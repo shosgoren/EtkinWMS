@@ -14,7 +14,7 @@ import https from "node:https";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { chromium } from "@playwright/test";
-import { mintSharedSession } from "./support/demo-session.ts";
+import { clearSharedSession, mintSharedSession } from "./support/demo-session.ts";
 import { provisionEmptyTenant } from "./support/empty-tenant.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
@@ -158,6 +158,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   const children: ChildProcess[] = [];
   let proxy: https.Server | undefined;
   const teardown = async (): Promise<void> => {
+    clearSharedSession();
     proxy?.close();
     proxy?.closeAllConnections();
     for (const c of children) stop(c);
@@ -232,6 +233,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
     let setupError: unknown;
     try {
       browser = await chromium.launch(process.env.E2E_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH } : {});
+      await mintSharedSession(browser, `https://localhost:${port}`);
       const made = await provisionEmptyTenant({
         browser,
         origin: `https://localhost:${portB}`,

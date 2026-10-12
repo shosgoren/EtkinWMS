@@ -29,11 +29,6 @@ async function tokenColor(page: Page, token: string): Promise<string> {
   );
 }
 
-async function computed(page: Page, selector: string, prop: string): Promise<string> {
-  // Dize ifadesi: kök tsconfig'de DOM tipleri yok; ifade tarayıcıda çalışır.
-  return page.evaluate<string>(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).getPropertyValue(${JSON.stringify(prop)})`);
-}
-
 async function selectView(page: Page, label: string): Promise<void> {
   // T-254: telefon genişliğinde görünüm anahtarı menüdedir; önce menü açılır, aynı düğme kullanılır (beklenen davranış aynı).
   const menuButton = page.getByTestId("app-bar-menu");
@@ -101,7 +96,11 @@ for (const size of SIZES) {
         const icons = tasks.locator("svg.lucide");
         expect(await icons.count(), "kart ikonları (svg.lucide)").toBeGreaterThanOrEqual(9);
         await expect(icons.first()).toHaveAttribute("aria-hidden", "true");
-        expect(await computed(page, "header span.bg-accent", "background-color"), "logo kabı = accent").toBe(accents[view.key]);
+        // T-902 marka kabı ink rengindedir; telefon uygulama çubuğu görünüm accent rengini korur.
+        await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
+        const landingAccent = accents[view.key];
+        if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
+        if (size.width < 768) await expect(page.getByTestId("app-bar").locator("span.bg-accent")).toHaveCSS("background-color", landingAccent);
         await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`);
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);
         await page.screenshot({ path: path.join(OUT, `${view.key}-${size.width}-ana-ekran.png`), fullPage: true });
