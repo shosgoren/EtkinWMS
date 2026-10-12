@@ -11,6 +11,7 @@
 import { createHmac } from "node:crypto";
 import { expect } from "@playwright/test";
 import type { Browser, Page } from "@playwright/test";
+import { completeFirstUseGuide } from "./first-use-guide.ts";
 
 export interface EmptyTenant {
   readonly slug: string;
@@ -19,11 +20,13 @@ export interface EmptyTenant {
   readonly totpSecret: string;
 }
 
-export function emptyTenant(): EmptyTenant {
-  const slug = process.env.E2E_EMPTY_SLUG;
-  const email = process.env.E2E_EMPTY_EMAIL;
-  const password = process.env.E2E_EMPTY_PASSWORD;
-  const totpSecret = process.env.E2E_EMPTY_TOTP_SECRET;
+export function emptyTenant(fixture: "empty" | "pilot" = "empty"): EmptyTenant {
+  if (process.env.E2E_BASE_URL?.trim()) throw new Error("e2e: yerel tenant fikstürü uzak hedefte kullanılamaz");
+  const prefix = fixture === "pilot" ? "E2E_PILOT" : "E2E_EMPTY";
+  const slug = process.env[`${prefix}_SLUG`];
+  const email = process.env[`${prefix}_EMAIL`];
+  const password = process.env[`${prefix}_PASSWORD`];
+  const totpSecret = process.env[`${prefix}_TOTP_SECRET`];
   if (!slug || !email || !password || !totpSecret) {
     throw new Error("e2e: boş tenant fikstürü yok (global-setup yerel yığında kurar; uzak koşuda bu spec dışlanır)");
   }
@@ -111,10 +114,11 @@ export async function scrubSecretInputs(page: Page): Promise<void> {
 }
 
 /** Normal e-posta/parola giriş formu + iki adım (TOTP) ekranı; girişten sonra kiracı ana ekranı. */
-export async function loginEmptyTenant(page: Page): Promise<EmptyTenant> {
-  const t = emptyTenant();
+export async function loginEmptyTenant(page: Page, fixture: "empty" | "pilot" = "empty"): Promise<EmptyTenant> {
+  const t = emptyTenant(fixture);
   await bindSecrets(page, { password: t.password, totpSecret: t.totpSecret });
   await page.goto(`/login?next=${encodeURIComponent(`/t/${t.slug}`)}`);
+  await completeFirstUseGuide(page);
   await page.getByLabel("E-posta").fill(t.email);
   await fillSecret(page, 'input[name="password"]', "password");
   await page.getByRole("button", { name: "Giriş yap" }).click();
@@ -167,6 +171,7 @@ export async function provisionEmptyTenant(input: ProvisionInput): Promise<{ slu
     expect(signedUp, "kayıt ucu durum kodu").toBe(200);
     // 2) Çalışma alanı: kurulum sihirbazı (createWorkspace; M9 etkin, demo olmayan e-posta).
     await page.goto("/onboarding");
+    await completeFirstUseGuide(page);
     await page.getByLabel("Çalışma alanı adı").fill(input.workspaceName);
     await page.getByRole("button", { name: "Devam" }).click();
     await page.getByRole("button", { name: "Oluştur" }).click();

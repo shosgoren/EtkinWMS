@@ -49,6 +49,7 @@ export const AUDIT_ACTIONS = [
   "serial.registered",
   "handling_unit.created",
   "handling_unit.changed",
+  "production_recipe.created",
   "stock_document.created",
   "stock_document.updated",
   "stock_document.approved",

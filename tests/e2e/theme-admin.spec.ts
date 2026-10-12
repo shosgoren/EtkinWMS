@@ -10,8 +10,8 @@ const SIZES = [
   { width: 1280, height: 800 },
 ] as const;
 const VIEWS = [
-  { id: "flow", label: "Akış" },
-  { id: "cockpit", label: "Kokpit" },
+  { id: "flow", label: "İşlemler" },
+  { id: "cockpit", label: "Genel bakış" },
 ] as const;
 const OUT = ".artifacts/t-246c";
 

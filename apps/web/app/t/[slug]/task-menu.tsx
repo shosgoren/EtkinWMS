@@ -75,8 +75,6 @@ export interface TaskDef {
 /** Görev tanımları — sıra kaynağı. Yeni iş eklerken yalnızca bu listeye ve `ICONS`'a eklenir. */
 export const TASKS: readonly TaskDef[] = [
   { key: "receive", group: "field", hue: "green" },
-  { key: "issue", group: "field", hue: "orange" },
-  { key: "transfer", group: "field", hue: "teal" },
   { key: "count", group: "field", hue: "purple" },
   { key: "lookup", group: "field", hue: "sky" },
   { key: "warehouses", group: "field", hue: "cyan" },
@@ -213,6 +211,7 @@ export async function TaskMenu({ slug, allowed, myTasks, now }: TaskMenuProps) {
     audit: { allowed: allowed.auditView, href: `${base}/audit` },
     // Ürün kartı (T-216): okuma `stock.view`; bayrak yalnızca gösterimdir, sayfa/eylem yetkiyi sunucuda denetler.
     items: { allowed: allowed.stockView, href: `${base}/items` },
+    lookup: { allowed: allowed.stockView, href: `${base}/stock` },
     // Okuma `stock.view` (her rol); yazma kilidi hedef sayfada gösterilir, asıl yetki sunucudadır (T-205).
     warehouses: { allowed: true, href: `${base}/warehouses` },
     // Saha kabulü (T-313): yazma `stock.post`; yetkisiz kullanıcıya bağlantı verilmez (kilit + gerekçe), FORBIDDEN ekranına götürmez.

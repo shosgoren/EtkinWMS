@@ -29,7 +29,7 @@ SVG baskı boyutu seçilebilir; içerik oranı korunur. Çok küçük etiketlerd
 
 ## Yayın kaynakları
 
-Yeni Neon projesi: `Motive` / `autumn-lake-32406096`, Frankfurt, PostgreSQL 18. Fly uygulaması ayrıca oluşturulacaktır. `etkinwms.com` DNS kayıtları ancak yeni uygulamanın IP/sertifika bilgileri doğrulandıktan sonra yönlendirilir. Eski Fly/Neon kaynakları bu deponun dağıtım hedefi değildir.
+Yeni Neon projesi: `Motive` / `autumn-lake-32406096`, Frankfurt, PostgreSQL 18. Yayın hedefi bu projeye özel Hostinger VPS ve `https://wms.etkinyazilim.com` adresidir. `deploy/vps/compose.yml` web/worker süreçlerini ve Caddy HTTPS vekilini başlatır. Gizli ortam dosyaları `/opt/etkinwms/secrets/web.env` ve `worker.env` altında tutulur; migration sahibi bağlantısı çalışma zamanına aktarılmaz. Eski Fly/Neon kaynakları bu deponun dağıtım hedefi değildir.
 
 ## Henüz tamamlanmayan işler
 

@@ -33,6 +33,7 @@ export function Typeahead<T>({
   search,
   toSuggestion,
   onSelect,
+  onQueryChange,
   scan,
   scanLabel,
   listLabel,
@@ -50,6 +51,8 @@ export function Typeahead<T>({
   search: (q: string) => Promise<readonly T[]>;
   toSuggestion: (item: T) => Suggestion;
   onSelect: (item: T) => void;
+  /** A changed query invalidates a previously selected identity in callers that require selection. */
+  onQueryChange?: (value: string) => void;
   scan?: ScanConfig<T>;
   scanLabel?: string;
   listLabel: string;
@@ -72,6 +75,7 @@ export function Typeahead<T>({
   useEffect(() => () => clearTimeout(timer.current), []);
 
   function onChange(value: string) {
+    onQueryChange?.(value);
     setQ(value);
     setScanMsg(null);
     clearTimeout(timer.current);

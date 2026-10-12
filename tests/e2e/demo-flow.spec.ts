@@ -1,3 +1,4 @@
+import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 // T-131: demo akışı duman testi (masaüstü + mobil). Yerelde `global-setup.ts` yığını kurar; `E2E_BASE_URL` ile staging'e karşı da koşar.
 // Beklenen davranışlar A-43 ve kod ile hizalıdır: `is_demo` tenant'ta davet KAPALI (inviteMember, M9), demo kullanıcıları
 // üzerinde rol/çıkarma/devir/sıfırlama KAPALI. Karttaki "davet → bağlantı kutusu → member.invited" zinciri demo tenant'ta
@@ -127,7 +128,8 @@ test.describe("demo akışı", () => {
 
     // Landing: demo bandı + rol düğmeleri; mobilde taşma yok, dokunma hedefleri >= 48 px.
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1, name: "Etkin WMS" })).toBeVisible();
+  await completeFirstUseGuide(page);
+    await expect(page.getByRole("heading", { level: 1, name: "Deponuz için kolay bir başlangıç." })).toBeVisible();
     await expect(page.getByText(DEMO_BANNER)).toBeVisible();
     const enter = page.getByRole("button", { name: "Yönetici olarak gir" });
     await expectTouchTarget(page, enter, "landing: Yönetici olarak gir");
@@ -139,10 +141,10 @@ test.describe("demo akışı", () => {
     await expect(page).toHaveURL(/\/t\/demo$/);
     await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
 
-    // Kartlar: 6 etkin bağlantı (yönetici; "Depoya mal geldi" T-313 ile etkinleşti; "Ürünlerim" T-216 ve "Depo ve raflar" T-207 ile EKLENDİ, mevcut kartlar değişmedi), 5 "Yakında" kartı (depo işleri) tıklanamaz; kilitli kart yok.
+    // Kartlar: yönetici için stok görünümü dahil 7 etkin bağlantı, 2 "Yakında" kartı tıklanamaz; kilitli kart yok.
     const tasks = page.getByRole("list", { name: "İşler" });
-    await expect(tasks.locator('a[data-state="active"]')).toHaveCount(6);
-    await expect(tasks.locator('[data-state="soon"]')).toHaveCount(5);
+    await expect(tasks.locator('a[data-state="active"]')).toHaveCount(7);
+    await expect(tasks.locator('[data-state="soon"]')).toHaveCount(2);
     const warehousesCard = tasks.locator('a[data-state="active"]').filter({ hasText: "Depo ve raflar" });
     await expect(warehousesCard).toHaveCount(1);
     await expect(warehousesCard).toHaveAttribute("href", "/t/demo/warehouses");
@@ -212,6 +214,7 @@ test.describe("demo akışı", () => {
 
   test("salt okunur demo kullanıcısı: üye eylemleri kilitli + açıklama", async ({ page }) => {
     await page.goto("/");
+  await completeFirstUseGuide(page);
     await enterDemoReal(page, "Salt okunur");
     await expect(page).toHaveURL(/\/t\/demo$/);
     await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
@@ -220,11 +223,11 @@ test.describe("demo akışı", () => {
     const tasks = page.getByRole("list", { name: "İşler" });
     // T-313: "Depoya mal geldi" `stock.post` ister; salt okunur kullanıcıda bağlantı değil kilitli kart (FORBIDDEN ekranına götürmez) → 3 yönetim işi + 1.
     await expect(tasks.locator('[data-state="locked"]')).toHaveCount(4);
-    // Yalnızca "Ürünlerim" (T-216) ve "Depo ve raflar" (T-207) etkin (okuma `stock.view`; yazma kilidi hedef sayfada), hedef rotaları doğrulanır.
-    await expect(tasks.locator('a[data-state="active"]')).toHaveCount(2);
+    // Stok görünümü, "Ürünlerim" ve "Depo ve raflar" etkin (okuma `stock.view`; yazma kilidi hedef sayfada), hedef rotaları doğrulanır.
+    await expect(tasks.locator('a[data-state="active"]')).toHaveCount(3);
     await expect(tasks.locator('a[data-state="active"]').filter({ hasText: "Ürünlerim" })).toHaveAttribute("href", "/t/demo/items");
     await expect(tasks.locator('a[data-state="active"]').filter({ hasText: "Depo ve raflar" })).toHaveAttribute("href", "/t/demo/warehouses");
-    await expect(tasks.locator('[data-state="soon"]')).toHaveCount(5);
+    await expect(tasks.locator('[data-state="soon"]')).toHaveCount(2);
     await expect(tasks.locator('[data-state="locked"]').first()).toContainText("Bu iş için yetkin yok. Sorumluna sorabilirsin.");
     await expectNoHorizontalOverflow(page, "salt okunur ana ekran");
 
