@@ -151,6 +151,8 @@ export interface StockCommandApplied {
   /** `null` yalnızca kayıtlı bir audit eylemi olmayan komutlar içindir (açık istisna; rapor Bulgusu). */
   readonly audit: StockAudit | null;
   readonly numbering?: StockNumbering;
+  /** Compound operations: all numbers are assigned last, in a stable kind/date/id order. */
+  readonly additionalNumbering?: readonly StockNumbering[];
   /**
    * T-222 (ADR-018 §6): iş kuyruğa bırakıldı; idempotency kaydı `IN_PROGRESS` kalır (worker `resume` ile tamamlar). `audit: null` ve `numbering`
    * yok olmalıdır (sonuç henüz yoktur); aksi `INTERNAL`. Dönüş `{ status: "IN_PROGRESS" }`.
@@ -278,14 +280,17 @@ export async function executeStockCommand<I, R extends StockCommandResult = Stoc
       // Beyaz liste sorgudan önce de denetlenir: liste dışı alan yazımdan ÖNCE reddedilir.
       assertResultWhitelisted(applied.result);
       if (applied.deferred === true) {
-        if (applied.audit !== null || applied.numbering !== undefined) throw new AppError("INTERNAL"); // sözleşme ihlali: sonuçsuz iş audit/numara yazmaz
+        if (applied.audit !== null || (applied.numbering !== undefined || applied.additionalNumbering !== undefined)) throw new AppError("INTERNAL"); // sözleşme ihlali: sonuçsuz iş audit/numara yazmaz
         return { status: "IN_PROGRESS" };
       }
       if (applied.audit !== null) await appendAudit(tx, { ...applied.audit, actorUserId: m.userId });
       let result: StockCommandResult = applied.result;
-      if (applied.numbering !== undefined) {
-        const documentNumber = await assignNumber(tx, m.tenantId, applied.numbering);
-        result = { ...result, documentNumber };
+      const numberings = [...(applied.numbering ? [applied.numbering] : []), ...(applied.additionalNumbering ?? [])];
+      if (new Set(numberings.map(n => n.documentId)).size !== numberings.length) throw new AppError("INTERNAL");
+      numberings.sort((a,b) => a.kind.localeCompare(b.kind) || a.businessDate.localeCompare(b.businessDate) || a.documentId.localeCompare(b.documentId));
+      for (const numbering of numberings) {
+        const documentNumber = await assignNumber(tx, m.tenantId, numbering);
+        if (numbering.documentId === applied.numbering?.documentId) result = { ...result, documentNumber };
       }
       await completeIdempotency(tx, m.tenantId, begun.recordId, result);
       return { status: "COMPLETED", replayed: false, result: result as R };
