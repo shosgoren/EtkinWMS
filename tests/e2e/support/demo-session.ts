@@ -7,7 +7,7 @@
 //   2. Çıkış yapmayan spec'ler `enterDemoShared` ile bu oturumu çerez olarak benimser (giriş yapmaz).
 //   3. Çıkış yapan / girişi sınayan spec'ler `enterDemoReal` ile gerçek giriş yapar; her giriş bir deftere yazılır ve sınıra
 //      dayanılmışsa pencerenin dolması beklenir (istemci tarafı uyum; sunucu kuralı gevşetilmez).
-// Yerel koşuda (E2E_BASE_URL yok) iki yardımcı da eski davranışın aynısıdır: landing'deki düğmeye tıklar; defter/oturum dosyası yoktur.
+// Yerelde de çıkış yapmayan testler aynı gerçek yönetici oturumunu kullanır; giriş/çıkış testleri enterDemoReal yolunda kalır.
 import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { type Browser, type Page, expect, test } from "@playwright/test";
@@ -87,14 +87,11 @@ export async function enterDemoReal(page: Page, label: DemoRoleLabel): Promise<v
 
 /**
  * Çıkış yapmayan spec'ler için: uzakta global-setup'ın yönetici oturumunu çerez olarak benimser ve ana ekrana gider (yeni giriş yok);
- * yerelde eski davranış (landing'deki düğmeye tıklama). Yalnızca yönetici oturumu saklanır: salt okunur/toplayıcı yalnızca çıkış yapan testlerde kullanılır.
+ * yerelde de global-setup oturumu kullanılır. Yalnızca yönetici oturumu saklanır: salt okunur/toplayıcı gerçek giriş testlerindedir.
  */
 export async function enterDemoShared(page: Page, label: "Yönetici"): Promise<void> {
   await completeFirstUseGuide(page);
-  if (!isRemote()) {
-    await page.getByRole("button", { name: `${label} olarak gir` }).click();
-    return;
-  }
+  if (label !== "Yönetici") throw new Error("e2e: paylaşılan oturum yalnız yönetici içindir");
   if (!existsSync(STATE_FILE)) throw new Error("e2e: paylaşılan demo oturumu yok (global-setup yönetici girişini yapmadı)");
   let state: { cookies: Parameters<ReturnType<Page["context"]>["addCookies"]>[0] };
   try {
@@ -107,11 +104,11 @@ export async function enterDemoShared(page: Page, label: "Yönetici"): Promise<v
   await page.goto("/t/demo");
 }
 
-/** global-setup (yalnız uzak): yönetici için bir kez gerçek ekrandan giriş; oturumu `.artifacts/session/admin.json` (0600) dosyasına yazar. */
+/** global-setup: yönetici için bir kez gerçek ekrandan giriş; oturumu `.artifacts/session/admin.json` (0600) dosyasına yazar. */
 export async function mintSharedSession(browser: Browser, baseURL: string): Promise<void> {
   mkdirSync(SESSION_DIR, { recursive: true, mode: 0o700 });
   rmSync(STATE_FILE, { force: true });
-  const context = await browser.newContext({ baseURL, locale: "tr-TR" });
+  const context = await browser.newContext({ baseURL, locale: "tr-TR", ignoreHTTPSErrors: !isRemote() });
   try {
     const page = await context.newPage();
     await page.goto("/");
@@ -122,4 +119,9 @@ export async function mintSharedSession(browser: Browser, baseURL: string): Prom
   } finally {
     await context.close();
   }
+}
+
+/** Test oturumunu artifact dışında tutar ve koşu sonunda kaldırır. */
+export function clearSharedSession(): void {
+  rmSync(STATE_FILE, { force: true });
 }

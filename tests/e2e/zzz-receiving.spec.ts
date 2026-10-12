@@ -2,6 +2,7 @@
 // Akış: saha kabulü (yanlış tarama engeli, koli adedi, tek dokunuş bütçesi) → masaüstü teslim formu ve kalite onayı → görevli yerleştirme
 // → serbest yerleştirme → sayım kilidi uyarısı. Fikstür (ürün, lokasyon, beklenen teslim) migration rolüyle SQL'den yazılır (sentetik veri, G-09);
 // tüm stok etkisi UI → sunucu eylemi → domain komutudur. Mobil görüntüler/ölçümler `.artifacts/t-313/` altına yazılır (git'e girmez).
+import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -256,6 +257,7 @@ async function measure(page: Page): Promise<StepMetrics> {
 async function login(page: Page, label: string): Promise<void> {
   await page.addInitScript("window.__taps = 0; document.addEventListener('pointerdown', () => { window.__taps++; }, true); try { delete window.BarcodeDetector; } catch (e) { window.BarcodeDetector = undefined; }");
   await page.goto("/");
+  await completeFirstUseGuide(page);
   await page.getByRole("button", { name: `${label} olarak gir` }).click();
   await expect(page).toHaveURL(/\/t\/demo$/);
 }
