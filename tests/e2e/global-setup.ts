@@ -159,6 +159,9 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   let proxy: https.Server | undefined;
   const teardown = async (): Promise<void> => {
     clearSharedSession();
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT"]) {
+      for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
+    }
     proxy?.close();
     proxy?.closeAllConnections();
     for (const c of children) stop(c);
@@ -247,6 +250,22 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       process.env.E2E_EMPTY_EMAIL = email;
       process.env.E2E_EMPTY_PASSWORD = password;
       process.env.E2E_EMPTY_TOTP_SECRET = made.totpSecret;
+      // Stok/üretim testleri boş durum ölçümlerinin tenant'ını dolduramaz. Aynı gerçek kayıt/MFA yolu, ayrı hesap ve tenant.
+      const pilotEmail = `pilot-${suffix}@example.test`;
+      const pilotPassword = randomBytes(18).toString("hex");
+      const pilot = await provisionEmptyTenant({
+        browser,
+        origin: `https://localhost:${portB}`,
+        clientIp: "198.51.100.20",
+        name: "E2E pilot yöneticisi",
+        email: pilotEmail,
+        password: pilotPassword,
+        workspaceName: `E2E pilot ${suffix}`,
+      });
+      process.env.E2E_PILOT_SLUG = pilot.slug;
+      process.env.E2E_PILOT_EMAIL = pilotEmail;
+      process.env.E2E_PILOT_PASSWORD = pilotPassword;
+      process.env.E2E_PILOT_TOTP_SECRET = pilot.totpSecret;
     } catch (e) {
       setupError = e;
     }
