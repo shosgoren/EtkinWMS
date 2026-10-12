@@ -5,6 +5,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import tr from "../../apps/web/messages/tr.json" with { type: "json" };
 import type { Browser, Locator, Page } from "@playwright/test";
 import { enterDemoReal } from "./support/demo-session.ts";
 import { T270_SIZES, chevronInfo, expectBand, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
@@ -81,7 +82,8 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
     // T-274: açık liste alt sayfadır (diyalog); aynı 6 iş ve aynı içerik.
     const soonCards = page.getByRole("dialog").locator('[data-state="soon"]');
     await expect(soonCards).toHaveCount(5);
-    for (const name of ["Depodan mal çıkacak", "Malı başka depoya taşıyacağım", "Rafı sayacağım", "Bir ürün nerede, kaç tane var?", "Yanlış bir şey yaptım"]) {
+    for (const key of ["issue", "transfer", "count", "lookup", "undo"] as const) {
+      const name = tr.home.tasks[key].title;
       const card = soonCards.filter({ hasText: name });
       await expect(card, `${size.name}: ${name}`).toHaveCount(1);
       await expect(card).toBeVisible();
