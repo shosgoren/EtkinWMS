@@ -1,4 +1,4 @@
-// T-909 independent QA: synthetic schema27 only. No production calls or credential output.
+// T-909 independent QA: synthetic fixture on the source migration ledger only. No production calls or credential output.
 // HTTPS Request objects exercise the real AuthService handler; this is not a browser/TLS deployment test.
 import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
@@ -237,10 +237,12 @@ it("proof validates all source checksums without modifying tenant/account data",
   expect(await count("SELECT count(*)::int n FROM public.users WHERE id=$1", [plan.userId])).toBe(0);
 });
 
-it("altered ledger checksum or extra schema30 entry rejects before account creation", async () => {
+it("altered ledger checksum or extra ledger entry rejects before account creation", async () => {
   const plan = identity();
   const original = expectedLedger[0];
   if (!original) throw new Error("missing baseline migration");
+  // Kaynak defterinin bir sonraki sürümü: hedef DB'de fazladan bir migration varmış gibi (kaynakta yok).
+  const extraVersion = String(expectedLedger.length + 1).padStart(4, "0");
   try {
     await admin.query("UPDATE wms_meta.schema_migrations SET checksum_sha256=$1 WHERE version=$2", ["0".repeat(64), original.version]);
     await expect(checkInitialOwnerProof(proof, proofTarget, expectedLedger, plan, false)).rejects.toThrow("INITIAL_OWNER_SCHEMA_MISMATCH");
@@ -248,9 +250,9 @@ it("altered ledger checksum or extra schema30 entry rejects before account creat
     await admin.query("UPDATE wms_meta.schema_migrations SET checksum_sha256=$1 WHERE version=$2", [original.checksum_sha256, original.version]);
   }
   try {
-    await admin.query("INSERT INTO wms_meta.schema_migrations(version,name,checksum_sha256) VALUES ('0030','synthetic_wrong_schema',$1)", ["0".repeat(64)]);
+    await admin.query("INSERT INTO wms_meta.schema_migrations(version,name,checksum_sha256) VALUES ($1,'synthetic_wrong_schema',$2)", [extraVersion, "0".repeat(64)]);
     await expect(checkInitialOwnerProof(proof, proofTarget, expectedLedger, plan, false)).rejects.toThrow("INITIAL_OWNER_SCHEMA_MISMATCH");
-  } finally { await admin.query("DELETE FROM wms_meta.schema_migrations WHERE version='0030' AND name='synthetic_wrong_schema'"); }
+  } finally { await admin.query("DELETE FROM wms_meta.schema_migrations WHERE version=$1 AND name='synthetic_wrong_schema'", [extraVersion]); }
   expect(await count("SELECT count(*)::int n FROM public.users WHERE id=$1", [plan.userId])).toBe(0);
 });
 
