@@ -1,5 +1,7 @@
 # EtkinWMS bağımsız pilot durumu
 
+Güncel müşteri talimatları, doğrulanmış durum, Cloud bağlantısının sınırları ve kalan pilot kabul işleri: [PILOT_HANDOFF.md](PILOT_HANDOFF.md). Sonraki görev önce bu kaydı ve gerçek Git durumunu okumalı; eski kaynak proje notlarını mevcut ürünün hazır olduğuna kanıt saymamalıdır.
+
 Hedef: 12 Ekim 2026, 22:00 Europe/Istanbul; Motive Rubber üç depo pilotu.
 Kaynak: shosgoren/2027-WMS-1 salt okunur kopya; orijinal depo/kaynaklara yazılmaz.
 Hedef depo: shosgoren/EtkinWMS. Eski çalışma notları UPSTREAM_STATE.md içinde yalnız referanstır.
@@ -11,3 +13,5 @@ Yayın: deploy/vps web/worker/Caddy yapılandırması ve üretim Docker derlemes
 Kalan: müşteri bootstrap ve MFA, üretim ve sevkiyat ekranları, tarayıcıdan müşteri kabul kontrolü, cihaz kabul denemeleri. Müşteriye hazır kullanım henüz doğrulanmadı.
 
 Satış sitesi: etkinyazilim.com HTTPS üzerinden yayında; etkinyazilim.com.tr HTTPS ile ana adrese yönlenir. Web ve 390px mobil görünüm, menü, sektör senaryoları ve gerçek form kaydı doğrulandı. Demo talepleri marketing-leads named volume içinde 0600 dosyada saklanır; bu sürüm otomatik e-posta bildirimi göndermez. Ana alan adlarının A kayıtları yeni VPS'ye alındı; mevcut e-posta ve diğer alt alan adı kayıtları korunur. İlk Motive yönetici e-postası kullanıcı tarafından belirlendi; hesap kurulumu henüz tamamlanmadı.
+
+Tasarım T-902: özgün lacivert/turuncu palet ve yeni açılış/giriş ekranı; misafir kabuğu sadeleştirildi. İlk kullanımda üç aşamalı rehber, her sayfada yeniden açma düğmesi, parolayı göster/gizle ve kısa açıklama eklendi. Masaüstü ve 390px mobilde rehber ileri/tamam/kapat/yeniden aç ile parola göster/gizle kontrol edildi. Lint/typecheck ve 3727 test geçti; mevcut kontrast testleri değiştirilmedi. Üretim Docker doğrulaması geçti; guided-20261012 sürümü VPS üzerinde etkin. Canlı açılış/rehber görüntüsü ve satış paleti doğrulandı. Derin sağlık DB/kuyruk/worker OK. İlk defa bilgisayar kullanan gerçek kişiyle kabul denemesi henüz yapılmadı.

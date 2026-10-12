@@ -5,8 +5,8 @@
     "skipToContent": "İçeriğe geç",
     "viewSwitch": {
       "label": "Görünüm",
-      "flow": "Akış",
-      "cockpit": "Kokpit"
+      "flow": "İşlemler",
+      "cockpit": "Genel bakış"
     },
     "userChip": {
       "label": "Kullanıcı",
@@ -14,7 +14,7 @@
       "placeholderInitials": "?"
     },
     "help": {
-      "full": "Yardım çağır",
+      "full": "Yardıma ihtiyacım var",
       "short": "Yardım"
     },
     "menu": {
@@ -373,7 +373,7 @@
     "unknownAction": "Biraz sonra yeniden dene."
   },
   "landing": {
-    "valueProp": "Deponuzdaki malı, kimin ne zaman ne yaptığıyla birlikte, adım adım ve yanlışsız takip edin.",
+    "valueProp": "İşinizi seçin. Ürünü bulun. Miktarı kontrol edin. Etkin WMS her adımda sıradaki işlemi gösterir.",
     "signIn": "Giriş yap",
     "createWorkspace": "Çalışma alanı oluştur",
     "actions": "Başlangıç",
@@ -1854,5 +1854,38 @@
       }
     },
     "noRows": "Dosyada henüz veri satırı yok. Şablona en az bir satır ekle, sonra dosyayı yeniden seç."
+  },
+  "guide": {
+    "label": "Nasıl kullanırım?",
+    "title": "Birlikte, adım adım.",
+    "intro": "İlk kez kullanıyorsanız bu üç adım yeterli. Rehberi istediğiniz zaman yeniden açabilirsiniz.",
+    "next": "Sonraki adım",
+    "done": "Tamam, başlayalım",
+    "skip": "Şimdilik kapat",
+    "progress": "Adım {current} / {total}",
+    "steps": [
+      {
+        "title": "Yapacağınız işi seçin",
+        "text": "Mal geldi mi? “Mal kabul”. Rafına mı koyacaksınız? “Yerleştir”. Karttaki açıklamayı okuyup büyük düğmeye dokunun.",
+        "icon": "1"
+      },
+      {
+        "title": "Ürünü bulun, miktarı yazın",
+        "text": "Barkodu okutun veya ürün adını arayın. Ekrandaki ürün, depo ve stok birimini kontrol edin. Emin değilseniz geri dönebilirsiniz.",
+        "icon": "2"
+      },
+      {
+        "title": "Kontrol edin, sonra kaydedin",
+        "text": "Kaydetmeden önce özeti okuyun. Kırmızı uyarı varsa işlem durur; açıklama size neyi düzeltmeniz gerektiğini söyler. Başarı mesajını görünce işiniz tamamdır.",
+        "icon": "3"
+      }
+    ],
+    "welcome": "Deponuz için kolay bir başlangıç.",
+    "welcomeText": "İşinizi seçin. Ürünü bulun. Miktarı kontrol edin. Etkin WMS her adımda sıradaki işlemi gösterir.",
+    "start": "Çalışma alanıma giriş yap",
+    "loginHelp": "Size verilen e-posta ve parolayla giriş yapın. Hesabınız yoksa işletmenizdeki yöneticiden yardım isteyin.",
+    "support": "Bir sorunuz mu var? Yardım ekranını açın.",
+    "showPassword": "Parolayı göster",
+    "hidePassword": "Parolayı gizle"
   }
 }

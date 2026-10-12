@@ -1,3 +1,4 @@
+import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 // T-246b: güven paleti ekran kanıtı (ADR-020). 375x812 ve 1280x800; Akış ve Kokpit; landing + demo girişi sonrası ana ekran.
 // Piksel karşılaştırma yok: hesaplanan stil değerleri belirteçlerle eşlenir, ekran görüntüleri .artifacts/t-246b/ altına yazılır.
 import { mkdirSync } from "node:fs";
@@ -12,8 +13,8 @@ const SIZES = [
   { width: 1280, height: 800 },
 ] as const;
 const VIEWS = [
-  { key: "flow", label: "Akış" },
-  { key: "cockpit", label: "Kokpit" },
+  { key: "flow", label: "İşlemler" },
+  { key: "cockpit", label: "Genel bakış" },
 ] as const;
 
 async function expectNoHorizontalOverflow(page: Page, where: string): Promise<void> {
@@ -26,11 +27,6 @@ async function tokenColor(page: Page, token: string): Promise<string> {
   return page.evaluate<string>(
     `(() => { const e = document.createElement("i"); e.style.backgroundColor = "var(--color-${token})"; document.body.append(e); const c = getComputedStyle(e).backgroundColor; e.remove(); return c; })()`,
   );
-}
-
-async function computed(page: Page, selector: string, prop: string): Promise<string> {
-  // Dize ifadesi: kök tsconfig'de DOM tipleri yok; ifade tarayıcıda çalışır.
-  return page.evaluate<string>(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).getPropertyValue(${JSON.stringify(prop)})`);
 }
 
 async function selectView(page: Page, label: string): Promise<void> {
@@ -67,8 +63,11 @@ for (const size of SIZES) {
 
       // Landing (oturumsuz): her iki görünümde. Demo girişi hız sınırlı olduğundan ana ekran için tek giriş yapılır.
       for (const view of VIEWS) {
+        // Oturumsuz kabuk görünüm düğmesi sunmaz; kaydedilmiş yalnız görsel tercihi iki değerde sınarız.
+        await page.context().addCookies([{ name: "view", value: view.key, url: new URL("/", page.url() === "about:blank" ? test.info().project.use.baseURL : page.url()).origin }]);
         await page.goto("/");
-        await selectView(page, view.label);
+        await completeFirstUseGuide(page);
+        await expect(page.getByRole("form", { name: "Görünüm" })).toHaveCount(0);
         await expect(page.locator("html")).toHaveAttribute("data-view", view.key);
 
         // Birincil düğme `accent` zeminli, odak halkası `focus`.
@@ -97,7 +96,11 @@ for (const size of SIZES) {
         const icons = tasks.locator("svg.lucide");
         expect(await icons.count(), "kart ikonları (svg.lucide)").toBeGreaterThanOrEqual(9);
         await expect(icons.first()).toHaveAttribute("aria-hidden", "true");
-        expect(await computed(page, "header span.bg-accent", "background-color"), "logo kabı = accent").toBe(accents[view.key]);
+        // T-902 marka kabı ink rengindedir; telefon uygulama çubuğu görünüm accent rengini korur.
+        await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
+        const landingAccent = accents[view.key];
+        if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
+        if (size.width < 768) await expect(page.getByTestId("app-bar").locator("span.bg-accent")).toHaveCSS("background-color", landingAccent);
         await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`);
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);
         await page.screenshot({ path: path.join(OUT, `${view.key}-${size.width}-ana-ekran.png`), fullPage: true });
