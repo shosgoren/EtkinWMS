@@ -1,3 +1,4 @@
+import { completeFirstUseGuide } from "./first-use-guide.ts";
 // T-289 e2e ortak yardımcıları (import.spec.ts ve zzz-import-partial.spec.ts): ölçüm, ekran görüntüsü, CSV üretimi, demo yönetici girişi.
 import path from "node:path";
 import { expect } from "@playwright/test";
@@ -61,6 +62,7 @@ export async function measure(page: Page): Promise<Metrics> {
 
 export async function loginAdmin(page: Page): Promise<void> {
   await page.goto("/");
+  await completeFirstUseGuide(page);
   await page.getByRole("button", { name: "Yönetici olarak gir" }).click();
   await expect(page).toHaveURL(/\/t\/demo$/);
 }
