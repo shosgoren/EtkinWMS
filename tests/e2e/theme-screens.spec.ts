@@ -1,3 +1,4 @@
+import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 // T-246b: güven paleti ekran kanıtı (ADR-020). 375x812 ve 1280x800; Akış ve Kokpit; landing + demo girişi sonrası ana ekran.
 // Piksel karşılaştırma yok: hesaplanan stil değerleri belirteçlerle eşlenir, ekran görüntüleri .artifacts/t-246b/ altına yazılır.
 import { mkdirSync } from "node:fs";
@@ -12,8 +13,8 @@ const SIZES = [
   { width: 1280, height: 800 },
 ] as const;
 const VIEWS = [
-  { key: "flow", label: "Akış" },
-  { key: "cockpit", label: "Kokpit" },
+  { key: "flow", label: "İşlemler" },
+  { key: "cockpit", label: "Genel bakış" },
 ] as const;
 
 async function expectNoHorizontalOverflow(page: Page, where: string): Promise<void> {
@@ -67,8 +68,11 @@ for (const size of SIZES) {
 
       // Landing (oturumsuz): her iki görünümde. Demo girişi hız sınırlı olduğundan ana ekran için tek giriş yapılır.
       for (const view of VIEWS) {
+        // Oturumsuz kabuk görünüm düğmesi sunmaz; kaydedilmiş yalnız görsel tercihi iki değerde sınarız.
+        await page.context().addCookies([{ name: "view", value: view.key, url: new URL("/", page.url() === "about:blank" ? test.info().project.use.baseURL : page.url()).origin }]);
         await page.goto("/");
-        await selectView(page, view.label);
+        await completeFirstUseGuide(page);
+        await expect(page.getByRole("form", { name: "Görünüm" })).toHaveCount(0);
         await expect(page.locator("html")).toHaveAttribute("data-view", view.key);
 
         // Birincil düğme `accent` zeminli, odak halkası `focus`.

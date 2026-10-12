@@ -112,20 +112,20 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await expect(menu).toBeVisible();
   await expect(menu.getByText("Giriş yapan: Demo Yönetici")).toBeVisible();
   await expect(menu.getByRole("link", { name: /Demo Ambalaj/ })).toHaveAttribute("aria-current", "page");
-  await expect(menu.getByRole("link", { name: "Yardım çağır" })).toBeVisible();
-  await expect(menu.getByRole("button", { name: "Akış", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toBeVisible();
+  await expect(menu.getByRole("button", { name: "İşlemler", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(await smallTargets(page, '[data-testid="app-menu"]'), "menü: 48 px altı dokunma hedefi").toEqual([]);
   await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-menu.png`) });
   const mm = await metrics(page);
   expect(mm.scrollWidth, "menü açıkken yatay taşma yok").toBeLessThanOrEqual(mm.clientWidth);
 
   // Kokpit menüden seçilir ve kalıcıdır.
-  await menu.getByRole("button", { name: "Kokpit", exact: true }).click();
+  await menu.getByRole("button", { name: "Genel bakış", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
   // Menü açık kalır (seçili durum görünür); sunucu eylemi sonrası sayfa yenilenir.
-  await expect(menu.getByRole("button", { name: "Kokpit", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(menu.getByRole("button", { name: "Genel bakış", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-kokpit.png`) });
-  await menu.getByRole("button", { name: "Akış", exact: true }).click();
+  await menu.getByRole("button", { name: "İşlemler", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
 
   // İç ekran: Escape menüyü kapatır; üyeler ekranında gövde kaymaz, yalnız içerik alanı kayar, yatay taşma yok.
