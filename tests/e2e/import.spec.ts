@@ -1,3 +1,4 @@
+import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 // T-289: açılış verisi içe aktarma — şablon indirme, hatalı dosyada satır satır önizleme, düzeltilmiş dosyayla içe aktarma (ürün + açılış stoku),
 // aynı dosyayı ikinci kez yükleme (ek hareket yok), klavye yolu, yetkisiz kullanıcı. Demo tenant (demo yönetici: MFA kapalı, A-38) üzerinde koşar;
 // her koşu benzersiz kod önekiyle yalnız KENDİ ürünlerini ve demo rafı A3-G03/A3-G04'e kendi stokunu ekler (demo tohumu bu ürünlere dokunmaz).
@@ -319,6 +320,7 @@ test.describe("açılış verisi içe aktarma (T-289)", () => {
     mkdirSync(OUT, { recursive: true });
     const sizes = testInfo.project.name === "desktop" ? DESKTOP_SIZES : PHONE_SIZES;
     await page.goto("/");
+  await completeFirstUseGuide(page);
     await page.getByRole("button", { name: "Salt okunur olarak gir" }).click();
     await expect(page).toHaveURL(/\/t\/demo$/);
     await page.goto("/t/demo/import");

@@ -23,7 +23,7 @@ vi.mock("../../../../lib/rate-limit.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/rate-limit.ts")>()),
   createProductionLimiter: () => ({ check: () => Promise.resolve() }),
 }));
-vi.mock("next-intl/server", () => ({ getTranslations: () => Promise.resolve((key: string) => key) }));
+vi.mock("next-intl/server", () => ({ getTranslations: () => Promise.resolve(Object.assign((key: string) => key, { has: () => false })) }));
 vi.mock("@wms/domain/identity/access", () => ({ runTenantQuery: () => Promise.resolve("t1") }));
 
 import { addBarcodeAction, archiveItemAction, createItemAction, removeBarcodeAction, searchItemsAction, setConversionAction, updateItemAction } from "./actions.ts";
@@ -182,9 +182,16 @@ describe('"Ürünler" kartı izne bağlı (stock.view)', () => {
   /** Kart ızgarasındaki `items` kartının TaskCard özellikleri (başlık anahtarına göre bulunur). */
   async function itemsCard(stockView: boolean): Promise<NonNullable<El["props"]>> {
     const ul = (await TaskMenu({ slug: "acme", allowed: { usersManage: true, settingsManage: true, auditView: true, stockView } })) as El;
-    const lis = ul.props?.children as El[];
-    const cards = lis.map((li) => li.props?.children as El);
-    const found = cards.find((c) => c.props?.title === "tasks.items.title");
+    function findItem(node: unknown): El | undefined {
+      if (Array.isArray(node)) {
+        for (const child of node) { const found = findItem(child); if (found) return found; }
+        return undefined;
+      }
+      if (node === null || typeof node !== "object") return undefined;
+      const element = node as El;
+      return element.props?.title === "tasks.items.title" ? element : findItem(element.props?.children);
+    }
+    const found = findItem(ul);
     expect(found).toBeDefined();
     return (found as El).props as NonNullable<El["props"]>;
   }

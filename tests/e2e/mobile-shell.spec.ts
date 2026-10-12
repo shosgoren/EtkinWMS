@@ -5,6 +5,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import tr from "../../apps/web/messages/tr.json" with { type: "json" };
 import type { Browser, Locator, Page } from "@playwright/test";
 import { enterDemoReal } from "./support/demo-session.ts";
 import { T270_SIZES, chevronInfo, expectBand, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
@@ -14,7 +15,7 @@ const PHONES = [
   { name: "iphone13", width: 390, height: 664 }, // Playwright "iPhone 13" cihaz profili (Safari araç çubukları dahil görünür alan)
   { name: "iphone13-tam", width: 390, height: 844 }, // standalone / tam ekran
   { name: "android-360", width: 360, height: 740 },
-  { name: "android-430", width: 430, height: 932 }, // T-313: 6 etkin iş (2 sütun) için büyük telefon da kaydırmasız sınanır
+  { name: "android-430", width: 430, height: 932 }, // T-903: 7 etkin iş (stok işlemleri stok ekranında) için büyük telefon da kaydırmasız sınanır
 ] as const;
 
 
@@ -39,8 +40,8 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto("/t/demo");
     const tasks = page.getByRole("list", { name: "İşler" });
-    await expect(tasks.locator('[data-state="active"]')).toHaveCount(6);
-    await expect(tasks.locator('[data-state="soon"]')).toHaveCount(5);
+    await expect(tasks.locator('[data-state="active"]')).toHaveCount(7);
+    await expect(tasks.locator('[data-state="soon"]')).toHaveCount(2);
     await page.screenshot({ path: path.join(OUT, `${tag}-${size.name}-ana-ekran.png`) });
 
     // Kaydırmasız: sayfa yüksekliği = görünür yükseklik, yatay taşma yok.
@@ -57,14 +58,14 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
     await expect(page.getByRole("button", { name: "Çıkış yap" })).toHaveCount(0); // menüde (kapalı)
     await expect(page.getByTestId("bottom-nav")).toBeVisible();
 
-    // T-270 (Supervisor kararı: kasıtlı şartname değişikliği): 6 etkin döşeme (T-313: "Depoya mal geldi" etkinleşti) kaydırmadan görünür alanda, üst çubuk ile alt sekme
-    // çubuğu arasında (kutu sınırı assertion'ları aynı). 6 "Yakında" iş ızgarada döşeme değil, tek satırlık düğmenin arkasındadır:
-    // düğme görünür alanda; dokununca tam 6 iş adı + "Yakında" listelenir (toplam 11 iş erişilebilir).
+    // T-270 (Supervisor kararı: kasıtlı şartname değişikliği): 7 etkin döşeme (T-903: stok görünümü etkinleşti) kaydırmadan görünür alanda, üst çubuk ile alt sekme
+    // çubuğu arasında (kutu sınırı assertion'ları aynı). 2 "Yakında" iş ızgarada döşeme değil, tek satırlık düğmenin arkasındadır:
+    // düğme görünür alanda; dokununca tam 2 iş adı + "Yakında" listelenir (toplam 9 ana menü işi erişilebilir).
     const barBottom = (await bar.boundingBox())?.y ?? 0;
     const navTop = (await page.getByTestId("bottom-nav").boundingBox())?.y ?? 0;
     const cards = tasks.locator('[data-state="active"]');
-    expect(await cards.count()).toBe(6);
-    for (let i = 0; i < 6; i++) {
+    expect(await cards.count()).toBe(7);
+    for (let i = 0; i < 7; i++) {
       const box = await cards.nth(i).boundingBox();
       expect(box, `${size.name}: kart ${i}`).not.toBeNull();
       expect((box?.y ?? 0) + (box?.height ?? 0), `${size.name}: kart ${i} alt sekmenin üstünde`).toBeLessThanOrEqual(navTop + 0.5);
@@ -76,12 +77,13 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
     expect(soonBox, `${size.name}: Yakında satırı görünür`).not.toBeNull();
     expect((soonBox?.y ?? 0) + (soonBox?.height ?? 0), `${size.name}: Yakında satırı alt sekmenin üstünde`).toBeLessThanOrEqual(navTop + 0.5);
     expect(soonBox?.y ?? 0, `${size.name}: Yakında satırı üst çubuğun altında`).toBeGreaterThanOrEqual(barBottom);
-    await expect(soonRow).toContainText("Yakında gelecekler (5)");
+    await expect(soonRow).toContainText("Yakında gelecekler (2)");
     await soonRow.click();
-    // T-274: açık liste alt sayfadır (diyalog); aynı 6 iş ve aynı içerik.
+    // T-274: açık liste alt sayfadır (diyalog); aynı 2 iş ve aynı içerik.
     const soonCards = page.getByRole("dialog").locator('[data-state="soon"]');
-    await expect(soonCards).toHaveCount(5);
-    for (const name of ["Depodan mal çıkacak", "Malı başka depoya taşıyacağım", "Rafı sayacağım", "Bir ürün nerede, kaç tane var?", "Yanlış bir şey yaptım"]) {
+    await expect(soonCards).toHaveCount(2);
+    for (const key of ["count", "undo"] as const) {
+      const name = tr.home.tasks[key].title;
       const card = soonCards.filter({ hasText: name });
       await expect(card, `${size.name}: ${name}`).toHaveCount(1);
       await expect(card).toBeVisible();
@@ -112,20 +114,21 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await expect(menu).toBeVisible();
   await expect(menu.getByText("Giriş yapan: Demo Yönetici")).toBeVisible();
   await expect(menu.getByRole("link", { name: /Demo Ambalaj/ })).toHaveAttribute("aria-current", "page");
-  await expect(menu.getByRole("link", { name: "Yardım çağır" })).toBeVisible();
-  await expect(menu.getByRole("button", { name: "Akış", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toHaveAttribute("href", "/help");
+  await expect(menu.getByRole("button", { name: "İşlemler", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(await smallTargets(page, '[data-testid="app-menu"]'), "menü: 48 px altı dokunma hedefi").toEqual([]);
   await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-menu.png`) });
   const mm = await metrics(page);
   expect(mm.scrollWidth, "menü açıkken yatay taşma yok").toBeLessThanOrEqual(mm.clientWidth);
 
   // Kokpit menüden seçilir ve kalıcıdır.
-  await menu.getByRole("button", { name: "Kokpit", exact: true }).click();
+  await menu.getByRole("button", { name: "Genel bakış", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
   // Menü açık kalır (seçili durum görünür); sunucu eylemi sonrası sayfa yenilenir.
-  await expect(menu.getByRole("button", { name: "Kokpit", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(menu.getByRole("button", { name: "Genel bakış", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-kokpit.png`) });
-  await menu.getByRole("button", { name: "Akış", exact: true }).click();
+  await menu.getByRole("button", { name: "İşlemler", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
 
   // İç ekran: Escape menüyü kapatır; üyeler ekranında gövde kaymaz, yalnız içerik alanı kayar, yatay taşma yok.
@@ -276,7 +279,7 @@ test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş al
     await expect(page).toHaveURL(/\/t\/demo$/);
     const tasks = page.getByRole("list", { name: "İşler" });
     const isAdmin = role.shot === "admin";
-    const activeCount = isAdmin ? 6 : 3; // toplayıcı: Depoya mal geldi (stock.post, T-313) + Depo ve raflar + Ürünlerim izinli; 3 yönetim işi yetkisiz
+    const activeCount = isAdmin ? 7 : 4; // toplayıcı: Depoya mal geldi (stock.post, T-313) + Stok durumu + Depo ve raflar + Ürünlerim izinli; 3 yönetim işi yetkisiz
     const soonRow = page.locator(".soon-toggle");
     const lockedRow = page.locator(".locked-toggle");
 
@@ -383,7 +386,7 @@ test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş al
       }
 
       // Üst düğmeler: kapalı, görünür alanda; toplayıcıda yetkisiz işler tek satırda (varsayılan kapalı); alt sayfa kapalı.
-      await expect(soonRow).toContainText("Yakında gelecekler (5)");
+      await expect(soonRow).toContainText("Yakında gelecekler (2)");
       if (isAdmin) await expect(lockedRow).toHaveCount(0);
       else {
         await expect(lockedRow).toContainText("Yetkin olmayan işler (3)");
@@ -404,10 +407,10 @@ test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş al
       expect(m.scrollHeight, `${where}: sayfa gövdesi kaymaz`).toBeLessThanOrEqual(m.innerHeight);
       await page.screenshot({ path: path.join(OUT_T270, `final-${tag}-${role.shot}-${size.width}.png`) });
 
-      // "Yakında" açık (B-01/B-02): kararmış ana ekran üzerinde alt sayfa; 6 iş, tek kompakt başlık satırı, kapatma altta.
+      // "Yakında" açık (B-01/B-02): kararmış ana ekran üzerinde alt sayfa; 2 iş, tek kompakt başlık satırı, kapatma altta.
       await soonRow.click();
       await expect(soonRow).toHaveAttribute("aria-expanded", "true");
-      const soonIcon = await expectSheet(page, `${where}: Yakında`, 5);
+      const soonIcon = await expectSheet(page, `${where}: Yakında`, 2);
       clockSizes.push(soonIcon);
       expect((await chevronInfo(page, ".soon-toggle")).rotated, `${where}: şevron açılınca döner (B-04)`).toBe(true);
       const dlg = page.getByRole("dialog");

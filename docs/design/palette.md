@@ -45,19 +45,19 @@ Belirteç adları korunur; değerler değişir. Yeni anlam belirteçleri: `succe
 
 | Belirteç | Eski (prototip) | Yeni | Rol |
 |---|---|---|---|
-| `ink` | #12302b | **#172133** | Ana metin, varsayılan ikon |
-| `ink-muted` | #3f544f | **#4a5568** | İkincil metin, nötr ikon |
+| `ink` | #12302b | **#172e42** | Ana metin, varsayılan ikon |
+| `ink-muted` | #3f544f | **#465b6c** | İkincil metin, nötr ikon |
 | `surface` | #ffffff | **#ffffff** | Kart, üst bar, diyalog |
-| `bg` | #ecf3f1 | **#f3f5f9** | Sayfa zemini |
+| `bg` | #ecf3f1 | **#f5f7f8** | Sayfa zemini |
 | `border` | #c9d6d2 | **#d5dce5** | **Yalnız süsleyici** ayırıcı (kart çerçevesi, tablo çizgisi) |
 | `border-strong` (yeni) | — | **#6b778a** | Girdi, seçim kutusu, ikincil düğme kenarı (1.4.11) |
-| `accent` | #0f766e (teal) | **#1559c7** | Birincil düğme, seçili durum |
-| `accent-ink` | #0b5a54 | **#0f4699** | Bağlantı, `accent-soft` üstünde metin/ikon |
-| `accent-soft` | #d3ece6 | **#e3ecfa** | Rozet, ikon kabı, görünüm anahtarı zemini |
+| `accent` | #0f766e (teal) | **#c64a19** | Birincil düğme, seçili durum |
+| `accent-ink` | #0b5a54 | **#07121b** | Bağlantı, `accent-soft` üstünde metin/ikon |
+| `accent-soft` | #d3ece6 | **#fff4ee** | Rozet, ikon kabı, görünüm anahtarı zemini |
 | `on-accent` | #ffffff | **#ffffff** | Tüm dolu (`accent`, `danger`, `success`, `warning`, `undo`, `info`) zeminlerde metin |
 | `locked-bg` | #e2e9e7 | **#e9edf2** | Kilitli/geçersiz kart |
-| `locked-ink` | #46564f | **#4a5568** | Kilitli kart metni ve `Lock` ikonu |
-| `focus` | #12302b | **#1559c7** | Odak halkası (Carbon/Polaris deseni: birincil mavi) |
+| `locked-ink` | #46564f | **#465b6c** | Kilitli kart metni ve `Lock` ikonu |
+| `focus` | #12302b | **#c64a19** | Odak halkası (Carbon/Polaris deseni: birincil mavi) |
 | `warning` (yeni) | — | **#b45309** | Uyarı ikonu, uyarı dolu zemin |
 | `warning-ink` | #6b4300 | **#7a3e00** | Uyarı metni |
 | `warning-bg` | #fff3c4 | **#fff4d5** | Uyarı bandı, "Sahip" rozeti zemini |
@@ -88,31 +88,31 @@ Bileşenler yalnız **anlam belirteçlerini** kullanır. Aşağıdaki ilkeller d
 | İlkel | Hex | Eşlenen belirteç |
 |---|---|---|
 | neutral-0 | #ffffff | `surface`, `on-accent` |
-| neutral-50 | #f3f5f9 | `bg` |
+| neutral-50 | #f5f7f8 | `bg` |
 | neutral-100 | #e9edf2 | `locked-bg` |
 | neutral-200 | #d5dce5 | `border` |
 | neutral-500 | #6b778a | `border-strong` |
-| neutral-700 | #4a5568 | `ink-muted`, `locked-ink` |
-| neutral-900 | #172133 | `ink` |
-| blue-50 | #e3ecfa | `accent-soft` |
-| blue-600 | #1559c7 | `accent`, `focus` |
-| blue-800 | #0f4699 | `accent-ink` |
-| navy-700 | #243d8f | Kokpit `accent`, `focus` |
-| navy-800 | #1c3175 | Kokpit `accent-ink` |
+| neutral-700 | #465b6c | `ink-muted`, `locked-ink` |
+| neutral-900 | #172e42 | `ink` |
+| blue-50 | #fff4ee | `accent-soft` |
+| blue-600 | #c64a19 | `accent`, `focus` |
+| blue-800 | #07121b | `accent-ink` |
+| navy-700 | #172e42 | Kokpit `accent`, `focus` |
+| navy-800 | #07121b | Kokpit `accent-ink` |
 
 ## 3. Kokpit görünümü (`[data-view="cockpit"]`)
 Eskiden Akış teal, Kokpit mavi idi; yeni palette ikisi de mavi ailesindedir (güven rengi tutarlı kalır). Kokpit, yoğun masaüstü görünüm olarak **daha koyu lacivert** vurgu ve biraz daha soğuk zemin alır. Görünüm farkı yalnız renkle verilmez: anahtar `aria-pressed` + etiket metniyle seçilidir (1.4.1).
 
 | Belirteç | Eski Kokpit | Yeni Kokpit |
 |---|---|---|
-| `bg` | #eff2fa | **#eef1f7** |
-| `accent` | #2548c4 | **#243d8f** |
-| `accent-ink` | #1d3a9e | **#1c3175** |
-| `accent-soft` | #dbe3fb | **#e1e6f5** |
+| `bg` | #eff2fa | **#eef2f4** |
+| `accent` | #2548c4 | **#172e42** |
+| `accent-ink` | #1d3a9e | **#07121b** |
+| `accent-soft` | #dbe3fb | **#fff4ee** |
 | `locked-bg` | #e3e7f1 | **#e5e9f1** |
 | `locked-ink` | #464f6b | **#465066** |
 | `border` | #c9d0e4 | **#cfd6e3** |
-| `focus` | (miras #12302b) | **#243d8f** |
+| `focus` | (miras #12302b) | **#172e42** |
 
 Anlam belirteçleri (`success*`, `danger*`, `warning*`, `info*`, `undo*`, `border-strong`, `ink*`) Kokpit'te **değişmez** — durum renkleri görünümden bağımsızdır.
 
@@ -152,17 +152,17 @@ Hesaplama: WCAG 2.2 göreli parlaklık formülü (sRGB doğrusallaştırma, eşi
 
 | Ön plan | Zemin | Oran | Eşik | Sonuç | Kullanım |
 |---|---|---:|---:|---|---|
-| `ink` #172133 | `surface` #ffffff | 16.13:1 | 4.5:1 | AA ✓ | gövde metni (kart, diyalog, üst bar) |
-| `ink` #172133 | `bg` #f3f5f9 | 14.78:1 | 4.5:1 | AA ✓ | sayfa metni |
-| `ink-muted` #4a5568 | `surface` #ffffff | 7.53:1 | 4.5:1 | AA ✓ | ipucu, açıklama, saat |
-| `ink-muted` #4a5568 | `bg` #f3f5f9 | 6.89:1 | 4.5:1 | AA ✓ | sayfa ikincil metni |
-| `ink` #172133 | `locked-bg` #e9edf2 | 13.72:1 | 4.5:1 | AA ✓ | kilitli kart başlığı (miras) |
-| `locked-ink` #4a5568 | `locked-bg` #e9edf2 | 6.40:1 | 4.5:1 | AA ✓ | kilitli kart gerekçesi |
-| `locked-ink` #4a5568 | `border` #d5dce5 | 5.45:1 | 4.5:1 | AA ✓ | kilitli kart rozet ikonu |
-| `on-accent` #ffffff | `accent` #1559c7 | 6.39:1 | 4.5:1 | AA ✓ | birincil düğme |
-| `accent-ink` #0f4699 | `accent-soft` #e3ecfa | 7.49:1 | 4.5:1 | AA ✓ | bilgi rozeti, görünüm anahtarı, 'Kolay mod' |
-| `accent-ink` #0f4699 | `surface` #ffffff | 8.91:1 | 4.5:1 | AA ✓ | bağlantı |
-| `accent-ink` #0f4699 | `bg` #f3f5f9 | 8.17:1 | 4.5:1 | AA ✓ | bağlantı (sayfa zemini) |
+| `ink` #172e42 | `surface` #ffffff | 16.13:1 | 4.5:1 | AA ✓ | gövde metni (kart, diyalog, üst bar) |
+| `ink` #172e42 | `bg` #f5f7f8 | 14.78:1 | 4.5:1 | AA ✓ | sayfa metni |
+| `ink-muted` #465b6c | `surface` #ffffff | 7.53:1 | 4.5:1 | AA ✓ | ipucu, açıklama, saat |
+| `ink-muted` #465b6c | `bg` #f5f7f8 | 6.89:1 | 4.5:1 | AA ✓ | sayfa ikincil metni |
+| `ink` #172e42 | `locked-bg` #e9edf2 | 13.72:1 | 4.5:1 | AA ✓ | kilitli kart başlığı (miras) |
+| `locked-ink` #465b6c | `locked-bg` #e9edf2 | 6.40:1 | 4.5:1 | AA ✓ | kilitli kart gerekçesi |
+| `locked-ink` #465b6c | `border` #d5dce5 | 5.45:1 | 4.5:1 | AA ✓ | kilitli kart rozet ikonu |
+| `on-accent` #ffffff | `accent` #c64a19 | 6.39:1 | 4.5:1 | AA ✓ | birincil düğme |
+| `accent-ink` #07121b | `accent-soft` #fff4ee | 7.49:1 | 4.5:1 | AA ✓ | bilgi rozeti, görünüm anahtarı, 'Kolay mod' |
+| `accent-ink` #07121b | `surface` #ffffff | 8.91:1 | 4.5:1 | AA ✓ | bağlantı |
+| `accent-ink` #07121b | `bg` #f5f7f8 | 8.17:1 | 4.5:1 | AA ✓ | bağlantı (sayfa zemini) |
 | `warning-ink` #7a3e00 | `warning-bg` #fff4d5 | 7.61:1 | 4.5:1 | AA ✓ | uyarı bandı, 'Sahip' rozeti |
 | `undo-ink` #8a3300 | `undo-bg` #fdebdd | 7.09:1 | 4.5:1 | AA ✓ | geri al / ters kayıt rozeti |
 | `success-ink` #11613d | `success-bg` #e4f4ea | 6.58:1 | 4.5:1 | AA ✓ | başarı bandı/rozeti |
@@ -173,11 +173,11 @@ Hesaplama: WCAG 2.2 göreli parlaklık formülü (sRGB doğrusallaştırma, eşi
 | `on-accent` #ffffff | `danger` #c9252c | 5.55:1 | 4.5:1 | AA ✓ | tehlikeli düğme |
 | `on-accent` #ffffff | `success` #18794e | 5.41:1 | 4.5:1 | AA ✓ | başarı düğmesi (dolu) |
 | `border-strong` #6b778a | `surface` #ffffff | 4.53:1 | 3:1 | AA ✓ | girdi / ikincil düğme kenarı |
-| `border-strong` #6b778a | `bg` #f3f5f9 | 4.15:1 | 3:1 | AA ✓ | girdi kenarı (sayfa zemini) |
-| `focus` #1559c7 | `surface` #ffffff | 6.39:1 | 3:1 | AA ✓ | odak halkası (kart/üst bar üstünde) |
-| `focus` #1559c7 | `bg` #f3f5f9 | 5.86:1 | 3:1 | AA ✓ | odak halkası (sayfa zemini) |
-| `accent` #1559c7 | `surface` #ffffff | 6.39:1 | 3:1 | AA ✓ | birincil düğme sınırı / seçili durum |
-| `accent` #1559c7 | `bg` #f3f5f9 | 5.86:1 | 3:1 | AA ✓ | birincil düğme sınırı (sayfa) |
+| `border-strong` #6b778a | `bg` #f5f7f8 | 4.15:1 | 3:1 | AA ✓ | girdi kenarı (sayfa zemini) |
+| `focus` #c64a19 | `surface` #ffffff | 6.39:1 | 3:1 | AA ✓ | odak halkası (kart/üst bar üstünde) |
+| `focus` #c64a19 | `bg` #f5f7f8 | 5.86:1 | 3:1 | AA ✓ | odak halkası (sayfa zemini) |
+| `accent` #c64a19 | `surface` #ffffff | 6.39:1 | 3:1 | AA ✓ | birincil düğme sınırı / seçili durum |
+| `accent` #c64a19 | `bg` #f5f7f8 | 5.86:1 | 3:1 | AA ✓ | birincil düğme sınırı (sayfa) |
 | `danger` #c9252c | `surface` #ffffff | 5.55:1 | 3:1 | AA ✓ | hata ikonu / geçersiz alan kenarı |
 | `danger` #c9252c | `danger-bg` #fdeaea | 4.79:1 | 3:1 | AA ✓ | hata bandı ikonu |
 | `warning` #b45309 | `surface` #ffffff | 5.02:1 | 3:1 | AA ✓ | uyarı ikonu |
@@ -188,11 +188,11 @@ Hesaplama: WCAG 2.2 göreli parlaklık formülü (sRGB doğrusallaştırma, eşi
 | `info` #1a6fc2 | `info-bg` #e5f0fb | 4.44:1 | 3:1 | AA ✓ | bilgi bandı ikonu |
 | `undo` #c2410c | `surface` #ffffff | 5.18:1 | 3:1 | AA ✓ | geri al ikonu |
 | `undo` #c2410c | `undo-bg` #fdebdd | 4.46:1 | 3:1 | AA ✓ | geri al rozeti ikonu |
-| `ink-muted` #4a5568 | `surface` #ffffff | 7.53:1 | 3:1 | AA ✓ | nötr ikon (varsayılan) |
-| `accent` #1559c7 | `accent-soft` #e3ecfa | 5.37:1 | 3:1 | AA ✓ | görünüm anahtarı seçili parça |
-| `danger` #c9252c | `bg` #f3f5f9 | 5.08:1 | 3:1 | AA ✓ | geçersiz alan kenarı (sayfa zemini) |
-| `ink-muted` #4a5568 | `locked-bg` #e9edf2 | 6.40:1 | 3:1 | AA ✓ | kilit ikonu |
-| `accent-ink` #0f4699 | `accent-soft` #e3ecfa | 7.49:1 | 3:1 | AA ✓ | kart rozet ikonu |
+| `ink-muted` #465b6c | `surface` #ffffff | 7.53:1 | 3:1 | AA ✓ | nötr ikon (varsayılan) |
+| `accent` #c64a19 | `accent-soft` #fff4ee | 5.37:1 | 3:1 | AA ✓ | görünüm anahtarı seçili parça |
+| `danger` #c9252c | `bg` #f5f7f8 | 5.08:1 | 3:1 | AA ✓ | geçersiz alan kenarı (sayfa zemini) |
+| `ink-muted` #465b6c | `locked-bg` #e9edf2 | 6.40:1 | 3:1 | AA ✓ | kilit ikonu |
+| `accent-ink` #07121b | `accent-soft` #fff4ee | 7.49:1 | 3:1 | AA ✓ | kart rozet ikonu |
 
 Akış (varsayılan): 41 çift, kalan 0
 
@@ -200,17 +200,17 @@ Akış (varsayılan): 41 çift, kalan 0
 
 | Ön plan | Zemin | Oran | Eşik | Sonuç | Kullanım |
 |---|---|---:|---:|---|---|
-| `ink` #172133 | `surface` #ffffff | 16.13:1 | 4.5:1 | AA ✓ | gövde metni (kart, diyalog, üst bar) |
-| `ink` #172133 | `bg` #eef1f7 | 14.26:1 | 4.5:1 | AA ✓ | sayfa metni |
-| `ink-muted` #4a5568 | `surface` #ffffff | 7.53:1 | 4.5:1 | AA ✓ | ipucu, açıklama, saat |
-| `ink-muted` #4a5568 | `bg` #eef1f7 | 6.65:1 | 4.5:1 | AA ✓ | sayfa ikincil metni |
-| `ink` #172133 | `locked-bg` #e5e9f1 | 13.26:1 | 4.5:1 | AA ✓ | kilitli kart başlığı (miras) |
+| `ink` #172e42 | `surface` #ffffff | 16.13:1 | 4.5:1 | AA ✓ | gövde metni (kart, diyalog, üst bar) |
+| `ink` #172e42 | `bg` #eef2f4 | 14.26:1 | 4.5:1 | AA ✓ | sayfa metni |
+| `ink-muted` #465b6c | `surface` #ffffff | 7.53:1 | 4.5:1 | AA ✓ | ipucu, açıklama, saat |
+| `ink-muted` #465b6c | `bg` #eef2f4 | 6.65:1 | 4.5:1 | AA ✓ | sayfa ikincil metni |
+| `ink` #172e42 | `locked-bg` #e5e9f1 | 13.26:1 | 4.5:1 | AA ✓ | kilitli kart başlığı (miras) |
 | `locked-ink` #465066 | `locked-bg` #e5e9f1 | 6.64:1 | 4.5:1 | AA ✓ | kilitli kart gerekçesi |
 | `locked-ink` #465066 | `border` #cfd6e3 | 5.53:1 | 4.5:1 | AA ✓ | kilitli kart rozet ikonu |
-| `on-accent` #ffffff | `accent` #243d8f | 9.82:1 | 4.5:1 | AA ✓ | birincil düğme |
-| `accent-ink` #1c3175 | `accent-soft` #e1e6f5 | 9.65:1 | 4.5:1 | AA ✓ | bilgi rozeti, görünüm anahtarı, 'Kolay mod' |
-| `accent-ink` #1c3175 | `surface` #ffffff | 12.03:1 | 4.5:1 | AA ✓ | bağlantı |
-| `accent-ink` #1c3175 | `bg` #eef1f7 | 10.63:1 | 4.5:1 | AA ✓ | bağlantı (sayfa zemini) |
+| `on-accent` #ffffff | `accent` #172e42 | 9.82:1 | 4.5:1 | AA ✓ | birincil düğme |
+| `accent-ink` #07121b | `accent-soft` #fff4ee | 9.65:1 | 4.5:1 | AA ✓ | bilgi rozeti, görünüm anahtarı, 'Kolay mod' |
+| `accent-ink` #07121b | `surface` #ffffff | 12.03:1 | 4.5:1 | AA ✓ | bağlantı |
+| `accent-ink` #07121b | `bg` #eef2f4 | 10.63:1 | 4.5:1 | AA ✓ | bağlantı (sayfa zemini) |
 | `warning-ink` #7a3e00 | `warning-bg` #fff4d5 | 7.61:1 | 4.5:1 | AA ✓ | uyarı bandı, 'Sahip' rozeti |
 | `undo-ink` #8a3300 | `undo-bg` #fdebdd | 7.09:1 | 4.5:1 | AA ✓ | geri al / ters kayıt rozeti |
 | `success-ink` #11613d | `success-bg` #e4f4ea | 6.58:1 | 4.5:1 | AA ✓ | başarı bandı/rozeti |
@@ -221,11 +221,11 @@ Akış (varsayılan): 41 çift, kalan 0
 | `on-accent` #ffffff | `danger` #c9252c | 5.55:1 | 4.5:1 | AA ✓ | tehlikeli düğme |
 | `on-accent` #ffffff | `success` #18794e | 5.41:1 | 4.5:1 | AA ✓ | başarı düğmesi (dolu) |
 | `border-strong` #6b778a | `surface` #ffffff | 4.53:1 | 3:1 | AA ✓ | girdi / ikincil düğme kenarı |
-| `border-strong` #6b778a | `bg` #eef1f7 | 4.01:1 | 3:1 | AA ✓ | girdi kenarı (sayfa zemini) |
-| `focus` #243d8f | `surface` #ffffff | 9.82:1 | 3:1 | AA ✓ | odak halkası (kart/üst bar üstünde) |
-| `focus` #243d8f | `bg` #eef1f7 | 8.68:1 | 3:1 | AA ✓ | odak halkası (sayfa zemini) |
-| `accent` #243d8f | `surface` #ffffff | 9.82:1 | 3:1 | AA ✓ | birincil düğme sınırı / seçili durum |
-| `accent` #243d8f | `bg` #eef1f7 | 8.68:1 | 3:1 | AA ✓ | birincil düğme sınırı (sayfa) |
+| `border-strong` #6b778a | `bg` #eef2f4 | 4.01:1 | 3:1 | AA ✓ | girdi kenarı (sayfa zemini) |
+| `focus` #172e42 | `surface` #ffffff | 9.82:1 | 3:1 | AA ✓ | odak halkası (kart/üst bar üstünde) |
+| `focus` #172e42 | `bg` #eef2f4 | 8.68:1 | 3:1 | AA ✓ | odak halkası (sayfa zemini) |
+| `accent` #172e42 | `surface` #ffffff | 9.82:1 | 3:1 | AA ✓ | birincil düğme sınırı / seçili durum |
+| `accent` #172e42 | `bg` #eef2f4 | 8.68:1 | 3:1 | AA ✓ | birincil düğme sınırı (sayfa) |
 | `danger` #c9252c | `surface` #ffffff | 5.55:1 | 3:1 | AA ✓ | hata ikonu / geçersiz alan kenarı |
 | `danger` #c9252c | `danger-bg` #fdeaea | 4.79:1 | 3:1 | AA ✓ | hata bandı ikonu |
 | `warning` #b45309 | `surface` #ffffff | 5.02:1 | 3:1 | AA ✓ | uyarı ikonu |
@@ -236,11 +236,11 @@ Akış (varsayılan): 41 çift, kalan 0
 | `info` #1a6fc2 | `info-bg` #e5f0fb | 4.44:1 | 3:1 | AA ✓ | bilgi bandı ikonu |
 | `undo` #c2410c | `surface` #ffffff | 5.18:1 | 3:1 | AA ✓ | geri al ikonu |
 | `undo` #c2410c | `undo-bg` #fdebdd | 4.46:1 | 3:1 | AA ✓ | geri al rozeti ikonu |
-| `ink-muted` #4a5568 | `surface` #ffffff | 7.53:1 | 3:1 | AA ✓ | nötr ikon (varsayılan) |
-| `accent` #243d8f | `accent-soft` #e1e6f5 | 7.87:1 | 3:1 | AA ✓ | görünüm anahtarı seçili parça |
-| `danger` #c9252c | `bg` #eef1f7 | 4.90:1 | 3:1 | AA ✓ | geçersiz alan kenarı (sayfa zemini) |
-| `ink-muted` #4a5568 | `locked-bg` #e5e9f1 | 6.18:1 | 3:1 | AA ✓ | kilit ikonu |
-| `accent-ink` #1c3175 | `accent-soft` #e1e6f5 | 9.65:1 | 3:1 | AA ✓ | kart rozet ikonu |
+| `ink-muted` #465b6c | `surface` #ffffff | 7.53:1 | 3:1 | AA ✓ | nötr ikon (varsayılan) |
+| `accent` #172e42 | `accent-soft` #fff4ee | 7.87:1 | 3:1 | AA ✓ | görünüm anahtarı seçili parça |
+| `danger` #c9252c | `bg` #eef2f4 | 4.90:1 | 3:1 | AA ✓ | geçersiz alan kenarı (sayfa zemini) |
+| `ink-muted` #465b6c | `locked-bg` #e5e9f1 | 6.18:1 | 3:1 | AA ✓ | kilit ikonu |
+| `accent-ink` #07121b | `accent-soft` #fff4ee | 9.65:1 | 3:1 | AA ✓ | kart rozet ikonu |
 
 Kokpit: 41 çift, kalan 0
 

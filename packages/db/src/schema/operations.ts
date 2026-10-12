@@ -10,7 +10,7 @@
 // - Sipariş/iade miktarları ürünün temel birimindedir (A-151); kabul satırı birim + katsayı taşır.
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, customType, index, integer, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -337,3 +337,34 @@ export type StockAlert = typeof stockAlerts.$inferSelect;
 export type NewStockAlert = typeof stockAlerts.$inferInsert;
 export type WarehouseTaskProgress = typeof warehouseTaskProgress.$inferSelect;
 export type NewWarehouseTaskProgress = typeof warehouseTaskProgress.$inferInsert;
+
+// T-903b: 0028–0030 immutable operation links and recipe revisions.
+// Tenant composite FKs, RLS, column grants and transaction seal remain authoritative in migrations.
+const recipeXid = customType<{ data: string }>({ dataType: () => "xid8" });
+export const stockDocumentLinks = pgTable("stock_document_links", {
+  tenantId: uuid("tenant_id").notNull(),
+  sourceDocumentId: uuid("source_document_id").notNull(),
+  targetDocumentId: uuid("target_document_id").notNull(),
+  kind: text("kind").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  recipeId: uuid("recipe_id"),
+}, t => [primaryKey({columns:[t.tenantId,t.sourceDocumentId]}), index("stock_document_links_target_idx").on(t.tenantId,t.targetDocumentId)]);
+export const productionRecipes = pgTable("production_recipes", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").notNull().defaultRandom(),
+  code: text("code").notNull(),
+  version: integer("version").notNull(),
+  name: text("name").notNull(),
+  outputItemId: uuid("output_item_id").notNull(),
+  outputQuantity: numeric("output_quantity").notNull(),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdXid: recipeXid("created_xid").notNull().default(sql`pg_catalog.pg_current_xact_id()`),
+}, t => [primaryKey({columns:[t.tenantId,t.id]}), unique().on(t.tenantId,t.code,t.version)]);
+export const productionRecipeLines = pgTable("production_recipe_lines", {
+  tenantId: uuid("tenant_id").notNull(),
+  recipeId: uuid("recipe_id").notNull(),
+  lineNo: integer("line_no").notNull(),
+  itemId: uuid("item_id").notNull(),
+  quantity: numeric("quantity").notNull(),
+}, t => [primaryKey({columns:[t.tenantId,t.recipeId,t.lineNo]}), unique().on(t.tenantId,t.recipeId,t.itemId)]);
