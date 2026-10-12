@@ -298,7 +298,7 @@ export async function reverseDocument(params: StockDocCallParams, input: Reverse
       assertNotProcessing(header); // işleme kilidi (M-6): ters kayıt reddedilir
       if (header.status !== "POSTED" || !KINDS.has(header.kind)) throw documentState(); // DRAFT/APPROVED/CANCELLED, ters kaydın ters kaydı, desteklenmeyen tür
       // B-1 (A-224-5): saha akışından gelen belge (`source_kind` dolu) ters çevrilmez; bağlı sipariş/rezervasyon/kabul/sayım kayıtları kopmasın.
-      if ((await readSourceKind(tx, ctx.tenantId, documentId)) !== null) throw blocked("SOURCE_LINKED");
+      if ((await readSourceKind(tx, ctx.tenantId, documentId)) !== null || await hasCompoundLink(tx, ctx.tenantId, documentId)) throw blocked("SOURCE_LINKED");
       const kind = header.kind as PostingKind;
       const selection = selectReversalLines(await loadSourceLines(tx, ctx.tenantId, documentId), req.lines);
       const plan = buildReversalPlan(kind, selection);
@@ -415,7 +415,7 @@ export async function getReversalCapacity(params: Omit<StockDocCallParams, "clie
     if (h === undefined) throw new AppError("NOT_FOUND");
     await assertWarehouseVisible(tx, m, [h.warehouse_id]); // kapsam dışı belge varlık sızdırmaz
     if (h.status !== "POSTED" || !KINDS.has(h.kind)) throw documentState();
-    if (h.source_kind !== null) throw blocked("SOURCE_LINKED");
+    if (h.source_kind !== null || await hasCompoundLink(tx,m.tenantId,id)) throw blocked("SOURCE_LINKED");
     type Row = {
       id: string; line_no: number; base_quantity: string; reversed_quantity: string; status_change: boolean;
       dim_id: string | null; available: string | null; receiving_blocked: boolean;
@@ -673,4 +673,11 @@ async function readPositiveSerialBalances(tx: AccessTx, tenantId: string, serial
     out.set(r.serial_id, m);
   }
   return out;
+}
+
+/** One leg of a compound operation cannot be reversed independently. */
+async function hasCompoundLink(tx:AccessTx,tenantId:string,documentId:string):Promise<boolean> {
+ const rows=await tx.execute<{id:string}>(sql`SELECT source_document_id AS id FROM public.stock_document_links
+ WHERE tenant_id=${tenantId}::uuid AND (source_document_id=${documentId}::uuid OR target_document_id=${documentId}::uuid) LIMIT 1`);
+ return rows.length>0;
 }
