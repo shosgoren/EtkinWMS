@@ -8,7 +8,9 @@ services:
     command: [postgres, -c, ssl=on, -c, ssl_cert_file=/tls/server.crt, -c, ssl_key_file=/tls/server.key, -c, hba_file=/tls/pg_hba.conf, -c, shared_buffers=512MB, -c, max_connections=100]
     volumes:
       - postgres-data:/var/lib/postgresql
-      - /opt/etkinwms/database/tls:/tls:ro
+      - /opt/etkinwms/database/tls/server.crt:/tls/server.crt:ro
+      - /opt/etkinwms/database/tls/server.key:/tls/server.key:ro
+      - /opt/etkinwms/database/tls/pg_hba.conf:/tls/pg_hba.conf:ro
     networks:
       application:
         aliases: [etkinwms-postgres]
