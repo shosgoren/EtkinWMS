@@ -20,11 +20,13 @@ export interface EmptyTenant {
   readonly totpSecret: string;
 }
 
-export function emptyTenant(): EmptyTenant {
-  const slug = process.env.E2E_EMPTY_SLUG;
-  const email = process.env.E2E_EMPTY_EMAIL;
-  const password = process.env.E2E_EMPTY_PASSWORD;
-  const totpSecret = process.env.E2E_EMPTY_TOTP_SECRET;
+export function emptyTenant(fixture: "empty" | "pilot" = "empty"): EmptyTenant {
+  if (process.env.E2E_BASE_URL?.trim()) throw new Error("e2e: yerel tenant fikstürü uzak hedefte kullanılamaz");
+  const prefix = fixture === "pilot" ? "E2E_PILOT" : "E2E_EMPTY";
+  const slug = process.env[`${prefix}_SLUG`];
+  const email = process.env[`${prefix}_EMAIL`];
+  const password = process.env[`${prefix}_PASSWORD`];
+  const totpSecret = process.env[`${prefix}_TOTP_SECRET`];
   if (!slug || !email || !password || !totpSecret) {
     throw new Error("e2e: boş tenant fikstürü yok (global-setup yerel yığında kurar; uzak koşuda bu spec dışlanır)");
   }
@@ -112,8 +114,8 @@ export async function scrubSecretInputs(page: Page): Promise<void> {
 }
 
 /** Normal e-posta/parola giriş formu + iki adım (TOTP) ekranı; girişten sonra kiracı ana ekranı. */
-export async function loginEmptyTenant(page: Page): Promise<EmptyTenant> {
-  const t = emptyTenant();
+export async function loginEmptyTenant(page: Page, fixture: "empty" | "pilot" = "empty"): Promise<EmptyTenant> {
+  const t = emptyTenant(fixture);
   await bindSecrets(page, { password: t.password, totpSecret: t.totpSecret });
   await page.goto(`/login?next=${encodeURIComponent(`/t/${t.slug}`)}`);
   await completeFirstUseGuide(page);
