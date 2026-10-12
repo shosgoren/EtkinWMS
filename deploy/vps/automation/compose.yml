@@ -4,7 +4,8 @@ services:
     image: etkinwms:${WMS_RELEASE:?required}
     restart: unless-stopped
     env_file: /opt/etkinwms/secrets/web.env
-    environment: {PORT: 3000, HOSTNAME: 0.0.0.0}
+    environment: {PORT: 3000, HOSTNAME: 0.0.0.0, NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt}
+    volumes: [/opt/etkinwms/database/tls/ca.crt:/run/etkinwms-db-ca.crt:ro]
     expose: ['3000']
     mem_limit: 1536m
     logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
@@ -17,6 +18,8 @@ services:
   worker:
     image: etkinwms:${WMS_RELEASE:?required}
     command: [node, apps/worker/dist/main.js]
+    environment: {NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt}
+    volumes: [/opt/etkinwms/database/tls/ca.crt:/run/etkinwms-db-ca.crt:ro]
     env_file: /opt/etkinwms/secrets/worker.env
     restart: unless-stopped
     mem_limit: 512m
