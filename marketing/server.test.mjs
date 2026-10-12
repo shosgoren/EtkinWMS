@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { request } from 'node:http';
-import test from 'node:test';
+import { test } from 'vitest';
 import { server } from './server.mjs';
 
 function get(port, path) {
@@ -20,7 +20,7 @@ function get(port, path) {
 }
 
 test('malformed request targets return 400 and the same server continues serving', async (t) => {
-  t.after(() => new Promise((resolve, reject) => {
+  t.onTestFinished(() => new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
     server.closeAllConnections();
   }));
