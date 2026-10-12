@@ -1,0 +1,1858 @@
+{
+  "shell": {
+    "productName": "Etkin WMS",
+    "easyMode": "Easy mode",
+    "skipToContent": "Skip to content",
+    "viewSwitch": {
+      "label": "View",
+      "flow": "Flow",
+      "cockpit": "Cockpit"
+    },
+    "userChip": {
+      "label": "User",
+      "placeholderName": "Not signed in",
+      "placeholderInitials": "?"
+    },
+    "help": {
+      "full": "Call for help",
+      "short": "Help"
+    },
+    "menu": {
+      "open": "Open menu",
+      "title": "Menu",
+      "close": "Close"
+    },
+    "nav": {
+      "label": "Main navigation",
+      "home": "Home",
+      "scan": "Scan",
+      "tasks": "My tasks",
+      "menu": "Menu",
+      "soon": "Soon"
+    }
+  },
+  "auth": {
+    "common": {
+      "errorCode": "Error code: {code}",
+      "backToLogin": "Back to sign in",
+      "continue": "Continue",
+      "waitSomeTime": "a few minutes",
+      "waitSeconds": "{seconds} seconds",
+      "waitMinutes": "{minutes} minutes",
+      "rateLimited": "Too many attempts.",
+      "rateLimitedAction": "Wait {wait} and try again.",
+      "serverError": "The request could not be completed right now.",
+      "serverErrorAction": "Check your connection and try again shortly; if it keeps happening, tell your administrator."
+    },
+    "login": {
+      "title": "Sign in",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "invalid": "Email or password is incorrect.",
+      "invalidAction": "Check your details and try again. If you forgot your password, reset it.",
+      "forgot": "I forgot my password",
+      "demoBanner": "Demo environment — do not enter real personal data",
+      "socialLabel": "Other sign-in methods",
+      "google": "Sign in with Google",
+      "microsoft": "Sign in with Microsoft"
+    },
+    "reset": {
+      "requestTitle": "Reset my password",
+      "requestIntro": "Enter your account email address. The reset link is valid for 30 minutes and works once.",
+      "requestSubmit": "Request reset link",
+      "sent": "If an account exists for this address, a reset link has been sent. If it does not arrive in a few minutes, ask your administrator for a reset link.",
+      "undeliverable": "We cannot send reset links by email right now. Ask your administrator for a reset link: they can generate a one-time link for you from the members screen and pass it on.",
+      "newTitle": "Set a new password",
+      "newPassword": "New password",
+      "confirmPassword": "New password (again)",
+      "passwordHint": "At least 12 and at most 128 characters.",
+      "newSubmit": "Save password",
+      "mismatch": "The passwords do not match.",
+      "mismatchAction": "Type the same password in both fields.",
+      "passwordRule": "The password does not meet the length rule.",
+      "passwordRuleAction": "Choose a password of 12 to 128 characters.",
+      "invalidLink": "The reset link is invalid, already used, or expired.",
+      "invalidLinkAction": "Request a new link or ask your administrator to generate one.",
+      "requestAgain": "Request a new link",
+      "done": "Your password has been changed. For your safety all sessions were closed; sign in with the new password."
+    },
+    "mfa": {
+      "verifyTitle": "Two-step verification",
+      "verifyIntro": "Enter the 6-digit code from your authenticator app.",
+      "backupIntro": "Enter one of the backup codes you saved during setup. Each code works only once.",
+      "code": "Verification code",
+      "backupCode": "Backup code",
+      "codeHint": "The 6-digit code in the app.",
+      "verifySubmit": "Verify",
+      "useBackup": "Use a backup code",
+      "useTotp": "Use the app code",
+      "invalid": "The code is wrong or expired.",
+      "invalidAction": "Type the current code from the app again.",
+      "locked": "Too many wrong codes; verification is temporarily locked.",
+      "lockedAction": "Wait 15 minutes and try again.",
+      "setupTitle": "Set up two-step verification",
+      "setupIntro": "Connect an authenticator app to protect your account. This step is mandatory for administrator accounts.",
+      "confirmPassword": "Your password",
+      "confirmPasswordHint": "Type your password again for security.",
+      "setupStart": "Start setup",
+      "passwordWrong": "The password is wrong.",
+      "passwordWrongAction": "Check your password and try again.",
+      "keyTitle": "1. Add the key to the app",
+      "keyIntro": "Add a new account in your authenticator app and type this key manually.",
+      "openApp": "Open in app",
+      "backupTitle": "2. Keep your backup codes",
+      "backupWarning": "These codes are shown only now. If you lose your phone they are the only way in; store them somewhere safe.",
+      "backupSaved": "I saved the backup codes",
+      "setupFinish": "Finish setup",
+      "setupDone": "Two-step verification is enabled. Next time you sign in you will be asked for the app code.",
+      "demoDisabled": "Two-step verification cannot be set up in the demo environment.",
+      "demoDisabledAction": "Sign in with your real account to set it up.",
+      "alreadyEnabled": "Two-step verification is already enabled.",
+      "alreadyEnabledAction": "If you need to change it, contact your administrator."
+    },
+    "signOut": {
+      "label": "Sign out",
+      "failed": "Could not sign out.",
+      "failedAction": "Check your connection and try again."
+    },
+    "invite": {
+      "title": "Workspace invitation",
+      "intro": "To accept the invitation, enter your name and choose a password. Your account is created with this invitation.",
+      "introSignedIn": "You are about to accept this invitation with the account you are signed in with.",
+      "preview": "You have been invited to the {tenant} workspace as {role}.",
+      "expiresInHours": "This invitation expires in about {hours, plural, one {# hour} other {# hours}}.",
+      "expiresSoon": "This invitation expires in less than an hour.",
+      "rateLimited": "Too many attempts. Wait a moment and reopen the page.",
+      "name": "Your name",
+      "acceptNew": "Create account and accept",
+      "acceptSignedIn": "Accept invitation",
+      "haveAccount": "I already have an account, sign in",
+      "errors": {
+        "not_found": "The invitation was not found, has expired, or was revoked.",
+        "not_foundAction": "Ask the administrator who invited you for a new invitation.",
+        "forbidden": "This invitation cannot be accepted with this account; it may have been sent to a different email address.",
+        "forbiddenAction": "Sign in with the email address the invitation was sent to, or ask the administrator to invite the right address.",
+        "validation_failed": "The details entered are invalid.",
+        "validation_failedAction": "Check your name and a password of at least 12 characters, then try again.",
+        "rate_limited": "Too many attempts.",
+        "rate_limitedAction": "Wait a moment and try again.",
+        "mfa_required": "Two-step verification is required for this invitation.",
+        "mfa_requiredAction": "Set up two-step verification first, then open the invitation again."
+      }
+    }
+  },
+  "tenantBar": {
+    "label": "Workspace",
+    "roleChip": "{role} · switch",
+    "switchTitle": "Switch workspace",
+    "current": "You are here",
+    "user": "Signed in: {name}"
+  },
+  "roles": {
+    "TENANT_ADMIN": "Administrator",
+    "WAREHOUSE_MANAGER": "Warehouse manager",
+    "PICKER": "Picker",
+    "COUNTER": "Counter",
+    "READ_ONLY": "Read-only"
+  },
+  "members": {
+    "title": "Members",
+    "intro": "People who can work in this workspace.",
+    "lockedReason": "You do not have permission for this. Ask your manager.",
+    "unavailableReason": "This action is not available for this person. They can reset their own password with their own email.",
+    "ownerBadge": "Owner",
+    "selfBadge": "You",
+    "demoBadge": "Demo",
+    "statusActive": "Active",
+    "empty": "There are no members in this workspace yet.",
+    "emptyAction": "Start by inviting someone.",
+    "membersList": "Member list",
+    "invite": "Invite a member",
+    "role": "Role",
+    "applyRole": "Change role",
+    "remove": "Remove",
+    "transfer": "Transfer ownership",
+    "resetLink": "Create password reset link",
+    "actionsFor": "Actions for {name}",
+    "confirmCancel": "Cancel",
+    "confirm": {
+      "role": {
+        "title": "Change role?",
+        "description": "{name} will work as {role} in this workspace from now on; their permissions change accordingly.",
+        "button": "Change role"
+      },
+      "remove": {
+        "title": "Remove member?",
+        "description": "{name} will no longer be able to work in this workspace. Past records are kept.",
+        "button": "Remove"
+      },
+      "transfer": {
+        "title": "Transfer ownership?",
+        "description": "{name} becomes the owner of this workspace; you lose the owner privilege.",
+        "button": "Transfer ownership"
+      },
+      "reset": {
+        "title": "Create a reset link?",
+        "description": "A single-use link valid for 30 minutes is created for {name}. You will see it only once and must pass it on yourself.",
+        "button": "Create link"
+      }
+    },
+    "done": {
+      "role": "Role updated.",
+      "remove": "Member removed.",
+      "transfer": "Ownership transferred."
+    },
+    "pending": {
+      "title": "Pending invitations",
+      "empty": "No pending invitations.",
+      "expires": "Expires: {date}",
+      "invitedBy": "Invited by: {name}",
+      "revoke": "Revoke invitation",
+      "revoked": "Invitation revoked.",
+      "revokeTitle": "Revoke invitation?",
+      "revokeDescription": "{email} will not be able to join with this link.",
+      "locked": "Only people who can manage members can see pending invitations."
+    },
+    "inviteDialog": {
+      "title": "Invite a member",
+      "email": "Email",
+      "emailHint": "The invitation goes to this address.",
+      "role": "Role",
+      "submit": "Send invitation",
+      "close": "Close",
+      "sentEmail": "The invitation was sent by email. It is valid for 72 hours.",
+      "sentScreen": "The invitation email could not be sent. Pass the link below on to the person you invited.",
+      "linkLabel": "Invitation link"
+    },
+    "linkBox": {
+      "copy": "Copy",
+      "copied": "Copied.",
+      "copyFailed": "Could not copy.",
+      "copyFailedAction": "Select the link and copy it manually.",
+      "warning": "Pass this link only to the person you invited; it will not be shown again.",
+      "resetTitle": "Password reset link",
+      "resetWarning": "Pass this link only to the person concerned; it will not be shown again. It is valid for 30 minutes and works once.",
+      "dismiss": "Hide link"
+    },
+    "errors": {
+      "code": "Error code: {code}",
+      "forbidden": "This could not be done.",
+      "forbiddenAction": "Check your permission. If the person is the workspace owner, first transfer ownership to another administrator.",
+      "forbidden_mfa_required": "Two-step verification is required for administrator actions.",
+      "forbidden_mfa_requiredAction": "Set up two-step verification first, then repeat the action.",
+      "mfaLink": "Set up two-step verification",
+      "unauthenticated": "Your session has ended.",
+      "unauthenticatedAction": "Sign in again and repeat the action.",
+      "unauthenticated_recent_auth_required": "You need to confirm your identity again for this action.",
+      "unauthenticated_recent_auth_requiredAction": "Sign in again and repeat the action.",
+      "loginLink": "Sign in again",
+      "not_found": "Record not found; someone else may have changed it.",
+      "not_foundAction": "Reload the page and try again.",
+      "validation_failed": "The information entered is not valid.",
+      "validation_failedAction": "Check the email address and role, then try again.",
+      "version_conflict": "The record was changed by another action at the same time.",
+      "version_conflictAction": "Reload the page and try again.",
+      "rate_limited": "Too many attempts.",
+      "rate_limitedAction": "Wait a moment and try again.",
+      "tenant_suspended": "This workspace is suspended.",
+      "tenant_suspendedAction": "Contact support.",
+      "tenant_closing": "This workspace is being closed.",
+      "tenant_closingAction": "Contact support if you need to export your data.",
+      "internal": "The action could not be completed right now.",
+      "internalAction": "Try again shortly; if it continues, tell your administrator with the error code.",
+      "retry": "Try again",
+      "boundaryTitle": "Something went wrong",
+      "supportCode": "Support code: {code}",
+      "tenantStatusTitle": "Workspace unavailable"
+    },
+    "demoLocked": "This action is disabled for the demo account."
+  },
+  "errors": {
+    "validation_failed": "The information entered is not valid.",
+    "validation_failedAction": "Check the fields and try again.",
+    "unauthenticated": "You are not signed in or your session has ended.",
+    "unauthenticatedAction": "Sign in and try again.",
+    "forbidden": "You do not have permission for this action.",
+    "forbiddenAction": "Ask your workspace admin.",
+    "tenant_suspended": "This workspace is suspended.",
+    "tenant_suspendedAction": "Contact support.",
+    "tenant_closing": "This workspace is being closed.",
+    "tenant_closingAction": "Contact support if you need to export your data.",
+    "not_found": "The record was not found.",
+    "not_foundAction": "Refresh the page and try again.",
+    "version_conflict": "The record was changed by another action at the same time.",
+    "version_conflictAction": "Refresh the page and try again.",
+    "rate_limited": "Too many attempts were made.",
+    "rate_limitedAction": "Wait a little and try again.",
+    "internal": "The action could not be completed right now.",
+    "internalAction": "Try again shortly; if it continues, tell your admin the support code.",
+    "insufficient_stock": "There is not enough available stock in this location.",
+    "insufficient_stockAction": "Reduce the quantity or choose another location.",
+    "tracking_violation": "The lot or serial entered does not match this item's tracking rule.",
+    "tracking_violationAction": "Check the item's tracking mode and correct the lot or serial.",
+    "location_locked": "This location is locked for a count.",
+    "location_lockedAction": "Try again when the count ends or choose another location.",
+    "reversal_blocked": "This action cannot be reversed because the stock has since been used.",
+    "reversal_blockedAction": "Bring the related stock back first, or make a partial reversal.",
+    "idempotency_mismatch": "The same request key was used with different details.",
+    "idempotency_mismatchAction": "Reopen the form and send the action as a new request.",
+    "count_lock_row_missing": "The action could not be completed.",
+    "count_lock_row_missingAction": "Try again shortly; if it continues, tell your admin the support code.",
+    "forbidden_mfa_required": "Two-step verification is required for admin actions.",
+    "forbidden_mfa_requiredAction": "Set up two-step verification first, then repeat the action.",
+    "unauthenticated_recent_auth_required": "You need to verify your identity again for this action.",
+    "unauthenticated_recent_auth_requiredAction": "Sign in again and repeat the action.",
+    "validation_failed_code_taken": "This code is already in use.",
+    "validation_failed_code_takenAction": "Enter a different code.",
+    "validation_failed_feature_disabled": "This feature is currently turned off.",
+    "validation_failed_feature_disabledAction": "Ask your administrator to enable it.",
+    "validation_failed_location_warehouse_mismatch": "All line locations must belong to the document's warehouse.",
+    "validation_failed_location_warehouse_mismatchAction": "Choose locations from the same warehouse; moving between warehouses needs a separate document.",
+    "validation_failed_in_use": "This change is not possible because the record is in use.",
+    "validation_failed_in_useAction": "Empty the stock or archive the linked records first, then try again.",
+    "validation_failed_parent_invalid": "The selected parent location is not valid.",
+    "validation_failed_parent_invalidAction": "Choose an active parent location in the same warehouse.",
+    "validation_failed_handling_unit_cycle": "Handling units cannot be nested in a loop.",
+    "validation_failed_handling_unit_cycleAction": "Choose a different parent handling unit.",
+    "validation_failed_barcode_ambiguous": "This barcode matches more than one item or unit.",
+    "validation_failed_barcode_ambiguousAction": "Choose the item from the list.",
+    "validation_failed_code_ambiguous": "This old code matches more than one record.",
+    "validation_failed_code_ambiguousAction": "Search the record by its current code.",
+    "validation_failed_unit_conversion_invalid": "The unit conversion is not valid: how many pieces this unit holds is not set, the factor is wrong, or a quantity was entered on a case barcode.",
+    "validation_failed_unit_conversion_invalidAction": "First save how many pieces the unit holds (greater than zero, up to 6 decimals, e.g. 12). Leave the quantity empty on a case barcode.",
+    "validation_failed_quantity_scale": "This quantity does not fit the item's precision: the item does not accept fractional pieces (for example, half a case or 0.5 piece).",
+    "validation_failed_quantity_scaleAction": "Do not enter a fractional case; enter whole cases and pieces separately (e.g. 2 cases + 3 pieces) or enter the quantity in pieces.",
+    "validation_failed_document_too_large": "The document exceeds the maximum number of lines.",
+    "validation_failed_document_too_largeAction": "Split the document into several documents.",
+    "validation_failed_document_state": "The document's status does not allow this action.",
+    "validation_failed_document_stateAction": "Refresh the page and check the document's current status.",
+    "validation_failed_scan_mismatch": "The scanned location or product does not match the task.",
+    "validation_failed_scan_mismatchAction": "Scan the location and product shown on the task and try again.",
+    "validation_failed_return_exceeds_shipped": "The return quantity is more than what was shipped and not yet returned.",
+    "validation_failed_return_exceeds_shippedAction": "Enter a quantity up to the shipped quantity minus earlier returns.",
+    "validation_failed_idempotency_key_required": "The request key is missing.",
+    "validation_failed_idempotency_key_requiredAction": "Refresh the page and send the action again.",
+    "reversal_blocked_exceeds_remaining": "The requested quantity is more than what is still left to reverse on this line.",
+    "reversal_blocked_exceeds_remainingAction": "Lower the quantity to the amount that has not been reversed yet.",
+    "reversal_blocked_stock_used": "This stock has been used since, so the requested quantity cannot be reversed.",
+    "reversal_blocked_stock_usedAction": "Choose a quantity that does not exceed the stock still in the location, or bring the issued stock back first.",
+    "reversal_blocked_stock_reserved": "Part of this stock is set aside for an order or another task.",
+    "reversal_blocked_stock_reservedAction": "Release the related reservation first, then try again.",
+    "reversal_blocked_serial_in_use": "This serial number currently shows as in stock somewhere else.",
+    "reversal_blocked_serial_in_useAction": "Check the record where the serial number is now; fix that movement first if needed.",
+    "reversal_blocked_source_linked": "This record came from the goods receipt, shipping or counting screen; it is corrected from that screen.",
+    "reversal_blocked_source_linkedAction": "Open the related receipt, shipment or count record and make the correction there.",
+    "reversal_blocked_status_change": "This move changed the stock status (for example a quality approval), so it cannot be reversed here.",
+    "reversal_blocked_status_changeAction": "Change the stock status back with a new move, or tell your manager.",
+    "validation_failed_too_many_lines": "At most 200 lines can be reversed at once.",
+    "validation_failed_too_many_linesAction": "Split the lines into groups of 200 and make a separate reversal for each group.",
+    "forbidden_warehouse_out_of_scope": "This warehouse is outside your scope.",
+    "forbidden_warehouse_out_of_scopeAction": "If you need access, ask your workspace admin to add it to your scope."
+  },
+  "serverErrors": {
+    "code": "Error code: {code}",
+    "supportCode": "Support code: {code}",
+    "forbidden": "This action could not be done.",
+    "forbiddenAction": "Check your permissions; ask your workspace administrator if needed.",
+    "unauthenticated": "You are not signed in or your session ended.",
+    "unauthenticatedAction": "Sign in and try again.",
+    "validation_failed": "The information entered is not valid.",
+    "validation_failedAction": "Check the fields and try again. The workspace address may already be taken; change the name slightly.",
+    "rate_limited": "Too many attempts.",
+    "rate_limitedAction": "Wait a moment and try again.",
+    "not_found": "Record not found.",
+    "not_foundAction": "Reload the page and try again.",
+    "tenant_suspended": "This workspace is suspended.",
+    "tenant_suspendedAction": "Contact support.",
+    "tenant_closing": "This workspace is being closed.",
+    "tenant_closingAction": "Contact support.",
+    "internal": "The action could not be completed right now.",
+    "internalAction": "Try again shortly; if it continues, tell your administrator the support code.",
+    "unknown": "The action could not be completed.",
+    "unknownAction": "Try again shortly."
+  },
+  "landing": {
+    "valueProp": "Track the goods in your warehouse step by step, with a record of who did what and when.",
+    "signIn": "Sign in",
+    "createWorkspace": "Create workspace",
+    "actions": "Get started",
+    "demo": {
+      "heading": "Try it as a demo",
+      "intro": "Pick a role to see that role's screens without a password.",
+      "enter": "Enter as {role}",
+      "entering": "Entering…",
+      "failed": "Demo sign-in failed.",
+      "failedAction": "Demo accounts may not be ready yet. Try again shortly; if it continues, tell your administrator.",
+      "unavailable": "Demo sign-in is not configured in this environment.",
+      "unavailableAction": "The demo account settings are missing or invalid; tell your administrator."
+    }
+  },
+  "help": {
+    "title": "Help",
+    "intro": "What you can do when you are stuck:",
+    "items": {
+      "sign": "Cannot sign in: use the \"Forgot my password\" link on the sign-in screen.",
+      "access": "Cannot reach a task: if the card says \"You are not allowed to do this\", ask your workspace administrator.",
+      "support": "Saw an error or support code: pass the code to your administrator so the record can be found quickly."
+    },
+    "back": "Back to home"
+  },
+  "onboarding": {
+    "title": "Let's set up your workspace",
+    "intro": "Ready in a minute: two short steps.",
+    "stepOf": "Step {current} of {total}",
+    "step1": {
+      "title": "What is your workspace called?",
+      "label": "Workspace name",
+      "hint": "Your company or warehouse name; you can change it later.",
+      "slugPreview": "Your address: {slug}",
+      "slugEmpty": "The address appears here as you type a name.",
+      "next": "Continue",
+      "slugNote": "If this name is used by another workspace, a short code is added to the end of the address."
+    },
+    "step2": {
+      "title": "What kind of business do you run?",
+      "legend": "Sector",
+      "back": "Back",
+      "options": {
+        "PACKAGING_SUPPLIES": "Packaging and supplies wholesaler",
+        "GENERIC": "General warehouse"
+      },
+      "optionHints": {
+        "PACKAGING_SUPPLIES": "Ready-made terms for cartons, tape, bags and similar items.",
+        "GENERIC": "A plain start without sector-specific terms."
+      },
+      "previewTitle": "This template will load",
+      "previewTerms": "Terms you will use",
+      "previewTermRow": "{key}: {label}",
+      "terms": {
+        "unit_carton": "Carton unit",
+        "location_zone": "Zone level",
+        "location_rack": "Rack level",
+        "location_bin": "Bin level"
+      },
+      "laterNote": "Units and the warehouse layout (locations) will be added during warehouse setup; you do not need to enter anything now.",
+      "create": "Create",
+      "creating": "Creating…"
+    },
+    "closed": {
+      "title": "A new workspace cannot be opened right now",
+      "body": "Self-service workspace creation is turned off in this environment.",
+      "action": "Ask your administrator for an invitation to join a workspace.",
+      "signIn": "Back to sign in"
+    },
+    "draftRestored": "You are continuing where you left off."
+  },
+  "home": {
+    "greeting": "Hello {name},",
+    "title": "What do you want to do?",
+    "intro": "Tap the task you want. I will guide you step by step and will not let you do something wrong.",
+    "tasksLabel": "Tasks",
+    "lockedReason": "You are not allowed to do this. Ask your manager.",
+    "soonListNote": "These tasks will open after warehouse setup.",
+    "lockedListNote": "You are not allowed to do these tasks. Ask your manager.",
+    "soonLabel": "Coming soon",
+    "soonWarehouse": "This task will open after warehouse setup.",
+    "soonScreen": "This screen will open soon.",
+    "myTasks": {
+      "title": "My tasks",
+      "assigned": "{count} tasks assigned to you",
+      "empty": "No tasks are assigned to you right now.",
+      "start": "Start with Scan"
+    },
+    "lockedList": {
+      "toggle": "Tasks you cannot use ({count})"
+    },
+    "soonList": {
+      "toggle": "Coming soon ({count})",
+      "back": "Back to tasks"
+    },
+    "tasks": {
+      "members": {
+        "title": "Manage my team",
+        "description": "Decide who can do which tasks",
+        "short": "Team and roles"
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Name, language and time zone",
+        "short": "Name, language"
+      },
+      "audit": {
+        "title": "Who did what?",
+        "description": "See who did what",
+        "short": "Recent actions"
+      },
+      "items": {
+        "title": "My products",
+        "description": "Product card, units and barcodes",
+        "short": "Items, barcodes"
+      },
+      "receive": {
+        "title": "Goods arrived",
+        "description": "Count and record incoming goods",
+        "short": "Count incoming",
+        "tile": "Receiving"
+      },
+      "issue": {
+        "title": "Goods are going out",
+        "description": "Record outgoing goods",
+        "short": "Record outgoing"
+      },
+      "transfer": {
+        "title": "Move goods to another warehouse",
+        "description": "Transfer between warehouses",
+        "short": "Between depots"
+      },
+      "count": {
+        "title": "Count a shelf",
+        "description": "Count the items on a shelf one by one",
+        "short": "Count a rack"
+      },
+      "lookup": {
+        "title": "Where is a product, how many?",
+        "description": "See stock and shelf information",
+        "short": "Check stock"
+      },
+      "undo": {
+        "title": "I made a mistake",
+        "description": "Let's fix the wrong record together",
+        "short": "Fix a mistake"
+      },
+      "warehouses": {
+        "title": "Warehouses and racks",
+        "description": "Manage warehouses and rack layout",
+        "short": "Rack layout"
+      }
+    },
+    "today": {
+      "title": "What you did today",
+      "empty": "You have not done anything yet today. What you do will appear here."
+    },
+    "now": {
+      "title": "To do now",
+      "empty": "Nothing is waiting",
+      "receive": "{count} deliveries waiting",
+      "putaway": "{count} putaway tasks waiting",
+      "next": "Next: {label}",
+      "then": "After that: {label}",
+      "qty": "{n} units"
+    }
+  },
+  "audit": {
+    "member": {
+      "invited": "You invited a member.",
+      "removed": "You removed a member from the workspace.",
+      "role_changed": "You changed a member's role.",
+      "left": "You left the workspace."
+    },
+    "ownership": {
+      "transferred": "You transferred ownership of the workspace."
+    },
+    "invitation": {
+      "revoked": "You revoked an invitation.",
+      "accepted": "You accepted an invitation."
+    },
+    "tenant": {
+      "created": "You created the workspace.",
+      "settings_changed": "You changed the workspace settings."
+    },
+    "onboarding": {
+      "step_completed": "You completed a setup step."
+    },
+    "password_reset_link": {
+      "issued": "You created a password reset link for a member."
+    },
+    "audit": {
+      "exported": "You exported the audit log."
+    },
+    "warehouse": {
+      "created": "You created a warehouse.",
+      "updated": "You updated a warehouse.",
+      "archived": "You archived a warehouse.",
+      "code_changed": "You changed a warehouse code."
+    },
+    "location": {
+      "created": "You created a location.",
+      "updated": "You updated a location.",
+      "archived": "You archived a location.",
+      "code_changed": "You changed a location code."
+    },
+    "warehouse_scope": {
+      "changed": "You changed a member's warehouse scope."
+    },
+    "unit": {
+      "created": "You created a unit.",
+      "updated": "You updated a unit."
+    },
+    "item": {
+      "created": "You created an item.",
+      "updated": "You updated an item.",
+      "archived": "You archived an item.",
+      "code_changed": "You changed an item code."
+    },
+    "item_barcode": {
+      "added": "You added a barcode to an item.",
+      "removed": "You removed a barcode from an item."
+    },
+    "unit_conversion": {
+      "set": "You set an item's unit conversion."
+    },
+    "lot": {
+      "created": "You created a lot."
+    },
+    "serial": {
+      "registered": "You registered a serial number."
+    },
+    "handling_unit": {
+      "created": "You created a handling unit.",
+      "changed": "You changed a handling unit."
+    },
+    "stock_document": {
+      "updated": "You updated a stock draft.",
+      "created": "You created a stock document.",
+      "approved": "You approved a stock document.",
+      "posted": "You posted a stock document.",
+      "cancelled": "You cancelled a stock document.",
+      "reversed": "You reversed a stock document."
+    },
+    "reservation": {
+      "created": "You reserved stock.",
+      "released": "You released a reservation."
+    },
+    "external_ref": {
+      "linked": "You linked or updated an external system reference."
+    },
+    "other": "You did something.",
+    "warehouse_task": {
+      "created": "You created a warehouse task.",
+      "assigned": "You assigned a warehouse task.",
+      "claimed": "You took a warehouse task.",
+      "cancelled": "You cancelled a warehouse task.",
+      "completed": "You completed a warehouse task."
+    },
+    "inbound_receipt": {
+      "created": "You created an expected delivery.",
+      "opened": "You opened an expected delivery for receiving.",
+      "cancelled": "You cancelled an expected delivery.",
+      "received": "You received goods against a delivery."
+    },
+    "sales_order": {
+      "created": "You created a customer order.",
+      "updated": "You updated a draft order.",
+      "cancelled": "You cancelled an order.",
+      "line_cancelled": "You cancelled an order line."
+    },
+    "pick_assignment": {
+      "created": "You created a picking assignment."
+    },
+    "pick": {
+      "not_found": "You reported a product as not found while picking; the location was flagged for counting."
+    },
+    "count": {
+      "started": "You started a count; the locations are locked while counting.",
+      "recorded": "You entered count values.",
+      "submitted": "You submitted a count for approval.",
+      "approved": "You approved a count difference.",
+      "posted": "You posted the count difference; the locations were unlocked.",
+      "cancelled": "You cancelled a count; no difference was applied and the locations were unlocked."
+    }
+  },
+  "auditLog": {
+    "title": "Who did what?",
+    "intro": "A record of what was done in the workspace. Newest first.",
+    "locked": "You do not have permission to view the audit log.",
+    "lockedAction": "Ask your workspace administrator.",
+    "from": "From date",
+    "to": "To date",
+    "action": "Action",
+    "allActions": "All actions",
+    "filter": "Filter",
+    "export": "Download CSV",
+    "exportNote": "You can download at most 2 times a minute; you may be asked to sign in again first.",
+    "empty": "No records match this filter.",
+    "more": "Load more",
+    "back": "Back to home",
+    "system": "System",
+    "colDate": "Date",
+    "colPerson": "Person",
+    "colAction": "Action",
+    "colRecord": "Record",
+    "colReason": "Reason",
+    "recentAuth": "You need to confirm your identity again to download the CSV.",
+    "recentAuthAction": "Sign in again and retry.",
+    "loginLink": "Sign in again",
+    "actions": {
+      "member": {
+        "invited": "Member invited",
+        "removed": "Member removed",
+        "role_changed": "Member role changed",
+        "left": "Member left"
+      },
+      "ownership": {
+        "transferred": "Ownership transferred"
+      },
+      "invitation": {
+        "revoked": "Invitation revoked",
+        "accepted": "Invitation accepted"
+      },
+      "tenant": {
+        "created": "Workspace created",
+        "settings_changed": "Settings changed"
+      },
+      "onboarding": {
+        "step_completed": "Setup step completed"
+      },
+      "password_reset_link": {
+        "issued": "Password reset link issued"
+      },
+      "audit": {
+        "exported": "Audit log exported"
+      },
+      "other": "Other action"
+    }
+  },
+  "settings": {
+    "title": "Workspace settings",
+    "intro": "Change the workspace name, language and time zone here.",
+    "name": "Workspace name",
+    "locale": "Language",
+    "localeTr": "Türkçe",
+    "localeEn": "English",
+    "timeZone": "Time zone",
+    "timeZoneHint": "Example: Europe/Istanbul",
+    "save": "Save",
+    "saved": "Settings saved.",
+    "unchanged": "No change; the settings are already like this.",
+    "addressNote": "The workspace address (slug) does not change when the name changes: {slug}",
+    "locked": "You are not allowed to change these settings.",
+    "lockedAction": "If a change is needed, ask your workspace administrator.",
+    "back": "Back to home",
+    "importLink": "Import products and stock from Excel"
+  },
+  "items": {
+    "title": "Products",
+    "intro": "Find a product or add a new one.",
+    "lockedReason": "You do not have permission for this. Ask your manager.",
+    "listLabel": "Product list",
+    "create": "New product",
+    "empty": "No products yet.",
+    "emptyAction": "Add your first product with “New product”.",
+    "emptyReadOnly": "Ask your manager to add products.",
+    "emptyFiltered": "No products match your search.",
+    "emptyFilteredAction": "Change the name or code and try again; type the full barcode. Or clear the search.",
+    "emptyStatus": "No products match this filter.",
+    "emptyStatusAction": "Pick another status or clear the search.",
+    "setup": {
+      "warehouse": "First add a warehouse · step 1 / 3",
+      "locations": "Next: create the shelves · step 2 / 3",
+      "item": "Next: add your first product",
+      "teach": "There are three short steps before you add products."
+    },
+    "codeLabel": "Code: {code}",
+    "baseUnitLabel": "Base unit: {unit}",
+    "status": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived"
+    },
+    "open": "Open details",
+    "openFor": "Open details: {name}",
+    "paging": "Pagination",
+    "more": "More",
+    "firstPage": "Back to start",
+    "search": {
+      "label": "Search products",
+      "hint": "Type a name or code; you can scan the barcode.",
+      "placeholder": "E.g. URN-0001 or Box 40x30",
+      "advanced": "More options",
+      "status": "Status",
+      "all": "All",
+      "clear": "Clear search"
+    },
+    "tracking": {
+      "NONE": "No tracking",
+      "LOT": "Lot tracking",
+      "SERIAL": "Serial tracking",
+      "LOT_AND_SERIAL": "Lot and serial tracking"
+    },
+    "pick": {
+      "FIFO": "First in, first out (FIFO)",
+      "FEFO": "Earliest expiry first (FEFO)"
+    },
+    "form": {
+      "createTitle": "New product",
+      "code": "Product code",
+      "codeHint": "The server tidies the format. The code can be changed later; searching by the old code finds the renamed card.",
+      "name": "Product name",
+      "baseUnit": "Base unit",
+      "baseUnitHint": "Stock is counted in this unit; it cannot be changed later.",
+      "baseUnitChoose": "Pick a unit. There is no ADET unit.",
+      "baseUnitPlaceholder": "Pick a unit",
+      "scale": "Quantity precision",
+      "scaleHint": "How many digits after the decimal point; it cannot be changed later.",
+      "scaleInteger": "Whole numbers (0 digits)",
+      "scaleDecimals": "{count, plural, one {# digit} other {# digits}}",
+      "advanced": "Advanced settings",
+      "advancedHint": "Most products do not need changes here. The tracking mode cannot be changed after creation.",
+      "tracking": "Tracking mode",
+      "pick": "Picking policy",
+      "submit": "Save",
+      "cancel": "Cancel",
+      "noUnits": "No units are defined yet; a product needs a base unit first (e.g. PCS). Ask your manager or support."
+    },
+    "detail": {
+      "title": "Product card",
+      "back": "Back to product list",
+      "archivedNote": "This product is archived; it cannot be changed and no barcode or conversion can be added.",
+      "cardTitle": "Product details",
+      "save": "Save changes",
+      "lockedFixed": "The base unit, quantity precision and tracking mode cannot be changed after the product is created.",
+      "lockedInUse": "This product has stock or an open reservation; its base unit, quantity precision and tracking mode are locked.",
+      "conversionsTitle": "Unit conversions",
+      "conversionsHint": "State how many {unit} a unit such as a box contains, per product.",
+      "conversionsEmpty": "No conversions are set for this product.",
+      "conversionLine": "1 {unit} = {factor} {base}",
+      "conversionUnit": "Unit",
+      "conversionFactor": "How many {base} is it?",
+      "conversionFactorHint": "Example: 12 or 0.5. Saving the same unit again updates the factor; past documents do not change.",
+      "conversionSave": "Save conversion",
+      "barcodesTitle": "Barcodes",
+      "barcodesHint": "Type the barcode or scan it (scanning is plain text entry).",
+      "barcodesEmpty": "No barcodes are linked to this product.",
+      "barcodeMeta": "Unit: {unit} · Quantity per scan: {quantity}",
+      "barcodeAmbiguous": "This barcode is also registered on other products; scanning it is never assigned to one product automatically. Fix the barcode if needed.",
+      "barcodeRemove": "Remove",
+      "barcodeRemoveFor": "Remove: {barcode}",
+      "barcodeValue": "Barcode",
+      "barcodeValueHint": "Scan or type it.",
+      "barcodeUnit": "Barcode unit",
+      "barcodeUnitBase": "Base unit ({unit})",
+      "barcodeQuantity": "Quantity per scan",
+      "barcodeQuantityHint": "If left empty, 1 is used.",
+      "barcodeAdd": "Add barcode",
+      "archiveTitle": "Archive product",
+      "archiveHint": "An archived product shows as archived and cannot be changed. It cannot be archived while it has stock or an open reservation.",
+      "archive": "Archive",
+      "confirmArchive": {
+        "title": "Archive {name}?",
+        "description": "{name} ({code}) will be archived and cannot be changed. It is not archived while it has stock or an open reservation; clear those first.",
+        "button": "Archive"
+      },
+      "confirmRemove": {
+        "title": "Remove barcode?",
+        "description": "{barcode} will be deleted from this product. This cannot be undone; you can add it again if needed.",
+        "button": "Remove"
+      },
+      "done": {
+        "saved": "Changes saved.",
+        "conversion": "Conversion saved.",
+        "barcodeAdded": "Barcode added.",
+        "barcodeRemoved": "Barcode removed.",
+        "archived": "Product archived.",
+        "codeSame": "The code is already this; nothing changed.",
+        "codeUndone": "The code is back to the old one."
+      },
+      "codeEdit": {
+        "button": "Change code",
+        "for": "Change code for {name}"
+      }
+    },
+    "errors": {
+      "code": "Error code: {code}",
+      "mfaLink": "Set up two-step verification",
+      "loginLink": "Sign in again",
+      "forbidden": "You do not have permission for this.",
+      "forbiddenAction": "Ask your manager.",
+      "forbidden_mfa_required": "Two-step verification is required for admin actions.",
+      "forbidden_mfa_requiredAction": "Set up verification first, then repeat the action.",
+      "unauthenticated": "Your session has ended.",
+      "unauthenticatedAction": "Sign in again and repeat the action.",
+      "unauthenticated_recent_auth_required": "You need to verify your identity again for this.",
+      "unauthenticated_recent_auth_requiredAction": "Sign in again and repeat the action.",
+      "not_found": "Record not found; someone else may have changed it.",
+      "not_foundAction": "Refresh the page and try again.",
+      "validation_failed": "The details are invalid or not allowed for this record.",
+      "validation_failedAction": "Check the fields and try again; archived products cannot be changed.",
+      "validation_failed_code_taken": "This code or barcode entry already exists.",
+      "validation_failed_code_takenAction": "Enter a different value.",
+      "validation_failed_in_use": "This product has stock or an open reservation.",
+      "validation_failed_in_useAction": "Clear the stock and close reservations first, then try again.",
+      "validation_failed_unit_conversion_invalid": "The conversion could not be saved: the base unit cannot have a factor, the factor is wrong, or how many pieces this unit holds is not set yet. A quantity cannot be entered on a case barcode.",
+      "validation_failed_unit_conversion_invalidAction": "First choose a unit other than the base unit and enter how many pieces it holds (e.g. 12 or 0.5, up to 6 decimals). Then add the case barcode and leave the quantity empty.",
+      "version_conflict": "The record was changed by another action at the same time.",
+      "version_conflictAction": "Refresh the page and try again.",
+      "rate_limited": "Too many actions.",
+      "rate_limitedAction": "Wait a moment and try again.",
+      "tenant_suspended": "The workspace is suspended.",
+      "tenant_suspendedAction": "Contact your manager or support.",
+      "tenant_closing": "The workspace is being closed.",
+      "tenant_closingAction": "Contact your manager.",
+      "internal": "Something went wrong.",
+      "internalAction": "Try again shortly; if it continues, send the error code to support."
+    },
+    "locked": "You do not have permission to view products.",
+    "lockedAction": "Ask your workspace manager.",
+    "renamedNote": "This code changed to {code} (old code: {old})"
+  },
+  "warehouses": {
+    "title": "Warehouses and racks",
+    "intro": "Manage your warehouses and rack layout (zone, rack, bin) here.",
+    "lockedReason": "You do not have permission for this task. Ask your manager.",
+    "listLabel": "Warehouse list",
+    "create": "New warehouse",
+    "createTitle": "New warehouse",
+    "empty": "No warehouses yet.",
+    "emptyAction": "Add your first warehouse with “New warehouse”.",
+    "emptyReadOnly": "Ask your manager to add a warehouse.",
+    "codeLabel": "Code: {code}",
+    "locationCount": "{count, plural, =0 {No locations} one {# location} other {# locations}}",
+    "locationCountCapped": "{count}+ locations",
+    "status": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived"
+    },
+    "open": "Open locations",
+    "archive": "Archive",
+    "actionsFor": "Actions for {name}",
+    "paging": "Paging",
+    "more": "Show more",
+    "firstPage": "Back to start",
+    "done": {
+      "created": "Warehouse added.",
+      "archived": "Warehouse archived.",
+      "codeSame": "The code is already this; nothing changed.",
+      "codeUndone": "The code is back to the old one."
+    },
+    "confirmArchive": {
+      "title": "Archive {name}?",
+      "description": "Warehouse {name} ({code}) will show as archived and no new locations can be added. It cannot be archived while it holds stock or active locations; empty or archive those first.",
+      "button": "Archive"
+    },
+    "kind": {
+      "RECEIVING": "Receiving",
+      "STORAGE": "Storage",
+      "STAGING": "Staging",
+      "TRANSIT": "Transit"
+    },
+    "form": {
+      "code": "Code",
+      "codeHint": "Letters are uppercased automatically. The code can be changed later.",
+      "name": "Name",
+      "kind": "Type",
+      "submit": "Save",
+      "cancel": "Cancel"
+    },
+    "tree": {
+      "title": "Locations",
+      "back": "Back to warehouse list",
+      "label": "Location tree",
+      "addRoot": "Add location",
+      "addChild": "Add sub-location",
+      "archive": "Archive",
+      "expand": "Expand {name}",
+      "collapse": "Collapse {name}",
+      "more": "Show more",
+      "empty": "This warehouse has no locations yet.",
+      "emptyAction": "Add the first zone with “Add location”.",
+      "emptyReadOnly": "Ask your manager to add locations.",
+      "warehouseArchived": "This warehouse is archived; locations cannot be added.",
+      "level": {
+        "zone": "Zone",
+        "rack": "Rack",
+        "bin": "Bin",
+        "deeper": "Sub-level"
+      },
+      "createRootTitle": "New location",
+      "createChildTitle": "New sub-location",
+      "parentIs": "Placed under: {parent}",
+      "done": {
+        "created": "Location added.",
+        "archived": "Location archived.",
+        "codeSame": "The code is already this; nothing changed.",
+        "codeUndone": "The code is back to the old one."
+      },
+      "confirmArchive": {
+        "title": "Archive {name}?",
+        "description": "Location {name} ({code}) will be archived. It cannot be archived while it holds stock, has an open count or active sub-locations; empty or archive those first.",
+        "button": "Archive"
+      }
+    },
+    "errors": {
+      "code": "Error code: {code}",
+      "mfaLink": "Set up two-step verification",
+      "loginLink": "Sign in again",
+      "forbidden": "You do not have permission for this action.",
+      "forbiddenAction": "Ask your manager.",
+      "forbidden_mfa_required": "Two-step verification is required for admin actions.",
+      "forbidden_mfa_requiredAction": "Set it up first, then repeat the action.",
+      "forbidden_warehouse_out_of_scope": "This warehouse is outside your scope.",
+      "forbidden_warehouse_out_of_scopeAction": "Ask your manager.",
+      "unauthenticated": "Your session has ended.",
+      "unauthenticatedAction": "Sign in again and repeat the action.",
+      "unauthenticated_recent_auth_required": "You need to verify your identity again for this action.",
+      "unauthenticated_recent_auth_requiredAction": "Sign in again and repeat the action.",
+      "not_found": "Record not found; someone else may have changed it.",
+      "not_foundAction": "Refresh the page and try again.",
+      "validation_failed": "The entered information is invalid.",
+      "validation_failedAction": "Check the code and name, then try again.",
+      "validation_failed_code_taken": "This code is already in use.",
+      "validation_failed_code_takenAction": "Enter a different code.",
+      "validation_failed_in_use": "This warehouse holds stock or active locations.",
+      "validation_failed_in_useAction": "Empty or archive them first, then try again.",
+      "validation_failed_in_use_location": "This location holds stock, has an open count or active sub-locations.",
+      "validation_failed_in_use_locationAction": "Empty it or archive the sub-locations first, then try again.",
+      "validation_failed_parent_invalid": "The parent location is not valid for this action.",
+      "validation_failed_parent_invalidAction": "Choose another parent or change the type.",
+      "version_conflict": "The record was changed by another action at the same time.",
+      "version_conflictAction": "Refresh the page and try again.",
+      "rate_limited": "Too many actions.",
+      "rate_limitedAction": "Wait a moment and try again.",
+      "tenant_suspended": "The workspace is suspended.",
+      "tenant_suspendedAction": "Contact your manager or support.",
+      "tenant_closing": "The workspace is being closed.",
+      "tenant_closingAction": "Contact your manager.",
+      "internal": "Something went wrong.",
+      "internalAction": "Try again shortly; if it persists, send the error code to support.",
+      "validation_failed_code_taken_bulk": "Some codes are already in use.",
+      "validation_failed_code_taken_bulkAction": "Check the conflicting codes in the preview; change the range or zone code.",
+      "validation_failed_document_too_large": "At most 2,000 locations can be created at once, and a warehouse can hold at most 50,000 locations in total; this addition exceeds the limit.",
+      "validation_failed_document_too_largeAction": "Make the range smaller and try again; if the warehouse is full, open another one.",
+      "validation_failed_idempotency_key_required": "The request id is missing.",
+      "validation_failed_idempotency_key_requiredAction": "Reload the page and try again.",
+      "idempotency_mismatch": "This request id was used with different input.",
+      "idempotency_mismatchAction": "Close and reopen the form, then try again.",
+      "validation_failed_code_ambiguous": "This old code appears in the history of more than one location, so it is unclear which one you mean.",
+      "validation_failed_code_ambiguousAction": "Search using the location's current code."
+    },
+    "codeEdit": {
+      "button": "Change code",
+      "for": "Change code for {name}"
+    }
+  },
+  "field": {
+    "title": "Field",
+    "intro": "Pick a job; scan, verify, confirm the quantity.",
+    "menuLabel": "Field jobs",
+    "actionBarLabel": "Field actions",
+    "fieldHome": "Field jobs",
+    "mainMenu": "Home",
+    "lockedReason": "This screen is not open yet.",
+    "tasks": {
+      "receive": {
+        "title": "Receiving",
+        "description": "Scan and count incoming goods."
+      },
+      "putaway": {
+        "title": "Putaway",
+        "description": "Put goods on a shelf."
+      },
+      "pick": {
+        "title": "Picking",
+        "description": "Pick goods for an order."
+      },
+      "ship": {
+        "title": "Shipping",
+        "description": "Ship the picked goods."
+      },
+      "return": {
+        "title": "Returns",
+        "description": "Receive returned goods."
+      },
+      "count": {
+        "title": "Counting",
+        "description": "Count a shelf and show the difference."
+      }
+    },
+    "noPermission": "You cannot do this job. Tell your manager."
+  },
+  "labels": {
+    "title": "Print labels",
+    "preview": "Label preview",
+    "print": "Print",
+    "downloadZpl": "Download ZPL",
+    "bridge": "Send via local bridge (not ready)",
+    "summary": "{count} labels · template {version}",
+    "noSource": "No item or location was selected for labels.",
+    "noSourceAction": "Open this page from an item detail or the location tree.",
+    "locked": "You do not have permission to view labels.",
+    "lockedAction": "Ask your workspace administrator.",
+    "errors": {
+      "copies": "Copies must be a number from 1 to {max}, and the total label count must not exceed {max}.",
+      "charset": "Barcode content can only contain ASCII characters (no Turkish letters such as ö, ş, ğ).",
+      "charsetAction": "Fix the item code or barcode to use ASCII characters.",
+      "tooLong": "The barcode does not fit the label width.",
+      "tooLongAction": "Shorten the code or barcode."
+    }
+  },
+  "easySetup": {
+    "guide": {
+      "title": "Get started",
+      "intro": "Three steps and you are ready. The next step is below.",
+      "listLabel": "Setup steps",
+      "done": "Done",
+      "todo": "To do",
+      "stepOf": "Step {n}",
+      "next": "Next step",
+      "warehouse": {
+        "title": "Add a warehouse",
+        "hint": "The place where goods are kept. Just type its name.",
+        "action": "Add the warehouse"
+      },
+      "locations": {
+        "title": "Create the racks",
+        "hint": "Enter how many zones, racks and bins; codes are made for you.",
+        "action": "Create the racks",
+        "locked": "Add a warehouse first."
+      },
+      "items": {
+        "title": "Add a product",
+        "hint": "Type the product name; code and unit come ready.",
+        "action": "Add the product"
+      },
+      "allDone": "Setup is complete. You can add a warehouse, racks or products any time."
+    },
+    "code": {
+      "suggested": "Suggested automatically. You can change it.",
+      "custom": "You typed your own code.",
+      "loading": "Preparing the code…",
+      "failed": "Could not get a suggestion; you can type the code yourself."
+    },
+    "form": {
+      "advanced": "Advanced settings",
+      "required": "Required",
+      "defaultWarehouseName": "Main warehouse"
+    },
+    "picker": {
+      "listLabel": "Suggestions",
+      "searching": "Searching…",
+      "none": "No matching record.",
+      "hintType": "Type the first letters; suggestions appear.",
+      "scanLabel": "Scan barcode",
+      "scanManual": "Type it",
+      "scanConfirm": "Find",
+      "scanCancel": "Cancel",
+      "scanPlaceholder": "Scan the barcode",
+      "scanNotFound": "No record found for this barcode.",
+      "scanNotFoundAction": "Check the barcode and scan again.",
+      "scanMany": "This barcode matches more than one record.",
+      "scanManyAction": "Type the code in search to choose.",
+      "selected": "Selected: {name}"
+    },
+    "items": {
+      "searchSuggestLabel": "Product suggestions",
+      "unitAuto": "There is no unit yet; the “ADET” unit is created automatically with your first product.",
+      "unitDefaultOption": "ADET · Piece (automatic)"
+    },
+    "bulk": {
+      "open": "Create racks in bulk",
+      "title": "Create the racks",
+      "intro": "Enter the zone, rack and bin ranges. You preview first, then they are created.",
+      "zone": "Zone code",
+      "zoneHint": "Example: A",
+      "rackFrom": "First rack no.",
+      "rackTo": "Last rack no.",
+      "levelFrom": "First bin no.",
+      "levelTo": "Last bin no.",
+      "advanced": "Advanced settings",
+      "parent": "Parent location (optional)",
+      "parentHint": "Leave empty to create under the warehouse.",
+      "parentClear": "Remove parent location",
+      "parentNone": "Under the warehouse",
+      "scanParent": "Scan the location label",
+      "previewTitle": "Preview",
+      "previewLoading": "Preparing the preview…",
+      "previewSummary": "{count} locations will be created: {first} … {last}",
+      "previewOne": "1 location will be created: {first}",
+      "previewListLabel": "Codes to be created",
+      "previewMore": "Only the first {shown} codes are listed.",
+      "conflictsTitle": "{count} codes already exist; they will not be created",
+      "conflictsAction": "Change the range or the zone code.",
+      "conflictsListLabel": "Conflicting codes",
+      "conflictsMore": "Only the first {shown} codes are listed.",
+      "tooMany": "At most {max} locations are created at once.",
+      "tooManyAction": "Make the range smaller.",
+      "invalid": "The range is not valid.",
+      "invalidAction": "Check the zone code (letters/digits) and ranges between 1 and 999, small to large.",
+      "submit": "Create",
+      "submitCount": "Create {count} locations",
+      "cancel": "Cancel",
+      "done": "{count} locations created: {first} … {last}",
+      "doneReplayed": "This request was already processed; {count} locations exist."
+    }
+  },
+  "codeEdit": {
+    "title": "Change code",
+    "current": "Current code: {code}",
+    "newCode": "New code",
+    "newCodeHint": "If this code is already used by another record, we will tell you right away.",
+    "preview": "{from} → {to}",
+    "previewSame": "Type a new code; the change shows here.",
+    "history": "Past movements are not affected: old records stay linked to this record. Anyone who scans or searches the old code is sent to the new one.",
+    "cancel": "Cancel",
+    "submit": "Change code",
+    "done": "Code changed: {from} → {to}.",
+    "undo": "Undo (go back to {code})"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "intro": "Assign warehouse tasks to people or cancel them.",
+    "kind": {
+      "PUTAWAY": "Put-away",
+      "PICK": "Picking",
+      "REPUTAWAY": "Re-put-away",
+      "COUNT": "Counting"
+    },
+    "status": {
+      "OPEN": "Open",
+      "ASSIGNED": "Assigned",
+      "DONE": "Done",
+      "CANCELLED": "Cancelled"
+    },
+    "filters": {
+      "label": "Filter tasks",
+      "kind": "Type",
+      "status": "Status",
+      "all": "All",
+      "apply": "Apply"
+    },
+    "listLabel": "Task list",
+    "unassigned": "Not assigned yet",
+    "assignee": "Assigned to: {name}",
+    "assigneeUnknown": "Assigned to: unknown",
+    "quantity": "Quantity: {quantity}",
+    "assign": "Assign",
+    "reassign": "Reassign",
+    "cancel": "Cancel",
+    "lockedReason": "Assigning and cancelling need the task approval permission. Ask your manager.",
+    "empty": {
+      "title": "No tasks",
+      "action": "Tasks come from goods receipt, orders and counts; change the filter and look again."
+    },
+    "nextPage": "Next page",
+    "firstPage": "First page",
+    "assignTitle": "Assign task",
+    "member": "Person",
+    "memberPlaceholder": "Choose a person",
+    "noEligible": "Nobody can do this kind of task yet. Give a suitable role on the team screen first.",
+    "cancelTitle": "Cancel task",
+    "reasonLabel": "Reason for cancelling",
+    "reasonHint": "Required; written to the audit log. At most 500 characters. Do not write personal information such as a person's name or health details.",
+    "back": "Go back",
+    "submit": "Save",
+    "confirmCancel": "Cancel task",
+    "done": {
+      "assigned": "Task assigned.",
+      "cancelled": "Task cancelled."
+    },
+    "field": {
+      "title": "My tasks",
+      "intro": "Work assigned to you and work you can pick up.",
+      "listLabel": "My task list",
+      "claim": "Take it",
+      "start": "Start",
+      "startLocked": "This work screen is not open yet. The task stays with you; you will start it here once the screen opens.",
+      "claimed": "You took the task.",
+      "empty": {
+        "title": "No tasks right now",
+        "action": "New work shows up here; you can refresh the page."
+      },
+      "mine": "Assigned to you",
+      "available": "You can take it",
+      "more": "Show more",
+      "backToField": "Field work"
+    },
+    "errors": {
+      "code": "Error code: {code}",
+      "forbidden": "You are not allowed to do this.",
+      "forbiddenAction": "Ask your manager.",
+      "unauthenticated": "Your session has ended.",
+      "unauthenticatedAction": "Sign in again and repeat the action.",
+      "not_found": "Task not found.",
+      "not_foundAction": "Refresh the page and try again.",
+      "validation_failed": "The information entered is not valid.",
+      "validation_failedAction": "Check the selection and the reason, then try again. The chosen person may not be able to do this kind of task.",
+      "validation_failed_document_state": "The task no longer allows this action (done, cancelled or taken by someone else).",
+      "validation_failed_document_stateAction": "Refresh the page to see the current state.",
+      "version_conflict": "Someone else changed the task at the same time.",
+      "version_conflictAction": "Refresh the page and try again.",
+      "rate_limited": "Too many actions.",
+      "rate_limitedAction": "Wait a moment and try again.",
+      "tenant_suspended": "The workspace is suspended.",
+      "tenant_suspendedAction": "Contact your manager or support.",
+      "tenant_closing": "The workspace is being closed.",
+      "tenant_closingAction": "Contact your manager.",
+      "internal": "Something went wrong.",
+      "internalAction": "Try again shortly; if it continues, send the error code to support."
+    }
+  },
+  "receiving": {
+    "title": "Expected deliveries",
+    "intro": "Record incoming goods; receive them on the phone.",
+    "backHome": "Back to home",
+    "back": "Back",
+    "stepOf": "Step {n} / {total}",
+    "primaryBar": "Main action",
+    "detail": "Details",
+    "errorCode": "Error code: {code}",
+    "cancel": "Cancel",
+    "scanAgain": "Got it, scan again",
+    "alert": {
+      "scanTitle": "Code not found",
+      "unitTitle": "Quantity not taken",
+      "mismatchTitle": "Wrong item",
+      "networkTitle": "No connection",
+      "putawayTitle": "Could not put on rack"
+    },
+    "errors": {
+      "network": "The connection dropped.",
+      "networkAction": "Try the same action again. It will not be saved twice.",
+      "forbidden": "You are not allowed to do this.",
+      "forbiddenAction": "Ask your manager or call for help.",
+      "forbidden_scope": "You do not have access to this warehouse.",
+      "forbidden_scopeAction": "Ask your manager for access.",
+      "location_locked": "A count is in progress on this rack.",
+      "location_lockedAction": "Try again when the count ends, or scan another rack.",
+      "insufficient_stock": "There is not enough stock on this rack.",
+      "insufficient_stockAction": "Lower the quantity or take from another rack.",
+      "tracking_violation": "This item needs a lot or serial number.",
+      "tracking_violationAction": "Tell your manager about this item.",
+      "version_conflict": "Someone else just changed this record.",
+      "version_conflictAction": "Refresh the page and try again.",
+      "idempotency_mismatch": "This action was changed and sent again.",
+      "idempotency_mismatchAction": "Refresh the page and start over.",
+      "scan_unknown": "This code is not in the system.",
+      "scan_unknownAction": "Scan it again; if that fails, type it.",
+      "not_found": "Record not found.",
+      "not_foundAction": "Refresh the page and try again.",
+      "unauthenticated": "Your session has ended.",
+      "unauthenticatedAction": "Sign in again and continue.",
+      "rate_limited": "Too many actions.",
+      "rate_limitedAction": "Wait a moment and try again.",
+      "tenant_suspended": "The workspace is suspended.",
+      "tenant_suspendedAction": "Tell your manager.",
+      "tenant_closing": "The workspace is closing.",
+      "tenant_closingAction": "Tell your manager.",
+      "barcode_ambiguous": "This barcode belongs to more than one item.",
+      "barcode_ambiguousAction": "Tell your manager.",
+      "document_state": "This job is no longer valid.",
+      "document_stateAction": "Refresh the page to see the current state.",
+      "quantity_scale": "The quantity must be a whole number for this item.",
+      "quantity_scaleAction": "Check the quantity and try again.",
+      "over_receipt": "You scanned more than expected. Remaining: {remaining}",
+      "over_receiptAction": "Lower the quantity to the remaining amount.",
+      "putaway_invalid": "It could not be put on this rack.",
+      "putaway_invalidAction": "Scan another rack.",
+      "validation_failed": "The information is not valid.",
+      "validation_failedAction": "Check it and try again.",
+      "internal": "The action could not be completed.",
+      "internalAction": "Try again shortly; if it continues, give the error code to your manager.",
+      "scan_mismatch": "This item is not part of this job.",
+      "scan_mismatchAction": "Scan the right item.",
+      "line_done": "This item is complete.",
+      "line_doneAction": "Scan the next item.",
+      "finish_first": "Finish the open item first.",
+      "finish_firstAction": "Scan the same item or go back.",
+      "no_stock_here": "There is none of this item on this rack.",
+      "no_stock_hereAction": "Scan the right rack.",
+      "qty_fractional": "This barcode's quantity is not a whole number.",
+      "qty_fractionalAction": "This screen only works with whole units. Enter the quantity on the desktop.",
+      "unit_mismatch": "This barcode is not in this line's unit.",
+      "unit_mismatchAction": "Scan a barcode in the line's unit or enter the quantity on the desktop."
+    },
+    "line": {
+      "complete": "Done",
+      "open": "Remaining {open}",
+      "expected": "Expected {n}",
+      "received": "Received {n}",
+      "damaged": "Damaged {n}"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "OPEN": "Open",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
+    },
+    "list": {
+      "title": "Expected delivery list",
+      "empty": "No expected deliveries.",
+      "emptyAction": "Add the first delivery with the form.",
+      "supplier": "Supplier: {ref}",
+      "receiveInField": "Receive in the field",
+      "more": "Show more"
+    },
+    "quality": {
+      "approve": "Approve quality",
+      "locked": "Your manager can approve quality. Call for help.",
+      "done": "{number} approved.",
+      "confirmTitle": "Approve quality?",
+      "confirmBody": "The waiting goods in {number} become available. Damaged goods are not affected."
+    },
+    "form": {
+      "title": "Add a delivery",
+      "locked": "You cannot add deliveries. Tell your manager.",
+      "created": "{number} saved.",
+      "warehouse": "Warehouse",
+      "supplierRef": "Supplier reference",
+      "supplierRefHint": "Do not enter personal data. Only a delivery note or order number.",
+      "lines": "Delivery lines",
+      "removeLine": "Remove line {name}",
+      "remove": "Remove",
+      "item": "Item",
+      "itemHint": "Search by name or code",
+      "unit": "Unit",
+      "expected": "Expected quantity",
+      "addLine": "Add line",
+      "save": "Save delivery"
+    },
+    "flow": {
+      "pickTitle": "Which delivery arrived?",
+      "pickInstruction": "Start with the next one or pick from the list.",
+      "startNext": "Start the next one",
+      "addReceipt": "Add a delivery",
+      "next": "Next",
+      "pickSummary": "{lines} items · {open} open",
+      "emptyTitle": "No waiting deliveries",
+      "emptyAction": "New deliveries appear here. Tell your manager.",
+      "emptyCanCreate": "Add a delivery first.",
+      "lockedTitle": "Receiving is closed to you",
+      "lockedReason": "You cannot receive goods. Tell your manager or call for help.",
+      "toField": "Back to field jobs",
+      "notOpenTitle": "Delivery is not open",
+      "notOpen": "This delivery was not found or is no longer open. Pick another.",
+      "otherReceipt": "Pick another delivery",
+      "scanTitle": "Scan the item",
+      "scanInstruction": "Scan the box barcode.",
+      "scanLabel": "Barcode",
+      "checking": "Checking…",
+      "scanPlaceholder": "Type the barcode",
+      "manual": "Type it",
+      "manualConfirm": "Confirm",
+      "expectedItems": "Expected items",
+      "qtyTitle": "How many arrived?",
+      "qtyInstruction": "Check the number and change it if needed.",
+      "verify": "Item you scanned:",
+      "scanMore": "Scan one more case",
+      "compound": "{text} · total {total} {unit}",
+      "compoundFailed": "Could not show the case breakdown. The count is correct; you can continue.",
+      "received": "Arrived ({unit})",
+      "damagedLabel": "Damaged count",
+      "hasDamaged": "Add damaged",
+      "rackLabel": "Receiving rack",
+      "rackAuto": "Receiving rack: {name}",
+      "confirm": "Receive",
+      "savedTitle": "Saved",
+      "saved": "{name}: {received} received.",
+      "savedDamaged": "{n} of them are damaged.",
+      "savedRemaining": "Remaining: {n}",
+      "receiptDone": "Delivery complete",
+      "openStays": "Missing items stay open.",
+      "nextItem": "Go to next item",
+      "allDone": "Every item in this delivery was received.",
+      "noLocationTitle": "No receiving rack",
+      "noLocation": "This warehouse has no receiving rack.",
+      "noLocationAction": "Tell your manager.",
+      "scanNow": "Scan barcode",
+      "scanPrompt": "Press the reader trigger and scan the box barcode.",
+      "readerReady": "Reader ready. Press the trigger and scan the barcode.",
+      "lastScan": "Last scanned: {name}",
+      "lastCode": "Code: {code}",
+      "helpCall": "Call for help"
+    },
+    "putaway": {
+      "title": "Put away",
+      "sourceTitle": "Scan the receiving rack",
+      "sourceInstruction": "Scan the label of the rack you took goods from.",
+      "itemTitle": "Scan the item",
+      "itemInstruction": "Scan the barcode of the item in your hand.",
+      "targetTitle": "Scan the rack",
+      "targetInstruction": "Scan the label of the rack to put it on.",
+      "itemLabel": "Item barcode",
+      "locationLabel": "Rack label",
+      "taskLine": "{qty} units · from rack {from}",
+      "takenFrom": "From rack {from}",
+      "confirmTitle": "Put on the rack",
+      "confirmInstruction": "Confirm if everything is right.",
+      "fromTo": "{from} → {to}",
+      "taskQty": "Quantity on the job: {n}",
+      "qtyLabel": "How many?",
+      "confirm": "Put on rack",
+      "savedTitle": "Put on the rack",
+      "saved": "{name}: {qty} units put on rack {to}.",
+      "noNewStock": "The stock count did not change; only the place did.",
+      "backToTasks": "Back to my jobs",
+      "toTasks": "My jobs",
+      "taskGoneTitle": "Job not found",
+      "taskGone": "This job is no longer yours or is already done.",
+      "noWarehouseTitle": "No warehouse",
+      "noWarehouse": "A warehouse must be set up first. Tell your manager.",
+      "warehouseTitle": "Which warehouse?",
+      "warehouseInstruction": "Pick the warehouse you work in.",
+      "sourcePrompt": "Scan the label of the rack you took goods from.",
+      "itemPrompt": "Scan the barcode of the item in your hand.",
+      "targetPrompt": "Scan the label of the rack to put it on.",
+      "lockedTitle": "Putting away is closed to you",
+      "lockedReason": "You cannot put goods away. Tell your manager or call for help."
+    },
+    "camera": {
+      "title": "Camera",
+      "hint": "Bring the barcode into the frame.",
+      "starting": "Opening the camera…",
+      "accepted": "Scanned.",
+      "dropped": "A code was read but not processed: reading was off at that moment. Nothing was added.",
+      "ok": "OK",
+      "retry": "Try again",
+      "notTaken": "Code not processed: scanning was off just now. To count it, press Scan again.",
+      "rescan": "Scan again",
+      "torchOn": "Torch on",
+      "torchOff": "Torch off",
+      "torchFailed": "The torch did not turn on. Move to a lit place or type the barcode.",
+      "off": "Camera is off",
+      "installHintSafari": "Add to home screen: Share (bottom bar) > Add to Home Screen.",
+      "installHintChrome": "Add to home screen: Share (address bar) > Add to Home Screen.",
+      "rejected": {
+        "empty": "The read came back empty. Frame the barcode again.",
+        "edge_space": "The read was damaged. Frame the barcode again.",
+        "too_long": "The code is too long and may not be a barcode. Frame the label barcode.",
+        "control_chars": "The read was damaged. Hold the phone steady and frame it again.",
+        "unexpected_format": "This type of code is not accepted. Scan the product or shelf label.",
+        "bad_digits": "The barcode was read partly. Frame all of it and hold steady.",
+        "bad_checksum": "The barcode was misread. Add light, move back, try again."
+      },
+      "error": {
+        "denied_ios": "Permission is off. Settings > Safari (or your browser) > Camera, turn it on.",
+        "denied_android": "Permission is off. Settings > Apps > your browser > Permissions > Camera.",
+        "denied_other": "Permission is off. Use the lock icon in the address bar to allow it.",
+        "none": "No camera found. Type the barcode or use the reader trigger.",
+        "busy": "The camera is open in another app. Close it, then Try again.",
+        "insecure": "The camera needs an https connection. Tell your manager, type the barcode.",
+        "decoder": "The reader failed to load. Check your connection, then Try again.",
+        "failed": "The camera did not open. Try again or type the barcode."
+      }
+    }
+  },
+  "import": {
+    "title": "Import products and stock",
+    "intro": "Bring the products and opening stock from your Excel file. It is checked first; nothing is saved until you confirm.",
+    "back": "Go back",
+    "locked": "You need the products and settings permission to use this screen.",
+    "lockedAction": "Ask your workspace admin.",
+    "kind": {
+      "products": "Products file",
+      "stock": "Opening stock file"
+    },
+    "step1": {
+      "title": "Download the template",
+      "hint": "Fill it in Excel, then save as “CSV UTF-8”. Import products first, then stock.",
+      "products": "Products template",
+      "stock": "Opening stock template",
+      "columnsProducts": "Products: {cols}. Required: kod and ad. Koli içi adet: how many pieces are in one carton (like 12).",
+      "columnsStock": "Opening stock: {cols}. Quantity is in pieces. The shelf code must match the warehouse screen."
+    },
+    "step2": {
+      "title": "Choose the file",
+      "label": "Choose file",
+      "hint": "Up to {kb} KB and {rows} rows. The file is checked before anything is saved.",
+      "none": "No file chosen yet",
+      "chosen": "Chosen: {name}"
+    },
+    "clientErrors": {
+      "tooBig": "The file is too large. It can be at most {kb} KB. Split it in two and choose it again.",
+      "readFailed": "The file could not be read. Save it again from Excel and choose it again."
+    },
+    "step3": {
+      "title": "Preview",
+      "checking": "Checking the file…"
+    },
+    "summary": {
+      "items": "Products",
+      "stockLines": "Rows",
+      "errorRows": "Rows with errors",
+      "lineProducts": "{total} rows: {ok} ready",
+      "lineStock": "{total} rows: {ok} ready",
+      "rows": "Rows"
+    },
+    "detail": {
+      "packUnit": "The carton unit will be created too.",
+      "stock": "A total of {total} pieces will be added to {warehouses} warehouses.",
+      "stockExists": "There is already stock in the system. Opening stock is only written to shelves without stock; a row for a shelf that has stock is an error. If you imported this same file before, it is not added twice.",
+      "stockNothing": "There are no new lines to write.",
+      "stockSkipped": "{n} lines were processed before and will be skipped.",
+      "create": "{n} new products will be added",
+      "existing": "{n} products already exist",
+      "packs": "{n} carton definitions",
+      "barcodes": "{n} barcodes"
+    },
+    "blocked": "The file has errors. Fix it and choose it again.",
+    "clean": "No errors. You can import.",
+    "issues": {
+      "all": "All errors ({total}):",
+      "truncated": "Showing the first {shown} errors of {total}. Fix these and the rest will appear.",
+      "file": "File",
+      "row": "Row {row}",
+      "fixPrefix": "How to fix:",
+      "more": "Show all ({n} rows)",
+      "moreTruncated": "Show the first {shown} errors ({n} rows)",
+      "less": "Show less",
+      "pickFixed": "Choose the fixed file",
+      "partial": "{total} errors: showing the first {rows} rows"
+    },
+    "step4": {
+      "title": "Import",
+      "apply": "Import",
+      "note": "If you upload the same file again, it is not added twice.",
+      "blocked": "Fix the errors first. Nothing can be imported while there are errors.",
+      "progress": "{done} / {total} rows",
+      "done": "Finished",
+      "partial": "Stopped halfway",
+      "noRows": "First add at least one row to the template.",
+      "failed": "Could not be saved"
+    },
+    "step5": {
+      "title": "Result"
+    },
+    "result": {
+      "partial": "The import stopped halfway.",
+      "failedRow": "Row {row} · {code}",
+      "nextStock": "Now you can upload the opening stock file.",
+      "again": "Choose the file again",
+      "another": "Upload another file",
+      "toItems": "Go to products",
+      "okLead": "Done.",
+      "created": "{n} products added.",
+      "updated": "Carton or barcode details completed for {n} products.",
+      "stockApplied": "{n} stock lines added.",
+      "retryProducts": "Fix the problem and upload the same file again. Finished products are not added twice; the rest are completed.",
+      "retryStock": "Do not change the quantities of finished lines. Fix only the failed line and upload the file again; finished lines are skipped as “processed before” and the rest are written.",
+      "stat": {
+        "failed": "{n} rows failed",
+        "skipped": "{n} rows not tried",
+        "existing": "{n} rows already existed",
+        "added": "{n} rows added",
+        "updated": "Carton or barcode details completed for {n} rows"
+      },
+      "toStock": "See stock in products",
+      "none": "No new records.",
+      "moreFailed": "and {n} more failed rows.",
+      "reason": {
+        "PAIR_HAS_STOCK": "This product got stock on this shelf from another action. Opening stock is only for empty shelves; this row was not written. Ask your manager if needed.",
+        "PAIR_REVERSED": "The opening stock of this product on this shelf was undone later. It is not written to the same shelf again; ask your manager if needed.",
+        "PAIR_PENDING": "There is an unfinished opening document for this product and shelf. Upload the same file again to continue it."
+      },
+      "failedGeneric": "{n, plural, one {The system could not save this row.} other {The system could not save these rows.}}",
+      "failedTitle": "Could not be saved.",
+      "retryNone": "No rows were written. Fix the problem and upload the same file again."
+    },
+    "column": {
+      "code": "Code",
+      "name": "Name",
+      "baseUnit": "Base unit",
+      "packQty": "Pieces per carton",
+      "unitBarcode": "Piece barcode",
+      "packBarcode": "Carton barcode",
+      "itemCode": "Product code",
+      "shelfCode": "Shelf code",
+      "quantity": "Quantity",
+      "file": "File"
+    },
+    "issue": {
+      "FILE_EMPTY": {
+        "reason": "The file is empty.",
+        "fix": "Download the template, fill it in, then choose it again."
+      },
+      "FILE_TOO_LARGE": {
+        "reason": "The file is too large.",
+        "fix": "It can be at most {maxKb} KB. Split the file in two."
+      },
+      "FILE_ENCODING": {
+        "reason": "The letters in the file could not be read.",
+        "fix": "Save it in Excel as “CSV UTF-8” and choose it again."
+      },
+      "TOO_MANY_ROWS": {
+        "reason": "The file has {count} rows; the limit is {max}.",
+        "fix": "Split the file into parts and upload them one by one."
+      },
+      "CSV_UNTERMINATED_QUOTE": {
+        "reason": "A quotation mark is not closed.",
+        "fix": "Check the quotes or save the file again from Excel."
+      },
+      "FORMAT_UNKNOWN": {
+        "reason": "The column names in the first row were not recognised.",
+        "fix": "Use the template you downloaded; do not change the first row."
+      },
+      "COLUMN_MISSING": {
+        "reason": "This column is missing from the file.",
+        "fix": "Add the column name from the template to the first row."
+      },
+      "COLUMN_DUPLICATE": {
+        "reason": "This column is written twice.",
+        "fix": "Delete one of them."
+      },
+      "NO_ROWS": {
+        "reason": "There are no data rows.",
+        "fix": "Add at least one row after the header row."
+      },
+      "ROW_TOO_MANY_CELLS": {
+        "reason": "The row has more cells than the header.",
+        "fix": "Delete the extra cells. If the text contains a semicolon, put the text in quotes."
+      },
+      "CODE_MISSING": {
+        "reason": "The code is empty.",
+        "fix": "Write a code on this row."
+      },
+      "CODE_INVALID": {
+        "reason": "The code is not valid.",
+        "fix": "Use at most {max} characters and no special characters."
+      },
+      "CODE_DUPLICATE_FILE": {
+        "reason": "Code {code} is also on row {firstRow}.",
+        "fix": "Each code must appear once. Change or delete one."
+      },
+      "NAME_MISSING": {
+        "reason": "The name is empty.",
+        "fix": "Write the product name."
+      },
+      "NAME_INVALID": {
+        "reason": "The name is not valid.",
+        "fix": "Use at most {max} characters."
+      },
+      "UNIT_UNKNOWN": {
+        "reason": "There is no unit called {unit}.",
+        "fix": "Write the unit code like ADET, or leave it empty."
+      },
+      "ITEM_UNIT_MISMATCH": {
+        "reason": "{code} is saved with unit {unit}.",
+        "fix": "Write the same unit. A saved product keeps its unit."
+      },
+      "ITEM_ARCHIVED": {
+        "reason": "{code} is archived.",
+        "fix": "Use another code or delete the row."
+      },
+      "ITEM_UNKNOWN": {
+        "reason": "There is no product {code}.",
+        "fix": "Import the products file first or fix the code."
+      },
+      "ITEM_TRACKED": {
+        "reason": "{code} is tracked by lot or serial.",
+        "fix": "Opening stock for tracked products cannot be imported here. Delete the row."
+      },
+      "PACK_QTY_INVALID": {
+        "reason": "{value} is not a number.",
+        "fix": "Write pieces per carton as a whole number like 12."
+      },
+      "PACK_QTY_FRACTIONAL": {
+        "reason": "Pieces per carton cannot be a fraction ({value}).",
+        "fix": "Write a whole number like 12. Half cartons are not defined."
+      },
+      "PACK_QTY_TOO_SMALL": {
+        "reason": "Pieces per carton must be at least 2.",
+        "fix": "If there is no carton, leave this cell empty."
+      },
+      "PACK_QTY_TOO_LARGE": {
+        "reason": "Pieces per carton is too large.",
+        "fix": "Write {max} or less."
+      },
+      "PACK_QTY_CONFLICT": {
+        "reason": "The system has {system} pieces per carton for this product; the file says {file}.",
+        "fix": "Write the same number or leave the cell empty."
+      },
+      "PACK_BASE_UNIT": {
+        "reason": "A product whose base unit is the carton cannot have pieces per carton.",
+        "fix": "Make the base unit ADET or leave the cell empty."
+      },
+      "PACK_BARCODE_NEEDS_QTY": {
+        "reason": "There is a carton barcode but no pieces per carton.",
+        "fix": "Write pieces per carton. The quantity comes from it when the carton is scanned."
+      },
+      "BARCODE_INVALID": {
+        "reason": "This barcode cannot be used ({value}).",
+        "fix": "Write only the barcode; no long QR text or special characters."
+      },
+      "BARCODE_SAME_ROW": {
+        "reason": "The piece and carton barcodes are the same.",
+        "fix": "They must be different."
+      },
+      "BARCODE_DUPLICATE_FILE": {
+        "reason": "Barcode {value} is also on row {firstRow}.",
+        "fix": "Each barcode must belong to one product. Fix one."
+      },
+      "BARCODE_TAKEN": {
+        "reason": "Barcode {value} is already saved on product {item}.",
+        "fix": "Fix the barcode or leave the cell empty."
+      },
+      "SHELF_MISSING": {
+        "reason": "The shelf code is empty.",
+        "fix": "Write the code of the shelf where the stock is."
+      },
+      "SHELF_UNKNOWN": {
+        "reason": "There is no shelf {code}.",
+        "fix": "Write the code exactly as on the warehouse screen, or add the shelf first."
+      },
+      "SHELF_ARCHIVED": {
+        "reason": "Shelf {code} is archived.",
+        "fix": "Write another shelf."
+      },
+      "SHELF_AMBIGUOUS": {
+        "reason": "Code {code} exists in more than one warehouse ({warehouses}).",
+        "fix": "Make shelf codes different between warehouses."
+      },
+      "SHELF_KIND": {
+        "reason": "{code} is a transit shelf.",
+        "fix": "Choose a storage shelf to put stock on."
+      },
+      "QTY_MISSING": {
+        "reason": "The quantity is empty.",
+        "fix": "Write the number of pieces."
+      },
+      "QTY_INVALID": {
+        "reason": "{value} is not a number.",
+        "fix": "Write digits only (like 24)."
+      },
+      "QTY_NEGATIVE": {
+        "reason": "The quantity cannot be negative ({value}).",
+        "fix": "Write a positive number."
+      },
+      "QTY_ZERO": {
+        "reason": "The quantity is zero.",
+        "fix": "If there is no stock, delete the row."
+      },
+      "QTY_AMBIGUOUS": {
+        "reason": "It is unclear whether {value} uses a thousands or decimal separator.",
+        "fix": "Write it without a dot (like 1250)."
+      },
+      "QTY_FRACTIONAL": {
+        "reason": "{decimals, plural, =0 {Pieces cannot be a fraction ({value}).} other {This product allows at most {decimals} decimal places ({value}).}}",
+        "fix": "{decimals, plural, =0 {Write a whole number (like 24).} other {Use fewer decimal places.}}"
+      },
+      "QTY_TOO_LARGE": {
+        "reason": "The quantity is too large or has too many digits ({value}).",
+        "fix": "Use at most 14 whole and 6 decimal digits."
+      },
+      "PAIR_DUPLICATE_FILE": {
+        "reason": "This product and shelf are also on row {firstRow}.",
+        "fix": "Merge the two rows into one with the total quantity."
+      },
+      "PAIR_HAS_STOCK": {
+        "reason": "Product {code} already has stock on shelf {shelf}.",
+        "fix": "Opening stock is only for empty shelves. Delete this row from the file and ask your manager if needed."
+      },
+      "CELL_TOO_LONG": {
+        "reason": "A cell is too long.",
+        "fix": "Shorten the cell to at most {max} characters or save the file again from Excel."
+      },
+      "TOO_MANY_COLUMNS": {
+        "reason": "The row has too many columns.",
+        "fix": "At most {max} columns are allowed. Delete the extra columns."
+      },
+      "PAIR_REVERSED": {
+        "reason": "The opening stock of product {code} on shelf {shelf} was undone earlier.",
+        "fix": "Undone opening stock is not written to the same shelf again. Delete this row from the file and ask your manager if needed."
+      },
+      "PAIR_PENDING": {
+        "reason": "Product {code} has an unfinished opening document for shelf {shelf} (with another quantity).",
+        "fix": "To continue the unfinished import write the SAME quantity as the earlier file, or delete the row."
+      }
+    },
+    "noRows": "The file has no data rows yet. Add at least one row to the template, then choose the file again."
+  }
+}

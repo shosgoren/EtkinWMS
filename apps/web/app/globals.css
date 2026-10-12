@@ -1,0 +1,525 @@
+@import "tailwindcss";
+/* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
+@source "../../../packages/ui/src";
+
+/* Cihaz algısı CSS ile (T-254; kullanıcı ajanı koklama yok): "telefon" = dar ekran (<768 px) YA DA dokunmatik + alçak ekran
+   (yatay telefon). Tablet/masaüstü yerleşimi bu kırılımın dışındadır ve değişmez. Aynı iki koşul aşağıdaki düz CSS bloklarında tekrarlanır.
+   Virgüllü tek sorgu biçimi Tailwind 4 derlemesinde sınıfları iki bloğa böler (T-292); bu yüzden her koşul ayrı @media + @slot. */
+@custom-variant phone {
+  @media (max-width: 767px) {
+    @slot;
+  }
+
+  @media (pointer: coarse) and (max-height: 500px) {
+    @slot;
+  }
+}
+
+/* Tasarım belirteçleri (ADR-020 / docs/design/palette.md; kontrast: theme-contrast.test.ts).
+   Her anlam rengi üç rol: <ad> (dolu zemin + ikon), <ad>-ink (metin), <ad>-bg (açık zemin).
+   Koyu tema bu kartta yok. Dış font indirilmez: sistem yığını. */
+@theme {
+  /* Nötr (Tailwind yardımcıları :root CSS değişkenlerini üretir) */
+  --color-ink: #172133;
+  --color-ink-muted: #4a5568;
+  --color-surface: #ffffff;
+  --color-border: #d5dce5; /* yalnız süsleyici ayırıcı */
+  --color-border-strong: #6b778a; /* girdi, ikincil düğme kenarı (WCAG 1.4.11) */
+
+  /* Akış görünümü (mavi) — varsayılan */
+  --color-bg: #f3f5f9;
+  --color-accent: #1559c7;
+  --color-accent-ink: #0f4699;
+  --color-accent-soft: #e3ecfa;
+  --color-on-accent: #ffffff;
+
+  /* Kilitli kart */
+  --color-locked-bg: #e9edf2;
+  --color-locked-ink: #4a5568;
+
+  /* Uyarı */
+  --color-warning: #b45309;
+  --color-warning-ink: #7a3e00;
+  --color-warning-bg: #fff4d5;
+
+  /* Geri al / ters kayıt */
+  --color-undo: #c2410c;
+  --color-undo-ink: #8a3300;
+  --color-undo-bg: #fdebdd;
+
+  /* Hata / tehlike */
+  --color-danger: #c9252c;
+  --color-danger-ink: #a51c22;
+  --color-danger-bg: #fdeaea;
+
+  /* Başarı */
+  --color-success: #18794e;
+  --color-success-ink: #11613d;
+  --color-success-bg: #e4f4ea;
+
+  /* Bilgi */
+  --color-info: #1a6fc2;
+  --color-info-ink: #0d4f91;
+  --color-info-bg: #e5f0fb;
+
+  /* Odak halkası */
+  --color-focus: #1559c7;
+
+  /* Köşe yarıçapı, gölge */
+  --radius-card: 1.25rem;
+  --radius-control: 999px;
+  --shadow-card: 0 1px 2px rgb(23 33 51 / 0.08), 0 4px 12px rgb(23 33 51 / 0.06);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* T-270 (ADR-020 ek, kural 8): iş kategorisi renk tonları. Durum anlam renklerinden (success/warning/info/danger/undo) AYRI `cat-*`
+   belirteçleridir; her ton çifttir: `-bg` açık ikon dairesi zemini, `-ink` aynı tonun koyu ikonu. İkinci @theme bloğu bilerek ayrıdır:
+   palette.md §2 tablosu (28 belirteç) bu çiftleri içermez; tablo güncellemesi ADR-020 ekinde takip maddesidir.
+   Kontrast + ayrıklık: theme-contrast.test.ts (KATEGORİ bloğu). */
+@theme {
+  --color-cat-green-bg: #e1f4e4;
+  --color-cat-green-ink: #15602e;
+  --color-cat-orange-bg: #fdeadb;
+  --color-cat-orange-ink: #8a3b06;
+  --color-cat-teal-bg: #d9f3ee;
+  --color-cat-teal-ink: #0b5f55;
+  --color-cat-purple-bg: #f0e5fb;
+  --color-cat-purple-ink: #6a1fb0;
+  --color-cat-sky-bg: #d5eefd;
+  --color-cat-sky-ink: #0b5688;
+  --color-cat-rose-bg: #fde6ec;
+  --color-cat-rose-ink: #9b1c3d;
+  --color-cat-amber-bg: #fcf1cc;
+  --color-cat-amber-ink: #6e4a00;
+  --color-cat-cyan-bg: #d8f1f6;
+  --color-cat-cyan-ink: #0a5766;
+  --color-cat-indigo-bg: #ebe5fc;
+  --color-cat-indigo-ink: #47299c;
+  --color-cat-slate-bg: #ece9f0;
+  --color-cat-slate-ink: #34445e;
+  --color-cat-lilac-bg: #f6e5f4;
+  --color-cat-lilac-ink: #7a2a73;
+}
+
+/* Aralık ölçeği ve dokunma hedefi */
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --touch-min: 3rem; /* 48 px */
+}
+
+/* Kokpit görünümü (koyu lacivert vurgu; anlam belirteçleri değişmez) */
+[data-view="cockpit"] {
+  --color-bg: #eef1f7;
+  --color-accent: #243d8f;
+  --color-accent-ink: #1c3175;
+  --color-accent-soft: #e1e6f5;
+  --color-locked-bg: #e5e9f1;
+  --color-locked-ink: #465066;
+  --color-border: #cfd6e3;
+  --color-focus: #243d8f;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ---- T-254: cihaza uyumlu kabuk ---------------------------------------------------------------------------------------- */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Dokunmatik işaretçide çift dokunma yakınlaştırma gecikmesi yok; dokunma vurgusu odak halkasının yerini tutmaz. */
+@media (pointer: coarse) {
+  a,
+  button,
+  summary,
+  [role="button"],
+  [tabindex="0"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Masaüstü/tablet: döşemede sağ ok yok; üst düğmeler ve yetki notu telefona özgü (telefon bloğu aşağıda geçersiz kılar). */
+.tile-chevron,
+.top-rows,
+.my-tasks-row {
+  display: none;
+}
+
+/* Telefon yalnız öğeleri masaüstünde gizlidir; masaüstüne özgü öğeler telefonda gizlenir. */
+.phone-only {
+  display: none;
+}
+
+@media (max-width: 767px), ((pointer: coarse) and (max-height: 500px)) {
+  .phone-only {
+    display: flex;
+  }
+
+  .desk-only {
+    display: none;
+  }
+
+  /* Kök üst bar yerine telefon üst çubuğu (yalnız çalışma alanı ekranlarında). */
+  body:has(.tenant-shell) .app-header {
+    display: none;
+  }
+
+  /* Tek ekran: gövde kaymaz; üst çubuk + içerik + alt sekme çubuğu 100dvh içinde. İçerik taşarsa yalnız içerik alanı kayar. */
+  html:has(.tenant-shell),
+  body:has(.tenant-shell) {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .tenant-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .tenant-body {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Ana ekran (T-270): ızgara kalan dikey alanı doldurur ve alt sekmeye yaslanır. Satır 1 = üstteki düğmeler (`.top-rows`, otomatik
+     yükseklik); altında `--rows` eşit satır, ilk iş en alt satırda (`--row`, task-menu.tsx). Yetkisiz ve "Yakında" işler ızgarada
+     yer kaplamaz: düğmeler kararmış ana ekran üzerinde ALT SAYFA açar (T-274, DESIGN_REVIEW §7.3 B-01). */
+  .task-grid {
+    flex: 1 1 0%;
+  }
+
+  .task-grid-fill {
+    grid-template-rows: auto repeat(var(--rows), minmax(0, 1fr));
+    min-height: calc(var(--rows) * 4.5rem + (var(--rows) - 1) * 0.5rem + 3.5rem);
+  }
+
+  .task-grid-fill > .task-item {
+    grid-row: var(--row);
+  }
+
+  /* Ana ekran kabı: ızgara (ve 2 sütunda "Şimdi" kartı) kalan alanı paylaşır. */
+  .task-menu {
+    flex: 1 1 0%;
+    min-height: 0;
+  }
+
+  .task-menu.task-menu-2col {
+    justify-content: flex-end;
+  }
+
+  /* "Şimdi" kartı ızgaranın hemen üstüne yaslıdır (kart + ızgara alta yaslı kabın içinde); kalan dikey alan selam başlığının altında TEK boşluk olarak kalır
+     (DESIGN_REVIEW §7.4.1: kartı iki yana otomatik boşlukla ortalayıp boşluğu bölmek yasak). */
+  /* İkinci sıradaki iş satırı yalnız yüksek ekranda (≥ 880 px) görünür: yer varsa GERÇEK ek bilgi gösterilir (dolgu değil; veri yoksa satır hiç yoktur). */
+  .now-extra {
+    display: none;
+  }
+
+  @media (min-height: 880px) {
+    .now-extra {
+      display: flex;
+    }
+  }
+
+  /* "Şimdi" kartı görünür yüksekliğe göre sığar; yalnız YERLEŞİM değişir, anlam kaybolmaz (fiil, şevron, doğrudan bağlantı hep var; DESIGN_REVIEW §7.4.2):
+     ≥ 800 px tam kart (başlık + "Sıradaki"); 700-799 px başlıksız, satırlar alt alta, "Sıradaki" satırı var; < 700 px iki satır yan yana, etiket sarılır, "Sıradaki" yok
+     (satırın kendisi sıradaki işi açar). */
+  @media (max-height: 799px) {
+    .now-card {
+      gap: 0;
+      padding: 0.25rem;
+    }
+
+    .now-card .now-title {
+      display: none;
+    }
+
+    .now-card .now-list {
+      gap: 0.25rem;
+    }
+
+    .now-card .now-list > li > a:first-child {
+      min-height: 3rem;
+      padding-block: 0;
+      gap: 0.5rem;
+    }
+
+    .now-card .now-list > li > a:first-child > span:first-child {
+      width: 2rem;
+      height: 2rem;
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-height: 699px) {
+    .now-card .now-list {
+      flex-direction: row;
+    }
+
+    .now-card .now-list > li {
+      flex: 1 1 0%;
+      min-width: 0;
+    }
+
+    .now-card .now-next {
+      display: none;
+    }
+
+    /* Sayı rozeti etiketin içinde zaten yazılı ("2 yerleştirme görevi bekliyor"); dar yarım satırda yer açmak için yalnız burada gizlenir. */
+    .now-card .now-list > li > a:first-child > span:first-child {
+      display: none;
+    }
+
+    .now-card .now-label {
+      font-size: 0.875rem;
+      line-height: 1.15;
+    }
+
+    .now-card .now-list > li > a:first-child > svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+
+
+  /* 6+ izinli iş (DESIGN_REVIEW §7.4, §7.4.1 SIKI): eşit 2 sütun; döşeme yüksekliği İÇERİKTEN gelir (ızgara alanı doldurmak için uzatmaz, ikon büyümez):
+     satırlar eşit (en yüksek içeriğe göre), alta yaslı; tek sayıda iş varsa en üstteki son döşeme tam genişlik (`--col: 1 / -1`).
+     Kalan dikey alan dolgu ile değil gerçek bilgiyle ("Şimdi" kartı, §7.4.2) kullanılır. */
+  .task-grid.task-grid-2col {
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto repeat(var(--rows), 1fr);
+    min-height: 0;
+  }
+
+  .task-grid.task-grid-2col > .top-rows {
+    grid-column: 1 / -1;
+  }
+
+  .task-grid.task-grid-2col > .task-item {
+    grid-column: var(--col);
+  }
+
+  .task-grid.task-grid-2col .task-tile {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    padding: 0.75rem;
+  }
+
+  /* İkon dairesi SABİT boyutta ve tüm döşemelerde eşit (3 rem); flex/yüzde ile büyümez. */
+  .task-grid.task-grid-2col .tile-badge {
+    flex: none;
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .task-grid.task-grid-2col .tile-badge svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .task-grid.task-grid-2col .tile-body {
+    flex: none;
+    width: 100%;
+    gap: 0.125rem;
+  }
+
+  /* Başlık: sabit boy (yalnız görünüm genişliğine bağlı), en çok 2 satır; açıklama: TEK satır, kesilmez (sığmayan metin çeviri anahtarında kısaltılır). */
+  .task-grid.task-grid-2col .tile-title {
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    display: block;
+  }
+
+  .task-grid.task-grid-2col .tile-desc {
+    display: block;
+    font-size: 0.875rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: visible;
+    color: var(--color-ink-muted);
+  }
+
+  .task-grid.task-grid-2col .tile-chevron {
+    display: none;
+  }
+
+  .top-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .top-rows > button {
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+  }
+
+  .top-rows > button[aria-expanded="true"] .row-chevron {
+    transform: rotate(180deg);
+  }
+
+  .task-grid > .soon-item,
+  .task-grid > .locked-item {
+    display: none;
+  }
+
+  /* Alt sayfa: içeriğine uyar (en çok %85), altta sabit; satırlar ızgara kurallarını paylaşır (`task-grid sheet-rows`). */
+  .sheet-rows {
+    flex: none;
+  }
+
+  .sheet-rows > li > .task-tile {
+    height: 4.5rem;
+  }
+
+  .sheet-rows .tile-chevron {
+    display: none;
+  }
+
+  /* "Görevlerim" özeti (saha rolleri): ızgaranın üstünde esnek satır; döşemeler en çok 140 px, altta. */
+  .task-grid-card {
+    grid-template-rows: minmax(13.5rem, 1fr) repeat(var(--rows), minmax(4.5rem, 8.75rem));
+    min-height: calc(var(--rows) * 5rem + 14rem);
+  }
+
+  /* Saha rolünde "Şimdi" satırları özetin yerine girdiğinde ilk satır içeriğe göre büyür (kırpma/çakışma yok); döşemeler kalan alanı 72-140 px arasında paylaşır. */
+  .task-grid-card.task-grid-now {
+    grid-template-rows: auto repeat(var(--rows), minmax(4.5rem, 8.75rem));
+  }
+
+  .task-grid-card > .my-tasks-row {
+    display: flex;
+    grid-row: 1;
+  }
+
+  .my-tasks-stack > .my-tasks:not(.my-tasks-empty),
+  .my-tasks-stack > [role="alert"] {
+    flex: 1 1 auto;
+  }
+
+  /* Döşeme: tek sütun yatay satır (ikon dairesi solda, başlık + açıklama, sağ ok). Boyutlar görünür yüksekliğe göre ölçeklenir
+     (düşük ekranda 72 px döşeme, yüksekte büyük ikon ve başlık). */
+  .task-grid .task-tile {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.875rem;
+    padding: 0.5rem 1rem;
+    overflow: hidden;
+    border-radius: 1rem;
+  }
+
+  .task-grid .tile-head {
+    display: contents;
+  }
+
+  .task-grid .tile-head > :not(.tile-badge) {
+    order: 3;
+  }
+
+  .task-grid .tile-badge {
+    width: clamp(3rem, 7.5dvh, 5rem);
+    height: clamp(3rem, 7.5dvh, 5rem);
+  }
+
+  .task-grid .tile-badge svg {
+    width: 50%;
+    height: 50%;
+  }
+
+  .task-grid .tile-body {
+    flex: 1 1 0%;
+  }
+
+  .task-grid .tile-title {
+    font-size: clamp(1.0625rem, 2.4dvh, 1.5rem);
+    line-height: 1.2;
+  }
+
+  .task-grid .tile-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: clamp(0.8125rem, 1.8dvh, 1.0625rem);
+    line-height: 1.25;
+  }
+
+  .task-grid .tile-chevron {
+    display: block;
+  }
+
+  .task-grid:not(.task-grid-fill) .task-tile {
+    min-height: 4.5rem;
+  }
+
+  /* "Yakında" ve yetkisiz işler: kompakt, gölgesiz, nötr satırlar (tıklanamaz; renk yalnız küçük ikon dairesinde). Gerekçe cümlesi
+     bir kez panelde; satırlardaki tekrarı gizli. */
+  .task-grid .task-tile[data-state="soon"],
+  .task-grid .task-tile[data-state="locked"] {
+    gap: 0.75rem;
+    min-height: 0;
+    padding: 0.375rem 0.75rem;
+    box-shadow: none;
+    border-width: 1px;
+  }
+
+  .task-grid .task-tile[data-state="soon"] .tile-badge,
+  .task-grid .task-tile[data-state="locked"] .tile-badge {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .task-grid .task-tile[data-state="soon"] .tile-title,
+  .task-grid .task-tile[data-state="locked"] .tile-title {
+    color: var(--color-ink-muted);
+    font-size: 0.9375rem;
+  }
+
+  .task-grid .task-tile[data-state="soon"] .tile-desc,
+  .task-grid .task-tile[data-state="locked"] .tile-desc,
+  .task-grid .task-tile[data-state="soon"] .tile-chevron {
+    display: none;
+  }
+
+  /* Açık listelerde her satır işin ne yaptığını tek satırda söyler (gerçek `tasks.*.description`; T-274). */
+  .task-grid .task-tile[data-state="soon"] .tile-what,
+  .task-grid .task-tile[data-state="locked"] .tile-what {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+    color: var(--color-ink-muted);
+    font-size: 0.8125rem;
+    line-height: 1.25;
+  }
+}

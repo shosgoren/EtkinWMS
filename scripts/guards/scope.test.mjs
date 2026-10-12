@@ -1,0 +1,1015 @@
+// T-008a `check:scope` + `cli.mjs` + `lib/cards.mjs` + `lib/output.mjs` testleri.
+// Fixture depolar `lib/testkit.mjs` ile geçici dizinde gerçek git ile kurulur.
+import { execFileSync } from "node:child_process";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { main } from "./cli.mjs";
+import {
+  backtickSegmentsOutsideParens,
+  cardIdFromBranch,
+  cardIntTarget,
+  CardError,
+  mergedWorkBranches,
+  parseCardFiles,
+} from "./lib/cards.mjs";
+import { createReporter, formatFinding, formatSummary } from "./lib/output.mjs";
+import { parseScopeArgs } from "./scope.mjs";
+import { createRepo } from "./lib/testkit.mjs";
+
+/** @type {Array<() => void>} */
+const cleanups = [];
+afterEach(() => {
+  for (const c of cleanups.splice(0)) c();
+});
+
+/**
+ * @param {string} id
+ * @param {string} files "Dokunulacak dosyalar" satırının gövdesi
+ * @param {string} [intTarget]
+ */
+function card(id, files, intTarget) {
+  const dal = `\`feat/${id}-x\`` + (intTarget === undefined ? "" : ` → \`${intTarget}\``);
+  return `# ${id}: örnek\n**Faz:** 0 · **Ajan:** devops · **Dal:** ${dal}\n**Dokunulacak dosyalar (≤10):** ${files}\n**Kabul ölçütü:** —\n`;
+}
+
+/**
+ * main'de üç kart (T-100, T-101, T-102) ve kaynak dosyalar; origin/main yayımlı.
+ */
+function fixture() {
+  const r = createRepo({ prefix: "guards-scope-" });
+  cleanups.push(() => r.cleanup());
+  r.writeAll({
+    ".gitignore": ".artifacts/\n",
+    "docs/tasks/T-100.md": card("T-100", "`src/a.mjs`, `src/lib/**` (yardımcılar; `src/gizli.mjs` sayılmaz), `pkg/`"),
+    "docs/tasks/T-101.md": card("T-101", "`src/b.mjs`"),
+    "docs/tasks/T-102.md": card("T-102", "`src/c.mjs`"),
+    "src/a.mjs": "a\n",
+    "src/b.mjs": "b\n",
+    "src/c.mjs": "c\n",
+    "README.md": "r\n",
+  });
+  r.commit("init").publish("main");
+  return r;
+}
+
+/**
+ * @param {string} root
+ * @param {string[]} argv
+ */
+async function check(root, argv = []) {
+  /** @type {string[]} */
+  const lines = [];
+  const code = await main(["scope", ...argv], { root, log: (l) => lines.push(l) });
+  return { code, lines, text: lines.join("\n") };
+}
+
+describe("check:scope fixture senaryoları", () => {
+  it("kart içi değişiklik → OK", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").write("src/lib/deep/u.mjs", "u\n").write("pkg/p.json", "{}\n").commit("iş");
+    const res = await check(r.dir);
+    expect(res.code).toBe(0);
+    expect(res.lines).toEqual(["check:scope OK"]);
+  });
+
+  it("kart dışı dosya → FAIL OUT_OF_SCOPE <yol>", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").write("README.md", "değişti\n").commit("iş");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.lines).toContainEqual(expect.stringMatching(/^\[check:scope\] FAIL OUT_OF_SCOPE README\.md — kart dosya listesinde yok \(T-100; durum M\)$/));
+    expect(res.lines.at(-1)).toBe("check:scope FAIL (1)");
+  });
+
+  it("parantez içindeki backtick yolu izin vermez", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/gizli.mjs", "g\n").commit("iş");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/gizli.mjs");
+  });
+
+  it("kart dışına yeniden adlandırma → FAIL (yeni yol), eski yol kart içi", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").rename("src/a.mjs", "elsewhere/a.mjs").commit("taşı");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.lines).toContainEqual(
+      expect.stringMatching(/FAIL OUT_OF_SCOPE elsewhere\/a\.mjs — .*yeniden adlandırma src\/a\.mjs → elsewhere\/a\.mjs/),
+    );
+    expect(res.text).not.toContain("OUT_OF_SCOPE src/a.mjs");
+  });
+
+  it("kart dışından içeri yeniden adlandırma → FAIL (eski yol silinmiş sayılır)", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").rename("README.md", "src/lib/README.md").commit("taşı");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE README.md");
+  });
+
+  it("kartı olmayan dal → FAIL CARD_NOT_FOUND", async () => {
+    const r = fixture();
+    r.branch("feat/T-999-yok").write("src/a.mjs", "a2\n").commit("iş");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.lines).toContainEqual("[check:scope] FAIL CARD_NOT_FOUND docs/tasks/T-999.md — T-999 kartı yok");
+  });
+
+  it("kalıba uymayan dal adı → FAIL CARD_NOT_FOUND (fail-closed)", async () => {
+    const r = fixture();
+    r.branch("deneme").write("src/a.mjs", "a2\n").commit("iş");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toMatch(/FAIL CARD_NOT_FOUND - — dal adı "deneme" kart kalıbına uymuyor/);
+  });
+
+  it("int/ dalında iki kartın birleşimi → OK, üçüncü kartın dosyası → FAIL", async () => {
+    const r = fixture();
+    r.branch("int/dilim").publish("int/dilim");
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("100").checkout("int/dilim");
+    r.merge("feat/T-100-x", "Merge remote-tracking branch 'origin/feat/T-100-x' into int/dilim");
+    r.branch("fix/T-101-y").write("src/b.mjs", "b2\n").commit("101").checkout("int/dilim");
+    r.merge("fix/T-101-y", "Merge pull request #7 from owner/fix/T-101-y");
+
+    const ok = await check(r.dir);
+    expect(ok.code).toBe(0);
+    expect(ok.lines).toEqual(["check:scope OK"]);
+
+    r.write("src/c.mjs", "c2\n").commit("T-102 dosyası doğrudan int'e");
+    const bad = await check(r.dir);
+    expect(bad.code).toBe(1);
+    expect(bad.lines).toContainEqual(expect.stringMatching(/^\[check:scope\] FAIL OUT_OF_SCOPE src\/c\.mjs — kart dosya listesinde yok \(T-100, T-101; durum M\)$/));
+  });
+
+  it("int/ dalında kartsız Supervisor commit'i (STATE, kart, ADR) → OK", async () => {
+    const r = fixture();
+    r.branch("int/dilim");
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("100").checkout("int/dilim");
+    r.merge("feat/T-100-x", "Merge remote-tracking branch 'origin/feat/T-100-x' into int/dilim");
+    r.write("docs/STATE.md", "durum\n").write("docs/tasks/T-102.md", "kart düzeltmesi\n").write("docs/adr/ADR-001.md", "a\n").commit("supervisor");
+    const res = await check(r.dir);
+    expect(res.code).toBe(0);
+    expect(res.lines).toEqual(["check:scope OK"]);
+  });
+
+  it("int/ dalında Supervisor yolları dışındaki kartsız dosya → FAIL", async () => {
+    const r = fixture();
+    r.branch("int/dilim").write("docs/STATE.md", "durum\n").write("docs/INVARIANTS.md", "x\n").commit("supervisor");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.lines).toEqual([
+      "[check:scope] FAIL OUT_OF_SCOPE docs/INVARIANTS.md — kart dosya listesinde yok (birleştirilmiş kart yok; durum A)",
+      "check:scope FAIL (1)",
+    ]);
+  });
+
+  it("feat dalında kartta olmayan STATE değişikliği → FAIL", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").write("docs/STATE.md", "durum\n").commit("iş");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.lines).toEqual([
+      "[check:scope] FAIL OUT_OF_SCOPE docs/STATE.md — kart dosya listesinde yok (T-100; durum A)",
+      "check:scope FAIL (1)",
+    ]);
+  });
+
+  it("int/ dalında birleştirilen dalın kartı yoksa → FAIL CARD_NOT_FOUND", async () => {
+    const r = fixture();
+    r.branch("int/dilim");
+    r.branch("feat/T-555-x").write("src/a.mjs", "a2\n").commit("555").checkout("int/dilim");
+    r.merge("feat/T-555-x");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL CARD_NOT_FOUND docs/tasks/T-555.md");
+  });
+
+  it("kart listesi dalda genişletilmiş → OK + SCOPE_CARD_CHANGED", async () => {
+    const r = fixture();
+    r.branch("feat/T-101-x")
+      .write("docs/tasks/T-101.md", card("T-101", "`src/b.mjs`, `extra/**`"))
+      .write("extra/e.txt", "e\n")
+      .commit("kart genişledi");
+    const res = await check(r.dir);
+    expect(res.code).toBe(0);
+    expect(res.lines).toContainEqual(
+      "[check:scope] WARN SCOPE_CARD_CHANGED docs/tasks/T-101.md — kartın dosya listesi dalda değişti (eklenen: extra/**)",
+    );
+    expect(res.lines.at(-1)).toBe("check:scope OK");
+  });
+
+  it("kartın kendisi örtük izinli; listesi değişmeyen kart düzenlemesi uyarı üretmez", async () => {
+    const r = fixture();
+    r.branch("feat/T-101-x").write("docs/tasks/T-101.md", card("T-101", "`src/b.mjs`") + "\nNot.\n").commit("kart notu");
+    const res = await check(r.dir);
+    expect(res.lines).toEqual(["check:scope OK"]);
+    expect(res.code).toBe(0);
+  });
+
+  it("başka bir kartın dosyası örtük izinli değil", async () => {
+    const r = fixture();
+    r.branch("feat/T-101-x").write("docs/tasks/T-102.md", "değişti\n").commit("başka kart");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE docs/tasks/T-102.md");
+  });
+
+  it("dalda oluşturulan kart → SCOPE_CARD_CHANGED uyarısı", async () => {
+    const r = fixture();
+    r.branch("feat/T-103-x").write("docs/tasks/T-103.md", card("T-103", "`src/d.mjs`")).write("src/d.mjs", "d\n").commit("yeni kart");
+    const res = await check(r.dir);
+    expect(res.code).toBe(0);
+    expect(res.text).toContain("WARN SCOPE_CARD_CHANGED docs/tasks/T-103.md — kart dalda oluşturuldu");
+  });
+
+  it("commit'lenmemiş izlenmeyen dosya da denetlenir", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("tmp/not.txt", "x\n");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE tmp/not.txt — kart dosya listesinde yok (T-100; durum ?)");
+  });
+
+  it("hedef dal kartın Dal satırındaki int/ hedefinden türetilir; --base bunu ezer", async () => {
+    const r = fixture();
+    r.write("docs/tasks/T-104.md", card("T-104", "`src/e.mjs`", "int/dilim")).commit("kart").publish("main");
+    r.branch("int/dilim").write("src/c.mjs", "int'te başka iş\n").commit("int işi").publish("int/dilim");
+    r.branch("feat/T-104-x").write("src/e.mjs", "e\n").commit("104");
+    const res = await check(r.dir);
+    expect(res.lines).toEqual(["check:scope OK"]);
+    const json = JSON.parse(readFileSync(path.join(r.dir, ".artifacts/guards/scope.json"), "utf8"));
+    expect(json.details.target).toBe("origin/int/dilim");
+
+    const vsMain = await check(r.dir, ["--base", "origin/main"]);
+    expect(vsMain.code).toBe(1);
+    expect(vsMain.text).toContain("FAIL OUT_OF_SCOPE src/c.mjs");
+  });
+
+  it("hedef ref yoksa → FAIL GIT_ERROR", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+    const res = await check(r.dir, ["--base=origin/yok"]);
+    expect(res.code).toBe(1);
+    expect(res.text).toMatch(/FAIL GIT_ERROR - — hedef ref bulunamadı: origin\/yok/);
+  });
+
+  it("--branch ayrık HEAD'de dal adını verir", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+    r.git("checkout", "--quiet", "--detach");
+    expect((await check(r.dir)).text).toContain("FAIL GIT_ERROR");
+    expect((await check(r.dir, ["--branch", "feat/T-100-x"])).lines).toEqual(["check:scope OK"]);
+  });
+
+  it("ayrıntı .artifacts/guards/scope.json'a yazılır", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("README.md", "x\n").commit("iş");
+    await check(r.dir);
+    const json = JSON.parse(readFileSync(path.join(r.dir, ".artifacts/guards/scope.json"), "utf8"));
+    expect(json.guard).toBe("scope");
+    expect(json.ok).toBe(false);
+    expect(json.failures).toEqual([
+      { level: "FAIL", code: "OUT_OF_SCOPE", file: "README.md", message: "kart dosya listesinde yok (T-100; durum M)" },
+    ]);
+    expect(json.details.branch).toBe("feat/T-100-x");
+    expect(json.details.cards[0].globs).toEqual(["src/a.mjs", "src/lib/**", "pkg/**"]);
+  });
+});
+
+describe("cli.mjs", () => {
+  /** @returns {string} */
+  function tmp() {
+    const d = mkdtempSync(path.join(os.tmpdir(), "guards-cli-"));
+    cleanups.push(() => rmSync(d, { recursive: true, force: true }));
+    return d;
+  }
+
+  it("modülü yazılmamış bekçi → FAIL NOT_IMPLEMENTED + çıkış 1", async () => {
+    const root = tmp();
+    for (const name of ["tests", "ac-ratchet", "protected", "assertions", "pilot"]) {
+      /** @type {string[]} */
+      const lines = [];
+      const code = await main([name], { root, guardsDir: root, log: (l) => lines.push(l) });
+      expect(code).toBe(1);
+      expect(lines[0]).toMatch(new RegExp(`^\\[check:${name}\\] FAIL NOT_IMPLEMENTED - — check:${name} henüz yazılmadı`));
+      expect(lines.at(-1)).toBe(`check:${name} FAIL (1)`);
+    }
+  });
+
+  it("bilinmeyen bekçi adı → çıkış 2", async () => {
+    /** @type {string[]} */
+    const lines = [];
+    expect(await main(["yok"], { root: tmp(), log: (l) => lines.push(l) })).toBe(2);
+    expect(await main([], { root: tmp(), log: (l) => lines.push(l) })).toBe(2);
+    expect(lines[0]).toContain('bilinmeyen bekçi "yok"');
+  });
+
+  it("run dışa aktarmayan modül → FAIL GUARD_INVALID", async () => {
+    const root = tmp();
+    writeFileSync(path.join(root, "tests.mjs"), "export const x = 1;\n");
+    /** @type {string[]} */
+    const lines = [];
+    expect(await main(["tests"], { root, guardsDir: root, log: (l) => lines.push(l) })).toBe(1);
+    expect(lines[0]).toBe("[check:tests] FAIL GUARD_INVALID tests.mjs — modül `run(ctx)` dışa aktarmıyor");
+  });
+
+  it("kullanım hatası → çıkış 2", async () => {
+    /** @type {string[]} */
+    const lines = [];
+    expect(await main(["scope", "--bilinmeyen"], { root: tmp(), log: (l) => lines.push(l) })).toBe(2);
+    expect(lines[0]).toBe('check:scope HATA: bilinmeyen argüman "--bilinmeyen"');
+  });
+});
+
+// T-008l güvenlik incelemesi: madde 2 (taban birleştirmesi yanlış pozitifi) GERİ ALINDI; aşağıdakiler
+// "kart dışı dosya hâlâ FAIL" negatif testleridir (PoC senaryoları A–D; hiçbir yol kaçmamalı).
+describe("T-008l negatif: kart dışı değişiklik/kart kaynağı sahteciliği FAIL kalır", () => {
+  const author = { GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@example.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@example.invalid" };
+
+  it("A: int hedefli dal, başka kartın int'teki değişikliğini main sürümüne geri alır (merge'süz) → FAIL", async () => {
+    const r = fixture();
+    r.write("docs/tasks/T-104.md", card("T-104", "`src/e.mjs`", "int/dilim")).write("src/sec.mjs", "v1-weak\n").write("src/e.mjs", "e\n").commit("kart").publish("main");
+    r.branch("int/dilim").write("src/sec.mjs", "v2-fixed\n").commit("fix(T-050): sec").publish("int/dilim");
+    r.branch("feat/T-104-z").write("src/e.mjs", "e2\n").write("src/sec.mjs", "v1-weak\n").commit("iş");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/sec.mjs");
+  });
+
+  it("B: commit-tree ile içeriksiz sahte merge (2. ebeveyn eski main commit'i) kart dışı geri almayı gizleyemez → FAIL", async () => {
+    const r = fixture();
+    r.write("src/sec.mjs", "v1-weak\n").commit("eski");
+    const old = r.git("rev-parse", "HEAD").trim();
+    r.write("src/sec.mjs", "v2-fixed\n").commit("fix sec").publish("main");
+    r.branch("feat/T-101-z").write("src/b.mjs", "b2\n").write("src/sec.mjs", "v1-weak\n").commit("iş");
+    const tree = r.git("rev-parse", "HEAD^{tree}").trim();
+    const m = execFileSync("git", ["commit-tree", tree, "-p", "HEAD", "-p", old, "-m", "Merge remote-tracking branch 'origin/main'"], {
+      cwd: r.dir,
+      env: { ...process.env, ...author },
+      encoding: "utf8",
+    }).trim();
+    r.git("reset", "--quiet", "--hard", m);
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/sec.mjs");
+  });
+
+  it("C: birleşen çalışma dalının ucu `fix(T-102):` öneki T-102 kartını AÇMAZ → FAIL", async () => {
+    const r = fixture();
+    r.branch("feat/T-101-x").write("src/b.mjs", "b2\n").write("src/c.mjs", "c-evil\n").commit("iş");
+    r.git("commit", "--quiet", "--allow-empty", "-m", "fix(T-102): nothing");
+    r.checkout("main").branch("int/dilim");
+    r.merge("feat/T-101-x", "Merge pull request #1 from x/feat/T-101-x");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/c.mjs");
+  });
+
+  it("D: iş dalının içindeki iç merge konusu (`Merge branch 'feat/T-102-x'`) int denetiminde T-102 kartını AÇMAZ → FAIL", async () => {
+    const r = fixture();
+    r.branch("side").commit("s");
+    r.checkout("main").branch("feat/T-101-x").write("src/b.mjs", "b2\n").write("src/c.mjs", "c-evil\n").commit("iş");
+    r.merge("side", "Merge branch 'feat/T-102-x'");
+    r.checkout("main").branch("int/dilim");
+    r.merge("feat/T-101-x", "Merge pull request #1 from x/feat/T-101-x");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/c.mjs");
+  });
+});
+
+describe("T-242 çakışmalı birleştirme (MERGE_HEAD) farkındalığı", () => {
+  /**
+   * Kart dalı eski tabanda; origin/main ilerlemiş (a.mjs çakışıyor + yeni dosya + README);
+   * `git merge origin/main` çakışmayla durur ve a.mjs elle çözülür (commit yok).
+   */
+  function conflictedMainMerge() {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a-branch\n").commit("dal işi");
+    r.checkout("main").write("src/a.mjs", "a-main\n").write("src/new.mjs", "n\n").write("README.md", "r2\n").commit("main ilerledi").publish("main");
+    r.checkout("feat/T-100-x");
+    expect(() => r.git("merge", "--no-ff", "origin/main")).toThrow();
+    r.write("src/a.mjs", "a-resolved\n");
+    return r;
+  }
+
+  it("çakışmalı origin/main birleştirmesi: main'in getirdiği dosyalar kart dışı sayılmaz → OK", async () => {
+    const r = conflictedMainMerge();
+    const res = await check(r.dir);
+    expect(res.text).not.toContain("OUT_OF_SCOPE");
+    expect(res.lines).toEqual(["check:scope OK"]);
+    expect(res.code).toBe(0);
+  });
+
+  it("birleştirme + kart dışı ek değişiklik: yalnız o dosya FAIL (yeni dosya ve main'in dosyasını sonradan değiştirme)", async () => {
+    const r = conflictedMainMerge();
+    r.write("src/c.mjs", "c-evil\n").write("README.md", "r2-sonradan\n");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.lines).toEqual([
+      "[check:scope] FAIL OUT_OF_SCOPE README.md — kart dosya listesinde yok (T-100; durum M)",
+      "[check:scope] FAIL OUT_OF_SCOPE src/c.mjs — kart dosya listesinde yok (T-100; durum M)",
+      "check:scope FAIL (2)",
+    ]);
+  });
+
+  it("birleştirme sırasında main'in getirdiği dosyaya ek kart dışı dosya + izlenmeyen dosya → FAIL yalnız onlar", async () => {
+    const r = conflictedMainMerge();
+    r.write("tmp/x.txt", "x\n");
+    const res = await check(r.dir);
+    expect(res.lines).toEqual([
+      "[check:scope] FAIL OUT_OF_SCOPE tmp/x.txt — kart dosya listesinde yok (T-100; durum ?)",
+      "check:scope FAIL (1)",
+    ]);
+  });
+
+  it("sahte MERGE_HEAD: hedefin atası olmayan commit → gevşeme yok (main'in dosyaları FAIL)", async () => {
+    const r = conflictedMainMerge();
+    r.git("merge", "--abort");
+    r.checkout("main").branch("yan").write("README.md", "r2\n").write("src/new.mjs", "n\n").commit("hedefte olmayan");
+    const side = r.git("rev-parse", "HEAD").trim();
+    r.checkout("feat/T-100-x").write("README.md", "r2\n").write("src/new.mjs", "n\n");
+    writeFileSync(path.join(r.dir, ".git/MERGE_HEAD"), `${side}\n`);
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE README.md");
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/new.mjs");
+  });
+
+  it("sahte MERGE_HEAD: tabandan eski (hedefin atası ama base'in soyundan değil) commit ile geri alma gizlenemez → FAIL", async () => {
+    const r = fixture();
+    r.write("src/sec.mjs", "v1-weak\n").commit("eski");
+    const old = r.git("rev-parse", "HEAD").trim();
+    r.write("src/sec.mjs", "v2-fixed\n").commit("fix sec").publish("main");
+    r.branch("feat/T-101-z").write("src/b.mjs", "b2\n").commit("iş").write("src/sec.mjs", "v1-weak\n");
+    writeFileSync(path.join(r.dir, ".git/MERGE_HEAD"), `${old}\n`);
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/sec.mjs");
+  });
+
+  it("sahte MERGE_HEAD: çöp / var olmayan SHA / boş dosya → gevşeme yok", async () => {
+    for (const body of ["çöp\n", `${"a".repeat(40)}\n`, ""]) {
+      const r = conflictedMainMerge();
+      writeFileSync(path.join(r.dir, ".git/MERGE_HEAD"), body);
+      const res = await check(r.dir);
+      expect(res.code).toBe(1);
+      expect(res.text).toContain("FAIL OUT_OF_SCOPE src/new.mjs");
+    }
+  });
+
+  it("sahte MERGE_HEAD: gerçek birleştirme olmadan elle yazılmış, hedefin gerçek ucu → yalnızca o ucun getirdiği, dalın dokunmadığı yollar muaf; ek dosya FAIL", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+    r.checkout("main").write("README.md", "r2\n").commit("main").publish("main");
+    r.checkout("feat/T-100-x").write("README.md", "r2\n").write("src/c.mjs", "evil\n");
+    r.git("add", "README.md");
+    writeFileSync(path.join(r.dir, ".git/MERGE_HEAD"), `${r.git("rev-parse", "origin/main").trim()}\n`);
+    const res = await check(r.dir);
+    expect(res.lines).toEqual([
+      "[check:scope] FAIL OUT_OF_SCOPE src/c.mjs — kart dosya listesinde yok (T-100; durum M)",
+      "check:scope FAIL (1)",
+    ]);
+  });
+
+  it("dalın kendi kart dışı değişikliği birleştirmeyle gizlenemez: dal README'yi değiştirmişse muaf değil", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").write("README.md", "r2\n").commit("kart dışı");
+    r.checkout("main").write("README.md", "r2\n").commit("main aynı içerik").publish("main");
+    r.checkout("feat/T-100-x");
+    r.git("merge", "--no-ff", "--no-commit", "origin/main");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE README.md");
+  });
+
+  it("int dalına kart dalı çakışmalı birleştirme: kart kapsamı MERGE_MSG + dal ref'inden çözülür → OK", async () => {
+    const r = fixture();
+    r.branch("int/dilim").write("src/a.mjs", "a-int\n").commit("int");
+    r.branch("feat/T-100-x", "main").write("src/a.mjs", "a-branch\n").write("src/lib/u.mjs", "u\n").commit("100");
+    r.checkout("int/dilim");
+    expect(() => r.git("merge", "--no-ff", "feat/T-100-x")).toThrow();
+    r.write("src/a.mjs", "a-resolved\n");
+    const res = await check(r.dir);
+    expect(res.lines).toEqual(["check:scope OK"]);
+    expect(res.code).toBe(0);
+  });
+
+  it("int dalı çakışmalı kart birleştirmesi + kart dışı ek dosya → FAIL; MERGE_MSG'ye sahte dal adı eklemek ikinci kartı açmaz", async () => {
+    const r = fixture();
+    r.branch("int/dilim").write("src/a.mjs", "a-int\n").commit("int");
+    r.branch("feat/T-100-x", "main").write("src/a.mjs", "a-branch\n").commit("100");
+    r.branch("feat/T-102-x", "main");
+    r.checkout("int/dilim");
+    expect(() => r.git("merge", "--no-ff", "feat/T-100-x")).toThrow();
+    r.write("src/a.mjs", "a-resolved\n").write("src/c.mjs", "c-evil\n");
+    writeFileSync(path.join(r.dir, ".git/MERGE_MSG"), "Merge branch 'feat/T-100-x' and 'feat/T-102-x'\n");
+    const res = await check(r.dir);
+    expect(res.lines).toEqual([
+      "[check:scope] FAIL OUT_OF_SCOPE src/c.mjs — kart dosya listesinde yok (T-100; durum M)",
+      "check:scope FAIL (1)",
+    ]);
+  });
+
+  it("int dalı: MERGE_MSG dal adı MERGE_HEAD'i göstermiyorsa kart açılmaz → FAIL", async () => {
+    const r = fixture();
+    r.branch("int/dilim").write("docs/STATE.md", "i\n").commit("int");
+    r.branch("fix/T-102-q", "main").write("src/c.mjs", "c\n").commit("102");
+    r.branch("sahte", "main").write("src/c.mjs", "c-evil\n").commit("sahte");
+    r.checkout("int/dilim");
+    r.git("merge", "--no-ff", "--no-commit", "sahte");
+    writeFileSync(path.join(r.dir, ".git/MERGE_MSG"), "Merge branch 'fix/T-102-q'\n");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/c.mjs");
+  });
+});
+
+describe("T-242 MERGE_HEAD muafiyeti: indeks/ağaç ayrışması ve özel girdiler fail-closed", () => {
+  /**
+   * Kart dalı eski tabanda; main `mainSide` ile ilerler; `git merge --no-commit origin/main`
+   * (çakışmasız) ile MERGE_HEAD'li durum. `branchWork` kart içi dal işidir.
+   * @param {(r: ReturnType<typeof fixture>) => unknown} mainSide main'de yapılacak değişiklikler (commit'ten önce)
+   */
+  function pendingMerge(mainSide) {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a-branch\n").commit("dal işi");
+    r.checkout("main");
+    if (mainSide(r) !== "committed") r.commit("main ilerledi");
+    r.publish("main");
+    r.checkout("feat/T-100-x");
+    r.git("merge", "--no-ff", "--no-commit", "origin/main");
+    return r;
+  }
+  const brings = (/** @type {ReturnType<typeof fixture>} */ r) => r.write("README.md", "r2\n").write("src/new.mjs", "n\n");
+
+  it("temel: çakışmasız --no-commit birleştirme → OK", async () => {
+    const r = pendingMerge(brings);
+    expect((await check(r.dir)).lines).toEqual(["check:scope OK"]);
+  });
+
+  it("MINOR-1: indekse kart dışı EVIL eklenip ağaç main içeriğine geri yazılırsa (ayrışma) → FAIL", async () => {
+    const r = pendingMerge(brings);
+    r.write("README.md", "EVIL\n");
+    r.git("add", "README.md");
+    r.write("README.md", "r2\n");
+    expect(r.git("show", ":README.md")).toBe("EVIL\n");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE README.md");
+    expect(res.text).not.toContain("src/new.mjs");
+  });
+
+  it("indeks main ile aynı, yalnız ağaç ayrışmışsa → FAIL", async () => {
+    const r = pendingMerge(brings);
+    r.write("README.md", "EVIL\n");
+    const res = await check(r.dir);
+    expect(res.lines).toContainEqual(expect.stringMatching(/FAIL OUT_OF_SCOPE README\.md/));
+    expect(res.code).toBe(1);
+  });
+
+  it("symlink: M'de düz dosya, ağaçta symlink → FAIL", async () => {
+    const r = pendingMerge(brings);
+    unlinkSync(path.join(r.dir, "src/new.mjs"));
+    symlinkSync("../README.md", path.join(r.dir, "src/new.mjs"));
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/new.mjs");
+  });
+
+  it("symlink: M'de symlink, ağaçta aynı hedef metniyle düz dosya → FAIL", async () => {
+    const r = pendingMerge((m) => {
+      m.write("README.md", "r2\n");
+      symlinkSync("README.md", path.join(m.dir, "lnk"));
+    });
+    expect(r.git("ls-files", "-s", "lnk")).toMatch(/^120000 /);
+    unlinkSync(path.join(r.dir, "lnk"));
+    writeFileSync(path.join(r.dir, "lnk"), "README.md");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE lnk");
+  });
+
+  it("silme: M'de var olan dosya ağaçtan silinmiş → FAIL", async () => {
+    const r = pendingMerge(brings);
+    unlinkSync(path.join(r.dir, "src/new.mjs"));
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/new.mjs");
+  });
+
+  it("silme: tabanda olan ve main'in değiştirdiği dosya ağaçtan silinmiş → FAIL", async () => {
+    const r = pendingMerge(brings);
+    unlinkSync(path.join(r.dir, "README.md"));
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE README.md");
+  });
+
+  it("yeniden adlandırma: M'nin getirdiği dosya kart dışına taşınmış → FAIL", async () => {
+    const r = pendingMerge(brings);
+    r.rename("src/new.mjs", "elsewhere/new.mjs");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE elsewhere/new.mjs");
+  });
+
+  it("dizin: M'deki dosyanın yerine ağaçta dizin → FAIL", async () => {
+    const r = pendingMerge(brings);
+    unlinkSync(path.join(r.dir, "src/new.mjs"));
+    mkdirSync(path.join(r.dir, "src/new.mjs"));
+    writeFileSync(path.join(r.dir, "src/new.mjs/in.txt"), "x\n");
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE");
+  });
+
+  it("özel dosya (FIFO): M'deki dosyanın yerine → FAIL", async () => {
+    const r = pendingMerge(brings);
+    unlinkSync(path.join(r.dir, "src/new.mjs"));
+    execFileSync("mkfifo", [path.join(r.dir, "src/new.mjs")]);
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/new.mjs");
+  });
+
+  it("alt modül (gitlink): main gitlink getirir; ağaçta dizin → FAIL", async () => {
+    const r = pendingMerge((m) => {
+      m.write("README.md", "r2\n").git("add", "README.md");
+      m.git("update-index", "--add", "--cacheinfo", `160000,${"1".repeat(40)},vendor/sub`);
+      m.git("commit", "--quiet", "-m", "gitlink");
+      return "committed";
+    });
+    mkdirSync(path.join(r.dir, "vendor/sub"), { recursive: true });
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE vendor/sub");
+  });
+
+  it("mod biti: git kuralı yalnız sahip x biti — 0654 dosya 100644'tür, M 100644 ise → OK", async () => {
+    const r = pendingMerge(brings);
+    chmodSync(path.join(r.dir, "src/new.mjs"), 0o654);
+    const res = await check(r.dir);
+    expect(res.lines).toEqual(["check:scope OK"]);
+  });
+
+  it("mod biti: M 100755, ağaçta 0654 (sahip x yok → 100644) → FAIL", async () => {
+    const r = pendingMerge((m) => {
+      m.write("README.md", "r2\n").write("src/tool.sh", "#!/bin/sh\n");
+      chmodSync(path.join(m.dir, "src/tool.sh"), 0o755);
+    });
+    expect(r.git("ls-files", "-s", "src/tool.sh")).toMatch(/^100755 /);
+    chmodSync(path.join(r.dir, "src/tool.sh"), 0o654);
+    const res = await check(r.dir);
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/tool.sh");
+  });
+
+  it("`.git` dosyalı gerçek worktree: birleştirme muafiyeti çalışır; ek kart dışı dosya ve indeks ayrışması FAIL", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a-branch\n").commit("dal işi");
+    r.checkout("main");
+    brings(r).commit("main ilerledi").publish("main");
+    const wt = path.join(mkdtempSync(path.join(os.tmpdir(), "guards-wt-")), "wt");
+    cleanups.push(() => rmSync(path.dirname(wt), { recursive: true, force: true }));
+    r.git("worktree", "add", "--quiet", wt, "feat/T-100-x");
+    expect(readFileSync(path.join(wt, ".git"), "utf8")).toMatch(/^gitdir: /);
+    r.git("-C", wt, "merge", "--no-ff", "--no-commit", "origin/main");
+    expect((await check(wt)).lines).toEqual(["check:scope OK"]);
+
+    writeFileSync(path.join(wt, "src/c.mjs"), "evil\n");
+    const extra = await check(wt);
+    expect(extra.lines).toEqual([
+      "[check:scope] FAIL OUT_OF_SCOPE src/c.mjs — kart dosya listesinde yok (T-100; durum M)",
+      "check:scope FAIL (1)",
+    ]);
+    r.git("-C", wt, "checkout", "--quiet", "--", "src/c.mjs");
+
+    writeFileSync(path.join(wt, "README.md"), "EVIL\n");
+    r.git("-C", wt, "add", "README.md");
+    writeFileSync(path.join(wt, "README.md"), "r2\n");
+    const split = await check(wt);
+    expect(split.code).toBe(1);
+    expect(split.text).toContain("FAIL OUT_OF_SCOPE README.md");
+  });
+});
+
+describe("lib/cards.mjs", () => {
+  it("dal adından kart kimliği", () => {
+    expect(cardIdFromBranch("feat/T-008a-guard-core-scope")).toBe("T-008a");
+    expect(cardIdFromBranch("fix/T-123-x")).toBe("T-123");
+    expect(cardIdFromBranch("feat/T-008a")).toBeNull();
+    expect(cardIdFromBranch("feat/T-08-x")).toBeNull();
+    expect(cardIdFromBranch("chore/T-001-x")).toBeNull();
+    expect(cardIdFromBranch("int/faz0")).toBeNull();
+  });
+
+  it("birleştirme konularından çalışma dalları", () => {
+    expect(
+      mergedWorkBranches([
+        "Merge remote-tracking branch 'origin/feat/T-007-test-ac' into int/faz0-bekciler-1",
+        "Merge pull request #1 from shosgoren/fix/T-002a-x",
+        "Merge branch 'feat/T-007-test-ac'",
+        "Merge branch 'main' into int/faz0",
+        "Merge pull request #2 from shosgoren/int/faz0-iskelet",
+      ]),
+    ).toEqual(["feat/T-007-test-ac", "fix/T-002a-x"]);
+  });
+
+  it("parantez içi backtick'ler yok sayılır (iç içe dahil)", () => {
+    expect(backtickSegmentsOutsideParens("`a`, `b` (x `c` (y `d`) `e`), `f(g)`")).toEqual(["a", "b", "f(g)"]);
+    expect(() => backtickSegmentsOutsideParens("`a")).toThrow(CardError);
+  });
+
+  it("gerçek kart satırı biçimi (T-008a) ayrıştırılır", () => {
+    const text =
+      "**Dokunulacak dosyalar (≤10):** `scripts/guards/cli.mjs`, `scripts/guards/lib/testkit.mjs` (geçici dizinde `git init`), `package.json` (kök; yalnızca `check:scope|tests` satırları → `scripts/guards/cli.mjs <ad>`)\n";
+    expect(parseCardFiles(text, "k.md")).toEqual(["scripts/guards/cli.mjs", "scripts/guards/lib/testkit.mjs", "package.json"]);
+  });
+
+  it("geçersiz kart listeleri hata verir (fail-closed)", () => {
+    expect(() => parseCardFiles("# kart\n", "k.md")).toThrow(/"Dokunulacak dosyalar" satırı yok/);
+    expect(() => parseCardFiles("**Dokunulacak dosyalar:** yok\n", "k.md")).toThrow(/listesinde yol yok/);
+    expect(() => parseCardFiles("**Dokunulacak dosyalar:** `a b`\n", "k.md")).toThrow(/geçersiz yol/);
+    expect(() => parseCardFiles("**Dokunulacak dosyalar:** `../x`\n", "k.md")).toThrow(/depo dışını/);
+    expect(() => parseCardFiles("**Dokunulacak dosyalar:** `a`\n**Dokunulacak dosyalar:** `b`\n", "k.md")).toThrow(/birden fazla/);
+  });
+
+  it("kartın int/ hedefi Dal satırından okunur", () => {
+    expect(cardIntTarget("**Faz:** 0 · **Dal:** `feat/T-1-x` → `int/faz0-bekciler-1`\n")).toBe("int/faz0-bekciler-1");
+    expect(cardIntTarget("**Faz:** 0 · **Dal:** `feat/T-1-x`\n")).toBeNull();
+  });
+});
+
+describe("lib/output.mjs", () => {
+  it("tek biçim: FAIL satırı ve özet", () => {
+    expect(formatFinding("scope", { level: "FAIL", code: "OUT_OF_SCOPE", file: "a.txt", message: "neden" })).toBe(
+      "[check:scope] FAIL OUT_OF_SCOPE a.txt — neden",
+    );
+    expect(formatFinding("x", { level: "WARN", code: "C", file: "", message: "m" })).toBe("[check:x] WARN C - — m");
+    expect(formatSummary("scope", 0)).toBe("check:scope OK");
+    expect(formatSummary("scope", 3)).toBe("check:scope FAIL (3)");
+  });
+
+  it("raporlayıcı uyarıda çıkış 0, hatada 1 döner ve iki kez bitirilemez", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "guards-out-"));
+    cleanups.push(() => rmSync(root, { recursive: true, force: true }));
+    /** @type {string[]} */
+    const lines = [];
+    const w = createReporter("demo", { root, log: (l) => lines.push(l) });
+    w.warn("W", "f", "m");
+    expect(w.finish()).toBe(0);
+    expect(() => w.finish()).toThrow(/iki kez/);
+    const f = createReporter("demo", { root, log: (l) => lines.push(l) });
+    f.fail("E", "f", "m");
+    expect(f.failCount).toBe(1);
+    expect(f.finish()).toBe(1);
+    expect(() => createReporter("Kötü Ad", { root })).toThrow(/geçersiz bekçi adı/);
+  });
+});
+
+describe("scope argümanları", () => {
+  it("--base/--branch iki biçimde; tekrar ve eksik değer hata", () => {
+    expect(parseScopeArgs(["--", "--base", "origin/x", "--branch=feat/T-1-a"])).toEqual({ base: "origin/x", branch: "feat/T-1-a" });
+    expect(() => parseScopeArgs(["--base"])).toThrow(/değer ister/);
+    expect(() => parseScopeArgs(["--base=a", "--base=b"])).toThrow(/birden fazla/);
+  });
+});
+
+describe("T-299 main push kipi: PR birleştirme commit'inden dal çözümü", () => {
+  const OWNER = "owner";
+  const REPO = `${OWNER}/repo`;
+
+  /**
+   * GitHub `GET /pulls/N` yanıtının doğru içerikli karşılığı; `mutate` ile bozulur.
+   * @param {ReturnType<typeof fixture>} r
+   * @param {{ number?: number, branch: string, tip: string, head: string, mutate?: (j: any) => void }} o
+   * @returns {string} dosya yolu
+   */
+  function prJsonFile(r, o) {
+    const j = {
+      number: o.number ?? 9,
+      merged_at: "2026-10-07T10:00:00Z",
+      merge_commit_sha: o.head,
+      base: { ref: "main", repo: { full_name: REPO } },
+      head: { ref: o.branch, sha: o.tip, repo: { full_name: REPO } },
+    };
+    o.mutate?.(j);
+    const f = path.join(r.dir, ".git", `pr-${o.number ?? 9}.json`);
+    writeFileSync(f, JSON.stringify(j));
+    return f;
+  }
+
+  /**
+   * `from` dalını main'e PR birleştirme commit'iyle alır (push öncesi uç = birleştirmeden önceki main).
+   * @param {ReturnType<typeof fixture>} r
+   * @param {string} from
+   * @param {string} subject
+   */
+  function mergeToMain(r, from, subject) {
+    r.checkout("main");
+    r.merge(from, subject);
+    return { before: r.git("rev-parse", "HEAD^1").trim(), tip: r.git("rev-parse", "HEAD^2").trim(), head: r.git("rev-parse", "HEAD").trim() };
+  }
+
+  /**
+   * Doğru kanıtla main-push kontrolü; her alan ezilebilir.
+   * @param {ReturnType<typeof fixture>} r
+   * @param {{ before: string, tip: string, head: string }} m
+   * @param {string} branch PR dalı (JSON head.ref)
+   * @param {{ before?: string | null, json?: string | null | ((j: any) => void), event?: string | null, branchArg?: string }} [o]
+   */
+  function checkMain(r, m, branch, o = {}) {
+    const before = o.before === undefined ? m.before : o.before;
+    const json = typeof o.json === "function" || o.json === undefined ? prJsonFile(r, { branch, tip: m.tip, head: m.head, mutate: o.json }) : o.json;
+    const event = o.event === undefined ? "push" : o.event;
+    return check(r.dir, [
+      "--branch",
+      o.branchArg ?? "main",
+      ...(event === null ? [] : ["--event", event]),
+      ...(before === null ? [] : ["--push-before", before]),
+      ...(json === null ? [] : ["--pr-json", json]),
+    ]);
+  }
+
+  it("PR birleştirme commit'i (int dalı, başlık eki, Supervisor yolu) → OK", async () => {
+    const r = fixture();
+    r.branch("int/dilim");
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("100").checkout("int/dilim");
+    r.merge("feat/T-100-x", "Merge pull request #7 from owner/feat/T-100-x");
+    r.write("docs/STATE.md", "durum\n").commit("supervisor");
+    r.publish("int/dilim");
+    const m = mergeToMain(r, "int/dilim", "Merge pull request #9 from owner/int/dilim — Paket 2");
+    const res = await checkMain(r, m, "int/dilim");
+    expect(res.lines).toEqual(["check:scope OK"]);
+    expect(res.code).toBe(0);
+  });
+
+  it("PR birleştirme commit'i (feat dalı, kart içi) → OK; kapsam dışı dosya → FAIL OUT_OF_SCOPE", async () => {
+    const ok = fixture();
+    ok.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+    const mo = mergeToMain(ok, "feat/T-100-x", "Merge pull request #9 from owner/feat/T-100-x");
+    expect((await checkMain(ok, mo, "feat/T-100-x")).code).toBe(0);
+
+    const bad = fixture();
+    bad.branch("feat/T-100-x").write("src/a.mjs", "a2\n").write("README.md", "değişti\n").commit("iş");
+    const mb = mergeToMain(bad, "feat/T-100-x", "Merge pull request #9 from owner/feat/T-100-x");
+    const res = await checkMain(bad, mb, "feat/T-100-x");
+    expect(res.code).toBe(1);
+    expect(res.lines).toContainEqual(expect.stringMatching(/^\[check:scope\] FAIL OUT_OF_SCOPE README\.md — kart dosya listesinde yok \(T-100; durum M\)$/));
+  });
+
+  it("int PR'ında birleştirilmemiş kartın dosyası → FAIL OUT_OF_SCOPE", async () => {
+    const r = fixture();
+    r.branch("int/dilim").write("src/c.mjs", "c2\n").commit("T-102 dosyası doğrudan int'te");
+    const m = mergeToMain(r, "int/dilim", "Merge pull request #9 from owner/int/dilim");
+    const res = await checkMain(r, m, "int/dilim");
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL OUT_OF_SCOPE src/c.mjs");
+  });
+
+  it("PR'sız doğrudan commit ve squash/rebase (tek ebeveyn, sahte PR konusu) → FAIL MAIN_DIRECT_PUSH", async () => {
+    for (const msg of ["doğrudan", "Merge pull request #9 from owner/feat/T-100-x", "feat: iş (#9)"]) {
+      const r = fixture();
+      const before = r.git("rev-parse", "HEAD").trim();
+      r.write("src/a.mjs", "a2\n").commit(msg);
+      const head = r.git("rev-parse", "HEAD").trim();
+      const res = await checkMain(r, { before, tip: before, head }, "feat/T-100-x");
+      expect(res.code, msg).toBe(1);
+      expect(res.text, msg).toContain("FAIL MAIN_DIRECT_PUSH");
+    }
+  });
+
+  it("REGRESYON (BLOCKER): doğrudan commit A + üstüne sahte/gerçek PR birleştirmesi → FAIL MAIN_PUSH_RANGE", async () => {
+    const r = fixture();
+    const before = r.git("rev-parse", "HEAD").trim();
+    r.branch("feat/T-100-x", before).write("src/a.mjs", "a2\n").commit("iş");
+    r.checkout("main").write("README.md", "gizli kapsam dışı değişiklik\n").commit("A: doğrudan commit");
+    const m = mergeToMain(r, "feat/T-100-x", "Merge pull request #9 from owner/feat/T-100-x");
+    // push öncesi uç gerçekten `before`; HEAD^1 = A → aralık before..HEAD^1 denetimsiz kalırdı.
+    const res = await checkMain(r, m, "feat/T-100-x", { before });
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL MAIN_PUSH_RANGE");
+    expect(res.text).not.toContain("check:scope OK");
+  });
+
+  it("push öncesi uç eksik / sıfır / geçersiz → FAIL MAIN_PUSH_RANGE", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+    const m = mergeToMain(r, "feat/T-100-x", "Merge pull request #9 from owner/feat/T-100-x");
+    for (const before of [null, "0".repeat(40), "abc", m.tip]) {
+      const res = await checkMain(r, m, "feat/T-100-x", { before });
+      expect(res.code, String(before)).toBe(1);
+      expect(res.text, String(before)).toContain("FAIL MAIN_PUSH_RANGE");
+    }
+  });
+
+  it("biçimi bozuk konu → FAIL MAIN_PR_SUBJECT", async () => {
+    for (const subject of ["Merge branch 'feat/T-100-x'", "Merge pull request 9 from owner/feat/T-100-x", "Merge pull request #9 from feat/T-100-x"]) {
+      const r = fixture();
+      r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+      const m = mergeToMain(r, "feat/T-100-x", subject);
+      const res = await checkMain(r, m, "feat/T-100-x");
+      expect(res.code, subject).toBe(1);
+      expect(res.text, subject).toContain("FAIL MAIN_PR_SUBJECT");
+    }
+  });
+
+  it("kart kalıbına uymayan PR dalı → FAIL MAIN_PR_SUBJECT (API/ata denetiminden önce)", async () => {
+    const r = fixture();
+    r.branch("deneme").write("src/a.mjs", "a2\n").commit("iş");
+    const m = mergeToMain(r, "deneme", "Merge pull request #9 from owner/deneme");
+    const res = await checkMain(r, m, "deneme", { json: null });
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL MAIN_PR_SUBJECT");
+  });
+
+  it("PR API kaydı bozuk/eksik → hepsi FAIL MAIN_PR_API", async () => {
+    /** @type {Array<[string, ((j: any) => void) | null]>} */
+    const cases = [
+      ["dosya yok", null],
+      ["merged_at null", (j) => (j.merged_at = null)],
+      ["merge_commit_sha farklı", (j) => (j.merge_commit_sha = "1".repeat(40))],
+      ["base main değil", (j) => (j.base.ref = "int/dilim")],
+      ["head.ref farklı", (j) => (j.head.ref = "feat/T-101-y")],
+      ["head.sha farklı", (j) => (j.head.sha = "2".repeat(40))],
+      ["fork", (j) => (j.head.repo.full_name = "evil/repo")],
+      ["fork silinmiş (head.repo null)", (j) => (j.head.repo = null)],
+      ["numara farklı", (j) => (j.number = 10)],
+      ["sahip farklı", (j) => (j.base.repo.full_name = "baska/repo") && (j.head.repo.full_name = "baska/repo")],
+    ];
+    for (const [name, mutate] of cases) {
+      const r = fixture();
+      r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+      const m = mergeToMain(r, "feat/T-100-x", "Merge pull request #9 from owner/feat/T-100-x");
+      const res = await checkMain(r, m, "feat/T-100-x", { json: mutate === null ? null : mutate });
+      expect(res.code, name).toBe(1);
+      expect(res.text, name).toContain("FAIL MAIN_PR_API");
+    }
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+    const m = mergeToMain(r, "feat/T-100-x", "Merge pull request #9 from owner/feat/T-100-x");
+    const bozuk = path.join(r.dir, ".git", "bozuk.json");
+    writeFileSync(bozuk, "{ bozuk");
+    const res = await checkMain(r, m, "feat/T-100-x", { json: bozuk });
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL MAIN_PR_API");
+  });
+
+  it("dal origin'de var ama ikinci ebeveyn onun commit'i değil → FAIL MAIN_PR_UNVERIFIED", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş").publish("feat/T-100-x");
+    r.checkout("main").branch("yan").write("src/a.mjs", "a3\n").commit("yan");
+    const m = mergeToMain(r, "yan", "Merge pull request #9 from owner/feat/T-100-x");
+    const res = await checkMain(r, m, "feat/T-100-x");
+    expect(res.code).toBe(1);
+    expect(res.text).toContain("FAIL MAIN_PR_UNVERIFIED");
+  });
+
+  it("kip olaya bağlı: pull_request olayında / olay yokken dal adı main → PR kuralı (CARD_NOT_FOUND), main kipi yok", async () => {
+    const r = fixture();
+    r.branch("feat/T-100-x").write("src/a.mjs", "a2\n").commit("iş");
+    const m = mergeToMain(r, "feat/T-100-x", "Merge pull request #9 from owner/feat/T-100-x");
+    const saved = process.env.GITHUB_EVENT_NAME;
+    try {
+      delete process.env.GITHUB_EVENT_NAME; // olay yokken (yerel): main kipi açılmaz
+      for (const event of ["pull_request", "pull_request_target", null]) {
+        const res = await checkMain(r, m, "feat/T-100-x", { event });
+        expect(res.code, String(event)).toBe(1);
+        expect(res.text, String(event)).toMatch(/FAIL CARD_NOT_FOUND - — dal adı "main" kart kalıbına uymuyor/);
+      }
+      // olay yalnız ortamdan (Actions `all` argüman geçirmez): push → main kipi
+      process.env.GITHUB_EVENT_NAME = "pull_request";
+      expect((await checkMain(r, m, "feat/T-100-x", { event: null })).text).toContain("FAIL CARD_NOT_FOUND");
+      process.env.GITHUB_EVENT_NAME = "push";
+      expect((await checkMain(r, m, "feat/T-100-x", { event: null })).code).toBe(0);
+    } finally {
+      if (saved === undefined) delete process.env.GITHUB_EVENT_NAME;
+      else process.env.GITHUB_EVENT_NAME = saved;
+    }
+  });
+
+  it("main kipinde --base verilemez → kullanım hatası (çıkış 2); yeni argümanlar tekrar/eksik değerde hata", async () => {
+    const r = fixture();
+    expect((await check(r.dir, ["--branch", "main", "--event", "push", "--base", "origin/main"])).code).toBe(2);
+    expect((await check(r.dir, ["--event"])).code).toBe(2);
+    expect((await check(r.dir, ["--push-before=a", "--push-before=b"])).code).toBe(2);
+  });
+});
+
+describe("guards.yml eşzamanlılık (T-299 SR @1e53492, @3b33440 MAJOR)", () => {
+  it("push koşusu çalışırken/beklerken iptal edilmez; PR olayında edilir", () => {
+    const yml = readFileSync(path.join(import.meta.dirname, "../../.github/workflows/guards.yml"), "utf8");
+    const block = yml.match(/^concurrency:\n((?: {2}.*\n)+)/m);
+    expect(block).not.toBeNull();
+    const cancel = (block?.[1] ?? "").match(/^ {2}cancel-in-progress: (.+)$/m);
+    expect(cancel?.[1]).toBe("${{ github.event_name != 'push' }}");
+    // Bekleyen koşu da iptal edilebildiğinden push grubu koşu başına benzersiz olmalı (@3b33440 MAJOR).
+    // Koruma çizgisi: metin eşleşmesidir, GitHub'ın kuyruk davranışını kanıtlamaz.
+    const group = (block?.[1] ?? "").match(/^ {2}group: (.+)$/m);
+    expect(group?.[1]).toBe("guards-${{ github.event.pull_request.number || github.run_id }}");
+  });
+});

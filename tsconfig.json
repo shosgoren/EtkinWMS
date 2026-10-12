@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "paths": {
+      "@next/eslint-plugin-next": ["./apps/web/node_modules/@next/eslint-plugin-next/dist/index.d.ts"],
+      "estree": ["./node_modules/.pnpm/node_modules/@types/estree/index.d.ts"]
+    }
+  },
+  "include": ["scripts/**/*.mjs", "tests/**/*.ts", "vitest*.config.ts", "eslint.config.mjs"]
+}

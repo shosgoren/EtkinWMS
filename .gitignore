@@ -1,0 +1,16 @@
+node_modules
+.next
+dist
+.artifacts/
+.env
+.env.*
+!.env.example
+apps/web/next-env.d.ts
+
+.env
+.env.*
+!.env.example
+.artifacts/
+node_modules/
+.next/
+*.log
