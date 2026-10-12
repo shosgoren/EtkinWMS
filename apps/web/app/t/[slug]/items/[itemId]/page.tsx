@@ -75,6 +75,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
             trackingMode: item.trackingMode,
             quantityScale: item.quantityScale,
             pickPolicy: item.pickPolicy,
+            cardType: item.cardType,
           }}
           conversions={conversions}
           barcodes={barcodes}

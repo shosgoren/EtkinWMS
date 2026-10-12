@@ -7,7 +7,7 @@
 // - "Stoklu" = ürünün herhangi bir stok boyutu (dolayısıyla defter/bakiye) var. `archiveItem`: pozitif bakiye ya da açık
 //   (ACTIVE) rezervasyon varsa `IN_USE`. Kullanılmış kart silinmez; DELETE yoktur (05 §Geri alma).
 import { sql } from "drizzle-orm";
-import type { PickPolicy, TrackingMode } from "@wms/db";
+import type { ItemCardType, PickPolicy, TrackingMode } from "@wms/db";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx } from "../identity/access.ts";
@@ -15,6 +15,17 @@ import { loadItem, parseCode, parseName, parseUuid, type CatalogCommandParams, t
 
 const TRACKING: readonly TrackingMode[] = ["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"];
 const PICK: readonly PickPolicy[] = ["FIFO", "FEFO"];
+/**
+ * Kart türleri (T-911; 0031 `items.card_type`): Hammadde, Yarı Mamul, Mamul, Ticari Mal — Logo ERP'deki standart malzeme türleri.
+ * Sıra ekrandaki sıradır. Varsayılan `TM` (DB varsayılanıyla aynı). Kod öneki bu koddur (`HM-000001`, bkz. code-suggest.ts).
+ */
+export const ITEM_CARD_TYPES: readonly ItemCardType[] = ["HM", "YM", "MM", "TM"];
+export const DEFAULT_CARD_TYPE: ItemCardType = "TM";
+
+export function parseCardType(raw: unknown): ItemCardType {
+  if (typeof raw !== "string" || !(ITEM_CARD_TYPES as readonly string[]).includes(raw)) throw new AppError("VALIDATION_FAILED");
+  return raw as ItemCardType;
+}
 
 function parseTracking(raw: unknown): TrackingMode {
   if (typeof raw !== "string" || !(TRACKING as readonly string[]).includes(raw)) throw new AppError("VALIDATION_FAILED");
@@ -39,6 +50,8 @@ export interface CreateItemInput {
   readonly quantityScale?: number;
   /** Varsayılan `FIFO`. */
   readonly pickPolicy?: PickPolicy;
+  /** Kart türü (T-911); varsayılan `TM`. */
+  readonly cardType?: ItemCardType;
 }
 
 export interface UpdateItemInput {
@@ -47,6 +60,8 @@ export interface UpdateItemInput {
   readonly code?: string;
   readonly name?: string;
   readonly pickPolicy?: PickPolicy;
+  /** Kart türü değiştirilebilir (T-911): sınıflandırmadır, stok/defter etkisi yoktur; değişim `item.updated` audit'ine yazılır. */
+  readonly cardType?: ItemCardType;
   // Değişmez alanlar (A-87): farklı değer istenirse ret (bkz. dosya başlığı).
   readonly trackingMode?: TrackingMode;
   readonly baseUnitId?: string;
@@ -62,6 +77,7 @@ export interface ItemRow {
   readonly quantityScale: number;
   readonly pickPolicy: PickPolicy;
   readonly status: "ACTIVE" | "ARCHIVED";
+  readonly cardType: ItemCardType;
 }
 
 function toRow(r: ItemHeader): ItemRow {
@@ -74,6 +90,7 @@ function toRow(r: ItemHeader): ItemRow {
     quantityScale: r.quantity_scale,
     pickPolicy: r.pick_policy as PickPolicy,
     status: r.status,
+    cardType: r.card_type as ItemCardType,
   };
 }
 
@@ -84,6 +101,7 @@ export async function createItem(params: CatalogCommandParams, input: CreateItem
   const trackingMode = input.trackingMode === undefined ? "NONE" : parseTracking(input.trackingMode);
   const quantityScale = input.quantityScale === undefined ? 0 : parseScale(input.quantityScale);
   const pickPolicy = input.pickPolicy === undefined ? "FIFO" : parsePick(input.pickPolicy);
+  const cardType = input.cardType === undefined ? DEFAULT_CARD_TYPE : parseCardType(input.cardType);
   const { requestId, ...access } = params;
   return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
     const unit = await tx.execute<{ status: string }>(
@@ -92,9 +110,9 @@ export async function createItem(params: CatalogCommandParams, input: CreateItem
     if (unit[0] === undefined) throw new AppError("NOT_FOUND");
     if (unit[0].status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
     const rows = await tx.execute<{ id: string }>(
-      sql`INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy)
+      sql`INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy, card_type)
           VALUES (${actor.tenantId}::uuid, gen_random_uuid(), ${code}, ${name}, ${baseUnitId}::uuid, ${trackingMode},
-                  ${quantityScale}::smallint, ${pickPolicy})
+                  ${quantityScale}::smallint, ${pickPolicy}, ${cardType})
           ON CONFLICT ON CONSTRAINT items_tenant_code_key DO NOTHING
           RETURNING id`,
     );
@@ -106,7 +124,7 @@ export async function createItem(params: CatalogCommandParams, input: CreateItem
       entityType: "item",
       entityId: id,
       requestId: requestId ?? null,
-      changeSummary: { code, name, base_unit_id: baseUnitId, tracking_mode: trackingMode, quantity_scale: quantityScale, pick_policy: pickPolicy },
+      changeSummary: { code, name, base_unit_id: baseUnitId, tracking_mode: trackingMode, quantity_scale: quantityScale, pick_policy: pickPolicy, card_type: cardType },
     });
     return { itemId: id };
   });
@@ -136,6 +154,7 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
   const trackingMode = input.trackingMode === undefined ? undefined : parseTracking(input.trackingMode);
   const baseUnitId = input.baseUnitId === undefined ? undefined : parseUuid(input.baseUnitId);
   const quantityScale = input.quantityScale === undefined ? undefined : parseScale(input.quantityScale);
+  const cardType = input.cardType === undefined ? undefined : parseCardType(input.cardType);
   const { requestId, ...access } = params;
   return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
@@ -152,11 +171,12 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
     const newName = name ?? cur.name;
     const newPick = pickPolicy ?? (cur.pick_policy as PickPolicy);
     const newCode = code ?? cur.code;
+    const newCard = cardType ?? (cur.card_type as ItemCardType);
     const codeChanged = newCode !== cur.code;
-    if (newName === cur.name && newPick === cur.pick_policy && !codeChanged) return { itemId, changed: false };
+    if (newName === cur.name && newPick === cur.pick_policy && newCard === cur.card_type && !codeChanged) return { itemId, changed: false };
     try {
       await tx.execute(
-        sql`UPDATE public.items SET name = ${newName}, pick_policy = ${newPick}, code = ${newCode}
+        sql`UPDATE public.items SET name = ${newName}, pick_policy = ${newPick}, code = ${newCode}, card_type = ${newCard}
              WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${itemId}::uuid`,
       );
     } catch (e) {
@@ -178,14 +198,14 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
         changeSummary: { from_code: cur.code, to_code: newCode },
       });
     }
-    if (newName === cur.name && newPick === cur.pick_policy) return { itemId, changed: true };
+    if (newName === cur.name && newPick === cur.pick_policy && newCard === cur.card_type) return { itemId, changed: true };
     await appendAudit(tx, {
       action: "item.updated",
       actorUserId: actor.userId,
       entityType: "item",
       entityId: itemId,
       requestId: requestId ?? null,
-      changeSummary: { from_name: cur.name, to_name: newName, from_pick_policy: cur.pick_policy, to_pick_policy: newPick },
+      changeSummary: { from_name: cur.name, to_name: newName, from_pick_policy: cur.pick_policy, to_pick_policy: newPick, from_card_type: cur.card_type, to_card_type: newCard },
     });
     return { itemId, changed: true };
   });
@@ -238,7 +258,7 @@ export async function getItem(params: Omit<CatalogCommandParams, "requestId">, i
 export async function listItems(params: Omit<CatalogCommandParams, "requestId">): Promise<readonly ItemRow[]> {
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
     const rows = await tx.execute<ItemHeader>(
-      sql`SELECT id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy, status FROM public.items
+      sql`SELECT id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy, status, card_type FROM public.items
            WHERE tenant_id = ${actor.tenantId}::uuid ORDER BY code`,
     );
     return rows.map(toRow);

@@ -79,7 +79,8 @@ afterAll(async () => {
 
 describe("kod önerisi (görev 1)", () => {
   it("boş tenant'ta ilk kod, sonra en büyük sıra + 1; arşivli ürünün kodu da ayrılmıştır", async () => {
-    expect(await suggestCode(admin(E), { kind: "item" })).toEqual({ code: "URN-0001", prefix: "URN" });
+    expect(await suggestCode(admin(E), { kind: "item" })).toEqual({ code: "TM-000001", prefix: "TM" }); // T-911: tür öneki + 6 hane
+    expect(await suggestCode(admin(E), { kind: "item", prefix: "HM" })).toEqual({ code: "HM-000001", prefix: "HM" });
     const { warehouseId } = await createWarehouse(admin(E), { code: "DEPO-01", name: "Ana depo" });
     expect(await suggestCode(admin(E), { kind: "warehouse" })).toMatchObject({ code: "DEPO-02" });
     expect(await suggestCode(admin(E), { kind: "location", warehouseId })).toMatchObject({ code: "LOK-0001" });

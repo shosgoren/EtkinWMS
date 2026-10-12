@@ -77,7 +77,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     const old = new Map((page.renamedFrom ?? []).map((r) => [r.itemId, r.oldCode] as const));
     rows = page.items.map((it) => {
       const oldCode = old.get(it.id);
-      return { id: it.id, code: it.code, name: it.name, status: it.status, baseUnitCode: unitCode.get(it.baseUnitId) ?? "", ...(oldCode === undefined ? {} : { oldCode }) };
+      return { id: it.id, code: it.code, name: it.name, status: it.status, baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
     });
     nextCursor = page.nextCursor;
   } catch (e) {

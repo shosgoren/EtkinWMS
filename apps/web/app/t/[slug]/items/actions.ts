@@ -6,7 +6,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
-import { addBarcode, archiveItem, createItem, createItemWithDefaultUnit, createWithSuggestedCode, removeBarcode, searchItems, setUnitConversion, suggestCode, updateItem } from "@wms/domain/catalog";
+import { addBarcode, archiveItem, createItem, createItemWithDefaultUnit, createUnit, createWithSuggestedCode, removeBarcode, searchItems, setUnitConversion, suggestCode, updateItem } from "@wms/domain/catalog";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 
 const guardedAction = createProductionGuard(() => headers());
@@ -20,6 +20,8 @@ const decimalSchema = z.string().min(1).max(64);
 // `TrackingMode` / `PickPolicy` ile birebir (domain ayrıca doğrular).
 const trackingSchema = z.enum(["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"]);
 const pickSchema = z.enum(["FIFO", "FEFO"]);
+// `ItemCardType` ile birebir (T-911; domain ayrıca doğrular).
+const cardTypeSchema = z.enum(["HM", "YM", "MM", "TM"]);
 
 const createItemSchema = z
   .object({
@@ -31,13 +33,17 @@ const createItemSchema = z
     quantityScale: z.number().int().min(0).max(6).optional(),
     trackingMode: trackingSchema.optional(),
     pickPolicy: pickSchema.optional(),
+    cardType: cardTypeSchema.optional(),
     /** T-250: kod kullanıcı tarafından değiştirilmedi (önerilen kod) beyanı; sunucu ayrıca kodun önerilen biçimde olduğunu doğrular, çakışmada sıradaki öneriyle yeniden dener. */
     autoCode: z.boolean().optional(),
   })
   .strict();
 const suggestItemCodeSchema = z.object({ slug: slugSchema, prefix: z.string().max(16).optional() }).strict();
 const searchItemsSchema = z.object({ slug: slugSchema, q: z.string().max(128), limit: z.number().int().min(1).max(10).optional() }).strict();
-const updateItemSchema = z.object({ slug: slugSchema, itemId: idSchema, code: textSchema.optional(), name: textSchema.optional(), pickPolicy: pickSchema.optional() }).strict();
+const updateItemSchema = z
+  .object({ slug: slugSchema, itemId: idSchema, code: textSchema.optional(), name: textSchema.optional(), pickPolicy: pickSchema.optional(), cardType: cardTypeSchema.optional() })
+  .strict();
+const createUnitSchema = z.object({ slug: slugSchema, code: z.string().min(1).max(64), name: z.string().min(1).max(200) }).strict();
 const archiveItemSchema = z.object({ slug: slugSchema, itemId: idSchema }).strict();
 const conversionSchema = z.object({ slug: slugSchema, itemId: idSchema, unitId: idSchema, factor: decimalSchema }).strict();
 const addBarcodeSchema = z
@@ -61,6 +67,7 @@ export async function createItemAction(raw: unknown) {
       ...(input.quantityScale === undefined ? {} : { quantityScale: input.quantityScale }),
       ...(input.trackingMode === undefined ? {} : { trackingMode: input.trackingMode }),
       ...(input.pickPolicy === undefined ? {} : { pickPolicy: input.pickPolicy }),
+      ...(input.cardType === undefined ? {} : { cardType: input.cardType }),
     };
     const p = { ...params, requestId: ctx.requestId };
     const baseUnitId = input.baseUnitId;
@@ -97,9 +104,24 @@ export async function updateItemAction(raw: unknown) {
     const params = await writeContext(input.slug, ctx);
     const r = await updateItem(
       { ...params, requestId: ctx.requestId },
-      { itemId: input.itemId, ...(input.code === undefined ? {} : { code: input.code }), ...(input.name === undefined ? {} : { name: input.name }), ...(input.pickPolicy === undefined ? {} : { pickPolicy: input.pickPolicy }) },
+      {
+        itemId: input.itemId,
+        ...(input.code === undefined ? {} : { code: input.code }),
+        ...(input.name === undefined ? {} : { name: input.name }),
+        ...(input.pickPolicy === undefined ? {} : { pickPolicy: input.pickPolicy }),
+        ...(input.cardType === undefined ? {} : { cardType: input.cardType }),
+      },
     );
     return { changed: r.changed };
+  })(raw);
+}
+
+/** Yeni birim (T-911): kod tenant içinde benzersiz (`CODE_TAKEN`); ürün formundan satır içi eklenir. Yetki `settings.manage` domain'de. */
+export async function createUnitAction(raw: unknown) {
+  return guardedAction({ schema: createUnitSchema }, async (input, ctx) => {
+    const params = await writeContext(input.slug, ctx);
+    const r = await createUnit({ ...params, requestId: ctx.requestId }, { code: input.code, name: input.name });
+    return { unitId: r.unitId };
   })(raw);
 }
 

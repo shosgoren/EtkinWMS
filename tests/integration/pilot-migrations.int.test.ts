@@ -27,12 +27,12 @@ async function scratch(run: (url: string, adm: pg.Client, name: string) => Promi
 }
 async function versions(adm: pg.Client) { return (await adm.query<{version: string}>("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 3")).rows.map(r => r.version); }
 
-it("pilot migrations go 30 → 27 → 30 on an empty scratch database", async () => {
+it("pilot migrations go 31 → 27 → 31 on an empty scratch database", async () => {
   await scratch(async (url, adm) => {
-    expect(await versions(adm)).toEqual(["0030", "0029", "0028"]);
-    expect((await migrateDown({url, to:"0027", wmsEnv:"staging"})).reverted).toEqual(["0030", "0029", "0028"]);
+    expect(await versions(adm)).toEqual(["0031", "0030", "0029"]);
+    expect((await migrateDown({url, to:"0027", wmsEnv:"staging"})).reverted).toEqual(["0031", "0030", "0029", "0028"]);
     expect((await adm.query("SELECT to_regclass('public.stock_document_links') AS links, to_regclass('public.production_recipes') AS recipes")).rows[0]).toEqual({links:null, recipes:null});
-    expect((await migrateUp({url})).applied).toEqual(["0028", "0029", "0030"]);
+    expect((await migrateUp({url})).applied).toEqual(["0028", "0029", "0030", "0031"]);
     expect((await migrateUp({url})).applied).toEqual([]);
     expect((await adm.query("SELECT count(*)::int AS n FROM pg_trigger WHERE tgname='production_recipe_lines_insert_guard'")).rows[0]?.n).toBe(1);
   });

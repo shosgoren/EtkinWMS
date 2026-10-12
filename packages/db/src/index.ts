@@ -124,6 +124,7 @@ export type {
   NewSerial,
   NewUnit,
   NewUnitConversion,
+  ItemCardType,
   PickPolicy,
   Serial,
   TrackingMode,

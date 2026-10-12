@@ -541,7 +541,9 @@
     }
   },
   "audit": {
-    "production_recipe": {"created": "Production recipe created"},
+    "production_recipe": {
+      "created": "Production recipe created"
+    },
     "member": {
       "invited": "You invited a member.",
       "removed": "You removed a member from the workspace.",
@@ -765,7 +767,7 @@
     "search": {
       "label": "Search products",
       "hint": "Type a name or code; you can scan the barcode.",
-      "placeholder": "E.g. URN-0001 or Box 40x30",
+      "placeholder": "E.g. HM-000001 or Box 40x30",
       "advanced": "More options",
       "status": "Status",
       "all": "All",
@@ -800,7 +802,14 @@
       "pick": "Picking policy",
       "submit": "Save",
       "cancel": "Cancel",
-      "noUnits": "No units are defined yet; a product needs a base unit first (e.g. PCS). Ask your manager or support."
+      "noUnits": "No units are defined yet; a product needs a base unit first (e.g. PCS). Ask your manager or support.",
+      "cardType": "Card type",
+      "cardTypeHint": "The item code is suggested with this type's prefix (e.g. HM-000001). Can be changed later.",
+      "newUnit": "Add a new unit",
+      "newUnitCode": "Unit code",
+      "newUnitCodeHint": "Short and unique; e.g. TON, ROLL, PACK.",
+      "newUnitName": "Unit name",
+      "newUnitAdd": "Add unit"
     },
     "detail": {
       "title": "Product card",
@@ -894,7 +903,13 @@
     },
     "locked": "You do not have permission to view products.",
     "lockedAction": "Ask your workspace manager.",
-    "renamedNote": "This code changed to {code} (old code: {old})"
+    "renamedNote": "This code changed to {code} (old code: {old})",
+    "cardType": {
+      "HM": "Raw material",
+      "YM": "Semi-finished",
+      "MM": "Finished good",
+      "TM": "Trade good"
+    }
   },
   "warehouses": {
     "title": "Warehouses and racks",
@@ -1984,8 +1999,7 @@
     "find": "Search",
     "next": "Next recipes",
     "empty": "No recipes yet."
-  }
-,
+  },
   "shipping": {
     "newHelp": "Choose items in their base units. Creating an order does not reduce stock; reserve stock in the next step.",
     "cameraLocation": "Scan location with camera",
