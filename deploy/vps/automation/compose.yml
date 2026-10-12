@@ -1,0 +1,44 @@
+name: etkinwms-motive
+services:
+  web:
+    image: etkinwms:${WMS_RELEASE:?required}
+    restart: unless-stopped
+    env_file: /opt/etkinwms/secrets/web.env
+    environment: {PORT: 3000, HOSTNAME: 0.0.0.0}
+    expose: ['3000']
+    mem_limit: 1536m
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+    healthcheck:
+      test: [CMD, node, '-e', "fetch('http://127.0.0.1:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+  worker:
+    image: etkinwms:${WMS_RELEASE:?required}
+    command: [node, apps/worker/dist/main.js]
+    env_file: /opt/etkinwms/secrets/worker.env
+    restart: unless-stopped
+    mem_limit: 512m
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+  marketing:
+    image: etkinwms:${WMS_RELEASE:?required}
+    command: [node, /marketing/server.mjs]
+    environment: {PORT: 3200, LEAD_DIR: /data}
+    volumes: [marketing-leads:/data]
+    restart: unless-stopped
+    mem_limit: 256m
+    expose: ['3200']
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+  proxy:
+    image: caddy:2
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes: [/opt/etkinwms/automation/Caddyfile:/etc/caddy/Caddyfile:ro, caddy-data:/data, caddy-config:/config]
+    depends_on: {web: {condition: service_healthy}}
+    restart: unless-stopped
+    mem_limit: 256m
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+volumes:
+  caddy-data:
+  caddy-config:
+  marketing-leads:
