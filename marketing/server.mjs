@@ -20,7 +20,12 @@ export const server = createServer(async (req,res) => {
   res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
   const json = (status,data) => { res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data)); };
-  const path = new URL(req.url || '/', 'http://local').pathname;
+  let path;
+  try {
+    path = new URL(req.url || '/', 'http://local').pathname;
+  } catch {
+    return json(400,{error:'Geçersiz istek adresi.'});
+  }
   if (path === '/api/demo' && req.method === 'POST') {
     if (!allowedOrigins.has(req.headers.origin || '')) return json(403,{error:'İstek doğrulanamadı.'});
     const ip = req.headers['x-forwarded-for']?.toString().split(',').at(-1)?.trim() || req.socket.remoteAddress || 'unknown';
