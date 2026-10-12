@@ -49,6 +49,23 @@ services:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
 
+  marketing:
+    image: etkinwms:${WMS_RELEASE:?WMS_RELEASE required}
+    command: ["node", "/marketing/server.mjs"]
+    restart: unless-stopped
+    environment:
+      PORT: 3200
+      LEAD_DIR: /data
+    volumes:
+      - ../../marketing:/marketing:ro
+      - marketing-leads:/data
+    expose: ["3200"]
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
 volumes:
   caddy-data:
   caddy-config:
+  marketing-leads:
