@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 // AC-04 — bağımsız kabul testi (T-104, qa-verifier). Uygulayıcının testlerinden bağımsız yazıldı.
 // katman: DB — API/dosya/cache/export katmanları T-128, oturum katmanı T-120.
 //
@@ -185,6 +186,18 @@ beforeAll(async () => {
       throw e;
     }
   }
+  // T-903: populate every new tenant table for the generic RLS matrix, without stock effects.
+  for (const w of [A, B]) {
+    await admin.query("BEGIN");
+    try {
+      const recipe = randomUUID(), target = randomUUID();
+      await admin.query("INSERT INTO public.production_recipes(tenant_id,id,code,version,name,output_item_id,output_quantity,created_by) VALUES($1,$2,'RLS',1,'RLS fixture',$3,1,$4)",[w.tenantId,recipe,w.itemNoneId,w.ownerUserId]);
+      await admin.query("INSERT INTO public.production_recipe_lines(tenant_id,recipe_id,line_no,item_id,quantity) VALUES($1,$2,1,$3,1)",[w.tenantId,recipe,w.itemNoneId]);
+      await admin.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,reason,created_by) SELECT tenant_id,$2,kind,type_version_id,warehouse_id,business_date,reason,created_by FROM public.documents WHERE tenant_id=$1 AND id=$3",[w.tenantId,target,w.documentId]);
+      await admin.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[w.tenantId,w.documentId,target]);
+      await admin.query("COMMIT");
+    } catch(e) { await admin.query("ROLLBACK"); throw e; }
+  }
   tables = await discoverTables();
 }, 60_000);
 
@@ -197,6 +210,7 @@ async function cleanupExceptTenants(c: pg.Client, r: typeof reg): Promise<void> 
   const tenantIds = r.worlds.map((w) => w.tenantId);
   const userIds = [...r.worlds.flatMap((w) => [w.ownerUserId, w.memberUserId]), ...r.extraUsers];
   if (tenantIds.length > 0) {
+    for(const table of ["stock_document_links","production_recipe_lines","production_recipes"]) await c.query(`DELETE FROM public.${q(table)} WHERE tenant_id = ANY($1::uuid[])`,[tenantIds]);
     await cleanupReliability(c, tenantIds, r.worlds.map((w) => w.platformEventId)); // T-211 tenant satırları
     await cleanupStock(c, tenantIds); // T-232 stok tabloları (defter append-only tetikleyicisi fikstürde geçici kapatılır)
     await cleanupDocuments(c, tenantIds); // T-206 tabloları (append-only tetikleyici replica ile atlanır)
@@ -346,6 +360,18 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
   it("@AC-04 INSERT: B tenant anahtarıyla satır RLS hatası verir; A anahtarlı kontrol RLS'i geçer", async () => {
     const failures: string[] = [];
     for (const t of tables) {
+      if (t.name === "production_recipe_lines") {
+        // The BEFORE INSERT seal rejects an invisible foreign parent before RLS WITH CHECK.
+        // Prove both foreign denial and a successful own-tenant insert in the creating transaction.
+        const recipe = randomUUID();
+        const pre: Pre[] = [setTenant(A.tenantId), ["INSERT INTO public.production_recipes(tenant_id,id,code,version,name,output_item_id,output_quantity,created_by) VALUES($1,$2::uuid,$2::text,1,'RLS control',$3,1,$4)",[A.tenantId,recipe,A.itemNoneId,A.ownerUserId]]];
+        const stmt = "INSERT INTO public.production_recipe_lines(tenant_id,recipe_id,line_no,item_id,quantity) VALUES($1,$2,1,$3,1)";
+        const foreign = await attempt(appClient,pre,stmt,[B.tenantId,recipe,B.itemNoneId]);
+        expect(foreign).toMatchObject({ok:false,code:"23514",message:"production recipe revision is sealed"});
+        const own = await attempt(appClient,pre,stmt,[A.tenantId,recipe,A.itemNoneId]);
+        expect(own).toMatchObject({ok:true,rowCount:1});
+        continue;
+      }
       if (t.insertCols.length === 0) {
         const r = await attempt(appClient, [setTenant(A.tenantId)], `INSERT INTO public.${q(t.name)} DEFAULT VALUES`);
         if (r.ok || r.code !== INSUFFICIENT_PRIVILEGE) failures.push(`${t.name}: INSERT yetkisi yokken beklenen 42501, gelen ${fmt(r)}`);
