@@ -21,6 +21,7 @@ CHECKS = {'verify', 'infra', 'secrets', 'deps', 'int', 'e2e', 'check-all', 'test
 HEX40 = re.compile(r'[0-9a-f]{40}\Z')
 HEX64 = re.compile(r'[0-9a-f]{64}\Z')
 MAX_UPLOAD = 512 * 1024 * 1024
+BASELINE_SHA = '024a800bace33c2dc3df397d56fda7e449d1d9dc'
 
 
 def command_parts(text):
@@ -48,6 +49,13 @@ def assert_ci(sha):
         latest = max(runs, key=lambda r: r['id'], default=None)
         if latest is None or latest['status'] != 'completed' or latest['conclusion'] != 'success':
             raise ValueError('CI_NOT_GREEN:' + name)
+
+
+def assert_descendant(sha, previous_sha):
+    if not HEX40.fullmatch(previous_sha):
+        raise ValueError('INVALID_PREVIOUS_REVISION')
+    if api('/compare/' + previous_sha + '...' + sha)['status'] not in ['ahead', 'identical']:
+        raise ValueError('PRODUCTION_DOWNGRADE_REJECTED')
 
 
 def validate_archive(path, sha):
@@ -122,6 +130,7 @@ def deploy(sha, archive_hash, schema_hash):
     previous = json.loads((AUTOMATION / 'state.json').read_text())
     if previous.get('schema') != schema_hash:
         raise ValueError('ROLLBACK_SCHEMA_INCOMPATIBLE')
+    assert_descendant(sha, previous.get('sha', BASELINE_SHA))
     with tempfile.TemporaryDirectory(prefix='release-', dir=AUTOMATION) as directory:
         package = Path(directory) / 'image.tar.gz'
         signal.alarm(600)  # An incomplete/slow stream must not hold the release lock indefinitely.
@@ -134,7 +143,7 @@ def deploy(sha, archive_hash, schema_hash):
     release = BASE / 'releases' / ('auto-' + sha)
     release.mkdir(mode=0o755, exist_ok=True)
     (release / 'release.json').write_text(json.dumps({'sha': sha, 'schema': schema_hash}))
-    current = {'tag': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash}
+    current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash}
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
     try:

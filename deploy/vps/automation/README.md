@@ -6,6 +6,7 @@ T-905: bilgisayardan bağımsız, yalnız `shosgoren/EtkinWMS` için yayın hatt
 
 - `check`: gerçek GitHub runner → sınırlı SSH kimliği → HTTPS derin health. Uygulama/migration değiştirmez.
 - `deploy`: yalnız exact **güncel main SHA**, `verify/infra/secrets/deps/int/e2e/check-all/test-ac/check-pilot` GitHub Actions kontrollerinin en son sonucu success ise kabul edilir. Kontroller runner'da ve VPS'de tekrar denetlenir.
+- İlk aday canlı T-902 baseline `024a800` commit'ini içermelidir; sonraki adaylar önceki yayın SHA'sının devamı olmalıdır. Main eski olduğu için yalnız otomasyon PR'ının birleşmesi eski ürün kodunu canlıya geri gönderemez. Eski/divergent kod reddedilir.
 - Payload yalnız digest'i eşleşen, `etkinwms:<SHA>` olarak tek etiketli ve `node` kullanıcı/revision etiketli Docker imaj arşividir. Genel shell, SCP, forwarding, dosya extraction ve genel sudo yok. Sabit root-sahipli Compose, yalnız EtkinWMS kaynakları ve volume'ları kullanır.
 - Migration'lar otomatik çalışmaz. Aday migration dosya fingerprint'i hem operator-approved schema hem önceki çalışan imajın schema kaydıyla aynı olmalıdır. 27→30 değişikliği, önceki imajla uyumlu geri dönüş hazırlanıp yetkili operatör yeni baseline'ı kurmadan reddedilir.
 - Sağlık başarısızsa schema-compatible önceki Compose/imaj geri getirilir. Volume silme/prune yok. Yeni imaj marketing kaynağını da içerir; kaynak host bind-mount'a ihtiyaç duymaz.
@@ -29,7 +30,7 @@ Kurulum/test çıktısını aşağıya gerçek zaman/SHA/workflow run URL'si ile
 - GitHub production environment ve ayrı key/known_hosts secret adları doğrulandı; değerler yazdırılmadı. Ortam dal listesi yalnız main. Kişisel/root anahtar aktarılmadı.
 - Installer'ın ilk sshd kontrolünde Match bloğunda desteklenmeyen PermitUserEnvironment satırı reddedildi; kaldırılıp genel etkin değerin no olduğu doğrulandı. sshd -t ve reload başarılı. Kaynak installer da düzeltildi; başarısız syntax dosyası için cleanup eklendi.
 - Yerel known-host dosya yolunda boşluk ayrıştırması tespit edildi. Önceden güvenilir kayıttaki açık anahtar, authenticated strict SSH sunucu anahtarıyla karşılaştırılarak doğru dosyaya kaydedildi. Yeni host kabul edilmedi. Yerel SSH option içinde boşluklu yol ayrıca tırnaklanır.
-- Sınır testi7/7, Bash syntax ve YAML parser kontrolleri başarılı. Bunlar GitHub runner uçtan uca sonucu değildir.
+- Sınır testi8/8, Bash syntax ve YAML parser kontrolleri başarılı. Bunlar GitHub runner uçtan uca sonucu değildir.
 - GitHub runner bağlantısı: main workflow inceleme/onay ve birleşmesi bekleniyor; henüz doğrulanmadı.
 - Protected inceleme ve main'e birleştirme: bekliyor.
 - Yeni ürün sürümünün yayını: yapılmadı; ayrı CI/schema/rollback kapıları vardır.

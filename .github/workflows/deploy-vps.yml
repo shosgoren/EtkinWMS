@@ -62,6 +62,8 @@ jobs:
           [[ "$REQUEST_SHA" =~ ^[0-9a-f]{40}$ ]]
           main_sha=$(gh api repos/shosgoren/EtkinWMS/git/ref/heads/main --jq .object.sha)
           test "$REQUEST_SHA" = "$main_sha"
+          ancestry=$(gh api "repos/shosgoren/EtkinWMS/compare/024a800bace33c2dc3df397d56fda7e449d1d9dc...$REQUEST_SHA" --jq .status)
+          test "$ancestry" = ahead || test "$ancestry" = identical
           gh api "repos/shosgoren/EtkinWMS/commits/$REQUEST_SHA/check-runs?per_page=100" > "$RUNNER_TEMP/checks.json"
           python3 - "$RUNNER_TEMP/checks.json" <<'PY'
           import json,sys

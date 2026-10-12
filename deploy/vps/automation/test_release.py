@@ -71,6 +71,14 @@ class ReleaseBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.object(release, 'MAX_UPLOAD', 8), self.assertRaises(ValueError):
             release.receive(io.BytesIO(b'0123456789'), Path(directory) / 'image')
 
+    def test_old_or_divergent_code_cannot_replace_production(self):
+        for status in ['behind', 'diverged']:
+            with patch.object(release, 'api', return_value={'status': status}), self.assertRaisesRegex(ValueError, 'PRODUCTION_DOWNGRADE_REJECTED'):
+                release.assert_descendant(SHA, 'b'*40)
+        for status in ['ahead', 'identical']:
+            with patch.object(release, 'api', return_value={'status': status}):
+                release.assert_descendant(SHA, 'b'*40)
+
     def test_schema_change_never_reaches_upload_or_docker(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -97,7 +105,7 @@ class ReleaseBoundaryTests(unittest.TestCase):
             (automation / 'state.json').write_text(json.dumps(previous))
             (automation / 'approved-schema.sha256').write_text('b'*64)
             with patch.object(release, 'BASE', base), patch.object(release, 'AUTOMATION', automation), \
-                 patch.object(release, 'assert_ci'), patch.object(release, 'validate_archive'), \
+                 patch.object(release, 'assert_ci'), patch.object(release, 'assert_descendant'), patch.object(release, 'validate_archive'), \
                  patch.object(release, 'receive', return_value='d'*64), patch.object(release.signal, 'alarm'), \
                  patch.object(release.time, 'sleep'), patch.object(release, 'run') as run, \
                  patch.object(release, 'healthy', side_effect=[False]*18+[True]):
