@@ -71,7 +71,8 @@ export async function enrollInitialOwner(input: {
 export interface InitialOwnerMigration { version: string; name: string; checksum_sha256: string }
 /** Existing operator connection: fixed read-only queries only. No grants, RLS switches or mutation. */
 export async function checkInitialOwnerProof(client: DbClient, target: InitialOwnerTarget, expected: readonly InitialOwnerMigration[], plan: InitialOwnerPlan, resume: boolean): Promise<void> {
-  if (!target.proofHost || !target.proofRole || expected.length !== 27 || expected.some((m, i) => m.version !== String(i + 1).padStart(4, '0') || !/^[0-9a-f]{64}$/.test(m.checksum_sha256))) throw new Error('INITIAL_OWNER_SCHEMA_PROOF_REQUIRED');
+  // Kaynak defteri 0001'den ardışık olmalı (sayı sabit değil); hedef DB defteri aşağıda sürüm/ad/checksum ile birebir eşleşir.
+  if (!target.proofHost || !target.proofRole || expected.length === 0 || expected.some((m, i) => m.version !== String(i + 1).padStart(4, '0') || !/^[0-9a-f]{64}$/.test(m.checksum_sha256))) throw new Error('INITIAL_OWNER_SCHEMA_PROOF_REQUIRED');
   await rawDb(client).transaction(async tx => {
     const meta = await tx.execute<{ db: string; role: string; version: number }>(sql`SELECT current_database() AS db, current_user AS role, current_setting('server_version_num')::int AS version`);
     if (meta[0]?.db !== target.database || meta[0].role !== target.proofRole || meta[0].version < 180000 || meta[0].version >= 190000) throw new Error('INITIAL_OWNER_PROOF_TARGET');

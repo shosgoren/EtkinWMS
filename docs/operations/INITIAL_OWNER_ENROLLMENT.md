@@ -4,7 +4,7 @@ Bu araç yalnız **yeni** kullanıcı ve yeni tenant içindir. Public signup aç
 
 ## Sabit sınırlar ve hedef doğrulaması
 
-- Yalnız schema27 kaynak ağacından build edilir; 0001–0027 up+NUL+down SHA256 defteri pakete gömülür. PG18 ve defterin her sürüm/ad/checksum değeri eşleşmelidir; schema30 reddedilir.
+- Build edildiği kaynak ağacının tam migration defteri (0001'den ardışık; up+NUL+down SHA256) pakete gömülür. PG18 ve defterin her sürüm/ad/checksum değeri hedef DB ile birebir eşleşmelidir; farklı şemadaki DB reddedilir (araç, derlendiği kaynağın şemasına bağlıdır).
 - `DATABASE_URL`: wms_app; `AUTH_DATABASE_URL`: wms_auth. Her ikisinin gerçek DB adı/rolü/PG18 sürümü ve NOSUPERUSER/NOBYPASSRLS niteliği kontrol edilir.
 - `INITIAL_OWNER_PROOF_DATABASE_URL`: mevcut yetkili operatörün aynı DB'ye bağlantısı. Yalnız sabit READ ONLY transaction içindeki SELECT'ler için kullanılır: metadata/defter, tam görünür mevcut email/slug önkontrolü. wms_meta uygulama rollerine yasak olduğundan bu üçüncü bağlantı gerekir. Yeni rol/grant/BYPASSRLS ayarı oluşturulmaz. Tam görünürlük için mevcut owner/superuser yetkisi yoksa araç durur.
 - Üç URI da açık port ve yalnız `sslmode=verify-full` parametresi kullanır. Başka query seçenekleri/fragment reddedilir. VPS CA'sı Node'un güvenilir CA deposunda veya operatörün mevcut `NODE_EXTRA_CA_CERTS` dosyasında olmalıdır; TLS doğrulaması kapatılmaz.

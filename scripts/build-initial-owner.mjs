@@ -12,7 +12,8 @@ const ledger = readdirSync(migrationDir).filter(name => /^\d{4}_.+\.up\.sql$/.te
   if (!match) throw new Error('INVALID_MIGRATION');
   return { version: match[1], name: match[2], checksum_sha256: createHash('sha256').update(readFileSync(path.join(migrationDir, filename))).update(Uint8Array.of(0)).update(readFileSync(path.join(migrationDir, filename.replace('.up.sql', '.down.sql')))).digest('hex') };
 });
-if (ledger.length !== 27 || ledger.some((m, i) => m.version !== String(i + 1).padStart(4, '0'))) throw new Error('INITIAL_OWNER_REQUIRES_SCHEMA27_SOURCE');
+// Kaynak defteri: 0001'den ardışık sürümler (sayı sabit değil); araç derlendiği kaynağın defterine bağlanır, hedef DB bununla birebir eşleşmelidir.
+if (ledger.length === 0 || ledger.some((m, i) => m.version !== String(i + 1).padStart(4, '0'))) throw new Error('INITIAL_OWNER_REQUIRES_CONTIGUOUS_SOURCE_LEDGER');
 const output = path.join(root, '.artifacts/initial-owner');
 mkdirSync(output, { recursive: true });
 const source = readFileSync(path.join(root, 'scripts/initial-owner.mjs'), 'utf8').replace('export const SOURCE_LEDGER = [];', 'export const SOURCE_LEDGER = ' + JSON.stringify(ledger) + ';').replaceAll("from '../packages/", "from '" + root + "/packages/");
