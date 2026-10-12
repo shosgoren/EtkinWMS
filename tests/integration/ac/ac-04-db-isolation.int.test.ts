@@ -367,9 +367,9 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
         const pre: Pre[] = [setTenant(A.tenantId), ["INSERT INTO public.production_recipes(tenant_id,id,code,version,name,output_item_id,output_quantity,created_by) VALUES($1,$2::uuid,$2::text,1,'RLS control',$3,1,$4)",[A.tenantId,recipe,A.itemNoneId,A.ownerUserId]]];
         const stmt = "INSERT INTO public.production_recipe_lines(tenant_id,recipe_id,line_no,item_id,quantity) VALUES($1,$2,1,$3,1)";
         const foreign = await attempt(appClient,pre,stmt,[B.tenantId,recipe,B.itemNoneId]);
-        expect(foreign).toMatchObject({ok:false,code:"23514",message:"production recipe revision is sealed"});
+        if(foreign.ok || foreign.code !== "23514" || foreign.message !== "production recipe revision is sealed") failures.push(`${t.name}: sealed foreign parent must be rejected: ${fmt(foreign)}`);
         const own = await attempt(appClient,pre,stmt,[A.tenantId,recipe,A.itemNoneId]);
-        expect(own).toMatchObject({ok:true,rowCount:1});
+        if(!own.ok || own.rowCount !== 1) failures.push(`${t.name}: same-transaction own parent must accept one line: ${fmt(own)}`);
         continue;
       }
       if (t.insertCols.length === 0) {
