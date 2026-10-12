@@ -13,9 +13,9 @@ spec.loader.exec_module(release)
 SHA = 'a' * 40
 
 
-def make_archive(path, tag=None, user='node', revision=SHA, extra=None):
+def make_archive(path, tag=None, user='node', revision=SHA, extra=None, schema='b'*64):
     entries = {'manifest.json': [{'RepoTags': [tag or 'etkinwms:' + SHA], 'Config': 'config.json', 'Layers': []}],
-               'config.json': {'config': {'User': user, 'Labels': {'org.opencontainers.image.revision': revision}}}}
+               'config.json': {'config': {'User': user, 'Labels': {'org.opencontainers.image.revision': revision, 'org.etkinwms.schema.sha256': schema}}}}
     with tarfile.open(path, 'w:gz') as archive:
         for name, value in entries.items():
             data = json.dumps(value).encode()
@@ -38,11 +38,11 @@ class ReleaseBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'image.tar.gz'
             make_archive(path)
-            release.validate_archive(path, SHA)
+            release.validate_archive(path, SHA, 'b'*64)
             for override in [{'tag': 'other-app:latest'}, {'user': 'root'}, {'revision': 'b'*40}]:
                 make_archive(path, **override)
                 with self.subTest(override=override), self.assertRaises(ValueError):
-                    release.validate_archive(path, SHA)
+                    release.validate_archive(path, SHA, 'b'*64)
 
     def test_no_links_or_traversal(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -53,7 +53,27 @@ class ReleaseBoundaryTests(unittest.TestCase):
                 member.linkname = '/etc/passwd'
                 make_archive(path, extra=member)
                 with self.subTest(name=name), self.assertRaises(ValueError):
-                    release.validate_archive(path, SHA)
+                    release.validate_archive(path, SHA, 'b'*64)
+
+    def test_schema_claim_must_match_attested_archive_before_docker_load(self):
+        with tempfile.TemporaryDirectory() as directory:
+            automation = Path(directory)
+            path = automation / 'image.tar.gz'
+            for schema in [None, 'c'*64]:
+                make_archive(path, schema=schema)
+                with self.subTest(schema=schema), self.assertRaisesRegex(ValueError, 'SIGNED_SCHEMA_MISMATCH'):
+                    release.validate_archive(path, SHA, 'b'*64)
+            (automation / 'approved-schema.sha256').write_text('b'*64)
+            (automation / 'state.json').write_text(json.dumps({'schema':'b'*64,'tag':'previous'}))
+            def uploaded(stream, package):
+                make_archive(package, schema='c'*64)
+                return 'd'*64
+            with patch.object(release,'AUTOMATION',automation), patch.object(release,'assert_ci'), \
+                 patch.object(release,'assert_descendant'), patch.object(release,'receive',side_effect=uploaded), \
+                 patch.object(release.signal,'alarm'), patch.object(release,'run') as run:
+                with self.assertRaisesRegex(ValueError,'SIGNED_SCHEMA_MISMATCH'):
+                    release.deploy(SHA,'d'*64,'b'*64)
+                run.assert_not_called()
 
     def test_current_main_and_all_checks_required(self):
         good = [{'id': i, 'name': name, 'app': {'slug': 'github-actions'}, 'status': 'completed', 'conclusion': 'success'}

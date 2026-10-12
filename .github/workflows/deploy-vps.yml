@@ -89,9 +89,11 @@ jobs:
           RELEASE_SHA: ${{ steps.gate.outputs.sha }}
         run: |
           set -euo pipefail
+          schema_hash=$(python3 deploy/vps/automation/schema.py packages/db/migrations)
+          [[ "$schema_hash" =~ ^[0-9a-f]{64}$ ]]
           docker build --platform linux/amd64 -t "etkinwms-build:$RELEASE_SHA" .
           printf 'FROM etkinwms-build:%s\nCOPY marketing /marketing\n' "$RELEASE_SHA" > "$RUNNER_TEMP/Release.Dockerfile"
-          docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$RELEASE_SHA" -f "$RUNNER_TEMP/Release.Dockerfile" -t "etkinwms:$RELEASE_SHA" .
+          docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$RELEASE_SHA" --label "org.etkinwms.schema.sha256=$schema_hash" -f "$RUNNER_TEMP/Release.Dockerfile" -t "etkinwms:$RELEASE_SHA" .
           docker save "etkinwms:$RELEASE_SHA" | gzip > "$RUNNER_TEMP/image.tar.gz"
       - name: Record bundle identity
         id: bundle

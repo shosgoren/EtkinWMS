@@ -58,7 +58,7 @@ def assert_descendant(sha, previous_sha):
         raise ValueError('PRODUCTION_DOWNGRADE_REJECTED')
 
 
-def validate_archive(path, sha):
+def validate_archive(path, sha, schema_hash):
     with tarfile.open(path, 'r:gz') as archive:
         count, total = 0, 0
         for member in archive:
@@ -81,6 +81,8 @@ def validate_archive(path, sha):
         data = json.load(archive.extractfile(config))['config']
         if data.get('User') != 'node' or data.get('Labels', {}).get('org.opencontainers.image.revision') != sha:
             raise ValueError('IMAGE_IDENTITY_REJECTED')
+        if data.get('Labels', {}).get('org.etkinwms.schema.sha256') != schema_hash:
+            raise ValueError('SIGNED_SCHEMA_MISMATCH')
 
 
 def run(args, **kwargs):
@@ -167,7 +169,7 @@ def deploy(sha, archive_hash, schema_hash):
         if receive(sys.stdin.buffer, package) != archive_hash:
             raise ValueError('UPLOAD_HASH_MISMATCH')
         signal.alarm(0)
-        validate_archive(package, sha)
+        validate_archive(package, sha, schema_hash)
         verify_provenance(package, sha, archive_hash)
         assert_ci(sha)  # main/CI may have changed during upload
         run(['docker', 'load', '-i', str(package)], stdout=subprocess.DEVNULL)
