@@ -1,5 +1,7 @@
 # EtkinWMS bağımsız pilot durumu
 
+Güncel müşteri talimatları, doğrulanmış durum, Cloud bağlantısının sınırları ve kalan pilot kabul işleri: [PILOT_HANDOFF.md](PILOT_HANDOFF.md). Sonraki görev önce bu kaydı ve gerçek Git durumunu okumalı; eski kaynak proje notlarını mevcut ürünün hazır olduğuna kanıt saymamalıdır.
+
 Hedef: 12 Ekim 2026, 22:00 Europe/Istanbul; Motive Rubber üç depo pilotu.
 Kaynak: shosgoren/2027-WMS-1 salt okunur kopya; orijinal depo/kaynaklara yazılmaz.
 Hedef depo: shosgoren/EtkinWMS. Eski çalışma notları UPSTREAM_STATE.md içinde yalnız referanstır.
