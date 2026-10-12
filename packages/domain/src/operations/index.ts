@@ -143,3 +143,4 @@ export {
 } from "./task-progress.ts";
 export { transferBetweenWarehouses, type WarehouseTransferInput } from "./warehouse-transfer.ts";
 export { scaleRecipeQuantity, createProductionRecipe, getProductionRecipe, listProductionRecipes, produceFromRecipe, type CreateRecipeInput, type ProduceInput } from "./production.ts";
+export { listShippingOrders, getShippingOrder, previewShippingPick } from "./shipping-queries.ts";
