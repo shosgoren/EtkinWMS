@@ -1,3 +1,4 @@
+import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 // T-286: telefon kamerasıyla barkod okuma. İKİ yol ayrı ayrı sınanır:
 //  (1) uygulama içi çözücü (BarcodeDetector YOK: iPhone/WebKit durumu): sahte kamera = EAN-13 görüntülü y4m videosu, WASM çözücü tembel yüklenir;
 //  (2) yerleşik API yolu: Chromium Linux'ta BarcodeDetector bulunmadığından, gerçek kamera akışından (sahte aygıt) kare bekleyen bir BarcodeDetector sahtesi enjekte edilir;
@@ -19,7 +20,7 @@ const CODE = BODY + ean13CheckDigit(BODY);
 const BAD_CHECKSUM = BODY + ((ean13CheckDigit(BODY) + 1) % 10);
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const SHOTS = process.env.T286_OUT ?? path.join(ROOT, ".artifacts/t286-shots");
-const Y4M = writeBarcodeY4m(path.join(ROOT, ".artifacts/e2e/camera/ean13.y4m"), CODE);
+const Y4M = writeBarcodeY4m(path.join(ROOT, `.artifacts/e2e/camera/ean13-${CODE}.y4m`), CODE);
 const SIZES = [
   { name: "360x780", width: 360, height: 780 },
   { name: "390x844", width: 390, height: 844 },
@@ -28,7 +29,7 @@ const SIZES = [
 
 test.use({
   permissions: ["camera"],
-  launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", `--use-file-for-fake-video-capture=${Y4M}`] },
+  launchOptions: { ...(process.env.E2E_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH } : {}), args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", `--use-file-for-fake-video-capture=${Y4M}`] },
 });
 
 /** Ses/titreşim çağrılarını sayan sahteler (gerçek cihaz yok); sayaçlar `window.__fb` altındadır. */
@@ -93,6 +94,7 @@ async function login(page: Page, testInfo: TestInfo): Promise<void> {
   if (session !== null) {
     await page.context().addCookies(session);
     await page.goto("/t/demo");
+    await completeFirstUseGuide(page);
     await expect(page).toHaveURL(/\/t\/demo$/);
     return;
   }
@@ -100,6 +102,7 @@ async function login(page: Page, testInfo: TestInfo): Promise<void> {
   const local = "x-e2e-client-ip" in project; // uzak hedefte başlık yoktur ve eklenmez
   if (local) await page.setExtraHTTPHeaders({ ...project, "x-e2e-client-ip": LOGIN_IP });
   await page.goto("/");
+  await completeFirstUseGuide(page);
   await page.getByRole("button", { name: "Yönetici olarak gir" }).click();
   await expect(page).toHaveURL(/\/t\/demo$/);
   if (local) await page.setExtraHTTPHeaders(project);
@@ -112,6 +115,7 @@ async function login(page: Page, testInfo: TestInfo): Promise<void> {
  */
 async function gotoPutaway(page: Page): Promise<void> {
   await page.goto("/t/demo/field/putaway");
+  await completeFirstUseGuide(page);
   const picker = page.getByRole("list", { name: "Hangi depo?" });
   if ((await picker.count()) > 0) {
     await picker.getByRole("link").first().click();
