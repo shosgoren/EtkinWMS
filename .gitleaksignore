@@ -16,3 +16,11 @@ f1b688fc552a658fde3a9b4581b16cbbacbee5fb:tests/integration/auth/auth-core.int.te
 65a33202f2e406d06833952233be91f08980f7ea:.gitleaksignore:generic-api-key:13
 # Sentetik test değeri, tests/integration/audit/audit-export.int.test.ts:122 (T-126)
 e6545f08a95a654e3155632f9eee87ae38b8dbf9:tests/integration/audit/audit-export.int.test.ts:generic-api-key:122
+
+# T-903: bağımsız EtkinWMS başlangıcında yukarıdaki test fikstürlerinin yeni parmak izleri.
+# Yalnız audit export testinin beforeAll bölümünde atanan sabit test kimlik sırrı; üretim kaynağı yok.
+c0e49268559f4dce5610d9d50a9f3ef310331ff1:tests/integration/audit/audit-export.int.test.ts:generic-api-key:122
+# Audit maskelemesini sınayan sentinel anahtar/değer örneği; hiçbir sağlayıcıya gönderilmez.
+c0e49268559f4dce5610d9d50a9f3ef310331ff1:packages/db/src/audit.test.ts:generic-api-key:295
+# Audit maskeleme örneği: 12 karakterlik sahte imza HS256 imzası değildir; oturum belirteci olarak kullanılmaz.
+c0e49268559f4dce5610d9d50a9f3ef310331ff1:packages/db/src/audit.test.ts:jwt:98
