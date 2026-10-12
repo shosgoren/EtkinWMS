@@ -627,6 +627,20 @@ async function masked<T>(fn: () => Promise<T>): Promise<T> {
 
 const authOptionsByService = new WeakMap<AuthService, BetterAuthOptions>();
 
+/** Offline operator capability. Never exposed by handler or added to the public signup flow. */
+export interface InitialOwnerAuthPort {
+  readonly baseUrl: string;
+  prepareUser(input: { userId: string; email: string; name: string; resume: boolean }): Promise<void>;
+  issueToken(userId: string): Promise<AdminResetToken>;
+  revokeToken(id: string): Promise<void>;
+}
+const initialOwnerPorts = new WeakMap<AuthService, InitialOwnerAuthPort>();
+export function initialOwnerAuthPort(service: AuthService): InitialOwnerAuthPort {
+  const port = initialOwnerPorts.get(service);
+  if (port === undefined) throw new AuthConfigError("INITIAL_OWNER_UNAVAILABLE");
+  return port;
+}
+
 /** `inspectAuthOptions` anlık görüntüsü: gizsiz, derin dondurulmuş; canlı yapılandırmayla bağı yoktur. */
 export interface AuthOptionsSnapshot {
   readonly session?: { readonly additionalFields?: Readonly<Record<string, { readonly input?: boolean }>> };
@@ -1600,6 +1614,41 @@ export function createAuth(params: CreateAuthParams): AuthService {
     },
   };
   authOptionsByService.set(service, auth.options);
+  const preparedOwners = new Set<string>();
+  initialOwnerPorts.set(service, {
+    baseUrl: env.baseUrl,
+    async prepareUser(input) {
+      if (env.requireEmailVerification || env.signupEnabled || !UUID_RE.test(input.userId)) throw new AuthConfigError("INITIAL_OWNER_POLICY");
+      await masked(async () => {
+        const rows = await authDb.execute<{ id: string; name: string; email: string; email_verified: boolean; two_factor_enabled: boolean }>(
+          sql`SELECT id, name, email, email_verified, two_factor_enabled FROM public.users WHERE email = ${input.email} OR id = ${input.userId}::uuid`,
+        );
+        if (rows.length > 0) {
+          const u = rows[0];
+          if (!input.resume || rows.length !== 1 || u?.id !== input.userId || u.email !== input.email || u.name !== input.name || u.email_verified || u.two_factor_enabled) throw new AuthConfigError("INITIAL_OWNER_EXISTS");
+          const used = await authDb.execute<{ used: boolean }>(sql`SELECT EXISTS(SELECT 1 FROM public.accounts WHERE user_id = ${input.userId}::uuid) OR EXISTS(SELECT 1 FROM public.sessions WHERE user_id = ${input.userId}::uuid) OR EXISTS(SELECT 1 FROM public.two_factors WHERE user_id = ${input.userId}::uuid) OR EXISTS(SELECT 1 FROM public.verifications WHERE value = ${input.userId}) AS used`);
+          if (used[0]?.used !== false) throw new AuthConfigError("INITIAL_OWNER_USED");
+          preparedOwners.add(input.userId);
+          return;
+        }
+        const context = await auth.$context;
+        const user = await context.internalAdapter.createUser({ id: input.userId, name: input.name, email: input.email, emailVerified: false }, { method: "email-password" });
+        if (user.id !== input.userId) throw new AuthConfigError("INITIAL_OWNER_ID_MISMATCH");
+        preparedOwners.add(input.userId);
+      });
+    },
+    async issueToken(userId) {
+      if (env.requireEmailVerification || env.signupEnabled || !UUID_RE.test(userId) || !preparedOwners.delete(userId)) throw new AuthConfigError("INITIAL_OWNER_POLICY");
+      return masked(async () => {
+        const context = await auth.$context;
+        const token = randomBytes(24).toString("hex");
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const record = await context.internalAdapter.createVerificationValue({ identifier: `reset-password:${token}`, value: userId, expiresAt });
+        return { token, verificationId: record.id, expiresAt };
+      });
+    },
+    revokeToken: (id) => service.discardPasswordResetToken(id),
+  });
   return service;
 }
 
