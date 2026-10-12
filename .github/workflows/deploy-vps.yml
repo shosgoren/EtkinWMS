@@ -1,0 +1,129 @@
+name: deploy-vps
+on:
+  workflow_run:
+    workflows: [ci, guards]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [check, deploy]
+        default: check
+        required: true
+      sha:
+        description: Exact main commit (deploy only)
+        type: string
+        required: false
+permissions:
+  contents: read
+  checks: read
+concurrency:
+  group: etkinwms-production
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'check'
+    runs-on: ubuntu-24.04
+    environment: etkinwms-production
+    timeout-minutes: 5
+    steps:
+      - name: Verify restricted connection
+        env:
+          DEPLOY_KEY: ${{ secrets.ETKINWMS_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ETKINWMS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+          trap 'rm -rf "$RUNNER_TEMP/ssh"' EXIT
+          ssh -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" -i "$RUNNER_TEMP/ssh/key" etkinwms-deploy@187.7.76.72 check
+  build:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+       (github.event_name == 'workflow_dispatch' && inputs.mode == 'deploy'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    outputs:
+      sha: ${{ steps.gate.outputs.sha }}
+      schema: ${{ steps.bundle.outputs.schema }}
+      digest: ${{ steps.bundle.outputs.digest }}
+    steps:
+      - name: Gate exact main commit and all required checks
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUEST_SHA: ${{ inputs.sha || github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$REQUEST_SHA" =~ ^[0-9a-f]{40}$ ]]
+          main_sha=$(gh api repos/shosgoren/EtkinWMS/git/ref/heads/main --jq .object.sha)
+          test "$REQUEST_SHA" = "$main_sha"
+          gh api "repos/shosgoren/EtkinWMS/commits/$REQUEST_SHA/check-runs?per_page=100" > "$RUNNER_TEMP/checks.json"
+          python3 - "$RUNNER_TEMP/checks.json" <<'PY'
+          import json,sys
+          checks=json.load(open(sys.argv[1]))['check_runs']
+          for name in ['verify','infra','secrets','deps','int','e2e','check-all','test-ac','check-pilot']:
+              runs=[r for r in checks if r['name']==name and r.get('app',{}).get('slug')=='github-actions']
+              latest=max(runs,key=lambda r:r['id'],default=None)
+              if latest is None or latest['status']!='completed' or latest['conclusion']!='success':
+                  sys.exit('RELEASE_BLOCKED:'+name)
+          PY
+          echo "sha=$REQUEST_SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ steps.gate.outputs.sha }}
+          persist-credentials: false
+      - name: Build immutable application and marketing image
+        env:
+          RELEASE_SHA: ${{ steps.gate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          docker build --platform linux/amd64 -t "etkinwms-build:$RELEASE_SHA" .
+          printf 'FROM etkinwms-build:%s\nCOPY marketing /marketing\n' "$RELEASE_SHA" > "$RUNNER_TEMP/Release.Dockerfile"
+          docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$RELEASE_SHA" -f "$RUNNER_TEMP/Release.Dockerfile" -t "etkinwms:$RELEASE_SHA" .
+          docker save "etkinwms:$RELEASE_SHA" | gzip > "$RUNNER_TEMP/image.tar.gz"
+      - name: Record bundle identity
+        id: bundle
+        run: |
+          set -euo pipefail
+          echo "schema=$(python3 deploy/vps/automation/schema.py packages/db/migrations)" >> "$GITHUB_OUTPUT"
+          echo "digest=$(sha256sum "$RUNNER_TEMP/image.tar.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: etkinwms-release
+          path: ${{ runner.temp }}/image.tar.gz
+          retention-days: 3
+          if-no-files-found: error
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: etkinwms-production
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: etkinwms-release
+          path: ${{ runner.temp }}/bundle
+      - name: Send only the verified image to the fixed release receiver
+        env:
+          DEPLOY_KEY: ${{ secrets.ETKINWMS_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ETKINWMS_KNOWN_HOSTS }}
+          RELEASE_SHA: ${{ needs.build.outputs.sha }}
+          SCHEMA_HASH: ${{ needs.build.outputs.schema }}
+          ARCHIVE_HASH: ${{ needs.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SCHEMA_HASH" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$ARCHIVE_HASH" =~ ^[0-9a-f]{64}$ ]]
+          test "$(sha256sum "$RUNNER_TEMP/bundle/image.tar.gz" | cut -d' ' -f1)" = "$ARCHIVE_HASH"
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+          trap 'rm -rf "$RUNNER_TEMP/ssh"' EXIT
+          ssh -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" -i "$RUNNER_TEMP/ssh/key" etkinwms-deploy@187.7.76.72 "deploy $RELEASE_SHA $ARCHIVE_HASH $SCHEMA_HASH" < "$RUNNER_TEMP/bundle/image.tar.gz"
