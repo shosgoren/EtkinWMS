@@ -35,5 +35,6 @@ Kurulum/test çıktısını aşağıya gerçek zaman/SHA/workflow run URL'si ile
 - İlk independent review: 0 BLOCKER / 2 MAJOR / 1 MINOR; imaj build provenance, aynı SHA/tag üzerine yazma ve state failure/current geri dönüşü. Üçü yeni kod ve regresyon testleriyle düzeltildi; yeni SHA bağımsız tekrar incelemesi bekleniyor.
 - Sınır testi11/11, Bash syntax ve YAML parser kontrolleri başarılı. Bunlar GitHub runner uçtan uca sonucu değildir. Token'sız CLI disk-bundle yolu, malformed test bundle'ını reddederek doğrulandı; gerçek signed image olumlu testi henüz yok.
 - GitHub runner bağlantısı: main workflow inceleme/onay ve birleşmesi bekleniyor; henüz doğrulanmadı.
+- Main'den gelen üç sentetik fixture tarama engeli için PR #5 / 72262ee'nin `.gitleaksignore` kaydı byte-identical taşınır; yeni kural/yol muafiyeti yok. Korunan fingerprint değişikliğinin inceleme kaydı da PR #8'e bağlanır.
 - Protected inceleme ve main'e birleştirme: bekliyor.
 - Yeni ürün sürümünün yayını: yapılmadı; ayrı CI/schema/rollback kapıları vardır.
