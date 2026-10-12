@@ -1854,5 +1854,38 @@
       }
     },
     "noRows": "The file has no data rows yet. Add at least one row to the template, then choose the file again."
+  },
+  "guide": {
+    "label": "How do I use this?",
+    "title": "Together, step by step.",
+    "intro": "New here? Start with these three steps. You can reopen this guide whenever you need it.",
+    "next": "Next step",
+    "done": "Ready to start",
+    "skip": "Close for now",
+    "progress": "Step {current} / {total}",
+    "steps": [
+      {
+        "title": "Choose the job",
+        "text": "Goods arrived? Choose Receive. Putting them on a shelf? Choose Put away. Read the card and tap the large button.",
+        "icon": "1"
+      },
+      {
+        "title": "Find the product and enter the quantity",
+        "text": "Scan the barcode or search the product name. Check the product, warehouse and stock unit. You can go back if unsure.",
+        "icon": "2"
+      },
+      {
+        "title": "Check first, then save",
+        "text": "Read the summary before saving. A red warning stops the action and tells you what to fix. Your job is complete when you see the success message.",
+        "icon": "3"
+      }
+    ],
+    "welcome": "An easier start for your warehouse.",
+    "welcomeText": "Choose your job. Find the product. Check the quantity. Etkin WMS shows the next step as you go.",
+    "start": "Sign in to my workspace",
+    "loginHelp": "Sign in with the email and password your administrator gave you. Ask your administrator if you do not have an account.",
+    "support": "Need help? Open the help page.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   }
 }
