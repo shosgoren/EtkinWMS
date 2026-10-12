@@ -46,6 +46,11 @@ jobs:
       ((github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
        (github.event_name == 'workflow_dispatch' && inputs.mode == 'deploy'))
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: read
+      id-token: write
+      attestations: write
     timeout-minutes: 35
     outputs:
       sha: ${{ steps.gate.outputs.sha }}
@@ -94,6 +99,10 @@ jobs:
           set -euo pipefail
           echo "schema=$(python3 deploy/vps/automation/schema.py packages/db/migrations)" >> "$GITHUB_OUTPUT"
           echo "digest=$(sha256sum "$RUNNER_TEMP/image.tar.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Sign exact artifact provenance with GitHub OIDC
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/image.tar.gz
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: etkinwms-release

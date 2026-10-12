@@ -106,6 +106,7 @@ class ReleaseBoundaryTests(unittest.TestCase):
             (automation / 'approved-schema.sha256').write_text('b'*64)
             with patch.object(release, 'BASE', base), patch.object(release, 'AUTOMATION', automation), \
                  patch.object(release, 'assert_ci'), patch.object(release, 'assert_descendant'), patch.object(release, 'validate_archive'), \
+                 patch.object(release, 'verify_provenance'), \
                  patch.object(release, 'receive', return_value='d'*64), patch.object(release.signal, 'alarm'), \
                  patch.object(release.time, 'sleep'), patch.object(release, 'run') as run, \
                  patch.object(release, 'healthy', side_effect=[False]*18+[True]):
@@ -116,6 +117,51 @@ class ReleaseBoundaryTests(unittest.TestCase):
                 self.assertIn(str(previous_release/'compose.yml'), run.call_args.args[0])
                 self.assertEqual(run.call_args.kwargs['env']['WMS_RELEASE'], 'previous')
                 self.assertFalse(any('down' in c.args[0] or 'prune' in c.args[0] for c in run.call_args_list))
+
+    def test_duplicate_release_never_loads_or_overwrites_active_tag(self):
+        with tempfile.TemporaryDirectory() as directory:
+            automation=Path(directory)
+            (automation/'state.json').write_text(json.dumps({'tag':SHA,'sha':SHA,'schema':'b'*64}))
+            (automation/'approved-schema.sha256').write_text('b'*64)
+            with patch.object(release,'AUTOMATION',automation), patch.object(release,'assert_ci'), \
+                 patch.object(release,'assert_descendant'), patch.object(release,'healthy',return_value=True), \
+                 patch.object(release,'receive') as receive, patch.object(release,'run') as run:
+                release.deploy(SHA,'d'*64,'b'*64)
+                receive.assert_not_called()
+                run.assert_not_called()
+
+    def test_state_write_failure_restores_current_and_previous_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory); automation=base/'automation'; automation.mkdir(); (base/'releases').mkdir()
+            previous_release=base/'releases'/'previous'; previous_release.mkdir(); (base/'current').symlink_to(previous_release)
+            previous={'tag':'previous','compose':str(previous_release/'compose.yml'),'release':str(previous_release),'schema':'b'*64}
+            (automation/'state.json').write_text(json.dumps(previous)); (automation/'approved-schema.sha256').write_text('b'*64)
+            with patch.object(release,'BASE',base), patch.object(release,'AUTOMATION',automation), \
+                 patch.object(release,'assert_ci'), patch.object(release,'assert_descendant'), patch.object(release,'validate_archive'), \
+                 patch.object(release,'verify_provenance'), patch.object(release,'receive',return_value='d'*64), \
+                 patch.object(release.signal,'alarm'), patch.object(release,'run'), patch.object(release,'healthy',return_value=True), \
+                 patch.object(release,'write_state',side_effect=[OSError('disk full'),None]) as write:
+                with self.assertRaisesRegex(ValueError,'RELEASE_FAILED_PREVIOUS_RESTORED'):
+                    release.deploy(SHA,'d'*64,'b'*64)
+                self.assertEqual((base/'current').resolve(),previous_release.resolve())
+                self.assertEqual(write.call_args.args[0],previous)
+
+    def test_provenance_rejects_missing_or_invalid_attestations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            artifact=Path(directory)/'image.tar.gz'
+            with patch.object(release,'api',return_value={'attestations':[]}), self.assertRaisesRegex(ValueError,'BUILD_ATTESTATION_MISSING'):
+                release.verify_provenance(artifact,SHA,'d'*64)
+            with patch.object(release,'api',return_value={'attestations':[{'bundle':{}}]}), \
+                 patch.object(release.subprocess,'run',return_value=release.subprocess.CompletedProcess([],1)) as verifier:
+                with self.assertRaisesRegex(ValueError,'BUILD_ATTESTATION_REJECTED'):
+                    release.verify_provenance(artifact,SHA,'d'*64)
+                args=verifier.call_args.args[0]
+                self.assertEqual(args[args.index('--source-ref')+1],'refs/heads/main')
+                self.assertEqual(args[args.index('--source-digest')+1],SHA)
+                self.assertEqual(args[args.index('--signer-digest')+1],SHA)
+                self.assertEqual(args[args.index('--signer-workflow')+1],'shosgoren/EtkinWMS/.github/workflows/deploy-vps.yml')
+                self.assertIn('--deny-self-hosted-runners',args)
+                self.assertNotIn('GH_TOKEN',verifier.call_args.kwargs['env'])
 
 
 if __name__ == '__main__':

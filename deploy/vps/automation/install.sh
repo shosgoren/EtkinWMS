@@ -19,6 +19,8 @@ test -f "$release/deploy/vps/compose.yml"
 test -f "$release/deploy/vps/Caddyfile"
 test -d "$release/packages/db/migrations"
 install -d -m 700 -o root -g root /opt/etkinwms/automation
+install -d -m 700 -o root -g root /opt/etkinwms/automation/gh-config
+bash install-gh.sh
 install -m 755 -o root -g root release.py /usr/local/sbin/etkinwms-release
 install -m 755 -o root -g root entry.py /usr/local/bin/etkinwms-deploy-entry
 install -m 644 -o root -g root compose.yml /opt/etkinwms/automation/compose.yml

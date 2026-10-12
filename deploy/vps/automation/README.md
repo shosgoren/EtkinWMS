@@ -8,8 +8,10 @@ T-905: bilgisayardan bağımsız, yalnız `shosgoren/EtkinWMS` için yayın hatt
 - `deploy`: yalnız exact **güncel main SHA**, `verify/infra/secrets/deps/int/e2e/check-all/test-ac/check-pilot` GitHub Actions kontrollerinin en son sonucu success ise kabul edilir. Kontroller runner'da ve VPS'de tekrar denetlenir.
 - İlk aday canlı T-902 baseline `024a800` commit'ini içermelidir; sonraki adaylar önceki yayın SHA'sının devamı olmalıdır. Main eski olduğu için yalnız otomasyon PR'ının birleşmesi eski ürün kodunu canlıya geri gönderemez. Eski/divergent kod reddedilir.
 - Payload yalnız digest'i eşleşen, `etkinwms:<SHA>` olarak tek etiketli ve `node` kullanıcı/revision etiketli Docker imaj arşividir. Genel shell, SCP, forwarding, dosya extraction ve genel sudo yok. Sabit root-sahipli Compose, yalnız EtkinWMS kaynakları ve volume'ları kullanır.
+- İmaj etiketi tek başına güven kanıtı değildir. Exact arşiv için GitHub OIDC build attestation gerekir; VPS resmi ve checksum-pinlenmiş GitHub CLI ile certificate issuer/repo/workflow/main-ref/source+signer digest ve hosted runner kimliğini doğrular. Üretim token'ı gerektirmeyen public API + disk bundle yolu kullanılır. Eksik/geçersiz attestations Docker load'dan önce reddedilir. Gerçek imaj attestation akışı ilk yeşil main build'inden sonra ayrıca doğrulanır.
 - Migration'lar otomatik çalışmaz. Aday migration dosya fingerprint'i hem operator-approved schema hem önceki çalışan imajın schema kaydıyla aynı olmalıdır. 27→30 değişikliği, önceki imajla uyumlu geri dönüş hazırlanıp yetkili operatör yeni baseline'ı kurmadan reddedilir.
 - Sağlık başarısızsa schema-compatible önceki Compose/imaj geri getirilir. Volume silme/prune yok. Yeni imaj marketing kaynağını da içerir; kaynak host bind-mount'a ihtiyaç duymaz.
+- Aynı üretim SHA'sının tekrar yayını sağlıklıysa no-op'tur; aktif rollback tag'i yeni imajla ezilmez. State yazımı başarısızlığında eski Compose/imajla birlikte current symlink ve state kaydı da geri yüklenir.
 - Runtime/db/secrets kullanıcı scope'unu yalnız uygulama içinde kullanır. İmaj kodu uygulama sırlarına erişebilir; bu yüzden main/CI/inceleme kapıları korunur. Sınırlı kimlik uygulama yayını yetkisidir, genel sunucu yönetimi yetkisi değildir.
 
 ## Kurulum sırası
@@ -30,7 +32,8 @@ Kurulum/test çıktısını aşağıya gerçek zaman/SHA/workflow run URL'si ile
 - GitHub production environment ve ayrı key/known_hosts secret adları doğrulandı; değerler yazdırılmadı. Ortam dal listesi yalnız main. Kişisel/root anahtar aktarılmadı.
 - Installer'ın ilk sshd kontrolünde Match bloğunda desteklenmeyen PermitUserEnvironment satırı reddedildi; kaldırılıp genel etkin değerin no olduğu doğrulandı. sshd -t ve reload başarılı. Kaynak installer da düzeltildi; başarısız syntax dosyası için cleanup eklendi.
 - Yerel known-host dosya yolunda boşluk ayrıştırması tespit edildi. Önceden güvenilir kayıttaki açık anahtar, authenticated strict SSH sunucu anahtarıyla karşılaştırılarak doğru dosyaya kaydedildi. Yeni host kabul edilmedi. Yerel SSH option içinde boşluklu yol ayrıca tırnaklanır.
-- Sınır testi8/8, Bash syntax ve YAML parser kontrolleri başarılı. Bunlar GitHub runner uçtan uca sonucu değildir.
+- İlk independent review: 0 BLOCKER / 2 MAJOR / 1 MINOR; imaj build provenance, aynı SHA/tag üzerine yazma ve state failure/current geri dönüşü. Üçü yeni kod ve regresyon testleriyle düzeltildi; yeni SHA bağımsız tekrar incelemesi bekleniyor.
+- Sınır testi11/11, Bash syntax ve YAML parser kontrolleri başarılı. Bunlar GitHub runner uçtan uca sonucu değildir. Token'sız CLI disk-bundle yolu, malformed test bundle'ını reddederek doğrulandı; gerçek signed image olumlu testi henüz yok.
 - GitHub runner bağlantısı: main workflow inceleme/onay ve birleşmesi bekleniyor; henüz doğrulanmadı.
 - Protected inceleme ve main'e birleştirme: bekliyor.
 - Yeni ürün sürümünün yayını: yapılmadı; ayrı CI/schema/rollback kapıları vardır.

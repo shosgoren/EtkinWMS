@@ -122,6 +122,31 @@ def receive(stream, path):
     return digest.hexdigest()
 
 
+def verify_provenance(path, sha, archive_hash):
+    records = api('/attestations/sha256:' + archive_hash)['attestations']
+    if not records:
+        raise ValueError('BUILD_ATTESTATION_MISSING')
+    bundle = path.with_name('provenance.jsonl')
+    bundle.write_text('\n'.join(json.dumps(row['bundle']) for row in records))
+    env = {'PATH': '/usr/bin:/bin', 'GH_CONFIG_DIR': str(AUTOMATION / 'gh-config')}
+    result = subprocess.run(['/usr/local/lib/etkinwms-gh/gh', 'attestation', 'verify', str(path),
+                             '--bundle', str(bundle), '--repo', REPO,
+                             '--signer-workflow', REPO + '/.github/workflows/deploy-vps.yml',
+                             '--source-ref', 'refs/heads/main', '--source-digest', sha,
+                             '--signer-digest', sha, '--deny-self-hosted-runners'],
+                            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=90)
+    if result.returncode != 0:
+        raise ValueError('BUILD_ATTESTATION_REJECTED')
+
+
+def set_current(release):
+    link = BASE / 'current.next'
+    if link.is_symlink():
+        link.unlink()
+    link.symlink_to(release)
+    link.replace(BASE / 'current')
+
+
 def deploy(sha, archive_hash, schema_hash):
     approved = (AUTOMATION / 'approved-schema.sha256').read_text().strip()
     if not HEX64.fullmatch(approved) or schema_hash != approved:
@@ -131,6 +156,11 @@ def deploy(sha, archive_hash, schema_hash):
     if previous.get('schema') != schema_hash:
         raise ValueError('ROLLBACK_SCHEMA_INCOMPATIBLE')
     assert_descendant(sha, previous.get('sha', BASELINE_SHA))
+    if previous.get('sha') == sha or previous['tag'] == sha:
+        if not healthy():
+            raise ValueError('EXISTING_RELEASE_UNHEALTHY')
+        print(json.dumps({'already_deployed': sha, 'health': 'ok'}))
+        return
     with tempfile.TemporaryDirectory(prefix='release-', dir=AUTOMATION) as directory:
         package = Path(directory) / 'image.tar.gz'
         signal.alarm(600)  # An incomplete/slow stream must not hold the release lock indefinitely.
@@ -138,6 +168,7 @@ def deploy(sha, archive_hash, schema_hash):
             raise ValueError('UPLOAD_HASH_MISMATCH')
         signal.alarm(0)
         validate_archive(package, sha)
+        verify_provenance(package, sha, archive_hash)
         assert_ci(sha)  # main/CI may have changed during upload
         run(['docker', 'load', '-i', str(package)], stdout=subprocess.DEVNULL)
     release = BASE / 'releases' / ('auto-' + sha)
@@ -155,17 +186,15 @@ def deploy(sha, archive_hash, schema_hash):
         else:
             raise ValueError('DEEP_HEALTH_FAILED')
         # The approved schema remains identical, so previous deployment is schema-compatible.
-        link = BASE / 'current.next'
-        if link.is_symlink():
-            link.unlink()
-        link.symlink_to(release)
-        link.replace(BASE / 'current')
+        set_current(release)
         write_state(current)
     except Exception:
         old_args, old_env = compose(previous)
         run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
         if not healthy():
             raise ValueError('ROLLBACK_HEALTH_FAILED') from None
+        set_current(previous['release'])
+        write_state(previous)
         raise ValueError('RELEASE_FAILED_PREVIOUS_RESTORED') from None
     print(json.dumps({'deployed': sha, 'health': 'ok'}))
 
