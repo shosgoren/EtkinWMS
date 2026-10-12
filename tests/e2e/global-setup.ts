@@ -8,13 +8,13 @@
 //   4. kendinden imzalı sertifikalı TLS ters vekili PORT'ta dinler (BETTER_AUTH_URL staging kipinde https ister)
 // Parolalar/sırlar her koşuda rastgele üretilir (ortamda yoksa); diske/loga yazılmaz. Yalnızca yerel veritabanına (loopback) bağlanır.
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { chromium } from "@playwright/test";
-import { mintSharedSession } from "./support/demo-session.ts";
+import { clearSharedSession, mintSharedSession } from "./support/demo-session.ts";
 import { provisionEmptyTenant } from "./support/empty-tenant.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
@@ -58,6 +58,19 @@ function run(cmd: string, args: string[], env: NodeJS.ProcessEnv, logName: strin
 function start(cmd: string, args: string[], env: NodeJS.ProcessEnv, logName: string): ChildProcess {
   const fd = openSync(path.join(OUT, logName), "w");
   return spawn(cmd, args, { cwd: ROOT, env, stdio: ["ignore", fd, fd], detached: true });
+}
+
+/** Next'in desteklenen standalone çıktısı: Cloud'da derleme ayrı yerel konteynerde yapılabilir. */
+function startWeb(port: number, env: NodeJS.ProcessEnv, logName: string): ChildProcess {
+  if (process.env.E2E_STANDALONE === "1") {
+    const webRoot = path.join(ROOT, "apps/web");
+    const output = path.join(webRoot, ".next/standalone/apps/web");
+    if (!existsSync(path.join(output, "server.js"))) throw new Error("e2e: standalone build yok");
+    cpSync(path.join(webRoot, ".next/static"), path.join(output, ".next/static"), { recursive: true });
+    if (existsSync(path.join(webRoot, "public"))) cpSync(path.join(webRoot, "public"), path.join(output, "public"), { recursive: true });
+    return start("node", [path.join(output, "server.js")], { ...env, PORT: String(port), HOSTNAME: "127.0.0.1" }, logName);
+  }
+  return start("pnpm", ["--filter", "@wms/web", "exec", "next", "start", "-p", String(port), "-H", "127.0.0.1"], env, logName);
 }
 
 function stop(child: ChildProcess | undefined): void {
@@ -113,7 +126,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   if (remote) {
     // staging/uzak koşu: yığın dışarıda. T-300: tek runner IP'si demo giriş sınırını (10 / 10 dk) aşmasın diye yönetici için BİR KEZ gerçek
     // ekrandan girilir; oturum `.artifacts/session/` altına yazılır (artifact'a girmez). Çıkış yapan spec'ler kendi girişini yapar.
-    const browser = await chromium.launch();
+    const browser = await chromium.launch(process.env.E2E_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH } : {});
     try {
       await mintSharedSession(browser, remote);
     } finally {
@@ -145,6 +158,10 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   const children: ChildProcess[] = [];
   let proxy: https.Server | undefined;
   const teardown = async (): Promise<void> => {
+    clearSharedSession();
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT"]) {
+      for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
+    }
     proxy?.close();
     proxy?.closeAllConnections();
     for (const c of children) stop(c);
@@ -158,7 +175,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       return readFileSync(path.join(OUT, "worker.log"), "utf8").includes('"msg":"demo.reseed done"');
     });
 
-    const web = start("pnpm", ["--filter", "@wms/web", "exec", "next", "start", "-p", String(innerPort), "-H", "127.0.0.1"], env, "web.log");
+    const web = startWeb(innerPort, env, "web.log");
     children.push(web);
     await waitFor("web hazır değil (bkz. .artifacts/e2e/web.log)", 120_000, async () => {
       if (web.exitCode !== null) throw new Error("e2e: web beklenmedik biçimde çıktı (bkz. .artifacts/e2e/web.log)");
@@ -198,7 +215,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
     const portB = port + 3;
     const envB: NodeJS.ProcessEnv = { ...env, WMS_ENV: "ci", SIGNUP_ENABLED: "true", BETTER_AUTH_URL: `https://localhost:${portB}` };
     delete envB.DEMO_MODE; // demo girişi yalnızca ana örnekte
-    const webB = start("pnpm", ["--filter", "@wms/web", "exec", "next", "start", "-p", String(innerB), "-H", "127.0.0.1"], envB, "web-signup.log");
+    const webB = startWeb(innerB, envB, "web-signup.log");
     children.push(webB);
     await waitFor("kayıt açık web örneği hazır değil (bkz. .artifacts/e2e/web-signup.log)", 120_000, async () => {
       if (webB.exitCode !== null) throw new Error("e2e: kayıt açık web örneği çıktı (bkz. .artifacts/e2e/web-signup.log)");
@@ -218,7 +235,8 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
     let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
     let setupError: unknown;
     try {
-      browser = await chromium.launch();
+      browser = await chromium.launch(process.env.E2E_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH } : {});
+      await mintSharedSession(browser, `https://localhost:${port}`);
       const made = await provisionEmptyTenant({
         browser,
         origin: `https://localhost:${portB}`,
@@ -232,6 +250,22 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       process.env.E2E_EMPTY_EMAIL = email;
       process.env.E2E_EMPTY_PASSWORD = password;
       process.env.E2E_EMPTY_TOTP_SECRET = made.totpSecret;
+      // Stok/üretim testleri boş durum ölçümlerinin tenant'ını dolduramaz. Aynı gerçek kayıt/MFA yolu, ayrı hesap ve tenant.
+      const pilotEmail = `pilot-${suffix}@example.test`;
+      const pilotPassword = randomBytes(18).toString("hex");
+      const pilot = await provisionEmptyTenant({
+        browser,
+        origin: `https://localhost:${portB}`,
+        clientIp: "198.51.100.20",
+        name: "E2E pilot yöneticisi",
+        email: pilotEmail,
+        password: pilotPassword,
+        workspaceName: `E2E pilot ${suffix}`,
+      });
+      process.env.E2E_PILOT_SLUG = pilot.slug;
+      process.env.E2E_PILOT_EMAIL = pilotEmail;
+      process.env.E2E_PILOT_PASSWORD = pilotPassword;
+      process.env.E2E_PILOT_TOTP_SECRET = pilot.totpSecret;
     } catch (e) {
       setupError = e;
     }
