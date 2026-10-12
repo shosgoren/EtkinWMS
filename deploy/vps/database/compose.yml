@@ -5,7 +5,7 @@ services:
     container_name: etkinwms-postgres
     restart: unless-stopped
     env_file: /opt/etkinwms/database/admin.env
-    command: [postgres, -c, ssl=on, -c, ssl_cert_file=/tls/server.crt, -c, ssl_key_file=/tls/server.key, -c, shared_buffers=512MB, -c, max_connections=100]
+    command: [postgres, -c, ssl=on, -c, ssl_cert_file=/tls/server.crt, -c, ssl_key_file=/tls/server.key, -c, hba_file=/tls/pg_hba.conf, -c, shared_buffers=512MB, -c, max_connections=100]
     volumes:
       - postgres-data:/var/lib/postgresql
       - /opt/etkinwms/database/tls:/tls:ro
