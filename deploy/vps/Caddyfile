@@ -1,0 +1,13 @@
+wms.etkinyazilim.com {
+    encode zstd gzip
+    reverse_proxy web:3000
+}
+
+etkinyazilim.com {
+    encode zstd gzip
+    reverse_proxy marketing:3200
+}
+
+www.etkinyazilim.com, etkinyazilim.com.tr, www.etkinyazilim.com.tr {
+    redir https://etkinyazilim.com{uri} permanent
+}
