@@ -100,6 +100,9 @@
       "passwordWrongAction": "Parolanı kontrol edip yeniden dene.",
       "keyTitle": "1. Anahtarı uygulamaya ekle",
       "keyIntro": "Kimlik doğrulama uygulamanda yeni hesap ekle ve bu anahtarı elle yaz.",
+      "qrLabel": "Doğrulama uygulaması için QR kod",
+      "qrHint": "Google Authenticator, Microsoft Authenticator ya da benzeri bir uygulamada “+” → “QR kodu tara” deyip bu kodu okut.",
+      "keyManual": "QR okutamıyorsan anahtarı elle gir:",
       "openApp": "Uygulamada aç",
       "backupTitle": "2. Yedek kodlarını sakla",
       "backupWarning": "Bu kodlar yalnızca şimdi gösterilir. Telefonunu kaybedersen girişin tek yolu bunlardır; güvenli bir yere kaydet.",
@@ -541,7 +544,9 @@
     }
   },
   "audit": {
-    "production_recipe": {"created": "Üretim reçetesi oluşturuldu"},
+    "production_recipe": {
+      "created": "Üretim reçetesi oluşturuldu"
+    },
     "member": {
       "invited": "Bir üyeyi davet ettin.",
       "removed": "Bir üyeyi çalışma alanından çıkardın.",
@@ -1984,8 +1989,7 @@
     "find": "Ara",
     "next": "Sonraki reçeteler",
     "empty": "Henüz reçete yok."
-  }
-,
+  },
   "shipping": {
     "newHelp": "Ürünleri temel birimleriyle seç. Sipariş kaydı stok düşürmez; sonraki adımda stok ayrılır.",
     "cameraLocation": "Konumu kamerayla oku",

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Banner, Button, CircleAlert, TextField } from "@wms/ui";
+import { QrCode } from "./qr-code.tsx";
 import { acceptInvitationAction } from "./invite/[token]/actions.ts";
 import { authPost } from "../lib/auth-client.ts";
 import type { AuthCallError } from "../lib/auth-client.ts";
@@ -458,6 +459,11 @@ export function MfaSetupForm({ next }: { next: string }) {
           {t("mfa.keyTitle")}
         </h2>
         <p className="break-words text-base text-ink-muted">{t("mfa.keyIntro")}</p>
+        <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <QrCode value={enable.totpURI} label={t("mfa.qrLabel")} />
+          <p className="break-words text-base text-ink-muted">{t("mfa.qrHint")}</p>
+        </div>
+        <p className="break-words text-sm font-semibold text-ink">{t("mfa.keyManual")}</p>
         <code className="break-all rounded-card bg-accent-soft p-3 font-mono text-base text-ink select-all">{secret}</code>
         <a href={enable.totpURI} className={LINK}>
           {t("mfa.openApp")}

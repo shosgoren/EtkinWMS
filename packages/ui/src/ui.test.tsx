@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ActivityList, Banner, Button, ConfirmDialog, EmptyState, TaskCard, TextField } from "./index.ts";
+import { ActivityList, Banner, Button, ConfirmDialog, EmptyState, SelectField, TaskCard, TextField } from "./index.ts";
 import { handleDialogCancel, handleDialogClose } from "./controls.tsx";
 
 const icon = <span>i</span>;
@@ -258,5 +258,23 @@ describe("Palet eşlemeleri (T-246a, ADR-020)", () => {
     const badge = classesOf(renderToStaticMarkup(<TaskCard icon={icon} title="K" tone="undo" />), "rounded-full");
     expect(badge).toEqual(expect.arrayContaining(["bg-undo-bg", "text-undo"]));
     expect(badge).not.toContain("text-undo-ink");
+  });
+});
+
+describe("SelectField (T-912)", () => {
+  it("gerçek <select> ve seçenekleri üretir; etiket ve ipucu alana bağlıdır", () => {
+    const html = renderToStaticMarkup(
+      <SelectField id="sf" name="kind" label="Tür" hint="Bir tür seç" defaultValue="b" options={[{ value: "a", label: "A" }, { value: "b", label: "B" }, { value: "c", label: "C", disabled: true }]} />,
+    );
+    expect(html).toContain('<select');
+    expect(html).toContain('id="sf"');
+    expect(html).toContain('name="kind"');
+    expect(html).toContain('<label for="sf"');
+    expect(html).toContain("Bir tür seç");
+    expect(html).toContain('aria-describedby="sf-hint"');
+    expect((html.match(/<option/g) ?? []).length).toBe(3);
+    expect(html).toContain('<option value="c" disabled="">C</option>');
+    // Liste kutusu yalnızca fareyle açılır; ilk çizimde yoktur.
+    expect(html).not.toContain('role="listbox"');
   });
 });

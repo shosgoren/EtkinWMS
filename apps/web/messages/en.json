@@ -100,6 +100,9 @@
       "passwordWrongAction": "Check your password and try again.",
       "keyTitle": "1. Add the key to the app",
       "keyIntro": "Add a new account in your authenticator app and type this key manually.",
+      "qrLabel": "QR code for your authenticator app",
+      "qrHint": "In Google Authenticator, Microsoft Authenticator or a similar app tap “+” → “Scan a QR code” and scan this code.",
+      "keyManual": "If you cannot scan, enter the key manually:",
       "openApp": "Open in app",
       "backupTitle": "2. Keep your backup codes",
       "backupWarning": "These codes are shown only now. If you lose your phone they are the only way in; store them somewhere safe.",
@@ -541,7 +544,9 @@
     }
   },
   "audit": {
-    "production_recipe": {"created": "Production recipe created"},
+    "production_recipe": {
+      "created": "Production recipe created"
+    },
     "member": {
       "invited": "You invited a member.",
       "removed": "You removed a member from the workspace.",
@@ -1984,8 +1989,7 @@
     "find": "Search",
     "next": "Next recipes",
     "empty": "No recipes yet."
-  }
-,
+  },
   "shipping": {
     "newHelp": "Choose items in their base units. Creating an order does not reduce stock; reserve stock in the next step.",
     "cameraLocation": "Scan location with camera",
