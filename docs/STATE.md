@@ -1,37 +1,49 @@
 # EtkinWMS bağımsız pilot durumu
 
-Güncel müşteri talimatları, doğrulanmış durum, Cloud bağlantısının sınırları ve kalan pilot kabul işleri: [PILOT_HANDOFF.md](PILOT_HANDOFF.md). Sonraki görev önce bu kaydı ve gerçek Git durumunu okumalı; eski kaynak proje notlarını mevcut ürünün hazır olduğuna kanıt saymamalıdır.
+Güncel devir: [PILOT_HANDOFF.md](PILOT_HANDOFF.md), son “Paket8 güncel yayın devri” bölümü.
+Yalnız shosgoren/EtkinWMS; 2027-WMS-1 ve eski Fly/Neon kaynaklarına işlem yok.
+Cloud geliştirme bilgisayardan bağımsız çalışıyor; Cloud VPS erişimi ve yayın hazırlığı doğrulanmadı.
 
-T-903 Cloud çalışma kaydı: `feat/T-903-motive-pilot`, HEAD `966079e` (T-904; uygulama baseline `024a800`), değişiklikler commit edilmedi. Rehber/boş tenant E2E engeli düzeltildi; yerel boş tenant 2/2, unit 3727/3727, audit-export entegrasyonu 12/12, web/worker build ve tip kontrolleri geçti. Gitleaks üç sentetik fikstür için exact fingerprint ile temiz. Varsayılan main tabanlı kapsam bekçisi ve SHA bağlı korunan dosya PR onayı açık; pilot tamamlanmadı. Ayrıntı, rehber test sonuçları ve ortam sınırlamaları devir kaydında. Gerçek müşteri/MFA, stok ve canlı kaynaklara işlem yapılmadı.
+Tek ürün adayı: `24bfcca8f6f19d1431b11bb6722e0f9f6a90d65b`, push edildi.
+Dal: feat/T-903c-pilot-ui; worktree: /workspace/EtkinWMS-packet-c.
+Sonraki belge commit'leri aday kodu değiştirmez; yayın hedefi hareketli dal adı değildir.
+Orijinal /workspace/EtkinWMS çalışma ağacı korunuyor; reset yapılmadı.
+Başlangıç: uygulama024a800bace33c2dc3df397d56fda7e449d1d9dc, T904belge966079e6f8a5d4fb9ec01b0798c4ef3464f20699; main geridedir.
 
-T-903 inceleme takibi: HEAD = T-904 remote = ortak ata (`966079e`); açık `--base` ile kapsam/AC/assertion kontrolleri geçti. `check:all` feature PR tabanını scope'a otomatik geçirmiyor; gerçek int dalı akışı veya ayrı korunan bekçi düzeltmesi gerekecek. `.gitleaksignore` ve `playwright.config.ts` ön incelemesi yapıldı; tek yetkili bağımsız security-reviewer ilk manifest için 0 BLOCKER / 0 MAJOR / 0 MINOR raporladı; commit/PR onayı yok. Ayrıntı devir kaydındaki takip bölümünde.
+[PR #5 A](https://github.com/shosgoren/EtkinWMS/pull/5): feat/T-903a-cloud-tests → int/pilot-base(966079e), 8 dosya.
+A HEAD: 72262ee2de741c09e688dcfd86089177cb8020a8; kod incelemesi: bc2efd34764a146b7bdfda874821a943071e096b.
+[PR #6 B](https://github.com/shosgoren/EtkinWMS/pull/6): feat/T-903b-pilot-domain → int/pilot-infra(A HEAD), 30 dosya.
+B HEAD: 1d2223edb4f2337f22a587b939cbc838f768edb5; kod incelemesi: 7b7d9f1fe4f17a976abdd0e53a5fbd9d4e6bc0b3.
+[PR #7 C](https://github.com/shosgoren/EtkinWMS/pull/7): feat/T-903c-pilot-ui → int/pilot-domain(B HEAD), 29 dosya.
+C incelemesi tek aday SHA üzerindedir. Üç bağımsız inceleme 0 BLOCKER / 0 MAJOR / 0 MINOR.
+Manifest ve raporlar docs/tasks/T-903a.md, T-903b.md, T-903c.md içindedir. PR'lar taslak; merge/deploy yapılmadı.
 
-Hedef: 12 Ekim 2026, 22:00 Europe/Istanbul; Motive Rubber çoklu depo pilotu; üç depo yalnız ilk örnek, ürün sınırı değil.
-Kaynak: shosgoren/2027-WMS-1 salt okunur kopya; orijinal depo/kaynaklara yazılmaz.
-Hedef depo: shosgoren/EtkinWMS. Eski çalışma notları UPSTREAM_STATE.md içinde yalnız referanstır.
+Son C verify: lint/typecheck ve 3752 unit PASS; C166 integration PASS; B85 integration PASS (sayımlar örtüşür).
+Son aday masaüstü/mobil E2E2/2 PASS (stok/transfer/üretim/sevkiyat, yanıt kaybında aynı istek ve tek etki).
+Son aday web ve worker üretim build PASS. Tam üretim Docker imajı/digest henüz yok.
+Yerel tüm bekçiler PASS; adayın9commit geçmişinde gitleaks0bulgu.
+Tam loopback suite:1881PASS/11FAIL/22beforeAll nedeniyle çalışmayan test; yeni schema/registry/AC eksikleri düzeltildi.
+MinIO403 ve dolu demo/job fixture sınırları açık; genel loopback suite yeşil sayılmaz.
+GitHub A guards SUCCESS; A ci int/verify/secrets/deps/infra SUCCESS, E2E sürüyor.
+C guards (38263327751) check-all/check-pilot/test-ac SUCCESS. B guards da SUCCESS; B ve C genel CI kesinleşmedi.
+Sonraki iş exact SHA güncel CI sonuçlarını oku; bütün kapılar yeşil olmadan merge/deploy yok.
 
-Hazır: bağımlılıklar; 27 yerel migration; ayrı etkinwms-pilot-local compose ortamı; SVG/Code128 etiketleri; A4 ve mm ölçü ayarları; kamera altyapısı.
-Kontrol: lint/typecheck ve 3726 birim testi geçti. Web ve worker üretim build geçti. Stok, firma izolasyonu, oturum ve etiket için 82 entegrasyon testi geçti.
-Bulut: yeni Neon Motive (autumn-lake-32406096, Frankfurt, PG18, free), ayrı uygulama/auth/worker rolleri ve 27 migration hazır. Hedef GitHub main yüklendi. Ücretli Fly kurulmadı; ayrı Hostinger KVM2 VPS hazır (Almanya, Ubuntu24.04, 2 CPU, 8GB RAM, 100GB disk). SSH bağlantısı doğrulandı.
-Yayın: deploy/vps web/worker/Caddy yapılandırması ve üretim Docker derlemesi doğrulandı. VPS üzerinde süreçler çalışıyor; derin sağlık kontrolü DB/kuyruk/worker OK. Kullanıcı yayın adresini wms.etkinyazilim.com olarak seçti; A kaydı eklendi, geçerli HTTPS sertifikası doğrulandı. Bazı istemcilerde DNS negatif önbelleği henüz temizlenmedi. Gizli ayarlar Git'e girmez, VPS'de web ve worker için ayrı dosyalarda tutulur.
-Kalan: müşteri bootstrap ve MFA, üretim ve sevkiyat ekranları, tarayıcıdan müşteri kabul kontrolü, cihaz kabul denemeleri. Müşteriye hazır kullanım henüz doğrulanmadı.
+Yerel migration30; canlı27 yalnız eski bildirim, Cloud doğrulamadı.
+28 belge bağları,29 reçeteler,30 transaction mührü ekler; mevcut miktarları yeniden yazmaz.
+Scratch DB3/3PASS: boş30→27→30; verili down reddi ve kayıtların korunması.
+Yeni bağlı stok verisinden sonra guided-20261012 tek bacak tersleme riski taşır; eski imaja/down otomatik dönüş yok.
+Plan: yazmaları durdur → yedek ve izole restore →30uyumlu fallback/ileri düzeltme testi → migration → worker → web → health.
+Canlı yedek/restore ve uyumlu fallback imaj/digest kanıtı YOK; yayın KAPALI.
+Public compose sentaksı geçici boş env referanslarıyla PASS; gerçek env okunmadı.
 
-Satış sitesi: etkinyazilim.com HTTPS üzerinden yayında; etkinyazilim.com.tr HTTPS ile ana adrese yönlenir. Web ve 390px mobil görünüm, menü, sektör senaryoları ve gerçek form kaydı doğrulandı. Demo talepleri marketing-leads named volume içinde 0600 dosyada saklanır; bu sürüm otomatik e-posta bildirimi göndermez. Ana alan adlarının A kayıtları yeni VPS'ye alındı; mevcut e-posta ve diğer alt alan adı kayıtları korunur. İlk Motive yönetici e-postası kullanıcı tarafından belirlendi; hesap kurulumu henüz tamamlanmadı.
+Yerel HOSTINGER_RUNBOOK commit23ef67e537415d82431802d3963bf0e86c4fe922 yalnız okundu.
+Yerel görev bildirimi12.10.2026 17:16İstanbul: onaylı SSH, guided-20261012, dört servis ve HTTPS deep health OK.
+Bu Cloud'un canlı kontrolü veya yeni adayın yayın kanıtı değildir.
+Son yetkiyle yerel görev GitHubActions ve EtkinWMS forced-command otomasyonunu kuruyor; başarı kanıtı bekleniyor.
+.github/workflows/deploy* ve deploy/vps/automation* yerel göreve ait; burada değiştirilmez.
+Kişisel/root anahtar Cloud'a istenmez. CI/rollback açık aday için otomatik deployment tetiklenmez.
 
-Tasarım T-902: özgün lacivert/turuncu palet ve yeni açılış/giriş ekranı; misafir kabuğu sadeleştirildi. İlk kullanımda üç aşamalı rehber, her sayfada yeniden açma düğmesi, parolayı göster/gizle ve kısa açıklama eklendi. Masaüstü ve 390px mobilde rehber ileri/tamam/kapat/yeniden aç ile parola göster/gizle kontrol edildi. Lint/typecheck ve 3727 test geçti; mevcut kontrast testleri değiştirilmedi. Üretim Docker doğrulaması geçti; guided-20261012 sürümü VPS üzerinde etkin. Canlı açılış/rehber görüntüsü ve satış paleti doğrulandı. Derin sağlık DB/kuyruk/worker OK. İlk defa bilgisayar kullanan gerçek kişiyle kabul denemesi henüz yapılmadı.
-
-T-903 ikinci dilim TAMAM (çalışma ağacı): depo/ürün/temel birim ayrımlı salt okunur stok görünümü. Entegrasyon 6/6, stok + ana menü E2E 8/8, ilgili unit/kontrast 448/448, lint, kök/tüm workspace TypeScript ve web build PASS. Son 10 dosyalık bağımsız manifest incelemesi 0/0/0, sır taraması 0 bulgu. Normal demo kotası penceresi beklendi; güvenlik limiti değiştirilmedi. Bu eski ikinci-dilim kaydında hazırlık 3/8 idi; güncel paket4/5 sonucu aşağıdadır. Nihai müşteri/cihaz pilot kabulü 0/13 kapalı, 13/13 açık. Commit/push/PR/deploy yapılmadı.
-
-Son kullanıcı kapsam düzeltmesi: kullanıcı birden çok depo ve depo başına birden çok raf/lokasyon açabilir; üç depo sabit koşul değildir. Otomatik toplu raf oluşturucu zaten mevcut (bölge + raf/göz aralıkları, önizleme, çakışma ve idempotency). İlgili yerel entegrasyon 36/36 geçti; mevcut 375px depo/50 raf/ürün kurulum E2E 2/2 geçti. Dört boyutlu serbest şablon kullanıcı tarafından kesinleştirilmedi. Gerçek müşteri verisi oluşturulmadı.
-
-T-903 paket4/5 son kabul — 12.10.2026 16:24 İstanbul: stok giriş/çıkış ve atomik transfer yerel teknik kabulü TAMAM. Mevcut menü düzeltmesi test eşikleri değişmeden doğrulandı: önceki dört geometri hatası kapandı; masaüstü/mobil E2E 6/6, ortak stok entegrasyonu 152/152, son belge/transfer entegrasyonu 9/9, ilgili unit 479/479 ve son action dosyası 5/5 PASS (sayımlar örtüşür). Ek başarılı çıkış testi ilk kez ADET ölçeğine uymayan veriyle reddedildi; test verisi düzeltildi, domain kuralı değişmedi. Tam lint/kök tsc PASS. Genel web tsc FAIL: shipping/actions.ts:24 cancelSalesOrder çağrısında expectedVersion eksik; paket7 dosyası bu dar turda korunuyor. Tam verify/build/CI iddiası yok. Son bağımsız paket4/5 kod incelemesi 0/0/0; commit/PR onayı değil.
-
-Güncel hazırlık 5/8 tamam, 3/8 açık: paket6 reçete/atomik üretim çekirdeği ve UI kısmi (önceki entegrasyon4/4, unit2/2; mevcut E2E üretim adımlarını da geçti, tüm kabul/son UI incelemesi açık); paket7 sevkiyat sorgu/action/form kısmi, sayfa/çeviri/test ve tip hatası açık; paket8 son yazılım/CI/SHA-bağlı inceleme kapısı açık. Yerel migration sayısı30; canlı27 kaydı yeni yayın anlamına gelmez. Müşteri/cihaz kabulü0/13. Dal feat/T-903-motive-pilot, HEAD966079e; tüm yeni kod çalışma ağacında, commit/push/PR/deploy yok. Kanıtlar .artifacts/t-903/packages45-*.log ve PILOT_HANDOFF son kabul bölümü.
-
-GÜNCEL — 12.10.2026 16:36 İstanbul: paket6 üretim yerel teknik kabulü tamam; hazırlık6/8, açık paket7 sevkiyat ve paket8 yayın/CI/rollback. Üretim5/5+orders22/22 entegrasyon, action4/4+ölçek2/2, masaüstü/mobil başarı+yetersizstok E2E2/2, webtypecheck/Nextbuild/workerbuild PASS; bağımsız security/QA0/0/0. Shipping expectedVersion hatası üçliteral strictschema+görülenversiyon aktarımıyla giderildi; paket7 tamam değil. Tamunitteki auditçeviri/allowlist ve testhelper nullchild sorunları düzeltildi, hedefli162/162PASS; son tamunit3747/3747PASS (104dosya), son lint/köktsc/Nextbuild PASS.
-
-Kullanıcı EtkinWMS sonkullanıcı testi için yayın, gerekli commit/push/taslakPR yetkisi verdi; henüz hiçbiri yapılmadı. VPS/CI yayın yolu doğrulanamadı: SSHagent/config yok, ghworkflowAPIForbidden; yeni credential yok. 0028–30 öncesi canlıyedek/restore ve migration→worker→web gerekir. Bağlı stok verisi sonrası eskiimaj reversalbağını tanımadığından rollback güvenli değil; uyumlu geri dönüş/forwardfix/bakım kanıtı olmadan deploy yok. Login hesabı/bootstrap/MFA oluşturuldu kanıtı yok; canlı hesap/reset/sır işlemi yapılmadı.
-
-YENİ KAPSAM ERTELENDİ: selfservice üyelik, Google/Apple giriş, yonet.etkinyazilim.com ve yonet.etkinyazilim.com.tr üzerinde platform-sahibi tenant/kullanıcı-adedi yönetimi. Kullanıcı önce uygulamayı görmek istiyor; bu işler sekizpilotpaketine dahil değil. Mevcut signup yalnızlocal/ci; Google/Microsoft bayraklı, Apple/panel yok; OAuth/DNS erişimi doğrulanmadı. Ayar/credential/değişiklik yok; tenantowner platformadmin sayılmaz, epostadan yetki verilmez. Ayrıntı PILOT_HANDOFF son bölümlerinde.
-
-GÜNCEL — 12.10.2026 paket7 sevkiyat yerel teknik kabulü tamam; hazırlık7/8, paket8 CI/SHA-inceleme/yayın/erişim/yedek-rollback açık. Sipariş/ayırma/toplama/kısmi-tam sevk/iptal/geçmiş ve tr/en sayfa tamam. Entegrasyon59/59 (yeni4 dahil), action8/8, tamunit3752/3752, son lint/köktsc/Nextbuild PASS. Masaüstü1/1 ve değişikliksiz mobil tekrar1/1 PASS: sunucu sevki işledikten sonra kayıp yanıt, aynı body/key ile tekrar ve tek stok etkisi doğrulandı. İlk mobil koşu sevkiyattan önce ürün kodu önerisi alınamadığı için durdu; kırmızı log korundu, kök neden kesinleşmedi. Test eşikleri/limitler değişmedi. Ayrıntı PILOT_HANDOFF paket7 bölümü; bağımsız rapor package7-review.txt. Tüm kod korunuyor; commit/push/PR/deploy/canlı hesap işlemi yok. İlk yönetici daveti sahiplik yaratmaz (is_owner=false); mevcut owner yoksa dar/testli bootstrap geliştirmesi ayrıca gerekir. Sosyal üyelik/platform paneli en sona ertelendi.
+İlk hesap/owner bootstrap ve MFA açık; TENANT_ADMIN daveti is_owner=false oluşturur, ilk sahip yaratmaz.
+Owner yoksa dar/testli bootstrap gerekir; production signup veya DB rol provisioning çözüm değildir.
+Hazırlık7/8, paket8 açık. Müşteri/cihaz kabulü0/13; kamera/yazıcı kabulü bekliyor. Üç depo ürün sınırı değildir.
+Sosyal üyelik, Google/Apple ve platform yönetim paneli sekiz pilot paketinin dışında en sona ertelendi.

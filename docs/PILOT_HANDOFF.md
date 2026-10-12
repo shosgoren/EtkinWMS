@@ -1,7 +1,7 @@
 # Etkin WMS — Motive pilotu ve Cloud devir kaydı
 
-**Belge sürümü:** 1.7 (T-903 çalışma kaydı, commit edilmedi)
-**Son doğrulama:** 12 Ekim 2026 — paket7 yerel teknik kabulü; yayın kapıları açık
+**Belge sürümü:** 1.8 (T-903 paket8 push edilmiş aday ve yayın devri)
+**Son doğrulama:** 12 Ekim 2026 — aşağıdaki paket8 kaydı günceldir; eski bölümler tarihsel kanıttır
 **Durum:** Altyapı yayında; müşteri pilotu tamamlanmadı.  
 **Bugünkü hedef:** 12 Ekim 2026, 22:00 Europe/Istanbul. Teslim garantisi verilmedi.
 
@@ -316,3 +316,63 @@ belgedeki kalan işleri tamamla. Her anlamlı sonuçta aynı devir belgesini gü
 Üretim erişiminin var olduğunu varsayma; sırları sohbet veya Git'e koyma.
 Bilgisayarımdan bağımsız ilerle, gerekli soruları bu Cloud görevinden sor.
 ```
+
+
+## Paket8 güncel yayın devri — 12 Ekim 2026
+
+Bu bölüm önceki “commit/push yok”, erişim ve dal durumu kayıtlarının güncel karşılığıdır. **Yayına hazır değil; otomatik deployment tetiklenmez.** Cloud geliştirme kullanıcı bilgisayarından bağımsız çalışmaktadır; bu görev VPS erişimi kurmadı ve canlıya bağlanmadı.
+
+### Tek ürün adayı ve PR zinciri
+
+**Tek birleşik ürün adayı: `24bfcca8f6f19d1431b11bb6722e0f9f6a90d65b`.** A+B+C ürün kodunu taşır ve GitHub'a push edilmiştir. Sonraki yalnız belge commit'leri yayın adayı değildir; bu kesin SHA değiştirilmedikçe başka branch tipini otomatik yayınlama. Üretim imaj digest'i henüz yok. Main son ürünün başlangıcı değildir.
+
+| Sıra / taslak PR | Dal → gerçek taban | Push edilmiş tam SHA |
+| --- | --- | --- |
+| [#5 A](https://github.com/shosgoren/EtkinWMS/pull/5), 8 dosya | feat/T-903a-cloud-tests → int/pilot-base (`966079e6f8a5d4fb9ec01b0798c4ef3464f20699`) | `72262ee2de741c09e688dcfd86089177cb8020a8` |
+| [#6 B](https://github.com/shosgoren/EtkinWMS/pull/6), 30 dosya | feat/T-903b-pilot-domain → int/pilot-infra (A SHA) | `1d2223edb4f2337f22a587b939cbc838f768edb5` |
+| [#7 C](https://github.com/shosgoren/EtkinWMS/pull/7), 29 dosya | feat/T-903c-pilot-ui → int/pilot-domain (B SHA) | `24bfcca8f6f19d1431b11bb6722e0f9f6a90d65b` ürün adayı; takip eden commit'ler yalnız devir belgeleri |
+
+Uygulama başlangıcı `024a800bace33c2dc3df397d56fda7e449d1d9dc` (T-902), belge başlangıcı T-904 `966079e6f8a5d4fb9ec01b0798c4ef3464f20699`. T-900 `80cfb10b5c651c0dfc6aa8aa1b5fd51661f3da83`, T-901 `e076fb72ff25df201c2cdc62db521dd38384aae3`, T-902 ve T-904 eski PR #1–4 ayrı taslak zincirdir; birleşmiş sayılmaz. A/B incelemeleri gerçek küçük paket tabanlarıyladır; tüm kod için tek 60+ dosyalık inceleme iddiası yok. Orijinal `/workspace/EtkinWMS` çalışma ağacı korunmuştur; aday ayrı `/workspace/EtkinWMS-packet-c` worktree'sindedir.
+
+### Test ve inceleme kanıtı
+
+- A bağımsız kod incelemesi `bc2efd34764a146b7bdfda874821a943071e096b`, B son inceleme `7b7d9f1fe4f17a976abdd0e53a5fbd9d4e6bc0b3`, C inceleme tek aday SHA: her biri **0 BLOCKER / 0 MAJOR / 0 MINOR**. Raporlar `docs/tasks/T-903a.md`, `T-903b.md`, `T-903c.md` içinde SHA256 manifestlidir. Bağımsız QA genel CI/restore sınırlarını açık tutar.
+- Son C `pnpm verify`: lint/tipler ve **3752/3752 unit PASS**. C API tenant loader147 + operations export15 + shipping4 = **166/166 integration PASS**. B son kod AC04DB35 + export15 + drift23 + migration3 + production5 + transfer4 = **85/85 PASS**. Sayımlar örtüşür, toplanmaz. Yerel `pnpm check:all --local` tüm bekçiler PASS.
+- Son aday web ve worker üretim build PASS (`package8-c-build-final.log`, `package8-c-worker-final.log`); bu tam Docker imajı build/digest kanıtı değildir.
+- Exact aday Git geçmişi sır taraması: **9 commit, 0 bulgu** (`package8-c-secrets-final.json`). Yeni credential/anahtar veya üretim env dosyası yok.
+- Tam loopback integration eski koşusu: **1881 PASS / 11 FAIL / 22 beforeAll nedeniyle çalışmayan test**, 105 dosya. AC04 loader/DB matrix, Drizzle metadata ve API export eksikleri düzeltildi ve hedefli tekrarlar geçti. Önceden dolu demo/job fixture'ları ile MinIO HTTP403/depolama ortamı eksikleri bu koşunun kalan sınırlamalarıdır. Genel suite yeşil sayılmaz; test/guard/baseline gevşetilmedi ve kırmızı loglar saklandı.
+- Son adayda masaüstü ve mobil stok/transfer/üretim/sevkiyat E2E **2/2 PASS**, 1.2dakika (`package8-c-e2e-final.log`); gerçek yanıt kaybında aynı istek ve tek stok etkisi dahil. Sistem Chromium154, fiziksel cihaz kabulü değildir. Önceki aynı UI kaynakları masaüstü E2E1/1 ve değişikliksiz mobil tekrar1/1 geçti; son birleşik ilk mobil koşu ürün kodu önerisi alınamadığı için durmuştu. Gerçek yanıt kaybı→aynı request/key→tek stok etkisi sınandı. Bu sonuç tek seferde tüm E2E yeşil veya fiziksel kamera/yazıcı kabulü değildir.
+- GitHub A guards [38261028004](https://github.com/shosgoren/EtkinWMS/actions/runs/38261028004) SUCCESS; A ci [38261027971](https://github.com/shosgoren/EtkinWMS/actions/runs/38261027971): int/verify/secrets/deps/infra SUCCESS, E2E son kontrolde sürüyor. A korunan dosya raporu ve SHA bağlı supervisor satırı PR #5'te; mekanik check-all geçti.
+- B güncel ci [38263027120](https://github.com/shosgoren/EtkinWMS/actions/runs/38263027120), guards [38263112088](https://github.com/shosgoren/EtkinWMS/actions/runs/38263112088): genel ci sürüyor; guards check-all/check-pilot/test-ac SUCCESS. Eski B test-ac eksik yeni tablo fixture'ı nedeniyle başarısızdı; yeni SHA sonucu yerine eski yeşil/kırmızı kullanılmaz. C [guards38263327751](https://github.com/shosgoren/EtkinWMS/actions/runs/38263327751) check-all/check-pilot/test-ac SUCCESS; [ci38263327769](https://github.com/shosgoren/EtkinWMS/actions/runs/38263327769) henüz kesinleşmedi. **Tüm gerekli GitHub kapıları yeşil olmadan merge yok.**
+
+Yerel ayrıntılı loglar `/workspace/EtkinWMS/.artifacts/t-903/package8-*` altındadır; runtime sırlarını içerdiği varsayılan dosyalar yayımlanmaz. Repo kartları taşınabilir sonuç/manifesttir.
+
+### Migration27→30 ve veri koruyan geri dönüş
+
+1. **0028 up:** değişmez `stock_document_links`, transfer/üretim belge bağları ve tenant/kısıt korumaları. Mevcut miktarları yeniden yazmaz. Down bağlı kayıt varken reddedilir.
+2. **0029 up:** değişmez reçete başlığı/satırları, belge-reçete ilişkisi ve birden çok tüketim belgesini üretim çıktısına bağlama. Mevcut stok miktarlarını değiştirmez. Down reçete/ilgili veri varken reddedilir.
+3. **0030 up:** reçete satırlarını başlıkla aynı transaction'da oluşturma mührü (`created_xid` ve INSERT tetikleyicisi). Sonradan satır ekleyerek reçete değiştirmek reddedilir. Down reçete varken mührü kaldırmaz.
+
+Yerel scratch DB testleri **3/3 PASS**: boş şemada30→27→30; bağlı transfer varken28down reddi ve stok/bağ korunması; kayıtlı reçetede30down ve29down reddi, tanımların korunması. Bu testler canlı yedek/restore veya eski binary uyumluluğunu kanıtlamaz.
+
+`guided-20261012` yalnız eski `source_kind` ilişkilerini bilir; yeni transfer/üretim bağları `stock_document_links` içindedir. Yeni işlemden sonra eski uygulamaya dönmek tek bacağı tersleyip toplamı bozabilir. **Eski imaja otomatik dönüş ve veri silerek down yasak; eski imajın disk üzerinde bulunması güvenli rollback değildir.**
+
+Veri kaybı olmadan uygulanacak plan (henüz operasyonel olarak kanıtlanmadı):
+
+1. Yetkili operatör canlı migration/tenant/işlem durumunu salt okunur doğrular. Yazmalar durdurulur; EtkinWMS'ye ait özel yedek/restore noktası alınır ve izole geri yükleme sınanır. Restore kanıtı, zaman ve kaynak kimliği kaydedilir; sırlar Cloud/Git'e alınmaz.
+2. Adayın30şemasını ve yeni bağlı tersleme korumasını koruyan **uyumlu geri dönüş imajı** hazırlanır; exactSHA/digest ile restore edilmiş test kopyasında okuma/transfer/üretim/tersleme ve health sınanır. Alternatif aynı30şemasında test edilmiş ileri düzeltmedir. Eski guided imajı bu hedef değildir. Şu anda böyle bir imaj/digest/test kanıtı yok.
+3. Sürüm kesimi yalnız tüm CI/inceleme, yedek/restore ve fallback kapıları sonrası: yazmalar kapalı → ayrı yetkili migration28→30 → yeni worker → web → HTTPS derin health ve yetkili uygulama doğrulaması → yazmaları açma. Runtime imajında migration CLI olduğu varsayılmaz; ayrı güvenli migrator yolu gerekir.
+4. Hata halinde yazmalar kapalı kalır; uyumlu imaj/ileri düzeltme uygulanır ve30şeması/veri korunur. Yeni yazmalar olduysa eski yedeği körlemesine geri yüklemek veri kaybıdır; down veya eski imaja otomatik dönüş yapılmaz. Uyumlu yol yoksa bakımda kalınır ve yayın bloke edilir.
+
+### Yayın dosyaları, erişim ve bootstrap
+
+- `Dockerfile`, `deploy/vps/compose.yml`, `deploy/vps/Caddyfile`, `marketing/server.mjs` ve28–30migration dosyaları adayda mevcuttur. Dockerfile Node24digest'i sabitler ve runtime node kullanıcısıdır; web/worker aynıimajdır. Public compose yalnız geçici kopyada env_file referansları boş test dosyasına çevrilerek `config --quiet` ile doğrulandı. Gerçek `/opt/.../web.env`/`worker.env` okunmadı; bu sentaks doğrulaması runtime yapılandırması kanıtı değildir. Tam aday üretim Docker imajı/digest'i henüz hazırlanmadı.
+- Kaynak teslimi `git archive <tam-aday-SHA>` ile yalnız takipli dosyalardan yapılmalı; `.env`, özel anahtar, node_modules, .git veya testlogları eklenmemeli. İmaj, kaynak arşivi ve kullanılan compose/Caddyfile için SHA256 manifesti operatörce karşılaştırılmalı; yeni benzersiz release dizini kullanılmalı. `current`, namedvolume'lar ve eski release üzerinde yıkıcı işlem yok.
+- Yerel görevden gelen [Hostinger devir kaydı](https://github.com/shosgoren/EtkinWMS/blob/23ef67e537415d82431802d3963bf0e86c4fe922/docs/HOSTINGER_RUNBOOK.md) yalnız `git show` ile okundu; kendi güncel STATE/PILOT dosyalarımız eski dal üzerine reset/cherry-pick edilmedi. **Yerel görev bildirimi:**12.10.2026 17:16İstanbul, önceden onaylı SSH başarılı, guided-20261012, dörtservis veHTTPS status/db/queue/worker OK. Bu Cloud'un yaptığı canlı kontrol değildir; yeni adayın yayın kanıtı değildir.
+- Kullanıcının son yetkisiyle yerel görev bilgisayardan bağımsız GitHubActions + yalnızEtkinWMS forced-command kimliğini kurmaktadır. `.github/workflows/deploy*` ve `deploy/vps/automation*` o göreve ayrılmıştır; burada değiştirilmedi. Kişisel/root özelanahtar Cloud'a alınmaz. Kurulumun ve yetkili tetiklemenin başarı kanıtı gelmedi; erişim hazır sayılmaz. CI/rollback açık aday için otomatik deployment tetiklenmez.
+- İlk yönetici hosgorens@gmail.com için canlı hesap/tenant sahipliği/MFA kanıtı yok. Mevcut yetkili owner varsa mevcut72saat tek-kullanımlık HTTPSdavet ve kullanıcının kendi belirlediği parola akışı kullanılabilir. Davet `is_owner=false` oluşturur, TENANT_ADMIN ilk sahip değildir. Owner yoksa dar/testli ilk-sahip bootstrap tamamlanmalıdır; DBrol provisioning betiği veya production signup açmak çözüm değildir. Bu görev hesap/parola/token oluşturmadı.
+
+**Açık kapılar:** sonGitHubCI/E2E + birleşme kapısı; exact üretim imajı/digest ve migration çalıştırma yolu; canlı yedek/restore kanıtı;30şeması uyumlu fallback/ileri düzeltme testi; otomasyon kurulum/tetikleme kanıtı; ilk sahip/bootstrap/MFA; gerçek müşteri/cihaz kabulü0/13. Yazılım hazırlığı7/8; paket8 kapanmadı.
+
+
+Son kaynak teslim kanıtı: `git archive` ile exact adaydan `etkinwms-24bfcca-source.tar.gz` üretildi; SHA256 `4f8e925bd266243ec451bba15bd9bc482b5a7439100262b584366b6adab938db`. Arşiv ve `package8-release-manifest.txt` Cloud `.artifacts/t-903/` dizinindedir; imaj veya canlı release değildir. Dockerfile, compose, Caddyfile, marketing ve altı migration dosyasının SHA256 özetleri manifestte; bunlar exact Git SHA'dan yeniden üretilebilir. Yerel `.env` veya çalışma ağacının takip edilmeyen dosyaları arşive alınmadı; depodaki kamuya açık `.env.example` bir sır değildir.
