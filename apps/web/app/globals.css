@@ -407,8 +407,8 @@ html {
 
   /* "Görevlerim" özeti (saha rolleri): ızgaranın üstünde esnek satır; döşemeler en çok 140 px, altta. */
   .task-grid-card {
-    grid-template-rows: minmax(13.5rem, 1fr) repeat(var(--rows), minmax(4.5rem, 8.75rem));
-    min-height: calc(var(--rows) * 5rem + 14rem);
+    grid-template-rows: minmax(10rem, 1fr) repeat(var(--rows), minmax(5.5rem, 8.75rem));
+    min-height: calc(var(--rows) * 5.5rem + (var(--rows) - 1) * 0.5rem + 10.5rem);
   }
 
   /* Saha rolünde "Şimdi" satırları özetin yerine girdiğinde ilk satır içeriğe göre büyür (kırpma/çakışma yok); döşemeler kalan alanı 72-140 px arasında paylaşır. */
@@ -587,6 +587,8 @@ html {
   .guide-step { padding:20px; min-height:230px; }
   .guide-step p { font-size:15px; }
   .guide-trigger { right:14px; bottom:calc(12px + env(safe-area-inset-bottom)); min-height:48px; font-size:12px; padding:10px 14px; }
-  body:has(.tenant-shell) .guide-trigger { bottom:calc(88px + env(safe-area-inset-bottom)); }
+  /* Keep help in reserved header space so it cannot cover warehouse actions. */
+  body:has(.tenant-shell) .guide-trigger { top:calc(4px + env(safe-area-inset-top)); bottom:auto; right:64px; width:128px; padding:8px; font-size:12px; box-shadow:none; }
+  body:has(.tenant-shell) [data-testid="app-bar-name"] { margin-right:136px; }
   .welcome-shell { padding-bottom:90px; }
 }
