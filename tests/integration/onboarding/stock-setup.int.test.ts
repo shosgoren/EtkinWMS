@@ -279,7 +279,8 @@ describe("demo tohumu: ürün, lokasyon, açılış stoğu (A-43, A-79)", () => 
 
     // şablon adımları (ayar onarımından önce uygulanır) ve sürüm
     const s = await tenantState(DEMO_TENANT_ID);
-    expect(s.units).toEqual(withStandard(["PAKET", "RULO"]));
+    // Demo tenant'ı migration/worker kurar (createWorkspace değil): standart birim seti burada beklenmez (T-911).
+    expect(s.units).toEqual(["ADET", "KOLI", "PAKET", "RULO"]);
     expect(s.whs.map((w) => w.code)).toEqual(["D1"]);
     expect(s.settings).toMatchObject({ v: 2, st: "COMPLETED" });
     expect(s.settings.steps.map((x) => x.key)).toEqual(V2_STEPS);

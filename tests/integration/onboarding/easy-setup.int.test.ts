@@ -89,16 +89,16 @@ describe("kod önerisi (görev 1)", () => {
     expect((await suggestCode(admin(E), { kind: "location", warehouseId })).code).toBe("LOK-0008");
 
     const p = pfx();
-    const { itemId } = await createItem(admin(A), { code: `${p}-0041`, name: "Kırk bir", baseUnitId: A.unitId });
-    expect((await suggestCode(admin(A), { kind: "item", prefix: p.toLowerCase() })).code).toBe(`${p}-0042`);
+    const { itemId } = await createItem(admin(A), { code: `${p}-000041`, name: "Kırk bir", baseUnitId: A.unitId });
+    expect((await suggestCode(admin(A), { kind: "item", prefix: p.toLowerCase() })).code).toBe(`${p}-000042`);
     await archiveItem(admin(A), { itemId });
-    expect((await suggestCode(admin(A), { kind: "item", prefix: p })).code).toBe(`${p}-0042`);
+    expect((await suggestCode(admin(A), { kind: "item", prefix: p })).code).toBe(`${p}-000042`);
   });
 
   it("öneri tenant'a özeldir ve lokasyon önerisi depoya özeldir; geçersiz önek/kimlik reddedilir", async () => {
     const p = pfx();
-    await createItem(admin(A), { code: `${p}-0005`, name: "A ürünü", baseUnitId: A.unitId });
-    expect((await suggestCode(admin(B), { kind: "item", prefix: p })).code).toBe(`${p}-0001`);
+    await createItem(admin(A), { code: `${p}-000005`, name: "A ürünü", baseUnitId: A.unitId });
+    expect((await suggestCode(admin(B), { kind: "item", prefix: p })).code).toBe(`${p}-000001`);
     const w1 = await newWarehouse(A);
     const w2 = await newWarehouse(A);
     await createLocation(admin(A), { warehouseId: w1, code: "LOK-0003", name: "x", kind: "STORAGE" });
@@ -118,7 +118,7 @@ describe("kod önerisi (görev 1)", () => {
     const make = (name: string) =>
       createWithSuggestedCode({
         kind: "item",
-        code: `${p}-0001`, // ikisi de aynı öneriyi görmüş gibi başlar
+        code: `${p}-000001`, // ikisi de aynı öneriyi görmüş gibi başlar
         auto: true,
         suggest: (prefix) => suggestCode(admin(A), { kind: "item", prefix }),
         create: async (code) => {
@@ -128,7 +128,7 @@ describe("kod önerisi (görev 1)", () => {
       });
     const two = await Promise.all([make("Eş 1"), make("Eş 2")]);
     expect(new Set(two).size).toBe(2);
-    expect(two.sort()).toEqual([`${p}-0001`, `${p}-0002`]);
+    expect(two.sort()).toEqual([`${p}-000001`, `${p}-000002`]);
     const six = await Promise.all([1, 2, 3, 4, 5, 6].map((n) => make(`Eş ${n + 2}`)));
     expect(new Set(six).size).toBe(6);
     const total = await adm.query<{ n: string }>("SELECT count(*) AS n FROM public.items WHERE tenant_id = $1 AND code LIKE $2", [A.tenantId, `${p}-%`]);
@@ -376,12 +376,14 @@ async function explain(tenantId: string, query: SQL): Promise<string> {
 
 describe("T-259 MINOR-1: sunucu autoCode bayrağına güvenmez", () => {
   it("suggestedCodePrefix: yalnızca sunucunun üreteceği biçim (kanonik dolgu, büyük harf) eşleşir", () => {
-    expect(suggestedCodePrefix("item", "URN-0042")).toBe("URN");
-    expect(suggestedCodePrefix("item", "MYPFX-0001")).toBe("MYPFX");
+    // T-911: ürün kodu 6 haneli (`HM-000042`); eski 4 haneli dolgu artık kanonik değil.
+    expect(suggestedCodePrefix("item", "HM-000042")).toBe("HM");
+    expect(suggestedCodePrefix("item", "MYPFX-000001")).toBe("MYPFX");
     expect(suggestedCodePrefix("warehouse", "DEPO-02")).toBe("DEPO");
-    expect(suggestedCodePrefix("item", "urn-0042")).toBeNull(); // küçük harf: kullanıcı yazmış
-    expect(suggestedCodePrefix("item", "URN-42")).toBeNull(); // dolgusuz
-    expect(suggestedCodePrefix("item", "URN-0042-X")).toBeNull();
+    expect(suggestedCodePrefix("item", "hm-000042")).toBeNull(); // küçük harf: kullanıcı yazmış
+    expect(suggestedCodePrefix("item", "HM-42")).toBeNull(); // dolgusuz
+    expect(suggestedCodePrefix("item", "URN-0042")).toBeNull(); // eski 4 haneli dolgu
+    expect(suggestedCodePrefix("item", "HM-000042-X")).toBeNull();
     expect(suggestedCodePrefix("item", "VIDA")).toBeNull();
     expect(suggestedCodePrefix("warehouse", "DEPO-0002")).toBeNull(); // depo için genişlik 2: 4 basamaklı dolgu kanonik değil
   });
@@ -410,11 +412,11 @@ describe("T-259 MINOR-1: sunucu autoCode bayrağına güvenmez", () => {
 
   it("önerilen biçimde ve çakışırsa: yeniden deneme GÖNDERİLEN önekle yapılır (varsayılan URN ile değil)", async () => {
     const p = pfx();
-    await createItem(admin(A), { code: `${p}-0001`, name: "Var", baseUnitId: A.unitId });
+    await createItem(admin(A), { code: `${p}-000001`, name: "Var", baseUnitId: A.unitId });
     const seen: string[] = [];
     const code = await createWithSuggestedCode({
       kind: "item",
-      code: `${p}-0001`,
+      code: `${p}-000001`,
       auto: true,
       suggest: (prefix) => {
         seen.push(prefix);
@@ -426,7 +428,7 @@ describe("T-259 MINOR-1: sunucu autoCode bayrağına güvenmez", () => {
       },
     });
     expect(seen).toEqual([p]);
-    expect(code).toBe(`${p}-0002`);
+    expect(code).toBe(`${p}-000002`);
   });
 });
 

@@ -554,6 +554,7 @@ const ITEM_ACTIONS: Record<string, Call> = {
   setConversionAction: (slug) => itemActions.setConversionAction!({ slug, itemId: fx.B.item, unitId: fx.B.unit, factor: "12" }),
   addBarcodeAction: (slug) => itemActions.addBarcodeAction!({ slug, itemId: fx.B.item, unitId: null, barcode: `9${rnd()}`, quantity: null }),
   removeBarcodeAction: (slug) => itemActions.removeBarcodeAction!({ slug, barcodeId: fx.B.barcode }),
+  createUnitAction: (slug) => itemActions.createUnitAction!({ slug, code: `U${rnd()}`, name: "Ele geçirme birimi" }),
   suggestItemCodeAction: (slug) => itemActions.suggestItemCodeAction!({ slug }),
   searchItemsAction: (slug) => itemActions.searchItemsAction!({ slug, q: "a" }),
 };

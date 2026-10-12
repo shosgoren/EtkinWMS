@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { AppError } from "../../../packages/shared/src/errors.ts";
+import { STANDARD_UNITS } from "../../../packages/domain/src/catalog/units.ts";
 import { continueOnboarding, createWorkspace, type WorkspaceEnv } from "../../../packages/domain/src/onboarding/workspace.ts";
 import { readIntEnv } from "../harness/env.ts";
 
@@ -78,7 +79,9 @@ describe("onboarding idempotency (T-124 madde 1)", () => {
     expect(await n("SELECT count(*) n FROM public.membership_roles WHERE tenant_id = $1", [tenantId])).toBe(1);
     expect(await n("SELECT count(*) n FROM public.tenant_settings WHERE tenant_id = $1", [tenantId])).toBe(1);
     expect(await n("SELECT count(*) n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'tenant.created'", [tenantId])).toBe(1);
-    expect(await n("SELECT count(*) n FROM public.audit_logs WHERE tenant_id = $1", [tenantId])).toBe(1); // başka yan etki yok
+    // T-911: tenant'la birlikte standart birimler kurulur (her biri bir `unit.created`); başka yan etki yok.
+    expect(await n("SELECT count(*) n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'unit.created'", [tenantId])).toBe(STANDARD_UNITS.length);
+    expect(await n("SELECT count(*) n FROM public.audit_logs WHERE tenant_id = $1", [tenantId])).toBe(1 + STANDARD_UNITS.length);
   }, 60_000);
 
   it("aynı requestId + açık slug ile 10 eşzamanlı istek → yine tek tenant (SLUG_TAKEN yarışı tek sonuca iner)", async () => {
