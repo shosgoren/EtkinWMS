@@ -5,18 +5,18 @@ Yalnız shosgoren/EtkinWMS; 2027-WMS-1 ve eski Fly/Neon kaynaklarına işlem yok
 Cloud geliştirme bilgisayardan bağımsız çalışıyor; kullanıcı kalan işi bu Cloud görevine devretti.
 GitHub runner → VPS bağlantısı ve yeni ürün yayını henüz doğrulanmadı; kişisel/root anahtar alınmaz.
 
-Ürün kodu adayı: `098a76bf29fdf4f6dfd08051100c626604702643`; son push/CI aşağıdaki zincirle izlenir.
+Ürün kodu adayı: `b7e24a8b8bbf2ff63ed682d3e75cc9a2322bd3db`; son push/CI aşağıdaki zincirle izlenir.
 Dal: feat/T-903c-pilot-ui; worktree: /workspace/EtkinWMS-packet-c.
 Sonraki belge commit'leri aday kodu değiştirmez; yayın hedefi hareketli dal adı değildir.
 Orijinal /workspace/EtkinWMS çalışma ağacı korunuyor; reset yapılmadı.
 Başlangıç: uygulama024a800bace33c2dc3df397d56fda7e449d1d9dc, T904belge966079e6f8a5d4fb9ec01b0798c4ef3464f20699; main geridedir.
 
 [PR #5 A](https://github.com/shosgoren/EtkinWMS/pull/5): feat/T-903a-cloud-tests → int/pilot-base(966079e), 17 dosya.
-A HEAD: b265a23d6b2e6aa06da940de2602d46fa750bc2b; kod incelemesi: f0c9009ec60c22867d860995b4fe79cd56ae3d8c.
+A HEAD: 48184f824e3f06d885aa9502559e776961b08b53; kod incelemesi: 48184f824e3f06d885aa9502559e776961b08b53.
 [PR #6 B](https://github.com/shosgoren/EtkinWMS/pull/6): feat/T-903b-pilot-domain → int/pilot-infra(A HEAD), 30 dosya.
-B HEAD: 51b21ba912b02537ddc90ee3e18fa501ed7a2720; kod incelemesi: 507df67c3dba5aec100a77d4e8a019c003e0ef7c.
+B HEAD: e14fd11fc0a697ecf6db2d668ced5c6ad42db82e; kod incelemesi: 59af35db7c92f924ccd8a47f90b534770c8feb91.
 [PR #7 C](https://github.com/shosgoren/EtkinWMS/pull/7): feat/T-903c-pilot-ui → int/pilot-domain(B HEAD), 30 dosya.
-C098a76b exact bağımsız incelemesi0/0/0; A ve B yeni exact incelemeleri de0/0/0.
+C b7e24a8 security0/0/0, QA/tasarımBLOCKER1; A481 ve B59af bağımsız incelemeleri0/0/0.
 Manifest ve raporlar docs/tasks/T-903a.md, T-903b.md, T-903c.md içindedir. PR'lar taslak; merge/deploy yapılmadı.
 
 Son C verify: lint/typecheck ve 3752 unit PASS; C166 integration PASS; B85 integration PASS (sayımlar örtüşür).
@@ -25,11 +25,15 @@ Son aday web ve worker üretim build PASS. Tam üretim Docker imajı/digest hen�
 Yerel tüm bekçiler PASS; adayın9commit geçmişinde gitleaks0bulgu.
 Tam loopback suite:1881PASS/11FAIL/22beforeAll nedeniyle çalışmayan test; yeni schema/registry/AC eksikleri düzeltildi.
 MinIO403 ve dolu demo/job fixture sınırları açık; genel loopback suite yeşil sayılmaz.
-GitHub A/B/C son eski head koşularında int/verify/secrets/deps/infra SUCCESS; E2E30dk timeout/cancelled.
-C06e23da int105dosya PASS; guards38264063005 SUCCESS. Tam CI yeşil değildir.
-A'da rehber/tema beklentileri, kamera örtüşmesi ve gerçek UI ortak oturum düzeltmesi doğrulanıyor.
-A b265a23 ve B51b21ba push edildi; GitHubCI sürüyor. Cye normalmerge alındı, menü testleri güncellendi.
-A yerel60PASS sonrasında rehber hatası düzeltildi; dar receiving12/12PASS; kesintisiz72test son koşu sürüyor.
+A önceki b265 CI dokuz işSUCCESS, E2E72/72PASS; yeni A481 CI izleniyor.
+B önceki51b CI sekiz işPASS, E2E70PASS/2FAIL eski locale başlığı; A düzeltmesi alındı.
+C önceki77d CI sekiz işPASS, E2E74PASS/4FAIL: iki fixture kirlenmesi, iki Şimdi çakışması.
+Son C build3PASS; Şimdi2/2PASS, ayrı pilot fixture ile birleşik empty/easysetup/stock6/6PASS; lint/tscPASS.
+C TASARIM KAPISI AÇIK: dolu7iş ana ekranında son iki iş kaydırma gerektiriyor; DESIGN_REVIEW§7.4 kaydırmasız ister.
+390x664: mevcut D04b min109.8px×4+32aralık+48Yakında=519.2px >498px kullanılabilir alan, Şimdi hariç.
+Eşik/spec/guard gevşetilmedi; CI yeşil olsa bile bu tasarım kabulü tamamlanmış değildir.
+PR5 yenihead APPROVED-BY güncellemesi otomatik incelemede CI/exactreview beklediği için reddedildi; eklenmedi.
+A exactreview şimdi0/0/0; tümCI tamamlanmadan onay/merge yok. B ve C yeni exactCI ayrıca izlenecek.
 
 Yerel migration30; canlı27 yalnız eski bildirim, Cloud doğrulamadı.
 28 belge bağları,29 reçeteler,30 transaction mührü ekler; mevcut miktarları yeniden yazmaz.
