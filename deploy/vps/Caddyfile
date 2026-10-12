@@ -1,6 +1,8 @@
 wms.etkinyazilim.com {
     encode zstd gzip
-    reverse_proxy web:3000
+    reverse_proxy web:3000 {
+        header_up Fly-Client-IP {http.request.remote.host}
+    }
 }
 
 etkinyazilim.com {
