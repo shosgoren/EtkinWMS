@@ -3,7 +3,7 @@ import { localClient,loginEmptyTenant,scrubSecretInputs } from "./support/empty-
 test.use({...localClient("198.51.100.12"),trace:"off"});
 test.afterEach(async({page})=>scrubSecretInputs(page));
 test("stock receipt, draft review, approval, posting and insufficient issue",async({page},info)=>{
- const {slug}=await loginEmptyTenant(page),suffix=info.project.name;
+ const {slug}=await loginEmptyTenant(page,"pilot"),suffix=info.project.name;
  await page.goto(`/t/${slug}/warehouses?new=1`);
  const dialog=page.getByRole("dialog");await expect(dialog).toBeVisible();
  await dialog.locator('input[name="name"]').fill(`Pilot ${suffix}`);
