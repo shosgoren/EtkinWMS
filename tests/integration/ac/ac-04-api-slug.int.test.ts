@@ -269,6 +269,11 @@ function files(dir: string, re: RegExp): string[] {
 // ---------------------------------------------------------------------------------------------
 
 const LOADERS = [
+  // T-903c: every pilot loader must enforce its own tenant boundary.
+  "stock/page.tsx",
+  "stock/documents/page.tsx",
+  "production/page.tsx",
+  "shipping/page.tsx",
   "layout.tsx",
   "page.tsx",
   "members/page.tsx",
