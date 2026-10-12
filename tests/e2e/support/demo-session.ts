@@ -11,6 +11,7 @@
 import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { type Browser, type Page, expect, test } from "@playwright/test";
+import { completeFirstUseGuide } from "./first-use-guide.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../../..");
 /** Artifact'a YÜKLENMEYEN dizin (iş akışı yalnızca `.artifacts/e2e/` yükler). */
@@ -75,6 +76,7 @@ async function waitForLoginSlot(): Promise<void> {
  * Çıkış yapan testler ve girişi sınayan test (demo-flow) bunu kullanır.
  */
 export async function enterDemoReal(page: Page, label: DemoRoleLabel): Promise<void> {
+  await completeFirstUseGuide(page);
   const button = page.getByRole("button", { name: `${label} olarak gir` });
   if (isRemote()) {
     await waitForLoginSlot();
@@ -88,6 +90,7 @@ export async function enterDemoReal(page: Page, label: DemoRoleLabel): Promise<v
  * yerelde eski davranış (landing'deki düğmeye tıklama). Yalnızca yönetici oturumu saklanır: salt okunur/toplayıcı yalnızca çıkış yapan testlerde kullanılır.
  */
 export async function enterDemoShared(page: Page, label: "Yönetici"): Promise<void> {
+  await completeFirstUseGuide(page);
   if (!isRemote()) {
     await page.getByRole("button", { name: `${label} olarak gir` }).click();
     return;
@@ -112,9 +115,7 @@ export async function mintSharedSession(browser: Browser, baseURL: string): Prom
   try {
     const page = await context.newPage();
     await page.goto("/");
-    await waitForLoginSlot();
-    recordLogin();
-    await page.getByRole("button", { name: "Yönetici olarak gir" }).click();
+    await enterDemoReal(page, "Yönetici");
     await expect(page).toHaveURL(/\/t\/demo$/, { timeout: 30_000 });
     await context.storageState({ path: STATE_FILE });
     chmodSync(STATE_FILE, 0o600);

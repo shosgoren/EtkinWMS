@@ -11,6 +11,7 @@
 import { createHmac } from "node:crypto";
 import { expect } from "@playwright/test";
 import type { Browser, Page } from "@playwright/test";
+import { completeFirstUseGuide } from "./first-use-guide.ts";
 
 export interface EmptyTenant {
   readonly slug: string;
@@ -115,6 +116,7 @@ export async function loginEmptyTenant(page: Page): Promise<EmptyTenant> {
   const t = emptyTenant();
   await bindSecrets(page, { password: t.password, totpSecret: t.totpSecret });
   await page.goto(`/login?next=${encodeURIComponent(`/t/${t.slug}`)}`);
+  await completeFirstUseGuide(page);
   await page.getByLabel("E-posta").fill(t.email);
   await fillSecret(page, 'input[name="password"]', "password");
   await page.getByRole("button", { name: "Giriş yap" }).click();
@@ -167,6 +169,7 @@ export async function provisionEmptyTenant(input: ProvisionInput): Promise<{ slu
     expect(signedUp, "kayıt ucu durum kodu").toBe(200);
     // 2) Çalışma alanı: kurulum sihirbazı (createWorkspace; M9 etkin, demo olmayan e-posta).
     await page.goto("/onboarding");
+    await completeFirstUseGuide(page);
     await page.getByLabel("Çalışma alanı adı").fill(input.workspaceName);
     await page.getByRole("button", { name: "Devam" }).click();
     await page.getByRole("button", { name: "Oluştur" }).click();
