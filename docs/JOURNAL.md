@@ -129,3 +129,7 @@
 - 2026-10-13 T-929: kullanıcı iç ekranlarda tutarlılık ve tek elle geri/ana ekran erişimi istedi; masaüstü/tablet/telefon ayrı düzenleri kartta sınırlandı. Yerel verify3772 + temiz DB'de 26 E2E PASS; GitHub CI/yayın sonucu ilgili PR'da gerçek kanıtla kayıtlanır.
 
 - 2026-10-13 T-930: PR23 88 E2E PASS sonrası main receiving-mobile87/88; SSR gizli fragmentiyle geçici çift seçici. Tek kart yerleşmesi için kesin count assertion eklendi; kayıt/veri/geometry assertionları korunur. Yayın sonucu ilgili PR'da.
+
+- 2026-10-13 T-929/T-930 canlı doğrulama: main/live1cf81ed1; CI38418935906 + deploy38420413300 SUCCESS,88 E2E, ledger0031/31; üç cihazda oturumlu arayüz kontrolü. T-931 tekil fiziksel paket QR mal kabulü kullanıcı tarafından başlatıldı; henüz QR teslimi yok.
+
+- 2026-10-13 T-931 ilk saf sözleşme:13 unit senaryosu, bağımsız121 QA probu PASS, güvenlik0/0/0; source hash0dc4917c…b6e44. Yerel lint+unit3785 PASS, üretilmiş tip kopyaları taşındıktan sonra tüm workspace typecheck PASS; check:all PASS. DB/UI/kabul/etiket akışı henüz yok; Excel/fiş/ERP ek hedefleri mevcut kısa rehberlere işlendi.

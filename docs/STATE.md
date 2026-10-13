@@ -1,12 +1,12 @@
 # Etkin WMS — güncel devam durumu
 
-Son canlı doğrulama: **13.10.2026 12:50 Europe/Istanbul** (GitHub run/PR + receiver + canlı giriş); yeni T-929 teslimi ayrıca doğrulanacak.
+Son canlı doğrulama: **13.10.2026 18:24 Europe/Istanbul** (GitHub CI/yayın + receiver + DB defteri + oturumlu cihaz kontrolü).
 Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yeniden dar kontrol yap.
 
 ## Doğrulanmış durum
 - Repo: https://github.com/shosgoren/EtkinWMS ; referans repo 2027-WMS-1 salt okunur.
-- Canlı: `a07fc1a5d2964aa96c438dfb390892bebb941874` (PR22, T-928). main: `76dd13e73d08c901c23b8505beccff95c8ef714b` (PR23, T-929); yeni UI henüz canlı değil.
-- deploy-vps run38378834142 success; receiver health=ok, current=auto-a07fc1a5…, ledger0031/31. Aynı SHA'nın dokuz CI kontrolü geçti; 82 masaüstü/mobil E2E geçti.
+- Canlı ve main: `1cf81ed1b9e80f2707145d62896019766e540ee5` (PR24, T-930; PR23/T-929 iç ekran düzenini içerir).
+- main CI38418935906 ve deploy38420413300 SUCCESS; dokuz zorunlu kontrol ve88 E2E PASS. Receiver health=ok, current=auto-1cf81ed1…, auto_migrate=true, ledger0031/31. 13 Ekim yeni görev başlangıcında main/yayın sonucu tekrar okundu.
 - Aynı SHA için önce `ci`, sonra `guards` callback'i gelir; ilk koşu RELEASE_BLOCKED ile düşüp ikincisi geçer (bilinen, zararsız).
 - PR15 pilot zinciri + PR16 kart türleri/standart birimler + PR17 MFA QR/rehber/SelectField + PR18/19 belgeler main'de.
 - VPS Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com ; satış https://etkinyazilim.com .
@@ -22,8 +22,10 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - Birim çevrimi "çok önemli" — doğru çalışmalı. Reçete sırası: hammadde → yarı mamul → mamul.
 - CI e2e için `paths-ignore`/paralelleştirme REDDEDİLDİ: zorunlu `e2e` raporlanmazsa PR kilitlenir; deploy kapısı e2e=success ister; G-11; kazanç ~2 dk.
 
+- Excel→ürün/birim/barkod→paket etiketi, yetkili fiş düzeltme/geri alma ve ileride ERP senkronu yeni hedeflerdir; ayrım/korumalar ARCHITECTURE/UI_UX kısa rehberlerinde. İşlenmiş defteri fiziksel silme uygulanmadı.
+
 ## Sıradaki işler — öncelik sırası
-1. **İç ekranların cihaz düzeni (T-929, kullanıcının yeni önceliği):** masaüstü/tablet/telefon farklı düzen; tek elle geri/ana ekran/ana işlem erişimi, ortak görsel dil. DB/auth/domain değişmez. T-916 receiver artık auto_migrate=true (12:50 readonly kanıt); günlük offsite yedek ve restore tatbikatı hâlâ doğrulanmış değil.
+1. **Tekil fiziksel paket QR / mal kabul (T-931, kullanıcı başlatma kararı):** 5 varil × ayrı KG miktarı →5 kimlik/etiket; lot/üretim/SKT; sonraki taşıma/tüketim/üretim çıktısı paketle izlenir. Mevcut handling-unit/stock-dimension ve etiket sınırları inceleniyor; henüz uygulanmış/yayımlanmış değil. v3 ek dosyası belirtilen yerel yolda bulunamadı; ayrıntı doğrulaması açık. Günlük offsite yedek ve restore tatbikatı hâlâ doğrulanmış değil.
 2. **Üretim reçeteleri ve emirleri:** çok seviyeli HM→YM→MM reçete ekranı, üretim emri, tüketim/çıktı stok kaydı. Domain `packages/domain/src/operations/production.ts` + migration 0029/0030 hazır; UI `apps/web/app/t/[slug]/production/` asgari.
 3. **Ürün resmi:** kartta görsel yükleme/gösterim; `packages/storage` S3 adaptörü var, VPS'te nesne deposu (MinIO) kurulmadı.
 4. **SelectField yayılımı:** `@wms/ui` `SelectField` hazır ama ekranlarda kullanılmıyor; tüm seçim alanlarına uygula.
@@ -37,6 +39,8 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - Kod merge, deploy ve kullanıcı kabulü ayrı durumlardır; birinden diğerini varsayma.
 
 ## Son teslim / aktif çalışma
-- T-928 canlı: dört işlem kartı ve sade kısayollar, korunmuş Genel bakış. Kullanıcı girişinden sonra gerçek Motive ekranı doğrulandı. Kanıt: https://github.com/shosgoren/EtkinWMS/pull/22#issuecomment-6143042188 . QR v3 geliştirmesi başlamadı.
-- T-929 aktif dal `feat/T-929-consistent-touch-screens`: iç ekranlarda ortak renk/ikon/form düzeni ve telefon/tablet alt geri/ana ekran. Yerel verify: lint/typecheck PASS, 3772 unit PASS; temiz ayrı DB ile 26 cihaz/ana ekran/saha E2E PASS. PR23 head dokuz CI + 88 E2E PASS; birleşik main76dd13e receiving-mobile testinde geçici iki SSR kartı nedeniyle87/88. Canlı yayın bu yüzden engellendi. Görev: docs/tasks/T-929.md.
-- T-930 test düzeltmesi: veri/geometry koşullarından önce tam tek kartın yerleşmesi beklenir (assertion eklenir, azaltılmaz). Dal fix/T-930-home-stream-ready; uygulama kodu değişmez. Sonraki CI/yayın kanıtı ilgili PR'da kayıtlanır.
+- T-928 kolay ana ekran canlı; dört işlem kartı ve korunmuş Genel bakış.
+- T-929/T-930 tamamlandı: ortak iç ekran kabuğu, cihazlara ayrı düzen, alt geri/ana ekran ve erişilebilir form ana eylemi. Yerel verify3772, temiz DB26 cihaz/saha E2E ve2 import yatay ekran testi PASS; son PR/main88 E2E PASS. Geçici çift SSR kartı count=1 assertionıyla beklenir; testler gevşetilmedi.
+- Oturumlu canlı kontrol: masaüstü1470×745, telefon390×740, tablet1024×740; taşma yok, telefon geri/ana ekran56px, son alan görünür; üretim/sevkiyat/transfer form bölümleri doğrulandı. Gerçek stok yazımı ve yazıcı testi yapılmadı.
+- Kanıt: [PR23](https://github.com/shosgoren/EtkinWMS/pull/23#issuecomment-6149097341), [PR24](https://github.com/shosgoren/EtkinWMS/pull/24#issuecomment-6149098075).
+- T-931 aktif dal `feat/T-931-package-receiving`: ilk saf paket miktar/tarih/QR sözleşmesi hazır;13 unit senaryosu, bağımsız121 QA probu ve güvenlik0 bulgu. Yerel lint+unit3785 PASS; tüm paket typecheck PASS (eski üretilmiş .next tip kopyaları taşındı). ardından migration → taslak/atomik kabul → etiket/okutma/UI. Mevcut stok motoru HU bazlı KG destekliyor, saha komutları henüz HU taşımıyor. Stok/RLS değişikliği bağımsız güvenlik + QA ister. DB/UI/kimlik üretimi/baskı bağlanmadı; yeni QR akışı canlıda var diye raporlanmaz. GitHub tam CI/birleşme durumu PR kanıtından kontrol edilir.

@@ -49,3 +49,18 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Ortak görsel kabuk tüm iç tenant sayfalarını kapsar; ana ekran sözleşmesi korunur. Renk ve ikon işlemin yönünü destekler, metin/alan etiketi kaybolmaz.
 - Saha işlem çubuğu ve form ana eylemi ortak alt alan yüksekliğini paylaşır. Safe-area boşluğu, içerik kaydırma sonu ve hata/son alan erişimi cihaz testinin parçasıdır. Birden çok sabit gezinme çubuğu üst üste çizilmez.
 - Bu görev UI yerleşimidir; iş kuralı, kayıt idempotency, rol, miktar veya QR v3 değişikliği anlamına gelmez. Canlı sürüm doğrulaması PR ve receiver kanıtıyla yapılır.
+
+## Fiziksel paket kabulü — yeni kullanıcı kararı / geliştirme hedefi
+- Ürün barkodu ürünü seçer; paket QR'si fiziksel varil/koli kimliğidir, birbirinin yerine geçmez. 5 varil toplamına tek QR üretilmez.
+- Kısa adımlar: Ürün → Paketler → Kontrol → Etiket. Eşit paket miktarı topluca girilebilir; farklı miktarlar paket kartlarında değiştirilir, toplam sistemce hesaplanır.
+- Lot/üretim/SKT alanları ürün takibine göre görünür/zorunlu; sunucu ayrıca doğrular. Tarih hatası ve negatif/boş miktar kaydı engeller.
+- Kaydet sonrası paket etiketleri açılır; yazdırma iptali stok kaydını tekrarlamaz. Yeniden baskı aynı paket QR'sini korur. Tarayıcı baskı penceresinin açılması fiziksel baskı başarısı sayılmaz.
+- Transfer/tüketim paket okutmayla yönlendirilir; kalan miktar görünür. Eski kimliksiz stok kendiliğinden varillere bölünmez.
+- T-931 hedefi henüz canlı özellik değildir; gerçek durum STATE'dedir.
+
+## Excel / fiş / ERP deneyimi — ek hedef
+- Önizleme ikon+renk+1–3 kelimeyle: Hazır / Tamamlandı / Düzelt. Hücre hatası bir dokunuşla açılır; çözülemeyen satır sessiz atlanmaz. Kullanıcıya uzun teknik rapor okutulmaz.
+- İçe aktarma sonucu ürün sayısı, otomatik eklenen barkodlar ve etiket hazır paketler ayrı özetlenir. “Basılmaya hazır” fiziksel baskı başarı bildirimi değildir.
+- Masaüstü fiş başlık/satır düzenleme; telefon/tablet aynı yetki ve sürüm denetimiyle kısa görsel akış. Ana eylem rol/durum bağımlıdır; renk tek güvenlik kontrolü değildir.
+- Taslak gri/kalem, kesinleşmiş yeşil/onay, geri alınmış kırmızı/geri ok, ERP durum mavi/aktarım; renk+ikon+kısa ad beraber. Riskli geri almada paket adedi ve miktar görünür; mükerrer dokunma tek etkidir.
+- Yanlış QR, başka depo, SKT/kalite uyarısı, eşzamanlı değişiklik, yazıcı iptali ve ERP hatasında “Şimdi ne yapmalı?” tek kısa eylem gösterilir.

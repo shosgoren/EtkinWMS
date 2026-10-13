@@ -38,3 +38,13 @@ DB `etkinwms-postgres:5432/etkinwms`, Docker özel ağ, public host portu yok. P
 Server cert/key/HBA tekil ro mount; CA özel anahtarı mount dışında. TCP TLS+SCRAM; plaintext ret. Unix socket yalnız postgres peer; operatör `docker exec --user postgres`. Neon'sağlayıcı rol/default ACL'leri yeni VPS'ye kör kopyalanmaz; uygulama ACL/RLS/owner ve schema paritesi ayrıca kanıtlanır.
 
 Kart türleri HM/YM/MM/TM ve standart birimler kaynak0031'de; Motive verisini örnek veya demo verisiyle overwrite etme. Yeni tenant/user açmadan mevcut kimlik/üyelik varlığını doğru DB'de metadata ile kontrol et.
+
+## Tekil fiziksel paket — T-931 hedef sözleşmesi
+- Ürün barkodu, lot, ürün seri numarası ve fiziksel paket kimliği farklıdır. KG varili SERIAL miktar=1 olarak modellenmez. Mevcut stock_dimensions.handling_unit_id fiziksel paket bakiyesi için kullanılır; ayrı değişebilir toplam stok tablosu kaynak olmaz.
+- Mevcut HU türleri yalnız KOLI/PALET; VARIL ve paket metadata desteği migration ister. field-posting şu an HU taşımıyor; receiveGoods takipli ürünleri reddediyor. Ürün/lokasyon etiket kaynağı paket etiketi değildir.
+- Tasarım: scope/idempotency denetlenmiş komutta paketler+lot+HU'lu stok belgesi DRAFT aynı transaction'da oluşur (stok yok). Ardından tam belge/boyut kilit planıyla posting tüm paketlerin defter/bakiye/receipt durumunu atomik işler. plan içinde INSERT veya stok kilidi sonrasında yeni boyut ekleme yok.
+- POSTED olmadan kabul başarılı/etiket hazır gösterilmez; kesilen bağlantı aynı anahtarla aynı taslağı ve kimlikleri döndürür. Baskı iptali stok tekrar yazmaz; yeniden etiket aynı QR. Boşalan paket kimliği yeniden kullanılmaz.
+- Lot üretim/SKT paket kabulüne sabitlenir; çelişkili mevcut lot tarihi sessiz değiştirilmez. Paket ve lot üyeliği tenant+ürün bileşik FK ile korunur. Tam/kısmi tüketim, bölme/birleştirme ve üretim çıktı soy ağacı sonraki dilimlerde ayrıca test edilir.
+- Tek fiziksel paket iki konuma aynı anda taşınmaz: normal transfer kalan içeriğin tamamıdır. Bölerek başka kaba aktarma ayrı çocuk kimliği ve kaynak/çıktı defter bağlantısı ister; üretimde kısmi tüketim aynı kaynak QR'nin kalan miktarını azaltır.
+- Eski kimliksiz stok otomatik varillere dağıtılmaz; sayımla doğrulanmış, defteri koruyan dönüşüm ayrı kontrollü işlem olur. Palet konteyneri alt paket kimliklerini silmez.
+- Bu bölüm HEDEF'tir. T-931 ilk dilim yalnız saf girdi/QR sözleşmesi; migration, server komutu, UI ve canlı kabul henüz yok.
