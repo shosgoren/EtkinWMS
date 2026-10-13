@@ -55,13 +55,15 @@ URL/secret/env içeriğini veya kişisel kullanıcı satırlarını yazdırma. D
 5. Başarılı deep health sonrası current/state atomik; aynı SHA sağlıklıysa no-op. Hata varsa sadece schema-compatible önceki imaj/Compose rollback.
 6. Gerçek run URL, image digest, current SHA/tag ve migration defteri STATE'e kaydedilir. check mode ürün yayımlamaz.
 
+Mevcut tetikleyici hem ci hem guards tamamlanmasını dinler; aynı SHA için iki workflow callback'i oluşabilir. Aynı PR başlığı altında ci ve guards farklı kontrollerdir; deploy tekrarını azaltmak ayrı korunan workflow değişikliğidir, belge temizliği kapsamında kapatılmaz.
+
 ```sh
 gh workflow run deploy-vps.yml --repo shosgoren/EtkinWMS --ref main -f mode=check
 ```
 Deploy mode yalnız yayın kapıları kapanınca, doğrulanmış full SHA ile. Hata logunda SCHEMA_OPERATOR_APPROVAL_REQUIRED normal güven kapısı olabilir; hash/state değiştirerek geçirme.
 
 ## Schema değiştiren ilk kesim
-Şu an27→kaynak31: tek operatör; yazmaları durdur; source/target kimliğini doğrula; tutarlı yedek ve izole restore; gerekli roller/ACL/RLS/checksum paritesi; migration ileri ve dolu veride geri dönüş/ret; **yeni şemayla uyumlu fallback image/digest** ve deploy planı. Sonra yetkili migration, runtime health ve iş akışı kabulü. Bağlı veri sonrası guided27 veya down31→27'yi otomatik güvenli sayma. Approved fingerprint/state ancak gerçek uyumlu baseline ve inceleme/izin sağlanınca ilerler.
+13 Ekim 10:00 defter/current kontrolünde canlı31 doğrulandı; kesim/yedek kanıtları ayrıca incelenir. Sonraki schema değişimi için: tek operatör; yazmaları durdur; source/target kimliğini doğrula; tutarlı yedek ve izole restore; gerekli roller/ACL/RLS/checksum paritesi; migration ileri ve dolu veride geri dönüş/ret; **yeni şemayla uyumlu fallback image/digest** ve deploy planı. Sonra yetkili migration, runtime health ve iş akışı kabulü. Bağlı veri sonrası guided27 veya down31→27'yi otomatik güvenli sayma. Approved fingerprint/state ancak gerçek uyumlu baseline ve inceleme/izin sağlanınca ilerler.
 
 ## Yedek kuralları — hedef, kurulu iş iddiası değil
 - Mevcut kanıt: 12 Ekim custom schema27 dump + ağsızPG18 restore + VPS kesim/parite testi. Zamanlanmış offsite/WAL/PITR başarısı doğrulanmış değil.

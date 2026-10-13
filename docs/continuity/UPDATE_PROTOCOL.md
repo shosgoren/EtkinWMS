@@ -45,3 +45,6 @@ Bir sonraki tek adım:
 Eski Fly/Neon, owner-yok, tam27 veya T911renewal satırı güncel STATE ile çelişirse onu tarihsel not olarak işaretle; geçmişin üstüne yeni doğrulama uydurma. Kod kuralları/spec çelişkisi bir “override” cümlesiyle çözülmez; ilgili tasarım/ADR/test etkisi gerekçelendirilir. Canlı gerçek durum ölçümü ise eski sohbet varsayımından önceliklidir.
 
 Bu düzeni her AI uygularsa güncel kalır. Henüz bir scheduler, CI doküman freshness botu veya otomatik VPS monitor kurulmuş değildir; kurulması ayrı yetkili görevdir.
+
+## Belge birikmesini önle
+Yeni toplu master veya ikinci devir/arsiv dizini oluşturma. Güncel bilgi STATE + ilgili rehberde; geçmiş Git/PR kanıtında kalır. Eski görev kartları [tasks düzenine](../tasks/README.md) göre temizlenir; tamamlanmamış planlar tamamlandı sayılmaz, korunan spec/ADR/test sözleşmesi silinmez. Yeni görev T-915 ve sonrasıdır.

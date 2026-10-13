@@ -30,7 +30,7 @@ Transferin giriş/çıkış bacakları, üretimin hammadde tüketimi/mamul çık
 - `db:migrate`/`db:rollback` gerçek script ve `packages/db/src/migrate.ts` sözleşmesi okunur; flag tahmin etme.
 - İleri + verili geri dönüş/ret + gerçek backup restore kanıtı. Bağlı veri varsa down'un reddi doğru davranış olabilir; “rollback geçti” diye veri silme yok.
 
-13 Ekim snapshot: canlı27, kaynak31. 0028 belge stok bağları,0029 reçeteler,0030 reçete mühürü,0031 kart türü/standart birimler. Kaynak31 olması canlı31 kanıtı değildir. Eski guided imaj, yeni bağlı belge/üretim verisi sonrasında güvenli fallback sayılmaz.
+13 Ekim 10:00 readonly snapshot: canlı31, kaynak31. 0028 belge stok bağları,0029 reçeteler,0030 reçete mühürü,0031 kart türü/standart birimler. Kaynak31 olması canlı31 kanıtı değildir. Eski guided imaj, yeni bağlı belge/üretim verisi sonrasında güvenli fallback sayılmaz.
 
 ## VPS / TLS farkı
 DB `etkinwms-postgres:5432/etkinwms`, Docker özel ağ, public host portu yok. PostgreSQL18 ayrı kalıcı volume. Node runtime URL yalnız `sslmode=verify-full`; CA `NODE_EXTRA_CA_CERTS=/run/etkinwms-db-ca.crt`. postgres.js URL'ye libpq `sslrootcert` dosya parametresi ekleme. psql/pg_dump ayrı `PGSSLMODE=verify-full` + `PGSSLROOTCERT` kullanır.

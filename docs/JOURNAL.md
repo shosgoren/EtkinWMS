@@ -121,3 +121,5 @@
   - T-126 yeniden inceleme @5da58eb 0·0·4 GEÇTİ (BLOCKER kapandı) → son tur: deterministik yarış testi, dev hot-reload havuz sızıntısı, route testleri.
   - int/faz1-ekran @d1c7cf0 push; verify 1922, test:int 630/630, build OK; PR #42 → main açıldı, paket incelemesi sürüyor, abone.
   - #42 paket incelemesi @d1c7cf0 0·0·2 → gövde APPROVED-BY + security-reviewer eklendi. MINOR → T-131: /login demo bandı demo-config yardımcısını kullansın; @wms/auth portsuz dışa aktarım lint koruması (zaten not).
+
+- 2026-10-13 T-914: eski kart/master/devir kopyaları Git geçmişine bırakıldı; gerekli sözleşmeler korundu. Bu temizlik ürün tamamlanma kanıtı değildir; önceki snapshot decbbe03fe1192473e096a1feb60cf090ca1fcf2.
