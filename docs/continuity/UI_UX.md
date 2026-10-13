@@ -42,3 +42,10 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Stok/ürün/depo/görev kısayolları kısa; ekip/ayar/denetim “Diğer işler” altında. Ayrıntılı TaskMenu `view=cockpit` / “Genel bakış”ta korunur; mevcut görsel tercih bu görünümü açabilir.
 - Yetkisiz yazma kartı kilitli ve gerekçeli; hedef sayfa/eylem sunucuda yetkiyi ayrıca denetler. Bekleyen iş sayıları gerçek domain sorgularından gelir.
 - Yeni Akış düzeni ve eski Kokpit geometrisi ayrı E2E sözleşmeleridir. Eski testler atlanmaz; Kokpit açıkça seçilerek korunur.
+
+## İç ekran ve tek elle gezinme (T-929)
+- Masaüstü (>=1200): geniş içerik alanı ve üst gezinme; tablet (768–1199): ayrı dokunmatik yerleşim, alt erişim alanı; telefon: tek sütun, alt geri/ana ekran ve ana işlem erişimi. Kısa yatay coarse-pointer ekran telefon davranışını korur.
+- Geri tarayıcı geçmişine güvenmez: `id/new` detay veya formdan aynı bölümün listesine, derin sayfadan ebeveyne, bölüm kökünden ana ekrana gider. Dış siteye geri dönüş yok.
+- Ortak görsel kabuk tüm iç tenant sayfalarını kapsar; ana ekran sözleşmesi korunur. Renk ve ikon işlemin yönünü destekler, metin/alan etiketi kaybolmaz.
+- Saha işlem çubuğu ve form ana eylemi ortak alt alan yüksekliğini paylaşır. Safe-area boşluğu, içerik kaydırma sonu ve hata/son alan erişimi cihaz testinin parçasıdır. Birden çok sabit gezinme çubuğu üst üste çizilmez.
+- Bu görev UI yerleşimidir; iş kuralı, kayıt idempotency, rol, miktar veya QR v3 değişikliği anlamına gelmez. Canlı sürüm doğrulaması PR ve receiver kanıtıyla yapılır.

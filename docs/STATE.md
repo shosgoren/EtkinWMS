@@ -1,12 +1,12 @@
 # Etkin WMS — güncel devam durumu
 
-Son doğrulama: **13.10.2026 ~10:30 Europe/Istanbul** (GitHub run/PR metadata; canlı DB defteri 09:25 operatör çıktısı).
+Son canlı doğrulama: **13.10.2026 12:50 Europe/Istanbul** (GitHub run/PR + receiver + canlı giriş); yeni T-929 teslimi ayrıca doğrulanacak.
 Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yeniden dar kontrol yap.
 
 ## Doğrulanmış durum
 - Repo: https://github.com/shosgoren/EtkinWMS ; referans repo 2027-WMS-1 salt okunur.
-- main = canlı: `5d7e7c62991db3b625f0926e46d7a5d9df6838e7` (PR19 belge). Uygulama kodu a6d2ef4 ile aynı.
-- deploy-vps run38362235031 success (07:24Z); receiver deep health sonrası current'ı değiştirir, hata olsa rollback eder.
+- main = canlı: `a07fc1a5d2964aa96c438dfb390892bebb941874` (PR22, T-928). Yeniden kontrol edilmeden sonraki sürüm varsayılmaz.
+- deploy-vps run38378834142 success; receiver health=ok, current=auto-a07fc1a5…, ledger0031/31. Aynı SHA'nın dokuz CI kontrolü geçti; 82 masaüstü/mobil E2E geçti.
 - Aynı SHA için önce `ci`, sonra `guards` callback'i gelir; ilk koşu RELEASE_BLOCKED ile düşüp ikincisi geçer (bilinen, zararsız).
 - PR15 pilot zinciri + PR16 kart türleri/standart birimler + PR17 MFA QR/rehber/SelectField + PR18/19 belgeler main'de.
 - VPS Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com ; satış https://etkinyazilim.com .
@@ -23,7 +23,7 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - CI e2e için `paths-ignore`/paralelleştirme REDDEDİLDİ: zorunlu `e2e` raporlanmazsa PR kilitlenir; deploy kapısı e2e=success ister; G-11; kazanç ~2 dk.
 
 ## Sıradaki işler — öncelik sırası
-1. **Yayında otomatik yedek + migration (onaylandı, ilk iş; T-916 PR'da, iki bağımsız güvenlik incelemesi düzeltildi; birleşince VPS'e tek komutluk `install-migrate.sh`):** şema değişen yayında receiver `pg_dump -Fc` alsın, web/worker durdursun, migration sahibi rolüyle imzalı migrator imajını koşsun, approved-schema/state'i kendisi ilerletsin. Migration hiç uygulanmadan düşerse önceki imaj açılır; defter kısmen ilerlediyse eski imaj otomatik AÇILMAZ (her migration ayrı transaction) — servis durur, yedekten dönüş veya ileri onarım operatör kararıdır. VPS'e bir kerelik root kurulumu gerekir (migration rolü kimliği root600 dosyada; 13 Ekim kesiminde `postgres` sahipli kalan 3 tablo + 1 fonksiyonun sahibine iadesi). İmza/provenance kapıları korunur.
+1. **İç ekranların cihaz düzeni (T-929, kullanıcının yeni önceliği):** masaüstü/tablet/telefon farklı düzen; tek elle geri/ana ekran/ana işlem erişimi, ortak görsel dil. DB/auth/domain değişmez. T-916 receiver artık auto_migrate=true (12:50 readonly kanıt); günlük offsite yedek ve restore tatbikatı hâlâ doğrulanmış değil.
 2. **Üretim reçeteleri ve emirleri:** çok seviyeli HM→YM→MM reçete ekranı, üretim emri, tüketim/çıktı stok kaydı. Domain `packages/domain/src/operations/production.ts` + migration 0029/0030 hazır; UI `apps/web/app/t/[slug]/production/` asgari.
 3. **Ürün resmi:** kartta görsel yükleme/gösterim; `packages/storage` S3 adaptörü var, VPS'te nesne deposu (MinIO) kurulmadı.
 4. **SelectField yayılımı:** `@wms/ui` `SelectField` hazır ama ekranlarda kullanılmıyor; tüm seçim alanlarına uygula.
@@ -36,6 +36,6 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - Yeni kart T-916+; dal adı `feat|fix/T-xxx-…` (scope bekçisi `claude/…` dalını reddeder).
 - Kod merge, deploy ve kullanıcı kabulü ayrı durumlardır; birinden diğerini varsayma.
 
-## Aktif teslim — T-928
-- Kullanıcı isteği: Sites kolay tasarımını VPS WMS'ye önce aktar; QR şartnamesi henüz geliştirilmez. Dal feat/T-928-easy-live-design: dört gerçek işlem kartı + sade kısayollar, korunmuş Kokpit; schema/auth/domain/CI değişmez.
-- Başlangıç readonly receiver: f1e6e447d7fbadbde78ef71b30b5384ad6fc3e37, schema31 d6b6b9d7…88dd, health OK, auto_migrate=true. Kod/test/CI/son yayın kanıtı PR'da; bu satır yayın iddiası değildir.
+## Son teslim / aktif çalışma
+- T-928 canlı: dört işlem kartı ve sade kısayollar, korunmuş Genel bakış. Kullanıcı girişinden sonra gerçek Motive ekranı doğrulandı. Kanıt: https://github.com/shosgoren/EtkinWMS/pull/22#issuecomment-6143042188 . QR v3 geliştirmesi başlamadı.
+- T-929 aktif dal `feat/T-929-consistent-touch-screens`: iç ekranlarda ortak renk/ikon/form düzeni ve telefon/tablet alt geri/ana ekran. Yerel verify: lint/typecheck PASS, 3772 unit PASS; temiz ayrı DB ile 26 cihaz/ana ekran/saha E2E PASS. GitHub CI ve canlı yayın henüz doğrulanmadı; son kanıt ilgili PR'da kayıtlanır. Görev: docs/tasks/T-929.md.

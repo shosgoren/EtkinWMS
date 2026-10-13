@@ -265,7 +265,7 @@ test.describe("açılış verisi içe aktarma (T-289)", () => {
     // getirir; bu `overflow: hidden` kabuğu da kaydırıyordu (üst çubuk kesik, sekme altında boşluk).
     const shellState = (): Promise<{ shell: number; doc: number; barTop: number | null; navBottom: number | null; innerH: number }> =>
       page.evaluate(`(() => {
-        const shell = document.querySelector('.tenant-shell'); const bar = document.querySelector('[data-testid=app-bar]'); const nav = document.querySelector('[data-testid=bottom-nav]');
+        const shell = document.querySelector('.tenant-shell'); const bar = document.querySelector('[data-testid=app-bar]'); const nav = document.querySelector('[data-testid=screen-nav]');
         const vis = (e) => e && e.getBoundingClientRect().height > 0;
         return { shell: shell.scrollTop, doc: document.scrollingElement.scrollTop, barTop: vis(bar) ? bar.getBoundingClientRect().top : null, navBottom: vis(nav) ? nav.getBoundingClientRect().bottom : null, innerH: innerHeight };
       })()`);
@@ -298,7 +298,7 @@ test.describe("açılış verisi içe aktarma (T-289)", () => {
       await expect(page.getByTestId("import-summary")).toBeVisible();
       await page.waitForTimeout(300); // reveal() eşzamanlı; yerleşimin oturması için
       const m = await page.evaluate<{ shell: number; doc: number; bodyTop: number; barTop: number | null; navBottom: number | null; innerH: number; sumTop: number; sumBottom: number }>(`(() => {
-        const shell = document.querySelector('.tenant-shell'); const bar = document.querySelector('[data-testid=app-bar]'); const nav = document.querySelector('[data-testid=bottom-nav]');
+        const shell = document.querySelector('.tenant-shell'); const bar = document.querySelector('[data-testid=app-bar]'); const nav = document.querySelector('[data-testid=screen-nav]');
         const vis = (e) => e && e.getBoundingClientRect().height > 0;
         const sum = document.querySelector('[data-testid=import-summary]').getBoundingClientRect();
         return { shell: shell.scrollTop, doc: document.scrollingElement.scrollTop, bodyTop: shell.getBoundingClientRect().top,

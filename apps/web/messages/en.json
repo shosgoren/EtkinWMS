@@ -1,5 +1,26 @@
 {
   "shell": {
+    "screen": {
+      "context": "Screen context",
+      "navigation": "Page navigation",
+      "back": "Back",
+      "home": "Home screen",
+      "production": "Produce",
+      "shipping": "Ship",
+      "stock": "Stock and transfer",
+      "field": "Field operations",
+      "items": "Items",
+      "warehouses": "Warehouses",
+      "members": "Team",
+      "settings": "Settings",
+      "other": "Other work",
+      "steps": "Operation steps",
+      "details": "Details",
+      "source": "Source",
+      "target": "Destination",
+      "itemsStep": "Item and quantity",
+      "reviewStep": "Review and save"
+    },
     "productName": "Etkin WMS",
     "easyMode": "Easy mode",
     "skipToContent": "Skip to content",

@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { runTenantQuery } from "@wms/domain/identity/access";
@@ -10,6 +10,7 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { AppError } from "@wms/shared/errors";
 import { AppBar } from "./app-bar.tsx";
 import { BottomNav } from "./bottom-nav.tsx";
+import { ScreenShell } from "./screen-shell.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -111,8 +112,8 @@ export default async function TenantLayout({ children, params }: { children: Rea
         </details>
         <span className="min-w-0 truncate text-sm font-semibold text-ink-muted">{t("tenantBar.user", { name: summary.userName })}</span>
       </div>
-      <div className="tenant-body flex min-w-0 flex-col">{children}</div>
-      <BottomNav slug={slug} />
+      <div className="tenant-body flex min-w-0 flex-col"><Suspense fallback={children}><ScreenShell slug={slug}>{children}</ScreenShell></Suspense></div>
+      <Suspense fallback={null}><BottomNav slug={slug} /></Suspense>
     </div>
   );
 }

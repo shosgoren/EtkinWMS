@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { House, ListChecks, Menu, ScanLine } from "@wms/ui";
+import { House, ListChecks, Menu, ScanLine, Undo2 } from "@wms/ui";
+import { screenParent } from "./screen-shell.tsx";
 import { openAppMenu } from "./app-bar.tsx";
 
-// Telefon alt sekme çubuğu (T-254): başparmak erişimi, her sekme >= 48 px, güvenli alan boşluğu. Yalnız telefonda görünür
-// (`phone-only`). Saha ekranlarında (T-303) kendi alt eylem çubuğu vardır; çakışmasın diye orada çizilmez.
+// Home retains its phone tabs; interior phone/tablet screens share one lower navigation layer.
+// Field navigation retains its 74px geometry so its fixed primary action stays above it.
 // "Görevlerim" (T-304) personelin görev listesine gider (/field/tasks); yetki ve kapsam hedef sayfada sunucuda denetlenir.
 
 const ICON = { className: "size-6", strokeWidth: 2, "aria-hidden": true } as const;
@@ -18,8 +19,18 @@ const TAB = "flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center g
 export function BottomNav({ slug }: { slug: string }) {
   const t = useTranslations("shell.nav");
   const pathname = usePathname();
+  const search = useSearchParams();
+  const screen = useTranslations("shell.screen");
+  const field = useTranslations("field");
   const base = `/t/${encodeURIComponent(slug)}`;
-  if (pathname.startsWith(`${base}/field`)) return null;
+  const isField = pathname === `${base}/field` || pathname.startsWith(`${base}/field/`);
+  if (pathname !== base) {
+    const parent = screenParent(base, pathname, search.has("id") || search.has("new"));
+    return <nav aria-label={isField ? field("actionBarLabel") : screen("navigation")} data-testid={isField ? "field-action-bar" : "screen-nav"} className={`screen-bottom-nav ${isField ? "screen-field-nav" : ""}`}>
+      <Link data-testid="screen-back" href={parent} className={`screen-nav-link ${FOCUS}`}><Undo2 {...ICON}/><span>{screen("back")}</span></Link>
+      <Link data-testid="screen-home" href={base} className={`screen-nav-link ${FOCUS}`}><House {...ICON}/><span>{screen("home")}</span></Link>
+    </nav>;
+  }
 
   const link = (href: string, label: string, icon: ReactNode, current: boolean) => (
     <Link

@@ -125,3 +125,5 @@
 - 2026-10-13 T-914: eski kart/master/devir kopyaları Git geçmişine bırakıldı; gerekli sözleşmeler korundu. Bu temizlik ürün tamamlanma kanıtı değildir; önceki snapshot decbbe03fe1192473e096a1feb60cf090ca1fcf2.
 
 - 2026-10-13 T-928: VPS WMS için dört işlemli kolay Akış + korunmuş Kokpit tasarımı; UI/i18n/E2E kapsamı, domain/DB/auth/CI değişmez. Merge/yayın kanıtı PR'da doğrulanır.
+
+- 2026-10-13 T-929: kullanıcı iç ekranlarda tutarlılık ve tek elle geri/ana ekran erişimi istedi; masaüstü/tablet/telefon ayrı düzenleri kartta sınırlandı. Yerel verify3772 + temiz DB'de 26 E2E PASS; GitHub CI/yayın sonucu ilgili PR'da gerçek kanıtla kayıtlanır.
