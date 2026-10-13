@@ -1,7 +1,8 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { migrateUp } from "../../../packages/db/src/migrate.ts";
+import { migrateDown, migrateUp, MIGRATIONS_DIR } from "../../../packages/db/src/migrate.ts";
 import { createDbClient, type DbClient } from "../../../packages/db/src/index.ts";
 import { preparePackageReceipt, postPackageReceipt, getPackageReceipt, getReceiptPackage, resolvePackageQr, receiveGoods } from "../../../packages/domain/src/operations/index.ts";
 import { postDocument, approveDocument, type StockDocCallParams } from "../../../packages/domain/src/stock/index.ts";
@@ -133,6 +134,27 @@ describe("T-933 persisted package prepare/post, scratch DB runtime roles",()=> {
     await expect(preparePackageReceipt(params(),input({warehouseId:warehouse,receivingLocationId:receiving}))).rejects.toMatchObject({code:"VALIDATION_FAILED"});
     await expect(postPackageReceipt(params(),{documentId:d.documentId,expectedVersion:1})).rejects.toMatchObject({code:"VALIDATION_FAILED"});expect((await getPackageReceipt(params(),{documentId:d.documentId})).documentVersion).toBe(1);
     expect((await q("SELECT count(*)::int AS n FROM public.stock_ledger WHERE document_id=$1",[d.documentId]))[0]?.n).toBe(0);
+  });
+
+  it("T939 data survives 32→33→32→33 with exact function rollback and unchanged privileges",async()=> {
+    const d=await prepare();await postPackageReceipt(params(),{documentId:d.documentId,expectedVersion:1});
+    const direct=new URL(env.databaseUrlDirect);direct.pathname=`/${name}`;
+    const signature="public.receipt_package_assert(uuid,uuid)";
+    const functionState=async()=> (await q("SELECT prosrc,proowner::regrole::text AS owner,proacl::text AS acl,prosecdef,proconfig FROM pg_proc WHERE oid=$1::regprocedure",[signature]))[0]!;
+    const rls=async()=>q("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class WHERE oid IN ('public.receipt_packages'::regclass,'public.stock_ledger'::regclass,'public.stock_balances'::regclass) ORDER BY relname");
+    const snapshot=async()=>({receipt:await getPackageReceipt(params(),{documentId:d.documentId}),
+      ledger:await q("SELECT * FROM public.stock_ledger WHERE document_id=$1 ORDER BY id",[d.documentId]),
+      balances:await q("SELECT b.* FROM public.stock_balances b JOIN public.stock_dimensions s ON s.tenant_id=b.tenant_id AND s.id=b.stock_dimension_id WHERE s.handling_unit_id=ANY($1::uuid[]) ORDER BY b.stock_dimension_id",[d.packages.map(p=>p.id)])});
+    const before=await snapshot(),current=await functionState(),security=await rls();
+    const oldSource=readFileSync(`${MIGRATIONS_DIR}/0032_receipt_packages.up.sql`,"utf8");
+    const oldBody=oldSource.slice(oldSource.indexOf("CREATE FUNCTION public.receipt_package_assert(" )).split("AS $fn$")[1]!.split("$fn$;")[0]!;
+    for(const target of ["0032","0033","0032","0033"] as const) {
+      if(target==="0032")expect((await migrateDown({url:direct.toString(),to:target,wmsEnv:"staging"})).reverted).toEqual(["0033"]);
+      else expect((await migrateUp({url:direct.toString()})).applied).toEqual(["0033"]);
+      expect((await q("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 1"))[0]?.version).toBe(target);
+      expect(await functionState()).toEqual({...current,prosrc:target==="0032"?oldBody:current.prosrc});
+      expect(await rls()).toEqual(security);expect(await snapshot()).toEqual(before);
+    }
   });
 
   for(const size of [5,200])it(`T934 default command batch ${size} preserves identities, totals and replay`,async()=> {

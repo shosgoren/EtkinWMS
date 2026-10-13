@@ -1,12 +1,12 @@
 # Etkin WMS — güncel devam durumu
 
-Son canlı doğrulama: **13.10.2026 21:11 Europe/Istanbul** (GitHub CI/yayın + receiver); son oturumlu üç cihaz kontrolü18:24.
+Son canlı doğrulama: **14.10.2026 00:33 Europe/Istanbul** (salt okunur VPS receiver); son oturumlu üç cihaz kontrolü13 Ekim18:24.
 Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yeniden dar kontrol yap.
 
 ## Doğrulanmış durum
 - Repo: https://github.com/shosgoren/EtkinWMS ; referans repo 2027-WMS-1 salt okunur.
-- Canlı ve main: `531e9034440ac1dc0d67fb11353a7ea09785c9f1` (PR25/T-931; önceki cihaz düzenini içerir).
-- main CI38442505462 + guards38442505492 SUCCESS; dokuz kontrol geçti, deploy38443949741 SUCCESS. VPS release531e9034/health=ok/auto_migrate=true; schema31 fingerprintd6b…88dd. T9320032 geliştirme şeması canlıda değil.
+- Canlı: `531e9034440ac1dc0d67fb11353a7ea09785c9f1` (PR25/T-931); main: `69d1fbed1948e72b324865f8a4fcff2cedf4906c` (PR27/T932–T934 altyapı). Yeni main henüz canlı değil.
+- Önceki canlı kesim CI38442505462 + guards38442505492 SUCCESS; dokuz kontrol geçti, deploy38443949741 SUCCESS. VPS release531e9034/health=ok/auto_migrate=true; schema31 fingerprintd6b…88dd. T9320032 geliştirme şeması canlıda değil.
 - Yayın callback'leri farklı sırada tamamlanabilir; eksik CI varken RELEASE_BLOCKED ret, tüm dokuz kontrol geçince son callback yayın yapar (son kesimde doğrulandı).
 - PR15 pilot zinciri + PR16 kart türleri/standart birimler + PR17 MFA QR/rehber/SelectField + PR18/19 belgeler main'de.
 - VPS Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com ; satış https://etkinyazilim.com .
@@ -48,11 +48,13 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - PR25 E2E/typecheck sorunları düzeltildi: streaming görünür tek alan, hydration-ready lokasyon kontrolü, iki ayrı gerçek signup/MFA stok test hesabı. Renk/odak/geometri assertionları ve limitler korundu; bağımsız QA0 bulgu. Son exact-head/main dokuz kontrol ve otomatik yayın PASS (yukarıdaki SHA/run kanıtı).
 - 13 Ekim16:38UTC: VPS canlı DB pg_dump -Fc, izole scratch restore --exit-on-error PASS; defter0031/31, ledger/balance fark0. Scratch kaldırıldı, canlı değişmedi; ayrıntı OPERATIONS. Günlük offsite/RPO/RTO veya auth kabulü kanıtlanmadı.
 
-- T-932/T-933/T-934 paketi PR26 ile geliştirme dalına birleştirildi: `int/package-receiving`, merge `49de679107b90c048c0633e0dccada02543c0db2` (14 Ekim 00:01 Istanbul). Main ve canlı hâlâ yukarıdaki PR25/schema31 kesimidir.
+- T-932/T-933/T-934 paketi PR26 ile geliştirme dalına birleştirildi: `int/package-receiving`, merge `49de679107b90c048c0633e0dccada02543c0db2` (14 Ekim 00:01 Istanbul). Ardından PR27 main69d1fbe birleşti (14 Ekim00:32). PR27 ci38470011292 + guards38470011315 dokuzkontrolPASS; main CI38471430417 int FAIL2028/2029 (200outer30s); guards38471430852 PASS. Canlı hâlâ PR25/schema31; yeni main yayımlanmadı.
 - İncelenen kaynak `34e0334061d35571c3a1e452109e75c08a7b3aed`: bağımsız güvenlik BLOCKER0/MAJOR0/MINOR0; bağımsız QA86/86 PASS, skip0. Gerçek KG birimiyle 5VARIL×200=1000KG ve GR→KG çevrimi ayrıca doğrulandı. [Raporlar](https://github.com/shosgoren/EtkinWMS/pull/26#issuecomment-6154851235).
 - PR26 dokuz zorunlu kontrol PASS: ci38465167535 ve guards38465559418. Merge ile incelenen kaynağın Git ağacı aynı (`bc57cdec6eeb15a76e8cb7e57adce6520474bf77`). Önceki başarısız denemeler JOURNAL'da korunur.
 - Hazır kapsam: immutable fiziksel paket kimliği, lot/üretim/SKT, tenant/RLS ilişkileri, idempotent taslak ve atomik kabul, yetkili QR sorgusu. İlk ledger allowlist yalnız origin STOCK_IN; legacy akışlar korunur.
 - Hazır olmayan kapsam: QR kabul ekranı, kamera akışı, etiket baskısı, paketle transfer/üretim, taslak düzenleme/iptal. Backend kabulü kullanıcıya hazır uçtan uca teslim değildir.
-- Sıradaki adım: paketi main PR'ına taşı → dokuz kontrol → main kontrolleri → doğrulanmış şema onayı/yedek/yayın → VPS health ve migration32 kanıtı. Sonra bağlı UI/etiket ve izlenebilir hareket dilimleri; yeni QR akışı canlıda diye raporlanmaz.
+- Sıradaki adım: main kontrolleri → otomatik migration yedeği/yayın → VPS health ve migration32 kanıtı. T935 webactions hazır (73scopedPASS/types/lint; fullverify sandboxmarketingEPERM, yetkiliVitest1/1tekrarPASS). T936 kabul UI hazır (67scopedPASS/lint/types; gerçekcihaz/E2E henüz yok); T937 POSTED/CLOSED etiket hazır19scopedPASS; T938 gerçekE2E ilk2stage2TIMEOUT,4tamamlanmadı, bağımsız üstteşhis açık. DB/QR/browseracceptance henüz yok. Dal feat/T-935-package-receiving-web; server flag varsayılanfalse, paket hareketi hazır olmadan normal Mal geldi değişmez. Yeni QR akışı canlıda diye raporlanmaz.
 - Son kaynak default200prepare6688.2/post14542.5ms, tüm test22770ms<değişmeyen30s; final bağımsız QA200prepare5906/post13166ms. Motor/timeout/GUC/trigger/cache gevşetilmedi. Bunlar izole test ortamı ölçümüdür, canlı SLA değildir.
 - Gelecek paket hareketinde yalnız değişmeyen origin anchor kilidi RR yarışını çözmez; ortak version/CAS, exact reversal ve depo/sayım kapsamı ayrı tasarım/test ister. Günlük offsite/RPO/RTO ve gerçek cihaz kabulü hâlâ açık.
+
+- T939 ayrıperformans onarımı: fix/T-939-package-assert-plan, yeni0033append yalnız assertfunctionplan;0032/engine/timeout unchanged. Kaynak82/82PASS, fresh200fullcase10092ms, seeded32→33→32→33 data/ACL/RLS/body roundtripPASS. Bağımsız exactreview/QA+tam9CI/yayın bekler; detay DATABASE/JOURNAL.
