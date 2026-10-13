@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Banner, PackagePlus } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../../field/receive/receive-flow.tsx";
@@ -120,6 +120,8 @@ const control = "min-h-12 w-full min-w-0 rounded-control border-2 border-border-
 const card = "min-w-0 rounded-card border-2 border-border bg-surface p-4";
 export function PackageFlow({ slug, initial, canWrite }: { slug: string; initial: PackageReceiptDto | null; canWrite: boolean }) {
   const t = useTranslations("packageReceiving");
+  const [clientReady, setClientReady] = useState(false);
+  useEffect(() => { setClientReady(true); }, []);
   const [stage, setStage] = useState(initial ? 3 : 1);
   const [receipt, setReceipt] = useState(initial);
   const [options, setOptions] = useState<PackageItemOptionsDto | null>(null);
@@ -264,7 +266,7 @@ export function PackageFlow({ slug, initial, canWrite }: { slug: string; initial
           {frozen && !posted ? <p>🔒 {t("draftLocked")}</p> : null}
           {receipt ? <><p>{receipt.receiptNumber}</p><p className="font-bold">{t("countSummary", { n: receipt.packages.length })}</p><p>{t("initialQuantity")}</p><ul className="flex min-w-0 flex-col gap-2">{receipt.packages.map(p => <li key={p.id} className={`${card} break-words`}>{t("packageNo", { n: p.packageNo })} · {p.itemName} · {displayQuantity(p.quantity)} {p.unitCode}<p>{p.lotCode} {p.producedOn} {p.expiresOn}</p><p>{p.stockStatus === "QUARANTINE" ? `⚠ ${t("quarantine")}` : p.stockStatus}</p></li>)}</ul></> : <><p>{options?.item.name}</p><p>{warehouses.find(w => w.id === warehouseId)?.name} · {locations.find(l => l.id === locationId)?.name}</p><p>{t(kind === "VARIL" ? "barrel" : "box")}</p><ul className="flex min-w-0 flex-col gap-2">{(equal ? Array.from({ length: preview?.count ?? 0 }, () => entry) : rows).map((r, i) => <li key={i} className={`${card} break-words`}>{t("packageNo", { n: i + 1 })} · {r.quantity} {options?.units.find(u => u.unitId === unitId)?.unitCode}<p>{r.lotCode} {r.producedOn} {r.expiresOn}</p></li>)}</ul></>}
           {!canWrite && !posted ? <p role="alert">🔒 {t("locked")}</p> : null}
-          {posted && receipt ? <Link href={packageLabelHref(slug, receipt.documentId)} className="flex min-h-14 items-center justify-center rounded-control bg-accent px-4 font-bold text-on-accent">{t("labels")}</Link> : canWrite ? <div className="package-actions flex gap-3">{!frozen ? <SecondaryButton disabled={busy} onClick={() => setStage(2)}>{t("edit")}</SecondaryButton> : null}<PrimaryButton loading={busy} disabled={!input && !frozen} onClick={() => void accept()}>{error || initial ? t("retry") : t("accept")}</PrimaryButton></div> : null}
+          {posted && receipt ? <Link href={packageLabelHref(slug, receipt.documentId)} className="flex min-h-14 items-center justify-center rounded-control bg-accent px-4 font-bold text-on-accent">{t("labels")}</Link> : canWrite ? <div className="package-actions flex gap-3">{!frozen ? <SecondaryButton disabled={busy} onClick={() => setStage(2)}>{t("edit")}</SecondaryButton> : null}<PrimaryButton loading={busy} disabled={!clientReady || (!input && !frozen)} onClick={() => void accept()}>{error || initial ? t("retry") : t("accept")}</PrimaryButton></div> : null}
         </section> : null}
       </section>
       <aside className={`${card} package-summary flex flex-col gap-2 self-start`} aria-live="polite">

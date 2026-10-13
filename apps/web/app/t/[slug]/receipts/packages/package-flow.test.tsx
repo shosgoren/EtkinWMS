@@ -158,6 +158,12 @@ describe("server entry and truthful status", () => {
     const html = renderToStaticMarkup(createElement(PackageFlow, { slug: "acme", initial: draft, canWrite: true }));
     expect(html).toContain("draftLocked"); expect(html).toContain("retry"); expect(html).not.toContain("/packages/labels?"); expect(html).not.toContain("✓ posted");
   });
+  it("server-rendered draft retry is disabled until the client can handle its click", () => {
+    const html = renderToStaticMarkup(createElement(PackageFlow, { slug: "acme", initial: draft, canWrite: true }));
+    const retry = html.match(/<button\b[^>]*>retry<\/button>/)?.[0];
+    expect(retry).toBeDefined();
+    expect(retry).toContain('disabled=""');
+  });
   it("read-only recovery hides write controls", () => {
     const html = renderToStaticMarkup(createElement(PackageFlow, { slug: "acme", initial: draft, canWrite: false }));
     expect(html).toContain("locked"); expect(html).not.toContain("<button");
