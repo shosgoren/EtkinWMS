@@ -59,9 +59,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <div className="flex min-w-0 items-center gap-3">
               <span
                 aria-hidden="true"
-                className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-on-accent"
+                className="flex size-12 shrink-0 items-center justify-center rounded-2xl border-b-4 border-accent bg-ink text-on-accent"
               >
-                <Package className="size-6" strokeWidth={2} aria-hidden="true" />
+                <Package className="size-6 text-accent" strokeWidth={2} aria-hidden="true" />
               </span>
               <div className="flex min-w-0 flex-col leading-tight">
                 <span className="truncate text-xl font-extrabold">{t("productName")}</span>

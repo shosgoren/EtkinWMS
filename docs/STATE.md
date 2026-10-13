@@ -35,3 +35,7 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - Canlıya şema değiştiren her iş tek operatörle; iki AI aynı anda migration/approve yapmaz.
 - Yeni kart T-916+; dal adı `feat|fix/T-xxx-…` (scope bekçisi `claude/…` dalını reddeder).
 - Kod merge, deploy ve kullanıcı kabulü ayrı durumlardır; birinden diğerini varsayma.
+
+## Aktif teslim — T-928
+- Kullanıcı isteği: Sites kolay tasarımını VPS WMS'ye önce aktar; QR şartnamesi henüz geliştirilmez. Dal feat/T-928-easy-live-design: dört gerçek işlem kartı + sade kısayollar, korunmuş Kokpit; schema/auth/domain/CI değişmez.
+- Başlangıç readonly receiver: f1e6e447d7fbadbde78ef71b30b5384ad6fc3e37, schema31 d6b6b9d7…88dd, health OK, auto_migrate=true. Kod/test/CI/son yayın kanıtı PR'da; bu satır yayın iddiası değildir.

@@ -726,6 +726,7 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
   const qtyText = (q: string): string => `${Number(q)} adet`;
   const mobile = isMobile(testInfo.project.name);
   const metrics: Record<string, unknown> = {};
+  await context.addCookies([{ name: "view", value: "cockpit", url: new URL(String(testInfo.project.use.baseURL)).origin }]);
   await login(page, "Yönetici");
   for (const [w, h] of [[360, 740], [390, 664], [390, 844], [430, 932]] as const) {
     await page.setViewportSize({ width: w, height: h });
@@ -787,6 +788,7 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
   }
   // Toplayıcı (tek sütun kipi): görüntüler + taşma/hedef ölçümü; "Görevlerim" özeti bu kipin gerçek içeriğidir.
   await context.clearCookies();
+  await context.addCookies([{ name: "view", value: "cockpit", url: new URL(String(testInfo.project.use.baseURL)).origin }]);
   await login(page, "Toplayıcı");
   const pickerM = (await db<{ id: string }>("SELECT m.id FROM public.tenant_memberships m JOIN public.membership_roles r ON r.tenant_id = m.tenant_id AND r.membership_id = m.id WHERE m.tenant_id = $1 AND r.role_key = 'PICKER' LIMIT 1", [fx.tenantId]))[0]?.id;
   expect(pickerM, "toplayıcı üyeliği").toBeDefined();

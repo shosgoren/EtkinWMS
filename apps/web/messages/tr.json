@@ -451,6 +451,34 @@
     "greeting": "Merhaba {name},",
     "title": "Ne yapmak istiyorsun?",
     "intro": "Yapmak istediğin işe dokun. Seni adım adım götüreceğim; yanlış bir şey yapmana izin vermem.",
+    "easy": {
+      "label": "Kolay işlemler",
+      "hint": "Bir iş seç, başlayalım.",
+      "receive": {
+        "title": "Mal geldi",
+        "description": "Gelen ürünü kabul et"
+      },
+      "transfer": {
+        "title": "Taşı",
+        "description": "Depolar arasında taşı"
+      },
+      "production": {
+        "title": "Üret",
+        "description": "Reçeteyle üretime başla"
+      },
+      "shipping": {
+        "title": "Sevk et",
+        "description": "Siparişi hazırla, gönder"
+      },
+      "links": "Diğer işler",
+      "stock": "Stok",
+      "items": "Ürünler",
+      "warehouses": "Depolar",
+      "tasks": "Görevlerim",
+      "members": "Ekip",
+      "settings": "Ayarlar",
+      "audit": "İşlem geçmişi"
+    },
     "tasksLabel": "İşler",
     "lockedReason": "Bu iş için yetkin yok. Sorumluna sorabilirsin.",
     "soonListNote": "Bu işler depo kurulumundan sonra açılacak.",
