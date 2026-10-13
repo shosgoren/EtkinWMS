@@ -70,3 +70,7 @@ Kart türleri HM/YM/MM/TM ve standart birimler kaynak0031'de; Motive verisini ö
 - T933 yeni kimlik üretimi aynı receiptId marker'ını HU INSERT'ine taşır. HU→metadata→receipt→origin sırası ve lot FK iç kilidinin receipt numarasından önce alınması korunur; motor/kilit/whitelist değişmez. Bu geliştirme0032 düzeltmesi bağımsız exact paket incelemesi ve tam kapılar öncesinde canlı uygulanmış sayılmaz.
 
 - T934 paket tutarlılık denetimi satır başına ayrı SQL döngüsü yerine MATERIALIZED package_lines→origins ve ayrı ledger/balance aggregates kullanır; callback sayısı, kilitler, RLS ve hata kategorileri korunur. Ledger/balance birleşmeden önce hesaplanır, toplam çarpılmaz; NULL/wrong HU ve missing ledger negatifleri korunur. Son yerel200 prepare6.688s/post14.543s (önce30.706/46.353s);5paket37/34ms, ortam ölçümüdür/SLA değildir. Son exact CI/canlı kanıtı STATE'den ayrı doğrulanır.
+
+## T939 — geliştirme performans onarımı, canlı kanıtı değil
+Main69d 200paket outer30sFAIL (2028/2029); PR yeşilleri bu sonucu silmez. Yeni0033 yalnız aynı invoker assert fonksiyonunu scalar flags + kimlik-filtreli LATERAL OFFSET0 planıyla değiştirir; bütün callbacks/altı hata/NULL-HU/kapsam/ayrıledger-balance kontrolü korunur. LIMIT/GUC/cache/SECDEF/timeout değişimi yok; down exact0032 bodyyi veri silmeden geri yükler.
+Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded32→33→32→33 owner/ACL/search_path/RLS/veri aynı PASS. Gerçek plan id-indexseek göstermiyor; bu iddia yapılmaz. Kaynak frozen; bağımsızreview/CI/yayın ayrı kapılardır, canlısonşema31.
