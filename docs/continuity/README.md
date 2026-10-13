@@ -21,7 +21,7 @@ Bu dizin yeni bir AI'ın bütün sohbeti okumadan devam etmesi içindir. Başlan
 3. Çalıştırılmış komut, gerçek deploy state, DB defteri ve aynı SHA'ya ait CI.
 4. Tarihli STATE özeti. Eski sohbet, PR açıklaması veya eski devir notu canlı kanıt değildir.
 
-`docs/PILOT_HANDOFF.md`, `HOSTINGER_RUNBOOK.md` ve eski STATE commit'leri tarihsel ayrıntı sağlar. Eski “Neon canlı”, “owner yok”, “tam 27 kaynak” veya “ürün yayımlandı” satırlarını güncel veri yerine kullanma.
+Eski master/devir notları ve görev kartları güncel ağaçtan kaldırılmıştır; gerektiğinde [temizlik öncesi snapshot](https://github.com/shosgoren/EtkinWMS/tree/decbbe03fe1192473e096a1feb60cf090ca1fcf2/docs) içinden yalnız ilgili dosyayı oku. Kalan otoritelerin dizini [docs/README](../README.md) içindedir. Eski “Neon canlı”, “owner yok”, “tam 27 kaynak” veya “ürün yayımlandı” satırlarını güncel veri yerine kullanma.
 
 ## Yeni AI'a verilecek kısa mesaj
 

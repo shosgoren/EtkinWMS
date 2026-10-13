@@ -37,3 +37,6 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - Eski açık PR'ların bir kısmı PR15 zincirinde bulunuyor; aynı kodu tekrar merge/cherry-pick etme. `git merge-base --is-ancestor` ile kanıtla.
 - Sonraki AI önce bu 50 satırı, sonra yalnız gerekli kısa rehberi okusun.
 - Bugünkü iş sadece belge düzeni; canlı release, hesap, schema veya yayın korumaları değiştirilmedi.
+
+## Son belge teslimi
+- T-914: eski görev kartları, toplu master ve tekrarlanan üç devir snapshot'ı ağaçtan kaldırıldı; önceki içerik decbbe03 Git snapshot'ında korunuyor. Başlangıç docs/README.md → continuity + STATE. Yeni task ID T-915+. Ürün/canlı/DB durumuna bu belge işi müdahale etmedi.
