@@ -24,10 +24,10 @@ async function transaction(run: () => Promise<void>) {
 }
 async function flush() { await app.query("SET CONSTRAINTS ALL IMMEDIATE"); }
 interface FixtureIds { receipt: string; receiptLine: string; document: string; line: string; hu: string }
-async function fixture(opts: { receiptId?: string; itemId?: string; handlingUnitId?: string; sourceLineId?: string; packageNo?: number; packageTenant?: string; receiptItemId?: string; lotId?: string; ids?: FixtureIds; noDates?: boolean } = {}) {
+async function fixture(opts: { receiptId?: string; itemId?: string; handlingUnitId?: string; sourceLineId?: string; packageNo?: number; packageTenant?: string; receiptItemId?: string; lotId?: string; ids?: FixtureIds; noDates?: boolean; existingHu?: boolean; markerReceiptId?: string } = {}) {
   const t=world.tenantId;
   const ids=opts.ids ?? {receipt,receiptLine,document,line,hu};
-  await app.query("INSERT INTO public.handling_units(tenant_id,id,kind,code) VALUES($1,$2,'VARIL',$3)",[t,ids.hu,ids.hu]);
+  if (!opts.existingHu) await app.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES($1,$2,'VARIL',$3,$4)",[t,ids.hu,ids.hu,opts.markerReceiptId ?? ids.receipt]);
   await app.query("INSERT INTO public.inbound_receipts(tenant_id,id,warehouse_id,number,created_by,package_document_id) VALUES($1,$2,$3,$4,$5,$6)",[t,ids.receipt,world.warehouseId,ids.receipt,world.ownerUserId,ids.document]);
   await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by,source_kind,source_id) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-13',$4,'INBOUND_RECEIPT',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[t,ids.document,world.warehouseId,world.ownerUserId,ids.receipt]);
   await app.query("INSERT INTO public.inbound_receipt_lines(tenant_id,id,receipt_id,line_no,item_id,unit_id,conversion_factor,expected_quantity) VALUES($1,$2,$3,1,$4,$5,2,3)",[t,ids.receiptLine,ids.receipt,opts.receiptItemId ?? world.itemNoneId,world.unitId]);
@@ -136,8 +136,14 @@ describe("T-932 immutable package origins (isolated scratch, runtime role)",()=>
       await expect(migration.query("UPDATE public.receipt_packages SET lot_code='RAW' WHERE id=$1",[hu])).rejects.toMatchObject({code:"23514"});
     } finally { await migration.query("ROLLBACK"); }
     await migration.query("BEGIN");
-    try { await expect(migration.query("TRUNCATE public.receipt_packages")).rejects.toMatchObject({code:"23514"}); }
+    try { await expect(migration.query("TRUNCATE public.receipt_packages")).rejects.toMatchObject({code:"0A000"}); }
     finally { await migration.query("ROLLBACK"); }
+    expect((await migration.query("SELECT rp.id,h.package_receipt_id FROM public.receipt_packages rp JOIN public.handling_units h ON h.tenant_id=rp.tenant_id AND h.id=rp.id WHERE rp.id=$1",[hu])).rows).toEqual([{id:hu,package_receipt_id:receipt}]);
+    await migration.query("BEGIN");
+    // Reciprocal FK rejects ordinary TRUNCATE before triggers; CASCADE still reaches the immutable-table guard.
+    try { await expect(migration.query("TRUNCATE public.receipt_packages CASCADE")).rejects.toMatchObject({code:"23514",message:"PACKAGE_IMMUTABLE"}); }
+    finally { await migration.query("ROLLBACK"); }
+    expect((await migration.query("SELECT rp.id,h.package_receipt_id FROM public.receipt_packages rp JOIN public.handling_units h ON h.tenant_id=rp.tenant_id AND h.id=rp.id WHERE rp.id=$1",[hu])).rows).toEqual([{id:hu,package_receipt_id:receipt}]);
   });
   it("runtime has no UPDATE DELETE TRUNCATE on package metadata and FORCE RLS",async()=> {
     const r=await migration.query("SELECT relrowsecurity,relforcerowsecurity,has_table_privilege('wms_app','public.receipt_packages','UPDATE') AS upd,has_table_privilege('wms_app','public.receipt_packages','DELETE') AS del,has_table_privilege('wms_app','public.receipt_packages','TRUNCATE') AS trunc FROM pg_class WHERE oid='public.receipt_packages'::regclass");
@@ -260,6 +266,55 @@ describe("T-932 immutable package origins (isolated scratch, runtime role)",()=>
       await app.query("ROLLBACK"); await racer.query("ROLLBACK");
       expect((await migration.query("SELECT count(*)::int AS n FROM public.receipt_packages rp JOIN public.lots lot ON lot.tenant_id=rp.tenant_id AND lot.id=rp.catalog_lot_id WHERE rp.id=$1 AND rp.package_dates IS DISTINCT FROM lot.package_dates",[ids.hu])).rows[0]?.n).toBe(0);
     } finally { await app.query("ROLLBACK"); await racer.query("ROLLBACK"); await racer.end(); }
+  });
+
+  it("T934 constructor pair FKs, immutable marker trigger and narrow column grants match DDL",async()=> {
+    const fks=await migration.query("SELECT conname,condeferrable,condeferred,pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conname IN ('receipt_packages_hu_binding_fkey','handling_units_package_pair_fkey') ORDER BY conname");
+    expect(fks.rows).toHaveLength(2);
+    expect(fks.rows[0]).toMatchObject({conname:"handling_units_package_pair_fkey",condeferrable:true,condeferred:true});
+    expect(fks.rows[0]?.definition).toContain("FOREIGN KEY (tenant_id, id, package_receipt_id) REFERENCES receipt_packages(tenant_id, id, receipt_id)");
+    expect(fks.rows[1]).toMatchObject({conname:"receipt_packages_hu_binding_fkey",condeferrable:false,condeferred:false});
+    expect(fks.rows[1]?.definition).toContain("FOREIGN KEY (tenant_id, id, receipt_id) REFERENCES handling_units(tenant_id, id, package_receipt_id)");
+    const trigger=await migration.query("SELECT t.tgenabled,t.tgtype,p.prosecdef,p.proconfig FROM pg_trigger t JOIN pg_proc p ON p.oid=t.tgfoid WHERE t.tgrelid='public.handling_units'::regclass AND t.tgname='handling_units_package_marker_guard'");
+    expect(trigger.rows).toEqual([{tgenabled:"A",tgtype:19,prosecdef:false,proconfig:["search_path=pg_catalog, pg_temp"]}]);
+    const grants=await migration.query("SELECT has_column_privilege('wms_app','public.handling_units','package_receipt_id','INSERT') AS ins,has_column_privilege('wms_app','public.handling_units','package_receipt_id','UPDATE') AS upd");
+    expect(grants.rows[0]).toEqual({ins:true,upd:false});
+  });
+  it("T934 marked HU cannot complete without matching metadata",async()=>transaction(async()=> {
+    const marked=randomUUID();await app.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES($1,$2,'KOLI',$3,$4)",[world.tenantId,marked,marked,randomUUID()]);
+    await expect(flush()).rejects.toMatchObject({code:"23503",constraint:"handling_units_package_pair_fkey"});
+  }));
+  it("T934 wrong receipt marker rejects package relation",async()=>transaction(async()=> {
+    const ids={receipt:randomUUID(),receiptLine:randomUUID(),document:randomUUID(),line:randomUUID(),hu:randomUUID()};
+    await expect(fixture({ids,markerReceiptId:legacyReceipt})).rejects.toMatchObject({code:"23503",constraint:"receipt_packages_hu_binding_fkey"});
+  }));
+  it("T934 runtime foreign constructor marker keeps tenant RLS rejection",async()=>transaction(async()=> {
+    await expect(app.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES($1,$2,'KOLI',$3,$4)",[other.tenantId,randomUUID(),randomUUID(),receipt])).rejects.toMatchObject({code:"42501"});
+  }));
+  for(const [label,target,marker] of [
+    ["legacy marker upgrade",(world:TenantWorld)=>world.handlingUnitId,()=>receipt],
+    ["bound marker removal",()=>hu,()=>null],
+    ["bound marker replacement",()=>hu,()=>legacyReceipt],
+  ] as const) it(`T934 ${label} is immutable even for owner`,async()=> {
+    await migration.query("BEGIN");
+    try {
+      await migration.query("SELECT set_config('app.current_tenant_id',$1,true)",[world.tenantId]);
+      await expect(migration.query("UPDATE public.handling_units SET package_receipt_id=$1 WHERE tenant_id=$2 AND id=$3",[marker(),world.tenantId,target(world)])).rejects.toMatchObject({code:"23514",message:"PACKAGE_HU_BINDING_IMMUTABLE"});
+    } finally {await migration.query("ROLLBACK");}
+  });
+  for(const order of ["existing legacy snapshot","legacy committed after snapshot"] as const) it(`T934 old HU mapping rejects ${order}`,async()=> {
+    const racer=new pg.Client({connectionString:appUrl});await racer.connect();
+    const oldHu=randomUUID(),ids={receipt:randomUUID(),receiptLine:randomUUID(),document:randomUUID(),line:randomUUID(),hu:oldHu};
+    try {
+      if(order==="existing legacy snapshot")await migration.query("INSERT INTO public.handling_units(tenant_id,id,kind,code) VALUES($1,$2,'KOLI',$3)",[world.tenantId,oldHu,oldHu]);
+      await racer.query("BEGIN ISOLATION LEVEL REPEATABLE READ");await racer.query("SELECT set_config('app.current_tenant_id',$1,true)",[world.tenantId]);await racer.query("SELECT id FROM public.handling_units WHERE id=$1",[oldHu]);
+      if(order==="legacy committed after snapshot")await migration.query("INSERT INTO public.handling_units(tenant_id,id,kind,code) VALUES($1,$2,'KOLI',$3)",[world.tenantId,oldHu,oldHu]);
+      // A package requires its immutable constructor key even when the identity itself is valid.
+      await expect(racer.query("INSERT INTO public.receipt_packages(tenant_id,id,receipt_id,receipt_line_id,document_id,document_line_id,package_no) VALUES($1,$2,$3,$4,$5,$6,1)",[world.tenantId,oldHu,ids.receipt,ids.receiptLine,ids.document,ids.line])).rejects.toMatchObject({code:"23503",constraint:"receipt_packages_hu_binding_fkey"});
+      await racer.query("ROLLBACK");
+      expect((await migration.query("SELECT package_receipt_id FROM public.handling_units WHERE id=$1",[oldHu])).rows[0]?.package_receipt_id).toBeNull();
+      expect((await migration.query("SELECT count(*)::int AS n FROM public.receipt_packages WHERE id=$1",[oldHu])).rows[0]?.n).toBe(0);
+    } finally {await racer.query("ROLLBACK");await racer.end();}
   });
 
 });

@@ -4,6 +4,10 @@ ALTER TABLE public.inbound_receipts ADD COLUMN package_document_id uuid,
  ADD CONSTRAINT inbound_receipts_package_document_fkey FOREIGN KEY (tenant_id, package_document_id)
  REFERENCES public.documents(tenant_id,id) DEFERRABLE INITIALLY DEFERRED;
 GRANT INSERT (package_document_id) ON public.inbound_receipts TO wms_app;
+-- Constructor-only marker: an old NULL HU can never be adopted by a package.
+ALTER TABLE public.handling_units ADD COLUMN package_receipt_id uuid,
+ ADD CONSTRAINT handling_units_package_receipt_key UNIQUE(tenant_id,id,package_receipt_id);
+GRANT INSERT(package_receipt_id) ON public.handling_units TO wms_app;
 ALTER TABLE public.handling_units DROP CONSTRAINT handling_units_kind_chk;
 ALTER TABLE public.handling_units ADD CONSTRAINT handling_units_kind_chk CHECK(kind IN ('KOLI','PALET','VARIL'));
 -- Arrays preserve nullable date elements while the composite FK itself has no NULL date key.
@@ -23,9 +27,9 @@ CREATE TABLE public.receipt_packages (
  catalog_lot_id uuid,
  package_dates date[] GENERATED ALWAYS AS (ARRAY[produced_on,expires_on]) STORED NOT NULL,
  created_at timestamptz NOT NULL DEFAULT now(),
- UNIQUE(tenant_id,id), UNIQUE(tenant_id,receipt_line_id), UNIQUE(tenant_id,document_line_id),
+ UNIQUE(tenant_id,id), CONSTRAINT receipt_packages_hu_receipt_key UNIQUE(tenant_id,id,receipt_id), UNIQUE(tenant_id,receipt_line_id), UNIQUE(tenant_id,document_line_id),
  UNIQUE(tenant_id,receipt_id,package_no),
- FOREIGN KEY(tenant_id,id) REFERENCES public.handling_units(tenant_id,id),
+ CONSTRAINT receipt_packages_hu_binding_fkey FOREIGN KEY(tenant_id,id,receipt_id) REFERENCES public.handling_units(tenant_id,id,package_receipt_id),
  FOREIGN KEY(tenant_id,receipt_id) REFERENCES public.inbound_receipts(tenant_id,id) DEFERRABLE INITIALLY DEFERRED,
  FOREIGN KEY(tenant_id,receipt_line_id) REFERENCES public.inbound_receipt_lines(tenant_id,id) DEFERRABLE INITIALLY DEFERRED,
  FOREIGN KEY(tenant_id,document_id) REFERENCES public.documents(tenant_id,id) DEFERRABLE INITIALLY DEFERRED,
@@ -36,6 +40,22 @@ CREATE TABLE public.receipt_packages (
  CHECK(lot_code IS NULL OR btrim(lot_code) <> ''),
  CHECK(produced_on IS NULL OR expires_on IS NULL OR expires_on >= produced_on)
 );
+-- Every marked HU must complete its matching immutable package pair in this transaction.
+ALTER TABLE public.handling_units ADD CONSTRAINT handling_units_package_pair_fkey
+ FOREIGN KEY(tenant_id,id,package_receipt_id) REFERENCES public.receipt_packages(tenant_id,id,receipt_id)
+ DEFERRABLE INITIALLY DEFERRED;
+CREATE FUNCTION public.handling_units_package_marker_guard() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $fn$
+BEGIN
+ IF NEW.package_receipt_id IS DISTINCT FROM OLD.package_receipt_id THEN
+  RAISE EXCEPTION 'PACKAGE_HU_BINDING_IMMUTABLE' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END; $fn$;
+REVOKE ALL ON FUNCTION public.handling_units_package_marker_guard() FROM PUBLIC;
+CREATE TRIGGER handling_units_package_marker_guard BEFORE UPDATE ON public.handling_units
+ FOR EACH ROW EXECUTE FUNCTION public.handling_units_package_marker_guard();
+ALTER TABLE public.handling_units ENABLE ALWAYS TRIGGER handling_units_package_marker_guard;
 CREATE INDEX receipt_packages_tenant_document_idx ON public.receipt_packages(tenant_id,document_id);
 ALTER TABLE public.receipt_packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.receipt_packages FORCE ROW LEVEL SECURITY;

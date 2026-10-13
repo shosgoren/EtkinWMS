@@ -155,3 +155,7 @@
 - 2026-10-13 f9948 bağımsız QA67/67 PASS (61 mevcut+6 bağımsız, final ledger fault rollback/concurrentpost/identity/LOT/foreignQR), skip0; private test helper text/UUID hatası düzeltildi, product source değişmedi. Security MAJOR geçerli; constructor-only HU binding reciprocalFK tasarım probu6 koşulda legacyret/newpaircommit/staleRRret kanıtladı. Gerçek0032 uygulama ve yeniSHA review gereklidir.
 
 - 2026-10-13 f9948 tam int108 dosya/2011PASS/1FAIL (2012),499.60s; tek hata tasks public export exact-list yeni5yetkili paket girişini beklemiyor. completeTask/createTasks private deny assertions aynen korunacak. Bu koşu PASS değildir; T934 binding düzeltmesi ve explicit export expectation sonrası finalsource/gates tekrar gerekir.
+
+- 2026-10-13 T934 şema ajanı provider güvenlik filtresiyle durdu; partial kaynak korunuyor, tamamlandı/testPASS sayılmadı. Normal iş-şeması/FK/Drizzle ve mevcut mal kabul regresyonları backend göreviyle devam; yeni saldırı probu istenmedi, canlı erişimi yok.
+
+- 2026-10-13 T934 kaynak freeze: HU constructor-only marker/composite+deferredreciprocalFK/T933 INSERT bind düzeltmesi; final6 dosya146PASS62.69s, fullverify lint/typecheck/unit3798 PASS, scopedlint/roottsc/diffcheckPASS. İlk145/146 ordinaryTRUNCATE yeniFK0A000 önceliği: eski guardedCASCADE23514 ve her iki ret sonrası kimlikkoruma assertions eklendi; hiçbir grant/engine/config gevşetilmedi. Independent newSHA review/protectedapproval/fullgates hâlâ açık.

@@ -169,11 +169,13 @@ export const handlingUnits = pgTable(
     kind: text("kind").$type<HandlingUnitKind>().notNull(),
     code: text("code").notNull(),
     parentId: uuid("parent_id"),
+    packageReceiptId: uuid("package_receipt_id"),
     locationId: uuid("location_id"),
     status: text("status").$type<HandlingUnitStatus>().notNull().default("OPEN"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
+    unique("handling_units_package_receipt_key").on(t.tenantId,t.id,t.packageReceiptId),
     unique("handling_units_tenant_id_id_key").on(t.tenantId, t.id),
     unique("handling_units_tenant_code_key").on(t.tenantId, t.code),
     index("handling_units_tenant_parent_idx").on(t.tenantId, t.parentId),
