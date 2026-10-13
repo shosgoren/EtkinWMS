@@ -20,12 +20,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
 import { sql } from "../../../packages/db/node_modules/drizzle-orm/index.js";
 import { createDbClient, type DbClient } from "../../../packages/db/src/client.ts";
+import { migrateUp } from "../../../packages/db/src/migrate.ts";
 import { withUser } from "../../../packages/db/src/index.ts";
 import { APP_ROLE, AUTH_ROLE, PROBE_ROLE, WORKER_ROLE, readIntEnv, redactErrorChain } from "../harness/env.ts";
-import { cleanupDocuments, cleanupReliability, cleanupStock, mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
+import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 
-const env = readIntEnv(process.env);
+let env = readIntEnv(process.env);
 const urls = [env.databaseUrl, env.databaseUrlDirect];
+const scratchName = `wms_ac04_${randomUUID().replaceAll("-", "")}`;
+let scratchAdmin: pg.Client;
 const INSUFFICIENT_PRIVILEGE = "42501";
 const UNIQUE_VIOLATION = "23505";
 const RLS_MESSAGE = /row-level security/i;
@@ -166,6 +169,14 @@ async function discoverTables(): Promise<TenantTable[]> {
 }
 
 beforeAll(async () => {
+  scratchAdmin = await connect(env.databaseUrlDirect);
+  await scratchAdmin.query(`CREATE DATABASE ${scratchName}`);
+  const direct = new URL(env.databaseUrlDirect), application = new URL(env.databaseUrl);
+  direct.pathname = `/${scratchName}`; application.pathname = direct.pathname;
+  application.hostname = direct.hostname; application.port = direct.port;
+  env = {...env,databaseUrl:application.toString(),databaseUrlDirect:direct.toString()};
+  urls.push(env.databaseUrl,env.databaseUrlDirect);
+  await migrateUp({url:env.databaseUrlDirect});
   admin = await connect(env.databaseUrlDirect);
   appClient = await connect(env.databaseUrl);
   A = await seedWorld(admin, reg, "A");
@@ -198,54 +209,30 @@ beforeAll(async () => {
       await admin.query("COMMIT");
     } catch(e) { await admin.query("ROLLBACK"); throw e; }
   }
+  // Two real immutable chains keep the automatic tenant-table matrix exhaustive.
+  for (const w of [A,B]) {
+    const hu=randomUUID(),receipt=randomUUID(),receiptLine=randomUUID(),document=randomUUID(),line=randomUUID();
+    await admin.query("BEGIN");
+    try {
+      await admin.query("SELECT set_config('app.current_tenant_id',$1,true)",[w.tenantId]);
+      await admin.query("INSERT INTO public.handling_units(tenant_id,id,kind,code) VALUES($1,$2,'VARIL',$3)",[w.tenantId,hu,hu]);
+      await admin.query("INSERT INTO public.inbound_receipts(tenant_id,id,warehouse_id,number,created_by,package_document_id) VALUES($1,$2,$3,$4,$5,$6)",[w.tenantId,receipt,w.warehouseId,receipt,w.ownerUserId,document]);
+      await admin.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by,source_kind,source_id) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-13',$4,'INBOUND_RECEIPT',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[w.tenantId,document,w.warehouseId,w.ownerUserId,receipt]);
+      await admin.query("INSERT INTO public.inbound_receipt_lines(tenant_id,id,receipt_id,line_no,item_id,unit_id,conversion_factor,expected_quantity) VALUES($1,$2,$3,1,$4,$5,1,1)",[w.tenantId,receiptLine,receipt,w.itemNoneId,w.unitId]);
+      await admin.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,source_line_id) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$7,$8)",[w.tenantId,line,document,w.itemNoneId,w.unitId,w.rootLocationId,hu,receiptLine]);
+      await admin.query("INSERT INTO public.receipt_packages(tenant_id,id,receipt_id,receipt_line_id,document_id,document_line_id,package_no) VALUES($1,$2,$3,$4,$5,$6,1)",[w.tenantId,hu,receipt,receiptLine,document,line]);
+      await admin.query("COMMIT");
+    } catch(e) { await admin.query("ROLLBACK"); throw e; }
+  }
   tables = await discoverTables();
 }, 60_000);
 
-/**
- * audit_logs satırı SİLİNEMEZ (I-12) ve tenants'a FK ile bağlıdır: tenant satırları bilerek silinmez (tek kullanımlık
- * Testcontainers örneği; Neon'da `t104-*` slug'lı sentetik artık kalır — audit.int.test.ts ile aynı). Diğer fikstür satırları
- * (FK sırasıyla) silinir; hatalar yutulmaz.
- */
-async function cleanupExceptTenants(c: pg.Client, r: typeof reg): Promise<void> {
-  const tenantIds = r.worlds.map((w) => w.tenantId);
-  const userIds = [...r.worlds.flatMap((w) => [w.ownerUserId, w.memberUserId]), ...r.extraUsers];
-  if (tenantIds.length > 0) {
-    for(const table of ["stock_document_links","production_recipe_lines","production_recipes"]) await c.query(`DELETE FROM public.${q(table)} WHERE tenant_id = ANY($1::uuid[])`,[tenantIds]);
-    await cleanupReliability(c, tenantIds, r.worlds.map((w) => w.platformEventId)); // T-211 tenant satırları
-    await cleanupStock(c, tenantIds); // T-232 stok tabloları (defter append-only tetikleyicisi fikstürde geçici kapatılır)
-    await cleanupDocuments(c, tenantIds); // T-206 tabloları (append-only tetikleyici replica ile atlanır)
-    // T-204 + T-202 tabloları FK sırasıyla önce (taşıma birimi → seri → lot → barkod/dönüşüm → sahip → ürün → birim; kapsam → kilit → lokasyon → depo).
-    for (const t of [
-      "handling_units",
-      "serials",
-      "lots",
-      "item_barcodes",
-      "unit_conversions",
-      "inventory_owners",
-      "items",
-      "units",
-      "membership_warehouse_scopes",
-      "location_count_locks",
-      "locations",
-      "warehouses",
-      "invitations",
-      "membership_roles",
-      "tenant_memberships",
-      "tenant_settings",
-    ]) {
-      await c.query(`DELETE FROM public.${t} WHERE tenant_id = ANY($1::uuid[])`, [tenantIds]);
-    }
-  }
-  if (userIds.length > 0) await c.query("DELETE FROM public.users WHERE id = ANY($1::uuid[])", [userIds]);
-  r.worlds.length = 0;
-  r.extraUsers.length = 0;
-}
-
+// Drop only this suite's isolated synthetic database. All immutable guards stay active.
 afterAll(async () => {
-  try {
-    if (admin !== undefined) await cleanupExceptTenants(admin, reg);
-  } finally {
-    await Promise.all(open.map((c) => c.end().catch(() => undefined)));
+  await Promise.all(open.filter(c=>c!==scratchAdmin).map(c=>c.end()));
+  if (scratchAdmin !== undefined) {
+    try { await scratchAdmin.query(`DROP DATABASE IF EXISTS ${scratchName} WITH (FORCE)`); }
+    finally { await scratchAdmin.end(); }
   }
 });
 

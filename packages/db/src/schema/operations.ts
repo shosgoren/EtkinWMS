@@ -10,7 +10,7 @@
 // - Sipariş/iade miktarları ürünün temel birimindedir (A-151); kabul satırı birim + katsayı taşır.
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { boolean, check, customType, index, integer, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, customType, date, index, integer, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -46,6 +46,7 @@ export const inboundReceipts = pgTable(
     warehouseId: uuid("warehouse_id").notNull(),
     number: text("number").notNull(),
     supplierRef: text("supplier_ref"),
+    packageDocumentId: uuid("package_document_id"),
     status: text("status").$type<InboundReceiptStatus>().notNull().default("DRAFT"),
     version: integer("version").notNull().default(1),
     createdBy: uuid("created_by").notNull(),
@@ -53,6 +54,7 @@ export const inboundReceipts = pgTable(
   },
   (t) => [
     unique("inbound_receipts_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("inbound_receipts_package_document_key").on(t.tenantId, t.packageDocumentId),
     unique("inbound_receipts_tenant_number_key").on(t.tenantId, t.number),
     index("inbound_receipts_tenant_warehouse_idx").on(t.tenantId, t.warehouseId),
     index("inbound_receipts_tenant_status_idx").on(t.tenantId, t.status),
@@ -368,3 +370,25 @@ export const productionRecipeLines = pgTable("production_recipe_lines", {
   itemId: uuid("item_id").notNull(),
   quantity: numeric("quantity").notNull(),
 }, t => [primaryKey({columns:[t.tenantId,t.recipeId,t.lineNo]}), unique().on(t.tenantId,t.recipeId,t.itemId)]);
+
+/** T-932: immutable identity and origin; quantity remains on the sealed document line. */
+export const receiptPackages = pgTable("receipt_packages", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  receiptId: uuid("receipt_id").notNull(),
+  receiptLineId: uuid("receipt_line_id").notNull(),
+  documentId: uuid("document_id").notNull(),
+  documentLineId: uuid("document_line_id").notNull(),
+  packageNo: integer("package_no").notNull(),
+  lotCode: text("lot_code"),
+  producedOn: date("produced_on", { mode: "string" }),
+  expiresOn: date("expires_on", { mode: "string" }),
+  catalogLotId: uuid("catalog_lot_id"),
+  packageDates: date("package_dates", { mode: "string" }).array().notNull().generatedAlwaysAs(sql`ARRAY[produced_on,expires_on]`),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  unique().on(t.tenantId,t.id), unique().on(t.tenantId,t.receiptLineId),
+  unique().on(t.tenantId,t.documentLineId), unique().on(t.tenantId,t.receiptId,t.packageNo),
+  index("receipt_packages_tenant_document_idx").on(t.tenantId,t.documentId),
+  check("receipt_packages_package_no_check",sql`${t.packageNo} BETWEEN 1 AND 200`),
+]);

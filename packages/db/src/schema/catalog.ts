@@ -22,7 +22,7 @@ export type PickPolicy = (typeof PICK_POLICIES)[number];
 /** Ürün kartı türü (0031, T-911): HM hammadde, YM yarı mamul, MM mamul, TM ticari mal. Sıra ekrandaki sıradır. */
 export const ITEM_CARD_TYPES = ["HM", "YM", "MM", "TM"] as const;
 export type ItemCardType = (typeof ITEM_CARD_TYPES)[number];
-export const HANDLING_UNIT_KINDS = ["KOLI", "PALET"] as const;
+export const HANDLING_UNIT_KINDS = ["KOLI", "PALET", "VARIL"] as const;
 export type HandlingUnitKind = (typeof HANDLING_UNIT_KINDS)[number];
 export const HANDLING_UNIT_STATUSES = ["OPEN", "CLOSED", "EMPTIED"] as const;
 export type HandlingUnitStatus = (typeof HANDLING_UNIT_STATUSES)[number];
@@ -131,10 +131,12 @@ export const lots = pgTable(
     lotCode: text("lot_code").notNull(),
     productionDate: date("production_date", { mode: "string" }),
     expiryDate: date("expiry_date", { mode: "string" }),
+    packageDates: date("package_dates", { mode: "string" }).array().notNull().generatedAlwaysAs(sql`ARRAY[production_date,expiry_date]`),
     supplierLot: text("supplier_lot"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
+    unique("lots_package_snapshot_key").on(t.tenantId,t.id,t.lotCode,t.packageDates),
     unique("lots_tenant_id_id_key").on(t.tenantId, t.id),
     unique("lots_tenant_item_id_key").on(t.tenantId, t.itemId, t.id),
     unique("lots_tenant_item_lot_code_key").on(t.tenantId, t.itemId, t.lotCode),

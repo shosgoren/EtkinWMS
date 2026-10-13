@@ -137,3 +137,13 @@
 - 2026-10-13 T-931 hosted ilk E2E86/88 streaming çift seçici; görünür tek parent/alan ve gerçek kart geometrisine test kapsamı daraltıldı, ek cardinality assertionları eklendi; eşik/veri/negatif kontroller korunur. Yerel4 cihaz+son2 receiving PASS, ESLint/check:all PASS; yeni CI gerekir.
 
 - 2026-10-13 T-931: b1f0afa hosted verify DOM tipi + mobile dialog kırmızı; structural tip root tsc PASS, client-ready dar koruma. Yerel desktop stock PASS; mobile RATE_LIMITED iki deneme sonrası durdu, bağımsız QA ortak pilot-user kovasını teşhis etti; gerçek signup/MFA ile ayrı cihaz fikstürleri, tek eskalasyon koşusu2/2 PASS55.4s, bağımsız QA0. Lint/unit3785 PASS; generated Git dışı tip kopyaları taşınarak workspace typecheck PASS; check:all PASS. Hosted son kapılar bekleniyor, merge/yayın yok. VPS16:38UTC dump→izole restore PASS,0031/31 ve ledger/balance fark0; scratch kaldırıldı. Offsite/PITR/iş akışı kabulü açık.
+
+- 2026-10-13 T-931: PR25 exact-head3dc57e41 dokuz kontrol PASS, ci38441189572/guards38441278515; merge531e9034. main CI/yayın henüz bekleniyor. T932 bağımlılığı sağlandı; yeni0032 immutable paket şeması dalı açıldı, hiçbir canlı migration uygulanmadı.
+
+- 2026-10-13 21:11 T931 main531e9034: ci38442505462/guards38442505492 + deploy38443949741 SUCCESS, VPS healthok/release exact/schema31 fingerprint eşleşti. Erken guards callback RELEASE_BLOCKED:int ile güvenle durdu. T932 hedefli59 PASS; lot snapshot manuel lock yerine date[]FK, syntax escalasyon rollback-only PASS; fullint/verify ve yeni negatifler sürüyor, bağımsız paket incelemesi açık.
+
+- 2026-10-13 T932 ilkfullint1942/1983PASS,19FAIL+22setup-unexecuted: mapped-onlyWHEN ile legacyctx/pending-trigger uyumu, ac04 sealed chain/isolatedscratch; source-documentbypass negatif test ekleniyor. STS eksik local adapter yerine son normalfresh compose seçildi. Operatorfixture tempalias üstfocused2/2PASS; source/config değişmedi. Bunlar son tam kabul kanıtı değildir.
+
+- 2026-10-13 T932: önceki kaynak fresh-compose fullint1992 PASS, verify3785 PASS; insert-order sonrası scoped215 PASS. Yeni bounded RR kaynak-parent yarışında iki COMMIT/iki source belge/+1 izlenmeyen onhand kanıtlandı; görünür parent BEFOREINSERT guard ve negatif iki-sıra testleri aktif. Son kaynak kabulü/bağımsız paket incelemesi henüz yok; canlıschema31.
+
+- 2026-10-13 T932 kaynak freeze eb28928cfb765feeffd1bc367b4954913850f52fd7ae3acee333283fd3b90466: yeni görünür-parent guard,10 dosya318 PASS27.65s, paket46 test/iki RR kaynak sırası/iki lot sırası; eski receiving28/reversal27/operations-schema44 dahil. Scoped eslint/check:all/diffcheck PASS, skip0. T933 ile birleşik fullverify/fullint ve bağımsız inceleme sonrası PR; prod0032 yok.
