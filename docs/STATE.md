@@ -1,42 +1,37 @@
 # Etkin WMS — güncel devam durumu
 
-Son salt okunur doğrulama: **13.10.2026 10:00 (canlı release/schema); hesap snapshot 09:21–09:25 Europe/Istanbul**.
+Son doğrulama: **13.10.2026 ~10:30 Europe/Istanbul** (GitHub run/PR metadata; canlı DB defteri 09:25 operatör çıktısı).
 Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yeniden dar kontrol yap.
 
 ## Doğrulanmış durum
 - Repo: https://github.com/shosgoren/EtkinWMS ; referans repo 2027-WMS-1 salt okunur.
-- Son incelenen main/live SHA: `decbbe03fe1192473e096a1feb60cf090ca1fcf2` (PR18 belge merge; uygulama kodu a6d2ef4 snapshot'ıyla aynı).
-- PR15 pilot zinciri + PR16 ürün kart türleri/birimler + PR17 MFA QR/rehber/SelectField main'de.
-- Aynı SHA'da verify/infra/secrets/deps/int/e2e/check-all/test-ac/check-pilot success.
-- GitHub deploy run38359525975 success; SSH release/current ve DB defteri ayrıca doğrulandı. Önceki başarısız run canlı durum değildir.
-- VPS: Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com .
-- Satış: https://etkinyazilim.com ; .com.tr ve www adresleri ana satış adresine yönlenir.
-- Canlı current: `/opt/etkinwms/releases/auto-decbbe03fe1192473e096a1feb60cf090ca1fcf2`.
-- Canlı web/worker/marketing imajı: `etkinwms:decbbe03fe1192473e096a1feb60cf090ca1fcf2`.
-- Beş servis çalışıyor: web, worker, marketing, Caddy proxy, VPS PostgreSQL18.
-- Gerçek DB: `etkinwms-postgres:5432/etkinwms`; public port yok, doğrulanan TLS.
-- Canlı migration defteri **0031 / 31 kayıt**; kaynak ağacında da **0031** var.
-- Deep health: status/db/queue/worker `ok`; bu iş akışlarının tamamının kabulü değildir.
-- Motive `motive`: ACTIVE owner/admin var; hedef yönetici parola ve MFA kurmuş.
-- Gerçek kullanıcıyla bu oturumda login/cihaz kabulü yeniden denenmedi; hazır varsayma.
-- Otomasyon main-only forced-command SSH; gerçek GitHub→VPS check run38276859152 geçti (12 Ekim).
-- Receiver'ın doğruladığı schema31 fingerprint: `d6b6b9d7fb725f66b773e7c4fa42df63cdf90db4fe94ee86bfb22e1e9f8488dd`.
-- Neon'dan VPS'ye restore/kesim doğrulandı; Neon runtime bağımlılığı yok. Kaynak silinmedi.
+- main = canlı: `5d7e7c62991db3b625f0926e46d7a5d9df6838e7` (PR19 belge). Uygulama kodu a6d2ef4 ile aynı.
+- deploy-vps run38362235031 success (07:24Z); receiver deep health sonrası current'ı değiştirir, hata olsa rollback eder.
+- Aynı SHA için önce `ci`, sonra `guards` callback'i gelir; ilk koşu RELEASE_BLOCKED ile düşüp ikincisi geçer (bilinen, zararsız).
+- PR15 pilot zinciri + PR16 kart türleri/standart birimler + PR17 MFA QR/rehber/SelectField + PR18/19 belgeler main'de.
+- VPS Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com ; satış https://etkinyazilim.com .
+- Beş servis: web, worker, marketing, Caddy proxy, PostgreSQL18 (`etkinwms-postgres`, public port yok, TLS verify-full).
+- Canlı migration defteri **0031 / 31**; approved schema `d6b6b9d7…88dd` (kesim ayrıntısı: [OPERATIONS](continuity/OPERATIONS.md#13-ekim-schema31-kesimi--gerçek-kayıt)).
+- Motive: ACTIVE owner/yönetici hesabı var; hedef yönetici 13 Ekim'de parola + MFA kurup giriş yaptı.
+- Gerçek cihaz (kamera/Epson/el terminali) kabulü yok; ürün iş akışı kabulü kullanıcıyla yapılmadı.
 
-## Kalan iş — öncelik sırası
-1. Yeni kullanıcı/ilk giriş durumunu yeniden kullanma: parola ve MFA zaten var. Eski INVALID_TOKEN / eksik-owner durumu çözülmüş olabilir; bu snapshot'ta yeni hesap açma gerekmez.
-2. Canlı schema31 geçişinin backup/restore/fallback kanıtını ilgili operatör kaydından doğrula; bu belge oturumu kesimi yapmadı. Yalnız approved hash değiştirme YASAK.
-3. Sonraki uygulama yayını exact imaj/digest/provenance ve zorunlu CI ister. Mevcut release health OK; kullanıcı iş akışı kabulü ayrıca yapılmalı.
-4. Motive üç depo, kartlar/birimler, giriş/transfer/üretim/sevkiyat ve ters kayıt; kamera ve Epson/etiket çıktısını gerçek cihazlarda doğrula. Gerçek cihaz kanıtı henüz bu teslimde yok.
-5. Otomatik DB yedeği, ayrı yerde şifreli kopya, restore tatbikatı ve RPO/RTO ölçümü: yapılandırma/başarı henüz doğrulanmadı.
-6. Mail teslimi ve parola kurtarma işletimi; mevcut MAIL_MODE=disabled. Abonelik/ödeme/hukuki metinler ticari SaaS kabulüyle ayrı iş.
+## Kullanıcı kararları (13 Ekim)
+- "Bana iş yaptırma": operatör adımı gerekiyorsa tek yapıştırmalık, idempotent komut; sır/bağlantı sohbete istenmez.
+- Kart türleri Logo ERP gibi: HM Hammadde, YM Yarı Mamul, MM Mamul, TM Ticari Mal; kod `HM-000001` (tireden sonra 6 hane). Ambalaj/Sarf yok.
+- Standart birimler hazır gelir (ADET, KG, GR, MT, CM, LT, M2, M3, KOLI, PALET); her birimin kendi barkodu olabilir.
+- Birim çevrimi "çok önemli" — doğru çalışmalı. Reçete sırası: hammadde → yarı mamul → mamul.
+- CI e2e için `paths-ignore`/paralelleştirme REDDEDİLDİ: zorunlu `e2e` raporlanmazsa PR kilitlenir; deploy kapısı e2e=success ister; G-11; kazanç ~2 dk.
+
+## Sıradaki işler — öncelik sırası
+1. **Yayında otomatik yedek + migration (onaylandı, ilk iş; T-916 taslak dal):** şema değişen yayında receiver `pg_dump -Fc` alsın, web/worker durdursun, migration sahibi rolüyle imzalı migrator imajını koşsun, approved-schema/state'i kendisi ilerletsin. Migration hiç uygulanmadan düşerse önceki imaj açılır; defter kısmen ilerlediyse eski imaj otomatik AÇILMAZ (her migration ayrı transaction) — servis durur, yedekten dönüş veya ileri onarım operatör kararıdır. VPS'e bir kerelik root kurulumu gerekir (migration rolü kimliği root600 dosyada; 13 Ekim kesiminde `postgres` sahipli kalan 3 tablo + 1 fonksiyonun sahibine iadesi). İmza/provenance kapıları korunur.
+2. **Üretim reçeteleri ve emirleri:** çok seviyeli HM→YM→MM reçete ekranı, üretim emri, tüketim/çıktı stok kaydı. Domain `packages/domain/src/operations/production.ts` + migration 0029/0030 hazır; UI `apps/web/app/t/[slug]/production/` asgari.
+3. **Ürün resmi:** kartta görsel yükleme/gösterim; `packages/storage` S3 adaptörü var, VPS'te nesne deposu (MinIO) kurulmadı.
+4. **SelectField yayılımı:** `@wms/ui` `SelectField` hazır ama ekranlarda kullanılmıyor; tüm seçim alanlarına uygula.
+5. **Birim çevrimi + birim barkodu sağlamlaştırma:** çevrim katsayısı doğrulama, stok/hareketlerde dönüşüm testleri, birim başına barkod UI.
+6. Gerçek cihaz kabulü (kamera, Epson etiket, el terminali); otomatik offsite DB yedeği + restore tatbikatı (RPO/RTO); mail teslimi (MAIL_MODE=disabled).
 
 ## Çakışma / yanlış devam önleme
-- Repo T-911 artık ürün kartı türü/birimlerdir; eski Cloud'un yayımlanmamış T911 renewal çalışması aynı ID değildir. Yeni kart için önce dosya ve PR taraması yap.
-- Cloud görevinde 12 Ekim kullanım limiti yüzünden duruş ve commit edilmemiş renewal kodu bildirildi. O çalışma main'e geçti varsayılmaz; bu oturum Cloud kodunu değiştirmedi.
-- Eski açık PR'ların bir kısmı PR15 zincirinde bulunuyor; aynı kodu tekrar merge/cherry-pick etme. `git merge-base --is-ancestor` ile kanıtla.
-- Sonraki AI önce bu 50 satırı, sonra yalnız gerekli kısa rehberi okusun.
-- Bu oturum sadece belge düzeni/readonly kontrol yaptı; canlı release/schema dış yayın akışında değişti. Hesap veya yayın korumaları bu oturumdan değiştirilmedi.
-
-## Son belge teslimi
-- T-914: eski görev kartları, toplu master ve tekrarlanan üç devir snapshot'ı ağaçtan kaldırıldı; önceki içerik decbbe03 Git snapshot'ında korunuyor. Başlangıç docs/README.md → continuity + STATE. Yeni task ID T-915+. Ürün/canlı/DB durumuna bu belge işi müdahale etmedi.
+- Eski açık PR'lar (#3 #4 #5 #6 #7 #10 #12 #13 #14) PR15/16/17 ile main'e geçti veya eskidi; yeniden merge/cherry-pick etme, `git merge-base --is-ancestor` ile kanıtla. Kapatılmaları kullanıcıya soruldu, yanıt yok.
+- Canlıya şema değiştiren her iş tek operatörle; iki AI aynı anda migration/approve yapmaz.
+- Yeni kart T-916+; dal adı `feat|fix/T-xxx-…` (scope bekçisi `claude/…` dalını reddeder).
+- Kod merge, deploy ve kullanıcı kabulü ayrı durumlardır; birinden diğerini varsayma.
