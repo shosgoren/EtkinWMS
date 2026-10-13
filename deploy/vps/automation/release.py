@@ -1,5 +1,10 @@
 #!/usr/bin/python3
-"""Root-owned, fixed-scope release receiver. No shell, migrations, or source extraction."""
+"""Root-owned, fixed-scope release receiver. No shell or source extraction.
+
+Schema changes (T-916): only when the signed archive's schema label differs from the approved one AND the
+operator installed the migration credential (migrate.env). Then: pg_dump backup -> stop web/worker ->
+signed migrator image runs `migrate.ts up` as the migration owner role -> schema approved -> normal rollout.
+"""
 import fcntl
 import hashlib
 import json
@@ -22,6 +27,11 @@ HEX40 = re.compile(r'[0-9a-f]{40}\Z')
 HEX64 = re.compile(r'[0-9a-f]{64}\Z')
 MAX_UPLOAD = 512 * 1024 * 1024
 BASELINE_SHA = '024a800bace33c2dc3df397d56fda7e449d1d9dc'
+IMAGES = ('etkinwms', 'etkinwms-migrate')
+KEEP_BACKUPS = 10
+DB_CONTAINER = 'etkinwms-postgres'
+DB_NETWORK = 'etkinwms-motive_default'
+DB_CA = '/opt/etkinwms/database/tls/ca.crt'
 
 
 def command_parts(text):
@@ -73,19 +83,24 @@ def validate_archive(path, sha, schema_hash):
         if manifest.size > 10000:
             raise ValueError('BAD_MANIFEST')
         entries = json.load(archive.extractfile(manifest))
-        if len(entries) != 1 or entries[0].get('RepoTags') != ['etkinwms:' + sha]:
+        tags = sorted(tag for entry in entries for tag in (entry.get('RepoTags') or []))
+        if len(entries) != len(IMAGES) or tags != sorted(name + ':' + sha for name in IMAGES) \
+                or any(len(entry.get('RepoTags') or []) != 1 for entry in entries):
             raise ValueError('IMAGE_TAG_REJECTED')
-        config = archive.getmember(entries[0]['Config'])
-        if config.size > 1024 * 1024:
-            raise ValueError('BAD_IMAGE_CONFIG')
-        data = json.load(archive.extractfile(config))['config']
-        if data.get('User') != 'node' or data.get('Labels', {}).get('org.opencontainers.image.revision') != sha:
-            raise ValueError('IMAGE_IDENTITY_REJECTED')
-        if data.get('Labels', {}).get('org.etkinwms.schema.sha256') != schema_hash:
-            raise ValueError('SIGNED_SCHEMA_MISMATCH')
+        for entry in entries:
+            config = archive.getmember(entry['Config'])
+            if config.size > 1024 * 1024:
+                raise ValueError('BAD_IMAGE_CONFIG')
+            data = json.load(archive.extractfile(config))['config']
+            if data.get('User') != 'node' or data.get('Labels', {}).get('org.opencontainers.image.revision') != sha:
+                raise ValueError('IMAGE_IDENTITY_REJECTED')
+            if data.get('Labels', {}).get('org.etkinwms.schema.sha256') != schema_hash:
+                raise ValueError('SIGNED_SCHEMA_MISMATCH')
 
 
 def run(args, **kwargs):
+    # stdin is the SSH upload stream; child processes never read it.
+    kwargs.setdefault('stdin', subprocess.DEVNULL)
     return subprocess.run(args, check=True, timeout=kwargs.pop('timeout', 300), **kwargs)
 
 
@@ -141,6 +156,48 @@ def verify_provenance(path, sha, archive_hash):
         raise ValueError('BUILD_ATTESTATION_REJECTED')
 
 
+def migrate_env():
+    return AUTOMATION / 'migrate.env'
+
+
+def backup_database(sha):
+    backups = BASE / 'backups'
+    backups.mkdir(mode=0o700, exist_ok=True)
+    backups.chmod(0o700)
+    path = backups / ('pre-' + sha + '-' + str(int(time.time())) + '.dump')
+    with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), 'wb') as target:
+        run(['docker', 'exec', '--user', 'postgres', DB_CONTAINER, 'pg_dump', '-Fc', '-d', 'etkinwms'],
+            stdout=target, stderr=subprocess.DEVNULL, timeout=900)
+    with path.open('rb') as dump:
+        if dump.read(5) != b'PGDMP':
+            raise ValueError('BACKUP_INVALID')
+    dumps = sorted(backups.glob('pre-*.dump'), key=lambda p: p.stat().st_mtime)
+    for old in dumps[:-KEEP_BACKUPS]:
+        old.unlink()
+    return path
+
+
+def migrate_database(sha):
+    # Credential stays in the root-only env file; never in argv or logs. Output is suppressed (may echo data).
+    run(['docker', 'run', '--rm', '--network', DB_NETWORK, '--env-file', str(migrate_env()),
+         '-e', 'NODE_EXTRA_CA_CERTS=/run/etkinwms-db-ca.crt', '-e', 'WMS_ENV=production', '-e', 'DEMO_MODE=0',
+         '-v', DB_CA + ':/run/etkinwms-db-ca.crt:ro', '--read-only', '--tmpfs', '/tmp',
+         '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--memory', '512m',
+         'etkinwms-migrate:' + sha, 'node', 'src/migrate.ts', 'up'],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=900)
+
+
+def approve_schema(schema_hash):
+    approved = AUTOMATION / 'approved-schema.sha256'
+    backup = AUTOMATION / ('approved-schema.sha256.bak-' + str(int(time.time())))
+    backup.write_text(approved.read_text())
+    backup.chmod(0o600)
+    temporary = AUTOMATION / 'approved-schema.sha256.new'
+    temporary.write_text(schema_hash + '\n')
+    temporary.chmod(0o600)
+    temporary.replace(approved)
+
+
 def set_current(release):
     link = BASE / 'current.next'
     if link.is_symlink():
@@ -151,14 +208,17 @@ def set_current(release):
 
 def deploy(sha, archive_hash, schema_hash):
     approved = (AUTOMATION / 'approved-schema.sha256').read_text().strip()
-    if not HEX64.fullmatch(approved) or schema_hash != approved:
+    if not HEX64.fullmatch(approved):
+        raise ValueError('SCHEMA_OPERATOR_APPROVAL_REQUIRED')
+    migrate = schema_hash != approved
+    if migrate and not migrate_env().is_file():
         raise ValueError('SCHEMA_OPERATOR_APPROVAL_REQUIRED')
     assert_ci(sha)
     previous = json.loads((AUTOMATION / 'state.json').read_text())
-    if previous.get('schema') != schema_hash:
+    if previous.get('schema') != approved:
         raise ValueError('ROLLBACK_SCHEMA_INCOMPATIBLE')
     assert_descendant(sha, previous.get('sha', BASELINE_SHA))
-    if previous.get('sha') == sha or previous['tag'] == sha:
+    if not migrate and (previous.get('sha') == sha or previous['tag'] == sha):
         if not healthy():
             raise ValueError('EXISTING_RELEASE_UNHEALTHY')
         print(json.dumps({'already_deployed': sha, 'health': 'ok'}))
@@ -179,6 +239,20 @@ def deploy(sha, archive_hash, schema_hash):
     current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash}
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
+    if migrate:
+        backup_database(sha)
+        old_args, old_env = compose(previous)
+        run(old_args + ['stop', 'web', 'worker'], env=old_env, stdout=subprocess.DEVNULL)
+        try:
+            migrate_database(sha)
+        except Exception:
+            # Schema stays unapproved; the previous image restarts. A partial ledger resumes on the next attempt.
+            run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
+            raise ValueError('MIGRATION_FAILED_PREVIOUS_RESTARTED') from None
+        approve_schema(schema_hash)
+        # The DB is now at the new schema; the previous image remains the rollback target on it.
+        previous = dict(previous, schema=schema_hash)
+        write_state(previous)
     try:
         run(args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=env)
         for _ in range(18):
@@ -187,7 +261,8 @@ def deploy(sha, archive_hash, schema_hash):
             time.sleep(5)
         else:
             raise ValueError('DEEP_HEALTH_FAILED')
-        # The approved schema remains identical, so previous deployment is schema-compatible.
+        # Without migration the schema is unchanged. After a migration the previous image is a best-effort
+        # rollback on the new schema; the pre-migration dump in /opt/etkinwms/backups is the recovery point.
         set_current(release)
         write_state(current)
     except Exception:
@@ -210,6 +285,7 @@ def main():
         if parts == ['check']:
             print(json.dumps({'scope': REPO, 'health': 'ok' if healthy() else 'failed',
                               'schema': (AUTOMATION / 'approved-schema.sha256').read_text().strip(),
+                              'auto_migrate': migrate_env().is_file(),
                               'release': json.loads((AUTOMATION / 'state.json').read_text())['tag']}))
             if not healthy():
                 raise ValueError('HEALTH_FAILED')

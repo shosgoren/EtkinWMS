@@ -94,7 +94,9 @@ jobs:
           docker build --platform linux/amd64 -t "etkinwms-build:$RELEASE_SHA" .
           printf 'FROM etkinwms-build:%s\nCOPY marketing /marketing\n' "$RELEASE_SHA" > "$RUNNER_TEMP/Release.Dockerfile"
           docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$RELEASE_SHA" --label "org.etkinwms.schema.sha256=$schema_hash" -f "$RUNNER_TEMP/Release.Dockerfile" -t "etkinwms:$RELEASE_SHA" .
-          docker save "etkinwms:$RELEASE_SHA" | gzip > "$RUNNER_TEMP/image.tar.gz"
+          # T-916: migration aracı ayrı imaj; aynı imzalı arşivde, aynı revision/schema etiketleriyle.
+          docker build --platform linux/amd64 --target migrate --label "org.opencontainers.image.revision=$RELEASE_SHA" --label "org.etkinwms.schema.sha256=$schema_hash" -t "etkinwms-migrate:$RELEASE_SHA" .
+          docker save "etkinwms:$RELEASE_SHA" "etkinwms-migrate:$RELEASE_SHA" | gzip > "$RUNNER_TEMP/image.tar.gz"
       - name: Record bundle identity
         id: bundle
         run: |
