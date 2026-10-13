@@ -149,3 +149,9 @@
 - 2026-10-13 T932 kaynak freeze eb28928cfb765feeffd1bc367b4954913850f52fd7ae3acee333283fd3b90466: yeni görünür-parent guard,10 dosya318 PASS27.65s, paket46 test/iki RR kaynak sırası/iki lot sırası; eski receiving28/reversal27/operations-schema44 dahil. Scoped eslint/check:all/diffcheck PASS, skip0. T933 ile birleşik fullverify/fullint ve bağımsız inceleme sonrası PR; prod0032 yok.
 
 - 2026-10-13 T933: prepare/post/yetkili QR sorgusu hazır; fresh-compose15 integration ve13 unit PASS, root/domain typecheck+eslint PASS. 5×200=>5kalıcıkimlik/1000KG, draftstock0, canonical/concurrent replay tek etki, gerçek QC/lot/scope/MFA/count-lock/archived kaynak rollback. UI/etiket/hareket açılmadı; T932+T933 finalpaket inceleme ve tüm kapılar bekler.
+
+- 2026-10-13 int/package-receiving f9948aad: bağımsız security BLOCKER0/MAJOR1, eski HU binding/RR generic ledger yarışı gerçek scratchta iki COMMIT ve DRAFT nonoriginstock3 ile kanıtlandı. Normal prepare eskiHU kabul etmiyor; DB garanti düzeltilecek, paket merge/prod0032 yok. Fullverify3798 PASS; finalallgates henüz yok.
+
+- 2026-10-13 f9948 bağımsız QA67/67 PASS (61 mevcut+6 bağımsız, final ledger fault rollback/concurrentpost/identity/LOT/foreignQR), skip0; private test helper text/UUID hatası düzeltildi, product source değişmedi. Security MAJOR geçerli; constructor-only HU binding reciprocalFK tasarım probu6 koşulda legacyret/newpaircommit/staleRRret kanıtladı. Gerçek0032 uygulama ve yeniSHA review gereklidir.
+
+- 2026-10-13 f9948 tam int108 dosya/2011PASS/1FAIL (2012),499.60s; tek hata tasks public export exact-list yeni5yetkili paket girişini beklemiyor. completeTask/createTasks private deny assertions aynen korunacak. Bu koşu PASS değildir; T934 binding düzeltmesi ve explicit export expectation sonrası finalsource/gates tekrar gerekir.
