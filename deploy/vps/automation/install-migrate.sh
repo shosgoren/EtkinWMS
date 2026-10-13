@@ -83,6 +83,12 @@ FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.roleid
 WHERE :'owner' NOT IN (:'target', 'postgres') AND r.rolname IN ('wms_identity_probe', 'wms_ops')
   AND m.member = (SELECT oid FROM pg_roles WHERE rolname = :'owner')
 \gexec
+-- 0001 revokes CREATE on public from PUBLIC and public stays owned by pg_database_owner: the migration role needs
+-- explicit USAGE/CREATE on every application schema it does not own after the transfer.
+SELECT format('GRANT USAGE, CREATE ON SCHEMA %I TO %I', n.nspname, :'target')
+FROM pg_namespace n WHERE $APP_SCHEMAS AND n.oid NOT IN (SELECT objid FROM ext)
+  AND n.nspowner <> (SELECT oid FROM pg_roles WHERE rolname = :'target')
+\gexec
 DO \$\$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
              WHERE $APP_SCHEMAS AND pg_get_userbyid(c.relowner) = 'postgres' AND c.oid NOT IN (SELECT objid FROM ext))
@@ -92,6 +98,7 @@ DO \$\$ BEGIN
        SELECT 1 FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.roleid
        WHERE r.rolname IN ('wms_identity_probe', 'wms_ops') AND m.member = '$OWNER'::regrole)
   THEN RAISE EXCEPTION 'old owner still member of probe/ops'; END IF;
+  IF NOT has_schema_privilege('$TARGET', 'public', 'CREATE') THEN RAISE EXCEPTION 'target lacks CREATE on public'; END IF;
 END \$\$;
 COMMIT;
 SQL
