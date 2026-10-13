@@ -144,3 +144,6 @@ export {
 export { transferBetweenWarehouses, type WarehouseTransferInput } from "./warehouse-transfer.ts";
 export { scaleRecipeQuantity, createProductionRecipe, getProductionRecipe, listProductionRecipes, produceFromRecipe, type CreateRecipeInput, type ProduceInput } from "./production.ts";
 export { listShippingOrders, getShippingOrder, previewShippingPick } from "./shipping-queries.ts";
+// Physical package receipt commands and authorized metadata (T-933).
+export { preparePackageReceipt, postPackageReceipt, type PreparePackageReceiptInput, type PostPackageReceiptInput } from "./package-receiving.ts";
+export { getPackageReceipt, getReceiptPackage, resolvePackageQr, type PackageReceiptView, type ReceiptPackageView } from "./package-receiving-queries.ts";
