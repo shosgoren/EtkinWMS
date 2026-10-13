@@ -1597,7 +1597,8 @@
         "decoder": "Okuyucu yüklenemedi. Bağlantını kontrol et, sonra Tekrar dene.",
         "failed": "Kamera açılamadı. Tekrar dene ya da barkodu elle gir."
       }
-    }
+    },
+    "packageEntry": "Paket kabulü"
   },
   "import": {
     "title": "Ürün ve stok içe aktar",
@@ -2110,5 +2111,50 @@
     "posted": "Son 50 sevk belgesi",
     "nextTasks": "Sonraki toplama görevleri",
     "nextStaged": "Sonraki hazır satırlar"
+  },
+  "packageReceiving": {
+    "title": "Paket kabulü",
+    "locked": "Paket kabulü için görüntüleme, oluşturma ve stok kabul yetkisi gerekir.",
+    "loadError": "Taslak açılamadı. Yetkiyi ve belgeyi kontrol edin.",
+    "product": "Ürün",
+    "packages": "Paketler",
+    "review": "Kontrol",
+    "labels": "Etiketleri aç",
+    "quantity": "Paket miktarı",
+    "lot": "Lot kodu",
+    "produced": "Üretim tarihi",
+    "expires": "Son kullanma tarihi",
+    "scanDropped": "Okuma beklerken atlandı; tekrar okutun.",
+    "search": "Ürün ara",
+    "scan": "Barkodu okut",
+    "serial": "Seri numaralı ürün bu akışta desteklenmiyor. Lot veya takipsiz ürün seçin.",
+    "next": "Paketlere geç",
+    "warehouse": "Depo",
+    "location": "Kabul lokasyonu",
+    "kind": "Paket türü",
+    "barrel": "Varil",
+    "box": "Koli",
+    "unit": "Miktar birimi",
+    "choose": "Seçin",
+    "noWarehouse": "Uygun depo yok. Yetkili kişiden depo erişimini kontrol etmesini isteyin.",
+    "noLocation": "Kabul lokasyonu yok. Bu depoda aktif RECEIVING lokasyonu tanımlayın.",
+    "count": "Paket adedi (1–200)",
+    "different": "Miktarlar farklı",
+    "equal": "Eşit miktar",
+    "each": "Her paket",
+    "packageNo": "Paket {n}",
+    "invalid": "Miktar pozitif olmalı; 1–200 paket, lot ve tarihleri kontrol edin. Ondalık için nokta kullanın.",
+    "back": "Geri",
+    "posted": "Kabul edildi",
+    "draftLocked": "Taslak / gönderim korunuyor. Düzenleme ve iptal henüz desteklenmiyor. Aynı işlemle devam edin.",
+    "countSummary": "{n} paket",
+    "initialQuantity": "Miktarlar kabul anına aittir; kalan stok değildir.",
+    "quarantine": "Karantina — kalite kontrolü bekliyor",
+    "edit": "Düzelt",
+    "retry": "Kabulü tekrar dene",
+    "accept": "Kabul et",
+    "summary": "Kabul özeti",
+    "chooseProduct": "Ürün seçin",
+    "optionalMetadata": "Lot / tarih (isteğe bağlı)"
   }
 }
