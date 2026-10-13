@@ -698,7 +698,10 @@ describe("T-301 belge kaynak bağlantısı ve tenant_settings.receiving_qc_enabl
     expectFail(await asApp(A.tenantId, (q) => q(insDoc, [A.tenantId, randomUUID(), A.warehouseId, randomUUID(), null, randomUUID()])), CHECK_VIOLATION, "kimlik var tür yok");
     expectFail(await asApp(A.tenantId, (q) => q(insDoc, [A.tenantId, randomUUID(), A.warehouseId, randomUUID(), "PURCHASE", randomUUID()])), CHECK_VIOLATION, "geçersiz tür");
     for (const kind of ["INBOUND_RECEIPT", "SALES_ORDER", "CUSTOMER_RETURN", "COUNT_SESSION", "TASK"]) {
-      expectOk(await asApp(A.tenantId, (q) => q(insDoc, [A.tenantId, randomUUID(), A.warehouseId, randomUUID(), kind, randomUUID()])), kind);
+      expectOk(await asApp(A.tenantId, async (q) => {
+        const sourceId = kind === "INBOUND_RECEIPT" ? (await mkReceipt(q,A)).receiptId : randomUUID();
+        return q(insDoc, [A.tenantId, randomUUID(), A.warehouseId, randomUUID(), kind, sourceId]);
+      }), kind);
     }
   });
 

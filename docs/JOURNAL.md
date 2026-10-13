@@ -137,3 +137,33 @@
 - 2026-10-13 T-931 hosted ilk E2E86/88 streaming çift seçici; görünür tek parent/alan ve gerçek kart geometrisine test kapsamı daraltıldı, ek cardinality assertionları eklendi; eşik/veri/negatif kontroller korunur. Yerel4 cihaz+son2 receiving PASS, ESLint/check:all PASS; yeni CI gerekir.
 
 - 2026-10-13 T-931: b1f0afa hosted verify DOM tipi + mobile dialog kırmızı; structural tip root tsc PASS, client-ready dar koruma. Yerel desktop stock PASS; mobile RATE_LIMITED iki deneme sonrası durdu, bağımsız QA ortak pilot-user kovasını teşhis etti; gerçek signup/MFA ile ayrı cihaz fikstürleri, tek eskalasyon koşusu2/2 PASS55.4s, bağımsız QA0. Lint/unit3785 PASS; generated Git dışı tip kopyaları taşınarak workspace typecheck PASS; check:all PASS. Hosted son kapılar bekleniyor, merge/yayın yok. VPS16:38UTC dump→izole restore PASS,0031/31 ve ledger/balance fark0; scratch kaldırıldı. Offsite/PITR/iş akışı kabulü açık.
+
+- 2026-10-13 T-931: PR25 exact-head3dc57e41 dokuz kontrol PASS, ci38441189572/guards38441278515; merge531e9034. main CI/yayın henüz bekleniyor. T932 bağımlılığı sağlandı; yeni0032 immutable paket şeması dalı açıldı, hiçbir canlı migration uygulanmadı.
+
+- 2026-10-13 21:11 T931 main531e9034: ci38442505462/guards38442505492 + deploy38443949741 SUCCESS, VPS healthok/release exact/schema31 fingerprint eşleşti. Erken guards callback RELEASE_BLOCKED:int ile güvenle durdu. T932 hedefli59 PASS; lot snapshot manuel lock yerine date[]FK, syntax escalasyon rollback-only PASS; fullint/verify ve yeni negatifler sürüyor, bağımsız paket incelemesi açık.
+
+- 2026-10-13 T932 ilkfullint1942/1983PASS,19FAIL+22setup-unexecuted: mapped-onlyWHEN ile legacyctx/pending-trigger uyumu, ac04 sealed chain/isolatedscratch; source-documentbypass negatif test ekleniyor. STS eksik local adapter yerine son normalfresh compose seçildi. Operatorfixture tempalias üstfocused2/2PASS; source/config değişmedi. Bunlar son tam kabul kanıtı değildir.
+
+- 2026-10-13 T932: önceki kaynak fresh-compose fullint1992 PASS, verify3785 PASS; insert-order sonrası scoped215 PASS. Yeni bounded RR kaynak-parent yarışında iki COMMIT/iki source belge/+1 izlenmeyen onhand kanıtlandı; görünür parent BEFOREINSERT guard ve negatif iki-sıra testleri aktif. Son kaynak kabulü/bağımsız paket incelemesi henüz yok; canlıschema31.
+
+- 2026-10-13 T932 kaynak freeze eb28928cfb765feeffd1bc367b4954913850f52fd7ae3acee333283fd3b90466: yeni görünür-parent guard,10 dosya318 PASS27.65s, paket46 test/iki RR kaynak sırası/iki lot sırası; eski receiving28/reversal27/operations-schema44 dahil. Scoped eslint/check:all/diffcheck PASS, skip0. T933 ile birleşik fullverify/fullint ve bağımsız inceleme sonrası PR; prod0032 yok.
+
+- 2026-10-13 T933: prepare/post/yetkili QR sorgusu hazır; fresh-compose15 integration ve13 unit PASS, root/domain typecheck+eslint PASS. 5×200=>5kalıcıkimlik/1000KG, draftstock0, canonical/concurrent replay tek etki, gerçek QC/lot/scope/MFA/count-lock/archived kaynak rollback. UI/etiket/hareket açılmadı; T932+T933 finalpaket inceleme ve tüm kapılar bekler.
+
+- 2026-10-13 int/package-receiving f9948aad: bağımsız security BLOCKER0/MAJOR1, eski HU binding/RR generic ledger yarışı gerçek scratchta iki COMMIT ve DRAFT nonoriginstock3 ile kanıtlandı. Normal prepare eskiHU kabul etmiyor; DB garanti düzeltilecek, paket merge/prod0032 yok. Fullverify3798 PASS; finalallgates henüz yok.
+
+- 2026-10-13 f9948 bağımsız QA67/67 PASS (61 mevcut+6 bağımsız, final ledger fault rollback/concurrentpost/identity/LOT/foreignQR), skip0; private test helper text/UUID hatası düzeltildi, product source değişmedi. Security MAJOR geçerli; constructor-only HU binding reciprocalFK tasarım probu6 koşulda legacyret/newpaircommit/staleRRret kanıtladı. Gerçek0032 uygulama ve yeniSHA review gereklidir.
+
+- 2026-10-13 f9948 tam int108 dosya/2011PASS/1FAIL (2012),499.60s; tek hata tasks public export exact-list yeni5yetkili paket girişini beklemiyor. completeTask/createTasks private deny assertions aynen korunacak. Bu koşu PASS değildir; T934 binding düzeltmesi ve explicit export expectation sonrası finalsource/gates tekrar gerekir.
+
+- 2026-10-13 T934 şema ajanı provider güvenlik filtresiyle durdu; partial kaynak korunuyor, tamamlandı/testPASS sayılmadı. Normal iş-şeması/FK/Drizzle ve mevcut mal kabul regresyonları backend göreviyle devam; yeni saldırı probu istenmedi, canlı erişimi yok.
+
+- 2026-10-13 T934 kaynak freeze: HU constructor-only marker/composite+deferredreciprocalFK/T933 INSERT bind düzeltmesi; final6 dosya146PASS62.69s, fullverify lint/typecheck/unit3798 PASS, scopedlint/roottsc/diffcheckPASS. İlk145/146 ordinaryTRUNCATE yeniFK0A000 önceliği: eski guardedCASCADE23514 ve her iki ret sonrası kimlikkoruma assertions eklendi; hiçbir grant/engine/config gevşetilmedi. Independent newSHA review/protectedapproval/fullgates hâlâ açık.
+
+- 2026-10-13 3af124security0/0/0 +independentQA79PASS; iki gerçekFKvisibility senaryosuPASS. Default200paket functionalSUCCESS ama prepare30.706s/post46.353s toplam77.554s; ilkouter30sFAIL nedenDBtimeout değildir, bounded120sobserver sonucu yakaladı. T934 dar packageassert SQL aggregate optimizasyonu eklendi, kaynakraporu yeniSHA için geçerli sayılmaz.
+
+- 2026-10-13 T934SQL aggregate WIP: bounded testsyntax iki parsehata sonrası tekupperrepair(roottsc0); thenruntime153/154 and77/78 (200outer30sFAIL iki optimize deneme),61schemaPASS/5pack~39msprepare/~51mspost. Author durdu; tekupperEXPLAIN performansdiagnosis, no timeout/GUC/cache/trigger change, WIPfreeze/merge/prod yok.
+
+- 2026-10-13 T934 tekupperperformance repair: gerçekEXPLAIN JITetkisi yok, planner1estimate/200actual lot/location40600calls; MATERIALIZED package_lines→origins sınırı query77.853→17.992ms. Sonfresh78/78PASS(61schema17command), default2006688.2/14542.5ms ve fulltest22770ms<30s;5paket37.3/34.4ms. No timeout/GUC/trigger/cache/enginechange, scratchcleaned. YeniSHA bağımsız review ve tamgates bekler.
+
+- 2026-10-14 T932+T933+T934 PR26 MERGED→int49de679 (kaynak34e0334); aynı Git tree bc57cdec. Final bağımsızsecurity0/0/0 + QA86/86PASS/skip0 (gerçekKG/GR çevrimi dahil), ci38465167535 ve guards38465559418 dokuzkontrolSUCCESS. Rapor: PR26#issuecomment-6154851235. Main/live531e9034/schema31; yeni UI/etiket/hareket yok, main paket PR/yayın sırada.
