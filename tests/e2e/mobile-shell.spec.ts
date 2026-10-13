@@ -560,6 +560,7 @@ async function landscapePhoneChecks(browser: Browser, source: Page, tag: string)
 
 // T-928: the default flow is the live easy design, separate from retained cockpit geometry.
 test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve Kokpit geçişi", async ({ page }) => {
+  await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
   const routes = { receive: "/field/receive", transfer: "/stock/documents?new=TRANSFER", production: "/production", shipping: "/shipping" };
@@ -599,6 +600,7 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
 });
 
 test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok okuma açık", async ({ page }) => {
+  await page.goto("/");
   await enterDemoReal(page, "Salt okunur");
   await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
   await page.goto("/t/demo");
