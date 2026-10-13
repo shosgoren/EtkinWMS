@@ -387,7 +387,7 @@ export const receiptPackages = pgTable("receipt_packages", {
   packageDates: date("package_dates", { mode: "string" }).array().notNull().generatedAlwaysAs(sql`ARRAY[produced_on,expires_on]`),
   createdAt: timestamptz("created_at").notNull().defaultNow(),
 }, (t) => [
-  unique().on(t.tenantId,t.id), unique().on(t.tenantId,t.receiptLineId),
+  unique().on(t.tenantId,t.id), unique("receipt_packages_hu_receipt_key").on(t.tenantId,t.id,t.receiptId), unique().on(t.tenantId,t.receiptLineId),
   unique().on(t.tenantId,t.documentLineId), unique().on(t.tenantId,t.receiptId,t.packageNo),
   index("receipt_packages_tenant_document_idx").on(t.tenantId,t.documentId),
   check("receipt_packages_package_no_check",sql`${t.packageNo} BETWEEN 1 AND 200`),

@@ -135,4 +135,23 @@ describe("T-933 persisted package prepare/post, scratch DB runtime roles",()=> {
     expect((await q("SELECT count(*)::int AS n FROM public.stock_ledger WHERE document_id=$1",[d.documentId]))[0]?.n).toBe(0);
   });
 
+  for(const size of [5,200])it(`T934 default command batch ${size} preserves identities, totals and replay`,async()=> {
+    const key=id(),start=performance.now();
+    const drafted=await preparePackageReceipt(params(key),input({packages:{mode:"equal",count:size,quantity:"200"}}));
+    const prepareMs=performance.now()-start,documentId=drafted.documentId as string;
+    console.info(`[T934 batch ${size}] prepared=${prepareMs.toFixed(1)}ms`);
+    const d=await getPackageReceipt(params(),{documentId});expect(d.packages).toHaveLength(size);
+    for(const k of ["id","receiptLineId","documentLineId"] as const)expect(new Set(d.packages.map(p=>p[k])).size).toBe(size);
+    expect(d.documentStatus).toBe("DRAFT");expect(d.receiptStatus).toBe("DRAFT");
+    expect((await q("SELECT count(*)::int AS n FROM public.stock_dimensions WHERE handling_unit_id=ANY($1::uuid[])",[d.packages.map(p=>p.id)]))[0]?.n).toBe(0);
+    expect((await preparePackageReceipt(params(key),input({packages:{mode:"explicit",packages:Array.from({length:size},()=>({quantity:"200.000000"}))}})))).toMatchObject({documentId,replayed:true});
+    const postKey=id(),postStart=performance.now(),posted=await postPackageReceipt(params(postKey),{documentId,expectedVersion:1}),postMs=performance.now()-postStart;
+    expect(posted.status).toBe("POSTED");expect((await postPackageReceipt(params(postKey),{documentId,expectedVersion:1}))).toMatchObject({documentId,replayed:true,documentNumber:posted.documentNumber});
+    const final=await getPackageReceipt(params(),{documentId});expect(final.packages.map(p=>p.id)).toEqual(d.packages.map(p=>p.id));expect(final.documentStatus).toBe("POSTED");expect(final.receiptStatus).toBe("CLOSED");
+    expect((await q("SELECT count(*)::int AS n,sum(quantity)::text AS total FROM public.stock_ledger WHERE document_id=$1",[documentId]))[0]).toEqual({n:size,total:`${size*200}.000000`});
+    expect((await q("SELECT count(*)::int AS n,sum(b.quantity)::text AS total FROM public.stock_dimensions s JOIN public.stock_balances b ON b.tenant_id=s.tenant_id AND b.stock_dimension_id=s.id WHERE s.handling_unit_id=ANY($1::uuid[])",[d.packages.map(p=>p.id)]))[0]).toEqual({n:size,total:`${size*200}.000000`});
+    expect((await q("SELECT count(*)::int AS n FROM public.inbound_receipt_lines WHERE receipt_id=$1 AND received_quantity=expected_quantity AND damaged_quantity=0",[d.receiptId]))[0]?.n).toBe(size);
+    console.info(`[T934 batch ${size}] prepare=${prepareMs.toFixed(1)}ms post=${postMs.toFixed(1)}ms`);
+  });
+
 });

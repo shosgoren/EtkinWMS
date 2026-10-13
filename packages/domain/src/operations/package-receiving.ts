@@ -101,7 +101,7 @@ export async function preparePackageReceipt(params: StockDocCallParams, input: P
     if (type[0] === undefined) throw new AppError("INTERNAL");
     const date = await tenantToday(tx,t), receiptId = randomUUID(), documentId = randomUUID();
     const allocated = rows.map((row) => ({ ...row, id: randomUUID(), receiptLineId: randomUUID(), documentLineId: randomUUID() }));
-    for (const row of allocated) await tx.execute(sql`INSERT INTO public.handling_units(tenant_id,id,kind,code) VALUES(${t}::uuid,${row.id}::uuid,${value.kind},${row.id})`);
+    for (const row of allocated) await tx.execute(sql`INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES(${t}::uuid,${row.id}::uuid,${value.kind},${row.id},${receiptId}::uuid)`);
     // Seal metadata first: deferred parent FKs allow this order, while the immediate lot snapshot FK
     // acquires its internal key lock before the final sequence lock. No manual lot lock is added.
     for (const [i,row] of allocated.entries()) {

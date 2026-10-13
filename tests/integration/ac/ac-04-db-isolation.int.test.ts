@@ -215,7 +215,7 @@ beforeAll(async () => {
     await admin.query("BEGIN");
     try {
       await admin.query("SELECT set_config('app.current_tenant_id',$1,true)",[w.tenantId]);
-      await admin.query("INSERT INTO public.handling_units(tenant_id,id,kind,code) VALUES($1,$2,'VARIL',$3)",[w.tenantId,hu,hu]);
+      await admin.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES($1,$2,'VARIL',$3,$4)",[w.tenantId,hu,hu,receipt]);
       await admin.query("INSERT INTO public.inbound_receipts(tenant_id,id,warehouse_id,number,created_by,package_document_id) VALUES($1,$2,$3,$4,$5,$6)",[w.tenantId,receipt,w.warehouseId,receipt,w.ownerUserId,document]);
       await admin.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by,source_kind,source_id) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-13',$4,'INBOUND_RECEIPT',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[w.tenantId,document,w.warehouseId,w.ownerUserId,receipt]);
       await admin.query("INSERT INTO public.inbound_receipt_lines(tenant_id,id,receipt_id,line_no,item_id,unit_id,conversion_factor,expected_quantity) VALUES($1,$2,$3,1,$4,$5,1,1)",[w.tenantId,receiptLine,receipt,w.itemNoneId,w.unitId]);

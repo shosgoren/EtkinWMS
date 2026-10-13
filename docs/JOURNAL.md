@@ -155,3 +155,13 @@
 - 2026-10-13 f9948 bağımsız QA67/67 PASS (61 mevcut+6 bağımsız, final ledger fault rollback/concurrentpost/identity/LOT/foreignQR), skip0; private test helper text/UUID hatası düzeltildi, product source değişmedi. Security MAJOR geçerli; constructor-only HU binding reciprocalFK tasarım probu6 koşulda legacyret/newpaircommit/staleRRret kanıtladı. Gerçek0032 uygulama ve yeniSHA review gereklidir.
 
 - 2026-10-13 f9948 tam int108 dosya/2011PASS/1FAIL (2012),499.60s; tek hata tasks public export exact-list yeni5yetkili paket girişini beklemiyor. completeTask/createTasks private deny assertions aynen korunacak. Bu koşu PASS değildir; T934 binding düzeltmesi ve explicit export expectation sonrası finalsource/gates tekrar gerekir.
+
+- 2026-10-13 T934 şema ajanı provider güvenlik filtresiyle durdu; partial kaynak korunuyor, tamamlandı/testPASS sayılmadı. Normal iş-şeması/FK/Drizzle ve mevcut mal kabul regresyonları backend göreviyle devam; yeni saldırı probu istenmedi, canlı erişimi yok.
+
+- 2026-10-13 T934 kaynak freeze: HU constructor-only marker/composite+deferredreciprocalFK/T933 INSERT bind düzeltmesi; final6 dosya146PASS62.69s, fullverify lint/typecheck/unit3798 PASS, scopedlint/roottsc/diffcheckPASS. İlk145/146 ordinaryTRUNCATE yeniFK0A000 önceliği: eski guardedCASCADE23514 ve her iki ret sonrası kimlikkoruma assertions eklendi; hiçbir grant/engine/config gevşetilmedi. Independent newSHA review/protectedapproval/fullgates hâlâ açık.
+
+- 2026-10-13 3af124security0/0/0 +independentQA79PASS; iki gerçekFKvisibility senaryosuPASS. Default200paket functionalSUCCESS ama prepare30.706s/post46.353s toplam77.554s; ilkouter30sFAIL nedenDBtimeout değildir, bounded120sobserver sonucu yakaladı. T934 dar packageassert SQL aggregate optimizasyonu eklendi, kaynakraporu yeniSHA için geçerli sayılmaz.
+
+- 2026-10-13 T934SQL aggregate WIP: bounded testsyntax iki parsehata sonrası tekupperrepair(roottsc0); thenruntime153/154 and77/78 (200outer30sFAIL iki optimize deneme),61schemaPASS/5pack~39msprepare/~51mspost. Author durdu; tekupperEXPLAIN performansdiagnosis, no timeout/GUC/cache/trigger change, WIPfreeze/merge/prod yok.
+
+- 2026-10-13 T934 tekupperperformance repair: gerçekEXPLAIN JITetkisi yok, planner1estimate/200actual lot/location40600calls; MATERIALIZED package_lines→origins sınırı query77.853→17.992ms. Sonfresh78/78PASS(61schema17command), default2006688.2/14542.5ms ve fulltest22770ms<30s;5paket37.3/34.4ms. No timeout/GUC/trigger/cache/enginechange, scratchcleaned. YeniSHA bağımsız review ve tamgates bekler.
