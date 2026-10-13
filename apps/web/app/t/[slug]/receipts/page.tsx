@@ -9,6 +9,7 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { listInboundReceipts, type ReceiptCursor } from "@wms/domain/operations";
 import { listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
+import { packageReceivingEnabled } from "../../../../lib/package-receiving-config.ts";
 import { ReceiptsView } from "./receipt-form.tsx";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
           {t("backHome")}
         </Link>
       </header>
+      {packageReceivingEnabled() && hasPermission(roles, "stock.view") && hasPermission(roles, "document.create") && hasPermission(roles, "stock.post") ? <Link href={`${returnTo}/packages`} className="inline-flex min-h-14 items-center rounded-control bg-accent px-4 font-bold text-on-accent">{t("packageEntry")}</Link> : null}
       <ReceiptsView
         slug={slug}
         receipts={page.items}

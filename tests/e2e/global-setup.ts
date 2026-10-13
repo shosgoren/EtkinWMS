@@ -150,10 +150,12 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   env.BETTER_AUTH_SECRET ||= randomBytes(32).toString("hex");
   if (!env.QUEUE_SEAL_KEY || env.QUEUE_SEAL_KEY === PLACEHOLDER_SEAL) env.QUEUE_SEAL_KEY = randomBytes(32).toString("hex");
   assertLoopbackDatabase(env);
+  // T-938: local, loopback-asserted web subprocesses only. Remote early return above never enables this flag.
+  const packageWebEnv = { ...env, PACKAGE_RECEIVING_ENABLED: "true" };
 
   run("pnpm", ["db:migrate"], env, "migrate.log");
   run("pnpm", ["--filter", "@wms/worker", "build"], env, "worker-build.log");
-  if (process.env.E2E_SKIP_BUILD !== "1") run("pnpm", ["--filter", "@wms/web", "build"], env, "web-build.log");
+  if (process.env.E2E_SKIP_BUILD !== "1") run("pnpm", ["--filter", "@wms/web", "build"], packageWebEnv, "web-build.log");
 
   const children: ChildProcess[] = [];
   let proxy: https.Server | undefined;
@@ -175,7 +177,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       return readFileSync(path.join(OUT, "worker.log"), "utf8").includes('"msg":"demo.reseed done"');
     });
 
-    const web = startWeb(innerPort, env, "web.log");
+    const web = startWeb(innerPort, packageWebEnv, "web.log");
     children.push(web);
     await waitFor("web hazır değil (bkz. .artifacts/e2e/web.log)", 120_000, async () => {
       if (web.exitCode !== null) throw new Error("e2e: web beklenmedik biçimde çıktı (bkz. .artifacts/e2e/web.log)");
@@ -213,7 +215,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
     const suffix = randomBytes(4).toString("hex");
     const innerB = port + 2;
     const portB = port + 3;
-    const envB: NodeJS.ProcessEnv = { ...env, WMS_ENV: "ci", SIGNUP_ENABLED: "true", BETTER_AUTH_URL: `https://localhost:${portB}` };
+    const envB: NodeJS.ProcessEnv = { ...packageWebEnv, WMS_ENV: "ci", SIGNUP_ENABLED: "true", BETTER_AUTH_URL: `https://localhost:${portB}` };
     delete envB.DEMO_MODE; // demo girişi yalnızca ana örnekte
     const webB = startWeb(innerB, envB, "web-signup.log");
     children.push(webB);
