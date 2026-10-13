@@ -1,0 +1,37 @@
+# Web, mobil ve tablet UI/UX
+
+## Temel kullanıcı kuralı
+İlk defa bilgisayar kullanan kişi bile sıradaki işi anlamalı. Müşteri sisteme hizmet etmez; sistem yanlış miktarı, yanlış yeri, mükerrer işlemi ve yetkisiz işi önleyerek müşteriye fayda sağlar. Bu bir hedef ve test kabulüdür; ekranın güzel olması hedefin ölçüldüğü anlamına gelmez.
+
+- Marka Etkin WMS; Motive müşteridir. Eski ekranın kopyası veya sektör adına bağlı ürün tasarımı yapılmaz.
+- Lacivert/turuncu ortak dil; satış sitesi aynı marka ailesinde. Kaynak token'lar `apps/web/app/globals.css`, ayrıntı `docs/design/palette.md`.
+- Güncel kaynak renkleri: ink `#172e42`, accent `#c64a19`, surface `#ffffff`, bg `#f5f7f8`, accent-soft `#fff4ee`. Bunlar sabit yeni kopya üretme talimatı değil, kaynak snapshot'ıdır; bileşenler semantic token kullanır.
+- Renk + ayırt edici ikon + kısa etiket birlikte. Renk tek başına hata, öncelik veya başarı anlamı taşımaz.
+- Bir ekranda bir ana karar, belirgin sonraki adım. Az düz yazı; ikonların yanında 1–3 kelimelik işletme dili. Uzun teknik metin yalnız yardım ayrıntısında.
+- Seçili ürün/depo/miktar ve işlemin sonucu kaydetmeden önce görünür. Hata ilgili alan yanında, şimdi yapılacak düzeltmeyle; boş durum açık başlangıç eylemiyle.
+- Veri kaydetme başarılı sunucu sonucu olmadan “tamamlandı” gösterilmez. Tekrar tıklama/düşen bağlantı tekrar stok yazmamalı.
+
+## Cihaz düzeni
+| Yüzey | Davranış |
+|---|---|
+| Telefon | Dikey kısa akış, tek elle ana işlem; gerekliyse kart/liste; sayfa yatay taşmaz |
+| Tablet / dokunmatik masaüstü | Büyük hedef, görünür etiket, hover gerektirmeyen işlem; yan panel yalnız yeterli alanda |
+| Notebook / masaüstü | Özet + düzenli liste; arama/klavye desteği; çok sütun sadece okunabiliyorsa |
+| Yatay telefon | Kaynak CSS: dar ekran veya coarse pointer + alçak ekran; cihaz adı/user-agent koklaması yok |
+
+Kaynak kırılımı: <768px veya coarse-pointer/max-height500px telefon varyantı. Yeni breakpoint, bütün cihaz matrisiyle test edilir; sadece eski telefon resmiyle kabul yok. Eski “her şey kaydırmasız sığmalı” kabulü ile büyük hedef çatışıyorsa mevcut tasarım/spec ve kullanıcı kararı birlikte çözülür; küçük düğmeyle sessiz bypass yok.
+
+## Etkileşim / erişilebilirlik
+- Dokunma alanı ≥48px; ana eylem ≥56px. Yakınlaştırma engellenmez; klavye odak ve ekran okuyucu etiketleri korunur.
+- Normal metin kontrastı ≥4.5:1, büyük metin/anlamlı ikon/girdi sınırı ≥3:1; kaynak kontrast testleri otorite.
+- Native veya ortak `SelectField`: touch/klavye yerel seçici, fare tasarım listesi; label/hint bağlı, Escape/Enter/ok tuşları çalışır.
+- Küçük ekranda form/panel kullanılabilir yüksekliği aşmaz; kaydet/iptal ulaşılır. Klavye açılınca alan ve hata görünür.
+- İlk kullanım rehberi, tekrar açılabilen yardım. Yardım düğmesi kamera/form/sabit eylemi örtmez. Kaynak T-912 satır içi yerleşimi canlıda var varsayılmaz.
+- MFA QR + elle anahtar alternatifi; OTP/MFA sırrı üçüncü taraf QR servisine gönderilmez, ekran görüntüsü/loga girmez.
+
+## Donanım / kabul sınırı
+Telefon/notebook kamerası için HTTPS, kullanıcı izni ve gerçek barkod senaryosu. Android el terminali için native uygulama baştan zorunlu kabul edilmez; kamera/klavye-wedge/PWA akışı cihazda denenir.
+
+Etiket ölçüsü kullanıcı seçilebilir; yazıcı “her modelde doğrudan çalışır” diye ilan edilmez. İlk pilot tarayıcı/işletim sistemi yazdırma + PDF; ZPL/ağ/Bluetooth/USB özel protokol erişimi gerekiyorsa ölçülmüş ayrı köprü ve izin. Epson A4 test ile gerçek termal etiket kabulü farklı kanıttır.
+
+Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, dokunmatik + klavye; giriş/arama/miktar/yanlış barkod/bağlantı hatası/ters kayıt; yazıcıda gerçek boyut ve okunabilir barkod. Test edilmediyse STATE'de UNKNOWN yaz.
