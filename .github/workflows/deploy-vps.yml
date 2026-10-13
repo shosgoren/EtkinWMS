@@ -91,11 +91,15 @@ jobs:
           set -euo pipefail
           schema_hash=$(python3 deploy/vps/automation/schema.py packages/db/migrations)
           [[ "$schema_hash" =~ ^[0-9a-f]{64}$ ]]
+          python3 -m unittest discover -s deploy/vps/automation -p 'test_*.py'
+          bash -n deploy/vps/automation/install-migrate.sh
           docker build --platform linux/amd64 -t "etkinwms-build:$RELEASE_SHA" .
           printf 'FROM etkinwms-build:%s\nCOPY marketing /marketing\n' "$RELEASE_SHA" > "$RUNNER_TEMP/Release.Dockerfile"
           docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$RELEASE_SHA" --label "org.etkinwms.schema.sha256=$schema_hash" -f "$RUNNER_TEMP/Release.Dockerfile" -t "etkinwms:$RELEASE_SHA" .
           # T-916: migration aracı ayrı imaj; aynı imzalı arşivde, aynı revision/schema etiketleriyle.
           docker build --platform linux/amd64 --target migrate --label "org.opencontainers.image.revision=$RELEASE_SHA" --label "org.etkinwms.schema.sha256=$schema_hash" -t "etkinwms-migrate:$RELEASE_SHA" .
+          # Migrator smoke: module graph loads (no DB, CLI entry not triggered by import).
+          docker run --rm --network none "etkinwms-migrate:$RELEASE_SHA" node --input-type=module -e "await import('/migrator/src/migrate.ts')"
           docker save "etkinwms:$RELEASE_SHA" "etkinwms-migrate:$RELEASE_SHA" | gzip > "$RUNNER_TEMP/image.tar.gz"
       - name: Record bundle identity
         id: bundle
@@ -116,7 +120,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 45
     environment: etkinwms-production
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333

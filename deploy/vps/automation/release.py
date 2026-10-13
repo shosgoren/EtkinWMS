@@ -11,12 +11,14 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import signal
 import subprocess
 import sys
 import tarfile
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 
 BASE = Path('/opt/etkinwms')
@@ -160,38 +162,83 @@ def migrate_env():
     return AUTOMATION / 'migrate.env'
 
 
+MIGRATOR_NAME = 'etkinwms-migrate-run'
+MIN_FREE_BYTES = 1024**3
+SAFE_ROLE = re.compile(r'[a-z_][a-z0-9_]{0,62}\Z')
+
+
+def psql(query, timeout=60):
+    # Peer-authenticated operator session inside the DB container; fixed queries only.
+    result = run(['docker', 'exec', '--user', 'postgres', DB_CONTAINER, 'psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1',
+                  '-d', 'etkinwms', '-c', query], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=timeout)
+    return result.stdout.decode().strip()
+
+
+def assert_migration_role():
+    """The env-file role must own the ledger and be NOSUPERUSER/NOBYPASSRLS/NOCREATEROLE/NOCREATEDB, incl. via membership."""
+    url = migrate_env().read_text().strip().split('=', 1)[1]
+    user = urllib.parse.unquote(urllib.parse.urlsplit(url).username or '')
+    if not SAFE_ROLE.fullmatch(user):
+        raise ValueError('MIGRATION_ROLE_REJECTED')
+    row = psql("SELECT pg_get_userbyid(c.relowner) = '" + user + "' AND NOT EXISTS ("
+               " SELECT 1 FROM pg_roles r WHERE pg_has_role('" + user + "', r.oid, 'MEMBER')"
+               " AND (r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication))"
+               " FROM pg_class c WHERE c.oid = 'wms_meta.schema_migrations'::regclass")
+    if row != 't':
+        raise ValueError('MIGRATION_ROLE_REJECTED')
+
+
 def backup_database(sha):
     backups = BASE / 'backups'
     backups.mkdir(mode=0o700, exist_ok=True)
     backups.chmod(0o700)
+    if shutil.disk_usage(backups).free < MIN_FREE_BYTES:
+        raise ValueError('BACKUP_DISK_LOW')
     path = backups / ('pre-' + sha + '-' + str(int(time.time())) + '.dump')
-    with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), 'wb') as target:
-        run(['docker', 'exec', '--user', 'postgres', DB_CONTAINER, 'pg_dump', '-Fc', '-d', 'etkinwms'],
-            stdout=target, stderr=subprocess.DEVNULL, timeout=900)
-    with path.open('rb') as dump:
-        if dump.read(5) != b'PGDMP':
-            raise ValueError('BACKUP_INVALID')
+    try:
+        with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), 'wb') as target:
+            run(['docker', 'exec', '--user', 'postgres', DB_CONTAINER, 'pg_dump', '-Fc', '-d', 'etkinwms'],
+                stdout=target, stderr=subprocess.DEVNULL, timeout=600)
+        with path.open('rb') as dump:
+            if dump.read(5) != b'PGDMP':
+                raise ValueError('BACKUP_INVALID')
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
     dumps = sorted(backups.glob('pre-*.dump'), key=lambda p: p.stat().st_mtime)
     for old in dumps[:-KEEP_BACKUPS]:
         old.unlink()
     return path
 
 
+def remove_migrator():
+    subprocess.run(['docker', 'rm', '-f', MIGRATOR_NAME], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL, timeout=60)
+
+
+def migrator_drained():
+    """After a failure: kill the container, then wait until no migration session remains in the DB."""
+    remove_migrator()
+    for _ in range(30):
+        if psql("SELECT count(*) FROM pg_stat_activity WHERE application_name = 'wms-migrate'") == '0':
+            return True
+        time.sleep(2)
+    return False
+
+
 def migrate_database(sha):
     # Credential stays in the root-only env file; never in argv or logs. Output is suppressed (may echo data).
-    run(['docker', 'run', '--rm', '--network', DB_NETWORK, '--env-file', str(migrate_env()),
+    remove_migrator()
+    run(['docker', 'run', '--rm', '--name', MIGRATOR_NAME, '--network', DB_NETWORK, '--env-file', str(migrate_env()),
          '-e', 'NODE_EXTRA_CA_CERTS=/run/etkinwms-db-ca.crt', '-e', 'WMS_ENV=production', '-e', 'DEMO_MODE=0',
          '-v', DB_CA + ':/run/etkinwms-db-ca.crt:ro', '--read-only', '--tmpfs', '/tmp',
          '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--memory', '512m',
          'etkinwms-migrate:' + sha, 'node', 'src/migrate.ts', 'up'],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=900)
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
 
 
 def ledger_version():
-    result = run(['docker', 'exec', '--user', 'postgres', DB_CONTAINER, 'psql', '-X', '-qAt', '-d', 'etkinwms', '-c',
-                  'SELECT coalesce(max(version), \'\') FROM wms_meta.schema_migrations'],
-                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60)
-    return result.stdout.decode().strip()
+    return psql("SELECT coalesce(max(version), '') FROM wms_meta.schema_migrations")
 
 
 def approve_schema(schema_hash):
@@ -247,27 +294,36 @@ def deploy(sha, archive_hash, schema_hash):
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
     if migrate:
-        backup_database(sha)
-        before = ledger_version()
         old_args, old_env = compose(previous)
-        run(old_args + ['stop', 'web', 'worker'], env=old_env, stdout=subprocess.DEVNULL)
+        assert_migration_role()
+        before = ledger_version()
+        try:
+            # Writers stop first so the dump is the exact recovery point.
+            run(old_args + ['stop', 'web', 'worker'], env=old_env, stdout=subprocess.DEVNULL)
+            backup_database(sha)
+        except Exception:
+            run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
+            raise ValueError('BACKUP_FAILED_PREVIOUS_RESTARTED') from None
         try:
             migrate_database(sha)
         except Exception:
-            # Each migration commits separately. Only an untouched ledger is known to fit the previous image;
-            # a partially advanced one stays stopped for an operator restore/forward fix (dump in /opt/etkinwms/backups).
+            # Each migration commits separately. Only an untouched ledger (after the migrator is gone) is known to
+            # fit the previous image; otherwise stay stopped for an operator restore/forward fix.
             try:
-                untouched = ledger_version() == before
+                untouched = migrator_drained() and ledger_version() == before
             except Exception:
                 untouched = False
             if not untouched:
                 raise ValueError('MIGRATION_PARTIAL_SERVICE_STOPPED') from None
             run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
             raise ValueError('MIGRATION_FAILED_PREVIOUS_RESTARTED') from None
-        approve_schema(schema_hash)
-        # The DB is now at the new schema; the previous image remains the rollback target on it.
-        previous = dict(previous, schema=schema_hash)
-        write_state(previous)
+        try:
+            # The DB is now at the new schema; the previous image remains the rollback target on it.
+            previous = dict(previous, schema=schema_hash)
+            write_state(previous)
+            approve_schema(schema_hash)
+        except Exception:
+            raise ValueError('POST_MIGRATION_STATE_WRITE_FAILED_SERVICE_STOPPED') from None
     try:
         run(args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=env)
         for _ in range(18):
