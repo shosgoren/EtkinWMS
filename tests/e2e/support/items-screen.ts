@@ -115,7 +115,7 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
     await expect(page.getByLabel("Durum")).toBeHidden();
     // B-05: büyüteç solda, ipucu tek satır (barkod yalnız ipucunda bir kez), örnek metin yalnız gerçek örnekler.
     const box = page.getByRole("searchbox", { name: "Ürün ara" });
-    await expect(box, `${where}: örnek metin (B-05)`).toHaveAttribute("placeholder", "Örn. URN-0001 ya da Koli 40x30");
+    await expect(box, `${where}: örnek metin (B-05)`).toHaveAttribute("placeholder", "Örn. HM-000001 ya da Koli 40x30");
     const sb = await page.evaluate<{ iconInside: boolean; iconLeft: number; hintLines: number; hint: string }>(`(() => {
       const input = document.querySelector('form[role="search"] input[type="search"]');
       const ir = input.getBoundingClientRect();

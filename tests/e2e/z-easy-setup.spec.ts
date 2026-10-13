@@ -78,7 +78,7 @@ async function measureForms(page: Page, tag: string, treeHref: string | null, sl
 
       await page.goto(`/t/${slug}/items?new=1`);
       const it = page.getByRole("dialog");
-      await expect(it.locator('input[name="code"]')).toHaveValue(/^URN-\d{4}$/);
+      await expect(it.locator('input[name="code"]')).toHaveValue(/^HM-\d{6}$/);
       await it.getByText("Gelişmiş ayarlar").click(); // en uzun hâl
       await noPageScroll(page, `ürün formu ${where}`);
       await inViewport(page, it.getByRole("button", { name: "Kaydet" }), `ürün Kaydet ${where}`);
@@ -167,9 +167,10 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     // --- Adım 3: Ürün ekle (raflardan sonra ürün formu açılır) ---
     await expect(page).toHaveURL(new RegExp(`/t/${slug}/items`));
     const item = page.getByRole("dialog");
-    await expect(item.locator('input[name="code"]')).toHaveValue("URN-0001");
+    await expect(item.locator('input[name="code"]')).toHaveValue("HM-000001"); // T-911: kart türü öneki (varsayılan HM) + 6 hane
     await expect(item.locator("#create-base-unit")).toContainText("ADET");
-    await expect(item.locator("#create-base-unit")).toBeDisabled(); // birim yok: ADET ilk ürünle kendiliğinden oluşur
+    await expect(item.locator("#create-base-unit")).toBeEnabled(); // T-911: standart birimler çalışma alanıyla kurulur; ADET seçili gelir
+    await expect(item.locator("#create-base-unit")).toHaveValue(/.+/);
     await expect(item.locator("details")).not.toHaveAttribute("open", ""); // gelişmiş ayarlar kapalı
     // T-274 S-01: ürün adımında kurulum satırı "Sıradaki: ilk ürünü ekle" ve "Yeni ürün" ile AYNI eylemi (bu formu) açar; ikinci dolu düğme yok.
     await page.keyboard.press("Escape");
@@ -177,7 +178,7 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     const rowNext = page.getByTestId("setup-row");
     await expect(rowNext).toHaveText("Sıradaki: ilk ürünü ekle");
     await rowNext.click();
-    await expect(page.getByRole("dialog").locator('input[name="code"]')).toHaveValue("URN-0001");
+    await expect(page.getByRole("dialog").locator('input[name="code"]')).toHaveValue("HM-000001");
     await item.locator('input[name="name"]').fill(ITEM_NAME);
     await noPageScroll(page, "ürün formu");
     await shot("item-form");

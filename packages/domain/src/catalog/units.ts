@@ -104,6 +104,44 @@ export async function renameUnit(
   });
 }
 
+/**
+ * Standart birim seti (T-911): yeni tenant'a kurulur (`seedStandardUnits`), mevcut tenant'lara 0031 migration'ı ile eklendi.
+ * Kod çakışırsa (kullanıcı aynı kodu önceden açmışsa) mevcut kayıt korunur. Sıra ekrandaki sıradır.
+ */
+export const STANDARD_UNITS: readonly { readonly code: string; readonly name: string }[] = [
+  { code: "ADET", name: "Adet" },
+  { code: "KG", name: "Kilogram" },
+  { code: "GR", name: "Gram" },
+  { code: "MT", name: "Metre" },
+  { code: "CM", name: "Santimetre" },
+  { code: "LT", name: "Litre" },
+  { code: "M2", name: "Metrekare" },
+  { code: "M3", name: "Metreküp" },
+  { code: "KOLI", name: "Koli" },
+  { code: "PALET", name: "Palet" },
+];
+
+/**
+ * Standart birimleri tenant bağlamı KURULMUŞ bir transaction içinde ekler (tenant oluşturma akışının parçası; ayrı komut değil).
+ * Idempotent: var olan kodlar atlanır. Her yeni birim için `unit.created` audit'i yazılır (aktör: tenant'ı kuran kullanıcı ya da null).
+ */
+export async function seedStandardUnits(tx: AccessTx, tenantId: string, actorUserId: string | null, requestId: string | null): Promise<readonly string[]> {
+  const created: string[] = [];
+  for (const u of STANDARD_UNITS) {
+    const rows = await tx.execute<{ id: string }>(
+      sql`INSERT INTO public.units (tenant_id, id, code, name)
+          VALUES (${tenantId}::uuid, gen_random_uuid(), ${u.code}, ${u.name})
+          ON CONFLICT ON CONSTRAINT units_tenant_code_key DO NOTHING
+          RETURNING id`,
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) continue;
+    created.push(id);
+    await appendAudit(tx, { action: "unit.created", actorUserId, entityType: "unit", entityId: id, requestId, changeSummary: { code: u.code, name: u.name, source: "standard" } });
+  }
+  return created;
+}
+
 export async function listUnits(params: Omit<CatalogCommandParams, "requestId">): Promise<readonly UnitRow[]> {
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
     const rows = await tx.execute<UnitRow>(
@@ -166,6 +204,7 @@ export type ItemHeader = {
   readonly quantity_scale: number;
   readonly pick_policy: string;
   readonly status: "ACTIVE" | "ARCHIVED";
+  readonly card_type: string;
 };
 
 export type ItemLock = "update" | "share";
@@ -176,7 +215,7 @@ export type ItemLock = "update" | "share";
  * `status` okunur).
  */
 export async function loadItem(tx: AccessTx, tenantId: string, itemId: string, lock?: ItemLock): Promise<ItemHeader | undefined> {
-  const cols = sql`id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy, status`;
+  const cols = sql`id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy, status, card_type`;
   const where = sql`WHERE tenant_id = ${tenantId}::uuid AND id = ${itemId}::uuid`;
   const rows =
     lock === "update"

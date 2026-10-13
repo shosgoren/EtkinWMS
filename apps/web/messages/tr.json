@@ -541,7 +541,9 @@
     }
   },
   "audit": {
-    "production_recipe": {"created": "Üretim reçetesi oluşturuldu"},
+    "production_recipe": {
+      "created": "Üretim reçetesi oluşturuldu"
+    },
     "member": {
       "invited": "Bir üyeyi davet ettin.",
       "removed": "Bir üyeyi çalışma alanından çıkardın.",
@@ -765,7 +767,7 @@
     "search": {
       "label": "Ürün ara",
       "hint": "Adı ya da kodu yaz; barkodu okutabilirsin.",
-      "placeholder": "Örn. URN-0001 ya da Koli 40x30",
+      "placeholder": "Örn. HM-000001 ya da Koli 40x30",
       "advanced": "Gelişmiş",
       "status": "Durum",
       "all": "Hepsi",
@@ -800,7 +802,14 @@
       "pick": "Toplama politikası",
       "submit": "Kaydet",
       "cancel": "Vazgeç",
-      "noUnits": "Henüz tanımlı birim yok; ürün için önce bir temel birim (ör. ADET) gerekir. Sorumluna ya da destek ekibine sor."
+      "noUnits": "Henüz tanımlı birim yok; ürün için önce bir temel birim (ör. ADET) gerekir. Sorumluna ya da destek ekibine sor.",
+      "cardType": "Kart türü",
+      "cardTypeHint": "Ürün kodu bu türün önekiyle önerilir (ör. HM-000001). Sonradan değiştirilebilir.",
+      "newUnit": "Yeni birim ekle",
+      "newUnitCode": "Birim kodu",
+      "newUnitCodeHint": "Kısa ve benzersiz; ör. TON, RULO, PAKET.",
+      "newUnitName": "Birim adı",
+      "newUnitAdd": "Birimi ekle"
     },
     "detail": {
       "title": "Ürün kartı",
@@ -894,7 +903,13 @@
     },
     "locked": "Ürünleri görme yetkin yok.",
     "lockedAction": "Çalışma alanı yöneticine sor.",
-    "renamedNote": "Bu kod {code} olarak değişti (eski kod: {old})"
+    "renamedNote": "Bu kod {code} olarak değişti (eski kod: {old})",
+    "cardType": {
+      "HM": "Hammadde",
+      "YM": "Yarı mamul",
+      "MM": "Mamul",
+      "TM": "Ticari mal"
+    }
   },
   "warehouses": {
     "title": "Depo ve raflar",
@@ -1984,8 +1999,7 @@
     "find": "Ara",
     "next": "Sonraki reçeteler",
     "empty": "Henüz reçete yok."
-  }
-,
+  },
   "shipping": {
     "newHelp": "Ürünleri temel birimleriyle seç. Sipariş kaydı stok düşürmez; sonraki adımda stok ayrılır.",
     "cameraLocation": "Konumu kamerayla oku",

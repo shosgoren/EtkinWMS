@@ -7,11 +7,11 @@
 // - Sıra = aynı önekle başlayan, yalnızca rakamdan oluşan son ekin en büyüğü + 1 (arşivli kayıtlar dahil: kod arşivde de ayrılmıştır).
 // - Yetki `settings.manage` (öneri yalnızca oluşturma formunun parçası); lokasyonda depo kapsamı `assertWarehouseVisible` ile denetlenir.
 import { sql } from "drizzle-orm";
-import { appendAudit, type PickPolicy, type TrackingMode } from "@wms/db";
+import { appendAudit, type ItemCardType, type PickPolicy, type TrackingMode } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery } from "../identity/access.ts";
 import { assertWarehouseVisible } from "../warehouse/scope.ts";
-import { createItem } from "./items.ts";
+import { DEFAULT_CARD_TYPE, createItem, parseCardType } from "./items.ts";
 import { parseCode, parseName, parseUuid, type CatalogCommandParams } from "./units.ts";
 
 export const CODE_SUGGEST_KINDS = ["item", "warehouse", "location"] as const;
@@ -19,7 +19,8 @@ export type CodeSuggestKind = (typeof CODE_SUGGEST_KINDS)[number];
 
 /** A-250-1: varsayılan önek ve sıra basamak sayısı. Kullanıcı öneki değiştirebilir (`A-Z`, `0-9`, `_`; en çok 16 karakter). */
 export const CODE_SUGGEST_DEFAULTS: Readonly<Record<CodeSuggestKind, { readonly prefix: string; readonly width: number }>> = {
-  item: { prefix: "URN", width: 4 },
+  // T-911: ürün kodu kart türü önekiyle (`HM-000001`); istemci öneki tür olarak gönderir, varsayılan tür TM.
+  item: { prefix: "TM", width: 6 },
   warehouse: { prefix: "DEPO", width: 2 },
   location: { prefix: "LOK", width: 4 },
 };
@@ -152,6 +153,8 @@ export interface CreateItemWithDefaultUnitInput {
   readonly trackingMode?: TrackingMode;
   readonly quantityScale?: number;
   readonly pickPolicy?: PickPolicy;
+  /** Kart türü (T-911); varsayılan `TM`. */
+  readonly cardType?: ItemCardType;
 }
 
 /**
@@ -177,6 +180,7 @@ export async function createItemWithDefaultUnit(
   if (!Number.isInteger(quantityScale) || quantityScale < 0 || quantityScale > 6) throw new AppError("VALIDATION_FAILED");
   const pickPolicy = input.pickPolicy ?? "FIFO";
   if (!PICK.includes(pickPolicy)) throw new AppError("VALIDATION_FAILED");
+  const cardType = input.cardType === undefined ? DEFAULT_CARD_TYPE : parseCardType(input.cardType);
   const { requestId, ...access } = params;
   return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
     const activeAdet = async (): Promise<{ readonly id: string | undefined; readonly anyActive: boolean }> => {
@@ -220,9 +224,9 @@ export async function createItemWithDefaultUnit(
     );
     if (locked[0]?.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
     const rows = await tx.execute<{ id: string }>(
-      sql`INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy)
+      sql`INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, tracking_mode, quantity_scale, pick_policy, card_type)
           VALUES (${actor.tenantId}::uuid, gen_random_uuid(), ${code}, ${name}, ${unitId}::uuid, ${trackingMode},
-                  ${quantityScale}::smallint, ${pickPolicy})
+                  ${quantityScale}::smallint, ${pickPolicy}, ${cardType})
           ON CONFLICT ON CONSTRAINT items_tenant_code_key DO NOTHING
           RETURNING id`,
     );
@@ -234,7 +238,7 @@ export async function createItemWithDefaultUnit(
       entityType: "item",
       entityId: itemId,
       requestId: requestId ?? null,
-      changeSummary: { code, name, base_unit_id: unitId, tracking_mode: trackingMode, quantity_scale: quantityScale, pick_policy: pickPolicy },
+      changeSummary: { code, name, base_unit_id: unitId, tracking_mode: trackingMode, quantity_scale: quantityScale, pick_policy: pickPolicy, card_type: cardType },
     });
     return { itemId, unitId, unitCreated };
   });

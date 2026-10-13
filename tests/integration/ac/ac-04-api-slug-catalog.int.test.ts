@@ -132,6 +132,7 @@ const calls = (): Record<string, Call> => ({
   setConversionAction: (slug) => act.setConversionAction!({ slug, itemId: B.itemId, unitId: B.boxUnitId, factor: "99" }),
   addBarcodeAction: (slug) => act.addBarcodeAction!({ slug, itemId: B.itemId, unitId: null, barcode: `9${rnd()}`, quantity: null }),
   removeBarcodeAction: (slug) => act.removeBarcodeAction!({ slug, barcodeId: bBarcode }),
+  createUnitAction: (slug) => act.createUnitAction!({ slug, code: `U${rnd()}`, name: "Ele geçirme birimi" }),
   suggestItemCodeAction: (slug) => act.suggestItemCodeAction!({ slug }),
   searchItemsAction: (slug) => act.searchItemsAction!({ slug, q: "a" }),
 });
