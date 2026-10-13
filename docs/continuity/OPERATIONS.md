@@ -65,6 +65,21 @@ Deploy mode yalnız yayın kapıları kapanınca, doğrulanmış full SHA ile. H
 ## Schema değiştiren ilk kesim
 13 Ekim 10:00 defter/current kontrolünde canlı31 doğrulandı; kesim/yedek kanıtları ayrıca incelenir. Sonraki schema değişimi için: tek operatör; yazmaları durdur; source/target kimliğini doğrula; tutarlı yedek ve izole restore; gerekli roller/ACL/RLS/checksum paritesi; migration ileri ve dolu veride geri dönüş/ret; **yeni şemayla uyumlu fallback image/digest** ve deploy planı. Sonra yetkili migration, runtime health ve iş akışı kabulü. Bağlı veri sonrası guided27 veya down31→27'yi otomatik güvenli sayma. Approved fingerprint/state ancak gerçek uyumlu baseline ve inceleme/izin sağlanınca ilerler.
 
+## 13 Ekim schema31 kesimi — gerçek kayıt
+Kullanıcının root Web konsolunda çalıştırdığı tek seferlik kesim (operatör çıktısı, DOĞRULANDI):
+- Kaynak: main `a6d2ef4979451b21cd986d3be5ff94ddc1e6ddae` codeload tarball; şema 27→31 (`b5a99942…` → `d6b6b9d7…`).
+- Yedek: migration öncesi `pg_dump -Fc` → `/root/etkinwms-cutover-a6d2ef49…/backup-before-<sha>.dump` (~540 KB). Restore denemesi YAPILMADI.
+- web/worker durduruldu, `migrate.ts up`: "4 migration uygulandı (0028–0031); toplam 31". Kesinti ~1 dk.
+- `queue-adapter install-cli` rol kontrolünde reddedildi (postgres `wms_meta.schema_migrations` sahibi değil). pg-boss sürümü ilk commit'ten beri değişmediği için kuyruk şeması zaten günceldi; atlandı.
+- approved-schema yedeği `.bak-<epoch>` ile alınıp `d6b6b9d7…` yazıldı, state.json `schema` güncellendi; sonra deploy run38349324566 success.
+
+Operatör betiği tuzakları (aynı hataları tekrarlama):
+- VPS'te `/opt/etkinwms/automation/schema.py` YOK; hash'i indirilen kaynaktaki `deploy/vps/automation/schema.py` ile hesapla.
+- `admin.env`'de `POSTGRES_USER` satırı yok; `set -o pipefail` altında `grep` boş dönünce betik web/worker durmuşken çıkar. Bilgileri durdurmadan ÖNCE oku, `trap … EXIT` ile web/worker'ı her durumda başlat.
+- Parola URI'ye `urllib.parse.quote` ile girer; argv/loga yazılmaz.
+- `bash <<'X'` içinde `docker exec -i` heredoc'un kalanını yutar; `-i` kullanma veya `</dev/null` ver.
+- Migration rolü (schema_migrations sahibi) postgres değil; queue install gerekiyorsa o rolle çalıştırılmalı.
+
 ## Yedek kuralları — hedef, kurulu iş iddiası değil
 - Mevcut kanıt: 12 Ekim custom schema27 dump + ağsızPG18 restore + VPS kesim/parite testi. Zamanlanmış offsite/WAL/PITR başarısı doğrulanmış değil.
 - Her migration/yayın öncesi tutarlı `pg_dump -Fc`; ayrı rol/global yetki planı. PostgreSQL18 ile uyumlu araç, verified TLS; URI/parola argv veya loga girmez.
