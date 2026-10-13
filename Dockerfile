@@ -48,6 +48,22 @@ RUN pnpm --filter @wms/web build \
  && ! printf '%s' "$smoke" | grep -q 'ERR_MODULE_NOT_FOUND\|Cannot find'
 
 # ---------------------------------------------------------------------------------------------
+# Migration aracı (T-916): yalnız `@wms/db` (src + migrations + üretim bağımlılıkları). Uygulama imajı migration
+# içermez (yukarıdaki MIGRATION_ denetimi); VPS yayın alıcısı bu ayrı imajı `--target migrate` ile imzalı arşivden
+# alır ve migration rolüyle `node src/migrate.ts up` koşar. Varsayılan hedef (son aşama) runtime olarak kalır.
+FROM build AS migrate-bundle
+RUN pnpm --filter @wms/db deploy --prod --legacy --ignore-scripts /migrator \
+ && test -f /migrator/src/migrate.ts \
+ && test -f /migrator/migrations/0001_baseline.up.sql
+
+FROM ${NODE_IMAGE} AS migrate
+ENV NODE_ENV=production
+WORKDIR /migrator
+COPY --from=migrate-bundle /migrator/ ./
+USER node
+CMD ["node", "src/migrate.ts", "up"]
+
+# ---------------------------------------------------------------------------------------------
 FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \

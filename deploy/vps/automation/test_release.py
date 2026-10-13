@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import tarfile
 import tempfile
@@ -13,9 +14,17 @@ spec.loader.exec_module(release)
 SHA = 'a' * 40
 
 
-def make_archive(path, tag=None, user='node', revision=SHA, extra=None, schema='b'*64):
-    entries = {'manifest.json': [{'RepoTags': [tag or 'etkinwms:' + SHA], 'Config': 'config.json', 'Layers': []}],
-               'config.json': {'config': {'User': user, 'Labels': {'org.opencontainers.image.revision': revision, 'org.etkinwms.schema.sha256': schema}}}}
+def release_health(values):
+    it = iter(values)
+    return lambda: next(it)
+
+
+def make_archive(path, tag=None, user='node', revision=SHA, extra=None, schema='b'*64, images=None, migrate_revision=None):
+    if images is None:
+        images = [(tag or 'etkinwms:' + SHA, revision), ('etkinwms-migrate:' + SHA, migrate_revision or revision)]
+    entries = {'manifest.json': [{'RepoTags': [name], 'Config': 'config%d.json' % i, 'Layers': []} for i, (name, _) in enumerate(images)]}
+    for i, (_, rev) in enumerate(images):
+        entries['config%d.json' % i] = {'config': {'User': user, 'Labels': {'org.opencontainers.image.revision': rev, 'org.etkinwms.schema.sha256': schema}}}
     with tarfile.open(path, 'w:gz') as archive:
         for name, value in entries.items():
             data = json.dumps(value).encode()
@@ -24,6 +33,22 @@ def make_archive(path, tag=None, user='node', revision=SHA, extra=None, schema='
             archive.addfile(info, io.BytesIO(data))
         if extra:
             archive.addfile(extra)
+
+
+def migration_setup(directory, approved='b'*64):
+    base = Path(directory)
+    automation = base / 'automation'
+    automation.mkdir()
+    (base / 'releases').mkdir()
+    previous_release = base / 'releases' / 'previous'
+    previous_release.mkdir()
+    (base / 'current').symlink_to(previous_release)
+    previous = {'tag': 'previous', 'sha': 'f'*40, 'compose': str(previous_release / 'compose.yml'),
+                'release': str(previous_release), 'schema': approved}
+    (automation / 'state.json').write_text(json.dumps(previous))
+    (automation / 'approved-schema.sha256').write_text(approved + '\n')
+    (automation / 'migrate.env').write_text('DATABASE_URL_DIRECT=x\n')
+    return base, automation, previous_release, previous
 
 
 class ReleaseBoundaryTests(unittest.TestCase):
@@ -43,6 +68,20 @@ class ReleaseBoundaryTests(unittest.TestCase):
                 make_archive(path, **override)
                 with self.subTest(override=override), self.assertRaises(ValueError):
                     release.validate_archive(path, SHA, 'b'*64)
+
+    def test_archive_must_carry_app_and_migrator_for_the_same_revision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'image.tar.gz'
+            for images in [[('etkinwms:' + SHA, SHA)],
+                           [('etkinwms:' + SHA, SHA), ('etkinwms-migrate:' + SHA, SHA), ('other:' + SHA, SHA)],
+                           [('etkinwms:' + SHA, SHA), ('etkinwms-migrate:latest', SHA)],
+                           [('etkinwms:' + SHA, SHA), ('etkinwms:' + SHA, SHA)]]:
+                make_archive(path, images=images)
+                with self.subTest(images=images), self.assertRaisesRegex(ValueError, 'IMAGE_TAG_REJECTED'):
+                    release.validate_archive(path, SHA, 'b'*64)
+            make_archive(path, migrate_revision='c'*40)
+            with self.assertRaisesRegex(ValueError, 'IMAGE_IDENTITY_REJECTED'):
+                release.validate_archive(path, SHA, 'b'*64)
 
     def test_no_links_or_traversal(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -105,11 +144,243 @@ class ReleaseBoundaryTests(unittest.TestCase):
             (root / 'approved-schema.sha256').write_text('b'*64)
             (root / 'state.json').write_text(json.dumps({'schema': 'c'*64}))
             with patch.object(release, 'AUTOMATION', root), patch.object(release, 'assert_ci'), patch.object(release, 'run') as run:
+                # No migration credential installed: a schema change still needs the operator.
                 with self.assertRaisesRegex(ValueError, 'SCHEMA_OPERATOR_APPROVAL_REQUIRED'):
                     release.deploy(SHA, 'd'*64, 'e'*64)
                 with self.assertRaisesRegex(ValueError, 'ROLLBACK_SCHEMA_INCOMPATIBLE'):
                     release.deploy(SHA, 'd'*64, 'b'*64)
+                (root / 'migrate.env').write_text('DATABASE_URL_DIRECT=x\n')
+                with self.assertRaisesRegex(ValueError, 'ROLLBACK_SCHEMA_INCOMPATIBLE'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
                 run.assert_not_called()
+
+    def _deploy_patches(self, base, automation, **extra):
+        patches = [patch.object(release, 'BASE', base), patch.object(release, 'AUTOMATION', automation),
+                   patch.object(release, 'assert_ci'), patch.object(release, 'assert_descendant'),
+                   patch.object(release, 'validate_archive'), patch.object(release, 'verify_provenance'),
+                   patch.object(release, 'receive', return_value='d'*64), patch.object(release.signal, 'alarm'),
+                   patch.object(release.time, 'sleep'), patch.object(release, 'assert_migration_role'),
+                   patch.object(release, 'migrator_drained', return_value=True)]
+        patches += [patch.object(release, name, value) for name, value in extra.items()]
+        return patches
+
+    def test_schema_change_backs_up_migrates_then_approves_and_rolls_out(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            calls = []
+            def backup(sha):
+                calls.append('backup')
+            def migrate(sha):
+                self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'b'*64)
+                calls.append('migrate')
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=backup, migrate_database=migrate, run=run,
+                                       ledger_version=lambda: '0031',
+                                       healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config', 'stop', 'backup', 'migrate', 'up'])
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'e'*64)
+            self.assertEqual(len(list(automation.glob('approved-schema.sha256.bak-*'))), 1)
+            state = json.loads((automation / 'state.json').read_text())
+            self.assertEqual((state['sha'], state['schema']), (SHA, 'e'*64))
+            self.assertEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
+
+    def test_failed_migration_restarts_previous_and_keeps_schema_unapproved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
+                                       migrate_database=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'migrate')),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with patch.object(release, 'run') as run, \
+                     self.assertRaisesRegex(ValueError, 'MIGRATION_FAILED_PREVIOUS_RESTARTED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(run.call_args.kwargs['env']['WMS_RELEASE'], 'previous')
+            self.assertIn('up', run.call_args.args[0])
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'b'*64)
+            self.assertEqual(json.loads((automation / 'state.json').read_text()), previous)
+            self.assertEqual((base / 'current').resolve(), previous_release.resolve())
+
+    def test_partially_applied_migration_keeps_service_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            versions = iter(['0031', '0032'])
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
+                                       migrate_database=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'migrate')),
+                                       ledger_version=lambda: next(versions), healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with patch.object(release, 'run') as run, \
+                     self.assertRaisesRegex(ValueError, 'MIGRATION_PARTIAL_SERVICE_STOPPED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertFalse(any('up' in c.args[0] for c in run.call_args_list))
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'b'*64)
+            self.assertEqual(json.loads((automation / 'state.json').read_text()), previous)
+
+    def test_migrator_not_drained_after_timeout_keeps_service_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
+                                       migrate_database=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.TimeoutExpired('docker', 600)),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with patch.object(release, 'migrator_drained', return_value=False), patch.object(release, 'run') as run, \
+                     self.assertRaisesRegex(ValueError, 'MIGRATION_PARTIAL_SERVICE_STOPPED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertFalse(any('up' in c.args[0] for c in run.call_args_list))
+
+    def test_ledger_read_failure_after_migration_error_keeps_service_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            reads = iter(['0031'])
+            def ledger():
+                return next(reads)
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
+                                       migrate_database=lambda sha: (_ for _ in ()).throw(RuntimeError()),
+                                       ledger_version=ledger, healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with patch.object(release, 'run') as run, \
+                     self.assertRaisesRegex(ValueError, 'MIGRATION_PARTIAL_SERVICE_STOPPED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertFalse(any('up' in c.args[0] for c in run.call_args_list))
+
+    def test_backup_failure_restarts_previous_before_any_migration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            migrate = []
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: (_ for _ in ()).throw(ValueError('BACKUP_INVALID')),
+                                       migrate_database=lambda sha: migrate.append(sha), ledger_version=lambda: '0031',
+                                       healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with patch.object(release, 'run') as run, \
+                     self.assertRaisesRegex(ValueError, 'BACKUP_FAILED_PREVIOUS_RESTARTED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(migrate, [])
+            self.assertIn('up', run.call_args.args[0])
+            self.assertEqual(run.call_args.kwargs['env']['WMS_RELEASE'], 'previous')
+
+    def test_state_write_failure_after_migration_is_reported_and_stays_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
+                                       migrate_database=lambda sha: None, ledger_version=lambda: '0031',
+                                       write_state=lambda state: (_ for _ in ()).throw(OSError('disk full')),
+                                       healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with patch.object(release, 'run') as run, \
+                     self.assertRaisesRegex(ValueError, 'POST_MIGRATION_STATE_WRITE_FAILED_SERVICE_STOPPED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'b'*64)
+            self.assertFalse(any('up' in c.args[0] for c in run.call_args_list))
+
+    def test_migration_role_must_own_ledger_and_be_unprivileged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            automation = Path(directory)
+            with patch.object(release, 'AUTOMATION', automation):
+                (automation / 'migrate.env').write_text('DATABASE_URL_DIRECT=postgresql://wms_migrator:x@h:5432/db\n')
+                with patch.object(release, 'psql', return_value='t') as q:
+                    release.assert_migration_role()
+                    self.assertIn("'wms_migrator'", q.call_args.args[0])
+                with patch.object(release, 'psql', return_value='f'), self.assertRaisesRegex(ValueError, 'MIGRATION_ROLE_REJECTED'):
+                    release.assert_migration_role()
+                (automation / 'migrate.env').write_text("DATABASE_URL_DIRECT=postgresql://x%27%3Bdrop:y@h/db\n")
+                with patch.object(release, 'psql') as q, self.assertRaisesRegex(ValueError, 'MIGRATION_ROLE_REJECTED'):
+                    release.assert_migration_role()
+                q.assert_not_called()
+
+    def test_failed_rollout_after_migration_keeps_previous_image_on_new_schema(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
+                                       migrate_database=lambda sha: None, run=lambda *a, **k: None,
+                                       ledger_version=lambda: '0031',
+                                       healthy=release_health([False]*18 + [True]))
+            for c in ctx: c.start()
+            try:
+                with self.assertRaisesRegex(ValueError, 'RELEASE_FAILED_PREVIOUS_RESTORED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'e'*64)
+            self.assertEqual(json.loads((automation / 'state.json').read_text()), dict(previous, schema='e'*64))
+            self.assertEqual((base / 'current').resolve(), previous_release.resolve())
+
+    def test_backup_is_private_valid_and_pruned(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            def dump(args, **kwargs):
+                self.assertEqual(args[:5], ['docker', 'exec', '--user', 'postgres', 'etkinwms-postgres'])
+                kwargs['stdout'].write(payload)
+            free = release.shutil._ntuple_diskusage(10**13, 0, 10**12)
+            with patch.object(release, 'BASE', base), patch.object(release, 'KEEP_BACKUPS', 2), \
+                 patch.object(release.shutil, 'disk_usage', return_value=free), \
+                 patch.object(release, 'run', side_effect=dump):
+                payload = b'PGDMP rest'
+                paths = []
+                for i in range(3):
+                    with patch.object(release.time, 'time', return_value=1000 + i):
+                        paths.append(release.backup_database(SHA))
+                    os.utime(paths[-1], (1000 + i, 1000 + i))
+                self.assertEqual(sorted((base / 'backups').glob('pre-*.dump')), sorted(paths[1:]))
+                self.assertEqual(paths[-1].stat().st_mode & 0o777, 0o600)
+                self.assertEqual((base / 'backups').stat().st_mode & 0o777, 0o700)
+                payload = b'not a dump'
+                with patch.object(release.time, 'time', return_value=2000), \
+                     self.assertRaisesRegex(ValueError, 'BACKUP_INVALID'):
+                    release.backup_database(SHA)
+                self.assertEqual(len(list((base / 'backups').glob('pre-*.dump'))), 2)
+            with patch.object(release, 'BASE', base), \
+                 patch.object(release.shutil, 'disk_usage', return_value=release.shutil._ntuple_diskusage(10**13, 0, 10)), \
+                 self.assertRaisesRegex(ValueError, 'BACKUP_DISK_LOW'):
+                release.backup_database(SHA)
+
+    def test_migrator_drained_kills_container_then_waits_for_sessions(self):
+        with patch.object(release, 'remove_migrator') as remove, patch.object(release.time, 'sleep'), \
+             patch.object(release, 'psql', side_effect=['1', '1', '0']) as q:
+            self.assertTrue(release.migrator_drained())
+            remove.assert_called_once()
+            self.assertIn("application_name = 'wms-migrate'", q.call_args.args[0])
+        with patch.object(release, 'remove_migrator'), patch.object(release.time, 'sleep'), \
+             patch.object(release, 'psql', return_value='1'):
+            self.assertFalse(release.migrator_drained())
+
+    def test_migrator_gets_credential_only_from_env_file(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
+             patch.object(release, 'run') as run:
+            with patch.object(release, 'remove_migrator') as remove:
+                release.migrate_database(SHA)
+            remove.assert_called_once()
+            args = run.call_args.args[0]
+            self.assertEqual(args[args.index('--name') + 1], release.MIGRATOR_NAME)
+            self.assertEqual(args[args.index('--env-file') + 1], str(Path(directory) / 'migrate.env'))
+            self.assertIn('etkinwms-migrate:' + SHA, args)
+            self.assertFalse(any('postgresql://' in a or 'PASSWORD' in a for a in args))
+            self.assertEqual(run.call_args.kwargs['stdout'], release.subprocess.DEVNULL)
 
     def test_failed_health_restores_previous_without_promoting_new_release(self):
         with tempfile.TemporaryDirectory() as directory:

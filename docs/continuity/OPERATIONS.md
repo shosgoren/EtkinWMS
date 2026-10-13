@@ -51,7 +51,7 @@ URL/secret/env içeriğini veya kişisel kullanıcı satırlarını yazdırma. D
 1. Güncel exact main SHA, bütün dokuz zorunlu GitHub Actions check'i son success ve önceki canlı ancestry.
 2. Immutable image tag/revision, kaynak schema label, arşiv digest ve GitHub OIDC provenance. Sadece isim/etiket güven kanıtı değil.
 3. Sınırlı kimlik, root-owned sabit receiver/Compose, tek release lock. Runtime sırları VPS'de kalır.
-4. Schema hash hem approved-schema hem önceki sağlıklı imaj state'iyle eşleşir. Migration otomatik değil.
+4. Schema hash approved-schema ile eşleşir; farklıysa ve `migrate.env` kuruluysa alıcı yedek alıp imzalı migrator ile migration uygular (T-916, ayrıntı `deploy/vps/automation/README.md`). Kurulu değilse migration otomatik değil.
 5. Başarılı deep health sonrası current/state atomik; aynı SHA sağlıklıysa no-op. Hata varsa sadece schema-compatible önceki imaj/Compose rollback.
 6. Gerçek run URL, image digest, current SHA/tag ve migration defteri STATE'e kaydedilir. check mode ürün yayımlamaz.
 
