@@ -165,3 +165,5 @@
 - 2026-10-13 T934SQL aggregate WIP: bounded testsyntax iki parsehata sonrası tekupperrepair(roottsc0); thenruntime153/154 and77/78 (200outer30sFAIL iki optimize deneme),61schemaPASS/5pack~39msprepare/~51mspost. Author durdu; tekupperEXPLAIN performansdiagnosis, no timeout/GUC/cache/trigger change, WIPfreeze/merge/prod yok.
 
 - 2026-10-13 T934 tekupperperformance repair: gerçekEXPLAIN JITetkisi yok, planner1estimate/200actual lot/location40600calls; MATERIALIZED package_lines→origins sınırı query77.853→17.992ms. Sonfresh78/78PASS(61schema17command), default2006688.2/14542.5ms ve fulltest22770ms<30s;5paket37.3/34.4ms. No timeout/GUC/trigger/cache/enginechange, scratchcleaned. YeniSHA bağımsız review ve tamgates bekler.
+
+- 2026-10-14 T932+T933+T934 PR26 MERGED→int49de679 (kaynak34e0334); aynı Git tree bc57cdec. Final bağımsızsecurity0/0/0 + QA86/86PASS/skip0 (gerçekKG/GR çevrimi dahil), ci38465167535 ve guards38465559418 dokuzkontrolSUCCESS. Rapor: PR26#issuecomment-6154851235. Main/live531e9034/schema31; yeni UI/etiket/hareket yok, main paket PR/yayın sırada.
