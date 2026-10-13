@@ -2,8 +2,10 @@ import { expect,test } from "@playwright/test";
 import { localClient,loginEmptyTenant,scrubSecretInputs } from "./support/empty-tenant.ts";
 test.use({...localClient("198.51.100.12"),trace:"off"});
 test.afterEach(async({page})=>scrubSecretInputs(page));
-test("stock receipt, draft review, approval, posting and insufficient issue",async({page},info)=>{
- const {slug}=await loginEmptyTenant(page,"pilot"),suffix=info.project.name;
+test("stock receipt, draft review, approval, posting and insufficient issue",async({page,browser},info)=>{
+ const testClient=localClient(info.project.name.includes("mobile")?"198.51.100.132":"198.51.100.131");
+ if(testClient.extraHTTPHeaders!==undefined)await page.setExtraHTTPHeaders(testClient.extraHTTPHeaders);
+ const {slug}=await loginEmptyTenant(page,info.project.name.includes("mobile")?"stockMobile":"stockDesktop"),suffix=info.project.name;
  await page.goto(`/t/${slug}/warehouses?new=1`);
  const dialog=page.getByRole("dialog");await expect(dialog).toBeVisible();
  await dialog.locator('input[name="name"]').fill(`Pilot ${suffix}`);
@@ -92,7 +94,19 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot mamul ${suffix}`)}`);await expect(page.getByText("2.000000 ADET").first()).toBeVisible();
  await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot ürün ${suffix}`)}`);await expect(page.getByText("3.000000 ADET").first()).toBeVisible();
  // Existing production output is picked and shipped through the customer-facing workflow.
- await page.goto(targetHref!);await page.getByRole("button",{name:"Lokasyon ekle",exact:true}).click();
+ // SSR must not expose a clickable launcher before its event handler is ready.
+ const previewContext=await browser.newContext({...testClient,javaScriptEnabled:false,storageState:await page.context().storageState()});
+ try {
+  const preview=await previewContext.newPage();await preview.goto(targetHref!);
+  const serverLaunchers=preview.locator('[data-location-tree-ready="false"]').getByRole("button",{name:"Lokasyon ekle",exact:true,includeHidden:true});
+  await expect(serverLaunchers).not.toHaveCount(0);
+  // JavaScript-disabled streaming may retain multiple previews; every copy must be disabled.
+  for(const launcher of await serverLaunchers.all())await expect(launcher).toBeDisabled();
+ } finally {await previewContext.close();}
+ await page.goto(targetHref!);
+ await expect(page.locator('[data-location-tree-ready="true"]')).toHaveCount(1);
+ const addLocation=page.getByRole("button",{name:"Lokasyon ekle",exact:true});
+ await expect(addLocation).toBeEnabled();await addLocation.click();
  await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Sevk ${suffix}`);
  await expect(dialog.locator('input[name="code"]')).not.toHaveAttribute("readonly","");
  await dialog.locator('input[name="code"]').fill("SHIP");await dialog.locator('select[name="kind"]').selectOption("STAGING");await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(dialog).toBeHidden();

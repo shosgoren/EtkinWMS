@@ -50,3 +50,15 @@ flowchart LR
 | Koordinatör | Tek sıradaki görev, kart, kanıt, STATE | Aynı VPS/şema üzerinde iki operatör çalıştırmaz |
 
 Tek kişi birden fazla rol üstlenebilir; bağımsız inceleme gerektiren risklerde gerçek ayrı inceleme şartı korunur. Model adları veya başka aracın rol dosyaları canlı yetki kanıtı değildir.
+
+## Mal kabul çevresindeki kullanıcı hedefleri — 13 Ekim ek kararı
+- Excel örneği → doğrulanmış ürün/birim/çevrim/barkod önizlemesi → kabul paketleri → paket/palet etiketleri. Ürün içe aktarımı stok kabulüyle aynı şey değildir; mevcut opening-stock import paket kimliği üretmiş sayılmaz.
+- Kart kodu ve işletme iç barkodu eksikse sunucu çakışmasız üretir; bu hedef henüz tüm import yolunda uygulanmış değildir. Ürün barkodu aynı ürünü, paket QR tek fiziksel kabı, palet QR alt paket grubunu tanımlar. Yeniden aktarma aynı satırları sessiz çoğaltmaz.
+- Temel birim bilinmiyorsa KG yerine sessiz ADET atanmaz; aday eşleşme kısa önizlemede onaylanır. Dönüşüm katsayısı verilmediyse varilin/koli'nin ağırlığı tahmin edilmez. Dosya ve mevcut katalog çelişkisi satır üzerinde gösterilir; stoklu kartın temel birimi sessiz değiştirilmez.
+- Fiş başlık/satır kimlikleri stok hareketine ve paketlere kalıcı bağlıdır. Taslak değişiklik aynı kimlikte/sürüm denetimiyle yapılır, sil-yeniden-oluştur yok. Fiş numarası tür/yıl/tenant sayacıyla sunucudan; istemci numara veya ERP numarasını stok kimliği yerine kullanmaz.
+- Kaynak farkı: mevcut `stock/documents.ts:updateDraft` satır düzenlemesinde satırları DELETE+INSERT yapıyor. Paket bağlantılı yeni akış bu yolla düzenlenemez; kalıcı satır kimliğiyle diff/sürüm güncellemesi ayrı uygulama ve test ister. Henüz düzeltilmiş değildir.
+- Kesinleşmiş fişte gerçek defter DELETE/UPDATE uygulanmaz (I-04/I-08). Kullanıcı hedefi kolay düzenle/geri al/sil işlemleridir; güvenli uygulama önerisi bağlı düzeltme/ters kayıt + aktif görünümden iptal. Kullanıcının “hareketleri de sil” isteği fiziksel silme onayı sayılmaz; bundan farklı politika seçilirse ayrı tasarım/test/geri dönüşsüz veri onayı gerekir.
+- Düzeltme asıl belgeye ve satıra referans verir; tüketilmiş/sevk edilmiş paket, kapalı dönem veya aktif rezervasyon bağımlılığı sessiz koparılamaz. Engel ilgili fiş ve çözüm eylemiyle gösterilir. Yeni tarih/satır miktarı gelecekteki soy ağacını geriye dönük yeniden yazmaz.
+- Görüntüle/oluştur/düzenle/geri al/ERP aktar/dönem aç yetkileri sunucuda kontrol edilir; mevcut izinler önce eşlenir, eksik ayrımlar ayrı gözden geçirilir. Yeni altı izin hazırmış veya kullanıcıdan ayrıca altı onay gerekirmiş diye varsayılmaz.
+- ERP gelecekte adapter+kalıcı dış referans/idempotent outbox üzerinden; POSTED belge aktarılır. ERP'ye gitmiş belge düzeltme/ters kayıtla senkronize edilir, dış kayıt bağlantısı korunur. Gitti/bekliyor/hata durumları gerçek alındıdan gelir. Dönem kilidi/adapter/otomatik fiş senkronu mevcut temel kaynaklarla karıştırılmaz; bunlar geliştirme hedefidir.
+- T-931 yalnız saf miktar/tarih/QR temel dilimidir. Mevcut CSV/Excel import, birim çevrimi, katalog barkodu, fiş numaralama ve dış referans altyapısı bu uçtan uca hedefin tamamlandığı kanıtı değildir.

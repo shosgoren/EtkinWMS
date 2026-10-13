@@ -34,7 +34,10 @@ async function computed(locator: Locator, prop: string): Promise<string> {
   return locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
 }
 
-async function expectBorderStrong(page: Page, field: Locator, name: string): Promise<void> {
+async function expectBorderStrong(page: Page, rawField: Locator, name: string): Promise<void> {
+  // Streaming may retain an invisible resolved fragment; two visible controls still fail.
+  const field = rawField.filter({ visible: true });
+  await expect(field, `${name}: tek görünür alan`).toHaveCount(1);
   await expect(field, name).toBeVisible();
   const strong = await tokenColor(page, "--color-border-strong");
   for (const side of ["top", "right", "bottom", "left"]) {
@@ -42,7 +45,9 @@ async function expectBorderStrong(page: Page, field: Locator, name: string): Pro
   }
 }
 
-async function expectFocusRing(page: Page, field: Locator, name: string): Promise<void> {
+async function expectFocusRing(page: Page, rawField: Locator, name: string): Promise<void> {
+  const field = rawField.filter({ visible: true });
+  await expect(field, `${name}: tek görünür alan`).toHaveCount(1);
   // Klavye ile odak (focus-visible): önce gövdeye, ardından Tab ile alana gelinir.
   await field.focus();
   await page.keyboard.press("Shift+Tab");

@@ -129,3 +129,11 @@
 - 2026-10-13 T-929: kullanıcı iç ekranlarda tutarlılık ve tek elle geri/ana ekran erişimi istedi; masaüstü/tablet/telefon ayrı düzenleri kartta sınırlandı. Yerel verify3772 + temiz DB'de 26 E2E PASS; GitHub CI/yayın sonucu ilgili PR'da gerçek kanıtla kayıtlanır.
 
 - 2026-10-13 T-930: PR23 88 E2E PASS sonrası main receiving-mobile87/88; SSR gizli fragmentiyle geçici çift seçici. Tek kart yerleşmesi için kesin count assertion eklendi; kayıt/veri/geometry assertionları korunur. Yayın sonucu ilgili PR'da.
+
+- 2026-10-13 T-929/T-930 canlı doğrulama: main/live1cf81ed1; CI38418935906 + deploy38420413300 SUCCESS,88 E2E, ledger0031/31; üç cihazda oturumlu arayüz kontrolü. T-931 tekil fiziksel paket QR mal kabulü kullanıcı tarafından başlatıldı; henüz QR teslimi yok.
+
+- 2026-10-13 T-931 ilk saf sözleşme:13 unit senaryosu, bağımsız121 QA probu PASS, güvenlik0/0/0; source hash0dc4917c…b6e44. Yerel lint+unit3785 PASS, üretilmiş tip kopyaları taşındıktan sonra tüm workspace typecheck PASS; check:all PASS. DB/UI/kabul/etiket akışı henüz yok; Excel/fiş/ERP ek hedefleri mevcut kısa rehberlere işlendi.
+
+- 2026-10-13 T-931 hosted ilk E2E86/88 streaming çift seçici; görünür tek parent/alan ve gerçek kart geometrisine test kapsamı daraltıldı, ek cardinality assertionları eklendi; eşik/veri/negatif kontroller korunur. Yerel4 cihaz+son2 receiving PASS, ESLint/check:all PASS; yeni CI gerekir.
+
+- 2026-10-13 T-931: b1f0afa hosted verify DOM tipi + mobile dialog kırmızı; structural tip root tsc PASS, client-ready dar koruma. Yerel desktop stock PASS; mobile RATE_LIMITED iki deneme sonrası durdu, bağımsız QA ortak pilot-user kovasını teşhis etti; gerçek signup/MFA ile ayrı cihaz fikstürleri, tek eskalasyon koşusu2/2 PASS55.4s, bağımsız QA0. Lint/unit3785 PASS; generated Git dışı tip kopyaları taşınarak workspace typecheck PASS; check:all PASS. Hosted son kapılar bekleniyor, merge/yayın yok. VPS16:38UTC dump→izole restore PASS,0031/31 ve ledger/balance fark0; scratch kaldırıldı. Offsite/PITR/iş akışı kabulü açık.

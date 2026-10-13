@@ -726,43 +726,44 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
   const qtyText = (q: string): string => `${Number(q)} adet`;
   const mobile = isMobile(testInfo.project.name);
   const metrics: Record<string, unknown> = {};
+  const pendingCard = page.getByTestId("now-card").filter({ visible: true });
   await context.addCookies([{ name: "view", value: "cockpit", url: new URL(String(testInfo.project.use.baseURL)).origin }]);
   await login(page, "Yönetici");
   for (const [w, h] of [[360, 740], [390, 664], [390, 844], [430, 932]] as const) {
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/t/demo");
-    const card = page.getByTestId("now-card");
+    const card = page.getByTestId("now-card").filter({ visible: true });
     // SSR can briefly contain the completed hidden fragment as well as the current card.
     // Require exactly one settled card before strict single-element/data assertions.
     await expect(card).toHaveCount(1);
     await expect(card).toHaveAttribute("data-state", "rows");
     // Satırlar DB'deki gerçek bekleyen işle eşleşir (uydurma sayı yok).
-    await expect(page.getByTestId("now-receive")).toHaveAttribute("data-count", String(receiptCount));
+    await expect(pendingCard.getByTestId("now-receive")).toHaveAttribute("data-count", String(receiptCount));
     // Satır neyi sayıyorsa onu söyler (teslim sayısı, yerleştirme GÖREVİ sayısı) ve DOĞRUDAN sıradaki işe gider (tek davranış).
-    await expect(page.getByTestId("now-receive")).toContainText(`${receiptCount} teslim bekliyor`);
-    await expect(page.getByTestId("now-putaway")).toHaveAttribute("data-count", String(putCount));
-    await expect(page.getByTestId("now-putaway")).toContainText(`${putCount} yerleştirme görevi bekliyor`);
-    await expect(page.getByTestId("now-receive")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[0]?.id}`);
-    await expect(page.getByTestId("now-putaway")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[0]?.id}`);
+    await expect(pendingCard.getByTestId("now-receive")).toContainText(`${receiptCount} teslim bekliyor`);
+    await expect(pendingCard.getByTestId("now-putaway")).toHaveAttribute("data-count", String(putCount));
+    await expect(pendingCard.getByTestId("now-putaway")).toContainText(`${putCount} yerleştirme görevi bekliyor`);
+    await expect(pendingCard.getByTestId("now-receive")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[0]?.id}`);
+    await expect(pendingCard.getByTestId("now-putaway")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[0]?.id}`);
     // Fiil ve şevron HER yükseklikte görünür (anlam kısa ekranda kaybolmaz).
     for (const k of ["now-receive", "now-putaway"]) {
-      await expect(page.getByTestId(k).locator("svg"), `${w}x${h}: ${k} şevron görünür`).toBeVisible();
-      await expect(page.getByTestId(k).locator(".now-label"), `${w}x${h}: ${k} fiil görünür`).toContainText("bekliyor");
+      await expect(pendingCard.getByTestId(k).locator("svg"), `${w}x${h}: ${k} şevron görünür`).toBeVisible();
+      await expect(pendingCard.getByTestId(k).locator(".now-label"), `${w}x${h}: ${k} fiil görünür`).toContainText("bekliyor");
     }
     // "Sıradaki" KISA biçim (teslim numarası / adet): DB'deki en eski açık işler; < 700 px'te satırın kendisi sıradaki işi açtığından ayrıntı satırı yoktur.
     if (h >= 700) {
-      await expect(page.getByTestId("now-receive-next")).toHaveText(`Sıradaki: ${nextReceipts[0]?.number}`);
-      await expect(page.getByTestId("now-putaway-next")).toHaveText(`Sıradaki: ${qtyText(nextTasks[0]?.quantity ?? "0")}`);
+      await expect(pendingCard.getByTestId("now-receive-next")).toHaveText(`Sıradaki: ${nextReceipts[0]?.number}`);
+      await expect(pendingCard.getByTestId("now-putaway-next")).toHaveText(`Sıradaki: ${qtyText(nextTasks[0]?.quantity ?? "0")}`);
     } else {
-      await expect(page.getByTestId("now-receive-next")).toBeHidden();
+      await expect(pendingCard.getByTestId("now-receive-next")).toBeHidden();
     }
     if (h >= 880) {
-      await expect(page.getByTestId("now-receive-extra")).toHaveText(`Ardından: ${nextReceipts[1]?.number}`);
-      await expect(page.getByTestId("now-receive-extra")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[1]?.id}`);
-      await expect(page.getByTestId("now-putaway-extra")).toHaveText(`Ardından: ${qtyText(nextTasks[1]?.quantity ?? "0")}`);
-      await expect(page.getByTestId("now-putaway-extra")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[1]?.id}`);
+      await expect(pendingCard.getByTestId("now-receive-extra")).toHaveText(`Ardından: ${nextReceipts[1]?.number}`);
+      await expect(pendingCard.getByTestId("now-receive-extra")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[1]?.id}`);
+      await expect(pendingCard.getByTestId("now-putaway-extra")).toHaveText(`Ardından: ${qtyText(nextTasks[1]?.quantity ?? "0")}`);
+      await expect(pendingCard.getByTestId("now-putaway-extra")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[1]?.id}`);
     } else {
-      await expect(page.getByTestId("now-receive-extra")).toBeHidden();
+      await expect(pendingCard.getByTestId("now-receive-extra")).toBeHidden();
     }
     // Kesilme yok: kartın hiçbir görünür öğesi taşmaz (scrollWidth ≤ clientWidth); "…" ile kısaltma yok.
     const cut = await page.evaluate<string[]>(`[...document.querySelectorAll('.now-card *')].filter((e) => e.getBoundingClientRect().width > 0 && e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className + ':' + e.textContent)`);
@@ -770,7 +771,20 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     const m = await homeMetrics(page);
     metrics[`admin-${w}x${h}`] = m;
     // Çakışma yok: selam başlığı kartın üstünde, kart ızgaranın üstünde (içerik alana sığar; üst üste binen/kesilen içerik yok).
-    const geo = await page.evaluate<{ headB: number; cardT: number; cardB: number; gridT: number }>(`(() => { const r = (e) => e.getBoundingClientRect(); const top = document.querySelector('.task-grid .top-rows'); return { headB: r(document.querySelector('main header')).bottom, cardT: r(document.querySelector('.now-card')).top, cardB: r(document.querySelector('.now-card')).bottom, gridT: r(top || document.querySelector('.task-grid')).top }; })()`);
+    const geo = await pendingCard.evaluate((card) => {
+      const r = (element: { getBoundingClientRect: () => { top: number; bottom: number; height: number } }) => element.getBoundingClientRect();
+      const root = card.closest("main");
+      if (root === null) throw new Error("Expected home main");
+      const one = (selector: string) => {
+        const rows = [...root.querySelectorAll(selector)].filter((element) => r(element).height > 0);
+        if (rows.length !== 1) throw new Error(`Expected one visible geometry target: ${selector}`);
+        const target = rows[0];
+        if (target === undefined) throw new Error("Expected geometry target");
+        return target;
+      };
+      const top = [...root.querySelectorAll(".task-grid .top-rows")].some((element) => r(element).height > 0);
+      return { headB: r(one("header")).bottom, cardT: r(card).top, cardB: r(card).bottom, gridT: r(one(top ? ".task-grid .top-rows" : ".task-grid")).top };
+    });
     expect(geo.cardT, `${w}x${h}: Şimdi kartı selam başlığıyla çakışmaz`).toBeGreaterThanOrEqual(geo.headB - 0.5);
     expect(geo.gridT, `${w}x${h}: ızgara Şimdi kartıyla çakışmaz`).toBeGreaterThanOrEqual(geo.cardB - 0.5);
     // D-04 SIKI + D-04b + açıklama tek satır kesilmeden + ikon sabit/eşit; B-02 ve emptyRatio "bekleyen iş VAR" durumunda ASSERT.
@@ -803,13 +817,23 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     await page.goto("/t/demo");
     // Saha rolü (K-2): atanmış iş yok, ama yetkili olduğu açık işler VAR → "Şu an sana atanmış iş yok" denmez; gerçek bekleyen iş satırları görünür.
     await expect(page.getByTestId("my-tasks-empty"), `${w}x${h}: açık iş varken "atanmış iş yok" denmez`).toHaveCount(0);
-    await expect(page.getByTestId("now-card")).toHaveCount(1);
-    await expect(page.getByTestId("now-card")).toHaveAttribute("data-state", "rows");
-    await expect(page.getByTestId("now-receive")).toHaveAttribute("data-count", String(receiptCount));
-    await expect(page.getByTestId("now-putaway")).toHaveAttribute("data-count", String(pickerPut));
-    await expect(page.getByTestId("now-receive")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[0]?.id}`);
+    await expect(page.getByTestId("now-card").filter({ visible: true })).toHaveCount(1);
+    await expect(page.getByTestId("now-card").filter({ visible: true })).toHaveAttribute("data-state", "rows");
+    await expect(pendingCard.getByTestId("now-receive")).toHaveAttribute("data-count", String(receiptCount));
+    await expect(pendingCard.getByTestId("now-putaway")).toHaveAttribute("data-count", String(pickerPut));
+    await expect(pendingCard.getByTestId("now-receive")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[0]?.id}`);
     // Çakışma/kırpma yok (saha rolü): kart selam başlığının altında, ilk döşemenin üstünde; döşemeler 72/88-140 px.
-    const pgeo = await page.evaluate<{ headB: number; cardT: number; cardB: number; tileT: number }>(`(() => { const r = (e) => e.getBoundingClientRect(); const tiles = [...document.querySelectorAll('.task-grid > .task-item')].filter((e) => r(e).height > 0); return { headB: r(document.querySelector('main header')).bottom, cardT: r(document.querySelector('.now-card')).top, cardB: r(document.querySelector('.now-card')).bottom, tileT: Math.min(...tiles.map((e) => r(e).top)) }; })()`);
+    const pgeo = await pendingCard.evaluate((card) => {
+      const r = (element: { getBoundingClientRect: () => { top: number; bottom: number; height: number } }) => element.getBoundingClientRect();
+      const root = card.closest("main");
+      if (root === null) throw new Error("Expected home main");
+      const headers = [...root.querySelectorAll("header")].filter((element) => r(element).height > 0);
+      if (headers.length !== 1) throw new Error("Expected one visible home header");
+      const header = headers[0];
+      if (header === undefined) throw new Error("Expected home header");
+      const tiles = [...root.querySelectorAll(".task-grid > .task-item")].filter((element) => r(element).height > 0);
+      return { headB: r(header).bottom, cardT: r(card).top, cardB: r(card).bottom, tileT: Math.min(...tiles.map((element) => r(element).top)) };
+    });
     expect(pgeo.cardT, `${w}x${h} toplayıcı: kart selam başlığıyla çakışmaz`).toBeGreaterThanOrEqual(pgeo.headB - 0.5);
     expect(pgeo.tileT, `${w}x${h} toplayıcı: döşemeler kartla çakışmaz`).toBeGreaterThanOrEqual(pgeo.cardB - 0.5);
     const ptiles = (await homeMetrics(page)).tileHeights;
@@ -833,7 +857,9 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
   await db("UPDATE public.warehouse_tasks SET status = 'OPEN', assigned_membership_id = NULL WHERE tenant_id = $1 AND id = $2", [fx.tenantId, assignedId ?? randomUUID()]);
   // Tek davranış: satıra dokunmak DOĞRUDAN sıradaki işi açar.
   await page.goto("/t/demo");
-  await page.getByTestId("now-receive").click();
+  const nextReceiptLink = pendingCard.getByTestId("now-receive");
+  await expect(nextReceiptLink).toHaveCount(1);
+  await nextReceiptLink.click();
   await expect(page).toHaveURL(new RegExp(`/t/demo/field/receive\\?receipt=${nextReceipts[0]?.id}`));
   await expect(page.getByTestId("flow-step")).toBeVisible();
   writeFileSync(path.join(OUT, `metrics-home-pending-${testInfo.project.name}.json`), JSON.stringify(metrics, null, 2));
