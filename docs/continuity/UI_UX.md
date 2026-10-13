@@ -35,3 +35,10 @@ Telefon/notebook kamerası için HTTPS, kullanıcı izni ve gerçek barkod senar
 Etiket ölçüsü kullanıcı seçilebilir; yazıcı “her modelde doğrudan çalışır” diye ilan edilmez. İlk pilot tarayıcı/işletim sistemi yazdırma + PDF; ZPL/ağ/Bluetooth/USB özel protokol erişimi gerekiyorsa ölçülmüş ayrı köprü ve izin. Epson A4 test ile gerçek termal etiket kabulü farklı kanıttır.
 
 Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, dokunmatik + klavye; giriş/arama/miktar/yanlış barkod/bağlantı hatası/ters kayıt; yazıcıda gerçek boyut ve okunabilir barkod. Test edilmediyse STATE'de UNKNOWN yaz.
+
+## Canlı uygulamanın kolay ana ekranı (T-928)
+- Varsayılan `view=flow` / kullanıcı etiketi “İşlemler”: Mal geldi (turuncu), Taşı (mavi), Üret (mor), Sevk et (yeşil). Telefon iki, masaüstü dört sütun; 48px hedef/56px ana eylem alt sınırı korunur.
+- Kartlar VPS WMS'nin gerçek field/receive, stock/documents?new=TRANSFER, production, shipping sayfalarına gider. Sites localStorage/veri katmanı taşınmaz; QR özelliğinin tamamlandığı anlamına gelmez.
+- Stok/ürün/depo/görev kısayolları kısa; ekip/ayar/denetim “Diğer işler” altında. Ayrıntılı TaskMenu `view=cockpit` / “Genel bakış”ta korunur; mevcut görsel tercih bu görünümü açabilir.
+- Yetkisiz yazma kartı kilitli ve gerekçeli; hedef sayfa/eylem sunucuda yetkiyi ayrıca denetler. Bekleyen iş sayıları gerçek domain sorgularından gelir.
+- Yeni Akış düzeni ve eski Kokpit geometrisi ayrı E2E sözleşmeleridir. Eski testler atlanmaz; Kokpit açıkça seçilerek korunur.

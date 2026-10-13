@@ -84,23 +84,23 @@ for (const size of SIZES) {
       // Demo girişi → ana ekran; görünüm anahtarı ile Kokpit sonra Akış.
       await enterDemoShared(page, "Yönetici");
       await expect(page).toHaveURL(/\/t\/demo$/);
-      const tasks = page.getByRole("list", { name: "İşler" });
-      await expect(tasks).toBeVisible();
 
       for (const view of [...VIEWS].reverse()) {
         await selectView(page, view.label);
         await expect(page.locator("html")).toHaveAttribute("data-view", view.key);
+        const tasks = view.key === "flow" ? page.getByTestId("easy-operations") : page.getByRole("list", { name: "İşler" });
         await expect(tasks).toBeVisible();
+        if (view.key === "flow") await expect(tasks.locator("[data-operation]")).toHaveCount(4);
 
         // Kart ikonları Lucide (svg.lucide), dekoratif; üst bar logosu `accent` zeminli.
         const icons = tasks.locator("svg.lucide");
-        expect(await icons.count(), "kart ikonları (svg.lucide)").toBeGreaterThanOrEqual(9);
+        expect(await icons.count(), "kart ikonları (svg.lucide)").toBeGreaterThanOrEqual(view.key === "flow" ? 4 : 9);
         await expect(icons.first()).toHaveAttribute("aria-hidden", "true");
         // T-902 marka kabı ink rengindedir; telefon uygulama çubuğu görünüm accent rengini korur.
         await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
         const landingAccent = accents[view.key];
         if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
-        if (size.width < 768) await expect(page.getByTestId("app-bar").locator("span.bg-accent")).toHaveCSS("background-color", landingAccent);
+        if (size.width < 768) await expect(page.getByTestId("app-bar").locator("span.bg-ink")).toHaveCSS("background-color", await tokenColor(page, "ink"));
         await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`);
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);
         await page.screenshot({ path: path.join(OUT, `${view.key}-${size.width}-ana-ekran.png`), fullPage: true });

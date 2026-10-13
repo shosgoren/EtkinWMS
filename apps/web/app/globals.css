@@ -608,3 +608,40 @@ select.bg-none { background-image:none; }
   body:has(.tenant-shell) [data-testid="app-bar-name"] { margin-right:136px; }
   .welcome-shell { padding-bottom:90px; }
 }
+
+/* T-928: the easy home uses category pairs for the full operation cards. */
+.easy-operation-card {
+  text-decoration: none;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.easy-operation-card[data-state="active"]:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+.easy-operation-card[data-state="active"]:active {
+  transform: translateY(0);
+}
+.easy-operation-card[data-state="locked"] {
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+.easy-operation-icon {
+  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .easy-operation-card { transition: none; }
+}
+@media (max-width: 767px), ((pointer: coarse) and (max-height: 500px)) {
+  main:has(> .easy-operations) {
+    gap: 1.25rem;
+    padding: 1.25rem 1rem;
+    flex: 0 0 auto;
+  }
+  main:has(> .easy-operations) > header { gap: 0.375rem; }
+  main:has(> .easy-operations) > header h1 {
+    font-size: 1.625rem;
+    line-height: 1.2;
+  }
+  .easy-operation-card { min-height: 11rem; }
+  body:has(.tenant-shell) [data-testid="app-bar-name"] { margin-right: 0; }
+}

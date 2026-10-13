@@ -58,8 +58,8 @@ export function AppBar({ slug, tenantName, userName, memberships, view, setViewA
         data-testid="app-bar"
         className="phone-only z-30 h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border bg-surface pl-3 pr-1 pt-[env(safe-area-inset-top)]"
       >
-        <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-on-accent">
-          <Package className="size-5" strokeWidth={2} aria-hidden="true" />
+        <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-xl border-b-4 border-accent bg-ink text-on-accent">
+          <Package className="size-5 text-accent" strokeWidth={2} aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1 truncate text-base font-extrabold text-ink" data-testid="app-bar-name">
           {tenantName}

@@ -451,6 +451,34 @@
     "greeting": "Hello {name},",
     "title": "What do you want to do?",
     "intro": "Tap the task you want. I will guide you step by step and will not let you do something wrong.",
+    "easy": {
+      "label": "Easy operations",
+      "hint": "Choose a task to get started.",
+      "receive": {
+        "title": "Goods arrived",
+        "description": "Receive incoming goods"
+      },
+      "transfer": {
+        "title": "Move",
+        "description": "Move between warehouses"
+      },
+      "production": {
+        "title": "Produce",
+        "description": "Start from a recipe"
+      },
+      "shipping": {
+        "title": "Ship",
+        "description": "Prepare and send orders"
+      },
+      "links": "Other tasks",
+      "stock": "Stock",
+      "items": "Items",
+      "warehouses": "Warehouses",
+      "tasks": "My tasks",
+      "members": "Team",
+      "settings": "Settings",
+      "audit": "Activity history"
+    },
     "tasksLabel": "Tasks",
     "lockedReason": "You are not allowed to do this. Ask your manager.",
     "soonListNote": "These tasks will open after warehouse setup.",

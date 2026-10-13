@@ -142,6 +142,10 @@ test.describe("demo akışı", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
 
     // Kartlar: yönetici için stok görünümü dahil 7 etkin bağlantı, 2 "Yakında" kartı tıklanamaz; kilitli kart yok.
+    // T-928: existing detailed task/permission contracts remain in the explicitly selected cockpit.
+    await page.context().addCookies([{ name: "view", value: "cockpit", url: new URL(page.url()).origin }]);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
     const tasks = page.getByRole("list", { name: "İşler" });
     await expect(tasks.locator('a[data-state="active"]')).toHaveCount(7);
     await expect(tasks.locator('[data-state="soon"]')).toHaveCount(2);
@@ -220,6 +224,10 @@ test.describe("demo akışı", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
 
     // Yönetim, ayar ve denetim kartları kilitli (bağlantı değil) + gerekçe.
+    // T-928: existing detailed task/permission contracts remain in the explicitly selected cockpit.
+    await page.context().addCookies([{ name: "view", value: "cockpit", url: new URL(page.url()).origin }]);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
     const tasks = page.getByRole("list", { name: "İşler" });
     // T-313: "Depoya mal geldi" `stock.post` ister; salt okunur kullanıcıda bağlantı değil kilitli kart (FORBIDDEN ekranına götürmez) → 3 yönetim işi + 1.
     await expect(tasks.locator('[data-state="locked"]')).toHaveCount(4);

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { ActivityList, Banner } from "@wms/ui";
@@ -10,6 +10,7 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_LIST_LIMIT_MAX, listInboundReceipts, listMyTasks } from "@wms/domain/operations";
 import { TaskMenu, type MyTasksSummary, type NowSummary } from "./task-menu.tsx";
+import { EasyOperations } from "./easy-operations.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       now = { kind: "error", message: `${ts(key)} ${ts(`${key}Action`)}`, code: ts("code", { code }) };
     }
   }
+  const Menu = (await cookies()).get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
   const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
 
   return (
@@ -123,9 +125,9 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       <header className="flex min-w-0 flex-col gap-2 phone:gap-0">
         <p className="break-words text-xl font-semibold text-ink-muted phone:text-sm">{t("home.greeting", { name: firstName })}</p>
         <h1 className="break-words text-4xl font-extrabold text-ink phone:text-xl">{t("home.title")}</h1>
-        <p className="desk-only max-w-2xl basis-full break-words text-lg text-ink">{t("home.intro")}</p>
+        {Menu === TaskMenu ? <p className="desk-only max-w-2xl basis-full break-words text-lg text-ink">{t("home.intro")}</p> : null}
       </header>
-      <TaskMenu
+      <Menu
         slug={slug}
         myTasks={myTasks}
         now={now}

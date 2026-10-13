@@ -7,7 +7,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import tr from "../../apps/web/messages/tr.json" with { type: "json" };
 import type { Browser, Locator, Page } from "@playwright/test";
-import { enterDemoReal } from "./support/demo-session.ts";
+import { enterDemoReal, enterDemoShared } from "./support/demo-session.ts";
 import { T270_SIZES, chevronInfo, expectBand, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
 
 const OUT = process.env.T254_OUT ?? path.resolve(import.meta.dirname, "../../.artifacts/t-254");
@@ -18,6 +18,12 @@ const PHONES = [
   { name: "android-430", width: 430, height: 932 }, // T-903: 7 etkin iş (stok işlemleri stok ekranında) için büyük telefon da kaydırmasız sınanır
 ] as const;
 
+
+async function selectCockpitPreference(page: Page): Promise<void> {
+  await page.context().addCookies([{ name: "view", value: "cockpit", url: new URL(page.url()).origin }]);
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
+}
 
 async function height(locator: Locator): Promise<number> {
   const box = await locator.boundingBox();
@@ -36,6 +42,8 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await expect(page).toHaveURL(/\/t\/demo$/);
   await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
 
+  // T-928: legacy detailed menu geometry is the cockpit contract, not the new four-action flow.
+  await selectCockpitPreference(page);
   for (const size of PHONES) {
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto("/t/demo");
@@ -116,6 +124,8 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await expect(menu.getByRole("link", { name: /Demo Ambalaj/ })).toHaveAttribute("aria-current", "page");
   await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toBeVisible();
   await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toHaveAttribute("href", "/help");
+  await menu.getByRole("button", { name: "İşlemler", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
   await expect(menu.getByRole("button", { name: "İşlemler", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(await smallTargets(page, '[data-testid="app-menu"]'), "menü: 48 px altı dokunma hedefi").toEqual([]);
   await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-menu.png`) });
@@ -150,7 +160,8 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await expect(menu.getByRole("alert")).toContainText("Çıkış yapılamadı. Bağlantını kontrol edip yeniden dene.");
   await page.unroute("**/sign-out");
 
-  // Masaüstü (1280x800): telefon öğeleri yok, eski üst bar + çalışma alanı satırı görünür.
+  // Masaüstü (1280x800): ayrıntılı Kokpit üst barı + çalışma alanı satırı korunur.
+  await selectCockpitPreference(page);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/t/demo");
   await expect(page.getByTestId("app-bar")).toBeHidden();
@@ -277,6 +288,7 @@ test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş al
     await page.goto("/");
     await enterDemoReal(page, role.label);
     await expect(page).toHaveURL(/\/t\/demo$/);
+    await selectCockpitPreference(page);
     const tasks = page.getByRole("list", { name: "İşler" });
     const isAdmin = role.shot === "admin";
     const activeCount = isAdmin ? 7 : 4; // toplayıcı: Depoya mal geldi (stock.post, T-313) + Stok durumu + Depo ve raflar + Ürünlerim izinli; 3 yönetim işi yetkisiz
@@ -472,6 +484,7 @@ test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş al
 // kartın içeriği (başlık + "Bekleyen iş yok") B-02 bantında içerik sayılmaz. Dört boyutta ölçüm + görüntü; değerler raporlanır.
 /** Yönetici oturumu AÇIKKEN çağrılır (ek demo girişi yok: demo girişi hız sınırlıdır). */
 async function zeroStateChecks(page: Page): Promise<void> {
+  await selectCockpitPreference(page);
   const outHome = path.resolve(import.meta.dirname, "../../.artifacts/t-313");
   mkdirSync(outHome, { recursive: true });
   mkdirSync(OUT_T270, { recursive: true });
@@ -514,6 +527,8 @@ async function landscapePhoneChecks(browser: Browser, source: Page, tag: string)
   });
   try {
     const page = await context.newPage();
+    // T-928: legacy cockpit typography/device geometry remains a separate contract.
+    await context.addCookies([{ name: "view", value: "cockpit", url: new URL(source.url()).origin }]);
     const fontSize = (selector: string): Promise<string> =>
       page.evaluate<string>(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).fontSize`);
     const cases = [
@@ -542,3 +557,63 @@ async function landscapePhoneChecks(browser: Browser, source: Page, tag: string)
     await context.close();
   }
 }
+
+// T-928: the default flow is the live easy design, separate from retained cockpit geometry.
+test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve Kokpit geçişi", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
+  const routes = { receive: "/field/receive", transfer: "/stock/documents?new=TRANSFER", production: "/production", shipping: "/shipping" };
+  for (const [width, height] of [[390, 844], [1024, 768], [1280, 800]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/t/demo");
+    await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
+    const easy = page.getByTestId("easy-operations");
+    await expect(easy).toBeVisible();
+    await expect(easy.locator("[data-operation]")).toHaveCount(4);
+    await expect(page.locator(".task-grid")).toHaveCount(0);
+    for (const [operation, path] of Object.entries(routes)) {
+      const card = easy.locator(`[data-operation="${operation}"]`);
+      await expect(card).toHaveAttribute("href", `/t/demo${path}`);
+      await expect(card).toHaveAttribute("data-state", "active");
+      await expect(card.locator("svg").first()).toHaveAttribute("aria-hidden", "true");
+      await card.scrollIntoViewIfNeeded();
+      const box = await card.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(56);
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(48);
+    }
+    const widths = await page.evaluate<{ scroll: number; client: number }>("({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth})");
+    expect(widths.scroll).toBeLessThanOrEqual(widths.client);
+    await expect(easy.getByRole("link", { name: "Ekip", exact: true })).toBeHidden();
+    await easy.getByText("Diğer işler", { exact: true }).click();
+    await expect(easy.getByRole("link", { name: "Ekip", exact: true })).toHaveAttribute("href", "/t/demo/members");
+    await easy.getByText("Diğer işler", { exact: true }).click();
+  }
+  await page.getByTestId("easy-operations").locator('[data-operation="transfer"]').click();
+  await expect(page).toHaveURL(/\/t\/demo\/stock\/documents\?new=TRANSFER$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(tr.stockDocuments.transfer);
+  await page.goto("/t/demo");
+  await page.getByRole("button", { name: "Genel bakış", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
+  await expect(page.getByTestId("easy-operations")).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "İşler" })).toBeVisible();
+});
+
+test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok okuma açık", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoReal(page, "Salt okunur");
+  await expect(page).toHaveURL(/\/t\/demo$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
+  await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
+  await page.goto("/t/demo");
+  const easy = page.getByTestId("easy-operations");
+  await expect(easy.locator('[data-operation][data-state="locked"]')).toHaveCount(4);
+  await expect(easy.locator('a[data-operation]')).toHaveCount(0);
+  for (const card of await easy.locator('[data-operation]').all()) {
+    await expect(card).toHaveAttribute("aria-disabled", "true");
+    await expect(card).toContainText(tr.home.lockedReason);
+  }
+  await expect(easy.getByRole("link", { name: "Stok", exact: true })).toHaveAttribute("href", "/t/demo/stock");
+  await expect(easy.getByRole("link", { name: "Ekip", exact: true })).toHaveCount(0);
+  await expect(easy.getByRole("link", { name: "Ayarlar", exact: true })).toHaveCount(0);
+});
