@@ -58,8 +58,8 @@ async function dbColumns(): Promise<Map<string, Map<string, Col>>> {
   const client = new pg.Client({ connectionString: env.databaseUrlDirect });
   try {
     await client.connect();
-    const r = await client.query<{ table_name: string; column_name: string; data_type: string; is_nullable: string }>(
-      `SELECT c.table_name, c.column_name, c.data_type, c.is_nullable
+    const r = await client.query<{ table_name: string; column_name: string; data_type: string; udt_name: string; is_nullable: string }>(
+      `SELECT c.table_name, c.column_name, c.data_type, c.udt_name, c.is_nullable
          FROM information_schema.columns c
          JOIN information_schema.tables t
            ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE'
@@ -68,7 +68,7 @@ async function dbColumns(): Promise<Map<string, Map<string, Col>>> {
     const out = new Map<string, Map<string, Col>>();
     for (const row of r.rows) {
       const cols = out.get(row.table_name) ?? new Map<string, Col>();
-      cols.set(row.column_name, { type: row.data_type, nullable: row.is_nullable === "YES" });
+      cols.set(row.column_name, { type: row.data_type === "ARRAY" ? `${row.udt_name.slice(1)}[]` : row.data_type, nullable: row.is_nullable === "YES" });
       out.set(row.table_name, cols);
     }
     return out;
@@ -164,7 +164,7 @@ describe(`identity schema drift (target=${env.target})`, () => {
       // `id` sütunu olan her Drizzle tablosu (tenant_settings'in PK'si tenant_id'dir, request_rate_limits'in bilesik PK'si vardir; `id` yoktur).
       const withId = allTables().filter((t) => pgCore.getTableConfig(t).columns.some((c) => c.name === "id"));
       expect(ids.rows.length).toBe(withId.length);
-      expect(withId.length).toBe(48); // T-903b: + production_recipes; T-252: + external_refs, sync_cursors; T-251: + code_history; T-302: + warehouse_tasks, count_sessions, count_session_lines, item_stock_policies, stock_alerts; T-301: + inbound_receipts, inbound_receipt_lines, sales_orders, sales_order_lines, customer_returns, customer_return_lines; T-211: + stock_consistency_runs, stock_consistency_signals; T-202: + warehouses, locations; T-204: + units, items, unit_conversions, item_barcodes, inventory_owners, lots, serials, handling_units; T-206: + document_type_versions, documents, document_lines, document_status_history, idempotency_records; T-232: + stock_dimensions, stock_ledger, reservations (stock_balances'ta id yok)
+      expect(withId.length).toBe(49); // T-903b: + production_recipes; T-252: + external_refs, sync_cursors; T-251: + code_history; T-302: + warehouse_tasks, count_sessions, count_session_lines, item_stock_policies, stock_alerts; T-301: + inbound_receipts, inbound_receipt_lines, sales_orders, sales_order_lines, customer_returns, customer_return_lines; T-211: + stock_consistency_runs, stock_consistency_signals; T-202: + warehouses, locations; T-204: + units, items, unit_conversions, item_barcodes, inventory_owners, lots, serials, handling_units; T-206: + document_type_versions, documents, document_lines, document_status_history, idempotency_records; T-232: + stock_dimensions, stock_ledger, reservations (stock_balances'ta id yok)
       for (const r of ids.rows) {
         expect(r.data_type, r.table_name).toBe("uuid");
         expect(r.column_default, r.table_name).toBe("gen_random_uuid()");

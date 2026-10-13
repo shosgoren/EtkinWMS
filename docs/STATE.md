@@ -1,13 +1,13 @@
 # Etkin WMS — güncel devam durumu
 
-Son canlı doğrulama: **13.10.2026 18:24 Europe/Istanbul** (GitHub CI/yayın + receiver + DB defteri + oturumlu cihaz kontrolü).
+Son canlı doğrulama: **13.10.2026 21:11 Europe/Istanbul** (GitHub CI/yayın + receiver); son oturumlu üç cihaz kontrolü18:24.
 Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yeniden dar kontrol yap.
 
 ## Doğrulanmış durum
 - Repo: https://github.com/shosgoren/EtkinWMS ; referans repo 2027-WMS-1 salt okunur.
-- Canlı ve main: `1cf81ed1b9e80f2707145d62896019766e540ee5` (PR24, T-930; PR23/T-929 iç ekran düzenini içerir).
-- main CI38418935906 ve deploy38420413300 SUCCESS; dokuz zorunlu kontrol ve88 E2E PASS. Receiver health=ok, current=auto-1cf81ed1…, auto_migrate=true, ledger0031/31. 13 Ekim yeni görev başlangıcında main/yayın sonucu tekrar okundu.
-- Aynı SHA için önce `ci`, sonra `guards` callback'i gelir; ilk koşu RELEASE_BLOCKED ile düşüp ikincisi geçer (bilinen, zararsız).
+- Canlı ve main: `531e9034440ac1dc0d67fb11353a7ea09785c9f1` (PR25/T-931; önceki cihaz düzenini içerir).
+- main CI38442505462 + guards38442505492 SUCCESS; dokuz kontrol geçti, deploy38443949741 SUCCESS. VPS release531e9034/health=ok/auto_migrate=true; schema31 fingerprintd6b…88dd. T9320032 geliştirme şeması canlıda değil.
+- Yayın callback'leri farklı sırada tamamlanabilir; eksik CI varken RELEASE_BLOCKED ret, tüm dokuz kontrol geçince son callback yayın yapar (son kesimde doğrulandı).
 - PR15 pilot zinciri + PR16 kart türleri/standart birimler + PR17 MFA QR/rehber/SelectField + PR18/19 belgeler main'de.
 - VPS Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com ; satış https://etkinyazilim.com .
 - Beş servis: web, worker, marketing, Caddy proxy, PostgreSQL18 (`etkinwms-postgres`, public port yok, TLS verify-full).
@@ -43,9 +43,13 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - T-929/T-930 tamamlandı: ortak iç ekran kabuğu, cihazlara ayrı düzen, alt geri/ana ekran ve erişilebilir form ana eylemi. Yerel verify3772, temiz DB26 cihaz/saha E2E ve2 import yatay ekran testi PASS; son PR/main88 E2E PASS. Geçici çift SSR kartı count=1 assertionıyla beklenir; testler gevşetilmedi.
 - Oturumlu canlı kontrol: masaüstü1470×745, telefon390×740, tablet1024×740; taşma yok, telefon geri/ana ekran56px, son alan görünür; üretim/sevkiyat/transfer form bölümleri doğrulandı. Gerçek stok yazımı ve yazıcı testi yapılmadı.
 - Kanıt: [PR23](https://github.com/shosgoren/EtkinWMS/pull/23#issuecomment-6149097341), [PR24](https://github.com/shosgoren/EtkinWMS/pull/24#issuecomment-6149098075).
-- T-931 aktif dal `feat/T-931-package-receiving`: ilk saf paket miktar/tarih/QR sözleşmesi hazır;13 unit senaryosu, bağımsız121 QA probu ve güvenlik0 bulgu. Yerel lint+unit3785 PASS; tüm paket typecheck PASS (eski üretilmiş .next tip kopyaları taşındı). ardından migration → taslak/atomik kabul → etiket/okutma/UI. Mevcut stok motoru HU bazlı KG destekliyor, saha komutları henüz HU taşımıyor. Stok/RLS değişikliği bağımsız güvenlik + QA ister. DB/UI/kimlik üretimi/baskı bağlanmadı; yeni QR akışı canlıda var diye raporlanmaz. GitHub tam CI/birleşme durumu PR kanıtından kontrol edilir.
+- T-931 PR25 main'e geçti; ilk saf paket miktar/tarih/QR sözleşmesi hazır;13 unit senaryosu, bağımsız121 QA probu ve güvenlik0 bulgu. Yerel lint+unit3785 PASS; tüm paket typecheck PASS (eski üretilmiş .next tip kopyaları taşındı). ardından migration → taslak/atomik kabul → etiket/okutma/UI. Mevcut stok motoru HU bazlı KG destekliyor, saha komutları henüz HU taşımıyor. Stok/RLS değişikliği bağımsız güvenlik + QA ister. DB/UI/kimlik üretimi/baskı bağlanmadı; yeni QR akışı canlıda var diye raporlanmaz. GitHub tam CI/birleşme durumu PR kanıtından kontrol edilir.
 
-- PR25 ilk hosted E2E86/88: streaming sırasında gizli fragment çift seçici (#from/now-receive). Görünür tek alan/satır assertionı eklendi; renk/odak/veri/geometri eşikleri korunuyor. Yerel4 cihaz testi PASS; görünür karta bağlı son ölçüm değişikliğiyle2 receiving testi tekrar PASS. Bağımsız QA:0 bulgu, eşikler/negatif kontroller korundu. Hosted tam CI tekrar geçmeden merge/yayın yok.
-
-- PR25 b1f0afa hosted: E2E87/88 (mobile lokasyon dialogu), verify iki root DOM tipi hatası; diğer yedi kontrol PASS. Structural tip düzeltmesi root tsc PASS; client-ready koruması hazır. Yerel stock desktop PASS; iki mobile picker timeout RATE_LIMITED, bağımsız QA ortak kullanıcı kovasını işaret etti. İki ayrı gerçek signup/MFA test hesabıyla tek eskalasyon koşusu2/2 PASS55.4s; bağımsız QA0 bulgu. Son lint/unit3785 PASS, root ve workspace typecheck PASS, check:all PASS; limit/timeout gevşetilmedi. PR25 hosted son kontroller bekleniyor; merge/yayın YOK.
+- PR25 E2E/typecheck sorunları düzeltildi: streaming görünür tek alan, hydration-ready lokasyon kontrolü, iki ayrı gerçek signup/MFA stok test hesabı. Renk/odak/geometri assertionları ve limitler korundu; bağımsız QA0 bulgu. Son exact-head/main dokuz kontrol ve otomatik yayın PASS (yukarıdaki SHA/run kanıtı).
 - 13 Ekim16:38UTC: VPS canlı DB pg_dump -Fc, izole scratch restore --exit-on-error PASS; defter0031/31, ledger/balance fark0. Scratch kaldırıldı, canlı değişmedi; ayrıntı OPERATIONS. Günlük offsite/RPO/RTO veya auth kabulü kanıtlanmadı.
+
+- T-932 aktif dal `feat/T-932-receipt-package-schema`: yalnız yeni0032 şema/tenant ilişkileri, immutable paket origin ve migration testleri. İlk paket ledger allowlist origin STOCK_IN; generic paket hareket/reversal destek açılana kadar ret, legacy HU korunur. Domain/QR hareket/etiket/UI sonraki bağlı kartlar; canlıya şema yazımı yok.
+
+- T932 önceki kaynakta fresh-compose tam int107 dosya/1992 PASS; verify lint/typecheck/unit3785 PASS. Sonraki insert-order korumasında odaklı7 dosya/215 PASS; bunlar henüz son guard kaynak kanıtı değildir. İlk başarısız adapter koşusu1942/1983PASS,19FAIL+22setup-unexecuted; gerçek legacy regresyonları düzeltildi, STS/demo bulaşması fresh-compose ile ayrıldı. Hiçbir test atlanmadı veya kapı gevşetilmedi.
+- Son bounded RR kanıtında görünmeyen yeni receipt-parent ile ikinci source document her iki transaction COMMIT edebildi. BEFORE INSERT görünür gerçek parent/tek origin ve binding immutability koruması tamam: son kaynak eb28928c,10 dosya/318 PASS (paket46, iki RR sıra, gerçek eski partial/QC/reversal dahil), scoped eslint/bekçiler PASS. T933 komutları sırada; birleşik bağımsız güvenlik/QA ve tam kapılar hâlâ açık.
+- Gelecek paket hareketinde yalnız değişmeyen origin anchor kilidi RR yarışını çözmez; gerçek ortak version/CAS, exact reversal ve depo/sayım kapsamı ayrı tasarım/test ister. Bu dilimde hareket/üretim/etiket/UI açık değildir.

@@ -16,7 +16,7 @@ import { runTenantCommand, runTenantQuery } from "../identity/access.ts";
 import { parseNfcText } from "./lots.ts";
 import { parseUuid, type CatalogCommandParams } from "./units.ts";
 
-const KINDS: readonly HandlingUnitKind[] = ["KOLI", "PALET"];
+const KINDS: readonly HandlingUnitKind[] = ["KOLI", "PALET", "VARIL"];
 export const HANDLING_UNIT_TREE_MAX_DEPTH = 32;
 
 export interface CreateHandlingUnitInput {

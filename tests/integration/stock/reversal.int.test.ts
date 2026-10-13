@@ -460,7 +460,9 @@ describe("B-1: saha akışından gelen belge (source_kind dolu) ters çevrilmez"
     const x = await mkItem();
     const loc = await mkLoc();
     const d = await mkApproved("STOCK_IN", [ln(x, { targetLocationId: loc, ...qty("10") })]);
-    await bypassGuardsUpdate("UPDATE public.documents SET source_kind = $2, source_id = $3 WHERE id = $1", [d.id, kind, uuid()]);
+    const sourceId = uuid();
+    if(kind === "INBOUND_RECEIPT") await q("INSERT INTO public.inbound_receipts(tenant_id,id,warehouse_id,number,created_by) VALUES($1,$2,$3,$4,$5)",[A.tenantId,sourceId,A.warehouseId,`SOURCE-${sourceId}`,A.ownerUserId]);
+    await bypassGuardsUpdate("UPDATE public.documents SET source_kind = $2, source_id = $3 WHERE id = $1", [d.id, kind, sourceId]);
     expect((await post(d)).status).toBe("POSTED");
     const e = await failure(reverse(d.id, "ALL"));
     expect(codeOf(e)).toBe("REVERSAL_BLOCKED/SOURCE_LINKED");

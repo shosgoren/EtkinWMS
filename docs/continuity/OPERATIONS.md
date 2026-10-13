@@ -94,3 +94,6 @@ Yeni tenant/ilk-owner tekrar açılmadan mevcut üyelik, password/MFA boolean'la
 
 ## 13 Ekim 16:38 UTC — izole geri yükleme doğrulaması
 Yeni canlı DB yedeği `pg_dump -Fc` ile `/root/etkinwms-backups/before-package-schema-20261013163858.dump` içine alındı (dizin700/dosya600; VPS dışına taşınmadı). Yalnız yeni scratch DB'ye `pg_restore --exit-on-error` uygulandı: defter0031/31 ve ledger/balance farkı0; scratch EXIT temizliğiyle kaldırıldı. Canlı DB değişmedi; receiver health=ok, release auto-1cf81ed1…, auto_migrate=true. Bu yeni prova önceki schema31 kesimindeki “restore denenmedi” tarihli kaydı değiştirmez. Login/iş akışı restore kabulü, günlük offsite, WAL/PITR, RPO/RTO ve retention doğrulanmış değildir.
+
+## 13 Ekim 21:11 — T931 otomatik yayın
+main531e9034440ac1dc0d67fb11353a7ea09785c9f1 için ci38442505462/guards38442505492 SUCCESS; deploy38443949741 SUCCESS. Salt okunur receiver check: release531e9034, health=ok, auto_migrate=true, schema31 fingerprintd6b6b9d7…88dd. Önce guards callback yayını38443064499 RELEASE_BLOCKED:int ile durdurdu; CI tamamlandıktan sonraki koşu geçti. T9320032 henüz geliştirme dalında, canlıya uygulanmadı. Yeni fiziksel QR kabul ekranı/etiket özelliği bu yayında yok.
