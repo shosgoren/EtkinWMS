@@ -602,6 +602,8 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
 test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok okuma açık", async ({ page }) => {
   await page.goto("/");
   await enterDemoReal(page, "Salt okunur");
+  await expect(page).toHaveURL(/\/t\/demo$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
   await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
   await page.goto("/t/demo");
   const easy = page.getByTestId("easy-operations");
