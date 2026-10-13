@@ -6,7 +6,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Banner, Button, ConfirmDialog, EmptyState } from "@wms/ui";
 import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
 import { PageBody } from "../../easy-setup/sheet.tsx";
@@ -43,6 +43,11 @@ const LINK_CLS =
 /** Bir seferde en çok bu kadar kademe girinti (mobilde yatay taşma olmasın); daha derinde düzey rozeti yol gösterir. */
 const MAX_INDENT_STEPS = 4;
 const INDENT_PX = 14;
+
+// SSR is a non-interactive preview; enable dialog launchers only after hydration.
+const subscribeToClientReady = () => () => {};
+const getClientReadySnapshot = () => true;
+const getServerReadySnapshot = () => false;
 
 function levelKey(depth: number): "zone" | "rack" | "bin" | "deeper" {
   return depth === 0 ? "zone" : depth === 1 ? "rack" : depth === 2 ? "bin" : "deeper";
@@ -90,6 +95,8 @@ export function LocationTree({
   const [error, setError] = useState<{ error: ServerError; scope: "warehouse" | "location" } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const writable = canManage && warehouseActive;
+  const clientReady = useSyncExternalStore(subscribeToClientReady, getClientReadySnapshot, getServerReadySnapshot);
+  const canOpenDialogs = writable && clientReady;
   const [bulkOpen, setBulkOpen] = useState(false);
   const [version, setVersion] = useState(0);
   const progress = useSetupProgress(slug, canManage, version);
@@ -193,7 +200,7 @@ export function LocationTree({
   return (
     <>
       <PageBody hide={bulkOpen || parent !== undefined || editing !== null}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div data-location-tree-ready={clientReady} className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Link href={base} className={LINK_CLS}>
             {t("back")}
@@ -202,10 +209,10 @@ export function LocationTree({
           <p className="break-all text-base text-ink-muted">{tw("codeLabel", { code: warehouseCode })}</p>
         </div>
         <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:*:shrink-0 sm:*:whitespace-nowrap">
-          <Button onClick={() => setParent({ id: null, label: warehouseName })} disabled={!writable} aria-describedby={lockText === null ? undefined : "tree-locked"}>
+          <Button onClick={() => setParent({ id: null, label: warehouseName })} disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : "tree-locked"}>
             {t("addRoot")}
           </Button>
-          <Button variant="secondary" onClick={() => setBulkOpen(true)} disabled={!writable} aria-describedby={lockText === null ? undefined : "tree-locked"}>
+          <Button variant="secondary" onClick={() => setBulkOpen(true)} disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : "tree-locked"}>
             {tb("open")}
           </Button>
           {lockText === null ? null : (
@@ -259,13 +266,13 @@ export function LocationTree({
                   </div>
                   {active ? (
                     <div role="group" aria-label={tw("actionsFor", { name: it.name })} className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:*:shrink-0 sm:*:whitespace-nowrap">
-                      <Button variant="secondary" disabled={!writable} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setParent({ id: it.id, label: `${it.name} (${it.code})` })}>
+                      <Button variant="secondary" disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setParent({ id: it.id, label: `${it.name} (${it.code})` })}>
                         {t("addChild")}
                       </Button>
-                      <Button variant="secondary" disabled={!writable} aria-describedby={lockText === null ? undefined : noteId} aria-label={tw("codeEdit.for", { name: it.name })} onClick={() => setEditing(it)}>
+                      <Button variant="secondary" disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : noteId} aria-label={tw("codeEdit.for", { name: it.name })} onClick={() => setEditing(it)}>
                         {tw("codeEdit.button")}
                       </Button>
-                      <Button variant="danger" disabled={!writable} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setArchiving(it)}>
+                      <Button variant="danger" disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setArchiving(it)}>
                         {t("archive")}
                       </Button>
                     </div>

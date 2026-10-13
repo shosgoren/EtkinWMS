@@ -772,7 +772,7 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     metrics[`admin-${w}x${h}`] = m;
     // Çakışma yok: selam başlığı kartın üstünde, kart ızgaranın üstünde (içerik alana sığar; üst üste binen/kesilen içerik yok).
     const geo = await pendingCard.evaluate((card) => {
-      const r = (element: Element) => element.getBoundingClientRect();
+      const r = (element: { getBoundingClientRect: () => { top: number; bottom: number; height: number } }) => element.getBoundingClientRect();
       const root = card.closest("main");
       if (root === null) throw new Error("Expected home main");
       const one = (selector: string) => {
@@ -824,7 +824,7 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     await expect(pendingCard.getByTestId("now-receive")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[0]?.id}`);
     // Çakışma/kırpma yok (saha rolü): kart selam başlığının altında, ilk döşemenin üstünde; döşemeler 72/88-140 px.
     const pgeo = await pendingCard.evaluate((card) => {
-      const r = (element: Element) => element.getBoundingClientRect();
+      const r = (element: { getBoundingClientRect: () => { top: number; bottom: number; height: number } }) => element.getBoundingClientRect();
       const root = card.closest("main");
       if (root === null) throw new Error("Expected home main");
       const headers = [...root.querySelectorAll("header")].filter((element) => r(element).height > 0);

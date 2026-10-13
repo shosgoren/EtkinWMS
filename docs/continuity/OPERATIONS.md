@@ -91,3 +91,6 @@ Operatör betiği tuzakları (aynı hataları tekrarlama):
 
 ## Hesap / kurtarma
 Yeni tenant/ilk-owner tekrar açılmadan mevcut üyelik, password/MFA boolean'ları kontrol edilir. İlk sahip aracı source ledger=DBledger eşleşmesine göre çalışır; eski “tam27” notu güncel build için kör uygulanmaz. MAIL_MODE disabled ise mail teslimini varsayma. Private tek kullanımlık link sohbet/log/CI artifact'a konmaz; kullanıcı kendi parolasını ve MFA'sını girer. Geçersiz/expired link için journal'ı silme veya normal resume guard'ını aşma; aynı hedefe bağlı incelenmiş recovery kullan. Şu an Motive'de password veMFA var; geçmiş başarısız kurulum yeniden uygulanmaz.
+
+## 13 Ekim 16:38 UTC — izole geri yükleme doğrulaması
+Yeni canlı DB yedeği `pg_dump -Fc` ile `/root/etkinwms-backups/before-package-schema-20261013163858.dump` içine alındı (dizin700/dosya600; VPS dışına taşınmadı). Yalnız yeni scratch DB'ye `pg_restore --exit-on-error` uygulandı: defter0031/31 ve ledger/balance farkı0; scratch EXIT temizliğiyle kaldırıldı. Canlı DB değişmedi; receiver health=ok, release auto-1cf81ed1…, auto_migrate=true. Bu yeni prova önceki schema31 kesimindeki “restore denenmedi” tarihli kaydı değiştirmez. Login/iş akışı restore kabulü, günlük offsite, WAL/PITR, RPO/RTO ve retention doğrulanmış değildir.

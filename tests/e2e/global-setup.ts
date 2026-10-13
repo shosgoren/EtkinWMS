@@ -266,6 +266,26 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       process.env.E2E_PILOT_EMAIL = pilotEmail;
       process.env.E2E_PILOT_PASSWORD = pilotPassword;
       process.env.E2E_PILOT_TOTP_SECRET = pilot.totpSecret;
+      // Stok akışında iki proje aynı kullanıcı hız kovasını tüketmez. Sınırlar değişmez;
+      // ayrı gerçek hesap/tenant/MFA oluşturulur, mevcut boş/pilot fikstürleri korunur.
+      for (const device of ["DESKTOP", "MOBILE"] as const) {
+        const stockEmail = `stock-${device.toLowerCase()}-${suffix}@example.test`;
+        const stockPassword = randomBytes(18).toString("hex");
+        const stock = await provisionEmptyTenant({
+          browser,
+          origin: `https://localhost:${portB}`,
+          clientIp: device === "DESKTOP" ? "198.51.100.21" : "198.51.100.22",
+          name: `E2E stock ${device}`,
+          email: stockEmail,
+          password: stockPassword,
+          workspaceName: `E2E stock ${device} ${suffix}`,
+        });
+        const prefix = `E2E_STOCK_${device}`;
+        process.env[`${prefix}_SLUG`] = stock.slug;
+        process.env[`${prefix}_EMAIL`] = stockEmail;
+        process.env[`${prefix}_PASSWORD`] = stockPassword;
+        process.env[`${prefix}_TOTP_SECRET`] = stock.totpSecret;
+      }
     } catch (e) {
       setupError = e;
     }
