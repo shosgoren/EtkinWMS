@@ -34,9 +34,9 @@ async function fixture(opts: { receiptId?: string; itemId?: string; handlingUnit
   await app.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,source_line_id,lot_id) VALUES($1,$2,$3,1,$4,$5,3,2,6,$6,$7,$8,$9)",[t,ids.line,ids.document,opts.itemId ?? world.itemNoneId,world.unitId,world.rootLocationId,opts.handlingUnitId ?? ids.hu,opts.sourceLineId ?? ids.receiptLine,opts.lotId ?? null]);
   await app.query("INSERT INTO public.receipt_packages(tenant_id,id,receipt_id,receipt_line_id,document_id,document_line_id,package_no,lot_code,produced_on,expires_on,catalog_lot_id) VALUES($1,$2,$3,$4,$5,$6,$7,'PHYSICAL-LOT',$9,$10,$8)",[opts.packageTenant ?? t,ids.hu,opts.receiptId ?? ids.receipt,ids.receiptLine,ids.document,ids.line,opts.packageNo ?? 1, opts.lotId ?? null,opts.noDates ? null : "2026-10-01",opts.noDates ? null : "2027-10-01"]);
 }
-async function post() {
+async function post(quantities:readonly number[]=[6]) {
   await app.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'AVAILABLE')",[world.tenantId,dimension,world.itemNoneId,world.rootLocationId,hu]);
-  await app.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,6,'Synthetic package acceptance','2026-10-13')",[world.tenantId,document,line,dimension]);
+  for(const quantity of quantities) await app.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,$5,'Synthetic package acceptance','2026-10-13')",[world.tenantId,document,line,dimension,quantity]);
   await app.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,6)",[world.tenantId,dimension]);
   await app.query("UPDATE public.inbound_receipt_lines SET received_quantity=3 WHERE tenant_id=$1 AND id=$2",[world.tenantId,receiptLine]);
   await app.query("UPDATE public.inbound_receipts SET status='CLOSED' WHERE tenant_id=$1 AND id=$2",[world.tenantId,receipt]);
@@ -316,5 +316,39 @@ describe("T-932 immutable package origins (isolated scratch, runtime role)",()=>
       expect((await migration.query("SELECT count(*)::int AS n FROM public.receipt_packages WHERE id=$1",[oldHu])).rows[0]?.n).toBe(0);
     } finally {await racer.query("ROLLBACK");await racer.end();}
   });
+
+ for(const schedule of ["creating transaction uncommitted","pair committed after RR snapshot"] as const) it(`T934 ordinary new-HU FK visibility ${schedule}`,async()=> {
+   const racer=new pg.Client({connectionString:appUrl});await racer.connect();
+   const ids={receipt:randomUUID(),receiptLine:randomUUID(),document:randomUUID(),line:randomUUID(),hu:randomUUID()},dim=randomUUID();
+   try {
+     for(const c of [app,racer]) {await c.query("BEGIN ISOLATION LEVEL REPEATABLE READ");await c.query("SELECT set_config('app.current_tenant_id',$1,true)",[world.tenantId]);expect((await c.query("SELECT id FROM handling_units WHERE tenant_id=$1 AND id=$2",[world.tenantId,ids.hu])).rowCount).toBe(0);}
+     await fixture({ids});await flush();
+     if(schedule==="pair committed after RR snapshot")await app.query("COMMIT");
+     expect((await racer.query("SELECT id FROM handling_units WHERE tenant_id=$1 AND id=$2",[world.tenantId,ids.hu])).rowCount).toBe(0);
+     await expect(racer.query("INSERT INTO stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'AVAILABLE')",[world.tenantId,dim,world.itemNoneId,world.rootLocationId,ids.hu])).rejects.toMatchObject({code:expect.stringMatching(/^(23503|40001)$/)});
+     await racer.query("ROLLBACK");if(schedule==="creating transaction uncommitted")await app.query("COMMIT");
+     expect((await migration.query("SELECT package_receipt_id FROM handling_units WHERE tenant_id=$1 AND id=$2",[world.tenantId,ids.hu])).rows).toEqual([{package_receipt_id:ids.receipt}]);
+     expect((await migration.query("SELECT id FROM stock_dimensions WHERE id=$1",[dim])).rows).toHaveLength(0);
+   } finally {await app.query("ROLLBACK");await racer.query("ROLLBACK");await racer.end();}
+ });
+
+  it("T934 aggregate split ledger entries do not multiply one balance; extra zero dimension is inert",async()=>transaction(async()=> {
+    await post([2,4]);const extra=randomUUID();
+    await app.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'AVAILABLE')",[world.tenantId,extra,world.itemNoneId,world.childLocationId,hu]);
+    await app.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,0)",[world.tenantId,extra]);
+    await flush();
+    expect((await app.query("SELECT sum(quantity)::text AS total,count(*)::int AS n FROM public.stock_ledger WHERE tenant_id=$1 AND document_id=$2",[world.tenantId,document])).rows[0]).toEqual({total:"6.000000",n:2});
+    expect((await app.query("SELECT sum(b.quantity)::text AS total FROM public.stock_balances b JOIN public.stock_dimensions d ON d.tenant_id=b.tenant_id AND d.id=b.stock_dimension_id WHERE d.tenant_id=$1 AND d.handling_unit_id=$2",[world.tenantId,hu])).rows[0]?.total).toBe("6.000000");
+  }));
+  for(const wrongHu of [null,"other"] as const)it(`T934 origin ledger with ${wrongHu===null?"NULL":"wrong"} HU keeps dimension category`,async()=>transaction(async()=> {
+    await post();const extra=randomUUID();
+    await app.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'QUARANTINE')",[world.tenantId,extra,world.itemNoneId,world.rootLocationId,wrongHu===null?null:world.handlingUnitId]);
+    await app.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,1,'Wrong package dimension','2026-10-13')",[world.tenantId,document,line,extra]);
+    await expect(app.query("SELECT public.receipt_package_assert($1,$2)",[world.tenantId,receipt])).rejects.toMatchObject({code:"23514",message:"PACKAGE_LEDGER_DIMENSION"});
+  }));
+  it("T934 posted missing ledger remains zero total and fails quantity category",async()=>transaction(async()=> {
+    await app.query("UPDATE public.inbound_receipt_lines SET received_quantity=3 WHERE id=$1",[receiptLine]);await app.query("UPDATE public.inbound_receipts SET status='CLOSED' WHERE id=$1",[receipt]);await app.query("UPDATE public.documents SET status='POSTED',number='MISSING-LEDGER' WHERE id=$1",[document]);
+    await expect(app.query("SELECT public.receipt_package_assert($1,$2)",[world.tenantId,receipt])).rejects.toMatchObject({code:"23514",message:"PACKAGE_LEDGER_QUANTITY"});
+  }));
 
 });
