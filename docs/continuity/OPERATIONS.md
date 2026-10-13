@@ -11,11 +11,14 @@ Bu dosya bağlantı **metadatasını** içerir; parola/özel anahtar/URI/bearer 
 | WMS | https://wms.etkinyazilim.com | HTTPS Caddy→web |
 | Satış | https://etkinyazilim.com | www ve .com.tr yönlendirmeleri |
 | DB | etkinwms-postgres:5432 / etkinwms | Yalnız uygulama Docker ağı; public DB portu yok |
+| Operatör SSH | root@187.7.76.72, TCP22 | Mevcut yetkili anahtar; genel erişim yalnız operatörde |
 | Otomatik kimlik | etkinwms-deploy | Forced command check/deploy; genel shell/SCP/forwarding yok |
 | GitHub Environment | etkinwms-production | Yalnız main |
 | Secret **adları** | ETKINWMS_DEPLOY_KEY,ETKINWMS_KNOWN_HOSTS | Değerler yalnız sağlayıcı güvenli ayarlarında |
 
 Host anahtarı 12 Ekim kaydında `SHA256:b9ipBdrYLPBxkdy0Xm7r1nDQCwC7SOMTs1PBXWaS9Xs`; strict known-host doğrulanır. Yeni host key veya farklı VPS için otomatik kabul yok. Yerel private root anahtarı Cloud/GitHub'a taşınmaz; otomasyon ayrı kısıtlı anahtarı kullanır. Anahtar yoksa token/chat üzerinden sır isteme; kullanıcı mevcut erişimi yetkili ortamda sağlar.
+
+Yerel mevcut çalışma alanında anahtar referansı `.deploy-access/etkinwms_vps`, host pin dosyası `.deploy-access/known_hosts`; bunlar repo dışında tutulur, dosya içeriği yayımlanmaz. Yeni makine/AI için var sayılmaz. Boşluklu dosya yolları SSH option içinde de doğru tırnaklanır. GitHub CLI erişimi `gh auth status` ile doğrulanır; token yazdırılmaz.
 
 ## Sunucu yolları
 - `/opt/etkinwms/current` → aktif release symlink; gerçek hedefini oku.
