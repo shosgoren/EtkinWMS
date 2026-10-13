@@ -359,6 +359,16 @@ class ReleaseBoundaryTests(unittest.TestCase):
                  self.assertRaisesRegex(ValueError, 'BACKUP_DISK_LOW'):
                 release.backup_database(SHA)
 
+    def test_migrator_drained_kills_container_then_waits_for_sessions(self):
+        with patch.object(release, 'remove_migrator') as remove, patch.object(release.time, 'sleep'), \
+             patch.object(release, 'psql', side_effect=['1', '1', '0']) as q:
+            self.assertTrue(release.migrator_drained())
+            remove.assert_called_once()
+            self.assertIn("application_name = 'wms-migrate'", q.call_args.args[0])
+        with patch.object(release, 'remove_migrator'), patch.object(release.time, 'sleep'), \
+             patch.object(release, 'psql', return_value='1'):
+            self.assertFalse(release.migrator_drained())
+
     def test_migrator_gets_credential_only_from_env_file(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
              patch.object(release, 'run') as run:

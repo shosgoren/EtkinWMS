@@ -1,11 +1,13 @@
 #!/bin/bash
 # T-916 one-time VPS setup (root). Run from this directory of an extracted exact-main source tree.
-# 1) Migration role: the owner of wms_meta.schema_migrations, or (if that owner is postgres/privileged) a new
-#    `wms_migrator`. It must end NOSUPERUSER/NOBYPASSRLS/NOCREATEROLE/NOCREATEDB/NOREPLICATION, also via membership.
+# 1) Migration role: the owner of wms_meta.schema_migrations if it is clean; if it is postgres or privileged
+#    (attributes or predefined server-access roles, directly or via membership) a new `wms_migrator` replaces it,
+#    inherits its EXECUTE grants on probe routines, and the old owner loses its probe/ops memberships.
 # 2) In one transaction, application objects owned by postgres (13 Oct manual cutover) or by the old owner move to
 #    the migration role; nothing owned by postgres may remain in application schemas.
 # 3) Fresh random password, sent only as a client-side SCRAM verifier; DSN only in root600 migrate.env.
-# 4) TLS login verified, receiver installed under the release lock. Nothing secret is printed. Idempotent.
+# 4) TLS login verified before migrate.env is installed; receiver installed under the release lock.
+#    Nothing secret is printed. Idempotent.
 set -euo pipefail
 umask 077
 test "$(id -u)" = 0
@@ -21,9 +23,11 @@ APP_SCHEMAS="n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname 
 OWNER=$(Q -c "SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid = 'wms_meta.schema_migrations'::regclass")
 [[ "$OWNER" =~ ^[a-z_][a-z0-9_]{0,62}$ ]] || { echo "HATA: migration sahibi rol okunamadi"; exit 1; }
 case "$OWNER" in wms_app|wms_auth|wms_worker|wms_ops|wms_identity_probe) echo "HATA: sahip uygulama rolu ($OWNER)"; exit 1;; esac
-PRIV=$(Q -c "SELECT EXISTS (SELECT 1 FROM pg_roles r WHERE pg_has_role('$OWNER', r.oid, 'MEMBER') AND (r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication) AND r.rolname <> '$OWNER')")
-OWNSUPER=$(Q -c "SELECT rolsuper FROM pg_roles WHERE rolname = '$OWNER'")
-if [ "$OWNSUPER" = t ] || [ "$PRIV" = t ]; then TARGET=wms_migrator; else TARGET=$OWNER; fi
+# PRIVILEGED_MEMBER is the single privilege rule (attributes or predefined server-access roles, incl. the role itself).
+PRIVILEGED="(r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication OR r.rolname IN ('pg_execute_server_program','pg_read_server_files','pg_write_server_files','pg_read_all_data','pg_write_all_data','pg_signal_backend','pg_checkpoint'))"
+PRIV=$(Q -c "SELECT EXISTS (SELECT 1 FROM pg_roles r WHERE pg_has_role('$OWNER', r.oid, 'MEMBER') AND $PRIVILEGED)")
+# A clean owner stays the migration role; any privileged owner (or postgres) is replaced by a new wms_migrator.
+if [ "$PRIV" = t ] || [ "$OWNER" = postgres ]; then TARGET=wms_migrator; else TARGET=$OWNER; fi
 echo "mevcut migration sahibi: $OWNER -> hedef migration rolu: $TARGET"
 
 docker exec -i --user postgres etkinwms-postgres psql -X -q -v ON_ERROR_STOP=1 -v target="$TARGET" -v owner="$OWNER" -d etkinwms >/dev/null <<SQL
@@ -65,6 +69,18 @@ WHERE $APP_SCHEMAS AND t.typtype IN ('e', 'd', 'r', 'c') AND t.typowner IN (SELE
   AND t.oid NOT IN (SELECT objid FROM ext)
   AND (t.typrelid = 0 OR (SELECT relkind FROM pg_class WHERE oid = t.typrelid) = 'c')
 \gexec
+-- Replaced (non-postgres) owner: its EXECUTE grants on probe-owned routines move to the target, and its
+-- probe/ops memberships are revoked so only the migration role holds them (0003/0009 invariant).
+SELECT format('GRANT EXECUTE ON ROUTINE %s TO %I', p.oid::regprocedure, :'target')
+FROM pg_proc p, aclexplode(p.proacl) a
+WHERE :'owner' NOT IN (:'target', 'postgres') AND a.grantee = (SELECT oid FROM pg_roles WHERE rolname = :'owner')
+  AND a.privilege_type = 'EXECUTE' AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname = :'target')
+\gexec
+SELECT format('REVOKE %I FROM %I', r.rolname, :'owner')
+FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.roleid
+WHERE :'owner' NOT IN (:'target', 'postgres') AND r.rolname IN ('wms_identity_probe', 'wms_ops')
+  AND m.member = (SELECT oid FROM pg_roles WHERE rolname = :'owner')
+\gexec
 DO \$\$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
              WHERE $APP_SCHEMAS AND pg_get_userbyid(c.relowner) = 'postgres' AND c.oid NOT IN (SELECT objid FROM ext))
@@ -73,7 +89,7 @@ DO \$\$ BEGIN
 END \$\$;
 COMMIT;
 SQL
-LEFT=$(Q -c "SELECT EXISTS (SELECT 1 FROM pg_roles r WHERE pg_has_role('$TARGET', r.oid, 'MEMBER') AND (r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication))")
+LEFT=$(Q -c "SELECT EXISTS (SELECT 1 FROM pg_roles r WHERE pg_has_role('$TARGET', r.oid, 'MEMBER') AND $PRIVILEGED)")
 [ "$LEFT" = f ] || { echo "HATA: $TARGET bir yetkili role uye"; exit 1; }
 echo "sahiplik devri ve rol yetkileri: OK"
 
@@ -97,12 +113,14 @@ os.write(fd, ('DATABASE_URL_DIRECT=postgresql://%s:%s@etkinwms-postgres:5432/etk
 os.close(fd)
 print('ALTER ROLE "%s" LOGIN PASSWORD \'%s\';' % (role, verifier))
 PY
-  chmod 600 "$ENVF.new"; mv "$ENVF.new" "$ENVF"
+  chmod 600 "$ENVF.new"; CAND=$ENVF.new
+else
+  CAND=$ENVF
 fi
 
 # Verify the stored credential over the real TLS path with libpq (values come from an env file, not argv).
 PGF=$(mktemp); trap 'rm -f "$PGF"' EXIT
-python3 -I - "$ENVF" "$PGF" <<'PY'
+python3 -I - "$CAND" "$PGF" <<'PY'
 import sys, urllib.parse
 url = open(sys.argv[1]).read().strip().split('=', 1)[1]
 u = urllib.parse.urlsplit(url)
@@ -114,6 +132,7 @@ WHO=$(docker run --rm --network etkinwms-motive_default --env-file "$PGF" -v /op
   "$PGIMG" psql -X -qAt -c "SELECT current_user" </dev/null)
 [ "$WHO" = "$TARGET" ] || { echo "HATA: migration rolu ile TLS girisi dogrulanamadi"; exit 1; }
 echo "migration rolu TLS girisi: OK"
+[ "$CAND" = "$ENVF" ] || mv "$CAND" "$ENVF"
 
 install -d -m 700 -o root -g root /opt/etkinwms/backups
 (

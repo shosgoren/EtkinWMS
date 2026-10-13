@@ -182,7 +182,9 @@ def assert_migration_role():
         raise ValueError('MIGRATION_ROLE_REJECTED')
     row = psql("SELECT pg_get_userbyid(c.relowner) = '" + user + "' AND NOT EXISTS ("
                " SELECT 1 FROM pg_roles r WHERE pg_has_role('" + user + "', r.oid, 'MEMBER')"
-               " AND (r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication))"
+               " AND (r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication"
+               " OR r.rolname IN ('pg_execute_server_program', 'pg_read_server_files', 'pg_write_server_files',"
+               " 'pg_read_all_data', 'pg_write_all_data', 'pg_signal_backend', 'pg_checkpoint')))"
                " FROM pg_class c WHERE c.oid = 'wms_meta.schema_migrations'::regclass")
     if row != 't':
         raise ValueError('MIGRATION_ROLE_REJECTED')
