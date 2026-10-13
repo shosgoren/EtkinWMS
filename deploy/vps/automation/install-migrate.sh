@@ -76,7 +76,9 @@ FROM pg_proc p, aclexplode(p.proacl) a
 WHERE :'owner' NOT IN (:'target', 'postgres') AND a.grantee = (SELECT oid FROM pg_roles WHERE rolname = :'owner')
   AND a.privilege_type = 'EXECUTE' AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname = :'target')
 \gexec
-SELECT format('REVOKE %I FROM %I', r.rolname, :'owner')
+-- One REVOKE per recorded grant (GRANTED BY its grantor). No CASCADE: if the old owner re-granted these roles,
+-- the transaction aborts with "dependent privileges exist" and nothing changes.
+SELECT format('REVOKE %I FROM %I GRANTED BY %I', r.rolname, :'owner', pg_get_userbyid(m.grantor))
 FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.roleid
 WHERE :'owner' NOT IN (:'target', 'postgres') AND r.rolname IN ('wms_identity_probe', 'wms_ops')
   AND m.member = (SELECT oid FROM pg_roles WHERE rolname = :'owner')
@@ -86,6 +88,10 @@ DO \$\$ BEGIN
              WHERE $APP_SCHEMAS AND pg_get_userbyid(c.relowner) = 'postgres' AND c.oid NOT IN (SELECT objid FROM ext))
      OR pg_get_userbyid((SELECT relowner FROM pg_class WHERE oid = 'wms_meta.schema_migrations'::regclass)) <> '$TARGET'
   THEN RAISE EXCEPTION 'ownership transfer incomplete'; END IF;
+  IF '$OWNER' NOT IN ('$TARGET', 'postgres') AND EXISTS (
+       SELECT 1 FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.roleid
+       WHERE r.rolname IN ('wms_identity_probe', 'wms_ops') AND m.member = '$OWNER'::regrole)
+  THEN RAISE EXCEPTION 'old owner still member of probe/ops'; END IF;
 END \$\$;
 COMMIT;
 SQL
