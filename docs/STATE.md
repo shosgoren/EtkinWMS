@@ -12,7 +12,7 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - VPS Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com ; satış https://etkinyazilim.com .
 - Beş servis: web, worker, marketing, Caddy proxy, PostgreSQL18 (`etkinwms-postgres`, public port yok, TLS verify-full).
 - Canlı migration defteri **0031 / 31**; approved schema `d6b6b9d7…88dd` (kesim ayrıntısı: [OPERATIONS](continuity/OPERATIONS.md#13-ekim-schema31-kesimi--gerçek-kayıt)).
-- Motive: ACTIVE owner `hosgorens@gmail.com`; kullanıcı 13 Ekim'de parola + MFA kurup giriş yaptı.
+- Motive: ACTIVE owner/yönetici hesabı var; hedef yönetici 13 Ekim'de parola + MFA kurup giriş yaptı.
 - Gerçek cihaz (kamera/Epson/el terminali) kabulü yok; ürün iş akışı kabulü kullanıcıyla yapılmadı.
 
 ## Kullanıcı kararları (13 Ekim)
@@ -23,7 +23,7 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - CI e2e için `paths-ignore`/paralelleştirme REDDEDİLDİ: zorunlu `e2e` raporlanmazsa PR kilitlenir; deploy kapısı e2e=success ister; G-11; kazanç ~2 dk.
 
 ## Sıradaki işler — öncelik sırası
-1. **Yayında otomatik yedek + migration (onaylandı, ilk iş):** şema değişen yayında receiver `pg_dump -Fc` alsın, web/worker durdursun, migration'ı uygulasın, approved-schema/state'i kendisi ilerletsin, hata olursa eski imajla açsın. VPS'e bir kerelik root kurulumu gerekir (tek komut). Güven sınırı ve imza/provenance kapıları korunur.
+1. **Yayında otomatik yedek + migration (onaylandı, ilk iş; T-916 taslak dal):** şema değişen yayında receiver `pg_dump -Fc` alsın, web/worker durdursun, migration sahibi rolüyle imzalı migrator imajını koşsun, approved-schema/state'i kendisi ilerletsin. Migration hiç uygulanmadan düşerse önceki imaj açılır; defter kısmen ilerlediyse eski imaj otomatik AÇILMAZ (her migration ayrı transaction) — servis durur, yedekten dönüş veya ileri onarım operatör kararıdır. VPS'e bir kerelik root kurulumu gerekir (migration rolü kimliği root600 dosyada; 13 Ekim kesiminde `postgres` sahipli kalan 3 tablo + 1 fonksiyonun sahibine iadesi). İmza/provenance kapıları korunur.
 2. **Üretim reçeteleri ve emirleri:** çok seviyeli HM→YM→MM reçete ekranı, üretim emri, tüketim/çıktı stok kaydı. Domain `packages/domain/src/operations/production.ts` + migration 0029/0030 hazır; UI `apps/web/app/t/[slug]/production/` asgari.
 3. **Ürün resmi:** kartta görsel yükleme/gösterim; `packages/storage` S3 adaptörü var, VPS'te nesne deposu (MinIO) kurulmadı.
 4. **SelectField yayılımı:** `@wms/ui` `SelectField` hazır ama ekranlarda kullanılmıyor; tüm seçim alanlarına uygula.
