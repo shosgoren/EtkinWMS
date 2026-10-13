@@ -187,6 +187,13 @@ def migrate_database(sha):
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=900)
 
 
+def ledger_version():
+    result = run(['docker', 'exec', '--user', 'postgres', DB_CONTAINER, 'psql', '-X', '-qAt', '-d', 'etkinwms', '-c',
+                  'SELECT coalesce(max(version), \'\') FROM wms_meta.schema_migrations'],
+                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60)
+    return result.stdout.decode().strip()
+
+
 def approve_schema(schema_hash):
     approved = AUTOMATION / 'approved-schema.sha256'
     backup = AUTOMATION / ('approved-schema.sha256.bak-' + str(int(time.time())))
@@ -241,12 +248,20 @@ def deploy(sha, archive_hash, schema_hash):
     run(args + ['config', '--quiet'], env=env)
     if migrate:
         backup_database(sha)
+        before = ledger_version()
         old_args, old_env = compose(previous)
         run(old_args + ['stop', 'web', 'worker'], env=old_env, stdout=subprocess.DEVNULL)
         try:
             migrate_database(sha)
         except Exception:
-            # Schema stays unapproved; the previous image restarts. A partial ledger resumes on the next attempt.
+            # Each migration commits separately. Only an untouched ledger is known to fit the previous image;
+            # a partially advanced one stays stopped for an operator restore/forward fix (dump in /opt/etkinwms/backups).
+            try:
+                untouched = ledger_version() == before
+            except Exception:
+                untouched = False
+            if not untouched:
+                raise ValueError('MIGRATION_PARTIAL_SERVICE_STOPPED') from None
             run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
             raise ValueError('MIGRATION_FAILED_PREVIOUS_RESTARTED') from None
         approve_schema(schema_hash)

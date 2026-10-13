@@ -175,6 +175,7 @@ class ReleaseBoundaryTests(unittest.TestCase):
             def run(args, **kwargs):
                 calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
             ctx = self._deploy_patches(base, automation, backup_database=backup, migrate_database=migrate, run=run,
+                                       ledger_version=lambda: '0031',
                                        healthy=lambda: True)
             for c in ctx: c.start()
             try:
@@ -194,7 +195,7 @@ class ReleaseBoundaryTests(unittest.TestCase):
             ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
                                        migrate_database=lambda sha: (_ for _ in ()).throw(
                                            release.subprocess.CalledProcessError(1, 'migrate')),
-                                       healthy=lambda: True)
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
             for c in ctx: c.start()
             try:
                 with patch.object(release, 'run') as run, \
@@ -208,11 +209,32 @@ class ReleaseBoundaryTests(unittest.TestCase):
             self.assertEqual(json.loads((automation / 'state.json').read_text()), previous)
             self.assertEqual((base / 'current').resolve(), previous_release.resolve())
 
+    def test_partially_applied_migration_keeps_service_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            versions = iter(['0031', '0032'])
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
+                                       migrate_database=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'migrate')),
+                                       ledger_version=lambda: next(versions), healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with patch.object(release, 'run') as run, \
+                     self.assertRaisesRegex(ValueError, 'MIGRATION_PARTIAL_SERVICE_STOPPED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertIn('stop', run.call_args.args[0])
+            self.assertFalse(any('up' in c.args[0] for c in run.call_args_list))
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'b'*64)
+            self.assertEqual(json.loads((automation / 'state.json').read_text()), previous)
+
     def test_failed_rollout_after_migration_keeps_previous_image_on_new_schema(self):
         with tempfile.TemporaryDirectory() as directory:
             base, automation, previous_release, previous = migration_setup(directory)
             ctx = self._deploy_patches(base, automation, backup_database=lambda sha: None,
                                        migrate_database=lambda sha: None, run=lambda *a, **k: None,
+                                       ledger_version=lambda: '0031',
                                        healthy=release_health([False]*18 + [True]))
             for c in ctx: c.start()
             try:
