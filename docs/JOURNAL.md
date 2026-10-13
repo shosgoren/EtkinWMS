@@ -133,3 +133,5 @@
 - 2026-10-13 T-929/T-930 canlı doğrulama: main/live1cf81ed1; CI38418935906 + deploy38420413300 SUCCESS,88 E2E, ledger0031/31; üç cihazda oturumlu arayüz kontrolü. T-931 tekil fiziksel paket QR mal kabulü kullanıcı tarafından başlatıldı; henüz QR teslimi yok.
 
 - 2026-10-13 T-931 ilk saf sözleşme:13 unit senaryosu, bağımsız121 QA probu PASS, güvenlik0/0/0; source hash0dc4917c…b6e44. Yerel lint+unit3785 PASS, üretilmiş tip kopyaları taşındıktan sonra tüm workspace typecheck PASS; check:all PASS. DB/UI/kabul/etiket akışı henüz yok; Excel/fiş/ERP ek hedefleri mevcut kısa rehberlere işlendi.
+
+- 2026-10-13 T-931 hosted ilk E2E86/88 streaming çift seçici; görünür tek parent/alan ve gerçek kart geometrisine test kapsamı daraltıldı, ek cardinality assertionları eklendi; eşik/veri/negatif kontroller korunur. Yerel4 cihaz+son2 receiving PASS, ESLint/check:all PASS; yeni CI gerekir.
