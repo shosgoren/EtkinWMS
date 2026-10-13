@@ -732,6 +732,9 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/t/demo");
     const card = page.getByTestId("now-card");
+    // SSR can briefly contain the completed hidden fragment as well as the current card.
+    // Require exactly one settled card before strict single-element/data assertions.
+    await expect(card).toHaveCount(1);
     await expect(card).toHaveAttribute("data-state", "rows");
     // Satırlar DB'deki gerçek bekleyen işle eşleşir (uydurma sayı yok).
     await expect(page.getByTestId("now-receive")).toHaveAttribute("data-count", String(receiptCount));
@@ -800,6 +803,7 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     await page.goto("/t/demo");
     // Saha rolü (K-2): atanmış iş yok, ama yetkili olduğu açık işler VAR → "Şu an sana atanmış iş yok" denmez; gerçek bekleyen iş satırları görünür.
     await expect(page.getByTestId("my-tasks-empty"), `${w}x${h}: açık iş varken "atanmış iş yok" denmez`).toHaveCount(0);
+    await expect(page.getByTestId("now-card")).toHaveCount(1);
     await expect(page.getByTestId("now-card")).toHaveAttribute("data-state", "rows");
     await expect(page.getByTestId("now-receive")).toHaveAttribute("data-count", String(receiptCount));
     await expect(page.getByTestId("now-putaway")).toHaveAttribute("data-count", String(pickerPut));

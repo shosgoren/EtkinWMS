@@ -5,7 +5,7 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 
 ## Doğrulanmış durum
 - Repo: https://github.com/shosgoren/EtkinWMS ; referans repo 2027-WMS-1 salt okunur.
-- main = canlı: `a07fc1a5d2964aa96c438dfb390892bebb941874` (PR22, T-928). Yeniden kontrol edilmeden sonraki sürüm varsayılmaz.
+- Canlı: `a07fc1a5d2964aa96c438dfb390892bebb941874` (PR22, T-928). main: `76dd13e73d08c901c23b8505beccff95c8ef714b` (PR23, T-929); yeni UI henüz canlı değil.
 - deploy-vps run38378834142 success; receiver health=ok, current=auto-a07fc1a5…, ledger0031/31. Aynı SHA'nın dokuz CI kontrolü geçti; 82 masaüstü/mobil E2E geçti.
 - Aynı SHA için önce `ci`, sonra `guards` callback'i gelir; ilk koşu RELEASE_BLOCKED ile düşüp ikincisi geçer (bilinen, zararsız).
 - PR15 pilot zinciri + PR16 kart türleri/standart birimler + PR17 MFA QR/rehber/SelectField + PR18/19 belgeler main'de.
@@ -38,4 +38,5 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 
 ## Son teslim / aktif çalışma
 - T-928 canlı: dört işlem kartı ve sade kısayollar, korunmuş Genel bakış. Kullanıcı girişinden sonra gerçek Motive ekranı doğrulandı. Kanıt: https://github.com/shosgoren/EtkinWMS/pull/22#issuecomment-6143042188 . QR v3 geliştirmesi başlamadı.
-- T-929 aktif dal `feat/T-929-consistent-touch-screens`: iç ekranlarda ortak renk/ikon/form düzeni ve telefon/tablet alt geri/ana ekran. Yerel verify: lint/typecheck PASS, 3772 unit PASS; temiz ayrı DB ile 26 cihaz/ana ekran/saha E2E PASS. GitHub CI ve canlı yayın henüz doğrulanmadı; son kanıt ilgili PR'da kayıtlanır. Görev: docs/tasks/T-929.md.
+- T-929 aktif dal `feat/T-929-consistent-touch-screens`: iç ekranlarda ortak renk/ikon/form düzeni ve telefon/tablet alt geri/ana ekran. Yerel verify: lint/typecheck PASS, 3772 unit PASS; temiz ayrı DB ile 26 cihaz/ana ekran/saha E2E PASS. PR23 head dokuz CI + 88 E2E PASS; birleşik main76dd13e receiving-mobile testinde geçici iki SSR kartı nedeniyle87/88. Canlı yayın bu yüzden engellendi. Görev: docs/tasks/T-929.md.
+- T-930 test düzeltmesi: veri/geometry koşullarından önce tam tek kartın yerleşmesi beklenir (assertion eklenir, azaltılmaz). Dal fix/T-930-home-stream-ready; uygulama kodu değişmez. Sonraki CI/yayın kanıtı ilgili PR'da kayıtlanır.
