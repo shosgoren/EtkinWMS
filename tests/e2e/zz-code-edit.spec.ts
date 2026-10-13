@@ -156,7 +156,7 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
     // --- Ürün: oluştur, kodu değiştir ---
     await page.goto("/t/demo/items?new=1");
     const ic = page.getByRole("dialog");
-    await expect(ic.locator('input[name="code"]')).toHaveValue(/^URN-\d{4}$/);
+    await expect(ic.locator('input[name="code"]')).toHaveValue(/^HM-\d{6}$/); // T-911: kart türü öneki + 6 hane
     await ic.locator('input[name="name"]').fill(itemName);
     await ic.locator('input[name="code"]').fill(itemCode);
     await ic.getByRole("button", { name: "Kaydet" }).click();

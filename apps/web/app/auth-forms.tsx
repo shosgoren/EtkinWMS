@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Banner, Button, CircleAlert, TextField } from "@wms/ui";
+import { QrCode } from "./qr-code.tsx";
 import { acceptInvitationAction } from "./invite/[token]/actions.ts";
 import { authPost } from "../lib/auth-client.ts";
 import type { AuthCallError } from "../lib/auth-client.ts";
@@ -55,7 +56,7 @@ function FormError({ id, error }: { id: string; error: ShownError | null }) {
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-md min-w-0 flex-col gap-4 px-4 py-6">
+    <main className="auth-card mx-auto flex w-full max-w-md min-w-0 flex-col gap-4 px-4 py-6">
       <h1 className="break-words text-2xl font-extrabold text-ink">{title}</h1>
       {children}
     </main>
@@ -77,6 +78,8 @@ interface SignInData {
 
 export function LoginForm({ next, socialEnabled, banner }: { next: string; socialEnabled: boolean; banner?: ReactNode }) {
   const t = useTranslations("auth");
+  const guide = useTranslations("guide");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
 
@@ -114,10 +117,12 @@ export function LoginForm({ next, socialEnabled, banner }: { next: string; socia
 
   return (
     <Card title={t("login.title")}>
+      <p className="auth-instruction">{guide("loginHelp")}</p>
       {banner}
       <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="login-error" noValidate={false}>
         <TextField label={t("login.email")} name="email" type="email" autoComplete="username" required />
-        <TextField label={t("login.password")} name="password" type="password" autoComplete="current-password" required />
+        <TextField label={t("login.password")} name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required />
+        <button type="button" className="password-toggle" aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)}>{guide(showPassword ? "hidePassword" : "showPassword")}</button>
         <FormError id="login-error" error={error} />
         <Button type="submit" loading={busy}>
           {t("login.submit")}
@@ -454,6 +459,11 @@ export function MfaSetupForm({ next }: { next: string }) {
           {t("mfa.keyTitle")}
         </h2>
         <p className="break-words text-base text-ink-muted">{t("mfa.keyIntro")}</p>
+        <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <QrCode value={enable.totpURI} label={t("mfa.qrLabel")} />
+          <p className="break-words text-base text-ink-muted">{t("mfa.qrHint")}</p>
+        </div>
+        <p className="break-words text-sm font-semibold text-ink">{t("mfa.keyManual")}</p>
         <code className="break-all rounded-card bg-accent-soft p-3 font-mono text-base text-ink select-all">{secret}</code>
         <a href={enable.totpURI} className={LINK}>
           {t("mfa.openApp")}

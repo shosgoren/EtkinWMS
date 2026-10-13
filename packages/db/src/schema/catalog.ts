@@ -19,6 +19,9 @@ export const TRACKING_MODES = ["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"] as con
 export type TrackingMode = (typeof TRACKING_MODES)[number];
 export const PICK_POLICIES = ["FIFO", "FEFO"] as const;
 export type PickPolicy = (typeof PICK_POLICIES)[number];
+/** Ürün kartı türü (0031, T-911): HM hammadde, YM yarı mamul, MM mamul, TM ticari mal. Sıra ekrandaki sıradır. */
+export const ITEM_CARD_TYPES = ["HM", "YM", "MM", "TM"] as const;
+export type ItemCardType = (typeof ITEM_CARD_TYPES)[number];
 export const HANDLING_UNIT_KINDS = ["KOLI", "PALET"] as const;
 export type HandlingUnitKind = (typeof HANDLING_UNIT_KINDS)[number];
 export const HANDLING_UNIT_STATUSES = ["OPEN", "CLOSED", "EMPTIED"] as const;
@@ -55,12 +58,16 @@ export const items = pgTable(
     status: text("status").$type<CatalogStatus>().notNull().default("ACTIVE"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     archivedAt: timestamptz("archived_at"),
+    /** Kart türü (0031, T-911): HM hammadde, YM yarı mamul, MM mamul, TM ticari mal. */
+    cardType: text("card_type").$type<ItemCardType>().notNull().default("TM"),
   },
   (t) => [
     unique("items_tenant_id_id_key").on(t.tenantId, t.id),
     unique("items_tenant_code_key").on(t.tenantId, t.code),
     index("items_tenant_base_unit_idx").on(t.tenantId, t.baseUnitId),
+    index("items_tenant_card_type_idx").on(t.tenantId, t.cardType),
     check("items_quantity_scale_chk", sql`${t.quantityScale} BETWEEN 0 AND 6`),
+    check("items_card_type_chk", sql`${t.cardType} IN ('HM', 'YM', 'MM', 'TM')`),
   ],
 );
 

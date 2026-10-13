@@ -11,7 +11,7 @@ import { Banner, Button, ChevronDown, ChevronRight, CircleCheck, EmptyState, Sea
 import { PageBody, Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress } from "../easy-setup/setup-guide.tsx";
 import { Typeahead } from "../easy-setup/typeahead.tsx";
-import { createItemAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
+import { createItemAction, createUnitAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği kullanılır. */
 export interface ServerError {
@@ -96,6 +96,7 @@ export interface ItemListView {
   readonly name: string;
   readonly status: "ACTIVE" | "ARCHIVED";
   readonly baseUnitCode: string;
+  readonly cardType: CardType;
   /** Arama eski kodla eşleştiyse o eski kod (T-257). */
   readonly oldCode?: string;
 }
@@ -105,6 +106,9 @@ const SUGGEST_TIMEOUT_MS = 5000;
 const TRACKING = ["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"] as const;
 const PICK = ["FIFO", "FEFO"] as const;
 const SCALES = [0, 1, 2, 3, 4, 5, 6] as const;
+/** Kart türleri (T-911): sıra ekrandaki sıradır; ilk seçenek üretim firması için en sık kullanılan (hammadde). Kod öneki = tür. */
+export const CARD_TYPES = ["HM", "YM", "MM", "TM"] as const;
+export type CardType = (typeof CARD_TYPES)[number];
 
 /** Akıllı varsayılan (A-250-5): birim ADET (sektör şablonları temel birim olarak ADET önerir). ADET yoksa SESSİZ SEÇİM YOK (T-259): boş kalır, kullanıcı seçer. */
 function defaultUnitId(units: readonly UnitOption[]): string {
@@ -128,6 +132,7 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
   const te = useTranslations("easySetup");
   const tt = useTranslations("items.tracking");
   const tp = useTranslations("items.pick");
+  const tc = useTranslations("items.cardType");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ServerError | null>(null);
   const [name, setName] = useState("");
@@ -136,25 +141,43 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
   // Gecikmeli öneri yanıtı kapanışın (closure) bayat `touched` değerini görmesin diye ref (T-259 MINOR-2).
   const touchedRef = useRef(false);
   const [codeState, setCodeState] = useState<"loading" | "ready" | "failed">("loading");
+  const [unitList, setUnitList] = useState<readonly UnitOption[]>(units);
   const [unitId, setUnitId] = useState(() => defaultUnitId(units));
+  const [cardType, setCardType] = useState<CardType>("HM");
   const [scale, setScale] = useState("0");
   const [tracking, setTracking] = useState("NONE");
   const [pick, setPick] = useState("FIFO");
+  const [unitOpen, setUnitOpen] = useState(false);
+  const [unitCode, setUnitCode] = useState("");
+  const [unitName, setUnitName] = useState("");
+  const [unitBusy, setUnitBusy] = useState(false);
+  const [unitError, setUnitError] = useState<ServerError | null>(null);
 
-  // Her açılışta akıllı varsayılanlar: ADET, 0 ondalık, takip yok, FIFO; sıradaki kod sunucudan hazır gelir.
+  // Her açılışta akıllı varsayılanlar: HM, ADET, 0 ondalık, takip yok, FIFO; sıradaki kod sunucudan hazır gelir.
+  // Kod önerisi kart türü önekiyle alınır (`HM-000001`, T-911); tür değişince kullanıcı koda dokunmadıysa öneri yenilenir.
   useEffect(() => {
     if (!open) return;
-    let live = true;
     setError(null);
     setName("");
     setCode("");
     setTouched(false);
     touchedRef.current = false;
-    setCodeState("loading");
+    setUnitList(units);
     setUnitId(defaultUnitId(units));
+    setCardType("HM");
     setScale("0");
     setTracking("NONE");
     setPick("FIFO");
+    setUnitOpen(false);
+    setUnitCode("");
+    setUnitName("");
+    setUnitError(null);
+    // units yalnızca açılışta okunur.
+  }, [open, slug]);
+  useEffect(() => {
+    if (!open || touchedRef.current) return;
+    let live = true;
+    setCodeState("loading");
     // Öneri hiç dönmezse alan sonsuza dek salt okunur kalmasın: süre dolunca "failed" (kullanıcı kodu kendisi yazar).
     let settled = false;
     const timer = setTimeout(() => {
@@ -163,7 +186,7 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
         setCodeState("failed");
       }
     }, SUGGEST_TIMEOUT_MS);
-    void suggestItemCodeAction({ slug }).then((r) => {
+    void suggestItemCodeAction({ slug, prefix: cardType }).then((r) => {
       if (!live || settled) return;
       settled = true;
       clearTimeout(timer);
@@ -177,8 +200,24 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
       live = false;
       clearTimeout(timer);
     };
-    // units yalnızca açılışta okunur.
-  }, [open, slug]);
+  }, [open, slug, cardType]);
+
+  async function onAddUnit() {
+    setUnitBusy(true);
+    setUnitError(null);
+    const res = await createUnitAction({ slug, code: unitCode, name: unitName });
+    setUnitBusy(false);
+    if (!res.ok) {
+      setUnitError(toServerError(res.error));
+      return;
+    }
+    const added: UnitOption = { id: (res.data as { unitId: string }).unitId, code: unitCode.trim().toUpperCase(), name: unitName.trim() };
+    setUnitList((list) => [...list, added].sort((a, b) => a.code.localeCompare(b.code)));
+    setUnitId(added.id);
+    setUnitOpen(false);
+    setUnitCode("");
+    setUnitName("");
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -188,10 +227,11 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
       slug,
       code,
       name,
-      ...(units.length === 0 ? {} : { baseUnitId: unitId }),
+      ...(unitList.length === 0 ? {} : { baseUnitId: unitId }),
       quantityScale: Number(scale),
       trackingMode: tracking,
       pickPolicy: pick,
+      cardType,
       autoCode: !touched && codeState === "ready",
     });
     setBusy(false);
@@ -221,6 +261,19 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
       }
     >
       <TextField label={t("name")} name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required maxLength={512} />
+      <div className="flex min-w-0 flex-col gap-1">
+        <label htmlFor="create-card-type" className="text-base font-semibold">
+          {t("cardType")}
+        </label>
+        <span className="text-sm text-ink-muted">{t("cardTypeHint")}</span>
+        <select id="create-card-type" name="cardType" value={cardType} onChange={(e) => setCardType(e.target.value as CardType)} className={SELECT_CLS}>
+          {CARD_TYPES.map((k) => (
+            <option key={k} value={k}>
+              {k} · {tc(k)}
+            </option>
+          ))}
+        </select>
+      </div>
       <TextField
         label={t("code")}
         hint={codeState === "loading" ? te("code.loading") : codeState === "failed" ? te("code.failed") : touched ? `${te("code.custom")} ${t("codeHint")}` : `${te("code.suggested")} ${t("codeHint")}`}
@@ -237,22 +290,41 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
         required
         maxLength={512}
       />
-      {units.length === 0 ? <Banner kind="info">{te("items.unitAuto")}</Banner> : null}
+      {unitList.length === 0 ? <Banner kind="info">{te("items.unitAuto")}</Banner> : null}
       <div className="flex min-w-0 flex-col gap-1">
         <label htmlFor="create-base-unit" className="text-base font-semibold">
           {t("baseUnit")}
         </label>
         <span className="text-sm text-ink-muted">{t("baseUnitHint")}</span>
-        {units.length > 0 && !units.some((u) => u.code.toUpperCase() === "ADET") ? <span className="text-sm font-semibold text-ink">{t("baseUnitChoose")}</span> : null}
-        <select id="create-base-unit" name="baseUnitId" required={units.length > 0} disabled={units.length === 0} value={unitId} onChange={(e) => setUnitId(e.target.value)} className={SELECT_CLS}>
-          {units.length === 0 ? <option value="">{te("items.unitDefaultOption")}</option> : null}
-          {units.length > 0 && unitId === "" ? <option value="">{t("baseUnitPlaceholder")}</option> : null}
-          {units.map((u) => (
+        {unitList.length > 0 && !unitList.some((u) => u.code.toUpperCase() === "ADET") ? <span className="text-sm font-semibold text-ink">{t("baseUnitChoose")}</span> : null}
+        <select id="create-base-unit" name="baseUnitId" required={unitList.length > 0} disabled={unitList.length === 0} value={unitId} onChange={(e) => setUnitId(e.target.value)} className={SELECT_CLS}>
+          {unitList.length === 0 ? <option value="">{te("items.unitDefaultOption")}</option> : null}
+          {unitList.length > 0 && unitId === "" ? <option value="">{t("baseUnitPlaceholder")}</option> : null}
+          {unitList.map((u) => (
             <option key={u.id} value={u.id}>
               {u.code} · {u.name}
             </option>
           ))}
         </select>
+        {unitOpen ? (
+          <div data-testid="new-unit" className="mt-2 flex min-w-0 flex-col gap-3 rounded-card border-2 border-border p-3">
+            <TextField label={t("newUnitCode")} hint={t("newUnitCodeHint")} name="newUnitCode" value={unitCode} onChange={(e) => setUnitCode(e.target.value)} autoComplete="off" autoCapitalize="characters" maxLength={64} />
+            <TextField label={t("newUnitName")} name="newUnitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} autoComplete="off" maxLength={200} />
+            {unitError ? <ServerErrorBanner error={unitError} returnTo={returnTo} /> : null}
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" loading={unitBusy} disabled={unitCode.trim() === "" || unitName.trim() === ""} onClick={() => void onAddUnit()}>
+                {t("newUnitAdd")}
+              </Button>
+              <Button type="button" variant="secondary" disabled={unitBusy} onClick={() => setUnitOpen(false)}>
+                {t("cancel")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setUnitOpen(true)} className={`${LINK_CLS} self-start`}>
+            {t("newUnit")}
+          </button>
+        )}
       </div>
       <details className="min-w-0 rounded-card border-2 border-border p-3">
         <summary className="flex min-h-12 cursor-pointer items-center text-base font-semibold">{t("advanced")}</summary>
@@ -400,6 +472,7 @@ export function ItemsView({
 }) {
   const t = useTranslations("items");
   const te = useTranslations("easySetup.items");
+  const tc = useTranslations("items.cardType");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -529,6 +602,7 @@ export function ItemsView({
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="min-w-0 break-words text-lg font-bold text-ink">{it.name}</span>
                     <span className={`${BADGE} ${active ? "bg-accent-soft text-accent-ink" : "bg-locked-bg text-locked-ink"}`}>{active ? t("status.ACTIVE") : t("status.ARCHIVED")}</span>
+                    <span className={`${BADGE} bg-locked-bg text-ink`} data-testid="card-type">{tc(it.cardType)}</span>
                   </div>
                   <p className="min-w-0 break-all text-base text-ink-muted">{t("codeLabel", { code: it.code })}</p>
                   {it.oldCode === undefined ? null : <p className="min-w-0 break-words text-sm font-semibold text-ink">{t("renamedNote", { code: it.code, old: it.oldCode })}</p>}

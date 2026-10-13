@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { Package } from "@wms/ui";
 import { SignOutButton } from "./auth-forms.tsx";
 import "./globals.css";
+import { FirstUseGuide, GuideTrigger } from "./first-use-guide.tsx";
 
 // Uygulama kabuğu (T-109): üst bar, Akış/Kokpit görünüm anahtarı, kullanıcı çipi yer tutucusu,
 // "Yardım çağır". Görünür metin yalnızca messages/*.json'dan gelir (ADR-002). Oturum T-118'de bağlanır.
@@ -71,7 +72,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <form action={setView} aria-label={t("viewSwitch.label")}>
+              {hasSession ? <form action={setView} aria-label={t("viewSwitch.label")}>
                 <div className="flex rounded-full bg-accent-soft p-1" role="group">
                   {VIEWS.map((v) => (
                     <button
@@ -88,20 +89,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                     </button>
                   ))}
                 </div>
-              </form>
-
-              {/* Oturum varken kullanıcı adı alt çubukta ("Giriş yapan: …") gösterilir; sabit "Oturum yok" rozeti yalnızca oturum YOKKEN çizilir (T-280, B4). */}
-              {hasSession ? null : (
-                <div role="group" aria-label={t("userChip.label")} className={`${TOUCH} flex items-center gap-2 rounded-full border-2 border-border px-1 pr-3`}>
-                  <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent-ink">
-                    {t("userChip.placeholderInitials")}
-                  </span>
-                  <span className="hidden text-sm font-semibold sm:inline">{t("userChip.placeholderName")}</span>
-                </div>
-              )}
+              </form> : null}
 
               {hasSession ? <SignOutButton /> : null}
 
+              <GuideTrigger className={`${TOUCH} inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-border-strong bg-surface px-4 text-sm font-bold text-ink`} />
               <Link
                 href="/help"
                 className={`${TOUCH} inline-flex items-center justify-center rounded-full bg-accent-soft px-4 text-sm font-bold text-accent-ink`}
@@ -111,6 +103,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               </Link>
             </div>
           </header>
+          <FirstUseGuide />
           <div id="main" tabIndex={-1}>
             {children}
           </div>

@@ -6,7 +6,7 @@
 // - `itemInUse` tanımı `archiveItem` ile aynıdır (pozitif bakiye/rezerve miktar ya da ACTIVE rezervasyon). Not: tanım
 //   items.ts'te satır içidir; ortak yardımcıya çıkarma kart dosya listesi dışında olduğundan T-240 raporunda önerilir.
 import { sql } from "drizzle-orm";
-import type { PickPolicy, TrackingMode } from "@wms/db";
+import type { ItemCardType, PickPolicy, TrackingMode } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type AccessTx } from "../identity/access.ts";
 import type { ItemRow } from "./items.ts";
@@ -87,6 +87,7 @@ function toItemRow(r: ItemHeader): ItemRow {
     quantityScale: r.quantity_scale,
     pickPolicy: r.pick_policy as PickPolicy,
     status: r.status,
+    cardType: r.card_type as ItemCardType,
   };
 }
 
@@ -121,7 +122,7 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
     }
     if (after !== undefined) filters.push(sql`(i.code, i.id) > (${after.code}, ${after.id}::uuid)`);
     const rows = await tx.execute<ItemHeader>(
-      sql`SELECT i.id, i.code, i.name, i.base_unit_id, i.tracking_mode, i.quantity_scale, i.pick_policy, i.status
+      sql`SELECT i.id, i.code, i.name, i.base_unit_id, i.tracking_mode, i.quantity_scale, i.pick_policy, i.status, i.card_type
             FROM public.items i
            WHERE ${sql.join(filters, sql` AND `)}
            ORDER BY i.code, i.id

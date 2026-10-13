@@ -54,7 +54,7 @@ describe("eylem listesi", () => {
         "warehouse_task.created", "warehouse_task.assigned", "warehouse_task.claimed", "warehouse_task.cancelled", "warehouse_task.completed",
         "inbound_receipt.created", "inbound_receipt.opened", "inbound_receipt.cancelled", "inbound_receipt.received",
         "sales_order.created", "sales_order.updated", "sales_order.cancelled", "sales_order.line_cancelled",
-        "pick_assignment.created", "pick.not_found",
+        "pick_assignment.created", "production_recipe.created", "pick.not_found",
         "count.started", "count.recorded", "count.submitted", "count.approved", "count.posted", "count.cancelled",
       ].sort(),
     );

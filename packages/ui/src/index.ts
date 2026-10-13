@@ -5,5 +5,7 @@ export type { ButtonProps, ButtonVariant, FieldError, TextFieldProps, ConfirmDia
 export { Banner, EmptyState, ActivityList } from "./banner.tsx";
 export type { BannerProps, BannerKind, EmptyStateProps, ActivityItem, ActivityListProps } from "./banner.tsx";
 export { ScanField } from "./scan-field.tsx";
+export { SelectField } from "./select-field.tsx";
+export type { SelectFieldProps, SelectOption } from "./select-field.tsx";
 export type { ScanFieldProps } from "./scan-field.tsx";
 export * from "./icons.ts";

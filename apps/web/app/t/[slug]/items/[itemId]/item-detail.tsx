@@ -11,8 +11,8 @@ import { Banner, Button, ConfirmDialog, TextField } from "@wms/ui";
 import { PageBody } from "../../easy-setup/sheet.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
 import { addBarcodeAction, archiveItemAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
-import { BADGE, LINK_CLS, SELECT_CLS, ServerErrorBanner, toServerError } from "../items-view.tsx";
-import type { ServerError, UnitOption } from "../items-view.tsx";
+import { BADGE, CARD_TYPES, LINK_CLS, SELECT_CLS, ServerErrorBanner, toServerError } from "../items-view.tsx";
+import type { CardType, ServerError, UnitOption } from "../items-view.tsx";
 
 export interface ItemDetailItem {
   readonly id: string;
@@ -24,6 +24,7 @@ export interface ItemDetailItem {
   readonly trackingMode: string;
   readonly quantityScale: number;
   readonly pickPolicy: string;
+  readonly cardType: CardType;
 }
 export interface ConversionView {
   readonly unitId: string;
@@ -74,6 +75,7 @@ export function ItemDetail({
   const td = useTranslations("items.detail");
   const tt = useTranslations("items.tracking");
   const tp = useTranslations("items.pick");
+  const tc = useTranslations("items.cardType");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}/items`;
   const returnTo = `${base}/${encodeURIComponent(item.id)}`;
@@ -131,7 +133,7 @@ export function ItemDetail({
     event.preventDefault();
     const f = new FormData(event.currentTarget);
     await run("save", "done.saved", async () => {
-      const r = await updateItemAction({ slug, itemId: item.id, name: String(f.get("name") ?? ""), pickPolicy: String(f.get("pickPolicy") ?? "") });
+      const r = await updateItemAction({ slug, itemId: item.id, name: String(f.get("name") ?? ""), pickPolicy: String(f.get("pickPolicy") ?? ""), cardType: String(f.get("cardType") ?? "") });
       return r.ok ? { ok: true } : { ok: false, error: r.error };
     });
   }
@@ -181,6 +183,7 @@ export function ItemDetail({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h1 className="min-w-0 break-words text-2xl font-extrabold text-ink">{item.name}</h1>
           <span className={`${BADGE} ${active ? "bg-accent-soft text-accent-ink" : "bg-locked-bg text-locked-ink"}`}>{active ? t("status.ACTIVE") : t("status.ARCHIVED")}</span>
+          <span className={`${BADGE} bg-locked-bg text-ink`} data-testid="card-type">{tc(item.cardType)}</span>
         </div>
         <p className="min-w-0 break-all text-base text-ink-muted">{t("codeLabel", { code: item.code })}</p>
         {writable ? (
@@ -201,6 +204,18 @@ export function ItemDetail({
       <Section id="sec-card" title={td("cardTitle")}>
         <form key={`save-${round}`} onSubmit={(e) => void onSave(e)} className="flex min-w-0 flex-col gap-4">
           <TextField label={t("form.name")} name="name" defaultValue={item.name} autoComplete="off" required maxLength={512} disabled={!writable} />
+          <div className="flex min-w-0 flex-col gap-1">
+            <label htmlFor="detail-card-type" className="text-base font-semibold">
+              {t("form.cardType")}
+            </label>
+            <select id="detail-card-type" name="cardType" defaultValue={item.cardType} disabled={!writable} className={SELECT_CLS}>
+              {CARD_TYPES.map((k) => (
+                <option key={k} value={k}>
+                  {k} · {tc(k)}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex min-w-0 flex-col gap-1">
             <label htmlFor="detail-pick" className="text-base font-semibold">
               {t("form.pick")}

@@ -21,6 +21,7 @@ import {
   type AccessPrincipal,
   type AccessTx,
 } from "../identity/access.ts";
+import { seedStandardUnits } from "../catalog/units.ts";
 import { applyLocationsStep, applyUnitsStep, type SetupCallParams } from "./stock-setup.ts";
 import { PHASE1_STEP_KEYS, PHASE2_STEP_KEYS, getTemplate, type OnboardingStepKey, type SectorTemplate } from "./templates.ts";
 
@@ -229,6 +230,8 @@ async function createWithSlug(
       requestId,
       changeSummary: { slug, templateKey: template.key, templateVersion: template.version },
     });
+    // T-911: standart birim seti (ADET, KG, …) tenant'la birlikte, aynı transaction'da kurulur; şablonun birim adımı çakışan kodu atlar.
+    await seedStandardUnits(tx, m.tenantId, userId, requestId);
     return { tenantId: m.tenantId, slug, created: true };
   });
 }

@@ -61,16 +61,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const demoError = SHOWN_CODES.find((c): c is ShownCode => c === rawError);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-6 px-4 py-8">
+    <main className="welcome-shell">
       {demo ? <Banner kind="warning">{t("auth.login.demoBanner")}</Banner> : null}
-      <section className="flex min-w-0 flex-col gap-3">
-        <h1 className="break-words text-4xl font-extrabold text-ink">{t("shell.productName")}</h1>
-        <p className="break-words text-xl text-ink">{t("landing.valueProp")}</p>
+      <section className="welcome-hero">
+        <div className="welcome-copy"><p className="welcome-kicker">ETKİN WMS · {t("shell.easyMode")}</p>
+        <h1>{t("guide.welcome")}</h1>
+        <p className="welcome-description">{t("guide.welcomeText")}</p>
+        <Link href="/login" className="welcome-start">{t("guide.start")} →</Link>
+        <p className="welcome-support">{t("guide.loginHelp")}</p></div>
+        <div className="welcome-path" aria-label={t("guide.title")}>{[0,1,2].map(n => <article key={n} className={`welcome-path-card welcome-path-${n}`}><span aria-hidden="true">{n+1}</span><div><h2>{t(`guide.steps.${n}.title`)}</h2><p>{t(`guide.steps.${n}.text`)}</p></div></article>)}</div>
       </section>
       <nav aria-label={t("landing.actions")} className="flex flex-wrap gap-3">
-        <Link href="/login" className={`${BUTTON} bg-accent text-on-accent`}>
-          {t("landing.signIn")}
-        </Link>
         {signup ? (
           <Link href="/onboarding" className={`${BUTTON} border-2 border-border-strong bg-surface text-ink`}>
             {t("landing.createWorkspace")}

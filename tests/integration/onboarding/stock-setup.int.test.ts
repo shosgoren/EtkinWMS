@@ -19,6 +19,7 @@ import {
   type DemoAccountPort,
 } from "../../../packages/domain/src/demo/seed.ts";
 import { approveDocument, createStockDocument, postDocument } from "../../../packages/domain/src/stock/index.ts";
+import { STANDARD_UNITS } from "../../../packages/domain/src/catalog/units.ts";
 import { continueOnboarding, createWorkspace, type WorkspaceEnv } from "../../../packages/domain/src/onboarding/workspace.ts";
 import { readIntEnv } from "../harness/env.ts";
 
@@ -88,6 +89,8 @@ async function tenantState(tenantId: string) {
 }
 
 const V2_STEPS = ["settings.applied", "terminology.applied", "units.applied", "locations.applied"];
+/** T-911: çalışma alanı standart birim setiyle açılır; şablon birimleri (çakışan kod atlanır) bunun üstüne eklenir. Kod sırası. */
+const withStandard = (extra: readonly string[]) => [...new Set([...STANDARD_UNITS.map((u) => u.code), ...extra])].sort();
 
 describe("Faz 2 adımları: yeni tenant (A-78)", () => {
   it("PACKAGING_SUPPLIES: createWorkspace + continueOnboarding → 4 adım, birimler, D1 + KABUL + SEVK, sürüm 2", async () => {
@@ -95,7 +98,7 @@ describe("Faz 2 adımları: yeni tenant (A-78)", () => {
     const r = await cont(ws.user, ws.slug);
     expect(r).toEqual({ status: "COMPLETED", applied: V2_STEPS });
     const s = await tenantState(ws.tenantId);
-    expect(s.units).toEqual(["ADET", "KOLI", "PAKET", "RULO"]);
+    expect(s.units).toEqual(withStandard(["PAKET", "RULO"]));
     expect(s.whs).toMatchObject([{ code: "D1", name: "Ana Depo" }]);
     expect(s.locs).toEqual([
       { code: "KABUL", kind: "RECEIVING", depth: 0 },
@@ -114,7 +117,7 @@ describe("Faz 2 adımları: yeni tenant (A-78)", () => {
     const ws = await newWorkspace("GENERIC");
     expect((await cont(ws.user, ws.slug)).status).toBe("COMPLETED");
     const s = await tenantState(ws.tenantId);
-    expect(s.units).toEqual(["ADET"]);
+    expect(s.units).toEqual(withStandard([]));
     expect(s.whs.map((w) => w.code)).toEqual(["D1"]);
     expect(s.locs.map((l) => l.code)).toEqual(["KABUL", "SEVK"]);
   });
@@ -137,7 +140,7 @@ describe("Faz 2 adımları: v1 uygulanmış mevcut tenant", () => {
     expect(await cont(ws.user, ws.slug)).toEqual({ status: "COMPLETED", applied: ["units.applied", "locations.applied"] });
     expect(await cont(ws.user, ws.slug)).toEqual({ status: "COMPLETED", applied: [] });
     const s = await tenantState(ws.tenantId);
-    expect(s.units).toEqual(["ADET", "KOLI", "PAKET", "RULO"]);
+    expect(s.units).toEqual(withStandard(["PAKET", "RULO"]));
     expect(s.whs).toHaveLength(1);
     expect(s.locs.map((l) => l.code)).toEqual(["KABUL", "SEVK"]);
     expect(s.settings).toMatchObject({ v: 2, st: "COMPLETED" });
@@ -149,7 +152,7 @@ describe("Faz 2 adımları: v1 uygulanmış mevcut tenant", () => {
     const runs = await Promise.allSettled([cont(ws.user, ws.slug), cont(ws.user, ws.slug), cont(ws.user, ws.slug)]);
     expect(runs.filter((r) => r.status === "rejected").map((r) => (r as PromiseRejectedResult).reason)).toEqual([]);
     const s = await tenantState(ws.tenantId);
-    expect(s.units).toEqual(["ADET", "KOLI", "PAKET", "RULO"]);
+    expect(s.units).toEqual(withStandard(["PAKET", "RULO"]));
     expect(s.whs).toHaveLength(1);
     expect(s.stepAudit).toEqual(["locations.applied", "units.applied"]);
     expect(s.settings).toMatchObject({ v: 2, st: "COMPLETED" });
@@ -276,6 +279,7 @@ describe("demo tohumu: ürün, lokasyon, açılış stoğu (A-43, A-79)", () => 
 
     // şablon adımları (ayar onarımından önce uygulanır) ve sürüm
     const s = await tenantState(DEMO_TENANT_ID);
+    // Demo tenant'ı migration/worker kurar (createWorkspace değil): standart birim seti burada beklenmez (T-911).
     expect(s.units).toEqual(["ADET", "KOLI", "PAKET", "RULO"]);
     expect(s.whs.map((w) => w.code)).toEqual(["D1"]);
     expect(s.settings).toMatchObject({ v: 2, st: "COMPLETED" });
