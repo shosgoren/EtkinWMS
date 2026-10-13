@@ -1,21 +1,47 @@
 "use client";
+// İlk kullanım rehberi (T-903c) — T-912: tetikleyici artık ekranın üstünde yüzmez (içeriği ve "Yeni ürün" gibi yapışkan
+// düğmeleri örtüyordu). Rehber penceresi kök düzende kalır; `GuideTrigger` düğmesi üst çubuğa ve mobil menüye
+// yerleştirilir ve bir pencere olayıyla rehberi açar.
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 const KEY = "etkinwms.guide.v1";
+const OPEN_EVENT = "etkinwms:guide-open";
+
+/** Rehberi açan düğme; görünümü çağıranın sınıfıyla (üst çubuk hapı / menü satırı). */
+export function GuideTrigger({ className, iconOnly = false }: { className: string; iconOnly?: boolean }) {
+  const t = useTranslations("guide");
+  return (
+    <button
+      type="button"
+      className={className}
+      data-testid="guide-trigger"
+      aria-label={iconOnly ? t("label") : undefined}
+      onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}
+    >
+      {iconOnly ? <span aria-hidden="true">?</span> : t("label")}
+    </button>
+  );
+}
+
 export function FirstUseGuide() {
   const t = useTranslations("guide");
   const dialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState(0);
   useEffect(() => {
     try { if (localStorage.getItem(KEY) !== "seen") dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
+    const onOpen = () => {
+      setStep(0);
+      if (!dialog.current?.open) dialog.current?.showModal();
+    };
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
   }, []);
   function close() {
     try { localStorage.setItem(KEY, "seen"); } catch { /* Depolama gerekli değildir. */ }
     dialog.current?.close();
   }
-  return <>
-    <button type="button" className="guide-trigger" onClick={() => { setStep(0); dialog.current?.showModal(); }}>{t("label")}</button>
+  return (
     <dialog ref={dialog} className="guide-dialog" aria-labelledby="guide-title" onCancel={close}>
       <div className="guide-heading"><span>{t("progress", { current: step + 1, total: 3 })}</span><button type="button" onClick={close} aria-label={t("skip")}>×</button></div>
       <p className="guide-kicker">ETKİN WMS</p><h2 id="guide-title">{t("title")}</h2><p className="guide-intro">{t("intro")}</p>
@@ -24,5 +50,5 @@ export function FirstUseGuide() {
       <button type="button" className="guide-next" onClick={() => step < 2 ? setStep(step + 1) : close()}>{t(step < 2 ? "next" : "done")} →</button>
       <button type="button" className="guide-skip" onClick={close}>{t("skip")}</button>
     </dialog>
-  </>;
+  );
 }

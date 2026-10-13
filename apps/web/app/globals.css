@@ -562,7 +562,11 @@ html {
 .auth-card button[type="submit"] { min-height:56px; border-radius:12px; font-size:18px; }
 .auth-instruction { color:var(--color-ink-muted); font-size:15px; line-height:1.75; }
 .password-toggle { min-height:48px; width:fit-content; padding:10px 14px; border:1px solid var(--color-border-strong); border-radius:10px; color:var(--color-ink); background:var(--color-bg); font-size:14px; font-weight:650; cursor:pointer; }
-.guide-trigger { position:fixed; right:22px; bottom:calc(88px + env(safe-area-inset-bottom)); z-index:35; display:flex; align-items:center; min-height:52px; background:var(--color-surface); color:var(--color-ink); border:2px solid var(--color-border-strong); border-radius:14px; padding:12px 18px; font-weight:700; box-shadow:var(--shadow-card); cursor:pointer; }
+/* T-912: rehber tetikleyicisi yüzen düğme değil; üst çubukta ve mobil menüde satır içi hap (GuideTrigger). */
+/* T-912: yerel <select> tetikleyicisi tasarımla aynı: sistem oku yerine kendi oku, sağda sabit boşluk. */
+select { appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23626b7a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>"); background-repeat:no-repeat; background-position:right 14px center; background-size:20px 20px; padding-right:44px; }
+select:disabled { opacity:.6; }
+select.bg-none { background-image:none; }
 .guide-dialog { width:min(560px,calc(100% - 32px)); max-height:calc(100dvh - 32px); overflow:auto; margin:auto; padding:28px; border:1px solid var(--color-border); border-radius:24px; background:var(--color-surface); color:var(--color-ink); box-shadow:var(--shadow-card); }
 .guide-dialog::backdrop { background:color-mix(in srgb,var(--color-ink) 65%,transparent); backdrop-filter:blur(4px); }
 .guide-heading { display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--color-ink-muted); margin-bottom:18px; }

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { Package } from "@wms/ui";
 import { SignOutButton } from "./auth-forms.tsx";
 import "./globals.css";
-import { FirstUseGuide } from "./first-use-guide.tsx";
+import { FirstUseGuide, GuideTrigger } from "./first-use-guide.tsx";
 
 // Uygulama kabuğu (T-109): üst bar, Akış/Kokpit görünüm anahtarı, kullanıcı çipi yer tutucusu,
 // "Yardım çağır". Görünür metin yalnızca messages/*.json'dan gelir (ADR-002). Oturum T-118'de bağlanır.
@@ -93,6 +93,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
               {hasSession ? <SignOutButton /> : null}
 
+              <GuideTrigger className={`${TOUCH} inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-border-strong bg-surface px-4 text-sm font-bold text-ink`} />
               <Link
                 href="/help"
                 className={`${TOUCH} inline-flex items-center justify-center rounded-full bg-accent-soft px-4 text-sm font-bold text-accent-ink`}

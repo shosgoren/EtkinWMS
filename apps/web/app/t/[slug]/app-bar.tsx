@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { GuideTrigger } from "../../first-use-guide.tsx";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef } from "react";
@@ -63,6 +64,8 @@ export function AppBar({ slug, tenantName, userName, memberships, view, setViewA
         <span className="min-w-0 flex-1 truncate text-base font-extrabold text-ink" data-testid="app-bar-name">
           {tenantName}
         </span>
+        {/* T-912: rehber telefonda üst çubukta (yüzen düğme kaldırıldı); masaüstünde kök üst çubuktaki hap. */}
+        <GuideTrigger iconOnly className={`${TOUCH} cursor-pointer rounded-control text-xl font-extrabold leading-none text-ink ${FOCUS}`} />
         <button
           type="button"
           aria-label={t("menu.open")}

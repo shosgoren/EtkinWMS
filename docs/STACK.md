@@ -58,6 +58,8 @@ Kaynak sözdizimi: `<dosya>#<json.yolu>` (package.json alanı) veya `docker-comp
 | Lucide | lucide-react | 1.52.0 | packages/ui/package.json#dependencies.lucide-react | T-110 |
 | Uygulama içi barkod çözücü (zxing-cpp WASM; MIT, zxing-cpp Apache-2.0; yalnızca tarama ekranında tembel yüklenir; WASM `locateFile` ile kendi kaynağımızdan sunulur, varsayılan jsDelivr adresi KULLANILMAZ; CSP `'wasm-unsafe-eval'`) | zxing-wasm | 3.1.5 | apps/web/package.json#dependencies.zxing-wasm | T-286, A-29 |
 | next-intl | next-intl | 4.14.9 | apps/web/package.json#dependencies.next-intl | T-109, ADR-002 |
+| QR kod üretici (MFA kurulum ekranı; yalnızca istemcide SVG, ağ isteği yok) | qrcode | 1.5.4 | apps/web/package.json#dependencies.qrcode | T-912 |
+| QR kod tipleri | @types/qrcode | 1.5.5 | apps/web/package.json#devDependencies.@types/qrcode | T-912 |
 
 Sürüm notları (kaynak: kurulu `package.json`/`pnpm-lock.yaml`, 2026-10-05):
 - **Kapsam kuralı (T-004b):** Workspace'lerin (`pnpm-lock.yaml#importers`) `package.json` dosyalarındaki her doğrudan bağımlılık (`dependencies`, `devDependencies`, `optionalDependencies`; `workspace:` hariç) bu tabloda kaynağıyla kilitli bir satıra sahip olmalıdır; eksikse `node scripts/check-docs.mjs` FAIL verir.
