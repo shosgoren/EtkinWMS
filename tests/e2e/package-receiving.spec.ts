@@ -55,12 +55,12 @@ test("GR → KG, different LOT quantities/dates, post fault then URL resume keep
     const last = page.getByLabel("2 Son kullanma tarihi", { exact: true });
     await last.scrollIntoViewIfNeeded(); await last.focus(); await expect(last).toBeFocused(); await expect(last).toBeInViewport();
     expect(await last.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(48);
-    expect(await last.evaluate(e => parseFloat(getComputedStyle(e).outlineWidth))).toBeGreaterThanOrEqual(3);
+    expect(await last.evaluate(e => parseFloat(e.ownerDocument.defaultView!.getComputedStyle(e).outlineWidth))).toBeGreaterThanOrEqual(3);
     const primary = page.getByRole("button", { name: "Kontrol", exact: true });
     expect(await primary.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(56);
     for (const target of [last, primary]) {
       expect(await target.evaluate(e => {
-        const canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
+        const canvas = e.ownerDocument.createElement("canvas"), ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("e2e: contrast canvas unavailable");
         const luminance = (color: string) => {
           ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = color; ctx.fillRect(0, 0, 1, 1);
@@ -68,11 +68,11 @@ test("GR → KG, different LOT quantities/dates, post fault then URL resume keep
           const rgb = [pixels[0]!, pixels[1]!, pixels[2]!].map(v => { const s = v / 255; return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
           return rgb[0]! * 0.2126 + rgb[1]! * 0.7152 + rgb[2]! * 0.0722;
         };
-        const style = getComputedStyle(e), a = luminance(style.color), b = luminance(style.backgroundColor);
+        const style = e.ownerDocument.defaultView!.getComputedStyle(e), a = luminance(style.color), b = luminance(style.backgroundColor);
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
       })).toBeGreaterThanOrEqual(4.5);
     }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    expect(await page.evaluate(() => { const d = (globalThis as unknown as { document: { documentElement: { scrollWidth: number; clientWidth: number } } }).document; return d.documentElement.scrollWidth - d.documentElement.clientWidth; })).toBeLessThanOrEqual(0);
     await expect(page.getByTestId("screen-home").filter({ visible: true })).toHaveAttribute("href", `/t/${f.slug}`);
     await expect(page.getByTestId("screen-back").filter({ visible: true })).toBeVisible();
     if (viewport.width === 390 || viewport.height === 390) {

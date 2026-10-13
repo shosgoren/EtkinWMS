@@ -12,9 +12,9 @@ export function PackageLabelPages({ packages, qrs, width, height, sheetRef }: {
   if (qrs.length !== packages.length || qrs.length === 0 || qrs.some((qr, i) => qr.id !== packages[i]?.id || !qr.path)) return null;
   return <div ref={sheetRef} className="label-sheet" data-testid="package-label-sheet">{packages.map((p, i) => {
     const qr = qrs[i]!;
-    return <article key={p.id} className="label-page" style={{ width: `${width}mm`, height: `${height}mm`, background: "white", color: "black", padding: "3mm", fontSize: "8pt", lineHeight: 1.25 }}>
+    return <article key={p.id} className="label-page" style={{ width: `${width}mm`, height: `${height}mm`, background: "var(--color-surface)", color: "var(--color-ink)", padding: "3mm", fontSize: "8pt", lineHeight: 1.25 }}>
       <div style={{ display: "flex", gap: "3mm", alignItems: "start" }}>
-        <svg role="img" aria-label={`Paket QR ${p.packageNo}`} viewBox={`0 0 ${qr.size} ${qr.size}`} shapeRendering="crispEdges" style={{ width: "28mm", height: "28mm", flexShrink: 0 }}><rect width={qr.size} height={qr.size} fill="white" /><path d={qr.path} fill="black" /></svg>
+        <svg role="img" aria-label={`Paket QR ${p.packageNo}`} viewBox={`0 0 ${qr.size} ${qr.size}`} shapeRendering="crispEdges" style={{ width: "28mm", height: "28mm", flexShrink: 0 }}><rect width={qr.size} height={qr.size} fill="var(--color-surface)" /><path d={qr.path} fill="var(--color-ink)" /></svg>
         <div style={{ minWidth: 0, overflowWrap: "anywhere" }}>
           <strong>{p.itemCode}</strong><p title={p.itemName}>{p.itemName}</p>
           <p>Paket {p.packageNo} / {packages.length} · {p.kind}</p>

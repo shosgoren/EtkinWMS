@@ -20,7 +20,7 @@ describe("package label preview", () => {
     expect(html).not.toContain("<script>"); expect(html).not.toContain("<img");
     expect(html).toContain("Kabul miktarı: 200.000 KG"); expect(html).toContain("Paket 1 / 1");
     expect(html).toContain("2026-10-01"); expect(html).toContain("2027-10-01");
-    expect(html).toContain(id); expect(html).toContain("Karantina"); expect(html).toContain('fill="white"');
+    expect(html).toContain(id); expect(html).toContain("Karantina"); expect(html).toContain('fill="var(--color-surface)"'); expect(html).toContain('fill="var(--color-ink)"');
   });
   it("renders all normal short metadata at the shared 100 × 50 mm roll size", async () => {
     const short = { ...p, itemName: "Rubber", lotCode: "LOT-1" };

@@ -38,9 +38,9 @@ test("POSTED labels decode five real QRs, escaped metadata, print and reopen pre
     paths.push(await qr.locator("path").getAttribute("d") ?? "");
   }
   expect(new Set(paths).size).toBe(5);
-  await page.evaluate(() => { Object.assign(window, { __packagePrints: 0 }); window.print = () => { const w = window as typeof window & { __packagePrints: number }; w.__packagePrints++; }; });
+  await page.evaluate(() => { const w = globalThis as unknown as { __packagePrints: number; print: () => void }; Object.assign(w, { __packagePrints: 0 }); w.print = () => { w.__packagePrints++; }; });
   await page.getByRole("button", { name: "Yazdır / PDF", exact: true }).click();
-  expect(await page.evaluate(() => (window as typeof window & { __packagePrints: number }).__packagePrints)).toBe(1);
+  expect(await page.evaluate(() => (globalThis as unknown as { __packagePrints: number }).__packagePrints)).toBe(1);
   await page.reload(); await expect(articles).toHaveCount(5);
   for (let i = 0; i < 5; i++) expect(await articles.nth(i).locator("svg path").getAttribute("d")).toBe(paths[i]);
   expect(await identities(f, id)).toEqual(ids); await assertStock(f, id, 5, "1000.000000");
