@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { FormSection, FormSteps } from "../../screen-shell.tsx";
 import { Banner } from "@wms/ui";
 import { Typeahead } from "../../easy-setup/typeahead.tsx";
 import { errorKeyOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
@@ -15,7 +16,7 @@ function Failure({error}:{error:ErrorInfo}) {
   return <Banner kind="warning"><p>{t(key)}</p><p>{t(`${key}Action`)}</p></Banner>;
 }
 export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT"|"TRANSFER"}) {
-  const t=useTranslations("stockDocuments"),router=useRouter(),key=useKeyHolder();
+  const t=useTranslations("stockDocuments"),screen=useTranslations("shell.screen"),router=useRouter(),key=useKeyHolder();
   const [selected,setSelected]=useState<Partial<Record<Kind,Choice>>>({});
   const [quantity,setQuantity]=useState(""),[reason,setReason]=useState("");
   const [error,setError]=useState<ErrorInfo|null>(null),[pending,start]=useTransition();
@@ -40,7 +41,7 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
         if(!result.ok){setError(result.error);throw new Error("search failed");} return result.data;
       }} toSuggestion={c=>({key:c.id,primary:c.code,secondary:c.name})} onSelect={value=>choose(kind,value)} />;
   }
-  return <form className="flex min-w-0 flex-col gap-4" onSubmit={event=>{
+  return <form className="workflow-form flex min-w-0 flex-col gap-4" onSubmit={event=>{
     event.preventDefault(); if(inFlight.current || !warehouse || !item || !selected.location) return;
     inFlight.current=true;
     const payload={slug,kind,warehouseId:warehouse.id,itemId:item.id,locationId:selected.location.id,quantity,reason,
@@ -52,13 +53,17 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
     }finally{inFlight.current=false;}});
   }}>
     <p>{t(kind === "TRANSFER"?"transferHelp":"draftHelp")}</p>
+    <FormSteps labels={kind === "TRANSFER" ? [screen("source"), screen("target"), screen("itemsStep")] : [screen("source"), screen("itemsStep")]}/>
     <fieldset disabled={pending || uncertain} className="flex min-w-0 flex-col gap-4">
-      {picker("warehouse")}{warehouse && picker("location")}{kind === "TRANSFER" && <>{picker("targetWarehouse")}{selected.targetWarehouse && picker("targetLocation")}</>}{picker("item")}
+      <FormSection title={screen("source")}>{picker("warehouse")}{warehouse && picker("location")}</FormSection>
+      {kind === "TRANSFER" && <FormSection title={screen("target")}>{picker("targetWarehouse")}{selected.targetWarehouse && picker("targetLocation")}</FormSection>}
+      <FormSection title={screen("itemsStep")}>{picker("item")}
       {lotRequired && picker("lot")}{serialRequired && picker("serial")}
       <label className="flex flex-col gap-1 font-bold">{t("quantity")} {item?.unitCode}
         <input required inputMode="decimal" pattern="[0-9]+([.][0-9]{1,6})?" maxLength={32} className={control} value={quantity} onChange={e=>{key.contentChanged();setQuantity(e.target.value);}} />
       </label>
       <label className="flex flex-col gap-1 font-bold">{t("reason")}<input required maxLength={500} className={control} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} /></label>
+      </FormSection>
     </fieldset>
     {item && warehouse && selected.location && <section className="rounded-card border-2 border-border bg-surface p-4" aria-label={t("summary")}>
       <h2 className="font-bold">{t("summary")}</h2><p>{warehouse.name} / {selected.location.code}</p><p>{item.code} — {item.name}</p>
@@ -68,7 +73,7 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
     </section>}
     {error && <Failure error={error} />}
     {uncertain && <p role="status">{t("uncertain")}</p>}
-    <button type="submit" className={`${control} bg-accent text-on-accent`} disabled={pending || !warehouse || !item || !selected.location || (kind === "TRANSFER" && (!selected.targetLocation || selected.targetWarehouse?.id === warehouse?.id)) || (lotRequired && !selected.lot) || (serialRequired && !selected.serial)}>{pending?t("busy"):uncertain?t("retry"):t(kind === "TRANSFER"?"transferPost":"create")}</button>
+    <button type="submit" className={`workflow-primary ${control} bg-accent text-on-accent`} disabled={pending || !warehouse || !item || !selected.location || (kind === "TRANSFER" && (!selected.targetLocation || selected.targetWarehouse?.id === warehouse?.id)) || (lotRequired && !selected.lot) || (serialRequired && !selected.serial)}>{pending?t("busy"):uncertain?t("retry"):t(kind === "TRANSFER"?"transferPost":"create")}</button>
   </form>;
 }
 export function DocumentControls({slug,document,permissions}:{slug:string;document:{id:string;version:number;status:string;processing:boolean};permissions:{create:boolean;approve:boolean;post:boolean}}) {

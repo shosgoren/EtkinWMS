@@ -1,5 +1,26 @@
 {
   "shell": {
+    "screen": {
+      "context": "Ekran bilgisi",
+      "navigation": "Sayfa gezinmesi",
+      "back": "Geri",
+      "home": "Ana ekran",
+      "production": "Üret",
+      "shipping": "Sevk et",
+      "stock": "Stok ve taşıma",
+      "field": "Saha işlemleri",
+      "items": "Ürünler",
+      "warehouses": "Depolar",
+      "members": "Ekip",
+      "settings": "Ayarlar",
+      "other": "Diğer işler",
+      "steps": "İşlem adımları",
+      "details": "Bilgiler",
+      "source": "Kaynak",
+      "target": "Hedef",
+      "itemsStep": "Ürün ve miktar",
+      "reviewStep": "Kontrol ve kaydet"
+    },
     "productName": "Etkin WMS",
     "easyMode": "Kolay mod",
     "skipToContent": "İçeriğe geç",

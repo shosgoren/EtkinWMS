@@ -49,7 +49,7 @@ export async function smallTargets(page: Page, scope: string): Promise<string[]>
 export async function expectBand(page: Page, where: string, panel: string | null, assertBand = true): Promise<number> {
   const max = await page.evaluate<number>(`(() => {
     const r = (el) => el.getBoundingClientRect();
-    const bar = r(document.querySelector('[data-testid="app-bar"]')), nav = r(document.querySelector('[data-testid="bottom-nav"]'));
+    const bar = r(document.querySelector('[data-testid="app-bar"]')), nav = r(document.querySelector('[data-testid="bottom-nav"], [data-testid="screen-nav"]'));
     const root = ${panel === null ? "document.body" : `document.querySelector(${JSON.stringify(panel)})`};
     const area = ${panel === null ? "{ top: bar.bottom, bottom: nav.top }" : `(() => { const b = r(root); return { top: b.top, bottom: b.bottom }; })()`};
     const spans = [];
@@ -129,7 +129,7 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
     expect(sb.hint).toContain("barkodu okutabilirsin");
     const geo = await page.evaluate<{ barB: number; navT: number; sB: number; sT: number; cB: number; cT: number; introLines: number }>(`(() => {
       const r = (el) => el.getBoundingClientRect();
-      const bar = r(document.querySelector('[data-testid="app-bar"]')), nav = r(document.querySelector('[data-testid="bottom-nav"]'));
+      const bar = r(document.querySelector('[data-testid="app-bar"]')), nav = r(document.querySelector('[data-testid="bottom-nav"], [data-testid="screen-nav"]'));
       const s = r(document.querySelector('input[type="search"]'));
       const c = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Yeni ürün');
       const cb = r(c);

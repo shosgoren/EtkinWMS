@@ -1,0 +1,72 @@
+import { expect, test } from "@playwright/test";
+import { enterDemoShared } from "./support/demo-session.ts";
+
+const DEVICES = [
+  { mode: "phone", width: 390, height: 844 },
+  { mode: "tablet", width: 1024, height: 768 },
+  { mode: "desktop", width: 1440, height: 900 },
+] as const;
+
+for (const device of DEVICES) {
+  test(`T-929 ${device.mode}: doğrudan giriş, güvenli geri, ana ekran ve ulaşılır gezinme`, async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: device.width, height: device.height });
+    await page.goto("/");
+    await enterDemoShared(page, "Yönetici");
+    await expect(page).toHaveURL(/\/t\/demo$/);
+
+    // Yeni sekme/doğrudan girişte önceki tarayıcı geçmişi gerekmez. Geri her zaman
+    // doğru bölümün listesine gider; yazma veya sahte form verisi gerektirmez.
+    const routes = [
+      { path: "/production?new=1", back: "/production" },
+      { path: "/shipping?new=1", back: "/shipping" },
+      { path: "/stock/documents?new=TRANSFER", back: "/stock/documents" },
+      { path: "/items", back: "" },
+      { path: "/field/receive", back: "/field" },
+      { path: "/field/putaway", back: "/field" },
+    ];
+    for (const route of routes) {
+      await page.goto(`/t/demo${route.path}`);
+      const shell = page.getByTestId("screen-shell");
+      await expect(shell).toBeVisible();
+      expect(await page.evaluate<string>('getComputedStyle(document.querySelector("[data-testid=screen-shell]")).getPropertyValue("--screen-mode").trim()')).toBe(device.mode);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      const back = page.getByTestId("screen-back").filter({ visible: true });
+      const home = page.getByTestId("screen-home").filter({ visible: true });
+      await expect(back).toHaveAttribute("href", `/t/demo${route.back}`);
+      await expect(home).toHaveAttribute("href", "/t/demo");
+      for (const target of [back, home]) {
+        await expect(target).toBeVisible();
+        const bounds = await target.boundingBox();
+        expect(bounds).not.toBeNull();
+        expect(bounds!.width).toBeGreaterThanOrEqual(48);
+        expect(bounds!.height).toBeGreaterThanOrEqual(48);
+        if (device.mode !== "desktop") {
+          expect(bounds!.y, "geri/ana ekran alt erişim alanında").toBeGreaterThan(device.height * 0.6);
+          expect(bounds!.y + bounds!.height, "ekran altına taşmaz").toBeLessThanOrEqual(device.height + 1);
+        }
+      }
+      expect(await page.evaluate<boolean>("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true);
+      if (route.path.startsWith("/stock/documents")) {
+        const form = page.locator("form.workflow-form");
+        await expect(form).toBeVisible();
+        const lastField = form.locator("input").last();
+        await lastField.scrollIntoViewIfNeeded();
+        await expect(lastField).toBeInViewport();
+        const fieldBounds = await lastField.boundingBox();
+        if (device.mode !== "desktop") {
+          const navBounds = await page.getByTestId("screen-nav").boundingBox();
+          expect(fieldBounds!.y + fieldBounds!.height, "son alan gezinme çubuğunun altında kalmaz").toBeLessThanOrEqual(navBounds!.y + 1);
+        }
+        await expect(form.locator(".workflow-primary")).toBeDisabled();
+        await page.screenshot({ path: testInfo.outputPath(`${device.mode}-transfer.png`) });
+      }
+      await back.click();
+      await expect(page).toHaveURL(new RegExp(`/t/demo${route.back}$`));
+      await page.goto(`/t/demo${route.path}`);
+      await page.getByTestId("screen-home").filter({ visible: true }).click();
+      await expect(page).toHaveURL(/\/t\/demo$/);
+      await expect(page.getByTestId("easy-operations")).toBeVisible();
+    }
+  });
+}
