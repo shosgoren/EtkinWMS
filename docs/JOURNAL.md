@@ -189,3 +189,4 @@
 - PR30 kaynakb4ba414 dokuzPASS ci38529048834/guards38529048371→main d67b82da; mainci38530824944/guards38530824878 dokuzPASS. Deploy38531988425 yalnız dışDocker registryHTTP500 buildFAIL, aynıfailedjob tekretry sürüyor. PR31 kaynak8b35d2b bağımsız0+gerçekAST119/134 ve dokuzPASS ci38531182211/guards38531182246→int9d02d305; finalUI30dosya. protected-paths gerçekkural yalnızbaseline düşüşü korunan: ikiartışın ayrıincelemesi korunur, insanonayı gerekli diye varsayılmaz; yanlışgenel ifade düzeltilir. Uygulama/testler8b sonrası değişmedi; sonUI/main/yayın/cihaz ayrı doğrulanacak.
 
 - 2026-10-14 T-941 yeni satış sitesi (marketing/): dc kaynak + eval'siz runtime + ön-çizim, yerel WOFF/WEBP, sunucu dosya haritası ve CSP font/style güncellemesi; eski site dosyaları silindi. Yerel tarayıcı QA ve marketing testleri PASS; CI ve canlı yayın bekliyor.
+- 2026-10-14 T-941 canlı: PR32→main908c22a, deploy38550135723 SUCCESS; etkinyazilim.com yeni sayfa, eski app.js 404.
