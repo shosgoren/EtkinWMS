@@ -29,6 +29,7 @@ Son durum kaydı: **14.10.2026 12:29 Europe/Istanbul**. Bu oturumda doğrudan VP
 - Tamamlanmış kaynak incelemesi/kapılar/main/yayın/schema kanıtı olmadan flag açılmaz; Supervisor uygulama kodu yazmaz.
 - Lokal GitHub/SSH geçici reset/banner timeout sonrası dar gerçek okuma/fetch/VPSreceiver başarılı. Kısa devam belgeleri int/package-movement dalında; main ile geliştirme dalını karıştırma.
 - PR33 ilk tam CI: AC04 yeni tablo fixture ve dört public export envanteri kırmızıydı; kaynak/RLS değişmeden düzeltildi. Gerçek207/207 AC04, tasks15+movement30=45/45, birebir schema konsolidasyonu125/125 PASS. E2E konsolidasyonu4/4PASS58.6s, verify3929/checkall6PASS; ilk verify guard-unit5000ms timeout saklandı, eşik değiştirilmeden tekrar PASS. Security0/0/0 @0ef57e8637231d45e73ef2e5295a5a21846ebc6e; production13hash aynı. Yeni exact-head dokuz CI/yayın bekler; önceki push legacyE2E hata/aynıhead PR E2E PASS ayrı kaydedildi.
+- 3d4ef8b CI verify/infra/secrets/deps/int/check-all/test-ac/check-pilot PASS; PR tarayıcı koşusu iki mobil hata verdi. QR reload geçici Suspense çift DOM için tek-kopya assertion eklendi, mevcut metin kontrolü korunur; freshbrowser4/4PASS. Legacy sevkiyat iptalinde RATE_LIMITED gerçek hata bağlamı bulundu; hız sınırı/test assertionları değişmeden teşhis sürüyor. Yeni exact-head tam kapılar/yayın PASS sayılmadı.
 
 ## Açık kabul ve işler
 - Gerçek kamera/Epson/el terminali kabulü **UNKNOWN**; PDF/tarayıcı testi fiziksel yazıcı başarısı değildir.

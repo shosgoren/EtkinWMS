@@ -115,6 +115,7 @@ test("same physical QR: lost QC reply replays once; putaway read failure preserv
   await page.getByText("Tekil QR", { exact: true }).click();
   await expect(page.getByTestId("package-qr")).toHaveText(f.qr);
   await page.reload();
+  await expect(page.getByTestId("package-current-location")).toHaveCount(1);
   await expect(page.getByTestId("package-current-location")).toHaveText(f.storageCode);
   await assertPackageMovement(f, { qc: 1, putaway: 1, locationId: f.storageId, status: "AVAILABLE", quantity: "200.000000" });
 });
