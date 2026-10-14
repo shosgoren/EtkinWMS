@@ -2184,6 +2184,16 @@
     "draft": "Complete receipt first",
     "unsupported": "Operation unavailable",
     "warehouse": "Warehouse",
-    "expired": "Expiry date passed"
+    "expired": "Expiry date passed",
+    "transfer": "Move to warehouse",
+    "chooseWarehouse": "Choose warehouse",
+    "targetWarehouse": "Target warehouse",
+    "confirmTransfer": "Confirm transfer",
+    "reviewTransfer": "Review",
+    "moreWarehouses": "More warehouses",
+    "moreLocations": "More locations",
+    "noWarehouse": "No eligible warehouse",
+    "reloadWarehouses": "Reload warehouses",
+    "reloadLocations": "Reload locations"
   }
 }
