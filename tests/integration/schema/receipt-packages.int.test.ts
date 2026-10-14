@@ -748,6 +748,13 @@ describe("T960 pending production and partial stock genealogy",()=>{
  it("half sourceOUT alone is rejected and wholeTX canrollback",async()=>tx(async()=>{
   const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);await postProduction(s,app,true);await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_PENDING_STOCK'});
  }));
+ for(const kind of ['TRANSFER','PRODUCTION'] as const)it(`inherited transfer rejects extra incoming ${kind} link`,async()=>tx(async()=>{
+  const p=await origin(app,'AVAILABLE');const step=await transfer(p);await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');
+  const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,$4,$5)",[world.tenantId,extra,step.document,kind,kind==='PRODUCTION'?secondRecipe:null]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_TRANSFER_LINK'});
+ }));
  for(const kind of ['TRANSFER','PRODUCTION'] as const)it(`posted batch rejects extra ${kind} target link even with another recipe`,async()=>tx(async()=>{
   const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);const posted=await postProduction(s);await flush();
   await app.query("SET CONSTRAINTS ALL DEFERRED");

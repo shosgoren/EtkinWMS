@@ -35,6 +35,12 @@ BEGIN
    RAISE EXCEPTION 'PACKAGE_MOVEMENT_CHAIN' USING ERRCODE='23514';
   END IF;
   IF step.operation='WAREHOUSE_TRANSFER' THEN
+   -- Legacy0029 permits several target links; a registered package transfer has one canonical pair.
+   IF (SELECT count(*) FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id)<>1
+   OR EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id
+    AND (kind<>'TRANSFER' OR source_document_id IS DISTINCT FROM step.source_document_id OR recipe_id IS NOT NULL)) THEN
+    RAISE EXCEPTION 'PACKAGE_TRANSFER_LINK' USING ERRCODE='23514';
+   END IF;
    SELECT count(*) INTO n FROM public.documents d
    JOIN public.document_lines l ON l.tenant_id=d.tenant_id AND l.document_id=d.id
    JOIN public.documents out_doc ON out_doc.tenant_id=d.tenant_id AND out_doc.id=step.source_document_id
