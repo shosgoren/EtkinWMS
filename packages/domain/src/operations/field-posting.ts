@@ -23,6 +23,7 @@ import {
   buildPostingPlan,
   postApprovedDocumentInTx,
   registerTxCreatedDocument,
+  type PostInTxOptions,
   type PostingKind,
   type PostingLine,
   type PostingStatus,
@@ -222,14 +223,17 @@ async function systemTypeVersionId(tx: AccessTx, kind: string): Promise<string> 
  * Primitif belgeyi aynı transaction'da oluştur → onayla → işle. Çağıran `executeStockCommand`'ın `apply`'ındadır ve planı `planFieldPosting` ile
  * bildirmiştir. Dönen `StockCommandApplied` (audit `stock_document.posted`, numara, beyaz listeli sonuç) apply'dan olduğu gibi döndürülür.
  */
-export async function postFieldDocument(
+export interface PreparedFieldDocument {
+  readonly documentId: string;
+  readonly lineIds: readonly string[];
+  readonly consumes: PostInTxOptions["consumes"];
+}
+/** Internal constructor: registers only the real document created in this AccessTx; writes no ledger/balance. */
+export async function prepareFieldDocument(
   tx: AccessTx,
-  locked: LockedState,
   ctx: StockCommandContext,
   spec: FieldPostSpec,
-  requestId: string | null,
-  beforePosting?: (documentId: string, lineIds: readonly string[]) => Promise<void>,
-): Promise<StockCommandApplied> {
+): Promise<PreparedFieldDocument> {
   assertSize(spec);
   if ((spec.sourceKind === null) !== (spec.sourceId === null)) throw new AppError("INTERNAL");
   await assertWarehouseActive(tx, ctx.tenantId, spec.warehouseId);
@@ -282,6 +286,19 @@ export async function postFieldDocument(
     if (lineId === undefined) throw new AppError("INTERNAL");
     return { lineId, orderLineId: c.orderLineId, reservationIds: c.reservationIds };
   });
+  return { documentId, lineIds, consumes };
+}
+
+/** Existing atomic wrapper: constructor -> unchanged callback -> unchanged posting core. */
+export async function postFieldDocument(
+  tx: AccessTx,
+  locked: LockedState,
+  ctx: StockCommandContext,
+  spec: FieldPostSpec,
+  requestId: string | null,
+  beforePosting?: (documentId: string, lineIds: readonly string[]) => Promise<void>,
+): Promise<StockCommandApplied> {
+  const { documentId, lineIds, consumes } = await prepareFieldDocument(tx, ctx, spec);
   await beforePosting?.(documentId, lineIds);
   return postApprovedDocumentInTx(tx, locked, ctx, documentId, { requestId, consumes, ledgerReason: spec.ledgerReason });
 }
