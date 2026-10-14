@@ -4,6 +4,7 @@ import { readdirSync } from 'node:fs';
 import { resolve, dirname, extname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { loadNotifyConfig, notifyLead } from './notify.mjs';
 
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), 'public');
 const leadDir = process.env.LEAD_DIR || '/data';
@@ -59,7 +60,13 @@ export const server = createServer(async (req,res) => {
       const lead = validateLead(JSON.parse(body));
       if (!lead) return json(400,{error:'Ad, firma, geçerli e-posta ve iletişim onayını kontrol edin.'});
       await mkdir(leadDir,{recursive:true,mode:0o700});
-      await appendFile(resolve(leadDir,'demo-requests.jsonl'),JSON.stringify({id:randomUUID(),createdAt:new Date().toISOString(),...lead})+'\n',{mode:0o600});
+      const record = {id:randomUUID(),createdAt:new Date().toISOString(),...lead};
+      await appendFile(resolve(leadDir,'demo-requests.jsonl'),JSON.stringify(record)+'\n',{mode:0o600});
+      // T-945: kayıt yazıldıktan sonra e-posta bildirimi; sonucu yanıtı bekletmez ve kaydı etkilemez.
+      loadNotifyConfig(process.env, leadDir).then((config) => notifyLead(record, config)).then((r) => {
+        if (r.status !== null && !r.ok) console.error(`lead-notify failed status=${r.status}`);
+        if (r.capped) console.error('lead-notify skipped hourly-cap');
+      }).catch(() => console.error('lead-notify failed'));
       return json(201,{ok:true});
     } catch {return json(503,{error:'Talep kaydedilemedi. Lütfen tekrar deneyin.'});}
   }
