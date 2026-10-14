@@ -200,3 +200,4 @@
 - 05f56b security B0/M0/m1; ordinary runtime bulguları kapalı. Kalan privileged UPDATE adoption pilot operasyon sınırıyla kabul; uygulama rolünün UPDATE grantı/public çağrısı yok, owner tamper garantisi verilmez.
 - Bağımsız final fresh35 receipt102+transfer40+drift23=165/165 PASS; kaynak hashleri aynı. Receiving4/labels2/A4/B4/legacy2=16/16 browserPASS; retry/skip0. Önceki hata koşuları korunur, korumalar gevşetilmedi.
 - Main belge çakışması kaynak koda dokunmadan çözüldü. PR/main/yayın ve gerçek cihaz ayrı kapılar; flagfalse. Son doğrudan VPS check fdf9d6/schema34 healthok.
+- 2026-10-14 T-945 demo talebi e-posta bildirimi (Resend), review 0/0/4 düzeltildi; anahtar bekliyor.

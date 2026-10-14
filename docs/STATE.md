@@ -42,3 +42,5 @@ Son doğrulama: 14.10.2026 Europe/Istanbul; kod, CI, main ve VPS ayrı otoritele
 - Excel anaürün/birim/standartbarkod otomasyonu, paletgruplama/split, yetkili draftedit/cancel/reversal, ERPsenkron/billing, ürün görseli ve fullsiparişQR ayrı backlog.
 - Migration tek yazar/operatör; birleşmiş migration değiştirilmez. Dokuz PR/main kapısı ve receiverbackup/schema/health ayrı doğrulanır.
 - Eski/stacked PRları kör yeniden birleştirme; git ancestry ve exacthead kontrol et. Başarısız geçmiş/ölçüm sınırları JOURNAL ve kartlarda korunur.
+
+- T-945 (14 Ekim): demo talebi kaydından sonra Resend ile e-posta bildirimi (marketing/notify.mjs; ayar ortam ya da /data/notify.json; saatlik 20 üst sınır; hata kaydı bozmaz). Bağımsız security-reviewer 0/0/4 MINOR → dördü düzeltildi. Kullanıcı Resend hesabı + anahtar ekleyene kadar bildirim kapalı; gerçek gönderim doğrulanmadı.
