@@ -76,7 +76,13 @@
       "demoBanner": "Demo environment — do not enter real personal data",
       "socialLabel": "Other sign-in methods",
       "google": "Sign in with Google",
-      "microsoft": "Sign in with Microsoft"
+      "microsoft": "Sign in with Microsoft",
+      "sceneTitle": "Seamless control from receiving to shipping.",
+      "sceneSub": "Today's tasks are ready. Scan, confirm, move on.",
+      "feed1": "QR label printed · P0206",
+      "feed2": "Picking completed · SO-0091",
+      "feed3": "Count: no difference · A-03",
+      "live": "Live floor"
     },
     "reset": {
       "requestTitle": "Reset my password",

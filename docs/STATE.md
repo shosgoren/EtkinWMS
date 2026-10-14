@@ -44,3 +44,6 @@ Son doğrulama: 14.10.2026 Europe/Istanbul; kod, CI, main ve VPS ayrı otoritele
 - Eski/stacked PRları kör yeniden birleştirme; git ancestry ve exacthead kontrol et. Başarısız geçmiş/ölçüm sınırları JOURNAL ve kartlarda korunur.
 
 - T-945 (14 Ekim): demo talebi kaydından sonra Resend ile e-posta bildirimi (marketing/notify.mjs; ayar ortam ya da /data/notify.json; saatlik 20 üst sınır; hata kaydı bozmaz). Bağımsız security-reviewer 0/0/4 MINOR → dördü düzeltildi. Kullanıcı Resend hesabı + anahtar ekleyene kadar bildirim kapalı; gerçek gönderim doğrulanmadı.
+
+- T-980 (14 Ekim, kullanıcı isteği): uygulama /login yeni dinamik sahne (solda canlı saha haritası + akış, sağda form); eski kart görünümü kaldırıldı, form mantığı/etiketleri aynı. Next yerelde derlenemedi (npm kapalı); statik önizleme ve CI ile doğrulanır.
+- T-945 canlı: Resend alan adı (etkinyazilim.com) doğrulandı, anahtar kullanıcı tarafından eklendi; 14 Ekim 18:2x deneme talebi hosgorens@gmail.com'a Delivered.

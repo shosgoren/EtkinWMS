@@ -741,3 +741,48 @@ select.bg-none { background-image:none; }
   .screen-interior[data-section="items"] > .screen-content > main { flex: 1 0 auto; }
   .screen-interior[data-section="items"] > .screen-content > main > .sticky { margin-inline: -.75rem; }
 }
+
+/* T-980: giriş sahnesi — solda canlı saha haritası, sağda form. Yalnız /login (LoginForm). */
+.login-stage { display:grid; grid-template-columns:minmax(0,1fr); min-height:calc(100dvh - 66px); }
+.login-scene { position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; gap:20px; min-height:250px; padding:28px 20px 60px; color:var(--color-surface); background:linear-gradient(160deg, color-mix(in srgb, var(--color-ink) 82%, var(--color-info)) 0%, var(--color-ink) 45%, color-mix(in srgb, var(--color-ink) 70%, var(--color-accent-ink)) 100%); }
+.login-scene-glow { position:absolute; inset:-30% -20% auto auto; width:70%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--color-accent) 45%, transparent) 0%, transparent 65%); filter:blur(10px); animation:loginGlow 14s ease-in-out infinite alternate; pointer-events:none; }
+.login-scene-map { position:absolute; inset:0; width:100%; height:100%; opacity:.35; pointer-events:none; }
+.login-rack { fill:color-mix(in srgb, var(--color-surface) 6%, transparent); stroke:color-mix(in srgb, var(--color-surface) 16%, transparent); stroke-width:1.2; }
+.login-route { fill:none; stroke:color-mix(in srgb, var(--color-surface) 55%, transparent); stroke-width:3; stroke-dasharray:2 10; stroke-linecap:round; animation:loginDash 1.6s linear infinite; }
+.login-stop { fill:var(--color-ink); stroke:var(--color-accent); stroke-width:3; animation:loginStop 9s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+.login-stop-2 { animation-delay:2.6s; }
+.login-stop-3 { animation-delay:5.4s; }
+.login-picker { fill:var(--color-accent); stroke:var(--color-surface); stroke-width:3; }
+.login-scene-copy { position:relative; z-index:1; display:flex; flex-direction:column; gap:10px; max-width:520px; }
+.login-scene-live { display:inline-flex; align-items:center; gap:8px; width:fit-content; padding:6px 12px; border-radius:999px; background:color-mix(in srgb, var(--color-surface) 10%, transparent); font-size:12px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; }
+.login-scene-live i { width:8px; height:8px; border-radius:50%; background:color-mix(in srgb, var(--color-success) 70%, var(--color-surface)); box-shadow:0 0 0 0 color-mix(in srgb, var(--color-success) 60%, transparent); animation:loginPulse 1.8s ease-out infinite; }
+.login-scene-title { margin:0; font-size:26px; font-weight:800; line-height:1.1; letter-spacing:-.5px; }
+.login-scene-sub { margin:0; color:color-mix(in srgb, var(--color-surface) 78%, transparent); font-size:15px; line-height:1.5; }
+.login-feed { display:none; list-style:none; margin:8px 0 0; padding:0; flex-direction:column; gap:10px; }
+.login-feed-item { display:flex; align-items:center; gap:10px; width:fit-content; padding:10px 14px 10px 10px; border-radius:14px; background:color-mix(in srgb, var(--color-surface) 8%, transparent); border:1px solid color-mix(in srgb, var(--color-surface) 14%, transparent); font-size:14px; font-weight:650; opacity:0; transform:translateY(10px); animation:loginFeed 9s ease-in-out infinite; backdrop-filter:blur(6px); }
+.login-feed-item svg { width:22px; height:22px; flex:none; padding:3px; border-radius:50%; background:var(--color-accent); fill:none; stroke:var(--color-surface); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.login-feed-2 { animation-delay:3s; }
+.login-feed-3 { animation-delay:6s; }
+.login-panel { display:flex; align-items:flex-start; justify-content:center; padding:0 16px 40px; }
+.login-panel .login-card { margin:-36px 0 0; position:relative; z-index:2; }
+@keyframes loginGlow { from { transform:translate(0,0) scale(1); } to { transform:translate(-12%,18%) scale(1.15); } }
+@keyframes loginDash { to { stroke-dashoffset:-24; } }
+@keyframes loginStop { 0%, 22%, 100% { transform:scale(1); } 8% { transform:scale(1.35); } }
+@keyframes loginPulse { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--color-success) 60%, transparent); } 100% { box-shadow:0 0 0 10px transparent; } }
+@keyframes loginFeed { 0% { opacity:0; transform:translateY(10px); } 8%, 92% { opacity:1; transform:none; } 100% { opacity:0; transform:translateY(-6px); } }
+@media (min-width: 1024px) {
+  .login-stage { grid-template-columns:minmax(0,1.15fr) minmax(440px,.85fr); }
+  .login-scene { justify-content:flex-end; padding:56px clamp(40px,5vw,80px); min-height:0; }
+  .login-scene-map { inset:5% 5% auto auto; width:auto; height:54%; max-width:80%; opacity:.85; }
+  .login-scene-title { font-size:clamp(34px,3.2vw,52px); }
+  .login-scene-sub { font-size:18px; }
+  .login-feed { display:flex; }
+  .login-feed-item { opacity:1; transform:none; animation-name:loginFeedWide; }
+  .login-panel { align-items:center; padding:40px; }
+  .login-panel .login-card { margin:0; }
+}
+@keyframes loginFeedWide { 0%, 100% { background:color-mix(in srgb, var(--color-surface) 8%, transparent); } 6%, 26% { background:color-mix(in srgb, var(--color-surface) 20%, transparent); border-color:color-mix(in srgb, var(--color-surface) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) {
+  .login-scene-glow, .login-route, .login-stop, .login-scene-live i, .login-feed-item { animation:none; }
+  .login-feed-item { opacity:1; transform:none; }
+}

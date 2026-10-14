@@ -116,32 +116,82 @@ export function LoginForm({ next, socialEnabled, banner }: { next: string; socia
   }
 
   return (
-    <Card title={t("login.title")}>
-      <p className="auth-instruction">{guide("loginHelp")}</p>
-      {banner}
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="login-error" noValidate={false}>
-        <TextField label={t("login.email")} name="email" type="email" autoComplete="username" required />
-        <TextField label={t("login.password")} name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required />
-        <button type="button" className="password-toggle" aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)}>{guide(showPassword ? "hidePassword" : "showPassword")}</button>
-        <FormError id="login-error" error={error} />
-        <Button type="submit" loading={busy}>
-          {t("login.submit")}
-        </Button>
-      </form>
-      <Link href="/reset-password" className={LINK}>
-        {t("login.forgot")}
-      </Link>
-      {socialEnabled ? (
-        <section aria-label={t("login.socialLabel")} className="flex flex-col gap-3">
-          <Button variant="secondary" onClick={() => void onSocial("google")} disabled={busy}>
-            {t("login.google")}
-          </Button>
-          <Button variant="secondary" onClick={() => void onSocial("microsoft")} disabled={busy}>
-            {t("login.microsoft")}
-          </Button>
-        </section>
-      ) : null}
-    </Card>
+    <div className="login-stage">
+      <LoginScene t={t} />
+      <div className="login-panel">
+        <main className="auth-card login-card flex w-full max-w-md min-w-0 flex-col gap-4">
+          <h1 className="break-words text-2xl font-extrabold text-ink">{t("login.title")}</h1>
+          <p className="auth-instruction">{guide("loginHelp")}</p>
+          {banner}
+          <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="login-error" noValidate={false}>
+            <TextField label={t("login.email")} name="email" type="email" autoComplete="username" required />
+            <TextField label={t("login.password")} name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required />
+            <button type="button" className="password-toggle" aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)}>{guide(showPassword ? "hidePassword" : "showPassword")}</button>
+            <FormError id="login-error" error={error} />
+            <Button type="submit" loading={busy}>
+              {t("login.submit")}
+            </Button>
+          </form>
+          <Link href="/reset-password" className={LINK}>
+            {t("login.forgot")}
+          </Link>
+          {socialEnabled ? (
+            <section aria-label={t("login.socialLabel")} className="flex flex-col gap-3">
+              <Button variant="secondary" onClick={() => void onSocial("google")} disabled={busy}>
+                {t("login.google")}
+              </Button>
+              <Button variant="secondary" onClick={() => void onSocial("microsoft")} disabled={busy}>
+                {t("login.microsoft")}
+              </Button>
+            </section>
+          ) : null}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+// Giriş sahnesi (T-980): yalnız görsel; içerik `auth.login.scene*`/`feed*`. Ekran okuyucudan gizlidir (bilgi formdadır).
+const SCENE_ROUTE = "M40 230 H150 V150 H250 V70 H360";
+const SCENE_STOPS = [[150, 230], [250, 150], [360, 70]] as const;
+
+function LoginScene({ t }: { t: Translator }) {
+  return (
+    <aside className="login-scene" aria-hidden="true">
+      <div className="login-scene-glow" />
+      <svg className="login-scene-map" viewBox="0 0 400 300" focusable="false">
+        {[0, 1, 2, 3].map((row) => (
+          <g key={row}>
+            {[0, 1, 2, 3, 4].map((col) => (
+              <rect key={col} className="login-rack" x={30 + col * 72} y={30 + row * 70} width="56" height="22" rx="5" />
+            ))}
+          </g>
+        ))}
+        <path className="login-route" d={SCENE_ROUTE} />
+        {SCENE_STOPS.map(([x, y], i) => (
+          <rect key={i} className={`login-stop login-stop-${i + 1}`} x={x - 9} y={y - 9} width="18" height="18" rx="4" />
+        ))}
+        <circle className="login-picker" r="10">
+          <animateMotion dur="9s" repeatCount="indefinite" path={SCENE_ROUTE} />
+        </circle>
+      </svg>
+      <div className="login-scene-copy">
+        <span className="login-scene-live">
+          <i />
+          {t("login.live")}
+        </span>
+        <p className="login-scene-title">{t("login.sceneTitle")}</p>
+        <p className="login-scene-sub">{t("login.sceneSub")}</p>
+        <ul className="login-feed">
+          {(["feed1", "feed2", "feed3"] as const).map((k, i) => (
+            <li key={k} className={`login-feed-item login-feed-${i + 1}`}>
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              {t(`login.${k}`)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </aside>
   );
 }
 
