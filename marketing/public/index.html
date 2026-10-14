@@ -459,10 +459,10 @@
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Sektörünüz</span>
         <select class="field" name="sector" data-dc-options="t.options"><option>Üretim</option><option>Toptan ticaret</option><option>Depo ve lojistik</option><option>Perakende</option><option>Diğer</option></select>
       </label>
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>İhtiyacınız</span><textarea class="field" name="message" rows="3" maxlength="2000" style="resize: vertical"></textarea></label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>İhtiyacınız</span><textarea class="field" name="message" rows="3" maxlength="2000" aria-describedby="need-hint" style="resize: vertical"></textarea><small id="need-hint" style="font-size: 13px; font-weight: 500; color: #4C6275; line-height: 1.45"><span>Kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.</span></small></label>
       <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
         <input type="checkbox" name="consent" required="" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
-        <span><span>Talebimin değerlendirilmesi için bu bilgilerle benimle iletişime geçilmesini kabul ediyorum.</span> <a href="/privacy"><span>Veri kullanımı</span></a></span>
+        <span><span>Demo talebime ilişkin</span> <a href="/privacy"><span>Aydınlatma Metni</span></a><span>’ni okudum.</span></span>
       </label>
       <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
       <button type="submit" class="cta" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer"><span>Teklif ve demo iste</span> <span aria-hidden="true" style="color: #F4C542">↗</span></button>
@@ -479,7 +479,7 @@
       <span style="color: #C7D4E0; font-size: 14px"><span>Uçtan uca izlenebilir depo yönetimi.</span></span>
     </div></div>
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px; font-size: 14px">
-      <a href="/privacy" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF"><span>Veri kullanımı</span></a>
+      <a href="/privacy" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF"><span>Aydınlatma Metni</span></a>
       <a href="https://wms.etkinyazilim.com/login" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF"><span>Uygulamaya giriş</span> ↗</a>
       <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C7D4E0">© 2026 Etkin Yazılım</span>
     </div>
@@ -808,10 +808,10 @@
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fSector}}
         <select class="field" name="sector" data-dc-options="t.options"></select>
       </label>
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" style="resize: vertical"></textarea></label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" aria-describedby="need-hint" style="resize: vertical"></textarea><small id="need-hint" style="font-size: 13px; font-weight: 500; color: #4C6275; line-height: 1.45">{{t.fNeedHint}}</small></label>
       <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
         <input type="checkbox" name="consent" required style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
-        <span>{{t.fConsent}} <a href="/privacy">{{t.privacy}}</a></span>
+        <span>{{t.fConsentA}} <a href="/privacy">{{t.notice}}</a>{{t.fConsentB}}</span>
       </label>
       <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
       <button type="submit" class="cta" disabled="{{formBusyAttr}}" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer">{{t.fSubmit}} <span aria-hidden="true" style="color: {{accent}}">↗</span></button>
