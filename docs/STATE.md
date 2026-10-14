@@ -1,6 +1,6 @@
 # Etkin WMS — güncel devam durumu
 
-Son doğrulama: **14.10.2026 11:36 Europe/Istanbul**. Kaynak/CI/yayın/cihaz kabulü ayrı durumdur.
+Son durum kaydı: **14.10.2026 12:29 Europe/Istanbul**. Bu oturumda doğrudan VPS receiver release53ed/healthok/schema33 doğrulandı. Kaynak/CI/yayın/cihaz kabulü ayrı durumdur.
 
 ## Canlı — doğrulandı
 - Repo: https://github.com/shosgoren/EtkinWMS ; `2027-WMS-1` yalnız salt okunur.
@@ -23,11 +23,11 @@ Son doğrulama: **14.10.2026 11:36 Europe/Istanbul**. Kaynak/CI/yayın/cihaz kab
 
 ## Aktif — bir sonraki tek adım
 - Dal `int/package-movement`, çalışma ağacı `/private/tmp/etkin-package-performance`; taban canlı53ed.
-- **T941 DB engineer**: append0034 step zinciri + tamHU QC_RELEASE/PUTAWAY dar allowlist; RR fork, RLS, down/rollback gerçek testleri. Aynı anda tek migration yazarı.
-- Sonra seri T942 komut → T943 currentQR/action → T944 ekran → T945 bağımsız QA+güvenlik ve dokuz kapı; beş kart/≤30 dosya.
+- T941 append0034 taslağı: Node24 gerçek100/100 testPASS (16yeni+61legacy+23drift); iki tekrar fixture42P08 üst onarımla çözüldü, kaynakguard değişmedi. Bağımsız125/125PASS owner/foreign/cycle/original33oracle/twoRR; mevcutkabul roundtrip54/54PASS/200paket17.078s<30s. Güvenlik/CI/yayın henüz tamam değil.
+- T942/T943 gerçek55/55PASS (23komut/4query/28legacy), schema34; bağımsız schema125/125 ve AC04loader169/169PASS. T944 gerçek4/4E2EPASS/39.8s, skip/retry0; sameQR/lot/dates/diğer800KG/dörtviewport/56nav doğrulandı. Şimdi tamverify, bağımsızpaketinceleme ve dokuzCI/yayın kapıları; beş kart/≤30dosya.
 - İlk dilim aynıQR kalite onayı ve aynıdepo yerleştirmesidir. Warehouse-transfer ve üretim tüketim/çıktıQR soy ağacı **sonraki ayrı paketler**, tamamlandı sayılmaz.
 - Tamamlanmış kaynak incelemesi/kapılar/main/yayın/schema kanıtı olmadan flag açılmaz; Supervisor uygulama kodu yazmaz.
-- Lokal GitHub/SSH bağlantısı reset/banner timeout verdi; resmi GitHub bağlantısı çalışıyor. Yeni erişim başarısı ölçülmeden yerel bağlantı düzeldi deme.
+- Lokal GitHub/SSH geçici reset/banner timeout sonrası dar gerçek okuma/fetch/VPSreceiver başarılı. Kısa devam belgeleri int/package-movement dalında; main ile geliştirme dalını karıştırma.
 
 ## Açık kabul ve işler
 - Gerçek kamera/Epson/el terminali kabulü **UNKNOWN**; PDF/tarayıcı testi fiziksel yazıcı başarısı değildir.
