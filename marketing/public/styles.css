@@ -317,3 +317,19 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 .hchips li{padding:7px 14px 7px 7px!important;font-size:14px!important}
 .devlg{position:relative;width:100%;max-width:312px;aspect-ratio:312 / 640;padding:11px;border-radius:50px;background:linear-gradient(145deg,#2A3846,#0B141C 55%,#1C2833);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.12),0 0 0 1px rgba(0,0,0,.5),0 40px 80px -30px rgba(23,46,66,.55),0 16px 30px -16px rgba(23,46,66,.4)}
 .devlg::before{content:'';position:absolute;z-index:3;top:20px;left:50%;width:84px;height:24px;margin-left:-42px;border-radius:999px;background:#05090D}
+/* T-943: kanıt şeridi geniş ve yeterince yüksek ekranlarda filmin içinde */
+.cine-proof{display:none}
+.cine-nav2{display:flex;align-items:center;justify-content:space-between;gap:16px;flex:1;min-width:0}
+@media (min-width:1200px) and (min-height:780px){
+.proofbar{display:none}
+.cine-body{align-items:center;padding-top:clamp(12px,3vh,40px);padding-bottom:clamp(12px,3vh,40px)}
+.cine-foot{align-items:flex-end;gap:24px 40px;padding-bottom:clamp(16px,3vh,32px)}
+.cine-proof{display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px;flex:1 1 auto;min-width:0;padding-top:clamp(14px,2.2vh,22px);border-top:1px solid rgba(255,255,255,.22)}
+.cine-proof .hqr{max-width:440px}
+.cine-proof .hqr p{color:#FFFFFF;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.cine-proof .hqr svg{border-color:#FFFFFF!important}
+.cine-proof .hchips li{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.55)!important;color:#FFFFFF;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.cine-nav2{flex:0 0 auto;flex-direction:column;align-items:flex-end;gap:8px}
+.cine-nav2 .cine-cap{justify-content:flex-end}
+}
+@media (min-width:1200px) and (max-width:1599px) and (min-height:780px){.cine-proof .hchips{gap:8px}.cine-proof .hchips li{font-size:13px!important;padding:6px 12px 6px 6px!important}.cine-proof .hqr{max-width:380px}}
