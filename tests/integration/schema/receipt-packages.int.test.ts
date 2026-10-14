@@ -748,6 +748,30 @@ describe("T960 pending production and partial stock genealogy",()=>{
  it("half sourceOUT alone is rejected and wholeTX canrollback",async()=>tx(async()=>{
   const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);await postProduction(s,app,true);await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_PENDING_STOCK'});
  }));
+ for(const flow of ['ORIGIN','QC_RELEASE','PUTAWAY'] as const)for(const endpoint of ['SOURCE','TARGET'] as const)it(`registered ${flow} forbids unrelated link at ${endpoint}`,async()=>tx(async()=>{
+  const p=await origin();let doc=p.document;
+  if(flow!=='ORIGIN'){const qc=await movement(p);doc=flow==='QC_RELEASE'?qc.document:(await movement(p,qc)).document;}
+  await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,endpoint==='SOURCE'?doc:extra,endpoint==='SOURCE'?extra:doc]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:flow==='ORIGIN'?'PACKAGE_ORIGIN_LINK':'PACKAGE_MOVEMENT_LINK'});
+ }));
+ it('pending production output forbids outgoing link without stock',async()=>tx(async()=>{
+  const p=await origin(app,'AVAILABLE'),batch=await prepareProduction(p);await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,batch.document,extra]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_PENDING_STOCK'});
+ }));
+ for(const flow of ['TRANSFER','PRODUCTION'] as const)for(const direction of ['IN_AS_SOURCE','OUT_AS_TARGET'] as const)it(`registered ${flow} rejects inverse endpoint ${direction}`,async()=>tx(async()=>{
+  const p=await origin(app,'AVAILABLE');let into:string,out:string;
+  if(flow==='TRANSFER'){const step=await transfer(p);into=step.document;out=step.sourceDocument;}
+  else {const batch=await prepareProduction(p);const posted=await postProduction(batch);into=batch.document;out=posted.doc;}
+  await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');
+  const extra=randomUUID(),kind=direction==='IN_AS_SOURCE'?'STOCK_IN':'STOCK_OUT';
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,$3,id,$4,'2026-10-14',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key=$3 AND version=1",[world.tenantId,extra,kind,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,direction==='IN_AS_SOURCE'?into:extra,direction==='IN_AS_SOURCE'?extra:out]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:flow==='TRANSFER'?'PACKAGE_TRANSFER_LINK':'PACKAGE_PRODUCTION_LINK'});
+ }));
  for(const kind of ['TRANSFER','PRODUCTION'] as const)it(`inherited transfer rejects extra incoming ${kind} link`,async()=>tx(async()=>{
   const p=await origin(app,'AVAILABLE');const step=await transfer(p);await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');
   const extra=randomUUID();

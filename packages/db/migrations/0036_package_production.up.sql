@@ -130,9 +130,10 @@ BEGIN
    expected_remaining:=expected_remaining-step.base_quantity;
   ELSIF step.operation='WAREHOUSE_TRANSFER' THEN
    -- Legacy0029 permits several target links; a registered package transfer has one canonical pair.
-   IF (SELECT count(*) FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id)<>1
-   OR EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id
-    AND (kind<>'TRANSFER' OR source_document_id IS DISTINCT FROM step.source_document_id OR recipe_id IS NOT NULL)) THEN
+   IF (SELECT count(*) FROM public.stock_document_links WHERE tenant_id=p_tenant
+    AND (source_document_id IN (step.document_id,step.source_document_id) OR target_document_id IN (step.document_id,step.source_document_id)))<>1
+   OR NOT EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id
+    AND kind='TRANSFER' AND source_document_id=step.source_document_id AND recipe_id IS NULL) THEN
     RAISE EXCEPTION 'PACKAGE_TRANSFER_LINK' USING ERRCODE='23514';
    END IF;
    SELECT count(*) INTO n FROM public.documents d
@@ -182,6 +183,10 @@ BEGIN
    END IF;
    SELECT warehouse_id INTO expected_warehouse FROM public.locations WHERE tenant_id=p_tenant AND id=step.target_location_id;
   ELSE
+  IF EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant
+   AND (source_document_id=step.document_id OR target_document_id=step.document_id)) THEN
+   RAISE EXCEPTION 'PACKAGE_MOVEMENT_LINK' USING ERRCODE='23514';
+  END IF;
   SELECT count(*) INTO n FROM public.documents d
   JOIN public.document_lines l ON l.tenant_id=d.tenant_id AND l.document_id=d.id
   JOIN public.locations src ON src.tenant_id=l.tenant_id AND src.id=l.source_location_id
@@ -265,6 +270,10 @@ BEGIN
  IF EXISTS(SELECT 1 FROM public.documents WHERE tenant_id=p_tenant AND source_kind='INBOUND_RECEIPT'
   AND source_id=p_receipt AND id<>d.id) THEN
   RAISE EXCEPTION 'PACKAGE_SOURCE_DOCUMENT_BYPASS' USING ERRCODE='23514';
+ END IF;
+ IF EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant
+  AND (source_document_id=d.id OR target_document_id=d.id)) THEN
+  RAISE EXCEPTION 'PACKAGE_ORIGIN_LINK' USING ERRCODE='23514';
  END IF;
  SELECT count(*) INTO n FROM public.receipt_packages WHERE tenant_id=p_tenant AND receipt_id=p_receipt;
  IF n NOT BETWEEN 1 AND 200
@@ -425,7 +434,7 @@ BEGIN
   RAISE EXCEPTION 'PACKAGE_PRODUCTION_COMPONENTS' USING ERRCODE='23514';
  END IF;
  IF NOT posted THEN
-  IF EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=b.output_document_id)
+  IF EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant AND (target_document_id=b.output_document_id OR source_document_id=b.output_document_id))
   OR EXISTS(SELECT 1 FROM public.package_movement_steps WHERE tenant_id=p_tenant AND production_batch_id=p_batch)
   OR EXISTS(SELECT 1 FROM public.stock_ledger WHERE tenant_id=p_tenant AND document_id=b.output_document_id)
   OR EXISTS(SELECT 1 FROM public.stock_dimensions sd JOIN public.production_packages pp ON pp.tenant_id=sd.tenant_id AND pp.id=sd.handling_unit_id
@@ -461,6 +470,10 @@ BEGIN
   RAISE EXCEPTION 'PACKAGE_PRODUCTION_LINK' USING ERRCODE='23514';
  END IF;
  SELECT source_document_id INTO source_doc FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=b.output_document_id;
+ IF (SELECT count(*) FROM public.stock_document_links WHERE tenant_id=p_tenant
+   AND (source_document_id IN (b.output_document_id,source_doc) OR target_document_id IN (b.output_document_id,source_doc)))<>1 THEN
+  RAISE EXCEPTION 'PACKAGE_PRODUCTION_LINK' USING ERRCODE='23514';
+ END IF;
  SELECT * INTO out_doc FROM public.documents WHERE tenant_id=p_tenant AND id=source_doc;
  IF NOT FOUND OR out_doc.kind<>'STOCK_OUT' OR out_doc.status<>'POSTED' OR out_doc.source_kind IS NOT NULL OR out_doc.source_id IS NOT NULL OR out_doc.reversal_of_document_id IS NOT NULL THEN
   RAISE EXCEPTION 'PACKAGE_PRODUCTION_DOCUMENTS' USING ERRCODE='23514';
@@ -546,7 +559,10 @@ BEGIN
   IF NEW.production_batch_id IS NOT NULL THEN PERFORM public.package_production_assert(NEW.tenant_id,NEW.production_batch_id); END IF;
  ELSIF TG_TABLE_NAME IN ('documents','document_lines','stock_ledger','stock_document_links') THEN
   doc:=CASE WHEN TG_TABLE_NAME='documents' THEN (to_jsonb(NEW)->>'id')::uuid WHEN TG_TABLE_NAME='stock_document_links' THEN (to_jsonb(NEW)->>'target_document_id')::uuid ELSE (to_jsonb(NEW)->>'document_id')::uuid END;
-  FOR batch IN SELECT id FROM public.production_batches WHERE tenant_id=NEW.tenant_id AND (output_document_id=doc OR EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=NEW.tenant_id AND target_document_id=output_document_id AND source_document_id=doc)) LOOP
+  FOR batch IN SELECT id FROM public.production_batches WHERE tenant_id=NEW.tenant_id AND
+   (output_document_id IN (doc,(to_jsonb(NEW)->>'source_document_id')::uuid)
+    OR EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=NEW.tenant_id AND target_document_id=output_document_id
+     AND source_document_id IN (doc,(to_jsonb(NEW)->>'source_document_id')::uuid))) LOOP
    PERFORM public.package_production_assert(NEW.tenant_id,batch);
   END LOOP;
  END IF;
