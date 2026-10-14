@@ -30,3 +30,5 @@ Son kayıt: 14 Ekim2026. Kaynak, GitHub kontrolleri, canlı sürüm ve fiziksel 
 - Giriş [continuity/README](continuity/README.md); erişim/yayın/yedek [OPERATIONS](continuity/OPERATIONS.md). Güncel kalan kart/GitSHA/run/VPSdefter kanıtı sohbet tahmininden üstündür.
 
 - C UI T963: C89c8369+onaylımain15289e2 actorinfra; verify3958/transport24PASS, gerçekschema36 freshbrowser4/4PASS59.858s/skip0. SameQR200→150→0, ikioutput20+30/immutableQR/labels/movement, stablekey/resume/readfault, dörtviewport48/56/focus/footer doğrulandı. Hata/üstidentifierrepair geçmişi T963 kartında; bağımsızreview/dokuzCI/main/live36/flag ayrı, author flag açmadı.
+
+- Kaynak aktarımı: T963 verified11blobs yeniC-ready parentd4c22b1 üstünde; primary/desktop/tablet/phone actual4casePASS/verify3958. ParentSQL yeniendpointguard Cown184/native292PASS, final bağımsızdelta/CI/main/live ayrı; UIseed test eski36snapshotınaait, bu finalSQL üstünde tekrar kabul edilir. QR çıkış37 ve anaekran yönlendirmesi bitmeden flag açılmaz.
