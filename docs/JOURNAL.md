@@ -7,3 +7,4 @@ Geçmiş ayrıntılar Git geçmişinde ve ilgili görev/PR raporlarında korunur
 - Önceki gerçek tarayıcı hataları: yetkili GET sınırı, erken hydration tıklaması ve doğal arama metni kaybı. Düzeltmeler test/guard/timeout gevşetmeden yapıldı; ayrıntılar T938/T940 ve PR29–31 geçmişinde.
 - 14 Ekim2026: T941–945 paketi başladı: tekilQR kalite onayı ve aynıdepo yerleştirme. Şema→komut→web sınırı→ekran→bağımsız kabul sırası; transfer ve üretim ayrı teslimdir.
 - Gerçek kamera/yazıcı kabulü ve operasyonel yedek hedefleri doğrulanmadı; tamamlandı diye raporlanmaz.
+- T941–945 frozen6c7e7d bağımsızQA283PASS/security0, browser4PASS, verify3929/checkall6PASS. Son test-onlydelta legacy34inventory ve exactqueryconsolidation; üç yetki/draft boşluğu58PASS ile kapandı. FinalCI/yayın sonucu henüz bekler.

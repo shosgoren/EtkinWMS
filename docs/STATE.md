@@ -24,7 +24,7 @@ Son durum kaydı: **14.10.2026 12:29 Europe/Istanbul**. Bu oturumda doğrudan VP
 ## Aktif — bir sonraki tek adım
 - Dal `int/package-movement`, çalışma ağacı `/private/tmp/etkin-package-performance`; taban canlı53ed.
 - T941 append0034 taslağı: Node24 gerçek100/100 testPASS (16yeni+61legacy+23drift); iki tekrar fixture42P08 üst onarımla çözüldü, kaynakguard değişmedi. Bağımsız125/125PASS owner/foreign/cycle/original33oracle/twoRR; mevcutkabul roundtrip54/54PASS/200paket17.078s<30s. Güvenlik/CI/yayın henüz tamam değil.
-- T942/T943 gerçek55/55PASS (23komut/4query/28legacy), schema34; bağımsız schema125/125 ve AC04loader169/169PASS. T944 gerçek4/4E2EPASS/39.8s, skip/retry0; sameQR/lot/dates/diğer800KG/dörtviewport/56nav doğrulandı. Şimdi tamverify, bağımsızpaketinceleme ve dokuzCI/yayın kapıları; beş kart/≤30dosya.
+- T942/T943 gerçek58/58PASS (30core/28legacy), schema34; bağımsız final283PASS+schema125PASS+AC04loader169PASS, security6c7e7d0/0/0. T944 gerçek4/4E2EPASS/39.8s, skip/retry0; sameQR/lot/dates/diğer800KG/dörtviewport/56nav doğrulandı. Verify3929 ve checkall6PASS; son test-onlydelta/üçüncüpilotinventory fixture sonrası dokuzCI/yayın kapıları; beş kart/≤30dosya.
 - İlk dilim aynıQR kalite onayı ve aynıdepo yerleştirmesidir. Warehouse-transfer ve üretim tüketim/çıktıQR soy ağacı **sonraki ayrı paketler**, tamamlandı sayılmaz.
 - Tamamlanmış kaynak incelemesi/kapılar/main/yayın/schema kanıtı olmadan flag açılmaz; Supervisor uygulama kodu yazmaz.
 - Lokal GitHub/SSH geçici reset/banner timeout sonrası dar gerçek okuma/fetch/VPSreceiver başarılı. Kısa devam belgeleri int/package-movement dalında; main ile geliştirme dalını karıştırma.
