@@ -30,3 +30,5 @@ Son kayıt: 14 Ekim2026. Kaynak, GitHub kontrolleri, canlı sürüm ve fiziksel 
 - Giriş [continuity/README](continuity/README.md); erişim/yayın/yedek [OPERATIONS](continuity/OPERATIONS.md). Güncel kalan kart/GitSHA/run/VPSdefter kanıtı sohbet tahmininden üstündür.
 
 - A kaynak aktarımı int/package-movement-ready: aynı incelenmiş30Gitblob, beş gerçekT951–955 author teslimi; eski çakışan kart history guard hatası korunur. YerelT956 actor üstü henüzmain/yayın değildir; yeni actualbase kapıları bekler.
+
+- B int/package-transfer-ready: önceki reviewedfeec102 kaynakları mevcutA/T956 üstüne Gitblob olarak taşındı; test-only workflowcall adoption ve exactheadfullverify/CI bekler. Eski kaynak incelemesi0@0383722, yeni sourcecode aynı fakat branch ancestry yeni.

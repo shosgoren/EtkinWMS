@@ -194,3 +194,5 @@
 - 2026-10-14 T-943 kanıt şeridi film içine (geniş/yüksek ekran); yerel PASS.
 
 - 14Ekim QR hareketi: gerçek main satış PR35/36 korunarak int/package-movement içine alındı; QR görev kartları T951–955, satış T941–943 ile kimlik çakışması giderildi. Source/CI/main/live schema34 kapıları ayrıdır; T956 PR37 legacy mobile geometry FAIL teşhisi bekler.
+
+- 14Ekim B yeni entegrasyon: gerçek incelenmiş transfer kaynakları güncelA ve ayrı testactor üstüne taşındı; satış T941–943 korunur, QR T951–955 farklıdır. Source/CI/main/live kapıları ayrıdır.
