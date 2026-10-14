@@ -1,36 +1,44 @@
 # Etkin WMS — güncel devam durumu
 
-Son kayıt: 14 Ekim2026. Kaynak, GitHub kontrolleri, canlı sürüm ve fiziksel cihaz kabulü ayrı doğrulanır.
+Son doğrulama: 14.10.2026 Europe/Istanbul; kod, CI, main ve VPS ayrı otoritelerdir.
+Önce continuity/README, sonra yalnız görev alanı. Sırlar ve tek kullanımlık bağlantılar kaydedilmez.
 
-## Canlı doğrulandı
-- Yalnız shosgoren/EtkinWMS yazılabilir; 2027-WMS-1 salt okunur.
-- Son doğrudan VPS receiver: release `d2dbc9be1bf1be838dbe9973c36ee896190c2878`, health=ok, auto_migrate=true; satış PR35 ve önceki WMS PR29 kaynakları içerir.
-- Hostinger187.7.76.72; WMS https://wms.etkinyazilim.com ; satış https://etkinyazilim.com . PostgreSQL18 VPS özel Docker ağında, Neon/Fly bağımlılığı yok.
-- Son schema0033/33 fingerprint `63869a172f9738df7c4e41fe7e4c57a7c43abdd9c352d9b9b33006ee33222e72`. Web/worker/marketing/Caddy/PostgreSQL beş servis.
-- Motive sahibi hosgorens@gmail.com ACTIVE;13Ekim parola/MFA kuruldu. Hesabı yeniden oluşturma/sıfırlama/impersonate etme.
-- Paket kabul/etiket kodu yayımlandı; PACKAGE_RECEIVING_ENABLED varsayılanfalse. Hareket/üretim zinciri bitmeden normal kullanıma açılmadı.
+## Canlı / erişim
+- Repo https://github.com/shosgoren/EtkinWMS; 2027-WMS-1 salt okunur.
+- WMS https://wms.etkinyazilim.com; satış https://etkinyazilim.com; .com.tr yönlendirmesi.
+- Hostinger VPS187.7.76.72; PostgreSQL18 VPS özel Docker ağında. Neon/Fly canlı değildir.
+- Beş servis: web, worker, marketing, Caddy, postgres. Erişim metadatası continuity/OPERATIONS.
+- Son doğrudan receiver: release fdf9d6ee88a4a5af58092568faf069bbcd723f23, healthok, auto_migrate=true; schema34 fingerprint c8e5f225d5c818f3ddda4691b198bd77564e098ca26cbbd18115e80bcd5f179d.
+- Son main metadata ayrı ilerleyebilir; canlı SHA'yı GitHub main'den varsayma.
+- Motive ACTIVE owner hosgorens@gmail.com; 13 Ekim parola/MFA ile giriş yaptı. Yeniden oluşturma/reset/owner-session üretme yok.
+- PACKAGE_RECEIVING_ENABLED false; bütün QR pipeline tamamlanmadan normal kullanıcı akışı açılmaz.
 
-## Şimdi yapılan bağımsız test ortamı düzeltmesi
-- T956 / feat/T-956-package-fixture-isolation: paket receiving/movement/transfer/production akışları desktop/mobile gerçek ayrı signup/workspace/MFA kullanıcıları kullanır. Legacy stock kullanıcıları aynı kalır; seedPackage optionalworkflow defaultreceiving, label rol sorgusu gerçekreceiving kullanıcıyla yapılır.
-- CI38553064258 web.log aynı stockMobile hesabının sabit dakikada121POST ürettiğini gösterir;120 kullanıcı sınırı aşıldı. Hız sınırları/counter/config/testcase/assertion/timer değişmedi; aynı kullanıcı bütçesi çakışması giderilir.
-- Gerçek schema33 freshbrowser8/8PASS (receiving+label6 ve değişmeyen stock2), skip/retry0; roottypes/lintPASS. On gerçek actor için farklıtenant/user, aktifadmin/MFA ve KG/GR booleansalltrue. İlk6/6 ve staleetiket-kullanıcısı nedeniyle6/8FAIL geçmişi korunur.
-- T956 PR37 auth/secrets review0 ve verify3921PASS; sekizGitHub kapısı PASS, tarayıcı93PASS/1FAIL eski mobil arama geometrisi. Gerçek CI trace hiddenSuspense geometri ölçümü gösterdi; shareditemshelper count1+visible kabuk/nav sonrası tüm özgün geometri ölçümlerini korur. Freshdesktop/mobile2PASS/74.487s;427productionhashunchanged; yeni9CIhead bekler. Bu kayıt yayın başarısı değildir.
+## Kullanıcı ana kuralları
+- Marka Etkin WMS; ilk müşteri Motive Rubber,3depo; sektör bağımsız aylık SaaS hedefi.
+- İlk bilgisayar kullanımı düzeyinde kısa ikon/renk/eylem; desktop/tablet/telefon ayrı,48kontrol/56anaeylem, tek el alt geri/ana ekran.
+- 5VARIL×200KG=5tekilHU/QR+1000KG; ürün barkodu, paketQR, lot/seri ve palet ayrı kimliklerdir.
+- QR EWMS:PKG:1:<uuid>; lot/üretim/SKT ve immutableoriginfactor; kalan değişir, kimlik değişmez.
+- Stable belge/satır ID; POSTED defter append-only/ters kayıt, fiziksel silme yok; motor/tenant/RLS/yetki korunur.
+- HM/YM/MM/TM, kod HM-000001; standart birimler ve çevrim/birim barkodu; reçete HM→YM→MM.
+- Docs her teslimde güncellenir; yalnız gerekli rehber/kartı oku, geçmiş JOURNAL/Git'te.
 
-## Devam eden QR paketleri
-- [PR33](https://github.com/shosgoren/EtkinWMS/pull/33), int/package-movement:0034 sameQR kalite/aynıdepo yerleştirme. BeşQR kartı T951–955,30dosya; T941–943 satış kartlarıdır. 3d4ef8b verify/int/AC/guardPASS fakat tarayıcı iki hata: geçiciSSRçiftDOM count1assert ile4/4freshPASS; ortakstockactor hız bütçesi T956 ile ayrılır. 629fc0e son test assertion kaynağıdır; QR kartları T951–955 olarak ayrıldı. Güncelmainba21dfa satış PR36 kaynakları korunarak birleşir, bu henüz CI/canlı sonucu değildir.
-- int/package-transfer yerel geliştirme:0035 ikiPOSTED OUT/IN, sharedHU/predecessor zinciri, currentwarehouseACL. Bağımsız414+23 ve final363PASS, schema156/browser4PASS; security0 @0383722. Test-onlyhelper/hydration düzeltmesi feec102 kaydedildi; T956 üstdalına aktarılınca tüm kapılar yeniden doğrulanır. Henüz canlıschema35 değil.
-- int/package-production yerel C-data:0036 partialconsume/newoutputQR. Engine immediateFK+tekexistingdoc nedeniyle yalnızoutputIN/HU/LOT hazırlanır; post freshOUT ve existingIN stok etkilerini atomik tamamlar. Aynı kaynakWH, farklıoutputWH olabilir; farklıkaynak önceQRtransfer. C-data schema146/nativeAC04tag292 ve domainfrozen134PASS; boundary33PASS; UI authoring başladı. Fullverify ilk guardunit5000ms timeout, eşik değişmeden yeniden kontrol edilir; security/CI/yayın pending.
+## Kabul / yayın zinciri
+- PR29 mal kabul/etiket UI ve PR37 gerçek izole fixture actorları main'de. QRflag kapalı.
+- PR39 kalite/yerleştirme main/canlı schema34; bağımsız security0/0/0 ve dokuz kapı geçti.
+- PR40 transfer kaynak05f56b ordinary-runtime güvenlik bulguları kapalı; bağımsız fresh35 165/165, gerçek browser16/16 PASS. Main belge merge sonrası exacthead CI tekrar doğrulanır;35 canlı varsayılmaz.
+- PR41 üretim veri: prepare yalnız gerçek APPROVED IN/HU/LOT/plan; post freshOUT+existingIN atomik. Aynı kaynak depo, farklı çıktıdepo; mixedsources önce QRtransfer.
+- C bağımsız d4c22b fresh36 schema184/domain138/unfilterednative207 PASS; boundary33PASS. Public yarış doğal motor; native forcedRR ayrı doğru adlandırılır.
+- B/C security BLOCKER0/MAJOR0/MINOR1: yalnız privileged eski stock_document_links UPDATE adoption sınırı. wms_app UPDATEgrant/publiccaller yok; pilot kabulü, raw privileged link UPDATE yapılmaz; owner-alltamper garantisi verilmez, hardening backlog.
+- PR41 fullint dört eski restore/ledger fixture hatasıyla durdu: yeni36 trigger inventorysine uyarlama T964; assertion/SQL/config/timeouts korunur. Yeni exacthead dokuzCI sonra merge.
+- PR42 T963 üretim UI: güncel36 gerçek4viewport E2E4/4 PASS; yeni UIsecurity0, inheritedminor1. Legacy2 browser savedrecipe ?id regression düzeltmesi; explicitmode=packages ile QR/legacy korunur; finalrerun/dokuzCI bekler.
+- T970–974 siparişsiz QR tam paket çıkışı37: DB219/nativeAC292, domain mevcut90/native10 PASS; boundary/UI/yeni dispatch QA/security/9CI henüz tamam değil.
+- D37 fullcurrentremaining AVAILABLE/reserved0, müşteri/reference; siparişsiz açık ad. Gerçek sipariş rezervasyon/picking/STAGING entegrasyonu bu teslim değildir.
+- T975 normal giriş yönlendirmesi/flag activation sonraki operatör teslimi: Mal geldi→paket kabul, Taşı→QR, Üret→QRmode, Sevk→siparişsiz çıkış. Henüz yapıldı denmez.
 
-## Kalıcı kurallar ve açık kabul
-- Marka Etkin WMS; Motive Rubber ilk müşteri, sektör bağımsız aylık SaaS. İlk kez kullanıcı: azmetin, ikon+renk,48px kontrol/56px anaeylem/geri, desktop/tablet/telefon ayrı düzen.
-- 5VARIL×200KG→5immutableHU/QR/1000KG; ürün barkodu/lot/seri/palet kimliği farklı. AynıQR bütün hareketlerde kalır; posteddefter fiziksel silinmez.
-- Şifre/anahtar/URI/MFA/bearer bağlantıları belge/log/chat'e girmez; CI/guard/limit/timeout/locking zayıflatılmaz. Rootuygulama kodu yazmaz.
-- Kamera/Epson/elterminali fiziksel kabulü UNKNOWN. Günlükoffsite/WAL/PITR/RPO/RTO/authrestore doğrulanmadı;13Ekim izolepgdump/restore schema31/netledger0 kanıtı var.
-- Excel/ürünbirim barkodu, yetkilifişdraftedit/iptal/terskayıt, ERP aktarımı ve QRsevkiyat kalan ayrı işlerdir; tamamlandı sayılmaz.
-- Giriş [continuity/README](continuity/README.md); erişim/yayın/yedek [OPERATIONS](continuity/OPERATIONS.md). Güncel kalan kart/GitSHA/run/VPSdefter kanıtı sohbet tahmininden üstündür.
-
-- A kaynak aktarımı int/package-movement-ready: aynı incelenmiş30Gitblob, beş gerçekT951–955 author teslimi; eski çakışan kart history guard hatası korunur. YerelT956 actor üstü henüzmain/yayın değildir; yeni actualbase kapıları bekler.
-
-- B int/package-transfer-ready: önceki reviewedfeec102 kaynakları mevcutA/T956 üstüne Gitblob olarak taşındı; test-only workflowcall adoption ve exactheadfullverify/CI bekler. Eski kaynak incelemesi0@0383722, yeni sourcecode aynı fakat branch ancestry yeni.
-
-- C-data int/package-production-ready: dörtT960/T961/T962/T964,30actualpaths; sourcec73816c exactapplication/QA blobs. Finalindependent domain138/schema171/nativeACtag292+unfiltered38/boundary33PASS; linkcardinality andprepareplay repaired. UIfreshbrowserpending; newexactheadsecurity/verify/9CI/main/live36 separate.
+## Doğrulanmayan / sonraki
+- Fiziksel telefon/notebook kamera, Epson/yazıcı, Bluetooth/elterminal kabulü UNKNOWN; browser/QRdecode/printdialog donanım başarısı değildir.
+- 13 Ekim16:38UTC isolated pg_dump/restore schema31 ledgerbalance fark0 PASS; günlük offsite/WAL/PITR/RPO/RTO/authrestore hâlâ UNKNOWN.
+- MAIL_MODE disabled; mail teslimi varsayılmaz.
+- Excel anaürün/birim/standartbarkod otomasyonu, paletgruplama/split, yetkili draftedit/cancel/reversal, ERPsenkron/billing, ürün görseli ve fullsiparişQR ayrı backlog.
+- Migration tek yazar/operatör; birleşmiş migration değiştirilmez. Dokuz PR/main kapısı ve receiverbackup/schema/health ayrı doğrulanır.
+- Eski/stacked PRları kör yeniden birleştirme; git ancestry ve exacthead kontrol et. Başarısız geçmiş/ölçüm sınırları JOURNAL ve kartlarda korunur.
