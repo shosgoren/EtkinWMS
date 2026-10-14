@@ -399,9 +399,10 @@ export const packageMovementSteps = pgTable("package_movement_steps", {
   handlingUnitId: uuid("handling_unit_id").notNull(),
   documentId: uuid("document_id").notNull(),
   documentLineId: uuid("document_line_id").notNull(),
+  productionBatchId: uuid("production_batch_id"),
   sourceDocumentId: uuid("source_document_id"),
   sourceDocumentLineId: uuid("source_document_line_id"),
-  operation: text("operation").$type<"QC_RELEASE" | "PUTAWAY" | "WAREHOUSE_TRANSFER">().notNull(),
+  operation: text("operation").$type<"QC_RELEASE" | "PUTAWAY" | "WAREHOUSE_TRANSFER" | "CONSUME">().notNull(),
   sequenceNo: integer("sequence_no").notNull(),
   previousDocumentLineId: uuid("previous_document_line_id").notNull(),
   sourceLocationId: uuid("source_location_id").notNull(),
@@ -412,4 +413,25 @@ export const packageMovementSteps = pgTable("package_movement_steps", {
   createdAt: timestamptz("created_at").notNull().defaultNow(),
 }, t => [primaryKey({columns:[t.tenantId,t.documentLineId]}),
   unique().on(t.tenantId,t.handlingUnitId,t.sequenceNo),
-  unique().on(t.tenantId,t.handlingUnitId,t.previousDocumentLineId), unique().on(t.tenantId,t.documentId)]);
+  unique().on(t.tenantId,t.handlingUnitId,t.previousDocumentLineId),]);
+
+/** T960: immutable single-source production batch and fresh output package origins. */
+export const productionBatches = pgTable("production_batches", {
+ tenantId: uuid("tenant_id").notNull(),id: uuid("id").notNull().default(sql`gen_random_uuid()`),recipeId: uuid("recipe_id").notNull(),
+ outputDocumentId: uuid("output_document_id").notNull(),
+ targetLocationId: uuid("target_location_id").notNull(),outputQuantity: numeric("output_quantity").notNull(),
+ outputUnitId: uuid("output_unit_id").notNull(),createdAt: timestamptz("created_at").notNull().defaultNow(),
+},t=>[primaryKey({columns:[t.tenantId,t.id]}),unique().on(t.tenantId,t.outputDocumentId)]);
+export const productionPackages = pgTable("production_packages", {
+ tenantId: uuid("tenant_id").notNull(),id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),productionBatchId: uuid("production_batch_id").notNull(),
+ documentId: uuid("document_id").notNull(),documentLineId: uuid("document_line_id").notNull(),packageNo: integer("package_no").notNull(),
+ lotCode: text("lot_code"),producedOn: date("produced_on",{mode:"string"}),expiresOn: date("expires_on",{mode:"string"}),catalogLotId: uuid("catalog_lot_id"),
+ packageDates: date("package_dates",{mode:"string"}).array().notNull().generatedAlwaysAs(sql`ARRAY[produced_on,expires_on]`),createdAt: timestamptz("created_at").notNull().defaultNow(),
+},t=>[unique().on(t.tenantId,t.id),unique().on(t.tenantId,t.id,t.productionBatchId),unique().on(t.tenantId,t.documentLineId),unique().on(t.tenantId,t.productionBatchId,t.packageNo),index("production_packages_batch_idx").on(t.tenantId,t.productionBatchId)]);
+
+const plannedVersion = customType<{data:string}>({dataType:()=>"bigint"});
+export const productionInputs = pgTable("production_inputs", {
+ tenantId:uuid("tenant_id").notNull(),productionBatchId:uuid("production_batch_id").notNull(),handlingUnitId:uuid("handling_unit_id").notNull(),
+ previousDocumentLineId:uuid("previous_document_line_id").notNull(),sequenceNo:integer("sequence_no").notNull(),
+ currentBalanceVersion:plannedVersion("current_balance_version").notNull(),baseQuantity:numeric("base_quantity").notNull(),createdAt:timestamptz("created_at").notNull().defaultNow(),
+},t=>[primaryKey({columns:[t.tenantId,t.productionBatchId,t.handlingUnitId]})]);
