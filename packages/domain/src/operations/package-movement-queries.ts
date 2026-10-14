@@ -5,12 +5,14 @@ import { runTenantQuery } from "../identity/access.ts";
 import { hasPermission } from "../identity/permissions.ts";
 import { assertWarehouseVisible } from "../warehouse/scope.ts";
 import type { TaskCallParams } from "./tasks.ts";
-import { uuidOf } from "./field-posting.ts";
+import { decimalToMicro, uuidOf } from "./field-posting.ts";
 import { decodePackageQr, encodePackageQr } from "./package-receipt-input.ts";
 export interface CurrentPackageDto {
   readonly id: string; readonly qr: string; readonly kind: string; readonly packageNo: number;
   readonly itemId: string; readonly itemCode: string; readonly itemName: string;
   readonly baseUnitId: string; readonly baseUnitCode: string; readonly baseUnitName: string;
+  readonly originKind: "RECEIPT" | "PRODUCTION";
+  readonly baseQuantity: string; readonly remainingBaseQuantity: string;
   readonly originBaseQuantity: string; readonly currentBaseQuantity: string;
   readonly lotId: string | null; readonly lotCode: string | null; readonly producedOn: string | null; readonly expiresOn: string | null;
   readonly warehouseId: string; readonly warehouseCode: string; readonly warehouseName: string;
@@ -22,7 +24,7 @@ export interface CurrentPackageDto {
 }
 type Row = {
   id: string; kind: string; package_no: number; item_id: string; item_code: string; item_name: string; base_unit_id: string; base_unit_code: string; base_unit_name: string;
-  base_quantity: string; lot_id: string | null; lot_code: string | null; produced_on: string | null; expires_on: string | null;
+  origin_kind: "RECEIPT" | "PRODUCTION"; remaining_base_quantity: string; base_quantity: string; lot_id: string | null; lot_code: string | null; produced_on: string | null; expires_on: string | null;
   warehouse_id: string; warehouse_code: string; warehouse_name: string; document_status: string; warehouse_status: string; item_status: string; tracking_mode: string;
   expected_warehouse_id: string; sequence_no: number; latest_location: string; latest_status: string; positives: number;
   current_quantity: string | null; current_version: string | null; current_status: string | null; reserved_quantity: string | null;
@@ -31,8 +33,8 @@ type Row = {
 export async function getCurrentPackage(params: TaskCallParams, input: { readonly packageId: string }): Promise<CurrentPackageDto> {
   const packageId = uuidOf(input.packageId);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
-    const rows = await tx.execute<Row>(sql`SELECT rp.id,hu.kind,rp.package_no,l.item_id,i.code AS item_code,i.name AS item_name,
-      i.base_unit_id,u.code AS base_unit_code,u.name AS base_unit_name,l.base_quantity::text,l.lot_id,rp.lot_code,rp.produced_on::text,rp.expires_on::text,
+    const rows = await tx.execute<Row>(sql`SELECT rp.id,hu.kind,coalesce(receipt.package_no,output.package_no) AS package_no,rp.origin_kind,l.item_id,i.code AS item_code,i.name AS item_name,
+      i.base_unit_id,u.code AS base_unit_code,u.name AS base_unit_name,l.base_quantity::text,(l.base_quantity-coalesce((SELECT sum(c.base_quantity) FROM public.package_movement_steps c WHERE c.tenant_id=rp.tenant_id AND c.handling_unit_id=rp.id AND c.operation='CONSUME'),0))::text AS remaining_base_quantity,l.lot_id,rp.lot_code,rp.produced_on::text,rp.expires_on::text,
       w.id AS warehouse_id,coalesce(terminal.warehouse_id,d.warehouse_id) AS expected_warehouse_id,w.code AS warehouse_code,w.name AS warehouse_name,d.status AS document_status,w.status AS warehouse_status,i.status AS item_status,i.tracking_mode,
       coalesce(ms.sequence_no,0) AS sequence_no,coalesce(ms.target_location_id,l.target_location_id) AS latest_location,
       coalesce(ms.target_stock_status,l.stock_status) AS latest_status,
@@ -40,7 +42,10 @@ export async function getCurrentPackage(params: TaskCallParams, input: { readonl
         WHERE x.tenant_id=rp.tenant_id AND x.handling_unit_id=rp.id AND b.quantity>0) AS positives,
       b.quantity::text AS current_quantity,b.version::text AS current_version,sd.stock_status AS current_status,b.reserved_quantity::text,
       loc.id AS location_id,loc.code AS location_code,loc.name AS location_name,loc.kind AS location_kind,loc.status AS location_status
-      FROM public.receipt_packages rp JOIN public.handling_units hu ON hu.tenant_id=rp.tenant_id AND hu.id=rp.id
+      FROM public.package_origin(${m.tenantId}::uuid,${packageId}::uuid) rp
+      LEFT JOIN public.receipt_packages receipt ON receipt.tenant_id=rp.tenant_id AND receipt.id=rp.id
+      LEFT JOIN public.production_packages output ON output.tenant_id=rp.tenant_id AND output.id=rp.id
+      JOIN public.handling_units hu ON hu.tenant_id=rp.tenant_id AND hu.id=rp.id
       JOIN public.document_lines l ON l.tenant_id=rp.tenant_id AND l.id=rp.document_line_id
       JOIN public.documents d ON d.tenant_id=l.tenant_id AND d.id=l.document_id
       JOIN public.items i ON i.tenant_id=l.tenant_id AND i.id=l.item_id
@@ -56,7 +61,7 @@ export async function getCurrentPackage(params: TaskCallParams, input: { readonl
       WHERE rp.tenant_id=${m.tenantId}::uuid AND rp.id=${packageId}::uuid`);
     const r = rows[0]; if (r === undefined) throw new AppError("NOT_FOUND");
     await assertWarehouseVisible(tx, m, [r.warehouse_id]);
-    const supported = r.warehouse_id === r.expected_warehouse_id && r.positives === 1 && r.current_quantity === r.base_quantity && r.location_id === r.latest_location && r.current_status === r.latest_status
+    const supported = r.warehouse_id === r.expected_warehouse_id && r.positives === 1 && r.current_quantity !== null && decimalToMicro(r.remaining_base_quantity) > 0n && decimalToMicro(r.current_quantity) === decimalToMicro(r.remaining_base_quantity) && r.location_id === r.latest_location && r.current_status === r.latest_status
       && r.reserved_quantity === "0.000000" && r.warehouse_status === "ACTIVE" && r.item_status === "ACTIVE" && r.location_status === "ACTIVE"
       && !["SERIAL", "LOT_AND_SERIAL"].includes(r.tracking_mode);
     const allowed: ("QC_RELEASE" | "PUTAWAY")[] = [];
@@ -65,6 +70,7 @@ export async function getCurrentPackage(params: TaskCallParams, input: { readonl
       if (r.current_status === "AVAILABLE" && ["RECEIVING", "STORAGE"].includes(r.location_kind ?? "") && hasPermission(m.roles, "stock.post")) allowed.push("PUTAWAY");
     }
     return { id: r.id, qr: encodePackageQr(r.id), kind: r.kind, packageNo: Number(r.package_no), itemId: r.item_id, itemCode: r.item_code, itemName: r.item_name,
+      originKind: r.origin_kind, baseQuantity: r.base_quantity, remainingBaseQuantity: r.remaining_base_quantity,
       baseUnitId: r.base_unit_id, baseUnitCode: r.base_unit_code, baseUnitName: r.base_unit_name, originBaseQuantity: r.base_quantity,
       currentBaseQuantity: r.current_quantity ?? "0.000000", lotId: r.lot_id, lotCode: r.lot_code, producedOn: r.produced_on, expiresOn: r.expires_on,
       warehouseId: r.warehouse_id, warehouseCode: r.warehouse_code, warehouseName: r.warehouse_name,

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@wms/shared/errors";
 import type { PackageReceiptDto, ReceiptPackageDto } from "../actions.ts";
-const mocks = vi.hoisted(() => ({ receipt: vi.fn(), principal: vi.fn() }));
-vi.mock("@wms/domain/operations", () => ({ getPackageReceipt: mocks.receipt }));
+const mocks = vi.hoisted(() => ({ receipt: vi.fn(), batch: vi.fn(), principal: vi.fn() }));
+vi.mock("@wms/domain/operations", () => ({ getPackageReceipt: mocks.receipt, getPackageProductionBatch: mocks.batch }));
 vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("404"); }, redirect: (url: string) => { throw new Error(url); } }));
@@ -16,7 +16,7 @@ const packages: ReceiptPackageDto[] = Array.from({ length: 5 }, (_, i) => {
 });
 const receipt: PackageReceiptDto = { documentId: packages[0]!.id, documentStatus: "POSTED", documentVersion: 2, documentNumber: "IN-1", receiptId: packages[0]!.id, receiptStatus: "CLOSED", receiptVersion: 2, receiptNumber: "R-1", warehouseId: packages[0]!.id, supplierRef: null, packages };
 const page = (extra = {}) => Page({ params: Promise.resolve({ slug: "acme" }), searchParams: Promise.resolve({ document: receipt.documentId, ...extra }) });
-beforeEach(() => { vi.resetAllMocks(); vi.stubEnv("PACKAGE_RECEIVING_ENABLED", "true"); mocks.principal.mockResolvedValue({ userId: packages[0]!.id, mfaVerified: true }); mocks.receipt.mockResolvedValue(receipt); });
+beforeEach(() => { vi.resetAllMocks(); vi.stubEnv("PACKAGE_RECEIVING_ENABLED", "true"); mocks.principal.mockResolvedValue({ userId: packages[0]!.id, mfaVerified: true }); mocks.receipt.mockResolvedValue(receipt); mocks.batch.mockRejectedValue(new AppError("NOT_FOUND")); });
 afterEach(() => vi.unstubAllEnvs());
 describe("server label source", () => {
   it("reads only the document from the authorized query and ignores client status claims", async () => {
@@ -28,7 +28,29 @@ describe("server label source", () => {
   it.each(["DRAFT", "PREPARED", "CANCELLED"])("rejects document %s even if client says POSTED", async status => { mocks.receipt.mockResolvedValue({ ...receipt, documentStatus: status }); const result = await page({ status: "POSTED" }); expect(JSON.stringify(result)).not.toContain("EWMS:PKG"); });
   it("requires the server-closed receipt too", () => { expect(() => postedLabelPackages({ ...receipt, receiptStatus: "DRAFT" })).toThrow(AppError); });
   it("foreign document NOT_FOUND propagates to 404", async () => { mocks.receipt.mockRejectedValue(new AppError("NOT_FOUND")); await expect(page()).rejects.toThrow("404"); });
-  it.each(["no stock.view", "warehouse ACL"])("does not expose labels after domain denies %s", async () => { mocks.receipt.mockRejectedValue(new AppError("FORBIDDEN")); expect(JSON.stringify(await page())).not.toContain("EWMS:PKG"); });
+  it.each(["no stock.view", "warehouse ACL"])("does not expose labels after domain denies %s", async () => { mocks.receipt.mockRejectedValue(new AppError("FORBIDDEN")); expect(JSON.stringify(await page())).not.toContain("EWMS:PKG"); expect(mocks.batch).not.toHaveBeenCalled(); });
+  it("resolves actual POSTED production output after receipt NOT_FOUND and projects only label metadata", async () => {
+    mocks.receipt.mockRejectedValue(new AppError("NOT_FOUND"));
+    const output={id:packages[0]!.id,qr:packages[0]!.qr,packageNo:1,kind:"KOLI",itemCode:"MM-000001",itemName:"Output",quantity:"50.000000",unitCode:"KG",stockStatus:"AVAILABLE",lotCode:"OUT-1",producedOn:"2026-10-14",expiresOn:"2027-10-14",targetLocationId:"private-output-location",documentLineId:"private-line"};
+    mocks.batch.mockResolvedValue({documentId:receipt.documentId,documentStatus:"POSTED",packages:[output],sourceWarehouseId:"private-input-warehouse",inputs:[{packageId:"private-input"}]});
+    const rendered=JSON.stringify(await page({source:"receipt",status:"DRAFT",quantity:"999"}));
+    expect(mocks.batch).toHaveBeenCalledWith(expect.objectContaining({tenantSlug:"acme",principal:expect.objectContaining({mfaVerified:true})}),{documentId:receipt.documentId});
+    expect(rendered).toContain("MM-000001");expect(rendered).toContain("50.000000");expect(rendered).toContain("EWMS:PKG");
+    expect(rendered).not.toContain("private-");expect(rendered).not.toContain("receiptStatus");expect(rendered).not.toContain("receiptLineId");expect(rendered).not.toContain("targetLocationId");
+  });
+  it("rejects APPROVED production output despite client POSTED claims", async () => {
+    mocks.receipt.mockRejectedValue(new AppError("NOT_FOUND"));mocks.batch.mockResolvedValue({documentId:receipt.documentId,documentStatus:"APPROVED",packages});
+    expect(JSON.stringify(await page({source:"production",status:"POSTED"}))).not.toContain("EWMS:PKG");
+    expect(mocks.batch).toHaveBeenCalledTimes(1);
+  });
+  it("ignores a production source claim for a real authorized receipt", async () => {
+    expect(JSON.stringify(await page({source:"production"}))).toContain("HM-000001");expect(mocks.batch).not.toHaveBeenCalled();
+  });
+  it("keeps production warehouse denial and MFA redirects within the readonly query", async () => {
+    mocks.receipt.mockRejectedValue(new AppError("NOT_FOUND"));mocks.batch.mockRejectedValue(new AppError("FORBIDDEN"));
+    expect(JSON.stringify(await page())).not.toContain("EWMS:PKG");
+    mocks.batch.mockRejectedValue(new AppError("FORBIDDEN",{detail:"MFA_REQUIRED"}));await expect(page()).rejects.toThrow("/mfa?next=");
+  });
   it("requires one document query parameter", async () => { await expect(page({ document: [receipt.documentId] })).rejects.toThrow("404"); expect(mocks.receipt).not.toHaveBeenCalled(); });
 });
 describe("same physical identities and all-or-nothing QR generation", () => {
