@@ -140,7 +140,6 @@ export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "emp
   const t = emptyTenant(fixture);
   await bindSecrets(page, { password: t.password, totpSecret: t.totpSecret });
   await page.goto(`/login?next=${encodeURIComponent(`/t/${t.slug}`)}`);
-  await completeFirstUseGuide(page);
   await page.getByLabel("E-posta").fill(t.email);
   await fillSecret(page, 'input[name="password"]', "password");
   await page.getByRole("button", { name: "Giriş yap" }).click();
@@ -148,6 +147,8 @@ export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "emp
   await fillSecret(page, 'input[name="code"]', "totp");
   await page.getByRole("button", { name: "Doğrula" }).click();
   await expect(page).toHaveURL(new RegExp(`/t/${t.slug}$`));
+  // T-983: giriş adımlarında rehber açılmaz; girişten sonraki ilk ekranda tamamlanır.
+  await completeFirstUseGuide(page);
   return t;
 }
 

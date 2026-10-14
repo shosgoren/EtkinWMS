@@ -57,6 +57,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const demo = demoState !== "disabled";
   // A-50 / m11: `SIGNUP_ENABLED` yalnızca local|ci'da etkindir; staging/prod'da düğme çıkmaz.
   const signup = workspaceCreationAllowed(process.env);
+  // T-983: canlıda (demo ve kayıt kapalı) eski karşılama ekranı yok; misafir doğrudan yeni giriş ekranına gider.
+  if (!demo && !signup) redirect("/login");
   const rawError = first((await searchParams).demoError);
   const demoError = SHOWN_CODES.find((c): c is ShownCode => c === rawError);
 
