@@ -170,6 +170,7 @@ export const handlingUnits = pgTable(
     code: text("code").notNull(),
     parentId: uuid("parent_id"),
     packageReceiptId: uuid("package_receipt_id"),
+    packageProductionId: uuid("package_production_id"),
     locationId: uuid("location_id"),
     status: text("status").$type<HandlingUnitStatus>().notNull().default("OPEN"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),

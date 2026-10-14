@@ -64,10 +64,10 @@ afterAll(async () => {
   await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`); await admin.end();
 });
 describe("T-932 immutable package origins (isolated scratch, runtime role)",()=> {
-  it("empty35→31→35 keeps old tables and schema ledger",async()=> {
-    expect((await migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).reverted).toEqual(["0035","0034","0033","0032"]);
+  it("empty36→31→36 keeps old tables and schema ledger",async()=> {
+    expect((await migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).reverted).toEqual(["0036","0035","0034","0033","0032"]);
     expect((await migration.query("SELECT to_regclass('public.receipt_packages') AS table")).rows[0]?.table).toBeNull();
-    expect((await migrateUp({url:direct})).applied).toEqual(["0032","0033","0034","0035"]);
+    expect((await migrateUp({url:direct})).applied).toEqual(["0032","0033","0034","0035","0036"]);
   });
   for (const [label, options] of [
     ["same tenant wrong receipt", () => ({receiptId: legacyReceipt})],
@@ -236,7 +236,7 @@ describe("T-932 immutable package origins (isolated scratch, runtime role)",()=>
     await expect(migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).rejects.toThrow(/receipt package data exists/);
     expect((await migration.query("SELECT count(*)::int AS n FROM public.receipt_packages")).rows[0]?.n).toBe(3);
     expect((await migration.query("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 1")).rows[0]?.version).toBe("0032");
-    expect((await migrateUp({url:direct})).applied).toEqual(["0033","0034","0035"]);
+    expect((await migrateUp({url:direct})).applied).toEqual(["0033","0034","0035","0036"]);
   });
   for(const order of ["package first","lot update first"] as const) it(`RR concurrent ${order} cannot commit contradictory dates`,async()=> {
     const racer=new pg.Client({connectionString:appUrl}); await racer.connect();
@@ -560,6 +560,390 @@ describe("T-941 whole-HU same-warehouse movement SQL",()=>{
    await expect(migrateDown({url:direct,to:"0033",wmsEnv:"staging"})).rejects.toThrow(/package movement data exists/);
    expect((await migration.query("SELECT max(version) AS version FROM wms_meta.schema_migrations")).rows[0]?.version).toBe("0034");
   }finally{await app.query("ROLLBACK");await racer.query("ROLLBACK");await racer.end();}
+ });
+});
+
+});
+
+
+describe("T960 production fixtures (separate scratch)",()=>{
+const env=readIntEnv(process.env), name=`wms_production_${randomBytes(6).toString("hex")}`;
+const admin=new pg.Client({connectionString:env.databaseUrlDirect});
+let migration:pg.Client, app:pg.Client, world:TenantWorld, other:TenantWorld, direct:string, appUrl:string;
+let kg:string;let outputItem:string;let secondOutputItem:string;let recipe:string;let secondRecipe:string;let targetWarehouse:string;let targetLocation:string;let targetShelf:string;
+const urlFor=(raw:string)=>{const u=new URL(raw);u.pathname=`/${name}`;return u.toString();};
+interface Package {receipt:string;receiptLine:string;document:string;line:string;hu:string;dimension:string}
+interface Step {document:string;line:string;dimension:string;sequence:number;target:string;status:string}
+async function begin(c:pg.Client=app,tenant=world.tenantId,rr=false){await c.query(rr?"BEGIN ISOLATION LEVEL REPEATABLE READ":"BEGIN");await c.query("SELECT set_config('app.current_tenant_id',$1,true)",[tenant]);}
+async function flush(c:pg.Client=app){await c.query("SET CONSTRAINTS ALL IMMEDIATE");}
+async function tx(run:()=>Promise<void>){await begin();try{await run();}finally{await app.query("ROLLBACK");}}
+async function origin(c:pg.Client=app,status="QUARANTINE"):Promise<Package>{
+ const p={receipt:randomUUID(),receiptLine:randomUUID(),document:randomUUID(),line:randomUUID(),hu:randomUUID(),dimension:randomUUID()};const t=world.tenantId;
+ await c.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES($1,$2,'VARIL',$4,$3)",[t,p.hu,p.receipt,p.hu]);
+ await c.query("INSERT INTO public.inbound_receipts(tenant_id,id,warehouse_id,number,created_by,package_document_id) VALUES($1,$2,$3,$6,$4,$5)",[t,p.receipt,world.warehouseId,world.ownerUserId,p.document,p.receipt]);
+ await c.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by,source_kind,source_id) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4,'INBOUND_RECEIPT',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[t,p.document,world.warehouseId,world.ownerUserId,p.receipt]);
+ await c.query("INSERT INTO public.inbound_receipt_lines(tenant_id,id,receipt_id,line_no,item_id,unit_id,conversion_factor,expected_quantity) VALUES($1,$2,$3,1,$4,$5,1,200)",[t,p.receiptLine,p.receipt,world.itemNoneId,kg]);
+ await c.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,source_line_id,stock_status) VALUES($1,$2,$3,1,$4,$5,200,1,200,$6,$7,$8,$9)",[t,p.line,p.document,world.itemNoneId,kg,world.rootLocationId,p.hu,p.receiptLine,status]);
+ await c.query("INSERT INTO public.receipt_packages(tenant_id,id,receipt_id,receipt_line_id,document_id,document_line_id,package_no,lot_code,produced_on,expires_on) VALUES($1,$2,$3,$4,$5,$6,1,'GRANUL','2026-10-01','2027-10-01')",[t,p.hu,p.receipt,p.receiptLine,p.document,p.line]);
+ await c.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,$6)",[t,p.dimension,world.itemNoneId,world.rootLocationId,p.hu,status]);
+ await c.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,200,'Package fixture','2026-10-14')",[t,p.document,p.line,p.dimension]);
+ await c.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,200)",[t,p.dimension]);
+ await c.query("UPDATE public.inbound_receipt_lines SET received_quantity=200 WHERE tenant_id=$1 AND id=$2",[t,p.receiptLine]);
+ await c.query("UPDATE public.inbound_receipts SET status='CLOSED' WHERE tenant_id=$1 AND id=$2",[t,p.receipt]);
+ await c.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,p.document,p.document]);
+ return p;
+}
+interface Options {operation?:string;quantity?:number;seq?:number;prev?:string;status?:string;target?:string;wrongItem?:boolean;register?:boolean;effects?:boolean;balance?:boolean}
+async function movement(p:Package,previous:Step|null=null,o:Options={},c:pg.Client=app):Promise<Step>{
+ await app.query("SET CONSTRAINTS ALL DEFERRED");
+ const packageItem=(await app.query("SELECT item_id FROM public.package_origin($1,$2)",[world.tenantId,p.hu])).rows[0]!.item_id;
+ const t=world.tenantId, q=o.quantity??200, op=o.operation??(previous?"PUTAWAY":"QC_RELEASE");
+ const source=previous?.target??world.rootLocationId, sourceStatus=previous?.status??"QUARANTINE";
+ const s={document:randomUUID(),line:randomUUID(),dimension:randomUUID(),sequence:o.seq??(previous?.sequence??0)+1,target:o.target??(op==="QC_RELEASE"?source:world.childLocationId),status:o.status??"AVAILABLE"};
+ await c.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_MOVE',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_MOVE' AND version=1",[t,s.document,world.warehouseId,world.ownerUserId]);
+ await c.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,source_location_id,target_location_id,handling_unit_id,stock_status,target_stock_status) VALUES($1,$2,$3,1,$4,$5,$6,1,$6,$7,$8,$9,$10,$11)",[t,s.line,s.document,o.wrongItem?world.itemTwoId:packageItem,kg,q,source,s.target,p.hu,sourceStatus,s.status]);
+ if(o.register!==false) await c.query("INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",[t,p.hu,s.document,s.line,op,s.sequence,o.prev??previous?.line??p.line,source,s.target,sourceStatus,s.status,q]);
+ if(o.effects===false)return s;
+ await c.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,$6)",[t,s.dimension,packageItem,s.target,p.hu,s.status]);
+ await c.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,0)",[t,s.dimension]);
+ for(const [dimension,quantity] of [[previous?.dimension??p.dimension,-q],[s.dimension,q]]) await c.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,$5,'Package movement fixture','2026-10-14')",[t,s.document,s.line,dimension,quantity]);
+ if(o.balance!==false){await c.query("UPDATE public.stock_balances SET quantity=quantity-$3,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[t,previous?.dimension??p.dimension,q]);await c.query("UPDATE public.stock_balances SET quantity=$3,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[t,s.dimension,q]);}
+ await c.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,s.document,s.document]);
+ return s;
+}
+beforeAll(async()=>{try{
+ await admin.connect();await admin.query(`CREATE DATABASE ${name}`);direct=urlFor(env.databaseUrlDirect);migration=new pg.Client({connectionString:direct});await migration.connect();await migrateUp({url:direct});
+ world=await seedWorld(migration,newRegistry(),"MOVEMENT");other=await seedWorld(migration,newRegistry(),"MOVEMENTOTHER");
+ kg=randomUUID();await migration.query("INSERT INTO public.units(tenant_id,id,code,name) VALUES($1,$2,'KG-PROOF','Kilogram')",[world.tenantId,kg]);
+ await migration.query("UPDATE public.items SET base_unit_id=$3 WHERE tenant_id=$1 AND id=$2",[world.tenantId,world.itemNoneId,kg]);
+ outputItem=randomUUID();secondOutputItem=randomUUID();recipe=randomUUID();secondRecipe=randomUUID();targetWarehouse=randomUUID();targetLocation=randomUUID();targetShelf=randomUUID();
+ await migration.query("INSERT INTO public.items(tenant_id,id,code,name,base_unit_id,tracking_mode) VALUES($1,$2,'OUTPUT-C','Output',$4,'NONE'),($1,$3,'OUTPUT-C2','Output2',$4,'NONE')",[world.tenantId,outputItem,secondOutputItem,kg]);
+ await migration.query("BEGIN");
+ try {
+  await migration.query("INSERT INTO public.production_recipes(tenant_id,id,code,version,name,output_item_id,output_quantity,created_by) VALUES($1,$2,'C-RECIPE',1,'Recipe',$3,40,$4),($1,$5,'C-RECIPE2',1,'Recipe2',$6,20,$4)",[world.tenantId,recipe,outputItem,world.ownerUserId,secondRecipe,secondOutputItem]);
+  await migration.query("INSERT INTO public.production_recipe_lines(tenant_id,recipe_id,line_no,item_id,quantity) VALUES($1,$2,1,$3,50),($1,$4,1,$5,10)",[world.tenantId,recipe,world.itemNoneId,secondRecipe,outputItem]);
+  await migration.query("COMMIT");
+ }catch(e){await migration.query("ROLLBACK");throw e;}
+ await migration.query("INSERT INTO public.warehouses(tenant_id,id,code,name) VALUES($1,$2,'TARGET-C','Target')",[world.tenantId,targetWarehouse]);
+ await migration.query("INSERT INTO public.locations(tenant_id,id,warehouse_id,code,name,depth,kind) VALUES($1,$2,$3,'C-TARGET','Target',0,'STORAGE'),($1,$4,$3,'C-SHELF','Shelf',0,'STORAGE')",[world.tenantId,targetLocation,targetWarehouse,targetShelf]);
+ const u=new URL(urlFor(env.databaseUrl)),endpoint=new URL(direct);u.hostname=endpoint.hostname;u.port=endpoint.port;appUrl=u.toString();app=new pg.Client({connectionString:appUrl});await app.connect();
+ expect((await app.query("SELECT current_user AS role")).rows[0]?.role).toBe("wms_app");
+}catch(e){throw new Error(redactErrorChain(e,secretUrls(env)));}},120000);
+afterAll(async()=>{await app?.end();await migration?.end();await admin.query(`DROP DATABASE IF EXISTS ${name} WITH(FORCE)`);await admin.end();});
+
+interface TransferStep extends Step {sourceDocument:string;sourceLine:string;warehouse:string}
+interface TransferOptions {quantity?:number;seq?:number;prev?:string;target?:string;sourceStatus?:string;targetStatus?:string;warehouse?:string;owner?:string;register?:boolean;link?:boolean;linkKind?:string;outOnly?:boolean;wrongSourceLine?:string;wrongSourceDocument?:string}
+async function transfer(p:Package,previous:Step|null=null,o:TransferOptions={},c:pg.Client=app):Promise<TransferStep>{
+ await c.query("SET CONSTRAINTS ALL DEFERRED");
+ const packageItem=(await c.query("SELECT item_id FROM public.package_origin($1,$2)",[world.tenantId,p.hu])).rows[0]!.item_id;
+ const t=world.tenantId,q=o.quantity??200,source=previous?.target??world.rootLocationId;
+ const srcWarehouse=(await c.query("SELECT warehouse_id FROM public.locations WHERE tenant_id=$1 AND id=$2",[t,source])).rows[0]!.warehouse_id as string;
+ const target=o.target??targetLocation,targetWh=(await c.query("SELECT warehouse_id FROM public.locations WHERE tenant_id=$1 AND id=$2",[t,target])).rows[0]!.warehouse_id as string;
+ const s:TransferStep={document:randomUUID(),line:randomUUID(),dimension:randomUUID(),sourceDocument:randomUUID(),sourceLine:randomUUID(),sequence:o.seq??(previous?.sequence??0)+1,target,status:o.targetStatus??"AVAILABLE",warehouse:targetWh};
+ for(const [doc,line,kind,wh,src,dst,status] of [[s.sourceDocument,s.sourceLine,"STOCK_OUT",srcWarehouse,source,null,o.sourceStatus??"AVAILABLE"],[s.document,s.line,"STOCK_IN",o.warehouse??targetWh,null,target,s.status]]){
+  await c.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,$3,id,$4,'2026-10-14',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key=$3 AND version=1",[t,doc,kind,wh,world.ownerUserId]);
+  await c.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,source_location_id,target_location_id,handling_unit_id,stock_status,inventory_owner_id) VALUES($1,$2,$3,1,$4,$5,$6,1,$6,$7,$8,$9,$10,$11)",[t,line,doc,packageItem,kg,q,src,dst,p.hu,status,o.owner??null]);
+ }
+ if(o.register!==false) await c.query("INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,source_document_id,source_document_line_id,operation,sequence_no,previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity) VALUES($1,$2,$3,$4,$5,$6,'WAREHOUSE_TRANSFER',$7,$8,$9,$10,$11,$12,$13)",[t,p.hu,s.document,s.line,o.wrongSourceDocument??s.sourceDocument,o.wrongSourceLine??s.sourceLine,s.sequence,o.prev??previous?.line??p.line,source,target,o.sourceStatus??"AVAILABLE",s.status,q]);
+ if(o.link!==false)await c.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,$4)",[t,s.sourceDocument,s.document,o.linkKind??"TRANSFER"]);
+ const existing=(await c.query("SELECT sd.id FROM public.stock_dimensions sd WHERE sd.tenant_id=$1 AND sd.handling_unit_id=$2 AND sd.location_id=$3 AND sd.stock_status=$4",[t,p.hu,target,s.status])).rows[0] as {id:string}|undefined;
+ if(existing)s.dimension=existing.id;else await c.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,$6)",[t,s.dimension,packageItem,target,p.hu,s.status]);
+ await c.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,0) ON CONFLICT(tenant_id,stock_dimension_id) DO NOTHING",[t,s.dimension]);
+ await c.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,$5,'Transfer fixture out','2026-10-14')",[t,s.sourceDocument,s.sourceLine,previous?.dimension??p.dimension,-q]);
+ await c.query("UPDATE public.stock_balances SET quantity=quantity-$3,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[t,previous?.dimension??p.dimension,q]);
+ await c.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,s.sourceDocument,s.sourceDocument]);
+ if(o.outOnly)return s;
+ await c.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,$5,'Transfer fixture in','2026-10-14')",[t,s.document,s.line,s.dimension,q]);
+ await c.query("UPDATE public.stock_balances SET quantity=quantity+$3,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[t,s.dimension,q]);
+ await c.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,s.document,s.document]);
+ return s;
+}
+
+
+interface ProductionOutput {hu:string;line:string;dimension:string;quantity:number}
+interface Production {outputs:ProductionOutput[];batch:string;document:string;line:string;hu:string;dimension:string;input:Package;inputDimension:string;previousLine:string;sequence:number;sourceLocation:string;amount:number;quantity:number;recipe:string;item:string}
+async function prepareProduction(input:Package,previous:Step|null=null,amount=50,quantity=40,recipeId=recipe,item=outputItem,c:pg.Client=app,splitOutput=false):Promise<Production>{
+ await c.query("SET CONSTRAINTS ALL DEFERRED");
+ const t=world.tenantId,s={batch:randomUUID(),document:randomUUID(),line:randomUUID(),hu:randomUUID(),dimension:randomUUID(),input,inputDimension:previous?.dimension??input.dimension,previousLine:previous?.line??input.line,sequence:(previous?.sequence??0)+1,sourceLocation:previous?.target??world.rootLocationId,amount,quantity,recipe:recipeId,item,outputs:[] as ProductionOutput[]};
+ s.outputs.push({hu:s.hu,line:s.line,dimension:s.dimension,quantity});
+ await c.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_production_id) VALUES($1,$2,'VARIL',$3,$4)",[t,s.hu,s.hu,s.batch]);
+ await c.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[t,s.document,world.warehouseId,world.ownerUserId]);
+ await c.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,1,$4,$5,$6,1,$6,$7,$8,'AVAILABLE')",[t,s.line,s.document,item,kg,quantity,world.rootLocationId,s.hu]);
+ if(splitOutput){
+  const second={hu:randomUUID(),line:randomUUID(),dimension:randomUUID(),quantity:quantity/2};s.outputs[0]!.quantity=quantity/2;s.outputs.push(second);
+  await c.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_production_id) VALUES($1,$2,'VARIL',$3,$4)",[t,second.hu,second.hu,s.batch]);
+  await c.query("UPDATE public.document_lines SET quantity=$3,base_quantity=$3 WHERE tenant_id=$1 AND id=$2",[t,s.line,quantity/2]);
+  await c.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,2,$4,$5,$6,1,$6,$7,$8,'AVAILABLE')",[t,second.line,s.document,item,kg,quantity/2,world.rootLocationId,second.hu]);
+ }
+ await c.query("UPDATE public.documents SET status='APPROVED' WHERE tenant_id=$1 AND id=$2",[t,s.document]);
+ await c.query("INSERT INTO public.production_batches(tenant_id,id,recipe_id,output_document_id,target_location_id,output_quantity) VALUES($1,$2,$3,$4,$5,$6)",[t,s.batch,recipeId,s.document,world.rootLocationId,quantity]);
+ const version=(await c.query<{version:string}>("SELECT version::text FROM public.stock_balances WHERE tenant_id=$1 AND stock_dimension_id=$2",[t,s.inputDimension])).rows[0]!.version;
+ await c.query("INSERT INTO public.production_inputs(tenant_id,production_batch_id,handling_unit_id,previous_document_line_id,sequence_no,current_balance_version,base_quantity) VALUES($1,$2,$3,$4,$5,$6,$7)",[t,s.batch,input.hu,s.previousLine,s.sequence,version,amount]);
+ for(const [index,o] of s.outputs.entries())await c.query("INSERT INTO public.production_packages(tenant_id,id,production_batch_id,document_id,document_line_id,package_no,lot_code,produced_on,expires_on) VALUES($1,$2,$3,$4,$5,$6,'PRODUCTION-LOT','2026-10-14','2027-10-14')",[t,o.hu,s.batch,s.document,o.line,index+1]);
+ return s;
+}
+async function postProduction(s:Production,c:pg.Client=app,half=false){
+ await c.query("SET CONSTRAINTS ALL DEFERRED");
+ const t=world.tenantId,doc=randomUUID(),line=randomUUID();const o=(await c.query("SELECT * FROM public.package_origin($1,$2)",[t,s.input.hu])).rows[0]!;
+ const wh=(await c.query("SELECT warehouse_id FROM public.locations WHERE tenant_id=$1 AND id=$2",[t,s.sourceLocation])).rows[0]!.warehouse_id;
+ await c.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[t,doc,wh,world.ownerUserId]);
+ await c.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,source_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,1,$4,$5,$6,1,$6,$7,$8,'AVAILABLE')",[t,line,doc,o.item_id,kg,s.amount,s.sourceLocation,s.input.hu]);
+ await c.query("UPDATE public.documents SET status='APPROVED' WHERE tenant_id=$1 AND id=$2",[t,doc]);
+ await c.query("INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity,production_batch_id) VALUES($1,$2,$3,$4,'CONSUME',$5,$6,$7,$7,'AVAILABLE','AVAILABLE',$8,$9)",[t,s.input.hu,doc,line,s.sequence,s.previousLine,s.sourceLocation,s.amount,s.batch]);
+ await c.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,'PRODUCTION',$4)",[t,doc,s.document,s.recipe]);
+ await c.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,$5,'Production consume fixture','2026-10-14')",[t,doc,line,s.inputDimension,-s.amount]);
+ await c.query("UPDATE public.stock_balances SET quantity=quantity-$3,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[t,s.inputDimension,s.amount]);
+ await c.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,doc,doc]);
+ if(half)return {doc,line};
+ for(const o of s.outputs){
+  await c.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'AVAILABLE')",[t,o.dimension,s.item,world.rootLocationId,o.hu]);
+  await c.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,$3)",[t,o.dimension,o.quantity]);
+  await c.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,$5,'Production output fixture','2026-10-14')",[t,s.document,o.line,o.dimension,o.quantity]);
+ }
+ await c.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,s.document,s.document]);
+ return {doc,line};
+}
+const outputPackage=(s:Production):Package=>({receipt:s.batch,receiptLine:s.line,document:s.document,line:s.line,hu:s.hu,dimension:s.dimension});
+
+
+describe("T960 pending production and partial stock genealogy",()=>{
+ it("empty36 down restores independently applied original35 funcs/ACL/RLS/schema",async()=>{
+  await migrateDown({url:direct,to:'0035',wmsEnv:'staging'});
+  const sql=await readFile(new URL('../../../packages/db/migrations/0035_package_transfers.up.sql',import.meta.url),'utf8');
+  const names=['package_movement_assert','receipt_package_assert','package_movement_check_trigger','package_transfer_link_guard'];
+  for(const name of names){const f=sql.match(new RegExp('CREATE(?: OR REPLACE)? FUNCTION public\\.'+name+'\\(.*?\\$fn\\$;','s'));expect(f).not.toBeNull();await migration.query(f![0].replace('CREATE FUNCTION','CREATE OR REPLACE FUNCTION'));}
+  const state=()=>migration.query('SELECT proname,prosrc,proowner::regrole::text,proacl::text,proconfig,prosecdef FROM pg_proc WHERE proname=ANY($1::text[]) ORDER BY proname',[names]);
+  const original=(await state()).rows;await migrateUp({url:direct});await migrateDown({url:direct,to:'0035',wmsEnv:'staging'});expect((await state()).rows).toEqual(original);
+  expect((await migration.query("SELECT to_regclass('public.production_batches') AS batches,to_regclass('public.production_inputs') AS inputs,to_regclass('public.production_packages') AS packages")).rows[0]).toEqual({batches:null,inputs:null,packages:null});await migrateUp({url:direct});
+ });
+ it("persisted APPROVED outputorigin has uniqueQR and zero stock/CONSUME/link",async()=>{
+  await begin();const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);await app.query('COMMIT');await begin();
+  try{
+   expect(s.hu).not.toBe(input.hu);expect((await app.query('SELECT id,origin_kind,document_status,base_quantity::text FROM public.package_origin($1,$2)',[world.tenantId,s.hu])).rows[0]).toEqual({id:s.hu,origin_kind:'PRODUCTION',document_status:'APPROVED',base_quantity:'40.000000'});
+   expect((await app.query('SELECT count(*)::int AS n FROM public.stock_dimensions WHERE handling_unit_id=$1',[s.hu])).rows[0]?.n).toBe(0);
+   expect((await app.query('SELECT count(*)::int AS n FROM public.package_movement_steps WHERE production_batch_id=$1',[s.batch])).rows[0]?.n).toBe(0);
+   await expect(app.query('SELECT public.package_movement_assert($1,$2)',[world.tenantId,s.hu])).rejects.toMatchObject({code:'23514',message:'PACKAGE_MOVEMENT_ORIGIN'});
+  }finally{await app.query('ROLLBACK');}
+ });
+ it("partial input50 leaves150, fresh output40 moves/transfers and is reused in nextbatch",async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);const consumed=await postProduction(s);await flush();
+  expect((await app.query('SELECT quantity::text FROM public.stock_balances WHERE stock_dimension_id=$1',[input.dimension])).rows[0]?.quantity).toBe('150.000000');
+  expect((await app.query('SELECT base_quantity::text FROM public.production_inputs WHERE production_batch_id=$1',[s.batch])).rows).toEqual([{base_quantity:'50.000000'}]);
+  const out=outputPackage(s);const initial={document:s.document,line:s.line,dimension:s.dimension,sequence:0,target:world.rootLocationId,status:'AVAILABLE'};
+  const moved=await movement(out,initial,{operation:'PUTAWAY',quantity:40,target:world.childLocationId});
+  const shipped=await transfer(out,moved,{quantity:40,target:targetLocation});await flush();
+  const next=await prepareProduction(out,shipped,10,20,secondRecipe,secondOutputItem);await postProduction(next);await flush();
+  expect((await app.query('SELECT quantity::text FROM public.stock_balances WHERE stock_dimension_id=$1',[shipped.dimension])).rows[0]?.quantity).toBe('30.000000');
+  expect((await app.query('SELECT id,document_line_id,lot_code,expires_on::text FROM public.production_packages WHERE id=$1',[s.hu])).rows[0]).toEqual({id:s.hu,document_line_id:s.line,lot_code:'PRODUCTION-LOT',expires_on:'2027-10-14'});
+  expect((await app.query('SELECT document_line_id,operation FROM public.package_movement_steps WHERE handling_unit_id=$1',[input.hu])).rows).toEqual([{document_line_id:consumed.line,operation:'CONSUME'}]);
+ }));
+ it("full consume200 leaves zero positive dimensions without reusing oldQR",async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input,null,200,160);await postProduction(s);await flush();
+  expect((await app.query('SELECT quantity::text FROM public.stock_balances WHERE stock_dimension_id=$1',[input.dimension])).rows[0]?.quantity).toBe('0.000000');
+  expect((await app.query('SELECT count(*)::int AS n FROM public.stock_balances b JOIN public.stock_dimensions sd ON sd.tenant_id=b.tenant_id AND sd.id=b.stock_dimension_id WHERE sd.handling_unit_id=$1 AND b.quantity>0',[input.hu])).rows[0]?.n).toBe(0);
+ }));
+ it("recipe scaling mismatch rejects pendingbatch without stockeffects",async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');await expect((async()=>{await prepareProduction(input,null,49,40);await flush();})()).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_COMPONENTS'});
+ }));
+ it("half sourceOUT alone is rejected and wholeTX canrollback",async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);await postProduction(s,app,true);await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_PENDING_STOCK'});
+ }));
+ for(const flow of ['ORIGIN','QC_RELEASE','PUTAWAY'] as const)for(const endpoint of ['SOURCE','TARGET'] as const)it(`registered ${flow} forbids unrelated link at ${endpoint}`,async()=>tx(async()=>{
+  const p=await origin();let doc=p.document;
+  if(flow!=='ORIGIN'){const qc=await movement(p);doc=flow==='QC_RELEASE'?qc.document:(await movement(p,qc)).document;}
+  await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,endpoint==='SOURCE'?doc:extra,endpoint==='SOURCE'?extra:doc]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:flow==='ORIGIN'?'PACKAGE_ORIGIN_LINK':'PACKAGE_MOVEMENT_LINK'});
+ }));
+ it('pending production output forbids outgoing link without stock',async()=>tx(async()=>{
+  const p=await origin(app,'AVAILABLE'),batch=await prepareProduction(p);await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,batch.document,extra]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_PENDING_STOCK'});
+ }));
+ for(const flow of ['TRANSFER','PRODUCTION'] as const)for(const direction of ['IN_AS_SOURCE','OUT_AS_TARGET'] as const)it(`registered ${flow} rejects inverse endpoint ${direction}`,async()=>tx(async()=>{
+  const p=await origin(app,'AVAILABLE');let into:string,out:string;
+  if(flow==='TRANSFER'){const step=await transfer(p);into=step.document;out=step.sourceDocument;}
+  else {const batch=await prepareProduction(p);const posted=await postProduction(batch);into=batch.document;out=posted.doc;}
+  await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');
+  const extra=randomUUID(),kind=direction==='IN_AS_SOURCE'?'STOCK_IN':'STOCK_OUT';
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,$3,id,$4,'2026-10-14',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key=$3 AND version=1",[world.tenantId,extra,kind,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,direction==='IN_AS_SOURCE'?into:extra,direction==='IN_AS_SOURCE'?extra:out]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:flow==='TRANSFER'?'PACKAGE_TRANSFER_LINK':'PACKAGE_PRODUCTION_LINK'});
+ }));
+ for(const kind of ['TRANSFER','PRODUCTION'] as const)it(`inherited transfer rejects extra incoming ${kind} link`,async()=>tx(async()=>{
+  const p=await origin(app,'AVAILABLE');const step=await transfer(p);await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');
+  const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,$4,$5)",[world.tenantId,extra,step.document,kind,kind==='PRODUCTION'?secondRecipe:null]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_TRANSFER_LINK'});
+ }));
+ for(const kind of ['TRANSFER','PRODUCTION'] as const)it(`posted batch rejects extra ${kind} target link even with another recipe`,async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);const posted=await postProduction(s);await flush();
+  await app.query("SET CONSTRAINTS ALL DEFERRED");
+  const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,$4,$5)",[world.tenantId,extra,s.document,kind,kind==='PRODUCTION'?secondRecipe:null]);
+  expect(posted.doc).not.toBe(extra);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_LINK'});
+ }));
+ it("ordinary RLS hides all three production tables and origin across tenant",async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);await flush();await app.query("SELECT set_config('app.current_tenant_id',$1,true)",[other.tenantId]);
+  for(const table of ['production_batches','production_inputs','production_packages'])expect((await app.query(`SELECT * FROM public.${table}`)).rowCount).toBe(0);
+  expect((await app.query('SELECT * FROM public.package_origin($1,$2)',[world.tenantId,s.hu])).rowCount).toBe(0);
+ }));
+ it("runtime newtables FORCE RLS and no UPDATE DELETE TRUNCATE, functions invoker",async()=>{
+  expect((await migration.query("SELECT count(*)::int AS n FROM pg_class WHERE oid IN ('public.production_batches'::regclass,'public.production_inputs'::regclass,'public.production_packages'::regclass) AND relrowsecurity AND relforcerowsecurity AND NOT has_table_privilege('wms_app',oid,'UPDATE') AND NOT has_table_privilege('wms_app',oid,'DELETE') AND NOT has_table_privilege('wms_app',oid,'TRUNCATE')")).rows[0]?.n).toBe(3);
+  expect((await migration.query("SELECT bool_and(NOT prosecdef AND proconfig=ARRAY['search_path=pg_catalog, pg_temp']) AS safe FROM pg_proc WHERE proname IN ('package_origin','package_production_assert')")).rows[0]?.safe).toBe(true);
+ });
+ for(const [label,sql] of [
+  ['batch','UPDATE public.production_batches SET output_quantity=41 WHERE tenant_id=$1 AND id=$2'],
+  ['allocation','UPDATE public.production_inputs SET base_quantity=49 WHERE tenant_id=$1 AND production_batch_id=$2'],
+  ['metadata',"UPDATE public.production_packages SET expires_on='2028-10-14' WHERE tenant_id=$1 AND production_batch_id=$2"],
+  ['truncate','TRUNCATE public.production_inputs']
+ ] as const)it(`privileged owner cannot edit ${label}`,async()=>{
+  await begin(migration);try{const input=await origin(migration,'AVAILABLE');const s=await prepareProduction(input,null,50,40,recipe,outputItem,migration);await flush(migration);
+   expect((await migration.query("SELECT has_table_privilege(current_user,'public.production_inputs','UPDATE') AS upd")).rows[0]?.upd).toBe(true);
+   await expect(migration.query(sql,sql.includes('$1')?[world.tenantId,s.batch]:[])).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_IMMUTABLE'});
+  }finally{await migration.query('ROLLBACK');}
+ });
+ it("legacyNULL HU cannot be adopted into production origin by owner marker UPDATE",async()=>{
+  await begin(migration);try{await expect(migration.query('UPDATE public.handling_units SET package_production_id=$3 WHERE tenant_id=$1 AND id=$2',[world.tenantId,world.handlingUnitId,randomUUID()])).rejects.toMatchObject({code:'23514',message:'PACKAGE_HU_BINDING_IMMUTABLE'});}finally{await migration.query('ROLLBACK');}
+ });
+
+ it("two distinct outputQRs share one input50 allocation rather than multiplying genealogy",async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input,null,50,40,recipe,outputItem,app,true);await postProduction(s);await flush();
+  expect(s.outputs).toHaveLength(2);expect(new Set(s.outputs.map(o=>o.hu)).size).toBe(2);expect(s.outputs.some(o=>o.hu===input.hu)).toBe(false);
+  expect((await app.query('SELECT base_quantity::text FROM public.production_inputs WHERE production_batch_id=$1',[s.batch])).rows).toEqual([{base_quantity:'50.000000'}]);
+  expect((await app.query('SELECT sum(base_quantity)::text AS total FROM public.production_inputs WHERE production_batch_id=$1',[s.batch])).rows[0]?.total).toBe('50.000000');
+  expect((await app.query('SELECT count(*)::int AS n FROM public.production_packages WHERE production_batch_id=$1',[s.batch])).rows[0]?.n).toBe(2);
+  expect((await app.query('SELECT quantity::text FROM public.stock_balances WHERE stock_dimension_id=$1',[input.dimension])).rows[0]?.quantity).toBe('150.000000');
+ }));
+ for(const winner of ['consume','transfer'] as const)it(`realRR ${winner} wins shared predecessor against the other operation`,async()=>{
+  await begin();const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);await app.query('COMMIT');const otherConnection=new pg.Client({connectionString:appUrl});await otherConnection.connect();
+  try{
+   await begin(app,world.tenantId,true);await begin(otherConnection,world.tenantId,true);
+   for(const connection of [app,otherConnection]){
+    expect((await connection.query('SHOW transaction_isolation')).rows[0]?.transaction_isolation).toBe('repeatable read');
+    expect((await connection.query('SELECT id FROM public.receipt_packages WHERE id=$1',[input.hu])).rowCount).toBe(1);
+   }
+   const winnerConnection=winner==='consume'?app:otherConnection,loserConnection=winner==='consume'?otherConnection:app;
+   const final=winner==='consume'?await postProduction(s,winnerConnection):await transfer(input,null,{target:targetLocation},winnerConnection);
+   const pid=(await loserConnection.query<{pid:number}>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+   const loser=(winner==='consume'?transfer(input,null,{target:targetLocation},loserConnection):postProduction(s,loserConnection)).then(()=>null,(e:unknown)=>e);
+   let locked=false;const deadline=performance.now()+2000;
+   while(performance.now()<deadline){
+    const wait=(await migration.query<{wait_event_type:string;query:string}>('SELECT wait_event_type,query FROM pg_stat_activity WHERE pid=$1',[pid])).rows[0];
+    if(wait?.wait_event_type==='Lock' && wait.query.includes('INSERT INTO public.package_movement_steps')){locked=true;break;}
+    await new Promise(resolve=>setTimeout(resolve,10));
+   }
+   expect(locked).toBe(true);await winnerConnection.query('COMMIT');expect(await loser).toMatchObject({code:'23505'});await loserConnection.query('ROLLBACK');
+   expect((await migration.query('SELECT operation FROM public.package_movement_steps WHERE tenant_id=$1 AND handling_unit_id=$2',[world.tenantId,input.hu])).rows).toEqual([{operation:winner==='consume'?'CONSUME':'WAREHOUSE_TRANSFER'}]);
+   expect((await migration.query('SELECT sum(b.quantity)::text AS total FROM public.stock_balances b JOIN public.stock_dimensions sd ON sd.tenant_id=b.tenant_id AND sd.id=b.stock_dimension_id WHERE sd.tenant_id=$1 AND sd.handling_unit_id=$2',[world.tenantId,input.hu])).rows[0]?.total).toBe(winner==='consume'?'150.000000':'200.000000');
+   if(winner==='consume')expect((await migration.query('SELECT quantity::text FROM public.stock_balances WHERE tenant_id=$1 AND stock_dimension_id=$2',[world.tenantId,s.dimension])).rows[0]?.quantity).toBe('40.000000');
+   else expect((await migration.query('SELECT id FROM public.stock_dimensions WHERE tenant_id=$1 AND handling_unit_id=$2',[world.tenantId,s.hu])).rowCount).toBe(0);
+   expect(final).toBeDefined();
+  }finally{if(winner==='consume'){await app.query('ROLLBACK');await otherConnection.query('ROLLBACK');}else{await otherConnection.query('ROLLBACK');await app.query('ROLLBACK');}await otherConnection.end();}
+ });
+ for(const winner of ['first','second'] as const)it(`two controlled nativeRR consume snapshots share one predecessor: ${winner} wins`,async()=>{
+  await begin();const input=await origin(app,'AVAILABLE'),first=await prepareProduction(input),second=await prepareProduction(input);await app.query('COMMIT');
+  const otherConnection=new pg.Client({connectionString:appUrl});await otherConnection.connect();
+  try{
+   await begin(app,world.tenantId,true);await begin(otherConnection,world.tenantId,true);
+   for(const connection of [app,otherConnection]){
+    expect((await connection.query('SHOW transaction_isolation')).rows[0]?.transaction_isolation).toBe('repeatable read');
+    expect((await connection.query('SELECT id FROM public.receipt_packages WHERE id=$1',[input.hu])).rows).toEqual([{id:input.hu}]);
+    expect((await connection.query('SELECT quantity::text FROM public.stock_balances WHERE tenant_id=$1 AND stock_dimension_id=$2',[world.tenantId,input.dimension])).rows).toEqual([{quantity:'200.000000'}]);
+   }
+   const winnerConnection=winner==='first'?app:otherConnection,loserConnection=winner==='first'?otherConnection:app;
+   const winning=winner==='first'?first:second,losing=winner==='first'?second:first;
+   await postProduction(winning,winnerConnection);
+   const pid=(await loserConnection.query<{pid:number}>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+   const loser=postProduction(losing,loserConnection).then(()=>null,(e:unknown)=>e);
+   let locked=false;const deadline=performance.now()+2000;
+   while(performance.now()<deadline){
+    const wait=(await migration.query<{wait_event_type:string;query:string}>('SELECT wait_event_type,query FROM pg_stat_activity WHERE pid=$1',[pid])).rows[0];
+    if(wait?.wait_event_type==='Lock' && wait.query.includes('INSERT INTO public.package_movement_steps')){locked=true;break;}
+    await new Promise(resolve=>setTimeout(resolve,10));
+   }
+   expect(locked).toBe(true);
+   expect((await migration.query('SELECT count(*)::int AS n FROM public.package_movement_steps WHERE tenant_id=$1 AND handling_unit_id=$2',[world.tenantId,input.hu])).rows[0]?.n).toBe(0);
+   await winnerConnection.query('SET CONSTRAINTS ALL IMMEDIATE');await winnerConnection.query('COMMIT');
+   expect(await loser).toMatchObject({code:'23505'});await loserConnection.query('ROLLBACK');
+   expect((await migration.query('SELECT production_batch_id,previous_document_line_id,sequence_no,base_quantity::text FROM public.package_movement_steps WHERE tenant_id=$1 AND handling_unit_id=$2',[world.tenantId,input.hu])).rows).toEqual([{production_batch_id:winning.batch,previous_document_line_id:input.line,sequence_no:1,base_quantity:'50.000000'}]);
+   expect((await migration.query('SELECT quantity::text FROM public.stock_balances WHERE tenant_id=$1 AND stock_dimension_id=$2',[world.tenantId,input.dimension])).rows).toEqual([{quantity:'150.000000'}]);
+   expect((await migration.query('SELECT quantity::text FROM public.stock_balances WHERE tenant_id=$1 AND stock_dimension_id=$2',[world.tenantId,winning.dimension])).rows).toEqual([{quantity:'40.000000'}]);
+   expect((await migration.query('SELECT id FROM public.stock_dimensions WHERE tenant_id=$1 AND handling_unit_id=$2',[world.tenantId,losing.hu])).rowCount).toBe(0);
+   expect((await migration.query('SELECT id,status FROM public.documents WHERE tenant_id=$1 AND id=ANY($2::uuid[]) ORDER BY status',[world.tenantId,[winning.document,losing.document]])).rows).toEqual([{id:losing.document,status:'APPROVED'},{id:winning.document,status:'POSTED'}]);
+  }finally{await app.query('ROLLBACK');await otherConnection.query('ROLLBACK');await otherConnection.end();}
+ });
+ it("orphan marked productionHU cannot commit without its real metadata pair",async()=>tx(async()=>{
+  const hu=randomUUID();await app.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_production_id) VALUES($1,$2,'VARIL',$3,$4)",[world.tenantId,hu,hu,randomUUID()]);
+  await expect(flush()).rejects.toMatchObject({code:'23503'});
+ }));
+ it("foreign plannedHU cannot be attached to same-tenant batch",async()=>tx(async()=>{
+  const input=await origin(app,'AVAILABLE');const s=await prepareProduction(input);
+  await expect(app.query('INSERT INTO public.production_inputs(tenant_id,production_batch_id,handling_unit_id,previous_document_line_id,sequence_no,current_balance_version,base_quantity) VALUES($1,$2,$3,$4,1,0,1)',[world.tenantId,s.batch,other.handlingUnitId,other.documentLineId])).rejects.toMatchObject({code:'23503'});
+ }));
+ it("privileged direct-write cyclic batch ancestry is rejected with actual cycle reason",async()=>{
+  await begin(migration);
+  try{
+   const t=world.tenantId;
+   const nodes=[0,1].map(()=>({item:randomUUID(),recipe:randomUUID(),batch:randomUUID(),hu:randomUUID(),into:randomUUID(),intoLine:randomUUID(),out:randomUUID(),outLine:randomUUID(),dim:randomUUID()}));
+   for(const n of nodes)await migration.query("INSERT INTO public.items(tenant_id,id,code,name,base_unit_id,tracking_mode) VALUES($1,$2,$3,'Cycle item',$4,'NONE')",[t,n.item,n.item,kg]);
+   for(const n of nodes)await migration.query("INSERT INTO public.production_recipes(tenant_id,id,code,version,name,output_item_id,output_quantity,created_by) VALUES($1,$2,$3,1,'Cycle recipe',$4,1,$5)",[t,n.recipe,n.recipe,n.item,world.ownerUserId]);
+   for(const [i,n] of nodes.entries())await migration.query('INSERT INTO public.production_recipe_lines(tenant_id,recipe_id,line_no,item_id,quantity) VALUES($1,$2,1,$3,1)',[t,n.recipe,nodes[1-i]!.item]);
+   for(const n of nodes){
+    await migration.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_production_id) VALUES($1,$2,'VARIL',$3,$4)",[t,n.hu,n.hu,n.batch]);
+    await migration.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[t,n.into,world.warehouseId,world.ownerUserId]);
+    await migration.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$7,'AVAILABLE')",[t,n.intoLine,n.into,n.item,kg,world.rootLocationId,n.hu]);
+    await migration.query('INSERT INTO public.production_batches(tenant_id,id,recipe_id,output_document_id,target_location_id,output_quantity) VALUES($1,$2,$3,$4,$5,1)',[t,n.batch,n.recipe,n.into,world.rootLocationId]);
+    await migration.query('INSERT INTO public.production_packages(tenant_id,id,production_batch_id,document_id,document_line_id,package_no) VALUES($1,$2,$3,$4,$5,1)',[t,n.hu,n.batch,n.into,n.intoLine]);
+    await migration.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'AVAILABLE')",[t,n.dim,n.item,world.rootLocationId,n.hu]);
+    await migration.query('INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,1)',[t,n.dim]);
+    await migration.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,1,'Cycle positive leg','2026-10-14')",[t,n.into,n.intoLine,n.dim]);
+    await migration.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,n.into,n.into]);
+   }
+   for(const [i,n] of nodes.entries()){
+    const input=nodes[1-i]!;
+    await migration.query('INSERT INTO public.production_inputs(tenant_id,production_batch_id,handling_unit_id,previous_document_line_id,sequence_no,current_balance_version,base_quantity) VALUES($1,$2,$3,$4,1,0,1)',[t,n.batch,input.hu,input.intoLine]);
+    await migration.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[t,n.out,world.warehouseId,world.ownerUserId]);
+    await migration.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,source_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$7,'AVAILABLE')",[t,n.outLine,n.out,input.item,kg,world.rootLocationId,input.hu]);
+    await migration.query("INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity,production_batch_id) VALUES($1,$2,$3,$4,'CONSUME',1,$5,$6,$6,'AVAILABLE','AVAILABLE',1,$7)",[t,input.hu,n.out,n.outLine,input.intoLine,world.rootLocationId,n.batch]);
+    await migration.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,'PRODUCTION',$4)",[t,n.out,n.into,n.recipe]);
+    await migration.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,-1,'Cycle negative leg','2026-10-14')",[t,n.out,n.outLine,input.dim]);
+    await migration.query('UPDATE public.stock_balances SET quantity=0,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2',[t,input.dim]);
+    await migration.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,n.out,n.out]);
+   }
+   expect((await migration.query("SELECT has_table_privilege(current_user,'public.production_inputs','INSERT') AS ins,current_user='wms_app' AS runtime")).rows[0]).toEqual({ins:true,runtime:false});
+   await expect(flush(migration)).rejects.toMatchObject({code:'23514',message:'PACKAGE_PRODUCTION_CYCLE'});
+  }finally{await migration.query('ROLLBACK');}
+ });
+
+ it("two HU allocations20+30 share one real OUT document and consume each exactly once",async()=>tx(async()=>{
+  const first=await origin(app,'AVAILABLE'),second=await origin(app,'AVAILABLE');const s=await prepareProduction(first,null,20,40);
+  const t=world.tenantId;await app.query('INSERT INTO public.production_inputs(tenant_id,production_batch_id,handling_unit_id,previous_document_line_id,sequence_no,current_balance_version,base_quantity) VALUES($1,$2,$3,$4,1,0,30)',[t,s.batch,second.hu,second.line]);
+  const doc=randomUUID();await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[t,doc,world.warehouseId,world.ownerUserId]);
+  for(const [index,input,amount] of [[1,first,20],[2,second,30]] as const){
+   const line=randomUUID();await app.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,source_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,$6,$7,1,$7,$8,$9,'AVAILABLE')",[t,line,doc,index,world.itemNoneId,kg,amount,world.rootLocationId,input.hu]);
+   await app.query("INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity,production_batch_id) VALUES($1,$2,$3,$4,'CONSUME',1,$5,$6,$6,'AVAILABLE','AVAILABLE',$7,$8)",[t,input.hu,doc,line,input.line,world.rootLocationId,amount,s.batch]);
+   await app.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,$5,'Multi-input consume','2026-10-14')",[t,doc,line,input.dimension,-amount]);
+   await app.query('UPDATE public.stock_balances SET quantity=quantity-$3,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2',[t,input.dimension,amount]);
+  }
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,'PRODUCTION',$4)",[t,doc,s.document,recipe]);
+  await app.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'AVAILABLE')",[t,s.dimension,outputItem,world.rootLocationId,s.hu]);
+  await app.query('INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,40)',[t,s.dimension]);
+  await app.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,40,'Multi-input output','2026-10-14')",[t,s.document,s.line,s.dimension]);
+  for(const id of [doc,s.document])await app.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[t,id,id]);
+  await flush();
+  expect((await app.query('SELECT count(DISTINCT document_id)::int AS docs,count(*)::int AS lines,sum(base_quantity)::text AS total FROM public.package_movement_steps WHERE production_batch_id=$1',[s.batch])).rows[0]).toEqual({docs:1,lines:2,total:'50.000000'});
+  expect((await app.query('SELECT quantity::text FROM public.stock_balances WHERE stock_dimension_id=$1',[first.dimension])).rows[0]?.quantity).toBe('180.000000');
+  expect((await app.query('SELECT quantity::text FROM public.stock_balances WHERE stock_dimension_id=$1',[second.dimension])).rows[0]?.quantity).toBe('170.000000');
+ }));
+
+ it("nonempty36 down refuses preserving pending genealogy and migrationledger",async()=>{
+  await expect(migrateDown({url:direct,to:'0035',wmsEnv:'staging'})).rejects.toThrow(/package production data exists/);expect((await migration.query('SELECT max(version) AS version FROM wms_meta.schema_migrations')).rows[0]?.version).toBe('0036');
  });
 });
 

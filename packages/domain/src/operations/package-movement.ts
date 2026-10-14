@@ -4,7 +4,7 @@ import type { LockedState } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import type { AccessTx } from "../identity/access.ts";
 import { executeStockCommand, type StockCommandResult, type StockDocCallParams } from "../stock/index.ts";
-import { decimalToMicro, emptyPlan, planFieldPosting, postFieldDocument, uuidOf, type FieldPostSpec } from "./field-posting.ts";
+import { decimalToMicro, microToDecimal, DECIMAL_RE, emptyPlan, planFieldPosting, postFieldDocument, uuidOf, type FieldPostSpec } from "./field-posting.ts";
 
 export interface PackageMovementInput {
   readonly packageId: string;
@@ -33,7 +33,7 @@ export function parsePackageMovementInput(raw: unknown, operation: Operation): V
 }
 
 type State = {
-  warehouse_id: string; expected_warehouse_id: string; expected_location_id: string; expected_stock_status: string; item_id: string; unit_id: string; quantity: string; conversion_factor: string; base_quantity: string;
+  warehouse_id: string; expected_warehouse_id: string; expected_location_id: string; expected_stock_status: string; item_id: string; unit_id: string; quantity: string; conversion_factor: string; base_quantity: string; remaining_base_quantity: string;
   lot_id: string | null; inventory_owner_id: string | null; serial_id: string | null; origin_status: string;
   previous_document_line_id: string; sequence_no: number; location_id: string; stock_status: string;
   stock_dimension_id: string; balance_version: string; balance_quantity: string; reserved_quantity: string; location_kind: string;
@@ -41,11 +41,12 @@ type State = {
 export async function readPackageState(tx: AccessTx, tenantId: string, packageId: string): Promise<State> {
   const rows = await tx.execute<State>(sql`SELECT loc.warehouse_id,coalesce(terminal.warehouse_id,d.warehouse_id) AS expected_warehouse_id,
     coalesce(ms.target_location_id,l.target_location_id) AS expected_location_id,coalesce(ms.target_stock_status,l.stock_status) AS expected_stock_status,l.item_id,l.unit_id,l.quantity::text,l.conversion_factor::text,l.base_quantity::text,
+    (l.base_quantity-coalesce((SELECT sum(c.base_quantity) FROM public.package_movement_steps c WHERE c.tenant_id=rp.tenant_id AND c.handling_unit_id=rp.id AND c.operation='CONSUME'),0))::text AS remaining_base_quantity,
     l.lot_id,l.inventory_owner_id,l.serial_id,d.status AS origin_status,
     coalesce(ms.document_line_id,l.id) AS previous_document_line_id,coalesce(ms.sequence_no,0) AS sequence_no,
     sd.location_id,sd.stock_status,sd.id AS stock_dimension_id,b.version::text AS balance_version,
     b.quantity::text AS balance_quantity,b.reserved_quantity::text,loc.kind AS location_kind
-    FROM public.receipt_packages rp JOIN public.document_lines l ON l.tenant_id=rp.tenant_id AND l.id=rp.document_line_id
+    FROM public.package_origin(${tenantId}::uuid,${packageId}::uuid) rp JOIN public.document_lines l ON l.tenant_id=rp.tenant_id AND l.id=rp.document_line_id
     JOIN public.documents d ON d.tenant_id=l.tenant_id AND d.id=l.document_id
     LEFT JOIN LATERAL (SELECT document_id,document_line_id,sequence_no,target_location_id,target_stock_status FROM public.package_movement_steps
       WHERE tenant_id=rp.tenant_id AND handling_unit_id=rp.id ORDER BY sequence_no DESC LIMIT 1) ms ON true
@@ -55,16 +56,16 @@ export async function readPackageState(tx: AccessTx, tenantId: string, packageId
     JOIN public.locations loc ON loc.tenant_id=sd.tenant_id AND loc.id=sd.location_id
     WHERE rp.tenant_id=${tenantId}::uuid AND rp.id=${packageId}::uuid`);
   if (rows.length === 0) {
-    const visible = await tx.execute<{ id: string }>(sql`SELECT id FROM public.receipt_packages WHERE tenant_id=${tenantId}::uuid AND id=${packageId}::uuid`);
+    const visible = await tx.execute<{ id: string }>(sql`SELECT id FROM public.package_origin(${tenantId}::uuid,${packageId}::uuid)`);
     throw new AppError(visible.length === 0 ? "NOT_FOUND" : "VALIDATION_FAILED");
   }
   const s = rows[0];
-  if (rows.length !== 1 || s === undefined || s.origin_status !== "POSTED" || s.serial_id !== null || s.inventory_owner_id !== null || s.warehouse_id !== s.expected_warehouse_id || s.location_id !== s.expected_location_id || s.stock_status !== s.expected_stock_status || decimalToMicro(s.balance_quantity) !== decimalToMicro(s.base_quantity)) throw new AppError("VALIDATION_FAILED");
+  if (rows.length !== 1 || s === undefined || s.origin_status !== "POSTED" || s.serial_id !== null || s.inventory_owner_id !== null || s.warehouse_id !== s.expected_warehouse_id || s.location_id !== s.expected_location_id || s.stock_status !== s.expected_stock_status || decimalToMicro(s.balance_quantity) !== decimalToMicro(s.remaining_base_quantity)) throw new AppError("VALIDATION_FAILED");
   return s;
 }
 export async function packageWarehouseIds(tx: AccessTx, tenantId: string, packageId: string): Promise<string[]> {
   const rows = await tx.execute<{ warehouse_id: string }>(sql`SELECT DISTINCT coalesce(loc.warehouse_id,terminal.warehouse_id,d.warehouse_id) AS warehouse_id
-    FROM public.receipt_packages rp JOIN public.documents d ON d.tenant_id=rp.tenant_id AND d.id=rp.document_id
+    FROM public.package_origin(${tenantId}::uuid,${packageId}::uuid) rp JOIN public.documents d ON d.tenant_id=rp.tenant_id AND d.id=rp.document_id
     LEFT JOIN LATERAL(SELECT document_id FROM public.package_movement_steps WHERE tenant_id=rp.tenant_id AND handling_unit_id=rp.id ORDER BY sequence_no DESC LIMIT 1) ms ON true
     LEFT JOIN public.documents terminal ON terminal.tenant_id=rp.tenant_id AND terminal.id=ms.document_id
     LEFT JOIN public.stock_dimensions sd ON sd.tenant_id=rp.tenant_id AND sd.handling_unit_id=rp.id
@@ -85,13 +86,19 @@ async function specOf(tx: AccessTx, tenantId: string, value: Value, operation: O
     target = value.targetLocationId;
   }
   return { kind: "STOCK_MOVE", warehouseId: state.warehouse_id, sourceKind: null, sourceId: null,
-    lines: [{ itemId: state.item_id, unitId: state.unit_id, quantity: state.quantity, conversionFactor: state.conversion_factor,
-      baseQuantity: state.base_quantity, lotId: state.lot_id, handlingUnitId: value.packageId, sourceLocationId: state.location_id,
+    lines: [{ itemId: state.item_id, unitId: state.unit_id, quantity: packageQuantityForBase(state,state.remaining_base_quantity), conversionFactor: state.conversion_factor,
+      baseQuantity: state.remaining_base_quantity, lotId: state.lot_id, handlingUnitId: value.packageId, sourceLocationId: state.location_id,
       targetLocationId: target, stockStatus: operation === "QC_RELEASE" ? "QUARANTINE" : "AVAILABLE", targetStockStatus: "AVAILABLE", sourceLineId: null }] };
+}
+/** Exact inverse of the sealed origin factor. Partial quantity must never be rounded or use a later conversion. */
+export function packageQuantityForBase(state: Pick<State,"conversion_factor">, baseQuantity: string): string {
+  const factor=decimalToMicro(state.conversion_factor), base=decimalToMicro(baseQuantity), numerator=base*1_000_000n;
+  if(factor<=0n||base<=0n||numerator%factor!==0n)throw new AppError("VALIDATION_FAILED",{detail:"QUANTITY_SCALE"});
+  const quantity=microToDecimal(numerator/factor);if(!DECIMAL_RE.test(quantity))throw new AppError("VALIDATION_FAILED");return quantity;
 }
 export function assertPackageCurrent(locked: LockedState, value: Pick<PackageMovementInput, "predecessorVersion" | "currentBalanceVersion">, state: State): void {
   const balance = locked.balances.find(b => b.stockDimensionId === state.stock_dimension_id);
-  if (state.sequence_no !== value.predecessorVersion || balance === undefined || balance.version !== value.currentBalanceVersion || state.balance_version !== balance.version || decimalToMicro(balance.quantity) !== decimalToMicro(state.base_quantity)) throw new AppError("VERSION_CONFLICT", { retryable: true });
+  if (state.sequence_no !== value.predecessorVersion || balance === undefined || balance.version !== value.currentBalanceVersion || state.balance_version !== balance.version || decimalToMicro(balance.quantity) !== decimalToMicro(state.remaining_base_quantity)) throw new AppError("VERSION_CONFLICT", { retryable: true });
   if (decimalToMicro(balance.reservedQuantity) !== 0n) throw new AppError("VALIDATION_FAILED");
 }
 async function move(params: StockDocCallParams, input: PackageMovementInput | PutawayPackageInput, operation: Operation): Promise<StockCommandResult & { readonly replayed: boolean }> {
@@ -112,7 +119,7 @@ async function move(params: StockDocCallParams, input: PackageMovementInput | Pu
         await tx.execute(sql`INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,
           previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity)
           VALUES(${ctx.tenantId}::uuid,${value.packageId}::uuid,${documentId}::uuid,${lineId}::uuid,${operation},${state.sequence_no + 1},
-          ${state.previous_document_line_id}::uuid,${state.location_id}::uuid,${spec.lines[0]?.targetLocationId}::uuid,${state.stock_status},'AVAILABLE',${state.base_quantity}::numeric)`);
+          ${state.previous_document_line_id}::uuid,${state.location_id}::uuid,${spec.lines[0]?.targetLocationId}::uuid,${state.stock_status},'AVAILABLE',${state.remaining_base_quantity}::numeric)`);
       });
     } });
   if (outcome.status !== "COMPLETED") throw new AppError("VERSION_CONFLICT", { retryable: true });
