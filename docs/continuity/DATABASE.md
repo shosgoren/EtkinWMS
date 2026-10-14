@@ -79,3 +79,12 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
 - Tek shared package_movement_steps sırası/predecessor uniq; WAREHOUSE_TRANSFER target IN ve source OUT gerçek FK, iki POSTED belge/TRANSFERlink/exact±fullqty. Kaynak ve hedef depo farklı, hedef STORAGE; originwarehouse/lot/unitfactor immutable.
 - Currentwarehouse terminalstep+pozitifbalance ile doğrulanır; originwarehouse hareket/yetki kaynağı değildir. QC/putaway hedefdepoda çalışır. Generic mapped ledger/reversal ve kayıt değişimi ret; legacyNULLHU korunur.
 - Boşdown exact0034 function/ACL/RLS oracle; transferverisi varsa down silmeden ret. Schema owner/foreign/RLS ve ters iki gerçekRR winner bağımsız154/authorgap156PASS; canonicalcommand+rollback27PASS. Tam güvenlik/CI/VPS schema35 sonucu henüz bekler.
+
+## Tekil QR üretim / schema36
+- Hazırlık sadece gerçek APPROVED output IN, immutable outputHU/LOT ve inputplan saklar; henüz ledger, kaynakOUT, link veya CONSUME yok.
+- Post mevcut motorun tek mevcut IN header kilidiyle freshOUT oluşturur; canonical PRODUCTION OUT→IN bağı, inputCONSUME, çıktıIN, audit/numara atomiktir.
+- Orijinal miktar/birim çevrim katsayısı immutable; kalan origin−CONSUME; zero aynıQR tarih/soy ağacını korur. Çoklu çıktıda inputtüketimi genealogyde bir kez sayılır.
+- Aynı kaynakdepo, farklı outputdepo; kaynaklar farklıysa önceden QRtransfer. Output mevcut manufacturing AVAILABLE politikasını izler.
+- Prepare/post ayrı stablekeys; preparelostreply inputtaşıma sonrası eskiID kurtarır, yeni stale key ret. Postfault APPROVED kimlikleri koruyup stok/link/numarayı geri alır.
+- B/C ordinary runtime incident-link guards ve tenant/RLS/MFA mevcut motor korunur. Privileged legacy-link UPDATE adoption MINOR pilot kabulüdür; appUPDATEgrant yok, raw privilegedUPDATE yapılmaz; geniş owner-tamper garantisi verilmez.
+- Şema36 bağımsız184/domain138/native207PASS; eski restore/ledger fixture uyumu147PASS. Bu sayı kod/CI/canlı veya cihaz kabulü yerine geçmez.

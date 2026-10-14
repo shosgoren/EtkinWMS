@@ -106,3 +106,17 @@ describe("T-948 current-warehouse transfer boundary", () => {
     expect(mocks.locations).not.toHaveBeenCalled();
   });
 });
+
+it("T963 preserves server origin and zero remaining metadata in readonly current transport", async () => {
+  for (const originKind of ["RECEIPT", "PRODUCTION"] as const) {
+    const current = { id: ID, qr: `EWMS:PKG:1:${ID}`, originKind, baseQuantity: "200.000000", originBaseQuantity: "200.000000",
+      remainingBaseQuantity: "0.000000", currentBaseQuantity: "0.000000", currentStockStatus: null,
+      currentLocation: null, currentBalanceVersion: null, predecessorVersion: 2, warehouseId: KEY,
+      allowedActions: [], canTransfer: false, blockedReason: "UNSUPPORTED_STATE" };
+    mocks.current.mockResolvedValue(current); mocks.resolve.mockResolvedValue(current);
+    expect(await getCurrentPackageAction(identity)).toEqual({ ok: true, data: current });
+    expect(await resolveCurrentPackageQrAction({ slug: "motive", qr: current.qr })).toEqual({ ok: true, data: current });
+  }
+  expect(mocks.access.mock.calls.map(c => c[0].permission)).toEqual(["stock.view", "stock.view", "stock.view", "stock.view"]);
+  expect(mocks.quality).not.toHaveBeenCalled(); expect(mocks.putaway).not.toHaveBeenCalled(); expect(mocks.transfer).not.toHaveBeenCalled();
+});

@@ -155,6 +155,7 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
   const canQc = current?.allowedActions.includes("QC_RELEASE") === true;
   const canPut = current?.allowedActions.includes("PUTAWAY") === true;
   const canTransfer = current?.canTransfer === true;
+  const emptyPackage = /^(?:0+)(?:\.0+)?$/.test(current?.remainingBaseQuantity??"");
   const footer = retry ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => { const f = frozen.current; if (f) void execute(f.action); }}>{t("retry")}</PrimaryButton>
     : needsReload ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void refresh()}>{t("reload")}</PrimaryButton>
     : stage === "transferWarehouse" ? <PrimaryButton disabled>{t("chooseWarehouse")}</PrimaryButton>
@@ -174,8 +175,10 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
     <div className="grid min-w-0 gap-3 min-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" data-testid="package-movement">
       {current && <section className={card} data-testid="package-current">
         <div className="flex items-center gap-2"><Package className="size-7 shrink-0 text-cat-teal-ink" aria-hidden="true" /><h2 className="break-words text-xl font-extrabold">{current.itemName}</h2></div>
-        <p className="my-3 text-3xl font-extrabold" data-testid="package-current-quantity">{quantity(current.currentBaseQuantity)} <span className="text-lg">{current.baseUnitCode}</span></p>
+        <p className="my-3 text-3xl font-extrabold" data-testid="package-current-quantity">{quantity(current.remainingBaseQuantity)} <span className="text-lg">{current.baseUnitCode}</span></p>
         <dl className="grid min-w-0 grid-cols-2 gap-2 text-sm">
+          <dt>{t("origin")}</dt><dd className="font-bold">{t(current.originKind === "PRODUCTION" ? "productionOrigin" : "receiptOrigin")}</dd>
+          <dt>{t("originalQuantity")}</dt><dd className="font-bold" data-testid="package-origin-quantity">{quantity(current.baseQuantity)} {current.baseUnitCode}</dd>
           <dt>{t("package")}</dt><dd className="break-words font-bold">{current.kind} · {current.packageNo}</dd>
           <dt>{t("warehouse")}</dt><dd className="break-words font-bold" data-testid="package-current-warehouse">{current.warehouseName}</dd>
           <dt>{t("location")}</dt><dd className="break-words font-bold" data-testid="package-current-location">{current.currentLocation?.code ?? "—"}</dd>
@@ -184,6 +187,7 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
           {current.producedOn && <><dt>{t("produced")}</dt><dd>{current.producedOn}</dd></>}
           {current.expiresOn && <><dt>{t("expiry")}</dt><dd className="font-bold">{current.expiresOn}</dd></>}
         </dl>
+        {emptyPackage && <p className="mt-3 flex items-center gap-2 rounded-control bg-cat-slate-bg p-3 font-bold text-cat-slate-ink" data-testid="package-empty"><Lock className="size-6 shrink-0" aria-hidden="true" />{t("consumed")}</p>}
         {ready && current.expiresOn && current.expiresOn < new Date().toISOString().slice(0, 10) && <p className="mt-3 flex items-center gap-2 rounded-control bg-warning-bg p-3 font-bold text-warning-ink"><TriangleAlert className="size-6 shrink-0" aria-hidden="true" />{t("expired")}</p>}
         <details className="mt-2"><summary className={`flex min-h-12 cursor-pointer items-center font-bold ${focus}`}>{t("qr")}</summary><p className="break-all text-sm" data-testid="package-qr">{current.qr}</p></details>
       </section>}
@@ -213,7 +217,7 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
           <p aria-hidden="true" className="text-2xl text-cat-sky-ink">↓</p>
           <p className="break-words rounded-control bg-cat-sky-bg p-3 font-bold text-cat-sky-ink">{targetWarehouse.name} · {place.code}</p>
         </div>}
-        {stage === "current" && !needsReload && !retry && current?.blockedReason && !canTransfer && <p className="flex items-center gap-2 rounded-card bg-warning-bg p-3 font-bold text-warning-ink"><Lock className="size-6 shrink-0" aria-hidden="true" />{t(current.blockedReason === "DRAFT" ? "draft" : current.blockedReason === "NO_PERMISSION" ? "locked" : "unsupported")}</p>}
+        {stage === "current" && !needsReload && !retry && current?.blockedReason && !canTransfer && !emptyPackage && <p className="flex items-center gap-2 rounded-card bg-warning-bg p-3 font-bold text-warning-ink"><Lock className="size-6 shrink-0" aria-hidden="true" />{t(current.blockedReason === "DRAFT" ? "draft" : current.blockedReason === "NO_PERMISSION" ? "locked" : "unsupported")}</p>}
         {stage === "current" && !retry && !needsReload && canTransfer && (canQc || canPut) && <SecondaryButton disabled={!ready || busy} onClick={() => void transferWarehouses()}><ArrowLeftRight className="mr-2 size-6 text-cat-sky-ink" aria-hidden="true" />{t("transfer")}</SecondaryButton>}
         {stage === "current" && !retry && !needsReload && <SecondaryButton disabled={!ready || busy} onClick={nextPackage}>{t("nextPackage")}</SecondaryButton>}
       </section>

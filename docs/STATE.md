@@ -42,3 +42,8 @@ Son doğrulama: 14.10.2026 Europe/Istanbul; kod, CI, main ve VPS ayrı otoritele
 - Excel anaürün/birim/standartbarkod otomasyonu, paletgruplama/split, yetkili draftedit/cancel/reversal, ERPsenkron/billing, ürün görseli ve fullsiparişQR ayrı backlog.
 - Migration tek yazar/operatör; birleşmiş migration değiştirilmez. Dokuz PR/main kapısı ve receiverbackup/schema/health ayrı doğrulanır.
 - Eski/stacked PRları kör yeniden birleştirme; git ancestry ve exacthead kontrol et. Başarısız geçmiş/ölçüm sınırları JOURNAL ve kartlarda korunur.
+
+## Üretim UI final kesimi
+- T963 explicit mode=packages + document QRresume; düz eski ?id legacy korunur. Fresh36 QR4 + unchangedlegacy2=6/6 PASS, retry/flaky/skip0; root/webtypes/scopedlintPASS. Forms/legacytest ve assertionlar korunur.
+- C testfixtures onarımı147PASS parenttan alındı; UI güncel14path/tek kart. Security129 incelemesi yeniUI0/inheritedminor1; yalnız2routefile delta sonrası dar finalrebind/9CI gerekir.
+- 66eb254 fullCI yalnız sharedfixture transientSSR çift Ürünara strictfill ile E2E1FAIL; kaynakbaşarısı diye sunulmadı. Helper tekglobalexactinput+screen-shell unique/visible/enabled bekler, locator/assertion/timeout/auth değişmez. Fresh36 receiving4/labels2/A4/B4/C4/legacy2=20/20 PASS166s, skip/retry/flaky0; yeni exacthead fullCI gerekir.

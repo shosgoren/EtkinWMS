@@ -200,3 +200,9 @@
 - 05f56b security B0/M0/m1; ordinary runtime bulguları kapalı. Kalan privileged UPDATE adoption pilot operasyon sınırıyla kabul; uygulama rolünün UPDATE grantı/public çağrısı yok, owner tamper garantisi verilmez.
 - Bağımsız final fresh35 receipt102+transfer40+drift23=165/165 PASS; kaynak hashleri aynı. Receiving4/labels2/A4/B4/legacy2=16/16 browserPASS; retry/skip0. Önceki hata koşuları korunur, korumalar gevşetilmedi.
 - Main belge çakışması kaynak koda dokunmadan çözüldü. PR/main/yayın ve gerçek cihaz ayrı kapılar; flagfalse. Son doğrudan VPS check fdf9d6/schema34 healthok.
+
+### 14 Ekim — üretim36 ve T963 final
+- D4 kaynak bağımsız schema184/domain138/native207/boundary33PASS. B/C security0/0/1 yalnız privileged link UPDATE adoption sınırı; appUPDATE yok, pilotta kabul/backlog. Ordinary constructor/incident link bulguları testle kapatıldı.
+- Fullint eski restore3/ledgerinventory1FAIL geçmişi korunur. İzole rollback helper yeni triggerleri kapsayıp exact original A/O/R/D geri yükler; gerçek147/147PASS, eskiassertions korunup1modecheckeklendi; uygulamaSQL değişmedi.
+- T963 güncel36 UI4PASS sonrası fullCI legacy2 recipe?idFAIL bulundu. Explicit mode=packages QR ve plain?id legacy: unchanged QR4+legacy2=6/6PASS, skip/retry/flaky0; forms/legacytests unchanged, types/lintPASS.
+- C kaynak30path sınırı için DATABASE/JOURNAL detayları bu ayrıUI teslimine taşındı. Yeni head9CI/main/receiver36/flag ayrıkapı, fizikselcihazUNKNOWN.
