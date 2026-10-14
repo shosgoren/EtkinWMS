@@ -422,9 +422,10 @@ class Component extends DCLogic {
         demoChips: [{ n: 'Birden fazla depo' }, { n: 'Kamera ile barkod' }, { n: 'Etiket çıktısı' }],
         fName: 'Adınız', fCompany: 'Firma', fEmail: 'İş e-postası', fSector: 'Sektörünüz', fNeed: 'İhtiyacınız',
         options: [{ n: 'Üretim' }, { n: 'Toptan ticaret' }, { n: 'Depo ve lojistik' }, { n: 'Perakende' }, { n: 'Diğer' }],
-        fConsent: 'Talebimin değerlendirilmesi için bu bilgilerle benimle iletişime geçilmesini kabul ediyorum.',
-        privacy: 'Veri kullanımı', fSubmit: 'Teklif ve demo iste',
-        fSending: 'Talebiniz kaydediliyor…', fOk: 'Talebiniz kaydedildi. Demo ve kapsam için sizinle iletişime geçeceğiz.', fErr: 'Talep kaydedilemedi. Lütfen tekrar deneyin.', fInvalid: 'Ad, firma, geçerli e-posta ve iletişim onayını kontrol edin.',
+        fNeedHint: 'Kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.',
+        fConsentA: 'Demo talebime ilişkin', notice: 'Aydınlatma Metni', fConsentB: '’ni okudum.',
+        privacy: 'Aydınlatma Metni', fSubmit: 'Teklif ve demo iste',
+        fSending: 'Talebiniz kaydediliyor…', fOk: 'Talebiniz kaydedildi. Demo ve kapsam için sizinle iletişime geçeceğiz.', fErr: 'Talep kaydedilemedi. Lütfen tekrar deneyin.', fInvalid: 'Ad, firma, geçerli e-posta ve Aydınlatma Metni kutusunu kontrol edin.',
         footTag: 'Uçtan uca izlenebilir depo yönetimi.'
       },
       en: {
@@ -532,9 +533,10 @@ class Component extends DCLogic {
         demoChips: [{ n: 'Multiple warehouses' }, { n: 'Camera barcode' }, { n: 'Label printing' }],
         fName: 'Your name', fCompany: 'Company', fEmail: 'Work email', fSector: 'Industry', fNeed: 'What you need',
         options: [{ n: 'Manufacturing' }, { n: 'Wholesale' }, { n: 'Warehousing & logistics' }, { n: 'Retail' }, { n: 'Other' }],
-        fConsent: 'I agree to be contacted with these details so my request can be assessed.',
-        privacy: 'Data use', fSubmit: 'Request an offer & demo',
-        fSending: 'Sending your request…', fOk: 'Your request has been saved. We will contact you about a demo and scope.', fErr: 'The request could not be saved. Please try again.', fInvalid: 'Please check name, company, a valid email and the consent box.',
+        fNeedHint: 'Please do not include ID numbers, health data, passwords or your customers’ personal data.',
+        fConsentA: 'I have read the', notice: 'Privacy Notice', fConsentB: ' for my demo request.',
+        privacy: 'Privacy Notice', fSubmit: 'Request an offer & demo',
+        fSending: 'Sending your request…', fOk: 'Your request has been saved. We will contact you about a demo and scope.', fErr: 'The request could not be saved. Please try again.', fInvalid: 'Please check name, company, a valid email and the Privacy Notice box.',
         footTag: 'End-to-end traceable warehouse management.'
       }
     };
