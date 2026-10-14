@@ -30,3 +30,5 @@ Son kayıt: 14 Ekim2026. Kaynak, GitHub kontrolleri, canlı sürüm ve fiziksel 
 - Giriş [continuity/README](continuity/README.md); erişim/yayın/yedek [OPERATIONS](continuity/OPERATIONS.md). Güncel kalan kart/GitSHA/run/VPSdefter kanıtı sohbet tahmininden üstündür.
 
 - A kaynak aktarımı int/package-movement-ready: aynı incelenmiş30Gitblob, beş gerçekT951–955 author teslimi; eski çakışan kart history guard hatası korunur. YerelT956 actor üstü henüzmain/yayın değildir; yeni actualbase kapıları bekler.
+
+- T-944 (14 Ekim): satış sitesine JSON-LD (Organization/WebSite/SoftwareApplication), 1200×630 paylaşım görseli, 512 PNG logo, hreflang ve sitemap lastmod. Alan adları: etkinyazilim.com.tr DNS A→VPS, Caddy `permanent` kuralı ({uri} korunur); etkinwms.com ve etkinwms.com.tr Hostinger panelinde Kalıcı(301)→https://etkinyazilim.com (14 Ekim, kullanıcı isteği; Hostinger yönlendirme IP'si). etkinwms.com.tr kaydı 'Onay bekliyor'.
