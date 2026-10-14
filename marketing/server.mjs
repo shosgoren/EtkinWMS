@@ -11,7 +11,7 @@ const allowedOrigins = new Set(['https://etkinyazilim.com','https://www.etkinyaz
 const limits = new Map();
 // T-941: yayımlanan dosyalar açılışta public/ altından bir kez listelenir; yalnız bu harita sunulur.
 // Nokta ile başlayan adlar ve bilinmeyen uzantılar sunulmaz; istek yolu dosya sistemine hiç ulaşmaz.
-const TYPES = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.txt':'text/plain; charset=utf-8','.xml':'application/xml; charset=utf-8','.svg':'image/svg+xml','.webp':'image/webp','.woff':'font/woff'};
+const TYPES = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.txt':'text/plain; charset=utf-8','.xml':'application/xml; charset=utf-8','.svg':'image/svg+xml','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.woff':'font/woff'};
 export function publicFiles(dir = publicDir) {
   const files = {'/':'index.html','/privacy':'privacy.html'};
   const walk = (d) => {
