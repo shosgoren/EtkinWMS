@@ -16,6 +16,7 @@ a{color:#172E42}
 .kicker{margin:0 0 12px;font:600 12px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#4C6275}
 h1{margin:0 0 24px;font:800 clamp(32px,5vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em}
 .doc p{margin:0 0 16px;color:#2E4458}
+.doc h2{margin:28px 0 8px;font:800 21px/1.2 'Bricolage Grotesque',sans-serif;letter-spacing:-.01em}
 .date{font-size:15px;color:#4C6275}
 .cta{display:inline-flex;align-items:center;gap:10px;min-height:54px;margin-top:12px;padding:0 24px;border-radius:999px;background:#172E42;color:#FFFFFF;font-weight:600;text-decoration:none}
 .cta span{color:#F4C542}
