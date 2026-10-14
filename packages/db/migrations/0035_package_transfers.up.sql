@@ -36,10 +36,11 @@ BEGIN
    RAISE EXCEPTION 'PACKAGE_MOVEMENT_CHAIN' USING ERRCODE='23514';
   END IF;
   IF step.operation='WAREHOUSE_TRANSFER' THEN
-   -- Legacy0029 permits several target links; a registered package transfer has one canonical pair.
-   IF (SELECT count(*) FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id)<>1
-   OR EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id
-    AND (kind<>'TRANSFER' OR source_document_id IS DISTINCT FROM step.source_document_id OR recipe_id IS NOT NULL)) THEN
+   -- Legacy0029 permits several target links; a registered pair allows only its canonical directed edge.
+   IF (SELECT count(*) FROM public.stock_document_links WHERE tenant_id=p_tenant
+    AND (source_document_id IN (step.document_id,step.source_document_id) OR target_document_id IN (step.document_id,step.source_document_id)))<>1
+   OR NOT EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant AND target_document_id=step.document_id
+    AND kind='TRANSFER' AND source_document_id=step.source_document_id AND recipe_id IS NULL) THEN
     RAISE EXCEPTION 'PACKAGE_TRANSFER_LINK' USING ERRCODE='23514';
    END IF;
    SELECT count(*) INTO n FROM public.documents d
@@ -89,6 +90,10 @@ BEGIN
    END IF;
    SELECT warehouse_id INTO expected_warehouse FROM public.locations WHERE tenant_id=p_tenant AND id=step.target_location_id;
   ELSE
+  IF EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant
+   AND (source_document_id=step.document_id OR target_document_id=step.document_id)) THEN
+   RAISE EXCEPTION 'PACKAGE_MOVEMENT_LINK' USING ERRCODE='23514';
+  END IF;
   SELECT count(*) INTO n FROM public.documents d
   JOIN public.document_lines l ON l.tenant_id=d.tenant_id AND l.document_id=d.id
   JOIN public.locations src ON src.tenant_id=l.tenant_id AND src.id=l.source_location_id
@@ -195,6 +200,10 @@ BEGIN
  IF EXISTS(SELECT 1 FROM public.documents WHERE tenant_id=p_tenant AND source_kind='INBOUND_RECEIPT'
   AND source_id=p_receipt AND id<>d.id) THEN
   RAISE EXCEPTION 'PACKAGE_SOURCE_DOCUMENT_BYPASS' USING ERRCODE='23514';
+ END IF;
+ IF EXISTS(SELECT 1 FROM public.stock_document_links WHERE tenant_id=p_tenant
+  AND (source_document_id=d.id OR target_document_id=d.id)) THEN
+  RAISE EXCEPTION 'PACKAGE_ORIGIN_LINK' USING ERRCODE='23514';
  END IF;
  SELECT count(*) INTO n FROM public.receipt_packages WHERE tenant_id=p_tenant AND receipt_id=p_receipt;
  IF n NOT BETWEEN 1 AND 200
@@ -314,11 +323,18 @@ CREATE TRIGGER package_transfer_links_no_truncate BEFORE TRUNCATE ON public.stoc
  FOR EACH STATEMENT EXECUTE FUNCTION public.package_transfer_link_guard();
 CREATE FUNCTION public.package_transfer_link_check() RETURNS trigger
  LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $fn$
-DECLARE package_id uuid;
+DECLARE package_id uuid;receipt_id uuid;
 BEGIN
- SELECT handling_unit_id INTO package_id FROM public.package_movement_steps WHERE tenant_id=NEW.tenant_id
-  AND operation='WAREHOUSE_TRANSFER' AND (source_document_id=NEW.source_document_id OR document_id=NEW.target_document_id);
- IF package_id IS NOT NULL THEN PERFORM public.package_movement_assert(NEW.tenant_id,package_id); END IF;
+ -- Inspect every incident endpoint, including reversed direction edges, not a filtered first match.
+ FOR package_id IN SELECT DISTINCT handling_unit_id FROM public.package_movement_steps WHERE tenant_id=NEW.tenant_id
+  AND (document_id IN (NEW.source_document_id,NEW.target_document_id)
+   OR source_document_id IN (NEW.source_document_id,NEW.target_document_id)) LOOP
+  PERFORM public.package_movement_assert(NEW.tenant_id,package_id);
+ END LOOP;
+ FOR receipt_id IN SELECT id FROM public.inbound_receipts WHERE tenant_id=NEW.tenant_id
+  AND package_document_id IN (NEW.source_document_id,NEW.target_document_id) LOOP
+  PERFORM public.receipt_package_assert(NEW.tenant_id,receipt_id);
+ END LOOP;
  RETURN NULL;
 END; $fn$;
 REVOKE ALL ON FUNCTION public.package_transfer_link_check() FROM PUBLIC;
