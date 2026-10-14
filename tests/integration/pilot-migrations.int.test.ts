@@ -27,12 +27,12 @@ async function scratch(run: (url: string, adm: pg.Client, name: string) => Promi
 }
 async function versions(adm: pg.Client) { return (await adm.query<{version: string}>("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 3")).rows.map(r => r.version); }
 
-it("pilot migrations go 33 → 27 → 33 on an empty scratch database", async () => {
+it("pilot migrations go 34 → 27 → 34 on an empty scratch database", async () => {
   await scratch(async (url, adm) => {
-    expect(await versions(adm)).toEqual(["0033", "0032", "0031"]);
-    expect((await migrateDown({url, to:"0027", wmsEnv:"staging"})).reverted).toEqual(["0033", "0032", "0031", "0030", "0029", "0028"]);
+    expect(await versions(adm)).toEqual(["0034", "0033", "0032"]);
+    expect((await migrateDown({url, to:"0027", wmsEnv:"staging"})).reverted).toEqual(["0034", "0033", "0032", "0031", "0030", "0029", "0028"]);
     expect((await adm.query("SELECT to_regclass('public.stock_document_links') AS links, to_regclass('public.production_recipes') AS recipes")).rows[0]).toEqual({links:null, recipes:null});
-    expect((await migrateUp({url})).applied).toEqual(["0028", "0029", "0030", "0031", "0032", "0033"]);
+    expect((await migrateUp({url})).applied).toEqual(["0028", "0029", "0030", "0031", "0032", "0033", "0034"]);
     expect((await migrateUp({url})).applied).toEqual([]);
     expect((await adm.query("SELECT count(*)::int AS n FROM pg_trigger WHERE tgname='production_recipe_lines_insert_guard'")).rows[0]?.n).toBe(1);
   });
@@ -52,7 +52,7 @@ it("linked transfer history blocks downgrade without changing stock or losing li
       expect(await listStockOverview(params)).toEqual(before);
       expect((await adm.query("SELECT count(*)::int AS n FROM public.stock_document_links")).rows[0]?.n).toBe(1);
       expect((await versions(adm))[0]).toBe("0028");
-      expect((await migrateUp({url})).applied).toEqual(["0029","0030","0031","0032","0033"]);
+      expect((await migrateUp({url})).applied).toEqual(["0029","0030","0031","0032","0033","0034"]);
       expect(await listStockOverview(params)).toEqual(before);
     } finally { await app.close(); }
   });
@@ -74,8 +74,8 @@ it("saved recipes block removal of the seal and recipe schema, preserving defini
       finally { await adm.query("ROLLBACK"); }
       expect((await adm.query("SELECT count(*)::int AS n FROM public.production_recipes")).rows[0]?.n).toBe(1);
       expect((await adm.query("SELECT count(*)::int AS n FROM public.production_recipe_lines")).rows[0]?.n).toBe(1);
-      // 0031 (kart türü/birimler) mühürden bağımsızdır: geri alınır, 0030 mührü kalır; ileri alma yalnız 0031'i uygular.
-      expect((await migrateUp({url})).applied).toEqual(["0031","0032","0033"]);
+      // 0031 (kart türü/birimler) mühürden bağımsızdır: geri alınır, 0030 mührü kalır; ileri alma 0031–0034 sürümlerini uygular.
+      expect((await migrateUp({url})).applied).toEqual(["0031","0032","0033","0034"]);
     } finally { await app.close(); }
   });
 }, 120000);

@@ -28,3 +28,5 @@ Son kayıt: 14 Ekim2026. Kaynak, GitHub kontrolleri, canlı sürüm ve fiziksel 
 - Kamera/Epson/elterminali fiziksel kabulü UNKNOWN. Günlükoffsite/WAL/PITR/RPO/RTO/authrestore doğrulanmadı;13Ekim izolepgdump/restore schema31/netledger0 kanıtı var.
 - Excel/ürünbirim barkodu, yetkilifişdraftedit/iptal/terskayıt, ERP aktarımı ve QRsevkiyat kalan ayrı işlerdir; tamamlandı sayılmaz.
 - Giriş [continuity/README](continuity/README.md); erişim/yayın/yedek [OPERATIONS](continuity/OPERATIONS.md). Güncel kalan kart/GitSHA/run/VPSdefter kanıtı sohbet tahmininden üstündür.
+
+- A kaynak aktarımı int/package-movement-ready: aynı incelenmiş30Gitblob, beş gerçekT951–955 author teslimi; eski çakışan kart history guard hatası korunur. YerelT956 actor üstü henüzmain/yayın değildir; yeni actualbase kapıları bekler.

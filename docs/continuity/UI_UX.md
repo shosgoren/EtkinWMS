@@ -72,3 +72,9 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Belirsiz gönderimden sonra içerik kilitli; ilk kesin prepare doğrulama/yetki reddi düzeltmeye izin verir, önceden belirsiz outcome varsa kilit korunur; prepare yanıtı URL'yi belge kimliğiyle korur; retry aynı taslak ve ayrı sabit komut anahtarlarını kullanır. Draft edit/cancel yok. Sayfa kapanırken cevabı alınmamış prepare için otomatik kurtarma yok.
 - T937 etiket bağlantısı yalnız gerçek POSTED sonucu: `/t/[slug]/receipts/packages/labels?document=<uuid>`. Metadata `PackageReceiptDto.packages` (server QR/id, sıra, ürün, quantity/unitCode, lotCode/producedOn/expiresOn); miktar kabul anına aittir. T936 label route veya baskı gerçekleştirmez.
 - Scoped UI/action testleri67 PASS, skip0; scoped lint ve web typecheck PASS. Yayın/pilot/gerçek baskı başarı kanıtı değildir.
+
+## T951–955 tekilQR kalite / yerleştirme
+- `/t/[slug]/field/packages?package=<uuid>` aynı fiziksel QR için gerçek currentbalance/konum/durum gösterir; origin lot/üretim/SKT ayrı korunur. İlk dilim tam paket kalite onayı ve aynıdepo STORAGE yerleştirmedir; transfer/üretim tamamlandı sayılmaz.
+- Akış: Paket okut → sunucunun izin verdiği tek işlem → gerekirse yer okut → sunucu sonucu. Ürün/palet barkodu paket yerine kabul edilmez; miktarı kullanıcı tekrar girmez.
+- Hydration öncesi girdiler kapalı; belirsiz yazma aynı içerik/anahtarla tekrar edilir. POSTED cevabı sonrası okuma hatasında yazma tekrarlanmaz; yeni işlem taze currentstate yüklenene kadar kapalı.
+- Yeni gerçek tarayıcı4/4PASS: kayıp cevap/tek etki/aynıQR/diğer800KG, dört viewport,56pxana/geri ve48pxsonalan/odak. Kamera/Epson fiziksel kabulü UNKNOWN; serverflag ve canlı kaynak durumu STATE'dedir.

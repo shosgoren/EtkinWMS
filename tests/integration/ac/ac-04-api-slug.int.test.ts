@@ -41,7 +41,7 @@ vi.mock("../../../apps/web/lib/auth-service.ts", () => ({
   getAuthService: () => ({
     getPrincipal: (headers: Headers) => {
       const u = headers.get("x-test-user");
-      return Promise.resolve(u === null ? null : { userId: u, mfaVerified: true });
+      return Promise.resolve(u === null ? null : { userId: u, mfaVerified: headers.get("x-test-mfa") !== "false" });
     },
   }),
 }));
@@ -133,6 +133,8 @@ async function snapshot(t: Fx): Promise<unknown> {
     tasks: await q("SELECT count(*)::int AS n, count(*) FILTER (WHERE status = 'OPEN')::int AS open FROM public.warehouse_tasks WHERE tenant_id = $1"),
     idempotency: await q("SELECT count(*)::int AS n FROM public.idempotency_records WHERE tenant_id = $1"),
     ledger: await q("SELECT count(*)::int AS n, COALESCE(sum(quantity), 0)::text AS q FROM public.stock_ledger WHERE tenant_id = $1"),
+    packageSteps: await q("SELECT document_line_id, handling_unit_id, sequence_no FROM public.package_movement_steps WHERE tenant_id = $1 ORDER BY document_line_id"),
+    packageOrigins: await q("SELECT id, document_id, lot_code, produced_on::text, expires_on::text FROM public.receipt_packages WHERE tenant_id = $1 ORDER BY id"),
     balances: await q("SELECT count(*)::int AS n, COALESCE(sum(quantity), 0)::text AS q, COALESCE(sum(reserved_quantity), 0)::text AS r FROM public.stock_balances WHERE tenant_id = $1"),
   };
 }
@@ -244,7 +246,7 @@ beforeAll(async () => {
   await adm.query("INSERT INTO public.locations (tenant_id,id,warehouse_id,code,name,depth,kind) VALUES($1,$2,$3,$4,'A package receiving',0,'RECEIVING')", [A.tenant, receivingA, A.warehouse, `PA-${rnd()}`]);
   const packageReceipt = async (t: Fx, item: ItemFx, location: string, posted: boolean): Promise<string> => {
     const params = { db: app, principal: { userId: t.admin, mfaVerified: true }, tenantSlug: t.slug, clientKey: randomUUID() };
-    const result = await preparePackageReceipt(params, { warehouseId: t.warehouse, receivingLocationId: location, itemId: item.item, unitId: item.unit, kind: "VARIL", packages: { mode: "equal", count: 2, quantity: "200" } });
+    const result = await preparePackageReceipt(params, { warehouseId: t.warehouse, receivingLocationId: location, itemId: item.item, unitId: item.unit, kind: "VARIL", packages: { mode: "equal", count: 2, quantity: "200", lotCode: `PKG-${t.label}-${rnd()}`, producedOn: "2026-01-01", expiresOn: "2028-01-01" } });
     const documentId = result.documentId as string;
     if (posted) await postPackageReceipt({ ...params, clientKey: randomUUID() }, { documentId, expectedVersion: 1 });
     return documentId;
@@ -322,6 +324,7 @@ const SHELL_LOADERS = ["field/layout.tsx", "field/page.tsx"] as const;
 const LABELS = "labels/page.tsx" as const;
 /** T-216: ürün ayrıntısı ek bir dinamik segment (`itemId`) ister; ortak döngüde değil, aşağıdaki özel bloktadır. */
 const ITEM_DETAIL = "items/[itemId]/page.tsx" as const;
+const PACKAGE_MOVEMENT_LOADER = "field/packages/page.tsx" as const;
 const PACKAGE_LOADERS = ["receipts/packages/page.tsx", "receipts/packages/labels/page.tsx"] as const;
 type Loader = (props: {
   params: Promise<{ slug: string; warehouseId?: string; itemId?: string }>;
@@ -331,7 +334,7 @@ type Loader = (props: {
 
 /** `[warehouseId]` yükleyicisi için kimlik: verilmezse slug A'nınsa A'nın, değilse B'nin deposu (çapraz tenant denemesi). */
 async function runLoader(
-  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | (typeof SHELL_LOADERS)[number] | typeof LABELS | (typeof PACKAGE_LOADERS)[number],
+  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | (typeof SHELL_LOADERS)[number] | typeof LABELS | (typeof PACKAGE_LOADERS)[number] | typeof PACKAGE_MOVEMENT_LOADER,
   slug: string,
   warehouseId?: string,
   itemId?: string,
@@ -400,7 +403,7 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
 
 describe("sayfa yükleyicileri (/t/<slug>)", () => {
   it("@AC-04 kapsam: apps/web/app/t/[slug] altındaki her page/layout bu tabloda (yeni yükleyici testsiz kalamaz)", () => {
-    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, ...PACKAGE_LOADERS].sort());
+    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER].sort());
   });
 
   for (const rel of LOADERS) {
@@ -571,6 +574,151 @@ describe("paket kabulü ve etiket yükleyicileri — gerçek DB üyelik/izin/RLS
     expect(rendered(own.value)).not.toContain(packageDocs.postedB);
     expect(rendered(own.value)).not.toContain(B.name);
     expect(await snapshot(A)).toEqual(before);
+  });
+});
+
+describe("paket hareketi gerçek GET yükleyicisi — T-945", () => {
+  const rendered = (value: unknown): string => JSON.stringify(value, (key, v: unknown) => key === "type" || key === "_owner" || key === "_store" ? undefined : v);
+  let ownPackage: { id: string; lot_code: string; produced_on: string; expires_on: string; location_id: string; location_code: string; location_name: string; location_kind: string; stock_status: string; quantity: string; version: string };
+  let foreignPackage: { id: string; lot_code: string };
+
+  beforeAll(async () => {
+    // Oracle reads the existing domain-posted fixtures; no fabricated stock or authorization.
+    const own = await adm.query<typeof ownPackage>(`SELECT rp.id,rp.lot_code,rp.produced_on::text,rp.expires_on::text,
+      sd.location_id,loc.code AS location_code,loc.name AS location_name,loc.kind AS location_kind,
+      sd.stock_status,b.quantity::text,b.version::text
+      FROM public.receipt_packages rp
+      JOIN public.stock_dimensions sd ON sd.tenant_id=rp.tenant_id AND sd.handling_unit_id=rp.id
+      JOIN public.stock_balances b ON b.tenant_id=sd.tenant_id AND b.stock_dimension_id=sd.id AND b.quantity>0
+      JOIN public.locations loc ON loc.tenant_id=sd.tenant_id AND loc.id=sd.location_id
+      WHERE rp.tenant_id=$1 AND rp.document_id=$2 ORDER BY rp.package_no`, [A.tenant, packageDocs.postedA]);
+    expect(own.rows).toHaveLength(2);
+    ownPackage = own.rows[0]!;
+    const foreign = await adm.query<typeof foreignPackage>("SELECT id,lot_code FROM public.receipt_packages WHERE tenant_id=$1 AND document_id=$2 ORDER BY package_no", [B.tenant, packageDocs.postedB]);
+    expect(foreign.rows).toHaveLength(2);
+    foreignPackage = foreign.rows[0]!;
+  });
+
+  const load = (slug: string, packageId?: string) => runLoader(PACKAGE_MOVEMENT_LOADER, slug, undefined, undefined, packageId === undefined ? {} : { package: packageId });
+  const returnTo = () => `/t/${encodeURIComponent(A.slug)}/field/packages?${new URLSearchParams({ package: ownPackage.id })}`;
+  const noForeignData = (value: unknown) => {
+    for (const privateValue of [B.name, B.tenant, B.warehouse, B.warehouseName, fx.B.item, packageDocs.postedB, foreignPackage.id, foreignPackage.lot_code]) {
+      expect(rendered(value)).not.toContain(privateValue);
+    }
+  };
+
+  it("@AC-04 field/packages: bayrak false yetkili ve anonim gerçek paket GET'ini 404 yapar, etki yok", async () => {
+    const beforeA = await snapshot(A), beforeB = await snapshot(B);
+    const prior = process.env.PACKAGE_RECEIVING_ENABLED;
+    try {
+      process.env.PACKAGE_RECEIVING_ENABLED = "false";
+      for (const user of [A.admin, null]) {
+        as(user, null);
+        expect(await load(A.slug, ownPackage.id)).toEqual({ outcome: "notFound" });
+      }
+    } finally {
+      if (prior === undefined) delete process.env.PACKAGE_RECEIVING_ENABLED;
+      else process.env.PACKAGE_RECEIVING_ENABLED = prior;
+    }
+    expect(await snapshot(A)).toEqual(beforeA);
+    expect(await snapshot(B)).toEqual(beforeB);
+  });
+
+  it("@AC-04 field/packages: anonim GET yerel UUID sorgusunu login dönüşünde korur", async () => {
+    const before = await snapshot(A);
+    as(null, null);
+    expect(await load(A.slug, ownPackage.id)).toEqual({ outcome: "redirect", to: `/login?next=${encodeURIComponent(returnTo())}` });
+    as(null, null);
+    expect(await load(A.slug)).toEqual({ outcome: "redirect", to: `/login?next=${encodeURIComponent(`/t/${A.slug}/field/packages`)}` });
+    expect(await snapshot(A)).toEqual(before);
+  });
+
+  it("@AC-04 field/packages: yabancı slug ve üyelik yokluğu aynı 404, tenant/paket verisi yok", async () => {
+    const beforeA = await snapshot(A), beforeB = await snapshot(B);
+    as(A.admin, null);
+    const cross = await load(B.slug, foreignPackage.id);
+    as(A.admin, null);
+    expect(await load(`yok-${rnd()}`, foreignPackage.id)).toEqual(cross);
+    as(outsider.id, null);
+    expect(await load(B.slug, foreignPackage.id)).toEqual(cross);
+    as(B.admin, null);
+    expect(await load(A.slug, ownPackage.id)).toEqual(cross);
+    expect(cross).toEqual({ outcome: "notFound" });
+    noForeignData(cross);
+    expect(await snapshot(A)).toEqual(beforeA);
+    expect(await snapshot(B)).toEqual(beforeB);
+  });
+
+  it("@AC-04 field/packages: kendi slug'ında gerçek yabancı paket ve eksik UUID aynı maskeli NOT_FOUND, etki yok", async () => {
+    const beforeA = await snapshot(A), beforeB = await snapshot(B);
+    as(A.admin, null);
+    const cross = await load(A.slug, foreignPackage.id);
+    as(A.admin, null);
+    const missing = await load(A.slug, randomUUID());
+    expect(cross.outcome).toBe("render");
+    expect(rendered(cross)).toEqual(rendered(missing));
+    expect(rendered(cross.value)).toContain("loadError");
+    expect(rendered(cross.value)).toContain("NOT_FOUND");
+    noForeignData(cross);
+    expect(await snapshot(A)).toEqual(beforeA);
+    expect(await snapshot(B)).toEqual(beforeB);
+  });
+
+  it("@AC-04 field/packages: aktif rolsüz üye kilitli görünüm alır, kendi paket metadata/kimlik verisi yok", async () => {
+    const before = await snapshot(A);
+    as(packageDocs.deniedUser, null);
+    const denied = await load(A.slug, ownPackage.id);
+    expect(denied.outcome).toBe("render");
+    expect(rendered(denied.value)).toContain("locked");
+    for (const privateValue of [ownPackage.id, ownPackage.lot_code, ownPackage.location_id, fx.A.item, packageDocs.postedA, "200.000000"]) {
+      expect(rendered(denied.value)).not.toContain(privateValue);
+    }
+    noForeignData(denied);
+    expect(await snapshot(A)).toEqual(before);
+  });
+
+  it("@AC-04 field/packages: Origin olmayan kendi GET gerçek QR/güncel bakiye/lokasyon/origin metadata çizer, salt okunur", async () => {
+    const beforeA = await snapshot(A), beforeB = await snapshot(B);
+    as(A.admin, null);
+    const own = await load(A.slug, ownPackage.id);
+    expect(own.outcome).toBe("render");
+    const props = (own.value as { props: { slug: string; initial: Record<string, unknown> } }).props;
+    expect(props.slug).toBe(A.slug);
+    expect(props.initial).toMatchObject({
+      id: ownPackage.id, qr: `EWMS:PKG:1:${ownPackage.id}`, kind: "VARIL", packageNo: 1,
+      itemId: fx.A.item, baseUnitId: fx.A.unit, warehouseId: A.warehouse, warehouseName: A.warehouseName,
+      originBaseQuantity: "200.000000", currentBaseQuantity: ownPackage.quantity,
+      lotCode: ownPackage.lot_code, producedOn: ownPackage.produced_on, expiresOn: ownPackage.expires_on,
+      currentLocation: { id: ownPackage.location_id, code: ownPackage.location_code, name: ownPackage.location_name, kind: ownPackage.location_kind },
+      currentStockStatus: ownPackage.stock_status, predecessorVersion: 0, currentBalanceVersion: ownPackage.version,
+    });
+    expect(props.initial.lotCode).toMatch(/^PKG-A-/);
+    expect(props.initial.producedOn).toBe("2026-01-01");
+    expect(props.initial.expiresOn).toBe("2028-01-01");
+    noForeignData(own);
+    expect(await snapshot(A)).toEqual(beforeA);
+    expect(await snapshot(B)).toEqual(beforeB);
+  });
+
+  it("@AC-04 field/packages: gerçek domain MFA_REQUIRED sorgusu UUID dönüşünü MFA yönlendirmesinde korur, etki yok", async () => {
+    const before = await snapshot(A);
+    as(A.admin, null);
+    h.headers.set("x-test-mfa", "false");
+    expect(await load(A.slug, ownPackage.id)).toEqual({ outcome: "redirect", to: `/mfa?next=${encodeURIComponent(returnTo())}` });
+    expect(await snapshot(A)).toEqual(before);
+  });
+
+  it("@AC-04 field/packages: eksik paket boş tarama ekranı, hatalı UUID 404, GET stok yazmaz", async () => {
+    const beforeA = await snapshot(A), beforeB = await snapshot(B);
+    as(A.admin, null);
+    const scan = await load(A.slug);
+    expect(scan.outcome).toBe("render");
+    expect((scan.value as { props: { initial: unknown; slug: string } }).props).toEqual({ slug: A.slug, initial: null });
+    as(A.admin, null);
+    expect(await load(A.slug, "https://foreign.example.test/package")).toEqual({ outcome: "notFound" });
+    noForeignData(scan);
+    expect(await snapshot(A)).toEqual(beforeA);
+    expect(await snapshot(B)).toEqual(beforeB);
   });
 });
 
