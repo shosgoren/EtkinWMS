@@ -145,8 +145,10 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 .knob{position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .25s}
 .switch.on .knob-track{background:#D9702A}
 .switch.on .knob{left:22px}
-.loginico{transition:transform .2s ease,box-shadow .2s ease}
-.loginbtn:hover .loginico{transform:translate(-2px,-2px);box-shadow:5px 5px 0 #172E42}
+.loginbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;min-width:48px;padding:0 18px 0 14px;border-radius:999px;background:#F4C542;border:1.5px solid #172E42;color:#172E42;text-decoration:none;font:600 12px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;box-sizing:border-box;transition:background .2s,transform .2s}
+.loginbtn:hover{background:#FFD460;transform:translateY(-1px)}
+.loginbtn svg{flex:none}
+@media (max-width:520px){.loginbtn{padding:0}.loginlbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 .qr{position:absolute;left:24%;top:22%;width:46%;height:52%;background:repeating-conic-gradient(#172E42 0 25%,#FFFFFF 0 50%) 0 0/.55cqw .55cqw;box-shadow:0 0 0 .35cqw #FFFFFF;border-radius:.12cqw}
 
 /* soft ambient background */
