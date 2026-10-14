@@ -5,7 +5,7 @@ import { AppError } from "@wms/shared/errors";
 import type { AccessTx } from "../identity/access.ts";
 import { executeStockCommand, postApprovedDocumentInTx, type StockDocCallParams } from "../stock/index.ts";
 import { emptyPlan, planFieldPosting, prepareFieldDocument, type FieldPostSpec } from "./field-posting.ts";
-import { assertPackageCurrent, packageWarehouseIds, parsePackageMovementInput, readPackageState, type PutawayPackageInput } from "./package-movement.ts";
+import { assertPackageCurrent, packageWarehouseIds, parsePackageMovementInput, readPackageState, packageQuantityForBase, type PutawayPackageInput } from "./package-movement.ts";
 import { mergeFieldPlans } from "./warehouse-transfer.ts";
 
 export type PackageTransferInput = PutawayPackageInput;
@@ -20,8 +20,8 @@ async function targetLocation(tx: AccessTx, tenantId: string, value: Value) {
 async function specs(tx: AccessTx, tenantId: string, value: Value, state: State): Promise<readonly [FieldPostSpec, FieldPostSpec]> {
   const target = await targetLocation(tx, tenantId, value);
   if (state.stock_status !== "AVAILABLE" || !["RECEIVING", "STORAGE"].includes(state.location_kind) || target.kind !== "STORAGE" || target.status !== "ACTIVE" || target.warehouse_id === state.warehouse_id) throw new AppError("VALIDATION_FAILED");
-  const line = { itemId: state.item_id, unitId: state.unit_id, quantity: state.quantity, conversionFactor: state.conversion_factor,
-    baseQuantity: state.base_quantity, lotId: state.lot_id, handlingUnitId: value.packageId, stockStatus: "AVAILABLE" as const, targetStockStatus: null, sourceLineId: null };
+  const line = { itemId: state.item_id, unitId: state.unit_id, quantity: packageQuantityForBase(state,state.remaining_base_quantity), conversionFactor: state.conversion_factor,
+    baseQuantity: state.remaining_base_quantity, lotId: state.lot_id, handlingUnitId: value.packageId, stockStatus: "AVAILABLE" as const, targetStockStatus: null, sourceLineId: null };
   return [
     { kind: "STOCK_OUT", warehouseId: state.warehouse_id, sourceKind: null, sourceId: null, reason: "PACKAGE_TRANSFER", lines: [{ ...line, sourceLocationId: state.location_id, targetLocationId: null }] },
     { kind: "STOCK_IN", warehouseId: target.warehouse_id, sourceKind: null, sourceId: null, reason: "PACKAGE_TRANSFER", lines: [{ ...line, sourceLocationId: null, targetLocationId: target.id }] },
@@ -53,7 +53,7 @@ export async function transferPackage(params: StockDocCallParams, input: Package
       await tx.execute(sql`INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,
         previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity,source_document_id,source_document_line_id)
         VALUES(${ctx.tenantId}::uuid,${value.packageId}::uuid,${into.documentId}::uuid,${inLine}::uuid,'WAREHOUSE_TRANSFER',${current.sequence_no + 1},
-        ${current.previous_document_line_id}::uuid,${current.location_id}::uuid,${value.targetLocationId}::uuid,'AVAILABLE','AVAILABLE',${current.base_quantity}::numeric,${out.documentId}::uuid,${outLine}::uuid)`);
+        ${current.previous_document_line_id}::uuid,${current.location_id}::uuid,${value.targetLocationId}::uuid,'AVAILABLE','AVAILABLE',${current.remaining_base_quantity}::numeric,${out.documentId}::uuid,${outLine}::uuid)`);
       // The existing link schema permits actual APPROVED parents; final package validation is deferred to commit.
       await tx.execute(sql`INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind)
         VALUES(${ctx.tenantId}::uuid,${out.documentId}::uuid,${into.documentId}::uuid,'TRANSFER')`);
