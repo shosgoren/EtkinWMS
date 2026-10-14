@@ -202,3 +202,4 @@
 - Main belge çakışması kaynak koda dokunmadan çözüldü. PR/main/yayın ve gerçek cihaz ayrı kapılar; flagfalse. Son doğrudan VPS check fdf9d6/schema34 healthok.
 - 2026-10-14 T-945 demo talebi e-posta bildirimi (Resend), review 0/0/4 düzeltildi; anahtar bekliyor.
 - 2026-10-14 T-980 giriş sahnesi; T-945 gerçek e-posta teslimi doğrulandı.
+- 2026-10-14 T-981 giriş Rota e sahnesi + uygulama/PWA logosu; landing talep formu yeniden doğrulandı (201, Resend Delivered).

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
-import { Package } from "@wms/ui";
 import { SignOutButton } from "./auth-forms.tsx";
+import { BrandMark } from "./brand-mark.tsx";
 import "./globals.css";
 import { FirstUseGuide, GuideTrigger } from "./first-use-guide.tsx";
 
@@ -57,11 +57,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </a>
           <header className="app-header sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-surface px-4 py-2">
             <div className="flex min-w-0 items-center gap-3">
-              <span
-                aria-hidden="true"
-                className="flex size-12 shrink-0 items-center justify-center rounded-2xl border-b-4 border-accent bg-ink text-on-accent"
-              >
-                <Package className="size-6 text-accent" strokeWidth={2} aria-hidden="true" />
+              <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center">
+                <BrandMark className="size-full" />
               </span>
               <div className="flex min-w-0 flex-col leading-tight">
                 <span className="truncate text-xl font-extrabold">{t("productName")}</span>
