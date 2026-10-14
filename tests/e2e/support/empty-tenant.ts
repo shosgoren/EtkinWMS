@@ -20,9 +20,31 @@ export interface EmptyTenant {
   readonly totpSecret: string;
 }
 
-export function emptyTenant(fixture: "empty" | "pilot" | "stockDesktop" | "stockMobile" = "empty"): EmptyTenant {
+/** T-956: each workflow/device provisions a real independent local signup/workspace/MFA actor. */
+export const PACKAGE_ACTORS = [
+  { workflow: "receiving", fixture: "receivingDesktop", prefix: "E2E_PACKAGE_RECEIVING_DESKTOP", mobile: false, clientIp: "198.51.100.81" },
+  { workflow: "receiving", fixture: "receivingMobile", prefix: "E2E_PACKAGE_RECEIVING_MOBILE", mobile: true, clientIp: "198.51.100.82" },
+  { workflow: "movement", fixture: "movementDesktop", prefix: "E2E_PACKAGE_MOVEMENT_DESKTOP", mobile: false, clientIp: "198.51.100.83" },
+  { workflow: "movement", fixture: "movementMobile", prefix: "E2E_PACKAGE_MOVEMENT_MOBILE", mobile: true, clientIp: "198.51.100.84" },
+  { workflow: "transfer", fixture: "transferDesktop", prefix: "E2E_PACKAGE_TRANSFER_DESKTOP", mobile: false, clientIp: "198.51.100.85" },
+  { workflow: "transfer", fixture: "transferMobile", prefix: "E2E_PACKAGE_TRANSFER_MOBILE", mobile: true, clientIp: "198.51.100.86" },
+  { workflow: "production", fixture: "productionDesktop", prefix: "E2E_PACKAGE_PRODUCTION_DESKTOP", mobile: false, clientIp: "198.51.100.87" },
+  { workflow: "production", fixture: "productionMobile", prefix: "E2E_PACKAGE_PRODUCTION_MOBILE", mobile: true, clientIp: "198.51.100.88" },
+] as const;
+export type PackageWorkflow = (typeof PACKAGE_ACTORS)[number]["workflow"];
+type TenantFixture = "empty" | "pilot" | "stockDesktop" | "stockMobile" | (typeof PACKAGE_ACTORS)[number]["fixture"];
+export function packageActor(workflow: PackageWorkflow, mobile: boolean) {
+  const actor = PACKAGE_ACTORS.find(a => a.workflow === workflow && a.mobile === mobile);
+  if (actor === undefined) throw new Error("e2e: unknown package workflow actor");
+  return actor;
+}
+
+export function emptyTenant(fixture: TenantFixture = "empty"): EmptyTenant {
   if (process.env.E2E_BASE_URL?.trim()) throw new Error("e2e: yerel tenant fikstürü uzak hedefte kullanılamaz");
-  const prefix = { empty: "E2E_EMPTY", pilot: "E2E_PILOT", stockDesktop: "E2E_STOCK_DESKTOP", stockMobile: "E2E_STOCK_MOBILE" }[fixture];
+  const actor = PACKAGE_ACTORS.find(a => a.fixture === fixture);
+  const legacy = { empty: "E2E_EMPTY", pilot: "E2E_PILOT", stockDesktop: "E2E_STOCK_DESKTOP", stockMobile: "E2E_STOCK_MOBILE" };
+  const prefix = actor?.prefix ?? legacy[fixture as keyof typeof legacy];
+  if (prefix === undefined) throw new Error("e2e: unknown tenant fixture");
   const slug = process.env[`${prefix}_SLUG`];
   const email = process.env[`${prefix}_EMAIL`];
   const password = process.env[`${prefix}_PASSWORD`];
@@ -114,7 +136,7 @@ export async function scrubSecretInputs(page: Page): Promise<void> {
 }
 
 /** Normal e-posta/parola giriş formu + iki adım (TOTP) ekranı; girişten sonra kiracı ana ekranı. */
-export async function loginEmptyTenant(page: Page, fixture: "empty" | "pilot" | "stockDesktop" | "stockMobile" = "empty"): Promise<EmptyTenant> {
+export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "empty"): Promise<EmptyTenant> {
   const t = emptyTenant(fixture);
   await bindSecrets(page, { password: t.password, totpSecret: t.totpSecret });
   await page.goto(`/login?next=${encodeURIComponent(`/t/${t.slug}`)}`);

@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { emptyTenant, localClient, scrubSecretInputs } from "./support/empty-tenant.ts";
+import { emptyTenant, localClient, packageActor, scrubSecretInputs } from "./support/empty-tenant.ts";
 import { assertStock, cleanupPackages, db, documentId, fillPackage, identities, posted, seedPackage } from "./support/package-receiving.ts";
 
 test.use({ ...localClient("198.51.100.142"), trace: "off" });
@@ -51,7 +51,7 @@ test("POSTED labels decode five real QRs, escaped metadata, print and reopen pre
   await page.goto(`/t/${foreign}/receipts/packages/labels?document=${id}`);
   await expect(page.getByTestId("package-label-sheet")).toHaveCount(0);
   // Remove only this synthetic fixture account's stock.view role; restore even on assertion failure.
-  const roles = await db<{ membership_id: string; role_key: string }>("SELECT r.membership_id,r.role_key FROM public.membership_roles r JOIN public.tenant_memberships m ON m.tenant_id=r.tenant_id AND m.id=r.membership_id WHERE r.tenant_id=$1 AND m.user_id=(SELECT id FROM public.users WHERE email=$2)", [f.tenantId, emptyTenant(info.project.name.includes("mobile") ? "stockMobile" : "stockDesktop").email]);
+  const roles = await db<{ membership_id: string; role_key: string }>("SELECT r.membership_id,r.role_key FROM public.membership_roles r JOIN public.tenant_memberships m ON m.tenant_id=r.tenant_id AND m.id=r.membership_id WHERE r.tenant_id=$1 AND m.user_id=(SELECT id FROM public.users WHERE email=$2)", [f.tenantId, emptyTenant(packageActor("receiving", info.project.name.includes("mobile")).fixture).email]);
   expect(roles.length).toBeGreaterThan(0);
   try {
     await db("DELETE FROM public.membership_roles WHERE tenant_id=$1 AND membership_id=$2", [f.tenantId, roles[0]!.membership_id]);

@@ -15,7 +15,7 @@ import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { clearSharedSession, mintSharedSession } from "./support/demo-session.ts";
-import { provisionEmptyTenant } from "./support/empty-tenant.ts";
+import { PACKAGE_ACTORS, provisionEmptyTenant } from "./support/empty-tenant.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, ".artifacts/e2e");
@@ -161,7 +161,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   let proxy: https.Server | undefined;
   const teardown = async (): Promise<void> => {
     clearSharedSession();
-    for (const prefix of ["E2E_EMPTY", "E2E_PILOT"]) {
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
     }
     proxy?.close();
@@ -287,6 +287,26 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
         process.env[`${prefix}_EMAIL`] = stockEmail;
         process.env[`${prefix}_PASSWORD`] = stockPassword;
         process.env[`${prefix}_TOTP_SECRET`] = stock.totpSecret;
+      }
+      // Package workflows must not consume the legacy stock principal's user-level request budget.
+      // Provisioning remains local-only and uses the same real signup/workspace/MFA screens.
+      for (const actor of PACKAGE_ACTORS) {
+        const device = actor.mobile ? "MOBILE" : "DESKTOP";
+        const actorEmail = `package-${actor.workflow}-${device.toLowerCase()}-${suffix}@example.test`;
+        const actorPassword = randomBytes(18).toString("hex");
+        const made = await provisionEmptyTenant({
+          browser,
+          origin: `https://localhost:${portB}`,
+          clientIp: actor.clientIp,
+          name: `E2E package ${actor.workflow} ${device}`,
+          email: actorEmail,
+          password: actorPassword,
+          workspaceName: `E2E package ${actor.workflow} ${device} ${suffix}`,
+        });
+        process.env[`${actor.prefix}_SLUG`] = made.slug;
+        process.env[`${actor.prefix}_EMAIL`] = actorEmail;
+        process.env[`${actor.prefix}_PASSWORD`] = actorPassword;
+        process.env[`${actor.prefix}_TOTP_SECRET`] = made.totpSecret;
       }
     } catch (e) {
       setupError = e;
