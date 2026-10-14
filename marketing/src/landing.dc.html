@@ -1,0 +1,1259 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin WMS — Girişten sevkiyata kesintisiz kontrolün en kolay hali</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F6F4EF}
+a{color:#172E42}a:hover{color:#0E1D2B}
+.wms *,.wms *::before,.wms *::after{box-sizing:border-box}
+.wms ::selection{background:#F4C542;color:#172E42}
+.wms :focus-visible{outline:2px solid #172E42;outline-offset:3px}
+.paper-grid{background-color:#F6F4EF;background-image:linear-gradient(rgba(23,46,66,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(23,46,66,.055) 1px,transparent 1px);background-size:24px 24px}
+.scanreveal{animation:clipIn 1.1s cubic-bezier(.65,0,.2,1) both}
+@keyframes clipIn{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.rise{animation:rise .9s cubic-bezier(.2,.7,.1,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}}
+
+/* ═══ 3D isometric warehouse ═══ */
+.stage{position:relative;width:100%;aspect-ratio:16/10.5;container-type:inline-size;overflow:hidden;border-radius:20px;background:radial-gradient(ellipse 70% 60% at 50% 55%,#FFFFFF 0%,#ECE7DD 100%);border:1.5px solid #CFC8BA}
+.world{position:absolute;left:50%;top:53%;width:56cqw;height:56cqw;transform-style:preserve-3d;transition:transform 1.4s cubic-bezier(.6,0,.25,1)}
+.world *{transform-style:preserve-3d}
+.world sc-for,.world sc-if,.group sc-for{display:contents}
+.cube{position:absolute}
+.f{position:absolute;display:block;box-shadow:inset 0 0 0 .08cqw rgba(23,46,66,.22)}
+.ft{left:0;top:0;width:100%;height:100%}
+.fs{left:0;bottom:0;width:100%;transform-origin:50% 100%;transform:rotateX(-90deg)}
+.fe{top:0;right:0;height:100%;transform-origin:100% 50%;transform:rotateY(90deg)}
+.group{position:absolute}
+.mov{transition:left 1.3s cubic-bezier(.6,0,.25,1),top 1.3s cubic-bezier(.6,0,.25,1),transform 1.3s cubic-bezier(.6,0,.25,1),opacity .3s ease}
+.loaded{opacity:0;transition-delay:0s,0s,0s,1.5s}
+.decal{position:absolute;border:.25cqw dashed rgba(23,46,66,.28);border-radius:1.2cqw;transform:translateZ(.06cqw);transition:background .5s,border-color .5s}
+.decal.on{background:rgba(244,197,66,.28);border:.3cqw solid #172E42}
+.decal-l{position:absolute;left:5%;bottom:5%;font:800 max(6px,1.6cqw)/1 'Bricolage Grotesque',sans-serif;color:rgba(23,46,66,.5);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.lane-h{position:absolute;height:.5cqw;transform:translateZ(.07cqw);background:repeating-linear-gradient(90deg,#E2B53B 0 1.6cqw,transparent 1.6cqw 2.6cqw)}
+.lane-v{position:absolute;width:.5cqw;transform:translateZ(.07cqw);background:repeating-linear-gradient(0deg,#E2B53B 0 1.6cqw,transparent 1.6cqw 2.6cqw)}
+.hz{position:absolute;transform:translateZ(.08cqw);background:repeating-linear-gradient(45deg,#172E42 0 .8cqw,#F4C542 .8cqw 1.6cqw);border-radius:.3cqw}
+.tag{position:absolute;white-space:nowrap;padding:.55cqw 1.1cqw;border-radius:99px;border:.16cqw solid #172E42;font:600 max(8px,1.3cqw)/1 'IBM Plex Mono',monospace;letter-spacing:.06em;transition:transform 1.4s cubic-bezier(.6,0,.25,1),left 1.3s cubic-bezier(.6,0,.25,1),top 1.3s cubic-bezier(.6,0,.25,1),background .4s,color .4s,opacity .3s}
+.tag::after{content:'';position:absolute;left:50%;top:100%;width:.16cqw;height:2.2cqw;background:#172E42;transform:translateX(-50%)}
+.tag.loaded{opacity:0;transition-delay:0s,0s,0s,0s,0s,1.5s}
+.conv{animation:conv 6s linear infinite}
+.conv.c2{animation-delay:-2s}.conv.c3{animation-delay:-4s}
+@keyframes conv{0%{left:3%;opacity:0}10%{opacity:1}82%{opacity:1}100%{left:21%;opacity:0}}
+.laser{opacity:0;transition:opacity .4s}
+.laser.on{opacity:1;animation:flick .45s steps(2) infinite}
+@keyframes flick{50%{opacity:.55}}
+.piston.on{animation:piston .7s ease-in-out infinite alternate}
+@keyframes piston{from{transform:translateZ(4.2cqw)}to{transform:translateZ(5.6cqw)}}
+.blink{animation:blinkO 1s steps(2) infinite}
+@keyframes blinkO{50%{opacity:.35}}
+.truck.go{animation:truckGo 1.8s cubic-bezier(.5,0,.8,.4) 1.6s both}
+@keyframes truckGo{from{margin-top:0;opacity:1}to{margin-top:-34cqw;opacity:0}}
+.beamcol{animation:beamP 1.6s ease-in-out infinite}
+@keyframes beamP{50%{opacity:.55}}
+
+/* overlays + controls */
+.ov{position:absolute;z-index:5}
+.vbtn{appearance:none;border:0;background:transparent;color:#172E42;font:600 13px/1 'Instrument Sans',system-ui,sans-serif;min-height:40px;padding:0 14px;border-radius:999px;cursor:pointer;transition:background .2s,color .2s;white-space:nowrap}
+.vbtn.on{background:#172E42;color:#FFFFFF}
+.pill{appearance:none;border:1.5px solid #172E42;background:#FFFFFF;color:#172E42;min-height:44px;padding:0 14px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font:600 14px/1 'Instrument Sans',system-ui,sans-serif;transition:background .25s,color .25s}
+.pill .pn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#EEF1F4;font:600 11px/1 'IBM Plex Mono',monospace}
+.pill.done{background:#DCEAF5}
+.pill.on{background:#172E42;color:#FFFFFF}
+.pill.on .pn{background:#F4C542;color:#172E42}
+.ctrl{appearance:none;border:1.5px solid #172E42;background:#FFFFFF;color:#172E42;min-width:48px;min-height:48px;border-radius:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 14px;font:600 14px/1 'Instrument Sans',system-ui,sans-serif;transition:background .2s}
+.ctrl:hover{background:#F6F4EF}
+.ctrl.primary{background:#172E42;color:#FFFFFF}
+.ctrl.primary:hover{background:#24435E}
+.slotbtn{appearance:none;min-height:44px;border-radius:10px;border:1.5px solid #7C9AB4;cursor:pointer;font:600 11px/1 'IBM Plex Mono',monospace;color:#172E42;transition:transform .15s}
+.slotbtn:hover{transform:translateY(-2px)}
+.slotbtn.stock{background:#DCEAF5}
+.slotbtn.check{background:#FFF0C2;border-color:#C8962A}
+.slotbtn.empty{background:repeating-linear-gradient(45deg,#FFFFFF 0 4px,#E9EDF1 4px 8px);border-style:dashed}
+.slotbtn.new{background:#F4C542;border-color:#172E42}
+.slotbtn.sel{outline:3px solid #172E42;outline-offset:2px}
+.logrow{animation:logIn .5s ease-out both}
+@keyframes logIn{from{opacity:0;transform:translateX(-8px)}}
+.steptxt{animation:rise .5s ease-out both}
+.show-sm{display:none}
+
+/* ═══ miniature film ═══ */
+.stage > sc-if{display:contents}
+.film{position:absolute;inset:0;overflow:hidden;background:#E9E4DA}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity 1.1s ease}
+.slide img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1.04)}
+.slide.on{opacity:1;z-index:1}
+.slide.on img{animation:kb 6s linear both}
+.slide.prev img{transform:scale(1.2)}
+.slide.zoom.on img{animation-name:kbz}
+.slide.zoom.prev img{transform:scale(1.7)}
+@keyframes kb{from{transform:scale(1.04)}to{transform:scale(1.2)}}
+@keyframes kbz{from{transform:scale(1.04)}to{transform:scale(1.7)}}
+.appzoom{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding:12px 12px 70px;background:rgba(246,244,239,.35);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:appBg .8s ease both}
+@keyframes appBg{from{background:rgba(246,244,239,0);backdrop-filter:blur(0)}}
+.appcard{width:clamp(190px,30cqw,290px);padding:14px;border-radius:26px;background:#F6F4EF;border:3px solid #172E42;box-shadow:10px 12px 0 #F4C542,0 30px 60px -20px rgba(23,46,66,.5);transform-origin:20% 70%;animation:appIn 1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes appIn{from{opacity:0;transform:scale(.2) translate(-20%,10%) rotate(-8deg);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+.filmdots{right:14px;bottom:14px;display:flex;gap:2px;z-index:4}
+.fdot{appearance:none;border:0;background:transparent;width:34px;height:44px;padding:0;cursor:pointer;display:flex;align-items:center}
+.fdot span{display:block;width:100%;height:5px;border-radius:5px;background:rgba(255,255,255,.65);box-shadow:0 0 0 1px rgba(23,46,66,.35);transition:background .3s}
+.fdot.on span{background:#F4C542;box-shadow:0 0 0 1.5px #172E42}
+
+/* ═══ animated phone ═══ */
+.phk{margin:0;font:600 10px/1.2 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#2B5F86}
+.pht{margin:3px 0 0;font:800 21px/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em;color:#172E42}
+.phcard{padding:9px 12px;border-radius:12px;background:#FFFFFF;border:1px solid #DCD6CA}
+.phl{margin:0;font:600 9.5px/1.2 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6A7F91}
+.phv{margin:2px 0 0;font-weight:700;font-size:14px;color:#172E42}
+.pack{flex:1;text-align:center;padding:6px 0;border-radius:8px;border:1px solid #CFC8BA;font-size:11px;font-weight:600;background:#F6F4EF}
+.pack.sel{background:#172E42;border-color:#172E42;color:#FFFFFF}
+.phbtn{display:block;border-radius:12px;background:#172E42;color:#FFFFFF;text-align:center;font-weight:600;font-size:14px;overflow:hidden}
+.phbtn .tap{padding:11px 0}
+.phscan{padding:5px 10px;border-radius:999px;background:#F4C542;font-size:11px;font-weight:700}
+.pop{animation:popIn .45s cubic-bezier(.2,.8,.2,1.15) both}
+@keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.96)}}
+.hideout{animation:hideOut .25s ease both}
+@keyframes hideOut{to{opacity:0;visibility:hidden}}
+.tap{animation:tapIt .6s ease both}
+@keyframes tapIt{0%{background:transparent}35%{background:#F4C542;color:#172E42;transform:scale(.97)}100%{background:#2FA36B;color:#FFFFFF}}
+.labelout{animation:labelOut 1.6s cubic-bezier(.3,.6,.3,1) both}
+@keyframes labelOut{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+.vf{position:absolute;width:26px;height:26px;border:0 solid #F4C542}
+.vscan{position:absolute;left:16%;right:16%;height:2px;background:#E5484D;box-shadow:0 0 10px 2px rgba(229,72,77,.6);animation:vs 1s ease-in-out infinite alternate}
+@keyframes vs{from{top:16%}to{top:84%}}
+.typing{display:inline-block;overflow:hidden;white-space:nowrap;vertical-align:bottom;animation:typeW 1.5s steps(24) both}
+@keyframes typeW{from{max-width:0}to{max-width:18em}}
+.ring{position:absolute;inset:0;border-radius:50%;border:2px solid #F4C542;animation:ringO 1.6s ease-out infinite}
+.ring.r2{animation-delay:.5s}.ring.r3{animation-delay:1s}
+@keyframes ringO{from{transform:scale(1);opacity:.9}to{transform:scale(1.9);opacity:0}}
+.d1{animation-delay:.3s}.d2{animation-delay:.7s}.d3{animation-delay:1.2s}.d4{animation-delay:1.7s}.d5{animation-delay:2.2s}.d6{animation-delay:2.7s}.d7{animation-delay:3.3s}
+.scn{appearance:none;position:relative;overflow:hidden;width:100%;text-align:left;display:flex;align-items:center;gap:14px;padding:11px 14px;min-height:58px;border-radius:14px;border:1.5px solid #DCD6CA;background:#F6F4EF;cursor:pointer;color:#172E42;font:inherit;transition:background .25s,border-color .25s,box-shadow .25s}
+.scn:hover{border-color:#172E42}
+.scn.on{background:#FFFFFF;border-color:#172E42;box-shadow:4px 4px 0 #172E42}
+.scn-n{flex:none;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:#FFFFFF;border:1.5px solid #172E42;font:600 12px/1 'IBM Plex Mono',monospace}
+.scn.done .scn-n{background:#DCEAF5}
+.scn.on .scn-n{background:#F4C542}
+.scnbar{position:absolute;left:0;bottom:0;height:3px;background:#172E42;animation:barW linear both}
+.scnbar.paused{animation-play-state:paused}
+@keyframes barW{from{width:0}to{width:100%}}
+.netpill{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.03em;white-space:nowrap;transition:background .3s,color .3s}
+.net-on{background:#E3F4EA;color:#1E6B45}
+.net-off{background:#FFE9D6;color:#8A4A12}
+.netdot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.net-off .netdot{animation:blinkO 1s steps(2) infinite}
+.switch{appearance:none;display:inline-flex;align-items:center;gap:12px;min-height:48px;padding:6px 16px 6px 6px;border-radius:999px;border:1.5px solid #172E42;background:#FFFFFF;cursor:pointer;font:600 14px/1.2 'Instrument Sans',system-ui,sans-serif;color:#172E42}
+.knob-track{flex:none;position:relative;width:48px;height:30px;border-radius:999px;background:#DCD6CA;transition:background .25s}
+.knob{position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .25s}
+.switch.on .knob-track{background:#D9702A}
+.switch.on .knob{left:22px}
+.loginico{transition:transform .2s ease,box-shadow .2s ease}
+.loginbtn:hover .loginico{transform:translate(-2px,-2px);box-shadow:5px 5px 0 #172E42}
+.qr{position:absolute;left:24%;top:22%;width:46%;height:52%;background:repeating-conic-gradient(#172E42 0 25%,#FFFFFF 0 50%) 0 0/.55cqw .55cqw;box-shadow:0 0 0 .35cqw #FFFFFF;border-radius:.12cqw}
+
+/* soft ambient background */
+.drift{animation:gridDrift 14s linear infinite}
+@keyframes gridDrift{to{background-position:24px 24px,24px 24px}}
+.bgfx{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.hero-in{position:relative;z-index:1}
+.flo{position:absolute;top:104%;display:block;animation:floUp linear infinite}
+.flo svg{display:block;width:100%;height:auto;animation:sway 9s ease-in-out infinite alternate}
+@keyframes floUp{0%{top:104%;opacity:0}12%{opacity:1}88%{opacity:1}100%{top:-12%;opacity:0}}
+@keyframes sway{from{transform:translateX(-14px) rotate(-8deg)}to{transform:translateX(14px) rotate(8deg)}}
+.glow{position:absolute;border-radius:50%;filter:blur(60px);opacity:.35;animation:glowMove 22s ease-in-out infinite alternate}
+@keyframes glowMove{from{transform:translate(0,0) scale(1)}to{transform:translate(8%,10%) scale(1.15)}}
+
+/* shared */
+.navlink{color:#172E42;text-decoration:none;font-weight:500;transition:opacity .2s}
+.navlink:hover{opacity:.65}
+.langbtn{appearance:none;border:0;background:transparent;color:#172E42;font:600 12px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;min-width:44px;min-height:40px;padding:0 10px;cursor:pointer;border-radius:999px;transition:background .2s,color .2s}
+.langbtn.on{background:#172E42;color:#FFFFFF}
+.cta{transition:transform .2s ease,box-shadow .2s ease}
+.cta:hover{transform:translateY(-2px);box-shadow:0 6px 0 #172E42}
+.ghost{transition:background .2s}
+.ghost:hover{background:rgba(23,46,66,.06)}
+.card{transition:transform .25s,box-shadow .25s}
+.card:hover{transform:translateY(-4px);box-shadow:0 18px 36px -18px rgba(23,46,66,.35)}
+.faqbtn{appearance:none;width:100%;border:0;background:transparent;color:#172E42;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:24px 0;min-height:44px;font:600 clamp(17px,2vw,21px)/1.3 'Bricolage Grotesque',sans-serif}
+.faq-icon{flex:none;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#FFFFFF;border:1px solid #DCD6CA;transition:transform .3s ease,background .3s}
+.faq.open .faq-icon{transform:rotate(45deg);background:#F4C542;border-color:#F4C542}
+.field{width:100%;min-height:50px;padding:13px 14px;background:#FFFFFF;border:1.5px solid #CFC8BA;border-radius:8px;color:#172E42;font:400 16px/1.4 'Instrument Sans',system-ui,sans-serif}
+.field:focus{outline:none;border-color:#172E42;box-shadow:0 0 0 3px rgba(244,197,66,.6)}
+
+.still *,.still *::before,.still *::after{animation:none!important}
+/* ═══ Görevlerim mini UI (landing phone + film card) ═══ */
+.gx{position:relative;flex:1;display:flex;flex-direction:column;gap:6px;min-height:100%;font-family:'Instrument Sans',sans-serif;color:#1E2F3E}
+.gx-hd{display:flex;align-items:center;gap:8px}
+.gx-ring{flex:none;width:38px;height:38px;border-radius:50%;border:4px solid #E6E2DA;border-top-color:#2F7D5B;display:flex;flex-direction:column;align-items:center;justify-content:center;font:800 12px/1 'Bricolage Grotesque',sans-serif}
+.gx-ring small{font:600 7px/1 'IBM Plex Mono',monospace;opacity:.6}
+.gx-hello{display:block;font:800 14px/1.1 'Bricolage Grotesque',sans-serif}
+.gx-sub{display:block;margin-top:2px;font:600 8px/1 'IBM Plex Mono',monospace;color:#6A7F91}
+.gx-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.gx-st{background:#FFFFFF;border-radius:10px;padding:6px 7px;display:flex;flex-direction:column;gap:2px}
+.gx-st b{font:800 18px/1 'Bricolage Grotesque',sans-serif}
+.gx-st i{font:800 7px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em;font-style:normal;color:#4C6275}
+.gx-sec{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px}
+.gx-ic{flex:none;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.gx-tt{flex:1;min-width:0;font:800 11.5px/1.1 'Bricolage Grotesque',sans-serif}
+.gx-tt small{display:block;margin-top:2px;font:600 7.5px/1 'IBM Plex Mono',monospace;opacity:.85}
+.gx-n{font:800 17px/1 'Bricolage Grotesque',sans-serif}
+.gx-acil{font-size:10px;padding:2px 5px;border-radius:999px;background:#C62828;color:#FFFFFF}
+.gx-bar{margin-top:auto;display:flex;gap:6px;padding:8px 0 4px}
+.gx-side{flex:none;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.gx-prim{flex:1;height:38px;border-radius:12px;background:#172E42;color:#FFFFFF;font:800 11px/1 'Bricolage Grotesque',sans-serif;display:flex;align-items:center;justify-content:center}
+.gx-band{margin:0 -12px;padding:7px 12px;color:#FFFFFF;font:800 13px/1.1 'Bricolage Grotesque',sans-serif}
+.gx-band small{display:block;margin-top:2px;font:600 8px/1 'IBM Plex Mono',monospace;opacity:.85}
+.gx-row{position:relative;display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:12px;background:#FFFFFF}
+.gx-row img,.gx-hero img,.gx-sh-h img{flex:none;width:34px;height:34px;border-radius:9px;object-fit:cover;background:#F1EEE8}
+.gx-rm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.gx-rm b{font:800 11px/1.1 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gx-rm > span{font:600 7.5px/1.1 'IBM Plex Mono',monospace;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gx-q{flex:none;font:800 13px/1 'Bricolage Grotesque',sans-serif;text-align:right}
+.gx-q small{font-size:8px;opacity:.6}
+.gx-ok{position:absolute;right:4px;top:3px;width:12px;height:12px;border-radius:50%;background:#2F7D5B;color:#FFFFFF;font-size:8px;line-height:12px;text-align:center}
+.gx-tag{align-self:flex-start;padding:2px 5px;border-radius:999px;font:800 6.5px/1.2 'Bricolage Grotesque',sans-serif;letter-spacing:.04em;color:#172E42;opacity:1}
+.gx-dim{opacity:.5}
+.gx-sheet{position:absolute;left:-12px;right:-12px;bottom:0;display:flex;flex-direction:column;gap:6px;padding:10px 12px 12px;border-radius:18px 18px 0 0;background:#FFFFFF;box-shadow:0 -14px 30px -10px rgba(23,46,66,.4);animation:gxUp .5s cubic-bezier(.2,.8,.2,1) 1.4s both}
+@keyframes gxUp{from{transform:translateY(105%)}}
+.gx-sh-h{display:flex;align-items:center;gap:8px}
+.gx-sh-h b{display:block;font:800 13px/1 'Bricolage Grotesque',sans-serif}
+.gx-sh-h span span{display:block;margin-top:3px;font:600 7.5px/1 'IBM Plex Mono',monospace;color:#4C6275}
+.gx-k{font:800 7.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em;color:#4C6275}
+.gx-chips{display:flex;gap:5px}
+.gx-chip{padding:6px 9px;border-radius:9px;background:#F1EEE8;font:800 10px/1 'Bricolage Grotesque',sans-serif}
+.gx-chip.on{background:#2F7D5B;color:#FFFFFF}
+.gx-tot{display:flex;align-items:baseline;justify-content:space-between;padding:6px 9px;border-radius:10px;background:#E3F1E9;color:#2F7D5B;font:800 15px/1 'Bricolage Grotesque',sans-serif}
+.gx-tot small{font:600 8px/1 'IBM Plex Mono',monospace}
+.gx-big{height:36px;border-radius:12px;background:#2F7D5B;color:#FFFFFF;font:800 10.5px/1 'Bricolage Grotesque',sans-serif;display:flex;align-items:center;justify-content:center}
+.gx-labels{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.gx-lb{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 3px;border-radius:7px;background:#FFFFFF;border:1.5px solid #172E42}
+.gx-lb b{font:600 7px/1 'IBM Plex Mono',monospace}
+.gx-lb span{font:800 8px/1 'Bricolage Grotesque',sans-serif}
+.gx-flash{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:4px;padding:12px;border-radius:14px;background:#2F7D5B;color:#FFFFFF;font:800 13px/1 'Bricolage Grotesque',sans-serif}
+.gx-flash-c{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:#FFFFFF}
+.gx-stops{display:flex;align-items:center;gap:5px;font:800 10px/1 'Bricolage Grotesque',sans-serif;color:#9AA7B2}
+.gx-stops span{padding:4px 7px;border-radius:7px}
+.gx-stops .on{color:#24787A;box-shadow:inset 0 0 0 2px #24787A}
+.gx-hero{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px}
+.gx-hero img{width:38px;height:38px}
+.gx-cnt{flex:none;text-align:right;color:#FFFFFF;font:800 26px/.9 'Bricolage Grotesque',sans-serif}
+.gx-cnt small{display:block;margin-top:2px;font:800 7px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em;opacity:.85}
+.gx-alert{position:absolute;left:-12px;right:-12px;top:30%;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:#F4B400;color:#1A1300;text-align:center;font:800 9px/1.2 'Bricolage Grotesque',sans-serif;overflow:hidden}
+.gx-stripes{position:absolute;left:0;right:0;top:0;height:8px;background:repeating-linear-gradient(-45deg,#1A1300 0 8px,#F4B400 8px 16px)}
+.gx-al-ic{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#1A1300;color:#F4B400;font:800 22px/1 'Bricolage Grotesque',sans-serif;animation:gxThrob .9s ease-in-out infinite}
+@keyframes gxThrob{50%{transform:scale(1.12)}}
+.gx-alert b{font-size:16px}
+.gx-al-n{font:800 28px/1 'Bricolage Grotesque',sans-serif}
+.gx-done{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 10px;border-radius:16px;background:#2F7D5B;color:#FFFFFF;text-align:center}
+.gx-done b{font:800 18px/1 'Bricolage Grotesque',sans-serif}
+.gx-done > span:last-child{font:600 8px/1 'IBM Plex Mono',monospace;opacity:.9}
+.gx-undo{margin-top:auto;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 10px;border-radius:999px;background:#172E42;color:#FFFFFF;font:700 9px/1.2 'Instrument Sans',sans-serif}
+.gx-undo > span:nth-of-type(1){flex:1}
+.gx-undo-b{padding:6px 9px;border-radius:999px;background:#F4C542;color:#172E42;font:800 9px/1 'Bricolage Grotesque',sans-serif}
+.appcard.gxphone{width:clamp(210px,28cqw,280px);aspect-ratio:9 / 17;padding:12px 12px 6px;display:flex;flex-direction:column;border-radius:30px;border:6px solid #172E42;background:#F4F2EE;overflow:hidden}
+
+@media (prefers-reduced-motion:reduce){.wms *{animation:none!important;transition:none!important}}
+@media (max-width:860px){.hide-md{display:none!important}}
+@media (max-width:640px){.filmdots{top:10px;right:10px;bottom:auto!important}.appzoom{padding:10px 10px 64px}.capt{left:10px!important;right:10px;bottom:10px!important;padding:10px 12px!important;border-radius:12px!important}.capt-t{font-size:16px!important}.hide-sm{display:none!important}.show-sm{display:block}.stage{aspect-ratio:1/1.02}.world{top:55%}}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.fstatus{grid-column:1 / -1;margin:0;min-height:1.4em;font-size:14px;font-weight:600;color:#172E42}
+.fstatus.ok{color:#1E6B45}
+.fstatus.err{color:#A3261B}
+</style>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</helmet>
+
+<div class="{{rootCls}}" id="top" style="background: #F6F4EF; color: #172E42; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden">
+
+<!-- ═════════ HERO ═════════ -->
+<header class="paper-grid drift" style="position: relative; overflow: hidden">
+  <div class="bgfx" aria-hidden="true">
+    <span class="glow" style="left: -8%; top: 6%; width: 46%; height: 520px; background: #F4C542"></span>
+    <span class="glow" style="right: -10%; top: 38%; width: 42%; height: 560px; background: #BFD6EA; animation-delay: -9s"></span>
+    <span class="flo" style="left: 4%; width: 54px; animation-duration: 38s; animation-delay: -4s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".14"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 17%; width: 30px; animation-duration: 30s; animation-delay: -19s"><svg viewBox="0 0 24 26" fill="#F4C542" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".28"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 33%; width: 72px; animation-duration: 46s; animation-delay: -30s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1" stroke-linejoin="round" opacity=".10"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 52%; width: 38px; animation-duration: 34s; animation-delay: -12s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".13"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 68%; width: 26px; animation-duration: 28s; animation-delay: -6s"><svg viewBox="0 0 24 26" fill="#F4C542" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".25"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 81%; width: 60px; animation-duration: 42s; animation-delay: -24s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1" stroke-linejoin="round" opacity=".11"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 92%; width: 34px; animation-duration: 36s; animation-delay: -33s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".14"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo hide-sm" style="left: 44%; width: 22px; animation-duration: 26s; animation-delay: -15s"><svg viewBox="0 0 24 26" fill="#DCEAF5" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".35"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+  </div>
+  <nav class="hero-in" aria-label="Ana menü" style="display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; max-width: 1320px; margin: 0 auto; padding: 18px clamp(16px, 4vw, 40px)">
+    <a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #172E42; min-width: 0">
+      <svg class="elogo" width="42" height="42" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#F4F2EE" stroke="#172E42" stroke-width="4"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#F4F2EE" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+      <span style="display: flex; flex-direction: column; line-height: 1.05">
+        <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 18px">ETKİN WMS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #4C6275">ETKİN YAZILIM</span>
+      </span>
+    </a>
+    <div class="hide-md" style="display: flex; gap: 28px; font-size: 15px">
+      <a class="navlink" href="#cozum">{{t.navSolution}}</a>
+      <a class="navlink" href="#sektorler">{{t.navSectors}}</a>
+      <a class="navlink" href="#kiralama">{{t.navRental}}</a>
+      <a class="navlink" href="#sorular">{{t.navFaq}}</a>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div role="group" aria-label="Language / Dil" style="display: flex; padding: 3px; border: 1.5px solid #172E42; border-radius: 999px; background: #FFFFFF">
+        <button type="button" class="langbtn {{trCls}}" aria-pressed="{{trPressed}}" onClick="{{setTr}}">TR</button>
+        <button type="button" class="langbtn {{enCls}}" aria-pressed="{{enPressed}}" onClick="{{setEn}}">EN</button>
+      </div>
+      <a class="loginbtn" href="https://wms.etkinyazilim.com/login" aria-label="{{t.login}}" title="{{t.login}}" style="display: inline-flex; flex-direction: column; align-items: center; gap: 4px; min-width: 52px; padding: 2px 4px; text-decoration: none; color: #172E42">
+        <span class="loginico" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; background: {{accent}}; border: 1.5px solid #172E42; box-shadow: 3px 3px 0 #172E42">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>
+        </span>
+        <span aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .08em; line-height: 1">{{t.loginShort}}</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="hero-in" style="max-width: 1320px; margin: 0 auto; padding: clamp(20px, 4vw, 52px) clamp(16px, 4vw, 40px) clamp(56px, 8vw, 104px)">
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px 48px">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <p class="rise" style="margin: 0 0 20px; display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 8px; border-radius: 999px; background: #FFFFFF; border: 1px solid #DCD6CA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .14em">
+          <span style="display: block; width: 10px; height: 10px; border-radius: 50%; background: {{accent}}; box-shadow: 0 0 0 3px #172E42"></span>{{t.eyebrow}}
+        </p>
+        <h1 style="margin: 0; max-width: 900px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(38px, 5.6vw, 84px); line-height: .98; letter-spacing: -.04em">
+          <span class="scanreveal" style="display: block; animation-delay: .2s">{{t.title1}}</span>
+          <span class="scanreveal" style="display: inline-block; animation-delay: .7s; margin-top: 10px; padding: 0 .14em .06em; background: {{accent}}; border-radius: 12px">{{t.title2}}</span>
+        </h1>
+        <div class="rise" style="animation-delay: 1.05s; display: flex; align-items: center; gap: 14px; margin-top: 26px; max-width: 640px">
+          <svg width="52" height="52" viewBox="0 0 29 29" role="img" aria-label="QR" style="flex: none; padding: 4px; background: #FFFFFF; border: 2px solid #172E42; border-radius: 10px; box-sizing: content-box">
+            <path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path>
+            <path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 5h4v2h-4z M11 9h2v4h-2z M15 9h2v2h-2z M1 11h4v2H1z M7 11h2v2H7z M19 11h2v2h-2z M23 11h5v2h-5z M13 13h4v2h-4z M1 15h2v2H1z M5 15h4v2H5z M19 15h2v4h-2z M25 15h3v2h-3z M11 17h2v4h-2z M15 17h2v2h-2z M23 19h2v2h-2z M11 23h4v2h-4z M17 21h2v4h-2z M21 23h2v2h-2z M25 23h3v5h-3z M11 27h6v1h-6z M19 26h4v2h-4z" fill="#172E42"></path>
+          </svg>
+          <p style="margin: 0; font-size: clamp(15px, 1.4vw, 17px); font-weight: 600; line-height: 1.4; color: #24435E">{{t.qrLine}}</p>
+        </div>
+      </div>
+      <div class="rise" style="animation-delay: 1s; flex: 0 1 440px; min-width: 0">
+        <p style="margin: 0; font-size: clamp(17px, 1.5vw, 19px); color: #3D5468">{{t.heroSub}}</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px">
+          <a class="cta" href="#demo" style="display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 24px; border-radius: 999px; background: #172E42; color: #FFFFFF; text-decoration: none; font-weight: 600">{{t.cta1}} <span aria-hidden="true" style="color: {{accent}}">↗</span></a>
+          <a class="ghost" href="#saha" style="display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 22px; border-radius: 999px; border: 1.5px solid #172E42; color: #172E42; text-decoration: none; font-weight: 600">{{t.cta2b}} <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <ul class="rise" style="animation-delay: 1.1s; flex: 1 1 100%; list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px">
+        <sc-for list="{{t.heroChips}}" as="hc" hint-placeholder-count="4">
+          <li style="display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-size: 15px; font-weight: 600">
+            <span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: {{accent}}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>
+            </span>{{hc.n}}
+          </li>
+        </sc-for>
+      </ul>
+    </div>
+
+    <!-- ═══ the 3D floor ═══ -->
+    <div id="saha" class="rise" style="animation-delay: 1.15s; margin-top: clamp(32px, 5vw, 60px); padding: clamp(10px, 1.6vw, 20px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 28px; box-shadow: 10px 12px 0 #172E42">
+      <div style="display: flex; flex-wrap: wrap; gap: 18px">
+
+        <div style="flex: 1 1 640px; min-width: 0">
+          <div class="stage">
+            <sc-if value="{{isFilm}}" hint-placeholder-val="{{true}}">
+              <div class="film" aria-hidden="true">
+                <div class="{{fs.c0}}"><img src="/img/saha-1-kabul.webp" alt="" style="transform-origin: 22% 62%; object-position: 22% 60%; animation-duration: {{filmDurS}}s"></div>
+                <div class="{{fs.c1}}"><img src="/img/saha-2-etiket.webp" alt="" style="transform-origin: 48% 45%; object-position: 45% 50%; animation-duration: {{filmDurS}}s"></div>
+                <div class="{{fs.c2}}"><img src="/img/saha-3-uretim.webp" alt="" style="transform-origin: 47% 42%; object-position: 47% 50%; animation-duration: {{filmDurS}}s"></div>
+                <div class="{{fs.c3}}"><img src="/img/saha-4-cep.webp" alt="" style="transform-origin: 49% 44%; object-position: 50% 50%; animation-duration: {{filmDurS}}s"></div>
+                <sc-if value="{{appOn}}" hint-placeholder-val="{{false}}">
+                  <div class="appzoom">
+                    <div class="appcard gxphone"><div class="gx"><div class="gx-hd pop"><span class="gx-ring">0<small>/11</small></span><span style="min-width: 0"><b class="gx-hello">{{t.gxHello}}</b><span class="gx-sub">{{t.gxShift}}</span></span></div><div class="gx-stats pop d1"><span class="gx-st"><b style="color: #1E2F3E">11</b><i>{{t.gxLeft}}</i></span><span class="gx-st"><b style="color: #2F7D5B">0</b><i>{{t.gxDone}}</i></span><span class="gx-st"><b style="color: #B83A2E">0</b><i>{{t.gxProb}}</i></span></div><div class="gx-sec pop d2" style="background: #E3F1E9; color: #1D5A40"><span class="gx-ic" style="background: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-tt">{{t.gxS1}}<small>{{t.gxS1n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d2" style="background: #DFF0EF; color: #16585A"><span class="gx-ic" style="background: #24787A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg></span><span class="gx-tt">{{t.gxS2}}<small>{{t.gxS2n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">3</span></div><div class="gx-sec pop d3" style="background: #ECE9F8; color: #45398C"><span class="gx-ic" style="background: #6253B5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3"></path></svg></span><span class="gx-tt">{{t.gxS3}}<small>{{t.gxS3n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d3" style="background: #F8EADF; color: #844818"><span class="gx-ic" style="background: #B0652E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V11l6 3v-3l6 3V7l6-3v17zM7 17h2M13 17h2"></path></svg></span><span class="gx-tt">{{t.gxS4}}<small>{{t.gxS4n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">2</span></div><div class="gx-sec pop d4" style="background: #E2ECF6; color: #1F4C7C"><span class="gx-ic" style="background: #2F67A3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2zM9 13l2 2 4-4"></path></svg></span><span class="gx-tt">{{t.gxS5}}<small>{{t.gxS5n}}</small></span><span class="gx-n">2</span></div><div class="gx-bar pop d5"><span class="gx-side" style="background: #E3F1E9; color: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-prim"><span class="tap d6" style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 9v6M10 9v6M13 9v6M17 9v6"></path></svg>{{t.gxScan}}</span></span><span class="gx-side" style="background: #F8EADF; color: #B5552B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M4 20h16"></path></svg></span></div></div></div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{isFilm}}" hint-placeholder-val="{{true}}">
+              <div class="ov filmdots" role="group" aria-label="{{t.filmNav}}">
+                <sc-for list="{{fdots}}" as="fd" hint-placeholder-count="4">
+                  <button type="button" class="{{fd.cls}}" aria-label="{{fd.l}}" aria-pressed="{{fd.pressed}}" onClick="{{fd.go}}"><span></span></button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{is3d}}" hint-placeholder-val="{{false}}">
+            <div class="world" aria-hidden="true" style="transform: {{world}}">
+              <sc-for list="{{cubes}}" as="c" hint-placeholder-count="0">
+                <div class="{{c.cls}}" style="left: {{c.x}}%; top: {{c.y}}%; width: {{c.w}}%; height: {{c.d}}%; transform: translateZ({{c.z}}cqw)">
+                  <span class="f ft" style="background: {{c.t}}; transform: translateZ({{c.h}}cqw)"></span>
+                  <span class="f fs" style="height: {{c.h}}cqw; background: {{c.s}}"></span>
+                  <span class="f fe" style="width: {{c.h}}cqw; background: {{c.e}}"></span>
+                </div>
+              </sc-for>
+
+              <sc-for list="{{decals}}" as="dc" hint-placeholder-count="0">
+                <div class="{{dc.cls}}" style="left: {{dc.x}}%; top: {{dc.y}}%; width: {{dc.w}}%; height: {{dc.h}}%"><span class="decal-l">{{dc.l}}</span></div>
+              </sc-for>
+              <span class="lane-h" style="left: 2%; top: 52.5%; width: 96%"></span>
+              <span class="lane-v" style="left: 76%; top: 2%; height: 96%"></span>
+              <span class="hz" style="left: 3%; top: 92.6%; width: 26%; height: 1.2%"></span>
+              <span class="hz" style="left: 81%; top: 33.2%; width: 15%; height: 1.2%"></span>
+
+              <div class="group mov" style="left: {{fl.x}}%; top: {{fl.y}}%; width: 6%; height: 5%; transform: translateZ(0cqw) rotateZ({{fl.r}}deg)">
+                <sc-for list="{{fl.parts}}" as="c" hint-placeholder-count="0">
+                  <div class="{{c.cls}}" style="left: {{c.x}}%; top: {{c.y}}%; width: {{c.w}}%; height: {{c.d}}%; transform: translateZ({{c.z}}cqw)">
+                    <span class="f ft" style="background: {{c.t}}; transform: translateZ({{c.h}}cqw)"></span>
+                    <span class="f fs" style="height: {{c.h}}cqw; background: {{c.s}}"></span>
+                    <span class="f fe" style="width: {{c.h}}cqw; background: {{c.e}}"></span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div class="{{pk.cls}}" style="left: {{pk.x}}%; top: {{pk.y}}%; width: 4.5%; height: 4%; transform: translateZ({{pk.z}}cqw)">
+                <span class="f ft" style="background: {{pk.t}}; transform: translateZ(2.4cqw)"><span class="qr"></span></span>
+                <span class="f fs" style="height: 2.4cqw; background: {{pk.s}}"></span>
+                <span class="f fe" style="width: 2.4cqw; background: {{pk.e}}"></span>
+              </div>
+
+              <sc-for list="{{tags}}" as="g" hint-placeholder-count="0">
+                <span class="{{g.cls}}" style="left: {{g.x}}%; top: {{g.y}}%; background: {{g.bg}}; color: {{g.fg}}; transform: {{g.tf}}">{{g.l}}</span>
+              </sc-for>
+            </div>
+
+            <!-- overlays -->
+            <p class="ov hide-sm" style="left: 16px; top: 14px; margin: 0; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,.88); border: 1px solid #DCD6CA; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .12em">
+              <span class="blink" style="display: block; width: 8px; height: 8px; border-radius: 50%; background: #2FA36B"></span>{{t.mapTitle}} <span style="font-weight: 400; color: #4C6275; letter-spacing: .02em">· {{t.repr}}</span>
+            </p>
+            <div class="ov" role="group" aria-label="{{t.viewLabel}}" style="right: 12px; top: 12px; display: flex; padding: 3px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42">
+              <sc-for list="{{views}}" as="v" hint-placeholder-count="3">
+                <button type="button" class="{{v.cls}}" aria-pressed="{{v.pressed}}" onClick="{{v.go}}">{{v.l}}</button>
+              </sc-for>
+            </div>
+            </sc-if>
+            <div class="ov steptxt capt" aria-live="polite" style="left: 16px; bottom: 16px; max-width: 420px; padding: 16px 18px; border-radius: 16px; background: rgba(23,46,66,.94); color: #FFFFFF">
+              <p style="margin: 0 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .14em; color: {{accent}}">{{cap.k}}</p>
+              <p class="capt-t" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -.02em; line-height: 1.1">{{cap.t}}</p>
+              <p class="hide-sm" style="margin: 6px 0 0; font-size: 14px; color: #D3DEE8">{{cap.d}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═════════ SOLUTION ═════════ -->
+<section id="cozum" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #FFFFFF; border-top: 2px solid #172E42">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px 40px; margin-bottom: 52px">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.solKicker}}</p>
+        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em">{{t.solA}} <span style="color: #6A7F91">{{t.solB}}</span></h2>
+      </div>
+      <p style="flex: 0 1 400px; margin: 0; color: #3D5468; font-size: 18px">{{t.solSub}}</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 20px">
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: {{accent}}">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3v18M20 3v18M4 9h16M4 15h16"></path><rect x="7" y="11" width="4" height="4"></rect><rect x="13" y="5" width="4" height="4"></rect></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em">{{t.f1Title}}</h3>
+        <p style="margin: 0; color: #3D5468; flex: 1">{{t.f1Body}}</p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86">{{t.f1Tag}}</p>
+      </article>
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: #DCEAF5">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="18" r="2"></circle><path d="M7 6h7a3 3 0 0 1 0 6H10a3 3 0 0 0 0 6h7"></path></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em">{{t.f2Title}}</h3>
+        <p style="margin: 0; color: #3D5468; flex: 1">{{t.f2Body}}</p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86">{{t.f2Tag}}</p>
+      </article>
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: #F1E3CC">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3"></path><path d="M7 8v8M10 8v8M13 8v8M15.5 8v8M17.5 8v8"></path></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em">{{t.f3Title}}</h3>
+        <p style="margin: 0; color: #3D5468; flex: 1">{{t.f3Body}}</p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86">{{t.f3Tag}}</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SECTORS ═════════ -->
+<section id="sektorler" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px)">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.secKicker}}</p>
+    <h2 style="margin: 0; max-width: 880px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em">{{t.secA}} <span style="color: #6A7F91">{{t.secB}}</span></h2>
+    <p style="margin: 24px 0 0; max-width: 560px; color: #3D5468; font-size: 18px">{{t.secSub}}</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 48px">
+      <sc-for list="{{t.sectors}}" as="s" hint-placeholder-count="4">
+        <span style="display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px 14px 14px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(18px, 2vw, 24px)">
+          <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #172E42; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{s.i}}</span>{{s.n}}
+        </span>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 40px; margin-top: 56px; padding: clamp(24px, 4vw, 52px); background: #FFFFFF; border: 1.5px solid #DCD6CA; border-radius: 24px">
+      <div style="flex: 1 1 360px; min-width: 0">
+        <p style="margin: 0 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #4C6275">{{t.scnKicker}}</p>
+        <h3 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 3vw, 40px); line-height: 1.05; letter-spacing: -.025em">{{t.scnTitle}}</h3>
+        <p style="margin: 18px 0 24px; color: #3D5468">{{t.scnBody}}</p>
+        <a class="navlink" href="#demo" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 600; text-decoration: underline; text-decoration-color: {{accent}}; text-decoration-thickness: 4px; text-underline-offset: 6px">{{t.scnLink}} ↗</a>
+      </div>
+      <ol style="flex: 1 1 380px; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+        <sc-for list="{{t.flow}}" as="f" hint-placeholder-count="3">
+          <li style="display: flex; align-items: center; gap: 18px; padding: 18px 20px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 16px">
+            <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: {{accent}}; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{f.k}}</span>
+            <span style="display: flex; flex-direction: column; min-width: 0">
+              <strong style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700">{{f.t}}</strong>
+              <span style="font-size: 14px; color: #4C6275">{{f.s}}</span>
+            </span>
+          </li>
+        </sc-for>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ MOBILE ═════════ -->
+<section id="mobil" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #FFFFFF; border-top: 1.5px solid #E4DED3">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px">
+    <div style="flex: 1 1 460px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.mobKicker}}</p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(34px, 4.8vw, 66px); line-height: 1; letter-spacing: -.035em">{{t.mobA}} <span style="color: #6A7F91">{{t.mobB}}</span></h2>
+      <p style="margin: 22px 0 20px; color: #3D5468; font-size: 18px">{{t.mobBody}}</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px">
+        <sc-for list="{{t.mobChips}}" as="mc" hint-placeholder-count="5">
+          <span style="padding: 7px 13px; border-radius: 999px; background: #F6F4EF; border: 1px solid #DCD6CA; font-size: 13px; font-weight: 600">{{mc.n}}</span>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <button type="button" class="{{offCls}}" aria-pressed="{{offPressed}}" onClick="{{offToggle}}">
+          <span class="knob-track"><span class="knob"></span></span>{{t.offLabel}}
+        </button>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 14px; color: #4C6275">{{t.offHint}}</p>
+      <p style="margin: 18px 0 0; font-size: 13px; color: #6A7F91">{{t.mobNote}}</p>
+    </div>
+
+    <!-- animated phone -->
+    <div style="flex: 1 1 320px; display: flex; justify-content: center">
+      <div aria-hidden="true" style="position: relative; width: 100%; max-width: 312px; aspect-ratio: 312 / 640; border-radius: 46px; background: #172E42; padding: 11px; box-shadow: 14px 16px 0 {{accent}}">
+        <div style="position: relative; height: 100%; border-radius: 36px; background: #F6F4EF; overflow: hidden; display: flex; flex-direction: column">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 22px 16px 10px">
+            <span style="display: flex; align-items: center; gap: 6px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 14px"><svg class="elogo" width="22" height="22" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>ETKİN WMS</span>
+            <span class="{{net.cls}}"><span class="netdot"></span>{{net.label}}</span>
+          </div>
+          <sc-if value="{{net.synced}}" hint-placeholder-val="{{false}}">
+            <div class="pop" style="margin: 0 16px 6px; padding: 8px 12px; border-radius: 12px; background: #E3F4EA; color: #1E6B45; font-size: 12px; font-weight: 600">✓ {{t.syncedMsg}}</div>
+          </sc-if>
+
+          <div style="position: relative; flex: 1; padding: 4px 12px 0; overflow: hidden; display: flex; flex-direction: column">
+
+            <!-- 1 · receive + QR -->
+            <sc-if value="{{ph.s0}}" hint-placeholder-val="{{true}}">
+              <div class="gx"><div class="gx-hd pop"><span class="gx-ring">0<small>/11</small></span><span style="min-width: 0"><b class="gx-hello">{{t.gxHello}}</b><span class="gx-sub">{{t.gxShift}}</span></span></div><div class="gx-stats pop d1"><span class="gx-st"><b style="color: #1E2F3E">11</b><i>{{t.gxLeft}}</i></span><span class="gx-st"><b style="color: #2F7D5B">0</b><i>{{t.gxDone}}</i></span><span class="gx-st"><b style="color: #B83A2E">0</b><i>{{t.gxProb}}</i></span></div><div class="gx-sec pop d2" style="background: #E3F1E9; color: #1D5A40"><span class="gx-ic" style="background: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-tt">{{t.gxS1}}<small>{{t.gxS1n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d2" style="background: #DFF0EF; color: #16585A"><span class="gx-ic" style="background: #24787A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg></span><span class="gx-tt">{{t.gxS2}}<small>{{t.gxS2n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">3</span></div><div class="gx-sec pop d3" style="background: #ECE9F8; color: #45398C"><span class="gx-ic" style="background: #6253B5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3"></path></svg></span><span class="gx-tt">{{t.gxS3}}<small>{{t.gxS3n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d3" style="background: #F8EADF; color: #844818"><span class="gx-ic" style="background: #B0652E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V11l6 3v-3l6 3V7l6-3v17zM7 17h2M13 17h2"></path></svg></span><span class="gx-tt">{{t.gxS4}}<small>{{t.gxS4n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">2</span></div><div class="gx-sec pop d4" style="background: #E2ECF6; color: #1F4C7C"><span class="gx-ic" style="background: #2F67A3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2zM9 13l2 2 4-4"></path></svg></span><span class="gx-tt">{{t.gxS5}}<small>{{t.gxS5n}}</small></span><span class="gx-n">2</span></div><div class="gx-bar pop d5"><span class="gx-side" style="background: #E3F1E9; color: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-prim"><span class="tap d6" style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 9v6M10 9v6M13 9v6M17 9v6"></path></svg>{{t.gxScan}}</span></span><span class="gx-side" style="background: #F8EADF; color: #B5552B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M4 20h16"></path></svg></span></div></div>
+            </sc-if>
+
+            <!-- 2 · bluetooth print -->
+            <sc-if value="{{ph.s1}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #2F7D5B">{{t.gxRecv}}<small>{{t.gxRecvSub}}</small></div><div class="gx-row pop d1"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm"><b>Solvent</b><span>KMY-007</span><span class="gx-tag" style="background: #F4C542">{{t.gxBc}}</span></span><span class="gx-q">0<small>/120 L</small></span></div><div class="gx-row pop d1"><img src="/img/urun-amb-001.webp" alt=""><span class="gx-rm"><b>{{t.gxBoxName}}</b><span>AMB-001</span><span class="gx-tag" style="background: #DCE6EE">{{t.gxStd}}</span></span><span class="gx-q">0<small>/400</small></span></div><div class="gx-row pop d2"><img src="/img/urun-urn-108.webp" alt=""><span class="gx-rm"><b>{{t.gxPaint}}</b><span>URN-108</span><span class="gx-tag" style="background: #F4C542">{{t.gxBc}}</span></span><span class="gx-q">0<small>/24</small></span></div><div class="gx-sheet"><span class="gx-tag" style="background: #F4C542">{{t.gxFromBc}}</span><div class="gx-sh-h"><img src="/img/urun-kmy-007.webp" alt=""><span><b>Solvent</b><span>LOT S-1188 · SKT 09.2027</span></span></div><span class="gx-k">{{t.gxPack}}</span><div class="gx-chips"><span class="gx-chip">{{t.gxLt}}</span><span class="gx-chip on">{{t.gxCan}}</span></div><div class="gx-tot">120 L<small>6 × 20 L</small></div><span class="gx-big"><span class="tap d6" style="display: flex; align-items: center; gap: 6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6h-2M7 14h10v7H7z"></path></svg>{{t.gxCreate}}</span></span></div></div>
+            </sc-if>
+
+            <!-- 3 · scan + suggested slot -->
+            <sc-if value="{{ph.s2}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #2F7D5B">{{t.gxRecv}}<small>{{t.gxRecvSub2}}</small></div><div class="gx-labels pop d1"><span class="gx-lb pop d1"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0201</b><span>20 L</span></span><span class="gx-lb pop d2"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0202</b><span>20 L</span></span><span class="gx-lb pop d3"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0203</b><span>20 L</span></span><span class="gx-lb pop d4"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0204</b><span>20 L</span></span><span class="gx-lb pop d5"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0205</b><span>20 L</span></span><span class="gx-lb pop d6"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0206</b><span>20 L</span></span></div><div class="gx-row pop d4"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm"><b>Solvent</b><span>KMY-007</span><span class="gx-tag" style="background: #F4C542">{{t.gxBc}}</span></span><span class="gx-q">120<small>/120 L</small></span><span class="gx-ok">✓</span></div><div class="gx-flash pop d5"><span class="gx-flash-c"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2F7D5B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>{{t.gxPrinted}}</div></div>
+            </sc-if>
+
+            <!-- 4 · voice production order + recipe -->
+            <sc-if value="{{ph.s3}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #24787A">{{t.gxPick}}<small>ÖRNEK YAPI · 1/4</small></div><div class="gx-stops pop d1"><span class="on">B-01</span>›<span>C-03</span>›<span>D-04</span></div><div class="gx-hero pop d2" style="background: #24787A"><img src="/img/urun-urn-108.webp" alt=""><span class="gx-rm" style="color: #FFFFFF"><b>{{t.gxPaint}}</b><span>{{t.gxAt}}</span></span><span class="gx-cnt"><span class="pop d4">12</span><small>/ 12 {{t.gxPcs}}</small></span></div><div class="gx-row pop d5"><img src="/img/urun-urn-108.webp" alt=""><span class="gx-rm"><b>{{t.gxPaint}}</b><span>URN-108 · B-01</span></span><span class="gx-q">12<small>/12</small></span><span class="gx-ok">✓</span></div><div class="gx-row pop d3"><img src="/img/urun-urn-112.webp" alt=""><span class="gx-rm"><b>{{t.gxPrimer}}</b><span>URN-112 · B-01</span></span><span class="gx-q">0<small>/6</small></span></div><div class="gx-row pop d3 gx-dim"><img src="/img/urun-urn-120.webp" alt=""><span class="gx-rm"><b>{{t.gxVarnish}}</b><span>URN-120 · C-03</span></span><span class="gx-q">0<small>/4</small></span></div><div class="gx-bar pop d3"><span class="gx-side" style="background: #F1EEE8; color: #1E2F3E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></span><span class="gx-prim" style="background: #24787A"><span class="tap d4" style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 9v6M10 9v6M13 9v6M17 9v6"></path></svg>{{t.gxOne}}</span></span><span class="gx-side" style="background: #F1EEE8; color: #1E2F3E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"></path></svg></span></div></div>
+            </sc-if>
+
+            <!-- 5 · raw material transfer -->
+            <sc-if value="{{ph.s4}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #2F67A3">{{t.gxCount}}<small>C-01 · {{t.gxBlind}}</small></div><div class="gx-hero pop d1" style="background: #2F67A3"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm" style="color: #FFFFFF"><b>Solvent</b><span>KMY-007</span></span><span class="gx-cnt">76<small>{{t.gxCounted}}</small></span></div><div class="gx-row pop d2"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm"><b>Solvent</b><span>KMY-007 · C-01</span></span><span class="gx-q">76<small>L</small></span></div><div class="gx-row pop d2 gx-dim"><img src="/img/urun-urn-120.webp" alt=""><span class="gx-rm"><b>{{t.gxVarnish}}</b><span>URN-120 · C-03</span></span><span class="gx-q">—</span></div><div class="gx-alert pop d4"><span class="gx-stripes"></span><span class="gx-al-ic">!</span><b>{{t.gxDiff}}</b><span class="gx-al-n">−4 L</span><span>{{t.gxDiffQ}}</span></div></div>
+            </sc-if>
+
+            <!-- 6 · finished goods + full trace -->
+            <sc-if value="{{ph.s5}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-done pop"><span class="gx-flash-c" style="width: 64px; height: 64px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2F7D5B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span><b>{{t.gxDay}}</b><span>{{t.gxDaySub}}</span></div><div class="gx-stats pop d2"><span class="gx-st"><b style="color: #1E2F3E">0</b><i>{{t.gxLeft}}</i></span><span class="gx-st"><b style="color: #2F7D5B">11</b><i>{{t.gxDone}}</i></span><span class="gx-st"><b style="color: #B83A2E">0</b><i>{{t.gxProb}}</i></span></div><div class="gx-row pop d3"><img src="/img/urun-urn-131.webp" alt=""><span class="gx-rm"><b>{{t.gxSil}}</b><span>SO-0091 · IRS-0318</span></span><span class="gx-q">✓</span><span class="gx-ok">✓</span></div><div class="gx-row pop d4"><img src="/img/urun-amb-001.webp" alt=""><span class="gx-rm"><b>{{t.gxBoxName}}</b><span>PO-0412 · 20 QR</span></span><span class="gx-q">✓</span><span class="gx-ok">✓</span></div><div class="gx-undo pop d5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4C542" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"></path></svg><span>{{t.gxUndoL}}</span><span class="gx-undo-b">{{t.gxUndo}}</span></div></div>
+            </sc-if>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 18px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A7F91">
+            <span>{{t.phFoot}}</span><span>{{phCounter}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ RENTAL ═════════ -->
+<section id="kiralama" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #172E42; color: #FFFFFF">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: {{accent}}">{{t.rentKicker}}</p>
+    <h2 style="margin: 0; max-width: 960px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em">{{t.rentA}} <span style="color: #A9BDD0">{{t.rentB}}</span></h2>
+    <p style="margin: 24px 0 0; max-width: 620px; color: #D3DEE8; font-size: 18px">{{t.rentBody}}</p>
+    <ol style="list-style: none; margin: 56px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px">
+      <sc-for list="{{t.steps}}" as="st" hint-placeholder-count="3">
+        <li style="padding: 28px; border-radius: 20px; background: #FFFFFF; color: #172E42">
+          <span style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: {{accent}}; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 30px">{{st.n}}</span>
+          <h3 style="margin: 22px 0 8px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -.015em">{{st.t}}</h3>
+          <p style="margin: 0; color: #3D5468">{{st.s}}</p>
+        </li>
+      </sc-for>
+    </ol>
+  </div>
+</section>
+
+<!-- ═════════ FAQ ═════════ -->
+<section id="sorular" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px)">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 40px 72px">
+    <div style="flex: 1 1 280px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.faqKicker}}</p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 4.8vw, 64px); line-height: .98; letter-spacing: -.035em">{{t.faqTitle}}</h2>
+    </div>
+    <div style="flex: 2 1 480px; min-width: 0; border-top: 1.5px solid #172E42">
+      <sc-for list="{{faq}}" as="q" hint-placeholder-count="5">
+        <div class="{{q.cls}}" style="border-bottom: 1.5px solid #DCD6CA">
+          <button type="button" class="faqbtn" aria-expanded="{{q.expanded}}" onClick="{{q.toggle}}">
+            <span>{{q.q}}</span>
+            <span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          </button>
+          <sc-if value="{{q.isOpen}}" hint-placeholder-val="{{false}}">
+            <p style="margin: -4px 0 26px; max-width: 680px; color: #3D5468; font-size: 17px">{{q.a}}</p>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ DEMO ═════════ -->
+<section id="demo" style="padding: 0 clamp(16px, 4vw, 40px) clamp(72px, 10vw, 140px)">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 40px; padding: clamp(24px, 5vw, 64px); border-radius: 28px; background: {{accent}}; border: 2px solid #172E42">
+    <div style="flex: 1 1 380px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: .16em">{{t.demoKicker}}</p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5vw, 68px); line-height: .98; letter-spacing: -.035em">{{t.demoA}} {{t.demoB}}</h2>
+      <p style="margin: 24px 0 28px; max-width: 460px; font-size: 18px">{{t.demoBody}}</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{t.demoChips}}" as="c" hint-placeholder-count="3">
+          <span style="padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1.5px solid #172E42; font-size: 14px; font-weight: 500">{{c.n}}</span>
+        </sc-for>
+      </div>
+    </div>
+    <form id="demo-form" novalidate style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100"></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150"></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254"></label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fSector}}
+        <select class="field" name="sector" data-dc-options="t.options"></select>
+      </label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" style="resize: vertical"></textarea></label>
+      <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
+        <input type="checkbox" name="consent" required style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
+        <span>{{t.fConsent}} <a href="/privacy">{{t.privacy}}</a></span>
+      </label>
+      <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+      <button type="submit" class="cta" disabled="{{formBusyAttr}}" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer">{{t.fSubmit}} <span aria-hidden="true" style="color: {{accent}}">↗</span></button>
+      <p id="form-status" class="{{formCls}}" role="status" aria-live="polite">{{formMsg}}</p>
+    </form>
+  </div>
+</section>
+
+<!-- ═════════ FOOTER ═════════ -->
+<footer style="padding: 40px clamp(16px, 4vw, 40px); background: #172E42; color: #FFFFFF">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 40px">
+    <div style="display: flex; align-items: center; gap: 12px"><svg class="elogo" width="44" height="44" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42" stroke="#FFFFFF" stroke-width="3"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg><div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 20px">ETKİN WMS</span>
+      <span style="color: #C7D4E0; font-size: 14px">{{t.footTag}}</span>
+    </div></div>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px; font-size: 14px">
+      <a href="/privacy" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF">{{t.privacy}}</a>
+      <a href="https://wms.etkinyazilim.com/login" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF">{{t.login}} ↗</a>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C7D4E0">© 2026 Etkin Yazılım</span>
+    </div>
+  </div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F4C542","options":["#F4C542","#FF9F5A","#7FD1C2","#9CC4FF"],"section":"Look"},"lang":{"editor":"enum","default":"tr","options":["tr","en"],"section":"Content"},"heroScene":{"editor":"enum","default":"film","options":["film","3d"],"section":"Saha"},"filmSpeed":{"editor":"range","default":6.5,"min":4,"max":10,"step":0.5,"unit":"s","section":"Saha"},"camera":{"editor":"enum","default":"follow","options":["follow","iso","top"],"section":"Saha"},"autoplay":{"editor":"boolean","default":true,"section":"Saha"},"speed":{"editor":"range","default":3.6,"min":2.4,"max":6,"step":0.2,"unit":"s","section":"Saha"},"phoneSpeed":{"editor":"range","default":5,"min":3.5,"max":8,"step":0.5,"unit":"s","section":"Telefon"},"motion":{"editor":"boolean","default":true,"section":"Look"},"$preview":{"width":1440,"height":6600}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { lang: null, open: 0, step: 0, playing: props.autoplay !== false, sel: null, view: null, filmIdx: 0, appOn: false, phScene: 0, phPlaying: true, offline: false, queue: 0, synced: false };
+  }
+  componentDidMount() {
+    this.schedule();
+    this.phSchedule();
+    this.filmSchedule();
+  }
+  componentWillUnmount() {
+    clearTimeout(this._t);
+    clearTimeout(this._pt);
+    clearTimeout(this._ft);
+    clearTimeout(this._fa);
+  }
+  filmDur() {
+    return Math.max(4, Number(this.props.filmSpeed) || 6.5);
+  }
+  filmGo(i) {
+    var self = this;
+    clearTimeout(this._fa);
+    this.setState({ filmIdx: i, appOn: false });
+    if (i === 3) {
+      this._fa = setTimeout(function () { self.setState({ appOn: true }); }, this.filmDur() * 450);
+    }
+  }
+  filmSchedule() {
+    var self = this;
+    clearTimeout(this._ft);
+    var extra = this.state.filmIdx === 3 ? 1.6 : 1;
+    this._ft = setTimeout(function () {
+      if (self.props.motion !== false) self.filmGo((self.state.filmIdx + 1) % 4);
+      self.filmSchedule();
+    }, this.filmDur() * 1000 * extra);
+  }
+  phGo(n) {
+    var s = this.state;
+    this.setState({ phScene: n, queue: s.offline ? s.queue + 1 : 0, synced: false });
+  }
+  phSchedule() {
+    var self = this;
+    clearTimeout(this._pt);
+    var ms = Math.max(3.5, Number(this.props.phoneSpeed) || 5) * 1000;
+    this._pt = setTimeout(function () {
+      if (self.state.phPlaying && self.props.motion !== false) self.phGo((self.state.phScene + 1) % 6);
+      self.phSchedule();
+    }, ms);
+  }
+  schedule() {
+    var self = this;
+    clearTimeout(this._t);
+    var ms = Math.max(2.4, Number(this.props.speed) || 3.6) * 1000;
+    this._t = setTimeout(function () {
+      if (self.state.playing && self.props.motion !== false) {
+        self.setState({ step: (self.state.step + 1) % 6 });
+      }
+      self.schedule();
+    }, ms);
+  }
+  dict() {
+    return {
+      tr: {
+        navSolution: 'Çözüm', navSectors: 'Sektörler', navRental: 'Kiralama modeli', navFaq: 'Sorular',
+        login: 'Uygulamaya giriş', loginShort: 'GİRİŞ',
+        eyebrow: 'UÇTAN UCA İZLENEBİLİRLİK',
+        title1: 'Girişten sevkiyata kesintisiz kontrolün', title2: 'en kolay hali.',
+        qrLine: 'Tekil QR kod ile girişten üretime, üretimden sevkiyata kayıpsız izlenebilirlik.',
+        heroSub: 'Koli, paket, varil ya da palet; kabul anında her birine kendi QR etiketi basılır. Depodan üretime, yarı mamulden mamule ve sevkiyata kadar her hareket iz bırakır. Ekran kullanıcıyı doğru işleme yönlendirir: eğitim gerekmez, birkaç dokunuş yeter.',
+        cta1: 'İşletmeniz için demo iste', cta2b: 'Yolculuğu izleyin',
+        heroChips: [{ n: 'Anında tekil QR etiket' }, { n: 'Eğitimsiz, yönlendirmeli kullanım' }, { n: 'Az dokunuş, akıllı öneri' }, { n: 'Veriden değere' }],
+        repr: 'Temsili veriler',
+        mapTitle: 'CANLI SAHA', viewLabel: 'Kamera', vFollow: 'Takip', vIso: 'İzometrik', vTop: 'Plan',
+        zDock: 'Ürün kabul', zProd: 'Üretim', zRacks: 'Raflar', zShip: 'Sevkiyat', suggest: 'Öneri: A-03',
+        filmK: 'SAHADAN', filmNav: 'Sahneler',
+        film: [
+          ['Dokunmatik ekranda ürün kabul', 'Gelen koli, paket ve varil kioskta tek dokunuşla kayda girer.'],
+          ['Anında tekil QR etiket', 'Taşınabilir yazıcı, her pakete kendi QR kodunu basar.'],
+          ['Okut, öneriyi al', 'Telefonla okutulan QR ürünü tanır ve doğru rafı önerir.'],
+          ['Her şey cebinizde', 'Transferden sevkiyata tüm işlemler tek uygulamada, birkaç dokunuşla.']
+        ],
+        flowLabel: 'Operasyon adımları',
+        stepLabel: 'ADIM', prev: 'Önceki adım', next: 'Sonraki adım', play: 'Oynat', pause: 'Duraklat',
+        logLabel: 'HAREKET KAYDI', cellLabel: 'Raf', slotPick: 'RAF GÖZÜ SEÇİN',
+        stStock: 'Stokta', stEmpty: 'Boş', stCheck: 'Kontrol', stNew: 'Yeni yerleşti', emptyName: 'Boş göz', emptyCode: '—', emptyUnit: 'yerleştirmeye hazır',
+        products: [['AMB-001', 'Ambalaj malzemesi', 'adet'], ['HAM-024', 'Hammadde', 'kg'], ['URN-108', 'Mamul ürün', 'adet']],
+        flowSteps: [
+          { s: 'Kabul', t: 'Kabulde tekil QR', d: 'Koli, paket, varil ya da palet; gelen her birime kabul anında kendi QR etiketi basılır. İzlenebilirlik ilk dokunuşta başlar.', log: 'HAM-024 · QR oluşturuldu' },
+          { s: 'Okut', t: 'Okut, öneriyi al', d: 'QR okutulduğu an sistem ürünü tanır ve en uygun rafı önerir. Kullanıcı ne yapacağını düşünmez; ekran yönlendirir.', log: 'HAM-024 okutuldu · öneri A-03' },
+          { s: 'Yerleştir', t: 'Önerilen rafa yerleştir', d: 'Tek dokunuşla onay; konum anında stok kaydına işlenir. Arama yok, tahmin yok.', log: 'HAM-024 → A-03' },
+          { s: 'Yarı mamul', t: 'Üretimde yarı mamul', d: 'Hammadde üretime çıkar; yarı mamul kendi QR’ıyla kayda girer ve kullanılan hammaddeye bağlanır.', log: 'YM-024 · yarı mamul' },
+          { s: 'Mamul', t: 'Yarı mamulden mamule', d: 'Son işlemden çıkan mamul, hammadde ve yarı mamul geçmişiyle birlikte izlenebilir hâle gelir.', log: 'URN-108 · mamul girişi' },
+          { s: 'Sevkiyat', t: 'Sevkiyat ve tam iz', d: 'Yüklenen her paketin kabulden sevkiyata tüm yolculuğu tek QR okutmasıyla görülür. Veri, değere dönüşür.', log: 'URN-108 sevk edildi' }
+        ],
+        solKicker: 'DAHA AZ DOKUNUŞ. DAHA ÇOK DEĞER.',
+        solA: 'Veri girmek için değil,', solB: 'iş yapmak için.',
+        solSub: 'Etkin WMS kullanıcıyı ekran ekran doğru işleme götürür. Az dokunuşla toplanan veri, izlenebilir ve raporlanabilir bilgiye dönüşür.',
+        f1Title: 'Uçtan uca izlenebilirlik', f1Body: 'Girişten üretime, yarı mamulden mamule ve sevkiyata kadar her hareket kayıt altında. Bir paketin tüm geçmişi tek okutmayla önünüzde.', f1Tag: 'Kabul → üretim → sevkiyat',
+        f2Title: 'Yönlendirmeli kullanım', f2Body: 'Yazılımı hiç bilmeyen biri bile doğru işlemi yapar: sistem sıradaki adımı ve uygun rafı önerir. Eğitim yükü en aza iner.', f2Tag: 'Az dokunuş · akıllı öneri',
+        f3Title: 'Tekil QR & anlık etiket', f3Body: 'Kabulde her koli, paket, varil ya da palete kendi QR’ı basılır. Aynı ürünün iki paketi bile birbirine karışmaz.', f3Tag: 'Telefon · notebook · etiket yazıcı',
+        secKicker: 'SEKTÖRÜNÜZ FARKLI. İHTİYACINIZ TANIDIK.',
+        secA: 'Sizin ürününüz.', secB: 'Sizin iş akışınız.',
+        secSub: 'Bir sektöre sıkışan yazılım yerine, ürün ve birim yapınıza uyarlanabilen bir stok altyapısı.',
+        sectors: [{ i: '01', n: 'Üretim' }, { i: '02', n: 'Toptan ticaret' }, { i: '03', n: 'Depo & lojistik' }, { i: '04', n: 'Perakende' }],
+        scnKicker: 'ÖRNEK KULLANIM SENARYOSU',
+        scnTitle: 'Hammaddeden mamule, aynı düzen.',
+        scnBody: 'Kg, metre veya adet: malzeme ve ürünlerinizi kendi birimleriyle takip edin. Üretim tüketimi ve mamul girişinin pilot kapsamını işletmenize göre planlayalım.',
+        scnLink: 'Bu akışı birlikte inceleyelim',
+        flow: [{ k: '01', t: 'Hammadde', s: 'Ürün kabul · tekil QR' }, { k: '02', t: 'Üretim', s: 'İşlem takibi' }, { k: '03', t: 'Mamul', s: 'Sevkiyat' }],
+        mobKicker: 'SAHADA, CEBİNİZDE',
+        mobA: 'Donanım bağımsız.', mobB: 'İnternet kesilse de iş durmaz.',
+        mobBody: 'Etkin WMS web üzerinden çalışır; telefon, tablet ya da el terminali fark etmez, kurulum gerekmez. Bağlantı koptuğunda işlemler cihazda sıraya alınır, bağlantı geri geldiğinde kendiliğinden senkronize olur.',
+        mobChips: [{ n: 'Web tabanlı, kurulum yok' }, { n: 'Telefon · tablet · el terminali' }, { n: 'Çevrimdışı çalışma' }, { n: 'Bluetooth etiket yazıcı' }, { n: 'Sesli komut' }],
+        phScenes: [
+          ['Görevlerim', '5 bölüm; kalan iş ve kalem tek bakışta'],
+          ['Satın alma girişi', 'Barkodu okut, lot ve SKT kendiliğinden dolsun'],
+          ['Tekil QR bas', 'Ambalajı seç, etiketler anında çıksın'],
+          ['Rotayla toplama', 'Raf raf, fotoğraflı ürün ve büyük sayaç'],
+          ['Kör sayım', 'Say; fark varsa sistem uyarsın'],
+          ['Gün tamam', 'Her işlem geri alınabilir, iz kesintisiz']
+        ],
+        gxHello: 'Günaydın, Ali', gxShift: 'VARDİYA 08:00–17:00 · ANA DEPO', gxLeft: 'KALAN', gxDone: 'BİTEN', gxProb: 'SORUN',
+        gxS1: 'Giriş Görevi', gxS2: 'Çıkış Görevi', gxS3: 'Transfer Görevi', gxS4: 'Üretim Transfer', gxS5: 'Sayım Görevi',
+        gxS1n: '2 SİPARİŞ · 6 KALEM', gxS2n: '3 SİPARİŞ · 8 KALEM', gxS3n: '2 FİŞ · 3 KALEM', gxS4n: '2 EMİR · 5 KALEM', gxS5n: '2 SAYIM · 3 KALEM',
+        gxScan: 'OKUT · BAŞLA', gxRecv: 'PO-0412 · GİRİŞ', gxRecvSub: 'ÖRNEK KİMYA · 0/4 KALEM', gxRecvSub2: 'ÖRNEK KİMYA · 1/4 KALEM · 6 QR',
+        gxBc: '▮▮ BARKODLU · LOT OTO', gxStd: '▮▮ STANDART · QR YOK', gxFromBc: '✦ BARKODDAN OKUNDU', gxPack: 'QR HANGİ AMBALAJA?', gxLt: 'LİTRE', gxCan: 'BİDON = 20 L',
+        gxCreate: 'OLUŞTUR + YAZDIR · 6 QR', gxPrinted: '6 ETİKET BASILDI', gxBoxName: 'Koli 40×30', gxPaint: 'Boya 2,5 L', gxPrimer: 'Astar 1 L', gxVarnish: 'Vernik 0,75 L', gxSil: 'Silikon 310 ml',
+        gxPick: 'SO-0091 · TOPLAMA', gxAt: 'B-01 RAFINDASINIZ', gxPcs: 'ADET', gxOne: 'OKUT +1',
+        gxCount: 'SYM-0103 · SAYIM', gxBlind: 'KÖR SAYIM', gxCounted: 'L SAYILDI', gxDiff: 'SAYIM FARKI', gxDiffQ: 'Bir kez daha saymak ister misiniz?',
+        gxDay: 'GÜN TAMAM', gxDaySub: '11 GÖREV · 25 KALEM', gxUndo: 'GERİ AL', gxUndoL: 'Her işlem geri alınabilir',
+        offLabel: 'İnternet kesintisini dene', offHint: 'Anahtarı açın: işlemler cihazda kuyruğa alınır. Kapatınca hepsi senkronize olur.',
+        netOn: 'Çevrimiçi', netOff: 'Çevrimdışı · {n} kuyrukta', syncedMsg: 'Kuyruktaki işlemler senkronize edildi',
+        phPlay: 'Oynat', phPause: 'Duraklat', phFoot: 'Temsili akış',
+        ph0k: 'ÜRÜN KABUL', ph0t: 'Yeni giriş', fProd: 'ÜRÜN', vProd: 'HAM-024 · Hammadde', fPack: 'PAKET TİPİ', packs: ['Koli', 'Paket', 'Varil', 'Palet'], fQty: 'MİKTAR', vQty: '250 kg', bQr: 'QR oluştur', qrDone: 'Tekil QR oluşturuldu',
+        ph1k: 'ETİKET', ph1t: 'Bluetooth yazıcıdan bas', bt: 'Taşınabilir yazıcı · bağlı', printing: 'Basılıyor…', printed: 'Etiket basıldı',
+        ph2k: 'OKUT & YERLEŞTİR', ph2t: 'Okut, öneriyi onayla', scanned: 'Okundu: HAM-024-P0193', sugK: 'ÖNERİLEN RAF', sugV: 'A-03 · üst kat', bOk: 'Onayla', placed: 'Konum kaydedildi',
+        ph3k: 'ÜRETİM EMRİ', ph3t: 'Söyleyin ya da seçin', say: 'Yarı mamul YM-024 üret', recipe: 'REÇETE · YM-024', r1n: 'Hammadde', r1q: '120 kg', r2n: 'Ambalaj malzemesi', r2q: '40 adet', orPick: 'veya listeden seçin',
+        ph4k: 'TRANSFER', ph4t: 'Okut, miktar otomatik', scanIt: 'Okut', autoQty: 'Miktarlar reçeteden otomatik gelir', moved: 'Üretime transfer edildi',
+        ph5k: 'MAMUL & SEVKİYAT', ph5t: 'Tam iz, tek QR', newQr: 'Yeni QR: URN-108-0042', chain: ['Kabul · QR', 'Raf A-03', 'Transfer', 'Üretim · YM-024', 'Mamul · URN-108'], ready: 'Sevkiyata hazır',
+        bullets: [{ n: 'Telefon ve notebook kamerasıyla QR ve barkod okutma' }, { n: 'Klavye gibi çalışan barkod okuyucularla kullanım' }, { n: 'A4 deneme baskısı ve mm ölçüsü seçilen etiketler' }],
+        mobNote: 'Bluetooth ve USB yazıcı desteği cihaza ve işletim sistemine göre değişir; pilot kurulumda uyumluluk testi yapılır.',
+        phoneWh: 'Merkez · Saha', phoneKicker: 'GÜNLÜK AKIŞ', phoneTitle: 'İşiniz sırada.',
+        p1Kicker: 'ÜRÜN KABUL', p1Title: 'Gelen malzemeyi kontrol edin.', p1Path: 'Ürün → miktar → konum', p1Btn: 'İşleme devam et',
+        p2Kicker: 'YERLEŞTİRME', p2Title: 'Doğru ürün. Doğru konum.',
+        tab1: 'Kabul', tab2: 'Yerleştir', tab3: 'Çıkış',
+        rentKicker: 'AYLIK KİRALAMA MODELİ',
+        rentA: 'İhtiyacınız kadar başlayın.', rentB: 'İşinizle birlikte büyütün.',
+        rentBody: 'Depo sayınız, kullanıcılarınız ve iş akışınız için uygun kapsamı belirleyelim. Standart bir fiyat tablosu yerine işletmenize uygun teklif hazırlayalım.',
+        steps: [
+          { n: '1', t: 'İhtiyacı birlikte belirleyelim', s: 'Ürünler, depolar, cihazlar ve günlük işlemler.' },
+          { n: '2', t: 'Pilot kurulumu deneyin', s: 'Gerçek senaryonuzla barkod, stok ve etiket kontrolü.' },
+          { n: '3', t: 'Aylık modelle devam edin', s: 'Mutabık kalınan kapsam ve kullanım koşullarıyla.' }
+        ],
+        faqKicker: 'AKLINIZDAKİ SORULAR', faqTitle: 'Başlamadan önce.',
+        faq: [
+          ['Yalnız üretim yapan firmalar için mi?', 'Hayır. Ürün, stok birimi ve depo yapısı farklı sektörlere uyarlanabilir. İhtiyacınız olan iş akışları pilot kapsamı belirlenirken netleştirilir.'],
+          ['Android el terminali için native uygulama şart mı?', 'Her cihaz için şart değil. Barkodu klavye girdisi olarak ileten terminaller web arayüzüyle kullanılabilir. Özel tarayıcı SDK’sı veya doğrudan cihaz bağlantısı gerekiyorsa cihaz bazında değerlendirilir.'],
+          ['Her yazıcıdan doğrudan etiket alabilir miyim?', 'Tarayıcının yazdırma penceresi üzerinden işletim sisteminin tanıdığı yazıcılara çıktı alınabilir. Etiket ölçüsü ayarlanabilir. Doğrudan USB/Bluetooth baskı her cihazda aynı değildir; sürücü ve cihaz testi gerekir.'],
+          ['Aylık ücret ve kurulum neye göre belirlenir?', 'Depo ve kullanıcı sayısı, süreç kapsamı, cihazlar ve ihtiyaç duyulan kurulum desteği değerlendirilir. Teklif aşamasında aylık kullanım ve varsa kurulum bedelleri ayrı açıklanır.'],
+          ['Bugün tüm modülleri kullanabilir miyim?', 'Etkin WMS pilot kurulum aşamasındadır. Kullanılabilir ekranlar, üretim/sevkiyat kapsamı ve cihaz desteği demo sırasında açıkça gösterilir; devreye alma kabul testleri tamamlanınca yapılır.']
+        ],
+        demoKicker: 'SİZİN DEPONUZLA BAŞLAYALIM.',
+        demoA: 'İş akışınızı anlatın.', demoB: 'Birlikte netleştirelim.',
+        demoBody: 'Firmanızı ve ihtiyacınızı bırakın. Size uygun demo ve pilot kapsamı için iletişime geçelim.',
+        demoChips: [{ n: 'Birden fazla depo' }, { n: 'Kamera ile barkod' }, { n: 'Etiket çıktısı' }],
+        fName: 'Adınız', fCompany: 'Firma', fEmail: 'İş e-postası', fSector: 'Sektörünüz', fNeed: 'İhtiyacınız',
+        options: [{ n: 'Üretim' }, { n: 'Toptan ticaret' }, { n: 'Depo ve lojistik' }, { n: 'Perakende' }, { n: 'Diğer' }],
+        fConsent: 'Talebimin değerlendirilmesi için bu bilgilerle benimle iletişime geçilmesini kabul ediyorum.',
+        privacy: 'Veri kullanımı', fSubmit: 'Teklif ve demo iste',
+        fSending: 'Talebiniz kaydediliyor…', fOk: 'Talebiniz kaydedildi. Demo ve kapsam için sizinle iletişime geçeceğiz.', fErr: 'Talep kaydedilemedi. Lütfen tekrar deneyin.', fInvalid: 'Ad, firma, geçerli e-posta ve iletişim onayını kontrol edin.',
+        footTag: 'Uçtan uca izlenebilir depo yönetimi.'
+      },
+      en: {
+        navSolution: 'Solution', navSectors: 'Industries', navRental: 'Rental model', navFaq: 'FAQ',
+        login: 'Sign in', loginShort: 'SIGN IN',
+        eyebrow: 'END-TO-END TRACEABILITY',
+        title1: 'Seamless control from receiving to shipping,', title2: 'made simple.',
+        qrLine: 'Lossless traceability with unique QR codes, from receiving to production and from production to shipping.',
+        heroSub: 'Carton, parcel, drum or pallet: each one gets its own QR label the moment it’s received. Every movement leaves a trace, from storage to production, semi-finished to finished goods, all the way to shipping. The screen guides each user to the right action: no training needed, just a few taps.',
+        cta1: 'Request a demo for your business', cta2b: 'Follow the journey',
+        heroChips: [{ n: 'Instant unique QR labels' }, { n: 'Guided, training-free use' }, { n: 'Fewer taps, smart suggestions' }, { n: 'From data to value' }],
+        repr: 'Representative data',
+        mapTitle: 'LIVE FLOOR', viewLabel: 'Camera', vFollow: 'Follow', vIso: 'Isometric', vTop: 'Plan',
+        zDock: 'Receiving', zProd: 'Production', zRacks: 'Racks', zShip: 'Shipping', suggest: 'Suggested: A-03',
+        filmK: 'ON THE FLOOR', filmNav: 'Scenes',
+        film: [
+          ['Receiving on a touchscreen', 'Incoming cartons, parcels and drums are recorded at the kiosk with one tap.'],
+          ['Instant unique QR label', 'A portable printer gives every package its own QR code.'],
+          ['Scan, get the suggestion', 'A phone scan recognises the item and suggests the right slot.'],
+          ['Everything in your pocket', 'From transfer to shipping, every action in one app, in a few taps.']
+        ],
+        flowLabel: 'Operation steps',
+        stepLabel: 'STEP', prev: 'Previous step', next: 'Next step', play: 'Play', pause: 'Pause',
+        logLabel: 'MOVEMENT LOG', cellLabel: 'Slot', slotPick: 'PICK A RACK SLOT',
+        stStock: 'In stock', stEmpty: 'Empty', stCheck: 'Check', stNew: 'Just placed', emptyName: 'Empty slot', emptyCode: '—', emptyUnit: 'ready for put-away',
+        products: [['AMB-001', 'Packaging material', 'pcs'], ['HAM-024', 'Raw material', 'kg'], ['URN-108', 'Finished product', 'pcs']],
+        flowSteps: [
+          { s: 'Receive', t: 'A unique QR at receiving', d: 'Carton, parcel, drum or pallet: every unit gets its own QR label the moment it’s received. Traceability starts with the first touch.', log: 'HAM-024 · QR created' },
+          { s: 'Scan', t: 'Scan, get the suggestion', d: 'The moment the QR is scanned, the system recognises the item and suggests the best slot. Users don’t have to think; the screen guides them.', log: 'HAM-024 scanned · suggest A-03' },
+          { s: 'Put away', t: 'Into the suggested slot', d: 'One tap to confirm; the location is written to the stock record instantly. No searching, no guessing.', log: 'HAM-024 → A-03' },
+          { s: 'Semi-finished', t: 'Semi-finished in production', d: 'Raw material goes to production; the semi-finished item gets its own QR and is linked to the raw material it used.', log: 'YM-024 · semi-finished' },
+          { s: 'Finished', t: 'From semi-finished to finished', d: 'The finished product leaves the last operation traceable along with its raw-material and semi-finished history.', log: 'URN-108 · goods receipt' },
+          { s: 'Shipping', t: 'Shipping, fully traced', d: 'Each loaded package’s whole journey, from receiving to shipping, is one QR scan away. Data turns into value.', log: 'URN-108 shipped' }
+        ],
+        solKicker: 'FEWER TAPS. MORE VALUE.',
+        solA: 'Not for entering data,', solB: 'for getting work done.',
+        solSub: 'Etkin WMS walks each user, screen by screen, to the right action. Data captured in a few taps becomes traceable, reportable information.',
+        f1Title: 'End-to-end traceability', f1Body: 'Every movement is recorded, from receiving to production, semi-finished to finished goods and shipping. A package’s full history is one scan away.', f1Tag: 'Receiving → production → shipping',
+        f2Title: 'Guided use', f2Body: 'Even someone who has never used the software does the right thing: the system suggests the next step and the right slot. Training effort drops to a minimum.', f2Tag: 'Fewer taps · smart suggestions',
+        f3Title: 'Unique QR & instant labels', f3Body: 'Every carton, parcel, drum or pallet gets its own QR at receiving. Even two packages of the same product never get mixed up.', f3Tag: 'Phone · laptop · label printer',
+        secKicker: 'YOUR INDUSTRY IS DIFFERENT. YOUR NEEDS ARE FAMILIAR.',
+        secA: 'Your products.', secB: 'Your workflow.',
+        secSub: 'Instead of software locked into one industry, a stock foundation that adapts to your product and unit structure.',
+        sectors: [{ i: '01', n: 'Manufacturing' }, { i: '02', n: 'Wholesale' }, { i: '03', n: 'Warehousing & logistics' }, { i: '04', n: 'Retail' }],
+        scnKicker: 'EXAMPLE SCENARIO',
+        scnTitle: 'From raw material to finished goods, one system.',
+        scnBody: 'Kilograms, metres or units: track materials and products in their own units. We’ll plan the pilot scope for production consumption and finished-goods receipt around your business.',
+        scnLink: 'Let’s review this flow together',
+        flow: [{ k: '01', t: 'Raw material', s: 'Goods receipt' }, { k: '02', t: 'Production', s: 'Process tracking' }, { k: '03', t: 'Finished goods', s: 'Shipping' }],
+        mobKicker: 'ON THE FLOOR, IN YOUR POCKET',
+        mobA: 'Hardware-independent.', mobB: 'Work goes on, even offline.',
+        mobBody: 'Etkin WMS runs on the web: phone, tablet or handheld terminal, nothing to install. If the connection drops, actions are queued on the device and sync automatically when it’s back.',
+        mobChips: [{ n: 'Web-based, no install' }, { n: 'Phone · tablet · handheld' }, { n: 'Works offline' }, { n: 'Bluetooth label printer' }, { n: 'Voice commands' }],
+        phScenes: [
+          ['My tasks', '5 sections; work and lines left at a glance'],
+          ['Purchase receiving', 'Scan the barcode; lot and expiry fill in'],
+          ['Print unique QR', 'Pick the pack; labels print instantly'],
+          ['Route picking', 'Shelf by shelf, with photo and big counter'],
+          ['Blind count', 'Count; the system flags any variance'],
+          ['Day complete', 'Every action can be undone, unbroken trace']
+        ],
+        gxHello: 'Good morning, Ali', gxShift: 'SHIFT 08:00–17:00 · MAIN WH', gxLeft: 'LEFT', gxDone: 'DONE', gxProb: 'ISSUES',
+        gxS1: 'Receiving', gxS2: 'Picking', gxS3: 'Transfers', gxS4: 'To production', gxS5: 'Cycle count',
+        gxS1n: '2 ORDERS · 6 LINES', gxS2n: '3 ORDERS · 8 LINES', gxS3n: '2 SLIPS · 3 LINES', gxS4n: '2 ORDERS · 5 LINES', gxS5n: '2 COUNTS · 3 LINES',
+        gxScan: 'SCAN · START', gxRecv: 'PO-0412 · RECEIVING', gxRecvSub: 'ÖRNEK KİMYA · 0/4 LINES', gxRecvSub2: 'ÖRNEK KİMYA · 1/4 LINES · 6 QR',
+        gxBc: '▮▮ BARCODE · AUTO LOT', gxStd: '▮▮ STANDARD · NO QR', gxFromBc: '✦ READ FROM BARCODE', gxPack: 'QR ON WHICH PACK?', gxLt: 'LITRE', gxCan: 'CAN = 20 L',
+        gxCreate: 'CREATE + PRINT · 6 QR', gxPrinted: '6 LABELS PRINTED', gxBoxName: 'Box 40×30', gxPaint: 'Paint 2.5 L', gxPrimer: 'Primer 1 L', gxVarnish: 'Varnish 0.75 L', gxSil: 'Silicone 310 ml',
+        gxPick: 'SO-0091 · PICKING', gxAt: 'YOU ARE AT B-01', gxPcs: 'PCS', gxOne: 'SCAN +1',
+        gxCount: 'SYM-0103 · COUNT', gxBlind: 'BLIND COUNT', gxCounted: 'L COUNTED', gxDiff: 'COUNT VARIANCE', gxDiffQ: 'Would you like to count once more?',
+        gxDay: 'DAY COMPLETE', gxDaySub: '11 TASKS · 25 LINES', gxUndo: 'UNDO', gxUndoL: 'Every action can be undone',
+        offLabel: 'Try an internet outage', offHint: 'Turn it on: actions queue on the device. Turn it off and everything syncs.',
+        netOn: 'Online', netOff: 'Offline · {n} queued', syncedMsg: 'Queued actions synced',
+        phPlay: 'Play', phPause: 'Pause', phFoot: 'Representative flow',
+        ph0k: 'RECEIVING', ph0t: 'New receipt', fProd: 'ITEM', vProd: 'HAM-024 · Raw material', fPack: 'PACKAGE TYPE', packs: ['Carton', 'Parcel', 'Drum', 'Pallet'], fQty: 'QUANTITY', vQty: '250 kg', bQr: 'Create QR', qrDone: 'Unique QR created',
+        ph1k: 'LABEL', ph1t: 'Print over Bluetooth', bt: 'Portable printer · connected', printing: 'Printing…', printed: 'Label printed',
+        ph2k: 'SCAN & PUT AWAY', ph2t: 'Scan, confirm the suggestion', scanned: 'Scanned: HAM-024-P0193', sugK: 'SUGGESTED SLOT', sugV: 'A-03 · upper level', bOk: 'Confirm', placed: 'Location saved',
+        ph3k: 'PRODUCTION ORDER', ph3t: 'Say it or pick it', say: 'Produce semi-finished YM-024', recipe: 'RECIPE · YM-024', r1n: 'Raw material', r1q: '120 kg', r2n: 'Packaging material', r2q: '40 pcs', orPick: 'or pick from the list',
+        ph4k: 'TRANSFER', ph4t: 'Scan, quantities auto-fill', scanIt: 'Scan', autoQty: 'Quantities come from the recipe', moved: 'Transferred to production',
+        ph5k: 'FINISHED & SHIPPING', ph5t: 'Full trace, one QR', newQr: 'New QR: URN-108-0042', chain: ['Receipt · QR', 'Slot A-03', 'Transfer', 'Production · YM-024', 'Finished · URN-108'], ready: 'Ready to ship',
+        bullets: [{ n: 'QR and barcode scanning with phone and laptop cameras' }, { n: 'Works with scanners that type like a keyboard' }, { n: 'A4 test prints and labels sized in mm' }],
+        mobNote: 'Bluetooth and USB printer support varies by device and operating system; compatibility is tested during pilot setup.',
+        phoneWh: 'Main · Field', phoneKicker: 'DAILY FLOW', phoneTitle: 'Your work, in order.',
+        p1Kicker: 'GOODS RECEIPT', p1Title: 'Check incoming materials.', p1Path: 'Item → quantity → location', p1Btn: 'Continue',
+        p2Kicker: 'PUT-AWAY', p2Title: 'Right item. Right place.',
+        tab1: 'Receive', tab2: 'Put away', tab3: 'Issue',
+        rentKicker: 'MONTHLY RENTAL MODEL',
+        rentA: 'Start with what you need.', rentB: 'Grow as your business grows.',
+        rentBody: 'Let’s define the right scope for your warehouses, users and workflow. Instead of a fixed price list, we prepare an offer that fits your business.',
+        steps: [
+          { n: '1', t: 'Define the need together', s: 'Products, warehouses, devices and daily operations.' },
+          { n: '2', t: 'Try the pilot setup', s: 'Barcode, stock and label checks with your real scenario.' },
+          { n: '3', t: 'Continue on a monthly plan', s: 'With the agreed scope and terms of use.' }
+        ],
+        faqKicker: 'QUESTIONS ON YOUR MIND', faqTitle: 'Before you start.',
+        faq: [
+          ['Is it only for manufacturers?', 'No. Product, stock-unit and warehouse structures adapt to different industries. The workflows you need are clarified while the pilot scope is defined.'],
+          ['Do Android handhelds need a native app?', 'Not for every device. Terminals that send barcodes as keyboard input work with the web interface. If a dedicated scanner SDK or direct device connection is needed, it’s assessed device by device.'],
+          ['Can I print labels from any printer?', 'You can print through the browser’s print dialog to any printer your operating system recognises, and label size is adjustable. Direct USB/Bluetooth printing differs by device and needs driver and device testing.'],
+          ['What sets the monthly fee and setup cost?', 'We look at the number of warehouses and users, process scope, devices and the setup support you need. The offer states monthly usage and any setup fees separately.'],
+          ['Can I use every module today?', 'Etkin WMS is in its pilot-setup phase. Available screens, production/shipping scope and device support are shown openly in the demo; go-live follows completed acceptance tests.']
+        ],
+        demoKicker: 'LET’S START WITH YOUR WAREHOUSE.',
+        demoA: 'Tell us your workflow.', demoB: 'We’ll shape it together.',
+        demoBody: 'Leave your company details and what you need. We’ll get in touch about the right demo and pilot scope.',
+        demoChips: [{ n: 'Multiple warehouses' }, { n: 'Camera barcode' }, { n: 'Label printing' }],
+        fName: 'Your name', fCompany: 'Company', fEmail: 'Work email', fSector: 'Industry', fNeed: 'What you need',
+        options: [{ n: 'Manufacturing' }, { n: 'Wholesale' }, { n: 'Warehousing & logistics' }, { n: 'Retail' }, { n: 'Other' }],
+        fConsent: 'I agree to be contacted with these details so my request can be assessed.',
+        privacy: 'Data use', fSubmit: 'Request an offer & demo',
+        fSending: 'Sending your request…', fOk: 'Your request has been saved. We will contact you about a demo and scope.', fErr: 'The request could not be saved. Please try again.', fInvalid: 'Please check name, company, a valid email and the consent box.',
+        footTag: 'End-to-end traceable warehouse management.'
+      }
+    };
+  }
+  renderVals() {
+    var self = this;
+    var lang = this.state.lang || this.props.lang || 'tr';
+    var d = this.dict();
+    var t = d[lang] || d.tr;
+    var step = this.state.step;
+    var playing = this.state.playing && this.props.motion !== false;
+    var accent = this.props.accent || '#F4C542';
+    var mix = function (p, c) { return 'color-mix(in srgb, ' + accent + ' ' + p + '%, ' + c + ')'; };
+
+    /* ── materials: [top, south, east] ── */
+    var M = {
+      slab: ['linear-gradient(rgba(23,46,66,.07) .12cqw, transparent .12cqw) 0 0 / 2.8cqw 2.8cqw, linear-gradient(90deg, rgba(23,46,66,.07) .12cqw, transparent .12cqw) 0 0 / 2.8cqw 2.8cqw, #F7F5F0', '#D9D2C4', '#C4BCAC'],
+      navy: ['#2E4D69', '#172E42', '#0E2131'],
+      navyD: ['#3A5D7C', '#1F3B54', '#152C40'],
+      steel: ['#E9EFF4', '#C7D4DF', '#AABBCA'],
+      steelD: ['#94A7B8', '#74899C', '#5C7083'],
+      machine: ['#DCEAF5', '#B7CCDD', '#97B1C6'],
+      kraft: ['#E8CDA2', '#CDAA77', '#B08B58'],
+      kraft2: ['#DDBE8E', '#C29E69', '#A5804D'],
+      check: ['#F7DC8A', '#E2BF5C', '#C9A43F'],
+      semi: ['#A9CBE6', '#82A9CC', '#668EB3'],
+      acc: [accent, mix(82, '#172E42'), mix(66, '#172E42')],
+      wall: ['#DDE5EC', '#C3D0DB', '#A7B8C7'],
+      trailer: ['linear-gradient(90deg, #FFFFFF 0 64%, ' + accent + ' 64% 80%, #FFFFFF 80%)', 'linear-gradient(90deg, #E8ECEF 49.3%, #8DA1B3 49.3% 50.7%, #E8ECEF 50.7%)', '#CDD5DC'],
+      laser: ['rgba(229,72,77,.22)', 'rgba(229,72,77,.4)', 'rgba(229,72,77,.4)'],
+      beam: [mix(60, 'transparent'), mix(28, 'transparent'), mix(20, 'transparent')]
+    };
+    var C = function (x, y, w, dd, h, z, m, cls) {
+      var c = M[m];
+      return { x: x, y: y, w: w, d: dd, h: h, z: z, t: c[0], s: c[1], e: c[2], cls: 'cube' + (cls ? ' ' + cls : '') };
+    };
+
+    /* ── racks data ── */
+    var pattern = { A: ['s0', 's1', 'e', 'c2'], B: ['s2', 'e', 's0', 's1'], C: ['s1', 's0', 's2', 'e'] };
+    var rowY = { A: 8, B: 22, C: 36 };
+    var slotX = [33, 42.5, 52, 61.5];
+    var sel = this.state.sel;
+
+    var cubes = [];
+    cubes.push(C(0, 0, 100, 100, 1.6, -1.6, 'slab'));
+    /* truck (back right) */
+    var truckCls = step === 5 ? 'truck go' : 'truck';
+    cubes.push(C(83, 2.5, 11, 6.5, 4.6, 0, 'navy', truckCls));
+    cubes.push(C(82, 9.5, 13, 23, 6.2, 0, 'trailer', truckCls));
+    /* racks */
+    var slots = [];
+    var selInfo = null;
+    ['A', 'B', 'C'].forEach(function (r) {
+      var ry = rowY[r];
+      [32.5, 42, 51.5, 61, 70.5].forEach(function (ux) { cubes.push(C(ux, ry, 1, 7, 9.8, 0, 'navy')); });
+      cubes.push(C(32.5, ry, 39, 7, .35, 3.2, 'acc'));
+      cubes.push(C(32.5, ry, 39, 7, .35, 6.6, 'acc'));
+      pattern[r].forEach(function (p, i) {
+        var id = r + '-0' + (i + 1);
+        var kind = p.charAt(0), pi = Number(p.charAt(1));
+        var x0 = slotX[i];
+        if (id === 'A-03' && step === 2) { kind = 'n'; pi = 1; }
+        if (kind === 's') {
+          cubes.push(C(x0 + 1.2, ry + .9, 7, 5.2, 2.5, 0, 'kraft'));
+          cubes.push(C(x0 + 1.2, ry + .9, 7, 5.2, 2.5, 3.55, 'kraft2'));
+        } else if (kind === 'c') {
+          cubes.push(C(x0 + 1.2, ry + .9, 7, 5.2, 2.5, 0, 'check'));
+        }
+        if (id === sel || (step === 1 && id === 'A-03')) cubes.push(C(x0 + .3, ry + .3, 8.9, 6.4, 13, 0, 'beam', 'beamcol'));
+        var prod = kind === 'e' ? null : t.products[pi];
+        var key = kind === 's' ? 'stock' : kind === 'c' ? 'check' : kind === 'n' ? 'new' : 'empty';
+        var st = kind === 's' ? t.stStock : kind === 'c' ? t.stCheck : kind === 'n' ? t.stNew : t.stEmpty;
+        var info = {
+          id: id, state: st,
+          name: prod ? prod[1] : t.emptyName,
+          code: prod ? prod[0] : t.emptyCode,
+          unit: prod ? prod[2] : t.emptyUnit,
+          badge: key === 'stock' ? '#DCEAF5' : key === 'check' ? '#FFF0C2' : key === 'new' ? accent : '#EEF1F4'
+        };
+        if (id === sel) selInfo = info;
+        slots.push({
+          id: id,
+          cls: 'slotbtn ' + key + (id === sel ? ' sel' : ''),
+          pressed: id === sel ? 'true' : 'false',
+          aria: t.cellLabel + ' ' + id + ': ' + info.name + ', ' + st,
+          pick: function () { self.setState({ sel: id }); }
+        });
+      });
+    });
+    /* scan gate */
+    cubes.push(C(26, 51.5, 1.2, 1.2, 6.2, 0, 'navy'));
+    cubes.push(C(26, 62, 1.2, 1.2, 6.2, 0, 'navy'));
+    cubes.push(C(26, 51.5, 1.2, 11.7, .8, 6.2, 'acc'));
+    cubes.push(C(26.45, 52.7, .3, 9.3, 6, .1, 'laser', step === 1 ? 'laser on' : 'laser'));
+    /* receiving dock */
+    cubes.push(C(1, 60, 1.2, 37, 4.2, 0, 'wall'));
+    cubes.push(C(3, 86, 26, 5.5, .9, 0, 'steel'));
+    cubes.push(C(3, 86.8, 4, 3.9, 2, .9, 'kraft', 'conv'));
+    cubes.push(C(3, 86.8, 4, 3.9, 2, .9, 'kraft2', 'conv c2'));
+    cubes.push(C(3, 86.8, 4, 3.9, 2, .9, 'kraft', 'conv c3'));
+    /* production */
+    cubes.push(C(54, 64, 16, 12, 4.2, 0, 'machine'));
+    cubes.push(C(59.5, 67, 5, 6, 1.3, 4.2, 'navy', step === 3 ? 'piston on' : 'piston'));
+    cubes.push(C(66, 65, 2.2, 2.2, 3, 4.2, 'steelD'));
+    cubes.push(C(55, 65, 1.6, 1.6, 1.1, 4.2, step === 3 ? 'acc' : 'steelD', step === 3 ? 'blink' : ''));
+    cubes.push(C(70, 72, 8.5, 5, 1.4, 0, 'steel'));
+    cubes.push(C(60, 82, 10, 8, 2.6, 0, 'machine'));
+    cubes.push(C(68.5, 83, 1.4, 1.4, 1, 2.6, step === 4 ? 'acc' : 'steelD', step === 4 ? 'blink' : ''));
+    /* QR label printer at receiving */
+    cubes.push(C(9, 79, 5, 4, 2.4, 0, 'steel'));
+    cubes.push(C(10, 80.2, 3, .5, 1.3, 2.4, 'acc', step === 0 ? 'blink' : ''));
+
+    /* ── forklift ── */
+    var FL = [
+      { x: 6, y: 74, r: 0, f: .3 },
+      { x: 20, y: 55.5, r: 0, f: .3 },
+      { x: 53.75, y: 17, r: -90, f: 3.7 },
+      { x: 46, y: 70, r: 0, f: .3 },
+      { x: 53, y: 81.5, r: 0, f: .3 },
+      { x: 83, y: 34, r: -90, f: 1.6 }
+    ][step];
+    var fl = {
+      x: FL.x, y: FL.y, r: FL.r,
+      parts: [
+        C(0, 15, 66, 70, 1.9, 0, 'navy'),
+        C(6, 18, 8, 9, 3.7, 0, 'navyD'),
+        C(6, 73, 8, 9, 3.7, 0, 'navyD'),
+        C(4, 14, 46, 72, .3, 3.7, 'navyD'),
+        C(66, 10, 9, 80, 4.8, 0, 'steelD'),
+        C(75, 24, 25, 11, .25, FL.f, 'steelD', 'mov'),
+        C(75, 65, 25, 11, .25, FL.f, 'steelD', 'mov'),
+        C(22, 40, 12, 20, .6, 4, 'acc', 'blink')
+      ]
+    };
+
+    /* ── the package ── */
+    var PK = [
+      { x: 22, y: 86.8, z: .9 },
+      { x: 23.1, y: 56, z: .55 },
+      { x: 54.5, y: 9.5, z: 3.55 },
+      { x: 71.5, y: 72.5, z: 1.4 },
+      { x: 62.75, y: 84, z: 2.6 },
+      { x: 83.75, y: 32.2, z: 1.85 }
+    ][step];
+    var pm = step >= 4 ? M.navy : step === 3 ? M.semi : M.kraft;
+    var pkCode = step >= 4 ? 'URN-108' : step === 3 ? 'YM-024' : 'HAM-024';
+    var pk = { x: PK.x, y: PK.y, z: PK.z, t: pm[0], s: pm[1], e: pm[2], cls: 'cube mov' + (step === 5 ? ' loaded' : '') };
+
+    /* ── camera ── */
+    var view = this.state.view || this.props.camera || 'follow';
+    var V = { follow: { tilt: 52, rz: 45, s: 1.75 }, iso: { tilt: 58, rz: 45, s: 1 }, top: { tilt: 0, rz: 0, s: .98 } }[view] || { tilt: 58, rz: 45, s: 1 };
+    var W = 56, rad = Math.PI / 180;
+    var px = 0, py = 3;
+    if (view === 'follow') {
+      var fx = PK.x + 2.25, fy = PK.y + 2, fz = PK.z;
+      var dx = (fx - 50) / 100 * W, dy = (fy - 50) / 100 * W;
+      var a = V.rz * rad, ti = V.tilt * rad;
+      var sx = dx * Math.cos(a) - dy * Math.sin(a);
+      var sy = (dx * Math.sin(a) + dy * Math.cos(a)) * Math.cos(ti) - fz * Math.sin(ti);
+      px = -sx * V.s; py = -sy * V.s + 4;
+    } else if (view === 'top') { py = -3; }
+    var r2 = function (n) { return Math.round(n * 100) / 100; };
+    var world = 'translate(-50%, -50%) translate(' + r2(px) + 'cqw, ' + r2(py) + 'cqw) scale(' + V.s + ') rotateX(' + V.tilt + 'deg) rotateZ(' + V.rz + 'deg)';
+    var bb = function (z) { return 'translateZ(' + z + 'cqw) rotateZ(' + (-V.rz) + 'deg) rotateX(' + (-V.tilt) + 'deg) translate(-50%, -100%)'; };
+
+    var zoneOn = [step <= 1, step === 2, step === 3 || step === 4, step === 5];
+    var tags = [
+      { x: 15, y: 76, z: 6, l: t.zDock, on: zoneOn[0] },
+      { x: 52, y: 5, z: 12, l: t.zRacks, on: zoneOn[1] },
+      { x: 62, y: 69, z: 7.5, l: t.zProd, on: zoneOn[2] },
+      { x: 88.5, y: 14, z: 9, l: t.zShip, on: zoneOn[3] }
+    ].map(function (g) {
+      return { x: g.x, y: g.y, l: g.l, tf: bb(g.z), cls: 'tag', bg: g.on ? '#172E42' : '#FFFFFF', fg: g.on ? '#FFFFFF' : '#172E42' };
+    });
+    tags.push({ x: PK.x + 2.25, y: PK.y + 2, l: 'QR · ' + pkCode, tf: bb(PK.z + 3.4), cls: 'tag' + (step === 5 ? ' loaded' : ''), bg: accent, fg: '#172E42' });
+    if (step === 1) tags.push({ x: 56.75, y: 11.5, l: t.suggest, tf: bb(14.5), cls: 'tag', bg: '#172E42', fg: '#FFFFFF' });
+
+    var decals = [
+      { x: 2, y: 61, w: 28, h: 37, l: t.zDock, on: zoneOn[0] },
+      { x: 30, y: 3, w: 44, h: 46, l: t.zRacks, on: zoneOn[1] },
+      { x: 49, y: 58, w: 32, h: 36, l: t.zProd, on: zoneOn[2] },
+      { x: 78, y: 1, w: 21, h: 42, l: t.zShip, on: zoneOn[3] }
+    ].map(function (z) { return { x: z.x, y: z.y, w: z.w, h: z.h, l: z.l, cls: z.on ? 'decal on' : 'decal' }; });
+
+    var views = [['follow', t.vFollow], ['iso', t.vIso], ['top', t.vTop]].map(function (v) {
+      return { l: v[1], cls: 'vbtn' + (v[0] === view ? ' on' : ''), pressed: v[0] === view ? 'true' : 'false', go: function () { self.setState({ view: v[0] }); } };
+    });
+
+    var fs = t.flowSteps;
+    var pills = fs.map(function (f, i) {
+      return {
+        n: String(i + 1), t: f.s,
+        cls: 'pill' + (i === step ? ' on' : i < step ? ' done' : ''),
+        selected: i === step ? 'true' : 'false',
+        go: function () { self.setState({ step: i, playing: false }); }
+      };
+    });
+    var log = fs.slice(0, step + 1).map(function (f, i) {
+      return { n: f.log, dot: i === step ? accent : '#DCEAF5' };
+    }).reverse();
+
+    var open = this.state.open;
+    var faq = t.faq.map(function (f, i) {
+      var isOpen = open === i;
+      return {
+        q: f[0], a: f[1], isOpen: isOpen,
+        cls: isOpen ? 'faq open' : 'faq',
+        expanded: isOpen ? 'true' : 'false',
+        toggle: function () { self.setState({ open: self.state.open === i ? -1 : i }); }
+      };
+    });
+    var motion = this.props.motion !== false;
+
+    /* ── animated phone ── */
+    var ps = this.state.phScene;
+    var phPlaying = this.state.phPlaying && motion;
+    var ph = { s0: ps === 0, s1: ps === 1, s2: ps === 2, s3: ps === 3, s4: ps === 4, s5: ps === 5 };
+    var phScenes = t.phScenes.map(function (sc, i) {
+      var on = i === ps;
+      return {
+        n: '0' + (i + 1), t: sc[0], d: sc[1], on: on,
+        current: on ? 'step' : 'false',
+        cls: 'scn' + (on ? ' on' : i < ps ? ' done' : ''),
+        go: function () { self.phGo(i); self.setState({ phPlaying: false }); }
+      };
+    });
+    var phPacks = t.packs.map(function (n, i) { return { n: n, cls: i === 3 ? 'pack sel' : 'pack' }; });
+    var phChain = t.chain.map(function (n, i) { return { n: n, cls: 'pop d' + (i + 2) }; });
+    var off = this.state.offline;
+    var net = {
+      cls: 'netpill ' + (off ? 'net-off' : 'net-on'),
+      label: off ? t.netOff.replace('{n}', String(this.state.queue)) : t.netOn,
+      synced: !off && this.state.synced
+    };
+    /* ── hero: miniature film or 3D ── */
+    var isFilm = (this.props.heroScene || 'film') !== '3d';
+    var fi = this.state.filmIdx;
+    var prevI = (fi + 3) % 4;
+    var fcls = function (i) { return 'slide' + (i === 3 ? ' zoom' : '') + (i === fi ? ' on' : i === prevI ? ' prev' : ''); };
+    var cap = isFilm
+      ? { k: t.filmK + ' · 0' + (fi + 1) + ' / 04', t: t.film[fi][0], d: t.film[fi][1] }
+      : { k: t.stepLabel + ' 0' + (step + 1) + ' / 06 · ' + pkCode, t: t.flowSteps[step].t, d: t.flowSteps[step].d };
+    var heroX = {
+      isFilm: isFilm, is3d: !isFilm, cap: cap,
+      fs: { c0: fcls(0), c1: fcls(1), c2: fcls(2), c3: fcls(3) },
+      filmDurS: this.filmDur() * (fi === 3 ? 1.6 : 1),
+      appOn: this.state.appOn && fi === 3,
+      fdots: t.film.map(function (f, i) {
+        return { l: f[0], cls: 'fdot' + (i === fi ? ' on' : ''), pressed: i === fi ? 'true' : 'false', go: function () { self.filmGo(i); self.filmSchedule(); } };
+      })
+    };
+    var phX = {
+      ph: ph, phScenes: phScenes, phPacks: phPacks, phChain: phChain, net: net,
+      phDur: Math.max(3.5, Number(this.props.phoneSpeed) || 5),
+      phBarCls: 'scnbar' + (phPlaying ? '' : ' paused'),
+      phPlaying: phPlaying, phPaused: !phPlaying,
+      phPlayingStr: phPlaying ? 'true' : 'false',
+      phPlayLabel: phPlaying ? t.phPause : t.phPlay,
+      phToggle: function () { self.setState({ phPlaying: !self.state.phPlaying }); },
+      phCounter: '0' + (ps + 1) + ' / 06',
+      offCls: 'switch' + (off ? ' on' : ''),
+      offPressed: off ? 'true' : 'false',
+      offToggle: function () {
+        var s = self.state;
+        if (s.offline) self.setState({ offline: false, synced: s.queue > 0, queue: 0 });
+        else self.setState({ offline: true, queue: 0, synced: false });
+      }
+    };
+
+    var base = {
+      t: t, faq: faq,
+      cubes: cubes, fl: fl, pk: pk, pkCode: pkCode, tags: tags, decals: decals, world: world, views: views,
+      slots: slots, sel: selInfo, pills: pills, log: log,
+      cur: fs[step],
+      counter: '0' + (step + 1) + ' / 06',
+      progress: Math.round((step + 1) / 6 * 100),
+      playing: playing, paused: !playing,
+      playingStr: playing ? 'true' : 'false',
+      playLabel: playing ? t.pause : t.play,
+      toggle: function () { self.setState({ playing: !self.state.playing }); },
+      next: function () { self.setState({ step: (self.state.step + 1) % 6, playing: false }); },
+      prev: function () { self.setState({ step: (self.state.step + 5) % 6, playing: false }); },
+      accent: accent,
+      rootCls: motion ? 'wms' : 'wms still',
+      trCls: lang === 'tr' ? 'on' : '',
+      enCls: lang === 'en' ? 'on' : '',
+      trPressed: lang === 'tr' ? 'true' : 'false',
+      enPressed: lang === 'en' ? 'true' : 'false',
+      setTr: function () { self.setState({ lang: 'tr' }); },
+      setEn: function () { self.setState({ lang: 'en' }); },
+      lang: lang,
+      formMsg: this.state.formKey ? t[this.state.formKey] || this.state.formText || '' : '',
+      formCls: 'fstatus' + (this.state.formKey === 'fOk' ? ' ok' : this.state.formKey && this.state.formKey !== 'fSending' ? ' err' : ''),
+      formBusyAttr: this.state.formKey === 'fSending' ? 'disabled' : null
+    };
+    for (var k in phX) base[k] = phX[k];
+    for (var h in heroX) base[h] = heroX[h];
+    return base;
+  }
+}
+</script>
+</body>
+</html>

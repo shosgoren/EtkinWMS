@@ -9,3 +9,4 @@ Geçmiş ayrıntılar Git geçmişinde ve ilgili görev/PR raporlarında korunur
 - Gerçek kamera/yazıcı kabulü ve operasyonel yedek hedefleri doğrulanmadı; tamamlandı diye raporlanmaz.
 - T941–945 frozen6c7e7d bağımsızQA283PASS/security0, browser4PASS, verify3929/checkall6PASS. Son test-onlydelta legacy34inventory ve exactqueryconsolidation; üç yetki/draft boşluğu58PASS ile kapandı. FinalCI/yayın sonucu henüz bekler.
 - PR33 ilk tam CI fixture/public-export boşlukları test-only düzeltildi: AC04 gerçek207PASS, tasks+movement45PASS, birebir schema konsolidasyonu125PASS; üretim kaynakları değişmedi. Yeni exact-head kapıları/yayın henüz bekler.
+- SatışPR32 main908c22a kaynakları korundu; eski STATE canlı bilgileri yerine yeni doğrulanmış QR kaydı tutuldu. Aynı T941 kimlik çakışması QR şema kartını T951 olarak ayırarak giderildi; satışT941 değişmedi. Yeni finalCI bekler.

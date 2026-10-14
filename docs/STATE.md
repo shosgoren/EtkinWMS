@@ -45,3 +45,6 @@ Son durum kaydı: **14.10.2026 12:29 Europe/Istanbul**. Bu oturumda doğrudan VP
 - TekilQR fiziksel paketindir; ürün barkodu/lot/seri/palet ayrıdır. Fiş/satır kimlikleri değişmez; posted düzeltme append-only.
 - CI/e2e/guard atlama veya test sınırı düşürme yok. Sır/şifre/MFA bağlantıları belgelere girmez.
 - Giriş rehberi: [continuity/README](continuity/README.md); VPS/yedek/yayın: [OPERATIONS](continuity/OPERATIONS.md).
+
+## Ana dal uyumu
+- Satış PR32 main908c22a ile birleşti; marketing kaynakları aynen korundu, canlı deploy sonucu bu kayıtla varsayılmaz. Güncel QR şema kartı T951 (önceki geliştirme kimliği T941); satış kartı T941 ile karıştırma. Kaynak A0ef57e8 review değişmez; son birleştirme belgeler ve mevcut main satış kaynaklarıdır. Yeni exact-head dokuz kapı bekler.
