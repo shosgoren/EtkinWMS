@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 
 const KEY = "etkinwms.guide.v1";
 const OPEN_EVENT = "etkinwms:guide-open";
+const AUTH_PATHS = ["/login", "/mfa", "/reset-password"];
 
 /** Rehberi açan düğme; görünümü çağıranın sınıfıyla (üst çubuk hapı / menü satırı). */
 export function GuideTrigger({ className, iconOnly = false }: { className: string; iconOnly?: boolean }) {
@@ -30,9 +31,9 @@ export function FirstUseGuide() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState(0);
   const pathname = usePathname();
-  // T-983: giriş ekranı sade kalır (üst bar yok); ilk rehber girişten sonraki ilk ekranda açılır.
+  // T-983: giriş adımları (giriş, iki adımlı doğrulama, parola sıfırlama) sade kalır; ilk rehber girişten sonraki ilk ekranda açılır.
   useEffect(() => {
-    if (pathname === "/login") return;
+    if (AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
     try { if (localStorage.getItem(KEY) !== "seen" && !dialog.current?.open) dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
   }, [pathname]);
   useEffect(() => {
