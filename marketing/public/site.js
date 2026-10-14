@@ -782,6 +782,7 @@ class Component extends DCLogic {
       fs: { c0: fcls(0), c1: fcls(1), c2: fcls(2), c3: fcls(3) },
       filmDurS: this.filmDur() * (fi === 3 ? 1.6 : 1),
       appOn: this.state.appOn && fi === 3,
+      cineCls: 'cine' + (this.state.appOn && fi === 3 ? ' app' : ''),
       fdots: t.film.map((f, i) => {
         return { l: f[0], cls: 'fdot' + (i === fi ? ' on' : ''), pressed: i === fi ? 'true' : 'false', go: () => { this.filmGo(i); this.filmSchedule(); } };
       })
