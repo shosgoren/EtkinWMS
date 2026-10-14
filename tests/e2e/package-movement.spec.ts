@@ -13,7 +13,7 @@ export interface PackageMovementFixture {
 const fixtures: PackageMovementFixture[] = [];
 
 export async function seedPackageMovement(page: Page, mobile = false): Promise<PackageMovementFixture> {
-  const originalPackage = await seedPackage(page, mobile, true);
+  const originalPackage = await seedPackage(page, mobile, true, "movement");
   const storageId = randomUUID(), storageCode = `PM-${storageId.slice(0, 8)}`.toUpperCase();
   await db("INSERT INTO public.locations(tenant_id,id,warehouse_id,code,name,depth,kind) VALUES($1,$2,$3,$4,'Movement storage',0,'STORAGE')", [originalPackage.tenantId, storageId, originalPackage.warehouseId, storageCode]);
   const dates = { lotCode: `LOT-${randomUUID().slice(0, 8)}`, producedOn: "2026-10-01", expiresOn: "2027-10-01" };
