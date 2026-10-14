@@ -102,6 +102,10 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
   for (const size of T270_SIZES) {
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto(`${base}/items`);
+    await expect(page.getByTestId("screen-shell")).toHaveCount(1);
+    await expect(page.getByTestId("screen-shell")).toBeVisible();
+    await expect(page.getByTestId("screen-nav")).toHaveCount(1);
+    await expect(page.getByTestId("screen-nav")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: "Ürünler" })).toBeVisible();
     const where = `ürünler ${size.width}x${size.height}`;
     const form = page.getByRole("search", { name: "Ürün ara" });
