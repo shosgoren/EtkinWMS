@@ -74,3 +74,8 @@ Kart türleri HM/YM/MM/TM ve standart birimler kaynak0031'de; Motive verisini ö
 ## T939 — geliştirme performans onarımı, canlı kanıtı değil
 Main69d 200paket outer30sFAIL (2028/2029); PR yeşilleri bu sonucu silmez. Yeni0033 yalnız aynı invoker assert fonksiyonunu scalar flags + kimlik-filtreli LATERAL OFFSET0 planıyla değiştirir; bütün callbacks/altı hata/NULL-HU/kapsam/ayrıledger-balance kontrolü korunur. LIMIT/GUC/cache/SECDEF/timeout değişimi yok; down exact0032 bodyyi veri silmeden geri yükler.
 Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded32→33→32→33 owner/ACL/search_path/RLS/veri aynı PASS. Gerçek plan id-indexseek göstermiyor; bu iddia yapılmaz. Kaynak frozen; bağımsızreview/CI/yayın ayrı kapılardır, canlısonşema31.
+
+## T946–950: geliştirme şeması0035, canlı kabulü ayrı
+- Tek shared package_movement_steps sırası/predecessor uniq; WAREHOUSE_TRANSFER target IN ve source OUT gerçek FK, iki POSTED belge/TRANSFERlink/exact±fullqty. Kaynak ve hedef depo farklı, hedef STORAGE; originwarehouse/lot/unitfactor immutable.
+- Currentwarehouse terminalstep+pozitifbalance ile doğrulanır; originwarehouse hareket/yetki kaynağı değildir. QC/putaway hedefdepoda çalışır. Generic mapped ledger/reversal ve kayıt değişimi ret; legacyNULLHU korunur.
+- Boşdown exact0034 function/ACL/RLS oracle; transferverisi varsa down silmeden ret. Schema owner/foreign/RLS ve ters iki gerçekRR winner bağımsız154/authorgap156PASS; canonicalcommand+rollback27PASS. Tam güvenlik/CI/VPS schema35 sonucu henüz bekler.

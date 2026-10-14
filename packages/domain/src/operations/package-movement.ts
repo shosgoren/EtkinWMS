@@ -33,21 +33,23 @@ export function parsePackageMovementInput(raw: unknown, operation: Operation): V
 }
 
 type State = {
-  warehouse_id: string; item_id: string; unit_id: string; quantity: string; conversion_factor: string; base_quantity: string;
+  warehouse_id: string; expected_warehouse_id: string; expected_location_id: string; expected_stock_status: string; item_id: string; unit_id: string; quantity: string; conversion_factor: string; base_quantity: string;
   lot_id: string | null; inventory_owner_id: string | null; serial_id: string | null; origin_status: string;
   previous_document_line_id: string; sequence_no: number; location_id: string; stock_status: string;
   stock_dimension_id: string; balance_version: string; balance_quantity: string; reserved_quantity: string; location_kind: string;
 };
-async function readState(tx: AccessTx, tenantId: string, packageId: string): Promise<State> {
-  const rows = await tx.execute<State>(sql`SELECT d.warehouse_id,l.item_id,l.unit_id,l.quantity::text,l.conversion_factor::text,l.base_quantity::text,
+export async function readPackageState(tx: AccessTx, tenantId: string, packageId: string): Promise<State> {
+  const rows = await tx.execute<State>(sql`SELECT loc.warehouse_id,coalesce(terminal.warehouse_id,d.warehouse_id) AS expected_warehouse_id,
+    coalesce(ms.target_location_id,l.target_location_id) AS expected_location_id,coalesce(ms.target_stock_status,l.stock_status) AS expected_stock_status,l.item_id,l.unit_id,l.quantity::text,l.conversion_factor::text,l.base_quantity::text,
     l.lot_id,l.inventory_owner_id,l.serial_id,d.status AS origin_status,
     coalesce(ms.document_line_id,l.id) AS previous_document_line_id,coalesce(ms.sequence_no,0) AS sequence_no,
     sd.location_id,sd.stock_status,sd.id AS stock_dimension_id,b.version::text AS balance_version,
     b.quantity::text AS balance_quantity,b.reserved_quantity::text,loc.kind AS location_kind
     FROM public.receipt_packages rp JOIN public.document_lines l ON l.tenant_id=rp.tenant_id AND l.id=rp.document_line_id
     JOIN public.documents d ON d.tenant_id=l.tenant_id AND d.id=l.document_id
-    LEFT JOIN LATERAL (SELECT document_line_id,sequence_no FROM public.package_movement_steps
+    LEFT JOIN LATERAL (SELECT document_id,document_line_id,sequence_no,target_location_id,target_stock_status FROM public.package_movement_steps
       WHERE tenant_id=rp.tenant_id AND handling_unit_id=rp.id ORDER BY sequence_no DESC LIMIT 1) ms ON true
+    LEFT JOIN public.documents terminal ON terminal.tenant_id=rp.tenant_id AND terminal.id=ms.document_id
     JOIN public.stock_dimensions sd ON sd.tenant_id=rp.tenant_id AND sd.handling_unit_id=rp.id
     JOIN public.stock_balances b ON b.tenant_id=sd.tenant_id AND b.stock_dimension_id=sd.id AND b.quantity>0
     JOIN public.locations loc ON loc.tenant_id=sd.tenant_id AND loc.id=sd.location_id
@@ -57,12 +59,18 @@ async function readState(tx: AccessTx, tenantId: string, packageId: string): Pro
     throw new AppError(visible.length === 0 ? "NOT_FOUND" : "VALIDATION_FAILED");
   }
   const s = rows[0];
-  if (rows.length !== 1 || s === undefined || s.origin_status !== "POSTED" || s.serial_id !== null || s.inventory_owner_id !== null || decimalToMicro(s.balance_quantity) !== decimalToMicro(s.base_quantity)) throw new AppError("VALIDATION_FAILED");
+  if (rows.length !== 1 || s === undefined || s.origin_status !== "POSTED" || s.serial_id !== null || s.inventory_owner_id !== null || s.warehouse_id !== s.expected_warehouse_id || s.location_id !== s.expected_location_id || s.stock_status !== s.expected_stock_status || decimalToMicro(s.balance_quantity) !== decimalToMicro(s.base_quantity)) throw new AppError("VALIDATION_FAILED");
   return s;
 }
-async function warehouseOf(tx: AccessTx, tenantId: string, packageId: string): Promise<string[]> {
-  const rows = await tx.execute<{ warehouse_id: string }>(sql`SELECT d.warehouse_id FROM public.receipt_packages rp
-    JOIN public.documents d ON d.tenant_id=rp.tenant_id AND d.id=rp.document_id WHERE rp.tenant_id=${tenantId}::uuid AND rp.id=${packageId}::uuid`);
+export async function packageWarehouseIds(tx: AccessTx, tenantId: string, packageId: string): Promise<string[]> {
+  const rows = await tx.execute<{ warehouse_id: string }>(sql`SELECT DISTINCT coalesce(loc.warehouse_id,terminal.warehouse_id,d.warehouse_id) AS warehouse_id
+    FROM public.receipt_packages rp JOIN public.documents d ON d.tenant_id=rp.tenant_id AND d.id=rp.document_id
+    LEFT JOIN LATERAL(SELECT document_id FROM public.package_movement_steps WHERE tenant_id=rp.tenant_id AND handling_unit_id=rp.id ORDER BY sequence_no DESC LIMIT 1) ms ON true
+    LEFT JOIN public.documents terminal ON terminal.tenant_id=rp.tenant_id AND terminal.id=ms.document_id
+    LEFT JOIN public.stock_dimensions sd ON sd.tenant_id=rp.tenant_id AND sd.handling_unit_id=rp.id
+      AND EXISTS(SELECT 1 FROM public.stock_balances b WHERE b.tenant_id=sd.tenant_id AND b.stock_dimension_id=sd.id AND b.quantity>0)
+    LEFT JOIN public.locations loc ON loc.tenant_id=sd.tenant_id AND loc.id=sd.location_id
+    WHERE rp.tenant_id=${tenantId}::uuid AND rp.id=${packageId}::uuid`);
   return rows.map(r => r.warehouse_id);
 }
 async function specOf(tx: AccessTx, tenantId: string, value: Value, operation: Operation, state: State): Promise<FieldPostSpec> {
@@ -81,7 +89,7 @@ async function specOf(tx: AccessTx, tenantId: string, value: Value, operation: O
       baseQuantity: state.base_quantity, lotId: state.lot_id, handlingUnitId: value.packageId, sourceLocationId: state.location_id,
       targetLocationId: target, stockStatus: operation === "QC_RELEASE" ? "QUARANTINE" : "AVAILABLE", targetStockStatus: "AVAILABLE", sourceLineId: null }] };
 }
-function assertCurrent(locked: LockedState, value: Value, state: State): void {
+export function assertPackageCurrent(locked: LockedState, value: Pick<PackageMovementInput, "predecessorVersion" | "currentBalanceVersion">, state: State): void {
   const balance = locked.balances.find(b => b.stockDimensionId === state.stock_dimension_id);
   if (state.sequence_no !== value.predecessorVersion || balance === undefined || balance.version !== value.currentBalanceVersion || state.balance_version !== balance.version || decimalToMicro(balance.quantity) !== decimalToMicro(state.base_quantity)) throw new AppError("VERSION_CONFLICT", { retryable: true });
   if (decimalToMicro(balance.reservedQuantity) !== 0n) throw new AppError("VALIDATION_FAILED");
@@ -92,12 +100,12 @@ async function move(params: StockDocCallParams, input: PackageMovementInput | Pu
     commandType: operation === "QC_RELEASE" ? "package.quality_release" : "package.putaway", permission: operation === "QC_RELEASE" ? "document.approve" : "stock.post", input: value,
     ...(params.retry === undefined ? {} : { retry: params.retry }), ...(params.timeouts === undefined ? {} : { timeouts: params.timeouts }), ...(params.logger === undefined ? {} : { logger: params.logger }),
     plan: async (tx, _input, m) => {
-      try { return await planFieldPosting(tx, m.tenantId, await specOf(tx, m.tenantId, value, operation, await readState(tx, m.tenantId, value.packageId))); }
-      catch (e) { if (!(e instanceof AppError)) throw e; return emptyPlan(await warehouseOf(tx, m.tenantId, value.packageId)); }
+      try { return await planFieldPosting(tx, m.tenantId, await specOf(tx, m.tenantId, value, operation, await readPackageState(tx, m.tenantId, value.packageId))); }
+      catch (e) { if (!(e instanceof AppError)) throw e; return emptyPlan(await packageWarehouseIds(tx, m.tenantId, value.packageId)); }
     },
     apply: async (tx, locked, ctx) => {
-      const state = await readState(tx, ctx.tenantId, value.packageId);
-      assertCurrent(locked, value, state);
+      const state = await readPackageState(tx, ctx.tenantId, value.packageId);
+      assertPackageCurrent(locked, value, state);
       const spec = await specOf(tx, ctx.tenantId, value, operation, state);
       return postFieldDocument(tx, locked, ctx, spec, input.requestId ?? null, async (documentId, lineIds) => {
         const lineId = lineIds[0]; if (lineId === undefined) throw new AppError("INTERNAL");

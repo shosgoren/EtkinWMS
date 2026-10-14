@@ -152,3 +152,5 @@ export { getPackageReceipt, getReceiptPackage, resolvePackageQr, type PackageRec
 export { approvePackageQuality, putawayPackage, type PackageMovementInput, type PutawayPackageInput } from "./package-movement.ts";
 
 export { getCurrentPackage, resolveCurrentPackageQr, type CurrentPackageDto } from "./package-movement-queries.ts";
+
+export { transferPackage, type PackageTransferInput } from "./package-transfer.ts";

@@ -78,3 +78,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Akış: Paket okut → sunucunun izin verdiği tek işlem → gerekirse yer okut → sunucu sonucu. Ürün/palet barkodu paket yerine kabul edilmez; miktarı kullanıcı tekrar girmez.
 - Hydration öncesi girdiler kapalı; belirsiz yazma aynı içerik/anahtarla tekrar edilir. POSTED cevabı sonrası okuma hatasında yazma tekrarlanmaz; yeni işlem taze currentstate yüklenene kadar kapalı.
 - Yeni gerçek tarayıcı4/4PASS: kayıp cevap/tek etki/aynıQR/diğer800KG, dört viewport,56pxana/geri ve48pxsonalan/odak. Kamera/Epson fiziksel kabulü UNKNOWN; serverflag ve canlı kaynak durumu STATE'dedir.
+
+## QR depo transferi (T949)
+- SameQR → hedefdepo → konum okut/seç → sunucu miktarı ve iki depo görselkontrolü → POSTED sonuç. Tüm seçim sayfaları yüklenir; tek el48px kontrol/56px anaeylem/geri/anaekran.
+- Kayıp cevap aynıkey/payload; başarılı kayıt sonrası readhatası ikinci yazma yaratmaz, sonraki işlem freshstate olmadan kapalı. Gerçek desktop/mobile4PASS dörtviewport, sameQR/lot/tarihler/diğer800KG ve A→B→A; fizikselkamera/yazıcıUNKNOWN. CI/yayın/flag ayrı.

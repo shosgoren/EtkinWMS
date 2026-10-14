@@ -32,3 +32,8 @@ Son kayıt: 14 Ekim2026. Kaynak, GitHub kontrolleri, canlı sürüm ve fiziksel 
 - A kaynak aktarımı int/package-movement-ready: aynı incelenmiş30Gitblob, beş gerçekT951–955 author teslimi; eski çakışan kart history guard hatası korunur. YerelT956 actor üstü henüzmain/yayın değildir; yeni actualbase kapıları bekler.
 
 - T-944 (14 Ekim): satış sitesine JSON-LD (Organization/WebSite/SoftwareApplication), 1200×630 paylaşım görseli, 512 PNG logo, hreflang ve sitemap lastmod. Alan adları: etkinyazilim.com.tr DNS A→VPS, Caddy `permanent` kuralı ({uri} korunur); etkinwms.com ve etkinwms.com.tr Hostinger panelinde Kalıcı(301)→https://etkinyazilim.com (14 Ekim, kullanıcı isteği; Hostinger yönlendirme IP'si). etkinwms.com.tr kaydı 'Onay bekliyor'.
+
+## 14 Ekim transfer yayın kesimi (T946–950)
+- PR40 kaynak05f56b: bağımsız security BLOCKER0/MAJOR0/MINOR1; ordinary app INSERT/constructor yolları kapalı. MINOR yalnız privileged stock_document_links UPDATE adoption; wms_app UPDATE yetkisi/public yolu yok. Pilot için kabul edildi; doğrudan privileged link UPDATE yapılmaz, geniş owner-tamper garantisi verilmez; backlog.
+- Bağımsız fresh35 schema165/165 PASS; gerçek receiving/labels/kalite/transfer/legacy tarayıcı16/16 PASS, skip/retry0. Önceki dokuz PR kontrolü PASS; yalnız güncel main belge çakışması çözümü sonrası yeni kapılar yeniden doğrulanır.
+- Son VPS doğrulaması fdf9d6ee88a4a5af58092568faf069bbcd723f23, healthok/schema34; transfer35 henüz canlı diye sunulmaz. QR flag false; üretim36 ve siparişsiz tam paket çıkışı37 ayrı teslimdir.

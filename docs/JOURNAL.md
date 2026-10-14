@@ -195,3 +195,8 @@
 
 - 14Ekim QR hareketi: gerçek main satış PR35/36 korunarak int/package-movement içine alındı; QR görev kartları T951–955, satış T941–943 ile kimlik çakışması giderildi. Source/CI/main/live schema34 kapıları ayrıdır; T956 PR37 legacy mobile geometry FAIL teşhisi bekler.
 - 2026-10-14 T-944 SEO/varlık etiketleri; etkinwms.com/.com.tr Hostinger 301 yönlendirmesi kuruldu.
+
+### 14 Ekim — T946–950 transfer final kaynak
+- 05f56b security B0/M0/m1; ordinary runtime bulguları kapalı. Kalan privileged UPDATE adoption pilot operasyon sınırıyla kabul; uygulama rolünün UPDATE grantı/public çağrısı yok, owner tamper garantisi verilmez.
+- Bağımsız final fresh35 receipt102+transfer40+drift23=165/165 PASS; kaynak hashleri aynı. Receiving4/labels2/A4/B4/legacy2=16/16 browserPASS; retry/skip0. Önceki hata koşuları korunur, korumalar gevşetilmedi.
+- Main belge çakışması kaynak koda dokunmadan çözüldü. PR/main/yayın ve gerçek cihaz ayrı kapılar; flagfalse. Son doğrudan VPS check fdf9d6/schema34 healthok.
