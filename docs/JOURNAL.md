@@ -194,7 +194,15 @@
 - 2026-10-14 T-943 kanıt şeridi film içine (geniş/yüksek ekran); yerel PASS.
 
 - 14Ekim QR hareketi: gerçek main satış PR35/36 korunarak int/package-movement içine alındı; QR görev kartları T951–955, satış T941–943 ile kimlik çakışması giderildi. Source/CI/main/live schema34 kapıları ayrıdır; T956 PR37 legacy mobile geometry FAIL teşhisi bekler.
+- 2026-10-14 T-944 SEO/varlık etiketleri; etkinwms.com/.com.tr Hostinger 301 yönlendirmesi kuruldu.
 
-- 14Ekim B yeni entegrasyon: gerçek incelenmiş transfer kaynakları güncelA ve ayrı testactor üstüne taşındı; satış T941–943 korunur, QR T951–955 farklıdır. Source/CI/main/live kapıları ayrıdır.
+### 14 Ekim — T946–950 transfer final kaynak
+- 05f56b security B0/M0/m1; ordinary runtime bulguları kapalı. Kalan privileged UPDATE adoption pilot operasyon sınırıyla kabul; uygulama rolünün UPDATE grantı/public çağrısı yok, owner tamper garantisi verilmez.
+- Bağımsız final fresh35 receipt102+transfer40+drift23=165/165 PASS; kaynak hashleri aynı. Receiving4/labels2/A4/B4/legacy2=16/16 browserPASS; retry/skip0. Önceki hata koşuları korunur, korumalar gevşetilmedi.
+- Main belge çakışması kaynak koda dokunmadan çözüldü. PR/main/yayın ve gerçek cihaz ayrı kapılar; flagfalse. Son doğrudan VPS check fdf9d6/schema34 healthok.
 
-- 14Ekim C-data source aktarımı: incelenenvebağımsıztested c73816c app/QA kaynakları yeniA/Bbase üstüne exactGitblob taşındı; dört kart/30yol. AuthorRLS/link/replay failurehistory ve final independent138/171/292/38/33PASS korunur. Yeniheadsecurity/CI/main/VPS36 veC-UI ayrı.
+### 14 Ekim — üretim36 ve T963 final
+- D4 kaynak bağımsız schema184/domain138/native207/boundary33PASS. B/C security0/0/1 yalnız privileged link UPDATE adoption sınırı; appUPDATE yok, pilotta kabul/backlog. Ordinary constructor/incident link bulguları testle kapatıldı.
+- Fullint eski restore3/ledgerinventory1FAIL geçmişi korunur. İzole rollback helper yeni triggerleri kapsayıp exact original A/O/R/D geri yükler; gerçek147/147PASS, eskiassertions korunup1modecheckeklendi; uygulamaSQL değişmedi.
+- T963 güncel36 UI4PASS sonrası fullCI legacy2 recipe?idFAIL bulundu. Explicit mode=packages QR ve plain?id legacy: unchanged QR4+legacy2=6/6PASS, skip/retry/flaky0; forms/legacytests unchanged, types/lintPASS.
+- C kaynak30path sınırı için DATABASE/JOURNAL detayları bu ayrıUI teslimine taşındı. Yeni head9CI/main/receiver36/flag ayrıkapı, fizikselcihazUNKNOWN.

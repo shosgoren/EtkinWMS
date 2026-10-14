@@ -39,6 +39,8 @@ async function runSql(c: pg.Client, sql: string, prefix: string): Promise<string
 const unwrap = (sql: string): string => sql.replace(/^BEGIN[^\n]*\n/, "").replace(/\nCOMMIT;\n$/, "\n");
 const ASSERT_TRIGGERS = [
   ["stock_balances", "stock_balances_assert"],
+  ["stock_balances", "receipt_packages_consistency"],
+  ["stock_balances", "package_production_consistency"],
   ["reservations", "reservations_assert"],
 ] as const;
 
@@ -66,18 +68,25 @@ async function tx(statements: [string, unknown[]][]): Promise<void> {
 
 /**
  * Bozuk "restore edilmiş kopya" simülasyonu: HİÇBİR ŞEY KALICI DEĞİLDİR (veri ve DDL aynı transaction'da, ROLLBACK ile biter).
- * Commit-zamanı tutarlılık tetikleyicileri (0013; `ENABLE ALWAYS`) yalnız bu transaction'da kapatılır, yazımdan sonra
- * `ENABLE ALWAYS` ile geri açılır (ROLLBACK zaten tamamını geri alır). `fn` içinde parmak izi/tutarlılık gövdeleri
+ * Commit-zamanı tutarlılık tetikleyicileri yalnız bu transaction'da kapatılır, yazımdan sonra
+ * her birinin özgün A/O/R/D modu aynen geri yüklenir (ROLLBACK zaten tamamını geri alır). `fn` içinde parmak izi/tutarlılık gövdeleri
  * (`unwrap`) bu transaction'ın değişikliklerini görür. Bu DDL yöntemi yalnız test içindir; üretim betiğine kopyalanmaz.
  */
 async function withTamperedCopy(statements: [string, unknown[]][], fn: () => Promise<void>, ddl: string[] = []): Promise<void> {
   await adm.query("BEGIN");
   try {
     await adm.query("SELECT set_config('app.current_tenant_id', $1, true)", [A.tenantId]);
+    const originalModes = await triggerModes();
     for (const [t, trg] of ASSERT_TRIGGERS) await adm.query(`ALTER TABLE public.${t} DISABLE TRIGGER ${trg}`);
     for (const d of ddl) await adm.query(d);
     for (const [sql, params] of statements) await adm.query(sql, params);
-    for (const [t, trg] of ASSERT_TRIGGERS) await adm.query(`ALTER TABLE public.${t} ENABLE ALWAYS TRIGGER ${trg}`);
+    const modeDdl: Record<string, string> = { A: "ENABLE ALWAYS", O: "ENABLE", R: "ENABLE REPLICA", D: "DISABLE" };
+    for (const [t, trg] of ASSERT_TRIGGERS) {
+      const restore = modeDdl[originalModes[`${t}.${trg}`] ?? ""];
+      if (restore === undefined) throw new Error(`tetikleyici özgün modu bulunamadı: ${t}.${trg}`);
+      await adm.query(`ALTER TABLE public.${t} ${restore} TRIGGER ${trg}`);
+    }
+    expect(await triggerModes()).toEqual(originalModes);
     await fn();
   } catch (e) {
     await rollbackKeeping(e);
@@ -86,11 +95,13 @@ async function withTamperedCopy(statements: [string, unknown[]][], fn: () => Pro
   await adm.query("ROLLBACK");
 }
 async function triggerModes(): Promise<Record<string, string>> {
-  const r = await adm.query<{ tgname: string; tgenabled: string }>(
-    "SELECT tgname, tgenabled FROM pg_trigger WHERE tgname = ANY($1::text[])",
-    [ASSERT_TRIGGERS.map(([, g]) => g)],
+  const r = await adm.query<{ table_name: string; tgname: string; tgenabled: string }>(
+    `SELECT c.relname AS table_name, t.tgname, t.tgenabled FROM pg_trigger t
+     JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+     WHERE n.nspname='public' AND c.relname=ANY($1::text[]) AND t.tgname=ANY($2::text[])`,
+    [ASSERT_TRIGGERS.map(([t]) => t), ASSERT_TRIGGERS.map(([, g]) => g)],
   );
-  return Object.fromEntries(r.rows.map((x) => [x.tgname, x.tgenabled]));
+  return Object.fromEntries(r.rows.map((x) => [`${x.table_name}.${x.tgname}`, x.tgenabled]));
 }
 const setBal = (set: string): [string, unknown[]] => [`UPDATE public.stock_balances SET ${set} WHERE tenant_id=$1 AND stock_dimension_id=$2`, [A.tenantId, dimensionId]];
 const setRes = (set: string): [string, unknown[]] => [`UPDATE public.reservations SET ${set} WHERE tenant_id=$1 AND stock_dimension_id=$2`, [A.tenantId, dimensionId]];
@@ -206,8 +217,13 @@ describe("restore içerik doğrulaması (T-284)", () => {
     expect(readFileSync(new URL("../../../scripts/lib/stock-consistency.sql", import.meta.url), "utf8")).not.toMatch(/\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE)\b/i);
   });
 
-  it("simülasyon kalıcı DDL bırakmaz: tutarlılık tetikleyicileri 'A' (ENABLE ALWAYS) kalır, CHECK kısıtları yerinde", async () => {
-    expect(await triggerModes()).toEqual({ stock_balances_assert: "A", reservations_assert: "A" });
+  it("simülasyon kalıcı DDL bırakmaz: tutarlılık tetikleyicileri özgün A/O modunda kalır, CHECK kısıtları yerinde", async () => {
+    expect(await triggerModes()).toEqual({
+      "stock_balances.stock_balances_assert": "A",
+      "stock_balances.receipt_packages_consistency": "O",
+      "stock_balances.package_production_consistency": "O",
+      "reservations.reservations_assert": "A",
+    });
     const chk = await adm.query<{ n: string }>(
       "SELECT count(*)::text AS n FROM pg_constraint WHERE conname IN ('stock_balances_quantity_chk','stock_balances_reserved_chk')",
     );

@@ -372,6 +372,7 @@ describe("T-232 defter değişmezliği (I-04)", () => {
       `SELECT tgname, tgenabled FROM pg_trigger WHERE tgrelid = 'public.stock_ledger'::regclass AND NOT tgisinternal ORDER BY tgname`,
     );
     expect(t.rows).toEqual([
+      { tgname: "package_production_consistency", tgenabled: "O" },
       { tgname: "receipt_packages_consistency", tgenabled: "O" },
       { tgname: "stock_ledger_append_only", tgenabled: "A" },
       { tgname: "stock_ledger_assert", tgenabled: "A" },

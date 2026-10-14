@@ -20,6 +20,49 @@ const TITLE = "Etkin WMS — Girişten sevkiyata kesintisiz kontrolün en kolay 
 const DESCRIPTION =
   "Etkin WMS: kabulde her koli, paket, varil ve palete anında tekil QR etiket; girişten üretime ve sevkiyata uçtan uca izlenebilirlik. Web tabanlı, kurulum gerektirmez, aylık kiralanır. Pilot demo isteyin.";
 
+// T-944: arama motorları ve yapay zekâ aramaları için tek varlık tanımı (Schema.org JSON-LD).
+// Çalıştırılmayan veri bloğudur; CSP script-src 'self' bunu engellemez. Fiyat/puan gibi doğrulanmamış iddia içermez.
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE}/#organization`,
+      name: "Etkin Yazılım",
+      alternateName: ["Etkin WMS", "etkinyazilim.com.tr"],
+      url: `${SITE}/`,
+      logo: { "@type": "ImageObject", url: `${SITE}/img/logo-512.png`, width: 512, height: 512 },
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE}/#website`,
+      name: "Etkin WMS",
+      url: `${SITE}/`,
+      inLanguage: ["tr-TR", "en"],
+      publisher: { "@id": `${SITE}/#organization` },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${SITE}/#software`,
+      name: "Etkin WMS",
+      applicationCategory: "BusinessApplication",
+      applicationSubCategory: "Depo yönetim sistemi (WMS)",
+      operatingSystem: "Web tarayıcısı (telefon, tablet, el terminali, bilgisayar)",
+      description: DESCRIPTION,
+      url: `${SITE}/`,
+      image: `${SITE}/img/og-etkin-wms.jpg`,
+      publisher: { "@id": `${SITE}/#organization` },
+      featureList: [
+        "Kabulde koli, paket, varil ve palete tekil QR etiket",
+        "Girişten üretime ve sevkiyata uçtan uca izlenebilirlik",
+        "Lot, üretim ve son kullanma tarihi takibi",
+        "Rotalı toplama ve kör sayım",
+        "İnternet kesintisinde çalışmaya devam",
+      ],
+    },
+  ],
+};
+
 const FONT_FACES = [
   ["Bricolage Grotesque", "bricolage-grotesque.woff", "400 800"],
   ["Instrument Sans", "instrument-sans.woff", "400 600"],
@@ -79,7 +122,14 @@ function page(prerendered, template) {
 <meta property="og:title" content="${TITLE}">
 <meta property="og:description" content="${DESCRIPTION}">
 <meta property="og:url" content="${SITE}/">
-<meta property="og:image" content="${SITE}/img/saha-2-etiket.webp">
+<meta property="og:image" content="${SITE}/img/og-etkin-wms.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Etkin WMS — saha filminden bir kare">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" hreflang="tr" href="${SITE}/">
+<link rel="alternate" hreflang="x-default" href="${SITE}/">
+<script type="application/ld+json">${JSON.stringify(STRUCTURED_DATA)}</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preload" href="/fonts/bricolage-grotesque.woff" as="font" type="font/woff" crossorigin>
 <link rel="preload" href="/fonts/instrument-sans.woff" as="font" type="font/woff" crossorigin>

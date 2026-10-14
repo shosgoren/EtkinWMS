@@ -80,8 +80,11 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
 - Currentwarehouse terminalstep+pozitifbalance ile doğrulanır; originwarehouse hareket/yetki kaynağı değildir. QC/putaway hedefdepoda çalışır. Generic mapped ledger/reversal ve kayıt değişimi ret; legacyNULLHU korunur.
 - Boşdown exact0034 function/ACL/RLS oracle; transferverisi varsa down silmeden ret. Schema owner/foreign/RLS ve ters iki gerçekRR winner bağımsız154/authorgap156PASS; canonicalcommand+rollback27PASS. Tam güvenlik/CI/VPS schema35 sonucu henüz bekler.
 
-## T960–964: üretim QR geliştirme sözleşmesi
-- Yeni0036 output origin/batch/inputallocation; mevcut QR girdisi kısmen tüketilir, kalan miktar sunucuda defterden hesaplanır. Origin miktarı/lot/tarih/QR ayrı korunur; sıfır kalan geçmişte okunur, yeni işlem yapılmaz.
-- Prepare gerçek outputIN/HU/LOT/batch ve planlanan girdileri kaydeder; stok/link/CONSUME yok. Post existingIN kilidini korur; freshOUT, gerçek PRODUCTIONlink, CONSUME, ikiPOSTED ve bütün ledger/audit/numaraları tekTX yapar. Ayrı sabit anahtarlar ve kalıcı preparedIDs; motor/FK/kilit kısayolu yok.
-- Aynı kaynakdepo girdileri; farklı kaynakdepo önce QR transfer. Çıktıdeposu farklı olabilir, outputAVAILABLE mevcut üretim kuralıdır. Soy ağacı input50 değerini batch için bir kez tutar; her çıktıya tekrar50 yazılmaz.
-- Yeni tenant tabloları FORCE RLS; yabancı wms_app INSERT nativeRLS tarafından reddedilir. Aynıtenant ve owner bütünlük kontrolleri korunur. Veri paketi arayüz tamamlandı veya canlı0036 kanıtı değildir; STATE gerçek kapıları gösterir.
+## Tekil QR üretim / schema36
+- Hazırlık sadece gerçek APPROVED output IN, immutable outputHU/LOT ve inputplan saklar; henüz ledger, kaynakOUT, link veya CONSUME yok.
+- Post mevcut motorun tek mevcut IN header kilidiyle freshOUT oluşturur; canonical PRODUCTION OUT→IN bağı, inputCONSUME, çıktıIN, audit/numara atomiktir.
+- Orijinal miktar/birim çevrim katsayısı immutable; kalan origin−CONSUME; zero aynıQR tarih/soy ağacını korur. Çoklu çıktıda inputtüketimi genealogyde bir kez sayılır.
+- Aynı kaynakdepo, farklı outputdepo; kaynaklar farklıysa önceden QRtransfer. Output mevcut manufacturing AVAILABLE politikasını izler.
+- Prepare/post ayrı stablekeys; preparelostreply inputtaşıma sonrası eskiID kurtarır, yeni stale key ret. Postfault APPROVED kimlikleri koruyup stok/link/numarayı geri alır.
+- B/C ordinary runtime incident-link guards ve tenant/RLS/MFA mevcut motor korunur. Privileged legacy-link UPDATE adoption MINOR pilot kabulüdür; appUPDATEgrant yok, raw privilegedUPDATE yapılmaz; geniş owner-tamper garantisi verilmez.
+- Şema36 bağımsız184/domain138/native207PASS; eski restore/ledger fixture uyumu147PASS. Bu sayı kod/CI/canlı veya cihaz kabulü yerine geçmez.
