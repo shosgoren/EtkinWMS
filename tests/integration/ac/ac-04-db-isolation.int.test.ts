@@ -213,6 +213,16 @@ beforeAll(async () => {
   for (const w of [A,B]) {
     const hu=randomUUID(),receipt=randomUUID(),receiptLine=randomUUID(),document=randomUUID(),line=randomUUID();
     const originDimension=randomUUID(), currentDimension=randomUUID(), movementDocument=randomUUID(), movementLine=randomUUID();
+    const productionRecipe=randomUUID(), outputItem=randomUUID(), batch=randomUUID(), outputDocument=randomUUID();
+    const outputHu=randomUUID(), outputLine=randomUUID(), outputDimension=randomUUID(), consumeDocument=randomUUID(), consumeLine=randomUUID();
+    // Recipe components are sealed at COMMIT; production uses a fresh output SKU and only this scratch HU.
+    await admin.query("BEGIN");
+    try {
+      await admin.query("INSERT INTO public.items(tenant_id,id,code,name,base_unit_id,tracking_mode) VALUES($1,$2,'AC04-OUTPUT','AC04 production output',$3,'NONE')",[w.tenantId,outputItem,w.unitId]);
+      await admin.query("INSERT INTO public.production_recipes(tenant_id,id,code,version,name,output_item_id,output_quantity,created_by) VALUES($1,$2,'AC04-PRODUCTION',1,'AC04 sealed recipe',$3,1,$4)",[w.tenantId,productionRecipe,outputItem,w.ownerUserId]);
+      await admin.query("INSERT INTO public.production_recipe_lines(tenant_id,recipe_id,line_no,item_id,quantity) VALUES($1,$2,1,$3,1)",[w.tenantId,productionRecipe,w.itemNoneId]);
+      await admin.query("COMMIT");
+    } catch(e) { await admin.query("ROLLBACK"); throw e; }
     await admin.query("BEGIN");
     try {
       await admin.query("SELECT set_config('app.current_tenant_id',$1,true)",[w.tenantId]);
@@ -237,6 +247,26 @@ beforeAll(async () => {
       await admin.query("UPDATE public.stock_balances SET quantity=0,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[w.tenantId,originDimension]);
       await admin.query("UPDATE public.stock_balances SET quantity=1,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[w.tenantId,currentDimension]);
       await admin.query("UPDATE public.documents SET status='POSTED',number=$3::text WHERE tenant_id=$1 AND id=$2",[w.tenantId,movementDocument,`AC04-QC-${movementDocument}`]);
+      // C: construct a real prepared output origin and immutable input snapshot, then both posted legs.
+      await admin.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_production_id) VALUES($1,$2,'VARIL',$3,$4)",[w.tenantId,outputHu,`AC04-OUTPUT-${outputHu}`,batch]);
+      await admin.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[w.tenantId,outputDocument,w.warehouseId,w.ownerUserId]);
+      await admin.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$7,'AVAILABLE')",[w.tenantId,outputLine,outputDocument,outputItem,w.unitId,w.rootLocationId,outputHu]);
+      await admin.query("UPDATE public.documents SET status='APPROVED' WHERE tenant_id=$1 AND id=$2",[w.tenantId,outputDocument]);
+      await admin.query("INSERT INTO public.production_batches(tenant_id,id,recipe_id,output_document_id,target_location_id,output_quantity) VALUES($1,$2,$3,$4,$5,1)",[w.tenantId,batch,productionRecipe,outputDocument,w.rootLocationId]);
+      await admin.query("INSERT INTO public.production_inputs(tenant_id,production_batch_id,handling_unit_id,previous_document_line_id,sequence_no,current_balance_version,base_quantity) SELECT $1,$2,$3,$4,2,version,1 FROM public.stock_balances WHERE tenant_id=$1 AND stock_dimension_id=$5",[w.tenantId,batch,hu,movementLine,currentDimension]);
+      await admin.query("INSERT INTO public.production_packages(tenant_id,id,production_batch_id,document_id,document_line_id,package_no,lot_code,produced_on,expires_on) VALUES($1,$2,$3,$4,$5,1,'AC04-PRODUCTION-LOT','2026-10-14','2027-10-14')",[w.tenantId,outputHu,batch,outputDocument,outputLine]);
+      await admin.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[w.tenantId,consumeDocument,w.warehouseId,w.ownerUserId]);
+      await admin.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,source_location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$7,'AVAILABLE')",[w.tenantId,consumeLine,consumeDocument,w.itemNoneId,w.unitId,w.rootLocationId,hu]);
+      await admin.query("UPDATE public.documents SET status='APPROVED' WHERE tenant_id=$1 AND id=$2",[w.tenantId,consumeDocument]);
+      await admin.query("INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity,production_batch_id) VALUES($1,$2,$3,$4,'CONSUME',2,$5,$6,$6,'AVAILABLE','AVAILABLE',1,$7)",[w.tenantId,hu,consumeDocument,consumeLine,movementLine,w.rootLocationId,batch]);
+      await admin.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,'PRODUCTION',$4)",[w.tenantId,consumeDocument,outputDocument,productionRecipe]);
+      await admin.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,-1,'AC04 production consume','2026-10-14')",[w.tenantId,consumeDocument,consumeLine,currentDimension]);
+      await admin.query("UPDATE public.stock_balances SET quantity=0,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[w.tenantId,currentDimension]);
+      await admin.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[w.tenantId,consumeDocument,`AC04-CONSUME-${consumeDocument}`]);
+      await admin.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'AVAILABLE')",[w.tenantId,outputDimension,outputItem,w.rootLocationId,outputHu]);
+      await admin.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,1)",[w.tenantId,outputDimension]);
+      await admin.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,1,'AC04 production output','2026-10-14')",[w.tenantId,outputDocument,outputLine,outputDimension]);
+      await admin.query("UPDATE public.documents SET status='POSTED',number=$3 WHERE tenant_id=$1 AND id=$2",[w.tenantId,outputDocument,`AC04-OUTPUT-${outputDocument}`]);
       await admin.query("SET CONSTRAINTS ALL IMMEDIATE");
       await admin.query("COMMIT");
     } catch(e) { await admin.query("ROLLBACK"); throw e; }
