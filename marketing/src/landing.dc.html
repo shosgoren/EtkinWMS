@@ -268,7 +268,7 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 :root{--wrap:1240px;--wrap-wide:1320px}
 @media (min-width:1680px){:root{--wrap:1400px;--wrap-wide:1480px}}
 @media (min-width:2200px){:root{--wrap:1560px;--wrap-wide:1640px}}
-.cine{position:relative;display:flex;flex-direction:column;min-height:max(600px,100svh);height:100svh;max-height:1400px;overflow:hidden;background:#0E1D2B;color:#FFFFFF}
+.cine{position:relative;display:flex;flex-direction:column;min-height:max(560px,100svh);overflow:hidden;background:#0E1D2B;color:#FFFFFF}
 .cine-film{position:absolute;inset:0;z-index:0}
 .cine-film .slide img{object-position:center}
 .cine-shade{position:absolute;inset:0;z-index:1;pointer-events:none;transition:background .6s ease;background:linear-gradient(180deg,rgba(9,20,31,.5) 0%,rgba(9,20,31,0) 20%,rgba(9,20,31,0) 55%,rgba(9,20,31,.82) 100%),linear-gradient(90deg,rgba(9,20,31,.88) 0%,rgba(9,20,31,.72) 30%,rgba(9,20,31,.3) 55%,rgba(9,20,31,0) 75%)}
@@ -322,6 +322,22 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 .hchips li{padding:7px 14px 7px 7px!important;font-size:14px!important}
 .devlg{position:relative;width:100%;max-width:312px;aspect-ratio:312 / 640;padding:11px;border-radius:50px;background:linear-gradient(145deg,#2A3846,#0B141C 55%,#1C2833);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.12),0 0 0 1px rgba(0,0,0,.5),0 40px 80px -30px rgba(23,46,66,.55),0 16px 30px -16px rgba(23,46,66,.4)}
 .devlg::before{content:'';position:absolute;z-index:3;top:20px;left:50%;width:84px;height:24px;margin-left:-42px;border-radius:999px;background:#05090D}
+/* T-943: kanıt şeridi geniş ve yeterince yüksek ekranlarda filmin içinde */
+.cine-proof{display:none}
+.cine-nav2{display:flex;align-items:center;justify-content:space-between;gap:16px;flex:1;min-width:0}
+@media (min-width:1200px) and (min-height:780px){
+.proofbar{display:none}
+.cine-body{align-items:center;padding-top:clamp(12px,3vh,40px);padding-bottom:clamp(12px,3vh,40px)}
+.cine-foot{align-items:flex-end;gap:24px 40px;padding-bottom:clamp(16px,3vh,32px)}
+.cine-proof{display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px;flex:1 1 auto;min-width:0;padding-top:clamp(14px,2.2vh,22px);border-top:1px solid rgba(255,255,255,.22)}
+.cine-proof .hqr{max-width:440px}
+.cine-proof .hqr p{color:#FFFFFF;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.cine-proof .hqr svg{border-color:#FFFFFF!important}
+.cine-proof .hchips li{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.55)!important;color:#FFFFFF;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.cine-nav2{flex:0 0 auto;flex-direction:column;align-items:flex-end;gap:8px}
+.cine-nav2 .cine-cap{justify-content:flex-end}
+}
+@media (min-width:1200px) and (max-width:1599px) and (min-height:780px){.cine-proof .hchips{gap:8px}.cine-proof .hchips li{font-size:13px!important;padding:6px 12px 6px 6px!important}.cine-proof .hqr{max-width:380px}}
 </style>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </helmet>
@@ -385,11 +401,31 @@ a{color:#172E42}a:hover{color:#0E1D2B}
     </sc-if>
   </div>
   <div class="cine-foot">
-    <p class="cine-cap" aria-live="polite"><span class="cine-cap-k">{{cap.k}}</span><span class="cine-cap-t">{{cap.t}}</span></p>
-    <div class="filmdots cine-dots" role="group" aria-label="{{t.filmNav}}">
-      <sc-for list="{{fdots}}" as="fd" hint-placeholder-count="4">
-        <button type="button" class="{{fd.cls}}" aria-label="{{fd.l}}" aria-pressed="{{fd.pressed}}" onClick="{{fd.go}}"><span></span></button>
-      </sc-for>
+    <div class="cine-proof">
+    <div class="hqr">
+            <svg width="52" height="52" viewBox="0 0 29 29" role="img" aria-label="QR" style="flex: none; padding: 4px; background: #FFFFFF; border: 2px solid #172E42; border-radius: 10px; box-sizing: content-box">
+              <path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path>
+              <path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 5h4v2h-4z M11 9h2v4h-2z M15 9h2v2h-2z M1 11h4v2H1z M7 11h2v2H7z M19 11h2v2h-2z M23 11h5v2h-5z M13 13h4v2h-4z M1 15h2v2H1z M5 15h4v2H5z M19 15h2v4h-2z M25 15h3v2h-3z M11 17h2v4h-2z M15 17h2v2h-2z M23 19h2v2h-2z M11 23h4v2h-4z M17 21h2v4h-2z M21 23h2v2h-2z M25 23h3v5h-3z M11 27h6v1h-6z M19 26h4v2h-4z" fill="#172E42"></path>
+            </svg>
+        <p>{{t.qrLine}}</p>
+      </div>
+      <ul class="hchips">
+            <sc-for list="{{t.heroChips}}" as="hc" hint-placeholder-count="4">
+              <li style="display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-size: 15px; font-weight: 600">
+                <span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: {{accent}}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>
+                </span>{{hc.n}}
+              </li>
+            </sc-for>
+      </ul>
+    </div>
+    <div class="cine-nav2">
+      <p class="cine-cap" aria-live="polite"><span class="cine-cap-k">{{cap.k}}</span><span class="cine-cap-t">{{cap.t}}</span></p>
+      <div class="filmdots cine-dots" role="group" aria-label="{{t.filmNav}}">
+        <sc-for list="{{fdots}}" as="fd" hint-placeholder-count="4">
+          <button type="button" class="{{fd.cls}}" aria-label="{{fd.l}}" aria-pressed="{{fd.pressed}}" onClick="{{fd.go}}"><span></span></button>
+        </sc-for>
+      </div>
     </div>
   </div>
 </header>
