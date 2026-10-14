@@ -66,6 +66,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Yanlış QR, başka depo, SKT/kalite uyarısı, eşzamanlı değişiklik, yazıcı iptali ve ERP hatasında “Şimdi ne yapmalı?” tek kısa eylem gösterilir.
 
 ## T936 geliştirme akışı
+- Controlled arama ve kabul girdileri SSR'de istemci hazır olmadan etkin görünmez; erken dokunma/yazı kaybını sistem önler. Rastgele bekleme süresi eklemek veya test seçicisini değiştirerek kaybı gizlemek çözüm değildir.
 - `/t/[slug]/receipts/packages?document=<uuid>` kısa ürün→paketler→kontrol→etiket akışıdır; server `PACKAGE_RECEIVING_ENABLED === "true"` ve rol kontrolleriyle kapalı başlar. Normal Mal geldi hedefi korunur.
 - Mevcut `ScreenShell`, `FormSteps`, scanner/kamera ve 56px/48px saha düğmeleri tekrar kullanılır. Lokal desktop özet/listesi, tablet özet üstte, telefon/alçak coarse-pointer tek sütun; ikinci sabit alt bar eklenmez. Gerçek cihaz ölçümü hâlâ paket kabulünde doğrulanmalıdır.
 - Belirsiz gönderimden sonra içerik kilitli; ilk kesin prepare doğrulama/yetki reddi düzeltmeye izin verir, önceden belirsiz outcome varsa kilit korunur; prepare yanıtı URL'yi belge kimliğiyle korur; retry aynı taslak ve ayrı sabit komut anahtarlarını kullanır. Draft edit/cancel yok. Sayfa kapanırken cevabı alınmamış prepare için otomatik kurtarma yok.
