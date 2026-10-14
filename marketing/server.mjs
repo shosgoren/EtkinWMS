@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile, mkdir, appendFile } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import { readdirSync } from 'node:fs';
+import { resolve, dirname, extname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 
@@ -8,6 +9,23 @@ const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), 'public');
 const leadDir = process.env.LEAD_DIR || '/data';
 const allowedOrigins = new Set(['https://etkinyazilim.com','https://www.etkinyazilim.com','http://localhost:3200']);
 const limits = new Map();
+// T-941: yayımlanan dosyalar açılışta public/ altından bir kez listelenir; yalnız bu harita sunulur.
+// Nokta ile başlayan adlar ve bilinmeyen uzantılar sunulmaz; istek yolu dosya sistemine hiç ulaşmaz.
+const TYPES = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.txt':'text/plain; charset=utf-8','.xml':'application/xml; charset=utf-8','.svg':'image/svg+xml','.webp':'image/webp','.woff':'font/woff'};
+export function publicFiles(dir = publicDir) {
+  const files = {'/':'index.html','/privacy':'privacy.html'};
+  const walk = (d) => {
+    for (const entry of readdirSync(d,{withFileTypes:true})) {
+      if (entry.name.startsWith('.')) continue;
+      const full = resolve(d,entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && TYPES[extname(entry.name)] && !entry.name.endsWith('.html')) files['/'+relative(dir,full).split(sep).join('/')] = relative(dir,full);
+    }
+  };
+  walk(dir);
+  return files;
+}
+const files = publicFiles();
 export function validateLead(data) {
   if (!data || typeof data !== 'object') return null;
   const clean = (key, max) => typeof data[key] === 'string' ? data[key].trim().slice(0,max) : '';
@@ -18,7 +36,8 @@ export function validateLead(data) {
 export const server = createServer(async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
-  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
+  // style-src 'unsafe-inline': yeni sayfa tasarım şablonunda satır içi style öznitelikleri kullanır (T-941). Betik yine yalnız 'self'.
+  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'");
   const json = (status,data) => { res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data)); };
   let path;
   try {
@@ -45,13 +64,13 @@ export const server = createServer(async (req,res) => {
     } catch {return json(503,{error:'Talep kaydedilemedi. Lütfen tekrar deneyin.'});}
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(405,{error:'Yöntem desteklenmiyor.'});
-  const files = {'/':'index.html','/styles.css':'styles.css','/app.js':'app.js','/privacy':'privacy.html','/robots.txt':'robots.txt','/sitemap.xml':'sitemap.xml'};
-  const file = files[path];
+  const file = Object.hasOwn(files,path) ? files[path] : undefined;
   if (!file) return json(404,{error:'Sayfa bulunamadı.'});
   try {
     const content = await readFile(resolve(publicDir,file));
-    const type=file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.txt')?'text/plain':file.endsWith('.xml')?'application/xml':'text/html';
-    res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':file==='index.html'?'no-cache':'public, max-age=300'});
+    const type = TYPES[extname(file)] || 'application/octet-stream';
+    const cache = file.endsWith('.html') ? 'no-cache' : /^(img|fonts)\//.test(file) ? 'public, max-age=86400' : 'public, max-age=300';
+    res.writeHead(200,{'Content-Type':type,'Cache-Control':cache});
     res.end(req.method==='HEAD'?undefined:content);
   } catch {json(503,{error:'Sayfa geçici olarak yüklenemiyor.'});}
 });
