@@ -113,6 +113,17 @@ describe("T946 registered package crosswarehouse transfer",()=>{
  ] as const)it(`rejects ${label}`,async()=>tx(async()=>{
   const p=await origin();await expect((async()=>{await transfer(p,null,make());await flush();})()).rejects.toMatchObject({code:expect.stringMatching(/23514|23503/)});
  }));
+ for(const kind of ['TRANSFER','PRODUCTION'] as const)it(`registered transfer rejects extra incoming ${kind} link`,async()=>tx(async()=>{
+  const p=await origin();const step=await transfer(p);await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');
+  const extra=randomUUID(),recipeId=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_OUT',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_OUT' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  if(kind==='PRODUCTION'){
+   await app.query("INSERT INTO public.production_recipes(tenant_id,id,code,version,name,output_item_id,output_quantity,created_by) VALUES($1,$2,$3,1,'Extra link recipe',$4,1,$5)",[world.tenantId,recipeId,recipeId,world.itemTwoId,world.ownerUserId]);
+   await app.query("INSERT INTO public.production_recipe_lines(tenant_id,recipe_id,line_no,item_id,quantity) VALUES($1,$2,1,$3,1)",[world.tenantId,recipeId,world.itemNoneId]);
+  }
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,$4,$5)",[world.tenantId,extra,step.document,kind,kind==='PRODUCTION'?recipeId:null]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_TRANSFER_LINK'});
+ }));
  it("RLS hides transferstep and runtime cannot edit/delete/newcolumnscreatedat",async()=>tx(async()=>{
   const p=await origin();await transfer(p);await flush();await app.query("SELECT set_config('app.current_tenant_id',$1,true)",[other.tenantId]);expect((await app.query("SELECT * FROM public.package_movement_steps WHERE handling_unit_id=$1",[p.hu])).rowCount).toBe(0);
   expect((await migration.query("SELECT has_column_privilege('wms_app','public.package_movement_steps','source_document_id','INSERT') AS ins,has_column_privilege('wms_app','public.package_movement_steps','created_at','INSERT') AS created,has_table_privilege('wms_app','public.package_movement_steps','DELETE') AS del")).rows[0]).toEqual({ins:true,created:false,del:false});
