@@ -487,23 +487,23 @@
     "title": "What do you want to do?",
     "intro": "Tap the task you want. I will guide you step by step and will not let you do something wrong.",
     "easy": {
-      "label": "Easy operations",
-      "hint": "Choose a task to get started.",
+      "label": "My tasks",
+      "hint": "Pick a job to start.",
       "receive": {
-        "title": "Goods arrived",
-        "description": "Receive incoming goods"
+        "title": "Inbound",
+        "description": "Receive goods, put them away"
       },
       "transfer": {
-        "title": "Move",
-        "description": "Move between warehouses"
+        "title": "Transfer",
+        "description": "Move between warehouses and shelves"
       },
       "production": {
-        "title": "Produce",
-        "description": "Start from a recipe"
+        "title": "Production",
+        "description": "Produce by recipe, label it"
       },
       "shipping": {
-        "title": "Ship",
-        "description": "Prepare and send orders"
+        "title": "Outbound",
+        "description": "Prepare the order, ship it"
       },
       "links": "Other tasks",
       "stock": "Stock",
@@ -512,7 +512,27 @@
       "tasks": "My tasks",
       "members": "Team",
       "settings": "Settings",
-      "audit": "Activity history"
+      "audit": "Activity history",
+      "count": {
+        "title": "Count",
+        "description": "Count a shelf, send differences for approval"
+      },
+      "counts": {
+        "receipts": "Deliveries",
+        "putaway": "Put-away"
+      },
+      "pulse": {
+        "label": "Today at a glance",
+        "pending": "Waiting",
+        "assigned": "Assigned to me",
+        "today": "Done today"
+      },
+      "manual": {
+        "title": "Unplanned",
+        "hint": "Movement without an order",
+        "in": "Manual in",
+        "out": "Manual out"
+      }
     },
     "tasksLabel": "Tasks",
     "lockedReason": "You are not allowed to do this. Ask your manager.",

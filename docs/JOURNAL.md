@@ -205,3 +205,4 @@
 - 2026-10-14 T-981 giriş Rota e sahnesi + uygulama/PWA logosu; landing talep formu yeniden doğrulandı (201, Resend Delivered).
 - 2026-10-14 T-982 demo formu KVKK aydınlatma metni ve form düzeltmeleri; çerez banner'ı gereksiz (çerez yok).
 - 2026-10-14 T-982 canlıya alındı; T-983 sade giriş ekranı, eski karşılama ekranı canlıda /login'e yönlenir.
+- 2026-10-15 T-984 Görevlerim tasarımı Aşama 1: Akış ana ekranı.

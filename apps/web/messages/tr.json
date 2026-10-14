@@ -487,23 +487,23 @@
     "title": "Ne yapmak istiyorsun?",
     "intro": "Yapmak istediğin işe dokun. Seni adım adım götüreceğim; yanlış bir şey yapmana izin vermem.",
     "easy": {
-      "label": "Kolay işlemler",
+      "label": "Görevlerim",
       "hint": "Bir iş seç, başlayalım.",
       "receive": {
-        "title": "Mal geldi",
-        "description": "Gelen ürünü kabul et"
+        "title": "Giriş",
+        "description": "Gelen malı kabul et, rafa yerleştir"
       },
       "transfer": {
-        "title": "Taşı",
-        "description": "Depolar arasında taşı"
+        "title": "Transfer",
+        "description": "Depolar ve raflar arası taşı"
       },
       "production": {
-        "title": "Üret",
-        "description": "Reçeteyle üretime başla"
+        "title": "Üretim",
+        "description": "Reçeteyle üret, etiketle"
       },
       "shipping": {
-        "title": "Sevk et",
-        "description": "Siparişi hazırla, gönder"
+        "title": "Çıkış",
+        "description": "Siparişi hazırla, sevk et"
       },
       "links": "Diğer işler",
       "stock": "Stok",
@@ -512,7 +512,27 @@
       "tasks": "Görevlerim",
       "members": "Ekip",
       "settings": "Ayarlar",
-      "audit": "İşlem geçmişi"
+      "audit": "İşlem geçmişi",
+      "count": {
+        "title": "Sayım",
+        "description": "Rafı say, farkı onaya gönder"
+      },
+      "counts": {
+        "receipts": "Teslim",
+        "putaway": "Yerleştirme"
+      },
+      "pulse": {
+        "label": "Bugünün özeti",
+        "pending": "Bekleyen",
+        "assigned": "Bana atanan",
+        "today": "Bugün yaptığım"
+      },
+      "manual": {
+        "title": "Plan dışı",
+        "hint": "Siparişsiz hareket",
+        "in": "Manuel giriş",
+        "out": "Manuel çıkış"
+      }
     },
     "tasksLabel": "İşler",
     "lockedReason": "Bu iş için yetkin yok. Sorumluna sorabilirsin.",
