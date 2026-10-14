@@ -49,7 +49,7 @@ test('ana sayfa yeni siteyi ön-çizilmiş olarak sunar; eski site dosyaları yo
 });
 
 test('sayfaların başvurduğu her yerel dosya doğru türle sunulur', async () => {
-  const types = { css: /^text\/css/, js: /^text\/javascript/, webp: /^image\/webp$/, woff: /^font\/woff$/, svg: /^image\/svg\+xml$/ };
+  const types = { css: /^text\/css/, js: /^text\/javascript/, webp: /^image\/webp$/, woff: /^font\/woff$/, svg: /^image\/svg\+xml$/, png: /^image\/png$/, jpg: /^image\/jpeg$/ };
   for (const pagePath of ['/', '/privacy']) {
     const page = await get(pagePath);
     assert.equal(page.status, 200, pagePath);
@@ -64,6 +64,23 @@ test('sayfaların başvurduğu her yerel dosya doğru türle sunulur', async () 
       if (types[ext]) assert.match(res.headers['content-type'], types[ext], ref);
     }
   }
+});
+
+test('arama motoru etiketleri: kanonik adres, paylaşım görseli ve tek varlık tanımı', async () => {
+  const home = (await get('/')).body;
+  assert.match(home, /<link rel="canonical" href="https:\/\/etkinyazilim\.com\/">/);
+  assert.match(home, /<meta property="og:image" content="https:\/\/etkinyazilim\.com\/img\/og-etkin-wms\.jpg">/);
+  const ld = /<script type="application\/ld\+json">([^<]+)<\/script>/.exec(home);
+  assert.ok(ld, 'JSON-LD yok');
+  const graph = JSON.parse(ld[1])['@graph'];
+  const types = graph.map((n) => n['@type']);
+  assert.deepEqual(types, ['Organization', 'WebSite', 'SoftwareApplication']);
+  assert.equal(graph[0].url, 'https://etkinyazilim.com/');
+  for (const path of ['/img/og-etkin-wms.jpg', '/img/logo-512.png']) {
+    const res = await get(path);
+    assert.equal(res.status, 200, path);
+  }
+  assert.doesNotMatch(JSON.stringify(graph), /"(offers|price|aggregateRating|review)"/);
 });
 
 test('güvenlik başlıkları: betik yalnız self, dış kaynak yok', async () => {
