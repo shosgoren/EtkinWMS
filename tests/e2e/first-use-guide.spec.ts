@@ -13,8 +13,18 @@ for (const [mode, enter] of [["gerçek", enterDemoReal], ["paylaşılan", enterD
   });
 }
 
-test("ilk rehber tamamlanır; giriş kullanılabilir, tercih yenilemede korunur ve rehber yeniden açılır", async ({ page }) => {
+test("giriş ekranı sade: üst bar ve ilk rehber çıkmaz, form hemen kullanılır", async ({ page }) => {
   await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Giriş yap" })).toBeVisible();
+  await expect(page.locator(".app-header")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Nasıl kullanırım?" })).toBeHidden();
+  await page.getByLabel("E-posta").fill("guide@example.invalid");
+  await expect(page.getByLabel("E-posta")).toHaveValue("guide@example.invalid");
+  await expect(page.getByRole("dialog", { name: title })).not.toBeVisible();
+});
+
+test("ilk rehber tamamlanır; tercih yenilemede korunur ve rehber yeniden açılır", async ({ page }) => {
+  await page.goto("/");
   const guide = page.getByRole("dialog", { name: title });
   await expect(guide).toBeVisible();
   await expect(guide.getByRole("heading", { name: "Yapacağınız işi seçin" })).toBeVisible();
@@ -26,10 +36,8 @@ test("ilk rehber tamamlanır; giriş kullanılabilir, tercih yenilemede korunur 
   expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
   expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height);
   await completeFirstUseGuide(page);
-  await page.getByLabel("E-posta").fill("guide@example.invalid");
-  await expect(page.getByLabel("E-posta")).toHaveValue("guide@example.invalid");
   await page.reload();
-  await page.getByLabel("E-posta").click();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(guide).not.toBeVisible();
   await page.getByRole("button", { name: "Nasıl kullanırım?" }).click();
   await expect(guide.getByText("Adım 1 / 3", { exact: true })).toBeVisible();
@@ -38,15 +46,13 @@ test("ilk rehber tamamlanır; giriş kullanılabilir, tercih yenilemede korunur 
   await expect(page.getByRole("button", { name: "Nasıl kullanırım?" })).toBeFocused();
 });
 
-test("kapat düğmesi formu açar ve tekrar açıldığında ilk adım gösterilir", async ({ page }) => {
-  await page.goto("/login");
+test("kapat düğmesi rehberi kapatır ve tekrar açıldığında ilk adım gösterilir", async ({ page }) => {
+  await page.goto("/");
   const guide = page.getByRole("dialog", { name: title });
   await expect(guide).toBeVisible();
   await guide.getByRole("button", { name: "Sonraki adım" }).click();
   await guide.getByRole("button", { name: "Şimdilik kapat", exact: true }).last().click();
   await expect(guide).not.toBeVisible();
-  await page.getByLabel("E-posta").click();
-  await expect(page.getByLabel("E-posta")).toBeFocused();
   await page.getByRole("button", { name: "Nasıl kullanırım?" }).click();
   await expect(guide.getByText("Adım 1 / 3", { exact: true })).toBeVisible();
   await guide.getByRole("button", { name: "Şimdilik kapat", exact: true }).first().click();

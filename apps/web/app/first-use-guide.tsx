@@ -4,6 +4,7 @@
 // yerleştirilir ve bir pencere olayıyla rehberi açar.
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 
 const KEY = "etkinwms.guide.v1";
 const OPEN_EVENT = "etkinwms:guide-open";
@@ -28,8 +29,13 @@ export function FirstUseGuide() {
   const t = useTranslations("guide");
   const dialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState(0);
+  const pathname = usePathname();
+  // T-983: giriş ekranı sade kalır (üst bar yok); ilk rehber girişten sonraki ilk ekranda açılır.
   useEffect(() => {
-    try { if (localStorage.getItem(KEY) !== "seen") dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
+    if (pathname === "/login") return;
+    try { if (localStorage.getItem(KEY) !== "seen" && !dialog.current?.open) dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
+  }, [pathname]);
+  useEffect(() => {
     const onOpen = () => {
       setStep(0);
       if (!dialog.current?.open) dialog.current?.showModal();
