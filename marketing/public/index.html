@@ -1,14 +1,881 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etkin WMS — Stok belli. İşler yolunda.</title><meta name="description" content="Etkin WMS: farklı sektörler için web ve mobil depo, stok ve operasyon yönetimi. Aylık kiralama modeli, kamera ile barkod ve esnek etiket çıktısı. Pilot demo talep edin."><link rel="canonical" href="https://etkinyazilim.com/"><meta name="theme-color" content="#172e42"><link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script></head>
-<body><a class="skip" href="#main">İçeriğe geç</a>
-<header><a class="logo" href="/" aria-label="Etkin WMS ana sayfa">ETKİN <span>WMS</span><small>ETKİN YAZILIM</small></a><nav aria-label="Ana menü"><a href="#cozum">Çözüm</a><a href="#sektorler">Sektörler</a><a href="#kiralama">Kiralama modeli</a><a href="#sorular">Sorular</a></nav><a class="login" href="https://wms.etkinyazilim.com/login">Uygulamaya giriş ↗</a><button class="menu" aria-expanded="false" aria-label="Menüyü aç">☰</button></header>
-<main id="main"><section class="hero wrap"><div class="hero-copy"><p class="eyebrow"><i></i> DEPO & STOK YÖNETİMİ</p><h1>Stok belli.<br><span>İşler yolunda.</span></h1><p class="intro">Malın nerede, ne kadar ve hangi aşamada olduğunu görün. Deponuzu, stok hareketlerinizi ve ekibinizi tek çalışma alanında buluşturun.</p><div class="actions"><a class="button" href="#demo">İşletmeniz için demo iste <span>↗</span></a><a class="text-link" href="#cozum">Nasıl çalışır? ↓</a></div><div class="hero-notes"><span>Web ve mobil</span><span>Aylık kiralama</span><span>Sektör bağımsız</span></div></div>
-<div class="visual" aria-label="Temsili stok yönetimi arayüzü"><div class="visual-title"><span><i></i> Operasyonunuz, tek bakışta</span><small>ARAYÜZ GÖSTERİMİ</small></div><div class="mock"><div class="mock-side"><b>e<span>•</span></b><span class="active">◫</span><span>▦</span><span>↗</span><span>◎</span></div><div class="mock-body"><div class="mock-heading"><div><small>ÇALIŞMA ALANI</small><h3>Bugün depoda</h3></div><span class="live"><i></i> Örnek görünüm</span></div><div class="mock-stats"><div><small>Aktif depo</small><strong>03</strong><span>Tek çalışma alanı</span></div><div><small>Takip edilen ürün</small><strong>128</strong><span>Temsili veriler</span></div><div><small>Bekleyen işlem</small><strong class="orange">08</strong><span>Günün iş akışı</span></div></div><div class="mock-table"><div class="table-head"><b>Ürün / malzeme</b><b>Depo</b><b>Durum</b></div><div><span><i class="item-dot"></i> Ambalaj malzemesi<small>AMB-001 · adet</small></span><span>Merkez</span><em>Stokta</em></div><div><span><i class="item-dot blue"></i> Hammadde<small>HAM-024 · kg</small></span><span>Üretim</span><em>Stokta</em></div><div><span><i class="item-dot yellow"></i> Mamul ürün<small>URN-108 · adet</small></span><span>Sevkiyat</span><em class="warning">Kontrol</em></div></div></div></div><div class="floating"><span class="scan-symbol">▥</span><div><b>Okut. Bul. İşleme devam et.</b><small>Kamera ve okuyucu ile barkod akışı</small></div><span>→</span></div></div></section>
-<section class="strip"><div class="wrap"><p>Bir depo da olsa, birden fazla lokasyon da.</p><b>Operasyonunuzun dilini konuşan bir sistem.</b><span>01 — 02 — 03 →</span></div></section>
-<section id="cozum" class="wrap section"><div class="section-heading"><p class="eyebrow">DAHA AZ ARAMA. DAHA NET OPERASYON.</p><h2>Her hareketin<br>bir karşılığı olsun.</h2><p>Günlük işlemleri kolaylaştıran bir çalışma düzeni. İşletmenizin ihtiyacına göre belirlenen pilot kapsamıyla başlayın.</p></div><div class="feature-grid"><article><span class="feature-icon">▦</span><span class="number">01</span><h3>Depo & stok</h3><p>Ürün kartları, birimler ve depo konumlarıyla stoklarınızı düzenleyin. Giriş, çıkış ve transfer süreçlerini ortak bir yapıda takip edin.</p><span class="feature-foot">Nerede? Ne kadar?</span></article><article><span class="feature-icon">↗</span><span class="number">02</span><h3>Operasyon akışı</h3><p>Mal kabulden yerleştirmeye, üretimden sevkiyata kadar işletmenize uygun akışı birlikte belirleyelim.</p><span class="feature-foot">Üretim ve sevkiyat pilot kapsamına göre</span></article><article><span class="feature-icon">▥</span><span class="number">03</span><h3>Barkod & etiket</h3><p>Kamera ile barkod okuma ve ölçüsü ayarlanabilen etiket çıktısını kullanın. Cihazlarınızla gerçek okuma ve baskı denemesi yapalım.</p><span class="feature-foot">Telefon · notebook · okuyucu</span></article></div></section>
-<section id="sektorler" class="industry section"><div class="wrap"><p class="eyebrow">SEKTÖRÜNÜZ FARKLI. İHTİYACINIZ TANIDIK.</p><div class="industry-heading"><h2>Sizin ürününüz.<br>Sizin iş akışınız.</h2><p>Bir sektöre sıkışan yazılım yerine, ürün ve birim yapınıza uyarlanabilen bir stok altyapısı.</p></div><div class="tabs" role="tablist" aria-label="Sektör örnekleri"><button role="tab" aria-selected="true" aria-controls="sector-panel" id="sector-0" data-sector="0">Üretim</button><button role="tab" aria-selected="false" aria-controls="sector-panel" id="sector-1" data-sector="1" tabindex="-1">Toptan ticaret</button><button role="tab" aria-selected="false" aria-controls="sector-panel" id="sector-2" data-sector="2" tabindex="-1">Depo & lojistik</button><button role="tab" aria-selected="false" aria-controls="sector-panel" id="sector-3" data-sector="3" tabindex="-1">Perakende</button></div><div class="sector-panel" id="sector-panel" role="tabpanel" aria-labelledby="sector-0"><div><small>ÖRNEK KULLANIM SENARYOSU</small><h3 id="sector-title">Hammaddeden mamule, aynı düzen.</h3><p id="sector-copy">Kg, metre veya adet: malzeme ve ürünlerinizi kendi birimleriyle takip edin. Üretim tüketimi ve mamul girişinin pilot kapsamını işletmenize göre planlayalım.</p><a href="#demo" class="text-link">Bu akışı birlikte inceleyelim ↗</a></div><div class="flow" id="sector-flow"><div><span>01</span><b>Hammadde</b><small>Mal kabul</small></div><i>→</i><div><span>02</span><b>Üretim</b><small>İşlem takibi</small></div><i>→</i><div><span>03</span><b>Mamul</b><small>Sevkiyat</small></div></div></div></div></section>
-<section class="wrap section devices"><div><p class="eyebrow">DEPO MASADA BİTMİYOR.</p><h2>İşin olduğu yerde.<br>Elinizin altında.</h2><p>Bilgisayarda yönetim, telefonda saha işlemleri. Mobil tarayıcıyla başlayın; el terminali ve yazıcı bağlantılarını cihazınızın özelliklerine göre doğrulayalım.</p><ul><li>Telefon ve notebook kamerasıyla barkod akışı</li><li>Klavye gibi çalışan barkod okuyucularla kullanım</li><li>A4 deneme baskısı ve mm ölçüsü seçilen etiketler</li></ul><p class="device-note">USB, ağ veya Bluetooth baskı desteği cihaz ve işletim sistemi sürücüsüne bağlıdır. Pilot kurulumda uyumluluk testi yapılır.</p></div><div class="phone"><div class="phone-top"><b>ETKİN <span>WMS</span></b><small>Merkez depo · Saha</small></div><div class="phone-body"><p class="eyebrow">GÜNLÜK AKIŞ</p><h3>İşiniz sırada.</h3><p>Temsili mobil görünüm</p><div class="phone-card"><span class="pill">Mal kabul</span><h4>Gelen malzemeyi<br>kontrol edin.</h4><small>Ürün → miktar → konum</small><div>İşleme devam et <b>→</b></div></div><div class="phone-card subdued"><span class="pill">Yerleştirme</span><h4>Doğru ürün.<br>Doğru konum.</h4></div></div><div class="phone-nav"><b>↓ Kabul</b><span>▦ Yerleştir</span><span>↗ Çıkış</span></div></div></section>
-<section id="kiralama" class="wrap section"><div class="rental"><div><p class="eyebrow">AYLIK KİRALAMA MODELİ</p><h2>İhtiyacınız kadar başlayın.<br>İşinizle birlikte büyütün.</h2><p>Depo sayınız, kullanıcılarınız ve iş akışınız için uygun kapsamı belirleyelim. Standart bir fiyat tablosu yerine işletmenize uygun teklif hazırlayalım.</p></div><div class="rental-steps"><div><span>1</span><p><b>İhtiyacı birlikte belirleyelim</b><small>Ürünler, depolar, cihazlar ve günlük işlemler.</small></p></div><div><span>2</span><p><b>Pilot kurulumu deneyin</b><small>Gerçek senaryonuzla barkod, stok ve etiket kontrolü.</small></p></div><div><span>3</span><p><b>Aylık modelle devam edin</b><small>Mutabık kalınan kapsam ve kullanım koşullarıyla.</small></p></div></div></div></section>
-<section id="sorular" class="wrap section faq"><div><p class="eyebrow">AKLINIZDAKİ SORULAR</p><h2>Başlamadan önce.</h2></div><div><details><summary>Yalnız üretim yapan firmalar için mi?</summary><p>Hayır. Ürün, stok birimi ve depo yapısı farklı sektörlere uyarlanabilir. İhtiyacınız olan iş akışları pilot kapsamı belirlenirken netleştirilir.</p></details><details><summary>Android el terminali için native uygulama şart mı?</summary><p>Her cihaz için şart değil. Barkodu klavye girdisi olarak ileten terminaller web arayüzüyle kullanılabilir. Özel tarayıcı SDK’sı veya doğrudan cihaz bağlantısı gerekiyorsa cihaz bazında değerlendirilir.</p></details><details><summary>Her yazıcıdan doğrudan etiket alabilir miyim?</summary><p>Tarayıcının yazdırma penceresi üzerinden işletim sisteminin tanıdığı yazıcılara çıktı alınabilir. Etiket ölçüsü ayarlanabilir. Doğrudan USB/Bluetooth baskı her cihazda aynı değildir; sürücü ve cihaz testi gerekir.</p></details><details><summary>Aylık ücret ve kurulum neye göre belirlenir?</summary><p>Depo ve kullanıcı sayısı, süreç kapsamı, cihazlar ve ihtiyaç duyulan kurulum desteği değerlendirilir. Teklif aşamasında aylık kullanım ve varsa kurulum bedelleri ayrı açıklanır.</p></details><details><summary>Bugün tüm modülleri kullanabilir miyim?</summary><p>Etkin WMS pilot kurulum aşamasındadır. Kullanılabilir ekranlar, üretim/sevkiyat kapsamı ve cihaz desteği demo sırasında açıkça gösterilir; devreye alma kabul testleri tamamlanınca yapılır.</p></details></div></section>
-<section id="demo" class="demo section"><div class="wrap demo-grid"><div><p class="eyebrow">SİZİN DEPONUZLA BAŞLAYALIM.</p><h2>İş akışınızı anlatın.<br>Birlikte netleştirelim.</h2><p>Firmanızı ve ihtiyacınızı bırakın. Size uygun demo ve pilot kapsamı için iletişime geçelim.</p><div class="demo-note">Birden fazla depo • Kamera ile barkod • Etiket çıktısı</div></div><form id="demo-form"><div class="form-row"><label>Adınız<input name="name" autocomplete="name" required maxlength="100" placeholder="Ad soyad"></label><label>Firma<input name="company" autocomplete="organization" required maxlength="150" placeholder="Firma adı"></label></div><label>İş e-postası<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="ad@firma.com"></label><label>Sektörünüz<select name="sector"><option>Üretim</option><option>Toptan ticaret</option><option>Depo ve lojistik</option><option>Perakende</option><option>Diğer</option></select></label><label>İhtiyacınız<textarea name="message" rows="3" maxlength="2000" placeholder="Örn. 3 depo, 8 kullanıcı; stok giriş/çıkış ve etiket baskısı"></textarea></label><div class="honey" aria-hidden="true"><label>Web sitesi<input name="website" tabindex="-1" autocomplete="off"></label></div><label class="consent"><input type="checkbox" name="consent" required><span>Talebimin değerlendirilmesi için bu bilgilerle benimle iletişime geçilmesini kabul ediyorum. <a href="/privacy">Veri kullanımı</a></span></label><button class="button" type="submit">Teklif ve demo iste <span>↗</span></button><p id="form-status" role="status" aria-live="polite"></p></form></div></section>
-</main><footer class="wrap"><a class="logo" href="/">ETKİN <span>WMS</span><small>ETKİN YAZILIM</small></a><p>Stok belli. İşler yolunda.</p><div><a href="/privacy">Veri kullanımı</a><a href="https://wms.etkinyazilim.com/login">Uygulamaya giriş ↗</a><small>© 2026 Etkin Yazılım</small></div></footer></body></html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Etkin WMS — Girişten sevkiyata kesintisiz kontrolün en kolay hali</title>
+<meta name="description" content="Etkin WMS: kabulde her koli, paket, varil ve palete anında tekil QR etiket; girişten üretime ve sevkiyata uçtan uca izlenebilirlik. Web tabanlı, kurulum gerektirmez, aylık kiralanır. Pilot demo isteyin.">
+<link rel="canonical" href="https://etkinyazilim.com/">
+<meta name="theme-color" content="#172e42">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:site_name" content="Etkin WMS">
+<meta property="og:title" content="Etkin WMS — Girişten sevkiyata kesintisiz kontrolün en kolay hali">
+<meta property="og:description" content="Etkin WMS: kabulde her koli, paket, varil ve palete anında tekil QR etiket; girişten üretime ve sevkiyata uçtan uca izlenebilirlik. Web tabanlı, kurulum gerektirmez, aylık kiralanır. Pilot demo isteyin.">
+<meta property="og:url" content="https://etkinyazilim.com/">
+<meta property="og:image" content="https://etkinyazilim.com/img/saha-2-etiket.webp">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preload" href="/fonts/bricolage-grotesque.woff" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="/fonts/instrument-sans.woff" as="font" type="font/woff" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+<script src="/site.js" defer></script>
+</head>
+<body>
+<div id="dc-root"><div class="wms" id="top" style="background: #F6F4EF; color: #172E42; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden">
+
+
+<header class="paper-grid drift" style="position: relative; overflow: hidden">
+  <div class="bgfx" aria-hidden="true">
+    <span class="glow" style="left: -8%; top: 6%; width: 46%; height: 520px; background: #F4C542"></span>
+    <span class="glow" style="right: -10%; top: 38%; width: 42%; height: 560px; background: #BFD6EA; animation-delay: -9s"></span>
+    <span class="flo" style="left: 4%; width: 54px; animation-duration: 38s; animation-delay: -4s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".14"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 17%; width: 30px; animation-duration: 30s; animation-delay: -19s"><svg viewBox="0 0 24 26" fill="#F4C542" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".28"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 33%; width: 72px; animation-duration: 46s; animation-delay: -30s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1" stroke-linejoin="round" opacity=".10"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 52%; width: 38px; animation-duration: 34s; animation-delay: -12s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".13"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 68%; width: 26px; animation-duration: 28s; animation-delay: -6s"><svg viewBox="0 0 24 26" fill="#F4C542" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".25"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 81%; width: 60px; animation-duration: 42s; animation-delay: -24s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1" stroke-linejoin="round" opacity=".11"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 92%; width: 34px; animation-duration: 36s; animation-delay: -33s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".14"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo hide-sm" style="left: 44%; width: 22px; animation-duration: 26s; animation-delay: -15s"><svg viewBox="0 0 24 26" fill="#DCEAF5" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".35"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+  </div>
+  <nav class="hero-in" aria-label="Ana menü" style="display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; max-width: 1320px; margin: 0 auto; padding: 18px clamp(16px, 4vw, 40px)">
+    <a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #172E42; min-width: 0">
+      <svg class="elogo" width="42" height="42" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#F4F2EE" stroke="#172E42" stroke-width="4"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#F4F2EE" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+      <span style="display: flex; flex-direction: column; line-height: 1.05">
+        <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 18px">ETKİN WMS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #4C6275">ETKİN YAZILIM</span>
+      </span>
+    </a>
+    <div class="hide-md" style="display: flex; gap: 28px; font-size: 15px">
+      <a class="navlink" href="#cozum"><span>Çözüm</span></a>
+      <a class="navlink" href="#sektorler"><span>Sektörler</span></a>
+      <a class="navlink" href="#kiralama"><span>Kiralama modeli</span></a>
+      <a class="navlink" href="#sorular"><span>Sorular</span></a>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div role="group" aria-label="Language / Dil" style="display: flex; padding: 3px; border: 1.5px solid #172E42; border-radius: 999px; background: #FFFFFF">
+        <button type="button" class="langbtn on" aria-pressed="true" data-dc-click="0">TR</button>
+        <button type="button" class="langbtn " aria-pressed="false" data-dc-click="1">EN</button>
+      </div>
+      <a class="loginbtn" href="https://wms.etkinyazilim.com/login" aria-label="Uygulamaya giriş" title="Uygulamaya giriş" style="display: inline-flex; flex-direction: column; align-items: center; gap: 4px; min-width: 52px; padding: 2px 4px; text-decoration: none; color: #172E42">
+        <span class="loginico" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; background: #F4C542; border: 1.5px solid #172E42; box-shadow: 3px 3px 0 #172E42">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>
+        </span>
+        <span aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .08em; line-height: 1"><span>GİRİŞ</span></span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="hero-in" style="max-width: 1320px; margin: 0 auto; padding: clamp(20px, 4vw, 52px) clamp(16px, 4vw, 40px) clamp(56px, 8vw, 104px)">
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px 48px">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <p class="rise" style="margin: 0 0 20px; display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 8px; border-radius: 999px; background: #FFFFFF; border: 1px solid #DCD6CA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .14em">
+          <span style="display: block; width: 10px; height: 10px; border-radius: 50%; background: #F4C542; box-shadow: 0 0 0 3px #172E42"></span><span>UÇTAN UCA İZLENEBİLİRLİK</span>
+        </p>
+        <h1 style="margin: 0; max-width: 900px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(38px, 5.6vw, 84px); line-height: .98; letter-spacing: -.04em">
+          <span class="scanreveal" style="display: block; animation-delay: .2s"><span>Girişten sevkiyata kesintisiz kontrolün</span></span>
+          <span class="scanreveal" style="display: inline-block; animation-delay: .7s; margin-top: 10px; padding: 0 .14em .06em; background: #F4C542; border-radius: 12px"><span>en kolay hali.</span></span>
+        </h1>
+        <div class="rise" style="animation-delay: 1.05s; display: flex; align-items: center; gap: 14px; margin-top: 26px; max-width: 640px">
+          <svg width="52" height="52" viewBox="0 0 29 29" role="img" aria-label="QR" style="flex: none; padding: 4px; background: #FFFFFF; border: 2px solid #172E42; border-radius: 10px; box-sizing: content-box">
+            <path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path>
+            <path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 5h4v2h-4z M11 9h2v4h-2z M15 9h2v2h-2z M1 11h4v2H1z M7 11h2v2H7z M19 11h2v2h-2z M23 11h5v2h-5z M13 13h4v2h-4z M1 15h2v2H1z M5 15h4v2H5z M19 15h2v4h-2z M25 15h3v2h-3z M11 17h2v4h-2z M15 17h2v2h-2z M23 19h2v2h-2z M11 23h4v2h-4z M17 21h2v4h-2z M21 23h2v2h-2z M25 23h3v5h-3z M11 27h6v1h-6z M19 26h4v2h-4z" fill="#172E42"></path>
+          </svg>
+          <p style="margin: 0; font-size: clamp(15px, 1.4vw, 17px); font-weight: 600; line-height: 1.4; color: #24435E"><span>Tekil QR kod ile girişten üretime, üretimden sevkiyata kayıpsız izlenebilirlik.</span></p>
+        </div>
+      </div>
+      <div class="rise" style="animation-delay: 1s; flex: 0 1 440px; min-width: 0">
+        <p style="margin: 0; font-size: clamp(17px, 1.5vw, 19px); color: #3D5468"><span>Koli, paket, varil ya da palet; kabul anında her birine kendi QR etiketi basılır. Depodan üretime, yarı mamulden mamule ve sevkiyata kadar her hareket iz bırakır. Ekran kullanıcıyı doğru işleme yönlendirir: eğitim gerekmez, birkaç dokunuş yeter.</span></p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px">
+          <a class="cta" href="#demo" style="display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 24px; border-radius: 999px; background: #172E42; color: #FFFFFF; text-decoration: none; font-weight: 600"><span>İşletmeniz için demo iste</span> <span aria-hidden="true" style="color: #F4C542">↗</span></a>
+          <a class="ghost" href="#saha" style="display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 22px; border-radius: 999px; border: 1.5px solid #172E42; color: #172E42; text-decoration: none; font-weight: 600"><span>Yolculuğu izleyin</span> <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <ul class="rise" style="animation-delay: 1.1s; flex: 1 1 100%; list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px">
+        <!--[-->
+          <li style="display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-size: 15px; font-weight: 600">
+            <span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #F4C542">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>
+            </span><span>Anında tekil QR etiket</span>
+          </li>
+        
+          <li style="display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-size: 15px; font-weight: 600">
+            <span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #F4C542">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>
+            </span><span>Eğitimsiz, yönlendirmeli kullanım</span>
+          </li>
+        
+          <li style="display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-size: 15px; font-weight: 600">
+            <span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #F4C542">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>
+            </span><span>Az dokunuş, akıllı öneri</span>
+          </li>
+        
+          <li style="display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-size: 15px; font-weight: 600">
+            <span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #F4C542">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>
+            </span><span>Veriden değere</span>
+          </li>
+        <!--]-->
+      </ul>
+    </div>
+
+    
+    <div id="saha" class="rise" style="animation-delay: 1.15s; margin-top: clamp(32px, 5vw, 60px); padding: clamp(10px, 1.6vw, 20px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 28px; box-shadow: 10px 12px 0 #172E42">
+      <div style="display: flex; flex-wrap: wrap; gap: 18px">
+
+        <div style="flex: 1 1 640px; min-width: 0">
+          <div class="stage">
+            <!--[-->
+              <div class="film" aria-hidden="true">
+                <div class="slide on"><img src="/img/saha-1-kabul.webp" alt="" style="transform-origin: 22% 62%; object-position: 22% 60%; animation-duration: 6.5s"></div>
+                <div class="slide"><img src="/img/saha-2-etiket.webp" alt="" style="transform-origin: 48% 45%; object-position: 45% 50%; animation-duration: 6.5s"></div>
+                <div class="slide"><img src="/img/saha-3-uretim.webp" alt="" style="transform-origin: 47% 42%; object-position: 47% 50%; animation-duration: 6.5s"></div>
+                <div class="slide zoom prev"><img src="/img/saha-4-cep.webp" alt="" style="transform-origin: 49% 44%; object-position: 50% 50%; animation-duration: 6.5s"></div>
+                <!--[--><!--]-->
+              </div>
+            <!--]-->
+            <!--[-->
+              <div class="ov filmdots" role="group" aria-label="Sahneler">
+                <!--[-->
+                  <button type="button" class="fdot on" aria-label="Dokunmatik ekranda ürün kabul" aria-pressed="true" data-dc-click="2"><span></span></button>
+                
+                  <button type="button" class="fdot" aria-label="Anında tekil QR etiket" aria-pressed="false" data-dc-click="3"><span></span></button>
+                
+                  <button type="button" class="fdot" aria-label="Okut, öneriyi al" aria-pressed="false" data-dc-click="4"><span></span></button>
+                
+                  <button type="button" class="fdot" aria-label="Her şey cebinizde" aria-pressed="false" data-dc-click="5"><span></span></button>
+                <!--]-->
+              </div>
+            <!--]-->
+            <!--[--><!--]-->
+            <div class="ov steptxt capt" aria-live="polite" style="left: 16px; bottom: 16px; max-width: 420px; padding: 16px 18px; border-radius: 16px; background: rgba(23,46,66,.94); color: #FFFFFF">
+              <p style="margin: 0 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .14em; color: #F4C542"><span>SAHADAN · 01 / 04</span></p>
+              <p class="capt-t" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -.02em; line-height: 1.1"><span>Dokunmatik ekranda ürün kabul</span></p>
+              <p class="hide-sm" style="margin: 6px 0 0; font-size: 14px; color: #D3DEE8"><span>Gelen koli, paket ve varil kioskta tek dokunuşla kayda girer.</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+<section id="cozum" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #FFFFFF; border-top: 2px solid #172E42">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px 40px; margin-bottom: 52px">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86"><span>DAHA AZ DOKUNUŞ. DAHA ÇOK DEĞER.</span></p>
+        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em"><span>Veri girmek için değil,</span> <span style="color: #6A7F91"><span>iş yapmak için.</span></span></h2>
+      </div>
+      <p style="flex: 0 1 400px; margin: 0; color: #3D5468; font-size: 18px"><span>Etkin WMS kullanıcıyı ekran ekran doğru işleme götürür. Az dokunuşla toplanan veri, izlenebilir ve raporlanabilir bilgiye dönüşür.</span></p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 20px">
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: #F4C542">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3v18M20 3v18M4 9h16M4 15h16"></path><rect x="7" y="11" width="4" height="4"></rect><rect x="13" y="5" width="4" height="4"></rect></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em"><span>Uçtan uca izlenebilirlik</span></h3>
+        <p style="margin: 0; color: #3D5468; flex: 1"><span>Girişten üretime, yarı mamulden mamule ve sevkiyata kadar her hareket kayıt altında. Bir paketin tüm geçmişi tek okutmayla önünüzde.</span></p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86"><span>Kabul → üretim → sevkiyat</span></p>
+      </article>
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: #DCEAF5">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="18" r="2"></circle><path d="M7 6h7a3 3 0 0 1 0 6H10a3 3 0 0 0 0 6h7"></path></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em"><span>Yönlendirmeli kullanım</span></h3>
+        <p style="margin: 0; color: #3D5468; flex: 1"><span>Yazılımı hiç bilmeyen biri bile doğru işlemi yapar: sistem sıradaki adımı ve uygun rafı önerir. Eğitim yükü en aza iner.</span></p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86"><span>Az dokunuş · akıllı öneri</span></p>
+      </article>
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: #F1E3CC">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3"></path><path d="M7 8v8M10 8v8M13 8v8M15.5 8v8M17.5 8v8"></path></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em"><span>Tekil QR &amp; anlık etiket</span></h3>
+        <p style="margin: 0; color: #3D5468; flex: 1"><span>Kabulde her koli, paket, varil ya da palete kendi QR’ı basılır. Aynı ürünün iki paketi bile birbirine karışmaz.</span></p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86"><span>Telefon · notebook · etiket yazıcı</span></p>
+      </article>
+    </div>
+  </div>
+</section>
+
+
+<section id="sektorler" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px)">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86"><span>SEKTÖRÜNÜZ FARKLI. İHTİYACINIZ TANIDIK.</span></p>
+    <h2 style="margin: 0; max-width: 880px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em"><span>Sizin ürününüz.</span> <span style="color: #6A7F91"><span>Sizin iş akışınız.</span></span></h2>
+    <p style="margin: 24px 0 0; max-width: 560px; color: #3D5468; font-size: 18px"><span>Bir sektöre sıkışan yazılım yerine, ürün ve birim yapınıza uyarlanabilen bir stok altyapısı.</span></p>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 48px">
+      <!--[-->
+        <span style="display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px 14px 14px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(18px, 2vw, 24px)">
+          <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #172E42; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px"><span>01</span></span><span>Üretim</span>
+        </span>
+      
+        <span style="display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px 14px 14px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(18px, 2vw, 24px)">
+          <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #172E42; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px"><span>02</span></span><span>Toptan ticaret</span>
+        </span>
+      
+        <span style="display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px 14px 14px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(18px, 2vw, 24px)">
+          <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #172E42; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px"><span>03</span></span><span>Depo &amp; lojistik</span>
+        </span>
+      
+        <span style="display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px 14px 14px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(18px, 2vw, 24px)">
+          <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #172E42; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px"><span>04</span></span><span>Perakende</span>
+        </span>
+      <!--]-->
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 40px; margin-top: 56px; padding: clamp(24px, 4vw, 52px); background: #FFFFFF; border: 1.5px solid #DCD6CA; border-radius: 24px">
+      <div style="flex: 1 1 360px; min-width: 0">
+        <p style="margin: 0 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #4C6275"><span>ÖRNEK KULLANIM SENARYOSU</span></p>
+        <h3 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 3vw, 40px); line-height: 1.05; letter-spacing: -.025em"><span>Hammaddeden mamule, aynı düzen.</span></h3>
+        <p style="margin: 18px 0 24px; color: #3D5468"><span>Kg, metre veya adet: malzeme ve ürünlerinizi kendi birimleriyle takip edin. Üretim tüketimi ve mamul girişinin pilot kapsamını işletmenize göre planlayalım.</span></p>
+        <a class="navlink" href="#demo" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 600; text-decoration: underline; text-decoration-color: #F4C542; text-decoration-thickness: 4px; text-underline-offset: 6px"><span>Bu akışı birlikte inceleyelim</span> ↗</a>
+      </div>
+      <ol style="flex: 1 1 380px; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+        <!--[-->
+          <li style="display: flex; align-items: center; gap: 18px; padding: 18px 20px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 16px">
+            <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: #F4C542; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600"><span>01</span></span>
+            <span style="display: flex; flex-direction: column; min-width: 0">
+              <strong style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700"><span>Hammadde</span></strong>
+              <span style="font-size: 14px; color: #4C6275"><span>Ürün kabul · tekil QR</span></span>
+            </span>
+          </li>
+        
+          <li style="display: flex; align-items: center; gap: 18px; padding: 18px 20px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 16px">
+            <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: #F4C542; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600"><span>02</span></span>
+            <span style="display: flex; flex-direction: column; min-width: 0">
+              <strong style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700"><span>Üretim</span></strong>
+              <span style="font-size: 14px; color: #4C6275"><span>İşlem takibi</span></span>
+            </span>
+          </li>
+        
+          <li style="display: flex; align-items: center; gap: 18px; padding: 18px 20px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 16px">
+            <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: #F4C542; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600"><span>03</span></span>
+            <span style="display: flex; flex-direction: column; min-width: 0">
+              <strong style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700"><span>Mamul</span></strong>
+              <span style="font-size: 14px; color: #4C6275"><span>Sevkiyat</span></span>
+            </span>
+          </li>
+        <!--]-->
+      </ol>
+    </div>
+  </div>
+</section>
+
+
+<section id="mobil" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #FFFFFF; border-top: 1.5px solid #E4DED3">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px">
+    <div style="flex: 1 1 460px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86"><span>SAHADA, CEBİNİZDE</span></p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(34px, 4.8vw, 66px); line-height: 1; letter-spacing: -.035em"><span>Donanım bağımsız.</span> <span style="color: #6A7F91"><span>İnternet kesilse de iş durmaz.</span></span></h2>
+      <p style="margin: 22px 0 20px; color: #3D5468; font-size: 18px"><span>Etkin WMS web üzerinden çalışır; telefon, tablet ya da el terminali fark etmez, kurulum gerekmez. Bağlantı koptuğunda işlemler cihazda sıraya alınır, bağlantı geri geldiğinde kendiliğinden senkronize olur.</span></p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px">
+        <!--[-->
+          <span style="padding: 7px 13px; border-radius: 999px; background: #F6F4EF; border: 1px solid #DCD6CA; font-size: 13px; font-weight: 600"><span>Web tabanlı, kurulum yok</span></span>
+        
+          <span style="padding: 7px 13px; border-radius: 999px; background: #F6F4EF; border: 1px solid #DCD6CA; font-size: 13px; font-weight: 600"><span>Telefon · tablet · el terminali</span></span>
+        
+          <span style="padding: 7px 13px; border-radius: 999px; background: #F6F4EF; border: 1px solid #DCD6CA; font-size: 13px; font-weight: 600"><span>Çevrimdışı çalışma</span></span>
+        
+          <span style="padding: 7px 13px; border-radius: 999px; background: #F6F4EF; border: 1px solid #DCD6CA; font-size: 13px; font-weight: 600"><span>Bluetooth etiket yazıcı</span></span>
+        
+          <span style="padding: 7px 13px; border-radius: 999px; background: #F6F4EF; border: 1px solid #DCD6CA; font-size: 13px; font-weight: 600"><span>Sesli komut</span></span>
+        <!--]-->
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <button type="button" class="switch" aria-pressed="false" data-dc-click="6">
+          <span class="knob-track"><span class="knob"></span></span><span>İnternet kesintisini dene</span>
+        </button>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 14px; color: #4C6275"><span>Anahtarı açın: işlemler cihazda kuyruğa alınır. Kapatınca hepsi senkronize olur.</span></p>
+      <p style="margin: 18px 0 0; font-size: 13px; color: #6A7F91"><span>Bluetooth ve USB yazıcı desteği cihaza ve işletim sistemine göre değişir; pilot kurulumda uyumluluk testi yapılır.</span></p>
+    </div>
+
+    
+    <div style="flex: 1 1 320px; display: flex; justify-content: center">
+      <div aria-hidden="true" style="position: relative; width: 100%; max-width: 312px; aspect-ratio: 312 / 640; border-radius: 46px; background: #172E42; padding: 11px; box-shadow: 14px 16px 0 #F4C542">
+        <div style="position: relative; height: 100%; border-radius: 36px; background: #F6F4EF; overflow: hidden; display: flex; flex-direction: column">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 22px 16px 10px">
+            <span style="display: flex; align-items: center; gap: 6px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 14px"><svg class="elogo" width="22" height="22" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>ETKİN WMS</span>
+            <span class="netpill net-on"><span class="netdot"></span><span>Çevrimiçi</span></span>
+          </div>
+          <!--[--><!--]-->
+
+          <div style="position: relative; flex: 1; padding: 4px 12px 0; overflow: hidden; display: flex; flex-direction: column">
+
+            
+            <!--[-->
+              <div class="gx"><div class="gx-hd pop"><span class="gx-ring">0<small>/11</small></span><span style="min-width: 0"><b class="gx-hello"><span>Günaydın, Ali</span></b><span class="gx-sub"><span>VARDİYA 08:00–17:00 · ANA DEPO</span></span></span></div><div class="gx-stats pop d1"><span class="gx-st"><b style="color: #1E2F3E">11</b><i><span>KALAN</span></i></span><span class="gx-st"><b style="color: #2F7D5B">0</b><i><span>BİTEN</span></i></span><span class="gx-st"><b style="color: #B83A2E">0</b><i><span>SORUN</span></i></span></div><div class="gx-sec pop d2" style="background: #E3F1E9; color: #1D5A40"><span class="gx-ic" style="background: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-tt"><span>Giriş Görevi</span><small><span>2 SİPARİŞ · 6 KALEM</span></small></span><span class="gx-n">2</span></div><div class="gx-sec pop d2" style="background: #DFF0EF; color: #16585A"><span class="gx-ic" style="background: #24787A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg></span><span class="gx-tt"><span>Çıkış Görevi</span><small><span>3 SİPARİŞ · 8 KALEM</span></small></span><span class="gx-acil">⚡</span><span class="gx-n">3</span></div><div class="gx-sec pop d3" style="background: #ECE9F8; color: #45398C"><span class="gx-ic" style="background: #6253B5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3"></path></svg></span><span class="gx-tt"><span>Transfer Görevi</span><small><span>2 FİŞ · 3 KALEM</span></small></span><span class="gx-n">2</span></div><div class="gx-sec pop d3" style="background: #F8EADF; color: #844818"><span class="gx-ic" style="background: #B0652E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V11l6 3v-3l6 3V7l6-3v17zM7 17h2M13 17h2"></path></svg></span><span class="gx-tt"><span>Üretim Transfer</span><small><span>2 EMİR · 5 KALEM</span></small></span><span class="gx-acil">⚡</span><span class="gx-n">2</span></div><div class="gx-sec pop d4" style="background: #E2ECF6; color: #1F4C7C"><span class="gx-ic" style="background: #2F67A3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2zM9 13l2 2 4-4"></path></svg></span><span class="gx-tt"><span>Sayım Görevi</span><small><span>2 SAYIM · 3 KALEM</span></small></span><span class="gx-n">2</span></div><div class="gx-bar pop d5"><span class="gx-side" style="background: #E3F1E9; color: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-prim"><span class="tap d6" style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 9v6M10 9v6M13 9v6M17 9v6"></path></svg><span>OKUT · BAŞLA</span></span></span><span class="gx-side" style="background: #F8EADF; color: #B5552B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M4 20h16"></path></svg></span></div></div>
+            <!--]-->
+
+            
+            <!--[--><!--]-->
+
+            
+            <!--[--><!--]-->
+
+            
+            <!--[--><!--]-->
+
+            
+            <!--[--><!--]-->
+
+            
+            <!--[--><!--]-->
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 18px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A7F91">
+            <span><span>Temsili akış</span></span><span><span>01 / 06</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="kiralama" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #172E42; color: #FFFFFF">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #F4C542"><span>AYLIK KİRALAMA MODELİ</span></p>
+    <h2 style="margin: 0; max-width: 960px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em"><span>İhtiyacınız kadar başlayın.</span> <span style="color: #A9BDD0"><span>İşinizle birlikte büyütün.</span></span></h2>
+    <p style="margin: 24px 0 0; max-width: 620px; color: #D3DEE8; font-size: 18px"><span>Depo sayınız, kullanıcılarınız ve iş akışınız için uygun kapsamı belirleyelim. Standart bir fiyat tablosu yerine işletmenize uygun teklif hazırlayalım.</span></p>
+    <ol style="list-style: none; margin: 56px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px">
+      <!--[-->
+        <li style="padding: 28px; border-radius: 20px; background: #FFFFFF; color: #172E42">
+          <span style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: #F4C542; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 30px"><span>1</span></span>
+          <h3 style="margin: 22px 0 8px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -.015em"><span>İhtiyacı birlikte belirleyelim</span></h3>
+          <p style="margin: 0; color: #3D5468"><span>Ürünler, depolar, cihazlar ve günlük işlemler.</span></p>
+        </li>
+      
+        <li style="padding: 28px; border-radius: 20px; background: #FFFFFF; color: #172E42">
+          <span style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: #F4C542; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 30px"><span>2</span></span>
+          <h3 style="margin: 22px 0 8px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -.015em"><span>Pilot kurulumu deneyin</span></h3>
+          <p style="margin: 0; color: #3D5468"><span>Gerçek senaryonuzla barkod, stok ve etiket kontrolü.</span></p>
+        </li>
+      
+        <li style="padding: 28px; border-radius: 20px; background: #FFFFFF; color: #172E42">
+          <span style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: #F4C542; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 30px"><span>3</span></span>
+          <h3 style="margin: 22px 0 8px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -.015em"><span>Aylık modelle devam edin</span></h3>
+          <p style="margin: 0; color: #3D5468"><span>Mutabık kalınan kapsam ve kullanım koşullarıyla.</span></p>
+        </li>
+      <!--]-->
+    </ol>
+  </div>
+</section>
+
+
+<section id="sorular" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px)">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 40px 72px">
+    <div style="flex: 1 1 280px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86"><span>AKLINIZDAKİ SORULAR</span></p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 4.8vw, 64px); line-height: .98; letter-spacing: -.035em"><span>Başlamadan önce.</span></h2>
+    </div>
+    <div style="flex: 2 1 480px; min-width: 0; border-top: 1.5px solid #172E42">
+      <!--[-->
+        <div class="faq open" style="border-bottom: 1.5px solid #DCD6CA">
+          <button type="button" class="faqbtn" aria-expanded="true" data-dc-click="7">
+            <span><span>Yalnız üretim yapan firmalar için mi?</span></span>
+            <span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          </button>
+          <!--[-->
+            <p style="margin: -4px 0 26px; max-width: 680px; color: #3D5468; font-size: 17px"><span>Hayır. Ürün, stok birimi ve depo yapısı farklı sektörlere uyarlanabilir. İhtiyacınız olan iş akışları pilot kapsamı belirlenirken netleştirilir.</span></p>
+          <!--]-->
+        </div>
+      
+        <div class="faq" style="border-bottom: 1.5px solid #DCD6CA">
+          <button type="button" class="faqbtn" aria-expanded="false" data-dc-click="8">
+            <span><span>Android el terminali için native uygulama şart mı?</span></span>
+            <span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          </button>
+          <!--[--><!--]-->
+        </div>
+      
+        <div class="faq" style="border-bottom: 1.5px solid #DCD6CA">
+          <button type="button" class="faqbtn" aria-expanded="false" data-dc-click="9">
+            <span><span>Her yazıcıdan doğrudan etiket alabilir miyim?</span></span>
+            <span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          </button>
+          <!--[--><!--]-->
+        </div>
+      
+        <div class="faq" style="border-bottom: 1.5px solid #DCD6CA">
+          <button type="button" class="faqbtn" aria-expanded="false" data-dc-click="10">
+            <span><span>Aylık ücret ve kurulum neye göre belirlenir?</span></span>
+            <span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          </button>
+          <!--[--><!--]-->
+        </div>
+      
+        <div class="faq" style="border-bottom: 1.5px solid #DCD6CA">
+          <button type="button" class="faqbtn" aria-expanded="false" data-dc-click="11">
+            <span><span>Bugün tüm modülleri kullanabilir miyim?</span></span>
+            <span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          </button>
+          <!--[--><!--]-->
+        </div>
+      <!--]-->
+    </div>
+  </div>
+</section>
+
+
+<section id="demo" style="padding: 0 clamp(16px, 4vw, 40px) clamp(72px, 10vw, 140px)">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 40px; padding: clamp(24px, 5vw, 64px); border-radius: 28px; background: #F4C542; border: 2px solid #172E42">
+    <div style="flex: 1 1 380px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: .16em"><span>SİZİN DEPONUZLA BAŞLAYALIM.</span></p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5vw, 68px); line-height: .98; letter-spacing: -.035em"><span>İş akışınızı anlatın.</span> <span>Birlikte netleştirelim.</span></h2>
+      <p style="margin: 24px 0 28px; max-width: 460px; font-size: 18px"><span>Firmanızı ve ihtiyacınızı bırakın. Size uygun demo ve pilot kapsamı için iletişime geçelim.</span></p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <!--[-->
+          <span style="padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1.5px solid #172E42; font-size: 14px; font-weight: 500"><span>Birden fazla depo</span></span>
+        
+          <span style="padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1.5px solid #172E42; font-size: 14px; font-weight: 500"><span>Kamera ile barkod</span></span>
+        
+          <span style="padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1.5px solid #172E42; font-size: 14px; font-weight: 500"><span>Etiket çıktısı</span></span>
+        <!--]-->
+      </div>
+    </div>
+    <form id="demo-form" novalidate="" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Adınız</span><input class="field" type="text" name="name" autocomplete="name" required="" maxlength="100"></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>Firma</span><input class="field" type="text" name="company" autocomplete="organization" required="" maxlength="150"></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>İş e-postası</span><input class="field" type="email" name="email" autocomplete="email" required="" maxlength="254"></label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Sektörünüz</span>
+        <select class="field" name="sector" data-dc-options="t.options"><option>Üretim</option><option>Toptan ticaret</option><option>Depo ve lojistik</option><option>Perakende</option><option>Diğer</option></select>
+      </label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>İhtiyacınız</span><textarea class="field" name="message" rows="3" maxlength="2000" style="resize: vertical"></textarea></label>
+      <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
+        <input type="checkbox" name="consent" required="" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
+        <span><span>Talebimin değerlendirilmesi için bu bilgilerle benimle iletişime geçilmesini kabul ediyorum.</span> <a href="/privacy"><span>Veri kullanımı</span></a></span>
+      </label>
+      <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+      <button type="submit" class="cta" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer"><span>Teklif ve demo iste</span> <span aria-hidden="true" style="color: #F4C542">↗</span></button>
+      <p id="form-status" class="fstatus" role="status" aria-live="polite"><span></span></p>
+    </form>
+  </div>
+</section>
+
+
+<footer style="padding: 40px clamp(16px, 4vw, 40px); background: #172E42; color: #FFFFFF">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 40px">
+    <div style="display: flex; align-items: center; gap: 12px"><svg class="elogo" width="44" height="44" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42" stroke="#FFFFFF" stroke-width="3"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg><div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 20px">ETKİN WMS</span>
+      <span style="color: #C7D4E0; font-size: 14px"><span>Uçtan uca izlenebilir depo yönetimi.</span></span>
+    </div></div>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px; font-size: 14px">
+      <a href="/privacy" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF"><span>Veri kullanımı</span></a>
+      <a href="https://wms.etkinyazilim.com/login" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF"><span>Uygulamaya giriş</span> ↗</a>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C7D4E0">© 2026 Etkin Yazılım</span>
+    </div>
+  </div>
+</footer>
+
+</div></div>
+<template id="dc-tpl"><div class="{{rootCls}}" id="top" style="background: #F6F4EF; color: #172E42; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden">
+
+<!-- ═════════ HERO ═════════ -->
+<header class="paper-grid drift" style="position: relative; overflow: hidden">
+  <div class="bgfx" aria-hidden="true">
+    <span class="glow" style="left: -8%; top: 6%; width: 46%; height: 520px; background: #F4C542"></span>
+    <span class="glow" style="right: -10%; top: 38%; width: 42%; height: 560px; background: #BFD6EA; animation-delay: -9s"></span>
+    <span class="flo" style="left: 4%; width: 54px; animation-duration: 38s; animation-delay: -4s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".14"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 17%; width: 30px; animation-duration: 30s; animation-delay: -19s"><svg viewBox="0 0 24 26" fill="#F4C542" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".28"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 33%; width: 72px; animation-duration: 46s; animation-delay: -30s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1" stroke-linejoin="round" opacity=".10"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 52%; width: 38px; animation-duration: 34s; animation-delay: -12s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".13"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 68%; width: 26px; animation-duration: 28s; animation-delay: -6s"><svg viewBox="0 0 24 26" fill="#F4C542" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".25"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 81%; width: 60px; animation-duration: 42s; animation-delay: -24s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1" stroke-linejoin="round" opacity=".11"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo" style="left: 92%; width: 34px; animation-duration: 36s; animation-delay: -33s"><svg viewBox="0 0 24 26" fill="none" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".14"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+    <span class="flo hide-sm" style="left: 44%; width: 22px; animation-duration: 26s; animation-delay: -15s"><svg viewBox="0 0 24 26" fill="#DCEAF5" stroke="#172E42" stroke-width="1.2" stroke-linejoin="round" opacity=".35"><path d="M12 2 22 7.5v11L12 24 2 18.5v-11z M2 7.5 12 13l10-5.5 M12 13v11"></path></svg></span>
+  </div>
+  <nav class="hero-in" aria-label="Ana menü" style="display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; max-width: 1320px; margin: 0 auto; padding: 18px clamp(16px, 4vw, 40px)">
+    <a href="#top" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #172E42; min-width: 0">
+      <svg class="elogo" width="42" height="42" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#F4F2EE" stroke="#172E42" stroke-width="4"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#F4F2EE" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+      <span style="display: flex; flex-direction: column; line-height: 1.05">
+        <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 18px">ETKİN WMS</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #4C6275">ETKİN YAZILIM</span>
+      </span>
+    </a>
+    <div class="hide-md" style="display: flex; gap: 28px; font-size: 15px">
+      <a class="navlink" href="#cozum">{{t.navSolution}}</a>
+      <a class="navlink" href="#sektorler">{{t.navSectors}}</a>
+      <a class="navlink" href="#kiralama">{{t.navRental}}</a>
+      <a class="navlink" href="#sorular">{{t.navFaq}}</a>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div role="group" aria-label="Language / Dil" style="display: flex; padding: 3px; border: 1.5px solid #172E42; border-radius: 999px; background: #FFFFFF">
+        <button type="button" class="langbtn {{trCls}}" aria-pressed="{{trPressed}}" onClick="{{setTr}}">TR</button>
+        <button type="button" class="langbtn {{enCls}}" aria-pressed="{{enPressed}}" onClick="{{setEn}}">EN</button>
+      </div>
+      <a class="loginbtn" href="https://wms.etkinyazilim.com/login" aria-label="{{t.login}}" title="{{t.login}}" style="display: inline-flex; flex-direction: column; align-items: center; gap: 4px; min-width: 52px; padding: 2px 4px; text-decoration: none; color: #172E42">
+        <span class="loginico" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; background: {{accent}}; border: 1.5px solid #172E42; box-shadow: 3px 3px 0 #172E42">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>
+        </span>
+        <span aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .08em; line-height: 1">{{t.loginShort}}</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="hero-in" style="max-width: 1320px; margin: 0 auto; padding: clamp(20px, 4vw, 52px) clamp(16px, 4vw, 40px) clamp(56px, 8vw, 104px)">
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px 48px">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <p class="rise" style="margin: 0 0 20px; display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 8px; border-radius: 999px; background: #FFFFFF; border: 1px solid #DCD6CA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .14em">
+          <span style="display: block; width: 10px; height: 10px; border-radius: 50%; background: {{accent}}; box-shadow: 0 0 0 3px #172E42"></span>{{t.eyebrow}}
+        </p>
+        <h1 style="margin: 0; max-width: 900px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(38px, 5.6vw, 84px); line-height: .98; letter-spacing: -.04em">
+          <span class="scanreveal" style="display: block; animation-delay: .2s">{{t.title1}}</span>
+          <span class="scanreveal" style="display: inline-block; animation-delay: .7s; margin-top: 10px; padding: 0 .14em .06em; background: {{accent}}; border-radius: 12px">{{t.title2}}</span>
+        </h1>
+        <div class="rise" style="animation-delay: 1.05s; display: flex; align-items: center; gap: 14px; margin-top: 26px; max-width: 640px">
+          <svg width="52" height="52" viewBox="0 0 29 29" role="img" aria-label="QR" style="flex: none; padding: 4px; background: #FFFFFF; border: 2px solid #172E42; border-radius: 10px; box-sizing: content-box">
+            <path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path>
+            <path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 5h4v2h-4z M11 9h2v4h-2z M15 9h2v2h-2z M1 11h4v2H1z M7 11h2v2H7z M19 11h2v2h-2z M23 11h5v2h-5z M13 13h4v2h-4z M1 15h2v2H1z M5 15h4v2H5z M19 15h2v4h-2z M25 15h3v2h-3z M11 17h2v4h-2z M15 17h2v2h-2z M23 19h2v2h-2z M11 23h4v2h-4z M17 21h2v4h-2z M21 23h2v2h-2z M25 23h3v5h-3z M11 27h6v1h-6z M19 26h4v2h-4z" fill="#172E42"></path>
+          </svg>
+          <p style="margin: 0; font-size: clamp(15px, 1.4vw, 17px); font-weight: 600; line-height: 1.4; color: #24435E">{{t.qrLine}}</p>
+        </div>
+      </div>
+      <div class="rise" style="animation-delay: 1s; flex: 0 1 440px; min-width: 0">
+        <p style="margin: 0; font-size: clamp(17px, 1.5vw, 19px); color: #3D5468">{{t.heroSub}}</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px">
+          <a class="cta" href="#demo" style="display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 24px; border-radius: 999px; background: #172E42; color: #FFFFFF; text-decoration: none; font-weight: 600">{{t.cta1}} <span aria-hidden="true" style="color: {{accent}}">↗</span></a>
+          <a class="ghost" href="#saha" style="display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 22px; border-radius: 999px; border: 1.5px solid #172E42; color: #172E42; text-decoration: none; font-weight: 600">{{t.cta2b}} <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <ul class="rise" style="animation-delay: 1.1s; flex: 1 1 100%; list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px">
+        <sc-for list="{{t.heroChips}}" as="hc" hint-placeholder-count="4">
+          <li style="display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-size: 15px; font-weight: 600">
+            <span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: {{accent}}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>
+            </span>{{hc.n}}
+          </li>
+        </sc-for>
+      </ul>
+    </div>
+
+    <!-- ═══ the 3D floor ═══ -->
+    <div id="saha" class="rise" style="animation-delay: 1.15s; margin-top: clamp(32px, 5vw, 60px); padding: clamp(10px, 1.6vw, 20px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 28px; box-shadow: 10px 12px 0 #172E42">
+      <div style="display: flex; flex-wrap: wrap; gap: 18px">
+
+        <div style="flex: 1 1 640px; min-width: 0">
+          <div class="stage">
+            <sc-if value="{{isFilm}}" hint-placeholder-val="{{true}}">
+              <div class="film" aria-hidden="true">
+                <div class="{{fs.c0}}"><img src="/img/saha-1-kabul.webp" alt="" style="transform-origin: 22% 62%; object-position: 22% 60%; animation-duration: {{filmDurS}}s"></div>
+                <div class="{{fs.c1}}"><img src="/img/saha-2-etiket.webp" alt="" style="transform-origin: 48% 45%; object-position: 45% 50%; animation-duration: {{filmDurS}}s"></div>
+                <div class="{{fs.c2}}"><img src="/img/saha-3-uretim.webp" alt="" style="transform-origin: 47% 42%; object-position: 47% 50%; animation-duration: {{filmDurS}}s"></div>
+                <div class="{{fs.c3}}"><img src="/img/saha-4-cep.webp" alt="" style="transform-origin: 49% 44%; object-position: 50% 50%; animation-duration: {{filmDurS}}s"></div>
+                <sc-if value="{{appOn}}" hint-placeholder-val="{{false}}">
+                  <div class="appzoom">
+                    <div class="appcard gxphone"><div class="gx"><div class="gx-hd pop"><span class="gx-ring">0<small>/11</small></span><span style="min-width: 0"><b class="gx-hello">{{t.gxHello}}</b><span class="gx-sub">{{t.gxShift}}</span></span></div><div class="gx-stats pop d1"><span class="gx-st"><b style="color: #1E2F3E">11</b><i>{{t.gxLeft}}</i></span><span class="gx-st"><b style="color: #2F7D5B">0</b><i>{{t.gxDone}}</i></span><span class="gx-st"><b style="color: #B83A2E">0</b><i>{{t.gxProb}}</i></span></div><div class="gx-sec pop d2" style="background: #E3F1E9; color: #1D5A40"><span class="gx-ic" style="background: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-tt">{{t.gxS1}}<small>{{t.gxS1n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d2" style="background: #DFF0EF; color: #16585A"><span class="gx-ic" style="background: #24787A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg></span><span class="gx-tt">{{t.gxS2}}<small>{{t.gxS2n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">3</span></div><div class="gx-sec pop d3" style="background: #ECE9F8; color: #45398C"><span class="gx-ic" style="background: #6253B5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3"></path></svg></span><span class="gx-tt">{{t.gxS3}}<small>{{t.gxS3n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d3" style="background: #F8EADF; color: #844818"><span class="gx-ic" style="background: #B0652E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V11l6 3v-3l6 3V7l6-3v17zM7 17h2M13 17h2"></path></svg></span><span class="gx-tt">{{t.gxS4}}<small>{{t.gxS4n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">2</span></div><div class="gx-sec pop d4" style="background: #E2ECF6; color: #1F4C7C"><span class="gx-ic" style="background: #2F67A3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2zM9 13l2 2 4-4"></path></svg></span><span class="gx-tt">{{t.gxS5}}<small>{{t.gxS5n}}</small></span><span class="gx-n">2</span></div><div class="gx-bar pop d5"><span class="gx-side" style="background: #E3F1E9; color: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-prim"><span class="tap d6" style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 9v6M10 9v6M13 9v6M17 9v6"></path></svg>{{t.gxScan}}</span></span><span class="gx-side" style="background: #F8EADF; color: #B5552B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M4 20h16"></path></svg></span></div></div></div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{isFilm}}" hint-placeholder-val="{{true}}">
+              <div class="ov filmdots" role="group" aria-label="{{t.filmNav}}">
+                <sc-for list="{{fdots}}" as="fd" hint-placeholder-count="4">
+                  <button type="button" class="{{fd.cls}}" aria-label="{{fd.l}}" aria-pressed="{{fd.pressed}}" onClick="{{fd.go}}"><span></span></button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{is3d}}" hint-placeholder-val="{{false}}">
+            <div class="world" aria-hidden="true" style="transform: {{world}}">
+              <sc-for list="{{cubes}}" as="c" hint-placeholder-count="0">
+                <div class="{{c.cls}}" style="left: {{c.x}}%; top: {{c.y}}%; width: {{c.w}}%; height: {{c.d}}%; transform: translateZ({{c.z}}cqw)">
+                  <span class="f ft" style="background: {{c.t}}; transform: translateZ({{c.h}}cqw)"></span>
+                  <span class="f fs" style="height: {{c.h}}cqw; background: {{c.s}}"></span>
+                  <span class="f fe" style="width: {{c.h}}cqw; background: {{c.e}}"></span>
+                </div>
+              </sc-for>
+
+              <sc-for list="{{decals}}" as="dc" hint-placeholder-count="0">
+                <div class="{{dc.cls}}" style="left: {{dc.x}}%; top: {{dc.y}}%; width: {{dc.w}}%; height: {{dc.h}}%"><span class="decal-l">{{dc.l}}</span></div>
+              </sc-for>
+              <span class="lane-h" style="left: 2%; top: 52.5%; width: 96%"></span>
+              <span class="lane-v" style="left: 76%; top: 2%; height: 96%"></span>
+              <span class="hz" style="left: 3%; top: 92.6%; width: 26%; height: 1.2%"></span>
+              <span class="hz" style="left: 81%; top: 33.2%; width: 15%; height: 1.2%"></span>
+
+              <div class="group mov" style="left: {{fl.x}}%; top: {{fl.y}}%; width: 6%; height: 5%; transform: translateZ(0cqw) rotateZ({{fl.r}}deg)">
+                <sc-for list="{{fl.parts}}" as="c" hint-placeholder-count="0">
+                  <div class="{{c.cls}}" style="left: {{c.x}}%; top: {{c.y}}%; width: {{c.w}}%; height: {{c.d}}%; transform: translateZ({{c.z}}cqw)">
+                    <span class="f ft" style="background: {{c.t}}; transform: translateZ({{c.h}}cqw)"></span>
+                    <span class="f fs" style="height: {{c.h}}cqw; background: {{c.s}}"></span>
+                    <span class="f fe" style="width: {{c.h}}cqw; background: {{c.e}}"></span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div class="{{pk.cls}}" style="left: {{pk.x}}%; top: {{pk.y}}%; width: 4.5%; height: 4%; transform: translateZ({{pk.z}}cqw)">
+                <span class="f ft" style="background: {{pk.t}}; transform: translateZ(2.4cqw)"><span class="qr"></span></span>
+                <span class="f fs" style="height: 2.4cqw; background: {{pk.s}}"></span>
+                <span class="f fe" style="width: 2.4cqw; background: {{pk.e}}"></span>
+              </div>
+
+              <sc-for list="{{tags}}" as="g" hint-placeholder-count="0">
+                <span class="{{g.cls}}" style="left: {{g.x}}%; top: {{g.y}}%; background: {{g.bg}}; color: {{g.fg}}; transform: {{g.tf}}">{{g.l}}</span>
+              </sc-for>
+            </div>
+
+            <!-- overlays -->
+            <p class="ov hide-sm" style="left: 16px; top: 14px; margin: 0; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,.88); border: 1px solid #DCD6CA; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .12em">
+              <span class="blink" style="display: block; width: 8px; height: 8px; border-radius: 50%; background: #2FA36B"></span>{{t.mapTitle}} <span style="font-weight: 400; color: #4C6275; letter-spacing: .02em">· {{t.repr}}</span>
+            </p>
+            <div class="ov" role="group" aria-label="{{t.viewLabel}}" style="right: 12px; top: 12px; display: flex; padding: 3px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42">
+              <sc-for list="{{views}}" as="v" hint-placeholder-count="3">
+                <button type="button" class="{{v.cls}}" aria-pressed="{{v.pressed}}" onClick="{{v.go}}">{{v.l}}</button>
+              </sc-for>
+            </div>
+            </sc-if>
+            <div class="ov steptxt capt" aria-live="polite" style="left: 16px; bottom: 16px; max-width: 420px; padding: 16px 18px; border-radius: 16px; background: rgba(23,46,66,.94); color: #FFFFFF">
+              <p style="margin: 0 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .14em; color: {{accent}}">{{cap.k}}</p>
+              <p class="capt-t" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -.02em; line-height: 1.1">{{cap.t}}</p>
+              <p class="hide-sm" style="margin: 6px 0 0; font-size: 14px; color: #D3DEE8">{{cap.d}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═════════ SOLUTION ═════════ -->
+<section id="cozum" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #FFFFFF; border-top: 2px solid #172E42">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px 40px; margin-bottom: 52px">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.solKicker}}</p>
+        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em">{{t.solA}} <span style="color: #6A7F91">{{t.solB}}</span></h2>
+      </div>
+      <p style="flex: 0 1 400px; margin: 0; color: #3D5468; font-size: 18px">{{t.solSub}}</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 20px">
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: {{accent}}">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3v18M20 3v18M4 9h16M4 15h16"></path><rect x="7" y="11" width="4" height="4"></rect><rect x="13" y="5" width="4" height="4"></rect></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em">{{t.f1Title}}</h3>
+        <p style="margin: 0; color: #3D5468; flex: 1">{{t.f1Body}}</p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86">{{t.f1Tag}}</p>
+      </article>
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: #DCEAF5">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="18" r="2"></circle><path d="M7 6h7a3 3 0 0 1 0 6H10a3 3 0 0 0 0 6h7"></path></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em">{{t.f2Title}}</h3>
+        <p style="margin: 0; color: #3D5468; flex: 1">{{t.f2Body}}</p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86">{{t.f2Tag}}</p>
+      </article>
+      <article class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 30px 28px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 18px">
+        <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: #F1E3CC">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3"></path><path d="M7 8v8M10 8v8M13 8v8M15.5 8v8M17.5 8v8"></path></svg>
+        </span>
+        <h3 style="margin: 14px 0 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.02em">{{t.f3Title}}</h3>
+        <p style="margin: 0; color: #3D5468; flex: 1">{{t.f3Body}}</p>
+        <p style="margin: 0; padding-top: 14px; border-top: 1.5px dashed #CFC8BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: #2B5F86">{{t.f3Tag}}</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SECTORS ═════════ -->
+<section id="sektorler" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px)">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.secKicker}}</p>
+    <h2 style="margin: 0; max-width: 880px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em">{{t.secA}} <span style="color: #6A7F91">{{t.secB}}</span></h2>
+    <p style="margin: 24px 0 0; max-width: 560px; color: #3D5468; font-size: 18px">{{t.secSub}}</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 48px">
+      <sc-for list="{{t.sectors}}" as="s" hint-placeholder-count="4">
+        <span style="display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px 14px 14px; border-radius: 999px; background: #FFFFFF; border: 1.5px solid #172E42; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: clamp(18px, 2vw, 24px)">
+          <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: #172E42; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{s.i}}</span>{{s.n}}
+        </span>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 40px; margin-top: 56px; padding: clamp(24px, 4vw, 52px); background: #FFFFFF; border: 1.5px solid #DCD6CA; border-radius: 24px">
+      <div style="flex: 1 1 360px; min-width: 0">
+        <p style="margin: 0 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #4C6275">{{t.scnKicker}}</p>
+        <h3 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 3vw, 40px); line-height: 1.05; letter-spacing: -.025em">{{t.scnTitle}}</h3>
+        <p style="margin: 18px 0 24px; color: #3D5468">{{t.scnBody}}</p>
+        <a class="navlink" href="#demo" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 600; text-decoration: underline; text-decoration-color: {{accent}}; text-decoration-thickness: 4px; text-underline-offset: 6px">{{t.scnLink}} ↗</a>
+      </div>
+      <ol style="flex: 1 1 380px; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+        <sc-for list="{{t.flow}}" as="f" hint-placeholder-count="3">
+          <li style="display: flex; align-items: center; gap: 18px; padding: 18px 20px; background: #F6F4EF; border: 1.5px solid #172E42; border-radius: 16px">
+            <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: {{accent}}; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{f.k}}</span>
+            <span style="display: flex; flex-direction: column; min-width: 0">
+              <strong style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700">{{f.t}}</strong>
+              <span style="font-size: 14px; color: #4C6275">{{f.s}}</span>
+            </span>
+          </li>
+        </sc-for>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ MOBILE ═════════ -->
+<section id="mobil" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #FFFFFF; border-top: 1.5px solid #E4DED3">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 48px 64px">
+    <div style="flex: 1 1 460px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.mobKicker}}</p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(34px, 4.8vw, 66px); line-height: 1; letter-spacing: -.035em">{{t.mobA}} <span style="color: #6A7F91">{{t.mobB}}</span></h2>
+      <p style="margin: 22px 0 20px; color: #3D5468; font-size: 18px">{{t.mobBody}}</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px">
+        <sc-for list="{{t.mobChips}}" as="mc" hint-placeholder-count="5">
+          <span style="padding: 7px 13px; border-radius: 999px; background: #F6F4EF; border: 1px solid #DCD6CA; font-size: 13px; font-weight: 600">{{mc.n}}</span>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <button type="button" class="{{offCls}}" aria-pressed="{{offPressed}}" onClick="{{offToggle}}">
+          <span class="knob-track"><span class="knob"></span></span>{{t.offLabel}}
+        </button>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 14px; color: #4C6275">{{t.offHint}}</p>
+      <p style="margin: 18px 0 0; font-size: 13px; color: #6A7F91">{{t.mobNote}}</p>
+    </div>
+
+    <!-- animated phone -->
+    <div style="flex: 1 1 320px; display: flex; justify-content: center">
+      <div aria-hidden="true" style="position: relative; width: 100%; max-width: 312px; aspect-ratio: 312 / 640; border-radius: 46px; background: #172E42; padding: 11px; box-shadow: 14px 16px 0 {{accent}}">
+        <div style="position: relative; height: 100%; border-radius: 36px; background: #F6F4EF; overflow: hidden; display: flex; flex-direction: column">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 22px 16px 10px">
+            <span style="display: flex; align-items: center; gap: 6px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 14px"><svg class="elogo" width="22" height="22" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>ETKİN WMS</span>
+            <span class="{{net.cls}}"><span class="netdot"></span>{{net.label}}</span>
+          </div>
+          <sc-if value="{{net.synced}}" hint-placeholder-val="{{false}}">
+            <div class="pop" style="margin: 0 16px 6px; padding: 8px 12px; border-radius: 12px; background: #E3F4EA; color: #1E6B45; font-size: 12px; font-weight: 600">✓ {{t.syncedMsg}}</div>
+          </sc-if>
+
+          <div style="position: relative; flex: 1; padding: 4px 12px 0; overflow: hidden; display: flex; flex-direction: column">
+
+            <!-- 1 · receive + QR -->
+            <sc-if value="{{ph.s0}}" hint-placeholder-val="{{true}}">
+              <div class="gx"><div class="gx-hd pop"><span class="gx-ring">0<small>/11</small></span><span style="min-width: 0"><b class="gx-hello">{{t.gxHello}}</b><span class="gx-sub">{{t.gxShift}}</span></span></div><div class="gx-stats pop d1"><span class="gx-st"><b style="color: #1E2F3E">11</b><i>{{t.gxLeft}}</i></span><span class="gx-st"><b style="color: #2F7D5B">0</b><i>{{t.gxDone}}</i></span><span class="gx-st"><b style="color: #B83A2E">0</b><i>{{t.gxProb}}</i></span></div><div class="gx-sec pop d2" style="background: #E3F1E9; color: #1D5A40"><span class="gx-ic" style="background: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-tt">{{t.gxS1}}<small>{{t.gxS1n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d2" style="background: #DFF0EF; color: #16585A"><span class="gx-ic" style="background: #24787A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path></svg></span><span class="gx-tt">{{t.gxS2}}<small>{{t.gxS2n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">3</span></div><div class="gx-sec pop d3" style="background: #ECE9F8; color: #45398C"><span class="gx-ic" style="background: #6253B5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3"></path></svg></span><span class="gx-tt">{{t.gxS3}}<small>{{t.gxS3n}}</small></span><span class="gx-n">2</span></div><div class="gx-sec pop d3" style="background: #F8EADF; color: #844818"><span class="gx-ic" style="background: #B0652E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V11l6 3v-3l6 3V7l6-3v17zM7 17h2M13 17h2"></path></svg></span><span class="gx-tt">{{t.gxS4}}<small>{{t.gxS4n}}</small></span><span class="gx-acil">⚡</span><span class="gx-n">2</span></div><div class="gx-sec pop d4" style="background: #E2ECF6; color: #1F4C7C"><span class="gx-ic" style="background: #2F67A3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2zM9 13l2 2 4-4"></path></svg></span><span class="gx-tt">{{t.gxS5}}<small>{{t.gxS5n}}</small></span><span class="gx-n">2</span></div><div class="gx-bar pop d5"><span class="gx-side" style="background: #E3F1E9; color: #2F7D5B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"></path></svg></span><span class="gx-prim"><span class="tap d6" style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 9v6M10 9v6M13 9v6M17 9v6"></path></svg>{{t.gxScan}}</span></span><span class="gx-side" style="background: #F8EADF; color: #B5552B"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M4 20h16"></path></svg></span></div></div>
+            </sc-if>
+
+            <!-- 2 · bluetooth print -->
+            <sc-if value="{{ph.s1}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #2F7D5B">{{t.gxRecv}}<small>{{t.gxRecvSub}}</small></div><div class="gx-row pop d1"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm"><b>Solvent</b><span>KMY-007</span><span class="gx-tag" style="background: #F4C542">{{t.gxBc}}</span></span><span class="gx-q">0<small>/120 L</small></span></div><div class="gx-row pop d1"><img src="/img/urun-amb-001.webp" alt=""><span class="gx-rm"><b>{{t.gxBoxName}}</b><span>AMB-001</span><span class="gx-tag" style="background: #DCE6EE">{{t.gxStd}}</span></span><span class="gx-q">0<small>/400</small></span></div><div class="gx-row pop d2"><img src="/img/urun-urn-108.webp" alt=""><span class="gx-rm"><b>{{t.gxPaint}}</b><span>URN-108</span><span class="gx-tag" style="background: #F4C542">{{t.gxBc}}</span></span><span class="gx-q">0<small>/24</small></span></div><div class="gx-sheet"><span class="gx-tag" style="background: #F4C542">{{t.gxFromBc}}</span><div class="gx-sh-h"><img src="/img/urun-kmy-007.webp" alt=""><span><b>Solvent</b><span>LOT S-1188 · SKT 09.2027</span></span></div><span class="gx-k">{{t.gxPack}}</span><div class="gx-chips"><span class="gx-chip">{{t.gxLt}}</span><span class="gx-chip on">{{t.gxCan}}</span></div><div class="gx-tot">120 L<small>6 × 20 L</small></div><span class="gx-big"><span class="tap d6" style="display: flex; align-items: center; gap: 6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6h-2M7 14h10v7H7z"></path></svg>{{t.gxCreate}}</span></span></div></div>
+            </sc-if>
+
+            <!-- 3 · scan + suggested slot -->
+            <sc-if value="{{ph.s2}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #2F7D5B">{{t.gxRecv}}<small>{{t.gxRecvSub2}}</small></div><div class="gx-labels pop d1"><span class="gx-lb pop d1"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0201</b><span>20 L</span></span><span class="gx-lb pop d2"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0202</b><span>20 L</span></span><span class="gx-lb pop d3"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0203</b><span>20 L</span></span><span class="gx-lb pop d4"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0204</b><span>20 L</span></span><span class="gx-lb pop d5"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0205</b><span>20 L</span></span><span class="gx-lb pop d6"><svg width="30" height="30" viewBox="0 0 29 29"><path d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" fill="none" stroke="#172E42" stroke-width="2"></path><path d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 9h2v4h-2z M13 13h4v2h-4z M19 15h2v4h-2z M11 17h2v4h-2z M17 21h2v4h-2z M25 23h3v5h-3z" fill="#172E42"></path></svg><b>P0206</b><span>20 L</span></span></div><div class="gx-row pop d4"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm"><b>Solvent</b><span>KMY-007</span><span class="gx-tag" style="background: #F4C542">{{t.gxBc}}</span></span><span class="gx-q">120<small>/120 L</small></span><span class="gx-ok">✓</span></div><div class="gx-flash pop d5"><span class="gx-flash-c"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2F7D5B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span>{{t.gxPrinted}}</div></div>
+            </sc-if>
+
+            <!-- 4 · voice production order + recipe -->
+            <sc-if value="{{ph.s3}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #24787A">{{t.gxPick}}<small>ÖRNEK YAPI · 1/4</small></div><div class="gx-stops pop d1"><span class="on">B-01</span>›<span>C-03</span>›<span>D-04</span></div><div class="gx-hero pop d2" style="background: #24787A"><img src="/img/urun-urn-108.webp" alt=""><span class="gx-rm" style="color: #FFFFFF"><b>{{t.gxPaint}}</b><span>{{t.gxAt}}</span></span><span class="gx-cnt"><span class="pop d4">12</span><small>/ 12 {{t.gxPcs}}</small></span></div><div class="gx-row pop d5"><img src="/img/urun-urn-108.webp" alt=""><span class="gx-rm"><b>{{t.gxPaint}}</b><span>URN-108 · B-01</span></span><span class="gx-q">12<small>/12</small></span><span class="gx-ok">✓</span></div><div class="gx-row pop d3"><img src="/img/urun-urn-112.webp" alt=""><span class="gx-rm"><b>{{t.gxPrimer}}</b><span>URN-112 · B-01</span></span><span class="gx-q">0<small>/6</small></span></div><div class="gx-row pop d3 gx-dim"><img src="/img/urun-urn-120.webp" alt=""><span class="gx-rm"><b>{{t.gxVarnish}}</b><span>URN-120 · C-03</span></span><span class="gx-q">0<small>/4</small></span></div><div class="gx-bar pop d3"><span class="gx-side" style="background: #F1EEE8; color: #1E2F3E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></span><span class="gx-prim" style="background: #24787A"><span class="tap d4" style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 9v6M10 9v6M13 9v6M17 9v6"></path></svg>{{t.gxOne}}</span></span><span class="gx-side" style="background: #F1EEE8; color: #1E2F3E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"></path></svg></span></div></div>
+            </sc-if>
+
+            <!-- 5 · raw material transfer -->
+            <sc-if value="{{ph.s4}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-band pop" style="background: #2F67A3">{{t.gxCount}}<small>C-01 · {{t.gxBlind}}</small></div><div class="gx-hero pop d1" style="background: #2F67A3"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm" style="color: #FFFFFF"><b>Solvent</b><span>KMY-007</span></span><span class="gx-cnt">76<small>{{t.gxCounted}}</small></span></div><div class="gx-row pop d2"><img src="/img/urun-kmy-007.webp" alt=""><span class="gx-rm"><b>Solvent</b><span>KMY-007 · C-01</span></span><span class="gx-q">76<small>L</small></span></div><div class="gx-row pop d2 gx-dim"><img src="/img/urun-urn-120.webp" alt=""><span class="gx-rm"><b>{{t.gxVarnish}}</b><span>URN-120 · C-03</span></span><span class="gx-q">—</span></div><div class="gx-alert pop d4"><span class="gx-stripes"></span><span class="gx-al-ic">!</span><b>{{t.gxDiff}}</b><span class="gx-al-n">−4 L</span><span>{{t.gxDiffQ}}</span></div></div>
+            </sc-if>
+
+            <!-- 6 · finished goods + full trace -->
+            <sc-if value="{{ph.s5}}" hint-placeholder-val="{{false}}">
+              <div class="gx"><div class="gx-done pop"><span class="gx-flash-c" style="width: 64px; height: 64px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2F7D5B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg></span><b>{{t.gxDay}}</b><span>{{t.gxDaySub}}</span></div><div class="gx-stats pop d2"><span class="gx-st"><b style="color: #1E2F3E">0</b><i>{{t.gxLeft}}</i></span><span class="gx-st"><b style="color: #2F7D5B">11</b><i>{{t.gxDone}}</i></span><span class="gx-st"><b style="color: #B83A2E">0</b><i>{{t.gxProb}}</i></span></div><div class="gx-row pop d3"><img src="/img/urun-urn-131.webp" alt=""><span class="gx-rm"><b>{{t.gxSil}}</b><span>SO-0091 · IRS-0318</span></span><span class="gx-q">✓</span><span class="gx-ok">✓</span></div><div class="gx-row pop d4"><img src="/img/urun-amb-001.webp" alt=""><span class="gx-rm"><b>{{t.gxBoxName}}</b><span>PO-0412 · 20 QR</span></span><span class="gx-q">✓</span><span class="gx-ok">✓</span></div><div class="gx-undo pop d5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4C542" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"></path></svg><span>{{t.gxUndoL}}</span><span class="gx-undo-b">{{t.gxUndo}}</span></div></div>
+            </sc-if>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 18px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A7F91">
+            <span>{{t.phFoot}}</span><span>{{phCounter}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ RENTAL ═════════ -->
+<section id="kiralama" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); background: #172E42; color: #FFFFFF">
+  <div style="max-width: 1240px; margin: 0 auto">
+    <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: {{accent}}">{{t.rentKicker}}</p>
+    <h2 style="margin: 0; max-width: 960px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5.6vw, 76px); line-height: .98; letter-spacing: -.035em">{{t.rentA}} <span style="color: #A9BDD0">{{t.rentB}}</span></h2>
+    <p style="margin: 24px 0 0; max-width: 620px; color: #D3DEE8; font-size: 18px">{{t.rentBody}}</p>
+    <ol style="list-style: none; margin: 56px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px">
+      <sc-for list="{{t.steps}}" as="st" hint-placeholder-count="3">
+        <li style="padding: 28px; border-radius: 20px; background: #FFFFFF; color: #172E42">
+          <span style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: {{accent}}; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 30px">{{st.n}}</span>
+          <h3 style="margin: 22px 0 8px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -.015em">{{st.t}}</h3>
+          <p style="margin: 0; color: #3D5468">{{st.s}}</p>
+        </li>
+      </sc-for>
+    </ol>
+  </div>
+</section>
+
+<!-- ═════════ FAQ ═════════ -->
+<section id="sorular" style="padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px)">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 40px 72px">
+    <div style="flex: 1 1 280px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; color: #2B5F86">{{t.faqKicker}}</p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 4.8vw, 64px); line-height: .98; letter-spacing: -.035em">{{t.faqTitle}}</h2>
+    </div>
+    <div style="flex: 2 1 480px; min-width: 0; border-top: 1.5px solid #172E42">
+      <sc-for list="{{faq}}" as="q" hint-placeholder-count="5">
+        <div class="{{q.cls}}" style="border-bottom: 1.5px solid #DCD6CA">
+          <button type="button" class="faqbtn" aria-expanded="{{q.expanded}}" onClick="{{q.toggle}}">
+            <span>{{q.q}}</span>
+            <span class="faq-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#172E42" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          </button>
+          <sc-if value="{{q.isOpen}}" hint-placeholder-val="{{false}}">
+            <p style="margin: -4px 0 26px; max-width: 680px; color: #3D5468; font-size: 17px">{{q.a}}</p>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ DEMO ═════════ -->
+<section id="demo" style="padding: 0 clamp(16px, 4vw, 40px) clamp(72px, 10vw, 140px)">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 40px; padding: clamp(24px, 5vw, 64px); border-radius: 28px; background: {{accent}}; border: 2px solid #172E42">
+    <div style="flex: 1 1 380px; min-width: 0">
+      <p style="margin: 0 0 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: .16em">{{t.demoKicker}}</p>
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(36px, 5vw, 68px); line-height: .98; letter-spacing: -.035em">{{t.demoA}} {{t.demoB}}</h2>
+      <p style="margin: 24px 0 28px; max-width: 460px; font-size: 18px">{{t.demoBody}}</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{t.demoChips}}" as="c" hint-placeholder-count="3">
+          <span style="padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1.5px solid #172E42; font-size: 14px; font-weight: 500">{{c.n}}</span>
+        </sc-for>
+      </div>
+    </div>
+    <form id="demo-form" novalidate style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100"></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150"></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254"></label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fSector}}
+        <select class="field" name="sector" data-dc-options="t.options"></select>
+      </label>
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" style="resize: vertical"></textarea></label>
+      <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
+        <input type="checkbox" name="consent" required style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
+        <span>{{t.fConsent}} <a href="/privacy">{{t.privacy}}</a></span>
+      </label>
+      <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+      <button type="submit" class="cta" disabled="{{formBusyAttr}}" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer">{{t.fSubmit}} <span aria-hidden="true" style="color: {{accent}}">↗</span></button>
+      <p id="form-status" class="{{formCls}}" role="status" aria-live="polite">{{formMsg}}</p>
+    </form>
+  </div>
+</section>
+
+<!-- ═════════ FOOTER ═════════ -->
+<footer style="padding: 40px clamp(16px, 4vw, 40px); background: #172E42; color: #FFFFFF">
+  <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 40px">
+    <div style="display: flex; align-items: center; gap: 12px"><svg class="elogo" width="44" height="44" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42" stroke="#FFFFFF" stroke-width="3"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg><div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 20px">ETKİN WMS</span>
+      <span style="color: #C7D4E0; font-size: 14px">{{t.footTag}}</span>
+    </div></div>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px; font-size: 14px">
+      <a href="/privacy" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF">{{t.privacy}}</a>
+      <a href="https://wms.etkinyazilim.com/login" style="display: inline-flex; align-items: center; min-height: 44px; color: #FFFFFF">{{t.login}} ↗</a>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C7D4E0">© 2026 Etkin Yazılım</span>
+    </div>
+  </div>
+</footer>
+
+</div></template>
+</body>
+</html>

@@ -1,0 +1,25 @@
+/* Etkin WMS — iç sayfalar (gizlilik). Ana sayfa stilleri styles.css içindedir. */
+@font-face{font-family:'Bricolage Grotesque';src:url(/fonts/bricolage-grotesque.woff) format('woff');font-weight:400 800;font-display:swap}
+@font-face{font-family:'Instrument Sans';src:url(/fonts/instrument-sans.woff) format('woff');font-weight:400 600;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(/fonts/ibm-plex-mono-600.woff) format('woff');font-weight:600;font-display:swap}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#F6F4EF;color:#172E42;font:400 18px/1.65 'Instrument Sans',system-ui,sans-serif}
+a{color:#172E42}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1240px;margin:0 auto;padding:18px clamp(16px,4vw,40px)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand svg{flex:none}
+.brand b{display:block;font:800 18px/1.05 'Bricolage Grotesque',sans-serif}
+.brand small{display:block;font:600 10px/1.4 'IBM Plex Mono',monospace;letter-spacing:.2em;color:#4C6275}
+.back{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
+.doc{max-width:760px;margin:clamp(24px,6vw,72px) auto;padding:clamp(24px,5vw,56px);background:#FFFFFF;border:2px solid #172E42;border-radius:28px;box-shadow:10px 12px 0 #172E42}
+.doc + .foot{margin-top:clamp(40px,8vw,96px)}
+.kicker{margin:0 0 12px;font:600 12px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#4C6275}
+h1{margin:0 0 24px;font:800 clamp(32px,5vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em}
+.doc p{margin:0 0 16px;color:#2E4458}
+.date{font-size:15px;color:#4C6275}
+.cta{display:inline-flex;align-items:center;gap:10px;min-height:54px;margin-top:12px;padding:0 24px;border-radius:999px;background:#172E42;color:#FFFFFF;font-weight:600;text-decoration:none}
+.cta span{color:#F4C542}
+.foot{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;padding:32px clamp(16px,4vw,40px);background:#172E42;color:#FFFFFF}
+.foot b{font:800 18px/1 'Bricolage Grotesque',sans-serif}
+.foot span{color:#C7D4E0;font-size:14px}
+@media (max-width:640px){.doc{margin:16px;border-radius:20px;box-shadow:6px 8px 0 #172E42}}
