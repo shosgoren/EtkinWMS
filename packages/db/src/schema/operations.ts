@@ -392,3 +392,22 @@ export const receiptPackages = pgTable("receipt_packages", {
   index("receipt_packages_tenant_document_idx").on(t.tenantId,t.documentId),
   check("receipt_packages_package_no_check",sql`${t.packageNo} BETWEEN 1 AND 200`),
 ]);
+
+/** T-941: append-only registered whole-HU movement; FK/RLS/guards are migration authority. */
+export const packageMovementSteps = pgTable("package_movement_steps", {
+  tenantId: uuid("tenant_id").notNull(),
+  handlingUnitId: uuid("handling_unit_id").notNull(),
+  documentId: uuid("document_id").notNull(),
+  documentLineId: uuid("document_line_id").notNull(),
+  operation: text("operation").$type<"QC_RELEASE" | "PUTAWAY">().notNull(),
+  sequenceNo: integer("sequence_no").notNull(),
+  previousDocumentLineId: uuid("previous_document_line_id").notNull(),
+  sourceLocationId: uuid("source_location_id").notNull(),
+  targetLocationId: uuid("target_location_id").notNull(),
+  sourceStockStatus: text("source_stock_status").notNull(),
+  targetStockStatus: text("target_stock_status").notNull(),
+  baseQuantity: numeric("base_quantity").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+}, t => [primaryKey({columns:[t.tenantId,t.documentLineId]}),
+  unique().on(t.tenantId,t.handlingUnitId,t.sequenceNo),
+  unique().on(t.tenantId,t.handlingUnitId,t.previousDocumentLineId), unique().on(t.tenantId,t.documentId)]);
