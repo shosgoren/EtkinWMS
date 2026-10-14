@@ -3,6 +3,12 @@ import { AppError } from "@wms/shared/errors";
 import type { PackageReceiptDto, ReceiptPackageDto } from "../actions.ts";
 import { validPrintSettings, type PrintSettings } from "../../../labels/print-settings.ts";
 
+// Shared immutable label metadata; no receipt identity, source warehouse or movement facts.
+export interface PackageLabelMetadata {
+  readonly id: string; readonly qr: string; readonly packageNo: number; readonly kind: string;
+  readonly itemCode: string; readonly itemName: string; readonly quantity: string; readonly unitCode: string;
+  readonly stockStatus: string; readonly lotCode: string | null; readonly producedOn: string | null; readonly expiresOn: string | null;
+}
 export interface PackageQr { readonly id: string; readonly size: number; readonly path: string; }
 export function postedLabelPackages(receipt: PackageReceiptDto): readonly ReceiptPackageDto[] {
   if (receipt.documentStatus !== "POSTED" || receipt.receiptStatus !== "CLOSED") throw new AppError("FORBIDDEN");
@@ -18,7 +24,7 @@ export function postedLabelPackages(receipt: PackageReceiptDto): readonly Receip
 export function validPackagePrintSettings(settings: PrintSettings): boolean {
   return validPrintSettings(settings);
 }
-export function packageQr(p: ReceiptPackageDto): PackageQr {
+export function packageQr(p: PackageLabelMetadata): PackageQr {
   if (p.qr !== `EWMS:PKG:1:${p.id}`) throw new AppError("VALIDATION_FAILED");
   const { modules } = create(p.qr, { errorCorrectionLevel: "M" });
   const quiet = 4;
@@ -30,7 +36,7 @@ export function packageQr(p: ReceiptPackageDto): PackageQr {
   return { id: p.id, size: modules.size + quiet * 2, path: parts.join("") };
 }
 // Atomic collection: a failed QR never exposes a partial printable sheet.
-export async function generatePackageQrs(packages: readonly ReceiptPackageDto[], generate: (p: ReceiptPackageDto) => PackageQr | Promise<PackageQr> = packageQr): Promise<readonly PackageQr[]> {
+export async function generatePackageQrs(packages: readonly PackageLabelMetadata[], generate: (p: PackageLabelMetadata) => PackageQr | Promise<PackageQr> = packageQr): Promise<readonly PackageQr[]> {
   const qrs = await Promise.all(packages.map(p => Promise.resolve().then(() => generate(p))));
   if (qrs.length === 0 || qrs.some((qr, i) => qr.id !== packages[i]?.id || !qr.path || !Number.isFinite(qr.size) || qr.size <= 0)) throw new Error("QR generation failed");
   return qrs;

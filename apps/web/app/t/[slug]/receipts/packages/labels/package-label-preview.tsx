@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@wms/ui";
-import type { ReceiptPackageDto } from "../actions.ts";
 import { printCss, type PaperMode } from "../../../labels/print-settings.ts";
-import { generatePackageQrs, validPackagePrintSettings, type PackageQr } from "./package-labels.ts";
+import { generatePackageQrs, validPackagePrintSettings, type PackageQr, type PackageLabelMetadata } from "./package-labels.ts";
 import "../../../labels/print.css";
 
 export function PackageLabelPages({ packages, qrs, width, height, sheetRef }: {
-  readonly packages: readonly ReceiptPackageDto[]; readonly qrs: readonly PackageQr[]; readonly width: number; readonly height: number; readonly sheetRef?: React.Ref<HTMLDivElement>;
+  readonly packages: readonly PackageLabelMetadata[]; readonly qrs: readonly PackageQr[]; readonly width: number; readonly height: number; readonly sheetRef?: React.Ref<HTMLDivElement>;
 }) {
   if (qrs.length !== packages.length || qrs.length === 0 || qrs.some((qr, i) => qr.id !== packages[i]?.id || !qr.path)) return null;
   return <div ref={sheetRef} className="label-sheet" data-testid="package-label-sheet">{packages.map((p, i) => {
@@ -18,7 +17,7 @@ export function PackageLabelPages({ packages, qrs, width, height, sheetRef }: {
         <div style={{ minWidth: 0, overflowWrap: "anywhere" }}>
           <strong>{p.itemCode}</strong><p title={p.itemName}>{p.itemName}</p>
           <p>Paket {p.packageNo} / {packages.length} · {p.kind}</p>
-          <p><strong>Kabul miktarı: {p.quantity} {p.unitCode}</strong></p>
+          <p><strong>Paket miktarı: {p.quantity} {p.unitCode}</strong></p>
           <p>{p.stockStatus === "QUARANTINE" ? "⚠ Karantina" : p.stockStatus}</p>
         </div>
       </div>
@@ -29,7 +28,7 @@ export function PackageLabelPages({ packages, qrs, width, height, sheetRef }: {
   })}</div>;
 }
 
-export function PackageLabelPreview({ packages }: { readonly packages: readonly ReceiptPackageDto[] }) {
+export function PackageLabelPreview({ packages }: { readonly packages: readonly PackageLabelMetadata[] }) {
   const [width, setWidth] = useState(100);
   const [height, setHeight] = useState(50);
   const [mode, setMode] = useState<PaperMode>("a4");
@@ -61,7 +60,7 @@ export function PackageLabelPreview({ packages }: { readonly packages: readonly 
         <label>Yükseklik (mm)<input className="mt-1 min-h-[48px] w-full rounded-lg border border-border-strong p-3" type="number" min="15" max="280" value={height} onChange={e => setHeight(Number(e.target.value))} /></label>
         <label>Kağıt<select className="mt-1 min-h-[48px] w-full rounded-lg border border-border-strong p-3" value={mode} onChange={e => setMode(e.target.value as PaperMode)}><option value="a4">A4</option><option value="label">Rulo</option></select></label>
       </div>
-      <p className="my-3 text-sm">{packages.length} paket · Kabul miktarı</p>
+      <p className="my-3 text-sm">{packages.length} paket · Paket miktarı</p>
       <details className="mb-3 text-sm"><summary className="flex min-h-[48px] cursor-pointer items-center">Yazdırma yardımı</summary><p>Yazdırma/PDF penceresinde ölçeği %100, üstbilgi/altbilgiyi kapalı tutun. QR okunurluğunu deneme baskısıyla kontrol edin. Metin veya QR sığmazsa ölçüyü artırın.</p></details>
       {!valid ? <p role="alert">Ölçü geçersiz. A4 için en çok 190 × 277 mm seçin.</p> : null}
       {current === null ? <p role="status">QR kodları hazırlanıyor…</p> : null}
