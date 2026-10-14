@@ -73,7 +73,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - T937 etiket bağlantısı yalnız gerçek POSTED sonucu: `/t/[slug]/receipts/packages/labels?document=<uuid>`. Metadata `PackageReceiptDto.packages` (server QR/id, sıra, ürün, quantity/unitCode, lotCode/producedOn/expiresOn); miktar kabul anına aittir. T936 label route veya baskı gerçekleştirmez.
 - Scoped UI/action testleri67 PASS, skip0; scoped lint ve web typecheck PASS. Yayın/pilot/gerçek baskı başarı kanıtı değildir.
 
-## T951–955 tekilQR kalite / yerleştirme
+## T941–945 tekilQR kalite / yerleştirme
 - `/t/[slug]/field/packages?package=<uuid>` aynı fiziksel QR için gerçek currentbalance/konum/durum gösterir; origin lot/üretim/SKT ayrı korunur. İlk dilim tam paket kalite onayı ve aynıdepo STORAGE yerleştirmedir; transfer/üretim tamamlandı sayılmaz.
 - Akış: Paket okut → sunucunun izin verdiği tek işlem → gerekirse yer okut → sunucu sonucu. Ürün/palet barkodu paket yerine kabul edilmez; miktarı kullanıcı tekrar girmez.
 - Hydration öncesi girdiler kapalı; belirsiz yazma aynı içerik/anahtarla tekrar edilir. POSTED cevabı sonrası okuma hatasında yazma tekrarlanmaz; yeni işlem taze currentstate yüklenene kadar kapalı.
@@ -82,3 +82,9 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 ## QR depo transferi (T949)
 - SameQR → hedefdepo → konum okut/seç → sunucu miktarı ve iki depo görselkontrolü → POSTED sonuç. Tüm seçim sayfaları yüklenir; tek el48px kontrol/56px anaeylem/geri/anaekran.
 - Kayıp cevap aynıkey/payload; başarılı kayıt sonrası readhatası ikinci yazma yaratmaz, sonraki işlem freshstate olmadan kapalı. Gerçek desktop/mobile4PASS dörtviewport, sameQR/lot/tarihler/diğer800KG ve A→B→A; fizikselkamera/yazıcıUNKNOWN. CI/yayın/flag ayrı.
+
+## QR üretim (T963)
+- Recipe → GirdiQR → Çıktıpaketleri → Kontrol → Etiket. İhtiyaç/kalan/version sunucudan; eşit/ayrı paketler ve lot/tarihler kısa kartlarda. ÜrünQR/duplicate/farklıkaynakdepo güvenli kısa düzeltme; otomatik gizli transfer yok.
+- Kontrol server preview; prepare/post ayrı stablekey ve frozencontent. Gerçek document URL'si readonly APPROVED/POSTEDresume sağlar; POSTEDmetadata hatası ikinci üretim oluşturmaz. Etiket ancak gerçekPOSTED, yenidenbaskı aynıoutputQR.
+- CurrentQR ilk miktar ve kalan ayrı; tamamen tüketilen paket readonly geçmiş, yeni stok işlemi yok. Cscope focus/viewportresize sonalanı footer üstüne getirir;48/56px ve dörtcihaz matrisi gerçekE2E4PASS.
+- Gerçek200→150→0sameQR/twooutput20+30/genealogy50once/reprint/movement kanıtı T963'te. Fizikselkamera/Epson/OSklavye UNKNOWN; CI/canlı/flag doğrulaması ayrı.

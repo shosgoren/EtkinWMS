@@ -12,6 +12,8 @@ export interface CurrentPackageDto {
   readonly id: string; readonly qr: string; readonly kind: string; readonly packageNo: number;
   readonly itemId: string; readonly itemCode: string; readonly itemName: string;
   readonly baseUnitId: string; readonly baseUnitCode: string; readonly baseUnitName: string;
+  readonly originKind: "RECEIPT" | "PRODUCTION";
+  readonly baseQuantity: string; readonly remainingBaseQuantity: string;
   readonly originBaseQuantity: string; readonly currentBaseQuantity: string;
   readonly lotId: string | null; readonly lotCode: string | null; readonly producedOn: string | null; readonly expiresOn: string | null;
   readonly warehouseId: string; readonly warehouseCode: string; readonly warehouseName: string;

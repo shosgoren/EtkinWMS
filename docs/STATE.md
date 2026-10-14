@@ -29,8 +29,4 @@ Son kayıt: 14 Ekim2026. Kaynak, GitHub kontrolleri, canlı sürüm ve fiziksel 
 - Excel/ürünbirim barkodu, yetkilifişdraftedit/iptal/terskayıt, ERP aktarımı ve QRsevkiyat kalan ayrı işlerdir; tamamlandı sayılmaz.
 - Giriş [continuity/README](continuity/README.md); erişim/yayın/yedek [OPERATIONS](continuity/OPERATIONS.md). Güncel kalan kart/GitSHA/run/VPSdefter kanıtı sohbet tahmininden üstündür.
 
-- A kaynak aktarımı int/package-movement-ready: aynı incelenmiş30Gitblob, beş gerçekT951–955 author teslimi; eski çakışan kart history guard hatası korunur. YerelT956 actor üstü henüzmain/yayın değildir; yeni actualbase kapıları bekler.
-
-- B int/package-transfer-ready: önceki reviewedfeec102 kaynakları mevcutA/T956 üstüne Gitblob olarak taşındı; test-only workflowcall adoption ve exactheadfullverify/CI bekler. Eski kaynak incelemesi0@0383722, yeni sourcecode aynı fakat branch ancestry yeni.
-
-- C-data int/package-production-ready: dörtT960/T961/T962/T964,30actualpaths; sourcec73816c exactapplication/QA blobs. Finalindependent domain138/schema171/nativeACtag292+unfiltered38/boundary33PASS; linkcardinality andprepareplay repaired. UIfreshbrowserpending; newexactheadsecurity/verify/9CI/main/live36 separate.
+- C UI T963: C89c8369+onaylımain15289e2 actorinfra; verify3958/transport24PASS, gerçekschema36 freshbrowser4/4PASS59.858s/skip0. SameQR200→150→0, ikioutput20+30/immutableQR/labels/movement, stablekey/resume/readfault, dörtviewport48/56/focus/footer doğrulandı. Hata/üstidentifierrepair geçmişi T963 kartında; bağımsızreview/dokuzCI/main/live36/flag ayrı, author flag açmadı.
