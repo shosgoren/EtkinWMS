@@ -72,6 +72,12 @@ export async function seedPackage(page: Page, mobile: boolean, lot = false, work
 }
 export async function fillPackage(page:Page,f:PackageFixture,unit=f.kg,count="5",quantity="200") {
  await page.goto(`/t/${f.slug}/receipts/packages`);
+ const search=page.getByLabel("Ürün ara",{exact:true}),shell=page.getByTestId("screen-shell");
+ await expect(search).toHaveCount(1);
+ await expect(shell).toHaveCount(1);
+ await expect(shell).toBeVisible();
+ await expect(search).toBeVisible();
+ await expect(search).toBeEnabled();
  await page.getByLabel("Ürün ara").fill(f.name);
  await page.getByRole("button",{name:`${f.itemId} · ${f.name}`,exact:true}).click();
  await page.getByRole("button",{name:"Paketlere geç",exact:true}).click();
