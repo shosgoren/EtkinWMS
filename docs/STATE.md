@@ -70,4 +70,4 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 
 - T-942 (14 Ekim, PR35): kullanıcı isteğiyle satış sitesi girişi tam ekran sinema düzenine geçti (film 100svh, metin film üstünde, 4. sahnede gerçekçi telefon, sarı gölge kaldırıldı, giriş butonu dil seçiciyle aynı 48px hap). Yerel 7 çözünürlük (360–2560) taşma/hata0, marketing testleri 7/7; kullanıcı yayın onayı verdi.
 
-- T-943 (14 Ekim): QR satırı + etiketler ≥1200×780 ekranlarda filmin alt şeridine taşındı; küçük/kısa ekranlarda ayrı şerit korunur. Yerel 5 çözünürlük PASS.
+- T-943 (14 Ekim): QR satırı + etiketler ≥1200×780 ekranlarda filmin alt şeridine taşındı; küçük/kısa ekranlarda ayrı şerit korunur. Yerel 27 çözünürlük taraması (320×568–3840×2160; açılış ve telefon sahnesi) çakışma/taşma/hata0; hero içerik kadar uzayabilir (min 100svh).

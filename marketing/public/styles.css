@@ -263,7 +263,7 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 :root{--wrap:1240px;--wrap-wide:1320px}
 @media (min-width:1680px){:root{--wrap:1400px;--wrap-wide:1480px}}
 @media (min-width:2200px){:root{--wrap:1560px;--wrap-wide:1640px}}
-.cine{position:relative;display:flex;flex-direction:column;min-height:max(600px,100svh);height:100svh;max-height:1400px;overflow:hidden;background:#0E1D2B;color:#FFFFFF}
+.cine{position:relative;display:flex;flex-direction:column;min-height:max(560px,100svh);overflow:hidden;background:#0E1D2B;color:#FFFFFF}
 .cine-film{position:absolute;inset:0;z-index:0}
 .cine-film .slide img{object-position:center}
 .cine-shade{position:absolute;inset:0;z-index:1;pointer-events:none;transition:background .6s ease;background:linear-gradient(180deg,rgba(9,20,31,.5) 0%,rgba(9,20,31,0) 20%,rgba(9,20,31,0) 55%,rgba(9,20,31,.82) 100%),linear-gradient(90deg,rgba(9,20,31,.88) 0%,rgba(9,20,31,.72) 30%,rgba(9,20,31,.3) 55%,rgba(9,20,31,0) 75%)}
