@@ -35,7 +35,7 @@ async function fixture(page:Page,mobile:boolean):Promise<Fixture>{
  await page.goto(`/t/${source.slug}/field/packages?package=${packageId}`);await uniqueCurrent(page);await page.getByRole("button",{name:"Kaliteyi onayla",exact:true}).click();await expect(page.getByRole("button",{name:"Yer seç",exact:true})).toBeEnabled();return f;
 }
 async function fillProduction(page:Page,f:Fixture,amount="50",count="2"){
- await page.goto(`/t/${f.source.slug}/production?id=${f.recipeId}`);await expect(page.getByTestId("screen-shell")).toBeVisible();await expect(page.getByLabel("Üretim miktarı (KG)",{exact:true})).toBeEnabled();
+ await page.goto(`/t/${f.source.slug}/production?id=${f.recipeId}&mode=packages`);await expect(page.getByTestId("screen-shell")).toBeVisible();await expect(page.getByLabel("Üretim miktarı (KG)",{exact:true})).toBeEnabled();
  await page.getByLabel("Üretim miktarı (KG)",{exact:true}).fill(amount);await page.getByRole("button",{name:"Girdilere geç",exact:true}).click();await expect(page.getByRole("button",{name:"Girdi okut",exact:true})).toBeEnabled();await manual(page,f.qr);
  await expect(page.getByTestId("production-input")).toHaveCount(1);await expect(page.getByLabel("Kullanılacak (KG)",{exact:true})).toHaveValue(amount);
  await page.getByRole("button",{name:"Çıktıya geç",exact:true}).click();await page.getByRole("searchbox",{name:"Ürün yeri",exact:true}).fill(f.storageCode);await page.getByRole("option").filter({hasText:f.storageCode}).click();
