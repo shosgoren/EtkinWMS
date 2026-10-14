@@ -212,15 +212,32 @@ beforeAll(async () => {
   // Two real immutable chains keep the automatic tenant-table matrix exhaustive.
   for (const w of [A,B]) {
     const hu=randomUUID(),receipt=randomUUID(),receiptLine=randomUUID(),document=randomUUID(),line=randomUUID();
+    const originDimension=randomUUID(), currentDimension=randomUUID(), movementDocument=randomUUID(), movementLine=randomUUID();
     await admin.query("BEGIN");
     try {
       await admin.query("SELECT set_config('app.current_tenant_id',$1,true)",[w.tenantId]);
-      await admin.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES($1,$2,'VARIL',$3,$4)",[w.tenantId,hu,hu,receipt]);
-      await admin.query("INSERT INTO public.inbound_receipts(tenant_id,id,warehouse_id,number,created_by,package_document_id) VALUES($1,$2,$3,$4,$5,$6)",[w.tenantId,receipt,w.warehouseId,receipt,w.ownerUserId,document]);
+      await admin.query("INSERT INTO public.handling_units(tenant_id,id,kind,code,package_receipt_id) VALUES($1,$2,'VARIL',$3::text,$4)",[w.tenantId,hu,`AC04-PKG-${hu}`,receipt]);
+      await admin.query("INSERT INTO public.inbound_receipts(tenant_id,id,warehouse_id,number,created_by,package_document_id) VALUES($1,$2,$3,$4::text,$5,$6)",[w.tenantId,receipt,w.warehouseId,`AC04-RECEIPT-${receipt}`,w.ownerUserId,document]);
       await admin.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by,source_kind,source_id) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-13',$4,'INBOUND_RECEIPT',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[w.tenantId,document,w.warehouseId,w.ownerUserId,receipt]);
       await admin.query("INSERT INTO public.inbound_receipt_lines(tenant_id,id,receipt_id,line_no,item_id,unit_id,conversion_factor,expected_quantity) VALUES($1,$2,$3,1,$4,$5,1,1)",[w.tenantId,receiptLine,receipt,w.itemNoneId,w.unitId]);
-      await admin.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,source_line_id) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$7,$8)",[w.tenantId,line,document,w.itemNoneId,w.unitId,w.rootLocationId,hu,receiptLine]);
+      await admin.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,target_location_id,handling_unit_id,source_line_id,stock_status) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$7,$8,'QUARANTINE')",[w.tenantId,line,document,w.itemNoneId,w.unitId,w.rootLocationId,hu,receiptLine]);
       await admin.query("INSERT INTO public.receipt_packages(tenant_id,id,receipt_id,receipt_line_id,document_id,document_line_id,package_no) VALUES($1,$2,$3,$4,$5,$6,1)",[w.tenantId,hu,receipt,receiptLine,document,line]);
+      // T-945: this suite's scratch-only package chain must populate the new table for every native RLS probe.
+      // Preserve seedWorld's legacy stock; the two dimensions below belong only to this physical package.
+      await admin.query("INSERT INTO public.stock_dimensions(tenant_id,id,item_id,location_id,handling_unit_id,stock_status) VALUES($1,$2,$3,$4,$5,'QUARANTINE'),($1,$6,$3,$4,$5,'AVAILABLE')",[w.tenantId,originDimension,w.itemNoneId,w.rootLocationId,hu,currentDimension]);
+      await admin.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,1,'AC04 package origin','2026-10-13')",[w.tenantId,document,line,originDimension]);
+      await admin.query("INSERT INTO public.stock_balances(tenant_id,stock_dimension_id,quantity) VALUES($1,$2,1),($1,$3,0)",[w.tenantId,originDimension,currentDimension]);
+      await admin.query("UPDATE public.inbound_receipt_lines SET received_quantity=1 WHERE tenant_id=$1 AND id=$2",[w.tenantId,receiptLine]);
+      await admin.query("UPDATE public.inbound_receipts SET status='CLOSED' WHERE tenant_id=$1 AND id=$2",[w.tenantId,receipt]);
+      await admin.query("UPDATE public.documents SET status='POSTED',number=$3::text WHERE tenant_id=$1 AND id=$2",[w.tenantId,document,`AC04-IN-${document}`]);
+      await admin.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_MOVE',id,$3,'2026-10-13',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_MOVE' AND version=1",[w.tenantId,movementDocument,w.warehouseId,w.ownerUserId]);
+      await admin.query("INSERT INTO public.document_lines(tenant_id,id,document_id,line_no,item_id,unit_id,quantity,conversion_factor,base_quantity,source_location_id,target_location_id,handling_unit_id,stock_status,target_stock_status) VALUES($1,$2,$3,1,$4,$5,1,1,1,$6,$6,$7,'QUARANTINE','AVAILABLE')",[w.tenantId,movementLine,movementDocument,w.itemNoneId,w.unitId,w.rootLocationId,hu]);
+      await admin.query("INSERT INTO public.package_movement_steps(tenant_id,handling_unit_id,document_id,document_line_id,operation,sequence_no,previous_document_line_id,source_location_id,target_location_id,source_stock_status,target_stock_status,base_quantity) VALUES($1,$2,$3,$4,'QC_RELEASE',1,$5,$6,$6,'QUARANTINE','AVAILABLE',1)",[w.tenantId,hu,movementDocument,movementLine,line,w.rootLocationId]);
+      await admin.query("INSERT INTO public.stock_ledger(tenant_id,document_id,document_line_id,stock_dimension_id,quantity,reason,business_date) VALUES($1,$2,$3,$4,-1,'AC04 package quality release','2026-10-13'),($1,$2,$3,$5,1,'AC04 package quality release','2026-10-13')",[w.tenantId,movementDocument,movementLine,originDimension,currentDimension]);
+      await admin.query("UPDATE public.stock_balances SET quantity=0,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[w.tenantId,originDimension]);
+      await admin.query("UPDATE public.stock_balances SET quantity=1,version=version+1 WHERE tenant_id=$1 AND stock_dimension_id=$2",[w.tenantId,currentDimension]);
+      await admin.query("UPDATE public.documents SET status='POSTED',number=$3::text WHERE tenant_id=$1 AND id=$2",[w.tenantId,movementDocument,`AC04-QC-${movementDocument}`]);
+      await admin.query("SET CONSTRAINTS ALL IMMEDIATE");
       await admin.query("COMMIT");
     } catch(e) { await admin.query("ROLLBACK"); throw e; }
   }
@@ -308,7 +325,11 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
       }
       const foreign = await attempt(appClient, [setTenant(A.tenantId)], `UPDATE public.${q(t.name)} SET ${q(col)} = ${q(col)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
       if (!foreign.ok || foreign.rowCount !== 0) failures.push(`${t.name}: B satırına UPDATE 0 değil: ${fmt(foreign)}`);
-      const own = await attempt(appClient, [setTenant(A.tenantId)], `UPDATE public.${q(t.name)} SET ${q(col)} = ${q(col)} WHERE ${q(t.key)} = $1`, [A.tenantId]);
+      // The new package fixtures are immutable POSTED/CLOSED records. Positive write controls
+      // must use the original writable DRAFT/open records; foreign probes above still cover all B rows.
+      const writable = t.name === "documents" ? " AND status = 'DRAFT'"
+        : t.name === "inbound_receipt_lines" ? " AND EXISTS (SELECT 1 FROM public.inbound_receipts r WHERE r.tenant_id=inbound_receipt_lines.tenant_id AND r.id=inbound_receipt_lines.receipt_id AND r.status IN ('DRAFT','OPEN'))" : "";
+      const own = await attempt(appClient, [setTenant(A.tenantId)], `UPDATE public.${q(t.name)} SET ${q(col)} = ${q(col)} WHERE ${q(t.key)} = $1${writable}`, [A.tenantId]);
       if (!own.ok || own.rowCount < 1) failures.push(`${t.name}: kontrol (A kendi satırı) UPDATE ≥1 değil: ${fmt(own)}`);
     }
     expect(failures).toEqual([]);
@@ -386,19 +407,22 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
       }
       const cols = t.insertCols.map(q).join(", ");
       const sel = t.insertCols.map((c) => `r.${q(c)}`).join(", ");
+      // Preserve the original valid DRAFT document-line copy as the native RLS control.
+      const draftLine = t.name === "document_lines" ? " AND a.document_id = $3::uuid" : "";
+      const copyParams = (tenant: string): unknown[] => t.name === "document_lines" ? [A.tenantId, tenant, A.documentId] : [A.tenantId, tenant];
       const copy = (): string =>
         `INSERT INTO public.${q(t.name)} (${cols})
          SELECT ${sel} FROM (
            SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, to_jsonb(a) || jsonb_build_object('${t.key}', $2::text))).*
-             FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1 LIMIT 1
+             FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1${draftLine} LIMIT 1
          ) r`;
       const reason = SYSTEM_REASON_WRITE[t.name];
       const insertCtx: Pre[] = reason === undefined ? [setTenant(A.tenantId)] : [setTenant(A.tenantId), setSystemReason(reason)];
-      const foreign = await attempt(appClient, insertCtx, copy(), [A.tenantId, B.tenantId]);
+      const foreign = await attempt(appClient, insertCtx, copy(), copyParams(B.tenantId));
       if (foreign.ok || foreign.code !== INSUFFICIENT_PRIVILEGE || !RLS_MESSAGE.test(foreign.message)) {
         failures.push(`${t.name}: B anahtarlı INSERT için RLS hatası beklenir, gelen ${fmt(foreign)}`);
       }
-      const control = await attempt(appClient, insertCtx, copy(), [A.tenantId, A.tenantId]);
+      const control = await attempt(appClient, insertCtx, copy(), copyParams(A.tenantId));
       if (!control.ok && control.code !== UNIQUE_VIOLATION) {
         failures.push(`${t.name}: kontrol (A anahtarlı kopya) RLS'i geçmeli (başarı ya da 23505), gelen ${fmt(control)}`);
       }

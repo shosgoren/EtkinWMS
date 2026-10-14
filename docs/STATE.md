@@ -28,6 +28,7 @@ Son durum kaydı: **14.10.2026 12:29 Europe/Istanbul**. Bu oturumda doğrudan VP
 - İlk dilim aynıQR kalite onayı ve aynıdepo yerleştirmesidir. Warehouse-transfer ve üretim tüketim/çıktıQR soy ağacı **sonraki ayrı paketler**, tamamlandı sayılmaz.
 - Tamamlanmış kaynak incelemesi/kapılar/main/yayın/schema kanıtı olmadan flag açılmaz; Supervisor uygulama kodu yazmaz.
 - Lokal GitHub/SSH geçici reset/banner timeout sonrası dar gerçek okuma/fetch/VPSreceiver başarılı. Kısa devam belgeleri int/package-movement dalında; main ile geliştirme dalını karıştırma.
+- PR33 ilk tam CI: AC04 yeni tablo için fixture eksikliği ve dört public export envanteri kırmızıydı; kaynak/RLS değişmeden düzeltildi. Gerçek207/207 AC04 (DB35+loader169+coverage3), tasks15+movement30=45/45, birebir iki schema-test modülü birleşimi125/125 PASS. E2E helper konsolidasyonu ve yeni exact-head dokuz CI sonucu bekleniyor; önceki push legacyE2E hata/aynıhead PR E2E PASS ayrı kaydedildi.
 
 ## Açık kabul ve işler
 - Gerçek kamera/Epson/el terminali kabulü **UNKNOWN**; PDF/tarayıcı testi fiziksel yazıcı başarısı değildir.

@@ -8,3 +8,4 @@ Geçmiş ayrıntılar Git geçmişinde ve ilgili görev/PR raporlarında korunur
 - 14 Ekim2026: T941–945 paketi başladı: tekilQR kalite onayı ve aynıdepo yerleştirme. Şema→komut→web sınırı→ekran→bağımsız kabul sırası; transfer ve üretim ayrı teslimdir.
 - Gerçek kamera/yazıcı kabulü ve operasyonel yedek hedefleri doğrulanmadı; tamamlandı diye raporlanmaz.
 - T941–945 frozen6c7e7d bağımsızQA283PASS/security0, browser4PASS, verify3929/checkall6PASS. Son test-onlydelta legacy34inventory ve exactqueryconsolidation; üç yetki/draft boşluğu58PASS ile kapandı. FinalCI/yayın sonucu henüz bekler.
+- PR33 ilk tam CI fixture/public-export boşlukları test-only düzeltildi: AC04 gerçek207PASS, tasks+movement45PASS, birebir schema konsolidasyonu125PASS; üretim kaynakları değişmedi. Yeni exact-head kapıları/yayın henüz bekler.
