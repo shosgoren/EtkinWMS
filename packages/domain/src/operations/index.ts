@@ -147,3 +147,8 @@ export { listShippingOrders, getShippingOrder, previewShippingPick } from "./shi
 // Physical package receipt commands and authorized metadata (T-933).
 export { preparePackageReceipt, postPackageReceipt, type PreparePackageReceiptInput, type PostPackageReceiptInput } from "./package-receiving.ts";
 export { getPackageReceipt, getReceiptPackage, resolvePackageQr, type PackageReceiptView, type ReceiptPackageView } from "./package-receiving-queries.ts";
+
+// T-942: whole physical-package movement commands.
+export { approvePackageQuality, putawayPackage, type PackageMovementInput, type PutawayPackageInput } from "./package-movement.ts";
+
+export { getCurrentPackage, resolveCurrentPackageQr, type CurrentPackageDto } from "./package-movement-queries.ts";
