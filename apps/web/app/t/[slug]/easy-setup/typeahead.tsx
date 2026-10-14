@@ -62,6 +62,7 @@ export function Typeahead<T>({
   const t = useTranslations("easySetup.picker");
   const id = useId();
   const listId = `${id}-list`;
+  const [clientReady, setClientReady] = useState(false);
   const [q, setQ] = useState(defaultValue);
   const [items, setItems] = useState<readonly T[]>([]);
   const [open, setOpen] = useState(false);
@@ -72,6 +73,7 @@ export function Typeahead<T>({
   const seq = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  useEffect(() => { setClientReady(true); }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
 
   function onChange(value: string) {
@@ -144,6 +146,7 @@ export function Typeahead<T>({
             autoComplete="off"
             maxLength={128}
             value={q}
+            disabled={!clientReady}
             aria-autocomplete="list"
             aria-controls={expanded ? listId : undefined}
             aria-activedescendant={expanded && active >= 0 ? `${listId}-${active}` : undefined}
