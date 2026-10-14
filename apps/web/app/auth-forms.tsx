@@ -3,10 +3,11 @@
 // burada yalnızca sunucu yanıtı (kod + sonraki eylem) gösterilir. Tüm metin `messages/*.json` `auth.*` altındadır.
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { Banner, Button, CircleAlert, TextField } from "@wms/ui";
 import { QrCode } from "./qr-code.tsx";
+import { BRAND_E_PATH } from "./brand-mark.tsx";
 import { acceptInvitationAction } from "./invite/[token]/actions.ts";
 import { authPost } from "../lib/auth-client.ts";
 import type { AuthCallError } from "../lib/auth-client.ts";
@@ -76,23 +77,59 @@ interface SignInData {
   readonly twoFactorRedirect?: boolean;
 }
 
+const REMEMBER_KEY = "etkin.login.email";
+
+function readRemembered(): string {
+  try {
+    return window.localStorage.getItem(REMEMBER_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeRemembered(email: string | null): void {
+  try {
+    if (email === null) window.localStorage.removeItem(REMEMBER_KEY);
+    else window.localStorage.setItem(REMEMBER_KEY, email);
+  } catch {
+    // Tarayıcı depolaması kapalı: hatırlama sessizce atlanır.
+  }
+}
+
 export function LoginForm({ next, socialEnabled, banner }: { next: string; socialEnabled: boolean; banner?: ReactNode }) {
   const t = useTranslations("auth");
   const guide = useTranslations("guide");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
+  const [badgeEmail, setBadgeEmail] = useState("");
+  const [capsOn, setCapsOn] = useState(false);
+  const [remember, setRemember] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // T-981: "e-postamı hatırla" yalnız bu cihazın tarayıcısında e-postayı tutar; parola asla saklanmaz.
+  useEffect(() => {
+    const saved = readRemembered();
+    const input = formRef.current?.elements.namedItem("email");
+    if (saved !== "" && input instanceof HTMLInputElement && input.value === "") {
+      input.value = saved;
+      setBadgeEmail(saved);
+      setRemember(true);
+    }
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     setBusy(true);
     setError(null);
+    const email = fieldValue(form, "email");
     const res = await authPost<SignInData>("/sign-in/email", {
-      email: fieldValue(form, "email"),
+      email,
       password: fieldValue(form, "password"),
     });
     if (res.ok) {
+      writeRemembered(remember ? email.trim() : null);
       // Tam gezinme: sunucu bileşenleri yeni çerezle yeniden çizilir. `next` sunucuda `safeNext`'ten geçmiştir.
       window.location.assign(res.data.twoFactorRedirect === true ? `/mfa?next=${encodeURIComponent(next)}` : next);
       return;
@@ -115,21 +152,80 @@ export function LoginForm({ next, socialEnabled, banner }: { next: string; socia
     setError({ reason: t("common.serverError"), action: t("common.serverErrorAction") });
   }
 
+  const caps = (event: KeyboardEvent<HTMLInputElement>) => setCapsOn(event.getModifierState("CapsLock"));
+
   return (
     <div className="login-stage">
       <LoginScene t={t} />
       <div className="login-panel">
         <main className="auth-card login-card flex w-full max-w-md min-w-0 flex-col gap-4">
+          <div className="login-printer" aria-hidden="true">
+            <span className="login-printer-head" />
+            <span className="login-badge">
+              <QrGlyph />
+              <span className="login-badge-text">
+                <small>{t("login.badge")}</small>
+                <b>{badgeEmail.trim() || t("login.badgeEmpty")}</b>
+              </span>
+            </span>
+          </div>
           <h1 className="break-words text-2xl font-extrabold text-ink">{t("login.title")}</h1>
           <p className="auth-instruction">{guide("loginHelp")}</p>
           {banner}
-          <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="login-error" noValidate={false}>
-            <TextField label={t("login.email")} name="email" type="email" autoComplete="username" required />
-            <TextField label={t("login.password")} name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required />
-            <button type="button" className="password-toggle" aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)}>{guide(showPassword ? "hidePassword" : "showPassword")}</button>
+          <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="login-error" noValidate={false}>
+            <div className="login-field login-field-email">
+              <TextField
+                label={t("login.email")}
+                name="email"
+                type="email"
+                autoComplete="username"
+                required
+                onInput={(e) => setBadgeEmail(e.currentTarget.value)}
+              />
+              <FieldIcon d="M4 6h16v12H4z M4 7l8 6 8-6" />
+            </div>
+            <div className="login-field login-field-password">
+              <TextField
+                label={t("login.password")}
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                onKeyDown={caps}
+                onKeyUp={caps}
+                onBlur={() => setCapsOn(false)}
+              />
+              <FieldIcon d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3" />
+              <button
+                type="button"
+                className="login-eye"
+                aria-pressed={showPassword}
+                aria-label={guide(showPassword ? "hidePassword" : "showPassword")}
+                title={guide(showPassword ? "hidePassword" : "showPassword")}
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                  {showPassword ? <path d="M4 4l16 16" /> : null}
+                </svg>
+              </button>
+            </div>
+            {capsOn ? (
+              <p className="login-caps" role="status">
+                {t("login.capsLock")}
+              </p>
+            ) : null}
+            <label className="login-remember">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.currentTarget.checked)} />
+              {t("login.remember")}
+            </label>
             <FormError id="login-error" error={error} />
             <Button type="submit" loading={busy}>
               {t("login.submit")}
+              <svg className="login-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
             </Button>
           </form>
           <Link href="/reset-password" className={LINK}>
@@ -151,45 +247,62 @@ export function LoginForm({ next, socialEnabled, banner }: { next: string; socia
   );
 }
 
-// Giriş sahnesi (T-980): yalnız görsel; içerik `auth.login.scene*`/`feed*`. Ekran okuyucudan gizlidir (bilgi formdadır).
-const SCENE_ROUTE = "M40 230 H150 V150 H250 V70 H360";
-const SCENE_STOPS = [[150, 230], [250, 150], [360, 70]] as const;
+function FieldIcon({ d }: { d: string }) {
+  return (
+    <svg className="login-field-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d={d} />
+    </svg>
+  );
+}
+
+function QrGlyph() {
+  return (
+    <svg className="login-badge-qr" viewBox="0 0 29 29" aria-hidden="true" focusable="false">
+      <path className="qr-frame" d="M1 1h7v7H1z M21 1h7v7h-7z M1 21h7v7H1z" />
+      <path className="qr-dots" d="M3.5 3.5h2v2h-2z M23.5 3.5h2v2h-2z M3.5 23.5h2v2h-2z M11 1h2v2h-2z M15 1h2v4h-2z M11 5h4v2h-4z M11 9h2v4h-2z M15 9h2v2h-2z M1 11h4v2H1z M7 11h2v2H7z M19 11h2v2h-2z M23 11h5v2h-5z M13 13h4v2h-4z M1 15h2v2H1z M5 15h4v2H5z M19 15h2v4h-2z M25 15h3v2h-3z M11 17h2v4h-2z M15 17h2v2h-2z M23 19h2v2h-2z M11 23h4v2h-4z M17 21h2v4h-2z M21 23h2v2h-2z M25 23h3v5h-3z M11 27h6v1h-6z M19 26h4v2h-4z" />
+    </svg>
+  );
+}
+
+// Giriş sahnesi (T-981): hareketli Rota e logosu; koli e yolunu dolaşırken istasyonlar sırayla yanar. Yalnız görsel.
+const SCENE_STATIONS = [
+  { key: "stIn", cls: "in", d: "M12 3v12M7 10l5 5 5-5M4 15v4h16v-4" },
+  { key: "stTransfer", cls: "transfer", d: "M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" },
+  { key: "stProd", cls: "prod", d: "M3 21V11l6 3v-3l6 3V7l6-3v17z" },
+  { key: "stCount", cls: "count", d: "M9 5H7v16h10V5h-2M9 5a3 3 0 0 1 6 0M9 13l2 2 4-4" },
+  { key: "stShip", cls: "ship", d: "M3 7h11v9H3zM14 10h4l3 3v3h-7z" },
+] as const;
 
 function LoginScene({ t }: { t: Translator }) {
   return (
     <aside className="login-scene" aria-hidden="true">
-      <div className="login-scene-glow" />
-      <svg className="login-scene-map" viewBox="0 0 400 300" focusable="false">
-        {[0, 1, 2, 3].map((row) => (
-          <g key={row}>
-            {[0, 1, 2, 3, 4].map((col) => (
-              <rect key={col} className="login-rack" x={30 + col * 72} y={30 + row * 70} width="56" height="22" rx="5" />
-            ))}
-          </g>
+      <div className="login-scene-logo">
+        <svg className="login-scene-e" viewBox="0 0 120 120" focusable="false">
+          <path className="login-e-base" d={BRAND_E_PATH} />
+          <path className="login-e-trail" d={BRAND_E_PATH} pathLength={400} />
+          <circle className="login-e-pack" r="9">
+            <animateMotion dur="9s" repeatCount="indefinite" path={BRAND_E_PATH} keyPoints="0;0;1;1" keyTimes="0;0.05;0.8;1" calcMode="linear" />
+          </circle>
+        </svg>
+        {SCENE_STATIONS.map((s, i) => (
+          <span key={s.key} className={`login-station login-station-${s.cls} login-station-${i + 1}`}>
+            <i>
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d={s.d} />
+              </svg>
+            </i>
+            {t(`login.${s.key}`)}
+          </span>
         ))}
-        <path className="login-route" d={SCENE_ROUTE} />
-        {SCENE_STOPS.map(([x, y], i) => (
-          <rect key={i} className={`login-stop login-stop-${i + 1}`} x={x - 9} y={y - 9} width="18" height="18" rx="4" />
-        ))}
-        <circle className="login-picker" r="10">
-          <animateMotion dur="9s" repeatCount="indefinite" path={SCENE_ROUTE} />
-        </circle>
-      </svg>
-      <div className="login-scene-copy">
-        <span className="login-scene-live">
-          <i />
-          {t("login.live")}
-        </span>
-        <p className="login-scene-title">{t("login.sceneTitle")}</p>
-        <p className="login-scene-sub">{t("login.sceneSub")}</p>
-        <ul className="login-feed">
-          {(["feed1", "feed2", "feed3"] as const).map((k, i) => (
-            <li key={k} className={`login-feed-item login-feed-${i + 1}`}>
-              <svg viewBox="0 0 24 24" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-              {t(`login.${k}`)}
-            </li>
-          ))}
-        </ul>
+      </div>
+      <div className="login-scene-text">
+        <p className="login-wordmark">
+          <b>{t("login.wordmark")}</b>
+          <span>{t("login.wordmarkSub")}</span>
+        </p>
+        <p className="login-slogan">
+          {t("login.sloganA")} <em>{t("login.sloganB")}</em> {t("login.sloganC")}
+        </p>
       </div>
     </aside>
   );
