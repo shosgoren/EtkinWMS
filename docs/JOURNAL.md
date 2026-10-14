@@ -192,3 +192,5 @@
 - 2026-10-14 T-941 canlı: PR32→main908c22a, deploy38550135723 SUCCESS; etkinyazilim.com yeni sayfa, eski app.js 404.
 - 2026-10-14 T-942 tam ekran sinema girişi + telefon çerçevesi + giriş butonu hizası; yerel 7 çözünürlük PASS, PR35.
 - 2026-10-14 T-943 kanıt şeridi film içine (geniş/yüksek ekran); yerel PASS.
+
+- 14Ekim QR hareketi: gerçek main satış PR35/36 korunarak int/package-movement içine alındı; QR görev kartları T951–955, satış T941–943 ile kimlik çakışması giderildi. Source/CI/main/live schema34 kapıları ayrıdır; T956 PR37 legacy mobile geometry FAIL teşhisi bekler.
