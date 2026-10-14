@@ -154,3 +154,5 @@ export { approvePackageQuality, putawayPackage, type PackageMovementInput, type 
 export { getCurrentPackage, resolveCurrentPackageQr, type CurrentPackageDto } from "./package-movement-queries.ts";
 
 export { transferPackage, type PackageTransferInput } from "./package-transfer.ts";
+
+export { previewPackageProduction, preparePackageProduction, postPackageProduction, getPackageProductionBatch, type ProducePackageInput, type PostPackageProductionInput, type PackageProductionPreview, type PackageProductionBatchView, type ProductionPackageView } from "./production.ts";
