@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { loginEmptyTenant } from "./empty-tenant.ts";
+import { localClient, loginEmptyTenant, packageActor, type PackageWorkflow } from "./empty-tenant.ts";
 type Row = Record<string, string>;
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 function lit(v: unknown): string {
@@ -52,9 +52,11 @@ export async function cleanupPackages(): Promise<void> {
   await db("UPDATE public.warehouses SET status='ARCHIVED',archived_at=now() WHERE tenant_id=$1 AND id=$2",[f.tenantId,f.warehouseId]);
  }
 }
-export async function seedPackage(page: Page, mobile: boolean, lot = false): Promise<PackageFixture> {
+export async function seedPackage(page: Page, mobile: boolean, lot = false, workflow: PackageWorkflow = "receiving"): Promise<PackageFixture> {
  if (process.env.E2E_BASE_URL?.trim()) throw new Error("e2e: package fixtures require a local target; remote stock writes prohibited");
- const {slug}=await loginEmptyTenant(page,mobile?"stockMobile":"stockDesktop");
+ const actor = packageActor(workflow,mobile), client = localClient(actor.clientIp);
+ if (client.extraHTTPHeaders !== undefined) await page.setExtraHTTPHeaders(client.extraHTTPHeaders);
+ const {slug}=await loginEmptyTenant(page,actor.fixture);
  const tenantId=(await db<{id:string}>("SELECT id FROM public.tenants WHERE slug=$1",[slug]))[0]?.id;
  if(!tenantId)throw new Error("e2e: package tenant missing");
  const units=await db<{id:string;code:string}>("SELECT id,code FROM public.units WHERE tenant_id=$1 AND code IN ('KG','GR') AND status='ACTIVE'",[tenantId]);
