@@ -2184,6 +2184,16 @@
     "draft": "Önce kabulü tamamla",
     "unsupported": "Bu işlem kapalı",
     "warehouse": "Depo",
-    "expired": "SKT geçmiş"
+    "expired": "SKT geçmiş",
+    "transfer": "Depoya taşı",
+    "chooseWarehouse": "Depo seç",
+    "targetWarehouse": "Hedef depo",
+    "confirmTransfer": "Taşımayı onayla",
+    "reviewTransfer": "Kontrol et",
+    "moreWarehouses": "Diğer depolar",
+    "moreLocations": "Diğer yerler",
+    "noWarehouse": "Uygun depo yok",
+    "reloadWarehouses": "Depoları tekrar al",
+    "reloadLocations": "Yerleri tekrar al"
   }
 }
