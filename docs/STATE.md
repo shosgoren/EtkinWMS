@@ -1,17 +1,17 @@
 # Etkin WMS — güncel devam durumu
 
-Son canlı doğrulama: **14.10.2026 00:33 Europe/Istanbul** (salt okunur VPS receiver); son oturumlu üç cihaz kontrolü13 Ekim18:24.
+Son canlı doğrulama: **14.10.2026 01:50 Europe/Istanbul** (salt okunur VPS receiver); son oturumlu üç cihaz kontrolü13 Ekim18:24.
 Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yeniden dar kontrol yap.
 
 ## Doğrulanmış durum
 - Repo: https://github.com/shosgoren/EtkinWMS ; referans repo 2027-WMS-1 salt okunur.
-- Canlı: `531e9034440ac1dc0d67fb11353a7ea09785c9f1` (PR25/T-931); main: `69d1fbed1948e72b324865f8a4fcff2cedf4906c` (PR27/T932–T934 altyapı). Yeni main henüz canlı değil.
-- Önceki canlı kesim CI38442505462 + guards38442505492 SUCCESS; dokuz kontrol geçti, deploy38443949741 SUCCESS. VPS release531e9034/health=ok/auto_migrate=true; schema31 fingerprintd6b…88dd. T9320032 geliştirme şeması canlıda değil.
+- Canlı ve main: `0fe2e80213095cac3d9be55a160458fbba30c6eb` (PR28/0033 performans). SSH release/health/schema ve migration defteri doğrulandı; UI PR29 henüz canlı değil.
+- Son kesim ci38478944602 + guards38478944569 dokuz kontrolPASS; deploy38480106163 SUCCESS. VPS release0fe2e80/health=ok/auto_migrate=true; schema33 fingerprint63869a…22e72.
 - Yayın callback'leri farklı sırada tamamlanabilir; eksik CI varken RELEASE_BLOCKED ret, tüm dokuz kontrol geçince son callback yayın yapar (son kesimde doğrulandı).
 - PR15 pilot zinciri + PR16 kart türleri/standart birimler + PR17 MFA QR/rehber/SelectField + PR18/19 belgeler main'de.
 - VPS Hostinger `187.7.76.72`; uygulama https://wms.etkinyazilim.com ; satış https://etkinyazilim.com .
 - Beş servis: web, worker, marketing, Caddy proxy, PostgreSQL18 (`etkinwms-postgres`, public port yok, TLS verify-full).
-- Canlı migration defteri **0031 / 31**; approved schema `d6b6b9d7…88dd` (kesim ayrıntısı: [OPERATIONS](continuity/OPERATIONS.md#13-ekim-schema31-kesimi--gerçek-kayıt)).
+- Canlı migration defteri **0033 / 33**; receiver schema `63869a172f9738df7c4e41fe7e4c57a7c43abdd9c352d9b9b33006ee33222e72` (kesim ayrıntısı: [OPERATIONS](continuity/OPERATIONS.md#13-ekim-schema31-kesimi--gerçek-kayıt)).
 - Motive: ACTIVE owner/yönetici hesabı var; hedef yönetici 13 Ekim'de parola + MFA kurup giriş yaptı.
 - Gerçek cihaz (kamera/Epson/el terminali) kabulü yok; ürün iş akışı kabulü kullanıcıyla yapılmadı.
 
@@ -48,13 +48,20 @@ Sahip: bu teslimi yapan operatör/AI. Bu tarih sonrası değişiklik varsa yenid
 - PR25 E2E/typecheck sorunları düzeltildi: streaming görünür tek alan, hydration-ready lokasyon kontrolü, iki ayrı gerçek signup/MFA stok test hesabı. Renk/odak/geometri assertionları ve limitler korundu; bağımsız QA0 bulgu. Son exact-head/main dokuz kontrol ve otomatik yayın PASS (yukarıdaki SHA/run kanıtı).
 - 13 Ekim16:38UTC: VPS canlı DB pg_dump -Fc, izole scratch restore --exit-on-error PASS; defter0031/31, ledger/balance fark0. Scratch kaldırıldı, canlı değişmedi; ayrıntı OPERATIONS. Günlük offsite/RPO/RTO veya auth kabulü kanıtlanmadı.
 
-- T-932/T-933/T-934 paketi PR26 ile geliştirme dalına birleştirildi: `int/package-receiving`, merge `49de679107b90c048c0633e0dccada02543c0db2` (14 Ekim 00:01 Istanbul). Ardından PR27 main69d1fbe birleşti (14 Ekim00:32). PR27 ci38470011292 + guards38470011315 dokuzkontrolPASS; main CI38471430417 int FAIL2028/2029 (200outer30s); guards38471430852 PASS. Canlı hâlâ PR25/schema31; yeni main yayımlanmadı.
+- T-932/T-933/T-934 paketi PR26 ile geliştirme dalına birleştirildi: `int/package-receiving`, merge `49de679107b90c048c0633e0dccada02543c0db2` (14 Ekim 00:01 Istanbul). Ardından PR27 main69d1fbe birleşti (14 Ekim00:32). PR27 ci38470011292 + guards38470011315 dokuzkontrolPASS; main CI38471430417 intFAIL2028/2029 (200outer30s), guards38471430852PASS; T939 onardı. Son canlı doğrulama PR25/schema31.
 - İncelenen kaynak `34e0334061d35571c3a1e452109e75c08a7b3aed`: bağımsız güvenlik BLOCKER0/MAJOR0/MINOR0; bağımsız QA86/86 PASS, skip0. Gerçek KG birimiyle 5VARIL×200=1000KG ve GR→KG çevrimi ayrıca doğrulandı. [Raporlar](https://github.com/shosgoren/EtkinWMS/pull/26#issuecomment-6154851235).
 - PR26 dokuz zorunlu kontrol PASS: ci38465167535 ve guards38465559418. Merge ile incelenen kaynağın Git ağacı aynı (`bc57cdec6eeb15a76e8cb7e57adce6520474bf77`). Önceki başarısız denemeler JOURNAL'da korunur.
 - Hazır kapsam: immutable fiziksel paket kimliği, lot/üretim/SKT, tenant/RLS ilişkileri, idempotent taslak ve atomik kabul, yetkili QR sorgusu. İlk ledger allowlist yalnız origin STOCK_IN; legacy akışlar korunur.
-- Hazır olmayan kapsam: QR kabul ekranı, kamera akışı, etiket baskısı, paketle transfer/üretim, taslak düzenleme/iptal. Backend kabulü kullanıcıya hazır uçtan uca teslim değildir.
-- Sıradaki adım: main kontrolleri → otomatik migration yedeği/yayın → VPS health ve migration32 kanıtı. T935 webactions hazır (73scopedPASS/types/lint; fullverify sandboxmarketingEPERM, yetkiliVitest1/1tekrarPASS). T936 kabul UI hazır (67scopedPASS/lint/types; gerçekcihaz/E2E henüz yok); T937 POSTED/CLOSED etiket hazır19scopedPASS; T938 gerçekE2E ilk2stage2TIMEOUT,4tamamlanmadı, bağımsız üstteşhis açık. DB/QR/browseracceptance henüz yok. Dal feat/T-935-package-receiving-web; server flag varsayılanfalse, paket hareketi hazır olmadan normal Mal geldi değişmez. Yeni QR akışı canlıda diye raporlanmaz.
+- T935–T938/T940 dalında kabul ekranı ve POSTED aynı kimlik etiketleri hazır; gerçek tarayıcı E2E6/6 PASS, skip0, şema32/32. Kamera/Epson fiziksel kabulü, paketle transfer/üretim, taslak düzenleme/iptal açık. UI PR29 açıldı; henüz main/canlı teslimi değildir.
+- Sıradaki adım: UI PR29 dokuz kapı → merge/main dokuz kapı → VPS doğrulama; QR transfer/üretim ayrı teslim. Dal int/package-receiving-ui; server flag varsayılanfalse, paket hareketi hazır olmadan normal Mal geldi değişmez. Yeni QR akışı canlıda diye raporlanmaz.
+- PR28 kaynak7dd20fd: bağımsız security0/0/0 + QA84/84 PASS; 200 paket gerçek KG kabulü12.525s, unchanged30s sınırı. Dokuz PR/main kapısı PASS; merge0fe2e80 deploy38480106163 SUCCESS ve schema33 SSH doğrulandı. İlk erken deploy callback38479313958 eksik kapıda durdu; sonraki callback geçti.
+- T938 dört koşunun geçmişi kart/JOURNAL'da korunur. Son app48ff436 + dondurulmuş dört E2E/setup dosyası: 6PASS/0FAIL/0skip/0flaky,32.94s; 5VARIL1000KG, GR→KG3.5, kayıp yanıt/yenileme/aynıID, QRdecode/XSS/baskı/erişim ve dört ekran geometrisi PASS. Fiziksel cihaz veya şema33 E2E kanıtı değildir.
 - Son kaynak default200prepare6688.2/post14542.5ms, tüm test22770ms<değişmeyen30s; final bağımsız QA200prepare5906/post13166ms. Motor/timeout/GUC/trigger/cache gevşetilmedi. Bunlar izole test ortamı ölçümüdür, canlı SLA değildir.
 - Gelecek paket hareketinde yalnız değişmeyen origin anchor kilidi RR yarışını çözmez; ortak version/CAS, exact reversal ve depo/sayım kapsamı ayrı tasarım/test ister. Günlük offsite/RPO/RTO ve gerçek cihaz kabulü hâlâ açık.
 
-- T939 ayrıperformans onarımı: fix/T-939-package-assert-plan, yeni0033append yalnız assertfunctionplan;0032/engine/timeout unchanged. Kaynak82/82PASS, fresh200fullcase10092ms, seeded32→33→32→33 data/ACL/RLS/body roundtripPASS. Exact7dd20fd bağımsızsecurity0/0/0 + QA84/84PASS/skip0; fullverify3798PASS/check:allOK. Tam9CI/yayın bekler; detay DATABASE/JOURNAL.
+- T939 ayrıperformans onarımı: fix/T-939-package-assert-plan, yeni0033append yalnız assertfunctionplan;0032/engine/timeout unchanged. Kaynak82/82PASS, fresh200fullcase10092ms, seeded32→33→32→33 data/ACL/RLS/body roundtripPASS. Exact7dd20fd bağımsızsecurity0/0/0 + QA84/84PASS/skip0; fullverify3798PASS/check:allOK. PR28 dokuzCI PASS ve main0fe2e80 birleşti; main CI/yayın PASS ve schema33 canlı; detay DATABASE/JOURNAL.
+
+- UI PR29 head65b6191: eski kaynakfd86b70 security0/0/0/fullverify3915PASS/checkall6OK. CI38480544015(push) E2EPASS/intFAIL; CI38480550586(PR) E2EFAIL/intFAIL; guards38480597782 test-acFAIL. Her iki int2029/2030 yalnız AC-04 iki eksik yükleyici; WIP düzeltme161/161PASS/schema33,12 yeni yetki senaryosu. PR tarayıcı hatası mevcut mobil kod aramasında doğal hydration metni sıfırlıyor; yalnız seçici değiştirilmeyecek. Yeni paket senaryoları geçti; tüm9kapı/finalkaynak review olmadan merge yok, flag kapalı.
+- Son onarım kaynakcb7f292: güvenlik0/0/0; AC04gerçek161/161 ve aynıwidgetblobuyla değişmeyen kodedit4/4PASS/skip0, doğal eski-kod POST200. Fullverify3915PASS. Checkall scope/tests/protected/docsPASS; artırılanAC04 kayıtları nedeniyle baseline112→119 ve assertions96→134 stale, ayrı küçük protectedPR ile yalnız yukarı güncellenecek. Arama PR30/b4ba414 dokuzPASS→main d67b82da; main ci38530824944+guards38530824878 dokuzPASS. Yayın38531988425 Docker HTTP500 nedeniyle tekfailedjob tekrarıyla sürüyor. Bu ayrı teslimden sonra finalUI beş kart/≤30dosya ve exact-source kapıları korunur.
+
+- PR31/8b35d2b sayaç artışı dokuzPASS (ci38531182211/guards38531182246)→int9d02d305; finalUI30dosya. Gerçek kural: JSON eşik artışı korunan değişiklik değildir; yalnız düşüş insan/supervisor kaydı gerektirir. Ayrı küçük teslim/bağımsız0review korunur; bekçi değişmedi. PR29 son9kapı+main+VPS bekler; arama/kabul paket hareketi veya gerçek yazıcı kabulü değildir.

@@ -49,6 +49,7 @@ vi.mock("../../../apps/web/lib/queue.ts", () => ({ getSenderQueue: () => Promise
 
 import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
+import { preparePackageReceipt, postPackageReceipt } from "../../../packages/domain/src/operations/index.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
@@ -146,7 +147,7 @@ function as(user: string | null, origin: string | null = ORIGIN): void {
 }
 
 const saved: Record<string, string | undefined> = {};
-const ENV_KEYS = ["BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "WMS_ENV", "MAIL_MODE", "MAILPIT_URL", "MAIL_FROM", "DEMO_EMAIL_DOMAIN", "SIGNUP_ENABLED"] as const;
+const ENV_KEYS = ["BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "WMS_ENV", "MAIL_MODE", "MAILPIT_URL", "MAIL_FROM", "DEMO_EMAIL_DOMAIN", "SIGNUP_ENABLED", "PACKAGE_RECEIVING_ENABLED"] as const;
 
 let A: Fx;
 let B: Fx;
@@ -163,6 +164,7 @@ let taskActions: Actions;
 let receiptActions: Actions;
 /** T-313: B tenant'ının GERÇEK kabul belgesi/satırı ve lokasyonları (yazma eylemleri bu kimliklerle çağrılır; rastgele kimlik "yok" olduğundan tek başına yalıtımı kanıtlamaz). */
 let bRcpt: { receipt: string; line: string; kabul: string; raf: string };
+let packageDocs: { draftA: string; postedA: string; postedB: string; deniedUser: string };
 /** T-304: B tenant'ının sentetik görevi (eylem tablosu bu kimlikle çağırır). */
 let bTask: string;
 /** T-216: her tenant için sentetik birim/ürün/barkod kimlikleri (eylem tablosu B'nin kimlikleriyle çağırır). */
@@ -190,6 +192,7 @@ beforeAll(async () => {
     MAIL_MODE: "mailpit",
     MAILPIT_URL: "http://localhost:8025",
     MAIL_FROM: "noreply@example.test",
+    PACKAGE_RECEIVING_ENABLED: "true",
   });
   delete process.env.DEMO_EMAIL_DOMAIN;
   app = createDbClient({ url: env.databaseUrl, poolMax: DB_CLIENT_SETTINGS.poolMax, prepare: env.prepare ?? DB_CLIENT_SETTINGS.prepare });
@@ -235,6 +238,25 @@ beforeAll(async () => {
     )).rows[0]!.id;
     bRcpt = { receipt, line, kabul, raf };
   }
+
+  // Real package origins, permissions and posting; only the request identity is mocked.
+  const receivingA = randomUUID();
+  await adm.query("INSERT INTO public.locations (tenant_id,id,warehouse_id,code,name,depth,kind) VALUES($1,$2,$3,$4,'A package receiving',0,'RECEIVING')", [A.tenant, receivingA, A.warehouse, `PA-${rnd()}`]);
+  const packageReceipt = async (t: Fx, item: ItemFx, location: string, posted: boolean): Promise<string> => {
+    const params = { db: app, principal: { userId: t.admin, mfaVerified: true }, tenantSlug: t.slug, clientKey: randomUUID() };
+    const result = await preparePackageReceipt(params, { warehouseId: t.warehouse, receivingLocationId: location, itemId: item.item, unitId: item.unit, kind: "VARIL", packages: { mode: "equal", count: 2, quantity: "200" } });
+    const documentId = result.documentId as string;
+    if (posted) await postPackageReceipt({ ...params, clientKey: randomUUID() }, { documentId, expectedVersion: 1 });
+    return documentId;
+  };
+  const denied = await mkUser("package-no-permission");
+  await adm.query("INSERT INTO public.tenant_memberships(tenant_id,user_id,status,is_owner) VALUES($1,$2,'ACTIVE',false)", [A.tenant, denied.id]);
+  packageDocs = {
+    draftA: await packageReceipt(A, fx.A, receivingA, false),
+    postedA: await packageReceipt(A, fx.A, receivingA, true),
+    postedB: await packageReceipt(B, fx.B, bRcpt.kabul, true),
+    deniedUser: denied.id,
+  };
 
   // B yöneticisi (meşru) bir davet üretir: hem olumlu kontrol hem de çapraz tenant kabul denemesi için belirteç.
   as(B.admin);
@@ -300,6 +322,7 @@ const SHELL_LOADERS = ["field/layout.tsx", "field/page.tsx"] as const;
 const LABELS = "labels/page.tsx" as const;
 /** T-216: ürün ayrıntısı ek bir dinamik segment (`itemId`) ister; ortak döngüde değil, aşağıdaki özel bloktadır. */
 const ITEM_DETAIL = "items/[itemId]/page.tsx" as const;
+const PACKAGE_LOADERS = ["receipts/packages/page.tsx", "receipts/packages/labels/page.tsx"] as const;
 type Loader = (props: {
   params: Promise<{ slug: string; warehouseId?: string; itemId?: string }>;
   searchParams?: Promise<Record<string, string>>;
@@ -308,7 +331,7 @@ type Loader = (props: {
 
 /** `[warehouseId]` yükleyicisi için kimlik: verilmezse slug A'nınsa A'nın, değilse B'nin deposu (çapraz tenant denemesi). */
 async function runLoader(
-  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | (typeof SHELL_LOADERS)[number] | typeof LABELS,
+  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | (typeof SHELL_LOADERS)[number] | typeof LABELS | (typeof PACKAGE_LOADERS)[number],
   slug: string,
   warehouseId?: string,
   itemId?: string,
@@ -377,7 +400,7 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
 
 describe("sayfa yükleyicileri (/t/<slug>)", () => {
   it("@AC-04 kapsam: apps/web/app/t/[slug] altındaki her page/layout bu tabloda (yeni yükleyici testsiz kalamaz)", () => {
-    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL].sort());
+    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, ...PACKAGE_LOADERS].sort());
   });
 
   for (const rel of LOADERS) {
@@ -442,6 +465,112 @@ describe("sayfa yükleyicileri (/t/<slug>)", () => {
     }
     as(B.admin);
     expect((await runLoader("members/page.tsx", B.slug)).outcome).toBe("render");
+  });
+});
+
+describe("paket kabulü ve etiket yükleyicileri — gerçek DB üyelik/izin/RLS", () => {
+  const rendered = (value: unknown): string => JSON.stringify(value, (key, v: unknown) =>
+    ["type", "_owner", "_store"].includes(key) ? undefined : v);
+
+  for (const rel of PACKAGE_LOADERS) {
+    it(`@AC-04 ${rel}: bayrak kapalıyken yetkili ve oturumsuz istekler 404; veri değişmez`, async () => {
+      const beforeA = await snapshot(A), beforeB = await snapshot(B);
+      const prior = process.env.PACKAGE_RECEIVING_ENABLED;
+      try {
+        process.env.PACKAGE_RECEIVING_ENABLED = "false";
+        for (const user of [A.admin, null]) {
+          as(user, null);
+          expect(await runLoader(rel, A.slug, undefined, undefined, { document: packageDocs.postedA })).toEqual({ outcome: "notFound" });
+        }
+      } finally {
+        if (prior === undefined) delete process.env.PACKAGE_RECEIVING_ENABLED;
+        else process.env.PACKAGE_RECEIVING_ENABLED = prior;
+      }
+      expect(await snapshot(A)).toEqual(beforeA);
+      expect(await snapshot(B)).toEqual(beforeB);
+    });
+
+    it(`@AC-04 ${rel}: açık bayrakta yabancı slug, eksik slug ve üye olmayan kullanıcı aynı 404`, async () => {
+      as(A.admin, null);
+      const cross = await runLoader(rel, B.slug, undefined, undefined, { document: packageDocs.postedB });
+      as(A.admin, null);
+      const missing = await runLoader(rel, `yok-${rnd()}`, undefined, undefined, { document: packageDocs.postedB });
+      as(outsider.id, null);
+      const outsiderResult = await runLoader(rel, B.slug, undefined, undefined, { document: packageDocs.postedB });
+      expect(cross).toEqual({ outcome: "notFound" });
+      expect(missing).toEqual(cross);
+      expect(outsiderResult).toEqual(cross);
+      expect(rendered(cross)).not.toContain(B.name);
+      expect(rendered(cross)).not.toContain(packageDocs.postedB);
+    });
+
+    it(`@AC-04 ${rel}: oturumsuz açık bayrak isteği document içeren kendi dönüş URL'siyle login'e gider`, async () => {
+      as(null, null);
+      const result = await runLoader(rel, A.slug, undefined, undefined, { document: packageDocs.postedA });
+      const route = rel === PACKAGE_LOADERS[0] ? "receipts/packages" : "receipts/packages/labels";
+      const returnTo = `/t/${encodeURIComponent(A.slug)}/${route}?${new URLSearchParams({ document: packageDocs.postedA })}`;
+      expect(result).toEqual({ outcome: "redirect", to: `/login?next=${encodeURIComponent(returnTo)}` });
+    });
+
+    it(`@AC-04 ${rel}: gerçek aktif fakat rolü olmayan üyeye stock.view verilmez, belge verisi çizilmez`, async () => {
+      const before = await snapshot(A);
+      as(packageDocs.deniedUser, null);
+      const denied = await runLoader(rel, A.slug, undefined, undefined, { document: packageDocs.postedA });
+      expect(denied.outcome).toBe("render");
+      const body = rendered(denied.value);
+      expect(body).not.toContain(packageDocs.postedA);
+      expect(body).not.toContain("200.000000");
+      if (rel === PACKAGE_LOADERS[0]) expect(body).toContain("locked");
+      else expect(body).toContain("stok görüntüleme yetkisi");
+      expect(await snapshot(A)).toEqual(before);
+    });
+
+    it(`@AC-04 ${rel}: kendi slug'ında yabancı mevcut belge ile olmayan belge ayırt edilemez, etki yok`, async () => {
+      const beforeA = await snapshot(A), beforeB = await snapshot(B);
+      as(A.admin, null);
+      const foreign = await runLoader(rel, A.slug, undefined, undefined, { document: packageDocs.postedB });
+      as(A.admin, null);
+      const missing = await runLoader(rel, A.slug, undefined, undefined, { document: randomUUID() });
+      expect(rendered(foreign)).toEqual(rendered(missing));
+      if (rel === PACKAGE_LOADERS[0]) {
+        expect(foreign.outcome).toBe("render");
+        expect(rendered(foreign.value)).toContain("NOT_FOUND");
+      } else expect(foreign).toEqual({ outcome: "notFound" });
+      expect(rendered(foreign)).not.toContain(packageDocs.postedB);
+      expect(rendered(foreign)).not.toContain(B.name);
+      expect(await snapshot(A)).toEqual(beforeA);
+      expect(await snapshot(B)).toEqual(beforeB);
+    });
+  }
+
+  it("@AC-04 paket kabulü: Origin olmayan kendi GET'i DRAFT ve POSTED gerçek kimliklerle çizer, stok yazmaz", async () => {
+    const before = await snapshot(A);
+    for (const [documentId, status] of [[packageDocs.draftA, "DRAFT"], [packageDocs.postedA, "POSTED"]] as const) {
+      as(A.admin, null);
+      const own = await runLoader(PACKAGE_LOADERS[0], A.slug, undefined, undefined, { document: documentId });
+      expect(own.outcome).toBe("render");
+      const props = (own.value as { props: { canWrite: boolean; initial: { documentId: string; documentStatus: string; packages: readonly { id: string; quantity: string }[] } } }).props;
+      expect(props.canWrite).toBe(true);
+      expect(props.initial.documentId).toBe(documentId);
+      expect(props.initial.documentStatus).toBe(status);
+      expect(props.initial.packages).toHaveLength(2);
+      expect(new Set(props.initial.packages.map(p => p.id)).size).toBe(2);
+      expect(props.initial.packages.every(p => p.quantity === "200.000000")).toBe(true);
+      expect(rendered(own.value)).not.toContain(packageDocs.postedB);
+    }
+    expect(await snapshot(A)).toEqual(before);
+  });
+
+  it("@AC-04 paket etiketleri: Origin olmayan kendi işlenmiş kabulü gerçek paketlerle çizer, stok yazmaz", async () => {
+    const before = await snapshot(A);
+    as(A.admin, null);
+    const own = await runLoader(PACKAGE_LOADERS[1], A.slug, undefined, undefined, { document: packageDocs.postedA });
+    expect(own.outcome).toBe("render");
+    expect(rendered(own.value)).toContain(packageDocs.postedA);
+    expect(rendered(own.value)).toContain("200.000000");
+    expect(rendered(own.value)).not.toContain(packageDocs.postedB);
+    expect(rendered(own.value)).not.toContain(B.name);
+    expect(await snapshot(A)).toEqual(before);
   });
 });
 

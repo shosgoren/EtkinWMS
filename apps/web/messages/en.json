@@ -1597,7 +1597,8 @@
         "decoder": "The reader failed to load. Check your connection, then Try again.",
         "failed": "The camera did not open. Try again or type the barcode."
       }
-    }
+    },
+    "packageEntry": "Package receiving"
   },
   "import": {
     "title": "Import products and stock",
@@ -2110,5 +2111,50 @@
     "posted": "Last 50 shipment documents",
     "nextTasks": "Next picking tasks",
     "nextStaged": "Next staged lines"
+  },
+  "packageReceiving": {
+    "title": "Package receiving",
+    "locked": "Viewing, document creation and stock posting permissions are required.",
+    "loadError": "Cannot open the draft. Check access and document.",
+    "product": "Product",
+    "packages": "Packages",
+    "review": "Review",
+    "labels": "Open labels",
+    "quantity": "Package quantity",
+    "lot": "Lot code",
+    "produced": "Production date",
+    "expires": "Expiry date",
+    "scanDropped": "Scan dropped while busy; scan again.",
+    "search": "Search products",
+    "scan": "Scan barcode",
+    "serial": "Serial tracked products are unsupported. Select a lot tracked or untracked product.",
+    "next": "Continue to packages",
+    "warehouse": "Warehouse",
+    "location": "Receiving location",
+    "kind": "Package type",
+    "barrel": "Barrel",
+    "box": "Box",
+    "unit": "Quantity unit",
+    "choose": "Select",
+    "noWarehouse": "No accessible warehouse. Ask an authorized person to check warehouse access.",
+    "noLocation": "No receiving location. Configure an active RECEIVING location in this warehouse.",
+    "count": "Package count (1–200)",
+    "different": "Different quantities",
+    "equal": "Equal quantities",
+    "each": "Each package",
+    "packageNo": "Package {n}",
+    "invalid": "Use positive quantities and 1–200 packages. Check lots and dates. Use a dot for decimals.",
+    "back": "Back",
+    "posted": "Received",
+    "draftLocked": "Draft / submission retained. Editing and cancellation are unsupported. Continue the same operation.",
+    "countSummary": "{n} packages",
+    "initialQuantity": "Quantities describe receipt time, not remaining stock.",
+    "quarantine": "Quarantine — awaiting quality control",
+    "edit": "Edit",
+    "retry": "Retry receiving",
+    "accept": "Receive",
+    "summary": "Receiving summary",
+    "chooseProduct": "Select a product",
+    "optionalMetadata": "Lot / dates (optional)"
   }
 }

@@ -64,3 +64,11 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Masaüstü fiş başlık/satır düzenleme; telefon/tablet aynı yetki ve sürüm denetimiyle kısa görsel akış. Ana eylem rol/durum bağımlıdır; renk tek güvenlik kontrolü değildir.
 - Taslak gri/kalem, kesinleşmiş yeşil/onay, geri alınmış kırmızı/geri ok, ERP durum mavi/aktarım; renk+ikon+kısa ad beraber. Riskli geri almada paket adedi ve miktar görünür; mükerrer dokunma tek etkidir.
 - Yanlış QR, başka depo, SKT/kalite uyarısı, eşzamanlı değişiklik, yazıcı iptali ve ERP hatasında “Şimdi ne yapmalı?” tek kısa eylem gösterilir.
+
+## T936 geliştirme akışı
+- Controlled arama ve kabul girdileri SSR'de istemci hazır olmadan etkin görünmez; erken dokunma/yazı kaybını sistem önler. Rastgele bekleme süresi eklemek veya test seçicisini değiştirerek kaybı gizlemek çözüm değildir.
+- `/t/[slug]/receipts/packages?document=<uuid>` kısa ürün→paketler→kontrol→etiket akışıdır; server `PACKAGE_RECEIVING_ENABLED === "true"` ve rol kontrolleriyle kapalı başlar. Normal Mal geldi hedefi korunur.
+- Mevcut `ScreenShell`, `FormSteps`, scanner/kamera ve 56px/48px saha düğmeleri tekrar kullanılır. Lokal desktop özet/listesi, tablet özet üstte, telefon/alçak coarse-pointer tek sütun; ikinci sabit alt bar eklenmez. Gerçek cihaz ölçümü hâlâ paket kabulünde doğrulanmalıdır.
+- Belirsiz gönderimden sonra içerik kilitli; ilk kesin prepare doğrulama/yetki reddi düzeltmeye izin verir, önceden belirsiz outcome varsa kilit korunur; prepare yanıtı URL'yi belge kimliğiyle korur; retry aynı taslak ve ayrı sabit komut anahtarlarını kullanır. Draft edit/cancel yok. Sayfa kapanırken cevabı alınmamış prepare için otomatik kurtarma yok.
+- T937 etiket bağlantısı yalnız gerçek POSTED sonucu: `/t/[slug]/receipts/packages/labels?document=<uuid>`. Metadata `PackageReceiptDto.packages` (server QR/id, sıra, ürün, quantity/unitCode, lotCode/producedOn/expiresOn); miktar kabul anına aittir. T936 label route veya baskı gerçekleştirmez.
+- Scoped UI/action testleri67 PASS, skip0; scoped lint ve web typecheck PASS. Yayın/pilot/gerçek baskı başarı kanıtı değildir.
