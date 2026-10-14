@@ -136,7 +136,7 @@ describe("T-933 persisted package prepare/post, scratch DB runtime roles",()=> {
     expect((await q("SELECT count(*)::int AS n FROM public.stock_ledger WHERE document_id=$1",[d.documentId]))[0]?.n).toBe(0);
   });
 
-  it("T939 data survives 32→34→32→34 with exact function rollback and unchanged privileges",async()=> {
+  it("T939 data survives 32→35→32→35 with exact function rollback and unchanged privileges",async()=> {
     const d=await prepare();await postPackageReceipt(params(),{documentId:d.documentId,expectedVersion:1});
     const direct=new URL(env.databaseUrlDirect);direct.pathname=`/${name}`;
     const signature="public.receipt_package_assert(uuid,uuid)";
@@ -148,9 +148,9 @@ describe("T-933 persisted package prepare/post, scratch DB runtime roles",()=> {
     const before=await snapshot(),current=await functionState(),security=await rls();
     const oldSource=readFileSync(`${MIGRATIONS_DIR}/0032_receipt_packages.up.sql`,"utf8");
     const oldBody=oldSource.slice(oldSource.indexOf("CREATE FUNCTION public.receipt_package_assert(" )).split("AS $fn$")[1]!.split("$fn$;")[0]!;
-    for(const target of ["0032","0034","0032","0034"] as const) {
-      if(target==="0032")expect((await migrateDown({url:direct.toString(),to:target,wmsEnv:"staging"})).reverted).toEqual(["0034","0033"]);
-      else expect((await migrateUp({url:direct.toString()})).applied).toEqual(["0033","0034"]);
+    for(const target of ["0032","0035","0032","0035"] as const) {
+      if(target==="0032")expect((await migrateDown({url:direct.toString(),to:target,wmsEnv:"staging"})).reverted).toEqual(["0035","0034","0033"]);
+      else expect((await migrateUp({url:direct.toString()})).applied).toEqual(["0033","0034","0035"]);
       expect((await q("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 1"))[0]?.version).toBe(target);
       expect(await functionState()).toEqual({...current,prosrc:target==="0032"?oldBody:current.prosrc});
       expect(await rls()).toEqual(security);expect(await snapshot()).toEqual(before);
