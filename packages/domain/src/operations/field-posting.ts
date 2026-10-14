@@ -66,6 +66,8 @@ export function baseQuantityOf(quantity: string, factor: string): string {
 export interface FieldLine {
   readonly lotId?: string | null;
   readonly serialId?: string | null;
+  /** Physical package identity; omitted legacy lines remain NULL. */
+  readonly handlingUnitId?: string | null;
   readonly itemId: string;
   readonly unitId: string;
   /** Satır biriminde miktar. */
@@ -120,7 +122,7 @@ function postingLines(spec: FieldPostSpec, ids: readonly string[]): PostingLine[
     sourceStatus: l.stockStatus,
     targetStatus: l.targetStockStatus ?? l.stockStatus,
     inventoryOwnerId: null,
-    handlingUnitId: null,
+    handlingUnitId: l.handlingUnitId ?? null,
   }));
 }
 
@@ -226,6 +228,7 @@ export async function postFieldDocument(
   ctx: StockCommandContext,
   spec: FieldPostSpec,
   requestId: string | null,
+  beforePosting?: (documentId: string, lineIds: readonly string[]) => Promise<void>,
 ): Promise<StockCommandApplied> {
   assertSize(spec);
   if ((spec.sourceKind === null) !== (spec.sourceId === null)) throw new AppError("INTERNAL");
@@ -256,16 +259,17 @@ export async function postFieldDocument(
       source_line_id: l.sourceLineId,
       lot_id: l.lotId ?? null,
       serial_id: l.serialId ?? null,
+      handling_unit_id: l.handlingUnitId ?? null,
     })),
   );
   await tx.execute(
     sql`INSERT INTO public.document_lines
           (tenant_id, id, document_id, line_no, item_id, unit_id, quantity, conversion_factor, base_quantity,
-           source_location_id, target_location_id, stock_status, target_stock_status, source_line_id, lot_id, serial_id)
+           source_location_id, target_location_id, stock_status, target_stock_status, source_line_id, lot_id, serial_id, handling_unit_id)
         SELECT ${ctx.tenantId}::uuid, w.id, ${documentId}::uuid, w.line_no, w.item_id, w.unit_id, w.quantity, w.conversion_factor, w.base_quantity,
-               w.source_location_id, w.target_location_id, w.stock_status, w.target_stock_status, w.source_line_id, w.lot_id, w.serial_id
+               w.source_location_id, w.target_location_id, w.stock_status, w.target_stock_status, w.source_line_id, w.lot_id, w.serial_id, w.handling_unit_id
           FROM jsonb_to_recordset(${json}::jsonb) AS w(id uuid, line_no int, item_id uuid, unit_id uuid, quantity numeric, conversion_factor numeric,
-               base_quantity numeric, source_location_id uuid, target_location_id uuid, stock_status text, target_stock_status text, source_line_id uuid, lot_id uuid, serial_id uuid)
+               base_quantity numeric, source_location_id uuid, target_location_id uuid, stock_status text, target_stock_status text, source_line_id uuid, lot_id uuid, serial_id uuid, handling_unit_id uuid)
          ORDER BY w.line_no`,
   );
   const approved = await tx.execute<{ id: string }>(
@@ -278,5 +282,6 @@ export async function postFieldDocument(
     if (lineId === undefined) throw new AppError("INTERNAL");
     return { lineId, orderLineId: c.orderLineId, reservationIds: c.reservationIds };
   });
+  await beforePosting?.(documentId, lineIds);
   return postApprovedDocumentInTx(tx, locked, ctx, documentId, { requestId, consumes, ledgerReason: spec.ledgerReason });
 }
