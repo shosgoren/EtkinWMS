@@ -191,3 +191,4 @@
 - 2026-10-14 T-941 yeni satış sitesi (marketing/): dc kaynak + eval'siz runtime + ön-çizim, yerel WOFF/WEBP, sunucu dosya haritası ve CSP font/style güncellemesi; eski site dosyaları silindi. Yerel tarayıcı QA ve marketing testleri PASS; CI ve canlı yayın bekliyor.
 - 2026-10-14 T-941 canlı: PR32→main908c22a, deploy38550135723 SUCCESS; etkinyazilim.com yeni sayfa, eski app.js 404.
 - 2026-10-14 T-942 tam ekran sinema girişi + telefon çerçevesi + giriş butonu hizası; yerel 7 çözünürlük PASS, PR35.
+- 2026-10-14 T-943 kanıt şeridi film içine (geniş/yüksek ekran); yerel PASS.
