@@ -742,7 +742,7 @@ select.bg-none { background-image:none; }
   .screen-interior[data-section="items"] > .screen-content > main > .sticky { margin-inline: -.75rem; }
 }
 
-/* T-946: giriş sahnesi — solda canlı saha haritası, sağda form. Yalnız /login (LoginForm). */
+/* T-980: giriş sahnesi — solda canlı saha haritası, sağda form. Yalnız /login (LoginForm). */
 .login-stage { display:grid; grid-template-columns:minmax(0,1fr); min-height:calc(100dvh - 66px); }
 .login-scene { position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; gap:20px; min-height:250px; padding:28px 20px 60px; color:#ffffff; background:linear-gradient(160deg, #1d3a52 0%, #172e42 45%, #0f2031 100%); }
 .login-scene-glow { position:absolute; inset:-30% -20% auto auto; width:70%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--color-accent) 45%, transparent) 0%, transparent 65%); filter:blur(10px); animation:loginGlow 14s ease-in-out infinite alternate; pointer-events:none; }

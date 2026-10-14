@@ -151,7 +151,7 @@ export function LoginForm({ next, socialEnabled, banner }: { next: string; socia
   );
 }
 
-// Giriş sahnesi (T-946): yalnız görsel; içerik `auth.login.scene*`/`feed*`. Ekran okuyucudan gizlidir (bilgi formdadır).
+// Giriş sahnesi (T-980): yalnız görsel; içerik `auth.login.scene*`/`feed*`. Ekran okuyucudan gizlidir (bilgi formdadır).
 const SCENE_ROUTE = "M40 230 H150 V150 H250 V70 H360";
 const SCENE_STOPS = [[150, 230], [250, 150], [360, 70]] as const;
 
