@@ -124,6 +124,26 @@ describe("T946 registered package crosswarehouse transfer",()=>{
   await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind,recipe_id) VALUES($1,$2,$3,$4,$5)",[world.tenantId,extra,step.document,kind,kind==='PRODUCTION'?recipeId:null]);
   await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_TRANSFER_LINK'});
  }));
+ for(const direction of ['IN_AS_SOURCE','OUT_AS_TARGET'] as const)it(`registered transfer rejects inverse endpoint ${direction}`,async()=>tx(async()=>{
+  const p=await origin();const step=await transfer(p);await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');
+  const extra=randomUUID(),kind=direction==='IN_AS_SOURCE'?'STOCK_IN':'STOCK_OUT';
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,$3,id,$4,'2026-10-14',$5 FROM public.document_type_versions WHERE tenant_id IS NULL AND key=$3 AND version=1",[world.tenantId,extra,kind,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,direction==='IN_AS_SOURCE'?step.document:extra,direction==='IN_AS_SOURCE'?extra:step.sourceDocument]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:'PACKAGE_TRANSFER_LINK'});
+ }));
+ for(const flow of ['ORIGIN','PUTAWAY'] as const)for(const endpoint of ['SOURCE','TARGET'] as const)it(`registered ${flow} forbids unrelated link at ${endpoint}`,async()=>tx(async()=>{
+  const p=await origin();const doc=flow==='ORIGIN'?p.document:(await putaway(p,await transfer(p))).document;
+  await flush();await app.query('SET CONSTRAINTS ALL DEFERRED');const extra=randomUUID();
+  await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[world.tenantId,extra,world.warehouseId,world.ownerUserId]);
+  await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,endpoint==='SOURCE'?doc:extra,endpoint==='SOURCE'?extra:doc]);
+  await expect(flush()).rejects.toMatchObject({code:'23514',message:flow==='ORIGIN'?'PACKAGE_ORIGIN_LINK':'PACKAGE_MOVEMENT_LINK'});
+ }));
+ it('legacy unrelated documents retain multiple incoming operation links',async()=>tx(async()=>{
+  const target=randomUUID();for(const doc of [target,randomUUID(),randomUUID()]){
+   await app.query("INSERT INTO public.documents(tenant_id,id,kind,type_version_id,warehouse_id,business_date,created_by) SELECT $1,$2,'STOCK_IN',id,$3,'2026-10-14',$4 FROM public.document_type_versions WHERE tenant_id IS NULL AND key='STOCK_IN' AND version=1",[world.tenantId,doc,world.warehouseId,world.ownerUserId]);
+   if(doc!==target)await app.query("INSERT INTO public.stock_document_links(tenant_id,source_document_id,target_document_id,kind) VALUES($1,$2,$3,'TRANSFER')",[world.tenantId,doc,target]);
+  }await flush();expect((await app.query('SELECT count(*)::int AS n FROM public.stock_document_links WHERE target_document_id=$1',[target])).rows[0]?.n).toBe(2);
+ }));
  it("RLS hides transferstep and runtime cannot edit/delete/newcolumnscreatedat",async()=>tx(async()=>{
   const p=await origin();await transfer(p);await flush();await app.query("SELECT set_config('app.current_tenant_id',$1,true)",[other.tenantId]);expect((await app.query("SELECT * FROM public.package_movement_steps WHERE handling_unit_id=$1",[p.hu])).rowCount).toBe(0);
   expect((await migration.query("SELECT has_column_privilege('wms_app','public.package_movement_steps','source_document_id','INSERT') AS ins,has_column_privilege('wms_app','public.package_movement_steps','created_at','INSERT') AS created,has_table_privilege('wms_app','public.package_movement_steps','DELETE') AS del")).rows[0]).toEqual({ins:true,created:false,del:false});
