@@ -1,133 +1,248 @@
+import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
-import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronRight, CircleCheck, ClipboardCheck, Clock, Factory, ListChecks, Lock, ScanLine, ShoppingCart } from "@wms/ui";
 import type { WorkSectionKey, WorkSummary } from "@wms/domain/operations";
-import { BrandMark } from "../../brand-mark.tsx";
-import { HomeControls } from "./home-controls.tsx";
+import { DzRoot } from "../../design/dz-root.tsx";
+import { C, dz } from "../../design/bakis-tokens.ts";
+import { ICON } from "../../design/bakis-icons.ts";
+import { HomeControls, HomeOverlays } from "./home-controls.tsx";
 import type { TaskMenuProps } from "./task-menu.tsx";
 
-// T-988: Görevlerim tasarımı (Bakış) birebir — yerleşim, yazı tipleri (Bricolage Grotesque / Instrument Sans / IBM Plex Mono) ve bölüm renkleri
-// globals.css `.gv` bloğundaki belirteçlerdendir. Her sayı `getWorkSummary` gerçek verisidir; karşılığı olmayan alan (öncelik, vardiya, sorun) çizilmez.
-// Dört işlem döşemesi (`data-operation`) önceki hedeflere gider; yetki kararı hedef ekran/eylemdedir (görünüm yalnız bayrağa bakar).
+// I-18 (docs/design/DESIGN-PARITY.md): Görevlerim = Bakis.dc.html `v.home` BİREBİR. Sınıf adları, öğe sırası, ikon yolları ve metinler kaynaktan;
+// CSS `apps/web/app/design/bakis.css` (üretilmiş). Yalnız `{{…}}` bağları gerçek veriye bağlanır (getWorkSummary). Hesaplar kaynaktaki renderVals ile
+// aynıdır: halka = biten / tüm iş × 264; bölüm ilerlemesi = (tüm − kalan) / tüm; ACİL = kalan işlerden biri acil.
 
-const OPERATIONS: ReadonlyArray<{ key: "receive" | "shipping" | "transfer" | "production"; section: WorkSectionKey; path: string; Icon: typeof ShoppingCart }> = [
-  { key: "receive", section: "giris", path: "/field/receive", Icon: ArrowDownToLine },
-  { key: "shipping", section: "cikis", path: "/shipping", Icon: ShoppingCart },
-  { key: "transfer", section: "transfer", path: "/stock/documents?new=TRANSFER", Icon: ArrowLeftRight },
-  { key: "production", section: "uretim", path: "/production", Icon: Factory },
+// Geçici hedefler (DESIGN-PARITY §8): kaynakta bölüm döşemesi ve durum kartları `v.list` (bölüm / durum listesi) ekranını açar. O ekran
+// sıradaki işte birebir aktarılana kadar döşemeler mevcut iş ekranlarına gider; durum kartları tıklanmaz (görünüm aynı).
+const SECS: ReadonlyArray<{ k: WorkSectionKey; operation?: string; path: string }> = [
+  { k: "giris", operation: "receive", path: "/field/receive" },
+  { k: "cikis", operation: "shipping", path: "/shipping" },
+  { k: "transfer", operation: "transfer", path: "/stock/documents?new=TRANSFER" },
+  { k: "uretim", operation: "production", path: "/production" },
+  { k: "sayim", path: "/field/tasks" },
 ];
 
 export interface EasyHomeProps extends TaskMenuProps {
   readonly summary?: WorkSummary | null;
   readonly firstName?: string;
+  readonly dark?: boolean;
 }
 
-export async function EasyOperations({ slug, allowed, summary, firstName }: EasyHomeProps) {
+function Ico({ d, size, sw, className = "ico", style }: { d: string; size: number | string; sw?: number; className?: string; style?: CSSProperties }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={sw === undefined ? style : { strokeWidth: sw, ...style }}>
+      <path d={d} />
+    </svg>
+  );
+}
+
+export async function EasyOperations({ slug, allowed, summary, firstName, dark = false }: EasyHomeProps) {
   const t = await getTranslations("home");
   const tg = await getTranslations("home.gv");
   const base = `/t/${encodeURIComponent(slug)}`;
+  const name = firstName ?? "";
+  const sections = summary?.sections ?? [];
+  const sec = (k: WorkSectionKey) => sections.find((s) => s.key === k);
+
+  // Kaynak `tot`: tüm iş = kalan + sorunlu + biten; halka 264 birimlik çevre.
+  const tot = { allO: 0, doneO: 0, leftO: 0, leftK: 0, probO: 0, probK: 0, doneK: 0 };
+  for (const s of sections) {
+    tot.leftO += s.open;
+    tot.leftK += s.openLines;
+    tot.doneO += s.doneToday;
+    tot.doneK += s.doneLines;
+    tot.probO += s.problems;
+    tot.probK += s.problemLines;
+  }
+  tot.probO += summary?.generalProblems ?? 0;
+  tot.allO = tot.leftO + tot.doneO + tot.probO;
+  const ring = tot.allO === 0 ? 0 : Math.round((tot.doneO / tot.allO) * 264);
+  const manual = summary?.manualToday ?? 0;
+  const hour = summary?.localHour ?? 12;
+  const hello = tot.leftO === 0 && tot.allO > 0 ? tg("dayDone", { name }) : tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name });
+  const where = (summary?.warehouseName ?? tg("allWarehouses")).toLocaleUpperCase("tr");
+  const whos = summary === null || summary === undefined ? where : tg("shift", { start: summary.shift.start, end: summary.shift.end, where });
   const active = allowed.stockPost === true;
-  const links = [
-    { key: "stock", path: "/stock", allowed: allowed.stockView },
-    { key: "items", path: "/items", allowed: allowed.stockView },
-    { key: "warehouses", path: "/warehouses", allowed: true },
-    { key: "tasks", path: "/field/tasks", allowed: allowed.stockView },
-    { key: "members", path: "/members", allowed: allowed.usersManage },
-    { key: "settings", path: "/settings", allowed: allowed.settingsManage },
-    { key: "audit", path: "/audit", allowed: allowed.auditView },
+
+  const stats = [
+    { k: "kalan", l: tg("left"), n: tot.leftO, sub: tg("linesCount", { n: tot.leftK }), a: C.kalan, d: ICON.list },
+    { k: "biten", l: tg("done"), n: tot.doneO + manual, sub: tg("linesCount", { n: tot.doneK }) + (manual > 0 ? tg("manualSuffix", { n: manual }) : ""), a: C.biten, d: ICON.check },
+    { k: "sorun", l: tg("problem"), n: tot.probO, sub: tg("linesCount", { n: tot.probK }), a: C.sorun, d: ICON.warn },
   ] as const;
 
-  const sections = summary?.sections ?? null;
-  const sec = (k: WorkSectionKey) => sections?.find((s) => s.key === k);
-  const left = sections === null ? null : sections.reduce((a, s) => ({ o: a.o + s.open, k: a.k + s.openLines }), { o: 0, k: 0 });
-  const done = sections === null ? null : sections.reduce((a, s) => ({ o: a.o + s.doneToday, k: a.k + s.doneLines }), { o: 0, k: 0 });
-  const all = left !== null && done !== null ? left.o + done.o : 0;
-  const ringDash = all === 0 || done === null ? 0 : Math.round((done.o / all) * 264);
-  const hour = summary?.localHour ?? 12;
-  const hello = left !== null && left.o === 0 && (done?.o ?? 0) > 0 ? tg("dayDone", { name: firstName ?? "" }) : tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name: firstName ?? "" });
-  const where = summary?.warehouseName ?? tg("allWarehouses");
-
-  const tile = (key: WorkSectionKey, title: string, unit: string, Icon: typeof ShoppingCart, href: string | null, state: "active" | "locked" | "soon", operation?: string) => {
-    const s = sec(key);
-    const o = s?.open ?? 0;
-    const k = s?.openLines ?? 0;
-    const total = s === undefined ? 0 : s.open + s.doneToday;
-    const d = s?.doneToday ?? 0;
-    const pct = total === 0 ? 0 : Math.round((d / total) * 100);
-    const body = (
-      <>
-        <span className="gv-sic"><Icon className="gv-ico" strokeWidth={2.4} aria-hidden="true" /></span>
-        <span className="gv-stt">{title}</span>
-        {state === "locked" ? <span className="gv-snote">{t("lockedReason")}</span> : s === undefined ? <span className="gv-snote">{tg("noData")}</span> : (
-          <span className="gv-snn"><span><b>{o}</b><small>{unit}</small></span><i aria-hidden="true" /><span><b>{k}</b><small>{tg("lines")}</small></span></span>
-        )}
-        {state === "active" ? <ChevronRight className="gv-ico gv-sch" strokeWidth={3} aria-hidden="true" /> : state === "locked" ? <Lock className="gv-ico gv-sch" strokeWidth={2.6} aria-hidden="true" /> : <span className="gv-sch gv-soon">{t("soonLabel")}</span>}
-        {s === undefined || state === "locked" ? null : <span className="gv-spb"><span className="gv-bar"><span style={{ width: `${pct}%` }} /></span>{tg("progress", { done: d, total })}</span>}
-      </>
-    );
-    const label = s === undefined ? title : tg("tileLabel", { title, open: o, unit, lines: k });
-    const common = { className: `gv-sec gv-sec-${key}`, "data-section": key, "data-state": state, ...(operation === undefined ? {} : { "data-operation": operation }) };
-    if (state === "active" && href !== null) return <a key={key} {...common} href={href} aria-label={label}>{body}</a>;
-    return <div key={key} {...common} role="group" aria-label={state === "locked" ? title : label} aria-disabled="true" tabIndex={state === "locked" ? 0 : undefined}>{body}</div>;
-  };
-
   return (
-    <div className="gv easy-operations" data-testid="easy-operations">
-      <h1 className="sr-only">{t("title")}</h1>
-      <header className="gv-hd">
-        <div className="gv-ring" role="img" aria-label={tg("ringLabel", { done: done?.o ?? 0, all })}>
-          <svg viewBox="0 0 100 100" aria-hidden="true"><circle className="gv-ring-track" cx="50" cy="50" r="42" /><circle className="gv-ring-done" cx="50" cy="50" r="42" strokeDasharray={`${ringDash} 264`} /></svg>
-          <b aria-hidden="true">{done?.o ?? 0}<small>/ {all}</small></b>
-        </div>
-        <div className="gv-who">
-          <span className="gv-brandl"><BrandMark className="gv-elogo" framed={false} /><b>ETKİN WMS</b></span>
-          <p className="gv-whoh">{hello}</p>
-          <span className="gv-whos"><Clock className="gv-ico" strokeWidth={2.4} aria-hidden="true" />{where}</span>
-        </div>
-        <HomeControls />
-      </header>
+    <DzRoot dark={dark} testId="easy-operations" overlays={<HomeOverlays slug={slug} />}>
+      <div className="page" style={{ background: C.bg, color: C.fg }}>
+        <h1 className="sr-only">{t("title")}</h1>
+        <div className="scroll">
+          <div className="inner">
+            <div className="hd">
+              <div className="ring" role="img" aria-label={tg("ringLabel", { done: tot.doneO, all: tot.allO })}>
+                <svg viewBox="0 0 100 100" aria-hidden="true">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke={C.track} strokeWidth="11" />
+                  <circle className="rp" cx="50" cy="50" r="42" fill="none" stroke={dz("17804F")} strokeWidth="11" strokeLinecap="round" strokeDasharray={`${ring} 264`} />
+                </svg>
+                <b>
+                  {tot.doneO}
+                  <small>/ {tot.allO}</small>
+                </b>
+              </div>
+              <div className="who">
+                <span className="brandl">
+                  <svg className="elogo" width="18" height="18" viewBox="0 0 120 120" aria-hidden="true" style={{ flex: "none", display: "block" }}>
+                    <rect x="4" y="4" width="112" height="112" rx="28" fill={C.surface} />
+                    <path d={ICON.logo} fill="none" stroke={C.fg} strokeWidth="13" strokeLinecap="round" />
+                    <circle r="12" fill={dz("F2C53D")} stroke={C.surface} strokeWidth="4">
+                      <animateMotion dur="3.2s" repeatCount="indefinite" path={ICON.logo} />
+                    </circle>
+                  </svg>
+                  <b className="brandn">ETKİN WMS</b>
+                </span>
+                <b className="whoh">{hello}</b>
+                <span className="whos">
+                  <Ico d={ICON.clock} size={14} />
+                  {whos}
+                </span>
+              </div>
+              <HomeControls />
+            </div>
 
-      {left === null || done === null ? null : (
-        <section className="gv-stats" aria-label={tg("statsLabel")}>
-          <p className="gv-st gv-st-kalan"><span className="gv-stl"><i><ListChecks className="gv-ico" strokeWidth={3} aria-hidden="true" /></i>{tg("left")}</span><span className="gv-stn">{left.o}</span><span className="gv-sts">{tg("linesCount", { n: left.k })}</span></p>
-          <p className="gv-st gv-st-biten"><span className="gv-stl"><i><CircleCheck className="gv-ico" strokeWidth={3} aria-hidden="true" /></i>{tg("done")}</span><span className="gv-stn">{done.o}</span><span className="gv-sts">{tg("linesCount", { n: done.k })}</span></p>
-        </section>
-      )}
+            <div className="stats" role="group" aria-label={tg("statsLabel")}>
+              {stats.map((sc) => (
+                <div key={sc.k} role="group" className="st" style={{ background: C.surface }} aria-label={`${sc.l} ${sc.n}`} data-stat={sc.k}>
+                  <span className="stl">
+                    <i style={{ background: sc.a }}>
+                      <Ico d={sc.d} size={14} sw={3} />
+                    </i>
+                    {sc.l}
+                  </span>
+                  <span className="stn" style={{ color: sc.a }}>
+                    {sc.n}
+                  </span>
+                  <span className="sts">{sc.sub}</span>
+                </div>
+              ))}
+            </div>
 
-      <section aria-labelledby="gv-tasks-title" className="gv-block">
-        <div className="gv-shd"><h2 id="gv-tasks-title">{tg("myTasks")}</h2>{left === null ? null : <span>{tg("leftSummary", { o: left.o, k: left.k })}</span>}</div>
-        <div className="gv-secs">
-          {OPERATIONS.map(({ key, section, path, Icon }) => tile(section, tg(`title.${section}`), tg(`unit.${section}`), Icon, `${base}${path}`, active ? "active" : "locked", key))}
-          {tile("sayim", tg("title.sayim"), tg("unit.sayim"), ClipboardCheck, null, "soon")}
-        </div>
-      </section>
+            <div className="shd">
+              <b>{tg("myTasks")}</b>
+              <span>{tg("leftSummary", { o: tot.leftO, k: tot.leftK })}</span>
+            </div>
+            <div className="secs">
+              {SECS.map((x, i) => {
+                const s = sec(x.k);
+                const o = s?.open ?? 0;
+                const k = s?.openLines ?? 0;
+                const all = s === undefined ? 0 : s.open + s.problems + s.doneToday;
+                const done = all - o;
+                const pct = all === 0 ? 0 : Math.round((done / all) * 100);
+                const title = tg(`title.${x.k}`);
+                const unit = tg(`unit.${x.k}`);
+                // Yazma yetkisi olmayan rol (salt okunur) işlem ekranına gidemez: aynı görünümde tıklanmaz döşeme (Sayım listesi herkese açık).
+                const live = active || x.operation === undefined;
+                const props = {
+                  className: "sec",
+                  "data-section": x.k,
+                  "data-operation": x.operation,
+                  "data-state": live ? "active" : "locked",
+                  style: { background: C[`${x.k}-t`], color: C[`${x.k}-ink`], animationDelay: `${i * 60}ms` },
+                  "aria-label": tg("tileLabel", { title, open: o, unit, lines: k }),
+                };
+                const body = (
+                  <>
+                    <span className="sic" style={{ background: C[`${x.k}-s`], color: C.txt }}>
+                      <Ico d={ICON[x.k]} size={32} sw={2.4} />
+                    </span>
+                    <span className="stt">{title}</span>
+                    <span className="snn">
+                      <span>
+                        <b>{o}</b>
+                        <small>{unit}</small>
+                      </span>
+                      <i />
+                      <span>
+                        <b>{k}</b>
+                        <small>{tg("lines")}</small>
+                      </span>
+                    </span>
+                    <Ico d={ICON.chevron} size={28} sw={3} className="ico sch" />
+                    <span className="spb">
+                      <span className="bar" style={{ background: C["sec-track"] }}>
+                        <span style={{ width: `${pct}%`, background: C[`${x.k}-a`] }} />
+                      </span>
+                      {tg("progress", { done, total: all })}
+                    </span>
+                    {s?.urgent === true ? (
+                      <span className="sbadge">
+                        <Ico d={ICON.bolt} size={12} sw={3} />
+                        {tg("urgent")}
+                      </span>
+                    ) : null}
+                  </>
+                );
+                return live ? (
+                  <a key={x.k} href={`${base}${x.path}`} {...props}>
+                    {body}
+                  </a>
+                ) : (
+                  <div key={x.k} role="group" aria-disabled="true" {...props}>
+                    {body}
+                  </div>
+                );
+              })}
+            </div>
 
-      {active ? (
-        <section aria-labelledby="gv-manual-title" className="gv-block gv-quickwrap">
-          <div className="gv-shd"><h2 id="gv-manual-title">{tg("manualTitle")}</h2><span>{tg("manualHint")}</span></div>
-          <div className="gv-quick">
-            <a className="gv-qb gv-qb-in" href={`${base}/stock/documents?new=STOCK_IN`} data-manual="in"><ArrowDownToLine className="gv-ico" strokeWidth={2.8} aria-hidden="true" />{tg("manualIn")}</a>
-            <a className="gv-qb gv-qb-out" href={`${base}/stock/documents?new=STOCK_OUT`} data-manual="out"><ArrowUpFromLine className="gv-ico" strokeWidth={2.8} aria-hidden="true" />{tg("manualOut")}</a>
+            {active ? (
+              <>
+                <div className="shd qhd">
+                  <b>{tg("manualTitle")}</b>
+                  <span>{tg("manualHint")}</span>
+                </div>
+                <div className="quick">
+                  <a className="qb" href={`${base}/stock/documents?new=STOCK_IN`} style={{ color: C.in }} data-manual="in">
+                    <Ico d={ICON.inn} size={22} sw={2.8} />
+                    {tg("manualIn")}
+                  </a>
+                  <a className="qb" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ color: C.out }} data-manual="out">
+                    <Ico d={ICON.out} size={22} sw={2.8} />
+                    {tg("manualOut")}
+                  </a>
+                </div>
+              </>
+            ) : null}
           </div>
-        </section>
-      ) : null}
+        </div>
+      </div>
 
-      <nav aria-label={t("easy.links")} className="gv-more">
-        {links.slice(0, 4).filter((link) => link.allowed).map((link) => <a key={link.key} href={`${base}${link.path}`} className="gv-chip">{t(`easy.${link.key}`)}</a>)}
-        {links.slice(4).some((link) => link.allowed) ? (
-          <details className="gv-moredet">
-            <summary className="gv-chip">{t("easy.links")}</summary>
-            <div className="gv-moreinner">{links.slice(4).filter((link) => link.allowed).map((link) => <a key={link.key} href={`${base}${link.path}`} className="gv-chip">{t(`easy.${link.key}`)}</a>)}</div>
-          </details>
-        ) : null}
+      <nav className="thumb" style={{ background: C.surface, color: C.fg }} aria-label={tg("thumbLabel")}>
+        <div className="trow">
+          {active ? (
+            <a className="tside" href={`${base}/stock/documents?new=STOCK_IN`} style={{ background: C["tin-bg"], color: C.in }} aria-label={tg("manualIn")}>
+              <Ico d={ICON.inn} size={26} sw={2.8} />
+              {tg("thumbIn")}
+            </a>
+          ) : (
+            <span className="tside off" style={{ background: C["tin-bg"], color: C.in }} aria-hidden="true">
+              <Ico d={ICON.inn} size={26} sw={2.8} />
+              {tg("thumbIn")}
+            </span>
+          )}
+          <a className="tprim" href={`${base}/field`} style={{ background: C["prim-bg"], color: C["prim-fg"] }}>
+            <Ico d={ICON.scan} size={26} sw={2.8} />
+            {tot.leftO > 0 ? tg("scanStart") : tg("dayComplete")}
+          </a>
+          {active ? (
+            <a className="tside" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ background: C["tout-bg"], color: C.out }} aria-label={tg("manualOut")}>
+              <Ico d={ICON.out} size={26} sw={2.8} />
+              {tg("thumbOut")}
+            </a>
+          ) : (
+            <span className="tside off" style={{ background: C["tout-bg"], color: C.out }} aria-hidden="true">
+              <Ico d={ICON.out} size={26} sw={2.8} />
+              {tg("thumbOut")}
+            </span>
+          )}
+        </div>
       </nav>
-
-      {active ? (
-        <nav className="gv-thumb" aria-label={tg("thumbLabel")}>
-          <a className="gv-tside gv-tside-in" href={`${base}/stock/documents?new=STOCK_IN`} aria-label={tg("manualIn")}><ArrowDownToLine className="gv-ico" strokeWidth={2.8} aria-hidden="true" />{tg("thumbIn")}</a>
-          <a className="gv-tprim" href={`${base}/field`}><ScanLine className="gv-ico" strokeWidth={2.8} aria-hidden="true" />{tg("scanStart")}</a>
-          <a className="gv-tside gv-tside-out" href={`${base}/stock/documents?new=STOCK_OUT`} aria-label={tg("manualOut")}><ArrowUpFromLine className="gv-ico" strokeWidth={2.8} aria-hidden="true" />{tg("thumbOut")}</a>
-        </nav>
-      ) : null}
-    </div>
+    </DzRoot>
   );
 }

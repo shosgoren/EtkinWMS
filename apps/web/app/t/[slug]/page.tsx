@@ -11,6 +11,7 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_LIST_LIMIT_MAX, getWorkSummary, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
 import { TaskMenu, type MyTasksSummary, type NowSummary } from "./task-menu.tsx";
 import { EasyOperations } from "./easy-operations.tsx";
+import { THEME_COOKIE } from "../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,8 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   const summary = await getMembershipSummary({ db: getAppDb(), principal });
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) return null;
-  const Menu = (await cookies()).get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
+  const jar = await cookies();
+  const Menu = jar.get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
   const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
   const allowed = {
     usersManage: hasPermission(current.roles, "users.manage"),
@@ -53,8 +55,8 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       console.error(JSON.stringify({ level: "error", msg: "home work summary failed", error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
     }
     return (
-      <main className="gv-main flex w-full min-w-0 flex-col">
-        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} />
+      <main className="flex w-full min-w-0 flex-col">
+        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={jar.get(THEME_COOKIE)?.value === "koyu"} />
       </main>
     );
   }

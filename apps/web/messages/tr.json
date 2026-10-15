@@ -666,7 +666,35 @@
       "scanStart": "OKUT · BAŞLA",
       "online": "Bağlantı var",
       "offline": "Bağlantı yok: kayıtlar gönderilemez",
-      "menu": "Menü"
+      "menu": "Menü",
+      "shift": "VARDİYA {start}–{end} · {where}",
+      "manualSuffix": " · {n} MAN.",
+      "problem": "SORUN",
+      "urgent": "ACİL",
+      "dayComplete": "GÜN TAMAM",
+      "theme": "Tema değiştir",
+      "actions": "Hızlı işlemler",
+      "reportProblem": "Sorun bildir",
+      "guide": "Nasıl kullanılır?",
+      "problemSheet": {
+        "title": "Sorun bildir",
+        "hint": "YÖNETİCİYE ANINDA GİDER · SORUN KARTINDA GÖRÜNÜR",
+        "reason": "NE OLDU?",
+        "note": "NOT · İSTEĞE BAĞLI",
+        "send": "BİLDİR",
+        "cancel": "Vazgeç",
+        "sent": "BİLDİRİLDİ",
+        "failed": "Gönderilemedi. Tekrar deneyin.",
+        "forbidden": "Bu rol sorun bildiremez.",
+        "reasons": {
+          "DAMAGED": "HASARLI",
+          "MISSING": "EKSİK",
+          "WRONG_ITEM": "YANLIŞ ÜRÜN",
+          "NO_LABEL": "ETİKET YOK",
+          "LOCATION": "RAF SORUNU",
+          "OTHER": "DİĞER"
+        }
+      }
     }
   },
   "audit": {

@@ -1,0 +1,307 @@
+#!/usr/bin/env node
+// I-18 (docs/design/DESIGN-PARITY.md §3): Claude Design kaynağındaki <style> bloğunu ve tema paletini uygulamaya ÜRETEREK aktarır.
+// Elle yeniden yazma yoktur: kurallar kaynak sırasıyla korunur, yalnızca şu mekanik dönüşümler yapılır:
+//   1. Her seçici `.dz` kabına kapsanır (`.wrap` → `.dz .wrap`, `body` → `body:has(.dz)`).
+//   2. `.m-mobile/.m-tablet/.m-desktop` önekli seçiciler kaynaktaki detect() eşiklerinin medya sorgusuna taşınır.
+//   3. Renk sabitleri (#hex, rgba()) `var(--color-dz-…)` belirtecine çevrilir; belirteç tanımları globals.css işaretli bloğuna yazılır
+//      (theme-contrast.test.ts: renk sabiti yalnız globals.css `--color-*` satırlarında).
+//   4. Yazı tipi aileleri next/font değişkenlerine çevrilir (`'Bricolage Grotesque'` → `var(--font-bricolage)`).
+//   5. Yalnız tasarım aracına ait önizleme kuralları (`.prev*`, `.fr-*`) atlanır (DESIGN-PARITY §5).
+// Kullanım: node scripts/design/port.mjs [--check]   (--check: yazmaz, depodakiyle fark varsa çıkış 1)
+import { readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+export const SOURCES = [{ name: "bakis", file: "docs/design/source/Bakis.dc.html", sha256: "f38a508b237a99683972698d34fdc639467864b4763f66d48e1c77d357bff457" }];
+
+// Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.
+export const MEDIA = {
+  mobile: "(max-width: 699.98px)",
+  tablet: "(min-width: 700px) and (max-width: 1099.98px), (min-width: 700px) and (pointer: coarse)",
+  desktop: "(min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (pointer: none)",
+};
+const FONTS = { "'Bricolage Grotesque'": "var(--font-bricolage)", "'Instrument Sans'": "var(--font-instrument)", "'IBM Plex Mono'": "var(--font-plex-mono)" };
+const SKIP = [/^\.prev/, /^\.fr-/];
+
+/** Onaltılık/rgba değerini yalnız harfli belirteç adına çevirir (globals muafiyeti `--color-[a-z-]+`). */
+const LETTERS = "abcdefghijklmnop";
+const enc = (s) => s.toLowerCase().replace(/[0-9a-f]/g, (ch) => LETTERS[parseInt(ch, 16)]);
+export function colorToken(raw) {
+  const v = raw.trim();
+  const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(v);
+  if (hex) {
+    const h = (hex[1].length === 3 ? [...hex[1]].map((c) => c + c).join("") : hex[1]).toLowerCase();
+    return { name: `dz-x-${enc(h)}`, value: `#${h}` };
+  }
+  const rgba = /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(0?\.\d+|1|0)\s*\)$/.exec(v);
+  if (rgba) {
+    const h = [rgba[1], rgba[2], rgba[3]].map((n) => Number(n).toString(16).padStart(2, "0")).join("");
+    const a = String(rgba[4]).replace(/^0?\./, "");
+    return { name: `dz-a-${enc(h)}-${enc(a)}`, value: `rgba(${rgba[1]}, ${rgba[2]}, ${rgba[3]}, ${rgba[4]})` };
+  }
+  throw new Error(`port: tanınmayan renk ${raw}`);
+}
+const COLOR_RE = /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])|rgba\([^)]*\)/g;
+
+function extract(html, open, close, from = 0) {
+  const a = html.indexOf(open, from);
+  const b = html.indexOf(close, a + open.length);
+  if (a < 0 || b < 0) throw new Error(`port: ${open} bulunamadı`);
+  return { text: html.slice(a + open.length, b), end: b };
+}
+
+/** Üst düzey CSS öğeleri: { kind: "rule"|"at", head, body }. Yorumlar atılır. */
+export function parseCss(css) {
+  const src = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const out = [];
+  let i = 0;
+  while (i < src.length) {
+    while (i < src.length && /\s/.test(src[i])) i++;
+    if (i >= src.length) break;
+    const brace = src.indexOf("{", i);
+    if (brace < 0) throw new Error("port: kapanmamış kural");
+    const head = src.slice(i, brace).trim();
+    let depth = 1;
+    let j = brace + 1;
+    while (depth > 0 && j < src.length) {
+      if (src[j] === "{") depth++;
+      else if (src[j] === "}") depth--;
+      j++;
+    }
+    out.push({ kind: head.startsWith("@") ? "at" : "rule", head, body: src.slice(brace + 1, j - 1).trim() });
+    i = j;
+  }
+  return out;
+}
+
+function splitSelectors(head) {
+  const parts = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of head) {
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (ch === "," && depth === 0) {
+      parts.push(cur.trim());
+      cur = "";
+    } else cur += ch;
+  }
+  if (cur.trim()) parts.push(cur.trim());
+  return parts;
+}
+
+/** Tek seçiciyi kapsar; mod öneki varsa { mode, sel } döner. */
+export function scopeSelector(sel) {
+  let mode = null;
+  let s = sel;
+  const m = /^\.m-(mobile|tablet|desktop)(?=[\s.:]|$)\s*/.exec(s);
+  if (m) {
+    mode = m[1];
+    s = s.slice(m[0].length);
+    if (s === "") throw new Error(`port: yalnız mod seçicisi ${sel}`);
+  }
+  if (SKIP.some((re) => re.test(s))) return null;
+  if (s === "body") return { mode, sel: "body:has(.dz)" };
+  return { mode, sel: `.dz ${s}` };
+}
+
+function convertValues(body, tokens) {
+  let b = body;
+  for (const [from, to] of Object.entries(FONTS)) b = b.split(from).join(to);
+  return b.replace(COLOR_RE, (raw) => {
+    const t = colorToken(raw);
+    tokens.set(t.name, t.value);
+    return `var(--color-${t.name})`;
+  });
+}
+
+const fmtDecls = (body) =>
+  body
+    .split(/;(?![^(]*\))/)
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .map((d) => `  ${d};`)
+    .join("\n");
+
+/** Kaynak CSS → { css, tokens }. */
+export function portCss(css) {
+  const tokens = new Map();
+  const blocks = [];
+  const items = parseCss(css);
+  // Kare adları genel ad alanındadır (Tailwind `pulse` vb.); çakışmasın diye `dz-` öneki alır, yalnız animation bildirimlerinde.
+  const frames = items.filter((x) => x.head.startsWith("@keyframes")).map((x) => x.head.split(/\s+/)[1]);
+  const anim = (body) =>
+    body.replace(/(animation(?:-name)?\s*:)([^;]*)/g, (_m, p, v) => p + v.replace(new RegExp(`(?<![\\w-])(${frames.join("|")})(?![\\w-])`, "g"), "dz-$1"));
+  const conv = (body) => anim(convertValues(body, tokens));
+  for (const item of items) {
+    if (item.kind === "at") {
+      if (item.head.startsWith("@keyframes")) {
+        blocks.push(`@keyframes dz-${item.head.split(/\s+/)[1]} {\n${conv(item.body).replace(/\s*\n\s*/g, " ")}\n}`);
+      } else if (item.head.startsWith("@media")) {
+        const inner = parseCss(item.body)
+          .map((r) => {
+            const sels = splitSelectors(r.head).map(scopeSelector).filter(Boolean);
+            if (sels.some((x) => x.mode)) throw new Error("port: @media içinde mod seçicisi");
+            return `  ${sels.map((x) => x.sel).join(", ")} { ${conv(r.body)} }`;
+          })
+          .join("\n");
+        blocks.push(`${item.head} {\n${inner}\n}`);
+      } else throw new Error(`port: desteklenmeyen ${item.head}`);
+      continue;
+    }
+    const scoped = splitSelectors(item.head).map(scopeSelector).filter(Boolean);
+    if (scoped.length === 0) continue;
+    const decls = fmtDecls(conv(item.body));
+    // Kaynak sırası korunur: aynı moddaki ardışık seçiciler tek bloğa, modsuzlar düz kurala.
+    let group = [];
+    let groupMode;
+    const flush = () => {
+      if (group.length === 0) return;
+      const rule = `${group.join(",\n")} {\n${decls}\n}`;
+      blocks.push(groupMode ? `@media ${MEDIA[groupMode]} {\n${rule.replace(/^/gm, "  ")}\n}` : rule);
+      group = [];
+    };
+    for (const x of scoped) {
+      if (group.length > 0 && x.mode !== groupMode) flush();
+      groupMode = x.mode;
+      group.push(x.sel);
+    }
+    flush();
+  }
+  return { css: blocks.join("\n"), tokens };
+}
+
+/** Kaynak betiğindeki tema paletini okur (renderVals: `c`, `PAL`, `A`, `TXT`, başparmak çubuğu). */
+export function readPalette(html) {
+  const js = extract(html, "data-dc-script", "</script>").text;
+  const obj = (src) => JSON.parse(src.replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_][\w]*)\s*:/g, '$1"$2":'));
+  const cm = /var c = dk \? (\{[^}]*\})\s*:\s*(\{[^}]*\});/.exec(js);
+  const pm = /var PAL = (\{.*?\});/.exec(js);
+  const am = /var A = \{ kalan: dk \? '(#\w+)' : '(#\w+)', biten: GA, sorun: dk \? '(#\w+)' : '(#\w+)' \};/.exec(js);
+  const gm = /var GS = dk \? '(#\w+)' : '(#\w+)', GA = dk \? '(#\w+)' : '(#\w+)', OUTS = dk \? '(#\w+)' : '(#\w+)', TXT = dk \? '(#\w+)' : '(#\w+)';/.exec(js);
+  const tl = /tb\.left = \{[^}]*bg: dk \? '(#\w+)' : '(#\w+)'/.exec(js);
+  const tr = /tb\.right = \{[^}]*bg: dk \? '(#\w+)' : '(#\w+)'/.exec(js);
+  const pd = /if \(dk\) \{ tb\.prim\.bg = '(#\w+)'; tb\.prim\.fg = '(#\w+)'; \}/.exec(js);
+  const pl = /prim: \{ l: '', d: D\.scan, bg: '(#\w+)', fg: '(#\w+)'/.exec(js);
+  const st = /track: dk \? '(rgba\([^)]*\))' : '(rgba\([^)]*\))', d: se\.d/.exec(js);
+  if (!cm || !pm || !am || !gm || !tl || !tr || !pd || !pl || !st) throw new Error("port: tema paleti kaynakta bulunamadı (kaynak değişti mi?)");
+  const dark = obj(cm[1]);
+  const light = obj(cm[2]);
+  const PAL = obj(pm[1]);
+  const theme = (dk) => {
+    const c = dk ? dark : light;
+    const t = { ...c, kalan: dk ? am[1] : am[2], biten: dk ? gm[3] : gm[4], sorun: dk ? am[3] : am[4], gs: dk ? gm[1] : gm[2], outs: dk ? gm[5] : gm[6], txt: dk ? gm[7] : gm[8] };
+    t["tin-bg"] = dk ? tl[1] : tl[2];
+    t["tout-bg"] = dk ? tr[1] : tr[2];
+    t["prim-bg"] = dk ? pd[1] : pl[1];
+    t["prim-fg"] = dk ? pd[2] : pl[2];
+    t["sec-track"] = dk ? st[1] : st[2];
+    for (const [k, q] of Object.entries(PAL)) {
+      // Kaynak K(): açıkta { s: q0, t: q1, ink: q2, a: q0 }, koyuda { s: q3, t: q4, ink: q5, a: q5 }
+      t[`${k}-s`] = dk ? q[3] : q[0];
+      t[`${k}-t`] = dk ? q[4] : q[1];
+      t[`${k}-ink`] = dk ? q[5] : q[2];
+      t[`${k}-a`] = dk ? q[5] : q[0];
+    }
+    return t;
+  };
+  return { light: theme(false), dark: theme(true) };
+}
+
+const BEGIN = (n) => `/* design:${n}:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */`;
+const END = (n) => `/* design:${n}:end */`;
+
+export function build(name, html) {
+  const style = extract(extract(html, "<helmet>", "</helmet>").text, "<style>", "</style>").text;
+  const { css, tokens } = portCss(style);
+  // İşaretlemedeki satır içi renkler (fill, stroke, style) da belirteç olur; TSX bunlara `dz("17804F")` ile başvurur.
+  const markup = extract(html, "</helmet>", "</x-dc>").text;
+  for (const raw of markup.match(COLOR_RE) ?? []) {
+    const t = colorToken(raw);
+    tokens.set(t.name, t.value);
+  }
+  const pal = readPalette(html);
+  const keys = Object.keys(pal.light);
+  const line = (k, v) => `  --color-dz-${k}: ${v.toLowerCase()};`;
+  if (keys.some((k) => !/^[a-z-]+$/.test(k))) throw new Error("port: palet anahtarı harf dışı");
+  const tokenBlock = [
+    BEGIN(name),
+    ".dz {",
+    ...[...tokens.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => line(k.replace(/^dz-/, ""), v)),
+    ...keys.map((k) => line(k, pal.light[k])),
+    "}",
+    ".dz.dz-dark {",
+    ...keys.map((k) => line(k, pal.dark[k])),
+    "}",
+    END(name),
+  ].join("\n");
+  const hexKeys = [...tokens.entries()].map(([k, v]) => [k.startsWith("dz-x-") ? v.slice(1).toUpperCase() : v.replace(/^rgba\((.*)\)$/, "$1").replace(/\s+/g, ""), k]);
+  const ts = [
+    `// ${name}-tokens.ts — scripts/design/port.mjs ile ÜRETİLDİ; elle düzenlemeyin (I-18). Kaynaktaki onaltılık renk → belirteç.`,
+    `const T: Readonly<Record<string, string>> = {`,
+    ...hexKeys.sort(([a], [b]) => a.localeCompare(b)).map(([h, k]) => `  "${h}": "var(--color-${k})",`),
+    `};`,
+    `/** Kaynaktaki onaltılık rengin (\`#\` olmadan, büyük harf) belirteci; kaynakta olmayan renk hata verir. */`,
+    `export function dz(hex: string): string {`,
+    `  const v = T[hex];`,
+    `  if (v === undefined) throw new Error(\`dz: kaynakta olmayan renk \${hex}\`);`,
+    `  return v;`,
+    `}`,
+    `/** Tema paleti (açık/koyu \`.dz.dz-dark\` ile değişir): kaynaktaki c.*, bölüm K(), A, TXT, başparmak çubuğu. */`,
+    `export const C = {`,
+    ...keys.map((k) => `  ${/^[a-z]+$/.test(k) ? k : JSON.stringify(k)}: "var(--color-dz-${k})",`),
+    `} as const;`,
+    ``,
+  ].join("\n");
+  const header = `/* ${name}.css — docs/design/source dosyasından scripts/design/port.mjs ile ÜRETİLDİ. Elle düzenlemeyin (I-18, DESIGN-PARITY §3). */\n`;
+  return { css: `${header}${css}\n`, tokenBlock, ts };
+}
+
+export function spliceGlobals(globals, name, block) {
+  const a = globals.indexOf(BEGIN(name));
+  const b = globals.indexOf(END(name));
+  if (a < 0 || b < 0) return `${globals.trimEnd()}\n\n${block}\n`;
+  return `${globals.slice(0, a)}${block}${globals.slice(b + END(name).length)}`;
+}
+
+async function main() {
+  const check = process.argv.includes("--check");
+  const { createHash } = await import("node:crypto");
+  const gPath = path.join(root, "apps/web/app/globals.css");
+  let globals = readFileSync(gPath, "utf8");
+  let bad = false;
+  for (const s of SOURCES) {
+    const html = readFileSync(path.join(root, s.file), "utf8");
+    const sum = createHash("sha256").update(html).digest("hex");
+    if (sum !== s.sha256) throw new Error(`port: ${s.file} sha256 ${sum} ≠ kayıtlı ${s.sha256} (SOURCE.md ve SOURCES birlikte güncellenir)`);
+    const out = build(s.name, html);
+    const cssPath = path.join(root, `apps/web/app/design/${s.name}.css`);
+    const tsPath = path.join(root, `apps/web/app/design/${s.name}-tokens.ts`);
+    const next = spliceGlobals(globals, s.name, out.tokenBlock);
+    if (check) {
+      const readOr = (f) => {
+        try {
+          return readFileSync(f, "utf8");
+        } catch {
+          return "";
+        }
+      };
+      const cur = readOr(cssPath);
+      const curTs = readOr(tsPath);
+      if (cur !== out.css || next !== globals || curTs !== out.ts) {
+        console.error(`FAIL design:${s.name} üretilmiş dosya kaynakla aynı değil — node scripts/design/port.mjs`);
+        bad = true;
+      }
+    } else {
+      writeFileSync(cssPath, out.css);
+      writeFileSync(tsPath, out.ts);
+      globals = next;
+    }
+  }
+  if (!check) writeFileSync(gPath, globals);
+  process.exit(bad ? 1 : 0);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

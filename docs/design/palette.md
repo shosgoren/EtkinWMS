@@ -272,14 +272,12 @@ Not: eski `border` (#c9d6d2) girdi kenarı olarak 1.50:1 ile 1.4.11'i geçmiyord
 
 Tasarım sistemi web sayfaları ajan ortamından açılamadı (egress engeli): bu sayfaların bağlantıları **erişimle doğrulanmadı**, yalnız başvuru içindir. Hex değerlerinin kaynağı yukarıdaki npm paketlerinin belirteç dosyalarıdır (2026-10-06, `npm pack`). Araştırma bağlantıları (güven, borsa renkleri, renk körlüğü, WCAG) web aramasıyla bulundu.
 
-## 10. Görevlerim ana ekranı paleti (T-988)
+## 10. Görevlerim ve tasarım kaynaklı ekranlar (I-18)
 
-Kullanıcı kararı (15.10.2026): Akış ana ekranı onaylanan Görevlerim tasarımıyla (Claude Design "Bakış") birebir aynıdır. Bu ekranın renkleri `@theme` belirteçlerine
-eklenmez (bu dosyadaki §2/§3 tabloları ve `theme-contrast.test.ts` değişmez); `globals.css` içinde yalnız `.gv` kabında `--color-gv-*` tanım satırlarıdır.
-Kokpit ve iç ekranlar §2/§3 paletini kullanmaya devam eder.
+Kullanıcı kararı (15.10.2026): tasarım kaynağından gelen ekranlar birebir uygulanır (`docs/INVARIANTS.md` I-18, `docs/design/DESIGN-PARITY.md`).
+Bu ekranların renkleri elle seçilmez ve bu dosyada tablo olarak tutulmaz. Kaynak `docs/design/source/Bakis.dc.html` dosyasıdır; `scripts/design/port.mjs`
+renkleri (açık ve koyu tema, bölüm paletleri, sabitler) `globals.css` içindeki `/* design:bakis */` bloğuna `--color-dz-*` belirteçleri olarak üretir.
+§2/§3 tabloları ve `theme-contrast.test.ts` değişmez. Kokpit ve henüz aktarılmamış iç ekranlar §2/§3 paletini kullanır.
 
-- Zemin `#f4f2ee`, yazı `#1e2f3e`, kart `#ffffff`, iz `#e6e2da`, lacivert `#172e42`; giriş yeşili `#2f7d5b` (açık `#e3f1e9`), çıkış turuncusu `#b5552b` (açık `#f8eadf`), sorun `#b83a2e`, menü sarısı `#f4b400` / `#1a1300`.
-- Bölüm üçlüleri (dolu ikon zemini · açık kart zemini · kart yazısı): Giriş `#2f7d5b · #e3f1e9 · #1d5a40`; Çıkış `#24787a · #dff0ef · #16585a`; Transfer `#6253b5 · #ece9f8 · #45398c`;
-  Üretim `#b0652e · #f8eadf · #844818`; Sayım `#2f67a3 · #e2ecf6 · #1f4c7c`.
-- Yazı tipleri: başlık/sayı Bricolage Grotesque, gövde Instrument Sans, etiket/sayaç IBM Plex Mono (SIL OFL 1.1; `apps/web/app/fonts/`, `next/font/local`, dış istek yok).
-- Durum renk dışında da taşınır: her bölümde ikon + başlık + sayı etiketi; kilitli döşeme `locked-*` belirteçleri ve kilit ikonu.
+Yazı tipleri: başlık/sayı Bricolage Grotesque, gövde Instrument Sans (400–600 değişken + 700), etiket/sayaç IBM Plex Mono (500/600). Hepsi SIL OFL 1.1
+lisanslıdır, `apps/web/app/fonts/` altındadır ve `next/font/local` ile yüklenir; dış istek yoktur.

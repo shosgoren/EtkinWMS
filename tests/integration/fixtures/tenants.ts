@@ -359,6 +359,17 @@ export async function seedWorld(
   await c.query("INSERT INTO public.stock_alerts (tenant_id, kind, warehouse_id, item_id, observed_quantity, threshold) VALUES ($1, 'MIN_MAX', $2, $3, 1, 2)", [
     tenantId, warehouseId, itemNoneId,
   ]);
+  // T-989: iş önceliği + KAPANMIŞ sorun bildirimi (AC-04 keşfi her tenant tablosunda satır ister). Bildirim kapalı tohumlanır: açık bildirim
+  // Görevlerim SORUN sayısını değiştirir; testler kendi açık bildirimini açar.
+  await c.query(
+    "INSERT INTO public.work_priorities (tenant_id, subject_kind, subject_id, urgent, updated_by) VALUES ($1, 'WAREHOUSE_TASK', $2, false, $3)",
+    [tenantId, seedTaskId, ownerMembershipId],
+  );
+  await c.query(
+    `INSERT INTO public.problem_reports (tenant_id, warehouse_id, subject_kind, subject_id, reason, reported_by, status, resolved_by, resolved_at)
+     VALUES ($1, $2, 'WAREHOUSE_TASK', $3, 'OTHER', $4, 'RESOLVED', $4, now())`,
+    [tenantId, warehouseId, seedTaskId, ownerMembershipId],
+  );
   // T-251: kod geçmişi satırı (AC-04 db-isolation her tenant tablosunda fikstür satırı arar).
   await c.query(
     `INSERT INTO public.code_history (tenant_id, entity_type, entity_id, old_code, new_code, changed_by)
@@ -469,7 +480,7 @@ export async function cleanupDocuments(c: pg.Client, tenantIds: string[]): Promi
         WHERE tenant_id = ANY($1::uuid[]) AND count_session_id IS NOT NULL`,
       [tenantIds],
     );
-    for (const t of ["stock_alerts", "item_stock_policies", "warehouse_task_progress", "warehouse_tasks", "count_session_lines", "count_sessions", "customer_return_lines", "customer_returns", "sales_order_lines", "sales_orders", "inbound_receipt_lines", "inbound_receipts", "idempotency_records", "number_sequences", "document_status_history", "document_lines", "documents"]) {
+    for (const t of ["problem_reports", "work_priorities", "stock_alerts", "item_stock_policies", "warehouse_task_progress", "warehouse_tasks", "count_session_lines", "count_sessions", "customer_return_lines", "customer_returns", "sales_order_lines", "sales_orders", "inbound_receipt_lines", "inbound_receipts", "idempotency_records", "number_sequences", "document_status_history", "document_lines", "documents"]) {
       await c.query(`DELETE FROM public.${t} WHERE tenant_id = ANY($1::uuid[])`, [tenantIds]);
     }
     await c.query("COMMIT");

@@ -6,6 +6,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
+import { appMenuReachable, openAppMenu } from "./support/app-menu.ts";
 
 const OUT = path.resolve(import.meta.dirname, "../../.artifacts/t-246b");
 const SIZES = [
@@ -31,9 +32,8 @@ async function tokenColor(page: Page, token: string): Promise<string> {
 
 async function selectView(page: Page, label: string): Promise<void> {
   // T-254: telefon genişliğinde görünüm anahtarı menüdedir; önce menü açılır, aynı düğme kullanılır (beklenen davranış aynı).
-  const menuButton = page.getByTestId("app-bar-menu");
-  const inMenu = await menuButton.isVisible();
-  if (inMenu) await menuButton.click();
+  const inMenu = await appMenuReachable(page);
+  if (inMenu) await openAppMenu(page);
   const button = page.getByRole("button", { name: label, exact: true });
   await button.click();
   // T-988: Akış ana ekranında üst çubuk gizlenir (menü düğmesi Görevlerim başlığındadır); düğme DOM'da kalır, görünürlük şartı aranmaz.
@@ -44,14 +44,14 @@ async function selectView(page: Page, label: string): Promise<void> {
   }
 }
 
-async function expectFocusRing(page: Page, locator: ReturnType<Page["locator"]>, where: string): Promise<void> {
+async function expectFocusRing(page: Page, locator: ReturnType<Page["locator"]>, where: string, expected?: string): Promise<void> {
   await page.keyboard.press("Tab"); // klavye etkileşimi: :focus-visible tetiklenir
   await locator.focus();
   const style = await page.evaluate<{ style: string; color: string }>(
     "(() => { const s = getComputedStyle(document.activeElement); return { style: s.outlineStyle, color: s.outlineColor }; })()",
   );
   expect(style.style, `${where}: outline-style`).toBe("solid");
-  expect(style.color, `${where}: outline-color = --color-focus`).toBe(await tokenColor(page, "focus"));
+  expect(style.color, `${where}: outline-color = --color-focus`).toBe(expected ?? (await tokenColor(page, "focus")));
 }
 
 for (const size of SIZES) {
@@ -93,9 +93,9 @@ for (const size of SIZES) {
         await expect(tasks).toBeVisible();
         if (view.key === "flow") await expect(tasks.locator("[data-operation]")).toHaveCount(4);
 
-        // Kart ikonları Lucide (svg.lucide), dekoratif; üst bar logosu `accent` zeminli.
-        const icons = tasks.locator("svg.lucide");
-        expect(await icons.count(), "kart ikonları (svg.lucide)").toBeGreaterThanOrEqual(view.key === "flow" ? 4 : 9);
+        // Kart ikonları dekoratif. Kokpit: Lucide (svg.lucide). Akış (I-18): tasarım kaynağının kendi SVG yolları (svg.ico).
+        const icons = tasks.locator(view.key === "flow" ? "svg.ico" : "svg.lucide");
+        expect(await icons.count(), "kart ikonları").toBeGreaterThanOrEqual(view.key === "flow" ? 5 : 9);
         await expect(icons.first()).toHaveAttribute("aria-hidden", "true");
         // T-902 marka kabı ink rengindedir; telefon uygulama çubuğu görünüm accent rengini korur.
         await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
@@ -103,8 +103,9 @@ for (const size of SIZES) {
         if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
         // T-988: Akış ana ekranı Görevlerim başlığını kullanır (ayrı uygulama çubuğu yok); Kokpit telefon çubuğu ink logoyu korur.
         if (size.width < 768 && view.key === "cockpit") await expect(page.getByTestId("app-bar").locator("span.bg-ink")).toHaveCSS("background-color", await tokenColor(page, "ink"));
-        if (view.key === "flow") await expect(page.getByTestId("app-bar-menu")).toBeVisible();
-        await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`);
+        if (view.key === "flow") await expect(page.getByTestId("home-actions")).toBeVisible();
+        // I-18: Görevlerim odak halkası tasarım kaynağındaki gibi 4 px sarı (#F4C542); diğer ekranlar --color-focus.
+        await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`, view.key === "flow" ? "rgb(244, 197, 66)" : undefined);
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);
         await page.screenshot({ path: path.join(OUT, `${view.key}-${size.width}-ana-ekran.png`), fullPage: true });
       }

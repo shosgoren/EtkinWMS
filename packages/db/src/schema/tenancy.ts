@@ -5,7 +5,10 @@
 // - `admin_reset_grants` platform (RLS'siz) tablosudur; `wms_app` yalnızca INSERT yapabilir.
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { boolean, index, integer, jsonb, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, customType, index, integer, jsonb, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
+/** `time` (saat:dakika); sapma testi information_schema `time without time zone` ile karşılaştırır. */
+export const timeOfDay = customType<{ data: string }>({ dataType: () => "time without time zone" });
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -83,6 +86,9 @@ export const tenantSettings = pgTable("tenant_settings", {
   receivingQcEnabled: boolean("receiving_qc_enabled").notNull().default(true),
   // T-302 (A-136): terk edilmiş sayım süresi (saat, 1-168); wms_app yalnızca bu sütunu ek olarak UPDATE eder.
   countAbandonHours: smallint("count_abandon_hours").notNull().default(8),
+  // T-989 (I-18): çalışma vardiyası (Görevlerim "VARDİYA 08:00–17:00"); wms_app yalnızca bu iki sütunu ek olarak UPDATE eder.
+  shiftStart: timeOfDay("shift_start").notNull().default("08:00"),
+  shiftEnd: timeOfDay("shift_end").notNull().default("17:00"),
 });
 
 export const adminResetGrants = pgTable(

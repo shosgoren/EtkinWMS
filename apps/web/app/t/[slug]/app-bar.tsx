@@ -34,12 +34,15 @@ export interface AppBarProps {
   readonly view: "flow" | "cockpit";
   /** Kök düzendeki `setView` ile aynı çerez sözleşmesi (`view`); sunucu eylemi olarak geçirilir. */
   readonly setViewAction: (formData: FormData) => Promise<void>;
+  /** Yönetim sayfaları (yetkiye göre süzülmüş); Akış ana ekranında başka bağlantı yoktur. */
+  readonly links?: readonly { readonly href: string; readonly label: string }[];
+  readonly linksLabel?: string;
 }
 
 const TOUCH = "min-h-12 min-w-12";
 const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
-export function AppBar({ slug, tenantName, userName, memberships, view, setViewAction }: AppBarProps) {
+export function AppBar({ slug, tenantName, userName, memberships, view, setViewAction, links = [], linksLabel }: AppBarProps) {
   const t = useTranslations("shell");
   const tb = useTranslations("tenantBar");
   const ref = useRef<HTMLDialogElement>(null);
@@ -130,6 +133,21 @@ export function AppBar({ slug, tenantName, userName, memberships, view, setViewA
               ))}
             </ul>
           </section>
+
+          {links.length > 0 ? (
+            <nav aria-label={linksLabel} className="flex flex-col gap-1">
+              <h3 className="text-sm font-bold text-ink-muted">{linksLabel}</h3>
+              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                {links.map((l) => (
+                  <li key={l.href}>
+                    <Link href={l.href} className={`${TOUCH} inline-flex items-center rounded-full bg-accent-soft px-4 text-base font-bold text-accent-ink ${FOCUS}`}>
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
 
           <form action={setViewAction} aria-label={t("viewSwitch.label")}>
             <div className="flex rounded-full bg-accent-soft p-1" role="group">

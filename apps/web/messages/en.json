@@ -666,7 +666,35 @@
       "scanStart": "SCAN · START",
       "online": "Online",
       "offline": "Offline: records cannot be sent",
-      "menu": "Menu"
+      "menu": "Menu",
+      "shift": "SHIFT {start}–{end} · {where}",
+      "manualSuffix": " · {n} MAN.",
+      "problem": "ISSUES",
+      "urgent": "URGENT",
+      "dayComplete": "DAY COMPLETE",
+      "theme": "Change theme",
+      "actions": "Quick actions",
+      "reportProblem": "Report a problem",
+      "guide": "How to use",
+      "problemSheet": {
+        "title": "Report a problem",
+        "hint": "GOES TO THE MANAGER · SHOWN ON THE ISSUES CARD",
+        "reason": "WHAT HAPPENED?",
+        "note": "NOTE · OPTIONAL",
+        "send": "REPORT",
+        "cancel": "Cancel",
+        "sent": "REPORTED",
+        "failed": "Could not send. Try again.",
+        "forbidden": "This role cannot report problems.",
+        "reasons": {
+          "DAMAGED": "DAMAGED",
+          "MISSING": "MISSING",
+          "WRONG_ITEM": "WRONG ITEM",
+          "NO_LABEL": "NO LABEL",
+          "LOCATION": "SHELF ISSUE",
+          "OTHER": "OTHER"
+        }
+      }
     }
   },
   "audit": {

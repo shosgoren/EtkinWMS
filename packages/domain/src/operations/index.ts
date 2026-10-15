@@ -136,6 +136,20 @@ export {
 } from "./count-queries.ts";
 // Akış ana ekranı "Görevlerim" özeti (T-988): bölüm başına açık/bugün biten iş ve kalem. Salt okuma. `getWorkSummaryAt` (zaman enjeksiyonu) testler içindir ve burada YOKTUR.
 export { WORK_SECTIONS, getWorkSummary, type WorkSection, type WorkSectionKey, type WorkSummary } from "./work-summary.ts";
+export {
+  PROBLEM_REASONS,
+  WORK_SUBJECT_KINDS,
+  listOpenProblems,
+  reportProblem,
+  resolveProblem,
+  setWorkPriority,
+  updateWorkShift,
+  type OpenProblemView,
+  type ProblemReason,
+  type ReportProblemInput,
+  type SetWorkPriorityInput,
+  type WorkSubjectKind,
+} from "./work-signals.ts";
 // Kısmi sevk ve müşteri iadesi (T-308). `planShipment`/`isShippableReservation` (shipping.ts) ve iade saf yardımcıları iç/test amaçlıdır: burada YOKTUR.
 export { shipOrder, type ShipLineInput, type ShipOrderInput } from "./shipping.ts";
 export { createCustomerReturn, type CreateCustomerReturnInput } from "./returns.ts";
