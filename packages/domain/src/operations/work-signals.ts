@@ -13,6 +13,7 @@ import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx, type Membership, type TenantAccessParams } from "../identity/access.ts";
 import { hasPermission } from "../identity/permissions.ts";
 import { assertWarehouseVisible, pgUuidArray, resolveWarehouseScope } from "../warehouse/scope.ts";
+import { TASK_KIND_PERMISSION } from "./tasks.ts";
 
 export const WORK_SUBJECT_KINDS = ["INBOUND_RECEIPT", "SALES_ORDER", "DOCUMENT", "WAREHOUSE_TASK"] as const;
 export type WorkSubjectKind = (typeof WORK_SUBJECT_KINDS)[number];
@@ -44,6 +45,12 @@ function hhmmOf(v: unknown): string {
   return v;
 }
 
+/** Çağıranın tür iznine göre görebildiği görev türleri (TASK_KIND_PERMISSION) — Postgres text[] dizgesi. */
+function taskKindsFor(m: Membership): string {
+  const kinds = (Object.keys(TASK_KIND_PERMISSION) as Array<keyof typeof TASK_KIND_PERMISSION>).filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k]));
+  return `{${kinds.join(",")}}`;
+}
+
 /** Konunun deposunu döner (kapsam denetimi dahil); satış siparişinin deposu yoktur (null). Yoksa/görünmezse NOT_FOUND. */
 async function subjectWarehouse(tx: AccessTx, m: Membership, kind: WorkSubjectKind, id: string): Promise<string | null> {
   let rows: Array<{ warehouse_id: string | null }>;
@@ -54,7 +61,13 @@ async function subjectWarehouse(tx: AccessTx, m: Membership, kind: WorkSubjectKi
   } else if (kind === "DOCUMENT") {
     rows = await tx.execute<{ warehouse_id: string | null }>(sql`SELECT warehouse_id FROM public.documents WHERE tenant_id = ${m.tenantId}::uuid AND id = ${id}::uuid`);
   } else {
-    rows = await tx.execute<{ warehouse_id: string | null }>(sql`SELECT warehouse_id FROM public.warehouse_tasks WHERE tenant_id = ${m.tenantId}::uuid AND id = ${id}::uuid`);
+    // Görev: yalnız çağıranın görebildiği görev (listMyTasks kuralı): tür izni + (OPEN ya da bana atanmış ya da yönetici).
+    const kinds = taskKindsFor(m);
+    const manager = hasPermission(m.roles, "document.approve");
+    rows = await tx.execute<{ warehouse_id: string | null }>(sql`
+      SELECT warehouse_id FROM public.warehouse_tasks
+       WHERE tenant_id = ${m.tenantId}::uuid AND id = ${id}::uuid AND kind = ANY(${kinds}::text[])
+         AND (status = 'OPEN' OR (status = 'ASSIGNED' AND (${manager}::boolean OR assigned_membership_id = ${m.membershipId}::uuid)))`);
   }
   const r = rows[0];
   if (r === undefined) throw new AppError("NOT_FOUND");
@@ -83,10 +96,10 @@ export async function setWorkPriority(params: Params, input: SetWorkPriorityInpu
            WHERE tenant_id = ${m.tenantId}::uuid AND subject_kind = ${kind} AND subject_id = ${id}::uuid FOR UPDATE`,
     );
     await tx.execute(sql`
-      INSERT INTO public.work_priorities (tenant_id, subject_kind, subject_id, urgent, due_time, updated_by, updated_at)
-      VALUES (${m.tenantId}::uuid, ${kind}, ${id}::uuid, ${input.urgent}, ${due}::time, ${m.membershipId}::uuid, now())
+      INSERT INTO public.work_priorities (tenant_id, subject_kind, subject_id, urgent, due_time, updated_by)
+      VALUES (${m.tenantId}::uuid, ${kind}, ${id}::uuid, ${input.urgent}, ${due}::time, ${m.membershipId}::uuid)
       ON CONFLICT (tenant_id, subject_kind, subject_id)
-      DO UPDATE SET urgent = EXCLUDED.urgent, due_time = EXCLUDED.due_time, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at`);
+      DO UPDATE SET urgent = EXCLUDED.urgent, due_time = EXCLUDED.due_time, updated_by = EXCLUDED.updated_by`);
     const before = prev[0];
     await appendAudit(tx, {
       action: "work_priority.set",
@@ -163,7 +176,7 @@ export async function resolveProblem(params: Params, input: { readonly problemId
     if (r.warehouse_id !== null) await assertWarehouseVisible(tx, m, [r.warehouse_id]);
     if (r.status !== "OPEN") throw new AppError("VERSION_CONFLICT");
     await tx.execute(sql`
-      UPDATE public.problem_reports SET status = 'RESOLVED', resolved_by = ${m.membershipId}::uuid, resolved_at = now(), resolution_note = ${note}
+      UPDATE public.problem_reports SET status = 'RESOLVED', resolved_by = ${m.membershipId}::uuid, resolution_note = ${note}
        WHERE tenant_id = ${m.tenantId}::uuid AND id = ${id}::uuid`);
     await appendAudit(tx, {
       action: "problem.resolved",
@@ -209,16 +222,21 @@ export interface OpenProblemView {
   readonly mine: boolean;
 }
 
-/** Açık sorunlar (stock.view; depo kapsamı). Not yalnız yöneticiye (document.approve) ve bildirene görünür. En yeni önce, en çok 100. */
+/** Açık sorunlar (stock.view; depo kapsamı; görev konulu bildirim yalnız görevi görebilen role — tür izni, başkasına atanmışsa yönetici). Not yalnız yöneticiye (document.approve) ve bildirene görünür. En yeni önce, en çok 100. */
 export async function listOpenProblems(params: Params): Promise<readonly OpenProblemView[]> {
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const allowed = await resolveWarehouseScope(tx, m);
     const scope = allowed === null ? null : pgUuidArray(allowed);
     const manager = hasPermission(m.roles, "document.approve");
+    const kinds = taskKindsFor(m);
     const rows = await tx.execute<{ id: string; reason: ProblemReason; note: string | null; subject_kind: WorkSubjectKind | null; subject_id: string | null; warehouse_id: string | null; reported_at: Date | string; reported_by: string }>(
-      sql`SELECT id, reason, note, subject_kind, subject_id, warehouse_id, reported_at, reported_by FROM public.problem_reports
+      sql`SELECT id, reason, note, subject_kind, subject_id, warehouse_id, reported_at, reported_by FROM public.problem_reports problem_reports
            WHERE tenant_id = ${m.tenantId}::uuid AND status = 'OPEN'
              AND (${scope}::uuid[] IS NULL OR warehouse_id IS NULL OR warehouse_id = ANY(${scope}::uuid[]))
+             AND (subject_kind IS DISTINCT FROM 'WAREHOUSE_TASK' OR EXISTS (
+                   SELECT 1 FROM public.warehouse_tasks t
+                    WHERE t.tenant_id = problem_reports.tenant_id AND t.id = problem_reports.subject_id AND t.kind = ANY(${kinds}::text[])
+                      AND (t.status IN ('OPEN', 'DONE', 'CANCELLED') OR ${manager}::boolean OR t.assigned_membership_id = ${m.membershipId}::uuid)))
            ORDER BY reported_at DESC, id LIMIT 100`,
     );
     return rows.map((r) => {

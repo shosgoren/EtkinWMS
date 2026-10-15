@@ -53,7 +53,8 @@ CREATE TABLE public.problem_reports (
 );
 CREATE INDEX problem_reports_open_idx ON public.problem_reports (tenant_id, subject_kind, subject_id) WHERE status = 'OPEN';
 
--- Kapanmış bildirim değişmez; açık bildirimde yalnız kapatma alanları değişir.
+-- Kapanmış bildirim değişmez; açık bildirimde yalnız OPEN → RESOLVED geçişi yapılır. Zaman damgaları sunucudadır (uygulama rolü yazamaz):
+-- resolved_at geçişte now(), work_priorities.updated_at her yazımda now().
 CREATE FUNCTION public.problem_reports_guard() RETURNS trigger
   LANGUAGE plpgsql
   SET search_path = pg_catalog, pg_temp
@@ -67,12 +68,32 @@ BEGIN
      OR NEW.note IS DISTINCT FROM OLD.note OR NEW.reported_by IS DISTINCT FROM OLD.reported_by OR NEW.reported_at IS DISTINCT FROM OLD.reported_at THEN
     RAISE EXCEPTION 'problem_reports: bildirim alanları değiştirilemez' USING ERRCODE = '23514';
   END IF;
+  IF NEW.status = 'OPEN' THEN
+    IF NEW.resolved_by IS DISTINCT FROM OLD.resolved_by OR NEW.resolved_at IS DISTINCT FROM OLD.resolved_at OR NEW.resolution_note IS DISTINCT FROM OLD.resolution_note THEN
+      RAISE EXCEPTION 'problem_reports: açık bildirimde kapatma alanları yazılmaz' USING ERRCODE = '23514';
+    END IF;
+  ELSE
+    NEW.resolved_at := now();
+  END IF;
   RETURN NEW;
 END
 $fn$;
 REVOKE ALL ON FUNCTION public.problem_reports_guard() FROM PUBLIC;
 CREATE TRIGGER problem_reports_guard BEFORE UPDATE ON public.problem_reports
   FOR EACH ROW EXECUTE FUNCTION public.problem_reports_guard();
+
+CREATE FUNCTION public.work_priorities_touch() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = pg_catalog, pg_temp
+AS $fn$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END
+$fn$;
+REVOKE ALL ON FUNCTION public.work_priorities_touch() FROM PUBLIC;
+CREATE TRIGGER work_priorities_touch BEFORE INSERT OR UPDATE ON public.work_priorities
+  FOR EACH ROW EXECUTE FUNCTION public.work_priorities_touch();
 
 DO $rls$
 DECLARE
@@ -92,9 +113,9 @@ END
 $rls$;
 
 GRANT SELECT ON public.work_priorities TO wms_app;
-GRANT INSERT (tenant_id, subject_kind, subject_id, urgent, due_time, updated_by, updated_at) ON public.work_priorities TO wms_app;
-GRANT UPDATE (urgent, due_time, updated_by, updated_at) ON public.work_priorities TO wms_app;
+GRANT INSERT (tenant_id, subject_kind, subject_id, urgent, due_time, updated_by) ON public.work_priorities TO wms_app;
+GRANT UPDATE (urgent, due_time, updated_by) ON public.work_priorities TO wms_app;
 
 GRANT SELECT ON public.problem_reports TO wms_app;
 GRANT INSERT (tenant_id, id, warehouse_id, subject_kind, subject_id, reason, note, reported_by) ON public.problem_reports TO wms_app;
-GRANT UPDATE (status, resolved_by, resolved_at, resolution_note) ON public.problem_reports TO wms_app;
+GRANT UPDATE (status, resolved_by, resolution_note) ON public.problem_reports TO wms_app;

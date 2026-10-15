@@ -18,6 +18,7 @@ import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
 import { hasPermission } from "../identity/permissions.ts";
 import { pgUuidArray, resolveWarehouseScope } from "../warehouse/scope.ts";
+import { TASK_KIND_PERMISSION } from "./tasks.ts";
 
 export type WorkSectionKey = "giris" | "cikis" | "transfer" | "uretim" | "sayim";
 export const WORK_SECTIONS: readonly WorkSectionKey[] = ["giris", "cikis", "transfer", "uretim", "sayim"];
@@ -70,6 +71,8 @@ export async function getWorkSummaryAt(params: Params, now: Date): Promise<WorkS
     const manager = hasPermission(m.roles, "document.approve");
     // Sayım görevleri yalnız sayım iznine (TASK_KIND_PERMISSION.COUNT = document.create) görünür; diğer rollere sayım bölümü 0'dır (listMyTasks ile aynı kural).
     const canCount = hasPermission(m.roles, "document.create");
+    // Görev konulu sorun bildirimi yalnız görevi görebilen role sayılır (work-signals listOpenProblems ile aynı kural).
+    const kinds = `{${(Object.keys(TASK_KIND_PERMISSION) as Array<keyof typeof TASK_KIND_PERMISSION>).filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k])).join(",")}}`;
     const nowIso = now.toISOString();
     const rows = await tx.execute<{
       local_hour: string;
@@ -90,7 +93,10 @@ export async function getWorkSummaryAt(params: Params, now: Date): Promise<WorkS
       prob AS (SELECT p.id, p.subject_kind, p.subject_id FROM public.problem_reports p
                 WHERE p.tenant_id = ${m.tenantId}::uuid AND p.status = 'OPEN'
                   AND (${scope}::uuid[] IS NULL OR p.warehouse_id IS NULL OR p.warehouse_id = ANY(${scope}::uuid[]))
-                  AND (p.subject_kind IS DISTINCT FROM 'WAREHOUSE_TASK' OR ${canCount}::boolean)),
+                  AND (p.subject_kind IS DISTINCT FROM 'WAREHOUSE_TASK' OR EXISTS (
+                        SELECT 1 FROM public.warehouse_tasks t
+                         WHERE t.tenant_id = p.tenant_id AND t.id = p.subject_id AND t.kind = ANY(${kinds}::text[])
+                           AND (t.status IN ('OPEN', 'DONE', 'CANCELLED') OR ${manager}::boolean OR t.assigned_membership_id = ${m.membershipId}::uuid)))),
       urg AS (SELECT w.subject_kind, w.subject_id FROM public.work_priorities w WHERE w.tenant_id = ${m.tenantId}::uuid AND w.urgent),
       rcp_all AS (SELECT r.id FROM public.inbound_receipts r
                WHERE r.tenant_id = ${m.tenantId}::uuid AND r.status = 'OPEN'

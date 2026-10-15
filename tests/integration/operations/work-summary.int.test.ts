@@ -288,5 +288,56 @@ describe("T-988 Görevlerim özeti", () => {
       await postDocument(ownerP(), { documentId: d.documentId as string, expectedVersion: v.version });
       expect((await getWorkSummaryAt(ownerP(), new Date())).manualToday).toBe(before + 1);
     });
+
+    it("görev konulu bildirim: yalnız görevi görebilen rol bildirir ve görür; sayım izni olmayana SORUN'da sayılmaz", async () => {
+      const R = await mkLoc();
+      const sid = (await startCount(ownerP(), { warehouseId: A.warehouseId, locationIds: [R] })).sessionId;
+      const { taskIds } = await createCountTasks(ownerP(), { sessionId: sid });
+      const task = taskIds[0] as string;
+      const picker = await mkRole("picker-count", "PICKER");
+      await expect(reportProblem(callP(picker), { reason: "OTHER", subjectKind: "WAREHOUSE_TASK", subjectId: task })).rejects.toMatchObject({ code: "NOT_FOUND" });
+      const ro = await mkRole("ro-count", "READ_ONLY");
+      const roBefore = await getWorkSummaryAt(callP(ro), new Date());
+      const { problemId } = await reportProblem(callP(COUNTER.userId), { reason: "LOCATION", subjectKind: "WAREHOUSE_TASK", subjectId: task });
+      expect((await listOpenProblems(ownerP())).some((p) => p.id === problemId)).toBe(true);
+      expect((await listOpenProblems(callP(ro))).some((p) => p.id === problemId)).toBe(false);
+      const roAfter = await getWorkSummaryAt(callP(ro), new Date());
+      expect(roAfter.generalProblems).toBe(roBefore.generalProblems);
+      expect(section(roAfter, "sayim")?.problems).toBe(0);
+      expect(section(await getWorkSummaryAt(ownerP(), new Date()), "sayim")?.problems).toBeGreaterThanOrEqual(1);
+      await resolveProblem(ownerP(), { problemId });
+    });
+
+    it("DB koruması (wms_app): kapanmış bildirim değişmez; açık bildirimde alan/kapatma alanı yazılmaz; zaman damgası sunucuda", async () => {
+      const { problemId } = await reportProblem(callP(COUNTER.userId), { reason: "MISSING" });
+      const appPg = new pg.Client({ connectionString: env.databaseUrl });
+      appPg.on("error", () => undefined);
+      await appPg.connect();
+      const tryApp = async (text: string, params: unknown[]): Promise<string | null> => {
+        await appPg.query("BEGIN");
+        try {
+          await appPg.query("SELECT set_config('app.current_tenant_id', $1, true)", [A.tenantId]);
+          await appPg.query(text, params);
+          await appPg.query("ROLLBACK");
+          return null;
+        } catch (e) {
+          await appPg.query("ROLLBACK");
+          return (e as { code?: string }).code ?? "ERR";
+        }
+      };
+      try {
+        expect(await tryApp("UPDATE public.problem_reports SET note = 'x' WHERE tenant_id = $1 AND id = $2", [A.tenantId, problemId])).not.toBeNull();
+        expect(await tryApp("UPDATE public.problem_reports SET resolution_note = 'x' WHERE tenant_id = $1 AND id = $2", [A.tenantId, problemId])).toBe("23514");
+        expect(await tryApp("UPDATE public.problem_reports SET resolved_at = now() WHERE tenant_id = $1 AND id = $2", [A.tenantId, problemId])).toBe("42501");
+        await resolveProblem(ownerP(), { problemId });
+        const r = await q<{ ok: boolean }>("SELECT resolved_at BETWEEN now() - interval '1 minute' AND now() + interval '1 minute' AS ok FROM public.problem_reports WHERE id = $1", [problemId]);
+        expect(r[0]?.ok).toBe(true);
+        expect(await tryApp("UPDATE public.problem_reports SET status = 'OPEN', resolved_by = NULL WHERE tenant_id = $1 AND id = $2", [A.tenantId, problemId])).toBe("23514");
+        expect(await tryApp("DELETE FROM public.problem_reports WHERE tenant_id = $1 AND id = $2", [A.tenantId, problemId])).toBe("42501");
+        expect(await tryApp("UPDATE public.work_priorities SET updated_at = now() WHERE tenant_id = $1", [A.tenantId])).toBe("42501");
+      } finally {
+        await appPg.end();
+      }
+    });
   });
 });

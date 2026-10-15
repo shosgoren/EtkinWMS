@@ -23,6 +23,8 @@ BEGIN
 END
 $guard$;
 
+DROP TRIGGER work_priorities_touch ON public.work_priorities;
+DROP FUNCTION public.work_priorities_touch();
 DROP TRIGGER problem_reports_guard ON public.problem_reports;
 DROP FUNCTION public.problem_reports_guard();
 DROP TABLE public.problem_reports;
