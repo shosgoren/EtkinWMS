@@ -8,9 +8,10 @@ import { listMyActionsToday } from "@wms/domain/audit/today";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
-import { TASK_LIST_LIMIT_MAX, listInboundReceipts, listMyTasks } from "@wms/domain/operations";
+import { TASK_LIST_LIMIT_MAX, getWorkSummary, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
 import { TaskMenu, type MyTasksSummary, type NowSummary } from "./task-menu.tsx";
 import { EasyOperations } from "./easy-operations.tsx";
+import { THEME_COOKIE } from "../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,35 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   const summary = await getMembershipSummary({ db: getAppDb(), principal });
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) return null;
+  const jar = await cookies();
+  const Menu = jar.get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
+  const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
+  const allowed = {
+    usersManage: hasPermission(current.roles, "users.manage"),
+    settingsManage: hasPermission(current.roles, "settings.manage"),
+    auditView: hasPermission(current.roles, "audit.view"),
+    stockView: hasPermission(current.roles, "stock.view"),
+    stockPost: hasPermission(current.roles, "stock.post"),
+  };
+  if (Menu === EasyOperations) {
+    // T-988: Görevlerim ana ekranı (tasarım birebir). Özet okunamazsa ekran düşmez: bölümler "veri yok" der, sayı uydurulmaz.
+    let work: WorkSummary | null = null;
+    try {
+      work = await getWorkSummary({ db: getAppDb(), principal, tenantSlug: slug });
+    } catch (e) {
+      if (e instanceof AppError) {
+        if (e.code === "NOT_FOUND") notFound();
+        if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(`/t/${slug}`)}`);
+        if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(`/t/${slug}`)}`);
+      }
+      console.error(JSON.stringify({ level: "error", msg: "home work summary failed", error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
+    }
+    return (
+      <main className="flex w-full min-w-0 flex-col">
+        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={jar.get(THEME_COOKIE)?.value === "koyu"} canReport={hasPermission(current.roles, "stock.post") || hasPermission(current.roles, "document.create")} />
+      </main>
+    );
+  }
   const t = await getTranslations();
   const format = await getFormatter();
   // `now` ASLA verilmez (sunucu saati); yalnızca çağıranın kendi satırları, en çok 5. Bölüm düzeyinde yakalanır: bu liste
@@ -116,8 +146,6 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       now = { kind: "error", message: `${ts(key)} ${ts(`${key}Action`)}`, code: ts("code", { code }) };
     }
   }
-  const Menu = (await cookies()).get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
-  const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6 px-4 py-6 phone:min-h-0 phone:flex-1 phone:gap-2 phone:px-3 phone:pb-2 phone:pt-1">
@@ -132,13 +160,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
         myTasks={myTasks}
         now={now}
         todayDone={today === null ? undefined : { count: today.items.length, more: today.nextCursor !== null }}
-        allowed={{
-          usersManage: hasPermission(current.roles, "users.manage"),
-          settingsManage: hasPermission(current.roles, "settings.manage"),
-          auditView: hasPermission(current.roles, "audit.view"),
-          stockView: hasPermission(current.roles, "stock.view"),
-          stockPost: hasPermission(current.roles, "stock.post"),
-        }}
+        allowed={allowed}
       />
       {today === null ? (
         <section aria-labelledby="today-title" className="flex flex-col gap-2 rounded-card bg-surface p-4 shadow-card">

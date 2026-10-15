@@ -435,3 +435,41 @@ export const productionInputs = pgTable("production_inputs", {
  previousDocumentLineId:uuid("previous_document_line_id").notNull(),sequenceNo:integer("sequence_no").notNull(),
  currentBalanceVersion:plannedVersion("current_balance_version").notNull(),baseQuantity:numeric("base_quantity").notNull(),createdAt:timestamptz("created_at").notNull().defaultNow(),
 },t=>[primaryKey({columns:[t.tenantId,t.productionBatchId,t.handlingUnitId]})]);
+
+// T-989 (I-18, `0037_work_signals`): iş önceliği (ACİL + hedef saat) ve sahadan sorun bildirimi. Konu çok biçimlidir; varlığı komutta doğrulanır.
+// CHECK/FK/RLS/tetikleyici/yetki migration'dadır (şema yalnızca tip kaynağıdır).
+const timeOfDayOps = customType<{ data: string }>({ dataType: () => "time without time zone" });
+export type WorkSubjectKind = "INBOUND_RECEIPT" | "SALES_ORDER" | "DOCUMENT" | "WAREHOUSE_TASK";
+export type ProblemReason = "DAMAGED" | "MISSING" | "WRONG_ITEM" | "NO_LABEL" | "LOCATION" | "OTHER";
+export const workPriorities = pgTable(
+  "work_priorities",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    subjectKind: text("subject_kind").$type<WorkSubjectKind>().notNull(),
+    subjectId: uuid("subject_id").notNull(),
+    urgent: boolean("urgent").notNull().default(false),
+    dueTime: timeOfDayOps("due_time"),
+    updatedBy: uuid("updated_by").notNull(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tenantId, t.subjectKind, t.subjectId] })],
+);
+export const problemReports = pgTable(
+  "problem_reports",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    id: uuid("id").notNull().default(sql`gen_random_uuid()`),
+    warehouseId: uuid("warehouse_id"),
+    subjectKind: text("subject_kind").$type<WorkSubjectKind>(),
+    subjectId: uuid("subject_id"),
+    reason: text("reason").$type<ProblemReason>().notNull(),
+    note: text("note"),
+    status: text("status").$type<"OPEN" | "RESOLVED">().notNull().default("OPEN"),
+    reportedBy: uuid("reported_by").notNull(),
+    reportedAt: timestamptz("reported_at").notNull().defaultNow(),
+    resolvedBy: uuid("resolved_by"),
+    resolvedAt: timestamptz("resolved_at"),
+    resolutionNote: text("resolution_note"),
+  },
+  (t) => [primaryKey({ columns: [t.tenantId, t.id] }), index("problem_reports_open_idx").on(t.tenantId, t.subjectKind, t.subjectId)],
+);

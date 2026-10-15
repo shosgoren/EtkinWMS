@@ -9,6 +9,7 @@ import tr from "../../apps/web/messages/tr.json" with { type: "json" };
 import type { Browser, Locator, Page } from "@playwright/test";
 import { enterDemoReal, enterDemoShared } from "./support/demo-session.ts";
 import { T270_SIZES, chevronInfo, expectBand, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
+import { openAppMenu } from "./support/app-menu.ts";
 
 const OUT = process.env.T254_OUT ?? path.resolve(import.meta.dirname, "../../.artifacts/t-254");
 const PHONES = [
@@ -117,7 +118,7 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await expect(nav.getByRole("button", { name: "Menü" })).toBeVisible();
 
   // Menü: Akış/Kokpit, çalışma alanı, "Giriş yapan", Yardım ve Çıkış erişilebilir; hedefler >= 48 px.
-  await page.getByTestId("app-bar-menu").click();
+  await openAppMenu(page);
   const menu = page.getByRole("dialog", { name: "Menü" });
   await expect(menu).toBeVisible();
   await expect(menu.getByText("Giriş yapan: Demo Yönetici")).toBeVisible();
@@ -154,7 +155,7 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await page.goto("/t/demo");
 
   // Sunucu/ağ hatası: çıkış başarısızsa neden + sonraki eylem menüde görünür; sonra gerçek çıkış.
-  await page.getByTestId("app-bar-menu").click();
+  await openAppMenu(page);
   await page.route("**/sign-out", (route) => route.fulfill({ status: 500, contentType: "application/json", body: "{}" }));
   await menu.getByRole("button", { name: "Çıkış yap" }).click();
   await expect(menu.getByRole("alert")).toContainText("Çıkış yapılamadı. Bağlantını kontrol edip yeniden dene.");
@@ -178,7 +179,7 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   // Gerçek çıkış (telefon menüsünden).
   await page.setViewportSize({ width: 390, height: 664 });
   await page.goto("/t/demo");
-  await page.getByTestId("app-bar-menu").click();
+  await openAppMenu(page);
   await menu.getByRole("button", { name: "Çıkış yap" }).click();
   await expect(page).toHaveURL(/\/login$/);
 
@@ -471,7 +472,7 @@ test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş al
       await itemsScreenChecks(page, { slug: "demo", empty: false });
     }
 
-    await page.getByTestId("app-bar-menu").click();
+    await openAppMenu(page);
     await page.getByRole("button", { name: "Çıkış yap" }).click();
     await expect(page).toHaveURL(/\/login$/);
   }
@@ -568,7 +569,7 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
     await page.setViewportSize({ width, height });
     await page.goto("/t/demo");
     await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
-    const easy = page.getByTestId("easy-operations");
+    const easy = page.locator("#main").getByTestId("easy-operations");
     await expect(easy).toBeVisible();
     await expect(easy.locator("[data-operation]")).toHaveCount(4);
     await expect(page.locator(".task-grid")).toHaveCount(0);
@@ -584,18 +585,22 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
     }
     const widths = await page.evaluate<{ scroll: number; client: number }>("({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth})");
     expect(widths.scroll).toBeLessThanOrEqual(widths.client);
-    await expect(easy.getByRole("link", { name: "Ekip", exact: true })).toBeHidden();
-    await easy.getByText("Diğer işler", { exact: true }).click();
-    await expect(easy.getByRole("link", { name: "Ekip", exact: true })).toHaveAttribute("href", "/t/demo/members");
-    await easy.getByText("Diğer işler", { exact: true }).click();
+    // I-18: Görevlerim tasarımında sayfa bağlantısı yoktur; yönetim sayfaları uygulama menüsündedir (⚠ → Menü).
+    await openAppMenu(page);
+    const menu = page.getByRole("dialog", { name: "Menü" });
+    await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveAttribute("href", "/t/demo/members");
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
   }
-  await page.getByTestId("easy-operations").locator('[data-operation="transfer"]').click();
+  await page.locator("#main").getByTestId("easy-operations").locator('[data-operation="transfer"]').click();
   await expect(page).toHaveURL(/\/t\/demo\/stock\/documents\?new=TRANSFER$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(tr.stockDocuments.transfer);
   await page.goto("/t/demo");
-  await page.getByRole("button", { name: "Genel bakış", exact: true }).click();
+  // T-988: Akış ana ekranında ayrı üst bar yoktur; görünüm anahtarı Görevlerim başlığındaki menüdedir.
+  await openAppMenu(page);
+  await page.getByRole("dialog", { name: "Menü" }).getByRole("button", { name: "Genel bakış", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
-  await expect(page.getByTestId("easy-operations")).toHaveCount(0);
+  await expect(page.locator("#main").getByTestId("easy-operations")).toHaveCount(0);
   await expect(page.getByRole("list", { name: "İşler" })).toBeVisible();
 });
 
@@ -606,14 +611,21 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
   await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
   await page.goto("/t/demo");
-  const easy = page.getByTestId("easy-operations");
+  const easy = page.locator("#main").getByTestId("easy-operations");
   await expect(easy.locator('[data-operation][data-state="locked"]')).toHaveCount(4);
   await expect(easy.locator('a[data-operation]')).toHaveCount(0);
   for (const card of await easy.locator('[data-operation]').all()) {
     await expect(card).toHaveAttribute("aria-disabled", "true");
-    await expect(card).toContainText(tr.home.lockedReason);
   }
-  await expect(easy.getByRole("link", { name: "Stok", exact: true })).toHaveAttribute("href", "/t/demo/stock");
-  await expect(easy.getByRole("link", { name: "Ekip", exact: true })).toHaveCount(0);
-  await expect(easy.getByRole("link", { name: "Ayarlar", exact: true })).toHaveCount(0);
+  // Plan dışı (manuel giriş/çıkış) yazma işidir: salt okuyana çizilmez.
+  await expect(easy.locator("[data-manual]")).toHaveCount(0);
+  // I-18 öncelik: yetkisiz eylem çizilmez — salt okuyan "Sorun bildir" görmez; menü erişilebilir.
+  await page.locator("#main").getByTestId("home-actions").click();
+  await expect(page.locator("#main").getByTestId("app-bar-menu")).toBeVisible();
+  await expect(page.locator("#main").getByTestId("report-problem")).toHaveCount(0);
+  await page.locator("#main").getByTestId("app-bar-menu").click();
+  const menu = page.getByRole("dialog", { name: "Menü" });
+  await expect(menu.getByRole("link", { name: "Stok", exact: true })).toHaveAttribute("href", "/t/demo/stock");
+  await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveCount(0);
+  await expect(menu.getByRole("link", { name: "Ayarlar", exact: true })).toHaveCount(0);
 });

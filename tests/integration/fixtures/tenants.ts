@@ -469,7 +469,7 @@ export async function cleanupDocuments(c: pg.Client, tenantIds: string[]): Promi
         WHERE tenant_id = ANY($1::uuid[]) AND count_session_id IS NOT NULL`,
       [tenantIds],
     );
-    for (const t of ["stock_alerts", "item_stock_policies", "warehouse_task_progress", "warehouse_tasks", "count_session_lines", "count_sessions", "customer_return_lines", "customer_returns", "sales_order_lines", "sales_orders", "inbound_receipt_lines", "inbound_receipts", "idempotency_records", "number_sequences", "document_status_history", "document_lines", "documents"]) {
+    for (const t of ["problem_reports", "work_priorities", "stock_alerts", "item_stock_policies", "warehouse_task_progress", "warehouse_tasks", "count_session_lines", "count_sessions", "customer_return_lines", "customer_returns", "sales_order_lines", "sales_orders", "inbound_receipt_lines", "inbound_receipts", "idempotency_records", "number_sequences", "document_status_history", "document_lines", "documents"]) {
       await c.query(`DELETE FROM public.${t} WHERE tenant_id = ANY($1::uuid[])`, [tenantIds]);
     }
     await c.query("COMMIT");

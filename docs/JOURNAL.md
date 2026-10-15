@@ -209,4 +209,10 @@
 - 2026-10-15 T-984 canlı; T-985 Aşama 2 saha adım bandı.
 - 2026-10-15 T-985 birleşti; T-986 Aşama 3 transfer/manuel görünüm.
 - 2026-10-15 T-986 canlı; T-987 sayım görevleri ve okumaları (Aşama 4a).
+<<<<<<< HEAD
 - 2026-10-15 T-989: I-18 tasarım birebir kuralı ayrı korunan PR olarak açıldı (güvenlik incelemesi MAJOR-1: korunan değişiklik özellik PR'ından ayrılır).
+=======
+- 2026-10-15 T-987 birleşti; T-988 Görevlerim ana ekranı birebir + gerçek özet.
+- 2026-10-15 T-988 güvenlik incelemesi: 2 MINOR düzeltildi (sayım yetki kapısı, negatif/yalıtım testleri), yeniden inceleme 0/0/0.
+- 2026-10-15 Kullanıcı: "tasarım birebir, standart kural" → I-18 + üreteç + Görevlerim piksel farkı 0; ACİL/vardiya/sorun altyapısı (0037).
+>>>>>>> origin/main

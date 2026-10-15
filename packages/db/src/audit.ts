@@ -85,6 +85,11 @@ export const AUDIT_ACTIONS = [
   "count.approved",
   "count.posted",
   "count.cancelled",
+  // T-989 (Görevlerim ACİL / sorun / vardiya): iş önceliği, sorun bildirimi ve kapatma, vardiya ayarı.
+  "work_priority.set",
+  "problem.reported",
+  "problem.resolved",
+  "settings.shift_updated",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
