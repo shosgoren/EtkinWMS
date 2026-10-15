@@ -11,6 +11,7 @@ import { runTenantQuery, type TenantAccessParams } from "@wms/domain/identity/ac
 import { AppError, type AppErrorBody } from "@wms/shared/errors";
 import { createJsonLogger, requestIdFrom } from "@wms/shared/log";
 import { RateLimitedError, clientIp, createProductionLimiter, type RateLimiter } from "./rate-limit.ts";
+import { appSurface, type Surface } from "./surface.ts";
 
 /** Sarmalayıcının ihtiyaç duyduğu principal şekli (`@wms/auth` `Principal` atanabilir). */
 export interface GuardPrincipal {
@@ -50,6 +51,11 @@ export interface GuardDeps {
   readonly socketIp?: (headers: Headers) => string | undefined;
   /** Varsayılan: `isProductionEnv()` (Fly-Client-IP/soket yoksa üretimde fail-closed). */
   readonly production?: boolean;
+  /**
+   * ADR-027 §1 (T-401 inceleme M-1): bu eylem/uç bu kipte (müşteri `app` / panel `panel`) çalışabilir mi. `false` → `NOT_FOUND`
+   * (yüzey dışı çağrı başka hiçbir denetime ulaşmaz). Tanımsızsa denetim yok (birim testleri).
+   */
+  readonly surfaceAllowed?: () => boolean;
 }
 
 export interface ActionOptions<S extends z.ZodType> {
@@ -122,6 +128,7 @@ export function createActionGuard(deps: GuardDeps) {
     return async (raw) => {
       let requestId = deps.newRequestId();
       try {
+        if (deps.surfaceAllowed !== undefined && !deps.surfaceAllowed()) throw new AppError("NOT_FOUND");
         const headers = await deps.getHeaders();
         // T-129: `proxy.ts` yalnızca UUID biçimli kimliği iletir; yanıttaki istek kimliği günlük/yanıt başlığıyla aynıdır.
         requestId = requestIdFrom(headers) ?? requestId;
@@ -181,6 +188,7 @@ export function createRouteGuard(deps: GuardDeps) {
     return async (request) => {
       const requestId = requestIdFrom(request.headers) ?? deps.newRequestId();
       try {
+        if (deps.surfaceAllowed !== undefined && !deps.surfaceAllowed()) throw new AppError("NOT_FOUND");
         const headers = request.headers;
         if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) assertOrigin(deps, headers);
         await limit(deps, "ip", ipOf(deps, headers));
@@ -235,11 +243,13 @@ function productionDeps(getHeaders: GuardDeps["getHeaders"], limiter: RateLimite
   };
 }
 
-export function createProductionGuard(getHeaders: GuardDeps["getHeaders"], limiter: RateLimiter = createProductionLimiter()) {
-  return createActionGuard(productionDeps(getHeaders, limiter));
+/** `surface`: eylemin ait olduğu kip (varsayılan müşteri uygulaması). Panel eylemleri `"panel"` verir; diğer kipte `NOT_FOUND`. */
+export function createProductionGuard(getHeaders: GuardDeps["getHeaders"], limiter: RateLimiter = createProductionLimiter(), surface: Surface = "app") {
+  return createActionGuard({ ...productionDeps(getHeaders, limiter), surfaceAllowed: () => appSurface() === surface });
 }
 
 /** `/api/t/**` route handler'ları için üretim sarmalayıcısı (T-126): `routeGuard` istek başlıklarını kendisi okur. */
 export function createProductionRouteGuard(limiter: RateLimiter = createProductionLimiter()) {
-  return createRouteGuard(productionDeps(() => Promise.resolve(new Headers()), limiter));
+  // `/api/t/**` yalnız müşteri kipindedir (ADR-027 §1); panel kipinde NOT_FOUND.
+  return createRouteGuard({ ...productionDeps(() => Promise.resolve(new Headers()), limiter), surfaceAllowed: () => appSurface() === "app" });
 }

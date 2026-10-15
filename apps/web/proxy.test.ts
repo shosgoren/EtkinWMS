@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildCsp, proxy } from "./proxy.ts";
+import { buildCsp, config, proxy } from "./proxy.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const GIVEN = "3f2b8c1e-9d4a-4e6b-8a57-1c2d3e4f5a6b";
@@ -135,6 +135,13 @@ describe("proxy: ADR-027 kip ayrımı (yonet. panel / wms. müşteri)", () => {
     expect(proxy(req("/login")).status).toBe(200);
     expect(proxy(req("/api/auth/sign-in/email")).status).toBe(200);
     expect(proxy(req("/mfa")).status).toBe(307);
+  });
+
+  it("ön-getirme başlığı kip ayrımını atlatamaz: eşleyici başlık muafiyeti taşımaz, panel kipinde tenant yolu yine 404", () => {
+    expect(JSON.stringify(config.matcher)).not.toContain("missing");
+    process.env.APP_SURFACE = "panel";
+    expect(proxy(req("/t/motive", { ...COOKIE, "next-router-prefetch": "1" })).status).toBe(404);
+    expect(proxy(req("/onboarding", { ...COOKIE, purpose: "prefetch" })).status).toBe(404);
   });
 
   it("müşteri kipi: panel iç yolları 404; müşteri yolları eskisi gibi", () => {

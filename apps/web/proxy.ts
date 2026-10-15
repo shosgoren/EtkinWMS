@@ -119,14 +119,7 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Tüm sayfa/uç noktalar (CSP için); statik varlıklar ve ön-getirme istekleri hariç (Next belgesi deseni).
-  matcher: [
-    {
-      source: "/((?!_next/static|_next/image|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
-  ],
+  // Tüm sayfa/uç noktalar; yalnız derlenmiş statik varlıklar hariç. Ön-getirme istekleri de buradan geçer (T-401 inceleme M-1:
+  // istemcinin koyabildiği `next-router-prefetch`/`purpose` başlığı kip ayrımını atlatamaz).
+  matcher: [{ source: "/((?!_next/static|_next/image|favicon.ico).*)" }],
 };

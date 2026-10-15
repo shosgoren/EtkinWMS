@@ -14,7 +14,7 @@ describe("ADR-027 kip ayrımı", () => {
     for (const p of ["/login", "/mfa", "/reset-password", "/api/auth/sign-in/email", "/api/health/live", "/icon.svg", "/manifest.webmanifest"]) {
       expect(panelRoute(p), p).toEqual({ kind: "shared" });
     }
-    for (const p of ["/t/motive", "/t", "/onboarding", "/invite/x", "/field", "/panel", "/panel/talepler", "/operator/demo-requests", "/api/t/motive/audit/export", "/loginx"]) {
+    for (const p of ["/t/motive", "/t", "/onboarding", "/invite/x", "/field", "/panel", "/panel/talepler", "/operator/demo-requests", "/api/t/motive/audit/export", "/loginx", "/api/health", "/help"]) {
       expect(panelRoute(p), p).toEqual({ kind: "missing" });
     }
   });

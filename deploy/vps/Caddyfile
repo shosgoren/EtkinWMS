@@ -1,14 +1,14 @@
-wms.# ADR-027: Etkin Yönetim paneli — aynı imajın panel kipindeki örneği; ayrı köken, ayrı oturum çerezi.
-yonet.etkinyazilim.com {
+wms.etkinyazilim.com {
     encode zstd gzip
-    reverse_proxy panel:3000 {
+    reverse_proxy web:3000 {
         header_up Fly-Client-IP {http.request.remote.host}
     }
 }
 
-etkinyazilim.com {
+# ADR-027: Etkin Yönetim paneli. Aynı imajın panel kipindeki örneği; ayrı köken, ayrı oturum çerezi.
+yonet.etkinyazilim.com {
     encode zstd gzip
-    reverse_proxy web:3000 {
+    reverse_proxy panel:3000 {
         header_up Fly-Client-IP {http.request.remote.host}
     }
 }

@@ -10,7 +10,7 @@ import { createProductionGuard } from "../../../lib/action-guard.ts";
 import { appSurface } from "../../../lib/surface.ts";
 
 const PATH = "/talepler";
-const guardedAction = createProductionGuard(() => headers());
+const guardedAction = createProductionGuard(() => headers(), undefined, "panel");
 const schema = z.object({ id: z.string().max(64), decision: z.enum(["APPROVED", "REJECTED"]) }).strict();
 
 export async function decideDemoRequestAction(form: FormData): Promise<void> {

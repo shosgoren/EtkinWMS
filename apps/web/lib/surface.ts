@@ -10,7 +10,7 @@ export function appSurface(env: Readonly<Record<string, string | undefined>> = p
 export const PANEL_PAGES: readonly string[] = ["/", "/talepler"];
 
 /** Panel kipinde açık kalan ortak yollar: giriş, iki adımlı doğrulama, parola sıfırlama, kimlik ve sağlık uçları. */
-const PANEL_SHARED = /^\/(?:login|mfa|reset-password)(?:\/|$)|^\/api\/(?:auth|health)(?:\/|$)/;
+const PANEL_SHARED = /^\/(?:login|mfa|reset-password)(?:\/|$)|^\/api\/auth(?:\/|$)|^\/api\/health\/live$/;
 /** Statik dosyalar (simge, manifest, yazı tipi). */
 const STATIC_FILE = /^\/[^/]+\.(?:svg|png|ico|webmanifest|txt|woff2?)$|^\/(?:icon|apple-icon|manifest)(?:\.[a-z]+)?$/;
 
