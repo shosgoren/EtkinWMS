@@ -126,11 +126,43 @@ describe("T-988 Görevlerim özeti", () => {
     expect(t1?.doneLines).toBeGreaterThanOrEqual(1);
   });
 
+  it("kiracı yalıtımı: B'nin açık teslimi/sayımı A'ya yansımaz; B sahibi A slug'ıyla NOT_FOUND alır", async () => {
+    const B = await seedWorld(adm, reg, "B988");
+    const before = await getWorkSummaryAt(ownerP(), new Date());
+    const bItem = uuid();
+    await q("INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, tracking_mode, quantity_scale) VALUES ($1,$2,$3,'T988 B urun',$4,'NONE',0)", [B.tenantId, bItem, `I-${hex(10)}`, B.unitId]);
+    const rid = uuid();
+    await q("INSERT INTO public.inbound_receipts (tenant_id, id, warehouse_id, number, created_by, status) VALUES ($1,$2,$3,$4,$5,'OPEN')", [B.tenantId, rid, B.warehouseId, `R-${hex(8)}`, B.ownerUserId]);
+    await q("INSERT INTO public.inbound_receipt_lines (tenant_id, id, receipt_id, line_no, item_id, unit_id, conversion_factor, expected_quantity, received_quantity) VALUES ($1, gen_random_uuid(), $2, 1, $3, $4, 1, 4, 0)", [B.tenantId, rid, bItem, B.unitId]);
+    const bP: StockDocCallParams = { ...callP(B.ownerUserId), tenantSlug: B.slug };
+    const bSid = (await startCount(bP, { warehouseId: B.warehouseId, locationIds: [B.childLocationId] })).sessionId;
+    await createCountTasks(bP, { sessionId: bSid });
+    const after = await getWorkSummaryAt(ownerP(), new Date());
+    for (const k of ["giris", "sayim"]) expect(section(after, k)?.open).toBe(section(before, k)?.open);
+    expect(section(await getWorkSummaryAt(bP, new Date()), "giris")?.open).toBeGreaterThanOrEqual(1);
+    await expect(getWorkSummaryAt(callP(B.ownerUserId), new Date())).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("sayım sayıları yalnız document.create yetkisiyle: READ_ONLY açık sayım görevi varken 0 görür", async () => {
+    const R = await mkLoc();
+    const sid = (await startCount(ownerP(), { warehouseId: A.warehouseId, locationIds: [R] })).sessionId;
+    await createCountTasks(ownerP(), { sessionId: sid });
+    const ro = await mkUser(adm, reg, "A988 readonly");
+    await mkMembership(adm, A.tenantId, ro, { roles: ["READ_ONLY"] });
+    const s = await getWorkSummaryAt(callP(ro), new Date());
+    expect(section(s, "sayim")?.open).toBe(0);
+    expect(section(s, "sayim")?.doneToday).toBe(0);
+    expect(section(await getWorkSummaryAt(ownerP(), new Date()), "sayim")?.open).toBeGreaterThanOrEqual(1);
+  });
+
   it("depo kapsamı: kapsam dışı depodaki açık teslim sayılmaz; kapsamdaki tek depo adı döner", async () => {
     const WB = uuid();
     await q("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1,$2,$3,'T988 depo B')", [A.tenantId, WB, `W${hex(6)}`]);
     const X = await mkItem();
     await mkReceipt([{ item: X, expected: "1", received: "0" }], WB);
+    const LB = await mkLoc(WB);
+    const sidB = (await startCount(ownerP(), { warehouseId: WB, locationIds: [LB] })).sessionId;
+    await createCountTasks(ownerP(), { sessionId: sidB });
     const u = await mkUser(adm, reg, "A988 scoped");
     const mm = await mkMembership(adm, A.tenantId, u, { roles: ["WAREHOUSE_MANAGER"] });
     await q("INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id) VALUES ($1,$2,$3)", [A.tenantId, mm, A.warehouseId]);
@@ -139,6 +171,8 @@ describe("T-988 Görevlerim özeti", () => {
     try {
       const scoped = await getWorkSummaryAt(callP(u), new Date());
       expect((section(all, "giris")?.open ?? 0) - (section(scoped, "giris")?.open ?? 0)).toBe(1);
+      expect((section(all, "sayim")?.open ?? 0) - (section(scoped, "sayim")?.open ?? 0)).toBe(1); // kapsam dışı depodaki sayım
+      expect(section(scoped, "transfer")?.open ?? 0).toBeLessThanOrEqual(section(all, "transfer")?.open ?? 0);
       const name = (await q<{ name: string }>("SELECT name FROM public.warehouses WHERE id = $1", [A.warehouseId]))[0]?.name;
       expect(scoped.warehouseName).toBe(name);
     } finally {

@@ -6,7 +6,7 @@
 // - cikis:    açık = OPEN satış siparişi; kalem = istenen > sevk+iptal satır. Biten = bugün POSTED STOCK_OUT (kaynak sipariş) farklı sipariş sayısı.
 // - transfer: açık = DRAFT/APPROVED, kaynaksız STOCK_MOVE belgesi; biten = bugün POSTED kaynaksız STOCK_MOVE + depolar arası (TRANSFER bağlantısı) çiftleri.
 // - uretim:   açık iş kavramı yok (0); biten = bugün işlenen üretim bağlantıları (PRODUCTION).
-// - sayim:    açık = görünür COUNT görevleri (yönetici: tüm açık; diğer: OPEN + bana atanan), kalem = o raflardaki sayılmamış satırlar; biten = bugün POSTED oturum.
+// - sayim:    yalnız sayım iznine (document.create); açık = görünür COUNT görevleri (yönetici: tüm açık; diğer: OPEN + bana atanan), kalem = o raflardaki sayılmamış satırlar; biten = bugün POSTED oturum.
 // Depo kapsamı (A-46) depoya bağlı her tabloya uygulanır; satış siparişinin deposu yoktur (sevkiyat listesiyle aynı: tenant geneli sayım).
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
@@ -48,6 +48,8 @@ export async function getWorkSummaryAt(params: Params, now: Date): Promise<WorkS
     const allowed = await resolveWarehouseScope(tx, m);
     const scope = allowed === null ? null : pgUuidArray(allowed);
     const manager = hasPermission(m.roles, "document.approve");
+    // Sayım görevleri yalnız sayım iznine (TASK_KIND_PERMISSION.COUNT = document.create) görünür; diğer rollere sayım bölümü 0'dır (listMyTasks ile aynı kural).
+    const canCount = hasPermission(m.roles, "document.create");
     const nowIso = now.toISOString();
     const rows = await tx.execute<{
       local_hour: string;
@@ -74,11 +76,12 @@ export async function getWorkSummaryAt(params: Params, now: Date): Promise<WorkS
                  JOIN posted p ON p.id = k.target_document_id
                 WHERE k.tenant_id = ${m.tenantId}::uuid),
       ctask AS (SELECT t.source_id, t.location_id FROM public.warehouse_tasks t
-                 WHERE t.tenant_id = ${m.tenantId}::uuid AND t.kind = 'COUNT' AND t.source_kind = 'COUNT_SESSION' AND t.location_id IS NOT NULL
+                 WHERE t.tenant_id = ${m.tenantId}::uuid AND ${canCount}::boolean AND t.kind = 'COUNT' AND t.source_kind = 'COUNT_SESSION' AND t.location_id IS NOT NULL
                    AND (t.status = 'OPEN' OR (t.status = 'ASSIGNED' AND (${manager}::boolean OR t.assigned_membership_id = ${m.membershipId}::uuid)))
                    AND (${scope}::uuid[] IS NULL OR t.warehouse_id = ANY(${scope}::uuid[]))),
       sdone AS (SELECT s.id FROM public.count_sessions s, d
-                 WHERE s.tenant_id = ${m.tenantId}::uuid AND s.status = 'POSTED' AND s.approved_at >= (d.local_start AT TIME ZONE ${tz})
+                 WHERE s.tenant_id = ${m.tenantId}::uuid AND ${canCount}::boolean AND s.status = 'POSTED' AND s.approved_at >= (d.local_start AT TIME ZONE ${tz})
+                   AND s.approved_at < ((d.local_start + interval '1 day') AT TIME ZONE ${tz})
                    AND (${scope}::uuid[] IS NULL OR s.warehouse_id = ANY(${scope}::uuid[])))
       SELECT (SELECT local_hour FROM d)::int::text AS local_hour,
         (SELECT count(*) FROM rcp)::text AS g_open,

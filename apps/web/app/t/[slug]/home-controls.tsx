@@ -26,7 +26,7 @@ export function HomeControls() {
         <span className="gv-netdot" aria-hidden="true" />
       </span>
       <GuideTrigger className="gv-icb gv-guide" iconOnly />
-      <button type="button" className="gv-icb gv-menu" data-testid="app-bar-menu" aria-label={t("menu")} onClick={openAppMenu}>
+      <button type="button" className="gv-icb gv-menu" data-testid="app-bar-menu" aria-haspopup="dialog" aria-label={t("menu")} onClick={openAppMenu}>
         <Menu className="size-6" strokeWidth={2.4} aria-hidden="true" />
       </button>
     </div>

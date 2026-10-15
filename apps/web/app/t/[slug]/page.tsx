@@ -30,6 +30,34 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   const summary = await getMembershipSummary({ db: getAppDb(), principal });
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) return null;
+  const Menu = (await cookies()).get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
+  const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
+  const allowed = {
+    usersManage: hasPermission(current.roles, "users.manage"),
+    settingsManage: hasPermission(current.roles, "settings.manage"),
+    auditView: hasPermission(current.roles, "audit.view"),
+    stockView: hasPermission(current.roles, "stock.view"),
+    stockPost: hasPermission(current.roles, "stock.post"),
+  };
+  if (Menu === EasyOperations) {
+    // T-988: Görevlerim ana ekranı (tasarım birebir). Özet okunamazsa ekran düşmez: bölümler "veri yok" der, sayı uydurulmaz.
+    let work: WorkSummary | null = null;
+    try {
+      work = await getWorkSummary({ db: getAppDb(), principal, tenantSlug: slug });
+    } catch (e) {
+      if (e instanceof AppError) {
+        if (e.code === "NOT_FOUND") notFound();
+        if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(`/t/${slug}`)}`);
+        if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(`/t/${slug}`)}`);
+      }
+      console.error(JSON.stringify({ level: "error", msg: "home work summary failed", error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
+    }
+    return (
+      <main className="gv-main flex w-full min-w-0 flex-col">
+        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} />
+      </main>
+    );
+  }
   const t = await getTranslations();
   const format = await getFormatter();
   // `now` ASLA verilmez (sunucu saati); yalnızca çağıranın kendi satırları, en çok 5. Bölüm düzeyinde yakalanır: bu liste
@@ -115,34 +143,6 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       const key = ["FORBIDDEN", "RATE_LIMITED", "TENANT_SUSPENDED", "TENANT_CLOSING", "VALIDATION_FAILED"].includes(code) ? code.toLowerCase() : "internal";
       now = { kind: "error", message: `${ts(key)} ${ts(`${key}Action`)}`, code: ts("code", { code }) };
     }
-  }
-  const Menu = (await cookies()).get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
-  const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
-  const allowed = {
-    usersManage: hasPermission(current.roles, "users.manage"),
-    settingsManage: hasPermission(current.roles, "settings.manage"),
-    auditView: hasPermission(current.roles, "audit.view"),
-    stockView: hasPermission(current.roles, "stock.view"),
-    stockPost: hasPermission(current.roles, "stock.post"),
-  };
-  if (Menu === EasyOperations) {
-    // T-988: Görevlerim ana ekranı (tasarım birebir). Özet okunamazsa ekran düşmez: bölümler "veri yok" der, sayı uydurulmaz.
-    let work: WorkSummary | null = null;
-    try {
-      work = await getWorkSummary({ db: getAppDb(), principal, tenantSlug: slug });
-    } catch (e) {
-      if (e instanceof AppError) {
-        if (e.code === "NOT_FOUND") notFound();
-        if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(`/t/${slug}`)}`);
-        if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(`/t/${slug}`)}`);
-      }
-      console.error(JSON.stringify({ level: "error", msg: "home work summary failed", error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
-    }
-    return (
-      <main className="gv-main flex w-full min-w-0 flex-col">
-        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} />
-      </main>
-    );
   }
 
   return (
