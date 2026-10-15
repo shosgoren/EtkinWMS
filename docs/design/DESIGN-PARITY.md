@@ -84,3 +84,4 @@ Bu tablo dışındaki her sapma için kullanıcının yazılı onayı gerekir; o
 | Saha etkinleştirme: kod → PIN → tekrar (`v.fact`), ortak cihaz kullanıcı değiştir (`v.sw`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
 | Saha personeli ekle + etkinleştirme kartı (`v.staff`), cihazlar + QR ile ekle (`v.dev`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
 | Operatör demo talepleri (`v.op`) | Giris.dc.html | Onaylandı; T-994 |
+| Yönetim paneli (yonet.etkinyazilim.com): özet, müşteriler, müşteri detayı, paketler, ödemeler, demo talepleri, satış sayfası, işlem kaydı | Yonet.dc.html | Onaylandı 15 Ekim; T-401…T-408. Demo talepleri ekranı Giris `v.op` yerine buradan (ADR-027) |
