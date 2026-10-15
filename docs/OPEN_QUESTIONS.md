@@ -120,6 +120,8 @@ Q-118 | İade için ayrı bir "müşteri iadesi" belgesi (başlık, numara, bird
 Q-119 | İade nedeni serbest metin mi olmalı, sabit bir neden listesi (hasarlı, yanlış ürün, vazgeçti…) mi; iade zorunlu neden istesin mi? | T-308 | açık — A-308-4
 Q-120 | Lot/seri takipli ürün iade edilirken hangi lot/seri geri alınır (orijinal sevkten mi seçilir, okutulur mu)? Bu komut takipli iadeyi kapsamaz | T-308, 06 §İade ve üretim | açık — A-308-7
 Q-126 | Kalite onayında bekleyeni 1 temel mikro (0,000001) aşan kısmi onay isteği bekleyene kırpılıyordu (A-305-11); bu bir kullanıcı kolaylığı ("kalanın tamamı") olarak mı tasarlandı, yoksa yalnız iki ayrı yuvarlamanın (toplam, hasarlı) kaymasını emen teknik pay mıydı? Kolaylık isteniyorsa açık bir "kalanın tamamı" girdisi (lines=null zaten var) mi yeterli? | T-298, T-305, I-09 | açık — A-298-1
+Q-127 | Deneme süresi (3 ay, ADR-026) bitince ne olur: alan salt okunur mu kalır, veri kaç gün saklanır, ücretli plana geçiş nasıl? | ADR-026, T-995 | açık — kullanıcı kararı bekler
+Q-128 | Saha PIN uzunluğu 6 hane (ADR-026 önerisi) mi, saha kolaylığı için 4 hane mi? (Kayıtlı cihaz + 5 deneme kilidi ile 4 hane de savunulabilir) | ADR-026, T-997 | açık — varsayılan 6, kullanıcı kararı bekler
 
 ## Varsayımlar
 A-01 | Neon pooler'ı transaction-mode PgBouncer'dır (kullanıcı kararı kaydı, 2026-10-05) — **teyit edildi 2026-10-05, sürüm hariç** (belge + T-005d koşu 3 çoklama gözlemi, https://github.com/shosgoren/2027-WMS-1/actions/runs/37388724069); PgBouncer sürümü gözlenemedi | Neon pooler türünü/kipini değiştirdiğini duyurana veya yeniden spike aksini gösterene kadar | Q-02
