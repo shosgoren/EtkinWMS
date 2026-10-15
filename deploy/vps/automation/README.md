@@ -42,3 +42,14 @@ Kurulum/test çıktısını aşağıya gerçek zaman/SHA/workflow run URL'si ile
 - Main'den gelen üç sentetik fixture tarama engeli için PR #5 / 72262ee'nin `.gitleaksignore` kaydı byte-identical taşınır; yeni kural/yol muafiyeti yok. Korunan fingerprint değişikliğinin inceleme kaydı da PR #8'e bağlanır.
 - Protected inceleme ve main'e birleştirme: bekliyor.
 - Yeni ürün sürümünün yayını: yapılmadı; ayrı CI/schema/rollback kapıları vardır.
+
+## Canlı ayar güncellemesi (update-config.sh, T-401)
+
+`install.sh` tek seferliktir ve yayınlar `/opt/etkinwms/automation/{compose.yml,Caddyfile}` dosyalarını güncellemez. Yeni servis/birim/alan adı
+(T-994 `demo-leads`, ADR-027 `panel` + `yonet.etkinyazilim.com`) için VPS yöneticisi, ilgili sürüm canlıya çıktıktan sonra:
+
+1. DNS: `A yonet → VPS IP` (Hostinger). Caddy sertifikayı ilk istekte alır.
+2. Depodan üç dosyayı (aynı commit) VPS'te bir klasöre kopyalar: `deploy/vps/automation/compose.yml`, `deploy/vps/Caddyfile`, `deploy/vps/automation/update-config.sh`.
+3. Root olarak `bash update-config.sh <klasör>`: önce `docker compose config` ve `caddy validate` ile doğrular, eski dosyaları zaman damgalı yedekler, kurar, servisleri mevcut sürüm etiketiyle ayağa kaldırır ve Caddy'yi yeniden başlatır.
+
+Bilinen sınır: `release.py` göç öncesi yalnız `web` ve `worker`'ı durdurur; `panel` açık kalır (yedek `pg_dump` tutarlı anlık görüntüdür; panel yazmaları seyrek operatör kararlarıdır). `release.py` de root kurulumludur; değişikliği ayrı adımdır.

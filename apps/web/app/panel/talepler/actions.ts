@@ -1,18 +1,20 @@
 "use server";
-// Operatör demo talebi kararı (T-994, ADR-026 §3). İnce giriş katmanı: Origin + hız sınırı + hata maskeleme `createProductionGuard`'da,
-// iş kuralı `@wms/domain/platform/demo-requests`'te (operatör veritabanında zorlanır, MFA + yakın zamanda doğrulama domain'de).
+// Demo talebi kararı (T-994 → panel, ADR-027 §1). İnce giriş katmanı: Origin + hız sınırı + hata maskeleme `createProductionGuard`'da;
+// panel kipi burada, operatör/MFA/yakın zamanda doğrulama domain'de (operatör veritabanında).
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { decideDemoRequest } from "@wms/domain/platform/demo-requests";
 import { getAppDb } from "@wms/db";
 import { createProductionGuard } from "../../../lib/action-guard.ts";
+import { appSurface } from "../../../lib/surface.ts";
 
-const PATH = "/operator/demo-requests";
-const guardedAction = createProductionGuard(() => headers());
+const PATH = "/talepler";
+const guardedAction = createProductionGuard(() => headers(), undefined, "panel");
 const schema = z.object({ id: z.string().max(64), decision: z.enum(["APPROVED", "REJECTED"]) }).strict();
 
 export async function decideDemoRequestAction(form: FormData): Promise<void> {
+  if (appSurface() !== "panel") notFound();
   const id = form.get("id");
   const decision = form.get("decision");
   const requestHeaders = await headers();

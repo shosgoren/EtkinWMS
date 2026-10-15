@@ -20,8 +20,8 @@ export function useDz(): DzCtx {
   return c;
 }
 
-/** `scope`: tasarım kaynağının CSS kabı (`dz` = Bakış, `dzg` = Giriş ve hesap; scripts/design/port.mjs SOURCES). */
-export function DzRoot({ dark: initial, testId, children, overlays, scope = "dz" }: { dark: boolean; testId?: string; children: ReactNode; overlays?: ReactNode; scope?: "dz" | "dzg" }) {
+/** `scope`: tasarım kaynağının CSS kabı (`dz` = Bakış, `dzg` = Giriş ve hesap, `dzy` = Yönetim paneli; scripts/design/port.mjs SOURCES). */
+export function DzRoot({ dark: initial, testId, children, overlays, scope = "dz" }: { dark: boolean; testId?: string; children: ReactNode; overlays?: ReactNode; scope?: "dz" | "dzg" | "dzy" }) {
   const [dark, setDark] = useState(initial);
   const [overlay, setOverlay] = useState<string | null>(null);
   const toggleTheme = useCallback(() => {

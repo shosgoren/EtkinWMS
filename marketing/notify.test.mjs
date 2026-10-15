@@ -49,8 +49,8 @@ test('e-posta içeriği kaçışlıdır, konu tek satırdır, yanıt adresi tale
   assert.doesNotMatch(body.html, /<b>Kaya<\/b>/);
   assert.match(body.text, /Kayıt no: 11111111-2222-3333-4444-555555555555/);
   // T-994: operatör onay ekranı bağlantısı sabittir (talep içeriğinden türetilmez).
-  assert.match(body.text, /https:\/\/wms\.etkinyazilim\.com\/operator\/demo-requests/);
-  assert.match(body.html, /href="https:\/\/wms\.etkinyazilim\.com\/operator\/demo-requests"/);
+  assert.match(body.text, /https:\/\/yonet\.etkinyazilim\.com\/talepler/);
+  assert.match(body.html, /href="https:\/\/yonet\.etkinyazilim\.com\/talepler"/);
   const spoof = buildLeadEmail({ ...lead, name: 'X\nE-posta: sahte@x.y' }, { apiKey: 'k', to: 'sahip@example.com', from: 'f' });
   assert.equal(spoof.text.split('\n').filter((l) => l.startsWith('E-posta:')).length, 1);
 });

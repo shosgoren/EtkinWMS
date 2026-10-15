@@ -2311,21 +2311,37 @@
     "reloadWarehouses": "Depoları tekrar al",
     "reloadLocations": "Yerleri tekrar al"
   },
-  "operator": {
-    "title": "Demo talepleri",
-    "band": "ETKİN YAZILIM · OPERATÖR",
-    "back": "Geri",
+  "panel": {
+    "brand": "ETKİN YÖNETİM",
+    "host": "YONET.ETKINYAZILIM.COM",
+    "menu": "Yönetim menüsü",
+    "who": "OPERATÖR · 2FA AÇIK",
+    "signOut": "Çıkış",
+    "signOutFailed": "Çıkış yapılamadı, tekrar deneyin.",
     "theme": "Açık / koyu görünüm",
-    "onlyTitle": "Yalnız Etkin Yazılım operatörü",
-    "onlyBody": "Onay, talep sahibine tek kullanımlık aktivasyon bağlantısı gönderir. Alan, müşteri bağlantıyı açınca kurulur.",
-    "pending": "BEKLEYEN",
-    "count": "{n} TALEP",
-    "approve": "ONAYLA",
-    "reject": "REDDET",
-    "approved": "ONAYLANDI · BAĞLANTI GİTTİ",
-    "rejected": "REDDEDİLDİ",
-    "today": "BUGÜN",
-    "yesterday": "DÜN",
-    "error": "İşlem tamamlanamadı ({code}). Sayfayı yenileyip tekrar deneyin."
+    "nav": {
+      "talepler": "Demo talepleri"
+    },
+    "talepler": {
+      "title": "Demo talepleri",
+      "sub": "SATIŞ SAYFASI FORMU",
+      "banTitle": "Onay, talep sahibine aktivasyon bağlantısı gönderir",
+      "banBody": "Bağlantı tek kullanımlık ve 72 saat geçerlidir. Çalışma alanı, müşteri bağlantıyı açınca kurulur.",
+      "colWho": "KİŞİ · FİRMA",
+      "colSector": "SEKTÖR",
+      "colNeed": "İHTİYAÇ",
+      "colWhen": "ZAMAN",
+      "lSector": "SEKTÖR",
+      "lNeed": "İHTİYAÇ",
+      "lWhen": "ZAMAN",
+      "reject": "Reddet",
+      "approve": "Onayla",
+      "approved": "ONAYLANDI · BAĞLANTI GİTTİ",
+      "rejected": "REDDEDİLDİ",
+      "today": "BUGÜN",
+      "yesterday": "DÜN",
+      "empty": "HENÜZ TALEP YOK",
+      "error": "İşlem tamamlanamadı ({code}). Sayfayı yenileyip tekrar deneyin."
+    }
   }
 }

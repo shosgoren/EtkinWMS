@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./design/bakis.css";
 @import "./design/giris.css";
+@import "./design/yonet.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
@@ -823,6 +824,9 @@ body:has(.dz) [data-testid="bottom-nav"], body:has(.dz) [data-testid="tenant-bar
 /* Giriş ve hesap kaynağı (Giris.dc.html, T-993) ayrı kapta (`.dzg`): Bakış kurallarıyla çakışmaz; yerleşim uyarlaması aynı. */
 .dzg { position: fixed; inset: 0; z-index: 20; }
 body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-bar"], body:has(.dzg) .app-header { display: none; }
+/* Yönetim paneli kaynağı (Yonet.dc.html, ADR-027) ayrı kapta (`.dzy`); yerleşim uyarlaması aynı. */
+.dzy { position: fixed; inset: 0; z-index: 20; }
+body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-bar"], body:has(.dzy) .app-header { display: none; }
 /* design:bakis:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
 .dz {
   --color-dz-a-aaaaaa-be: rgba(0, 0, 0, .14);
@@ -1018,3 +1022,67 @@ body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-b
   --color-dzg-key-bg: #232b34;
 }
 /* design:giris:end */
+
+/* design:yonet:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzy {
+  --color-dz-a-aaaaaa-d: rgba(0, 0, 0, .3);
+  --color-dz-a-aaaaaa-g: rgba(0, 0, 0, .6);
+  --color-dz-a-afajan-ff: rgba(5, 9, 13, .55);
+  --color-dz-a-bhcoec-ag: rgba(23, 46, 66, .06);
+  --color-dz-a-bhcoec-ai: rgba(23, 46, 66, .08);
+  --color-dz-a-bhcoec-df: rgba(23, 46, 66, .35);
+  --color-dz-a-bhcoec-f: rgba(23, 46, 66, .5);
+  --color-dz-a-pemfec-bc: rgba(244, 197, 66, .12);
+  --color-dz-a-pppppp-ag: rgba(255, 255, 255, .06);
+  --color-dz-a-pppppp-ai: rgba(255, 255, 255, .08);
+  --color-dz-a-pppppp-b: rgba(255, 255, 255, .1);
+  --color-dz-a-pppppp-bc: rgba(255, 255, 255, .12);
+  --color-dz-a-pppppp-be: rgba(255, 255, 255, .14);
+  --color-dz-a-pppppp-hf: rgba(255, 255, 255, .75);
+  --color-dz-a-pppppp-hi: rgba(255, 255, 255, .78);
+  --color-dz-x-afajan: #05090d;
+  --color-dz-x-apdnch: #0f3d27;
+  --color-dz-x-bdbhbm: #13171c;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhiaep: #17804f;
+  --color-dz-x-bkbdaa: #1a1300;
+  --color-dz-x-blcbci: #1b2128;
+  --color-dz-x-bocpdo: #1e2f3e;
+  --color-dz-x-bpekdk: #1f4a3a;
+  --color-dz-x-cdclde: #232b34;
+  --color-dz-x-cmdfea: #2c3540;
+  --color-dz-x-dkeffc: #3a4552;
+  --color-dz-x-dnckgl: #3d2a6b;
+  --color-dz-x-ekdfaa: #4a3500;
+  --color-dz-x-lahnaa: #b07d00;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-mjmdli: #c9c3b8;
+  --color-dz-x-mpoink: #cfe8da;
+  --color-dz-x-ninooe: #d8dee4;
+  --color-dz-x-ogocnk: #e6e2da;
+  --color-dz-x-ogokoo: #e6eaee;
+  --color-dz-x-ojoenk: #e9e4da;
+  --color-dz-x-pboooi: #f1eee8;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-pepcoo: #f4f2ee;
+  --color-dz-x-ppohki: #ffe7a8;
+  --color-dz-x-pppppp: #ffffff;
+  --color-dzy-bg: #f4f2ee;
+  --color-dzy-fg: #1e2f3e;
+  --color-dzy-surface: #ffffff;
+  --color-dzy-chip: #f1eee8;
+  --color-dzy-track: #e6e2da;
+  --color-dzy-ok-bg: #cfe8da;
+  --color-dzy-ok-fg: #0f3d27;
+}
+.dzy.dz-dark {
+  --color-dzy-bg: #13171c;
+  --color-dzy-fg: #d8dee4;
+  --color-dzy-surface: #1b2128;
+  --color-dzy-chip: #232b34;
+  --color-dzy-track: #2c3540;
+  --color-dzy-ok-bg: #1f4a3a;
+  --color-dzy-ok-fg: #e6eaee;
+}
+/* design:yonet:end */

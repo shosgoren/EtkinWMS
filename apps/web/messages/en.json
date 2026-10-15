@@ -2311,21 +2311,37 @@
     "reloadWarehouses": "Reload warehouses",
     "reloadLocations": "Reload locations"
   },
-  "operator": {
-    "title": "Demo requests",
-    "band": "ETKİN YAZILIM · OPERATOR",
-    "back": "Back",
+  "panel": {
+    "brand": "ETKİN ADMIN",
+    "host": "YONET.ETKINYAZILIM.COM",
+    "menu": "Admin menu",
+    "who": "OPERATOR · 2FA ON",
+    "signOut": "Sign out",
+    "signOutFailed": "Could not sign out, try again.",
     "theme": "Light / dark view",
-    "onlyTitle": "Etkin Yazılım operator only",
-    "onlyBody": "Approval sends the requester a single-use activation link. The workspace is set up when the customer opens it.",
-    "pending": "PENDING",
-    "count": "{n} REQUESTS",
-    "approve": "APPROVE",
-    "reject": "REJECT",
-    "approved": "APPROVED · LINK SENT",
-    "rejected": "REJECTED",
-    "today": "TODAY",
-    "yesterday": "YESTERDAY",
-    "error": "Could not complete ({code}). Refresh and try again."
+    "nav": {
+      "talepler": "Demo requests"
+    },
+    "talepler": {
+      "title": "Demo requests",
+      "sub": "SALES SITE FORM",
+      "banTitle": "Approval sends the requester an activation link",
+      "banBody": "The link is single-use and valid for 72 hours. The workspace is set up when the customer opens it.",
+      "colWho": "PERSON · COMPANY",
+      "colSector": "SECTOR",
+      "colNeed": "NEED",
+      "colWhen": "TIME",
+      "lSector": "SECTOR",
+      "lNeed": "NEED",
+      "lWhen": "TIME",
+      "reject": "Reject",
+      "approve": "Approve",
+      "approved": "APPROVED · LINK SENT",
+      "rejected": "REJECTED",
+      "today": "TODAY",
+      "yesterday": "YESTERDAY",
+      "empty": "NO REQUESTS YET",
+      "error": "Could not complete ({code}). Refresh and try again."
+    }
   }
 }
