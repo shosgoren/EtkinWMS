@@ -59,6 +59,8 @@ export interface TaskMenuProps {
   readonly myTasks?: MyTasksSummary;
   /** `stock.post` sahibi için gerçek bekleyen işler; 2 sütun kipinde (≥ 6 izinli iş) ızgara üstünde, saha rolünde (tek sütun) atanmış iş yoksa Görevlerim özetinin yerinde çizilir. */
   readonly now?: NowSummary;
+  /** T-984: Akış ana ekranı özeti için bugün kaydedilen kendi işlemlerim (ana ekranın okuduğu en çok 5 satır; fazlası "n+"). */
+  readonly todayDone?: { readonly count: number; readonly more: boolean };
 }
 
 export type TaskKey = "members" | "settings" | "audit" | "items" | "warehouses" | "receive" | "issue" | "transfer" | "count" | "lookup" | "undo";

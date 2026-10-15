@@ -131,6 +131,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
         slug={slug}
         myTasks={myTasks}
         now={now}
+        todayDone={today === null ? undefined : { count: today.items.length, more: today.nextCursor !== null }}
         allowed={{
           usersManage: hasPermission(current.roles, "users.manage"),
           settingsManage: hasPermission(current.roles, "settings.manage"),
