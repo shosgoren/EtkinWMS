@@ -209,3 +209,4 @@
 - 2026-10-15 T-984 canlı; T-985 Aşama 2 saha adım bandı.
 - 2026-10-15 T-985 birleşti; T-986 Aşama 3 transfer/manuel görünüm.
 - 2026-10-15 T-986 canlı; T-987 sayım görevleri ve okumaları (Aşama 4a).
+- 2026-10-15 T-989: I-18 tasarım birebir kuralı ayrı korunan PR olarak açıldı (güvenlik incelemesi MAJOR-1: korunan değişiklik özellik PR'ından ayrılır).
