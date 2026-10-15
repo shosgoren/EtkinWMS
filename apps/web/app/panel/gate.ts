@@ -11,7 +11,7 @@ export interface OperatorPrincipal {
   readonly mfaVerified: boolean;
 }
 
-export async function requireOperator(returnTo: string): Promise<OperatorPrincipal> {
+export async function panelOperatorOrExit(returnTo: string): Promise<OperatorPrincipal> {
   if (appSurface() !== "panel") notFound();
   const { getAuthService } = await import("../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());

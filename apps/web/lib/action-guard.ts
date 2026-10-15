@@ -222,10 +222,12 @@ const logger = createJsonLogger(
   { service: "web" },
 );
 
-function productionDeps(getHeaders: GuardDeps["getHeaders"], limiter: RateLimiter): GuardDeps {
+// `appUrl` bir getter'dır (her istekte okunur): nesne YAYILMAZ (yayma getter'ı kurulum anında dondurur); kip burada parametredir.
+function productionDeps(getHeaders: GuardDeps["getHeaders"], limiter: RateLimiter, surface: Surface): GuardDeps {
   return {
     getHeaders,
     limiter,
+    surfaceAllowed: () => appSurface() === surface,
     resolvePrincipal: async (headers) => {
       const { getAuthService } = await import("./auth-service.ts");
       const p = await getAuthService().getPrincipal(headers);
@@ -245,11 +247,11 @@ function productionDeps(getHeaders: GuardDeps["getHeaders"], limiter: RateLimite
 
 /** `surface`: eylemin ait olduğu kip (varsayılan müşteri uygulaması). Panel eylemleri `"panel"` verir; diğer kipte `NOT_FOUND`. */
 export function createProductionGuard(getHeaders: GuardDeps["getHeaders"], limiter: RateLimiter = createProductionLimiter(), surface: Surface = "app") {
-  return createActionGuard({ ...productionDeps(getHeaders, limiter), surfaceAllowed: () => appSurface() === surface });
+  return createActionGuard(productionDeps(getHeaders, limiter, surface));
 }
 
 /** `/api/t/**` route handler'ları için üretim sarmalayıcısı (T-126): `routeGuard` istek başlıklarını kendisi okur. */
 export function createProductionRouteGuard(limiter: RateLimiter = createProductionLimiter()) {
   // `/api/t/**` yalnız müşteri kipindedir (ADR-027 §1); panel kipinde NOT_FOUND.
-  return createRouteGuard({ ...productionDeps(() => Promise.resolve(new Headers()), limiter), surfaceAllowed: () => appSurface() === "app" });
+  return createRouteGuard(productionDeps(() => Promise.resolve(new Headers()), limiter, "app"));
 }

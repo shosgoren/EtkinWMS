@@ -7,7 +7,7 @@ import { listDemoRequests } from "@wms/domain/platform/demo-requests";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../design/theme.ts";
 import { YICON } from "../../design/yonet-icons.ts";
-import { requireOperator } from "../gate.ts";
+import { panelOperatorOrExit } from "../gate.ts";
 import { PanelShell } from "../shell.tsx";
 import { decideDemoRequestAction } from "./actions.ts";
 import { TaleplerView, type TaleplerLabels } from "./view.tsx";
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TaleplerPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const principal = await requireOperator(PATH);
+  const principal = await panelOperatorOrExit(PATH);
   const rows = await listDemoRequests({ db: getAppDb(), principal }).catch((e: unknown) => {
     if (e instanceof AppError && e.code === "NOT_FOUND") notFound();
     throw e;
@@ -34,8 +34,24 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
   const errorCode = ERRORS.find((c) => c === rawErr);
   const t = await getTranslations("panel");
   const tt = await getTranslations("panel.talepler");
-  const keys = ["banTitle", "banBody", "colWho", "colSector", "colNeed", "colWhen", "lSector", "lNeed", "lWhen", "reject", "approve", "approved", "rejected", "today", "yesterday", "empty"] as const;
-  const labels = Object.fromEntries(keys.map((k) => [k, tt(k)])) as TaleplerLabels;
+  const labels: TaleplerLabels = {
+    banTitle: tt("banTitle"),
+    banBody: tt("banBody"),
+    colWho: tt("colWho"),
+    colSector: tt("colSector"),
+    colNeed: tt("colNeed"),
+    colWhen: tt("colWhen"),
+    lSector: tt("lSector"),
+    lNeed: tt("lNeed"),
+    lWhen: tt("lWhen"),
+    reject: tt("reject"),
+    approve: tt("approve"),
+    approved: tt("approved"),
+    rejected: tt("rejected"),
+    today: tt("today"),
+    yesterday: tt("yesterday"),
+    empty: tt("empty"),
+  };
   const pending = rows.filter((r) => r.status === "PENDING").length;
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
