@@ -218,3 +218,4 @@
 - 2026-10-15 T-993: Giris.dc.html tasarım kaynağı onaylandı ve depoya alındı (kod yok).
 - 2026-10-15 T-994: demo talebi platform tablosu (0038) + worker içe alma + operatör ekranı (0 px); yayın T-995 ile.
 - T-994 güvenlik incelemesi 0/1/5 → M-1 ve m-1…m-4 düzeltildi; m-5 (saklama) KVKK kararına bağlı. Canlı compose VPS'te install.sh ile yenilenmeli.
+- 2026-10-15 T-400: yönetim paneli ADR-027 + Yonet.dc.html kaynağı + T-401…T-409 kartları (kod yok).
