@@ -36,7 +36,8 @@ async function selectView(page: Page, label: string): Promise<void> {
   if (inMenu) await menuButton.click();
   const button = page.getByRole("button", { name: label, exact: true });
   await button.click();
-  await expect(button).toHaveAttribute("aria-pressed", "true");
+  // T-988: Akış ana ekranında üst çubuk gizlenir (menü düğmesi Görevlerim başlığındadır); düğme DOM'da kalır, görünürlük şartı aranmaz.
+  await expect(page.locator('button[name="view"]', { hasText: label }).first()).toHaveAttribute("aria-pressed", "true");
   if (inMenu) {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toBeHidden();

@@ -135,7 +135,9 @@ describe("T-988 Görevlerim özeti", () => {
     await q("INSERT INTO public.inbound_receipts (tenant_id, id, warehouse_id, number, created_by, status) VALUES ($1,$2,$3,$4,$5,'OPEN')", [B.tenantId, rid, B.warehouseId, `R-${hex(8)}`, B.ownerUserId]);
     await q("INSERT INTO public.inbound_receipt_lines (tenant_id, id, receipt_id, line_no, item_id, unit_id, conversion_factor, expected_quantity, received_quantity) VALUES ($1, gen_random_uuid(), $2, 1, $3, $4, 1, 4, 0)", [B.tenantId, rid, bItem, B.unitId]);
     const bP: StockDocCallParams = { ...callP(B.ownerUserId), tenantSlug: B.slug };
-    const bSid = (await startCount(bP, { warehouseId: B.warehouseId, locationIds: [B.childLocationId] })).sessionId;
+    const bLoc = uuid(); // boş raf: fikstür rafında izlenen (lot/seri) stok var, sayım başlatmaz
+    await q("INSERT INTO public.locations (tenant_id, id, warehouse_id, parent_id, code, name, depth, kind) VALUES ($1,$2,$3,NULL,$4,'T988 B lok',0,'STORAGE')", [B.tenantId, bLoc, B.warehouseId, `L-${hex(10)}`]);
+    const bSid = (await startCount(bP, { warehouseId: B.warehouseId, locationIds: [bLoc] })).sessionId;
     await createCountTasks(bP, { sessionId: bSid });
     const after = await getWorkSummaryAt(ownerP(), new Date());
     for (const k of ["giris", "sayim"]) expect(section(after, k)?.open).toBe(section(before, k)?.open);
