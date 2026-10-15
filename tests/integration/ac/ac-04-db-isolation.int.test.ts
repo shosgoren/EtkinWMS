@@ -271,6 +271,12 @@ beforeAll(async () => {
       await admin.query("COMMIT");
     } catch(e) { await admin.query("ROLLBACK"); throw e; }
   }
+  // T-989: iş önceliği + AÇIK genel sorun bildirimi (otomatik tablo matrisi her tenant tablosunda satır ister; kendi satırına UPDATE kontrolü
+  // kapanmış bildirimde tetikleyiciyle reddedileceğinden bildirim açık). Ortak fikstürde değil: 0037 down veri varken geri almayı reddeder.
+  for (const w of [A, B]) {
+    await admin.query("INSERT INTO public.work_priorities (tenant_id, subject_kind, subject_id, urgent, updated_by) VALUES ($1, 'INBOUND_RECEIPT', $2, false, $3)", [w.tenantId, randomUUID(), w.ownerMembershipId]);
+    await admin.query("INSERT INTO public.problem_reports (tenant_id, warehouse_id, reason, reported_by) VALUES ($1, $2, 'OTHER', $3)", [w.tenantId, w.warehouseId, w.ownerMembershipId]);
+  }
   tables = await discoverTables();
 }, 60_000);
 
