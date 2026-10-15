@@ -2,7 +2,9 @@
 
 **Kullanıcı kararı (15 Ekim 2026):** "Yaptığın tasarım birebir uygulamada olmalı, her şeyiyle; bunu standart kural haline getir: tasarım, yerleşim, renk, font, her anlamda."
 
-Bu belge `docs/INVARIANTS.md` **I-18**'in uygulama kılavuzudur. Kullanıcıya görünen her ekran için geçerlidir; Kokpit/yönetim ekranları da tasarımı geldiğinde bu kurala girer.
+Bu belge `docs/INVARIANTS.md` **I-18**'in uygulama kılavuzudur. Üreteç (`scripts/design/port.mjs`), bekçi (`design-parity.test.ts`) ve kaynak klasörü (`docs/design/source/`) T-988 ile gelir.
+
+**Öncelik:** I-18 yetki, depo kapsamı, tenant yalıtımı ve audit kararlarını (I-01, I-12, A-46) geçersiz kılmaz. Rolün göremeyeceği alan gösterilmez ya da 0 gösterilir; yetkisiz eylem çizilmez ya da tıklanmaz hâlde gösterilir. Çıkış ve menü her ekranda erişilebilir kalır. Kullanıcıya görünen her ekran için geçerlidir; Kokpit/yönetim ekranları da tasarımı geldiğinde bu kurala girer.
 
 ## 1. Kaynak
 
