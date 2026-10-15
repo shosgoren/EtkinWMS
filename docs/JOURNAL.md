@@ -213,3 +213,4 @@
 - 2026-10-15 T-988 güvenlik incelemesi: 2 MINOR düzeltildi (sayım yetki kapısı, negatif/yalıtım testleri), yeniden inceleme 0/0/0.
 - 2026-10-15 Kullanıcı: "tasarım birebir, standart kural" → I-18 + üreteç + Görevlerim piksel farkı 0; ACİL/vardiya/sorun altyapısı (0037).
 - 2026-10-15 T-989: I-18 tasarım birebir kuralı ayrı korunan PR olarak açıldı (güvenlik incelemesi MAJOR-1: korunan değişiklik özellik PR'ından ayrılır).
+- 2026-10-15 T-988 (#53) ve T-989 (#54) birleşti, canlıda; 0037 uygulandı. Sırada (kullanıcı başlatınca): Giriş Görevi listesi (`v.list`), Manuel giriş, Giriş, Sayım, Toplama ekranları I-18 ile birebir; yönetici ACİL/vardiya giriş ekranı; üretim emri kavramı.
