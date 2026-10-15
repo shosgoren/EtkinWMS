@@ -68,10 +68,10 @@ export function HomeControls() {
   );
 }
 
-export function HomeOverlays({ slug }: { slug: string }) {
+export function HomeOverlays({ slug, canReport }: { slug: string; canReport: boolean }) {
   const t = useTranslations("home.gv");
   const { overlay, setOverlay } = useDz();
-  if (overlay === PROBLEM) return <ProblemSheet slug={slug} onClose={() => setOverlay(null)} />;
+  if (overlay === PROBLEM && canReport) return <ProblemSheet slug={slug} onClose={() => setOverlay(null)} />;
   if (overlay !== MENU) return null;
   const items = [
     { k: "problem", l: t("reportProblem"), d: ICON.warn, bg: dz("C62828"), fg: dz("FFFFFF"), go: () => setOverlay(PROBLEM), testId: "report-problem" },
@@ -83,7 +83,7 @@ export function HomeOverlays({ slug }: { slug: string }) {
         setOverlay(null);
         openAppMenu();
       }, testId: "app-bar-menu" },
-  ];
+  ].filter((dm) => dm.k !== "problem" || canReport);
   return (
     <div className="demo" role="menu" aria-label={t("actions")}>
       {items.map((dm) => (

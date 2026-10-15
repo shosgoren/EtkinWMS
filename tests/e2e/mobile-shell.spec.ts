@@ -619,7 +619,11 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   }
   // Plan dışı (manuel giriş/çıkış) yazma işidir: salt okuyana çizilmez.
   await expect(easy.locator("[data-manual]")).toHaveCount(0);
-  await openAppMenu(page);
+  // I-18 öncelik: yetkisiz eylem çizilmez — salt okuyan "Sorun bildir" görmez; menü erişilebilir.
+  await page.getByTestId("home-actions").click();
+  await expect(page.getByTestId("app-bar-menu")).toBeVisible();
+  await expect(page.getByTestId("report-problem")).toHaveCount(0);
+  await page.getByTestId("app-bar-menu").click();
   const menu = page.getByRole("dialog", { name: "Menü" });
   await expect(menu.getByRole("link", { name: "Stok", exact: true })).toHaveAttribute("href", "/t/demo/stock");
   await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveCount(0);

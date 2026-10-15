@@ -25,6 +25,8 @@ export interface EasyHomeProps extends TaskMenuProps {
   readonly summary?: WorkSummary | null;
   readonly firstName?: string;
   readonly dark?: boolean;
+  /** Sorun bildirebilir mi (stock.post ya da document.create); değilse eylem çizilmez (I-18 öncelik cümlesi). */
+  readonly canReport?: boolean;
 }
 
 function Ico({ d, size, sw, className = "ico", style }: { d: string; size: number | string; sw?: number; className?: string; style?: CSSProperties }) {
@@ -35,7 +37,7 @@ function Ico({ d, size, sw, className = "ico", style }: { d: string; size: numbe
   );
 }
 
-export async function EasyOperations({ slug, allowed, summary, firstName, dark = false }: EasyHomeProps) {
+export async function EasyOperations({ slug, allowed, summary, firstName, dark = false, canReport = false }: EasyHomeProps) {
   const t = await getTranslations("home");
   const tg = await getTranslations("home.gv");
   const base = `/t/${encodeURIComponent(slug)}`;
@@ -70,7 +72,7 @@ export async function EasyOperations({ slug, allowed, summary, firstName, dark =
   ] as const;
 
   return (
-    <DzRoot dark={dark} testId="easy-operations" overlays={<HomeOverlays slug={slug} />}>
+    <DzRoot dark={dark} testId="easy-operations" overlays={<HomeOverlays slug={slug} canReport={canReport} />}>
       <div className="page" style={{ background: C.bg, color: C.fg }}>
         <h1 className="sr-only">{t("title")}</h1>
         <div className="scroll">

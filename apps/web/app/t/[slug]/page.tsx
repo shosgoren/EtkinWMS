@@ -56,7 +56,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     }
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={jar.get(THEME_COOKIE)?.value === "koyu"} />
+        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={jar.get(THEME_COOKIE)?.value === "koyu"} canReport={hasPermission(current.roles, "stock.post") || hasPermission(current.roles, "document.create")} />
       </main>
     );
   }
