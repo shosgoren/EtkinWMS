@@ -96,7 +96,7 @@ export async function getWorkSummaryAt(params: Params, now: Date): Promise<WorkS
                   AND (p.subject_kind IS DISTINCT FROM 'WAREHOUSE_TASK' OR EXISTS (
                         SELECT 1 FROM public.warehouse_tasks t
                          WHERE t.tenant_id = p.tenant_id AND t.id = p.subject_id AND t.kind = ANY(${kinds}::text[])
-                           AND (t.status IN ('OPEN', 'DONE', 'CANCELLED') OR ${manager}::boolean OR t.assigned_membership_id = ${m.membershipId}::uuid)))),
+                           AND (${manager}::boolean OR t.assigned_membership_id IS NULL OR t.assigned_membership_id = ${m.membershipId}::uuid)))),
       urg AS (SELECT w.subject_kind, w.subject_id FROM public.work_priorities w WHERE w.tenant_id = ${m.tenantId}::uuid AND w.urgent),
       rcp_all AS (SELECT r.id FROM public.inbound_receipts r
                WHERE r.tenant_id = ${m.tenantId}::uuid AND r.status = 'OPEN'

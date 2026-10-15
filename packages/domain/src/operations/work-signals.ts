@@ -236,7 +236,7 @@ export async function listOpenProblems(params: Params): Promise<readonly OpenPro
              AND (subject_kind IS DISTINCT FROM 'WAREHOUSE_TASK' OR EXISTS (
                    SELECT 1 FROM public.warehouse_tasks t
                     WHERE t.tenant_id = problem_reports.tenant_id AND t.id = problem_reports.subject_id AND t.kind = ANY(${kinds}::text[])
-                      AND (t.status IN ('OPEN', 'DONE', 'CANCELLED') OR ${manager}::boolean OR t.assigned_membership_id = ${m.membershipId}::uuid)))
+                      AND (${manager}::boolean OR t.assigned_membership_id IS NULL OR t.assigned_membership_id = ${m.membershipId}::uuid)))
            ORDER BY reported_at DESC, id LIMIT 100`,
     );
     return rows.map((r) => {

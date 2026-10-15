@@ -306,6 +306,16 @@ describe("T-988 Görevlerim özeti", () => {
       expect(section(roAfter, "sayim")?.problems).toBe(0);
       expect(section(await getWorkSummaryAt(ownerP(), new Date()), "sayim")?.problems).toBeGreaterThanOrEqual(1);
       await resolveProblem(ownerP(), { problemId });
+      // Başkasına atanmış görev (durumundan bağımsız; getCountWork kuralı): yalnız atanan ve yönetici görür.
+      const R2 = await mkLoc();
+      const sid2 = (await startCount(ownerP(), { warehouseId: A.warehouseId, locationIds: [R2] })).sessionId;
+      const assigned = (await createCountTasks(ownerP(), { sessionId: sid2, assigneeMembershipId: COUNTER.membershipId })).taskIds[0] as string;
+      const p2 = (await reportProblem(ownerP(), { reason: "OTHER", subjectKind: "WAREHOUSE_TASK", subjectId: assigned })).problemId;
+      const otherCounter = await mkRole("counter-other", "COUNTER");
+      expect((await listOpenProblems(callP(otherCounter))).some((p) => p.id === p2)).toBe(false);
+      expect((await listOpenProblems(callP(COUNTER.userId))).some((p) => p.id === p2)).toBe(true);
+      await expect(reportProblem(callP(otherCounter), { reason: "OTHER", subjectKind: "WAREHOUSE_TASK", subjectId: assigned })).rejects.toMatchObject({ code: "NOT_FOUND" });
+      await resolveProblem(ownerP(), { problemId: p2 });
     });
 
     it("DB koruması (wms_app): kapanmış bildirim değişmez; açık bildirimde alan/kapatma alanı yazılmaz; zaman damgası sunucuda", async () => {
