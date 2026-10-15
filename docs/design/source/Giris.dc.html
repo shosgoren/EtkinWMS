@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin WMS — Giriş ve hesap</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-direction:column;width:100%;height:100vh;height:100dvh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap.dk{background:#05090D}
+button,input{font:inherit;color:inherit}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+.appzone{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.app{position:relative;width:100%;height:100%;overflow:hidden;container-type:size}
+.app :focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.fr-mobile .app{width:390px;max-width:100%;height:min(844px,100%);border-radius:36px;border:10px solid #172E42;box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
+.fr-tablet .app{width:min(1180px,100%);height:min(820px,100%);border-radius:28px;border:12px solid #172E42;box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
+.prev{flex:none;align-self:center;display:flex;align-items:center;gap:4px;margin:6px 0 0;padding:4px;border-radius:999px;background:#FFFFFF;border:1.5px solid #172E42;color:#172E42;max-width:calc(100% - 12px);overflow-x:auto}
+.prev.scr{margin:4px 0 6px}
+.prev-l{padding:0 8px 0 10px;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6A7F91;white-space:nowrap}
+.prevb{appearance:none;min-height:34px;padding:0 12px;border:0;border-radius:999px;background:transparent;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
+.prevb.on{background:#172E42;color:#FFFFFF}
+
+/* ── page shell ── */
+.lp{position:absolute;inset:0;display:flex;overflow:hidden}
+.lside{display:none}
+.m-desktop .lside{position:relative;display:flex;flex-direction:column;justify-content:space-between;flex:0 0 42%;padding:40px 44px;background:#172E42;color:#FFFFFF;overflow:hidden}
+.lside-h{margin:0;font:800 44px/1.02 'Bricolage Grotesque',sans-serif;letter-spacing:-.01em}
+.lside-p{margin:14px 0 0;max-width:420px;font:500 17px/1.45 'Instrument Sans',sans-serif;opacity:.82}
+.lside-f{display:flex;flex-direction:column;gap:10px}
+.lside-r{display:flex;align-items:center;gap:12px;font:600 13px/1.3 'IBM Plex Mono',monospace;opacity:.86}
+.lside-r i{flex:none;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.12);color:#F4C542}
+.lmain{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.lscroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.lin{width:100%;max-width:520px;margin:0 auto;padding:20px 16px 132px;display:flex;flex-direction:column;gap:16px}
+.m-tablet .lin{padding:40px 24px 140px;max-width:560px}
+.m-desktop .lin{padding:56px 40px 48px;max-width:520px}
+.wide .lin{max-width:880px}
+.m-desktop.wide .lin,.m-desktop .wide .lin{max-width:880px}
+
+/* ── brand + head ── */
+.brand{display:flex;align-items:center;gap:10px}
+.brand b{font:800 15px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+.brand .mode{margin-left:auto}
+.lh{margin:4px 0 0;font:800 30px/1.08 'Bricolage Grotesque',sans-serif;letter-spacing:-.01em}
+.m-desktop .lh{font-size:36px}
+.ls{margin:-6px 0 0;font:500 15px/1.45 'Instrument Sans',sans-serif;opacity:.78}
+.kick{font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;opacity:.7}
+.icb{appearance:none;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;min-width:48px;height:48px;padding:0 12px;border-radius:16px;border:0;cursor:pointer;font:800 13px/1 'Bricolage Grotesque',sans-serif}
+
+/* ── tabs ── */
+.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px;border-radius:20px}
+.tab{appearance:none;display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:0 12px;border:0;border-radius:15px;background:transparent;cursor:pointer;font:800 16px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.02em}
+.tab.on{box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 22px -16px rgba(23,46,66,.45)}
+
+/* ── fields ── */
+.card{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:24px;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.m-desktop .card,.m-tablet .card{padding:22px}
+.fl{display:flex;flex-direction:column;gap:7px}
+.fl > label,.fll{font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em}
+.inp{display:flex;align-items:center;gap:10px;min-height:60px;padding:0 16px;border-radius:18px;border:2px solid transparent}
+.inp.bad{border-color:#C62828}
+.inp.ok{border-color:#17804F}
+.inp input{flex:1;min-width:0;height:56px;border:0;outline:0;background:transparent;font:600 18px/1 'Instrument Sans',sans-serif}
+.inp .pre{font:600 15px/1 'IBM Plex Mono',monospace;opacity:.6;white-space:nowrap}
+.hint{display:flex;align-items:center;gap:6px;font:600 12px/1.35 'IBM Plex Mono',monospace;opacity:.78}
+.hint.bad{color:#C62828;opacity:1}
+.hint.ok{color:#17804F;opacity:1}
+.eye{appearance:none;flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:12px;background:transparent;cursor:pointer}
+.lnk{appearance:none;align-self:flex-start;min-height:44px;padding:0 4px;border:0;background:transparent;cursor:pointer;font:700 15px/1 'Instrument Sans',sans-serif;text-decoration:underline;text-underline-offset:4px}
+
+/* ── big buttons ── */
+.big{appearance:none;flex:1;display:flex;align-items:center;justify-content:center;gap:12px;min-height:64px;padding:0 18px;border:0;border-radius:22px;cursor:pointer;font:800 19px/1.05 'Bricolage Grotesque',sans-serif;letter-spacing:.02em;text-align:center;box-shadow:0 14px 30px -16px rgba(0,0,0,.5);transition:transform .12s}
+.big:active{transform:scale(.98)}
+.big.ghost{box-shadow:none}
+.big[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+.act{display:flex;gap:10px}
+.m-mobile .act,.m-tablet .act{position:absolute;left:0;right:0;bottom:0;padding:12px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px -20px rgba(23,46,66,.5)}
+.m-tablet .act{padding:14px 24px 18px}
+
+/* ── pin ── */
+.dots{display:flex;justify-content:center;gap:14px;padding:10px 0 4px}
+.dots i{width:20px;height:20px;border-radius:50%;border:2.5px solid currentColor;transition:background .15s,transform .15s}
+.dots i.on{background:currentColor;transform:scale(1.05)}
+.dots.bad{color:#C62828;animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.key{appearance:none;display:flex;align-items:center;justify-content:center;min-height:64px;border:0;border-radius:20px;cursor:pointer;font:800 28px/1 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums;transition:transform .1s}
+.key:active{transform:scale(.96)}
+.key.fn{font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+.m-mobile .key{min-height:58px}
+
+/* ── banners / chips ── */
+.ban{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:18px;font:600 14px/1.4 'Instrument Sans',sans-serif}
+.ban b{display:block;font:800 15px/1.2 'Bricolage Grotesque',sans-serif;letter-spacing:.02em;margin-bottom:3px}
+.ban .ico{margin-top:1px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border-radius:999px;font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;white-space:nowrap}
+
+/* ── option tiles ── */
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.m-mobile .opts{grid-template-columns:minmax(0,1fr)}
+.opt{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:120px;padding:16px;border-radius:22px;border:2.5px solid transparent;cursor:pointer;text-align:left}
+.opt.on{border-color:#172E42}
+.dkm .opt.on{border-color:#F4C542}
+.opt b{font:800 18px/1.1 'Bricolage Grotesque',sans-serif}
+.opt span{font:500 14px/1.4 'Instrument Sans',sans-serif;opacity:.8}
+.opt .tick{position:absolute;top:12px;right:12px;display:none;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#172E42;color:#FFFFFF}
+.dkm .opt .tick{background:#F4C542;color:#1A1300}
+.opt.on .tick{display:flex}
+.oi{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:14px}
+
+/* ── steps ── */
+.steps{display:flex;gap:6px}
+.steps i{flex:1;height:6px;border-radius:6px}
+
+/* ── lists ── */
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{appearance:none;display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 14px;border-radius:20px;border:0;text-align:left;cursor:pointer;box-shadow:0 1px 0 rgba(23,46,66,.05),0 10px 22px -18px rgba(23,46,66,.35)}
+.row.sel{outline:3px solid #172E42;outline-offset:-3px}
+.dkm .row.sel{outline-color:#F4C542}
+.av{flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:15px;font:800 18px/1 'Bricolage Grotesque',sans-serif}
+.rt{flex:1;min-width:0}
+.rt b{display:block;font:800 18px/1.15 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt span{display:block;margin-top:4px;font:600 12px/1.3 'IBM Plex Mono',monospace;opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rbtns{display:flex;gap:8px;flex:none}
+.sbtn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 14px;border:0;border-radius:15px;cursor:pointer;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.03em;white-space:nowrap}
+.m-mobile .rbtns .sbtn .tx{display:none}
+.shd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:4px 2px -4px}
+.shd b{font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.12em}
+.shd > span{font:600 11.5px/1 'IBM Plex Mono',monospace;opacity:.7;text-align:right}
+
+/* ── manager band ── */
+.band{flex:none;display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:64px;color:#FFFFFF}
+.m-desktop .band{padding:12px 24px}
+.wb{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:48px;padding:0 12px;border-radius:16px;border:0;background:rgba(255,255,255,.2);color:#FFFFFF;cursor:pointer}
+.band-t{flex:1;min-width:0}
+.band-h{display:block;font:800 21px/1.1 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-desktop .band-h{font-size:26px}
+.band-s{display:block;margin-top:4px;font:600 11.5px/1.25 'IBM Plex Mono',monospace;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+.mgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.m-desktop .mgrid{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:start}
+
+/* ── code card ── */
+.kcard{display:flex;flex-direction:column;align-items:center;gap:12px;padding:22px 18px;border-radius:24px;border:2.5px dashed currentColor;text-align:center}
+.kcode{font:600 34px/1 'IBM Plex Mono',monospace;letter-spacing:.14em}
+.m-mobile .kcode{font-size:28px}
+.qr{width:168px;height:168px;padding:12px;border-radius:16px;background:#FFFFFF}
+.qr svg{display:block;width:100%;height:100%}
+.qrbig{width:240px;height:240px}
+.timer{font:800 15px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+
+/* ── done ── */
+.done{display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 18px;border-radius:26px;text-align:center}
+.done .okc{display:flex;align-items:center;justify-content:center;width:84px;height:84px;border-radius:50%;background:#17804F;color:#FFFFFF;animation:pop .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.addr{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;border-radius:15px;font:600 16px/1 'IBM Plex Mono',monospace}
+
+/* ── mail mock ── */
+.mail{display:flex;flex-direction:column;border-radius:24px;overflow:hidden;box-shadow:0 1px 0 rgba(23,46,66,.06),0 14px 30px -20px rgba(23,46,66,.45)}
+.mail-h{display:flex;flex-direction:column;gap:6px;padding:14px 18px;font:600 12.5px/1.35 'IBM Plex Mono',monospace}
+.mail-b{display:flex;flex-direction:column;gap:14px;padding:22px 20px}
+.mail-b p{margin:0;font:500 15.5px/1.55 'Instrument Sans',sans-serif}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 14px;padding:14px 16px;border-radius:16px;font:600 14px/1.3 'IBM Plex Mono',monospace}
+.kv dt{opacity:.65}
+.kv dd{margin:0;overflow-wrap:anywhere}
+
+/* ── dark ── */
+.dkm .card,.dkm .row,.dkm .tab.on{box-shadow:none}
+.m-mobile .lh{font-size:27px}
+@media (prefers-reduced-motion:reduce){.wrap *{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div class="{{wrapCls}}">
+<sc-if value="{{showPrev}}" hint-placeholder-val="{{true}}">
+  <div class="prev" role="group" aria-label="Önizleme cihazı">
+    <span class="prev-l">ÖNİZLEME</span>
+    <sc-for list="{{prevBtns}}" as="pb" hint-placeholder-count="4"><button type="button" class="{{pb.cls}}" aria-pressed="{{pb.pressed}}" onClick="{{pb.go}}">{{pb.l}}</button></sc-for>
+  </div>
+  <div class="prev scr" role="group" aria-label="Ekran">
+    <span class="prev-l">EKRAN</span>
+    <sc-for list="{{scrBtns}}" as="sb" hint-placeholder-count="8"><button type="button" class="{{sb.cls}}" aria-pressed="{{sb.pressed}}" onClick="{{sb.go}}">{{sb.l}}</button></sc-for>
+  </div>
+</sc-if>
+<div class="appzone">
+<div class="{{appCls}}">
+
+<!-- ═════════ GİRİŞ / AKTİVASYON / SAHA (sol marka paneli + form) ═════════ -->
+<sc-if value="{{v.auth}}" hint-placeholder-val="{{true}}">
+<div class="lp" style="background: {{c.bg}}; color: {{c.fg}}">
+  <aside class="lside" aria-hidden="true">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#FFFFFF"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#FFFFFF" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+      <b>ETKİN WMS</b>
+    </div>
+    <div>
+      <h2 class="lside-h">{{side.h}}</h2>
+      <p class="lside-p">{{side.p}}</p>
+    </div>
+    <div class="lside-f">
+      <sc-for list="{{side.rows}}" as="sr" hint-placeholder-count="3"><div class="lside-r"><i><svg class="ico" width="18" height="18" viewBox="0 0 24 24"><path d="{{sr.d}}"></path></svg></i>{{sr.l}}</div></sc-for>
+    </div>
+  </aside>
+
+  <div class="lmain">
+    <div class="lscroll"><div class="lin">
+      <div class="brand">
+        <svg width="28" height="28" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="{{c.logoBg}}"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="{{c.logoFg}}" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="{{c.logoBg}}" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+        <b>ETKİN WMS</b>
+        <button type="button" class="icb mode" style="background: {{c.surface}}" onClick="{{toggleTheme}}" aria-label="Açık / koyu görünüm"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18"></path></svg></button>
+      </div>
+
+      <!-- ── 1 GİRİŞ ── -->
+      <sc-if value="{{v.login}}" hint-placeholder-val="{{true}}">
+        <h1 class="lh">Giriş yap</h1>
+        <div class="tabs" role="tablist" aria-label="Giriş türü" style="background: {{c.chip}}">
+          <sc-for list="{{tabs}}" as="tb" hint-placeholder-count="2"><button type="button" role="tab" class="{{tb.cls}}" aria-selected="{{tb.sel}}" style="background: {{tb.bg}}" onClick="{{tb.go}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{tb.d}}"></path></svg>{{tb.l}}</button></sc-for>
+        </div>
+
+        <sc-if value="{{v.loginMail}}" hint-placeholder-val="{{true}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="fl"><label for="g-mail">E-POSTA</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M3 6h18v12H3zM3 7l9 6 9-6"></path></svg><input id="g-mail" type="email" autocomplete="username" placeholder="ad@firma.com" value="{{f.mail}}" onChange="{{on.mail}}"></div></div>
+            <div class="fl"><label for="g-pw">PAROLA</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><input id="g-pw" type="{{pwType}}" autocomplete="current-password" placeholder="Parolanız" value="{{f.pw}}" onChange="{{on.pw}}"><button type="button" class="eye" onClick="{{togglePw}}" aria-label="{{pwEyeL}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{pwEyeD}}"></path></svg></button></div></div>
+            <button type="button" class="lnk" onClick="{{noop}}">Parolamı unuttum</button>
+          </div>
+          <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg><span><b>Hangi firmaya bağlı olduğunuzu biz buluruz</b>Girişten sonra çalışma alanınız açılır. Birden çok firmada üyeyseniz seçersiniz.</span></div>
+          <div class="act" style="background: {{c.bg}}"><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{goMfa}}">GİRİŞ YAP<svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button></div>
+        </sc-if>
+
+        <sc-if value="{{v.loginField}}" hint-placeholder-val="{{false}}">
+          <sc-if value="{{dev.ok}}" hint-placeholder-val="{{true}}">
+            <div class="ban" style="background: {{c.okBg}}; color: {{c.okFg}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg><span><b>Kayıtlı cihaz · El terminali 1</b>MOTIVE · ANA DEPO</span></div>
+            <div class="card" style="background: {{c.surface}}">
+              <div class="fl"><label for="g-ws">ÇALIŞMA ALANI</label><div class="inp" style="background: {{c.chip}}"><span class="pre">wms.etkinyazilim.com/</span><input id="g-ws" type="text" autocomplete="organization" value="{{f.ws}}" onChange="{{on.ws}}" aria-describedby="g-ws-h"></div><span id="g-ws-h" class="hint">Bu cihazda hatırlanır</span></div>
+              <div class="fl"><label for="g-user">KULLANICI ADI</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"></path></svg><input id="g-user" type="text" autocomplete="username" autocapitalize="none" value="{{f.user}}" onChange="{{on.user}}"></div></div>
+              <div class="fl"><span class="fll" id="g-pin-l">PIN</span>
+                <div class="{{pinDotsCls}}" role="img" aria-label="{{pinAria}}"><sc-for list="{{pinDots}}" as="pd" hint-placeholder-count="6"><i class="{{pd.cls}}"></i></sc-for></div>
+                <sc-if value="{{pinErr}}" hint-placeholder-val="{{false}}"><span class="hint bad" role="alert"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>{{pinErrT}}</span></sc-if>
+              </div>
+              <div class="pad" role="group" aria-label="PIN tuşları">
+                <sc-for list="{{keys}}" as="k" hint-placeholder-count="12"><button type="button" class="{{k.cls}}" style="background: {{k.bg}}; color: {{k.fg}}" onClick="{{k.go}}" aria-label="{{k.a}}">{{k.l}}</button></sc-for>
+              </div>
+            </div>
+            <button type="button" class="lnk" onClick="{{goSwitch}}">Bu cihazdaki personelden seç</button>
+          </sc-if>
+          <sc-if value="{{dev.no}}" hint-placeholder-val="{{false}}">
+            <div class="ban" style="background: #F4B400; color: #1A1300"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>Bu cihaz kayıtlı değil</b>PIN yalnız kayıtlı cihazda çalışır. Yöneticinizin verdiği etkinleştirme koduyla bu telefonu kaydedin ya da yöneticiniz QR ile kaydetsin.</span></div>
+            <div class="act" style="background: {{c.bg}}"><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{goFact}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>ETKİNLEŞTİRME KODUM VAR</button></div>
+          </sc-if>
+          <button type="button" class="lnk" onClick="{{toggleDev}}">{{devToggleL}}</button>
+        </sc-if>
+      </sc-if>
+
+      <!-- ── 2 İKİ ADIMLI DOĞRULAMA ── -->
+      <sc-if value="{{v.mfa}}" hint-placeholder-val="{{false}}">
+        <span class="kick">2 / 2 · DOĞRULAMA</span>
+        <h1 class="lh">Doğrulama kodu</h1>
+        <p class="ls">Authenticator uygulamasındaki 6 haneli kodu girin.</p>
+        <div class="card" style="background: {{c.surface}}">
+          <div class="fl"><label for="g-otp">KOD</label><div class="inp" style="background: {{c.chip}}"><input id="g-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" value="{{f.otp}}" onChange="{{on.otp}}" style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; letter-spacing: .3em"></div></div>
+          <button type="button" class="lnk" onClick="{{noop}}">Yedek kod kullan</button>
+        </div>
+        <div class="act" style="background: {{c.bg}}"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}; flex: 0 0 auto; min-width: 64px" onClick="{{goLogin}}" aria-label="Geri"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{goPick}}">DOĞRULA</button></div>
+      </sc-if>
+
+      <!-- ── 3 ÇALIŞMA ALANI SEÇ ── -->
+      <sc-if value="{{v.pick}}" hint-placeholder-val="{{false}}">
+        <span class="kick">BİRDEN ÇOK ÜYELİK</span>
+        <h1 class="lh">Çalışma alanı seçin</h1>
+        <div class="rows">
+          <sc-for list="{{wsList}}" as="w" hint-placeholder-count="3"><button type="button" class="{{w.cls}}" style="background: {{c.surface}}" onClick="{{w.go}}" aria-pressed="{{w.pressed}}"><span class="av" style="background: {{w.avBg}}; color: {{w.avFg}}">{{w.ini}}</span><span class="rt"><b>{{w.n}}</b><span>{{w.s}}</span></span><sc-if value="{{w.last}}" hint-placeholder-val="{{false}}"><span class="chip" style="background: #F4C542; color: #1A1300">SON</span></sc-if><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button></sc-for>
+        </div>
+        <p class="ls" style="margin: 0">Son kullandığınız alan bir dahaki girişte doğrudan açılır.</p>
+      </sc-if>
+
+      <!-- ── 4 AKTİVASYON (onaylı demo talebi) ── -->
+      <sc-if value="{{v.act}}" hint-placeholder-val="{{false}}">
+        <span class="kick">{{act.kick}}</span>
+        <div class="steps" aria-hidden="true"><sc-for list="{{act.bars}}" as="ab" hint-placeholder-count="4"><i style="background: {{ab.bg}}"></i></sc-for></div>
+        <h1 class="lh">{{act.h}}</h1>
+        <p class="ls">{{act.s}}</p>
+
+        <sc-if value="{{act.s1}}" hint-placeholder-val="{{true}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="fl"><label for="g-co">FİRMA ADI</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M4 21V5h10v16M14 9h6v12M8 9h2M8 13h2M8 17h2"></path></svg><input id="g-co" type="text" autocomplete="organization" value="{{f.co}}" onChange="{{on.co}}"></div><span class="hint">Faturada ve ekranlarda görünür</span></div>
+            <div class="fl"><label for="g-slug">ÇALIŞMA ALANI ADI</label><div class="{{slugCls}}" style="background: {{c.chip}}"><span class="pre">wms.etkinyazilim.com/</span><input id="g-slug" type="text" autocapitalize="none" spellcheck="false" value="{{f.slug}}" onChange="{{on.slug}}" aria-describedby="g-slug-h"></div><span id="g-slug-h" class="{{slugHintCls}}" role="status">{{slugHint}}</span></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{act.s2}}" hint-placeholder-val="{{false}}">
+          <div class="opts" role="radiogroup" aria-label="Başlangıç verisi">
+            <sc-for list="{{seedOpts}}" as="so" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{so.sel}}" class="{{so.cls}}" style="background: {{c.surface}}" onClick="{{so.go}}"><span class="tick"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></span><span class="oi" style="background: {{so.iBg}}; color: {{so.iFg}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{so.d}}"></path></svg></span><b>{{so.t}}</b><span>{{so.s}}</span></button></sc-for>
+          </div>
+          <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg><span><b>Örnek verileri sonra temizleyebilirsiniz</b>Ayarlar › Örnek veriler. Kullanılmamış örnekler silinir, işlem görmüş olanlar pasife alınır.</span></div>
+        </sc-if>
+
+        <sc-if value="{{act.s3}}" hint-placeholder-val="{{false}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="fl"><span class="fll">GİRİŞ E-POSTASI</span><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M3 6h18v12H3zM3 7l9 6 9-6"></path></svg><span style="font: 600 17px/1 'Instrument Sans', sans-serif">{{f.ownerMail}}</span></div><span class="hint ok"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>Bağlantıya tıkladınız, adres doğrulandı</span></div>
+            <div class="fl"><label for="g-np">YENİ PAROLA</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><input id="g-np" type="{{pwType}}" autocomplete="new-password" value="{{f.np}}" onChange="{{on.np}}" aria-describedby="g-np-h"><button type="button" class="eye" onClick="{{togglePw}}" aria-label="{{pwEyeL}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{pwEyeD}}"></path></svg></button></div><span id="g-np-h" class="{{npHintCls}}">{{npHint}}</span></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{act.s4}}" hint-placeholder-val="{{false}}">
+          <div class="card" style="background: {{c.surface}}; align-items: center; text-align: center">
+            <div class="qr" role="img" aria-label="Authenticator kurulum QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
+            <p class="ls" style="margin: 0">Google Authenticator ile QR'ı okutun, çıkan kodu girin.</p>
+            <div class="inp" style="background: {{c.chip}}; width: 100%"><input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-label="Doğrulama kodu" value="{{f.otp}}" onChange="{{on.otp}}" style="text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 26px; letter-spacing: .3em"></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{act.s5}}" hint-placeholder-val="{{false}}">
+          <div class="done" style="background: {{c.surface}}">
+            <span class="okc"><svg class="ico" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></span>
+            <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Çalışma alanınız hazır</b>
+            <span class="addr" style="background: {{c.chip}}">wms.etkinyazilim.com/{{slugShow}}</span>
+            <span class="chip" style="background: #F4C542; color: #1A1300">DENEME · 3 AY · {{trialEnd}}'E KADAR</span>
+            <p class="ls" style="margin: 0">Giriş bilgileriniz <b>{{f.ownerMail}}</b> adresine gönderildi. Parolanız e-postada yer almaz.</p>
+          </div>
+        </sc-if>
+
+        <div class="act" style="background: {{c.bg}}">
+          <sc-if value="{{act.back}}" hint-placeholder-val="{{false}}"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}; flex: 0 0 auto; min-width: 64px" onClick="{{actBack}}" aria-label="Geri"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+          <button type="button" class="big" style="background: {{act.btnBg}}; color: {{act.btnFg}}" onClick="{{actNext}}" disabled="{{act.dis}}">{{act.btn}}<svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+      </sc-if>
+
+      <!-- ── 5 SAHA ETKİNLEŞTİRME (kod → PIN) ── -->
+      <sc-if value="{{v.fact}}" hint-placeholder-val="{{false}}">
+        <span class="kick">{{fa.kick}}</span>
+        <div class="steps" aria-hidden="true"><sc-for list="{{fa.bars}}" as="fb" hint-placeholder-count="3"><i style="background: {{fb.bg}}"></i></sc-for></div>
+        <h1 class="lh">{{fa.h}}</h1>
+        <p class="ls">{{fa.s}}</p>
+        <sc-if value="{{fa.s1}}" hint-placeholder-val="{{true}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="fl"><label for="g-ws2">ÇALIŞMA ALANI</label><div class="inp" style="background: {{c.chip}}"><span class="pre">wms.etkinyazilim.com/</span><input id="g-ws2" type="text" value="{{f.ws}}" onChange="{{on.ws}}"></div></div>
+            <div class="fl"><label for="g-user2">KULLANICI ADI</label><div class="inp" style="background: {{c.chip}}"><input id="g-user2" type="text" autocapitalize="none" value="{{f.user}}" onChange="{{on.user}}"></div></div>
+            <div class="fl"><label for="g-code">ETKİNLEŞTİRME KODU</label><div class="inp" style="background: {{c.chip}}"><input id="g-code" type="text" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="XXXX-XXXX" value="{{f.code}}" onChange="{{on.code}}" style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; letter-spacing: .14em"></div><span class="hint">Yöneticinizden alın · 24 saat geçerli · tek kullanım</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{fa.pin}}" hint-placeholder-val="{{false}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="{{pinDotsCls}}" role="img" aria-label="{{pinAria}}"><sc-for list="{{pinDots}}" as="pd" hint-placeholder-count="6"><i class="{{pd.cls}}"></i></sc-for></div>
+            <sc-if value="{{pinErr}}" hint-placeholder-val="{{false}}"><span class="hint bad" role="alert" style="justify-content: center">{{pinErrT}}</span></sc-if>
+            <div class="pad" role="group" aria-label="PIN tuşları"><sc-for list="{{keys}}" as="k" hint-placeholder-count="12"><button type="button" class="{{k.cls}}" style="background: {{k.bg}}; color: {{k.fg}}" onClick="{{k.go}}" aria-label="{{k.a}}">{{k.l}}</button></sc-for></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{fa.done}}" hint-placeholder-val="{{false}}">
+          <div class="done" style="background: {{c.surface}}">
+            <span class="okc"><svg class="ico" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></span>
+            <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Hazırsınız</b>
+            <p class="ls" style="margin: 0">Bu telefon kaydedildi. Bundan sonra kullanıcı adınız ve PIN'inizle girersiniz.</p>
+            <span class="chip" style="background: {{c.chip}}">KAYITLI CİHAZ · 180 GÜN</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{fa.btnShow}}" hint-placeholder-val="{{true}}">
+          <div class="act" style="background: {{c.bg}}"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}; flex: 0 0 auto; min-width: 64px" onClick="{{faBack}}" aria-label="Geri"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{faNext}}">{{fa.btn}}<svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button></div>
+        </sc-if>
+      </sc-if>
+
+      <!-- ── 6 ORTAK CİHAZ · KULLANICI DEĞİŞTİR ── -->
+      <sc-if value="{{v.sw}}" hint-placeholder-val="{{false}}">
+        <span class="kick">EL TERMİNALİ 1 · ANA DEPO</span>
+        <h1 class="lh">{{swH}}</h1>
+        <sc-if value="{{swList}}" hint-placeholder-val="{{true}}">
+          <sc-if value="{{pending}}" hint-placeholder-val="{{false}}"><div class="ban" style="background: #F4B400; color: #1A1300"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>Gönderilmemiş 2 işlem var</b>Önceki personelin işleri bağlantı gelince gönderilir; kullanıcı değişse de kaybolmaz.</span></div></sc-if>
+          <div class="rows"><sc-for list="{{staffDev}}" as="p" hint-placeholder-count="4"><button type="button" class="row" style="background: {{c.surface}}" onClick="{{p.go}}"><span class="av" style="background: {{p.avBg}}; color: {{p.avFg}}">{{p.ini}}</span><span class="rt"><b>{{p.n}}</b><span>{{p.s}}</span></span><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button></sc-for></div>
+        </sc-if>
+        <sc-if value="{{swPin}}" hint-placeholder-val="{{false}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="{{pinDotsCls}}" role="img" aria-label="{{pinAria}}"><sc-for list="{{pinDots}}" as="pd" hint-placeholder-count="6"><i class="{{pd.cls}}"></i></sc-for></div>
+            <sc-if value="{{pinErr}}" hint-placeholder-val="{{false}}"><span class="hint bad" role="alert" style="justify-content: center">{{pinErrT}}</span></sc-if>
+            <div class="pad" role="group" aria-label="PIN tuşları"><sc-for list="{{keys}}" as="k" hint-placeholder-count="12"><button type="button" class="{{k.cls}}" style="background: {{k.bg}}; color: {{k.fg}}" onClick="{{k.go}}" aria-label="{{k.a}}">{{k.l}}</button></sc-for></div>
+          </div>
+          <button type="button" class="lnk" onClick="{{swBack}}">Başka personel seç</button>
+        </sc-if>
+      </sc-if>
+
+    </div></div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ═════════ YÖNETİCİ / OPERATÖR (bant + liste) ═════════ -->
+<sc-if value="{{v.mgr}}" hint-placeholder-val="{{false}}">
+<div class="mp" style="background: {{c.bg}}; color: {{c.fg}}">
+  <div class="band" style="background: {{band.bg}}">
+    <button type="button" class="wb" onClick="{{goLogin}}" aria-label="Geri"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button>
+    <div class="band-t"><b class="band-h">{{band.h}}</b><span class="band-s">{{band.s}}</span></div>
+    <button type="button" class="wb" onClick="{{toggleTheme}}" aria-label="Açık / koyu görünüm"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18"></path></svg></button>
+  </div>
+  <div class="lscroll wide"><div class="lin">
+
+    <!-- ── 7 SAHA PERSONELİ EKLE ── -->
+    <sc-if value="{{v.staff}}" hint-placeholder-val="{{true}}">
+      <div class="mgrid">
+        <div class="card" style="background: {{c.surface}}">
+          <div class="fl"><label for="g-sn">AD SOYAD</label><div class="inp" style="background: {{c.chip}}"><input id="g-sn" type="text" value="{{f.sn}}" onChange="{{on.sn}}"></div></div>
+          <div class="fl"><label for="g-su">KULLANICI ADI</label><div class="inp" style="background: {{c.chip}}"><input id="g-su" type="text" autocapitalize="none" spellcheck="false" value="{{f.su}}" onChange="{{on.su}}"></div><span class="hint">Bu çalışma alanında tek · e-posta gerekmez</span></div>
+          <div class="fl"><span class="fll">GÖREV</span>
+            <div class="opts" role="radiogroup" aria-label="Saha rolü"><sc-for list="{{roleOpts}}" as="ro" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{ro.sel}}" class="{{ro.cls}}" style="background: {{c.chip}}; min-height: 96px" onClick="{{ro.go}}"><span class="tick"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></span><span class="oi" style="background: {{ro.iBg}}; color: {{ro.iFg}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ro.d}}"></path></svg></span><b>{{ro.t}}</b></button></sc-for></div>
+          </div>
+          <div class="fl"><span class="fll">DEPO</span>
+            <div class="opts" role="radiogroup" aria-label="Depo"><sc-for list="{{whOpts}}" as="wo" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{wo.sel}}" class="{{wo.cls}}" style="background: {{c.chip}}; min-height: 64px; justify-content: center" onClick="{{wo.go}}"><span class="tick"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></span><b>{{wo.t}}</b></button></sc-for></div>
+          </div>
+          <button type="button" class="big" style="background: #172E42; color: #FFFFFF; flex: none" onClick="{{makeCode}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M12 5v14M5 12h14"></path></svg>PERSONELİ EKLE</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <sc-if value="{{codeShown}}" hint-placeholder-val="{{true}}">
+            <div class="kcard" style="background: {{c.surface}}">
+              <span class="kick">ETKİNLEŞTİRME KARTI · {{f.su}}</span>
+              <span class="kcode" aria-label="Etkinleştirme kodu">K7MR-4XQ2</span>
+              <div class="qr" role="img" aria-label="Etkinleştirme QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
+              <span class="mono" style="font-size: 13px; opacity: .8">wms.etkinyazilim.com/motive · 24 SAAT · TEK KULLANIM</span>
+              <div class="act" style="position: static; padding: 0; box-shadow: none; width: 100%"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}" onClick="{{noop}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"></path></svg>YAZDIR</button></div>
+            </div>
+            <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span><b>Kod yalnız bu ekranda görünür</b>Kaydedilmez, e-postayla gitmez. Kaybolursa yeni kod üretin; eskisi geçersiz olur.</span></div>
+          </sc-if>
+          <sc-if value="{{codeHidden}}" hint-placeholder-val="{{false}}">
+            <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg><span><b>Personel nasıl girer?</b>Ekledikten sonra çıkan kodu verin. Personel kendi telefonunda ya da kayıtlı el terminalinde kodu girip PIN belirler.</span></div>
+          </sc-if>
+        </div>
+      </div>
+      <div class="shd"><b>SAHA PERSONELİ</b><span>3 KİŞİ</span></div>
+      <div class="rows"><sc-for list="{{staffList}}" as="p" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{p.avBg}}; color: {{p.avFg}}">{{p.ini}}</span><span class="rt"><b>{{p.n}}</b><span>{{p.s}}</span></span><span class="chip" style="background: {{p.stBg}}; color: {{p.stFg}}">{{p.st}}</span><div class="rbtns"><button type="button" class="sbtn" style="background: {{c.chip}}" onClick="{{noop}}" aria-label="Yeni kod üret"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"></path></svg><span class="tx">YENİ KOD</span></button></div></div></sc-for></div>
+    </sc-if>
+
+    <!-- ── 8 CİHAZLAR ── -->
+    <sc-if value="{{v.dev}}" hint-placeholder-val="{{false}}">
+      <div class="mgrid">
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <div class="shd"><b>KAYITLI CİHAZLAR</b><span>{{devCount}} CİHAZ</span></div>
+          <div class="rows"><sc-for list="{{devList}}" as="d" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{d.avBg}}; color: {{d.avFg}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{d.ic}}"></path></svg></span><span class="rt"><b>{{d.n}}</b><span>{{d.s}}</span></span><div class="rbtns"><button type="button" class="sbtn" style="background: #C62828; color: #FFFFFF" onClick="{{d.go}}" aria-label="{{d.a}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="tx">İPTAL ET</span></button></div></div></sc-for></div>
+        </div>
+        <div class="kcard" style="background: {{c.surface}}">
+          <span class="kick">ORTAK CİHAZ EKLE</span>
+          <div class="qr qrbig" role="img" aria-label="Cihaz kayıt QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
+          <span class="timer" role="timer">04:58 KALDI</span>
+          <p class="ls" style="margin: 0">El terminalinde wms.etkinyazilim.com açın, <b>Cihazı kaydet</b>'e dokunun ve bu QR'ı okutun.</p>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ── 9 OPERATÖR · DEMO TALEPLERİ ── -->
+    <sc-if value="{{v.op}}" hint-placeholder-val="{{false}}">
+      <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span><b>Yalnız Etkin Yazılım operatörü</b>Onay, talep sahibine tek kullanımlık aktivasyon bağlantısı gönderir. Alan, müşteri bağlantıyı açınca kurulur.</span></div>
+      <div class="shd"><b>BEKLEYEN</b><span>{{opPending}} TALEP</span></div>
+      <div class="rows"><sc-for list="{{opList}}" as="r" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{r.avBg}}; color: {{r.avFg}}">{{r.ini}}</span><span class="rt"><b>{{r.n}}</b><span>{{r.s}}</span></span><sc-if value="{{r.open}}" hint-placeholder-val="{{true}}"><div class="rbtns"><button type="button" class="sbtn" style="background: {{c.chip}}" onClick="{{r.no}}" aria-label="Reddet"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="tx">REDDET</span></button><button type="button" class="sbtn" style="background: #17804F; color: #FFFFFF" onClick="{{r.yes}}" aria-label="Onayla"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M4 12l5 5L20 6"></path></svg><span class="tx">ONAYLA</span></button></div></sc-if><sc-if value="{{r.closed}}" hint-placeholder-val="{{false}}"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></sc-if></div></sc-for></div>
+    </sc-if>
+
+    <!-- ── 10 HOŞ GELDİNİZ E-POSTASI ── -->
+    <sc-if value="{{v.mail}}" hint-placeholder-val="{{false}}">
+      <div class="mail" style="background: {{c.surface}}">
+        <div class="mail-h" style="background: {{c.chip}}"><span>KİMDEN · Etkin WMS &lt;bildirim@etkinyazilim.com&gt;</span><span>KİME · {{f.ownerMail}}</span><span>KONU · Etkin WMS çalışma alanınız hazır</span></div>
+        <div class="mail-b">
+          <div class="brand"><svg width="28" height="28" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle cx="80" cy="82" r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"></circle></svg><b>ETKİN WMS</b></div>
+          <b style="font: 800 24px/1.15 'Bricolage Grotesque', sans-serif">Hoş geldiniz, {{f.co}}</b>
+          <p>Çalışma alanınız kuruldu. Bu bilgileri kolay bulmanız için saklayın.</p>
+          <dl class="kv" style="background: {{c.chip}}"><dt>ADRES</dt><dd>wms.etkinyazilim.com/{{slugShow}}</dd><dt>GİRİŞ E-POSTASI</dt><dd>{{f.ownerMail}}</dd><dt>SAHA GİRİŞİ</dt><dd>Çalışma alanı: {{slugShow}}</dd><dt>DENEME</dt><dd>{{trialEnd}} tarihine kadar</dd></dl>
+          <p>Parolanız ve doğrulama kodlarınız bu e-postada <b>yer almaz</b>. Parolanızı unutursanız giriş ekranındaki "Parolamı unuttum" bağlantısını kullanın.</p>
+          <a href="#" class="big" style="background: #172E42; color: #FFFFFF; text-decoration: none; flex: none">ÇALIŞMA ALANINI AÇ</a>
+        </div>
+      </div>
+    </sc-if>
+
+  </div></div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"device":{"editor":"enum","default":"auto","options":["auto","desktop","tablet","mobile"],"section":"Önizleme"},"previewBar":{"editor":"boolean","default":true,"section":"Önizleme"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      mode: 'desktop', override: null, theme: 'acik',
+      scr: 'login', tab: 'eposta', devOk: true, showPw: false,
+      pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true,
+      seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0,
+      opDone: {}, revoked: {},
+      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d' }
+    };
+  }
+  componentDidMount() {
+    var self = this;
+    this._r = function () { self.setState({ mode: self.detect() }); };
+    this._r();
+    window.addEventListener('resize', this._r);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); clearTimeout(this._e); }
+  detect() {
+    var w = window.innerWidth || 1440, coarse = false;
+    try { coarse = window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
+    if (w < 700) return 'mobile';
+    if (coarse || w < 1100) return 'tablet';
+    return 'desktop';
+  }
+  buzz(p) { try { if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(p); } catch (e) {} }
+  slugOf(t) {
+    var map = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'Ç': 'c', 'Ğ': 'g', 'Ö': 'o', 'Ş': 's', 'Ü': 'u' };
+    return String(t || '').replace(/[çğıİöşüÇĞÖŞÜ]/g, function (ch) { return map[ch]; }).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
+  }
+  renderVals() {
+    var self = this, s = this.state, P = this.props;
+    var forced = P.device && P.device !== 'auto' ? P.device : s.override;
+    var m = forced || s.mode;
+    var dk = s.theme === 'koyu';
+    var c = dk ? { bg: '#13171C', fg: '#D8DEE4', surface: '#1B2128', chip: '#232B34', track: '#2C3540', okBg: '#1F4A3A', okFg: '#E6EAEE', logoBg: '#E6EAEE', logoFg: '#13171C', keyBg: '#232B34' }
+               : { bg: '#F4F2EE', fg: '#1E2F3E', surface: '#FFFFFF', chip: '#F1EEE8', track: '#E6E2DA', okBg: '#CFE8DA', okFg: '#0F3D27', logoBg: '#172E42', logoFg: '#FFFFFF', keyBg: '#F1EEE8' };
+    var D = {
+      mail: 'M3 6h18v12H3zM3 7l9 6 9-6', user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+      lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+      eyeOff: 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6 0 10 6 10 6a17 17 0 0 1-3.1 3.7M6.6 6.6C3.8 8.4 2 12 2 12s4 6 10 6a9.6 9.6 0 0 0 4.4-1.1',
+      phone: 'M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM11 18h2', term: 'M6 2h12v20H6zM9 6h6v5H9zM9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01',
+      box: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10', empty: 'M4 4h16v16H4zM9 12h6',
+      giris: 'M12 3v12M7 10l5 5 5-5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4', cikis: 'M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
+      sayim: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2zM9 13l2 2 4-4',
+      check: 'M4 12l5 5L20 6', clock: 'M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z'
+    };
+    var go = function (scr, extra) { return function () { var o = { scr: scr, pin: '', pin1: '', pinErr: '' }; for (var k in (extra || {})) o[k] = extra[k]; self.setState(o); }; };
+    var setF = function (k) { return function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; f[k] = e && e.target ? e.target.value : ''; self.setState({ f: f }); }; };
+    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su'].forEach(function (k) { on[k] = setF(k); });
+    on.co = function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; var v = e && e.target ? e.target.value : ''; if (self.slugOf(f.co) === f.slug) f.slug = self.slugOf(v); f.co = v; self.setState({ f: f }); };
+
+    /* ── PIN ── */
+    var pinCtx = s.scr === 'fact' ? (s.faStep === 2 ? 'set1' : 'set2') : 'login';
+    var pinDone = function (pin) {
+      if (pinCtx === 'set1') {
+        if (pin === '000000' || pin === '123456' || /^(\d)\1+$/.test(pin)) { self.buzz([80, 40, 80]); self.setState({ pin: '', pinErr: 'Çok kolay bir PIN. Başka rakamlar seçin.' }); return; }
+        self.setState({ pin1: pin, pin: '', pinErr: '', faStep: 3 }); return;
+      }
+      if (pinCtx === 'set2') {
+        if (pin !== self.state.pin1) { self.buzz([80, 40, 80]); self.setState({ pin: '', pinErr: 'PIN\'ler aynı değil. Yeniden girin.' }); return; }
+        self.setState({ pin: '', pinErr: '', faStep: 4 }); return;
+      }
+      if (pin === '482916') { self.setState({ pin: '', pinErr: '' }); return; }
+      self.buzz([80, 40, 80]); self.setState({ pin: '', pinErr: 'PIN yanlış · 4 deneme hakkınız kaldı' });
+    };
+    var press = function (d) { return function () { var p = self.state.pin; if (p.length >= 6) return; p += d; self.setState({ pin: p, pinErr: '' }); if (p.length === 6) { clearTimeout(self._e); self._e = setTimeout(function () { pinDone(p); }, 160); } }; };
+    var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(function (d) { return { l: d, a: d, cls: 'key', bg: c.keyBg, fg: c.fg, go: press(d) }; });
+    keys.push({ l: 'TEMİZLE', a: 'PIN\'i temizle', cls: 'key fn', bg: 'transparent', fg: c.fg, go: function () { self.setState({ pin: '' }); } });
+    keys.push({ l: '0', a: '0', cls: 'key', bg: c.keyBg, fg: c.fg, go: press('0') });
+    keys.push({ l: 'SİL', a: 'Son rakamı sil', cls: 'key fn', bg: 'transparent', fg: c.fg, go: function () { self.setState({ pin: self.state.pin.slice(0, -1) }); } });
+    var pinDots = [0, 1, 2, 3, 4, 5].map(function (i) { return { cls: i < s.pin.length ? 'on' : '' }; });
+
+    /* ── slug ── */
+    var slug = self.slugOf(s.f.slug);
+    var taken = ['demo', 'login', 'api', 'mfa', 't', 'invite', 'operator', 'field', 'onboarding', 'reset-password', 'motive2'];
+    var slugState = slug.length < 3 ? 'short' : taken.indexOf(slug) >= 0 ? 'taken' : slug !== s.f.slug ? 'fix' : 'ok';
+    var slugHint = { short: 'En az 3 karakter: küçük harf, rakam, tire', taken: 'Bu ad kullanılamaz, başka bir ad deneyin', fix: 'Adresiniz böyle olacak: ' + slug, ok: 'Uygun · adresiniz wms.etkinyazilim.com/' + slug }[slugState];
+
+    /* ── activation ── */
+    var aS = s.actStep;
+    var npOk = (s.f.np || '').length >= 12;
+    var actBtn = ['', 'DEVAM', 'DEVAM', 'PAROLAYI KAYDET', 'DOĞRULA', 'ÇALIŞMA ALANINI AÇ'][aS];
+    var actDis = (aS === 1 && (slugState === 'short' || slugState === 'taken' || !(s.f.co || '').trim())) || (aS === 3 && !npOk);
+    var d = new Date(); d.setMonth(d.getMonth() + 3);
+    var trialEnd = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
+    var act = {
+      kick: aS < 5 ? 'ADIM ' + aS + ' / 4' : 'TAMAMLANDI',
+      h: ['', 'Çalışma alanınızı adlandırın', 'Nasıl başlamak istersiniz?', 'Parolanızı belirleyin', 'İki adımlı doğrulama', 'Hoş geldiniz'][aS],
+      s: ['', 'Firma adınız ile çalışma alanı adı ayrıdır. Alan adı giriş adresiniz olur ve sonradan değişmez.', '3 aylık deneme. Örnek verilerle hemen deneyebilir ya da boş başlayabilirsiniz.', 'En az 12 karakter. Parolanızı yalnız siz bilirsiniz; biz göremeyiz.', 'Yönetici hesabı olduğunuz için zorunludur.', ''][aS],
+      bars: [1, 2, 3, 4].map(function (i) { return { bg: i <= aS ? '#172E42' : c.track }; }),
+      s1: aS === 1, s2: aS === 2, s3: aS === 3, s4: aS === 4, s5: aS === 5, back: aS > 1 && aS < 5,
+      btn: actBtn, dis: actDis, btnBg: aS === 5 ? '#17804F' : '#172E42', btnFg: '#FFFFFF'
+    };
+    if (dk) act.bars = act.bars.map(function (b) { return { bg: b.bg === '#172E42' ? '#F4C542' : b.bg }; });
+
+    /* ── field activation ── */
+    var fS = s.faStep;
+    var fa = {
+      kick: fS < 4 ? 'ADIM ' + Math.min(fS, 3) + ' / 3' : 'TAMAMLANDI',
+      h: ['', 'Telefonu kaydet', 'PIN belirleyin', 'PIN\'i tekrar girin', 'Kaydedildi'][fS],
+      s: ['', 'Yöneticinizin verdiği kodu girin. Bu telefon size ait cihaz olarak kaydolur.', '6 rakam. Kimseyle paylaşmayın.', 'Aynı 6 rakamı bir kez daha.', ''][fS],
+      bars: [1, 2, 3].map(function (i) { return { bg: i <= fS ? (dk ? '#F4C542' : '#172E42') : c.track }; }),
+      s1: fS === 1, pin: fS === 2 || fS === 3, done: fS === 4, btnShow: fS === 1 || fS === 4,
+      btn: fS === 4 ? 'GÖREVLERİME GİT' : 'DEVAM'
+    };
+
+    var ini = function (n) { return n.split(' ').map(function (x) { return x.charAt(0); }).join('').slice(0, 2).toUpperCase(); };
+    var tone = [['#FFE7A8', '#4A3500'], ['#CFE8DA', '#0F3D27'], ['#DCE4F8', '#1C2E5C'], ['#F6D9C9', '#5C2410']];
+    var staffDev = ['Personel A', 'Personel B', 'Personel C', 'Personel D'].map(function (n, i) {
+      return { n: n, s: ['TOPLAYICI', 'TOPLAYICI', 'SAYIMCI', 'TOPLAYICI'][i] + ' · ANA DEPO', ini: n.slice(-1), avBg: tone[i][0], avFg: tone[i][1], go: function () { self.setState({ swWho: n, pin: '', pinErr: '' }); } };
+    });
+    var staffList = [['Personel A', 'personel.a · TOPLAYICI · ANA DEPO', 'AKTİF'], ['Personel B', 'personel.b · TOPLAYICI · ANA DEPO', 'AKTİF'], ['Personel C', 'personel.c · SAYIMCI · DEPO 2', 'KİLİTLİ']].map(function (r, i) {
+      var lk = r[2] === 'KİLİTLİ';
+      return { n: r[0], s: r[1], st: r[2], ini: r[0].slice(-1), avBg: tone[i][0], avFg: tone[i][1], stBg: lk ? '#C62828' : (dk ? '#1F4A3A' : '#CFE8DA'), stFg: lk ? '#FFFFFF' : (dk ? '#E6EAEE' : '#0F3D27') };
+    });
+    var devs = [['el1', 'El terminali 1', 'ORTAK · ANA DEPO · SON KULLANIM 3 DK ÖNCE', D.term], ['tab1', 'Tablet · Sevkiyat', 'ORTAK · ANA DEPO · SON KULLANIM DÜN', D.term], ['tel1', 'Personel A · telefon', 'KİŞİSEL · SON KULLANIM 1 SA ÖNCE', D.phone]].filter(function (x) { return !s.revoked[x[0]]; });
+    var devList = devs.map(function (x) { return { n: x[1], s: x[2], ic: x[3], avBg: c.chip, avFg: c.fg, a: x[1] + ' cihazını iptal et', go: function () { var r = {}; for (var k in self.state.revoked) r[k] = true; r[x[0]] = true; self.setState({ revoked: r }); } }; });
+    var reqs = [['r1', '[Ad Soyad]', '[Firma adı] · [e-posta] · BUGÜN 14:22'], ['r2', '[Ad Soyad]', '[Firma adı] · [e-posta] · DÜN 09:10'], ['r3', '[Ad Soyad]', '[Firma adı] · [e-posta] · 12.10 16:45']];
+    var opList = reqs.map(function (r, i) {
+      var st = s.opDone[r[0]];
+      var mark = function (v) { return function () { var o = {}; for (var k in self.state.opDone) o[k] = self.state.opDone[k]; o[r[0]] = v; self.setState({ opDone: o }); }; };
+      return { n: r[1], s: r[2], ini: String(i + 1), avBg: tone[i][0], avFg: tone[i][1], open: !st, closed: !!st, st: st === 'ok' ? 'ONAYLANDI · BAĞLANTI GİTTİ' : 'REDDEDİLDİ', stBg: st === 'ok' ? (dk ? '#1F4A3A' : '#CFE8DA') : c.chip, stFg: st === 'ok' ? (dk ? '#E6EAEE' : '#0F3D27') : c.fg, yes: mark('ok'), no: mark('no') };
+    });
+    var opPending = opList.filter(function (r) { return r.open; }).length;
+    var pick = function (key, val) { return function () { var o = {}; o[key] = val; self.setState(o); }; };
+    var opt = function (key, val, o) { var sel = s[key] === val; o.cls = 'opt' + (sel ? ' on' : ''); o.sel = sel ? 'true' : 'false'; o.go = pick(key, val); return o; };
+
+    /* ── QR (örnek desen) ── */
+    var qrCells = [];
+    var fin = function (x0, y0) { for (var y = 0; y < 7; y++) for (var x = 0; x < 7; x++) { var b = x === 0 || y === 0 || x === 6 || y === 6 || (x > 1 && x < 5 && y > 1 && y < 5); if (b) qrCells.push({ x: x0 + x, y: y0 + y }); } };
+    fin(0, 0); fin(14, 0); fin(0, 14);
+    for (var y = 0; y < 21; y++) for (var x = 0; x < 21; x++) { if ((x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12)) continue; if (((x * 7 + y * 13 + x * y) % 5) < 2) qrCells.push({ x: x, y: y }); }
+
+    var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
+    var mgr = ['staff', 'dev', 'op', 'mail'].indexOf(s.scr) >= 0;
+    var bands = { staff: { h: 'Saha personeli ekle', s: 'MOTIVE · E-POSTA GEREKMEZ', bg: '#172E42' }, dev: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, op: { h: 'Demo talepleri', s: 'ETKİN YAZILIM · OPERATÖR', bg: '#3D2A6B' }, mail: { h: 'Hoş geldiniz e-postası', s: 'AKTİVASYON SONRASI OTOMATİK', bg: '#172E42' } };
+    var sides = {
+      login: { h: 'Depo işi, tek ekranda.', p: 'Ofisten e-postanızla, sahadan kullanıcı adı ve PIN ile girin.', rows: [[D.mail, 'YÖNETİCİ · E-POSTA + PAROLA + KOD'], [D.term, 'SAHA · KULLANICI ADI + PIN'], [D.lock, 'PIN YALNIZ KAYITLI CİHAZDA']] },
+      act: { h: 'Deneme alanınız onaylandı.', p: '3 ay boyunca bütün özellikler açık. Kurulum dört adım.', rows: [[D.box, 'ÖRNEK VERİ YA DA BOŞ BAŞLANGIÇ'], [D.lock, 'PAROLAYI YALNIZ SİZ BİLİRSİNİZ'], [D.mail, 'GİRİŞ BİLGİLERİ E-POSTAYLA']] },
+      fact: { h: 'Sahaya hoş geldiniz.', p: 'Kodu bir kez girin, PIN belirleyin. Sonra her gün yalnız PIN.', rows: [[D.phone, 'KİŞİSEL TELEFON YA DA EL TERMİNALİ'], [D.lock, '5 YANLIŞ PIN = HESAP KİLİTLENİR'], [D.check, 'E-POSTA GEREKMEZ']] }
+    };
+    var side = sides[s.scr === 'act' ? 'act' : s.scr === 'fact' ? 'fact' : 'login'];
+
+    return {
+      wrapCls: 'wrap' + (forced && m !== 'desktop' ? ' fr-' + m : '') + (dk ? ' dk' : ''),
+      appCls: 'app m-' + m + (dk ? ' dkm' : ''),
+      showPrev: P.previewBar !== false,
+      prevBtns: [['auto', 'Otomatik'], ['desktop', 'Masaüstü'], ['tablet', 'Tablet'], ['mobile', 'Mobil']].map(function (b) { var on2 = b[0] === 'auto' ? !s.override : s.override === b[0];
+        return { l: b[1], cls: 'prevb' + (on2 ? ' on' : ''), pressed: on2 ? 'true' : 'false', go: function () { self.setState({ override: b[0] === 'auto' ? null : b[0] }); } }; }),
+      scrBtns: scrList.map(function (b) { var on3 = s.scr === b[0]; return { l: b[1], cls: 'prevb' + (on3 ? ' on' : ''), pressed: on3 ? 'true' : 'false', go: go(b[0], { actStep: 1, faStep: 1, swWho: null }) }; }),
+      c: c, f: s.f, on: on, side: side, band: bands[s.scr] || bands.staff,
+      v: { auth: !mgr, mgr: mgr, login: s.scr === 'login', loginMail: s.tab === 'eposta', loginField: s.tab === 'saha', mfa: s.scr === 'mfa', pick: s.scr === 'pick', act: s.scr === 'act', fact: s.scr === 'fact', sw: s.scr === 'sw', staff: s.scr === 'staff', dev: s.scr === 'dev', op: s.scr === 'op', mail: s.scr === 'mail' },
+      tabs: [['eposta', 'E-POSTA', D.mail], ['saha', 'SAHA GİRİŞİ', D.term]].map(function (t) { var on4 = s.tab === t[0]; return { l: t[1], d: t[2], cls: 'tab' + (on4 ? ' on' : ''), sel: on4 ? 'true' : 'false', bg: on4 ? c.surface : 'transparent', go: function () { self.setState({ tab: t[0], pin: '', pinErr: '' }); } }; }),
+      dev: { ok: s.devOk, no: !s.devOk },
+      devToggleL: s.devOk ? 'Önizleme: kayıtsız cihazı göster' : 'Önizleme: kayıtlı cihazı göster',
+      toggleDev: function () { self.setState({ devOk: !self.state.devOk, pin: '', pinErr: '' }); },
+      pwType: s.showPw ? 'text' : 'password', pwEyeL: s.showPw ? 'Parolayı gizle' : 'Parolayı göster', pwEyeD: s.showPw ? D.eyeOff : D.eye,
+      togglePw: function () { self.setState({ showPw: !self.state.showPw }); },
+      keys: keys, pinDots: pinDots, pinDotsCls: 'dots' + (s.pinErr ? ' bad' : ''), pinAria: s.pin.length + ' / 6 rakam girildi', pinErr: !!s.pinErr, pinErrT: s.pinErr,
+      wsList: [['Motive Rubber', 'wms.etkinyazilim.com/motive · YÖNETİCİ'], ['[Firma adı]', 'wms.etkinyazilim.com/[alan] · DEPO SORUMLUSU']].map(function (w, i) { var sel = s.wsPick === i; return { n: w[0], s: w[1], ini: ini(w[0].replace(/[\[\]]/g, '')), last: i === 0, cls: 'row' + (sel ? ' sel' : ''), pressed: sel ? 'true' : 'false', avBg: tone[i][0], avFg: tone[i][1], go: function () { self.setState({ wsPick: i }); } }; }),
+      act: act, slugCls: 'inp' + (slugState === 'taken' ? ' bad' : slugState === 'ok' ? ' ok' : ''), slugHintCls: 'hint' + (slugState === 'taken' ? ' bad' : slugState === 'ok' ? ' ok' : ''), slugHint: slugHint, slugShow: slug || 'motive',
+      npHint: npOk ? 'Güçlü parola' : 'En az 12 karakter · ' + (s.f.np || '').length + ' / 12', npHintCls: 'hint' + (npOk ? ' ok' : ''),
+      seedOpts: [opt('seed', 'ornek', { t: 'Örnek verilerle', s: 'Örnek depo, ürün ve raflarla hemen deneyin.', d: D.box, iBg: '#FFE7A8', iFg: '#4A3500' }), opt('seed', 'bos', { t: 'Boş başla', s: 'Kendi depo ve ürünlerinizi girin ya da Excel ile yükleyin.', d: D.empty, iBg: c.chip, iFg: c.fg })],
+      trialEnd: trialEnd, qrCells: qrCells,
+      actNext: function () { if (self.state.actStep < 5) self.setState({ actStep: self.state.actStep + 1 }); else self.setState({ scr: 'mail' }); },
+      actBack: function () { self.setState({ actStep: Math.max(1, self.state.actStep - 1) }); },
+      fa: fa,
+      faNext: function () { if (self.state.faStep === 1) self.setState({ faStep: 2, pin: '', pinErr: '' }); else self.setState({ scr: 'login', tab: 'saha', devOk: true, faStep: 1 }); },
+      faBack: function () { if (self.state.faStep === 1 || self.state.faStep === 4) self.setState({ scr: 'login', tab: 'saha', faStep: 1 }); else self.setState({ faStep: 1, pin: '' }); },
+      swList: !s.swWho, swPin: !!s.swWho, swH: s.swWho ? s.swWho + ' · PIN' : 'Kim çalışıyor?', pending: true, staffDev: staffDev,
+      swBack: function () { self.setState({ swWho: null, pin: '', pinErr: '' }); },
+      roleOpts: [opt('role', 'PICKER', { t: 'Toplayıcı', d: D.cikis, iBg: '#F6D9C9', iFg: '#5C2410' }), opt('role', 'COUNTER', { t: 'Sayımcı', d: D.sayim, iBg: '#DCE4F8', iFg: '#1C2E5C' })],
+      whOpts: ['Ana depo', 'Depo 2', 'Depo 3'].map(function (w, i) { return opt('wh', i, { t: w }); }),
+      codeShown: s.codeShown, codeHidden: !s.codeShown, staffList: staffList,
+      makeCode: function () { self.setState({ codeShown: true }); },
+      devList: devList, devCount: devList.length, opList: opList, opPending: opPending,
+      goMfa: go('mfa'), goPick: go('pick'), goLogin: go('login'), goSwitch: go('sw', { swWho: null }), goFact: go('fact', { faStep: 1 }),
+      toggleTheme: function () { self.setState({ theme: self.state.theme === 'koyu' ? 'acik' : 'koyu' }); },
+      noop: function () {}
+    };
+  }
+}
+</script>
+</body>
+</html>
