@@ -210,3 +210,4 @@
 - 2026-10-15 T-985 birleşti; T-986 Aşama 3 transfer/manuel görünüm.
 - 2026-10-15 T-986 canlı; T-987 sayım görevleri ve okumaları (Aşama 4a).
 - 2026-10-15 T-987 birleşti; T-988 Görevlerim ana ekranı birebir + gerçek özet.
+- 2026-10-15 T-988 güvenlik incelemesi: 2 MINOR düzeltildi (sayım yetki kapısı, negatif/yalıtım testleri), yeniden inceleme 0/0/0.
