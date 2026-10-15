@@ -94,7 +94,7 @@ const tasksOf = (sid: string) =>
     [A.tenantId, sid],
   );
 const auditCount = async (action: string, ids: readonly string[]): Promise<number> =>
-  Number((await q<{ c: string }>("SELECT count(*)::text AS c FROM public.audit_logs WHERE tenant_id = $1 AND action = $2 AND entity_id = ANY($3::uuid[])", [A.tenantId, action, ids]))[0]?.c);
+  Number((await q<{ c: string }>("SELECT count(*)::text AS c FROM public.audit_logs WHERE tenant_id = $1 AND action = $2 AND entity_id = ANY($3::text[])", [A.tenantId, action, ids]))[0]?.c);
 
 beforeAll(async () => {
   app = createDbClient({ url: env.databaseUrl, poolMax: DB_CLIENT_SETTINGS.poolMax, prepare: env.prepare ?? DB_CLIENT_SETTINGS.prepare });
@@ -202,7 +202,7 @@ describe("T-987 yönetici atamalı sayım akışı", () => {
     const after = await tasksOf(sid);
     expect(after.map((t) => t.status)).toEqual(["CANCELLED", "CANCELLED"]);
     const reasons = await q<{ reason: string | null }>(
-      "SELECT reason FROM public.audit_logs WHERE tenant_id = $1 AND action = 'warehouse_task.cancelled' AND entity_id = ANY($2::uuid[])",
+      "SELECT reason FROM public.audit_logs WHERE tenant_id = $1 AND action = 'warehouse_task.cancelled' AND entity_id = ANY($2::text[])",
       [A.tenantId, after.map((t) => t.id)],
     );
     expect(reasons.map((r) => r.reason)).toEqual(["T987 iptal", "T987 iptal"]);
