@@ -83,5 +83,6 @@ Bu tablo dışındaki her sapma için kullanıcının yazılı onayı gerekir; o
 | Aktivasyon 4 adım + hazır (`v.act`) ve hoş geldiniz e-postası (`v.mail`) | Giris.dc.html | Onaylandı; T-995 |
 | Saha etkinleştirme: kod → PIN → tekrar (`v.fact`), ortak cihaz kullanıcı değiştir (`v.sw`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
 | Saha personeli ekle + etkinleştirme kartı (`v.staff`), cihazlar + QR ile ekle (`v.dev`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
-| Operatör demo talepleri (`v.op`) | Giris.dc.html | T-994 aktarıldı: 390/1180/1440 açık ve koyu 0 px fark (`parity/demo-talepleri/`); yayın T-995 ile |
+| Operatör demo talepleri (`v.op`) | Giris.dc.html | T-994 aktarıldı (`parity/demo-talepleri/`), sonra ADR-027 ile panele taşındı; bu görünüm artık kullanılmıyor |
 | Yönetim paneli (yonet.etkinyazilim.com): özet, müşteriler, müşteri detayı, paketler, ödemeler, demo talepleri, satış sayfası, işlem kaydı | Yonet.dc.html | Onaylandı 15 Ekim; T-401…T-408. Demo talepleri ekranı Giris `v.op` yerine buradan (ADR-027) |
+| Panel kabuğu + Demo talepleri (`talepler`) | Yonet.dc.html | T-401 aktarıldı (`parity/panel-talepler/`): içerik alanı mobil 0 px, tablet/masaüstü alt piksel; menüde yalnız yapılmış sayfa (kademeli) |

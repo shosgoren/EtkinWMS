@@ -49,8 +49,8 @@ const oneLine = (s) => s.replace(/[\r\n\t]+/g, ' ').trim();
  * @param {{ id: string, createdAt: string, name: string, company: string, email: string, sector: string, message: string }} lead
  * @param {{ apiKey: string, to: string, from: string }} config
  */
-/** Operatör onay ekranı (T-994). Sabit adres: talep içeriğinden türetilmez. */
-export const OPERATOR_URL = 'https://wms.etkinyazilim.com/operator/demo-requests';
+/** Operatör onay ekranı (T-994 → panel, ADR-027). Sabit adres: talep içeriğinden türetilmez. */
+export const OPERATOR_URL = 'https://yonet.etkinyazilim.com/talepler';
 
 export function buildLeadEmail(lead, config) {
   const rows = [

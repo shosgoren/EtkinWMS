@@ -102,3 +102,45 @@ describe("CSP: uygulama içi barkod çözücü (T-286)", () => {
     expect(csp).not.toMatch(/https?:/);
   });
 });
+
+describe("proxy: ADR-027 kip ayrımı (yonet. panel / wms. müşteri)", () => {
+  const COOKIE = { cookie: "better-auth.session_token=x" };
+  beforeEach(() => vi.spyOn(console, "log").mockImplementation(() => undefined));
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.APP_SURFACE;
+  });
+
+  it("panel kipi: tenant ve kayıt yolları 404, CSP başlığı yine var", () => {
+    process.env.APP_SURFACE = "panel";
+    for (const p of ["/t/motive", "/onboarding", "/invite/abc", "/panel/talepler", "/operator/demo-requests"]) {
+      const res = proxy(req(p, COOKIE));
+      expect(res.status, p).toBe(404);
+      expect(res.headers.get("Content-Security-Policy"), p).toContain("default-src 'self'");
+    }
+  });
+
+  it("panel kipi: oturumsuz panel sayfası girişe, oturumlu panel sayfası iç yola yazılır", () => {
+    process.env.APP_SURFACE = "panel";
+    const anon = proxy(req("/talepler"));
+    expect(anon.status).toBe(307);
+    expect(anon.headers.get("location")).toBe("http://localhost:3000/login?next=%2Ftalepler");
+    const res = proxy(req("/talepler?error=INTERNAL", COOKIE));
+    expect(res.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/panel/talepler?error=INTERNAL");
+    expect(proxy(req("/", COOKIE)).headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/panel");
+  });
+
+  it("panel kipi: giriş ve kimlik uçları açık; /mfa oturum ister", () => {
+    process.env.APP_SURFACE = "panel";
+    expect(proxy(req("/login")).status).toBe(200);
+    expect(proxy(req("/api/auth/sign-in/email")).status).toBe(200);
+    expect(proxy(req("/mfa")).status).toBe(307);
+  });
+
+  it("müşteri kipi: panel iç yolları 404; müşteri yolları eskisi gibi", () => {
+    expect(proxy(req("/panel", COOKIE)).status).toBe(404);
+    expect(proxy(req("/panel/talepler", COOKIE)).status).toBe(404);
+    expect(proxy(req("/t/motive", COOKIE)).status).toBe(200);
+    expect(proxy(req("/login")).status).toBe(200);
+  });
+});
