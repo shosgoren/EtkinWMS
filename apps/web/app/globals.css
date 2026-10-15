@@ -653,6 +653,21 @@ select.bg-none { background-image:none; }
   body:has(.tenant-shell) [data-testid="app-bar-name"] { margin-right: 0; }
 }
 
+/* T-986: Görevlerim tasarımı Aşama 3 — stok/transfer/manuel belge ekranlarında başlık bandı (yalnız bu bölümler; yönetici ekranları aynı).
+   Transfer, ana ekrandaki döşemesiyle aynı mor tonu kullanır; zemin ton koyusu + yüzey yazısı. */
+.screen-shell[data-section="transfer"] { --screen-tone-bg: var(--color-cat-purple-bg); --screen-tone-ink: var(--color-cat-purple-ink); }
+.screen-interior:is([data-section="stock"], [data-section="transfer"]) .screen-content > main > h1 {
+  border-bottom: 0;
+  padding: .875rem 1.125rem;
+  border-radius: 1.25rem;
+  background: var(--screen-tone-ink);
+  color: var(--color-surface);
+  box-shadow: 0 12px 24px -18px color-mix(in srgb, var(--color-ink) 80%, transparent);
+}
+.screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-section { border-radius: 1.25rem; }
+.screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-form { border-radius: 1.5rem; }
+.screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-form > .workflow-primary { border-radius: 1rem; font-weight: 800; letter-spacing: .02em; }
+
 /* T-929: interior screens only. Home, dialogs, camera overlays and print surfaces retain their own layouts. */
 .screen-shell {
   --screen-mode: desktop;
