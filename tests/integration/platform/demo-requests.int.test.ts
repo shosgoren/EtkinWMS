@@ -95,7 +95,15 @@ describe("0038 yetki sınırı", () => {
   });
 
   it("içe alma yalnız wms_worker: web rolü (wms_app) talep ekleyemez (42501)", async () => {
-    await expect(ingestDemoLeads({ db: app, jsonl: `${lead()}\n` })).rejects.toMatchObject({});
+    const err = await ingestDemoLeads({ db: app, jsonl: `${lead()}\n` }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    const codes: string[] = [];
+    for (let cur = err as { code?: unknown; cause?: unknown } | null, i = 0; cur !== null && cur !== undefined && i < 6; cur = cur.cause as typeof cur, i++) {
+      if (typeof cur.code === "string") codes.push(cur.code);
+    }
+    expect(codes).toContain("42501");
     const c = new pg.Client({ connectionString: env.databaseUrl });
     await c.connect();
     try {
