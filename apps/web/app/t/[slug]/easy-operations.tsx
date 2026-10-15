@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronRight, CircleCheck, ClipboardCheck, Clock, Factory, ListChecks, Lock, ScanLine, ShoppingCart } from "@wms/ui";
 import type { WorkSectionKey, WorkSummary } from "@wms/domain/operations";
-import { designFontVars } from "../../fonts.ts";
 import { BrandMark } from "../../brand-mark.tsx";
 import { HomeControls } from "./home-controls.tsx";
 import type { TaskMenuProps } from "./task-menu.tsx";
@@ -72,7 +71,7 @@ export async function EasyOperations({ slug, allowed, summary, firstName }: Easy
   };
 
   return (
-    <div className={`gv easy-operations ${designFontVars}`} data-testid="easy-operations">
+    <div className="gv easy-operations" data-testid="easy-operations">
       <h1 className="sr-only">{t("title")}</h1>
       <header className="gv-hd">
         <div className="gv-ring" role="img" aria-label={tg("ringLabel", { done: done?.o ?? 0, all })}>
