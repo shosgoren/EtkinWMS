@@ -20,7 +20,8 @@ export function useDz(): DzCtx {
   return c;
 }
 
-export function DzRoot({ dark: initial, testId, children, overlays }: { dark: boolean; testId?: string; children: ReactNode; overlays?: ReactNode }) {
+/** `scope`: tasarım kaynağının CSS kabı (`dz` = Bakış, `dzg` = Giriş ve hesap; scripts/design/port.mjs SOURCES). */
+export function DzRoot({ dark: initial, testId, children, overlays, scope = "dz" }: { dark: boolean; testId?: string; children: ReactNode; overlays?: ReactNode; scope?: "dz" | "dzg" }) {
   const [dark, setDark] = useState(initial);
   const [overlay, setOverlay] = useState<string | null>(null);
   const toggleTheme = useCallback(() => {
@@ -41,7 +42,7 @@ export function DzRoot({ dark: initial, testId, children, overlays }: { dark: bo
   const value = useMemo(() => ({ dark, toggleTheme, overlay, setOverlay }), [dark, toggleTheme, overlay]);
   return (
     <Ctx.Provider value={value}>
-      <div className={`dz${dark ? " dz-dark" : ""}`} data-testid={testId}>
+      <div className={`${scope}${dark ? " dz-dark" : ""}`} data-testid={testId}>
         <div className={`wrap${dark ? " dk" : ""}`}>
           <div className="appzone">
             <div className={`app${dark ? " dkm" : ""}`}>

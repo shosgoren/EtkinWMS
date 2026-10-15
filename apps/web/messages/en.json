@@ -2310,5 +2310,22 @@
     "noWarehouse": "No eligible warehouse",
     "reloadWarehouses": "Reload warehouses",
     "reloadLocations": "Reload locations"
+  },
+  "operator": {
+    "title": "Demo requests",
+    "band": "ETKİN YAZILIM · OPERATOR",
+    "back": "Back",
+    "theme": "Light / dark view",
+    "onlyTitle": "Etkin Yazılım operator only",
+    "onlyBody": "Approval sends the requester a single-use activation link. The workspace is set up when the customer opens it.",
+    "pending": "PENDING",
+    "count": "{n} REQUESTS",
+    "approve": "APPROVE",
+    "reject": "REJECT",
+    "approved": "APPROVED · LINK SENT",
+    "rejected": "REJECTED",
+    "today": "TODAY",
+    "yesterday": "YESTERDAY",
+    "error": "Could not complete ({code}). Refresh and try again."
   }
 }

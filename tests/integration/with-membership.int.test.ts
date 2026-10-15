@@ -1564,6 +1564,8 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       "invitation_preview_for_token", // T-117d migration 0008 (salt okunur; ad+rol+süre; ilke değişmedi)
       "invitation_tenant_for_token", // T-117 migration 0006 (salt okunur; ilke değişmedi)
       "ops_session_audited", // T-105c migration 0009 (salt okunur denetim kanıtı; ilke değişmedi)
+      // T-994 migration 0038: platform demo talepleri (operatör DB listesi; tenant verisi yok; ilke değişmedi)
+      "platform_decide_demo_request", "platform_ingest_demo_request", "platform_is_operator", "platform_list_demo_requests",
     ]);
     for (const f of r.funcs) {
       expect([f.proname, f.owner, f.prosecdef, f.proconfig]).toEqual([f.proname, PROBE_ROLE, true, ["search_path=pg_catalog, pg_temp"]]);

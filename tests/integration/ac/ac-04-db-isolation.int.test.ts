@@ -783,6 +783,10 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.invitation_preview_for_token", // T-117d migration 0008: salt okunur (ad+rol+süre), yalnızca wms_app EXECUTE
     "wms_probe.invitation_tenant_for_token", // T-117 migration 0006: salt okunur, yalnızca wms_app EXECUTE
     "wms_probe.ops_session_audited", // T-105c migration 0009: salt okunur denetim kanıtı (özyineleme önlemi), yalnızca wms_ops EXECUTE
+    "wms_probe.platform_decide_demo_request", // T-994 migration 0038: operatör (DB listesi) PENDING → karar + security_events, yalnızca wms_app
+    "wms_probe.platform_ingest_demo_request", // T-994 migration 0038: satış sitesi talebi idempotent ekleme (tenant verisi yok), yalnızca wms_worker
+    "wms_probe.platform_is_operator", // T-994 migration 0038: çağıran kullanıcı operatör mü (salt okunur), yalnızca wms_app
+    "wms_probe.platform_list_demo_requests", // T-994 migration 0038: yalnız operatöre talep listesi (salt okunur), yalnızca wms_app
   ];
 
   it("@AC-04 prosecdef=true işlevler tam olarak izinli liste; wms_meta'da hiç yok", () => {
@@ -822,6 +826,10 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.invitation_tenant_for_token": [APP_ROLE],
       "wms_probe.ops_session_audited": ["wms_ops"],
       "wms_probe.admin_reset_cleanup_on_membership": [migrator],
+      "wms_probe.platform_is_operator": [APP_ROLE],
+      "wms_probe.platform_ingest_demo_request": [WORKER_ROLE],
+      "wms_probe.platform_list_demo_requests": [APP_ROLE],
+      "wms_probe.platform_decide_demo_request": [APP_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);

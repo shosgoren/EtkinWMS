@@ -1,14 +1,17 @@
 // Worker giriş noktası: `node dist/main.js`. Web'den bağımsız, uzun ömürlü süreç (ADR-001).
+import { open } from "node:fs/promises";
 import { hostname } from "node:os";
 import { DEMO_TENANT_ID, createDbClient, withSystemTenant, withUser } from "@wms/db";
 import { consumeOnce, createJobQueue } from "@wms/queue-adapter";
 import { findAbandonedCounts } from "@wms/domain/operations";
+import { ingestDemoLeads } from "@wms/domain/platform/demo-requests";
 import type { ConsumeOnceFn } from "@wms/domain/stock/jobs";
 import { assertMailModeAllowed, loadMailConfig } from "@wms/shared/mailer";
 import { createSealer } from "@wms/shared/seal";
 import { JOB_TYPES, PLATFORM_NO_USER_ID, type JobHandler, type JobType } from "@wms/shared/queue";
 import { createDeliverInvitationHandler } from "./jobs/deliver-invitation.js";
 import { startCountAbandonSchedule } from "./jobs/count-abandon.js";
+import { startDemoLeadsSchedule } from "./jobs/demo-leads.js";
 import { DEMO_RESEED_SINGLETON_KEY, registerDemoReseed } from "./jobs/demo-reseed.js";
 import { createPostStockDocumentHandler } from "./jobs/post-stock-document.js";
 import { startQueueMaintenance } from "./jobs/queue-maintenance.js";
@@ -182,12 +185,46 @@ const countAbandonSchedule = startCountAbandonSchedule({
   logger,
 });
 
+// Demo talebi içe alma (T-994, ADR-026 §3): `DEMO_LEADS_FILE` (satış sitesi JSONL, salt okunur bağlama) tanımlıysa dakikada bir.
+// Tanımsızsa kapalıdır (yerel/CI). Bir koşuda en çok 1 MiB okunur; kalan bir sonraki koşuda.
+const DEMO_LEADS_MAX_READ = 1024 * 1024;
+const demoLeadsFile = process.env.DEMO_LEADS_FILE?.trim();
+const demoLeadsSchedule =
+  demoLeadsFile === undefined || demoLeadsFile === ""
+    ? null
+    : startDemoLeadsSchedule({
+        readFrom: async (from) => {
+          let fh: Awaited<ReturnType<typeof open>>;
+          try {
+            fh = await open(demoLeadsFile, "r");
+          } catch (e) {
+            if ((e as { code?: unknown }).code === "ENOENT") return null;
+            throw e;
+          }
+          try {
+            const { size } = await fh.stat();
+            if (from >= size) return { text: "", size };
+            const len = Math.min(size - from, DEMO_LEADS_MAX_READ);
+            const buf = Buffer.alloc(len);
+            const { bytesRead } = await fh.read(buf, 0, len, from);
+            // Yarım UTF-8 karakter sınırında kesilmesin: son satır sonuna kadar olan kısım kullanılır (runDemoLeadsIngest).
+            return { text: buf.subarray(0, bytesRead).toString("utf8"), size };
+          } finally {
+            await fh.close();
+          }
+        },
+        // İçe alma işlevinin EXECUTE yetkisi yalnız wms_worker (0038; web katmanı talep ekleyemez).
+        ingest: (jsonl) => ingestDemoLeads({ db: workerDb, jsonl }),
+        logger,
+      });
+
 // Kapanış sırası: önce zamanlayıcı, sonra kuyruk (çalışan işler biter), sonra DB havuzu.
 lifecycle.register({ name: "demo-schedule", run: () => demoSchedule?.stop() });
 lifecycle.register({ name: "worker-heartbeat", run: () => workerHeartbeat.stop() });
 lifecycle.register({ name: "queue-maintenance", run: () => queueMaintenance.stop() });
 lifecycle.register({ name: "consistency-schedule", run: () => consistencySchedule.stop() });
 lifecycle.register({ name: "count-abandon-schedule", run: () => countAbandonSchedule.stop() });
+lifecycle.register({ name: "demo-leads-schedule", run: () => demoLeadsSchedule?.stop() });
 lifecycle.register({ name: "job-queue", run: () => queue.stop() });
 lifecycle.register({ name: "db", run: () => db.close() });
 lifecycle.register({ name: "worker-db", run: () => workerDb.close() });

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./design/bakis.css";
+@import "./design/giris.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
@@ -819,6 +820,9 @@ body:has(.login-stage) .app-header { display:none; }
 body:has(.dz) [data-testid="bottom-nav"], body:has(.dz) [data-testid="tenant-bar"], body:has(.dz) .app-header { display: none; }
 /* Kaynak `tb.show: m === 'mobile'`: başparmak çubuğu yalnız mobilde çizilir (kaynak JS koşulu; burada aynı eşik). */
 @media (min-width: 700px) { .dz .thumb { display: none; } }
+/* Giriş ve hesap kaynağı (Giris.dc.html, T-993) ayrı kapta (`.dzg`): Bakış kurallarıyla çakışmaz; yerleşim uyarlaması aynı. */
+.dzg { position: fixed; inset: 0; z-index: 20; }
+body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-bar"], body:has(.dzg) .app-header { display: none; }
 /* design:bakis:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
 .dz {
   --color-dz-a-aaaaaa-be: rgba(0, 0, 0, .14);
@@ -949,3 +953,68 @@ body:has(.dz) [data-testid="bottom-nav"], body:has(.dz) [data-testid="tenant-bar
   --color-dz-sayim-a: #8fb9ea;
 }
 /* design:bakis:end */
+
+/* design:giris:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzg {
+  --color-dz-a-aaaaaa-f: rgba(0, 0, 0, .5);
+  --color-dz-a-bhcoec-af: rgba(23, 46, 66, .05);
+  --color-dz-a-bhcoec-ag: rgba(23, 46, 66, .06);
+  --color-dz-a-bhcoec-df: rgba(23, 46, 66, .35);
+  --color-dz-a-bhcoec-ef: rgba(23, 46, 66, .45);
+  --color-dz-a-bhcoec-f: rgba(23, 46, 66, .5);
+  --color-dz-a-pppppp-bc: rgba(255, 255, 255, .12);
+  --color-dz-a-pppppp-c: rgba(255, 255, 255, .2);
+  --color-dz-x-afajan: #05090d;
+  --color-dz-x-apdnch: #0f3d27;
+  --color-dz-x-bdbhbm: #13171c;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhiaep: #17804f;
+  --color-dz-x-bkbdaa: #1a1300;
+  --color-dz-x-blcbci: #1b2128;
+  --color-dz-x-bmcofm: #1c2e5c;
+  --color-dz-x-bocpdo: #1e2f3e;
+  --color-dz-x-bpekdk: #1f4a3a;
+  --color-dz-x-cdclde: #232b34;
+  --color-dz-x-cmdfea: #2c3540;
+  --color-dz-x-dnckgl: #3d2a6b;
+  --color-dz-x-ekdfaa: #4a3500;
+  --color-dz-x-fmceba: #5c2410;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-mpoink: #cfe8da;
+  --color-dz-x-ninooe: #d8dee4;
+  --color-dz-x-nmoepi: #dce4f8;
+  --color-dz-x-ogocnk: #e6e2da;
+  --color-dz-x-ogokoo: #e6eaee;
+  --color-dz-x-ojoenk: #e9e4da;
+  --color-dz-x-pboooi: #f1eee8;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-peleaa: #f4b400;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-pepcoo: #f4f2ee;
+  --color-dz-x-pgnjmj: #f6d9c9;
+  --color-dz-x-ppohki: #ffe7a8;
+  --color-dz-x-pppppp: #ffffff;
+  --color-dzg-bg: #f4f2ee;
+  --color-dzg-fg: #1e2f3e;
+  --color-dzg-surface: #ffffff;
+  --color-dzg-chip: #f1eee8;
+  --color-dzg-track: #e6e2da;
+  --color-dzg-ok-bg: #cfe8da;
+  --color-dzg-ok-fg: #0f3d27;
+  --color-dzg-logo-bg: #172e42;
+  --color-dzg-logo-fg: #ffffff;
+  --color-dzg-key-bg: #f1eee8;
+}
+.dzg.dz-dark {
+  --color-dzg-bg: #13171c;
+  --color-dzg-fg: #d8dee4;
+  --color-dzg-surface: #1b2128;
+  --color-dzg-chip: #232b34;
+  --color-dzg-track: #2c3540;
+  --color-dzg-ok-bg: #1f4a3a;
+  --color-dzg-ok-fg: #e6eaee;
+  --color-dzg-logo-bg: #e6eaee;
+  --color-dzg-logo-fg: #13171c;
+  --color-dzg-key-bg: #232b34;
+}
+/* design:giris:end */
