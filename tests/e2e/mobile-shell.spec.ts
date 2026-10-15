@@ -593,7 +593,9 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
   await expect(page).toHaveURL(/\/t\/demo\/stock\/documents\?new=TRANSFER$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(tr.stockDocuments.transfer);
   await page.goto("/t/demo");
-  await page.getByRole("button", { name: "Genel bakış", exact: true }).click();
+  // T-988: Akış ana ekranında ayrı üst bar yoktur; görünüm anahtarı Görevlerim başlığındaki menüdedir.
+  await page.getByTestId("app-bar-menu").click();
+  await page.getByRole("dialog", { name: "Menü" }).getByRole("button", { name: "Genel bakış", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
   await expect(page.getByTestId("easy-operations")).toHaveCount(0);
   await expect(page.getByRole("list", { name: "İşler" })).toBeVisible();

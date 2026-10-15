@@ -52,9 +52,12 @@ export function AppBar({ slug, tenantName, userName, memberships, view, setViewA
     if (el?.open) el.close();
   }, [pathname]);
 
+  // T-988: Akış ana ekranı kendi Görevlerim başlığını çizer (marka, selam, menü düğmesi); orada üst çubuk yoktur, menü sayfası aynıdır.
+  const homeFlow = view === "flow" && pathname === `/t/${encodeURIComponent(slug)}`;
+
   return (
     <>
-      <header
+      {homeFlow ? null : <header
         data-testid="app-bar"
         className="phone-only z-30 h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border bg-surface pl-3 pr-1 pt-[env(safe-area-inset-top)]"
       >
@@ -76,7 +79,7 @@ export function AppBar({ slug, tenantName, userName, memberships, view, setViewA
         >
           <span aria-hidden="true">≡</span>
         </button>
-      </header>
+      </header>}
 
       <dialog
         ref={ref}

@@ -100,7 +100,9 @@ for (const size of SIZES) {
         await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
         const landingAccent = accents[view.key];
         if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
-        if (size.width < 768) await expect(page.getByTestId("app-bar").locator("span.bg-ink")).toHaveCSS("background-color", await tokenColor(page, "ink"));
+        // T-988: Akış ana ekranı Görevlerim başlığını kullanır (ayrı uygulama çubuğu yok); Kokpit telefon çubuğu ink logoyu korur.
+        if (size.width < 768 && view.key === "cockpit") await expect(page.getByTestId("app-bar").locator("span.bg-ink")).toHaveCSS("background-color", await tokenColor(page, "ink"));
+        if (view.key === "flow") await expect(page.getByTestId("app-bar-menu")).toBeVisible();
         await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`);
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);
         await page.screenshot({ path: path.join(OUT, `${view.key}-${size.width}-ana-ekran.png`), fullPage: true });

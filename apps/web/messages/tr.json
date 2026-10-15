@@ -624,6 +624,49 @@
       "next": "Sıradaki: {label}",
       "then": "Ardından: {label}",
       "qty": "{n} adet"
+    },
+    "gv": {
+      "morning": "Günaydın, {name}",
+      "day": "İyi günler, {name}",
+      "evening": "İyi akşamlar, {name}",
+      "dayDone": "Harika, {name}! Gün tamam",
+      "allWarehouses": "TÜM DEPOLAR",
+      "ringLabel": "Bugün {done} / {all} iş bitti",
+      "statsLabel": "Bugünün durumu",
+      "left": "KALAN",
+      "done": "BİTEN",
+      "linesCount": "{n} KALEM",
+      "myTasks": "GÖREVLERİM",
+      "leftSummary": "{o} GÖREV · {k} KALEM KALDI",
+      "lines": "KALEM",
+      "noData": "Veri okunamadı",
+      "progress": "{done}/{total} BİTTİ",
+      "tileLabel": "{title}: {open} {unit}, {lines} kalem",
+      "title": {
+        "giris": "Giriş Görevi",
+        "cikis": "Çıkış Görevi",
+        "transfer": "Transfer Görevi",
+        "uretim": "Üretim Transfer",
+        "sayim": "Sayım Görevi"
+      },
+      "unit": {
+        "giris": "SİPARİŞ",
+        "cikis": "SİPARİŞ",
+        "transfer": "FİŞ",
+        "uretim": "EMİR",
+        "sayim": "SAYIM"
+      },
+      "manualTitle": "PLAN DIŞI",
+      "manualHint": "SİPARİŞSİZ HAREKET",
+      "manualIn": "MANUEL GİRİŞ",
+      "manualOut": "MANUEL ÇIKIŞ",
+      "thumbLabel": "Ana işlemler",
+      "thumbIn": "GİRİŞ",
+      "thumbOut": "ÇIKIŞ",
+      "scanStart": "OKUT · BAŞLA",
+      "online": "Bağlantı var",
+      "offline": "Bağlantı yok: kayıtlar gönderilemez",
+      "menu": "Menü"
     }
   },
   "audit": {
