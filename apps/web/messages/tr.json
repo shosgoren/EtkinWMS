@@ -817,6 +817,16 @@
       "approved": "Bir sayım farkını onayladın.",
       "posted": "Sayım farkını işledin; lokasyonların kilidi açıldı.",
       "cancelled": "Bir sayımı iptal ettin; fark uygulanmadı, lokasyonların kilidi açıldı."
+    },
+    "work_priority": {
+      "set": "İş önceliği değiştirildi"
+    },
+    "problem": {
+      "reported": "Sorun bildirildi",
+      "resolved": "Sorun çözüldü"
+    },
+    "settings": {
+      "shift_updated": "Vardiya saatleri değiştirildi"
     }
   },
   "auditLog": {
