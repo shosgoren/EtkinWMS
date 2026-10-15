@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin Yönetim — yonet.etkinyazilim.com</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-direction:column;width:100%;height:100vh;height:100dvh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap.dk{background:#05090D}
+button,input,select,textarea{font:inherit;color:inherit}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+.appzone{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.app{position:relative;width:100%;height:100%;overflow:hidden;container-type:size}
+.app :focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.fr-mobile .app{width:390px;max-width:100%;height:min(844px,100%);border-radius:36px;border:10px solid #172E42;box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
+.fr-tablet .app{width:min(1180px,100%);height:min(820px,100%);border-radius:28px;border:12px solid #172E42;box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
+.prev{flex:none;align-self:center;display:flex;align-items:center;gap:4px;margin:6px 0 0;padding:4px;border-radius:999px;background:#FFFFFF;border:1.5px solid #172E42;color:#172E42;max-width:calc(100% - 12px);overflow-x:auto}
+.prev.scr{margin:4px 0 6px}
+.prev-l{padding:0 8px 0 10px;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6A7F91;white-space:nowrap}
+.prevb{appearance:none;min-height:34px;padding:0 12px;border:0;border-radius:999px;background:transparent;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
+.prevb.on{background:#172E42;color:#FFFFFF}
+
+/* ── shell ── */
+.shell{position:absolute;inset:0;display:flex;overflow:hidden}
+.side{flex:none;display:flex;flex-direction:column;gap:6px;width:256px;padding:18px 14px;background:#172E42;color:#FFFFFF;overflow-y:auto}
+.m-tablet .side{width:84px;padding:16px 10px;align-items:center}
+.m-mobile .side{display:none}
+.sbrand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+.sbrand b{font:800 15px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+.sbrand small{display:block;margin-top:4px;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#F4C542}
+.m-tablet .sbrand .tx{display:none}
+.nav{appearance:none;display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0 12px;border:0;border-radius:14px;background:transparent;color:rgba(255,255,255,.78);cursor:pointer;font:700 15px/1 'Instrument Sans',sans-serif;text-align:left}
+.nav:hover{background:rgba(255,255,255,.08);color:#FFFFFF}
+.nav.on{background:#F4C542;color:#1A1300}
+.nav .cnt{margin-left:auto;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:#C62828;color:#FFFFFF;font:700 12px/24px 'IBM Plex Mono',monospace;text-align:center}
+.nav.on .cnt{background:#1A1300;color:#F4C542}
+.m-tablet .nav{justify-content:center;padding:0;width:56px;position:relative}
+.m-tablet .nav .tx{display:none}
+.m-tablet .nav .cnt{position:absolute;top:4px;right:2px;min-width:18px;height:18px;padding:0 4px;font-size:10px;line-height:18px}
+.sfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}
+.who{display:flex;align-items:center;gap:10px;padding:6px 8px;font:600 12px/1.3 'IBM Plex Mono',monospace;color:rgba(255,255,255,.75)}
+.m-tablet .who .tx{display:none}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.top{flex:none;display:flex;align-items:center;gap:12px;min-height:72px;padding:12px 28px}
+.m-tablet .top{padding:12px 20px}
+.m-mobile .top{padding:10px 14px;min-height:64px;background:#172E42;color:#FFFFFF}
+.top-t{flex:1;min-width:0}
+.top-h{display:block;margin:0;font:800 28px/1.1 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-mobile .top-h{font-size:21px}
+.top-s{display:block;margin-top:4px;font:600 11.5px/1.25 'IBM Plex Mono',monospace;opacity:.72;letter-spacing:.04em}
+.mtabs{display:none}
+.m-mobile .mtabs{flex:none;display:flex;gap:6px;padding:8px 14px;overflow-x:auto;background:#172E42}
+.mtab{appearance:none;flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border:0;border-radius:999px;background:rgba(255,255,255,.1);color:#FFFFFF;cursor:pointer;font:700 13px/1 'Instrument Sans',sans-serif;white-space:nowrap}
+.mtab.on{background:#F4C542;color:#1A1300}
+.scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.inner{width:100%;max-width:1240px;margin:0 auto;padding:8px 28px 48px;display:flex;flex-direction:column;gap:18px}
+.m-tablet .inner{padding:8px 20px 40px}
+.m-mobile .inner{padding:14px 14px 40px;gap:14px}
+
+/* ── pieces ── */
+.icb{appearance:none;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;min-width:48px;height:48px;padding:0 14px;border-radius:16px;border:0;cursor:pointer;font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.03em}
+.m-mobile .icb{min-width:42px;height:42px;background:rgba(255,255,255,.14)!important;color:#FFFFFF!important}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border:0;border-radius:15px;cursor:pointer;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.03em;white-space:nowrap}
+.btn.sm{min-height:40px;padding:0 12px;border-radius:12px;font-size:13px}
+.m-mobile .btn .tx{display:none}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.m-tablet .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.m-mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:22px;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.kpi-l{display:flex;align-items:center;gap:8px;font:800 12px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em}
+.kpi-l i{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9px;color:#FFFFFF}
+.kpi-n{font:800 40px/1 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.m-mobile .kpi-n{font-size:32px}
+.kpi-s{font:600 11.5px/1.3 'IBM Plex Mono',monospace;opacity:.7}
+.card{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:24px;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.m-mobile .card{padding:14px;border-radius:20px}
+.chd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chd b{font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.12em}
+.chd > span{font:600 11.5px/1 'IBM Plex Mono',monospace;opacity:.7}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+.m-tablet .grid2,.m-mobile .grid2{grid-template-columns:minmax(0,1fr)}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:0 10px;border-radius:999px;font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;white-space:nowrap}
+
+/* ── table ── */
+.tbl{width:100%;border-collapse:separate;border-spacing:0}
+.tbl th{padding:10px 12px;text-align:left;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;opacity:.65;white-space:nowrap}
+.tbl td{padding:12px;border-top:1px solid rgba(23,46,66,.08);font:600 14.5px/1.3 'Instrument Sans',sans-serif;vertical-align:middle}
+.dkm .tbl td{border-top-color:rgba(255,255,255,.06)}
+.tbl td.num{font:600 14px/1 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;text-align:right}
+.tbl th.num{text-align:right}
+.tbl tr.rowlink{cursor:pointer}
+.tbl tr.rowlink:hover td{background:rgba(244,197,66,.12)}
+.tname > b{display:block;font:800 16px/1.15 'Bricolage Grotesque',sans-serif}
+.tname > span{display:block;margin-top:3px;font:600 11.5px/1.2 'IBM Plex Mono',monospace;opacity:.65}
+.tbox{overflow-x:auto;margin:0 -6px}
+.m-mobile .tbl thead{display:none}
+.m-mobile .tbl,.m-mobile .tbl tbody,.m-mobile .tbl tr,.m-mobile .tbl td{display:block;width:100%}
+.m-mobile .tbl tr{padding:10px 4px;border-top:1px solid rgba(23,46,66,.08)}
+.m-mobile .tbl td{border:0;padding:3px 6px;text-align:left}
+.m-mobile .tbl td.num{text-align:left}
+.m-mobile .tbl td[data-l]::before{content:attr(data-l);display:inline-block;min-width:110px;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;opacity:.6}
+
+/* ── seg / tabs ── */
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:16px;overflow-x:auto;max-width:100%}
+.segb{appearance:none;flex:none;min-height:40px;padding:0 14px;border:0;border-radius:12px;background:transparent;cursor:pointer;font:700 13.5px/1 'Instrument Sans',sans-serif;white-space:nowrap}
+.segb.on{box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.5)}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:15px}
+.search input{flex:1;min-width:0;height:44px;border:0;outline:0;background:transparent;font:600 15px/1 'Instrument Sans',sans-serif}
+
+/* ── detail ── */
+.dhead{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.av{flex:none;display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:18px;font:800 22px/1 'Bricolage Grotesque',sans-serif}
+.dname{flex:1;min-width:0}
+.dname > b{display:block;font:800 26px/1.1 'Bricolage Grotesque',sans-serif}
+.dname > span{display:block;margin-top:5px;font:600 12px/1.3 'IBM Plex Mono',monospace;opacity:.7}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.meter{display:flex;flex-direction:column;gap:7px}
+.meter-t{display:flex;justify-content:space-between;gap:10px;font:700 14px/1.2 'Instrument Sans',sans-serif}
+.meter-t b{font:700 14px/1.2 'Instrument Sans',sans-serif}
+.meter-t > span{font:600 13px/1.2 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.bar{position:relative;height:10px;border-radius:10px;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:10px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 18px;margin:0;font:600 14px/1.3 'Instrument Sans',sans-serif}
+.kv dt{font:600 11.5px/1.5 'IBM Plex Mono',monospace;letter-spacing:.06em;opacity:.65}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.tl{display:flex;flex-direction:column;gap:0}
+.tli{display:flex;gap:12px;padding:10px 0;border-top:1px solid rgba(23,46,66,.08)}
+.dkm .tli{border-top-color:rgba(255,255,255,.06)}
+.tli:first-child{border-top:0}
+.tli time{flex:none;width:118px;font:600 12px/1.4 'IBM Plex Mono',monospace;opacity:.65}
+.tli > span{font:600 14px/1.4 'Instrument Sans',sans-serif}
+.m-mobile .tli{flex-direction:column;gap:2px}
+
+/* ── packages ── */
+.pk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.m-tablet .pk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.m-mobile .pk-grid{grid-template-columns:minmax(0,1fr)}
+.pk{appearance:none;position:relative;display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:24px;border:2.5px solid transparent;cursor:pointer;text-align:left;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.pk.sel{border-color:#172E42}
+.dkm .pk.sel{border-color:#F4C542}
+.pk-n{font:800 22px/1.1 'Bricolage Grotesque',sans-serif}
+.pk-p{font:800 34px/1 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums}
+.pk-p small{font:600 13px/1 'IBM Plex Mono',monospace;opacity:.7;margin-left:4px}
+.pk-l{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none;font:600 14px/1.3 'Instrument Sans',sans-serif}
+.pk-l li{display:flex;align-items:center;gap:8px}
+.pk-tags{display:flex;gap:6px;flex-wrap:wrap}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.m-mobile .form{grid-template-columns:minmax(0,1fr)}
+.fl{display:flex;flex-direction:column;gap:6px}
+.fl.full{grid-column:1 / -1}
+.fl label,.fll{font:800 12px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em}
+.inp{display:flex;align-items:center;gap:8px;min-height:52px;padding:0 14px;border-radius:15px}
+.inp input{flex:1;min-width:0;height:48px;border:0;outline:0;background:transparent;font:600 16px/1 'Instrument Sans',sans-serif}
+.inp .suf{font:600 13px/1 'IBM Plex Mono',monospace;opacity:.6;white-space:nowrap}
+.tg{appearance:none;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;padding:0 14px;border:0;border-radius:15px;cursor:pointer;font:700 14.5px/1.2 'Instrument Sans',sans-serif;text-align:left}
+.sw{flex:none;position:relative;width:46px;height:28px;border-radius:999px;transition:background .15s}
+.sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw.on i{transform:translateX(18px)}
+
+/* ── banners / sheet ── */
+.ban{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:18px;font:600 14px/1.45 'Instrument Sans',sans-serif}
+.ban b{display:block;font:800 15px/1.2 'Bricolage Grotesque',sans-serif;margin-bottom:3px}
+.scrim{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,9,13,.55)}
+.m-mobile .scrim{align-items:flex-end;padding:0}
+.sheet{width:100%;max-width:520px;display:flex;flex-direction:column;gap:14px;padding:22px;border-radius:26px;box-shadow:0 30px 80px -30px rgba(0,0,0,.6)}
+.m-mobile .sheet{border-radius:26px 26px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0;font:800 24px/1.15 'Bricolage Grotesque',sans-serif}
+.ta{width:100%;min-height:96px;padding:12px 14px;border:0;border-radius:15px;resize:vertical;font:600 15px/1.4 'Instrument Sans',sans-serif;outline:0}
+.sacts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+
+/* ── landing preview ── */
+.lprev{display:flex;flex-direction:column;gap:16px;padding:22px;border-radius:24px;background:#172E42;color:#FFFFFF}
+.lprev h3{margin:0;font:800 30px/1.08 'Bricolage Grotesque',sans-serif}
+.m-mobile .lprev h3{font-size:24px}
+.lprev p{margin:0;font:500 15.5px/1.5 'Instrument Sans',sans-serif;opacity:.82}
+.lpk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.m-mobile .lpk{grid-template-columns:minmax(0,1fr)}
+.lpk-c{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:18px;background:rgba(255,255,255,.08)}
+.lpk-c.rec{background:#F4C542;color:#1A1300}
+.lpk-c > b{font:800 18px/1.1 'Bricolage Grotesque',sans-serif}
+.lpk-c > span{font:800 24px/1 'Bricolage Grotesque',sans-serif}
+.lpk-c > small{font:600 11.5px/1.35 'IBM Plex Mono',monospace;opacity:.8}
+
+.empty{padding:28px;text-align:center;font:600 13px/1.4 'IBM Plex Mono',monospace;opacity:.6}
+.dkm .card,.dkm .kpi,.dkm .pk{box-shadow:none}
+@media (prefers-reduced-motion:reduce){.wrap *{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div class="{{wrapCls}}">
+<sc-if value="{{showPrev}}" hint-placeholder-val="{{true}}">
+  <div class="prev" role="group" aria-label="Önizleme cihazı">
+    <span class="prev-l">ÖNİZLEME</span>
+    <sc-for list="{{prevBtns}}" as="pb" hint-placeholder-count="4"><button type="button" class="{{pb.cls}}" aria-pressed="{{pb.pressed}}" onClick="{{pb.go}}">{{pb.l}}</button></sc-for>
+  </div>
+</sc-if>
+<div class="appzone">
+<div class="{{appCls}}">
+<div class="shell" style="background: {{c.bg}}; color: {{c.fg}}">
+
+  <nav class="side" aria-label="Yönetim menüsü">
+    <div class="sbrand">
+      <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#FFFFFF"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#FFFFFF" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+      <span class="tx"><b>ETKİN YÖNETİM</b><small>YONET.ETKINYAZILIM.COM</small></span>
+    </div>
+    <sc-for list="{{navs}}" as="n" hint-placeholder-count="8"><button type="button" class="{{n.cls}}" onClick="{{n.go}}" aria-current="{{n.cur}}" aria-label="{{n.l}}" title="{{n.l}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.d}}"></path></svg><span class="tx">{{n.l}}</span><sc-if value="{{n.hasCnt}}" hint-placeholder-val="{{false}}"><span class="cnt">{{n.cnt}}</span></sc-if></button></sc-for>
+    <div class="sfoot">
+      <div class="who"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span class="tx">OPERATÖR · 2FA AÇIK</span></div>
+      <button type="button" class="nav" onClick="{{noop}}" aria-label="Çıkış" title="Çıkış"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"></path></svg><span class="tx">Çıkış</span></button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <header class="top">
+      <sc-if value="{{showBack}}" hint-placeholder-val="{{false}}"><button type="button" class="icb" style="background: {{c.surface}}" onClick="{{goBack}}" aria-label="Geri"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
+      <div class="top-t"><h1 class="top-h">{{head.h}}</h1><span class="top-s">{{head.s}}</span></div>
+      <sc-if value="{{head.hasAct}}" hint-placeholder-val="{{false}}"><button type="button" class="btn" style="background: #172E42; color: #FFFFFF" onClick="{{head.go}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M12 5v14M5 12h14"></path></svg><span class="tx">{{head.act}}</span></button></sc-if>
+      <button type="button" class="icb" style="background: {{c.surface}}" onClick="{{toggleTheme}}" aria-label="Açık / koyu görünüm"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18"></path></svg></button>
+    </header>
+    <div class="mtabs" role="tablist" aria-label="Yönetim menüsü">
+      <sc-for list="{{navs}}" as="n" hint-placeholder-count="8"><button type="button" role="tab" class="{{n.mcls}}" aria-selected="{{n.cur}}" onClick="{{n.go}}">{{n.l}}<sc-if value="{{n.hasCnt}}" hint-placeholder-val="{{false}}"> · {{n.cnt}}</sc-if></button></sc-for>
+    </div>
+
+    <div class="scroll"><div class="inner">
+
+      <!-- ═══ ÖZET ═══ -->
+      <sc-if value="{{v.ozet}}" hint-placeholder-val="{{true}}">
+        <div class="kpis">
+          <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4"><div class="kpi" style="background: {{c.surface}}"><span class="kpi-l"><i style="background: {{k.a}}"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="{{k.d}}"></path></svg></i>{{k.l}}</span><span class="kpi-n" style="color: {{k.a}}">{{k.n}}</span><span class="kpi-s">{{k.s}}</span></div></sc-for>
+        </div>
+        <div class="grid2">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="chd"><b>YAPILACAKLAR</b><span>{{todoCount}} İŞ</span></div>
+            <div class="tl">
+              <sc-for list="{{todos}}" as="t" hint-placeholder-count="4"><div class="tli"><time>{{t.when}}</time><span style="display: flex; align-items: center; gap: 10px; flex: 1"><span class="chip" style="background: {{t.bg}}; color: {{t.fg}}">{{t.tag}}</span>{{t.l}}</span></div></sc-for>
+            </div>
+          </div>
+          <div class="card" style="background: {{c.surface}}">
+            <div class="chd"><b>SİSTEM</b><span>SON KONTROL 2 DK ÖNCE</span></div>
+            <dl class="kv">
+              <sc-for list="{{health}}" as="h" hint-placeholder-count="5"><dt>{{h.k}}</dt><dd style="display: flex; align-items: center; gap: 8px"><span style="width: 10px; height: 10px; border-radius: 50%; background: {{h.c}}; flex: none"></span>{{h.v}}</dd></sc-for>
+            </dl>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ MÜŞTERİLER ═══ -->
+      <sc-if value="{{v.musteriler}}" hint-placeholder-val="{{false}}">
+        <div class="toolbar">
+          <div class="search" style="background: {{c.surface}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5"></path></svg><input type="search" placeholder="Firma ya da çalışma alanı ara" aria-label="Müşteri ara" value="{{q}}" onChange="{{onQ}}"></div>
+          <div class="seg" role="tablist" aria-label="Durum" style="background: {{c.chip}}"><sc-for list="{{custTabs}}" as="ct" hint-placeholder-count="5"><button type="button" role="tab" class="{{ct.cls}}" aria-selected="{{ct.sel}}" style="background: {{ct.bg}}" onClick="{{ct.go}}">{{ct.l}}</button></sc-for></div>
+        </div>
+        <div class="card" style="background: {{c.surface}}; padding-top: 8px">
+          <div class="tbox"><table class="tbl">
+            <thead><tr><th>FİRMA</th><th>DURUM</th><th>PAKET</th><th class="num">KULLANICI</th><th class="num">DEPO</th><th class="num">KALEM</th><th>SON GİRİŞ</th></tr></thead>
+            <tbody>
+              <sc-for list="{{custRows}}" as="r" hint-placeholder-count="5"><tr class="rowlink" onClick="{{r.go}}"><td><span class="tname"><b>{{r.n}}</b><span>{{r.slug}}</span></span></td><td data-l="DURUM"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></td><td data-l="PAKET">{{r.pk}}</td><td class="num" data-l="KULLANICI">{{r.u}}</td><td class="num" data-l="DEPO">{{r.w}}</td><td class="num" data-l="KALEM">{{r.i}}</td><td data-l="SON GİRİŞ" class="mono" style="font-size: 13px">{{r.last}}</td></tr></sc-for>
+            </tbody>
+          </table></div>
+          <sc-if value="{{custEmpty}}" hint-placeholder-val="{{false}}"><div class="empty">BU FİLTREDE MÜŞTERİ YOK</div></sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ═══ MÜŞTERİ DETAY ═══ -->
+      <sc-if value="{{v.musteri}}" hint-placeholder-val="{{false}}">
+        <div class="card" style="background: {{c.surface}}">
+          <div class="dhead">
+            <span class="av" style="background: {{cu.avBg}}; color: {{cu.avFg}}">{{cu.ini}}</span>
+            <div class="dname"><b>{{cu.n}}</b><span>wms.etkinyazilim.com/{{cu.slug}} · KAYIT {{cu.since}}</span></div>
+            <span class="chip" style="background: {{cu.stBg}}; color: {{cu.stFg}}">{{cu.st}}</span>
+          </div>
+          <div class="acts">
+            <sc-if value="{{cu.canSuspend}}" hint-placeholder-val="{{true}}"><button type="button" class="btn sm" style="background: #C62828; color: #FFFFFF" onClick="{{openSuspend}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M9 5v14M15 5v14"></path></svg>Askıya al</button></sc-if>
+            <sc-if value="{{cu.canResume}}" hint-placeholder-val="{{false}}"><button type="button" class="btn sm" style="background: #17804F; color: #FFFFFF" onClick="{{resume}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M7 4l12 8-12 8z"></path></svg>Devam ettir</button></sc-if>
+            <sc-if value="{{cu.isTrial}}" hint-placeholder-val="{{false}}"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{extend}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg>Denemeyi 30 gün uzat</button></sc-if>
+            <button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{openPlan}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"></path></svg>Paketi değiştir</button>
+            <button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{noop}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path></svg>Destek erişimi iste</button>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="chd"><b>KULLANIM · {{cu.pk}}</b><span>SINIRLAR PAKETTEN</span></div>
+            <sc-for list="{{cu.meters}}" as="m" hint-placeholder-count="4"><div class="meter"><div class="meter-t"><b>{{m.l}}</b><span>{{m.v}} / {{m.max}}</span></div><div class="bar" style="background: {{c.track}}"><i style="width: {{m.w}}; background: {{m.c}}"></i></div></div></sc-for>
+          </div>
+          <div class="card" style="background: {{c.surface}}">
+            <div class="chd"><b>ABONELİK</b><span>İYZİCO</span></div>
+            <dl class="kv">
+              <sc-for list="{{cu.sub}}" as="s" hint-placeholder-count="5"><dt>{{s.k}}</dt><dd>{{s.v}}</dd></sc-for>
+            </dl>
+          </div>
+        </div>
+        <div class="card" style="background: {{c.surface}}">
+          <div class="chd"><b>GEÇMİŞ</b><span>KİM · NE · NEDEN</span></div>
+          <div class="tl"><sc-for list="{{cu.hist}}" as="h" hint-placeholder-count="4"><div class="tli"><time>{{h.t}}</time><span>{{h.l}}</span></div></sc-for></div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ PAKETLER ═══ -->
+      <sc-if value="{{v.paketler}}" hint-placeholder-val="{{false}}">
+        <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg><span><b>Yayındaki paketler satış sayfasında görünür</b>Fiyat değişikliği yeni müşterilere hemen, mevcut müşterilere bir sonraki dönemden itibaren uygulanır. Ödeme sağlayıcıdaki plan otomatik güncellenir.</span></div>
+        <div class="pk-grid">
+          <sc-for list="{{pkList}}" as="p" hint-placeholder-count="3"><button type="button" class="{{p.cls}}" style="background: {{c.surface}}" onClick="{{p.go}}" aria-pressed="{{p.pressed}}"><div class="pk-tags"><span class="chip" style="background: {{p.stBg}}; color: {{p.stFg}}">{{p.st}}</span><sc-if value="{{p.rec}}" hint-placeholder-val="{{false}}"><span class="chip" style="background: #F4C542; color: #1A1300">ÖNERİLEN</span></sc-if></div><span class="pk-n">{{p.n}}</span><span class="pk-p">₺{{p.price}}<small>/ AY</small></span><ul class="pk-l"><sc-for list="{{p.lines}}" as="l" hint-placeholder-count="4"><li><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M4 12l5 5L20 6"></path></svg>{{l}}</li></sc-for></ul><span class="kpi-s">{{p.cust}} MÜŞTERİ BU PAKETTE</span></button></sc-for>
+        </div>
+        <div class="card" style="background: {{c.surface}}">
+          <div class="chd"><b>PAKETİ DÜZENLE · {{ed.n}}</b><span>{{ed.st}}</span></div>
+          <div class="form">
+            <div class="fl"><label for="y-pn">PAKET ADI</label><div class="inp" style="background: {{c.chip}}"><input id="y-pn" type="text" value="{{ed.n}}" onChange="{{ed.onN}}"></div></div>
+            <div class="fl"><label for="y-pp">AYLIK FİYAT</label><div class="inp" style="background: {{c.chip}}"><input id="y-pp" type="text" inputmode="numeric" value="{{ed.price}}" onChange="{{ed.onP}}"><span class="suf">₺ + KDV / AY</span></div></div>
+            <sc-for list="{{ed.limits}}" as="lm" hint-placeholder-count="4"><div class="fl"><label for="{{lm.id}}">{{lm.l}}</label><div class="inp" style="background: {{c.chip}}"><input id="{{lm.id}}" type="text" inputmode="numeric" value="{{lm.v}}" onChange="{{lm.on}}"><span class="suf">{{lm.suf}}</span></div></div></sc-for>
+            <div class="fl full"><span class="fll">ÖZELLİKLER</span></div>
+            <sc-for list="{{ed.feats}}" as="ft" hint-placeholder-count="4"><button type="button" class="tg" style="background: {{c.chip}}" role="switch" aria-checked="{{ft.on}}" onClick="{{ft.go}}">{{ft.l}}<span class="{{ft.swCls}}" style="background: {{ft.swBg}}"><i></i></span></button></sc-for>
+            <div class="fl full"><span class="fll">YAYIN</span></div>
+            <sc-for list="{{ed.flags}}" as="fg" hint-placeholder-count="2"><button type="button" class="tg" style="background: {{c.chip}}" role="switch" aria-checked="{{fg.on}}" onClick="{{fg.go}}">{{fg.l}}<span class="{{fg.swCls}}" style="background: {{fg.swBg}}"><i></i></span></button></sc-for>
+          </div>
+          <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{noop}}">Taslak olarak kaydet</button><button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{noop}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M4 12l5 5L20 6"></path></svg>Kaydet ve yayınla</button></div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ ÖDEMELER ═══ -->
+      <sc-if value="{{v.odemeler}}" hint-placeholder-val="{{false}}">
+        <div class="kpis">
+          <sc-for list="{{payKpis}}" as="k" hint-placeholder-count="4"><div class="kpi" style="background: {{c.surface}}"><span class="kpi-l"><i style="background: {{k.a}}"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="{{k.d}}"></path></svg></i>{{k.l}}</span><span class="kpi-n" style="color: {{k.a}}">{{k.n}}</span><span class="kpi-s">{{k.s}}</span></div></sc-for>
+        </div>
+        <div class="toolbar"><div class="seg" role="tablist" aria-label="Ödeme durumu" style="background: {{c.chip}}"><sc-for list="{{payTabs}}" as="pt" hint-placeholder-count="4"><button type="button" role="tab" class="{{pt.cls}}" aria-selected="{{pt.sel}}" style="background: {{pt.bg}}" onClick="{{pt.go}}">{{pt.l}}</button></sc-for></div></div>
+        <div class="card" style="background: {{c.surface}}; padding-top: 8px">
+          <div class="tbox"><table class="tbl">
+            <thead><tr><th>FİRMA</th><th>DÖNEM</th><th>PAKET</th><th class="num">TUTAR</th><th>DURUM</th><th>FATURA</th><th></th></tr></thead>
+            <tbody><sc-for list="{{payRows}}" as="r" hint-placeholder-count="5"><tr><td><span class="tname"><b>{{r.n}}</b><span>{{r.ref}}</span></span></td><td data-l="DÖNEM" class="mono" style="font-size: 13px">{{r.per}}</td><td data-l="PAKET">{{r.pk}}</td><td class="num" data-l="TUTAR">₺{{r.amt}}</td><td data-l="DURUM"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></td><td data-l="FATURA" class="mono" style="font-size: 13px">{{r.inv}}</td><td><sc-if value="{{r.late}}" hint-placeholder-val="{{false}}"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{noop}}">Hatırlat</button></sc-if></td></tr></sc-for></tbody>
+          </table></div>
+          <sc-if value="{{payEmpty}}" hint-placeholder-val="{{false}}"><div class="empty">BU FİLTREDE KAYIT YOK</div></sc-if>
+        </div>
+        <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>Resmi fatura şirket kurulunca</b>Fatura numaraları e-Arşiv entegratörü bağlanınca dolar. O zamana kadar tahakkuk ve tahsilat burada izlenir.</span></div>
+      </sc-if>
+
+      <!-- ═══ DEMO TALEPLERİ ═══ -->
+      <sc-if value="{{v.talepler}}" hint-placeholder-val="{{false}}">
+        <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span><b>Onay, talep sahibine aktivasyon bağlantısı gönderir</b>Bağlantı tek kullanımlık ve 72 saat geçerlidir. Çalışma alanı, müşteri bağlantıyı açınca kurulur.</span></div>
+        <div class="card" style="background: {{c.surface}}; padding-top: 8px">
+          <div class="tbox"><table class="tbl">
+            <thead><tr><th>KİŞİ · FİRMA</th><th>SEKTÖR</th><th>İHTİYAÇ</th><th>ZAMAN</th><th></th></tr></thead>
+            <tbody><sc-for list="{{reqRows}}" as="r" hint-placeholder-count="3"><tr><td><span class="tname"><b>{{r.n}}</b><span>{{r.co}} · {{r.mail}}</span></span></td><td data-l="SEKTÖR">{{r.sec}}</td><td data-l="İHTİYAÇ" style="max-width: 320px">{{r.msg}}</td><td data-l="ZAMAN" class="mono" style="font-size: 13px">{{r.when}}</td><td><sc-if value="{{r.open}}" hint-placeholder-val="{{true}}"><div class="acts" style="flex-wrap: nowrap"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{r.no}}">Reddet</button><button type="button" class="btn sm" style="background: #17804F; color: #FFFFFF" onClick="{{r.yes}}">Onayla</button></div></sc-if><sc-if value="{{r.closed}}" hint-placeholder-val="{{false}}"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></sc-if></td></tr></sc-for></tbody>
+          </table></div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ SATIŞ SAYFASI ═══ -->
+      <sc-if value="{{v.satis}}" hint-placeholder-val="{{false}}">
+        <div class="grid2">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="chd"><b>İÇERİK</b><span>ETKINYAZILIM.COM</span></div>
+            <div class="fl"><label for="y-h1">ANA BAŞLIK</label><div class="inp" style="background: {{c.chip}}"><input id="y-h1" type="text" value="{{lp.h}}" onChange="{{lp.onH}}"></div></div>
+            <div class="fl"><label for="y-sub">ALT METİN</label><textarea id="y-sub" class="ta" style="background: {{c.chip}}" value="{{lp.s}}" onChange="{{lp.onS}}"></textarea></div>
+            <span class="fll">FİYAT BÖLÜMÜNDE GÖSTERİLEN PAKETLER</span>
+            <sc-for list="{{lp.toggles}}" as="t" hint-placeholder-count="3"><button type="button" class="tg" style="background: {{c.chip}}" role="switch" aria-checked="{{t.on}}" onClick="{{t.go}}">{{t.l}}<span class="{{t.swCls}}" style="background: {{t.swBg}}"><i></i></span></button></sc-for>
+            <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{noop}}">Önizleme bağlantısı</button><button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{noop}}">Yayınla</button></div>
+          </div>
+          <div class="lprev" aria-label="Satış sayfası önizlemesi">
+            <span class="kpi-s" style="color: #F4C542; opacity: 1">ÖNİZLEME · FİYATLAR</span>
+            <h3>{{lp.h}}</h3>
+            <p>{{lp.s}}</p>
+            <div class="lpk"><sc-for list="{{lp.cards}}" as="lc" hint-placeholder-count="3"><div class="{{lc.cls}}"><b>{{lc.n}}</b><span>₺{{lc.price}}</span><small>{{lc.sum}}</small></div></sc-for></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══ İŞLEM KAYDI ═══ -->
+      <sc-if value="{{v.kayit}}" hint-placeholder-val="{{false}}">
+        <div class="card" style="background: {{c.surface}}">
+          <div class="chd"><b>PANEL İŞLEMLERİ</b><span>SİLİNEMEZ</span></div>
+          <div class="tl"><sc-for list="{{logRows}}" as="h" hint-placeholder-count="6"><div class="tli"><time>{{h.t}}</time><span>{{h.l}}</span></div></sc-for></div>
+        </div>
+      </sc-if>
+
+    </div></div>
+  </div>
+
+  <!-- ═══ Askıya al penceresi ═══ -->
+  <sc-if value="{{sheetSuspend}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" role="dialog" aria-modal="true" aria-labelledby="y-sh">
+      <div class="sheet" style="background: {{c.surface}}; color: {{c.fg}}">
+        <h2 id="y-sh">{{cu.n}} askıya alınsın mı?</h2>
+        <p style="margin: 0; font: 500 15px/1.5 'Instrument Sans', sans-serif; opacity: .8">Müşterinin kullanıcıları giriş yapamaz; veriler silinmez. İstediğiniz zaman devam ettirebilirsiniz.</p>
+        <div class="fl"><label for="y-why">GEREKÇE (ZORUNLU)</label><textarea id="y-why" class="ta" style="background: {{c.chip}}" placeholder="Örn. 2 dönem ödeme yapılmadı" value="{{why}}" onChange="{{onWhy}}"></textarea></div>
+        <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{closeSheet}}">Vazgeç</button><button type="button" class="btn" style="background: #C62828; color: #FFFFFF" onClick="{{suspend}}" disabled="{{whyEmpty}}">Askıya al</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ═══ Paket değiştir penceresi ═══ -->
+  <sc-if value="{{sheetPlan}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" role="dialog" aria-modal="true" aria-labelledby="y-pl">
+      <div class="sheet" style="background: {{c.surface}}; color: {{c.fg}}">
+        <h2 id="y-pl">Paketi değiştir · {{cu.n}}</h2>
+        <div style="display: flex; flex-direction: column; gap: 8px"><sc-for list="{{planOpts}}" as="po" hint-placeholder-count="3"><button type="button" class="tg" style="background: {{po.bg}}; color: {{po.fg}}" role="radio" aria-checked="{{po.sel}}" onClick="{{po.go}}"><span><b style="display: block; font: 800 17px/1.2 'Bricolage Grotesque', sans-serif">{{po.n}}</b><span class="mono" style="font-size: 12px; opacity: .75">₺{{po.price}} / AY · {{po.sum}}</span></span><span class="chip" style="background: {{po.tagBg}}; color: {{po.tagFg}}">{{po.tag}}</span></button></sc-for></div>
+        <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg><span>{{planNote}}</span></div>
+        <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{closeSheet}}">Vazgeç</button><button type="button" class="btn" style="background: #172E42; color: #FFFFFF" onClick="{{applyPlan}}">Değiştir</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"device":{"editor":"enum","default":"auto","options":["auto","desktop","tablet","mobile"],"section":"Önizleme"},"previewBar":{"editor":"boolean","default":true,"section":"Önizleme"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      mode: 'desktop', override: null, theme: 'acik', page: 'ozet', cust: 0, q: '', custTab: 'hepsi', payTab: 'hepsi',
+      sheet: null, why: '', planPick: null, pkSel: 1, opDone: {},
+      custs: [
+        { n: 'Motive Rubber', slug: 'motive', st: 'AKTİF', pk: 1, u: 9, field: 6, w: 3, i: 412, mv: 1840, last: 'BUGÜN 08:41', since: '13.10.2026', ini: 'MR' },
+        { n: '[Firma adı]', slug: '[alan-1]', st: 'DENEME', pk: 0, u: 3, field: 2, w: 1, i: 86, mv: 120, last: 'DÜN 17:05', since: '02.10.2026', ini: 'F1', trialEnd: '02.01.2027' },
+        { n: '[Firma adı]', slug: '[alan-2]', st: 'DENEME', pk: 0, u: 1, field: 0, w: 1, i: 0, mv: 0, last: '—', since: '14.10.2026', ini: 'F2', trialEnd: '14.01.2027' },
+        { n: '[Firma adı]', slug: '[alan-3]', st: 'GECİKMEDE', pk: 1, u: 7, field: 5, w: 2, i: 230, mv: 610, last: '3 GÜN ÖNCE', since: '20.08.2026', ini: 'F3' },
+        { n: '[Firma adı]', slug: '[alan-4]', st: 'ASKIDA', pk: 0, u: 2, field: 1, w: 1, i: 40, mv: 0, last: '21 GÜN ÖNCE', since: '01.07.2026', ini: 'F4' }
+      ],
+      pks: [
+        { n: 'Başlangıç', price: '[fiyat]', users: 3, field: 5, w: 1, items: 500, f: { qr: true, prod: false, api: false, ship: true }, pub: true, rec: false },
+        { n: 'Profesyonel', price: '[fiyat]', users: 10, field: 20, w: 3, items: 5000, f: { qr: true, prod: true, api: false, ship: true }, pub: true, rec: true },
+        { n: 'Kurumsal', price: '[fiyat]', users: 0, field: 0, w: 0, items: 0, f: { qr: true, prod: true, api: true, ship: true }, pub: true, rec: false }
+      ],
+      lp: { h: 'Depo işi, tek ekranda.', s: 'Mal kabulden sevkiyata her iş telefonda; 3 ay ücretsiz deneyin.', show: [true, true, true] }
+    };
+  }
+  componentDidMount() { var self = this; this._r = function () { self.setState({ mode: self.detect() }); }; this._r(); window.addEventListener('resize', this._r); }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); }
+  detect() { var w = window.innerWidth || 1440, coarse = false; try { coarse = window.matchMedia('(pointer: coarse)').matches; } catch (e) {} if (w < 700) return 'mobile'; if (coarse || w < 1100) return 'tablet'; return 'desktop'; }
+  renderVals() {
+    var self = this, s = this.state, P = this.props;
+    var forced = P.device && P.device !== 'auto' ? P.device : s.override;
+    var m = forced || s.mode, dk = s.theme === 'koyu';
+    var c = dk ? { bg: '#13171C', fg: '#D8DEE4', surface: '#1B2128', chip: '#232B34', track: '#2C3540', okBg: '#1F4A3A', okFg: '#E6EAEE' }
+               : { bg: '#F4F2EE', fg: '#1E2F3E', surface: '#FFFFFF', chip: '#F1EEE8', track: '#E6E2DA', okBg: '#CFE8DA', okFg: '#0F3D27' };
+    var D = {
+      ozet: 'M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z', cust: 'M4 21V5h10v16M14 9h6v12M8 9h2M8 13h2M8 17h2',
+      pk: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10', pay: 'M3 6h18v12H3zM3 10h18M7 15h4', req: 'M3 6h18v12H3zM3 7l9 6 9-6',
+      site: 'M3 5h18v14H3zM3 9h18M7 7h.01M10 7h.01', log: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+      check: 'M4 12l5 5L20 6', warn: 'M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z', clock: 'M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z'
+    };
+    var ST = { 'AKTİF': [c.okBg, c.okFg], 'DENEME': ['#FFE7A8', '#4A3500'], 'GECİKMEDE': ['#C62828', '#FFFFFF'], 'ASKIDA': [c.chip, c.fg] };
+    var go = function (page, extra) { return function () { var o = { page: page, sheet: null }; for (var k in (extra || {})) o[k] = extra[k]; self.setState(o); }; };
+    var pending = Object.keys(s.opDone).length >= 2 ? 0 : 2 - Object.keys(s.opDone).length;
+    var navList = [['ozet', 'Özet', D.ozet, 0], ['musteriler', 'Müşteriler', D.cust, 0], ['paketler', 'Paketler', D.pk, 0], ['odemeler', 'Ödemeler', D.pay, 1], ['talepler', 'Demo talepleri', D.req, pending], ['satis', 'Satış sayfası', D.site, 0], ['kayit', 'İşlem kaydı', D.log, 0]];
+    var curPage = s.page === 'musteri' ? 'musteriler' : s.page;
+    var navs = navList.map(function (n) { var on = curPage === n[0]; return { l: n[1], d: n[2], cls: 'nav' + (on ? ' on' : ''), mcls: 'mtab' + (on ? ' on' : ''), cur: on ? 'page' : 'false', hasCnt: n[3] > 0, cnt: String(n[3]), go: go(n[0]) }; });
+
+    var pkSum = function (p) { var lim = function (v, u) { return v === 0 ? 'Sınırsız ' + u : v.toLocaleString('tr-TR') + ' ' + u; }; return [lim(p.users, 'yönetici'), lim(p.field, 'saha personeli'), lim(p.w, 'depo'), lim(p.items, 'kalem')]; };
+    var custs = s.custs;
+    var heads = {
+      ozet: { h: 'Özet', s: 'ETKİN WMS · ' + custs.length + ' MÜŞTERİ' },
+      musteriler: { h: 'Müşteriler', s: 'YALNIZ SAYILAR GÖRÜNÜR · MÜŞTERİ VERİSİ AÇILMAZ' },
+      musteri: { h: custs[s.cust].n, s: 'MÜŞTERİ DETAYI' },
+      paketler: { h: 'Paketler', s: 'SATIŞ SAYFASI VE İYZİCO PLANLARIYLA EŞLİ', act: 'Yeni paket', hasAct: true, go: function () { var p = self.state.pks.slice(); p.push({ n: 'Yeni paket', price: '[fiyat]', users: 1, field: 1, w: 1, items: 100, f: { qr: true, prod: false, api: false, ship: false }, pub: false, rec: false }); self.setState({ pks: p, pkSel: p.length - 1 }); } },
+      odemeler: { h: 'Ödemeler', s: 'İYZİCO ABONELİK · AYLIK' },
+      talepler: { h: 'Demo talepleri', s: 'SATIŞ SAYFASI FORMU' },
+      satis: { h: 'Satış sayfası', s: 'ETKINYAZILIM.COM · İÇERİK VE FİYATLAR' },
+      kayit: { h: 'İşlem kaydı', s: 'PANELDE KİM NE YAPTI' }
+    };
+    var head = heads[s.page]; if (!head.hasAct) { head.hasAct = false; head.act = ''; head.go = function () {}; }
+
+    var counts = { aktif: 0, deneme: 0, gec: 0, ask: 0 };
+    custs.forEach(function (x) { if (x.st === 'AKTİF') counts.aktif++; if (x.st === 'DENEME') counts.deneme++; if (x.st === 'GECİKMEDE') counts.gec++; if (x.st === 'ASKIDA') counts.ask++; });
+    var kpis = [
+      { l: 'AKTİF MÜŞTERİ', n: counts.aktif, s: 'ÖDEMESİ GÜNCEL', a: '#17804F', d: D.check },
+      { l: 'DENEMEDE', n: counts.deneme, s: '1 DENEME 30 GÜN İÇİNDE BİTİYOR', a: '#B07D00', d: D.clock },
+      { l: 'GECİKEN ÖDEME', n: counts.gec, s: '1 FATURA · 2. HATIRLATMA', a: '#C62828', d: D.warn },
+      { l: 'BEKLEYEN TALEP', n: pending, s: 'DEMO FORMU', a: '#3D2A6B', d: D.req }
+    ];
+    var todos = [
+      { when: 'BUGÜN', tag: 'TALEP', bg: '#3D2A6B', fg: '#FFFFFF', l: pending + ' demo talebi onay bekliyor' },
+      { when: 'BUGÜN', tag: 'ÖDEME', bg: '#C62828', fg: '#FFFFFF', l: '[Firma adı] · ekim ödemesi 9 gün gecikti' },
+      { when: '30 GÜN İÇİNDE', tag: 'DENEME', bg: '#FFE7A8', fg: '#4A3500', l: '[Firma adı] · deneme 02.01.2027 bitiyor' },
+      { when: 'BU HAFTA', tag: 'SINIR', bg: c.chip, fg: c.fg, l: 'Motive Rubber · saha personeli sınırına 4 kişi kaldı' }
+    ];
+    var health = [
+      { k: 'UYGULAMA', v: 'Çalışıyor', c: '#17804F' }, { k: 'ARKA PLAN İŞLERİ', v: 'Çalışıyor · kuyrukta 0 iş', c: '#17804F' },
+      { k: 'SON YEDEK', v: 'Bugün 03:00', c: '#17804F' }, { k: 'E-POSTA', v: 'Resend · bugün 12 gönderim', c: '#17804F' }, { k: 'ÖDEME SAĞLAYICI', v: 'iyzico · bağlantı bekleniyor', c: '#B07D00' }
+    ];
+
+    var tabsOf = function (key, list, cur) { return list.map(function (t) { var on = cur === t[0]; return { l: t[1], cls: 'segb' + (on ? ' on' : ''), sel: on ? 'true' : 'false', bg: on ? c.surface : 'transparent', go: function () { var o = {}; o[key] = t[0]; self.setState(o); } }; }); };
+    var custTabs = tabsOf('custTab', [['hepsi', 'Hepsi · ' + custs.length], ['AKTİF', 'Aktif · ' + counts.aktif], ['DENEME', 'Deneme · ' + counts.deneme], ['GECİKMEDE', 'Gecikmede · ' + counts.gec], ['ASKIDA', 'Askıda · ' + counts.ask]], s.custTab);
+    var ql = (s.q || '').toLocaleLowerCase('tr');
+    var custRows = custs.map(function (x, i) { return { x: x, i: i }; }).filter(function (o) { return (s.custTab === 'hepsi' || o.x.st === s.custTab) && (!ql || (o.x.n + ' ' + o.x.slug).toLocaleLowerCase('tr').indexOf(ql) >= 0); }).map(function (o) {
+      var x = o.x, st = ST[x.st]; return { n: x.n, slug: 'wms.etkinyazilim.com/' + x.slug, st: x.st, stBg: st[0], stFg: st[1], pk: s.pks[x.pk].n, u: x.u + ' + ' + x.field, w: x.w, i: x.i.toLocaleString('tr-TR'), last: x.last, go: go('musteri', { cust: o.i }) };
+    });
+
+    var cx = custs[s.cust], cpk = s.pks[cx.pk], cst = ST[cx.st];
+    var meter = function (l, v, max) { var w = max === 0 ? 8 : Math.min(100, Math.round(v / max * 100)); var col = max !== 0 && v / max >= 0.8 ? '#C62828' : '#17804F'; return { l: l, v: v.toLocaleString('tr-TR'), max: max === 0 ? 'SINIRSIZ' : max.toLocaleString('tr-TR'), w: w + '%', c: col }; };
+    var cu = {
+      n: cx.n, slug: cx.slug, since: cx.since, ini: cx.ini, st: cx.st, stBg: cst[0], stFg: cst[1], pk: cpk.n.toLocaleUpperCase('tr'),
+      avBg: '#FFE7A8', avFg: '#4A3500', canSuspend: cx.st !== 'ASKIDA', canResume: cx.st === 'ASKIDA', isTrial: cx.st === 'DENEME',
+      meters: [meter('Yönetici kullanıcı', cx.u, cpk.users), meter('Saha personeli', cx.field, cpk.field), meter('Depo', cx.w, cpk.w), meter('Kalem (ürün)', cx.i, cpk.items)],
+      sub: cx.st === 'DENEME' ? [{ k: 'DURUM', v: 'Deneme · ' + cx.trialEnd + ' bitiş' }, { k: 'PAKET', v: cpk.n }, { k: 'KART', v: 'Henüz yok' }, { k: 'SONRAKİ ÖDEME', v: 'Deneme bitince' }, { k: 'BU AY HAREKET', v: cx.mv.toLocaleString('tr-TR') }]
+        : [{ k: 'DURUM', v: cx.st === 'GECİKMEDE' ? 'Ödeme gecikti · 9 gün' : cx.st === 'ASKIDA' ? 'Askıda · panelden' : 'Aktif · aylık' }, { k: 'PAKET', v: cpk.n + ' · ₺' + cpk.price + ' / ay' }, { k: 'KART', v: '•••• [son 4]' }, { k: 'SONRAKİ ÖDEME', v: '13.11.2026' }, { k: 'BU AY HAREKET', v: cx.mv.toLocaleString('tr-TR') }],
+      hist: [{ t: '15.10 10:12', l: 'Paket: Başlangıç → Profesyonel (müşteri, uygulamadan)' }, { t: '13.10 16:05', l: 'İlk ödeme alındı · iyzico' }, { t: '13.10 15:40', l: 'Çalışma alanı açıldı · deneme 3 ay' }, { t: '13.10 09:02', l: 'Demo talebi onaylandı · operatör' }]
+    };
+
+    var pkList = s.pks.map(function (p, i) {
+      var st = p.pub ? ['YAYINDA', c.okBg, c.okFg] : ['TASLAK', c.chip, c.fg];
+      return { n: p.n, price: p.price, rec: p.rec, st: st[0], stBg: st[1], stFg: st[2], lines: pkSum(p), cust: custs.filter(function (x) { return x.pk === i; }).length, cls: 'pk' + (s.pkSel === i ? ' sel' : ''), pressed: s.pkSel === i ? 'true' : 'false', go: function () { self.setState({ pkSel: i }); } };
+    });
+    var ep = s.pks[s.pkSel] || s.pks[0];
+    var setPk = function (patch) { var a = self.state.pks.slice(); var o = {}; for (var k in a[self.state.pkSel]) o[k] = a[self.state.pkSel][k]; for (var k2 in patch) o[k2] = patch[k2]; a[self.state.pkSel] = o; self.setState({ pks: a }); };
+    var val = function (e) { return e && e.target ? e.target.value : ''; };
+    var num = function (e) { var n = parseInt(val(e).replace(/\D/g, ''), 10); return isNaN(n) ? 0 : n; };
+    var sw = function (on) { return { swCls: 'sw' + (on ? ' on' : ''), swBg: on ? '#17804F' : (dk ? '#3A4552' : '#C9C3B8'), on: on ? 'true' : 'false' }; };
+    var feat = function (k, l) { var on = !!ep.f[k]; var o = sw(on); o.l = l; o.go = function () { var f = {}; for (var x in ep.f) f[x] = ep.f[x]; f[k] = !on; setPk({ f: f }); }; return o; };
+    var flag = function (k, l) { var on = !!ep[k]; var o = sw(on); o.l = l; o.go = function () { var p = {}; p[k] = !on; setPk(p); }; return o; };
+    var ed = {
+      n: ep.n, price: ep.price, st: ep.pub ? 'YAYINDA' : 'TASLAK',
+      onN: function (e) { setPk({ n: val(e) }); }, onP: function (e) { setPk({ price: val(e) }); },
+      limits: [['y-l1', 'YÖNETİCİ KULLANICI', 'users'], ['y-l2', 'SAHA PERSONELİ', 'field'], ['y-l3', 'DEPO', 'w'], ['y-l4', 'KALEM (ÜRÜN)', 'items']].map(function (l) { return { id: l[0], l: l[1], v: String(ep[l[2]]), suf: ep[l[2]] === 0 ? 'SINIRSIZ' : 'EN ÇOK', on: function (e) { var p = {}; p[l[2]] = num(e); setPk(p); } }; }),
+      feats: [feat('qr', 'QR paket etiketi'), feat('ship', 'Sevkiyat ve toplama'), feat('prod', 'Üretim ve reçete'), feat('api', 'ERP / API bağlantısı')],
+      flags: [flag('pub', 'Satış sayfasında yayınla'), flag('rec', '“Önerilen” olarak işaretle')]
+    };
+
+    var pays = [
+      { n: 'Motive Rubber', ref: 'ABN-0001', per: 'EKİM 2026', pk: 'Profesyonel', amt: '[tutar]', st: 'ÖDENDİ', inv: 'BEKLİYOR' },
+      { n: '[Firma adı]', ref: 'ABN-0003', per: 'EKİM 2026', pk: 'Profesyonel', amt: '[tutar]', st: 'GECİKTİ', inv: '—' },
+      { n: '[Firma adı]', ref: 'ABN-0004', per: 'EYLÜL 2026', pk: 'Başlangıç', amt: '[tutar]', st: 'GECİKTİ', inv: '—' },
+      { n: 'Motive Rubber', ref: 'ABN-0001', per: 'KASIM 2026', pk: 'Profesyonel', amt: '[tutar]', st: 'BEKLİYOR', inv: '—' }
+    ];
+    var PST = { 'ÖDENDİ': [c.okBg, c.okFg], 'GECİKTİ': ['#C62828', '#FFFFFF'], 'BEKLİYOR': [c.chip, c.fg] };
+    var payTabs = tabsOf('payTab', [['hepsi', 'Hepsi'], ['ÖDENDİ', 'Ödendi'], ['GECİKTİ', 'Gecikti'], ['BEKLİYOR', 'Bekliyor']], s.payTab);
+    var payRows = pays.filter(function (p) { return s.payTab === 'hepsi' || p.st === s.payTab; }).map(function (p) { var st = PST[p.st]; return { n: p.n, ref: p.ref, per: p.per, pk: p.pk, amt: p.amt, st: p.st, stBg: st[0], stFg: st[1], inv: p.inv, late: p.st === 'GECİKTİ' }; });
+    var payKpis = [
+      { l: 'BU AY TAHSİL', n: 1, s: 'ÖDEME', a: '#17804F', d: D.check }, { l: 'GECİKEN', n: 2, s: 'ÖDEME · 2 MÜŞTERİ', a: '#C62828', d: D.warn },
+      { l: 'BEKLEYEN', n: 1, s: 'ÖDEME · 13.11', a: '#B07D00', d: D.clock }, { l: 'FATURA BEKLEYEN', n: 1, s: 'E-ARŞİV BAĞLANINCA', a: '#3D2A6B', d: D.pay }
+    ];
+
+    var reqs = [['r1', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Kauçuk / plastik', '3 depo, QR etiket, üretim', 'BUGÜN 14:22'], ['r2', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Gıda', 'SKT takibi, sevkiyat', 'DÜN 09:10']];
+    var reqRows = reqs.map(function (r) { var st = s.opDone[r[0]]; var mark = function (v) { return function () { var o = {}; for (var k in self.state.opDone) o[k] = self.state.opDone[k]; o[r[0]] = v; self.setState({ opDone: o }); }; };
+      return { n: r[1], co: r[2], mail: r[3], sec: r[4], msg: r[5], when: r[6], open: !st, closed: !!st, st: st === 'ok' ? 'ONAYLANDI · BAĞLANTI GİTTİ' : 'REDDEDİLDİ', stBg: st === 'ok' ? c.okBg : c.chip, stFg: st === 'ok' ? c.okFg : c.fg, yes: mark('ok'), no: mark('no') }; });
+
+    var setLp = function (patch) { var o = {}; for (var k in self.state.lp) o[k] = self.state.lp[k]; for (var k2 in patch) o[k2] = patch[k2]; self.setState({ lp: o }); };
+    var lp = {
+      h: s.lp.h, s: s.lp.s, onH: function (e) { setLp({ h: val(e) }); }, onS: function (e) { setLp({ s: val(e) }); },
+      toggles: s.pks.map(function (p, i) { var on = !!s.lp.show[i] && p.pub; var o = sw(on); o.l = p.n + (p.pub ? '' : ' (taslak)'); o.go = function () { var a = self.state.lp.show.slice(); a[i] = !a[i]; setLp({ show: a }); }; return o; }),
+      cards: s.pks.map(function (p, i) { return { p: p, i: i }; }).filter(function (o) { return o.p.pub && s.lp.show[o.i]; }).map(function (o) { return { n: o.p.n, price: o.p.price + ' / ay', sum: pkSum(o.p).join(' · '), cls: 'lpk-c' + (o.p.rec ? ' rec' : '') }; })
+    };
+
+    var logRows = [
+      { t: '15.10 21:04', l: 'Operatör · Satış sayfası alt metni değişti, yayınlandı' }, { t: '15.10 19:40', l: 'Operatör · Profesyonel paketi fiyatı güncellendi (yeni müşteriler)' },
+      { t: '15.10 14:30', l: 'Operatör · Demo talebi onaylandı · [Firma adı]' }, { t: '14.10 11:02', l: 'Operatör · [Firma adı] askıya alındı · gerekçe: 2 dönem ödeme yok' },
+      { t: '13.10 16:05', l: 'Sistem · iyzico ödeme alındı · ABN-0001' }, { t: '13.10 09:02', l: 'Operatör · Panel girişi · 2FA' }
+    ];
+
+    var planIdx = s.planPick === null ? cx.pk : s.planPick;
+    var planOpts = s.pks.map(function (p, i) { var cur = i === cx.pk, sel = i === planIdx; var tag = cur ? 'ŞU AN' : i > cx.pk ? 'YÜKSELT' : 'DÜŞÜR';
+      return { n: p.n, price: p.price, sum: pkSum(p).slice(0, 2).join(' · '), sel: sel ? 'true' : 'false', bg: sel ? '#172E42' : c.chip, fg: sel ? '#FFFFFF' : c.fg, tag: tag, tagBg: sel ? '#F4C542' : c.surface, tagFg: sel ? '#1A1300' : c.fg, go: function () { self.setState({ planPick: i }); } }; });
+    var planNote = planIdx > cx.pk ? 'Yükseltme hemen geçerli olur; yeni sınırlar hemen açılır, yeni fiyat bir sonraki ödemeden itibaren alınır.' : planIdx < cx.pk ? 'Düşürme bir sonraki dönem başında geçerli olur. Yeni paket sınırını aşan kullanım varsa müşteri önce uyarılır.' : 'Müşteri zaten bu pakette.';
+    var setCust = function (patch) { var a = self.state.custs.slice(); var o = {}; for (var k in a[self.state.cust]) o[k] = a[self.state.cust][k]; for (var k2 in patch) o[k2] = patch[k2]; a[self.state.cust] = o; self.setState({ custs: a, sheet: null, why: '', planPick: null }); };
+
+    return {
+      wrapCls: 'wrap' + (forced && m !== 'desktop' ? ' fr-' + m : '') + (dk ? ' dk' : ''),
+      appCls: 'app m-' + m + (dk ? ' dkm' : ''),
+      showPrev: P.previewBar !== false,
+      prevBtns: [['auto', 'Otomatik'], ['desktop', 'Masaüstü'], ['tablet', 'Tablet'], ['mobile', 'Mobil']].map(function (b) { var on = b[0] === 'auto' ? !s.override : s.override === b[0]; return { l: b[1], cls: 'prevb' + (on ? ' on' : ''), pressed: on ? 'true' : 'false', go: function () { self.setState({ override: b[0] === 'auto' ? null : b[0] }); } }; }),
+      c: c, navs: navs, head: head, showBack: s.page === 'musteri', goBack: go('musteriler'),
+      v: { ozet: s.page === 'ozet', musteriler: s.page === 'musteriler', musteri: s.page === 'musteri', paketler: s.page === 'paketler', odemeler: s.page === 'odemeler', talepler: s.page === 'talepler', satis: s.page === 'satis', kayit: s.page === 'kayit' },
+      kpis: kpis, todos: todos, todoCount: todos.length, health: health,
+      q: s.q, onQ: function (e) { self.setState({ q: val(e) }); }, custTabs: custTabs, custRows: custRows, custEmpty: custRows.length === 0,
+      cu: cu, pkList: pkList, ed: ed,
+      payTabs: payTabs, payRows: payRows, payEmpty: payRows.length === 0, payKpis: payKpis,
+      reqRows: reqRows, lp: lp, logRows: logRows,
+      sheetSuspend: s.sheet === 'suspend', sheetPlan: s.sheet === 'plan', why: s.why, whyEmpty: !(s.why || '').trim(),
+      onWhy: function (e) { self.setState({ why: val(e) }); },
+      openSuspend: function () { self.setState({ sheet: 'suspend', why: '' }); }, openPlan: function () { self.setState({ sheet: 'plan', planPick: null }); },
+      closeSheet: function () { self.setState({ sheet: null, planPick: null }); },
+      suspend: function () { if ((self.state.why || '').trim()) setCust({ st: 'ASKIDA' }); },
+      resume: function () { setCust({ st: 'AKTİF' }); }, extend: function () { setCust({ trialEnd: '01.02.2027' }); },
+      planOpts: planOpts, planNote: planNote, applyPlan: function () { setCust({ pk: planIdx }); },
+      toggleTheme: function () { self.setState({ theme: self.state.theme === 'koyu' ? 'acik' : 'koyu' }); },
+      noop: function () {}
+    };
+  }
+}
+</script>
+</body>
+</html>
