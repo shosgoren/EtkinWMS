@@ -1,5 +1,6 @@
 // I-18 (DESIGN-PARITY): Giris.dc.html `v.mgr` + `v.op` BİREBİR. Sınıf adları, öğe sırası, ikon yolları ve metinler kaynaktan; CSS
 // `app/design/giris.css` (üretilmiş). Satırlar gerçek veridir; bu bileşen yalnız çizer (yetki ve veri page.tsx'te).
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { DemoRequestRow } from "@wms/domain/platform/demo-requests";
 import { DzRoot } from "../../design/dz-root.tsx";
@@ -49,9 +50,9 @@ export async function DemoRequestsView({ rows, now, dark, errorCode, action }: D
     <DzRoot dark={dark} scope="dzg" testId="operator-demo-requests">
       <div className="mp" style={{ background: C.bg, color: C.fg }}>
         <div className="band" style={{ background: dz("3D2A6B") }}>
-          <a className="wb" href="/" aria-label={t("back")}>
+          <Link className="wb" href="/" aria-label={t("back")}>
             <Ico d={GICON.back} size={26} sw={3} />
-          </a>
+          </Link>
           <div className="band-t">
             <h1 className="sr-only">{t("title")}</h1>
             <b className="band-h" aria-hidden="true">

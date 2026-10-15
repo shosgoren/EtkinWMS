@@ -65,7 +65,7 @@ function mapPlatformError(e: unknown): unknown {
   return wrap("INTERNAL");
 }
 
-function requirePrincipal(principal: AccessPrincipal | null | undefined): AccessPrincipal {
+function principalOrThrow(principal: AccessPrincipal | null | undefined): AccessPrincipal {
   if (principal === null || principal === undefined) throw new AppError("UNAUTHENTICATED");
   if (!principal.mfaVerified) throw new AppError("FORBIDDEN", { detail: "MFA_REQUIRED" });
   return principal;
@@ -80,7 +80,7 @@ export async function isPlatformOperator(params: { readonly db: AccessDbClient; 
 }
 
 export async function listDemoRequests(params: { readonly db: AccessDbClient; readonly principal: AccessPrincipal | null }): Promise<readonly DemoRequestRow[]> {
-  const principal = requirePrincipal(params.principal);
+  const principal = principalOrThrow(params.principal);
   try {
     const rows = await withUser(params.db, principal.userId, (tx) =>
       tx.execute<{
@@ -121,7 +121,7 @@ export interface DecideDemoRequestParams {
 }
 
 export async function decideDemoRequest(params: DecideDemoRequestParams): Promise<DemoDecision> {
-  const principal = requirePrincipal(params.principal);
+  const principal = principalOrThrow(params.principal);
   const { id, decision } = params;
   if (typeof id !== "string" || !UUID.test(id)) throw new AppError("VALIDATION_FAILED");
   if (decision !== "APPROVED" && decision !== "REJECTED") throw new AppError("VALIDATION_FAILED");
