@@ -10,6 +10,7 @@ test("stok: ana menü, gerçek veriler, arama, yardım ve mobil taşma", async (
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Birlikte, adım adım." })).not.toBeVisible();
   // T-988 (I-18): Görevlerim tasarımında sayfa bağlantısı yoktur; Stok uygulama menüsündedir.
+  await expect(page).toHaveURL(/\/t\/demo$/);
   await openAppMenu(page);
   await page.getByRole("dialog", { name: "Menü" }).locator('a[href="/t/demo/stock"]').click();
   await expect(page.getByRole("heading", { name: "Stok durumu", exact: true })).toBeVisible();

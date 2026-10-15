@@ -89,7 +89,7 @@ for (const size of SIZES) {
       for (const view of [...VIEWS].reverse()) {
         await selectView(page, view.label);
         await expect(page.locator("html")).toHaveAttribute("data-view", view.key);
-        const tasks = view.key === "flow" ? page.getByTestId("easy-operations") : page.getByRole("list", { name: "İşler" });
+        const tasks = view.key === "flow" ? page.locator("#main").getByTestId("easy-operations") : page.getByRole("list", { name: "İşler" });
         await expect(tasks).toBeVisible();
         if (view.key === "flow") await expect(tasks.locator("[data-operation]")).toHaveCount(4);
 
@@ -103,7 +103,7 @@ for (const size of SIZES) {
         if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
         // T-988: Akış ana ekranı Görevlerim başlığını kullanır (ayrı uygulama çubuğu yok); Kokpit telefon çubuğu ink logoyu korur.
         if (size.width < 768 && view.key === "cockpit") await expect(page.getByTestId("app-bar").locator("span.bg-ink")).toHaveCSS("background-color", await tokenColor(page, "ink"));
-        if (view.key === "flow") await expect(page.getByTestId("home-actions")).toBeVisible();
+        if (view.key === "flow") await expect(page.locator("#main").getByTestId("home-actions")).toBeVisible();
         // I-18: Görevlerim odak halkası tasarım kaynağındaki gibi 4 px sarı (#F4C542); diğer ekranlar --color-focus.
         await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`, view.key === "flow" ? "rgb(244, 197, 66)" : undefined);
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);

@@ -569,7 +569,7 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
     await page.setViewportSize({ width, height });
     await page.goto("/t/demo");
     await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
-    const easy = page.getByTestId("easy-operations");
+    const easy = page.locator("#main").getByTestId("easy-operations");
     await expect(easy).toBeVisible();
     await expect(easy.locator("[data-operation]")).toHaveCount(4);
     await expect(page.locator(".task-grid")).toHaveCount(0);
@@ -592,7 +592,7 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
   }
-  await page.getByTestId("easy-operations").locator('[data-operation="transfer"]').click();
+  await page.locator("#main").getByTestId("easy-operations").locator('[data-operation="transfer"]').click();
   await expect(page).toHaveURL(/\/t\/demo\/stock\/documents\?new=TRANSFER$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(tr.stockDocuments.transfer);
   await page.goto("/t/demo");
@@ -600,7 +600,7 @@ test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve
   await openAppMenu(page);
   await page.getByRole("dialog", { name: "Menü" }).getByRole("button", { name: "Genel bakış", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
-  await expect(page.getByTestId("easy-operations")).toHaveCount(0);
+  await expect(page.locator("#main").getByTestId("easy-operations")).toHaveCount(0);
   await expect(page.getByRole("list", { name: "İşler" })).toBeVisible();
 });
 
@@ -611,7 +611,7 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
   await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
   await page.goto("/t/demo");
-  const easy = page.getByTestId("easy-operations");
+  const easy = page.locator("#main").getByTestId("easy-operations");
   await expect(easy.locator('[data-operation][data-state="locked"]')).toHaveCount(4);
   await expect(easy.locator('a[data-operation]')).toHaveCount(0);
   for (const card of await easy.locator('[data-operation]').all()) {
@@ -620,10 +620,10 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   // Plan dışı (manuel giriş/çıkış) yazma işidir: salt okuyana çizilmez.
   await expect(easy.locator("[data-manual]")).toHaveCount(0);
   // I-18 öncelik: yetkisiz eylem çizilmez — salt okuyan "Sorun bildir" görmez; menü erişilebilir.
-  await page.getByTestId("home-actions").click();
-  await expect(page.getByTestId("app-bar-menu")).toBeVisible();
-  await expect(page.getByTestId("report-problem")).toHaveCount(0);
-  await page.getByTestId("app-bar-menu").click();
+  await page.locator("#main").getByTestId("home-actions").click();
+  await expect(page.locator("#main").getByTestId("app-bar-menu")).toBeVisible();
+  await expect(page.locator("#main").getByTestId("report-problem")).toHaveCount(0);
+  await page.locator("#main").getByTestId("app-bar-menu").click();
   const menu = page.getByRole("dialog", { name: "Menü" });
   await expect(menu.getByRole("link", { name: "Stok", exact: true })).toHaveAttribute("href", "/t/demo/stock");
   await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveCount(0);
