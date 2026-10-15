@@ -22,7 +22,9 @@ export type FlowHue = "green" | "teal";
 const SCAN_ICON: Record<FlowHue, string> = { green: "text-cat-green-ink", teal: "text-cat-teal-ink" };
 const SCAN_READY_BORDER: Record<FlowHue, string> = { green: "border-cat-green-ink", teal: "border-cat-teal-ink" };
 const SCAN_LINK: Record<FlowHue, string> = { green: "text-cat-green-ink", teal: "text-cat-teal-ink" };
-const HUE: Record<FlowHue, string> = { green: "bg-cat-green-bg text-cat-green-ink", teal: "bg-cat-teal-bg text-cat-teal-ink" };
+/** T-985: Görevlerim tasarımı — adım üst bandı kategori koyu tonunda, yazı yüzey renginde (ikon + metin de taşır). */
+const BAND: Record<FlowHue, string> = { green: "bg-cat-green-ink", teal: "bg-cat-teal-ink" };
+const SCAN_READY_BG: Record<FlowHue, string> = { green: "bg-cat-green-bg", teal: "bg-cat-teal-bg" };
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Ortak saha parçaları
@@ -35,7 +37,7 @@ export function PrimaryButton({ children, onClick, disabled, loading, type = "bu
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       onClick={onClick}
-      className={`flex min-h-14 w-full min-w-0 items-center justify-center rounded-control bg-accent px-4 text-lg font-bold text-on-accent disabled:opacity-60 ${FOCUS}`}
+      className={`flow-primary flex min-h-14 w-full min-w-0 items-center justify-center rounded-2xl bg-accent px-4 text-lg font-extrabold tracking-wide text-on-accent disabled:opacity-60 ${FOCUS}`}
     >
       {children}
     </button>
@@ -43,7 +45,7 @@ export function PrimaryButton({ children, onClick, disabled, loading, type = "bu
 }
 export function PrimaryLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} data-variant="primary" className={`flex min-h-14 w-full min-w-0 items-center justify-center rounded-control bg-accent px-4 text-center text-lg font-bold text-on-accent ${FOCUS}`}>
+    <Link href={href} data-variant="primary" className={`flow-primary flex min-h-14 w-full min-w-0 items-center justify-center rounded-2xl bg-accent px-4 text-center text-lg font-extrabold tracking-wide text-on-accent ${FOCUS}`}>
       {children}
     </Link>
   );
@@ -94,14 +96,14 @@ export interface FlowShellProps {
 /** Adım çerçevesi: tek satır üst bilgi (geri + kategori ikonu + adım + başlık), altta tek sabit birincil eylem (alt gezinme çubuğunun hemen üstünde). */
 export function FlowShell({ hue, icon, step, total, title, instruction, backHref, onBack, footer, footerExtra, scanProxy, children }: FlowShellProps) {
   const t = useTranslations("receiving");
-  const back = "flex size-12 shrink-0 items-center justify-center rounded-control border-2 border-border bg-surface text-ink " + FOCUS;
+  const back = "flow-band-back flex size-12 shrink-0 items-center justify-center rounded-2xl text-surface " + FOCUS;
   return (
     <main
       className={`group flex min-h-[calc(100dvh-8.25rem)] w-full min-w-0 flex-col gap-3 px-4 pt-3 ${footerExtra === undefined ? "pb-24" : "pb-44"} ${scanProxy === true ? "[&_[data-mode=scan]]:hidden" : ""}`}
       data-testid="flow-step"
       data-step={step ?? 0}
     >
-      <header className="flex min-w-0 items-center gap-3">
+      <header className={`flow-band -mx-4 -mt-3 flex min-w-0 items-center gap-3 rounded-b-3xl px-4 py-1.5 text-surface ${BAND[hue]}`}>
         {backHref !== undefined ? (
           <Link href={backHref} aria-label={t("back")} className={back}>
             <ArrowLeft />
@@ -111,16 +113,16 @@ export function FlowShell({ hue, icon, step, total, title, instruction, backHref
             <ArrowLeft />
           </button>
         ) : null}
-        <span aria-hidden="true" className={`flex size-10 shrink-0 items-center justify-center rounded-full ${HUE[hue]}`}>
+        <span aria-hidden="true" className="flow-band-icon flex size-10 shrink-0 items-center justify-center rounded-xl">
           {icon}
         </span>
         <div className="flex min-w-0 flex-col">
           {step === undefined || total === undefined ? null : (
-            <p className="text-xs font-bold text-ink-muted" data-testid="step-label">
+            <p className="text-xs font-extrabold uppercase tracking-wider" data-testid="step-label">
               {t("stepOf", { n: step, total })}
             </p>
           )}
-          <h1 className="break-words text-xl font-extrabold leading-tight text-ink">{title}</h1>
+          <h1 className="break-words text-xl font-extrabold leading-tight">{title}</h1>
         </div>
       </header>
       {instruction === undefined ? null : <p className="break-words text-base text-ink [@media(max-height:700px)]:hidden">{instruction}</p>}
@@ -554,7 +556,7 @@ export function ScanPanel({ service, prompt, last, lastName, ready, hue }: { ser
       data-testid="scan-panel"
       data-ready={ready ? "true" : "false"}
       aria-live="polite"
-      className={`flex min-w-0 flex-none flex-col items-center gap-2 rounded-card border-2 bg-surface p-4 text-center ${ready ? SCAN_READY_BORDER[hue] : "border-border"}`}
+      className={`flex min-w-0 flex-none flex-col items-center gap-2 rounded-3xl border-2 p-4 text-center ${ready ? `${SCAN_READY_BORDER[hue]} ${SCAN_READY_BG[hue]}` : "border-dashed border-border-strong bg-surface"}`}
     >
       <ScanLine aria-hidden="true" className={`size-16 ${SCAN_ICON[hue]}`} strokeWidth={1.75} />
       <p className="break-words text-lg font-bold text-ink">{ready ? t("flow.readerReady") : prompt}</p>
@@ -1094,7 +1096,7 @@ export function ReceiveFlow({ slug, receipt }: { slug: string; receipt: ReceiptD
           </p>
           <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="expected-lines">
             {receipt.lines.map((l) => (
-              <li key={l.id} className="flex min-w-0 flex-col gap-1 rounded-card border-2 border-border bg-surface p-3">
+              <li key={l.id} className="flex min-w-0 flex-col gap-1 rounded-2xl border-2 border-border bg-surface p-3">
                 <span className="break-words text-base font-bold text-ink">{l.itemName}</span>
                 <LineStatus expected={l.expected} received={l.received} damaged={l.damaged} open={l.open} />
               </li>

@@ -653,6 +653,7 @@ select.bg-none { background-image:none; }
   body:has(.tenant-shell) [data-testid="app-bar-name"] { margin-right: 0; }
 }
 
+<<<<<<< HEAD
 /* T-986: Görevlerim tasarımı Aşama 3 — stok/transfer/manuel belge ekranlarında başlık bandı (yalnız bu bölümler; yönetici ekranları aynı).
    Transfer, ana ekrandaki döşemesiyle aynı mor tonu kullanır; zemin ton koyusu + yüzey yazısı. */
 .screen-shell[data-section="transfer"] { --screen-tone-bg: var(--color-cat-purple-bg); --screen-tone-ink: var(--color-cat-purple-ink); }
@@ -667,6 +668,14 @@ select.bg-none { background-image:none; }
 .screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-section { border-radius: 1.25rem; }
 .screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-form { border-radius: 1.5rem; }
 .screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-form > .workflow-primary { border-radius: 1rem; font-weight: 800; letter-spacing: .02em; }
+=======
+/* T-985: saha adım bandı (Görevlerim tasarımı). Zemin kategori koyu tonu (bileşende), yarı saydam yüzey kutuları. */
+.flow-band { box-shadow: 0 10px 22px -18px color-mix(in srgb, var(--color-ink) 80%, transparent); }
+.flow-band-back, .flow-band-icon { background: color-mix(in srgb, var(--color-surface) 20%, transparent); }
+.flow-band-back:hover { background: color-mix(in srgb, var(--color-surface) 30%, transparent); }
+.flow-band [data-testid="step-label"] { opacity: .88; }
+.flow-primary { box-shadow: 0 10px 20px -14px color-mix(in srgb, var(--color-accent) 80%, transparent); }
+>>>>>>> origin/main
 
 /* T-929: interior screens only. Home, dialogs, camera overlays and print surfaces retain their own layouts. */
 .screen-shell {
