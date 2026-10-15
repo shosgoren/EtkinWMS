@@ -30,14 +30,15 @@ let A: TenantWorld;
 let MGR: { userId: string; membershipId: string };
 let COUNTER: { userId: string; membershipId: string };
 let OTHER_COUNTER: { userId: string; membershipId: string };
+let B: TenantWorld;
 
 const NO_WAIT = { sleep: async () => undefined } as const;
 const uuid = (): string => randomUUID();
 const hex = (n: number): string => uuid().replaceAll("-", "").slice(0, n);
-const callP = (userId: string): StockDocCallParams => ({
+const callP = (userId: string, slug: string = A.slug): StockDocCallParams => ({
   db: app,
   principal: { userId, mfaVerified: true },
-  tenantSlug: A.slug,
+  tenantSlug: slug,
   clientKey: uuid(),
   retry: NO_WAIT,
 });
@@ -107,6 +108,7 @@ beforeAll(async () => {
   COUNTER = { userId: c, membershipId: await mkMembership(adm, A.tenantId, c, { roles: ["COUNTER"] }) };
   const o = await mkUser(adm, reg, "A987 other counter");
   OTHER_COUNTER = { userId: o, membershipId: await mkMembership(adm, A.tenantId, o, { roles: ["COUNTER"] }) };
+  B = await seedWorld(adm, reg, "B987");
 }, 120_000);
 
 afterAll(async () => {
@@ -173,6 +175,9 @@ describe("T-987 yönetici atamalı sayım akışı", () => {
     await approveCount(mgrP(), { sessionId: sid });
     await postCountAdjustment(mgrP(), { sessionId: sid });
     expect((await tasksOf(sid)).map((t) => t.status)).toEqual(["DONE", "DONE"]);
+    // Sonlanmış ama başkasına atanmış görev de yalnız onay yetkisine görünür.
+    expect(codeOf(await failure(getCountWork(otherP(), { taskId: t1.id })))).toBe("NOT_FOUND");
+    expect((await getCountWork(mgrP(), { taskId: t1.id })).task).toMatchObject({ status: "DONE", assignedToMe: false });
   });
 
   it("atanan doğrulaması: sayım izni olmayan üye VALIDATION_FAILED, bilinmeyen üye NOT_FOUND; sayımcı görev açamaz (FORBIDDEN); hiçbir görev yazılmaz", async () => {
@@ -203,5 +208,79 @@ describe("T-987 yönetici atamalı sayım akışı", () => {
     expect(reasons.map((r) => r.reason)).toEqual(["T987 iptal", "T987 iptal"]);
     // İptal edilmiş oturuma görev açılmaz.
     expect(codeOf(await failure(createCountTasks(mgrP(), { sessionId: sid })))).toBe("VALIDATION_FAILED/DOCUMENT_STATE");
+  });
+
+  it("kör olmayan oturumda sayımcı referansı görür; toplama eksiğinden doğan COUNT görevi oturum iptalinde dokunulmaz", async () => {
+    const X = await mkItem();
+    const R = await mkLoc();
+    await stockIn(X, R.id, "4");
+    const sid = (await startCount(ownerP(), { warehouseId: A.warehouseId, locationIds: [R.id], blind: false })).sessionId;
+    const shortfall = uuid();
+    await q(
+      "INSERT INTO public.warehouse_tasks (tenant_id, id, warehouse_id, kind, source_kind, source_id, location_id) VALUES ($1,$2,$3,'COUNT','SALES_ORDER',$4,$5)",
+      [A.tenantId, shortfall, A.warehouseId, uuid(), R.id],
+    );
+    const own = (await createCountTasks(mgrP(), { sessionId: sid, assigneeMembershipId: COUNTER.membershipId })).taskIds[0] as string;
+    const work = await getCountWork(counterP(), { taskId: own });
+    expect(work.session.blind).toBe(false);
+    expect(work.lines.map((l) => [l.itemId, l.reference])).toEqual([[X, "4"]]);
+    await cancelCount(ownerP(), { sessionId: sid, reason: "T987 kör değil" });
+    const rows = await q<{ id: string; status: string }>("SELECT id, status FROM public.warehouse_tasks WHERE id = ANY($1::uuid[]) ORDER BY id", [[own, shortfall]]);
+    expect(Object.fromEntries(rows.map((r) => [r.id, r.status]))).toEqual({ [own]: "CANCELLED", [shortfall]: "OPEN" });
+    const audit = await q<{ change_summary: { from_status?: string; assigned_membership_id?: string } }>(
+      "SELECT change_summary FROM public.audit_logs WHERE tenant_id = $1 AND action = 'warehouse_task.cancelled' AND entity_id = $2", [A.tenantId, own]);
+    expect(audit.map((a) => [a.change_summary.from_status, a.change_summary.assigned_membership_id])).toEqual([["ASSIGNED", COUNTER.membershipId]]);
+  });
+
+  it("başka tenant kimlikleri NOT_FOUND; ayrılmış (REMOVED) üye atanamaz; eşzamanlı iki çağrı her rafa tek görev açar", async () => {
+    const R1 = await mkLoc();
+    const R2 = await mkLoc();
+    const sid = (await startCount(ownerP(), { warehouseId: A.warehouseId, locationIds: [R1.id, R2.id] })).sessionId;
+    const bOwner = (): StockDocCallParams => callP(B.ownerUserId, B.slug);
+    expect(codeOf(await failure(createCountTasks(bOwner(), { sessionId: sid })))).toBe("NOT_FOUND");
+    expect(codeOf(await failure(getCountReview(bOwner(), { sessionId: sid })))).toBe("NOT_FOUND");
+    expect((await listCountSessions(bOwner())).some((x) => x.id === sid)).toBe(false);
+    const gone = await mkUser(adm, reg, "A987 removed");
+    const goneM = await mkMembership(adm, A.tenantId, gone, { roles: ["COUNTER"] });
+    await q("UPDATE public.tenant_memberships SET status = 'REMOVED' WHERE tenant_id = $1 AND id = $2", [A.tenantId, goneM]);
+    expect(codeOf(await failure(createCountTasks(mgrP(), { sessionId: sid, assigneeMembershipId: goneM })))).toBe("NOT_FOUND");
+    expect(codeOf(await failure(createCountTasks(mgrP(), { sessionId: sid, assigneeMembershipId: B.memberMembershipId })))).toBe("NOT_FOUND");
+    const both = await Promise.allSettled([createCountTasks(mgrP(), { sessionId: sid }), createCountTasks(mgrP(), { sessionId: sid })]);
+    expect(both.every((r) => r.status === "fulfilled")).toBe(true);
+    const created = both.map((r) => (r.status === "fulfilled" ? r.value.created : -1)).sort();
+    expect(created).toEqual([0, 2]);
+    const tasks = await tasksOf(sid);
+    expect(tasks.map((t) => t.location_id)).toEqual([R1.id, R2.id].sort());
+    expect(codeOf(await failure(getCountWork(bOwner(), { taskId: tasks[0]?.id as string })))).toBe("NOT_FOUND");
+    await cancelCount(ownerP(), { sessionId: sid, reason: "T987 temizlik" });
+  });
+
+  describe("depo kapsamı (A-46; WAREHOUSE_SCOPE_ENABLED)", () => {
+    afterAll(async () => {
+      delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      await adm.query("DELETE FROM public.membership_warehouse_scopes WHERE tenant_id = $1 AND membership_id <> $2", [A.tenantId, A.ownerMembershipId]);
+    });
+    it("kapsamı depoyu içermeyen sayımcı atanamaz (görev/audit yazılmaz); kapsam dışı yönetici oturumu göremez ve görev açamaz", async () => {
+      const WB = uuid();
+      await q("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1,$2,$3,'T987 depo B')", [A.tenantId, WB, `W${hex(6)}`]);
+      const R = await mkLoc();
+      const sid = (await startCount(ownerP(), { warehouseId: A.warehouseId, locationIds: [R.id] })).sessionId;
+      const cu = await mkUser(adm, reg, "A987 scoped counter");
+      const cm = await mkMembership(adm, A.tenantId, cu, { roles: ["COUNTER"] });
+      const mu = await mkUser(adm, reg, "A987 scoped manager");
+      const mm = await mkMembership(adm, A.tenantId, mu, { roles: ["WAREHOUSE_MANAGER"] });
+      await q("INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id) VALUES ($1,$2,$3),($1,$4,$3)", [A.tenantId, cm, WB, mm]);
+      process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+      expect(codeOf(await failure(createCountTasks(mgrP(), { sessionId: sid, assigneeMembershipId: cm })))).toBe("VALIDATION_FAILED");
+      expect(await tasksOf(sid)).toHaveLength(0);
+      const scopedMgr = (): StockDocCallParams => callP(mu);
+      expect(codeOf(await failure(createCountTasks(scopedMgr(), { sessionId: sid })))).toBe("NOT_FOUND");
+      expect(codeOf(await failure(getCountReview(scopedMgr(), { sessionId: sid })))).toBe("NOT_FOUND");
+      expect((await listCountSessions(scopedMgr())).some((x) => x.id === sid)).toBe(false);
+      const t = (await createCountTasks(mgrP(), { sessionId: sid })).taskIds[0] as string;
+      expect(codeOf(await failure(getCountWork(callP(cu), { taskId: t })))).toBe("NOT_FOUND");
+      delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      await cancelCount(ownerP(), { sessionId: sid, reason: "T987 temizlik" });
+    });
   });
 });

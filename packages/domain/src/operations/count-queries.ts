@@ -2,7 +2,7 @@
 //
 // - `getCountWork` (`document.create`): saha sayımcısının bir COUNT görevi (oturum kaynaklı) için gördüğü raf: lokasyon, oturum durumu ve o rafın satırları.
 //   Kör sayımda (A-136, varsayılan) referans miktar DÖNMEZ; yalnız sayımcının girdiği değer döner. Başkasına atanmış görev yalnız `document.approve` sahibine görünür.
-// - `listCountSessions` / `getCountReview` (`document.approve`): yönetici listesi ve fark incelemesi. Referans miktar yalnız gösterimdir; fark kararı
+// - `listCountSessions` / `getCountReview` (`document.approve`): yönetici listesi ve fark incelemesi (kör oturumda referans/fark yalnız `count_diff.approve`). Referans miktar yalnız gösterimdir; fark kararı
 //   `approveCount`/`postCountAdjustment` içinde kilitli bakiyeye göre verilir (counting.ts başlığı, Supervisor notu 1).
 // - Depo kapsamı (A-46) her okumada uygulanır; kapsam dışı/başka tenant kaydı `NOT_FOUND` (varlık sızmaz). `tenant_id` yalnız doğrulanmış üyelikten gelir.
 import { sql } from "drizzle-orm";
@@ -59,7 +59,8 @@ export async function getCountWork(params: CountQueryParams, input: { readonly t
     await assertWarehouseVisible(tx, m, [t.warehouse_id]);
     if (t.kind !== "COUNT" || t.source_kind !== "COUNT_SESSION" || t.source_id === null || t.location_id === null) throw new AppError("VALIDATION_FAILED");
     const assignedToMe = t.assigned_membership_id !== null && t.assigned_membership_id.toLowerCase() === m.membershipId.toLowerCase();
-    if (t.status === "ASSIGNED" && !assignedToMe && !hasPermission(m.roles, "document.approve")) throw new AppError("NOT_FOUND");
+    // Başkasına atanmış (durumu ne olursa olsun: ASSIGNED, DONE, CANCELLED) görev yalnız onay yetkisine görünür.
+    if (t.assigned_membership_id !== null && !assignedToMe && !hasPermission(m.roles, "document.approve")) throw new AppError("NOT_FOUND");
     const sessions = await tx.execute<{ id: string; status: CountSessionStatus; blind: boolean; warehouse_id: string; warehouse_name: string }>(
       sql`SELECT s.id, s.status, s.blind, s.warehouse_id, w.name AS warehouse_name
             FROM public.count_sessions s JOIN public.warehouses w ON w.tenant_id = s.tenant_id AND w.id = s.warehouse_id
@@ -173,9 +174,10 @@ export interface CountReviewLine {
   readonly itemName: string;
   readonly unitCode: string;
   readonly stockStatus: string;
-  readonly reference: string;
+  /** Kör oturumda `count_diff.approve` yoksa null. */
+  readonly reference: string | null;
   readonly counted: string | null;
-  /** counted − reference (sayılmadıysa null). Yalnız gösterim. */
+  /** counted − reference (sayılmadıysa ya da referans gizliyse null). Yalnız gösterim. */
   readonly difference: string | null;
 }
 export interface CountReview {
@@ -199,6 +201,8 @@ export async function getCountReview(params: CountQueryParams, input: { readonly
     const h = heads[0];
     if (h === undefined) throw new AppError("NOT_FOUND");
     await assertWarehouseVisible(tx, m, [h.warehouse_id]);
+    // Kör oturumda referans ve fark yalnız fark onay yetkisine (A-136; approveCount ile aynı kural).
+    const hideReference = h.blind && !hasPermission(m.roles, "count_diff.approve");
     const lines = await tx.execute<{ location_code: string; item_code: string; item_name: string; unit_code: string; stock_status: string | null; reference: string; counted: string | null; difference: string | null }>(
       sql`SELECT lo.code AS location_code, i.code AS item_code, i.name AS item_name, u.code AS unit_code, d.stock_status,
                  l.reference_quantity::text AS reference, l.counted_quantity::text AS counted,
@@ -237,9 +241,9 @@ export async function getCountReview(params: CountQueryParams, input: { readonly
         itemName: r.item_name,
         unitCode: r.unit_code,
         stockStatus: r.stock_status ?? "AVAILABLE",
-        reference: trimQty(r.reference) ?? "0",
+        reference: hideReference ? null : (trimQty(r.reference) ?? "0"),
         counted: trimQty(r.counted),
-        difference: trimQty(r.difference),
+        difference: hideReference ? null : trimQty(r.difference),
       })),
       tasks: tasks.map((r) => ({ id: r.id, locationCode: r.location_code ?? "", status: r.status, assigneeName: r.assignee_name })),
     };

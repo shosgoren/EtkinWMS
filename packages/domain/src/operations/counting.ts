@@ -660,7 +660,8 @@ export interface CancelCountInput {
 
 /**
  * `document.approve`: COUNTING|SUBMITTED|APPROVED oturumu iptal eder; fark UYGULANMAZ, kilitler aynı transaction'da `IDLE` olur (gerekçe audit'e). `pick_blocked` ve
- * açık `COUNT` görevleri olduğu gibi kalır (sayım yapılmadı).
+ * toplama eksiğinden doğan (`source_kind = SALES_ORDER`) açık `COUNT` görevleri olduğu gibi kalır (sayım yapılmadı). T-987: bu oturumun KENDİ açık
+ * görevleri (`source_kind = COUNT_SESSION`, `source_id` = oturum) aynı transaction'da CANCELLED olur; her biri gerekçeli audit taşır.
  */
 export async function cancelCount(params: StockDocCallParams, input: CancelCountInput): Promise<CountCommandResult> {
   const sessionId = uuidOf(input.sessionId);
@@ -695,13 +696,19 @@ export async function cancelCount(params: StockDocCallParams, input: CancelCount
       if (r[0] === undefined) throw new AppError("INTERNAL");
       // T-987: bu oturum için açılan sayım görevleri (source_kind = COUNT_SESSION) sayım yapılmayacağından iptal edilir. Toplama eksiğinden doğan
       // COUNT görevleri (source_kind = SALES_ORDER) dokunulmadan kalır.
-      const own = await tx.execute<{ id: string; status: string }>(
-        sql`UPDATE public.warehouse_tasks SET status = 'CANCELLED'
+      // Sıra: başlık → stok kilitleri → görev satırları (postCountAdjustment ile aynı). Eski durum/atanan audit için önce kilitli okunur.
+      const own = await tx.execute<{ id: string; status: string; assigned_membership_id: string | null }>(
+        sql`SELECT id, status, assigned_membership_id FROM public.warehouse_tasks
              WHERE tenant_id = ${ctx.tenantId}::uuid AND kind = 'COUNT' AND source_kind = 'COUNT_SESSION' AND source_id = ${sessionId}::uuid
                AND status IN ('OPEN', 'ASSIGNED')
-         RETURNING id, status`,
+             ORDER BY id FOR UPDATE`,
       );
       for (const t of own) {
+        const upd = await tx.execute<{ version: number }>(
+          sql`UPDATE public.warehouse_tasks SET status = 'CANCELLED'
+               WHERE tenant_id = ${ctx.tenantId}::uuid AND id = ${t.id}::uuid AND status = ${t.status} RETURNING version`,
+        );
+        if (upd[0] === undefined) throw new AppError("INTERNAL");
         await appendAudit(tx, {
           action: "warehouse_task.cancelled",
           actorUserId: ctx.userId,
@@ -709,7 +716,14 @@ export async function cancelCount(params: StockDocCallParams, input: CancelCount
           entityId: t.id,
           requestId: input.requestId ?? null,
           reason,
-          changeSummary: { to_status: "CANCELLED", source: "count.cancelled", count_session_id: sessionId },
+          changeSummary: {
+            from_status: t.status,
+            to_status: "CANCELLED",
+            version: Number(upd[0].version),
+            assigned_membership_id: t.assigned_membership_id,
+            source: "count.cancelled",
+            count_session_id: sessionId,
+          },
         });
       }
       return {
