@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { enterDemoReal } from "./support/demo-session.ts";
+import { openAppMenu } from "./support/app-menu.ts";
 
 test("stok: ana menü, gerçek veriler, arama, yardım ve mobil taşma", async ({ page }) => {
   await page.goto("/");
@@ -8,7 +9,9 @@ test("stok: ana menü, gerçek veriler, arama, yardım ve mobil taşma", async (
   await expect(page.getByRole("dialog", { name: "Birlikte, adım adım." })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Birlikte, adım adım." })).not.toBeVisible();
-  await page.locator('a[href="/t/demo/stock"]').click();
+  // T-988 (I-18): Görevlerim tasarımında sayfa bağlantısı yoktur; Stok uygulama menüsündedir.
+  await openAppMenu(page);
+  await page.getByRole("dialog", { name: "Menü" }).locator('a[href="/t/demo/stock"]').click();
   await expect(page.getByRole("heading", { name: "Stok durumu", exact: true })).toBeVisible();
   const rows = page.getByRole("list", { name: "Stok durumu" }).getByRole("listitem");
   expect(await rows.count()).toBeGreaterThan(0);
