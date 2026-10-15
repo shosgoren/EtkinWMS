@@ -48,7 +48,7 @@ Aşağıdakilerin hepsi kaynakla aynıdır:
 
 | Parça | Neden |
 |---|---|
-| `ÖNİZLEME` çubuğu (Otomatik / Masaüstü / Tablet / Mobil) ve cihaz çerçevesi (`.fr-mobile`, `.fr-tablet`) | Tasarım aracının önizleme kontrolüdür, ürünün parçası değildir |
+| `ÖNİZLEME` çubuğu (Otomatik / Masaüstü / Tablet / Mobil), Giris'teki `EKRAN` çubuğu ve cihaz çerçevesi (`.fr-mobile`, `.fr-tablet`) | Tasarım aracının önizleme kontrolüdür, ürünün parçası değildir |
 | Kamera ekranındaki `OKUNDU · DEMO` düğmesi ve benzetimli görüntü | Gerçek kamera ve okuyucu kullanılır |
 | Demo örnekleri menüsünün **içeriği** ("Şef yeni görev atasın", "Yanlış ürün okutuldu", "Bağlantı kopsun") | Benzetim içindir. Aynı açılır kutu (`.demo` / `.dm`) görünümüyle gerçek işlevler gelir; bkz. §6 |
 
@@ -79,3 +79,8 @@ Bu tablo dışındaki her sapma için kullanıcının yazılı onayı gerekir; o
 | Toplama: Çıkış / Transfer / Üretim (`v.pick`) | Bakis.dc.html | Sırada |
 | Kamera, uyarılar, tamam ekranı, geri al, çevrimdışı, bildirim | Bakis.dc.html | Ekranlarıyla birlikte |
 | Landing | Saha.dc.html | T-980–983 ile yayında (marketing) |
+| Giriş: e-posta + saha PIN sekmesi, iki adımlı doğrulama, çalışma alanı seçimi (`v.login`, `v.mfa`, `v.pick`) | Giris.dc.html | Onaylandı 15 Ekim; T-999 / T-997 |
+| Aktivasyon 4 adım + hazır (`v.act`) ve hoş geldiniz e-postası (`v.mail`) | Giris.dc.html | Onaylandı; T-995 |
+| Saha etkinleştirme: kod → PIN → tekrar (`v.fact`), ortak cihaz kullanıcı değiştir (`v.sw`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
+| Saha personeli ekle + etkinleştirme kartı (`v.staff`), cihazlar + QR ile ekle (`v.dev`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
+| Operatör demo talepleri (`v.op`) | Giris.dc.html | Onaylandı; T-994 |
