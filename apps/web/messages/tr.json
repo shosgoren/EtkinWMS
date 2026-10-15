@@ -2310,5 +2310,22 @@
     "noWarehouse": "Uygun depo yok",
     "reloadWarehouses": "Depoları tekrar al",
     "reloadLocations": "Yerleri tekrar al"
+  },
+  "operator": {
+    "title": "Demo talepleri",
+    "band": "ETKİN YAZILIM · OPERATÖR",
+    "back": "Geri",
+    "theme": "Açık / koyu görünüm",
+    "onlyTitle": "Yalnız Etkin Yazılım operatörü",
+    "onlyBody": "Onay, talep sahibine tek kullanımlık aktivasyon bağlantısı gönderir. Alan, müşteri bağlantıyı açınca kurulur.",
+    "pending": "BEKLEYEN",
+    "count": "{n} TALEP",
+    "approve": "ONAYLA",
+    "reject": "REDDET",
+    "approved": "ONAYLANDI · BAĞLANTI GİTTİ",
+    "rejected": "REDDEDİLDİ",
+    "today": "BUGÜN",
+    "yesterday": "DÜN",
+    "error": "İşlem tamamlanamadı ({code}). Sayfayı yenileyip tekrar deneyin."
   }
 }

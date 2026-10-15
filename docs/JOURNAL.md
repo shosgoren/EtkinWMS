@@ -216,3 +216,4 @@
 - 2026-10-15 T-988 (#53) ve T-989 (#54) birleşti, canlıda; 0037 uygulandı. Sırada (kullanıcı başlatınca): Giriş Görevi listesi (`v.list`), Manuel giriş, Giriş, Sayım, Toplama ekranları I-18 ile birebir; yönetici ACİL/vardiya giriş ekranı; üretim emri kavramı.
 - 2026-10-15 T-992: giriş/deneme alanı/saha PIN kararları ADR-026 (önerildi) + T-993…T-999 kartları; kod yok.
 - 2026-10-15 T-993: Giris.dc.html tasarım kaynağı onaylandı ve depoya alındı (kod yok).
+- 2026-10-15 T-994: demo talebi platform tablosu (0038) + worker içe alma + operatör ekranı (0 px); yayın T-995 ile.

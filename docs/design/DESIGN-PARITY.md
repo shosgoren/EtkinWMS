@@ -83,4 +83,4 @@ Bu tablo dışındaki her sapma için kullanıcının yazılı onayı gerekir; o
 | Aktivasyon 4 adım + hazır (`v.act`) ve hoş geldiniz e-postası (`v.mail`) | Giris.dc.html | Onaylandı; T-995 |
 | Saha etkinleştirme: kod → PIN → tekrar (`v.fact`), ortak cihaz kullanıcı değiştir (`v.sw`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
 | Saha personeli ekle + etkinleştirme kartı (`v.staff`), cihazlar + QR ile ekle (`v.dev`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
-| Operatör demo talepleri (`v.op`) | Giris.dc.html | Onaylandı; T-994 |
+| Operatör demo talepleri (`v.op`) | Giris.dc.html | T-994 aktarıldı: 390/1180/1440 açık ve koyu 0 px fark (`parity/demo-talepleri/`); yayın T-995 ile |

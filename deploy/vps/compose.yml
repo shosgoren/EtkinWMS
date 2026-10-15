@@ -28,6 +28,11 @@ services:
     command: ["node", "apps/worker/dist/main.js"]
     restart: unless-stopped
     env_file: /opt/etkinwms/secrets/worker.env
+    environment:
+      # T-994 (ADR-026 §3): satış sitesi demo talepleri; salt okunur bağlama, worker yalnız okur ve platform tablosuna alır.
+      DEMO_LEADS_FILE: /leads/demo-requests.jsonl
+    volumes:
+      - marketing-leads:/leads:ro
     mem_limit: 512m
     logging:
       driver: json-file

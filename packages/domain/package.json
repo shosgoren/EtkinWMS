@@ -27,7 +27,8 @@
     "./labels": "./src/labels/index.ts",
     "./stock": "./src/stock/index.ts",
     "./stock/jobs": "./src/stock/jobs.ts",
-    "./integrations": "./src/integrations/index.ts"
+    "./integrations": "./src/integrations/index.ts",
+    "./platform/demo-requests": "./src/platform/demo-requests.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
