@@ -359,15 +359,15 @@ export async function seedWorld(
   await c.query("INSERT INTO public.stock_alerts (tenant_id, kind, warehouse_id, item_id, observed_quantity, threshold) VALUES ($1, 'MIN_MAX', $2, $3, 1, 2)", [
     tenantId, warehouseId, itemNoneId,
   ]);
-  // T-989: iş önceliği + KAPANMIŞ sorun bildirimi (AC-04 keşfi her tenant tablosunda satır ister). Bildirim kapalı tohumlanır: açık bildirim
-  // Görevlerim SORUN sayısını değiştirir; testler kendi açık bildirimini açar.
+  // T-989: iş önceliği + AÇIK sorun bildirimi (AC-04 keşfi her tenant tablosunda satır ister; AC-04 kendi satırına UPDATE kontrolü yapar ve
+  // kapanmış bildirim değişmez, bu yüzden açık). Görevlerim testleri fark (önce/sonra) ile ölçer.
   await c.query(
     "INSERT INTO public.work_priorities (tenant_id, subject_kind, subject_id, urgent, updated_by) VALUES ($1, 'WAREHOUSE_TASK', $2, false, $3)",
     [tenantId, seedTaskId, ownerMembershipId],
   );
   await c.query(
-    `INSERT INTO public.problem_reports (tenant_id, warehouse_id, subject_kind, subject_id, reason, reported_by, status, resolved_by, resolved_at)
-     VALUES ($1, $2, 'WAREHOUSE_TASK', $3, 'OTHER', $4, 'RESOLVED', $4, now())`,
+    `INSERT INTO public.problem_reports (tenant_id, warehouse_id, subject_kind, subject_id, reason, reported_by)
+     VALUES ($1, $2, 'WAREHOUSE_TASK', $3, 'OTHER', $4)`,
     [tenantId, warehouseId, seedTaskId, ownerMembershipId],
   );
   // T-251: kod geçmişi satırı (AC-04 db-isolation her tenant tablosunda fikstür satırı arar).

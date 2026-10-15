@@ -22,29 +22,46 @@ export const MEDIA = {
   tablet: "(min-width: 700px) and (max-width: 1099.98px), (min-width: 700px) and (pointer: coarse)",
   desktop: "(min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (pointer: none)",
 };
+/** @type {Record<string, string>} */
 const FONTS = { "'Bricolage Grotesque'": "var(--font-bricolage)", "'Instrument Sans'": "var(--font-instrument)", "'IBM Plex Mono'": "var(--font-plex-mono)" };
 const SKIP = [/^\.prev/, /^\.fr-/];
 
 /** Onaltılık/rgba değerini yalnız harfli belirteç adına çevirir (globals muafiyeti `--color-[a-z-]+`). */
 const LETTERS = "abcdefghijklmnop";
-const enc = (s) => s.toLowerCase().replace(/[0-9a-f]/g, (ch) => LETTERS[parseInt(ch, 16)]);
+/** @param {string} s */
+const enc = (s) => s.toLowerCase().replace(/[0-9a-f]/g, (ch) => LETTERS[parseInt(ch, 16)] ?? ch);
+/** @param {string | undefined} g @returns {string} */
+const req = (g) => {
+  if (g === undefined) throw new Error("port: eksik grup");
+  return g;
+};
+/**
+ * @param {string} raw
+ * @returns {{ name: string, value: string }}
+ */
 export function colorToken(raw) {
   const v = raw.trim();
   const hex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(v);
   if (hex) {
-    const h = (hex[1].length === 3 ? [...hex[1]].map((c) => c + c).join("") : hex[1]).toLowerCase();
+    const g = req(/** @type {string} */ (hex[1]));
+    const h = (g.length === 3 ? [...g].map((c) => c + c).join("") : g).toLowerCase();
     return { name: `dz-x-${enc(h)}`, value: `#${h}` };
   }
   const rgba = /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(0?\.\d+|1|0)\s*\)$/.exec(v);
   if (rgba) {
-    const h = [rgba[1], rgba[2], rgba[3]].map((n) => Number(n).toString(16).padStart(2, "0")).join("");
-    const a = String(rgba[4]).replace(/^0?\./, "");
-    return { name: `dz-a-${enc(h)}-${enc(a)}`, value: `rgba(${rgba[1]}, ${rgba[2]}, ${rgba[3]}, ${rgba[4]})` };
+    const [r, g, b, al] = [1, 2, 3, 4].map((i) => req(/** @type {string} */ (rgba[i])));
+    const h = [r, g, b].map((n) => Number(n).toString(16).padStart(2, "0")).join("");
+    const a = String(al).replace(/^0?\./, "");
+    return { name: `dz-a-${enc(h)}-${enc(a)}`, value: `rgba(${r}, ${g}, ${b}, ${al})` };
   }
   throw new Error(`port: tanınmayan renk ${raw}`);
 }
 const COLOR_RE = /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])|rgba\([^)]*\)/g;
 
+/**
+ * @param {string} html @param {string} open @param {string} close @param {number} [from]
+ * @returns {{ text: string, end: number }}
+ */
 function extract(html, open, close, from = 0) {
   const a = html.indexOf(open, from);
   const b = html.indexOf(close, a + open.length);
@@ -52,13 +69,19 @@ function extract(html, open, close, from = 0) {
   return { text: html.slice(a + open.length, b), end: b };
 }
 
-/** Üst düzey CSS öğeleri: { kind: "rule"|"at", head, body }. Yorumlar atılır. */
+/** @typedef {{ kind: "rule" | "at", head: string, body: string }} CssItem */
+/**
+ * Üst düzey CSS öğeleri. Yorumlar atılır.
+ * @param {string} css
+ * @returns {CssItem[]}
+ */
 export function parseCss(css) {
   const src = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  /** @type {CssItem[]} */
   const out = [];
   let i = 0;
   while (i < src.length) {
-    while (i < src.length && /\s/.test(src[i])) i++;
+    while (i < src.length && /\s/.test(src.charAt(i))) i++;
     if (i >= src.length) break;
     const brace = src.indexOf("{", i);
     if (brace < 0) throw new Error("port: kapanmamış kural");
@@ -76,7 +99,9 @@ export function parseCss(css) {
   return out;
 }
 
+/** @param {string} head @returns {string[]} */
 function splitSelectors(head) {
+  /** @type {string[]} */
   const parts = [];
   let depth = 0;
   let cur = "";
@@ -92,13 +117,19 @@ function splitSelectors(head) {
   return parts;
 }
 
-/** Tek seçiciyi kapsar; mod öneki varsa { mode, sel } döner. */
+/** @typedef {{ mode: "mobile" | "tablet" | "desktop" | null, sel: string }} Scoped */
+/**
+ * Tek seçiciyi kapsar; mod öneki varsa { mode, sel } döner.
+ * @param {string} sel
+ * @returns {Scoped | null}
+ */
 export function scopeSelector(sel) {
+  /** @type {Scoped["mode"]} */
   let mode = null;
   let s = sel;
   const m = /^\.m-(mobile|tablet|desktop)(?=[\s.:]|$)\s*/.exec(s);
   if (m) {
-    mode = m[1];
+    mode = /** @type {Scoped["mode"]} */ (m[1] ?? null);
     s = s.slice(m[0].length);
     if (s === "") throw new Error(`port: yalnız mod seçicisi ${sel}`);
   }
@@ -107,6 +138,7 @@ export function scopeSelector(sel) {
   return { mode, sel: `.dz ${s}` };
 }
 
+/** @param {string} body @param {Map<string, string>} tokens */
 function convertValues(body, tokens) {
   let b = body;
   for (const [from, to] of Object.entries(FONTS)) b = b.split(from).join(to);
@@ -117,6 +149,7 @@ function convertValues(body, tokens) {
   });
 }
 
+/** @param {string} body */
 const fmtDecls = (body) =>
   body
     .split(/;(?![^(]*\))/)
@@ -125,15 +158,23 @@ const fmtDecls = (body) =>
     .map((d) => `  ${d};`)
     .join("\n");
 
-/** Kaynak CSS → { css, tokens }. */
+/**
+ * Kaynak CSS → { css, tokens }.
+ * @param {string} css
+ * @returns {{ css: string, tokens: Map<string, string> }}
+ */
 export function portCss(css) {
+  /** @type {Map<string, string>} */
   const tokens = new Map();
+  /** @type {string[]} */
   const blocks = [];
   const items = parseCss(css);
   // Kare adları genel ad alanındadır (Tailwind `pulse` vb.); çakışmasın diye `dz-` öneki alır, yalnız animation bildirimlerinde.
   const frames = items.filter((x) => x.head.startsWith("@keyframes")).map((x) => x.head.split(/\s+/)[1]);
+  /** @param {string} body */
   const anim = (body) =>
-    body.replace(/(animation(?:-name)?\s*:)([^;]*)/g, (_m, p, v) => p + v.replace(new RegExp(`(?<![\\w-])(${frames.join("|")})(?![\\w-])`, "g"), "dz-$1"));
+    body.replace(/(animation(?:-name)?\s*:)([^;]*)/g, (/** @type {string} */ _m, /** @type {string} */ p, /** @type {string} */ v) => p + v.replace(new RegExp(`(?<![\\w-])(${frames.join("|")})(?![\\w-])`, "g"), "dz-$1"));
+  /** @param {string} body */
   const conv = (body) => anim(convertValues(body, tokens));
   for (const item of items) {
     if (item.kind === "at") {
@@ -142,7 +183,7 @@ export function portCss(css) {
       } else if (item.head.startsWith("@media")) {
         const inner = parseCss(item.body)
           .map((r) => {
-            const sels = splitSelectors(r.head).map(scopeSelector).filter(Boolean);
+            const sels = splitSelectors(r.head).map(scopeSelector).filter(/** @returns {x is Scoped} */ (x) => x !== null);
             if (sels.some((x) => x.mode)) throw new Error("port: @media içinde mod seçicisi");
             return `  ${sels.map((x) => x.sel).join(", ")} { ${conv(r.body)} }`;
           })
@@ -151,12 +192,14 @@ export function portCss(css) {
       } else throw new Error(`port: desteklenmeyen ${item.head}`);
       continue;
     }
-    const scoped = splitSelectors(item.head).map(scopeSelector).filter(Boolean);
+    const scoped = splitSelectors(item.head).map(scopeSelector).filter(/** @returns {x is Scoped} */ (x) => x !== null);
     if (scoped.length === 0) continue;
     const decls = fmtDecls(conv(item.body));
     // Kaynak sırası korunur: aynı moddaki ardışık seçiciler tek bloğa, modsuzlar düz kurala.
+    /** @type {string[]} */
     let group = [];
-    let groupMode;
+    /** @type {Scoped["mode"]} */
+    let groupMode = null;
     const flush = () => {
       if (group.length === 0) return;
       const rule = `${group.join(",\n")} {\n${decls}\n}`;
@@ -173,10 +216,15 @@ export function portCss(css) {
   return { css: blocks.join("\n"), tokens };
 }
 
-/** Kaynak betiğindeki tema paletini okur (renderVals: `c`, `PAL`, `A`, `TXT`, başparmak çubuğu). */
+/**
+ * Kaynak betiğindeki tema paletini okur (renderVals: `c`, `PAL`, `A`, `TXT`, başparmak çubuğu).
+ * @param {string} html
+ * @returns {{ light: Record<string, string>, dark: Record<string, string> }}
+ */
 export function readPalette(html) {
   const js = extract(html, "data-dc-script", "</script>").text;
-  const obj = (src) => JSON.parse(src.replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_][\w]*)\s*:/g, '$1"$2":'));
+  /** @param {string | undefined} src @returns {any} */
+  const obj = (src) => JSON.parse(req(/** @type {string} */ (src)).replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_][\w]*)\s*:/g, '$1"$2":'));
   const cm = /var c = dk \? (\{[^}]*\})\s*:\s*(\{[^}]*\});/.exec(js);
   const pm = /var PAL = (\{.*?\});/.exec(js);
   const am = /var A = \{ kalan: dk \? '(#\w+)' : '(#\w+)', biten: GA, sorun: dk \? '(#\w+)' : '(#\w+)' \};/.exec(js);
@@ -187,32 +235,47 @@ export function readPalette(html) {
   const pl = /prim: \{ l: '', d: D\.scan, bg: '(#\w+)', fg: '(#\w+)'/.exec(js);
   const st = /track: dk \? '(rgba\([^)]*\))' : '(rgba\([^)]*\))', d: se\.d/.exec(js);
   if (!cm || !pm || !am || !gm || !tl || !tr || !pd || !pl || !st) throw new Error("port: tema paleti kaynakta bulunamadı (kaynak değişti mi?)");
+  /** @type {Record<string, string>} */
   const dark = obj(cm[1]);
+  /** @type {Record<string, string>} */
   const light = obj(cm[2]);
+  /** @type {Record<string, string[]>} */
   const PAL = obj(pm[1]);
+  /** @param {RegExpExecArray} m @param {number} i */
+  const g = (m, i) => req(/** @type {string} */ (m[i]));
+  /** @param {boolean} dk @returns {Record<string, string>} */
   const theme = (dk) => {
     const c = dk ? dark : light;
-    const t = { ...c, kalan: dk ? am[1] : am[2], biten: dk ? gm[3] : gm[4], sorun: dk ? am[3] : am[4], gs: dk ? gm[1] : gm[2], outs: dk ? gm[5] : gm[6], txt: dk ? gm[7] : gm[8] };
-    t["tin-bg"] = dk ? tl[1] : tl[2];
-    t["tout-bg"] = dk ? tr[1] : tr[2];
-    t["prim-bg"] = dk ? pd[1] : pl[1];
-    t["prim-fg"] = dk ? pd[2] : pl[2];
-    t["sec-track"] = dk ? st[1] : st[2];
+    /** @type {Record<string, string>} */
+    const t = { ...c, kalan: g(am, dk ? 1 : 2), biten: g(gm, dk ? 3 : 4), sorun: g(am, dk ? 3 : 4), gs: g(gm, dk ? 1 : 2), outs: g(gm, dk ? 5 : 6), txt: g(gm, dk ? 7 : 8) };
+    t["tin-bg"] = g(tl, dk ? 1 : 2);
+    t["tout-bg"] = g(tr, dk ? 1 : 2);
+    t["prim-bg"] = dk ? g(pd, 1) : g(pl, 1);
+    t["prim-fg"] = dk ? g(pd, 2) : g(pl, 2);
+    t["sec-track"] = g(st, dk ? 1 : 2);
     for (const [k, q] of Object.entries(PAL)) {
       // Kaynak K(): açıkta { s: q0, t: q1, ink: q2, a: q0 }, koyuda { s: q3, t: q4, ink: q5, a: q5 }
-      t[`${k}-s`] = dk ? q[3] : q[0];
-      t[`${k}-t`] = dk ? q[4] : q[1];
-      t[`${k}-ink`] = dk ? q[5] : q[2];
-      t[`${k}-a`] = dk ? q[5] : q[0];
+      /** @param {number} i */
+      const qi = (i) => req(/** @type {string} */ (q[i]));
+      t[`${k}-s`] = qi(dk ? 3 : 0);
+      t[`${k}-t`] = qi(dk ? 4 : 1);
+      t[`${k}-ink`] = qi(dk ? 5 : 2);
+      t[`${k}-a`] = qi(dk ? 5 : 0);
     }
     return t;
   };
   return { light: theme(false), dark: theme(true) };
 }
 
+/** @param {string} n */
 const BEGIN = (n) => `/* design:${n}:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */`;
+/** @param {string} n */
 const END = (n) => `/* design:${n}:end */`;
 
+/**
+ * @param {string} name @param {string} html
+ * @returns {{ css: string, tokenBlock: string, ts: string }}
+ */
 export function build(name, html) {
   const style = extract(extract(html, "<helmet>", "</helmet>").text, "<style>", "</style>").text;
   const { css, tokens } = portCss(style);
@@ -224,7 +287,8 @@ export function build(name, html) {
   }
   const pal = readPalette(html);
   const keys = Object.keys(pal.light);
-  const line = (k, v) => `  --color-dz-${k}: ${v.toLowerCase()};`;
+  /** @param {string} k @param {string | undefined} v */
+  const line = (k, v) => `  --color-dz-${k}: ${req(/** @type {string} */ (v)).toLowerCase()};`;
   if (keys.some((k) => !/^[a-z-]+$/.test(k))) throw new Error("port: palet anahtarı harf dışı");
   const tokenBlock = [
     BEGIN(name),
@@ -237,7 +301,8 @@ export function build(name, html) {
     "}",
     END(name),
   ].join("\n");
-  const hexKeys = [...tokens.entries()].map(([k, v]) => [k.startsWith("dz-x-") ? v.slice(1).toUpperCase() : v.replace(/^rgba\((.*)\)$/, "$1").replace(/\s+/g, ""), k]);
+  /** @type {Array<[string, string]>} */
+  const hexKeys = [...tokens.entries()].map(([k, v]) => /** @type {[string, string]} */ ([k.startsWith("dz-x-") ? v.slice(1).toUpperCase() : v.replace(/^rgba\((.*)\)$/, "$1").replace(/\s+/g, ""), k]));
   const ts = [
     `// ${name}-tokens.ts — scripts/design/port.mjs ile ÜRETİLDİ; elle düzenlemeyin (I-18). Kaynaktaki onaltılık renk → belirteç.`,
     `const T: Readonly<Record<string, string>> = {`,
@@ -259,6 +324,7 @@ export function build(name, html) {
   return { css: `${header}${css}\n`, tokenBlock, ts };
 }
 
+/** @param {string} globals @param {string} name @param {string} block */
 export function spliceGlobals(globals, name, block) {
   const a = globals.indexOf(BEGIN(name));
   const b = globals.indexOf(END(name));
@@ -281,6 +347,7 @@ async function main() {
     const tsPath = path.join(root, `apps/web/app/design/${s.name}-tokens.ts`);
     const next = spliceGlobals(globals, s.name, out.tokenBlock);
     if (check) {
+      /** @param {string} f */
       const readOr = (f) => {
         try {
           return readFileSync(f, "utf8");
