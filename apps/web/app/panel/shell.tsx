@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { authPost } from "../../lib/auth-client.ts";
 import { DzRoot, useDz } from "../design/dz-root.tsx";
-import { C } from "../design/yonet-tokens.ts";
+import { C, dz } from "../design/yonet-tokens.ts";
 import { YICON } from "../design/yonet-icons.ts";
 
 export interface PanelNavItem {
@@ -68,9 +68,9 @@ function Inner({ current, nav, title, sub, labels, children }: Omit<Props, "dark
       <nav className="side" aria-label={labels.menu}>
         <div className="sbrand">
           <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true" style={{ flex: "none", display: "block" }}>
-            <rect x="4" y="4" width="112" height="112" rx="28" fill="#FFFFFF" />
-            <path d={YICON.logo} fill="none" stroke="#172E42" strokeWidth="13" strokeLinecap="round" />
-            <circle r="12" fill="#F2C53D" stroke="#FFFFFF" strokeWidth="4">
+            <rect x="4" y="4" width="112" height="112" rx="28" fill={dz("FFFFFF")} />
+            <path d={YICON.logo} fill="none" stroke={dz("172E42")} strokeWidth="13" strokeLinecap="round" />
+            <circle r="12" fill={dz("F2C53D")} stroke={dz("FFFFFF")} strokeWidth="4">
               <animateMotion dur="3.2s" repeatCount="indefinite" path={YICON.logo} />
             </circle>
           </svg>
