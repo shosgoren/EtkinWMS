@@ -4,6 +4,7 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
+import { appMenuReachable, openAppMenu } from "./support/app-menu.ts";
 
 const SIZES = [
   { width: 375, height: 812 },
@@ -73,9 +74,8 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
 
         // Görünüm anahtarı: seçili durum aria-pressed + metinle (renk tek taşıyıcı değil).
         // T-254: telefon genişliğinde anahtar menüdedir; önce menü açılır, aynı düğme kullanılır.
-        const menuButton = page.getByTestId("app-bar-menu");
-        const inMenu = await menuButton.isVisible();
-        if (inMenu) await menuButton.click();
+        const inMenu = await appMenuReachable(page);
+        if (inMenu) await openAppMenu(page);
         await page.getByRole("button", { name: view.label, exact: true }).click();
         await expect(page.getByRole("button", { name: view.label, exact: true })).toHaveAttribute("aria-pressed", "true");
         if (inMenu) {

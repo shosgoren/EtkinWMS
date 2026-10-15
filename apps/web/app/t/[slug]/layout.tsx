@@ -7,6 +7,7 @@ import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { runTenantQuery } from "@wms/domain/identity/access";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
+import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { AppBar } from "./app-bar.tsx";
 import { BottomNav } from "./bottom-nav.tsx";
@@ -71,6 +72,21 @@ export default async function TenantLayout({ children, params }: { children: Rea
   const t = await getTranslations();
   const roleName = current.roles.map((r) => t(`roles.${r}`)).join(", ");
   const view = (await cookies()).get("view")?.value === "cockpit" ? "cockpit" : "flow";
+  // T-988 (I-18): Görevlerim tasarımında sayfa bağlantıları yoktur; yönetim sayfalarına uygulama menüsünden gidilir (yetkiye göre).
+  const base = `/t/${encodeURIComponent(slug)}`;
+  const menuLinks = (
+    [
+      ["stock", "/stock", hasPermission(current.roles, "stock.view")],
+      ["items", "/items", hasPermission(current.roles, "stock.view")],
+      ["warehouses", "/warehouses", true],
+      ["tasks", "/field/tasks", hasPermission(current.roles, "stock.view")],
+      ["members", "/members", hasPermission(current.roles, "users.manage")],
+      ["settings", "/settings", hasPermission(current.roles, "settings.manage")],
+      ["audit", "/audit", hasPermission(current.roles, "audit.view")],
+    ] as const
+  )
+    .filter(([, , ok]) => ok)
+    .map(([key, path]) => ({ href: `${base}${path}`, label: t(`home.easy.${key}`) }));
 
   return (
     <div className="tenant-shell flex min-w-0 flex-col">
@@ -80,6 +96,8 @@ export default async function TenantLayout({ children, params }: { children: Rea
         userName={summary.userName}
         view={view}
         setViewAction={setView}
+        links={menuLinks}
+        linksLabel={t("home.easy.links")}
         memberships={summary.memberships.map((m) => ({ slug: m.slug, tenantName: m.tenantName, rolesLabel: m.roles.map((r) => t(`roles.${r}`)).join(", ") }))}
       />
       <div className="desk-only flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-surface px-4 py-2" data-testid="tenant-bar">

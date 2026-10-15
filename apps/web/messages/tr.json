@@ -624,6 +624,77 @@
       "next": "Sıradaki: {label}",
       "then": "Ardından: {label}",
       "qty": "{n} adet"
+    },
+    "gv": {
+      "morning": "Günaydın, {name}",
+      "day": "İyi günler, {name}",
+      "evening": "İyi akşamlar, {name}",
+      "dayDone": "Harika, {name}! Gün tamam",
+      "allWarehouses": "TÜM DEPOLAR",
+      "ringLabel": "Bugün {done} / {all} iş bitti",
+      "statsLabel": "Bugünün durumu",
+      "left": "KALAN",
+      "done": "BİTEN",
+      "linesCount": "{n} KALEM",
+      "myTasks": "GÖREVLERİM",
+      "leftSummary": "{o} GÖREV · {k} KALEM KALDI",
+      "lines": "KALEM",
+      "noData": "Veri okunamadı",
+      "progress": "{done}/{total} BİTTİ",
+      "tileLabel": "{title}: {open} {unit}, {lines} kalem",
+      "title": {
+        "giris": "Giriş Görevi",
+        "cikis": "Çıkış Görevi",
+        "transfer": "Transfer Görevi",
+        "uretim": "Üretim Transfer",
+        "sayim": "Sayım Görevi"
+      },
+      "unit": {
+        "giris": "SİPARİŞ",
+        "cikis": "SİPARİŞ",
+        "transfer": "FİŞ",
+        "uretim": "EMİR",
+        "sayim": "SAYIM"
+      },
+      "manualTitle": "PLAN DIŞI",
+      "manualHint": "SİPARİŞSİZ HAREKET",
+      "manualIn": "MANUEL GİRİŞ",
+      "manualOut": "MANUEL ÇIKIŞ",
+      "thumbLabel": "Ana işlemler",
+      "thumbIn": "GİRİŞ",
+      "thumbOut": "ÇIKIŞ",
+      "scanStart": "OKUT · BAŞLA",
+      "online": "Bağlantı var",
+      "offline": "Bağlantı yok: kayıtlar gönderilemez",
+      "menu": "Menü",
+      "shift": "VARDİYA {start}–{end} · {where}",
+      "manualSuffix": " · {n} MAN.",
+      "problem": "SORUN",
+      "urgent": "ACİL",
+      "dayComplete": "GÜN TAMAM",
+      "theme": "Tema değiştir",
+      "actions": "Hızlı işlemler",
+      "reportProblem": "Sorun bildir",
+      "guide": "Nasıl kullanılır?",
+      "problemSheet": {
+        "title": "Sorun bildir",
+        "hint": "YÖNETİCİYE ANINDA GİDER · SORUN KARTINDA GÖRÜNÜR",
+        "reason": "NE OLDU?",
+        "note": "NOT · İSTEĞE BAĞLI",
+        "send": "BİLDİR",
+        "cancel": "Vazgeç",
+        "sent": "BİLDİRİLDİ",
+        "failed": "Gönderilemedi. Tekrar deneyin.",
+        "forbidden": "Bu rol sorun bildiremez.",
+        "reasons": {
+          "DAMAGED": "HASARLI",
+          "MISSING": "EKSİK",
+          "WRONG_ITEM": "YANLIŞ ÜRÜN",
+          "NO_LABEL": "ETİKET YOK",
+          "LOCATION": "RAF SORUNU",
+          "OTHER": "DİĞER"
+        }
+      }
     }
   },
   "audit": {
@@ -746,6 +817,16 @@
       "approved": "Bir sayım farkını onayladın.",
       "posted": "Sayım farkını işledin; lokasyonların kilidi açıldı.",
       "cancelled": "Bir sayımı iptal ettin; fark uygulanmadı, lokasyonların kilidi açıldı."
+    },
+    "work_priority": {
+      "set": "İş önceliği değiştirildi"
+    },
+    "problem": {
+      "reported": "Sorun bildirildi",
+      "resolved": "Sorun çözüldü"
+    },
+    "settings": {
+      "shift_updated": "Vardiya saatleri değiştirildi"
     }
   },
   "auditLog": {

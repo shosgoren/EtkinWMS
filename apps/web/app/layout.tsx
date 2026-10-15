@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { SignOutButton } from "./auth-forms.tsx";
 import { BrandMark } from "./brand-mark.tsx";
 import "./globals.css";
+import { designFontVars } from "./fonts.ts";
 import { FirstUseGuide, GuideTrigger } from "./first-use-guide.tsx";
 
 // Uygulama kabuğu (T-109): üst bar, Akış/Kokpit görünüm anahtarı, kullanıcı çipi yer tutucusu,
@@ -47,7 +48,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return (
     <html lang={locale} data-view={view}>
-      <body className="min-h-dvh bg-bg text-ink antialiased">
+      <body className={`min-h-dvh bg-bg text-ink antialiased ${designFontVars}`}>
         <NextIntlClientProvider>
           <a
             href="#main"

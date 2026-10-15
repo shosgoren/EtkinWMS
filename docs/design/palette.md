@@ -271,3 +271,13 @@ Not: eski `border` (#c9d6d2) girdi kenarı olarak 1.50:1 ile 1.4.11'i geçmiyord
 - Renk körlüğü yaygınlığı: UTMB Accessibility https://www.utmb.edu/accessibility/digital/100-days-of-a11y/100-days-article/days-of-a11y/2024/04/03/3.-color-blindness
 
 Tasarım sistemi web sayfaları ajan ortamından açılamadı (egress engeli): bu sayfaların bağlantıları **erişimle doğrulanmadı**, yalnız başvuru içindir. Hex değerlerinin kaynağı yukarıdaki npm paketlerinin belirteç dosyalarıdır (2026-10-06, `npm pack`). Araştırma bağlantıları (güven, borsa renkleri, renk körlüğü, WCAG) web aramasıyla bulundu.
+
+## 10. Görevlerim ve tasarım kaynaklı ekranlar (I-18)
+
+Kullanıcı kararı (15.10.2026): tasarım kaynağından gelen ekranlar birebir uygulanır (`docs/INVARIANTS.md` I-18, `docs/design/DESIGN-PARITY.md`).
+Bu ekranların renkleri elle seçilmez ve bu dosyada tablo olarak tutulmaz. Kaynak `docs/design/source/Bakis.dc.html` dosyasıdır; `scripts/design/port.mjs`
+renkleri (açık ve koyu tema, bölüm paletleri, sabitler) `globals.css` içindeki `/* design:bakis */` bloğuna `--color-dz-*` belirteçleri olarak üretir.
+§2/§3 tabloları ve `theme-contrast.test.ts` değişmez. Kokpit ve henüz aktarılmamış iç ekranlar §2/§3 paletini kullanır.
+
+Yazı tipleri: başlık/sayı Bricolage Grotesque, gövde Instrument Sans (400–600 değişken + 700), etiket/sayaç IBM Plex Mono (500/600). Hepsi SIL OFL 1.1
+lisanslıdır, `apps/web/app/fonts/` altındadır ve `next/font/local` ile yüklenir; dış istek yoktur.

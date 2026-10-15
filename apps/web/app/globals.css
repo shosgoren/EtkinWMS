@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "./design/bakis.css";
+/* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
+@source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
 @source "../../../packages/ui/src";
 
@@ -609,50 +612,6 @@ select.bg-none { background-image:none; }
   .welcome-shell { padding-bottom:90px; }
 }
 
-/* T-928 → T-984: Akış ana ekranı "Görevlerim" tasarımı. Döşeme zemini kategori `cat-*-ink`, yazı yüzey rengi; kilitli/yakında döşemeler `locked-*`. */
-.easy-operation-card {
-  text-decoration: none;
-  transition: transform 140ms ease, box-shadow 140ms ease;
-  box-shadow: 0 12px 24px -18px color-mix(in srgb, var(--color-ink) 70%, transparent);
-}
-.easy-operation-card[data-state="active"]:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 28px -18px color-mix(in srgb, var(--color-ink) 80%, transparent);
-}
-.easy-operation-card[data-state="active"]:active {
-  transform: scale(0.98);
-}
-.easy-operation-card[data-state="locked"] {
-  border: 1px solid var(--color-border);
-  box-shadow: none;
-}
-.easy-operation-icon {
-  background: color-mix(in srgb, var(--color-surface) 22%, transparent);
-}
-.easy-operation-card[data-state="locked"] .easy-operation-icon {
-  background: var(--color-surface);
-}
-.easy-pulse-value { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
-.easy-operation-counts b { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
-@media (prefers-reduced-motion: reduce) {
-  .easy-operation-card { transition: none; }
-}
-@media (max-width: 767px), ((pointer: coarse) and (max-height: 500px)) {
-  main:has(> .easy-operations) {
-    gap: 1rem;
-    padding: 1rem 0.875rem;
-    flex: 0 0 auto;
-  }
-  main:has(> .easy-operations) > header { gap: 0.25rem; }
-  main:has(> .easy-operations) > header h1 {
-    font-size: 1.625rem;
-    line-height: 1.2;
-  }
-  .easy-operations { gap: 1rem; }
-  .easy-operation-grid { gap: 0.625rem; }
-  body:has(.tenant-shell) [data-testid="app-bar-name"] { margin-right: 0; }
-}
-
 /* T-986: Görevlerim tasarımı Aşama 3 — stok/transfer/manuel belge ekranlarında başlık bandı (yalnız bu bölümler; yönetici ekranları aynı).
    Transfer, ana ekrandaki döşemesiyle aynı mor tonu kullanır; zemin ton koyusu + yüzey yazısı. */
 .screen-shell[data-section="transfer"] { --screen-tone-bg: var(--color-cat-purple-bg); --screen-tone-ink: var(--color-cat-purple-ink); }
@@ -853,3 +812,140 @@ body:has(.login-stage) .app-header { display:none; }
   .login-e-trail, .login-station, .login-badge { animation:none; }
   .login-e-trail { stroke-dasharray:none; }
 }
+
+/* I-18 uyarlama (DESIGN-PARITY §3): tasarım kökü `.wrap` tam görüntü alanıdır (100dvh). Uygulamada `.dz` kabı görüntü alanını
+   kaplar ve kiracı kabuğunun üst çubuğu / alt sekmeleri bu ekranlarda gösterilmez (tasarımda yoktur). Renk yok; yalnız yerleşim. */
+.dz { position: fixed; inset: 0; z-index: 20; }
+body:has(.dz) [data-testid="bottom-nav"], body:has(.dz) [data-testid="tenant-bar"], body:has(.dz) .app-header { display: none; }
+/* Kaynak `tb.show: m === 'mobile'`: başparmak çubuğu yalnız mobilde çizilir (kaynak JS koşulu; burada aynı eşik). */
+@media (min-width: 700px) { .dz .thumb { display: none; } }
+/* design:bakis:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dz {
+  --color-dz-a-aaaaaa-be: rgba(0, 0, 0, .14);
+  --color-dz-a-aaaaaa-ef: rgba(0, 0, 0, .45);
+  --color-dz-a-aaaaaa-f: rgba(0, 0, 0, .5);
+  --color-dz-a-aaaaaa-ff: rgba(0, 0, 0, .55);
+  --color-dz-a-aaaaaa-g: rgba(0, 0, 0, .6);
+  --color-dz-a-aaaaaa-gc: rgba(0, 0, 0, .62);
+  --color-dz-a-afajan-ff: rgba(5, 9, 13, .55);
+  --color-dz-a-afajan-gf: rgba(5, 9, 13, .65);
+  --color-dz-a-bhcoec-af: rgba(23, 46, 66, .05);
+  --color-dz-a-bhcoec-ag: rgba(23, 46, 66, .06);
+  --color-dz-a-bhcoec-ai: rgba(23, 46, 66, .08);
+  --color-dz-a-bhcoec-df: rgba(23, 46, 66, .35);
+  --color-dz-a-bhcoec-e: rgba(23, 46, 66, .4);
+  --color-dz-a-mgcici-a: rgba(198, 40, 40, 0);
+  --color-dz-a-mgcici-g: rgba(198, 40, 40, .6);
+  --color-dz-a-ppdlda-hf: rgba(255, 59, 48, .75);
+  --color-dz-a-ppdlda-i: rgba(255, 59, 48, .8);
+  --color-dz-a-pppppp-a: rgba(255, 255, 255, 0);
+  --color-dz-a-pppppp-bg: rgba(255, 255, 255, .16);
+  --color-dz-a-pppppp-bi: rgba(255, 255, 255, .18);
+  --color-dz-a-pppppp-c: rgba(255, 255, 255, .2);
+  --color-dz-a-pppppp-cf: rgba(255, 255, 255, .25);
+  --color-dz-a-pppppp-ci: rgba(255, 255, 255, .28);
+  --color-dz-a-pppppp-hf: rgba(255, 255, 255, .75);
+  --color-dz-a-pppppp-if: rgba(255, 255, 255, .85);
+  --color-dz-x-aaaaaa: #000000;
+  --color-dz-x-afajan: #05090d;
+  --color-dz-x-albgca: #0b1620;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhiaep: #17804f;
+  --color-dz-x-bkbdaa: #1a1300;
+  --color-dz-x-bpekdk: #1f4a3a;
+  --color-dz-x-eknojf: #4ade95;
+  --color-dz-x-kidfcl: #a8352b;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-odoiom: #e3e8ec;
+  --color-dz-x-ofgkaa: #e56a00;
+  --color-dz-x-ogokoo: #e6eaee;
+  --color-dz-x-ojoenk: #e9e4da;
+  --color-dz-x-ojomop: #e9ecef;
+  --color-dz-x-paomod: #f0ece3;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-peleaa: #f4b400;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-ppdlda: #ff3b30;
+  --color-dz-x-pppppp: #ffffff;
+  --color-dz-bg: #f4f2ee;
+  --color-dz-fg: #1e2f3e;
+  --color-dz-surface: #ffffff;
+  --color-dz-chip: #f1eee8;
+  --color-dz-track: #e6e2da;
+  --color-dz-in: #2f7d5b;
+  --color-dz-out: #b5552b;
+  --color-dz-ok: #2f7d5b;
+  --color-dz-kalan: #1e2f3e;
+  --color-dz-biten: #2f7d5b;
+  --color-dz-sorun: #b83a2e;
+  --color-dz-gs: #2f7d5b;
+  --color-dz-outs: #b5552b;
+  --color-dz-txt: #ffffff;
+  --color-dz-tin-bg: #e3f1e9;
+  --color-dz-tout-bg: #f8eadf;
+  --color-dz-prim-bg: #172e42;
+  --color-dz-prim-fg: #ffffff;
+  --color-dz-sec-track: rgba(23,46,66,.08);
+  --color-dz-giris-s: #2f7d5b;
+  --color-dz-giris-t: #e3f1e9;
+  --color-dz-giris-ink: #1d5a40;
+  --color-dz-giris-a: #2f7d5b;
+  --color-dz-cikis-s: #24787a;
+  --color-dz-cikis-t: #dff0ef;
+  --color-dz-cikis-ink: #16585a;
+  --color-dz-cikis-a: #24787a;
+  --color-dz-transfer-s: #6253b5;
+  --color-dz-transfer-t: #ece9f8;
+  --color-dz-transfer-ink: #45398c;
+  --color-dz-transfer-a: #6253b5;
+  --color-dz-uretim-s: #b0652e;
+  --color-dz-uretim-t: #f8eadf;
+  --color-dz-uretim-ink: #844818;
+  --color-dz-uretim-a: #b0652e;
+  --color-dz-sayim-s: #2f67a3;
+  --color-dz-sayim-t: #e2ecf6;
+  --color-dz-sayim-ink: #1f4c7c;
+  --color-dz-sayim-a: #2f67a3;
+}
+.dz.dz-dark {
+  --color-dz-bg: #13171c;
+  --color-dz-fg: #d8dee4;
+  --color-dz-surface: #1b2128;
+  --color-dz-chip: #232b34;
+  --color-dz-track: #2c3540;
+  --color-dz-in: #7dd3a8;
+  --color-dz-out: #f0a877;
+  --color-dz-ok: #1f4a3a;
+  --color-dz-kalan: #e9c46a;
+  --color-dz-biten: #7dd3a8;
+  --color-dz-sorun: #f08a80;
+  --color-dz-gs: #1f4a3a;
+  --color-dz-outs: #5a3220;
+  --color-dz-txt: #e6eaee;
+  --color-dz-tin-bg: #1c2b26;
+  --color-dz-tout-bg: #2c231c;
+  --color-dz-prim-bg: #e9c46a;
+  --color-dz-prim-fg: #13171c;
+  --color-dz-sec-track: rgba(255,255,255,.08);
+  --color-dz-giris-s: #1f4a3a;
+  --color-dz-giris-t: #1c2b26;
+  --color-dz-giris-ink: #7dd3a8;
+  --color-dz-giris-a: #7dd3a8;
+  --color-dz-cikis-s: #1c4647;
+  --color-dz-cikis-t: #1a2a2b;
+  --color-dz-cikis-ink: #7ad0cf;
+  --color-dz-cikis-a: #7ad0cf;
+  --color-dz-transfer-s: #383167;
+  --color-dz-transfer-t: #221f33;
+  --color-dz-transfer-ink: #b8aef2;
+  --color-dz-transfer-a: #b8aef2;
+  --color-dz-uretim-s: #583a22;
+  --color-dz-uretim-t: #2c231c;
+  --color-dz-uretim-ink: #f0b285;
+  --color-dz-uretim-a: #f0b285;
+  --color-dz-sayim-s: #1f3b5e;
+  --color-dz-sayim-t: #1b2532;
+  --color-dz-sayim-ink: #8fb9ea;
+  --color-dz-sayim-a: #8fb9ea;
+}
+/* design:bakis:end */

@@ -1,170 +1,250 @@
+import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
-import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Banner, Boxes, ChevronRight, CircleCheck, ClipboardCheck, Clock, ListChecks, Lock, PackagePlus, Truck } from "@wms/ui";
+import type { WorkSectionKey, WorkSummary } from "@wms/domain/operations";
+import { DzRoot } from "../../design/dz-root.tsx";
+import { C, dz } from "../../design/bakis-tokens.ts";
+import { ICON } from "../../design/bakis-icons.ts";
+import { HomeControls, HomeOverlays } from "./home-controls.tsx";
 import type { TaskMenuProps } from "./task-menu.tsx";
 
-const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-// T-984: "Görevlerim" tasarımı (Bakış). Dört gerçek iş aynı hedeflere gider; renk kategori `cat-*-ink` zemini + yüzey yazısıdır (ikon + metin de taşır).
-const OPERATIONS = [
-  { key: "receive", path: "/field/receive", Icon: PackagePlus, tone: "bg-cat-green-ink text-surface" },
-  { key: "shipping", path: "/shipping", Icon: Truck, tone: "bg-cat-teal-ink text-surface" },
-  { key: "transfer", path: "/stock/documents?new=TRANSFER", Icon: ArrowLeftRight, tone: "bg-cat-purple-ink text-surface" },
-  { key: "production", path: "/production", Icon: Boxes, tone: "bg-cat-orange-ink text-surface" },
-] as const;
+// I-18 (docs/design/DESIGN-PARITY.md): Görevlerim = Bakis.dc.html `v.home` BİREBİR. Sınıf adları, öğe sırası, ikon yolları ve metinler kaynaktan;
+// CSS `apps/web/app/design/bakis.css` (üretilmiş). Yalnız `{{…}}` bağları gerçek veriye bağlanır (getWorkSummary). Hesaplar kaynaktaki renderVals ile
+// aynıdır: halka = biten / tüm iş × 264; bölüm ilerlemesi = (tüm − kalan) / tüm; ACİL = kalan işlerden biri acil.
 
-/** Gösterilen sayı: tek sayfaya sığmadıysa "n+". */
-const shown = (count: number, more: boolean): string => (more ? `${count}+` : String(count));
+// Geçici hedefler (DESIGN-PARITY §8): kaynakta bölüm döşemesi ve durum kartları `v.list` (bölüm / durum listesi) ekranını açar. O ekran
+// sıradaki işte birebir aktarılana kadar döşemeler mevcut iş ekranlarına gider; durum kartları tıklanmaz (görünüm aynı).
+const SECS: ReadonlyArray<{ k: WorkSectionKey; operation?: string; path: string }> = [
+  { k: "giris", operation: "receive", path: "/field/receive" },
+  { k: "cikis", operation: "shipping", path: "/shipping" },
+  { k: "transfer", operation: "transfer", path: "/stock/documents?new=TRANSFER" },
+  { k: "uretim", operation: "production", path: "/production" },
+  { k: "sayim", path: "/field/tasks" },
+];
 
-// Display uses the same permission flags as TaskMenu; destination pages/actions remain the authority.
-export async function EasyOperations({ slug, allowed, myTasks, now, todayDone }: TaskMenuProps) {
+export interface EasyHomeProps extends TaskMenuProps {
+  readonly summary?: WorkSummary | null;
+  readonly firstName?: string;
+  readonly dark?: boolean;
+  /** Sorun bildirebilir mi (stock.post ya da document.create); değilse eylem çizilmez (I-18 öncelik cümlesi). */
+  readonly canReport?: boolean;
+}
+
+function Ico({ d, size, sw, className = "ico", style }: { d: string; size: number | string; sw?: number; className?: string; style?: CSSProperties }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={sw === undefined ? style : { strokeWidth: sw, ...style }}>
+      <path d={d} />
+    </svg>
+  );
+}
+
+export async function EasyOperations({ slug, allowed, summary, firstName, dark = false, canReport = false }: EasyHomeProps) {
   const t = await getTranslations("home");
+  const tg = await getTranslations("home.gv");
   const base = `/t/${encodeURIComponent(slug)}`;
-  const links = [
-    { key: "stock", path: "/stock", allowed: allowed.stockView },
-    { key: "items", path: "/items", allowed: allowed.stockView },
-    { key: "warehouses", path: "/warehouses", allowed: true },
-    { key: "tasks", path: "/field/tasks", allowed: allowed.stockView },
-    { key: "members", path: "/members", allowed: allowed.usersManage },
-    { key: "settings", path: "/settings", allowed: allowed.settingsManage },
-    { key: "audit", path: "/audit", allowed: allowed.auditView },
-  ] as const;
+  const name = firstName ?? "";
+  const sections = summary?.sections ?? [];
+  const sec = (k: WorkSectionKey) => sections.find((s) => s.key === k);
 
-  // Gerçek sayılar (uydurma yok): bekleyen = "Şimdi" satırları, atanan = Görevlerim özeti, bugün = kendi işlem kayıtlarım.
-  const rows = now?.kind === "rows" ? now.rows : [];
-  const receiveRow = rows.find((r) => r.key === "receive");
-  const putawayRow = rows.find((r) => r.key === "putaway");
-  const pending = now === undefined || now.kind === "error" ? null : { count: rows.reduce((a, r) => a + r.count, 0), more: rows.some((r) => r.more) };
-  const assigned = myTasks?.kind === "count" ? myTasks : null;
-  const pulse = [
-    pending === null ? null : { key: "pending", Icon: Clock, value: shown(pending.count, pending.more) },
-    assigned === null ? null : { key: "assigned", Icon: ListChecks, value: shown(assigned.count, assigned.more) },
-    todayDone === undefined ? null : { key: "today", Icon: CircleCheck, value: shown(todayDone.count, todayDone.more) },
-  ].filter((x) => x !== null);
+  // Kaynak `tot`: tüm iş = kalan + sorunlu + biten; halka 264 birimlik çevre.
+  const tot = { allO: 0, doneO: 0, leftO: 0, leftK: 0, probO: 0, probK: 0, doneK: 0 };
+  for (const s of sections) {
+    tot.leftO += s.open;
+    tot.leftK += s.openLines;
+    tot.doneO += s.doneToday;
+    tot.doneK += s.doneLines;
+    tot.probO += s.problems;
+    tot.probK += s.problemLines;
+  }
+  tot.probO += summary?.generalProblems ?? 0;
+  tot.allO = tot.leftO + tot.doneO + tot.probO;
+  const ring = tot.allO === 0 ? 0 : Math.round((tot.doneO / tot.allO) * 264);
+  const manual = summary?.manualToday ?? 0;
+  const hour = summary?.localHour ?? 12;
+  const hello = tot.leftO === 0 && tot.allO > 0 ? tg("dayDone", { name }) : tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name });
+  const where = (summary?.warehouseName ?? tg("allWarehouses")).toLocaleUpperCase("tr");
+  const whos = summary === null || summary === undefined ? where : tg("shift", { start: summary.shift.start, end: summary.shift.end, where });
   const active = allowed.stockPost === true;
 
+  const stats = [
+    { k: "kalan", l: tg("left"), n: tot.leftO, sub: tg("linesCount", { n: tot.leftK }), a: C.kalan, d: ICON.list },
+    { k: "biten", l: tg("done"), n: tot.doneO + manual, sub: tg("linesCount", { n: tot.doneK }) + (manual > 0 ? tg("manualSuffix", { n: manual }) : ""), a: C.biten, d: ICON.check },
+    { k: "sorun", l: tg("problem"), n: tot.probO, sub: tg("linesCount", { n: tot.probK }), a: C.sorun, d: ICON.warn },
+  ] as const;
+
   return (
-    <div className="easy-operations flex min-w-0 flex-col gap-5" data-testid="easy-operations">
-      {pulse.length === 0 ? null : (
-        <section aria-label={t("easy.pulse.label")} className="easy-pulse grid min-w-0 gap-2" style={{ gridTemplateColumns: `repeat(${pulse.length}, minmax(0, 1fr))` }}>
-          {pulse.map(({ key, Icon, value }) => (
-            <p key={key} data-pulse={key} className="easy-pulse-item m-0 flex min-w-0 flex-col gap-1 rounded-card bg-surface px-3 py-3 shadow-card">
-              <span className="flex min-w-0 items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-ink-muted">
-                <Icon className="size-4 shrink-0" strokeWidth={2.4} aria-hidden="true" />
-                <span className="truncate">{t(`easy.pulse.${key}`)}</span>
-              </span>
-              <span className="easy-pulse-value text-3xl font-extrabold leading-none text-ink">{value}</span>
-            </p>
-          ))}
-        </section>
-      )}
-
-      <section aria-labelledby="easy-tasks-title" className="flex min-w-0 flex-col gap-3">
-        <div className="flex min-w-0 items-baseline justify-between gap-3">
-          <h2 id="easy-tasks-title" className="text-sm font-extrabold uppercase tracking-widest text-ink">{t("easy.label")}</h2>
-          <p className="m-0 truncate text-sm text-ink-muted">{t("easy.hint")}</p>
-        </div>
-        <ul className="easy-operation-grid m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-5">
-          {OPERATIONS.map(({ key, path, Icon, tone }) => {
-            // Mal kabul döşemesi gerçek bekleyenleri sayıyla gösterir; diğerleri kısa açıklama taşır.
-            const counts = key === "receive" && (receiveRow !== undefined || putawayRow !== undefined) ? [
-              receiveRow === undefined ? null : { k: "receipts", v: shown(receiveRow.count, receiveRow.more) },
-              putawayRow === undefined ? null : { k: "putaway", v: shown(putawayRow.count, putawayRow.more) },
-            ].filter((x) => x !== null) : [];
-            const content = (
-              <>
-                <span className="easy-operation-icon flex size-14 shrink-0 items-center justify-center rounded-2xl">
-                  <Icon className="size-8" strokeWidth={2} aria-hidden="true" />
+    <DzRoot dark={dark} testId="easy-operations" overlays={<HomeOverlays slug={slug} canReport={canReport} />}>
+      <div className="page" style={{ background: C.bg, color: C.fg }}>
+        <h1 className="sr-only">{t("title")}</h1>
+        <div className="scroll">
+          <div className="inner">
+            <div className="hd">
+              <div className="ring" role="img" aria-label={tg("ringLabel", { done: tot.doneO, all: tot.allO })}>
+                <svg viewBox="0 0 100 100" aria-hidden="true">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke={C.track} strokeWidth="11" />
+                  <circle className="rp" cx="50" cy="50" r="42" fill="none" stroke={dz("17804F")} strokeWidth="11" strokeLinecap="round" strokeDasharray={`${ring} 264`} />
+                </svg>
+                <b>
+                  {tot.doneO}
+                  <small>/ {tot.allO}</small>
+                </b>
+              </div>
+              <div className="who">
+                <span className="brandl">
+                  <svg className="elogo" width="18" height="18" viewBox="0 0 120 120" aria-hidden="true" style={{ flex: "none", display: "block" }}>
+                    <rect x="4" y="4" width="112" height="112" rx="28" fill={C.surface} />
+                    <path d={ICON.logo} fill="none" stroke={C.fg} strokeWidth="13" strokeLinecap="round" />
+                    <circle r="12" fill={dz("F2C53D")} stroke={C.surface} strokeWidth="4">
+                      <animateMotion dur="3.2s" repeatCount="indefinite" path={ICON.logo} />
+                    </circle>
+                  </svg>
+                  <b className="brandn">ETKİN WMS</b>
                 </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="break-words text-xl font-extrabold leading-tight">{t(`easy.${key}.title`)}</span>
-                  {active && counts.length > 0 ? (
-                    <span className="easy-operation-counts flex flex-wrap items-end gap-x-4 gap-y-1" data-testid="easy-receive-counts">
-                      {counts.map((c) => (
-                        <span key={c.k} className="flex flex-col">
-                          <b className="text-3xl font-extrabold leading-none">{c.v}</b>
-                          <small className="text-xs font-extrabold uppercase tracking-wider">{t(`easy.counts.${c.k}`)}</small>
-                        </span>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="break-words text-sm font-medium leading-snug">{active ? t(`easy.${key}.description`) : t("lockedReason")}</span>
-                  )}
+                <b className="whoh">{hello}</b>
+                <span className="whos">
+                  <Ico d={ICON.clock} size={14} />
+                  {whos}
                 </span>
-                {active ? <ChevronRight className="size-7 shrink-0" aria-hidden="true" /> : <Lock className="size-6 shrink-0" aria-hidden="true" />}
-              </>
-            );
-            const cls = `easy-operation-card ${FOCUS} flex h-full min-h-24 min-w-0 items-center gap-4 rounded-3xl p-4 text-left lg:min-h-52 lg:flex-col lg:items-start ${active ? tone : "bg-locked-bg text-locked-ink"}`;
-            return (
-              <li key={key} className="min-w-0">
-                {active ? <a href={`${base}${path}`} data-operation={key} data-state="active" className={cls}>{content}</a> :
-                  <div role="group" aria-label={t(`easy.${key}.title`)} aria-disabled="true" tabIndex={0} data-operation={key} data-state="locked" className={cls}>{content}</div>}
-              </li>
-            );
-          })}
-          {/* Sayım: alan işlevleri var, saha ekranı henüz yok — dürüstçe "Yakında" (tıklanmaz, iş sayısına girmez). */}
-          <li className="min-w-0">
-            <div role="group" aria-label={t("easy.count.title")} data-soon="count" className="easy-operation-card flex h-full min-h-24 min-w-0 items-center gap-4 rounded-3xl bg-locked-bg p-4 text-left text-locked-ink lg:min-h-52 lg:flex-col lg:items-start" data-state="locked">
-              <span className="easy-operation-icon flex size-14 shrink-0 items-center justify-center rounded-2xl">
-                <ClipboardCheck className="size-8" strokeWidth={2} aria-hidden="true" />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="break-words text-xl font-extrabold leading-tight">{t("easy.count.title")}</span>
-                <span className="break-words text-sm font-medium leading-snug">{t("easy.count.description")}</span>
-              </span>
-              <span className="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-extrabold uppercase tracking-wider">{t("soonLabel")}</span>
+              </div>
+              <HomeControls />
             </div>
-          </li>
-        </ul>
-      </section>
 
-      {now === undefined ? null : (
-        <section aria-labelledby="easy-now-title" data-testid="now-card" data-state={now.kind} className="easy-now flex min-w-0 flex-col gap-3 rounded-3xl bg-surface p-4 shadow-card">
-          <h2 id="easy-now-title" className="text-sm font-extrabold uppercase tracking-widest">{t("now.title")}</h2>
-          {now.kind === "error" ? <Banner kind="warning"><p>{now.message}</p><p className="mt-1 text-sm">{now.code}</p></Banner> :
-            now.kind === "empty" ? <p data-testid="now-empty" className="flex items-center gap-2 text-base text-ink-muted"><CircleCheck className="size-5 shrink-0" aria-hidden="true" />{t("now.empty")}</p> :
-              <ul className="m-0 grid list-none gap-3 p-0 md:grid-cols-2">
-                {now.rows.map(row => {
-                  const first = row.next[0];
-                  return <li key={row.key} className="flex min-w-0 flex-col gap-2">
-                    <a href={first?.href ?? `${base}/field/${row.key === "receive" ? "receive" : "tasks"}`} data-testid={`now-${row.key}`} data-count={row.count} className={`${FOCUS} easy-now-row flex min-h-16 min-w-0 items-center gap-3 rounded-2xl px-3 py-2 ${row.key === "receive" ? "bg-cat-green-bg text-cat-green-ink" : "bg-cat-sky-bg text-cat-sky-ink"}`}>
-                      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface">{row.key === "receive" ? <PackagePlus className="size-6" aria-hidden="true" /> : <ArrowDownToLine className="size-6" aria-hidden="true" />}</span>
-                      <span className="flex min-w-0 flex-1 flex-col gap-1"><span className="break-words font-extrabold">{t(`now.${row.key}`, { count: shown(row.count, row.more) })}</span>
-                        {first === undefined ? null : <span data-testid={`now-${row.key}-next`} className="break-words text-sm font-semibold">{t("now.next", { label: first.label })}</span>}
-                      </span><ChevronRight className="size-6 shrink-0" aria-hidden="true" />
-                    </a>
-                    {row.next[1] === undefined ? null : <a href={row.next[1].href} data-testid={`now-${row.key}-extra`} className={`${FOCUS} flex min-h-12 items-center rounded-xl px-3 py-2 text-sm font-semibold`}>{t("now.then", { label: row.next[1].label })}</a>}
-                  </li>;
-                })}
-              </ul>}
-        </section>
-      )}
-      {myTasks === undefined ? null : myTasks.kind === "error" ? <Banner kind="warning"><p>{myTasks.message}</p><p className="mt-1 text-sm">{myTasks.code}</p></Banner> :
-        myTasks.count > 0 ? <a href={`${base}/field/tasks`} data-testid="my-tasks-card" className={`${FOCUS} flex min-h-16 items-center justify-between gap-3 rounded-3xl bg-ink p-4 text-surface`}>
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface text-ink"><ListChecks className="size-6" aria-hidden="true" /></span>
-          <span className="flex min-w-0 flex-1 flex-col"><span className="text-xs font-extrabold uppercase tracking-widest">{t("myTasks.title")}</span><span className="break-words text-lg font-extrabold">{t("myTasks.assigned", { count: myTasks.more ? `${myTasks.count}+` : String(myTasks.count) })}</span></span><ChevronRight className="size-6 shrink-0" aria-hidden="true" />
-        </a> : now?.kind === "rows" ? null : <p data-testid="my-tasks-empty" className="text-sm text-ink-muted">{t("myTasks.empty")}</p>}
+            <div className="stats" role="group" aria-label={tg("statsLabel")}>
+              {stats.map((sc) => (
+                <div key={sc.k} role="group" className="st" style={{ background: C.surface }} aria-label={`${sc.l} ${sc.n}`} data-stat={sc.k}>
+                  <span className="stl">
+                    <i style={{ background: sc.a }}>
+                      <Ico d={sc.d} size={14} sw={3} />
+                    </i>
+                    {sc.l}
+                  </span>
+                  <span className="stn" style={{ color: sc.a }}>
+                    {sc.n}
+                  </span>
+                  <span className="sts">{sc.sub}</span>
+                </div>
+              ))}
+            </div>
 
-      {active ? (
-        <section aria-labelledby="easy-manual-title" className="flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 items-baseline justify-between gap-3">
-            <h2 id="easy-manual-title" className="text-sm font-extrabold uppercase tracking-widest text-ink">{t("easy.manual.title")}</h2>
-            <p className="m-0 truncate text-sm text-ink-muted">{t("easy.manual.hint")}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:max-w-xl">
-            <a href={`${base}/stock/documents?new=STOCK_IN`} data-manual="in" className={`${FOCUS} easy-manual flex min-h-14 items-center justify-center gap-2 rounded-2xl border-2 border-ink px-3 text-sm font-extrabold uppercase tracking-wide text-ink`}><ArrowDownToLine className="size-5 shrink-0" aria-hidden="true" />{t("easy.manual.in")}</a>
-            <a href={`${base}/stock/documents?new=STOCK_OUT`} data-manual="out" className={`${FOCUS} easy-manual flex min-h-14 items-center justify-center gap-2 rounded-2xl border-2 border-ink px-3 text-sm font-extrabold uppercase tracking-wide text-ink`}><ArrowUpFromLine className="size-5 shrink-0" aria-hidden="true" />{t("easy.manual.out")}</a>
-          </div>
-        </section>
-      ) : null}
+            <div className="shd">
+              <b>{tg("myTasks")}</b>
+              <span>{tg("leftSummary", { o: tot.leftO, k: tot.leftK })}</span>
+            </div>
+            <div className="secs">
+              {SECS.map((x, i) => {
+                const s = sec(x.k);
+                const o = s?.open ?? 0;
+                const k = s?.openLines ?? 0;
+                const all = s === undefined ? 0 : s.open + s.problems + s.doneToday;
+                const done = all - o;
+                const pct = all === 0 ? 0 : Math.round((done / all) * 100);
+                const title = tg(`title.${x.k}`);
+                const unit = tg(`unit.${x.k}`);
+                // Yazma yetkisi olmayan rol (salt okunur) işlem ekranına gidemez: aynı görünümde tıklanmaz döşeme (Sayım listesi herkese açık).
+                const live = active || x.operation === undefined;
+                const props = {
+                  className: "sec",
+                  "data-section": x.k,
+                  "data-operation": x.operation,
+                  "data-state": live ? "active" : "locked",
+                  style: { background: C[`${x.k}-t`], color: C[`${x.k}-ink`], animationDelay: `${i * 60}ms` },
+                  "aria-label": tg("tileLabel", { title, open: o, unit, lines: k }),
+                };
+                const body = (
+                  <>
+                    <span className="sic" style={{ background: C[`${x.k}-s`], color: C.txt }}>
+                      <Ico d={ICON[x.k]} size={32} sw={2.4} />
+                    </span>
+                    <span className="stt">{title}</span>
+                    <span className="snn">
+                      <span>
+                        <b>{o}</b>
+                        <small>{unit}</small>
+                      </span>
+                      <i />
+                      <span>
+                        <b>{k}</b>
+                        <small>{tg("lines")}</small>
+                      </span>
+                    </span>
+                    <Ico d={ICON.chevron} size={28} sw={3} className="ico sch" />
+                    <span className="spb">
+                      <span className="bar" style={{ background: C["sec-track"] }}>
+                        <span style={{ width: `${pct}%`, background: C[`${x.k}-a`] }} />
+                      </span>
+                      {tg("progress", { done, total: all })}
+                    </span>
+                    {s?.urgent === true ? (
+                      <span className="sbadge">
+                        <Ico d={ICON.bolt} size={12} sw={3} />
+                        {tg("urgent")}
+                      </span>
+                    ) : null}
+                  </>
+                );
+                return live ? (
+                  <a key={x.k} href={`${base}${x.path}`} {...props}>
+                    {body}
+                  </a>
+                ) : (
+                  <div key={x.k} role="group" aria-disabled="true" {...props}>
+                    {body}
+                  </div>
+                );
+              })}
+            </div>
 
-      <nav aria-label={t("easy.links")} className="flex min-w-0 flex-wrap gap-2">
-        {links.slice(0, 4).filter(link => link.allowed).map(link => <a key={link.key} href={`${base}${link.path}`} className={`${FOCUS} inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-border-strong bg-surface px-4 py-2 text-sm font-bold`}>{t(`easy.${link.key}`)}</a>)}
-        {links.slice(4).some(link => link.allowed) ? <details className="w-full min-w-0">
-          <summary className={`${FOCUS} min-h-12 w-fit cursor-pointer rounded-xl px-4 py-3 text-sm font-bold`}>{t("easy.links")}</summary>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {links.slice(4).filter(link => link.allowed).map(link => <a key={link.key} href={`${base}${link.path}`} className={`${FOCUS} inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-border-strong bg-surface px-4 py-2 text-sm font-bold`}>{t(`easy.${link.key}`)}</a>)}
+            {active ? (
+              <>
+                <div className="shd qhd">
+                  <b>{tg("manualTitle")}</b>
+                  <span>{tg("manualHint")}</span>
+                </div>
+                <div className="quick">
+                  <a className="qb" href={`${base}/stock/documents?new=STOCK_IN`} style={{ color: C.in }} data-manual="in">
+                    <Ico d={ICON.inn} size={22} sw={2.8} />
+                    {tg("manualIn")}
+                  </a>
+                  <a className="qb" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ color: C.out }} data-manual="out">
+                    <Ico d={ICON.out} size={22} sw={2.8} />
+                    {tg("manualOut")}
+                  </a>
+                </div>
+              </>
+            ) : null}
           </div>
-        </details> : null}
+        </div>
+      </div>
+
+      <nav className="thumb" style={{ background: C.surface, color: C.fg }} aria-label={tg("thumbLabel")}>
+        <div className="trow">
+          {active ? (
+            <a className="tside" href={`${base}/stock/documents?new=STOCK_IN`} style={{ background: C["tin-bg"], color: C.in }} aria-label={tg("manualIn")}>
+              <Ico d={ICON.inn} size={26} sw={2.8} />
+              {tg("thumbIn")}
+            </a>
+          ) : (
+            <span className="tside off" style={{ background: C["tin-bg"], color: C.in }} aria-hidden="true">
+              <Ico d={ICON.inn} size={26} sw={2.8} />
+              {tg("thumbIn")}
+            </span>
+          )}
+          <a className="tprim" href={`${base}/field`} style={{ background: C["prim-bg"], color: C["prim-fg"] }}>
+            <Ico d={ICON.scan} size={26} sw={2.8} />
+            {tot.leftO > 0 ? tg("scanStart") : tg("dayComplete")}
+          </a>
+          {active ? (
+            <a className="tside" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ background: C["tout-bg"], color: C.out }} aria-label={tg("manualOut")}>
+              <Ico d={ICON.out} size={26} sw={2.8} />
+              {tg("thumbOut")}
+            </a>
+          ) : (
+            <span className="tside off" style={{ background: C["tout-bg"], color: C.out }} aria-hidden="true">
+              <Ico d={ICON.out} size={26} sw={2.8} />
+              {tg("thumbOut")}
+            </span>
+          )}
+        </div>
       </nav>
-    </div>
+    </DzRoot>
   );
 }

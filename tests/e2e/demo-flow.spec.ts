@@ -6,6 +6,7 @@ import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 import { expect, test } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
 import { enterDemoReal } from "./support/demo-session.ts";
+import { appMenuReachable, openAppMenu } from "./support/app-menu.ts";
 
 const DEMO_BANNER = "Demo ortamı — gerçek kişisel veri girmeyin";
 
@@ -27,9 +28,8 @@ async function expectTouchTarget(page: Page, locator: ReturnType<Page["locator"]
 
 /** T-254: telefon genişliğinde "Çıkış yap" menüdedir; menü düğmesi görünürse önce menü açılır. Açıldıysa true döner. */
 async function openMenuIfPhone(page: Page): Promise<boolean> {
-  const menuButton = page.getByTestId("app-bar-menu");
-  if (!(await menuButton.isVisible())) return false;
-  await menuButton.click();
+  if (!(await appMenuReachable(page))) return false;
+  await openAppMenu(page);
   return true;
 }
 

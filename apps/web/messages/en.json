@@ -624,6 +624,77 @@
       "next": "Next: {label}",
       "then": "After that: {label}",
       "qty": "{n} units"
+    },
+    "gv": {
+      "morning": "Good morning, {name}",
+      "day": "Good afternoon, {name}",
+      "evening": "Good evening, {name}",
+      "dayDone": "Great, {name}! Day done",
+      "allWarehouses": "ALL WAREHOUSES",
+      "ringLabel": "{done} of {all} jobs done today",
+      "statsLabel": "Today's status",
+      "left": "LEFT",
+      "done": "DONE",
+      "linesCount": "{n} LINES",
+      "myTasks": "MY TASKS",
+      "leftSummary": "{o} JOBS · {k} LINES LEFT",
+      "lines": "LINES",
+      "noData": "Could not read data",
+      "progress": "{done}/{total} DONE",
+      "tileLabel": "{title}: {open} {unit}, {lines} lines",
+      "title": {
+        "giris": "Inbound",
+        "cikis": "Outbound",
+        "transfer": "Transfer",
+        "uretim": "Production transfer",
+        "sayim": "Count"
+      },
+      "unit": {
+        "giris": "ORDERS",
+        "cikis": "ORDERS",
+        "transfer": "SLIPS",
+        "uretim": "ORDERS",
+        "sayim": "COUNTS"
+      },
+      "manualTitle": "UNPLANNED",
+      "manualHint": "MOVEMENT WITHOUT ORDER",
+      "manualIn": "MANUAL IN",
+      "manualOut": "MANUAL OUT",
+      "thumbLabel": "Main actions",
+      "thumbIn": "IN",
+      "thumbOut": "OUT",
+      "scanStart": "SCAN · START",
+      "online": "Online",
+      "offline": "Offline: records cannot be sent",
+      "menu": "Menu",
+      "shift": "SHIFT {start}–{end} · {where}",
+      "manualSuffix": " · {n} MAN.",
+      "problem": "ISSUES",
+      "urgent": "URGENT",
+      "dayComplete": "DAY COMPLETE",
+      "theme": "Change theme",
+      "actions": "Quick actions",
+      "reportProblem": "Report a problem",
+      "guide": "How to use",
+      "problemSheet": {
+        "title": "Report a problem",
+        "hint": "GOES TO THE MANAGER · SHOWN ON THE ISSUES CARD",
+        "reason": "WHAT HAPPENED?",
+        "note": "NOTE · OPTIONAL",
+        "send": "REPORT",
+        "cancel": "Cancel",
+        "sent": "REPORTED",
+        "failed": "Could not send. Try again.",
+        "forbidden": "This role cannot report problems.",
+        "reasons": {
+          "DAMAGED": "DAMAGED",
+          "MISSING": "MISSING",
+          "WRONG_ITEM": "WRONG ITEM",
+          "NO_LABEL": "NO LABEL",
+          "LOCATION": "SHELF ISSUE",
+          "OTHER": "OTHER"
+        }
+      }
     }
   },
   "audit": {
@@ -746,6 +817,16 @@
       "approved": "You approved a count difference.",
       "posted": "You posted the count difference; the locations were unlocked.",
       "cancelled": "You cancelled a count; no difference was applied and the locations were unlocked."
+    },
+    "work_priority": {
+      "set": "Work priority changed"
+    },
+    "problem": {
+      "reported": "Problem reported",
+      "resolved": "Problem resolved"
+    },
+    "settings": {
+      "shift_updated": "Shift hours changed"
     }
   },
   "auditLog": {
