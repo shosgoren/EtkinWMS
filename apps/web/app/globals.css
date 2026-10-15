@@ -653,6 +653,13 @@ select.bg-none { background-image:none; }
   body:has(.tenant-shell) [data-testid="app-bar-name"] { margin-right: 0; }
 }
 
+/* T-985: saha adım bandı (Görevlerim tasarımı). Zemin kategori koyu tonu (bileşende), yarı saydam yüzey kutuları. */
+.flow-band { box-shadow: 0 10px 22px -18px color-mix(in srgb, var(--color-ink) 80%, transparent); }
+.flow-band-back, .flow-band-icon { background: color-mix(in srgb, var(--color-surface) 20%, transparent); }
+.flow-band-back:hover { background: color-mix(in srgb, var(--color-surface) 30%, transparent); }
+.flow-band [data-testid="step-label"] { opacity: .88; }
+.flow-primary { box-shadow: 0 10px 20px -14px color-mix(in srgb, var(--color-accent) 80%, transparent); }
+
 /* T-929: interior screens only. Home, dialogs, camera overlays and print surfaces retain their own layouts. */
 .screen-shell {
   --screen-mode: desktop;
