@@ -207,3 +207,4 @@
 - 2026-10-14 T-982 canlıya alındı; T-983 sade giriş ekranı, eski karşılama ekranı canlıda /login'e yönlenir.
 - 2026-10-15 T-984 Görevlerim tasarımı Aşama 1: Akış ana ekranı.
 - 2026-10-15 T-984 canlı; T-985 Aşama 2 saha adım bandı.
+- 2026-10-15 T-985 birleşti; T-986 Aşama 3 transfer/manuel görünüm.
