@@ -101,6 +101,7 @@ export {
   COUNT_REASON_MAX,
   approveCount,
   cancelCount,
+  createCountTasks,
   findAbandonedCounts,
   postCountAdjustment,
   recordCount,
@@ -113,11 +114,26 @@ export {
   type CountDifference,
   type CountStockStatus,
   type CountTransitionInput,
+  type CreateCountTasksInput,
   type PostCountAdjustmentInput,
   type RecordCountInput,
   type RecordCountLineInput,
   type StartCountInput,
 } from "./counting.ts";
+// Sayım ekranları okumaları (T-987): saha raf görünümü (kör), yönetici listesi ve fark incelemesi. Stok/oturum yazmaz.
+export {
+  COUNT_SESSION_LIST_MAX,
+  getCountReview,
+  getCountWork,
+  listCountSessions,
+  type CountQueryParams,
+  type CountReview,
+  type CountReviewLine,
+  type CountSessionStatus,
+  type CountSessionSummary,
+  type CountWork,
+  type CountWorkLine,
+} from "./count-queries.ts";
 // Kısmi sevk ve müşteri iadesi (T-308). `planShipment`/`isShippableReservation` (shipping.ts) ve iade saf yardımcıları iç/test amaçlıdır: burada YOKTUR.
 export { shipOrder, type ShipLineInput, type ShipOrderInput } from "./shipping.ts";
 export { createCustomerReturn, type CreateCustomerReturnInput } from "./returns.ts";

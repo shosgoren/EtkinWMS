@@ -24,8 +24,9 @@ import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { toBase } from "../catalog/quantity.ts";
-import { runTenantQuery, type AccessTx, type Membership, type TenantAccessParams } from "../identity/access.ts";
-import { assertWarehouseVisible, pgUuidArray } from "../warehouse/scope.ts";
+import { runTenantCommand, runTenantQuery, type AccessTx, type Membership, type TenantAccessParams } from "../identity/access.ts";
+import { hasPermission } from "../identity/permissions.ts";
+import { assertWarehouseVisible, pgUuidArray, resolveWarehouseScope } from "../warehouse/scope.ts";
 import {
   EMPTY_LOCK_PLAN,
   SYNC_POST_MAX_LINES,
@@ -41,7 +42,7 @@ import {
 import { releaseCountLocks, setLocationsCounting } from "../stock/posting.ts";
 import { toMicro } from "../stock/plan.ts";
 import { baseQuantityOf, decimalToMicro, documentState, microToDecimal, postFieldDocument, tooLarge, uuidOf, type FieldLine } from "./field-posting.ts";
-import { completeTask } from "./tasks.ts";
+import { completeTask, createTasks } from "./tasks.ts";
 
 const CONTROL_RE = /\p{C}/u;
 export const COUNT_REASON_MAX = 500;
@@ -659,7 +660,8 @@ export interface CancelCountInput {
 
 /**
  * `document.approve`: COUNTING|SUBMITTED|APPROVED oturumu iptal eder; fark UYGULANMAZ, kilitler aynı transaction'da `IDLE` olur (gerekçe audit'e). `pick_blocked` ve
- * açık `COUNT` görevleri olduğu gibi kalır (sayım yapılmadı).
+ * toplama eksiğinden doğan (`source_kind = SALES_ORDER`) açık `COUNT` görevleri olduğu gibi kalır (sayım yapılmadı). T-987: bu oturumun KENDİ açık
+ * görevleri (`source_kind = COUNT_SESSION`, `source_id` = oturum) aynı transaction'da CANCELLED olur; her biri gerekçeli audit taşır.
  */
 export async function cancelCount(params: StockDocCallParams, input: CancelCountInput): Promise<CountCommandResult> {
   const sessionId = uuidOf(input.sessionId);
@@ -692,6 +694,38 @@ export async function cancelCount(params: StockDocCallParams, input: CancelCount
              WHERE tenant_id = ${ctx.tenantId}::uuid AND id = ${sessionId}::uuid AND status IN ('COUNTING', 'SUBMITTED', 'APPROVED') RETURNING id`,
       );
       if (r[0] === undefined) throw new AppError("INTERNAL");
+      // T-987: bu oturum için açılan sayım görevleri (source_kind = COUNT_SESSION) sayım yapılmayacağından iptal edilir. Toplama eksiğinden doğan
+      // COUNT görevleri (source_kind = SALES_ORDER) dokunulmadan kalır.
+      // Sıra: başlık → stok kilitleri → görev satırları (postCountAdjustment ile aynı). Eski durum/atanan audit için önce kilitli okunur.
+      const own = await tx.execute<{ id: string; status: string; assigned_membership_id: string | null }>(
+        sql`SELECT id, status, assigned_membership_id FROM public.warehouse_tasks
+             WHERE tenant_id = ${ctx.tenantId}::uuid AND kind = 'COUNT' AND source_kind = 'COUNT_SESSION' AND source_id = ${sessionId}::uuid
+               AND status IN ('OPEN', 'ASSIGNED')
+             ORDER BY id FOR UPDATE`,
+      );
+      for (const t of own) {
+        const upd = await tx.execute<{ version: number }>(
+          sql`UPDATE public.warehouse_tasks SET status = 'CANCELLED'
+               WHERE tenant_id = ${ctx.tenantId}::uuid AND id = ${t.id}::uuid AND status = ${t.status} RETURNING version`,
+        );
+        if (upd[0] === undefined) throw new AppError("INTERNAL");
+        await appendAudit(tx, {
+          action: "warehouse_task.cancelled",
+          actorUserId: ctx.userId,
+          entityType: "warehouse_task",
+          entityId: t.id,
+          requestId: input.requestId ?? null,
+          reason,
+          changeSummary: {
+            from_status: t.status,
+            to_status: "CANCELLED",
+            version: Number(upd[0].version),
+            assigned_membership_id: t.assigned_membership_id,
+            source: "count.cancelled",
+            count_session_id: sessionId,
+          },
+        });
+      }
       return {
         result: { documentId: sessionId, status: "CANCELLED" },
         audit: {
@@ -700,13 +734,86 @@ export async function cancelCount(params: StockDocCallParams, input: CancelCount
           entityId: sessionId,
           requestId: input.requestId ?? null,
           reason,
-          changeSummary: { warehouse_id: s.warehouseId, from_status: s.status, location_count: lockedLocationIds.length },
+          changeSummary: { warehouse_id: s.warehouseId, from_status: s.status, location_count: lockedLocationIds.length, tasks_cancelled: own.length },
         },
       };
     },
   });
   if (outcome.status !== "COMPLETED") throw new AppError("VERSION_CONFLICT", { retryable: true });
   return { ...outcome.result, replayed: outcome.replayed };
+}
+
+// --- sayım görevleri (T-987) ----------------------------------------------------------------------------------------------------
+
+export interface CreateCountTasksInput {
+  readonly sessionId: string;
+  /** Verilirse yeni görevler doğrudan bu üyeye atanır (ACTIVE, `document.create` sahibi, depo kapsamında olmalı). Yoksa görevler OPEN (üstlenilebilir). */
+  readonly assigneeMembershipId?: string | null;
+  readonly requestId?: string | null;
+}
+
+/**
+ * `document.approve`: COUNTING oturumun kilitli her lokasyonu için bir `COUNT` görevi açar (`source_kind = COUNT_SESSION`, `source_id` = oturum) ve
+ * isteğe bağlı olarak bir sayımcıya atar. Tekrar çağrı güvenlidir: oturumun açık/biten görevi olan lokasyon için yeni görev açılmaz (yalnız eksikler).
+ * Oturum başlığı önce kilitlenir (I-15 "belge önce"; `postCountAdjustment` aynı sırayla görevleri kapatır). Stok yazmaz, stok kilidi almaz.
+ * Atanan denetimi `assignTask` ile aynıdır (A-132/A-46): yoksa `NOT_FOUND`, izin/kapsam uymuyorsa `VALIDATION_FAILED`.
+ */
+export async function createCountTasks(params: CountCallParams, input: CreateCountTasksInput): Promise<{ readonly taskIds: readonly string[]; readonly created: number }> {
+  const sessionId = uuidOf(input.sessionId);
+  const assignee = input.assigneeMembershipId === undefined || input.assigneeMembershipId === null ? null : uuidOf(input.assigneeMembershipId);
+  const requestId = input.requestId ?? null;
+  return runTenantCommand({ ...params, permission: "document.approve" }, async (tx, m) => {
+    const s = await lockSession(tx, m, sessionId);
+    if (s.status !== "COUNTING") throw documentState();
+    const locations = await sessionLocationIds(tx, m.tenantId, sessionId);
+    if (locations.length === 0) throw documentState();
+    if (assignee !== null) {
+      const target = await tx.execute<{ role_key: string | null }>(
+        sql`SELECT r.role_key
+              FROM public.tenant_memberships tm
+              LEFT JOIN public.membership_roles r ON r.tenant_id = tm.tenant_id AND r.membership_id = tm.id
+             WHERE tm.tenant_id = ${m.tenantId}::uuid AND tm.id = ${assignee}::uuid AND tm.status = 'ACTIVE'`,
+      );
+      if (target.length === 0) throw new AppError("NOT_FOUND");
+      const roles = target.flatMap((r) => (r.role_key === null ? [] : [r.role_key]));
+      if (!hasPermission(roles, "document.create")) throw new AppError("VALIDATION_FAILED");
+      const scope = await resolveWarehouseScope(tx, { ...m, membershipId: assignee, roles: roles as Membership["roles"] });
+      if (scope !== null && !scope.includes(s.warehouseId.toLowerCase())) throw new AppError("VALIDATION_FAILED");
+    }
+    const existing = await tx.execute<{ id: string; location_id: string }>(
+      sql`SELECT id, location_id FROM public.warehouse_tasks
+           WHERE tenant_id = ${m.tenantId}::uuid AND kind = 'COUNT' AND source_kind = 'COUNT_SESSION' AND source_id = ${sessionId}::uuid
+             AND status IN ('OPEN', 'ASSIGNED', 'DONE')
+           ORDER BY location_id, id`,
+    );
+    const covered = new Set(existing.map((r) => r.location_id.toLowerCase()));
+    const missing = locations.filter((l) => !covered.has(l));
+    const ids = await createTasks(
+      tx,
+      m,
+      missing.map((locationId) => ({ warehouseId: s.warehouseId, kind: "COUNT" as const, sourceKind: "COUNT_SESSION" as const, sourceId: sessionId, locationId })),
+      requestId,
+    );
+    if (assignee !== null && ids.length > 0) {
+      const assigned = await tx.execute<{ id: string; version: number }>(
+        sql`UPDATE public.warehouse_tasks SET status = 'ASSIGNED', assigned_membership_id = ${assignee}::uuid
+             WHERE tenant_id = ${m.tenantId}::uuid AND id = ANY(${pgUuidArray(ids)}::uuid[]) AND status = 'OPEN'
+         RETURNING id, version`,
+      );
+      if (assigned.length !== ids.length) throw new AppError("INTERNAL");
+      for (const t of assigned) {
+        await appendAudit(tx, {
+          action: "warehouse_task.assigned",
+          actorUserId: m.userId,
+          entityType: "warehouse_task",
+          entityId: t.id,
+          requestId,
+          changeSummary: { from_status: "OPEN", to_status: "ASSIGNED", from_membership_id: null, to_membership_id: assignee, version: Number(t.version) },
+        });
+      }
+    }
+    return { taskIds: [...existing.map((r) => r.id), ...ids], created: ids.length };
+  });
 }
 
 // --- terk edilmiş sayım alarmı (worker; salt okuma) ------------------------------------------------------------------------------

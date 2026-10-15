@@ -208,3 +208,4 @@
 - 2026-10-15 T-984 Görevlerim tasarımı Aşama 1: Akış ana ekranı.
 - 2026-10-15 T-984 canlı; T-985 Aşama 2 saha adım bandı.
 - 2026-10-15 T-985 birleşti; T-986 Aşama 3 transfer/manuel görünüm.
+- 2026-10-15 T-986 canlı; T-987 sayım görevleri ve okumaları (Aşama 4a).
