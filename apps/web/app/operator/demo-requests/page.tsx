@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
+import { AppError } from "@wms/shared/errors";
 import { isPlatformOperator, listDemoRequests } from "@wms/domain/platform/demo-requests";
 import { THEME_COOKIE } from "../../design/theme.ts";
 import { decideDemoRequestAction } from "./actions.ts";
@@ -27,7 +28,11 @@ export default async function OperatorDemoRequestsPage({ searchParams }: { searc
   const db = getAppDb();
   if (!(await isPlatformOperator({ db, principal }))) notFound();
   if (!principal.mfaVerified) redirect(`/mfa?next=${encodeURIComponent(PATH)}`);
-  const rows = await listDemoRequests({ db, principal });
+  // İki denetim arasında operatörlükten çıkarılırsa da 404 (500 değil).
+  const rows = await listDemoRequests({ db, principal }).catch((e: unknown) => {
+    if (e instanceof AppError && e.code === "NOT_FOUND") notFound();
+    throw e;
+  });
   const query = await searchParams;
   const rawErr = Array.isArray(query.error) ? query.error[0] : query.error;
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";

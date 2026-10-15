@@ -213,7 +213,8 @@ const demoLeadsSchedule =
             await fh.close();
           }
         },
-        ingest: (jsonl) => ingestDemoLeads({ db, jsonl }),
+        // İçe alma işlevinin EXECUTE yetkisi yalnız wms_worker (0038; web katmanı talep ekleyemez).
+        ingest: (jsonl) => ingestDemoLeads({ db: workerDb, jsonl }),
         logger,
       });
 

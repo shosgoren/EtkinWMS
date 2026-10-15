@@ -8,10 +8,13 @@
 -- * OPERATÖR VERİTABANINDA ZORLANIR: `wms_platform.operators` (normalize e-posta). İşlev çağıranı transaction-yerel
 --   `app.current_user_id`'den (withUser) okur, `users.email` ile eşler; listede değilse 42501. Uygulama koduna "operatör mü" kararını
 --   bırakmaz (ortam değişkeni ya da kod hatası operatör yetkisi vermez). Operatör eklemek/çıkarmak migration'dır (git kaydı).
---   MFA ve yakın zamanda doğrulama (A-39) uygulama katmanında ayrıca zorunludur (oturum bilgisi veritabanında değil).
+--   Operatör hesabında iki adımlı doğrulama KURULU olmalıdır (`users.two_factor_enabled`): yönetici kaynaklı parola sıfırlama
+--   bağlantısı tek başına operatörlüğü devralamaz (inceleme m-4; işletim kuralı: operatör hesabı müşteri alanına üye yapılmaz).
+--   Oturum düzeyi MFA ve yakın zamanda doğrulama (A-39) uygulama katmanında ayrıca zorunludur.
 -- * İÇE ALMA (`platform_ingest_demo_request`): worker satış sitesinin JSONL kaydını okur ve bu işlevle ekler. Kimlik satış sitesinin
 --   ürettiği uuid'dir; aynı kayıt ikinci kez gelirse eklenmez (idempotent). Uzunluklar satış sitesindeki doğrulamayla aynı sınırlarla
---   yeniden denetlenir. EXECUTE yalnızca wms_app (worker'ın veri bağlantısı). Eklenen talep her zaman PENDING'dir.
+--   yeniden denetlenir. EXECUTE yalnızca wms_worker (worker'ın kuyruk bağlantısı; web katmanı talep ekleyemez — inceleme m-2,
+--   active_tenant_ids emsali). Eklenen talep her zaman PENDING'dir.
 -- * KARAR (`platform_decide_demo_request`): yalnızca PENDING → APPROVED | REJECTED; karar zamanı veritabanı saati, karar veren çağıran
 --   kullanıcı. Aynı transaction'da `security_events` satırı (`platform.demo_request.approved|rejected`, kişisel veri yok: yalnız
 --   talep kimliği) yazılır; audit_logs tenant'a bağlı olduğu için kullanılmaz. Kimlik olayı öneklerine girmez (0005 tetikleyicisi).
@@ -112,7 +115,7 @@ BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.users u
       JOIN wms_platform.operators o ON o.email_normalized = pg_catalog.lower(pg_catalog.btrim(u.email))
-     WHERE u.id = v_uid AND u.email_verified);
+     WHERE u.id = v_uid AND u.email_verified AND u.two_factor_enabled);
 END
 $fn$;
 
@@ -202,7 +205,7 @@ REVOKE ALL ON FUNCTION wms_probe.platform_ingest_demo_request(uuid, timestamptz,
 REVOKE ALL ON FUNCTION wms_probe.platform_list_demo_requests(integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION wms_probe.platform_decide_demo_request(uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION wms_probe.platform_is_operator() TO wms_app;
-GRANT EXECUTE ON FUNCTION wms_probe.platform_ingest_demo_request(uuid, timestamptz, text, text, text, text, text) TO wms_app;
+GRANT EXECUTE ON FUNCTION wms_probe.platform_ingest_demo_request(uuid, timestamptz, text, text, text, text, text) TO wms_worker;
 GRANT EXECUTE ON FUNCTION wms_probe.platform_list_demo_requests(integer) TO wms_app;
 GRANT EXECUTE ON FUNCTION wms_probe.platform_decide_demo_request(uuid, text) TO wms_app;
 
@@ -210,7 +213,29 @@ RESET ROLE;
 REVOKE CREATE ON SCHEMA wms_probe FROM wms_identity_probe;
 
 -- ---------------------------------------------------------------------------------------------
--- 3. Doğrulama
+-- 3. security_events: `platform.*` olaylarını yalnız işlev sahibi yazar (inceleme m-1; 0007 gövdesi + yeni önek kuralı)
+-- ---------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.security_events_restrict_identity_writers() RETURNS trigger
+  LANGUAGE plpgsql
+  SECURITY INVOKER
+  SET search_path = pg_catalog, pg_temp
+AS $fn$
+BEGIN
+  IF pg_catalog.lower(NEW.event_type) ~ '^(login_|logout|password[_.]|two_factor_|reauth[_.]|session[_.]|mfa[_.]|account[_.]|password_reset_link[_.]|demo\.(account|password)[_.])'
+     AND current_user::text <> 'wms_auth' THEN
+    RAISE EXCEPTION 'security_events: kimlik olayı (%) yalnızca wms_auth tarafından yazılabilir', NEW.event_type
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF pg_catalog.lower(NEW.event_type) ~ '^platform[_.]' AND current_user::text <> 'wms_identity_probe' THEN
+    RAISE EXCEPTION 'security_events: platform olayı (%) yalnızca platform işlevleriyle yazılabilir', NEW.event_type
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END
+$fn$;
+
+-- ---------------------------------------------------------------------------------------------
+-- 4. Doğrulama
 -- ---------------------------------------------------------------------------------------------
 DO $verify$
 DECLARE
@@ -232,12 +257,10 @@ BEGIN
             AND NOT EXISTS (SELECT 1 FROM pg_catalog.aclexplode(p.proacl) a WHERE a.grantee = 0)) THEN
       RAISE EXCEPTION '0038_demo_requests: % sahibi/SECURITY DEFINER/search_path/ACL beklenenden farklı', f;
     END IF;
-    IF NOT pg_catalog.has_function_privilege('wms_app', f, 'EXECUTE') THEN
-      RAISE EXCEPTION '0038_demo_requests: wms_app % EXECUTE taşımalı', f;
-    END IF;
-    FOREACH r IN ARRAY ARRAY['wms_auth', 'wms_worker', 'wms_ops'] LOOP
-      IF pg_catalog.has_function_privilege(r, f, 'EXECUTE') THEN
-        RAISE EXCEPTION '0038_demo_requests: % rolü % EXECUTE taşımamalı', r, f;
+    FOREACH r IN ARRAY ARRAY['wms_app', 'wms_auth', 'wms_worker', 'wms_ops'] LOOP
+      IF pg_catalog.has_function_privilege(r, f, 'EXECUTE')
+         <> (r = CASE WHEN f LIKE '%platform_ingest_demo_request%' THEN 'wms_worker' ELSE 'wms_app' END) THEN
+        RAISE EXCEPTION '0038_demo_requests: % rolünün % EXECUTE yetkisi beklenenden farklı', r, f;
       END IF;
     END LOOP;
   END LOOP;
@@ -253,6 +276,12 @@ BEGIN
      OR pg_catalog.has_column_privilege('wms_identity_probe', 'wms_platform.demo_requests', 'email', 'UPDATE')
      OR pg_catalog.has_schema_privilege('wms_identity_probe', 'wms_probe', 'CREATE') THEN
     RAISE EXCEPTION '0038_demo_requests: wms_identity_probe yetkisi beklenenden geniş';
+  END IF;
+  IF NOT pg_catalog.has_schema_privilege('wms_worker', 'wms_probe', 'USAGE') THEN
+    RAISE EXCEPTION '0038_demo_requests: wms_worker wms_probe şemasında USAGE taşımalı (0014)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc WHERE oid = 'public.security_events_restrict_identity_writers()'::regprocedure AND prosecdef) THEN
+    RAISE EXCEPTION '0038_demo_requests: tetikleyici işlevi SECURITY INVOKER olmalı';
   END IF;
 END
 $verify$;

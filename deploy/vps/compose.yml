@@ -29,10 +29,14 @@ services:
     restart: unless-stopped
     env_file: /opt/etkinwms/secrets/worker.env
     environment:
-      # T-994 (ADR-026 §3): satış sitesi demo talepleri; salt okunur bağlama, worker yalnız okur ve platform tablosuna alır.
+      # T-994 (ADR-026 §3): satış sitesi demo talepleri; worker yalnız okur ve platform tablosuna alır. Ayrı birim: bildirim ayarı
+      # (notify.json, Resend anahtarı) `marketing-leads`'te kalır ve worker'a hiç bağlanmaz (güvenlik incelemesi m-3).
       DEMO_LEADS_FILE: /leads/demo-requests.jsonl
     volumes:
-      - marketing-leads:/leads:ro
+      - demo-leads:/leads:ro
+    depends_on:
+      leads-init:
+        condition: service_completed_successfully
     mem_limit: 512m
     logging:
       driver: json-file
@@ -54,6 +58,16 @@ services:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
 
+  # T-994: `demo-leads` birimi kök sahipli oluşur; uygulama kullanıcısı (node) yazabilsin diye bir kez sahipliği verir ve çıkar.
+  leads-init:
+    image: etkinwms:${WMS_RELEASE:?WMS_RELEASE required}
+    user: "0:0"
+    command: ["sh", "-c", "chown node:node /leads && chmod 0700 /leads"]
+    restart: "no"
+    volumes:
+      - demo-leads:/leads
+    mem_limit: 64m
+
   marketing:
     image: etkinwms:${WMS_RELEASE:?WMS_RELEASE required}
     command: ["node", "/marketing/server.mjs"]
@@ -61,9 +75,14 @@ services:
     environment:
       PORT: 3200
       LEAD_DIR: /data
+      DEMO_LEADS_DIR: /leads
     volumes:
       - ../../marketing:/marketing:ro
       - marketing-leads:/data
+      - demo-leads:/leads
+    depends_on:
+      leads-init:
+        condition: service_completed_successfully
     expose: ["3200"]
     mem_limit: 256m
     logging:
@@ -74,3 +93,4 @@ volumes:
   caddy-data:
   caddy-config:
   marketing-leads:
+  demo-leads:

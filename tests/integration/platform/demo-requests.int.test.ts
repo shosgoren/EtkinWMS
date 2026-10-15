@@ -14,10 +14,11 @@ import {
   isPlatformOperator,
   listDemoRequests,
 } from "../../../packages/domain/src/platform/demo-requests.ts";
-import { readIntEnv } from "../harness/env.ts";
+import { readIntEnv, readWorkerDatabaseUrl } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
 let app: DbClient;
+let worker: DbClient;
 let adm: pg.Client;
 let operatorId: string;
 let otherId: string;
@@ -25,8 +26,11 @@ let operatorEmail: string;
 const leadIds: string[] = [];
 const ok = async (): Promise<void> => undefined;
 
-async function mkUser(email: string, verified = true): Promise<string> {
-  const r = await adm.query<{ id: string }>("INSERT INTO public.users (name, email, email_verified) VALUES ('T994 fixture', $1, $2) RETURNING id", [email, verified]);
+async function mkUser(email: string, verified = true, twoFactor = true): Promise<string> {
+  const r = await adm.query<{ id: string }>(
+    "INSERT INTO public.users (name, email, email_verified, two_factor_enabled) VALUES ('T994 fixture', $1, $2, $3) RETURNING id",
+    [email, verified, twoFactor],
+  );
   return (r.rows[0] as { id: string }).id;
 }
 
@@ -38,6 +42,7 @@ function lead(over: Partial<Record<string, unknown>> = {}): string {
 
 beforeAll(async () => {
   app = createDbClient({ url: env.databaseUrl, poolMax: DB_CLIENT_SETTINGS.poolMax, prepare: env.prepare ?? DB_CLIENT_SETTINGS.prepare });
+  worker = createDbClient({ url: readWorkerDatabaseUrl(process.env), poolMax: 1, prepare: env.prepare ?? DB_CLIENT_SETTINGS.prepare });
   adm = new pg.Client({ connectionString: env.databaseUrlDirect });
   adm.on("error", () => undefined);
   await adm.connect();
@@ -52,6 +57,7 @@ afterAll(async () => {
   await adm.query("DELETE FROM wms_platform.operators WHERE email_normalized = $1", [operatorEmail]).catch(() => undefined);
   await adm.end();
   await app.close();
+  await worker.close();
 }, 60_000);
 
 describe("0038 yetki sınırı", () => {
@@ -87,6 +93,31 @@ describe("0038 yetki sınırı", () => {
     expect(r.rows.length).toBe(4);
     for (const x of r.rows) expect(x, x.fn).toMatchObject({ owner: "wms_identity_probe", def: true, pub: false });
   });
+
+  it("içe alma yalnız wms_worker: web rolü (wms_app) talep ekleyemez (42501)", async () => {
+    await expect(ingestDemoLeads({ db: app, jsonl: `${lead()}\n` })).rejects.toMatchObject({});
+    const c = new pg.Client({ connectionString: env.databaseUrl });
+    await c.connect();
+    try {
+      await expect(
+        c.query("SELECT wms_probe.platform_ingest_demo_request($1::uuid, now(), 'a', 'b', 'c@d.ef', '', '')", [randomUUID()]),
+      ).rejects.toMatchObject({ code: "42501" });
+    } finally {
+      await c.end();
+    }
+  });
+
+  it("wms_app platform.* güvenlik olayını doğrudan yazamaz (sahte karar kaydı yok)", async () => {
+    const c = new pg.Client({ connectionString: env.databaseUrl });
+    await c.connect();
+    try {
+      await expect(
+        c.query("INSERT INTO public.security_events (user_id, event_type, detail) VALUES ($1, 'platform.demo_request.approved', '{}'::jsonb)", [operatorId]),
+      ).rejects.toMatchObject({ code: "42501" });
+    } finally {
+      await c.end();
+    }
+  });
 });
 
 describe("içe alma", () => {
@@ -94,8 +125,8 @@ describe("içe alma", () => {
     const a = lead();
     const b = lead({ sector: "Kauçuk", message: "Üç depo" });
     const jsonl = `${a}\n${b}\n{bozuk\n${JSON.stringify({ id: "x" })}\n`;
-    expect(await ingestDemoLeads({ db: app, jsonl })).toEqual({ inserted: 2, skipped: 2 });
-    expect(await ingestDemoLeads({ db: app, jsonl })).toEqual({ inserted: 0, skipped: 2 });
+    expect(await ingestDemoLeads({ db: worker, jsonl })).toEqual({ inserted: 2, skipped: 2 });
+    expect(await ingestDemoLeads({ db: worker, jsonl })).toEqual({ inserted: 0, skipped: 2 });
     const r = await adm.query<{ status: string; email: string }>("SELECT status, email FROM wms_platform.demo_requests WHERE id = $1", [JSON.parse(a).id]);
     expect(r.rows[0]?.status).toBe("PENDING");
   });
@@ -103,12 +134,12 @@ describe("içe alma", () => {
   it("kısıt reddeden satır (gelecek tarih) sonrakileri durdurmaz", async () => {
     const future = lead({ createdAt: new Date(Date.now() + 3_600_000).toISOString() });
     const good = lead();
-    expect(await ingestDemoLeads({ db: app, jsonl: `${future}\n${good}\n` })).toEqual({ inserted: 1, skipped: 1 });
+    expect(await ingestDemoLeads({ db: worker, jsonl: `${future}\n${good}\n` })).toEqual({ inserted: 1, skipped: 1 });
   });
 });
 
 describe("operatör", () => {
-  it("operatör listede; başka kullanıcı ve doğrulanmamış e-posta değil", async () => {
+  it("operatör listede; başka kullanıcı, doğrulanmamış e-posta ve iki adımlı doğrulaması kurulu olmayan hesap değil", async () => {
     expect(await isPlatformOperator({ db: app, principal: { userId: operatorId, mfaVerified: true } })).toBe(true);
     expect(await isPlatformOperator({ db: app, principal: { userId: otherId, mfaVerified: true } })).toBe(false);
     const unverified = `t994-u-${randomBytes(6).toString("hex")}@example.test`;
@@ -119,10 +150,18 @@ describe("operatör", () => {
     } finally {
       await adm.query("DELETE FROM wms_platform.operators WHERE email_normalized = $1", [unverified]);
     }
+    const no2fa = `t994-n-${randomBytes(6).toString("hex")}@example.test`;
+    const nid = await mkUser(no2fa, true, false);
+    await adm.query("INSERT INTO wms_platform.operators (email_normalized) VALUES ($1)", [no2fa]);
+    try {
+      expect(await isPlatformOperator({ db: app, principal: { userId: nid, mfaVerified: true } })).toBe(false);
+    } finally {
+      await adm.query("DELETE FROM wms_platform.operators WHERE email_normalized = $1", [no2fa]);
+    }
   });
 
   it("listeleme: operatör görür; operatör olmayan NOT_FOUND; MFA'sız FORBIDDEN/MFA_REQUIRED", async () => {
-    await ingestDemoLeads({ db: app, jsonl: `${lead()}\n` });
+    await ingestDemoLeads({ db: worker, jsonl: `${lead()}\n` });
     const rows = await listDemoRequests({ db: app, principal: { userId: operatorId, mfaVerified: true } });
     expect(rows.length).toBeGreaterThanOrEqual(1);
     await expect(listDemoRequests({ db: app, principal: { userId: otherId, mfaVerified: true } })).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -145,7 +184,7 @@ describe("karar", () => {
   it("onay bir kez; ikinci karar VERSION_CONFLICT; security_events kişisel veri taşımaz", async () => {
     const l = lead();
     const id = JSON.parse(l).id as string;
-    await ingestDemoLeads({ db: app, jsonl: `${l}\n` });
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
     const principal = { userId: operatorId, mfaVerified: true };
     expect(await decideDemoRequest({ db: app, principal, id, decision: "APPROVED", recentAuth: ok })).toBe("APPROVED");
     await expect(decideDemoRequest({ db: app, principal, id, decision: "REJECTED", recentAuth: ok })).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
@@ -164,7 +203,7 @@ describe("karar", () => {
   it("operatör olmayan karar veremez (NOT_FOUND); yakın zamanda doğrulama reddi RECENT_AUTH_REQUIRED; geçersiz girdi VALIDATION_FAILED", async () => {
     const l = lead();
     const id = JSON.parse(l).id as string;
-    await ingestDemoLeads({ db: app, jsonl: `${l}\n` });
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
     await expect(decideDemoRequest({ db: app, principal: { userId: otherId, mfaVerified: true }, id, decision: "APPROVED", recentAuth: ok })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });

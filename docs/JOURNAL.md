@@ -217,3 +217,4 @@
 - 2026-10-15 T-992: giriş/deneme alanı/saha PIN kararları ADR-026 (önerildi) + T-993…T-999 kartları; kod yok.
 - 2026-10-15 T-993: Giris.dc.html tasarım kaynağı onaylandı ve depoya alındı (kod yok).
 - 2026-10-15 T-994: demo talebi platform tablosu (0038) + worker içe alma + operatör ekranı (0 px); yayın T-995 ile.
+- T-994 güvenlik incelemesi 0/1/5 → M-1 ve m-1…m-4 düzeltildi; m-5 (saklama) KVKK kararına bağlı. Canlı compose VPS'te install.sh ile yenilenmeli.
