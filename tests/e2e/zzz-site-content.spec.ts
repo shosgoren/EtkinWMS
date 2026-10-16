@@ -5,6 +5,8 @@
 // (E2E_BASE_URL) bu test KAYITLI DEĞİLDİR (atlama değil; panel/satış sitesi örneği ve fikstür kavramı yok).
 import { randomBytes, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { loginPanel, scrubSecretInputs } from "./support/empty-tenant.ts";
 
@@ -53,7 +55,19 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     );
 
     await loginPanel(page, panel, { email, password, totpSecret }, "/satis");
-    await expect(page.getByRole("heading", { level: 1, name: "Satış sayfası" })).toBeVisible();
+    try {
+      await expect(page.getByRole("heading", { level: 1, name: "Satış sayfası" })).toBeVisible();
+    } catch (e) {
+      // Tanı: sayfa metni ve panel örneğinin maskeli günlüğündeki hata satırları (sır içermez; günlük maskelidir).
+      const body = (await page.locator("body").innerText().catch(() => "")).slice(0, 400);
+      let log = "";
+      try {
+        log = readFileSync(path.join(process.cwd(), ".artifacts/e2e/web-panel.log"), "utf8").split("\n").filter((l) => /error|Error/.test(l)).slice(-8).join("\n").slice(0, 1500);
+      } catch {
+        log = "(günlük okunamadı)";
+      }
+      throw new Error(`satis sayfası açılmadı: ${page.url()}\n--- sayfa ---\n${body}\n--- panel günlüğü ---\n${log}`, { cause: e });
+    }
     const title1 = `E2E başlık ${randomBytes(3).toString("hex")}`;
     await page.locator("#y-h1").fill(title1);
     await page.locator("#y-h2").fill("tek ekranda.");

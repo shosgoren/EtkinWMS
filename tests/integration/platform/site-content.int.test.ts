@@ -200,7 +200,7 @@ describe("satış sayfası içeriği", () => {
     const title1 = `T407 olay ${tag()}`;
     const r = await saveSiteContent({ ...op(), content: content({ title1 }), publish: true });
     const ev = await adm.query<{ event_type: string; detail: Record<string, unknown> }>(
-      "SELECT event_type, detail FROM public.security_events WHERE user_id = $1 AND event_type LIKE 'platform.site.%' ORDER BY created_at",
+      "SELECT event_type, detail FROM public.security_events WHERE user_id = $1 AND event_type LIKE 'platform.site.%' ORDER BY occurred_at",
       [operatorId],
     );
     const types = new Set(ev.rows.map((e) => e.event_type));
