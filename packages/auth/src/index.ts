@@ -1288,7 +1288,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
                        AND (s.updated_at < now() - make_interval(secs => ${FIELD_SESSION_IDLE_SEC})
                             OR s.created_at < now() - make_interval(secs => ${FIELD_SESSION_MAX_SEC}))`,
               ),
-            ).catch(() => undefined);
+            ).catch((e: unknown) => logMasked("error", "field idle session sweep failed", e));
           }
         }
         // T-997 (ADR-026 §7.2): saha hesabının iç e-postası (`@field.invalid`) e-posta/parola girişi ve sıfırlamada reddedilir

@@ -1,6 +1,9 @@
 -- 0044_field_logins geri alma (G-08, ADR-015 §9). Saha giriş bilgilerini (PIN özeti, bekleyen kod, cihaz kaydı) SİLER; hesaplar,
 -- üyelikler ve stok/iş kayıtları kalır. Yeniden kurulumda personel yeni etkinleştirme koduyla tekrar kaydolur (kimlik bilgisi; defter
 -- verisi değil — bu yüzden veri bekçisi yok).
+-- Açık saha oturumları da kapanır (giriş bilgisi geri alınırken oturum yaşamaz; inceleme A-2).
+DELETE FROM public.sessions s USING public.users u WHERE u.id = s.user_id AND pg_catalog.lower(u.email) LIKE '%@field.invalid';
+
 GRANT CREATE ON SCHEMA wms_probe TO wms_identity_probe;
 SET ROLE wms_identity_probe;
 DROP FUNCTION wms_probe.field_admin_reset(uuid, text, uuid);

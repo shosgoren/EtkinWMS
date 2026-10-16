@@ -229,6 +229,13 @@ describe("saha hesabı açılışı (yönetici)", () => {
     const { recentAuth: _omit, ...noReauth } = access(fx);
     void _omit;
     expect((await failure(createFieldUser({ ...noReauth, name: "Altı", username: `z${username}`, roleKey: "PICKER" }, accountPort))).detail).toBe("RECENT_AUTH_REQUIRED");
+    // Var olmayan depo kapsamı: hesap AÇILMAZ (kapsam aynı transaction'da; "tüm depolar" ile yarım hesap kalmaz).
+    const ghostWh = await failure(
+      createFieldUser({ ...access(fx), name: "Yedi", username: `w${username}`, roleKey: "PICKER", warehouseId: randomUUID() }, accountPort),
+    );
+    expect(ghostWh.code).toBe("VALIDATION_FAILED");
+    const leftover = await adm.query("SELECT count(*)::int AS n FROM public.field_logins WHERE tenant_id = $1 AND username = $2", [fx.tenant, `w${username}`]);
+    expect(leftover.rows[0]?.n).toBe(0);
     // PICKER üyesi saha hesabı açamaz.
     const picker = await enrolled(fx);
     const asPicker = { db: app, principal: { userId: picker.userId, mfaVerified: true }, tenantSlug: fx.slug, recentAuth };

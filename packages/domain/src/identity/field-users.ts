@@ -116,10 +116,17 @@ function newCode(): { code: string; hash: string } {
   return { code, hash: activationCodeHash(normalized) };
 }
 
-export type CreateFieldUserParams = CommandParams & { readonly name: string; readonly username: string; readonly roleKey: string };
+export type CreateFieldUserParams = CommandParams & {
+  readonly name: string;
+  readonly username: string;
+  readonly roleKey: string;
+  /** Tek depo kapsamı (aynı transaction); verilmezse tüm depolar (A-77). */
+  readonly warehouseId?: string | null;
+};
 
 export async function createFieldUser(params: CreateFieldUserParams, deps: FieldUserDeps): Promise<CreateFieldUserResult> {
-  const { name: rawName, username: rawUsername, roleKey: rawRole, requestId, ...access } = params;
+  const { name: rawName, username: rawUsername, roleKey: rawRole, warehouseId: rawWarehouse, requestId, ...access } = params;
+  const warehouseId = rawWarehouse === undefined || rawWarehouse === null ? null : parseUuid(rawWarehouse);
   const name = parseName(rawName);
   const role = parseFieldRole(rawRole);
   const username = typeof rawUsername === "string" ? normalizeFieldUsername(rawUsername) : null;
@@ -161,6 +168,17 @@ export async function createFieldUser(params: CreateFieldUserParams, deps: Field
       );
       const raw = login[0]?.expires;
       if (raw === undefined) throw new Error("createFieldUser: field login insert returned no row");
+      // Depo kapsamı hesapla AYNI transaction'da (yarıda kalırsa "tüm depolar" ile hesap kalmaz; inceleme B-1).
+      if (warehouseId !== null) {
+        const wh = await tx.execute<{ one: number }>(
+          sql`SELECT 1 AS one FROM public.warehouses WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${warehouseId}::uuid AND status = 'ACTIVE'`,
+        );
+        if (wh.length === 0) throw new AppError("VALIDATION_FAILED");
+        await tx.execute(
+          sql`INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id)
+              VALUES (${actor.tenantId}::uuid, ${membershipId}::uuid, ${warehouseId}::uuid)`,
+        );
+      }
       const expiresAt = raw instanceof Date ? raw : new Date(raw);
       await appendAudit(tx, {
         action: "field_user.created",
@@ -168,7 +186,7 @@ export async function createFieldUser(params: CreateFieldUserParams, deps: Field
         entityType: "membership",
         entityId: membershipId,
         requestId: requestId ?? null,
-        changeSummary: { role_key: role, username },
+        changeSummary: { role_key: role, username, warehouse_id: warehouseId },
       });
       return { userId, membershipId, username, code, expiresAt };
     });
