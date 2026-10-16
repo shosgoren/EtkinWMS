@@ -52,9 +52,9 @@ export const MESSAGES: Record<MailLocale, { email: Record<MailTemplate, Template
       },
       password_reset: {
         subject: `${PRODUCT_NAME} password reset`,
-        title: "Reset your password",
+        title: "Choose a new password",
         intro: `A password reset was requested for your ${PRODUCT_NAME} account.`,
-        button: "Choose a new password",
+        button: "Open the reset page",
         action: "Open the link to choose a new password:",
         expiry: "The link is valid for 30 minutes and can be used once.",
         ignore: "If you did not request this, you can ignore this email.",

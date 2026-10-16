@@ -26,7 +26,7 @@ const ACT = {
     subject: `Your ${PRODUCT_NAME} trial is approved`,
     hello: (co: string) => `Your demo request for ${co} has been approved.`,
     body: "All features are available for 3 months. Open the link to set up your workspace; it takes four steps.",
-    button: "Set up workspace",
+    button: "Create your workspace",
     expiry: "The link is valid for 72 hours and can be used once.",
     ignore: "If you did not make this request, you can ignore this email.",
   },
