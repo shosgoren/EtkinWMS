@@ -1494,14 +1494,18 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       ]);
       for (const p of pol.rows) expect(p.roles, p.policyname).toEqual(["wms_identity_probe"]);
       const priv = await c.query<Record<string, boolean>>(
-        `SELECT has_any_column_privilege('wms_identity_probe', 'public.tenants', 'UPDATE') AS tenants_upd,
+        // T-403 (0042, ADR-027 §3): tek istisna tenants.status sütun yetkisi (askıya alma; yazma politikası yok, yalnız operatör
+        // denetimli işlevden ve o satırın tenant bağlamıyla). Diğer sütunlar yazılamaz.
+        `SELECT (SELECT array_agg(a.attname ORDER BY a.attname) FROM pg_attribute a
+                  WHERE a.attrelid = 'public.tenants'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+                    AND has_column_privilege('wms_identity_probe', 'public.tenants', a.attname, 'UPDATE'))::text AS tenants_upd,
                 has_any_column_privilege('wms_identity_probe', 'public.tenant_memberships', 'UPDATE') AS memberships_upd,
                 has_any_column_privilege('wms_identity_probe', 'public.invitations', 'UPDATE') AS invitations_upd,
                 has_any_column_privilege('wms_identity_probe', 'public.membership_roles', 'UPDATE') AS roles_upd,
                 has_column_privilege('wms_identity_probe', 'public.users', 'id', 'UPDATE') AS users_upd,
                 has_table_privilege('wms_identity_probe', 'public.tenants', 'SELECT') AS tenants_sel`,
       );
-      expect(priv.rows[0]).toEqual({ tenants_upd: false, memberships_upd: false, invitations_upd: false, roles_upd: false, users_upd: true, tenants_sel: true });
+      expect(priv.rows[0]).toEqual({ tenants_upd: "{status}", memberships_upd: false, invitations_upd: false, roles_upd: false, users_upd: true, tenants_sel: true });
     });
     // OR'lanma: probe rolü için `USING (true)` izolasyonu kaldırır (tenant bağlamı olmadan TÜM tenant'ları görür) ...
     const asProbe = await openClient(env.databaseUrlDirect);
@@ -1511,8 +1515,12 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
     const write = await attempt(asProbe, "UPDATE public.tenants SET name = name WHERE id = $1", [f.a], [`SET LOCAL ROLE ${PROBE_ROLE}`]);
     expect(write.ok).toBe(false);
     if (!write.ok) expect(write.code).toBe(INSUFFICIENT_PRIVILEGE);
+    // Kilit/durum: bağlamsız probe hiçbir tenant satırını kilitleyemez ya da güncelleyemez (güncelleme politikası yok; 0042 sonrası
+    // yetki hatası yerine boş sonuç).
     const lock = await attempt(asProbe, "SELECT id FROM public.tenants WHERE id = $1 FOR UPDATE", [f.a], [`SET LOCAL ROLE ${PROBE_ROLE}`]);
-    expect(lock.ok).toBe(false);
+    expect(lock.ok ? lock.rows : []).toEqual([]);
+    const status = await attempt(asProbe, "UPDATE public.tenants SET status = 'SUSPENDED' WHERE id = $1 RETURNING id", [f.a], [`SET LOCAL ROLE ${PROBE_ROLE}`]);
+    expect(status.ok ? status.rows : []).toEqual([]);
     // wms_app için probe politikası görünmez: başka tenant bağlamıyla yalnızca kendi tenant'ı görünür.
     const appSees = await expectOk(appRaw, "SELECT id FROM public.tenants WHERE id = ANY($1::uuid[])", [[f.a, f.b]], [`SELECT set_config('app.current_tenant_id', '${f.a}', true)`]);
     expect(appSees).toEqual([{ id: f.a }]);
