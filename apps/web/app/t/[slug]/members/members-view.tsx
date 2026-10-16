@@ -233,7 +233,7 @@ export function MembersView({
                     {m.field ? <span className={`${BADGE} bg-accent-soft text-accent-ink`}>{t("fieldBadge")}</span> : null}
                     {m.field?.locked ? <span className={`${BADGE} bg-warning-bg text-warning-ink`}>{t("fieldLocked")}</span> : null}
                   </div>
-                  {m.field ? (
+                  {m.field && m.field.username === "" ? null : m.field ? (
                     <p className="min-w-0 truncate text-base text-ink-muted">
                       {`@${m.field.username} · `}
                       {m.field.active ? t("fieldActive") : m.field.pendingUntil !== null ? t("fieldPending", { until: when(m.field.pendingUntil) }) : t("fieldNoCode")}

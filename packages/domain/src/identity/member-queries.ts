@@ -14,6 +14,7 @@
 //   `membership_roles` politikası gereği tenant bağlamı ister; her tenant için `withMembership` (kendi doğrulanmış üyeliği,
 //   roller `membership.roles`) kullanılır. Askıda/kapanan tenant `withMembership` ile reddedilir ve özetten düşer.
 import { sql } from "drizzle-orm";
+import { isFieldEmail } from "@wms/shared/field-login";
 import { MembershipError, withMembership, withUser } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type AccessDbClient, type AccessPrincipal, type TenantAccessParams } from "./access.ts";
@@ -124,10 +125,14 @@ export async function listMembers(params: QueryParams, deps: MemberQueryDeps): P
     }
     return rows.map((r) => {
       const isDemo = isDemoAddress(r.email, deps.demoEmailDomain);
+      // Saha ayrıntısı (kullanıcı adı, kilit, kod durumu) yalnız yöneticiye (inceleme B-2); diğerlerine yalnız "saha" işareti.
+      const isField = r.username !== null || isFieldEmail(r.email);
       const field =
-        r.username === null
+        !isField
           ? undefined
-          : {
+          : !canManage || r.username === null
+            ? { username: "", active: false, pendingUntil: null, locked: false }
+            : {
               username: r.username,
               active: r.pin_set === true,
               pendingUntil: r.pending_until === null ? null : new Date(r.pending_until),
@@ -137,13 +142,13 @@ export async function listMembers(params: QueryParams, deps: MemberQueryDeps): P
         membershipId: r.id,
         userId: r.user_id,
         displayName: r.name,
-        email: field !== undefined ? "" : canManage ? r.email : maskEmail(r.email),
+        email: isField ? "" : canManage ? r.email : maskEmail(r.email),
         ...(field === undefined ? {} : { field }),
         roles: rolesBy.get(r.id) ?? [],
         isOwner: r.is_owner,
         status: "ACTIVE" as const,
         isDemo,
-        resetLinkAvailable: field === undefined && resetLinkPrechecks({
+        resetLinkAvailable: !isField && resetLinkPrechecks({
           callerCanManage: canManage,
           tenantIsDemo,
           isSelf: r.user_id === actor.userId,

@@ -11,7 +11,6 @@ import {
   revokeUserSessions,
 } from "../../../../lib/auth-service.ts";
 import { createFieldUser, resetFieldCode, unlockFieldLogin } from "@wms/domain/identity/field-users";
-import { setMembershipWarehouseScopes } from "@wms/domain/warehouse";
 import {
   changeRole,
   issuePasswordResetLink,
@@ -214,19 +213,13 @@ export async function createFieldUserAction(raw: unknown) {
         name: input.name,
         username: input.username,
         roleKey: input.roleKey,
+        warehouseId: input.warehouseId,
         requestId: ctx.requestId,
         // Kimlik bilgisi veren komut: yakın zamanda doğrulama zorunlu (A-39; T-997 inceleme M4).
         recentAuth: () => ensureRecentAuth(requestHeaders),
       },
       { createFieldAccount },
     );
-    // Tek depo seçildiyse kapsam (A-77: seçilmezse tüm depolar).
-    if (input.warehouseId !== null) {
-      await setMembershipWarehouseScopes(
-        { db: getAppDb(), principal, tenantSlug: input.slug },
-        { membershipId: result.membershipId, warehouseIds: [input.warehouseId], requestId: ctx.requestId },
-      );
-    }
     return { membershipId: result.membershipId, username: result.username, code: result.code, expiresAt: result.expiresAt.toISOString() };
   })(raw);
 }
