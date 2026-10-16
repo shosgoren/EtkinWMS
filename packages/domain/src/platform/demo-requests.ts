@@ -56,7 +56,7 @@ function sqlstateOf(e: unknown): string | undefined {
 }
 
 /** Veritabanı retlerini sözleşme kodlarına çevirir; kök neden yalnızca `cause`'da kalır. */
-function mapPlatformError(e: unknown): unknown {
+export function mapPlatformError(e: unknown): unknown {
   if (e instanceof AppError) return e;
   const state = sqlstateOf(e);
   const wrap = (code: "FORBIDDEN" | "NOT_FOUND" | "VERSION_CONFLICT" | "VALIDATION_FAILED" | "INTERNAL"): AppError => {
@@ -71,7 +71,7 @@ function mapPlatformError(e: unknown): unknown {
   return wrap("INTERNAL");
 }
 
-function principalOrThrow(principal: AccessPrincipal | null | undefined): AccessPrincipal {
+export function principalOrThrow(principal: AccessPrincipal | null | undefined): AccessPrincipal {
   if (principal === null || principal === undefined) throw new AppError("UNAUTHENTICATED");
   if (!principal.mfaVerified) throw new AppError("FORBIDDEN", { detail: "MFA_REQUIRED" });
   return principal;
@@ -161,7 +161,7 @@ export interface DecideDemoRequestResult {
   readonly activation?: IssuedActivation;
 }
 
-async function operatorWithRecentAuth(params: {
+export async function operatorWithRecentAuth(params: {
   readonly db: AccessDbClient;
   readonly principal: AccessPrincipal | null;
   readonly recentAuth: () => Promise<void>;

@@ -302,7 +302,9 @@
       "retry": "Try again",
       "boundaryTitle": "Something went wrong",
       "supportCode": "Support code: {code}",
-      "tenantStatusTitle": "Workspace unavailable"
+      "tenantStatusTitle": "Workspace unavailable",
+      "validation_failed_plan_limit": "You have reached your plan's user limit.",
+      "validation_failed_plan_limitAction": "Remove a user who no longer needs access, or contact us to upgrade your plan."
     },
     "demoLocked": "This action is disabled for the demo account."
   },
@@ -386,7 +388,11 @@
     "validation_failed_too_many_lines": "At most 200 lines can be reversed at once.",
     "validation_failed_too_many_linesAction": "Split the lines into groups of 200 and make a separate reversal for each group.",
     "forbidden_warehouse_out_of_scope": "This warehouse is outside your scope.",
-    "forbidden_warehouse_out_of_scopeAction": "If you need access, ask your workspace admin to add it to your scope."
+    "forbidden_warehouse_out_of_scopeAction": "If you need access, ask your workspace admin to add it to your scope.",
+    "validation_failed_plan_limit": "You have reached your plan's limit.",
+    "validation_failed_plan_limitAction": "Archive a record you no longer use, or contact us to upgrade your plan.",
+    "validation_failed_plan_invalid": "The plan details are invalid.",
+    "validation_failed_plan_invalidAction": "Check the name, price and limits and try again."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -1089,7 +1095,9 @@
       "tenant_closing": "The workspace is being closed.",
       "tenant_closingAction": "Contact your manager.",
       "internal": "Something went wrong.",
-      "internalAction": "Try again shortly; if it continues, send the error code to support."
+      "internalAction": "Try again shortly; if it continues, send the error code to support.",
+      "validation_failed_plan_limit": "You have reached your plan's item limit.",
+      "validation_failed_plan_limitAction": "Archive items you no longer use, or contact us to upgrade your plan."
     },
     "locked": "You do not have permission to view products.",
     "lockedAction": "Ask your workspace manager.",
@@ -1229,7 +1237,9 @@
       "idempotency_mismatch": "This request id was used with different input.",
       "idempotency_mismatchAction": "Close and reopen the form, then try again.",
       "validation_failed_code_ambiguous": "This old code appears in the history of more than one location, so it is unclear which one you mean.",
-      "validation_failed_code_ambiguousAction": "Search using the location's current code."
+      "validation_failed_code_ambiguousAction": "Search using the location's current code.",
+      "validation_failed_plan_limit": "You have reached your plan's warehouse limit.",
+      "validation_failed_plan_limitAction": "Archive a warehouse you no longer use, or contact us to upgrade your plan."
     },
     "codeEdit": {
       "button": "Change code",
@@ -2343,7 +2353,8 @@
     "signOutFailed": "Could not sign out, try again.",
     "theme": "Light / dark view",
     "nav": {
-      "talepler": "Demo requests"
+      "talepler": "Demo requests",
+      "paketler": "Plans"
     },
     "talepler": {
       "title": "Demo requests",
@@ -2373,7 +2384,47 @@
       "sentScreen": "APPROVED · SEND THE LINK",
       "expired": "LINK EXPIRED",
       "activated": "WORKSPACE OPENED"
-    }
+    },
+    "paketler": {
+      "title": "Plans",
+      "sub": "PAIRED WITH THE SALES PAGE AND IYZICO PLANS",
+      "newPlan": "New plan",
+      "newName": "New plan",
+      "banTitle": "Published plans appear on the sales page",
+      "banBody": "A price change applies to new customers immediately and to existing customers from their next period. The payment provider plan is updated automatically.",
+      "published": "PUBLISHED",
+      "draft": "DRAFT",
+      "recommended": "RECOMMENDED",
+      "perMonth": "/ MO",
+      "customers": "{n} CUSTOMERS ON THIS PLAN",
+      "unlimited": "Unlimited",
+      "admins": "admins",
+      "field": "field staff",
+      "warehouses": "warehouses",
+      "items": "items",
+      "edit": "EDIT PLAN",
+      "name": "PLAN NAME",
+      "price": "MONTHLY PRICE",
+      "priceSuffix": "₺ + VAT / MO",
+      "limAdmins": "ADMIN USERS",
+      "limField": "FIELD STAFF",
+      "limWarehouses": "WAREHOUSES",
+      "limItems": "ITEMS (PRODUCTS)",
+      "atMost": "AT MOST",
+      "unlimitedSuffix": "UNLIMITED",
+      "features": "FEATURES",
+      "fQr": "QR package label",
+      "fShip": "Shipping and picking",
+      "fProd": "Production and recipes",
+      "fApi": "ERP / API connection",
+      "publish": "PUBLISHING",
+      "fPublish": "Publish on the sales page",
+      "fRecommended": "Mark as “Recommended”",
+      "saveDraft": "Save as draft",
+      "savePublish": "Save and publish",
+      "error": "The plan could not be saved ({code}). Check the price and limits and try again."
+    },
+    "back": "Back"
   },
   "activate": {
     "title": "Set up your workspace",

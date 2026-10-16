@@ -25,6 +25,8 @@ export interface PanelShellLabels {
   readonly signOut: string;
   readonly signOutFailed: string;
   readonly theme: string;
+  /** Geri düğmesinin erişilebilir adı (kaynak "Geri"). */
+  readonly back?: string;
 }
 
 interface Props {
@@ -34,6 +36,10 @@ interface Props {
   readonly title: string;
   readonly sub: string;
   readonly labels: PanelShellLabels;
+  /** Başlıktaki geri düğmesi (kaynak `showBack`, ör. müşteri detayı → Müşteriler). */
+  readonly backHref?: string;
+  /** Başlıktaki eylem düğmesi (kaynak `head.act`, ör. "Yeni paket"). */
+  readonly action?: { readonly label: string; readonly href: string };
   readonly children: ReactNode;
 }
 
@@ -54,7 +60,7 @@ function ThemeButton({ label }: { label: string }) {
   );
 }
 
-function Inner({ current, nav, title, sub, labels, children }: Omit<Props, "dark">) {
+function Inner({ current, nav, title, sub, labels, backHref, action, children }: Omit<Props, "dark">) {
   const router = useRouter();
   const [failed, setFailed] = useState(false);
   async function signOut(): Promise<void> {
@@ -108,10 +114,21 @@ function Inner({ current, nav, title, sub, labels, children }: Omit<Props, "dark
 
       <div className="main">
         <header className="top">
+          {backHref === undefined ? null : (
+            <button type="button" className="icb" style={{ background: C.surface }} onClick={() => router.push(backHref)} aria-label={labels.back}>
+              <Ico d={YICON.back} size={22} sw={3} />
+            </button>
+          )}
           <div className="top-t">
             <h1 className="top-h">{title}</h1>
             <span className="top-s">{sub}</span>
           </div>
+          {action === undefined ? null : (
+            <button type="button" className="btn" style={{ background: dz("172E42"), color: dz("FFFFFF") }} onClick={() => router.push(action.href)}>
+              <Ico d={YICON.plus} size={20} sw={2.8} />
+              <span className="tx">{action.label}</span>
+            </button>
+          )}
           <ThemeButton label={labels.theme} />
         </header>
         <div className="mtabs" role="tablist" aria-label={labels.menu}>
