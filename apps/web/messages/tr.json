@@ -421,7 +421,9 @@
     "validation_failed_payment_invalid": "Ödeme kaydı geçersiz.",
     "validation_failed_payment_invalidAction": "Tarihi (bugün ya da önce), yöntemi ve notu kontrol edin.",
     "validation_failed_code_mismatch": "Doğrulama kodu terminaldeki kodla aynı değil.",
-    "validation_failed_code_mismatchAction": "Terminal ekranındaki 6 haneli kodu yeniden yazın; 3 yanlışta QR yenilenir."
+    "validation_failed_code_mismatchAction": "Terminal ekranındaki 6 haneli kodu yeniden yazın; 3 yanlışta QR yenilenir.",
+    "validation_failed_site_invalid": "Satış sayfası metni geçersiz.",
+    "validation_failed_site_invalidAction": "Başlık 80, vurgulu satır 60, alt metin 400 karakteri geçmesin; < ve > kullanmayın."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",

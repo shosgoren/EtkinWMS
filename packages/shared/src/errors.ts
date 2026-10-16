@@ -59,6 +59,8 @@ export const ERROR_DETAILS = [
   "PAYMENT_INVALID",
   // T-998: ortak cihaz onayında terminal doğrulama kodu eşleşmedi.
   "CODE_MISMATCH",
+  // T-407: satış sayfası metni/paket seçimi geçersiz (panel).
+  "SITE_INVALID",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -94,6 +96,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   REASON_REQUIRED: "VALIDATION_FAILED",
   PAYMENT_INVALID: "VALIDATION_FAILED",
   CODE_MISMATCH: "VALIDATION_FAILED",
+  SITE_INVALID: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {
