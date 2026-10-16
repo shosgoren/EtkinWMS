@@ -23,19 +23,12 @@ import {
 } from "../identity/access.ts";
 import { seedStandardUnits } from "../catalog/units.ts";
 import { applyLocationsStep, applyUnitsStep, type SetupCallParams } from "./stock-setup.ts";
+import { RESERVED_SLUGS } from "./reserved.ts";
 import { PHASE1_STEP_KEYS, PHASE2_STEP_KEYS, getTemplate, type OnboardingStepKey, type SectorTemplate } from "./templates.ts";
 
 export const SUPPORTED_LOCALES: readonly string[] = Object.freeze(["tr", "en"]);
 
-/**
- * Ayrılmış slug'lar (ADR-016 5. tur eki MINOR-5). Karşılaştırma küçük harfe çevrildikten sonra yapılır; üretilen slug
- * da tabidir. `demo` yalnızca demo tenant'a aittir (DB de `tenants_slug_chk` ile zorlar).
- */
-export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
-  "demo", "admin", "api", "app", "auth", "login", "logout", "signup", "register", "onboarding", "invite", "invitations",
-  "t", "www", "static", "assets", "_next", "health", "status", "support", "help", "docs", "billing", "settings",
-  "system", "root", "null", "undefined", "wms", "staging", "prod", "production", "test", "mail",
-]);
+export { RESERVED_SLUGS };
 
 const SLUG_FORMAT = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -214,26 +207,42 @@ async function createWithSlug(
       }
       return { tenantId: m.tenantId, slug, created: false };
     }
-    const steps: StepState[] = template.steps.map((key) => ({ key, status: "PENDING" }));
-    await tx.execute(
-      sql`INSERT INTO public.tenant_settings
-            (tenant_id, locale, time_zone, sector_template_key, sector_template_version, terminology,
-             onboarding_status, onboarding_steps)
-          VALUES (${m.tenantId}::uuid, ${template.locale}, ${template.timeZone}, ${template.key}, ${template.version},
-                  ${JSON.stringify(template.terminology)}::jsonb, 'IN_PROGRESS', ${JSON.stringify(steps)}::jsonb)`,
-    );
-    await appendAudit(tx, {
-      action: "tenant.created",
-      actorUserId: userId,
-      entityType: "tenant",
-      entityId: m.tenantId,
-      requestId,
-      changeSummary: { slug, templateKey: template.key, templateVersion: template.version },
-    });
-    // T-911: standart birim seti (ADET, KG, …) tenant'la birlikte, aynı transaction'da kurulur; şablonun birim adımı çakışan kodu atlar.
-    await seedStandardUnits(tx, m.tenantId, userId, requestId);
+    await initializeNewTenant(tx, m.tenantId, userId, slug, template, requestId);
     return { tenantId: m.tenantId, slug, created: true };
   });
+}
+
+/**
+ * Yeni tenant'ın ilk kayıtları (`withNewTenant` içinde, aynı transaction): ayarlar + onboarding adımları, `tenant.created` audit'i ve
+ * standart birimler. `createWorkspace` ve deneme aktivasyonu (T-995) ortak kullanır.
+ */
+export async function initializeNewTenant(
+  tx: AccessTx,
+  tenantId: string,
+  userId: string,
+  slug: string,
+  template: SectorTemplate,
+  requestId: string,
+  extraAudit: Readonly<Record<string, unknown>> = {},
+): Promise<void> {
+  const steps: StepState[] = template.steps.map((key) => ({ key, status: "PENDING" }));
+  await tx.execute(
+    sql`INSERT INTO public.tenant_settings
+          (tenant_id, locale, time_zone, sector_template_key, sector_template_version, terminology,
+           onboarding_status, onboarding_steps)
+        VALUES (${tenantId}::uuid, ${template.locale}, ${template.timeZone}, ${template.key}, ${template.version},
+                ${JSON.stringify(template.terminology)}::jsonb, 'IN_PROGRESS', ${JSON.stringify(steps)}::jsonb)`,
+  );
+  await appendAudit(tx, {
+    action: "tenant.created",
+    actorUserId: userId,
+    entityType: "tenant",
+    entityId: tenantId,
+    requestId,
+    changeSummary: { slug, templateKey: template.key, templateVersion: template.version, ...extraAudit },
+  });
+  // T-911: standart birim seti (ADET, KG, …) tenant'la birlikte, aynı transaction'da kurulur; şablonun birim adımı çakışan kodu atlar.
+  await seedStandardUnits(tx, tenantId, userId, requestId);
 }
 
 // ---------------------------------------------------------------------------------------------

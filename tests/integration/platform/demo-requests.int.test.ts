@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { AppError } from "../../../packages/shared/src/errors.ts";
+import { loadMailConfig } from "../../../packages/shared/src/mailer.ts";
 import {
   decideDemoRequest,
   ingestDemoLeads,
@@ -25,6 +26,8 @@ let otherId: string;
 let operatorEmail: string;
 const leadIds: string[] = [];
 const ok = async (): Promise<void> => undefined;
+/** T-995: onay aktivasyon bağlantısı da verir; posta kapalı → ekranda teslim (kuyruğa iş yazılmaz). */
+const deps = { mailConfig: loadMailConfig({ MAIL_MODE: "disabled" }), queue: { enqueuePlatform: async () => ({ jobId: null }) } };
 
 async function mkUser(email: string, verified = true, twoFactor = true): Promise<string> {
   const r = await adm.query<{ id: string }>(
@@ -53,6 +56,7 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
+  await adm.query("DELETE FROM wms_platform.subscriptions WHERE demo_request_id = ANY($1::uuid[])", [leadIds]).catch(() => undefined);
   await adm.query("DELETE FROM wms_platform.demo_requests WHERE id = ANY($1::uuid[])", [leadIds]).catch(() => undefined);
   await adm.query("DELETE FROM wms_platform.operators WHERE email_normalized = $1", [operatorEmail]).catch(() => undefined);
   await adm.end();
@@ -90,7 +94,7 @@ describe("0038 yetki sınırı", () => {
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'wms_probe' AND p.proname LIKE 'platform\\_%'`,
     );
-    expect(r.rows.length).toBe(4);
+    expect(r.rows.length).toBe(14); // 0038: 4, 0039 (T-995): +10
     for (const x of r.rows) expect(x, x.fn).toMatchObject({ owner: "wms_identity_probe", def: true, pub: false });
   });
 
@@ -194,8 +198,11 @@ describe("karar", () => {
     const id = JSON.parse(l).id as string;
     await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
     const principal = { userId: operatorId, mfaVerified: true };
-    expect(await decideDemoRequest({ db: app, principal, id, decision: "APPROVED", recentAuth: ok })).toBe("APPROVED");
-    await expect(decideDemoRequest({ db: app, principal, id, decision: "REJECTED", recentAuth: ok })).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    const approved = await decideDemoRequest({ db: app, principal, id, decision: "APPROVED", recentAuth: ok }, deps);
+    expect(approved.decision).toBe("APPROVED");
+    expect(approved.activation).toMatchObject({ delivery: "SCREEN", screenReason: "DELIVERY_UNAVAILABLE" });
+    expect(approved.activation?.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    await expect(decideDemoRequest({ db: app, principal, id, decision: "REJECTED", recentAuth: ok }, deps)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
     const row = await adm.query<{ status: string; decided_by: string; decided: boolean }>(
       "SELECT status, decided_by, decided_at IS NOT NULL AS decided FROM wms_platform.demo_requests WHERE id = $1",
       [id],
@@ -212,18 +219,18 @@ describe("karar", () => {
     const l = lead();
     const id = JSON.parse(l).id as string;
     await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
-    await expect(decideDemoRequest({ db: app, principal: { userId: otherId, mfaVerified: true }, id, decision: "APPROVED", recentAuth: ok })).rejects.toMatchObject({
+    await expect(decideDemoRequest({ db: app, principal: { userId: otherId, mfaVerified: true }, id, decision: "APPROVED", recentAuth: ok }, deps)).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
     const reauth = async (): Promise<void> => {
       throw Object.assign(new Error("reauth"), { reason: "REAUTH_REQUIRED" });
     };
-    await expect(decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id, decision: "APPROVED", recentAuth: reauth })).rejects.toMatchObject({
+    await expect(decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id, decision: "APPROVED", recentAuth: reauth }, deps)).rejects.toMatchObject({
       code: "UNAUTHENTICATED",
       detail: "RECENT_AUTH_REQUIRED",
     });
-    await expect(decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id, decision: "DELETE", recentAuth: ok })).rejects.toBeInstanceOf(AppError);
-    await expect(decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id: "x", decision: "APPROVED", recentAuth: ok })).rejects.toMatchObject({
+    await expect(decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id, decision: "DELETE", recentAuth: ok }, deps)).rejects.toBeInstanceOf(AppError);
+    await expect(decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id: "x", decision: "APPROVED", recentAuth: ok }, deps)).rejects.toMatchObject({
       code: "VALIDATION_FAILED",
     });
     const st = await adm.query<{ status: string }>("SELECT status FROM wms_platform.demo_requests WHERE id = $1", [id]);
@@ -232,7 +239,7 @@ describe("karar", () => {
 
   it("olmayan talep NOT_FOUND", async () => {
     await expect(
-      decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id: randomUUID(), decision: "REJECTED", recentAuth: ok }),
+      decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id: randomUUID(), decision: "REJECTED", recentAuth: ok }, deps),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

@@ -43,7 +43,8 @@ const QUEUE_DEFAULTS = { retryLimit: 5, retryDelay: 30, retryBackoff: true } as 
  * İş türü başına `expireInSeconds` (T-281). Adaptör `supervise: false` çalıştığı için süresi dolan `active` işi worker bakımı
  * (`requeueExpiredJobs`) `retry`/`failed` yapar; bu süre bir denemenin EN UZUN meşru çalışmasından uzun olmalı (yoksa canlı iş yanlışlıkla
  * ikinci kez teslim edilir), ama çöken bir worker'ın işini de gereksiz geciktirmemeli. Tür sayısı sabittir: yeni tür bu tabloya eklenmeden derlenmez.
- * - `email.send`, `invitation.deliver`: tek HTTP çağrısı (15 sn istek zaman aşımı) + kiracı/mühür denetimi → 300 sn.
+ * - `email.send`, `invitation.deliver`, `platform.activation.deliver`, `trial.welcome`: tek HTTP çağrısı (15 sn istek zaman aşımı) +
+ *   kiracı/mühür denetimi → 300 sn.
  * - `stock.document.post`: tek transaction'da büyük belge (ADR-019 §1); pg-boss varsayılanı 15 dk korunur. MFA penceresi bu değerden türetilir
  *   (`postingMfaWindowSeconds`): değiştirmek pencereyi de değiştirir.
  * - `demo.reseed`, `stock.consistency.check`: kiracı çapında uzun tarama/onarım (parola özeti üretimi, tüm bakiyeler) → 1800 sn.
@@ -54,6 +55,8 @@ export const QUEUE_EXPIRE_SECONDS: { readonly [T in JobType]: number } = {
   "demo.reseed": 1800,
   "stock.document.post": 900,
   "stock.consistency.check": 1800,
+  "platform.activation.deliver": 300,
+  "trial.welcome": 300,
 };
 
 /** İş zarfı: tenant kimliği yükten AYRI saklanır; yalnızca `enqueue` yazar. */

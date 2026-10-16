@@ -20,7 +20,7 @@ services:
     image: etkinwms:${WMS_RELEASE:?required}
     restart: unless-stopped
     env_file: /opt/etkinwms/secrets/web.env
-    environment: {PORT: 3000, HOSTNAME: 0.0.0.0, NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt, APP_SURFACE: panel, BETTER_AUTH_URL: 'https://yonet.etkinyazilim.com'}
+    environment: {PORT: 3000, HOSTNAME: 0.0.0.0, NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt, APP_SURFACE: panel, BETTER_AUTH_URL: 'https://yonet.etkinyazilim.com', WMS_APP_URL: 'https://wms.etkinyazilim.com'}
     volumes: [/opt/etkinwms/database/tls/ca.crt:/run/etkinwms-db-ca.crt:ro]
     expose: ['3000']
     mem_limit: 768m

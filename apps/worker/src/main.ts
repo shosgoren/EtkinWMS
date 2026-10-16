@@ -15,6 +15,7 @@ import { startDemoLeadsSchedule } from "./jobs/demo-leads.js";
 import { DEMO_RESEED_SINGLETON_KEY, registerDemoReseed } from "./jobs/demo-reseed.js";
 import { createPostStockDocumentHandler } from "./jobs/post-stock-document.js";
 import { startQueueMaintenance } from "./jobs/queue-maintenance.js";
+import { createActivationDeliverHandler, createTrialWelcomeHandler } from "./jobs/trial-activation.js";
 import { startWorkerHeartbeat, workerInstanceId, workerVersion } from "./jobs/worker-heartbeat.js";
 import { consistencySingletonKey, createStockConsistencyHandler, startConsistencySchedule } from "./jobs/stock-consistency.js";
 import { createMailer, createSendEmailHandler } from "./jobs/send-email.js";
@@ -62,6 +63,8 @@ function requireEnv(name: string): string {
 }
 const databaseUrl = requireEnv("DATABASE_URL");
 const workerDatabaseUrl = requireEnv("DATABASE_URL_WORKER");
+// `wms_worker` bağlantısı (pgboss bakımı, heartbeat, demo talebi içe alma, aktivasyon belirteci — T-995). Tenant verisine erişemez.
+const workerDb = createDbClient({ url: workerDatabaseUrl, poolMax: 1, prepare: false });
 
 // E-posta (T-116): geçersiz MAIL_MODE veya boş/kısa/yer tutucu QUEUE_SEAL_KEY açılışta hata verir (yerel dahil).
 // Hata mesajları değer içermez (G-09).
@@ -83,6 +86,15 @@ try {
     logger,
     appBaseUrl,
   });
+  // T-995: aktivasyon bağlantısı (platform işi; belirteç wms_worker ile yazılır) ve hoş geldiniz e-postası (tenant işi).
+  HANDLERS["platform.activation.deliver"] = createActivationDeliverHandler({
+    config: mailConfig,
+    mailer: createMailer(mailConfig),
+    logger,
+    appBaseUrl,
+    workerDb,
+  });
+  HANDLERS["trial.welcome"] = createTrialWelcomeHandler({ config: mailConfig, mailer: createMailer(mailConfig), logger, appBaseUrl });
   logger.info("mail configured", { mode: mailConfig.mode });
 } catch (err) {
   logger.error("invalid configuration", { error: err instanceof Error ? err.message : String(err) });
@@ -148,7 +160,6 @@ logger.info("queue started", {
 
 // pg-boss bakım eşdeğeri (T-281; T-222 taramasını genelleştirir): adaptör `supervise: false`; süresi dolan `active` iş (her tür) `wms_worker`
 // bağlantısında `retry`/`failed` yapılır ve `failed` belge işlerinin belgeleri serbest bırakılır (çöken worker'ın işi yeniden teslim edilir; AC-16).
-const workerDb = createDbClient({ url: workerDatabaseUrl, poolMax: 1, prepare: false });
 const queueMaintenance = startQueueMaintenance({ workerDb, db, logger });
 
 // Heartbeat (T-282): `/api/health` worker yaşını ve kuyruk ilerleme sayaçlarını buradan okur. Yalnızca tüketicisi olan türler sayılır (ertelenmiş `demo.reseed` bekleyen işi alarm değildir).

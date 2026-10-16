@@ -304,7 +304,7 @@ button,input{font:inherit;color:inherit}
 
         <sc-if value="{{act.s3}}" hint-placeholder-val="{{false}}">
           <div class="card" style="background: {{c.surface}}">
-            <div class="fl"><span class="fll">GİRİŞ E-POSTASI</span><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M3 6h18v12H3zM3 7l9 6 9-6"></path></svg><span style="font: 600 17px/1 'Instrument Sans', sans-serif">{{f.ownerMail}}</span></div><span class="hint ok"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>Bağlantıya tıkladınız, adres doğrulandı</span></div>
+            <div class="fl"><span class="fll">GİRİŞ E-POSTASI</span><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M3 6h18v12H3zM3 7l9 6 9-6"></path></svg><span style="font: 600 17px/1 'Instrument Sans', sans-serif">{{f.ownerMail}}</span></div><sc-if value="{{f.mailOk}}" hint-placeholder-val="{{true}}"><span class="hint ok"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"></path></svg>Bağlantıya tıkladınız, adres doğrulandı</span></sc-if><sc-if value="{{f.mailNo}}" hint-placeholder-val="{{false}}"><span class="hint">Girişte bu adresi kullanacaksınız</span></sc-if></div>
             <div class="fl"><label for="g-np">YENİ PAROLA</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><input id="g-np" type="{{pwType}}" autocomplete="new-password" value="{{f.np}}" onChange="{{on.np}}" aria-describedby="g-np-h"><button type="button" class="eye" onClick="{{togglePw}}" aria-label="{{pwEyeL}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{pwEyeD}}"></path></svg></button></div><span id="g-np-h" class="{{npHintCls}}">{{npHint}}</span></div>
           </div>
         </sc-if>
@@ -313,7 +313,14 @@ button,input{font:inherit;color:inherit}
           <div class="card" style="background: {{c.surface}}; align-items: center; text-align: center">
             <div class="qr" role="img" aria-label="Authenticator kurulum QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
             <p class="ls" style="margin: 0">Google Authenticator ile QR'ı okutun, çıkan kodu girin.</p>
+            <span class="addr" style="background: {{c.chip}}; max-width: 100%; overflow-wrap: anywhere; min-height: 40px; font-size: 13px" aria-label="Elle girilecek anahtar">{{totpKey}}</span>
+            <span class="hint" style="justify-content: center">QR okutamıyorsanız bu anahtarı uygulamaya elle girin</span>
             <div class="inp" style="background: {{c.chip}}; width: 100%"><input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-label="Doğrulama kodu" value="{{f.otp}}" onChange="{{on.otp}}" style="text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 26px; letter-spacing: .3em"></div>
+          </div>
+          <div class="card" style="background: {{c.surface}}">
+            <span class="fll">YEDEK KODLAR</span>
+            <dl class="kv" style="background: {{c.chip}}"><sc-for list="{{backupCodes}}" as="bk" hint-placeholder-count="10"><dt>{{bk.i}}</dt><dd>{{bk.c}}</dd></sc-for></dl>
+            <span class="hint">Telefonunuzu kaybederseniz bu kodlarla girersiniz. Bir yere yazın; her kod bir kez çalışır, bir daha gösterilmez.</span>
           </div>
         </sc-if>
 
@@ -323,10 +330,12 @@ button,input{font:inherit;color:inherit}
             <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Çalışma alanınız hazır</b>
             <span class="addr" style="background: {{c.chip}}">wms.etkinyazilim.com/{{slugShow}}</span>
             <span class="chip" style="background: #F4C542; color: #1A1300">DENEME · 3 AY · {{trialEnd}}'E KADAR</span>
-            <p class="ls" style="margin: 0">Giriş bilgileriniz <b>{{f.ownerMail}}</b> adresine gönderildi. Parolanız e-postada yer almaz.</p>
+            <sc-if value="{{f.mailSent}}" hint-placeholder-val="{{true}}"><p class="ls" style="margin: 0">Giriş bilgileriniz <b>{{f.ownerMail}}</b> adresine gönderildi. Parolanız e-postada yer almaz.</p></sc-if>
+            <sc-if value="{{f.mailOff}}" hint-placeholder-val="{{false}}"><p class="ls" style="margin: 0">Giriş e-postanız <b>{{f.ownerMail}}</b>. Bu adresi ve çalışma alanı adresinizi not alın.</p></sc-if>
           </div>
         </sc-if>
 
+        <sc-if value="{{act.err}}" hint-placeholder-val="{{false}}"><span class="hint bad" role="alert"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>{{act.errT}}</span></sc-if>
         <div class="act" style="background: {{c.bg}}">
           <sc-if value="{{act.back}}" hint-placeholder-val="{{false}}"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}; flex: 0 0 auto; min-width: 64px" onClick="{{actBack}}" aria-label="Geri"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if>
           <button type="button" class="big" style="background: {{act.btnBg}}; color: {{act.btnFg}}" onClick="{{actNext}}" disabled="{{act.dis}}">{{act.btn}}<svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button>
@@ -487,7 +496,7 @@ class Component extends DCLogic {
       mode: 'desktop', override: null, theme: 'acik',
       scr: 'login', tab: 'eposta', devOk: true, showPw: false,
       pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true,
-      seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0,
+      seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0, actBad: false, mailOk: true, mailSent: true,
       opDone: {}, revoked: {},
       f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d' }
     };
@@ -563,17 +572,19 @@ class Component extends DCLogic {
     /* ── activation ── */
     var aS = s.actStep;
     var npOk = (s.f.np || '').length >= 12;
-    var actBtn = ['', 'DEVAM', 'DEVAM', 'PAROLAYI KAYDET', 'DOĞRULA', 'ÇALIŞMA ALANINI AÇ'][aS];
+    if (s.actBad) aS = 0;
+    var actBtn = ['GİRİŞ EKRANINA', 'DEVAM', 'DEVAM', 'PAROLAYI KAYDET', 'DOĞRULA', 'ÇALIŞMA ALANINI AÇ'][aS];
     var actDis = (aS === 1 && (slugState === 'short' || slugState === 'taken' || !(s.f.co || '').trim())) || (aS === 3 && !npOk);
     var d = new Date(); d.setMonth(d.getMonth() + 3);
     var trialEnd = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
     var act = {
-      kick: aS < 5 ? 'ADIM ' + aS + ' / 4' : 'TAMAMLANDI',
-      h: ['', 'Çalışma alanınızı adlandırın', 'Nasıl başlamak istersiniz?', 'Parolanızı belirleyin', 'İki adımlı doğrulama', 'Hoş geldiniz'][aS],
-      s: ['', 'Firma adınız ile çalışma alanı adı ayrıdır. Alan adı giriş adresiniz olur ve sonradan değişmez.', '3 aylık deneme. Örnek verilerle hemen deneyebilir ya da boş başlayabilirsiniz.', 'En az 12 karakter. Parolanızı yalnız siz bilirsiniz; biz göremeyiz.', 'Yönetici hesabı olduğunuz için zorunludur.', ''][aS],
+      kick: aS === 0 ? 'BAĞLANTI' : aS < 5 ? 'ADIM ' + aS + ' / 4' : 'TAMAMLANDI',
+      h: ['Bu bağlantı kullanılamıyor', 'Çalışma alanınızı adlandırın', 'Nasıl başlamak istersiniz?', 'Parolanızı belirleyin', 'İki adımlı doğrulama', 'Hoş geldiniz'][aS],
+      s: ['Süresi dolmuş, daha önce kullanılmış ya da eksik kopyalanmış olabilir. Yeni bağlantı için talep e-postanızı yanıtlayın.', 'Firma adınız ile çalışma alanı adı ayrıdır. Alan adı giriş adresiniz olur ve sonradan değişmez.', '3 aylık deneme. Örnek verilerle hemen deneyebilir ya da boş başlayabilirsiniz.', 'En az 12 karakter. Parolanızı yalnız siz bilirsiniz; biz göremeyiz.', 'Yönetici hesabı olduğunuz için zorunludur.', ''][aS],
       bars: [1, 2, 3, 4].map(function (i) { return { bg: i <= aS ? '#172E42' : c.track }; }),
-      s1: aS === 1, s2: aS === 2, s3: aS === 3, s4: aS === 4, s5: aS === 5, back: aS > 1 && aS < 5,
-      btn: actBtn, dis: actDis, btnBg: aS === 5 ? '#17804F' : '#172E42', btnFg: '#FFFFFF'
+      s1: aS === 1, s2: aS === 2, s3: aS === 3, s4: aS === 4, s5: aS === 5, back: aS > 1 && aS < 4,
+      btn: actBtn, dis: actDis, btnBg: aS === 5 ? '#17804F' : '#172E42', btnFg: '#FFFFFF',
+      err: false, errT: ''
     };
     if (dk) act.bars = act.bars.map(function (b) { return { bg: b.bg === '#172E42' ? '#F4C542' : b.bg }; });
 
@@ -615,7 +626,7 @@ class Component extends DCLogic {
     fin(0, 0); fin(14, 0); fin(0, 14);
     for (var y = 0; y < 21; y++) for (var x = 0; x < 21; x++) { if ((x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12)) continue; if (((x * 7 + y * 13 + x * y) % 5) < 2) qrCells.push({ x: x, y: y }); }
 
-    var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
+    var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['actx', 'Bağlantı geçersiz'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
     var mgr = ['staff', 'dev', 'op', 'mail'].indexOf(s.scr) >= 0;
     var bands = { staff: { h: 'Saha personeli ekle', s: 'MOTIVE · E-POSTA GEREKMEZ', bg: '#172E42' }, dev: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, op: { h: 'Demo talepleri', s: 'ETKİN YAZILIM · OPERATÖR', bg: '#3D2A6B' }, mail: { h: 'Hoş geldiniz e-postası', s: 'AKTİVASYON SONRASI OTOMATİK', bg: '#172E42' } };
     var sides = {
@@ -623,7 +634,8 @@ class Component extends DCLogic {
       act: { h: 'Deneme alanınız onaylandı.', p: '3 ay boyunca bütün özellikler açık. Kurulum dört adım.', rows: [[D.box, 'ÖRNEK VERİ YA DA BOŞ BAŞLANGIÇ'], [D.lock, 'PAROLAYI YALNIZ SİZ BİLİRSİNİZ'], [D.mail, 'GİRİŞ BİLGİLERİ E-POSTAYLA']] },
       fact: { h: 'Sahaya hoş geldiniz.', p: 'Kodu bir kez girin, PIN belirleyin. Sonra her gün yalnız PIN.', rows: [[D.phone, 'KİŞİSEL TELEFON YA DA EL TERMİNALİ'], [D.lock, '5 YANLIŞ PIN = HESAP KİLİTLENİR'], [D.check, 'E-POSTA GEREKMEZ']] }
     };
-    var side = sides[s.scr === 'act' ? 'act' : s.scr === 'fact' ? 'fact' : 'login'];
+    var side = sides[s.scr === 'act' && !s.actBad ? 'act' : s.scr === 'fact' ? 'fact' : 'login'];
+    side = { h: side.h, p: side.p, rows: side.rows.map(function (r) { return { d: r[0], l: r[1] }; }) };
 
     return {
       wrapCls: 'wrap' + (forced && m !== 'desktop' ? ' fr-' + m : '') + (dk ? ' dk' : ''),
@@ -631,8 +643,8 @@ class Component extends DCLogic {
       showPrev: P.previewBar !== false,
       prevBtns: [['auto', 'Otomatik'], ['desktop', 'Masaüstü'], ['tablet', 'Tablet'], ['mobile', 'Mobil']].map(function (b) { var on2 = b[0] === 'auto' ? !s.override : s.override === b[0];
         return { l: b[1], cls: 'prevb' + (on2 ? ' on' : ''), pressed: on2 ? 'true' : 'false', go: function () { self.setState({ override: b[0] === 'auto' ? null : b[0] }); } }; }),
-      scrBtns: scrList.map(function (b) { var on3 = s.scr === b[0]; return { l: b[1], cls: 'prevb' + (on3 ? ' on' : ''), pressed: on3 ? 'true' : 'false', go: go(b[0], { actStep: 1, faStep: 1, swWho: null }) }; }),
-      c: c, f: s.f, on: on, side: side, band: bands[s.scr] || bands.staff,
+      scrBtns: scrList.map(function (b) { var on3 = b[0] === 'actx' ? s.scr === 'act' && s.actBad : b[0] === 'act' ? s.scr === 'act' && !s.actBad : s.scr === b[0]; return { l: b[1], cls: 'prevb' + (on3 ? ' on' : ''), pressed: on3 ? 'true' : 'false', go: b[0] === 'actx' ? go('act', { actStep: 1, actBad: true }) : go(b[0], { actStep: 1, faStep: 1, swWho: null, actBad: false }) }; }),
+      c: c, f: (function () { var f = {}; for (var k in s.f) f[k] = s.f[k]; f.mailOk = s.mailOk; f.mailNo = !s.mailOk; f.mailSent = s.mailSent; f.mailOff = !s.mailSent; return f; })(), on: on, side: side, band: bands[s.scr] || bands.staff,
       v: { auth: !mgr, mgr: mgr, login: s.scr === 'login', loginMail: s.tab === 'eposta', loginField: s.tab === 'saha', mfa: s.scr === 'mfa', pick: s.scr === 'pick', act: s.scr === 'act', fact: s.scr === 'fact', sw: s.scr === 'sw', staff: s.scr === 'staff', dev: s.scr === 'dev', op: s.scr === 'op', mail: s.scr === 'mail' },
       tabs: [['eposta', 'E-POSTA', D.mail], ['saha', 'SAHA GİRİŞİ', D.term]].map(function (t) { var on4 = s.tab === t[0]; return { l: t[1], d: t[2], cls: 'tab' + (on4 ? ' on' : ''), sel: on4 ? 'true' : 'false', bg: on4 ? c.surface : 'transparent', go: function () { self.setState({ tab: t[0], pin: '', pinErr: '' }); } }; }),
       dev: { ok: s.devOk, no: !s.devOk },
@@ -646,7 +658,9 @@ class Component extends DCLogic {
       npHint: npOk ? 'Güçlü parola' : 'En az 12 karakter · ' + (s.f.np || '').length + ' / 12', npHintCls: 'hint' + (npOk ? ' ok' : ''),
       seedOpts: [opt('seed', 'ornek', { t: 'Örnek verilerle', s: 'Örnek depo, ürün ve raflarla hemen deneyin.', d: D.box, iBg: '#FFE7A8', iFg: '#4A3500' }), opt('seed', 'bos', { t: 'Boş başla', s: 'Kendi depo ve ürünlerinizi girin ya da Excel ile yükleyin.', d: D.empty, iBg: c.chip, iFg: c.fg })],
       trialEnd: trialEnd, qrCells: qrCells,
-      actNext: function () { if (self.state.actStep < 5) self.setState({ actStep: self.state.actStep + 1 }); else self.setState({ scr: 'mail' }); },
+      totpKey: 'XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX',
+      backupCodes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (i) { return { i: (i < 10 ? '0' : '') + i, c: 'xxxxx-xxxxx' }; }),
+      actNext: function () { if (self.state.actBad) { self.setState({ scr: 'login', actBad: false }); return; } if (self.state.actStep < 5) self.setState({ actStep: self.state.actStep + 1 }); else self.setState({ scr: 'mail' }); },
       actBack: function () { self.setState({ actStep: Math.max(1, self.state.actStep - 1) }); },
       fa: fa,
       faNext: function () { if (self.state.faStep === 1) self.setState({ faStep: 2, pin: '', pinErr: '' }); else self.setState({ scr: 'login', tab: 'saha', devOk: true, faStep: 1 }); },

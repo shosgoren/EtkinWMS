@@ -1,5 +1,7 @@
 // ADR-027 §1: aynı imaj iki kipte çalışır. `APP_SURFACE=panel` → yonet.etkinyazilim.com (Etkin Yönetim paneli); aksi müşteri
 // uygulaması (wms.etkinyazilim.com). Kip yalnız ortamdan okunur (istek başlığından değil): bir kökende diğerinin sayfaları açılmaz.
+import { RESERVED_SLUGS } from "@wms/domain/onboarding/reserved";
+
 export type Surface = "app" | "panel";
 
 export function appSurface(env: Readonly<Record<string, string | undefined>> = process.env): Surface {
@@ -26,4 +28,14 @@ export function panelRoute(pathname: string): PanelRoute {
 /** Müşteri kipinde panel iç yolları yoktur (doğrudan `/panel/...` 404). */
 export function isPanelInternal(pathname: string): boolean {
   return pathname === "/panel" || pathname.startsWith("/panel/");
+}
+
+/** Kısa çalışma alanı adresi (ADR-026 §1): `wms.etkinyazilim.com/<alan>` → `/t/<alan>`. Biçim tenant slug'ı; ayrılmış adlar (bütün üst düzey
+ * uygulama yolları) asla kısa adres sayılmaz. Yalnız yönlendirme: oturum/çerez taşımaz, üyelik `/t/<alan>`'da yine denetlenir (I-01). */
+const SHORT_WORKSPACE = /^\/([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)\/?$/;
+export function shortWorkspaceTarget(pathname: string): string | null {
+  const m = SHORT_WORKSPACE.exec(pathname);
+  const slug = m?.[1];
+  if (slug === undefined || RESERVED_SLUGS.has(slug)) return null;
+  return `/t/${slug}`;
 }

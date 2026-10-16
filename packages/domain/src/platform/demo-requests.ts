@@ -6,8 +6,10 @@
 import { sql } from "drizzle-orm";
 import { withUser } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
-import { PLATFORM_NO_USER_ID } from "@wms/shared/queue";
+import { canDeliver, type MailConfig } from "@wms/shared/mailer";
+import { PLATFORM_NO_USER_ID, type JobQueue } from "@wms/shared/queue";
 import type { AccessDbClient, AccessPrincipal } from "../identity/access.ts";
+import { generateActivationToken, hashActivationToken, placeholderActivationHash } from "./activation.ts";
 
 export type DemoRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type DemoDecision = "APPROVED" | "REJECTED";
@@ -22,6 +24,10 @@ export interface DemoRequestRow {
   readonly message: string;
   readonly status: DemoRequestStatus;
   readonly decidedAt: Date | null;
+  /** Verilmiş aktivasyon bağlantısı (belirteç/özet dönmez): teslim yolu ve son geçerlilik. */
+  readonly activation: { readonly delivery: "EMAIL" | "SCREEN"; readonly expiresAt: Date } | null;
+  /** Müşteri bağlantıyı kullanıp çalışma alanını açtıysa. */
+  readonly activatedAt: Date | null;
 }
 
 /** Satış sitesinin JSONL satırı (marketing/server.mjs `record`). */
@@ -93,7 +99,14 @@ export async function listDemoRequests(params: { readonly db: AccessDbClient; re
         message: string;
         status: DemoRequestStatus;
         decided_at: Date | string | null;
-      }>(sql`SELECT id, received_at, name, company, email, sector, message, status, decided_at FROM wms_probe.platform_list_demo_requests(${LIST_LIMIT}::integer)`),
+        activation_delivery: string | null;
+        activation_expires_at: Date | string | null;
+        activated_at: Date | string | null;
+      }>(
+        sql`SELECT id, received_at, name, company, email, sector, message, status, decided_at,
+                   activation_delivery, activation_expires_at, activated_at
+              FROM wms_probe.platform_list_demo_requests(${LIST_LIMIT}::integer)`,
+      ),
     );
     return rows.map((r) => ({
       id: r.id,
@@ -105,6 +118,11 @@ export async function listDemoRequests(params: { readonly db: AccessDbClient; re
       message: r.message,
       status: r.status,
       decidedAt: r.decided_at === null ? null : new Date(r.decided_at),
+      activation:
+        (r.activation_delivery === "EMAIL" || r.activation_delivery === "SCREEN") && r.activation_expires_at !== null
+          ? { delivery: r.activation_delivery, expiresAt: new Date(r.activation_expires_at) }
+          : null,
+      activatedAt: r.activated_at === null ? null : new Date(r.activated_at),
     }));
   } catch (e) {
     throw mapPlatformError(e);
@@ -120,11 +138,35 @@ export interface DecideDemoRequestParams {
   readonly recentAuth: () => Promise<void>;
 }
 
-export async function decideDemoRequest(params: DecideDemoRequestParams): Promise<DemoDecision> {
+/** Onayın aktivasyon bağlantısı teslimi (ADR-026 §3.3, A-42 deseni). */
+export interface ActivationDeliveryDeps {
+  readonly mailConfig: MailConfig;
+  /** Platform işi (tenant'sız): `platform.activation.deliver` yalnız talep kimliğiyle. */
+  readonly queue: Pick<JobQueue, "enqueuePlatform">;
+  readonly log?: (entry: Readonly<Record<string, unknown>>) => void;
+}
+
+export interface IssuedActivation {
+  readonly delivery: "EMAIL" | "SCREEN";
+  readonly expiresAt: Date;
+  /** Yalnızca `SCREEN`: düz belirteç, yalnızca bu sonuçta bir kez (operatör müşteriye iletir). */
+  readonly token?: string;
+  /** `SCREEN` nedeni: posta teslimi kapalı/uygun değil ya da iş kuyruğa yazılamadı. */
+  readonly screenReason?: "DELIVERY_UNAVAILABLE" | "QUEUE_UNAVAILABLE";
+}
+
+export interface DecideDemoRequestResult {
+  readonly decision: DemoDecision;
+  /** Yalnızca onayda. */
+  readonly activation?: IssuedActivation;
+}
+
+async function operatorWithRecentAuth(params: {
+  readonly db: AccessDbClient;
+  readonly principal: AccessPrincipal | null;
+  readonly recentAuth: () => Promise<void>;
+}): Promise<AccessPrincipal> {
   const principal = principalOrThrow(params.principal);
-  const { id, decision } = params;
-  if (typeof id !== "string" || !UUID.test(id)) throw new AppError("VALIDATION_FAILED");
-  if (decision !== "APPROVED" && decision !== "REJECTED") throw new AppError("VALIDATION_FAILED");
   // Önce operatör mü (yetkisiz çağrı gereksiz kimlik sorgusu üretmez), sonra yakın zamanda doğrulama, sonra karar (işlev yeniden denetler).
   if (!(await isPlatformOperator({ db: params.db, principal }))) throw new AppError("NOT_FOUND");
   try {
@@ -135,13 +177,100 @@ export async function decideDemoRequest(params: DecideDemoRequestParams): Promis
     if (o?.code === "UNAUTHENTICATED") throw new AppError("UNAUTHENTICATED");
     throw mapPlatformError(e);
   }
+  return principal;
+}
+
+type IssueTx = Parameters<Parameters<typeof withUser>[2]>[0];
+
+/** Aynı transaction'da bağlantı yazar: posta uygunsa yer tutucu özet (`EMAIL`), değilse ekranda gösterilecek belirteç (`SCREEN`). */
+async function issueInTx(tx: IssueTx, id: string, mailConfig: MailConfig): Promise<{ delivery: "EMAIL" | "SCREEN"; expiresAt: Date; token?: string }> {
+  const emailRows = await tx.execute<{ email: string }>(sql`SELECT wms_probe.platform_demo_request_email(${id}::uuid) AS email`);
+  const email = emailRows[0]?.email;
+  if (email === undefined) throw new AppError("NOT_FOUND");
+  const delivery: "EMAIL" | "SCREEN" = canDeliver(mailConfig, email) ? "EMAIL" : "SCREEN";
+  const token = delivery === "SCREEN" ? generateActivationToken() : undefined;
+  const hash = token === undefined ? placeholderActivationHash() : hashActivationToken(token);
+  const rows = await tx.execute<{ expires_at: Date | string }>(
+    sql`SELECT wms_probe.platform_issue_activation(${id}::uuid, ${hash}, ${delivery}) AS expires_at`,
+  );
+  const raw = rows[0]?.expires_at;
+  if (raw === undefined || raw === null) throw new AppError("INTERNAL");
+  return { delivery, expiresAt: new Date(raw), ...(token === undefined ? {} : { token }) };
+}
+
+/**
+ * E-postayla teslimde işi kuyruğa yazar (commit SONRASI: platform işi kendi transaction'ındadır). Yazılamazsa bağlantı ekranda
+ * teslime çevrilir (yeni belirteç; yer tutucu geçersiz kalır) — operatör sessizce "gönderildi" görmez (G-07).
+ */
+async function deliverOrFallback(
+  db: AccessDbClient,
+  principal: AccessPrincipal,
+  id: string,
+  issued: { delivery: "EMAIL" | "SCREEN"; expiresAt: Date; token?: string },
+  deps: ActivationDeliveryDeps,
+): Promise<IssuedActivation> {
+  if (issued.delivery === "SCREEN") return { ...issued, screenReason: "DELIVERY_UNAVAILABLE" };
   try {
-    const rows = await withUser(params.db, principal.userId, (tx) =>
-      tx.execute<{ d: DemoDecision }>(sql`SELECT wms_probe.platform_decide_demo_request(${id}::uuid, ${decision}) AS d`),
+    await deps.queue.enqueuePlatform({ type: "platform.activation.deliver", actorUserId: principal.userId, payload: { demoRequestId: id } });
+    return { delivery: "EMAIL", expiresAt: issued.expiresAt };
+  } catch (cause) {
+    const c = cause as { name?: unknown; code?: unknown } | null;
+    deps.log?.({
+      level: "error",
+      msg: "activation enqueue failed",
+      error: typeof c?.name === "string" ? c.name : "unknown",
+      ...(typeof c?.code === "string" ? { code: c.code } : {}),
+    });
+    const token = generateActivationToken();
+    const rows = await withUser(db, principal.userId, (tx) =>
+      tx.execute<{ expires_at: Date | string }>(
+        sql`SELECT wms_probe.platform_issue_activation(${id}::uuid, ${hashActivationToken(token)}, 'SCREEN') AS expires_at`,
+      ),
     );
-    const d = rows[0]?.d;
-    if (d !== "APPROVED" && d !== "REJECTED") throw new AppError("INTERNAL");
-    return d;
+    const raw = rows[0]?.expires_at;
+    if (raw === undefined || raw === null) throw new AppError("INTERNAL");
+    return { delivery: "SCREEN", expiresAt: new Date(raw), token, screenReason: "QUEUE_UNAVAILABLE" };
+  }
+}
+
+export async function decideDemoRequest(params: DecideDemoRequestParams, deps: ActivationDeliveryDeps): Promise<DecideDemoRequestResult> {
+  const { id, decision } = params;
+  principalOrThrow(params.principal);
+  if (typeof id !== "string" || !UUID.test(id)) throw new AppError("VALIDATION_FAILED");
+  if (decision !== "APPROVED" && decision !== "REJECTED") throw new AppError("VALIDATION_FAILED");
+  const principal = await operatorWithRecentAuth(params);
+  let issued: { delivery: "EMAIL" | "SCREEN"; expiresAt: Date; token?: string } | undefined;
+  try {
+    // Karar ve (onayda) bağlantı TEK transaction'da: bağlantısız onay kalmaz.
+    const d = await withUser(params.db, principal.userId, async (tx) => {
+      const rows = await tx.execute<{ d: DemoDecision }>(sql`SELECT wms_probe.platform_decide_demo_request(${id}::uuid, ${decision}) AS d`);
+      const out = rows[0]?.d;
+      if (out !== "APPROVED" && out !== "REJECTED") throw new AppError("INTERNAL");
+      if (out === "APPROVED") issued = await issueInTx(tx, id, deps.mailConfig);
+      return out;
+    });
+    if (d === "REJECTED" || issued === undefined) return { decision: d };
+    return { decision: d, activation: await deliverOrFallback(params.db, principal, id, issued, deps) };
+  } catch (e) {
+    throw mapPlatformError(e);
+  }
+}
+
+/**
+ * Onaylı ve henüz etkinleşmemiş talebe YENİ aktivasyon bağlantısı (süresi dolan, ekranda gösterilip kaybolan ya da teslim edilemeyen
+ * bağlantı için). Eski bağlantı geçersiz olur. Operatör + MFA + yakın zamanda doğrulama.
+ */
+export async function reissueActivation(
+  params: { readonly db: AccessDbClient; readonly principal: AccessPrincipal | null; readonly id: unknown; readonly recentAuth: () => Promise<void> },
+  deps: ActivationDeliveryDeps,
+): Promise<IssuedActivation> {
+  const { id } = params;
+  principalOrThrow(params.principal);
+  if (typeof id !== "string" || !UUID.test(id)) throw new AppError("VALIDATION_FAILED");
+  const principal = await operatorWithRecentAuth(params);
+  try {
+    const issued = await withUser(params.db, principal.userId, (tx) => issueInTx(tx, id, deps.mailConfig));
+    return await deliverOrFallback(params.db, principal, id, issued, deps);
   } catch (e) {
     throw mapPlatformError(e);
   }
