@@ -827,6 +827,9 @@
     },
     "settings": {
       "shift_updated": "Shift hours changed"
+    },
+    "trial": {
+      "started": "Trial started (3 months)"
     }
   },
   "auditLog": {

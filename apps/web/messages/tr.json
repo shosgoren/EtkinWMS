@@ -827,6 +827,9 @@
     },
     "settings": {
       "shift_updated": "Vardiya saatleri değiştirildi"
+    },
+    "trial": {
+      "started": "Deneme başlatıldı (3 ay)"
     }
   },
   "auditLog": {
