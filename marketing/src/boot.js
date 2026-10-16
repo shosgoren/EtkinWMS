@@ -11,6 +11,13 @@
   } catch {
     // eski tarayıcı: hareket varsayılanı korunur
   }
+  // T-407: panelden yayınlanan içerik (sunucunun yerleştirdiği, çalıştırılmayan JSON veri bloğu). Yoksa tasarım metni.
+  try {
+    const block = document.getElementById("site-content");
+    if (block) props.site = JSON.parse(block.textContent || "null");
+  } catch {
+    // biçimsiz blok: tasarım metni
+  }
   const comp = new window.EtkinDCComponent(props);
   window.EtkinDC.mount(root, tpl, comp);
 

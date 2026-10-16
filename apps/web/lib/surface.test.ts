@@ -14,6 +14,8 @@ describe("ADR-027 kip ayrımı", () => {
   it("panel sayfaları iç yola yazılır; ortak yollar açık; tenant yolları yok", () => {
     expect(panelRoute("/")).toEqual({ kind: "page", internal: "/panel" });
     expect(panelRoute("/talepler")).toEqual({ kind: "page", internal: "/panel/talepler" });
+    expect(panelRoute("/satis")).toEqual({ kind: "page", internal: "/panel/satis" });
+    expect(panelRoute("/api/public/site")).toEqual({ kind: "missing" });
     expect(panelRoute("/paketler")).toEqual({ kind: "page", internal: "/panel/paketler" });
     expect(panelRoute("/musteriler")).toEqual({ kind: "page", internal: "/panel/musteriler" });
     expect(panelRoute("/odemeler")).toEqual({ kind: "page", internal: "/panel/odemeler" });

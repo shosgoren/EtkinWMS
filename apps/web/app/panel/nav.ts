@@ -13,6 +13,7 @@ const PAGES = [
   { key: "paketler", href: "/paketler", icon: YICON.pk },
   { key: "odemeler", href: "/odemeler", icon: YICON.pay },
   { key: "talepler", href: "/talepler", icon: YICON.req },
+  { key: "satis", href: "/satis", icon: YICON.site },
 ] as const;
 
 export async function panelNav(principal: AccessPrincipal, pendingKnown?: number, overdueKnown?: number): Promise<PanelNavItem[]> {

@@ -357,18 +357,21 @@ button,input,select,textarea{font:inherit;color:inherit}
 
       <!-- ═══ SATIŞ SAYFASI ═══ -->
       <sc-if value="{{v.satis}}" hint-placeholder-val="{{false}}">
+        <sc-if value="{{lp.link}}" hint-placeholder-val="{{false}}"><div class="ban" role="status" style="background: #FFE7A8; color: #4A3500"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg><span style="flex: 1; min-width: 0"><b>Önizleme bağlantısı hazır</b>Kaydedilen taslağı gösterir; 30 dakika geçerlidir ve arama motorlarına kapalıdır.<span class="mono" style="display: block; margin-top: 8px; font-size: 13px; overflow-wrap: anywhere">https://etkinyazilim.com/?onizleme=[bağlantı]</span></span><button type="button" class="btn sm" style="background: #4A3500; color: #FFFFFF" onClick="{{noop}}">Kopyala</button></div></sc-if>
         <div class="grid2">
           <div class="card" style="background: {{c.surface}}">
             <div class="chd"><b>İÇERİK</b><span>ETKINYAZILIM.COM</span></div>
             <div class="fl"><label for="y-h1">ANA BAŞLIK</label><div class="inp" style="background: {{c.chip}}"><input id="y-h1" type="text" value="{{lp.h}}" onChange="{{lp.onH}}"></div></div>
+            <div class="fl"><label for="y-h2">VURGULU SATIR</label><div class="inp" style="background: {{c.chip}}"><input id="y-h2" type="text" value="{{lp.h2}}" onChange="{{lp.onH2}}"></div></div>
             <div class="fl"><label for="y-sub">ALT METİN</label><textarea id="y-sub" class="ta" style="background: {{c.chip}}" value="{{lp.s}}" onChange="{{lp.onS}}"></textarea></div>
             <span class="fll">FİYAT BÖLÜMÜNDE GÖSTERİLEN PAKETLER</span>
             <sc-for list="{{lp.toggles}}" as="t" hint-placeholder-count="3"><button type="button" class="tg" style="background: {{c.chip}}" role="switch" aria-checked="{{t.on}}" onClick="{{t.go}}">{{t.l}}<span class="{{t.swCls}}" style="background: {{t.swBg}}"><i></i></span></button></sc-for>
-            <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{noop}}">Önizleme bağlantısı</button><button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{noop}}">Yayınla</button></div>
+            <span class="kpi-s">SON YAYIN · {{lp.pub}}</span>
+            <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{lp.mkLink}}">Önizleme bağlantısı</button><button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{lp.publish}}">Yayınla</button></div>
           </div>
           <div class="lprev" aria-label="Satış sayfası önizlemesi">
             <span class="kpi-s" style="color: #F4C542; opacity: 1">ÖNİZLEME · FİYATLAR</span>
-            <h3>{{lp.h}}</h3>
+            <h3>{{lp.h}} <span style="display: inline-block; padding: 0 .14em .04em; border-radius: 10px; background: #F4C542; color: #172E42">{{lp.h2}}</span></h3>
             <p>{{lp.s}}</p>
             <div class="lpk"><sc-for list="{{lp.cards}}" as="lc" hint-placeholder-count="3"><div class="{{lc.cls}}"><b>{{lc.n}}</b><span>₺{{lc.price}}</span><small>{{lc.sum}}</small></div></sc-for></div>
           </div>
@@ -460,7 +463,7 @@ class Component extends DCLogic {
         { n: 'Profesyonel', price: '[fiyat]', users: 10, field: 20, w: 3, items: 5000, f: { qr: true, prod: true, api: false, ship: true }, pub: true, rec: true },
         { n: 'Kurumsal', price: '[fiyat]', users: 0, field: 0, w: 0, items: 0, f: { qr: true, prod: true, api: true, ship: true }, pub: true, rec: false }
       ],
-      lp: { h: 'Depo işi, tek ekranda.', s: 'Mal kabulden sevkiyata her iş telefonda; 3 ay ücretsiz deneyin.', show: [true, true, true] }
+      lp: { h: 'Girişten sevkiyata kesintisiz kontrolün', h2: 'en kolay hali.', s: 'Mal kabulden sevkiyata her iş telefonda; 3 ay ücretsiz deneyin.', show: [true, true, true], link: false, pub: '15.10 21:04 · SÜRÜM 3' }
     };
   }
   componentDidMount() { var self = this; this._r = function () { self.setState({ mode: self.detect() }); }; this._r(); window.addEventListener('resize', this._r); }
@@ -579,7 +582,8 @@ class Component extends DCLogic {
 
     var setLp = function (patch) { var o = {}; for (var k in self.state.lp) o[k] = self.state.lp[k]; for (var k2 in patch) o[k2] = patch[k2]; self.setState({ lp: o }); };
     var lp = {
-      h: s.lp.h, s: s.lp.s, onH: function (e) { setLp({ h: val(e) }); }, onS: function (e) { setLp({ s: val(e) }); },
+      h: s.lp.h, h2: s.lp.h2, s: s.lp.s, onH: function (e) { setLp({ h: val(e) }); }, onH2: function (e) { setLp({ h2: val(e) }); }, onS: function (e) { setLp({ s: val(e) }); },
+      link: s.lp.link, pub: s.lp.pub, mkLink: function () { setLp({ link: true }); }, publish: function () { setLp({ link: false, pub: '16.10 22:40 · SÜRÜM 4' }); },
       toggles: s.pks.map(function (p, i) { var on = !!s.lp.show[i] && p.pub; var o = sw(on); o.l = p.n + (p.pub ? '' : ' (taslak)'); o.go = function () { var a = self.state.lp.show.slice(); a[i] = !a[i]; setLp({ show: a }); }; return o; }),
       cards: s.pks.map(function (p, i) { return { p: p, i: i }; }).filter(function (o) { return o.p.pub && s.lp.show[o.i]; }).map(function (o) { return { n: o.p.n, price: o.p.price + ' / ay', sum: pkSum(o.p).join(' · '), cls: 'lpk-c' + (o.p.rec ? ' rec' : '') }; })
     };

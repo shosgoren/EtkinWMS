@@ -421,7 +421,9 @@
     "validation_failed_payment_invalid": "Ödeme kaydı geçersiz.",
     "validation_failed_payment_invalidAction": "Tarihi (bugün ya da önce), yöntemi ve notu kontrol edin.",
     "validation_failed_code_mismatch": "Doğrulama kodu terminaldeki kodla aynı değil.",
-    "validation_failed_code_mismatchAction": "Terminal ekranındaki 6 haneli kodu yeniden yazın; 3 yanlışta QR yenilenir."
+    "validation_failed_code_mismatchAction": "Terminal ekranındaki 6 haneli kodu yeniden yazın; 3 yanlışta QR yenilenir.",
+    "validation_failed_site_invalid": "Satış sayfası metni geçersiz.",
+    "validation_failed_site_invalidAction": "Başlık 80, vurgulu satır 60, alt metin 400 karakteri geçmesin; < ve > kullanmayın."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",
@@ -2403,7 +2405,8 @@
       "musteriler": "Müşteriler",
       "talepler": "Demo talepleri",
       "paketler": "Paketler",
-      "odemeler": "Ödemeler"
+      "odemeler": "Ödemeler",
+      "satis": "Satış sayfası"
     },
     "talepler": {
       "title": "Demo talepleri",
@@ -2651,6 +2654,38 @@
         "Kasım",
         "Aralık"
       ]
+    },
+    "satis": {
+      "title": "Satış sayfası",
+      "sub": "ETKINYAZILIM.COM · İÇERİK VE FİYATLAR",
+      "content": "İÇERİK",
+      "host": "ETKINYAZILIM.COM",
+      "title1": "ANA BAŞLIK",
+      "title2": "VURGULU SATIR",
+      "subtitle": "ALT METİN",
+      "plans": "FİYAT BÖLÜMÜNDE GÖSTERİLEN PAKETLER",
+      "draftSuffix": " (taslak)",
+      "lastPub": "SON YAYIN",
+      "pubNever": "HENÜZ YAYIN YOK",
+      "pubAt": "{when} · SÜRÜM {v}",
+      "preview": "Önizleme bağlantısı",
+      "publish": "Yayınla",
+      "previewKick": "ÖNİZLEME · FİYATLAR",
+      "previewAria": "Satış sayfası önizlemesi",
+      "perMonth": "/ ay",
+      "unlimited": "Sınırsız",
+      "admins": "yönetici",
+      "field": "saha personeli",
+      "warehouses": "depo",
+      "items": "kalem",
+      "linkTitle": "Önizleme bağlantısı hazır",
+      "linkBody": "Kaydedilen taslağı gösterir; 30 dakika geçerlidir ve arama motorlarına kapalıdır.",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "error": "İşlem tamamlanamadı ({code}). Metni kontrol edip tekrar deneyin.",
+      "defTitle1": "Girişten sevkiyata kesintisiz kontrolün",
+      "defTitle2": "en kolay hali.",
+      "defSubtitle": "Koli, paket, varil ya da palet; kabul anında her birine kendi QR etiketi basılır. Depodan üretime, yarı mamulden mamule ve sevkiyata kadar her hareket iz bırakır. Ekran kullanıcıyı doğru işleme yönlendirir: eğitim gerekmez, birkaç dokunuş yeter."
     }
   },
   "activate": {

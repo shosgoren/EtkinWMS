@@ -1,5 +1,8 @@
 wms.etkinyazilim.com {
     encode zstd gzip
+    # T-407 (inceleme m1): satış sitesi içerik ucu yalnız iç ağdan (marketing → web:3000); dışarıya kapalı.
+    @sitecontent path /api/public/*
+    respond @sitecontent 404
     reverse_proxy web:3000 {
         header_up Fly-Client-IP {http.request.remote.host}
     }
