@@ -86,7 +86,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
             {errorCode === "recent_auth_required" ? t("recentAuth") : ts(errorCode)} {errorCode === "recent_auth_required" ? t("recentAuthAction") : ts(`${errorCode}Action`)}
           </p>
           {errorCode === "recent_auth_required" ? (
-            <a className={`${LINK_CLS} mt-2`} href={`/login?next=${encodeURIComponent(here)}`}>
+            <a className={`${LINK_CLS} mt-2`} href={`/login?reauth=1&next=${encodeURIComponent(here)}`}>
               {t("loginLink")}
             </a>
           ) : null}

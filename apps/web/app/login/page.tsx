@@ -17,10 +17,14 @@ function first(v: string | string[] | undefined): string | undefined {
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const next = safeNext(first((await searchParams).next));
+  const query = await searchParams;
+  const next = safeNext(first(query.next));
+  // A-39: hassas işlem "yeniden doğrula" istediğinde (`reauth=1`) açık oturum varken de form gösterilir; aksi hâlde giriş sayfası
+  // oturumu görüp geri gönderir ve kullanıcı döngüye girer. Yeni giriş yeni oturum açar (doğrulama zamanı yenilenir).
+  const reauth = first(query.reauth) === "1";
 
   const { getAuthService } = await import("../../lib/auth-service.ts");
-  if ((await getAuthService().getPrincipal(await headers())) !== null) redirect(next);
+  if (!reauth && (await getAuthService().getPrincipal(await headers())) !== null) redirect(next);
 
   // A-43: demo uyarısı yalnızca sunucuda karar verilir; bayraklar yokken demo metni hiç render edilmez.
   const demo = process.env.DEMO_MODE === "1" && process.env.WMS_ENV === "staging";
