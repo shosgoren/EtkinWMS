@@ -29,6 +29,17 @@ describe("T-995 deneme e-postaları", () => {
     expect(`${r.text}${r.html}`).not.toMatch(/activate\/|token|parola:/i);
     expect(renderWelcomeEmail({ locale: "en", appBaseUrl: "https://a.invalid", company: "A", slug: "a-b", email: "a@b.invalid", trialEndsAt: null }).text).not.toContain("TRIAL");
   });
+  it("T-412 kurumsal düzen: marka bandı + logo, ham bağlantı yalnız düğmede, hoş geldinizde düğme bilgilerin üstünde", () => {
+    const link = "https://wms.example.invalid/activate/abc";
+    const a = renderActivationEmail("tr", link, "Acme");
+    expect(a.html).toContain('src="https://wms.example.invalid/apple-icon"');
+    expect(a.html).toContain("etkinyazilim.com");
+    expect(a.html.split(link).length - 1).toBe(1);
+    expect(a.html).toContain(`href="${link}"`);
+    const w = renderWelcomeEmail({ locale: "tr", appBaseUrl: "https://wms.example.invalid", company: "A", slug: "a", email: "a@b.invalid", trialEndsAt: null });
+    expect(w.html.indexOf("Çalışma alanını aç")).toBeGreaterThan(w.html.indexOf("saklayın."));
+    expect(w.html.indexOf("Çalışma alanını aç")).toBeLessThan(w.html.indexOf("ADRES"));
+  });
   it("tarih İstanbul saatiyle gg.aa.yyyy", () => {
     expect(trialDate(new Date("2026-12-31T22:30:00Z"))).toBe("01.01.2027");
   });
