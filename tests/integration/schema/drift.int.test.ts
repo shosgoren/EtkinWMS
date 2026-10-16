@@ -588,4 +588,37 @@ describe(`number_sequences tür CHECK'i ile numbering.ts eşitliği (0022, T-305
       await client.end();
     }
   });
+  it("T-997 (0044): saha tablolarinda probe yalniz belgeli sutunlara yazar, politika yok; ozet sutunlari uygulama/kimlik rolune kapali", async () => {
+    const cols = await query<{ t: string; a: string; p: string }>(
+      `SELECT c.relname AS t, a.attname AS a, x.p
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+         CROSS JOIN unnest(ARRAY['INSERT', 'UPDATE']) AS x(p)
+        WHERE n.nspname = 'public' AND c.relname IN ('field_logins', 'field_devices')
+          AND has_column_privilege('wms_identity_probe', c.oid, a.attname, x.p)
+        ORDER BY 1, 3, 2`,
+    );
+    expect(cols.map((r) => `${r.t}.${r.p}.${r.a}`)).toEqual([
+      "field_devices.INSERT.created_by", "field_devices.INSERT.kind", "field_devices.INSERT.name", "field_devices.INSERT.tenant_id",
+      "field_devices.INSERT.token_hash", "field_devices.INSERT.user_id",
+      "field_devices.UPDATE.last_used_at", "field_devices.UPDATE.revoked_at", "field_devices.UPDATE.token_hash",
+      "field_logins.UPDATE.activation_expires_at", "field_logins.UPDATE.activation_hash", "field_logins.UPDATE.failed_count",
+      "field_logins.UPDATE.lock_count", "field_logins.UPDATE.locked_until", "field_logins.UPDATE.pin_hash", "field_logins.UPDATE.pin_set_at",
+    ]);
+    const other = await query<{ w: boolean }>(
+      `SELECT bool_or(has_table_privilege('wms_identity_probe', t, 'DELETE, TRUNCATE')
+                      OR has_any_column_privilege('wms_auth', t, 'SELECT, INSERT, UPDATE')
+                      OR has_column_privilege('wms_app', 'public.field_logins', 'pin_hash', 'SELECT')
+                      OR has_column_privilege('wms_app', 'public.field_logins', 'activation_hash', 'SELECT')
+                      OR has_column_privilege('wms_app', 'public.field_logins', 'pin_hash', 'UPDATE')
+                      OR has_column_privilege('wms_app', 'public.field_devices', 'token_hash', 'SELECT')) AS w
+         FROM unnest(ARRAY['public.field_logins', 'public.field_devices']) AS t`,
+    );
+    expect(other[0]?.w).toBe(false);
+    const pols = await query<{ p: string }>(
+      `SELECT tablename || '.' || policyname AS p FROM pg_policies
+        WHERE schemaname = 'public' AND tablename IN ('field_logins', 'field_devices') ORDER BY 1`,
+    );
+    expect(pols.map((r) => r.p)).toEqual(["field_devices.field_devices_isolation", "field_logins.field_logins_isolation"]);
+  });
 });

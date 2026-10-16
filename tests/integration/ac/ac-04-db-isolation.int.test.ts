@@ -800,6 +800,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.active_tenant_ids", // T-211 migration 0014: yalnızca ACTIVE tenant kimlikleri, yalnızca wms_worker EXECUTE (ADR-019 §1)
     "wms_probe.admin_reset_cleanup_on_membership", // T-103 üyelik tetikleyici işlevi (ADR-016 Sonuçlar)
     "wms_probe.consume_admin_reset_grant",
+    "wms_probe.field_activate", // T-997 migration 0044: saha etkinleştirme (kod tek kullanım + PIN özeti + kişisel cihaz) + security_events, yalnızca wms_auth
+    "wms_probe.field_admin_reset", // T-997 migration 0044: yönetici kod yenileme/kilit açma (tenant bağlamı zorunlu) + security_events, yalnızca wms_app
+    "wms_probe.field_device_status", // T-997 migration 0044: kayıtlı cihazın tenant/cihaz adı (salt okunur), yalnızca wms_auth
+    "wms_probe.field_signin_begin", // T-997 migration 0044: saha girişi ön denetimi (cihaz, rol, kilit) → PIN özeti, yalnızca wms_auth
+    "wms_probe.field_signin_finish", // T-997 migration 0044: saha girişi sonucu (sayaç/kilit, belirteç rotasyonu) + security_events, yalnızca wms_auth
     "wms_probe.identity_exclusive_to_tenant",
     "wms_probe.invitation_for_account_creation",
     "wms_probe.invitation_preview_for_token", // T-117d migration 0008: salt okunur (ad+rol+süre), yalnızca wms_app EXECUTE
@@ -898,6 +903,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_list_charges": [APP_ROLE],
       "wms_probe.platform_accrue_charges": [APP_ROLE],
       "wms_probe.platform_mark_charge_paid": [APP_ROLE],
+      "wms_probe.field_device_status": [AUTH_ROLE],
+      "wms_probe.field_signin_begin": [AUTH_ROLE],
+      "wms_probe.field_signin_finish": [AUTH_ROLE],
+      "wms_probe.field_activate": [AUTH_ROLE],
+      "wms_probe.field_admin_reset": [APP_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);
