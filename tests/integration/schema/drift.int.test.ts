@@ -268,19 +268,15 @@ describe(`tenancy schema (T-103, target=${env.target})`, () => {
     }
     // wms_identity_probe politikalari yalnizca o role ve yalnizca SELECT USING (true) (MINOR-1: kilit politikalari kaldirildi).
     const probe = pols.filter((p) => p.roles.includes("wms_identity_probe"));
-    // T-403 (0042, ADR-027 §3): askıya alma için tek yazma politikası (tenants.probe_status: yalnız UPDATE, demo tenant hariç,
-    // yalnız ACTIVE/SUSPENDED; operatör denetimli işlevden). Sayım okuma politikaları (depo/ürün/defter) bu tablo listesinde değil.
     expect(probe.map((p) => `${p.tablename}.${p.policyname}.${p.cmd}`).sort()).toEqual([
       "invitations.probe_select.SELECT",
       "membership_roles.probe_select.SELECT",
       "tenant_memberships.probe_select.SELECT",
       "tenants.probe_select.SELECT",
-      "tenants.probe_status.UPDATE",
     ]);
     for (const p of probe) {
       expect(p.roles, p.policyname).toEqual(["wms_identity_probe"]);
-      if (p.cmd === "SELECT") expect(p.qual, p.policyname).toBe("true");
-      else expect(p.qual, p.policyname).toBe("(NOT is_demo)");
+      expect(p.qual, p.policyname).toBe("true");
     }
   });
 
@@ -446,7 +442,7 @@ describe(`invitation_tenant_for_token (0006, T-117; target=${env.target})`, () =
     ]);
   });
 
-  it("probe tenant tablolarinda salt okunur kalir; tek istisna tenants.status (T-403 askiya alma, 0042)", async () => {
+  it("probe tenant tablolarinda salt okunur kalir; tek istisna tenants.status sutun yetkisi (T-403 askiya alma, 0042), yazma politikasi yok", async () => {
     const r = await query<{ w: boolean }>(
       `SELECT bool_or(has_table_privilege('wms_identity_probe', t, 'INSERT, UPDATE, DELETE, TRUNCATE')
                       OR (t <> 'public.tenants' AND has_any_column_privilege('wms_identity_probe', t, 'UPDATE'))) AS w
@@ -459,11 +455,11 @@ describe(`invitation_tenant_for_token (0006, T-117; target=${env.target})`, () =
           AND has_column_privilege('wms_identity_probe', 'public.tenants', a.attname, 'UPDATE') ORDER BY a.attname`,
     );
     expect(cols.map((c) => c.attname)).toEqual(["status"]);
-    const writes = await query<{ polname: string; rel: string }>(
-      `SELECT polname, polrelid::regclass::text AS rel FROM pg_policy p
-        WHERE p.polroles = ARRAY[(SELECT oid FROM pg_roles WHERE rolname = 'wms_identity_probe')] AND p.polcmd <> 'r'`,
+    // Yazma politikası yok: askıya alma işlevi mevcut izolasyon politikasından geçer (bağlam yalnız o satır için, 0042).
+    const writes = await query<{ polname: string }>(
+      `SELECT polname FROM pg_policy p WHERE p.polroles = ARRAY[(SELECT oid FROM pg_roles WHERE rolname = 'wms_identity_probe')] AND p.polcmd <> 'r'`,
     );
-    expect(writes).toEqual([{ polname: "probe_status", rel: "tenants" }]);
+    expect(writes).toEqual([]);
   });
 });
 

@@ -7,8 +7,9 @@
 --   is_sample; stock_ledger: tenant_id, occurred_at; sessions: user_id, created_at; security_events: olay türü/detay/zaman) ve
 --   `probe_select` (FOR SELECT TO wms_identity_probe) politikası eklenir (0003 kalıbı). Probe NOLOGIN'dir; bu yetkiler yalnız aşağıdaki
 --   operatör denetimli SECURITY DEFINER işlevlerinde kullanılır. Uygulama rollerine tenant tablolarında yeni yetki YOK (AC-04).
--- * DURUM: tenants.status ACTIVE ↔ SUSPENDED probe ile değişir (dar UPDATE (status) + FOR UPDATE TO probe politikası; CHECK yalnız
---   ACTIVE/SUSPENDED geçişine izin veren işlev). Askıdaki tenant'ta mevcut `TENANT_SUSPENDED` davranışı geçerlidir; veri silinmez.
+-- * DURUM: tenants.status ACTIVE ↔ SUSPENDED probe ile değişir: yalnız UPDATE (status) sütun yetkisi; probe'a YAZMA POLİTİKASI YOK
+--   (AC-04). İşlev, yalnız o satır için tenant bağlamını transaction-yerel kurar (mevcut izolasyon politikası), günceller ve önceki
+--   bağlamı geri yükler; yalnız ACTIVE ↔ SUSPENDED (demo ve CLOSING hariç). Askıdaki tenant'ta mevcut `TENANT_SUSPENDED` davranışı geçerlidir; veri silinmez.
 --   Askıya alma gerekçe ister (1–300 karakter); devam ettirmede gerekçe isteğe bağlı (tasarım: tek düğme).
 -- * DENEME UZATMA: yalnız abonelik türü TRIAL ve tenant ACTIVE iken, 30 gün; en çok 365 gün ileri.
 -- * PAKET DEĞİŞTİRME: müşteriye paketin GÜNCEL sürümü atanır (yükseltme/düşürme hemen; dönem/ödeme T-405/T-406 ile gelir). Mevcut
@@ -52,7 +53,6 @@ CREATE POLICY probe_select ON public.stock_ledger FOR SELECT TO wms_identity_pro
 CREATE INDEX security_events_platform_tenant_idx ON public.security_events ((detail ->> 'tenant_id'), occurred_at)
   WHERE event_type LIKE 'platform.%';
 
-CREATE POLICY probe_status ON public.tenants      FOR UPDATE TO wms_identity_probe USING (NOT is_demo) WITH CHECK (status IN ('ACTIVE', 'SUSPENDED'));
 
 -- ---------------------------------------------------------------------------------------------
 -- 2. İşlevler (SET ROLE kalıbı, 0038–0041 ile aynı)
@@ -144,6 +144,7 @@ DECLARE
   v_uid uuid;
   v_reason text := NULLIF(pg_catalog.btrim(coalesce(p_reason, '')), '');
   v_status text;
+  v_prev text;
 BEGIN
   IF NOT wms_probe.platform_is_operator() THEN
     RAISE EXCEPTION 'platform_set_customer_status: operatör değil' USING ERRCODE = '42501';
@@ -153,6 +154,10 @@ BEGIN
      OR coalesce(v_reason, '') ~ '[[:cntrl:]]' THEN
     RAISE EXCEPTION 'platform_set_customer_status: gerekçe biçimsiz' USING ERRCODE = '22023';
   END IF;
+  -- Probe'a tenant tablosunda YAZMA POLİTİKASI verilmez (AC-04: probe politikaları yalnız SELECT). Kilit ve güncelleme mevcut izolasyon
+  -- politikasından geçer: bağlam yalnız bu satır için transaction-yerel kurulur ve işlev bitmeden önceki değerine döndürülür.
+  v_prev := pg_catalog.current_setting('app.current_tenant_id', true);
+  PERFORM pg_catalog.set_config('app.current_tenant_id', p_tenant::text, true);
   SELECT t.status INTO v_status FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'platform_set_customer_status: müşteri yok' USING ERRCODE = 'P0002';
@@ -160,10 +165,13 @@ BEGIN
   IF v_status NOT IN ('ACTIVE', 'SUSPENDED') THEN
     RAISE EXCEPTION 'platform_set_customer_status: durum değiştirilemez' USING ERRCODE = '55000';
   END IF;
+  IF (v_status = 'SUSPENDED') <> p_suspend THEN
+    UPDATE public.tenants t SET status = CASE WHEN p_suspend THEN 'SUSPENDED' ELSE 'ACTIVE' END WHERE t.id = p_tenant;
+  END IF;
+  PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
   IF (v_status = 'SUSPENDED') = p_suspend THEN
     RETURN false;
   END IF;
-  UPDATE public.tenants t SET status = CASE WHEN p_suspend THEN 'SUSPENDED' ELSE 'ACTIVE' END WHERE t.id = p_tenant;
   INSERT INTO public.security_events (user_id, event_type, detail)
   VALUES (v_uid, CASE WHEN p_suspend THEN 'platform.tenant.suspended' ELSE 'platform.tenant.resumed' END,
           pg_catalog.jsonb_strip_nulls(pg_catalog.jsonb_build_object('tenant_id', p_tenant::text, 'reason', v_reason)));
@@ -220,8 +228,10 @@ BEGIN
     RAISE EXCEPTION 'platform_change_customer_plan: operatör değil' USING ERRCODE = '42501';
   END IF;
   v_uid := NULLIF(pg_catalog.current_setting('app.current_user_id', true), '')::uuid;
-  -- Tenant satırı kilitlenir: aboneliği olmayan tenant'a eşzamanlı iki ilk atama PK çakışmasına düşmez (inceleme MINOR-2).
-  PERFORM 1 FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo AND t.status IN ('ACTIVE', 'SUSPENDED') FOR UPDATE;
+  -- Tenant başına transaction kilidi: aboneliği olmayan tenant'a eşzamanlı iki ilk atama PK çakışmasına düşmez (inceleme MINOR-2).
+  -- (Satır kilidi kullanılmaz: probe'un tenant tablosunda güncelleme politikası yoktur.)
+  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('platform.customer:' || p_tenant::text, 0));
+  PERFORM 1 FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo AND t.status IN ('ACTIVE', 'SUSPENDED');
   IF NOT FOUND THEN
     RAISE EXCEPTION 'platform_change_customer_plan: müşteri yok' USING ERRCODE = 'P0002';
   END IF;

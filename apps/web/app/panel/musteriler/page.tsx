@@ -160,7 +160,7 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
   const picked = first(query.m);
   const cx = picked === undefined ? undefined : rows.find((r) => r.id === picked);
   if (picked !== undefined) {
-    if (cx === undefined) notFound();
+    if (cx === undefined) return notFound();
     const act = await getCustomerActivity({ db, principal, tenantId: cx.id }).catch(onMissing);
     const rank = (id: string | null): number => (id === null ? -1 : plans.findIndex((p) => p.id === id));
     const st = stateOf(cx);
