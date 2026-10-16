@@ -1581,7 +1581,7 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       "platform_activation_preview", "platform_activation_release", "platform_assign_default_plan", "platform_change_customer_plan",
       "platform_customer_activity", "platform_decide_demo_request", "platform_demo_request_email", "platform_extend_trial",
       "platform_ingest_demo_request", "platform_is_operator", "platform_issue_activation", "platform_list_charges",
-      "platform_list_customers", "platform_list_demo_requests", "platform_list_plans", "platform_mark_charge_paid",
+      "platform_list_customers", "platform_list_demo_requests", "platform_list_events", "platform_list_plans", "platform_mark_charge_paid",
       "platform_prepare_activation_delivery", "platform_published_plans", "platform_save_plan", "platform_set_customer_status",
       "platform_site_get", "platform_site_preview", "platform_site_public", "platform_site_publish", "platform_site_save", // T-407 0046: satış sayfası içeriği
       "platform_tenant_plan_limit", "platform_tenant_subscription",

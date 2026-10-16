@@ -15,6 +15,7 @@ describe("ADR-027 kip ayrımı", () => {
     expect(panelRoute("/")).toEqual({ kind: "page", internal: "/panel" });
     expect(panelRoute("/talepler")).toEqual({ kind: "page", internal: "/panel/talepler" });
     expect(panelRoute("/satis")).toEqual({ kind: "page", internal: "/panel/satis" });
+    expect(panelRoute("/kayit")).toEqual({ kind: "page", internal: "/panel/kayit" });
     expect(panelRoute("/api/public/site")).toEqual({ kind: "missing" });
     expect(panelRoute("/paketler")).toEqual({ kind: "page", internal: "/panel/paketler" });
     expect(panelRoute("/musteriler")).toEqual({ kind: "page", internal: "/panel/musteriler" });

@@ -9,11 +9,13 @@ import { YICON } from "../design/yonet-icons.ts";
 import type { PanelNavItem, PanelShellLabels } from "./shell.tsx";
 
 const PAGES = [
+  { key: "ozet", href: "/", icon: YICON.ozet },
   { key: "musteriler", href: "/musteriler", icon: YICON.cust },
   { key: "paketler", href: "/paketler", icon: YICON.pk },
   { key: "odemeler", href: "/odemeler", icon: YICON.pay },
   { key: "talepler", href: "/talepler", icon: YICON.req },
   { key: "satis", href: "/satis", icon: YICON.site },
+  { key: "kayit", href: "/kayit", icon: YICON.log },
 ] as const;
 
 export async function panelNav(principal: AccessPrincipal, pendingKnown?: number, overdueKnown?: number): Promise<PanelNavItem[]> {
