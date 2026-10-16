@@ -295,7 +295,8 @@ describe("ortak cihazda kullanım ve iptal", () => {
     const after = await post("/field/sign-in", { workspace: fx.slug, username: a.username, pin: a.pin }, cookie);
     expect([after.status, await code(after)]).toEqual([401, "FIELD_LOGIN_DENIED"]);
     expect((await listDevices(access(fx))).some((d) => d.id === shared.deviceId)).toBe(false);
-    expect((await failure(revokeDevice({ ...access(fx), deviceId: shared.deviceId }, devicePort))).code).toBe("NOT_FOUND");
+    // İkinci iptal hata vermez (ALREADY): yalnız oturum kapatma yeniden denenir (inceleme m2/n1).
+    await revokeDevice({ ...access(fx), deviceId: shared.deviceId }, devicePort);
     const ev = await adm.query("SELECT event_type FROM public.security_events WHERE detail ->> 'device_id' = $1 AND event_type = 'device.revoked'", [shared.deviceId]);
     expect(ev.rows).toHaveLength(1);
     // Kişisel cihaz etkilenmez.

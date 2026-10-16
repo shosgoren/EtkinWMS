@@ -613,7 +613,9 @@ describe(`number_sequences tür CHECK'i ile numbering.ts eşitliği (0022, T-305
     expect(cols.map((r) => `${r.t}.${r.p}.${r.a}`)).toEqual([
       "field_devices.INSERT.created_by", "field_devices.INSERT.kind", "field_devices.INSERT.name", "field_devices.INSERT.tenant_id",
       "field_devices.INSERT.token_hash", "field_devices.INSERT.user_id",
-      "field_devices.UPDATE.last_used_at", "field_devices.UPDATE.revoked_at", "field_devices.UPDATE.token_hash",
+      // T-998 (0045): iptal nedeni ve iptal eden (otomatik durdurma `LOCK_SPREE`, inceleme m5).
+      "field_devices.UPDATE.last_used_at", "field_devices.UPDATE.revoke_reason", "field_devices.UPDATE.revoked_at", "field_devices.UPDATE.revoked_by",
+      "field_devices.UPDATE.token_hash",
       "field_logins.UPDATE.activation_expires_at", "field_logins.UPDATE.activation_failed_count", "field_logins.UPDATE.activation_hash", "field_logins.UPDATE.failed_count",
       "field_logins.UPDATE.lock_count", "field_logins.UPDATE.locked_until", "field_logins.UPDATE.pin_hash", "field_logins.UPDATE.pin_set_at",
     ]);

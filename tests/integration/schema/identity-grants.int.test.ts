@@ -187,7 +187,9 @@ describe(`identity grants (target=${env.target})`, () => {
 
   it("wms_auth: hicbir tenant (kimlik disi) tabloda yetki yok; wms_app yalniz izinli tablolarda", async () => {
     const admin = await open(env.databaseUrlDirect);
-    const identityTables = ["users", "sessions", "accounts", "verifications", "two_factors", "auth_rate_limits", "security_events"];
+    const identityTables = ["users", "sessions", "accounts", "verifications", "two_factors", "auth_rate_limits", "security_events",
+      // T-998 (0045): saha oturum-cihaz bağı (platform kimlik tablosu; tenant verisi değil).
+      "field_sessions"];
     const r = await admin.query<{ relname: string; auth_any: boolean; app_any: boolean }>(
       `SELECT c.relname,
               has_any_column_privilege('wms_auth', c.oid, 'SELECT, INSERT, UPDATE, REFERENCES')

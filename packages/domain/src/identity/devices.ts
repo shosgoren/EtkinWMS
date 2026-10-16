@@ -106,7 +106,7 @@ export interface RevokeDeviceDeps {
   readonly revokeDeviceSessions: (deviceId: string) => Promise<void>;
 }
 
-/** Cihazı iptal eder (geri alınmaz) ve oturumlarını kapatır. Zaten iptal/yok → `NOT_FOUND`. */
+/** Cihazı iptal eder (geri alınmaz) ve oturumlarını kapatır. Yok → `NOT_FOUND`; zaten iptal → yalnız oturumlar yeniden kapatılır. */
 export async function revokeDevice(params: CommandParams & { readonly deviceId: string }, deps: RevokeDeviceDeps): Promise<void> {
   const { deviceId: rawId, requestId, ...access } = params;
   const deviceId = parseUuid(rawId);
@@ -222,9 +222,12 @@ export async function approveEnrollment(
   try {
     // Yanlış kod sayacı işlevde yazılır; transaction GERİ ALINMASIN diye ret commit'ten sonra bildirilir.
     result = await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
-      const rows = await tx.execute<{ device_id: string | null }>(
-        sql`SELECT wms_probe.field_enroll_approve(${id}::uuid, ${actor.userId}::uuid, ${code}) AS device_id`,
-      );
+      // P0002 (onaylanamaz) burada eşlenir: erişim katmanı bilinmeyen SQL hatasını INTERNAL'a çevirir.
+      const rows = await tx
+        .execute<{ device_id: string | null }>(sql`SELECT wms_probe.field_enroll_approve(${id}::uuid, ${actor.userId}::uuid, ${code}) AS device_id`)
+        .catch((e: unknown) => {
+          throw mapDeviceError(e);
+        });
       const deviceId = rows[0]?.device_id;
       if (deviceId === undefined) throw new AppError("NOT_FOUND");
       if (deviceId === null) return null;
