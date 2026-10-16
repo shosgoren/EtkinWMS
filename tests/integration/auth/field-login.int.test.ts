@@ -276,6 +276,9 @@ describe("etkinleştirme ve giriş", () => {
       "UPDATE public.sessions SET created_at = now() - interval '3 hours', updated_at = now() - interval '3 hours', expires_at = now() + interval '9 hours' WHERE user_id = $1 AND token = $2",
       [created.userId, (idleJar.split("; ").find((c) => c.includes("session_token"))?.split("=")[1] ?? "").split(".")[0]],
     );
+    // Better Auth'un kendi uçları (get-session) boşta oturumu yenileyip canlandıramaz (inceleme N1).
+    const gs = await get("/get-session", idleJar);
+    expect(await gs.json().catch(() => null)).toBeNull();
     expect(await auth.getPrincipal(new Headers({ cookie: idleJar }))).toBeNull();
     // Etkin oturum (30 dk önce kullanılmış, yenileme zamanı gelmiş) geçerli kalır ve yenilenir.
     const live = await post("/field/sign-in", { workspace: fx.slug, username, pin }, deviceOnly(idleJar));

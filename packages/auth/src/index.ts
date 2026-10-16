@@ -21,7 +21,7 @@ import type { DbClient } from "@wms/db/internal";
 import * as schema from "@wms/db/internal/schema";
 import { maskChangeSummary, recordSecurityEvent } from "@wms/db";
 import { hashPassword, verifyPassword } from "./password.ts";
-import { FIELD_RATE_RULES, FIELD_SESSION_IDLE_SEC, FIELD_SESSION_MAX_SEC, fieldLoginPlugin, isFieldEmail } from "./field.ts";
+import { FIELD_EMAIL_DOMAIN as FIELD_EMAIL_DOMAIN_LOCAL, FIELD_RATE_RULES, FIELD_SESSION_IDLE_SEC, FIELD_SESSION_MAX_SEC, fieldLoginPlugin, isFieldEmail } from "./field.ts";
 import {
   DEMO_FORBIDDEN_PATHS,
   DISABLED_PATHS,
@@ -1272,6 +1272,21 @@ export function createAuth(params: CreateAuthParams): AuthService {
           if (!warnedNoIp) {
             warnedNoIp = true;
             logMasked("warn", "Fly-Client-IP header missing: using the shared local rate-limit bucket (non-production only)");
+          }
+        }
+        // T-997 (inceleme N1): boşta (2 sa) ya da mutlak süresi (12 sa) dolmuş saha oturumu, Better Auth herhangi bir uçta oturumu
+        // okuyup yenilemeden (`updatedAt`) ÖNCE silinir. Zaman DB saatinden; tek dizinli DELETE.
+        {
+          const token = await ctx.getSignedCookie(ctx.context.authCookies.sessionToken.name, ctx.context.secret);
+          if (typeof token === "string" && token !== "") {
+            await masked(() =>
+              authDb.execute(
+                sql`DELETE FROM public.sessions s USING public.users u
+                     WHERE s.token = ${token} AND u.id = s.user_id AND lower(u.email) LIKE ${`%@${FIELD_EMAIL_DOMAIN_LOCAL}`}
+                       AND (s.updated_at < now() - make_interval(secs => ${FIELD_SESSION_IDLE_SEC})
+                            OR s.created_at < now() - make_interval(secs => ${FIELD_SESSION_MAX_SEC}))`,
+              ),
+            );
           }
         }
         // T-997 (ADR-026 §7.2): saha hesabının iç e-postası (`@field.invalid`) e-posta/parola girişi ve sıfırlamada reddedilir

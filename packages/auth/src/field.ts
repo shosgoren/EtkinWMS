@@ -13,7 +13,7 @@
 //   karşılamaz ve mutlak süresi 12 saattir (index.ts `getPrincipal`/`ensureRecentAuth`).
 // - PIN, kod ve belirteç loga, yanıta (çerez dışında) ve olay detayına yazılmaz.
 import { createHash, randomBytes } from "node:crypto";
-import { APIError, createAuthEndpoint } from "better-auth/api";
+import { APIError, createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { sql } from "drizzle-orm";
 
@@ -84,8 +84,8 @@ function text(v: unknown, max: number): string {
   return typeof v === "string" && v.length <= max ? v : "";
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- iki uçta ortak Better Auth uç bağlamı (GenericEndpointContext; kurulu sürümün iç tipi dışa açık değil)
-type EndpointCtx = any;
+/** İki uçta ortak Better Auth uç bağlamı (GenericEndpointContext; index.ts ile aynı türetme). */
+type EndpointCtx = Parameters<typeof getSessionFromCtx>[0];
 
 type Exec = <T extends Record<string, unknown>>(query: ReturnType<typeof sql>) => Promise<T[]>;
 
@@ -216,8 +216,16 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
           await burn(pin);
           throw DENIED();
         }
-        // Tenant kovası yalnız KAYITLI cihazdan gelen deneme için (tenant kimliğiyle): kayıtsız trafik alanı kilitleyemez.
-        await limit(`field:tenant:${r.tenant_id}`, FIELD_RATE_RULES.tenant);
+        // Tenant kovası yalnız KAYITLI cihazdan gelen deneme için (tenant kimliğiyle): kayıtsız trafik alanı kilitleyemez. Sınır
+        // aşılırsa `begin`'in ayırdığı deneme geri verilir (hayalet hata sayılmaz; inceleme N2).
+        try {
+          await limit(`field:tenant:${r.tenant_id}`, FIELD_RATE_RULES.tenant);
+        } catch (e) {
+          await deps
+            .execute(sql`SELECT wms_probe.field_signin_finish(${r.tenant_id}::uuid, ${r.login_id}::uuid, ${r.device_id}::uuid, NULL, NULL)`)
+            .catch(() => undefined);
+          throw e;
+        }
         const ok = await deps.verifyPin(r.pin_hash, pin).catch(() => false);
         const next = newDeviceToken();
         const finished = await deps.execute<{ outcome: string }>(

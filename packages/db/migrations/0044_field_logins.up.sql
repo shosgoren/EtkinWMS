@@ -218,7 +218,11 @@ BEGIN
         UPDATE public.field_logins l
            SET failed_count = 0, lock_count = l.lock_count + 1,
                locked_until = CASE WHEN l.lock_count + 1 >= 3 THEN 'infinity'::timestamptz ELSE now() + interval '15 minutes' END
-         WHERE l.id = v_l.id;
+         WHERE l.id = v_l.id RETURNING * INTO v_l;
+        PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
+        INSERT INTO public.security_events (user_id, event_type, detail)
+        VALUES (v_l.user_id, 'field_login.locked', pg_catalog.jsonb_build_object('tenant_id', v_tenant::text, 'device_id', v_d.id::text,
+                'reason', 'pin', 'lock_count', v_l.lock_count));
       END IF;
       PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
       INSERT INTO public.security_events (user_id, event_type, detail)
@@ -258,6 +262,13 @@ DECLARE
   v_l public.field_logins%ROWTYPE;
   v_out text;
 BEGIN
+  IF p_ok IS NULL THEN
+    -- Ayrılmış denemeyi geri ver (istek PIN doğrulanmadan kesildi, ör. tenant hız sınırı); olay yazılmaz.
+    PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(p_tenant::text, ''), true);
+    UPDATE public.field_logins l SET failed_count = GREATEST(l.failed_count - 1, 0) WHERE l.tenant_id = p_tenant AND l.id = p_login;
+    PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
+    RETURN 'RELEASED';
+  END IF;
   IF p_ok AND (p_new_token_hash IS NULL OR p_new_token_hash !~ '^[0-9a-f]{64}$') THEN
     RAISE EXCEPTION 'field_signin_finish: belirteç biçimsiz' USING ERRCODE = '22023';
   END IF;
@@ -340,6 +351,8 @@ BEGIN
   -- Kod bekleyen hesap yoksa genel ret, sayaç DEĞİŞMEZ (kilitleme saldırısı ve kullanıcı adı keşfi yok; inceleme M1).
   IF v_l.activation_hash IS NULL OR v_l.activation_expires_at <= now() THEN
     PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
+    INSERT INTO public.security_events (user_id, event_type, detail)
+    VALUES (v_l.user_id, 'field_pin.failed', pg_catalog.jsonb_build_object('tenant_id', v_tenant::text, 'reason', 'no_pending_code'));
     RETURN QUERY SELECT 'DENIED'::text, NULL::uuid, NULL::uuid, NULL::uuid;
     RETURN;
   END IF;
