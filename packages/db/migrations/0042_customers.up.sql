@@ -4,8 +4,9 @@
 -- BİLİNÇLİ KARARLAR (inceleme için):
 -- * VERİ SINIRI (I-01, ADR-027 §2): panel müşteri içeriğini GÖRMEZ. İşlevler yalnız sayı, tarih ve durum döner (ürün adı, depo adı,
 --   kişi, stok miktarı yok). Sayım için probe'a YALNIZ sayım sütunlarında SELECT verilir (warehouses/items: tenant_id, status,
---   is_sample; stock_ledger: tenant_id, occurred_at; sessions: user_id, created_at; security_events: olay türü/detay/zaman) ve
---   `probe_select` (FOR SELECT TO wms_identity_probe) politikası eklenir (0003 kalıbı). Probe NOLOGIN'dir; bu yetkiler yalnız aşağıdaki
+--   is_sample; stock_ledger: tenant_id, occurred_at; sessions: user_id, created_at; security_events: olay türü/detay/zaman). Faz 2 tenant
+--   tablolarına probe politikası EKLENMEZ (AC-04: yalnız TO'suz izolasyon politikası): işlevler her tenant için bağlamı transaction-yerel
+--   kurup mevcut izolasyon politikasıyla sayar ve önceki bağlamı geri yükler. Probe NOLOGIN'dir; bu yetkiler yalnız aşağıdaki
 --   operatör denetimli SECURITY DEFINER işlevlerinde kullanılır. Uygulama rollerine tenant tablolarında yeni yetki YOK (AC-04).
 -- * DURUM: tenants.status ACTIVE ↔ SUSPENDED probe ile değişir: yalnız UPDATE (status) sütun yetkisi; probe'a YAZMA POLİTİKASI YOK
 --   (AC-04). İşlev, yalnız o satır için tenant bağlamını transaction-yerel kurar (mevcut izolasyon politikası), günceller ve önceki
@@ -46,9 +47,6 @@ GRANT UPDATE (status) ON public.tenants TO wms_identity_probe;
 GRANT EXECUTE ON FUNCTION public.plan_member_class(uuid, uuid, text) TO wms_identity_probe;
 GRANT EXECUTE ON FUNCTION public.plan_member_count(uuid, text, uuid) TO wms_identity_probe;
 
-CREATE POLICY probe_select ON public.warehouses   FOR SELECT TO wms_identity_probe USING (true);
-CREATE POLICY probe_select ON public.items        FOR SELECT TO wms_identity_probe USING (true);
-CREATE POLICY probe_select ON public.stock_ledger FOR SELECT TO wms_identity_probe USING (true);
 -- Müşteri geçmişi araması (inceleme MINOR-3): yalnız platform olayları, tenant + zaman.
 CREATE INDEX security_events_platform_tenant_idx ON public.security_events ((detail ->> 'tenant_id'), occurred_at)
   WHERE event_type LIKE 'platform.%';
@@ -60,35 +58,50 @@ CREATE INDEX security_events_platform_tenant_idx ON public.security_events ((det
 GRANT CREATE ON SCHEMA wms_probe TO wms_identity_probe;
 SET ROLE wms_identity_probe;
 
--- Operatör: müşteriler (demo hariç), paket ve sayılarıyla. İçerik sütunu yok.
+-- Operatör: müşteriler (demo hariç), paket ve sayılarıyla. İçerik sütunu yok. Depo/ürün sayımı için probe'a politika VERİLMEZ (AC-04:
+-- faz 2 tenant tablolarında yalnız TO'suz izolasyon politikası): her tenant için bağlam transaction-yerel kurulur, sayılır, sonra önceki
+-- bağlam geri yüklenir.
 CREATE FUNCTION wms_probe.platform_list_customers()
 RETURNS TABLE (id uuid, name text, slug text, status text, created_at timestamptz, subscription text, trial_ends_at timestamptz,
                plan_id uuid, plan_name text, price_monthly numeric, max_admins integer, max_field integer, max_warehouses integer,
                max_items integer, admins integer, field integer, warehouses integer, items integer, last_login timestamptz)
   LANGUAGE plpgsql
-  STABLE
+  VOLATILE
   SECURITY DEFINER
   SET search_path = pg_catalog, pg_temp
 AS $fn$
+DECLARE
+  r record;
+  v_prev text;
 BEGIN
   IF NOT wms_probe.platform_is_operator() THEN
     RAISE EXCEPTION 'platform_list_customers: operatör değil' USING ERRCODE = '42501';
   END IF;
-  RETURN QUERY
-    SELECT t.id, t.name, t.slug, t.status, t.created_at, s.plan, s.trial_ends_at, p.id, p.name, v.price_monthly,
-           v.max_admins, v.max_field, v.max_warehouses, v.max_items,
-           public.plan_member_count(t.id, 'admins', NULL)::integer,
-           public.plan_member_count(t.id, 'field', NULL)::integer,
-           (SELECT count(*)::integer FROM public.warehouses w WHERE w.tenant_id = t.id AND w.status = 'ACTIVE' AND NOT w.is_sample),
-           (SELECT count(*)::integer FROM public.items i WHERE i.tenant_id = t.id AND i.status = 'ACTIVE' AND NOT i.is_sample),
-           (SELECT max(se.created_at) FROM public.sessions se
-             WHERE se.user_id IN (SELECT m.user_id FROM public.tenant_memberships m WHERE m.tenant_id = t.id AND m.status = 'ACTIVE'))
+  v_prev := pg_catalog.current_setting('app.current_tenant_id', true);
+  FOR r IN
+    SELECT t.id AS tid, t.name AS tname, t.slug AS tslug, t.status AS tstatus, t.created_at AS tcreated, s.plan AS splan,
+           s.trial_ends_at AS strial, p.id AS pid, p.name AS pname, v.price_monthly AS vprice, v.max_admins AS vadm,
+           v.max_field AS vfield, v.max_warehouses AS vwh, v.max_items AS vitems
       FROM public.tenants t
       LEFT JOIN wms_platform.subscriptions s ON s.tenant_id = t.id
       LEFT JOIN wms_platform.plans p ON p.id = s.plan_id
       LEFT JOIN wms_platform.plan_versions v ON v.plan_id = s.plan_id AND v.version = s.plan_version
      WHERE NOT t.is_demo
-     ORDER BY t.created_at DESC, t.id;
+     ORDER BY t.created_at DESC, t.id
+  LOOP
+    PERFORM pg_catalog.set_config('app.current_tenant_id', r.tid::text, true);
+    id := r.tid; name := r.tname; slug := r.tslug; status := r.tstatus; created_at := r.tcreated; subscription := r.splan;
+    trial_ends_at := r.strial; plan_id := r.pid; plan_name := r.pname; price_monthly := r.vprice; max_admins := r.vadm;
+    max_field := r.vfield; max_warehouses := r.vwh; max_items := r.vitems;
+    admins := public.plan_member_count(r.tid, 'admins', NULL)::integer;
+    field := public.plan_member_count(r.tid, 'field', NULL)::integer;
+    SELECT count(*)::integer INTO warehouses FROM public.warehouses w WHERE w.tenant_id = r.tid AND w.status = 'ACTIVE' AND NOT w.is_sample;
+    SELECT count(*)::integer INTO items FROM public.items i WHERE i.tenant_id = r.tid AND i.status = 'ACTIVE' AND NOT i.is_sample;
+    SELECT max(se.created_at) INTO last_login FROM public.sessions se
+     WHERE se.user_id IN (SELECT m.user_id FROM public.tenant_memberships m WHERE m.tenant_id = r.tid AND m.status = 'ACTIVE');
+    RETURN NEXT;
+  END LOOP;
+  PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
 END
 $fn$;
 
@@ -96,12 +109,13 @@ $fn$;
 CREATE FUNCTION wms_probe.platform_customer_activity(p_tenant uuid)
 RETURNS TABLE (moves_month integer, at timestamptz, kind text, info jsonb)
   LANGUAGE plpgsql
-  STABLE
+  VOLATILE
   SECURITY DEFINER
   SET search_path = pg_catalog, pg_temp
 AS $fn$
 DECLARE
   v_moves integer;
+  v_prev text;
   v_from timestamptz := pg_catalog.date_trunc('month', now() AT TIME ZONE 'Europe/Istanbul') AT TIME ZONE 'Europe/Istanbul';
 BEGIN
   IF NOT wms_probe.platform_is_operator() THEN
@@ -110,7 +124,11 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo) THEN
     RAISE EXCEPTION 'platform_customer_activity: müşteri yok' USING ERRCODE = 'P0002';
   END IF;
+  -- Sayım izolasyon politikasından geçer (probe'a defter politikası yok, AC-04): bağlam yalnız sayım için kurulur ve geri yüklenir.
+  v_prev := pg_catalog.current_setting('app.current_tenant_id', true);
+  PERFORM pg_catalog.set_config('app.current_tenant_id', p_tenant::text, true);
   SELECT count(*)::integer INTO v_moves FROM public.stock_ledger l WHERE l.tenant_id = p_tenant AND l.occurred_at >= v_from;
+  PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
   RETURN QUERY
     SELECT v_moves, h.at, h.kind, h.info FROM (
       SELECT e.occurred_at AS at, e.event_type AS kind, (e.detail - 'tenant_id') AS info
