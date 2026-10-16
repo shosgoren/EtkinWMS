@@ -6,7 +6,7 @@
 -- * DÖNEN BİLGİ SINIRLI: zaman, olay türü, operatör mü sistem mi (kullanıcı kimliği/e-postası DÖNMEZ), ilgili firma adı (tenant ya da demo
 --   talebi), paket adı ve olay ayrıntısının yalnız izinli anahtarları (sürüm, yayın, dönem, adet, yöntem, gerekçe, deneme bitişi, teslim yolu).
 --   IP, tarayıcı, istek kimliği ve diğer anahtarlar dönmez.
--- * Probe'a olay tablosunda yalnız SÜTUN düzeyinde okuma (id, zaman, kullanıcı var/yok, tür, ayrıntı); ip/user_agent/request_id yok.
+-- * Probe'a olay tablosunda yalnız SÜTUN düzeyinde okuma (0042: zaman, kullanıcı, tür, ayrıntı; 0047: id); ip/user_agent/request_id yok.
 -- * En yeni önce, en çok 200 satır.
 -- Koşturucu tek transaction içinde çalıştırır.
 
@@ -19,8 +19,9 @@ END
 $pre$;
 
 CREATE INDEX security_events_platform_occurred_idx ON public.security_events (occurred_at DESC) WHERE event_type LIKE 'platform.%';
--- İşlevin okuması için sütun düzeyinde: IP, tarayıcı ve istek kimliği sütunlarına yetki VERİLMEZ.
-GRANT SELECT (id, occurred_at, user_id, event_type, detail) ON public.security_events TO wms_identity_probe;
+-- İşlevin okuması için sütun düzeyinde: zaman/kullanıcı/tür/ayrıntı 0042'den zaten var; yalnız sıralama için `id` eklenir. IP, tarayıcı ve
+-- istek kimliği sütunlarına yetki VERİLMEZ.
+GRANT SELECT (id) ON public.security_events TO wms_identity_probe;
 
 GRANT CREATE ON SCHEMA wms_probe TO wms_identity_probe;
 SET ROLE wms_identity_probe;

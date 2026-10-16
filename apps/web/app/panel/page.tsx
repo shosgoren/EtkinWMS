@@ -13,6 +13,7 @@ import { C, dz } from "../design/yonet-tokens.ts";
 import { YICON } from "../design/yonet-icons.ts";
 import { panelOperatorOrExit } from "./gate.ts";
 import { panelLabels, panelNav } from "./nav.ts";
+import { nearLimit } from "./ozet-rules.ts";
 import { OzetView, type OzetHealth, type OzetKpi, type OzetTodo } from "./ozet-view.tsx";
 import { PanelShell } from "./shell.tsx";
 
@@ -81,13 +82,6 @@ function fill(s: string, v: Readonly<Record<string, string | number>>): string {
 /** İstanbul takvim günü (YYYY-MM-DD). */
 function day(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-}
-
-/** Sınıra yaklaşan kullanım: sınır > 0 ve kalan ≤ sınırın %20'si (en az 1). Aşılmış/tam dolu sınırda kalan 0. */
-function nearLimit(limit: number, used: number): number | null {
-  if (limit <= 0) return null;
-  const left = Math.max(limit - used, 0);
-  return left <= Math.max(1, Math.floor(limit * 0.2)) ? left : null;
 }
 
 function trialTodos(customers: readonly CustomerRow[], now: Date, t: Msgs): OzetTodo[] {
