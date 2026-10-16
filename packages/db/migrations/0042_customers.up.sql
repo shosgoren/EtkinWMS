@@ -174,6 +174,7 @@ BEGIN
   END IF;
   -- Probe'a tenant tablosunda YAZMA POLİTİKASI verilmez (AC-04: probe politikaları yalnız SELECT). Kilit ve güncelleme mevcut izolasyon
   -- politikasından geçer: bağlam yalnız bu satır için transaction-yerel kurulur ve işlev bitmeden önceki değerine döndürülür.
+  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('platform.customer:' || p_tenant::text, 0));
   v_prev := pg_catalog.current_setting('app.current_tenant_id', true);
   PERFORM pg_catalog.set_config('app.current_tenant_id', p_tenant::text, true);
   SELECT t.status INTO v_status FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo FOR UPDATE;
@@ -311,6 +312,14 @@ BEGIN
   IF pg_catalog.has_table_privilege('wms_app', 'public.stock_ledger', 'DELETE') THEN
     RAISE EXCEPTION '0042_customers: beklenmeyen yetki';
   END IF;
+  -- Tenant durumunu yazan TEK probe işlevi askıya alma işlevidir (ikinci inceleme önerisi).
+  FOR f IN
+    SELECT p.proname FROM pg_catalog.pg_proc p
+     WHERE p.proowner = 'wms_identity_probe'::regrole AND p.prosrc ~* 'update\s+public\.tenants'
+       AND p.proname <> 'platform_set_customer_status'
+  LOOP
+    RAISE EXCEPTION '0042_customers: % tenant tablosunu güncelliyor', f;
+  END LOOP;
   -- Probe'un okuyabildiği sütunlar TAM OLARAK sayım sütunları (inceleme MINOR-6: belirteç, IP, ad vb. yok).
   FOR f IN
     SELECT c.relname || '.' || a.attname
