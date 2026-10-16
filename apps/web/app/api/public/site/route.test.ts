@@ -24,8 +24,9 @@ describe("GET /api/public/site", () => {
 
   it("önizleme sırrı başlıktan iletilir; yanıt önbelleksiz ve noindex; sorgudaki sır yok sayılır", async () => {
     next = site({ preview: true, title1: "Taslak" });
-    const res = await GET(new Request("http://web/api/public/site?preview=QUERY", { headers: { "x-site-preview": "SECRET" } }));
-    expect(calls).toEqual(["SECRET"]);
+    const secret = "S".repeat(43);
+    const res = await GET(new Request("http://web/api/public/site?preview=QUERY", { headers: { "x-site-preview": secret } }));
+    expect(calls).toEqual([secret]);
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("x-robots-tag")).toBe("noindex");
     expect(((await res.json()) as { site: { title1: string } }).site.title1).toBe("Taslak");
@@ -52,4 +53,14 @@ describe("GET /api/public/site", () => {
     expect(d.status).toBe(503);
     expect(await d.json()).toEqual({ error: "unavailable" });
   });
+  it("biçimsiz önizleme başlığı önbelleği atlamaz; önizleme sorguları dakikada sınırlı (aşımda yayındaki içerik)", async () => {
+    next = site({ preview: true });
+    const bad = await GET(new Request("http://web/api/public/site", { headers: { "x-site-preview": "x" } }));
+    expect(bad.headers.get("cache-control")).toBe("public, max-age=15");
+    const before = calls.length;
+    for (let i = 0; i < 70; i++) await GET(new Request("http://web/api/public/site", { headers: { "x-site-preview": "T".repeat(43) } }));
+    expect(calls.filter((c) => c === "T".repeat(43)).length).toBeLessThanOrEqual(59);
+    expect(calls.length - before).toBeLessThanOrEqual(60);
+  });
+
 });

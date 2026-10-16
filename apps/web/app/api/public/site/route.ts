@@ -12,11 +12,21 @@ export const dynamic = "force-dynamic";
 
 const CACHE_MS = 15_000;
 let cached: { at: number; site: PublicSite | null } | null = null;
+// İnceleme m1: önbelleği atlayan (önizleme) sorgular sınırlı. Yalnız biçimi geçerli sır DB'ye gider; dakikada en çok PREVIEW_PER_MIN
+// önizleme sorgusu (süreç geneli: istek iç ağdan, tek kaynaktan gelir); aşımda yayındaki içerik döner.
+const PREVIEW_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+const PREVIEW_PER_MIN = 60;
+let window_ = { at: 0, n: 0 };
+function previewAllowed(now: number): boolean {
+  if (now - window_.at >= 60_000) window_ = { at: now, n: 0 };
+  window_.n += 1;
+  return window_.n <= PREVIEW_PER_MIN;
+}
 
 export async function GET(request: Request): Promise<Response> {
   const preview = request.headers.get("x-site-preview");
   try {
-    if (preview !== null && preview !== "") {
+    if (preview !== null && PREVIEW_TOKEN.test(preview) && previewAllowed(Date.now())) {
       const site = await getPublicSite(getAppDb(), preview);
       return Response.json({ site }, { headers: { "cache-control": "no-store", "x-robots-tag": "noindex" } });
     }

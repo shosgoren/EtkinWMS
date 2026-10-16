@@ -75,6 +75,16 @@ export async function siteContent(preview) {
   siteCache = { at: now, site: r.ok ? r.site : siteCache.site };
   return siteCache.site;
 }
+// İnceleme m1: önizleme (önbelleksiz) istekleri IP başına saatte 20 ile sınırlı; aşımda yayındaki içerik sunulur.
+const previewLimits = new Map();
+function previewAllowed(req) {
+  const ip = req.headers['x-forwarded-for']?.toString().split(',').at(-1)?.trim() || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  for (const [key, value] of previewLimits) if (now - value.at > 3600000) previewLimits.delete(key);
+  const c = previewLimits.get(ip) || { at: now, n: 0 };
+  c.n++; previewLimits.set(ip, c);
+  return c.n <= 20;
+}
 const escapeHtml = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const jsonBlock = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 /** Ön-çizilmiş sayfaya içeriği yerleştirir: kahraman metni (JS'siz ziyaretçi ve titremesiz açılış) + istemci için veri bloğu. */
@@ -141,7 +151,7 @@ export const server = createServer(async (req,res) => {
     let cache = file.endsWith('.html') ? 'no-cache' : /^(img|fonts)\//.test(file) ? 'public, max-age=86400' : 'public, max-age=300';
     if (file === 'index.html') {
       const raw = new URL(req.url || '/', 'http://local').searchParams.get('onizleme');
-      const preview = raw !== null && PREVIEW_TOKEN.test(raw) ? raw : null;
+      const preview = raw !== null && PREVIEW_TOKEN.test(raw) && previewAllowed(req) ? raw : null;
       content = Buffer.from(injectSite(content.toString('utf8'), await siteContent(preview)), 'utf8');
       if (raw !== null) {
         cache = 'no-store';
