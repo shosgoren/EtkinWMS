@@ -56,7 +56,11 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.locator("#g-co")).toHaveValue("E2E Deneme AŞ");
     // Hidrasyon tamamlanmadan yazılan değer React durumuyla ezilir: önce firma adından üretilen adın sunucu yanıtı beklenir.
     await expect(page.locator("#g-slug-h")).toHaveText(/^Uygun · adresiniz .+\/e2e-deneme-as$/);
-    await page.locator("#g-slug").fill(slug);
+    const slugInput = page.locator("#g-slug");
+    await slugInput.click();
+    await slugInput.press("ControlOrMeta+a");
+    await slugInput.pressSequentially(slug, { delay: 20 });
+    await expect(slugInput).toHaveValue(slug);
     await expect(page.locator("#g-slug-h")).toHaveText(new RegExp(`^Uygun · adresiniz .+/${slug}$`));
     await page.getByRole("button", { name: /DEVAM/ }).click();
 
