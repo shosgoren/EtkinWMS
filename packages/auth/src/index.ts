@@ -1480,9 +1480,10 @@ export function createAuth(params: CreateAuthParams): AuthService {
       }),
       // T-997: saha girişi (çalışma alanı + kullanıcı adı + PIN, yalnız kayıtlı cihaz). Oturumu iç bağdaştırıcıyla açar.
       fieldLoginPlugin({
-        execute: (query) => masked(() => authDb.execute(query)),
+        execute: async <T extends Record<string, unknown>>(query: ReturnType<typeof sql>) =>
+          [...(await masked(() => authDb.execute<T>(query)))] as T[],
         hashPin: hashPassword,
-        verifyPin: verifyPassword,
+        verifyPin: (hash, pin) => verifyPassword({ hash, password: pin }),
         dummyHash: dummyPasswordHash,
         consume: (key, rule) => rateStore.consume(key, rule),
         markSessionVerified: (token) =>
@@ -1659,7 +1660,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
           email: `${randomUUID()}@field.invalid`,
           emailVerified: false,
           image: null,
-        });
+        }, { method: "field-login" });
         return { userId: user.id };
       });
     },

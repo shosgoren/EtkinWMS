@@ -588,6 +588,18 @@ describe(`number_sequences tür CHECK'i ile numbering.ts eşitliği (0022, T-305
       await client.end();
     }
   });
+  async function query<T extends pg.QueryResultRow>(sql: string, params: unknown[] = []): Promise<T[]> {
+    const client = new pg.Client({ connectionString: env.databaseUrlDirect });
+    try {
+      await client.connect();
+      return (await client.query<T>(sql, params)).rows;
+    } catch (e) {
+      throw new Error(redactErrorChain(e, secretUrls(env)));
+    } finally {
+      await client.end();
+    }
+  }
+
   it("T-997 (0044): saha tablolarinda probe yalniz belgeli sutunlara yazar, politika yok; ozet sutunlari uygulama/kimlik rolune kapali", async () => {
     const cols = await query<{ t: string; a: string; p: string }>(
       `SELECT c.relname AS t, a.attname AS a, x.p
