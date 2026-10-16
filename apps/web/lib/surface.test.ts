@@ -15,10 +15,11 @@ describe("ADR-027 kip ayrımı", () => {
     expect(panelRoute("/")).toEqual({ kind: "page", internal: "/panel" });
     expect(panelRoute("/talepler")).toEqual({ kind: "page", internal: "/panel/talepler" });
     expect(panelRoute("/paketler")).toEqual({ kind: "page", internal: "/panel/paketler" });
+    expect(panelRoute("/musteriler")).toEqual({ kind: "page", internal: "/panel/musteriler" });
     for (const p of ["/login", "/mfa", "/reset-password", "/api/auth/sign-in/email", "/api/health/live", "/icon.svg", "/manifest.webmanifest"]) {
       expect(panelRoute(p), p).toEqual({ kind: "shared" });
     }
-    for (const p of ["/t/motive", "/t", "/onboarding", "/invite/x", "/field", "/panel", "/panel/talepler", "/panel/paketler", "/paketler/x", "/operator/demo-requests", "/api/t/motive/audit/export", "/loginx", "/api/health", "/help"]) {
+    for (const p of ["/t/motive", "/t", "/onboarding", "/invite/x", "/field", "/panel", "/panel/talepler", "/panel/paketler", "/panel/musteriler", "/musteriler/x", "/paketler/x", "/operator/demo-requests", "/api/t/motive/audit/export", "/loginx", "/api/health", "/help"]) {
       expect(panelRoute(p), p).toEqual({ kind: "missing" });
     }
   });

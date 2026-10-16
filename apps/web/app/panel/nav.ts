@@ -8,6 +8,7 @@ import { YICON } from "../design/yonet-icons.ts";
 import type { PanelNavItem, PanelShellLabels } from "./shell.tsx";
 
 const PAGES = [
+  { key: "musteriler", href: "/musteriler", icon: YICON.cust },
   { key: "paketler", href: "/paketler", icon: YICON.pk },
   { key: "talepler", href: "/talepler", icon: YICON.req },
 ] as const;

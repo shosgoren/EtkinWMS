@@ -94,7 +94,7 @@ describe("0038 yetki sınırı", () => {
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'wms_probe' AND p.proname LIKE 'platform\\_%'`,
     );
-    expect(r.rows.length).toBe(19); // 0038: 4, 0039 (T-995): +10, 0041 (T-404): +5
+    expect(r.rows.length).toBe(24); // 0038: 4, 0039 (T-995): +10, 0041 (T-404): +5, 0042 (T-403): +5
     for (const x of r.rows) expect(x, x.fn).toMatchObject({ owner: "wms_identity_probe", def: true, pub: false });
   });
 

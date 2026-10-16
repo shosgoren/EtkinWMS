@@ -268,15 +268,19 @@ describe(`tenancy schema (T-103, target=${env.target})`, () => {
     }
     // wms_identity_probe politikalari yalnizca o role ve yalnizca SELECT USING (true) (MINOR-1: kilit politikalari kaldirildi).
     const probe = pols.filter((p) => p.roles.includes("wms_identity_probe"));
+    // T-403 (0042, ADR-027 §3): askıya alma için tek yazma politikası (tenants.probe_status: yalnız UPDATE, demo tenant hariç,
+    // yalnız ACTIVE/SUSPENDED; operatör denetimli işlevden). Sayım okuma politikaları (depo/ürün/defter) bu tablo listesinde değil.
     expect(probe.map((p) => `${p.tablename}.${p.policyname}.${p.cmd}`).sort()).toEqual([
       "invitations.probe_select.SELECT",
       "membership_roles.probe_select.SELECT",
       "tenant_memberships.probe_select.SELECT",
       "tenants.probe_select.SELECT",
+      "tenants.probe_status.UPDATE",
     ]);
     for (const p of probe) {
       expect(p.roles, p.policyname).toEqual(["wms_identity_probe"]);
-      expect(p.qual, p.policyname).toBe("true");
+      if (p.cmd === "SELECT") expect(p.qual, p.policyname).toBe("true");
+      else expect(p.qual, p.policyname).toBe("(NOT is_demo)");
     }
   });
 
@@ -429,17 +433,24 @@ describe(`invitation_tenant_for_token (0006, T-117; target=${env.target})`, () =
     expect(grantees.map((g) => g.grantee).filter((g) => g !== "wms_identity_probe")).toEqual(["wms_app"]);
   });
 
-  it("probe salt okunur kalir: tenant tablolarinda yazma yetkisi ve yazma politikasi yok", async () => {
+  it("probe tenant tablolarinda salt okunur kalir; tek istisna tenants.status (T-403 askiya alma, 0042)", async () => {
     const r = await query<{ w: boolean }>(
       `SELECT bool_or(has_table_privilege('wms_identity_probe', t, 'INSERT, UPDATE, DELETE, TRUNCATE')
-                      OR has_any_column_privilege('wms_identity_probe', t, 'UPDATE')) AS w
-         FROM unnest(ARRAY['public.invitations', 'public.tenant_memberships', 'public.membership_roles', 'public.tenants']) AS t`,
+                      OR (t <> 'public.tenants' AND has_any_column_privilege('wms_identity_probe', t, 'UPDATE'))) AS w
+         FROM unnest(ARRAY['public.invitations', 'public.tenant_memberships', 'public.membership_roles', 'public.tenants',
+                           'public.warehouses', 'public.items', 'public.stock_ledger']) AS t`,
     );
     expect(r[0]?.w).toBe(false);
-    const writes = await query<{ polname: string }>(
-      `SELECT polname FROM pg_policy p WHERE p.polroles = ARRAY[(SELECT oid FROM pg_roles WHERE rolname = 'wms_identity_probe')] AND p.polcmd <> 'r'`,
+    const cols = await query<{ attname: string }>(
+      `SELECT a.attname FROM pg_attribute a WHERE a.attrelid = 'public.tenants'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+          AND has_column_privilege('wms_identity_probe', 'public.tenants', a.attname, 'UPDATE') ORDER BY a.attname`,
     );
-    expect(writes).toEqual([]);
+    expect(cols.map((c) => c.attname)).toEqual(["status"]);
+    const writes = await query<{ polname: string; rel: string }>(
+      `SELECT polname, polrelid::regclass::text AS rel FROM pg_policy p
+        WHERE p.polroles = ARRAY[(SELECT oid FROM pg_roles WHERE rolname = 'wms_identity_probe')] AND p.polcmd <> 'r'`,
+    );
+    expect(writes).toEqual([{ polname: "probe_status", rel: "tenants" }]);
   });
 });
 
