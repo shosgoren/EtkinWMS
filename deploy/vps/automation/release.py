@@ -359,6 +359,8 @@ def deploy(sha, archive_hash, schema_hash):
             queues = 'installed'
         except Exception:
             run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
+            if not healthy():
+                raise ValueError('QUEUE_INSTALL_FAILED_AFTER_MIGRATION_ROLLBACK_HEALTH_FAILED') from None
             raise ValueError('QUEUE_INSTALL_FAILED_AFTER_MIGRATION_PREVIOUS_RESTARTED') from None
     try:
         run(args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=env)

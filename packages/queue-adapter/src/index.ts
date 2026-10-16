@@ -574,7 +574,8 @@ export function describeFailure(err: unknown): QueueInstallError {
  * Canlı yayın için EKLEMELİ kuyruk eşitlemesi (T-411): şema yükseltmesi, yetki geri alma/verme ya da RLS değişikliği YAPMAZ; yalnız kayıtlı
  * iş türlerinden eksik olan kuyrukları oluşturur. Önceki sürüm çalışırken güvenle koşar. Şema bu pg-boss sürümünün beklediği sürümde
  * değilse (yükseltme gerekirse) hiçbir şey yazmadan hata verir: yükseltme `installQueueSchema` ile, servisler durdurulmuş göç penceresinde
- * yapılır. YALNIZCA migration rolüyle (wms_meta.schema_migrations ve pgboss şemasının sahibi) çalışır. Oluşturulan kuyruk adlarını döner.
+ * yapılır. Var olan kuyrukların ayarları (ör. `QUEUE_EXPIRE_SECONDS` değişikliği) güncellenmez; o da tam kurulumla yapılır. YALNIZCA migration
+ * rolüyle (wms_meta.schema_migrations ve pgboss şemasının sahibi) çalışır. Oluşturulan kuyruk adlarını döner.
  */
 export async function syncQueues(options: InstallQueueSchemaOptions): Promise<readonly string[]> {
   const boss = new PgBoss({
@@ -619,6 +620,8 @@ export async function syncQueues(options: InstallQueueSchemaOptions): Promise<re
 }
 
 /**
+ * UYARI (T-411): servisler çalışırken canlı veritabanında KOŞMAYIN — önce yetkileri geri alır, sonra yeniden verir; arada uygulama kuyruğa
+ * erişemez. Canlı yayın yalnız `syncQueues` kullanır; bu işlev geliştirme/CI ve servislerin durdurulduğu bakım penceresi içindir.
  * pg-boss şemasını kurar/yükseltir, kayıtlı iş türlerinin kuyruklarını oluşturur ve `wms_app`/`wms_worker`'a en dar yetkileri
  * verir (gönderen wms_app, tüketici wms_worker; job RLS). YALNIZCA migration rolüyle çağrılır (`install-cli.ts`); idempotenttir. Herhangi bir hata kurulumu
  * başarısız sayar (yutulmaz); hata yalnızca ad + SQLSTATE taşır.
