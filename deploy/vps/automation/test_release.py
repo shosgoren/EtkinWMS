@@ -161,6 +161,8 @@ class ReleaseBoundaryTests(unittest.TestCase):
                    patch.object(release, 'receive', return_value='d'*64), patch.object(release.signal, 'alarm'),
                    patch.object(release.time, 'sleep'), patch.object(release, 'assert_migration_role'),
                    patch.object(release, 'migrator_drained', return_value=True)]
+        if 'install_queues' not in extra:
+            patches.append(patch.object(release, 'install_queues'))
         patches += [patch.object(release, name, value) for name, value in extra.items()]
         return patches
 
@@ -189,6 +191,77 @@ class ReleaseBoundaryTests(unittest.TestCase):
             state = json.loads((automation / 'state.json').read_text())
             self.assertEqual((state['sha'], state['schema']), (SHA, 'e'*64))
             self.assertEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
+
+    def test_queues_sync_after_migration_and_approval(self):
+        # T-411: with a migration, the queue sync runs after the approved migration (queues may depend on it).
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            calls = []
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: calls.append('backup'),
+                                       migrate_database=lambda sha: calls.append('migrate'), run=run,
+                                       install_queues=lambda sha: calls.append('queues:' + sha),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config', 'stop', 'backup', 'migrate', 'queues:' + SHA, 'up'])
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'e'*64)
+
+    def test_failed_queue_sync_after_migration_restarts_previous(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            calls = []
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: calls.append('backup'),
+                                       migrate_database=lambda sha: calls.append('migrate'), run=run,
+                                       install_queues=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'queues')),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with self.assertRaisesRegex(ValueError, 'QUEUE_INSTALL_FAILED_AFTER_MIGRATION_PREVIOUS_RESTARTED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config', 'stop', 'backup', 'migrate', 'up'])
+            self.assertNotEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
+
+    def test_failed_queue_sync_without_migration_stops_release_before_any_stop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            (automation / 'state.json').write_text(json.dumps(dict(previous, schema='b'*64)))
+            calls = []
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: calls.append('backup'),
+                                       migrate_database=lambda sha: calls.append('migrate'), run=run,
+                                       install_queues=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'queues')),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with self.assertRaisesRegex(ValueError, 'QUEUE_INSTALL_FAILED_PREVIOUS_RUNNING'):
+                    release.deploy(SHA, 'd'*64, 'b'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config'])
+
+    def test_queue_installer_uses_migrator_image_and_env_file_only(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
+             patch.object(release, 'run') as run, patch.object(release, 'remove_migrator') as remove:
+            release.install_queues(SHA)
+            self.assertEqual(remove.call_count, 2)  # before the run and always after it (killed client)
+            args = run.call_args.args[0]
+            self.assertEqual(args[args.index('--env-file') + 1], str(Path(directory) / 'migrate.env'))
+            self.assertEqual(args[-3:], ['etkinwms-migrate:' + SHA, 'node', '/queue-installer/sync.mjs'])
+            self.assertIn('--read-only', args)
+            self.assertFalse(any('postgresql://' in a or 'PASSWORD' in a for a in args))
+            self.assertEqual(run.call_args.kwargs['stdout'], release.subprocess.DEVNULL)
 
     def test_failed_migration_restarts_previous_and_keeps_schema_unapproved(self):
         with tempfile.TemporaryDirectory() as directory:

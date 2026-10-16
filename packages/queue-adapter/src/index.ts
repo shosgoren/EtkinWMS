@@ -571,6 +571,57 @@ export function describeFailure(err: unknown): QueueInstallError {
 }
 
 /**
+ * Canlı yayın için EKLEMELİ kuyruk eşitlemesi (T-411): şema yükseltmesi, yetki geri alma/verme ya da RLS değişikliği YAPMAZ; yalnız kayıtlı
+ * iş türlerinden eksik olan kuyrukları oluşturur. Önceki sürüm çalışırken güvenle koşar. Şema bu pg-boss sürümünün beklediği sürümde
+ * değilse (yükseltme gerekirse) hiçbir şey yazmadan hata verir: yükseltme `installQueueSchema` ile, servisler durdurulmuş göç penceresinde
+ * yapılır. Var olan kuyrukların ayarları (ör. `QUEUE_EXPIRE_SECONDS` değişikliği) güncellenmez; o da tam kurulumla yapılır. YALNIZCA migration
+ * rolüyle (wms_meta.schema_migrations ve pgboss şemasının sahibi) çalışır. Oluşturulan kuyruk adlarını döner.
+ */
+export async function syncQueues(options: InstallQueueSchemaOptions): Promise<readonly string[]> {
+  const boss = new PgBoss({
+    connectionString: options.url,
+    schema: QUEUE_SCHEMA,
+    application_name: "wms-migrate-queue",
+    max: 2,
+    supervise: false,
+    registerInstance: false,
+    schedule: false,
+    useListenNotify: false,
+    migrate: false,
+  });
+  const errors: unknown[] = [];
+  boss.on("error", (e) => errors.push(e));
+  const created: string[] = [];
+  try {
+    await boss.start();
+    const db = boss.getDb();
+    const who = await db.executeSql(
+      `SELECT current_user::text AS u, session_user::text AS s,
+              (SELECT pg_get_userbyid(c.relowner) = current_user FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'wms_meta' AND c.relname = 'schema_migrations') AS owns_migrations,
+              (SELECT pg_get_userbyid(nspowner) = current_user FROM pg_namespace WHERE nspname = '${QUEUE_SCHEMA}') AS owns_schema`,
+    );
+    const row = who.rows[0] as { u: string; s: string; owns_migrations: boolean | null; owns_schema: boolean | null } | undefined;
+    if (row === undefined || APP_ROLES.includes(row.u) || APP_ROLES.includes(row.s) || row.u !== row.s || row.owns_migrations !== true || row.owns_schema !== true) {
+      throw new QueueInstallError("queue sync must run with the migration role (owner of wms_meta.schema_migrations and the pgboss schema)");
+    }
+    for (const type of JOB_TYPES) {
+      if ((await boss.getQueue(type)) != null) continue;
+      await boss.createQueue(type, { policy: "standard", ...QUEUE_DEFAULTS, expireInSeconds: QUEUE_EXPIRE_SECONDS[type] });
+      created.push(type);
+    }
+  } catch (err) {
+    throw describeFailure(err);
+  } finally {
+    await boss.stop({ graceful: false, close: true }).catch(() => undefined);
+  }
+  if (errors.length > 0) throw describeFailure(errors[0]);
+  return created;
+}
+
+/**
+ * UYARI (T-411): servisler çalışırken canlı veritabanında KOŞMAYIN — önce yetkileri geri alır, sonra yeniden verir; arada uygulama kuyruğa
+ * erişemez. Canlı yayın yalnız `syncQueues` kullanır; bu işlev geliştirme/CI ve servislerin durdurulduğu bakım penceresi içindir.
  * pg-boss şemasını kurar/yükseltir, kayıtlı iş türlerinin kuyruklarını oluşturur ve `wms_app`/`wms_worker`'a en dar yetkileri
  * verir (gönderen wms_app, tüketici wms_worker; job RLS). YALNIZCA migration rolüyle çağrılır (`install-cli.ts`); idempotenttir. Herhangi bir hata kurulumu
  * başarısız sayar (yutulmaz); hata yalnızca ad + SQLSTATE taşır.

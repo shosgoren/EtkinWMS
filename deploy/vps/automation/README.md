@@ -53,3 +53,19 @@ Kurulum/test çıktısını aşağıya gerçek zaman/SHA/workflow run URL'si ile
 3. Root olarak `bash update-config.sh <klasör>`: önce `docker compose config` ve `caddy validate` ile doğrular, eski dosyaları zaman damgalı yedekler, kurar, servisleri mevcut sürüm etiketiyle ayağa kaldırır ve Caddy'yi yeniden başlatır.
 
 Bilinen sınır: `release.py` göç öncesi yalnız `web` ve `worker`'ı durdurur; `panel` açık kalır (yedek `pg_dump` tutarlı anlık görüntüdür; panel yazmaları seyrek operatör kararlarıdır). `release.py` de root kurulumludur; değişikliği ayrı adımdır.
+
+## İş kuyruklarının kurulumu (T-411)
+
+Yeni iş türleri (ör. `platform.activation.deliver`, `trial.welcome`) şema değişmeden de eklenebilir. `release.py`, `migrate.env`
+kuruluysa HER yayında aynı imzalı migration imajındaki `/queue-installer/sync.mjs`'i migration rolüyle çalıştırır: yalnız eksik
+kuyrukları oluşturur (pg-boss şema yükseltmesi ve yetki değişikliği yapmaz). Göç yoksa önceki sürüm çalışırken koşar; hata olursa yayın
+`QUEUE_INSTALL_FAILED_PREVIOUS_RUNNING` ile durur, hiçbir servis durdurulmaz. Göç varsa onaylı göçten sonra koşar; hata önceki imajı
+yeniden başlatır. Yanıtta `"queues": "installed"` (ya da `migrate.env` yoksa `"skipped"`) yazar.
+
+`release.py` root kurulumludur (`/usr/local/sbin/etkinwms-release`) ve yayınla güncellenmez. Bu özelliği içeren sürüm canlıya
+çıktıktan SONRA VPS yöneticisi bir kez kurar (aynı commit'teki dosya; önce kurulursa eski imajda yükleyici olmadığı için bir sonraki
+yayın güvenle durur):
+
+```bash
+install -m 755 -o root -g root release.py /usr/local/sbin/etkinwms-release
+```

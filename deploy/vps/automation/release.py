@@ -4,6 +4,8 @@
 Schema changes (T-916): only when the signed archive's schema label differs from the approved one AND the
 operator installed the migration credential (migrate.env). Then: pg_dump backup -> stop web/worker ->
 signed migrator image runs `migrate.ts up` as the migration owner role -> schema approved -> normal rollout.
+Job queues (T-411): whenever migrate.env exists, every release runs an additive queue sync (missing queues only) from the
+same signed migrator image: before rollout while the previous release serves, or right after a migration.
 """
 import fcntl
 import hashlib
@@ -228,15 +230,29 @@ def migrator_drained():
     return False
 
 
-def migrate_database(sha):
+def migrator_run(sha, command, timeout):
     # Credential stays in the root-only env file; never in argv or logs. Output is suppressed (may echo data).
     remove_migrator()
     run(['docker', 'run', '--rm', '--name', MIGRATOR_NAME, '--network', DB_NETWORK, '--env-file', str(migrate_env()),
          '-e', 'NODE_EXTRA_CA_CERTS=/run/etkinwms-db-ca.crt', '-e', 'WMS_ENV=production', '-e', 'DEMO_MODE=0',
          '-v', DB_CA + ':/run/etkinwms-db-ca.crt:ro', '--read-only', '--tmpfs', '/tmp',
          '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--memory', '512m',
-         'etkinwms-migrate:' + sha, 'node', 'src/migrate.ts', 'up'],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+         'etkinwms-migrate:' + sha] + command,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout)
+
+
+def migrate_database(sha):
+    migrator_run(sha, ['node', 'src/migrate.ts', 'up'], 600)
+
+
+def install_queues(sha):
+    # T-411: additive queue sync for this release: creates missing job-type queues only (no pg-boss schema upgrade, no
+    # grant/RLS change; refuses without writing if the queue schema would need an upgrade). Same credential and limits
+    # as the migrator. A killed client must not leave the container holding locks.
+    try:
+        migrator_run(sha, ['node', '/queue-installer/sync.mjs'], 120)
+    finally:
+        remove_migrator()
 
 
 def ledger_version():
@@ -295,6 +311,17 @@ def deploy(sha, archive_hash, schema_hash):
     current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash}
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
+    # Queue sync is additive (missing queues only). Without a migration it runs while the previous release still serves,
+    # so a failure stops the release before anything is stopped. With a migration it runs right after the migration
+    # (a release's queues may depend on its own migrations); a failure then restarts the previous image like a failed rollout.
+    queues = 'skipped'
+    if not migrate and migrate_env().is_file():
+        assert_migration_role()
+        try:
+            install_queues(sha)
+        except Exception:
+            raise ValueError('QUEUE_INSTALL_FAILED_PREVIOUS_RUNNING') from None
+        queues = 'installed'
     if migrate:
         old_args, old_env = compose(previous)
         assert_migration_role()
@@ -326,6 +353,15 @@ def deploy(sha, archive_hash, schema_hash):
             approve_schema(schema_hash)
         except Exception:
             raise ValueError('POST_MIGRATION_STATE_WRITE_FAILED_SERVICE_STOPPED') from None
+        try:
+            # After the approved migration (a release's queues may depend on it); the previous image stays the rollback target.
+            install_queues(sha)
+            queues = 'installed'
+        except Exception:
+            run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
+            if not healthy():
+                raise ValueError('QUEUE_INSTALL_FAILED_AFTER_MIGRATION_ROLLBACK_HEALTH_FAILED') from None
+            raise ValueError('QUEUE_INSTALL_FAILED_AFTER_MIGRATION_PREVIOUS_RESTARTED') from None
     try:
         run(args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=env)
         for _ in range(18):
@@ -346,7 +382,7 @@ def deploy(sha, archive_hash, schema_hash):
         set_current(previous['release'])
         write_state(previous)
         raise ValueError('RELEASE_FAILED_PREVIOUS_RESTORED') from None
-    print(json.dumps({'deployed': sha, 'health': 'ok'}))
+    print(json.dumps({'deployed': sha, 'health': 'ok', 'queues': queues}))
 
 
 def main():
