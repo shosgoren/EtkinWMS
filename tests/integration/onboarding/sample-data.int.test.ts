@@ -91,7 +91,7 @@ async function counts(tenantId: string) {
 
 async function audits(tenantId: string, action: string) {
   const r = await adm.query<{ change_summary: Record<string, unknown> }>(
-    "SELECT change_summary FROM public.audit_logs WHERE tenant_id = $1 AND action = $2 ORDER BY created_at",
+    "SELECT change_summary FROM public.audit_logs WHERE tenant_id = $1 AND action = $2 ORDER BY occurred_at, id",
     [tenantId, action],
   );
   return r.rows.map((x) => x.change_summary);
