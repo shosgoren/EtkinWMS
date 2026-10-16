@@ -857,6 +857,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.platform_list_charges", // T-406 migration 0043: operatöre tahakkuk listesi (firma adı, dönem, tutar, durum; not yok), yalnızca wms_app
     "wms_probe.platform_list_customers", // T-403 migration 0042: operatöre müşteri listesi (yalnız sayılar ve durum), yalnızca wms_app
     "wms_probe.platform_list_demo_requests", // T-994 migration 0038 (0039: aktivasyon durumu eklendi): yalnız operatöre talep listesi, yalnızca wms_app
+    "wms_probe.platform_list_events", // T-408 migration 0047: operatöre panel işlem kaydı (platform.* olayları; kullanıcı kimliği yok, izinli ayrıntı), yalnızca wms_app
     "wms_probe.platform_list_plans", // T-404 migration 0041: yalnız operatöre paket listesi (güncel sürüm + müşteri sayısı), yalnızca wms_app
     "wms_probe.platform_mark_charge_paid", // T-406 migration 0043: operatör elle ödendi kaydı (geri alınmaz) + security_events, yalnızca wms_app
     "wms_probe.platform_prepare_activation_delivery", // T-995 migration 0039: e-postayla teslimde yeni belirteç özeti, yalnızca wms_worker
@@ -942,6 +943,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_site_publish": [APP_ROLE],
       "wms_probe.platform_site_preview": [APP_ROLE],
       "wms_probe.platform_site_public": [APP_ROLE],
+      "wms_probe.platform_list_events": [APP_ROLE],
       "wms_probe.field_device_status": [AUTH_ROLE],
       "wms_probe.field_signin_begin": [AUTH_ROLE],
       "wms_probe.field_signin_finish": [AUTH_ROLE],
