@@ -863,6 +863,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.platform_published_plans", // T-404 migration 0041: yayındaki paketler (herkese açık bilgi, müşteri verisi yok), yalnızca wms_app
     "wms_probe.platform_save_plan", // T-404 migration 0041: operatör paket kaydı (değişiklikte yeni sürüm) + security_events, yalnızca wms_app
     "wms_probe.platform_set_customer_status", // T-403 migration 0042: operatör askıya alır (gerekçe) / devam ettirir + security_events, yalnızca wms_app
+    "wms_probe.platform_site_get", // T-407 migration 0046: operatöre düzenlenen satış sayfası içeriği + son yayın, yalnızca wms_app
+    "wms_probe.platform_site_preview", // T-407 migration 0046: operatör 30 dk önizleme özeti yazar + security_events, yalnızca wms_app
+    "wms_probe.platform_site_public", // T-407 migration 0046: yayındaki içerik + yayındaki paketler (herkese açık bilgi; geçerli önizleme özetiyle taslak), yalnızca wms_app
+    "wms_probe.platform_site_publish", // T-407 migration 0046: operatör taslağı yayınlar (değişmez sürüm) + security_events, yalnızca wms_app
+    "wms_probe.platform_site_save", // T-407 migration 0046: operatör taslak kaydı + security_events, yalnızca wms_app
     "wms_probe.platform_tenant_plan_limit", // T-404 migration 0041: bağlam tenant'ının paket sınırı (başka tenant → NULL), yalnızca wms_app
     "wms_probe.platform_tenant_subscription", // T-995 migration 0039: bağlam tenant'ının deneme kaydı (salt okunur), yalnızca wms_app
     "wms_probe.platform_workspace_name_taken", // T-995 migration 0039: yalnız geçerli bağlantıyla ad yoklaması (salt okunur), yalnızca wms_app
@@ -932,6 +937,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_list_charges": [APP_ROLE],
       "wms_probe.platform_accrue_charges": [APP_ROLE],
       "wms_probe.platform_mark_charge_paid": [APP_ROLE],
+      "wms_probe.platform_site_get": [APP_ROLE],
+      "wms_probe.platform_site_save": [APP_ROLE],
+      "wms_probe.platform_site_publish": [APP_ROLE],
+      "wms_probe.platform_site_preview": [APP_ROLE],
+      "wms_probe.platform_site_public": [APP_ROLE],
       "wms_probe.field_device_status": [AUTH_ROLE],
       "wms_probe.field_signin_begin": [AUTH_ROLE],
       "wms_probe.field_signin_finish": [AUTH_ROLE],

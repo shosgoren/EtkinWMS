@@ -9,7 +9,7 @@ export function appSurface(env: Readonly<Record<string, string | undefined>> = p
 }
 
 /** Panelin temiz adresleri (yonet.etkinyazilim.com/<yol>) → iç yol `/panel/<yol>`. Yeni panel sayfası buraya eklenir. */
-export const PANEL_PAGES: readonly string[] = ["/", "/musteriler", "/paketler", "/odemeler", "/talepler"];
+export const PANEL_PAGES: readonly string[] = ["/", "/musteriler", "/paketler", "/odemeler", "/talepler", "/satis"];
 
 /** Panel kipinde açık kalan ortak yollar: giriş, iki adımlı doğrulama, parola sıfırlama, kimlik ve sağlık uçları. */
 const PANEL_SHARED = /^\/(?:login|mfa|reset-password)(?:\/|$)|^\/api\/auth(?:\/|$)|^\/api\/health\/live$/;

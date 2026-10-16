@@ -100,6 +100,8 @@ services:
       PORT: 3200
       LEAD_DIR: /data
       DEMO_LEADS_DIR: /leads
+      # T-407: panelden yayınlanan satış sayfası içeriği (iç ağ; kimliksiz, yalnız yayındaki bilgi).
+      SITE_CONTENT_URL: http://web:3000/api/public/site
     volumes:
       - ../../marketing:/marketing:ro
       - marketing-leads:/data

@@ -29,6 +29,66 @@ export function publicFiles(dir = publicDir) {
   return files;
 }
 const files = publicFiles();
+
+// T-407 (ADR-027 §6): panelden yayınlanan satış sayfası içeriği (ana başlık, vurgulu satır, alt metin, fiyat bölümü paketleri).
+// Web uygulamasının iç ucundan (`SITE_CONTENT_URL`, ör. http://web:3000/api/public/site) okunur; ayar yoksa ya da uç yanıt vermezse
+// sayfa tasarımdaki metinle sunulur (fiyat bölümü görünmez). Yanıt sıkı biçimde doğrulanır; metin HTML'e kaçışlanarak, istemciye
+// çalıştırılmayan JSON veri bloğu olarak (`<` `>` `&` kaçışlı) girer. Önizleme sırrı (`?onizleme=`) yalnız başlıkla iletilir, önbelleğe
+// alınmaz; önizleme yanıtı arama motorlarına kapalı ve Referer'sızdır.
+const siteContentUrl = (process.env.SITE_CONTENT_URL || '').trim();
+const SITE_TTL_MS = 30000;
+const PREVIEW_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+let siteCache = { at: 0, site: null };
+const str = (v, min, max) => typeof v === 'string' && v.length >= min && v.length <= max && !/[\u0000-\u001f\u007f<>]/.test(v);
+const int = (v) => Number.isSafeInteger(v) && v >= 0 && v <= 10000000;
+/** Uçtan gelen içeriği doğrular; biçim dışıysa `null` (sayfa tasarım metniyle sunulur). */
+export function validSite(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (!str(raw.title1, 1, 80) || !str(raw.title2, 1, 60) || !str(raw.subtitle, 1, 400) || !Array.isArray(raw.plans) || raw.plans.length > 12) return null;
+  const plans = [];
+  for (const p of raw.plans) {
+    if (!p || typeof p !== 'object' || !str(p.name, 1, 60) || typeof p.price !== 'string' || !/^\d{1,7}(?:\.\d{1,2})?$/.test(p.price)) return null;
+    const l = p.limits || {}, f = p.features || {};
+    if (![l.admins, l.field, l.warehouses, l.items].every(int) || ![f.qr, f.ship, f.prod, f.api].every((b) => typeof b === 'boolean')) return null;
+    plans.push({ name: p.name, recommended: p.recommended === true, price: p.price,
+      limits: { admins: l.admins, field: l.field, warehouses: l.warehouses, items: l.items }, features: { qr: f.qr, ship: f.ship, prod: f.prod, api: f.api } });
+  }
+  return { title1: raw.title1, title2: raw.title2, subtitle: raw.subtitle, plans };
+}
+async function fetchSite(preview) {
+  if (!siteContentUrl) return { ok: true, site: null };
+  try {
+    const res = await fetch(siteContentUrl, { headers: preview ? { 'x-site-preview': preview } : {}, signal: AbortSignal.timeout(1500), redirect: 'error' });
+    if (!res.ok) return { ok: false, site: null };
+    const body = await res.json();
+    return { ok: true, site: validSite(body && body.site) };
+  } catch {
+    return { ok: false, site: null };
+  }
+}
+/** Yayındaki içerik (30 sn önbellek; uç hata verirse son iyi değer). Önizleme sırrı varsa önbelleksiz. */
+export async function siteContent(preview) {
+  if (preview) return (await fetchSite(preview)).site;
+  const now = Date.now();
+  if (now - siteCache.at < SITE_TTL_MS) return siteCache.site;
+  const r = await fetchSite(null);
+  siteCache = { at: now, site: r.ok ? r.site : siteCache.site };
+  return siteCache.site;
+}
+const escapeHtml = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const jsonBlock = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+/** Ön-çizilmiş sayfaya içeriği yerleştirir: kahraman metni (JS'siz ziyaretçi ve titremesiz açılış) + istemci için veri bloğu. */
+export function injectSite(html, site) {
+  if (!site) return html;
+  const cut = html.indexOf('<template id="dc-tpl">');
+  if (cut < 0) return html;
+  let root = html.slice(0, cut);
+  root = root.replace(/(<h1 class="htitle"[^>]*>\s*<span class="scanreveal"[^>]*><span>)[^<]*(<\/span><\/span>\s*<span class="scanreveal"[^>]*><span>)[^<]*(<\/span>)/,
+    (_m, a, b, c) => a + escapeHtml(site.title1) + b + escapeHtml(site.title2) + c);
+  root = root.replace(/(<p class="cine-sub"><span>)[^<]*(<\/span>)/, (_m, a, b) => a + escapeHtml(site.subtitle) + b);
+  root = root.replace('</head>', `<script type="application/json" id="site-content">${jsonBlock(site)}</script>\n</head>`);
+  return root + html.slice(cut);
+}
 export function validateLead(data) {
   if (!data || typeof data !== 'object') return null;
   const clean = (key, max) => typeof data[key] === 'string' ? data[key].trim().slice(0,max) : '';
@@ -76,9 +136,19 @@ export const server = createServer(async (req,res) => {
   const file = Object.hasOwn(files,path) ? files[path] : undefined;
   if (!file) return json(404,{error:'Sayfa bulunamadı.'});
   try {
-    const content = await readFile(resolve(publicDir,file));
+    let content = await readFile(resolve(publicDir,file));
     const type = TYPES[extname(file)] || 'application/octet-stream';
-    const cache = file.endsWith('.html') ? 'no-cache' : /^(img|fonts)\//.test(file) ? 'public, max-age=86400' : 'public, max-age=300';
+    let cache = file.endsWith('.html') ? 'no-cache' : /^(img|fonts)\//.test(file) ? 'public, max-age=86400' : 'public, max-age=300';
+    if (file === 'index.html') {
+      const raw = new URL(req.url || '/', 'http://local').searchParams.get('onizleme');
+      const preview = raw !== null && PREVIEW_TOKEN.test(raw) ? raw : null;
+      content = Buffer.from(injectSite(content.toString('utf8'), await siteContent(preview)), 'utf8');
+      if (raw !== null) {
+        cache = 'no-store';
+        res.setHeader('X-Robots-Tag','noindex, nofollow');
+        res.setHeader('Referrer-Policy','no-referrer');
+      }
+    }
     res.writeHead(200,{'Content-Type':type,'Cache-Control':cache});
     res.end(req.method==='HEAD'?undefined:content);
   } catch {json(503,{error:'Sayfa geçici olarak yüklenemiyor.'});}

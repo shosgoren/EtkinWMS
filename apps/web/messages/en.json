@@ -2403,7 +2403,8 @@
       "musteriler": "Customers",
       "talepler": "Demo requests",
       "paketler": "Plans",
-      "odemeler": "Payments"
+      "odemeler": "Payments",
+      "satis": "Sales page"
     },
     "talepler": {
       "title": "Demo requests",
@@ -2651,6 +2652,38 @@
         "November",
         "December"
       ]
+    },
+    "satis": {
+      "title": "Sales page",
+      "sub": "ETKINYAZILIM.COM · CONTENT AND PRICING",
+      "content": "CONTENT",
+      "host": "ETKINYAZILIM.COM",
+      "title1": "HEADLINE",
+      "title2": "HIGHLIGHTED LINE",
+      "subtitle": "SUBTITLE",
+      "plans": "PLANS SHOWN IN THE PRICING SECTION",
+      "draftSuffix": " (draft)",
+      "lastPub": "LAST PUBLISHED",
+      "pubNever": "NOT PUBLISHED YET",
+      "pubAt": "{when} · VERSION {v}",
+      "preview": "Preview link",
+      "publish": "Publish",
+      "previewKick": "PREVIEW · PRICING",
+      "previewAria": "Sales page preview",
+      "perMonth": "/ mo",
+      "unlimited": "Unlimited",
+      "admins": "admins",
+      "field": "field staff",
+      "warehouses": "warehouses",
+      "items": "items",
+      "linkTitle": "Preview link ready",
+      "linkBody": "Shows the saved draft; valid for 30 minutes and hidden from search engines.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "error": "Could not complete ({code}). Check the text and try again.",
+      "defTitle1": "Girişten sevkiyata kesintisiz kontrolün",
+      "defTitle2": "en kolay hali.",
+      "defSubtitle": "Koli, paket, varil ya da palet; kabul anında her birine kendi QR etiketi basılır. Depodan üretime, yarı mamulden mamule ve sevkiyata kadar her hareket iz bırakır. Ekran kullanıcıyı doğru işleme yönlendirir: eğitim gerekmez, birkaç dokunuş yeter."
     }
   },
   "activate": {
