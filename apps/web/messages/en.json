@@ -2472,7 +2472,7 @@
       "historyNote": "WHO · WHAT · WHY",
       "historyEmpty": "No records yet",
       "suspendTitle": "Suspend {name}?",
-      "suspendBody": "The customer's users cannot sign in; no data is deleted. You can resume at any time.",
+      "suspendBody": "The customer's users cannot sign in; no data is deleted. You can resume at any time. The reason is kept permanently; do not enter personal data.",
       "reason": "REASON (REQUIRED)",
       "reasonPlaceholder": "E.g. two billing periods unpaid",
       "cancel": "Cancel",

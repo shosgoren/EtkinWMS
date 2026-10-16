@@ -124,15 +124,15 @@ function meter(label: string, v: number, max: number | null, unlimited: string):
 function historyLine(e: CustomerEvent, m: Msgs, planName: (id: string | undefined) => string): string {
   switch (e.kind) {
     case "SUSPENDED":
-      return m.hSuspended.replace("{reason}", e.reason ?? "—");
+      return m.hSuspended.replace("{reason}", () => e.reason ?? "—");
     case "RESUMED":
       return m.hResumed;
     case "TRIAL_EXTENDED":
-      return m.hExtended.replace("{date}", e.trialEndsAt === undefined ? "—" : day(e.trialEndsAt));
+      return m.hExtended.replace("{date}", () => (e.trialEndsAt === undefined ? "—" : day(e.trialEndsAt)));
     case "PLAN_CHANGED":
-      return m.hPlanChanged.replace("{from}", e.fromPlanId === undefined ? m.noPlan : planName(e.fromPlanId)).replace("{to}", planName(e.planId));
+      return m.hPlanChanged.replace("{from}", () => (e.fromPlanId === undefined ? m.noPlan : planName(e.fromPlanId))).replace("{to}", () => planName(e.planId));
     case "PLAN_ASSIGNED":
-      return m.hPlanAssigned.replace("{to}", planName(e.planId));
+      return m.hPlanAssigned.replace("{to}", () => planName(e.planId));
     case "TRIAL_STARTED":
       return m.hTrialStarted;
     case "DEMO_APPROVED":

@@ -174,7 +174,7 @@ export async function setCustomerSuspended(params: WriteParams & { readonly susp
   const id = tenantId(params.tenantId);
   const reason = typeof params.reason === "string" ? params.reason.trim().replace(/\s+/g, " ") : "";
   if (params.suspend && reason === "") throw new AppError("VALIDATION_FAILED", { detail: "REASON_REQUIRED" });
-  if (reason.length > REASON_MAX) throw new AppError("VALIDATION_FAILED");
+  if (reason.length > REASON_MAX || /\p{Cc}/u.test(reason)) throw new AppError("VALIDATION_FAILED");
   const principal = await operatorWithRecentAuth(params);
   try {
     const rows = await withUser(params.db, principal.userId, (tx) =>

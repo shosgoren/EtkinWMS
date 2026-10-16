@@ -433,6 +433,19 @@ describe(`invitation_tenant_for_token (0006, T-117; target=${env.target})`, () =
     expect(grantees.map((g) => g.grantee).filter((g) => g !== "wms_identity_probe")).toEqual(["wms_app"]);
   });
 
+  it("T-403 (0042): sayim okuma politikalari yalnizca probe, yalnizca SELECT USING (true)", async () => {
+    const r = await query<{ t: string; p: string; cmd: string; roles: string[]; qual: string | null }>(
+      `SELECT tablename AS t, policyname AS p, cmd, roles::text[] AS roles, qual FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = ANY(ARRAY['warehouses', 'items', 'stock_ledger']) AND 'wms_identity_probe' = ANY(roles)
+        ORDER BY 1, 2`,
+    );
+    expect(r).toEqual([
+      { t: "items", p: "probe_select", cmd: "SELECT", roles: ["wms_identity_probe"], qual: "true" },
+      { t: "stock_ledger", p: "probe_select", cmd: "SELECT", roles: ["wms_identity_probe"], qual: "true" },
+      { t: "warehouses", p: "probe_select", cmd: "SELECT", roles: ["wms_identity_probe"], qual: "true" },
+    ]);
+  });
+
   it("probe tenant tablolarinda salt okunur kalir; tek istisna tenants.status (T-403 askiya alma, 0042)", async () => {
     const r = await query<{ w: boolean }>(
       `SELECT bool_or(has_table_privilege('wms_identity_probe', t, 'INSERT, UPDATE, DELETE, TRUNCATE')

@@ -20,6 +20,7 @@ RESET ROLE;
 REVOKE CREATE ON SCHEMA wms_probe FROM wms_identity_probe;
 
 DROP POLICY probe_status ON public.tenants;
+DROP INDEX public.security_events_platform_tenant_idx;
 DROP POLICY probe_select ON public.stock_ledger;
 DROP POLICY probe_select ON public.items;
 DROP POLICY probe_select ON public.warehouses;

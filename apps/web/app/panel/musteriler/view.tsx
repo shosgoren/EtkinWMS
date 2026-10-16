@@ -239,7 +239,7 @@ export function MusteriDetail({
     <>
       {state.error !== undefined ? (
         <div className="ban" role="alert" style={{ background: dz("C62828"), color: dz("FFFFFF") }}>
-          <span>{t.error.replace("{code}", state.error)}</span>
+          <span>{t.error.replace("{code}", () => state.error ?? "")}</span>
         </div>
       ) : null}
       <div className="card" style={{ background: C.surface }}>
@@ -346,7 +346,7 @@ export function MusteriDetail({
         <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-sh">
           <form className="sheet" style={{ background: C.surface, color: C.fg }} action={formAction} onSubmit={() => setSheet(null)}>
             <input type="hidden" name="id" value={cu.id} />
-            <h2 id="y-sh">{t.suspendTitle.replace("{name}", cu.name)}</h2>
+            <h2 id="y-sh">{t.suspendTitle.replace("{name}", () => cu.name)}</h2>
             <p style={{ margin: 0, font: "500 15px/1.5 'Instrument Sans', sans-serif", opacity: 0.8 }}>{t.suspendBody}</p>
             <div className="fl">
               <label htmlFor="y-why">{t.reason}</label>

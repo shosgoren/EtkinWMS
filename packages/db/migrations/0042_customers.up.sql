@@ -48,6 +48,10 @@ GRANT EXECUTE ON FUNCTION public.plan_member_count(uuid, text, uuid) TO wms_iden
 CREATE POLICY probe_select ON public.warehouses   FOR SELECT TO wms_identity_probe USING (true);
 CREATE POLICY probe_select ON public.items        FOR SELECT TO wms_identity_probe USING (true);
 CREATE POLICY probe_select ON public.stock_ledger FOR SELECT TO wms_identity_probe USING (true);
+-- Müşteri geçmişi araması (inceleme MINOR-3): yalnız platform olayları, tenant + zaman.
+CREATE INDEX security_events_platform_tenant_idx ON public.security_events ((detail ->> 'tenant_id'), occurred_at)
+  WHERE event_type LIKE 'platform.%';
+
 CREATE POLICY probe_status ON public.tenants      FOR UPDATE TO wms_identity_probe USING (NOT is_demo) WITH CHECK (status IN ('ACTIVE', 'SUSPENDED'));
 
 -- ---------------------------------------------------------------------------------------------
@@ -145,7 +149,8 @@ BEGIN
     RAISE EXCEPTION 'platform_set_customer_status: operatör değil' USING ERRCODE = '42501';
   END IF;
   v_uid := NULLIF(pg_catalog.current_setting('app.current_user_id', true), '')::uuid;
-  IF p_suspend IS NULL OR (p_suspend AND v_reason IS NULL) OR pg_catalog.length(coalesce(v_reason, '')) > 300 THEN
+  IF p_suspend IS NULL OR (p_suspend AND v_reason IS NULL) OR pg_catalog.length(coalesce(v_reason, '')) > 300
+     OR coalesce(v_reason, '') ~ '[[:cntrl:]]' THEN
     RAISE EXCEPTION 'platform_set_customer_status: gerekçe biçimsiz' USING ERRCODE = '22023';
   END IF;
   SELECT t.status INTO v_status FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo FOR UPDATE;
@@ -215,7 +220,9 @@ BEGIN
     RAISE EXCEPTION 'platform_change_customer_plan: operatör değil' USING ERRCODE = '42501';
   END IF;
   v_uid := NULLIF(pg_catalog.current_setting('app.current_user_id', true), '')::uuid;
-  IF NOT EXISTS (SELECT 1 FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo AND t.status IN ('ACTIVE', 'SUSPENDED')) THEN
+  -- Tenant satırı kilitlenir: aboneliği olmayan tenant'a eşzamanlı iki ilk atama PK çakışmasına düşmez (inceleme MINOR-2).
+  PERFORM 1 FROM public.tenants t WHERE t.id = p_tenant AND NOT t.is_demo AND t.status IN ('ACTIVE', 'SUSPENDED') FOR UPDATE;
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'platform_change_customer_plan: müşteri yok' USING ERRCODE = 'P0002';
   END IF;
   SELECT p.current_version INTO v_ver FROM wms_platform.plans p WHERE p.id = p_plan FOR SHARE;
@@ -273,10 +280,23 @@ BEGIN
       RAISE EXCEPTION '0042_customers: % PUBLIC çalıştırabiliyor', f;
     END IF;
   END LOOP;
-  IF pg_catalog.has_table_privilege('wms_app', 'public.stock_ledger', 'DELETE')
-     OR pg_catalog.has_column_privilege('wms_identity_probe', 'public.items', 'name', 'SELECT')
-     OR pg_catalog.has_column_privilege('wms_identity_probe', 'public.stock_ledger', 'quantity', 'SELECT') THEN
-    RAISE EXCEPTION '0042_customers: beklenmeyen yetki (içerik sütunu)';
+  IF pg_catalog.has_table_privilege('wms_app', 'public.stock_ledger', 'DELETE') THEN
+    RAISE EXCEPTION '0042_customers: beklenmeyen yetki';
   END IF;
+  -- Probe'un okuyabildiği sütunlar TAM OLARAK sayım sütunları (inceleme MINOR-6: belirteç, IP, ad vb. yok).
+  FOR f IN
+    SELECT c.relname || '.' || a.attname
+      FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+     WHERE c.oid IN ('public.warehouses'::regclass, 'public.items'::regclass, 'public.stock_ledger'::regclass,
+                     'public.sessions'::regclass, 'public.security_events'::regclass)
+       AND a.attnum > 0 AND NOT a.attisdropped
+       AND pg_catalog.has_column_privilege('wms_identity_probe', c.oid, a.attnum, 'SELECT')
+       AND c.relname || '.' || a.attname NOT IN ('warehouses.tenant_id', 'warehouses.status', 'warehouses.is_sample',
+             'items.tenant_id', 'items.status', 'items.is_sample', 'stock_ledger.tenant_id', 'stock_ledger.occurred_at',
+             'sessions.user_id', 'sessions.created_at', 'security_events.occurred_at', 'security_events.user_id',
+             'security_events.event_type', 'security_events.detail')
+  LOOP
+    RAISE EXCEPTION '0042_customers: probe beklenmeyen sütunu okuyabiliyor: %', f;
+  END LOOP;
 END
 $verify$;

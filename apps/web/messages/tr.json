@@ -2472,7 +2472,7 @@
       "historyNote": "KİM · NE · NEDEN",
       "historyEmpty": "Henüz kayıt yok",
       "suspendTitle": "{name} askıya alınsın mı?",
-      "suspendBody": "Müşterinin kullanıcıları giriş yapamaz; veriler silinmez. İstediğiniz zaman devam ettirebilirsiniz.",
+      "suspendBody": "Müşterinin kullanıcıları giriş yapamaz; veriler silinmez. İstediğiniz zaman devam ettirebilirsiniz. Gerekçe kalıcı kayda yazılır; kişisel bilgi girmeyin.",
       "reason": "GEREKÇE (ZORUNLU)",
       "reasonPlaceholder": "Örn. 2 dönem ödeme yapılmadı",
       "cancel": "Vazgeç",
