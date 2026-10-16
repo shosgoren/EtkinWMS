@@ -84,7 +84,8 @@ async function mkTenant(): Promise<Fx> {
   return { tenant, slug, ownerId };
 }
 
-const access = (fx: Fx) => ({ db: app, principal: { userId: fx.ownerId, mfaVerified: true }, tenantSlug: fx.slug });
+const recentAuth = async (): Promise<void> => undefined;
+const access = (fx: Fx) => ({ db: app, principal: { userId: fx.ownerId, mfaVerified: true }, tenantSlug: fx.slug, recentAuth });
 const accountPort = { createFieldAccount: (input: { readonly name: string }) => auth.createFieldAccount(input) };
 const revokePort = { revokeUserSessions: (userId: string) => auth.revokeUserSessions(userId) };
 
@@ -224,9 +225,13 @@ describe("saha hesabı açılışı (yönetici)", () => {
     expect((await failure(createFieldUser({ ...access(fx), name: "İki", username, roleKey: "PICKER" }, accountPort))).detail).toBe("CODE_TAKEN");
     expect((await failure(createFieldUser({ ...access(fx), name: "Üç", username: `x${username}`, roleKey: "TENANT_ADMIN" }, accountPort))).code).toBe("VALIDATION_FAILED");
     expect((await failure(createFieldUser({ ...access(fx), name: "Dört", username: "a b", roleKey: "PICKER" }, accountPort))).code).toBe("VALIDATION_FAILED");
+    // Yakın doğrulama bağlanmadan hesap açılamaz ve kod yenilenemez (fail-closed).
+    const { recentAuth: _omit, ...noReauth } = access(fx);
+    void _omit;
+    expect((await failure(createFieldUser({ ...noReauth, name: "Altı", username: `z${username}`, roleKey: "PICKER" }, accountPort))).detail).toBe("RECENT_AUTH_REQUIRED");
     // PICKER üyesi saha hesabı açamaz.
     const picker = await enrolled(fx);
-    const asPicker = { db: app, principal: { userId: picker.userId, mfaVerified: true }, tenantSlug: fx.slug };
+    const asPicker = { db: app, principal: { userId: picker.userId, mfaVerified: true }, tenantSlug: fx.slug, recentAuth };
     const e = await failure(createFieldUser({ ...asPicker, name: "Beş", username: `y${username}`, roleKey: "PICKER" }, accountPort));
     expect(e.code).toBe("FORBIDDEN");
   });
@@ -268,16 +273,66 @@ describe("etkinleştirme ve giriş", () => {
     expect(idle.status).toBe(200);
     const idleJar = jarFrom(idle);
     await adm.query(
-      "UPDATE public.sessions SET created_at = now() - interval '3 hours', updated_at = now() - interval '3 hours' WHERE user_id = $1 AND token = $2",
+      "UPDATE public.sessions SET created_at = now() - interval '3 hours', updated_at = now() - interval '3 hours', expires_at = now() + interval '9 hours' WHERE user_id = $1 AND token = $2",
       [created.userId, (idleJar.split("; ").find((c) => c.includes("session_token"))?.split("=")[1] ?? "").split(".")[0]],
     );
     expect(await auth.getPrincipal(new Headers({ cookie: idleJar }))).toBeNull();
+    // Etkin oturum (30 dk önce kullanılmış, yenileme zamanı gelmiş) geçerli kalır ve yenilenir.
+    const live = await post("/field/sign-in", { workspace: fx.slug, username, pin }, deviceOnly(idleJar));
+    expect(live.status).toBe(200);
+    const liveJar = jarFrom(live);
+    const liveToken = (liveJar.split("; ").find((c) => c.includes("session_token"))?.split("=")[1] ?? "").split(".")[0];
+    await adm.query(
+      "UPDATE public.sessions SET updated_at = now() - interval '30 minutes', expires_at = now() + interval '11 hours 30 minutes' WHERE token = $1",
+      [liveToken],
+    );
+    expect((await auth.getPrincipal(new Headers({ cookie: liveJar })))?.userId).toBe(created.userId);
+    const refreshed = await adm.query<{ fresh: boolean }>("SELECT updated_at > now() - interval '1 minute' AS fresh FROM public.sessions WHERE token = $1", [liveToken]);
+    expect(refreshed.rows[0]?.fresh).toBe(true);
     // Aynı kod ikinci kez kullanılamaz.
     expect((await post("/field/activate", { workspace: fx.slug, username, code: created.code, pin: goodPin() })).status).toBe(401);
     // Cihaz durumu: yalnız alan ve cihaz adı.
-    const st = (await (await get("/field/device", deviceOnly(idleJar))).json()) as Record<string, unknown>;
+    const st = (await (await get("/field/device", deviceOnly(liveJar))).json()) as Record<string, unknown>;
     expect(st).toMatchObject({ registered: true, workspace: fx.slug, kind: "PERSONAL" });
     expect(JSON.stringify(st)).not.toContain(created.userId);
+  });
+
+  it("etkinleştirme ucu kilit koymaz ve kilit bildirmez: kod beklemeyen hesapta sayaç değişmez; 5 yanlış kod kodu geçersiz kılar", async () => {
+    const fx = await mkTenant();
+    const p = await enrolled(fx);
+    // Kod beklemeyen (etkin) hesap: çok sayıda deneme → hep aynı genel ret; PIN girişi etkilenmez.
+    for (let i = 0; i < 7; i++) {
+      const r = await post("/field/activate", { workspace: fx.slug, username: p.username, code: "ABCD-EFGH", pin: goodPin() });
+      expect([r.status, await code(r)]).toEqual([401, "FIELD_LOGIN_DENIED"]);
+    }
+    const st = await adm.query("SELECT failed_count, lock_count, locked_until FROM public.field_logins WHERE user_id = $1", [p.userId]);
+    expect(st.rows[0]).toEqual({ failed_count: 0, lock_count: 0, locked_until: null });
+    expect((await post("/field/sign-in", { workspace: fx.slug, username: p.username, pin: p.pin }, p.device)).status).toBe(200);
+    // Bekleyen kod: 5 yanlış denemede kod geçersiz, doğru kod da artık çalışmaz.
+    const q = await createFieldUser({ ...access(fx), name: "Kod", username: `k${randomBytes(4).toString("hex")}`, roleKey: "PICKER" }, accountPort);
+    const wrong = q.code.startsWith("A") ? "BBBB-BBBB" : "AAAA-AAAA";
+    for (let i = 0; i < 5; i++) {
+      const r = await post("/field/activate", { workspace: fx.slug, username: q.username, code: wrong, pin: goodPin() });
+      expect([r.status, await code(r)]).toEqual([401, "FIELD_LOGIN_DENIED"]);
+    }
+    const after = await post("/field/activate", { workspace: fx.slug, username: q.username, code: q.code, pin: goodPin() });
+    expect([after.status, await code(after)]).toEqual([401, "FIELD_LOGIN_DENIED"]);
+    const row = await adm.query("SELECT activation_hash, locked_until FROM public.field_logins WHERE user_id = $1", [q.userId]);
+    expect(row.rows[0]).toEqual({ activation_hash: null, locked_until: null });
+  });
+
+  it("paralel denemeler 5'i aşamaz: doğrulanmamış ayrılmış denemeler doluysa giriş kilitlenir ve doğru PIN de reddedilir", async () => {
+    const fx = await mkTenant();
+    const p = await enrolled(fx);
+    const wrong = p.pin === "482915" ? "579302" : "482915";
+    const res = await Promise.all(
+      Array.from({ length: 8 }, () => post("/field/sign-in", { workspace: fx.slug, username: p.username, pin: wrong }, p.device)),
+    );
+    const codes = await Promise.all(res.map((r) => code(r)));
+    expect(codes.filter((c) => c === "FIELD_LOGIN_DENIED").length).toBeLessThanOrEqual(5);
+    expect(codes).toContain("FIELD_LOGIN_LOCKED");
+    const ok = await post("/field/sign-in", { workspace: fx.slug, username: p.username, pin: p.pin }, p.device);
+    expect([ok.status, await code(ok)]).toEqual([403, "FIELD_LOGIN_LOCKED"]);
   });
 
   it("giriş: kayıtlı cihaz şart; belirteç her girişte yenilenir (eski çerez geçersiz); bilinmeyenler aynı genel ret", async () => {

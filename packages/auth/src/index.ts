@@ -1537,7 +1537,16 @@ export function createAuth(params: CreateAuthParams): AuthService {
     },
 
     async getPrincipal(headers) {
-      const result = await masked(() => auth.api.getSession({ headers }));
+      // Önce YENİLEMESİZ okuma (inceleme B1): Better Auth `updateAge` dolunca oturumu okurken `updatedAt`'i şimdiye çeker; saha
+      // oturumunun boşta süresi yenilemeden ÖNCEKİ değerle ölçülmeli. Yenileme gerekiyorsa ve oturum geçerliyse ikinci okuma yeniler.
+      const first = await masked(() => auth.api.getSession({ headers, query: { disableRefresh: true } }));
+      if (first === null || first === undefined) return null;
+      const refreshDue =
+        new Date(first.session.expiresAt).getTime() - SESSION_EXPIRES_IN_SEC * 1000 + SESSION_UPDATE_AGE_SEC * 1000 <= Date.now();
+      const firstField = isFieldEmail(first.user.email);
+      const firstIdle =
+        firstField && Date.now() - new Date(first.session.updatedAt ?? first.session.createdAt).getTime() > FIELD_SESSION_IDLE_SEC * 1000;
+      const result = refreshDue && !firstIdle ? await masked(() => auth.api.getSession({ headers })) : first;
       if (result === null || result === undefined) return null;
       const { session, user } = result;
       // A-39: mutlak 7 gün sınırı (oturum oluşturmadan itibaren); aşıldıysa oturum iptal edilir.
@@ -1546,7 +1555,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
       const fieldExpired =
         fieldStaff &&
         (Date.now() - new Date(session.createdAt).getTime() > FIELD_SESSION_MAX_SEC * 1000 ||
-          Date.now() - new Date(session.updatedAt ?? session.createdAt).getTime() > FIELD_SESSION_IDLE_SEC * 1000);
+          firstIdle);
       if (sessionAbsoluteExpired(new Date(session.createdAt)) || fieldExpired) {
         await masked(() => authDb.execute(sql`DELETE FROM public.sessions WHERE id = ${session.id}::uuid`));
         return null;

@@ -84,6 +84,9 @@ function text(v: unknown, max: number): string {
   return typeof v === "string" && v.length <= max ? v : "";
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- iki uçta ortak Better Auth uç bağlamı (GenericEndpointContext; kurulu sürümün iç tipi dışa açık değil)
+type EndpointCtx = any;
+
 type Exec = <T extends Record<string, unknown>>(query: ReturnType<typeof sql>) => Promise<T[]>;
 
 export interface FieldPluginDeps {
@@ -128,6 +131,29 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
     await deps.verifyPin(await deps.dummyHash(), pin).catch(() => false);
   }
 
+  /**
+   * Cihaz çerezini yazar ve oturumu açar. Oturum açıldıktan SONRA cihaz yeniden doğrulanır: arada yönetici kodu yeniledi/cihazı iptal
+   * ettiyse (oturumlar o anda kapatılmıştı) yeni oturum silinir ve genel ret döner (inceleme m3).
+   */
+  async function openSession(
+    ctx: EndpointCtx,
+    userId: string,
+    tenantId: string,
+    device: { token: string; hash: string },
+  ): Promise<void> {
+    const user = await ctx.context.internalAdapter.findUserById(userId);
+    if (user === null || !isFieldEmail(user.email)) throw DENIED();
+    const session = await ctx.context.internalAdapter.createSession(userId, false);
+    const still = await deps.execute<{ slug: string }>(sql`SELECT slug FROM wms_probe.field_device_status(${tenantId}::uuid, ${device.hash})`);
+    if (still.length === 0) {
+      await ctx.context.internalAdapter.deleteSession(session.token);
+      throw DENIED();
+    }
+    await deps.markSessionVerified(session.token);
+    ctx.setCookie(cookieName, `${tenantId}.${device.token}`, cookieOptions);
+    await setSessionCookie(ctx, { session, user });
+  }
+
   return {
     id: "wms-field-login",
     endpoints: {
@@ -150,8 +176,9 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const pin = text(body.pin, 16);
         const deviceName = text(body.deviceName, 60).trim();
         if (workspace === "" || username === "" || code === null || !pinAcceptable(pin)) throw INVALID();
+        // Kullanıcı başına sınır (IP sınırı Better Auth kuralı). Tenant kovası burada TÜKETİLMEZ: doğrulanmamış trafik bütün alanın
+        // girişini kapatamamalı (inceleme M3).
         await limit(`field:activate-user:${workspace}:${username}`, FIELD_RATE_RULES.activateUser);
-        await limit(`field:tenant:${workspace}`, FIELD_RATE_RULES.tenant);
         const device = newDeviceToken();
         const pinHash = await deps.hashPin(pin);
         const rows = await deps.execute<{ outcome: string; user_id: string | null; tenant_id: string | null; device_id: string | null }>(
@@ -159,14 +186,9 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
                                                      ${deviceName === "" ? null : deviceName})`,
         );
         const r = rows[0];
-        if (r?.outcome === "LOCKED") throw LOCKED();
+        // Etkinleştirme kilit bildirmez (kullanıcı adı keşfi yok; inceleme M1): her ret aynı.
         if (r?.outcome !== "OK" || r.user_id === null || r.tenant_id === null) throw DENIED();
-        ctx.setCookie(cookieName, `${r.tenant_id}.${device.token}`, cookieOptions);
-        const user = await ctx.context.internalAdapter.findUserById(r.user_id);
-        if (user === null || !isFieldEmail(user.email)) throw DENIED();
-        const session = await ctx.context.internalAdapter.createSession(r.user_id, false);
-        await deps.markSessionVerified(session.token);
-        await setSessionCookie(ctx, { session, user });
+        await openSession(ctx, r.user_id, r.tenant_id, device);
         return ctx.json({ ok: true });
       }),
 
@@ -177,8 +199,9 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const pin = text(body.pin, 16);
         if (workspace === "" || username === "" || !/^\d{6}$/.test(pin)) throw INVALID();
         const parsed = parseDeviceCookie(ctx.getCookie(cookieName));
-        await limit(`field:device:${parsed?.tokenHash ?? "none"}`, FIELD_RATE_RULES.device);
-        await limit(`field:tenant:${workspace}`, FIELD_RATE_RULES.tenant);
+        // Cihaz çerezi yoksa/biçimsizse kova harcanmadan genel ret (her zaman ret; hesap bilgisi taşımaz — inceleme M3).
+        if (parsed === null) throw DENIED();
+        await limit(`field:device:${parsed.tokenHash}`, FIELD_RATE_RULES.device);
         const rows = await deps.execute<{ outcome: string; login_id: string | null; tenant_id: string | null; user_id: string | null; device_id: string | null; pin_hash: string | null }>(
           sql`SELECT * FROM wms_probe.field_signin_begin(${workspace}, ${username}, ${parsed?.tokenHash ?? null})`,
         );
@@ -189,10 +212,12 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         }
         // Cihaz tenant'ı ile girilen alan aynı olmalı (başka tenant'ın cihazı reddi; işlev de tenant içinde arar).
         if (r?.outcome !== "OK" || r.pin_hash === null || r.login_id === null || r.tenant_id === null || r.user_id === null
-            || parsed === null || parsed.tenantId !== r.tenant_id) {
+            || parsed.tenantId !== r.tenant_id) {
           await burn(pin);
           throw DENIED();
         }
+        // Tenant kovası yalnız KAYITLI cihazdan gelen deneme için (tenant kimliğiyle): kayıtsız trafik alanı kilitleyemez.
+        await limit(`field:tenant:${r.tenant_id}`, FIELD_RATE_RULES.tenant);
         const ok = await deps.verifyPin(r.pin_hash, pin).catch(() => false);
         const next = newDeviceToken();
         const finished = await deps.execute<{ outcome: string }>(
@@ -202,12 +227,7 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const outcome = finished[0]?.outcome;
         if (outcome === "LOCKED") throw LOCKED();
         if (!ok || outcome !== "OK") throw DENIED();
-        ctx.setCookie(cookieName, `${r.tenant_id}.${next.token}`, cookieOptions);
-        const user = await ctx.context.internalAdapter.findUserById(r.user_id);
-        if (user === null || !isFieldEmail(user.email)) throw DENIED();
-        const session = await ctx.context.internalAdapter.createSession(r.user_id, false);
-        await deps.markSessionVerified(session.token);
-        await setSessionCookie(ctx, { session, user });
+        await openSession(ctx, r.user_id, r.tenant_id, next);
         return ctx.json({ ok: true });
       }),
     },

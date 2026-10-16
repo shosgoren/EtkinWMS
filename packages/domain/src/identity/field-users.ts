@@ -124,6 +124,8 @@ export async function createFieldUser(params: CreateFieldUserParams, deps: Field
   const role = parseFieldRole(rawRole);
   const username = typeof rawUsername === "string" ? normalizeFieldUsername(rawUsername) : null;
   if (username === null) throw new AppError("VALIDATION_FAILED");
+  // Kimlik bilgisi veren komut: yakın zamanda doğrulama ZORUNLU (ADR-026 §7.1; inceleme M4 — `issuePasswordResetLink` deseni).
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   try {
     // (0) Ön denetim: yetki, demo, kullanıcı adı, paket sınırı — hesap açılmadan önce.
     await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
@@ -197,6 +199,7 @@ export interface ResetFieldCodeDeps {
 export async function resetFieldCode(params: FieldMemberParams, deps: ResetFieldCodeDeps): Promise<FieldCodeResult> {
   const { memberId: rawMember, requestId, ...access } = params;
   const memberId = parseUuid(rawMember);
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // fail-closed (M4)
   let result: FieldCodeResult & { readonly userId: string };
   try {
     result = await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {

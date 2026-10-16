@@ -44,6 +44,7 @@ CREATE TABLE public.field_logins (
   activation_hash        text,
   activation_expires_at  timestamptz,
   failed_count           integer     NOT NULL DEFAULT 0,
+  activation_failed_count integer    NOT NULL DEFAULT 0,
   lock_count             integer     NOT NULL DEFAULT 0,
   locked_until           timestamptz,
   created_at             timestamptz NOT NULL DEFAULT now(),
@@ -59,7 +60,7 @@ CREATE TABLE public.field_logins (
   CONSTRAINT field_logins_pin_chk CHECK ((pin_hash IS NULL) = (pin_set_at IS NULL) AND (pin_hash IS NULL OR pin_hash LIKE '$argon2id$%')),
   CONSTRAINT field_logins_activation_chk CHECK ((activation_hash IS NULL) = (activation_expires_at IS NULL)
                                                 AND (activation_hash IS NULL OR activation_hash ~ '^[0-9a-f]{64}$')),
-  CONSTRAINT field_logins_counts_chk CHECK (failed_count >= 0 AND lock_count >= 0)
+  CONSTRAINT field_logins_counts_chk CHECK (failed_count >= 0 AND lock_count >= 0 AND activation_failed_count >= 0)
 );
 CREATE INDEX field_logins_activation_idx ON public.field_logins (activation_hash) WHERE activation_hash IS NOT NULL;
 
@@ -107,7 +108,7 @@ GRANT SELECT (tenant_id, id, kind, user_id, name, created_at, created_by, last_u
 GRANT UPDATE (revoked_at, revoked_by) ON public.field_devices TO wms_app;
 -- Probe (giriş/etkinleştirme işlevleri): bağlam yalnız ilgili satır için kurulur.
 GRANT SELECT ON public.field_logins, public.field_devices TO wms_identity_probe;
-GRANT UPDATE (pin_hash, pin_set_at, activation_hash, activation_expires_at, failed_count, lock_count, locked_until)
+GRANT UPDATE (pin_hash, pin_set_at, activation_hash, activation_expires_at, activation_failed_count, failed_count, lock_count, locked_until)
   ON public.field_logins TO wms_identity_probe;
 GRANT INSERT (tenant_id, token_hash, kind, user_id, name, created_by) ON public.field_devices TO wms_identity_probe;
 GRANT UPDATE (token_hash, last_used_at, revoked_at) ON public.field_devices TO wms_identity_probe;
@@ -200,7 +201,8 @@ BEGIN
     SELECT EXISTS (SELECT 1 FROM public.membership_roles r WHERE r.tenant_id = v_tenant AND r.membership_id = v_l.membership_id
                      AND r.role_key NOT IN ('PICKER', 'COUNTER'))
            OR NOT EXISTS (SELECT 1 FROM public.membership_roles r WHERE r.tenant_id = v_tenant AND r.membership_id = v_l.membership_id)
-           OR NOT EXISTS (SELECT 1 FROM public.tenant_memberships m WHERE m.tenant_id = v_tenant AND m.id = v_l.membership_id AND m.status = 'ACTIVE')
+           OR NOT EXISTS (SELECT 1 FROM public.tenant_memberships m WHERE m.tenant_id = v_tenant AND m.id = v_l.membership_id
+                            AND m.user_id = v_l.user_id AND m.status = 'ACTIVE')
       INTO v_admin;
     IF v_d.id IS NULL THEN
       v_reason := 'device';
@@ -210,7 +212,14 @@ BEGIN
       v_reason := 'role';
     ELSIF v_l.pin_hash IS NULL THEN
       v_reason := 'no_pin';
-    ELSIF v_l.locked_until IS NOT NULL AND v_l.locked_until > now() THEN
+    ELSIF v_l.failed_count >= 5 OR (v_l.locked_until IS NOT NULL AND v_l.locked_until > now()) THEN
+      -- Ayrılmış denemeler sınırı doldurduysa kilit burada uygulanır (paralel denemeler 5'i aşamaz; inceleme M2).
+      IF v_l.failed_count >= 5 THEN
+        UPDATE public.field_logins l
+           SET failed_count = 0, lock_count = l.lock_count + 1,
+               locked_until = CASE WHEN l.lock_count + 1 >= 3 THEN 'infinity'::timestamptz ELSE now() + interval '15 minutes' END
+         WHERE l.id = v_l.id;
+      END IF;
       PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
       INSERT INTO public.security_events (user_id, event_type, detail)
       VALUES (v_l.user_id, 'field_login.failed', pg_catalog.jsonb_build_object('tenant_id', v_tenant::text, 'reason', 'locked',
@@ -227,6 +236,10 @@ BEGIN
     RETURN QUERY SELECT 'DENIED'::text, NULL::uuid, NULL::uuid, NULL::uuid, NULL::uuid, NULL::text;
     RETURN;
   END IF;
+  -- Deneme AYRILIR (PIN doğrulanmadan önce, kilit altında): en çok 5 deneme aynı anda doğrulanabilir; başarı `finish`'te sıfırlar.
+  PERFORM pg_catalog.set_config('app.current_tenant_id', v_tenant::text, true);
+  UPDATE public.field_logins l SET failed_count = l.failed_count + 1 WHERE l.id = v_l.id;
+  PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
   RETURN QUERY SELECT 'OK'::text, v_l.id, v_tenant, v_l.user_id, v_d.id, v_l.pin_hash;
 END
 $fn$;
@@ -254,7 +267,10 @@ BEGIN
     PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
     RAISE EXCEPTION 'field_signin_finish: giriş yok' USING ERRCODE = 'P0002';
   END IF;
-  IF p_ok THEN
+  IF v_l.locked_until IS NOT NULL AND v_l.locked_until > now() THEN
+    -- Paralel bir deneme kilidi koyduysa doğru PIN de reddedilir ve kilit sıfırlanmaz (inceleme M2).
+    v_out := 'LOCKED';
+  ELSIF p_ok THEN
     UPDATE public.field_logins l SET failed_count = 0, lock_count = 0, locked_until = NULL WHERE l.id = p_login;
     UPDATE public.field_devices d SET token_hash = p_new_token_hash, last_used_at = now()
      WHERE d.tenant_id = v_l.tenant_id AND d.id = p_device AND d.revoked_at IS NULL;
@@ -264,7 +280,7 @@ BEGIN
       v_out := 'OK';
     END IF;
   ELSE
-    UPDATE public.field_logins l SET failed_count = l.failed_count + 1 WHERE l.id = p_login RETURNING * INTO v_l;
+    -- Deneme `begin`'de ayrıldı (sayaç orada arttı); burada yalnız sınır dolduysa kilit.
     IF v_l.failed_count >= 5 THEN
       UPDATE public.field_logins l
          SET failed_count = 0, lock_count = l.lock_count + 1,
@@ -279,7 +295,7 @@ BEGIN
   INSERT INTO public.security_events (user_id, event_type, detail)
   VALUES (v_l.user_id, CASE v_out WHEN 'OK' THEN 'field_login.succeeded' WHEN 'LOCKED' THEN 'field_login.locked' ELSE 'field_login.failed' END,
           pg_catalog.jsonb_strip_nulls(pg_catalog.jsonb_build_object('tenant_id', v_l.tenant_id::text, 'device_id', p_device::text,
-            'reason', CASE WHEN v_out = 'OK' THEN NULL WHEN p_ok THEN 'device_revoked' ELSE 'pin' END,
+            'reason', CASE WHEN v_out = 'OK' THEN NULL WHEN v_out = 'LOCKED' AND p_ok THEN 'locked' WHEN p_ok THEN 'device_revoked' ELSE 'pin' END,
             'lock_count', CASE WHEN v_out = 'LOCKED' THEN v_l.lock_count END)));
   RETURN v_out;
 END
@@ -321,31 +337,35 @@ BEGIN
     RETURN QUERY SELECT 'DENIED'::text, NULL::uuid, NULL::uuid, NULL::uuid;
     RETURN;
   END IF;
-  IF v_l.locked_until IS NOT NULL AND v_l.locked_until > now() THEN
+  -- Kod bekleyen hesap yoksa genel ret, sayaç DEĞİŞMEZ (kilitleme saldırısı ve kullanıcı adı keşfi yok; inceleme M1).
+  IF v_l.activation_hash IS NULL OR v_l.activation_expires_at <= now() THEN
     PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
-    RETURN QUERY SELECT 'LOCKED'::text, NULL::uuid, NULL::uuid, NULL::uuid;
+    RETURN QUERY SELECT 'DENIED'::text, NULL::uuid, NULL::uuid, NULL::uuid;
     RETURN;
   END IF;
   SELECT NOT EXISTS (SELECT 1 FROM public.membership_roles r WHERE r.tenant_id = v_tenant AND r.membership_id = v_l.membership_id
                        AND r.role_key NOT IN ('PICKER', 'COUNTER'))
-         AND EXISTS (SELECT 1 FROM public.tenant_memberships m WHERE m.tenant_id = v_tenant AND m.id = v_l.membership_id AND m.status = 'ACTIVE')
+         AND EXISTS (SELECT 1 FROM public.tenant_memberships m WHERE m.tenant_id = v_tenant AND m.id = v_l.membership_id
+                       AND m.user_id = v_l.user_id AND m.status = 'ACTIVE')
     INTO v_role_ok;
-  IF v_l.activation_hash IS NULL OR v_l.activation_expires_at <= now() OR v_l.activation_hash <> p_code_hash OR NOT v_role_ok THEN
-    UPDATE public.field_logins l SET failed_count = l.failed_count + 1 WHERE l.id = v_l.id RETURNING * INTO v_l;
-    IF v_l.failed_count >= 5 THEN
-      UPDATE public.field_logins l SET failed_count = 0, lock_count = l.lock_count + 1,
-             locked_until = CASE WHEN l.lock_count + 1 >= 3 THEN 'infinity'::timestamptz ELSE now() + interval '15 minutes' END
-       WHERE l.id = v_l.id;
+  IF v_l.activation_hash <> p_code_hash OR NOT v_role_ok THEN
+    -- Yanlış kod: AYRI sayaç; 5'te kod geçersiz (PIN kilidine dokunulmaz).
+    IF v_l.activation_hash <> p_code_hash THEN
+      UPDATE public.field_logins l
+         SET activation_failed_count = l.activation_failed_count + 1,
+             activation_hash = CASE WHEN l.activation_failed_count + 1 >= 5 THEN NULL ELSE l.activation_hash END,
+             activation_expires_at = CASE WHEN l.activation_failed_count + 1 >= 5 THEN NULL ELSE l.activation_expires_at END
+       WHERE l.id = v_l.id RETURNING * INTO v_l;
     END IF;
     PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
     INSERT INTO public.security_events (user_id, event_type, detail)
     VALUES (v_l.user_id, 'field_pin.failed', pg_catalog.jsonb_build_object('tenant_id', v_tenant::text,
-            'reason', CASE WHEN NOT v_role_ok THEN 'role' ELSE 'code' END));
+            'reason', CASE WHEN NOT v_role_ok THEN 'role' WHEN v_l.activation_hash IS NULL THEN 'code_exhausted' ELSE 'code' END));
     RETURN QUERY SELECT 'DENIED'::text, NULL::uuid, NULL::uuid, NULL::uuid;
     RETURN;
   END IF;
   UPDATE public.field_logins l
-     SET pin_hash = p_pin_hash, pin_set_at = now(), activation_hash = NULL, activation_expires_at = NULL,
+     SET pin_hash = p_pin_hash, pin_set_at = now(), activation_hash = NULL, activation_expires_at = NULL, activation_failed_count = 0,
          failed_count = 0, lock_count = 0, locked_until = NULL
    WHERE l.id = v_l.id;
   -- Kişinin önceki kişisel cihazları iptal (yeni kod = eski PIN ve cihazlar geçersiz; ADR-026 §7.8).
@@ -392,7 +412,7 @@ BEGIN
   ELSE
     UPDATE public.field_logins l
        SET pin_hash = NULL, pin_set_at = NULL, activation_hash = p_code_hash, activation_expires_at = now() + interval '24 hours',
-           failed_count = 0, lock_count = 0, locked_until = NULL
+           activation_failed_count = 0, failed_count = 0, lock_count = 0, locked_until = NULL
      WHERE l.id = v_l.id;
     UPDATE public.field_devices d SET revoked_at = now()
      WHERE d.tenant_id = v_ctx AND d.kind = 'PERSONAL' AND d.user_id = v_l.user_id AND d.revoked_at IS NULL;
