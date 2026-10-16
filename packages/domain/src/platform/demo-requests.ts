@@ -239,18 +239,16 @@ export async function decideDemoRequest(params: DecideDemoRequestParams, deps: A
   if (typeof id !== "string" || !UUID.test(id)) throw new AppError("VALIDATION_FAILED");
   if (decision !== "APPROVED" && decision !== "REJECTED") throw new AppError("VALIDATION_FAILED");
   const principal = await operatorWithRecentAuth(params);
-  let issued: { delivery: "EMAIL" | "SCREEN"; expiresAt: Date; token?: string } | undefined;
   try {
     // Karar ve (onayda) bağlantı TEK transaction'da: bağlantısız onay kalmaz.
-    const d = await withUser(params.db, principal.userId, async (tx) => {
+    const out = await withUser(params.db, principal.userId, async (tx) => {
       const rows = await tx.execute<{ d: DemoDecision }>(sql`SELECT wms_probe.platform_decide_demo_request(${id}::uuid, ${decision}) AS d`);
-      const out = rows[0]?.d;
-      if (out !== "APPROVED" && out !== "REJECTED") throw new AppError("INTERNAL");
-      if (out === "APPROVED") issued = await issueInTx(tx, id, deps.mailConfig);
-      return out;
+      const d = rows[0]?.d;
+      if (d !== "APPROVED" && d !== "REJECTED") throw new AppError("INTERNAL");
+      return { d, issued: d === "APPROVED" ? await issueInTx(tx, id, deps.mailConfig) : undefined };
     });
-    if (d === "REJECTED" || issued === undefined) return { decision: d };
-    return { decision: d, activation: await deliverOrFallback(params.db, principal, id, issued, deps) };
+    if (out.issued === undefined) return { decision: out.d };
+    return { decision: out.d, activation: await deliverOrFallback(params.db, principal, id, out.issued, deps) };
   } catch (e) {
     throw mapPlatformError(e);
   }
