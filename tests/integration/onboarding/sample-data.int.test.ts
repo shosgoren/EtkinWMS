@@ -7,7 +7,7 @@
 // Fikstürler sentetik (G-09); parola çalışma anında üretilir.
 import { randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
-import { sql } from "drizzle-orm";
+import { sql } from "../../../packages/db/node_modules/drizzle-orm/index.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDbClient, withTenant } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, createTenantContext, type DbClient } from "../../../packages/db/src/client.ts";
