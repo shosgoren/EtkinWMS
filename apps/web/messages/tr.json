@@ -419,7 +419,9 @@
     "validation_failed_reason_required": "Gerekçe gerekli.",
     "validation_failed_reason_requiredAction": "Askıya alma için gerekçe yazın.",
     "validation_failed_payment_invalid": "Ödeme kaydı geçersiz.",
-    "validation_failed_payment_invalidAction": "Tarihi (bugün ya da önce), yöntemi ve notu kontrol edin."
+    "validation_failed_payment_invalidAction": "Tarihi (bugün ya da önce), yöntemi ve notu kontrol edin.",
+    "validation_failed_code_mismatch": "Doğrulama kodu terminaldeki kodla aynı değil.",
+    "validation_failed_code_mismatchAction": "Terminal ekranındaki 6 haneli kodu yeniden yazın; 3 yanlışta QR yenilenir."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",
@@ -2838,7 +2840,7 @@
     "deviceNameHint": "Yönetici bu adı görür · ör. El terminali 2, Sevkiyat tableti",
     "request": "KAYDI İSTE",
     "waitTitle": "Onay bekleniyor",
-    "waitBody": "Yöneticiniz kendi ekranında <b>{name}</b> için ONAYLA'ya dokununca bu ekran kendiliğinden ilerler.",
+    "waitBody": "Bu kodu yöneticinize söyleyin. Yönetici <b>{name}</b> için kodu yazıp onaylayınca bu ekran kendiliğinden ilerler.",
     "waitChip": "TALEP · 5 DAKİKA GEÇERLİ",
     "enrDoneTitle": "Cihaz kaydedildi",
     "enrDoneBody": "Bu cihazda alanın saha personeli kendi kullanıcı adı ve PIN'iyle girer.",
@@ -2852,7 +2854,8 @@
     "swEmpty": "Bu cihazda PIN'i belirlenmiş personel yok.",
     "deviceNameDefault": "El terminali",
     "rolePicker": "Toplayıcı",
-    "roleCounter": "Sayımcı"
+    "roleCounter": "Sayımcı",
+    "codeAria": "Doğrulama kodu"
   },
   "fieldDevices": {
     "title": "Cihazlar",
@@ -2873,7 +2876,7 @@
     "addBody": "El terminalinin kamerasıyla bu QR'ı okutun. Cihaz bağlanmak istediğinde burada onaylarsınız.",
     "claimKick": "ONAY BEKLİYOR",
     "claimChip": "BAĞLANMAK İSTİYOR",
-    "claimBody": "Bu cihaz şu an yanınızdaysa onaylayın. Tanımıyorsanız reddedin; QR yeniden üretilir.",
+    "claimBody": "Terminal ekranındaki 6 haneli kodu yazıp onaylayın. Kod yoksa ya da tanımıyorsanız reddedin; QR yeniden üretilir.",
     "reject": "REDDET",
     "approve": "ONAYLA",
     "banTitle": "Onaysız cihaz giriş yapamaz",
@@ -2884,6 +2887,10 @@
     "reauthLink": "Yeniden giriş",
     "errServer": "Bağlantı sorunu. Yeniden deneyin.",
     "approved": "Cihaz kaydedildi.",
-    "revoked": "Cihaz iptal edildi; oturumları kapatıldı."
+    "revoked": "Cihaz iptal edildi; oturumları kapatıldı.",
+    "codeLabel": "TERMİNALDEKİ KOD",
+    "errCode": "Kod terminaldeki kodla aynı değil. 3 yanlışta QR yenilenir.",
+    "suspendedTitle": "Otomatik durduruldu · {name}",
+    "suspendedBody": "Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi. Hesapların kilidini Üyeler ekranından açın."
   }
 }

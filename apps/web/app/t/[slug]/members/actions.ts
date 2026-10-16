@@ -261,6 +261,7 @@ export async function unlockFieldLoginAction(raw: unknown) {
 
 const deviceSchema = z.object({ slug: slugSchema, deviceId: z.string().uuid() }).strict();
 const enrollmentSchema = z.object({ slug: slugSchema, enrollmentId: z.string().uuid() }).strict();
+const approveSchema = z.object({ slug: slugSchema, enrollmentId: z.string().uuid(), confirmCode: z.string().min(1).max(12) }).strict();
 
 export async function revokeDeviceAction(raw: unknown) {
   return guardedAction({ schema: deviceSchema }, async (input, ctx) => {
@@ -293,10 +294,17 @@ export async function enrollmentStatusAction(raw: unknown) {
 }
 
 export async function approveEnrollmentAction(raw: unknown) {
-  return guardedAction({ schema: enrollmentSchema }, async (input, ctx) => {
+  return guardedAction({ schema: approveSchema }, async (input, ctx) => {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
-    const r = await approveEnrollment({ db: getAppDb(), principal, tenantSlug: input.slug, enrollmentId: input.enrollmentId, requestId: ctx.requestId });
+    const r = await approveEnrollment({
+      db: getAppDb(),
+      principal,
+      tenantSlug: input.slug,
+      enrollmentId: input.enrollmentId,
+      confirmCode: input.confirmCode,
+      requestId: ctx.requestId,
+    });
     return { deviceId: r.deviceId };
   })(raw);
 }

@@ -57,13 +57,14 @@ function Qr({ value, label }: { value: string; label: string }) {
   );
 }
 
-function View({ slug, tenantName, devices }: { slug: string; tenantName: string; devices: readonly DeviceItem[] }) {
+function View({ slug, tenantName, devices, suspended }: { slug: string; tenantName: string; devices: readonly DeviceItem[]; suspended: readonly string[] }) {
   const t = useTranslations("fieldDevices");
   const format = useFormatter();
   const { toggleTheme } = useDz();
   const router = useRouter();
   const [enr, setEnr] = useState<Enrollment | null>(null);
   const [claim, setClaim] = useState<string | null>(null);
+  const [cc, setCc] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ text: string; reauth: boolean } | null>(null);
@@ -78,6 +79,7 @@ function View({ slug, tenantName, devices }: { slug: string; tenantName: string;
     if (starting.current) return;
     starting.current = true;
     setClaim(null);
+    setCc("");
     const r = await startEnrollmentAction({ slug });
     starting.current = false;
     if (r.ok) {
@@ -120,13 +122,19 @@ function View({ slug, tenantName, devices }: { slug: string; tenantName: string;
   async function approve(): Promise<void> {
     if (enr === null) return;
     setBusy(true);
-    const r = await approveEnrollmentAction({ slug, enrollmentId: enr.id });
+    const r = await approveEnrollmentAction({ slug, enrollmentId: enr.id, confirmCode: cc });
     setBusy(false);
     if (!r.ok) {
+      if (r.error.detail === "CODE_MISMATCH") {
+        setErr({ text: t("errCode"), reauth: false });
+        setCc("");
+        return;
+      }
       setErr({ text: t("errServer"), reauth: false });
       void start();
       return;
     }
+    setErr(null);
     setNotice(t("approved"));
     router.refresh();
     void start();
@@ -173,6 +181,15 @@ function View({ slug, tenantName, devices }: { slug: string; tenantName: string;
         <div className="lin">
           <div className="mgrid">
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {suspended.map((name) => (
+                <div key={name} className="ban" style={{ background: dz("C62828"), color: dz("FFFFFF") }} role="alert">
+                  <Ico d={GICON.warn} size={22} />
+                  <span>
+                    <b>{t("suspendedTitle", { name })}</b>
+                    {t("suspendedBody")}
+                  </span>
+                </div>
+              ))}
               <div className="shd">
                 <b>{t("listTitle")}</b>
                 <span>{t("listCount", { n: devices.length })}</span>
@@ -245,11 +262,32 @@ function View({ slug, tenantName, devices }: { slug: string; tenantName: string;
                   <p className="ls" style={{ margin: 0 }}>
                     {t("claimBody")}
                   </p>
+                  <div className="fl" style={{ width: "100%", textAlign: "left" }}>
+                    <label htmlFor="g-cc">{t("codeLabel")}</label>
+                    <div className="inp" style={{ background: C.chip }}>
+                      <input
+                        id="g-cc"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={cc}
+                        onChange={(e) => setCc(e.target.value.replace(/\D/g, ""))}
+                        style={{ fontFamily: "var(--font-plex-mono), monospace", fontSize: "22px", letterSpacing: ".3em", textAlign: "center" }}
+                      />
+                    </div>
+                  </div>
+                  {err !== null ? (
+                    <span className="hint bad" role="alert">
+                      <Ico d={GICON.warn} size={16} />
+                      {err.text}
+                    </span>
+                  ) : null}
                   <div className="act" style={{ position: "static", padding: 0, boxShadow: "none", width: "100%" }}>
                     <button type="button" className="big ghost" style={{ background: C.chip, color: C.fg }} onClick={() => void reject()} disabled={busy}>
                       {t("reject")}
                     </button>
-                    <button type="button" className="big" style={{ background: dz("17804F"), color: dz("FFFFFF") }} onClick={() => void approve()} disabled={busy}>
+                    <button type="button" className="big" style={{ background: dz("17804F"), color: dz("FFFFFF") }} onClick={() => void approve()} disabled={busy || cc.length !== 6}>
                       <Ico d={GICON.check} size={24} sw={3} />
                       {t("approve")}
                     </button>
@@ -271,10 +309,22 @@ function View({ slug, tenantName, devices }: { slug: string; tenantName: string;
   );
 }
 
-export function DevicesView({ dark, slug, tenantName, devices }: { dark: boolean; slug: string; tenantName: string; devices: readonly DeviceItem[] }) {
+export function DevicesView({
+  dark,
+  slug,
+  tenantName,
+  devices,
+  suspended,
+}: {
+  dark: boolean;
+  slug: string;
+  tenantName: string;
+  devices: readonly DeviceItem[];
+  suspended: readonly string[];
+}) {
   return (
     <DzRoot dark={dark} scope="dzg" testId="field-devices">
-      <View slug={slug} tenantName={tenantName} devices={devices} />
+      <View slug={slug} tenantName={tenantName} devices={devices} suspended={suspended} />
     </DzRoot>
   );
 }

@@ -831,6 +831,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.field_device_status", // T-997 migration 0044: kayıtlı cihazın tenant/cihaz adı (salt okunur), yalnızca wms_auth
     "wms_probe.field_enroll_approve", // T-998 migration 0045: kaydı başlatan yönetici talep eden ortak cihazı onaylar + security_events, yalnızca wms_app
     "wms_probe.field_enroll_claim", // T-998 migration 0045: terminal 5 dk kayıt belirteciyle bir kez talep eder, yalnızca wms_auth
+    "wms_probe.field_lock_spree_check", // T-998 migration 0045: ortak cihazda toplu kilitleme koruması (kilit yanıtında; cihazı durdurur) + security_events, yalnızca wms_auth
     "wms_probe.field_signin_begin", // T-997 migration 0044: saha girişi ön denetimi (cihaz, rol, kilit) → PIN özeti, yalnızca wms_auth
     "wms_probe.field_signin_finish", // T-997 migration 0044: saha girişi sonucu (sayaç/kilit, belirteç rotasyonu) + security_events, yalnızca wms_auth
     "wms_probe.identity_exclusive_to_tenant",
@@ -940,6 +941,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.field_device_staff": [AUTH_ROLE],
       "wms_probe.field_enroll_approve": [APP_ROLE],
       "wms_probe.field_enroll_claim": [AUTH_ROLE],
+      "wms_probe.field_lock_spree_check": [AUTH_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);

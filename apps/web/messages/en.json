@@ -419,7 +419,9 @@
     "validation_failed_reason_required": "A reason is required.",
     "validation_failed_reason_requiredAction": "Enter a reason to suspend.",
     "validation_failed_payment_invalid": "The payment record is invalid.",
-    "validation_failed_payment_invalidAction": "Check the date (today or earlier), method and note."
+    "validation_failed_payment_invalidAction": "Check the date (today or earlier), method and note.",
+    "validation_failed_code_mismatch": "The confirmation code doesn't match the terminal.",
+    "validation_failed_code_mismatchAction": "Type the 6-digit code shown on the terminal again; after 3 wrong tries the QR is renewed."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -2838,7 +2840,7 @@
     "deviceNameHint": "Your manager sees this name · e.g. Handheld 2, Shipping tablet",
     "request": "REQUEST REGISTRATION",
     "waitTitle": "Waiting for approval",
-    "waitBody": "This screen moves on by itself when your manager taps APPROVE for <b>{name}</b>.",
+    "waitBody": "Tell your manager this code. The screen moves on by itself once they type it for <b>{name}</b> and approve.",
     "waitChip": "REQUEST · VALID 5 MINUTES",
     "enrDoneTitle": "Device registered",
     "enrDoneBody": "Field staff sign in on this device with their own username and PIN.",
@@ -2852,7 +2854,8 @@
     "swEmpty": "No staff with a PIN on this device yet.",
     "deviceNameDefault": "Handheld",
     "rolePicker": "Picker",
-    "roleCounter": "Counter"
+    "roleCounter": "Counter",
+    "codeAria": "Confirmation code"
   },
   "fieldDevices": {
     "title": "Devices",
@@ -2873,7 +2876,7 @@
     "addBody": "Scan this QR with the handheld's camera. When the device asks to connect, approve it here.",
     "claimKick": "WAITING FOR APPROVAL",
     "claimChip": "WANTS TO CONNECT",
-    "claimBody": "Approve if this device is with you now. If you don't recognize it, reject; a new QR is created.",
+    "claimBody": "Type the 6-digit code shown on the terminal and approve. If there's no code or you don't recognize it, reject; a new QR is created.",
     "reject": "REJECT",
     "approve": "APPROVE",
     "banTitle": "Unapproved devices can't sign in",
@@ -2884,6 +2887,10 @@
     "reauthLink": "Sign in again",
     "errServer": "Connection problem. Try again.",
     "approved": "Device registered.",
-    "revoked": "Device revoked; its sessions were closed."
+    "revoked": "Device revoked; its sessions were closed.",
+    "codeLabel": "CODE ON THE TERMINAL",
+    "errCode": "The code doesn't match the terminal. After 3 wrong tries the QR is renewed.",
+    "suspendedTitle": "Automatically stopped · {name}",
+    "suspendedBody": "3 accounts were locked from this device within an hour; the device was revoked. Unlock the accounts from the Members screen."
   }
 }

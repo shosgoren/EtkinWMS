@@ -32,7 +32,7 @@ export const FIELD_RATE_RULES = Object.freeze({
   device: { window: 15 * 60, max: 20 },
   tenant: { window: 15 * 60, max: 300 },
   activateUser: { window: 60 * 60, max: 10 },
-  enrollTenant: { window: 10 * 60, max: 30 },
+  enrollTenant: { window: 10 * 60, max: 10 },
   ipEnroll: { window: 10 * 60, max: 20 },
 });
 
@@ -138,6 +138,13 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
     await deps.verifyPin(await deps.dummyHash(), pin).catch(() => false);
   }
 
+  /** Toplu kilitleme koruması (T-997 koşul 1, T-998): kilit yanıtında ortak cihaz + hesap eşlenir; 60 dk'da 3 hesap → cihaz durdurulur. */
+  async function spree(tenantId: string, tokenHash: string, username: string): Promise<void> {
+    await deps
+      .execute(sql`SELECT wms_probe.field_lock_spree_check(${tenantId}::uuid, ${tokenHash}, ${username}) AS suspended`)
+      .catch(() => undefined);
+  }
+
   /**
    * Cihaz çerezini yazar ve oturumu açar. Oturum açıldıktan SONRA cihaz yeniden doğrulanır: arada yönetici kodu yeniledi/cihazı iptal
    * ettiyse (oturumlar o anda kapatılmıştı) yeni oturum silinir ve genel ret döner (inceleme m3).
@@ -152,13 +159,8 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
     const user = await ctx.context.internalAdapter.findUserById(userId);
     if (user === null || !isFieldEmail(user.email)) throw DENIED();
     const session = await ctx.context.internalAdapter.createSession(userId, false);
-    const still = await deps.execute<{ slug: string }>(sql`SELECT slug FROM wms_probe.field_device_status(${tenantId}::uuid, ${device.hash})`);
-    if (still.length === 0) {
-      await ctx.context.internalAdapter.deleteSession(session.token);
-      throw DENIED();
-    }
-    await deps.markSessionVerified(session.token);
-    // T-998: oturum ↔ cihaz bağı (cihaz iptalinde oturumlar kapanır; ADR-026 §7.5). Yazılamazsa oturum açılmaz.
+    // T-998: oturum ↔ cihaz bağı yeniden denetimden ÖNCE yazılır (inceleme m1): arada gelen iptal ya bu bağı görüp oturumu siler ya da
+    // aşağıdaki denetim iptali görür. Yazılamazsa oturum açılmaz.
     if (deviceId !== null && UUID.test(deviceId)) {
       try {
         await deps.execute(sql`INSERT INTO public.field_sessions (session_id, device_id) VALUES (${session.id}::uuid, ${deviceId}::uuid)`);
@@ -167,6 +169,12 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         throw e;
       }
     }
+    const still = await deps.execute<{ slug: string }>(sql`SELECT slug FROM wms_probe.field_device_status(${tenantId}::uuid, ${device.hash})`);
+    if (still.length === 0) {
+      await ctx.context.internalAdapter.deleteSession(session.token);
+      throw DENIED();
+    }
+    await deps.markSessionVerified(session.token);
     ctx.setCookie(cookieName, `${tenantId}.${device.token}`, cookieOptions);
     await setSessionCookie(ctx, { session, user });
   }
@@ -202,16 +210,19 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const enrollment = parseDeviceCookie(text(body.enrollment, 120));
         const name = text(body.deviceName, 60).trim();
         if (enrollment === null || name === "") throw INVALID();
-        await limit(`field:enroll:${enrollment.tenantId}`, FIELD_RATE_RULES.enrollTenant);
-        const device = newDeviceToken();
-        // Kayıt belirteci özeti cihaz belirteciyle AYNI biçimde (alan ayrımı: `field-enroll:` öneki).
+        // Kayıt belirteci özeti (alan ayrımı: `field-enroll:` öneki). Hız sınırı belirteç özetine bağlı: doğrulanmamış trafik bir tenant'ın
+        // bütün kayıtlarını kapatamaz (inceleme m3); IP sınırı ayrıca Better Auth kuralında.
         const tokenHash = enrollmentTokenHash(text(body.enrollment, 120).slice(enrollment.tenantId.length + 1));
+        await limit(`field:enroll:${tokenHash}`, FIELD_RATE_RULES.enrollTenant);
+        const device = newDeviceToken();
         const rows = await deps.execute<{ outcome: string }>(
           sql`SELECT wms_probe.field_enroll_claim(${enrollment.tenantId}::uuid, ${tokenHash}, ${device.hash}, ${name}) AS outcome`,
         );
-        if (rows[0]?.outcome !== "OK") throw DENIED();
+        const confirm = rows[0]?.outcome ?? "DENIED";
+        if (!/^\d{6}$/.test(confirm)) throw DENIED();
         ctx.setCookie(cookieName, `${enrollment.tenantId}.${device.token}`, cookieOptions);
-        return ctx.json({ ok: true, pending: true });
+        // Doğrulama kodu yalnız bu terminalin ekranında görünür; yönetici onayda yazar (inceleme M1).
+        return ctx.json({ ok: true, pending: true, confirmCode: confirm });
       }),
 
       fieldActivate: createAuthEndpoint("/field/activate", { method: "POST" }, async (ctx) => {
@@ -254,6 +265,7 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const r = rows[0];
         if (r?.outcome === "LOCKED") {
           await burn(pin);
+          await spree(parsed.tenantId, parsed.tokenHash, username);
           throw LOCKED();
         }
         // Cihaz tenant'ı ile girilen alan aynı olmalı (başka tenant'ın cihazı reddi; işlev de tenant içinde arar).
@@ -279,7 +291,10 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
                                                    ${ok ? next.hash : null}) AS outcome`,
         );
         const outcome = finished[0]?.outcome;
-        if (outcome === "LOCKED") throw LOCKED();
+        if (outcome === "LOCKED") {
+          await spree(parsed.tenantId, parsed.tokenHash, username);
+          throw LOCKED();
+        }
         if (!ok || outcome !== "OK") throw DENIED();
         await openSession(ctx, r.user_id, r.tenant_id, next, r.device_id);
         return ctx.json({ ok: true });

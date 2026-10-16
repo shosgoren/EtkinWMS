@@ -390,7 +390,8 @@ button,input{font:inherit;color:inherit}
           <div class="done" style="background: {{c.surface}}">
             <span class="okc" style="background: #F4B400; color: #1A1300"><svg class="ico" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.6"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg></span>
             <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Onay bekleniyor</b>
-            <p class="ls" style="margin: 0">Yöneticiniz kendi ekranında <b>{{f.dn}}</b> için ONAYLA'ya dokununca bu ekran kendiliğinden ilerler.</p>
+            <span class="kcode" aria-label="Doğrulama kodu">482 917</span>
+            <p class="ls" style="margin: 0">Bu kodu yöneticinize söyleyin. Yönetici <b>{{f.dn}}</b> için kodu yazıp onaylayınca bu ekran kendiliğinden ilerler.</p>
             <span class="chip" style="background: {{c.chip}}">TALEP · 5 DAKİKA GEÇERLİ</span>
           </div>
         </sc-if>
@@ -480,6 +481,7 @@ button,input{font:inherit;color:inherit}
     <sc-if value="{{v.dev}}" hint-placeholder-val="{{false}}">
       <div class="mgrid">
         <div style="display: flex; flex-direction: column; gap: 14px">
+          <sc-if value="{{dq.claim}}" hint-placeholder-val="{{false}}"><div class="ban" style="background: #C62828; color: #FFFFFF"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>Otomatik durduruldu · Tablet 3</b>Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi. Hesapların kilidini Üyeler ekranından açın.</span></div></sc-if>
           <div class="shd"><b>KAYITLI CİHAZLAR</b><span>{{devCount}} CİHAZ</span></div>
           <div class="rows"><sc-for list="{{devList}}" as="d" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{d.avBg}}; color: {{d.avFg}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{d.ic}}"></path></svg></span><span class="rt"><b>{{d.n}}</b><span>{{d.s}}</span></span><div class="rbtns"><button type="button" class="sbtn" style="background: #C62828; color: #FFFFFF" onClick="{{d.go}}" aria-label="{{d.a}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="tx">İPTAL ET</span></button></div></div></sc-for></div>
         </div>
@@ -498,7 +500,8 @@ button,input{font:inherit;color:inherit}
               <span class="av" style="background: {{c.chip}}; color: {{c.fg}}; width: 72px; height: 72px; border-radius: 22px"><svg class="ico" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20H6zM9 6h6v5H9zM9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01"></path></svg></span>
               <b style="font: 800 24px/1.1 'Bricolage Grotesque', sans-serif">El terminali 2</b>
               <span class="chip" style="background: #F4B400; color: #1A1300">BAĞLANMAK İSTİYOR</span>
-              <p class="ls" style="margin: 0">Bu cihaz şu an yanınızdaysa onaylayın. Tanımıyorsanız reddedin; QR yeniden üretilir.</p>
+              <p class="ls" style="margin: 0">Terminal ekranındaki 6 haneli kodu yazıp onaylayın. Kod yoksa ya da tanımıyorsanız reddedin; QR yeniden üretilir.</p>
+              <div class="fl" style="width: 100%; text-align: left"><label for="g-cc">TERMİNALDEKİ KOD</label><div class="inp" style="background: {{c.chip}}"><input id="g-cc" type="text" inputmode="numeric" maxlength="6" placeholder="000000" value="{{f.cc}}" onChange="{{on.cc}}" style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; letter-spacing: .3em; text-align: center"></div></div>
               <div class="act" style="position: static; padding: 0; box-shadow: none; width: 100%"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}" onClick="{{devReject}}">REDDET</button><button type="button" class="big" style="background: #17804F; color: #FFFFFF" onClick="{{devApprove}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M4 12l5 5L20 6"></path></svg>ONAYLA</button></div>
             </div>
           </sc-if>
@@ -558,7 +561,7 @@ class Component extends DCLogic {
       pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true, enStep: 1, devClaim: false,
       seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0, actBad: false, mailOk: true, mailSent: true,
       opDone: {}, revoked: {},
-      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d', dn: 'El terminali 2' }
+      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d', dn: 'El terminali 2', cc: '' }
     };
   }
   componentDidMount() {
@@ -599,7 +602,7 @@ class Component extends DCLogic {
     };
     var go = function (scr, extra) { return function () { var o = { scr: scr, pin: '', pin1: '', pinErr: '' }; for (var k in (extra || {})) o[k] = extra[k]; self.setState(o); }; };
     var setF = function (k) { return function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; f[k] = e && e.target ? e.target.value : ''; self.setState({ f: f }); }; };
-    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su', 'dn'].forEach(function (k) { on[k] = setF(k); });
+    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su', 'dn', 'cc'].forEach(function (k) { on[k] = setF(k); });
     on.co = function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; var v = e && e.target ? e.target.value : ''; if (self.slugOf(f.co) === f.slug) f.slug = self.slugOf(v); f.co = v; self.setState({ f: f }); };
 
     /* ── PIN ── */

@@ -57,6 +57,8 @@ export const ERROR_DETAILS = [
   "REASON_REQUIRED",
   // T-406: ödeme kaydı (tarih/yöntem/not) geçersiz.
   "PAYMENT_INVALID",
+  // T-998: ortak cihaz onayında terminal doğrulama kodu eşleşmedi.
+  "CODE_MISMATCH",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -91,6 +93,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   PLAN_INVALID: "VALIDATION_FAILED",
   REASON_REQUIRED: "VALIDATION_FAILED",
   PAYMENT_INVALID: "VALIDATION_FAILED",
+  CODE_MISMATCH: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

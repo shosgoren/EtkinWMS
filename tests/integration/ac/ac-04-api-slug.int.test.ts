@@ -837,7 +837,7 @@ const ACTIONS: Record<string, Call> = {
   revokeDeviceAction: (slug) => members.revokeDeviceAction!({ slug, deviceId: randomUUID() }),
   startEnrollmentAction: (slug) => members.startEnrollmentAction!({ slug }),
   enrollmentStatusAction: (slug) => members.enrollmentStatusAction!({ slug, enrollmentId: randomUUID() }),
-  approveEnrollmentAction: (slug) => members.approveEnrollmentAction!({ slug, enrollmentId: randomUUID() }),
+  approveEnrollmentAction: (slug) => members.approveEnrollmentAction!({ slug, enrollmentId: randomUUID(), confirmCode: "123456" }),
   cancelEnrollmentAction: (slug) => members.cancelEnrollmentAction!({ slug, enrollmentId: randomUUID() }),
 };
 

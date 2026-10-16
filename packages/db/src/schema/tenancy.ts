@@ -154,6 +154,8 @@ export const fieldDevices = pgTable("field_devices", {
   expiresAt: timestamptz("expires_at").notNull(),
   revokedAt: timestamptz("revoked_at"),
   revokedBy: uuid("revoked_by"),
+  /** T-998 (0045): MANUAL | LOCK_SPREE. */
+  revokeReason: text("revoke_reason"),
 });
 
 // T-998 (0045): ortak cihaz kaydı (5 dk belirteç → terminal talebi → yönetici onayı). Özet sütunları uygulama rolüne kapalı.
@@ -170,6 +172,15 @@ export const fieldEnrollments = pgTable("field_enrollments", {
   approvedAt: timestamptz("approved_at"),
   deviceId: uuid("device_id"),
   cancelledAt: timestamptz("cancelled_at"),
+  confirmCode: text("confirm_code"),
+  confirmFailed: integer("confirm_failed").notNull().default(0),
+});
+
+// T-998 (0045): ortak cihazda kilitlenen hesaplar (toplu kilitleme koruması; platform tablosu, yalnız probe işlevi).
+export const fieldDeviceLockouts = pgTable("field_device_lockouts", {
+  deviceId: uuid("device_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  lockedAt: timestamptz("locked_at").notNull().defaultNow(),
 });
 
 // T-998 (0045): saha oturumu ↔ cihaz (platform tablosu; yalnız kimlik rolü). Cihaz iptalinde oturumlar bu bağla kapanır.

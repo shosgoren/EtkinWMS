@@ -19,6 +19,7 @@ function Flow() {
   const [name, setName] = useState(() => t("deviceNameDefault"));
   const [bad, setBad] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     const h = window.location.hash.replace(/^#/, "");
@@ -49,13 +50,14 @@ function Flow() {
   async function request(): Promise<void> {
     if (secret.current === null) return;
     setBusy(true);
-    const r = await authPost<{ ok: boolean }>("/field/enroll", { enrollment: secret.current, deviceName: name.trim() });
+    const r = await authPost<{ ok: boolean; confirmCode?: string }>("/field/enroll", { enrollment: secret.current, deviceName: name.trim() });
     setBusy(false);
     if (!r.ok) {
       setBad(true);
       return;
     }
     secret.current = null;
+    setCode(r.data.confirmCode ?? "");
     setStep(2);
   }
 
@@ -89,6 +91,9 @@ function Flow() {
             <Ico d={GICON.clock} size={44} sw={2.6} />
           </span>
           <b style={{ font: "800 26px/1.1 var(--font-bricolage), sans-serif" }}>{t("waitTitle")}</b>
+          <span className="kcode" aria-label={t("codeAria")}>
+            {`${code.slice(0, 3)} ${code.slice(3)}`}
+          </span>
           <p className="ls" style={{ margin: 0 }}>
             {t.rich("waitBody", { name: name.trim(), b: (c) => <b>{c}</b> })}
           </p>

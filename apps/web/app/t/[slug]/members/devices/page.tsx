@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { listDevices } from "@wms/domain/identity/devices";
+import { listDevices, listSuspendedDevices } from "@wms/domain/identity/devices";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../../design/theme.ts";
@@ -35,7 +35,7 @@ export default async function DevicesPage({ params }: { params: Promise<{ slug: 
     }
     throw e;
   }
-  const summary = await getMembershipSummary({ db, principal });
+  const [summary, suspended] = await Promise.all([getMembershipSummary({ db, principal }), listSuspendedDevices({ db, principal, tenantSlug: slug })]);
   const tenantName = summary.memberships.find((m) => m.slug === slug)?.tenantName ?? slug;
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
@@ -43,6 +43,7 @@ export default async function DevicesPage({ params }: { params: Promise<{ slug: 
       dark={dark}
       slug={slug}
       tenantName={tenantName}
+      suspended={suspended.map((d) => d.name)}
       devices={devices.map((d) => ({ id: d.id, kind: d.kind, name: d.name, owner: d.owner, lastUsedAt: d.lastUsedAt.toISOString() }))}
     />
   );

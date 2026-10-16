@@ -79,6 +79,28 @@ export async function listDevices(params: Omit<TenantAccessParams, "permission">
   }
 }
 
+export interface SuspendedDevice {
+  readonly id: string;
+  readonly name: string;
+  readonly at: Date;
+}
+
+/** Son 7 günde toplu kilitleme nedeniyle kendiliğinden durdurulan ortak cihazlar (yönetici uyarısı; T-997 koşul 1). */
+export async function listSuspendedDevices(params: Omit<TenantAccessParams, "permission">): Promise<readonly SuspendedDevice[]> {
+  try {
+    return await runTenantQuery({ ...params, permission: "users.manage" }, async (tx, actor) => {
+      const rows = await tx.execute<{ id: string; name: string; revoked_at: Date | string }>(
+        sql`SELECT id, name, revoked_at FROM public.field_devices
+             WHERE tenant_id = ${actor.tenantId}::uuid AND revoke_reason = 'LOCK_SPREE' AND revoked_at > now() - interval '7 days'
+             ORDER BY revoked_at DESC LIMIT 20`,
+      );
+      return rows.map((r) => ({ id: r.id, name: r.name, at: toDate(r.revoked_at) as Date }));
+    });
+  } catch (e) {
+    throw mapDeviceError(e);
+  }
+}
+
 export interface RevokeDeviceDeps {
   /** Commit'ten SONRA cihazdaki oturumları kapatır (`@wms/auth` `revokeDeviceSessions`). */
   readonly revokeDeviceSessions: (deviceId: string) => Promise<void>;
@@ -90,8 +112,11 @@ export async function revokeDevice(params: CommandParams & { readonly deviceId: 
   const deviceId = parseUuid(rawId);
   try {
     await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
-      const r = await tx.execute<{ ok: boolean }>(sql`SELECT wms_probe.field_device_revoke(${deviceId}::uuid, ${actor.userId}::uuid) AS ok`);
-      if (r[0]?.ok !== true) throw new AppError("NOT_FOUND");
+      const r = await tx.execute<{ out: string }>(sql`SELECT wms_probe.field_device_revoke(${deviceId}::uuid, ${actor.userId}::uuid) AS out`);
+      const out = r[0]?.out;
+      if (out === "MISSING" || out === undefined) throw new AppError("NOT_FOUND");
+      // Zaten iptal: yalnız oturum kapatma yeniden denenir (önceki deneme yarıda kalmış olabilir; inceleme m2).
+      if (out === "ALREADY") return;
       await appendAudit(tx, {
         action: "field_device.revoked",
         actorUserId: actor.userId,
@@ -182,15 +207,27 @@ export async function getEnrollment(params: Omit<TenantAccessParams, "permission
   }
 }
 
-/** Talep eden ortak cihazı onaylar (yalnız kaydı başlatan yönetici). */
-export async function approveEnrollment(params: CommandParams & { readonly enrollmentId: string }): Promise<{ readonly deviceId: string }> {
-  const { enrollmentId: rawId, requestId, ...access } = params;
+/**
+ * Talep eden ortak cihazı onaylar (yalnız kaydı başlatan yönetici). `confirmCode`: terminal ekranındaki 6 haneli kod (inceleme M1: QR'ı
+ * başka cihaz okutmuşsa yönetici kodu göremez). Yanlış kod → `VALIDATION_FAILED` (`CODE_MISMATCH`); 3. yanlışta kayıt iptal edilir.
+ */
+export async function approveEnrollment(
+  params: CommandParams & { readonly enrollmentId: string; readonly confirmCode: string },
+): Promise<{ readonly deviceId: string }> {
+  const { enrollmentId: rawId, confirmCode, requestId, ...access } = params;
   const id = parseUuid(rawId);
+  const code = typeof confirmCode === "string" ? confirmCode.replace(/\s+/g, "") : "";
+  if (!/^\d{6}$/.test(code)) throw new AppError("VALIDATION_FAILED", { detail: "CODE_MISMATCH" });
+  let result: { readonly deviceId: string } | null;
   try {
-    return await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
-      const rows = await tx.execute<{ device_id: string }>(sql`SELECT wms_probe.field_enroll_approve(${id}::uuid, ${actor.userId}::uuid) AS device_id`);
+    // Yanlış kod sayacı işlevde yazılır; transaction GERİ ALINMASIN diye ret commit'ten sonra bildirilir.
+    result = await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
+      const rows = await tx.execute<{ device_id: string | null }>(
+        sql`SELECT wms_probe.field_enroll_approve(${id}::uuid, ${actor.userId}::uuid, ${code}) AS device_id`,
+      );
       const deviceId = rows[0]?.device_id;
-      if (deviceId === undefined || deviceId === null) throw new AppError("NOT_FOUND");
+      if (deviceId === undefined) throw new AppError("NOT_FOUND");
+      if (deviceId === null) return null;
       await appendAudit(tx, {
         action: "field_device.enrolled",
         actorUserId: actor.userId,
@@ -204,6 +241,8 @@ export async function approveEnrollment(params: CommandParams & { readonly enrol
   } catch (e) {
     throw mapDeviceError(e);
   }
+  if (result === null) throw new AppError("VALIDATION_FAILED", { detail: "CODE_MISMATCH" });
+  return result;
 }
 
 /** Kaydı iptal eder (talep gelmiş olsa da cihaz açılmaz). */
