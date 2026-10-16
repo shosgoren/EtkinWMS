@@ -14,9 +14,13 @@ const PAGES = [
 
 export async function panelNav(principal: AccessPrincipal, pendingKnown?: number): Promise<PanelNavItem[]> {
   const t = await getTranslations("panel.nav");
-  const pending =
-    pendingKnown ?? (await listDemoRequests({ db: getAppDb(), principal }).then((rows) => rows.filter((r) => r.status === "PENDING").length));
-  return PAGES.map((p) => ({ key: p.key, href: p.href, label: t(p.key), icon: p.icon, count: p.key === "talepler" ? pending : 0 }));
+  let pending: number;
+  if (pendingKnown !== undefined) pending = pendingKnown;
+  else {
+    const rows = await listDemoRequests({ db: getAppDb(), principal });
+    pending = rows.filter((r) => r.status === "PENDING").length;
+  }
+  return PAGES.map((p): PanelNavItem => ({ key: p.key, href: p.href, label: t(p.key), icon: p.icon, count: p.key === "talepler" ? pending : 0 }));
 }
 
 export async function panelLabels(): Promise<PanelShellLabels> {
