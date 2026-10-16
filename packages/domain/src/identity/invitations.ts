@@ -19,6 +19,10 @@ import type { JobQueue } from "@wms/shared/queue";
 import { mapAccessError, runTenantCommand, type AccessDbClient, type AccessPrincipal, type AccessTx, type TenantAccessParams } from "./access.ts";
 import { ROLE_KEYS, type RoleKey } from "./permissions.ts";
 
+/** Paket sınıfları (0041 `plan_member_class` ile aynı): yönetici kullanıcı ve saha personeli. */
+const ADMIN_CLASS_ROLES: readonly string[] = ["TENANT_ADMIN", "WAREHOUSE_MANAGER", "READ_ONLY"];
+const FIELD_CLASS_ROLES: readonly string[] = ["PICKER", "COUNTER"];
+
 /** Davet geçerlilik süresi (A-42). */
 export const INVITATION_TTL_HOURS = 72;
 /** Hesap girdisi sınırları: `@wms/auth` ile aynı (A-41: parola 12–128; ad ≤200). Auth yine kendi doğrulamasını yapar. */
@@ -212,17 +216,21 @@ export async function inviteMember(params: InviteMemberParams, deps: InvitationD
         });
       }
 
-      // T-404 (0041): paket kullanıcı sınırı. Etkin üyeler + açık davetler sınırı doldurduysa yeni davet verilmez (kabulde de
-      // veritabanı tetikleyicisi denetler; burada erken ve anlaşılır red). Sınır yoksa (paketsiz tenant) ya da 0 ise sınırsız.
+      // T-404 (0041): paket kullanıcı sınırı, rol sınıfına göre (yönetici: TENANT_ADMIN/WAREHOUSE_MANAGER/READ_ONLY; saha: PICKER/COUNTER).
+      // Sınıftaki etkin üyeler + aynı sınıfa açık davetler sınırı doldurduysa yeni davet verilmez (rol eklenirken veritabanı
+      // tetikleyicisi yine denetler; burada erken ve anlaşılır red). Paketsiz tenant ya da 0 sınırsızdır.
+      const kind = ADMIN_CLASS_ROLES.includes(role) ? "admins" : "field";
       const cap = await tx.execute<{ lim: number | null }>(
-        sql`SELECT wms_probe.platform_tenant_plan_limit(${membership.tenantId}::uuid, 'admins') AS lim`,
+        sql`SELECT wms_probe.platform_tenant_plan_limit(${membership.tenantId}::uuid, ${kind}) AS lim`,
       );
       const lim = cap[0]?.lim ?? null;
       if (lim !== null && Number(lim) > 0) {
+        const classRoles = kind === "admins" ? ADMIN_CLASS_ROLES : FIELD_CLASS_ROLES;
         const used = await tx.execute<{ n: number }>(
-          sql`SELECT (SELECT count(*) FROM public.tenant_memberships WHERE tenant_id = ${membership.tenantId}::uuid AND status = 'ACTIVE')
+          sql`SELECT public.plan_member_count(${membership.tenantId}::uuid, ${kind}, NULL)
                    + (SELECT count(*) FROM public.invitations WHERE tenant_id = ${membership.tenantId}::uuid
-                        AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()) AS n`,
+                        AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+                        AND role_key = ANY(${`{${classRoles.join(",")}}`}::text[])) AS n`,
         );
         if (Number(used[0]?.n ?? 0) >= Number(lim)) throw new AppError("VALIDATION_FAILED", { detail: "PLAN_LIMIT" });
       }

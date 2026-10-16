@@ -9,10 +9,14 @@ BEGIN
 END
 $guard$;
 
+DROP TRIGGER membership_roles_plan_limit ON public.membership_roles;
 DROP TRIGGER tenant_memberships_plan_limit ON public.tenant_memberships;
 DROP TRIGGER items_plan_limit ON public.items;
 DROP TRIGGER warehouses_plan_limit ON public.warehouses;
 DROP FUNCTION public.plan_limit_guard();
+DROP FUNCTION public.plan_member_count(uuid, text, uuid);
+DROP FUNCTION public.plan_member_class(uuid, uuid, text);
+DROP FUNCTION public.plan_limit_exempt();
 
 GRANT CREATE ON SCHEMA wms_probe TO wms_identity_probe;
 SET ROLE wms_identity_probe;

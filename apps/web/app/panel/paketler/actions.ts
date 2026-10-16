@@ -35,9 +35,10 @@ function field(form: FormData, name: string): string {
   return typeof v === "string" ? v : "";
 }
 
+/** Yalnız rakam (boşluk hariç): "-5" ya da "1.5" sessizce başka sayıya çevrilmez, reddedilir. */
 function count(v: string): number {
-  const n = Number.parseInt(v.replace(/\D/g, ""), 10);
-  return Number.isNaN(n) ? -1 : n;
+  const t = v.replace(/\s/g, "");
+  return /^\d{1,8}$/.test(t) ? Number(t) : -1;
 }
 
 function features(raw: string): unknown {

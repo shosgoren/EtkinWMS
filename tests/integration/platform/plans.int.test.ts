@@ -181,6 +181,51 @@ describe("paket sınırları (veritabanı)", () => {
     expect(await activeWarehouses(A)).toBe(before);
   });
 
+  it("kullanıcı sınırı rol sınıfına göre: yönetici ve saha ayrı sayılır; arşivden geri alma da sınırlanır", async () => {
+    const counts = await adm.query<{ a: number; f: number }>(
+      "SELECT public.plan_member_count($1, 'admins', NULL)::int AS a, public.plan_member_count($1, 'field', NULL)::int AS f",
+      [A.tenantId],
+    );
+    const { a, f } = counts.rows[0] as { a: number; f: number };
+    const p = await savePlan({ ...op(), recentAuth: ok, plan: { ...plan({ warehouses: 0, items: 0 }), limits: { admins: a, field: f + 1, warehouses: 0, items: 0 } } });
+    planIds.push(p.id);
+    await subscribe(A, p.id);
+    // Rolsüz etkin üyelik (migration rolüyle; sınır dışı) → rol uygulama rolüyle eklenir (sınır burada).
+    const mk = async (): Promise<string> => {
+      const u = await adm.query<{ id: string }>("INSERT INTO public.users (name, email, email_verified) VALUES ('T404 üye', $1, true) RETURNING id", [`t404-m-${tag()}@example.test`]);
+      const m = await adm.query<{ id: string }>("INSERT INTO public.tenant_memberships (tenant_id, user_id, status) VALUES ($1, $2, 'ACTIVE') RETURNING id", [A.tenantId, (u.rows[0] as { id: string }).id]);
+      return (m.rows[0] as { id: string }).id;
+    };
+    const role = (membershipId: string, key: string) =>
+      withTenant(createTenantContext(app, A.tenantId), (tx) =>
+        tx.execute(sql`INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES (${A.tenantId}::uuid, ${membershipId}::uuid, ${key})`),
+      ).then(
+        () => "ok",
+        (err: unknown) => String((err as { cause?: { message?: unknown } }).cause?.message ?? (err as { message?: unknown }).message),
+      );
+    const m1 = await mk();
+    expect(await role(m1, "WAREHOUSE_MANAGER")).toBe("PLAN_LIMIT"); // yönetici sınıfı dolu
+    expect(await role(m1, "PICKER")).toBe("ok"); // saha sınıfında bir yer var
+    const m2 = await mk();
+    expect(await role(m2, "COUNTER")).toBe("PLAN_LIMIT"); // saha sınıfı doldu
+    expect(await role(m1, "READ_ONLY")).toBe("PLAN_LIMIT"); // sahadan yöneticiye geçiş yönetici sınırına takılır
+    // Arşivli depo geri alınırken de sınır uygulanır.
+    const tight = await savePlan({ ...op(), recentAuth: ok, plan: plan({ warehouses: 1, items: 0 }) });
+    planIds.push(tight.id);
+    await subscribe(A, tight.id);
+    const arch = await adm.query<{ id: string }>(
+      "INSERT INTO public.warehouses (tenant_id, code, name, status, archived_at) VALUES ($1, $2, 'Arşivli', 'ARCHIVED', now()) RETURNING id",
+      [A.tenantId, `X${tag()}`],
+    );
+    const revive = await withTenant(createTenantContext(app, A.tenantId), (tx) =>
+      tx.execute(sql`UPDATE public.warehouses SET status = 'ACTIVE', archived_at = NULL WHERE id = ${(arch.rows[0] as { id: string }).id}::uuid`),
+    ).then(
+      () => "ok",
+      (err: unknown) => String((err as { cause?: { message?: unknown } }).cause?.message ?? (err as { message?: unknown }).message),
+    );
+    expect(revive).toBe("PLAN_LIMIT");
+  });
+
   it("paketsiz tenant sınırsız; sınır yalnız bağlam tenant'ı için okunur", async () => {
     await adm.query("DELETE FROM wms_platform.subscriptions WHERE tenant_id = $1", [B.tenantId]);
     const w = await createWarehouse(owner(B), { code: `W${tag()}`, name: "Paketsiz" });

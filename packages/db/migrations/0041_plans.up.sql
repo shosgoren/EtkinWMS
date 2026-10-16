@@ -8,13 +8,14 @@
 --   `wms_probe.platform_*` SECURITY DEFINER işlevleriyle (operatör denetimli; yayındaki paket listesi herkese açık bilgi).
 -- * SINIR 0 = SINIRSIZ. Paketi olmayan tenant (mevcut müşteriler, demo, paket atanmamış deneme) SINIRSIZDIR: kural yeni veri eklemeyi
 --   yalnız paket bağlıysa sınırlar; mevcut veri hiçbir durumda silinmez (düşürme sonrası aşım korunur, yalnız yeni ekleme reddedilir).
--- * SINIR VERİTABANINDA: depo, ürün ve etkin üyelik eklenirken BEFORE tetikleyicisi (SECURITY INVOKER) tenant'ın sınırını
+-- * SINIR VERİTABANINDA: depo/ürün eklenirken ya da arşivden geri alınırken, üyeye rol eklenirken ya da üyelik yeniden etkinleşirken
+--   BEFORE tetikleyicisi (SECURITY INVOKER) tenant'ın sınırını
 --   `platform_tenant_plan_limit(tenant, tür)` ile okur, aynı tenant+tür için transaction kilidiyle sayar, aşımda 23514 `PLAN_LIMIT`.
 --   İşlev yalnız çağıranın transaction-yerel tenant bağlamındaki tenant için değer döner (başka tenant → NULL = sınır yok; RLS zaten
 --   bağlam dışı tenant'a yazmayı reddeder). Örnek veri (T-996 `is_sample`) ve arşivli kayıtlar sayılmaz.
 -- * MÜŞTERİNİN PAKETİ: `subscriptions.plan_id/plan_version` (ikisi birlikte). Aktivasyonda önerilen yayındaki paket atanır
 --   (`platform_assign_default_plan`, yalnız paketi boş deneme kaydına, yalnız kendi tenant'ına). Operatörün paket değiştirmesi T-403.
--- * GÜVENLİK OLAYI: `platform.plan.saved` (paket kimliği + sürüm + yayın). Kişisel veri yok. Yazan probe (0038 tetikleyici kuralı).
+-- * GÜVENLİK OLAYLARI: `platform.plan.saved` (paket kimliği + sürüm + yayın), `platform.plan.assigned` (tenant + paket + sürüm). Kişisel veri yok. Yazan probe (0038 tetikleyici kuralı).
 -- Koşturucu tek transaction içinde çalıştırır.
 
 DO $pre$
@@ -135,6 +136,8 @@ BEGIN
   IF p_recommended AND NOT p_published THEN
     RAISE EXCEPTION 'platform_save_plan: önerilen paket yayında olmalı' USING ERRCODE = '22023';
   END IF;
+  -- Kayıt biçiminde karşılaştır (numeric(12,2)): fazladan ondalık her kayıtta yeni sürüm açmaz.
+  p_price := pg_catalog.round(p_price, 2);
   v_uid := pg_catalog.current_setting('app.current_user_id', true)::uuid;
   -- Önerilen tekilliği ve sıra: paket tablosu üzerinde tek yazıcı.
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('wms_platform.plans', 0));
@@ -249,6 +252,9 @@ BEGIN
   IF NOT FOUND THEN
     RETURN NULL;
   END IF;
+  INSERT INTO public.security_events (user_id, event_type, detail)
+  VALUES (NULLIF(pg_catalog.current_setting('app.current_user_id', true), '')::uuid, 'platform.plan.assigned',
+          pg_catalog.jsonb_build_object('tenant_id', v_ctx::text, 'plan_id', v_plan::text, 'version', v_ver));
   RETURN v_plan;
 END
 $fn$;
@@ -270,37 +276,90 @@ REVOKE CREATE ON SCHEMA wms_probe FROM wms_identity_probe;
 -- ---------------------------------------------------------------------------------------------
 -- 3. Sınır tetikleyicileri (SECURITY INVOKER; tenant tablolarına yalnız okuma — sayım)
 -- ---------------------------------------------------------------------------------------------
+-- Sınır yalnız işletim (wms_ops), migration rolü ve süper kullanıcı için atlanır; diğer her rol sınırlanır (bilinmeyen yazıcı
+-- güvenli tarafta kalır). Depo/ürün: ekleme ve ARŞİVLİ → ETKİN geri alma. Üyelik sınıfı rollerden: TENANT_ADMIN, WAREHOUSE_MANAGER
+-- ya da READ_ONLY rolü olan etkin üye "yönetici kullanıcı", yalnız PICKER/COUNTER rolü olan "saha personeli" (ADR-027 §4).
+CREATE FUNCTION public.plan_limit_exempt() RETURNS boolean
+ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $fn$
+  SELECT current_user IN ('wms_ops', 'wms_migrator')
+      OR COALESCE((SELECT r.rolsuper FROM pg_catalog.pg_roles r WHERE r.rolname = current_user), false);
+$fn$;
+REVOKE ALL ON FUNCTION public.plan_limit_exempt() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.plan_limit_exempt() TO wms_app;
+
+-- Üyenin sınıfı: rolleri arasında yönetici rolü varsa 'admins', yalnız saha rolü varsa 'field', rolü yoksa NULL. `p_extra` eklenmekte
+-- olan rol (BEFORE INSERT'te henüz tabloda değil).
+CREATE FUNCTION public.plan_member_class(p_tenant uuid, p_membership uuid, p_extra text) RETURNS text
+ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $fn$
+  SELECT CASE
+           WHEN p_extra IN ('TENANT_ADMIN', 'WAREHOUSE_MANAGER', 'READ_ONLY')
+             OR EXISTS (SELECT 1 FROM public.membership_roles r WHERE r.tenant_id = p_tenant AND r.membership_id = p_membership
+                          AND r.role_key IN ('TENANT_ADMIN', 'WAREHOUSE_MANAGER', 'READ_ONLY')) THEN 'admins'
+           WHEN p_extra IS NOT NULL
+             OR EXISTS (SELECT 1 FROM public.membership_roles r WHERE r.tenant_id = p_tenant AND r.membership_id = p_membership) THEN 'field'
+         END;
+$fn$;
+REVOKE ALL ON FUNCTION public.plan_member_class(uuid, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.plan_member_class(uuid, uuid, text) TO wms_app;
+
+-- Sınıftaki etkin üye sayısı (`p_except` hariç).
+CREATE FUNCTION public.plan_member_count(p_tenant uuid, p_class text, p_except uuid) RETURNS bigint
+ LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $fn$
+  SELECT count(*) FROM public.tenant_memberships m
+   WHERE m.tenant_id = p_tenant AND m.status = 'ACTIVE' AND m.id IS DISTINCT FROM p_except
+     AND public.plan_member_class(m.tenant_id, m.id, NULL) = p_class;
+$fn$;
+REVOKE ALL ON FUNCTION public.plan_member_count(uuid, text, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.plan_member_count(uuid, text, uuid) TO wms_app;
+
 CREATE FUNCTION public.plan_limit_guard() RETURNS trigger
  LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $fn$
 DECLARE
-  v_kind text := TG_ARGV[0];
+  v_kind text;
   v_limit integer;
   v_n bigint;
+  v_member uuid;
 BEGIN
-  -- Yalnız uygulama rolü sınırlanır: işletim rolü (wms_ops, kayıtlı oturumla üyelik onarımı) ve migration/fikstür yazımları sınır dışı.
-  IF current_user <> 'wms_app' THEN
+  IF public.plan_limit_exempt() THEN
     RETURN NEW;
   END IF;
   IF TG_TABLE_NAME IN ('warehouses', 'items') THEN
-    IF NEW.is_sample OR NEW.status <> 'ACTIVE' THEN
+    IF NEW.is_sample OR NEW.status <> 'ACTIVE' OR (TG_OP = 'UPDATE' AND OLD.status = 'ACTIVE') THEN
       RETURN NEW;
     END IF;
+    v_kind := TG_TABLE_NAME;
   ELSIF TG_TABLE_NAME = 'tenant_memberships' THEN
-    IF NEW.status <> 'ACTIVE' OR (TG_OP = 'UPDATE' AND OLD.status = 'ACTIVE') THEN
+    -- Yeni üyelik rolsüzdür (sınıf rol eklenirken denetlenir); burada yalnız ETKİN olmayan → ETKİN geri dönüş.
+    IF TG_OP <> 'UPDATE' OR NEW.status <> 'ACTIVE' OR OLD.status = 'ACTIVE' THEN
       RETURN NEW;
     END IF;
+    v_member := NEW.id;
+    v_kind := public.plan_member_class(NEW.tenant_id, NEW.id, NULL);
+  ELSE -- membership_roles
+    IF NOT EXISTS (SELECT 1 FROM public.tenant_memberships m WHERE m.tenant_id = NEW.tenant_id AND m.id = NEW.membership_id AND m.status = 'ACTIVE') THEN
+      RETURN NEW;
+    END IF;
+    v_member := NEW.membership_id;
+    v_kind := public.plan_member_class(NEW.tenant_id, NEW.membership_id, NEW.role_key);
+    -- Sınıf değişmiyorsa (aynı sınıfta ek rol) sayım değişmez.
+    IF v_kind IS NOT DISTINCT FROM public.plan_member_class(NEW.tenant_id, NEW.membership_id, NULL) THEN
+      RETURN NEW;
+    END IF;
+  END IF;
+  IF v_kind IS NULL THEN
+    RETURN NEW;
   END IF;
   v_limit := wms_probe.platform_tenant_plan_limit(NEW.tenant_id, v_kind);
   IF v_limit IS NULL OR v_limit = 0 THEN
     RETURN NEW;
   END IF;
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(NEW.tenant_id::text || ':plan-limit:' || v_kind, 0));
-  IF TG_TABLE_NAME = 'warehouses' THEN
+  IF v_kind = 'warehouses' THEN
     SELECT count(*) INTO v_n FROM public.warehouses w WHERE w.tenant_id = NEW.tenant_id AND w.status = 'ACTIVE' AND NOT w.is_sample;
-  ELSIF TG_TABLE_NAME = 'items' THEN
+  ELSIF v_kind = 'items' THEN
     SELECT count(*) INTO v_n FROM public.items i WHERE i.tenant_id = NEW.tenant_id AND i.status = 'ACTIVE' AND NOT i.is_sample;
   ELSE
-    SELECT count(*) INTO v_n FROM public.tenant_memberships m WHERE m.tenant_id = NEW.tenant_id AND m.status = 'ACTIVE';
+    v_n := public.plan_member_count(NEW.tenant_id, v_kind, v_member);
   END IF;
   IF v_n >= v_limit THEN
     RAISE EXCEPTION 'PLAN_LIMIT' USING ERRCODE = '23514', DETAIL = v_kind;
@@ -309,15 +368,18 @@ BEGIN
 END; $fn$;
 REVOKE ALL ON FUNCTION public.plan_limit_guard() FROM PUBLIC;
 
-CREATE TRIGGER warehouses_plan_limit BEFORE INSERT ON public.warehouses
- FOR EACH ROW EXECUTE FUNCTION public.plan_limit_guard('warehouses');
+CREATE TRIGGER warehouses_plan_limit BEFORE INSERT OR UPDATE OF status ON public.warehouses
+ FOR EACH ROW EXECUTE FUNCTION public.plan_limit_guard();
 ALTER TABLE public.warehouses ENABLE ALWAYS TRIGGER warehouses_plan_limit;
-CREATE TRIGGER items_plan_limit BEFORE INSERT ON public.items
- FOR EACH ROW EXECUTE FUNCTION public.plan_limit_guard('items');
+CREATE TRIGGER items_plan_limit BEFORE INSERT OR UPDATE OF status ON public.items
+ FOR EACH ROW EXECUTE FUNCTION public.plan_limit_guard();
 ALTER TABLE public.items ENABLE ALWAYS TRIGGER items_plan_limit;
-CREATE TRIGGER tenant_memberships_plan_limit BEFORE INSERT OR UPDATE OF status ON public.tenant_memberships
- FOR EACH ROW EXECUTE FUNCTION public.plan_limit_guard('admins');
+CREATE TRIGGER tenant_memberships_plan_limit BEFORE UPDATE OF status ON public.tenant_memberships
+ FOR EACH ROW EXECUTE FUNCTION public.plan_limit_guard();
 ALTER TABLE public.tenant_memberships ENABLE ALWAYS TRIGGER tenant_memberships_plan_limit;
+CREATE TRIGGER membership_roles_plan_limit BEFORE INSERT ON public.membership_roles
+ FOR EACH ROW EXECUTE FUNCTION public.plan_limit_guard();
+ALTER TABLE public.membership_roles ENABLE ALWAYS TRIGGER membership_roles_plan_limit;
 
 -- ---------------------------------------------------------------------------------------------
 -- 4. Doğrulama
