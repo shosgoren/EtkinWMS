@@ -41,7 +41,7 @@ describe("eylem listesi", () => {
     expect([...AUDIT_ACTIONS].sort()).toEqual(
       [
         "member.invited", "member.removed", "member.role_changed", "member.left", "ownership.transferred",
-        "invitation.revoked", "invitation.accepted", "field_user.created", "field_user.code_reset", "field_user.unlocked", "tenant.created", "tenant.settings_changed",
+        "invitation.revoked", "invitation.accepted", "field_user.created", "field_user.code_reset", "field_user.unlocked", "field_device.enrolled", "field_device.revoked", "tenant.created", "tenant.settings_changed",
         "onboarding.step_completed", "password_reset_link.issued", "audit.exported",
         "warehouse.created", "warehouse.updated", "warehouse.archived", "location.created", "location.updated",
         "location.archived", "warehouse_scope.changed", "unit.created", "unit.updated", "item.created",

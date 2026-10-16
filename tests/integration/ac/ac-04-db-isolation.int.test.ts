@@ -105,6 +105,8 @@ interface TenantTable {
   /** wms_app'in okuyabildiği sütunlar; tümü değilse (T-997: özet sütunları kapalı) satır kimliği bu sütunlardan kurulur. */
   selectCols: string[];
   allCols: string[];
+  /** NOT NULL sütunlar (okunamayan ama yazılabilir özet sütunu kopyada sentetik değer alır). */
+  notNullCols: string[];
   canDelete: boolean;
 }
 
@@ -156,8 +158,8 @@ async function discoverTables(): Promise<TenantTable[]> {
     );
     const m = meta.rows[0];
     if (m === undefined) throw new Error(`pg_class satırı yok: ${name}`);
-    const cols = await admin.query<{ column_name: string; ins: boolean; upd: boolean; sel: boolean }>(
-      `SELECT column_name,
+    const cols = await admin.query<{ column_name: string; ins: boolean; upd: boolean; sel: boolean; nn: boolean }>(
+      `SELECT column_name, is_nullable = 'NO' AS nn,
               has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'SELECT') AS sel,
               has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'INSERT') AS ins,
               has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'UPDATE') AS upd
@@ -179,6 +181,7 @@ async function discoverTables(): Promise<TenantTable[]> {
       updateCols: cols.rows.filter((c) => c.upd).map((c) => c.column_name),
       selectCols: cols.rows.filter((c) => c.sel).map((c) => c.column_name),
       allCols: cols.rows.map((c) => c.column_name),
+      notNullCols: cols.rows.filter((c) => c.nn).map((c) => c.column_name),
       canDelete: del.rows[0]?.d === true,
     });
   }
@@ -482,8 +485,10 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
       }
       // Okunamayan sütun (özet) kopyalanamaz: yalnız okunup yazılabilen sütunlar (diğerleri varsayılan/NULL).
       const copyCols = t.insertCols.filter((c) => t.selectCols.includes(c));
-      const cols = copyCols.map(q).join(", ");
-      const sel = copyCols.map((c) => `r.${q(c)}`).join(", ");
+      // Okunamayan ama zorunlu (NOT NULL) yazılabilir özet sütunu (ör. T-998 field_enrollments.token_hash): yeni sentetik 64 hex.
+      const synthCols = t.insertCols.filter((c) => !t.selectCols.includes(c) && t.notNullCols.includes(c));
+      const cols = [...copyCols, ...synthCols].map(q).join(", ");
+      const sel = [...copyCols.map((c) => `r.${q(c)}`), ...synthCols.map(() => "md5(random()::text) || md5(random()::text)")].join(", ");
       // Preserve the original valid DRAFT document-line copy as the native RLS control.
       const draftLine = t.name === "document_lines" ? " AND a.document_id = $3::uuid" : "";
       const copyParams = (tenant: string): unknown[] => t.name === "document_lines" ? [A.tenantId, tenant, A.documentId] : [A.tenantId, tenant];
@@ -821,7 +826,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.consume_admin_reset_grant",
     "wms_probe.field_activate", // T-997 migration 0044: saha etkinleştirme (kod tek kullanım + PIN özeti + kişisel cihaz) + security_events, yalnızca wms_auth
     "wms_probe.field_admin_reset", // T-997 migration 0044: yönetici kod yenileme/kilit açma (tenant bağlamı zorunlu) + security_events, yalnızca wms_app
+    "wms_probe.field_device_revoke", // T-998 migration 0045: yönetici cihaz iptali + security_events (tenant bağlamı zorunlu), yalnızca wms_app
+    "wms_probe.field_device_staff", // T-998 migration 0045: ortak cihaz personel listesi (ad + kullanıcı adı; yalnız SHARED cihaz belirteciyle), yalnızca wms_auth
     "wms_probe.field_device_status", // T-997 migration 0044: kayıtlı cihazın tenant/cihaz adı (salt okunur), yalnızca wms_auth
+    "wms_probe.field_enroll_approve", // T-998 migration 0045: kaydı başlatan yönetici talep eden ortak cihazı onaylar + security_events, yalnızca wms_app
+    "wms_probe.field_enroll_claim", // T-998 migration 0045: terminal 5 dk kayıt belirteciyle bir kez talep eder, yalnızca wms_auth
     "wms_probe.field_signin_begin", // T-997 migration 0044: saha girişi ön denetimi (cihaz, rol, kilit) → PIN özeti, yalnızca wms_auth
     "wms_probe.field_signin_finish", // T-997 migration 0044: saha girişi sonucu (sayaç/kilit, belirteç rotasyonu) + security_events, yalnızca wms_auth
     "wms_probe.identity_exclusive_to_tenant",
@@ -927,6 +936,10 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.field_signin_finish": [AUTH_ROLE],
       "wms_probe.field_activate": [AUTH_ROLE],
       "wms_probe.field_admin_reset": [APP_ROLE],
+      "wms_probe.field_device_revoke": [APP_ROLE],
+      "wms_probe.field_device_staff": [AUTH_ROLE],
+      "wms_probe.field_enroll_approve": [APP_ROLE],
+      "wms_probe.field_enroll_claim": [AUTH_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);

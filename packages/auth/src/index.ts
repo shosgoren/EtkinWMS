@@ -356,6 +356,8 @@ export interface AuthService {
   reauthenticate(principal: Principal, password: string, headers?: Headers): Promise<void>;
   /** Kullanıcının tüm oturumlarını siler. */
   revokeUserSessions(userId: string): Promise<void>;
+  /** T-998: iptal edilen saha cihazında açılmış bütün oturumları kapatır (`field_sessions` bağı). Yetki denetimi ÇAĞIRANIN işi. */
+  revokeDeviceSessions(deviceId: string): Promise<void>;
   /**
    * Yönetici kaynaklı sıfırlama belirteci (B1, ADR-016 §9 / 3. tur m1): YÖNETİCİ İŞARETLİ doğrulama kaydı yazar
    * (30 dk). Yetki/üretim denetimi ÇAĞIRANIN işidir (`issuePasswordResetLink`); grant yoksa kullanılamaz (fail-closed).
@@ -1255,6 +1257,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
         // T-997: saha girişi IP başına (cihaz ve tenant başına sınırlar field.ts'te).
         "/field/sign-in": FIELD_RATE_RULES.ipSignIn,
         "/field/activate": FIELD_RATE_RULES.ipActivate,
+        "/field/enroll": FIELD_RATE_RULES.ipEnroll,
       },
     },
     // ADR-014 4. tur BLOCKER-1 (b): `/update-session` ucu kapalı (api/index.mjs:166-168 → 404).
@@ -1705,6 +1708,15 @@ export function createAuth(params: CreateAuthParams): AuthService {
         const context = await auth.$context;
         await context.internalAdapter.deleteUserSessions(userId);
       });
+    },
+
+    async revokeDeviceSessions(deviceId) {
+      if (!UUID_RE.test(deviceId)) throw new AuthConfigError("revokeDeviceSessions: deviceId must be a UUID");
+      await masked(() =>
+        authDb.execute(
+          sql`DELETE FROM public.sessions WHERE id IN (SELECT session_id FROM public.field_sessions WHERE device_id = ${deviceId}::uuid)`,
+        ),
+      );
     },
   };
   authOptionsByService.set(service, auth.options);

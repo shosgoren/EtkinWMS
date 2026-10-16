@@ -138,3 +138,4 @@ export const createInvitedAccount: AuthService["createInvitedAccount"] = (input)
 export const createActivatedAccount: AuthService["createActivatedAccount"] = (input) => getAuthService().createActivatedAccount(input);
 export const createFieldAccount: AuthService["createFieldAccount"] = (input) => getAuthService().createFieldAccount(input);
 export const revokeUserSessions: AuthService["revokeUserSessions"] = (userId) => getAuthService().revokeUserSessions(userId);
+export const revokeDeviceSessions: AuthService["revokeDeviceSessions"] = (deviceId) => getAuthService().revokeDeviceSessions(deviceId);

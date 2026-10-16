@@ -381,6 +381,12 @@ export async function seedWorld(
     "INSERT INTO public.field_devices (tenant_id, token_hash, kind, user_id, name) VALUES ($1, $2, 'PERSONAL', $3, 'fx cihaz')",
     [tenantId, randomBytes(32).toString("hex"), memberUserId],
   );
+  // T-998 (0045): bekleyen ortak cihaz kaydı (sentetik özet).
+  await c.query("INSERT INTO public.field_enrollments (tenant_id, token_hash, created_by) VALUES ($1, $2, $3)", [
+    tenantId,
+    randomBytes(32).toString("hex"),
+    ownerUserId,
+  ]);
   const world: TenantWorld = {
     label,
     tenantId,
@@ -441,6 +447,7 @@ export async function cleanupRegistry(c: pg.Client, reg: WorldRegistry): Promise
     await c.query("DELETE FROM public.locations WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.warehouses WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.invitations WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
+    await c.query("DELETE FROM public.field_enrollments WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.field_devices WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.field_logins WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.membership_roles WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);

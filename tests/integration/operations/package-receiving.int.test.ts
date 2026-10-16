@@ -148,9 +148,9 @@ describe("T-933 persisted package prepare/post, scratch DB runtime roles",()=> {
     const before=await snapshot(),current=await functionState(),security=await rls();
     const oldSource=readFileSync(`${MIGRATIONS_DIR}/0032_receipt_packages.up.sql`,"utf8");
     const oldBody=oldSource.slice(oldSource.indexOf("CREATE FUNCTION public.receipt_package_assert(" )).split("AS $fn$")[1]!.split("$fn$;")[0]!;
-    for(const target of ["0032","0044","0032","0044"] as const) {
-      if(target==="0032")expect((await migrateDown({url:direct.toString(),to:target,wmsEnv:"staging"})).reverted).toEqual(["0044", "0043", "0042", "0041", "0040", "0039", "0038","0037","0036","0035","0034","0033"]);
-      else expect((await migrateUp({url:direct.toString()})).applied).toEqual(["0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044"]);
+    for(const target of ["0032","0045","0032","0045"] as const) {
+      if(target==="0032")expect((await migrateDown({url:direct.toString(),to:target,wmsEnv:"staging"})).reverted).toEqual(["0045", "0044", "0043", "0042", "0041", "0040", "0039", "0038","0037","0036","0035","0034","0033"]);
+      else expect((await migrateUp({url:direct.toString()})).applied).toEqual(["0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045"]);
       expect((await q("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 1"))[0]?.version).toBe(target);
       expect(await functionState()).toEqual({...current,prosrc:target==="0032"?oldBody:current.prosrc});
       expect(await rls()).toEqual(security);expect(await snapshot()).toEqual(before);

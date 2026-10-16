@@ -155,3 +155,26 @@ export const fieldDevices = pgTable("field_devices", {
   revokedAt: timestamptz("revoked_at"),
   revokedBy: uuid("revoked_by"),
 });
+
+// T-998 (0045): ortak cihaz kaydı (5 dk belirteç → terminal talebi → yönetici onayı). Özet sütunları uygulama rolüne kapalı.
+export const fieldEnrollments = pgTable("field_enrollments", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tokenHash: text("token_hash").notNull(),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  expiresAt: timestamptz("expires_at").notNull(),
+  claimTokenHash: text("claim_token_hash"),
+  claimedAt: timestamptz("claimed_at"),
+  deviceName: text("device_name"),
+  approvedAt: timestamptz("approved_at"),
+  deviceId: uuid("device_id"),
+  cancelledAt: timestamptz("cancelled_at"),
+});
+
+// T-998 (0045): saha oturumu ↔ cihaz (platform tablosu; yalnız kimlik rolü). Cihaz iptalinde oturumlar bu bağla kapanır.
+export const fieldSessions = pgTable("field_sessions", {
+  sessionId: uuid("session_id").primaryKey(),
+  deviceId: uuid("device_id").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+});

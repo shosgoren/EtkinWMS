@@ -32,6 +32,8 @@ export const FIELD_RATE_RULES = Object.freeze({
   device: { window: 15 * 60, max: 20 },
   tenant: { window: 15 * 60, max: 300 },
   activateUser: { window: 60 * 60, max: 10 },
+  enrollTenant: { window: 10 * 60, max: 30 },
+  ipEnroll: { window: 10 * 60, max: 20 },
 });
 
 export function isFieldEmail(email: string | null | undefined): boolean {
@@ -58,6 +60,11 @@ export function pinAcceptable(pin: string): boolean {
   const up = d.every((x, i) => i === 0 || x === ((d[i - 1] as number) + 1) % 10);
   const down = d.every((x, i) => i === 0 || x === ((d[i - 1] as number) + 9) % 10);
   return !(same || up || down);
+}
+
+/** Ortak cihaz kayıt belirteci özeti (QR; 5 dk). Domain aynı kuralı kullanır (`@wms/shared/field-login` `enrollmentTokenHash`). */
+export function enrollmentTokenHash(token: string): string {
+  return createHash("sha256").update(`field-enroll:${token}`).digest("hex");
 }
 
 export function deviceTokenHash(token: string): string {
@@ -140,6 +147,7 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
     userId: string,
     tenantId: string,
     device: { token: string; hash: string },
+    deviceId: string | null,
   ): Promise<void> {
     const user = await ctx.context.internalAdapter.findUserById(userId);
     if (user === null || !isFieldEmail(user.email)) throw DENIED();
@@ -150,6 +158,15 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
       throw DENIED();
     }
     await deps.markSessionVerified(session.token);
+    // T-998: oturum ↔ cihaz bağı (cihaz iptalinde oturumlar kapanır; ADR-026 §7.5). Yazılamazsa oturum açılmaz.
+    if (deviceId !== null && UUID.test(deviceId)) {
+      try {
+        await deps.execute(sql`INSERT INTO public.field_sessions (session_id, device_id) VALUES (${session.id}::uuid, ${deviceId}::uuid)`);
+      } catch (e) {
+        await ctx.context.internalAdapter.deleteSession(session.token);
+        throw e;
+      }
+    }
     ctx.setCookie(cookieName, `${tenantId}.${device.token}`, cookieOptions);
     await setSessionCookie(ctx, { session, user });
   }
@@ -166,6 +183,35 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const r = rows[0];
         if (r === undefined) return ctx.json({ registered: false });
         return ctx.json({ registered: true, workspace: r.slug, tenantName: r.tenant_name, deviceName: r.device_name, kind: r.kind });
+      }),
+
+      // T-998: ortak cihaz personel listesi (hızlı kullanıcı değişimi). Yalnız geçerli SHARED cihaz çereziyle; aksi boş liste.
+      fieldDeviceStaff: createAuthEndpoint("/field/staff", { method: "GET" }, async (ctx) => {
+        const parsed = parseDeviceCookie(ctx.getCookie(cookieName));
+        if (parsed === null) return ctx.json({ staff: [] });
+        const rows = await deps.execute<{ name: string; username: string }>(
+          sql`SELECT * FROM wms_probe.field_device_staff(${parsed.tenantId}::uuid, ${parsed.tokenHash})`,
+        );
+        return ctx.json({ staff: rows.map((r) => ({ name: r.name, username: r.username })) });
+      }),
+
+      // T-998: ortak cihaz kaydı talebi. QR adresinin `#` parçası `<tenant>.<kayıt belirteci>`; terminal kendi rastgele cihaz belirtecini
+      // üretir (çerez), DB'ye yalnız özetler gider. Cihaz, yönetici kendi ekranında ONAYLAYANA dek kayıtlı sayılmaz (`/field/device`).
+      fieldEnroll: createAuthEndpoint("/field/enroll", { method: "POST" }, async (ctx) => {
+        const body = (ctx.body ?? {}) as Record<string, unknown>;
+        const enrollment = parseDeviceCookie(text(body.enrollment, 120));
+        const name = text(body.deviceName, 60).trim();
+        if (enrollment === null || name === "") throw INVALID();
+        await limit(`field:enroll:${enrollment.tenantId}`, FIELD_RATE_RULES.enrollTenant);
+        const device = newDeviceToken();
+        // Kayıt belirteci özeti cihaz belirteciyle AYNI biçimde (alan ayrımı: `field-enroll:` öneki).
+        const tokenHash = enrollmentTokenHash(text(body.enrollment, 120).slice(enrollment.tenantId.length + 1));
+        const rows = await deps.execute<{ outcome: string }>(
+          sql`SELECT wms_probe.field_enroll_claim(${enrollment.tenantId}::uuid, ${tokenHash}, ${device.hash}, ${name}) AS outcome`,
+        );
+        if (rows[0]?.outcome !== "OK") throw DENIED();
+        ctx.setCookie(cookieName, `${enrollment.tenantId}.${device.token}`, cookieOptions);
+        return ctx.json({ ok: true, pending: true });
       }),
 
       fieldActivate: createAuthEndpoint("/field/activate", { method: "POST" }, async (ctx) => {
@@ -188,7 +234,7 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const r = rows[0];
         // Etkinleştirme kilit bildirmez (kullanıcı adı keşfi yok; inceleme M1): her ret aynı.
         if (r?.outcome !== "OK" || r.user_id === null || r.tenant_id === null) throw DENIED();
-        await openSession(ctx, r.user_id, r.tenant_id, device);
+        await openSession(ctx, r.user_id, r.tenant_id, device, r.device_id);
         return ctx.json({ ok: true });
       }),
 
@@ -235,7 +281,7 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const outcome = finished[0]?.outcome;
         if (outcome === "LOCKED") throw LOCKED();
         if (!ok || outcome !== "OK") throw DENIED();
-        await openSession(ctx, r.user_id, r.tenant_id, next);
+        await openSession(ctx, r.user_id, r.tenant_id, next, r.device_id);
         return ctx.json({ ok: true });
       }),
     },

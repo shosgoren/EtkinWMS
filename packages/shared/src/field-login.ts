@@ -1,7 +1,7 @@
 // Saha girişi ortak kuralları (T-997, ADR-026 §7). Etkinleştirme kodu: 8 karakter, karışmayan alfabe (0/O, 1/I/L yok), gösterimde
 // `XXXX-XXXX`; DB'de yalnız normalize edilmiş kodun SHA-256 özeti. Aynı normalize + özet kuralı `packages/auth/src/field.ts`'te de vardır
 // (paket bağımlılığı eklenmez); `tests/unit/field-login.test.ts` ikisinin eşitliğini denetler.
-import { createHash, randomInt } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 
 /** İç e-posta alanı (RFC 2606 `.invalid`): Better Auth e-posta uçları ve posta adaptörü bu alanı reddeder. */
 export const FIELD_EMAIL_DOMAIN = "field.invalid";
@@ -58,4 +58,14 @@ export function pinProblem(pin: string): PinProblem | null {
   const up = d.every((x, i) => i === 0 || x === ((d[i - 1] as number) + 1) % 10);
   const down = d.every((x, i) => i === 0 || x === ((d[i - 1] as number) + 9) % 10);
   return same || up || down ? "OBVIOUS" : null;
+}
+
+/** Ortak cihaz kayıt belirteci (QR, 5 dk; T-998): 32 bayt base64url. DB'de yalnız özeti. */
+export function generateEnrollmentToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/** `packages/auth/src/field.ts` `enrollmentTokenHash` ile aynı. */
+export function enrollmentTokenHash(token: string): string {
+  return createHash("sha256").update(`field-enroll:${token}`).digest("hex");
 }

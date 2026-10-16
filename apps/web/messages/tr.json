@@ -871,6 +871,10 @@
       "created": "Bir saha personeli hesabı açtın.",
       "code_reset": "Bir saha personeli için yeni etkinleştirme kodu oluşturdun.",
       "unlocked": "Bir saha personelinin kilidini açtın."
+    },
+    "field_device": {
+      "enrolled": "Bir ortak cihaz kaydettin.",
+      "revoked": "Bir saha cihazını iptal ettin."
     }
   },
   "auditLog": {
@@ -929,6 +933,10 @@
         "created": "Saha personeli eklendi",
         "code_reset": "Saha etkinleştirme kodu yenilendi",
         "unlocked": "Saha girişi kilidi açıldı"
+      },
+      "field_device": {
+        "enrolled": "Ortak cihaz kaydedildi",
+        "revoked": "Saha cihazı iptal edildi"
       }
     }
   },

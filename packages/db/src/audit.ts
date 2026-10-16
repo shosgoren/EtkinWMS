@@ -25,6 +25,8 @@ export const AUDIT_ACTIONS = [
   "field_user.created",
   "field_user.code_reset",
   "field_user.unlocked",
+  "field_device.enrolled",
+  "field_device.revoked",
   "tenant.created",
   "tenant.settings_changed",
   "onboarding.step_completed",
