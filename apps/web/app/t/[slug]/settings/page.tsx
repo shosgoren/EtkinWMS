@@ -25,12 +25,6 @@ function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-/** Sonuç sayısı (yönlendirme sorgusundan; yalnız gösterim). Biçimsizse 0. */
-function count(v: string | string[] | undefined): number {
-  const s = first(v);
-  return s !== undefined && /^\d{1,6}$/.test(s) ? Number(s) : 0;
-}
-
 const SAMPLE_RESULTS = ["deleted", "archived", "none"] as const;
 
 // Ayarlar (T-122): okuma `getTenantSettings` (settings.manage), yazma `saveSettingsAction`. Yetki yoksa form kilitli + açıklama.
@@ -62,7 +56,6 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const sample: SampleDataStatus | null = locked ? null : await getSampleDataStatus({ db: getAppDb(), principal, tenantSlug: slug });
   const sampleResult = SAMPLE_RESULTS.find((r) => r === first(query.sample));
   const sampleNotice = first(query.sample);
-  const resultCounts = { warehouses: count(query.w), locations: count(query.l), items: count(query.i) };
 
   return (
     <main className="mx-auto flex w-full max-w-xl min-w-0 flex-col gap-4 px-4 py-6">
@@ -125,7 +118,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
       </form>
       {sampleResult === undefined ? null : (
         <Banner kind="info">
-          <p>{t(`sample.${sampleResult}`, resultCounts)}</p>
+          <p>{t(`sample.${sampleResult}`)}</p>
         </Banner>
       )}
       {sampleNotice === "in_use" ? (

@@ -17,6 +17,10 @@
 -- * KULLANILMIŞ ÖRNEK SİLİNEMEZ: tüm bağlı tablolar (stok boyutu → defter, belge satırı, görev, sayım, rezervasyon …) bu tablolara
 --   ON DELETE NO ACTION ile bağlıdır. İşlenmiş hareketi olan örnek satır 23503 ile reddedilir (I-08: defter silinmez); domain bu
 --   durumda silmez, pasife alır (status = ARCHIVED).
+-- * BİLİNEN, KABUL EDİLEN SINIR (inceleme MINOR-1/2): wms_app ham SQL ile örnek lokasyonun kilit satırını ya da örnek ürünün dönüşümünü
+--   tek başına silebilir (lokasyon kilitsiz kalırsa stok komutları COUNT_LOCK_ROW_MISSING ile güvenli tarafta reddeder). Uygulama kodu
+--   kilit tablosuna yazmaz (T-210 lint) ve dönüşümü yalnız ürünle birlikte siler; daha dar koşul (yalnız iç içe tetikleyiciden silme)
+--   AC-04'ün genel "kendi satırını silebilir" denetimiyle çelişir. Gerçek (örnek olmayan) satır her durumda korunur.
 -- * RLS DEĞİŞMEZ: tek izolasyon politikası (FOR ALL, USING + WITH CHECK) aynen kalır; yabancı tenant satırı silme için görünmez.
 -- Koşturucu tek transaction içinde çalıştırır.
 

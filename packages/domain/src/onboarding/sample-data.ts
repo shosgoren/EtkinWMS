@@ -10,7 +10,7 @@
 //   silinen sayılar önceden sayılanla karşılaştırılır; sapma silmeyi geri alıp pasife almaya düşer. Lokasyonun sayım kilidini de aynı
 //   tetikleyici siler (bu dosya kilit tablosuna yazmaz; T-210 stok yazma kuralı).
 import { sql } from "drizzle-orm";
-import { appendAudit } from "@wms/db";
+import { acquireStockLocks, appendAudit, type StockDimensionKey } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessDbClient, type AccessPrincipal, type AccessTx } from "../identity/access.ts";
 import { sqlstateOf } from "../stock/retry.ts";
@@ -210,9 +210,20 @@ async function archiveAll(tx: AccessTx, tenantId: string): Promise<SampleCounts>
     sql`UPDATE public.items SET status = 'ARCHIVED', archived_at = now()
          WHERE tenant_id = ${tenantId}::uuid AND is_sample AND status = 'ACTIVE' RETURNING 1 AS x`,
   );
+  // Kullanıcının örnek bir rafın/gözün altına açtığı etkin lokasyon varsa o örnek atalar açık kalır: ağaçta gerçek lokasyon (ve stoğu)
+  // arşivli ebeveyn altında görünmez olmaz (archiveLocation kuralı "aktif alt lokasyon").
   const locs = await tx.execute<{ x: number }>(
-    sql`UPDATE public.locations SET status = 'ARCHIVED', archived_at = now()
-         WHERE tenant_id = ${tenantId}::uuid AND is_sample AND status = 'ACTIVE' RETURNING 1 AS x`,
+    sql`WITH RECURSIVE keep AS (
+          SELECT l.parent_id AS id FROM public.locations l
+           WHERE l.tenant_id = ${tenantId}::uuid AND NOT l.is_sample AND l.status = 'ACTIVE' AND l.parent_id IS NOT NULL
+          UNION
+          SELECT p.parent_id FROM public.locations p JOIN keep k ON p.id = k.id
+           WHERE p.tenant_id = ${tenantId}::uuid AND p.parent_id IS NOT NULL
+        )
+        UPDATE public.locations SET status = 'ARCHIVED', archived_at = now()
+         WHERE tenant_id = ${tenantId}::uuid AND is_sample AND status = 'ACTIVE'
+           AND id NOT IN (SELECT id FROM keep WHERE id IS NOT NULL)
+        RETURNING 1 AS x`,
   );
   // Örnek depoda kullanıcının kendi açtığı etkin lokasyon varsa depo açık kalır (gerçek kayıt gizlenmez).
   const whs = await tx.execute<{ x: number }>(
@@ -223,6 +234,56 @@ async function archiveAll(tx: AccessTx, tenantId: string): Promise<SampleCounts>
          RETURNING 1 AS x`,
   );
   return { warehouses: whs.length, locations: locs.length, items: items.length };
+}
+
+/**
+ * Temizlik ile eşzamanlı stok işlemini serileştirir (I-15 sırası: sayım kilidi → bakiye → lokasyon/ürün satırı):
+ * - örnek lokasyonların sayım kilidi (`acquireStockLocks`; sayımdaysa `LOCATION_LOCKED` → `IN_USE`),
+ * - örnek ürün/lokasyona ait mevcut stok boyutlarının bakiyeleri (`FOR UPDATE`, tek kilit yolu üzerinden),
+ * - örnek lokasyon ve ürün satırları `FOR UPDATE`: yeni stok boyutu açan işlem (FK KEY SHARE) temizlik bitene dek bekler.
+ * Böylece "stok yok" denetimi ile silme/pasife alma arasında stok girişi kaydedilemez.
+ */
+async function lockSampleStock(tx: AccessTx, tenantId: string): Promise<void> {
+  const locs = await tx.execute<{ id: string }>(
+    sql`SELECT id FROM public.locations WHERE tenant_id = ${tenantId}::uuid AND is_sample AND status = 'ACTIVE' ORDER BY id`,
+  );
+  const dims = await tx.execute<{
+    item_id: string;
+    location_id: string;
+    lot_id: string | null;
+    serial_id: string | null;
+    stock_status: StockDimensionKey["stockStatus"];
+    inventory_owner_id: string | null;
+    handling_unit_id: string | null;
+  }>(
+    sql`SELECT d.item_id, d.location_id, d.lot_id, d.serial_id, d.stock_status, d.inventory_owner_id, d.handling_unit_id
+          FROM public.stock_dimensions d
+          LEFT JOIN public.items i ON i.tenant_id = d.tenant_id AND i.id = d.item_id
+          LEFT JOIN public.locations l ON l.tenant_id = d.tenant_id AND l.id = d.location_id
+         WHERE d.tenant_id = ${tenantId}::uuid AND (i.is_sample OR l.is_sample)`,
+  );
+  try {
+    await acquireStockLocks(tx, tenantId, {
+      locationIds: locs.map((r) => r.id),
+      dimensions: dims.map((d) => ({
+        itemId: d.item_id,
+        locationId: d.location_id,
+        lotId: d.lot_id,
+        serialId: d.serial_id,
+        stockStatus: d.stock_status,
+        inventoryOwnerId: d.inventory_owner_id,
+        handlingUnitId: d.handling_unit_id,
+      })),
+      reservationIds: [],
+      serialIds: [],
+    });
+  } catch (e) {
+    const x = e as { name?: unknown; code?: unknown } | null;
+    if (x?.name === "StockLockError" && x.code === "LOCATION_LOCKED") throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
+    throw e;
+  }
+  await tx.execute(sql`SELECT id FROM public.locations WHERE tenant_id = ${tenantId}::uuid AND is_sample ORDER BY id FOR UPDATE`);
+  await tx.execute(sql`SELECT id FROM public.items WHERE tenant_id = ${tenantId}::uuid AND is_sample ORDER BY id FOR UPDATE`);
 }
 
 export async function clearSampleData(params: {
@@ -239,6 +300,7 @@ export async function clearSampleData(params: {
     await tx.execute(sql`SELECT id FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND is_sample FOR NO KEY UPDATE`);
     const active = await activeCounts(tx, m.tenantId);
     if (active.warehouses + active.locations + active.items === 0) return { mode: "NONE", counts: active };
+    await lockSampleStock(tx, m.tenantId);
 
     let mode: SampleClearMode;
     let counts: SampleCounts;

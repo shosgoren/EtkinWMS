@@ -35,6 +35,5 @@ export async function clearSampleDataAction(form: FormData): Promise<void> {
     if (result.error.code === "UNAUTHENTICATED" && result.error.detail === "RECENT_AUTH_REQUIRED") redirect(`${base}?sample=reauth`);
     redirect(`${base}?error=${encodeURIComponent(result.error.code)}`);
   }
-  const c = result.data.counts;
-  redirect(`${base}?sample=${result.data.mode.toLowerCase()}&w=${c.warehouses}&l=${c.locations}&i=${c.items}`);
+  redirect(`${base}?sample=${result.data.mode.toLowerCase()}`);
 }

@@ -258,6 +258,30 @@ describe("temizleme", () => {
     expect((await clearSampleData({ ...access(t), recentAuth: ok })).mode).toBe("NONE");
   }, 120_000);
 
+  it("örnek rafın altına açılmış gerçek lokasyon: silme geri alınır; pasife almada o rafın örnek ataları ve depo açık kalır", async () => {
+    const t = await trial(true);
+    const rack = await adm.query<{ id: string; warehouse_id: string }>(
+      "SELECT id, warehouse_id FROM public.locations WHERE tenant_id = $1 AND code = 'A-R1'",
+      [t.tenantId],
+    );
+    const r1 = rack.rows[0] as { id: string; warehouse_id: string };
+    const real = randomUUID();
+    await withTenant(createTenantContext(app, t.tenantId), async (tx) => {
+      await tx.execute(
+        sql`INSERT INTO public.locations (tenant_id, id, warehouse_id, parent_id, code, name, depth, kind)
+            VALUES (${t.tenantId}::uuid, ${real}::uuid, ${r1.warehouse_id}::uuid, ${r1.id}::uuid, 'GERCEK-1', 'Gerçek göz', 2, 'STORAGE')`,
+      );
+    });
+    const r = await clearSampleData({ ...access(t), recentAuth: ok });
+    expect(r).toEqual({ mode: "ARCHIVED", counts: { warehouses: 0, locations: SAMPLE_LOCATIONS.length - 2, items: SAMPLE_ITEMS.length } });
+    const open = await adm.query<{ code: string }>(
+      "SELECT code FROM public.locations WHERE tenant_id = $1 AND status = 'ACTIVE' ORDER BY code",
+      [t.tenantId],
+    );
+    expect(open.rows.map((x) => x.code)).toEqual(["A", "A-R1", "GERCEK-1"]);
+    expect((await adm.query("SELECT status FROM public.warehouses WHERE tenant_id = $1", [t.tenantId])).rows).toEqual([{ status: "ACTIVE" }]);
+  }, 60_000);
+
   it("yakın zamanda doğrulama istenir; reddedilirse hiçbir şey silinmez", async () => {
     const t = await trial(true);
     const reauth = async (): Promise<void> => {
@@ -270,6 +294,17 @@ describe("temizleme", () => {
 });
 
 describe("DB sınırı (0040)", () => {
+  it("DELETE yetkisi beş tabloda yalnız wms_app'te (tetikleyici başka rolleri sınamaz; başka çalışma rolüne verilmemeli)", async () => {
+    const r = await adm.query<{ role: string; t: string; d: boolean; tr: boolean }>(
+      `SELECT r AS role, t, has_table_privilege(r, 'public.' || t, 'DELETE') AS d, has_table_privilege(r, 'public.' || t, 'TRUNCATE') AS tr
+         FROM unnest(ARRAY['wms_app','wms_auth','wms_worker','wms_ops','wms_identity_probe']) r,
+              unnest(ARRAY['warehouses','locations','location_count_locks','items','unit_conversions']) t
+        ORDER BY 1, 2`,
+    );
+    expect(r.rows.filter((x) => x.d).map((x) => x.role)).toEqual(Array(5).fill("wms_app"));
+    expect(r.rows.filter((x) => x.tr)).toEqual([]);
+  });
+
   it("wms_app örnek olmayan satırı silemez (atlanır, satır yerinde); gerçek satır örnek işaretlenemez; başka tenant'ın örneği görünmez", async () => {
     const t = await trial(true);
     const other = await trial(true);
