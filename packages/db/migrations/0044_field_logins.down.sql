@@ -1,14 +1,6 @@
--- 0044_field_logins geri alma (G-08, ADR-015 §9). VERİ KAYBETTİRİR: saha hesabı ya da cihaz varsa yalnızca
--- wms_meta.allow_destructive_down = 'on' (WMS_ENV local|ci) iken çalışır.
-DO $guard$
-BEGIN
-  IF (EXISTS (SELECT 1 FROM public.field_logins) OR EXISTS (SELECT 1 FROM public.field_devices))
-     AND coalesce(pg_catalog.current_setting('wms_meta.allow_destructive_down', true), '') <> 'on' THEN
-    RAISE EXCEPTION '0044_field_logins down: saha hesabı/cihaz kaydı var; veri kaybettiren geri alma bu ortamda kapalı';
-  END IF;
-END
-$guard$;
-
+-- 0044_field_logins geri alma (G-08, ADR-015 §9). Saha giriş bilgilerini (PIN özeti, bekleyen kod, cihaz kaydı) SİLER; hesaplar,
+-- üyelikler ve stok/iş kayıtları kalır. Yeniden kurulumda personel yeni etkinleştirme koduyla tekrar kaydolur (kimlik bilgisi; defter
+-- verisi değil — bu yüzden veri bekçisi yok).
 GRANT CREATE ON SCHEMA wms_probe TO wms_identity_probe;
 SET ROLE wms_identity_probe;
 DROP FUNCTION wms_probe.field_admin_reset(uuid, text, uuid);

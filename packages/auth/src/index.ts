@@ -1279,6 +1279,8 @@ export function createAuth(params: CreateAuthParams): AuthService {
         {
           const token = await ctx.getSignedCookie(ctx.context.authCookies.sessionToken.name, ctx.context.secret);
           if (typeof token === "string" && token !== "") {
+            // Temizlik hatası (ör. DB yetki/bağlantı) isteği burada düşürmez: oturum okuması aynı DB'ye gider ve kendi hatasıyla düşer;
+            // `getPrincipal` boşta/mutlak sınırı ayrıca uygular.
             await masked(() =>
               authDb.execute(
                 sql`DELETE FROM public.sessions s USING public.users u
@@ -1286,7 +1288,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
                        AND (s.updated_at < now() - make_interval(secs => ${FIELD_SESSION_IDLE_SEC})
                             OR s.created_at < now() - make_interval(secs => ${FIELD_SESSION_MAX_SEC}))`,
               ),
-            );
+            ).catch(() => undefined);
           }
         }
         // T-997 (ADR-026 §7.2): saha hesabının iç e-postası (`@field.invalid`) e-posta/parola girişi ve sıfırlamada reddedilir
