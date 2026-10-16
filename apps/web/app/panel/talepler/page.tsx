@@ -6,8 +6,8 @@ import { getAppDb } from "@wms/db";
 import { listDemoRequests } from "@wms/domain/platform/demo-requests";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../design/theme.ts";
-import { YICON } from "../../design/yonet-icons.ts";
 import { panelOperatorOrExit } from "../gate.ts";
+import { panelLabels, panelNav } from "../nav.ts";
 import { PanelShell } from "../shell.tsx";
 import { demoRequestAction } from "./actions.ts";
 import { TaleplerView, type TaleplerLabels } from "./view.tsx";
@@ -32,7 +32,6 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
   const query = await searchParams;
   const rawErr = Array.isArray(query.error) ? query.error[0] : query.error;
   const errorCode = ERRORS.find((c) => c === rawErr);
-  const t = await getTranslations("panel");
   const tt = await getTranslations("panel.talepler");
   const labels: TaleplerLabels = {
     banTitle: tt("banTitle"),
@@ -69,8 +68,8 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
       current="talepler"
       title={tt("title")}
       sub={tt("sub")}
-      nav={[{ key: "talepler", href: "/talepler", label: t("nav.talepler"), icon: YICON.req, count: pending }]}
-      labels={{ brand: t("brand"), host: t("host"), menu: t("menu"), who: t("who"), signOut: t("signOut"), signOutFailed: t("signOutFailed"), theme: t("theme") }}
+      nav={await panelNav(principal, pending)}
+      labels={await panelLabels()}
     >
       <TaleplerView rows={rows} now={new Date()} labels={labels} initialError={errorCode} action={demoRequestAction} />
     </PanelShell>

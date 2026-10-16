@@ -1567,9 +1567,10 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       // T-994 migration 0038: platform demo talepleri (operatör DB listesi; tenant verisi yok; ilke değişmedi)
       // T-995 migration 0039: deneme aktivasyonu (bağlantı özeti, talep, tüketme, abonelik okuma; tenant tablosuna yazma yok)
       "platform_activation_claim", "platform_activation_consume", "platform_activation_for_account_creation", "platform_activation_preview",
-      "platform_activation_release", "platform_decide_demo_request", "platform_demo_request_email", "platform_ingest_demo_request",
-      "platform_is_operator", "platform_issue_activation", "platform_list_demo_requests", "platform_prepare_activation_delivery",
-      "platform_tenant_subscription", "platform_workspace_name_taken",
+      "platform_activation_release", "platform_assign_default_plan", "platform_decide_demo_request", "platform_demo_request_email",
+      "platform_ingest_demo_request", "platform_is_operator", "platform_issue_activation", "platform_list_demo_requests",
+      "platform_list_plans", "platform_prepare_activation_delivery", "platform_published_plans", "platform_save_plan",
+      "platform_tenant_plan_limit", "platform_tenant_subscription", "platform_workspace_name_taken", // T-404 0041: paket işlevleri
     ]);
     for (const f of r.funcs) {
       expect([f.proname, f.owner, f.prosecdef, f.proconfig]).toEqual([f.proname, PROBE_ROLE, true, ["search_path=pg_catalog, pg_temp"]]);

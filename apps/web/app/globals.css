@@ -828,6 +828,8 @@ body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-b
 .dzg .inp input { padding: 1px 2px; }
 /* Yönetim paneli kaynağı (Yonet.dc.html, ADR-027) ayrı kapta (`.dzy`); yerleşim uyarlaması aynı. */
 .dzy { position: fixed; inset: 0; z-index: 20; }
+/* T-404: panel formları da tarayıcı varsayılanıyla (metin kutusu iç boşluğu 1px 2px, Giriş kabıyla aynı uyarlama). */
+.dzy .inp input { padding: 1px 2px; }
 body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-bar"], body:has(.dzy) .app-header { display: none; }
 /* design:bakis:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
 .dz {

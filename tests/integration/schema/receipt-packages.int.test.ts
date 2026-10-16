@@ -65,9 +65,9 @@ afterAll(async () => {
 });
 describe("T-932 immutable package origins (isolated scratch, runtime role)",()=> {
   it("empty36→31→36 keeps old tables and schema ledger",async()=> {
-    expect((await migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).reverted).toEqual(["0040", "0039", "0038","0037","0036","0035","0034","0033","0032"]);
+    expect((await migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).reverted).toEqual(["0041", "0040", "0039", "0038","0037","0036","0035","0034","0033","0032"]);
     expect((await migration.query("SELECT to_regclass('public.receipt_packages') AS table")).rows[0]?.table).toBeNull();
-    expect((await migrateUp({url:direct})).applied).toEqual(["0032","0033","0034","0035","0036","0037","0038","0039","0040"]);
+    expect((await migrateUp({url:direct})).applied).toEqual(["0032","0033","0034","0035","0036","0037","0038","0039","0040","0041"]);
   });
   for (const [label, options] of [
     ["same tenant wrong receipt", () => ({receiptId: legacyReceipt})],
@@ -236,7 +236,7 @@ describe("T-932 immutable package origins (isolated scratch, runtime role)",()=>
     await expect(migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).rejects.toThrow(/receipt package data exists/);
     expect((await migration.query("SELECT count(*)::int AS n FROM public.receipt_packages")).rows[0]?.n).toBe(3);
     expect((await migration.query("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 1")).rows[0]?.version).toBe("0032");
-    expect((await migrateUp({url:direct})).applied).toEqual(["0033","0034","0035","0036","0037","0038","0039","0040"]);
+    expect((await migrateUp({url:direct})).applied).toEqual(["0033","0034","0035","0036","0037","0038","0039","0040","0041"]);
   });
   for(const order of ["package first","lot update first"] as const) it(`RR concurrent ${order} cannot commit contradictory dates`,async()=> {
     const racer=new pg.Client({connectionString:appUrl}); await racer.connect();

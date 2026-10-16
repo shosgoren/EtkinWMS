@@ -59,6 +59,12 @@ export function mapAccessError(e: unknown): unknown {
     }
     return internalError(e);
   }
+  // T-404 (0041): paket sınırı tetikleyicisi (23514 `PLAN_LIMIT`) → kullanıcıya gösterilen ayırt edilebilir red.
+  if (isPlanLimit(e)) {
+    const err = new AppError("VALIDATION_FAILED", { detail: "PLAN_LIMIT" });
+    err.cause = e;
+    return err;
+  }
   const state = sqlstateOf(e);
   if (state !== undefined && RETRYABLE_SQLSTATES.has(state)) {
     const err = new AppError("VERSION_CONFLICT", { retryable: true });
@@ -66,6 +72,17 @@ export function mapAccessError(e: unknown): unknown {
     return err;
   }
   return internalError(e);
+}
+
+/** Hata zincirinde paket sınırı reddi var mı (0041 `plan_limit_guard`: SQLSTATE 23514, ileti `PLAN_LIMIT`). */
+export function isPlanLimit(e: unknown): boolean {
+  let cur: unknown = e;
+  for (let i = 0; i < 6 && cur !== undefined && cur !== null; i++) {
+    const o = cur as { code?: unknown; message?: unknown };
+    if (o.code === "23514" && o.message === "PLAN_LIMIT") return true;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
 }
 
 function internalError(cause: unknown): AppError {
