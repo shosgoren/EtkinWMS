@@ -8,6 +8,8 @@ import { loadNotifyConfig, notifyLead } from './notify.mjs';
 
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), 'public');
 const leadDir = process.env.LEAD_DIR || '/data';
+// T-994: talep kaydı ayrı dizinde (worker yalnız bunu salt okunur bağlar); bildirim ayarı (notify.json) LEAD_DIR'de kalır.
+const demoLeadsDir = process.env.DEMO_LEADS_DIR || leadDir;
 const allowedOrigins = new Set(['https://etkinyazilim.com','https://www.etkinyazilim.com','http://localhost:3200']);
 const limits = new Map();
 // T-941: yayımlanan dosyalar açılışta public/ altından bir kez listelenir; yalnız bu harita sunulur.
@@ -59,9 +61,9 @@ export const server = createServer(async (req,res) => {
       for await (const chunk of req) {size+=chunk.length;if(size>8192)return json(413,{error:'Mesaj çok uzun.'});body+=chunk.toString();}
       const lead = validateLead(JSON.parse(body));
       if (!lead) return json(400,{error:'Ad, firma, geçerli e-posta ve iletişim onayını kontrol edin.'});
-      await mkdir(leadDir,{recursive:true,mode:0o700});
+      await mkdir(demoLeadsDir,{recursive:true,mode:0o700});
       const record = {id:randomUUID(),createdAt:new Date().toISOString(),...lead};
-      await appendFile(resolve(leadDir,'demo-requests.jsonl'),JSON.stringify(record)+'\n',{mode:0o600});
+      await appendFile(resolve(demoLeadsDir,'demo-requests.jsonl'),JSON.stringify(record)+'\n',{mode:0o600});
       // T-945: kayıt yazıldıktan sonra e-posta bildirimi; sonucu yanıtı bekletmez ve kaydı etkilemez.
       loadNotifyConfig(process.env, leadDir).then((config) => notifyLead(record, config)).then((r) => {
         if (r.status !== null && !r.ok) console.error(`lead-notify failed status=${r.status}`);

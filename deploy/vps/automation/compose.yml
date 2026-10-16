@@ -15,20 +15,47 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+  # ADR-027: yonet.etkinyazilim.com — aynı imaj, panel kipi (yalnız panel sayfaları + giriş), kendi kimlik doğrulama tabanı.
+  panel:
+    image: etkinwms:${WMS_RELEASE:?required}
+    restart: unless-stopped
+    env_file: /opt/etkinwms/secrets/web.env
+    environment: {PORT: 3000, HOSTNAME: 0.0.0.0, NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt, APP_SURFACE: panel, BETTER_AUTH_URL: 'https://yonet.etkinyazilim.com', WMS_APP_URL: 'https://wms.etkinyazilim.com'}
+    volumes: [/opt/etkinwms/database/tls/ca.crt:/run/etkinwms-db-ca.crt:ro]
+    expose: ['3000']
+    mem_limit: 768m
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+    healthcheck:
+      test: [CMD, node, '-e', "fetch('http://127.0.0.1:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
   worker:
     image: etkinwms:${WMS_RELEASE:?required}
     command: [node, apps/worker/dist/main.js]
-    environment: {NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt}
-    volumes: [/opt/etkinwms/database/tls/ca.crt:/run/etkinwms-db-ca.crt:ro]
+    # T-994: demo talepleri ayrı birimden salt okunur (notify.json/Resend anahtarı marketing-leads'te kalır, worker'a bağlanmaz).
+    environment: {NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt, DEMO_LEADS_FILE: /leads/demo-requests.jsonl}
+    volumes: [/opt/etkinwms/database/tls/ca.crt:/run/etkinwms-db-ca.crt:ro, demo-leads:/leads:ro]
+    depends_on: {leads-init: {condition: service_completed_successfully}}
     env_file: /opt/etkinwms/secrets/worker.env
     restart: unless-stopped
     mem_limit: 512m
     logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+  # T-994: demo-leads birimi kök sahipli oluşur; node kullanıcısına bir kez sahiplik verir ve çıkar.
+  leads-init:
+    image: etkinwms:${WMS_RELEASE:?required}
+    user: '0:0'
+    command: [sh, -c, 'chown node:node /leads && chmod 0700 /leads']
+    volumes: [demo-leads:/leads]
+    restart: 'no'
+    mem_limit: 64m
   marketing:
     image: etkinwms:${WMS_RELEASE:?required}
     command: [node, /marketing/server.mjs]
-    environment: {PORT: 3200, LEAD_DIR: /data}
-    volumes: [marketing-leads:/data]
+    environment: {PORT: 3200, LEAD_DIR: /data, DEMO_LEADS_DIR: /leads}
+    volumes: [marketing-leads:/data, demo-leads:/leads]
+    depends_on: {leads-init: {condition: service_completed_successfully}}
     restart: unless-stopped
     mem_limit: 256m
     expose: ['3200']
@@ -45,3 +72,4 @@ volumes:
   caddy-data:
   caddy-config:
   marketing-leads:
+  demo-leads:

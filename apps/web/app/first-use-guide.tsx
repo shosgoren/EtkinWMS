@@ -8,7 +8,8 @@ import { usePathname } from "next/navigation";
 
 const KEY = "etkinwms.guide.v1";
 const OPEN_EVENT = "etkinwms:guide-open";
-const AUTH_PATHS = ["/login", "/mfa", "/reset-password"];
+// T-995: aktivasyon (oturumsuz kurulum) ekranında da ilk rehber açılmaz; rehber kurulumdan sonraki ilk iş ekranındadır.
+const AUTH_PATHS = ["/login", "/mfa", "/reset-password", "/activate"];
 
 /** Rehberi açan düğme; görünümü çağıranın sınıfıyla (üst çubuk hapı / menü satırı). */
 export function GuideTrigger({ className, iconOnly = false }: { className: string; iconOnly?: boolean }) {

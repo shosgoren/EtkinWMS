@@ -8,6 +8,7 @@ import { getAppDb } from "@wms/db";
 import { runTenantQuery } from "@wms/domain/identity/access";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
+import { appSurface } from "../../../lib/surface.ts";
 import { AppError } from "@wms/shared/errors";
 import { AppBar } from "./app-bar.tsx";
 import { BottomNav } from "./bottom-nav.tsx";
@@ -29,6 +30,8 @@ async function setView(formData: FormData): Promise<void> {
 // Tenant kabuğu (T-119): üyelik SUNUCUDA doğrulanır (üye değil → 404; varlık sızdırılmaz). Yetki kararı domain'dedir
 // (`runTenantQuery`); burada yalnızca kullanıcı adı, aktif rol çipi ve tenant değiştirici gösterilir.
 export default async function TenantLayout({ children, params }: { children: ReactNode; params: Promise<{ slug: string }> }) {
+  // ADR-027 §1 (T-401 inceleme M-1): müşteri alanı panel kipinde yoktur (proxy'ye ek, sunucu tarafı).
+  if (appSurface() === "panel") notFound();
   const { slug } = await params;
   const { getAuthService } = await import("../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());

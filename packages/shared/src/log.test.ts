@@ -120,6 +120,8 @@ describe("maskeleme: dizeler (URL, yol, sorgu)", () => {
 
   it("davet belirteci: yolda ve next= sorgusunda (tek/çift kodlu)", () => {
     expect(maskString("/invite/AbC_123-xyz")).toBe(`/invite/${MASK}`);
+    expect(maskString("/activate/AbC_123-xyz")).toBe(`/activate/${MASK}`); // T-995
+    expect(maskString("/login?next=%2Factivate%2FAbC_123-xyz")).toBe(`/login?next=%2Factivate%2F${MASK}`);
     expect(maskString("/invite/AbC_123-xyz?utm=1")).toBe(`/invite/${MASK}?utm=1`);
     expect(maskString("/login?next=%2Finvite%2FAbC_123-xyz")).toBe(`/login?next=%2Finvite%2F${MASK}`);
     expect(maskString("/mfa?next=%2Finvite%2FAbC_123-xyz&x=1")).toBe(`/mfa?next=%2Finvite%2F${MASK}&x=1`);

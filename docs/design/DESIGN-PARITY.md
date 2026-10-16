@@ -61,6 +61,12 @@ Aşağıdakilerin hepsi kaynakla aynıdır:
 
 Bu tablo dışındaki her sapma için kullanıcının yazılı onayı gerekir; onay tarih ve alıntıyla buraya eklenir.
 
+### Kaynak çalışma zamanının çizim ayrıntıları (T-995)
+
+Tasarım aracı metin bağlarını (`{{…}}`) ayrı bir `<span>` içinde çizer ve sayfaya tarayıcı varsayılanları uygulanır; uygulamada Tailwind
+sıfırlaması vardır. Birebir için: (1) `.opt span`, `.addr`, `.chip` gibi alt öğe ya da esnek kutu aralığı kuralı olan yerlerde bağ ayrı
+`<span>` olarak çizilir; (2) `dl` dış boşluğu (1em) ve metin kutusu iç boşluğu (1px 2px) açıkça verilir (`.dzg .inp input` uyarlaması).
+
 ## 7. Teslim kanıtı (her ekran PR'ı)
 
 - Aynı veriyle tasarım ve uygulama ekran görüntüleri üç ölçüde alınır: **390×844** (mobil), **1180×820** (tablet), **1440×900** (masaüstü). Görüntüler `docs/design/parity/<ekran>/` altına `design-<ölçü>.png` ve `app-<ölçü>.png` adıyla konur.
@@ -80,8 +86,10 @@ Bu tablo dışındaki her sapma için kullanıcının yazılı onayı gerekir; o
 | Kamera, uyarılar, tamam ekranı, geri al, çevrimdışı, bildirim | Bakis.dc.html | Ekranlarıyla birlikte |
 | Landing | Saha.dc.html | T-980–983 ile yayında (marketing) |
 | Giriş: e-posta + saha PIN sekmesi, iki adımlı doğrulama, çalışma alanı seçimi (`v.login`, `v.mfa`, `v.pick`) | Giris.dc.html | Onaylandı 15 Ekim; T-999 / T-997 |
-| Aktivasyon 4 adım + hazır (`v.act`) ve hoş geldiniz e-postası (`v.mail`) | Giris.dc.html | Onaylandı; T-995 |
+| Aktivasyon 4 adım + hazır + geçersiz bağlantı (`v.act`) ve hoş geldiniz e-postası (`v.mail`) | Giris.dc.html | T-995 aktarıldı (`parity/aktivasyon/`): 390/1180/1440 açık ve koyu 0 px (masaüstünde hareketli logo noktası 1 px). Tasarıma eklenen durumlar (geçersiz bağlantı, MFA anahtarı + yedek kodlar, posta kapalı metni, hata satırı) kullanıcı onayladı ("onaylıyorum", 16 Ekim). E-posta HTML'i aynı düzende (marka, başlık, bilgi kutusu, düğme) |
 | Saha etkinleştirme: kod → PIN → tekrar (`v.fact`), ortak cihaz kullanıcı değiştir (`v.sw`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
 | Saha personeli ekle + etkinleştirme kartı (`v.staff`), cihazlar + QR ile ekle (`v.dev`) | Giris.dc.html | Onaylandı; T-997 / T-998 |
-| Operatör demo talepleri (`v.op`) | Giris.dc.html | Onaylandı; T-994 |
+| Operatör demo talepleri (`v.op`) | Giris.dc.html | T-994 aktarıldı (`parity/demo-talepleri/`), sonra ADR-027 ile panele taşındı; bu görünüm artık kullanılmıyor |
 | Yönetim paneli (yonet.etkinyazilim.com): özet, müşteriler, müşteri detayı, paketler, ödemeler, demo talepleri, satış sayfası, işlem kaydı | Yonet.dc.html | Onaylandı 15 Ekim; T-401…T-408. Demo talepleri ekranı Giris `v.op` yerine buradan (ADR-027) |
+| Panel kabuğu + Demo talepleri (`talepler`) | Yonet.dc.html | T-401 aktarıldı (`parity/panel-talepler/`): içerik alanı mobil 0 px, tablet/masaüstü alt piksel; menüde yalnız yapılmış sayfa (kademeli). T-995: aktivasyon durumları + tek seferlik bağlantı kutusu (`parity/panel-talepler-aktivasyon/`, aynı sonuç; tasarım eki onaylandı "onaylıyorum" 16 Ekim) |
+| Ayarlar → Örnek veriler (`/t/<alan>/settings`) | — (tasarım kaynağı yok) | T-996: ayarlar ekranının tasarımı henüz yok; bölüm mevcut ayarlar sayfasının bileşenleriyle (Banner, Button) eklendi. Ayarlar tasarımı geldiğinde I-18 kapsamına girer ve birebir aktarılır |

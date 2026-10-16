@@ -1,17 +1,21 @@
 // Worker giriş noktası: `node dist/main.js`. Web'den bağımsız, uzun ömürlü süreç (ADR-001).
+import { open } from "node:fs/promises";
 import { hostname } from "node:os";
 import { DEMO_TENANT_ID, createDbClient, withSystemTenant, withUser } from "@wms/db";
 import { consumeOnce, createJobQueue } from "@wms/queue-adapter";
 import { findAbandonedCounts } from "@wms/domain/operations";
+import { ingestDemoLeads } from "@wms/domain/platform/demo-requests";
 import type { ConsumeOnceFn } from "@wms/domain/stock/jobs";
 import { assertMailModeAllowed, loadMailConfig } from "@wms/shared/mailer";
 import { createSealer } from "@wms/shared/seal";
 import { JOB_TYPES, PLATFORM_NO_USER_ID, type JobHandler, type JobType } from "@wms/shared/queue";
 import { createDeliverInvitationHandler } from "./jobs/deliver-invitation.js";
 import { startCountAbandonSchedule } from "./jobs/count-abandon.js";
+import { startDemoLeadsSchedule } from "./jobs/demo-leads.js";
 import { DEMO_RESEED_SINGLETON_KEY, registerDemoReseed } from "./jobs/demo-reseed.js";
 import { createPostStockDocumentHandler } from "./jobs/post-stock-document.js";
 import { startQueueMaintenance } from "./jobs/queue-maintenance.js";
+import { createActivationDeliverHandler, createTrialWelcomeHandler } from "./jobs/trial-activation.js";
 import { startWorkerHeartbeat, workerInstanceId, workerVersion } from "./jobs/worker-heartbeat.js";
 import { consistencySingletonKey, createStockConsistencyHandler, startConsistencySchedule } from "./jobs/stock-consistency.js";
 import { createMailer, createSendEmailHandler } from "./jobs/send-email.js";
@@ -59,6 +63,8 @@ function requireEnv(name: string): string {
 }
 const databaseUrl = requireEnv("DATABASE_URL");
 const workerDatabaseUrl = requireEnv("DATABASE_URL_WORKER");
+// `wms_worker` bağlantısı (pgboss bakımı, heartbeat, demo talebi içe alma, aktivasyon belirteci — T-995). Tenant verisine erişemez.
+const workerDb = createDbClient({ url: workerDatabaseUrl, poolMax: 1, prepare: false });
 
 // E-posta (T-116): geçersiz MAIL_MODE veya boş/kısa/yer tutucu QUEUE_SEAL_KEY açılışta hata verir (yerel dahil).
 // Hata mesajları değer içermez (G-09).
@@ -80,6 +86,15 @@ try {
     logger,
     appBaseUrl,
   });
+  // T-995: aktivasyon bağlantısı (platform işi; belirteç wms_worker ile yazılır) ve hoş geldiniz e-postası (tenant işi).
+  HANDLERS["platform.activation.deliver"] = createActivationDeliverHandler({
+    config: mailConfig,
+    mailer: createMailer(mailConfig),
+    logger,
+    appBaseUrl,
+    workerDb,
+  });
+  HANDLERS["trial.welcome"] = createTrialWelcomeHandler({ config: mailConfig, mailer: createMailer(mailConfig), logger, appBaseUrl });
   logger.info("mail configured", { mode: mailConfig.mode });
 } catch (err) {
   logger.error("invalid configuration", { error: err instanceof Error ? err.message : String(err) });
@@ -145,7 +160,6 @@ logger.info("queue started", {
 
 // pg-boss bakım eşdeğeri (T-281; T-222 taramasını genelleştirir): adaptör `supervise: false`; süresi dolan `active` iş (her tür) `wms_worker`
 // bağlantısında `retry`/`failed` yapılır ve `failed` belge işlerinin belgeleri serbest bırakılır (çöken worker'ın işi yeniden teslim edilir; AC-16).
-const workerDb = createDbClient({ url: workerDatabaseUrl, poolMax: 1, prepare: false });
 const queueMaintenance = startQueueMaintenance({ workerDb, db, logger });
 
 // Heartbeat (T-282): `/api/health` worker yaşını ve kuyruk ilerleme sayaçlarını buradan okur. Yalnızca tüketicisi olan türler sayılır (ertelenmiş `demo.reseed` bekleyen işi alarm değildir).
@@ -182,12 +196,46 @@ const countAbandonSchedule = startCountAbandonSchedule({
   logger,
 });
 
+// Demo talebi içe alma (T-994, ADR-026 §3): `DEMO_LEADS_FILE` (satış sitesi JSONL, salt okunur bağlama) tanımlıysa dakikada bir.
+// Tanımsızsa kapalıdır (yerel/CI). Bir koşuda en çok 1 MiB okunur; kalan bir sonraki koşuda.
+const DEMO_LEADS_MAX_READ = 1024 * 1024;
+const demoLeadsFile = process.env.DEMO_LEADS_FILE?.trim();
+const demoLeadsSchedule =
+  demoLeadsFile === undefined || demoLeadsFile === ""
+    ? null
+    : startDemoLeadsSchedule({
+        readFrom: async (from) => {
+          let fh: Awaited<ReturnType<typeof open>>;
+          try {
+            fh = await open(demoLeadsFile, "r");
+          } catch (e) {
+            if ((e as { code?: unknown }).code === "ENOENT") return null;
+            throw e;
+          }
+          try {
+            const { size } = await fh.stat();
+            if (from >= size) return { text: "", size };
+            const len = Math.min(size - from, DEMO_LEADS_MAX_READ);
+            const buf = Buffer.alloc(len);
+            const { bytesRead } = await fh.read(buf, 0, len, from);
+            // Yarım UTF-8 karakter sınırında kesilmesin: son satır sonuna kadar olan kısım kullanılır (runDemoLeadsIngest).
+            return { text: buf.subarray(0, bytesRead).toString("utf8"), size };
+          } finally {
+            await fh.close();
+          }
+        },
+        // İçe alma işlevinin EXECUTE yetkisi yalnız wms_worker (0038; web katmanı talep ekleyemez).
+        ingest: (jsonl) => ingestDemoLeads({ db: workerDb, jsonl }),
+        logger,
+      });
+
 // Kapanış sırası: önce zamanlayıcı, sonra kuyruk (çalışan işler biter), sonra DB havuzu.
 lifecycle.register({ name: "demo-schedule", run: () => demoSchedule?.stop() });
 lifecycle.register({ name: "worker-heartbeat", run: () => workerHeartbeat.stop() });
 lifecycle.register({ name: "queue-maintenance", run: () => queueMaintenance.stop() });
 lifecycle.register({ name: "consistency-schedule", run: () => consistencySchedule.stop() });
 lifecycle.register({ name: "count-abandon-schedule", run: () => countAbandonSchedule.stop() });
+lifecycle.register({ name: "demo-leads-schedule", run: () => demoLeadsSchedule?.stop() });
 lifecycle.register({ name: "job-queue", run: () => queue.stop() });
 lifecycle.register({ name: "db", run: () => db.close() });
 lifecycle.register({ name: "worker-db", run: () => workerDb.close() });

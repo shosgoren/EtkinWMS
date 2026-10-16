@@ -14,7 +14,17 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-export const SOURCES = [{ name: "bakis", file: "docs/design/source/Bakis.dc.html", sha256: "f38a508b237a99683972698d34fdc639467864b4763f66d48e1c77d357bff457" }];
+/**
+ * Kaynaklar. `scope`: CSS kabı sınıfı (her kaynağın kuralları ayrı kapta; aynı sayfada iki kaynak çakışmaz — `.big` gibi ortak adlar).
+ * `palette`: "bakis" = Bakış'a özgü tema okuyucu (c, PAL, A, TXT, başparmak çubuğu); "c" = yalnız `var c = dk ? {…} : {…}` (+ betikteki
+ * renk sabitleri `dz()` belirteci olur). Palet belirteçleri `--color-<scope>-<anahtar>` (kebab).
+ * @type {ReadonlyArray<{ name: string, file: string, sha256: string, scope: string, palette: "bakis" | "c" }>}
+ */
+export const SOURCES = [
+  { name: "bakis", file: "docs/design/source/Bakis.dc.html", sha256: "f38a508b237a99683972698d34fdc639467864b4763f66d48e1c77d357bff457", scope: "dz", palette: "bakis" },
+  { name: "giris", file: "docs/design/source/Giris.dc.html", sha256: "d1d94b48aa67e80c7f3e8d55e4da04d616ea9b8dca0aad22634570a946b328c2", scope: "dzg", palette: "c" },
+  { name: "yonet", file: "docs/design/source/Yonet.dc.html", sha256: "e9a8cf86acceb22174601a108162c6813d559aa0df68d1e80a5e8d2ad55bd513", scope: "dzy", palette: "c" },
+];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.
 export const MEDIA = {
@@ -120,10 +130,10 @@ function splitSelectors(head) {
 /** @typedef {{ mode: "mobile" | "tablet" | "desktop" | null, sel: string }} Scoped */
 /**
  * Tek seçiciyi kapsar; mod öneki varsa { mode, sel } döner.
- * @param {string} sel
+ * @param {string} sel @param {string} [scope]
  * @returns {Scoped | null}
  */
-export function scopeSelector(sel) {
+export function scopeSelector(sel, scope = "dz") {
   /** @type {Scoped["mode"]} */
   let mode = null;
   let s = sel;
@@ -134,8 +144,8 @@ export function scopeSelector(sel) {
     if (s === "") throw new Error(`port: yalnız mod seçicisi ${sel}`);
   }
   if (SKIP.some((re) => re.test(s))) return null;
-  if (s === "body") return { mode, sel: "body:has(.dz)" };
-  return { mode, sel: `.dz ${s}` };
+  if (s === "body") return { mode, sel: `body:has(.${scope})` };
+  return { mode, sel: `.${scope} ${s}` };
 }
 
 /** @param {string} body @param {Map<string, string>} tokens */
@@ -160,10 +170,10 @@ const fmtDecls = (body) =>
 
 /**
  * Kaynak CSS → { css, tokens }.
- * @param {string} css
+ * @param {string} css @param {string} [scope]
  * @returns {{ css: string, tokens: Map<string, string> }}
  */
-export function portCss(css) {
+export function portCss(css, scope = "dz") {
   /** @type {Map<string, string>} */
   const tokens = new Map();
   /** @type {string[]} */
@@ -173,17 +183,17 @@ export function portCss(css) {
   const frames = items.filter((x) => x.head.startsWith("@keyframes")).map((x) => x.head.split(/\s+/)[1]);
   /** @param {string} body */
   const anim = (body) =>
-    body.replace(/(animation(?:-name)?\s*:)([^;]*)/g, (/** @type {string} */ _m, /** @type {string} */ p, /** @type {string} */ v) => p + v.replace(new RegExp(`(?<![\\w-])(${frames.join("|")})(?![\\w-])`, "g"), "dz-$1"));
+    body.replace(/(animation(?:-name)?\s*:)([^;]*)/g, (/** @type {string} */ _m, /** @type {string} */ p, /** @type {string} */ v) => p + v.replace(new RegExp(`(?<![\\w-])(${frames.join("|")})(?![\\w-])`, "g"), `${scope}-$1`));
   /** @param {string} body */
   const conv = (body) => anim(convertValues(body, tokens));
   for (const item of items) {
     if (item.kind === "at") {
       if (item.head.startsWith("@keyframes")) {
-        blocks.push(`@keyframes dz-${item.head.split(/\s+/)[1]} {\n${conv(item.body).replace(/\s*\n\s*/g, " ")}\n}`);
+        blocks.push(`@keyframes ${scope}-${item.head.split(/\s+/)[1]} {\n${conv(item.body).replace(/\s*\n\s*/g, " ")}\n}`);
       } else if (item.head.startsWith("@media")) {
         const inner = parseCss(item.body)
           .map((r) => {
-            const sels = splitSelectors(r.head).map(scopeSelector).filter(/** @returns {x is Scoped} */ (x) => x !== null);
+            const sels = splitSelectors(r.head).map((x) => scopeSelector(x, scope)).filter(/** @returns {x is Scoped} */ (x) => x !== null);
             if (sels.some((x) => x.mode)) throw new Error("port: @media içinde mod seçicisi");
             return `  ${sels.map((x) => x.sel).join(", ")} { ${conv(r.body)} }`;
           })
@@ -192,7 +202,7 @@ export function portCss(css) {
       } else throw new Error(`port: desteklenmeyen ${item.head}`);
       continue;
     }
-    const scoped = splitSelectors(item.head).map(scopeSelector).filter(/** @returns {x is Scoped} */ (x) => x !== null);
+    const scoped = splitSelectors(item.head).map((x) => scopeSelector(x, scope)).filter(/** @returns {x is Scoped} */ (x) => x !== null);
     if (scoped.length === 0) continue;
     const decls = fmtDecls(conv(item.body));
     // Kaynak sırası korunur: aynı moddaki ardışık seçiciler tek bloğa, modsuzlar düz kurala.
@@ -267,6 +277,24 @@ export function readPalette(html) {
   return { light: theme(false), dark: theme(true) };
 }
 
+/**
+ * Yalın tema paleti: `var c = dk ? {koyu} : {açık};` (camelCase anahtar → kebab).
+ * @param {string} html
+ * @returns {{ light: Record<string, string>, dark: Record<string, string> }}
+ */
+export function readPaletteC(html) {
+  const js = extract(html, "data-dc-script", "</script>").text;
+  const cm = /var c = dk \? (\{[^}]*\})\s*:\s*(\{[^}]*\});/.exec(js);
+  if (!cm) throw new Error("port: tema paleti (var c = dk ? …) kaynakta bulunamadı");
+  /** @param {string | undefined} src @returns {Record<string, string>} */
+  const obj = (src) => {
+    /** @type {Record<string, string>} */
+    const raw = JSON.parse(req(src).replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_][\w]*)\s*:/g, '$1"$2":'));
+    return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`), v]));
+  };
+  return { dark: obj(cm[1]), light: obj(cm[2]) };
+}
+
 /** @param {string} n */
 const BEGIN = (n) => `/* design:${n}:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */`;
 /** @param {string} n */
@@ -276,28 +304,37 @@ const END = (n) => `/* design:${n}:end */`;
  * @param {string} name @param {string} html
  * @returns {{ css: string, tokenBlock: string, ts: string }}
  */
-export function build(name, html) {
+export function build(name, html, scope = "dz", palette = "bakis") {
   const style = extract(extract(html, "<helmet>", "</helmet>").text, "<style>", "</style>").text;
-  const { css, tokens } = portCss(style);
+  const { css, tokens } = portCss(style, scope);
   // İşaretlemedeki satır içi renkler (fill, stroke, style) da belirteç olur; TSX bunlara `dz("17804F")` ile başvurur.
   const markup = extract(html, "</helmet>", "</x-dc>").text;
   for (const raw of markup.match(COLOR_RE) ?? []) {
     const t = colorToken(raw);
     tokens.set(t.name, t.value);
   }
-  const pal = readPalette(html);
+  if (palette === "c") {
+    // Yalın kaynakta renkler betikte de geçer (renderVals); TSX bunlara da `dz("…")` ile başvurur.
+    for (const raw of extract(html, "data-dc-script", "</script>").text.match(COLOR_RE) ?? []) {
+      const t = colorToken(raw);
+      tokens.set(t.name, t.value);
+    }
+  }
+  const pal = palette === "c" ? readPaletteC(html) : readPalette(html);
   const keys = Object.keys(pal.light);
   /** @param {string} k @param {string | undefined} v */
   const line = (k, v) => `  --color-dz-${k}: ${req(/** @type {string} */ (v)).toLowerCase()};`;
+  /** @param {string} k @param {string | undefined} v */
+  const pline = (k, v) => (scope === "dz" ? line(k, v) : `  --color-${scope}-${k}: ${req(/** @type {string} */ (v)).toLowerCase()};`);
   if (keys.some((k) => !/^[a-z-]+$/.test(k))) throw new Error("port: palet anahtarı harf dışı");
   const tokenBlock = [
     BEGIN(name),
-    ".dz {",
+    `.${scope} {`,
     ...[...tokens.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => line(k.replace(/^dz-/, ""), v)),
-    ...keys.map((k) => line(k, pal.light[k])),
+    ...keys.map((k) => pline(k, pal.light[k])),
     "}",
-    ".dz.dz-dark {",
-    ...keys.map((k) => line(k, pal.dark[k])),
+    `.${scope}.dz-dark {`,
+    ...keys.map((k) => pline(k, pal.dark[k])),
     "}",
     END(name),
   ].join("\n");
@@ -316,7 +353,7 @@ export function build(name, html) {
     `}`,
     `/** Tema paleti (açık/koyu \`.dz.dz-dark\` ile değişir): kaynaktaki c.*, bölüm K(), A, TXT, başparmak çubuğu. */`,
     `export const C = {`,
-    ...keys.map((k) => `  ${/^[a-z]+$/.test(k) ? k : JSON.stringify(k)}: "var(--color-dz-${k})",`),
+    ...keys.map((k) => `  ${/^[a-z]+$/.test(k) ? k : JSON.stringify(k)}: "var(--color-${scope === "dz" ? "dz" : scope}-${k})",`),
     `} as const;`,
     ``,
   ].join("\n");
@@ -342,7 +379,7 @@ async function main() {
     const html = readFileSync(path.join(root, s.file), "utf8");
     const sum = createHash("sha256").update(html).digest("hex");
     if (sum !== s.sha256) throw new Error(`port: ${s.file} sha256 ${sum} ≠ kayıtlı ${s.sha256} (SOURCE.md ve SOURCES birlikte güncellenir)`);
-    const out = build(s.name, html);
+    const out = build(s.name, html, s.scope, s.palette);
     const cssPath = path.join(root, `apps/web/app/design/${s.name}.css`);
     const tsPath = path.join(root, `apps/web/app/design/${s.name}-tokens.ts`);
     const next = spliceGlobals(globals, s.name, out.tokenBlock);

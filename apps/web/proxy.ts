@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createConsoleLogger, maskAccessPath, maskString, requestIdFrom } from "@wms/shared/log";
 import { safeNext } from "./lib/safe-redirect.ts";
+import { appSurface, isPanelInternal, panelRoute, shortWorkspaceTarget } from "./lib/surface.ts";
 
 const logger = createConsoleLogger("web");
 
@@ -46,7 +47,7 @@ export function newNonce(): string {
 }
 
 /** Belirteç taşıyan sayfalar (yolda: `/invite/<t>`; sorguda: `/reset-password?token=`): dış kaynaklara Referer ile sızmaz. */
-const TOKEN_PAGE = /^\/(?:invite|reset-password)(?:\/|$)/;
+const TOKEN_PAGE = /^\/(?:invite|reset-password|activate)(?:\/|$)/;
 
 const PROTECTED = /^\/(?:t(?:\/|$)|onboarding(?:\/|$)|mfa$)/;
 
@@ -79,31 +80,50 @@ export function proxy(request: NextRequest): NextResponse {
     return res;
   };
 
+  const withHeaders = (res: NextResponse): NextResponse => {
+    res.headers.set("Content-Security-Policy", csp);
+    res.headers.set("x-request-id", requestId);
+    if (tokenBearing) res.headers.set("Referrer-Policy", "no-referrer");
+    return res;
+  };
+  const notFound = (): NextResponse => withHeaders(new NextResponse(null, { status: 404 }));
+  const toLogin = (): NextResponse => {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", safeNext(`${pathname}${search}`));
+    return withHeaders(NextResponse.redirect(login));
+  };
+
+  // ADR-027 §1: kip ayrımı. Panel kipinde (yonet.) yalnız panel sayfaları + giriş/doğrulama/kimlik/sağlık uçları; müşteri kipinde
+  // panel iç yolları yok. Yetki yine sunucuda (panel düzeni operatörü veritabanından denetler); bu katman yalnız yüzey daraltır.
+  if (appSurface() === "panel") {
+    const route = panelRoute(pathname);
+    if (route.kind === "missing") return notFound();
+    if (route.kind === "page") {
+      if (!hasCookie(request, SESSION_COOKIE)) return toLogin();
+      const target = new URL(route.internal, request.url);
+      target.search = search;
+      return withHeaders(NextResponse.rewrite(target, { request: { headers: requestHeaders } }));
+    }
+    if (pathname !== "/mfa") return next();
+  } else if (isPanelInternal(pathname)) {
+    return notFound();
+  } else {
+    // ADR-026 §1: kısa adres yalnız `/t/<alan>`'a yönlendirir (sorgu dizesi taşınmaz; açık yönlendirme yok — hedef sabit önekli iç yol).
+    const short = shortWorkspaceTarget(pathname);
+    if (short !== null) return withHeaders(NextResponse.redirect(new URL(short, request.url), 307));
+  }
+
   if (!PROTECTED.test(pathname)) return next();
 
   // `/mfa` doğrulama adımında oturum henüz yoktur; yalnızca geçici 2FA çerezi vardır.
   const authenticated =
     hasCookie(request, SESSION_COOKIE) || (pathname === "/mfa" && hasCookie(request, TWO_FACTOR_COOKIE));
   if (authenticated) return next();
-
-  const login = new URL("/login", request.url);
-  login.searchParams.set("next", safeNext(`${pathname}${search}`));
-  const res = NextResponse.redirect(login);
-  res.headers.set("Content-Security-Policy", csp);
-  res.headers.set("x-request-id", requestId);
-  if (tokenBearing) res.headers.set("Referrer-Policy", "no-referrer");
-  return res;
+  return toLogin();
 }
 
 export const config = {
-  // Tüm sayfa/uç noktalar (CSP için); statik varlıklar ve ön-getirme istekleri hariç (Next belgesi deseni).
-  matcher: [
-    {
-      source: "/((?!_next/static|_next/image|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
-  ],
+  // Tüm sayfa/uç noktalar; yalnız derlenmiş statik varlıklar hariç. Ön-getirme istekleri de buradan geçer (T-401 inceleme M-1:
+  // istemcinin koyabildiği `next-router-prefetch`/`purpose` başlığı kip ayrımını atlatamaz).
+  matcher: [{ source: "/((?!_next/static|_next/image|favicon.ico).*)" }],
 };

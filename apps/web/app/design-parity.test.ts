@@ -8,9 +8,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ICON } from "./design/bakis-icons.ts";
+import { GICON } from "./design/giris-icons.ts";
+import { YICON } from "./design/yonet-icons.ts";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 const source = readFileSync(join(repoRoot, "docs/design/source/Bakis.dc.html"), "utf8");
+const giris = readFileSync(join(repoRoot, "docs/design/source/Giris.dc.html"), "utf8");
+const yonet = readFileSync(join(repoRoot, "docs/design/source/Yonet.dc.html"), "utf8");
 
 describe("I-18 tasarım birebir", () => {
   it("üretilmiş CSS ve belirteçler kaynaktan yeniden üretilenle bayt bayt aynı", () => {
@@ -19,6 +23,26 @@ describe("I-18 tasarım birebir", () => {
 
   it.each(Object.entries(ICON))("ikon %s kaynakta birebir geçer", (_k, d) => {
     expect(source.includes(`"${d}"`) || source.includes(`'${d}'`)).toBe(true);
+  });
+
+  it.each(Object.entries(GICON))("Giriş ikonu %s kaynakta birebir geçer", (_k, d) => {
+    expect(giris.includes(`"${d}"`) || giris.includes(`'${d}'`)).toBe(true);
+  });
+
+  it.each(Object.entries(YICON))("Yönetim ikonu %s kaynakta birebir geçer", (_k, d) => {
+    expect(yonet.includes(`"${d}"`) || yonet.includes(`'${d}'`)).toBe(true);
+  });
+
+  it("Yönetim kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {
+    const sum = createHash("sha256").update(yonet).digest("hex");
+    expect(readFileSync(join(repoRoot, "docs/design/source/SOURCE.md"), "utf8")).toContain(sum);
+    expect(readFileSync(join(repoRoot, "scripts/design/port.mjs"), "utf8")).toContain(sum);
+  });
+
+  it("Giriş kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {
+    const sum = createHash("sha256").update(giris).digest("hex");
+    expect(readFileSync(join(repoRoot, "docs/design/source/SOURCE.md"), "utf8")).toContain(sum);
+    expect(readFileSync(join(repoRoot, "scripts/design/port.mjs"), "utf8")).toContain(sum);
   });
 
   it("SOURCE.md sha256 kaydı kaynak dosyayla aynı", () => {

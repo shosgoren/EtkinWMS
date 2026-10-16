@@ -83,6 +83,12 @@ const appOne = (tenantId: string | null, sql: string, p: unknown[] = []): Promis
 /** Tablo sahibi/süper kullanıcı (RLS'i aşar; tetikleyiciler yine çalışır). */
 const ownerOne = (tenantId: string, sql: string, p: unknown[] = []): Promise<Outcome> => attempt(admin, tenantId, (q) => q(sql, p));
 
+/** Komut çalışır ama hiçbir satıra dokunmaz (0040: örnek olmayan satırı tetikleyici atlar). */
+function expectNone(o: Outcome, note: string): void {
+  expect(o.ok, `${note}: ${fmt(o)}`).toBe(true);
+  if (o.ok) expect(o.rowCount, note).toBe(0);
+}
+
 function expectRejected(o: Outcome, codes: string[], note: string, message?: RegExp): void {
   expect(o.ok, `${note}: reddedilmesi beklenirdi, gerçekleşen ${fmt(o)}`).toBe(false);
   if (!o.ok) {
@@ -166,13 +172,16 @@ describe("Faz 2 şeması — RLS/FORCE, sahiplik ve yetki yüzeyi (katalogdan)",
     expect(bad).toEqual([]);
   });
 
-  it("DELETE yetkisi yalnızca membership_warehouse_scopes, item_barcodes ve document_lines'ta; location_count_locks'ta ve diğerlerinde yok", async () => {
+  it("DELETE yetkisi yalnızca membership_warehouse_scopes, item_barcodes, document_lines ve örnek veri yolunda (0040); diğerlerinde yok", async () => {
     const withDelete: string[] = [];
     for (const t of ALL_PHASE2_TABLES) {
       const r = await admin.query<{ p: boolean }>(`SELECT has_table_privilege($1, $2::regclass, 'DELETE') AS p`, [APP_ROLE, `public.${t}`]);
       if (r.rows[0]?.p === true) withDelete.push(t);
     }
-    expect(withDelete.sort()).toEqual(["document_lines", "item_barcodes", "membership_warehouse_scopes"]);
+    // T-996 (0040): warehouses/locations/location_count_locks/items/unit_conversions'ta DELETE yalnız örnek satırı siler (tetikleyici).
+    expect(withDelete.sort()).toEqual(
+      ["document_lines", "item_barcodes", "items", "location_count_locks", "locations", "membership_warehouse_scopes", "unit_conversions", "warehouses"].sort(),
+    );
   });
 
   it("wms_app SECURITY INVOKER tetikleyici işlevleri: search_path sabit, PUBLIC'ten EXECUTE geri alınmış", async () => {
@@ -524,9 +533,10 @@ describe("Lokasyon ağacı ve sayım kilidi satırı", () => {
     expect(orphan.rows[0]?.n).toBe("0");
   });
 
-  it("location_count_locks DELETE reddedilir: wms_app 42501 (satır var); wms_ops de yetkisiz", async () => {
-    expectRejected(await appOne(A.tenantId, "DELETE FROM public.location_count_locks WHERE location_id = $1", [A.rootLocationId]), [INSUFFICIENT_PRIVILEGE], "wms_app DELETE");
-    expectRejected(await appOne(A.tenantId, "DELETE FROM public.location_count_locks"), [INSUFFICIENT_PRIVILEGE], "wms_app toplu DELETE");
+  it("location_count_locks DELETE örnek olmayan kilidi silmez (0040 tetikleyicisi; satır var); TRUNCATE 42501; wms_ops de yetkisiz", async () => {
+    expectNone(await appOne(A.tenantId, "DELETE FROM public.location_count_locks WHERE location_id = $1", [A.rootLocationId]), "wms_app DELETE");
+    expectNone(await appOne(A.tenantId, "DELETE FROM public.location_count_locks"), "wms_app toplu DELETE");
+    expect((await admin.query("SELECT 1 FROM public.location_count_locks WHERE location_id = $1", [A.rootLocationId])).rowCount).toBe(1);
     expectRejected(await appOne(A.tenantId, "TRUNCATE public.location_count_locks"), [INSUFFICIENT_PRIVILEGE], "wms_app TRUNCATE");
     const ops = await attempt(admin, A.tenantId, async (q) => {
       await q("SET LOCAL ROLE wms_ops");
@@ -535,9 +545,11 @@ describe("Lokasyon ağacı ve sayım kilidi satırı", () => {
     expectRejected(ops, [INSUFFICIENT_PRIVILEGE], "wms_ops SELECT");
   });
 
-  it("lokasyon DELETE'i uygulama rolünde yok (arşivlenir): 42501", async () => {
-    expectRejected(await appOne(A.tenantId, "DELETE FROM public.locations WHERE id = $1", [A.childLocationId]), [INSUFFICIENT_PRIVILEGE], "wms_app lokasyon DELETE");
-    expectRejected(await appOne(A.tenantId, "DELETE FROM public.warehouses WHERE id = $1", [A.warehouseId]), [INSUFFICIENT_PRIVILEGE], "wms_app depo DELETE");
+  it("gerçek lokasyon/depo uygulama rolünde silinmez (arşivlenir; 0040 yalnız örnek satırı siler)", async () => {
+    expectNone(await appOne(A.tenantId, "DELETE FROM public.locations WHERE id = $1", [A.childLocationId]), "wms_app lokasyon DELETE");
+    expectNone(await appOne(A.tenantId, "DELETE FROM public.warehouses WHERE id = $1", [A.warehouseId]), "wms_app depo DELETE");
+    expect((await admin.query("SELECT 1 FROM public.locations WHERE id = $1", [A.childLocationId])).rowCount).toBe(1);
+    expect((await admin.query("SELECT 1 FROM public.warehouses WHERE id = $1", [A.warehouseId])).rowCount).toBe(1);
   });
 });
 

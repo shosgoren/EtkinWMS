@@ -216,4 +216,9 @@
 - 2026-10-15 T-988 (#53) ve T-989 (#54) birleşti, canlıda; 0037 uygulandı. Sırada (kullanıcı başlatınca): Giriş Görevi listesi (`v.list`), Manuel giriş, Giriş, Sayım, Toplama ekranları I-18 ile birebir; yönetici ACİL/vardiya giriş ekranı; üretim emri kavramı.
 - 2026-10-15 T-992: giriş/deneme alanı/saha PIN kararları ADR-026 (önerildi) + T-993…T-999 kartları; kod yok.
 - 2026-10-15 T-993: Giris.dc.html tasarım kaynağı onaylandı ve depoya alındı (kod yok).
+- 2026-10-15 T-994: demo talebi platform tablosu (0038) + worker içe alma + operatör ekranı (0 px); yayın T-995 ile.
+- T-994 güvenlik incelemesi 0/1/5 → M-1 ve m-1…m-4 düzeltildi; m-5 (saklama) KVKK kararına bağlı. Canlı compose VPS'te install.sh ile yenilenmeli.
 - 2026-10-15 T-400: yönetim paneli ADR-027 + Yonet.dc.html kaynağı + T-401…T-409 kartları (kod yok).
+- 2026-10-15 T-401: panel kipi ve yonet. kabuğu + demo talepleri; int/panel-launch paketi.
+- 2026-10-16 T-995: deneme aktivasyonu (0039, onay bağlantısı, hesap + alan + 3 ay deneme, hoş geldiniz işi, /activate birebir, panel durumları, kısa adres). Tasarım ekleri onaylandı (16 Ekim); int/panel-launch.
+- 2026-10-16 T-996: örnek veri (0040 is_sample + yalnız örnek satırı silen DELETE yolu; aktivasyonda Örnek depo; ayarlardan sil/pasife al, defter korunur). int/panel-launch.

@@ -49,6 +49,9 @@ const oneLine = (s) => s.replace(/[\r\n\t]+/g, ' ').trim();
  * @param {{ id: string, createdAt: string, name: string, company: string, email: string, sector: string, message: string }} lead
  * @param {{ apiKey: string, to: string, from: string }} config
  */
+/** Operatör onay ekranı (T-994 → panel, ADR-027). Sabit adres: talep içeriğinden türetilmez. */
+export const OPERATOR_URL = 'https://yonet.etkinyazilim.com/talepler';
+
 export function buildLeadEmail(lead, config) {
   const rows = [
     ['Ad', oneLine(lead.name)],
@@ -59,12 +62,14 @@ export function buildLeadEmail(lead, config) {
     ['Zaman', lead.createdAt],
     ['Kayıt no', lead.id],
   ];
-  const text = rows.map(([k, v]) => `${k}: ${v}`).join('\n') + '\n\nYanıtla dediğinizde e-posta doğrudan talep sahibine gider.';
+  // T-994: onay/ret uygulamadaki operatör ekranında (MFA + yakın zamanda doğrulama); bağlantı yalnız ekranı açar, onay vermez.
+  const text = rows.map(([k, v]) => `${k}: ${v}`).join('\n') + `\n\nOnaylamak ya da reddetmek için: ${OPERATOR_URL}\nYanıtla dediğinizde e-posta doğrudan talep sahibine gider.`;
   const html =
     '<div style="font-family:Arial,sans-serif;font-size:15px;color:#172E42">' +
     '<h2 style="margin:0 0 12px">Yeni demo talebi</h2><table cellpadding="6" style="border-collapse:collapse">' +
     rows.map(([k, v]) => `<tr><td style="color:#4C6275;vertical-align:top"><b>${esc(k)}</b></td><td style="white-space:pre-wrap">${esc(String(v))}</td></tr>`).join('') +
-    '</table><p style="color:#4C6275;font-size:13px">Yanıtla dediğinizde e-posta doğrudan talep sahibine gider.</p></div>';
+    `</table><p><a href="${OPERATOR_URL}" style="color:#172E42;font-weight:bold">Talebi onayla / reddet</a></p>` +
+    '<p style="color:#4C6275;font-size:13px">Yanıtla dediğinizde e-posta doğrudan talep sahibine gider.</p></div>';
   const body = {
     from: config.from,
     to: [config.to],

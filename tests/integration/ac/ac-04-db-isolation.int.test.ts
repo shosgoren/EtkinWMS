@@ -197,6 +197,28 @@ beforeAll(async () => {
       throw e;
     }
   }
+  // T-996 (0040): örnek veri yolu. Bu beş tabloda wms_app DELETE'i yalnız örnek satırı siler (tetikleyici örnek olmayanı atlar), bu
+  // yüzden A'ya FK ile korunmayan örnek kontrol satırları eklenir: depo (lokasyonsuz), lokasyon (kilidi migration rolüyle kaldırılmış),
+  // ürün (dönüşümsüz); kilit ve dönüşüm genel `WHERE tenant_id = A` denetimiyle silinir (yalnız örnek satır etkilenir).
+  {
+    const sw = randomUUID(), swEmpty = randomUUID(), sl1 = randomUUID(), sl2 = randomUUID(), si1 = randomUUID(), si2 = randomUUID();
+    await admin.query(
+      "INSERT INTO public.warehouses (tenant_id, id, code, name, is_sample) VALUES ($1, $2, 'ORNEK', 'Örnek depo', true), ($1, $3, 'ORNEK2', 'Örnek depo 2', true)",
+      [A.tenantId, sw, swEmpty],
+    );
+    await admin.query(
+      `INSERT INTO public.locations (tenant_id, id, warehouse_id, code, name, depth, kind, is_sample)
+       VALUES ($1, $2, $4, 'S-1', 'Örnek 1', 0, 'STORAGE', true), ($1, $3, $4, 'S-2', 'Örnek 2', 0, 'STORAGE', true)`,
+      [A.tenantId, sl1, sl2, sw],
+    );
+    await admin.query("DELETE FROM public.location_count_locks WHERE tenant_id = $1 AND location_id = $2", [A.tenantId, sl1]);
+    await admin.query(
+      "INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, is_sample) VALUES ($1, $2, 'ORN-1', 'Örnek 1', $4, true), ($1, $3, 'ORN-2', 'Örnek 2', $4, true)",
+      [A.tenantId, si1, si2, A.unitId],
+    );
+    await admin.query("INSERT INTO public.unit_conversions (tenant_id, item_id, unit_id, to_base_factor) VALUES ($1, $2, $3, 10)", [A.tenantId, si2, A.boxUnitId]);
+    A.deletableControl = { ...A.deletableControl, warehouses: swEmpty, locations: sl1, items: si1 };
+  }
   // T-903: populate every new tenant table for the generic RLS matrix, without stock effects.
   for (const w of [A, B]) {
     await admin.query("BEGIN");
@@ -783,6 +805,20 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.invitation_preview_for_token", // T-117d migration 0008: salt okunur (ad+rol+süre), yalnızca wms_app EXECUTE
     "wms_probe.invitation_tenant_for_token", // T-117 migration 0006: salt okunur, yalnızca wms_app EXECUTE
     "wms_probe.ops_session_audited", // T-105c migration 0009: salt okunur denetim kanıtı (özyineleme önlemi), yalnızca wms_ops EXECUTE
+    "wms_probe.platform_activation_claim", // T-995 migration 0039: geçerli bağlantıya 10 dk hesap açma talebi, yalnızca wms_app
+    "wms_probe.platform_activation_consume", // T-995 migration 0039: yeni tenant transaction'ında talebi tüketir + deneme kaydı, yalnızca wms_app
+    "wms_probe.platform_activation_for_account_creation", // T-995 migration 0039: talep eşleşirse e-posta/ad/teslim yolu, yalnızca wms_auth
+    "wms_probe.platform_activation_preview", // T-995 migration 0039: geçerli bağlantı önizlemesi (firma/e-posta/süre), yalnızca wms_app
+    "wms_probe.platform_activation_release", // T-995 migration 0039: yarıda kalan talebin süresini bitirir (kimlik korunur), yalnızca wms_app
+    "wms_probe.platform_decide_demo_request", // T-994 migration 0038: operatör (DB listesi) PENDING → karar + security_events, yalnızca wms_app
+    "wms_probe.platform_demo_request_email", // T-995 migration 0039: operatöre talep e-postası (teslim yolu seçimi), yalnızca wms_app
+    "wms_probe.platform_ingest_demo_request", // T-994 migration 0038: satış sitesi talebi idempotent ekleme (tenant verisi yok), yalnızca wms_worker
+    "wms_probe.platform_is_operator", // T-994 migration 0038: çağıran kullanıcı operatör mü (salt okunur), yalnızca wms_app
+    "wms_probe.platform_issue_activation", // T-995 migration 0039: operatör bağlantı özeti yazar (72 sa) + security_events, yalnızca wms_app
+    "wms_probe.platform_list_demo_requests", // T-994 migration 0038 (0039: aktivasyon durumu eklendi): yalnız operatöre talep listesi, yalnızca wms_app
+    "wms_probe.platform_prepare_activation_delivery", // T-995 migration 0039: e-postayla teslimde yeni belirteç özeti, yalnızca wms_worker
+    "wms_probe.platform_tenant_subscription", // T-995 migration 0039: bağlam tenant'ının deneme kaydı (salt okunur), yalnızca wms_app
+    "wms_probe.platform_workspace_name_taken", // T-995 migration 0039: yalnız geçerli bağlantıyla ad yoklaması (salt okunur), yalnızca wms_app
   ];
 
   it("@AC-04 prosecdef=true işlevler tam olarak izinli liste; wms_meta'da hiç yok", () => {
@@ -822,6 +858,20 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.invitation_tenant_for_token": [APP_ROLE],
       "wms_probe.ops_session_audited": ["wms_ops"],
       "wms_probe.admin_reset_cleanup_on_membership": [migrator],
+      "wms_probe.platform_is_operator": [APP_ROLE],
+      "wms_probe.platform_ingest_demo_request": [WORKER_ROLE],
+      "wms_probe.platform_list_demo_requests": [APP_ROLE],
+      "wms_probe.platform_decide_demo_request": [APP_ROLE],
+      "wms_probe.platform_activation_claim": [APP_ROLE],
+      "wms_probe.platform_activation_consume": [APP_ROLE],
+      "wms_probe.platform_activation_for_account_creation": [AUTH_ROLE],
+      "wms_probe.platform_activation_preview": [APP_ROLE],
+      "wms_probe.platform_activation_release": [APP_ROLE],
+      "wms_probe.platform_demo_request_email": [APP_ROLE],
+      "wms_probe.platform_issue_activation": [APP_ROLE],
+      "wms_probe.platform_prepare_activation_delivery": [WORKER_ROLE],
+      "wms_probe.platform_tenant_subscription": [APP_ROLE],
+      "wms_probe.platform_workspace_name_taken": [APP_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);

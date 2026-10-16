@@ -370,9 +370,20 @@ describe("T-204 taşıma birimi hiyerarşisi", () => {
 });
 
 describe("T-204 silme yasağı, yetkiler ve RLS", () => {
-  it("wms_app DELETE: item_barcodes dışındaki tüm yeni tablolarda yetki hatası; item_barcodes silinebilir", async () => {
-    for (const t of NEW_TABLES.filter((x) => x !== "item_barcodes")) {
+  it("wms_app DELETE: item_barcodes ve örnek yolu (items, unit_conversions; 0040) dışındaki tablolarda yetki hatası; item_barcodes silinebilir", async () => {
+    // T-996 (0040): items/unit_conversions'ta DELETE yetkisi yalnız örnek veri temizliği içindir; tetikleyici örnek olmayan satırı atlar.
+    const SAMPLE_PATH = new Set<string>(["items", "unit_conversions"]);
+    for (const t of NEW_TABLES.filter((x) => x !== "item_barcodes" && !SAMPLE_PATH.has(x))) {
       expectFail(await one(A.tenantId, `DELETE FROM public.${t}`), INSUFFICIENT_PRIVILEGE, t);
+    }
+    for (const t of SAMPLE_PATH) {
+      const r = await inTenant(A.tenantId, async (q) => {
+        const before = Number((await q(`SELECT count(*) AS n FROM public.${t}`)).rows[0]?.n);
+        expect(before, `${t}: fikstür satırı`).toBeGreaterThan(0);
+        expect((await q(`DELETE FROM public.${t}`)).rowCount, `${t}: örnek olmayan satır silinmemeli`).toBe(0);
+        return q(`SELECT count(*) AS n FROM public.${t} HAVING count(*) = ${before}`);
+      });
+      expect(r.ok && r.rowCount, `${t}: ${JSON.stringify(r)}`).toBe(1);
     }
     const del = await inTenant(A.tenantId, async (q) => {
       const d = await q("DELETE FROM public.item_barcodes");

@@ -3,7 +3,7 @@
 // veri girmez; bu modül SAVUNMA DERİNLİĞİdir (çağıran yine de sır göndermemelidir). Maskeleme her dize ve alan değerinde:
 //  - anahtar adında `password|token|secret|key|code|otp` (+ `authorization`, `cookie`, `set-cookie`, `email`) → değer `***`;
 //  - URL içindeki kimlik bilgisi (`scheme://user:pass@host`), `Bearer/Basic` değerleri, e-posta adresleri;
-//  - sorgu parametresi adı aynı kümedeyse değer; davet / yönetici sıfırlama belirteci yolda (`/invite/<t>`,
+//  - sorgu parametresi adı aynı kümedeyse değer; davet / aktivasyon (T-995) / yönetici sıfırlama belirteci yolda (`/invite/<t>`, `/activate/<t>`,
 //    `/api/auth/reset-password/<t>`) ve başka bir parametrenin içinde (`next=%2Finvite%2F<t>`, çift kodlu dahil).
 // Sınırlar (ReDoS/şişme): her dize `MAX_LOG_STRING` (2048) karakterde kesilir (`…[truncated]`); maskeleme tarayıcıları DOĞRUSALDIR
 // (düzenli ifade geri izlemesi yok: sınırlı geriye bakışlı elle tarama). Nesne anahtarı/dizi öğesi sayısı `MAX_ENTRIES` (50),
@@ -167,7 +167,7 @@ const WEB_SCHEMES = new Set(["http", "https", "ws", "wss", "ftp"]);
 const BEARER = /\b(Bearer|Basic)[ \t]{1,8}[A-Za-z0-9._~+/=%-]{1,2048}/g;
 // `/` ya da kodlu biçimi (`%2F`, çift kodlu `%252F`) ile ayrılmış hassas yol parçası + belirteç. Tek sabit önek: geri izleme yok.
 const SEP = "(?:\\/|%2F|%252F)";
-const TOKEN_PATH = new RegExp(`(${SEP}(?:invite|reset-password)${SEP})[^\\s/?#&"'%\\\\]{1,2048}`, "gi");
+const TOKEN_PATH = new RegExp(`(${SEP}(?:invite|reset-password|activate)${SEP})[^\\s/?#&"'%\\\\]{1,2048}`, "gi");
 
 // `ad=değer`: değer `&`, `#`, `;`, tırnak ya da SATIR SONUNA kadar (boşluk içeren `password=abc def` tam maskelenir; `%` dahildir).
 const VALUE_STOP_PARAM = new Set(["&", "#", ";", '"', "'", "\n", "\r"]);

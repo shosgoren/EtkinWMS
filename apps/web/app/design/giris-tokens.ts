@@ -1,0 +1,60 @@
+// giris-tokens.ts — scripts/design/port.mjs ile ÜRETİLDİ; elle düzenlemeyin (I-18). Kaynaktaki onaltılık renk → belirteç.
+const T: Readonly<Record<string, string>> = {
+  "0,0,0,.5": "var(--color-dz-a-aaaaaa-f)",
+  "05090D": "var(--color-dz-x-afajan)",
+  "0F3D27": "var(--color-dz-x-apdnch)",
+  "13171C": "var(--color-dz-x-bdbhbm)",
+  "172E42": "var(--color-dz-x-bhcoec)",
+  "17804F": "var(--color-dz-x-bhiaep)",
+  "1A1300": "var(--color-dz-x-bkbdaa)",
+  "1B2128": "var(--color-dz-x-blcbci)",
+  "1C2E5C": "var(--color-dz-x-bmcofm)",
+  "1E2F3E": "var(--color-dz-x-bocpdo)",
+  "1F4A3A": "var(--color-dz-x-bpekdk)",
+  "23,46,66,.05": "var(--color-dz-a-bhcoec-af)",
+  "23,46,66,.06": "var(--color-dz-a-bhcoec-ag)",
+  "23,46,66,.35": "var(--color-dz-a-bhcoec-df)",
+  "23,46,66,.45": "var(--color-dz-a-bhcoec-ef)",
+  "23,46,66,.5": "var(--color-dz-a-bhcoec-f)",
+  "232B34": "var(--color-dz-x-cdclde)",
+  "255,255,255,.12": "var(--color-dz-a-pppppp-bc)",
+  "255,255,255,.2": "var(--color-dz-a-pppppp-c)",
+  "2C3540": "var(--color-dz-x-cmdfea)",
+  "3D2A6B": "var(--color-dz-x-dnckgl)",
+  "4A3500": "var(--color-dz-x-ekdfaa)",
+  "5C2410": "var(--color-dz-x-fmceba)",
+  "C62828": "var(--color-dz-x-mgcici)",
+  "CFE8DA": "var(--color-dz-x-mpoink)",
+  "D8DEE4": "var(--color-dz-x-ninooe)",
+  "DCE4F8": "var(--color-dz-x-nmoepi)",
+  "E6E2DA": "var(--color-dz-x-ogocnk)",
+  "E6EAEE": "var(--color-dz-x-ogokoo)",
+  "E9E4DA": "var(--color-dz-x-ojoenk)",
+  "F1EEE8": "var(--color-dz-x-pboooi)",
+  "F2C53D": "var(--color-dz-x-pcmfdn)",
+  "F4B400": "var(--color-dz-x-peleaa)",
+  "F4C542": "var(--color-dz-x-pemfec)",
+  "F4F2EE": "var(--color-dz-x-pepcoo)",
+  "F6D9C9": "var(--color-dz-x-pgnjmj)",
+  "FFE7A8": "var(--color-dz-x-ppohki)",
+  "FFFFFF": "var(--color-dz-x-pppppp)",
+};
+/** Kaynaktaki onaltılık rengin (`#` olmadan, büyük harf) belirteci; kaynakta olmayan renk hata verir. */
+export function dz(hex: string): string {
+  const v = T[hex];
+  if (v === undefined) throw new Error(`dz: kaynakta olmayan renk ${hex}`);
+  return v;
+}
+/** Tema paleti (açık/koyu `.dz.dz-dark` ile değişir): kaynaktaki c.*, bölüm K(), A, TXT, başparmak çubuğu. */
+export const C = {
+  bg: "var(--color-dzg-bg)",
+  fg: "var(--color-dzg-fg)",
+  surface: "var(--color-dzg-surface)",
+  chip: "var(--color-dzg-chip)",
+  track: "var(--color-dzg-track)",
+  "ok-bg": "var(--color-dzg-ok-bg)",
+  "ok-fg": "var(--color-dzg-ok-fg)",
+  "logo-bg": "var(--color-dzg-logo-bg)",
+  "logo-fg": "var(--color-dzg-logo-fg)",
+  "key-bg": "var(--color-dzg-key-bg)",
+} as const;

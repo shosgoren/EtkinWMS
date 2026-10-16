@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildCsp, proxy } from "./proxy.ts";
+import { buildCsp, config, proxy } from "./proxy.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const GIVEN = "3f2b8c1e-9d4a-4e6b-8a57-1c2d3e4f5a6b";
@@ -100,5 +100,73 @@ describe("CSP: uygulama içi barkod çözücü (T-286)", () => {
     expect(csp).not.toContain("'unsafe-eval'");
     expect(csp).toContain("connect-src 'self'");
     expect(csp).not.toMatch(/https?:/);
+  });
+});
+
+describe("proxy: ADR-027 kip ayrımı (yonet. panel / wms. müşteri)", () => {
+  const COOKIE = { cookie: "better-auth.session_token=x" };
+  beforeEach(() => vi.spyOn(console, "log").mockImplementation(() => undefined));
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.APP_SURFACE;
+  });
+
+  it("panel kipi: tenant ve kayıt yolları 404, CSP başlığı yine var", () => {
+    process.env.APP_SURFACE = "panel";
+    for (const p of ["/t/motive", "/onboarding", "/invite/abc", "/panel/talepler", "/operator/demo-requests"]) {
+      const res = proxy(req(p, COOKIE));
+      expect(res.status, p).toBe(404);
+      expect(res.headers.get("Content-Security-Policy"), p).toContain("default-src 'self'");
+    }
+  });
+
+  it("panel kipi: oturumsuz panel sayfası girişe, oturumlu panel sayfası iç yola yazılır", () => {
+    process.env.APP_SURFACE = "panel";
+    const anon = proxy(req("/talepler"));
+    expect(anon.status).toBe(307);
+    expect(anon.headers.get("location")).toBe("http://localhost:3000/login?next=%2Ftalepler");
+    const res = proxy(req("/talepler?error=INTERNAL", COOKIE));
+    expect(res.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/panel/talepler?error=INTERNAL");
+    expect(proxy(req("/", COOKIE)).headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/panel");
+  });
+
+  it("panel kipi: giriş ve kimlik uçları açık; /mfa oturum ister", () => {
+    process.env.APP_SURFACE = "panel";
+    expect(proxy(req("/login")).status).toBe(200);
+    expect(proxy(req("/api/auth/sign-in/email")).status).toBe(200);
+    expect(proxy(req("/mfa")).status).toBe(307);
+  });
+
+  it("ön-getirme başlığı kip ayrımını atlatamaz: eşleyici başlık muafiyeti taşımaz, panel kipinde tenant yolu yine 404", () => {
+    expect(JSON.stringify(config.matcher)).not.toContain("missing");
+    process.env.APP_SURFACE = "panel";
+    expect(proxy(req("/t/motive", { ...COOKIE, "next-router-prefetch": "1" })).status).toBe(404);
+    expect(proxy(req("/onboarding", { ...COOKIE, purpose: "prefetch" })).status).toBe(404);
+  });
+
+  it("T-995 kısa adres: müşteri kipinde /<alan> → /t/<alan> (sorgu taşınmaz); panel kipinde yok (404)", () => {
+    const res = proxy(req("/motive?next=https://evil.example"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost:3000/t/motive");
+    expect(proxy(req("/login")).status).toBe(200);
+    process.env.APP_SURFACE = "panel";
+    expect(proxy(req("/motive", COOKIE)).status).toBe(404);
+    expect(proxy(req("/activate/AbCdEf", COOKIE)).status).toBe(404);
+  });
+
+  it("T-995 aktivasyon sayfası belirteç taşır: Referrer-Policy no-referrer ve maskeli günlük", () => {
+    const lines: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((l: unknown) => void lines.push(String(l)));
+    const res = proxy(req("/activate/SuperSecretActivationToken123"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(lines.join("\n")).not.toContain("SuperSecret");
+  });
+
+  it("müşteri kipi: panel iç yolları 404; müşteri yolları eskisi gibi", () => {
+    expect(proxy(req("/panel", COOKIE)).status).toBe(404);
+    expect(proxy(req("/panel/talepler", COOKIE)).status).toBe(404);
+    expect(proxy(req("/t/motive", COOKIE)).status).toBe(200);
+    expect(proxy(req("/login")).status).toBe(200);
   });
 });

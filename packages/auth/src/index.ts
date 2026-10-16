@@ -28,6 +28,7 @@ import {
   InvitedAccountError,
   SESSION_ADDITIONAL_FIELDS,
   USER_ADDITIONAL_FIELDS,
+  createActivatedAccountWith,
   createInvitedAccountWith,
   emailRateKey,
   isDemoEmail,
@@ -36,11 +37,11 @@ import {
   sessionAbsoluteExpired,
   signupAllowed,
 } from "./policy.ts";
-import type { CreateInvitedAccountInput } from "./policy.ts";
+import type { CreateActivatedAccountInput, CreateInvitedAccountInput } from "./policy.ts";
 
 export { ARGON2_PARAMS, hashPassword, verifyPassword } from "./password.ts";
 export { InvitedAccountError } from "./policy.ts";
-export type { CreateInvitedAccountInput } from "./policy.ts";
+export type { CreateActivatedAccountInput, CreateInvitedAccountInput } from "./policy.ts";
 
 // ---------------------------------------------------------------------------------------------
 // Hatalar
@@ -367,6 +368,8 @@ export interface AuthService {
   }): Promise<void>;
   /** Davetle hesap açar (T-117 çağırır). E-posta/doğrulama durumu parametre değildir; bkz. policy.ts. */
   createInvitedAccount(input: CreateInvitedAccountInput): Promise<CreateInvitedAccountResult>;
+  /** Onaylı demo talebinin aktivasyon bağlantısıyla sahip hesabı açar (T-995). E-posta/ad/doğrulama talepten okunur; bkz. policy.ts. */
+  createActivatedAccount(input: CreateActivatedAccountInput): Promise<CreateInvitedAccountResult>;
 }
 
 export interface CreateAuthParams {
@@ -1458,6 +1461,39 @@ export function createAuth(params: CreateAuthParams): AuthService {
     if (!Number.isFinite(age) || age > maxAgeSec) throw new AuthError("REAUTH_REQUIRED");
   }
 
+  /** Davet ve aktivasyon hesap açmanın ortak bağımlılıkları (kullanıcı + parola hesabı tek transaction'da). */
+  async function claimAccountDeps(): Promise<Parameters<typeof createInvitedAccountWith>[0]> {
+    const context = await auth.$context;
+    return {
+      db: authDb,
+      passwordMinLength: PASSWORD_MIN_LENGTH,
+      passwordMaxLength: PASSWORD_MAX_LENGTH,
+      hashPassword,
+      newId: randomUUID,
+      // Kurulu 1.7.7 `internalAdapter.createOAuthUser` kullanıcı + hesap yazımını `runWithTransaction` ile tek
+      // transaction'da yapar (db/internal-adapter.mjs:119-139); `runWithTransaction` paketin genel
+      // yüzeyinde (better-auth export'ları) yoktur. `id` ve `forceAllowId` (with-hooks.mjs:26-30).
+      createUserWithPassword: async (d) => {
+        const user = {
+          id: d.id,
+          name: d.name,
+          email: d.email,
+          emailVerified: d.emailVerified,
+          image: null,
+          invitationClaimId: d.invitationClaimId,
+        };
+        await context.internalAdapter.createOAuthUser(user, {
+          accountId: d.id,
+          providerId: "credential",
+          password: d.passwordHash,
+        });
+      },
+      setPasswordHash: async (userId, passwordHash) => {
+        await context.internalAdapter.updatePassword(userId, passwordHash);
+      },
+    };
+  }
+
   const service: AuthService = {
     async handler(request) {
       try {
@@ -1540,37 +1576,11 @@ export function createAuth(params: CreateAuthParams): AuthService {
     },
 
     async createInvitedAccount(input) {
-      return masked(async () => {
-        const context = await auth.$context;
-        return createInvitedAccountWith(
-          {
-            db: authDb,
-            passwordMinLength: PASSWORD_MIN_LENGTH,
-            passwordMaxLength: PASSWORD_MAX_LENGTH,
-            hashPassword,
-            newId: randomUUID,
-            // Kurulu 1.7.7 `internalAdapter.createOAuthUser` kullanıcı + hesap yazımını `runWithTransaction` ile tek
-            // transaction'da yapar (db/internal-adapter.mjs:119-139); `runWithTransaction` paketin genel
-            // yüzeyinde (better-auth export'ları) yoktur. `id` ve `forceAllowId` (with-hooks.mjs:26-30).
-            createUserWithPassword: async (d) => {
-              const user = {
-                id: d.id,
-                name: d.name,
-                email: d.email,
-                emailVerified: d.emailVerified,
-                image: null,
-                invitationClaimId: d.invitationClaimId,
-              };
-              await context.internalAdapter.createOAuthUser(user, {
-                accountId: d.id,
-                providerId: "credential",
-                password: d.passwordHash,
-              });
-            },
-          },
-          input,
-        );
-      });
+      return masked(async () => createInvitedAccountWith(await claimAccountDeps(), input));
+    },
+
+    async createActivatedAccount(input) {
+      return masked(async () => createActivatedAccountWith(await claimAccountDeps(), input));
     },
 
     async createPasswordResetToken(userId, issuingTenantId) {
@@ -1671,6 +1681,11 @@ export function getAuthService(env: EnvSource = process.env, options: { readonly
     });
   }
   return instance;
+}
+
+/** Aktivasyonla sahip hesabı açma (T-995): bkz. `AuthService.createActivatedAccount`. */
+export function createActivatedAccount(input: CreateActivatedAccountInput): Promise<CreateInvitedAccountResult> {
+  return getAuthService().createActivatedAccount(input);
 }
 
 /** Davetle hesap açma (T-117): bkz. `AuthService.createInvitedAccount`. */

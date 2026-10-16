@@ -9,6 +9,7 @@ import { BrandMark } from "./brand-mark.tsx";
 import "./globals.css";
 import { designFontVars } from "./fonts.ts";
 import { FirstUseGuide, GuideTrigger } from "./first-use-guide.tsx";
+import { appSurface } from "../lib/surface.ts";
 
 // Uygulama kabuğu (T-109): üst bar, Akış/Kokpit görünüm anahtarı, kullanıcı çipi yer tutucusu,
 // "Yardım çağır". Görünür metin yalnızca messages/*.json'dan gelir (ADR-002). Oturum T-118'de bağlanır.
@@ -101,7 +102,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               </Link>
             </div>
           </header>
-          <FirstUseGuide />
+          {/* Yönetim panelinde (ADR-027) depo kullanım rehberi gösterilmez. */}
+          {appSurface() === "panel" ? null : <FirstUseGuide />}
           <div id="main" tabIndex={-1}>
             {children}
           </div>
