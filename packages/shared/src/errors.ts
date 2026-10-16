@@ -55,6 +55,8 @@ export const ERROR_DETAILS = [
   "PLAN_INVALID",
   // T-403: askıya alma gerekçesi boş.
   "REASON_REQUIRED",
+  // T-406: ödeme kaydı (tarih/yöntem/not) geçersiz.
+  "PAYMENT_INVALID",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -88,6 +90,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   PLAN_LIMIT: "VALIDATION_FAILED",
   PLAN_INVALID: "VALIDATION_FAILED",
   REASON_REQUIRED: "VALIDATION_FAILED",
+  PAYMENT_INVALID: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

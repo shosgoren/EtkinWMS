@@ -32,6 +32,7 @@
     "./integrations": "./src/integrations/index.ts",
     "./platform/demo-requests": "./src/platform/demo-requests.ts",
     "./platform/activation": "./src/platform/activation.ts",
+    "./platform/charges": "./src/platform/charges.ts",
     "./platform/customers": "./src/platform/customers.ts",
     "./platform/plans": "./src/platform/plans.ts"
   },

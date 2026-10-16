@@ -578,6 +578,12 @@ body:has(.dzy) {
   font:700 13.5px/1 var(--font-instrument),sans-serif;
   white-space:nowrap;
 }
+.dzy .racts {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
+}
 .dzy .segb.on {
   box-shadow:0 1px 0 var(--color-dz-a-bhcoec-ag),0 8px 18px -14px var(--color-dz-a-bhcoec-f);
 }

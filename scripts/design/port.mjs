@@ -23,7 +23,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 export const SOURCES = [
   { name: "bakis", file: "docs/design/source/Bakis.dc.html", sha256: "f38a508b237a99683972698d34fdc639467864b4763f66d48e1c77d357bff457", scope: "dz", palette: "bakis" },
   { name: "giris", file: "docs/design/source/Giris.dc.html", sha256: "cdf62d7bdc714c5c9411691041d9d7771ba8adeaf1396555aae62ce556607dd6", scope: "dzg", palette: "c" },
-  { name: "yonet", file: "docs/design/source/Yonet.dc.html", sha256: "e9a8cf86acceb22174601a108162c6813d559aa0df68d1e80a5e8d2ad55bd513", scope: "dzy", palette: "c" },
+  { name: "yonet", file: "docs/design/source/Yonet.dc.html", sha256: "660019fe37e4fadc2dc551b4b5a52ed00eb2a0d29104aaca1680071ed28aec11", scope: "dzy", palette: "c" },
 ];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.
