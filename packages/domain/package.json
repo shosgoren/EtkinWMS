@@ -31,7 +31,8 @@
     "./stock/jobs": "./src/stock/jobs.ts",
     "./integrations": "./src/integrations/index.ts",
     "./platform/demo-requests": "./src/platform/demo-requests.ts",
-    "./platform/activation": "./src/platform/activation.ts"
+    "./platform/activation": "./src/platform/activation.ts",
+    "./platform/plans": "./src/platform/plans.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"

@@ -302,7 +302,9 @@
       "retry": "Yeniden dene",
       "boundaryTitle": "Bir şeyler ters gitti",
       "supportCode": "Destek kodu: {code}",
-      "tenantStatusTitle": "Çalışma alanı kullanılamıyor"
+      "tenantStatusTitle": "Çalışma alanı kullanılamıyor",
+      "validation_failed_plan_limit": "Paketinizin kullanıcı sınırına ulaştınız.",
+      "validation_failed_plan_limitAction": "Artık kullanılmayan bir kullanıcıyı çıkarın ya da paketinizi yükseltmek için bizimle iletişime geçin."
     },
     "demoLocked": "Demo hesabında bu işlem kapalı."
   },
@@ -1089,7 +1091,9 @@
       "tenant_closing": "Çalışma alanı kapatılıyor.",
       "tenant_closingAction": "Sorumluna başvur.",
       "internal": "Bir sorun oluştu.",
-      "internalAction": "Biraz sonra yeniden dene; sürerse hata kodunu destek ekibine ilet."
+      "internalAction": "Biraz sonra yeniden dene; sürerse hata kodunu destek ekibine ilet.",
+      "validation_failed_plan_limit": "Paketinizin ürün (kalem) sınırına ulaştınız.",
+      "validation_failed_plan_limitAction": "Kullanmadığınız ürünleri arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin."
     },
     "locked": "Ürünleri görme yetkin yok.",
     "lockedAction": "Çalışma alanı yöneticine sor.",
@@ -1229,7 +1233,9 @@
       "idempotency_mismatch": "Bu istek kimliği başka bir girdiyle kullanılmış.",
       "idempotency_mismatchAction": "Formu kapatıp yeniden aç, sonra yeniden dene.",
       "validation_failed_code_ambiguous": "Bu eski kod birden çok lokasyonun geçmişinde var; hangisi olduğu anlaşılamıyor.",
-      "validation_failed_code_ambiguousAction": "Lokasyonun güncel kodunu yazarak ara."
+      "validation_failed_code_ambiguousAction": "Lokasyonun güncel kodunu yazarak ara.",
+      "validation_failed_plan_limit": "Paketinizin depo sınırına ulaştınız.",
+      "validation_failed_plan_limitAction": "Kullanmadığınız depoyu arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin."
     },
     "codeEdit": {
       "button": "Kodu değiştir",
@@ -2343,7 +2349,8 @@
     "signOutFailed": "Çıkış yapılamadı, tekrar deneyin.",
     "theme": "Açık / koyu görünüm",
     "nav": {
-      "talepler": "Demo talepleri"
+      "talepler": "Demo talepleri",
+      "paketler": "Paketler"
     },
     "talepler": {
       "title": "Demo talepleri",
@@ -2373,7 +2380,47 @@
       "sentScreen": "ONAYLANDI · BAĞLANTIYI İLETİN",
       "expired": "BAĞLANTI SÜRESİ DOLDU",
       "activated": "ÇALIŞMA ALANI AÇILDI"
-    }
+    },
+    "paketler": {
+      "title": "Paketler",
+      "sub": "SATIŞ SAYFASI VE İYZİCO PLANLARIYLA EŞLİ",
+      "newPlan": "Yeni paket",
+      "newName": "Yeni paket",
+      "banTitle": "Yayındaki paketler satış sayfasında görünür",
+      "banBody": "Fiyat değişikliği yeni müşterilere hemen, mevcut müşterilere bir sonraki dönemden itibaren uygulanır. Ödeme sağlayıcıdaki plan otomatik güncellenir.",
+      "published": "YAYINDA",
+      "draft": "TASLAK",
+      "recommended": "ÖNERİLEN",
+      "perMonth": "/ AY",
+      "customers": "{n} MÜŞTERİ BU PAKETTE",
+      "unlimited": "Sınırsız",
+      "admins": "yönetici",
+      "field": "saha personeli",
+      "warehouses": "depo",
+      "items": "kalem",
+      "edit": "PAKETİ DÜZENLE",
+      "name": "PAKET ADI",
+      "price": "AYLIK FİYAT",
+      "priceSuffix": "₺ + KDV / AY",
+      "limAdmins": "YÖNETİCİ KULLANICI",
+      "limField": "SAHA PERSONELİ",
+      "limWarehouses": "DEPO",
+      "limItems": "KALEM (ÜRÜN)",
+      "atMost": "EN ÇOK",
+      "unlimitedSuffix": "SINIRSIZ",
+      "features": "ÖZELLİKLER",
+      "fQr": "QR paket etiketi",
+      "fShip": "Sevkiyat ve toplama",
+      "fProd": "Üretim ve reçete",
+      "fApi": "ERP / API bağlantısı",
+      "publish": "YAYIN",
+      "fPublish": "Satış sayfasında yayınla",
+      "fRecommended": "“Önerilen” olarak işaretle",
+      "saveDraft": "Taslak olarak kaydet",
+      "savePublish": "Kaydet ve yayınla",
+      "error": "Paket kaydedilemedi ({code}). Fiyatı ve sınırları kontrol edip tekrar deneyin."
+    },
+    "back": "Geri"
   },
   "activate": {
     "title": "Çalışma alanınızı kurun",

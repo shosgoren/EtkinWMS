@@ -212,6 +212,21 @@ export async function inviteMember(params: InviteMemberParams, deps: InvitationD
         });
       }
 
+      // T-404 (0041): paket kullanıcı sınırı. Etkin üyeler + açık davetler sınırı doldurduysa yeni davet verilmez (kabulde de
+      // veritabanı tetikleyicisi denetler; burada erken ve anlaşılır red). Sınır yoksa (paketsiz tenant) ya da 0 ise sınırsız.
+      const cap = await tx.execute<{ lim: number | null }>(
+        sql`SELECT wms_probe.platform_tenant_plan_limit(${membership.tenantId}::uuid, 'admins') AS lim`,
+      );
+      const lim = cap[0]?.lim ?? null;
+      if (lim !== null && Number(lim) > 0) {
+        const used = await tx.execute<{ n: number }>(
+          sql`SELECT (SELECT count(*) FROM public.tenant_memberships WHERE tenant_id = ${membership.tenantId}::uuid AND status = 'ACTIVE')
+                   + (SELECT count(*) FROM public.invitations WHERE tenant_id = ${membership.tenantId}::uuid
+                        AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()) AS n`,
+        );
+        if (Number(used[0]?.n ?? 0) >= Number(lim)) throw new AppError("VALIDATION_FAILED", { detail: "PLAN_LIMIT" });
+      }
+
       const invitationId = randomUUID();
       let delivery: "EMAIL" | "SCREEN" = "SCREEN";
       let screenReason: InviteMemberResult["screenReason"] = "DELIVERY_UNAVAILABLE";
