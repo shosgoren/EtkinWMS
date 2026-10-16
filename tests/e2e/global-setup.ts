@@ -104,7 +104,9 @@ function startTlsProxy(port: number, targetPort: number, keyFile: string, certFi
         method: req.method,
         path: req.url,
         // Fly kenarını taklit eder: uygulama istemci IP'sini yalnızca `Fly-Client-IP`'den okur (apps/web/lib/rate-limit.ts).
-        headers: { ...forwardHeaders, "x-forwarded-proto": "https", "fly-client-ip": clientIp },
+        // T-407: üretimdeki Caddy gibi `X-Forwarded-Host` da verilir; yoksa Next iç yeniden yazmayı (panel `/satis` → `/panel/satis`)
+        // kendi iç portuna https ile dış vekil isteği sanıyordu.
+        headers: { ...forwardHeaders, "x-forwarded-proto": "https", "x-forwarded-host": req.headers.host ?? `localhost:${port}`, "fly-client-ip": clientIp },
       },
       (up) => {
         res.writeHead(up.statusCode ?? 502, up.headers);
