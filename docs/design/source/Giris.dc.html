@@ -375,6 +375,40 @@ button,input{font:inherit;color:inherit}
         </sc-if>
       </sc-if>
 
+      <!-- ── 5b ORTAK CİHAZ · TERMİNAL KAYDI (QR okutulduktan sonra) ── -->
+      <sc-if value="{{v.enr}}" hint-placeholder-val="{{false}}">
+        <span class="kick">{{en.kick}}</span>
+        <div class="steps" aria-hidden="true"><sc-for list="{{en.bars}}" as="eb" hint-placeholder-count="3"><i style="background: {{eb.bg}}"></i></sc-for></div>
+        <h1 class="lh">{{en.h}}</h1>
+        <p class="ls">{{en.s}}</p>
+        <sc-if value="{{en.s1}}" hint-placeholder-val="{{true}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="fl"><label for="g-dn">CİHAZ ADI</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M6 2h12v20H6zM9 6h6v5H9zM9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01"></path></svg><input id="g-dn" type="text" maxlength="60" value="{{f.dn}}" onChange="{{on.dn}}"></div><span class="hint">Yönetici bu adı görür · ör. El terminali 2, Sevkiyat tableti</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{en.s2}}" hint-placeholder-val="{{false}}">
+          <div class="done" style="background: {{c.surface}}">
+            <span class="okc" style="background: #F4B400; color: #1A1300"><svg class="ico" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.6"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg></span>
+            <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Onay bekleniyor</b>
+            <p class="ls" style="margin: 0">Yöneticiniz kendi ekranında <b>{{f.dn}}</b> için ONAYLA'ya dokununca bu ekran kendiliğinden ilerler.</p>
+            <span class="chip" style="background: {{c.chip}}">TALEP · 5 DAKİKA GEÇERLİ</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{en.s2}}" hint-placeholder-val="{{false}}"><button type="button" class="lnk" onClick="{{enApproved}}">Önizleme: onaylandı göster</button></sc-if>
+        <sc-if value="{{en.s3}}" hint-placeholder-val="{{false}}">
+          <div class="done" style="background: {{c.surface}}">
+            <span class="okc"><svg class="ico" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></span>
+            <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Cihaz kaydedildi</b>
+            <p class="ls" style="margin: 0">Bu cihazda alanın saha personeli kendi kullanıcı adı ve PIN'iyle girer.</p>
+            <span class="chip" style="background: {{c.chip}}">ORTAK CİHAZ · 180 GÜN</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{en.err}}" hint-placeholder-val="{{false}}"><span class="hint bad" role="alert"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>Bu QR kullanılamıyor. Yöneticinizden yeni QR isteyin.</span></sc-if>
+        <sc-if value="{{en.btnShow}}" hint-placeholder-val="{{true}}">
+          <div class="act" style="background: {{c.bg}}"><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{enNext}}">{{en.btn}}<svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button></div>
+        </sc-if>
+      </sc-if>
+
       <!-- ── 6 ORTAK CİHAZ · KULLANICI DEĞİŞTİR ── -->
       <sc-if value="{{v.sw}}" hint-placeholder-val="{{false}}">
         <span class="kick">EL TERMİNALİ 1 · ANA DEPO</span>
@@ -449,11 +483,26 @@ button,input{font:inherit;color:inherit}
           <div class="shd"><b>KAYITLI CİHAZLAR</b><span>{{devCount}} CİHAZ</span></div>
           <div class="rows"><sc-for list="{{devList}}" as="d" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{d.avBg}}; color: {{d.avFg}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{d.ic}}"></path></svg></span><span class="rt"><b>{{d.n}}</b><span>{{d.s}}</span></span><div class="rbtns"><button type="button" class="sbtn" style="background: #C62828; color: #FFFFFF" onClick="{{d.go}}" aria-label="{{d.a}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="tx">İPTAL ET</span></button></div></div></sc-for></div>
         </div>
-        <div class="kcard" style="background: {{c.surface}}">
-          <span class="kick">ORTAK CİHAZ EKLE</span>
-          <div class="qr qrbig" role="img" aria-label="Cihaz kayıt QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
-          <span class="timer" role="timer">04:58 KALDI</span>
-          <p class="ls" style="margin: 0">El terminalinde wms.etkinyazilim.com açın, <b>Cihazı kaydet</b>'e dokunun ve bu QR'ı okutun.</p>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <sc-if value="{{dq.wait}}" hint-placeholder-val="{{true}}">
+            <div class="kcard" style="background: {{c.surface}}">
+              <span class="kick">ORTAK CİHAZ EKLE</span>
+              <div class="qr qrbig" role="img" aria-label="Cihaz kayıt QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
+              <span class="timer" role="timer">04:58 KALDI</span>
+              <p class="ls" style="margin: 0">El terminalinin kamerasıyla bu QR'ı okutun. Cihaz bağlanmak istediğinde burada onaylarsınız.</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{dq.claim}}" hint-placeholder-val="{{false}}">
+            <div class="kcard" style="background: {{c.surface}}">
+              <span class="kick">ONAY BEKLİYOR</span>
+              <span class="av" style="background: {{c.chip}}; color: {{c.fg}}; width: 72px; height: 72px; border-radius: 22px"><svg class="ico" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20H6zM9 6h6v5H9zM9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01"></path></svg></span>
+              <b style="font: 800 24px/1.1 'Bricolage Grotesque', sans-serif">El terminali 2</b>
+              <span class="chip" style="background: #F4B400; color: #1A1300">BAĞLANMAK İSTİYOR</span>
+              <p class="ls" style="margin: 0">Bu cihaz şu an yanınızdaysa onaylayın. Tanımıyorsanız reddedin; QR yeniden üretilir.</p>
+              <div class="act" style="position: static; padding: 0; box-shadow: none; width: 100%"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}" onClick="{{devReject}}">REDDET</button><button type="button" class="big" style="background: #17804F; color: #FFFFFF" onClick="{{devApprove}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M4 12l5 5L20 6"></path></svg>ONAYLA</button></div>
+            </div>
+          </sc-if>
+          <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span><b>Onaysız cihaz giriş yapamaz</b>QR 5 dakika ve tek kullanımlıktır. Fotoğrafı başkasına geçse bile cihaz sizin onayınız olmadan kaydolmaz.</span></div>
         </div>
       </div>
     </sc-if>
@@ -506,10 +555,10 @@ class Component extends DCLogic {
     this.state = {
       mode: 'desktop', override: null, theme: 'acik',
       scr: 'login', tab: 'eposta', devOk: true, showPw: false,
-      pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true,
+      pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true, enStep: 1, devClaim: false,
       seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0, actBad: false, mailOk: true, mailSent: true,
       opDone: {}, revoked: {},
-      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d' }
+      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d', dn: 'El terminali 2' }
     };
   }
   componentDidMount() {
@@ -550,7 +599,7 @@ class Component extends DCLogic {
     };
     var go = function (scr, extra) { return function () { var o = { scr: scr, pin: '', pin1: '', pinErr: '' }; for (var k in (extra || {})) o[k] = extra[k]; self.setState(o); }; };
     var setF = function (k) { return function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; f[k] = e && e.target ? e.target.value : ''; self.setState({ f: f }); }; };
-    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su'].forEach(function (k) { on[k] = setF(k); });
+    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su', 'dn'].forEach(function (k) { on[k] = setF(k); });
     on.co = function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; var v = e && e.target ? e.target.value : ''; if (self.slugOf(f.co) === f.slug) f.slug = self.slugOf(v); f.co = v; self.setState({ f: f }); };
 
     /* ── PIN ── */
@@ -637,9 +686,18 @@ class Component extends DCLogic {
     fin(0, 0); fin(14, 0); fin(0, 14);
     for (var y = 0; y < 21; y++) for (var x = 0; x < 21; x++) { if ((x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12)) continue; if (((x * 7 + y * 13 + x * y) % 5) < 2) qrCells.push({ x: x, y: y }); }
 
-    var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['actx', 'Bağlantı geçersiz'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
-    var mgr = ['staff', 'dev', 'op', 'mail'].indexOf(s.scr) >= 0;
-    var bands = { staff: { h: 'Saha personeli ekle', s: 'MOTIVE · E-POSTA GEREKMEZ', bg: '#172E42' }, dev: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, op: { h: 'Demo talepleri', s: 'ETKİN YAZILIM · OPERATÖR', bg: '#3D2A6B' }, mail: { h: 'Hoş geldiniz e-postası', s: 'AKTİVASYON SONRASI OTOMATİK', bg: '#172E42' } };
+    var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['actx', 'Bağlantı geçersiz'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['enr', 'Cihaz kaydı (terminal)'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['devq', 'Cihaz onayı'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
+    var mgr = ['staff', 'dev', 'devq', 'op', 'mail'].indexOf(s.scr) >= 0;
+    var eS = s.enStep;
+    var en = {
+      kick: eS < 3 ? 'ORTAK CİHAZ · ADIM ' + eS + ' / 2' : 'TAMAMLANDI',
+      h: ['', 'Bu cihazı kaydet', 'Yönetici onayı', 'Hazır'][eS],
+      s: ['', 'Cihaza bir ad verin. Yöneticiniz kendi ekranında onaylayınca bu cihazda saha girişi açılır.', '', ''][eS],
+      bars: [1, 2].map(function (i) { return { bg: i <= eS ? (dk ? '#F4C542' : '#172E42') : c.track }; }),
+      s1: eS === 1, s2: eS === 2, s3: eS === 3, err: false, btnShow: eS !== 2,
+      btn: eS === 3 ? 'GİRİŞ EKRANINA' : 'KAYDI İSTE'
+    };
+    var bands = { staff: { h: 'Saha personeli ekle', s: 'MOTIVE · E-POSTA GEREKMEZ', bg: '#172E42' }, dev: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, devq: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, op: { h: 'Demo talepleri', s: 'ETKİN YAZILIM · OPERATÖR', bg: '#3D2A6B' }, mail: { h: 'Hoş geldiniz e-postası', s: 'AKTİVASYON SONRASI OTOMATİK', bg: '#172E42' } };
     var sides = {
       login: { h: 'Depo işi, tek ekranda.', p: 'Ofisten e-postanızla, sahadan kullanıcı adı ve PIN ile girin.', rows: [[D.mail, 'YÖNETİCİ · E-POSTA + PAROLA + KOD'], [D.term, 'SAHA · KULLANICI ADI + PIN'], [D.lock, 'PIN YALNIZ KAYITLI CİHAZDA']] },
       act: { h: 'Deneme alanınız onaylandı.', p: '3 ay boyunca bütün özellikler açık. Kurulum dört adım.', rows: [[D.box, 'ÖRNEK VERİ YA DA BOŞ BAŞLANGIÇ'], [D.lock, 'PAROLAYI YALNIZ SİZ BİLİRSİNİZ'], [D.mail, 'GİRİŞ BİLGİLERİ E-POSTAYLA']] },
@@ -656,7 +714,7 @@ class Component extends DCLogic {
         return { l: b[1], cls: 'prevb' + (on2 ? ' on' : ''), pressed: on2 ? 'true' : 'false', go: function () { self.setState({ override: b[0] === 'auto' ? null : b[0] }); } }; }),
       scrBtns: scrList.map(function (b) { var on3 = b[0] === 'actx' ? s.scr === 'act' && s.actBad : b[0] === 'act' ? s.scr === 'act' && !s.actBad : s.scr === b[0]; return { l: b[1], cls: 'prevb' + (on3 ? ' on' : ''), pressed: on3 ? 'true' : 'false', go: b[0] === 'actx' ? go('act', { actStep: 1, actBad: true }) : go(b[0], { actStep: 1, faStep: 1, swWho: null, actBad: false }) }; }),
       c: c, f: (function () { var f = {}; for (var k in s.f) f[k] = s.f[k]; f.mailOk = s.mailOk; f.mailNo = !s.mailOk; f.mailSent = s.mailSent; f.mailOff = !s.mailSent; return f; })(), on: on, side: side, band: bands[s.scr] || bands.staff,
-      v: { auth: !mgr, mgr: mgr, login: s.scr === 'login', loginMail: s.tab === 'eposta', loginField: s.tab === 'saha', mfa: s.scr === 'mfa', pick: s.scr === 'pick', act: s.scr === 'act', fact: s.scr === 'fact', sw: s.scr === 'sw', staff: s.scr === 'staff', dev: s.scr === 'dev', op: s.scr === 'op', mail: s.scr === 'mail' },
+      v: { auth: !mgr, mgr: mgr, login: s.scr === 'login', loginMail: s.tab === 'eposta', loginField: s.tab === 'saha', mfa: s.scr === 'mfa', pick: s.scr === 'pick', act: s.scr === 'act', fact: s.scr === 'fact', sw: s.scr === 'sw', staff: s.scr === 'staff', dev: s.scr === 'dev' || s.scr === 'devq', enr: s.scr === 'enr', op: s.scr === 'op', mail: s.scr === 'mail' },
       tabs: [['eposta', 'E-POSTA', D.mail], ['saha', 'SAHA GİRİŞİ', D.term]].map(function (t) { var on4 = s.tab === t[0]; return { l: t[1], d: t[2], cls: 'tab' + (on4 ? ' on' : ''), sel: on4 ? 'true' : 'false', bg: on4 ? c.surface : 'transparent', go: function () { self.setState({ tab: t[0], pin: '', pinErr: '' }); } }; }),
       dev: { ok: s.devOk, no: !s.devOk },
       devToggleL: s.devOk ? 'Önizleme: kayıtsız cihazı göster' : 'Önizleme: kayıtlı cihazı göster',
@@ -682,7 +740,10 @@ class Component extends DCLogic {
       whOpts: ['Ana depo', 'Depo 2', 'Depo 3'].map(function (w, i) { return opt('wh', i, { t: w }); }),
       codeShown: s.codeShown, codeHidden: !s.codeShown, staffList: staffList,
       makeCode: function () { self.setState({ codeShown: true }); },
-      devList: devList, devCount: devList.length, opList: opList, opPending: opPending,
+      devList: devList, devCount: devList.length, dq: { wait: s.scr !== 'devq', claim: s.scr === 'devq' }, en: en,
+      enNext: function () { if (self.state.enStep === 1) self.setState({ enStep: 2 }); else self.setState({ scr: 'login', tab: 'saha', devOk: true, enStep: 1 }); },
+      enApproved: function () { self.setState({ enStep: 3 }); },
+      devApprove: function () { self.setState({ scr: 'dev' }); }, devReject: function () { self.setState({ scr: 'dev' }); }, opList: opList, opPending: opPending,
       goMfa: go('mfa'), goPick: go('pick'), goLogin: go('login'), goSwitch: go('sw', { swWho: null }), goFact: go('fact', { faStep: 1 }),
       toggleTheme: function () { self.setState({ theme: self.state.theme === 'koyu' ? 'acik' : 'koyu' }); },
       noop: function () {}

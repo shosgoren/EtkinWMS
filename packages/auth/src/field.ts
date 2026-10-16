@@ -189,10 +189,10 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
       fieldDeviceStaff: createAuthEndpoint("/field/staff", { method: "GET" }, async (ctx) => {
         const parsed = parseDeviceCookie(ctx.getCookie(cookieName));
         if (parsed === null) return ctx.json({ staff: [] });
-        const rows = await deps.execute<{ name: string; username: string }>(
+        const rows = await deps.execute<{ name: string; username: string; role_key: string | null }>(
           sql`SELECT * FROM wms_probe.field_device_staff(${parsed.tenantId}::uuid, ${parsed.tokenHash})`,
         );
-        return ctx.json({ staff: rows.map((r) => ({ name: r.name, username: r.username })) });
+        return ctx.json({ staff: rows.map((r) => ({ name: r.name, username: r.username, role: r.role_key === "COUNTER" ? "COUNTER" : "PICKER" })) });
       }),
 
       // T-998: ortak cihaz kaydı talebi. QR adresinin `#` parçası `<tenant>.<kayıt belirteci>`; terminal kendi rastgele cihaz belirtecini

@@ -41,6 +41,7 @@ vi.mock("../../../apps/web/lib/auth-service.ts", () => ({
   // T-997: saha hesabı açma ve oturum kapatma çapraz tenant denemesinde hiç çağrılmamalı (ön denetim önce reddeder).
   createFieldAccount: () => Promise.reject(new Error("field account creation must not be reached")),
   revokeUserSessions: () => Promise.reject(new Error("session revocation must not be reached")),
+  revokeDeviceSessions: () => Promise.reject(new Error("device session revocation must not be reached")),
   getAuthService: () => ({
     getPrincipal: (headers: Headers) => {
       const u = headers.get("x-test-user");
@@ -306,6 +307,8 @@ const LOADERS = [
   "members/page.tsx",
   // T-997: saha personeli ekle (users.manage; saha giriş listesi sayfanın kendisinde çözülür).
   "members/field/page.tsx",
+  // T-998: saha cihazları (users.manage; cihaz listesi sayfanın kendisinde çözülür).
+  "members/devices/page.tsx",
   "settings/page.tsx",
   "audit/page.tsx",
   "items/page.tsx",
@@ -830,6 +833,12 @@ const ACTIONS: Record<string, Call> = {
   createFieldUserAction: (slug) => members.createFieldUserAction!({ slug, name: "Ele Gecirme", username: `x${rnd()}`.toLowerCase().slice(0, 30), roleKey: "PICKER", warehouseId: null }),
   resetFieldCodeAction: (slug, v) => members.resetFieldCodeAction!({ slug, memberId: v.membership }),
   unlockFieldLoginAction: (slug, v) => members.unlockFieldLoginAction!({ slug, memberId: v.membership }),
+  // T-998: cihaz/kayıt kimlikleri B'nin (ya da rastgele) — A bağlamında etkisiz.
+  revokeDeviceAction: (slug) => members.revokeDeviceAction!({ slug, deviceId: randomUUID() }),
+  startEnrollmentAction: (slug) => members.startEnrollmentAction!({ slug }),
+  enrollmentStatusAction: (slug) => members.enrollmentStatusAction!({ slug, enrollmentId: randomUUID() }),
+  approveEnrollmentAction: (slug) => members.approveEnrollmentAction!({ slug, enrollmentId: randomUUID() }),
+  cancelEnrollmentAction: (slug) => members.cancelEnrollmentAction!({ slug, enrollmentId: randomUUID() }),
 };
 
 /** T-216: ürün kartı eylemleri; hepsi B'nin birim/ürün/barkod kimlikleriyle çağrılır (A veya B slug'ında). */

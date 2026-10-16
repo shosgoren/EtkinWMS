@@ -191,6 +191,14 @@ export function MembersView({
               {t("addField")}
             </a>
           ) : null}
+          {canManage ? (
+            <a
+              href={`/t/${slug}/members/devices`}
+              className="inline-flex min-h-12 items-center justify-center rounded-card border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink"
+            >
+              {t("devices")}
+            </a>
+          ) : null}
           {canManage ? null : (
             <p id="invite-locked" className="max-w-xs break-words text-sm text-ink-muted">
               {t("lockedReason")}

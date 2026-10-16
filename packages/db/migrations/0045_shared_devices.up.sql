@@ -144,9 +144,9 @@ BEGIN
 END
 $fn$;
 
--- Ortak cihaz personel listesi (hızlı kullanıcı değişimi): yalnız geçerli SHARED cihazla; ad + kullanıcı adı.
+-- Ortak cihaz personel listesi (hızlı kullanıcı değişimi): yalnız geçerli SHARED cihazla; ad + kullanıcı adı + saha rolü.
 CREATE FUNCTION wms_probe.field_device_staff(p_tenant uuid, p_token_hash text)
-RETURNS TABLE (name text, username text)
+RETURNS TABLE (name text, username text, role_key text)
   LANGUAGE plpgsql
   VOLATILE
   SECURITY DEFINER
@@ -163,7 +163,9 @@ BEGIN
               WHERE d.tenant_id = p_tenant AND d.token_hash = p_token_hash AND d.kind = 'SHARED' AND d.revoked_at IS NULL
                 AND d.expires_at > now() AND d.last_used_at > now() - interval '60 days' AND t.status = 'ACTIVE' AND NOT t.is_demo) THEN
     RETURN QUERY
-      SELECT u.name, l.username
+      SELECT u.name, l.username,
+             (SELECT r.role_key FROM public.membership_roles r WHERE r.tenant_id = l.tenant_id AND r.membership_id = l.membership_id
+               ORDER BY r.role_key LIMIT 1)
         FROM public.field_logins l
         JOIN public.tenant_memberships m ON m.tenant_id = l.tenant_id AND m.id = l.membership_id AND m.user_id = l.user_id AND m.status = 'ACTIVE'
         JOIN public.users u ON u.id = l.user_id
