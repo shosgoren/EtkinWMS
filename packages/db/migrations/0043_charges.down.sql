@@ -64,6 +64,7 @@ RESET ROLE;
 REVOKE CREATE ON SCHEMA wms_probe FROM wms_identity_probe;
 
 DROP TABLE wms_platform.charges;
+DROP FUNCTION wms_platform.charges_paid_immutable();
 REVOKE USAGE ON SEQUENCE wms_platform.subscription_no_seq FROM wms_identity_probe;
 ALTER TABLE wms_platform.subscriptions DROP CONSTRAINT subscriptions_number_key;
 ALTER TABLE wms_platform.subscriptions DROP COLUMN number;

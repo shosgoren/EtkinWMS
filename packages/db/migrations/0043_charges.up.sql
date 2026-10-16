@@ -6,8 +6,8 @@
 --   `wms_probe.platform_*` SECURITY DEFINER işlevleriyle (0038–0042 kalıbı). Tenant tablolarına yazma yok.
 -- * DÖNEM: İstanbul takvim ayı (dönemin ilk günü). Tahakkuk operatörün "Dönem tahakkuku" işlemiyle açılır (idempotent: tenant+dönem
 --   tekil). Kimlere: demo değil, askıda değil, paketi atanmış, denemesi bitmiş (ya da ACTIVE abonelik) ve paket fiyatı > 0. Tutar
---   müşterinin bağlı olduğu paket SÜRÜMÜNÜN aylık fiyatıdır (KDV hariç). Vade: dönemin 7. günü; tahakkuk geç açıldıysa
---   açılıştan 7 gün sonra.
+--   müşterinin bağlı olduğu paket SÜRÜMÜNÜN aylık fiyatıdır (KDV hariç). Vade: dönemin 7. günü; tahakkuk 7'sinden sonra
+--   açıldıysa açılıştan 7 gün sonra. Ödenmiş tahakkuk tetikleyiciyle değişmez.
 -- * DURUM türetilir: ödendiyse ÖDENDİ; vade geçtiyse GECİKTİ; değilse BEKLİYOR. Elle ödendi kaydı (ADR-027 §8): tarih (dönem başından en
 --   çok 60 gün önce, en geç bugün), yöntem (HAVALE/KART/NAKIT), isteğe bağlı not (≤200, denetim karakteri yok), kaydeden operatör ve
 --   zaman; kayıt sonradan değiştirilemez (geri alma yok; yanlış kayıt işlem kaydında görünür).
@@ -68,6 +68,18 @@ CREATE TABLE wms_platform.charges (
   CONSTRAINT charges_method_chk CHECK (paid_method IN ('HAVALE', 'KART', 'NAKIT')),
   CONSTRAINT charges_note_chk CHECK (paid_note IS NULL OR pg_catalog.length(paid_note) BETWEEN 1 AND 200)
 );
+-- Ödendi kaydı değişmez (inceleme MINOR-2): ödenmiş satırın ödeme alanları hiçbir yoldan güncellenemez.
+CREATE FUNCTION wms_platform.charges_paid_immutable() RETURNS trigger
+ LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $fn$
+BEGIN
+  IF OLD.paid_on IS NOT NULL THEN
+    RAISE EXCEPTION 'charges: ödenmiş tahakkuk değiştirilemez' USING ERRCODE = '55000';
+  END IF;
+  RETURN NEW;
+END
+$fn$;
+REVOKE ALL ON FUNCTION wms_platform.charges_paid_immutable() FROM PUBLIC;
+CREATE TRIGGER charges_paid_immutable BEFORE UPDATE ON wms_platform.charges FOR EACH ROW EXECUTE FUNCTION wms_platform.charges_paid_immutable();
 CREATE INDEX charges_unpaid_idx ON wms_platform.charges (due_on) WHERE paid_on IS NULL;
 REVOKE ALL ON wms_platform.charges FROM PUBLIC;
 GRANT SELECT, INSERT ON wms_platform.charges TO wms_identity_probe;
@@ -95,7 +107,7 @@ BEGIN
     RAISE EXCEPTION 'platform_list_charges: operatör değil' USING ERRCODE = '42501';
   END IF;
   RETURN QUERY
-    SELECT c.id, c.tenant_id, t.name, 'ABN-' || pg_catalog.lpad(s.number::text, 4, '0'), c.period, p.name, c.amount, c.due_on,
+    SELECT c.id, c.tenant_id, t.name, 'ABN-' || CASE WHEN s.number < 10000 THEN pg_catalog.lpad(s.number::text, 4, '0') ELSE s.number::text END, c.period, p.name, c.amount, c.due_on,
            CASE WHEN c.paid_on IS NOT NULL THEN 'PAID' WHEN v_today > c.due_on THEN 'OVERDUE' ELSE 'PENDING' END,
            c.paid_on, c.paid_method, c.invoice_no
       FROM wms_platform.charges c
@@ -125,7 +137,8 @@ BEGIN
   PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('platform.charges.accrue', 0));
   INSERT INTO wms_platform.charges (tenant_id, period, plan_id, plan_version, amount, due_on, created_by)
   SELECT s.tenant_id, v_period, s.plan_id, s.plan_version, v.price_monthly,
-         GREATEST(v_period + 6, (now() AT TIME ZONE 'Europe/Istanbul')::date + 7), v_uid
+         CASE WHEN (now() AT TIME ZONE 'Europe/Istanbul')::date <= v_period + 6 THEN v_period + 6
+              ELSE (now() AT TIME ZONE 'Europe/Istanbul')::date + 7 END, v_uid
     FROM wms_platform.subscriptions s
     JOIN public.tenants t ON t.id = s.tenant_id
     JOIN wms_platform.plan_versions v ON v.plan_id = s.plan_id AND v.version = s.plan_version

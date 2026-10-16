@@ -112,7 +112,9 @@ export async function markChargePaid(
 ): Promise<boolean> {
   principalOrThrow(params.principal);
   if (typeof params.chargeId !== "string" || !UUID.test(params.chargeId)) throw new AppError("VALIDATION_FAILED");
-  if (typeof params.paidOn !== "string" || !DAY.test(params.paidOn) || Number.isNaN(Date.parse(`${params.paidOn}T00:00:00Z`))) {
+  // Takvimde olmayan gün (ör. 2026-02-30) de reddedilir: gidiş-dönüş aynı olmalı.
+  const day = typeof params.paidOn === "string" && DAY.test(params.paidOn) ? new Date(`${params.paidOn}T00:00:00Z`) : null;
+  if (day === null || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== params.paidOn) {
     throw new AppError("VALIDATION_FAILED", { detail: "PAYMENT_INVALID" });
   }
   const method = PAY_METHODS.find((m) => m === params.method);
