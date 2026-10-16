@@ -4,6 +4,8 @@
 Schema changes (T-916): only when the signed archive's schema label differs from the approved one AND the
 operator installed the migration credential (migrate.env). Then: pg_dump backup -> stop web/worker ->
 signed migrator image runs `migrate.ts up` as the migration owner role -> schema approved -> normal rollout.
+Job queues (T-411): whenever migrate.env exists, every release first runs the queue installer from the same signed
+migrator image (idempotent) while the previous release still serves; a failure stops the release.
 """
 import fcntl
 import hashlib
@@ -228,15 +230,25 @@ def migrator_drained():
     return False
 
 
-def migrate_database(sha):
+def migrator_run(sha, command, timeout):
     # Credential stays in the root-only env file; never in argv or logs. Output is suppressed (may echo data).
     remove_migrator()
     run(['docker', 'run', '--rm', '--name', MIGRATOR_NAME, '--network', DB_NETWORK, '--env-file', str(migrate_env()),
          '-e', 'NODE_EXTRA_CA_CERTS=/run/etkinwms-db-ca.crt', '-e', 'WMS_ENV=production', '-e', 'DEMO_MODE=0',
          '-v', DB_CA + ':/run/etkinwms-db-ca.crt:ro', '--read-only', '--tmpfs', '/tmp',
          '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--memory', '512m',
-         'etkinwms-migrate:' + sha, 'node', 'src/migrate.ts', 'up'],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+         'etkinwms-migrate:' + sha] + command,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout)
+
+
+def migrate_database(sha):
+    migrator_run(sha, ['node', 'src/migrate.ts', 'up'], 600)
+
+
+def install_queues(sha):
+    # T-411: pg-boss schema, every job type's queue, grants and RLS for this release. Idempotent; runs on every release
+    # (job types can change without a schema change) with the same migration credential and container limits.
+    migrator_run(sha, ['node', '/queue-installer/install.mjs'], 300)
 
 
 def ledger_version():
@@ -295,6 +307,15 @@ def deploy(sha, archive_hash, schema_hash):
     current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash}
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
+    # Queues are additive and independent of the table schema: install them while the previous release still serves.
+    # A failure stops the release before anything is stopped or migrated.
+    queues = 'skipped'
+    if migrate_env().is_file():
+        try:
+            install_queues(sha)
+        except Exception:
+            raise ValueError('QUEUE_INSTALL_FAILED_PREVIOUS_RUNNING') from None
+        queues = 'installed'
     if migrate:
         old_args, old_env = compose(previous)
         assert_migration_role()
@@ -346,7 +367,7 @@ def deploy(sha, archive_hash, schema_hash):
         set_current(previous['release'])
         write_state(previous)
         raise ValueError('RELEASE_FAILED_PREVIOUS_RESTORED') from None
-    print(json.dumps({'deployed': sha, 'health': 'ok'}))
+    print(json.dumps({'deployed': sha, 'health': 'ok', 'queues': queues}))
 
 
 def main():
