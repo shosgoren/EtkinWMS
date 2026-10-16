@@ -372,6 +372,15 @@ export async function seedWorld(
     [tenantId, itemNoneId, `fx-${hex(6)}`],
   );
   await c.query("INSERT INTO public.sync_cursors (tenant_id, system, stream) VALUES ($1, 'LOGO', 'LEDGER')", [tenantId]);
+  // T-997 (0044): saha girişi ve kişisel cihaz (sentetik özetler; hiçbir PIN/belirteçle eşleşmez).
+  await c.query(
+    "INSERT INTO public.field_logins (tenant_id, user_id, membership_id, username) VALUES ($1, $2, $3, $4)",
+    [tenantId, memberUserId, memberMembershipId, `fx-${hex(6)}`],
+  );
+  await c.query(
+    "INSERT INTO public.field_devices (tenant_id, token_hash, kind, user_id, name) VALUES ($1, $2, 'PERSONAL', $3, 'fx cihaz')",
+    [tenantId, randomBytes(32).toString("hex"), memberUserId],
+  );
   const world: TenantWorld = {
     label,
     tenantId,
@@ -432,6 +441,8 @@ export async function cleanupRegistry(c: pg.Client, reg: WorldRegistry): Promise
     await c.query("DELETE FROM public.locations WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.warehouses WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.invitations WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
+    await c.query("DELETE FROM public.field_devices WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
+    await c.query("DELETE FROM public.field_logins WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.membership_roles WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.tenant_memberships WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
     await c.query("DELETE FROM public.tenant_settings WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
