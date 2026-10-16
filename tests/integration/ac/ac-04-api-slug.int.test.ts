@@ -38,6 +38,9 @@ vi.mock("../../../apps/web/lib/auth-service.ts", () => ({
   discardPasswordResetToken: () => Promise.resolve(),
   recordPasswordResetLinkIssued: () => Promise.resolve(),
   createInvitedAccount: () => Promise.reject(new Error("account creation must not be reached")),
+  // T-997: saha hesabı açma ve oturum kapatma çapraz tenant denemesinde hiç çağrılmamalı (ön denetim önce reddeder).
+  createFieldAccount: () => Promise.reject(new Error("field account creation must not be reached")),
+  revokeUserSessions: () => Promise.reject(new Error("session revocation must not be reached")),
   getAuthService: () => ({
     getPrincipal: (headers: Headers) => {
       const u = headers.get("x-test-user");
