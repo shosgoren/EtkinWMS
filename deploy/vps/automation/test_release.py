@@ -192,8 +192,8 @@ class ReleaseBoundaryTests(unittest.TestCase):
             self.assertEqual((state['sha'], state['schema']), (SHA, 'e'*64))
             self.assertEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
 
-    def test_queues_install_first_while_previous_release_serves(self):
-        # T-411: every release with the migration credential installs queues before anything is stopped or migrated.
+    def test_queues_sync_after_migration_and_approval(self):
+        # T-411: with a migration, the queue sync runs after the approved migration (queues may depend on it).
         with tempfile.TemporaryDirectory() as directory:
             base, automation, previous_release, previous = migration_setup(directory)
             calls = []
@@ -208,9 +208,10 @@ class ReleaseBoundaryTests(unittest.TestCase):
                 release.deploy(SHA, 'd'*64, 'e'*64)
             finally:
                 for c in reversed(ctx): c.stop()
-            self.assertEqual(calls, ['load', 'config', 'queues:' + SHA, 'stop', 'backup', 'migrate', 'up'])
+            self.assertEqual(calls, ['load', 'config', 'stop', 'backup', 'migrate', 'queues:' + SHA, 'up'])
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'e'*64)
 
-    def test_failed_queue_install_stops_release_before_any_stop_or_migration(self):
+    def test_failed_queue_sync_after_migration_restarts_previous(self):
         with tempfile.TemporaryDirectory() as directory:
             base, automation, previous_release, previous = migration_setup(directory)
             calls = []
@@ -223,21 +224,41 @@ class ReleaseBoundaryTests(unittest.TestCase):
                                        ledger_version=lambda: '0031', healthy=lambda: True)
             for c in ctx: c.start()
             try:
-                with self.assertRaisesRegex(ValueError, 'QUEUE_INSTALL_FAILED_PREVIOUS_RUNNING'):
+                with self.assertRaisesRegex(ValueError, 'QUEUE_INSTALL_FAILED_AFTER_MIGRATION_PREVIOUS_RESTARTED'):
                     release.deploy(SHA, 'd'*64, 'e'*64)
             finally:
                 for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config', 'stop', 'backup', 'migrate', 'up'])
+            self.assertNotEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
+
+    def test_failed_queue_sync_without_migration_stops_release_before_any_stop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            (automation / 'state.json').write_text(json.dumps(dict(previous, schema='b'*64)))
+            calls = []
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: calls.append('backup'),
+                                       migrate_database=lambda sha: calls.append('migrate'), run=run,
+                                       install_queues=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'queues')),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with self.assertRaisesRegex(ValueError, 'QUEUE_INSTALL_FAILED_PREVIOUS_RUNNING'):
+                    release.deploy(SHA, 'd'*64, 'b'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
             self.assertEqual(calls, ['load', 'config'])
-            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'b'*64)
 
     def test_queue_installer_uses_migrator_image_and_env_file_only(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
              patch.object(release, 'run') as run, patch.object(release, 'remove_migrator') as remove:
             release.install_queues(SHA)
-            remove.assert_called_once()
+            self.assertEqual(remove.call_count, 2)  # before the run and always after it (killed client)
             args = run.call_args.args[0]
             self.assertEqual(args[args.index('--env-file') + 1], str(Path(directory) / 'migrate.env'))
-            self.assertEqual(args[-3:], ['etkinwms-migrate:' + SHA, 'node', '/queue-installer/install.mjs'])
+            self.assertEqual(args[-3:], ['etkinwms-migrate:' + SHA, 'node', '/queue-installer/sync.mjs'])
             self.assertIn('--read-only', args)
             self.assertFalse(any('postgresql://' in a or 'PASSWORD' in a for a in args))
             self.assertEqual(run.call_args.kwargs['stdout'], release.subprocess.DEVNULL)

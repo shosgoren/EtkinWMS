@@ -4,8 +4,8 @@
 Schema changes (T-916): only when the signed archive's schema label differs from the approved one AND the
 operator installed the migration credential (migrate.env). Then: pg_dump backup -> stop web/worker ->
 signed migrator image runs `migrate.ts up` as the migration owner role -> schema approved -> normal rollout.
-Job queues (T-411): whenever migrate.env exists, every release first runs the queue installer from the same signed
-migrator image (idempotent) while the previous release still serves; a failure stops the release.
+Job queues (T-411): whenever migrate.env exists, every release runs an additive queue sync (missing queues only) from the
+same signed migrator image: before rollout while the previous release serves, or right after a migration.
 """
 import fcntl
 import hashlib
@@ -246,9 +246,13 @@ def migrate_database(sha):
 
 
 def install_queues(sha):
-    # T-411: pg-boss schema, every job type's queue, grants and RLS for this release. Idempotent; runs on every release
-    # (job types can change without a schema change) with the same migration credential and container limits.
-    migrator_run(sha, ['node', '/queue-installer/install.mjs'], 300)
+    # T-411: additive queue sync for this release: creates missing job-type queues only (no pg-boss schema upgrade, no
+    # grant/RLS change; refuses without writing if the queue schema would need an upgrade). Same credential and limits
+    # as the migrator. A killed client must not leave the container holding locks.
+    try:
+        migrator_run(sha, ['node', '/queue-installer/sync.mjs'], 120)
+    finally:
+        remove_migrator()
 
 
 def ledger_version():
@@ -307,10 +311,12 @@ def deploy(sha, archive_hash, schema_hash):
     current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash}
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
-    # Queues are additive and independent of the table schema: install them while the previous release still serves.
-    # A failure stops the release before anything is stopped or migrated.
+    # Queue sync is additive (missing queues only). Without a migration it runs while the previous release still serves,
+    # so a failure stops the release before anything is stopped. With a migration it runs right after the migration
+    # (a release's queues may depend on its own migrations); a failure then restarts the previous image like a failed rollout.
     queues = 'skipped'
-    if migrate_env().is_file():
+    if not migrate and migrate_env().is_file():
+        assert_migration_role()
         try:
             install_queues(sha)
         except Exception:
@@ -347,6 +353,13 @@ def deploy(sha, archive_hash, schema_hash):
             approve_schema(schema_hash)
         except Exception:
             raise ValueError('POST_MIGRATION_STATE_WRITE_FAILED_SERVICE_STOPPED') from None
+        try:
+            # After the approved migration (a release's queues may depend on it); the previous image stays the rollback target.
+            install_queues(sha)
+            queues = 'installed'
+        except Exception:
+            run(old_args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=old_env)
+            raise ValueError('QUEUE_INSTALL_FAILED_AFTER_MIGRATION_PREVIOUS_RESTARTED') from None
     try:
         run(args + ['up', '-d', '--no-build', '--wait', '--wait-timeout', '180'], env=env)
         for _ in range(18):

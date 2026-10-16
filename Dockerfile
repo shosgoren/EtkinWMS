@@ -52,18 +52,18 @@ RUN pnpm --filter @wms/web build \
 # içermez (yukarıdaki MIGRATION_ denetimi); VPS yayın alıcısı bu ayrı imajı `--target migrate` ile imzalı arşivden
 # alır ve migration rolüyle `node src/migrate.ts up` koşar. Varsayılan hedef (son aşama) runtime olarak kalır.
 FROM build AS migrate-bundle
-# T-411: iş kuyruğu kurulumu (pg-boss şeması, kuyruklar, yetki) aynı imzalı imajda tek dosya paket olarak; yayın alıcısı her yayında
-# migration rolüyle `node /queue-installer/install.mjs` koşar (idempotent). Paket worker paketiyle aynı esbuild ayarlarıyla üretilir.
+# T-411: canlı kuyruk eşitlemesi (yalnız eksik kuyrukları oluşturur; şema yükseltmesi/yetki değişikliği yok) aynı imzalı imajda tek dosya
+# paket olarak; yayın alıcısı her yayında migration rolüyle `node /queue-installer/sync.mjs` koşar. Worker paketiyle aynı esbuild ayarları.
 RUN pnpm --filter @wms/db deploy --prod --legacy --ignore-scripts /migrator \
  && test -f /migrator/src/migrate.ts \
  && test -f /migrator/migrations/0001_baseline.up.sql \
  && mkdir -p /queue-installer \
- && pnpm --filter @wms/worker exec esbuild ../../packages/queue-adapter/src/install-cli.ts --bundle --platform=node --format=esm \
-      --target=node24 --outfile=/queue-installer/install.mjs --log-level=warning \
+ && pnpm --filter @wms/worker exec esbuild ../../packages/queue-adapter/src/sync-cli.ts --bundle --platform=node --format=esm \
+      --target=node24 --outfile=/queue-installer/sync.mjs --log-level=warning \
       --banner:js="import { createRequire as __wmsCreateRequire } from 'node:module'; const require = __wmsCreateRequire(import.meta.url);" \
  && test "$(ls /queue-installer | wc -l)" = 1 \
- && ! grep -q 'workspace:' /queue-installer/install.mjs \
- && out="$(cd / && env -i PATH="$PATH" timeout 10 node /queue-installer/install.mjs 2>&1 || true)" \
+ && ! grep -q 'workspace:' /queue-installer/sync.mjs \
+ && out="$(cd / && env -i PATH="$PATH" timeout 10 node /queue-installer/sync.mjs 2>&1 || true)" \
  && printf '%s' "$out" | grep -q 'DATABASE_URL_DIRECT'
 
 FROM ${NODE_IMAGE} AS migrate
