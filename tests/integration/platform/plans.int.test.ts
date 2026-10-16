@@ -134,7 +134,7 @@ describe("paketler (operatör)", () => {
 
   it("önerilen tek ve yayında olmalı; yayındaki liste yalnız yayınlananları içerir; yakın zamanda doğrulama istenir", async () => {
     const bad = await failure(savePlan({ ...op(), recentAuth: ok, plan: plan({ recommended: true, published: false }) }));
-    expect([bad.code, bad.detail]).toEqual(["VALIDATION_FAILED", "RECOMMENDED_UNPUBLISHED"]);
+    expect([bad.code, bad.detail]).toEqual(["VALIDATION_FAILED", "PLAN_INVALID"]);
     const reauth = async (): Promise<void> => {
       throw Object.assign(new Error("reauth"), { reason: "REAUTH_REQUIRED" });
     };
@@ -244,6 +244,6 @@ describe("uyum", () => {
   it("paket uuid'i biçimsizse VALIDATION_FAILED; olmayan paket NOT_FOUND", async () => {
     expect((await failure(savePlan({ ...op(), recentAuth: ok, id: "x", plan: plan() }))).code).toBe("VALIDATION_FAILED");
     expect((await failure(savePlan({ ...op(), recentAuth: ok, id: randomUUID(), plan: plan() }))).code).toBe("NOT_FOUND");
-    expect((await failure(savePlan({ ...op(), recentAuth: ok, plan: { ...plan(), price: "abc" } }))).detail).toBe("PRICE");
+    expect((await failure(savePlan({ ...op(), recentAuth: ok, plan: { ...plan(), price: "abc" } }))).detail).toBe("PLAN_INVALID");
   });
 });

@@ -388,7 +388,11 @@
     "validation_failed_too_many_lines": "Tek seferde en fazla 200 satır ters çevrilebilir.",
     "validation_failed_too_many_linesAction": "Satırları 200'erli gruplara bölüp her grup için ayrı ters kayıt yap.",
     "forbidden_warehouse_out_of_scope": "Bu depo senin çalışma kapsamının dışında.",
-    "forbidden_warehouse_out_of_scopeAction": "Erişim gerekiyorsa çalışma alanı yöneticinden depoyu kapsamına eklemesini iste."
+    "forbidden_warehouse_out_of_scopeAction": "Erişim gerekiyorsa çalışma alanı yöneticinden depoyu kapsamına eklemesini iste.",
+    "validation_failed_plan_limit": "Paketinizin sınırına ulaştınız.",
+    "validation_failed_plan_limitAction": "Kullanmadığınız kaydı arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin.",
+    "validation_failed_plan_invalid": "Paket bilgileri geçersiz.",
+    "validation_failed_plan_invalidAction": "Adı, fiyatı ve sınırları kontrol edip tekrar deneyin."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",

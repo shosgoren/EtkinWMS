@@ -388,7 +388,11 @@
     "validation_failed_too_many_lines": "At most 200 lines can be reversed at once.",
     "validation_failed_too_many_linesAction": "Split the lines into groups of 200 and make a separate reversal for each group.",
     "forbidden_warehouse_out_of_scope": "This warehouse is outside your scope.",
-    "forbidden_warehouse_out_of_scopeAction": "If you need access, ask your workspace admin to add it to your scope."
+    "forbidden_warehouse_out_of_scopeAction": "If you need access, ask your workspace admin to add it to your scope.",
+    "validation_failed_plan_limit": "You have reached your plan's limit.",
+    "validation_failed_plan_limitAction": "Archive a record you no longer use, or contact us to upgrade your plan.",
+    "validation_failed_plan_invalid": "The plan details are invalid.",
+    "validation_failed_plan_invalidAction": "Check the name, price and limits and try again."
   },
   "serverErrors": {
     "code": "Error code: {code}",

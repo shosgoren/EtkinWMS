@@ -87,14 +87,14 @@ export function normalizePlanInput(raw: unknown): PlanInput & { readonly priceNu
   const o = raw as Partial<PlanInput> | null;
   if (o === null || typeof o !== "object") throw new AppError("VALIDATION_FAILED");
   const name = typeof o.name === "string" ? o.name.trim().replace(/\s+/g, " ") : "";
-  if (name === "" || name.length > NAME_MAX || /[\u0000-\u001f\u007f<>]/.test(name)) throw new AppError("VALIDATION_FAILED", { detail: "NAME" });
+  if (name === "" || name.length > NAME_MAX || /[\u0000-\u001f\u007f<>]/.test(name)) throw new AppError("VALIDATION_FAILED", { detail: "PLAN_INVALID" });
   const price = typeof o.price === "string" ? o.price.trim().replace(/\s/g, "") : "";
-  if (!PRICE.test(price)) throw new AppError("VALIDATION_FAILED", { detail: "PRICE" });
+  if (!PRICE.test(price)) throw new AppError("VALIDATION_FAILED", { detail: "PLAN_INVALID" });
   const priceNumeric = price.replace(",", ".");
   const l = o.limits as Partial<PlanLimits> | undefined;
   const lim = (k: keyof PlanLimits): number => {
     const v = l?.[k];
-    if (typeof v !== "number" || !Number.isSafeInteger(v) || v < 0 || v > LIMIT_MAX[k]) throw new AppError("VALIDATION_FAILED", { detail: "LIMIT" });
+    if (typeof v !== "number" || !Number.isSafeInteger(v) || v < 0 || v > LIMIT_MAX[k]) throw new AppError("VALIDATION_FAILED", { detail: "PLAN_INVALID" });
     return v;
   };
   const f = o.features as Partial<Record<PlanFeature, boolean>> | undefined;
@@ -104,7 +104,7 @@ export function normalizePlanInput(raw: unknown): PlanInput & { readonly priceNu
     return v;
   };
   if (typeof o.published !== "boolean" || typeof o.recommended !== "boolean") throw new AppError("VALIDATION_FAILED");
-  if (o.recommended && !o.published) throw new AppError("VALIDATION_FAILED", { detail: "RECOMMENDED_UNPUBLISHED" });
+  if (o.recommended && !o.published) throw new AppError("VALIDATION_FAILED", { detail: "PLAN_INVALID" });
   return {
     name,
     price: priceText(priceNumeric),
