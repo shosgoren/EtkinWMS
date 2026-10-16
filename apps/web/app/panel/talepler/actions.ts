@@ -68,7 +68,11 @@ export async function demoRequestAction(_prev: TaleplerActionState, form: FormDa
     return { link: issued?.token === undefined ? undefined : `${base}/activate/${issued.token}` };
   })({ id: typeof id === "string" ? id : "", intent: typeof intent === "string" ? intent : "" });
   if (!result.ok) {
-    if (result.error.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(PATH)}`);
+    if (result.error.code === "UNAUTHENTICATED") {
+      // Yakın zamanda doğrulama gerekiyorsa giriş sayfası açık oturumda da formu gösterir (`reauth=1`); yoksa döngü olur.
+      const reauth = result.error.detail === "RECENT_AUTH_REQUIRED" ? "reauth=1&" : "";
+      redirect(`/login?${reauth}next=${encodeURIComponent(PATH)}`);
+    }
     if (result.error.code === "FORBIDDEN" && result.error.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(PATH)}`);
     revalidatePath(INTERNAL_PATH);
     return { error: result.error.code };

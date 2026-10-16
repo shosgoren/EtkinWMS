@@ -64,7 +64,7 @@ export function ServerErrorBanner({ error, returnTo }: { error: ServerError; ret
         </a>
       ) : null}
       {error.detail === "RECENT_AUTH_REQUIRED" ? (
-        <a className={LINK_CLS} href={`/login?next=${encodeURIComponent(returnTo)}`}>
+        <a className={LINK_CLS} href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`}>
           {t("loginLink")}
         </a>
       ) : null}
