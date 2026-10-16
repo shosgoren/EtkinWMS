@@ -137,3 +137,4 @@ export const recordPasswordResetLinkIssued: AuthService["recordPasswordResetLink
 export const createInvitedAccount: AuthService["createInvitedAccount"] = (input) => getAuthService().createInvitedAccount(input);
 export const createActivatedAccount: AuthService["createActivatedAccount"] = (input) => getAuthService().createActivatedAccount(input);
 export const createFieldAccount: AuthService["createFieldAccount"] = (input) => getAuthService().createFieldAccount(input);
+export const revokeUserSessions: AuthService["revokeUserSessions"] = (userId) => getAuthService().revokeUserSessions(userId);

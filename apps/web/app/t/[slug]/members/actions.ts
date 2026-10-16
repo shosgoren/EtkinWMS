@@ -2,7 +2,16 @@
 // Üye davet (T-117) ve üyelik (T-117b) eylemleri. İnce giriş: doğrulama + sarmalayıcı `guardedAction`; iş kuralı
 // `@wms/domain`. Tenant erişimi yalnızca domain komutları (`runTenantCommand`) üzerinden; bu dosyada DB bağlantısı açılmaz.
 import { z } from "zod";
-import { createPasswordResetToken, discardPasswordResetToken, ensureRecentAuth, recordPasswordResetLinkIssued } from "../../../../lib/auth-service.ts";
+import {
+  createFieldAccount,
+  createPasswordResetToken,
+  discardPasswordResetToken,
+  ensureRecentAuth,
+  recordPasswordResetLinkIssued,
+  revokeUserSessions,
+} from "../../../../lib/auth-service.ts";
+import { createFieldUser, resetFieldCode, unlockFieldLogin } from "@wms/domain/identity/field-users";
+import { setMembershipWarehouseScopes } from "@wms/domain/warehouse";
 import {
   changeRole,
   issuePasswordResetLink,
@@ -174,5 +183,79 @@ export async function issuePasswordResetLinkAction(raw: unknown) {
     // Better Auth `GET /reset-password/:token?callbackURL=` belirteci geri çağrı adresine taşır.
     const link = `${ctx.origin}/api/auth/reset-password/${result.token}?callbackURL=${encodeURIComponent("/reset-password")}`;
     return { resetLink: link, expiresAt: result.expiresAt.toISOString() };
+  })(raw);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Saha personeli (T-997, ADR-026 §7): e-postasız hesap, etkinleştirme kodu yalnız bu yanıtta
+// ---------------------------------------------------------------------------------------------
+
+const fieldCreateSchema = z
+  .object({
+    slug: slugSchema,
+    name: z.string().min(2).max(100),
+    username: z.string().min(3).max(40),
+    roleKey: z.enum(["PICKER", "COUNTER"]),
+    warehouseId: z.string().uuid().nullable(),
+  })
+  .strict();
+
+export async function createFieldUserAction(raw: unknown) {
+  return guardedAction({ schema: fieldCreateSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const requestHeaders = await headers();
+    await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: input.slug, permission: "users.manage" }, ctx);
+    const result = await createFieldUser(
+      {
+        db: getAppDb(),
+        principal,
+        tenantSlug: input.slug,
+        name: input.name,
+        username: input.username,
+        roleKey: input.roleKey,
+        requestId: ctx.requestId,
+        // Kimlik bilgisi veren komut: yakın zamanda doğrulama zorunlu (A-39; T-997 inceleme M4).
+        recentAuth: () => ensureRecentAuth(requestHeaders),
+      },
+      { createFieldAccount },
+    );
+    // Tek depo seçildiyse kapsam (A-77: seçilmezse tüm depolar).
+    if (input.warehouseId !== null) {
+      await setMembershipWarehouseScopes(
+        { db: getAppDb(), principal, tenantSlug: input.slug },
+        { membershipId: result.membershipId, warehouseIds: [input.warehouseId], requestId: ctx.requestId },
+      );
+    }
+    return { membershipId: result.membershipId, username: result.username, code: result.code, expiresAt: result.expiresAt.toISOString() };
+  })(raw);
+}
+
+export async function resetFieldCodeAction(raw: unknown) {
+  return guardedAction({ schema: memberSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const requestHeaders = await headers();
+    const result = await resetFieldCode(
+      {
+        db: getAppDb(),
+        principal,
+        tenantSlug: input.slug,
+        memberId: input.memberId,
+        requestId: ctx.requestId,
+        recentAuth: () => ensureRecentAuth(requestHeaders),
+      },
+      { revokeUserSessions },
+    );
+    return { code: result.code, expiresAt: result.expiresAt.toISOString() };
+  })(raw);
+}
+
+export async function unlockFieldLoginAction(raw: unknown) {
+  return guardedAction({ schema: memberSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    await unlockFieldLogin({ db: getAppDb(), principal, tenantSlug: input.slug, memberId: input.memberId, requestId: ctx.requestId });
+    return { unlocked: true as const };
   })(raw);
 }
