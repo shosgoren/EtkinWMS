@@ -33,6 +33,8 @@ services:
       HOSTNAME: 0.0.0.0
       APP_SURFACE: panel
       BETTER_AUTH_URL: https://yonet.etkinyazilim.com
+      # T-995: panelde verilen aktivasyon bağlantısı müşteri uygulamasının adresiyle kurulur.
+      WMS_APP_URL: https://wms.etkinyazilim.com
     expose: ["3000"]
     mem_limit: 768m
     logging:

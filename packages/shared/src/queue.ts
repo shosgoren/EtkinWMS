@@ -7,8 +7,17 @@
 import { z } from "zod";
 
 /** Kayıtlı iş türleri. `email.send` T-116, `invitation.deliver` T-117, `demo.reseed` T-123 tarafından doldurulur;
- * `stock.document.post` T-222, `stock.consistency.check` T-225 (handler'lar o kartlarda; ADR-019 §5). */
-export const JOB_TYPES = ["email.send", "invitation.deliver", "demo.reseed", "stock.document.post", "stock.consistency.check"] as const;
+ * `stock.document.post` T-222, `stock.consistency.check` T-225 (handler'lar o kartlarda; ADR-019 §5);
+ * `platform.activation.deliver` ve `trial.welcome` T-995 (ADR-026 §3). */
+export const JOB_TYPES = [
+  "email.send",
+  "invitation.deliver",
+  "demo.reseed",
+  "stock.document.post",
+  "stock.consistency.check",
+  "platform.activation.deliver",
+  "trial.welcome",
+] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
 /**
@@ -34,6 +43,10 @@ export const JOB_PAYLOAD_SCHEMAS = {
   "stock.document.post": z.object({ documentId: z.string().uuid(), idempotencyRecordId: z.string().uuid() }).strict(),
   /** Tutarlılık denetimi (T-225): tenant işi, yük yok; tenant zarftan gelir (ADR-019 §5). */
   "stock.consistency.check": z.object({}).strict(),
+  /** Aktivasyon bağlantısı teslimi (T-995): PLATFORM işi, yalnızca demo talebi kimliği; belirteç worker'da üretilir (davet deseni). */
+  "platform.activation.deliver": z.object({ demoRequestId: z.string().uuid() }).strict(),
+  /** Hoş geldiniz e-postası (T-995): tenant işi, yük yok; alıcı (sahip) ve adres işte tenant'tan okunur, sırsızdır. */
+  "trial.welcome": z.object({}).strict(),
 } as const satisfies Record<JobType, z.ZodType>;
 
 export type JobPayload<T extends JobType> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[T]>;

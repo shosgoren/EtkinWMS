@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createConsoleLogger, maskAccessPath, maskString, requestIdFrom } from "@wms/shared/log";
 import { safeNext } from "./lib/safe-redirect.ts";
-import { appSurface, isPanelInternal, panelRoute } from "./lib/surface.ts";
+import { appSurface, isPanelInternal, panelRoute, shortWorkspaceTarget } from "./lib/surface.ts";
 
 const logger = createConsoleLogger("web");
 
@@ -47,7 +47,7 @@ export function newNonce(): string {
 }
 
 /** Belirteç taşıyan sayfalar (yolda: `/invite/<t>`; sorguda: `/reset-password?token=`): dış kaynaklara Referer ile sızmaz. */
-const TOKEN_PAGE = /^\/(?:invite|reset-password)(?:\/|$)/;
+const TOKEN_PAGE = /^\/(?:invite|reset-password|activate)(?:\/|$)/;
 
 const PROTECTED = /^\/(?:t(?:\/|$)|onboarding(?:\/|$)|mfa$)/;
 
@@ -107,6 +107,10 @@ export function proxy(request: NextRequest): NextResponse {
     if (pathname !== "/mfa") return next();
   } else if (isPanelInternal(pathname)) {
     return notFound();
+  } else {
+    // ADR-026 §1: kısa adres yalnız `/t/<alan>`'a yönlendirir (sorgu dizesi taşınmaz; açık yönlendirme yok — hedef sabit önekli iç yol).
+    const short = shortWorkspaceTarget(pathname);
+    if (short !== null) return withHeaders(NextResponse.redirect(new URL(short, request.url), 307));
   }
 
   if (!PROTECTED.test(pathname)) return next();

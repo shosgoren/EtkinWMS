@@ -13,4 +13,6 @@ export const YICON = {
   theme: "M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18",
   /** Geri */
   back: "M15 6l-6 6 6 6",
+  /** Bağlantı (tek seferlik aktivasyon bağlantısı kutusu, T-995) */
+  link: "M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1",
 } as const;

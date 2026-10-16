@@ -9,7 +9,7 @@ import { THEME_COOKIE } from "../../design/theme.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { PanelShell } from "../shell.tsx";
-import { decideDemoRequestAction } from "./actions.ts";
+import { demoRequestAction } from "./actions.ts";
 import { TaleplerView, type TaleplerLabels } from "./view.tsx";
 
 // Panel · Demo talepleri (yonet.etkinyazilim.com/talepler; ADR-026 §3, ADR-027). Yalnız platform operatörü (veritabanı listesi + MFA).
@@ -37,6 +37,10 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
   const labels: TaleplerLabels = {
     banTitle: tt("banTitle"),
     banBody: tt("banBody"),
+    linkTitle: tt("linkTitle"),
+    linkBody: tt("linkBody"),
+    copy: tt("copy"),
+    copied: tt("copied"),
     colWho: tt("colWho"),
     colSector: tt("colSector"),
     colNeed: tt("colNeed"),
@@ -46,11 +50,16 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
     lWhen: tt("lWhen"),
     reject: tt("reject"),
     approve: tt("approve"),
-    approved: tt("approved"),
+    again: tt("again"),
+    sentEmail: tt("sentEmail"),
+    sentScreen: tt("sentScreen"),
+    expired: tt("expired"),
+    activated: tt("activated"),
     rejected: tt("rejected"),
     today: tt("today"),
     yesterday: tt("yesterday"),
     empty: tt("empty"),
+    error: tt.raw("error") as string,
   };
   const pending = rows.filter((r) => r.status === "PENDING").length;
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
@@ -63,7 +72,7 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
       nav={[{ key: "talepler", href: "/talepler", label: t("nav.talepler"), icon: YICON.req, count: pending }]}
       labels={{ brand: t("brand"), host: t("host"), menu: t("menu"), who: t("who"), signOut: t("signOut"), signOutFailed: t("signOutFailed"), theme: t("theme") }}
     >
-      <TaleplerView rows={rows} now={new Date()} labels={labels} errorText={errorCode === undefined ? undefined : tt("error", { code: errorCode })} action={decideDemoRequestAction} />
+      <TaleplerView rows={rows} now={new Date()} labels={labels} initialError={errorCode} action={demoRequestAction} />
     </PanelShell>
   );
 }

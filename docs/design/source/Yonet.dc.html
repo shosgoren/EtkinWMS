@@ -345,10 +345,11 @@ button,input,select,textarea{font:inherit;color:inherit}
       <!-- ═══ DEMO TALEPLERİ ═══ -->
       <sc-if value="{{v.talepler}}" hint-placeholder-val="{{false}}">
         <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span><b>Onay, talep sahibine aktivasyon bağlantısı gönderir</b>Bağlantı tek kullanımlık ve 72 saat geçerlidir. Çalışma alanı, müşteri bağlantıyı açınca kurulur.</span></div>
+        <sc-if value="{{linkBox}}" hint-placeholder-val="{{false}}"><div class="ban" role="status" style="background: #FFE7A8; color: #4A3500"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg><span style="flex: 1; min-width: 0"><b>Bağlantıyı müşteriye iletin</b>E-posta gönderimi kapalı. Bu bağlantı yalnız şimdi gösterilir; 72 saat geçerli ve tek kullanımlıktır.<span class="mono" style="display: block; margin-top: 8px; font-size: 13px; overflow-wrap: anywhere">{{link}}</span></span><button type="button" class="btn sm" style="background: #4A3500; color: #FFFFFF" onClick="{{copyLink}}">Kopyala</button></div></sc-if>
         <div class="card" style="background: {{c.surface}}; padding-top: 8px">
           <div class="tbox"><table class="tbl">
             <thead><tr><th>KİŞİ · FİRMA</th><th>SEKTÖR</th><th>İHTİYAÇ</th><th>ZAMAN</th><th></th></tr></thead>
-            <tbody><sc-for list="{{reqRows}}" as="r" hint-placeholder-count="3"><tr><td><span class="tname"><b>{{r.n}}</b><span>{{r.co}} · {{r.mail}}</span></span></td><td data-l="SEKTÖR">{{r.sec}}</td><td data-l="İHTİYAÇ" style="max-width: 320px">{{r.msg}}</td><td data-l="ZAMAN" class="mono" style="font-size: 13px">{{r.when}}</td><td><sc-if value="{{r.open}}" hint-placeholder-val="{{true}}"><div class="acts" style="flex-wrap: nowrap"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{r.no}}">Reddet</button><button type="button" class="btn sm" style="background: #17804F; color: #FFFFFF" onClick="{{r.yes}}">Onayla</button></div></sc-if><sc-if value="{{r.closed}}" hint-placeholder-val="{{false}}"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></sc-if></td></tr></sc-for></tbody>
+            <tbody><sc-for list="{{reqRows}}" as="r" hint-placeholder-count="3"><tr><td><span class="tname"><b>{{r.n}}</b><span>{{r.co}} · {{r.mail}}</span></span></td><td data-l="SEKTÖR">{{r.sec}}</td><td data-l="İHTİYAÇ" style="max-width: 320px">{{r.msg}}</td><td data-l="ZAMAN" class="mono" style="font-size: 13px">{{r.when}}</td><td><sc-if value="{{r.open}}" hint-placeholder-val="{{true}}"><div class="acts" style="flex-wrap: nowrap"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{r.no}}">Reddet</button><button type="button" class="btn sm" style="background: #17804F; color: #FFFFFF" onClick="{{r.yes}}">Onayla</button></div></sc-if><sc-if value="{{r.closed}}" hint-placeholder-val="{{false}}"><div class="acts" style="flex-wrap: nowrap; align-items: center"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span><sc-if value="{{r.again}}" hint-placeholder-val="{{false}}"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{r.re}}">Yeni bağlantı</button></sc-if></div></sc-if></td></tr></sc-for></tbody>
           </table></div>
         </div>
       </sc-if>
@@ -419,7 +420,7 @@ class Component extends DCLogic {
     super(props);
     this.state = {
       mode: 'desktop', override: null, theme: 'acik', page: 'ozet', cust: 0, q: '', custTab: 'hepsi', payTab: 'hepsi',
-      sheet: null, why: '', planPick: null, pkSel: 1, opDone: {},
+      sheet: null, why: '', planPick: null, pkSel: 1, opDone: {}, linkShown: true,
       custs: [
         { n: 'Motive Rubber', slug: 'motive', st: 'AKTİF', pk: 1, u: 9, field: 6, w: 3, i: 412, mv: 1840, last: 'BUGÜN 08:41', since: '13.10.2026', ini: 'MR' },
         { n: '[Firma adı]', slug: '[alan-1]', st: 'DENEME', pk: 0, u: 3, field: 2, w: 1, i: 86, mv: 120, last: 'DÜN 17:05', since: '02.10.2026', ini: 'F1', trialEnd: '02.01.2027' },
@@ -541,9 +542,12 @@ class Component extends DCLogic {
       { l: 'BEKLEYEN', n: 1, s: 'ÖDEME · 13.11', a: '#B07D00', d: D.clock }, { l: 'FATURA BEKLEYEN', n: 1, s: 'E-ARŞİV BAĞLANINCA', a: '#3D2A6B', d: D.pay }
     ];
 
-    var reqs = [['r1', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Kauçuk / plastik', '3 depo, QR etiket, üretim', 'BUGÜN 14:22'], ['r2', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Gıda', 'SKT takibi, sevkiyat', 'DÜN 09:10']];
+    var reqs = [['r1', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Kauçuk / plastik', '3 depo, QR etiket, üretim', 'BUGÜN 14:22'], ['r2', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Gıda', 'SKT takibi, sevkiyat', 'DÜN 09:10'],
+      ['r3', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Otomotiv', 'Seri no, sevkiyat', '12.10 16:45', 'ekran'], ['r4', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Kimya', 'Lot, SKT', '09.10 11:02', 'doldu'], ['r5', '[Ad Soyad]', '[Firma adı]', '[e-posta]', 'Tekstil', 'Raf, sayım', '05.10 10:30', 'acik']];
+    var RST = { ok: ['ONAYLANDI · BAĞLANTI GİTTİ', c.okBg, c.okFg, false], ekran: ['ONAYLANDI · BAĞLANTIYI İLETİN', '#FFE7A8', '#4A3500', true], doldu: ['BAĞLANTI SÜRESİ DOLDU', c.chip, c.fg, true], acik: ['ÇALIŞMA ALANI AÇILDI', c.okBg, c.okFg, false], no: ['REDDEDİLDİ', c.chip, c.fg, false] };
     var reqRows = reqs.map(function (r) { var st = s.opDone[r[0]]; var mark = function (v) { return function () { var o = {}; for (var k in self.state.opDone) o[k] = self.state.opDone[k]; o[r[0]] = v; self.setState({ opDone: o }); }; };
-      return { n: r[1], co: r[2], mail: r[3], sec: r[4], msg: r[5], when: r[6], open: !st, closed: !!st, st: st === 'ok' ? 'ONAYLANDI · BAĞLANTI GİTTİ' : 'REDDEDİLDİ', stBg: st === 'ok' ? c.okBg : c.chip, stFg: st === 'ok' ? c.okFg : c.fg, yes: mark('ok'), no: mark('no') }; });
+      st = st || r[7]; var rs = RST[st] || RST.no;
+      return { n: r[1], co: r[2], mail: r[3], sec: r[4], msg: r[5], when: r[6], open: !st, closed: !!st, st: rs[0], stBg: rs[1], stFg: rs[2], again: rs[3], re: function () { self.setState({ linkShown: true }); }, yes: mark('ok'), no: mark('no') }; });
 
     var setLp = function (patch) { var o = {}; for (var k in self.state.lp) o[k] = self.state.lp[k]; for (var k2 in patch) o[k2] = patch[k2]; self.setState({ lp: o }); };
     var lp = {
@@ -575,7 +579,8 @@ class Component extends DCLogic {
       q: s.q, onQ: function (e) { self.setState({ q: val(e) }); }, custTabs: custTabs, custRows: custRows, custEmpty: custRows.length === 0,
       cu: cu, pkList: pkList, ed: ed,
       payTabs: payTabs, payRows: payRows, payEmpty: payRows.length === 0, payKpis: payKpis,
-      reqRows: reqRows, lp: lp, logRows: logRows,
+      reqRows: reqRows, linkBox: s.linkShown, link: 'https://wms.etkinyazilim.com/activate/[tek kullanımlık bağlantı]', copyLink: function () {},
+      lp: lp, logRows: logRows,
       sheetSuspend: s.sheet === 'suspend', sheetPlan: s.sheet === 'plan', why: s.why, whyEmpty: !(s.why || '').trim(),
       onWhy: function (e) { self.setState({ why: val(e) }); },
       openSuspend: function () { self.setState({ sheet: 'suspend', why: '' }); }, openPlan: function () { self.setState({ sheet: 'plan', planPick: null }); },

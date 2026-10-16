@@ -135,3 +135,4 @@ export const discardPasswordResetToken: AuthService["discardPasswordResetToken"]
 export const recordPasswordResetLinkIssued: AuthService["recordPasswordResetLinkIssued"] = (input) =>
   getAuthService().recordPasswordResetLinkIssued(input);
 export const createInvitedAccount: AuthService["createInvitedAccount"] = (input) => getAuthService().createInvitedAccount(input);
+export const createActivatedAccount: AuthService["createActivatedAccount"] = (input) => getAuthService().createActivatedAccount(input);

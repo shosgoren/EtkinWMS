@@ -1,5 +1,8 @@
+import { readdirSync, statSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { appSurface, isPanelInternal, panelRoute } from "./surface.ts";
+import { RESERVED_SLUGS } from "@wms/domain/onboarding/reserved";
+import { appSurface, isPanelInternal, panelRoute, shortWorkspaceTarget } from "./surface.ts";
 
 describe("ADR-027 kip ayrımı", () => {
   it("kip yalnız APP_SURFACE=panel ile panel", () => {
@@ -23,5 +26,24 @@ describe("ADR-027 kip ayrımı", () => {
     expect(isPanelInternal("/panel/talepler")).toBe(true);
     expect(isPanelInternal("/panels")).toBe(false);
     expect(isPanelInternal("/t/motive")).toBe(false);
+  });
+});
+
+describe("ADR-026 §1 kısa çalışma alanı adresi (T-995)", () => {
+  it("tek parça alan adı /t/<alan>'a gider; ayrılmış, çok parçalı, noktalı ve biçimsiz yollar gitmez", () => {
+    expect(shortWorkspaceTarget("/motive")).toBe("/t/motive");
+    expect(shortWorkspaceTarget("/motive/")).toBe("/t/motive");
+    expect(shortWorkspaceTarget("/acme-2")).toBe("/t/acme-2");
+    for (const p of ["/", "/login", "/mfa", "/activate", "/invite", "/t", "/onboarding", "/reset-password", "/help", "/panel", "/api", "/design", "/fonts",
+      "/motive/x", "/Motive", "/-x", "/x-", "/icon.svg", "/robots.txt", "/a_b", "/%2e%2e", "//motive"]) {
+      expect(shortWorkspaceTarget(p), p).toBeNull();
+    }
+  });
+  it("bekçi: uygulamanın her üst düzey yolu ayrılmış addır (kısa adresle gölgelenmez)", () => {
+    const appDir = path.resolve(import.meta.dirname, "../app");
+    const top = readdirSync(appDir)
+      .filter((n) => statSync(path.join(appDir, n)).isDirectory())
+      .filter((n) => !n.startsWith("(") && !n.startsWith("_") && !n.startsWith("["));
+    for (const n of top) expect(RESERVED_SLUGS.has(n), n).toBe(true);
   });
 });

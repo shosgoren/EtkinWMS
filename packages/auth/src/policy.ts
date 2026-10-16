@@ -136,6 +136,8 @@ export interface InvitedAccountDeps {
     passwordHash: string;
   }) => Promise<void>;
   readonly newId: () => string;
+  /** Yeniden kullanılan aktivasyon hesabının parola özetini yeniler (T-995 inceleme m-2; davet yolu kullanmaz). */
+  readonly setPasswordHash?: (userId: string, passwordHash: string) => Promise<void>;
 }
 
 /**
@@ -167,7 +169,22 @@ export async function createInvitedAccountWith(
   );
   const row = invite[0];
   if (row === undefined) throw new InvitedAccountError("NOT_FOUND");
-  const email = row.email_normalized.toLowerCase();
+  return createAccountForClaim(deps, {
+    email: row.email_normalized,
+    name: name.trim(),
+    emailVerified: row.delivered_via === "EMAIL",
+    claimId,
+    password,
+  });
+}
+
+/** Ortak hesap açma (davet ve aktivasyon): aynı e-postalı hesap varsa yalnızca aynı talep kimliğiyle yeniden kullanılır. */
+async function createAccountForClaim(
+  deps: InvitedAccountDeps,
+  input: { readonly email: string; readonly name: string; readonly emailVerified: boolean; readonly claimId: string; readonly password: string },
+): Promise<{ userId: string; reused: boolean }> {
+  const { claimId, password } = input;
+  const email = input.email.toLowerCase();
   const lookup = async (): Promise<{ id: string; invitation_claim_id: string | null } | undefined> =>
     (
       await deps.db.execute<{ id: string; invitation_claim_id: string | null }>(
@@ -186,9 +203,9 @@ export async function createInvitedAccountWith(
   try {
     await deps.createUserWithPassword({
       id,
-      name: name.trim(),
+      name: input.name,
       email,
-      emailVerified: row.delivered_via === "EMAIL",
+      emailVerified: input.emailVerified,
       invitationClaimId: claimId,
       passwordHash,
     });
@@ -199,4 +216,58 @@ export async function createInvitedAccountWith(
     throw error;
   }
   return { userId: id, reused: false };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Aktivasyonla hesap açma (T-995, ADR-026 §3.3; migration 0039)
+// ---------------------------------------------------------------------------------------------
+
+export interface CreateActivatedAccountInput {
+  readonly activationTokenHash: string;
+  readonly claimId: string;
+  readonly password: string;
+}
+
+/**
+ * Onaylı demo talebinin aktivasyon bağlantısıyla sahip hesabı açar. E-posta, ad ve doğrulama durumu PARAMETRE DEĞİLDİR:
+ * `wms_probe.platform_activation_for_account_creation` (yalnız wms_auth) talepten okur; `email_verified=true` yalnızca bağlantı
+ * e-postayla gittiyse (`EMAIL`; bağlantıya tıklamak adres sahipliğini kanıtlar). Talep yoksa/eşleşmezse `NOT_FOUND`.
+ */
+export async function createActivatedAccountWith(
+  deps: InvitedAccountDeps,
+  input: CreateActivatedAccountInput,
+): Promise<{ userId: string; reused: boolean }> {
+  const { activationTokenHash, claimId, password } = input;
+  if (
+    typeof activationTokenHash !== "string" ||
+    !/^[0-9a-f]{64}$/.test(activationTokenHash) ||
+    !isUuid(claimId) ||
+    typeof password !== "string" ||
+    password.length < deps.passwordMinLength ||
+    password.length > deps.passwordMaxLength
+  ) {
+    throw new InvitedAccountError("VALIDATION_FAILED");
+  }
+  const found = await deps.db.execute<{ email_normalized: string; name: string; delivered_via: string }>(
+    sql`SELECT email_normalized, name, delivered_via
+          FROM wms_probe.platform_activation_for_account_creation(${activationTokenHash}, ${claimId}::uuid)`,
+  );
+  const row = found[0];
+  if (row === undefined) throw new InvitedAccountError("NOT_FOUND");
+  const name = row.name.trim();
+  if (name === "" || name.length > 200) throw new InvitedAccountError("VALIDATION_FAILED");
+  const r = await createAccountForClaim(deps, {
+    email: row.email_normalized,
+    name,
+    emailVerified: row.delivered_via === "EMAIL",
+    claimId,
+    password,
+  });
+  // Yarıda kalan önceki denemenin hesabı (aynı talep zinciri): müşterinin şimdi yazdığı parola geçerli olur; aksi hâlde alan açılır ama
+  // giriş eski parolayı ister (inceleme m-2). Hesap henüz hiçbir alana bağlı değildir (tüketme bu adımdan sonra).
+  if (r.reused) {
+    if (deps.setPasswordHash === undefined) throw new InvitedAccountError("FORBIDDEN");
+    await deps.setPasswordHash(r.userId, await deps.hashPassword(password));
+  }
+  return r;
 }

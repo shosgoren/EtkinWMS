@@ -144,6 +144,25 @@ describe("proxy: ADR-027 kip ayrımı (yonet. panel / wms. müşteri)", () => {
     expect(proxy(req("/onboarding", { ...COOKIE, purpose: "prefetch" })).status).toBe(404);
   });
 
+  it("T-995 kısa adres: müşteri kipinde /<alan> → /t/<alan> (sorgu taşınmaz); panel kipinde yok (404)", () => {
+    const res = proxy(req("/motive?next=https://evil.example"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost:3000/t/motive");
+    expect(proxy(req("/login")).status).toBe(200);
+    process.env.APP_SURFACE = "panel";
+    expect(proxy(req("/motive", COOKIE)).status).toBe(404);
+    expect(proxy(req("/activate/AbCdEf", COOKIE)).status).toBe(404);
+  });
+
+  it("T-995 aktivasyon sayfası belirteç taşır: Referrer-Policy no-referrer ve maskeli günlük", () => {
+    const lines: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((l: unknown) => void lines.push(String(l)));
+    const res = proxy(req("/activate/SuperSecretActivationToken123"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(lines.join("\n")).not.toContain("SuperSecret");
+  });
+
   it("müşteri kipi: panel iç yolları 404; müşteri yolları eskisi gibi", () => {
     expect(proxy(req("/panel", COOKIE)).status).toBe(404);
     expect(proxy(req("/panel/talepler", COOKIE)).status).toBe(404);

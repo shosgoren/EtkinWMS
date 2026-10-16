@@ -14,6 +14,7 @@
     "./audit/today": "./src/audit/today.ts",
     "./audit/audit-query": "./src/audit/audit-query.ts",
     "./onboarding/templates": "./src/onboarding/templates.ts",
+    "./onboarding/reserved": "./src/onboarding/reserved.ts",
     "./onboarding/import": "./src/onboarding/index.ts",
     "./demo/seed": "./src/demo/seed.ts",
     "./catalog": "./src/catalog/index.ts",
@@ -28,7 +29,8 @@
     "./stock": "./src/stock/index.ts",
     "./stock/jobs": "./src/stock/jobs.ts",
     "./integrations": "./src/integrations/index.ts",
-    "./platform/demo-requests": "./src/platform/demo-requests.ts"
+    "./platform/demo-requests": "./src/platform/demo-requests.ts",
+    "./platform/activation": "./src/platform/activation.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
