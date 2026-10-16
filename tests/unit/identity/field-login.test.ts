@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import * as shared from "../../../packages/shared/src/field-login.ts";
 import * as auth from "../../../packages/auth/src/field.ts";
+import { pinProblem as clientPinProblem } from "../../../apps/web/app/field/pin.ts";
 
 describe("saha girişi kuralları (shared ↔ auth)", () => {
   it("iç e-posta alanı aynı", () => {
@@ -36,7 +37,10 @@ describe("saha girişi kuralları (shared ↔ auth)", () => {
 
   it("PIN kuralı aynı: 6 hane, bariz diziler yok", () => {
     const cases = ["000000", "111111", "123456", "234567", "890123", "654321", "098765", "12345", "1234567", "12a456", "135790", "482915", "112233"];
-    for (const pin of cases) expect(auth.pinAcceptable(pin), pin).toBe(shared.pinProblem(pin) === null);
+    for (const pin of cases) {
+      expect(auth.pinAcceptable(pin), pin).toBe(shared.pinProblem(pin) === null);
+      expect(clientPinProblem(pin), pin).toBe(shared.pinProblem(pin));
+    }
     expect(shared.pinProblem("482915")).toBeNull();
     expect(shared.pinProblem("123456")).toBe("OBVIOUS");
     expect(shared.pinProblem("12345")).toBe("FORMAT");

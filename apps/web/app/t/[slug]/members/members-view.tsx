@@ -6,7 +6,15 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { Banner, Button, ConfirmDialog, EmptyState } from "@wms/ui";
-import { changeRoleAction, issuePasswordResetLinkAction, removeMemberAction, revokeInvitationAction, transferOwnershipAction } from "./actions.ts";
+import {
+  changeRoleAction,
+  issuePasswordResetLinkAction,
+  removeMemberAction,
+  resetFieldCodeAction,
+  revokeInvitationAction,
+  transferOwnershipAction,
+  unlockFieldLoginAction,
+} from "./actions.ts";
 import { InviteDialog, LinkBox, ServerErrorBanner } from "./invite-dialog.tsx";
 import type { ServerError } from "./invite-dialog.tsx";
 
@@ -20,6 +28,8 @@ export interface MemberView {
   readonly isOwner: boolean;
   readonly isDemo: boolean;
   readonly resetLinkAvailable: boolean;
+  /** T-997: e-postasız saha personeli (iç e-posta gösterilmez). */
+  readonly field?: { readonly username: string; readonly active: boolean; readonly pendingUntil: string | null; readonly locked: boolean };
 }
 
 export interface PendingView {
@@ -30,7 +40,9 @@ export interface PendingView {
   readonly invitedBy: string;
 }
 
-type Kind = "role" | "remove" | "transfer" | "reset";
+type Kind = "role" | "remove" | "transfer" | "reset" | "fieldCode" | "unlock";
+
+const FIELD_ROLES: readonly string[] = ["PICKER", "COUNTER"];
 interface Confirm {
   readonly kind: Kind;
   readonly member: MemberView;
@@ -73,6 +85,7 @@ export function MembersView({
   const [resetUnavailable, setResetUnavailable] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<{ name: string; link: string } | null>(null);
+  const [fieldCode, setFieldCode] = useState<{ name: string; code: string } | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const returnTo = `/t/${slug}/members`;
 
@@ -96,6 +109,25 @@ export function MembersView({
     setResetUnavailable(false);
     setNotice(null);
     setResetLink(null);
+    setFieldCode(null);
+    if (kind === "fieldCode") {
+      const res = await resetFieldCodeAction({ slug, memberId: member.membershipId });
+      setBusy(false);
+      setConfirm(null);
+      if (!res.ok) return fail(res);
+      setFieldCode({ name: member.displayName, code: res.data.code });
+      router.refresh();
+      return;
+    }
+    if (kind === "unlock") {
+      const res = await unlockFieldLoginAction({ slug, memberId: member.membershipId });
+      setBusy(false);
+      setConfirm(null);
+      if (!res.ok) return fail(res);
+      setNotice(t("done.unlock"));
+      router.refresh();
+      return;
+    }
     if (kind === "reset") {
       const res = await issuePasswordResetLinkAction({ slug, memberId: member.membershipId });
       setBusy(false);
@@ -151,6 +183,14 @@ export function MembersView({
           <Button onClick={() => setInviteOpen(true)} disabled={!canManage || !hydrated} aria-describedby={canManage ? undefined : "invite-locked"}>
             {t("invite")}
           </Button>
+          {canManage ? (
+            <a
+              href={`/t/${slug}/members/field`}
+              className="inline-flex min-h-12 items-center justify-center rounded-card border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink"
+            >
+              {t("addField")}
+            </a>
+          ) : null}
           {canManage ? null : (
             <p id="invite-locked" className="max-w-xs break-words text-sm text-ink-muted">
               {t("lockedReason")}
@@ -162,6 +202,9 @@ export function MembersView({
       {notice ? <Banner kind="info">{notice}</Banner> : null}
       {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
       {resetUnavailable ? <Banner kind="error">{t("unavailableReason")}</Banner> : null}
+      {fieldCode ? (
+        <LinkBox title={`${t("linkBox.fieldCodeTitle")} · ${fieldCode.name}`} link={fieldCode.code} warning={t("linkBox.fieldCodeWarning")} onDismiss={() => setFieldCode(null)} />
+      ) : null}
       {resetLink ? (
         <LinkBox title={`${t("linkBox.resetTitle")} · ${resetLink.name}`} link={resetLink.link} warning={t("linkBox.resetWarning")} onDismiss={() => setResetLink(null)} />
       ) : null}
@@ -187,10 +230,19 @@ export function MembersView({
                     {m.isOwner ? <span className={`${BADGE} bg-warning-bg text-warning-ink`}>{t("ownerBadge")}</span> : null}
                     {self ? <span className={`${BADGE} bg-accent-soft text-accent-ink`}>{t("selfBadge")}</span> : null}
                     {m.isDemo ? <span className={`${BADGE} bg-locked-bg text-locked-ink`}>{t("demoBadge")}</span> : null}
+                    {m.field ? <span className={`${BADGE} bg-accent-soft text-accent-ink`}>{t("fieldBadge")}</span> : null}
+                    {m.field?.locked ? <span className={`${BADGE} bg-warning-bg text-warning-ink`}>{t("fieldLocked")}</span> : null}
                   </div>
-                  <p className="min-w-0 truncate text-base text-ink-muted" title={m.email}>
-                    {m.email}
-                  </p>
+                  {m.field && m.field.username === "" ? null : m.field ? (
+                    <p className="min-w-0 truncate text-base text-ink-muted">
+                      {`@${m.field.username} · `}
+                      {m.field.active ? t("fieldActive") : m.field.pendingUntil !== null ? t("fieldPending", { until: when(m.field.pendingUntil) }) : t("fieldNoCode")}
+                    </p>
+                  ) : (
+                    <p className="min-w-0 truncate text-base text-ink-muted" title={m.email}>
+                      {m.email}
+                    </p>
+                  )}
                   <p className="text-sm text-ink-muted">
                     {roleName(m.roles)} · {t("statusActive")}
                   </p>
@@ -204,7 +256,7 @@ export function MembersView({
                           disabled={lockText !== null}
                           onChange={(e) => setDraft({ ...draft, [m.userId]: e.target.value })}
                         >
-                          {roleKeys.map((r) => (
+                          {roleKeys.filter((r) => m.field === undefined || FIELD_ROLES.includes(r)).map((r) => (
                             <option key={r} value={r}>
                               {tr(r)}
                             </option>
@@ -223,21 +275,34 @@ export function MembersView({
                         <Button variant="danger" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "remove", member: m })}>
                           {t("remove")}
                         </Button>
-                        {m.isOwner ? null : (
+                        {m.isOwner || m.field ? null : (
                           <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "transfer", member: m })}>
                             {t("transfer")}
                           </Button>
                         )}
-                        <Button variant="secondary" disabled={resetLocked} aria-describedby={resetText === null ? undefined : `${noteId}-reset`} onClick={() => setConfirm({ kind: "reset", member: m })}>
-                          {t("resetLink")}
-                        </Button>
+                        {m.field ? (
+                          <>
+                            <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "fieldCode", member: m })}>
+                              {t("fieldNewCode")}
+                            </Button>
+                            {m.field.locked ? (
+                              <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "unlock", member: m })}>
+                                {t("fieldUnlock")}
+                              </Button>
+                            ) : null}
+                          </>
+                        ) : (
+                          <Button variant="secondary" disabled={resetLocked} aria-describedby={resetText === null ? undefined : `${noteId}-reset`} onClick={() => setConfirm({ kind: "reset", member: m })}>
+                            {t("resetLink")}
+                          </Button>
+                        )}
                       </div>
                       {lockText === null ? null : (
                         <p id={noteId} className="break-words text-sm text-ink-muted">
                           {lockText}
                         </p>
                       )}
-                      {resetText === null ? null : (
+                      {resetText === null || m.field ? null : (
                         <p id={`${noteId}-reset`} className="break-words text-sm text-ink-muted">
                           {resetText}
                         </p>

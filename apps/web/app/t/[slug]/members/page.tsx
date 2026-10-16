@@ -47,7 +47,7 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
-      <MembersView slug={slug} selfUserId={principal.userId} members={members.map((m) => ({ membershipId: m.membershipId, userId: m.userId, displayName: m.displayName, email: m.email, roles: m.roles, isOwner: m.isOwner, isDemo: m.isDemo, resetLinkAvailable: m.resetLinkAvailable }))} pending={pending} roleKeys={[...ROLE_KEYS]} />
+      <MembersView slug={slug} selfUserId={principal.userId} members={members.map((m) => ({ membershipId: m.membershipId, userId: m.userId, displayName: m.displayName, email: m.email, roles: m.roles, isOwner: m.isOwner, isDemo: m.isDemo, resetLinkAvailable: m.resetLinkAvailable, ...(m.field === undefined ? {} : { field: { username: m.field.username, active: m.field.active, pendingUntil: m.field.pendingUntil === null ? null : m.field.pendingUntil.toISOString(), locked: m.field.locked } }) }))} pending={pending} roleKeys={[...ROLE_KEYS]} />
     </main>
   );
 }

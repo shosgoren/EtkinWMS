@@ -31,5 +31,22 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const socialEnabled = process.env.AUTH_SOCIAL_ENABLED === "true";
   const t = await getTranslations("auth");
 
-  return <LoginForm next={next} socialEnabled={socialEnabled} banner={demo ? <Banner kind="warning">{t("login.demoBanner")}</Banner> : undefined} />;
+  // T-997: saha personeli (e-postasız) ayrı giriş ekranına gider (kullanıcı adı + PIN, yalnız kayıtlı cihaz).
+  const fieldLink = (
+    <a href="/field" className="text-base font-bold text-ink underline underline-offset-4">
+      {t("login.fieldLink")}
+    </a>
+  );
+  return (
+    <LoginForm
+      next={next}
+      socialEnabled={socialEnabled}
+      banner={
+        <>
+          {demo ? <Banner kind="warning">{t("login.demoBanner")}</Banner> : null}
+          {fieldLink}
+        </>
+      }
+    />
+  );
 }

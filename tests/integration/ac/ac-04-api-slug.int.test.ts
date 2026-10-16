@@ -38,6 +38,9 @@ vi.mock("../../../apps/web/lib/auth-service.ts", () => ({
   discardPasswordResetToken: () => Promise.resolve(),
   recordPasswordResetLinkIssued: () => Promise.resolve(),
   createInvitedAccount: () => Promise.reject(new Error("account creation must not be reached")),
+  // T-997: saha hesabı açma ve oturum kapatma çapraz tenant denemesinde hiç çağrılmamalı (ön denetim önce reddeder).
+  createFieldAccount: () => Promise.reject(new Error("field account creation must not be reached")),
+  revokeUserSessions: () => Promise.reject(new Error("session revocation must not be reached")),
   getAuthService: () => ({
     getPrincipal: (headers: Headers) => {
       const u = headers.get("x-test-user");
@@ -301,6 +304,8 @@ const LOADERS = [
   "layout.tsx",
   "page.tsx",
   "members/page.tsx",
+  // T-997: saha personeli ekle (users.manage; saha giriş listesi sayfanın kendisinde çözülür).
+  "members/field/page.tsx",
   "settings/page.tsx",
   "audit/page.tsx",
   "items/page.tsx",
@@ -821,6 +826,10 @@ const ACTIONS: Record<string, Call> = {
   leaveTenantAction: (slug) => members.leaveTenantAction!({ slug }),
   transferOwnershipAction: (slug, v) => members.transferOwnershipAction!({ slug, toMemberId: v.membership }),
   issuePasswordResetLinkAction: (slug, v) => members.issuePasswordResetLinkAction!({ slug, memberId: v.membership }),
+  // T-997: saha personeli; hesap açma ön denetimi (yetki/üyelik) hesap açılmadan önce, kod yenileme/kilit açma hedef üyelikle.
+  createFieldUserAction: (slug) => members.createFieldUserAction!({ slug, name: "Ele Gecirme", username: `x${rnd()}`.toLowerCase().slice(0, 30), roleKey: "PICKER", warehouseId: null }),
+  resetFieldCodeAction: (slug, v) => members.resetFieldCodeAction!({ slug, memberId: v.membership }),
+  unlockFieldLoginAction: (slug, v) => members.unlockFieldLoginAction!({ slug, memberId: v.membership }),
 };
 
 /** T-216: ürün kartı eylemleri; hepsi B'nin birim/ürün/barkod kimlikleriyle çağrılır (A veya B slug'ında). */
