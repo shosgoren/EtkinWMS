@@ -2891,6 +2891,8 @@
     "codeLabel": "TERMİNALDEKİ KOD",
     "errCode": "Kod terminaldeki kodla aynı değil. 3 yanlışta QR yenilenir.",
     "suspendedTitle": "Otomatik durduruldu · {name}",
-    "suspendedBody": "Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi. Hesapların kilidini Üyeler ekranından açın."
+    "suspendedBody": "Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi ve oturumları kapatıldı. Hesapların kilidini Üyeler ekranından açın.",
+    "closeSessions": "OTURUMLARI KAPAT",
+    "sessionsClosed": "Oturumlar kapatıldı."
   }
 }

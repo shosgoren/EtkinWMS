@@ -57,7 +57,17 @@ function Qr({ value, label }: { value: string; label: string }) {
   );
 }
 
-function View({ slug, tenantName, devices, suspended }: { slug: string; tenantName: string; devices: readonly DeviceItem[]; suspended: readonly string[] }) {
+function View({
+  slug,
+  tenantName,
+  devices,
+  suspended,
+}: {
+  slug: string;
+  tenantName: string;
+  devices: readonly DeviceItem[];
+  suspended: readonly { readonly id: string; readonly name: string }[];
+}) {
   const t = useTranslations("fieldDevices");
   const format = useFormatter();
   const { toggleTheme } = useDz();
@@ -148,6 +158,17 @@ function View({ slug, tenantName, devices, suspended }: { slug: string; tenantNa
     void start();
   }
 
+  async function closeSessions(deviceId: string): Promise<void> {
+    setBusy(true);
+    const r = await revokeDeviceAction({ slug, deviceId });
+    setBusy(false);
+    if (!r.ok) {
+      setErr({ text: t("errServer"), reauth: false });
+      return;
+    }
+    setNotice(t("sessionsClosed"));
+  }
+
   async function revoke(d: DeviceItem): Promise<void> {
     setBusy(true);
     const r = await revokeDeviceAction({ slug, deviceId: d.id });
@@ -181,13 +202,17 @@ function View({ slug, tenantName, devices, suspended }: { slug: string; tenantNa
         <div className="lin">
           <div className="mgrid">
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {suspended.map((name) => (
-                <div key={name} className="ban" style={{ background: dz("C62828"), color: dz("FFFFFF") }} role="alert">
+              {suspended.map((d) => (
+                <div key={d.id} className="ban" style={{ background: dz("C62828"), color: dz("FFFFFF") }} role="alert">
                   <Ico d={GICON.warn} size={22} />
-                  <span>
-                    <b>{t("suspendedTitle", { name })}</b>
+                  <span style={{ flex: 1 }}>
+                    <b>{t("suspendedTitle", { name: d.name })}</b>
                     {t("suspendedBody")}
                   </span>
+                  {/* İptal edilmiş cihazda oturum kapatma yeniden denenir (ALREADY yolu; inceleme n1/m2). */}
+                  <button type="button" className="sbtn" style={{ background: dz("255,255,255,.2"), color: dz("FFFFFF") }} onClick={() => void closeSessions(d.id)} disabled={busy}>
+                    {t("closeSessions")}
+                  </button>
                 </div>
               ))}
               <div className="shd">
@@ -320,7 +345,7 @@ export function DevicesView({
   slug: string;
   tenantName: string;
   devices: readonly DeviceItem[];
-  suspended: readonly string[];
+  suspended: readonly { readonly id: string; readonly name: string }[];
 }) {
   return (
     <DzRoot dark={dark} scope="dzg" testId="field-devices">

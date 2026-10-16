@@ -43,7 +43,7 @@ export default async function DevicesPage({ params }: { params: Promise<{ slug: 
       dark={dark}
       slug={slug}
       tenantName={tenantName}
-      suspended={suspended.map((d) => d.name)}
+      suspended={suspended.map((d) => ({ id: d.id, name: d.name }))}
       devices={devices.map((d) => ({ id: d.id, kind: d.kind, name: d.name, owner: d.owner, lastUsedAt: d.lastUsedAt.toISOString() }))}
     />
   );

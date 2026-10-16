@@ -120,7 +120,8 @@ DECLARE
   v_prev text := pg_catalog.current_setting('app.current_tenant_id', true);
   v_id uuid;
   v_name text := NULLIF(pg_catalog.left(pg_catalog.btrim(coalesce(p_name, '')), 60), '');
-  v_code text := pg_catalog.lpad((pg_catalog.floor(pg_catalog.random() * 1000000))::int::text, 6, '0');
+  -- Doğrulama kodu güvenli kaynaktan (gen_random_uuid; inceleme n3).
+  v_code text := pg_catalog.lpad(((pg_catalog.abs(('x' || pg_catalog.substr(pg_catalog.md5(gen_random_uuid()::text), 1, 8))::bit(32)::bigint) % 1000000))::text, 6, '0');
 BEGIN
   IF p_tenant IS NULL OR p_token_hash IS NULL OR p_token_hash !~ '^[0-9a-f]{64}$' OR p_device_token_hash IS NULL
      OR p_device_token_hash !~ '^[0-9a-f]{64}$' THEN
@@ -250,9 +251,9 @@ $fn$;
 
 -- Toplu kilitleme koruması (T-997 koşul 1; wms_auth giriş ucu her KİLİT yanıtında çağırır): kilitli hesabı bu ORTAK cihazla eşleyip
 -- `field_device_lockouts`'a yazar; 60 dakikada 3 farklı hesap → cihaz kendiliğinden iptal (`LOCK_SPREE`) + `device.suspended`.
--- Dönüş: cihaz bu çağrıda durduruldu mu.
+-- Dönüş: bu çağrıda durdurulan cihazın kimliği (oturumlarını çağıran kimlik servisi kapatır) ya da NULL.
 CREATE FUNCTION wms_probe.field_lock_spree_check(p_tenant uuid, p_token_hash text, p_username text)
-RETURNS boolean
+RETURNS uuid
   LANGUAGE plpgsql
   VOLATILE
   SECURITY DEFINER
@@ -266,7 +267,7 @@ DECLARE
   v_done boolean := false;
 BEGIN
   IF p_tenant IS NULL OR p_token_hash IS NULL OR p_token_hash !~ '^[0-9a-f]{64}$' THEN
-    RETURN false;
+    RETURN NULL;
   END IF;
   PERFORM pg_catalog.set_config('app.current_tenant_id', p_tenant::text, true);
   SELECT d.id INTO v_device FROM public.field_devices d
@@ -290,7 +291,10 @@ BEGIN
     VALUES (NULL, 'device.suspended', pg_catalog.jsonb_build_object('tenant_id', p_tenant::text, 'device_id', v_device::text,
             'reason', 'lock_spree', 'locked_accounts', v_n));
   END IF;
-  RETURN v_done;
+  IF v_done THEN
+    RETURN v_device;
+  END IF;
+  RETURN NULL;
 END
 $fn$;
 

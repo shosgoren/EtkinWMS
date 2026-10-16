@@ -332,7 +332,12 @@ describe("ortak cihazda kullanım ve iptal", () => {
     const fx = await mkTenant();
     const users = [await enrolled(fx), await enrolled(fx), await enrolled(fx)];
     const shared = await sharedDevice(fx, "Tablet 3");
-    let cookie = shared.cookie;
+    // Cihazda açık bir oturum (durdurmada kapanmalı) ve kilitli hesaba yapılan denemeler sayılmamalı.
+    const extra = await enrolled(fx);
+    const open = await post("/field/sign-in", { workspace: fx.slug, username: extra.username, pin: extra.pin }, shared.cookie);
+    expect(open.status).toBe(200);
+    const openJar = jarFrom(open);
+    let cookie = deviceOnly(openJar);
     for (const u of users) {
       const wrong = u.pin === "482915" ? "579302" : "482915";
       for (let i = 0; i < 5; i++) {
@@ -340,6 +345,7 @@ describe("ortak cihazda kullanım ve iptal", () => {
         cookie = deviceOnly(jarFrom(r, cookie)) || cookie;
       }
     }
+    expect(await auth.getPrincipal(new Headers({ cookie: openJar }))).toBeNull();
     const dev = await adm.query("SELECT revoked_at IS NOT NULL AS revoked, revoke_reason FROM public.field_devices WHERE id = $1", [shared.deviceId]);
     expect(dev.rows[0]).toEqual({ revoked: true, revoke_reason: "LOCK_SPREE" });
     expect((await listSuspendedDevices(access(fx))).map((d) => d.name)).toEqual(["Tablet 3"]);
@@ -361,5 +367,26 @@ describe("ortak cihazda kullanım ve iptal", () => {
     expect(await auth.getPrincipal(new Headers({ cookie: jar }))).toBeNull();
     const by = await adm.query("SELECT revoked_by FROM public.field_devices WHERE id = $1", [shared.deviceId]);
     expect(by.rows[0]?.revoked_by).toBe(fx.ownerId);
+  });
+
+  it("toplu kilitleme sayacı yalnız bu cihazda konan kilidi sayar: başka cihazda kilitlenmiş hesapların denemeleri cihazı durdurmaz", async () => {
+    const fx = await mkTenant();
+    const users = [await enrolled(fx), await enrolled(fx), await enrolled(fx)];
+    // Hesaplar kişisel telefonlarında kilitlenir.
+    for (const u of users) {
+      let c = u.device;
+      const wrong = u.pin === "482915" ? "579302" : "482915";
+      for (let i = 0; i < 5; i++) {
+        const r = await post("/field/sign-in", { workspace: fx.slug, username: u.username, pin: wrong }, c);
+        c = deviceOnly(jarFrom(r, c)) || c;
+      }
+    }
+    const shared = await sharedDevice(fx, "Depo terminali");
+    for (const u of users) {
+      const r = await post("/field/sign-in", { workspace: fx.slug, username: u.username, pin: u.pin }, shared.cookie);
+      expect([r.status, await code(r)]).toEqual([403, "FIELD_LOGIN_LOCKED"]);
+    }
+    const dev = await adm.query("SELECT revoked_at FROM public.field_devices WHERE id = $1", [shared.deviceId]);
+    expect(dev.rows[0]?.revoked_at).toBeNull();
   });
 });

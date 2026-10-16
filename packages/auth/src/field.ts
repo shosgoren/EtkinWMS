@@ -107,6 +107,8 @@ export interface FieldPluginDeps {
   /** Oturuma `mfa_verified_at = now()`; yazılamazsa oturum silinir (index.ts `sessionWriteOrRevoke`). */
   readonly markSessionVerified: (token: string) => Promise<void>;
   readonly secureCookies: boolean;
+  /** Maskeli hata günlüğü (değer/parametre yazmaz). */
+  readonly log?: (message: string, error: unknown) => void;
 }
 
 export function fieldDeviceCookieName(secure: boolean): string {
@@ -138,11 +140,23 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
     await deps.verifyPin(await deps.dummyHash(), pin).catch(() => false);
   }
 
-  /** Toplu kilitleme koruması (T-997 koşul 1, T-998): kilit yanıtında ortak cihaz + hesap eşlenir; 60 dk'da 3 hesap → cihaz durdurulur. */
+  /**
+   * Toplu kilitleme koruması (T-997 koşul 1, T-998): YALNIZ bu istekte konan kilitte (yanlış PIN → kilit geçişi; kilitli hesaba deneme
+   * sayılmaz, inceleme n2) ortak cihaz + hesap eşlenir; 60 dk'da 3 hesap → cihaz durdurulur ve o cihazdaki oturumlar AYNI istekte kapanır
+   * (inceleme n1). Hata loglanır (sessiz koruma kaybı yok).
+   */
   async function spree(tenantId: string, tokenHash: string, username: string): Promise<void> {
-    await deps
-      .execute(sql`SELECT wms_probe.field_lock_spree_check(${tenantId}::uuid, ${tokenHash}, ${username}) AS suspended`)
-      .catch(() => undefined);
+    try {
+      const rows = await deps.execute<{ device: string | null }>(
+        sql`SELECT wms_probe.field_lock_spree_check(${tenantId}::uuid, ${tokenHash}, ${username}) AS device`,
+      );
+      const device = rows[0]?.device ?? null;
+      if (device !== null && UUID.test(device)) {
+        await deps.execute(sql`DELETE FROM public.sessions WHERE id IN (SELECT session_id FROM public.field_sessions WHERE device_id = ${device}::uuid)`);
+      }
+    } catch (e) {
+      deps.log?.("field lock spree check failed", e);
+    }
   }
 
   /**
@@ -265,7 +279,6 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const r = rows[0];
         if (r?.outcome === "LOCKED") {
           await burn(pin);
-          await spree(parsed.tenantId, parsed.tokenHash, username);
           throw LOCKED();
         }
         // Cihaz tenant'ı ile girilen alan aynı olmalı (başka tenant'ın cihazı reddi; işlev de tenant içinde arar).
@@ -292,7 +305,8 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         );
         const outcome = finished[0]?.outcome;
         if (outcome === "LOCKED") {
-          await spree(parsed.tenantId, parsed.tokenHash, username);
+          // Yanlış PIN ile konan kilit (geçiş); doğru PIN'in paralel kilide takılması sayılmaz.
+          if (!ok) await spree(parsed.tenantId, parsed.tokenHash, username);
           throw LOCKED();
         }
         if (!ok || outcome !== "OK") throw DENIED();

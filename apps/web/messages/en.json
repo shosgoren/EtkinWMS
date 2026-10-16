@@ -2891,6 +2891,8 @@
     "codeLabel": "CODE ON THE TERMINAL",
     "errCode": "The code doesn't match the terminal. After 3 wrong tries the QR is renewed.",
     "suspendedTitle": "Automatically stopped · {name}",
-    "suspendedBody": "3 accounts were locked from this device within an hour; the device was revoked. Unlock the accounts from the Members screen."
+    "suspendedBody": "3 accounts were locked from this device within an hour; the device was revoked and its sessions closed. Unlock the accounts from the Members screen.",
+    "closeSessions": "CLOSE SESSIONS",
+    "sessionsClosed": "Sessions closed."
   }
 }

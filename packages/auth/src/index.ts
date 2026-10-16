@@ -1494,6 +1494,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
         markSessionVerified: (token) =>
           sessionWriteOrRevoke(token, () => authDb.execute(sql`UPDATE public.sessions SET mfa_verified_at = now() WHERE token = ${token}`)),
         secureCookies: new URL(env.baseUrl).protocol === "https:",
+        log: (message, error) => logMasked("error", message, error),
       }),
       // Her zaman SON eklenti (cookie-plugin-guard.mjs uyarısı).
       nextCookies(),
