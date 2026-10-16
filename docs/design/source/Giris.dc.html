@@ -465,17 +465,28 @@ button,input{font:inherit;color:inherit}
       <div class="rows"><sc-for list="{{opList}}" as="r" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{r.avBg}}; color: {{r.avFg}}">{{r.ini}}</span><span class="rt"><b>{{r.n}}</b><span>{{r.s}}</span></span><sc-if value="{{r.open}}" hint-placeholder-val="{{true}}"><div class="rbtns"><button type="button" class="sbtn" style="background: {{c.chip}}" onClick="{{r.no}}" aria-label="Reddet"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="tx">REDDET</span></button><button type="button" class="sbtn" style="background: #17804F; color: #FFFFFF" onClick="{{r.yes}}" aria-label="Onayla"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M4 12l5 5L20 6"></path></svg><span class="tx">ONAYLA</span></button></div></sc-if><sc-if value="{{r.closed}}" hint-placeholder-val="{{false}}"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></sc-if></div></sc-for></div>
     </sc-if>
 
-    <!-- ── 10 HOŞ GELDİNİZ E-POSTASI ── -->
+    <!-- ── 10 HOŞ GELDİNİZ E-POSTASI (T-412 kurumsal düzen: lacivert marka bandı, sarı çizgi, düğme bilgilerin üstünde, ham bağlantı yok, şirket alt bilgisi) ── -->
     <sc-if value="{{v.mail}}" hint-placeholder-val="{{false}}">
       <div class="mail" style="background: {{c.surface}}">
         <div class="mail-h" style="background: {{c.chip}}"><span>KİMDEN · Etkin WMS &lt;bildirim@etkinyazilim.com&gt;</span><span>KİME · {{f.ownerMail}}</span><span>KONU · Etkin WMS çalışma alanınız hazır</span></div>
-        <div class="mail-b">
-          <div class="brand"><svg width="28" height="28" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle cx="80" cy="82" r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"></circle></svg><b>ETKİN WMS</b></div>
-          <b style="font: 800 24px/1.15 'Bricolage Grotesque', sans-serif">Hoş geldiniz, {{f.co}}</b>
-          <p>Çalışma alanınız kuruldu. Bu bilgileri kolay bulmanız için saklayın.</p>
-          <dl class="kv" style="background: {{c.chip}}"><dt>ADRES</dt><dd>wms.etkinyazilim.com/{{slugShow}}</dd><dt>GİRİŞ E-POSTASI</dt><dd>{{f.ownerMail}}</dd><dt>SAHA GİRİŞİ</dt><dd>Çalışma alanı: {{slugShow}}</dd><dt>DENEME</dt><dd>{{trialEnd}} tarihine kadar</dd></dl>
-          <p>Parolanız ve doğrulama kodlarınız bu e-postada <b>yer almaz</b>. Parolanızı unutursanız giriş ekranındaki "Parolamı unuttum" bağlantısını kullanın.</p>
-          <a href="#" class="big" style="background: #172E42; color: #FFFFFF; text-decoration: none; flex: none">ÇALIŞMA ALANINI AÇ</a>
+        <div style="padding: 20px 12px; background: #F3F1EA">
+          <div style="max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; overflow: hidden; color: #172E42; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 20px 28px; background: #172E42"><svg width="40" height="40" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block; border-radius: 9px"><rect width="120" height="120" fill="#172E42"></rect><g transform="translate(60 60) scale(.62) translate(-60 -60)"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle cx="80" cy="82" r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"></circle></g></svg><b style="font: 800 20px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #FFFFFF">Etkin WMS</b><span style="margin-left: auto; font: 600 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .04em; color: #C9D3DC">etkinyazilim.com</span></div>
+            <div style="height: 4px; background: #F4C542"></div>
+            <div style="padding: 34px 28px 30px">
+              <div style="margin: 0 0 16px; font: 800 24px/1.25 'Helvetica Neue', Helvetica, Arial, sans-serif">Hoş geldiniz, {{f.co}}</div>
+              <p style="margin: 0 0 14px; font: 400 16px/1.6 'Helvetica Neue', Helvetica, Arial, sans-serif">Çalışma alanınız kuruldu. Bu bilgileri kolay bulmanız için saklayın.</p>
+              <a href="#" style="display: inline-block; margin: 10px 0 24px; padding: 16px 30px; border-radius: 10px; background: #172E42; color: #FFFFFF; text-decoration: none; font: 700 15px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .02em">Çalışma alanını aç</a>
+              <div style="margin: 4px 0 18px; border-radius: 12px; background: #F3F1EA">
+                <div style="padding: 12px 16px"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">ADRES</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; overflow-wrap: anywhere">wms.etkinyazilim.com/{{slugShow}}</div></div>
+                <div style="padding: 12px 16px; border-top: 1px solid #E4DFD3"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">GİRİŞ E-POSTASI</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; overflow-wrap: anywhere">{{f.ownerMail}}</div></div>
+                <div style="padding: 12px 16px; border-top: 1px solid #E4DFD3"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">SAHA GİRİŞİ</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif">Çalışma alanı: {{slugShow}}</div></div>
+                <div style="padding: 12px 16px; border-top: 1px solid #E4DFD3"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">DENEME</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif">{{trialEnd}} tarihine kadar</div></div>
+              </div>
+              <p style="margin: 0; font: 400 16px/1.6 'Helvetica Neue', Helvetica, Arial, sans-serif">Parolanız ve doğrulama kodlarınız bu e-postada yer almaz. Parolanızı unutursanız giriş ekranındaki "Parolamı unuttum" bağlantısını kullanın.</p>
+            </div>
+            <div style="padding: 20px 28px; background: #F3F1EA; border-top: 1px solid #E4DFD3"><p style="margin: 0 0 4px; font: 700 13px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif">Etkin Yazılım · <span style="font-weight: 400">Depo ve stok yönetimi</span></p><p style="margin: 0; font: 400 12px/1.6 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #5B6E7F"><a href="#" style="color: #172E42">etkinyazilim.com</a> · Bu e-posta otomatik olarak gönderilmiştir.</p></div>
+          </div>
         </div>
       </div>
     </sc-if>
