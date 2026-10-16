@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DemoRequestRow } from "@wms/domain/platform/demo-requests";
-import { rowState, whenLabel } from "./view.tsx";
+import { rowState, whenLabel, type DemoRequestRow } from "./view.tsx";
 
 const now = new Date("2026-10-16T10:00:00+03:00");
 const base: DemoRequestRow = {

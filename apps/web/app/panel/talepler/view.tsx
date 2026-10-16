@@ -3,10 +3,24 @@
 // Satırlar gerçek veridir (wms_platform.demo_requests, aktivasyon durumuyla). Kapı ve veri page.tsx'te; eylem actions.ts'te.
 // Ekranda teslimde bağlantı yalnız eylem yanıtıyla gelir ve yalnız bu bileşenin durumunda yaşar (yenilemede kaybolur; "Yeni bağlantı").
 import { useActionState, useState } from "react";
-import type { DemoRequestRow } from "@wms/domain/platform/demo-requests";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import type { TaleplerActionState } from "./actions.ts";
+
+/** Talep satırı (sunucudaki `DemoRequestRow` ile aynı biçim; istemci dosyası sunucu paketini içe aktarmaz — T-127b). */
+export interface DemoRequestRow {
+  readonly id: string;
+  readonly receivedAt: Date;
+  readonly name: string;
+  readonly company: string;
+  readonly email: string;
+  readonly sector: string;
+  readonly message: string;
+  readonly status: "PENDING" | "APPROVED" | "REJECTED";
+  readonly decidedAt: Date | null;
+  readonly activation: { readonly delivery: "EMAIL" | "SCREEN"; readonly expiresAt: Date } | null;
+  readonly activatedAt: Date | null;
+}
 
 export interface TaleplerLabels {
   readonly banTitle: string;

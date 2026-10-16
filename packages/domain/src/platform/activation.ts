@@ -12,7 +12,7 @@
 //   `VALIDATION_FAILED` + `CODE_TAKEN`. Kişisel veri günlüğe yazılmaz.
 import { createHash, randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { MembershipError, appendAudit, withNewTenant, withUser } from "@wms/db";
+import { MembershipError, appendAudit, currentTenantId, withNewTenant, withUser } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { canDeliver, type MailConfig } from "@wms/shared/mailer";
 import { PLATFORM_NO_USER_ID, type JobQueue } from "@wms/shared/queue";
@@ -313,13 +313,15 @@ export interface WelcomeMailData {
 
 /** `trial.welcome` işi için (worker `ctx.inTenant`): sahibin e-postası, firma, adres, dil ve deneme bitişi. Sır yok. */
 export async function readWelcomeMailData(tx: AccessTx): Promise<WelcomeMailData | null> {
+  const tenantId = await currentTenantId(tx);
+  if (tenantId === undefined) return null;
   const rows = await tx.execute<{ email: string; name: string; slug: string; locale: string | null }>(
     sql`SELECT u.email, t.name, t.slug, s.locale
           FROM public.tenants t
           JOIN public.tenant_memberships m ON m.tenant_id = t.id AND m.is_owner AND m.status = 'ACTIVE'
           JOIN public.users u ON u.id = m.user_id
           LEFT JOIN public.tenant_settings s ON s.tenant_id = t.id
-         WHERE t.id = NULLIF(pg_catalog.current_setting('app.current_tenant_id', true), '')::uuid
+         WHERE t.id = ${tenantId}::uuid
          ORDER BY m.joined_at
          LIMIT 1`,
   );
