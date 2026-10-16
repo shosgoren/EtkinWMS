@@ -61,16 +61,16 @@ function start(cmd: string, args: string[], env: NodeJS.ProcessEnv, logName: str
 }
 
 /** Next'in desteklenen standalone çıktısı: Cloud'da derleme ayrı yerel konteynerde yapılabilir. */
-function startWeb(port: number, env: NodeJS.ProcessEnv, logName: string): ChildProcess {
+function startWeb(port: number, env: NodeJS.ProcessEnv, logName: string, host = "127.0.0.1"): ChildProcess {
   if (process.env.E2E_STANDALONE === "1") {
     const webRoot = path.join(ROOT, "apps/web");
     const output = path.join(webRoot, ".next/standalone/apps/web");
     if (!existsSync(path.join(output, "server.js"))) throw new Error("e2e: standalone build yok");
     cpSync(path.join(webRoot, ".next/static"), path.join(output, ".next/static"), { recursive: true });
     if (existsSync(path.join(webRoot, "public"))) cpSync(path.join(webRoot, "public"), path.join(output, "public"), { recursive: true });
-    return start("node", [path.join(output, "server.js")], { ...env, PORT: String(port), HOSTNAME: "127.0.0.1" }, logName);
+    return start("node", [path.join(output, "server.js")], { ...env, PORT: String(port), HOSTNAME: host }, logName);
   }
-  return start("pnpm", ["--filter", "@wms/web", "exec", "next", "start", "-p", String(port), "-H", "127.0.0.1"], env, logName);
+  return start("pnpm", ["--filter", "@wms/web", "exec", "next", "start", "-p", String(port), "-H", host], env, logName);
 }
 
 function stop(child: ChildProcess | undefined): void {
@@ -219,7 +219,9 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
     const portSite = port + 6;
     const panelEnv: NodeJS.ProcessEnv = { ...env, APP_SURFACE: "panel", BETTER_AUTH_URL: `https://localhost:${portPanel}`, MARKETING_URL: `http://localhost:${portSite}` };
     delete panelEnv.DEMO_MODE;
-    const panel = startWeb(innerPanel, panelEnv, "web-panel.log");
+    // Üretimdeki gibi tüm arayüzlerde (HOSTNAME=0.0.0.0): Next bu durumda iç yeniden yazmanın kökenini istek başlıklarından kurar; belirli
+    // bir adrese bağlıyken kendi `localhost:<iç port>` kökenini https sanıp yeniden yazmayı dış vekil isteğine çeviriyordu (T-407).
+    const panel = startWeb(innerPanel, panelEnv, "web-panel.log", "0.0.0.0");
     children.push(panel);
     const site = start("node", ["marketing/server.mjs"], { PATH: process.env.PATH, PORT: String(portSite), LEAD_DIR: path.join(OUT, "marketing-leads"), SITE_CONTENT_URL: `http://127.0.0.1:${innerPort}/api/public/site` }, "marketing.log");
     children.push(site);
