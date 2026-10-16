@@ -394,7 +394,9 @@
     "validation_failed_plan_invalid": "Paket bilgileri geçersiz.",
     "validation_failed_plan_invalidAction": "Adı, fiyatı ve sınırları kontrol edip tekrar deneyin.",
     "validation_failed_reason_required": "Gerekçe gerekli.",
-    "validation_failed_reason_requiredAction": "Askıya alma için gerekçe yazın."
+    "validation_failed_reason_requiredAction": "Askıya alma için gerekçe yazın.",
+    "validation_failed_payment_invalid": "Ödeme kaydı geçersiz.",
+    "validation_failed_payment_invalidAction": "Tarihi (bugün ya da önce), yöntemi ve notu kontrol edin."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",
@@ -2357,7 +2359,8 @@
     "nav": {
       "musteriler": "Müşteriler",
       "talepler": "Demo talepleri",
-      "paketler": "Paketler"
+      "paketler": "Paketler",
+      "odemeler": "Ödemeler"
     },
     "talepler": {
       "title": "Demo talepleri",
@@ -2517,7 +2520,94 @@
       "unitField": "saha personeli",
       "unitWarehouses": "depo",
       "unitItems": "kalem",
-      "unlimited": "Sınırsız"
+      "unlimited": "Sınırsız",
+      "vOverdue": "Ödeme gecikti"
+    },
+    "odemeler": {
+      "title": "Ödemeler",
+      "sub": "İYZİCO ABONELİK · AYLIK",
+      "newAccrual": "Dönem tahakkuku",
+      "months": [
+        "OCAK",
+        "ŞUBAT",
+        "MART",
+        "NİSAN",
+        "MAYIS",
+        "HAZİRAN",
+        "TEMMUZ",
+        "AĞUSTOS",
+        "EYLÜL",
+        "EKİM",
+        "KASIM",
+        "ARALIK"
+      ],
+      "states": {
+        "PAID": "ÖDENDİ",
+        "OVERDUE": "GECİKTİ",
+        "PENDING": "BEKLİYOR"
+      },
+      "tabs": {
+        "all": "Hepsi",
+        "PAID": "Ödendi",
+        "OVERDUE": "Gecikti",
+        "PENDING": "Bekliyor"
+      },
+      "tabsLabel": "Ödeme durumu",
+      "colFirm": "FİRMA",
+      "colPeriod": "DÖNEM",
+      "colPlan": "PAKET",
+      "colAmount": "TUTAR",
+      "colState": "DURUM",
+      "colInvoice": "FATURA",
+      "empty": "BU FİLTREDE KAYIT YOK",
+      "markPaid": "Ödendi işaretle",
+      "remind": "Hatırlat",
+      "remindSoon": "Yakında: hatırlatma e-postası",
+      "banTitle": "Resmi fatura şirket kurulunca",
+      "banBody": "Fatura numaraları e-Arşiv entegratörü bağlanınca dolar. O zamana kadar tahakkuk ve tahsilat burada izlenir.",
+      "paidTitle": "Ödeme kaydı",
+      "paidDate": "TAHSİLAT TARİHİ",
+      "method": "YÖNTEM",
+      "methodLabel": "Ödeme yöntemi",
+      "methods": {
+        "HAVALE": "Havale / EFT",
+        "KART": "Kredi kartı",
+        "NAKIT": "Nakit"
+      },
+      "note": "NOT (İSTEĞE BAĞLI)",
+      "notePlaceholder": "Örn. dekont no, banka",
+      "paidBan": "Ödeme sağlayıcısı bağlanınca kartla ödemeler kendiliğinden düşer; havale ve nakit buradan işaretlenir.",
+      "cancel": "Vazgeç",
+      "savePaid": "Ödendi olarak kaydet",
+      "accrueTitle": "{period} tahakkukları oluşturulsun mu?",
+      "accrueBody": "Paketi atanmış ve deneme süresi bitmiş her müşteri için bu ayın tutarı açılır. Daha önce açılmış dönemler atlanır; tutar müşterinin paket fiyatıdır (KDV hariç).",
+      "accrue": "Tahakkukları oluştur",
+      "accrued": "{n} tahakkuk açıldı.",
+      "error": "İşlem yapılamadı ({code}). Sayfayı yenileyip tekrar deneyin.",
+      "kPaid": "BU AY TAHSİL",
+      "kPaidSub": "ÖDEME",
+      "kOverdue": "GECİKEN",
+      "kOverdueSub": "ÖDEME · {n} MÜŞTERİ",
+      "kPending": "BEKLEYEN",
+      "kPendingSub": "ÖDEME · {date}",
+      "kPendingNone": "ÖDEME",
+      "kInvoice": "FATURA BEKLEYEN",
+      "kInvoiceSub": "E-ARŞİV BAĞLANINCA",
+      "invoicePending": "BEKLİYOR",
+      "monthNames": [
+        "Ocak",
+        "Şubat",
+        "Mart",
+        "Nisan",
+        "Mayıs",
+        "Haziran",
+        "Temmuz",
+        "Ağustos",
+        "Eylül",
+        "Ekim",
+        "Kasım",
+        "Aralık"
+      ]
     }
   },
   "activate": {
