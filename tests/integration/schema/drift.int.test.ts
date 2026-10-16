@@ -164,7 +164,7 @@ describe(`identity schema drift (target=${env.target})`, () => {
       // `id` sütunu olan her Drizzle tablosu (tenant_settings'in PK'si tenant_id'dir, request_rate_limits'in bilesik PK'si vardir; `id` yoktur).
       const withId = allTables().filter((t) => pgCore.getTableConfig(t).columns.some((c) => c.name === "id"));
       expect(ids.rows.length).toBe(withId.length);
-      expect(withId.length).toBe(52); // T-989: + problem_reports (work_priorities'ta id yok); T960: + production_batches, production_packages; T-903b: + production_recipes; T-252: + external_refs, sync_cursors; T-251: + code_history; T-302: + warehouse_tasks, count_sessions, count_session_lines, item_stock_policies, stock_alerts; T-301: + inbound_receipts, inbound_receipt_lines, sales_orders, sales_order_lines, customer_returns, customer_return_lines; T-211: + stock_consistency_runs, stock_consistency_signals; T-202: + warehouses, locations; T-204: + units, items, unit_conversions, item_barcodes, inventory_owners, lots, serials, handling_units; T-206: + document_type_versions, documents, document_lines, document_status_history, idempotency_records; T-232: + stock_dimensions, stock_ledger, reservations (stock_balances'ta id yok)
+      expect(withId.length).toBe(54); // T-997: + field_logins, field_devices; T-989: + problem_reports (work_priorities'ta id yok); T960: + production_batches, production_packages; T-903b: + production_recipes; T-252: + external_refs, sync_cursors; T-251: + code_history; T-302: + warehouse_tasks, count_sessions, count_session_lines, item_stock_policies, stock_alerts; T-301: + inbound_receipts, inbound_receipt_lines, sales_orders, sales_order_lines, customer_returns, customer_return_lines; T-211: + stock_consistency_runs, stock_consistency_signals; T-202: + warehouses, locations; T-204: + units, items, unit_conversions, item_barcodes, inventory_owners, lots, serials, handling_units; T-206: + document_type_versions, documents, document_lines, document_status_history, idempotency_records; T-232: + stock_dimensions, stock_ledger, reservations (stock_balances'ta id yok)
       for (const r of ids.rows) {
         expect(r.data_type, r.table_name).toBe("uuid");
         expect(r.column_default, r.table_name).toBe("gen_random_uuid()");
@@ -587,5 +587,50 @@ describe(`number_sequences tür CHECK'i ile numbering.ts eşitliği (0022, T-305
     } finally {
       await client.end();
     }
+  });
+  async function query<T extends pg.QueryResultRow>(sql: string, params: unknown[] = []): Promise<T[]> {
+    const client = new pg.Client({ connectionString: env.databaseUrlDirect });
+    try {
+      await client.connect();
+      return (await client.query<T>(sql, params)).rows;
+    } catch (e) {
+      throw new Error(redactErrorChain(e, secretUrls(env)));
+    } finally {
+      await client.end();
+    }
+  }
+
+  it("T-997 (0044): saha tablolarinda probe yalniz belgeli sutunlara yazar, politika yok; ozet sutunlari uygulama/kimlik rolune kapali", async () => {
+    const cols = await query<{ t: string; a: string; p: string }>(
+      `SELECT c.relname AS t, a.attname AS a, x.p
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+         CROSS JOIN unnest(ARRAY['INSERT', 'UPDATE']) AS x(p)
+        WHERE n.nspname = 'public' AND c.relname IN ('field_logins', 'field_devices')
+          AND has_column_privilege('wms_identity_probe', c.oid, a.attname, x.p)
+        ORDER BY 1, 3, 2`,
+    );
+    expect(cols.map((r) => `${r.t}.${r.p}.${r.a}`)).toEqual([
+      "field_devices.INSERT.created_by", "field_devices.INSERT.kind", "field_devices.INSERT.name", "field_devices.INSERT.tenant_id",
+      "field_devices.INSERT.token_hash", "field_devices.INSERT.user_id",
+      "field_devices.UPDATE.last_used_at", "field_devices.UPDATE.revoked_at", "field_devices.UPDATE.token_hash",
+      "field_logins.UPDATE.activation_expires_at", "field_logins.UPDATE.activation_failed_count", "field_logins.UPDATE.activation_hash", "field_logins.UPDATE.failed_count",
+      "field_logins.UPDATE.lock_count", "field_logins.UPDATE.locked_until", "field_logins.UPDATE.pin_hash", "field_logins.UPDATE.pin_set_at",
+    ]);
+    const other = await query<{ w: boolean }>(
+      `SELECT bool_or(has_table_privilege('wms_identity_probe', t, 'DELETE, TRUNCATE')
+                      OR has_any_column_privilege('wms_auth', t, 'SELECT, INSERT, UPDATE')
+                      OR has_column_privilege('wms_app', 'public.field_logins', 'pin_hash', 'SELECT')
+                      OR has_column_privilege('wms_app', 'public.field_logins', 'activation_hash', 'SELECT')
+                      OR has_column_privilege('wms_app', 'public.field_logins', 'pin_hash', 'UPDATE')
+                      OR has_column_privilege('wms_app', 'public.field_devices', 'token_hash', 'SELECT')) AS w
+         FROM unnest(ARRAY['public.field_logins', 'public.field_devices']) AS t`,
+    );
+    expect(other[0]?.w).toBe(false);
+    const pols = await query<{ p: string }>(
+      `SELECT tablename || '.' || policyname AS p FROM pg_policies
+        WHERE schemaname = 'public' AND tablename IN ('field_logins', 'field_devices') ORDER BY 1`,
+    );
+    expect(pols.map((r) => r.p)).toEqual(["field_devices.field_devices_isolation", "field_logins.field_logins_isolation"]);
   });
 });

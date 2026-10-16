@@ -102,6 +102,9 @@ interface TenantTable {
   ownerIsApp: boolean;
   insertCols: string[];
   updateCols: string[];
+  /** wms_app'in okuyabildiği sütunlar; tümü değilse (T-997: özet sütunları kapalı) satır kimliği bu sütunlardan kurulur. */
+  selectCols: string[];
+  allCols: string[];
   canDelete: boolean;
 }
 
@@ -111,6 +114,17 @@ let multi: { userId: string };
 let appClient: pg.Client;
 let admin: pg.Client;
 let tables: TenantTable[] = [];
+
+/** Satırın metin kimliği: uygulama rolü bütün sütunları okuyabiliyorsa `x::text`, değilse okunabilir sütunlardan `ROW(...)::text`. */
+function rowText(t: TenantTable, alias: string): string {
+  return t.selectCols.length === t.allCols.length ? `${alias}::text` : `ROW(${t.selectCols.map((c) => `${alias}.${q(c)}`).join(", ")})::text`;
+}
+/** INSERT kopyası için satırın jsonb'si (okunabilir sütunlarla sınırlı). */
+function rowJson(t: TenantTable, alias: string): string {
+  return t.selectCols.length === t.allCols.length
+    ? `to_jsonb(${alias})`
+    : `jsonb_build_object(${t.selectCols.map((c) => `'${c}', ${alias}.${q(c)}`).join(", ")})`;
+}
 
 async function discoverTables(): Promise<TenantTable[]> {
   const found = await admin.query<{ table_name: string }>(
@@ -142,8 +156,9 @@ async function discoverTables(): Promise<TenantTable[]> {
     );
     const m = meta.rows[0];
     if (m === undefined) throw new Error(`pg_class satırı yok: ${name}`);
-    const cols = await admin.query<{ column_name: string; ins: boolean; upd: boolean }>(
+    const cols = await admin.query<{ column_name: string; ins: boolean; upd: boolean; sel: boolean }>(
       `SELECT column_name,
+              has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'SELECT') AS sel,
               has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'INSERT') AS ins,
               has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'UPDATE') AS upd
          FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position`,
@@ -162,6 +177,8 @@ async function discoverTables(): Promise<TenantTable[]> {
       ownerIsApp: m.owner === APP_ROLE,
       insertCols: cols.rows.filter((c) => c.ins).map((c) => c.column_name),
       updateCols: cols.rows.filter((c) => c.upd).map((c) => c.column_name),
+      selectCols: cols.rows.filter((c) => c.sel).map((c) => c.column_name),
+      allCols: cols.rows.map((c) => c.column_name),
       canDelete: del.rows[0]?.d === true,
     });
   }
@@ -348,10 +365,10 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
   it("@AC-04 SELECT: B satırı (x::text ile) 0 satır; toplam görünür satır yalnızca A'nın; A satırı görünür (kontrol)", async () => {
     const failures: string[] = [];
     for (const t of tables) {
-      const bRows = await admin.query<{ r: string }>(`SELECT x::text AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [B.tenantId]);
-      const aRows = await admin.query<{ r: string }>(`SELECT x::text AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [A.tenantId]);
+      const bRows = await admin.query<{ r: string }>(`SELECT ${rowText(t, "x")} AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [B.tenantId]);
+      const aRows = await admin.query<{ r: string }>(`SELECT ${rowText(t, "x")} AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [A.tenantId]);
       for (const b of bRows.rows) {
-        const r = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} x WHERE x::text = $1`, [b.r]);
+        const r = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} x WHERE ${rowText(t, "x")} = $1`, [b.r]);
         if (!r.ok || (r.rows[0] as { n: number }).n !== 0) failures.push(`${t.name}: B satırı A bağlamında görünür/hata: ${fmt(r)}`);
       }
       const byKey = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
@@ -454,7 +471,7 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
           appClient,
           [setTenant(A.tenantId)],
           `INSERT INTO public.${q(t.name)} (${cols2})
-           SELECT ${sel2} FROM (SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, to_jsonb(a))).* FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1 LIMIT 1) r
+           SELECT ${sel2} FROM (SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, ${rowJson(t, "a")})).* FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1 LIMIT 1) r
            RETURNING ${q(t.key)}::text AS k`,
           [A.tenantId],
         );
@@ -463,15 +480,17 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
         }
         continue;
       }
-      const cols = t.insertCols.map(q).join(", ");
-      const sel = t.insertCols.map((c) => `r.${q(c)}`).join(", ");
+      // Okunamayan sütun (özet) kopyalanamaz: yalnız okunup yazılabilen sütunlar (diğerleri varsayılan/NULL).
+      const copyCols = t.insertCols.filter((c) => t.selectCols.includes(c));
+      const cols = copyCols.map(q).join(", ");
+      const sel = copyCols.map((c) => `r.${q(c)}`).join(", ");
       // Preserve the original valid DRAFT document-line copy as the native RLS control.
       const draftLine = t.name === "document_lines" ? " AND a.document_id = $3::uuid" : "";
       const copyParams = (tenant: string): unknown[] => t.name === "document_lines" ? [A.tenantId, tenant, A.documentId] : [A.tenantId, tenant];
       const copy = (): string =>
         `INSERT INTO public.${q(t.name)} (${cols})
          SELECT ${sel} FROM (
-           SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, to_jsonb(a) || jsonb_build_object('${t.key}', $2::text))).*
+           SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, ${rowJson(t, "a")} || jsonb_build_object('${t.key}', $2::text))).*
              FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1${draftLine} LIMIT 1
          ) r`;
       const reason = SYSTEM_REASON_WRITE[t.name];
@@ -800,6 +819,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.active_tenant_ids", // T-211 migration 0014: yalnızca ACTIVE tenant kimlikleri, yalnızca wms_worker EXECUTE (ADR-019 §1)
     "wms_probe.admin_reset_cleanup_on_membership", // T-103 üyelik tetikleyici işlevi (ADR-016 Sonuçlar)
     "wms_probe.consume_admin_reset_grant",
+    "wms_probe.field_activate", // T-997 migration 0044: saha etkinleştirme (kod tek kullanım + PIN özeti + kişisel cihaz) + security_events, yalnızca wms_auth
+    "wms_probe.field_admin_reset", // T-997 migration 0044: yönetici kod yenileme/kilit açma (tenant bağlamı zorunlu) + security_events, yalnızca wms_app
+    "wms_probe.field_device_status", // T-997 migration 0044: kayıtlı cihazın tenant/cihaz adı (salt okunur), yalnızca wms_auth
+    "wms_probe.field_signin_begin", // T-997 migration 0044: saha girişi ön denetimi (cihaz, rol, kilit) → PIN özeti, yalnızca wms_auth
+    "wms_probe.field_signin_finish", // T-997 migration 0044: saha girişi sonucu (sayaç/kilit, belirteç rotasyonu) + security_events, yalnızca wms_auth
     "wms_probe.identity_exclusive_to_tenant",
     "wms_probe.invitation_for_account_creation",
     "wms_probe.invitation_preview_for_token", // T-117d migration 0008: salt okunur (ad+rol+süre), yalnızca wms_app EXECUTE
@@ -898,6 +922,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_list_charges": [APP_ROLE],
       "wms_probe.platform_accrue_charges": [APP_ROLE],
       "wms_probe.platform_mark_charge_paid": [APP_ROLE],
+      "wms_probe.field_device_status": [AUTH_ROLE],
+      "wms_probe.field_signin_begin": [AUTH_ROLE],
+      "wms_probe.field_signin_finish": [AUTH_ROLE],
+      "wms_probe.field_activate": [AUTH_ROLE],
+      "wms_probe.field_admin_reset": [APP_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);

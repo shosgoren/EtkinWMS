@@ -844,6 +844,11 @@
     "sample_data": {
       "loaded": "Örnek depo verisi yüklendi",
       "cleared": "Örnek veriler temizlendi"
+    },
+    "field_user": {
+      "created": "Bir saha personeli hesabı açtın.",
+      "code_reset": "Bir saha personeli için yeni etkinleştirme kodu oluşturdun.",
+      "unlocked": "Bir saha personelinin kilidini açtın."
     }
   },
   "auditLog": {
@@ -897,7 +902,12 @@
       "audit": {
         "exported": "Denetim kaydı dışa aktarıldı"
       },
-      "other": "Diğer işlem"
+      "other": "Diğer işlem",
+      "field_user": {
+        "created": "Saha personeli eklendi",
+        "code_reset": "Saha etkinleştirme kodu yenilendi",
+        "unlocked": "Saha girişi kilidi açıldı"
+      }
     }
   },
   "settings": {

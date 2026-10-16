@@ -844,6 +844,11 @@
     "sample_data": {
       "loaded": "Sample warehouse data loaded",
       "cleared": "Sample data cleared"
+    },
+    "field_user": {
+      "created": "You created a field staff account.",
+      "code_reset": "You issued a new activation code for field staff.",
+      "unlocked": "You unlocked a field staff sign-in."
     }
   },
   "auditLog": {
@@ -897,7 +902,12 @@
       "audit": {
         "exported": "Audit log exported"
       },
-      "other": "Other action"
+      "other": "Other action",
+      "field_user": {
+        "created": "Field staff added",
+        "code_reset": "Field activation code renewed",
+        "unlocked": "Field sign-in unlocked"
+      }
     }
   },
   "settings": {

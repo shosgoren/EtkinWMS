@@ -1568,7 +1568,9 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
     });
     expect(r.funcs.map((f) => f.proname)).toEqual([
       "active_tenant_ids", // T-211 migration 0014 (yalnız ACTIVE tenant kimlikleri; yalnızca wms_worker EXECUTE; ADR-019 §1)
-      "admin_reset_cleanup_on_membership", "consume_admin_reset_grant", "identity_exclusive_to_tenant", "invitation_for_account_creation",
+      "admin_reset_cleanup_on_membership", "consume_admin_reset_grant",
+      "field_activate", "field_admin_reset", "field_device_status", "field_signin_begin", "field_signin_finish", // T-997 0044: saha girişi
+      "identity_exclusive_to_tenant", "invitation_for_account_creation",
       "invitation_preview_for_token", // T-117d migration 0008 (salt okunur; ad+rol+süre; ilke değişmedi)
       "invitation_tenant_for_token", // T-117 migration 0006 (salt okunur; ilke değişmedi)
       "ops_session_audited", // T-105c migration 0009 (salt okunur denetim kanıtı; ilke değişmedi)
