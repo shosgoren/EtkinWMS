@@ -236,6 +236,12 @@ describe("saha hesabı açılışı (yönetici)", () => {
     expect(ghostWh.code).toBe("VALIDATION_FAILED");
     const leftover = await adm.query("SELECT count(*)::int AS n FROM public.field_logins WHERE tenant_id = $1 AND username = $2", [fx.tenant, `w${username}`]);
     expect(leftover.rows[0]?.n).toBe(0);
+    // Geçerli depo: kapsam satırı hesapla birlikte yazılır.
+    const whId = randomUUID();
+    await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, 'T997 depo')", [fx.tenant, whId, `W${randomBytes(3).toString("hex").toUpperCase()}`]);
+    const scoped = await createFieldUser({ ...access(fx), name: "Sekiz", username: `s${username}`, roleKey: "PICKER", warehouseId: whId }, accountPort);
+    const sc = await adm.query("SELECT warehouse_id FROM public.membership_warehouse_scopes WHERE membership_id = $1", [scoped.membershipId]);
+    expect(sc.rows.map((r: { warehouse_id: string }) => r.warehouse_id)).toEqual([whId]);
     // PICKER üyesi saha hesabı açamaz.
     const picker = await enrolled(fx);
     const asPicker = { db: app, principal: { userId: picker.userId, mfaVerified: true }, tenantSlug: fx.slug, recentAuth };
