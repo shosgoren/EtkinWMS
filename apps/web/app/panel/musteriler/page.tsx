@@ -98,6 +98,7 @@ interface Msgs extends MusterilerLabels {
   readonly vTrial: string;
   readonly vActive: string;
   readonly vSuspended: string;
+  readonly vOverdue: string;
   readonly vNoCard: string;
   readonly vNextTrial: string;
   readonly vNextNone: string;
@@ -175,7 +176,7 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
             { k: t.kMoves, v: act.movesThisMonth.toLocaleString("tr-TR") },
           ]
         : [
-            { k: t.kState, v: st === "SUSPENDED" ? t.vSuspended : t.vActive },
+            { k: t.kState, v: st === "SUSPENDED" ? t.vSuspended : st === "OVERDUE" ? t.vOverdue : t.vActive },
             { k: t.kPlan, v: cx.plan === null ? t.noPlan : `${cx.plan.name}${planPrice}` },
             { k: t.kCard, v: t.vNoCard },
             { k: t.kNext, v: t.vNextNone },

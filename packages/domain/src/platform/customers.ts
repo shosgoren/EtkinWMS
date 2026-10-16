@@ -8,8 +8,8 @@ import type { AccessDbClient, AccessPrincipal } from "../identity/access.ts";
 import { mapPlatformError, operatorWithRecentAuth, principalOrThrow } from "./demo-requests.ts";
 import type { PlanLimits } from "./plans.ts";
 
-/** Panel durumu: AKTİF / DENEME / ASKIDA (GECİKMEDE ödeme entegrasyonuyla, T-406). */
-export type CustomerState = "ACTIVE" | "TRIAL" | "SUSPENDED";
+/** Panel durumu: AKTİF / DENEME / GECİKMEDE (vadesi geçmiş ödenmemiş tahakkuk, T-406) / ASKIDA. */
+export type CustomerState = "ACTIVE" | "TRIAL" | "OVERDUE" | "SUSPENDED";
 
 export interface CustomerRow {
   readonly id: string;
@@ -97,6 +97,7 @@ type DbCustomer = {
   warehouses: number;
   items: number;
   last_login: Date | string | null;
+  overdue: boolean | null;
 };
 
 export async function listCustomers(params: { readonly db: AccessDbClient; readonly principal: AccessPrincipal | null }): Promise<readonly CustomerRow[]> {
@@ -107,7 +108,7 @@ export async function listCustomers(params: { readonly db: AccessDbClient; reado
       id: r.id,
       name: r.name,
       slug: r.slug,
-      state: r.status === "SUSPENDED" ? "SUSPENDED" : r.subscription === "TRIAL" ? "TRIAL" : "ACTIVE",
+      state: r.status === "SUSPENDED" ? "SUSPENDED" : r.overdue === true ? "OVERDUE" : r.subscription === "TRIAL" ? "TRIAL" : "ACTIVE",
       createdAt: date(r.created_at),
       trialEndsAt: r.subscription === "TRIAL" && r.trial_ends_at !== null ? date(r.trial_ends_at) : null,
       plan:

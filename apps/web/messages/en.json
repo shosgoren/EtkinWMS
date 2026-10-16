@@ -394,7 +394,9 @@
     "validation_failed_plan_invalid": "The plan details are invalid.",
     "validation_failed_plan_invalidAction": "Check the name, price and limits and try again.",
     "validation_failed_reason_required": "A reason is required.",
-    "validation_failed_reason_requiredAction": "Enter a reason to suspend."
+    "validation_failed_reason_requiredAction": "Enter a reason to suspend.",
+    "validation_failed_payment_invalid": "The payment record is invalid.",
+    "validation_failed_payment_invalidAction": "Check the date (today or earlier), method and note."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -2357,7 +2359,8 @@
     "nav": {
       "musteriler": "Customers",
       "talepler": "Demo requests",
-      "paketler": "Plans"
+      "paketler": "Plans",
+      "odemeler": "Payments"
     },
     "talepler": {
       "title": "Demo requests",
@@ -2517,7 +2520,94 @@
       "unitField": "field staff",
       "unitWarehouses": "warehouses",
       "unitItems": "items",
-      "unlimited": "Unlimited"
+      "unlimited": "Unlimited",
+      "vOverdue": "Payment overdue"
+    },
+    "odemeler": {
+      "title": "Payments",
+      "sub": "IYZICO SUBSCRIPTION · MONTHLY",
+      "newAccrual": "Period accrual",
+      "months": [
+        "JANUARY",
+        "FEBRUARY",
+        "MARCH",
+        "APRIL",
+        "MAY",
+        "JUNE",
+        "JULY",
+        "AUGUST",
+        "SEPTEMBER",
+        "OCTOBER",
+        "NOVEMBER",
+        "DECEMBER"
+      ],
+      "states": {
+        "PAID": "PAID",
+        "OVERDUE": "OVERDUE",
+        "PENDING": "PENDING"
+      },
+      "tabs": {
+        "all": "All",
+        "PAID": "Paid",
+        "OVERDUE": "Overdue",
+        "PENDING": "Pending"
+      },
+      "tabsLabel": "Payment status",
+      "colFirm": "COMPANY",
+      "colPeriod": "PERIOD",
+      "colPlan": "PLAN",
+      "colAmount": "AMOUNT",
+      "colState": "STATUS",
+      "colInvoice": "INVOICE",
+      "empty": "NO RECORDS IN THIS FILTER",
+      "markPaid": "Mark as paid",
+      "remind": "Remind",
+      "remindSoon": "Coming soon: reminder email",
+      "banTitle": "Official invoices once the company is set up",
+      "banBody": "Invoice numbers fill in once the e-Archive provider is connected. Until then accruals and collections are tracked here.",
+      "paidTitle": "Payment record",
+      "paidDate": "PAYMENT DATE",
+      "method": "METHOD",
+      "methodLabel": "Payment method",
+      "methods": {
+        "HAVALE": "Bank transfer",
+        "KART": "Credit card",
+        "NAKIT": "Cash"
+      },
+      "note": "NOTE (OPTIONAL)",
+      "notePlaceholder": "E.g. receipt no, bank",
+      "paidBan": "Once the payment provider is connected, card payments settle automatically; transfers and cash are marked here.",
+      "cancel": "Cancel",
+      "savePaid": "Save as paid",
+      "accrueTitle": "Create {period} accruals?",
+      "accrueBody": "This month's amount is opened for every customer with a plan whose trial has ended. Periods already opened are skipped; the amount is the customer's plan price (excl. VAT).",
+      "accrue": "Create accruals",
+      "accrued": "{n} accruals created.",
+      "error": "The action failed ({code}). Refresh the page and try again.",
+      "kPaid": "COLLECTED THIS MONTH",
+      "kPaidSub": "PAYMENTS",
+      "kOverdue": "OVERDUE",
+      "kOverdueSub": "PAYMENTS · {n} CUSTOMERS",
+      "kPending": "PENDING",
+      "kPendingSub": "PAYMENTS · {date}",
+      "kPendingNone": "PAYMENTS",
+      "kInvoice": "AWAITING INVOICE",
+      "kInvoiceSub": "WHEN E-ARCHIVE CONNECTS",
+      "invoicePending": "PENDING",
+      "monthNames": [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ]
     }
   },
   "activate": {
