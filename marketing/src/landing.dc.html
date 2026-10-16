@@ -314,6 +314,8 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 .cine-cap-t{display:none}
 }
 @media (max-width:899px) and (max-height:760px){.cine-phone{--pz:.6}}
+/* T-412: geniş ekranda telefon her sahnede görünür; dar ekranda yalnız son sahnede (metnin yerine) gelir. */
+@media (max-width:899px){.cine:not(.app) .cine-phone{display:none}}
 .proofbar{background:#FFFFFF;border-bottom:1.5px solid #E4DED3}
 .proofbar-in{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 32px;max-width:var(--wrap-wide,1320px);margin:0 auto;padding:clamp(18px,3vw,28px) clamp(16px,4vw,40px)}
 .hqr{display:flex;align-items:center;gap:14px;max-width:520px}
@@ -1221,7 +1223,7 @@ class Component extends DCLogic {
       isFilm: isFilm, is3d: !isFilm, cap: cap,
       fs: { c0: fcls(0), c1: fcls(1), c2: fcls(2), c3: fcls(3) },
       filmDurS: this.filmDur() * (fi === 3 ? 1.6 : 1),
-      appOn: this.state.appOn && fi === 3,
+      appOn: true,
       cineCls: 'cine' + (this.state.appOn && fi === 3 ? ' app' : ''),
       fdots: t.film.map(function (f, i) {
         return { l: f[0], cls: 'fdot' + (i === fi ? ' on' : ''), pressed: i === fi ? 'true' : 'false', go: function () { self.filmGo(i); self.filmSchedule(); } };
