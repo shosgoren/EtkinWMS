@@ -1488,6 +1488,9 @@ export function createAuth(params: CreateAuthParams): AuthService {
           password: d.passwordHash,
         });
       },
+      setPasswordHash: async (userId, passwordHash) => {
+        await context.internalAdapter.updatePassword(userId, passwordHash);
+      },
     };
   }
 

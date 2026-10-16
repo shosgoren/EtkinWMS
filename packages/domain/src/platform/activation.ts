@@ -188,7 +188,7 @@ export interface ActivateTrialResult {
   /** Giriş e-postası (talepten; istemci girişi bununla yapar). */
   readonly email: string;
   readonly trialEndsAt: Date;
-  /** Hoş geldiniz e-postası kuyruğa girdi mi (posta kapalı/uygun değilse `false`; ekranda bu söylenir). */
+  /** Hoş geldiniz e-postası kuyruğa girdi mi (posta kapalı/uygun değil ya da adres doğrulanmamışsa `false`; ekranda bu söylenir). */
   readonly welcomeQueued: boolean;
 }
 
@@ -251,11 +251,14 @@ export async function activateTrial(params: ActivateTrialParams, deps: ActivateT
         requestId: claimId,
         changeSummary: { plan: "TRIAL", trial_ends_at: trialEndsAt.toISOString(), sample },
       });
-      const email = await tx.execute<{ email: string }>(sql`SELECT email FROM public.users WHERE id = ${userId}::uuid`);
-      const ownerEmail = email[0]?.email;
+      const owner = await tx.execute<{ email: string; email_verified: boolean }>(
+        sql`SELECT email, email_verified FROM public.users WHERE id = ${userId}::uuid`,
+      );
+      const ownerEmail = owner[0]?.email;
       if (ownerEmail === undefined) throw new AppError("INTERNAL");
       let welcomeQueued = false;
-      if (canDeliver(deps.mailConfig, ownerEmail)) {
+      // Adres sahipliği kanıtlanmadıysa (bağlantı ekranda iletildi) e-posta gönderilmez (inceleme m-5): üçüncü kişiye ürün postası gitmez.
+      if (owner[0]?.email_verified === true && canDeliver(deps.mailConfig, ownerEmail)) {
         try {
           // Savepoint: kuyruk yazımı başarısız olursa aktivasyon bozulmaz; sonuç "gönderilmedi" der (sahte başarı yok).
           await tx.transaction((sp) => deps.queue.enqueue(sp, { type: "trial.welcome", actorUserId: userId, payload: {} }));

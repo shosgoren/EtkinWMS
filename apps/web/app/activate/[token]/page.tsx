@@ -22,7 +22,14 @@ export default async function ActivatePage({ params }: { params: Promise<{ token
   const { token } = await params;
   const preview = await previewActivation({ db: getAppDb(), token });
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
-  const host = (await headers()).get("host") ?? "wms.etkinyazilim.com";
+  // Gösterilen adres yapılandırılmış uygulama kökünden (istek Host başlığına güvenilmez; inceleme nit); tanımsızsa istek kökü.
+  let host = (await headers()).get("host") ?? "wms.etkinyazilim.com";
+  try {
+    const configured = process.env.BETTER_AUTH_URL?.trim();
+    if (configured) host = new URL(configured).host;
+  } catch {
+    // biçimsiz yapılandırma: istek kökü kalır
+  }
   return (
     <ActivationFlow
       dark={dark}

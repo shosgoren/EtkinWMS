@@ -82,6 +82,18 @@ async function approvedLead(company = "Deneme Kauçuk AŞ"): Promise<{ id: strin
   return { id, email, token };
 }
 
+/** E-postayla teslim: worker yeni belirteç üretir (adres bağlantıyla doğrulanır). */
+async function emailedLead(company = "Posta Teslim AŞ"): Promise<{ id: string; email: string; token: string }> {
+  const id = randomUUID();
+  leadIds.push(id);
+  const email = `t995-p-${randomBytes(5).toString("hex")}@example.test`;
+  await ingestDemoLeads({ db: worker, jsonl: `${JSON.stringify({ id, createdAt: new Date().toISOString(), name: "Kişi", company, email })}\n` });
+  await decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id, decision: "APPROVED", recentAuth: ok }, decideDeps(mailOn));
+  const p = await prepareActivationDelivery(worker, id);
+  if (p === null) throw new Error("expected prepared delivery");
+  return { id, email, token: p.token };
+}
+
 const slugOf = (): string => `t995-${randomBytes(4).toString("hex")}`;
 
 const failure = async (p: Promise<unknown>): Promise<AppError> => {
@@ -237,7 +249,7 @@ describe("çalışma alanı adı", () => {
 
 describe("aktivasyon", () => {
   it("hesap + tenant + deneme tek seferde: sahip TENANT_ADMIN; deneme DB saatinden 3 ay; hoş geldiniz işi kuyrukta; bağlantı tekrar kullanılamaz", async () => {
-    const l = await approvedLead("Motive Deneme");
+    const l = await emailedLead("Motive Deneme");
     const slug = slugOf();
     const r = await activateTrial({ db: app, token: l.token, company: "  Motive Deneme  ", workspaceName: slug, sample: true, password: PASSWORD }, activateDeps());
     expect(r).toMatchObject({ tenantSlug: slug, email: l.email, welcomeQueued: true });
@@ -250,8 +262,8 @@ describe("aktivasyon", () => {
         WHERE m.tenant_id = $1`,
       [r.tenantId],
     );
-    // Bağlantı ekranda iletildi (posta kapalıydı): adres sahipliği kanıtlanmadı → doğrulanmamış (davet deseni).
-    expect(owner.rows).toEqual([{ email: l.email, verified: false, role: "TENANT_ADMIN", is_owner: true }]);
+    // Bağlantı e-postayla gitti: tıklama adres sahipliğini kanıtlar → doğrulanmış.
+    expect(owner.rows).toEqual([{ email: l.email, verified: true, role: "TENANT_ADMIN", is_owner: true }]);
     const sub = await adm.query<{ plan: string; exact: boolean; fresh: boolean; dr: string }>(
       `SELECT plan, trial_ends_at = started_at + interval '3 months' AS exact, started_at > now() - interval '1 minute' AS fresh,
               demo_request_id::text AS dr FROM wms_platform.subscriptions WHERE tenant_id = $1`,
@@ -324,12 +336,49 @@ describe("aktivasyon", () => {
     expect(claim.rows[0]?.c).toBeNull();
   });
 
-  it("posta kapalıysa hoş geldiniz işi yazılmaz ve sonuç bunu söyler", async () => {
-    const l = await approvedLead();
+  it("posta kapalıysa ya da adres doğrulanmamışsa (ekranda iletilen bağlantı) hoş geldiniz işi yazılmaz ve sonuç bunu söyler", async () => {
+    const l = await emailedLead();
     const r = await activateTrial({ db: app, token: l.token, company: "Sessiz AŞ", workspaceName: slugOf(), sample: false, password: PASSWORD }, activateDeps(mailOff));
     expect(r.welcomeQueued).toBe(false);
     const jobs = await adm.query(`SELECT 1 FROM ${QUEUE_SCHEMA}.job WHERE name = 'trial.welcome' AND data->>'tenantId' = $1`, [r.tenantId]);
     expect(jobs.rowCount).toBe(0);
+    const screen = await approvedLead();
+    const r2 = await activateTrial({ db: app, token: screen.token, company: "Ekran AŞ", workspaceName: slugOf(), sample: false, password: PASSWORD }, activateDeps(mailOn));
+    expect(r2.welcomeQueued).toBe(false);
+  });
+
+  it("yarıda kalan deneme sonrası yeni bağlantı: aynı hesap yeniden kullanılır ve yeni parola geçerli olur (inceleme M-1, m-2)", async () => {
+    const l = await approvedLead();
+    // 1. deneme: talep + hesap açılır, tenant aşamasına gelinmeden yarıda kalır (talep bırakılır).
+    const hash = hashActivationToken(l.token);
+    const c = new pg.Client({ connectionString: env.databaseUrl });
+    await c.connect();
+    try {
+      const claim = (await c.query<{ id: string }>("SELECT wms_probe.platform_activation_claim($1)::text AS id", [hash])).rows[0]?.id as string;
+      await auth.createActivatedAccount({ activationTokenHash: hash, claimId: claim, password: PASSWORD });
+      await c.query("SELECT wms_probe.platform_activation_release($1, $2::uuid)", [hash, claim]);
+    } finally {
+      await c.end();
+    }
+    const uid = (await adm.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [l.email])).rows[0]?.id;
+    expect(uid).toBeDefined();
+    const again = await reissueActivation({ db: app, principal: { userId: operatorId, mfaVerified: true }, id: l.id, recentAuth: ok }, decideDeps());
+    const newPassword = `N${randomBytes(12).toString("hex")}`;
+    const r = await activateTrial({ db: app, token: again.token, company: "Sonra AŞ", workspaceName: slugOf(), sample: false, password: newPassword }, activateDeps());
+    const owner = await adm.query<{ user_id: string }>("SELECT user_id FROM public.tenant_memberships WHERE tenant_id = $1 AND is_owner", [r.tenantId]);
+    expect(owner.rows[0]?.user_id).toBe(uid);
+    const pw = await adm.query<{ password: string }>("SELECT password FROM public.accounts WHERE user_id = $1 AND provider_id = 'credential'", [uid]);
+    const { verifyPassword } = await import("../../../packages/auth/src/password.ts");
+    expect(await verifyPassword({ hash: pw.rows[0]?.password ?? "", password: newPassword })).toBe(true);
+  });
+
+  it("operatör adresiyle talep: bağlantı müşteri hesabı açmaz (NOT_FOUND)", async () => {
+    const id = randomUUID();
+    leadIds.push(id);
+    await ingestDemoLeads({ db: worker, jsonl: `${JSON.stringify({ id, createdAt: new Date().toISOString(), name: "K", company: "Op AŞ", email: operatorEmail })}\n` });
+    const r = await decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id, decision: "APPROVED", recentAuth: ok }, decideDeps());
+    const e = await failure(activateTrial({ db: app, token: r.activation?.token, company: "Op AŞ", workspaceName: slugOf(), sample: false, password: PASSWORD }, activateDeps()));
+    expect(e.code).toBe("NOT_FOUND");
   });
 
   it("tüketme işlevi başka tenant bağlamından ya da talep sahibine ait olmayan tenant'la çağrılamaz", async () => {

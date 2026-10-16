@@ -59,6 +59,7 @@ DROP TABLE wms_platform.subscriptions;
 DROP INDEX wms_platform.demo_requests_activation_token_key;
 ALTER TABLE wms_platform.demo_requests
   DROP CONSTRAINT demo_requests_activation_chk,
+  DROP CONSTRAINT demo_requests_email_lower_chk,
   DROP COLUMN activation_sample,
   DROP COLUMN activated_at,
   DROP COLUMN activation_claim_expires_at,

@@ -136,6 +136,8 @@ export interface InvitedAccountDeps {
     passwordHash: string;
   }) => Promise<void>;
   readonly newId: () => string;
+  /** Yeniden kullanılan aktivasyon hesabının parola özetini yeniler (T-995 inceleme m-2; davet yolu kullanmaz). */
+  readonly setPasswordHash?: (userId: string, passwordHash: string) => Promise<void>;
 }
 
 /**
@@ -254,11 +256,18 @@ export async function createActivatedAccountWith(
   if (row === undefined) throw new InvitedAccountError("NOT_FOUND");
   const name = row.name.trim();
   if (name === "" || name.length > 200) throw new InvitedAccountError("VALIDATION_FAILED");
-  return createAccountForClaim(deps, {
+  const r = await createAccountForClaim(deps, {
     email: row.email_normalized,
     name,
     emailVerified: row.delivered_via === "EMAIL",
     claimId,
     password,
   });
+  // Yarıda kalan önceki denemenin hesabı (aynı talep zinciri): müşterinin şimdi yazdığı parola geçerli olur; aksi hâlde alan açılır ama
+  // giriş eski parolayı ister (inceleme m-2). Hesap henüz hiçbir alana bağlı değildir (tüketme bu adımdan sonra).
+  if (r.reused) {
+    if (deps.setPasswordHash === undefined) throw new InvitedAccountError("FORBIDDEN");
+    await deps.setPasswordHash(r.userId, await deps.hashPassword(password));
+  }
+  return r;
 }

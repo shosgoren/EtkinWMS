@@ -51,6 +51,8 @@ ALTER TABLE wms_platform.demo_requests
     AND (activation_claim_id IS NULL OR activation_token_hash IS NOT NULL)
     AND ((activated_at IS NULL) = (activation_sample IS NULL))
     AND (activated_at IS NULL OR activation_token_hash IS NOT NULL));
+-- E-posta küçük harf ve kırpılmış (ingest zaten böyle yazar; tüketme karşılaştırması buna dayanır — inceleme nit).
+ALTER TABLE wms_platform.demo_requests ADD CONSTRAINT demo_requests_email_lower_chk CHECK (email = pg_catalog.lower(pg_catalog.btrim(email)));
 CREATE UNIQUE INDEX demo_requests_activation_token_key ON wms_platform.demo_requests (activation_token_hash)
   WHERE activation_token_hash IS NOT NULL;
 
@@ -159,7 +161,8 @@ BEGIN
   v_expires := pg_catalog.now() + interval '72 hours';
   UPDATE wms_platform.demo_requests
      SET activation_token_hash = p_token_hash, activation_delivery = p_delivery, activation_expires_at = v_expires,
-         activation_claim_id = NULL, activation_claim_expires_at = NULL
+         -- Talep kimliği KORUNUR (yalnız süresi biter): yarıda kalan denemenin açtığı hesap yeni bağlantıyla da kullanılır (inceleme M-1).
+         activation_claim_expires_at = CASE WHEN activation_claim_id IS NULL THEN NULL ELSE pg_catalog.now() END
    WHERE id = p_id;
   INSERT INTO public.security_events (user_id, event_type, detail)
   VALUES (v_uid, 'platform.activation.issued',
@@ -184,9 +187,11 @@ BEGIN
   RETURN QUERY
     WITH rotated AS (
       UPDATE wms_platform.demo_requests d
-         SET activation_token_hash = p_token_hash, activation_claim_id = NULL, activation_claim_expires_at = NULL
+         SET activation_token_hash = p_token_hash
        WHERE d.id = p_id AND d.status = 'APPROVED' AND d.activation_delivery = 'EMAIL' AND d.activated_at IS NULL
          AND d.activation_expires_at > pg_catalog.now()
+         -- Süren bir kurulum varken belirteç döndürülmez (inceleme M-1): devam eden aktivasyon bozulmaz.
+         AND (d.activation_claim_expires_at IS NULL OR d.activation_claim_expires_at <= pg_catalog.now())
       RETURNING d.email AS r_email, d.company AS r_company)
     SELECT rotated.r_email, rotated.r_company FROM rotated;
 END
@@ -233,6 +238,10 @@ BEGIN
      AND d.activation_expires_at > pg_catalog.now()
      FOR UPDATE;
   IF NOT FOUND THEN
+    RAISE EXCEPTION 'platform_activation_claim: bağlantı geçersiz' USING ERRCODE = 'P0002';
+  END IF;
+  -- Operatör adresiyle müşteri hesabı açılmaz (inceleme m-4): operatör hesabı müşteri alanına üye yapılmaz (0038 işletim kuralı).
+  IF EXISTS (SELECT 1 FROM wms_platform.demo_requests d JOIN wms_platform.operators o ON o.email_normalized = d.email WHERE d.id = v_id) THEN
     RAISE EXCEPTION 'platform_activation_claim: bağlantı geçersiz' USING ERRCODE = 'P0002';
   END IF;
   IF v_claim IS NOT NULL AND v_claim_exp > pg_catalog.now() THEN
