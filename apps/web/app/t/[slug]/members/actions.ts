@@ -8,8 +8,10 @@ import {
   discardPasswordResetToken,
   ensureRecentAuth,
   recordPasswordResetLinkIssued,
+  revokeDeviceSessions,
   revokeUserSessions,
 } from "../../../../lib/auth-service.ts";
+import { approveEnrollment, cancelEnrollment, getEnrollment, revokeDevice, startEnrollment } from "@wms/domain/identity/devices";
 import { createFieldUser, resetFieldCode, unlockFieldLogin } from "@wms/domain/identity/field-users";
 import {
   changeRole,
@@ -250,5 +252,68 @@ export async function unlockFieldLoginAction(raw: unknown) {
     if (principal === null) throw new Error("unreachable: principal required");
     await unlockFieldLogin({ db: getAppDb(), principal, tenantSlug: input.slug, memberId: input.memberId, requestId: ctx.requestId });
     return { unlocked: true as const };
+  })(raw);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Saha cihazları (T-998, ADR-026 §7.5): ortak cihaz kaydı (QR + onay), iptal (oturumlar kapanır)
+// ---------------------------------------------------------------------------------------------
+
+const deviceSchema = z.object({ slug: slugSchema, deviceId: z.string().uuid() }).strict();
+const enrollmentSchema = z.object({ slug: slugSchema, enrollmentId: z.string().uuid() }).strict();
+const approveSchema = z.object({ slug: slugSchema, enrollmentId: z.string().uuid(), confirmCode: z.string().min(1).max(12) }).strict();
+
+export async function revokeDeviceAction(raw: unknown) {
+  return guardedAction({ schema: deviceSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    await revokeDevice({ db: getAppDb(), principal, tenantSlug: input.slug, deviceId: input.deviceId, requestId: ctx.requestId }, { revokeDeviceSessions });
+    return { revoked: true as const };
+  })(raw);
+}
+
+/** Yeni 5 dk kayıt belirteci; QR adresi (`#` parçası belirteci taşır) yalnız bu yanıtta. */
+export async function startEnrollmentAction(raw: unknown) {
+  return guardedAction({ schema: leaveSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const requestHeaders = await headers();
+    await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: input.slug, permission: "users.manage" }, ctx);
+    const r = await startEnrollment({ db: getAppDb(), principal, tenantSlug: input.slug, requestId: ctx.requestId, recentAuth: () => ensureRecentAuth(requestHeaders) });
+    return { enrollmentId: r.enrollmentId, url: `${ctx.origin}/field/enroll#${r.secret}`, expiresAt: r.expiresAt.toISOString() };
+  })(raw);
+}
+
+export async function enrollmentStatusAction(raw: unknown) {
+  return guardedAction({ schema: enrollmentSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const r = await getEnrollment({ db: getAppDb(), principal, tenantSlug: input.slug, enrollmentId: input.enrollmentId });
+    return { state: r.state, deviceName: r.deviceName, expiresAt: r.expiresAt.toISOString() };
+  })(raw);
+}
+
+export async function approveEnrollmentAction(raw: unknown) {
+  return guardedAction({ schema: approveSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const r = await approveEnrollment({
+      db: getAppDb(),
+      principal,
+      tenantSlug: input.slug,
+      enrollmentId: input.enrollmentId,
+      confirmCode: input.confirmCode,
+      requestId: ctx.requestId,
+    });
+    return { deviceId: r.deviceId };
+  })(raw);
+}
+
+export async function cancelEnrollmentAction(raw: unknown) {
+  return guardedAction({ schema: enrollmentSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    await cancelEnrollment({ db: getAppDb(), principal, tenantSlug: input.slug, enrollmentId: input.enrollmentId, requestId: ctx.requestId });
+    return { cancelled: true as const };
   })(raw);
 }

@@ -328,7 +328,8 @@
     "fieldPending": "Code pending · until {until}",
     "fieldNoCode": "No code · issue a new one",
     "fieldNewCode": "New activation code",
-    "fieldUnlock": "Unlock"
+    "fieldUnlock": "Unlock",
+    "devices": "Devices"
   },
   "errors": {
     "validation_failed": "The information entered is not valid.",
@@ -418,7 +419,9 @@
     "validation_failed_reason_required": "A reason is required.",
     "validation_failed_reason_requiredAction": "Enter a reason to suspend.",
     "validation_failed_payment_invalid": "The payment record is invalid.",
-    "validation_failed_payment_invalidAction": "Check the date (today or earlier), method and note."
+    "validation_failed_payment_invalidAction": "Check the date (today or earlier), method and note.",
+    "validation_failed_code_mismatch": "The confirmation code doesn't match the terminal.",
+    "validation_failed_code_mismatchAction": "Type the 6-digit code shown on the terminal again; after 3 wrong tries the QR is renewed."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -871,6 +874,10 @@
       "created": "You created a field staff account.",
       "code_reset": "You issued a new activation code for field staff.",
       "unlocked": "You unlocked a field staff sign-in."
+    },
+    "field_device": {
+      "enrolled": "You registered a shared device.",
+      "revoked": "You revoked a field device."
     }
   },
   "auditLog": {
@@ -929,6 +936,10 @@
         "created": "Field staff added",
         "code_reset": "Field activation code renewed",
         "unlocked": "Field sign-in unlocked"
+      },
+      "field_device": {
+        "enrolled": "Shared device registered",
+        "revoked": "Field device revoked"
       }
     }
   },
@@ -2818,6 +2829,70 @@
     "next": "CONTINUE",
     "goTasks": "GO TO MY TASKS",
     "back": "Back",
-    "deviceName": "Personal phone"
+    "deviceName": "Personal phone",
+    "enrKick": "SHARED DEVICE · STEP {n} / 2",
+    "enrDone": "DONE",
+    "enr1H": "Register this device",
+    "enr1S": "Give the device a name. Field sign-in opens on it once your manager approves on their screen.",
+    "enr2H": "Manager approval",
+    "enr3H": "Ready",
+    "deviceNameLabel": "DEVICE NAME",
+    "deviceNameHint": "Your manager sees this name · e.g. Handheld 2, Shipping tablet",
+    "request": "REQUEST REGISTRATION",
+    "waitTitle": "Waiting for approval",
+    "waitBody": "Tell your manager this code. The screen moves on by itself once they type it for <b>{name}</b> and approve.",
+    "waitChip": "REQUEST · VALID 5 MINUTES",
+    "enrDoneTitle": "Device registered",
+    "enrDoneBody": "Field staff sign in on this device with their own username and PIN.",
+    "enrDoneChip": "SHARED DEVICE · 180 DAYS",
+    "toLogin": "TO SIGN-IN",
+    "enrBad": "This QR can't be used. Ask your manager for a new one.",
+    "pickStaff": "Pick from staff on this device",
+    "swH": "Who's working?",
+    "swPinH": "{name} · PIN",
+    "swBack": "Pick someone else",
+    "swEmpty": "No staff with a PIN on this device yet.",
+    "deviceNameDefault": "Handheld",
+    "rolePicker": "Picker",
+    "roleCounter": "Counter",
+    "codeAria": "Confirmation code"
+  },
+  "fieldDevices": {
+    "title": "Devices",
+    "back": "Back",
+    "theme": "Light / dark view",
+    "bandH": "Devices",
+    "bandS": "{tenant} · PIN WORKS ONLY ON REGISTERED DEVICES",
+    "listTitle": "REGISTERED DEVICES",
+    "listCount": "{n} DEVICES",
+    "shared": "SHARED",
+    "personal": "PERSONAL",
+    "lastUsed": "LAST USED {when}",
+    "revoke": "REVOKE",
+    "revokeAria": "Revoke {name}",
+    "addKick": "ADD SHARED DEVICE",
+    "qrLabel": "Device registration QR code",
+    "timer": "{mm}:{ss} LEFT",
+    "addBody": "Scan this QR with the handheld's camera. When the device asks to connect, approve it here.",
+    "claimKick": "WAITING FOR APPROVAL",
+    "claimChip": "WANTS TO CONNECT",
+    "claimBody": "Type the 6-digit code shown on the terminal and approve. If there's no code or you don't recognize it, reject; a new QR is created.",
+    "reject": "REJECT",
+    "approve": "APPROVE",
+    "banTitle": "Unapproved devices can't sign in",
+    "banBody": "The QR is valid for 5 minutes and single use. Even if a photo of it leaks, no device registers without your approval.",
+    "newQr": "NEW QR",
+    "empty": "No registered devices.",
+    "errReauth": "Sign in again to create a QR.",
+    "reauthLink": "Sign in again",
+    "errServer": "Connection problem. Try again.",
+    "approved": "Device registered.",
+    "revoked": "Device revoked; its sessions were closed.",
+    "codeLabel": "CODE ON THE TERMINAL",
+    "errCode": "The code doesn't match the terminal. After 3 wrong tries the QR is renewed.",
+    "suspendedTitle": "Automatically stopped · {name}",
+    "suspendedBody": "3 accounts were locked from this device within an hour; the device was revoked and its sessions closed. Unlock the accounts from the Members screen.",
+    "closeSessions": "CLOSE SESSIONS",
+    "sessionsClosed": "Sessions closed."
   }
 }

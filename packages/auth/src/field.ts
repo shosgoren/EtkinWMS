@@ -32,6 +32,8 @@ export const FIELD_RATE_RULES = Object.freeze({
   device: { window: 15 * 60, max: 20 },
   tenant: { window: 15 * 60, max: 300 },
   activateUser: { window: 60 * 60, max: 10 },
+  enrollTenant: { window: 10 * 60, max: 10 },
+  ipEnroll: { window: 10 * 60, max: 20 },
 });
 
 export function isFieldEmail(email: string | null | undefined): boolean {
@@ -58,6 +60,11 @@ export function pinAcceptable(pin: string): boolean {
   const up = d.every((x, i) => i === 0 || x === ((d[i - 1] as number) + 1) % 10);
   const down = d.every((x, i) => i === 0 || x === ((d[i - 1] as number) + 9) % 10);
   return !(same || up || down);
+}
+
+/** Ortak cihaz kayıt belirteci özeti (QR; 5 dk). Domain aynı kuralı kullanır (`@wms/shared/field-login` `enrollmentTokenHash`). */
+export function enrollmentTokenHash(token: string): string {
+  return createHash("sha256").update(`field-enroll:${token}`).digest("hex");
 }
 
 export function deviceTokenHash(token: string): string {
@@ -100,6 +107,8 @@ export interface FieldPluginDeps {
   /** Oturuma `mfa_verified_at = now()`; yazılamazsa oturum silinir (index.ts `sessionWriteOrRevoke`). */
   readonly markSessionVerified: (token: string) => Promise<void>;
   readonly secureCookies: boolean;
+  /** Maskeli hata günlüğü (değer/parametre yazmaz). */
+  readonly log?: (message: string, error: unknown) => void;
 }
 
 export function fieldDeviceCookieName(secure: boolean): string {
@@ -132,6 +141,25 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
   }
 
   /**
+   * Toplu kilitleme koruması (T-997 koşul 1, T-998): YALNIZ bu istekte konan kilitte (yanlış PIN → kilit geçişi; kilitli hesaba deneme
+   * sayılmaz, inceleme n2) ortak cihaz + hesap eşlenir; 60 dk'da 3 hesap → cihaz durdurulur ve o cihazdaki oturumlar AYNI istekte kapanır
+   * (inceleme n1). Hata loglanır (sessiz koruma kaybı yok).
+   */
+  async function spree(tenantId: string, tokenHash: string, username: string): Promise<void> {
+    try {
+      const rows = await deps.execute<{ device: string | null }>(
+        sql`SELECT wms_probe.field_lock_spree_check(${tenantId}::uuid, ${tokenHash}, ${username}) AS device`,
+      );
+      const device = rows[0]?.device ?? null;
+      if (device !== null && UUID.test(device)) {
+        await deps.execute(sql`DELETE FROM public.sessions WHERE id IN (SELECT session_id FROM public.field_sessions WHERE device_id = ${device}::uuid)`);
+      }
+    } catch (e) {
+      deps.log?.("field lock spree check failed", e);
+    }
+  }
+
+  /**
    * Cihaz çerezini yazar ve oturumu açar. Oturum açıldıktan SONRA cihaz yeniden doğrulanır: arada yönetici kodu yeniledi/cihazı iptal
    * ettiyse (oturumlar o anda kapatılmıştı) yeni oturum silinir ve genel ret döner (inceleme m3).
    */
@@ -140,10 +168,21 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
     userId: string,
     tenantId: string,
     device: { token: string; hash: string },
+    deviceId: string | null,
   ): Promise<void> {
     const user = await ctx.context.internalAdapter.findUserById(userId);
     if (user === null || !isFieldEmail(user.email)) throw DENIED();
     const session = await ctx.context.internalAdapter.createSession(userId, false);
+    // T-998: oturum ↔ cihaz bağı yeniden denetimden ÖNCE yazılır (inceleme m1): arada gelen iptal ya bu bağı görüp oturumu siler ya da
+    // aşağıdaki denetim iptali görür. Yazılamazsa oturum açılmaz.
+    if (deviceId !== null && UUID.test(deviceId)) {
+      try {
+        await deps.execute(sql`INSERT INTO public.field_sessions (session_id, device_id) VALUES (${session.id}::uuid, ${deviceId}::uuid)`);
+      } catch (e) {
+        await ctx.context.internalAdapter.deleteSession(session.token);
+        throw e;
+      }
+    }
     const still = await deps.execute<{ slug: string }>(sql`SELECT slug FROM wms_probe.field_device_status(${tenantId}::uuid, ${device.hash})`);
     if (still.length === 0) {
       await ctx.context.internalAdapter.deleteSession(session.token);
@@ -168,6 +207,38 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         return ctx.json({ registered: true, workspace: r.slug, tenantName: r.tenant_name, deviceName: r.device_name, kind: r.kind });
       }),
 
+      // T-998: ortak cihaz personel listesi (hızlı kullanıcı değişimi). Yalnız geçerli SHARED cihaz çereziyle; aksi boş liste.
+      fieldDeviceStaff: createAuthEndpoint("/field/staff", { method: "GET" }, async (ctx) => {
+        const parsed = parseDeviceCookie(ctx.getCookie(cookieName));
+        if (parsed === null) return ctx.json({ staff: [] });
+        const rows = await deps.execute<{ name: string; username: string; role_key: string | null }>(
+          sql`SELECT * FROM wms_probe.field_device_staff(${parsed.tenantId}::uuid, ${parsed.tokenHash})`,
+        );
+        return ctx.json({ staff: rows.map((r) => ({ name: r.name, username: r.username, role: r.role_key === "COUNTER" ? "COUNTER" : "PICKER" })) });
+      }),
+
+      // T-998: ortak cihaz kaydı talebi. QR adresinin `#` parçası `<tenant>.<kayıt belirteci>`; terminal kendi rastgele cihaz belirtecini
+      // üretir (çerez), DB'ye yalnız özetler gider. Cihaz, yönetici kendi ekranında ONAYLAYANA dek kayıtlı sayılmaz (`/field/device`).
+      fieldEnroll: createAuthEndpoint("/field/enroll", { method: "POST" }, async (ctx) => {
+        const body = (ctx.body ?? {}) as Record<string, unknown>;
+        const enrollment = parseDeviceCookie(text(body.enrollment, 120));
+        const name = text(body.deviceName, 60).trim();
+        if (enrollment === null || name === "") throw INVALID();
+        // Kayıt belirteci özeti (alan ayrımı: `field-enroll:` öneki). Hız sınırı belirteç özetine bağlı: doğrulanmamış trafik bir tenant'ın
+        // bütün kayıtlarını kapatamaz (inceleme m3); IP sınırı ayrıca Better Auth kuralında.
+        const tokenHash = enrollmentTokenHash(text(body.enrollment, 120).slice(enrollment.tenantId.length + 1));
+        await limit(`field:enroll:${tokenHash}`, FIELD_RATE_RULES.enrollTenant);
+        const device = newDeviceToken();
+        const rows = await deps.execute<{ outcome: string }>(
+          sql`SELECT wms_probe.field_enroll_claim(${enrollment.tenantId}::uuid, ${tokenHash}, ${device.hash}, ${name}) AS outcome`,
+        );
+        const confirm = rows[0]?.outcome ?? "DENIED";
+        if (!/^\d{6}$/.test(confirm)) throw DENIED();
+        ctx.setCookie(cookieName, `${enrollment.tenantId}.${device.token}`, cookieOptions);
+        // Doğrulama kodu yalnız bu terminalin ekranında görünür; yönetici onayda yazar (inceleme M1).
+        return ctx.json({ ok: true, pending: true, confirmCode: confirm });
+      }),
+
       fieldActivate: createAuthEndpoint("/field/activate", { method: "POST" }, async (ctx) => {
         const body = (ctx.body ?? {}) as Record<string, unknown>;
         const workspace = text(body.workspace, 64).trim().toLowerCase();
@@ -188,7 +259,7 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const r = rows[0];
         // Etkinleştirme kilit bildirmez (kullanıcı adı keşfi yok; inceleme M1): her ret aynı.
         if (r?.outcome !== "OK" || r.user_id === null || r.tenant_id === null) throw DENIED();
-        await openSession(ctx, r.user_id, r.tenant_id, device);
+        await openSession(ctx, r.user_id, r.tenant_id, device, r.device_id);
         return ctx.json({ ok: true });
       }),
 
@@ -233,9 +304,13 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
                                                    ${ok ? next.hash : null}) AS outcome`,
         );
         const outcome = finished[0]?.outcome;
-        if (outcome === "LOCKED") throw LOCKED();
+        if (outcome === "LOCKED") {
+          // Yanlış PIN ile konan kilit (geçiş); doğru PIN'in paralel kilide takılması sayılmaz.
+          if (!ok) await spree(parsed.tenantId, parsed.tokenHash, username);
+          throw LOCKED();
+        }
         if (!ok || outcome !== "OK") throw DENIED();
-        await openSession(ctx, r.user_id, r.tenant_id, next);
+        await openSession(ctx, r.user_id, r.tenant_id, next, r.device_id);
         return ctx.json({ ok: true });
       }),
     },

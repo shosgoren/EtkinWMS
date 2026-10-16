@@ -12,12 +12,19 @@ import { C, dz } from "../design/giris-tokens.ts";
 import { GICON } from "../design/giris-icons.ts";
 import { pinProblem } from "./pin.ts";
 
-type Device = { readonly registered: false } | { readonly registered: true; readonly workspace: string; readonly tenantName: string; readonly deviceName: string };
+type Device =
+  | { readonly registered: false }
+  | { readonly registered: true; readonly workspace: string; readonly tenantName: string; readonly deviceName: string; readonly shared: boolean };
+interface StaffPick {
+  readonly name: string;
+  readonly username: string;
+  readonly role: "PICKER" | "COUNTER";
+}
 type FactStep = 1 | 2 | 3 | 4;
 
 const WS_KEY = "wms.field.workspace";
 
-function Ico({ d, size, sw, style }: { d: string; size: number; sw?: number; style?: CSSProperties }) {
+export function Ico({ d, size, sw, style }: { d: string; size: number; sw?: number; style?: CSSProperties }) {
   return (
     <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={sw === undefined ? style : { strokeWidth: sw, ...style }}>
       <path d={d} />
@@ -49,7 +56,7 @@ function buzz(): void {
   }
 }
 
-function Shell({ fact, children }: { fact: boolean; children: ReactNode }) {
+export function Shell({ fact, children }: { fact: boolean; children: ReactNode }) {
   const t = useTranslations("fieldLogin");
   const { toggleTheme } = useDz();
   const rows = fact
@@ -177,7 +184,9 @@ function Flow({ host }: { host: string }) {
   const t = useTranslations("fieldLogin");
   const { dark } = useDz();
   const [device, setDevice] = useState<Device | null>(null);
-  const [scr, setScr] = useState<"login" | "fact">("login");
+  const [scr, setScr] = useState<"login" | "fact" | "sw">("login");
+  const [staff, setStaff] = useState<readonly StaffPick[] | null>(null);
+  const [who, setWho] = useState<StaffPick | null>(null);
   const [ws, setWs] = useState("");
   const [user, setUser] = useState("");
   const [code, setCode] = useState("");
@@ -189,10 +198,10 @@ function Flow({ host }: { host: string }) {
   const [busy, setBusy] = useState(false);
 
   const loadDevice = useCallback(async () => {
-    const r = await authClient.$fetch<{ registered: boolean; workspace?: string; tenantName?: string; deviceName?: string }>("/field/device", { method: "GET" }).catch(() => null);
+    const r = await authClient.$fetch<{ registered: boolean; workspace?: string; tenantName?: string; deviceName?: string; kind?: string }>("/field/device", { method: "GET" }).catch(() => null);
     const d = r?.data;
     if (d?.registered === true && typeof d.workspace === "string") {
-      setDevice({ registered: true, workspace: d.workspace, tenantName: d.tenantName ?? "", deviceName: d.deviceName ?? "" });
+      setDevice({ registered: true, workspace: d.workspace, tenantName: d.tenantName ?? "", deviceName: d.deviceName ?? "", shared: d.kind === "SHARED" });
       setWs(d.workspace);
     } else {
       setDevice({ registered: false });
@@ -206,15 +215,25 @@ function Flow({ host }: { host: string }) {
   const wsNorm = ws.trim().toLowerCase();
   const userNorm = user.trim().toLowerCase();
 
-  async function signIn(p: string): Promise<void> {
-    if (wsNorm === "" || userNorm === "") {
+  async function openSwitch(): Promise<void> {
+    setScr("sw");
+    setWho(null);
+    setPin("");
+    setPinErr(null);
+    const r = await authClient.$fetch<{ staff: StaffPick[] }>("/field/staff", { method: "GET" }).catch(() => null);
+    setStaff(r?.data?.staff ?? []);
+  }
+
+  async function signIn(p: string, as?: string): Promise<void> {
+    const userFor = as ?? userNorm;
+    if (wsNorm === "" || userFor === "") {
       buzz();
       setPin("");
       setPinErr(t("errFill"));
       return;
     }
     setBusy(true);
-    const r = await authPost<{ ok: boolean }>("/field/sign-in", { workspace: wsNorm, username: userNorm, pin: p });
+    const r = await authPost<{ ok: boolean }>("/field/sign-in", { workspace: wsNorm, username: userFor, pin: p });
     if (r.ok) {
       saveWs(wsNorm);
       window.location.assign(`/t/${encodeURIComponent(wsNorm)}`);
@@ -276,6 +295,69 @@ function Flow({ host }: { host: string }) {
     setErr(null);
     void loadDevice();
   };
+
+  if (scr === "sw" && device !== null && device.registered) {
+    // Kaynak `v.sw` (ortak cihazda hızlı kullanıcı değişimi). Bekleyen çevrimdışı iş bandı: uygulamada çevrimdışı kuyruk yok (T-998 notu).
+    const tones: readonly (readonly [string, string])[] = [
+      ["FFE7A8", "4A3500"],
+      ["CFE8DA", "0F3D27"],
+      ["DCE4F8", "1C2E5C"],
+      ["F6D9C9", "5C2410"],
+    ];
+    const ini = (n: string): string =>
+      n
+        .split(" ")
+        .map((x) => x.charAt(0))
+        .join("")
+        .slice(0, 2)
+        .toLocaleUpperCase("tr-TR");
+    return (
+      <Shell fact={false}>
+        <span className="kick">{`${device.deviceName} · ${device.tenantName}`.toLocaleUpperCase("tr-TR")}</span>
+        <h1 className="lh">{who === null ? t("swH") : t("swPinH", { name: who.name })}</h1>
+        {who === null ? (
+          <div className="rows">
+            {staff !== null && staff.length === 0 ? <span className="hint">{t("swEmpty")}</span> : null}
+            {(staff ?? []).map((p, i) => {
+              const tone = tones[i % tones.length] ?? ["FFE7A8", "4A3500"];
+              return (
+                <button
+                  key={p.username}
+                  type="button"
+                  className="row"
+                  style={{ background: C.surface }}
+                  onClick={() => {
+                    setWho(p);
+                    setPin("");
+                    setPinErr(null);
+                  }}
+                >
+                  <span className="av" style={{ background: dz(tone[0]), color: dz(tone[1]) }}>
+                    {ini(p.name)}
+                  </span>
+                  <span className="rt">
+                    <b>{p.name}</b>
+                    <span>{(p.role === "COUNTER" ? t("roleCounter") : t("rolePicker")).toLocaleUpperCase("tr-TR")}</span>
+                  </span>
+                  <Ico d={GICON.next} size={26} sw={3} />
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <>
+            <div className="card" style={{ background: C.surface }}>
+              <PinDots pin={pin} err={pinErr} center />
+              <PinKeys pin={pin} setPin={(p) => { setPin(p); setPinErr(null); }} onDone={(p) => void signIn(p, who.username)} busy={busy} />
+            </div>
+            <button type="button" className="lnk" onClick={() => { setWho(null); setPin(""); setPinErr(null); }}>
+              {t("swBack")}
+            </button>
+          </>
+        )}
+      </Shell>
+    );
+  }
 
   if (scr === "fact") {
     const bars = [1, 2, 3].map((i) => (i <= fs ? (dark ? dz("F4C542") : dz("172E42")) : C.track));
@@ -440,6 +522,11 @@ function Flow({ host }: { host: string }) {
             </div>
             <PinKeys pin={pin} setPin={(p) => { setPin(p); setPinErr(null); }} onDone={(p) => void signIn(p)} busy={busy} />
           </div>
+          {device.shared ? (
+            <button type="button" className="lnk" onClick={() => void openSwitch()}>
+              {t("pickStaff")}
+            </button>
+          ) : null}
         </>
       ) : (
         <>
