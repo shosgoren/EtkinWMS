@@ -9,7 +9,7 @@
 //   indeksi bilerek benzersiz değildir (A-69).
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { check, date, index, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -60,6 +60,8 @@ export const items = pgTable(
     archivedAt: timestamptz("archived_at"),
     /** Kart türü (0031, T-911): HM hammadde, YM yarı mamul, MM mamul, TM ticari mal. */
     cardType: text("card_type").$type<ItemCardType>().notNull().default("TM"),
+    /** Örnek veri işareti (0040, T-996). */
+    isSample: boolean("is_sample").notNull().default(false),
   },
   (t) => [
     unique("items_tenant_id_id_key").on(t.tenantId, t.id),

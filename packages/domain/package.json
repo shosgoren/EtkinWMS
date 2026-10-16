@@ -15,6 +15,7 @@
     "./audit/audit-query": "./src/audit/audit-query.ts",
     "./onboarding/templates": "./src/onboarding/templates.ts",
     "./onboarding/reserved": "./src/onboarding/reserved.ts",
+    "./onboarding/sample-data": "./src/onboarding/sample-data.ts",
     "./onboarding/import": "./src/onboarding/index.ts",
     "./demo/seed": "./src/demo/seed.ts",
     "./catalog": "./src/catalog/index.ts",

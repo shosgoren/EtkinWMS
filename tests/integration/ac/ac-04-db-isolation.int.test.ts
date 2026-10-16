@@ -197,6 +197,28 @@ beforeAll(async () => {
       throw e;
     }
   }
+  // T-996 (0040): örnek veri yolu. Bu beş tabloda wms_app DELETE'i yalnız örnek satırı siler (tetikleyici örnek olmayanı atlar), bu
+  // yüzden A'ya FK ile korunmayan örnek kontrol satırları eklenir: depo (lokasyonsuz), lokasyon (kilidi migration rolüyle kaldırılmış),
+  // ürün (dönüşümsüz); kilit ve dönüşüm genel `WHERE tenant_id = A` denetimiyle silinir (yalnız örnek satır etkilenir).
+  {
+    const sw = randomUUID(), swEmpty = randomUUID(), sl1 = randomUUID(), sl2 = randomUUID(), si1 = randomUUID(), si2 = randomUUID();
+    await admin.query(
+      "INSERT INTO public.warehouses (tenant_id, id, code, name, is_sample) VALUES ($1, $2, 'ORNEK', 'Örnek depo', true), ($1, $3, 'ORNEK2', 'Örnek depo 2', true)",
+      [A.tenantId, sw, swEmpty],
+    );
+    await admin.query(
+      `INSERT INTO public.locations (tenant_id, id, warehouse_id, code, name, depth, kind, is_sample)
+       VALUES ($1, $2, $4, 'S-1', 'Örnek 1', 0, 'STORAGE', true), ($1, $3, $4, 'S-2', 'Örnek 2', 0, 'STORAGE', true)`,
+      [A.tenantId, sl1, sl2, sw],
+    );
+    await admin.query("DELETE FROM public.location_count_locks WHERE tenant_id = $1 AND location_id = $2", [A.tenantId, sl1]);
+    await admin.query(
+      "INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, is_sample) VALUES ($1, $2, 'ORN-1', 'Örnek 1', $4, true), ($1, $3, 'ORN-2', 'Örnek 2', $4, true)",
+      [A.tenantId, si1, si2, A.unitId],
+    );
+    await admin.query("INSERT INTO public.unit_conversions (tenant_id, item_id, unit_id, to_base_factor) VALUES ($1, $2, $3, 10)", [A.tenantId, si2, A.boxUnitId]);
+    A.deletableControl = { ...A.deletableControl, warehouses: swEmpty, locations: sl1, items: si1 };
+  }
   // T-903: populate every new tenant table for the generic RLS matrix, without stock effects.
   for (const w of [A, B]) {
     await admin.query("BEGIN");

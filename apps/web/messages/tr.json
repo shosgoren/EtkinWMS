@@ -830,6 +830,10 @@
     },
     "trial": {
       "started": "Deneme başlatıldı (3 ay)"
+    },
+    "sample_data": {
+      "loaded": "Örnek depo verisi yüklendi",
+      "cleared": "Örnek veriler temizlendi"
     }
   },
   "auditLog": {
@@ -902,7 +906,23 @@
     "locked": "Bu ayarları değiştirme yetkin yok.",
     "lockedAction": "Değişiklik gerekiyorsa çalışma alanı yöneticine (sorumlun) sor.",
     "back": "Ana ekrana dön",
-    "importLink": "Ürün ve stoku Excel'den içe aktar"
+    "importLink": "Ürün ve stoku Excel'den içe aktar",
+    "sample": {
+      "title": "Örnek veriler",
+      "body": "Deneme alanında örnek bir depo, raflar ve ürünler var: {warehouses} depo · {locations} lokasyon · {items} ürün. İşin bitince temizleyebilirsin.",
+      "rule": "Örnek kayıtlarla hiç işlem yapılmadıysa hepsi silinir. İşlem yapıldıysa silinmez, pasife alınır: geçmiş hareketler ve kayıtlar korunur, listelerde görünmez.",
+      "confirm": "Örnek kayıtların silineceğini ya da pasife alınacağını anladım",
+      "clear": "Örnek verileri temizle",
+      "deleted": "Örnek veriler silindi: {warehouses} depo, {locations} lokasyon, {items} ürün.",
+      "archived": "Örnek kayıtlarla işlem yapıldığı için silinmediler; pasife alındılar: {warehouses} depo, {locations} lokasyon, {items} ürün. Geçmiş hareketler korundu.",
+      "none": "Temizlenecek örnek veri yok.",
+      "inUse": "Örnek ürünlerde ya da raflarda stok veya açık rezervasyon var; bu durumda pasife alınamaz.",
+      "inUseAction": "Önce o stoğu çıkar ya da başka lokasyona taşı, sonra yeniden dene.",
+      "confirmRequired": "Temizlemeden önce onay kutusunu işaretle.",
+      "reauth": "Bu işlem için kimliğini yeniden doğrulaman gerekiyor.",
+      "reauthAction": "Yeniden giriş yapıp işlemi yinele.",
+      "loginLink": "Yeniden giriş yap"
+    }
   },
   "items": {
     "title": "Ürünler",

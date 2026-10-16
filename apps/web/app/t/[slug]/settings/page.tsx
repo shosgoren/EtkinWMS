@@ -5,10 +5,12 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Banner, Button, TextField } from "@wms/ui";
 import { getAppDb } from "@wms/db";
+import { getSampleDataStatus, hasActiveSample, type SampleDataStatus } from "@wms/domain/onboarding/sample-data";
 import { getTenantSettings } from "@wms/domain/onboarding/settings-queries";
 import { AppError } from "@wms/shared/errors";
 import { TIME_ZONES } from "../../../../lib/timezones.ts";
 import { saveSettingsAction } from "./actions.ts";
+import { clearSampleDataAction } from "./sample-actions.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,14 @@ const SHOWN = ["FORBIDDEN", "UNAUTHENTICATED", "RATE_LIMITED", "VALIDATION_FAILE
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
+
+/** Sonuç sayısı (yönlendirme sorgusundan; yalnız gösterim). Biçimsizse 0. */
+function count(v: string | string[] | undefined): number {
+  const s = first(v);
+  return s !== undefined && /^\d{1,6}$/.test(s) ? Number(s) : 0;
+}
+
+const SAMPLE_RESULTS = ["deleted", "archived", "none"] as const;
 
 // Ayarlar (T-122): okuma `getTenantSettings` (settings.manage), yazma `saveSettingsAction`. Yetki yoksa form kilitli + açıklama.
 // Yetki kararı sunucudadır; kilit yalnızca gösterimdir (eylem de aynı izni ister).
@@ -48,6 +58,11 @@ export default async function SettingsPage({ params, searchParams }: { params: P
 
   const errorCode = SHOWN.find((c) => c === first(query.error))?.toLowerCase();
   const locked = settings === null;
+  // Örnek veri durumu (T-996): yalnız ayar yetkisi olana; etkin örnek kayıt yoksa bölüm çizilmez.
+  const sample: SampleDataStatus | null = locked ? null : await getSampleDataStatus({ db: getAppDb(), principal, tenantSlug: slug });
+  const sampleResult = SAMPLE_RESULTS.find((r) => r === first(query.sample));
+  const sampleNotice = first(query.sample);
+  const resultCounts = { warehouses: count(query.w), locations: count(query.l), items: count(query.i) };
 
   return (
     <main className="mx-auto flex w-full max-w-xl min-w-0 flex-col gap-4 px-4 py-6">
@@ -108,6 +123,46 @@ export default async function SettingsPage({ params, searchParams }: { params: P
           <Button type="submit">{t("save")}</Button>
         </fieldset>
       </form>
+      {sampleResult === undefined ? null : (
+        <Banner kind="info">
+          <p>{t(`sample.${sampleResult}`, resultCounts)}</p>
+        </Banner>
+      )}
+      {sampleNotice === "in_use" ? (
+        <Banner kind="error">
+          <p>
+            {t("sample.inUse")} {t("sample.inUseAction")}
+          </p>
+        </Banner>
+      ) : null}
+      {sampleNotice === "confirm" ? <Banner kind="error">{t("sample.confirmRequired")}</Banner> : null}
+      {sampleNotice === "reauth" ? (
+        <Banner kind="error">
+          <p>
+            {t("sample.reauth")} {t("sample.reauthAction")}
+          </p>
+          <a className="mt-1 inline-block font-bold text-ink underline" href={`/login?next=${encodeURIComponent(`/t/${slug}/settings`)}`}>
+            {t("sample.loginLink")}
+          </a>
+        </Banner>
+      ) : null}
+      {sample !== null && hasActiveSample(sample) ? (
+        <section aria-labelledby="sample-title" className="flex min-w-0 flex-col gap-3 rounded-card bg-surface p-4 shadow-card" data-testid="sample-data">
+          <h2 id="sample-title" className="text-xl font-bold text-ink">
+            {t("sample.title")}
+          </h2>
+          <p className="text-base text-ink">{t("sample.body", { ...sample.active })}</p>
+          <p className="text-base text-ink-muted">{t("sample.rule")}</p>
+          <form action={clearSampleDataAction} className="flex min-w-0 flex-col gap-3">
+            <input type="hidden" name="slug" value={slug} />
+            <label className="flex min-h-12 items-center gap-3 text-base text-ink">
+              <input type="checkbox" name="confirm" value="1" required className="h-6 w-6 shrink-0" />
+              <span>{t("sample.confirm")}</span>
+            </label>
+            <Button type="submit">{t("sample.clear")}</Button>
+          </form>
+        </section>
+      ) : null}
       {locked ? null : (
         <Link
           href={`${home}/import`}
