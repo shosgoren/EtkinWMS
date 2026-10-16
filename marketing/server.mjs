@@ -75,15 +75,14 @@ export async function siteContent(preview) {
   siteCache = { at: now, site: r.ok ? r.site : siteCache.site };
   return siteCache.site;
 }
-// İnceleme m1: önizleme (önbelleksiz) istekleri IP başına saatte 20 ile sınırlı; aşımda yayındaki içerik sunulur.
-const previewLimits = new Map();
-function previewAllowed(req) {
-  const ip = req.headers['x-forwarded-for']?.toString().split(',').at(-1)?.trim() || req.socket.remoteAddress || 'unknown';
+// İnceleme m1/n1: önizleme (önbelleksiz) istekleri süreç genelinde 10 dakikada en çok 60 (sabit bellek; IP başına tablo yok, IP değiştirerek
+// büyütülemez). Aşımda yayındaki içerik sunulur. Önizleme yalnız operatör içindir; veritabanı yükü web tarafında ayrıca sınırlıdır.
+let previewWindow = { at: 0, n: 0 };
+function previewAllowed() {
   const now = Date.now();
-  for (const [key, value] of previewLimits) if (now - value.at > 3600000) previewLimits.delete(key);
-  const c = previewLimits.get(ip) || { at: now, n: 0 };
-  c.n++; previewLimits.set(ip, c);
-  return c.n <= 20;
+  if (now - previewWindow.at >= 600000) previewWindow = { at: now, n: 0 };
+  previewWindow.n++;
+  return previewWindow.n <= 60;
 }
 const escapeHtml = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const jsonBlock = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
@@ -151,7 +150,7 @@ export const server = createServer(async (req,res) => {
     let cache = file.endsWith('.html') ? 'no-cache' : /^(img|fonts)\//.test(file) ? 'public, max-age=86400' : 'public, max-age=300';
     if (file === 'index.html') {
       const raw = new URL(req.url || '/', 'http://local').searchParams.get('onizleme');
-      const preview = raw !== null && PREVIEW_TOKEN.test(raw) && previewAllowed(req) ? raw : null;
+      const preview = raw !== null && PREVIEW_TOKEN.test(raw) && previewAllowed() ? raw : null;
       content = Buffer.from(injectSite(content.toString('utf8'), await siteContent(preview)), 'utf8');
       if (raw !== null) {
         cache = 'no-store';
