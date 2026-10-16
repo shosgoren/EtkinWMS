@@ -811,16 +811,21 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.platform_activation_preview", // T-995 migration 0039: geçerli bağlantı önizlemesi (firma/e-posta/süre), yalnızca wms_app
     "wms_probe.platform_activation_release", // T-995 migration 0039: yarıda kalan talebin süresini bitirir (kimlik korunur), yalnızca wms_app
     "wms_probe.platform_assign_default_plan", // T-404 migration 0041: bağlam tenant'ının paketsiz deneme kaydına önerilen paket, yalnızca wms_app
+    "wms_probe.platform_change_customer_plan", // T-403 migration 0042: operatör müşteri paketini değiştirir (güncel sürüm) + security_events, yalnızca wms_app
+    "wms_probe.platform_customer_activity", // T-403 migration 0042: operatöre müşterinin bu ayki hareket SAYISI + panel geçmişi (içerik yok), yalnızca wms_app
     "wms_probe.platform_decide_demo_request", // T-994 migration 0038: operatör (DB listesi) PENDING → karar + security_events, yalnızca wms_app
     "wms_probe.platform_demo_request_email", // T-995 migration 0039: operatöre talep e-postası (teslim yolu seçimi), yalnızca wms_app
+    "wms_probe.platform_extend_trial", // T-403 migration 0042: operatör denemeyi 30 gün uzatır + security_events, yalnızca wms_app
     "wms_probe.platform_ingest_demo_request", // T-994 migration 0038: satış sitesi talebi idempotent ekleme (tenant verisi yok), yalnızca wms_worker
     "wms_probe.platform_is_operator", // T-994 migration 0038: çağıran kullanıcı operatör mü (salt okunur), yalnızca wms_app
     "wms_probe.platform_issue_activation", // T-995 migration 0039: operatör bağlantı özeti yazar (72 sa) + security_events, yalnızca wms_app
+    "wms_probe.platform_list_customers", // T-403 migration 0042: operatöre müşteri listesi (yalnız sayılar ve durum), yalnızca wms_app
     "wms_probe.platform_list_demo_requests", // T-994 migration 0038 (0039: aktivasyon durumu eklendi): yalnız operatöre talep listesi, yalnızca wms_app
     "wms_probe.platform_list_plans", // T-404 migration 0041: yalnız operatöre paket listesi (güncel sürüm + müşteri sayısı), yalnızca wms_app
     "wms_probe.platform_prepare_activation_delivery", // T-995 migration 0039: e-postayla teslimde yeni belirteç özeti, yalnızca wms_worker
     "wms_probe.platform_published_plans", // T-404 migration 0041: yayındaki paketler (herkese açık bilgi, müşteri verisi yok), yalnızca wms_app
     "wms_probe.platform_save_plan", // T-404 migration 0041: operatör paket kaydı (değişiklikte yeni sürüm) + security_events, yalnızca wms_app
+    "wms_probe.platform_set_customer_status", // T-403 migration 0042: operatör askıya alır (gerekçe) / devam ettirir + security_events, yalnızca wms_app
     "wms_probe.platform_tenant_plan_limit", // T-404 migration 0041: bağlam tenant'ının paket sınırı (başka tenant → NULL), yalnızca wms_app
     "wms_probe.platform_tenant_subscription", // T-995 migration 0039: bağlam tenant'ının deneme kaydı (salt okunur), yalnızca wms_app
     "wms_probe.platform_workspace_name_taken", // T-995 migration 0039: yalnız geçerli bağlantıyla ad yoklaması (salt okunur), yalnızca wms_app
@@ -882,6 +887,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_published_plans": [APP_ROLE],
       "wms_probe.platform_tenant_plan_limit": [APP_ROLE],
       "wms_probe.platform_assign_default_plan": [APP_ROLE],
+      "wms_probe.platform_list_customers": [APP_ROLE],
+      "wms_probe.platform_customer_activity": [APP_ROLE],
+      "wms_probe.platform_set_customer_status": [APP_ROLE],
+      "wms_probe.platform_extend_trial": [APP_ROLE],
+      "wms_probe.platform_change_customer_plan": [APP_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);

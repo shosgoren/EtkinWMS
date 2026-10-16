@@ -8,6 +8,7 @@ import { useDz } from "../../design/dz-root.tsx";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import type { PlanActionState } from "./actions.ts";
+import { planLines, priceLabel } from "../plan-format.ts";
 
 /** Paket (sunucudaki `PlanRow` ile aynı biçim; istemci dosyası sunucu paketini içe aktarmaz — T-127b). */
 export interface PlanItem {
@@ -56,19 +57,6 @@ export interface PaketlerLabels {
   readonly savePublish: string;
   /** `{code}` yer tutuculu hata metni. */
   readonly error: string;
-}
-
-/** Kaynaktaki `pkSum`: "3 yönetici", "Sınırsız saha personeli"… */
-export function planLines(p: PlanItem, t: Pick<PaketlerLabels, "unlimited" | "admins" | "field" | "warehouses" | "items">): string[] {
-  const lim = (v: number, u: string): string => (v === 0 ? `${t.unlimited} ${u}` : `${v.toLocaleString("tr-TR")} ${u}`);
-  return [lim(p.limits.admins, t.admins), lim(p.limits.field, t.field), lim(p.limits.warehouses, t.warehouses), lim(p.limits.items, t.items)];
-}
-
-/** Fiyat gösterimi: tamsayı binlik ayraçlı, ondalıklı iki hane (tr-TR). */
-export function priceLabel(price: string): string {
-  const n = Number(price);
-  if (price === "" || !Number.isFinite(n)) return price;
-  return n.toLocaleString("tr-TR", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
 }
 
 function Ico({ d, size, sw }: { d: string; size: number; sw?: number }) {

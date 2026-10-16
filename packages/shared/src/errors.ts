@@ -53,6 +53,8 @@ export const ERROR_DETAILS = [
   // T-404: paket sınırı (0041 tetikleyicisi) ve geçersiz paket tanımı (panel).
   "PLAN_LIMIT",
   "PLAN_INVALID",
+  // T-403: askıya alma gerekçesi boş.
+  "REASON_REQUIRED",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -85,6 +87,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   RETURN_EXCEEDS_SHIPPED: "VALIDATION_FAILED",
   PLAN_LIMIT: "VALIDATION_FAILED",
   PLAN_INVALID: "VALIDATION_FAILED",
+  REASON_REQUIRED: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

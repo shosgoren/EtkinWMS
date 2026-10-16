@@ -84,7 +84,9 @@ export async function savePlanAction(_prev: PlanActionState, form: FormData): Pr
     recommended: field(form, "recommended") === "1",
   });
   if (!result.ok) {
-    if (result.error.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(PATH)}`);
+    if (result.error.code === "UNAUTHENTICATED") {
+      redirect(`/login?${result.error.detail === "RECENT_AUTH_REQUIRED" ? "reauth=1&" : ""}next=${encodeURIComponent(PATH)}`);
+    }
     if (result.error.code === "FORBIDDEN" && result.error.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(PATH)}`);
     return { error: result.error.detail === undefined ? result.error.code : `${result.error.code}/${result.error.detail}` };
   }

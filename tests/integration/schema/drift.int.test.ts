@@ -429,13 +429,28 @@ describe(`invitation_tenant_for_token (0006, T-117; target=${env.target})`, () =
     expect(grantees.map((g) => g.grantee).filter((g) => g !== "wms_identity_probe")).toEqual(["wms_app"]);
   });
 
-  it("probe salt okunur kalir: tenant tablolarinda yazma yetkisi ve yazma politikasi yok", async () => {
+  it("T-403 (0042): sayim icin depo/urun/defterde probe politikasi yok (AC-04: yalnizca TO'suz izolasyon politikasi)", async () => {
+    const r = await query<{ p: string }>(
+      `SELECT tablename || '.' || policyname AS p FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = ANY(ARRAY['warehouses', 'items', 'stock_ledger']) AND 'wms_identity_probe' = ANY(roles)`,
+    );
+    expect(r).toEqual([]);
+  });
+
+  it("probe tenant tablolarinda salt okunur kalir; tek istisna tenants.status sutun yetkisi (T-403 askiya alma, 0042), yazma politikasi yok", async () => {
     const r = await query<{ w: boolean }>(
       `SELECT bool_or(has_table_privilege('wms_identity_probe', t, 'INSERT, UPDATE, DELETE, TRUNCATE')
-                      OR has_any_column_privilege('wms_identity_probe', t, 'UPDATE')) AS w
-         FROM unnest(ARRAY['public.invitations', 'public.tenant_memberships', 'public.membership_roles', 'public.tenants']) AS t`,
+                      OR (t <> 'public.tenants' AND has_any_column_privilege('wms_identity_probe', t, 'UPDATE'))) AS w
+         FROM unnest(ARRAY['public.invitations', 'public.tenant_memberships', 'public.membership_roles', 'public.tenants',
+                           'public.warehouses', 'public.items', 'public.stock_ledger']) AS t`,
     );
     expect(r[0]?.w).toBe(false);
+    const cols = await query<{ attname: string }>(
+      `SELECT a.attname FROM pg_attribute a WHERE a.attrelid = 'public.tenants'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+          AND has_column_privilege('wms_identity_probe', 'public.tenants', a.attname, 'UPDATE') ORDER BY a.attname`,
+    );
+    expect(cols.map((c) => c.attname)).toEqual(["status"]);
+    // Yazma politikası yok: askıya alma işlevi mevcut izolasyon politikasından geçer (bağlam yalnız o satır için, 0042).
     const writes = await query<{ polname: string }>(
       `SELECT polname FROM pg_policy p WHERE p.polroles = ARRAY[(SELECT oid FROM pg_roles WHERE rolname = 'wms_identity_probe')] AND p.polcmd <> 'r'`,
     );

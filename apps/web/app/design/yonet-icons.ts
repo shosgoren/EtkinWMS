@@ -33,4 +33,12 @@ export const YICON = {
   clock: "M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z",
   /** D.check (paket satırı işareti, kalın) */
   check: "M4 12l5 5L20 6",
+  /** Arama (Müşteriler araç çubuğu) */
+  search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5",
+  /** Askıya al (kalın) */
+  pause: "M9 5v14M15 5v14",
+  /** Devam ettir (kalın) */
+  play: "M7 4l12 8-12 8z",
+  /** Destek erişimi iste */
+  eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
 } as const;
