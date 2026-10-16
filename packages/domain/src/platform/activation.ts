@@ -17,6 +17,7 @@ import { AppError } from "@wms/shared/errors";
 import { canDeliver, type MailConfig } from "@wms/shared/mailer";
 import { PLATFORM_NO_USER_ID, type JobQueue } from "@wms/shared/queue";
 import type { AccessDbClient, AccessTx } from "../identity/access.ts";
+import { seedSampleData } from "../onboarding/sample-data.ts";
 import { getTemplate } from "../onboarding/templates.ts";
 import { RESERVED_SLUGS, initializeNewTenant, slugBaseFromName } from "../onboarding/workspace.ts";
 
@@ -237,6 +238,7 @@ export async function activateTrial(params: ActivateTrialParams, deps: ActivateT
     return await withNewTenant(db, { userId, slug, name: company, creationRequestId: claimId }, async (tx, m) => {
       if (!m.created) throw new AppError("VERSION_CONFLICT", { retryable: true }); // tüketilmiş talep tekrar gelemez; tutarsız durum
       await initializeNewTenant(tx, m.tenantId, userId, slug, template, claimId, { source: "trial_activation", sample });
+      if (sample) await seedSampleData(tx, m.tenantId, userId, claimId);
       const consumed = await tx.execute<{ trial_ends_at: Date | string }>(
         sql`SELECT wms_probe.platform_activation_consume(${hash}, ${claimId}::uuid, ${m.tenantId}::uuid, ${sample}) AS trial_ends_at`,
       );

@@ -830,6 +830,10 @@
     },
     "trial": {
       "started": "Trial started (3 months)"
+    },
+    "sample_data": {
+      "loaded": "Sample warehouse data loaded",
+      "cleared": "Sample data cleared"
     }
   },
   "auditLog": {
@@ -902,7 +906,23 @@
     "locked": "You are not allowed to change these settings.",
     "lockedAction": "If a change is needed, ask your workspace administrator.",
     "back": "Back to home",
-    "importLink": "Import products and stock from Excel"
+    "importLink": "Import products and stock from Excel",
+    "sample": {
+      "title": "Sample data",
+      "body": "This trial workspace has a sample warehouse with shelves and products: {warehouses} warehouse · {locations} locations · {items} products. Clear them when you are done.",
+      "rule": "If nothing was done with the sample records, they are all deleted. If something was done, they are not deleted but deactivated: past movements and records are kept and hidden from lists.",
+      "confirm": "I understand the sample records will be deleted or deactivated",
+      "clear": "Clear sample data",
+      "deleted": "Sample data deleted.",
+      "archived": "The sample records were used, so they were not deleted but deactivated. Past movements were kept. Sample shelves that hold your own locations, if any, stay active.",
+      "none": "There is no sample data to clear.",
+      "inUse": "Sample products or shelves still hold stock, an open reservation or a running count, so they cannot be cleared.",
+      "inUseAction": "Issue or move that stock and finish the count first, then try again.",
+      "confirmRequired": "Tick the confirmation box before clearing.",
+      "reauth": "You need to verify your identity again for this action.",
+      "reauthAction": "Sign in again and repeat the action.",
+      "loginLink": "Sign in again"
+    }
   },
   "items": {
     "title": "Products",

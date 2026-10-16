@@ -355,11 +355,16 @@ describe("T-202 ağaç bütünlüğü", () => {
 });
 
 describe("T-202 silme yasağı, yetkiler ve RLS", () => {
-  it("wms_app lokasyon / kilit / depo DELETE: yetki hatası", async () => {
-    for (const t of ["locations", "location_count_locks", "warehouses"]) {
+  it("wms_app lokasyon / kilit / depo DELETE: örnek olmayan satır silinmez (0040 tetikleyicisi atlar); TRUNCATE yetki hatası", async () => {
+    // T-996 (0040): DELETE yetkisi yalnız örnek veri temizliği içindir (is_sample); gerçek satır hiçbir koşulda silinmez.
+    for (const t of ["location_count_locks", "locations", "warehouses"]) {
       const r = await one(A.tenantId, `DELETE FROM public.${t}`);
-      expect(r.ok, t).toBe(false);
-      if (!r.ok) expect(r.code, t).toBe(INSUFFICIENT_PRIVILEGE);
+      expect(r.ok && r.rowCount, `${t}: ${JSON.stringify(r)}`).toBe(0);
+      const left = await admin.query<{ n: string }>(`SELECT count(*)::text AS n FROM public.${t} WHERE tenant_id = $1`, [A.tenantId]);
+      expect(Number(left.rows[0]?.n), t).toBeGreaterThan(0);
+      const tr = await one(A.tenantId, `TRUNCATE public.${t}`);
+      expect(tr.ok, t).toBe(false);
+      if (!tr.ok) expect(tr.code, t).toBe(INSUFFICIENT_PRIVILEGE);
     }
   });
 

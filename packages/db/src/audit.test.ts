@@ -56,7 +56,7 @@ describe("eylem listesi", () => {
         "sales_order.created", "sales_order.updated", "sales_order.cancelled", "sales_order.line_cancelled",
         "pick_assignment.created", "production_recipe.created", "pick.not_found",
         "count.started", "count.recorded", "count.submitted", "count.approved", "count.posted", "count.cancelled",
-        "work_priority.set", "problem.reported", "problem.resolved", "settings.shift_updated", "trial.started",
+        "work_priority.set", "problem.reported", "problem.resolved", "settings.shift_updated", "trial.started", "sample_data.loaded", "sample_data.cleared",
       ].sort(),
     );
   });

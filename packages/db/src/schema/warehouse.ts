@@ -26,6 +26,8 @@ export const warehouses = pgTable(
     status: text("status").$type<WarehouseStatus>().notNull().default("ACTIVE"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     archivedAt: timestamptz("archived_at"),
+    /** Deneme alanının "Örnek depo" kaydı (0040, T-996): yalnız oluşturmada yazılır; temizlikte silinir ya da pasife alınır. */
+    isSample: boolean("is_sample").notNull().default(false),
   },
   (t) => [
     unique("warehouses_tenant_id_id_key").on(t.tenantId, t.id),
@@ -48,6 +50,8 @@ export const locations = pgTable(
     status: text("status").$type<WarehouseStatus>().notNull().default("ACTIVE"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     archivedAt: timestamptz("archived_at"),
+    /** Örnek veri işareti (0040, T-996). */
+    isSample: boolean("is_sample").notNull().default(false),
   },
   (t) => [
     unique("locations_tenant_id_id_key").on(t.tenantId, t.id),

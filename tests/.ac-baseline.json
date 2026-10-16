@@ -48,7 +48,7 @@
     "tests/integration/operations/receiving.int.test.ts": 178,
     "tests/integration/operations/shipping-returns.int.test.ts": 177,
     "tests/integration/schema/documents-qa.int.test.ts": 27,
-    "tests/integration/schema/phase2-catalog-qa.int.test.ts": 49,
+    "tests/integration/schema/phase2-catalog-qa.int.test.ts": 54,
     "tests/integration/schema/stock-guard-qa.int.test.ts": 51,
     "tests/integration/stock/consistency-job.int.test.ts": 66,
     "tests/unit/ac/ac-28-lint.test.ts": 119

@@ -92,6 +92,9 @@ export const AUDIT_ACTIONS = [
   "settings.shift_updated",
   // T-995: deneme aktivasyonu (plan TRIAL + bitiş tarihi; tenant.created ile aynı transaction).
   "trial.started",
+  // T-996: deneme alanının örnek verisi (aktivasyonda yükleme; ayarlardan silme ya da pasife alma).
+  "sample_data.loaded",
+  "sample_data.cleared",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
