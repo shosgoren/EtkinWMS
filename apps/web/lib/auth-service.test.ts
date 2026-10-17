@@ -116,8 +116,14 @@ describe("createRouteHandler (kuyruk hazırlığı yalnızca sıfırlama isteği
 });
 
 describe("createRouteHandler (T-999b: başarısız e-posta girişinde kalan deneme / bekleme başlığı)", () => {
-  const signIn = (body: unknown): Request =>
-    new Request("https://app.example.test/api/auth/sign-in/email", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const signIn = (body: unknown, length?: string): Request => {
+    const text = JSON.stringify(body);
+    return new Request("https://app.example.test/api/auth/sign-in/email", {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": length ?? String(new TextEncoder().encode(text).length) },
+      body: text,
+    });
+  };
   const mk = (status: number, headers: Record<string, string> = {}, attempts = vi.fn(() => Promise.resolve({ remaining: 3, retryAfterSec: 840 as number | null }))) => {
     const handler = vi.fn(async (r: Request) => {
       await r.text(); // işleyici gövdeyi tüketir; kopya ayrı okunmalı
@@ -150,6 +156,13 @@ describe("createRouteHandler (T-999b: başarısız e-posta girişinde kalan dene
     const res = await fail.route(signIn({ email: "a@example.test" }));
     expect(res.status).toBe(401);
     expect(res.headers.get("x-attempts-left")).toBeNull();
+    // Boyutu bildirilmemiş ya da büyük gövde kopyalanmaz; saha iç adresi için sayaç okunmaz.
+    const big = mk(401);
+    expect((await big.route(signIn({ email: "a@example.test" }, "999999"))).headers.get("x-attempts-left")).toBeNull();
+    expect(big.attempts).not.toHaveBeenCalled();
+    const field = mk(401);
+    expect((await field.route(signIn({ email: "u-1@field.invalid" }))).headers.get("x-attempts-left")).toBeNull();
+    expect(field.attempts).not.toHaveBeenCalled();
     const other = mk(401);
     const r2 = await other.route(new Request("https://app.example.test/api/auth/two-factor/verify-totp", { method: "POST", body: "{}" }));
     expect(r2.headers.get("x-attempts-left")).toBeNull();

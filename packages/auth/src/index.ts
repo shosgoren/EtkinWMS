@@ -487,10 +487,6 @@ function createRateLimitStorage(client: DbClient) {
       const last = Number(current[0]?.last_request ?? now);
       return { allowed: false, retryAfter: Math.max(1, Math.ceil((last + windowMs - now) / 1000)) };
     },
-    /**
-     * Rezervasyonu geri alır (başarılı giriş): sayaç 1 azalır (0'ın altına inmez). SIFIRLAMAZ: önceki başarısızlıklar
-     * (rezerve edilmiş, geri alınmamış) pencerede kalır → A-41 "5 BAŞARISIZ deneme" anlamı korunur.
-     */
     /** Sayacı değiştirmeden okur (kalan deneme / bekleme; T-999b). Pencere dolmuşsa tam hak. */
     async peek(key: string, rule: { window: number; max: number }): Promise<{ remaining: number; retryAfter: number | null }> {
       const now = Date.now();
@@ -505,6 +501,10 @@ function createRateLimitStorage(client: DbClient) {
       const remaining = Math.max(rule.max - Number(row.count), 0);
       return { remaining, retryAfter: remaining === 0 ? Math.max(1, Math.ceil((last + windowMs - now) / 1000)) : null };
     },
+    /**
+     * Rezervasyonu geri alır (başarılı giriş): sayaç 1 azalır (0'ın altına inmez). SIFIRLAMAZ: önceki başarısızlıklar
+     * (rezerve edilmiş, geri alınmamış) pencerede kalır → A-41 "5 BAŞARISIZ deneme" anlamı korunur.
+     */
     async refund(key: string): Promise<void> {
       await db.execute(
         sql`UPDATE public.auth_rate_limits SET count = GREATEST(count - 1, 0) WHERE key_hash = ${sha256Hex(key)}`,

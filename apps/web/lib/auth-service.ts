@@ -4,6 +4,7 @@
 //
 // Fail-closed (sahte başarı yok): geçersiz/izinsiz MAIL_MODE, geçersiz QUEUE_SEAL_KEY → port yok (503 MAIL_DELIVERY_DISABLED);
 // kuyruk (gönderen istemci) başlatılamıyorsa `canDeliver` false → aynı 503. Alıcı yalnızca mühürlü yükte yaşar; loga girmez (G-09).
+import { isFieldEmail } from "@wms/shared/field-login";
 import { getAuthService as getBaseAuthService, type AuthService, type ResetMailPort } from "@wms/auth";
 import { createResetMailPort } from "@wms/domain/identity/memberships";
 import { AppError } from "@wms/shared/errors";
@@ -89,6 +90,7 @@ export interface RouteDeps {
 }
 
 const SIGN_IN_SUFFIX = "/sign-in/email";
+const MAX_SIGN_IN_BODY = 4096;
 
 /**
  * T-999b: başarısız e-posta girişinin yanıtına kullanıcıya gösterilecek sayaç bilgisi eklenir — 401'de `x-attempts-left` (kalan deneme),
@@ -101,13 +103,16 @@ async function withAttempts(res: Response, copy: Request, attempts: NonNullable<
   try {
     email = ((await copy.json()) as { email?: unknown } | null)?.email;
   } catch {
+    console.warn("[auth] sign-in attempts: gövde okunamadı");
     return res;
   }
-  if (typeof email !== "string" || email === "" || email.length > 320) return res;
+  // Saha hesaplarının iç adresleri e-posta girişinde sayaçtan önce reddedilir; sayaç anlamsızdır (inceleme n3).
+  if (typeof email !== "string" || email === "" || email.length > 320 || isFieldEmail(email)) return res;
   let v: { readonly remaining: number; readonly retryAfterSec: number | null };
   try {
     v = await attempts(email);
   } catch {
+    console.warn("[auth] sign-in attempts: sayaç okunamadı"); // e-posta günlüğe yazılmaz
     return res;
   }
   const headers = new Headers(res.headers);
@@ -145,6 +150,9 @@ export function createRouteHandler(deps: RouteDeps): (request: Request) => Promi
     if (attempts === undefined || request.method !== "POST" || !new URL(request.url).pathname.endsWith(SIGN_IN_SUFFIX)) {
       return deps.handler(request);
     }
+    // Gövde kopyası yalnız küçük ve boyutu bildirilmiş istekte (inceleme n1: sınırsız gövdenin iki kopyası tutulmaz).
+    const length = Number(request.headers.get("content-length"));
+    if (!Number.isFinite(length) || length <= 0 || length > MAX_SIGN_IN_BODY) return deps.handler(request);
     const copy = request.clone();
     const res = await deps.handler(request);
     return res.ok ? res : withAttempts(res, copy, attempts);

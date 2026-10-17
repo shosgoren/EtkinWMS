@@ -115,7 +115,8 @@ function Login({ next, socialEnabled, demo, fieldTab }: { next: string; socialEn
       const w = waitParts(e.retryAfterSec);
       return { h: t("waitH"), t: w === null ? t("waitTSome") : t("waitT", { minutes: w.minutes, time: w.time }), reset: true };
     }
-    if (e.code === "EMAIL_NOT_VERIFIED") return { h: t("unverifiedH"), t: t("unverifiedT") };
+    // Güvenlik incelemesi m1: `EMAIL_NOT_VERIFIED` yalnız parola DOĞRUYSA döner; ayrı mesaj "hesap var ve parola doğru" bilgisini sızdırırdı.
+    // Hesap varlığı sızdırılmaz kuralı gereği hatalı bilgi mesajıyla aynı gösterilir (tasarımdaki "doğrulanmamış" bandı kullanılmaz).
     const left = e.attemptsLeft;
     const tail = left === undefined ? "" : left > 0 ? ` ${t("left", { n: left })}` : ` ${t("leftNone")}`;
     return { h: t("invalidH"), t: `${t("invalidT")}${tail}`, reset: true };
