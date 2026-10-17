@@ -141,6 +141,24 @@ describe("createRouteHandler (T-999b: başarısız e-posta girişinde kalan dene
     expect(t.attempts).toHaveBeenCalledWith("a@example.test");
   });
 
+  it("403 EMAIL_NOT_VERIFIED → yanlış parolayla aynı 401 + kalan deneme; başka 403 dokunulmaz", async () => {
+    const mk403 = (code: string) => {
+      const attempts = vi.fn(() => Promise.resolve({ remaining: 3, retryAfterSec: null as number | null }));
+      const handler = vi.fn(async (r: Request) => {
+        await r.text();
+        return new Response(JSON.stringify({ code }), { status: 403, headers: { "content-type": "application/json" } });
+      });
+      return createRouteHandler({ hasPort: () => false, getQueue: () => Promise.resolve(undefined), holder: { queue: undefined }, handler, attempts });
+    };
+    const res = await mk403("EMAIL_NOT_VERIFIED")(signIn({ email: "a@example.test" }));
+    expect(res.status).toBe(401);
+    expect(res.headers.get("x-attempts-left")).toBe("3");
+    expect(await res.json()).toEqual({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" });
+    const other = await mk403("FORBIDDEN")(signIn({ email: "a@example.test" }));
+    expect(other.status).toBe(403);
+    expect(other.headers.get("x-attempts-left")).toBeNull();
+  });
+
   it("429 → eksikse x-retry-after; varsa dokunulmaz", async () => {
     expect((await mk(429).route(signIn({ email: "a@example.test" }))).headers.get("x-retry-after")).toBe("840");
     expect((await mk(429, { "x-retry-after": "5" }).route(signIn({ email: "a@example.test" }))).headers.get("x-retry-after")).toBe("5");

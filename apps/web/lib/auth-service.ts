@@ -97,7 +97,22 @@ const MAX_SIGN_IN_BODY = 4096;
  * 429'da eksikse `x-retry-after` (bekleme). Sayaç e-posta başınadır ve kayıtlı/kayıtsız ayrımı yapmaz (hesap varlığı sızmaz). Sayaç
  * okunamazsa yanıt değişmeden döner. Gövde ve diğer başlıklar korunur.
  */
-async function withAttempts(res: Response, copy: Request, attempts: NonNullable<RouteDeps["attempts"]>): Promise<Response> {
+async function withAttempts(input: Response, copy: Request, attempts: NonNullable<RouteDeps["attempts"]>): Promise<Response> {
+  let res = input;
+  // Güvenlik incelemesi m1: Better Auth `EMAIL_NOT_VERIFIED`'ı (403) yalnız parola DOĞRUYSA döner → "hesap var ve parola doğru" bilgisi.
+  // Yanıt yanlış parolayla aynı biçime (401 INVALID_EMAIL_OR_PASSWORD + kalan deneme) çevrilir; hesap varlığı API'den de sızmaz.
+  if (res.status === 403) {
+    const code = await res
+      .clone()
+      .json()
+      .then((b: unknown) => (b as { code?: unknown } | null)?.code)
+      .catch(() => undefined);
+    if (code !== "EMAIL_NOT_VERIFIED") return res;
+    const headers = new Headers(res.headers);
+    headers.delete("content-length");
+    headers.set("content-type", "application/json");
+    res = new Response(JSON.stringify({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" }), { status: 401, headers });
+  }
   if (res.status !== 401 && res.status !== 429) return res;
   let email: unknown;
   try {
