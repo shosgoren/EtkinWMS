@@ -9,6 +9,7 @@
     "./identity/invitations": "./src/identity/invitations.ts",
     "./identity/memberships": "./src/identity/memberships.ts",
     "./identity/member-queries": "./src/identity/member-queries.ts",
+    "./identity/last-workspace": "./src/identity/last-workspace.ts",
     "./identity/field-users": "./src/identity/field-users.ts",
     "./identity/devices": "./src/identity/devices.ts",
     "./onboarding/workspace": "./src/onboarding/workspace.ts",

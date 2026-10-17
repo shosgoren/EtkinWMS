@@ -101,6 +101,21 @@ button,input{font:inherit;color:inherit}
 .ban{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:18px;font:600 14px/1.4 'Instrument Sans',sans-serif}
 .ban b{display:block;font:800 15px/1.2 'Bricolage Grotesque',sans-serif;letter-spacing:.02em;margin-bottom:3px}
 .ban .ico{margin-top:1px}
+.ban.err{box-shadow:inset 0 0 0 2px #C62828}
+.ban .blnk{display:inline-block;margin-top:6px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;font:700 14px/1.3 'Instrument Sans',sans-serif;text-decoration:underline;text-underline-offset:3px}
+.hint.warn{color:#8A5A00;opacity:1}
+.dkm .hint.warn{color:#F4C542}
+.chk{appearance:none;align-self:flex-start;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 4px;border:0;background:transparent;color:inherit;cursor:pointer;font:600 15px/1.3 'Instrument Sans',sans-serif;text-align:left}
+.chk i{flex:none;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px;border:2.5px solid currentColor;opacity:.7}
+.chk i .ico{visibility:hidden}
+.chk.on i{opacity:1;background:#172E42;border-color:#172E42;color:#FFFFFF}
+.chk.on i .ico{visibility:visible}
+.dkm .chk.on i{background:#F4C542;border-color:#F4C542;color:#1A1300}
+.or{display:flex;align-items:center;gap:12px;font:600 12px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;opacity:.6}
+.or::before,.or::after{content:'';flex:1;height:1.5px;background:currentColor;opacity:.35}
+.soc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.m-mobile .soc{grid-template-columns:minmax(0,1fr)}
+.big.sm{min-height:56px;font-size:16px}
 .chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border-radius:999px;font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;white-space:nowrap}
 
 /* ── option tiles ── */
@@ -189,6 +204,12 @@ button,input{font:inherit;color:inherit}
     <span class="prev-l">EKRAN</span>
     <sc-for list="{{scrBtns}}" as="sb" hint-placeholder-count="8"><button type="button" class="{{sb.cls}}" aria-pressed="{{sb.pressed}}" onClick="{{sb.go}}">{{sb.l}}</button></sc-for>
   </div>
+  <sc-if value="{{stShow}}" hint-placeholder-val="{{true}}">
+  <div class="prev scr" role="group" aria-label="Durum">
+    <span class="prev-l">DURUM</span>
+    <sc-for list="{{stBtns}}" as="stb" hint-placeholder-count="6"><button type="button" class="{{stb.cls}}" aria-pressed="{{stb.pressed}}" onClick="{{stb.go}}">{{stb.l}}</button></sc-for>
+  </div>
+  </sc-if>
 </sc-if>
 <div class="appzone">
 <div class="{{appCls}}">
@@ -226,11 +247,18 @@ button,input{font:inherit;color:inherit}
         </div>
 
         <sc-if value="{{v.loginMail}}" hint-placeholder-val="{{true}}">
+          <sc-if value="{{lg.demo}}" hint-placeholder-val="{{false}}"><div class="ban" style="background: #F4B400; color: #1A1300"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>Demo ortamı</b>Gerçek kişisel veri girmeyin. Bu ortamdaki veriler düzenli olarak silinir.</span></div></sc-if>
+          <sc-if value="{{lg.err}}" hint-placeholder-val="{{false}}"><div class="ban err" role="alert" style="background: {{c.errBg}}; color: {{c.errFg}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>{{lg.errH}}</b>{{lg.errT}}<sc-if value="{{lg.errReset}}" hint-placeholder-val="{{false}}"><br><button type="button" class="blnk" onClick="{{noop}}">Parolamı sıfırla</button></sc-if></span></div></sc-if>
           <div class="card" style="background: {{c.surface}}">
-            <div class="fl"><label for="g-mail">E-POSTA</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M3 6h18v12H3zM3 7l9 6 9-6"></path></svg><input id="g-mail" type="email" autocomplete="username" placeholder="ad@firma.com" value="{{f.mail}}" onChange="{{on.mail}}"></div></div>
-            <div class="fl"><label for="g-pw">PAROLA</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><input id="g-pw" type="{{pwType}}" autocomplete="current-password" placeholder="Parolanız" value="{{f.pw}}" onChange="{{on.pw}}"><button type="button" class="eye" onClick="{{togglePw}}" aria-label="{{pwEyeL}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{pwEyeD}}"></path></svg></button></div></div>
+            <div class="fl"><label for="g-mail">E-POSTA</label><div class="{{lg.mailCls}}" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M3 6h18v12H3zM3 7l9 6 9-6"></path></svg><input id="g-mail" type="email" autocomplete="username" placeholder="ad@firma.com" value="{{f.mail}}" onChange="{{on.mail}}" aria-describedby="g-mail-h"></div><sc-if value="{{lg.mailBad}}" hint-placeholder-val="{{false}}"><span id="g-mail-h" class="hint bad" role="alert"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>E-posta adresi eksik görünüyor. Örnek: ad@firma.com</span></sc-if></div>
+            <div class="fl"><label for="g-pw">PAROLA</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><input id="g-pw" type="{{pwType}}" autocomplete="current-password" placeholder="Parolanız" value="{{f.pw}}" onChange="{{on.pw}}"><button type="button" class="eye" onClick="{{togglePw}}" aria-label="{{pwEyeL}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{pwEyeD}}"></path></svg></button></div><sc-if value="{{lg.caps}}" hint-placeholder-val="{{false}}"><span class="hint warn" role="status"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l7 8h-4v4H9v-4H5zM9 20h6"></path></svg>Büyük harf kilidi (Caps Lock) açık</span></sc-if></div>
+            <button type="button" role="checkbox" class="{{lg.remCls}}" aria-checked="{{lg.remA}}" onClick="{{lg.toggleRem}}"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></i>Bu cihazda e-postamı hatırla</button>
             <button type="button" class="lnk" onClick="{{noop}}">Parolamı unuttum</button>
           </div>
+          <sc-if value="{{lg.social}}" hint-placeholder-val="{{false}}">
+            <div class="or">VEYA</div>
+            <div class="soc"><button type="button" class="big ghost sm" style="background: {{c.surface}}; color: {{c.fg}}" onClick="{{noop}}">GOOGLE İLE GİRİŞ</button><button type="button" class="big ghost sm" style="background: {{c.surface}}; color: {{c.fg}}" onClick="{{noop}}">MICROSOFT İLE GİRİŞ</button></div>
+          </sc-if>
           <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg><span><b>Hangi firmaya bağlı olduğunuzu biz buluruz</b>Girişten sonra çalışma alanınız açılır. Birden çok firmada üyeyseniz seçersiniz.</span></div>
           <div class="act" style="background: {{c.bg}}"><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{goMfa}}">GİRİŞ YAP<svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button></div>
         </sc-if>
@@ -263,10 +291,12 @@ button,input{font:inherit;color:inherit}
       <sc-if value="{{v.mfa}}" hint-placeholder-val="{{false}}">
         <span class="kick">2 / 2 · DOĞRULAMA</span>
         <h1 class="lh">Doğrulama kodu</h1>
-        <p class="ls">Authenticator uygulamasındaki 6 haneli kodu girin.</p>
+        <p class="ls">{{mf.ls}}</p>
+        <sc-if value="{{mf.err}}" hint-placeholder-val="{{false}}"><div class="ban err" role="alert" style="background: {{c.errBg}}; color: {{c.errFg}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>{{mf.errH}}</b>{{mf.errT}}</span></div></sc-if>
         <div class="card" style="background: {{c.surface}}">
-          <div class="fl"><label for="g-otp">KOD</label><div class="inp" style="background: {{c.chip}}"><input id="g-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" value="{{f.otp}}" onChange="{{on.otp}}" style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; letter-spacing: .3em"></div></div>
-          <button type="button" class="lnk" onClick="{{noop}}">Yedek kod kullan</button>
+          <sc-if value="{{mf.app}}" hint-placeholder-val="{{true}}"><div class="fl"><label for="g-otp">KOD</label><div class="{{mf.inpCls}}" style="background: {{c.chip}}"><input id="g-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" value="{{f.otp}}" onChange="{{on.otp}}" style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; letter-spacing: .3em"></div></div></sc-if>
+          <sc-if value="{{mf.backup}}" hint-placeholder-val="{{false}}"><div class="fl"><label for="g-bk">YEDEK KOD</label><div class="{{mf.inpCls}}" style="background: {{c.chip}}"><input id="g-bk" type="text" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" placeholder="xxxxx-xxxxx" value="{{f.bk}}" onChange="{{on.bk}}" style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; letter-spacing: .12em"></div><span class="hint">Her yedek kod yalnız bir kez kullanılır</span></div></sc-if>
+          <button type="button" class="lnk" onClick="{{mf.toggle}}">{{mf.altL}}</button>
         </div>
         <div class="act" style="background: {{c.bg}}"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}; flex: 0 0 auto; min-width: 64px" onClick="{{goLogin}}" aria-label="Geri"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{goPick}}">DOĞRULA</button></div>
       </sc-if>
@@ -559,9 +589,9 @@ class Component extends DCLogic {
       mode: 'desktop', override: null, theme: 'acik',
       scr: 'login', tab: 'eposta', devOk: true, showPw: false,
       pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true, enStep: 1, devClaim: false,
-      seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0, actBad: false, mailOk: true, mailSent: true,
+      seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0, actBad: false, mailOk: true, mailSent: true, lgSt: 'normal', lgRem: true, mfSt: 'normal',
       opDone: {}, revoked: {},
-      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d', dn: 'El terminali 2', cc: '' }
+      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', bk: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d', dn: 'El terminali 2', cc: '' }
     };
   }
   componentDidMount() {
@@ -588,8 +618,8 @@ class Component extends DCLogic {
     var forced = P.device && P.device !== 'auto' ? P.device : s.override;
     var m = forced || s.mode;
     var dk = s.theme === 'koyu';
-    var c = dk ? { bg: '#13171C', fg: '#D8DEE4', surface: '#1B2128', chip: '#232B34', track: '#2C3540', okBg: '#1F4A3A', okFg: '#E6EAEE', logoBg: '#E6EAEE', logoFg: '#13171C', keyBg: '#232B34' }
-               : { bg: '#F4F2EE', fg: '#1E2F3E', surface: '#FFFFFF', chip: '#F1EEE8', track: '#E6E2DA', okBg: '#CFE8DA', okFg: '#0F3D27', logoBg: '#172E42', logoFg: '#FFFFFF', keyBg: '#F1EEE8' };
+    var c = dk ? { bg: '#13171C', fg: '#D8DEE4', surface: '#1B2128', chip: '#232B34', track: '#2C3540', okBg: '#1F4A3A', okFg: '#E6EAEE', errBg: '#3A1E22', errFg: '#FFD9D9', logoBg: '#E6EAEE', logoFg: '#13171C', keyBg: '#232B34' }
+               : { bg: '#F4F2EE', fg: '#1E2F3E', surface: '#FFFFFF', chip: '#F1EEE8', track: '#E6E2DA', okBg: '#CFE8DA', okFg: '#0F3D27', errBg: '#FDE8E8', errFg: '#6B1111', logoBg: '#172E42', logoFg: '#FFFFFF', keyBg: '#F1EEE8' };
     var D = {
       mail: 'M3 6h18v12H3zM3 7l9 6 9-6', user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
       lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
@@ -602,7 +632,7 @@ class Component extends DCLogic {
     };
     var go = function (scr, extra) { return function () { var o = { scr: scr, pin: '', pin1: '', pinErr: '' }; for (var k in (extra || {})) o[k] = extra[k]; self.setState(o); }; };
     var setF = function (k) { return function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; f[k] = e && e.target ? e.target.value : ''; self.setState({ f: f }); }; };
-    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su', 'dn', 'cc'].forEach(function (k) { on[k] = setF(k); });
+    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'bk', 'co', 'slug', 'np', 'code', 'sn', 'su', 'dn', 'cc'].forEach(function (k) { on[k] = setF(k); });
     on.co = function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; var v = e && e.target ? e.target.value : ''; if (self.slugOf(f.co) === f.slug) f.slug = self.slugOf(v); f.co = v; self.setState({ f: f }); };
 
     /* ── PIN ── */
@@ -690,6 +720,37 @@ class Component extends DCLogic {
     for (var y = 0; y < 21; y++) for (var x = 0; x < 21; x++) { if ((x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12)) continue; if (((x * 7 + y * 13 + x * y) % 5) < 2) qrCells.push({ x: x, y: y }); }
 
     var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['actx', 'Bağlantı geçersiz'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['enr', 'Cihaz kaydı (terminal)'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['devq', 'Cihaz onayı'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
+    var LGE = {
+      invalid: ['E-posta ya da parola hatalı', 'Parolanızı kontrol edin; büyük harf kilidi açık olabilir. Hesabınız yoksa firmanızın yöneticisinden davet isteyin. 3 deneme hakkınız kaldı, sonra 15 dakika beklemeniz gerekir.', true],
+      wait: ['Çok fazla deneme yapıldı', 'Güvenliğiniz için bu e-postayla giriş 15 dakika durduruldu. 14:52’den sonra yeniden deneyin ya da parolanızı sıfırlayın.', true],
+      unverified: ['E-posta adresiniz henüz doğrulanmadı', 'Size gönderilen doğrulama e-postasındaki bağlantıyı açın. E-postayı bulamıyorsanız yöneticinizden yeni davet isteyin.', false],
+      net: ['Sunucuya ulaşılamadı', 'İnternet bağlantınızı kontrol edip yeniden deneyin. Sorun sürerse yöneticinize haber verin. Hata kodu: INTERNAL', false]
+    };
+    var lgE = LGE[s.lgSt];
+    var lg = {
+      err: !!lgE, errH: lgE ? lgE[0] : '', errT: lgE ? lgE[1] : '', errReset: !!(lgE && lgE[2]),
+      mailBad: s.lgSt === 'mailbad', mailCls: 'inp' + (s.lgSt === 'mailbad' ? ' bad' : ''),
+      caps: s.lgSt === 'caps', social: s.lgSt === 'social', demo: s.lgSt === 'demo',
+      remCls: 'chk' + (s.lgRem ? ' on' : ''), remA: s.lgRem ? 'true' : 'false',
+      toggleRem: function () { self.setState({ lgRem: !self.state.lgRem }); }
+    };
+    var MFE = {
+      bad: ['Kod hatalı', 'Uygulamadaki güncel 6 haneli kodu girin; kod her 30 saniyede yenilenir. Telefonunuzun saati doğru değilse kodlar tutmayabilir.'],
+      locked: ['Doğrulama 15 dakika durduruldu', 'Çok fazla hatalı kod girildi. 14:52’den sonra yeniden deneyin. Erişemiyorsanız yöneticinize haber verin.'],
+      expired: ['Giriş adımının süresi doldu', 'Güvenliğiniz için doğrulama kısa süre içinde tamamlanmalı. Geri dönüp e-posta ve parolanızı yeniden girin.']
+    };
+    var mfE = MFE[s.mfSt];
+    var mfBk = s.mfSt === 'backup';
+    var mf = {
+      err: !!mfE, errH: mfE ? mfE[0] : '', errT: mfE ? mfE[1] : '',
+      app: !mfBk, backup: mfBk, inpCls: 'inp' + (s.mfSt === 'bad' ? ' bad' : ''),
+      ls: mfBk ? 'Kurulumda kaydettiğiniz yedek kodlardan birini girin.' : 'Authenticator uygulamasındaki 6 haneli kodu girin.',
+      altL: mfBk ? 'Uygulama kodunu kullan' : 'Yedek kod kullan',
+      toggle: function () { self.setState({ mfSt: self.state.mfSt === 'backup' ? 'normal' : 'backup' }); }
+    };
+    var stDefs = s.scr === 'mfa' ? [['normal', 'Normal', 'mfSt'], ['bad', 'Kod hatalı', 'mfSt'], ['locked', 'Kilitli', 'mfSt'], ['backup', 'Yedek kod', 'mfSt'], ['expired', 'Süre doldu', 'mfSt']]
+      : [['normal', 'Normal', 'lgSt'], ['mailbad', 'E-posta biçimi', 'lgSt'], ['invalid', 'Hatalı bilgi', 'lgSt'], ['wait', 'Çok deneme', 'lgSt'], ['unverified', 'Doğrulanmamış', 'lgSt'], ['net', 'Bağlantı', 'lgSt'], ['caps', 'Caps Lock', 'lgSt'], ['social', 'Google / Microsoft', 'lgSt'], ['demo', 'Demo', 'lgSt']];
+    var stBtns = stDefs.map(function (b) { var on5 = s[b[2]] === b[0]; return { l: b[1], cls: 'prevb' + (on5 ? ' on' : ''), pressed: on5 ? 'true' : 'false', go: function () { var o = {}; o[b[2]] = b[0]; self.setState(o); } }; });
     var mgr = ['staff', 'dev', 'devq', 'op', 'mail'].indexOf(s.scr) >= 0;
     var eS = s.enStep;
     var en = {
@@ -716,6 +777,7 @@ class Component extends DCLogic {
       prevBtns: [['auto', 'Otomatik'], ['desktop', 'Masaüstü'], ['tablet', 'Tablet'], ['mobile', 'Mobil']].map(function (b) { var on2 = b[0] === 'auto' ? !s.override : s.override === b[0];
         return { l: b[1], cls: 'prevb' + (on2 ? ' on' : ''), pressed: on2 ? 'true' : 'false', go: function () { self.setState({ override: b[0] === 'auto' ? null : b[0] }); } }; }),
       scrBtns: scrList.map(function (b) { var on3 = b[0] === 'actx' ? s.scr === 'act' && s.actBad : b[0] === 'act' ? s.scr === 'act' && !s.actBad : s.scr === b[0]; return { l: b[1], cls: 'prevb' + (on3 ? ' on' : ''), pressed: on3 ? 'true' : 'false', go: b[0] === 'actx' ? go('act', { actStep: 1, actBad: true }) : go(b[0], { actStep: 1, faStep: 1, swWho: null, actBad: false }) }; }),
+      lg: lg, mf: mf, stBtns: stBtns, stShow: (s.scr === 'login' && s.tab === 'eposta') || s.scr === 'mfa',
       c: c, f: (function () { var f = {}; for (var k in s.f) f[k] = s.f[k]; f.mailOk = s.mailOk; f.mailNo = !s.mailOk; f.mailSent = s.mailSent; f.mailOff = !s.mailSent; return f; })(), on: on, side: side, band: bands[s.scr] || bands.staff,
       v: { auth: !mgr, mgr: mgr, login: s.scr === 'login', loginMail: s.tab === 'eposta', loginField: s.tab === 'saha', mfa: s.scr === 'mfa', pick: s.scr === 'pick', act: s.scr === 'act', fact: s.scr === 'fact', sw: s.scr === 'sw', staff: s.scr === 'staff', dev: s.scr === 'dev' || s.scr === 'devq', enr: s.scr === 'enr', op: s.scr === 'op', mail: s.scr === 'mail' },
       tabs: [['eposta', 'E-POSTA', D.mail], ['saha', 'SAHA GİRİŞİ', D.term]].map(function (t) { var on4 = s.tab === t[0]; return { l: t[1], d: t[2], cls: 'tab' + (on4 ? ' on' : ''), sel: on4 ? 'true' : 'false', bg: on4 ? c.surface : 'transparent', go: function () { self.setState({ tab: t[0], pin: '', pinErr: '' }); } }; }),

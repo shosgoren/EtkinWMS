@@ -164,7 +164,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   let proxyPanel: https.Server | undefined;
   const teardown = async (): Promise<void> => {
     clearSharedSession();
-    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
     }
     proxy?.close();
@@ -361,6 +361,22 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       process.env.E2E_OPERATOR_EMAIL = opEmail;
       process.env.E2E_OPERATOR_PASSWORD = opPassword;
       process.env.E2E_OPERATOR_TOTP_SECRET = opMade.totpSecret;
+      // T-999: çok üyelikli kullanıcı (kendi alanı; ikinci ve pasif üyelikleri spec yerel DB'ye ekler).
+      const multiEmail = `multi-${suffix}@example.test`;
+      const multiPassword = randomBytes(18).toString("hex");
+      const multiMade = await provisionEmptyTenant({
+        browser,
+        origin: `https://localhost:${portB}`,
+        clientIp: "198.51.100.24",
+        name: "E2E çok üyelik",
+        email: multiEmail,
+        password: multiPassword,
+        workspaceName: `E2E multi ${suffix}`,
+      });
+      process.env.E2E_MULTI_SLUG = multiMade.slug;
+      process.env.E2E_MULTI_EMAIL = multiEmail;
+      process.env.E2E_MULTI_PASSWORD = multiPassword;
+      process.env.E2E_MULTI_TOTP_SECRET = multiMade.totpSecret;
     } catch (e) {
       setupError = e;
     }

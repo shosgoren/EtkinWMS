@@ -49,7 +49,7 @@ export function newNonce(): string {
 /** Belirteç taşıyan sayfalar (yolda: `/invite/<t>`; sorguda: `/reset-password?token=`): dış kaynaklara Referer ile sızmaz. */
 const TOKEN_PAGE = /^\/(?:invite|reset-password|activate)(?:\/|$)/;
 
-const PROTECTED = /^\/(?:t(?:\/|$)|onboarding(?:\/|$)|mfa$)/;
+const PROTECTED = /^\/(?:t(?:\/|$)|onboarding(?:\/|$)|mfa$|workspaces$)/;
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;

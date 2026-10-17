@@ -222,3 +222,10 @@
 - 2026-10-15 T-401: panel kipi ve yonet. kabuğu + demo talepleri; int/panel-launch paketi.
 - 2026-10-16 T-995: deneme aktivasyonu (0039, onay bağlantısı, hesap + alan + 3 ay deneme, hoş geldiniz işi, /activate birebir, panel durumları, kısa adres). Tasarım ekleri onaylandı (16 Ekim); int/panel-launch.
 - 2026-10-16 T-996: örnek veri (0040 is_sample + yalnız örnek satırı silen DELETE yolu; aktivasyonda Örnek depo; ayarlardan sil/pasife al, defter korunur). int/panel-launch.
+- 2026-10-16 T-404/T-403/T-406/T-411/T-412: paketler (0041), müşteriler (0042), ödemeler (0043), yayında kuyruk kurulumu, kurumsal e-posta düzeni; int/panel-2.
+- 2026-10-16 T-997/T-998: e-postasız saha girişi (0044) ve ortak cihaz kaydı/iptal/kullanıcı değişimi (0045); int/panel-2.
+- 2026-10-16 T-407: satış sayfası içeriği (0046) panelden düzenle/önizle/yayınla; satış sitesi fiyat bölümü. int/panel-2.
+- 2026-10-17 T-408: panel özet ve işlem kaydı (0047). T-410: Docker proje adı `etkinwms` (taşıma betiği, geri dönüş).
+- 2026-10-17 Canlı yayın: main 9d5159d (PR #79), 0041–0047 yedekle uygulandı, kuyruklar kuruldu; proje taşıması `tamam`. T-998 ve T-407 tasarım ekleri kullanıcı onayı ("Hepsini onaylıyorum", 11:12).
+- 2026-10-17 T-999: açılış yönlendirmesi + `/workspaces` seçici + son kullanılan alan (0048); e-posta giriş ekranlarının birebir aktarımı T-999b kartına ayrıldı.
+- 2026-10-17 T-999b: e-posta giriş ve doğrulama ekranları Giris tasarımına birebir; hata bantları + kalan deneme (tasarım eki onayı 16:10).
