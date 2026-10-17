@@ -1,4 +1,4 @@
-name: etkinwms-motive
+name: etkinwms
 services:
   web:
     image: etkinwms:${WMS_RELEASE:?required}
@@ -53,7 +53,8 @@ services:
   marketing:
     image: etkinwms:${WMS_RELEASE:?required}
     command: [node, /marketing/server.mjs]
-    environment: {PORT: 3200, LEAD_DIR: /data, DEMO_LEADS_DIR: /leads}
+    # T-407: panelden yayınlanan satış sayfası içeriği (iç ağ; kimliksiz, yalnız yayındaki bilgi).
+    environment: {PORT: 3200, LEAD_DIR: /data, DEMO_LEADS_DIR: /leads, SITE_CONTENT_URL: 'http://web:3000/api/public/site'}
     volumes: [marketing-leads:/data, demo-leads:/leads]
     depends_on: {leads-init: {condition: service_completed_successfully}}
     restart: unless-stopped
@@ -68,6 +69,10 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+# T-410: uygulama ağı proje adından bağımsız sabit adla (veritabanı projesi bu ağa dış ağ olarak bağlanır).
+networks:
+  default:
+    name: etkinwms_default
 volumes:
   caddy-data:
   caddy-config:

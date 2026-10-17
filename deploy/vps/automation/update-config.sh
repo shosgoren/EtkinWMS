@@ -19,9 +19,14 @@ auto=/opt/etkinwms/automation
 test -f "$auto/state.json"
 tag=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["tag"])' "$auto/state.json")
 [[ $tag =~ ^[A-Za-z0-9._-]+$ ]]
+# T-410: proje adı state.json'dan (yeniden adlandırmadan önce kayıt yoksa eski ad); yalnız iki ad kabul edilir.
+project=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("project", "etkinwms-motive"))' "$auto/state.json")
+[[ $project == etkinwms || $project == etkinwms-motive ]]
+# Kurulacak dosyanın proje adı (compose `name:`) da aynı olmalı: başka projeye ait dosya bu betikle kurulmaz.
+grep -qx "name: $project" "$src/compose.yml"
 docker image inspect "etkinwms:$tag" >/dev/null
 # 1. Doğrula (kurmadan önce).
-WMS_RELEASE="$tag" docker compose -p etkinwms-motive -f "$src/compose.yml" config --quiet
+WMS_RELEASE="$tag" docker compose -p "$project" -f "$src/compose.yml" config --quiet
 docker run --rm -v "$(readlink -f "$src/Caddyfile"):/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 # 2. Eskiyi yedekle, yeniyi kur.
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
@@ -32,15 +37,15 @@ rollback() {
   echo "hata: eski ayara dönülüyor ($stamp)" >&2
   cp -p "$auto/compose.yml.$stamp" "$auto/compose.yml"
   cp -p "$auto/Caddyfile.$stamp" "$auto/Caddyfile"
-  WMS_RELEASE="$tag" docker compose -p etkinwms-motive -f "$auto/compose.yml" up -d --no-build --remove-orphans --wait --wait-timeout 180 || true
-  WMS_RELEASE="$tag" docker compose -p etkinwms-motive -f "$auto/compose.yml" restart proxy || true
+  WMS_RELEASE="$tag" docker compose -p "$project" -f "$auto/compose.yml" up -d --no-build --remove-orphans --wait --wait-timeout 180 || true
+  WMS_RELEASE="$tag" docker compose -p "$project" -f "$auto/compose.yml" restart proxy || true
   rm -rf "$src"
 }
 trap 'rollback' ERR
 install -m 644 -o root -g root "$src/compose.yml" "$auto/compose.yml"
 install -m 644 -o root -g root "$src/Caddyfile" "$auto/Caddyfile"
 # 3. Servisleri mevcut sürümle güncelle; Caddy tek dosya bağlaması yeni dosyayı görsün diye yeniden başlatılır.
-WMS_RELEASE="$tag" docker compose -p etkinwms-motive -f "$auto/compose.yml" up -d --no-build --wait --wait-timeout 180
-WMS_RELEASE="$tag" docker compose -p etkinwms-motive -f "$auto/compose.yml" restart proxy
+WMS_RELEASE="$tag" docker compose -p "$project" -f "$auto/compose.yml" up -d --no-build --wait --wait-timeout 180
+WMS_RELEASE="$tag" docker compose -p "$project" -f "$auto/compose.yml" restart proxy
 trap - ERR
 echo "tamam: sürüm $tag, yedek: compose.yml.$stamp / Caddyfile.$stamp"

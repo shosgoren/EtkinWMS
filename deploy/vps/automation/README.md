@@ -54,6 +54,26 @@ Kurulum/test çıktısını aşağıya gerçek zaman/SHA/workflow run URL'si ile
 
 Bilinen sınır: `release.py` göç öncesi yalnız `web` ve `worker`'ı durdurur; `panel` açık kalır (yedek `pg_dump` tutarlı anlık görüntüdür; panel yazmaları seyrek operatör kararlarıdır). `release.py` de root kurulumludur; değişikliği ayrı adımdır.
 
+## Proje adının taşınması (T-410, bir kez)
+
+Canlı Compose projesi `etkinwms-motive` (tek müşteri adı) → `etkinwms`. `release.py`, `update-config.sh` ve `install-migrate.sh` proje ve
+uygulama ağı adını `state.json`'daki `project` alanından okur (yoksa eski ad; yalnız `etkinwms-motive`/`etkinwms` kabul edilir), bu yüzden
+yeni `release.py` taşımadan önce de sonra da çalışır.
+
+Sıra (bu özelliği içeren sürüm main'e birleşmeden ÖNCE 1, yayından SONRA 2):
+1. Root: aynı commit'teki `release.py`'yi kur (`install -m 755 -o root -g root release.py /usr/local/sbin/etkinwms-release`). T-411
+   kuyruk kurulumu da bununla gelir; yayın bu sürümün imzalı migration imajını kullanır.
+2. Yayın sağlıklı bitince, düşük trafik saatinde root: depodan `deploy/vps/automation/compose.yml`, `deploy/vps/Caddyfile`,
+   `deploy/vps/automation/release.py` ve `deploy/vps/automation/rename-project.sh` aynı klasöre kopyalanır;
+   `bash rename-project.sh <klasör>`. Betik: önkoşulları ve mevcut sağlığı denetler → yayın kilidini alır → eski yığını durdurur →
+   yeni compose/Caddyfile'ı kurar → yeni projenin ağ/birim/konteynerlerini oluşturur → `caddy-data`, `caddy-config`, `marketing-leads`,
+   `demo-leads` birimlerini KOPYALAR (eskiler silinmez) → `etkinwms-postgres`'i yeni ağa da bağlar → yeni yığını başlatır → derin sağlık →
+   `state.json`'a `project: etkinwms` yazar ve `release.py`'yi kurar → eski (durmuş) konteynerleri kaldırır. Herhangi bir hatada yeni
+   kaynaklar (konteyner, ağ, yalnız kopya birimler) kaldırılır, dosyalar ve `state.json` geri yüklenir, eski proje ayağa kalkar.
+   Kesinti hedefi < 2 dk. Yerel Docker'da başarılı taşıma, sağlık hatasında geri dönüş ve ikinci çalıştırmanın reddi denendi.
+3. Eski birimler (`etkinwms-motive_*`) ve ağ, bir sonraki planlı DB bakımında DB konteyneri yeni `database/compose.yml` ile yeniden
+   oluşturulduktan sonra elle kaldırılabilir; o zamana dek DB konteyneri iki ağa bağlı kalır.
+
 ## İş kuyruklarının kurulumu (T-411)
 
 Yeni iş türleri (ör. `platform.activation.deliver`, `trial.welcome`) şema değişmeden de eklenebilir. `release.py`, `migrate.env`

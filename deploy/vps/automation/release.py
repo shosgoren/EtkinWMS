@@ -34,7 +34,10 @@ BASELINE_SHA = '024a800bace33c2dc3df397d56fda7e449d1d9dc'
 IMAGES = ('etkinwms', 'etkinwms-migrate')
 KEEP_BACKUPS = 10
 DB_CONTAINER = 'etkinwms-postgres'
-DB_NETWORK = 'etkinwms-motive_default'
+# T-410: Compose proje adı ve uygulama ağı state.json'dan okunur (yeniden adlandırma betiği `project`/`network` yazar). Kayıt yoksa eski
+# adlar (geçiş öncesi kurulum). Yalnız bu iki çift kabul edilir: state dosyası üzerinden keyfi proje/ağ adı verilemez.
+PROJECTS = {'etkinwms-motive': 'etkinwms-motive_default', 'etkinwms': 'etkinwms_default'}
+LEGACY_PROJECT = 'etkinwms-motive'
 DB_CA = '/opt/etkinwms/database/tls/ca.crt'
 
 
@@ -108,10 +111,21 @@ def run(args, **kwargs):
     return subprocess.run(args, check=True, timeout=kwargs.pop('timeout', 300), **kwargs)
 
 
+def project(state):
+    name = state.get('project', LEGACY_PROJECT)
+    if name not in PROJECTS:
+        raise ValueError('PROJECT_REJECTED')
+    return name
+
+
+def db_network():
+    return PROJECTS[project(json.loads((AUTOMATION / 'state.json').read_text()))]
+
+
 def compose(state):
     env = os.environ.copy()
     env['WMS_RELEASE'] = state['tag']
-    return ['docker', 'compose', '-p', 'etkinwms-motive', '-f', state['compose']], env
+    return ['docker', 'compose', '-p', project(state), '-f', state['compose']], env
 
 
 def healthy():
@@ -233,7 +247,7 @@ def migrator_drained():
 def migrator_run(sha, command, timeout):
     # Credential stays in the root-only env file; never in argv or logs. Output is suppressed (may echo data).
     remove_migrator()
-    run(['docker', 'run', '--rm', '--name', MIGRATOR_NAME, '--network', DB_NETWORK, '--env-file', str(migrate_env()),
+    run(['docker', 'run', '--rm', '--name', MIGRATOR_NAME, '--network', db_network(), '--env-file', str(migrate_env()),
          '-e', 'NODE_EXTRA_CA_CERTS=/run/etkinwms-db-ca.crt', '-e', 'WMS_ENV=production', '-e', 'DEMO_MODE=0',
          '-v', DB_CA + ':/run/etkinwms-db-ca.crt:ro', '--read-only', '--tmpfs', '/tmp',
          '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--memory', '512m',
@@ -308,7 +322,8 @@ def deploy(sha, archive_hash, schema_hash):
     release = BASE / 'releases' / ('auto-' + sha)
     release.mkdir(mode=0o755, exist_ok=True)
     (release / 'release.json').write_text(json.dumps({'sha': sha, 'schema': schema_hash}))
-    current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash}
+    current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash,
+               'project': project(previous)}
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
     # Queue sync is additive (missing queues only). Without a migration it runs while the previous release still serves,

@@ -52,6 +52,14 @@ def migration_setup(directory, approved='b'*64):
 
 
 class ReleaseBoundaryTests(unittest.TestCase):
+    def test_project_and_network_come_from_state_allow_list_only(self):
+        # T-410: proje adı state.json'dan; yoksa eski ad; listede olmayan ad reddedilir (keyfi compose projesi yok).
+        self.assertEqual(release.compose({'tag': 't', 'compose': '/c.yml'})[0][:4], ['docker', 'compose', '-p', 'etkinwms-motive'])
+        self.assertEqual(release.compose({'tag': 't', 'compose': '/c.yml', 'project': 'etkinwms'})[0][:4], ['docker', 'compose', '-p', 'etkinwms'])
+        for bad in ['', 'etkinwms-database', 'x; rm -rf /', 'etkinwms_default']:
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, 'PROJECT_REJECTED'):
+                release.compose({'tag': 't', 'compose': '/c.yml', 'project': bad})
+
     def test_commands_reject_shell_and_other_hosts(self):
         for command in ['', 'bash', 'check; id', 'scp -t /etc', 'deploy ' + SHA, 'deploy ' + 'a'*39 + ' ' + 'b'*64 + ' ' + 'c'*64]:
             with self.subTest(command=command), self.assertRaises(ValueError):
@@ -190,6 +198,8 @@ class ReleaseBoundaryTests(unittest.TestCase):
             self.assertEqual(len(list(automation.glob('approved-schema.sha256.bak-*'))), 1)
             state = json.loads((automation / 'state.json').read_text())
             self.assertEqual((state['sha'], state['schema']), (SHA, 'e'*64))
+            # T-410: proje adı yeni kayda taşınır (önceki kayıtta yoksa eski ad).
+            self.assertEqual(state['project'], 'etkinwms-motive')
             self.assertEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
 
     def test_queues_sync_after_migration_and_approval(self):
@@ -254,7 +264,9 @@ class ReleaseBoundaryTests(unittest.TestCase):
     def test_queue_installer_uses_migrator_image_and_env_file_only(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
              patch.object(release, 'run') as run, patch.object(release, 'remove_migrator') as remove:
+            (Path(directory) / 'state.json').write_text(json.dumps({'tag': 'x', 'project': 'etkinwms'}))
             release.install_queues(SHA)
+            self.assertEqual(run.call_args.args[0][run.call_args.args[0].index('--network') + 1], 'etkinwms_default')
             self.assertEqual(remove.call_count, 2)  # before the run and always after it (killed client)
             args = run.call_args.args[0]
             self.assertEqual(args[args.index('--env-file') + 1], str(Path(directory) / 'migrate.env'))
@@ -445,8 +457,11 @@ class ReleaseBoundaryTests(unittest.TestCase):
     def test_migrator_gets_credential_only_from_env_file(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
              patch.object(release, 'run') as run:
+            (Path(directory) / 'state.json').write_text(json.dumps({'tag': 'x'}))
             with patch.object(release, 'remove_migrator') as remove:
                 release.migrate_database(SHA)
+            # Eski kurulum (state'te proje yok): geçiş öncesi ağ.
+            self.assertEqual(run.call_args.args[0][run.call_args.args[0].index('--network') + 1], 'etkinwms-motive_default')
             remove.assert_called_once()
             args = run.call_args.args[0]
             self.assertEqual(args[args.index('--name') + 1], release.MIGRATOR_NAME)
