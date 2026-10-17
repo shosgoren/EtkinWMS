@@ -986,10 +986,13 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dz-x-bpekdk: #1f4a3a;
   --color-dz-x-cdclde: #232b34;
   --color-dz-x-cmdfea: #2c3540;
+  --color-dz-x-dkbocc: #3a1e22;
   --color-dz-x-dnckgl: #3d2a6b;
   --color-dz-x-ekdfaa: #4a3500;
   --color-dz-x-flgohp: #5b6e7f;
   --color-dz-x-fmceba: #5c2410;
+  --color-dz-x-glbbbb: #6b1111;
+  --color-dz-x-ikfkaa: #8a5a00;
   --color-dz-x-mgcici: #c62828;
   --color-dz-x-mjndnm: #c9d3dc;
   --color-dz-x-mpoink: #cfe8da;
@@ -1006,6 +1009,8 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dz-x-pemfec: #f4c542;
   --color-dz-x-pepcoo: #f4f2ee;
   --color-dz-x-pgnjmj: #f6d9c9;
+  --color-dz-x-pnoioi: #fde8e8;
+  --color-dz-x-ppnjnj: #ffd9d9;
   --color-dz-x-ppohki: #ffe7a8;
   --color-dz-x-pppppp: #ffffff;
   --color-dzg-bg: #f4f2ee;
@@ -1015,6 +1020,8 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dzg-track: #e6e2da;
   --color-dzg-ok-bg: #cfe8da;
   --color-dzg-ok-fg: #0f3d27;
+  --color-dzg-err-bg: #fde8e8;
+  --color-dzg-err-fg: #6b1111;
   --color-dzg-logo-bg: #172e42;
   --color-dzg-logo-fg: #ffffff;
   --color-dzg-key-bg: #f1eee8;
@@ -1027,6 +1034,8 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dzg-track: #2c3540;
   --color-dzg-ok-bg: #1f4a3a;
   --color-dzg-ok-fg: #e6eaee;
+  --color-dzg-err-bg: #3a1e22;
+  --color-dzg-err-fg: #ffd9d9;
   --color-dzg-logo-bg: #e6eaee;
   --color-dzg-logo-fg: #13171c;
   --color-dzg-key-bg: #232b34;
