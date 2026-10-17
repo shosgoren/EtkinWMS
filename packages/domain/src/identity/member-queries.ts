@@ -54,7 +54,15 @@ export interface PendingInvitationRow {
 
 export interface MembershipSummary {
   readonly userName: string;
-  readonly memberships: readonly { readonly slug: string; readonly tenantName: string; readonly roles: readonly RoleKey[] }[];
+  readonly memberships: readonly {
+    readonly slug: string;
+    readonly tenantName: string;
+    readonly roles: readonly RoleKey[];
+    /** T-999 (0048): bu alanın son kullanımı; hiç kullanılmadıysa `null`. */
+    readonly lastUsedAt: Date | null;
+  }[];
+  /** T-999: en son kullanılan (en yeni `last_used_at`) ve hâlâ listede olan alan; hiç kullanılmadıysa `null`. */
+  readonly lastSlug: string | null;
 }
 
 /**
@@ -195,8 +203,8 @@ export async function getMembershipSummary(params: MembershipSummaryParams): Pro
   try {
     const listed = await withUser(db, userId, async (tx) => {
       const me = await tx.execute<{ name: string }>(sql`SELECT name FROM public.users WHERE id = ${userId}::uuid`);
-      const tenants = await tx.execute<{ id: string; slug: string; name: string }>(
-        sql`SELECT t.id, t.slug, t.name FROM public.tenants t
+      const tenants = await tx.execute<{ id: string; slug: string; name: string; last_used_at: Date | string | null }>(
+        sql`SELECT t.id, t.slug, t.name, m.last_used_at FROM public.tenants t
               JOIN public.tenant_memberships m ON m.tenant_id = t.id
              WHERE m.user_id = ${userId}::uuid AND m.status = 'ACTIVE'
              ORDER BY t.name, t.slug`,
@@ -204,18 +212,26 @@ export async function getMembershipSummary(params: MembershipSummaryParams): Pro
       return { name: me[0]?.name, tenants };
     });
     if (listed.name === undefined) throw new AppError("NOT_FOUND");
-    const memberships: { slug: string; tenantName: string; roles: readonly RoleKey[] }[] = [];
+    const memberships: { slug: string; tenantName: string; roles: readonly RoleKey[]; lastUsedAt: Date | null }[] = [];
+    let lastSlug: string | null = null;
+    let lastAt = -Infinity;
     for (const t of listed.tenants) {
       try {
         const roles = await withMembership({ client: db, userId, tenantId: t.id }, (_tx, m) => Promise.resolve(m.roles));
-        memberships.push({ slug: t.slug, tenantName: t.name, roles });
+        const used = t.last_used_at === null ? null : new Date(t.last_used_at);
+        memberships.push({ slug: t.slug, tenantName: t.name, roles, lastUsedAt: used });
+        const at = used === null ? Number.NaN : used.getTime();
+        if (Number.isFinite(at) && at > lastAt) {
+          lastAt = at;
+          lastSlug = t.slug;
+        }
       } catch (e) {
         // Askıda/kapanan tenant ya da arada düşen üyelik: özetten çıkar; diğer hatalar yutulmaz.
         if (e instanceof MembershipError && (e.code === "FORBIDDEN" || e.code === "TENANT_SUSPENDED" || e.code === "TENANT_CLOSING")) continue;
         throw e;
       }
     }
-    return { userName: listed.name, memberships };
+    return { userName: listed.name, memberships, lastSlug };
   } catch (e) {
     if (e instanceof AppError) throw e;
     const err = new AppError("INTERNAL");

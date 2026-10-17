@@ -10,4 +10,6 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   // T-995 (ADR-026 §1): kısa adres `wms.etkinyazilim.com/<alan>` uygulama yollarıyla çakışmasın (her üst düzey yol ayrılmış; bekçi testi).
   "activate", "mfa", "reset-password", "operator", "field", "panel", "design", "fonts", "yonet", "manifest", "icon", "apple-icon",
   "favicon", "robots", "sitemap", "privacy", "terms", "pricing", "trial", "account", "accounts", "security",
+  // T-999: çalışma alanı seçici.
+  "workspaces",
 ]);
