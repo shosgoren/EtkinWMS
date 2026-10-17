@@ -5,7 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { AppError } from "../../../packages/shared/src/errors.ts";
-import { runTenantQuery } from "../../../packages/domain/src/identity/access.ts";
+import { runTenantCommand, runTenantQuery } from "../../../packages/domain/src/identity/access.ts";
+import { landingFor, markWorkspaceUsed } from "../../../packages/domain/src/identity/last-workspace.ts";
 import { sql } from "../../../packages/db/node_modules/drizzle-orm/index.js";
 import { getMembershipSummary, listMembers, listPendingInvitations } from "../../../packages/domain/src/identity/member-queries.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
@@ -214,9 +215,10 @@ describe("getMembershipSummary", () => {
     const s = await getMembershipSummary({ db: app, principal: { userId: me.userId, mfaVerified: true } });
     expect(s.userName).toBe(me.name);
     expect(s.memberships).toEqual([
-      { slug: a.slug, tenantName: "Alfa", roles: ["PICKER"] },
-      { slug: b.slug, tenantName: "Beta", roles: ["TENANT_ADMIN"] },
+      { slug: a.slug, tenantName: "Alfa", roles: ["PICKER"], lastUsedAt: null },
+      { slug: b.slug, tenantName: "Beta", roles: ["TENANT_ADMIN"], lastUsedAt: null },
     ]);
+    expect(s.lastSlug).toBeNull();
     // Çağıranın kendi REMOVED üyeliği de özette yok.
     await adm.query("UPDATE public.tenant_memberships SET status='REMOVED', removed_at=now() WHERE tenant_id=$1 AND user_id=$2", [b.tenant, me.userId]);
     const s2 = await getMembershipSummary({ db: app, principal: { userId: me.userId, mfaVerified: true } });
@@ -235,5 +237,64 @@ describe("getMembershipSummary", () => {
     const r = await getMembershipSummary({ db: app, principal: { userId: me.userId, mfaVerified: false } });
     expect(r.memberships.map((m) => m.slug)).toEqual([a.slug]);
     await expect(getMembershipSummary({ db: app, principal: null })).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+  });
+});
+
+describe("son kullanılan alan (T-999, 0048)", () => {
+  const summary = (userId: string) => getMembershipSummary({ db: app, principal: { userId, mfaVerified: true } });
+  const mark = (fx: Fx, userId: string) =>
+    runTenantCommand({ db: app, principal: { userId, mfaVerified: true }, tenantSlug: fx.slug, permission: "stock.view" }, (tx, m) => markWorkspaceUsed(tx, m));
+
+  it("kabuk kaydı son alanı belirler; açılış: tek → alan, çok → son alan, kayıt yok → seçici; pasif/askıdaki son alan sayılmaz", async () => {
+    const a = await mkTenant({ name: "Son A" });
+    const b = await mkTenant({ name: "Son B" });
+    const me = await mkMember(a.tenant, "PICKER");
+    expect(landingFor(await summary(me.userId))).toEqual({ kind: "workspace", slug: a.slug });
+    await mkMember(b.tenant, "PICKER", { userId: me.userId });
+    expect(landingFor(await summary(me.userId))).toEqual({ kind: "pick" });
+    await mark(a, me.userId);
+    let s = await summary(me.userId);
+    expect(s.lastSlug).toBe(a.slug);
+    expect(s.memberships.find((m) => m.slug === a.slug)?.lastUsedAt).toBeInstanceOf(Date);
+    expect(landingFor(s)).toEqual({ kind: "workspace", slug: a.slug });
+    await mark(b, me.userId);
+    s = await summary(me.userId);
+    expect(s.lastSlug).toBe(b.slug);
+    // Son alan pasifleşirse (REMOVED) ya da askıya alınırsa açılış onu seçmez.
+    await adm.query("UPDATE public.tenants SET status='SUSPENDED' WHERE id=$1", [b.tenant]);
+    expect(landingFor(await summary(me.userId))).toEqual({ kind: "workspace", slug: a.slug });
+    await adm.query("UPDATE public.tenants SET status='ACTIVE' WHERE id=$1", [b.tenant]);
+    await adm.query("UPDATE public.tenant_memberships SET status='REMOVED', removed_at=now() WHERE tenant_id=$1 AND user_id=$2", [b.tenant, me.userId]);
+    s = await summary(me.userId);
+    expect(s.memberships.map((m) => m.slug)).toEqual([a.slug]);
+    expect(s.lastSlug).toBe(a.slug);
+  });
+
+  it("yazma yalnız tenant bağlamında, yalnız çağıranın kendi satırına ve yalnız last_used_at sütununa", async () => {
+    const a = await mkTenant({ name: "Yaz A" });
+    const b = await mkTenant({ name: "Yaz B" });
+    const me = await mkMember(a.tenant, "PICKER");
+    const meB = await mkMember(b.tenant, "PICKER", { userId: me.userId });
+    const other = await mkMember(a.tenant, "PICKER");
+    const used = async (id: string): Promise<unknown> => (await adm.query("SELECT last_used_at FROM public.tenant_memberships WHERE id=$1", [id])).rows[0]?.last_used_at;
+    // A bağlamında: başka kullanıcının satırı (aynı tenant) ve kendi B satırı (başka tenant) yazılmaz.
+    await runTenantCommand({ db: app, principal: { userId: me.userId, mfaVerified: true }, tenantSlug: a.slug, permission: "stock.view" }, async (tx, m) => {
+      await markWorkspaceUsed(tx, { ...m, membershipId: other.membershipId });
+      await markWorkspaceUsed(tx, { ...m, membershipId: meB.membershipId });
+      const u = await tx.execute(sql`UPDATE public.tenant_memberships SET last_used_at = now() WHERE id = ${meB.membershipId}::uuid RETURNING id`);
+      expect(u.length).toBe(0);
+    });
+    expect(await used(other.membershipId)).toBeNull();
+    expect(await used(meB.membershipId)).toBeNull();
+    // Diğer sütunlar (kimlik, sahiplik zamanı) bu yetkiyle yazılamaz; wms_app yalnız eskiden izinli sütunlar + last_used_at.
+    const err = await runTenantCommand({ db: app, principal: { userId: me.userId, mfaVerified: true }, tenantSlug: a.slug, permission: "stock.view" }, (tx) =>
+      tx.execute(sql`UPDATE public.tenant_memberships SET user_id = ${other.userId}::uuid WHERE id = ${me.membershipId}::uuid`),
+    ).then(() => undefined, (e: unknown) => e);
+    expect(err).toBeDefined();
+    const g = await adm.query<{ c: string }>(
+      `SELECT column_name AS c FROM information_schema.column_privileges
+        WHERE table_schema='public' AND table_name='tenant_memberships' AND grantee='wms_app' AND privilege_type='UPDATE' ORDER BY 1`,
+    );
+    expect(g.rows.map((r) => r.c)).toEqual(["is_owner", "joined_at", "last_used_at", "removed_at", "roles_version", "status"]);
   });
 });

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
+import { landingFor } from "@wms/domain/identity/last-workspace";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { ROLE_KEYS } from "@wms/domain/identity/permissions";
 import { workspaceCreationAllowed } from "@wms/domain/onboarding/workspace";
@@ -45,10 +46,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const { getAuthService } = await import("../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal !== null) {
-    // "Son çalışma alanı" kaydı yok (kart dışı); ada göre ilk aktif üyelik. Üyelik yoksa kurulum sihirbazı.
-    const summary = await getMembershipSummary({ db: getAppDb(), principal });
-    const target = summary.memberships[0];
-    redirect(target === undefined ? "/onboarding" : `/t/${target.slug}`);
+    // T-999 (ADR-026 §6): tek üyelik → o alan; çok üyelik → son kullanılan alan (sunucuda, 0048), yoksa seçici; üyelik yok → kurulum.
+    const landing = landingFor(await getMembershipSummary({ db: getAppDb(), principal }));
+    redirect(landing.kind === "onboarding" ? "/onboarding" : landing.kind === "pick" ? "/workspaces" : `/t/${encodeURIComponent(landing.slug)}`);
   }
 
   const t = await getTranslations();

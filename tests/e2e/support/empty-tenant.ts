@@ -32,7 +32,7 @@ export const PACKAGE_ACTORS = [
   { workflow: "production", fixture: "productionMobile", prefix: "E2E_PACKAGE_PRODUCTION_MOBILE", mobile: true, clientIp: "198.51.100.88" },
 ] as const;
 export type PackageWorkflow = (typeof PACKAGE_ACTORS)[number]["workflow"];
-type TenantFixture = "empty" | "pilot" | "stockDesktop" | "stockMobile" | (typeof PACKAGE_ACTORS)[number]["fixture"];
+type TenantFixture = "empty" | "pilot" | "stockDesktop" | "stockMobile" | "multi" | (typeof PACKAGE_ACTORS)[number]["fixture"];
 export function packageActor(workflow: PackageWorkflow, mobile: boolean) {
   const actor = PACKAGE_ACTORS.find(a => a.workflow === workflow && a.mobile === mobile);
   if (actor === undefined) throw new Error("e2e: unknown package workflow actor");
@@ -42,7 +42,7 @@ export function packageActor(workflow: PackageWorkflow, mobile: boolean) {
 export function emptyTenant(fixture: TenantFixture = "empty"): EmptyTenant {
   if (process.env.E2E_BASE_URL?.trim()) throw new Error("e2e: yerel tenant fikstürü uzak hedefte kullanılamaz");
   const actor = PACKAGE_ACTORS.find(a => a.fixture === fixture);
-  const legacy = { empty: "E2E_EMPTY", pilot: "E2E_PILOT", stockDesktop: "E2E_STOCK_DESKTOP", stockMobile: "E2E_STOCK_MOBILE" };
+  const legacy = { empty: "E2E_EMPTY", pilot: "E2E_PILOT", stockDesktop: "E2E_STOCK_DESKTOP", stockMobile: "E2E_STOCK_MOBILE", multi: "E2E_MULTI" };
   const prefix = actor?.prefix ?? legacy[fixture as keyof typeof legacy];
   if (prefix === undefined) throw new Error("e2e: unknown tenant fixture");
   const slug = process.env[`${prefix}_SLUG`];
@@ -149,6 +149,21 @@ export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "emp
   await expect(page).toHaveURL(new RegExp(`/t/${t.slug}$`));
   // T-983: giriş adımlarında rehber açılmaz; girişten sonraki ilk ekranda tamamlanır.
   await completeFirstUseGuide(page);
+  return t;
+}
+
+/** T-999: `next` olmadan giriş (açılış yönlendirmesi sınanır); iki adım doğrulamadan sonra `landing` adresi beklenir. */
+export async function loginLanding(page: Page, fixture: TenantFixture, landing: RegExp): Promise<EmptyTenant> {
+  const t = emptyTenant(fixture);
+  await bindSecrets(page, { password: t.password, totpSecret: t.totpSecret });
+  await page.goto("/login");
+  await page.getByLabel("E-posta").fill(t.email);
+  await fillSecret(page, 'input[name="password"]', "password");
+  await page.getByRole("button", { name: "Giriş yap" }).click();
+  await expect(page).toHaveURL(/\/mfa\?/);
+  await fillSecret(page, 'input[name="code"]', "totp");
+  await page.getByRole("button", { name: "Doğrula" }).click();
+  await expect(page).toHaveURL(landing);
   return t;
 }
 

@@ -5,7 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { Suspense, type ReactNode } from "react";
 import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
-import { runTenantQuery } from "@wms/domain/identity/access";
+import { runTenantCommand, runTenantQuery } from "@wms/domain/identity/access";
+import { markWorkspaceUsed, needsMark } from "@wms/domain/identity/last-workspace";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { appSurface } from "../../../lib/surface.ts";
@@ -72,6 +73,11 @@ export default async function TenantLayout({ children, params }: { children: Rea
   const summary = await getMembershipSummary({ db, principal });
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) notFound();
+  // T-999: son kullanılan alan (yalnız gerektiğinde ayrı kısa transaction; üyelik/izin yeniden doğrulanır). Bilgi amaçlıdır: yazılamazsa
+  // sayfa yine açılır.
+  if (needsMark(summary, slug, new Date())) {
+    await runTenantCommand({ db, principal, tenantSlug: slug, permission: "stock.view" }, (tx, m) => markWorkspaceUsed(tx, m)).catch(() => undefined);
+  }
   const t = await getTranslations();
   const roleName = current.roles.map((r) => t(`roles.${r}`)).join(", ");
   const view = (await cookies()).get("view")?.value === "cockpit" ? "cockpit" : "flow";

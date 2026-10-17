@@ -47,6 +47,8 @@ export const tenantMemberships = pgTable(
     joinedAt: timestamptz("joined_at").notNull().defaultNow(),
     removedAt: timestamptz("removed_at"),
     rolesVersion: integer("roles_version").notNull().default(0),
+    /** T-999 (0048): son kullanım; yalnız girişten sonraki yönlendirme ve seçicideki "SON" işareti. */
+    lastUsedAt: timestamptz("last_used_at"),
   },
   (t) => [index("tenant_memberships_user_id_idx").on(t.userId)],
 );

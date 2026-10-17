@@ -90,5 +90,7 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
   olaylarından, probe'a sütun düzeyinde okuma (ip/user_agent/request_id yok).
 - Saha girişi (0044) ve ortak cihazlar (0045): `field_logins`, `field_devices`, `field_enrollments` (tenant), `field_sessions`,
   `field_device_lockouts` (platform); işlevler `wms_probe.field_*`.
+- Son kullanılan alan (0048, T-999): `tenant_memberships.last_used_at`; `wms_app` yalnız bu sütunu yazar (tenant bağlamı + kendi satırı,
+  tenant kabuğu); okuma `getMembershipSummary` (kendi satırları). Yetki kararına girmez, yalnız açılış yönlendirmesi.
 - Yayınlanmış satış içeriği ve ödenmiş tahakkuk tetikleyiciyle değişmez. Veri kaybettiren down migration'lar dolu veride
   `allow_destructive_down` olmadan reddeder.

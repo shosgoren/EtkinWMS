@@ -3045,5 +3045,12 @@
     "suspendedBody": "3 accounts were locked from this device within an hour; the device was revoked and its sessions closed. Unlock the accounts from the Members screen.",
     "closeSessions": "CLOSE SESSIONS",
     "sessionsClosed": "Sessions closed."
+  },
+  "workspaces": {
+    "title": "Choose a workspace",
+    "kick": "MORE THAN ONE MEMBERSHIP",
+    "heading": "Choose a workspace",
+    "last": "LAST",
+    "note": "The workspace you used last opens directly next time you sign in."
   }
 }

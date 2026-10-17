@@ -3045,5 +3045,12 @@
     "suspendedBody": "Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi ve oturumları kapatıldı. Hesapların kilidini Üyeler ekranından açın.",
     "closeSessions": "OTURUMLARI KAPAT",
     "sessionsClosed": "Oturumlar kapatıldı."
+  },
+  "workspaces": {
+    "title": "Çalışma alanı seçin",
+    "kick": "BİRDEN ÇOK ÜYELİK",
+    "heading": "Çalışma alanı seçin",
+    "last": "SON",
+    "note": "Son kullandığınız alan bir dahaki girişte doğrudan açılır."
   }
 }
