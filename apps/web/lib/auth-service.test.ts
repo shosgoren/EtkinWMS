@@ -159,6 +159,13 @@ describe("createRouteHandler (T-999b: başarısız e-posta girişinde kalan dene
     expect(big.status).toBe(401);
     expect(big.headers.get("x-attempts-left")).toBeNull();
     expect(await big.json()).toEqual({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" });
+    // Yol varyantları (sondaki eğik çizgi, yüzde kodlaması) da maskelenir.
+    for (const path of ["sign-in/email/", "sign-in/%65mail"]) {
+      const v = await mk403("EMAIL_NOT_VERIFIED")(
+        new Request(`https://app.example.test/api/auth/${path}`, { method: "POST", headers: { "content-length": "2" }, body: "{}" }),
+      );
+      expect(v.status).toBe(401);
+    }
     const other = await mk403("FORBIDDEN")(signIn({ email: "a@example.test" }));
     expect(other.status).toBe(403);
     expect(other.headers.get("x-attempts-left")).toBeNull();
