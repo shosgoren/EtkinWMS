@@ -14,6 +14,8 @@ Durum: `var` = yol repoda mevcut; `planlı: <kart>` = henüz yok, ilgili kart a�
 | tests/integration/ | var | Testcontainers PostgreSQL entegrasyon testleri (`pnpm test:int`) |
 | tests/e2e/ | var | Playwright uçtan uca testler (T-131): `demo-flow.spec.ts`, `global-setup.ts` (yerel yığın: migration + worker reseed + web + TLS vekili) |
 | tests/load/ | planlı: ilk kullanan kart | k6 yük testleri |
+| marketing/ | var | Satış sitesi (etkinyazilim.com): ön-çizilmiş tasarım, demo formu, panelden yayınlanan içerik |
+| deploy/vps/ | var | Canlı VPS: compose (proje `etkinwms`), Caddyfile, yayın alıcısı `automation/release.py`, taşıma ve ayar betikleri, DB compose |
 | infra/ | var | Yerel/CI altyapı yapılandırması |
 | infra/postgres/init/ | var | PostgreSQL ilk açılış betikleri (roller) |
 | infra/pgbouncer/ | var | PgBouncer yapılandırması (transaction mode) |
