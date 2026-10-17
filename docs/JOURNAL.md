@@ -228,3 +228,4 @@
 - 2026-10-17 T-408: panel özet ve işlem kaydı (0047). T-410: Docker proje adı `etkinwms` (taşıma betiği, geri dönüş).
 - 2026-10-17 Canlı yayın: main 9d5159d (PR #79), 0041–0047 yedekle uygulandı, kuyruklar kuruldu; proje taşıması `tamam`. T-998 ve T-407 tasarım ekleri kullanıcı onayı ("Hepsini onaylıyorum", 11:12).
 - 2026-10-17 T-999: açılış yönlendirmesi + `/workspaces` seçici + son kullanılan alan (0048); e-posta giriş ekranlarının birebir aktarımı T-999b kartına ayrıldı.
+- 2026-10-17 T-999b: e-posta giriş ve doğrulama ekranları Giris tasarımına birebir; hata bantları + kalan deneme (tasarım eki onayı 16:10).

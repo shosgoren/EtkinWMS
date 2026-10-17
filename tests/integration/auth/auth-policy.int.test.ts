@@ -321,6 +321,25 @@ describe(`auth politikası (target=${env.target})`, () => {
     expect((await signIn(u.email, nextIp(), WRONG_PASSWORD)).res.status).toBe(429);
   });
 
+  it("T-999b: signInAttempts kalan deneme ve beklemeyi sayaçtan okur (yazmaz); kayıtlı/kayıtsız e-posta aynı davranır", async () => {
+    const u = await mkUser();
+    const ghost = `t999b-${randomBytes(4).toString("hex")}@example.test`;
+    expect(await service.signInAttempts(u.email)).toEqual({ remaining: 5, retryAfterSec: null });
+    for (let i = 0; i < 2; i += 1) {
+      expect((await signIn(u.email, nextIp(), WRONG_PASSWORD)).res.status).toBe(401);
+      expect((await signIn(ghost, nextIp(), WRONG_PASSWORD)).res.status).toBe(401);
+    }
+    expect(await service.signInAttempts(u.email)).toEqual({ remaining: 3, retryAfterSec: null });
+    expect(await service.signInAttempts(ghost)).toEqual({ remaining: 3, retryAfterSec: null });
+    // Okuma sayacı değiştirmez.
+    expect(await service.signInAttempts(u.email.toUpperCase())).toEqual({ remaining: 3, retryAfterSec: null });
+    for (let i = 0; i < 3; i += 1) expect((await signIn(u.email, nextIp(), WRONG_PASSWORD)).res.status).toBe(401);
+    const locked = await service.signInAttempts(u.email);
+    expect(locked.remaining).toBe(0);
+    expect(locked.retryAfterSec).toBeGreaterThan(800);
+    expect(locked.retryAfterSec).toBeLessThanOrEqual(900);
+  });
+
   /** wms_auth'un `sessions` DELETE ifadelerinden, metni `pattern` içerenleri bu kullanıcı için reddeden test tetikleyicisi. */
   async function withDeleteFailure<T>(userId: string, pattern: string, run: () => Promise<T>): Promise<T> {
     const fn = `t112b_delfail_${randomBytes(4).toString("hex")}`;

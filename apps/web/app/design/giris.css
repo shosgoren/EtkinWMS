@@ -455,6 +455,101 @@ body:has(.dzg) {
 .dzg .ban .ico {
   margin-top:1px;
 }
+.dzg .ban.err {
+  box-shadow:inset 0 0 0 2px var(--color-dz-x-mgcici);
+}
+.dzg .ban .blnk {
+  display:inline-block;
+  margin-top:6px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  font:700 14px/1.3 var(--font-instrument),sans-serif;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.dzg .hint.warn {
+  color:var(--color-dz-x-ikfkaa);
+  opacity:1;
+}
+.dzg .dkm .hint.warn {
+  color:var(--color-dz-x-pemfec);
+}
+.dzg .chk {
+  appearance:none;
+  align-self:flex-start;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:48px;
+  padding:0 4px;
+  border:0;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  font:600 15px/1.3 var(--font-instrument),sans-serif;
+  text-align:left;
+}
+.dzg .chk i {
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  height:28px;
+  border-radius:9px;
+  border:2.5px solid currentColor;
+  opacity:.7;
+}
+.dzg .chk i .ico {
+  visibility:hidden;
+}
+.dzg .chk.on i {
+  opacity:1;
+  background:var(--color-dz-x-bhcoec);
+  border-color:var(--color-dz-x-bhcoec);
+  color:var(--color-dz-x-pppppp);
+}
+.dzg .chk.on i .ico {
+  visibility:visible;
+}
+.dzg .dkm .chk.on i {
+  background:var(--color-dz-x-pemfec);
+  border-color:var(--color-dz-x-pemfec);
+  color:var(--color-dz-x-bkbdaa);
+}
+.dzg .or {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font:600 12px/1 var(--font-plex-mono),monospace;
+  letter-spacing:.12em;
+  opacity:.6;
+}
+.dzg .or::before,
+.dzg .or::after {
+  content:'';
+  flex:1;
+  height:1.5px;
+  background:currentColor;
+  opacity:.35;
+}
+.dzg .soc {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+@media (max-width: 699.98px) {
+  .dzg .soc {
+    grid-template-columns:minmax(0,1fr);
+  }
+}
+.dzg .big.sm {
+  min-height:56px;
+  font-size:16px;
+}
 .dzg .chip {
   display:inline-flex;
   align-items:center;

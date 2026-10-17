@@ -33,6 +33,7 @@ flowchart LR
 | Satış | `marketing/` | Ayrı hafif servis; WMS üyeliği/kimlik tablolarından ayrı. Panelden yayınlanan içeriği iç uçtan okur (T-407) |
 | Yönetim paneli | `apps/web/app/panel`, `packages/domain/src/platform`, `wms_platform` şeması | `yonet.` (ADR-027): müşteriler (yalnız sayılar), paketler, ödemeler, demo talepleri, satış sayfası, özet, işlem kaydı; erişim yalnız operatör denetimli `wms_probe.platform_*` işlevleriyle |
 | Saha girişi | `apps/web/app/field`, `packages/auth/src/field.ts` | E-postasız saha personeli: kayıtlı cihaz + 6 hane PIN, ortak cihaz kaydı (ADR-026 §7) |
+| Giriş ve doğrulama | `apps/web/app/login/flow.tsx`, `apps/web/lib/auth-service.ts` (`/api/auth` sarmalayıcısı) | E-posta + parola, iki adımlı doğrulama; Giris tasarımı; kalan deneme/bekleme başlıkları, hesap varlığı sızdırmayan tek hata mesajı (T-999b) |
 | Açılış ve alan seçimi | `apps/web/app/page.tsx`, `apps/web/app/workspaces`, `packages/domain/src/identity/last-workspace.ts` | Girişten sonra tek alan → doğrudan, çok alan → son kullanılan (sunucuda, 0048), yoksa seçici (ADR-026 §6, T-999) |
 | İşletim | `deploy/vps/`, `.github/workflows/` | Konteynerler, DB, CI, sınırlı yayın |
 

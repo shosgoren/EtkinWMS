@@ -732,8 +732,9 @@ select.bg-none { background-image:none; }
   .screen-interior[data-section="items"] > .screen-content > main > .sticky { margin-inline: -.75rem; }
 }
 
-/* T-981: marka işareti (Rota e) + giriş sahnesi. Yalnız belirteç renkleri; marka sarısı aşağıdaki tanım satırında. */
-.brand-mark, .login-stage {
+/* T-981: marka işareti (Rota e). Yalnız belirteç renkleri; marka sarısı aşağıdaki tanım satırında. Eski giriş sahnesi (`login-*`)
+   T-999b'de Giris.dc.html tasarımına geçti (login/flow.tsx, giris.css). */
+.brand-mark {
   --color-brand-yellow: #f2c53d;
 }
 .brand-mark { display:block; overflow:visible; }
@@ -741,79 +742,6 @@ select.bg-none { background-image:none; }
 .brand-mark-e { fill:none; stroke:var(--color-surface); stroke-width:13; stroke-linecap:round; }
 .brand-mark:not(.brand-mark-framed) .brand-mark-e { stroke:var(--color-ink); }
 .brand-mark-dot { fill:var(--color-brand-yellow); stroke:var(--color-ink); stroke-width:4; }
-
-/* T-983: giriş ekranında kök üst bar (Kolay mod, Nasıl kullanırım?, Yardım) gösterilmez; marka sahnede. */
-body:has(.login-stage) .app-header { display:none; }
-.login-stage { display:grid; grid-template-columns:minmax(0,1fr); align-content:start; min-height:100dvh; }
-.login-scene { position:relative; overflow:hidden; display:flex; align-items:center; gap:14px; padding:max(18px, env(safe-area-inset-top)) 18px 44px; color:var(--color-surface); background:radial-gradient(90% 70% at 70% 35%, color-mix(in srgb, var(--color-info) 30%, transparent) 0%, transparent 60%), linear-gradient(160deg, color-mix(in srgb, var(--color-ink) 82%, var(--color-info)) 0%, var(--color-ink) 50%, color-mix(in srgb, var(--color-ink) 70%, var(--color-accent-ink)) 100%); }
-.login-scene-logo { position:relative; flex:none; width:64px; aspect-ratio:1; }
-.login-scene-e { display:block; width:100%; height:100%; overflow:visible; }
-.login-e-base { fill:none; stroke:var(--color-surface); stroke-width:13; stroke-linecap:round; }
-.login-e-trail { fill:none; stroke:var(--color-brand-yellow); stroke-width:7; stroke-linecap:round; stroke-dasharray:0 400; animation:loginTrail 9s ease-in-out infinite; }
-.login-e-pack { fill:var(--color-brand-yellow); stroke:var(--color-ink); stroke-width:4; }
-.login-station { display:none; }
-.login-scene-text { display:flex; flex-direction:column; gap:4px; min-width:0; }
-.login-wordmark { display:none; margin:0; }
-.login-slogan { margin:0; font-size:15px; line-height:1.35; color:color-mix(in srgb, var(--color-surface) 82%, transparent); }
-.login-slogan em { font-style:normal; font-weight:700; color:color-mix(in srgb, var(--color-accent) 35%, var(--color-surface)); }
-.login-panel { display:flex; justify-content:center; align-items:flex-start; padding:0 14px 40px; }
-.login-panel .login-card { position:relative; z-index:2; margin:-30px 0 0; padding:20px 18px!important; gap:12px; box-shadow:0 30px 60px -30px color-mix(in srgb, var(--color-ink) 45%, transparent), var(--shadow-card); }
-.login-panel .login-card h1 { font-size:24px; }
-.login-printer { display:none; }
-.login-field { position:relative; }
-.login-field input { padding-left:46px!important; min-height:52px; }
-.login-field-password input { padding-right:56px!important; }
-.login-field-icon { position:absolute; left:14px; bottom:16px; width:20px; height:20px; fill:none; stroke:var(--color-ink-muted); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
-.login-eye { position:absolute; right:6px; bottom:4px; width:48px; height:44px; display:flex; align-items:center; justify-content:center; border:0; border-radius:10px; background:transparent; color:var(--color-ink); cursor:pointer; }
-.login-eye:focus-visible { outline:3px solid var(--color-focus); outline-offset:2px; }
-.login-eye svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-.login-caps { margin:0; width:fit-content; padding:6px 10px; border-radius:8px; background:var(--color-warning-bg); color:var(--color-warning-ink); font-size:13px; font-weight:700; }
-.login-remember { display:flex; align-items:center; gap:10px; min-height:44px; font-size:15px; font-weight:600; cursor:pointer; }
-.login-remember input { width:22px; height:22px; accent-color:var(--color-accent); }
-.login-arrow { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
-@keyframes loginTrail { 0% { stroke-dasharray:0 400; } 80%, 100% { stroke-dasharray:400 0; } }
-@keyframes loginBadge { from { clip-path:inset(0 0 100% 0); transform:translateY(-14px); } to { clip-path:inset(0 0 0 0); transform:none; } }
-@keyframes loginLit { 0%, 14%, 100% { opacity:.75; transform:translate(-50%,-50%) scale(.95); box-shadow:none; } 3%, 10% { opacity:1; transform:translate(-50%,-50%) scale(1.06); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-brand-yellow) 60%, transparent); } }
-@media (min-width: 1024px) {
-  .login-stage { grid-template-columns:minmax(0,1.15fr) minmax(460px,.85fr); align-content:stretch; }
-  .login-scene { flex-direction:column; justify-content:center; text-align:center; gap:22px; padding:48px clamp(36px,4vw,72px); }
-  .login-scene-logo { width:min(30vw,380px); }
-  .login-e-trail { stroke-width:5; }
-  .login-scene-text { align-items:center; gap:8px; }
-  .login-wordmark { display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .login-wordmark b { font-size:34px; font-weight:850; letter-spacing:-.5px; }
-  .login-wordmark span { font-size:11px; font-weight:700; letter-spacing:.3em; color:color-mix(in srgb, var(--color-surface) 60%, transparent); }
-  .login-slogan { max-width:460px; font-size:17px; }
-  .login-station { position:absolute; display:flex; align-items:center; gap:7px; padding:5px 10px 5px 5px; border-radius:12px; background:color-mix(in srgb, var(--color-ink) 85%, transparent); border:1px solid color-mix(in srgb, var(--color-surface) 18%, transparent); font-size:12px; font-weight:750; white-space:nowrap; transform:translate(-50%,-50%); animation:loginLit 9s infinite; }
-  .login-station i { width:24px; height:24px; border-radius:7px; display:flex; align-items:center; justify-content:center; }
-  .login-station svg { width:14px; height:14px; fill:none; stroke:var(--color-surface); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
-  .login-station-in { left:18%; top:52%; } .login-station-in i { background:var(--color-success); }
-  .login-station-transfer { left:88%; top:52%; animation-delay:1.45s; } .login-station-transfer i { background:var(--color-info); }
-  .login-station-prod { left:60%; top:10%; animation-delay:3s; } .login-station-prod i { background:var(--color-warning); }
-  .login-station-count { left:14%; top:74%; animation-delay:4.3s; } .login-station-count i { background:color-mix(in srgb, var(--color-info) 60%, var(--color-ink)); }
-  .login-station-ship { left:86%; top:94%; animation-delay:5.8s; } .login-station-ship i { background:var(--color-accent); }
-  .login-panel { align-items:center; padding:40px; }
-  .login-panel .login-card { margin:0; padding:32px!important; gap:16px; }
-  .login-panel .login-card h1 { font-size:28px; }
-  .login-printer { display:block; position:relative; height:96px; }
-  .login-printer-head { position:absolute; left:0; right:0; top:0; height:28px; border-radius:12px; background:var(--color-ink); }
-  .login-printer-head::before { content:""; position:absolute; left:14px; top:10px; width:8px; height:8px; border-radius:50%; background:color-mix(in srgb, var(--color-success) 70%, var(--color-surface)); }
-  .login-printer-head::after { content:""; position:absolute; left:44px; right:44px; top:21px; height:4px; border-radius:2px; background:var(--color-accent-ink); }
-  .login-badge { position:absolute; left:54px; right:54px; top:23px; height:70px; display:flex; align-items:center; gap:10px; padding:6px 12px; background:var(--color-surface); border:1.5px solid var(--color-border); border-top:0; border-radius:0 0 10px 10px; box-shadow:0 10px 18px -12px color-mix(in srgb, var(--color-ink) 35%, transparent); animation:loginBadge 1.3s cubic-bezier(.2,.8,.2,1) .3s both; }
-  .login-badge-qr { flex:none; width:48px; height:48px; }
-  .login-badge-qr .qr-frame { fill:none; stroke:var(--color-ink); stroke-width:2; }
-  .login-badge-qr .qr-dots { fill:var(--color-ink); }
-  .login-badge-text { min-width:0; display:flex; flex-direction:column; gap:3px; }
-  .login-badge-text small { font-size:10px; font-weight:700; letter-spacing:1px; color:var(--color-ink-muted); }
-  .login-badge-text b { font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .login-field input { min-height:56px; }
-  .login-field-icon { bottom:18px; }
-  .login-eye { bottom:6px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .login-e-trail, .login-station, .login-badge { animation:none; }
-  .login-e-trail { stroke-dasharray:none; }
-}
 
 /* I-18 uyarlama (DESIGN-PARITY §3): tasarım kökü `.wrap` tam görüntü alanıdır (100dvh). Uygulamada `.dz` kabı görüntü alanını
    kaplar ve kiracı kabuğunun üst çubuğu / alt sekmeleri bu ekranlarda gösterilmez (tasarımda yoktur). Renk yok; yalnız yerleşim. */
@@ -986,10 +914,13 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dz-x-bpekdk: #1f4a3a;
   --color-dz-x-cdclde: #232b34;
   --color-dz-x-cmdfea: #2c3540;
+  --color-dz-x-dkbocc: #3a1e22;
   --color-dz-x-dnckgl: #3d2a6b;
   --color-dz-x-ekdfaa: #4a3500;
   --color-dz-x-flgohp: #5b6e7f;
   --color-dz-x-fmceba: #5c2410;
+  --color-dz-x-glbbbb: #6b1111;
+  --color-dz-x-ikfkaa: #8a5a00;
   --color-dz-x-mgcici: #c62828;
   --color-dz-x-mjndnm: #c9d3dc;
   --color-dz-x-mpoink: #cfe8da;
@@ -1006,6 +937,8 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dz-x-pemfec: #f4c542;
   --color-dz-x-pepcoo: #f4f2ee;
   --color-dz-x-pgnjmj: #f6d9c9;
+  --color-dz-x-pnoioi: #fde8e8;
+  --color-dz-x-ppnjnj: #ffd9d9;
   --color-dz-x-ppohki: #ffe7a8;
   --color-dz-x-pppppp: #ffffff;
   --color-dzg-bg: #f4f2ee;
@@ -1015,6 +948,8 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dzg-track: #e6e2da;
   --color-dzg-ok-bg: #cfe8da;
   --color-dzg-ok-fg: #0f3d27;
+  --color-dzg-err-bg: #fde8e8;
+  --color-dzg-err-fg: #6b1111;
   --color-dzg-logo-bg: #172e42;
   --color-dzg-logo-fg: #ffffff;
   --color-dzg-key-bg: #f1eee8;
@@ -1027,6 +962,8 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dzg-track: #2c3540;
   --color-dzg-ok-bg: #1f4a3a;
   --color-dzg-ok-fg: #e6eaee;
+  --color-dzg-err-bg: #3a1e22;
+  --color-dzg-err-fg: #ffd9d9;
   --color-dzg-logo-bg: #e6eaee;
   --color-dzg-logo-fg: #13171c;
   --color-dzg-key-bg: #232b34;
