@@ -114,3 +114,9 @@ Yeni canlı DB yedeği `pg_dump -Fc` ile `/root/etkinwms-backups/before-package-
 
 ## 13 Ekim 21:11 — T931 otomatik yayın
 main531e9034440ac1dc0d67fb11353a7ea09785c9f1 için ci38442505462/guards38442505492 SUCCESS; deploy38443949741 SUCCESS. Salt okunur receiver check: release531e9034, health=ok, auto_migrate=true, schema31 fingerprintd6b6b9d7…88dd. Önce guards callback yayını38443064499 RELEASE_BLOCKED:int ile durdurdu; CI tamamlandıktan sonraki koşu geçti. T9320032 henüz geliştirme dalında, canlıya uygulanmadı. Yeni fiziksel QR kabul ekranı/etiket özelliği bu yayında yok.
+
+## 17 Ekim — T-999 + T-999b canlı yayını
+- main `6dd9880` (PR #85), deploy-vps 39042736174 başarılı (17:56): yedek → 0048 (`tenant_memberships.last_used_at`) → sağlık ok.
+- İlk deploy-vps koşusu (guards bitince) "tüm kontroller" kapısında durdu (beklenen); main e2e bir kez dalgalı (mobile-shell) → iş yeniden koşuldu.
+- Canlı doğrulama: `/login` yeni tasarım; sentetik adresle yanlış giriş 401 + `x-attempts-left: 4`.
+
