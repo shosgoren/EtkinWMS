@@ -60,7 +60,7 @@ describe("syncQueues (T-411)", () => {
   it("eksik kuyruğu oluşturur; oluşan kuyruğa uygulama rolü gönderir, worker rolü alır (yetki/RLS ek işlem gerektirmez)", async () => {
     // Platform işi (tenantId null): wms_app tenant bağlamı olmadan gönderir (job RLS), wms_worker tüm işleri alır.
     const type = "platform.activation.deliver";
-    const owner = new PgBoss({ connectionString: env.databaseUrlDirect, schema: QUEUE_SCHEMA, migrate: false, supervise: false, schedule: false, max: 1 });
+    const owner = new PgBoss({ connectionString: env.databaseUrlDirect, schema: QUEUE_SCHEMA, migrate: false, supervise: false, registerInstance: false, schedule: false, useListenNotify: false, max: 1 });
     await owner.start();
     try {
       await owner.deleteQueue(type);
@@ -73,7 +73,18 @@ describe("syncQueues (T-411)", () => {
     expect(await syncQueues({ url: env.databaseUrlDirect })).toEqual([]);
     expect(await appGrants()).toBe(before);
 
-    const opts = { schema: QUEUE_SCHEMA, migrate: false, supervise: false, schedule: false, max: 1 } as const;
+    // Üretimdeki `createJobQueue` ayarları: uygulama/worker rolleri yönetim tablolarına (instance, bam, ...) erişemez.
+    const opts = {
+      schema: QUEUE_SCHEMA,
+      migrate: false,
+      createSchema: false,
+      supervise: false,
+      registerInstance: false,
+      schedule: false,
+      reindex: false,
+      useListenNotify: false,
+      max: 1,
+    } as const;
     const sender = new PgBoss({ ...opts, connectionString: env.databaseUrl });
     const consumer = new PgBoss({ ...opts, connectionString: workerUrl });
     await sender.start();
