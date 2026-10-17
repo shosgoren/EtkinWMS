@@ -41,6 +41,9 @@ export function needsMark(summary: Pick<MembershipSummary, "memberships" | "last
  * Bilgi amaçlıdır: kimlik/yetki kararına girmez.
  */
 export async function markWorkspaceUsed(tx: AccessTx, membership: Membership): Promise<void> {
+  // Üyelik satırı bu transaction'da `FOR SHARE` tutulur; güncelleme kilidi yükseltir. Aynı kullanıcının eşzamanlı isteği ya da uzun komutu
+  // satırı tutuyorsa beklemez (inceleme m1: kilitlenme/arkadaki isteklerin birikmesi) — kısa kilit süresi aşılırsa çağıran yutar.
+  await tx.execute(sql`SELECT set_config('lock_timeout', '100ms', true)`);
   await tx.execute(sql`
     UPDATE public.tenant_memberships SET last_used_at = now()
      WHERE id = ${membership.membershipId}::uuid AND user_id = ${membership.userId}::uuid AND status = 'ACTIVE'`);

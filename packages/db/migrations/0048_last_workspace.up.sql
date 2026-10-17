@@ -8,6 +8,8 @@
 --   satırı RLS ile görünmez; aynı kiracıdaki başka üyenin satırına yazmak uygulama kodunda yoktur ve yalnız bu sıralama bilgisini etkiler.
 -- * OKUYAN: `getMembershipSummary` (`withUser`, `tenant_memberships_select_own`: yalnız kendi satırları). Sütun hiçbir yerde kimlik/yetki
 --   kararına girmez; yalnız girişten sonraki yönlendirme ve seçicideki "SON" işareti.
+-- * KİŞİSEL VERİ (KVKK): kullanıcının alan kullanım zamanıdır. Tenant bağlamındaki sorgular okuyabilir (tablo SELECT yetkisi); üye listesi,
+--   denetim/dışa aktarım ve panel ekranlarına KONMAZ. Yalnız çağıranın kendi özetinde kullanılır.
 -- * Rol/sistem gerekçesi tetikleyicisi (0003) bu UPDATE'te de çalışır; `app.system_reason` boş olduğundan geçer.
 -- Koşturucu tek transaction içinde çalıştırır.
 
@@ -15,6 +17,10 @@ DO $pre$
 BEGIN
   IF pg_catalog.to_regprocedure('wms_probe.platform_list_events(integer)') IS NULL THEN
     RAISE EXCEPTION '0048_last_workspace: platform_list_events yok (0047 önkoşulu)';
+  END IF;
+  -- `workspaces` ayrılmış ad oldu (seçici sayfası); bu adla alan varsa kısa adresi sessizce kaybolmasın (inceleme n3).
+  IF EXISTS (SELECT 1 FROM public.tenants WHERE lower(slug) = 'workspaces') THEN
+    RAISE EXCEPTION '0048_last_workspace: "workspaces" adlı çalışma alanı var; önce yeniden adlandırılmalı';
   END IF;
 END
 $pre$;

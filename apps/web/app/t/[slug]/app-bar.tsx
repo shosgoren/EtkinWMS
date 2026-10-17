@@ -120,6 +120,7 @@ export function AppBar({ slug, tenantName, userName, memberships, view, setViewA
                 <li key={m.slug}>
                   <Link
                     href={`/t/${encodeURIComponent(m.slug)}`}
+                    prefetch={false}
                     aria-current={m.slug === slug ? "page" : undefined}
                     className={`${TOUCH} flex flex-col justify-center rounded-card px-3 py-1 text-base font-semibold text-ink aria-[current=page]:bg-accent-soft ${FOCUS}`}
                   >
