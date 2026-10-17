@@ -210,6 +210,16 @@ export function ResetPasswordForm({ token, linkError }: { token: string; linkErr
 // 2FA kurulum (QR bileşeni bağımlılık gerektirir: şimdilik elle anahtar + otpauth bağlantısı)
 // ---------------------------------------------------------------------------------------------
 
+/** MFA kurulumu doğrulama adımı hataları (giriş ikinci adımı T-999b'den beri `login/flow.tsx`). */
+function mfaError(t: Translator, e: AuthCallError): ShownError {
+  const common = commonError(t, e);
+  if (common !== null) return e.status === 429 || e.code === "RATE_LIMITED" ? { ...common, action: t("mfa.lockedAction") } : common;
+  if (e.code === "TOO_MANY_ATTEMPTS" || e.status === 429) {
+    return { reason: t("mfa.locked"), action: t("mfa.lockedAction"), code: e.code };
+  }
+  return { reason: t("mfa.invalid"), action: t("mfa.invalidAction"), code: e.code };
+}
+
 interface EnableData {
   readonly totpURI: string;
   readonly backupCodes: readonly string[];
