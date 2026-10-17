@@ -88,7 +88,9 @@ rolling=0
 rollback() {
   [ "$rolling" = 1 ] && return
   rolling=1
-  trap - ERR HUP INT TERM
+  # Geri dönüş yarıda kesilemez (inceleme n1): sinyaller yok sayılır, ERR tuzağı kaldırılır.
+  trap '' HUP INT TERM
+  trap - ERR
   set +e
   echo "hata: eski projeye dönülüyor ($stamp)" >&2
   if [ "$created" = 1 ]; then
