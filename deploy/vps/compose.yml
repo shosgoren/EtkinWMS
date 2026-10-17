@@ -1,4 +1,4 @@
-name: etkinwms-motive
+name: etkinwms
 
 services:
   web:

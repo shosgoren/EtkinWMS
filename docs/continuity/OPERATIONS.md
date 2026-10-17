@@ -27,7 +27,7 @@ Yerel mevcut çalışma alanında anahtar referansı `.deploy-access/etkinwms_vp
 - `/opt/etkinwms/automation/` → root-owned receiver/Compose/Caddyfile/approved-schema/state.
 - `/opt/etkinwms/database/` → DB Compose,TLS,operatör özel ayarlar,yedek/kesim dosyaları.
 - `/opt/etkinwms/enrollment/` → operatör kurulum aracı/journal; token/link dosyaları gizli.
-- App project `etkinwms-motive`; DB project `etkinwms-database`. DB volume `etkinwms-database_postgres-data`; app caddy-data/caddy-config/marketing-leads korunur.
+- App project `etkinwms` (T-410; önceki `etkinwms-motive`, birimleri yedek olarak durur); app network `etkinwms_default`; DB project `etkinwms-database`. DB volume `etkinwms-database_postgres-data`; app caddy-data/caddy-config/marketing-leads korunur.
 - Gerçek Compose rollback yolu STATE/automation state'ten alınır; eski göreli bind-mount ile yanlış kaynak bağlama.
 
 ## Beş konteyner

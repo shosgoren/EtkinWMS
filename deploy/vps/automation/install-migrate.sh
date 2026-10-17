@@ -141,7 +141,8 @@ open(sys.argv[2], 'w').write('PGHOST=%s\nPGPORT=%s\nPGDATABASE=%s\nPGUSER=%s\nPG
                              % (u.hostname, u.port, u.path.lstrip('/'), urllib.parse.unquote(u.username), urllib.parse.unquote(u.password)))
 PY
 PGIMG=$(docker inspect --format '{{.Config.Image}}' etkinwms-postgres)
-WHO=$(docker run --rm --network etkinwms-motive_default --env-file "$PGF" -v /opt/etkinwms/database/tls/ca.crt:/run/ca.crt:ro \
+NET=$(python3 -c 'import json; p=json.load(open("/opt/etkinwms/automation/state.json")).get("project", "etkinwms-motive"); print({"etkinwms-motive": "etkinwms-motive_default", "etkinwms": "etkinwms_default"}[p])')
+WHO=$(docker run --rm --network "$NET" --env-file "$PGF" -v /opt/etkinwms/database/tls/ca.crt:/run/ca.crt:ro \
   "$PGIMG" psql -X -qAt -c "SELECT current_user" </dev/null)
 [ "$WHO" = "$TARGET" ] || { echo "HATA: migration rolu ile TLS girisi dogrulanamadi"; exit 1; }
 echo "migration rolu TLS girisi: OK"

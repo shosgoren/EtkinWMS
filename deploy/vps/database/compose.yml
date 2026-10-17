@@ -27,4 +27,4 @@ volumes:
 networks:
   application:
     external: true
-    name: etkinwms-motive_default
+    name: etkinwms_default
