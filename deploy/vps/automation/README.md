@@ -64,15 +64,20 @@ Sıra (bu özelliği içeren sürüm main'e birleşmeden ÖNCE 1, yayından SONR
 1. Root: aynı commit'teki `release.py`'yi kur (`install -m 755 -o root -g root release.py /usr/local/sbin/etkinwms-release`). T-411
    kuyruk kurulumu da bununla gelir; yayın bu sürümün imzalı migration imajını kullanır.
 2. Yayın sağlıklı bitince, düşük trafik saatinde root: depodan `deploy/vps/automation/compose.yml`, `deploy/vps/Caddyfile`,
-   `deploy/vps/automation/release.py` ve `deploy/vps/automation/rename-project.sh` aynı klasöre kopyalanır;
-   `bash rename-project.sh <klasör>`. Betik: önkoşulları ve mevcut sağlığı denetler → yayın kilidini alır → eski yığını durdurur →
+   `deploy/vps/automation/release.py`, `deploy/vps/automation/rename-project.sh` ve `deploy/vps/database/compose.yml` (adı
+   `database-compose.yml` olarak) aynı klasöre kopyalanır; SSH kopmasına karşı `setsid bash rename-project.sh <klasör>` (ya da
+   `systemd-run --wait --pty`). Betik: yayın kilidini beklemeden alır (yayın sürüyorsa reddeder) → önkoşulları ve mevcut sağlığı denetler
+   → yedekler (`*.<zaman>`) → eski yığını durdurur →
    yeni compose/Caddyfile'ı kurar → yeni projenin ağ/birim/konteynerlerini oluşturur → `caddy-data`, `caddy-config`, `marketing-leads`,
    `demo-leads` birimlerini KOPYALAR (eskiler silinmez) → `etkinwms-postgres`'i yeni ağa da bağlar → yeni yığını başlatır → derin sağlık →
-   `state.json`'a `project: etkinwms` yazar ve `release.py`'yi kurar → eski (durmuş) konteynerleri kaldırır. Herhangi bir hatada yeni
-   kaynaklar (konteyner, ağ, yalnız kopya birimler) kaldırılır, dosyalar ve `state.json` geri yüklenir, eski proje ayağa kalkar.
-   Kesinti hedefi < 2 dk. Yerel Docker'da başarılı taşıma, sağlık hatasında geri dönüş ve ikinci çalıştırmanın reddi denendi.
-3. Eski birimler (`etkinwms-motive_*`) ve ağ, bir sonraki planlı DB bakımında DB konteyneri yeni `database/compose.yml` ile yeniden
-   oluşturulduktan sonra elle kaldırılabilir; o zamana dek DB konteyneri iki ağa bağlı kalır.
+   `state.json`'a `project: etkinwms` yazar, `release.py`'yi ve veritabanı compose dosyasını kurar (DB konteyneri yeniden
+   OLUŞTURULMAZ) → eski (durmuş) konteynerleri kaldırır. Herhangi bir hatada ya da kesilme sinyalinde (HUP/INT/TERM): yeni birimlerin
+   içeriği eskilere geri kopyalanır (bu arada gelen demo talepleri kaybolmaz), yeni kaynaklar (konteyner, ağ, kopya birimler) kaldırılır,
+   dosyalar ve `state.json` geri yüklenir, eski proje ayağa kalkar. Kesinti hedefi < 2 dk. Yerel Docker'da başarılı taşıma, sağlık
+   hatasında geri dönüş (yeni yığına gelen talep eskiye geri yazıldı), kesilme sinyalinde geri dönüş, yayın kilidi meşgulken ret ve ikinci
+   çalıştırmanın reddi denendi.
+3. Eski birimler (`etkinwms-motive_*`) ve ağ, bir sonraki planlı DB bakımında DB konteyneri (kurulu yeni `database/compose.yml` ile)
+   yeniden oluşturulduktan sonra elle kaldırılabilir; o zamana dek DB konteyneri iki ağa bağlı kalır.
 
 ## İş kuyruklarının kurulumu (T-411)
 

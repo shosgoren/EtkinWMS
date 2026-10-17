@@ -7,8 +7,9 @@
 #     release.py kurulur (proje/ağ adını state.json'dan okur).
 # Herhangi bir adımda hata → yeni kaynaklar (konteyner, ağ, KOPYA birimler) kaldırılır, dosyalar geri yüklenir, eski proje ayağa kalkar.
 # Kesinti: eski yığının durmasından yeni yığının sağlıklı olmasına kadar (hedef < 2 dk). Yayın kilidi boyunca alınır (eşzamanlı yayın yok).
-# Kullanım (root): bash rename-project.sh <klasör>   — klasörde compose.yml (deploy/vps/automation/), Caddyfile (deploy/vps/) ve
-# release.py (deploy/vps/automation/) olmalı. Sır içermez; çıktıya değer yazılmaz.
+# Kullanım (root): bash rename-project.sh <klasör>   — klasörde compose.yml (deploy/vps/automation/), Caddyfile (deploy/vps/),
+# release.py (deploy/vps/automation/) ve database-compose.yml (deploy/vps/database/compose.yml) olmalı. SSH kopmasına karşı
+# `setsid` ya da `systemd-run --wait --pty` altında çalıştırın; kesilme sinyalinde de geri dönülür. Sır içermez; çıktıya değer yazılmaz.
 set -Eeuo pipefail
 umask 022
 test "$(id -u)" = 0
@@ -22,13 +23,19 @@ BASE=${ETKINWMS_BASE:-/opt/etkinwms}
 RELEASE_BIN=${ETKINWMS_RELEASE_BIN:-/usr/local/sbin/etkinwms-release}
 HEALTH_URL=${ETKINWMS_HEALTH_URL:-https://wms.etkinyazilim.com/api/health}
 auto=$BASE/automation
+dbdir=$BASE/database
 
-for f in compose.yml Caddyfile release.py; do test -f "$given/$f"; done
+# Yayın kilidi EN BAŞTA ve beklemeden (inceleme m1): durum okunurken eşzamanlı yayın bitip etiketi değiştiremez.
+exec 9>>"$auto/release.lock"
+flock -n 9 || { echo "hata: yayın sürüyor (kilit meşgul); bitince yeniden çalıştırın"; exit 1; }
+
+for f in compose.yml Caddyfile release.py database-compose.yml; do test -f "$given/$f"; done
 src=$(mktemp -d)
 trap 'rm -rf "$src"' EXIT
 install -m 600 -o root -g root "$given/compose.yml" "$src/compose.yml"
 install -m 600 -o root -g root "$given/Caddyfile" "$src/Caddyfile"
 install -m 600 -o root -g root "$given/release.py" "$src/release.py"
+install -m 600 -o root -g root "$given/database-compose.yml" "$src/database-compose.yml"
 
 # Önkoşullar: eski adla kurulu, yeni adın hiçbir kaynağı yok.
 test -f "$auto/state.json"
@@ -38,6 +45,9 @@ tag=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["tag"])' "
 [[ $tag =~ ^[A-Za-z0-9._-]+$ ]]
 docker image inspect "etkinwms:$tag" >/dev/null
 grep -qx "name: $NEW" "$src/compose.yml"
+grep -qx "    name: $NEW_NET" "$src/database-compose.yml"
+grep -qx "name: etkinwms-database" "$src/database-compose.yml"
+test -f "$dbdir/compose.yml"
 grep -q "PROJECTS = {'etkinwms-motive': 'etkinwms-motive_default', 'etkinwms': 'etkinwms_default'}" "$src/release.py"
 python3 -I -c 'import ast,sys; ast.parse(open(sys.argv[1]).read())' "$src/release.py"
 for v in "${VOLS[@]}"; do
@@ -62,38 +72,53 @@ PY
 # Doğrula (hiçbir şey değişmeden): yeni compose yeni adla, Caddyfile, mevcut yığın sağlıklı.
 WMS_RELEASE="$tag" docker compose -p "$NEW" -f "$src/compose.yml" config --quiet
 docker run --rm -v "$(readlink -f "$src/Caddyfile"):/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
+docker compose -f "$src/database-compose.yml" --project-directory "$dbdir" config --quiet
 healthy || { echo "hata: mevcut yığın sağlıksız; taşıma başlatılmadı"; exit 1; }
-
-exec 9>>"$auto/release.lock"
-flock -w 600 9 || { echo "hata: yayın kilidi alınamadı"; exit 1; }
 
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 cp -p "$auto/compose.yml" "$auto/compose.yml.$stamp"
 cp -p "$auto/Caddyfile" "$auto/Caddyfile.$stamp"
 cp -p "$auto/state.json" "$auto/state.json.$stamp"
 cp -p "$RELEASE_BIN" "$RELEASE_BIN.bak-$stamp"
+cp -p "$dbdir/compose.yml" "$dbdir/compose.yml.$stamp"
+echo "yedekler: *.$stamp"
 created=0
+rolling=0
 
 rollback() {
+  [ "$rolling" = 1 ] && return
+  rolling=1
+  trap - ERR HUP INT TERM
   set +e
   echo "hata: eski projeye dönülüyor ($stamp)" >&2
   if [ "$created" = 1 ]; then
+    WMS_RELEASE="$tag" docker compose -p "$NEW" -f "$auto/compose.yml" stop >/dev/null 2>&1
+    # Kopya birimler yalnız güvenle silinebilirse silinir: kopyalama bitmediyse (eski birim zaten tam) ya da içerik eskiye geri yazıldıysa.
+    # Eski yığın kopyadan beri durduğu için yeni birim eskinin üst kümesidir (ör. bu arada gelen demo talepleri, inceleme m3).
+    removable=1
+    if [ "$copied" = 1 ]; then
+      for v in "${VOLS[@]}"; do
+        docker run --rm --entrypoint /bin/sh -v "${NEW}_$v:/from:ro" -v "${OLD}_$v:/to" caddy:2 -c 'cp -a /from/. /to/' >/dev/null 2>&1 \
+          || { echo "UYARI: ${NEW}_$v geri kopyalanamadı; yeni birimler silinmedi" >&2; removable=0; }
+      done
+    fi
     WMS_RELEASE="$tag" docker compose -p "$NEW" -f "$auto/compose.yml" rm -sf >/dev/null 2>&1
     docker network disconnect "$NEW_NET" "$DB" >/dev/null 2>&1
     docker network rm "$NEW_NET" >/dev/null 2>&1
-    # Yalnız bu çalıştırmada oluşturulan KOPYA birimler; eski birimlere dokunulmaz.
-    for v in "${VOLS[@]}"; do docker volume rm "${NEW}_$v" >/dev/null 2>&1; done
+    if [ "$removable" = 1 ]; then for v in "${VOLS[@]}"; do docker volume rm "${NEW}_$v" >/dev/null 2>&1; done; fi
   fi
   cp -p "$auto/compose.yml.$stamp" "$auto/compose.yml"
   cp -p "$auto/Caddyfile.$stamp" "$auto/Caddyfile"
   cp -p "$auto/state.json.$stamp" "$auto/state.json"
   cp -p "$RELEASE_BIN.bak-$stamp" "$RELEASE_BIN"
+  cp -p "$dbdir/compose.yml.$stamp" "$dbdir/compose.yml"
   WMS_RELEASE="$tag" docker compose -p "$OLD" -f "$auto/compose.yml" up -d --no-build --wait --wait-timeout 180
   WMS_RELEASE="$tag" docker compose -p "$OLD" -f "$auto/compose.yml" restart proxy
   if healthy; then echo "eski proje sağlıklı ($OLD)" >&2; else echo "UYARI: eski proje sağlık denetiminden geçmedi" >&2; fi
   exit 1
 }
-trap rollback ERR
+copied=0
+trap rollback ERR HUP INT TERM
 
 # 1. Eski yığın durur (kesinti başlar). Konteynerler silinmez; geri dönüş için hazır kalır.
 WMS_RELEASE="$tag" docker compose -p "$OLD" -f "$auto/compose.yml.$stamp" stop
@@ -107,6 +132,7 @@ WMS_RELEASE="$tag" docker compose -p "$NEW" -f "$auto/compose.yml" create
 for v in "${VOLS[@]}"; do
   docker run --rm --entrypoint /bin/sh -v "${OLD}_$v:/from:ro" -v "${NEW}_$v:/to" caddy:2 -c 'cp -a /from/. /to/'
 done
+copied=1
 # 5. Veritabanı yeni ağa da bağlanır (aynı takma ad).
 docker network connect --alias "$DB" "$NEW_NET" "$DB"
 # 6. Yeni yığın.
@@ -126,7 +152,10 @@ with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as f:
 os.replace(tmp, path)
 PY
 install -m 755 -o root -g root "$src/release.py" "$RELEASE_BIN"
-trap - ERR
+# Veritabanı compose dosyası yeni ağ adını taşır (inceleme m4): DB konteyneri yeniden OLUŞTURULMAZ; ileride bu dosyayla yeniden
+# oluşturulursa doğrudan yeni ağa bağlanır.
+install -m 644 -o root -g root "$src/database-compose.yml" "$dbdir/compose.yml"
+trap - ERR HUP INT TERM
 # 8. Eski (durmuş) konteynerler kaldırılır; eski birimler ve ağ yerinde kalır (geri dönüş ve DB bağlantısı için).
 WMS_RELEASE="$tag" docker compose -p "$OLD" -f "$auto/compose.yml.$stamp" rm -f >/dev/null || echo "uyarı: eski konteynerler kaldırılamadı (çalışmayı etkilemez)"
 echo "tamam: proje $NEW, sürüm $tag, yedekler: *.$stamp"
