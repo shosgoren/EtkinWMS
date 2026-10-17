@@ -9,6 +9,8 @@
     "./identity/invitations": "./src/identity/invitations.ts",
     "./identity/memberships": "./src/identity/memberships.ts",
     "./identity/member-queries": "./src/identity/member-queries.ts",
+    "./identity/field-users": "./src/identity/field-users.ts",
+    "./identity/devices": "./src/identity/devices.ts",
     "./onboarding/workspace": "./src/onboarding/workspace.ts",
     "./onboarding/settings-queries": "./src/onboarding/settings-queries.ts",
     "./audit/today": "./src/audit/today.ts",
@@ -31,7 +33,12 @@
     "./stock/jobs": "./src/stock/jobs.ts",
     "./integrations": "./src/integrations/index.ts",
     "./platform/demo-requests": "./src/platform/demo-requests.ts",
-    "./platform/activation": "./src/platform/activation.ts"
+    "./platform/activation": "./src/platform/activation.ts",
+    "./platform/charges": "./src/platform/charges.ts",
+    "./platform/customers": "./src/platform/customers.ts",
+    "./platform/plans": "./src/platform/plans.ts",
+    "./platform/site-content": "./src/platform/site-content.ts",
+    "./platform/events": "./src/platform/events.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"

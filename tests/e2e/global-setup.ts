@@ -61,16 +61,16 @@ function start(cmd: string, args: string[], env: NodeJS.ProcessEnv, logName: str
 }
 
 /** Next'in desteklenen standalone çıktısı: Cloud'da derleme ayrı yerel konteynerde yapılabilir. */
-function startWeb(port: number, env: NodeJS.ProcessEnv, logName: string): ChildProcess {
+function startWeb(port: number, env: NodeJS.ProcessEnv, logName: string, host = "127.0.0.1"): ChildProcess {
   if (process.env.E2E_STANDALONE === "1") {
     const webRoot = path.join(ROOT, "apps/web");
     const output = path.join(webRoot, ".next/standalone/apps/web");
     if (!existsSync(path.join(output, "server.js"))) throw new Error("e2e: standalone build yok");
     cpSync(path.join(webRoot, ".next/static"), path.join(output, ".next/static"), { recursive: true });
     if (existsSync(path.join(webRoot, "public"))) cpSync(path.join(webRoot, "public"), path.join(output, "public"), { recursive: true });
-    return start("node", [path.join(output, "server.js")], { ...env, PORT: String(port), HOSTNAME: "127.0.0.1" }, logName);
+    return start("node", [path.join(output, "server.js")], { ...env, PORT: String(port), HOSTNAME: host }, logName);
   }
-  return start("pnpm", ["--filter", "@wms/web", "exec", "next", "start", "-p", String(port), "-H", "127.0.0.1"], env, logName);
+  return start("pnpm", ["--filter", "@wms/web", "exec", "next", "start", "-p", String(port), "-H", host], env, logName);
 }
 
 function stop(child: ChildProcess | undefined): void {
@@ -104,7 +104,9 @@ function startTlsProxy(port: number, targetPort: number, keyFile: string, certFi
         method: req.method,
         path: req.url,
         // Fly kenarını taklit eder: uygulama istemci IP'sini yalnızca `Fly-Client-IP`'den okur (apps/web/lib/rate-limit.ts).
-        headers: { ...forwardHeaders, "x-forwarded-proto": "https", "fly-client-ip": clientIp },
+        // T-407: üretimdeki Caddy gibi `X-Forwarded-Host` da verilir; yoksa Next iç yeniden yazmayı (panel `/satis` → `/panel/satis`)
+        // kendi iç portuna https ile dış vekil isteği sanıyordu.
+        headers: { ...forwardHeaders, "x-forwarded-proto": "https", "x-forwarded-host": req.headers.host ?? `localhost:${port}`, "fly-client-ip": clientIp },
       },
       (up) => {
         res.writeHead(up.statusCode ?? 502, up.headers);
@@ -159,13 +161,16 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
 
   const children: ChildProcess[] = [];
   let proxy: https.Server | undefined;
+  let proxyPanel: https.Server | undefined;
   const teardown = async (): Promise<void> => {
     clearSharedSession();
-    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
     }
     proxy?.close();
     proxy?.closeAllConnections();
+    proxyPanel?.close();
+    proxyPanel?.closeAllConnections();
     for (const c of children) stop(c);
   };
 
@@ -206,6 +211,39 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
         req.on("error", () => resolve(false));
       });
     });
+
+    // T-407: panel kipi (yonet. eşdeğeri, aynı derleme `APP_SURFACE=panel`, ayrı köken/çerez) ve satış sitesi sunucusu. Satış sitesi içeriği
+    // ana örneğin iç ucundan okur (üretimdeki `http://web:3000/api/public/site` eşdeğeri). Uçtan uca: panelde düzenle → yayınla → satış sayfası.
+    const innerPanel = port + 5;
+    const portPanel = port + 4;
+    const portSite = port + 6;
+    const panelEnv: NodeJS.ProcessEnv = { ...env, APP_SURFACE: "panel", BETTER_AUTH_URL: `https://localhost:${portPanel}`, MARKETING_URL: `http://localhost:${portSite}` };
+    delete panelEnv.DEMO_MODE;
+    // Üretimdeki gibi tüm arayüzlerde (HOSTNAME=0.0.0.0): Next bu durumda iç yeniden yazmanın kökenini istek başlıklarından kurar; belirli
+    // bir adrese bağlıyken kendi `localhost:<iç port>` kökenini https sanıp yeniden yazmayı dış vekil isteğine çeviriyordu (T-407).
+    const panel = startWeb(innerPanel, panelEnv, "web-panel.log", "0.0.0.0");
+    children.push(panel);
+    const site = start("node", ["marketing/server.mjs"], { PATH: process.env.PATH, PORT: String(portSite), LEAD_DIR: path.join(OUT, "marketing-leads"), SITE_CONTENT_URL: `http://127.0.0.1:${innerPort}/api/public/site` }, "marketing.log");
+    children.push(site);
+    await waitFor("panel örneği hazır değil (bkz. .artifacts/e2e/web-panel.log)", 120_000, async () => {
+      if (panel.exitCode !== null) throw new Error("e2e: panel örneği beklenmedik biçimde çıktı (bkz. .artifacts/e2e/web-panel.log)");
+      try {
+        return (await fetch(`http://127.0.0.1:${innerPanel}/api/health/live`)).ok;
+      } catch {
+        return false;
+      }
+    });
+    proxyPanel = startTlsProxy(portPanel, innerPanel, key, cert);
+    await waitFor("satış sitesi hazır değil (bkz. .artifacts/e2e/marketing.log)", 30_000, async () => {
+      if (site.exitCode !== null) throw new Error("e2e: satış sitesi beklenmedik biçimde çıktı (bkz. .artifacts/e2e/marketing.log)");
+      try {
+        return (await fetch(`http://127.0.0.1:${portSite}/`)).ok;
+      } catch {
+        return false;
+      }
+    });
+    process.env.E2E_PANEL_URL = `https://localhost:${portPanel}`;
+    process.env.E2E_SITE_URL = `http://localhost:${portSite}`;
 
     // T-279: boş tenant fikstürü (depo/ürün yok). TENANT_ADMIN MFA ister (access.ts:92-96) ve demo hesapları MFA kuramaz; bu yüzden fikstür
     // DEMO OLMAYAN bir hesaptır ve çalışma alanını kendisi açar (M9 etkin: DEMO_EMAIL_DOMAIN iletilir). Üretimdeki yol kullanılır: kayıt ucu +
@@ -308,6 +346,21 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
         process.env[`${actor.prefix}_PASSWORD`] = actorPassword;
         process.env[`${actor.prefix}_TOTP_SECRET`] = made.totpSecret;
       }
+      // T-407: panel operatörü olacak hesap (aynı gerçek kayıt/MFA yolu). Operatör listesine spec ekler (yerel DB fikstürü).
+      const opEmail = `operator-${suffix}@example.test`;
+      const opPassword = randomBytes(18).toString("hex");
+      const opMade = await provisionEmptyTenant({
+        browser,
+        origin: `https://localhost:${portB}`,
+        clientIp: "198.51.100.23",
+        name: "E2E operatör",
+        email: opEmail,
+        password: opPassword,
+        workspaceName: `E2E operator ${suffix}`,
+      });
+      process.env.E2E_OPERATOR_EMAIL = opEmail;
+      process.env.E2E_OPERATOR_PASSWORD = opPassword;
+      process.env.E2E_OPERATOR_TOTP_SECRET = opMade.totpSecret;
     } catch (e) {
       setupError = e;
     }

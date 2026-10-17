@@ -19,6 +19,7 @@ import { buildEmailSendPayload, canDeliver, type MailConfig } from "@wms/shared/
 import type { Sealer } from "@wms/shared/seal";
 import type { JobQueue } from "@wms/shared/queue";
 import { mapAccessError, runTenantCommand, runTenantCommandById, type AccessTx, type TenantAccessParams } from "./access.ts";
+import { isFieldEmail } from "@wms/shared/field-login";
 import { isDemoAddress } from "./invitations.ts";
 import { ROLE_KEYS, ROLE_PERMISSIONS, type RoleKey } from "./permissions.ts";
 
@@ -34,7 +35,9 @@ export type DenyReason =
   | "OWNER_ROLE"
   | "SELF_ESCALATION"
   | "NOT_OWNER"
-  | "NOT_MEMBER";
+  | "NOT_MEMBER"
+  /** T-997: saha hesabına (`@field.invalid`) yönetim rolü / sahiplik verilemez. */
+  | "FIELD_ACCOUNT";
 
 export class MembershipDenied extends Error {
   override name = "MembershipDenied";
@@ -219,6 +222,7 @@ export async function changeRole(params: ChangeRoleParams, deps: MembershipDeps)
       const owners = await lockOwners(tx, actor.tenantId);
       const target = await loadTarget(tx, actor.tenantId, memberId);
       if (isDemoAddress(target.email, deps.demoEmailDomain)) throw deny("DEMO");
+      if (isFieldEmail(target.email) && role !== "PICKER" && role !== "COUNTER") throw deny("FIELD_ACCOUNT");
       const before = target.roles[0];
       if (target.roles.length === 1 && before === role) return { membershipId: target.id, roleKey: role, changed: false };
 
@@ -343,6 +347,7 @@ export async function transferOwnership(params: TransferOwnershipParams, deps: M
       const target = await loadTarget(tx, actor.tenantId, toMemberId);
       if (target.id === actor.membershipId) throw new AppError("VALIDATION_FAILED");
       if (isDemoAddress(target.email, deps.demoEmailDomain)) throw deny("DEMO");
+      if (isFieldEmail(target.email)) throw deny("FIELD_ACCOUNT");
 
       if (!target.isOwner) {
         if (!target.roles.includes("TENANT_ADMIN") || target.roles.length !== 1) {
@@ -418,6 +423,7 @@ export async function issuePasswordResetLink(
     });
     if (target.userId === actorUserId) throw new AppError("VALIDATION_FAILED");
     if (isDemoAddress(target.email, deps.demoEmailDomain)) throw deny("DEMO");
+    if (isFieldEmail(target.email)) throw deny("FIELD_ACCOUNT"); // saha hesabının parolası yok: kod yenileme kullanılır
     if (target.isOwner) throw deny("OWNER");
     return target;
   };

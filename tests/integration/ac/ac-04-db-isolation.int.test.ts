@@ -102,6 +102,11 @@ interface TenantTable {
   ownerIsApp: boolean;
   insertCols: string[];
   updateCols: string[];
+  /** wms_app'in okuyabildiği sütunlar; tümü değilse (T-997: özet sütunları kapalı) satır kimliği bu sütunlardan kurulur. */
+  selectCols: string[];
+  allCols: string[];
+  /** NOT NULL sütunlar (okunamayan ama yazılabilir özet sütunu kopyada sentetik değer alır). */
+  notNullCols: string[];
   canDelete: boolean;
 }
 
@@ -111,6 +116,17 @@ let multi: { userId: string };
 let appClient: pg.Client;
 let admin: pg.Client;
 let tables: TenantTable[] = [];
+
+/** Satırın metin kimliği: uygulama rolü bütün sütunları okuyabiliyorsa `x::text`, değilse okunabilir sütunlardan `ROW(...)::text`. */
+function rowText(t: TenantTable, alias: string): string {
+  return t.selectCols.length === t.allCols.length ? `${alias}::text` : `ROW(${t.selectCols.map((c) => `${alias}.${q(c)}`).join(", ")})::text`;
+}
+/** INSERT kopyası için satırın jsonb'si (okunabilir sütunlarla sınırlı). */
+function rowJson(t: TenantTable, alias: string): string {
+  return t.selectCols.length === t.allCols.length
+    ? `to_jsonb(${alias})`
+    : `jsonb_build_object(${t.selectCols.map((c) => `'${c}', ${alias}.${q(c)}`).join(", ")})`;
+}
 
 async function discoverTables(): Promise<TenantTable[]> {
   const found = await admin.query<{ table_name: string }>(
@@ -142,8 +158,9 @@ async function discoverTables(): Promise<TenantTable[]> {
     );
     const m = meta.rows[0];
     if (m === undefined) throw new Error(`pg_class satırı yok: ${name}`);
-    const cols = await admin.query<{ column_name: string; ins: boolean; upd: boolean }>(
-      `SELECT column_name,
+    const cols = await admin.query<{ column_name: string; ins: boolean; upd: boolean; sel: boolean; nn: boolean }>(
+      `SELECT column_name, is_nullable = 'NO' AS nn,
+              has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'SELECT') AS sel,
               has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'INSERT') AS ins,
               has_column_privilege($2, ('public.' || quote_ident($1))::regclass, column_name, 'UPDATE') AS upd
          FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position`,
@@ -162,6 +179,9 @@ async function discoverTables(): Promise<TenantTable[]> {
       ownerIsApp: m.owner === APP_ROLE,
       insertCols: cols.rows.filter((c) => c.ins).map((c) => c.column_name),
       updateCols: cols.rows.filter((c) => c.upd).map((c) => c.column_name),
+      selectCols: cols.rows.filter((c) => c.sel).map((c) => c.column_name),
+      allCols: cols.rows.map((c) => c.column_name),
+      notNullCols: cols.rows.filter((c) => c.nn).map((c) => c.column_name),
       canDelete: del.rows[0]?.d === true,
     });
   }
@@ -348,10 +368,10 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
   it("@AC-04 SELECT: B satırı (x::text ile) 0 satır; toplam görünür satır yalnızca A'nın; A satırı görünür (kontrol)", async () => {
     const failures: string[] = [];
     for (const t of tables) {
-      const bRows = await admin.query<{ r: string }>(`SELECT x::text AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [B.tenantId]);
-      const aRows = await admin.query<{ r: string }>(`SELECT x::text AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [A.tenantId]);
+      const bRows = await admin.query<{ r: string }>(`SELECT ${rowText(t, "x")} AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [B.tenantId]);
+      const aRows = await admin.query<{ r: string }>(`SELECT ${rowText(t, "x")} AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [A.tenantId]);
       for (const b of bRows.rows) {
-        const r = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} x WHERE x::text = $1`, [b.r]);
+        const r = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} x WHERE ${rowText(t, "x")} = $1`, [b.r]);
         if (!r.ok || (r.rows[0] as { n: number }).n !== 0) failures.push(`${t.name}: B satırı A bağlamında görünür/hata: ${fmt(r)}`);
       }
       const byKey = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
@@ -454,7 +474,7 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
           appClient,
           [setTenant(A.tenantId)],
           `INSERT INTO public.${q(t.name)} (${cols2})
-           SELECT ${sel2} FROM (SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, to_jsonb(a))).* FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1 LIMIT 1) r
+           SELECT ${sel2} FROM (SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, ${rowJson(t, "a")})).* FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1 LIMIT 1) r
            RETURNING ${q(t.key)}::text AS k`,
           [A.tenantId],
         );
@@ -463,15 +483,19 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
         }
         continue;
       }
-      const cols = t.insertCols.map(q).join(", ");
-      const sel = t.insertCols.map((c) => `r.${q(c)}`).join(", ");
+      // Okunamayan sütun (özet) kopyalanamaz: yalnız okunup yazılabilen sütunlar (diğerleri varsayılan/NULL).
+      const copyCols = t.insertCols.filter((c) => t.selectCols.includes(c));
+      // Okunamayan ama zorunlu (NOT NULL) yazılabilir özet sütunu (ör. T-998 field_enrollments.token_hash): yeni sentetik 64 hex.
+      const synthCols = t.insertCols.filter((c) => !t.selectCols.includes(c) && t.notNullCols.includes(c));
+      const cols = [...copyCols, ...synthCols].map(q).join(", ");
+      const sel = [...copyCols.map((c) => `r.${q(c)}`), ...synthCols.map(() => "md5(random()::text) || md5(random()::text)")].join(", ");
       // Preserve the original valid DRAFT document-line copy as the native RLS control.
       const draftLine = t.name === "document_lines" ? " AND a.document_id = $3::uuid" : "";
       const copyParams = (tenant: string): unknown[] => t.name === "document_lines" ? [A.tenantId, tenant, A.documentId] : [A.tenantId, tenant];
       const copy = (): string =>
         `INSERT INTO public.${q(t.name)} (${cols})
          SELECT ${sel} FROM (
-           SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, to_jsonb(a) || jsonb_build_object('${t.key}', $2::text))).*
+           SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, ${rowJson(t, "a")} || jsonb_build_object('${t.key}', $2::text))).*
              FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1${draftLine} LIMIT 1
          ) r`;
       const reason = SYSTEM_REASON_WRITE[t.name];
@@ -800,23 +824,52 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.active_tenant_ids", // T-211 migration 0014: yalnızca ACTIVE tenant kimlikleri, yalnızca wms_worker EXECUTE (ADR-019 §1)
     "wms_probe.admin_reset_cleanup_on_membership", // T-103 üyelik tetikleyici işlevi (ADR-016 Sonuçlar)
     "wms_probe.consume_admin_reset_grant",
+    "wms_probe.field_activate", // T-997 migration 0044: saha etkinleştirme (kod tek kullanım + PIN özeti + kişisel cihaz) + security_events, yalnızca wms_auth
+    "wms_probe.field_admin_reset", // T-997 migration 0044: yönetici kod yenileme/kilit açma (tenant bağlamı zorunlu) + security_events, yalnızca wms_app
+    "wms_probe.field_device_revoke", // T-998 migration 0045: yönetici cihaz iptali + security_events (tenant bağlamı zorunlu), yalnızca wms_app
+    "wms_probe.field_device_staff", // T-998 migration 0045: ortak cihaz personel listesi (ad + kullanıcı adı; yalnız SHARED cihaz belirteciyle), yalnızca wms_auth
+    "wms_probe.field_device_status", // T-997 migration 0044: kayıtlı cihazın tenant/cihaz adı (salt okunur), yalnızca wms_auth
+    "wms_probe.field_enroll_approve", // T-998 migration 0045: kaydı başlatan yönetici talep eden ortak cihazı onaylar + security_events, yalnızca wms_app
+    "wms_probe.field_enroll_claim", // T-998 migration 0045: terminal 5 dk kayıt belirteciyle bir kez talep eder, yalnızca wms_auth
+    "wms_probe.field_lock_spree_check", // T-998 migration 0045: ortak cihazda toplu kilitleme koruması (kilit yanıtında; cihazı durdurur) + security_events, yalnızca wms_auth
+    "wms_probe.field_signin_begin", // T-997 migration 0044: saha girişi ön denetimi (cihaz, rol, kilit) → PIN özeti, yalnızca wms_auth
+    "wms_probe.field_signin_finish", // T-997 migration 0044: saha girişi sonucu (sayaç/kilit, belirteç rotasyonu) + security_events, yalnızca wms_auth
     "wms_probe.identity_exclusive_to_tenant",
     "wms_probe.invitation_for_account_creation",
     "wms_probe.invitation_preview_for_token", // T-117d migration 0008: salt okunur (ad+rol+süre), yalnızca wms_app EXECUTE
     "wms_probe.invitation_tenant_for_token", // T-117 migration 0006: salt okunur, yalnızca wms_app EXECUTE
     "wms_probe.ops_session_audited", // T-105c migration 0009: salt okunur denetim kanıtı (özyineleme önlemi), yalnızca wms_ops EXECUTE
+    "wms_probe.platform_accrue_charges", // T-406 migration 0043: operatör bu ayın tahakkuklarını açar (idempotent) + security_events, yalnızca wms_app
     "wms_probe.platform_activation_claim", // T-995 migration 0039: geçerli bağlantıya 10 dk hesap açma talebi, yalnızca wms_app
     "wms_probe.platform_activation_consume", // T-995 migration 0039: yeni tenant transaction'ında talebi tüketir + deneme kaydı, yalnızca wms_app
     "wms_probe.platform_activation_for_account_creation", // T-995 migration 0039: talep eşleşirse e-posta/ad/teslim yolu, yalnızca wms_auth
     "wms_probe.platform_activation_preview", // T-995 migration 0039: geçerli bağlantı önizlemesi (firma/e-posta/süre), yalnızca wms_app
     "wms_probe.platform_activation_release", // T-995 migration 0039: yarıda kalan talebin süresini bitirir (kimlik korunur), yalnızca wms_app
+    "wms_probe.platform_assign_default_plan", // T-404 migration 0041: bağlam tenant'ının paketsiz deneme kaydına önerilen paket, yalnızca wms_app
+    "wms_probe.platform_change_customer_plan", // T-403 migration 0042: operatör müşteri paketini değiştirir (güncel sürüm) + security_events, yalnızca wms_app
+    "wms_probe.platform_customer_activity", // T-403 migration 0042: operatöre müşterinin bu ayki hareket SAYISI + panel geçmişi (içerik yok), yalnızca wms_app
     "wms_probe.platform_decide_demo_request", // T-994 migration 0038: operatör (DB listesi) PENDING → karar + security_events, yalnızca wms_app
     "wms_probe.platform_demo_request_email", // T-995 migration 0039: operatöre talep e-postası (teslim yolu seçimi), yalnızca wms_app
+    "wms_probe.platform_extend_trial", // T-403 migration 0042: operatör denemeyi 30 gün uzatır + security_events, yalnızca wms_app
     "wms_probe.platform_ingest_demo_request", // T-994 migration 0038: satış sitesi talebi idempotent ekleme (tenant verisi yok), yalnızca wms_worker
     "wms_probe.platform_is_operator", // T-994 migration 0038: çağıran kullanıcı operatör mü (salt okunur), yalnızca wms_app
     "wms_probe.platform_issue_activation", // T-995 migration 0039: operatör bağlantı özeti yazar (72 sa) + security_events, yalnızca wms_app
+    "wms_probe.platform_list_charges", // T-406 migration 0043: operatöre tahakkuk listesi (firma adı, dönem, tutar, durum; not yok), yalnızca wms_app
+    "wms_probe.platform_list_customers", // T-403 migration 0042: operatöre müşteri listesi (yalnız sayılar ve durum), yalnızca wms_app
     "wms_probe.platform_list_demo_requests", // T-994 migration 0038 (0039: aktivasyon durumu eklendi): yalnız operatöre talep listesi, yalnızca wms_app
+    "wms_probe.platform_list_events", // T-408 migration 0047: operatöre panel işlem kaydı (platform.* olayları; kullanıcı kimliği yok, izinli ayrıntı), yalnızca wms_app
+    "wms_probe.platform_list_plans", // T-404 migration 0041: yalnız operatöre paket listesi (güncel sürüm + müşteri sayısı), yalnızca wms_app
+    "wms_probe.platform_mark_charge_paid", // T-406 migration 0043: operatör elle ödendi kaydı (geri alınmaz) + security_events, yalnızca wms_app
     "wms_probe.platform_prepare_activation_delivery", // T-995 migration 0039: e-postayla teslimde yeni belirteç özeti, yalnızca wms_worker
+    "wms_probe.platform_published_plans", // T-404 migration 0041: yayındaki paketler (herkese açık bilgi, müşteri verisi yok), yalnızca wms_app
+    "wms_probe.platform_save_plan", // T-404 migration 0041: operatör paket kaydı (değişiklikte yeni sürüm) + security_events, yalnızca wms_app
+    "wms_probe.platform_set_customer_status", // T-403 migration 0042: operatör askıya alır (gerekçe) / devam ettirir + security_events, yalnızca wms_app
+    "wms_probe.platform_site_get", // T-407 migration 0046: operatöre düzenlenen satış sayfası içeriği + son yayın, yalnızca wms_app
+    "wms_probe.platform_site_preview", // T-407 migration 0046: operatör 30 dk önizleme özeti yazar + security_events, yalnızca wms_app
+    "wms_probe.platform_site_public", // T-407 migration 0046: yayındaki içerik + yayındaki paketler (herkese açık bilgi; geçerli önizleme özetiyle taslak), yalnızca wms_app
+    "wms_probe.platform_site_publish", // T-407 migration 0046: operatör taslağı yayınlar (değişmez sürüm) + security_events, yalnızca wms_app
+    "wms_probe.platform_site_save", // T-407 migration 0046: operatör taslak kaydı + security_events, yalnızca wms_app
+    "wms_probe.platform_tenant_plan_limit", // T-404 migration 0041: bağlam tenant'ının paket sınırı (başka tenant → NULL), yalnızca wms_app
     "wms_probe.platform_tenant_subscription", // T-995 migration 0039: bağlam tenant'ının deneme kaydı (salt okunur), yalnızca wms_app
     "wms_probe.platform_workspace_name_taken", // T-995 migration 0039: yalnız geçerli bağlantıyla ad yoklaması (salt okunur), yalnızca wms_app
   ];
@@ -872,6 +925,35 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_prepare_activation_delivery": [WORKER_ROLE],
       "wms_probe.platform_tenant_subscription": [APP_ROLE],
       "wms_probe.platform_workspace_name_taken": [APP_ROLE],
+      "wms_probe.platform_list_plans": [APP_ROLE],
+      "wms_probe.platform_save_plan": [APP_ROLE],
+      "wms_probe.platform_published_plans": [APP_ROLE],
+      "wms_probe.platform_tenant_plan_limit": [APP_ROLE],
+      "wms_probe.platform_assign_default_plan": [APP_ROLE],
+      "wms_probe.platform_list_customers": [APP_ROLE],
+      "wms_probe.platform_customer_activity": [APP_ROLE],
+      "wms_probe.platform_set_customer_status": [APP_ROLE],
+      "wms_probe.platform_extend_trial": [APP_ROLE],
+      "wms_probe.platform_change_customer_plan": [APP_ROLE],
+      "wms_probe.platform_list_charges": [APP_ROLE],
+      "wms_probe.platform_accrue_charges": [APP_ROLE],
+      "wms_probe.platform_mark_charge_paid": [APP_ROLE],
+      "wms_probe.platform_site_get": [APP_ROLE],
+      "wms_probe.platform_site_save": [APP_ROLE],
+      "wms_probe.platform_site_publish": [APP_ROLE],
+      "wms_probe.platform_site_preview": [APP_ROLE],
+      "wms_probe.platform_site_public": [APP_ROLE],
+      "wms_probe.platform_list_events": [APP_ROLE],
+      "wms_probe.field_device_status": [AUTH_ROLE],
+      "wms_probe.field_signin_begin": [AUTH_ROLE],
+      "wms_probe.field_signin_finish": [AUTH_ROLE],
+      "wms_probe.field_activate": [AUTH_ROLE],
+      "wms_probe.field_admin_reset": [APP_ROLE],
+      "wms_probe.field_device_revoke": [APP_ROLE],
+      "wms_probe.field_device_staff": [AUTH_ROLE],
+      "wms_probe.field_enroll_approve": [APP_ROLE],
+      "wms_probe.field_enroll_claim": [AUTH_ROLE],
+      "wms_probe.field_lock_spree_check": [AUTH_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
       const f = fns.find((x) => key(x) === k);

@@ -403,6 +403,9 @@ class Component extends DCLogic {
         rentKicker: 'AYLIK KİRALAMA MODELİ',
         rentA: 'İhtiyacınız kadar başlayın.', rentB: 'İşinizle birlikte büyütün.',
         rentBody: 'Depo sayınız, kullanıcılarınız ve iş akışınız için uygun kapsamı belirleyelim. Standart bir fiyat tablosu yerine işletmenize uygun teklif hazırlayalım.',
+        rentBodyPlans: 'Paketlerden birini seçin; depo sayınıza ve iş akışınıza özel kapsam için teklif de hazırlayabiliriz.',
+        planRec: 'ÖNERİLEN', planPer: '/ AY · KDV HARİÇ', planNote: 'Fiyatlar aylık ve KDV hariçtir. Yükseltme hemen, düşürme sonraki dönemden geçerlidir.',
+        planU: { unl: 'Sınırsız', a: 'yönetici', f: 'saha personeli', w: 'depo', i: 'kalem', qr: 'QR paket etiketi', ship: 'Sevkiyat ve toplama', prod: 'Üretim ve reçete', api: 'ERP / API bağlantısı' },
         steps: [
           { n: '1', t: 'İhtiyacı birlikte belirleyelim', s: 'Ürünler, depolar, cihazlar ve günlük işlemler.' },
           { n: '2', t: 'Pilot kurulumu deneyin', s: 'Gerçek senaryonuzla barkod, stok ve etiket kontrolü.' },
@@ -514,6 +517,9 @@ class Component extends DCLogic {
         rentKicker: 'MONTHLY RENTAL MODEL',
         rentA: 'Start with what you need.', rentB: 'Grow as your business grows.',
         rentBody: 'Let’s define the right scope for your warehouses, users and workflow. Instead of a fixed price list, we prepare an offer that fits your business.',
+        rentBodyPlans: 'Pick one of our plans; we can also prepare an offer scoped to your warehouses and workflow.',
+        planRec: 'RECOMMENDED', planPer: '/ MO · EXCL. VAT', planNote: 'Prices are monthly and exclude VAT. Upgrades apply immediately, downgrades from the next period.',
+        planU: { unl: 'Unlimited', a: 'admins', f: 'field staff', w: 'warehouses', i: 'items', qr: 'QR package labels', ship: 'Shipping and picking', prod: 'Production and recipes', api: 'ERP / API connection' },
         steps: [
           { n: '1', t: 'Define the need together', s: 'Products, warehouses, devices and daily operations.' },
           { n: '2', t: 'Try the pilot setup', s: 'Barcode, stock and label checks with your real scenario.' },
@@ -546,6 +552,9 @@ class Component extends DCLogic {
     var lang = this.state.lang || this.props.lang || 'tr';
     var d = this.dict();
     var t = d[lang] || d.tr;
+    // T-407 (üretim düzeltmesi): panelden yayınlanan içerik (boot.js `props.site`). Metin Türkçedir; İngilizce görünümde tasarım metni kalır.
+    var site = this.props.site && typeof this.props.site === 'object' ? this.props.site : null;
+    if (site && lang === 'tr') t = Object.assign({}, t, { title1: site.title1, title2: site.title2, heroSub: site.subtitle });
     var step = this.state.step;
     var playing = this.state.playing && this.props.motion !== false;
     var accent = this.props.accent || '#F4C542';
@@ -783,7 +792,7 @@ class Component extends DCLogic {
       isFilm: isFilm, is3d: !isFilm, cap: cap,
       fs: { c0: fcls(0), c1: fcls(1), c2: fcls(2), c3: fcls(3) },
       filmDurS: this.filmDur() * (fi === 3 ? 1.6 : 1),
-      appOn: this.state.appOn && fi === 3,
+      appOn: true,
       cineCls: 'cine' + (this.state.appOn && fi === 3 ? ' app' : ''),
       fdots: t.film.map((f, i) => {
         return { l: f[0], cls: 'fdot' + (i === fi ? ' on' : ''), pressed: i === fi ? 'true' : 'false', go: () => { this.filmGo(i); this.filmSchedule(); } };
@@ -807,8 +816,22 @@ class Component extends DCLogic {
       }
     };
 
+    // Fiyat bölümü (T-407): yayındaki paketler panelden gelir (üretim düzeltmesi: tuvaldeki örnek üç paket yerine `props.site.plans`).
+    var planSrc = site && Array.isArray(site.plans) ? site.plans.map((p) => {
+      return { n: p.name, price: p.price, rec: p.recommended === true, l: { a: p.limits.admins, f: p.limits.field, w: p.limits.warehouses, i: p.limits.items }, f: p.features };
+    }) : [];
+    var pu = t.planU;
+    var money = (p) => { var n = Number(p); return p === '' || !isFinite(n) ? p : n.toLocaleString('tr-TR', { minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 }); };
+    var lim = (v, u) => { return v === 0 ? pu.unl + ' ' + u : Number(v).toLocaleString('tr-TR') + ' ' + u; };
+    var plans = planSrc.map((p) => {
+      var lines = [lim(p.l.a, pu.a), lim(p.l.f, pu.f), lim(p.l.w, pu.w), lim(p.l.i, pu.i)];
+      ['qr', 'ship', 'prod', 'api'].forEach((k) => { if (p.f[k]) lines.push(pu[k]); });
+      return { n: p.n, price: money(p.price), rec: !!p.rec, lines: lines.map((l) => { return { l: l }; }),
+               bg: p.rec ? '#FFFFFF' : 'rgba(255,255,255,.06)', fg: p.rec ? '#172E42' : '#FFFFFF', ring: p.rec ? '3px ' + accent : '1px rgba(255,255,255,.16)', ck: p.rec ? '#2F7D5B' : accent };
+    });
+
     var base = {
-      t: t, faq: faq,
+      t: t, faq: faq, plans: plans, hasPlans: plans.length > 0, rentBody: plans.length > 0 ? t.rentBodyPlans : t.rentBody,
       cubes: cubes, fl: fl, pk: pk, pkCode: pkCode, tags: tags, decals: decals, world: world, views: views,
       slots: slots, sel: selInfo, pills: pills, log: log,
       cur: fs[step],
@@ -852,6 +875,13 @@ window.EtkinDCComponent = Component;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) props.motion = false;
   } catch {
     // eski tarayıcı: hareket varsayılanı korunur
+  }
+  // T-407: panelden yayınlanan içerik (sunucunun yerleştirdiği, çalıştırılmayan JSON veri bloğu). Yoksa tasarım metni.
+  try {
+    const block = document.getElementById("site-content");
+    if (block) props.site = JSON.parse(block.textContent || "null");
+  } catch {
+    // biçimsiz blok: tasarım metni
   }
   const comp = new window.EtkinDCComponent(props);
   window.EtkinDC.mount(root, tpl, comp);

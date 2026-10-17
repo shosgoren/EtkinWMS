@@ -28,6 +28,7 @@ const DETAILED = [
   "validation_failed_code_taken",
   "validation_failed_code_ambiguous",
   "validation_failed_in_use",
+  "validation_failed_plan_limit",
   "validation_failed_parent_invalid",
   "validation_failed_document_too_large",
   "validation_failed_idempotency_key_required",

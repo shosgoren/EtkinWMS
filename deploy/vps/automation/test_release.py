@@ -52,6 +52,14 @@ def migration_setup(directory, approved='b'*64):
 
 
 class ReleaseBoundaryTests(unittest.TestCase):
+    def test_project_and_network_come_from_state_allow_list_only(self):
+        # T-410: proje adı state.json'dan; yoksa eski ad; listede olmayan ad reddedilir (keyfi compose projesi yok).
+        self.assertEqual(release.compose({'tag': 't', 'compose': '/c.yml'})[0][:4], ['docker', 'compose', '-p', 'etkinwms-motive'])
+        self.assertEqual(release.compose({'tag': 't', 'compose': '/c.yml', 'project': 'etkinwms'})[0][:4], ['docker', 'compose', '-p', 'etkinwms'])
+        for bad in ['', 'etkinwms-database', 'x; rm -rf /', 'etkinwms_default']:
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, 'PROJECT_REJECTED'):
+                release.compose({'tag': 't', 'compose': '/c.yml', 'project': bad})
+
     def test_commands_reject_shell_and_other_hosts(self):
         for command in ['', 'bash', 'check; id', 'scp -t /etc', 'deploy ' + SHA, 'deploy ' + 'a'*39 + ' ' + 'b'*64 + ' ' + 'c'*64]:
             with self.subTest(command=command), self.assertRaises(ValueError):
@@ -161,6 +169,8 @@ class ReleaseBoundaryTests(unittest.TestCase):
                    patch.object(release, 'receive', return_value='d'*64), patch.object(release.signal, 'alarm'),
                    patch.object(release.time, 'sleep'), patch.object(release, 'assert_migration_role'),
                    patch.object(release, 'migrator_drained', return_value=True)]
+        if 'install_queues' not in extra:
+            patches.append(patch.object(release, 'install_queues'))
         patches += [patch.object(release, name, value) for name, value in extra.items()]
         return patches
 
@@ -188,7 +198,82 @@ class ReleaseBoundaryTests(unittest.TestCase):
             self.assertEqual(len(list(automation.glob('approved-schema.sha256.bak-*'))), 1)
             state = json.loads((automation / 'state.json').read_text())
             self.assertEqual((state['sha'], state['schema']), (SHA, 'e'*64))
+            # T-410: proje adı yeni kayda taşınır (önceki kayıtta yoksa eski ad).
+            self.assertEqual(state['project'], 'etkinwms-motive')
             self.assertEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
+
+    def test_queues_sync_after_migration_and_approval(self):
+        # T-411: with a migration, the queue sync runs after the approved migration (queues may depend on it).
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            calls = []
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: calls.append('backup'),
+                                       migrate_database=lambda sha: calls.append('migrate'), run=run,
+                                       install_queues=lambda sha: calls.append('queues:' + sha),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config', 'stop', 'backup', 'migrate', 'queues:' + SHA, 'up'])
+            self.assertEqual((automation / 'approved-schema.sha256').read_text().strip(), 'e'*64)
+
+    def test_failed_queue_sync_after_migration_restarts_previous(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            calls = []
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: calls.append('backup'),
+                                       migrate_database=lambda sha: calls.append('migrate'), run=run,
+                                       install_queues=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'queues')),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with self.assertRaisesRegex(ValueError, 'QUEUE_INSTALL_FAILED_AFTER_MIGRATION_PREVIOUS_RESTARTED'):
+                    release.deploy(SHA, 'd'*64, 'e'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config', 'stop', 'backup', 'migrate', 'up'])
+            self.assertNotEqual((base / 'current').resolve(), (base / 'releases' / ('auto-' + SHA)).resolve())
+
+    def test_failed_queue_sync_without_migration_stops_release_before_any_stop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base, automation, previous_release, previous = migration_setup(directory)
+            (automation / 'state.json').write_text(json.dumps(dict(previous, schema='b'*64)))
+            calls = []
+            def run(args, **kwargs):
+                calls.append(' '.join(a for a in args if a in ('stop', 'up', 'config', 'load')))
+            ctx = self._deploy_patches(base, automation, backup_database=lambda sha: calls.append('backup'),
+                                       migrate_database=lambda sha: calls.append('migrate'), run=run,
+                                       install_queues=lambda sha: (_ for _ in ()).throw(
+                                           release.subprocess.CalledProcessError(1, 'queues')),
+                                       ledger_version=lambda: '0031', healthy=lambda: True)
+            for c in ctx: c.start()
+            try:
+                with self.assertRaisesRegex(ValueError, 'QUEUE_INSTALL_FAILED_PREVIOUS_RUNNING'):
+                    release.deploy(SHA, 'd'*64, 'b'*64)
+            finally:
+                for c in reversed(ctx): c.stop()
+            self.assertEqual(calls, ['load', 'config'])
+
+    def test_queue_installer_uses_migrator_image_and_env_file_only(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
+             patch.object(release, 'run') as run, patch.object(release, 'remove_migrator') as remove:
+            (Path(directory) / 'state.json').write_text(json.dumps({'tag': 'x', 'project': 'etkinwms'}))
+            release.install_queues(SHA)
+            self.assertEqual(run.call_args.args[0][run.call_args.args[0].index('--network') + 1], 'etkinwms_default')
+            self.assertEqual(remove.call_count, 2)  # before the run and always after it (killed client)
+            args = run.call_args.args[0]
+            self.assertEqual(args[args.index('--env-file') + 1], str(Path(directory) / 'migrate.env'))
+            self.assertEqual(args[-3:], ['etkinwms-migrate:' + SHA, 'node', '/queue-installer/sync.mjs'])
+            self.assertIn('--read-only', args)
+            self.assertFalse(any('postgresql://' in a or 'PASSWORD' in a for a in args))
+            self.assertEqual(run.call_args.kwargs['stdout'], release.subprocess.DEVNULL)
 
     def test_failed_migration_restarts_previous_and_keeps_schema_unapproved(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -372,8 +457,11 @@ class ReleaseBoundaryTests(unittest.TestCase):
     def test_migrator_gets_credential_only_from_env_file(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(release, 'AUTOMATION', Path(directory)), \
              patch.object(release, 'run') as run:
+            (Path(directory) / 'state.json').write_text(json.dumps({'tag': 'x'}))
             with patch.object(release, 'remove_migrator') as remove:
                 release.migrate_database(SHA)
+            # Eski kurulum (state'te proje yok): geçiş öncesi ağ.
+            self.assertEqual(run.call_args.args[0][run.call_args.args[0].index('--network') + 1], 'etkinwms-motive_default')
             remove.assert_called_once()
             args = run.call_args.args[0]
             self.assertEqual(args[args.index('--name') + 1], release.MIGRATOR_NAME)

@@ -23,7 +23,7 @@ Demo formu gerçek talepleri `/data/demo-requests.jsonl` dosyasına, Docker name
 Ayar ortamdan (`RESEND_API_KEY`, `LEAD_NOTIFY_TO`, `LEAD_NOTIFY_FROM`) ya da veri biriminde `notify.json` dosyasından okunur; anahtar repoya, loga veya sohbete girmez. VPS'de root olarak (anahtar gizli girilir):
 
 ```bash
-read -rsp 'Resend API anahtarı: ' K && echo && case "$K" in re_*) ;; *) echo 'anahtar re_ ile başlamalı'; false;; esac && case "$K" in *[!A-Za-z0-9_]*) echo 'anahtarda beklenmeyen karakter'; false;; esac && printf '{"resendApiKey":"%s","to":"hosgorens@gmail.com"}' "$K" | docker exec -i etkinwms-motive-marketing-1 sh -c 'umask 077 && cat > /data/notify.json' && unset K && echo tamam
+read -rsp 'Resend API anahtarı: ' K && echo && case "$K" in re_*) ;; *) echo 'anahtar re_ ile başlamalı'; false;; esac && case "$K" in *[!A-Za-z0-9_]*) echo 'anahtarda beklenmeyen karakter'; false;; esac && printf '{"resendApiKey":"%s","to":"hosgorens@gmail.com"}' "$K" | docker exec -i etkinwms-marketing-1 sh -c 'umask 077 && cat > /data/notify.json' && unset K && echo tamam
 ```
 
 Alan adı Resend'de doğrulanmadıkça gönderen `onboarding@resend.dev` olur ve yalnız Resend hesabının e-postasına gönderim yapılabilir. Kapatmak için `notify.json` silinir. Tüm IP'ler için saatte en çok 20 bildirim gider; fazlası yalnız dosyaya kaydedilir. Not: marketing-leads birimi yedeklenirse anahtar da yedekte bulunur. Kayıtlar herkese açık bir API'den okunamaz. Bu sürümde talepleri sunucu erişimi olan işletmeci kontrol eder. Formda iletişim onayı, kaynak denetimi, 8KB gövde sınırı ve IP başına saatte 5 deneme sınırı vardır.

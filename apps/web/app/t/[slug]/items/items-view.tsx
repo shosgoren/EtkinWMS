@@ -26,6 +26,7 @@ const DETAILED = [
   "unauthenticated_recent_auth_required",
   "validation_failed_code_taken",
   "validation_failed_in_use",
+  "validation_failed_plan_limit",
   "validation_failed_unit_conversion_invalid",
 ];
 

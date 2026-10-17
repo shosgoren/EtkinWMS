@@ -21,6 +21,7 @@ import type { DbClient } from "@wms/db/internal";
 import * as schema from "@wms/db/internal/schema";
 import { maskChangeSummary, recordSecurityEvent } from "@wms/db";
 import { hashPassword, verifyPassword } from "./password.ts";
+import { FIELD_EMAIL_DOMAIN as FIELD_EMAIL_DOMAIN_LOCAL, FIELD_RATE_RULES, FIELD_SESSION_IDLE_SEC, FIELD_SESSION_MAX_SEC, fieldLoginPlugin, isFieldEmail } from "./field.ts";
 import {
   DEMO_FORBIDDEN_PATHS,
   DISABLED_PATHS,
@@ -40,6 +41,7 @@ import {
 import type { CreateActivatedAccountInput, CreateInvitedAccountInput } from "./policy.ts";
 
 export { ARGON2_PARAMS, hashPassword, verifyPassword } from "./password.ts";
+export { FIELD_EMAIL_DOMAIN, FIELD_SESSION_IDLE_SEC, FIELD_SESSION_MAX_SEC, isFieldEmail } from "./field.ts";
 export { InvitedAccountError } from "./policy.ts";
 export type { CreateActivatedAccountInput, CreateInvitedAccountInput } from "./policy.ts";
 
@@ -298,6 +300,8 @@ export interface Principal {
   readonly mfaVerified: boolean;
   /** Demo kullanıcısı (A-43; `isDemoEmail` tek kaynak). UI demo ekranlarını render etmez (M9). */
   readonly isDemo: boolean;
+  /** Saha personeli (T-997: e-postasız, PIN + kayıtlı cihaz). Hassas işlem yeniden doğrulamasını karşılamaz. */
+  readonly fieldStaff?: boolean;
   /** Kullanıcıda 2FA etkin (kurulum tamamlanmış). */
   readonly twoFactorEnabled: boolean;
 }
@@ -352,6 +356,8 @@ export interface AuthService {
   reauthenticate(principal: Principal, password: string, headers?: Headers): Promise<void>;
   /** Kullanıcının tüm oturumlarını siler. */
   revokeUserSessions(userId: string): Promise<void>;
+  /** T-998: iptal edilen saha cihazında açılmış bütün oturumları kapatır (`field_sessions` bağı). Yetki denetimi ÇAĞIRANIN işi. */
+  revokeDeviceSessions(deviceId: string): Promise<void>;
   /**
    * Yönetici kaynaklı sıfırlama belirteci (B1, ADR-016 §9 / 3. tur m1): YÖNETİCİ İŞARETLİ doğrulama kaydı yazar
    * (30 dk). Yetki/üretim denetimi ÇAĞIRANIN işidir (`issuePasswordResetLink`); grant yoksa kullanılamaz (fail-closed).
@@ -370,6 +376,8 @@ export interface AuthService {
   createInvitedAccount(input: CreateInvitedAccountInput): Promise<CreateInvitedAccountResult>;
   /** Onaylı demo talebinin aktivasyon bağlantısıyla sahip hesabı açar (T-995). E-posta/ad/doğrulama talepten okunur; bkz. policy.ts. */
   createActivatedAccount(input: CreateActivatedAccountInput): Promise<CreateInvitedAccountResult>;
+  /** E-postasız saha hesabı (T-997): yalnız `users` satırı (iç `@field.invalid` e-posta, parola yok). Yetki denetimi ÇAĞIRANIN işi. */
+  createFieldAccount(input: { readonly name: string }): Promise<{ readonly userId: string }>;
 }
 
 export interface CreateAuthParams {
@@ -1246,6 +1254,10 @@ export function createAuth(params: CreateAuthParams): AuthService {
         "/sign-in/email": RATE_LIMIT_RULES.signIn,
         "/request-password-reset": RATE_LIMIT_RULES.passwordReset,
         "/two-factor/*": RATE_LIMIT_RULES.twoFactor,
+        // T-997: saha girişi IP başına (cihaz ve tenant başına sınırlar field.ts'te).
+        "/field/sign-in": FIELD_RATE_RULES.ipSignIn,
+        "/field/activate": FIELD_RATE_RULES.ipActivate,
+        "/field/enroll": FIELD_RATE_RULES.ipEnroll,
       },
     },
     // ADR-014 4. tur BLOCKER-1 (b): `/update-session` ucu kapalı (api/index.mjs:166-168 → 404).
@@ -1263,6 +1275,35 @@ export function createAuth(params: CreateAuthParams): AuthService {
           if (!warnedNoIp) {
             warnedNoIp = true;
             logMasked("warn", "Fly-Client-IP header missing: using the shared local rate-limit bucket (non-production only)");
+          }
+        }
+        // T-997 (inceleme N1): boşta (2 sa) ya da mutlak süresi (12 sa) dolmuş saha oturumu, Better Auth herhangi bir uçta oturumu
+        // okuyup yenilemeden (`updatedAt`) ÖNCE silinir. Zaman DB saatinden; tek dizinli DELETE.
+        {
+          const token = await ctx.getSignedCookie(ctx.context.authCookies.sessionToken.name, ctx.context.secret);
+          if (typeof token === "string" && token !== "") {
+            // Temizlik hatası (ör. DB yetki/bağlantı) isteği burada düşürmez: oturum okuması aynı DB'ye gider ve kendi hatasıyla düşer;
+            // `getPrincipal` boşta/mutlak sınırı ayrıca uygular.
+            await masked(() =>
+              authDb.execute(
+                sql`DELETE FROM public.sessions s USING public.users u
+                     WHERE s.token = ${token} AND u.id = s.user_id AND lower(u.email) LIKE ${`%@${FIELD_EMAIL_DOMAIN_LOCAL}`}
+                       AND (s.updated_at < now() - make_interval(secs => ${FIELD_SESSION_IDLE_SEC})
+                            OR s.created_at < now() - make_interval(secs => ${FIELD_SESSION_MAX_SEC}))`,
+              ),
+            ).catch((e: unknown) => logMasked("error", "field idle session sweep failed", e));
+          }
+        }
+        // T-997 (ADR-026 §7.2): saha hesabının iç e-postası (`@field.invalid`) e-posta/parola girişi ve sıfırlamada reddedilir
+        // (hesap var/yok ayrımı yok: biçim denetimi, arama yapılmaz).
+        if ((ctx.path === "/sign-in/email" || ctx.path === "/request-password-reset") && isFieldEmail(ctx.body?.email as string | undefined)) {
+          throw new APIError("UNAUTHORIZED", { message: "INVALID_EMAIL_OR_PASSWORD", code: "INVALID_EMAIL_OR_PASSWORD" });
+        }
+        // T-997: saha oturumu hesap yönetimi (2FA, parola, e-posta değişimi) uçlarını kullanamaz.
+        if (ctx.path.startsWith("/two-factor/") || ctx.path === "/change-password" || ctx.path === "/change-email" || ctx.path === "/set-password") {
+          const current = await getSessionFromCtx(ctx);
+          if (current !== null && isFieldEmail(current.user.email)) {
+            throw new APIError("FORBIDDEN", { message: "FIELD_ACCOUNT_FORBIDDEN", code: "FIELD_ACCOUNT_FORBIDDEN" });
           }
         }
         // M4 (ADR-014 §12): "trust device" kapalı — 2FA doğrulama gövdesinde reddedilir.
@@ -1442,6 +1483,19 @@ export function createAuth(params: CreateAuthParams): AuthService {
         backupCodeOptions: { storeBackupCodes: "encrypted" },
         accountLockout: TWO_FACTOR_LOCKOUT,
       }),
+      // T-997: saha girişi (çalışma alanı + kullanıcı adı + PIN, yalnız kayıtlı cihaz). Oturumu iç bağdaştırıcıyla açar.
+      fieldLoginPlugin({
+        execute: async <T extends Record<string, unknown>>(query: ReturnType<typeof sql>) =>
+          [...(await masked(() => authDb.execute<T>(query)))] as T[],
+        hashPin: hashPassword,
+        verifyPin: (hash, pin) => verifyPassword({ hash, password: pin }),
+        dummyHash: dummyPasswordHash,
+        consume: (key, rule) => rateStore.consume(key, rule),
+        markSessionVerified: (token) =>
+          sessionWriteOrRevoke(token, () => authDb.execute(sql`UPDATE public.sessions SET mfa_verified_at = now() WHERE token = ${token}`)),
+        secureCookies: new URL(env.baseUrl).protocol === "https:",
+        log: (message, error) => logMasked("error", message, error),
+      }),
       // Her zaman SON eklenti (cookie-plugin-guard.mjs uyarısı).
       nextCookies(),
     ],
@@ -1505,11 +1559,26 @@ export function createAuth(params: CreateAuthParams): AuthService {
     },
 
     async getPrincipal(headers) {
-      const result = await masked(() => auth.api.getSession({ headers }));
+      // Önce YENİLEMESİZ okuma (inceleme B1): Better Auth `updateAge` dolunca oturumu okurken `updatedAt`'i şimdiye çeker; saha
+      // oturumunun boşta süresi yenilemeden ÖNCEKİ değerle ölçülmeli. Yenileme gerekiyorsa ve oturum geçerliyse ikinci okuma yeniler.
+      const first = await masked(() => auth.api.getSession({ headers, query: { disableRefresh: true } }));
+      if (first === null || first === undefined) return null;
+      const refreshDue =
+        new Date(first.session.expiresAt).getTime() - SESSION_EXPIRES_IN_SEC * 1000 + SESSION_UPDATE_AGE_SEC * 1000 <= Date.now();
+      const firstField = isFieldEmail(first.user.email);
+      const firstIdle =
+        firstField && Date.now() - new Date(first.session.updatedAt ?? first.session.createdAt).getTime() > FIELD_SESSION_IDLE_SEC * 1000;
+      const result = refreshDue && !firstIdle ? await masked(() => auth.api.getSession({ headers })) : first;
       if (result === null || result === undefined) return null;
       const { session, user } = result;
       // A-39: mutlak 7 gün sınırı (oturum oluşturmadan itibaren); aşıldıysa oturum iptal edilir.
-      if (sessionAbsoluteExpired(new Date(session.createdAt))) {
+      const fieldStaff = isFieldEmail(user.email);
+      // T-997: saha oturumunun mutlak süresi 12 saat, boşta üst sınırı 2 saat (ADR-026 §7.8, T-997 koşul 4); aşıldıysa iptal.
+      const fieldExpired =
+        fieldStaff &&
+        (Date.now() - new Date(session.createdAt).getTime() > FIELD_SESSION_MAX_SEC * 1000 ||
+          firstIdle);
+      if (sessionAbsoluteExpired(new Date(session.createdAt)) || fieldExpired) {
         await masked(() => authDb.execute(sql`DELETE FROM public.sessions WHERE id = ${session.id}::uuid`));
         return null;
       }
@@ -1519,6 +1588,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
         authenticatedAt: new Date(session.createdAt),
         mfaVerified: session.mfaVerifiedAt !== null && session.mfaVerifiedAt !== undefined,
         ...principalIdentityFlags(user, env.demoEmailDomain),
+        ...(fieldStaff ? { fieldStaff: true } : {}),
       };
     },
 
@@ -1526,12 +1596,14 @@ export function createAuth(params: CreateAuthParams): AuthService {
     // ve DB `now()` kullanır. `reauth.*` yazımı artık DB'de yalnızca `wms_auth`'a açıktır (0005, T-112c) ve
     // `reauthenticate` olayı yazar; `requireRecentAuth`'u bu olaya bağlamak AYRI bir sonraki değişikliktir.
     async requireRecentAuth(principal, maxAgeSec) {
+      if (principal.fieldStaff === true) throw new AuthError("REAUTH_REQUIRED");
       await recentAuthWithin(principal, maxAgeSec);
     },
 
     async ensureRecentAuth(headers) {
       const principal = await service.getPrincipal(headers);
-      if (principal === null) throw new AuthError("REAUTH_REQUIRED");
+      // T-997 (kabul koşulu 3): saha oturumu hassas işlem yeniden doğrulamasını karşılamaz.
+      if (principal === null || principal.fieldStaff === true) throw new AuthError("REAUTH_REQUIRED");
       await recentAuthWithin(principal, REAUTH_WINDOW_SEC);
     },
 
@@ -1583,6 +1655,22 @@ export function createAuth(params: CreateAuthParams): AuthService {
       return masked(async () => createActivatedAccountWith(await claimAccountDeps(), input));
     },
 
+    async createFieldAccount(input) {
+      const name = typeof input.name === "string" ? input.name.trim().replace(/\s+/g, " ") : "";
+      if (name === "" || name.length > 100) throw new AuthConfigError("createFieldAccount: name must be 1-100 characters");
+      return masked(async () => {
+        const context = await auth.$context;
+        // İç e-posta: Better Auth e-posta uçlarına ve posta adaptörüne kapalı `.invalid` alanı; parola hesabı YOK.
+        const user = await context.internalAdapter.createUser({
+          name,
+          email: `${randomUUID()}@field.invalid`,
+          emailVerified: false,
+          image: null,
+        }, { method: "field-login" });
+        return { userId: user.id };
+      });
+    },
+
     async createPasswordResetToken(userId, issuingTenantId) {
       if (!UUID_RE.test(userId) || !UUID_RE.test(issuingTenantId)) throw new AuthConfigError("createPasswordResetToken: ids must be UUIDs");
       return masked(async () => {
@@ -1621,6 +1709,15 @@ export function createAuth(params: CreateAuthParams): AuthService {
         const context = await auth.$context;
         await context.internalAdapter.deleteUserSessions(userId);
       });
+    },
+
+    async revokeDeviceSessions(deviceId) {
+      if (!UUID_RE.test(deviceId)) throw new AuthConfigError("revokeDeviceSessions: deviceId must be a UUID");
+      await masked(() =>
+        authDb.execute(
+          sql`DELETE FROM public.sessions WHERE id IN (SELECT session_id FROM public.field_sessions WHERE device_id = ${deviceId}::uuid)`,
+        ),
+      );
     },
   };
   authOptionsByService.set(service, auth.options);
@@ -1686,6 +1783,11 @@ export function getAuthService(env: EnvSource = process.env, options: { readonly
 /** Aktivasyonla sahip hesabı açma (T-995): bkz. `AuthService.createActivatedAccount`. */
 export function createActivatedAccount(input: CreateActivatedAccountInput): Promise<CreateInvitedAccountResult> {
   return getAuthService().createActivatedAccount(input);
+}
+
+/** E-postasız saha hesabı (T-997): bkz. `AuthService.createFieldAccount`. */
+export function createFieldAccount(input: { readonly name: string }): Promise<{ readonly userId: string }> {
+  return getAuthService().createFieldAccount(input);
 }
 
 /** Davetle hesap açma (T-117): bkz. `AuthService.createInvitedAccount`. */

@@ -50,6 +50,17 @@ export const ERROR_DETAILS = [
   "STATUS_CHANGE",
   // T-308: müşteri iadesi, sevk edilen miktarın (önceki iadeler düşülmüş) üstünde (A-135).
   "RETURN_EXCEEDS_SHIPPED",
+  // T-404: paket sınırı (0041 tetikleyicisi) ve geçersiz paket tanımı (panel).
+  "PLAN_LIMIT",
+  "PLAN_INVALID",
+  // T-403: askıya alma gerekçesi boş.
+  "REASON_REQUIRED",
+  // T-406: ödeme kaydı (tarih/yöntem/not) geçersiz.
+  "PAYMENT_INVALID",
+  // T-998: ortak cihaz onayında terminal doğrulama kodu eşleşmedi.
+  "CODE_MISMATCH",
+  // T-407: satış sayfası metni/paket seçimi geçersiz (panel).
+  "SITE_INVALID",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -80,6 +91,12 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   SOURCE_LINKED: "REVERSAL_BLOCKED",
   STATUS_CHANGE: "REVERSAL_BLOCKED",
   RETURN_EXCEEDS_SHIPPED: "VALIDATION_FAILED",
+  PLAN_LIMIT: "VALIDATION_FAILED",
+  PLAN_INVALID: "VALIDATION_FAILED",
+  REASON_REQUIRED: "VALIDATION_FAILED",
+  PAYMENT_INVALID: "VALIDATION_FAILED",
+  CODE_MISMATCH: "VALIDATION_FAILED",
+  SITE_INVALID: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

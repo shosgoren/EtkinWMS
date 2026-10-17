@@ -152,6 +152,19 @@ export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "emp
   return t;
 }
 
+/** T-407: panel (operatör) girişi — aynı giriş ve iki adım ekranları, panel kökeninde; gizli değerler sayfaya bağlı kaynaktan. */
+export async function loginPanel(page: Page, origin: string, account: { readonly email: string; readonly password: string; readonly totpSecret: string }, next: string): Promise<void> {
+  await bindSecrets(page, { password: account.password, totpSecret: account.totpSecret });
+  await page.goto(`${origin}/login?next=${encodeURIComponent(next)}`);
+  await page.getByLabel("E-posta").fill(account.email);
+  await fillSecret(page, 'input[name="password"]', "password");
+  await page.getByRole("button", { name: "Giriş yap" }).click();
+  await expect(page).toHaveURL(/\/mfa\?/);
+  await fillSecret(page, 'input[name="code"]', "totp");
+  await page.getByRole("button", { name: "Doğrula" }).click();
+  await expect(page).toHaveURL(`${origin}${next}`);
+}
+
 export interface ProvisionInput {
   readonly browser: Browser;
   /** Kayıt açık (WMS_ENV=ci, SIGNUP_ENABLED=true) ikinci web örneğinin https kökü (tek aşım: workspaceCreationAllowed ortam kapısı). */

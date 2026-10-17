@@ -32,5 +32,19 @@ export const GICON = {
   clock: "M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z",
   /** Uyarı (hata satırı) */
   warn: "M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
+  /** D.user (kullanıcı adı) — T-997 saha girişi */
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
+  /** D.phone (kişisel telefon) */
+  phone: "M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM11 18h2",
+  /** D.cikis (toplayıcı rolü) */
+  cikis: "M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
+  /** D.sayim (sayımcı rolü) */
+  sayim: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2zM9 13l2 2 4-4",
+  /** Ekle (PERSONELİ EKLE) */
+  plus: "M12 5v14M5 12h14",
+  /** Yazdır (etkinleştirme kartı) */
+  print: "M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z",
+  /** Yeni kod (saha personeli satırı) */
+  renew: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
 } as const;
 export type GIconKey = keyof typeof GICON;

@@ -14,6 +14,7 @@
 //   `membership_roles` politikası gereği tenant bağlamı ister; her tenant için `withMembership` (kendi doğrulanmış üyeliği,
 //   roller `membership.roles`) kullanılır. Askıda/kapanan tenant `withMembership` ile reddedilir ve özetten düşer.
 import { sql } from "drizzle-orm";
+import { isFieldEmail } from "@wms/shared/field-login";
 import { MembershipError, withMembership, withUser } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type AccessDbClient, type AccessPrincipal, type TenantAccessParams } from "./access.ts";
@@ -39,6 +40,8 @@ export interface MemberRow {
   readonly status: "ACTIVE";
   readonly isDemo: boolean;
   readonly resetLinkAvailable: boolean;
+  /** T-997: e-postasız saha personeli (e-posta alanı boş; iç adres gösterilmez). */
+  readonly field?: { readonly username: string; readonly active: boolean; readonly pendingUntil: Date | null; readonly locked: boolean };
 }
 
 export interface PendingInvitationRow {
@@ -88,10 +91,25 @@ export async function listMembers(params: QueryParams, deps: MemberQueryDeps): P
     const canManage = hasPermission(actor.roles, "users.manage");
     const tenantRows = await tx.execute<{ is_demo: boolean }>(sql`SELECT is_demo FROM public.tenants WHERE id = ${actor.tenantId}::uuid`);
     const tenantIsDemo = tenantRows[0]?.is_demo !== false; // fail-closed
-    const rows = await tx.execute<{ user_id: string; name: string; email: string; is_owner: boolean; id: string }>(
-      sql`SELECT m.id, m.user_id, u.name, u.email, m.is_owner
+    // T-997: saha hesabının iç e-postası (`@field.invalid`) hiçbir ekranda görünmez; yerine kullanıcı adı ve giriş durumu (özet sütunları
+    // okunmaz).
+    const rows = await tx.execute<{
+      user_id: string;
+      name: string;
+      email: string;
+      is_owner: boolean;
+      id: string;
+      username: string | null;
+      pin_set: boolean | null;
+      pending_until: Date | string | null;
+      locked: boolean | null;
+    }>(
+      sql`SELECT m.id, m.user_id, u.name, u.email, m.is_owner, f.username, (f.pin_set_at IS NOT NULL) AS pin_set,
+                 CASE WHEN f.activation_expires_at > now() THEN f.activation_expires_at END AS pending_until,
+                 (f.locked_until IS NOT NULL AND f.locked_until > now()) AS locked
             FROM public.tenant_memberships m
             JOIN public.users u ON u.id = m.user_id
+            LEFT JOIN public.field_logins f ON f.tenant_id = m.tenant_id AND f.membership_id = m.id
            WHERE m.tenant_id = ${actor.tenantId}::uuid AND m.status = 'ACTIVE'
            ORDER BY u.name, u.email, m.id`,
     );
@@ -107,16 +125,30 @@ export async function listMembers(params: QueryParams, deps: MemberQueryDeps): P
     }
     return rows.map((r) => {
       const isDemo = isDemoAddress(r.email, deps.demoEmailDomain);
+      // Saha ayrıntısı (kullanıcı adı, kilit, kod durumu) yalnız yöneticiye (inceleme B-2); diğerlerine yalnız "saha" işareti.
+      const isField = r.username !== null || isFieldEmail(r.email);
+      const field =
+        !isField
+          ? undefined
+          : !canManage || r.username === null
+            ? { username: "", active: false, pendingUntil: null, locked: false }
+            : {
+              username: r.username,
+              active: r.pin_set === true,
+              pendingUntil: r.pending_until === null ? null : new Date(r.pending_until),
+              locked: r.locked === true,
+            };
       return {
         membershipId: r.id,
         userId: r.user_id,
         displayName: r.name,
-        email: canManage ? r.email : maskEmail(r.email),
+        email: isField ? "" : canManage ? r.email : maskEmail(r.email),
+        ...(field === undefined ? {} : { field }),
         roles: rolesBy.get(r.id) ?? [],
         isOwner: r.is_owner,
         status: "ACTIVE" as const,
         isDemo,
-        resetLinkAvailable: resetLinkPrechecks({
+        resetLinkAvailable: !isField && resetLinkPrechecks({
           callerCanManage: canManage,
           tenantIsDemo,
           isSelf: r.user_id === actor.userId,

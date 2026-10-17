@@ -18,6 +18,7 @@ import { canDeliver, type MailConfig } from "@wms/shared/mailer";
 import { PLATFORM_NO_USER_ID, type JobQueue } from "@wms/shared/queue";
 import type { AccessDbClient, AccessTx } from "../identity/access.ts";
 import { seedSampleData } from "../onboarding/sample-data.ts";
+import { assignDefaultPlan } from "./plans.ts";
 import { getTemplate } from "../onboarding/templates.ts";
 import { RESERVED_SLUGS, initializeNewTenant, slugBaseFromName } from "../onboarding/workspace.ts";
 
@@ -245,13 +246,15 @@ export async function activateTrial(params: ActivateTrialParams, deps: ActivateT
       const rawEnd = consumed[0]?.trial_ends_at;
       if (rawEnd === undefined || rawEnd === null) throw new AppError("INTERNAL");
       const trialEndsAt = new Date(rawEnd);
+      // T-404: deneme, önerilen yayındaki paketin sınırlarıyla başlar (paket yoksa sınırsız; operatör panelden değiştirir).
+      const planId = await assignDefaultPlan(tx);
       await appendAudit(tx, {
         action: "trial.started",
         actorUserId: userId,
         entityType: "tenant",
         entityId: m.tenantId,
         requestId: claimId,
-        changeSummary: { plan: "TRIAL", trial_ends_at: trialEndsAt.toISOString(), sample },
+        changeSummary: { plan: "TRIAL", trial_ends_at: trialEndsAt.toISOString(), sample, plan_id: planId },
       });
       const owner = await tx.execute<{ email: string; email_verified: boolean }>(
         sql`SELECT email, email_verified FROM public.users WHERE id = ${userId}::uuid`,

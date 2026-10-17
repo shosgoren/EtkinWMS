@@ -112,6 +112,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* ── seg / tabs ── */
 .seg{display:inline-flex;gap:4px;padding:4px;border-radius:16px;overflow-x:auto;max-width:100%}
 .segb{appearance:none;flex:none;min-height:40px;padding:0 14px;border:0;border-radius:12px;background:transparent;cursor:pointer;font:700 13.5px/1 'Instrument Sans',sans-serif;white-space:nowrap}
+.racts{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .segb.on{box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.5)}
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .search{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:15px}
@@ -335,7 +336,7 @@ button,input,select,textarea{font:inherit;color:inherit}
         <div class="card" style="background: {{c.surface}}; padding-top: 8px">
           <div class="tbox"><table class="tbl">
             <thead><tr><th>FİRMA</th><th>DÖNEM</th><th>PAKET</th><th class="num">TUTAR</th><th>DURUM</th><th>FATURA</th><th></th></tr></thead>
-            <tbody><sc-for list="{{payRows}}" as="r" hint-placeholder-count="5"><tr><td><span class="tname"><b>{{r.n}}</b><span>{{r.ref}}</span></span></td><td data-l="DÖNEM" class="mono" style="font-size: 13px">{{r.per}}</td><td data-l="PAKET">{{r.pk}}</td><td class="num" data-l="TUTAR">₺{{r.amt}}</td><td data-l="DURUM"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></td><td data-l="FATURA" class="mono" style="font-size: 13px">{{r.inv}}</td><td><sc-if value="{{r.late}}" hint-placeholder-val="{{false}}"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{noop}}">Hatırlat</button></sc-if></td></tr></sc-for></tbody>
+            <tbody><sc-for list="{{payRows}}" as="r" hint-placeholder-count="5"><tr><td><span class="tname"><b>{{r.n}}</b><span>{{r.ref}}</span></span></td><td data-l="DÖNEM" class="mono" style="font-size: 13px">{{r.per}}</td><td data-l="PAKET">{{r.pk}}</td><td class="num" data-l="TUTAR">₺{{r.amt}}</td><td data-l="DURUM"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></td><td data-l="FATURA" class="mono" style="font-size: 13px">{{r.inv}}</td><td><div class="racts"><sc-if value="{{r.open}}" hint-placeholder-val="{{true}}"><button type="button" class="btn sm" style="background: #17804F; color: #FFFFFF" onClick="{{r.pay}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M4 12l5 5L20 6"></path></svg>Ödendi işaretle</button></sc-if><sc-if value="{{r.late}}" hint-placeholder-val="{{false}}"><button type="button" class="btn sm" style="background: {{c.chip}}" onClick="{{noop}}">Hatırlat</button></sc-if></div></td></tr></sc-for></tbody>
           </table></div>
           <sc-if value="{{payEmpty}}" hint-placeholder-val="{{false}}"><div class="empty">BU FİLTREDE KAYIT YOK</div></sc-if>
         </div>
@@ -356,18 +357,21 @@ button,input,select,textarea{font:inherit;color:inherit}
 
       <!-- ═══ SATIŞ SAYFASI ═══ -->
       <sc-if value="{{v.satis}}" hint-placeholder-val="{{false}}">
+        <sc-if value="{{lp.link}}" hint-placeholder-val="{{false}}"><div class="ban" role="status" style="background: #FFE7A8; color: #4A3500"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg><span style="flex: 1; min-width: 0"><b>Önizleme bağlantısı hazır</b>Kaydedilen taslağı gösterir; 30 dakika geçerlidir ve arama motorlarına kapalıdır.<span class="mono" style="display: block; margin-top: 8px; font-size: 13px; overflow-wrap: anywhere">https://etkinyazilim.com/?onizleme=[bağlantı]</span></span><button type="button" class="btn sm" style="background: #4A3500; color: #FFFFFF" onClick="{{noop}}">Kopyala</button></div></sc-if>
         <div class="grid2">
           <div class="card" style="background: {{c.surface}}">
             <div class="chd"><b>İÇERİK</b><span>ETKINYAZILIM.COM</span></div>
             <div class="fl"><label for="y-h1">ANA BAŞLIK</label><div class="inp" style="background: {{c.chip}}"><input id="y-h1" type="text" value="{{lp.h}}" onChange="{{lp.onH}}"></div></div>
+            <div class="fl"><label for="y-h2">VURGULU SATIR</label><div class="inp" style="background: {{c.chip}}"><input id="y-h2" type="text" value="{{lp.h2}}" onChange="{{lp.onH2}}"></div></div>
             <div class="fl"><label for="y-sub">ALT METİN</label><textarea id="y-sub" class="ta" style="background: {{c.chip}}" value="{{lp.s}}" onChange="{{lp.onS}}"></textarea></div>
             <span class="fll">FİYAT BÖLÜMÜNDE GÖSTERİLEN PAKETLER</span>
             <sc-for list="{{lp.toggles}}" as="t" hint-placeholder-count="3"><button type="button" class="tg" style="background: {{c.chip}}" role="switch" aria-checked="{{t.on}}" onClick="{{t.go}}">{{t.l}}<span class="{{t.swCls}}" style="background: {{t.swBg}}"><i></i></span></button></sc-for>
-            <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{noop}}">Önizleme bağlantısı</button><button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{noop}}">Yayınla</button></div>
+            <span class="kpi-s">SON YAYIN · {{lp.pub}}</span>
+            <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{lp.mkLink}}">Önizleme bağlantısı</button><button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{lp.publish}}">Yayınla</button></div>
           </div>
           <div class="lprev" aria-label="Satış sayfası önizlemesi">
             <span class="kpi-s" style="color: #F4C542; opacity: 1">ÖNİZLEME · FİYATLAR</span>
-            <h3>{{lp.h}}</h3>
+            <h3>{{lp.h}} <span style="display: inline-block; padding: 0 .14em .04em; border-radius: 10px; background: #F4C542; color: #172E42">{{lp.h2}}</span></h3>
             <p>{{lp.s}}</p>
             <div class="lpk"><sc-for list="{{lp.cards}}" as="lc" hint-placeholder-count="3"><div class="{{lc.cls}}"><b>{{lc.n}}</b><span>₺{{lc.price}}</span><small>{{lc.sum}}</small></div></sc-for></div>
           </div>
@@ -397,6 +401,32 @@ button,input,select,textarea{font:inherit;color:inherit}
     </div>
   </sc-if>
 
+  <!-- ═══ Ödeme kaydı penceresi (T-406: ödeme sağlayıcısı bağlanana dek elle tahsilat) ═══ -->
+  <sc-if value="{{sheetPaid}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" role="dialog" aria-modal="true" aria-labelledby="y-pd">
+      <div class="sheet" style="background: {{c.surface}}; color: {{c.fg}}">
+        <h2 id="y-pd">Ödeme kaydı · {{pp.n}}</h2>
+        <p class="mono" style="margin: 0; font-size: 13px; opacity: .8">{{pp.ref}} · {{pp.per}} · {{pp.pk}} · ₺{{pp.amt}}</p>
+        <div class="fl"><label for="y-pdt">TAHSİLAT TARİHİ</label><div class="inp" style="background: {{c.chip}}"><input id="y-pdt" type="text" inputmode="numeric" value="16.10.2026"></div></div>
+        <div class="fl"><span class="fll">YÖNTEM</span><div class="seg" role="radiogroup" aria-label="Ödeme yöntemi" style="background: {{c.chip}}"><sc-for list="{{payWays}}" as="pw" hint-placeholder-count="3"><button type="button" role="radio" class="{{pw.cls}}" aria-checked="{{pw.sel}}" style="background: {{pw.bg}}" onClick="{{pw.go}}">{{pw.l}}</button></sc-for></div></div>
+        <div class="fl"><label for="y-pnt">NOT (İSTEĞE BAĞLI)</label><textarea id="y-pnt" class="ta" style="background: {{c.chip}}; min-height: 72px" placeholder="Örn. dekont no, banka" value="{{payNote}}" onChange="{{onPayNote}}"></textarea></div>
+        <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg><span>Ödeme sağlayıcısı bağlanınca kartla ödemeler kendiliğinden düşer; havale ve nakit buradan işaretlenir.</span></div>
+        <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{closeSheet}}">Vazgeç</button><button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{markPaid}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M4 12l5 5L20 6"></path></svg>Ödendi olarak kaydet</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ═══ Dönem tahakkuku penceresi (T-406) ═══ -->
+  <sc-if value="{{sheetAccrue}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" role="dialog" aria-modal="true" aria-labelledby="y-ac">
+      <div class="sheet" style="background: {{c.surface}}; color: {{c.fg}}">
+        <h2 id="y-ac">Ekim 2026 tahakkukları oluşturulsun mu?</h2>
+        <p style="margin: 0; font: 500 15px/1.5 'Instrument Sans', sans-serif; opacity: .8">Paketi atanmış ve deneme süresi bitmiş her müşteri için bu ayın tutarı açılır. Daha önce açılmış dönemler atlanır; tutar müşterinin paket fiyatıdır (KDV hariç).</p>
+        <div class="sacts"><button type="button" class="btn" style="background: {{c.chip}}" onClick="{{closeSheet}}">Vazgeç</button><button type="button" class="btn" style="background: #172E42; color: #FFFFFF" onClick="{{closeSheet}}">Tahakkukları oluştur</button></div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ═══ Paket değiştir penceresi ═══ -->
   <sc-if value="{{sheetPlan}}" hint-placeholder-val="{{false}}">
     <div class="scrim" role="dialog" aria-modal="true" aria-labelledby="y-pl">
@@ -420,7 +450,7 @@ class Component extends DCLogic {
     super(props);
     this.state = {
       mode: 'desktop', override: null, theme: 'acik', page: 'ozet', cust: 0, q: '', custTab: 'hepsi', payTab: 'hepsi',
-      sheet: null, why: '', planPick: null, pkSel: 1, opDone: {}, linkShown: true,
+      sheet: null, why: '', planPick: null, payPick: 0, payWay: 'havale', payNote: '', paid: {}, pkSel: 1, opDone: {}, linkShown: true,
       custs: [
         { n: 'Motive Rubber', slug: 'motive', st: 'AKTİF', pk: 1, u: 9, field: 6, w: 3, i: 412, mv: 1840, last: 'BUGÜN 08:41', since: '13.10.2026', ini: 'MR' },
         { n: '[Firma adı]', slug: '[alan-1]', st: 'DENEME', pk: 0, u: 3, field: 2, w: 1, i: 86, mv: 120, last: 'DÜN 17:05', since: '02.10.2026', ini: 'F1', trialEnd: '02.01.2027' },
@@ -433,7 +463,7 @@ class Component extends DCLogic {
         { n: 'Profesyonel', price: '[fiyat]', users: 10, field: 20, w: 3, items: 5000, f: { qr: true, prod: true, api: false, ship: true }, pub: true, rec: true },
         { n: 'Kurumsal', price: '[fiyat]', users: 0, field: 0, w: 0, items: 0, f: { qr: true, prod: true, api: true, ship: true }, pub: true, rec: false }
       ],
-      lp: { h: 'Depo işi, tek ekranda.', s: 'Mal kabulden sevkiyata her iş telefonda; 3 ay ücretsiz deneyin.', show: [true, true, true] }
+      lp: { h: 'Girişten sevkiyata kesintisiz kontrolün', h2: 'en kolay hali.', s: 'Mal kabulden sevkiyata her iş telefonda; 3 ay ücretsiz deneyin.', show: [true, true, true], link: false, pub: '15.10 21:04 · SÜRÜM 3' }
     };
   }
   componentDidMount() { var self = this; this._r = function () { self.setState({ mode: self.detect() }); }; this._r(); window.addEventListener('resize', this._r); }
@@ -465,7 +495,7 @@ class Component extends DCLogic {
       musteriler: { h: 'Müşteriler', s: 'YALNIZ SAYILAR GÖRÜNÜR · MÜŞTERİ VERİSİ AÇILMAZ' },
       musteri: { h: custs[s.cust].n, s: 'MÜŞTERİ DETAYI' },
       paketler: { h: 'Paketler', s: 'SATIŞ SAYFASI VE İYZİCO PLANLARIYLA EŞLİ', act: 'Yeni paket', hasAct: true, go: function () { var p = self.state.pks.slice(); p.push({ n: 'Yeni paket', price: '[fiyat]', users: 1, field: 1, w: 1, items: 100, f: { qr: true, prod: false, api: false, ship: false }, pub: false, rec: false }); self.setState({ pks: p, pkSel: p.length - 1 }); } },
-      odemeler: { h: 'Ödemeler', s: 'İYZİCO ABONELİK · AYLIK' },
+      odemeler: { h: 'Ödemeler', s: 'İYZİCO ABONELİK · AYLIK', act: 'Dönem tahakkuku', hasAct: true, go: function () { self.setState({ sheet: 'accrue' }); } },
       talepler: { h: 'Demo talepleri', s: 'SATIŞ SAYFASI FORMU' },
       satis: { h: 'Satış sayfası', s: 'ETKINYAZILIM.COM · İÇERİK VE FİYATLAR' },
       kayit: { h: 'İşlem kaydı', s: 'PANELDE KİM NE YAPTI' }
@@ -536,7 +566,8 @@ class Component extends DCLogic {
     ];
     var PST = { 'ÖDENDİ': [c.okBg, c.okFg], 'GECİKTİ': ['#C62828', '#FFFFFF'], 'BEKLİYOR': [c.chip, c.fg] };
     var payTabs = tabsOf('payTab', [['hepsi', 'Hepsi'], ['ÖDENDİ', 'Ödendi'], ['GECİKTİ', 'Gecikti'], ['BEKLİYOR', 'Bekliyor']], s.payTab);
-    var payRows = pays.filter(function (p) { return s.payTab === 'hepsi' || p.st === s.payTab; }).map(function (p) { var st = PST[p.st]; return { n: p.n, ref: p.ref, per: p.per, pk: p.pk, amt: p.amt, st: p.st, stBg: st[0], stFg: st[1], inv: p.inv, late: p.st === 'GECİKTİ' }; });
+    pays = pays.map(function (p, i) { var o = {}; for (var k in p) o[k] = p[k]; o.i = i; if (s.paid[i]) { o.st = 'ÖDENDİ'; o.inv = 'BEKLİYOR'; } return o; });
+    var payRows = pays.filter(function (p) { return s.payTab === 'hepsi' || p.st === s.payTab; }).map(function (p) { var st = PST[p.st]; return { n: p.n, ref: p.ref, per: p.per, pk: p.pk, amt: p.amt, st: p.st, stBg: st[0], stFg: st[1], inv: p.inv, late: p.st === 'GECİKTİ', open: p.st !== 'ÖDENDİ', pay: function () { self.setState({ sheet: 'paid', payPick: p.i, payWay: 'havale', payNote: '' }); } }; });
     var payKpis = [
       { l: 'BU AY TAHSİL', n: 1, s: 'ÖDEME', a: '#17804F', d: D.check }, { l: 'GECİKEN', n: 2, s: 'ÖDEME · 2 MÜŞTERİ', a: '#C62828', d: D.warn },
       { l: 'BEKLEYEN', n: 1, s: 'ÖDEME · 13.11', a: '#B07D00', d: D.clock }, { l: 'FATURA BEKLEYEN', n: 1, s: 'E-ARŞİV BAĞLANINCA', a: '#3D2A6B', d: D.pay }
@@ -551,7 +582,8 @@ class Component extends DCLogic {
 
     var setLp = function (patch) { var o = {}; for (var k in self.state.lp) o[k] = self.state.lp[k]; for (var k2 in patch) o[k2] = patch[k2]; self.setState({ lp: o }); };
     var lp = {
-      h: s.lp.h, s: s.lp.s, onH: function (e) { setLp({ h: val(e) }); }, onS: function (e) { setLp({ s: val(e) }); },
+      h: s.lp.h, h2: s.lp.h2, s: s.lp.s, onH: function (e) { setLp({ h: val(e) }); }, onH2: function (e) { setLp({ h2: val(e) }); }, onS: function (e) { setLp({ s: val(e) }); },
+      link: s.lp.link, pub: s.lp.pub, mkLink: function () { setLp({ link: true }); }, publish: function () { setLp({ link: false, pub: '16.10 22:40 · SÜRÜM 4' }); },
       toggles: s.pks.map(function (p, i) { var on = !!s.lp.show[i] && p.pub; var o = sw(on); o.l = p.n + (p.pub ? '' : ' (taslak)'); o.go = function () { var a = self.state.lp.show.slice(); a[i] = !a[i]; setLp({ show: a }); }; return o; }),
       cards: s.pks.map(function (p, i) { return { p: p, i: i }; }).filter(function (o) { return o.p.pub && s.lp.show[o.i]; }).map(function (o) { return { n: o.p.n, price: o.p.price + ' / ay', sum: pkSum(o.p).join(' · '), cls: 'lpk-c' + (o.p.rec ? ' rec' : '') }; })
     };
@@ -581,7 +613,10 @@ class Component extends DCLogic {
       payTabs: payTabs, payRows: payRows, payEmpty: payRows.length === 0, payKpis: payKpis,
       reqRows: reqRows, linkBox: s.linkShown, link: 'https://wms.etkinyazilim.com/activate/[tek kullanımlık bağlantı]', copyLink: function () {},
       lp: lp, logRows: logRows,
-      sheetSuspend: s.sheet === 'suspend', sheetPlan: s.sheet === 'plan', why: s.why, whyEmpty: !(s.why || '').trim(),
+      sheetSuspend: s.sheet === 'suspend', sheetPlan: s.sheet === 'plan', sheetPaid: s.sheet === 'paid', sheetAccrue: s.sheet === 'accrue',
+      pp: pays[s.payPick] || pays[0], payNote: s.payNote, onPayNote: function (e) { self.setState({ payNote: val(e) }); },
+      payWays: [['havale', 'Havale / EFT'], ['kart', 'Kredi kartı'], ['nakit', 'Nakit']].map(function (w) { var on = s.payWay === w[0]; return { l: w[1], cls: 'segb' + (on ? ' on' : ''), sel: on ? 'true' : 'false', bg: on ? c.surface : 'transparent', go: function () { self.setState({ payWay: w[0] }); } }; }),
+      markPaid: function () { var o = {}; for (var k in self.state.paid) o[k] = true; o[self.state.payPick] = true; self.setState({ paid: o, sheet: null }); }, why: s.why, whyEmpty: !(s.why || '').trim(),
       onWhy: function (e) { self.setState({ why: val(e) }); },
       openSuspend: function () { self.setState({ sheet: 'suspend', why: '' }); }, openPlan: function () { self.setState({ sheet: 'plan', planPick: null }); },
       closeSheet: function () { self.setState({ sheet: null, planPick: null }); },

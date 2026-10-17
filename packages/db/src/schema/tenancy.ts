@@ -117,3 +117,75 @@ export type TenantSettings = typeof tenantSettings.$inferSelect;
 export type NewTenantSettings = typeof tenantSettings.$inferInsert;
 export type AdminResetGrant = typeof adminResetGrants.$inferSelect;
 export type NewAdminResetGrant = typeof adminResetGrants.$inferInsert;
+
+// T-997 (0044, ADR-026 §7): e-postasız saha girişi. Özet sütunları (pin_hash, activation_hash, token_hash) uygulama rolüne kapalıdır;
+// erişim `wms_probe.field_*` işlevleriyle. Tanım drift testine (sütun/tip/NULL) karşı birebir.
+export const fieldLogins = pgTable("field_logins", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull(),
+  membershipId: uuid("membership_id").notNull(),
+  username: text("username").notNull(),
+  pinHash: text("pin_hash"),
+  pinSetAt: timestamptz("pin_set_at"),
+  activationHash: text("activation_hash"),
+  activationExpiresAt: timestamptz("activation_expires_at"),
+  failedCount: integer("failed_count").notNull().default(0),
+  activationFailedCount: integer("activation_failed_count").notNull().default(0),
+  lockCount: integer("lock_count").notNull().default(0),
+  lockedUntil: timestamptz("locked_until"),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdBy: uuid("created_by"),
+});
+
+export const FIELD_DEVICE_KINDS = ["PERSONAL", "SHARED"] as const;
+export type FieldDeviceKind = (typeof FIELD_DEVICE_KINDS)[number];
+
+export const fieldDevices = pgTable("field_devices", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tokenHash: text("token_hash").notNull(),
+  kind: text("kind").$type<FieldDeviceKind>().notNull(),
+  userId: uuid("user_id"),
+  name: text("name").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdBy: uuid("created_by"),
+  lastUsedAt: timestamptz("last_used_at").notNull().defaultNow(),
+  expiresAt: timestamptz("expires_at").notNull(),
+  revokedAt: timestamptz("revoked_at"),
+  revokedBy: uuid("revoked_by"),
+  /** T-998 (0045): MANUAL | LOCK_SPREE. */
+  revokeReason: text("revoke_reason"),
+});
+
+// T-998 (0045): ortak cihaz kaydı (5 dk belirteç → terminal talebi → yönetici onayı). Özet sütunları uygulama rolüne kapalı.
+export const fieldEnrollments = pgTable("field_enrollments", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tokenHash: text("token_hash").notNull(),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  expiresAt: timestamptz("expires_at").notNull(),
+  claimTokenHash: text("claim_token_hash"),
+  claimedAt: timestamptz("claimed_at"),
+  deviceName: text("device_name"),
+  approvedAt: timestamptz("approved_at"),
+  deviceId: uuid("device_id"),
+  cancelledAt: timestamptz("cancelled_at"),
+  confirmCode: text("confirm_code"),
+  confirmFailed: integer("confirm_failed").notNull().default(0),
+});
+
+// T-998 (0045): ortak cihazda kilitlenen hesaplar (toplu kilitleme koruması; platform tablosu, yalnız probe işlevi).
+export const fieldDeviceLockouts = pgTable("field_device_lockouts", {
+  deviceId: uuid("device_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  lockedAt: timestamptz("locked_at").notNull().defaultNow(),
+});
+
+// T-998 (0045): saha oturumu ↔ cihaz (platform tablosu; yalnız kimlik rolü). Cihaz iptalinde oturumlar bu bağla kapanır.
+export const fieldSessions = pgTable("field_sessions", {
+  sessionId: uuid("session_id").primaryKey(),
+  deviceId: uuid("device_id").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+});

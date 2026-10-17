@@ -375,6 +375,41 @@ button,input{font:inherit;color:inherit}
         </sc-if>
       </sc-if>
 
+      <!-- ── 5b ORTAK CİHAZ · TERMİNAL KAYDI (QR okutulduktan sonra) ── -->
+      <sc-if value="{{v.enr}}" hint-placeholder-val="{{false}}">
+        <span class="kick">{{en.kick}}</span>
+        <div class="steps" aria-hidden="true"><sc-for list="{{en.bars}}" as="eb" hint-placeholder-count="3"><i style="background: {{eb.bg}}"></i></sc-for></div>
+        <h1 class="lh">{{en.h}}</h1>
+        <p class="ls">{{en.s}}</p>
+        <sc-if value="{{en.s1}}" hint-placeholder-val="{{true}}">
+          <div class="card" style="background: {{c.surface}}">
+            <div class="fl"><label for="g-dn">CİHAZ ADI</label><div class="inp" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M6 2h12v20H6zM9 6h6v5H9zM9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01"></path></svg><input id="g-dn" type="text" maxlength="60" value="{{f.dn}}" onChange="{{on.dn}}"></div><span class="hint">Yönetici bu adı görür · ör. El terminali 2, Sevkiyat tableti</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{en.s2}}" hint-placeholder-val="{{false}}">
+          <div class="done" style="background: {{c.surface}}">
+            <span class="okc" style="background: #F4B400; color: #1A1300"><svg class="ico" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.6"><path d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"></path></svg></span>
+            <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Onay bekleniyor</b>
+            <span class="kcode" aria-label="Doğrulama kodu">482 917</span>
+            <p class="ls" style="margin: 0">Bu kodu yöneticinize söyleyin. Yönetici <b>{{f.dn}}</b> için kodu yazıp onaylayınca bu ekran kendiliğinden ilerler.</p>
+            <span class="chip" style="background: {{c.chip}}">TALEP · 5 DAKİKA GEÇERLİ</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{en.s2}}" hint-placeholder-val="{{false}}"><button type="button" class="lnk" onClick="{{enApproved}}">Önizleme: onaylandı göster</button></sc-if>
+        <sc-if value="{{en.s3}}" hint-placeholder-val="{{false}}">
+          <div class="done" style="background: {{c.surface}}">
+            <span class="okc"><svg class="ico" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3.2"><path d="M4 12l5 5L20 6"></path></svg></span>
+            <b style="font: 800 26px/1.1 'Bricolage Grotesque', sans-serif">Cihaz kaydedildi</b>
+            <p class="ls" style="margin: 0">Bu cihazda alanın saha personeli kendi kullanıcı adı ve PIN'iyle girer.</p>
+            <span class="chip" style="background: {{c.chip}}">ORTAK CİHAZ · 180 GÜN</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{en.err}}" hint-placeholder-val="{{false}}"><span class="hint bad" role="alert"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>Bu QR kullanılamıyor. Yöneticinizden yeni QR isteyin.</span></sc-if>
+        <sc-if value="{{en.btnShow}}" hint-placeholder-val="{{true}}">
+          <div class="act" style="background: {{c.bg}}"><button type="button" class="big" style="background: #172E42; color: #FFFFFF" onClick="{{enNext}}">{{en.btn}}<svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M9 6l6 6-6 6"></path></svg></button></div>
+        </sc-if>
+      </sc-if>
+
       <!-- ── 6 ORTAK CİHAZ · KULLANICI DEĞİŞTİR ── -->
       <sc-if value="{{v.sw}}" hint-placeholder-val="{{false}}">
         <span class="kick">EL TERMİNALİ 1 · ANA DEPO</span>
@@ -446,14 +481,31 @@ button,input{font:inherit;color:inherit}
     <sc-if value="{{v.dev}}" hint-placeholder-val="{{false}}">
       <div class="mgrid">
         <div style="display: flex; flex-direction: column; gap: 14px">
+          <sc-if value="{{dq.claim}}" hint-placeholder-val="{{false}}"><div class="ban" style="background: #C62828; color: #FFFFFF"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17v.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span style="flex: 1"><b>Otomatik durduruldu · Tablet 3</b>Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi ve oturumları kapatıldı. Hesapların kilidini Üyeler ekranından açın.</span><button type="button" class="sbtn" style="background: rgba(255,255,255,.2); color: #FFFFFF" onClick="{{noop}}">OTURUMLARI KAPAT</button></div></sc-if>
           <div class="shd"><b>KAYITLI CİHAZLAR</b><span>{{devCount}} CİHAZ</span></div>
           <div class="rows"><sc-for list="{{devList}}" as="d" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{d.avBg}}; color: {{d.avFg}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{d.ic}}"></path></svg></span><span class="rt"><b>{{d.n}}</b><span>{{d.s}}</span></span><div class="rbtns"><button type="button" class="sbtn" style="background: #C62828; color: #FFFFFF" onClick="{{d.go}}" aria-label="{{d.a}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="tx">İPTAL ET</span></button></div></div></sc-for></div>
         </div>
-        <div class="kcard" style="background: {{c.surface}}">
-          <span class="kick">ORTAK CİHAZ EKLE</span>
-          <div class="qr qrbig" role="img" aria-label="Cihaz kayıt QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
-          <span class="timer" role="timer">04:58 KALDI</span>
-          <p class="ls" style="margin: 0">El terminalinde wms.etkinyazilim.com açın, <b>Cihazı kaydet</b>'e dokunun ve bu QR'ı okutun.</p>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <sc-if value="{{dq.wait}}" hint-placeholder-val="{{true}}">
+            <div class="kcard" style="background: {{c.surface}}">
+              <span class="kick">ORTAK CİHAZ EKLE</span>
+              <div class="qr qrbig" role="img" aria-label="Cihaz kayıt QR kodu (örnek)"><svg viewBox="0 0 21 21" aria-hidden="true" shape-rendering="crispEdges"><sc-for list="{{qrCells}}" as="q" hint-placeholder-count="40"><rect x="{{q.x}}" y="{{q.y}}" width="1" height="1" fill="#172E42"></rect></sc-for></svg></div>
+              <span class="timer" role="timer">04:58 KALDI</span>
+              <p class="ls" style="margin: 0">El terminalinin kamerasıyla bu QR'ı okutun. Cihaz bağlanmak istediğinde burada onaylarsınız.</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{dq.claim}}" hint-placeholder-val="{{false}}">
+            <div class="kcard" style="background: {{c.surface}}">
+              <span class="kick">ONAY BEKLİYOR</span>
+              <span class="av" style="background: {{c.chip}}; color: {{c.fg}}; width: 72px; height: 72px; border-radius: 22px"><svg class="ico" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20H6zM9 6h6v5H9zM9 15h.01M12 15h.01M15 15h.01M9 18h.01M12 18h.01M15 18h.01"></path></svg></span>
+              <b style="font: 800 24px/1.1 'Bricolage Grotesque', sans-serif">El terminali 2</b>
+              <span class="chip" style="background: #F4B400; color: #1A1300">BAĞLANMAK İSTİYOR</span>
+              <p class="ls" style="margin: 0">Terminal ekranındaki 6 haneli kodu yazıp onaylayın. Kod yoksa ya da tanımıyorsanız reddedin; QR yeniden üretilir.</p>
+              <div class="fl" style="width: 100%; text-align: left"><label for="g-cc">TERMİNALDEKİ KOD</label><div class="inp" style="background: {{c.chip}}"><input id="g-cc" type="text" inputmode="numeric" maxlength="6" placeholder="000000" value="{{f.cc}}" onChange="{{on.cc}}" style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; letter-spacing: .3em; text-align: center"></div></div>
+              <div class="act" style="position: static; padding: 0; box-shadow: none; width: 100%"><button type="button" class="big ghost" style="background: {{c.chip}}; color: {{c.fg}}" onClick="{{devReject}}">REDDET</button><button type="button" class="big" style="background: #17804F; color: #FFFFFF" onClick="{{devApprove}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M4 12l5 5L20 6"></path></svg>ONAYLA</button></div>
+            </div>
+          </sc-if>
+          <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span><b>Onaysız cihaz giriş yapamaz</b>QR 5 dakika ve tek kullanımlıktır. Fotoğrafı başkasına geçse bile cihaz sizin onayınız olmadan kaydolmaz.</span></div>
         </div>
       </div>
     </sc-if>
@@ -465,17 +517,28 @@ button,input{font:inherit;color:inherit}
       <div class="rows"><sc-for list="{{opList}}" as="r" hint-placeholder-count="3"><div class="row" style="background: {{c.surface}}; cursor: default"><span class="av" style="background: {{r.avBg}}; color: {{r.avFg}}">{{r.ini}}</span><span class="rt"><b>{{r.n}}</b><span>{{r.s}}</span></span><sc-if value="{{r.open}}" hint-placeholder-val="{{true}}"><div class="rbtns"><button type="button" class="sbtn" style="background: {{c.chip}}" onClick="{{r.no}}" aria-label="Reddet"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="tx">REDDET</span></button><button type="button" class="sbtn" style="background: #17804F; color: #FFFFFF" onClick="{{r.yes}}" aria-label="Onayla"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M4 12l5 5L20 6"></path></svg><span class="tx">ONAYLA</span></button></div></sc-if><sc-if value="{{r.closed}}" hint-placeholder-val="{{false}}"><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></sc-if></div></sc-for></div>
     </sc-if>
 
-    <!-- ── 10 HOŞ GELDİNİZ E-POSTASI ── -->
+    <!-- ── 10 HOŞ GELDİNİZ E-POSTASI (T-412 kurumsal düzen: lacivert marka bandı, sarı çizgi, düğme bilgilerin üstünde, ham bağlantı yok, şirket alt bilgisi) ── -->
     <sc-if value="{{v.mail}}" hint-placeholder-val="{{false}}">
       <div class="mail" style="background: {{c.surface}}">
         <div class="mail-h" style="background: {{c.chip}}"><span>KİMDEN · Etkin WMS &lt;bildirim@etkinyazilim.com&gt;</span><span>KİME · {{f.ownerMail}}</span><span>KONU · Etkin WMS çalışma alanınız hazır</span></div>
-        <div class="mail-b">
-          <div class="brand"><svg width="28" height="28" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#172E42"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle cx="80" cy="82" r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"></circle></svg><b>ETKİN WMS</b></div>
-          <b style="font: 800 24px/1.15 'Bricolage Grotesque', sans-serif">Hoş geldiniz, {{f.co}}</b>
-          <p>Çalışma alanınız kuruldu. Bu bilgileri kolay bulmanız için saklayın.</p>
-          <dl class="kv" style="background: {{c.chip}}"><dt>ADRES</dt><dd>wms.etkinyazilim.com/{{slugShow}}</dd><dt>GİRİŞ E-POSTASI</dt><dd>{{f.ownerMail}}</dd><dt>SAHA GİRİŞİ</dt><dd>Çalışma alanı: {{slugShow}}</dd><dt>DENEME</dt><dd>{{trialEnd}} tarihine kadar</dd></dl>
-          <p>Parolanız ve doğrulama kodlarınız bu e-postada <b>yer almaz</b>. Parolanızı unutursanız giriş ekranındaki "Parolamı unuttum" bağlantısını kullanın.</p>
-          <a href="#" class="big" style="background: #172E42; color: #FFFFFF; text-decoration: none; flex: none">ÇALIŞMA ALANINI AÇ</a>
+        <div style="padding: 20px 12px; background: #F3F1EA">
+          <div style="max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; overflow: hidden; color: #172E42; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 20px 28px; background: #172E42"><svg width="40" height="40" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block; border-radius: 9px"><rect width="120" height="120" fill="#172E42"></rect><g transform="translate(60 60) scale(.62) translate(-60 -60)"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle cx="80" cy="82" r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"></circle></g></svg><b style="font: 800 20px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #FFFFFF">Etkin WMS</b><span style="margin-left: auto; font: 600 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .04em; color: #C9D3DC">etkinyazilim.com</span></div>
+            <div style="height: 4px; background: #F4C542"></div>
+            <div style="padding: 34px 28px 30px">
+              <div style="margin: 0 0 16px; font: 800 24px/1.25 'Helvetica Neue', Helvetica, Arial, sans-serif">Hoş geldiniz, {{f.co}}</div>
+              <p style="margin: 0 0 14px; font: 400 16px/1.6 'Helvetica Neue', Helvetica, Arial, sans-serif">Çalışma alanınız kuruldu. Bu bilgileri kolay bulmanız için saklayın.</p>
+              <a href="#" style="display: inline-block; margin: 10px 0 24px; padding: 16px 30px; border-radius: 10px; background: #172E42; color: #FFFFFF; text-decoration: none; font: 700 15px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .02em">Çalışma alanını aç</a>
+              <div style="margin: 4px 0 18px; border-radius: 12px; background: #F3F1EA">
+                <div style="padding: 12px 16px"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">ADRES</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; overflow-wrap: anywhere">wms.etkinyazilim.com/{{slugShow}}</div></div>
+                <div style="padding: 12px 16px; border-top: 1px solid #E4DFD3"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">GİRİŞ E-POSTASI</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; overflow-wrap: anywhere">{{f.ownerMail}}</div></div>
+                <div style="padding: 12px 16px; border-top: 1px solid #E4DFD3"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">SAHA GİRİŞİ</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif">Çalışma alanı: {{slugShow}}</div></div>
+                <div style="padding: 12px 16px; border-top: 1px solid #E4DFD3"><div style="font: 700 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; color: #5B6E7F">DENEME</div><div style="margin-top: 4px; font: 600 16px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif">{{trialEnd}} tarihine kadar</div></div>
+              </div>
+              <p style="margin: 0; font: 400 16px/1.6 'Helvetica Neue', Helvetica, Arial, sans-serif">Parolanız ve doğrulama kodlarınız bu e-postada yer almaz. Parolanızı unutursanız giriş ekranındaki "Parolamı unuttum" bağlantısını kullanın.</p>
+            </div>
+            <div style="padding: 20px 28px; background: #F3F1EA; border-top: 1px solid #E4DFD3"><p style="margin: 0 0 4px; font: 700 13px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif">Etkin Yazılım · <span style="font-weight: 400">Depo ve stok yönetimi</span></p><p style="margin: 0; font: 400 12px/1.6 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #5B6E7F"><a href="#" style="color: #172E42">etkinyazilim.com</a> · Bu e-posta otomatik olarak gönderilmiştir.</p></div>
+          </div>
         </div>
       </div>
     </sc-if>
@@ -495,10 +558,10 @@ class Component extends DCLogic {
     this.state = {
       mode: 'desktop', override: null, theme: 'acik',
       scr: 'login', tab: 'eposta', devOk: true, showPw: false,
-      pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true,
+      pin: '', pin1: '', pinErr: '', actStep: 1, faStep: 1, swWho: null, codeShown: true, enStep: 1, devClaim: false,
       seed: 'ornek', role: 'PICKER', wh: 0, wsPick: 0, actBad: false, mailOk: true, mailSent: true,
       opDone: {}, revoked: {},
-      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d' }
+      f: { mail: '', pw: '', ws: 'motive', user: 'personel.a', otp: '', co: 'Motive Rubber', slug: 'motive', ownerMail: 'yonetici@firma.com', np: '', code: '', sn: 'Personel D', su: 'personel.d', dn: 'El terminali 2', cc: '' }
     };
   }
   componentDidMount() {
@@ -539,7 +602,7 @@ class Component extends DCLogic {
     };
     var go = function (scr, extra) { return function () { var o = { scr: scr, pin: '', pin1: '', pinErr: '' }; for (var k in (extra || {})) o[k] = extra[k]; self.setState(o); }; };
     var setF = function (k) { return function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; f[k] = e && e.target ? e.target.value : ''; self.setState({ f: f }); }; };
-    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su'].forEach(function (k) { on[k] = setF(k); });
+    var on = {}; ['mail', 'pw', 'ws', 'user', 'otp', 'co', 'slug', 'np', 'code', 'sn', 'su', 'dn', 'cc'].forEach(function (k) { on[k] = setF(k); });
     on.co = function (e) { var f = {}; for (var x in self.state.f) f[x] = self.state.f[x]; var v = e && e.target ? e.target.value : ''; if (self.slugOf(f.co) === f.slug) f.slug = self.slugOf(v); f.co = v; self.setState({ f: f }); };
 
     /* ── PIN ── */
@@ -626,9 +689,18 @@ class Component extends DCLogic {
     fin(0, 0); fin(14, 0); fin(0, 14);
     for (var y = 0; y < 21; y++) for (var x = 0; x < 21; x++) { if ((x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12)) continue; if (((x * 7 + y * 13 + x * y) % 5) < 2) qrCells.push({ x: x, y: y }); }
 
-    var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['actx', 'Bağlantı geçersiz'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
-    var mgr = ['staff', 'dev', 'op', 'mail'].indexOf(s.scr) >= 0;
-    var bands = { staff: { h: 'Saha personeli ekle', s: 'MOTIVE · E-POSTA GEREKMEZ', bg: '#172E42' }, dev: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, op: { h: 'Demo talepleri', s: 'ETKİN YAZILIM · OPERATÖR', bg: '#3D2A6B' }, mail: { h: 'Hoş geldiniz e-postası', s: 'AKTİVASYON SONRASI OTOMATİK', bg: '#172E42' } };
+    var scrList = [['login', 'Giriş'], ['mfa', 'Doğrulama'], ['pick', 'Alan seç'], ['act', 'Aktivasyon'], ['actx', 'Bağlantı geçersiz'], ['fact', 'Saha etkinleştir'], ['sw', 'Kullanıcı değiştir'], ['enr', 'Cihaz kaydı (terminal)'], ['staff', 'Saha personeli'], ['dev', 'Cihazlar'], ['devq', 'Cihaz onayı'], ['op', 'Demo talepleri'], ['mail', 'Hoş geldiniz e-postası']];
+    var mgr = ['staff', 'dev', 'devq', 'op', 'mail'].indexOf(s.scr) >= 0;
+    var eS = s.enStep;
+    var en = {
+      kick: eS < 3 ? 'ORTAK CİHAZ · ADIM ' + eS + ' / 2' : 'TAMAMLANDI',
+      h: ['', 'Bu cihazı kaydet', 'Yönetici onayı', 'Hazır'][eS],
+      s: ['', 'Cihaza bir ad verin. Yöneticiniz kendi ekranında onaylayınca bu cihazda saha girişi açılır.', '', ''][eS],
+      bars: [1, 2].map(function (i) { return { bg: i <= eS ? (dk ? '#F4C542' : '#172E42') : c.track }; }),
+      s1: eS === 1, s2: eS === 2, s3: eS === 3, err: false, btnShow: eS !== 2,
+      btn: eS === 3 ? 'GİRİŞ EKRANINA' : 'KAYDI İSTE'
+    };
+    var bands = { staff: { h: 'Saha personeli ekle', s: 'MOTIVE · E-POSTA GEREKMEZ', bg: '#172E42' }, dev: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, devq: { h: 'Cihazlar', s: 'MOTIVE · PIN YALNIZ KAYITLI CİHAZDA ÇALIŞIR', bg: '#172E42' }, op: { h: 'Demo talepleri', s: 'ETKİN YAZILIM · OPERATÖR', bg: '#3D2A6B' }, mail: { h: 'Hoş geldiniz e-postası', s: 'AKTİVASYON SONRASI OTOMATİK', bg: '#172E42' } };
     var sides = {
       login: { h: 'Depo işi, tek ekranda.', p: 'Ofisten e-postanızla, sahadan kullanıcı adı ve PIN ile girin.', rows: [[D.mail, 'YÖNETİCİ · E-POSTA + PAROLA + KOD'], [D.term, 'SAHA · KULLANICI ADI + PIN'], [D.lock, 'PIN YALNIZ KAYITLI CİHAZDA']] },
       act: { h: 'Deneme alanınız onaylandı.', p: '3 ay boyunca bütün özellikler açık. Kurulum dört adım.', rows: [[D.box, 'ÖRNEK VERİ YA DA BOŞ BAŞLANGIÇ'], [D.lock, 'PAROLAYI YALNIZ SİZ BİLİRSİNİZ'], [D.mail, 'GİRİŞ BİLGİLERİ E-POSTAYLA']] },
@@ -645,7 +717,7 @@ class Component extends DCLogic {
         return { l: b[1], cls: 'prevb' + (on2 ? ' on' : ''), pressed: on2 ? 'true' : 'false', go: function () { self.setState({ override: b[0] === 'auto' ? null : b[0] }); } }; }),
       scrBtns: scrList.map(function (b) { var on3 = b[0] === 'actx' ? s.scr === 'act' && s.actBad : b[0] === 'act' ? s.scr === 'act' && !s.actBad : s.scr === b[0]; return { l: b[1], cls: 'prevb' + (on3 ? ' on' : ''), pressed: on3 ? 'true' : 'false', go: b[0] === 'actx' ? go('act', { actStep: 1, actBad: true }) : go(b[0], { actStep: 1, faStep: 1, swWho: null, actBad: false }) }; }),
       c: c, f: (function () { var f = {}; for (var k in s.f) f[k] = s.f[k]; f.mailOk = s.mailOk; f.mailNo = !s.mailOk; f.mailSent = s.mailSent; f.mailOff = !s.mailSent; return f; })(), on: on, side: side, band: bands[s.scr] || bands.staff,
-      v: { auth: !mgr, mgr: mgr, login: s.scr === 'login', loginMail: s.tab === 'eposta', loginField: s.tab === 'saha', mfa: s.scr === 'mfa', pick: s.scr === 'pick', act: s.scr === 'act', fact: s.scr === 'fact', sw: s.scr === 'sw', staff: s.scr === 'staff', dev: s.scr === 'dev', op: s.scr === 'op', mail: s.scr === 'mail' },
+      v: { auth: !mgr, mgr: mgr, login: s.scr === 'login', loginMail: s.tab === 'eposta', loginField: s.tab === 'saha', mfa: s.scr === 'mfa', pick: s.scr === 'pick', act: s.scr === 'act', fact: s.scr === 'fact', sw: s.scr === 'sw', staff: s.scr === 'staff', dev: s.scr === 'dev' || s.scr === 'devq', enr: s.scr === 'enr', op: s.scr === 'op', mail: s.scr === 'mail' },
       tabs: [['eposta', 'E-POSTA', D.mail], ['saha', 'SAHA GİRİŞİ', D.term]].map(function (t) { var on4 = s.tab === t[0]; return { l: t[1], d: t[2], cls: 'tab' + (on4 ? ' on' : ''), sel: on4 ? 'true' : 'false', bg: on4 ? c.surface : 'transparent', go: function () { self.setState({ tab: t[0], pin: '', pinErr: '' }); } }; }),
       dev: { ok: s.devOk, no: !s.devOk },
       devToggleL: s.devOk ? 'Önizleme: kayıtsız cihazı göster' : 'Önizleme: kayıtlı cihazı göster',
@@ -671,7 +743,10 @@ class Component extends DCLogic {
       whOpts: ['Ana depo', 'Depo 2', 'Depo 3'].map(function (w, i) { return opt('wh', i, { t: w }); }),
       codeShown: s.codeShown, codeHidden: !s.codeShown, staffList: staffList,
       makeCode: function () { self.setState({ codeShown: true }); },
-      devList: devList, devCount: devList.length, opList: opList, opPending: opPending,
+      devList: devList, devCount: devList.length, dq: { wait: s.scr !== 'devq', claim: s.scr === 'devq' }, en: en,
+      enNext: function () { if (self.state.enStep === 1) self.setState({ enStep: 2 }); else self.setState({ scr: 'login', tab: 'saha', devOk: true, enStep: 1 }); },
+      enApproved: function () { self.setState({ enStep: 3 }); },
+      devApprove: function () { self.setState({ scr: 'dev' }); }, devReject: function () { self.setState({ scr: 'dev' }); }, opList: opList, opPending: opPending,
       goMfa: go('mfa'), goPick: go('pick'), goLogin: go('login'), goSwitch: go('sw', { swWho: null }), goFact: go('fact', { faStep: 1 }),
       toggleTheme: function () { self.setState({ theme: self.state.theme === 'koyu' ? 'acik' : 'koyu' }); },
       noop: function () {}

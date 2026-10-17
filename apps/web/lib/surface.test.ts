@@ -14,10 +14,16 @@ describe("ADR-027 kip ayrımı", () => {
   it("panel sayfaları iç yola yazılır; ortak yollar açık; tenant yolları yok", () => {
     expect(panelRoute("/")).toEqual({ kind: "page", internal: "/panel" });
     expect(panelRoute("/talepler")).toEqual({ kind: "page", internal: "/panel/talepler" });
+    expect(panelRoute("/satis")).toEqual({ kind: "page", internal: "/panel/satis" });
+    expect(panelRoute("/kayit")).toEqual({ kind: "page", internal: "/panel/kayit" });
+    expect(panelRoute("/api/public/site")).toEqual({ kind: "missing" });
+    expect(panelRoute("/paketler")).toEqual({ kind: "page", internal: "/panel/paketler" });
+    expect(panelRoute("/musteriler")).toEqual({ kind: "page", internal: "/panel/musteriler" });
+    expect(panelRoute("/odemeler")).toEqual({ kind: "page", internal: "/panel/odemeler" });
     for (const p of ["/login", "/mfa", "/reset-password", "/api/auth/sign-in/email", "/api/health/live", "/icon.svg", "/manifest.webmanifest"]) {
       expect(panelRoute(p), p).toEqual({ kind: "shared" });
     }
-    for (const p of ["/t/motive", "/t", "/onboarding", "/invite/x", "/field", "/panel", "/panel/talepler", "/operator/demo-requests", "/api/t/motive/audit/export", "/loginx", "/api/health", "/help"]) {
+    for (const p of ["/t/motive", "/t", "/onboarding", "/invite/x", "/field", "/panel", "/panel/talepler", "/panel/paketler", "/panel/musteriler", "/musteriler/x", "/panel/odemeler", "/odemeler/x", "/paketler/x", "/operator/demo-requests", "/api/t/motive/audit/export", "/loginx", "/api/health", "/help"]) {
       expect(panelRoute(p), p).toEqual({ kind: "missing" });
     }
   });

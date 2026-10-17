@@ -828,6 +828,10 @@ body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-b
 .dzg .inp input { padding: 1px 2px; }
 /* Yönetim paneli kaynağı (Yonet.dc.html, ADR-027) ayrı kapta (`.dzy`); yerleşim uyarlaması aynı. */
 .dzy { position: fixed; inset: 0; z-index: 20; }
+/* T-404: panel formları da tarayıcı varsayılanıyla (metin kutusu iç boşluğu 1px 2px, Giriş kabıyla aynı uyarlama). */
+.dzy .inp input, .dzy .search input { padding: 1px 2px; }
+/* T-403: arama kutusu yer tutucusu tarayıcı varsayılanı (kaynak sıfırlama yapmaz; Tailwind önyükü yarı saydam yapar). */
+.dzy .search input::placeholder { color: revert; opacity: revert; }
 body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-bar"], body:has(.dzy) .app-header { display: none; }
 /* design:bakis:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
 .dz {
@@ -984,16 +988,20 @@ body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-b
   --color-dz-x-cmdfea: #2c3540;
   --color-dz-x-dnckgl: #3d2a6b;
   --color-dz-x-ekdfaa: #4a3500;
+  --color-dz-x-flgohp: #5b6e7f;
   --color-dz-x-fmceba: #5c2410;
   --color-dz-x-mgcici: #c62828;
+  --color-dz-x-mjndnm: #c9d3dc;
   --color-dz-x-mpoink: #cfe8da;
   --color-dz-x-ninooe: #d8dee4;
   --color-dz-x-nmoepi: #dce4f8;
+  --color-dz-x-oenpnd: #e4dfd3;
   --color-dz-x-ogocnk: #e6e2da;
   --color-dz-x-ogokoo: #e6eaee;
   --color-dz-x-ojoenk: #e9e4da;
   --color-dz-x-pboooi: #f1eee8;
   --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-pdpbok: #f3f1ea;
   --color-dz-x-peleaa: #f4b400;
   --color-dz-x-pemfec: #f4c542;
   --color-dz-x-pepcoo: #f4f2ee;
