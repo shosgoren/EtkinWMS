@@ -154,6 +154,11 @@ describe("createRouteHandler (T-999b: başarısız e-posta girişinde kalan dene
     expect(res.status).toBe(401);
     expect(res.headers.get("x-attempts-left")).toBe("3");
     expect(await res.json()).toEqual({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" });
+    // Boyutu bildirilmemiş/büyük gövdede de dönüşüm yapılır (yalnız kalan deneme başlığı eklenmez).
+    const big = await mk403("EMAIL_NOT_VERIFIED")(signIn({ email: "a@example.test" }, "999999"));
+    expect(big.status).toBe(401);
+    expect(big.headers.get("x-attempts-left")).toBeNull();
+    expect(await big.json()).toEqual({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" });
     const other = await mk403("FORBIDDEN")(signIn({ email: "a@example.test" }));
     expect(other.status).toBe(403);
     expect(other.headers.get("x-attempts-left")).toBeNull();

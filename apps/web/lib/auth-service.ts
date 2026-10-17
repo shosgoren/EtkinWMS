@@ -97,22 +97,26 @@ const MAX_SIGN_IN_BODY = 4096;
  * 429'da eksikse `x-retry-after` (bekleme). Sayaç e-posta başınadır ve kayıtlı/kayıtsız ayrımı yapmaz (hesap varlığı sızmaz). Sayaç
  * okunamazsa yanıt değişmeden döner. Gövde ve diğer başlıklar korunur.
  */
-async function withAttempts(input: Response, copy: Request, attempts: NonNullable<RouteDeps["attempts"]>): Promise<Response> {
-  let res = input;
-  // Güvenlik incelemesi m1: Better Auth `EMAIL_NOT_VERIFIED`'ı (403) yalnız parola DOĞRUYSA döner → "hesap var ve parola doğru" bilgisi.
-  // Yanıt yanlış parolayla aynı biçime (401 INVALID_EMAIL_OR_PASSWORD + kalan deneme) çevrilir; hesap varlığı API'den de sızmaz.
-  if (res.status === 403) {
-    const code = await res
-      .clone()
-      .json()
-      .then((b: unknown) => (b as { code?: unknown } | null)?.code)
-      .catch(() => undefined);
-    if (code !== "EMAIL_NOT_VERIFIED") return res;
-    const headers = new Headers(res.headers);
-    headers.delete("content-length");
-    headers.set("content-type", "application/json");
-    res = new Response(JSON.stringify({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" }), { status: 401, headers });
-  }
+/**
+ * Güvenlik incelemesi m1: Better Auth `EMAIL_NOT_VERIFIED`'ı (403) yalnız parola DOĞRUYSA döner → "hesap var ve parola doğru" bilgisi.
+ * Yanıt yanlış parolayla aynı biçime (401 INVALID_EMAIL_OR_PASSWORD) çevrilir; hesap varlığı API'den de sızmaz. Başka 403 dokunulmaz.
+ */
+async function maskUnverified(res: Response): Promise<Response> {
+  if (res.status !== 403) return res;
+  const code = await res
+    .clone()
+    .json()
+    .then((b: unknown) => (b as { code?: unknown } | null)?.code)
+    .catch(() => undefined);
+  if (code !== "EMAIL_NOT_VERIFIED") return res;
+  const headers = new Headers(res.headers);
+  headers.delete("content-length");
+  headers.delete("set-cookie");
+  headers.set("content-type", "application/json");
+  return new Response(JSON.stringify({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" }), { status: 401, headers });
+}
+
+async function withAttempts(res: Response, copy: Request, attempts: NonNullable<RouteDeps["attempts"]>): Promise<Response> {
   if (res.status !== 401 && res.status !== 429) return res;
   let email: unknown;
   try {
@@ -161,16 +165,14 @@ export function createRouteHandler(deps: RouteDeps): (request: Request) => Promi
         if (deps.holder.queue === undefined) retryAfter = now() + QUEUE_NEGATIVE_CACHE_MS;
       }
     }
-    const attempts = deps.attempts;
-    if (attempts === undefined || request.method !== "POST" || !new URL(request.url).pathname.endsWith(SIGN_IN_SUFFIX)) {
-      return deps.handler(request);
-    }
-    // Gövde kopyası yalnız küçük ve boyutu bildirilmiş istekte (inceleme n1: sınırsız gövdenin iki kopyası tutulmaz).
+    if (request.method !== "POST" || !new URL(request.url).pathname.endsWith(SIGN_IN_SUFFIX)) return deps.handler(request);
+    // Gövde kopyası yalnız küçük ve boyutu bildirilmiş istekte (inceleme n1: sınırsız gövdenin iki kopyası tutulmaz). Kopya yoksa kalan
+    // deneme başlığı eklenmez; doğrulanmamış e-posta dönüşümü (m1) gövde boyutundan bağımsız HER sign-in yanıtında yapılır.
     const length = Number(request.headers.get("content-length"));
-    if (!Number.isFinite(length) || length <= 0 || length > MAX_SIGN_IN_BODY) return deps.handler(request);
-    const copy = request.clone();
-    const res = await deps.handler(request);
-    return res.ok ? res : withAttempts(res, copy, attempts);
+    const small = Number.isFinite(length) && length > 0 && length <= MAX_SIGN_IN_BODY;
+    const copy = small && deps.attempts !== undefined ? request.clone() : undefined;
+    const res = await maskUnverified(await deps.handler(request));
+    return res.ok || copy === undefined || deps.attempts === undefined ? res : withAttempts(res, copy, deps.attempts);
   };
 }
 
