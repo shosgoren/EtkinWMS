@@ -79,3 +79,16 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
 - Tek shared package_movement_steps sırası/predecessor uniq; WAREHOUSE_TRANSFER target IN ve source OUT gerçek FK, iki POSTED belge/TRANSFERlink/exact±fullqty. Kaynak ve hedef depo farklı, hedef STORAGE; originwarehouse/lot/unitfactor immutable.
 - Currentwarehouse terminalstep+pozitifbalance ile doğrulanır; originwarehouse hareket/yetki kaynağı değildir. QC/putaway hedefdepoda çalışır. Generic mapped ledger/reversal ve kayıt değişimi ret; legacyNULLHU korunur.
 - Boşdown exact0034 function/ACL/RLS oracle; transferverisi varsa down silmeden ret. Schema owner/foreign/RLS ve ters iki gerçekRR winner bağımsız154/authorgap156PASS; canonicalcommand+rollback27PASS. Tam güvenlik/CI/VPS schema35 sonucu henüz bekler.
+
+## Platform katmanı (0038–0047, 17 Ekim'de canlı)
+- `wms_platform` şeması tenant verisi değildir: demo talepleri (0038), deneme aboneliği/aktivasyon (0039), paketler ve sürümleri (0041),
+  tahakkuklar (0043), satış sayfası içerik sürümleri ve önizleme özetleri (0046). Uygulama rollerinin bu tablolara yetkisi yoktur; okuma/yazma
+  yalnız `wms_probe.platform_*` SECURITY DEFINER işlevleriyle (sahip `wms_identity_probe`, `search_path` sabit, PUBLIC EXECUTE yok, operatör
+  denetimi `platform_is_operator`).
+- Paket sınırları (0041) tenant tablolarında BEFORE tetikleyicisiyle uygulanır (`PLAN_LIMIT`, 0 = sınırsız, paketsiz tenant sınırsız).
+- Müşteri sayımları (0042) probe'a yalnız sayım sütunlarında okuma verir; içerik okunmaz. İşlem kaydı (0047) `security_events` `platform.*`
+  olaylarından, probe'a sütun düzeyinde okuma (ip/user_agent/request_id yok).
+- Saha girişi (0044) ve ortak cihazlar (0045): `field_logins`, `field_devices`, `field_enrollments` (tenant), `field_sessions`,
+  `field_device_lockouts` (platform); işlevler `wms_probe.field_*`.
+- Yayınlanmış satış içeriği ve ödenmiş tahakkuk tetikleyiciyle değişmez. Veri kaybettiren down migration'lar dolu veride
+  `allow_destructive_down` olmadan reddeder.

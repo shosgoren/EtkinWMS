@@ -12,6 +12,15 @@ WMS uygulaması wms.etkinyazilim.com adresinde ayrı çalışır.
 - Görseller `public/img`, yazı tipleri `public/fonts` (Bricolage Grotesque, Instrument Sans, IBM Plex Mono; OFL lisansları yanında; Türkçe dahil Latin alt kümesi). Dış yazı tipi veya betik kaynağı yoktur.
 - Tasarım güncellenirse: yeni `.dc.html` dışa aktarımını `src/landing.dc.html` üzerine alıp aynı üretim düzeltmelerini koruyun, sonra `node marketing/build.mjs` ve `marketing/*.test.mjs`.
 
+## Panelden yönetilen içerik (T-407)
+
+Ana başlık, vurgulu satır, alt metin ve kiralama bölümündeki fiyat kartları `yonet.etkinyazilim.com/satis` ekranından yayınlanır. Sunucu
+içeriği `SITE_CONTENT_URL`'den (canlıda `http://web:3000/api/public/site`, iç ağ) 30 sn önbellekle okur, sıkı doğrular, kahraman metnini
+HTML kaçışıyla ön-çizime yerleştirir ve istemciye çalıştırılmayan JSON veri bloğu (`#site-content`) verir; `boot.js` bunu `props.site`
+olarak bileşene geçirir (yalnız Türkçe görünümde). İçerik yoksa ya da uç yanıt vermezse tasarım metni kalır ve fiyat bölümü görünmez.
+Önizleme: `/?onizleme=<sır>` (30 dk, süreç genelinde 10 dakikada en çok 60 istek), yanıt `no-store`, `noindex`, `no-referrer`.
+Fiyat bölümünün işaretlemesi tuval (`Saha.dc.html`) ile aynıdır; üretim düzeltmesi yalnız veri kaynağıdır.
+
 ## Sunucu
 
 Sunulan dosyalar açılışta `public/` altından listelenir (`/` → index.html, `/privacy` → privacy.html; diğer `.html`, nokta ile başlayan adlar ve bilinmeyen uzantılar sunulmaz). CSP: betik yalnız `'self'`; tasarım satır içi `style` öznitelikleri kullandığı için `style-src 'self' 'unsafe-inline'`.

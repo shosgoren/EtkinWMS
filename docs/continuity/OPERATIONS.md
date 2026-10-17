@@ -30,8 +30,18 @@ Yerel mevcut çalışma alanında anahtar referansı `.deploy-access/etkinwms_vp
 - App project `etkinwms` (T-410; önceki `etkinwms-motive`, birimleri yedek olarak durur); app network `etkinwms_default`; DB project `etkinwms-database`. DB volume `etkinwms-database_postgres-data`; app caddy-data/caddy-config/marketing-leads korunur.
 - Gerçek Compose rollback yolu STATE/automation state'ten alınır; eski göreli bind-mount ile yanlış kaynak bağlama.
 
-## Beş konteyner
-Web=UI/API; worker=kuyruk/outbox/arka plan; marketing=satış/form kaydı; Caddy=TLS/yönlendirme; postgres=veri. Test konteynerleri kalıcı servis değildir. “5 Running” bütün ürün kabulü değildir. `down -v`, volume prune veya kontrolsüz imaj/tag overwrite yasak.
+## Konteynerler (17 Ekim'den proje `etkinwms`)
+web=müşteri UI/API (`wms.`); panel=aynı imaj `APP_SURFACE=panel` (`yonet.`, yalnız operatör + MFA); worker=kuyruk/outbox/arka plan
+(demo talebi alımı, aktivasyon ve hoş geldiniz postası); marketing=satış sitesi, demo formu, panelden yayınlanan içerik
+(`SITE_CONTENT_URL=http://web:3000/api/public/site`, iç ağ); proxy=Caddy TLS/yönlendirme (`wms.` kökeninde `/api/public/*` 404);
+leads-init=bir kerelik birim sahipliği; postgres=veri (ayrı `etkinwms-database` projesi). Test konteynerleri kalıcı servis değildir.
+“Running” bütün ürün kabulü değildir. `down -v`, volume prune veya kontrolsüz imaj/tag overwrite yasak.
+
+Proje taşıması (T-410, 17 Ekim 10:55, kullanıcı root): `rename-project.sh` çıktısı `tamam`, yedekler `/opt/etkinwms/automation/*.20261017T075531Z`
+ve `/usr/local/sbin/etkinwms-release.bak-20261017T075531Z`, `/opt/etkinwms/database/compose.yml.20261017T075531Z`. Eski
+`etkinwms-motive_*` birimleri ve `etkinwms-motive_default` ağı silinmedi; DB konteyneri iki ağa bağlı. Bunlar DB konteyneri kurulu yeni
+`database/compose.yml` ile planlı bakımda yeniden oluşturulduktan sonra elle kaldırılabilir. `state.json` artık `project: etkinwms` taşır;
+`release.py`/`update-config.sh`/`install-migrate.sh` adı oradan okur.
 
 ## Güvenilir IP / kimlik
 Caddy uygulamaya `header_up Fly-Client-IP {http.request.remote.host}` yazar; gelen sahte başlık ezilir. Bu eski auth politikasına VPS uyumluluğudur, IP/hız sınırı kapatılmaz. Web doğrudan host portuna açılmaz. Yeni CDN/proxy varsa güven sınırı ayrı tasarlanır; X-Forwarded-For'a kör güven yok. CLIENT_IP_REQUIRED geldiğinde auth'u local moda alma veya guard'ı kapatma.
@@ -94,6 +104,13 @@ Yeni tenant/ilk-owner tekrar açılmadan mevcut üyelik, password/MFA boolean'la
 
 ## 13 Ekim 16:38 UTC — izole geri yükleme doğrulaması
 Yeni canlı DB yedeği `pg_dump -Fc` ile `/root/etkinwms-backups/before-package-schema-20261013163858.dump` içine alındı (dizin700/dosya600; VPS dışına taşınmadı). Yalnız yeni scratch DB'ye `pg_restore --exit-on-error` uygulandı: defter0031/31 ve ledger/balance farkı0; scratch EXIT temizliğiyle kaldırıldı. Canlı DB değişmedi; receiver health=ok, release auto-1cf81ed1…, auto_migrate=true. Bu yeni prova önceki schema31 kesimindeki “restore denenmedi” tarihli kaydı değiştirmez. Login/iş akışı restore kabulü, günlük offsite, WAL/PITR, RPO/RTO ve retention doğrulanmış değildir.
+
+## 17 Ekim — panel paketi canlı yayını ve proje taşıması
+- Önce kullanıcı (root) aynı commit'in `release.py`'sini kurdu (sha256 `67b5e64d…`, `check` health ok).
+- PR #79 `int/panel-2` → main `9d5159d8b783f83ec7a1025aa404797b56005f31`. İlk deploy koşusu (guards callback) CI bitmeden kapıda durdu
+  (beklenen); ci tamamlanınca deploy run 39015057320 SUCCESS: yedek + migration 0041–0047, `"queues": "installed"`, health ok.
+- Ardından `rename-project.sh` (yukarıda). Dış doğrulama: `wms.` deep health ok, `/api/public/site` 404, `etkinyazilim.com` ve
+  `yonet.` giriş açılıyor. Satış sayfası içeriği henüz panelden yayınlanmadı (site tasarım metninde).
 
 ## 13 Ekim 21:11 — T931 otomatik yayın
 main531e9034440ac1dc0d67fb11353a7ea09785c9f1 için ci38442505462/guards38442505492 SUCCESS; deploy38443949741 SUCCESS. Salt okunur receiver check: release531e9034, health=ok, auto_migrate=true, schema31 fingerprintd6b6b9d7…88dd. Önce guards callback yayını38443064499 RELEASE_BLOCKED:int ile durdurdu; CI tamamlandıktan sonraki koşu geçti. T9320032 henüz geliştirme dalında, canlıya uygulanmadı. Yeni fiziksel QR kabul ekranı/etiket özelliği bu yayında yok.
