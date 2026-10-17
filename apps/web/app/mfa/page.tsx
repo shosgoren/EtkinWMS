@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { MfaNotice, MfaSetupForm, MfaVerifyForm } from "../auth-forms.tsx";
+import { MfaNotice, MfaSetupForm } from "../auth-forms.tsx";
+import { THEME_COOKIE } from "../design/theme.ts";
+import { MfaVerify } from "../login/flow.tsx";
 import { safeNext } from "../../lib/safe-redirect.ts";
 
 export const dynamic = "force-dynamic";
@@ -21,9 +23,11 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
   const principal = await getAuthService().getPrincipal(await headers());
 
   if (principal === null) {
-    const pending = (await cookies()).getAll().some((c) => TWO_FACTOR_COOKIE.test(c.name) && c.value !== "");
+    const jar = await cookies();
+    const pending = jar.getAll().some((c) => TWO_FACTOR_COOKIE.test(c.name) && c.value !== "");
     if (!pending) redirect(`/login?next=${encodeURIComponent(next)}`);
-    return <MfaVerifyForm next={next} />;
+    // T-999b: Giris.dc.html `v.mfa` birebir (login/flow.tsx).
+    return <MfaVerify dark={jar.get(THEME_COOKIE)?.value === "koyu"} next={next} />;
   }
   // Karar sunucuda, `principal` alanlarıyla (tek kaynak: @wms/auth `isDemoEmail`).
   if (principal.isDemo) return <MfaNotice kind="demo" next={next} />; // M9

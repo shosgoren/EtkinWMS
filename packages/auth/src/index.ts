@@ -359,6 +359,11 @@ export interface AuthService {
   /** T-998: iptal edilen saha cihazında açılmış bütün oturumları kapatır (`field_sessions` bağı). Yetki denetimi ÇAĞIRANIN işi. */
   revokeDeviceSessions(deviceId: string): Promise<void>;
   /**
+   * T-999b: e-posta başına başarısız giriş sayacının durumu (A-41 `failedSignIn`; YAZMAZ). Sayaç kayıtlı olsun olmasın her e-posta için
+   * aynı işler: hesap varlığı sızmaz. `remaining`: pencere içinde kalan deneme; `retryAfterSec`: sınır aşıldıysa bekleme, değilse `null`.
+   */
+  signInAttempts(email: string): Promise<{ readonly remaining: number; readonly retryAfterSec: number | null }>;
+  /**
    * Yönetici kaynaklı sıfırlama belirteci (B1, ADR-016 §9 / 3. tur m1): YÖNETİCİ İŞARETLİ doğrulama kaydı yazar
    * (30 dk). Yetki/üretim denetimi ÇAĞIRANIN işidir (`issuePasswordResetLink`); grant yoksa kullanılamaz (fail-closed).
    */
@@ -486,6 +491,20 @@ function createRateLimitStorage(client: DbClient) {
      * Rezervasyonu geri alır (başarılı giriş): sayaç 1 azalır (0'ın altına inmez). SIFIRLAMAZ: önceki başarısızlıklar
      * (rezerve edilmiş, geri alınmamış) pencerede kalır → A-41 "5 BAŞARISIZ deneme" anlamı korunur.
      */
+    /** Sayacı değiştirmeden okur (kalan deneme / bekleme; T-999b). Pencere dolmuşsa tam hak. */
+    async peek(key: string, rule: { window: number; max: number }): Promise<{ remaining: number; retryAfter: number | null }> {
+      const now = Date.now();
+      const windowMs = rule.window * 1000;
+      const rows = await db.execute<{ count: number | string; last_request: number | string }>(
+        sql`SELECT count, last_request FROM public.auth_rate_limits WHERE key_hash = ${sha256Hex(key)}`,
+      );
+      const row = rows[0];
+      if (row === undefined) return { remaining: rule.max, retryAfter: null };
+      const last = Number(row.last_request);
+      if (now - last >= windowMs) return { remaining: rule.max, retryAfter: null };
+      const remaining = Math.max(rule.max - Number(row.count), 0);
+      return { remaining, retryAfter: remaining === 0 ? Math.max(1, Math.ceil((last + windowMs - now) / 1000)) : null };
+    },
     async refund(key: string): Promise<void> {
       await db.execute(
         sql`UPDATE public.auth_rate_limits SET count = GREATEST(count - 1, 0) WHERE key_hash = ${sha256Hex(key)}`,
@@ -1709,6 +1728,11 @@ export function createAuth(params: CreateAuthParams): AuthService {
         const context = await auth.$context;
         await context.internalAdapter.deleteUserSessions(userId);
       });
+    },
+
+    async signInAttempts(email) {
+      const v = await masked(() => rateStore.peek(emailRateKey("signin-fail", email), EMAIL_RATE_RULES.failedSignIn));
+      return { remaining: v.remaining, retryAfterSec: v.retryAfter };
     },
 
     async revokeDeviceSessions(deviceId) {

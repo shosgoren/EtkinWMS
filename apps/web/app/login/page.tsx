@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
-import { Banner } from "@wms/ui";
-import { LoginForm } from "../auth-forms.tsx";
+import { THEME_COOKIE } from "../design/theme.ts";
+import { EmailSignIn } from "./flow.tsx";
 import { safeNext } from "../../lib/safe-redirect.ts";
+import { appSurface } from "../../lib/surface.ts";
 
 // Ortam bayrakları istek anında okunur (derleme anında değil).
 export const dynamic = "force-dynamic";
@@ -29,24 +29,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   // A-43: demo uyarısı yalnızca sunucuda karar verilir; bayraklar yokken demo metni hiç render edilmez.
   const demo = process.env.DEMO_MODE === "1" && process.env.WMS_ENV === "staging";
   const socialEnabled = process.env.AUTH_SOCIAL_ENABLED === "true";
-  const t = await getTranslations("auth");
-
-  // T-997: saha personeli (e-postasız) ayrı giriş ekranına gider (kullanıcı adı + PIN, yalnız kayıtlı cihaz).
-  const fieldLink = (
-    <a href="/field" className="text-base font-bold text-ink underline underline-offset-4">
-      {t("login.fieldLink")}
-    </a>
-  );
-  return (
-    <LoginForm
-      next={next}
-      socialEnabled={socialEnabled}
-      banner={
-        <>
-          {demo ? <Banner kind="warning">{t("login.demoBanner")}</Banner> : null}
-          {fieldLink}
-        </>
-      }
-    />
-  );
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  // T-999b: Giris.dc.html `v.login` E-POSTA sekmesi birebir (flow.tsx); SAHA GİRİŞİ sekmesi `/field`'e gider (T-997).
+  return <EmailSignIn dark={dark} next={next} socialEnabled={socialEnabled} demo={demo} fieldTab={appSurface() !== "panel"} />;
 }

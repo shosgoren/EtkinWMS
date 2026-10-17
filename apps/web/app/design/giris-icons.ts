@@ -44,6 +44,8 @@ export const GICON = {
   plus: "M12 5v14M5 12h14",
   /** Yazdır (etkinleştirme kartı) */
   print: "M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z",
+  /** Büyük harf kilidi uyarısı (T-999b) */
+  caps: "M12 4l7 8h-4v4H9v-4H5zM9 20h6",
   /** Yeni kod (saha personeli satırı) */
   renew: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
 } as const;

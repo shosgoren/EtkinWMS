@@ -84,6 +84,36 @@ export interface RouteDeps {
   readonly holder: QueueHolder;
   readonly handler: (request: Request) => Promise<Response>;
   readonly now?: () => number;
+  /** T-999b: e-posta başına başarısız giriş sayacı (yazmaz). Verilmezse ek başlık yok. */
+  readonly attempts?: (email: string) => Promise<{ readonly remaining: number; readonly retryAfterSec: number | null }>;
+}
+
+const SIGN_IN_SUFFIX = "/sign-in/email";
+
+/**
+ * T-999b: başarısız e-posta girişinin yanıtına kullanıcıya gösterilecek sayaç bilgisi eklenir — 401'de `x-attempts-left` (kalan deneme),
+ * 429'da eksikse `x-retry-after` (bekleme). Sayaç e-posta başınadır ve kayıtlı/kayıtsız ayrımı yapmaz (hesap varlığı sızmaz). Sayaç
+ * okunamazsa yanıt değişmeden döner. Gövde ve diğer başlıklar korunur.
+ */
+async function withAttempts(res: Response, copy: Request, attempts: NonNullable<RouteDeps["attempts"]>): Promise<Response> {
+  if (res.status !== 401 && res.status !== 429) return res;
+  let email: unknown;
+  try {
+    email = ((await copy.json()) as { email?: unknown } | null)?.email;
+  } catch {
+    return res;
+  }
+  if (typeof email !== "string" || email === "" || email.length > 320) return res;
+  let v: { readonly remaining: number; readonly retryAfterSec: number | null };
+  try {
+    v = await attempts(email);
+  } catch {
+    return res;
+  }
+  const headers = new Headers(res.headers);
+  if (res.status === 401) headers.set("x-attempts-left", String(v.remaining));
+  if (res.status === 429 && !headers.has("x-retry-after") && v.retryAfterSec !== null) headers.set("x-retry-after", String(v.retryAfterSec));
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
 /**
@@ -111,7 +141,13 @@ export function createRouteHandler(deps: RouteDeps): (request: Request) => Promi
         if (deps.holder.queue === undefined) retryAfter = now() + QUEUE_NEGATIVE_CACHE_MS;
       }
     }
-    return deps.handler(request);
+    const attempts = deps.attempts;
+    if (attempts === undefined || request.method !== "POST" || !new URL(request.url).pathname.endsWith(SIGN_IN_SUFFIX)) {
+      return deps.handler(request);
+    }
+    const copy = request.clone();
+    const res = await deps.handler(request);
+    return res.ok ? res : withAttempts(res, copy, attempts);
   };
 }
 
@@ -120,6 +156,7 @@ const handle = createRouteHandler({
   getQueue: getSenderQueue,
   holder,
   handler: (request) => getAuthService().handler(request),
+  attempts: (email) => getAuthService().signInAttempts(email),
 });
 
 export const authRouteHandlers = Object.freeze({
