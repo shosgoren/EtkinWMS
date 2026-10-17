@@ -5,7 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { completeFirstUseGuide } from "./support/first-use-guide.ts";
-import { emptyTenant, loginLanding, scrubSecretInputs } from "./support/empty-tenant.ts";
+import { emptyTenant, localClient, loginLanding, scrubSecretInputs } from "./support/empty-tenant.ts";
 
 type Row = Record<string, string>;
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
@@ -33,6 +33,8 @@ const one = <T>(rows: T[]): T => {
 };
 
 if (!process.env.E2E_BASE_URL?.trim()) {
+  // Kendi hız sınırı kovası; giriş yapan spec: trace kapalı (G-09, empty-tenant.ts başı).
+  test.use({ ...localClient("198.51.100.25"), trace: "off" });
   test.afterEach(async ({ page }) => {
     await scrubSecretInputs(page);
   });
