@@ -6,7 +6,7 @@ import { Suspense, type ReactNode } from "react";
 import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { runTenantCommand, runTenantQuery } from "@wms/domain/identity/access";
-import { markWorkspaceUsed, needsMark } from "@wms/domain/identity/last-workspace";
+import { MARK_TIMEOUTS, markWorkspaceUsed, needsMark } from "@wms/domain/identity/last-workspace";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { appSurface } from "../../../lib/surface.ts";
@@ -79,7 +79,7 @@ export default async function TenantLayout({ children, params }: { children: Rea
   const reqHeaders = await headers();
   const prefetch = reqHeaders.get("next-router-prefetch") !== null || /prefetch/i.test(reqHeaders.get("sec-purpose") ?? reqHeaders.get("purpose") ?? "");
   if (!prefetch && needsMark(summary, slug, new Date())) {
-    await runTenantCommand({ db, principal, tenantSlug: slug, permission: "stock.view" }, (tx, m) => markWorkspaceUsed(tx, m)).catch((e: unknown) => {
+    await runTenantCommand({ db, principal, tenantSlug: slug, permission: "stock.view", timeouts: MARK_TIMEOUTS }, (tx, m) => markWorkspaceUsed(tx, m)).catch((e: unknown) => {
       console.error(JSON.stringify({ event: "workspace.mark_failed", code: e instanceof AppError ? e.code : "UNKNOWN" }));
     });
   }
