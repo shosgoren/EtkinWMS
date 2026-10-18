@@ -41,11 +41,18 @@ import {
   loadDemoSeedConfig,
   reseedDemo,
 } from "../../../packages/domain/src/demo/seed.ts";
-import { acceptInvitation, inviteMember } from "../../../packages/domain/src/identity/invitations.ts";
-import { changeRole, issuePasswordResetLink, removeMember, transferOwnership } from "../../../packages/domain/src/identity/memberships.ts";
+import { acceptInvitation, inviteMember as inviteMemberRaw } from "../../../packages/domain/src/identity/invitations.ts";
+import { changeRole as changeRoleRaw, issuePasswordResetLink, removeMember as removeMemberRaw, transferOwnership as transferOwnershipRaw } from "../../../packages/domain/src/identity/memberships.ts";
 import { createWorkspace } from "../../../packages/domain/src/onboarding/workspace.ts";
 import { registerDemoReseed } from "../../../apps/worker/src/jobs/demo-reseed.ts";
 import { readAuthDatabaseUrl, readIntEnv } from "../harness/env.ts";
+
+// T-414: hassas yönetici komutları yeniden giriş ister (fail-closed); testler varsayılan olarak geçerli pencere verir, ret testleri ham işlevi çağırır.
+const reauthOk = (): Promise<void> => Promise.resolve();
+const inviteMember: typeof inviteMemberRaw = (params, ...rest) => inviteMemberRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof inviteMemberRaw>[0], ...(rest as [never]));
+const changeRole: typeof changeRoleRaw = (params, ...rest) => changeRoleRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof changeRoleRaw>[0], ...(rest as [never]));
+const removeMember: typeof removeMemberRaw = (params, ...rest) => removeMemberRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof removeMemberRaw>[0], ...(rest as [never]));
+const transferOwnership: typeof transferOwnershipRaw = (params, ...rest) => transferOwnershipRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof transferOwnershipRaw>[0], ...(rest as [never]));
 
 const env = readIntEnv(process.env);
 const authUrl = readAuthDatabaseUrl(process.env);

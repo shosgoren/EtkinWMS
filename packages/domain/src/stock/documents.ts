@@ -26,6 +26,7 @@ import type { StockCommandResult, StockResultLine } from "./idempotency.ts";
 import { yearOfBusinessDate } from "./numbering.ts";
 import { isStatusTransitionAllowed, type PostingStatus } from "./plan.ts";
 import {
+  assertDraftOwnerOrApprover,
   assertItemsActive,
   assertNotProcessing,
   readCancellationLockSet,
@@ -409,6 +410,7 @@ export async function updateDraft(
         const header = await readDocumentHeader(tx, ctx.tenantId, documentId); // kilit altında
         assertNotProcessing(header);
         if (header.status !== "DRAFT") throw documentState();
+        assertDraftOwnerOrApprover(header, ctx.membership);
         if (lines !== undefined) assertTargetStatusAllowed(header.kind, lines);
         if (warehouseId !== undefined && warehouseId !== header.warehouseId) await assertWarehouseActive(tx, ctx.tenantId, warehouseId);
         const date = await assertBusinessDateNotFuture(tx, ctx.tenantId, businessDate ?? header.businessDate);
@@ -536,6 +538,7 @@ export async function cancelDocument(
         // A-146 (Supervisor): DRAFT → CANCELLED `document.create` (komut izni); APPROVED → CANCELLED ayrıca `document.approve` ister.
         // Durum ancak kilitli okumadan sonra bilindiğinden ikinci izin burada, güncel üyelik rollerinden denetlenir.
         if (header.status === "APPROVED" && !hasPermission(ctx.membership.roles, "document.approve")) throw new AppError("FORBIDDEN");
+        if (header.status === "DRAFT") assertDraftOwnerOrApprover(header, ctx.membership);
         // Stok tablosuna yazım `reservations.ts`'tedir (M-4); documents.ts yalnızca çağırır.
         const released = await releaseForCancellation(tx, ctx.tenantId, locked, documentId);
         await tx.execute(

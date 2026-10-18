@@ -140,6 +140,11 @@ function View({
         setCc("");
         return;
       }
+      if (r.error.detail === "RECENT_AUTH_REQUIRED") {
+        // T-414: cihaz onayı yeniden giriş ister; kayıt yeniden başlatılmaz, giriş bağlantısı gösterilir.
+        setErr({ text: t("errReauth"), reauth: true });
+        return;
+      }
       setErr({ text: t("errServer"), reauth: false });
       void start();
       return;
@@ -163,7 +168,7 @@ function View({
     const r = await revokeDeviceAction({ slug, deviceId });
     setBusy(false);
     if (!r.ok) {
-      setErr({ text: t("errServer"), reauth: false });
+      setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
     setNotice(t("sessionsClosed"));
@@ -174,7 +179,7 @@ function View({
     const r = await revokeDeviceAction({ slug, deviceId: d.id });
     setBusy(false);
     if (!r.ok) {
-      setErr({ text: t("errServer"), reauth: false });
+      setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
     setNotice(t("revoked"));

@@ -67,6 +67,7 @@ export async function inviteMemberAction(raw: unknown) {
         email: input.email,
         roleKey: input.roleKey,
         requestId: ctx.requestId,
+        recentAuth: reauth(await headers()),
       },
       { mailConfig, queue: senderQueue ?? unavailableQueue, log: logInvitation },
     );
@@ -106,6 +107,11 @@ const memberSchema = z.object({ slug: slugSchema, memberId: z.string().uuid() })
 const leaveSchema = z.object({ slug: slugSchema }).strict();
 const transferSchema = z.object({ slug: slugSchema, toMemberId: z.string().uuid() }).strict();
 
+/** T-414: hassas yönetici işlemleri yeniden giriş penceresi ister (A-39); transaction DIŞINDA çağrılır (access.ts). */
+function reauth(requestHeaders: Headers): () => Promise<void> {
+  return () => ensureRecentAuth(requestHeaders);
+}
+
 function membershipDeps(): MembershipDeps {
   return { demoEmailDomain: process.env.DEMO_EMAIL_DOMAIN?.trim().toLowerCase() || null };
 }
@@ -115,7 +121,7 @@ export async function changeRoleAction(raw: unknown) {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
     const result = await changeRole(
-      { db: getAppDb(), principal, tenantSlug: input.slug, memberId: input.memberId, roleKey: input.roleKey, requestId: ctx.requestId },
+      { db: getAppDb(), principal, tenantSlug: input.slug, memberId: input.memberId, roleKey: input.roleKey, requestId: ctx.requestId, recentAuth: reauth(await headers()) },
       membershipDeps(),
     );
     return { membershipId: result.membershipId, roleKey: result.roleKey, changed: result.changed };
@@ -127,7 +133,7 @@ export async function removeMemberAction(raw: unknown) {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
     const result = await removeMember(
-      { db: getAppDb(), principal, tenantSlug: input.slug, memberId: input.memberId, requestId: ctx.requestId },
+      { db: getAppDb(), principal, tenantSlug: input.slug, memberId: input.memberId, requestId: ctx.requestId, recentAuth: reauth(await headers()) },
       membershipDeps(),
     );
     return { membershipId: result.membershipId };
@@ -148,7 +154,7 @@ export async function transferOwnershipAction(raw: unknown) {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
     const result = await transferOwnership(
-      { db: getAppDb(), principal, tenantSlug: input.slug, toMemberId: input.toMemberId, requestId: ctx.requestId },
+      { db: getAppDb(), principal, tenantSlug: input.slug, toMemberId: input.toMemberId, requestId: ctx.requestId, recentAuth: reauth(await headers()) },
       membershipDeps(),
     );
     return { fromMembershipId: result.fromMembershipId, toMembershipId: result.toMembershipId };
@@ -267,7 +273,7 @@ export async function revokeDeviceAction(raw: unknown) {
   return guardedAction({ schema: deviceSchema }, async (input, ctx) => {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
-    await revokeDevice({ db: getAppDb(), principal, tenantSlug: input.slug, deviceId: input.deviceId, requestId: ctx.requestId }, { revokeDeviceSessions });
+    await revokeDevice({ db: getAppDb(), principal, tenantSlug: input.slug, deviceId: input.deviceId, requestId: ctx.requestId, recentAuth: reauth(await headers()) }, { revokeDeviceSessions });
     return { revoked: true as const };
   })(raw);
 }
@@ -304,6 +310,7 @@ export async function approveEnrollmentAction(raw: unknown) {
       enrollmentId: input.enrollmentId,
       confirmCode: input.confirmCode,
       requestId: ctx.requestId,
+      recentAuth: reauth(await headers()),
     });
     return { deviceId: r.deviceId };
   })(raw);

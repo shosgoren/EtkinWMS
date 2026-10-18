@@ -216,6 +216,7 @@ export async function changeRole(params: ChangeRoleParams, deps: MembershipDeps)
   const { memberId: rawMember, roleKey: rawRole, requestId, ...access } = params;
   const memberId = parseUuid(rawMember);
   const role = parseRole(rawRole);
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed (girdi doğrulamasından sonra)
   try {
     return await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
       await assertTenantNotDemo(tx, actor.tenantId);
@@ -265,6 +266,7 @@ export type RemoveMemberParams = CommandParams & { readonly memberId: string };
 
 export async function removeMember(params: RemoveMemberParams, deps: MembershipDeps): Promise<{ membershipId: string }> {
   const { memberId: rawMember, requestId, ...access } = params;
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed
   const memberId = parseUuid(rawMember);
   try {
     return await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
@@ -339,6 +341,7 @@ export type TransferOwnershipParams = CommandParams & { readonly toMemberId: str
  */
 export async function transferOwnership(params: TransferOwnershipParams, deps: MembershipDeps): Promise<{ fromMembershipId: string; toMembershipId: string }> {
   const { toMemberId: rawTo, requestId, ...access } = params;
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed
   const toMemberId = parseUuid(rawTo);
   try {
     return await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {

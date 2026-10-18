@@ -15,6 +15,7 @@ import { sql } from "drizzle-orm";
 import type { LockedState, StockDimensionKey } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import type { AccessTx, TenantAccessParams } from "../identity/access.ts";
+import { hasPermission } from "../identity/permissions.ts";
 import { pgUuidArray } from "../warehouse/scope.ts";
 import type { StockCommandParams } from "./command.ts";
 import { compareDimensionKeys, dimensionIdentity, type ReservationSource } from "./plan.ts";
@@ -266,6 +267,8 @@ export interface DocumentHeader {
   readonly businessDate: string;
   readonly reason: string | null;
   readonly postingJobId: string | null;
+  /** T-414: taslağı oluşturan kullanıcı (taslak düzenleme/iptal yalnız oluşturan ya da onay yetkilisi). */
+  readonly createdBy: string;
 }
 
 /**
@@ -276,9 +279,9 @@ export async function readDocumentHeader(tx: AccessTx, tenantId: string, documen
   const tenant = uuid(tenantId); // T-273: kimlikler sorgudan ÖNCE doğrulanır (geçersiz → VALIDATION_FAILED, DB 22P02 değil); küçük harfe çevrilir
   const document = uuid(documentId);
   const rows = await tx.execute<{
-    id: string; kind: string; status: DocumentHeader["status"]; version: number | string; warehouse_id: string; business_date: string; reason: string | null; posting_job_id: string | null;
+    id: string; kind: string; status: DocumentHeader["status"]; version: number | string; warehouse_id: string; business_date: string; reason: string | null; posting_job_id: string | null; created_by: string;
   }>(
-    sql`SELECT id, kind, status, version, warehouse_id, business_date::text AS business_date, reason, posting_job_id
+    sql`SELECT id, kind, status, version, warehouse_id, business_date::text AS business_date, reason, posting_job_id, created_by
           FROM public.documents WHERE tenant_id = ${tenant}::uuid AND id = ${document}::uuid`,
   );
   const r = rows[0];
@@ -292,7 +295,18 @@ export async function readDocumentHeader(tx: AccessTx, tenantId: string, documen
     businessDate: r.business_date,
     reason: r.reason,
     postingJobId: r.posting_job_id,
+    createdBy: r.created_by,
   };
+}
+
+/**
+ * T-414: taslak (DRAFT) belgeyi yalnız oluşturan ya da onay yetkilisi (`document.approve`) düzenler/iptal eder; aksi `FORBIDDEN`
+ * (`NOT_CREATOR`). Başka kullanıcının taslağını sayımcı/rol kapsamındaki biri değiştiremez.
+ */
+export function assertDraftOwnerOrApprover(header: Pick<DocumentHeader, "createdBy">, membership: { readonly userId: string; readonly roles: readonly string[] }): void {
+  if (header.createdBy.toLowerCase() === membership.userId.toLowerCase()) return;
+  if (hasPermission(membership.roles, "document.approve")) return;
+  throw new AppError("FORBIDDEN", { detail: "NOT_CREATOR" });
 }
 
 /** İşleme kilidi (M-6, ADR-018 §6): `posting_job_id` doluyken düzenleme/onay/iptal/rezervasyon/yeni işleme → `DOCUMENT_STATE`. */

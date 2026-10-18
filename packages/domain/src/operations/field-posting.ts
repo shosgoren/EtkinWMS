@@ -186,6 +186,8 @@ export interface FieldHeader {
   readonly status: string;
   readonly version: number;
   readonly number: string;
+  /** T-414: kabulü açan kullanıcı (iptal yalnız açan ya da onay yetkilisi). */
+  readonly createdBy: string;
 }
 
 /**
@@ -193,13 +195,13 @@ export interface FieldHeader {
  * Not: yalnızca saha başlık tablosudur (stok kilit tablosu değil); stok kilitleri `acquireStockLocks`'tadır.
  */
 export async function lockFieldHeader(tx: AccessTx, tenantId: string, table: HeaderTable, id: string): Promise<FieldHeader> {
-  const rows = await tx.execute<{ id: string; warehouse_id: string; status: string; version: number; number: string }>(
-    sql`SELECT id, warehouse_id, status, version, number FROM public.inbound_receipts
+  const rows = await tx.execute<{ id: string; warehouse_id: string; status: string; version: number; number: string; created_by: string }>(
+    sql`SELECT id, warehouse_id, status, version, number, created_by FROM public.inbound_receipts
          WHERE tenant_id = ${tenantId}::uuid AND id = ${id}::uuid FOR UPDATE`,
   );
   const r = rows[0];
   if (r === undefined) throw new AppError("NOT_FOUND");
-  return { id: r.id, warehouseId: r.warehouse_id, status: r.status, version: Number(r.version), number: r.number };
+  return { id: r.id, warehouseId: r.warehouse_id, status: r.status, version: Number(r.version), number: r.number, createdBy: r.created_by };
 }
 
 async function assertWarehouseActive(tx: AccessTx, tenantId: string, warehouseId: string): Promise<void> {

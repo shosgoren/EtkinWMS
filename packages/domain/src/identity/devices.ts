@@ -109,6 +109,7 @@ export interface RevokeDeviceDeps {
 /** Cihazı iptal eder (geri alınmaz) ve oturumlarını kapatır. Yok → `NOT_FOUND`; zaten iptal → yalnız oturumlar yeniden kapatılır. */
 export async function revokeDevice(params: CommandParams & { readonly deviceId: string }, deps: RevokeDeviceDeps): Promise<void> {
   const { deviceId: rawId, requestId, ...access } = params;
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed
   const deviceId = parseUuid(rawId);
   try {
     await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
@@ -215,6 +216,7 @@ export async function approveEnrollment(
   params: CommandParams & { readonly enrollmentId: string; readonly confirmCode: string },
 ): Promise<{ readonly deviceId: string }> {
   const { enrollmentId: rawId, confirmCode, requestId, ...access } = params;
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed
   const id = parseUuid(rawId);
   const code = typeof confirmCode === "string" ? confirmCode.replace(/\s+/g, "") : "";
   if (!/^\d{6}$/.test(code)) throw new AppError("VALIDATION_FAILED", { detail: "CODE_MISMATCH" });

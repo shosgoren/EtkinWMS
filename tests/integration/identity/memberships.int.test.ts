@@ -9,17 +9,23 @@ import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/clie
 import { createAuth, readAuthEnv, type AuthService } from "../../../packages/auth/src/index.ts";
 import { hashPassword } from "../../../packages/auth/src/password.ts";
 import { AppError } from "../../../packages/shared/src/errors.ts";
-import { runTenantCommand, runTenantCommandById } from "../../../packages/domain/src/identity/access.ts";
+import { runTenantCommand, runTenantCommandById, runTenantQuery } from "../../../packages/domain/src/identity/access.ts";
 import {
   MembershipDenied,
-  changeRole,
+  changeRole as changeRoleRaw,
   leaveTenant,
-  removeMember,
-  transferOwnership,
+  removeMember as removeMemberRaw,
+  transferOwnership as transferOwnershipRaw,
   type DenyReason,
   type MembershipDeps,
 } from "../../../packages/domain/src/identity/memberships.ts";
 import { readAuthDatabaseUrl, readIntEnv, redactErrorChain } from "../harness/env.ts";
+
+// T-414: hassas yönetici komutları yeniden giriş ister (fail-closed); testler varsayılan olarak geçerli pencere verir, ret testleri ham işlevi çağırır.
+const reauthOk = (): Promise<void> => Promise.resolve();
+const changeRole: typeof changeRoleRaw = (params, ...rest) => changeRoleRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof changeRoleRaw>[0], ...(rest as [never]));
+const removeMember: typeof removeMemberRaw = (params, ...rest) => removeMemberRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof removeMemberRaw>[0], ...(rest as [never]));
+const transferOwnership: typeof transferOwnershipRaw = (params, ...rest) => transferOwnershipRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof transferOwnershipRaw>[0], ...(rest as [never]));
 
 const env = readIntEnv(process.env);
 const authUrl = readAuthDatabaseUrl(process.env);
@@ -361,5 +367,30 @@ describe("demo korumaları (M9)", () => {
     expect(r).toMatchObject({ status: "ACTIVE", is_owner: false, roles: ["TENANT_ADMIN"] });
     // Demo alan adı tanımsızsa e-posta tabanlı kısıt yok (yalnızca is_demo tenant kısıtı).
     await expect(changeRole({ ...access(fx, fx.owner), memberId: demoUser.membershipId, roleKey: "READ_ONLY" }, { demoEmailDomain: null })).resolves.toMatchObject({ changed: true });
+  });
+});
+
+describe("T-414: yeniden giriş ve depo sorumlusu MFA", () => {
+  it("rol değiştirme, çıkarma ve devir yeniden giriş penceresi olmadan reddedilir (fail-closed); hiçbir şey yazılmaz", async () => {
+    const fx = await mkTenant();
+    const target = await mkMember(fx.tenant, "PICKER");
+    const before = await row(target.membershipId);
+    const noAuth = { db: app, principal: principalOf(fx.owner), tenantSlug: fx.slug };
+    for (const call of [
+      () => changeRoleRaw({ ...noAuth, memberId: target.membershipId, roleKey: "COUNTER" }, deps),
+      () => removeMemberRaw({ ...noAuth, memberId: target.membershipId }, deps),
+      () => transferOwnershipRaw({ ...noAuth, toMemberId: target.membershipId }, deps),
+    ]) {
+      await expect(call()).rejects.toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
+    }
+    expect(await row(target.membershipId)).toEqual(before);
+  });
+
+  it("depo sorumlusu MFA doğrulanmamış oturumla tenant işlemi yapamaz (MFA_REQUIRED); doğrulanmışla yapar", async () => {
+    const fx = await mkTenant();
+    const wm = await mkMember(fx.tenant, "WAREHOUSE_MANAGER");
+    const q = (mfaVerified: boolean) => runTenantQuery({ db: app, principal: { userId: wm.userId, mfaVerified }, tenantSlug: fx.slug, permission: "stock.view" }, () => Promise.resolve(true));
+    await expect(q(false)).rejects.toMatchObject({ code: "FORBIDDEN", detail: "MFA_REQUIRED" });
+    expect(await q(true)).toBe(true);
   });
 });
