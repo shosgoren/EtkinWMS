@@ -214,9 +214,9 @@ export interface ChangeRoleResult {
 
 export async function changeRole(params: ChangeRoleParams, deps: MembershipDeps): Promise<ChangeRoleResult> {
   const { memberId: rawMember, roleKey: rawRole, requestId, ...access } = params;
-  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed
   const memberId = parseUuid(rawMember);
   const role = parseRole(rawRole);
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed (girdi doğrulamasından sonra)
   try {
     return await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
       await assertTenantNotDemo(tx, actor.tenantId);
