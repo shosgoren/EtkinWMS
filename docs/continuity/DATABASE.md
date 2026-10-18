@@ -93,5 +93,7 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
 - Son kullanılan alan (0048, T-999): `tenant_memberships.last_used_at`; `wms_app` yalnız bu sütunu yazar (tenant bağlamı + kendi satırı,
   tenant kabuğu); okuma `getMembershipSummary` (kendi satırları). Yetki kararına girmez, yalnız açılış yönlendirmesi.
   Kişisel veri: üye listesi, denetim/dışa aktarım ve panel ekranlarına konmaz.
+- Görev ayrılığı (0049, T-416): `tenant_settings.separation_of_duties` (varsayılan false); `wms_app` yalnız bu sütunu yazar; kural domain
+  komutlarında (onay, sayım onayı, ters kayıt), DB tetikleyicisi yok.
 - Yayınlanmış satış içeriği ve ödenmiş tahakkuk tetikleyiciyle değişmez. Veri kaybettiren down migration'lar dolu veride
   `allow_destructive_down` olmadan reddeder.

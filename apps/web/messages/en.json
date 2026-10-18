@@ -480,6 +480,8 @@
     "forbidden_warehouse_out_of_scopeAction": "If you need access, ask your workspace admin to add it to your scope.",
     "forbidden_not_creator": "Only the person who created this draft or an approver can change it.",
     "forbidden_not_creatorAction": "Ask the person who created the draft or your manager.",
+    "forbidden_separation_of_duties": "Separation of duties is on: whoever prepared this cannot approve or reverse it.",
+    "forbidden_separation_of_dutiesAction": "Ask another authorised person to approve or reverse it.",
     "validation_failed_plan_limit": "You have reached your plan's limit.",
     "validation_failed_plan_limitAction": "Archive a record you no longer use, or contact us to upgrade your plan.",
     "validation_failed_plan_invalid": "The plan details are invalid.",
@@ -1045,6 +1047,18 @@
       "reauth": "You need to verify your identity again for this action.",
       "reauthAction": "Sign in again and repeat the action.",
       "loginLink": "Sign in again"
+    },
+    "sod": {
+      "title": "Separation of duties",
+      "body": "When on, the same person cannot both prepare and approve: whoever created a document cannot approve it, whoever counted cannot approve the difference, and whoever created or posted a document cannot reverse it. Automatic approvals inside field flows are not affected.",
+      "stateOn": "Status: on",
+      "stateOff": "Status: off",
+      "turnOn": "Turn on separation of duties",
+      "turnOff": "Turn off separation of duties",
+      "on": "Separation of duties turned on.",
+      "off": "Separation of duties turned off.",
+      "unchanged": "The setting was already in this state.",
+      "reauth": "Sign in again to change this setting."
     }
   },
   "items": {
@@ -1691,7 +1705,9 @@
       "qty_fractional": "This barcode's quantity is not a whole number.",
       "qty_fractionalAction": "This screen only works with whole units. Enter the quantity on the desktop.",
       "unit_mismatch": "This barcode is not in this line's unit.",
-      "unit_mismatchAction": "Scan a barcode in the line's unit or enter the quantity on the desktop."
+      "unit_mismatchAction": "Scan a barcode in the line's unit or enter the quantity on the desktop.",
+      "forbidden_not_creator": "Only the person who created this draft or an approver can change it.",
+      "forbidden_sod": "Separation of duties is on: whoever prepared this document or count cannot approve or reverse it. Ask another authorised person."
     },
     "line": {
       "complete": "Done",

@@ -10,7 +10,7 @@
 // - İşleme kilidi (M-6): `posting_job_id IS NOT NULL` iken `updateDraft`/`approveDocument`/`cancelDocument` → `DOCUMENT_STATE`
 //   (`assertNotProcessing`; T-217/T-221 de kullanır).
 // - Yazımlar açık sütun listelidir (Drizzle `insert()` varsayılan sütunları hedef listesine koyar → sunucu türetimli sütunlarda 42501).
-// - Durum geçmişini `documents` tetikleyicisi yazar (doğrudan INSERT yasak); görev ayrımı yok (A-03 kapalı).
+// - Durum geçmişini `documents` tetikleyicisi yazar (doğrudan INSERT yasak); görev ayrılığı firma ayarıdır (A-03, T-416): açıkken oluşturan onaylayamaz.
 //
 // A-xx varsayımları (rapor): (a) `approveDocument` en az 1 satır ister (boş belge işlenemez); (b) satırda `baseQuantity`
 // = `quantity × conversionFactor` (6 hane) tutarlılığı SQL'de denetlenir, dönüşüm/ölçek kuralları T-208/T-217'dedir; (c) belge
@@ -18,6 +18,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
+import { assertOwnDraftUnderSeparation, assertSeparated } from "../identity/separation.ts";
 import type { AccessTx } from "../identity/access.ts";
 import { hasPermission } from "../identity/permissions.ts";
 import { pgUuidArray } from "../warehouse/scope.ts";
@@ -411,6 +412,8 @@ export async function updateDraft(
         assertNotProcessing(header);
         if (header.status !== "DRAFT") throw documentState();
         assertDraftOwnerOrApprover(header, ctx.membership);
+        // T-416: görev ayrılığı açıksa onay yetkilisi başkasının taslağını düzenleyemez (düzenleyip onaylamak = hazırlayıp onaylamak).
+        await assertOwnDraftUnderSeparation(tx, ctx.tenantId, ctx.userId, header.createdBy);
         if (lines !== undefined) assertTargetStatusAllowed(header.kind, lines);
         if (warehouseId !== undefined && warehouseId !== header.warehouseId) await assertWarehouseActive(tx, ctx.tenantId, warehouseId);
         const date = await assertBusinessDateNotFuture(tx, ctx.tenantId, businessDate ?? header.businessDate);
@@ -456,7 +459,7 @@ export interface TransitionInput {
   readonly requestId?: string | null;
 }
 
-/** `document.approve`: `DRAFT → APPROVED` (A-03: görev ayrımı yok). Boş belge (satırsız) onaylanamaz (A-xx a). */
+/** `document.approve`: `DRAFT → APPROVED` (A-03: görev ayrılığı firma ayarıyla, T-416). Boş belge (satırsız) onaylanamaz (A-xx a). */
 export async function approveDocument(
   params: StockDocCallParams,
   input: TransitionInput,
@@ -475,6 +478,8 @@ export async function approveDocument(
         const header = await readDocumentHeader(tx, ctx.tenantId, documentId);
         assertNotProcessing(header);
         if (header.status !== "DRAFT") throw documentState();
+        // T-416 (A-03): görev ayrılığı açıksa belgeyi oluşturan onaylayamaz.
+        await assertSeparated(tx, ctx.tenantId, ctx.userId, [header.createdBy]);
         const count = await tx.execute<{ n: string }>(
           sql`SELECT count(*)::text AS n FROM public.document_lines WHERE tenant_id = ${ctx.tenantId}::uuid AND document_id = ${documentId}::uuid`,
         );

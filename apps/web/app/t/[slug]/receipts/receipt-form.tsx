@@ -128,6 +128,9 @@ export function errorKeyOf(error: Pick<ErrorInfo, "code" | "detail">, context: E
     case "NETWORK":
       return "network";
     case "FORBIDDEN":
+      // T-414/T-416: taslağın sahibi değil / görev ayrılığı — kullanıcıya nedeni söylenir.
+      if (detail === "NOT_CREATOR") return "forbidden_not_creator";
+      if (detail === "SEPARATION_OF_DUTIES") return "forbidden_sod";
       return detail === "WAREHOUSE_OUT_OF_SCOPE" ? "forbidden_scope" : "forbidden";
     case "LOCATION_LOCKED":
       return "location_locked";

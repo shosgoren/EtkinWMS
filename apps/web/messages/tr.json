@@ -480,6 +480,8 @@
     "forbidden_warehouse_out_of_scopeAction": "Erişim gerekiyorsa çalışma alanı yöneticinden depoyu kapsamına eklemesini iste.",
     "forbidden_not_creator": "Bu taslağı yalnız oluşturan kişi ya da onay yetkilisi değiştirebilir.",
     "forbidden_not_creatorAction": "Taslağı oluşturan kişiden ya da sorumlundan iste.",
+    "forbidden_separation_of_duties": "Görev ayrılığı açık: bu işlemi hazırlayan kişi onaylayamaz ya da ters kaydını yapamaz.",
+    "forbidden_separation_of_dutiesAction": "Onayı ya da ters kaydı başka bir yetkiliden iste.",
     "validation_failed_plan_limit": "Paketinizin sınırına ulaştınız.",
     "validation_failed_plan_limitAction": "Kullanmadığınız kaydı arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin.",
     "validation_failed_plan_invalid": "Paket bilgileri geçersiz.",
@@ -1045,6 +1047,18 @@
       "reauth": "Bu işlem için kimliğini yeniden doğrulaman gerekiyor.",
       "reauthAction": "Yeniden giriş yapıp işlemi yinele.",
       "loginLink": "Yeniden giriş yap"
+    },
+    "sod": {
+      "title": "Görev ayrılığı",
+      "body": "Açıkken aynı kişi bir işin hem hazırlayan hem onaylayan tarafı olamaz: belgeyi oluşturan onaylayamaz, sayımı yapan farkı onaylayamaz, belgeyi oluşturan ya da işleyen ters kayıt yapamaz. Saha akışlarındaki otomatik onaylar etkilenmez.",
+      "stateOn": "Durum: açık",
+      "stateOff": "Durum: kapalı",
+      "turnOn": "Görev ayrılığını aç",
+      "turnOff": "Görev ayrılığını kapat",
+      "on": "Görev ayrılığı açıldı.",
+      "off": "Görev ayrılığı kapatıldı.",
+      "unchanged": "Ayar zaten bu durumdaydı.",
+      "reauth": "Bu ayarı değiştirmek için yeniden giriş yapın."
     }
   },
   "items": {
@@ -1691,7 +1705,9 @@
       "qty_fractional": "Bu barkodun adedi tam sayı değil.",
       "qty_fractionalAction": "Bu ekran yalnız tam adetle çalışır. Adedi masaüstünden gir.",
       "unit_mismatch": "Bu barkod bu satırın biriminde değil.",
-      "unit_mismatchAction": "Satırın birimindeki barkodu okut ya da adedi masaüstünden gir."
+      "unit_mismatchAction": "Satırın birimindeki barkodu okut ya da adedi masaüstünden gir.",
+      "forbidden_not_creator": "Bu taslağı yalnız oluşturan kişi ya da onay yetkilisi değiştirebilir.",
+      "forbidden_sod": "Görev ayrılığı açık: bu belgeyi/sayımı hazırlayan kişi onaylayamaz ya da ters kaydını yapamaz. Başka bir yetkiliden isteyin."
     },
     "line": {
       "complete": "Tamam",
