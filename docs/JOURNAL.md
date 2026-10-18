@@ -232,3 +232,4 @@
 - 2026-10-17 Canlı yayın: main 6dd9880 (PR #85) — T-999 (0048) + T-999b; main e2e bir kez dalgalı (mobile-shell), yeniden koşuyla geçti; sağlık ok.
 - 2026-10-18 Yetkilendirme incelemesi; sıra onaylandı. T-413: depo kapsamı açılışı (A-77 kararı), üyeler ekranı sahip/devir/çoklu rol tutarlılığı.
 - 2026-10-18 T-414: iade onay yetkilisine, taslak/kabul iptali oluşturana, işlem kaydında kimlik olayları üye yöneticisine; depo sorumlusuna MFA; hassas yönetici işlemlerinde yeniden giriş.
+- 2026-10-19 T-420: altın kural (eğitimsiz, görsel, sesli, role göre açılış) kalıcı kurala yazıldı; yetki grupları, yönetici panosu, üst çubuk, Etkin AI ve alt ekran envanteri kartlara bölündü.
