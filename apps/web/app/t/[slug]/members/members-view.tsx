@@ -233,7 +233,7 @@ export function MembersView({
               const resetLocked = !canManage || m.isDemo || !m.resetLinkAvailable;
               const resetText = !canManage ? t("lockedReason") : m.isDemo || !m.resetLinkAvailable ? t("unavailableReason") : null;
               // Birden çok rolü olan üye: seçici "birden çok rol" gösterir; tek rol seçilip uygulanırsa roller o role iner (sunucu kuralı).
-              const current = m.roles.length === 1 ? (m.roles[0] ?? "") : MULTI;
+              const current = m.roles.length > 1 ? MULTI : (m.roles[0] ?? "");
               const selected = draft[m.userId] ?? current;
               const noteId = `lock-${m.userId}`;
               return (
