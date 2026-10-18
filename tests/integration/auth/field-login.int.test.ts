@@ -19,6 +19,7 @@ import { AppError } from "../../../packages/shared/src/errors.ts";
 import { pinProblem } from "../../../packages/shared/src/field-login.ts";
 import { createFieldUser, listFieldLogins, resetFieldCode, unlockFieldLogin } from "../../../packages/domain/src/identity/field-users.ts";
 import { MembershipDenied, changeRole } from "../../../packages/domain/src/identity/memberships.ts";
+import { listWarehouses } from "../../../packages/domain/src/warehouse/warehouses.ts";
 import { readAuthDatabaseUrl, readIntEnv, redactErrorChain } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
@@ -483,3 +484,33 @@ describe("e-posta uçları ve olaylar", () => {
     }
   });
 });
+
+describe("T-413: saha personelinin deposu uygulanır (A-77 kararı 18 Ekim, bayrak açık)", () => {
+  it("tek depoya bağlanan saha personeli yalnız o depoyu görür; 'tüm depolar' seçilen tümünü görür; yönetici tümünü görür", async () => {
+    const prior = process.env.WAREHOUSE_SCOPE_ENABLED;
+    process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+    try {
+      const fx = await mkTenant();
+      const wh: string[] = [];
+      for (const code of ["ANA", "D2"]) {
+        const id = randomUUID();
+        await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, $3)", [fx.tenant, id, code]);
+        wh.push(id);
+      }
+      const scoped = await createFieldUser(
+        { ...access(fx), name: "Kapsamlı", username: `s${randomBytes(4).toString("hex")}`, roleKey: "PICKER", warehouseId: wh[0] },
+        accountPort,
+      );
+      const all = await createFieldUser({ ...access(fx), name: "Tüm", username: `a${randomBytes(4).toString("hex")}`, roleKey: "PICKER" }, accountPort);
+      const seen = async (userId: string) =>
+        (await listWarehouses({ db: app, principal: { userId, mfaVerified: false }, tenantSlug: fx.slug })).items.map((w) => w.id).sort();
+      expect(await seen(scoped.userId)).toEqual([wh[0]]);
+      expect(await seen(all.userId)).toEqual([...wh].sort());
+      expect(await seen(fx.ownerId)).toEqual([...wh].sort());
+    } finally {
+      if (prior === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      else process.env.WAREHOUSE_SCOPE_ENABLED = prior;
+    }
+  });
+});
+

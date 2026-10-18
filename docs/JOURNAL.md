@@ -230,3 +230,4 @@
 - 2026-10-17 T-999: açılış yönlendirmesi + `/workspaces` seçici + son kullanılan alan (0048); e-posta giriş ekranlarının birebir aktarımı T-999b kartına ayrıldı.
 - 2026-10-17 T-999b: e-posta giriş ve doğrulama ekranları Giris tasarımına birebir; hata bantları + kalan deneme (tasarım eki onayı 16:10).
 - 2026-10-17 Canlı yayın: main 6dd9880 (PR #85) — T-999 (0048) + T-999b; main e2e bir kez dalgalı (mobile-shell), yeniden koşuyla geçti; sağlık ok.
+- 2026-10-18 Yetkilendirme incelemesi; sıra onaylandı. T-413: depo kapsamı açılışı (A-77 kararı), üyeler ekranı sahip/devir/çoklu rol tutarlılığı.

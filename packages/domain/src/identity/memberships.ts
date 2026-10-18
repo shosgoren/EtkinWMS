@@ -243,7 +243,8 @@ export async function changeRole(params: ChangeRoleParams, deps: MembershipDeps)
         entityType: "membership",
         entityId: target.id,
         requestId: requestId ?? null,
-        changeSummary: { from_role: before ?? null, to_role: role },
+        // T-413: çoklu rol de kaydedilir (`from_roles`); `from_role` geriye uyum için ilk rol.
+        changeSummary: { from_role: before ?? null, from_roles: [...target.roles], to_role: role },
       });
       return { membershipId: target.id, roleKey: role, changed: true };
     });
