@@ -18,7 +18,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
-import { assertSeparated } from "../identity/separation.ts";
+import { assertOwnDraftUnderSeparation, assertSeparated } from "../identity/separation.ts";
 import type { AccessTx } from "../identity/access.ts";
 import { hasPermission } from "../identity/permissions.ts";
 import { pgUuidArray } from "../warehouse/scope.ts";
@@ -412,6 +412,8 @@ export async function updateDraft(
         assertNotProcessing(header);
         if (header.status !== "DRAFT") throw documentState();
         assertDraftOwnerOrApprover(header, ctx.membership);
+        // T-416: görev ayrılığı açıksa onay yetkilisi başkasının taslağını düzenleyemez (düzenleyip onaylamak = hazırlayıp onaylamak).
+        await assertOwnDraftUnderSeparation(tx, ctx.tenantId, ctx.userId, header.createdBy);
         if (lines !== undefined) assertTargetStatusAllowed(header.kind, lines);
         if (warehouseId !== undefined && warehouseId !== header.warehouseId) await assertWarehouseActive(tx, ctx.tenantId, warehouseId);
         const date = await assertBusinessDateNotFuture(tx, ctx.tenantId, businessDate ?? header.businessDate);

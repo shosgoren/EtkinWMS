@@ -1,7 +1,8 @@
 // Görev ayrılığı (T-416, A-03; 0049). Firma ayarı, varsayılan KAPALI. Açıkken aynı kişi bir işlemin hem hazırlayan hem onaylayan tarafı
 // olamaz: belgeyi oluşturan onaylayamaz; sayım satırı sayan fark onaylayamaz; belgeyi oluşturan ya da işleyen ters kayıt yapamaz.
 // Denetimler komutun transaction'ında, kilitli kayıtlar okunduktan sonra yapılır. Saha akışlarının kendi oluşturduğu belgeyi aynı komutta
-// onaylaması bu kurala girmez (kullanıcı kararı değil, akışın parçası).
+// onaylaması bu kurala girmez (kullanıcı kararı değil, akışın parçası). Ayar okuması kilitsizdir: ayarın açıldığı anda süren bir onay
+// eski değerle tamamlanabilir (READ COMMITTED; kabul edilen dar pencere, T-416 inceleme m3).
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, type AccessTx, type TenantAccessParams } from "./access.ts";
@@ -21,6 +22,13 @@ export async function separationOfDutiesEnabled(tx: AccessTx, tenantId: string):
 export async function assertSeparated(tx: AccessTx, tenantId: string, actor: string, forbidden: readonly (string | null | undefined)[]): Promise<void> {
   const a = actor.toLowerCase();
   if (!forbidden.some((f) => typeof f === "string" && f.toLowerCase() === a)) return;
+  if (!(await separationOfDutiesEnabled(tx, tenantId))) return;
+  throw new AppError("FORBIDDEN", { detail: SOD_DETAIL });
+}
+
+/** Ayar açıksa yalnız oluşturan taslağı düzenler (aksi `FORBIDDEN`/`SEPARATION_OF_DUTIES`): onaylayanın içeriği değiştirip onaylaması engellenir. */
+export async function assertOwnDraftUnderSeparation(tx: AccessTx, tenantId: string, actor: string, createdBy: string): Promise<void> {
+  if (createdBy.toLowerCase() === actor.toLowerCase()) return;
   if (!(await separationOfDutiesEnabled(tx, tenantId))) return;
   throw new AppError("FORBIDDEN", { detail: SOD_DETAIL });
 }

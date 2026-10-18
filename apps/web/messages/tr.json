@@ -480,6 +480,8 @@
     "forbidden_warehouse_out_of_scopeAction": "Erişim gerekiyorsa çalışma alanı yöneticinden depoyu kapsamına eklemesini iste.",
     "forbidden_not_creator": "Bu taslağı yalnız oluşturan kişi ya da onay yetkilisi değiştirebilir.",
     "forbidden_not_creatorAction": "Taslağı oluşturan kişiden ya da sorumlundan iste.",
+    "forbidden_separation_of_duties": "Görev ayrılığı açık: bu işlemi hazırlayan kişi onaylayamaz ya da ters kaydını yapamaz.",
+    "forbidden_separation_of_dutiesAction": "Onayı ya da ters kaydı başka bir yetkiliden iste.",
     "validation_failed_plan_limit": "Paketinizin sınırına ulaştınız.",
     "validation_failed_plan_limitAction": "Kullanmadığınız kaydı arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin.",
     "validation_failed_plan_invalid": "Paket bilgileri geçersiz.",

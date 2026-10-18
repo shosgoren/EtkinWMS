@@ -13,6 +13,7 @@ import {
   postDocument,
   reserve,
   reverseDocument,
+  updateDraft,
   type DocumentLineInput,
   type ReverseDocumentInput,
   type StockDocCallParams,
@@ -708,6 +709,13 @@ describe("T-416 görev ayrılığı (A-03; 0049)", () => {
       expect(codeOf(await failure(reverse(id, "ALL", asUser(u2))))).toBe("FORBIDDEN/SEPARATION_OF_DUTIES"); // işleyen
       expect(await reversalDocsOf(id)).toEqual([]);
       expect((await reverse(id, "ALL", asUser(u3))).status).toBe("POSTED");
+      // İnceleme M4: onay yetkilisi başkasının taslağını düzenleyip onaylayamaz (düzenleme reddedilir; oluşturan düzenler).
+      const c2 = await createStockDocument(ownerP(), { kind: "STOCK_IN", warehouseId: A.warehouseId, lines: [ln(x, { targetLocationId: loc, ...qty("1") })] });
+      const id2 = c2.documentId as string;
+      const edit = (p: StockDocCallParams) => updateDraft(p, { documentId: id2, expectedVersion: 1, lines: [ln(x, { targetLocationId: loc, ...qty("9") })] });
+      expect(codeOf(await failure(edit(asUser(u2))))).toBe("FORBIDDEN/SEPARATION_OF_DUTIES");
+      expect((await docRow(id2)).version, "ret hiçbir şey yazmaz").toBe(1);
+      await edit(ownerP());
     } finally {
       await sod(false);
     }
@@ -722,7 +730,7 @@ describe("T-416 görev ayrılığı (A-03; 0049)", () => {
     expect(codeOf(await failure(setSeparationOfDuties({ ...base, enabled: true })))).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
     const picker = { ...base, principal: { userId: A.memberUserId, mfaVerified: true }, recentAuth, enabled: true };
     expect(codeOf(await failure(setSeparationOfDuties(picker)))).toBe("FORBIDDEN");
-    const denied = async (): Promise<void> => { throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); };
+    const denied = async (): Promise<void> => { throw Object.assign(new Error("yeniden giriş"), { reason: "REAUTH_REQUIRED" }); };
     expect(codeOf(await failure(setSeparationOfDuties({ ...base, enabled: true, recentAuth: denied })))).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
     try {
       expect(await setSeparationOfDuties({ ...base, enabled: true, recentAuth })).toEqual({ changed: true });
