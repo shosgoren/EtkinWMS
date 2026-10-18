@@ -389,7 +389,14 @@ describe("T-417: depo kısıtlı üye işlem kaydında yalnız kendi depoların�
     }
     const key = (a: { action: string; entityId: string | null }) => `${a.action}:${a.entityId}`;
     const visible = ev.filter((e) => e[3]).map(([a, , id]) => `${a}:${id}`).sort();
+    // Bayrak kapalı: süzme yok (A-46). Dışa aktarımdan ÖNCE (kendi `audit.exported` satırı sayıyı değiştirir).
     const prior = process.env.WAREHOUSE_SCOPE_ENABLED;
+    delete process.env.WAREHOUSE_SCOPE_ENABLED;
+    try {
+      expect((await listAudit(access(fx, fx.manager.userId), { limit: 100 })).items).toHaveLength(ev.length);
+    } finally {
+      if (prior !== undefined) process.env.WAREHOUSE_SCOPE_ENABLED = prior;
+    }
     process.env.WAREHOUSE_SCOPE_ENABLED = "true";
     try {
       expect((await listAudit(access(fx, fx.manager.userId), { limit: 100 })).items.map(key).sort()).toEqual(visible);
@@ -404,7 +411,5 @@ describe("T-417: depo kısıtlı üye işlem kaydında yalnız kendi depoların�
       if (prior === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
       else process.env.WAREHOUSE_SCOPE_ENABLED = prior;
     }
-    // Bayrak kapalı: süzme yok (A-46).
-    expect((await listAudit(access(fx, fx.manager.userId), { limit: 100 })).items).toHaveLength(ev.length);
   });
 });

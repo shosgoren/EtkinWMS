@@ -136,6 +136,8 @@ const IDENTITY_ACTION_PATTERNS = "{member.%,invitation.%,ownership.%,password_re
  * katalog olaylarını görür. Depoya bağlanamayan her tür (firma ayarı, sipariş, toplu işlem, kimlik vb.) GİZLENİR (fail-closed);
  * bağlı kayıt silinmişse de gizlenir. `scope === null` (kısıtsız) süzme yok.
  */
+/** T-417 inceleme m4: dar kapsamlı üyede süzme geçmişin tamamını tarayabilir; okuma transaction'ı süreyle sınırlı. */
+const AUDIT_TIMEOUTS = { lockTimeoutMs: 5000, statementTimeoutMs: 15_000 } as const;
 const CATALOG_ENTITY_TYPES = "{item,unit,lot,serial,item_barcode,production_recipe}";
 function scopeFilter(scope: readonly string[] | null) {
   if (scope === null) return sql``;
@@ -210,7 +212,7 @@ export async function listAudit(params: QueryParams, options: ListAuditOptions =
   if (!Number.isInteger(limit) || limit < 1 || limit > AUDIT_LIST_MAX_LIMIT) throw new AppError("VALIDATION_FAILED");
   const cursor = options.cursor === undefined ? undefined : decodeAuditCursor(options.cursor);
   const filters = checkFilters(options.filters);
-  return runTenantQuery({ ...params, permission: "audit.view" }, async (tx, m) => {
+  return runTenantQuery({ ...params, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => {
     const timeZone = await tenantTimeZone(tx, m.tenantId);
     const rows = await selectRows(tx, m.tenantId, timeZone, filters, cursor, undefined, limit + 1, false, undefined, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m));
     const page = rows.slice(0, limit);
@@ -263,7 +265,7 @@ export async function openAuditExport(params: Omit<TenantAccessParams, "permissi
   const { recentAuth: _recentAuth, ...later } = params;
   void _recentAuth;
 
-  const first = await runTenantQuery({ ...params, permission: "audit.view" }, async (tx, m) => {
+  const first = await runTenantQuery({ ...params, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => {
     await options.testBeforeSnapshot?.();
     const snap = (await tx.execute<{ s: string }>(sql`SELECT pg_current_snapshot()::text AS s`))[0]?.s;
     if (snap === undefined || !SNAPSHOT_RE.test(snap)) throw new AppError("INTERNAL");
@@ -325,7 +327,7 @@ export async function openAuditExport(params: Omit<TenantAccessParams, "permissi
         // Sonraki parça: oturum + ayrı kısa transaction; üyelik/izin yeniden doğrulanır (recentAuth yalnızca ilk parçada).
         if (options.revalidate !== undefined) await options.revalidate();
         const cur = lastCursor;
-        rows = await runTenantQuery({ ...later, permission: "audit.view" }, async (tx, m) => selectRows(tx, m.tenantId, first.tz, filters, cur, first.snap, size, true, first.ownXid, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m)));
+        rows = await runTenantQuery({ ...later, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => selectRows(tx, m.tenantId, first.tz, filters, cur, first.snap, size, true, first.ownXid, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m)));
       }
       const last = rows[rows.length - 1];
       if (last !== undefined) {

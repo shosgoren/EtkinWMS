@@ -458,12 +458,23 @@ describe("warehouse scope (A-77, flag WAREHOUSE_SCOPE_ENABLED)", () => {
   it("T-417: kapsam değişikliği yeniden giriş ister (fail-closed); reddedilen istek satır ve kayıt yazmaz", async () => {
     const count = async () => Number((await adm.query<{ n: string }>("SELECT count(*)::text AS n FROM public.membership_warehouse_scopes WHERE membership_id = $1", [A.memberMembershipId])).rows[0]?.n);
     const before = await count();
-    const e = await failure(setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] }));
+    const e = await failure(setMembershipWarehouseScopes(admin(A) as never, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] }));
     expect(`${e.code}/${e.detail}`).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
     const denied = async (): Promise<void> => { throw Object.assign(new Error("yeniden giriş"), { reason: "REAUTH_REQUIRED" }); };
     const e2 = await failure(setMembershipWarehouseScopes({ ...admin(A), recentAuth: denied }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] }));
     expect(`${e2.code}/${e2.detail}`).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
     expect(await count()).toBe(before);
+  });
+
+  it("T-417: arşivli depo kapsama yeni eklenemez (VALIDATION_FAILED); zaten kapsamdaysa korunur", async () => {
+    const ok = { ...admin(A), recentAuth: async () => undefined };
+    const w = randomUUID();
+    await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, 'Arşiv')", [A.tenantId, w, `AR${randomUUID().slice(0, 6)}`]);
+    await setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId, w] });
+    await adm.query("UPDATE public.warehouses SET status = 'ARCHIVED', archived_at = now() WHERE id = $1", [w]);
+    await setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    expect((await failure(setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId, w] }))).code).toBe("VALIDATION_FAILED");
+    await setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, all: true });
   });
 
   it("setMembershipWarehouseScopes validates targets, replaces rows and audits; cross-tenant ids are rejected", async () => {
