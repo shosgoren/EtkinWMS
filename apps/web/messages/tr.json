@@ -310,13 +310,20 @@
         "title": "Kilidi aç",
         "description": "{name} yeniden PIN ile girebilir. PIN ve cihaz kaydı değişmez.",
         "button": "Kilidi aç"
+      },
+      "scope": {
+        "title": "Depoları değiştir",
+        "description": "{name} bundan sonra yalnız şu depolarda çalışabilecek: {scope}. Açık oturumu yeni kısıtla devam eder.",
+        "button": "Depoları kaydet"
       }
     },
     "done": {
       "role": "Rol güncellendi.",
       "remove": "Üye çıkarıldı.",
       "transfer": "Sahiplik devredildi.",
-      "unlock": "Kilit açıldı."
+      "unlock": "Kilit açıldı.",
+      "scope": "Depo kısıtı güncellendi.",
+      "scopeUnchanged": "Depo kısıtı zaten bu şekildeydi; değişiklik yapılmadı."
     },
     "pending": {
       "title": "Bekleyen davetler",
@@ -395,7 +402,21 @@
     "fieldNewCode": "Yeni etkinleştirme kodu",
     "fieldUnlock": "Kilidi aç",
     "devices": "Cihazlar",
-    "ownerLocked": "Firma sahibinin rolü değiştirilemez ve firmadan çıkarılamaz. Sahiplik yalnız firma sahibi tarafından devredilebilir."
+    "ownerLocked": "Firma sahibinin rolü değiştirilemez ve firmadan çıkarılamaz. Sahiplik yalnız firma sahibi tarafından devredilebilir.",
+    "scope": {
+      "admin": "Depolar: tümü (yönetici her depoyu görür)",
+      "all": "Depolar: tümü",
+      "only": "Depolar: yalnız {names}",
+      "allShort": "Tüm depolar",
+      "unknown": "silinmiş depo",
+      "archived": "{name} (arşivli)",
+      "legend": "{name} hangi depolarda çalışsın?",
+      "allOption": "Tüm depolar (yeni açılan depolar dahil)",
+      "pickOne": "En az bir depo seç ya da “Tüm depolar”ı işaretle.",
+      "save": "Depoları kaydet",
+      "edit": "Depoları düzenle",
+      "disabled": "Depo kısıtı bu ortamda kapalı: seçim kaydedilir, açıldığında uygulanır."
+    }
   },
   "errors": {
     "validation_failed": "Girilen bilgiler geçersiz.",

@@ -233,3 +233,4 @@
 - 2026-10-18 Yetkilendirme incelemesi; sıra onaylandı. T-413: depo kapsamı açılışı (A-77 kararı), üyeler ekranı sahip/devir/çoklu rol tutarlılığı.
 - 2026-10-18 T-414: iade onay yetkilisine, taslak/kabul iptali oluşturana, işlem kaydında kimlik olayları üye yöneticisine; depo sorumlusuna MFA; hassas yönetici işlemlerinde yeniden giriş.
 - 2026-10-18 T-416: görev ayrılığı firma ayarı (0049, varsayılan kapalı): oluşturan onaylayamaz, sayan sayımı onaylayamaz, oluşturan/işleyen ters kayıt yapamaz; ayarlar ekranında aç/kapat (yeniden giriş).
+- 2026-10-18 T-417: üyeler ekranında depo kısıtı (göster/düzenle, yeniden giriş); işlem kaydı kısıtlı üyeye depo kapsamıyla süzülür (A-103 önkoşulları).

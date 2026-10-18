@@ -40,6 +40,11 @@ export interface MemberRow {
   readonly status: "ACTIVE";
   readonly isDemo: boolean;
   readonly resetLinkAvailable: boolean;
+  /**
+   * T-417: depo kapsamı — yalnız `users.manage` sahibine. `null` = tüm depolar (kapsam satırı yok, A-77); dizi = yalnız bu depolar.
+   * Yeniden etkinleşen üyelik eski satırlarını korur; liste onları gösterir (A-103). Diğer okuyuculara alan yok.
+   */
+  readonly warehouseIds?: readonly string[] | null;
   /** T-997: e-postasız saha personeli (e-posta alanı boş; iç adres gösterilmez). */
   readonly field?: { readonly username: string; readonly active: boolean; readonly pendingUntil: Date | null; readonly locked: boolean };
 }
@@ -125,6 +130,18 @@ export async function listMembers(params: QueryParams, deps: MemberQueryDeps): P
       sql`SELECT membership_id, role_key FROM public.membership_roles
            WHERE tenant_id = ${actor.tenantId}::uuid ORDER BY role_key`,
     );
+    const scopeBy = new Map<string, string[]>();
+    if (canManage) {
+      const scopeRows = await tx.execute<{ membership_id: string; warehouse_id: string }>(
+        sql`SELECT membership_id, warehouse_id FROM public.membership_warehouse_scopes
+             WHERE tenant_id = ${actor.tenantId}::uuid ORDER BY membership_id, warehouse_id`,
+      );
+      for (const r of scopeRows) {
+        const list = scopeBy.get(r.membership_id);
+        if (list === undefined) scopeBy.set(r.membership_id, [r.warehouse_id]);
+        else list.push(r.warehouse_id);
+      }
+    }
     const rolesBy = new Map<string, RoleKey[]>();
     for (const r of roleRows) {
       const list = rolesBy.get(r.membership_id);
@@ -152,6 +169,7 @@ export async function listMembers(params: QueryParams, deps: MemberQueryDeps): P
         displayName: r.name,
         email: isField ? "" : canManage ? r.email : maskEmail(r.email),
         ...(field === undefined ? {} : { field }),
+        ...(canManage ? { warehouseIds: scopeBy.get(r.id) ?? null } : {}),
         roles: rolesBy.get(r.id) ?? [],
         isOwner: r.is_owner,
         status: "ACTIVE" as const,

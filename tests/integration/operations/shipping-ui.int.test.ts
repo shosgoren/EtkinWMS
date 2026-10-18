@@ -37,7 +37,7 @@ describe("shipping UI query and command contract",()=>{
   await expect(getShippingOrder({...params(),principal:{userId:A.ownerUserId,mfaVerified:false}},orderId)).rejects.toMatchObject({code:"FORBIDDEN"});
   expect((await listShippingOrders(params(B),{q:"Pilot UI"})).items).toEqual([]);
   const other=(await createWarehouse(params(),{code:"OTHER",name:"Other"})).warehouseId;
-  await setMembershipWarehouseScopes(params(),{membershipId:A.memberMembershipId,warehouseIds:[other]});
+  await setMembershipWarehouseScopes({ ...params(), recentAuth: async () => undefined },{membershipId:A.memberMembershipId,warehouseIds:[other]});
   const prior=process.env.WAREHOUSE_SCOPE_ENABLED;
   try{process.env.WAREHOUSE_SCOPE_ENABLED="true";const scoped={...params(),principal:{userId:A.memberUserId,mfaVerified:true}};
    expect(await getShippingOrder(scoped,orderId)).toMatchObject({tasks:[],staged:[],posted:[],lines:[{reserved:"0"}]});

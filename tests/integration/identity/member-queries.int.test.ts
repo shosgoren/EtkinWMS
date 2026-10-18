@@ -95,6 +95,20 @@ describe("listMembers", () => {
     expect(rows.find((r) => r.userId === a.owner.userId)).toMatchObject({ isOwner: true, resetLinkAvailable: false });
   });
 
+  it("T-417: depo kısıtı yalnız yöneticiye; satır yok = tüm depolar (null), satır varsa liste (yeniden etkinleşen üyelikte de satırlar korunur, liste aynı kaynaktan okur)", async () => {
+    const a = await mkTenant();
+    const p = await mkMember(a.tenant, "PICKER");
+    const c = await mkMember(a.tenant, "COUNTER");
+    const w = randomUUID();
+    await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, 'D')", [a.tenant, w, `W${rnd()}`]);
+    await adm.query("INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id) VALUES ($1, $2, $3)", [a.tenant, c.membershipId, w]);
+    const rows = await listMembers(acc(a, a.owner), deps);
+    expect(rows.find((r) => r.userId === p.userId)?.warehouseIds).toBeNull();
+    expect(rows.find((r) => r.userId === c.userId)?.warehouseIds).toEqual([w]);
+    const asPicker = await listMembers(acc(a, p), deps);
+    expect(asPicker.every((r) => !("warehouseIds" in r))).toBe(true);
+  });
+
   it("resetLinkAvailable: demo hedef, sahip, kendisi için false (paylaşılan kimlik kararı komutta; kilit yok)", async () => {
     const a = await mkTenant();
     const b = await mkTenant();

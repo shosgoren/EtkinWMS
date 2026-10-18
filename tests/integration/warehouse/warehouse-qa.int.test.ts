@@ -357,7 +357,7 @@ describe("yetki (A-68): kart yazma settings.manage ister, okuma stock.view", () 
         ["renameLocation", () => renameLocation(p, { locationId: loc.locationId, name: "x" })],
         ["setLocationKind", () => setLocationKind(p, { locationId: loc.locationId, kind: "STAGING" })],
         ["archiveLocation", () => archiveLocation(p, { locationId: loc.locationId })],
-        ["setMembershipWarehouseScopes", () => setMembershipWarehouseScopes(p, { membershipId: A.memberMembershipId, all: true })],
+        ["setMembershipWarehouseScopes", () => setMembershipWarehouseScopes({ ...p, recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, all: true })],
       ];
       for (const [name, pr] of writes) expect((await failure(pr())).code, `${who} ${name}`).toBe("FORBIDDEN");
     }
@@ -444,7 +444,7 @@ describe("depo kapsamı (A-77, WAREHOUSE_SCOPE_ENABLED)", () => {
     expect((await failure(inScope("picker", [A.warehouseId]))).detail).toBe("WAREHOUSE_OUT_OF_SCOPE");
     expect((await failure(inScope("picker", [B.warehouseId]))).detail).toBe("WAREHOUSE_OUT_OF_SCOPE");
     // wms_app, B'nin kapsam satırını yazamaz: A yöneticisi B üyeliği için komut verirse NOT_FOUND
-    expect((await failure(setMembershipWarehouseScopes(admin(A), { membershipId: B.memberMembershipId, warehouseIds: [w1] }))).code).toBe("NOT_FOUND");
+    expect((await failure(setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: B.memberMembershipId, warehouseIds: [w1] }))).code).toBe("NOT_FOUND");
     const rows = await adm.query("SELECT 1 FROM public.membership_warehouse_scopes WHERE membership_id = $1", [B.memberMembershipId]);
     expect(rows.rowCount).toBe(0);
   });

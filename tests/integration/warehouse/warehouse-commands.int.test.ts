@@ -112,7 +112,7 @@ describe("warehouse commands", () => {
     expect((await failure(createWarehouse(picker(A), { code: uniq("p-"), name: "n" }))).code).toBe("FORBIDDEN");
     expect((await failure(createLocation(picker(A), { warehouseId: A.warehouseId, code: uniq("p-"), name: "n", kind: "STORAGE" }))).code).toBe("FORBIDDEN");
     expect((await failure(archiveLocation(picker(A), { locationId: A.childLocationId }))).code).toBe("FORBIDDEN");
-    expect((await failure(setMembershipWarehouseScopes(picker(A), { membershipId: A.memberMembershipId, all: true }))).code).toBe("FORBIDDEN");
+    expect((await failure(setMembershipWarehouseScopes({ ...picker(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, all: true }))).code).toBe("FORBIDDEN");
     expect((await listWarehouses(picker(A))).items.length).toBeGreaterThan(0);
     expect((await getLocationTree(picker(A), { warehouseId: A.warehouseId })).items.length).toBe(2);
   });
@@ -263,7 +263,7 @@ describe("review fixes (T-205 inceleme)", () => {
     await adm.query("INSERT INTO public.tenants (id, slug, name, status, is_demo) VALUES ($1, $2, 'T205 demo', 'ACTIVE', true)", [tenantId, slug]);
     const m = (await adm.query<{ id: string }>("INSERT INTO public.tenant_memberships (tenant_id, user_id, status, is_owner) VALUES ($1, $2, 'ACTIVE', true) RETURNING id", [tenantId, userId])).rows[0]!.id;
     await adm.query("INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES ($1, $2, 'TENANT_ADMIN')", [tenantId, m]);
-    const e = await failure(setMembershipWarehouseScopes({ db: app, principal: { userId, mfaVerified: false }, tenantSlug: slug }, { membershipId: m, all: true }));
+    const e = await failure(setMembershipWarehouseScopes({ db: app, principal: { userId, mfaVerified: false }, tenantSlug: slug, recentAuth: async () => undefined }, { membershipId: m, all: true }));
     expect(e.code).toBe("FORBIDDEN");
   });
 
@@ -426,7 +426,7 @@ describe("warehouse scope (A-77, flag WAREHOUSE_SCOPE_ENABLED)", () => {
 
   it("flag off (default): scope rows are ignored, everything is reachable", async () => {
     const other = await newWarehouse();
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     await expect(check(A, "member", [other])).resolves.toBeUndefined();
     expect((await getLocationTree(picker(A), { warehouseId: other })).items).toEqual([]);
     expect(await findLocationByCode(picker(A), { warehouseId: other, code: "yok" })).toBeNull();
@@ -436,9 +436,9 @@ describe("warehouse scope (A-77, flag WAREHOUSE_SCOPE_ENABLED)", () => {
   it("flag on: admin always passes; no scope rows = all; rows restrict to the listed warehouses", async () => {
     process.env.WAREHOUSE_SCOPE_ENABLED = "true";
     const other = await newWarehouse();
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, all: true });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, all: true });
     await expect(check(A, "member", [other, A.warehouseId])).resolves.toBeUndefined();
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     await expect(check(A, "member", [A.warehouseId])).resolves.toBeUndefined();
     const e = await failure(check(A, "member", [A.warehouseId, other]));
     expect(e.code).toBe("FORBIDDEN");
@@ -449,32 +449,43 @@ describe("warehouse scope (A-77, flag WAREHOUSE_SCOPE_ENABLED)", () => {
     expect((await failure(getLocationTree(picker(A), { warehouseId: randomUUID() }))).code).toBe("NOT_FOUND");
     expect((await listWarehouses(picker(A))).items.map((w) => w.id)).toEqual([A.warehouseId]);
     // TENANT_ADMIN kapsam satırı olsa da geçer
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.ownerMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.ownerMembershipId, warehouseIds: [A.warehouseId] });
     await expect(check(A, "owner", [other])).resolves.toBeUndefined();
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.ownerMembershipId, all: true });
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, all: true });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.ownerMembershipId, all: true });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, all: true });
+  });
+
+  it("T-417: kapsam değişikliği yeniden giriş ister (fail-closed); reddedilen istek satır ve kayıt yazmaz", async () => {
+    const count = async () => Number((await adm.query<{ n: string }>("SELECT count(*)::text AS n FROM public.membership_warehouse_scopes WHERE membership_id = $1", [A.memberMembershipId])).rows[0]?.n);
+    const before = await count();
+    const e = await failure(setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] }));
+    expect(`${e.code}/${e.detail}`).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
+    const denied = async (): Promise<void> => { throw Object.assign(new Error("yeniden giriş"), { reason: "REAUTH_REQUIRED" }); };
+    const e2 = await failure(setMembershipWarehouseScopes({ ...admin(A), recentAuth: denied }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] }));
+    expect(`${e2.code}/${e2.detail}`).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
+    expect(await count()).toBe(before);
   });
 
   it("setMembershipWarehouseScopes validates targets, replaces rows and audits; cross-tenant ids are rejected", async () => {
     const w = await newWarehouse();
-    expect(await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [w, w, A.warehouseId] })).toEqual({
+    expect(await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [w, w, A.warehouseId] })).toEqual({
       changed: true,
       all: false,
       warehouseIds: [A.warehouseId, w].sort(),
     });
     // aynı liste → changed:false, yeni audit yok
     const n1 = await auditCount(A.tenantId, "warehouse_scope.changed", A.memberMembershipId);
-    expect((await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId, w] })).changed).toBe(false);
+    expect((await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId, w] })).changed).toBe(false);
     expect(await auditCount(A.tenantId, "warehouse_scope.changed", A.memberMembershipId)).toBe(n1);
     // belirsiz girdiler: boş liste, ikisi birden, hiçbiri
     for (const bad of [{ warehouseIds: [] }, { all: true, warehouseIds: [w] }, {}]) {
-      expect((await failure(setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, ...bad } as never))).code).toBe("VALIDATION_FAILED");
+      expect((await failure(setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, ...bad } as never))).code).toBe("VALIDATION_FAILED");
     }
     expect(await auditCount(A.tenantId, "warehouse_scope.changed", A.memberMembershipId)).toBeGreaterThan(0);
-    expect((await failure(setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [B.warehouseId] }))).code).toBe("NOT_FOUND");
-    expect((await failure(setMembershipWarehouseScopes(admin(A), { membershipId: B.memberMembershipId, all: true }))).code).toBe("NOT_FOUND");
-    expect((await failure(setMembershipWarehouseScopes(admin(A), { membershipId: "x", all: true }))).code).toBe("VALIDATION_FAILED");
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, all: true });
+    expect((await failure(setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [B.warehouseId] }))).code).toBe("NOT_FOUND");
+    expect((await failure(setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: B.memberMembershipId, all: true }))).code).toBe("NOT_FOUND");
+    expect((await failure(setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: "x", all: true }))).code).toBe("VALIDATION_FAILED");
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, all: true });
     const rows = await adm.query("SELECT 1 FROM public.membership_warehouse_scopes WHERE membership_id = $1", [A.memberMembershipId]);
     expect(rows.rowCount).toBe(0);
   });

@@ -180,7 +180,7 @@ describe("depo kapsamı (A-46)", () => {
     const item = await mkItem(A);
     const inScope = await mkReceipt(A, A.warehouseId, item, "2");
     const outScope = await mkReceipt(A, otherWh, item, "2");
-    await setMembershipWarehouseScopes(owner(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...owner(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     const prev = process.env.WAREHOUSE_SCOPE_ENABLED;
     try {
       delete process.env.WAREHOUSE_SCOPE_ENABLED;

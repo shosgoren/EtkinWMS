@@ -75,7 +75,8 @@ export async function assertWarehouseVisible(
   for (const id of warehouseIds) if (!set.has(id.toLowerCase())) throw new AppError("NOT_FOUND");
 }
 
-export type ScopeCallParams = Omit<TenantAccessParams, "permission" | "recentAuth">;
+/** T-417: `recentAuth` zorunlu (fail-closed): kapsam değişikliği erişimi daraltır/genişletir, hassas yönetici işlemidir (A-39). */
+export type ScopeCallParams = Omit<TenantAccessParams, "permission">;
 
 export type SetScopesInput =
   | { readonly membershipId: string; readonly all: true; readonly requestId?: string | null }
@@ -91,9 +92,12 @@ export interface SetScopesResult {
 /**
  * Üyeliğin depo kapsamını değiştirir (`users.manage`). Giriş açıktır: `{ all: true }` (kapsam satırı yok = tüm depolar) ya da
  * boş OLMAYAN `{ warehouseIds }`; boş liste ve belirsiz girdi `VALIDATION_FAILED`. Demo tenant'ta kapalı (M9). Liste
- * değişmediyse `changed: false`, audit yok. Hedef üyelik satırı serileştirme için `FOR UPDATE` kilitlenir.
+ * değişmediyse `changed: false`, audit yok. Hedef üyelik satırı serileştirme için `FOR UPDATE` kilitlenir. T-417: yeniden giriş
+ * zorunlu (`recentAuth` yoksa `UNAUTHENTICATED`/`RECENT_AUTH_REQUIRED`). `TENANT_ADMIN` hedefin satırları saklanır ama etkisizdir
+ * (yönetici her depoyu görür); ekran yönetici üyede kısıt denetimini göstermez.
  */
 export async function setMembershipWarehouseScopes(params: ScopeCallParams, input: SetScopesInput): Promise<SetScopesResult> {
+  if (params.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   const membershipId = uuid(input.membershipId);
   const raw = input as { all?: unknown; warehouseIds?: unknown };
   let all: boolean;
