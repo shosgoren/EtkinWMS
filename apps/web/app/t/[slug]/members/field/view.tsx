@@ -205,7 +205,10 @@ function View({ slug, host, tenantName, warehouses, staff }: { slug: string; hos
                       aria-checked={wh === wo.id}
                       className={`opt${wh === wo.id ? " on" : ""}`}
                       style={{ background: C.chip, minHeight: "64px", justifyContent: "center" }}
-                      onClick={() => setWh(wo.id)}
+                      onClick={() => {
+                        setWh(wo.id);
+                        setErr(null);
+                      }}
                     >
                       <Tick />
                       <b>{wo.t}</b>
