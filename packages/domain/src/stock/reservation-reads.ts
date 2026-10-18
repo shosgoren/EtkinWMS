@@ -304,7 +304,7 @@ export async function readDocumentHeader(tx: AccessTx, tenantId: string, documen
  * (`NOT_CREATOR`). Başka kullanıcının taslağını sayımcı/rol kapsamındaki biri değiştiremez.
  */
 export function assertDraftOwnerOrApprover(header: Pick<DocumentHeader, "createdBy">, membership: { readonly userId: string; readonly roles: readonly string[] }): void {
-  if (header.createdBy === membership.userId) return;
+  if (header.createdBy.toLowerCase() === membership.userId.toLowerCase()) return;
   if (hasPermission(membership.roles, "document.approve")) return;
   throw new AppError("FORBIDDEN", { detail: "NOT_CREATOR" });
 }

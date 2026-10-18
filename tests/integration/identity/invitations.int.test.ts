@@ -854,3 +854,17 @@ describe("getAppDb (web'in tek DB erişim noktası)", () => {
     }
   });
 });
+
+describe("T-414: davet yeniden giriş ister", () => {
+  it("yeniden giriş penceresi verilmeden davet reddedilir (fail-closed); davet satırı yazılmaz", async () => {
+    const fx = await mkTenant();
+    const email = rndEmail();
+    await expect(inviteMemberRaw({ db: app, principal: principalOf(fx.admin), tenantSlug: fx.slug, email, roleKey: "PICKER" }, deps())).rejects.toMatchObject({
+      code: "UNAUTHENTICATED",
+      detail: "RECENT_AUTH_REQUIRED",
+    });
+    const r = await adm.query("SELECT 1 FROM public.invitations WHERE tenant_id = $1 AND lower(email) = lower($2)", [fx.tenant, email]);
+    expect(r.rowCount).toBe(0);
+  });
+});
+

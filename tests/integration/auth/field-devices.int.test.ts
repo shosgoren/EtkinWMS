@@ -391,3 +391,14 @@ describe("ortak cihazda kullanım ve iptal", () => {
     expect(dev.rows[0]?.revoked_at).toBeNull();
   });
 });
+
+describe("T-414: cihaz onayı ve iptali yeniden giriş ister", () => {
+  it("yeniden giriş penceresi verilmeden onay ve iptal reddedilir (fail-closed)", async () => {
+    const fx = await mkTenant();
+    const noAuth = { db: app, principal: { userId: fx.ownerId, mfaVerified: true }, tenantSlug: fx.slug };
+    const id = randomUUID();
+    await expect(approveEnrollment({ ...noAuth, enrollmentId: id, confirmCode: "123456" })).rejects.toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
+    await expect(revokeDevice({ ...noAuth, deviceId: id }, devicePort)).rejects.toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
+  });
+});
+
