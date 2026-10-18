@@ -10,6 +10,7 @@
 - `docs/INVARIANTS.md`, `docs/agents/PROTOCOL.md` ve mekanik bekçiler geçerlidir. Bu dosya onları gevşetmez; üst düzey talimat ve açık kullanıcı kararı önceliklidir.
 - Roller sorumluluktur; otomatik çoklu ajan veya belli bir model kullanma talimatı değildir. Riskin istediği bağımsız incelemeyi gerçek kanıtla sağla; rapor uydurma.
 - Web kodunda `apps/web/AGENTS.md` ve kurulu Next.js sürümünün yerel belgelerini ayrıca oku.
+- **ALTIN KURAL (kullanıcı, 19 Ekim):** her ekran ve alt ekran `docs/design/ALTIN-KURAL.md`ye uyar — eğitim gerektirmeyen, az tıklamalı, yazıdan çok anlamlı renkli/hareketli ikon, görsel+sesli geri bildirim, sesle işlem (NFC/kamera okutma hariç), role göre açılış. Kullanıcıya tekrar hatırlatılmaz.
 - **Tasarım birebir (I-18):** Ekran işi `docs/design/DESIGN-PARITY.md` ile başlar. Kaynak `docs/design/source/*.dc.html`; CSS `scripts/design/port.mjs` ile üretilir, işaretleme ve ikonlar kaynaktan aktarılır; teslimde tasarım/uygulama ekran görüntüsü karşılaştırması zorunludur. "Benzer", "esinlenilmiş" veya kütüphane ikonuyla yaklaşık uygulama teslim sayılmaz.
 - Her anlamlı teslimde `docs/STATE.md` ve değişen alanın kısa rehberini aynı PR'da güncelle. Başarı, hata ve eksik doğrulamayı birlikte kaydet.
 - Belge değişikliği yeni yayın yetkisi değildir. Kullanıcıdan parola alma; parola/MFA girişini kullanıcı yapar.
