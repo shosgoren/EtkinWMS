@@ -863,7 +863,7 @@ describe("T-414: davet yeniden giriş ister", () => {
       code: "UNAUTHENTICATED",
       detail: "RECENT_AUTH_REQUIRED",
     });
-    const r = await adm.query("SELECT 1 FROM public.invitations WHERE tenant_id = $1 AND lower(email) = lower($2)", [fx.tenant, email]);
+    const r = await adm.query("SELECT 1 FROM public.invitations WHERE tenant_id = $1 AND email_normalized = lower($2)", [fx.tenant, email]);
     expect(r.rowCount).toBe(0);
   });
 });

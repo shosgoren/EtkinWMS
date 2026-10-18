@@ -348,7 +348,7 @@ describe("kullanım anı denetimi (before /reset-password)", () => {
     const link = await issue(a, a.admin, target.membershipId);
     // B tenant'ı hedefi e-posta ekranı daveti ile (teslim edilemez ortam) davet eder; hedef kabul eder.
     const inv = await inviteMember(
-      { db: app, principal: principalOf(b.admin), tenantSlug: b.slug, email: target.email, roleKey: "PICKER" },
+      { db: app, principal: principalOf(b.admin), tenantSlug: b.slug, email: target.email, roleKey: "PICKER", recentAuth: () => Promise.resolve() },
       { mailConfig: loadMailConfig({}), queue: { enqueue: () => Promise.reject(new Error("unused")) } },
     );
     expect(inv.token).toBeDefined();
