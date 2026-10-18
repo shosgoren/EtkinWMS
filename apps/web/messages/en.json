@@ -478,6 +478,8 @@
     "validation_failed_too_many_linesAction": "Split the lines into groups of 200 and make a separate reversal for each group.",
     "forbidden_warehouse_out_of_scope": "This warehouse is outside your scope.",
     "forbidden_warehouse_out_of_scopeAction": "If you need access, ask your workspace admin to add it to your scope.",
+    "forbidden_not_creator": "Only the person who created this draft or an approver can change it.",
+    "forbidden_not_creatorAction": "Ask the person who created the draft or your manager.",
     "validation_failed_plan_limit": "You have reached your plan's limit.",
     "validation_failed_plan_limitAction": "Archive a record you no longer use, or contact us to upgrade your plan.",
     "validation_failed_plan_invalid": "The plan details are invalid.",

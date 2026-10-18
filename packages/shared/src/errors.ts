@@ -61,6 +61,8 @@ export const ERROR_DETAILS = [
   "CODE_MISMATCH",
   // T-407: satış sayfası metni/paket seçimi geçersiz (panel).
   "SITE_INVALID",
+  // T-414: taslağı yalnız oluşturan ya da onay yetkilisi değiştirir/iptal eder.
+  "NOT_CREATOR",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -97,6 +99,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   PAYMENT_INVALID: "VALIDATION_FAILED",
   CODE_MISMATCH: "VALIDATION_FAILED",
   SITE_INVALID: "VALIDATION_FAILED",
+  NOT_CREATOR: "FORBIDDEN",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {
