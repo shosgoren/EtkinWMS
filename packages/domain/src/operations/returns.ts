@@ -1,6 +1,6 @@
 // Müşteri iadesi (T-308; ADR-021 §3, 16 Temel kurallar 4 ve 6, Senaryo A adım 8, Senaryo D adım 9, A-135, A-150, A-154).
 //
-// `createCustomerReturn` (`stock.post`): orijinal sevk satırına (sipariş satırı) bağlı iade: primitif `STOCK_IN` belgesi, defter nedeni `RETURN`,
+// `createCustomerReturn` (`document.approve`, T-414; önceden `stock.post`): orijinal sevk satırına (sipariş satırı) bağlı iade: primitif `STOCK_IN` belgesi, defter nedeni `RETURN`,
 // `+quantity` hedef deponun seçilen `RECEIVING` lokasyonunda `QUARANTINE` boyutuna (iade stoğu kullanılabilir/sevke uygun sayılmaz; AC-08). Belge kaynağı
 // `SALES_ORDER` (kaynak satır = sipariş satırı; `customer_returns` başlığı açılmaz, A-308-5). `returned_quantity` artar; AÇIK MİKTAR DEĞİŞMEZ ve sipariş yeniden
 // açılmaz (kural 6): kapanmış siparişte yalnız `returned_quantity` değişebilir (0016 `field_docs_lines_guard_closed`, A-154).
@@ -84,7 +84,8 @@ export async function createCustomerReturn(params: StockDocCallParams, input: Cr
     tenantSlug: params.tenantSlug,
     clientKey: params.clientKey,
     commandType: "sales_order.customer_return",
-    permission: "stock.post",
+    // T-414 (yetki incelemesi, 18 Ekim): iade müşteri beyanıyla stok yaratır → onay yetkilisi (depo sorumlusu/yönetici); toplayıcı değil.
+    permission: "document.approve",
     input: hashInput,
     ...(params.retry === undefined ? {} : { retry: params.retry }),
     ...(params.timeouts === undefined ? {} : { timeouts: params.timeouts }),

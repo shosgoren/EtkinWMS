@@ -14,7 +14,7 @@ import { loadMailConfig, type MailConfig, type MailMessage } from "../../../pack
 import { runTenantCommand } from "../../../packages/domain/src/identity/access.ts";
 import {
   acceptInvitation,
-  inviteMember,
+  inviteMember as inviteMemberRaw,
   revokeInvitation,
   type AcceptInvitationDeps,
   type InvitationDeps,
@@ -24,6 +24,10 @@ import { createActionGuard, type GuardDeps } from "../../../apps/web/lib/action-
 import { safeNext } from "../../../apps/web/lib/safe-redirect.ts";
 import { closeSenderQueue, getSenderQueue } from "../../../apps/web/lib/queue.ts";
 import { readAuthDatabaseUrl, readIntEnv, redactErrorChain } from "../harness/env.ts";
+
+// T-414: hassas yönetici komutları yeniden giriş ister (fail-closed); testler varsayılan olarak geçerli pencere verir, ret testleri ham işlevi çağırır.
+const reauthOk = (): Promise<void> => Promise.resolve();
+const inviteMember: typeof inviteMemberRaw = (params, ...rest) => inviteMemberRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof inviteMemberRaw>[0], ...(rest as [never]));
 
 const env = readIntEnv(process.env);
 const authUrl = readAuthDatabaseUrl(process.env);

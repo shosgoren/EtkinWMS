@@ -503,7 +503,7 @@ describe("T-413: saha personelinin deposu uygulanır (A-77 kararı 18 Ekim, bayr
       );
       const all = await createFieldUser({ ...access(fx), name: "Tüm", username: `a${randomBytes(4).toString("hex")}`, roleKey: "PICKER" }, accountPort);
       const seen = async (userId: string) =>
-        (await listWarehouses({ db: app, principal: { userId, mfaVerified: false }, tenantSlug: fx.slug })).items.map((w) => w.id).sort();
+        (await listWarehouses({ db: app, principal: { userId, mfaVerified: true }, tenantSlug: fx.slug })).items.map((w) => w.id).sort();
       expect(await seen(scoped.userId)).toEqual([wh[0]]);
       expect(await seen(all.userId)).toEqual([...wh].sort());
       expect(await seen(fx.ownerId)).toEqual([...wh].sort());

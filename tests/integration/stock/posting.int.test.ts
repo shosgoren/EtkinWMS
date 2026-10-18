@@ -10,6 +10,7 @@ import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/clie
 import { AppError } from "../../../packages/shared/src/errors.ts";
 import {
   approveDocument,
+  cancelDocument,
   createStockDocument,
   postDocument,
   readAvailability,
@@ -22,7 +23,7 @@ import { assertTargetStatusAllowed } from "../../../packages/domain/src/stock/do
 import { ALLOWED_STATUS_TRANSITION_PAIRS, isStatusTransitionAllowed } from "../../../packages/domain/src/stock/plan.ts";
 import { archiveLocation } from "../../../packages/domain/src/warehouse/index.ts";
 import { runTenantQuery } from "../../../packages/domain/src/identity/access.ts";
-import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
+import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
@@ -355,6 +356,29 @@ describe("T-248: hedef stok durumu ve STOCK_MOVE ile durum değişimi", () => {
     expect(() => assertTargetStatusAllowed("STOCK_OUT", [l("AVAILABLE", "AVAILABLE")])).toThrowError(expect.objectContaining({ code: "VALIDATION_FAILED" }));
     expect(() => assertTargetStatusAllowed("STOCK_MOVE", [l("QUARANTINE", "AVAILABLE"), l("AVAILABLE", "QUARANTINE"), l("AVAILABLE", "AVAILABLE"), l("DAMAGED", null)])).not.toThrow();
     expect(() => assertTargetStatusAllowed("STOCK_IN", [l("AVAILABLE", null)])).not.toThrow();
+  });
+
+  it("T-414: başkasının taslağını sayımcı düzenleyemez/iptal edemez (NOT_CREATOR); oluşturan ve onay yetkilisi yapabilir", async () => {
+    const x = await mkItem();
+    const r1 = await mkLoc();
+    const counterP = async (): Promise<StockDocCallParams> => {
+      const u = await mkUser(adm, reg, `T414 counter ${hex(4)}`);
+      await mkMembership(adm, A.tenantId, u, { roles: ["COUNTER"] });
+      return { db: app, principal: { userId: u, mfaVerified: true }, tenantSlug: A.slug, clientKey: uuid(), retry: NO_WAIT };
+    };
+    const author = await counterP();
+    const other = await counterP();
+    const lines = [ln(x, { targetLocationId: r1 })];
+    const c = await createStockDocument(author, { kind: "STOCK_IN", warehouseId: A.warehouseId, lines });
+    const id = c.documentId as string;
+    let v = (await docRow(id)).version;
+    expect(codeOf(await failure(updateDraft({ ...other, clientKey: uuid() }, { documentId: id, expectedVersion: v, lines })))).toBe("FORBIDDEN/NOT_CREATOR");
+    expect(codeOf(await failure(cancelDocument({ ...other, clientKey: uuid() }, { documentId: id, expectedVersion: v, reason: "x" })))).toBe("FORBIDDEN/NOT_CREATOR");
+    expect((await docRow(id)).version).toBe(v);
+    await updateDraft({ ...author, clientKey: uuid() }, { documentId: id, expectedVersion: v, lines });
+    v = (await docRow(id)).version;
+    await cancelDocument(ownerP(), { documentId: id, expectedVersion: v, reason: "yönetici" });
+    expect((await docRow(id)).status).toBe("CANCELLED");
   });
 
   it("izinsiz geçiş updateDraft'ta reddedilir (T-258): izinli taslak DAMAGED→AVAILABLE'a güncellenemez; satır ve sürüm değişmez", async () => {

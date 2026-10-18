@@ -69,6 +69,15 @@ async function mkTenant(label: string, rows: number): Promise<Fx> {
   return { tenant, slug, admin, picker, manager };
 }
 
+/** T-414: operasyon olayları (kimlik olayı değil; depo sorumlusu görür). */
+async function seedOps(tenant: string, actor: string, rows: number): Promise<void> {
+  await adm.query(
+    `INSERT INTO public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id, change_summary)
+     SELECT $1, $2, 'warehouse.updated', 'warehouse', gen_random_uuid()::text, '{"k":"v"}'::jsonb FROM generate_series(1, $3)`,
+    [tenant, actor, rows],
+  );
+}
+
 async function seedRows(tenant: string, actor: string, label: string, rows: number): Promise<void> {
   for (let done = 0; done < rows; done += 100) {
     const n = Math.min(100, rows - done);
@@ -173,6 +182,7 @@ describe("listAudit (keyset)", () => {
 
   it("izin: PICKER FORBIDDEN, WAREHOUSE_MANAGER görür; başka tenant'ın slug'ı NOT_FOUND", async () => {
     await expectCode(listAudit(access(A, A.picker.userId)), "FORBIDDEN");
+    await seedOps(A.tenant, A.admin.userId, 1);
     expect((await listAudit(access(A, A.manager.userId), { limit: 1 })).items).toHaveLength(1);
     await expectCode(listAudit({ ...access(A, A.admin.userId), tenantSlug: B.slug }), "NOT_FOUND");
   });
@@ -271,6 +281,7 @@ describe("openAuditExport", () => {
   it("akış sırasında üyelik yetkisi düşerse sonraki parça okunmaz (her parça yeniden yetkilendirilir)", async () => {
     const fx = await mkTenant("C", 30);
     const u = await mkMember(fx.tenant, "WAREHOUSE_MANAGER", "Geçici Depocu");
+    await seedOps(fx.tenant, fx.admin.userId, 30); // T-414: depo sorumlusu kimlik olaylarını görmez; okunacak operasyon satırları
     const { stream } = await openAuditExport({ ...access(fx, u.userId), recentAuth: fresh }, { chunkSize: 10 });
     const reader = stream.getReader();
     await reader.read(); // başlık
@@ -334,5 +345,20 @@ describe("export route (GET)", () => {
     expect(Object.keys(entry).sort()).toEqual(["code", "error", "level", "msg", "requestId"]);
     expect(entry).toMatchObject({ error: "AppError", code: "UNAUTHENTICATED", requestId: "req-t126" });
     expect(logged[0]).not.toContain(A.slug);
+  }, 60_000);
+});
+
+describe("T-414: kimlik olayları yalnız üye yönetimi yetkisine", () => {
+  it("depo sorumlusu listede ve dışa aktarımda üyelik/davet olaylarını görmez; yönetici görür", async () => {
+    const fx = await mkTenant("D", 3); // 3 × member.invited
+    await seedOps(fx.tenant, fx.admin.userId, 2);
+    const mgr = await listAudit(access(fx, fx.manager.userId), { limit: 50 });
+    expect(mgr.items.map((i) => i.action).filter((a) => a.startsWith("member."))).toEqual([]);
+    expect(mgr.items.filter((i) => i.action === "warehouse.updated")).toHaveLength(2);
+    const adminList = await listAudit(access(fx, fx.admin.userId), { limit: 50 });
+    expect(adminList.items.filter((i) => i.action === "member.invited")).toHaveLength(3);
+    const csv = await readAll((await openAuditExport({ ...access(fx, fx.manager.userId), recentAuth: fresh })).stream);
+    expect(csv).not.toContain("member.invited");
+    expect(dataLines(csv)).toHaveLength(2);
   }, 60_000);
 });
