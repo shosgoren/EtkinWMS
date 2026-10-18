@@ -40,6 +40,8 @@ export interface PendingView {
   readonly invitedBy: string;
 }
 
+const MULTI = "__multi";
+
 type Kind = "role" | "remove" | "transfer" | "reset" | "fieldCode" | "unlock";
 
 const FIELD_ROLES: readonly string[] = ["PICKER", "COUNTER"];
@@ -86,6 +88,7 @@ export function MembersView({
   const [notice, setNotice] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<{ name: string; link: string } | null>(null);
   const [fieldCode, setFieldCode] = useState<{ name: string; code: string } | null>(null);
+  const selfIsOwner = members.some((x) => x.userId === selfUserId && x.isOwner);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const returnTo = `/t/${slug}/members`;
 
@@ -224,11 +227,13 @@ export function MembersView({
           <ul className="m-0 flex min-w-0 list-none flex-col gap-3 p-0">
             {members.map((m) => {
               const self = m.userId === selfUserId;
+              // T-413: firma sahibinin rolü/üyeliği sunucuda kilitli (OWNER_ROLE/LAST_OWNER) — ekranda da kilitli; sahiplik devri yalnız sahibe.
               // Demo satırı: rol/çıkarma/devir için ayrı nötr metin; sıfırlama kilidi 2. tur m6 metninde kalır.
-              const lockText = !canManage ? t("lockedReason") : m.isDemo ? t("demoLocked") : null;
+              const lockText = !canManage ? t("lockedReason") : m.isDemo ? t("demoLocked") : m.isOwner ? t("ownerLocked") : null;
               const resetLocked = !canManage || m.isDemo || !m.resetLinkAvailable;
               const resetText = !canManage ? t("lockedReason") : m.isDemo || !m.resetLinkAvailable ? t("unavailableReason") : null;
-              const current = m.roles[0] ?? "";
+              // Birden çok rolü olan üye: seçici "birden çok rol" gösterir; tek rol seçilip uygulanırsa roller o role iner (sunucu kuralı).
+              const current = m.roles.length > 1 ? MULTI : (m.roles[0] ?? "");
               const selected = draft[m.userId] ?? current;
               const noteId = `lock-${m.userId}`;
               return (
@@ -264,6 +269,11 @@ export function MembersView({
                           disabled={lockText !== null}
                           onChange={(e) => setDraft({ ...draft, [m.userId]: e.target.value })}
                         >
+                          {current === MULTI ? (
+                            <option value={MULTI} disabled>
+                              {roleName(m.roles)}
+                            </option>
+                          ) : null}
                           {roleKeys.filter((r) => m.field === undefined || FIELD_ROLES.includes(r)).map((r) => (
                             <option key={r} value={r}>
                               {tr(r)}
@@ -272,7 +282,7 @@ export function MembersView({
                         </select>
                         <Button
                           variant="secondary"
-                          disabled={lockText !== null || selected === current}
+                          disabled={lockText !== null || selected === current || selected === MULTI}
                           aria-describedby={lockText === null ? undefined : noteId}
                           onClick={() => setConfirm({ kind: "role", member: m, roleKey: selected })}
                         >
@@ -283,7 +293,7 @@ export function MembersView({
                         <Button variant="danger" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "remove", member: m })}>
                           {t("remove")}
                         </Button>
-                        {m.isOwner || m.field ? null : (
+                        {!selfIsOwner || m.isOwner || m.field ? null : (
                           <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "transfer", member: m })}>
                             {t("transfer")}
                           </Button>

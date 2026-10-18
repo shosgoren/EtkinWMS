@@ -185,7 +185,7 @@ const RE_STATE_WORD = /^[a-z_-]{1,20}$/;
 const RE_CODE = /^(?=.{1,32}$)(?:[A-Z][A-Z_]{2,11}|[A-Z]+(?:_[A-Z]+)+|[0-9A-Z]{5})$/;
 // msg: serbest metin YOK; yalnızca worker/kuyruk kodunun yazdığı sabit iletiler (tam eşleşme).
 export const ALLOWED_MSGS = new Set([
-  "started", "queue started", "queue start failed", "queue error", "invalid configuration", "mail configured",
+  "started", "warehouse scope", "queue started", "queue start failed", "queue error", "invalid configuration", "mail configured",
   "job types without handler", "demo disabled", "demo.reseed done", "demo.reseed failed", "demo.reseed enqueued",
   "demo.reseed enqueue failed", "email sent", "email.send failed", "invitation email sent", "invitation.deliver failed",
   "invitation.deliver skipped", "queue.maintenance.started", "queue.maintenance.requeued_expired", "queue.maintenance.expired_exhausted",

@@ -394,7 +394,8 @@
     "fieldNoCode": "No code · issue a new one",
     "fieldNewCode": "New activation code",
     "fieldUnlock": "Unlock",
-    "devices": "Devices"
+    "devices": "Devices",
+    "ownerLocked": "The company owner's role cannot be changed and the owner cannot be removed. Only the owner can transfer ownership."
   },
   "errors": {
     "validation_failed": "The information entered is not valid.",
@@ -2985,7 +2986,8 @@
     "stLocked": "LOCKED",
     "stPending": "CODE PENDING",
     "newCode": "NEW CODE",
-    "newCodeAria": "Create a new code for {name}"
+    "newCodeAria": "Create a new code for {name}",
+    "errWarehouse": "Choose the warehouse this person will work in (or \"All warehouses\")."
   },
   "fieldLogin": {
     "title": "Field sign-in",

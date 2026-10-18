@@ -1,9 +1,9 @@
-// Depo kapsamı denetimi (T-205; A-46, A-77) — `WAREHOUSE_SCOPE_ENABLED` bayrağı, varsayılan KAPALI.
+// Depo kapsamı denetimi (T-205; A-46, A-77) — `WAREHOUSE_SCOPE_ENABLED` bayrağı; kod varsayılanı kapalı, CANLIDA AÇIK (T-413, 18 Ekim).
 //
 // - Bayrak kapalı: `assertWarehouseInScope` no-op (A-46: tenant kapsamı sürer).
 // - Bayrak açık: `TENANT_ADMIN` her zaman geçer; diğer rollerde kapsam satırı yoksa tüm depolar, varsa yalnızca listelenenler;
-//   aksi `FORBIDDEN`/`WAREHOUSE_OUT_OF_SCOPE`. BİLİNEN RİSK (A-77, MINOR-8): "satır yoksa tüm depolar" fail-open'dır; bayrak
-//   AÇILMADAN önce bu kural yeniden karara bağlanır (Q-23).
+//   aksi `FORBIDDEN`/`WAREHOUSE_OUT_OF_SCOPE`. A-77 kararı (18 Ekim): "satır yoksa tüm depolar" korunur — satırsızlık yalnız açık
+//   "Tüm depolar" seçimiyle oluşur (A-103 boş listeyi reddeder), depo kapsam satırı varken silinemez (FK; örnek veri arşivlenir).
 // - Bayrak ortamdan çağrı anında okunur (`process.env`); yalnızca `true`/`1` açar, başka her değer (ve tanımsız) kapalıdır.
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";

@@ -86,7 +86,8 @@ function View({ slug, host, tenantName, warehouses, staff }: { slug: string; hos
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [role, setRole] = useState<"PICKER" | "COUNTER">("PICKER");
-  const [wh, setWh] = useState<string | null>(null);
+  // T-413 (inceleme m2): depo bilinçli seçilir — `undefined` = seçilmedi (gönderilmez), `null` = tüm depolar.
+  const [wh, setWh] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ text: string; reauth: boolean } | null>(null);
   const [issued, setIssued] = useState<Issued | null>(null);
@@ -115,6 +116,10 @@ function View({ slug, host, tenantName, warehouses, staff }: { slug: string; hos
   }
 
   async function add(): Promise<void> {
+    if (wh === undefined) {
+      setErr({ text: t("errWarehouse"), reauth: false });
+      return;
+    }
     setBusy(true);
     setErr(null);
     const res = await createFieldUserAction({ slug, name: name.trim(), username: username.trim(), roleKey: role, warehouseId: wh });
@@ -200,7 +205,10 @@ function View({ slug, host, tenantName, warehouses, staff }: { slug: string; hos
                       aria-checked={wh === wo.id}
                       className={`opt${wh === wo.id ? " on" : ""}`}
                       style={{ background: C.chip, minHeight: "64px", justifyContent: "center" }}
-                      onClick={() => setWh(wo.id)}
+                      onClick={() => {
+                        setWh(wo.id);
+                        setErr(null);
+                      }}
                     >
                       <Tick />
                       <b>{wo.t}</b>
