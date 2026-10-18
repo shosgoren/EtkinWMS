@@ -201,7 +201,7 @@ describe("AC-04 export katmanı", () => {
 
   it("@AC-04 sorgu parametresiyle tenant zorlama yok sayılır: A slug'ı + tenant_id=B yalnızca A verisi; B slug'ı + tenant_id=A -> 404", async () => {
     const forced = `?tenant_id=${B.tenant}&tenantId=${B.tenant}&tenant=${B.slug}&slug=${B.slug}&tenant_id[]=${B.tenant}`;
-    const own = await callExport(A.slug, A.manager, forced);
+    const own = await callExport(A.slug, A.admin, forced);
     expect(own.status).toBe(200);
     const csv = await own.text();
     expect(csv).toContain(A.marker);
