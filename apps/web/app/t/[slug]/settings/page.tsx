@@ -11,6 +11,7 @@ import { AppError } from "@wms/shared/errors";
 import { TIME_ZONES } from "../../../../lib/timezones.ts";
 import { saveSettingsAction } from "./actions.ts";
 import { clearSampleDataAction } from "./sample-actions.ts";
+import { setSeparationAction } from "./sod-actions.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const sample: SampleDataStatus | null = locked ? null : await getSampleDataStatus({ db: getAppDb(), principal, tenantSlug: slug });
   const sampleResult = SAMPLE_RESULTS.find((r) => r === first(query.sample));
   const sampleNotice = first(query.sample);
+  const sodNotice = first(query.sod);
 
   return (
     <main className="mx-auto flex w-full max-w-xl min-w-0 flex-col gap-4 px-4 py-6">
@@ -116,6 +118,32 @@ export default async function SettingsPage({ params, searchParams }: { params: P
           <Button type="submit">{t("save")}</Button>
         </fieldset>
       </form>
+      {/* T-416 (A-03): görev ayrılığı. Ayarlar tasarımı henüz yok (DESIGN-PARITY): mevcut bileşenlerle. */}
+      {settings === null ? null : (
+        <section aria-labelledby="sod-title" className="flex min-w-0 flex-col gap-3 rounded-card bg-surface p-4 shadow-card" data-testid="sod">
+          <h2 id="sod-title" className="text-xl font-bold text-ink">
+            {t("sod.title")}
+          </h2>
+          <p className="text-base text-ink">{t("sod.body")}</p>
+          <p className="text-base font-semibold text-ink">{settings.separationOfDuties ? t("sod.stateOn") : t("sod.stateOff")}</p>
+          {sodNotice === "on" || sodNotice === "off" || sodNotice === "unchanged" ? <Banner kind="info">{t(`sod.${sodNotice}`)}</Banner> : null}
+          {sodNotice === "reauth" ? (
+            <Banner kind="error">
+              <p>{t("sod.reauth")}</p>
+              <a className="mt-1 inline-block font-bold text-ink underline" href={`/login?reauth=1&next=${encodeURIComponent(`/t/${slug}/settings`)}`}>
+                {t("sample.loginLink")}
+              </a>
+            </Banner>
+          ) : null}
+          <form action={setSeparationAction} className="flex min-w-0 flex-col gap-3">
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="enabled" value={settings.separationOfDuties ? "0" : "1"} />
+            <Button type="submit" variant={settings.separationOfDuties ? "secondary" : "primary"}>
+              {settings.separationOfDuties ? t("sod.turnOff") : t("sod.turnOn")}
+            </Button>
+          </form>
+        </section>
+      )}
       {sampleResult === undefined ? null : (
         <Banner kind="info">
           <p>{t(`sample.${sampleResult}`)}</p>

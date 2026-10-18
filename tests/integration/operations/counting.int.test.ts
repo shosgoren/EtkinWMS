@@ -969,3 +969,24 @@ describe("T-309a: sayım komutlarının idempotency'si", () => {
     await cancelCount(ownerP(), { sessionId: sid, reason: "T309a temizlik" });
   });
 });
+
+describe("T-416 görev ayrılığı — sayım (A-03)", () => {
+  it("açıkken satırı sayan onaylayamaz (FORBIDDEN/SEPARATION_OF_DUTIES); başka yönetici onaylar", async () => {
+    const X = await mkItem();
+    const L = await mkLoc();
+    await stockIn(X, L, "3");
+    await q("UPDATE public.tenant_settings SET separation_of_duties = true WHERE tenant_id = $1", [A.tenantId]);
+    try {
+      const sid = await startOn([L]);
+      await recordCount(mgrP(), { sessionId: sid, lines: [{ locationId: L, itemId: X, countedQuantity: "3" }] });
+      await submitCount(mgrP(), { sessionId: sid });
+      expect(codeOf(await failure(approveCount(mgrP(), { sessionId: sid })))).toBe("FORBIDDEN/SEPARATION_OF_DUTIES");
+      expect((await sessOf(sid)).status, "ret durumu değiştirmez").not.toBe("APPROVED");
+      await approveCount(ownerP(), { sessionId: sid });
+      expect((await sessOf(sid)).status).toBe("APPROVED");
+      await postCountAdjustment(ownerP(), { sessionId: sid });
+    } finally {
+      await q("UPDATE public.tenant_settings SET separation_of_duties = false WHERE tenant_id = $1", [A.tenantId]);
+    }
+  });
+});

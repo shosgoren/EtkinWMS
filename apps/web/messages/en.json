@@ -1043,6 +1043,18 @@
       "reauth": "You need to verify your identity again for this action.",
       "reauthAction": "Sign in again and repeat the action.",
       "loginLink": "Sign in again"
+    },
+    "sod": {
+      "title": "Separation of duties",
+      "body": "When on, the same person cannot both prepare and approve: whoever created a document cannot approve it, whoever counted cannot approve the difference, and whoever created or posted a document cannot reverse it. Automatic approvals inside field flows are not affected.",
+      "stateOn": "Status: on",
+      "stateOff": "Status: off",
+      "turnOn": "Turn on separation of duties",
+      "turnOff": "Turn off separation of duties",
+      "on": "Separation of duties turned on.",
+      "off": "Separation of duties turned off.",
+      "unchanged": "The setting was already in this state.",
+      "reauth": "Sign in again to change this setting."
     }
   },
   "items": {
@@ -1689,7 +1701,9 @@
       "qty_fractional": "This barcode's quantity is not a whole number.",
       "qty_fractionalAction": "This screen only works with whole units. Enter the quantity on the desktop.",
       "unit_mismatch": "This barcode is not in this line's unit.",
-      "unit_mismatchAction": "Scan a barcode in the line's unit or enter the quantity on the desktop."
+      "unit_mismatchAction": "Scan a barcode in the line's unit or enter the quantity on the desktop.",
+      "forbidden_not_creator": "Only the person who created this draft or an approver can change it.",
+      "forbidden_sod": "Separation of duties is on: whoever prepared this document or count cannot approve or reverse it. Ask another authorised person."
     },
     "line": {
       "complete": "Done",

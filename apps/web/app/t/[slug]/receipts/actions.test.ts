@@ -339,3 +339,11 @@ describe("i18n: her hata anahtarı için TR + EN ileti ve sonraki eylem var", ()
     expect(load("tr.json").receiving.errors.location_locked).toBe("Bu rafta sayım sürüyor.");
   });
 });
+
+describe("T-414/T-416 hata anahtarları", () => {
+  it("NOT_CREATOR ve SEPARATION_OF_DUTIES ayrı metne eşlenir", () => {
+    expect(errorKeyOf({ code: "FORBIDDEN", detail: "NOT_CREATOR" }, "receive")).toBe("forbidden_not_creator");
+    expect(errorKeyOf({ code: "FORBIDDEN", detail: "SEPARATION_OF_DUTIES" }, "receive")).toBe("forbidden_sod");
+    expect(errorKeyOf({ code: "FORBIDDEN" }, "receive")).toBe("forbidden");
+  });
+});

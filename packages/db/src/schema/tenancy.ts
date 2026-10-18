@@ -91,6 +91,8 @@ export const tenantSettings = pgTable("tenant_settings", {
   // T-989 (I-18): çalışma vardiyası (Görevlerim "VARDİYA 08:00–17:00"); wms_app yalnızca bu iki sütunu ek olarak UPDATE eder.
   shiftStart: timeOfDay("shift_start").notNull().default("08:00"),
   shiftEnd: timeOfDay("shift_end").notNull().default("17:00"),
+  // T-416 (A-03): görev ayrılığı (varsayılan kapalı); wms_app yalnızca bu sütunu ek olarak UPDATE eder.
+  separationOfDuties: boolean("separation_of_duties").notNull().default(false),
 });
 
 export const adminResetGrants = pgTable(
