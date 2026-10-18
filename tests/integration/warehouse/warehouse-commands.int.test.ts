@@ -472,6 +472,8 @@ describe("warehouse scope (A-77, flag WAREHOUSE_SCOPE_ENABLED)", () => {
     await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, 'Arşiv')", [A.tenantId, w, `AR${randomUUID().slice(0, 6)}`]);
     await setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId, w] });
     await adm.query("UPDATE public.warehouses SET status = 'ARCHIVED', archived_at = now() WHERE id = $1", [w]);
+    // Zaten kapsamdaki arşivli depo korunur (yeni ekleme sayılmaz).
+    expect((await setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId, w] })).changed).toBe(false);
     await setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     expect((await failure(setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId, w] }))).code).toBe("VALIDATION_FAILED");
     await setMembershipWarehouseScopes(ok, { membershipId: A.memberMembershipId, all: true });
