@@ -164,6 +164,7 @@ type ActionResult = { ok: true; data: Record<string, unknown> } | { ok: false; e
 type Actions = Record<string, (arg: unknown) => Promise<ActionResult>>;
 let members: Actions;
 let settings: { saveSettingsAction: (f: FormData) => Promise<void> };
+let sodActions: { setSeparationAction: (form: FormData) => Promise<void> };
 let inviteAccept: Actions;
 let itemActions: Actions;
 let taskActions: Actions;
@@ -217,6 +218,7 @@ beforeAll(async () => {
   const load = (rel: string): Promise<unknown> => import(/* @vite-ignore */ path.join(WEB, rel));
   members = (await load("app/t/[slug]/members/actions.ts")) as Actions;
   settings = (await load("app/t/[slug]/settings/actions.ts")) as typeof settings;
+  sodActions = (await load("app/t/[slug]/settings/sod-actions.ts")) as typeof sodActions;
   inviteAccept = (await load("app/invite/[token]/actions.ts")) as Actions;
   itemActions = (await load("app/t/[slug]/items/actions.ts")) as Actions;
   taskActions = (await load("app/t/[slug]/tasks/actions.ts")) as Actions;
@@ -979,6 +981,30 @@ describe("Server Action'lar", () => {
     ownForm.set("locale", "tr");
     ownForm.set("timeZone", "Europe/Istanbul");
     await expect(settings.saveSettingsAction(ownForm)).rejects.toMatchObject({ kind: "redirect", to: `/t/${A.slug}/settings?unchanged=1` });
+  });
+
+  it("@AC-04 setSeparationAction (T-416): A yöneticisi B'nin slug'ıyla görev ayrılığını açamaz -> NOT_FOUND ile yönlendirme; B'nin ayarı değişmez", async () => {
+    const sod = async (tenant: string): Promise<boolean | undefined> =>
+      (await adm.query<{ v: boolean }>("SELECT separation_of_duties AS v FROM public.tenant_settings WHERE tenant_id = $1", [tenant])).rows[0]?.v;
+    const before = await sod(B.tenant);
+    const run = async (slug: string): Promise<string> => {
+      as(A.admin);
+      const f = new FormData();
+      f.set("slug", slug);
+      f.set("enabled", "1");
+      try {
+        await sodActions.setSeparationAction(f);
+      } catch (e) {
+        if ((e as { kind?: string }).kind === "redirect") return (e as { to: string }).to;
+        throw e;
+      }
+      throw new Error("expected redirect");
+    };
+    const cross = await run(B.slug);
+    const missing = await run(`yok-${rnd()}`);
+    expect(cross).toBe(`/t/${B.slug}/settings?error=NOT_FOUND`);
+    expect(missing.replace(/\/t\/[^/]+/, "")).toBe(cross.replace(/\/t\/[^/]+/, ""));
+    expect(await sod(B.tenant)).toBe(before);
   });
 
   it("@AC-04 acceptInvitationAction: B'nin davet belirteciyle A kullanıcısının kabulü -> FORBIDDEN (e-posta uyuşmazlığı); üyelik/kabul oluşmaz", async () => {
