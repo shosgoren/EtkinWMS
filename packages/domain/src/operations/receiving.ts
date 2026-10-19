@@ -292,7 +292,7 @@ export async function cancelInboundReceipt(
         const h = await lockFieldHeader(tx, ctx.tenantId, "inbound_receipts", receiptId);
         guardVersion(h.status, h.version, expectedVersion);
         // T-414: başkasının açtığı kabulü yalnız onay yetkilisi iptal eder.
-        if (h.createdBy.toLowerCase() !== ctx.membership.userId.toLowerCase() && !hasPermission(ctx.membership.roles, "document.approve")) {
+        if (h.createdBy.toLowerCase() !== ctx.membership.userId.toLowerCase() && !hasPermission(ctx.membership.roles, "document.approve", ctx.membership.grants)) {
           throw new AppError("FORBIDDEN", { detail: "NOT_CREATOR" });
         }
         // Kabul yazımı başlık kilidi altındadır: burada okunan toplam kararlıdır.

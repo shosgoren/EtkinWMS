@@ -229,8 +229,8 @@ describe("getMembershipSummary", () => {
     const s = await getMembershipSummary({ db: app, principal: { userId: me.userId, mfaVerified: true } });
     expect(s.userName).toBe(me.name);
     expect(s.memberships).toEqual([
-      { slug: a.slug, tenantName: "Alfa", roles: ["PICKER"], lastUsedAt: null },
-      { slug: b.slug, tenantName: "Beta", roles: ["TENANT_ADMIN"], lastUsedAt: null },
+      { slug: a.slug, tenantName: "Alfa", roles: ["PICKER"], grants: [], screens: null, lastUsedAt: null },
+      { slug: b.slug, tenantName: "Beta", roles: ["TENANT_ADMIN"], grants: [], screens: null, lastUsedAt: null },
     ]);
     expect(s.lastSlug).toBeNull();
     // Çağıranın kendi REMOVED üyeliği de özette yok.

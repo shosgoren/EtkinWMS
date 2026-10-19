@@ -16,6 +16,8 @@ const PERMISSION_LIST = [
   "settings.manage",
   "users.manage",
   "audit.view",
+  // T-421/T-427: Excel'den aktarım (ürün, cari, açılış stoku). Hesap sahibinde her zaman; diğerlerine yalnız özel yetki grubuyla.
+  "data.import",
 ] as const;
 export type Permission = (typeof PERMISSION_LIST)[number];
 /** Derin dondurulmuş (çalışma anında değiştirilemez). */
@@ -44,8 +46,29 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
   READ_ONLY: freeze(["stock.view"]),
 });
 
-/** Rollerden en az biri izni taşıyorsa `true`. Bilinmeyen rol/izin → `false`. */
-export function hasPermission(roles: readonly string[], permission: Permission): boolean {
+/**
+ * T-421: özel gruba verilebilecek EK yetkiler (0051 CHECK ile aynı kapalı liste). `stock.view` her üyede rol yoluyla vardır.
+ * `users.manage` ve `settings.manage` BİLEREK yoktur: ekip yönetimi rol değiştirme, davet, parola sıfırlama bağlantısı ve cihaz onayı taşır
+ * (yönetici olmayan biri başka hesabı yönetici yapabilirdi); ayarlar görev ayrımını kapatma, örnek veri silme ve entegrasyonları taşır (onaylayan
+ * kendi denetimini kapatabilirdi; güvenlik incelemesi). İkisi de yalnız Yönetici rolündedir.
+ */
+export const GRANTABLE: readonly Permission[] = Object.freeze([
+  "stock.post",
+  "document.create",
+  "document.approve",
+  "count_diff.approve",
+  "reversal.create",
+  "data.import",
+] as const);
+/** Taşıyana MFA zorunlu kılan yetkiler (rolde MFA_REQUIRED_ROLES ile aynı gerekçe: onay, ters kayıt, toplu yazma). */
+export const MFA_GRANTS: readonly Permission[] = Object.freeze(["document.approve", "count_diff.approve", "reversal.create", "data.import"] as const);
+
+/**
+ * Rollerden en az biri izni taşıyorsa ya da üyenin özel grubu (T-421) bu yetkiyi veriyorsa `true`. Bilinmeyen rol/izin → `false`.
+ * `grants` yalnız kapalı listedeki (GRANTABLE) değerlerle eşleşir.
+ */
+export function hasPermission(roles: readonly string[], permission: Permission, grants: readonly string[] = []): boolean {
+  if (grants.includes(permission) && GRANTABLE.includes(permission)) return true;
   return roles.some((role) => {
     if (!Object.hasOwn(ROLE_PERMISSIONS, role)) return false;
     return (ROLE_PERMISSIONS as Readonly<Record<string, readonly Permission[]>>)[role]?.includes(permission) === true;

@@ -1,0 +1,31 @@
+// I-18: Gruplar kaynağındaki SVG yolları AYNEN (docs/design/source/Gruplar.dc.html). design-parity.test.ts her değerin kaynakta geçtiğini doğrular.
+export const RICON = {
+  shieldA: "M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z",
+  shieldB: "m9 12 2 2 4-4",
+  plus: "M12 5v14M5 12h14",
+  warn: "M12 3 2 20h20zM12 10v4.5M12 17.5v.01",
+  check: "m5 12 5 5 9-10",
+  searchTail: "m20 20-3.5-3.5",
+  all: "m3 12 4 4 8-9M10 16l1 1 10-11",
+  sync: "M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4",
+  back: "M15 5l-7 7 7 7",
+  homeA: "M3 11 12 3l9 8",
+  homeB: "M5 9.5V21h5v-6h4v6h5V9.5",
+  next: "m9 5 7 7-7 7",
+  leave: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10",
+  // Ekran kartları (SCREENS)
+  receive: "M12 3v12M7 10l5 5 5-5M4 19h16",
+  pick: "M3 4h2.5l2.2 11h10.6L21 7H7M9.5 19.5h.01M17.5 19.5h.01",
+  transfer: "M4 8h14l-3-3M20 16H6l3 3",
+  prod: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  count: "M6 4h12v17H6zM9 13l2 2 4-4",
+  labels: "M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z",
+  reports: "M4 17l6-6 4 4 6-7M15 8h5v5",
+  // Yetki kartları (POWERS)
+  scan: "M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10",
+  approve: "m5 12 5 5 9-10",
+  reverse: "M4 12a8 8 0 0 1 14-5.3M18 3v4h-4",
+  team: "M9 8a3.5 3.5 0 1 0 0 .01M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8",
+  import: "M4 3h11l5 5v13H4zM14 3v6h6M8 13l3 3 5-5",
+  settings: "M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3",
+} as const;

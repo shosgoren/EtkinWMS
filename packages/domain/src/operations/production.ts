@@ -51,7 +51,7 @@ export async function listProductionRecipes(params:ReadParams,input:{q?:string;a
   WHERE r.tenant_id=${m.tenantId}::uuid AND (r.code ILIKE ${pattern} OR r.name ILIKE ${pattern}) AND (${after}::uuid IS NULL OR r.id>${after}::uuid)
   ORDER BY r.id LIMIT 51`);
   const items=rows.slice(0,50),last=items.at(-1);
-  return {items,next:rows.length>50&&last?last.id:null,canCreate:hasPermission(m.roles,"settings.manage"),canPost:hasPermission(m.roles,"stock.post")};
+  return {items,next:rows.length>50&&last?last.id:null,canCreate:hasPermission(m.roles, "settings.manage", m.grants),canPost:hasPermission(m.roles, "stock.post", m.grants)};
  });
 }
 export interface CreateRecipeInput {readonly code:string;readonly version:number;readonly name:string;readonly outputItemId:string;readonly outputQuantity:string;readonly lines:readonly {readonly itemId:string;readonly quantity:string}[];readonly requestId?:string|null}

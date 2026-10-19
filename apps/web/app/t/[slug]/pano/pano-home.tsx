@@ -39,7 +39,12 @@ export interface PanoHomeProps {
   readonly stockPost: boolean;
   readonly canReport: boolean;
   readonly settingsManage: boolean;
+  /** T-421: üyenin özel grubunun görünür ekranları (`null` = rolün varsayılanı, hepsi). */
+  readonly screens?: readonly string[] | null;
 }
+
+/** İş bölümü → yetki grubundaki ekran anahtarı (Gruplar.dc.html SCREENS). */
+const SCREEN_OF: Readonly<Record<WorkSectionKey, string>> = { giris: "receive", cikis: "pick", transfer: "transfer", uretim: "prod", sayim: "count" };
 
 function Ico({ d, size, className = "ico", style }: { d: string; size: number; className?: string; style?: CSSProperties }) {
   return (
@@ -49,12 +54,13 @@ function Ico({ d, size, className = "ico", style }: { d: string; size: number; c
   );
 }
 
-export async function PanoHome({ slug, role, summary, userName, tenantName, dark, stockPost, canReport, settingsManage }: PanoHomeProps) {
+export async function PanoHome({ slug, role, summary, userName, tenantName, dark, stockPost, canReport: canReportRole, settingsManage, screens = null }: PanoHomeProps) {
+  const canReport = canReportRole && (screens === null || screens.includes("problem"));
   const t = await getTranslations("pano");
   const tg = await getTranslations("home.gv");
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstName = userName.trim().split(/\s+/)[0] ?? userName;
-  const sections = summary?.sections ?? [];
+  const sections = (summary?.sections ?? []).filter((s) => screens === null || screens.includes(SCREEN_OF[s.key]));
   const sec = (k: WorkSectionKey) => sections.find((s) => s.key === k);
 
   let leftO = 0;

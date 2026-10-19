@@ -1,0 +1,26 @@
+/* I-18 uyarlaması (DESIGN-PARITY §5): Gruplar kaynağındaki `.appzone` / `.app` kuralları tasarım aracının cihaz çerçevesidir ve port.mjs
+   tarafından atlanır. Uygulamada `.app` tam ekran kaptır (Aktar uyarlamasıyla aynı): arka plan kaynaktaki geçiş, içerik dikey sütun. */
+.dzr .appzone {
+  display: block;
+  padding: 0;
+}
+.dzr .app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-dz-x-nmodok) 100%);
+}
+.dzr { position: fixed; inset: 0; z-index: 20; }
+body:has(.dzr) [data-testid="bottom-nav"], body:has(.dzr) [data-testid="tenant-bar"], body:has(.dzr) .app-header { display: none; }
+/* Hazır (rol) grupları ve ekip yönetimi yetkisi salt okunur: kart kilitli görünür. */
+.dzr .pm[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.dzr .gnm input[readonly] { cursor: default; }
+/* Kişi araması: kaynakta `.search` Etkin'i açan düğme; uygulamada aynı kutuda yazı alanı (Etkin T-424). */
+.dzr .search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; color: var(--color-dz-x-bhcoec); outline: none; }
+.dzr.dz-dark .search input { color: var(--color-dz-x-pppppp); }
+/* 9'dan çok kişi: telefonda sabit 9 satır yerine liste kendi içinde kayar. */
+.dzr .people[data-many="true"] { overflow-y: auto; min-height: 0; }
+@media (max-width: 699.98px) { .dzr.dzr .people[data-many="true"] { grid-template-rows: none; grid-auto-rows: minmax(52px, auto); } }

@@ -40,7 +40,7 @@ export default async function LocationTreePage({ params }: { params: Promise<{ s
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canManage = hasPermission(current.roles, "settings.manage");
+    canManage = hasPermission(current.roles, "settings.manage", current.grants);
     warehouse = await getWarehouse(call, { warehouseId });
     tree = await getLocationTree(call, { warehouseId: warehouse.id, includeArchived: true, limit: TREE_PAGE });
   } catch (e) {

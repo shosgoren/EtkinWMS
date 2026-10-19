@@ -34,7 +34,7 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
     const summary = await getMembershipSummary({ db: getAppDb(), principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canEdit = hasPermission(current.roles, "settings.manage");
+    canEdit = hasPermission(current.roles, "settings.manage", current.grants);
     data = await listParties({ db: getAppDb(), principal, tenantSlug: slug }, { q, archived, limit: 100 });
   } catch (e) {
     if (e instanceof AppError) {

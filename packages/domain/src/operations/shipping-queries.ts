@@ -15,7 +15,7 @@ export async function listShippingOrders(params:Params,input:{q?:string;after?:s
   const rows=await tx.execute<Order>(sql`SELECT id,number,customer_ref AS "customerRef",status,version FROM public.sales_orders
    WHERE tenant_id=${m.tenantId}::uuid AND (number ILIKE ${pattern} OR customer_ref ILIKE ${pattern}) AND (${after}::uuid IS NULL OR id>${after}::uuid) ORDER BY id LIMIT 51`);
   const items=rows.slice(0,50),last=items.at(-1);
-  return {items,next:rows.length>50&&last?last.id:null,permissions:{create:hasPermission(m.roles,"document.create"),approve:hasPermission(m.roles,"document.approve"),post:hasPermission(m.roles,"stock.post")}};
+  return {items,next:rows.length>50&&last?last.id:null,permissions:{create:hasPermission(m.roles, "document.create", m.grants),approve:hasPermission(m.roles, "document.approve", m.grants),post:hasPermission(m.roles, "stock.post", m.grants)}};
  });
 }
 export async function getShippingOrder(params:Params,orderId:string,input:{taskAfter?:string;stageAfter?:string}={}){
@@ -37,7 +37,7 @@ export async function getShippingOrder(params:Params,orderId:string,input:{taskA
   const tasks=await tx.execute<{id:string;itemName:string;unitCode:string;warehouseName:string;sourceCode:string;targetCode:string|null;quantity:string;canPick:boolean}>(sql`
    SELECT t.id,i.name AS "itemName",u.code AS "unitCode",w.name AS "warehouseName",loc.code AS "sourceCode",t.quantity::text AS quantity,
     (SELECT code FROM public.locations st WHERE st.tenant_id=t.tenant_id AND st.warehouse_id=t.warehouse_id AND st.kind='STAGING' AND st.status='ACTIVE' ORDER BY code LIMIT 1) AS "targetCode",
-    (t.status='OPEN' OR t.assigned_membership_id=${m.membershipId}::uuid OR ${hasPermission(m.roles,"document.approve")}) AS "canPick"
+    (t.status='OPEN' OR t.assigned_membership_id=${m.membershipId}::uuid OR ${hasPermission(m.roles, "document.approve", m.grants)}) AS "canPick"
    FROM public.warehouse_tasks t JOIN public.items i ON i.tenant_id=t.tenant_id AND i.id=t.item_id
    JOIN public.units u ON u.tenant_id=i.tenant_id AND u.id=i.base_unit_id JOIN public.locations loc ON loc.tenant_id=t.tenant_id AND loc.id=t.location_id
    JOIN public.warehouses w ON w.tenant_id=t.tenant_id AND w.id=t.warehouse_id

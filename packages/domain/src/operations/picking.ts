@@ -534,7 +534,7 @@ export async function confirmPick(params: StockDocCallParams, input: ConfirmPick
         if (head[0] === undefined) throw new AppError("NOT_FOUND");
         const task = await readTask(tx, ctx.tenantId, taskId, true);
         if (task.status !== "OPEN" && task.status !== "ASSIGNED") throw documentState();
-        if (task.status === "ASSIGNED" && task.assignedMembershipId !== ctx.membership.membershipId && !hasPermission(ctx.membership.roles, "document.approve")) {
+        if (task.status === "ASSIGNED" && task.assignedMembershipId !== ctx.membership.membershipId && !hasPermission(ctx.membership.roles, "document.approve", ctx.membership.grants)) {
           throw new AppError("FORBIDDEN");
         }
         if (head[0].status !== "OPEN") throw documentState();

@@ -30,6 +30,8 @@ export const SOURCES = [
   // T-423: Pano (19 Ekim kaynakları): cihaz kuralları `.fr-*` önekiyle, karanlık tema `.thd` sınıfıyla (palet betikte değil, CSS'te).
   // T-427: Excel'den aktar (aynı 19 Ekim kaynak biçimi).
   { name: "aktar", file: "docs/design/source/Aktar.dc.html", sha256: "68f488a1e4d81af8da378238f1bebdf10004d4400b7547857800d79f5f1c508b", scope: "dza", palette: "none", device: "fr" },
+  // T-421: Yetki grupları (aynı 19 Ekim kaynak biçimi).
+  { name: "gruplar", file: "docs/design/source/Gruplar.dc.html", sha256: "e7f4c23629c9f7058c47416f9ddced3ac0e5aee89da74b99903344362cef7baa", scope: "dzr", palette: "none", device: "fr" },
   { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "2305dacb6a48c57a454ec6e84a2940309a83fe55718ececebabe3af73d9d5ce4", scope: "dzp", palette: "none", device: "fr" },
 ];
 

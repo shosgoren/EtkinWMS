@@ -303,9 +303,9 @@ export async function readDocumentHeader(tx: AccessTx, tenantId: string, documen
  * T-414: taslak (DRAFT) belgeyi yalnız oluşturan ya da onay yetkilisi (`document.approve`) düzenler/iptal eder; aksi `FORBIDDEN`
  * (`NOT_CREATOR`). Başka kullanıcının taslağını sayımcı/rol kapsamındaki biri değiştiremez.
  */
-export function assertDraftOwnerOrApprover(header: Pick<DocumentHeader, "createdBy">, membership: { readonly userId: string; readonly roles: readonly string[] }): void {
+export function assertDraftOwnerOrApprover(header: Pick<DocumentHeader, "createdBy">, membership: { readonly userId: string; readonly roles: readonly string[]; readonly grants?: readonly string[] }): void {
   if (header.createdBy.toLowerCase() === membership.userId.toLowerCase()) return;
-  if (hasPermission(membership.roles, "document.approve")) return;
+  if (hasPermission(membership.roles, "document.approve", membership.grants)) return;
   throw new AppError("FORBIDDEN", { detail: "NOT_CREATOR" });
 }
 
