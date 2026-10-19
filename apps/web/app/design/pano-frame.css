@@ -1,0 +1,17 @@
+/* I-18 uyarlaması (DESIGN-PARITY §5): Pano kaynağındaki `.appzone` / `.app` kuralları tasarım aracının cihaz çerçevesidir (köşe, kenarlık,
+   sabit boy) ve port.mjs tarafından atlanır. Uygulamada `.app` tam ekran kaptır: arka plan kaynaktaki geçişin aynısı, içerik dikey
+   sütun; telefon/tablette kaydırma yok (kaynak `.fr-mobile .app,.fr-tablet .app{display:flex;flex-direction:column}`), masaüstünde
+   içerik kendi içinde kayar (kaynak `.fr-desktop .inner{overflow-y:auto}` üretilmiş CSS'te). Renk sabiti yok: üretilmiş belirteçler. */
+.dzp .appzone {
+  display: block;
+  padding: 0;
+}
+.dzp .app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-dz-x-nmodok) 100%);
+}
