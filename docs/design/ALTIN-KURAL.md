@@ -21,3 +21,13 @@ her seferinde hatırlatması beklenmez.
 - **Yetki grupları:** sabit roller yerine özel isimli gruplar — grup oluştur → yetkileri ve görünecek görev ekranlarını ikonlarla seç → kullanıcıları
   ekle; 50 kullanıcıda bile birkaç dokunuş. Bugünkü roller hazır şablon olarak kalır.
 - **Üst çubuk:** sağ üstte ayarlara kolay erişen anlamlı, hareketli ikonlar ve Etkin AI düğmesi.
+
+## Ekran standardı (19 Ekim, tuvalde onaylandı; her yeni ekran buna uyar)
+- **Alt cam çubuk (tek el):** saydam buzlu oval; içerik altında kalmaz. Ana ekranda Sorun (sol, sarı "?") · OKUT (orta, yükseltilmiş yumuşak yeşil #5FAF8A) · Etkin (sağ, bas-konuş). Alt ekranlarda **Geri + Ana ekran (solda yan yana)** · ekranın ana işlemi (orta, etiket altında) · Etkin (sağ). Üstte geri ya da ana ekran düğmesi yok.
+- **Kaydedilmemiş iş uyarısı:** yarım iş varken Geri veya Ana ekran → yüzen kısayoldaki gibi engelleyen buzlu perde + cam kutu: "… ve çık" · "Kaydetmeden çık" · "Vazgeç, burada kalayım". Değişiklik yoksa sormadan geçer.
+- **Üst çubuk:** hareketli logo noktası (sitedeki `animateMotion` yolu) + çevrimiçi noktası, "Etkin WMS" + çalışma alanı adı; sağda Bildirim, Ekip (menü: Kullanıcılar, Onay bekleyenler, Yetki grupları, Çıkış yap; saha/sayımda Hesap: Kullanıcı değiştir, Çıkış yap), Ayarlar. Menüler kısayol halkasıyla aynı perde + cam kutudur.
+- **Yüzen kısayol:** küçük saydam lacivert, 2×2 kare ikon, sürüklenir; dokununca dikey menü + engelleyen perde; rol ve izne göre, kullanıcı "Düzenle" ile seçer (en çok 6, yalnız yetkili ekranlar).
+- **Telefon ve tablette dikey/yatay kaydırma yok;** sığmayan liste "+N daha · ara ya da söyle" satırıyla biter.
+- **Renk (trafik ışığı):** yalnız sorunlu kart dolu renk (kırmızı / turuncu); sakin kartlar beyaz, renk ikon ve sayıda. Düğme ikonları hareketsiz; hareket yalnız logo noktası, çevrimiçi nabız, zil ve Etkin halkası.
+- **Arka plan** #EEF1F4 → #DCE3EA; **karanlık tema** saf siyah değil (#121B24 → #0F171F), yazı #E6EBEF, vurgular kısık.
+- **Otomatik cihaz:** < 700 px telefon, < 1100 px ya da dokunmatik tablet, diğerleri masaüstü (Görevlerim `detect()` ile aynı).
