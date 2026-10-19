@@ -26,6 +26,11 @@ type CommandParams = Omit<TenantAccessParams, "permission"> & { readonly request
 export interface FieldUserDeps {
   /** Better Auth'ta iç e-postalı, parolasız kullanıcı açar (`@wms/auth` `createFieldAccount`). */
   readonly createFieldAccount: (input: { readonly name: string }) => Promise<{ readonly userId: string }>;
+  /**
+   * T-429: hesap açılışıyla AYNI transaction'da çalışır (ör. katılma talebini onaylandı olarak bağlamak). Hata atarsa hesap açılmaz.
+   * Yalnız sunucu kodu verir (istemci girdisi değil).
+   */
+  readonly afterCreate?: (tx: AccessTx, ctx: { readonly tenantId: string; readonly actorUserId: string; readonly membershipId: string }) => Promise<void>;
 }
 
 export interface FieldCodeResult {
@@ -180,6 +185,7 @@ export async function createFieldUser(params: CreateFieldUserParams, deps: Field
         );
       }
       const expiresAt = raw instanceof Date ? raw : new Date(raw);
+      if (deps.afterCreate !== undefined) await deps.afterCreate(tx, { tenantId: actor.tenantId, actorUserId: actor.userId, membershipId });
       await appendAudit(tx, {
         action: "field_user.created",
         actorUserId: actor.userId,

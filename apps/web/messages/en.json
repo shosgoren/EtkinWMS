@@ -986,6 +986,12 @@
       "updated": "Permission group updated",
       "archived": "Permission group archived",
       "restored": "Permission group restored"
+    },
+    "team_join": {
+      "link_created": "Team join QR created",
+      "link_revoked": "Team join QR closed",
+      "approved": "Join request approved, field account opened",
+      "rejected": "Join request rejected"
     }
   },
   "auditLog": {
@@ -3128,7 +3134,36 @@
     "deviceNameDefault": "Handheld",
     "rolePicker": "Picker",
     "roleCounter": "Counter",
-    "codeAria": "Confirmation code"
+    "codeAria": "Confirmation code",
+    "join1H": "Join the team",
+    "join1S": "Type your name and choose a username. When your manager approves, you will set your PIN.",
+    "join2H": "Waiting for approval",
+    "join3H": "Set your PIN",
+    "join3H2": "Enter the PIN again",
+    "join3S": "Choose a 6-digit PIN. You will use it every time you sign in.",
+    "join3S2": "Enter the same PIN once more.",
+    "joinDoneH": "You are ready",
+    "joinDoneTitle": "You joined the team",
+    "joinKick": "JOIN THE TEAM",
+    "joinEndedH": "Joining could not be completed",
+    "joinEnded": {
+      "NONE": "This link is invalid or has expired. Ask your manager for a new QR.",
+      "EXPIRED": "This link is invalid or has expired. Ask your manager for a new QR.",
+      "REJECTED": "Your manager did not approve the request. Ask your manager if this is a mistake.",
+      "CANCELLED": "The request was cancelled because the code was entered wrong three times. Scan the QR again.",
+      "CLAIMED": "This request was already used. Sign in with your PIN.",
+      "PENDING": "The request is waiting.",
+      "APPROVED": "The request was approved."
+    },
+    "joinNameLabel": "Full name",
+    "joinUserLabel": "Username",
+    "joinUserHint": "At least 3 characters; letters, digits, dot, dash. Example: ahmet.y",
+    "joinTaken": "This username is taken. Type another one.",
+    "joinInvalid": "Type your name and a valid username (at least 3 characters).",
+    "joinBad": "The link is invalid or has expired. Ask your manager for a new QR.",
+    "joinRequest": "ASK TO JOIN",
+    "joinWaitBody": "Show or read this code to your manager. When they approve, this screen moves on by itself.",
+    "joinActivateBad": "The PIN could not be saved. The approval may have expired; ask your manager."
   },
   "fieldDevices": {
     "title": "Devices",
@@ -3234,7 +3269,8 @@
     "m": {
       "users": "Users",
       "pending": "Devices awaiting approval",
-      "groups": "Permission groups"
+      "groups": "Permission groups",
+      "join": "Team joining (QR)"
     },
     "live": {
       "in": "RECEIVED LINES",
@@ -3725,5 +3761,52 @@
       "leave": "Leave without saving",
       "stay": "Cancel, stay here"
     }
+  },
+  "teamJoin": {
+    "title": "Team joining",
+    "back": "Back to team",
+    "bandH": "Team joining",
+    "bandS": "{tenant} · JOIN BY QR · WAITING FOR APPROVAL",
+    "theme": "Change theme",
+    "listTitle": "WAITING FOR APPROVAL",
+    "listCount": "{n} PEOPLE",
+    "empty": "Nobody is waiting. When staff scan the QR with their own phone, they appear here.",
+    "phone": "Phone",
+    "approve": "APPROVE",
+    "reject": "REJECT",
+    "approveAria": "Approve {name}",
+    "rejectAria": "Reject {name}",
+    "cancel": "CANCEL",
+    "codeLabel": "6-digit code on the person's phone",
+    "codeHint": "Read the code from their screen; 3 wrong tries cancel the request.",
+    "codeTries": "Wrong code. {n} tries left.",
+    "roleLabel": "Role",
+    "role": {
+      "PICKER": "Picker",
+      "COUNTER": "Counter"
+    },
+    "approved": "@{username} joined the team. They can now set their own PIN.",
+    "rejected": "Request rejected.",
+    "linkClosed": "The join QR was closed; no new requests can arrive.",
+    "qrKick": "JOIN QR · 7 DAYS",
+    "qrLabel": "Team join QR code",
+    "validUntil": "Valid until: {when}",
+    "qrBody": "You can print this QR and put it up. Staff scan it with their own phone and type their name; you see their code here and approve.",
+    "qrHidden": "A valid QR exists but is not shown again for safety. Press RENEW to print again (the old one stops working at once).",
+    "qrNone": "There is no join QR yet. Press CREATE.",
+    "demoBody": "Team joining is closed in the demo workspace.",
+    "create": "CREATE",
+    "renew": "RENEW",
+    "close": "CLOSE",
+    "print": "PRINT",
+    "banTitle": "Nobody gets in without approval. ",
+    "banBody": "Even if a photo of the QR reaches someone else, no account opens until you type the code from their phone and approve.",
+    "reauthLink": "Sign in again",
+    "errReauth": "Confirm your identity for this action.",
+    "errDemo": "Team joining is closed in the demo workspace.",
+    "errPlan": "Your plan's field staff limit is reached.",
+    "errCode": "Wrong code. Read the code on their screen again.",
+    "errGone": "This request is no longer valid (expired or cancelled).",
+    "errServer": "Something went wrong. Try again."
   }
 }

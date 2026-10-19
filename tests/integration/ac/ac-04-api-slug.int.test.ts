@@ -311,6 +311,8 @@ const LOADERS = [
   "members/field/page.tsx",
   // T-998: saha cihazları (users.manage; cihaz listesi sayfanın kendisinde çözülür).
   "members/devices/page.tsx",
+  // T-429: ekibe katılma talepleri (users.manage; çapraz tenant 404).
+  "members/join/page.tsx",
   "settings/page.tsx",
   "audit/page.tsx",
   "items/page.tsx",

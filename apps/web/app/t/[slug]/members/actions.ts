@@ -13,6 +13,7 @@ import {
 } from "../../../../lib/auth-service.ts";
 import { approveEnrollment, cancelEnrollment, getEnrollment, revokeDevice, startEnrollment } from "@wms/domain/identity/devices";
 import { createFieldUser, resetFieldCode, unlockFieldLogin } from "@wms/domain/identity/field-users";
+import { approveJoinRequest, createJoinLink, rejectJoinRequest, revokeJoinLink } from "@wms/domain/identity/team-join";
 import {
   changeRole,
   issuePasswordResetLink,
@@ -344,5 +345,73 @@ export async function cancelEnrollmentAction(raw: unknown) {
     if (principal === null) throw new Error("unreachable: principal required");
     await cancelEnrollment({ db: getAppDb(), principal, tenantSlug: input.slug, enrollmentId: input.enrollmentId, requestId: ctx.requestId });
     return { cancelled: true as const };
+  })(raw);
+}
+
+// ---------------------------------------------------------------------------------------------
+// T-429: ekibe katılma (QR bağlantısı, bekleyen talep onayı / reddi). Hepsi `users.manage` + yakın zamanda doğrulama (domain fail-closed).
+// ---------------------------------------------------------------------------------------------
+
+const joinDecideSchema = z
+  .object({ slug: slugSchema, requestId: z.string().uuid(), code: z.string().max(12), roleKey: z.enum(["PICKER", "COUNTER"]) })
+  .strict();
+const joinRejectSchema = z.object({ slug: slugSchema, requestId: z.string().uuid() }).strict();
+
+/** Yeni katılma QR'ı (eskisi o anda geçersiz). Adres yalnız bu yanıtta; belirteç `#` parçasında (sunucuya / günlüğe gitmez). */
+export async function createJoinLinkAction(raw: unknown) {
+  return guardedAction({ schema: leaveSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const requestHeaders = await headers();
+    await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: input.slug, permission: "users.manage" }, ctx);
+    const r = await createJoinLink({ db: getAppDb(), principal, tenantSlug: input.slug, requestId: ctx.requestId, recentAuth: () => ensureRecentAuth(requestHeaders) });
+    return { url: `${ctx.origin}/field/join#${r.tenantId}.${r.token}`, expiresAt: r.expiresAt.toISOString() };
+  })(raw);
+}
+
+export async function revokeJoinLinkAction(raw: unknown) {
+  return guardedAction({ schema: leaveSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const requestHeaders = await headers();
+    return revokeJoinLink({ db: getAppDb(), principal, tenantSlug: input.slug, requestId: ctx.requestId, recentAuth: () => ensureRecentAuth(requestHeaders) });
+  })(raw);
+}
+
+export async function approveJoinAction(raw: unknown) {
+  return guardedAction({ schema: joinDecideSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const requestHeaders = await headers();
+    await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: input.slug, permission: "users.manage" }, ctx);
+    return approveJoinRequest(
+      {
+        db: getAppDb(),
+        principal,
+        tenantSlug: input.slug,
+        joinRequestId: input.requestId,
+        code: input.code,
+        roleKey: input.roleKey,
+        requestId: ctx.requestId,
+        recentAuth: () => ensureRecentAuth(requestHeaders),
+      },
+      { createFieldAccount },
+    );
+  })(raw);
+}
+
+export async function rejectJoinAction(raw: unknown) {
+  return guardedAction({ schema: joinRejectSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const requestHeaders = await headers();
+    return rejectJoinRequest({
+      db: getAppDb(),
+      principal,
+      tenantSlug: input.slug,
+      joinRequestId: input.requestId,
+      requestId: ctx.requestId,
+      recentAuth: () => ensureRecentAuth(requestHeaders),
+    });
   })(raw);
 }
