@@ -24,6 +24,7 @@ Yerel mevcut çalışma alanında anahtar referansı `.deploy-access/etkinwms_vp
 - `/opt/etkinwms/current` → aktif release symlink; gerçek hedefini oku.
 - `/opt/etkinwms/releases/` → eski/yeni immutable release kayıtları.
 - `/opt/etkinwms/secrets/web.env`, `worker.env` → root600 runtime ayarlar.
+- **Gizli olmayan ayarlar kodda (T-426, 19 Ekim kullanıcı kararı "bunları senin yapman gerekiyor"):** bayraklar `Dockerfile` runtime `ENV` ile imaja girer ve normal yayınla canlıya gider; sunucuda elle değişiklik gerekmez. Sunucudaki env dosyası aynı adı yazarsa o geçerlidir (acil geri alma). Sırlar (anahtar, parola, DB URI) imaja girmez, yalnız sunucu env dosyasında kalır. Şu an: `WAREHOUSE_SCOPE_ENABLED=true`.
 - `/opt/etkinwms/automation/` → root-owned receiver/Compose/Caddyfile/approved-schema/state.
 - `/opt/etkinwms/database/` → DB Compose,TLS,operatör özel ayarlar,yedek/kesim dosyaları.
 - `/opt/etkinwms/enrollment/` → operatör kurulum aracı/journal; token/link dosyaları gizli.
