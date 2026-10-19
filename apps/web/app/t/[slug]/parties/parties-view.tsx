@@ -24,8 +24,7 @@ export interface PartyView {
   readonly version: number;
 }
 
-const FIELDS = ["code", "name", "taxNo", "taxOffice", "phone", "email", "city", "address"] as const;
-type Form = Record<(typeof FIELDS)[number], string> & { kind: PartyView["kind"] };
+type Form = Record<"code" | "name" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "address", string> & { kind: PartyView["kind"] };
 const empty: Form = { code: "", name: "", kind: "CUSTOMER", taxNo: "", taxOffice: "", phone: "", email: "", city: "", address: "" };
 const fromParty = (p: PartyView): Form => ({ code: p.code, name: p.name, kind: p.kind, taxNo: p.taxNo ?? "", taxOffice: p.taxOffice ?? "", phone: p.phone ?? "", email: p.email ?? "", city: p.city ?? "", address: p.address ?? "" });
 const KIND_COLOR = { CUSTOMER: "2F7D5B", SUPPLIER: "6C4BD8", BOTH: "0E7C7B" } as const;

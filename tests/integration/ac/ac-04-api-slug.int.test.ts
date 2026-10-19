@@ -316,6 +316,8 @@ const LOADERS = [
   "items/page.tsx",
   "warehouses/page.tsx",
   "import/page.tsx",
+  // T-428: cari kartlar (üyelik özeti + `listParties`; çapraz tenant 404).
+  "parties/page.tsx",
   "warehouses/[warehouseId]/page.tsx",
   // T-304: görev ekranları; üyelik/izin `listTasks`/`listMyTasks`/üyelik özeti ile sayfanın kendisinde çözülür.
   "tasks/page.tsx",

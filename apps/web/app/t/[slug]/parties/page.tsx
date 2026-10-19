@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // T-428: cari kartlar listesi. Okuma `stock.view`, düzenleme `settings.manage` (eylemde de denetlenir). Arama sunucuda (`?q=`).
 export default async function PartiesPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ q?: string; arsiv?: string }> }) {
   const { slug } = await params;
-  const sp = await searchParams;
+  const sp: { q?: string; arsiv?: string } = (await searchParams) ?? {};
   const returnTo = `/t/${encodeURIComponent(slug)}/parties`;
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());

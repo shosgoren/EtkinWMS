@@ -130,7 +130,7 @@ export function cleanParty(input: PartyInput): { readonly ok: true; readonly val
   };
 }
 
-interface DbParty {
+type DbParty = {
   id: string;
   code: string;
   code_key: string;
@@ -144,7 +144,7 @@ interface DbParty {
   address: string | null;
   archived_at: string | null;
   version: number;
-}
+};
 const toRow = (r: DbParty): PartyRow => ({
   id: r.id,
   code: r.code,
