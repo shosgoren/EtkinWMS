@@ -144,6 +144,9 @@ export function ImportView({ slug, templates, columns, limits }: ImportViewProps
   // Başlık açılışta görünür olsun: uygulama kabuğunun içerik alanı kendi içinde kayar ve sayfa geçişinde kaydırma konumunu korur (ayarlar sayfasındaki
   // bağlantı sayfanın altındadır); bu yüzden açılışta başlık görünür alana alınır.
   useEffect(() => {
+    // T-416: önceki sayfa (ayarlar) uzayınca altındaki bağlantıdan gelişte belge kaydırılmış kalıyordu; yeni sayfa baştan başlar.
+    const root = document.scrollingElement;
+    if (root !== null && root.scrollTop !== 0) root.scrollTop = 0;
     reveal(headingRef.current, "nearest"); // görünürse kaydırmaz (masaüstünde üst çubuğu kesmez); üstte kalmışsa üste getirir
   }, []);
   // Önizleme hazır olunca özet görünür alana gelir (telefonda adım 1-2 uzundur).

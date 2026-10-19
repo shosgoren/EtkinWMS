@@ -23,6 +23,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { LockedState } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
+import { assertSeparated } from "../identity/separation.ts";
 import { toBase } from "../catalog/quantity.ts";
 import { runTenantQuery, type AccessTx } from "../identity/access.ts";
 import { assertWarehouseVisible, pgUuidArray } from "../warehouse/scope.ts";
@@ -297,6 +298,12 @@ export async function reverseDocument(params: StockDocCallParams, input: Reverse
       const header = await readDocumentHeader(tx, ctx.tenantId, documentId); // belge kilitli
       assertNotProcessing(header); // işleme kilidi (M-6): ters kayıt reddedilir
       if (header.status !== "POSTED" || !KINDS.has(header.kind)) throw documentState(); // DRAFT/APPROVED/CANCELLED, ters kaydın ters kaydı, desteklenmeyen tür
+      // T-416 (A-03): görev ayrılığı açıksa belgeyi oluşturan ya da işleyen (POSTED geçişinin sahibi) ters kayıt yapamaz.
+      const posters = await tx.execute<{ actor_user_id: string | null }>(
+        sql`SELECT actor_user_id FROM public.document_status_history
+             WHERE tenant_id = ${ctx.tenantId}::uuid AND document_id = ${documentId}::uuid AND to_status = 'POSTED'`,
+      );
+      await assertSeparated(tx, ctx.tenantId, ctx.userId, [header.createdBy, ...posters.map((p) => p.actor_user_id)]);
       // B-1 (A-224-5): saha akışından gelen belge (`source_kind` dolu) ters çevrilmez; bağlı sipariş/rezervasyon/kabul/sayım kayıtları kopmasın.
       if ((await readSourceKind(tx, ctx.tenantId, documentId)) !== null || await hasCompoundLink(tx, ctx.tenantId, documentId)) throw blocked("SOURCE_LINKED");
       const kind = header.kind as PostingKind;

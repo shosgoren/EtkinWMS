@@ -14,7 +14,7 @@ import { loadMailConfig, type MailConfig, type MailMessage } from "../../../pack
 import { runTenantCommand } from "../../../packages/domain/src/identity/access.ts";
 import {
   acceptInvitation,
-  inviteMember,
+  inviteMember as inviteMemberRaw,
   revokeInvitation,
   type AcceptInvitationDeps,
   type InvitationDeps,
@@ -24,6 +24,10 @@ import { createActionGuard, type GuardDeps } from "../../../apps/web/lib/action-
 import { safeNext } from "../../../apps/web/lib/safe-redirect.ts";
 import { closeSenderQueue, getSenderQueue } from "../../../apps/web/lib/queue.ts";
 import { readAuthDatabaseUrl, readIntEnv, redactErrorChain } from "../harness/env.ts";
+
+// T-414: hassas yönetici komutları yeniden giriş ister (fail-closed); testler varsayılan olarak geçerli pencere verir, ret testleri ham işlevi çağırır.
+const reauthOk = (): Promise<void> => Promise.resolve();
+const inviteMember: typeof inviteMemberRaw = (params, ...rest) => inviteMemberRaw({ recentAuth: reauthOk, ...params } as Parameters<typeof inviteMemberRaw>[0], ...(rest as [never]));
 
 const env = readIntEnv(process.env);
 const authUrl = readAuthDatabaseUrl(process.env);
@@ -850,3 +854,17 @@ describe("getAppDb (web'in tek DB erişim noktası)", () => {
     }
   });
 });
+
+describe("T-414: davet yeniden giriş ister", () => {
+  it("yeniden giriş penceresi verilmeden davet reddedilir (fail-closed); davet satırı yazılmaz", async () => {
+    const fx = await mkTenant();
+    const email = rndEmail();
+    await expect(inviteMemberRaw({ db: app, principal: principalOf(fx.admin), tenantSlug: fx.slug, email, roleKey: "PICKER" }, deps())).rejects.toMatchObject({
+      code: "UNAUTHENTICATED",
+      detail: "RECENT_AUTH_REQUIRED",
+    });
+    const r = await adm.query("SELECT 1 FROM public.invitations WHERE tenant_id = $1 AND email_normalized = lower($2)", [fx.tenant, email]);
+    expect(r.rowCount).toBe(0);
+  });
+});
+

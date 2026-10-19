@@ -75,9 +75,9 @@ describe("atomic recipe production",()=>{
   const outsideLocation=(await createLocation(params(),{warehouseId:outside,code:"FIN",name:"Other output",kind:"STORAGE"})).locationId;
   const prior=process.env.WAREHOUSE_SCOPE_ENABLED;
   try{process.env.WAREHOUSE_SCOPE_ENABLED="true";
-   await setMembershipWarehouseScopes(params(),{membershipId:A.memberMembershipId,warehouseIds:[A.warehouseId]});
+   await setMembershipWarehouseScopes({ ...params(), recentAuth: async () => undefined },{membershipId:A.memberMembershipId,warehouseIds:[A.warehouseId]});
    await expect(produceFromRecipe(member(),input)).rejects.toMatchObject({code:"FORBIDDEN",detail:"WAREHOUSE_OUT_OF_SCOPE"});
-   await setMembershipWarehouseScopes(params(),{membershipId:A.memberMembershipId,warehouseIds:[A.warehouseId,sourceWarehouse]});
+   await setMembershipWarehouseScopes({ ...params(), recentAuth: async () => undefined },{membershipId:A.memberMembershipId,warehouseIds:[A.warehouseId,sourceWarehouse]});
    await expect(produceFromRecipe(member(),{...input,targetLocationId:outsideLocation})).rejects.toMatchObject({code:"FORBIDDEN",detail:"WAREHOUSE_OUT_OF_SCOPE"});
   }finally{if(prior===undefined)delete process.env.WAREHOUSE_SCOPE_ENABLED;else process.env.WAREHOUSE_SCOPE_ENABLED=prior;}
   expect(await listStockOverview(params())).toEqual(before);expect(await counts()).toBe(n);

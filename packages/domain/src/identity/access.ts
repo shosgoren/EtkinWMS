@@ -105,9 +105,12 @@ async function resolveTenantId(db: AccessDbClient, userId: string, slug: string)
   return id;
 }
 
-/** A-38: TENANT_ADMIN için MFA zorunlu (oturum düzeyi); `is_demo` tenant'ta kapalı. Okuma ve yazmada aynı. */
+/** MFA zorunlu roller: A-38 TENANT_ADMIN; T-414 (18 Ekim, kullanıcı onayı) WAREHOUSE_MANAGER — onay, ters kayıt ve işlem kaydı yetkisi taşır. */
+export const MFA_REQUIRED_ROLES: readonly string[] = Object.freeze(["TENANT_ADMIN", "WAREHOUSE_MANAGER"]);
+
+/** Oturum düzeyi MFA; `is_demo` tenant'ta kapalı. Okuma ve yazmada aynı. */
 async function enforceMfa(tx: AccessTx, membership: Membership, principal: AccessPrincipal, tenantId: string): Promise<void> {
-  if (membership.roles.includes("TENANT_ADMIN") && !principal.mfaVerified) {
+  if (membership.roles.some((r) => MFA_REQUIRED_ROLES.includes(r)) && !principal.mfaVerified) {
     const rows = await tx.execute<{ is_demo: boolean }>(sql`SELECT is_demo FROM public.tenants WHERE id = ${tenantId}::uuid`);
     if (rows[0]?.is_demo !== true) throw new AppError("FORBIDDEN", { detail: "MFA_REQUIRED" });
   }

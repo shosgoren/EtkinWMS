@@ -39,7 +39,7 @@ import {
   type StockCommandResult,
   type StockDocCallParams,
 } from "../stock/index.ts";
-import { readAllocationBalances, readFreeAtDimensions, readOrderReservedSums, readReservationPlanRows, uniqueKeys, type ReservationPlanRow } from "../stock/reservation-reads.ts";
+import { assertDraftOwnerOrApprover, readAllocationBalances, readFreeAtDimensions, readOrderReservedSums, readReservationPlanRows, uniqueKeys, type ReservationPlanRow } from "../stock/reservation-reads.ts";
 import { allocateInTx, releaseSelected, type AllocationRequest } from "../stock/reservations.ts";
 import { dimensionIdentity, fromMicro, toMicro } from "../stock/plan.ts";
 import { baseQuantityOf, decimalToMicro, documentState, emptyPlan, microToDecimal, tenantToday, tooLarge, uuidOf, DECIMAL_RE } from "./field-posting.ts";
@@ -112,27 +112,29 @@ interface OrderHeader {
   readonly status: string;
   readonly version: number;
   readonly number: string;
+  /** T-414: siparişi açan kullanıcı. */
+  readonly createdBy: string;
 }
 /** Kilitsiz okuma (yalnızca plan/varlık denetimi). Yok / başka tenant → `NOT_FOUND`. */
 async function readOrder(tx: AccessTx, tenantId: string, orderId: string): Promise<OrderHeader> {
-  const rows = await tx.execute<{ id: string; status: string; version: number | string; number: string }>(
-    sql`SELECT id, status, version, number FROM public.sales_orders WHERE tenant_id = ${tenantId}::uuid AND id = ${orderId}::uuid`,
+  const rows = await tx.execute<{ id: string; status: string; version: number | string; number: string; created_by: string }>(
+    sql`SELECT id, status, version, number, created_by FROM public.sales_orders WHERE tenant_id = ${tenantId}::uuid AND id = ${orderId}::uuid`,
   );
   const r = rows[0];
   if (r === undefined) throw new AppError("NOT_FOUND");
-  return { id: r.id, status: r.status, version: Number(r.version), number: r.number };
+  return { id: r.id, status: r.status, version: Number(r.version), number: r.number, createdBy: r.created_by };
 }
 /**
  * Sipariş başlığını `FOR UPDATE` ile kilitler (stok kilitlerinden SONRA, satır yazımından ÖNCE; bkz. dosya başı). `sales_orders` stok kilit tablosu
  * değildir; stok kilitleri `acquireStockLocks`'tadır. (T-305'in `lockFieldHeader`ı yalnızca kabul belgesi içindir; o dosyaya dokunulmaz.)
  */
 async function lockOrder(tx: AccessTx, tenantId: string, orderId: string): Promise<OrderHeader> {
-  const rows = await tx.execute<{ id: string; status: string; version: number | string; number: string }>(
-    sql`SELECT id, status, version, number FROM public.sales_orders WHERE tenant_id = ${tenantId}::uuid AND id = ${orderId}::uuid FOR UPDATE`,
+  const rows = await tx.execute<{ id: string; status: string; version: number | string; number: string; created_by: string }>(
+    sql`SELECT id, status, version, number, created_by FROM public.sales_orders WHERE tenant_id = ${tenantId}::uuid AND id = ${orderId}::uuid FOR UPDATE`,
   );
   const r = rows[0];
   if (r === undefined) throw new AppError("NOT_FOUND");
-  return { id: r.id, status: r.status, version: Number(r.version), number: r.number };
+  return { id: r.id, status: r.status, version: Number(r.version), number: r.number, createdBy: r.created_by };
 }
 
 interface OrderLine {
@@ -338,6 +340,8 @@ export async function updateDraftOrder(params: StockDocCallParams, input: Update
       apply: async (tx, _locked, ctx) => {
         const h = await lockOrder(tx, ctx.tenantId, orderId);
         guardVersion(h, expectedVersion);
+        // T-414 (inceleme m1): taslak siparişi yalnız oluşturan ya da onay yetkilisi değiştirir (satırları 0'a çekmek fiilen iptaldir).
+        assertDraftOwnerOrApprover(h, ctx.membership);
         const lines = await readLines(tx, ctx.tenantId, orderId);
         if (lines.some((l) => l.active > 0n || l.shipped > 0n || l.cancelled > 0n)) throw documentState();
         if (lines.length + addLines.length > SYNC_POST_MAX_LINES) throw tooLarge();

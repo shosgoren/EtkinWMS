@@ -12,6 +12,7 @@ import {
   removeMemberAction,
   resetFieldCodeAction,
   revokeInvitationAction,
+  setWarehouseScopeAction,
   transferOwnershipAction,
   unlockFieldLoginAction,
 } from "./actions.ts";
@@ -30,6 +31,21 @@ export interface MemberView {
   readonly resetLinkAvailable: boolean;
   /** T-997: e-postasız saha personeli (iç e-posta gösterilmez). */
   readonly field?: { readonly username: string; readonly active: boolean; readonly pendingUntil: string | null; readonly locked: boolean };
+  /** T-417: yalnız yöneticiye gelir. `null` = tüm depolar; dizi = yalnız bu depolar (yeniden etkinleşen üyeliğin eski kısıtı dahil). */
+  readonly warehouseIds?: readonly string[] | null;
+}
+
+export interface WarehouseOption {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly archived: boolean;
+}
+
+interface ScopeDraft {
+  readonly memberId: string;
+  readonly all: boolean;
+  readonly ids: readonly string[];
 }
 
 export interface PendingView {
@@ -40,13 +56,16 @@ export interface PendingView {
   readonly invitedBy: string;
 }
 
-type Kind = "role" | "remove" | "transfer" | "reset" | "fieldCode" | "unlock";
+const MULTI = "__multi";
+
+type Kind = "role" | "remove" | "transfer" | "reset" | "fieldCode" | "unlock" | "scope";
 
 const FIELD_ROLES: readonly string[] = ["PICKER", "COUNTER"];
 interface Confirm {
   readonly kind: Kind;
   readonly member: MemberView;
   readonly roleKey?: string;
+  readonly scope?: ScopeDraft;
 }
 
 const SELECT =
@@ -61,6 +80,8 @@ export function MembersView({
   members,
   pending,
   roleKeys,
+  warehouses = [],
+  scopeEnabled = false,
 }: {
   slug: string;
   selfUserId: string;
@@ -68,6 +89,10 @@ export function MembersView({
   /** `null`: yönetim yetkisi yok. */
   pending: readonly PendingView[] | null;
   roleKeys: readonly string[];
+  /** T-417: yöneticiye depo seçenekleri (arşivliler dahil). */
+  warehouses?: readonly WarehouseOption[];
+  /** `WAREHOUSE_SCOPE_ENABLED`: kapalıysa kısıt kaydedilir ama uygulanmaz; ekran bunu söyler. */
+  scopeEnabled?: boolean;
 }) {
   const t = useTranslations("members");
   const tr = useTranslations("roles");
@@ -86,7 +111,13 @@ export function MembersView({
   const [notice, setNotice] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<{ name: string; link: string } | null>(null);
   const [fieldCode, setFieldCode] = useState<{ name: string; code: string } | null>(null);
+  const selfIsOwner = members.some((x) => x.userId === selfUserId && x.isOwner);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [scopeDraft, setScopeDraft] = useState<ScopeDraft | null>(null);
+  const whName = (id: string) => {
+    const w = warehouses.find((x) => x.id === id);
+    return w === undefined ? t("scope.unknown") : w.archived ? t("scope.archived", { name: w.name }) : w.name;
+  };
   const returnTo = `/t/${slug}/members`;
 
   const roleName = (keys: readonly string[]) => keys.map((k) => tr(k)).join(", ");
@@ -125,6 +156,20 @@ export function MembersView({
       setConfirm(null);
       if (!res.ok) return fail(res);
       setNotice(t("done.unlock"));
+      router.refresh();
+      return;
+    }
+    if (kind === "scope") {
+      const s = confirm.scope;
+      if (s === undefined) return;
+      const res = await setWarehouseScopeAction(
+        s.all ? { slug, memberId: member.membershipId, all: true } : { slug, memberId: member.membershipId, warehouseIds: [...s.ids] },
+      );
+      setBusy(false);
+      setConfirm(null);
+      if (!res.ok) return fail(res);
+      setScopeDraft(null);
+      setNotice(t(res.data.changed ? "done.scope" : "done.scopeUnchanged"));
       router.refresh();
       return;
     }
@@ -167,6 +212,7 @@ export function MembersView({
         description: t(`confirm.${confirm.kind}.description`, {
           name: confirm.member.displayName,
           role: confirm.roleKey === undefined ? "" : tr(confirm.roleKey),
+          scope: confirm.scope === undefined ? "" : confirm.scope.all ? t("scope.allShort") : confirm.scope.ids.map(whName).join(", "),
         }),
         button: t(`confirm.${confirm.kind}.button`),
       }
@@ -224,11 +270,13 @@ export function MembersView({
           <ul className="m-0 flex min-w-0 list-none flex-col gap-3 p-0">
             {members.map((m) => {
               const self = m.userId === selfUserId;
+              // T-413: firma sahibinin rolü/üyeliği sunucuda kilitli (OWNER_ROLE/LAST_OWNER) — ekranda da kilitli; sahiplik devri yalnız sahibe.
               // Demo satırı: rol/çıkarma/devir için ayrı nötr metin; sıfırlama kilidi 2. tur m6 metninde kalır.
-              const lockText = !canManage ? t("lockedReason") : m.isDemo ? t("demoLocked") : null;
+              const lockText = !canManage ? t("lockedReason") : m.isDemo ? t("demoLocked") : m.isOwner ? t("ownerLocked") : null;
               const resetLocked = !canManage || m.isDemo || !m.resetLinkAvailable;
               const resetText = !canManage ? t("lockedReason") : m.isDemo || !m.resetLinkAvailable ? t("unavailableReason") : null;
-              const current = m.roles[0] ?? "";
+              // Birden çok rolü olan üye: seçici "birden çok rol" gösterir; tek rol seçilip uygulanırsa roller o role iner (sunucu kuralı).
+              const current = m.roles.length > 1 ? MULTI : (m.roles[0] ?? "");
               const selected = draft[m.userId] ?? current;
               const noteId = `lock-${m.userId}`;
               return (
@@ -254,6 +302,15 @@ export function MembersView({
                   <p className="text-sm text-ink-muted">
                     {roleName(m.roles)} · {t("statusActive")}
                   </p>
+                  {m.warehouseIds === undefined ? null : (
+                    <p className="break-words text-sm text-ink" data-testid="member-scope">
+                      {m.roles.includes("TENANT_ADMIN")
+                        ? t("scope.admin")
+                        : m.warehouseIds === null
+                          ? t("scope.all")
+                          : t("scope.only", { names: m.warehouseIds.map(whName).join(", ") })}
+                    </p>
+                  )}
                   {self ? null : (
                     <div role="group" aria-label={t("actionsFor", { name: m.displayName })} className="flex min-w-0 flex-col gap-2">
                       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:*:shrink-0 sm:*:whitespace-nowrap">
@@ -264,6 +321,11 @@ export function MembersView({
                           disabled={lockText !== null}
                           onChange={(e) => setDraft({ ...draft, [m.userId]: e.target.value })}
                         >
+                          {current === MULTI ? (
+                            <option value={MULTI} disabled>
+                              {roleName(m.roles)}
+                            </option>
+                          ) : null}
                           {roleKeys.filter((r) => m.field === undefined || FIELD_ROLES.includes(r)).map((r) => (
                             <option key={r} value={r}>
                               {tr(r)}
@@ -272,7 +334,7 @@ export function MembersView({
                         </select>
                         <Button
                           variant="secondary"
-                          disabled={lockText !== null || selected === current}
+                          disabled={lockText !== null || selected === current || selected === MULTI}
                           aria-describedby={lockText === null ? undefined : noteId}
                           onClick={() => setConfirm({ kind: "role", member: m, roleKey: selected })}
                         >
@@ -283,7 +345,7 @@ export function MembersView({
                         <Button variant="danger" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "remove", member: m })}>
                           {t("remove")}
                         </Button>
-                        {m.isOwner || m.field ? null : (
+                        {!selfIsOwner || m.isOwner || m.field ? null : (
                           <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "transfer", member: m })}>
                             {t("transfer")}
                           </Button>
@@ -305,6 +367,63 @@ export function MembersView({
                           </Button>
                         )}
                       </div>
+                      {m.warehouseIds === undefined || m.roles.includes("TENANT_ADMIN") || m.isDemo ? null : scopeDraft?.memberId === m.membershipId ? (
+                        <fieldset className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border p-3" data-testid="scope-editor">
+                          <legend className="px-1 text-base font-bold text-ink">{t("scope.legend", { name: m.displayName })}</legend>
+                          {scopeEnabled ? null : <p className="break-words text-sm text-ink-muted">{t("scope.disabled")}</p>}
+                          <label className="flex min-h-12 items-center gap-3 text-base text-ink">
+                            <input
+                              type="checkbox"
+                              className="size-6"
+                              checked={scopeDraft.all}
+                              onChange={(e) => setScopeDraft({ ...scopeDraft, all: e.target.checked })}
+                            />
+                            {t("scope.allOption")}
+                          </label>
+                          {warehouses.map((w) => (
+                            <label key={w.id} className="flex min-h-12 min-w-0 items-center gap-3 text-base text-ink">
+                              <input
+                                type="checkbox"
+                                className="size-6"
+                                disabled={scopeDraft.all || (w.archived && !scopeDraft.ids.includes(w.id))}
+                                checked={!scopeDraft.all && scopeDraft.ids.includes(w.id)}
+                                onChange={(e) =>
+                                  setScopeDraft({
+                                    ...scopeDraft,
+                                    ids: e.target.checked ? [...scopeDraft.ids, w.id] : scopeDraft.ids.filter((x) => x !== w.id),
+                                  })
+                                }
+                              />
+                              <span className="min-w-0 break-words">{`${w.code} · ${whName(w.id)}`}</span>
+                            </label>
+                          ))}
+                          {!scopeDraft.all && scopeDraft.ids.length === 0 ? <p className="text-sm text-ink-muted">{t("scope.pickOne")}</p> : null}
+                          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:*:shrink-0">
+                            <Button
+                              disabled={!scopeDraft.all && scopeDraft.ids.length === 0}
+                              onClick={() => setConfirm({ kind: "scope", member: m, scope: scopeDraft })}
+                            >
+                              {t("scope.save")}
+                            </Button>
+                            <Button variant="secondary" onClick={() => setScopeDraft(null)}>
+                              {t("confirmCancel")}
+                            </Button>
+                          </div>
+                        </fieldset>
+                      ) : (
+                        <div>
+                          <Button
+                            variant="secondary"
+                            disabled={lockText !== null}
+                            aria-describedby={lockText === null ? undefined : noteId}
+                            onClick={() =>
+                              setScopeDraft({ memberId: m.membershipId, all: m.warehouseIds === null, ids: m.warehouseIds ?? [] })
+                            }
+                          >
+                            {t("scope.edit")}
+                          </Button>
+                        </div>
+                      )}
                       {lockText === null ? null : (
                         <p id={noteId} className="break-words text-sm text-ink-muted">
                           {lockText}

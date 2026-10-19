@@ -729,12 +729,17 @@ describe("depo kapsamı (flag WAREHOUSE_SCOPE_ENABLED)", () => {
     await reserveAndPick(o, X, R, "4");
     await shipLines(o, [[0, "2"]]);
     const scoped = await mkUser(adm, reg, "A308 scoped");
-    const m = await mkMembership(adm, A.tenantId, scoped, { roles: ["PICKER"] });
+    // T-414: iade `document.approve` ister → kapsam denetimi için depo sorumlusu (sevk + iade ikisi de yetkili).
+    const m = await mkMembership(adm, A.tenantId, scoped, { roles: ["WAREHOUSE_MANAGER"] });
     await q("INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id) VALUES ($1,$2,$3)", [A.tenantId, m, WB]);
     process.env.WAREHOUSE_SCOPE_ENABLED = "true";
     const docs = await docCount();
     expect(codeOf(await failure(shipOrder(callP(A, scoped, uuid(), {}), { orderId: o.id, lines: [{ orderLineId: o.lineIds[0] as string, quantity: "2" }] })))).toBe("FORBIDDEN/WAREHOUSE_OUT_OF_SCOPE");
     expect(codeOf(await failure(createCustomerReturn(callP(A, scoped, uuid(), {}), { orderLineId: o.lineIds[0] as string, quantity: "1", locationId: KABUL, reason: "x" })))).toBe("FORBIDDEN/WAREHOUSE_OUT_OF_SCOPE");
+    // T-414: toplayıcı (yalnız `stock.post`) iade oluşturamaz.
+    const picker = await mkUser(adm, reg, "A308 picker");
+    await mkMembership(adm, A.tenantId, picker, { roles: ["PICKER"] });
+    expect(codeOf(await failure(createCustomerReturn(callP(A, picker, uuid(), {}), { orderLineId: o.lineIds[0] as string, quantity: "1", locationId: KABUL, reason: "x" })))).toBe("FORBIDDEN");
     expect(await docCount()).toBe(docs);
     expect(await lineTriple(o.lineIds[0] as string)).toEqual({ istenen: n(4), sevk: n(2), acik: n(2), iptal: n(0), iade: n(0) });
   }, 120_000);

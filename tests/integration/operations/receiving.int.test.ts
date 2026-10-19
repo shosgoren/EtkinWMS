@@ -24,7 +24,7 @@ import {
   postApprovedDocumentInTx,
   type StockDocCallParams,
 } from "../../../packages/domain/src/stock/index.ts";
-import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
+import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
@@ -413,6 +413,12 @@ describe("kurallar", () => {
     const X = await mkItem();
     const KABUL = await mkLoc("RECEIVING");
     const g1 = await mkReceipt([{ itemId: X, expected: "5" }]);
+    // T-414: başkasının açtığı kabulü sayımcı iptal edemez (NOT_CREATOR); hiçbir şey yazılmaz.
+    const counter = await mkUser(adm, reg, `T414 sayimci ${uuid().slice(0, 6)}`);
+    await mkMembership(adm, A.tenantId, counter, { roles: ["COUNTER"] });
+    const counterP = { ...ownerP(), principal: { userId: counter, mfaVerified: true } };
+    expect(codeOf(await failure(cancelInboundReceipt(counterP, { receiptId: g1.id, expectedVersion: 2 })))).toBe("FORBIDDEN/NOT_CREATOR");
+    expect(await receiptRow(g1.id)).toMatchObject({ status: expect.not.stringMatching(/CANCELLED/) });
     expect((await failure(cancelInboundReceipt(ownerP(), { receiptId: g1.id, expectedVersion: 1 }))).code).toBe("VERSION_CONFLICT");
     await cancelInboundReceipt(ownerP(), { receiptId: g1.id, expectedVersion: 2, reason: "yanlis kayit" });
     expect(await receiptRow(g1.id)).toMatchObject({ status: "CANCELLED" });

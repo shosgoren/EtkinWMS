@@ -179,6 +179,7 @@ export interface InviteMemberResult {
 
 export async function inviteMember(params: InviteMemberParams, deps: InvitationDeps): Promise<InviteMemberResult> {
   const { email: rawEmail, roleKey: rawRole, requestId, ...access } = params;
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // T-414: hassas yönetici işlemi, fail-closed
   const email = normalizeInvitationEmail(rawEmail);
   const role = parseRole(rawRole);
   try {

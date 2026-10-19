@@ -23,6 +23,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
+import { assertSeparated } from "../identity/separation.ts";
 import { toBase } from "../catalog/quantity.ts";
 import { runTenantCommand, runTenantQuery, type AccessTx, type Membership, type TenantAccessParams } from "../identity/access.ts";
 import { hasPermission } from "../identity/permissions.ts";
@@ -463,6 +464,11 @@ export async function approveCount(
     if (s.status !== "COUNTING" && s.status !== "SUBMITTED") throw documentState();
     const lines = await readLines(tx, m.tenantId, sessionId);
     assertAllCounted(lines);
+    // T-416 (A-03): görev ayrılığı açıksa satır sayan fark onaylayamaz (sayanlar üyelik kimliğiyle kayıtlı).
+    const counters = await tx.execute<{ counted_by: string }>(
+      sql`SELECT DISTINCT counted_by FROM public.count_session_lines WHERE tenant_id = ${m.tenantId}::uuid AND session_id = ${sessionId}::uuid AND counted_by IS NOT NULL`,
+    );
+    await assertSeparated(tx, m.tenantId, m.membershipId, counters.map((c) => c.counted_by));
     if (s.status === "COUNTING") {
       const a = await tx.execute<{ id: string }>(
         sql`UPDATE public.count_sessions SET status = 'SUBMITTED' WHERE tenant_id = ${m.tenantId}::uuid AND id = ${sessionId}::uuid AND status = 'COUNTING' RETURNING id`,

@@ -310,13 +310,20 @@
         "title": "Kilidi aç",
         "description": "{name} yeniden PIN ile girebilir. PIN ve cihaz kaydı değişmez.",
         "button": "Kilidi aç"
+      },
+      "scope": {
+        "title": "Depoları değiştir",
+        "description": "{name} bundan sonra yalnız şu depolarda çalışabilecek: {scope}. Açık oturumu yeni kısıtla devam eder.",
+        "button": "Depoları kaydet"
       }
     },
     "done": {
       "role": "Rol güncellendi.",
       "remove": "Üye çıkarıldı.",
       "transfer": "Sahiplik devredildi.",
-      "unlock": "Kilit açıldı."
+      "unlock": "Kilit açıldı.",
+      "scope": "Depo kısıtı güncellendi.",
+      "scopeUnchanged": "Depo kısıtı zaten bu şekildeydi; değişiklik yapılmadı."
     },
     "pending": {
       "title": "Bekleyen davetler",
@@ -394,7 +401,22 @@
     "fieldNoCode": "Kod yok · yeni kod verin",
     "fieldNewCode": "Yeni etkinleştirme kodu",
     "fieldUnlock": "Kilidi aç",
-    "devices": "Cihazlar"
+    "devices": "Cihazlar",
+    "ownerLocked": "Firma sahibinin rolü değiştirilemez ve firmadan çıkarılamaz. Sahiplik yalnız firma sahibi tarafından devredilebilir.",
+    "scope": {
+      "admin": "Depolar: tümü (yönetici her depoyu görür)",
+      "all": "Depolar: tümü",
+      "only": "Depolar: yalnız {names}",
+      "allShort": "Tüm depolar",
+      "unknown": "silinmiş depo",
+      "archived": "{name} (arşivli)",
+      "legend": "{name} hangi depolarda çalışsın?",
+      "allOption": "Tüm depolar (yeni açılan depolar dahil)",
+      "pickOne": "En az bir depo seç ya da “Tüm depolar”ı işaretle.",
+      "save": "Depoları kaydet",
+      "edit": "Depoları düzenle",
+      "disabled": "Depo kısıtı bu ortamda kapalı: seçim kaydedilir, açıldığında uygulanır."
+    }
   },
   "errors": {
     "validation_failed": "Girilen bilgiler geçersiz.",
@@ -477,6 +499,10 @@
     "validation_failed_too_many_linesAction": "Satırları 200'erli gruplara bölüp her grup için ayrı ters kayıt yap.",
     "forbidden_warehouse_out_of_scope": "Bu depo senin çalışma kapsamının dışında.",
     "forbidden_warehouse_out_of_scopeAction": "Erişim gerekiyorsa çalışma alanı yöneticinden depoyu kapsamına eklemesini iste.",
+    "forbidden_not_creator": "Bu taslağı yalnız oluşturan kişi ya da onay yetkilisi değiştirebilir.",
+    "forbidden_not_creatorAction": "Taslağı oluşturan kişiden ya da sorumlundan iste.",
+    "forbidden_separation_of_duties": "Görev ayrılığı açık: bu işlemi hazırlayan kişi onaylayamaz ya da ters kaydını yapamaz.",
+    "forbidden_separation_of_dutiesAction": "Onayı ya da ters kaydı başka bir yetkiliden iste.",
     "validation_failed_plan_limit": "Paketinizin sınırına ulaştınız.",
     "validation_failed_plan_limitAction": "Kullanmadığınız kaydı arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin.",
     "validation_failed_plan_invalid": "Paket bilgileri geçersiz.",
@@ -1042,6 +1068,18 @@
       "reauth": "Bu işlem için kimliğini yeniden doğrulaman gerekiyor.",
       "reauthAction": "Yeniden giriş yapıp işlemi yinele.",
       "loginLink": "Yeniden giriş yap"
+    },
+    "sod": {
+      "title": "Görev ayrılığı",
+      "body": "Açıkken aynı kişi bir işin hem hazırlayan hem onaylayan tarafı olamaz: belgeyi oluşturan onaylayamaz, sayımı yapan farkı onaylayamaz, belgeyi oluşturan ya da işleyen ters kayıt yapamaz. Saha akışlarındaki otomatik onaylar etkilenmez.",
+      "stateOn": "Durum: açık",
+      "stateOff": "Durum: kapalı",
+      "turnOn": "Görev ayrılığını aç",
+      "turnOff": "Görev ayrılığını kapat",
+      "on": "Görev ayrılığı açıldı.",
+      "off": "Görev ayrılığı kapatıldı.",
+      "unchanged": "Ayar zaten bu durumdaydı.",
+      "reauth": "Bu ayarı değiştirmek için yeniden giriş yapın."
     }
   },
   "items": {
@@ -1688,7 +1726,9 @@
       "qty_fractional": "Bu barkodun adedi tam sayı değil.",
       "qty_fractionalAction": "Bu ekran yalnız tam adetle çalışır. Adedi masaüstünden gir.",
       "unit_mismatch": "Bu barkod bu satırın biriminde değil.",
-      "unit_mismatchAction": "Satırın birimindeki barkodu okut ya da adedi masaüstünden gir."
+      "unit_mismatchAction": "Satırın birimindeki barkodu okut ya da adedi masaüstünden gir.",
+      "forbidden_not_creator": "Bu taslağı yalnız oluşturan kişi ya da onay yetkilisi değiştirebilir.",
+      "forbidden_sod": "Görev ayrılığı açık: bu belgeyi/sayımı hazırlayan kişi onaylayamaz ya da ters kaydını yapamaz. Başka bir yetkiliden isteyin."
     },
     "line": {
       "complete": "Tamam",
@@ -2985,7 +3025,8 @@
     "stLocked": "KİLİTLİ",
     "stPending": "KOD BEKLİYOR",
     "newCode": "YENİ KOD",
-    "newCodeAria": "{name} için yeni kod üret"
+    "newCodeAria": "{name} için yeni kod üret",
+    "errWarehouse": "Personelin çalışacağı depoyu seçin (ya da \"Tüm depolar\")."
   },
   "fieldLogin": {
     "title": "Saha girişi",

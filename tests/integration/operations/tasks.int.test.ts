@@ -206,7 +206,7 @@ describe("görev komutları", () => {
     const [inScope, outScope] = await runTenantCommand({ ...admin(w), permission: "stock.post" }, async (tx, m) =>
       createTasks(tx, m, [{ warehouseId: w.warehouseId, kind: "PICK" }, { warehouseId: other, kind: "PICK" }]),
     );
-    await setMembershipWarehouseScopes(admin(w), { membershipId: w.memberMembershipId, warehouseIds: [w.warehouseId] });
+    await setMembershipWarehouseScopes({ ...admin(w), recentAuth: async () => undefined }, { membershipId: w.memberMembershipId, warehouseIds: [w.warehouseId] });
     const prev = process.env.WAREHOUSE_SCOPE_ENABLED;
     try {
       // Bayrak kapalı: kapsam satırı yok sayılır.
@@ -219,7 +219,7 @@ describe("görev komutları", () => {
       expect(await row(other2)).toMatchObject({ status: "OPEN", version: 1, assigned_membership_id: null });
       expect(await assignTask(admin(w), { taskId: inScope as string, membershipId: w.memberMembershipId, expectedVersion: 1 })).toEqual({ version: 2 });
       // TENANT_ADMIN kapsam satırı olsa da geçer.
-      await setMembershipWarehouseScopes(admin(w), { membershipId: w.ownerMembershipId, warehouseIds: [w.warehouseId] });
+      await setMembershipWarehouseScopes({ ...admin(w), recentAuth: async () => undefined }, { membershipId: w.ownerMembershipId, warehouseIds: [w.warehouseId] });
       expect(await assignTask(admin(w), { taskId: other2, membershipId: w.ownerMembershipId, expectedVersion: 1 })).toEqual({ version: 2 });
     } finally {
       if (prev === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;

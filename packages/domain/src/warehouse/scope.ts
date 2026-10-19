@@ -1,9 +1,9 @@
-// Depo kapsamı denetimi (T-205; A-46, A-77) — `WAREHOUSE_SCOPE_ENABLED` bayrağı, varsayılan KAPALI.
+// Depo kapsamı denetimi (T-205; A-46, A-77) — `WAREHOUSE_SCOPE_ENABLED` bayrağı; kod varsayılanı kapalı, CANLIDA AÇIK (T-413, 18 Ekim).
 //
 // - Bayrak kapalı: `assertWarehouseInScope` no-op (A-46: tenant kapsamı sürer).
 // - Bayrak açık: `TENANT_ADMIN` her zaman geçer; diğer rollerde kapsam satırı yoksa tüm depolar, varsa yalnızca listelenenler;
-//   aksi `FORBIDDEN`/`WAREHOUSE_OUT_OF_SCOPE`. BİLİNEN RİSK (A-77, MINOR-8): "satır yoksa tüm depolar" fail-open'dır; bayrak
-//   AÇILMADAN önce bu kural yeniden karara bağlanır (Q-23).
+//   aksi `FORBIDDEN`/`WAREHOUSE_OUT_OF_SCOPE`. A-77 kararı (18 Ekim): "satır yoksa tüm depolar" korunur — satırsızlık yalnız açık
+//   "Tüm depolar" seçimiyle oluşur (A-103 boş listeyi reddeder), depo kapsam satırı varken silinemez (FK; örnek veri arşivlenir).
 // - Bayrak ortamdan çağrı anında okunur (`process.env`); yalnızca `true`/`1` açar, başka her değer (ve tanımsız) kapalıdır.
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
@@ -75,7 +75,8 @@ export async function assertWarehouseVisible(
   for (const id of warehouseIds) if (!set.has(id.toLowerCase())) throw new AppError("NOT_FOUND");
 }
 
-export type ScopeCallParams = Omit<TenantAccessParams, "permission" | "recentAuth">;
+/** T-417: `recentAuth` zorunlu (fail-closed): kapsam değişikliği erişimi daraltır/genişletir, hassas yönetici işlemidir (A-39). */
+export type ScopeCallParams = Omit<TenantAccessParams, "permission" | "recentAuth"> & { readonly recentAuth: () => Promise<void> };
 
 export type SetScopesInput =
   | { readonly membershipId: string; readonly all: true; readonly requestId?: string | null }
@@ -91,9 +92,12 @@ export interface SetScopesResult {
 /**
  * Üyeliğin depo kapsamını değiştirir (`users.manage`). Giriş açıktır: `{ all: true }` (kapsam satırı yok = tüm depolar) ya da
  * boş OLMAYAN `{ warehouseIds }`; boş liste ve belirsiz girdi `VALIDATION_FAILED`. Demo tenant'ta kapalı (M9). Liste
- * değişmediyse `changed: false`, audit yok. Hedef üyelik satırı serileştirme için `FOR UPDATE` kilitlenir.
+ * değişmediyse `changed: false`, audit yok. Hedef üyelik satırı serileştirme için `FOR UPDATE` kilitlenir. T-417: yeniden giriş
+ * zorunlu (`recentAuth` yoksa `UNAUTHENTICATED`/`RECENT_AUTH_REQUIRED`). `TENANT_ADMIN` hedefin satırları saklanır ama etkisizdir
+ * (yönetici her depoyu görür); ekran yönetici üyede kısıt denetimini göstermez.
  */
 export async function setMembershipWarehouseScopes(params: ScopeCallParams, input: SetScopesInput): Promise<SetScopesResult> {
+  if ((params as { recentAuth?: unknown }).recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   const membershipId = uuid(input.membershipId);
   const raw = input as { all?: unknown; warehouseIds?: unknown };
   let all: boolean;
@@ -127,6 +131,14 @@ export async function setMembershipWarehouseScopes(params: ScopeCallParams, inpu
            WHERE tenant_id = ${m.tenantId}::uuid AND membership_id = ${membershipId}::uuid ORDER BY warehouse_id`,
     );
     const before = beforeRows.map((r) => r.warehouse_id);
+    // T-417 inceleme m2: arşivli depo yeni eklenemez (saha kullanıcısı oluşturma ile aynı kural); zaten kapsamdaysa korunabilir.
+    const added = ids.filter((w) => !before.includes(w));
+    if (added.length > 0) {
+      const archived = await tx.execute<{ id: string }>(
+        sql`SELECT id FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ANY(${pgUuidArray(added)}::uuid[]) AND status <> 'ACTIVE'`,
+      );
+      if (archived.length > 0) throw new AppError("VALIDATION_FAILED");
+    }
     if (before.length === ids.length && before.every((v, i) => v === ids[i])) return { changed: false, all, warehouseIds: ids };
     await tx.execute(
       sql`DELETE FROM public.membership_warehouse_scopes WHERE tenant_id = ${m.tenantId}::uuid AND membership_id = ${membershipId}::uuid`,

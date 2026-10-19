@@ -76,7 +76,7 @@ describe("getWarehouse", () => {
 
   it("flag off: scope rows are ignored (same as listWarehouses)", async () => {
     const other = await newWarehouse();
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     expect((await getWarehouse(picker(A), { warehouseId: other })).id).toBe(other);
     expect((await listWarehouses(picker(A))).items.some((w) => w.id === other)).toBe(true);
   });
@@ -84,7 +84,7 @@ describe("getWarehouse", () => {
   it("flag on: scoped member sees only scoped warehouse; out-of-scope, other-tenant and missing give the identical NOT_FOUND", async () => {
     process.env.WAREHOUSE_SCOPE_ENABLED = "true";
     const other = await newWarehouse();
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     expect((await getWarehouse(picker(A), { warehouseId: A.warehouseId })).id).toBe(A.warehouseId);
     const outOfScope = await failure(getWarehouse(picker(A), { warehouseId: other }));
     const foreign = await failure(getWarehouse(picker(A), { warehouseId: B.warehouseId }));
@@ -147,7 +147,7 @@ describe("countLocationsByWarehouse", () => {
     process.env.WAREHOUSE_SCOPE_ENABLED = "true";
     const other = await newWarehouse();
     await seedLocations(other, 2, 0);
-    await setMembershipWarehouseScopes(admin(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     const counts = await countLocationsByWarehouse(picker(A), { warehouseIds: [A.warehouseId, other] });
     expect([...counts.keys()]).toEqual([A.warehouseId]);
     expect(counts.has(other)).toBe(false);

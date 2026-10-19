@@ -4,6 +4,7 @@ import { hostname } from "node:os";
 import { DEMO_TENANT_ID, createDbClient, withSystemTenant, withUser } from "@wms/db";
 import { consumeOnce, createJobQueue } from "@wms/queue-adapter";
 import { findAbandonedCounts } from "@wms/domain/operations";
+import { isWarehouseScopeEnabled } from "@wms/domain/warehouse";
 import { ingestDemoLeads } from "@wms/domain/platform/demo-requests";
 import type { ConsumeOnceFn } from "@wms/domain/stock/jobs";
 import { assertMailModeAllowed, loadMailConfig } from "@wms/shared/mailer";
@@ -153,6 +154,8 @@ try {
   logger.error("queue start failed", { error: err instanceof Error ? err.name : "unknown" });
   process.exit(EXIT_FAILURE);
 }
+// T-413 (inceleme n3): depo kapsamı bayrağı web ve worker'da ayrı okunur; açılışta durumu günlüğe yazılır (karşılaştırma için).
+logger.info("warehouse scope", { enabled: isWarehouseScopeEnabled() });
 logger.info("queue started", {
   registered: JOB_TYPES.filter((t) => HANDLERS[t] !== undefined),
   deferred: DEFERRED_JOB_TYPES.filter((t) => HANDLERS[t] === undefined),

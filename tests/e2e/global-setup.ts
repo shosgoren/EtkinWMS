@@ -151,6 +151,8 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   env.DEMO_PASSWORD ||= randomBytes(18).toString("hex");
   env.BETTER_AUTH_SECRET ||= randomBytes(32).toString("hex");
   if (!env.QUEUE_SEAL_KEY || env.QUEUE_SEAL_KEY === PLACEHOLDER_SEAL) env.QUEUE_SEAL_KEY = randomBytes(32).toString("hex");
+  // T-413 (A-77 kararı 18 Ekim): canlıda depo kapsamı açık; uçtan uca testler aynı kipte koşar.
+  env.WAREHOUSE_SCOPE_ENABLED = "true";
   assertLoopbackDatabase(env);
   // T-938: local, loopback-asserted web subprocesses only. Remote early return above never enables this flag.
   const packageWebEnv = { ...env, PACKAGE_RECEIVING_ENABLED: "true" };

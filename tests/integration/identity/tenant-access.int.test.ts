@@ -169,7 +169,7 @@ describe("runTenantCommand / runTenantQuery", () => {
     expect(qry.toBody().error.messageKey).toBe("errors.forbidden.mfa_required");
     const demo = await fixture({ role: "TENANT_ADMIN", demo: true });
     expect(await runTenantCommand({ db: app, principal: principal(demo.user, false), tenantSlug: demo.slug, permission: "settings.manage" }, async () => "ok")).toBe("ok");
-    // MFA yalnızca TENANT_ADMIN için zorunlu
+    // MFA TENANT_ADMIN ve (T-414) WAREHOUSE_MANAGER için zorunlu; salt okunur için değil
     const ro = await fixture({ role: "READ_ONLY" });
     expect(await runTenantQuery({ db: app, principal: principal(ro.user, false), tenantSlug: ro.slug, permission: "stock.view" }, async () => "ok")).toBe("ok");
   });

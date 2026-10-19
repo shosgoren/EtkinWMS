@@ -20,6 +20,7 @@ import { sql } from "drizzle-orm";
 import { appendAudit, type AuditEntry } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import type { AccessTx } from "../identity/access.ts";
+import { hasPermission } from "../identity/permissions.ts";
 import { pgUuidArray } from "../warehouse/scope.ts";
 import {
   EMPTY_LOCK_PLAN,
@@ -290,6 +291,10 @@ export async function cancelInboundReceipt(
       apply: async (tx, _locked, ctx) => {
         const h = await lockFieldHeader(tx, ctx.tenantId, "inbound_receipts", receiptId);
         guardVersion(h.status, h.version, expectedVersion);
+        // T-414: başkasının açtığı kabulü yalnız onay yetkilisi iptal eder.
+        if (h.createdBy.toLowerCase() !== ctx.membership.userId.toLowerCase() && !hasPermission(ctx.membership.roles, "document.approve")) {
+          throw new AppError("FORBIDDEN", { detail: "NOT_CREATOR" });
+        }
         // Kabul yazımı başlık kilidi altındadır: burada okunan toplam kararlıdır.
         const sum = await tx.execute<{ n: string }>(
           sql`SELECT COALESCE(sum(received_quantity), 0)::text AS n FROM public.inbound_receipt_lines

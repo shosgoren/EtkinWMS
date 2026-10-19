@@ -74,7 +74,7 @@ describe("stock overview", () => {
   });
 
   it("warehouse scopes filter every aggregate and cannot be bypassed with an explicit warehouse", async () => {
-    await setMembershipWarehouseScopes(owner(A), { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
+    await setMembershipWarehouseScopes({ ...owner(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [A.warehouseId] });
     const prior = process.env.WAREHOUSE_SCOPE_ENABLED;
     try {
       process.env.WAREHOUSE_SCOPE_ENABLED = "true";

@@ -1,5 +1,5 @@
 // Rol × izin matrisi (ADR-016 §4, OPEN_QUESTIONS A-45). TEK KAYNAK: değişiklik A-45/Q-22 güncellemesi ister.
-// Görev ayrımı (A-03) bu dosyada yoktur. Depo kapsamı yoktur (A-46: Faz 1 yetkisi tenant kapsamlıdır).
+// Görev ayrımı (A-03) bu dosyada yoktur: firma ayarı, identity/separation.ts (T-416). Depo kapsamı warehouse/scope.ts (T-413).
 import type { Membership } from "@wms/db";
 
 export const ROLE_KEYS = Object.freeze(["TENANT_ADMIN", "WAREHOUSE_MANAGER", "PICKER", "COUNTER", "READ_ONLY"] as const);

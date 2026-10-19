@@ -11,8 +11,10 @@ import { sql } from "drizzle-orm";
 import { AUDIT_ACTIONS, appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
+import { hasPermission } from "../identity/permissions.ts";
 import { CSV_BOM, auditCsvHeader, auditCsvRow } from "./csv.ts";
 import { summaryKeyFor, validCursorTs } from "./today-impl.ts";
+import { pgUuidArray, resolveWarehouseScope } from "../warehouse/scope.ts";
 
 export const AUDIT_LIST_DEFAULT_LIMIT = 50;
 export const AUDIT_LIST_MAX_LIMIT = 100;
@@ -126,6 +128,37 @@ type RawRow = {
 };
 
 /** Ortak sayfa sorgusu: tenant + filtre + (isteğe bağlı) imleç + (isteğe bağlı) kesit; `limit` satır. */
+/** T-414: kimlik olayı önekleri (Postgres dizi değişmezi; `LIKE ANY`). */
+const IDENTITY_ACTION_PATTERNS = "{member.%,invitation.%,ownership.%,password_reset_link.%,field_user.%,field_device.%,warehouse_scope.%}";
+
+/**
+ * T-417 (A-103 önkoşulu): depo kapsamı kısıtlı üye işlem kaydında yalnız kapsamındaki depolara bağlı olayları ve depodan bağımsız
+ * katalog olaylarını görür. Depoya bağlanamayan her tür (firma ayarı, sipariş, toplu işlem, kimlik vb.) GİZLENİR (fail-closed);
+ * bağlı kayıt silinmişse de gizlenir. `scope === null` (kısıtsız) süzme yok.
+ */
+/** T-417 inceleme m4: dar kapsamlı üyede süzme geçmişin tamamını tarayabilir; okuma transaction'ı süreyle sınırlı. */
+const AUDIT_TIMEOUTS = { lockTimeoutMs: 5000, statementTimeoutMs: 15_000 } as const;
+const CATALOG_ENTITY_TYPES = "{item,unit,lot,serial,item_barcode,production_recipe}";
+function scopeFilter(scope: readonly string[] | null) {
+  if (scope === null) return sql``;
+  const ids = pgUuidArray(scope);
+  const ref = sql`(CASE WHEN a.entity_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN a.entity_id::uuid END)`;
+  const inScope = sql`x.tenant_id = a.tenant_id AND x.id = ${ref} AND x.warehouse_id = ANY(${ids}::uuid[])`;
+  return sql`AND (CASE
+      WHEN a.entity_type = ANY(${CATALOG_ENTITY_TYPES}::text[]) THEN true
+      WHEN a.entity_type = 'warehouse' THEN ${ref} = ANY(${ids}::uuid[])
+      WHEN a.entity_type = 'location' THEN EXISTS (SELECT 1 FROM public.locations x WHERE ${inScope})
+      WHEN a.entity_type = 'stock_document' THEN EXISTS (SELECT 1 FROM public.documents x WHERE ${inScope})
+      WHEN a.entity_type = 'count_session' THEN EXISTS (SELECT 1 FROM public.count_sessions x WHERE ${inScope})
+      WHEN a.entity_type = 'warehouse_task' THEN EXISTS (SELECT 1 FROM public.warehouse_tasks x WHERE ${inScope})
+      WHEN a.entity_type = 'inbound_receipt' THEN EXISTS (SELECT 1 FROM public.inbound_receipts x WHERE ${inScope})
+      WHEN a.entity_type = 'problem_report' THEN EXISTS (SELECT 1 FROM public.problem_reports x WHERE ${inScope})
+      WHEN a.entity_type = 'handling_unit' THEN EXISTS (
+        SELECT 1 FROM public.handling_units h JOIN public.locations l ON l.tenant_id = h.tenant_id AND l.id = h.location_id
+         WHERE h.tenant_id = a.tenant_id AND h.id = ${ref} AND l.warehouse_id = ANY(${ids}::uuid[]))
+      ELSE false END)`;
+}
+
 async function selectRows(
   tx: AccessTx,
   tenantId: string,
@@ -136,6 +169,8 @@ async function selectRows(
   limit: number,
   withSummary: boolean,
   excludeXid?: string,
+  hideIdentity = false,
+  scope: readonly string[] | null = null,
 ): Promise<RawRow[]> {
   const from = filters.from === undefined ? sql`` : sql`AND a.occurred_at >= ((${filters.from}::date)::timestamp AT TIME ZONE ${tz})`;
   const to = filters.to === undefined ? sql`` : sql`AND a.occurred_at < (((${filters.to}::date + 1))::timestamp AT TIME ZONE ${tz})`;
@@ -148,13 +183,16 @@ async function selectRows(
   // Kesit kendi `audit.exported` olayını DIŞLAMALI: o xid snapshot'tan önce atanmışsa (xmax'tan küçük, xip'te yok) görünür olurdu.
   const own = excludeXid === undefined ? sql`` : sql`AND a.created_xid <> ${excludeXid}::xid8`;
   const summary = withSummary ? sql`a.change_summary::text` : sql`'{}'::text`;
+  // T-414: kimlik/üyelik olayları (davet, rol, çıkarma, sahiplik, sıfırlama bağlantısı, saha hesabı/cihaz, depo kapsamı) yalnız üye
+  // yönetimi yetkisi (`users.manage`) olana; depo sorumlusu işlem kaydında operasyon olaylarını görür.
+  const identity = hideIdentity ? sql`AND NOT (a.action LIKE ANY (${IDENTITY_ACTION_PATTERNS}::text[]))` : sql``;
   return [
     ...(await tx.execute<RawRow>(
       sql`SELECT a.id, a.occurred_at, a.occurred_at::text AS ts, u.name AS actor_name, a.action, a.entity_type, a.entity_id, a.reason,
                  ${summary} AS summary
             FROM public.audit_logs a
             LEFT JOIN public.users u ON u.id = a.actor_user_id
-           WHERE a.tenant_id = ${tenantId}::uuid ${from} ${to} ${act} ${after} ${snap} ${own}
+           WHERE a.tenant_id = ${tenantId}::uuid ${from} ${to} ${act} ${after} ${snap} ${own} ${identity} ${scopeFilter(scope)}
            ORDER BY a.occurred_at DESC, a.id ASC
            LIMIT ${limit}`,
     )),
@@ -174,9 +212,9 @@ export async function listAudit(params: QueryParams, options: ListAuditOptions =
   if (!Number.isInteger(limit) || limit < 1 || limit > AUDIT_LIST_MAX_LIMIT) throw new AppError("VALIDATION_FAILED");
   const cursor = options.cursor === undefined ? undefined : decodeAuditCursor(options.cursor);
   const filters = checkFilters(options.filters);
-  return runTenantQuery({ ...params, permission: "audit.view" }, async (tx, m) => {
+  return runTenantQuery({ ...params, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => {
     const timeZone = await tenantTimeZone(tx, m.tenantId);
-    const rows = await selectRows(tx, m.tenantId, timeZone, filters, cursor, undefined, limit + 1, false);
+    const rows = await selectRows(tx, m.tenantId, timeZone, filters, cursor, undefined, limit + 1, false, undefined, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m));
     const page = rows.slice(0, limit);
     const last = page[page.length - 1];
     return {
@@ -227,7 +265,7 @@ export async function openAuditExport(params: Omit<TenantAccessParams, "permissi
   const { recentAuth: _recentAuth, ...later } = params;
   void _recentAuth;
 
-  const first = await runTenantQuery({ ...params, permission: "audit.view" }, async (tx, m) => {
+  const first = await runTenantQuery({ ...params, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => {
     await options.testBeforeSnapshot?.();
     const snap = (await tx.execute<{ s: string }>(sql`SELECT pg_current_snapshot()::text AS s`))[0]?.s;
     if (snap === undefined || !SNAPSHOT_RE.test(snap)) throw new AppError("INTERNAL");
@@ -241,7 +279,7 @@ export async function openAuditExport(params: Omit<TenantAccessParams, "permissi
     });
     // Kesit kendi `audit.exported` olayını DIŞLAR: tx xid'i üyelik `FOR SHARE` kilidinde snapshot'tan ÖNCE atanır, yani snapshot.xmax'tan küçük
     // olabilir ve `pg_visible_in_snapshot` onu görünür sayardı; bu yüzden `createdXid` açıkça süzülür.
-    const rows = await selectRows(tx, m.tenantId, tz, filters, undefined, snap, size, true, ev.createdXid);
+    const rows = await selectRows(tx, m.tenantId, tz, filters, undefined, snap, size, true, ev.createdXid, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m));
     return { snap, tz, rows, ownXid: ev.createdXid };
   });
 
@@ -289,7 +327,7 @@ export async function openAuditExport(params: Omit<TenantAccessParams, "permissi
         // Sonraki parça: oturum + ayrı kısa transaction; üyelik/izin yeniden doğrulanır (recentAuth yalnızca ilk parçada).
         if (options.revalidate !== undefined) await options.revalidate();
         const cur = lastCursor;
-        rows = await runTenantQuery({ ...later, permission: "audit.view" }, (tx, m) => selectRows(tx, m.tenantId, first.tz, filters, cur, first.snap, size, true, first.ownXid));
+        rows = await runTenantQuery({ ...later, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => selectRows(tx, m.tenantId, first.tz, filters, cur, first.snap, size, true, first.ownXid, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m)));
       }
       const last = rows[rows.length - 1];
       if (last !== undefined) {

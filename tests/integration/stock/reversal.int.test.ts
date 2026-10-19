@@ -13,6 +13,7 @@ import {
   postDocument,
   reserve,
   reverseDocument,
+  updateDraft,
   type DocumentLineInput,
   type ReverseDocumentInput,
   type StockDocCallParams,
@@ -23,7 +24,8 @@ import {
   openInboundReceipt,
   receiveGoods,
 } from "../../../packages/domain/src/operations/index.ts";
-import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
+import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
+import { setSeparationOfDuties } from "../../../packages/domain/src/identity/separation.ts";
 import { readIntEnv } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
@@ -678,5 +680,69 @@ describe("eşzamanlılık (I-15, I-05)", () => {
       expect(await reversalDocsOf(g.id)).toHaveLength(1);
       expect(await ledgerMatchesBalances(x)).toBe(true);
     }
+  });
+});
+
+describe("T-416 görev ayrılığı (A-03; 0049)", () => {
+  const asUser = (userId: string): StockDocCallParams => ({ ...ownerP(), principal: { userId, mfaVerified: true } });
+  const sod = async (on: boolean): Promise<void> => {
+    await q("UPDATE public.tenant_settings SET separation_of_duties = $2 WHERE tenant_id = $1", [A.tenantId, on]);
+  };
+
+  it("açıkken: oluşturan onaylayamaz; oluşturan da işleyen de ters kayıt yapamaz; üçüncü kişi yapar. Kapalıyken aynı kişi yapar", async () => {
+    const u2 = await mkUser(adm, reg, "T416 onay");
+    await mkMembership(adm, A.tenantId, u2, { roles: ["TENANT_ADMIN"] });
+    const u3 = await mkUser(adm, reg, "T416 ters");
+    await mkMembership(adm, A.tenantId, u3, { roles: ["TENANT_ADMIN"] });
+    const x = await mkItem();
+    const loc = await mkLoc();
+    await sod(true);
+    try {
+      const c = await createStockDocument(ownerP(), { kind: "STOCK_IN", warehouseId: A.warehouseId, lines: [ln(x, { targetLocationId: loc, ...qty("5") })] });
+      const id = c.documentId as string;
+      expect(codeOf(await failure(approveDocument(ownerP(), { documentId: id, expectedVersion: 1 })))).toBe("FORBIDDEN/SEPARATION_OF_DUTIES");
+      expect((await docRow(id)).status, "ret hiçbir şey yazmaz").toBe("DRAFT");
+      await approveDocument(asUser(u2), { documentId: id, expectedVersion: 1 });
+      const v = await docRow(id);
+      expect((await post({ id, version: v.version }, asUser(u2))).status).toBe("POSTED");
+      expect(codeOf(await failure(reverse(id, "ALL")))).toBe("FORBIDDEN/SEPARATION_OF_DUTIES"); // oluşturan
+      expect(codeOf(await failure(reverse(id, "ALL", asUser(u2))))).toBe("FORBIDDEN/SEPARATION_OF_DUTIES"); // işleyen
+      expect(await reversalDocsOf(id)).toEqual([]);
+      expect((await reverse(id, "ALL", asUser(u3))).status).toBe("POSTED");
+      // İnceleme M4: onay yetkilisi başkasının taslağını düzenleyip onaylayamaz (düzenleme reddedilir; oluşturan düzenler).
+      const c2 = await createStockDocument(ownerP(), { kind: "STOCK_IN", warehouseId: A.warehouseId, lines: [ln(x, { targetLocationId: loc, ...qty("1") })] });
+      const id2 = c2.documentId as string;
+      const edit = (p: StockDocCallParams) => updateDraft(p, { documentId: id2, expectedVersion: 1, lines: [ln(x, { targetLocationId: loc, ...qty("9") })] });
+      expect(codeOf(await failure(edit(asUser(u2))))).toBe("FORBIDDEN/SEPARATION_OF_DUTIES");
+      expect((await docRow(id2)).version, "ret hiçbir şey yazmaz").toBe(1);
+      await edit(ownerP());
+    } finally {
+      await sod(false);
+    }
+    // Kapalı (varsayılan): tek kişi oluşturur, onaylar, işler, ters kaydını yapar.
+    const d = await mkPosted("STOCK_IN", [ln(x, { targetLocationId: loc, ...qty("2") })]);
+    expect((await reverse(d.id, "ALL")).status).toBe("POSTED");
+  });
+
+  it("ayar: settings.manage + yeniden giriş (fail-closed); değişiklik denetim kaydına yazılır; aynı değer yazılmaz", async () => {
+    const base = { db: app, principal: { userId: A.ownerUserId, mfaVerified: true }, tenantSlug: A.slug } as const;
+    const recentAuth = async (): Promise<void> => undefined;
+    expect(codeOf(await failure(setSeparationOfDuties({ ...base, enabled: true })))).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
+    const picker = { ...base, principal: { userId: A.memberUserId, mfaVerified: true }, recentAuth, enabled: true };
+    expect(codeOf(await failure(setSeparationOfDuties(picker)))).toBe("FORBIDDEN");
+    const denied = async (): Promise<void> => { throw Object.assign(new Error("yeniden giriş"), { reason: "REAUTH_REQUIRED" }); };
+    expect(codeOf(await failure(setSeparationOfDuties({ ...base, enabled: true, recentAuth: denied })))).toBe("UNAUTHENTICATED/RECENT_AUTH_REQUIRED");
+    try {
+      expect(await setSeparationOfDuties({ ...base, enabled: true, recentAuth })).toEqual({ changed: true });
+      expect(await setSeparationOfDuties({ ...base, enabled: true, recentAuth })).toEqual({ changed: false });
+      const rows = await q<{ s: { separationOfDuties: { from: boolean; to: boolean } } }>(
+        "SELECT change_summary AS s FROM public.audit_logs WHERE tenant_id = $1 AND action = 'tenant.settings_changed' AND change_summary ? 'separationOfDuties'",
+        [A.tenantId],
+      );
+      expect(rows.map((r) => r.s.separationOfDuties)).toEqual([{ from: false, to: true }]);
+    } finally {
+      await setSeparationOfDuties({ ...base, enabled: false, recentAuth });
+    }
+    expect((await q<{ v: boolean }>("SELECT separation_of_duties AS v FROM public.tenant_settings WHERE tenant_id = $1", [A.tenantId]))[0]?.v).toBe(false);
   });
 });
