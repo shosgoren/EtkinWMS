@@ -326,7 +326,7 @@ export async function PanoBoard(p: PanoBoardProps) {
                 <span><b id="team-t">{t("teamTitle")}</b><small><span className="dotlive" />{t("liveShort")}</small></span>
               </div>
               {b.team.slice(0, 6).map((x, i) => {
-                const st = { SCANNING: ["E3F1E9", "17583C"], ASSIGNED: ["E6EEF8", "1F4A8A"], IDLE: ["FFF3D1", "6B4A00"], AWAY: ["FBE3E3", "9A1F1F"] }[x.state];
+                const st: readonly [string, string] = ({ SCANNING: ["E3F1E9", "17583C"], ASSIGNED: ["E6EEF8", "1F4A8A"], IDLE: ["FFF3D1", "6B4A00"], AWAY: ["FBE3E3", "9A1F1F"] } as const)[x.state];
                 const group = x.state === "ASSIGNED" || x.state === "SCANNING" ? t("tasksN", { n: x.assigned }) : x.state === "IDLE" ? t("idleMin", { n: x.idleMinutes ?? 0 }) : t("notToday");
                 return (
                   <div className="person" key={x.membershipId}>
