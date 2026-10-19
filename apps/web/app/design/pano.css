@@ -2010,7 +2010,7 @@ from{width:0}
 .dzp.dz-dark .wrap {
   background:var(--color-dz-x-albbbi);
 }
-.dzp.dz-dark .rp.calm[style*="#172E42"] {
+.dzp.dz-dark .rp.calm[style*="var(--color-dz-x-bhcoec)"] {
   --c:var(--color-dz-x-mfnank) !important;
   --t:var(--color-dz-x-dkfkhi) !important;
 }

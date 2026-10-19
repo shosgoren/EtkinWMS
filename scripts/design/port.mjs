@@ -135,7 +135,7 @@ function splitSelectors(head) {
 /** @typedef {{ mode: "mobile" | "tablet" | "desktop" | null, sel: string }} Scoped */
 /**
  * Tek seçiciyi kapsar; mod öneki varsa { mode, sel } döner.
- * @param {string} sel @param {string} [scope]
+ * @param {string} sel @param {string} [scope] @param {"fr"} [device]
  * @returns {Scoped | null}
  */
 export function scopeSelector(sel, scope = "dz", device = undefined) {
@@ -154,6 +154,8 @@ export function scopeSelector(sel, scope = "dz", device = undefined) {
     // Kaynakta cihaz öneki seçiciye bir sınıf ekler (özgüllük); medya sorgusuna taşınırken kap sınıfı iki kez yazılarak korunur
     // (aksi hâlde sonra gelen temel kural telefonda kazanır).
     const root = mode ? `.${scope}.${scope}` : `.${scope}`;
+    // Satır içi renge göre seçici (`[style*="#172E42"]`): uygulamada satır içi renk belirteçtir (`dz("172E42")`), seçici de belirteci arar.
+    s = s.replace(/\[style\*="(#[0-9a-fA-F]{6})"\]/g, (_, h) => `[style*="var(--color-${colorToken(h).name})"]`);
     if (s === ".wrap.thd") return { mode, sel: `${root}.dz-dark .wrap` };
     const d = /^\.thd\s+/.exec(s);
     if (d) {
@@ -198,7 +200,7 @@ const fmtDecls = (body) =>
 
 /**
  * Kaynak CSS → { css, tokens }.
- * @param {string} css @param {string} [scope]
+ * @param {string} css @param {string} [scope] @param {"fr"} [device]
  * @returns {{ css: string, tokens: Map<string, string> }}
  */
 export function portCss(css, scope = "dz", device = undefined) {
@@ -329,7 +331,7 @@ const BEGIN = (n) => `/* design:${n}:begin — scripts/design/port.mjs üretir; 
 const END = (n) => `/* design:${n}:end */`;
 
 /**
- * @param {string} name @param {string} html
+ * @param {string} name @param {string} html @param {string} [scope] @param {"bakis" | "c" | "none"} [palette] @param {"fr"} [device]
  * @returns {{ css: string, tokenBlock: string, ts: string }}
  */
 export function build(name, html, scope = "dz", palette = "bakis", device = undefined) {
@@ -348,7 +350,9 @@ export function build(name, html, scope = "dz", palette = "bakis", device = unde
       tokens.set(t.name, t.value);
     }
   }
-  const pal = palette === "none" ? { light: {}, dark: {} } : palette === "c" ? readPaletteC(html) : readPalette(html);
+  /** @type {{ light: Record<string, string>, dark: Record<string, string> }} */
+  const none = { light: {}, dark: {} };
+  const pal = palette === "none" ? none : palette === "c" ? readPaletteC(html) : readPalette(html);
   const keys = Object.keys(pal.light);
   /** @param {string} k @param {string | undefined} v */
   const line = (k, v) => `  --color-dz-${k}: ${req(/** @type {string} */ (v)).toLowerCase()};`;
