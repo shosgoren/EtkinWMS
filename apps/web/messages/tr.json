@@ -3312,5 +3312,148 @@
     "assignedTo": "{name} kişisine atandı",
     "assignFailed": "Atanamadı",
     "assignTo": "{name} kişisine ata"
+  },
+  "aktar": {
+    "title": "Excel’den aktar",
+    "online": "Çevrimiçi",
+    "stepLine": "ADIM {n}/4 · {name} · AYARLAR › İÇERİ AKTAR",
+    "steps": {
+      "1": "Tür",
+      "2": "Dosya",
+      "3": "Eşleştir",
+      "4": "Kontrol",
+      "5": "Bitti"
+    },
+    "kind": {
+      "stok": {
+        "title": "Stok kartları",
+        "sub": "KOD · AD · BİRİM · BARKOD · KOLİ",
+        "done": "{n} stok kartı eklendi ya da güncellendi",
+        "goList": "Stok kartlarına git"
+      },
+      "cari": {
+        "title": "Cari kartlar",
+        "sub": "MÜŞTERİ · TEDARİKÇİ · VERGİ NO · İLETİŞİM",
+        "done": "{n} cari kart eklendi",
+        "goList": "Cari kartlara git"
+      },
+      "acilis": {
+        "title": "Açılış stoku",
+        "sub": "ÜRÜN KODU · RAF · MİKTAR",
+        "done": "{n} raf satırı açılış stoku olarak yazıldı",
+        "goList": "Stok durumuna git"
+      },
+      "soon": "CARİ KART EKRANI GELİNCE AÇILIR"
+    },
+    "s1": {
+      "lead": "Ne aktaracaksın?",
+      "hint": "KENDİ EXCEL’İN OLUR · HAZIR ŞABLON GEREKMEZ",
+      "memo": "Sütun adları ne olursa olsun bulurum; bulamadığımı sana sorarım. Eşleştirmeyi hatırlarım, aynı Excel’de bir daha sormam."
+    },
+    "s2": {
+      "lead": "{kind} için Excel’ini seç",
+      "hint": ".XLSX · .CSV · EN ÇOK {n} SATIR",
+      "reading": "Okunuyor…",
+      "pick": "Dosyayı seç",
+      "drag": "YA DA BURAYA SÜRÜKLE",
+      "recent": "SON KULLANILAN",
+      "recentHint": "EŞLEŞTİRME HATIRLANIYOR",
+      "recentMeta": "{rows} SATIR · {cols} SÜTUN",
+      "noAsk": "SORMADAN"
+    },
+    "s3": {
+      "meta": "{sheet} · {rows} SATIR · {cols} SÜTUN · BAŞLIK {header}. SATIRDA",
+      "remembered": "EŞLEŞTİRME HATIRLANDI",
+      "sheet": "Sayfa seç",
+      "found": "BULDUM",
+      "sure": "DOĞRU MU?",
+      "need": "SEÇMEN GEREK",
+      "mapAria": "Alan eşleştirme",
+      "choose": "SEÇ ›",
+      "notInFile": "DOSYADA YOK",
+      "required": "ZORUNLU · DOKUN, SÜTUNU SEÇ",
+      "optional": "İSTERSEN DOKUN, SEÇ",
+      "yes": "Doğru",
+      "unused": "Kullanılmayan sütun: {cols} (aktarılmaz)",
+      "allUsed": "Dosyadaki tüm sütunlar kullanılıyor",
+      "preview": "ÖNİZLEME",
+      "previewHint": "İLK 4 SATIR · SENİN EŞLEŞTİRMENLE"
+    },
+    "field": {
+      "stok": {
+        "kod": "Stok kodu",
+        "ad": "Stok adı",
+        "birim": "Temel birim",
+        "koli": "Koli içi adet",
+        "barkod": "Adet barkodu",
+        "kbarkod": "Koli barkodu"
+      },
+      "acilis": {
+        "urun": "Ürün kodu",
+        "raf": "Raf kodu",
+        "miktar": "Miktar"
+      }
+    },
+    "s4": {
+      "blocked": "Aktarılamaz · {bad} satırda sorun",
+      "ready": "{n} satır hazır · {bad} satırda sorun",
+      "hint": "HİÇBİR ŞEY YAZILMADI · AKTAR’A BASINCA EKLENİR",
+      "new": "YENİ",
+      "upd": "ZATEN VAR · GÜNCELLENİR",
+      "bad": "SORUNLU SATIR",
+      "row": "SATIR {n}",
+      "file": "DOSYA",
+      "recheck": "Yeniden kontrol et",
+      "skip": "Sorunluları atla, kalanını aktar"
+    },
+    "s5": {
+      "partial": "Yarım kaldı · {n} satır yazıldı",
+      "sub": "{added} YENİ · {updated} GÜNCELLENDİ · {same} ZATEN VARDI · {failed} HATALI · {notTried} DENENMEDİ · {skipped} ATLANDI",
+      "failedRow": "Bu satır kaydedilemedi",
+      "more": "ve {n} satır daha hatalı",
+      "retry": "Dosyayı yeniden seç",
+      "memo": "Eşleştirmeyi kaydettim. Aynı başlıklı Excel’i yine yüklersen hiç sormadan önizlemeye geçerim."
+    },
+    "main": {
+      "pick": "DOSYA SEÇ",
+      "wait": "{n} ALAN BEKLİYOR",
+      "checking": "KONTROL EDİLİYOR…",
+      "check": "KONTROL ET",
+      "applying": "AKTARILIYOR {done}/{total}",
+      "apply": "{n} SATIRI AKTAR",
+      "fix": "EŞLEŞTİRMEYE DÖN",
+      "done": "BİTTİ"
+    },
+    "dock": "Alt çubuk",
+    "back": "GERİ",
+    "backHome": "Geri: ana ekran",
+    "home": "Ana ekran",
+    "homeShort": "ANA EKRAN",
+    "pick": {
+      "aria": "Sütun seç",
+      "hint": "DOSYANDAKİ HANGİ SÜTUN? · DOKUN, SEÇ",
+      "close": "Kapat",
+      "noHeader": "(başlıksız)",
+      "empty": "BOŞ",
+      "current": "SEÇİLİ",
+      "leaveEmpty": "Bu alanı boş bırak",
+      "notInFile": "DOSYADA YOK"
+    },
+    "cf": {
+      "title": "Aktarım yarıda kalsın mı?",
+      "text": "Dosya henüz aktarılmadı. Eşleştirmeyi kaydedersen aynı Excel’i yüklediğinde bir daha sormam.",
+      "save": "Eşleştirmeyi kaydet, çık",
+      "leave": "Kaydetmeden çık",
+      "stay": "Vazgeç, burada kalayım"
+    },
+    "fileError": {
+      "TOO_BIG": "Dosya çok büyük. En çok 10 MB olabilir; dosyayı ikiye böl.",
+      "XLS_OLD": "Eski .xls biçimi okunmuyor. Excel’de “Farklı kaydet → Excel Çalışma Kitabı (.xlsx)” seçip yeniden yükle.",
+      "UNREADABLE": "Dosya okunamadı. Excel’de .xlsx ya da CSV olarak kaydedip yeniden dene.",
+      "EMPTY": "Dosyada satır yok.",
+      "TOO_MANY_ROWS": "Dosyada çok fazla satır var. Dosyayı parçalara böl, sırayla yükle.",
+      "TOO_MANY_COLS": "Dosyada 40’tan fazla sütun var. Gerekmeyen sütunları silip yeniden yükle."
+    },
+    "serverError": "Sunucu işlemi tamamlayamadı ({code}). Biraz sonra yeniden dene."
   }
 }
