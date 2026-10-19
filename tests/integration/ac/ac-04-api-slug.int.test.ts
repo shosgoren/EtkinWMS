@@ -848,6 +848,11 @@ const ACTIONS: Record<string, Call> = {
   enrollmentStatusAction: (slug) => members.enrollmentStatusAction!({ slug, enrollmentId: randomUUID() }),
   approveEnrollmentAction: (slug) => members.approveEnrollmentAction!({ slug, enrollmentId: randomUUID(), confirmCode: "123456" }),
   cancelEnrollmentAction: (slug) => members.cancelEnrollmentAction!({ slug, enrollmentId: randomUUID() }),
+  // T-429: ekibe katılma (QR bağlantısı, talep onayı / reddi); talep kimlikleri rastgele — A bağlamında etkisiz.
+  createJoinLinkAction: (slug) => members.createJoinLinkAction!({ slug }),
+  revokeJoinLinkAction: (slug) => members.revokeJoinLinkAction!({ slug }),
+  approveJoinAction: (slug) => members.approveJoinAction!({ slug, requestId: randomUUID(), code: "123456", roleKey: "PICKER" }),
+  rejectJoinAction: (slug) => members.rejectJoinAction!({ slug, requestId: randomUUID() }),
 };
 
 /** T-216: ürün kartı eylemleri; hepsi B'nin birim/ürün/barkod kimlikleriyle çağrılır (A veya B slug'ında). */
