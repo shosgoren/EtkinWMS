@@ -2,6 +2,8 @@
 @import "./design/bakis.css";
 @import "./design/giris.css";
 @import "./design/yonet.css";
+@import "./design/pano.css";
+@import "./design/pano-frame.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */

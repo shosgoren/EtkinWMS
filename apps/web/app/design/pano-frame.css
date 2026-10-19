@@ -15,3 +15,15 @@
   overflow: hidden;
   background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-dz-x-nmodok) 100%);
 }
+/* Kap görüntü alanını kaplar; kiracı kabuğunun eski üst çubuğu / alt sekmeleri bu ekranda çizilmez (Bakış `.dz` ile aynı uyarlama). */
+.dzp { position: fixed; inset: 0; z-index: 20; }
+body:has(.dzp) [data-testid="bottom-nav"], body:has(.dzp) [data-testid="tenant-bar"], body:has(.dzp) .app-header { display: none; }
+/* Sorun penceresi Bakış kaynağının kendi penceresidir (`.dz .ovl`); Pano'nun üstünde ayrı kapta açılır. */
+.dzp ~ .dz, .dz.dzp-pop { z-index: 30; }
+/* Telefonda 4+ görev kartı tek ekrana sığsın (kaydırma yok kuralı): ilerleme satırı gizlenir, kart iç boşluğu daralır. Kaynakta en çok
+   3 kart vardır; gerçek veride beşe kadar bölüm olabilir. */
+@media (max-width: 699.98px) {
+  .dzp .tasks:has(> .tk:nth-child(4)) .tkp { display: none; }
+  .dzp .tasks:has(> .tk:nth-child(4)) .tk { padding: 8px 12px; row-gap: 0; }
+  .dzp .tasks:has(> .tk:nth-child(4)) .tki { width: 42px; height: 42px; }
+}
