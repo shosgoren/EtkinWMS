@@ -68,9 +68,9 @@ export async function getWorkSummaryAt(params: Params, now: Date): Promise<WorkS
     const tz = settings.time_zone;
     const allowed = await resolveWarehouseScope(tx, m);
     const scope = allowed === null ? null : pgUuidArray(allowed);
-    const manager = hasPermission(m.roles, "document.approve", m.grants, m.grants);
+    const manager = hasPermission(m.roles, "document.approve", m.grants);
     // Sayım görevleri yalnız sayım iznine (TASK_KIND_PERMISSION.COUNT = document.create) görünür; diğer rollere sayım bölümü 0'dır (listMyTasks ile aynı kural).
-    const canCount = hasPermission(m.roles, "document.create", m.grants, m.grants);
+    const canCount = hasPermission(m.roles, "document.create", m.grants);
     // Görev konulu sorun bildirimi yalnız görevi görebilen role sayılır (work-signals listOpenProblems ile aynı kural).
     const kinds = `{${(Object.keys(TASK_KIND_PERMISSION) as Array<keyof typeof TASK_KIND_PERMISSION>).filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k], m.grants)).join(",")}}`;
     const nowIso = now.toISOString();

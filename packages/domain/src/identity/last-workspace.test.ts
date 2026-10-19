@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { landingFor, needsMark } from "./last-workspace.ts";
 
-const m = (slug: string, lastUsedAt: Date | null = null) => ({ slug, tenantName: slug.toUpperCase(), roles: [] as const, lastUsedAt });
+const m = (slug: string, lastUsedAt: Date | null = null) => ({ slug, tenantName: slug.toUpperCase(), roles: [] as const, grants: [] as const, screens: null, lastUsedAt });
 const NOW = new Date("2026-10-17T10:00:00Z");
 
 describe("landingFor", () => {

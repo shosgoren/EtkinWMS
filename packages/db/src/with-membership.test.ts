@@ -185,7 +185,7 @@ describe("withMembership — SQL biçimi ve karar tablosu (sahte tx)", () => {
     await expect(withMembership({ client, userId: USER, tenantId: TENANT, permission: { allowedRoles: [] } }, async () => "x")).rejects.toMatchObject({ code: "FORBIDDEN" });
     const check = vi.fn((roles: readonly string[]) => roles.includes("PICKER"));
     await expect(withMembership({ client, userId: USER, tenantId: TENANT, permission: check }, async () => "ok")).resolves.toBe("ok");
-    expect(check).toHaveBeenCalledWith(["PICKER"]);
+    expect(check).toHaveBeenCalledWith(["PICKER"], []); // T-421: grup yetkileri (grup yok → boş)
     await expect(withMembership({ client, userId: USER, tenantId: TENANT, permission: () => false }, async () => "x")).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 

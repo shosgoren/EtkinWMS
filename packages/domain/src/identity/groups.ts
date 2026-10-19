@@ -30,7 +30,6 @@ export interface CleanGroup {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// eslint-disable-next-line no-control-regex
 const CONTROL_RE = /[\u0000-\u001f\u007f]/g;
 
 function parseUuid(raw: unknown): string {
@@ -118,7 +117,7 @@ async function lockGroupMembers(tx: AccessTx, tenantId: string, groupId: string)
   return [...rows];
 }
 
-interface GroupRow {
+type GroupRow = {
   id: string;
   name: string;
   color: string;
@@ -126,7 +125,7 @@ interface GroupRow {
   grants: string[];
   archived_at: Date | string | null;
   version: number;
-}
+};
 
 async function lockGroup(tx: AccessTx, tenantId: string, id: string): Promise<GroupRow> {
   const rows = await tx.execute<GroupRow>(
