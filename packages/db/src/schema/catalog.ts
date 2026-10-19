@@ -9,7 +9,7 @@
 //   indeksi bilerek benzersiz değildir (A-69).
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { boolean, check, date, index, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, integer, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -229,4 +229,31 @@ export const codeHistory = pgTable(
     check("code_history_entity_type_chk", sql`${t.entityType} IN ('item', 'warehouse', 'location')`),
     check("code_history_codes_chk", sql`btrim(${t.oldCode}) <> '' AND btrim(${t.newCode}) <> '' AND ${t.oldCode} <> ${t.newCode}`),
   ],
+);
+
+// T-428 (`0050_parties`): cari kartlar (müşteri / tedarikçi). Fiziksel silme yok (arşiv); `updated_at`/`version` tetikleyicide.
+export const PARTY_KINDS = ["CUSTOMER", "SUPPLIER", "BOTH"] as const;
+export type PartyKind = (typeof PARTY_KINDS)[number];
+export const parties = pgTable(
+  "parties",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    id: uuid("id").notNull().default(sql`gen_random_uuid()`),
+    code: text("code").notNull(),
+    codeKey: text("code_key").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").$type<PartyKind>().notNull().default("CUSTOMER"),
+    taxNo: text("tax_no"),
+    taxOffice: text("tax_office"),
+    phone: text("phone"),
+    email: text("email"),
+    city: text("city"),
+    address: text("address"),
+    archivedAt: timestamptz("archived_at"),
+    createdBy: uuid("created_by").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+    version: integer("version").notNull().default(1),
+  },
+  (t) => [unique("parties_tenant_code_key").on(t.tenantId, t.codeKey), index("parties_tenant_name_idx").on(t.tenantId, t.name)],
 );

@@ -11,12 +11,14 @@ import { ICON } from "./design/bakis-icons.ts";
 import { GICON } from "./design/giris-icons.ts";
 import { YICON } from "./design/yonet-icons.ts";
 import { PICON } from "./design/pano-icons.ts";
+import { AICON } from "./design/aktar-icons.ts";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 const source = readFileSync(join(repoRoot, "docs/design/source/Bakis.dc.html"), "utf8");
 const giris = readFileSync(join(repoRoot, "docs/design/source/Giris.dc.html"), "utf8");
 const yonet = readFileSync(join(repoRoot, "docs/design/source/Yonet.dc.html"), "utf8");
 const pano = readFileSync(join(repoRoot, "docs/design/source/Pano.dc.html"), "utf8");
+const aktar = readFileSync(join(repoRoot, "docs/design/source/Aktar.dc.html"), "utf8");
 
 describe("I-18 tasarım birebir", () => {
   it("üretilmiş CSS ve belirteçler kaynaktan yeniden üretilenle bayt bayt aynı", () => {
@@ -37,6 +39,16 @@ describe("I-18 tasarım birebir", () => {
 
   it.each(Object.entries(PICON))("Pano ikonu %s kaynakta birebir geçer", (_k, d) => {
     expect(pano.includes(`"${d}"`) || pano.includes(`'${d}'`)).toBe(true);
+  });
+
+  it.each(Object.entries(AICON))("Aktar ikonu %s kaynakta birebir geçer", (_k, d) => {
+    expect(aktar.includes(`"${d}"`) || aktar.includes(`'${d}'`)).toBe(true);
+  });
+
+  it("Aktar kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {
+    const sum = createHash("sha256").update(aktar).digest("hex");
+    expect(readFileSync(join(repoRoot, "docs/design/source/SOURCE.md"), "utf8")).toContain(sum);
+    expect(readFileSync(join(repoRoot, "scripts/design/port.mjs"), "utf8")).toContain(sum);
   });
 
   it("Pano kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {

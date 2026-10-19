@@ -660,7 +660,8 @@
         "hint": "Movement without an order",
         "in": "Manual in",
         "out": "Manual out"
-      }
+      },
+      "parties": "Customers"
     },
     "tasksLabel": "Tasks",
     "lockedReason": "You are not allowed to do this. Ask your manager.",
@@ -971,6 +972,13 @@
     "field_device": {
       "enrolled": "You registered a shared device.",
       "revoked": "You revoked a field device."
+    },
+    "party": {
+      "created": "Customer card added",
+      "updated": "Customer card updated",
+      "archived": "Customer card archived",
+      "restored": "Customer card restored",
+      "imported": "Customer cards imported from Excel"
     }
   },
   "auditLog": {
@@ -3312,5 +3320,243 @@
     "assignedTo": "Assigned to {name}",
     "assignFailed": "Could not assign",
     "assignTo": "Assign to {name}"
+  },
+  "aktar": {
+    "title": "Import from Excel",
+    "online": "Online",
+    "stepLine": "STEP {n}/4 · {name} · SETTINGS › IMPORT",
+    "steps": {
+      "1": "Type",
+      "2": "File",
+      "3": "Match",
+      "4": "Check",
+      "5": "Done"
+    },
+    "kind": {
+      "stok": {
+        "title": "Item cards",
+        "sub": "CODE · NAME · UNIT · BARCODE · CASE",
+        "done": "{n} item cards added or updated",
+        "goList": "Go to items"
+      },
+      "cari": {
+        "title": "Customer cards",
+        "sub": "CUSTOMER · SUPPLIER · TAX NO · CONTACT",
+        "done": "{n} customer cards added or updated",
+        "goList": "Go to customers"
+      },
+      "acilis": {
+        "title": "Opening stock",
+        "sub": "ITEM CODE · SHELF · QUANTITY",
+        "done": "{n} shelf lines written as opening stock",
+        "goList": "Go to stock"
+      },
+      "soon": "OPENS WITH THE CUSTOMER SCREEN"
+    },
+    "s1": {
+      "lead": "What will you import?",
+      "hint": "YOUR OWN EXCEL · NO TEMPLATE NEEDED",
+      "memo": "Whatever your column names are, I find them; I ask what I can't find. I remember the matching and won't ask again for the same Excel."
+    },
+    "s2": {
+      "lead": "Choose your Excel for {kind}",
+      "hint": ".XLSX · .CSV · UP TO {n} ROWS",
+      "reading": "Reading…",
+      "pick": "Choose file",
+      "drag": "OR DROP IT HERE",
+      "recent": "LAST USED",
+      "recentHint": "MATCHING REMEMBERED",
+      "recentMeta": "{rows} ROWS · {cols} COLUMNS",
+      "noAsk": "NO QUESTIONS"
+    },
+    "s3": {
+      "meta": "{sheet} · {rows} ROWS · {cols} COLUMNS · HEADER ON ROW {header}",
+      "remembered": "MATCHING REMEMBERED",
+      "sheet": "Choose sheet",
+      "found": "FOUND",
+      "sure": "IS IT RIGHT?",
+      "need": "YOU CHOOSE",
+      "mapAria": "Field matching",
+      "choose": "CHOOSE ›",
+      "notInFile": "NOT IN FILE",
+      "required": "REQUIRED · TAP TO CHOOSE",
+      "optional": "TAP TO CHOOSE IF YOU LIKE",
+      "yes": "Correct",
+      "unused": "Unused column: {cols} (not imported)",
+      "allUsed": "All columns in the file are used",
+      "preview": "PREVIEW",
+      "previewHint": "FIRST 4 ROWS · WITH YOUR MATCHING"
+    },
+    "field": {
+      "stok": {
+        "kod": "Item code",
+        "ad": "Item name",
+        "birim": "Base unit",
+        "koli": "Units per case",
+        "barkod": "Unit barcode",
+        "kbarkod": "Case barcode"
+      },
+      "acilis": {
+        "urun": "Item code",
+        "raf": "Shelf code",
+        "miktar": "Quantity"
+      },
+      "cari": {
+        "kod": "Customer code",
+        "unvan": "Name",
+        "vkn": "Tax / ID no",
+        "vd": "Tax office",
+        "tel": "Phone",
+        "mail": "Email",
+        "il": "City",
+        "adres": "Address",
+        "tur": "Type (customer / supplier)"
+      }
+    },
+    "s4": {
+      "blocked": "Cannot import · {bad} rows have problems",
+      "ready": "{n} rows ready · {bad} rows have problems",
+      "hint": "NOTHING WRITTEN YET · ADDED WHEN YOU PRESS IMPORT",
+      "new": "NEW",
+      "upd": "EXISTS · UPDATED",
+      "bad": "PROBLEM ROWS",
+      "row": "ROW {n}",
+      "file": "FILE",
+      "recheck": "Check again",
+      "skip": "Skip problem rows, import the rest"
+    },
+    "s5": {
+      "partial": "Incomplete · {n} rows written",
+      "sub": "{added} NEW · {updated} UPDATED · {same} ALREADY THERE · {failed} FAILED · {notTried} NOT TRIED · {skipped} SKIPPED",
+      "failedRow": "This row could not be saved",
+      "more": "and {n} more rows failed",
+      "retry": "Choose the file again",
+      "memo": "I saved the matching. If you upload an Excel with the same headers, I go straight to the preview."
+    },
+    "main": {
+      "pick": "CHOOSE FILE",
+      "wait": "{n} FIELDS WAITING",
+      "checking": "CHECKING…",
+      "check": "CHECK",
+      "applying": "IMPORTING {done}/{total}",
+      "apply": "IMPORT {n} ROWS",
+      "fix": "BACK TO MATCHING",
+      "done": "DONE"
+    },
+    "dock": "Bottom bar",
+    "back": "BACK",
+    "backHome": "Back: home",
+    "home": "Home",
+    "homeShort": "HOME",
+    "pick": {
+      "aria": "Choose column",
+      "hint": "WHICH COLUMN IN YOUR FILE? · TAP TO CHOOSE",
+      "close": "Close",
+      "noHeader": "(no header)",
+      "empty": "EMPTY",
+      "current": "SELECTED",
+      "leaveEmpty": "Leave this field empty",
+      "notInFile": "NOT IN FILE"
+    },
+    "cf": {
+      "title": "Leave the import unfinished?",
+      "text": "The file has not been imported yet. If you save the matching, I won't ask again for the same Excel.",
+      "save": "Save matching and leave",
+      "leave": "Leave without saving",
+      "stay": "Cancel, stay here"
+    },
+    "fileError": {
+      "TOO_BIG": "File too large. Up to 10 MB; split the file.",
+      "XLS_OLD": "The old .xls format cannot be read. In Excel choose “Save as → Excel Workbook (.xlsx)” and upload again.",
+      "UNREADABLE": "The file could not be read. Save it as .xlsx or CSV and try again.",
+      "EMPTY": "The file has no rows.",
+      "TOO_MANY_ROWS": "The file has too many rows. Split it and upload the parts in order.",
+      "TOO_MANY_COLS": "The file has more than 40 columns. Delete unneeded columns and upload again."
+    },
+    "serverError": "The server could not finish ({code}). Try again shortly.",
+    "partyIssue": {
+      "CODE_MISSING": "Customer code is empty",
+      "CODE_INVALID": "Customer code too long or invalid",
+      "NAME_MISSING": "Name is empty (new customer)",
+      "NAME_INVALID": "Name too long or invalid",
+      "KIND_UNKNOWN": "Type not understood (customer / supplier / both)",
+      "TAX_NO_INVALID": "Tax no contains invalid characters",
+      "PHONE_INVALID": "Phone is invalid",
+      "EMAIL_INVALID": "Email is invalid",
+      "TEXT_TOO_LONG": "A cell is too long",
+      "CODE_DUPLICATE_FILE": "This code appears earlier in the file",
+      "UNKNOWN": "Row could not be read"
+    },
+    "partyIssueFix": "THIS ROW IS SKIPPED · FIX AND UPLOAD AGAIN",
+    "partyWarning": {
+      "TAX_NO_LENGTH": "Tax no has 10 digits, national ID 11"
+    },
+    "partyWarningFix": "WARNING · THE RECORD IS STILL SAVED"
+  },
+  "parties": {
+    "title": "Customer cards",
+    "sub": "{n} CARDS · CUSTOMERS AND SUPPLIERS",
+    "search": "Name, code, tax no, phone or city",
+    "find": "Find",
+    "activeList": "CUSTOMERS",
+    "archivedList": "ARCHIVED",
+    "showArchived": "SHOW ARCHIVE",
+    "showActive": "ACTIVE CARDS",
+    "empty": "No customer cards yet.",
+    "noMatch": "No card matches the search.",
+    "importLink": "Import from Excel",
+    "archived": "ARCHIVED",
+    "dock": "Bottom bar",
+    "back": "Back",
+    "backShort": "BACK",
+    "home": "Home",
+    "homeShort": "HOME",
+    "new": "New customer",
+    "newShort": "NEW",
+    "formHint": "* REQUIRED · PRESS SAVE",
+    "readOnly": "VIEW ONLY",
+    "close": "Close",
+    "save": "Save",
+    "saving": "Saving…",
+    "archive": "Archive",
+    "restore": "Restore",
+    "conflict": "This card changed meanwhile. Close and reopen.",
+    "failed": "Could not save ({code}). Try again.",
+    "f": {
+      "code": "Customer code",
+      "name": "Name",
+      "kind": "Type",
+      "taxNo": "Tax / ID no",
+      "taxOffice": "Tax office",
+      "phone": "Phone",
+      "email": "Email",
+      "city": "City",
+      "address": "Address"
+    },
+    "kind": {
+      "CUSTOMER": "Customer",
+      "SUPPLIER": "Supplier",
+      "BOTH": "Customer and supplier"
+    },
+    "issue": {
+      "CODE_MISSING": "Enter the code.",
+      "CODE_INVALID": "Code too long or invalid.",
+      "NAME_MISSING": "Enter the name.",
+      "NAME_INVALID": "Name too long or invalid.",
+      "KIND_UNKNOWN": "Choose the type.",
+      "TAX_NO_INVALID": "Tax no may only contain digits and letters.",
+      "PHONE_INVALID": "Enter the phone with digits.",
+      "EMAIL_INVALID": "Check the email address.",
+      "TEXT_TOO_LONG": "A field is too long.",
+      "CODE_DUPLICATE_FILE": "This code repeats.",
+      "CODE_TAKEN": "This code is used by another card."
+    },
+    "cf": {
+      "title": "Changes not saved",
+      "text": "The card has unsaved changes. They are lost if you leave.",
+      "save": "Save and leave",
+      "leave": "Leave without saving",
+      "stay": "Cancel, stay here"
+    }
   }
 }
