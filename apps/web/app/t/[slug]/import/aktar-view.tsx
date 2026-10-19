@@ -20,7 +20,7 @@ type ApplyResult = Awaited<ReturnType<typeof applyImportChunkAction>>;
 type ChunkReport = Extract<ApplyResult, { ok: true }>["data"];
 type PartyResult = Awaited<ReturnType<typeof importPartiesAction>>;
 type PartyReport = Extract<PartyResult, { ok: true }>["data"];
-type PartyRec = Record<string, string> & { row: number };
+type PartyRec = { row: number } & Partial<Record<"code" | "name" | "kind" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "address", string>>;
 const PARTY_CHUNK = 500;
 
 export interface AktarViewProps {
@@ -184,7 +184,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     setError(null);
     if (kind === "cari") {
       // T-428: cari kartlar kayıt olarak gider; kontrol = sunucuda yazmadan deneme (dryRun), aynı kurallar.
-      const records = buildRecords(rows, loaded.header, map, kind);
+      const records = buildRecords(rows, loaded.header, map, kind) as unknown as PartyRec[];
       const res: PartyReport["rows"][number][] = [];
       for (let i = 0; i < records.length; i += PARTY_CHUNK) {
         const r = await importPartiesAction({ slug, dryRun: true, rows: records.slice(i, i + PARTY_CHUNK) });

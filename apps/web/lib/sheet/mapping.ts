@@ -235,9 +235,10 @@ export function colLetter(i: number): string {
 }
 
 /** Cari kartlar (T-428): eşleşen alanlarla satır kayıtları (sunucu alan adları). `row`: dosyadaki satır no (1 tabanlı). */
-export function buildRecords(rows: readonly (readonly string[])[], headerRow: number, m: Mapping, kind: ImportKindKey, skip: ReadonlySet<number> = new Set()): Array<Record<string, string> & { row: number }> {
+export type SheetRecord = { readonly row: number; readonly [field: string]: string | number };
+export function buildRecords(rows: readonly (readonly string[])[], headerRow: number, m: Mapping, kind: ImportKindKey, skip: ReadonlySet<number> = new Set()): SheetRecord[] {
   const fields = FIELDS[kind].filter((f) => m.col[f.id] !== null && m.col[f.id] !== undefined);
-  const out: Array<Record<string, string> & { row: number }> = [];
+  const out: SheetRecord[] = [];
   for (let i = headerRow + 1; i < rows.length; i++) {
     if (skip.has(i + 1)) continue;
     const r = rows[i] ?? [];
