@@ -6,12 +6,13 @@ import { ActivityList, Banner } from "@wms/ui";
 import { AppError } from "@wms/shared/errors";
 import { listMyActionsToday } from "@wms/domain/audit/today";
 import { getAppDb } from "@wms/db";
-import { getMembershipSummary } from "@wms/domain/identity/member-queries";
+import { getMembershipSummary, listMembers } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
-import { TASK_LIST_LIMIT_MAX, getWorkSummary, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
+import { TASK_KIND_PERMISSION, TASK_LIST_LIMIT_MAX, getBoard, getWorkSummary, type Board, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
 import { TaskMenu, type MyTasksSummary, type NowSummary } from "./task-menu.tsx";
 import { EasyOperations } from "./easy-operations.tsx";
 import { PanoHome, type PanoRole } from "./pano/pano-home.tsx";
+import { PanoBoard, type Assignee, type BoardRole } from "./pano/pano-board.tsx";
 import { THEME_COOKIE } from "../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,67 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   if (current === undefined) return null;
   const jar = await cookies();
   // T-423: saha (PICKER) ve sayım (COUNTER) rolleri yeni ana ekranı (Pano.dc.html) görür; yönetici ve hesap sahibinin ana ekranı T-422'de.
+  const boardRole: BoardRole | null = current.roles.includes("TENANT_ADMIN") ? "owner" : current.roles.includes("WAREHOUSE_MANAGER") ? "manager" : null;
+  if (boardRole !== null && jar.get("view")?.value !== "cockpit") {
+    // T-422: hesap sahibi / depo yöneticisi panosu. Bölüm hatası ekranı düşürmez: veri yoksa kartlar "veri okunamadı" der.
+    const call = { db: getAppDb(), principal, tenantSlug: slug };
+    const guard = (e: unknown, what: string): void => {
+      if (e instanceof AppError) {
+        if (e.code === "NOT_FOUND") notFound();
+        if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(`/t/${slug}`)}`);
+        if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(`/t/${slug}`)}`);
+      }
+      console.error(JSON.stringify({ level: "error", msg: `pano ${what} failed`, error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
+    };
+    let board: Board | null = null;
+    let work: WorkSummary | null = null;
+    let assignees: Assignee[] = [];
+    try {
+      board = await getBoard(call);
+    } catch (e) {
+      guard(e, "board");
+    }
+    try {
+      work = await getWorkSummary(call);
+    } catch (e) {
+      guard(e, "work summary");
+    }
+    const canAssign = hasPermission(current.roles, "document.approve");
+    if (canAssign) {
+      try {
+        const members = await listMembers(call, { demoEmailDomain: process.env.DEMO_EMAIL_DOMAIN?.trim().toLowerCase() || null });
+        assignees = members
+          .filter((x) => x.status === "ACTIVE")
+          .map((x) => ({
+            membershipId: x.membershipId,
+            name: x.displayName,
+            kinds: (Object.keys(TASK_KIND_PERMISSION) as Array<keyof typeof TASK_KIND_PERMISSION>).filter((k) => hasPermission(x.roles, TASK_KIND_PERMISSION[k])),
+          }))
+          .filter((x) => x.kinds.length > 0);
+      } catch (e) {
+        guard(e, "members");
+      }
+    }
+    return (
+      <main className="flex w-full min-w-0 flex-col">
+        <PanoBoard
+          slug={slug}
+          role={boardRole}
+          board={board}
+          summary={work}
+          userName={summary.userName}
+          tenantName={current.tenantName}
+          dark={jar.get(THEME_COOKIE)?.value === "koyu"}
+          canAssign={canAssign}
+          canReport={hasPermission(current.roles, "stock.post") || hasPermission(current.roles, "document.create")}
+          stockPost={hasPermission(current.roles, "stock.post")}
+          usersManage={hasPermission(current.roles, "users.manage")}
+          settingsManage={hasPermission(current.roles, "settings.manage")}
+          assignees={assignees}
+        />
+      </main>
+    );
+  }
   const panoRole: PanoRole | null =
     current.roles.includes("TENANT_ADMIN") || current.roles.includes("WAREHOUSE_MANAGER") ? null : current.roles.includes("PICKER") ? "field" : current.roles.includes("COUNTER") ? "counter" : null;
   if (panoRole !== null && jar.get("view")?.value !== "cockpit") {

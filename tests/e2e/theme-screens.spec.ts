@@ -89,9 +89,10 @@ for (const size of SIZES) {
       for (const view of [...VIEWS].reverse()) {
         await selectView(page, view.label);
         await expect(page.locator("html")).toHaveAttribute("data-view", view.key);
-        const tasks = view.key === "flow" ? page.locator("#main").getByTestId("easy-operations") : page.getByRole("list", { name: "İşler" });
+        // T-422: Akış görünümünde hesap sahibinin ana ekranı Pano (rapor kartları).
+        const tasks = view.key === "flow" ? page.locator("#main").getByTestId("pano") : page.getByRole("list", { name: "İşler" });
         await expect(tasks).toBeVisible();
-        if (view.key === "flow") await expect(tasks.locator("[data-operation]")).toHaveCount(4);
+        if (view.key === "flow") await expect(tasks.locator("[data-report]")).toHaveCount(5);
 
         // Kart ikonları dekoratif. Kokpit: Lucide (svg.lucide). Akış (I-18): tasarım kaynağının kendi SVG yolları (svg.ico).
         const icons = tasks.locator(view.key === "flow" ? "svg.ico" : "svg.lucide");
