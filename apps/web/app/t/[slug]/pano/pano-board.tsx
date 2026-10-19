@@ -82,6 +82,7 @@ export async function PanoBoard(p: PanoBoardProps) {
   const teamLinks: PanoLink[] = [
     { k: "users", label: t("m.users"), color: "6C4BD8", d: PICON.team, href: `${base}/members` },
     ...(p.usersManage ? [{ k: "pending", label: t("m.pending"), color: "E56A00", d: PICON.clock, href: `${base}/members/devices` }] : []),
+    ...(p.usersManage ? [{ k: "groups", label: t("m.groups"), color: "0E7C7B", d: PICON.shieldCheck, href: `${base}/groups` }] : []),
   ];
 
   const shd = (title: string, right: ReactNode, cls = "shd") => (
@@ -112,6 +113,7 @@ export async function PanoBoard(p: PanoBoardProps) {
       settingsHref={p.settingsManage ? `${base}/settings` : undefined}
       scanHref={`${base}/field`}
       canReport={p.canReport}
+      bell={b === null ? undefined : { n: b.criticalCount + b.problems, href: owner ? "#pano-alerts" : `${base}/tasks` }}
     >
       <div className="hello">
         <div className="hl">
@@ -177,7 +179,7 @@ export async function PanoBoard(p: PanoBoardProps) {
           </div>
 
           {shd(t("alerts"), <><span className="dotlive" />{t("liveNow")}</>, "shd alerts-hd")}
-          <div className="alerts">
+          <div className="alerts" id="pano-alerts">
             <a href={`${base}/stock`} className="al" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }}>
               {b.criticalCount > 0 ? <span className="pulse" /> : null}
               <span className="alic"><Svg size={28}><P d={PICON.boxA} /><P d={PICON.boxB} /><P d={PICON.boxC} /></Svg></span>

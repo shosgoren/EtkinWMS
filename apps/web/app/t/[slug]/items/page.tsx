@@ -64,7 +64,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canManage = hasPermission(current.roles, "settings.manage");
+    canManage = hasPermission(current.roles, "settings.manage", current.grants);
     const page = await searchItems(call, {
       limit: PAGE_SIZE,
       ...(q.trim() === "" ? {} : { q }),

@@ -53,7 +53,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canManage = hasPermission(current.roles, "document.approve");
+    canManage = hasPermission(current.roles, "document.approve", current.grants);
     result = await listTasks(call, { ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }), ...(after === undefined ? {} : { after }), limit: PAGE_SIZE });
     members = await listMembers(call, { demoEmailDomain: process.env.DEMO_EMAIL_DOMAIN?.trim().toLowerCase() || null });
   } catch (e) {

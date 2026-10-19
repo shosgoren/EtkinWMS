@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Açılış verisi içe aktarma (T-289): sunucu bileşeni yalnız oturum/üyelik ve gösterim yetkisini çözer. İş kuralları ve yetki kararı
-// eylemlerde (domain) verilir; `canManage` kilidi yalnız gösterimdir (eylem de `settings.manage` ister). Şablon metinleri ve sınırlar
+// eylemlerde (domain) verilir; `canManage` kilidi yalnız gösterimdir (eylem de `data.import` ister). Şablon metinleri ve sınırlar
 // domain'den buraya okunur, istemciye ÖZELLİK olarak geçer (istemci paketine domain/DB kodu girmez).
 export default async function ImportPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -34,7 +34,7 @@ export default async function ImportPage({ params }: { params: Promise<{ slug: s
     const summary = await getMembershipSummary({ db: getAppDb(), principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canManage = hasPermission(current.roles, "settings.manage");
+    canManage = hasPermission(current.roles, "data.import", current.grants);
   } catch (e) {
     if (e instanceof AppError && e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
     throw e;

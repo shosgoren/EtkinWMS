@@ -49,7 +49,7 @@ export default async function FieldReceivePage({ params, searchParams }: { param
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) notFound();
   const roles = current.roles;
-  if (!hasPermission(roles, "stock.post")) {
+  if (!hasPermission(roles, "stock.post", current.grants)) {
     return (
       <FlowShell hue="green" icon={icon} title={t("flow.lockedTitle")} backHref={fieldHome} footer={<PrimaryLink href={fieldHome}>{t("flow.toField")}</PrimaryLink>}>
         <p className="break-words text-lg text-ink" data-testid="receive-locked">
@@ -97,7 +97,7 @@ export default async function FieldReceivePage({ params, searchParams }: { param
     if (e instanceof AppError && e.code === "VALIDATION_FAILED") redirect(base);
     return guardErrors(e);
   }
-  const canCreate = hasPermission(roles, "document.create");
+  const canCreate = hasPermission(roles, "document.create", current.grants);
   const firstReceipt = page.items[0];
   const rowCls =
     "flex min-h-16 min-w-0 flex-col justify-center gap-1 rounded-card border-2 border-border bg-surface p-3 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";

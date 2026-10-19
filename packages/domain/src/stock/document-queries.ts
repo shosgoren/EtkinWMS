@@ -32,7 +32,7 @@ export async function listStockDocuments(params: Params, input: { after?: string
       ORDER BY d.business_date DESC,d.id DESC LIMIT 51`);
     const items = rows.slice(0,50), last = items.at(-1);
     return { items, next: rows.length > 50 && last ? `${last.businessDate}:${last.id}` : null,
-      permissions: { create: hasPermission(m.roles,"document.create"), approve: hasPermission(m.roles,"document.approve"), post: hasPermission(m.roles,"stock.post") } };
+      permissions: { create: hasPermission(m.roles, "document.create", m.grants), approve: hasPermission(m.roles, "document.approve", m.grants), post: hasPermission(m.roles, "stock.post", m.grants) } };
   });
 }
 export async function getStockDocument(params: Params, documentId: string) {

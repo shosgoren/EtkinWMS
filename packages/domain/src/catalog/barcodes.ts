@@ -73,8 +73,8 @@ export async function addBarcode(
   // lot/SKT/seri okutmaya özgüdür. Normalize etmek yerine reddederiz (girdiyi sessizce değiştirmez); GTIN'in kendisi eklenir.
   const gs1 = parseGs1(barcode);
   if (gs1.ok && gs1.gtin !== undefined) throw new AppError("VALIDATION_FAILED");
-  const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  const { requestId, writePermission, ...access } = params;
+  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
     const item = await loadItem(tx, actor.tenantId, itemId, "share");
     if (item === undefined) throw new AppError("NOT_FOUND");
     if (item.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");

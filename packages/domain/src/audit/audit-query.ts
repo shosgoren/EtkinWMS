@@ -214,7 +214,7 @@ export async function listAudit(params: QueryParams, options: ListAuditOptions =
   const filters = checkFilters(options.filters);
   return runTenantQuery({ ...params, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => {
     const timeZone = await tenantTimeZone(tx, m.tenantId);
-    const rows = await selectRows(tx, m.tenantId, timeZone, filters, cursor, undefined, limit + 1, false, undefined, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m));
+    const rows = await selectRows(tx, m.tenantId, timeZone, filters, cursor, undefined, limit + 1, false, undefined, !hasPermission(m.roles, "users.manage", m.grants), await resolveWarehouseScope(tx, m));
     const page = rows.slice(0, limit);
     const last = page[page.length - 1];
     return {
@@ -279,7 +279,7 @@ export async function openAuditExport(params: Omit<TenantAccessParams, "permissi
     });
     // Kesit kendi `audit.exported` olayını DIŞLAR: tx xid'i üyelik `FOR SHARE` kilidinde snapshot'tan ÖNCE atanır, yani snapshot.xmax'tan küçük
     // olabilir ve `pg_visible_in_snapshot` onu görünür sayardı; bu yüzden `createdXid` açıkça süzülür.
-    const rows = await selectRows(tx, m.tenantId, tz, filters, undefined, snap, size, true, ev.createdXid, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m));
+    const rows = await selectRows(tx, m.tenantId, tz, filters, undefined, snap, size, true, ev.createdXid, !hasPermission(m.roles, "users.manage", m.grants), await resolveWarehouseScope(tx, m));
     return { snap, tz, rows, ownXid: ev.createdXid };
   });
 
@@ -327,7 +327,7 @@ export async function openAuditExport(params: Omit<TenantAccessParams, "permissi
         // Sonraki parça: oturum + ayrı kısa transaction; üyelik/izin yeniden doğrulanır (recentAuth yalnızca ilk parçada).
         if (options.revalidate !== undefined) await options.revalidate();
         const cur = lastCursor;
-        rows = await runTenantQuery({ ...later, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => selectRows(tx, m.tenantId, first.tz, filters, cur, first.snap, size, true, first.ownXid, !hasPermission(m.roles, "users.manage"), await resolveWarehouseScope(tx, m)));
+        rows = await runTenantQuery({ ...later, permission: "audit.view", timeouts: AUDIT_TIMEOUTS }, async (tx, m) => selectRows(tx, m.tenantId, first.tz, filters, cur, first.snap, size, true, first.ownXid, !hasPermission(m.roles, "users.manage", m.grants), await resolveWarehouseScope(tx, m)));
       }
       const last = rows[rows.length - 1];
       if (last !== undefined) {

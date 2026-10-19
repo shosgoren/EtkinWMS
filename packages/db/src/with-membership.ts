@@ -48,6 +48,11 @@ export interface Membership {
   readonly isOwner: boolean;
   readonly roles: readonly RoleKey[];
   readonly rolesVersion: number;
+  /** T-421: üyenin özel yetki grubunun EK yetkileri (rol izinlerine eklenir; grubu yoksa / grup arşivdeyse boş). */
+  readonly grants: readonly string[];
+  /** T-421: özel grubun görünür ekranları (grubu yoksa `null`: rolün varsayılanı). */
+  readonly screens: readonly string[] | null;
+  readonly groupId: string | null;
 }
 
 /**
@@ -55,7 +60,7 @@ export interface Membership {
  * ya da `allowedRoles` (rollerden en az biri listede olmalı). Boş liste her zaman reddeder.
  */
 export type MembershipPermission =
-  | ((roles: readonly RoleKey[]) => boolean)
+  | ((roles: readonly RoleKey[], grants: readonly string[]) => boolean)
   | { readonly allowedRoles: readonly RoleKey[] };
 
 export interface WithMembershipParams {
@@ -79,8 +84,8 @@ function assertReason(value: unknown): asserts value is string {
   }
 }
 
-function permits(permission: MembershipPermission, roles: readonly RoleKey[]): boolean {
-  if (typeof permission === "function") return permission(roles) === true;
+function permits(permission: MembershipPermission, roles: readonly RoleKey[], grants: readonly string[]): boolean {
+  if (typeof permission === "function") return permission(roles, grants) === true;
   return roles.some((r) => permission.allowedRoles.includes(r));
 }
 
@@ -120,8 +125,8 @@ export async function withMembership<T>(
     await tx.execute(sql`SELECT set_config('app.current_user_id', ${userId}, true)`);
     if (timeouts !== undefined) await setLocalTimeouts(tx, timeouts); // kilit okumalarından ÖNCE
     const tenantStatus = await lockTenantRow(tx, tenantId);
-    const rows = await tx.execute<{ id: string; is_owner: boolean; status: string; roles_version: number }>(
-      sql`SELECT id, is_owner, status, roles_version
+    const rows = await tx.execute<{ id: string; is_owner: boolean; status: string; roles_version: number; has_groups?: boolean }>(
+      sql`SELECT id, is_owner, status, roles_version, pg_catalog.to_regclass('public.member_groups') IS NOT NULL AS has_groups
             FROM public.tenant_memberships
            WHERE tenant_id = ${tenantId}::uuid AND user_id = ${userId}::uuid
              FOR SHARE`,
@@ -138,7 +143,18 @@ export async function withMembership<T>(
              FOR SHARE`,
     );
     const roles = roleRows.map((r) => r.role_key);
-    if (permission !== undefined && !permits(permission, roles)) {
+    // T-421: özel grup (en çok bir). Grup ve üyelik satırı FOR SHARE: yetki daraltma/grup değişimi bu transaction bitene kadar bekler.
+    // 0051 öncesi şemaya geri alınmış veritabanında (geri alma güvenliği, G-08) tablo yoktur: grup yok sayılır.
+    const groupRows = m.has_groups === false ? [] : await tx.execute<{ id: string; grants: string[]; screens: string[] }>(
+      sql`SELECT g.id, g.grants, g.screens
+            FROM public.member_groups mg
+            JOIN public.permission_groups g ON g.tenant_id = mg.tenant_id AND g.id = mg.group_id
+           WHERE mg.tenant_id = ${tenantId}::uuid AND mg.membership_id = ${m.id}::uuid AND g.archived_at IS NULL
+             FOR SHARE OF mg, g`,
+    );
+    const group = groupRows[0];
+    const grants: readonly string[] = group === undefined ? [] : [...group.grants];
+    if (permission !== undefined && !permits(permission, roles, grants)) {
       throw new MembershipError("FORBIDDEN", "permission denied");
     }
     return fn(tx, {
@@ -148,6 +164,9 @@ export async function withMembership<T>(
       isOwner: m.is_owner,
       roles,
       rolesVersion: Number(m.roles_version),
+      grants,
+      screens: group === undefined || group.screens.length === 0 ? null : [...group.screens], // boş liste = rolün varsayılanı (kimse kilitlenmez)
+      groupId: group?.id ?? null,
     });
   });
 }

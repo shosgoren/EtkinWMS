@@ -102,8 +102,8 @@ export async function createItem(params: CatalogCommandParams, input: CreateItem
   const quantityScale = input.quantityScale === undefined ? 0 : parseScale(input.quantityScale);
   const pickPolicy = input.pickPolicy === undefined ? "FIFO" : parsePick(input.pickPolicy);
   const cardType = input.cardType === undefined ? DEFAULT_CARD_TYPE : parseCardType(input.cardType);
-  const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  const { requestId, writePermission, ...access } = params;
+  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
     const unit = await tx.execute<{ status: string }>(
       sql`SELECT status FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${baseUnitId}::uuid`,
     );

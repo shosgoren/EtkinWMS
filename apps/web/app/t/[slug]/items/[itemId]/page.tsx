@@ -50,7 +50,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    const canManage = hasPermission(current.roles, "settings.manage");
+    const canManage = hasPermission(current.roles, "settings.manage", current.grants);
     const item = await getItem(call, { itemId });
     const conversions = await listItemConversions(call, item.id);
     const barcodes = await listItemBarcodes(call, item.id);

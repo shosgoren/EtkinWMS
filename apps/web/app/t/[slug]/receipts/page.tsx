@@ -46,6 +46,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
   const t = await getTranslations("receiving");
 
   let roles: readonly string[];
+  let grants: readonly string[] = [];
   let page: Awaited<ReturnType<typeof listInboundReceipts>>;
   let warehouses: Awaited<ReturnType<typeof listWarehouses>>;
   try {
@@ -53,6 +54,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     roles = current.roles;
+    grants = current.grants;
     page = await listInboundReceipts(call, { limit: PAGE_SIZE, ...(after === undefined ? {} : { after }) });
     warehouses = await listWarehouses(call);
   } catch (e) {
@@ -77,14 +79,14 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
           {t("backHome")}
         </Link>
       </header>
-      {packageReceivingEnabled() && hasPermission(roles, "stock.view") && hasPermission(roles, "document.create") && hasPermission(roles, "stock.post") ? <Link href={`${returnTo}/packages`} className="inline-flex min-h-14 items-center rounded-control bg-accent px-4 font-bold text-on-accent">{t("packageEntry")}</Link> : null}
+      {packageReceivingEnabled() && hasPermission(roles, "stock.view", grants) && hasPermission(roles, "document.create", grants) && hasPermission(roles, "stock.post", grants) ? <Link href={`${returnTo}/packages`} className="inline-flex min-h-14 items-center rounded-control bg-accent px-4 font-bold text-on-accent">{t("packageEntry")}</Link> : null}
       <ReceiptsView
         slug={slug}
         receipts={page.items}
         nextHref={nextHref}
         warehouses={warehouses.items.filter((w) => w.status === "ACTIVE").map((w) => ({ id: w.id, code: w.code, name: w.name }))}
-        canCreate={hasPermission(roles, "document.create")}
-        canApprove={hasPermission(roles, "document.approve")}
+        canCreate={hasPermission(roles, "document.create", grants)}
+        canApprove={hasPermission(roles, "document.approve", grants)}
       />
     </main>
   );

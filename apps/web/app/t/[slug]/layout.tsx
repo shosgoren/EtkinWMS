@@ -90,14 +90,14 @@ export default async function TenantLayout({ children, params }: { children: Rea
   const base = `/t/${encodeURIComponent(slug)}`;
   const menuLinks = (
     [
-      ["stock", "/stock", hasPermission(current.roles, "stock.view")],
-      ["items", "/items", hasPermission(current.roles, "stock.view")],
-      ["parties", "/parties", hasPermission(current.roles, "stock.view")],
+      ["stock", "/stock", hasPermission(current.roles, "stock.view", current.grants)],
+      ["items", "/items", hasPermission(current.roles, "stock.view", current.grants)],
+      ["parties", "/parties", hasPermission(current.roles, "stock.view", current.grants)],
       ["warehouses", "/warehouses", true],
-      ["tasks", "/field/tasks", hasPermission(current.roles, "stock.view")],
-      ["members", "/members", hasPermission(current.roles, "users.manage")],
-      ["settings", "/settings", hasPermission(current.roles, "settings.manage")],
-      ["audit", "/audit", hasPermission(current.roles, "audit.view")],
+      ["tasks", "/field/tasks", hasPermission(current.roles, "stock.view", current.grants)],
+      ["members", "/members", hasPermission(current.roles, "users.manage", current.grants)],
+      ["settings", "/settings", hasPermission(current.roles, "settings.manage", current.grants)],
+      ["audit", "/audit", hasPermission(current.roles, "audit.view", current.grants)],
     ] as const
   )
     .filter(([, , ok]) => ok)

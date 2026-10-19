@@ -260,6 +260,8 @@ export async function changeRole(params: ChangeRoleParams, deps: MembershipDeps)
 
 async function deactivate(tx: AccessTx, tenantId: string, membershipId: string): Promise<void> {
   await bumpMembership(tx, tenantId, membershipId, sql`status = 'REMOVED', is_owner = false, removed_at = now()`);
+  // T-421 (güvenlik incelemesi): çıkan üye özel grubundan da çıkar; yeniden davetle dönen üye eski grup yetkilerini geri almaz.
+  await tx.execute(sql`DELETE FROM public.member_groups WHERE tenant_id = ${tenantId}::uuid AND membership_id = ${membershipId}::uuid`);
 }
 
 export type RemoveMemberParams = CommandParams & { readonly memberId: string };

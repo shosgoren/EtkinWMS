@@ -1,6 +1,6 @@
 "use server";
 // Açılış verisi içe aktarma eylemleri (T-289). İnce giriş: yalnızca girdi doğrulama (zod) + domain komutu. Ayrıştırma, doğrulama, yetki
-// (`settings.manage`; stok dosyasında ayrıca `document.create`/`document.approve`/`stock.post`) ve idempotans domain'dedir; burada yeniden
+// (`data.import`; stok dosyasında ayrıca `document.create`/`document.approve`/`stock.post`) ve idempotans domain'dedir; burada yeniden
 // yazılmaz. Dosya içeriği YALNIZ bellekte taşınır: diske/loga yazılmaz (G-09); loga yalnız sınıf adı/SQLSTATE girer (ortak guard). Her çağrı
 // dosyayı sunucuda yeniden ayrıştırır (istemci önizlemesine güvenilmez). Bu dosyada DB bağlantısı açılmaz (`getAppDb` yalnız domain'e verilir).
 import { headers } from "next/headers";
@@ -21,7 +21,7 @@ const applySchema = z.object({ slug: slugSchema, text: textSchema, chunk: z.numb
 async function writeContext(slug: string, ctx: ActionContext) {
   const principal = ctx.principal;
   if (principal === null) throw new Error("unreachable: principal required");
-  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission: "settings.manage" }, ctx);
+  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission: "data.import" }, ctx);
   return { db: getAppDb(), principal, tenantSlug: slug };
 }
 

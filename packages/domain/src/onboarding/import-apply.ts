@@ -13,6 +13,7 @@
 //   aynı (ürün, raf, miktar) önceki içe aktarma belgesinden (POSTED, `import.opening_stock`) geliyorsa satır "zaten uygulanmış" sayılır ve atlanır: korunma
 //   DURUM tabanlıdır ve komut içinde stok kilitleri altında yeniden denetlenir; dosyayı sıralamak/düzeltmek/satır eklemek eski satırı iki kez yazmaz.
 // - Dosya içeriği diske/loga yazılmaz; yalnız bellek (G-09). Audit: her komut kendi audit'ini yazar; `requestId` hepsini bağlar.
+import { SOD_DETAIL, separationOfDutiesEnabled } from "../identity/separation.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
@@ -82,8 +83,16 @@ export interface ImportPreview {
 // --- sistem anlık görüntüsü ------------------------------------------------------------------------------------------
 
 async function assertPermissions(params: ImportCallParams, kind: ImportKind): Promise<void> {
-  const perms = kind === "PRODUCTS" ? (["settings.manage"] as const) : (["settings.manage", "document.create", "document.approve", "stock.post"] as const);
+  const perms = kind === "PRODUCTS" ? (["data.import"] as const) : (["data.import", "document.create", "document.approve", "stock.post"] as const);
   for (const permission of perms) await runTenantQuery({ ...params, permission }, () => Promise.resolve(null));
+  // T-421 (güvenlik incelemesi): açılış stoku tek komutta oluştur + onayla + işle. Görev ayrımı açıkken bunu yalnız Yönetici rolü yapar;
+  // aktarım yetkisini grupla alan üye kendi belgesini onaylamış olurdu.
+  if (kind !== "PRODUCTS") {
+    await runTenantQuery({ ...params, permission: "data.import" }, async (tx, m) => {
+      if (!m.roles.includes("TENANT_ADMIN") && (await separationOfDutiesEnabled(tx, m.tenantId))) throw new AppError("FORBIDDEN", { detail: SOD_DETAIL });
+      return null;
+    });
+  }
 }
 
 function canonicalFactor(f: string): string {
@@ -105,7 +114,7 @@ async function loadUnits(tx: AccessTx, tenantId: string): Promise<UnitInfo[]> {
 }
 
 async function loadProductContext(params: ImportCallParams): Promise<ProductContext> {
-  return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantQuery({ ...params, permission: "data.import" }, async (tx, m) => {
     const units = await loadUnits(tx, m.tenantId);
     const items = await loadItems(tx, m.tenantId);
     const bc = await tx.execute<{ barcode: string; code: string; unit_id: string | null }>(
@@ -396,7 +405,8 @@ export async function applyImportChunk(params: ImportCallParams, input: { readon
 }
 
 async function applyProducts(params: ImportCallParams, plans: readonly ProductPlan[], ctx: ProductContext): Promise<RowReport[]> {
-  const p = { ...params };
+  // T-421: kart yazmaları aktarım izniyle (`data.import`); grupla aktarım yetkisi alan üye `settings.manage` almadan ürün açabilir.
+  const p = { ...params, writePermission: "data.import" as const };
   const rows: RowReport[] = [];
   const unitId = new Map(ctx.units.map((u) => [u.code, u.id] as const));
   let packUnitId = unitId.get(PACK_UNIT_CODE);
@@ -406,7 +416,7 @@ async function applyProducts(params: ImportCallParams, plans: readonly ProductPl
       packUnitId = (await createUnit(p, { code: PACK_UNIT_CODE, name: PACK_UNIT_NAME })).unitId;
     } catch (e) {
       if (!isCodeTaken(e)) throw e;
-      packUnitId = (await runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => (await loadUnits(tx, m.tenantId)).find((u) => u.code === PACK_UNIT_CODE)?.id)) ?? undefined;
+      packUnitId = (await runTenantQuery({ ...params, permission: "data.import" }, async (tx, m) => (await loadUnits(tx, m.tenantId)).find((u) => u.code === PACK_UNIT_CODE)?.id)) ?? undefined;
       if (packUnitId === undefined) throw new AppError("INTERNAL");
     }
     return packUnitId;
@@ -482,7 +492,7 @@ class PairConflictError extends AppError {
  *   stok kilitleri (`acquireStockLocks`, plan önceden tam bildirilir) → kilitler alındıktan SONRA çiftlerin hâlâ boş olduğu ve bekleyen belge olmadığı
  *   YENİDEN denetlenir (eşzamanlı içe aktarma ya da normal STOCK_IN araya girmiş olabilir) → belge oluşturulur, onaylanır ve aynı transaction'da işlenir.
  * Ayrı advisory kilit/bağlantı ve polling YOKTUR: bekleyen ikinci işlem tek bağlantı tutar, kilit sahibi ek bağlantı istemez (havuz tükenmez).
- * Yetki: önizleme/uygulama başında dört izin (`settings.manage`, `document.create`, `document.approve`, `stock.post`) denetlenir; komut `stock.post` ister.
+ * Yetki: önizleme/uygulama başında dört izin (`data.import`, `document.create`, `document.approve`, `stock.post`) denetlenir; komut `stock.post` ister.
  */
 async function applyStock(params: ImportCallParams, allPlans: readonly StockPlan[], ctx: StockContext): Promise<RowReport[]> {
   const byWarehouse = new Map<string, StockPlan[]>();

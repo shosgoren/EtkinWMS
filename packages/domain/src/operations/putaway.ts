@@ -147,7 +147,7 @@ export async function putaway(
         if (
           task.status === "ASSIGNED" &&
           task.assigned_membership_id !== ctx.membership.membershipId &&
-          !hasPermission(ctx.membership.roles, "document.approve")
+          !hasPermission(ctx.membership.roles, "document.approve", ctx.membership.grants)
         ) {
           throw new AppError("FORBIDDEN");
         }
@@ -170,7 +170,7 @@ export async function putaway(
         );
         let left = decimalToMicro(p.quantity);
         for (const t of open) {
-          if (t.status === "ASSIGNED" && t.assigned_membership_id !== ctx.membership.membershipId && !hasPermission(ctx.membership.roles, "document.approve")) continue;
+          if (t.status === "ASSIGNED" && t.assigned_membership_id !== ctx.membership.membershipId && !hasPermission(ctx.membership.roles, "document.approve", ctx.membership.grants)) continue;
           const need = t.quantity === null ? 0n : decimalToMicro(t.quantity);
           if (need <= 0n || need > left) break;
           await completeTask(tx, t.id, Number(t.version), ctx.membership, input.requestId ?? null);

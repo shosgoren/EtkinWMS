@@ -47,7 +47,7 @@ function hhmmOf(v: unknown): string {
 
 /** Çağıranın tür iznine göre görebildiği görev türleri (TASK_KIND_PERMISSION) — Postgres text[] dizgesi. */
 function taskKindsFor(m: Membership): string {
-  const kinds = (Object.keys(TASK_KIND_PERMISSION) as Array<keyof typeof TASK_KIND_PERMISSION>).filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k]));
+  const kinds = (Object.keys(TASK_KIND_PERMISSION) as Array<keyof typeof TASK_KIND_PERMISSION>).filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k], m.grants));
   return `{${kinds.join(",")}}`;
 }
 
@@ -63,7 +63,7 @@ async function subjectWarehouse(tx: AccessTx, m: Membership, kind: WorkSubjectKi
   } else {
     // Görev: yalnız çağıranın görebildiği görev (listMyTasks kuralı): tür izni + (OPEN ya da bana atanmış ya da yönetici).
     const kinds = taskKindsFor(m);
-    const manager = hasPermission(m.roles, "document.approve");
+    const manager = hasPermission(m.roles, "document.approve", m.grants);
     rows = await tx.execute<{ warehouse_id: string | null }>(sql`
       SELECT warehouse_id FROM public.warehouse_tasks
        WHERE tenant_id = ${m.tenantId}::uuid AND id = ${id}::uuid AND kind = ANY(${kinds}::text[])
@@ -134,7 +134,7 @@ export async function reportProblem(params: Params, input: ReportProblemInput): 
   if (hasSubject && askedWarehouse !== null) throw new AppError("VALIDATION_FAILED");
   return runTenantCommand({ ...params, permission: "stock.view" }, async (tx, m) => {
     // Bildirim saha işidir: işlem yapabilen roller (stock.post / document.create). Salt okuyan rol bildiremez.
-    if (!hasPermission(m.roles, "stock.post") && !hasPermission(m.roles, "document.create")) throw new AppError("FORBIDDEN");
+    if (!hasPermission(m.roles, "stock.post", m.grants) && !hasPermission(m.roles, "document.create", m.grants)) throw new AppError("FORBIDDEN");
     let warehouseId: string | null;
     if (kind !== null && subjectId !== null) warehouseId = await subjectWarehouse(tx, m, kind, subjectId);
     else {
@@ -227,7 +227,7 @@ export async function listOpenProblems(params: Params): Promise<readonly OpenPro
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const allowed = await resolveWarehouseScope(tx, m);
     const scope = allowed === null ? null : pgUuidArray(allowed);
-    const manager = hasPermission(m.roles, "document.approve");
+    const manager = hasPermission(m.roles, "document.approve", m.grants);
     const kinds = taskKindsFor(m);
     const rows = await tx.execute<{ id: string; reason: ProblemReason; note: string | null; subject_kind: WorkSubjectKind | null; subject_id: string | null; warehouse_id: string | null; reported_at: Date | string; reported_by: string }>(
       sql`SELECT id, reason, note, subject_kind, subject_id, warehouse_id, reported_at, reported_by FROM public.problem_reports problem_reports

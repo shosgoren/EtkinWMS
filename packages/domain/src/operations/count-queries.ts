@@ -60,7 +60,7 @@ export async function getCountWork(params: CountQueryParams, input: { readonly t
     if (t.kind !== "COUNT" || t.source_kind !== "COUNT_SESSION" || t.source_id === null || t.location_id === null) throw new AppError("VALIDATION_FAILED");
     const assignedToMe = t.assigned_membership_id !== null && t.assigned_membership_id.toLowerCase() === m.membershipId.toLowerCase();
     // Başkasına atanmış (durumu ne olursa olsun: ASSIGNED, DONE, CANCELLED) görev yalnız onay yetkisine görünür.
-    if (t.assigned_membership_id !== null && !assignedToMe && !hasPermission(m.roles, "document.approve")) throw new AppError("NOT_FOUND");
+    if (t.assigned_membership_id !== null && !assignedToMe && !hasPermission(m.roles, "document.approve", m.grants)) throw new AppError("NOT_FOUND");
     const sessions = await tx.execute<{ id: string; status: CountSessionStatus; blind: boolean; warehouse_id: string; warehouse_name: string }>(
       sql`SELECT s.id, s.status, s.blind, s.warehouse_id, w.name AS warehouse_name
             FROM public.count_sessions s JOIN public.warehouses w ON w.tenant_id = s.tenant_id AND w.id = s.warehouse_id
@@ -202,7 +202,7 @@ export async function getCountReview(params: CountQueryParams, input: { readonly
     if (h === undefined) throw new AppError("NOT_FOUND");
     await assertWarehouseVisible(tx, m, [h.warehouse_id]);
     // Kör oturumda referans ve fark yalnız fark onay yetkisine (A-136; approveCount ile aynı kural).
-    const hideReference = h.blind && !hasPermission(m.roles, "count_diff.approve");
+    const hideReference = h.blind && !hasPermission(m.roles, "count_diff.approve", m.grants);
     const lines = await tx.execute<{ location_code: string; item_code: string; item_name: string; unit_code: string; stock_status: string | null; reference: string; counted: string | null; difference: string | null }>(
       sql`SELECT lo.code AS location_code, i.code AS item_code, i.name AS item_name, u.code AS unit_code, d.stock_status,
                  l.reference_quantity::text AS reference, l.counted_quantity::text AS counted,

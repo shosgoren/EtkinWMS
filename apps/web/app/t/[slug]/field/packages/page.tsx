@@ -29,7 +29,7 @@ export default async function PackageMovementPage({ params, searchParams }: {
   const member = (await getMembershipSummary({ db, principal })).memberships.find(m => m.slug === slug);
   if (!member) notFound();
   const t = await getTranslations("packageMovement");
-  if (!hasPermission(member.roles, "stock.view")) return <main className="p-4"><h1>{t("title")}</h1><p role="alert">🔒 {t("locked")}</p></main>;
+  if (!hasPermission(member.roles, "stock.view", member.grants)) return <main className="p-4"><h1>{t("title")}</h1><p role="alert">🔒 {t("locked")}</p></main>;
   let initial = null;
   try {
     // Read-only GET uses domain authorization, never the POST Origin guard.

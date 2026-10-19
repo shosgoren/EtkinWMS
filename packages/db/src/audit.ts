@@ -106,6 +106,12 @@ export const AUDIT_ACTIONS = [
   "party.archived",
   "party.restored",
   "party.imported",
+  // T-421: özel yetki grupları (yalnız hesap sahibi) ve üyenin grubu.
+  "group.created",
+  "group.updated",
+  "group.archived",
+  "group.restored",
+  "member.group_changed",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

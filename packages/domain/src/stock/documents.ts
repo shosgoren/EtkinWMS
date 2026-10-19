@@ -542,7 +542,7 @@ export async function cancelDocument(
         if (header.status !== "DRAFT" && header.status !== "APPROVED") throw documentState();
         // A-146 (Supervisor): DRAFT → CANCELLED `document.create` (komut izni); APPROVED → CANCELLED ayrıca `document.approve` ister.
         // Durum ancak kilitli okumadan sonra bilindiğinden ikinci izin burada, güncel üyelik rollerinden denetlenir.
-        if (header.status === "APPROVED" && !hasPermission(ctx.membership.roles, "document.approve")) throw new AppError("FORBIDDEN");
+        if (header.status === "APPROVED" && !hasPermission(ctx.membership.roles, "document.approve", ctx.membership.grants)) throw new AppError("FORBIDDEN");
         if (header.status === "DRAFT") assertDraftOwnerOrApprover(header, ctx.membership);
         // Stok tablosuna yazım `reservations.ts`'tedir (M-4); documents.ts yalnızca çağırır.
         const released = await releaseForCancellation(tx, ctx.tenantId, locked, documentId);
