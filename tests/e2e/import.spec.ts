@@ -34,7 +34,7 @@ test.describe("Excel'den aktar (T-427)", () => {
     await expect(page).toHaveURL(/\/t\/demo\/import$/);
     const aktar = page.getByTestId("aktar");
     await expect(aktar).toBeVisible();
-    await expect(aktar.locator('[data-kind="cari"]')).toBeDisabled(); // cari kartlar T-428 ile açılır
+    await expect(aktar.locator('[data-kind="cari"]')).toBeEnabled(); // T-428: cari kartlar açık
     for (const size of sizes) {
       await page.setViewportSize(size);
       const w = await page.evaluate<{ sw: number; cw: number }>("({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })");
@@ -105,6 +105,25 @@ test.describe("Excel'den aktar (T-427)", () => {
     await main(page).click();
     await expect(page.getByTestId("aktar-done")).toHaveAttribute("data-partial", "false");
     await page.screenshot({ path: path.join(OUT, `aktar-${project}-bitti.png`) });
+
+    // 5) Cari kartlar (T-428): kendi başlıklarıyla; tekrar yüklemede yeni kayıt yok; cari listesinde görünür.
+    await main(page).click();
+    await aktar.locator('[data-kind="cari"]').click();
+    const cari = ["CARİ KOD;Hesap Adı;VKN/TCKN;V.D.;GSM;MAIL;ŞEHİR", `${p}-C1;Kaya Otomotiv;5230012345;Kozyatağı;0532 111 22 33;satis@kaya.com;İstanbul`, `${p}-C2;Demir Lastik;3310098765;Nilüfer;0533 444 55 66;;Bursa`];
+    await upload(page, cari);
+    await expect(aktar.locator('[data-field="kod"]')).toHaveAttribute("data-state", "auto");
+    await expect(aktar.locator('[data-field="unvan"]')).toHaveAttribute("data-state", "auto");
+    await main(page).click();
+    await expect(page.getByTestId("aktar-new")).toHaveText("2");
+    await main(page).click();
+    await expect(page.getByTestId("aktar-counts")).toContainText("2 YENİ");
+    await main(page).click();
+    await aktar.locator('[data-kind="cari"]').click();
+    await upload(page, cari);
+    await main(page).click();
+    await expect(page.getByTestId("aktar-new")).toHaveText("0");
+    await page.goto(`/t/demo/parties?q=${p}-C1`);
+    await expect(page.getByTestId("parties").getByText("Kaya Otomotiv")).toBeVisible();
 
     // Ürünler listesinde içe aktarılan ürün görünür.
     await page.goto(`/t/demo/items?q=${p}-1`);
