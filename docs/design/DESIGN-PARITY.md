@@ -100,3 +100,7 @@ sıfırlaması vardır. Birebir için: (1) `.opt span`, `.addr`, `.chip` gibi al
 | Ayarlar → Örnek veriler (`/t/<alan>/settings`) | — (tasarım kaynağı yok) | T-996: ayarlar ekranının tasarımı henüz yok; bölüm mevcut ayarlar sayfasının bileşenleriyle (Banner, Button) eklendi. Ayarlar tasarımı geldiğinde I-18 kapsamına girer ve birebir aktarılır |
 | Ayarlar → Görev ayrılığı (`/t/<alan>/settings`) | — (tasarım kaynağı yok) | T-416: bölüm mevcut ayarlar sayfasının bileşenleriyle eklendi (aç/kapat, yeniden giriş uyarısı). Ayarlar tasarımı geldiğinde I-18 kapsamına girer |
 | Üyeler → depo kısıtı (`/t/<alan>/members`) | — (üyeler listesinin tasarım kaynağı yok) | T-417: kart içinde "Depolar: …" satırı ve "Depoları düzenle" alanı mevcut üyeler ekranı bileşenleriyle (Button, ConfirmDialog, onay kutuları) eklendi. Üyeler tasarımı geldiğinde I-18 kapsamına girer |
+| Ana ekran (role göre) + üst çubuk + alt cam çubuk + yüzen kısayol + Ekip/Hesap menüsü + Etkin şeridi | Pano.dc.html | Onaylandı 19 Ekim 16:09; T-423 (kabuk), T-422 (rol içerikleri). Görevlerim (`v.home`) canlıda sürer; Pano yayına çıkınca saha personelinin açılışı Pano olur |
+| Ekip: kişiler + aktif/pasif, onay bekleyenler, davet, saha katılma QR'ı | Ekip.dc.html | Onaylandı 19 Ekim; T-429 (güvenlik incelemesi zorunlu: uzun ömürlü katılma QR'ı) |
+| Yetki grupları | Gruplar.dc.html | Onaylandı 19 Ekim; T-421 |
+| Excel'den aktar (şablonsuz eşleştirme) | Aktar.dc.html | Onaylandı 19 Ekim; T-427 (+ T-428 cari kartlar) |
