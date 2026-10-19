@@ -3,6 +3,11 @@
 Son doğrulama: 17.10.2026 Europe/Istanbul (canlı yayın main `6dd9880`, T-999 + T-999b); kod, CI, main ve VPS ayrı otoritelerdir.
 Önce continuity/README, sonra yalnız görev alanı. Sırlar ve tek kullanımlık bağlantılar kaydedilmez.
 
+## 19 Ekim panel 2. tur (özet)
+- Canlıda: Pano (rol açılışı, sahip/yönetici panoları), Excel'den aktar, cari kartlar (0050). Sırada canlıya: yetki grupları (0051), ekibe katılma QR (0052), Ekip ekranı.
+- Yetki modeli: roller aynen; hesap sahibinin özel grubu yalnız EK yetki verir (kapalı liste; ekip yönetimi ve ayarlar verilemez); hassas yetki MFA ister.
+- Açık: pasif üyelik, Etkin sesli asistan (T-424), alt ekran ortak bileşeni.
+
 ## Canlı / erişim
 - Repo https://github.com/shosgoren/EtkinWMS; 2027-WMS-1 salt okunur.
 - WMS https://wms.etkinyazilim.com; yönetim paneli https://yonet.etkinyazilim.com (yalnız operatör + MFA); satış https://etkinyazilim.com; .com.tr yönlendirmesi.

@@ -581,7 +581,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
               <div className="dockin">
                 <div className="dkl">
                   {view === "list" ? (
-                    <a href={`${base}/members`} className="dk" aria-label={t("backTeam")} style={{ textDecoration: "none" }} data-testid="groups-back">
+                    <a href={`${base}/team`} className="dk" aria-label={t("backTeam")} style={{ textDecoration: "none" }} data-testid="groups-back">
                       <Ico d={RICON.back} size={26} />
                       <span>{t("back")}</span>
                     </a>

@@ -1,0 +1,21 @@
+/* I-18 uyarlaması (DESIGN-PARITY §5): Ekip kaynağındaki `.appzone` / `.app` kuralları tasarım aracının cihaz çerçevesidir ve port.mjs
+   tarafından atlanır. Uygulamada `.app` tam ekran kaptır (Aktar uyarlamasıyla aynı): arka plan kaynaktaki geçiş, içerik dikey sütun. */
+.dze .appzone {
+  display: block;
+  padding: 0;
+}
+.dze .app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-dz-x-nmodok) 100%);
+}
+.dze { position: fixed; inset: 0; z-index: 20; }
+body:has(.dze) [data-testid="bottom-nav"], body:has(.dze) [data-testid="tenant-bar"], body:has(.dze) .app-header { display: none; }
+/* Uygulama uyarlaması: kişi listesi kendi içinde kayar (gerçek ekip kaynaktaki örnek sayıdan büyük olabilir); "+N kişi daha" satırı çizilmez.
+   Onay kartında doğrulama kodu yöneticinin yazdığı alandır (güvenlik: uygulama kodu okuyamaz). */
+.dze .plist { overflow-y: auto; min-height: 0; }
+.dze .code input { width: 100%; min-height: 52px; border: 0; background: none; font: 800 28px/1 var(--font-plex-mono), monospace; letter-spacing: .25em; color: inherit; outline: none; }
