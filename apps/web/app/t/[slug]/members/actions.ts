@@ -22,6 +22,7 @@ import {
   type MembershipDeps,
 } from "@wms/domain/identity/memberships";
 import { inviteMember, revokeInvitation, type InvitationDeps } from "@wms/domain/identity/invitations";
+import { setMembershipWarehouseScopes } from "@wms/domain/warehouse";
 import { ROLE_KEYS } from "@wms/domain/identity/permissions";
 import { assertMailModeAllowed, loadMailConfig } from "@wms/shared/mailer";
 import { getAppDb } from "@wms/db";
@@ -125,6 +126,27 @@ export async function changeRoleAction(raw: unknown) {
       membershipDeps(),
     );
     return { membershipId: result.membershipId, roleKey: result.roleKey, changed: result.changed };
+  })(raw);
+}
+
+// T-417: üyenin depo kısıtı. Giriş açıktır (A-103): `all: true` ya da boş olmayan depo listesi; yeniden giriş zorunlu.
+const scopeSchema = z.union([
+  z.object({ slug: slugSchema, memberId: z.string().uuid(), all: z.literal(true) }).strict(),
+  z.object({ slug: slugSchema, memberId: z.string().uuid(), warehouseIds: z.array(z.string().uuid()).min(1).max(1000) }).strict(),
+]);
+
+export async function setWarehouseScopeAction(raw: unknown) {
+  return guardedAction({ schema: scopeSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const db = getAppDb();
+    await limitVerifiedTenant({ db, principal, tenantSlug: input.slug, permission: "users.manage" }, ctx);
+    const target = "all" in input ? { all: true as const } : { warehouseIds: input.warehouseIds };
+    const result = await setMembershipWarehouseScopes(
+      { db, principal, tenantSlug: input.slug, recentAuth: reauth(await headers()) },
+      { membershipId: input.memberId, ...target, requestId: ctx.requestId },
+    );
+    return { changed: result.changed, all: result.all };
   })(raw);
 }
 

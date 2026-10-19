@@ -310,13 +310,20 @@
         "title": "Unlock",
         "description": "{name} can sign in with their PIN again. PIN and device registration stay the same.",
         "button": "Unlock"
+      },
+      "scope": {
+        "title": "Change warehouses",
+        "description": "{name} will only be able to work in: {scope}. Their open session continues with the new restriction.",
+        "button": "Save warehouses"
       }
     },
     "done": {
       "role": "Role updated.",
       "remove": "Member removed.",
       "transfer": "Ownership transferred.",
-      "unlock": "Unlocked."
+      "unlock": "Unlocked.",
+      "scope": "Warehouse access updated.",
+      "scopeUnchanged": "Warehouse access was already set this way; nothing changed."
     },
     "pending": {
       "title": "Pending invitations",
@@ -395,7 +402,21 @@
     "fieldNewCode": "New activation code",
     "fieldUnlock": "Unlock",
     "devices": "Devices",
-    "ownerLocked": "The company owner's role cannot be changed and the owner cannot be removed. Only the owner can transfer ownership."
+    "ownerLocked": "The company owner's role cannot be changed and the owner cannot be removed. Only the owner can transfer ownership.",
+    "scope": {
+      "admin": "Warehouses: all (admins see every warehouse)",
+      "all": "Warehouses: all",
+      "only": "Warehouses: only {names}",
+      "allShort": "All warehouses",
+      "unknown": "deleted warehouse",
+      "archived": "{name} (archived)",
+      "legend": "Which warehouses should {name} work in?",
+      "allOption": "All warehouses (including new ones)",
+      "pickOne": "Pick at least one warehouse or tick “All warehouses”.",
+      "save": "Save warehouses",
+      "edit": "Edit warehouses",
+      "disabled": "Warehouse restriction is off in this environment: the choice is saved and applies once it is turned on."
+    }
   },
   "errors": {
     "validation_failed": "The information entered is not valid.",

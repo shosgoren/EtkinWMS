@@ -50,7 +50,7 @@ describe("atomic warehouse transfer",()=>{
   await expect(transferBetweenWarehouses({...params(B),clientKey:randomUUID()},input)).rejects.toMatchObject({code:"NOT_FOUND"});
   await expect(transferBetweenWarehouses({...command(),principal:{userId:A.ownerUserId,mfaVerified:false}},input)).rejects.toMatchObject({code:"FORBIDDEN"});
   await expect(transferBetweenWarehouses(command(),{...input,targetLocationId:A.childLocationId})).rejects.toMatchObject({code:"VALIDATION_FAILED"});
-  await setMembershipWarehouseScopes(params(),{membershipId:A.memberMembershipId,warehouseIds:[A.warehouseId]});
+  await setMembershipWarehouseScopes({ ...params(), recentAuth: async () => undefined },{membershipId:A.memberMembershipId,warehouseIds:[A.warehouseId]});
   const prior=process.env.WAREHOUSE_SCOPE_ENABLED;
   try{process.env.WAREHOUSE_SCOPE_ENABLED="true";
    await expect(transferBetweenWarehouses({...command(),principal:{userId:A.memberUserId,mfaVerified:true}},input)).rejects.toMatchObject({code:"FORBIDDEN",detail:"WAREHOUSE_OUT_OF_SCOPE"});

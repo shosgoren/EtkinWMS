@@ -362,3 +362,54 @@ describe("T-414: kimlik olayları yalnız üye yönetimi yetkisine", () => {
     expect(dataLines(csv)).toHaveLength(2);
   }, 60_000);
 });
+
+describe("T-417: depo kısıtlı üye işlem kaydında yalnız kendi depolarını görür (A-103 önkoşulu)", () => {
+  it("kapsam W1: W1 deposu/lokasyonu ve katalog olayları görünür; W2 ve depoya bağlanamayan olaylar gizli; yönetici tümünü görür; dışa aktarım aynı", async () => {
+    const fx = await mkTenant("SC", 0);
+    const [w1, w2, l1, l2] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    for (const [id, code] of [[w1, "W1"], [w2, "W2"]] as const) {
+      await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, $3)", [fx.tenant, id, `${code}-${rnd()}`]);
+    }
+    for (const [id, wh] of [[l1, w1], [l2, w2]] as const) {
+      await adm.query("INSERT INTO public.locations (tenant_id, id, warehouse_id, parent_id, code, name, depth, kind, pick_blocked) VALUES ($1,$2,$3,NULL,$4,'L',0,'STORAGE',false)", [fx.tenant, id, wh, `L-${rnd()}`]);
+    }
+    const mid = (await adm.query<{ id: string }>("SELECT id FROM public.tenant_memberships WHERE tenant_id = $1 AND user_id = $2", [fx.tenant, fx.manager.userId])).rows[0]?.id;
+    await adm.query("INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id) VALUES ($1, $2, $3)", [fx.tenant, mid, w1]);
+    const ev: [string, string, string, boolean][] = [
+      ["warehouse.updated", "warehouse", w1, true],
+      ["warehouse.updated", "warehouse", w2, false],
+      ["location.created", "location", l1, true],
+      ["location.created", "location", l2, false],
+      ["item.created", "item", randomUUID(), true],
+      ["tenant.settings_changed", "tenant", fx.tenant, false],
+      ["location.created", "location", "not-a-uuid", false],
+    ];
+    for (const [action, type, id] of ev) {
+      await adm.query("INSERT INTO public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id, change_summary) VALUES ($1, $2, $3, $4, $5, '{}'::jsonb)", [fx.tenant, fx.admin.userId, action, type, id]);
+    }
+    const key = (a: { action: string; entityId: string | null }) => `${a.action}:${a.entityId}`;
+    const visible = ev.filter((e) => e[3]).map(([a, , id]) => `${a}:${id}`).sort();
+    // Bayrak kapalı: süzme yok (A-46). Dışa aktarımdan ÖNCE (kendi `audit.exported` satırı sayıyı değiştirir).
+    const prior = process.env.WAREHOUSE_SCOPE_ENABLED;
+    delete process.env.WAREHOUSE_SCOPE_ENABLED;
+    try {
+      expect((await listAudit(access(fx, fx.manager.userId), { limit: 100 })).items).toHaveLength(ev.length);
+    } finally {
+      if (prior !== undefined) process.env.WAREHOUSE_SCOPE_ENABLED = prior;
+    }
+    process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+    try {
+      expect((await listAudit(access(fx, fx.manager.userId), { limit: 100 })).items.map(key).sort()).toEqual(visible);
+      expect((await listAudit(access(fx, fx.admin.userId), { limit: 100 })).items).toHaveLength(ev.length);
+      const csv = await readAll((await openAuditExport({ ...access(fx, fx.manager.userId), recentAuth: fresh })).stream);
+      const lines = dataLines(csv);
+      expect(lines).toHaveLength(visible.length);
+      expect(csv).toContain(w1);
+      expect(csv).not.toContain(w2);
+      expect(csv).not.toContain(l2);
+    } finally {
+      if (prior === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      else process.env.WAREHOUSE_SCOPE_ENABLED = prior;
+    }
+  });
+});

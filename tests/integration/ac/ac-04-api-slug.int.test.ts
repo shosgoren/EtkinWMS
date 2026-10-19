@@ -828,6 +828,7 @@ const ACTIONS: Record<string, Call> = {
   revokeInvitationAction: (slug, v) => members.revokeInvitationAction!({ slug, invitationId: v.invitation }),
   changeRoleAction: (slug, v) => members.changeRoleAction!({ slug, memberId: v.membership, roleKey: "TENANT_ADMIN" }),
   removeMemberAction: (slug, v) => members.removeMemberAction!({ slug, memberId: v.membership }),
+  setWarehouseScopeAction: (slug, v) => members.setWarehouseScopeAction!({ slug, memberId: v.membership, all: true }),
   leaveTenantAction: (slug) => members.leaveTenantAction!({ slug }),
   transferOwnershipAction: (slug, v) => members.transferOwnershipAction!({ slug, toMemberId: v.membership }),
   issuePasswordResetLinkAction: (slug, v) => members.issuePasswordResetLinkAction!({ slug, memberId: v.membership }),
