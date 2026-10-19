@@ -24,6 +24,8 @@ export interface PanoLink {
   /** Bağlantı; yoksa `action` çalışır. */
   readonly href?: string;
   readonly action?: "problem";
+  /** Menüde sayı rozeti (kaynak `.hbn`). */
+  readonly n?: number;
 }
 
 export interface PanoShellProps {
@@ -33,6 +35,8 @@ export interface PanoShellProps {
   readonly team: boolean;
   readonly me: { readonly ini: string; readonly name: string; readonly group: string; readonly color: string };
   readonly halo: readonly PanoLink[];
+  /** Ekip menüsü bağlantıları (yalnız yönetici rolleri; kaynak menuItems team). */
+  readonly teamLinks?: readonly PanoLink[];
   readonly settingsHref?: string;
   readonly scanHref: string;
   readonly canReport: boolean;
@@ -49,7 +53,7 @@ function Ico({ d, size, className = "ico", style }: { d: string; size: number; c
   );
 }
 
-export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, settingsHref, scanHref, canReport, children }: PanoShellProps) {
+export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, children }: PanoShellProps) {
   const t = useTranslations("pano");
   const [dark, setDark] = useState(initialDark);
   const [menu, setMenu] = useState(false);
@@ -154,7 +158,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, s
 
   const teamLbl = team ? t("team") : t("account");
   const menuItems: Array<{ k: string; label: string; color: string; d: string; out?: boolean; go: () => void }> = [
-    { k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => void signOut("/login") },
+    ...(team ? [] : [{ k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => void signOut("/login") }]),
     // Uygulama menüsü (tüm ekranlar): eski ana ekrandaki "Menü" ile aynı pencere; saha kişisi diğer ekranlara buradan ulaşır.
     { k: "menu", label: t("allScreens"), color: "172E42", d: PICON.list, go: () => {
         setMenu(false);
@@ -299,6 +303,15 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, s
                         <small>{me.group}</small>
                       </span>
                     </div>
+                    {teamLinks.map((l) => (
+                      <a key={l.k} href={l.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} data-testid={`pano-menu-${l.k}`}>
+                        <i style={{ background: dz(l.color) }}>
+                          <Ico d={l.d} size={20} />
+                        </i>
+                        <span>{l.label}</span>
+                        {l.n !== undefined && l.n > 0 ? <em className="hbn">{l.n}</em> : null}
+                      </a>
+                    ))}
                     {menuItems.map((m) => (
                       <button key={m.k} type="button" className={`hb${m.out === true ? " out" : ""}`} role="menuitem" onClick={m.go} data-testid={m.k === "menu" ? "app-bar-menu" : `pano-menu-${m.k}`} aria-haspopup={m.k === "menu" ? "dialog" : undefined}>
                         <i style={{ background: dz(m.color) }}>

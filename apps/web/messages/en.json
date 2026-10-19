@@ -3202,6 +3202,115 @@
     },
     "noTasks": "No tasks today",
     "noTasksHint": "APPEARS HERE WHEN YOUR MANAGER ASSIGNS WORK",
-    "allScreens": "All screens"
+    "allScreens": "All screens",
+    "ownerTitle": "Warehouse board",
+    "managerTitle": "My warehouse",
+    "ownerSub": "{wh} WAREHOUSES · {people} PEOPLE WORKING TODAY",
+    "managerSub": "TODAY {total} TASKS · {asg} ASSIGNED · {un} UNASSIGNED",
+    "ringManagerAria": "{done} of {total} tasks done, {asg} assigned, {un} unassigned",
+    "h": {
+      "reports": "Reports",
+      "plan": "Plan",
+      "label": "Print label",
+      "manualOut": "Manual issue",
+      "team": "Team"
+    },
+    "m": {
+      "users": "Users",
+      "pending": "Devices awaiting approval"
+    },
+    "live": {
+      "in": "RECEIVED LINES",
+      "out": "SHIPPED LINES",
+      "transfer": "TRANSFERS",
+      "count": "COUNTS RUNNING"
+    },
+    "reports": "REPORTS",
+    "reportsHint": "TAP → REPORT OPENS",
+    "reportsAria": "Reports",
+    "r": {
+      "critical": "Critical stock",
+      "criticalSub": "FAR BELOW MINIMUM",
+      "none": "NONE NOW",
+      "orders": "Waiting orders",
+      "ordersSub": "OLDEST {d} DAYS",
+      "turn": "Turnover",
+      "turnSub": "90 DAYS · FASTEST ITEM",
+      "buy": "Purchasing",
+      "buySub": "ITEMS BELOW MINIMUM",
+      "count": "Count variance",
+      "countSub": "AWAITING APPROVAL",
+      "all": "All reports",
+      "allSub": "STOCK, MOVES, OCCUPANCY…"
+    },
+    "alerts": "NEEDS ATTENTION",
+    "liveNow": "LIVE",
+    "liveShort": "LIVE",
+    "liveTitle": "TODAY IN THE WAREHOUSE",
+    "a": {
+      "critical": "items at critical stock",
+      "orders": "orders waiting",
+      "count": "count variances awaiting approval",
+      "problems": "problems reported from the floor"
+    },
+    "minutes": "{n} MIN",
+    "buyTitle": "Items to purchase",
+    "buyHint": "ITEMS BELOW MINIMUM",
+    "buyEmpty": "No items below minimum. Items appear here when a minimum stock is set.",
+    "ordersTitle": "Waiting orders",
+    "ordersHint": "OPEN, NOT SHIPPED · OLDEST FIRST",
+    "ordersEmpty": "No waiting orders.",
+    "days": "{n} DAYS",
+    "linesN": "{n} LINES",
+    "waitShip": "WAITING TO SHIP",
+    "ordersOpen": "Open shipping",
+    "turnTitle": "Stock turnover",
+    "turnHint": "LAST 90 DAYS · TIMES ISSUED",
+    "fast": "Fastest movers",
+    "slow": "Slow movers",
+    "turnEmpty": "No movement yet",
+    "idle": "No movement",
+    "itemsN": "{n} items",
+    "idleHint": "NO IN/OUT FOR 90 DAYS",
+    "idleOpen": "See list",
+    "q": {
+      "plan": "Plan today",
+      "planSub": "{n} TASKS WAITING FOR ASSIGNMENT",
+      "planNone": "NO TASKS WAITING",
+      "label": "Reprint label",
+      "labelSub": "RECEIVING AND SHIPPING LABELS",
+      "reports": "My warehouse reports"
+    },
+    "todoTitle": "Tasks waiting for assignment",
+    "todoHint": "TAP A PERSON TO ASSIGN",
+    "todoEmpty": "No tasks waiting.",
+    "kind": {
+      "PUTAWAY": "Putaway",
+      "PICK": "Pick",
+      "REPUTAWAY": "Re-putaway",
+      "COUNT": "Count",
+      "hint": "WAREHOUSE TASK"
+    },
+    "qty": "{n} UNITS",
+    "teamTitle": "Team now",
+    "tasksN": "{n} TASKS",
+    "idleMin": "IDLE {n} MIN",
+    "notToday": "NO ACTIVITY TODAY",
+    "role": {
+      "TENANT_ADMIN": "ACCOUNT OWNER",
+      "WAREHOUSE_MANAGER": "WAREHOUSE MANAGER",
+      "PICKER": "PICKER",
+      "COUNTER": "COUNTER",
+      "READ_ONLY": "READ ONLY"
+    },
+    "state": {
+      "SCANNING": "SCANNING",
+      "ASSIGNED": "ON TASK",
+      "IDLE": "IDLE",
+      "AWAY": "AWAY"
+    },
+    "assignedTo": "Assigned to {name}",
+    "assignFailed": "Could not assign",
+    "assignTo": "Assign to {name}"
   }
 }

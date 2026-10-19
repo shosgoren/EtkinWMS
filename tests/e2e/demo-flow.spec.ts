@@ -139,7 +139,8 @@ test.describe("demo akışı", () => {
     // Demo girişi → /t/demo.
     await enterDemoReal(page, "Yönetici");
     await expect(page).toHaveURL(/\/t\/demo$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
+    // T-422: hesap sahibinin açılışı Pano (depo panosu).
+    await expect(page.locator("#main").getByTestId("pano")).toBeVisible();
 
     // Kartlar: yönetici için stok görünümü dahil 7 etkin bağlantı, 2 "Yakında" kartı tıklanamaz; kilitli kart yok.
     // T-928: existing detailed task/permission contracts remain in the explicitly selected cockpit.
