@@ -1,0 +1,76 @@
+// T-423 (I-18): saha personelinin yeni ana ekranı (Pano.dc.html kabuğu). Toplayıcı oturumu AÇIKKEN çağrılır (ek demo girişi yok:
+// demo girişi hız sınırlıdır). Ölçülenler: üst çubuk + alt cam çubuk görünür, yatay kaydırma yok, telefon/tablette içerik alanı taşmaz,
+// Hesap menüsü cam kutusu açılır/kapanır, yüzen kısayol halkası açılır, uygulama menüsüne ("Tüm ekranlar") ulaşılır, tema kalıcıdır.
+// Eşlik görüntüleri (açık/koyu × 390/1180/1440) test çıktısına yazılır.
+import { expect, test, type Page } from "@playwright/test";
+import { openAppMenu } from "./app-menu.ts";
+
+const SIZES = [
+  { w: 390, h: 844 },
+  { w: 1180, h: 820 },
+  { w: 1440, h: 900 },
+] as const;
+
+export async function panoChecks(page: Page): Promise<void> {
+  await page.context().clearCookies({ name: "view" });
+  await page.goto("/t/demo");
+  const pano = page.locator("#main").getByTestId("pano");
+  await expect(pano).toBeVisible();
+  await expect(page.locator("#main").getByTestId("easy-operations")).toHaveCount(0);
+
+  for (const dark of [false, true]) {
+    for (const s of SIZES) {
+      await page.setViewportSize({ width: s.w, height: s.h });
+      await page.goto("/t/demo");
+      await expect(pano).toBeVisible();
+      await expect(pano.locator(".top")).toBeVisible();
+      await expect(pano.locator(".dock")).toBeVisible();
+      await expect(pano.getByTestId("pano-scan")).toHaveAttribute("href", "/t/demo/field");
+      await expect(pano.locator(".tasks > .tk, .counthero").first()).toBeVisible();
+      const m = await page.evaluate<{ sw: number; cw: number; ish: number; ich: number; ov: string; dockBottom: number }>(`(() => {
+        const d = document.documentElement;
+        const inner = document.querySelector('[data-testid="pano"] .inner');
+        const dock = document.querySelector('[data-testid="pano"] .dock').getBoundingClientRect();
+        return { sw: d.scrollWidth, cw: d.clientWidth, ish: inner.scrollHeight, ich: inner.clientHeight, ov: getComputedStyle(inner).overflowY, dockBottom: dock.bottom };
+      })()`);
+      expect(m.sw, `${s.w}: yatay kaydırma yok`).toBeLessThanOrEqual(m.cw);
+      expect(m.dockBottom, `${s.w}: alt çubuk ekranın içinde`).toBeLessThanOrEqual(s.h + 0.5);
+      // Telefon/tablet kırılımında (`overflow: hidden`) içerik alanı taşmaz: kaydırma yok kuralı.
+      if (m.ov === "hidden") expect(m.ish, `${s.w}: içerik alanı taşmaz`).toBeLessThanOrEqual(m.ich + 1);
+      await page.screenshot({ path: test.info().outputPath(`pano-field-${dark ? "koyu" : "acik"}-${s.w}.png`) });
+    }
+    if (!dark) {
+      // Hesap menüsü: cam kutu + perde; Esc kapatır.
+      await pano.getByTestId("home-actions").click();
+      const menu = pano.getByRole("menu", { name: "HESAP" });
+      await expect(menu).toBeVisible();
+      await expect(menu.getByRole("menuitem", { name: "Çıkış yap" })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
+      // Yüzen kısayol: dokununca halka açılır.
+      await pano.getByTestId("pano-fab").click();
+      const halo = pano.getByRole("menu", { name: "Kısayollar" });
+      await expect(halo).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(halo).toBeHidden();
+      // Uygulama menüsü (tüm ekranlar) erişilebilir.
+      await openAppMenu(page);
+      const app = page.getByRole("dialog", { name: "Menü" });
+      await expect(app).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(app).toBeHidden();
+      // Tema: menüden karanlık.
+      await pano.getByTestId("home-actions").click();
+      await pano.getByTestId("pano-menu-theme").click();
+      await expect(pano).toHaveClass(/dz-dark/);
+      await page.keyboard.press("Escape");
+    }
+  }
+  // Tema çerezde kalıcı; sonra açığa geri alınır (sonraki adımlar açık temayla sürer).
+  await page.goto("/t/demo");
+  await expect(pano).toHaveClass(/dz-dark/);
+  await pano.getByTestId("home-actions").click();
+  await pano.getByTestId("pano-menu-theme").click();
+  await expect(pano).not.toHaveClass(/dz-dark/);
+  await page.keyboard.press("Escape");
+}

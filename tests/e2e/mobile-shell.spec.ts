@@ -8,6 +8,7 @@ import { expect, test } from "@playwright/test";
 import tr from "../../apps/web/messages/tr.json" with { type: "json" };
 import type { Browser, Locator, Page } from "@playwright/test";
 import { enterDemoReal, enterDemoShared } from "./support/demo-session.ts";
+import { panoChecks } from "./support/pano-checks.ts";
 import { T270_SIZES, chevronInfo, expectBand, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
 import { openAppMenu } from "./support/app-menu.ts";
 
@@ -289,6 +290,11 @@ test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş al
     await page.goto("/");
     await enterDemoReal(page, role.label);
     await expect(page).toHaveURL(/\/t\/demo$/);
+    // T-423: toplayıcının varsayılan açılışı Pano; Kokpit tercihi seçilince eski ızgara (aşağıdaki ölçümler) görünür.
+    if (role.shot === "picker") {
+      await panoChecks(page);
+      await page.setViewportSize({ width: 390, height: 844 });
+    }
     await selectCockpitPreference(page);
     const tasks = page.getByRole("list", { name: "İşler" });
     const isAdmin = role.shot === "admin";

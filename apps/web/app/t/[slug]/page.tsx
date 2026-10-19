@@ -11,6 +11,7 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_LIST_LIMIT_MAX, getWorkSummary, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
 import { TaskMenu, type MyTasksSummary, type NowSummary } from "./task-menu.tsx";
 import { EasyOperations } from "./easy-operations.tsx";
+import { PanoHome, type PanoRole } from "./pano/pano-home.tsx";
 import { THEME_COOKIE } from "../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,37 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) return null;
   const jar = await cookies();
+  // T-423: saha (PICKER) ve sayım (COUNTER) rolleri yeni ana ekranı (Pano.dc.html) görür; yönetici ve hesap sahibinin ana ekranı T-422'de.
+  const panoRole: PanoRole | null =
+    current.roles.includes("TENANT_ADMIN") || current.roles.includes("WAREHOUSE_MANAGER") ? null : current.roles.includes("PICKER") ? "field" : current.roles.includes("COUNTER") ? "counter" : null;
+  if (panoRole !== null && jar.get("view")?.value !== "cockpit") {
+    let work: WorkSummary | null = null;
+    try {
+      work = await getWorkSummary({ db: getAppDb(), principal, tenantSlug: slug });
+    } catch (e) {
+      if (e instanceof AppError) {
+        if (e.code === "NOT_FOUND") notFound();
+        if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(`/t/${slug}`)}`);
+        if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(`/t/${slug}`)}`);
+      }
+      console.error(JSON.stringify({ level: "error", msg: "pano work summary failed", error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
+    }
+    return (
+      <main className="flex w-full min-w-0 flex-col">
+        <PanoHome
+          slug={slug}
+          role={panoRole}
+          summary={work}
+          userName={summary.userName}
+          tenantName={current.tenantName}
+          dark={jar.get(THEME_COOKIE)?.value === "koyu"}
+          stockPost={hasPermission(current.roles, "stock.post")}
+          canReport={hasPermission(current.roles, "stock.post") || hasPermission(current.roles, "document.create")}
+          settingsManage={hasPermission(current.roles, "settings.manage")}
+        />
+      </main>
+    );
+  }
   const Menu = jar.get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
   const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
   const allowed = {
