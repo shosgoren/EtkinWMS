@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -7,9 +7,10 @@ import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
-import { IMPORT_CHUNK_SIZE, IMPORT_MAX_BYTES, IMPORT_MAX_ROWS, PRODUCT_HEADERS, STOCK_HEADERS, templateCsv } from "@wms/domain/onboarding/import";
+import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS } from "@wms/domain/onboarding/import";
 import { AppError } from "@wms/shared/errors";
-import { ImportView } from "./import-view.tsx";
+import { AktarView } from "./aktar-view.tsx";
+import { THEME_COOKIE } from "../../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -56,14 +57,12 @@ export default async function ImportPage({ params }: { params: Promise<{ slug: s
       </main>
     );
   }
+  // T-427: Excel'den aktar (Aktar.dc.html birebir); dosya tarayıcıda okunur, sunucuya mevcut biçimde düz CSV gider.
+  const jar = await cookies();
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6 phone:gap-3 phone:pt-3">
-      <ImportView
-        slug={slug}
-        templates={{ products: templateCsv("PRODUCTS"), stock: templateCsv("STOCK") }}
-        columns={{ products: [...PRODUCT_HEADERS], stock: [...STOCK_HEADERS] }}
-        limits={{ maxBytes: IMPORT_MAX_BYTES, maxRows: IMPORT_MAX_ROWS, chunkSize: IMPORT_CHUNK_SIZE }}
-      />
+    <main className="flex w-full min-w-0 flex-col">
+      <h1 className="sr-only">{t("title")}</h1>
+      <AktarView slug={slug} dark={jar.get(THEME_COOKIE)?.value === "koyu"} maxRows={IMPORT_MAX_ROWS} chunkSize={IMPORT_CHUNK_SIZE} />
     </main>
   );
 }

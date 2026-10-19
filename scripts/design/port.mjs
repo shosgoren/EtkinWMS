@@ -28,6 +28,8 @@ export const SOURCES = [
   { name: "giris", file: "docs/design/source/Giris.dc.html", sha256: "a0007e9453c60f8e11bd547101e38a8afe6888289f5490497510924a4296c1e5", scope: "dzg", palette: "c" },
   { name: "yonet", file: "docs/design/source/Yonet.dc.html", sha256: "5135ec250d1dd609b2415d5d834fc73d21b2a79df273d5cc44f21d4c4bfff425", scope: "dzy", palette: "c" },
   // T-423: Pano (19 Ekim kaynakları): cihaz kuralları `.fr-*` önekiyle, karanlık tema `.thd` sınıfıyla (palet betikte değil, CSS'te).
+  // T-427: Excel'den aktar (aynı 19 Ekim kaynak biçimi).
+  { name: "aktar", file: "docs/design/source/Aktar.dc.html", sha256: "68f488a1e4d81af8da378238f1bebdf10004d4400b7547857800d79f5f1c508b", scope: "dza", palette: "none", device: "fr" },
   { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "2305dacb6a48c57a454ec6e84a2940309a83fe55718ececebabe3af73d9d5ce4", scope: "dzp", palette: "none", device: "fr" },
 ];
 
