@@ -3596,7 +3596,7 @@
       "NAME_TOO_LONG": "Grup adı en çok 60 harf olabilir.",
       "NAME_TAKEN": "Bu adda bir grup zaten var. Başka bir ad yaz.",
       "COLOR_INVALID": "Listeden bir renk seç.",
-      "FIELD_MEMBER_MFA": "Bu grupta saha hesabı var; saha hesabına onay, ters kayıt, aktarım ya da ayar yetkisi verilemez."
+      "FIELD_MEMBER_MFA": "Bu grupta saha hesabı var; saha hesabına onay, ters kayıt ya da aktarım yetkisi verilemez."
     },
     "skipped": "Şu kişiler gruba alınamadı: {names}. Saha hesabına hassas yetki verilemez.",
     "archived": "“{name}” arşivlendi",
@@ -3616,7 +3616,7 @@
       "done": "BİTTİ",
       "save": "KAYDET ({n})"
     },
-    "teamLocked": "Ekip yönetimi gruba verilemez; yalnız Yönetici rolündedir.",
+    "teamLocked": "Ekip yönetimi ve ayarlar gruba verilemez; yalnız Yönetici rolündedir.",
     "scr": {
       "receive": {
         "name": "Giriş görevi",
@@ -3670,8 +3670,7 @@
       },
       "team": {
         "name": "Ekibi yönetsin",
-        "hint": "KİŞİ VE YETKİ",
-        "locked": "YALNIZ YÖNETİCİ ROLÜNDE"
+        "hint": "KİŞİ VE YETKİ"
       },
       "import": {
         "name": "Excel’den aktarsın",
@@ -3680,7 +3679,8 @@
       "settings": {
         "name": "Ayarları değiştirsin",
         "hint": "FİRMA AYARLARI"
-      }
+      },
+      "locked": "YALNIZ YÖNETİCİ ROLÜNDE"
     },
     "online": "Çevrimiçi",
     "heading": "YETKİ GRUPLARI",

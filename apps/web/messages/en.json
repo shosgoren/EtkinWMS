@@ -3596,7 +3596,7 @@
       "NAME_TOO_LONG": "A group name can be at most 60 characters.",
       "NAME_TAKEN": "A group with this name already exists. Type another name.",
       "COLOR_INVALID": "Pick a colour from the list.",
-      "FIELD_MEMBER_MFA": "This group has a field account; field accounts cannot get approval, reversal, import or settings permissions."
+      "FIELD_MEMBER_MFA": "This group has a field account; field accounts cannot get approval, reversal or import permissions."
     },
     "skipped": "These people could not be added: {names}. Field accounts cannot get sensitive permissions.",
     "archived": "“{name}” archived",
@@ -3616,7 +3616,7 @@
       "done": "DONE",
       "save": "SAVE ({n})"
     },
-    "teamLocked": "Team management cannot be given by a group; it stays with the Administrator role.",
+    "teamLocked": "Team management and settings cannot be given by a group; they stay with the Administrator role.",
     "scr": {
       "receive": {
         "name": "Inbound task",
@@ -3670,8 +3670,7 @@
       },
       "team": {
         "name": "Manage the team",
-        "hint": "PEOPLE AND PERMISSIONS",
-        "locked": "ADMINISTRATOR ROLE ONLY"
+        "hint": "PEOPLE AND PERMISSIONS"
       },
       "import": {
         "name": "Import from Excel",
@@ -3680,7 +3679,8 @@
       "settings": {
         "name": "Change settings",
         "hint": "COMPANY SETTINGS"
-      }
+      },
+      "locked": "ADMINISTRATOR ROLE ONLY"
     },
     "online": "Online",
     "heading": "PERMISSION GROUPS",

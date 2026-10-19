@@ -105,7 +105,7 @@ export function resetLinkPrechecks(i: ResetLinkInput): boolean {
 /** Aktif üyeler: ad, e-posta (yetkiye göre), roller, sahiplik, demo, sıfırlama bağlantısı üretilebilirliği. */
 export async function listMembers(params: QueryParams, deps: MemberQueryDeps): Promise<MemberRow[]> {
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
-    const canManage = hasPermission(actor.roles, "users.manage");
+    const canManage = hasPermission(actor.roles, "users.manage", actor.grants);
     const tenantRows = await tx.execute<{ is_demo: boolean }>(sql`SELECT is_demo FROM public.tenants WHERE id = ${actor.tenantId}::uuid`);
     const tenantIsDemo = tenantRows[0]?.is_demo !== false; // fail-closed
     // T-997: saha hesabının iç e-postası (`@field.invalid`) hiçbir ekranda görünmez; yerine kullanıcı adı ve giriş durumu (özet sütunları

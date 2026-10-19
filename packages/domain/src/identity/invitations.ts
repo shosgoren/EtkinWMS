@@ -439,6 +439,8 @@ async function activateMembership(
     await tx.execute(
       sql`DELETE FROM public.membership_roles WHERE tenant_id = ${tenantId}::uuid AND membership_id = ${membershipId}::uuid`,
     );
+    // T-421: eski özel grup yetkisi geri gelmez (çıkarma da siler; bu satır 0051 öncesi çıkarılmış üyeler için savunma).
+    await tx.execute(sql`DELETE FROM public.member_groups WHERE tenant_id = ${tenantId}::uuid AND membership_id = ${membershipId}::uuid`);
   } else {
     throw new AppError("VALIDATION_FAILED"); // ACTIVE üyelik zaten var
   }

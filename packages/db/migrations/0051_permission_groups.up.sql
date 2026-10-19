@@ -4,9 +4,9 @@
 -- BİLİNÇLİ KARARLAR (inceleme için):
 -- * Özel grup, üyenin rol izinlerine EK yetki (grants) ve görünür ekran listesi (screens) verir; rol izinlerini daraltmaz. Etkin izin =
 --   rol izinleri ∪ grubunun yetkileri (domain `hasPermission(roles, p, grants)`; üyelik okumasında aynı transaction'da, FOR SHARE).
--- * Verilebilecek yetkiler kapalı listedir (CHECK): okut-işle, belge oluştur, onayla (+ sayım farkı onayı), ters kayıt, Excel'den aktar,
---   ayarlar. Ekip yönetimi (`users.manage`) BİLEREK yok: grupla verilirse başka hesabı yönetici yapabilirdi (yetki yükseltme). Grup yönetimi ve üyeyi gruba koymak yalnız hesap sahibine açıktır (domain); hesap sahibi gruba konamaz (zaten tam yetki).
--- * Hassas yetki (onay, ters kayıt, ayarlar, aktarım) taşıyan üyeye MFA zorunludur (domain `enforceMfa`).
+-- * Verilebilecek yetkiler kapalı listedir (CHECK): okut-işle, belge oluştur, onayla (+ sayım farkı onayı), ters kayıt, Excel'den aktar.
+--   Ekip yönetimi (`users.manage`) ve ayarlar (`settings.manage`) BİLEREK yok: başka hesabı yönetici yapmak / görev ayrımını kapatmak (yetki yükseltme). Grup yönetimi ve üyeyi gruba koymak yalnız hesap sahibine açıktır (domain); hesap sahibi gruba konamaz (zaten tam yetki).
+-- * Hassas yetki (onay, ters kayıt, aktarım) taşıyan üyeye MFA zorunludur (domain `enforceMfa`).
 -- * Üye en çok bir özel gruptadır (PK). Grup silinmez, arşivlenir; arşivdeki grubun yetkisi uygulanmaz.
 -- * RLS ADR-015 §5 kalıbı; yetkiler sütun bazlı; DELETE yalnız `member_groups` (üyeyi gruptan çıkarmak) için.
 -- Koşturucu tek transaction içinde çalıştırır.
@@ -38,8 +38,8 @@ CREATE TABLE public.permission_groups (
   CONSTRAINT permission_groups_screens_chk CHECK (
     screens <@ ARRAY['receive', 'pick', 'transfer', 'prod', 'count', 'labels', 'reports', 'problem']::text[] AND cardinality(screens) <= 8),
   CONSTRAINT permission_groups_grants_chk CHECK (
-    grants <@ ARRAY['stock.post', 'document.create', 'document.approve', 'count_diff.approve', 'reversal.create', 'data.import', 'settings.manage']::text[]
-    AND cardinality(grants) <= 7),
+    grants <@ ARRAY['stock.post', 'document.create', 'document.approve', 'count_diff.approve', 'reversal.create', 'data.import']::text[]
+    AND cardinality(grants) <= 6),
   CONSTRAINT permission_groups_version_chk CHECK (version >= 1)
 );
 CREATE UNIQUE INDEX permission_groups_tenant_name_key ON public.permission_groups (tenant_id, lower(name)) WHERE archived_at IS NULL;

@@ -324,7 +324,7 @@ export async function claimTask(params: TaskCallParams, input: ClaimTaskInput): 
   const expectedVersion = version(input.expectedVersion);
   return runTenantCommand({ ...params, permission: "stock.view" }, async (tx, m) => {
     const task = await lockTask(tx, m, taskId);
-    if (!hasPermission(m.roles, TASK_KIND_PERMISSION[task.kind])) throw new AppError("FORBIDDEN");
+    if (!hasPermission(m.roles, TASK_KIND_PERMISSION[task.kind], m.grants)) throw new AppError("FORBIDDEN");
     const next = guardTransition(task, expectedVersion, "CLAIM");
     const newVersion = await setState(tx, m, task, next, m.membershipId);
     await appendAudit(tx, {
@@ -422,7 +422,7 @@ export async function listMyTasks(params: TaskCallParams, input: ListMyTasksInpu
   const cur = cursorOf(input.after);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
-    const kinds = TASK_KINDS.filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k]));
+    const kinds = TASK_KINDS.filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k], m.grants));
     const rows = await tx.execute<TaskDbRow>(
       sql`SELECT ${COLUMNS}
             FROM public.warehouse_tasks

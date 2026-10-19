@@ -48,8 +48,9 @@ export const ROLE_PERMISSIONS: Readonly<Record<RoleKey, readonly Permission[]>> 
 
 /**
  * T-421: özel gruba verilebilecek EK yetkiler (0051 CHECK ile aynı kapalı liste). `stock.view` her üyede rol yoluyla vardır.
- * `users.manage` BİLEREK yoktur: ekip yönetimi rol değiştirme, davet, parola sıfırlama bağlantısı ve cihaz onayı taşır; grupla verilirse
- * yönetici olmayan biri başka hesabı yönetici yapabilirdi (yetki yükseltme). Ekip yönetimi yalnız Yönetici rolündedir.
+ * `users.manage` ve `settings.manage` BİLEREK yoktur: ekip yönetimi rol değiştirme, davet, parola sıfırlama bağlantısı ve cihaz onayı taşır
+ * (yönetici olmayan biri başka hesabı yönetici yapabilirdi); ayarlar görev ayrımını kapatma, örnek veri silme ve entegrasyonları taşır (onaylayan
+ * kendi denetimini kapatabilirdi; güvenlik incelemesi). İkisi de yalnız Yönetici rolündedir.
  */
 export const GRANTABLE: readonly Permission[] = Object.freeze([
   "stock.post",
@@ -58,10 +59,9 @@ export const GRANTABLE: readonly Permission[] = Object.freeze([
   "count_diff.approve",
   "reversal.create",
   "data.import",
-  "settings.manage",
 ] as const);
-/** Taşıyana MFA zorunlu kılan yetkiler (rolde MFA_REQUIRED_ROLES ile aynı gerekçe: onay, ters kayıt, ayar, toplu yazma). */
-export const MFA_GRANTS: readonly Permission[] = Object.freeze(["document.approve", "count_diff.approve", "reversal.create", "data.import", "settings.manage"] as const);
+/** Taşıyana MFA zorunlu kılan yetkiler (rolde MFA_REQUIRED_ROLES ile aynı gerekçe: onay, ters kayıt, toplu yazma). */
+export const MFA_GRANTS: readonly Permission[] = Object.freeze(["document.approve", "count_diff.approve", "reversal.create", "data.import"] as const);
 
 /**
  * Rollerden en az biri izni taşıyorsa ya da üyenin özel grubu (T-421) bu yetkiyi veriyorsa `true`. Bilinmeyen rol/izin → `false`.

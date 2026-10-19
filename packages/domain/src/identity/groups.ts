@@ -111,7 +111,7 @@ async function lockGroupMembers(tx: AccessTx, tenantId: string, groupId: string)
           FROM public.member_groups mg
           JOIN public.tenant_memberships m ON m.tenant_id = mg.tenant_id AND m.id = mg.membership_id
           JOIN public.users u ON u.id = m.user_id
-         WHERE mg.tenant_id = ${tenantId}::uuid AND mg.group_id = ${groupId}::uuid
+         WHERE mg.tenant_id = ${tenantId}::uuid AND mg.group_id = ${groupId}::uuid AND m.status = 'ACTIVE'
          ORDER BY m.id
            FOR UPDATE OF m`,
   );
@@ -263,10 +263,11 @@ export async function saveGroup(
         });
         return { ok: true, id: created.id, version: created.version } as const;
       }
+      // Kilit sırası withMembership ile aynı: önce üyelik satırları, sonra grup (ters sıra deadlock üretirdi).
+      const members = await lockGroupMembers(tx, actor.tenantId, id);
       const before = await lockGroup(tx, actor.tenantId, id);
       if (before.version !== expectedVersion) throw new AppError("VERSION_CONFLICT");
       if (before.archived_at !== null) throw new AppError("VALIDATION_FAILED");
-      const members = await lockGroupMembers(tx, actor.tenantId, id);
       if (needsMfa(g.grants) && members.some((m) => isFieldEmail(m.email))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
       const rows = await tx.execute<{ version: number }>(
         sql`UPDATE public.permission_groups
@@ -286,6 +287,8 @@ export async function saveGroup(
         changeSummary: {
           from_name: before.name,
           name: g.name,
+          from_color: before.color,
+          color: g.color,
           from_grants: [...before.grants],
           grants: [...g.grants],
           from_screens: [...before.screens],
@@ -309,10 +312,10 @@ export async function setGroupArchived(
   if (!Number.isInteger(expectedVersion) || expectedVersion < 1 || typeof archived !== "boolean") throw new AppError("VALIDATION_FAILED");
   try {
     return await ownerWrite(rest, async (tx, actor) => {
+      const members = await lockGroupMembers(tx, actor.tenantId, id); // kilit sırası: üyelik → grup
       const before = await lockGroup(tx, actor.tenantId, id);
       if (before.version !== expectedVersion) throw new AppError("VERSION_CONFLICT");
       if ((before.archived_at !== null) === archived) return { ok: true, id, version: before.version } as const;
-      const members = await lockGroupMembers(tx, actor.tenantId, id);
       if (!archived && needsMfa(before.grants) && members.some((m) => isFieldEmail(m.email))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
       const rows = await tx.execute<{ version: number }>(
         sql`UPDATE public.permission_groups SET archived_at = ${archived ? sql`now()` : sql`NULL`}

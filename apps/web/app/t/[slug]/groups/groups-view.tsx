@@ -33,7 +33,8 @@ const SCREENS = [
   ["reports", "E56A00", RICON.reports],
   ["problem", "C62828", RICON.warn],
 ] as const;
-/** Yetki kartı → domain yetkileri. `team` (ekip yönetimi) grupla verilmez: kart kilitli. */
+/** Yetki kartı → domain yetkileri. `team` (ekip yönetimi) ve `settings` (ayarlar) grupla verilmez: kartlar kilitli (yalnız Yönetici rolü). */
+const LOCKED: readonly string[] = ["team", "settings"];
 const POWERS = [
   ["scan", "2F7D5B", RICON.scan, ["stock.post"]],
   ["create", "0E7C7B", RICON.plus, ["document.create"]],
@@ -41,7 +42,7 @@ const POWERS = [
   ["reverse", "B5552B", RICON.reverse, ["reversal.create"]],
   ["team", "2F5DA8", RICON.team, []],
   ["import", "2F7D5B", RICON.import, ["data.import"]],
-  ["settings", "172E42", RICON.settings, ["settings.manage"]],
+  ["settings", "172E42", RICON.settings, []],
 ] as const;
 const COLORS = ["#2F7D5B", "#0E7C7B", "#2F5DA8", "#6C4BD8", "#B5552B"] as const;
 
@@ -328,7 +329,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
     list.map((item) => {
       const [id, color, d] = item;
       const on = draft?.[key].includes(id) === true;
-      const locked = readOnly || (key === "powers" && id === "team");
+      const locked = readOnly || (key === "powers" && LOCKED.includes(id));
       return (
         <button
           key={id}
@@ -338,7 +339,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
           aria-disabled={locked}
           data-card={id}
           onClick={() => {
-            if (key === "powers" && id === "team" && !readOnly) {
+            if (key === "powers" && LOCKED.includes(id) && !readOnly) {
               beep(false);
               flash(t("teamLocked"));
               return;
@@ -353,7 +354,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
             <Ico d={d} size={22} />
           </span>
           <b>{t(`${key === "screens" ? "scr" : "pow"}.${id}.name`)}</b>
-          <small>{key === "powers" && id === "team" ? t("pow.team.locked") : t(`${key === "screens" ? "scr" : "pow"}.${id}.hint`)}</small>
+          <small>{key === "powers" && LOCKED.includes(id) ? t("pow.locked") : t(`${key === "screens" ? "scr" : "pow"}.${id}.hint`)}</small>
         </button>
       );
     });

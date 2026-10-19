@@ -11,7 +11,11 @@ import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
 import { assertConversionFactor } from "./quantity.ts";
 
-export type CatalogCommandParams = Omit<TenantAccessParams, "permission"> & { readonly requestId?: string };
+export type CatalogCommandParams = Omit<TenantAccessParams, "permission"> & {
+  readonly requestId?: string;
+  /** T-421: yalnız Excel'den aktarım yolu (`onboarding/import-apply`) `data.import` ile yazar; diğer tüm çağrılar `settings.manage`. */
+  readonly writePermission?: "data.import";
+};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CODE_MAX = 64;
@@ -53,8 +57,8 @@ export async function createUnit(
 ): Promise<{ readonly unitId: string }> {
   const code = parseCode(input.code);
   const name = parseName(input.name);
-  const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  const { requestId, writePermission, ...access } = params;
+  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
     const rows = await tx.execute<{ id: string }>(
       sql`INSERT INTO public.units (tenant_id, id, code, name)
           VALUES (${actor.tenantId}::uuid, gen_random_uuid(), ${code}, ${name})
@@ -162,8 +166,8 @@ export async function setUnitConversion(
   const itemId = parseUuid(input.itemId);
   const unitId = parseUuid(input.unitId);
   const factor = assertConversionFactor(input.factor);
-  const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  const { requestId, writePermission, ...access } = params;
+  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
     const item = await loadItem(tx, actor.tenantId, itemId, "share");
     if (item === undefined) throw new AppError("NOT_FOUND");
     if (item.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");

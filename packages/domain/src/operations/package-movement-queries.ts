@@ -66,8 +66,8 @@ export async function getCurrentPackage(params: TaskCallParams, input: { readonl
       && !["SERIAL", "LOT_AND_SERIAL"].includes(r.tracking_mode);
     const allowed: ("QC_RELEASE" | "PUTAWAY")[] = [];
     if (r.document_status === "POSTED" && supported) {
-      if (r.current_status === "QUARANTINE" && hasPermission(m.roles, "document.approve")) allowed.push("QC_RELEASE");
-      if (r.current_status === "AVAILABLE" && ["RECEIVING", "STORAGE"].includes(r.location_kind ?? "") && hasPermission(m.roles, "stock.post")) allowed.push("PUTAWAY");
+      if (r.current_status === "QUARANTINE" && hasPermission(m.roles, "document.approve", m.grants)) allowed.push("QC_RELEASE");
+      if (r.current_status === "AVAILABLE" && ["RECEIVING", "STORAGE"].includes(r.location_kind ?? "") && hasPermission(m.roles, "stock.post", m.grants)) allowed.push("PUTAWAY");
     }
     return { id: r.id, qr: encodePackageQr(r.id), kind: r.kind, packageNo: Number(r.package_no), itemId: r.item_id, itemCode: r.item_code, itemName: r.item_name,
       originKind: r.origin_kind, baseQuantity: r.base_quantity, remainingBaseQuantity: r.remaining_base_quantity,
@@ -76,7 +76,7 @@ export async function getCurrentPackage(params: TaskCallParams, input: { readonl
       warehouseId: r.warehouse_id, warehouseCode: r.warehouse_code, warehouseName: r.warehouse_name,
       currentLocation: r.location_id === null ? null : { id: r.location_id, code: r.location_code ?? "", name: r.location_name ?? "", kind: r.location_kind ?? "" },
       currentStockStatus: r.current_status, predecessorVersion: Number(r.sequence_no), currentBalanceVersion: r.current_version,
-      canTransfer: r.document_status === "POSTED" && supported && r.current_status === "AVAILABLE" && ["RECEIVING", "STORAGE"].includes(r.location_kind ?? "") && hasPermission(m.roles, "stock.post"),
+      canTransfer: r.document_status === "POSTED" && supported && r.current_status === "AVAILABLE" && ["RECEIVING", "STORAGE"].includes(r.location_kind ?? "") && hasPermission(m.roles, "stock.post", m.grants),
       allowedActions: allowed, blockedReason: r.document_status !== "POSTED" ? "DRAFT" : !supported ? "UNSUPPORTED_STATE" : allowed.length === 0 ? "NO_PERMISSION" : null };
   });
 }

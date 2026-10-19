@@ -13,6 +13,7 @@
 //   aynı (ürün, raf, miktar) önceki içe aktarma belgesinden (POSTED, `import.opening_stock`) geliyorsa satır "zaten uygulanmış" sayılır ve atlanır: korunma
 //   DURUM tabanlıdır ve komut içinde stok kilitleri altında yeniden denetlenir; dosyayı sıralamak/düzeltmek/satır eklemek eski satırı iki kez yazmaz.
 // - Dosya içeriği diske/loga yazılmaz; yalnız bellek (G-09). Audit: her komut kendi audit'ini yazar; `requestId` hepsini bağlar.
+import { SOD_DETAIL, separationOfDutiesEnabled } from "../identity/separation.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
@@ -84,6 +85,14 @@ export interface ImportPreview {
 async function assertPermissions(params: ImportCallParams, kind: ImportKind): Promise<void> {
   const perms = kind === "PRODUCTS" ? (["data.import"] as const) : (["data.import", "document.create", "document.approve", "stock.post"] as const);
   for (const permission of perms) await runTenantQuery({ ...params, permission }, () => Promise.resolve(null));
+  // T-421 (güvenlik incelemesi): açılış stoku tek komutta oluştur + onayla + işle. Görev ayrımı açıkken bunu yalnız Yönetici rolü yapar;
+  // aktarım yetkisini grupla alan üye kendi belgesini onaylamış olurdu.
+  if (kind !== "PRODUCTS") {
+    await runTenantQuery({ ...params, permission: "data.import" }, async (tx, m) => {
+      if (!m.roles.includes("TENANT_ADMIN") && (await separationOfDutiesEnabled(tx, m.tenantId))) throw new AppError("FORBIDDEN", { detail: SOD_DETAIL });
+      return null;
+    });
+  }
 }
 
 function canonicalFactor(f: string): string {
@@ -396,7 +405,8 @@ export async function applyImportChunk(params: ImportCallParams, input: { readon
 }
 
 async function applyProducts(params: ImportCallParams, plans: readonly ProductPlan[], ctx: ProductContext): Promise<RowReport[]> {
-  const p = { ...params };
+  // T-421: kart yazmaları aktarım izniyle (`data.import`); grupla aktarım yetkisi alan üye `settings.manage` almadan ürün açabilir.
+  const p = { ...params, writePermission: "data.import" as const };
   const rows: RowReport[] = [];
   const unitId = new Map(ctx.units.map((u) => [u.code, u.id] as const));
   let packUnitId = unitId.get(PACK_UNIT_CODE);
