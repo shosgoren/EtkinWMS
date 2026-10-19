@@ -31,10 +31,10 @@ function parseUuid(raw: unknown): string {
 
 async function assertNotDemo(tx: AccessTx, tenantId: string): Promise<void> {
   const rows = await tx.execute<{ is_demo: boolean; status: string }>(sql`SELECT is_demo, status FROM public.tenants WHERE id = ${tenantId}::uuid`);
-  if (rows[0]?.is_demo !== false) throw new AppError("FORBIDDEN", { detail: "DEMO" });
+  if (rows[0]?.is_demo !== false) throw new AppError("FORBIDDEN");
 }
 
-function requireRecent(access: Access): void {
+function needRecentAuth(access: Access): void {
   if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
 }
 
@@ -96,7 +96,7 @@ export async function getJoinOverview(params: Access): Promise<JoinOverview> {
 /** Yeni katılma bağlantısı (eskisi o anda geçersiz). Düz belirteç YALNIZ bu dönüşte; QR adresi `/field/join#<tenant>.<belirteç>`. */
 export async function createJoinLink(params: CommandParams): Promise<{ readonly tenantId: string; readonly token: string; readonly expiresAt: Date }> {
   const { requestId, ...access } = params;
-  requireRecent(access);
+  needRecentAuth(access);
   const token = randomBytes(32).toString("base64url");
   try {
     return await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
@@ -127,7 +127,7 @@ export async function createJoinLink(params: CommandParams): Promise<{ readonly 
 /** Geçerli bağlantıyı kapatır (yeni talep açılamaz; bekleyen talepler kalır, onaylanabilir/reddedilebilir). */
 export async function revokeJoinLink(params: CommandParams): Promise<{ readonly changed: boolean }> {
   const { requestId, ...access } = params;
-  requireRecent(access);
+  needRecentAuth(access);
   return runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
     await assertNotDemo(tx, actor.tenantId);
     const rows = await tx.execute<{ id: string }>(
@@ -156,7 +156,7 @@ export async function approveJoinRequest(
   const id = parseUuid(rawId);
   const code = typeof rawCode === "string" ? rawCode.replace(/\s+/g, "") : "";
   if (!(FIELD_ROLES as readonly string[]).includes(roleKey)) throw new AppError("VALIDATION_FAILED");
-  requireRecent(access);
+  needRecentAuth(access);
   // (1) Kod doğrulaması (yanlış deneme kalıcı sayılır: bu transaction normal biter).
   const pre = await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
     await assertNotDemo(tx, actor.tenantId);
@@ -202,7 +202,7 @@ export async function approveJoinRequest(
 export async function rejectJoinRequest(params: CommandParams & { readonly joinRequestId: string }): Promise<{ readonly changed: boolean }> {
   const { joinRequestId: rawId, requestId, ...access } = params;
   const id = parseUuid(rawId);
-  requireRecent(access);
+  needRecentAuth(access);
   return runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
     await assertNotDemo(tx, actor.tenantId);
     const rows = await tx.execute<{ id: string; status: string }>(
