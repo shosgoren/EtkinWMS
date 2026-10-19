@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin WMS — Yetki grupları</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-direction:column;width:100%;min-height:100vh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;color:#172E42;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+.disp{font-family:'Bricolage Grotesque',sans-serif}
+
+/* önizleme çubuğu */
+.prev{align-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;margin:10px 12px;padding:4px;border-radius:24px;background:#FFFFFF;border:1.5px solid #172E42;max-width:calc(100% - 24px)}
+.prev-l{padding:0 8px 0 10px;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476;white-space:nowrap}
+.prevb{appearance:none;min-height:36px;padding:0 13px;border:0;border-radius:999px;background:transparent;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.prevb.on{background:#172E42;color:#FFFFFF}
+.prevsep{width:1px;height:22px;background:#C9D2DA;margin:0 4px}
+
+.appzone{display:flex;justify-content:center;padding:0 12px 24px}
+.app{position:relative;width:100%;max-width:1440px;background:linear-gradient(180deg,#EEF1F4 0%,#DCE3EA 100%);border-radius:28px;overflow:hidden;box-shadow:0 30px 80px -40px rgba(23,46,66,.45)}
+.fr-tablet .app{max-width:1180px;border:12px solid #172E42}
+.fr-mobile .app{max-width:390px;height:844px;border:10px solid #172E42;border-radius:36px}
+.fr-tablet .app{height:820px}
+.app :focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+
+/* üst çubuk */
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:14px 24px;background:rgba(238,241,244,.85);backdrop-filter:blur(8px);border-bottom:1.5px solid rgba(23,46,66,.08)}
+.fr-mobile .top{padding:10px 12px;gap:8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.logo{position:relative;flex:none;width:40px;height:40px;border-radius:12px;background:#172E42;display:flex;align-items:center;justify-content:center}
+.brand b{display:block;font:800 17px/1.05 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{display:block;margin-top:3px;font:600 11px/1 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.net{position:absolute;right:-4px;top:-4px;display:flex;width:14px;height:14px;border-radius:50%;background:#EEF1F4;align-items:center;justify-content:center}
+.net i{width:9px;height:9px;border-radius:50%;background:#2F9E6B;box-shadow:0 0 0 0 rgba(47,158,107,.6);animation:netpulse 1.6s ease-out infinite}
+@keyframes netpulse{0%{box-shadow:0 0 0 0 rgba(47,158,107,.6)}100%{box-shadow:0 0 0 8px rgba(47,158,107,0)}}
+.net.off i{background:#C62828;animation:blink 1s steps(2) infinite}
+.tools{display:flex;align-items:center;gap:8px;flex:none}
+.tb{appearance:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:62px;height:62px;padding:6px 8px;border:0;border-radius:18px;cursor:pointer;color:#172E42;background:#FFFFFF !important;box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.4);transition:transform .15s}
+.tb .ico{color:var(--i,#172E42)}
+.tb.tb-bell{background:#E56A00 !important;color:#FFFFFF}
+.tb.tb-bell .ico{color:#FFFFFF}
+.tb:hover{transform:translateY(-2px)}
+.tb:active{transform:scale(.95)}
+.tb span{font:800 10.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.04em;white-space:nowrap}
+.fr-mobile .tb{min-width:46px;height:46px;border-radius:14px;padding:0}
+.fr-mobile .tb span{display:none}
+.fr-mobile .tools{gap:6px}
+.fr-mobile .brand small{display:block;font-size:9.5px}
+.fr-mobile .brand b{font-size:15px}
+.fr-mobile .brand{gap:8px}
+.fr-mobile .top .etkin,.fr-tablet .top .etkin{display:none}
+.fr-mobile .tb{min-width:42px;height:42px;border-radius:13px}
+.more{display:none}
+/* alt sabit çubuk (telefon + tablet): hiçbir şeyin üstüne binmez; içerik üstünde kayar */
+.dock{display:block}
+/* ===== ALT ÇUBUK (tüm cihazlar): şeffaf buzlu cam oval; içerik üstüne binmez ===== */
+.dock{position:relative;flex:none;z-index:15;display:block;padding:14px 16px 10px;background:transparent}
+.dockin{position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;height:72px;padding:0 10px;border-radius:999px;background:rgba(23,46,66,.38);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border:1px solid rgba(255,255,255,.45);box-shadow:0 14px 34px -16px rgba(23,46,66,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+.dk{appearance:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:64px;border:0;border-radius:999px;background:transparent;color:#FFFFFF;cursor:pointer;transition:transform .15s}
+.dk:active{transform:scale(.93)}
+.dk span{font:800 10px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;opacity:.85}
+.dk.problem{color:#F4C542}
+.dk.problem .qm{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:2.4px solid currentColor;font:800 17px/1 'Bricolage Grotesque',sans-serif}
+/* ortadaki yükseltilmiş OKUT */
+.dk.scan,.dk.big{justify-self:center;width:66px;height:66px;margin-top:-20px;border-radius:50%;background:#5FAF8A;color:#FFFFFF;box-shadow:0 12px 26px -8px rgba(95,175,138,.75),0 0 0 5px rgba(23,46,66,.5);gap:0}
+.dk.scan span,.dk.big span{position:absolute;top:70px;left:50%;transform:translateX(-50%);display:block;white-space:nowrap;color:#FFFFFF;opacity:.9}
+.dk.scan,.dk.big{position:relative;overflow:visible}
+.dk.scan .ico{width:30px;height:30px;stroke-width:2.2}
+/* Etkin: sade halka */
+.dock .dk-etkin{justify-self:center;display:flex;align-items:center;justify-content:center;width:64px;height:64px;padding:0;border-radius:50%;background:transparent;box-shadow:none}
+.dock .dk-etkin .etl{display:none}
+.dock .orb{width:48px;height:48px}
+.dock .orb::after{inset:3px;background:#172E42}
+.dock .orb .ico{color:#FFFFFF;width:22px;height:22px;animation:none}
+.dock .dk-etkin:active .orb .ico{color:#F4C542}
+.subdock{display:block}
+.dcap{display:block;text-align:center;margin-top:6px;font:800 10px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;color:#30475A}
+.dk.big span{display:none}
+
+
+.dock .orb{width:50px;height:50px}
+.fr-mobile .app,.fr-tablet .app{display:flex;flex-direction:column;max-height:100vh}
+.fr-mobile .inner,.fr-tablet .inner{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.fr-desktop .app{display:flex;flex-direction:column;height:1180px}
+.fr-desktop .inner{flex:1;min-height:0;overflow-y:auto}
+/* TEK EKRAN (telefon): kaydırma yok; rapor ızgarası kalan yüksekliği doldurur, kartlar küçülür */
+.fr-mobile .inner{gap:10px;padding:10px 12px 4px}
+.fr-tablet .inner{gap:14px;padding:16px 20px 6px}
+.fr-tablet .rep{flex:0 0 auto}
+.fr-tablet .rp{min-height:150px;justify-content:flex-start}
+.fr-tablet .rp b{font-size:18px}
+.fr-tablet .rp small{font-size:11px}
+.fr-tablet .rp .n{font-size:30px}
+.fr-tablet .alerts,.fr-tablet .alerts-hd,.fr-desktop .alerts,.fr-desktop .alerts-hd{display:none}
+.fr-tablet .al{min-height:0;flex-direction:row;align-items:center;gap:18px;padding:18px 22px}
+.fr-tablet .al .alic{width:64px;height:64px}
+.fr-tablet .al .n{font-size:56px}
+.fr-tablet .al .t{font-size:20px}
+.fr-tablet .al .s{font-size:12px}
+.fr-tablet .al .txt{display:flex;flex-direction:column;gap:4px}
+.fr-tablet .grid2,.fr-tablet .turn-card,.fr-tablet .live,.fr-tablet .live-hd{display:none}
+.fr-mobile .hello h1{font-size:22px}
+.fr-mobile .hello p{margin-top:3px;font-size:11px}
+.fr-mobile .shd{margin:0 2px -2px}
+.fr-mobile .rep{flex:1;min-height:0;grid-template-rows:repeat(3,minmax(0,1fr))}
+.fr-mobile .rp{min-height:0;padding:12px;gap:4px;justify-content:flex-start}
+.fr-mobile .rp .alic{width:36px;height:36px;border-radius:11px;margin-bottom:2px}
+.fr-mobile .rp b{font-size:16px}
+.fr-mobile .rp small{font-size:10.5px}
+.fr-mobile .rp .n{font-size:24px}
+.fr-mobile .live-hd,.fr-mobile .live,.fr-mobile .grid2,.fr-mobile .turn-card{display:none}
+.fr-mobile .quick{flex:1;min-height:0;grid-template-rows:repeat(2,minmax(0,1fr))}
+.fr-mobile .qt{min-height:0}
+.fr-mobile .fieldtiles{flex:1;min-height:0;grid-template-rows:repeat(3,minmax(0,1fr))}
+.fr-mobile .counthero{padding:16px}
+.fr-mobile .counthero b{font-size:22px}
+/* tek ekran alt çubuk: Okut · Etkin · Sorun bildir */
+.dock .dk-etkin{justify-self:end}
+.fr-desktop .top .etkin,.fr-desktop .tb{display:flex}
+/* yüzen kısayol yuvarlağı */
+.fab{position:absolute;z-index:22;width:0;height:0;touch-action:none}
+.fabb{appearance:none;position:absolute;left:-24px;top:-24px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:1.5px solid rgba(255,255,255,.35);border-radius:50%;background:rgba(23,46,66,.72);backdrop-filter:blur(6px);color:#FFFFFF;cursor:grab;box-shadow:0 8px 20px -8px rgba(5,9,13,.5);transition:transform .15s,background .15s}
+.fabb:active{cursor:grabbing;transform:scale(.94)}
+.fabb.on{background:#172E42;transform:rotate(45deg)}
+/* Etkin halkası: basılı tutunca kısayollar (tuvalde: sağ tık/uzun basma yerine ikinci dokunuş) */
+.hback{position:absolute;inset:0;z-index:20;background:rgba(5,9,13,.35);backdrop-filter:blur(3px)}
+.halo{position:absolute;z-index:21;display:flex;flex-direction:column;gap:8px;width:220px;padding:8px;border-radius:22px;background:rgba(14,27,39,.92);backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,.16);box-shadow:0 24px 50px -20px rgba(0,0,0,.6);animation:rise .2s cubic-bezier(.2,.9,.2,1)}
+.hb{appearance:none;display:flex;align-items:center;gap:12px;min-height:54px;padding:0 12px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:#FFFFFF;cursor:pointer;text-align:left;animation:pop .25s cubic-bezier(.2,.9,.2,1) backwards}
+.hb:hover{background:rgba(255,255,255,.16)}
+.hb i{display:flex;align-items:center;justify-content:center;flex:none;width:38px;height:38px;border-radius:12px}
+.hb span{font:700 14px/1.1 'Instrument Sans',sans-serif}
+@keyframes pop{from{transform:translateY(8px);opacity:0}}
+.hint{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:16;padding:4px 10px;border-radius:999px;background:#172E42;color:#F4C542;font:800 9.5px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;white-space:nowrap}
+/* raporlar şeridi (yönetici; telefonda üst çubuğun hemen altında, kaydırmadan görünür) */
+.rep{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rp{appearance:none;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:118px;padding:14px;border:0;border-radius:20px;color:#FFFFFF;text-align:left;cursor:pointer;transition:transform .15s;animation:rise .45s cubic-bezier(.2,.9,.2,1) backwards}
+.rp.calm{background:#FFFFFF;color:#172E42;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.rp.calm .alic.rich{background:var(--t);box-shadow:none;color:#FFFFFF}
+.rp.calm .n{color:var(--c)}
+.rp.calm small{color:#4E6476}
+.rp .items{display:flex;flex-direction:column;gap:4px;margin-top:auto;font:600 11px/1.3 'IBM Plex Mono',monospace;opacity:.92}
+.rp .items span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp.all{background:#FFFFFF;color:#172E42;border:2px dashed rgba(23,46,66,.4);justify-content:center;align-items:center;text-align:center}
+.rp .alic.rich{background:rgba(255,255,255,.22);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.rp .alic.rich .ico{stroke-width:2.6;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+.rp.editing{outline:3px solid #FFFFFF;outline-offset:-3px}
+.pal{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:16px;background:rgba(14,27,39,.62);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.3);animation:rise .2s cubic-bezier(.2,.9,.2,1)}
+.palrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.sw2{appearance:none;width:26px;height:26px;border:2px solid rgba(255,255,255,.5);border-radius:50%;cursor:pointer}
+.sw2.on{border-color:#FFFFFF;box-shadow:0 0 0 2px #172E42}
+.icb2{appearance:none;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border:2px solid rgba(255,255,255,.45);border-radius:9px;background:transparent;color:#FFFFFF;cursor:pointer}
+.icb2.on{background:#FFFFFF;color:#172E42;border-color:#FFFFFF}
+.palhide{appearance:none;margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 9px;border:0;border-radius:9px;background:#C62828;color:#FFFFFF;cursor:pointer;font:800 9.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+.rp.all .alic{background:#F4C542;color:#1A1300}
+.fr-desktop .rp.all,.fr-tablet .rp.all{display:none}
+.rp:active{transform:scale(.96)}
+.rp .alic{width:40px;height:40px;border-radius:13px}
+.rp b{font:800 14px/1.1 'Bricolage Grotesque',sans-serif}
+.rp small{font:600 10px/1.2 'IBM Plex Mono',monospace;opacity:.9}
+.rp .n{position:absolute;top:10px;right:12px;font:800 22px/1 'Bricolage Grotesque',sans-serif}
+.rp{position:relative}
+.fr-desktop .rep,.fr-tablet .rep{grid-template-columns:repeat(5,minmax(0,1fr))}
+/* telefonda Etkin: sağ altta yüzen büyük düğme (tek el, başparmak); sol el tercihi ayarlardan */
+.fr-mobile .say{display:none}
+.fr-mobile .tb span{display:none}
+.tb-bell .ico{transform-origin:50% 10%;animation:ring 2.6s ease-in-out infinite}
+@keyframes ring{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(14deg)}80%{transform:rotate(-12deg)}85%{transform:rotate(8deg)}90%{transform:rotate(-5deg)}}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.tbadge{position:absolute;top:-5px;right:-5px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#C62828;color:#FFFFFF;border:2.5px solid #EEF1F4;font:800 11px/17px 'Bricolage Grotesque',sans-serif;text-align:center}
+/* Etkin düğmesi: dönen renk halkası + nefes alan çekirdek */
+.etkin{appearance:none;position:relative;display:flex;align-items:center;gap:10px;height:62px;padding:0 18px 0 8px;border:0;border-radius:999px;background:#172E42;color:#FFFFFF;cursor:pointer}
+.fr-mobile .etkin{height:44px;padding:0 4px}
+.fr-mobile .etkin .etl{display:none}
+.orb{position:relative;flex:none;width:46px;height:46px;border-radius:50%}
+.fr-mobile .orb{width:36px;height:36px}
+.orb::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#F4C542,#E56A00,#C62828,#6C4BD8,#0E7C7B,#2F7D5B,#F4C542);animation:spin 3.2s linear infinite}
+.orb::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#172E42}
+.orb .ico{position:absolute;inset:0;margin:auto;z-index:1;color:#F4C542;animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.15)}}
+.etl b{display:block;font:800 16px/1 'Bricolage Grotesque',sans-serif;text-align:left}
+.etl small{display:block;margin-top:3px;font:600 10.5px/1 'IBM Plex Mono',monospace;color:#F4C542;text-align:left}
+
+/* içerik */
+.inner{display:flex;flex-direction:column;gap:18px;padding:22px 24px 40px}
+.fr-mobile .inner{padding:14px 12px 28px;gap:14px}
+.hello{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.hello h1{margin:0;font:800 34px/1.05 'Bricolage Grotesque',sans-serif}
+.fr-mobile .hello h1{font-size:25px}
+.hello p{margin:6px 0 0;font:600 12px/1.3 'IBM Plex Mono',monospace;color:#4E6476}
+.say{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 10px;border-radius:999px;background:#FFFFFF;border:2px dashed #172E42;font:700 14px/1.2 'Instrument Sans',sans-serif;cursor:pointer}
+.say i{display:flex;width:38px;height:38px;border-radius:50%;background:#F4C542;align-items:center;justify-content:center;animation:breathe 1.6s ease-in-out infinite}
+.sample{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;background:#E3E9EE;font:600 10.5px/1 'IBM Plex Mono',monospace;color:#30475A;letter-spacing:.06em}
+
+.shd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:6px 2px -6px}
+.shd b{font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.12em}
+.shd span{font:600 11.5px/1 'IBM Plex Mono',monospace;color:#4E6476}
+
+/* dikkat kutucukları */
+.alerts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.fr-tablet .alerts{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fr-mobile .alerts{display:none}
+.fr-mobile .alerts-hd{display:none}
+.al{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:18px;border:0;border-radius:24px;color:#FFFFFF;text-align:left;cursor:pointer;overflow:hidden;animation:rise .45s cubic-bezier(.2,.9,.2,1) backwards;transition:transform .15s}
+.al:active{transform:scale(.97)}
+.fr-mobile .al{padding:14px;border-radius:20px}
+@keyframes rise{from{transform:translateY(16px);opacity:0}}
+.alic{display:flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:17px;background:rgba(255,255,255,.2)}
+.alic .ico{animation:none}
+@keyframes bob{50%{transform:translateY(-3px)}}
+.al .txt{display:flex;flex-direction:column;gap:8px}
+.al .n{font:800 52px/.9 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.fr-mobile .al .n{font-size:38px}
+.al .t{font:800 17px/1.15 'Bricolage Grotesque',sans-serif}
+.fr-mobile .al .t{font-size:14.5px}
+.al .s{font:600 11px/1.3 'IBM Plex Mono',monospace;opacity:.88}
+.pulse{position:absolute;top:18px;right:18px;width:14px;height:14px;border-radius:50%;background:#FFFFFF;animation:ping 1.2s ease-out infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(255,255,255,.8)}100%{box-shadow:0 0 0 14px rgba(255,255,255,0)}}
+
+/* kartlar */
+.grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px}
+.fr-tablet .grid2,.fr-mobile .grid2{grid-template-columns:minmax(0,1fr)}
+.card{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:24px;background:#FFFFFF;box-shadow:0 1px 0 rgba(23,46,66,.06),0 12px 26px -20px rgba(23,46,66,.4)}
+.fr-mobile .card{padding:14px;border-radius:20px}
+.ch{display:flex;align-items:center;gap:12px}
+.ch i{display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+.ch b{display:block;font:800 19px/1.1 'Bricolage Grotesque',sans-serif}
+.ch small{display:block;margin-top:3px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.ch .go{margin-left:auto}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:12px;border-radius:16px;background:#F6F3EE}
+.row .nm{font:700 15px/1.2 'Instrument Sans',sans-serif;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{grid-column:1;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.row .act{grid-row:1 / span 2;grid-column:2}
+.meter{grid-column:1;display:flex;align-items:center;gap:8px}
+.meter .bar{flex:1;height:12px;border-radius:12px;background:#E3DDD3;overflow:hidden}
+.meter .bar span{display:block;height:100%;border-radius:12px;animation:grow .9s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes grow{from{width:0}}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 16px;border:0;border-radius:14px;cursor:pointer;font:800 13.5px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.btn.y{background:#F4C542;color:#1A1300}
+.btn.n{background:#172E42;color:#FFFFFF}
+.btn.g{background:#E3F1E9;color:#17583C}
+.late{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;background:#C62828;color:#FFFFFF;font:800 12px/1 'Bricolage Grotesque',sans-serif}
+.late.amb{background:#E56A00}
+
+/* devir hızı */
+.turn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fr-mobile .turn{grid-template-columns:minmax(0,1fr)}
+.tc{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:18px}
+.tc b{font:800 15px/1.1 'Bricolage Grotesque',sans-serif;display:flex;align-items:center;gap:8px}
+.tc .big{font:800 38px/.9 'Bricolage Grotesque',sans-serif}
+.tl{display:flex;align-items:center;gap:8px;font:600 12px/1.2 'Instrument Sans',sans-serif}
+.tl .bar{flex:1;height:9px;border-radius:9px;background:rgba(23,46,66,.12);overflow:hidden}
+.tl .bar span{display:block;height:100%;border-radius:9px;animation:grow .9s cubic-bezier(.2,.8,.2,1) backwards}
+.tl em{font-style:normal;font:600 11px/1 'IBM Plex Mono',monospace;min-width:38px;text-align:right}
+
+/* bugün canlı */
+.live{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.fr-mobile .live{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.lv{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:#FFFFFF}
+.lv i{display:flex;align-items:center;justify-content:center;flex:none;width:46px;height:46px;border-radius:14px;color:#FFFFFF}
+.lv b{display:block;font:800 30px/.9 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums}
+.lv small{display:block;margin-top:4px;font:800 10.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;color:#4E6476}
+.dotlive{display:inline-block;width:9px;height:9px;border-radius:50%;background:#17804F;margin-right:6px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* depo yöneticisi */
+.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.fr-tablet .quick,.fr-mobile .quick{grid-template-columns:repeat(2,minmax(0,1fr))}
+.qt{appearance:none;display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-height:132px;padding:16px;border:0;border-radius:22px;color:#172E42;text-align:left;cursor:pointer;transition:transform .15s;background:#FFFFFF !important;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.qt .alic{background:var(--q,#172E42);color:#FFFFFF}
+.qt small{color:#4E6476}
+.qt.hot{background:var(--q) !important;color:#FFFFFF}
+.qt.hot .alic{background:rgba(255,255,255,.2)}
+.qt.hot small{color:rgba(255,255,255,.9)}
+.qt:active{transform:scale(.97)}
+.qt .alic{width:50px;height:50px}
+.qt b{font:800 17px/1.15 'Bricolage Grotesque',sans-serif}
+.qt small{font:600 11px/1.3 'IBM Plex Mono',monospace;opacity:.9}
+.person{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:#F6F3EE}
+.av{flex:none;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;color:#FFFFFF;font:800 15px/1 'Bricolage Grotesque',sans-serif}
+.person b{display:block;font:700 14.5px/1.2 'Instrument Sans',sans-serif}
+.person small{display:block;margin-top:2px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.st{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:800 11.5px/1 'Bricolage Grotesque',sans-serif}
+
+/* sayım */
+.counthero{display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding:22px;border-radius:28px;background:#2F5DA8;color:#FFFFFF}
+.counthero .alic{width:76px;height:76px;border-radius:24px}
+.counthero b{display:block;font:800 30px/1.05 'Bricolage Grotesque',sans-serif}
+.counthero small{display:block;margin-top:6px;font:600 12px/1.3 'IBM Plex Mono',monospace;opacity:.9}
+.cs{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:16px;border-radius:22px;background:#FFFFFF}
+.fr-mobile .cs{grid-template-columns:auto minmax(0,1fr);}
+.fr-mobile .cs .btn{grid-column:1 / -1}
+.cs .no{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:18px;background:#E6EEF8;color:#2F5DA8;font:800 15px/1 'Bricolage Grotesque',sans-serif}
+.cs b{display:block;font:800 18px/1.15 'Bricolage Grotesque',sans-serif}
+.cs small{display:block;margin-top:4px;font:600 11.5px/1.3 'IBM Plex Mono',monospace;color:#4E6476}
+
+/* saha */
+.fieldtiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fr-mobile .fieldtiles{grid-template-columns:minmax(0,1fr)}
+
+/* Etkin paneli */
+.page{position:absolute;inset:0;z-index:19;display:flex;flex-direction:column;background:linear-gradient(180deg,#EEF1F4 0%,#DCE3EA 100%);animation:rise .25s cubic-bezier(.2,.9,.2,1)}
+.back{appearance:none;display:flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;border:0;border-radius:16px;background:#FFFFFF;cursor:pointer}
+.page .inner{flex:1;min-height:0;overflow-y:auto}
+.pk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fr-desktop .pk{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pp{appearance:none;display:flex;align-items:center;gap:10px;padding:10px;border:2.5px solid transparent;border-radius:16px;background:#FFFFFF;text-align:left;cursor:pointer}
+.pp.on{border-color:#17804F;background:#E3F1E9}
+.pp b{font:700 14px/1.2 'Instrument Sans',sans-serif}
+.pp .chk{margin-left:auto;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#E3DDD3;color:#FFFFFF}
+.pp.on .chk{background:#17804F}
+.av{flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;color:#FFFFFF}
+.scrim{position:absolute;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:12px;background:rgba(233,228,218,.35);backdrop-filter:blur(5px)}
+.fr-mobile .scrim{padding:0}
+.sheet{display:flex;flex-direction:column;gap:10px;width:560px;max-width:100%;max-height:70%;overflow:auto;padding:14px;border-radius:26px;background:rgba(14,27,39,.82);backdrop-filter:blur(14px);color:#FFFFFF;border:1.5px solid rgba(255,255,255,.18);box-shadow:0 30px 60px -20px rgba(0,0,0,.5);animation:rise .3s cubic-bezier(.2,.9,.2,1)}
+.fr-mobile .sheet{width:100%;border-radius:28px 28px 0 0}
+.sh{display:flex;align-items:center;gap:12px}
+.sh b{font:800 20px/1 'Bricolage Grotesque',sans-serif}
+.sh small{display:block;margin-top:4px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#9FB2C2}
+.x{appearance:none;margin-left:auto;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:14px;background:#1E2F3E;color:#FFFFFF;cursor:pointer}
+.listen{display:flex;flex-direction:row;align-items:center;gap:14px;padding:6px 6px 6px 10px}
+.bigorb{position:relative;flex:none;width:56px;height:56px;border-radius:50%}
+.bigorb::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#F4C542,#E56A00,#C62828,#6C4BD8,#0E7C7B,#2F7D5B,#F4C542);animation:spin 2.4s linear infinite}
+.bigorb::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#0E1B27}
+.bigorb .ico{position:absolute;inset:0;margin:auto;z-index:1;width:24px;height:24px;color:#F4C542;animation:breathe 1.2s ease-in-out infinite}
+.wave{display:flex;align-items:center;gap:4px;height:28px;flex:none}
+.wave span{width:6px;border-radius:6px;background:#F4C542;animation:wv 1s ease-in-out infinite}
+@keyframes wv{0%,100%{height:6px}50%{height:26px}}
+.heard{flex:1;min-width:0;font:700 16px/1.25 'Instrument Sans',sans-serif;text-align:left}
+.heard small{display:block;margin-top:4px;font:600 11px/1 'IBM Plex Mono',monospace;color:#9FB2C2}
+.ans{display:flex;flex-direction:column;gap:8px}
+.ar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;border-radius:16px;background:rgba(255,255,255,.08)}
+.ar i{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:12px;color:#FFFFFF}
+.ar b{display:block;font:700 14.5px/1.2 'Instrument Sans',sans-serif}
+.ar small{display:block;margin-top:2px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#9FB2C2}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{appearance:none;flex:none;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:1.5px solid #30475A;border-radius:999px;background:transparent;color:#FFFFFF;cursor:pointer;font:700 13px/1.1 'Instrument Sans',sans-serif;text-align:left}
+.chip:hover{background:#1E2F3E}
+.chip i{display:flex;color:#F4C542}
+
+
+/* ===== KARANLIK MOD: göz yormayan, saf siyah yok, kırık beyaz yazı ===== */
+.thd .app,.thd .page{background:linear-gradient(180deg,#121B24 0%,#0F171F 100%);color:#E6EBEF}
+.thd .top{background:rgba(18,27,36,.88);border-bottom-color:rgba(255,255,255,.08)}
+.thd .brand b,.thd .hello h1,.thd .shd b,.thd .ch b{color:#E6EBEF}
+.thd .brand small,.thd .hello p,.thd .shd span,.thd .ch small,.thd .sample{color:#9FB2C2}
+.thd .sample{background:#1C2833}
+.thd .logo{background:#0B1118;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.thd .net{background:#121B24}
+.thd .tb{background:#1C2833 !important;color:#E6EBEF;box-shadow:none}
+.thd .tb.tb-bell{background:#C25A00 !important}
+.thd .tbadge{border-color:#121B24}
+.thd .rp.calm,.thd .rp.all,.thd .card,.thd .lv,.thd .qt,.thd .cs,.thd .row{background:#1C2833 !important;color:#E6EBEF;box-shadow:none}
+.thd .rp.calm small,.thd .rp.all small,.thd .qt small,.thd .lv small,.thd .cs small,.thd .row .meta{color:#9FB2C2 !important}
+.thd .rp.all{border-color:rgba(255,255,255,.25)}
+.thd .rp.all .alic{background:#263544 !important;color:#E6EBEF !important}
+.thd .rp:not(.calm):not(.all){filter:saturate(.85) brightness(.92)}
+.thd .qt.hot{filter:saturate(.85) brightness(.92);color:#FFFFFF}
+.thd .row{background:#223040 !important}
+.thd .meter .bar{background:#2E3E4F}
+.thd .btn.g{background:#1F3A30;color:#9FE1BF}
+.thd .btn.y{background:#D9AE3A;color:#1A1300}
+.thd .btn.o{background:#1C2833;color:#E6EBEF;border-color:#3A4A5A}
+.thd .say{background:#1C2833;border-color:#9FB2C2;color:#E6EBEF}
+.thd .dockin{background:rgba(28,40,51,.72);border-color:rgba(255,255,255,.14)}
+.thd .dk.scan,.thd .dk.big{background:#4E9A78;box-shadow:0 12px 26px -8px rgba(78,154,120,.6),0 0 0 5px rgba(18,27,36,.9)}
+.thd .dk.problem{color:#E0B84A}
+.thd .dock .orb::after{background:#0F171F}
+.thd .fabb{background:rgba(230,235,239,.14);border-color:rgba(255,255,255,.2)}
+.thd .halo{background:rgba(18,27,36,.94)}
+.thd .sheet{background:rgba(18,27,36,.9)}
+.thd .counthero{filter:saturate(.85) brightness(.92)}
+.thd .person,.thd .pp{background:#223040;color:#E6EBEF}
+.thd .pp.on{background:#1F3A30;border-color:#4E9A78}
+.thd .prev{background:#1C2833;border-color:#3A4A5A;color:#E6EBEF}
+.thd .prevb.on{background:#E6EBEF;color:#121B24}
+.wrap.thd{background:#0B1118}
+
+/* saha personeli görev kartları (Bakış ekranındaki yapı: sayılar + ilerleme + acil) */
+.tsum{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:18px;background:#FFFFFF}
+.tring{position:relative;flex:none;width:52px;height:52px}
+.tring svg{width:100%;height:100%}
+.tring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 16px/1 'Bricolage Grotesque',sans-serif}
+.tring small{font:600 9px/1 'IBM Plex Mono',monospace;opacity:.6}
+.tsx b{display:block;font:800 16px/1.15 'Bricolage Grotesque',sans-serif}
+.tsx small{display:block;margin-top:4px;font:600 10.5px/1 'IBM Plex Mono',monospace;color:#4E6476}
+.tasks{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.fr-desktop .tasks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.tk{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"ic bd ch" "pb pb pb";column-gap:14px;row-gap:10px;align-items:center;padding:14px;border-radius:22px;text-decoration:none;box-shadow:0 1px 0 rgba(23,46,66,.05),0 10px 22px -18px rgba(23,46,66,.35);transition:transform .15s}
+.tk:active{transform:scale(.98)}
+.tki{grid-area:ic;display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:17px;color:#FFFFFF}
+.tkb{grid-area:bd;min-width:0;display:flex;flex-direction:column;gap:6px}
+.tkt{display:flex;align-items:center;gap:8px;font:800 19px/1.1 'Bricolage Grotesque',sans-serif}
+.tacil{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:5px 9px;border-radius:999px;background:#C62828;color:#FFFFFF;font:800 10.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+.tkn{display:flex;align-items:flex-end;gap:12px}
+.tkn span{display:flex;flex-direction:column;gap:2px}
+.tkn b{font:800 30px/.9 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums}
+.tkn small{font:800 10px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;opacity:.85}
+.tkn i{width:1.5px;align-self:stretch;background:currentColor;opacity:.25}
+.tkc{grid-area:ch}
+.tkp{grid-area:pb;display:flex;align-items:center;gap:10px}
+.tkp .bar{flex:1;height:10px;border-radius:10px;background:rgba(23,46,66,.1);overflow:hidden}
+.tkp .bar span{display:block;height:100%;border-radius:10px}
+.tkp em{font:600 11px/1 'IBM Plex Mono',monospace;font-style:normal;white-space:nowrap}
+.tk.off{grid-template-areas:"ic bd";grid-template-columns:auto minmax(0,1fr);background:transparent;border:2px dashed rgba(23,46,66,.25);box-shadow:none;color:#4E6476}
+.tk.off .tkt{font-size:16px}
+.tko{font:600 10.5px/1.2 'IBM Plex Mono',monospace}
+.fr-mobile .tk{padding:12px}
+.fr-mobile .tki{width:50px;height:50px}
+.fr-mobile .tkn b{font-size:26px}
+.thd .tsum{background:#1C2833}
+.thd .tsx small{color:#9FB2C2}
+.thd .tring circle:first-child{stroke:rgba(255,255,255,.12)}
+.thd .tk:not(.off){background:#1C2833 !important;color:#E6EBEF !important;box-shadow:none}
+.thd .tk .tki{filter:saturate(.8) brightness(.9)}
+.thd .tkp .bar{background:rgba(255,255,255,.1)}
+.thd .tk.off{border-color:rgba(255,255,255,.2);color:#9FB2C2}
+.thd .tacil{background:#B23A3A}
+
+
+/* ===================== YETKİ GRUPLARI (T-421) — Pano standardı ===================== */
+.groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fr-tablet .groups{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fr-mobile .groups{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:1;min-height:0;grid-template-rows:repeat(3,minmax(0,1fr))}
+.grp{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:150px;padding:14px;border:0;border-radius:22px;background:#FFFFFF;color:#172E42;text-align:left;cursor:pointer;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35);transition:transform .15s;animation:rise .4s cubic-bezier(.2,.9,.2,1) backwards}
+.fr-mobile .grp{min-height:0;padding:12px;border-radius:20px}
+.grp:active{transform:scale(.97)}
+.gic{display:flex;align-items:center;justify-content:center;flex:none;width:46px;height:46px;border-radius:14px;color:#FFFFFF}
+.fr-mobile .gic{width:40px;height:40px;border-radius:12px}
+.grp b{font:800 17px/1.1 'Bricolage Grotesque',sans-serif}
+.fr-mobile .grp b{font-size:15.5px}
+.grp small{font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.grp .faces{display:flex;margin-top:auto}
+.grp .faces span{display:flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:-7px;border-radius:50%;border:2px solid #FFFFFF;color:#FFFFFF;font:800 11px/1 'Bricolage Grotesque',sans-serif}
+.tpl{position:absolute;top:10px;right:10px;padding:4px 8px;border-radius:999px;background:#EEF1F4;color:#4E6476;font:800 9.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em}
+.grp.new{background:rgba(255,255,255,.55);border:2.5px dashed rgba(23,46,66,.35);box-shadow:none;justify-content:center;align-items:center;text-align:center}
+.memo{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.6);font:600 13px/1.4 'Instrument Sans',sans-serif;color:#30475A}
+.mic{display:flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;border-radius:10px}
+.fr-mobile .memo{font-size:12px}
+.stepbar{height:4px;background:rgba(23,46,66,.08)}
+.stepbar span{display:block;height:100%;background:#5FAF8A;border-radius:0 4px 4px 0;transition:width .35s cubic-bezier(.2,.9,.2,1)}
+/* düzenle */
+.gnm{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:18px;background:#FFFFFF}
+.gnm input{flex:1;min-width:0;height:42px;border:0;background:transparent;font:800 20px/1 'Bricolage Grotesque',sans-serif;color:#172E42;outline:none}
+.swatches{display:flex;gap:6px;flex:none}
+.sw{appearance:none;width:30px;height:30px;border:3px solid #FFFFFF;border-radius:50%;cursor:pointer;box-shadow:0 0 0 1.5px rgba(23,46,66,.15)}
+.sw.on{box-shadow:0 0 0 2.5px #172E42}
+.fr-mobile .sw{width:24px;height:24px;border-width:2px}
+.fr-mobile .swatches{gap:4px}
+.fr-mobile .gnm input{font-size:17px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;background:rgba(23,46,66,.08)}
+.sg{appearance:none;min-height:44px;border:0;border-radius:12px;background:transparent;color:#4E6476;cursor:pointer;font:800 11.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+.sg b{font-size:15px;margin-right:2px}
+.sg.on{background:#FFFFFF;color:#172E42;box-shadow:0 2px 6px -2px rgba(23,46,66,.3)}
+.perms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.fr-mobile .perms{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;flex:1;min-height:0;grid-template-rows:repeat(4,minmax(0,1fr))}
+.pm{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:118px;padding:12px;border:2.5px solid transparent;border-radius:18px;background:rgba(255,255,255,.55);color:#4E6476;text-align:left;cursor:pointer;transition:transform .15s}
+.fr-mobile .pm{min-height:0;padding:10px;flex-direction:row;align-items:center;gap:10px}
+.fr-mobile .pm small{display:none}
+.pm:active{transform:scale(.97)}
+.pic{display:flex;align-items:center;justify-content:center;flex:none;width:42px;height:42px;border-radius:13px;background:#DCE3EA;color:#6A7F91}
+.fr-mobile .pic{width:36px;height:36px;border-radius:11px}
+.pm b{font:800 14.5px/1.15 'Bricolage Grotesque',sans-serif}
+.fr-mobile .pm b{font-size:13.5px;padding-right:18px}
+.pm small{font:600 10px/1.3 'IBM Plex Mono',monospace}
+.pm.on{color:#172E42;border-color:#2F9E6B;background:#FFFFFF}
+.pm.on .pic{color:#FFFFFF}
+.gchk{position:absolute;top:8px;right:8px;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#DCE3EA;color:#FFFFFF}
+.pm.on .gchk{background:#2F9E6B}
+/* kişiler */
+.phead{display:flex;gap:8px}
+.search{appearance:none;flex:1;display:flex;align-items:center;gap:10px;padding:0 14px;height:50px;border:0;border-radius:16px;background:#FFFFFF;color:#4E6476;font:600 14px/1 'Instrument Sans',sans-serif;cursor:pointer;text-align:left}
+.allb{appearance:none;display:inline-flex;align-items:center;gap:6px;height:50px;padding:0 14px;border:0;border-radius:16px;background:#E3F1E9;color:#17583C;cursor:pointer;font:800 13px/1 'Bricolage Grotesque',sans-serif}
+.people{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fr-mobile .people{grid-template-columns:minmax(0,1fr);flex:1;min-height:0;grid-template-rows:repeat(9,minmax(0,1fr));gap:5px}
+.ppl{appearance:none;position:relative;display:flex;align-items:center;gap:10px;padding:8px 10px;border:2.5px solid transparent;border-radius:16px;background:rgba(255,255,255,.55);text-align:left;cursor:pointer;color:#172E42}
+.fr-mobile .ppl{padding:4px 10px;border-radius:14px}
+.ppl .av{width:38px;height:38px;border-radius:50%;font:800 14px/1 'Bricolage Grotesque',sans-serif}
+.fr-mobile .ppl .av{width:32px;height:32px;font-size:12.5px}
+.ppl b{display:block;font:700 14.5px/1.15 'Instrument Sans',sans-serif}
+.ppl small{display:block;margin-top:2px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.ppl .gchk{position:static;margin-left:auto}
+.ppl.on{border-color:#2F9E6B;background:#FFFFFF}
+.ppl.on .gchk{background:#2F9E6B}
+/* bitti */
+.done{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+.dring{display:flex;align-items:center;justify-content:center;width:118px;height:118px;border-radius:50%;background:#2F9E6B;color:#FFFFFF;box-shadow:0 0 0 12px rgba(47,158,107,.15);animation:popin .5s cubic-bezier(.2,1.4,.4,1)}
+.dring .ico{stroke-width:3}
+@keyframes popin{from{transform:scale(.4);opacity:0}}
+.done b{font:800 28px/1.1 'Bricolage Grotesque',sans-serif}
+.done small{font:600 11.5px/1.3 'IBM Plex Mono',monospace;color:#4E6476}
+.mainlbl{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:16;font:800 10px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;color:#30475A;white-space:nowrap;pointer-events:none}
+.subdock{padding-bottom:20px}
+.toast{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:30;padding:10px 16px;border-radius:999px;background:#17804F;color:#FFFFFF;font:800 13px/1 'Bricolage Grotesque',sans-serif;box-shadow:0 12px 26px -10px rgba(23,128,79,.7);animation:rise .25s cubic-bezier(.2,.9,.2,1);white-space:nowrap}
+/* karanlık */
+.thd .grp,.thd .gnm,.thd .search,.thd .pm.on,.thd .ppl.on,.thd .sg.on{background:#1C2833;color:#E6EBEF;box-shadow:none}
+.thd .grp small,.thd .pm small,.thd .ppl small,.thd .done small,.thd .search{color:#9FB2C2}
+.thd .grp.new,.thd .pm,.thd .ppl{background:rgba(28,40,51,.55);color:#C5D0DA}
+.thd .grp.new{border-color:rgba(255,255,255,.2)}
+.thd .tpl{background:#263544;color:#9FB2C2}
+.thd .gnm input,.thd .done b{color:#E6EBEF}
+.thd .memo{background:rgba(28,40,51,.7);color:#C5D0DA}
+.thd .seg{background:rgba(255,255,255,.06)}
+.thd .sg{color:#9FB2C2}
+.thd .pic,.thd .gchk{background:#2E3E4F}
+.thd .pm.on .gchk,.thd .ppl.on .gchk{background:#4E9A78}
+.thd .pm.on,.thd .ppl.on{border-color:#4E9A78}
+.thd .allb{background:#1F3A30;color:#9FE1BF}
+.thd .grp .faces span{border-color:#1C2833}
+.thd .sw{border-color:#1C2833}
+.thd .stepbar{background:rgba(255,255,255,.06)}
+.thd .mainlbl{color:#C5D0DA}
+.thd .gic,.thd .pm.on .pic{filter:saturate(.85) brightness(.92)}
+
+/* OTOMATİK önizleme: açıldığı ekrana göre telefon/tablet/masaüstü; çerçevesiz, ekranı doldurur */
+.prev{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.prev::-webkit-scrollbar{display:none}
+.auto .appzone{padding:0}
+.auto .app,.auto.fr-mobile .app,.auto.fr-tablet .app{max-width:none;width:100%;height:calc(100vh - 62px);border:0;border-radius:0;box-shadow:none}
+
+/* ana ekran düğmesi (alt ekranlarda sağ üst) + kaydedilmemiş iş uyarısı */
+.dkl{display:flex;align-items:center;justify-content:space-evenly;gap:2px;min-width:0}
+.dkl .dk{flex:1;min-width:0}
+.dkl .dk span{font-size:9px;letter-spacing:.06em;white-space:nowrap}
+.dk-home .ico{width:24px;height:24px}
+.tb-home{position:relative}
+.top .brand .alic{color:#FFFFFF}
+.hnet{position:absolute;right:-4px;top:-4px}
+.cfback{position:absolute;inset:0;z-index:40;background:rgba(5,9,13,.35);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fadein .2s}
+@keyframes fadein{from{opacity:0}}
+.cfbox{position:absolute;z-index:41;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;width:360px;max-width:calc(100% - 24px);padding:20px 16px 14px;border-radius:26px;background:rgba(14,27,39,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,.16);box-shadow:0 30px 60px -24px rgba(0,0,0,.6);color:#FFFFFF;text-align:center;animation:rise .22s cubic-bezier(.2,.9,.2,1)}
+.fr-mobile .cfbox{top:auto;bottom:112px;transform:translateX(-50%)}
+.cfic{display:flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:50%;background:#F4C542;color:#1A1300}
+.cfbox b{font:800 21px/1.15 'Bricolage Grotesque',sans-serif}
+.cfbox p{margin:0 0 6px;font:600 13.5px/1.4 'Instrument Sans',sans-serif;color:#C5D0DA}
+.cfb{appearance:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border:0;border-radius:16px;cursor:pointer;text-decoration:none;font:800 15px/1 'Bricolage Grotesque',sans-serif}
+.cfb.save{background:#5FAF8A;color:#FFFFFF}
+.cfb.leave{background:transparent;border:2px solid #E57373;color:#F2A3A3}
+.cfb.stay{min-height:44px;background:transparent;color:#C5D0DA;font-size:14px}
+.thd .cfbox{background:rgba(18,27,36,.95)}
+@media (prefers-reduced-motion:reduce){.wrap *{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div class="wrap fr-{{dev}} {{themeCls}} {{autoCls}}">
+  <div class="prev" role="group" aria-label="Önizleme">
+    <span class="prev-l">ADIM</span>
+    <sc-for list="{{views}}" as="v" hint-placeholder-count="4">
+      <button type="button" class="{{v.cls}}" aria-pressed="{{v.on}}" onClick="{{v.pick}}">{{v.label}}</button>
+    </sc-for>
+    <span class="prevsep"></span>
+    <span class="prev-l">TEMA</span>
+    <button type="button" class="{{lightCls}}" onClick="{{setLight}}">Açık</button>
+    <button type="button" class="{{darkCls}}" onClick="{{setDark}}">Karanlık</button>
+    <span class="prevsep"></span>
+    <span class="prev-l">CİHAZ</span>
+    <sc-for list="{{devs}}" as="d" hint-placeholder-count="4">
+      <button type="button" class="{{d.cls}}" aria-pressed="{{d.on}}" onClick="{{d.pick}}">{{d.label}}</button>
+    </sc-for>
+  </div>
+
+  <div class="appzone">
+    <div class="app">
+      <!-- Alt ekran üst çubuğu: ekran simgesi + başlık; geri düğmesi ALTTA (tek el) -->
+      <header class="top">
+        <span class="brand">
+          <span class="alic" style="{{headIc}}; width: 44px; height: 44px; border-radius: 14px; flex: none"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+          <span style="min-width: 0"><b>{{title}}</b><small>{{subtitle}}</small></span>
+        </span>
+        <span class="net" style="position: static; flex: none" title="Çevrimiçi"><i></i></span>
+      </header>
+      <div class="stepbar" aria-hidden="true"><span style="{{stepBarStyle}}"></span></div>
+
+      <main class="inner">
+        <!-- ===== 1) GRUPLAR ===== -->
+        <sc-if value="{{isList}}" hint-placeholder-val="{{ true }}">
+          <div class="shd"><b>YETKİ GRUPLARI</b><span>14 KİŞİ · 5 GRUP</span></div>
+          <div class="groups">
+            <sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
+              <button type="button" class="grp" style="{{g.style}}" onClick="{{g.open}}">
+                <sc-if value="{{g.template}}" hint-placeholder-val="{{ true }}"><span class="tpl">HAZIR</span></sc-if>
+                <span class="gic" style="{{g.icStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+                <b>{{g.name}}</b>
+                <small>{{g.screens}} EKRAN · {{g.count}} KİŞİ</small>
+                <span class="faces"><sc-for list="{{g.faces}}" as="f" hint-placeholder-count="3"><span style="{{g.faceStyle}}">{{f}}</span></sc-for></span>
+              </button>
+            </sc-for>
+            <button type="button" class="grp new" onClick="{{startNew}}">
+              <span class="gic" style="background: #F4C542; color: #1A1300"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+              <b>Yeni grup</b>
+              <small>AD · EKRAN · KİŞİ</small>
+            </button>
+          </div>
+          <div class="memo"><span class="mic" style="background: #F4C542; color: #1A1300"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4.5M12 17.5v.01"></path></svg></span><span>“HAZIR” gruplar eski rollerden geldi; herkes eski rolünün grubunda. Dokun, değiştir.</span></div>
+        </sc-if>
+
+        <!-- ===== 2) GRUBU DÜZENLE: ad + ekranlar / yetkiler ===== -->
+        <sc-if value="{{isEdit}}" hint-placeholder-val="{{ false }}">
+          <div class="gnm">
+            <span class="gic" style="{{gIcStyle}}; width: 42px; height: 42px"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"></path></svg></span>
+            <input id="gname" aria-label="Grup adı" value="{{gname}}">
+            <span class="swatches" aria-label="Renk">
+              <sc-for list="{{colors}}" as="c" hint-placeholder-count="5"><button type="button" class="{{c.cls}}" style="{{c.style}}" aria-label="{{c.label}}" onClick="{{c.pick}}"></button></sc-for>
+            </span>
+          </div>
+          <div class="seg" role="tablist">
+            <button type="button" class="{{segScrCls}}" role="tab" onClick="{{segScr}}"><b>{{nScr}}</b> EKRAN GÖRSÜN</button>
+            <button type="button" class="{{segPowCls}}" role="tab" onClick="{{segPow}}"><b>{{nPow}}</b> YETKİ</button>
+          </div>
+          <div class="perms">
+            <sc-for list="{{cards}}" as="s" hint-placeholder-count="8">
+              <button type="button" class="{{s.cls}}" aria-pressed="{{s.on}}" onClick="{{s.toggle}}">
+                <span class="gchk"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+                <span class="pic" style="{{s.icStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{s.d}}"></path></svg></span>
+                <b>{{s.name}}</b><small>{{s.hint}}</small>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ===== 3) KİŞİLER ===== -->
+        <sc-if value="{{isPeople}}" hint-placeholder-val="{{ false }}">
+          <div class="phead">
+            <button type="button" class="search" onClick="{{openEtkin}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span>Ad yaz ya da söyle…</span></button>
+            <button type="button" class="allb" onClick="{{pickAll}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 12 4 4 8-9M10 16l1 1 10-11"></path></svg>Hepsi</button>
+          </div>
+          <div class="people">
+            <sc-for list="{{people}}" as="p" hint-placeholder-count="9">
+              <button type="button" class="{{p.cls}}" aria-pressed="{{p.on}}" onClick="{{p.toggle}}">
+                <span class="av" style="{{p.avStyle}}">{{p.ini}}</span>
+                <span style="min-width: 0"><b>{{p.name}}</b><small>{{p.now}}</small></span>
+                <span class="gchk"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ===== 4) BİTTİ ===== -->
+        <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+          <div class="done">
+            <span class="dring"><svg class="ico" width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+            <b>“{{gname}}” hazır</b>
+            <small>{{pickedCount}} KİŞİ · {{nScr}} EKRAN · {{nPow}} YETKİ</small>
+            <div class="memo" style="max-width: 520px"><span class="mic" style="background: #E3F1E9; color: #17583C"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4"></path></svg></span><span>Seçilenler hemen bu grubun ekranlarını görür; açık oturumları yeni yetkiyle sürer.</span></div>
+          </div>
+        </sc-if>
+      </main>
+
+      <!-- Alt çubuk: Geri · ana işlem · Etkin -->
+      <nav class="dock subdock" aria-label="Alt çubuk"><div class="dockin">
+        <div class="dkl">
+        <sc-if value="{{isList}}" hint-placeholder-val="{{ true }}"><a href="Ekip.dc.html" class="dk" aria-label="Geri: Ekip" style="text-decoration: none">
+          <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+          <span>GERİ</span>
+        </a></sc-if>
+        <sc-if value="{{notIsList}}" hint-placeholder-val="{{ false }}">
+        <button type="button" class="dk" aria-label="Geri" onClick="{{back}}">
+          <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+          <span>GERİ</span>
+        </button>
+        </sc-if>
+          <sc-if value="{{homeLink}}" hint-placeholder-val="{{ true }}"><a href="Pano.dc.html" class="dk dk-home" aria-label="Ana ekran" style="text-decoration: none"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8"></path><path d="M5 9.5V21h5v-6h4v6h5V9.5"></path></svg><span>ANA EKRAN</span></a></sc-if>
+          <sc-if value="{{homeAsk}}" hint-placeholder-val="{{ false }}"><button type="button" class="dk dk-home" aria-label="Ana ekran" onClick="{{askHome}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8"></path><path d="M5 9.5V21h5v-6h4v6h5V9.5"></path></svg><span>ANA EKRAN</span></button></sc-if>
+        </div>
+        <button type="button" class="dk big scan" aria-label="{{mainLabel}}" onClick="{{main}}">
+          <svg class="ico" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="{{mainIcon}}"></path></svg>
+        </button>
+        <button type="button" class="etkin dk-etkin" aria-label="Etkin: bas, konuş" onClick="{{openEtkin}}">
+          <span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span>
+          <span class="etl"><b>Etkin</b><small>BAS, KONUŞ</small></span>
+        </button>
+      </div></nav>
+      <span class="mainlbl">{{mainLabel}}</span>
+
+      <!-- Etkin: sesle -->
+      <sc-if value="{{etkin}}" hint-placeholder-val="{{ false }}">
+        <div class="scrim" onClick="{{closeEtkin}}">
+          <section class="sheet" role="dialog" aria-label="Etkin" onClick="{{stop}}">
+            <div class="listen">
+              <span class="bigorb"><svg class="ico" width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span>
+              <span class="wave" aria-hidden="true"><span style="animation-delay: 0s"></span><span style="animation-delay: .15s"></span><span style="animation-delay: .3s"></span><span style="animation-delay: .1s"></span><span style="animation-delay: .25s"></span></span>
+              <span class="heard">“{{heard}}”<small>DİNLİYORUM… · DIŞINA DOKUN, KAPANSIN</small></span>
+            </div>
+            <div class="chips">
+              <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+                <button type="button" class="chip" onClick="{{c.pick}}"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0"></path></svg></i>{{c.label}}</button>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+      </sc-if>
+      <!-- Kaydedilmemiş iş uyarısı: yüzen kısayoldaki gibi engelleyen buzlu perde + cam kutu -->
+      <sc-if value="{{cfOpen}}" hint-placeholder-val="{{ false }}">
+        <div class="cfback" onClick="{{cfStay}}"></div>
+        <div class="cfbox" role="alertdialog" aria-label="{{cfTitle}}">
+          <span class="cfic"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4.5M12 17.5v.01"></path></svg></span>
+          <b>{{cfTitle}}</b>
+          <p>{{cfText}}</p>
+          <sc-if value="{{cfHome}}" hint-placeholder-val="{{ true }}">
+            <a href="Pano.dc.html" class="cfb save" onClick="{{cfSave}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>{{cfSaveLbl}}</a>
+            <a href="Pano.dc.html" class="cfb leave" onClick="{{cfDiscard}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"></path></svg>Kaydetmeden çık</a>
+          </sc-if>
+          <sc-if value="{{cfBack}}" hint-placeholder-val="{{ false }}">
+            <button type="button" class="cfb save" onClick="{{cfSaveBack}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>{{cfSaveLbl}}</button>
+            <button type="button" class="cfb leave" onClick="{{cfDiscardBack}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"></path></svg>Kaydetmeden çık</button>
+          </sc-if>
+          <button type="button" class="cfb stay" onClick="{{cfStay}}">Vazgeç, burada kalayım</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}"><div class="toast">{{toast}}</div></sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { view: 'list', dev: 'auto', mode: 'desktop', dark: false, tab: 'scr', etkin: false, heard: 'Ahmet’i sayım grubuna ekle', toast: '', gname: 'Sayımcı', color: '#2F5DA8', on: { count: true, problem: true }, powers: { scan: true }, picked: { C: true, A: true } };
+  }
+  componentDidMount() {
+    this._rs = () => this.setState({ mode: this.detect() });
+    this._rs();
+    window.addEventListener('resize', this._rs);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._rs); }
+  detect() {
+    const w = window.innerWidth || 1440; let coarse = false;
+    try { coarse = window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
+    if (w < 700) return 'mobile';
+    if (coarse || w < 1100) return 'tablet';
+    return 'desktop';
+  }
+  renderVals() {
+    const s = this.state;
+    const VIEWS = [['list', 'Gruplar'], ['edit', 'Ad + ekranlar'], ['people', 'Kişiler'], ['done', 'Bitti']];
+    const DEVS = [['auto', 'Otomatik'], ['desktop', 'Masaüstü'], ['tablet', 'Tablet'], ['mobile', 'Telefon']];
+    const COLORS = ['#2F7D5B', '#0E7C7B', '#2F5DA8', '#6C4BD8', '#B5552B'];
+    const GROUPS = [
+      { name: 'Yönetici', color: '#172E42', screens: 'TÜM', count: 1, faces: ['S'], template: true },
+      { name: 'Depo yöneticisi', color: '#0E7C7B', screens: 9, count: 2, faces: ['A', 'E'], template: true },
+      { name: 'Toplayıcı', color: '#2F7D5B', screens: 3, count: 7, faces: ['M', 'Z', 'K'], template: true },
+      { name: 'Sayımcı', color: '#2F5DA8', screens: 2, count: 2, faces: ['C', 'A'], template: true },
+      { name: 'Sevkiyat ekibi', color: '#B5552B', screens: 2, count: 2, faces: ['E', 'B'], template: false },
+    ];
+    const SCREENS = [
+      ['receive', 'Giriş görevi', 'MAL KABUL, YERLEŞTİRME', '#2F7D5B', 'M12 3v12M7 10l5 5 5-5M4 19h16'],
+      ['pick', 'Çıkış görevi', 'TOPLAMA, SEVK', '#0E7C7B', 'M3 4h2.5l2.2 11h10.6L21 7H7M9.5 19.5h.01M17.5 19.5h.01'],
+      ['transfer', 'Transfer', 'DEPOLAR ARASI', '#6C4BD8', 'M4 8h14l-3-3M20 16H6l3 3'],
+      ['prod', 'Üretim transferi', 'HAMMADDE → ÜRETİM', '#B5552B', 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
+      ['count', 'Sayım görevi', 'RAF SAYIMI', '#2F5DA8', 'M6 4h12v17H6zM9 13l2 2 4-4'],
+      ['labels', 'Etiket bas', 'ÜRÜN, PALET, SEVK', '#172E42', 'M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z'],
+      ['reports', 'Raporlar', 'DEPO PANOSU', '#E56A00', 'M4 17l6-6 4 4 6-7M15 8h5v5'],
+      ['problem', 'Sorun bildir', 'FOTOĞRAF + SES', '#C62828', 'M12 3 2 20h20zM12 10v4.5M12 17.5v.01'],
+    ];
+    const POWERS = [
+      ['scan', 'Okutup işlesin', 'ONAYLI BELGEYİ İŞLER', '#2F7D5B', 'M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10'],
+      ['create', 'Belge oluştursun', 'TASLAK AÇAR', '#0E7C7B', 'M12 5v14M5 12h14'],
+      ['approve', 'Onaylasın', 'BELGE VE SAYIM FARKI', '#6C4BD8', 'm5 12 5 5 9-10'],
+      ['reverse', 'Ters kayıt yapsın', 'İŞLENMİŞİ GERİ ALIR', '#B5552B', 'M4 12a8 8 0 0 1 14-5.3M18 3v4h-4'],
+      ['team', 'Ekibi yönetsin', 'KİŞİ VE YETKİ', '#2F5DA8', 'M9 8a3.5 3.5 0 1 0 0 .01M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8'],
+      ['settings', 'Ayarları değiştirsin', 'FİRMA AYARLARI', '#172E42', 'M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3'],
+    ];
+    const PEOPLE = [
+      ['M', 'Mehmet Kara', 'TOPLAYICI', '#2F7D5B'], ['Z', 'Zeynep Ak', 'TOPLAYICI', '#2F7D5B'], ['K', 'Kerem Us', 'TOPLAYICI', '#2F7D5B'],
+      ['C', 'Can Demir', 'SAYIMCI', '#2F5DA8'], ['A', 'Ahmet Yılmaz', 'SAYIMCI', '#2F5DA8'], ['E', 'Emre Su', 'SEVKİYAT EKİBİ', '#B5552B'],
+      ['B', 'Burak Öz', 'SEVKİYAT EKİBİ', '#B5552B'], ['N', 'Nur Aslan', 'HENÜZ GRUPSUZ', '#6A7F91'], ['H', 'Hakan Tan', 'HENÜZ GRUPSUZ', '#6A7F91'],
+    ];
+    const onScreens = SCREENS.filter((x) => s.on[x[0]]);
+    const onPowers = POWERS.filter((x) => s.powers[x[0]]);
+    const pickedCount = Object.values(s.picked).filter(Boolean).length;
+    const tog = (key, id) => () => this.setState({ [key]: { ...s[key], [id]: !s[key][id] }, dirty: true });
+    const card = (list, key) => list.map(([id, name, hint, color, d]) => ({
+      id, name, hint, d, on: s[key][id] ? 'true' : 'false', cls: 'pm' + (s[key][id] ? ' on' : ''), style: '',
+      icStyle: s[key][id] ? 'background: ' + color : '', toggle: tog(key, id),
+    }));
+    const titles = { list: ['Yetki grupları', 'EKİP › GRUPLAR · GRUBA DOKUN, DÜZENLE'], edit: ['Grubu düzenle', 'ADIM 1/3 · AD, EKRANLAR, YETKİLER'], people: ['Kişileri seç', 'ADIM 2/3 · DOKUN: EKLE / ÇIKAR'], done: ['Grup hazır', 'ADIM 3/3 · BİTTİ'] };
+    const go = (view) => this.setState({ view, etkin: false });
+    const flash = (msg) => { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 1400); };
+    const MAIN = {
+      list: ['YENİ GRUP', 'M12 5v14M5 12h14', () => this.setState({ view: 'edit', tab: 'scr', gname: 'Yeni grup', color: '#2F7D5B', on: {}, powers: {}, picked: {} })],
+      edit: ['DEVAM: KİŞİLER', 'm9 5 7 7-7 7', () => go('people')],
+      people: ['KAYDET (' + pickedCount + ')', 'm5 12 5 5 9-10', () => this.setState({ view: 'done', dirty: false, etkin: false })],
+      done: ['BİTTİ', 'm5 12 5 5 9-10', () => go('list')],
+    };
+    const BACK = { list: () => flash('Ekip ekranına döner'), edit: () => (s.dirty ? this.setState({ cf: 'back' }) : go('list')), people: () => go('edit'), done: () => go('list') };
+    const STEPW = { list: 25, edit: 50, people: 75, done: 100 };
+    const cf = {
+      dirty: (s.view === 'edit' || s.view === 'people') && !!s.dirty,
+      title: 'Grup kaydedilmedi', text: '“' + s.gname + '” grubunda yaptığın değişiklikler kaydedilmeden çıkarsan kaybolur.', saveLbl: 'Kaydet ve çık',
+      save: () => this.setState({ view: 'done', dirty: false }), discard: () => this.setState({ dirty: false }), back: () => this.setState({ view: 'list' }),
+    };
+    return {
+      homeLink: !cf.dirty, homeAsk: cf.dirty,
+      askHome: () => this.setState({ cf: 'home' }),
+      cfOpen: !!s.cf, cfHome: s.cf === 'home', cfBack: s.cf === 'back',
+      cfTitle: cf.title, cfText: cf.text, cfSaveLbl: cf.saveLbl,
+      cfStay: () => this.setState({ cf: null }),
+      cfSave: () => { cf.save(); this.setState({ cf: null }); },
+      cfDiscard: () => { cf.discard(); this.setState({ cf: null }); },
+      cfSaveBack: () => { cf.save(); cf.back(); this.setState({ cf: null }); },
+      cfDiscardBack: () => { cf.discard(); cf.back(); this.setState({ cf: null }); },
+      dev: s.dev === 'auto' ? s.mode : s.dev,
+      autoCls: s.dev === 'auto' ? 'auto' : '',
+      notIsList: s.view !== 'list',
+      themeCls: s.dark ? 'thd' : '',
+      lightCls: 'prevb' + (s.dark ? '' : ' on'), darkCls: 'prevb' + (s.dark ? ' on' : ''),
+      setLight: () => this.setState({ dark: false }), setDark: () => this.setState({ dark: true }),
+      headIc: 'background: ' + (s.view === 'list' ? '#6C4BD8' : s.color),
+      stepBarStyle: 'width: ' + STEPW[s.view] + '%',
+      segScrCls: 'sg' + (s.tab === 'scr' ? ' on' : ''), segPowCls: 'sg' + (s.tab === 'pow' ? ' on' : ''),
+      segScr: () => this.setState({ tab: 'scr' }), segPow: () => this.setState({ tab: 'pow' }),
+      cards: s.tab === 'scr' ? card(SCREENS, 'on') : card(POWERS, 'powers'),
+      nScr: onScreens.length, nPow: onPowers.length,
+      mainLabel: MAIN[s.view][0], mainIcon: MAIN[s.view][1], main: MAIN[s.view][2], back: BACK[s.view],
+      etkin: s.etkin, heard: s.heard,
+      openEtkin: () => this.setState({ etkin: true }), closeEtkin: () => this.setState({ etkin: false }),
+      stop: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
+      toast: s.toast,
+      chips: [
+        ['Ahmet’i sayım grubuna ekle', () => { this.setState({ view: 'people', gname: 'Sayımcı', color: '#2F5DA8', picked: { ...s.picked, A: true }, etkin: false }); flash('Ahmet seçildi · Kaydet’e bas'); }],
+        ['Sayımcı grubunu aç', () => this.setState({ view: 'edit', gname: 'Sayımcı', color: '#2F5DA8', etkin: false })],
+        ['Hepsini seç', () => this.setState({ view: 'people', picked: Object.fromEntries(PEOPLE.map((p) => [p[0], true])), etkin: false })],
+        ['Kaydet', () => go('done')],
+      ].map(([label, fn]) => ({ label, pick: () => { this.setState({ heard: label }); fn(); } })),
+      views: VIEWS.map(([id, label]) => ({ label, on: s.view === id ? 'true' : 'false', cls: 'prevb' + (s.view === id ? ' on' : ''), pick: () => this.setState({ view: id }) })),
+      devs: DEVS.map(([id, label]) => ({ label, on: s.dev === id ? 'true' : 'false', cls: 'prevb' + (s.dev === id ? ' on' : ''), pick: () => this.setState({ dev: id }) })),
+      title: titles[s.view][0], subtitle: titles[s.view][1],
+      isList: s.view === 'list', isEdit: s.view === 'edit', isPeople: s.view === 'people', isDone: s.view === 'done',
+      groups: GROUPS.map((g, i) => ({ ...g, style: 'animation-delay: ' + (i * 40) + 'ms', icStyle: 'background: ' + g.color, faceStyle: 'background: ' + g.color, open: () => this.setState({ dirty: false, view: 'edit', tab: 'scr', gname: g.name, color: g.color }) })),
+      startNew: () => this.setState({ view: 'edit', gname: 'Yeni grup', color: '#2F7D5B', on: {}, powers: {}, picked: {} }),
+      gname: s.gname,
+      gIcStyle: 'background: ' + s.color,
+      colors: COLORS.map((c) => ({ style: 'background: ' + c, cls: 'sw' + (s.color === c ? ' on' : ''), label: 'Renk ' + c, pick: () => this.setState({ color: c, dirty: true }) })),
+      screens: card(SCREENS, 'on'),
+      powers: card(POWERS, 'powers'),
+      summary: onScreens.length + ' ekran (' + onScreens.map((x) => x[1]).join(', ') + ') · ' + onPowers.length + ' yetki',
+      people: PEOPLE.map(([ini, name, now, color]) => ({ ini, name, now, avStyle: 'background: ' + color, on: s.picked[ini] ? 'true' : 'false', cls: 'ppl' + (s.picked[ini] ? ' on' : ''), toggle: tog('picked', ini) })),
+      pickedCount,
+      pickAll: () => this.setState({ picked: Object.fromEntries(PEOPLE.map((p) => [p[0], true])), dirty: true }),
+      goList: () => this.setState({ view: 'list' }),
+      goEdit: () => this.setState({ view: 'edit' }),
+      goPeople: () => this.setState({ view: 'people' }),
+      save: () => this.setState({ view: 'done' }),
+      noop: () => undefined,
+    };
+  }
+}
+</script>
+</body>
+</html>
