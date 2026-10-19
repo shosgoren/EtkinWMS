@@ -235,3 +235,4 @@
 - 2026-10-18 T-416: görev ayrılığı firma ayarı (0049, varsayılan kapalı): oluşturan onaylayamaz, sayan sayımı onaylayamaz, oluşturan/işleyen ters kayıt yapamaz; ayarlar ekranında aç/kapat (yeniden giriş).
 - 2026-10-18 T-417: üyeler ekranında depo kısıtı (göster/düzenle, yeniden giriş); işlem kaydı kısıtlı üyeye depo kapsamıyla süzülür (A-103 önkoşulları).
 - 2026-10-19 T-420: altın kural (eğitimsiz, görsel, sesli, role göre açılış) kalıcı kurala yazıldı; yetki grupları, yönetici panosu, üst çubuk, Etkin AI ve alt ekran envanteri kartlara bölündü.
+- 2026-10-19 Canlı yayın: main 8385ec4 (PR #92) — T-413, T-414, T-416 (0049), T-417, T-420; deploy-vps başarılı. Kararlar: Etkin AI tarayıcı ses + Claude; roller şablon grup; önce yönetici panosu + üst çubuk.
