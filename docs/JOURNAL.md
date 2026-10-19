@@ -237,3 +237,4 @@
 - 2026-10-19 T-420: altın kural (eğitimsiz, görsel, sesli, role göre açılış) kalıcı kurala yazıldı; yetki grupları, yönetici panosu, üst çubuk, Etkin AI ve alt ekran envanteri kartlara bölündü.
 - 2026-10-19 Canlı yayın: main 8385ec4 (PR #92) — T-413, T-414, T-416 (0049), T-417, T-420; deploy-vps başarılı. Kararlar: Etkin AI tarayıcı ses + Claude; roller şablon grup; önce yönetici panosu + üst çubuk.
 - 2026-10-19 T-426: gizli olmayan canlı ayarlar imajla gelir (kullanıcı kararı: sunucu işleri kullanıcıya bırakılmaz); depo kısıtı bayrağı açık.
+- 2026-10-19 T-423: Pano kabuğu + saha/sayım ana ekranı canlıda (main 2936802); yönetici/hesap sahibi ana ekranı T-422.
