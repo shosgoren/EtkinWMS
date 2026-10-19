@@ -29,8 +29,8 @@ export default async function PackageReceivingPage({ params, searchParams }: {
   const member = summary.memberships.find(m => m.slug === slug);
   if (member === undefined) notFound();
   const t = await getTranslations("packageReceiving");
-  const canView = hasPermission(member.roles, "stock.view");
-  const canWrite = canView && hasPermission(member.roles, "document.create") && hasPermission(member.roles, "stock.post");
+  const canView = hasPermission(member.roles, "stock.view", member.grants);
+  const canWrite = canView && hasPermission(member.roles, "document.create", member.grants) && hasPermission(member.roles, "stock.post", member.grants);
   if (!canView || (!documentId && !canWrite)) return <main className="p-4"><h1>{t("title")}</h1><p role="alert">🔒 {t("locked")}</p></main>;
   let initial = null;
   try {

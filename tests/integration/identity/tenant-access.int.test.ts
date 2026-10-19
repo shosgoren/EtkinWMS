@@ -98,7 +98,7 @@ describe("ROLE_PERMISSIONS (A-45)", () => {
     expect([...ROLE_PERMISSIONS.PICKER].sort()).toEqual(["stock.post", "stock.view"]);
     expect([...ROLE_PERMISSIONS.COUNTER].sort()).toEqual(["document.create", "stock.view"]);
     expect([...ROLE_PERMISSIONS.READ_ONLY]).toEqual(["stock.view"]);
-    for (const p of ["users.manage", "settings.manage", "takeout.request"] as Permission[]) {
+    for (const p of ["users.manage", "settings.manage", "takeout.request", "data.import"] as Permission[]) {
       expect(ROLE_KEYS.filter((r) => hasPermission([r], p))).toEqual(["TENANT_ADMIN"]);
     }
     expect(hasPermission(["constructor"], "stock.view")).toBe(false);

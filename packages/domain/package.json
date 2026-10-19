@@ -13,6 +13,7 @@
     "./identity/separation": "./src/identity/separation.ts",
     "./identity/field-users": "./src/identity/field-users.ts",
     "./identity/devices": "./src/identity/devices.ts",
+    "./identity/groups": "./src/identity/groups.ts",
     "./onboarding/workspace": "./src/onboarding/workspace.ts",
     "./onboarding/settings-queries": "./src/onboarding/settings-queries.ts",
     "./audit/today": "./src/audit/today.ts",

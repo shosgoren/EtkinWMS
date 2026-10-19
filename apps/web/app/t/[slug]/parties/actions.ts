@@ -1,5 +1,5 @@
 "use server";
-// Cari kart eylemleri (T-428). İnce giriş: yalnız girdi doğrulama (zod) + domain komutu; yetki (`settings.manage`), doğrulama ve audit domain'dedir.
+// Cari kart eylemleri (T-428). İnce giriş: yalnız girdi doğrulama (zod) + domain komutu; yetki (`settings.manage`; Excel aktarımı `data.import`), doğrulama ve audit domain'dedir.
 // Aktarım satırları yalnız bellekte taşınır (diske/loga yazılmaz, G-09). Bu dosyada DB bağlantısı açılmaz (`getAppDb` yalnız domain'e verilir).
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -29,10 +29,10 @@ const importSchema = z
   .object({ slug: slugSchema, dryRun: z.boolean(), rows: z.array(z.object({ row: z.number().int().min(1).max(100_000), ...fields }).strict()).min(1).max(PARTY_IMPORT_MAX_ROWS) })
   .strict();
 
-async function writeContext(slug: string, ctx: ActionContext) {
+async function writeContext(slug: string, ctx: ActionContext, permission: "settings.manage" | "data.import" = "settings.manage") {
   const principal = ctx.principal;
   if (principal === null) throw new Error("unreachable: principal required");
-  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission: "settings.manage" }, ctx);
+  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission }, ctx);
   return { db: getAppDb(), principal, tenantSlug: slug };
 }
 
@@ -55,7 +55,7 @@ export async function archivePartyAction(raw: unknown) {
 /** Excel'den aktarım parçası (≤ 500 satır). `dryRun`: kontrol adımı, hiçbir şey yazılmaz. */
 export async function importPartiesAction(raw: unknown) {
   return guardedAction({ schema: importSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "data.import");
     return importParties({ ...params, requestId: ctx.requestId }, { rows: input.rows, dryRun: input.dryRun });
   })(raw);
 }

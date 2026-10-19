@@ -834,7 +834,8 @@
       "invited": "Bir üyeyi davet ettin.",
       "removed": "Bir üyeyi çalışma alanından çıkardın.",
       "role_changed": "Bir üyenin rolünü değiştirdin.",
-      "left": "Çalışma alanından ayrıldın."
+      "left": "Çalışma alanından ayrıldın.",
+      "group_changed": "Bir üyenin yetki grubunu değiştirdin."
     },
     "ownership": {
       "transferred": "Çalışma alanının sahipliğini devrettin."
@@ -979,6 +980,12 @@
       "archived": "Cari kart arşivlendi",
       "restored": "Cari kart geri alındı",
       "imported": "Cari kartlar Excel'den aktarıldı"
+    },
+    "group": {
+      "created": "Yetki grubu oluşturuldu",
+      "updated": "Yetki grubu güncellendi",
+      "archived": "Yetki grubu arşivlendi",
+      "restored": "Yetki grubu geri alındı"
     }
   },
   "auditLog": {
@@ -1010,7 +1017,8 @@
         "invited": "Üye davet edildi",
         "removed": "Üye çıkarıldı",
         "role_changed": "Üyenin rolü değişti",
-        "left": "Üye ayrıldı"
+        "left": "Üye ayrıldı",
+        "group_changed": "Üyenin yetki grubu değişti"
       },
       "ownership": {
         "transferred": "Sahiplik devredildi"
@@ -3225,7 +3233,8 @@
     },
     "m": {
       "users": "Kullanıcılar",
-      "pending": "Onay bekleyen cihazlar"
+      "pending": "Onay bekleyen cihazlar",
+      "groups": "Yetki grupları"
     },
     "live": {
       "in": "GİRİŞ KALEMİ",
@@ -3554,6 +3563,154 @@
     "cf": {
       "title": "Değişiklikler kaydedilmedi",
       "text": "Kartta kaydedilmemiş değişiklik var. Kaydetmeden çıkarsan kaybolur.",
+      "save": "Kaydet ve çık",
+      "leave": "Kaydetmeden çık",
+      "stay": "Vazgeç, burada kalayım"
+    }
+  },
+  "gruplar": {
+    "title": "Yetki grupları",
+    "locked": "Yetki gruplarını görmek için ekip yönetimi yetkisi gerekir.",
+    "lockedAction": "Hesap sahibine ya da yöneticiye sor.",
+    "backHome": "Ana ekrana dön",
+    "owner": "HESAP SAHİBİ",
+    "role": {
+      "TENANT_ADMIN": "Yönetici",
+      "WAREHOUSE_MANAGER": "Depo yöneticisi",
+      "PICKER": "Toplayıcı",
+      "COUNTER": "Sayımcı",
+      "READ_ONLY": "İzleyici"
+    },
+    "allScreens": "TÜM",
+    "all": "Hepsi",
+    "ownerOnly": "Grupları yalnız hesap sahibi değiştirebilir.",
+    "newName": "Yeni grup",
+    "err": {
+      "reauth": "Bu değişiklik için kimliğini yeniden doğrula: çıkış yapıp yeniden gir, sonra tekrar dene.",
+      "mfa": "Bu işlem için iki adımlı doğrulama gerekir.",
+      "conflict": "Grup bu arada değişti. Sayfayı yenileyip tekrar dene.",
+      "failed": "Kaydedilemedi (kod: {code}). Tekrar dene."
+    },
+    "issue": {
+      "NAME_MISSING": "Gruba bir ad yaz.",
+      "NAME_TOO_LONG": "Grup adı en çok 60 harf olabilir.",
+      "NAME_TAKEN": "Bu adda bir grup zaten var. Başka bir ad yaz.",
+      "COLOR_INVALID": "Listeden bir renk seç.",
+      "FIELD_MEMBER_MFA": "Bu grupta saha hesabı var; saha hesabına onay, ters kayıt, aktarım ya da ayar yetkisi verilemez."
+    },
+    "skipped": "Şu kişiler gruba alınamadı: {names}. Saha hesabına hassas yetki verilemez.",
+    "archived": "“{name}” arşivlendi",
+    "sub": {
+      "list": "EKİP › GRUPLAR · GRUBA DOKUN, DÜZENLE",
+      "template": "HAZIR GRUP · ROLDEN GELİR, DEĞİŞMEZ",
+      "edit": "ADIM 1/3 · AD, EKRANLAR, YETKİLER",
+      "people": "ADIM 2/3 · DOKUN: EKLE / ÇIKAR",
+      "done": "ADIM 3/3 · BİTTİ"
+    },
+    "editTitle": "Grubu düzenle",
+    "peopleTitle": "Kişileri seç",
+    "doneTitle": "Grup hazır",
+    "main": {
+      "new": "YENİ GRUP",
+      "people": "DEVAM: KİŞİLER",
+      "done": "BİTTİ",
+      "save": "KAYDET ({n})"
+    },
+    "teamLocked": "Ekip yönetimi gruba verilemez; yalnız Yönetici rolündedir.",
+    "scr": {
+      "receive": {
+        "name": "Giriş görevi",
+        "hint": "MAL KABUL, YERLEŞTİRME"
+      },
+      "pick": {
+        "name": "Çıkış görevi",
+        "hint": "TOPLAMA, SEVK"
+      },
+      "transfer": {
+        "name": "Transfer",
+        "hint": "DEPOLAR ARASI"
+      },
+      "prod": {
+        "name": "Üretim transferi",
+        "hint": "HAMMADDE → ÜRETİM"
+      },
+      "count": {
+        "name": "Sayım görevi",
+        "hint": "RAF SAYIMI"
+      },
+      "labels": {
+        "name": "Etiket bas",
+        "hint": "ÜRÜN, PALET, SEVK"
+      },
+      "reports": {
+        "name": "Raporlar",
+        "hint": "DEPO PANOSU"
+      },
+      "problem": {
+        "name": "Sorun bildir",
+        "hint": "FOTOĞRAF + SES"
+      }
+    },
+    "pow": {
+      "scan": {
+        "name": "Okutup işlesin",
+        "hint": "ONAYLI BELGEYİ İŞLER"
+      },
+      "create": {
+        "name": "Belge oluştursun",
+        "hint": "TASLAK AÇAR"
+      },
+      "approve": {
+        "name": "Onaylasın",
+        "hint": "BELGE VE SAYIM FARKI"
+      },
+      "reverse": {
+        "name": "Ters kayıt yapsın",
+        "hint": "İŞLENMİŞİ GERİ ALIR"
+      },
+      "team": {
+        "name": "Ekibi yönetsin",
+        "hint": "KİŞİ VE YETKİ",
+        "locked": "YALNIZ YÖNETİCİ ROLÜNDE"
+      },
+      "import": {
+        "name": "Excel’den aktarsın",
+        "hint": "ÜRÜN · CARİ · AÇILIŞ STOKU"
+      },
+      "settings": {
+        "name": "Ayarları değiştirsin",
+        "hint": "FİRMA AYARLARI"
+      }
+    },
+    "online": "Çevrimiçi",
+    "heading": "YETKİ GRUPLARI",
+    "counts": "{people} KİŞİ · {groups} GRUP",
+    "ready": "HAZIR",
+    "tileMeta": "{screens} EKRAN · {n} KİŞİ",
+    "newTile": "Yeni grup",
+    "newTileHint": "AD · EKRAN · KİŞİ",
+    "memo": "“HAZIR” gruplar rollerden gelir; herkes rolünün grubunda. Yeni grup role ek yetki verir. Dokun, değiştir.",
+    "memoReadOnly": "Grupları yalnız hesap sahibi değiştirebilir; sen görebilirsin.",
+    "nameAria": "Grup adı",
+    "colorAria": "Renk",
+    "colorItem": "Renk {c}",
+    "tabScr": "EKRAN GÖRSÜN",
+    "tabPow": "YETKİ",
+    "templateMemo": "Hazır grubun ekran ve yetkileri rolden gelir. Kişinin rolünü Ekip ekranından değiştirebilirsin; ek yetki için yeni grup aç.",
+    "archive": "Grubu arşivle",
+    "search": "Ad yaz…",
+    "ownerNoGroup": "Hesap sahibinin zaten tüm yetkileri var; gruba alınmaz.",
+    "doneLine": "“{name}” hazır",
+    "doneMeta": "{n} KİŞİ · {s} EKRAN · {p} YETKİ",
+    "doneMemo": "Seçilenler hemen bu grubun ekranlarını görür; açık oturumları yeni yetkiyle sürer.",
+    "dock": "Alt çubuk",
+    "backTeam": "Geri: Ekip",
+    "back": "GERİ",
+    "home": "Ana ekran",
+    "homeShort": "ANA EKRAN",
+    "cf": {
+      "title": "Grup kaydedilmedi",
+      "text": "“{name}” grubunda yaptığın değişiklikler kaydedilmeden çıkarsan kaybolur.",
       "save": "Kaydet ve çık",
       "leave": "Kaydetmeden çık",
       "stay": "Vazgeç, burada kalayım"

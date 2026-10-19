@@ -43,7 +43,8 @@ export default async function FieldHomePage({ params }: { params: Promise<{ slug
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect(`/login?next=${encodeURIComponent(`/t/${slug}/field`)}`);
   const summary = await getMembershipSummary({ db: getAppDb(), principal });
-  const canPost = hasPermission(summary.memberships.find((m) => m.slug === slug)?.roles ?? [], "stock.post");
+  const mine = summary.memberships.find((m) => m.slug === slug);
+  const canPost = hasPermission(mine?.roles ?? [], "stock.post", mine?.grants ?? []);
   const base = `/t/${encodeURIComponent(slug)}` as const;
   return (
     <main className="flex w-full min-w-0 flex-col gap-4 px-4 py-4">

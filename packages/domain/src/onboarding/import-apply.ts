@@ -82,7 +82,7 @@ export interface ImportPreview {
 // --- sistem anlık görüntüsü ------------------------------------------------------------------------------------------
 
 async function assertPermissions(params: ImportCallParams, kind: ImportKind): Promise<void> {
-  const perms = kind === "PRODUCTS" ? (["settings.manage"] as const) : (["settings.manage", "document.create", "document.approve", "stock.post"] as const);
+  const perms = kind === "PRODUCTS" ? (["data.import"] as const) : (["data.import", "document.create", "document.approve", "stock.post"] as const);
   for (const permission of perms) await runTenantQuery({ ...params, permission }, () => Promise.resolve(null));
 }
 
@@ -105,7 +105,7 @@ async function loadUnits(tx: AccessTx, tenantId: string): Promise<UnitInfo[]> {
 }
 
 async function loadProductContext(params: ImportCallParams): Promise<ProductContext> {
-  return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantQuery({ ...params, permission: "data.import" }, async (tx, m) => {
     const units = await loadUnits(tx, m.tenantId);
     const items = await loadItems(tx, m.tenantId);
     const bc = await tx.execute<{ barcode: string; code: string; unit_id: string | null }>(
@@ -406,7 +406,7 @@ async function applyProducts(params: ImportCallParams, plans: readonly ProductPl
       packUnitId = (await createUnit(p, { code: PACK_UNIT_CODE, name: PACK_UNIT_NAME })).unitId;
     } catch (e) {
       if (!isCodeTaken(e)) throw e;
-      packUnitId = (await runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => (await loadUnits(tx, m.tenantId)).find((u) => u.code === PACK_UNIT_CODE)?.id)) ?? undefined;
+      packUnitId = (await runTenantQuery({ ...params, permission: "data.import" }, async (tx, m) => (await loadUnits(tx, m.tenantId)).find((u) => u.code === PACK_UNIT_CODE)?.id)) ?? undefined;
       if (packUnitId === undefined) throw new AppError("INTERNAL");
     }
     return packUnitId;
@@ -482,7 +482,7 @@ class PairConflictError extends AppError {
  *   stok kilitleri (`acquireStockLocks`, plan önceden tam bildirilir) → kilitler alındıktan SONRA çiftlerin hâlâ boş olduğu ve bekleyen belge olmadığı
  *   YENİDEN denetlenir (eşzamanlı içe aktarma ya da normal STOCK_IN araya girmiş olabilir) → belge oluşturulur, onaylanır ve aynı transaction'da işlenir.
  * Ayrı advisory kilit/bağlantı ve polling YOKTUR: bekleyen ikinci işlem tek bağlantı tutar, kilit sahibi ek bağlantı istemez (havuz tükenmez).
- * Yetki: önizleme/uygulama başında dört izin (`settings.manage`, `document.create`, `document.approve`, `stock.post`) denetlenir; komut `stock.post` ister.
+ * Yetki: önizleme/uygulama başında dört izin (`data.import`, `document.create`, `document.approve`, `stock.post`) denetlenir; komut `stock.post` ister.
  */
 async function applyStock(params: ImportCallParams, allPlans: readonly StockPlan[], ctx: StockContext): Promise<RowReport[]> {
   const byWarehouse = new Map<string, StockPlan[]>();

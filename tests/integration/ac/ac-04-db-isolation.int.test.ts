@@ -320,6 +320,9 @@ beforeAll(async () => {
     await admin.query("INSERT INTO public.problem_reports (tenant_id, warehouse_id, reason, reported_by) VALUES ($1, $2, 'OTHER', $3)", [w.tenantId, w.warehouseId, w.ownerMembershipId]);
     // T-428: cari kart (otomatik tablo matrisi her tenant tablosunda satır ister).
     await admin.query("INSERT INTO public.parties (tenant_id, code, code_key, name, created_by) VALUES ($1, 'AC04-CARI', 'AC04-CARI', 'AC04 cari', $2)", [w.tenantId, w.ownerMembershipId]);
+    // T-421: özel yetki grubu + gruptaki üye.
+    const g = await admin.query<{ id: string }>("INSERT INTO public.permission_groups (tenant_id, name, created_by) VALUES ($1, 'AC04 grup', $2) RETURNING id", [w.tenantId, w.ownerMembershipId]);
+    await admin.query("INSERT INTO public.member_groups (tenant_id, membership_id, group_id, assigned_by) VALUES ($1, $2, $3, $2)", [w.tenantId, w.ownerMembershipId, g.rows[0]?.id]);
   }
   tables = await discoverTables();
 }, 60_000);

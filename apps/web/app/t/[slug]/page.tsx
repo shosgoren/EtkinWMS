@@ -60,7 +60,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     } catch (e) {
       guard(e, "work summary");
     }
-    const canAssign = hasPermission(current.roles, "document.approve");
+    const canAssign = hasPermission(current.roles, "document.approve", current.grants);
     if (canAssign) {
       try {
         const members = await listMembers(call, { demoEmailDomain: process.env.DEMO_EMAIL_DOMAIN?.trim().toLowerCase() || null });
@@ -87,10 +87,10 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
           tenantName={current.tenantName}
           dark={jar.get(THEME_COOKIE)?.value === "koyu"}
           canAssign={canAssign}
-          canReport={hasPermission(current.roles, "stock.post") || hasPermission(current.roles, "document.create")}
-          stockPost={hasPermission(current.roles, "stock.post")}
-          usersManage={hasPermission(current.roles, "users.manage")}
-          settingsManage={hasPermission(current.roles, "settings.manage")}
+          canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)}
+          stockPost={hasPermission(current.roles, "stock.post", current.grants)}
+          usersManage={hasPermission(current.roles, "users.manage", current.grants)}
+          settingsManage={hasPermission(current.roles, "settings.manage", current.grants)}
           assignees={assignees}
         />
       </main>
@@ -119,9 +119,10 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
           userName={summary.userName}
           tenantName={current.tenantName}
           dark={jar.get(THEME_COOKIE)?.value === "koyu"}
-          stockPost={hasPermission(current.roles, "stock.post")}
-          canReport={hasPermission(current.roles, "stock.post") || hasPermission(current.roles, "document.create")}
-          settingsManage={hasPermission(current.roles, "settings.manage")}
+          stockPost={hasPermission(current.roles, "stock.post", current.grants)}
+          canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)}
+          settingsManage={hasPermission(current.roles, "settings.manage", current.grants)}
+          screens={current.screens}
         />
       </main>
     );
@@ -129,11 +130,11 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   const Menu = jar.get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
   const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
   const allowed = {
-    usersManage: hasPermission(current.roles, "users.manage"),
-    settingsManage: hasPermission(current.roles, "settings.manage"),
-    auditView: hasPermission(current.roles, "audit.view"),
-    stockView: hasPermission(current.roles, "stock.view"),
-    stockPost: hasPermission(current.roles, "stock.post"),
+    usersManage: hasPermission(current.roles, "users.manage", current.grants),
+    settingsManage: hasPermission(current.roles, "settings.manage", current.grants),
+    auditView: hasPermission(current.roles, "audit.view", current.grants),
+    stockView: hasPermission(current.roles, "stock.view", current.grants),
+    stockPost: hasPermission(current.roles, "stock.post", current.grants),
   };
   if (Menu === EasyOperations) {
     // T-988: Görevlerim ana ekranı (tasarım birebir). Özet okunamazsa ekran düşmez: bölümler "veri yok" der, sayı uydurulmaz.
@@ -150,7 +151,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     }
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={jar.get(THEME_COOKIE)?.value === "koyu"} canReport={hasPermission(current.roles, "stock.post") || hasPermission(current.roles, "document.create")} />
+        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={jar.get(THEME_COOKIE)?.value === "koyu"} canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)} />
       </main>
     );
   }
@@ -178,7 +179,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   // depo kapsamı domain'de). Sayım yalnız BANA ATANMIŞ (ASSIGNED) görevlerdir; liste tek sayfaya sığmazsa "n+" gösterilir. Hata bu bölümle
   // sınırlıdır (ana ekran düşmez): sunucu hatası + kod gösterilir.
   let myTasks: MyTasksSummary | undefined;
-  if (!hasPermission(current.roles, "users.manage")) {
+  if (!hasPermission(current.roles, "users.manage", current.grants)) {
     try {
       const mine = await listMyTasks({ db: getAppDb(), principal, tenantSlug: slug }, { limit: TASK_LIST_LIMIT_MAX });
       myTasks = { kind: "count", count: mine.items.filter((x) => x.status === "ASSIGNED").length, more: mine.next !== null };
@@ -197,7 +198,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
   // "Şimdi" kartı (T-280, DESIGN_REVIEW §7.4.2): yalnız `stock.post` sahibi için GERÇEK bekleyen işler (mevcut domain okumaları: tenant ve depo kapsamı domain'de).
   // Açık teslim = `listInboundReceipts` (OPEN); yerleştirilecek = `listMyTasks` içindeki PUTAWAY görevleri. Hata: sunucu mesajı + kod (ana ekran düşmez).
   let now: NowSummary | undefined;
-  if (hasPermission(current.roles, "stock.post")) {
+  if (hasPermission(current.roles, "stock.post", current.grants)) {
     try {
       const call = { db: getAppDb(), principal, tenantSlug: slug };
       const receipts = await listInboundReceipts(call, { status: "OPEN", limit: 50 });

@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 import { MembershipError, withMembership, withUser } from "@wms/db";
 import type { LocalTimeouts, Membership } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
-import { hasPermission, type Permission } from "./permissions.ts";
+import { MFA_GRANTS, hasPermission, type Permission } from "./permissions.ts";
 
 // `@wms/db` genel yüzeyi ham istemci/tx tiplerini adlandırmaz; imzadan türetilir.
 type WithMembershipParams = Parameters<typeof withMembership>[0];
@@ -110,7 +110,9 @@ export const MFA_REQUIRED_ROLES: readonly string[] = Object.freeze(["TENANT_ADMI
 
 /** Oturum düzeyi MFA; `is_demo` tenant'ta kapalı. Okuma ve yazmada aynı. */
 async function enforceMfa(tx: AccessTx, membership: Membership, principal: AccessPrincipal, tenantId: string): Promise<void> {
-  if (membership.roles.some((r) => MFA_REQUIRED_ROLES.includes(r)) && !principal.mfaVerified) {
+  // T-421: hassas yetkiyi özel grupla alan üye de MFA'ya tabidir.
+  const sensitive = membership.roles.some((r) => MFA_REQUIRED_ROLES.includes(r)) || membership.grants.some((g) => (MFA_GRANTS as readonly string[]).includes(g));
+  if (sensitive && !principal.mfaVerified) {
     const rows = await tx.execute<{ is_demo: boolean }>(sql`SELECT is_demo FROM public.tenants WHERE id = ${tenantId}::uuid`);
     if (rows[0]?.is_demo !== true) throw new AppError("FORBIDDEN", { detail: "MFA_REQUIRED" });
   }
@@ -138,7 +140,7 @@ async function runOnce<T>(
     client: db,
     userId: principal.userId,
     tenantId,
-    permission: (roles) => hasPermission(roles, permission),
+    permission: (roles, grants) => hasPermission(roles, permission, grants),
     ...(timeouts === undefined ? {} : { timeouts }),
   });
   if (recentAuth !== undefined) {

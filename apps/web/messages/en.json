@@ -834,7 +834,8 @@
       "invited": "You invited a member.",
       "removed": "You removed a member from the workspace.",
       "role_changed": "You changed a member's role.",
-      "left": "You left the workspace."
+      "left": "You left the workspace.",
+      "group_changed": "You changed a member's permission group."
     },
     "ownership": {
       "transferred": "You transferred ownership of the workspace."
@@ -979,6 +980,12 @@
       "archived": "Customer card archived",
       "restored": "Customer card restored",
       "imported": "Customer cards imported from Excel"
+    },
+    "group": {
+      "created": "Permission group created",
+      "updated": "Permission group updated",
+      "archived": "Permission group archived",
+      "restored": "Permission group restored"
     }
   },
   "auditLog": {
@@ -1010,7 +1017,8 @@
         "invited": "Member invited",
         "removed": "Member removed",
         "role_changed": "Member role changed",
-        "left": "Member left"
+        "left": "Member left",
+        "group_changed": "Member permission group changed"
       },
       "ownership": {
         "transferred": "Ownership transferred"
@@ -3225,7 +3233,8 @@
     },
     "m": {
       "users": "Users",
-      "pending": "Devices awaiting approval"
+      "pending": "Devices awaiting approval",
+      "groups": "Permission groups"
     },
     "live": {
       "in": "RECEIVED LINES",
@@ -3554,6 +3563,154 @@
     "cf": {
       "title": "Changes not saved",
       "text": "The card has unsaved changes. They are lost if you leave.",
+      "save": "Save and leave",
+      "leave": "Leave without saving",
+      "stay": "Cancel, stay here"
+    }
+  },
+  "gruplar": {
+    "title": "Permission groups",
+    "locked": "You need team management permission to see permission groups.",
+    "lockedAction": "Ask the account owner or an administrator.",
+    "backHome": "Back to home",
+    "owner": "ACCOUNT OWNER",
+    "role": {
+      "TENANT_ADMIN": "Administrator",
+      "WAREHOUSE_MANAGER": "Warehouse manager",
+      "PICKER": "Picker",
+      "COUNTER": "Counter",
+      "READ_ONLY": "Viewer"
+    },
+    "allScreens": "ALL",
+    "all": "All",
+    "ownerOnly": "Only the account owner can change groups.",
+    "newName": "New group",
+    "err": {
+      "reauth": "Confirm your identity for this change: sign out, sign in again, then retry.",
+      "mfa": "Two-step verification is required for this action.",
+      "conflict": "The group changed meanwhile. Refresh and try again.",
+      "failed": "Could not save (code: {code}). Try again."
+    },
+    "issue": {
+      "NAME_MISSING": "Type a group name.",
+      "NAME_TOO_LONG": "A group name can be at most 60 characters.",
+      "NAME_TAKEN": "A group with this name already exists. Type another name.",
+      "COLOR_INVALID": "Pick a colour from the list.",
+      "FIELD_MEMBER_MFA": "This group has a field account; field accounts cannot get approval, reversal, import or settings permissions."
+    },
+    "skipped": "These people could not be added: {names}. Field accounts cannot get sensitive permissions.",
+    "archived": "“{name}” archived",
+    "sub": {
+      "list": "TEAM › GROUPS · TAP A GROUP TO EDIT",
+      "template": "READY GROUP · FROM THE ROLE, FIXED",
+      "edit": "STEP 1/3 · NAME, SCREENS, PERMISSIONS",
+      "people": "STEP 2/3 · TAP: ADD / REMOVE",
+      "done": "STEP 3/3 · DONE"
+    },
+    "editTitle": "Edit group",
+    "peopleTitle": "Pick people",
+    "doneTitle": "Group ready",
+    "main": {
+      "new": "NEW GROUP",
+      "people": "NEXT: PEOPLE",
+      "done": "DONE",
+      "save": "SAVE ({n})"
+    },
+    "teamLocked": "Team management cannot be given by a group; it stays with the Administrator role.",
+    "scr": {
+      "receive": {
+        "name": "Inbound task",
+        "hint": "RECEIVING, PUTAWAY"
+      },
+      "pick": {
+        "name": "Outbound task",
+        "hint": "PICKING, SHIPPING"
+      },
+      "transfer": {
+        "name": "Transfer",
+        "hint": "BETWEEN WAREHOUSES"
+      },
+      "prod": {
+        "name": "Production transfer",
+        "hint": "RAW MATERIAL → PRODUCTION"
+      },
+      "count": {
+        "name": "Count task",
+        "hint": "SHELF COUNT"
+      },
+      "labels": {
+        "name": "Print labels",
+        "hint": "ITEM, PALLET, SHIPMENT"
+      },
+      "reports": {
+        "name": "Reports",
+        "hint": "WAREHOUSE BOARD"
+      },
+      "problem": {
+        "name": "Report a problem",
+        "hint": "PHOTO + VOICE"
+      }
+    },
+    "pow": {
+      "scan": {
+        "name": "Scan and post",
+        "hint": "POSTS APPROVED DOCUMENTS"
+      },
+      "create": {
+        "name": "Create documents",
+        "hint": "OPENS DRAFTS"
+      },
+      "approve": {
+        "name": "Approve",
+        "hint": "DOCUMENTS AND COUNT DIFFERENCES"
+      },
+      "reverse": {
+        "name": "Reverse",
+        "hint": "UNDOES POSTED ENTRIES"
+      },
+      "team": {
+        "name": "Manage the team",
+        "hint": "PEOPLE AND PERMISSIONS",
+        "locked": "ADMINISTRATOR ROLE ONLY"
+      },
+      "import": {
+        "name": "Import from Excel",
+        "hint": "ITEMS · PARTIES · OPENING STOCK"
+      },
+      "settings": {
+        "name": "Change settings",
+        "hint": "COMPANY SETTINGS"
+      }
+    },
+    "online": "Online",
+    "heading": "PERMISSION GROUPS",
+    "counts": "{people} PEOPLE · {groups} GROUPS",
+    "ready": "READY",
+    "tileMeta": "{screens} SCREENS · {n} PEOPLE",
+    "newTile": "New group",
+    "newTileHint": "NAME · SCREENS · PEOPLE",
+    "memo": "“READY” groups come from roles; everyone is in their role's group. A new group adds permissions on top of the role. Tap to change.",
+    "memoReadOnly": "Only the account owner can change groups; you can view them.",
+    "nameAria": "Group name",
+    "colorAria": "Colour",
+    "colorItem": "Colour {c}",
+    "tabScr": "SCREENS VISIBLE",
+    "tabPow": "PERMISSIONS",
+    "templateMemo": "A ready group's screens and permissions come from the role. Change a person's role on the Team screen; open a new group for extra permissions.",
+    "archive": "Archive group",
+    "search": "Type a name…",
+    "ownerNoGroup": "The account owner already has every permission and is not added to groups.",
+    "doneLine": "“{name}” is ready",
+    "doneMeta": "{n} PEOPLE · {s} SCREENS · {p} PERMISSIONS",
+    "doneMemo": "The selected people see this group's screens right away; open sessions continue with the new permissions.",
+    "dock": "Bottom bar",
+    "backTeam": "Back: Team",
+    "back": "BACK",
+    "home": "Home",
+    "homeShort": "HOME",
+    "cf": {
+      "title": "Group not saved",
+      "text": "Changes to “{name}” will be lost if you leave without saving.",
       "save": "Save and leave",
       "leave": "Leave without saving",
       "stay": "Cancel, stay here"

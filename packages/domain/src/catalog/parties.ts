@@ -1,5 +1,5 @@
-// T-428: cari kartlar (müşteri / tedarikçi). Okuma `stock.view`; ekleme/düzenleme/arşiv ve Excel'den aktarım `settings.manage` (hesap sahibi;
-// T-421 yetki gruplarıyla depo yöneticisine `data.import` açılacak). Fiziksel silme yok. Audit aynı transaction'da (I-12).
+// T-428: cari kartlar (müşteri / tedarikçi). Okuma `stock.view`; ekleme/düzenleme/arşiv `settings.manage`; Excel'den aktarım `data.import` (hesap sahibi ya da
+// T-421 özel yetki grubu). Fiziksel silme yok. Audit aynı transaction'da (I-12).
 // Kod alan içinde benzersizdir (büyük/küçük harf ve boşluktan bağımsız: `code_key`). Vergi no 10/11 hane denetimi uyarıdır, engel değildir.
 // Aktarım (`importParties`): aynı kod varsa güncellenir (boş hücre mevcut değeri silmez), dosyada tekrarlayan kod → ilki alınır, sonrakiler sorunlu.
 // `dryRun`: hiçbir şey yazılmaz; aynı kurallarla satır başına sonuç döner (kontrol adımı).
@@ -247,14 +247,14 @@ export interface PartyImportResult {
 }
 
 /**
- * Excel'den aktarım (`settings.manage`). `rows[i].row`: kullanıcının dosyasındaki satır no (rapor için). Aynı kod varsa yalnız DOLU hücreler yazılır;
+ * Excel'den aktarım (`data.import`; T-421). `rows[i].row`: kullanıcının dosyasındaki satır no (rapor için). Aynı kod varsa yalnız DOLU hücreler yazılır;
  * değişmeyen satır UNCHANGED. Dosyada tekrarlayan kod: ilki alınır. `dryRun` yazmaz (aynı karar). Bir çağrıda en çok 500 satır.
  */
 export async function importParties(params: PartyCommandParams, input: { readonly rows: readonly (PartyInput & { readonly row: number })[]; readonly dryRun: boolean }): Promise<PartyImportResult> {
   if (!Array.isArray(input.rows) || input.rows.length === 0 || input.rows.length > PARTY_IMPORT_MAX_ROWS) throw new AppError("VALIDATION_FAILED");
   const { requestId, ...access } = params;
   const run = input.dryRun ? runTenantQuery : runTenantCommand;
-  return run({ ...access, permission: "settings.manage" }, async (tx, m) => {
+  return run({ ...access, permission: "data.import" }, async (tx, m) => {
     const out: { row: number; status: PartyImportStatus; issue?: PartyIssue; warning?: PartyWarning }[] = [];
     const seen = new Set<string>();
     const cleaned: { row: number; v: Clean; warning?: PartyWarning }[] = [];

@@ -318,6 +318,8 @@ const LOADERS = [
   "import/page.tsx",
   // T-428: cari kartlar (üyelik özeti + `listParties`; çapraz tenant 404).
   "parties/page.tsx",
+  // T-421: yetki grupları (üyelik özeti + `listGroups`, users.manage; çapraz tenant 404).
+  "groups/page.tsx",
   "warehouses/[warehouseId]/page.tsx",
   // T-304: görev ekranları; üyelik/izin `listTasks`/`listMyTasks`/üyelik özeti ile sayfanın kendisinde çözülür.
   "tasks/page.tsx",

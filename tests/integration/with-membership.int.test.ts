@@ -287,7 +287,7 @@ describe(`withMembership — kabul ve ret yolları (target=${env.target})`, () =
       return { tenant, user, membership };
     });
     const out = await withMembership({ client: app, userId: user, tenantId: tenant }, async (tx, m) => ({ m, g: await guc(tx) }));
-    expect(out.m).toEqual({ membershipId: membership, userId: user, tenantId: tenant, isOwner: true, roles: ["COUNTER", "PICKER"], rolesVersion: 0 });
+    expect(out.m).toEqual({ membershipId: membership, userId: user, tenantId: tenant, isOwner: true, roles: ["COUNTER", "PICKER"], rolesVersion: 0, grants: [], screens: null, groupId: null });
     expect(out.g).toEqual({ tenant, user, reason: "" });
   });
 

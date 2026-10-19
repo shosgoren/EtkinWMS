@@ -63,6 +63,10 @@ export interface MembershipSummary {
     readonly slug: string;
     readonly tenantName: string;
     readonly roles: readonly RoleKey[];
+    /** T-421: özel yetki grubunun EK yetkileri (yoksa boş) — ekranda `hasPermission(roles, p, grants)`. */
+    readonly grants: readonly string[];
+    /** T-421: özel grubun görünür ekranları; grubu yoksa `null` (rolün varsayılanı). */
+    readonly screens: readonly string[] | null;
     /** T-999 (0048): bu alanın son kullanımı; hiç kullanılmadıysa `null`. */
     readonly lastUsedAt: Date | null;
   }[];
@@ -230,14 +234,14 @@ export async function getMembershipSummary(params: MembershipSummaryParams): Pro
       return { name: me[0]?.name, tenants };
     });
     if (listed.name === undefined) throw new AppError("NOT_FOUND");
-    const memberships: { slug: string; tenantName: string; roles: readonly RoleKey[]; lastUsedAt: Date | null }[] = [];
+    const memberships: { slug: string; tenantName: string; roles: readonly RoleKey[]; grants: readonly string[]; screens: readonly string[] | null; lastUsedAt: Date | null }[] = [];
     let lastSlug: string | null = null;
     let lastAt = -Infinity;
     for (const t of listed.tenants) {
       try {
-        const roles = await withMembership({ client: db, userId, tenantId: t.id }, (_tx, m) => Promise.resolve(m.roles));
+        const m = await withMembership({ client: db, userId, tenantId: t.id }, (_tx, mm) => Promise.resolve(mm));
         const used = t.last_used_at === null ? null : new Date(t.last_used_at);
-        memberships.push({ slug: t.slug, tenantName: t.name, roles, lastUsedAt: used });
+        memberships.push({ slug: t.slug, tenantName: t.name, roles: m.roles, grants: m.grants, screens: m.screens, lastUsedAt: used });
         const at = used === null ? Number.NaN : used.getTime();
         if (Number.isFinite(at) && at > lastAt) {
           lastAt = at;

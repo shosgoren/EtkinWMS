@@ -130,7 +130,7 @@ describe("withMembership — SQL biçimi ve karar tablosu (sahte tx)", () => {
     const { tx, queries } = fakeTx(client, membershipResponder({ roles: ["PICKER", "COUNTER"] }));
     const result = await withMembership({ client, userId: USER, tenantId: TENANT }, async (t, m) => {
       expect(t).toBe(tx);
-      expect(m).toEqual({ membershipId: MEMBERSHIP, userId: USER, tenantId: TENANT, isOwner: false, roles: ["PICKER", "COUNTER"], rolesVersion: 3 });
+      expect(m).toEqual({ membershipId: MEMBERSHIP, userId: USER, tenantId: TENANT, isOwner: false, roles: ["PICKER", "COUNTER"], rolesVersion: 3, grants: [], screens: null, groupId: null });
       return "done";
     });
     expect(result).toBe("done");

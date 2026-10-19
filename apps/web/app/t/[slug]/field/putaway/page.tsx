@@ -64,7 +64,7 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) notFound();
   const roles = current.roles;
-  if (!hasPermission(roles, "stock.post")) return message(t("putaway.lockedTitle"), t("putaway.lockedReason"), fieldHome, t("flow.toField"), true);
+  if (!hasPermission(roles, "stock.post", current.grants)) return message(t("putaway.lockedTitle"), t("putaway.lockedReason"), fieldHome, t("flow.toField"), true);
 
   const taskId = first(sp.task);
   if (taskId !== undefined && taskId !== "") {

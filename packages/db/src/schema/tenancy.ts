@@ -193,3 +193,26 @@ export const fieldSessions = pgTable("field_sessions", {
   deviceId: uuid("device_id").notNull(),
   createdAt: timestamptz("created_at").notNull().defaultNow(),
 });
+
+// T-421 (`0051_permission_groups`): hesap sahibinin özel yetki grupları. Rol izinlerine EK yetki ve görünür ekran listesi; RLS, CHECK'ler
+// (kapalı yetki/ekran listeleri) ve tetikleyiciler migration'dadır.
+export const permissionGroups = pgTable("permission_groups", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").notNull().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#2F7D5B"),
+  screens: text("screens").array().notNull().default(sql`'{}'`),
+  grants: text("grants").array().notNull().default(sql`'{}'`),
+  archivedAt: timestamp("archived_at", { withTimezone: true, mode: "date" }),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  version: integer("version").notNull().default(1),
+});
+export const memberGroups = pgTable("member_groups", {
+  tenantId: uuid("tenant_id").notNull(),
+  membershipId: uuid("membership_id").notNull(),
+  groupId: uuid("group_id").notNull(),
+  assignedBy: uuid("assigned_by").notNull(),
+  assignedAt: timestamp("assigned_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
