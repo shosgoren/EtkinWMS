@@ -3336,7 +3336,9 @@
     "back": "Back",
     "backShort": "BACK",
     "save": "Save",
-    "saveShort": "SAVE"
+    "saveShort": "SAVE",
+    "bell": "ALERTS",
+    "bellAria": "Alerts, {n} open"
   },
   "aktar": {
     "title": "Import from Excel",

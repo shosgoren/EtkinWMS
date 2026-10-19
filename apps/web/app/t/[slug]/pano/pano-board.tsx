@@ -113,6 +113,7 @@ export async function PanoBoard(p: PanoBoardProps) {
       settingsHref={p.settingsManage ? `${base}/settings` : undefined}
       scanHref={`${base}/field`}
       canReport={p.canReport}
+      bell={b === null ? undefined : { n: b.criticalCount + b.problems, href: owner ? "#pano-alerts" : `${base}/tasks` }}
     >
       <div className="hello">
         <div className="hl">
@@ -178,7 +179,7 @@ export async function PanoBoard(p: PanoBoardProps) {
           </div>
 
           {shd(t("alerts"), <><span className="dotlive" />{t("liveNow")}</>, "shd alerts-hd")}
-          <div className="alerts">
+          <div className="alerts" id="pano-alerts">
             <a href={`${base}/stock`} className="al" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }}>
               {b.criticalCount > 0 ? <span className="pulse" /> : null}
               <span className="alic"><Svg size={28}><P d={PICON.boxA} /><P d={PICON.boxB} /><P d={PICON.boxC} /></Svg></span>

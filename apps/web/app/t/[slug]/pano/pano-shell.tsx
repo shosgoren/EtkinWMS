@@ -3,7 +3,8 @@
 // (`.dock > .dockin`: Sorun · OKUT · Etkin), sürüklenebilir yüzen kısayol (`.fab` + `.hback` + `.halo`), Ekip/Hesap menüsü (`.halo.tmenu`).
 // Sınıf adları, öğe sırası ve ikon yolları kaynaktan (pano-icons.ts); renkler üretilmiş belirteçlerden (pano-tokens.ts).
 // Rol içeriği (`.inner` içi) sunucuda çizilir ve `children` olarak gelir.
-// Bilinçli farklar (docs/design/DESIGN-PARITY.md, T-423): bildirim zili (bildirim altyapısı yok) ve Etkin (T-424) çizilmez; kaynakta
+// Bilinçli farklar (docs/design/DESIGN-PARITY.md, T-423): bildirim zili yalnız yönetici panolarında, sayısı açık uyarılardan (kritik stok +
+// sorun; ayrı bildirim kutusu yok, zil uyarılar bölümüne götürür); Etkin (T-424) çizilmez; kaynakta
 // uygulama içi tema düğmesi olmadığından tema Hesap menüsünde bir öğedir. "Düzenle" kısayol seçicisi (`.page > .pk > .pp`): yalnız yetkili
 // ekranlar listelenir, en çok 6; seçim kişisel kolaylık olarak tarayıcıda hatırlanır (kaynaktaki her öğede liste ikonu yerine öğenin ikonu).
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
@@ -41,6 +42,8 @@ export interface PanoShellProps {
   readonly settingsHref?: string;
   readonly scanHref: string;
   readonly canReport: boolean;
+  /** Bildirim zili (yalnız yönetici panoları): açık uyarı sayısı (kritik stok + sorun) ve gideceği yer. */
+  readonly bell?: { readonly n: number; readonly href: string };
   readonly children: ReactNode;
 }
 
@@ -56,7 +59,7 @@ function Ico({ d, size, className = "ico", style }: { d: string; size: number; c
   );
 }
 
-export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, children }: PanoShellProps) {
+export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, bell, children }: PanoShellProps) {
   const t = useTranslations("pano");
   const [dark, setDark] = useState(initialDark);
   const [menu, setMenu] = useState(false);
@@ -233,6 +236,20 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                   </span>
                 </div>
                 <nav className="tools" aria-label={t("tools")}>
+                  {bell !== undefined ? (
+                    <a href={bell.href} className="tb tb-bell" style={{ background: dz("E56A00"), textDecoration: "none" }} aria-label={t("bellAria", { n: bell.n })} data-testid="pano-bell">
+                      <svg className="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d={PICON.bell} />
+                        <path d={PICON.bellFoot} />
+                      </svg>
+                      <span>{t("bell")}</span>
+                      {bell.n > 0 ? (
+                        <em className="tbadge" style={{ fontStyle: "normal" }}>
+                          {bell.n > 99 ? "99+" : bell.n}
+                        </em>
+                      ) : null}
+                    </a>
+                  ) : null}
                   <button
                     type="button"
                     className={`tb tb-team${menu ? " on" : ""}`}

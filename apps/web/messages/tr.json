@@ -3336,7 +3336,9 @@
     "back": "Geri",
     "backShort": "GERİ",
     "save": "Kaydet",
-    "saveShort": "KAYDET"
+    "saveShort": "KAYDET",
+    "bell": "BİLDİRİM",
+    "bellAria": "Bildirimler, {n} açık uyarı"
   },
   "aktar": {
     "title": "Excel’den aktar",
