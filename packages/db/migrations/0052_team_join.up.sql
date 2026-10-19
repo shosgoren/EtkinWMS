@@ -5,7 +5,7 @@
 --   SHA-256 özeti; QR adresi belirteci URL PARÇASINDA (`#`) taşır. Yenilenince eskisi o anda geçersiz (`revoked_at`). Uygulama rolü özeti OKUMAZ.
 -- * TALEP: personel cihazı (oturumsuz, wms_auth) ad + istediği kullanıcı adını gönderir; cihaz kendi rastgele TALEP belirtecini üretir, DB'ye yalnız
 --   özeti gider (`field_join_request`). Sonuç 6 haneli doğrulama kodudur; yalnız o cihazın ekranında görünür, uygulama rolü okuyamaz. Kötüye kullanım
---   sınırları: bağlantı başına en çok 20 bekleyen talep, talep 24 saat geçerli, aynı kullanıcı adıyla bekleyen ya da var olan hesap reddedilir
+--   sınırları: bağlantı başına en çok 50 bekleyen talep, talep 24 saat geçerli, aynı kullanıcı adıyla bekleyen ya da var olan hesap reddedilir
 --   (IP / bağlantı hız sınırı kimlik servisinde).
 -- * ONAY yalnız yönetici ekranında: cihazdaki kodu yazar (`field_join_verify`, wms_app + tenant bağlamı; 3 yanlışta talep iptal), rolü (PICKER /
 --   COUNTER) seçer; hesap mevcut saha hesabı yolu ile (T-997) aynı transaction'da açılır ve talep APPROVED + üyelik bağlanır.
@@ -71,7 +71,7 @@ CREATE TABLE public.team_join_requests (
   CONSTRAINT team_join_requests_code_chk CHECK (confirm_code ~ '^[0-9]{6}$' AND confirm_failed >= 0),
   CONSTRAINT team_join_requests_status_chk CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'CLAIMED')),
   CONSTRAINT team_join_requests_decision_chk CHECK (((status = 'PENDING') = (decided_at IS NULL) AND (decided_at IS NULL) = (decided_by IS NULL)) OR status = 'CANCELLED'),
-  CONSTRAINT team_join_requests_member_chk CHECK ((status IN ('APPROVED', 'CLAIMED')) = (membership_id IS NOT NULL)),
+  CONSTRAINT team_join_requests_member_chk CHECK (status NOT IN ('APPROVED', 'CLAIMED') OR membership_id IS NOT NULL),
   CONSTRAINT team_join_requests_claim_chk CHECK ((status = 'CLAIMED') = (claimed_at IS NOT NULL))
 );
 CREATE INDEX team_join_requests_pending_idx ON public.team_join_requests (tenant_id, status, created_at);
@@ -140,7 +140,7 @@ BEGIN
   IF v_link IS NULL THEN
     v_out := 'DENIED';
   ELSIF (SELECT count(*) FROM public.team_join_requests r
-          WHERE r.tenant_id = p_tenant AND r.link_id = v_link AND r.status = 'PENDING' AND r.expires_at > now()) >= 20 THEN
+          WHERE r.tenant_id = p_tenant AND r.link_id = v_link AND r.status = 'PENDING' AND r.expires_at > now()) >= 50 THEN
     v_out := 'FULL';
   ELSIF EXISTS (SELECT 1 FROM public.field_logins f WHERE f.tenant_id = p_tenant AND f.username = v_user)
      OR EXISTS (SELECT 1 FROM public.team_join_requests r WHERE r.tenant_id = p_tenant AND r.username = v_user
@@ -178,7 +178,7 @@ BEGIN
            t.slug, r.username, t.name
       FROM public.team_join_requests r
       JOIN public.tenants t ON t.id = r.tenant_id
-     WHERE r.tenant_id = p_tenant AND r.request_hash = p_request_hash;
+     WHERE r.tenant_id = p_tenant AND r.request_hash = p_request_hash AND t.status = 'ACTIVE' AND NOT t.is_demo;
   PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
 END
 $fn$;
@@ -270,13 +270,20 @@ BEGIN
     RETURN;
   END IF;
   SELECT * INTO v_l FROM public.field_logins l WHERE l.tenant_id = p_tenant AND l.membership_id = v_r.membership_id FOR UPDATE;
-  SELECT FOUND AND NOT EXISTS (SELECT 1 FROM public.membership_roles mr WHERE mr.tenant_id = p_tenant AND mr.membership_id = v_r.membership_id
+  -- Yalnız HİÇ PIN belirlenmemiş ve onaydaki etkinleştirmesi hâlâ bekleyen hesap (güvenlik incelemesi: kişi başka yoldan etkinleştirdiyse
+  -- ya da yönetici kodu yeniledikten sonra kullanıldıysa eski talep çerezi PIN'i ezemez; kod yenileme talebi ayrıca iptal eder).
+  SELECT FOUND AND v_l.pin_set_at IS NULL AND v_l.activation_hash IS NOT NULL AND v_l.activation_expires_at > now()
+         AND NOT EXISTS (SELECT 1 FROM public.membership_roles mr WHERE mr.tenant_id = p_tenant AND mr.membership_id = v_r.membership_id
                                  AND mr.role_key NOT IN ('PICKER', 'COUNTER'))
          AND EXISTS (SELECT 1 FROM public.tenant_memberships m WHERE m.tenant_id = p_tenant AND m.id = v_r.membership_id
                        AND m.user_id = v_l.user_id AND m.status = 'ACTIVE')
     INTO v_ok;
   IF NOT coalesce(v_ok, false) THEN
     PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
+    IF v_l.user_id IS NOT NULL THEN
+      INSERT INTO public.security_events (user_id, event_type, detail)
+      VALUES (v_l.user_id, 'field_pin.failed', pg_catalog.jsonb_build_object('tenant_id', p_tenant::text, 'reason', 'join_not_pending'));
+    END IF;
     RETURN QUERY SELECT 'DENIED'::text, NULL::uuid, NULL::uuid, NULL::uuid;
     RETURN;
   END IF;

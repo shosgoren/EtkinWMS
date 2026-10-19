@@ -51,6 +51,8 @@ export interface JoinOverview {
     readonly expiresAt: Date;
     readonly wrongTries: number;
   }[];
+  /** Onaylanmış, kişinin PIN belirlemesini bekleyen talepler (24 saat; yönetici iptal edebilir). */
+  readonly approvedWaiting: readonly { readonly id: string; readonly name: string; readonly username: string; readonly decidedAt: Date }[];
   readonly isDemo: boolean;
 }
 
@@ -67,6 +69,11 @@ export async function getJoinOverview(params: Access): Promise<JoinOverview> {
            WHERE tenant_id = ${actor.tenantId}::uuid AND status = 'PENDING' AND expires_at > now()
            ORDER BY created_at, id LIMIT 50`,
     );
+    const approved = await tx.execute<{ id: string; name: string; username: string; decided_at: Date | string }>(
+      sql`SELECT id, name, username, decided_at FROM public.team_join_requests
+           WHERE tenant_id = ${actor.tenantId}::uuid AND status = 'APPROVED' AND decided_at > now() - interval '24 hours'
+           ORDER BY decided_at DESC, id LIMIT 50`,
+    );
     const demo = await tx.execute<{ is_demo: boolean }>(sql`SELECT is_demo FROM public.tenants WHERE id = ${actor.tenantId}::uuid`);
     const l = link[0];
     return {
@@ -80,6 +87,7 @@ export async function getJoinOverview(params: Access): Promise<JoinOverview> {
         expiresAt: asDate(r.expires_at),
         wrongTries: Number(r.confirm_failed),
       })),
+      approvedWaiting: approved.map((r) => ({ id: r.id, name: r.name, username: r.username, decidedAt: asDate(r.decided_at) })),
       isDemo: demo[0]?.is_demo !== false,
     };
   });
@@ -121,6 +129,7 @@ export async function revokeJoinLink(params: CommandParams): Promise<{ readonly 
   const { requestId, ...access } = params;
   requireRecent(access);
   return runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
+    await assertNotDemo(tx, actor.tenantId);
     const rows = await tx.execute<{ id: string }>(
       sql`UPDATE public.team_join_links SET revoked_at = now() WHERE tenant_id = ${actor.tenantId}::uuid AND revoked_at IS NULL RETURNING id`,
     );
@@ -189,17 +198,30 @@ export async function approveJoinRequest(
   return { ok: true, membershipId: created.membershipId, username: created.username };
 }
 
+/** Bekleyen talebi reddeder; onaylanmış ama PIN'i belirlenmemiş talebi iptal eder (açılan hesap kalır; kod yenilemeyle etkinleştirilebilir). */
 export async function rejectJoinRequest(params: CommandParams & { readonly joinRequestId: string }): Promise<{ readonly changed: boolean }> {
   const { joinRequestId: rawId, requestId, ...access } = params;
   const id = parseUuid(rawId);
   requireRecent(access);
   return runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
-    const rows = await tx.execute<{ id: string }>(
-      sql`UPDATE public.team_join_requests SET status = 'REJECTED', decided_by = ${actor.userId}::uuid, decided_at = now()
-           WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${id}::uuid AND status = 'PENDING' RETURNING id`,
+    await assertNotDemo(tx, actor.tenantId);
+    const rows = await tx.execute<{ id: string; status: string }>(
+      sql`UPDATE public.team_join_requests
+             SET status = CASE WHEN status = 'PENDING' THEN 'REJECTED' ELSE 'CANCELLED' END,
+                 decided_by = CASE WHEN status = 'PENDING' THEN ${actor.userId}::uuid ELSE decided_by END,
+                 decided_at = CASE WHEN status = 'PENDING' THEN now() ELSE decided_at END
+           WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${id}::uuid AND status IN ('PENDING', 'APPROVED') RETURNING id, status`,
     );
-    if (rows.length === 0) return { changed: false };
-    await appendAudit(tx, { action: "team_join.rejected", actorUserId: actor.userId, entityType: "team_join_request", entityId: id, requestId: requestId ?? null });
+    const r = rows[0];
+    if (r === undefined) return { changed: false };
+    await appendAudit(tx, {
+      action: "team_join.rejected",
+      actorUserId: actor.userId,
+      entityType: "team_join_request",
+      entityId: id,
+      requestId: requestId ?? null,
+      changeSummary: { outcome: r.status },
+    });
     return { changed: true };
   });
 }

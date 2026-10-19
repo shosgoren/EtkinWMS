@@ -3807,6 +3807,10 @@
     "errPlan": "Your plan's field staff limit is reached.",
     "errCode": "Wrong code. Read the code on their screen again.",
     "errGone": "This request is no longer valid (expired or cancelled).",
-    "errServer": "Something went wrong. Try again."
+    "errServer": "Something went wrong. Try again.",
+    "approvedTitle": "WAITING FOR PIN",
+    "approvedHint": "APPROVED · PERSON WILL SET A PIN (24 HOURS)",
+    "cancelApproved": "CANCEL",
+    "cancelApprovedAria": "Cancel approval for {name}"
   }
 }

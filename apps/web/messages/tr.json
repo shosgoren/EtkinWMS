@@ -3807,6 +3807,10 @@
     "errPlan": "Paketindeki saha personeli sınırı doldu.",
     "errCode": "Kod yanlış. Kişinin ekranındaki kodu yeniden oku.",
     "errGone": "Bu talep artık geçerli değil (süresi doldu ya da iptal edildi).",
-    "errServer": "Bir sorun oldu. Tekrar dene."
+    "errServer": "Bir sorun oldu. Tekrar dene.",
+    "approvedTitle": "PIN BEKLEYENLER",
+    "approvedHint": "ONAYLANDI · KİŞİ PIN BELİRLEYECEK (24 SAAT)",
+    "cancelApproved": "İPTAL ET",
+    "cancelApprovedAria": "{name} için onayı iptal et"
   }
 }

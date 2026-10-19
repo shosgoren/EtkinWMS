@@ -53,8 +53,14 @@ function Qr({ value, label }: { value: string; label: string }) {
 }
 
 type Err = { readonly text: string; readonly reauth: boolean } | null;
+export interface JoinApproved {
+  readonly id: string;
+  readonly name: string;
+  readonly username: string;
+  readonly decidedAt: string;
+}
 
-function View({ slug, tenantName, isDemo, link, pending }: { slug: string; tenantName: string; isDemo: boolean; link: { readonly expiresAt: string } | null; pending: readonly JoinPending[] }) {
+function View({ slug, tenantName, isDemo, link, pending, approved }: { slug: string; tenantName: string; isDemo: boolean; link: { readonly expiresAt: string } | null; pending: readonly JoinPending[]; approved: readonly JoinApproved[] }) {
   const t = useTranslations("teamJoin");
   const format = useFormatter();
   const { toggleTheme } = useDz();
@@ -292,6 +298,33 @@ function View({ slug, tenantName, isDemo, link, pending }: { slug: string; tenan
                   );
                 })}
               </div>
+              {approved.length > 0 ? (
+                <>
+                  <div className="shd">
+                    <b>{t("approvedTitle")}</b>
+                    <span>{t("listCount", { n: approved.length })}</span>
+                  </div>
+                  <div className="rows">
+                    {approved.map((a) => (
+                      <div key={a.id} className="row" style={{ background: C.surface, cursor: "default" }} data-testid="join-approved-row">
+                        <span className="av" style={{ background: C.chip, color: C.fg }}>
+                          <Ico d={GICON.clock} size={24} />
+                        </span>
+                        <span className="rt">
+                          <b>{a.name}</b>
+                          <span>{`@${a.username} · ${t("approvedHint")}`}</span>
+                        </span>
+                        <div className="rbtns">
+                          <button type="button" className="sbtn" style={{ background: dz("C62828"), color: dz("FFFFFF") }} onClick={() => void reject(a.id)} disabled={busy || isDemo} aria-label={t("cancelApprovedAria", { name: a.name })}>
+                            <Ico d={GICON.close} size={20} sw={2.8} />
+                            <span className="tx">{t("cancelApproved")}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : null}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div className="kcard" style={{ background: C.surface }}>
@@ -348,6 +381,7 @@ export function JoinView({
   isDemo,
   link,
   pending,
+  approved,
 }: {
   dark: boolean;
   slug: string;
@@ -355,10 +389,11 @@ export function JoinView({
   isDemo: boolean;
   link: { readonly expiresAt: string } | null;
   pending: readonly JoinPending[];
+  approved: readonly JoinApproved[];
 }) {
   return (
     <DzRoot dark={dark} scope="dzg" testId="team-join">
-      <View slug={slug} tenantName={tenantName} isDemo={isDemo} link={link} pending={pending} />
+      <View slug={slug} tenantName={tenantName} isDemo={isDemo} link={link} pending={pending} approved={approved} />
     </DzRoot>
   );
 }

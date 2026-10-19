@@ -35,7 +35,8 @@ export const FIELD_RATE_RULES = Object.freeze({
   enrollTenant: { window: 10 * 60, max: 10 },
   ipEnroll: { window: 10 * 60, max: 20 },
   // T-429: ekibe katılma (QR bağlantısı başına talep, IP başına, talep başına etkinleştirme).
-  joinLink: { window: 60 * 60, max: 30 },
+  joinPreview: { window: 60 * 60, max: 300 },
+  joinLink: { window: 60 * 60, max: 120 },
   ipJoin: { window: 10 * 60, max: 20 },
   joinActivate: { window: 60 * 60, max: 10 },
 });
@@ -293,7 +294,8 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         const link = parseJoinValue(text(body.join, 120));
         if (link === null) throw INVALID();
         const hash = joinLinkHash(link.token);
-        await limit(`field:join-link:${hash}`, FIELD_RATE_RULES.joinLink);
+        // Önizleme ayrı (geniş) kovada: gerçek talepleri tüketmez.
+        await limit(`field:join-preview:${hash}`, FIELD_RATE_RULES.joinPreview);
         const rows = await deps.execute<{ tenant_name: string }>(sql`SELECT tenant_name FROM wms_probe.field_join_link(${link.tenantId}::uuid, ${hash})`);
         const r = rows[0];
         if (r === undefined) throw DENIED();

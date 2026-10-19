@@ -46,6 +46,7 @@ export default async function JoinRequestsPage({ params }: { params: Promise<{ s
       tenantName={tenantName}
       isDemo={overview.isDemo}
       link={overview.link === null ? null : { expiresAt: overview.link.expiresAt.toISOString() }}
+      approved={overview.approvedWaiting.map((a) => ({ id: a.id, name: a.name, username: a.username, decidedAt: a.decidedAt.toISOString() }))}
       pending={overview.pending.map((p) => ({ id: p.id, name: p.name, username: p.username, deviceHint: p.deviceHint, createdAt: p.createdAt.toISOString(), wrongTries: p.wrongTries }))}
     />
   );

@@ -237,6 +237,15 @@ describe("T-429 ekibe katılma", () => {
     expect(((await (await get("/field/join/status", b.cookie)).json()) as { status: string }).status).toBe("REJECTED");
     expect((await post("/field/join/activate", { pin: goodPin() }, b.cookie)).status).toBe(401);
 
+    // Onaylanmış ama PIN'i belirlenmemiş talep yönetici tarafından iptal edilir → çerez artık işe yaramaz (hesap kalır).
+    const c = await request(join, `can.${randomBytes(3).toString("hex")}`, "Can Demir");
+    const pc = (await getJoinOverview(access(fx))).pending.find((p) => p.name === "Can Demir");
+    expect(await approveJoinRequest({ ...access(fx), joinRequestId: pc?.id ?? "", code: c.code, roleKey: "PICKER" }, accountPort)).toMatchObject({ ok: true });
+    expect((await getJoinOverview(access(fx))).approvedWaiting.map((x) => x.name)).toContain("Can Demir");
+    expect(await rejectJoinRequest({ ...access(fx), joinRequestId: pc?.id ?? "" })).toEqual({ changed: true });
+    expect((await post("/field/join/activate", { pin: goodPin() }, c.cookie)).status).toBe(401);
+    expect(((await (await get("/field/join/status", c.cookie)).json()) as { status: string }).status).toBe("CANCELLED");
+
     expect(await revokeJoinLink(access(fx))).toEqual({ changed: true });
     expect((await request(join, `nur.${randomBytes(3).toString("hex")}`)).res.status).toBe(401);
     expect((await getJoinOverview(access(fx))).link).toBeNull();
