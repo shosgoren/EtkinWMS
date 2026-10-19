@@ -125,8 +125,8 @@ export async function withMembership<T>(
     await tx.execute(sql`SELECT set_config('app.current_user_id', ${userId}, true)`);
     if (timeouts !== undefined) await setLocalTimeouts(tx, timeouts); // kilit okumalarından ÖNCE
     const tenantStatus = await lockTenantRow(tx, tenantId);
-    const rows = await tx.execute<{ id: string; is_owner: boolean; status: string; roles_version: number }>(
-      sql`SELECT id, is_owner, status, roles_version
+    const rows = await tx.execute<{ id: string; is_owner: boolean; status: string; roles_version: number; has_groups?: boolean }>(
+      sql`SELECT id, is_owner, status, roles_version, pg_catalog.to_regclass('public.member_groups') IS NOT NULL AS has_groups
             FROM public.tenant_memberships
            WHERE tenant_id = ${tenantId}::uuid AND user_id = ${userId}::uuid
              FOR SHARE`,
@@ -144,7 +144,8 @@ export async function withMembership<T>(
     );
     const roles = roleRows.map((r) => r.role_key);
     // T-421: özel grup (en çok bir). Grup ve üyelik satırı FOR SHARE: yetki daraltma/grup değişimi bu transaction bitene kadar bekler.
-    const groupRows = await tx.execute<{ id: string; grants: string[]; screens: string[] }>(
+    // 0051 öncesi şemaya geri alınmış veritabanında (geri alma güvenliği, G-08) tablo yoktur: grup yok sayılır.
+    const groupRows = m.has_groups === false ? [] : await tx.execute<{ id: string; grants: string[]; screens: string[] }>(
       sql`SELECT g.id, g.grants, g.screens
             FROM public.member_groups mg
             JOIN public.permission_groups g ON g.tenant_id = mg.tenant_id AND g.id = mg.group_id
