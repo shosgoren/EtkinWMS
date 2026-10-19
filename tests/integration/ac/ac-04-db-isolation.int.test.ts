@@ -318,6 +318,8 @@ beforeAll(async () => {
   for (const w of [A, B]) {
     await admin.query("INSERT INTO public.work_priorities (tenant_id, subject_kind, subject_id, urgent, updated_by) VALUES ($1, 'INBOUND_RECEIPT', $2, false, $3)", [w.tenantId, randomUUID(), w.ownerMembershipId]);
     await admin.query("INSERT INTO public.problem_reports (tenant_id, warehouse_id, reason, reported_by) VALUES ($1, $2, 'OTHER', $3)", [w.tenantId, w.warehouseId, w.ownerMembershipId]);
+    // T-428: cari kart (otomatik tablo matrisi her tenant tablosunda satır ister).
+    await admin.query("INSERT INTO public.parties (tenant_id, code, code_key, name, created_by) VALUES ($1, 'AC04-CARI', 'AC04-CARI', 'AC04 cari', $2)", [w.tenantId, w.ownerMembershipId]);
   }
   tables = await discoverTables();
 }, 60_000);

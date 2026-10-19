@@ -5,7 +5,7 @@
 // Başlık satırı: ilk 10 satırda en çok alanla eşleşen satır (üstte firma adı / boş satır olan Excel'ler).
 // Sunucuya gidecek dosya mevcut içe aktarma biçimindeki düz CSV'dir (sabit Türkçe başlıklar); sunucu her şeyi yeniden doğrular.
 
-export type ImportKindKey = "stok" | "acilis";
+export type ImportKindKey = "stok" | "cari" | "acilis";
 export type MapState = "auto" | "sug" | "user" | "none";
 
 export interface FieldDef {
@@ -14,7 +14,7 @@ export interface FieldDef {
   readonly header: string;
   readonly required: boolean;
   readonly synonyms: readonly string[];
-  readonly content?: "gtin" | "gtin14" | "int";
+  readonly content?: "gtin" | "gtin14" | "int" | "taxno" | "email" | "phone";
 }
 
 export const FIELDS: Readonly<Record<ImportKindKey, readonly FieldDef[]>> = {
@@ -25,6 +25,18 @@ export const FIELDS: Readonly<Record<ImportKindKey, readonly FieldDef[]>> = {
     { id: "koli", header: "koli içi adet", required: false, synonyms: ["koli ici adet", "koli ici", "koli mik", "koli miktari", "koli adedi", "kolideki adet", "paket ici adet", "koli icerigi", "koli"], content: "int" },
     { id: "barkod", header: "adet barkodu", required: false, synonyms: ["barkod", "adet barkodu", "barcode", "ean", "gtin", "urun barkodu", "barkodu", "barkod no"], content: "gtin" },
     { id: "kbarkod", header: "koli barkodu", required: false, synonyms: ["koli barkodu", "koli barkod", "koli ean", "paket barkodu", "koli gtin"], content: "gtin14" },
+  ],
+  // T-428: cari kartlar (sunucuya alan adlarıyla kayıt gider; `header` yalnız etiket anahtarıdır).
+  cari: [
+    { id: "kod", header: "code", required: true, synonyms: ["cari kod", "cari kodu", "hesap kodu", "musteri kodu", "firma kodu", "cari no", "kod", "kodu", "code", "hesap no"] },
+    { id: "unvan", header: "name", required: true, synonyms: ["unvan", "unvani", "cari adi", "cari unvan", "cari unvani", "hesap adi", "firma adi", "firma unvani", "musteri adi", "firma", "ad soyad", "adi soyadi", "adi", "ad", "isim", "name", "company"] },
+    { id: "vkn", header: "taxNo", required: false, synonyms: ["vkn", "tckn", "vkn tckn", "tckn vkn", "vergi no", "vergi numarasi", "vergi kimlik no", "tc no", "tc kimlik no", "tc kimlik", "tax no", "vergi tc no"], content: "taxno" },
+    { id: "vd", header: "taxOffice", required: false, synonyms: ["vd", "v d", "vergi dairesi", "vergi d", "vergi dairesi adi", "tax office"] },
+    { id: "tel", header: "phone", required: false, synonyms: ["tel", "telefon", "gsm", "cep", "cep telefonu", "telefon no", "tel no", "phone", "mobile"], content: "phone" },
+    { id: "mail", header: "email", required: false, synonyms: ["mail", "e posta", "eposta", "email", "e mail", "e posta adresi"], content: "email" },
+    { id: "il", header: "city", required: false, synonyms: ["il", "sehir", "city", "il adi"] },
+    { id: "adres", header: "address", required: false, synonyms: ["adres", "acik adres", "adresi", "address", "fatura adresi"] },
+    { id: "tur", header: "kind", required: false, synonyms: ["tur", "cari turu", "cari tipi", "tip", "hesap turu", "type", "musteri tedarikci"] },
   ],
   acilis: [
     { id: "urun", header: "ürün kodu", required: true, synonyms: ["urun kodu", "stok kodu", "kod", "kodu", "malzeme kodu", "mal kodu", "sku", "item code"] },
@@ -57,11 +69,28 @@ export function isGtin(v: string): boolean {
   return (10 - (sum % 10)) % 10 === check;
 }
 
-function contentScore(kind: "gtin" | "gtin14" | "int", values: readonly string[]): boolean {
+function contentOk(kind: NonNullable<FieldDef["content"]>, x: string): boolean {
+  const d = x.replace(/\s/g, "");
+  switch (kind) {
+    case "int":
+      return /^\d{1,7}$/.test(x.replace(/\./g, ""));
+    case "gtin":
+      return isGtin(d) && d.length !== 14;
+    case "gtin14":
+      return isGtin(d) && d.length === 14;
+    case "taxno":
+      return /^\d{10,11}$/.test(d);
+    case "email":
+      return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x);
+    case "phone":
+      return /^[0-9+() .\/-]{7,20}$/.test(x) && (x.match(/\d/g) ?? []).length >= 7;
+  }
+}
+
+function contentScore(kind: NonNullable<FieldDef["content"]>, values: readonly string[]): boolean {
   const v = values.filter((x) => x !== "");
   if (v.length === 0) return false;
-  const ok = v.filter((x) => (kind === "int" ? /^\d{1,7}$/.test(x.replace(/\./g, "")) : isGtin(x) && (kind === "gtin14" ? x.replace(/\s/g, "").length === 14 : x.replace(/\s/g, "").length !== 14)));
-  return ok.length / v.length >= 0.8;
+  return v.filter((x) => contentOk(kind, x)).length / v.length >= 0.8;
 }
 
 function headerMatch(f: FieldDef, h: string): "auto" | "sug" | null {
@@ -203,4 +232,23 @@ export function colLetter(i: number): string {
     n = Math.floor((n - 1) / 26);
   }
   return s;
+}
+
+/** Cari kartlar (T-428): eşleşen alanlarla satır kayıtları (sunucu alan adları). `row`: dosyadaki satır no (1 tabanlı). */
+export function buildRecords(rows: readonly (readonly string[])[], headerRow: number, m: Mapping, kind: ImportKindKey, skip: ReadonlySet<number> = new Set()): Array<Record<string, string> & { row: number }> {
+  const fields = FIELDS[kind].filter((f) => m.col[f.id] !== null && m.col[f.id] !== undefined);
+  const out: Array<Record<string, string> & { row: number }> = [];
+  for (let i = headerRow + 1; i < rows.length; i++) {
+    if (skip.has(i + 1)) continue;
+    const r = rows[i] ?? [];
+    const rec: Record<string, string> = {};
+    let any = false;
+    for (const f of fields) {
+      const v = r[m.col[f.id] as number] ?? "";
+      if (v !== "") any = true;
+      rec[f.header] = v;
+    }
+    if (any) out.push({ ...rec, row: i + 1 });
+  }
+  return out;
 }

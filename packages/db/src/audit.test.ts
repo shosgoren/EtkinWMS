@@ -57,6 +57,7 @@ describe("eylem listesi", () => {
         "pick_assignment.created", "production_recipe.created", "pick.not_found",
         "count.started", "count.recorded", "count.submitted", "count.approved", "count.posted", "count.cancelled",
         "work_priority.set", "problem.reported", "problem.resolved", "settings.shift_updated", "trial.started", "sample_data.loaded", "sample_data.cleared",
+        "party.created", "party.updated", "party.archived", "party.restored", "party.imported",
       ].sort(),
     );
   });

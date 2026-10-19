@@ -660,7 +660,8 @@
         "hint": "Movement without an order",
         "in": "Manual in",
         "out": "Manual out"
-      }
+      },
+      "parties": "Customers"
     },
     "tasksLabel": "Tasks",
     "lockedReason": "You are not allowed to do this. Ask your manager.",
@@ -971,6 +972,13 @@
     "field_device": {
       "enrolled": "You registered a shared device.",
       "revoked": "You revoked a field device."
+    },
+    "party": {
+      "created": "Customer card added",
+      "updated": "Customer card updated",
+      "archived": "Customer card archived",
+      "restored": "Customer card restored",
+      "imported": "Customer cards imported from Excel"
     }
   },
   "auditLog": {
@@ -3334,7 +3342,7 @@
       "cari": {
         "title": "Customer cards",
         "sub": "CUSTOMER · SUPPLIER · TAX NO · CONTACT",
-        "done": "{n} customer cards added",
+        "done": "{n} customer cards added or updated",
         "goList": "Go to customers"
       },
       "acilis": {
@@ -3392,6 +3400,17 @@
         "urun": "Item code",
         "raf": "Shelf code",
         "miktar": "Quantity"
+      },
+      "cari": {
+        "kod": "Customer code",
+        "unvan": "Name",
+        "vkn": "Tax / ID no",
+        "vd": "Tax office",
+        "tel": "Phone",
+        "mail": "Email",
+        "il": "City",
+        "adres": "Address",
+        "tur": "Type (customer / supplier)"
       }
     },
     "s4": {
@@ -3454,6 +3473,90 @@
       "TOO_MANY_ROWS": "The file has too many rows. Split it and upload the parts in order.",
       "TOO_MANY_COLS": "The file has more than 40 columns. Delete unneeded columns and upload again."
     },
-    "serverError": "The server could not finish ({code}). Try again shortly."
+    "serverError": "The server could not finish ({code}). Try again shortly.",
+    "partyIssue": {
+      "CODE_MISSING": "Customer code is empty",
+      "CODE_INVALID": "Customer code too long or invalid",
+      "NAME_MISSING": "Name is empty (new customer)",
+      "NAME_INVALID": "Name too long or invalid",
+      "KIND_UNKNOWN": "Type not understood (customer / supplier / both)",
+      "TAX_NO_INVALID": "Tax no contains invalid characters",
+      "PHONE_INVALID": "Phone is invalid",
+      "EMAIL_INVALID": "Email is invalid",
+      "TEXT_TOO_LONG": "A cell is too long",
+      "CODE_DUPLICATE_FILE": "This code appears earlier in the file",
+      "UNKNOWN": "Row could not be read"
+    },
+    "partyIssueFix": "THIS ROW IS SKIPPED · FIX AND UPLOAD AGAIN",
+    "partyWarning": {
+      "TAX_NO_LENGTH": "Tax no has 10 digits, national ID 11"
+    },
+    "partyWarningFix": "WARNING · THE RECORD IS STILL SAVED"
+  },
+  "parties": {
+    "title": "Customer cards",
+    "sub": "{n} CARDS · CUSTOMERS AND SUPPLIERS",
+    "search": "Name, code, tax no, phone or city",
+    "find": "Find",
+    "activeList": "CUSTOMERS",
+    "archivedList": "ARCHIVED",
+    "showArchived": "SHOW ARCHIVE",
+    "showActive": "ACTIVE CARDS",
+    "empty": "No customer cards yet.",
+    "noMatch": "No card matches the search.",
+    "importLink": "Import from Excel",
+    "archived": "ARCHIVED",
+    "dock": "Bottom bar",
+    "back": "Back",
+    "backShort": "BACK",
+    "home": "Home",
+    "homeShort": "HOME",
+    "new": "New customer",
+    "newShort": "NEW",
+    "formHint": "* REQUIRED · PRESS SAVE",
+    "readOnly": "VIEW ONLY",
+    "close": "Close",
+    "save": "Save",
+    "saving": "Saving…",
+    "archive": "Archive",
+    "restore": "Restore",
+    "conflict": "This card changed meanwhile. Close and reopen.",
+    "failed": "Could not save ({code}). Try again.",
+    "f": {
+      "code": "Customer code",
+      "name": "Name",
+      "kind": "Type",
+      "taxNo": "Tax / ID no",
+      "taxOffice": "Tax office",
+      "phone": "Phone",
+      "email": "Email",
+      "city": "City",
+      "address": "Address"
+    },
+    "kind": {
+      "CUSTOMER": "Customer",
+      "SUPPLIER": "Supplier",
+      "BOTH": "Customer and supplier"
+    },
+    "issue": {
+      "CODE_MISSING": "Enter the code.",
+      "CODE_INVALID": "Code too long or invalid.",
+      "NAME_MISSING": "Enter the name.",
+      "NAME_INVALID": "Name too long or invalid.",
+      "KIND_UNKNOWN": "Choose the type.",
+      "TAX_NO_INVALID": "Tax no may only contain digits and letters.",
+      "PHONE_INVALID": "Enter the phone with digits.",
+      "EMAIL_INVALID": "Check the email address.",
+      "TEXT_TOO_LONG": "A field is too long.",
+      "CODE_DUPLICATE_FILE": "This code repeats.",
+      "CODE_TAKEN": "This code is used by another card."
+    },
+    "cf": {
+      "title": "Changes not saved",
+      "text": "The card has unsaved changes. They are lost if you leave.",
+      "save": "Save and leave",
+      "leave": "Leave without saving",
+      "stay": "Cancel, stay here"
+    }
   }
 }

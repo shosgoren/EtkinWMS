@@ -660,7 +660,8 @@
         "hint": "Siparişsiz hareket",
         "in": "Manuel giriş",
         "out": "Manuel çıkış"
-      }
+      },
+      "parties": "Cari kartlar"
     },
     "tasksLabel": "İşler",
     "lockedReason": "Bu iş için yetkin yok. Sorumluna sorabilirsin.",
@@ -971,6 +972,13 @@
     "field_device": {
       "enrolled": "Bir ortak cihaz kaydettin.",
       "revoked": "Bir saha cihazını iptal ettin."
+    },
+    "party": {
+      "created": "Cari kart eklendi",
+      "updated": "Cari kart güncellendi",
+      "archived": "Cari kart arşivlendi",
+      "restored": "Cari kart geri alındı",
+      "imported": "Cari kartlar Excel'den aktarıldı"
     }
   },
   "auditLog": {
@@ -3334,7 +3342,7 @@
       "cari": {
         "title": "Cari kartlar",
         "sub": "MÜŞTERİ · TEDARİKÇİ · VERGİ NO · İLETİŞİM",
-        "done": "{n} cari kart eklendi",
+        "done": "{n} cari kart eklendi ya da güncellendi",
         "goList": "Cari kartlara git"
       },
       "acilis": {
@@ -3392,6 +3400,17 @@
         "urun": "Ürün kodu",
         "raf": "Raf kodu",
         "miktar": "Miktar"
+      },
+      "cari": {
+        "kod": "Cari kodu",
+        "unvan": "Ünvan",
+        "vkn": "Vergi / TC no",
+        "vd": "Vergi dairesi",
+        "tel": "Telefon",
+        "mail": "E-posta",
+        "il": "İl",
+        "adres": "Adres",
+        "tur": "Tür (müşteri / tedarikçi)"
       }
     },
     "s4": {
@@ -3454,6 +3473,90 @@
       "TOO_MANY_ROWS": "Dosyada çok fazla satır var. Dosyayı parçalara böl, sırayla yükle.",
       "TOO_MANY_COLS": "Dosyada 40’tan fazla sütun var. Gerekmeyen sütunları silip yeniden yükle."
     },
-    "serverError": "Sunucu işlemi tamamlayamadı ({code}). Biraz sonra yeniden dene."
+    "serverError": "Sunucu işlemi tamamlayamadı ({code}). Biraz sonra yeniden dene.",
+    "partyIssue": {
+      "CODE_MISSING": "Cari kodu boş",
+      "CODE_INVALID": "Cari kodu çok uzun ya da geçersiz",
+      "NAME_MISSING": "Ünvan boş (yeni cari)",
+      "NAME_INVALID": "Ünvan çok uzun ya da geçersiz",
+      "KIND_UNKNOWN": "Tür anlaşılmadı (müşteri / tedarikçi / ikisi)",
+      "TAX_NO_INVALID": "Vergi / TC no geçersiz karakter içeriyor",
+      "PHONE_INVALID": "Telefon geçersiz",
+      "EMAIL_INVALID": "E-posta geçersiz",
+      "TEXT_TOO_LONG": "Bir hücre çok uzun",
+      "CODE_DUPLICATE_FILE": "Bu kod dosyada daha önce var",
+      "UNKNOWN": "Satır okunamadı"
+    },
+    "partyIssueFix": "BU SATIR ATLANIR · DÜZELTİP YENİDEN YÜKLE",
+    "partyWarning": {
+      "TAX_NO_LENGTH": "Vergi no 10, TC no 11 hane olur"
+    },
+    "partyWarningFix": "UYARI · KAYIT YİNE DE YAZILIR"
+  },
+  "parties": {
+    "title": "Cari kartlar",
+    "sub": "{n} CARİ · MÜŞTERİ VE TEDARİKÇİ",
+    "search": "Ad, kod, vergi no, telefon ya da il",
+    "find": "Bul",
+    "activeList": "CARİLER",
+    "archivedList": "ARŞİVDEKİ CARİLER",
+    "showArchived": "ARŞİVİ GÖSTER",
+    "showActive": "ETKİN CARİLER",
+    "empty": "Henüz cari kart yok.",
+    "noMatch": "Aramaya uyan cari yok.",
+    "importLink": "Excel’den aktar",
+    "archived": "ARŞİVDE",
+    "dock": "Alt çubuk",
+    "back": "Geri",
+    "backShort": "GERİ",
+    "home": "Ana ekran",
+    "homeShort": "ANA EKRAN",
+    "new": "Yeni cari",
+    "newShort": "YENİ CARİ",
+    "formHint": "* ZORUNLU · KAYDET’E BAS",
+    "readOnly": "YALNIZ GÖRÜNTÜLEME",
+    "close": "Kapat",
+    "save": "Kaydet",
+    "saving": "Kaydediliyor…",
+    "archive": "Arşivle",
+    "restore": "Arşivden çıkar",
+    "conflict": "Bu kart bu arada değişmiş. Kapatıp yeniden aç.",
+    "failed": "Kaydedilemedi ({code}). Yeniden dene.",
+    "f": {
+      "code": "Cari kodu",
+      "name": "Ünvan",
+      "kind": "Tür",
+      "taxNo": "Vergi / TC no",
+      "taxOffice": "Vergi dairesi",
+      "phone": "Telefon",
+      "email": "E-posta",
+      "city": "İl",
+      "address": "Adres"
+    },
+    "kind": {
+      "CUSTOMER": "Müşteri",
+      "SUPPLIER": "Tedarikçi",
+      "BOTH": "Müşteri ve tedarikçi"
+    },
+    "issue": {
+      "CODE_MISSING": "Cari kodunu yaz.",
+      "CODE_INVALID": "Cari kodu çok uzun ya da geçersiz.",
+      "NAME_MISSING": "Ünvanı yaz.",
+      "NAME_INVALID": "Ünvan çok uzun ya da geçersiz.",
+      "KIND_UNKNOWN": "Türü seç.",
+      "TAX_NO_INVALID": "Vergi / TC no yalnız rakam ve harf olabilir.",
+      "PHONE_INVALID": "Telefonu rakamlarla yaz.",
+      "EMAIL_INVALID": "E-posta adresini kontrol et.",
+      "TEXT_TOO_LONG": "Bir alan çok uzun.",
+      "CODE_DUPLICATE_FILE": "Bu kod tekrar ediyor.",
+      "CODE_TAKEN": "Bu cari kodu başka bir kartta kullanılıyor."
+    },
+    "cf": {
+      "title": "Değişiklikler kaydedilmedi",
+      "text": "Kartta kaydedilmemiş değişiklik var. Kaydetmeden çıkarsan kaybolur.",
+      "save": "Kaydet ve çık",
+      "leave": "Kaydetmeden çık",
+      "stay": "Vazgeç, burada kalayım"
+    }
   }
 }
