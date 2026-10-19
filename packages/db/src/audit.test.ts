@@ -59,6 +59,7 @@ describe("eylem listesi", () => {
         "work_priority.set", "problem.reported", "problem.resolved", "settings.shift_updated", "trial.started", "sample_data.loaded", "sample_data.cleared",
         "party.created", "party.updated", "party.archived", "party.restored", "party.imported",
         "group.created", "group.updated", "group.archived", "group.restored", "member.group_changed",
+        "team_join.link_created", "team_join.link_revoked", "team_join.approved", "team_join.rejected",
       ].sort(),
     );
   });

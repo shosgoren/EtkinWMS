@@ -1277,6 +1277,10 @@ export function createAuth(params: CreateAuthParams): AuthService {
         "/field/sign-in": FIELD_RATE_RULES.ipSignIn,
         "/field/activate": FIELD_RATE_RULES.ipActivate,
         "/field/enroll": FIELD_RATE_RULES.ipEnroll,
+        // T-429: ekibe katılma (bağlantı/talep başına sınırlar field.ts'te).
+        "/field/join": FIELD_RATE_RULES.ipJoin,
+        "/field/join/link": FIELD_RATE_RULES.ipJoin,
+        "/field/join/activate": FIELD_RATE_RULES.ipActivate,
       },
     },
     // ADR-014 4. tur BLOCKER-1 (b): `/update-session` ucu kapalı (api/index.mjs:166-168 → 404).

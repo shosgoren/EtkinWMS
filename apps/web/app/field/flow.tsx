@@ -48,7 +48,7 @@ function saveWs(v: string): void {
   }
 }
 
-function buzz(): void {
+export function buzz(): void {
   try {
     navigator.vibrate?.([80, 40, 80]);
   } catch {
@@ -125,7 +125,7 @@ export function Shell({ fact, children }: { fact: boolean; children: ReactNode }
 }
 
 /** Kaynaktaki `.dots` (+ hata satırı). */
-function PinDots({ pin, err, center }: { pin: string; err: string | null; center: boolean }) {
+export function PinDots({ pin, err, center }: { pin: string; err: string | null; center: boolean }) {
   const t = useTranslations("fieldLogin");
   return (
     <>
@@ -145,7 +145,7 @@ function PinDots({ pin, err, center }: { pin: string; err: string | null; center
 }
 
 /** Kaynaktaki `.pad` (12 tuş: 1–9, TEMİZLE, 0, SİL); 6. rakamda 160 ms sonra `onDone`. */
-function PinKeys({ pin, setPin, onDone, busy }: { pin: string; setPin: (p: string) => void; onDone: (p: string) => void; busy: boolean }) {
+export function PinKeys({ pin, setPin, onDone, busy }: { pin: string; setPin: (p: string) => void; onDone: (p: string) => void; busy: boolean }) {
   const t = useTranslations("fieldLogin");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);

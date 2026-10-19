@@ -238,3 +238,10 @@
 - 2026-10-19 Canlı yayın: main 8385ec4 (PR #92) — T-413, T-414, T-416 (0049), T-417, T-420; deploy-vps başarılı. Kararlar: Etkin AI tarayıcı ses + Claude; roller şablon grup; önce yönetici panosu + üst çubuk.
 - 2026-10-19 T-426: gizli olmayan canlı ayarlar imajla gelir (kullanıcı kararı: sunucu işleri kullanıcıya bırakılmaz); depo kısıtı bayrağı açık.
 - 2026-10-19 T-423: Pano kabuğu + saha/sayım ana ekranı canlıda (main 2936802); yönetici/hesap sahibi ana ekranı T-422.
+
+## 2026-10-19 — Panel 2. tur (Supervisor)
+- T-427 Excel'den aktar (#105) + T-428 cari kartlar (#106, 0050) → main #107 (22664d7), deploy-vps ikinci tetikte yeşil.
+- T-421 yetki grupları (#108, 0051): rol ∪ özel grup, yalnız hesap sahibi, `users.manage`/`settings.manage` verilemez, `data.import` izni; Pano Düzenle + bildirim zili. Bağımsız güvenlik incelemesi BLOCKER 0 · MAJOR 3 (düzeltildi). → main #110.
+- T-429 ekibe katılma (#109, 0052): QR → talep (6 haneli kod cihazda) → yönetici kodu yazıp onaylar → kişi PIN belirler. Güvenlik incelemesi BLOCKER 0 · MAJOR 2 (düzeltildi). → main #111.
+- T-430 Ekip ekranı (#112): Ekip.dc.html aktarımı (kişiler, onay, davet, QR). Kalan: pasif üyelik (backend), alt ekran ortak bileşen çıkarımı, Etkin (T-424).
+

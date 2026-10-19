@@ -311,6 +311,8 @@ const LOADERS = [
   "members/field/page.tsx",
   // T-998: saha cihazları (users.manage; cihaz listesi sayfanın kendisinde çözülür).
   "members/devices/page.tsx",
+  // T-429: ekibe katılma talepleri (users.manage; çapraz tenant 404).
+  "members/join/page.tsx",
   "settings/page.tsx",
   "audit/page.tsx",
   "items/page.tsx",
@@ -320,6 +322,8 @@ const LOADERS = [
   "parties/page.tsx",
   // T-421: yetki grupları (üyelik özeti + `listGroups`, users.manage; çapraz tenant 404).
   "groups/page.tsx",
+  // T-430: Ekip ekranı (listGroups + getJoinOverview, users.manage; çapraz tenant 404).
+  "team/page.tsx",
   "warehouses/[warehouseId]/page.tsx",
   // T-304: görev ekranları; üyelik/izin `listTasks`/`listMyTasks`/üyelik özeti ile sayfanın kendisinde çözülür.
   "tasks/page.tsx",
@@ -846,6 +850,11 @@ const ACTIONS: Record<string, Call> = {
   enrollmentStatusAction: (slug) => members.enrollmentStatusAction!({ slug, enrollmentId: randomUUID() }),
   approveEnrollmentAction: (slug) => members.approveEnrollmentAction!({ slug, enrollmentId: randomUUID(), confirmCode: "123456" }),
   cancelEnrollmentAction: (slug) => members.cancelEnrollmentAction!({ slug, enrollmentId: randomUUID() }),
+  // T-429: ekibe katılma (QR bağlantısı, talep onayı / reddi); talep kimlikleri rastgele — A bağlamında etkisiz.
+  createJoinLinkAction: (slug) => members.createJoinLinkAction!({ slug }),
+  revokeJoinLinkAction: (slug) => members.revokeJoinLinkAction!({ slug }),
+  approveJoinAction: (slug) => members.approveJoinAction!({ slug, requestId: randomUUID(), code: "123456", roleKey: "PICKER" }),
+  rejectJoinAction: (slug) => members.rejectJoinAction!({ slug, requestId: randomUUID() }),
 };
 
 /** T-216: ürün kartı eylemleri; hepsi B'nin birim/ürün/barkod kimlikleriyle çağrılır (A veya B slug'ında). */
