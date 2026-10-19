@@ -26,6 +26,11 @@ type CommandParams = Omit<TenantAccessParams, "permission"> & { readonly request
 export interface FieldUserDeps {
   /** Better Auth'ta iç e-postalı, parolasız kullanıcı açar (`@wms/auth` `createFieldAccount`). */
   readonly createFieldAccount: (input: { readonly name: string }) => Promise<{ readonly userId: string }>;
+  /**
+   * T-429: hesap açılışıyla AYNI transaction'da çalışır (ör. katılma talebini onaylandı olarak bağlamak). Hata atarsa hesap açılmaz.
+   * Yalnız sunucu kodu verir (istemci girdisi değil).
+   */
+  readonly afterCreate?: (tx: AccessTx, ctx: { readonly tenantId: string; readonly actorUserId: string; readonly membershipId: string }) => Promise<void>;
 }
 
 export interface FieldCodeResult {
@@ -180,6 +185,7 @@ export async function createFieldUser(params: CreateFieldUserParams, deps: Field
         );
       }
       const expiresAt = raw instanceof Date ? raw : new Date(raw);
+      if (deps.afterCreate !== undefined) await deps.afterCreate(tx, { tenantId: actor.tenantId, actorUserId: actor.userId, membershipId });
       await appendAudit(tx, {
         action: "field_user.created",
         actorUserId: actor.userId,
@@ -229,6 +235,11 @@ export async function resetFieldCode(params: FieldMemberParams, deps: ResetField
       );
       const userId = reset[0]?.user_id;
       if (userId === undefined) throw new Error("resetFieldCode: reset returned no user");
+      // T-429: yeni kod verildi → onaylanmış ama PIN'i belirlenmemiş katılma talebi geçersiz (eski talep çerezi kullanılamaz).
+      await tx.execute(
+        sql`UPDATE public.team_join_requests SET status = 'CANCELLED'
+             WHERE tenant_id = ${actor.tenantId}::uuid AND membership_id = ${memberId}::uuid AND status = 'APPROVED'`,
+      );
       const rows = await tx.execute<{ expires: Date | string | null }>(
         sql`SELECT activation_expires_at AS expires FROM public.field_logins WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${login.id}::uuid`,
       );

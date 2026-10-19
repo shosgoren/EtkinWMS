@@ -82,6 +82,7 @@ export async function PanoBoard(p: PanoBoardProps) {
   const teamLinks: PanoLink[] = [
     { k: "users", label: t("m.users"), color: "6C4BD8", d: PICON.team, href: `${base}/members` },
     ...(p.usersManage ? [{ k: "pending", label: t("m.pending"), color: "E56A00", d: PICON.clock, href: `${base}/members/devices` }] : []),
+    ...(p.usersManage ? [{ k: "join", label: t("m.join"), color: "2F7D5B", d: PICON.plus, href: `${base}/members/join` }] : []),
     ...(p.usersManage ? [{ k: "groups", label: t("m.groups"), color: "0E7C7B", d: PICON.shieldCheck, href: `${base}/groups` }] : []),
   ];
 

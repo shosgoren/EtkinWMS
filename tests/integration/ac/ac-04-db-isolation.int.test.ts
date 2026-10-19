@@ -323,6 +323,9 @@ beforeAll(async () => {
     // T-421: özel yetki grubu + gruptaki üye.
     const g = await admin.query<{ id: string }>("INSERT INTO public.permission_groups (tenant_id, name, created_by) VALUES ($1, 'AC04 grup', $2) RETURNING id", [w.tenantId, w.ownerMembershipId]);
     await admin.query("INSERT INTO public.member_groups (tenant_id, membership_id, group_id, assigned_by) VALUES ($1, $2, $3, $2)", [w.tenantId, w.ownerMembershipId, g.rows[0]?.id]);
+    // T-429: katılma bağlantısı + bekleyen talep.
+    const jl = await admin.query<{ id: string }>("INSERT INTO public.team_join_links (tenant_id, token_hash, created_by) VALUES ($1, md5(random()::text) || md5(random()::text), $2) RETURNING id", [w.tenantId, w.ownerUserId]);
+    await admin.query("INSERT INTO public.team_join_requests (tenant_id, link_id, request_hash, name, username, confirm_code) VALUES ($1, $2, md5(random()::text) || md5(random()::text), 'AC04 kişi', 'ac04-kisi', '123456')", [w.tenantId, jl.rows[0]?.id]);
   }
   tables = await discoverTables();
 }, 60_000);
@@ -836,6 +839,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.field_device_status", // T-997 migration 0044: kayıtlı cihazın tenant/cihaz adı (salt okunur), yalnızca wms_auth
     "wms_probe.field_enroll_approve", // T-998 migration 0045: kaydı başlatan yönetici talep eden ortak cihazı onaylar + security_events, yalnızca wms_app
     "wms_probe.field_enroll_claim", // T-998 migration 0045: terminal 5 dk kayıt belirteciyle bir kez talep eder, yalnızca wms_auth
+    "wms_probe.field_join_activate", // T-429 migration 0052: onaylı katılma talebi + PIN özeti → kişisel cihaz + security_events, yalnızca wms_auth
+    "wms_probe.field_join_link", // T-429 migration 0052: geçerli katılma bağlantısının alan adı (salt okunur), yalnızca wms_auth
+    "wms_probe.field_join_request", // T-429 migration 0052: katılma QR'ıyla talep (sınırlı) → 6 haneli kod, yalnızca wms_auth
+    "wms_probe.field_join_status", // T-429 migration 0052: talep belirteci sahibine durum (salt okunur), yalnızca wms_auth
+    "wms_probe.field_join_verify", // T-429 migration 0052: yönetici cihazdaki kodu doğrular (tenant bağlamı zorunlu; 3 yanlışta iptal), yalnızca wms_app
     "wms_probe.field_lock_spree_check", // T-998 migration 0045: ortak cihazda toplu kilitleme koruması (kilit yanıtında; cihazı durdurur) + security_events, yalnızca wms_auth
     "wms_probe.field_signin_begin", // T-997 migration 0044: saha girişi ön denetimi (cihaz, rol, kilit) → PIN özeti, yalnızca wms_auth
     "wms_probe.field_signin_finish", // T-997 migration 0044: saha girişi sonucu (sayaç/kilit, belirteç rotasyonu) + security_events, yalnızca wms_auth
@@ -958,6 +966,11 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.field_device_staff": [AUTH_ROLE],
       "wms_probe.field_enroll_approve": [APP_ROLE],
       "wms_probe.field_enroll_claim": [AUTH_ROLE],
+      "wms_probe.field_join_activate": [AUTH_ROLE],
+      "wms_probe.field_join_link": [AUTH_ROLE],
+      "wms_probe.field_join_request": [AUTH_ROLE],
+      "wms_probe.field_join_status": [AUTH_ROLE],
+      "wms_probe.field_join_verify": [APP_ROLE],
       "wms_probe.field_lock_spree_check": [AUTH_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {

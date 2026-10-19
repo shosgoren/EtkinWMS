@@ -34,6 +34,11 @@ export const FIELD_RATE_RULES = Object.freeze({
   activateUser: { window: 60 * 60, max: 10 },
   enrollTenant: { window: 10 * 60, max: 10 },
   ipEnroll: { window: 10 * 60, max: 20 },
+  // T-429: ekibe katılma (QR bağlantısı başına talep, IP başına, talep başına etkinleştirme).
+  joinPreview: { window: 60 * 60, max: 300 },
+  joinLink: { window: 60 * 60, max: 120 },
+  ipJoin: { window: 10 * 60, max: 20 },
+  joinActivate: { window: 60 * 60, max: 10 },
 });
 
 export function isFieldEmail(email: string | null | undefined): boolean {
@@ -67,6 +72,27 @@ export function enrollmentTokenHash(token: string): string {
   return createHash("sha256").update(`field-enroll:${token}`).digest("hex");
 }
 
+/** T-429 katılma bağlantısı (QR, 7 gün) özeti. Domain AYNI kuralı kullanır (`@wms/domain/identity/team-join` `joinLinkHash`). */
+export function joinLinkHash(token: string): string {
+  return createHash("sha256").update(`field-join-link:${token}`).digest("hex");
+}
+
+/** T-429 cihazın katılma talebi belirteci özeti (çerezde düz değer, DB'de yalnız özet). */
+export function joinRequestHash(token: string): string {
+  return createHash("sha256").update(`field-join-request:${token}`).digest("hex");
+}
+
+/** Katılma bağlantısı / talep çerezi `<tenant uuid>.<43 karakter base64url>`; biçimsizse `null`. */
+export function parseJoinValue(raw: string | null | undefined): { tenantId: string; token: string } | null {
+  if (typeof raw !== "string") return null;
+  const i = raw.indexOf(".");
+  if (i <= 0) return null;
+  const tenantId = raw.slice(0, i);
+  const token = raw.slice(i + 1);
+  if (!UUID.test(tenantId) || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  return { tenantId: tenantId.toLowerCase(), token };
+}
+
 export function deviceTokenHash(token: string): string {
   return createHash("sha256").update(`field-device:${token}`).digest("hex");
 }
@@ -85,6 +111,11 @@ export function parseDeviceCookie(raw: string | null | undefined): { tenantId: s
 function newDeviceToken(): { token: string; hash: string } {
   const token = randomBytes(32).toString("base64url");
   return { token, hash: deviceTokenHash(token) };
+}
+
+/** Kontrol karakterlerini boşluğa çevirir (ad / cihaz ipucu; DB CHECK'i de reddeder). */
+function noControl(v: string): string {
+  return [...v].map((c) => (c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127 ? " " : c)).join("");
 }
 
 function text(v: unknown, max: number): string {
@@ -115,6 +146,22 @@ export function fieldDeviceCookieName(secure: boolean): string {
   return secure ? "__Host-wms_field_device" : "wms_field_device";
 }
 
+/** T-429: bekleyen katılma talebinin çerezi (httpOnly; betik okuyamaz). */
+export function fieldJoinCookieName(secure: boolean): string {
+  return secure ? "__Host-wms_field_join" : "wms_field_join";
+}
+const JOIN_COOKIE_MAX_AGE_SEC = 2 * 24 * 60 * 60;
+const JOIN_USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
+/** `@wms/shared/field-login` `normalizeFieldUsername` ile aynı kural (Türkçe harfler sadeleşir, küçük harf). */
+export function normalizeJoinUsername(raw: string): string | null {
+  const map: Record<string, string> = { ç: "c", ğ: "g", ı: "i", İ: "i", ö: "o", ş: "s", ü: "u", Ç: "c", Ğ: "g", Ö: "o", Ş: "s", Ü: "u" };
+  const v = raw
+    .trim()
+    .replace(/[çğıİöşüÇĞÖŞÜ]/g, (c) => map[c] ?? c)
+    .toLowerCase();
+  return JOIN_USERNAME_RE.test(v) ? v : null;
+}
+
 const DENIED = () => new APIError("UNAUTHORIZED", { code: "FIELD_LOGIN_DENIED", message: "FIELD_LOGIN_DENIED" });
 const LOCKED = () => new APIError("FORBIDDEN", { code: "FIELD_LOGIN_LOCKED", message: "FIELD_LOGIN_LOCKED" });
 const LIMITED = () => new APIError("TOO_MANY_REQUESTS", { code: "FIELD_RATE_LIMITED", message: "FIELD_RATE_LIMITED" });
@@ -122,6 +169,8 @@ const INVALID = () => new APIError("BAD_REQUEST", { code: "FIELD_INPUT_INVALID",
 
 export function fieldLoginPlugin(deps: FieldPluginDeps) {
   const cookieName = fieldDeviceCookieName(deps.secureCookies);
+  const joinCookie = fieldJoinCookieName(deps.secureCookies);
+  const joinCookieOptions = { httpOnly: true, secure: deps.secureCookies, sameSite: "strict" as const, path: "/", maxAge: JOIN_COOKIE_MAX_AGE_SEC };
   const cookieOptions = {
     httpOnly: true,
     secure: deps.secureCookies,
@@ -237,6 +286,77 @@ export function fieldLoginPlugin(deps: FieldPluginDeps) {
         ctx.setCookie(cookieName, `${enrollment.tenantId}.${device.token}`, cookieOptions);
         // Doğrulama kodu yalnız bu terminalin ekranında görünür; yönetici onayda yazar (inceleme M1).
         return ctx.json({ ok: true, pending: true, confirmCode: confirm });
+      }),
+
+      // T-429: ekibe katılma bağlantısı önizlemesi (QR `#` parçası `<tenant>.<belirteç>`). Geçersizse genel ret; alan adı yalnız geçerli bağlantıda.
+      fieldJoinLink: createAuthEndpoint("/field/join/link", { method: "POST" }, async (ctx) => {
+        const body = (ctx.body ?? {}) as Record<string, unknown>;
+        const link = parseJoinValue(text(body.join, 120));
+        if (link === null) throw INVALID();
+        const hash = joinLinkHash(link.token);
+        // Önizleme ayrı (geniş) kovada: gerçek talepleri tüketmez.
+        await limit(`field:join-preview:${hash}`, FIELD_RATE_RULES.joinPreview);
+        const rows = await deps.execute<{ tenant_name: string }>(sql`SELECT tenant_name FROM wms_probe.field_join_link(${link.tenantId}::uuid, ${hash})`);
+        const r = rows[0];
+        if (r === undefined) throw DENIED();
+        return ctx.json({ ok: true, tenantName: r.tenant_name });
+      }),
+
+      // T-429: katılma talebi (oturumsuz). Cihaz kendi rastgele talep belirtecini üretir (httpOnly çerez), DB'ye yalnız özeti gider.
+      // Yanıt: cihaz ekranında gösterilecek 6 haneli kod (yönetici onayda yazar). Kullanıcı adı alınmışsa ayrı bildirilir (aynı alanda).
+      fieldJoin: createAuthEndpoint("/field/join", { method: "POST" }, async (ctx) => {
+        const body = (ctx.body ?? {}) as Record<string, unknown>;
+        const link = parseJoinValue(text(body.join, 120));
+        const name = noControl(text(body.name, 60)).trim();
+        const username = normalizeJoinUsername(text(body.username, 64));
+        const hint = noControl(text(body.deviceHint, 80)).trim();
+        if (link === null || name === "" || username === null) throw INVALID();
+        const hash = joinLinkHash(link.token);
+        await limit(`field:join-link:${hash}`, FIELD_RATE_RULES.joinLink);
+        const req = newDeviceToken();
+        const reqHash = joinRequestHash(req.token);
+        const rows = await deps.execute<{ outcome: string }>(
+          sql`SELECT wms_probe.field_join_request(${link.tenantId}::uuid, ${hash}, ${reqHash}, ${name}, ${username}, ${hint === "" ? null : hint}) AS outcome`,
+        );
+        const outcome = rows[0]?.outcome ?? "DENIED";
+        if (outcome === "USERNAME_TAKEN") throw new APIError("BAD_REQUEST", { code: "FIELD_USERNAME_TAKEN", message: "FIELD_USERNAME_TAKEN" });
+        if (outcome === "FULL") throw LIMITED();
+        if (!/^\d{6}$/.test(outcome)) throw DENIED();
+        ctx.setCookie(joinCookie, `${link.tenantId}.${req.token}`, joinCookieOptions);
+        return ctx.json({ ok: true, confirmCode: outcome, username });
+      }),
+
+      // T-429: talep durumu (yalnız talep çerezini tutan cihaz). PENDING | APPROVED | REJECTED | CANCELLED | CLAIMED | EXPIRED | NONE.
+      fieldJoinStatus: createAuthEndpoint("/field/join/status", { method: "GET" }, async (ctx) => {
+        const v = parseJoinValue(ctx.getCookie(joinCookie));
+        if (v === null) return ctx.json({ status: "NONE" });
+        const rows = await deps.execute<{ status: string; slug: string; username: string; tenant_name: string }>(
+          sql`SELECT * FROM wms_probe.field_join_status(${v.tenantId}::uuid, ${joinRequestHash(v.token)})`,
+        );
+        const r = rows[0];
+        if (r === undefined) return ctx.json({ status: "NONE" });
+        return ctx.json({ status: r.status, workspace: r.slug, username: r.username, tenantName: r.tenant_name });
+      }),
+
+      // T-429: onaylanmış talep → kişi kendi PIN'ini belirler; kişisel cihaz açılır ve oturum başlar (tek kullanım).
+      fieldJoinActivate: createAuthEndpoint("/field/join/activate", { method: "POST" }, async (ctx) => {
+        const body = (ctx.body ?? {}) as Record<string, unknown>;
+        const pin = text(body.pin, 16);
+        const deviceName = text(body.deviceName, 60).trim();
+        const v = parseJoinValue(ctx.getCookie(joinCookie));
+        if (v === null || !pinAcceptable(pin)) throw INVALID();
+        const reqHash = joinRequestHash(v.token);
+        await limit(`field:join-activate:${reqHash}`, FIELD_RATE_RULES.joinActivate);
+        const device = newDeviceToken();
+        const pinHash = await deps.hashPin(pin);
+        const rows = await deps.execute<{ outcome: string; user_id: string | null; tenant_id: string | null; device_id: string | null }>(
+          sql`SELECT * FROM wms_probe.field_join_activate(${v.tenantId}::uuid, ${reqHash}, ${pinHash}, ${device.hash}, ${deviceName === "" ? null : deviceName})`,
+        );
+        const r = rows[0];
+        if (r?.outcome !== "OK" || r.user_id === null || r.tenant_id === null) throw DENIED();
+        ctx.setCookie(joinCookie, "", { ...joinCookieOptions, maxAge: 0 });
+        await openSession(ctx, r.user_id, r.tenant_id, device, r.device_id);
+        return ctx.json({ ok: true });
       }),
 
       fieldActivate: createAuthEndpoint("/field/activate", { method: "POST" }, async (ctx) => {

@@ -986,6 +986,12 @@
       "updated": "Yetki grubu güncellendi",
       "archived": "Yetki grubu arşivlendi",
       "restored": "Yetki grubu geri alındı"
+    },
+    "team_join": {
+      "link_created": "Ekibe katılma QR'ı oluşturuldu",
+      "link_revoked": "Ekibe katılma QR'ı kapatıldı",
+      "approved": "Katılma talebi onaylandı, saha hesabı açıldı",
+      "rejected": "Katılma talebi reddedildi"
     }
   },
   "auditLog": {
@@ -3128,7 +3134,36 @@
     "deviceNameDefault": "El terminali",
     "rolePicker": "Toplayıcı",
     "roleCounter": "Sayımcı",
-    "codeAria": "Doğrulama kodu"
+    "codeAria": "Doğrulama kodu",
+    "join1H": "Ekibe katıl",
+    "join1S": "Adını ve kendine bir kullanıcı adı yaz. Yöneticin onaylayınca PIN'ini belirleyeceksin.",
+    "join2H": "Onay bekleniyor",
+    "join3H": "PIN belirle",
+    "join3H2": "PIN'i tekrar gir",
+    "join3S": "6 haneli bir PIN seç. Her girişte bunu kullanacaksın.",
+    "join3S2": "Aynı PIN'i bir kez daha gir.",
+    "joinDoneH": "Hazırsın",
+    "joinDoneTitle": "Ekibe katıldın",
+    "joinKick": "EKİBE KATIL",
+    "joinEndedH": "Katılma tamamlanamadı",
+    "joinEnded": {
+      "NONE": "Bu bağlantı geçersiz ya da süresi doldu. Yöneticinden yeni QR iste.",
+      "EXPIRED": "Bu bağlantı geçersiz ya da süresi doldu. Yöneticinden yeni QR iste.",
+      "REJECTED": "Yöneticin talebini onaylamadı. Bir yanlışlık varsa yöneticine sor.",
+      "CANCELLED": "Kod üç kez yanlış girildiği için talep iptal edildi. QR'ı yeniden okut.",
+      "CLAIMED": "Bu talep zaten kullanıldı. Giriş ekranından PIN'inle gir.",
+      "PENDING": "Talep bekliyor.",
+      "APPROVED": "Talep onaylandı."
+    },
+    "joinNameLabel": "Adın soyadın",
+    "joinUserLabel": "Kullanıcı adı",
+    "joinUserHint": "En az 3 harf; harf, rakam, nokta, tire. Örnek: ahmet.y",
+    "joinTaken": "Bu kullanıcı adı alınmış. Başka bir ad yaz.",
+    "joinInvalid": "Adını ve geçerli bir kullanıcı adı yaz (en az 3 harf).",
+    "joinBad": "Bağlantı geçersiz ya da süresi doldu. Yöneticinden yeni QR iste.",
+    "joinRequest": "KATILMAK İSTE",
+    "joinWaitBody": "Bu kodu yöneticine göster ya da söyle. Yöneticin onaylayınca bu ekran kendiliğinden ilerler.",
+    "joinActivateBad": "PIN kaydedilemedi. Onayın süresi dolmuş olabilir; yöneticine sor."
   },
   "fieldDevices": {
     "title": "Cihazlar",
@@ -3234,7 +3269,8 @@
     "m": {
       "users": "Kullanıcılar",
       "pending": "Onay bekleyen cihazlar",
-      "groups": "Yetki grupları"
+      "groups": "Yetki grupları",
+      "join": "Ekibe katılma (QR)"
     },
     "live": {
       "in": "GİRİŞ KALEMİ",
@@ -3725,5 +3761,56 @@
       "leave": "Kaydetmeden çık",
       "stay": "Vazgeç, burada kalayım"
     }
+  },
+  "teamJoin": {
+    "title": "Ekibe katılma",
+    "back": "Ekip ekranına dön",
+    "bandH": "Ekibe katılma",
+    "bandS": "{tenant} · QR İLE KATILMA · ONAY BEKLEYENLER",
+    "theme": "Temayı değiştir",
+    "listTitle": "ONAY BEKLEYENLER",
+    "listCount": "{n} KİŞİ",
+    "empty": "Bekleyen kimse yok. Personel QR'ı kendi telefonuyla okutunca burada görünür.",
+    "phone": "Telefon",
+    "approve": "ONAYLA",
+    "reject": "REDDET",
+    "approveAria": "{name} kişisini onayla",
+    "rejectAria": "{name} kişisini reddet",
+    "cancel": "VAZGEÇ",
+    "codeLabel": "Kişinin telefonundaki 6 haneli kod",
+    "codeHint": "Kodu kişinin ekranından oku; 3 yanlışta talep iptal olur.",
+    "codeTries": "Yanlış kod. {n} hak kaldı.",
+    "roleLabel": "Rol",
+    "role": {
+      "PICKER": "Toplayıcı",
+      "COUNTER": "Sayımcı"
+    },
+    "approved": "@{username} ekibe katıldı. Kişi şimdi kendi PIN'ini belirleyebilir.",
+    "rejected": "Talep reddedildi.",
+    "linkClosed": "Katılma QR'ı kapatıldı; yeni talep gelemez.",
+    "qrKick": "KATILMA QR'I · 7 GÜN",
+    "qrLabel": "Ekibe katılma QR kodu",
+    "validUntil": "Geçerli: {when}",
+    "qrBody": "Bu QR'ı yazdırıp asabilirsin. Personel kendi telefonuyla okutur, adını yazar; sen burada kodunu görüp onaylarsın.",
+    "qrHidden": "Geçerli bir QR var ama güvenlik için yeniden gösterilmez. Yeniden yazdırmak için YENİLE'ye bas (eskisi o anda geçersiz olur).",
+    "qrNone": "Henüz katılma QR'ı yok. OLUŞTUR'a bas.",
+    "demoBody": "Demo alanında ekibe katılma kapalı.",
+    "create": "OLUŞTUR",
+    "renew": "YENİLE",
+    "close": "KAPAT",
+    "print": "YAZDIR",
+    "banTitle": "Onaysız kimse giremez. ",
+    "banBody": "QR'ın fotoğrafı başkasına gitse bile, sen telefondaki kodu yazıp onaylamadan hesap açılmaz.",
+    "reauthLink": "Yeniden giriş yap",
+    "errReauth": "Bu işlem için kimliğini yeniden doğrula.",
+    "errDemo": "Demo alanında ekibe katılma kapalı.",
+    "errPlan": "Paketindeki saha personeli sınırı doldu.",
+    "errCode": "Kod yanlış. Kişinin ekranındaki kodu yeniden oku.",
+    "errGone": "Bu talep artık geçerli değil (süresi doldu ya da iptal edildi).",
+    "errServer": "Bir sorun oldu. Tekrar dene.",
+    "approvedTitle": "PIN BEKLEYENLER",
+    "approvedHint": "ONAYLANDI · KİŞİ PIN BELİRLEYECEK (24 SAAT)",
+    "cancelApproved": "İPTAL ET",
+    "cancelApprovedAria": "{name} için onayı iptal et"
   }
 }

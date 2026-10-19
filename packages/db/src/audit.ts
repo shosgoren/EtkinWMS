@@ -112,6 +112,11 @@ export const AUDIT_ACTIONS = [
   "group.archived",
   "group.restored",
   "member.group_changed",
+  // T-429: ekibe katılma (QR bağlantısı, talep onayı / reddi).
+  "team_join.link_created",
+  "team_join.link_revoked",
+  "team_join.approved",
+  "team_join.rejected",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

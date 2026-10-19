@@ -216,3 +216,33 @@ export const memberGroups = pgTable("member_groups", {
   assignedBy: uuid("assigned_by").notNull(),
   assignedAt: timestamp("assigned_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
+
+// T-429 (`0052_team_join`): saha personelinin kendi telefonuyla katılması. Bağlantı (QR, 7 gün, alan başına bir geçerli) ve cihaz talebi
+// (6 haneli kod, yönetici onayı). Özet ve kod sütunları uygulama rolüne kapalı; RLS ve probe işlevleri migration'dadır.
+export const teamJoinLinks = pgTable("team_join_links", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  tokenHash: text("token_hash").notNull(),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  expiresAt: timestamptz("expires_at").notNull(),
+  revokedAt: timestamptz("revoked_at"),
+});
+export const teamJoinRequests = pgTable("team_join_requests", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  linkId: uuid("link_id").notNull(),
+  requestHash: text("request_hash").notNull(),
+  name: text("name").notNull(),
+  username: text("username").notNull(),
+  deviceHint: text("device_hint"),
+  confirmCode: text("confirm_code").notNull(),
+  confirmFailed: integer("confirm_failed").notNull().default(0),
+  status: text("status").notNull().default("PENDING"),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  expiresAt: timestamptz("expires_at").notNull(),
+  decidedBy: uuid("decided_by"),
+  decidedAt: timestamptz("decided_at"),
+  membershipId: uuid("membership_id"),
+  claimedAt: timestamptz("claimed_at"),
+});
