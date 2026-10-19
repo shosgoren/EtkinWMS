@@ -76,10 +76,13 @@ CMD ["node", "src/migrate.ts", "up"]
 
 # ---------------------------------------------------------------------------------------------
 FROM ${NODE_IMAGE} AS runtime
+# T-426: gizli OLMAYAN canlı ayarlar imajla gelir (sunucuda elle değişiklik gerekmez); sunucudaki env dosyası aynı adı yazarsa o geçerli
+# olur (docker env_file imaj ENV'ini ezer; geri alma: env dosyasına `WAREHOUSE_SCOPE_ENABLED=false`). Sırlar imaja GİRMEZ.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    WAREHOUSE_SCOPE_ENABLED=true
 WORKDIR /app
 # Yalnızca üretim çıktıları; dosyalar root'a ait (çalışan süreç kodu değiştiremez).
 COPY --from=build /repo/apps/web/.next/standalone/ ./
