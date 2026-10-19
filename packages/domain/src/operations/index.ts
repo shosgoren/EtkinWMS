@@ -135,6 +135,7 @@ export {
   type CountWorkLine,
 } from "./count-queries.ts";
 // Akış ana ekranı "Görevlerim" özeti (T-988): bölüm başına açık/bugün biten iş ve kalem. Salt okuma. `getWorkSummaryAt` (zaman enjeksiyonu) testler içindir ve burada YOKTUR.
+export { getBoard, type Board, type BoardBuy, type BoardOrder, type BoardPerson, type BoardTask, type BoardTurn } from "./board.ts";
 export { WORK_SECTIONS, getWorkSummary, type WorkSection, type WorkSectionKey, type WorkSummary } from "./work-summary.ts";
 export {
   PROBLEM_REASONS,

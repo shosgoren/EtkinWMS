@@ -3202,6 +3202,115 @@
     },
     "noTasks": "Bugün görevin yok",
     "noTasksHint": "YÖNETİCİN İŞ ATAYINCA BURADA GÖRÜNÜR",
-    "allScreens": "Tüm ekranlar"
+    "allScreens": "Tüm ekranlar",
+    "ownerTitle": "Depo panosu",
+    "managerTitle": "Depom",
+    "ownerSub": "{wh} DEPO · {people} KİŞİ BUGÜN ÇALIŞIYOR",
+    "managerSub": "BUGÜN {total} İŞ · {asg} ATANDI · {un} ATANMADI",
+    "ringManagerAria": "{total} işin {done}’i bitti, {asg}’i atandı, {un}’i atanmadı",
+    "h": {
+      "reports": "Raporlar",
+      "plan": "Planla",
+      "label": "Etiket bas",
+      "manualOut": "Manuel çıkış",
+      "team": "Ekip"
+    },
+    "m": {
+      "users": "Kullanıcılar",
+      "pending": "Onay bekleyen cihazlar"
+    },
+    "live": {
+      "in": "GİRİŞ KALEMİ",
+      "out": "ÇIKIŞ KALEMİ",
+      "transfer": "TRANSFER",
+      "count": "SAYIM SÜRÜYOR"
+    },
+    "reports": "RAPORLAR",
+    "reportsHint": "DOKUN → RAPOR AÇILIR",
+    "reportsAria": "Raporlar",
+    "r": {
+      "critical": "Kritik stok",
+      "criticalSub": "MİNİMUMUN ÇOK ALTINDA",
+      "none": "ŞU AN YOK",
+      "orders": "Bekleyen sipariş",
+      "ordersSub": "EN ESKİSİ {d} GÜN",
+      "turn": "Devir hızı",
+      "turnSub": "90 GÜN · EN HIZLI ÜRÜN",
+      "buy": "Satın alma",
+      "buySub": "MİNİMUM ALTI ÜRÜN",
+      "count": "Sayım farkı",
+      "countSub": "ONAY BEKLİYOR",
+      "all": "Tüm raporlar",
+      "allSub": "STOK, HAREKET, DOLULUK…"
+    },
+    "alerts": "DİKKAT İSTEYENLER",
+    "liveNow": "CANLI",
+    "liveShort": "CANLI",
+    "liveTitle": "BUGÜN DEPODA",
+    "a": {
+      "critical": "ürün kritik stokta",
+      "orders": "sipariş bekliyor",
+      "count": "sayım farkı onay bekliyor",
+      "problems": "sahadan sorun bildirildi"
+    },
+    "minutes": "{n} DK",
+    "buyTitle": "Satın alınması gerekenler",
+    "buyHint": "MİNİMUMUN ALTINA DÜŞEN ÜRÜNLER",
+    "buyEmpty": "Minimumun altına düşen ürün yok. Ürün kartında minimum stok tanımlıysa burada görünür.",
+    "ordersTitle": "Bekleyen siparişler",
+    "ordersHint": "AÇIK, SEVK EDİLMEMİŞ · EN ESKİ ÖNCE",
+    "ordersEmpty": "Bekleyen sipariş yok.",
+    "days": "{n} GÜN",
+    "linesN": "{n} KALEM",
+    "waitShip": "SEVK BEKLİYOR",
+    "ordersOpen": "Sevkiyatı aç",
+    "turnTitle": "Stok devir hızı",
+    "turnHint": "SON 90 GÜN · KAÇ KEZ ÇIKTI",
+    "fast": "En hızlı dönenler",
+    "slow": "Yavaş dönenler",
+    "turnEmpty": "Henüz hareket yok",
+    "idle": "Hiç hareket etmeyen",
+    "itemsN": "{n} ürün",
+    "idleHint": "90 GÜNDÜR GİRİŞ/ÇIKIŞ YOK",
+    "idleOpen": "Listeyi gör",
+    "q": {
+      "plan": "Bugünü planla",
+      "planSub": "{n} İŞ ATANMAYI BEKLİYOR",
+      "planNone": "ATANMAYI BEKLEYEN İŞ YOK",
+      "label": "Etiketi yeniden bas",
+      "labelSub": "GİRİŞ VE SEVK ETİKETLERİ",
+      "reports": "Depo raporlarım"
+    },
+    "todoTitle": "Atanmayı bekleyen işler",
+    "todoHint": "KİŞİYE DOKUN, İŞ ONA GİTSİN",
+    "todoEmpty": "Atanmayı bekleyen iş yok.",
+    "kind": {
+      "PUTAWAY": "Yerleştirme",
+      "PICK": "Toplama",
+      "REPUTAWAY": "Yeniden yerleştirme",
+      "COUNT": "Sayım",
+      "hint": "DEPO GÖREVİ"
+    },
+    "qty": "{n} ADET",
+    "teamTitle": "Ekip şu an",
+    "tasksN": "{n} GÖREV",
+    "idleMin": "BOŞTA {n} DK",
+    "notToday": "BUGÜN İŞLEM YOK",
+    "role": {
+      "TENANT_ADMIN": "HESAP SAHİBİ",
+      "WAREHOUSE_MANAGER": "DEPO YÖNETİCİSİ",
+      "PICKER": "TOPLAYICI",
+      "COUNTER": "SAYIM",
+      "READ_ONLY": "SALT OKUR"
+    },
+    "state": {
+      "SCANNING": "OKUTUYOR",
+      "ASSIGNED": "GÖREVDE",
+      "IDLE": "BOŞTA",
+      "AWAY": "YOK"
+    },
+    "assignedTo": "{name} kişisine atandı",
+    "assignFailed": "Atanamadı",
+    "assignTo": "{name} kişisine ata"
   }
 }

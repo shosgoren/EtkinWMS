@@ -14,6 +14,15 @@ export async function appMenuReachable(page: Page): Promise<boolean> {
 /** Uygulama menüsü penceresini açar (sayfa hazır olana kadar iki girişten birinin görünmesini bekler). */
 export async function openAppMenu(page: Page): Promise<void> {
   await expect(home(page).or(bar(page)).first()).toBeVisible();
-  if (await home(page).isVisible()) await home(page).click();
-  await bar(page).first().click();
+  // T-422: Pano ana ekranında menü hidrasyon/akış sırasında yeniden çizilebilir (öğe ayrılır); kısa denemelerle yeniden açılır.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (!(await bar(page).first().isVisible()) && (await home(page).isVisible())) await home(page).click({ timeout: 5_000 });
+      await bar(page).first().click({ timeout: 5_000 });
+      return;
+    } catch (e) {
+      if (attempt === 2) throw e;
+      await page.waitForTimeout(500);
+    }
+  }
 }

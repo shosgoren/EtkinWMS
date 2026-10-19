@@ -42,7 +42,8 @@ test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur
   await page.goto("/");
   await enterDemoReal(page, "Yönetici");
   await expect(page).toHaveURL(/\/t\/demo$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
+  // T-422: hesap sahibinin açılışı Pano (depo panosu).
+  await expect(page.locator("#main").getByTestId("pano")).toBeVisible();
 
   // T-928: legacy detailed menu geometry is the cockpit contract, not the new four-action flow.
   await selectCockpitPreference(page);
@@ -565,48 +566,51 @@ async function landscapePhoneChecks(browser: Browser, source: Page, tag: string)
   }
 }
 
-// T-928: the default flow is the live easy design, separate from retained cockpit geometry.
-test("kolay Akış: dört gerçek işlem, telefon/tablet/masaüstü hedefleri ve Kokpit geçişi", async ({ page }) => {
+// T-422 (T-928'in yerine): Akış görünümünde hesap sahibinin ana ekranı Pano (depo panosu); ayrıntılı Kokpit ayrı tercih olarak kalır.
+test("Pano hesap sahibi: rapor kartları, kaydırmasız telefon/tablet, ekip menüsü, Tüm ekranlar ve Kokpit geçişi", async ({ page }) => {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
-  const routes = { receive: "/field/receive", transfer: "/stock/documents?new=TRANSFER", production: "/production", shipping: "/shipping" };
+  const reports = { critical: "/stock", orders: "/shipping", turn: "/stock", buy: "/stock", count: "/tasks?kind=COUNT" };
   for (const [width, height] of [[390, 844], [1024, 768], [1280, 800]] as const) {
     await page.setViewportSize({ width, height });
     await page.goto("/t/demo");
     await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
-    const easy = page.locator("#main").getByTestId("easy-operations");
-    await expect(easy).toBeVisible();
-    await expect(easy.locator("[data-operation]")).toHaveCount(4);
+    const pano = page.locator("#main").getByTestId("pano");
+    await expect(pano).toBeVisible();
+    await expect(pano.locator("[data-report]")).toHaveCount(5);
     await expect(page.locator(".task-grid")).toHaveCount(0);
-    for (const [operation, path] of Object.entries(routes)) {
-      const card = easy.locator(`[data-operation="${operation}"]`);
-      await expect(card).toHaveAttribute("href", `/t/demo${path}`);
-      await expect(card).toHaveAttribute("data-state", "active");
+    for (const [key, href] of Object.entries(reports)) {
+      const card = pano.locator(`[data-report="${key}"]`);
+      await expect(card).toHaveAttribute("href", `/t/demo${href}`);
       await expect(card.locator("svg").first()).toHaveAttribute("aria-hidden", "true");
-      await card.scrollIntoViewIfNeeded();
       const box = await card.boundingBox();
-      expect(box?.height ?? 0).toBeGreaterThanOrEqual(56);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(48);
       expect(box?.width ?? 0).toBeGreaterThanOrEqual(48);
     }
-    const widths = await page.evaluate<{ scroll: number; client: number }>("({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth})");
-    expect(widths.scroll).toBeLessThanOrEqual(widths.client);
-    // I-18: Görevlerim tasarımında sayfa bağlantısı yoktur; yönetim sayfaları uygulama menüsündedir (⚠ → Menü).
+    const m = await page.evaluate<{ sw: number; cw: number; ish: number; ich: number; ov: string }>(`(() => {
+      const d = document.documentElement; const inner = document.querySelector('[data-testid="pano"] .inner');
+      return { sw: d.scrollWidth, cw: d.clientWidth, ish: inner.scrollHeight, ich: inner.clientHeight, ov: getComputedStyle(inner).overflowY };
+    })()`);
+    expect(m.sw, `${width}: yatay taşma yok`).toBeLessThanOrEqual(m.cw);
+    if (m.ov === "hidden") expect(m.ish, `${width}: içerik alanı taşmaz`).toBeLessThanOrEqual(m.ich + 1);
+    // Ekip menüsü: Kullanıcılar bağlantısı; Tüm ekranlar uygulama menüsünü açar.
+    await pano.getByTestId("home-actions").click();
+    await expect(pano.getByRole("menu", { name: "EKİP" }).getByRole("menuitem", { name: "Kullanıcılar" })).toHaveAttribute("href", "/t/demo/members");
+    await page.keyboard.press("Escape");
     await openAppMenu(page);
     const menu = page.getByRole("dialog", { name: "Menü" });
     await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveAttribute("href", "/t/demo/members");
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
   }
-  await page.locator("#main").getByTestId("easy-operations").locator('[data-operation="transfer"]').click();
-  await expect(page).toHaveURL(/\/t\/demo\/stock\/documents\?new=TRANSFER$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(tr.stockDocuments.transfer);
+  await page.locator("#main").getByTestId("pano").locator('[data-report="orders"]').click();
+  await expect(page).toHaveURL(/\/t\/demo\/shipping$/);
   await page.goto("/t/demo");
-  // T-988: Akış ana ekranında ayrı üst bar yoktur; görünüm anahtarı Görevlerim başlığındaki menüdedir.
   await openAppMenu(page);
   await page.getByRole("dialog", { name: "Menü" }).getByRole("button", { name: "Genel bakış", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
-  await expect(page.locator("#main").getByTestId("easy-operations")).toHaveCount(0);
+  await expect(page.locator("#main").getByTestId("pano")).toHaveCount(0);
   await expect(page.getByRole("list", { name: "İşler" })).toBeVisible();
 });
 

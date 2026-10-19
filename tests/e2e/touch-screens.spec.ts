@@ -66,7 +66,7 @@ for (const device of DEVICES) {
       await page.goto(`/t/demo${route.path}`);
       await page.getByTestId("screen-home").filter({ visible: true }).click();
       await expect(page).toHaveURL(/\/t\/demo$/);
-      await expect(page.locator("#main").getByTestId("easy-operations")).toBeVisible();
+      await expect(page.locator("#main").getByTestId("pano")).toBeVisible();
     }
   });
 }
