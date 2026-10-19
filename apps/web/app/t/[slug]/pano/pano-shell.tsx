@@ -3,8 +3,9 @@
 // (`.dock > .dockin`: Sorun · OKUT · Etkin), sürüklenebilir yüzen kısayol (`.fab` + `.hback` + `.halo`), Ekip/Hesap menüsü (`.halo.tmenu`).
 // Sınıf adları, öğe sırası ve ikon yolları kaynaktan (pano-icons.ts); renkler üretilmiş belirteçlerden (pano-tokens.ts).
 // Rol içeriği (`.inner` içi) sunucuda çizilir ve `children` olarak gelir.
-// İlk teslimdeki bilinçli eksikler (docs/design/DESIGN-PARITY.md, T-423): bildirim zili (bildirim altyapısı yok), Etkin (T-424) ve
-// "Düzenle" kısayol seçici çizilmez; kaynakta uygulama içi tema düğmesi olmadığından tema Hesap menüsünde bir öğedir.
+// Bilinçli farklar (docs/design/DESIGN-PARITY.md, T-423): bildirim zili (bildirim altyapısı yok) ve Etkin (T-424) çizilmez; kaynakta
+// uygulama içi tema düğmesi olmadığından tema Hesap menüsünde bir öğedir. "Düzenle" kısayol seçicisi (`.page > .pk > .pp`): yalnız yetkili
+// ekranlar listelenir, en çok 6; seçim kişisel kolaylık olarak tarayıcıda hatırlanır (kaynaktaki her öğede liste ikonu yerine öğenin ikonu).
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/pano-tokens.ts";
@@ -44,6 +45,8 @@ export interface PanoShellProps {
 }
 
 const FAB_KEY = "etkin-pano-fab";
+const MINE_KEY = (slug: string): string => `etkin-pano-kisayol:${slug}`;
+const MAX_SHORTCUTS = 6;
 
 function Ico({ d, size, className = "ico", style }: { d: string; size: number; className?: string; style?: CSSProperties }) {
   return (
@@ -58,12 +61,27 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
   const [dark, setDark] = useState(initialDark);
   const [menu, setMenu] = useState(false);
   const [haloOpen, setHaloOpen] = useState(false);
+  // "Düzenle": kişinin seçtiği kısayollar (null = varsayılan: yetkili ilk 6) ve seçici sayfası taslağı.
+  const [mine, setMine] = useState<readonly string[] | null>(null);
+  const [picker, setPicker] = useState<readonly string[] | null>(null);
   const [problem, setProblem] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);
   const [online, setOnline] = useState(true);
   // Kaynak başlangıç konumu (fx .86, fy .66); kişisel kolaylık olarak tarayıcıda hatırlanır.
   const [pos, setPos] = useState<{ fx: number; fy: number }>({ fx: 0.86, fy: 0.66 });
   const drag = useRef<{ r: DOMRect; moved: boolean; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(MINE_KEY(slug));
+      if (saved !== null) {
+        const v = JSON.parse(saved) as unknown;
+        if (Array.isArray(v) && v.every((x) => typeof x === "string")) setMine(v as string[]);
+      }
+    } catch {
+      /* tarayıcı depolaması yoksa varsayılan kısayollar */
+    }
+  }, [slug]);
 
   useEffect(() => {
     try {
@@ -172,6 +190,23 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
     setHaloOpen(false);
     if (h.action === "problem") setProblem(true);
   };
+  const shown = (mine === null ? halo : halo.filter((h) => mine.includes(h.k))).slice(0, MAX_SHORTCUTS);
+  const openPicker = (): void => {
+    setHaloOpen(false);
+    setPicker(shown.map((h) => h.k));
+  };
+  const togglePick = (k: string): void =>
+    setPicker((p) => (p === null ? p : p.includes(k) ? p.filter((x) => x !== k) : p.length >= MAX_SHORTCUTS ? p : [...p, k]));
+  const savePicker = (): void => {
+    if (picker === null) return;
+    setMine(picker);
+    try {
+      window.localStorage.setItem(MINE_KEY(slug), JSON.stringify(picker));
+    } catch {
+      /* hatırlanamaz; seçim bu oturumda kalır */
+    }
+    setPicker(null);
+  };
 
   return (
     <>
@@ -266,7 +301,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                 <>
                   <div className="hback" onClick={() => setHaloOpen(false)} />
                   <div className="halo" style={haloStyle} role="menu" aria-label={t("shortcuts")}>
-                    {halo.map((h, i) => {
+                    {shown.map((h, i) => {
                       const inner = (
                         <>
                           <i style={{ background: dz(h.color) }}>
@@ -286,8 +321,71 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                         </a>
                       );
                     })}
+                    <button type="button" className="hb" role="menuitem" style={{ animationDelay: `${shown.length * 35}ms` }} onClick={openPicker} data-testid="pano-edit">
+                      <i style={{ background: dz("6A7F91") }}>
+                        <Ico d={PICON.plus} size={20} />
+                      </i>
+                      <span>{t("edit")}</span>
+                    </button>
                   </div>
                 </>
+              ) : null}
+
+              {picker !== null ? (
+                <div className="page" style={{ zIndex: 22 }} role="dialog" aria-label={t("pickerTitle")} data-testid="pano-picker">
+                  <header className="top">
+                    <span className="brand">
+                      <span className="alic" style={{ background: dz("172E42"), width: 44, height: 44, borderRadius: 14 }}>
+                        <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                          <rect x="4" y="4" width="6.5" height="6.5" rx="1.8" />
+                          <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" />
+                          <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" />
+                          <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8" />
+                        </svg>
+                      </span>
+                      <span style={{ minWidth: 0 }}>
+                        <b>{t("pickerTitle")}</b>
+                        <small>{t("pickerSub", { n: MAX_SHORTCUTS })}</small>
+                      </span>
+                    </span>
+                  </header>
+                  <div className="inner" style={{ gap: 10 }}>
+                    <div className="pk">
+                      {halo.map((h) => {
+                        const on = picker.includes(h.k);
+                        return (
+                          <button key={h.k} type="button" className={`pp${on ? " on" : ""}`} aria-pressed={on} onClick={() => togglePick(h.k)} data-shortcut={h.k}>
+                            <span className="av" style={{ background: dz(h.color), borderRadius: 12 }}>
+                              <Ico d={h.d} size={20} />
+                            </span>
+                            <span style={{ minWidth: 0 }}>
+                              <b>{h.label}</b>
+                            </span>
+                            <span className="chk">
+                              <Ico d={PICON.check} size={16} />
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mono" style={{ margin: 0, fontSize: 11, color: dz("4E6476") }}>
+                      {t("pickerNote")}
+                    </p>
+                  </div>
+                  <nav className="dock subdock" aria-label={t("dock")}>
+                    <div className="dockin">
+                      <button type="button" className="dk" aria-label={t("back")} onClick={() => setPicker(null)}>
+                        <Ico d={PICON.back} size={26} />
+                        <span>{t("backShort")}</span>
+                      </button>
+                      <button type="button" className="dk big scan" aria-label={t("save")} onClick={savePicker} data-testid="pano-picker-save">
+                        <Ico d={PICON.check} size={26} />
+                        <span>{t("saveShort")}</span>
+                      </button>
+                      <span />
+                    </div>
+                  </nav>
+                </div>
               ) : null}
 
               {menu ? (

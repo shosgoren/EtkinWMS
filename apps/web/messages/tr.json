@@ -3328,7 +3328,15 @@
     },
     "assignedTo": "{name} kişisine atandı",
     "assignFailed": "Atanamadı",
-    "assignTo": "{name} kişisine ata"
+    "assignTo": "{name} kişisine ata",
+    "edit": "Düzenle",
+    "pickerTitle": "Kısayollarım",
+    "pickerSub": "YETKİN OLAN EKRANLAR · DOKUN: EKLE / KALDIR · EN ÇOK {n}",
+    "pickerNote": "Grubunda kapalı olan ekranlar burada görünmez. Yöneticin grubu değiştirince liste kendiliğinden güncellenir.",
+    "back": "Geri",
+    "backShort": "GERİ",
+    "save": "Kaydet",
+    "saveShort": "KAYDET"
   },
   "aktar": {
     "title": "Excel’den aktar",

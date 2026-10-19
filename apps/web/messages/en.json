@@ -3328,7 +3328,15 @@
     },
     "assignedTo": "Assigned to {name}",
     "assignFailed": "Could not assign",
-    "assignTo": "Assign to {name}"
+    "assignTo": "Assign to {name}",
+    "edit": "Edit",
+    "pickerTitle": "My shortcuts",
+    "pickerSub": "SCREENS YOU CAN USE · TAP: ADD / REMOVE · UP TO {n}",
+    "pickerNote": "Screens closed in your group are not listed. The list updates when your manager changes your group.",
+    "back": "Back",
+    "backShort": "BACK",
+    "save": "Save",
+    "saveShort": "SAVE"
   },
   "aktar": {
     "title": "Import from Excel",
