@@ -25,6 +25,7 @@
     "./catalog": "./src/catalog/index.ts",
     "./catalog/units": "./src/catalog/units.ts",
     "./catalog/items": "./src/catalog/items.ts",
+    "./catalog/parties": "./src/catalog/parties.ts",
     "./catalog/barcodes": "./src/catalog/barcodes.ts",
     "./catalog/gs1": "./src/catalog/gs1.ts",
     "./catalog/quantity": "./src/catalog/quantity.ts",

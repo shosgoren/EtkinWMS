@@ -92,6 +92,7 @@ export default async function TenantLayout({ children, params }: { children: Rea
     [
       ["stock", "/stock", hasPermission(current.roles, "stock.view")],
       ["items", "/items", hasPermission(current.roles, "stock.view")],
+      ["parties", "/parties", hasPermission(current.roles, "stock.view")],
       ["warehouses", "/warehouses", true],
       ["tasks", "/field/tasks", hasPermission(current.roles, "stock.view")],
       ["members", "/members", hasPermission(current.roles, "users.manage")],

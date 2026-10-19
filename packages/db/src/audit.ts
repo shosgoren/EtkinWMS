@@ -100,6 +100,12 @@ export const AUDIT_ACTIONS = [
   // T-996: deneme alanının örnek verisi (aktivasyonda yükleme; ayarlardan silme ya da pasife alma).
   "sample_data.loaded",
   "sample_data.cleared",
+  // T-428: cari kartlar (ekle / düzenle / arşivle / geri al; Excel'den aktarım parça başına tek kayıt).
+  "party.created",
+  "party.updated",
+  "party.archived",
+  "party.restored",
+  "party.imported",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

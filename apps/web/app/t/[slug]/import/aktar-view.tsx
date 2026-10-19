@@ -10,13 +10,18 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { dz } from "../../../design/aktar-tokens.ts";
 import { AICON } from "../../../design/aktar-icons.ts";
 import { readWorkbook, SheetError, type Workbook } from "../../../../lib/sheet/read.ts";
-import { FIELDS, autoMap, buildCsv, colLetter, detectHeader, headerSignature, samples, setColumn, waiting, type ImportKindKey, type Mapping } from "../../../../lib/sheet/mapping.ts";
+import { FIELDS, autoMap, buildCsv, buildRecords, colLetter, detectHeader, headerSignature, samples, setColumn, waiting, type ImportKindKey, type Mapping } from "../../../../lib/sheet/mapping.ts";
 import { applyImportChunkAction, previewImportAction } from "./actions.ts";
+import { importPartiesAction } from "../parties/actions.ts";
 
 type PreviewResult = Awaited<ReturnType<typeof previewImportAction>>;
 type ImportPreview = Extract<PreviewResult, { ok: true }>["data"];
 type ApplyResult = Awaited<ReturnType<typeof applyImportChunkAction>>;
 type ChunkReport = Extract<ApplyResult, { ok: true }>["data"];
+type PartyResult = Awaited<ReturnType<typeof importPartiesAction>>;
+type PartyReport = Extract<PartyResult, { ok: true }>["data"];
+type PartyRec = { row: number } & Partial<Record<"code" | "name" | "kind" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "address", string>>;
+const PARTY_CHUNK = 500;
 
 export interface AktarViewProps {
   readonly slug: string;
@@ -32,7 +37,10 @@ interface Loaded {
   readonly header: number;
 }
 interface Check {
-  readonly preview: ImportPreview;
+  /** Ürün / açılış stoku önizlemesi; cari kartlarda null. */
+  readonly preview: ImportPreview | null;
+  /** Cari kartlar: yazılacak (geçerli) kayıtlar. */
+  readonly records?: readonly PartyRec[];
   readonly text: string;
   readonly rowMap: readonly number[];
   readonly nNew: number;
@@ -104,6 +112,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const [busy, setBusy] = useState(false);
   const [check, setCheck] = useState<Check | null>(null);
   const [reports, setReports] = useState<readonly ChunkReport[]>([]);
+  const [partyReports, setPartyReports] = useState<readonly PartyReport[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
@@ -150,6 +159,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
       setMap(m);
       setCheck(null);
       setReports([]);
+      setPartyReports([]);
       setProgress(null);
       store(RECENT(slug, kind), { name: file.name, rows: Math.max(0, first.rows.length - header - 1), cols: (first.rows[header] ?? []).length });
       beep(true);
@@ -172,6 +182,43 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     if (map === null || loaded === null) return;
     setBusy(true);
     setError(null);
+    if (kind === "cari") {
+      // T-428: cari kartlar kayıt olarak gider; kontrol = sunucuda yazmadan deneme (dryRun), aynı kurallar.
+      const records = buildRecords(rows, loaded.header, map, kind) as unknown as PartyRec[];
+      const res: PartyReport["rows"][number][] = [];
+      for (let i = 0; i < records.length; i += PARTY_CHUNK) {
+        const r = await importPartiesAction({ slug, dryRun: true, rows: records.slice(i, i + PARTY_CHUNK) });
+        if (!r.ok) {
+          setBusy(false);
+          beep(false);
+          setError(t("serverError", { code: r.error.code }));
+          return;
+        }
+        res.push(...r.data.rows);
+      }
+      const invalid = res.filter((x) => x.status === "INVALID");
+      const bad = new Set(invalid.map((x) => x.row));
+      const valid = records.filter((x) => !bad.has(x.row));
+      const blocked = valid.length === 0 || (invalid.length > 0 && !skip);
+      setCheck({
+        preview: null,
+        records: valid,
+        text: "",
+        rowMap: [],
+        nNew: res.filter((x) => x.status === "CREATED").length,
+        nUpd: res.filter((x) => x.status === "UPDATED").length,
+        bad: [
+          ...invalid.map((x) => ({ row: x.row, code: `P:${x.issue ?? "UNKNOWN"}`, params: {} })),
+          ...res.filter((x) => x.warning !== undefined && x.status !== "INVALID").map((x) => ({ row: x.row, code: `W:${x.warning ?? ""}`, params: {} })),
+        ].sort((a, b) => a.row - b.row).slice(0, 20),
+        badRows: invalid.length,
+        blocked,
+      });
+      setBusy(false);
+      beep(!blocked);
+      setStep(4);
+      return;
+    }
     const first = buildCsv(rows, loaded.header, map, kind);
     const r = await previewImportAction({ slug, text: first.text });
     if (!r.ok) {
@@ -205,11 +252,33 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     if (check === null || check.blocked) return;
     setBusy(true);
     setError(null);
+    if (check.records !== undefined) {
+      const acc: PartyReport[] = [];
+      const total = check.records.length;
+      setProgress({ done: 0, total });
+      for (let i = 0; i < total; i += PARTY_CHUNK) {
+        const r = await importPartiesAction({ slug, dryRun: false, rows: check.records.slice(i, i + PARTY_CHUNK) });
+        if (!r.ok) {
+          setError(t("serverError", { code: r.error.code }));
+          break;
+        }
+        acc.push(r.data);
+        setPartyReports([...acc]);
+        setProgress({ done: Math.min(total, i + PARTY_CHUNK), total });
+      }
+      remember();
+      setBusy(false);
+      beep(true);
+      setStep(5);
+      return;
+    }
+    if (check.preview === null) return;
+    const preview = check.preview;
     const acc: ChunkReport[] = [];
-    const total = check.preview.rowCount;
+    const total = preview.rowCount;
     setProgress({ done: 0, total });
-    for (let c = 0; c < check.preview.chunkCount; c++) {
-      const r = await applyImportChunkAction({ slug, text: check.text, chunk: c, digest: check.preview.digest });
+    for (let c = 0; c < preview.chunkCount; c++) {
+      const r = await applyImportChunkAction({ slug, text: check.text, chunk: c, digest: preview.digest });
       if (!r.ok) {
         setError(t("serverError", { code: r.error.code }));
         break;
@@ -246,14 +315,17 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const shown = fields.filter((f) => f.required || (map?.col[f.id] ?? null) !== null).slice(0, 5);
 
   const dirty = step === 3 || step === 4;
-  const applied = reports.flatMap((r) => r.rows);
+  const partyRows = partyReports.flatMap((r) => r.rows);
+  const applied: readonly { readonly row: number; readonly code: string; readonly status: string; readonly reason?: string }[] =
+    kind === "cari" ? partyRows.map((r) => ({ row: r.row, code: r.issue ?? "", status: r.status === "INVALID" ? "FAILED" : r.status })) : reports.flatMap((r) => r.rows);
   const count = (...s: string[]): number => applied.filter((r) => s.includes(r.status)).length;
   const added = count("CREATED", "APPLIED");
   const updated = count("UPDATED");
   const same = count("UNCHANGED", "REPLAYED");
   const failedRows = applied.filter((r) => r.status === "FAILED");
   const failed = failedRows.length;
-  const notTried = check === null ? 0 : count("NOT_ATTEMPTED") + Math.max(0, check.preview.rowCount - applied.length);
+  const expected = check === null ? 0 : check.records !== undefined ? check.records.length : (check.preview?.rowCount ?? 0);
+  const notTried = check === null ? 0 : count("NOT_ATTEMPTED") + Math.max(0, expected - applied.length);
   const partial = step === 5 && (failed > 0 || notTried > 0 || error !== null);
 
   let main: (() => void) | null = null;
@@ -282,7 +354,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   if (step === 4) {
     mainIcon = AICON.down;
     if (check !== null && !check.blocked) {
-      mainLabel = busy ? t("main.applying", { done: progress?.done ?? 0, total: progress?.total ?? 0 }) : t("main.apply", { n: fmt(check.preview.rowCount) });
+      mainLabel = busy ? t("main.applying", { done: progress?.done ?? 0, total: progress?.total ?? 0 }) : t("main.apply", { n: fmt(expected) });
       main = () => void runApply();
     } else {
       mainLabel = t("main.fix");
@@ -304,7 +376,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     if (step > 1) setStep(step === 3 ? 2 : step - 1);
   };
   const pickF = pick === null ? null : (fields.find((f) => f.id === pick) ?? null);
-  const goList = kind === "stok" ? `${base}/items` : `${base}/stock`;
+  const goList = kind === "stok" ? `${base}/items` : kind === "cari" ? `${base}/parties` : `${base}/stock`;
 
   return (
     <div className={`dza${dark ? " dz-dark" : ""}`} data-testid="aktar">
@@ -350,7 +422,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                     {(
                       [
                         ["stok", "2F7D5B", [AICON.boxA, AICON.boxB], true],
-                        ["cari", "6C4BD8", [AICON.cariA, AICON.cariB], false],
+                        ["cari", "6C4BD8", [AICON.cariA, AICON.cariB], true],
                         ["acilis", "0E7C7B", [AICON.shelf], true],
                       ] as const
                     ).map(([k, color, icon, on]) => (
@@ -569,7 +641,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
               {step === 4 && check !== null ? (
                 <>
                   <div className="lead">
-                    <b>{check.blocked ? t("s4.blocked", { bad: check.badRows }) : t("s4.ready", { n: fmt(check.preview.rowCount), bad: check.badRows })}</b>
+                    <b>{check.blocked ? t("s4.blocked", { bad: check.badRows }) : t("s4.ready", { n: fmt(expected), bad: check.badRows })}</b>
                     <small>{t("s4.hint")}</small>
                   </div>
                   <div className="chk3">
@@ -600,8 +672,8 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                       <div className="pr" key={`${p.row}-${p.code}-${String(i)}`}>
                         <span className="prn">{p.row > 0 ? t("s4.row", { n: p.row }) : t("s4.file")}</span>
                         <span className="kt" style={{ minWidth: 0 }}>
-                          <b>{ti(`issue.${p.code}.reason`, p.params)}</b>
-                          <small>{ti(`issue.${p.code}.fix`, p.params)}</small>
+                          <b>{p.code.startsWith("P:") ? t(`partyIssue.${p.code.slice(2)}`) : p.code.startsWith("W:") ? t(`partyWarning.${p.code.slice(2)}`) : ti(`issue.${p.code}.reason`, p.params)}</b>
+                          <small>{p.code.startsWith("P:") ? t("partyIssueFix") : p.code.startsWith("W:") ? t("partyWarningFix") : ti(`issue.${p.code}.fix`, p.params)}</small>
                         </span>
                       </div>
                     ))}
@@ -641,7 +713,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                         <div className="pr" key={`${r.row}-${r.code}`}>
                           <span className="prn">{t("s4.row", { n: check?.rowMap[r.row] ?? r.row })}</span>
                           <span className="kt" style={{ minWidth: 0 }}>
-                            <b>{r.code}</b>
+                            <b>{kind === "cari" && r.code !== "" ? t(`partyIssue.${r.code}`) : r.code}</b>
                             <small>{r.reason !== undefined ? ti(`result.reason.${r.reason}`) : t("s5.failedRow")}</small>
                           </span>
                         </div>
