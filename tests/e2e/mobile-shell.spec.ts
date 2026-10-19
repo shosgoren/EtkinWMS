@@ -596,7 +596,7 @@ test("Pano hesap sahibi: rapor kartları, kaydırmasız telefon/tablet, ekip men
     if (m.ov === "hidden") expect(m.ish, `${width}: içerik alanı taşmaz`).toBeLessThanOrEqual(m.ich + 1);
     // Ekip menüsü: Kullanıcılar bağlantısı; Tüm ekranlar uygulama menüsünü açar.
     await pano.getByTestId("home-actions").click();
-    await expect(pano.getByRole("menu", { name: "EKİP" }).getByRole("menuitem", { name: "Kullanıcılar" })).toHaveAttribute("href", "/t/demo/members");
+    await expect(pano.getByRole("menu", { name: "EKİP" }).getByRole("menuitem", { name: "Kullanıcılar" })).toHaveAttribute("href", "/t/demo/team");
     await page.keyboard.press("Escape");
     await openAppMenu(page);
     const menu = page.getByRole("dialog", { name: "Menü" });

@@ -38,6 +38,31 @@ test.describe("Yetki grupları (T-421)", () => {
     await page.getByTestId("groups-main").click(); // BİTTİ → liste
     await expect(view.locator('[data-group="TENANT_ADMIN"]')).toBeVisible();
     await page.getByTestId("groups-back").click();
-    await expect(page).toHaveURL(/\/t\/demo\/members$/);
+    await expect(page).toHaveURL(/\/t\/demo\/team$/);
+  });
+});
+
+test.describe("Ekip (T-430)", () => {
+  test("demo: kişiler listesi, onay sekmesi, kişi ekle sayfası; taşma yok", async ({ page }, testInfo) => {
+    await loginAdmin(page);
+    await page.goto("/t/demo/team");
+    const team = page.getByTestId("team");
+    await expect(team).toBeVisible();
+    await page.getByTestId("team-tab-people").click();
+    await expect(page.getByTestId("team-people").locator(".pr2").first()).toBeVisible();
+    await page.getByTestId("team-tab-pend").click();
+    await expect(page.getByTestId("team-none")).toBeVisible();
+    await page.getByTestId("team-main").click();
+    await expect(page.getByRole("dialog", { name: "Kişi ekle" })).toBeVisible();
+    await page.getByTestId("team-add-qr").click();
+    await expect(page.getByTestId("team-qr-new")).toBeDisabled(); // demo: QR üretilmez
+    const sizes = testInfo.project.name === "desktop" ? DESKTOP_SIZES : PHONE_SIZES;
+    for (const size of sizes) {
+      await page.setViewportSize(size);
+      const w = await page.evaluate<{ sw: number; cw: number }>("({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })");
+      expect(w.sw, `${size.width}: yatay taşma yok`).toBeLessThanOrEqual(w.cw);
+    }
+    await page.getByTestId("team-back").click();
+    await expect(page.getByTestId("team-tab-people")).toBeVisible();
   });
 });
