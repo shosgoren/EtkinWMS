@@ -44,7 +44,9 @@ const POWERS = [
   ["import", "2F7D5B", RICON.import, ["data.import"]],
   ["settings", "172E42", RICON.settings, []],
 ] as const;
-const COLORS = ["#2F7D5B", "#0E7C7B", "#2F5DA8", "#6C4BD8", "#B5552B"] as const;
+/** Renk anahtarları `#` olmadan (belirteç: `dz()`); sunucuya `#` önekiyle gider (0051 CHECK). */
+const COLORS = ["2F7D5B", "0E7C7B", "2F5DA8", "6C4BD8", "B5552B"] as const;
+const withHash = (c: string): string => `#${c}`;
 
 /** Hazır gruplar = roller (ADR-016 §4 / A-45). Ekran ve yetki kartları rol izinlerinden; değiştirilemez. */
 const TEMPLATES = [
@@ -180,7 +182,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       return;
     }
     beep(true);
-    const d: Draft = { id: null, version: null, template: null, name: t("newName"), color: COLORS[0], screens: [], powers: [], picked: [] };
+    const d: Draft = { id: null, version: null, template: null, name: t("newName"), color: withHash(COLORS[0]), screens: [], powers: [], picked: [] };
     setDraft(d);
     setSaved({ ...d, name: "" });
     setIssue(null);
@@ -461,10 +463,10 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                           <button
                             key={c}
                             type="button"
-                            className={`sw${draft.color === c ? " on" : ""}`}
-                            style={{ background: dz(hexKey(c)) }}
-                            aria-label={t("colorItem", { c })}
-                            onClick={() => upd({ color: c })}
+                            className={`sw${hexKey(draft.color) === c ? " on" : ""}`}
+                            style={{ background: dz(c) }}
+                            aria-label={t("colorItem", { c: withHash(c) })}
+                            onClick={() => upd({ color: withHash(c) })}
                           />
                         ))}
                       </span>
