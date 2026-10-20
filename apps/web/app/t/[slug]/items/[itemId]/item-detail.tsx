@@ -14,10 +14,9 @@ import type { FormEvent, ReactNode } from "react";
 import { Banner, Button, ConfirmDialog, TextField } from "@wms/ui";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
-import { KalipDetayIzgara, KalipHizli, KalipKartBolum, KalipMinimum, KalipNerede, KalipTumu, KalipUyari, KalipZaman, type KalipHizliIslem, type KalipOlay, type KalipYer } from "../../kalip/detay.tsx";
+import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, KalipMinimum, KalipNerede, KalipTumu, KalipUyari, KalipZaman, type KalipHizliIslem, type KalipOlay, type KalipYer } from "../../kalip/detay.tsx";
 import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
 import { approx, fmtQty, stockTone, sumDecimal } from "../../kalip/format.ts";
-import { kdz } from "../../kalip/tokens.ts";
 import { addBarcodeAction, archiveItemAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
 import { CARD_VISUAL } from "../card-visual.ts";
 import { CARD_TYPES, SELECT_CLS, ServerErrorBanner, toServerError } from "../items-view.tsx";
@@ -291,35 +290,19 @@ export function ItemDetail({
         <KalipDetayIzgara
           left={
             <>
-              <section className="hero" aria-label={tk("hero")}>
-                <span className="hic" style={{ background: kdz("dzd", vis.color) }}>
-                  <Ico d={vis.d} size={42} />
+              <KalipHero
+                label={tk("hero")}
+                name={item.name}
+                code={item.code}
+                tags={tags}
+                d={vis.d}
+                color={vis.color}
+                {...(totalRaw === null ? {} : { total: { value: fq(totalRaw), sub: tk("total", { unit }), crit: tn === "crit" } })}
+              >
+                <span hidden data-testid="card-type">
+                  {tc(item.cardType)}
                 </span>
-                <span className="hx">
-                  <b role="heading" aria-level={1}>
-                    {item.name}
-                  </b>
-                  <span className="hcode" data-testid="item-code">
-                    {item.code}
-                  </span>
-                  <span className="tags">
-                    {tags.map((tg) => (
-                      <span key={tg} className="tag">
-                        {tg}
-                      </span>
-                    ))}
-                  </span>
-                  <span hidden data-testid="card-type">
-                    {tc(item.cardType)}
-                  </span>
-                </span>
-                {totalRaw === null ? null : (
-                  <span className={`htot${tn === "crit" ? " crit" : ""}`} data-testid="kalip-total">
-                    <b>{fq(totalRaw)}</b>
-                    <small>{tk("total", { unit })}</small>
-                  </span>
-                )}
-              </section>
+              </KalipHero>
               <KalipHizli label={tk("quick")} items={quickItems} />
               {writable ? (
                 <button type="button" className="more" onClick={() => setCodeOpen(true)} aria-label={td("codeEdit.for", { name: item.name })}>

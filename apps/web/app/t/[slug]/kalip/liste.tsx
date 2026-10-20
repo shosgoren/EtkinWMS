@@ -41,7 +41,7 @@ export interface KalipAraProps {
 /** Kaynak `.lsearch` (form + `role=search`). */
 export function KalipAra({ label, placeholder, name = "q", defaultValue, value, onChange, onSubmit, action, busy, onCamera, cameraLabel, onMic, micLabel, micSoon, inputRef, below, inputProps }: KalipAraProps) {
   return (
-    <form role="search" aria-label={label} aria-busy={busy} method="get" action={action} onSubmit={onSubmit} style={{ display: "contents" }}>
+    <form role="search" aria-label={label} aria-busy={busy} method="get" action={action} onSubmit={onSubmit} style={{ margin: 0, flex: "none" }}>
       <label className="lsearch">
         <Ico d={LICON.search} size={22} className="ico lup" />
         <span className="sr">{label}</span>

@@ -88,9 +88,11 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await page.goto("/t/demo/settings");
           await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
           await expect(page.locator("html")).toHaveAttribute("data-view", view.id);
-          await expectBorderStrong(page, page.locator("#locale"), "ayarlar: dil seçimi");
-          await expectBorderStrong(page, page.locator("#timeZone"), "ayarlar: saat dilimi");
-          await expectFocusRing(page, page.locator("#locale"), "ayarlar: dil seçimi");
+          // T-968: Ayarlar form kalıbında (KalipForm): satıra dokununca düzenleyici açılır; kaynak tasarımın kendi kenarlık/odak dili.
+          await page.getByTestId("settings-locale").click();
+          await expect(page.getByTestId("settings-locale-editor")).toBeVisible();
+          await page.getByTestId("settings-locale").click();
+          await expect(page.getByTestId("settings-locale-editor")).toHaveCount(0);
           await expectNoHorizontalOverflow(page, "ayarlar");
           await shot("settings");
 
@@ -126,10 +128,9 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           // T-246d — Ürünler: arama alanı + durum seçimi + oluşturma penceresi.
           await page.goto("/t/demo/items");
           await expect(page.getByRole("heading", { level: 1, name: "Ürünler" })).toBeVisible();
-          await expectBorderStrong(page, page.getByRole("searchbox", { name: "Ürün ara" }), "ürünler: arama");
-          await page.getByText("Gelişmiş", { exact: true }).filter({ visible: true }).first().click(); // T-274: durum seçimi "Gelişmiş" altında
-          await expectBorderStrong(page, page.locator("#item-status"), "ürünler: durum seçimi");
-          await expectFocusRing(page, page.locator("#item-status"), "ürünler: durum seçimi");
+          // T-968: Ürünler liste kalıbında (KalipListe): arama + süzgeç çipleri (durum "Arşivli" çipi).
+          await expect(page.getByRole("searchbox", { name: "Ürün ara" })).toBeVisible();
+          await expect(page.getByRole("group", { name: "Süzgeç" })).toBeVisible();
           await expectNoHorizontalOverflow(page, "ürünler");
           await shot("items");
           await page.getByRole("button", { name: "Yeni ürün" }).click();

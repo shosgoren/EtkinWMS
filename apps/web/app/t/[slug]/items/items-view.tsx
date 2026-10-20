@@ -619,8 +619,7 @@ export function ItemsView({
                   key={it.id}
                   index={i}
                   name={it.name}
-                  code={it.code}
-                  {...(it.oldCode === undefined ? {} : { meta: t("renamedNote", { code: it.code, old: it.oldCode }) })}
+                  code={it.oldCode === undefined ? it.code : t("renamedNote", { code: it.code, old: it.oldCode })}
                   d={LICON.box}
                   color="2F5DA8"
                   href={`${base}/${encodeURIComponent(it.id)}`}
@@ -667,8 +666,8 @@ export function ItemsView({
                     key={it.id}
                     index={i}
                     name={it.name}
-                    code={it.code}
-                    meta={it.oldCode === undefined ? meta : t("renamedNote", { code: it.code, old: it.oldCode })}
+                    code={it.oldCode === undefined ? it.code : t("renamedNote", { code: it.code, old: it.oldCode })}
+                    meta={meta}
                     d={v.d}
                     color={v.color}
                     tone={tn}

@@ -50,6 +50,11 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Saha işlem çubuğu ve form ana eylemi ortak alt alan yüksekliğini paylaşır. Safe-area boşluğu, içerik kaydırma sonu ve hata/son alan erişimi cihaz testinin parçasıdır. Birden çok sabit gezinme çubuğu üst üste çizilmez.
 - Bu görev UI yerleşimidir; iş kuralı, kayıt idempotency, rol, miktar veya QR v3 değişikliği anlamına gelmez. Canlı sürüm doğrulaması PR ve receiver kanıtıyla yapılır.
 
+## Ekran kalıpları (T-968, B-63)
+- Eski ekranlar tuvaldeki 4 kalıpla geçer: Liste (`KalipListe`), Form (`KalipForm`), Detay (`KalipDetay`), Saha (`KalipSaha`, yalnız telefon). Ortak bileşenler `apps/web/app/t/[slug]/kalip/`: `KalipEkran` (üst çubuk + sağ üst `actions` yuvası + ortak alt cam çubuk `bar`), `liste.tsx` (KalipAra, KalipCipler, KalipKartListe/KalipKart, KalipBos, KalipKurulum, KalipDaha), `form.tsx` (KalipKilit, KalipIzgara, KalipGrup, KalipSatir, KalipAnahtar, KalipSabit, KalipSecenek, KalipAlan, KalipPerde, KalipCikisUyarisi, useLeaveGuard), `detay.tsx` (KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, KalipNerede, KalipMinimum, KalipZaman, KalipTumu).
+- Kalıbı kullanan ekranda eski kabuk süslemeleri kendiliğinden gizlenir (`design/kalip-frame.css`, kök `.kalip`); ekranın ayrıca bir şey yapması gerekmez. Satır içi renk o kalıbın kaynağında geçen renk olmalı (`kdz(scope, hex)` kaynakta yoksa hata verir).
+- Kullanıcı kararı 20 Ekim: görüntü karşılaştırması ve ekran başı e2e zorunlu değil; CI yeşil + kaynak birebir.
+
 ## Fiziksel paket kabulü — yeni kullanıcı kararı / geliştirme hedefi
 - Ürün barkodu ürünü seçer; paket QR'si fiziksel varil/koli kimliğidir, birbirinin yerine geçmez. 5 varil toplamına tek QR üretilmez.
 - Kısa adımlar: Ürün → Paketler → Kontrol → Etiket. Eşit paket miktarı topluca girilebilir; farklı miktarlar paket kartlarında değiştirilir, toplam sistemce hesaplanır.

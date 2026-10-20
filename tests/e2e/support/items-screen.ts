@@ -85,11 +85,11 @@ export async function chevronInfo(page: Page, control: string): Promise<{ h: num
   })()`);
 }
 
-// T-274: Ürünler ekranı telefonda sade (DESIGN_REVIEW §7, §7.3): TEK arama alanı (büyüteç, örnek metin, tek satır ipucu), "Durum" Gelişmiş altında
-// (şevronlu), açıklama tek satır, "Yeni ürün" altta sabit tek dolu eylem, ürün yokken ÖĞRETEN boş durum + eylem gibi okunan kurulum satırı.
-// Ürün bulma akışları z-easy-setup / zz-code-edit'te.
-// T-279: demo tenant dolu açılır (T-223); bu yüzden iki kiracı durumu ayrı denetlenir. `empty: true` (empty-tenant.spec.ts: depo/ürün yok) = S-01 + B-03
-// boş durum ölçütlerinin AYNEN eski halidir; `empty: false` (demo: depo, lokasyon, ürün var) = kurulum satırı/adımları yok + ürün listesi var.
+// T-968 (B-63): Ürünler ekranı LİSTE kalıbında (KalipListe.dc.html). Eski T-274 ölçümleri (Gelişmiş altında Durum, sabit "Yeni ürün" çubuğu,
+// kurulum satırı metni) kalıbın yapısıyla değişti; aynı niyet korunur: tek arama alanı, kiracı kabuğunun eski süslemeleri yok, ana işlem alt
+// cam çubukta (ÜRÜN EKLE / DEPO EKLE), ürün yokken öğreten kurulum rehberi (3 adım, şimdiki adım doğru ekrana götürür), kart ≥ 48 px,
+// sayfa gövdesi kaymaz, yatay taşma yok, "Arşivli" süzgeci adresi değiştirir.
+// T-279: demo tenant dolu açılır (T-223); iki kiracı durumu ayrı denetlenir (`empty: true` = depo/ürün yok).
 export interface ItemsTenant {
   readonly slug: string;
   readonly empty: boolean;
@@ -102,139 +102,62 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
   for (const size of T270_SIZES) {
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto(`${base}/items`);
-    await expect(page.getByTestId("screen-shell")).toHaveCount(1);
-    await expect(page.getByTestId("screen-shell")).toBeVisible();
-    await expect(page.getByTestId("screen-nav")).toHaveCount(1);
-    await expect(page.getByTestId("screen-nav")).toBeVisible();
-    await expect(page.getByRole("heading", { level: 1, name: "Ürünler" })).toBeVisible();
     const where = `ürünler ${size.width}x${size.height}`;
+    const screen = page.getByTestId("items");
+    await expect(screen).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Ürünler" })).toBeVisible();
+    // Kalıp ekranında kiracı kabuğunun eski süslemeleri çizilmez (kalip-frame.css genel kuralı).
+    for (const old of ["screen-nav", "app-bar", "bottom-nav", "tenant-bar"]) await expect(page.getByTestId(old), `${where}: eski ${old} gizli`).toBeHidden();
+    await expect(page.locator(".app-header")).toBeHidden();
+    await expect(page.locator(".screen-context")).toBeHidden();
+    await expect(page.getByTestId("kabuk-dock"), `${where}: ortak alt cam çubuk`).toBeVisible();
+    // I-01: tek görünür arama alanı; ayrı "Ara" düğmesi yok.
     const form = page.getByRole("search", { name: "Ürün ara" });
-    // I-01: görünür giriş/seçim/gönder denetimi (Gelişmiş kapalı).
-    const controls = await form.evaluate<number>((el: { querySelectorAll: (s: string) => ArrayLike<{ checkVisibility: () => boolean }> }) =>
-      Array.from(el.querySelectorAll("input, select, textarea, button[type=submit]")).filter((e) => e.checkVisibility()).length,
-    );
-    expect(controls, `${where}: görünür arama denetimi (I-01)`).toBe(1);
-    await expect(page.getByRole("button", { name: "Ara", exact: true })).toHaveCount(0);
-    await expect(page.getByLabel("Barkodla ürün bul")).toHaveCount(0);
-    await expect(page.getByLabel("Durum")).toBeHidden();
-    // B-05: büyüteç solda, ipucu tek satır (barkod yalnız ipucunda bir kez), örnek metin yalnız gerçek örnekler.
     const box = page.getByRole("searchbox", { name: "Ürün ara" });
-    await expect(box, `${where}: örnek metin (B-05)`).toHaveAttribute("placeholder", "Örn. HM-000001 ya da Koli 40x30");
-    const sb = await page.evaluate<{ iconInside: boolean; iconLeft: number; hintLines: number; hint: string }>(`(() => {
-      const input = document.querySelector('form[role="search"] input[type="search"]');
-      const ir = input.getBoundingClientRect();
-      const svg = input.parentElement.querySelector('svg').getBoundingClientRect();
-      const hint = input.closest('div.relative').previousElementSibling;
-      return { iconInside: svg.left >= ir.left && svg.right <= ir.right && svg.top >= ir.top && svg.bottom <= ir.bottom, iconLeft: svg.left - ir.left, hintLines: Math.round(hint.getBoundingClientRect().height / parseFloat(getComputedStyle(hint).lineHeight)), hint: hint.textContent };
-    })()`);
-    expect(sb.iconInside && sb.iconLeft <= 24, `${where}: büyüteç alanın solunda (B-05)`).toBe(true);
-    expect(sb.hintLines, `${where}: ipucu tek satır (B-05)`).toBe(1);
-    expect(sb.hint.match(/barkod/gi)?.length, `${where}: barkod ipucunda bir kez (B-05)`).toBe(1);
-    expect(sb.hint).toContain("barkodu okutabilirsin");
-    const geo = await page.evaluate<{ barB: number; navT: number; sB: number; sT: number; cB: number; cT: number; introLines: number }>(`(() => {
-      const r = (el) => el.getBoundingClientRect();
-      const bar = r(document.querySelector('[data-testid="app-bar"]')), nav = r(document.querySelector('[data-testid="bottom-nav"], [data-testid="screen-nav"]'));
-      const s = r(document.querySelector('input[type="search"]'));
-      const c = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Yeni ürün');
-      const cb = r(c);
-      const intro = document.querySelector('h1').nextElementSibling;
-      return { barB: bar.bottom, navT: nav.top, sB: s.bottom, sT: s.top, cB: cb.bottom, cT: cb.top, introLines: Math.round(r(intro).height / parseFloat(getComputedStyle(intro).lineHeight)) };
-    })()`);
-    expect(geo.sT, `${where}: arama alanı üst çubuğun altında`).toBeGreaterThanOrEqual(geo.barB);
-    expect(geo.sB, `${where}: arama alanı görünür alanda (I-02)`).toBeLessThanOrEqual(geo.navT);
-    expect(geo.cB, `${where}: Yeni ürün görünür alanda (I-02)`).toBeLessThanOrEqual(geo.navT);
-    expect(geo.navT - geo.cB, `${where}: Yeni ürün alt sekmeye yakın (I-03)`).toBeLessThanOrEqual(16);
-    expect(geo.cB - geo.cT, `${where}: Yeni ürün yüksekliği`).toBeGreaterThanOrEqual(48);
-    expect(geo.introLines, `${where}: açıklama tek satır (I-04)`).toBe(1);
+    await expect(box).toBeVisible();
+    await expect(box).toHaveAttribute("placeholder", "Ürün ara: ad, kod ya da barkod");
+    await expect(form.locator("input:visible")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Ara", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Barkodu kamerayla okut" })).toBeVisible();
+    const main = page.getByTestId("items-add");
+    await expect(main, `${where}: ana işlem alt çubukta`).toBeVisible();
     if (tenant.empty) {
-      // S-01 + B-03: ürün yok, kurulum tamam değil: eylem gibi okunan satır + ÖĞRETEN sıralı liste; tek dolu denetim "Yeni ürün".
-      const row = page.getByTestId("setup-row");
-      await expect(row, `${where}: kurulum satırı (S-01)`).toHaveText("Önce depo ekle · 1. adım / 3");
-      await expect(row).toHaveAttribute("href", `${base}/warehouses?new=1`);
-      const rc = await row.evaluate<{ h: number; chevronRight: boolean }>((el: { getBoundingClientRect: () => { right: number; height: number }; querySelector: (s: string) => { getBoundingClientRect: () => { right: number } } | null }) => ({
-        h: el.getBoundingClientRect().height,
-        chevronRight: el.getBoundingClientRect().right - (el.querySelector("svg")?.getBoundingClientRect().right ?? 0) <= 16,
-      }));
-      expect(rc.h, `${where}: kurulum satırı yüksekliği`).toBeGreaterThanOrEqual(48);
-      expect(rc.chevronRight, `${where}: kurulum satırında sağda şevron (S-01)`).toBe(true);
+      // Kurulum rehberi: 3 adım; şimdiki adım (depo) depo formuna götürür; ana işlem DEPO EKLE.
       const steps = page.getByTestId("setup-steps");
-      await expect(steps.locator("ol > li"), `${where}: sıralı adımlar (B-03)`).toHaveCount(3);
-      await expect(steps.locator("ol a[href]").first(), `${where}: ikincil metin bağlantısı (B-03)`).toBeVisible();
+      await expect(steps, `${where}: kurulum rehberi`).toBeVisible();
+      await expect(steps.locator("[data-step]")).toHaveCount(3);
+      await expect(steps.locator('[data-step="warehouse"]')).toHaveAttribute("href", `${base}/warehouses?new=1`);
+      await expect(main).toHaveAccessibleName("Depo ekle");
     } else {
-      // Demo (dolu tenant): kurulum tamam → kurulum satırı ve öğreten adımlar YOK; ürün listesi görünür (eski boş-durum ölçütlerinin tersi, aynı kapı: isSetupComplete).
-      await expect(page.getByTestId("setup-row"), `${where}: kurulum tamam, kurulum satırı yok (S-01)`).toHaveCount(0);
-      await expect(page.getByTestId("setup-steps"), `${where}: kurulum tamam, öğreten adımlar yok (B-03)`).toHaveCount(0);
+      await expect(page.getByTestId("setup-steps"), `${where}: kurulum tamam, rehber yok`).toHaveCount(0);
       const rows = page.getByRole("link", { name: /^Ayrıntıyı aç: / });
-      expect(await rows.count(), `${where}: demo ürün satırları görünür`).toBeGreaterThanOrEqual(3);
-      await expect(rows.first(), `${where}: ürün satırı görünür`).toBeVisible();
-      expect((await rows.first().boundingBox())?.height ?? 0, `${where}: ürün satırı yüksekliği`).toBeGreaterThanOrEqual(48);
+      expect(await rows.count(), `${where}: demo ürün kartları görünür`).toBeGreaterThanOrEqual(3);
+      await expect(rows.first()).toBeVisible();
+      expect((await rows.first().boundingBox())?.height ?? 0, `${where}: kart yüksekliği`).toBeGreaterThanOrEqual(48);
+      await expect(main).toHaveAccessibleName("Yeni ürün");
     }
-    const filled = await page.evaluate<string[]>(`(() => {
-      const cta = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Yeni ürün');
-      const accent = getComputedStyle(cta).backgroundColor;
-      return [...document.querySelectorAll('a[href], button')].filter((e) => e.checkVisibility() && getComputedStyle(e).backgroundColor === accent).map((e) => e.textContent.trim());
-    })()`);
-    expect(filled, `${where}: tek dolu birincil eylem (B-03/N-01)`).toEqual(["Yeni ürün"]);
-    // B-02: ürün yok durumunda en büyük boş bant ≤ 120 px.
-    await expectBand(page, tenant.empty ? `${where}: ürün yok` : `${where}: ürün listesi`, null);
-    // Sabit çubuğun altında içerik kalmaz.
-    await page.locator(".tenant-body").evaluate((el: { scrollTop: number; scrollHeight: number }) => {
-      el.scrollTop = el.scrollHeight;
-    });
-    const tail = await page.evaluate<{ contentBottom: number; ctaTop: number }>(`(() => {
-      const c = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Yeni ürün').getBoundingClientRect();
-      const rows = ${tenant.empty ? "[document.querySelector('[data-testid=\"setup-steps\"]')]" : "[...document.querySelectorAll('.tenant-body li')]"};
-      const last = rows[rows.length - 1].getBoundingClientRect();
-      return { contentBottom: last.bottom, ctaTop: c.top };
-    })()`);
-    expect(tail.contentBottom, `${where}: içerik sabit çubuğun altında kalmaz`).toBeLessThanOrEqual(tail.ctaTop + 1);
-    await page.locator(".tenant-body").evaluate((el: { scrollTop: number }) => {
-      el.scrollTop = 0;
-    });
-    expect(await smallTargets(page, "body"), `${where}: 48 px altı hedef (I-05)`).toEqual([]);
+    // Dokunma hedefi ölçüleri kaynak tasarımdandır (I-18; ör. telefonda çip 40 px, arama düğmeleri 44 px): eski 48 px ölçümü bu ekranda yok.
     const m = await metrics(page);
     expect(m.scrollWidth, `${where}: yatay taşma`).toBeLessThanOrEqual(m.clientWidth);
     expect(m.scrollHeight, `${where}: sayfa gövdesi kaymaz`).toBeLessThanOrEqual(m.innerHeight);
     await page.screenshot({ path: path.join(OUT_T274, `final-${tag}-items-${size.width}.png`) });
-    // B-04: Gelişmiş şevronlu, açılınca döner. Durum burada; değişince sonuç adresi güncellenir (ayrı "Ara" düğmesi yok).
-    const adv = await chevronInfo(page, "form[role=search] details summary");
-    expect(adv.h, `${where}: Gelişmiş yüksekliği (B-04)`).toBeGreaterThanOrEqual(48);
-    expect(adv.rightGap, `${where}: Gelişmiş şevronu sağda (B-04)`).toBeLessThanOrEqual(16);
-    expect(adv.rotated).toBe(false);
-    await page.getByText("Gelişmiş", { exact: true }).click();
-    await expect.poll(async () => (await chevronInfo(page, "form[role=search] details summary")).rotated, { message: `${where}: şevron açılınca döner (B-04)` }).toBe(true);
-    await page.getByLabel("Durum").selectOption("ARCHIVED");
+    // Süzgeç: "Arşivli" çipi adresi değiştirir; her kart arşivli ya da süzgece özgü boş durum.
+    await page.getByRole("group", { name: "Süzgeç" }).getByRole("link", { name: /Arşivli/ }).click();
     await expect(page).toHaveURL(/status=ARCHIVED/);
-    await expect(page.getByLabel("Durum")).toHaveValue("ARCHIVED");
-    // T-01: yalnız filtre ile arama sonuçsuz: filtreye özgü ileti; "Aramayı temizle" arama alanıyla sol kenarda hizalı.
-    // T-279b: ortak (kalıcı) demo kiracısında önceki koşulardan arşivli ürün kalmış olabilir; "Arşivli" boş varsayılmaz. İki dal, ikisi de kesin:
-    //  - liste boşsa (taze DB) filtreye özgü ileti ZORUNLU (T-01 aynen);
-    //  - doluysa her kart "Arşivli" rozeti taşır (süzgeç gerçekten uygulandı) VE sonuçsuz olduğu garanti bir arama + aynı süzgeç boş-durumu
-    //    ("Aramana uyan ürün yok") ve hizalı "Aramayı temizle"yi sınar. Süzgeç tek başına sonuçsuz yapılamaz (yalnız ACTIVE/ARCHIVED var).
     const cards = page.getByTestId("item-card");
-    await expect(cards.first().or(page.getByText("Bu filtreye uyan ürün yok"))).toBeVisible();
-    if ((await cards.count()) === 0) {
-      await expect(page.getByText("Bu filtreye uyan ürün yok")).toBeVisible();
-    } else {
-      const badges = await cards.locator("span", { hasText: /^(Aktif|Arşivli)$/ }).allTextContents();
-      expect(badges.length, `${where}: her kartta durum rozeti (T-01)`).toBe(await cards.count());
-      for (const badge of badges) {
-        expect(badge, `${where}: Arşivli süzgeçte her kart Arşivli rozetli (T-01)`).toBe("Arşivli");
-      }
-      await page.goto(`${base}/items?status=ARCHIVED&q=zzyok${Date.now().toString(36)}`);
-      await expect(page.getByText("Aramana uyan ürün yok")).toBeVisible();
-    }
-    const clear = page.getByRole("link", { name: "Aramayı temizle" });
-    const lx = (await clear.boundingBox())?.x ?? -99;
-    const fx = (await box.boundingBox())?.x ?? 99;
-    expect(Math.abs(lx - fx), `${where}: "Aramayı temizle" sol kenarı hizalı (T-01)`).toBeLessThanOrEqual(2);
-    await page.screenshot({ path: path.join(OUT_T274, `final-${tag}-items-${size.width}-gelismis.png`) });
+    await expect(cards.first().or(page.getByText("Bu süzgece uyan ürün yok"))).toBeVisible();
+    const n = await cards.count();
+    for (let i = 0; i < n; i++) await expect(cards.nth(i).locator("[data-status]"), `${where}: arşivli süzgeçte kart`).toHaveAttribute("data-status", "ARCHIVED");
+    await page.goto(`${base}/items?status=ARCHIVED&q=zzyok${Date.now().toString(36)}`);
+    await expect(page.getByText("Aramana uyan ürün yok")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Aramayı temizle" })).toHaveAttribute("href", `${base}/items`);
+    await page.screenshot({ path: path.join(OUT_T274, `final-${tag}-items-${size.width}-arsivli.png`) });
   }
-  // S-01: satıra dokunmak doğrudan sıradaki adıma (depo ekleme) götürür (yalnız kurulumu tamamlanmamış kiracıda satır vardır).
+  // Kurulum: şimdiki adıma dokunmak doğrudan depo eklemeye götürür.
   if (tenant.empty) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${base}/items`);
-    await page.getByTestId("setup-row").click();
+    await page.getByTestId("setup-steps").locator('[data-step="warehouse"]').click();
     await expect(page).toHaveURL(new RegExp(`/t/${tenant.slug}/warehouses`));
   }
   await page.goto(base); // depo formu açık kalmasın (çıkış menüsü önde)

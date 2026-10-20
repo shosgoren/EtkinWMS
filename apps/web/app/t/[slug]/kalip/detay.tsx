@@ -20,16 +20,24 @@ export function KalipDetayIzgara({ left, right }: { left: ReactNode; right: Reac
   );
 }
 
-/** Kaynak `.hero`. */
-export function KalipHero({ label, name, code, tags, d, color, total, testId }: { label: string; name: string; code: string; tags: readonly string[]; d: string; color: string; total?: { readonly value: string; readonly sub: string; readonly crit: boolean }; testId?: string }) {
+/** Kaynak `.hero`. `heading`: ad sayfanın birinci düzey başlığı (detayda üst çubuk başlık değildir). */
+export function KalipHero({ label, name, code, tags, d, color, total, heading = true, testId, children }: { label: string; name: string; code: string; tags: readonly string[]; d: string; color: string; total?: { readonly value: string; readonly sub: string; readonly crit: boolean }; heading?: boolean; testId?: string; children?: ReactNode }) {
   return (
     <section className="hero" aria-label={label} data-testid={testId}>
       <span className="hic" style={{ background: c(color) }}>
         <Ico d={d} size={42} />
       </span>
       <span className="hx">
-        <b>{name}</b>
-        <span className="hcode">{code}</span>
+        {heading ? (
+          <b role="heading" aria-level={1}>
+            {name}
+          </b>
+        ) : (
+          <b>{name}</b>
+        )}
+        <span className="hcode" data-testid="kalip-code">
+          {code}
+        </span>
         {tags.length === 0 ? null : (
           <span className="tags">
             {tags.map((tg) => (
@@ -39,6 +47,7 @@ export function KalipHero({ label, name, code, tags, d, color, total, testId }: 
             ))}
           </span>
         )}
+        {children}
       </span>
       {total === undefined ? null : (
         <span className={`htot${total.crit ? " crit" : ""}`} data-testid="kalip-total">
