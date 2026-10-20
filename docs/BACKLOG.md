@@ -115,7 +115,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-84 | **Destek talebi (kullanıcı kararı 20 Ekim):** her kullanıcı üst çubuktaki Destek ikonundan bize yazar (konu, kısa not, otomatik ekran/sürüm/destek kodu, isteğe bağlı ekran görüntüsü). Talep yonet.etkinyazilim.com'da müşterinin Destek sekmesine ve genel gelen kutusuna (rozetli) düşer. Talepten tek tıkla "Erişim iste" (mevcut destek erişimi akışı) ve yanıt verilir; yanıt kullanıcının ekranına döner. Operatöre WhatsApp bildirimi gider (Meta WhatsApp Cloud API, onaylı "utility" şablonu; kullanıcı Meta işletme hesabı ve numarası açar). Tuval → onay → birebir (I-18). Kiracı verisi RLS'li; operatör okuması panel rolüyle denetimli |
 | B-85 | **Üst çubukta iki anlaşılır ikon (kullanıcı kararı 20 Ekim):** "Sorun bildir" (hasarlı, eksik, yanlış ürün → kendi yöneticisine; mevcut `problem-sheet`) ve "Destek" (bize, B-84). Alt çubuğun sol düğmesi her ekranda Geri olur; sarı "?" kalkar. Kabuk.dc.html tuvalinde güncelleme → onay |
 | B-86 | Alt çubuk OKUT eski "Saha" iş seçme menüsünü açıyor (kullanıcı 20 Ekim, telefon). OKUT doğrudan kamera/okuyucu ile okutmayı açmalı: okutulan koda göre ürün, raf veya görev bulunup ilgili işe geçilir. B-50 QR akışı ve B-63 saha ekranlarıyla birlikte |
-| B-87 | Ana ekranda sağda yüzen ızgara (Modüller) düğmesi alt çubuktaki Modüller'in kopyası; eski `BottomNav`/FAB kalıntısı kaldırılır (B-60 kalanı) |
+| B-87 | Ana ekranda sağda yüzen ızgara düğmesi (`pano-fab`, sürüklenebilir kısayol halkası) alt çubuktaki Modüller ile aynı görünüyor; kullanıcı kopya olarak algıladı (20 Ekim). Pano/Gruplar/Aktar onaylı kaynağında var (I-18) → kaldırma veya farklılaştırma B-85 tuval güncellemesiyle birlikte onaya sunulur |
 
 ## Belge düzeltmeleri
 | ID | İş |
