@@ -2017,10 +2017,6 @@ body:has(.dzp, .dza, .dzr, .dze) [data-testid="screen-nav"] { display: none; }
 .dzs {
   --color-dz-x-nmodok: #dce3ea;
 }
-}
-.dzk.dz-dark {
-}
-/* design:kabuk:end */
 
 /* design:destek:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
 .dzt {
