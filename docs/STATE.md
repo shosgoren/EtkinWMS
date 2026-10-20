@@ -99,3 +99,4 @@ Son doğrulama: 17.10.2026 Europe/Istanbul (canlı yayın main `6dd9880`, T-999 
 - **20 Ekim T-922 (KODDA VAR):** kullanıcı kararı — yöneticiyi (rol değişimi, çıkarma, parola sıfırlama, yönetici daveti) yalnız hesap sahibi yönetir.
 - **20 Ekim T-925 (KODDA VAR):** kullanıcı kararı "hatasız hızlı sonuç" — CI'da int ve e2e ikiye bölündü (kapsam aynı), yalnız belge PR'ında ağır testler atlanır, yayın yalnız `ci` ile tetiklenip kapıları bekler. Ölçüm öncesi: e2e 14,2 dk, int 11,7 dk.
 - **20 Ekim kullanıcı onayı ("Onaylıyorum"):** `Kabuk.dc.html` (yeni alt çubuk, Modüller, Etkin dinleme, ilk kullanım rehberi) repoya kaynak alındı, ALTIN-KURAL ekran standardı güncellendi; onaylı iş sırası BACKLOG başında (B-76 → B-60 → B-75 → B-62 → B-63 …).
+- **20 Ekim T-927 (KODDA VAR):** e2e'deki rastgele "2 öğe" düşmelerinin kökü (yerleşimde içerik iki kez çiziliyordu) düzeltildi. Kullanıcı kararı: dönemsel zorunlu parola değiştirme yok (Q-18).

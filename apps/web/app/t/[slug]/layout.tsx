@@ -145,7 +145,9 @@ export default async function TenantLayout({ children, params }: { children: Rea
         </details>
         <span className="min-w-0 truncate text-sm font-semibold text-ink-muted">{t("tenantBar.user", { name: summary.userName })}</span>
       </div>
-      <div className="tenant-body flex min-w-0 flex-col"><Suspense fallback={children}><ScreenShell slug={slug}>{children}</ScreenShell></Suspense></div>
+      {/* T-927: içerik yalnız bir kez çizilir. Önceki `fallback={children}` sayfa içeriğini yer tutucu olarak İKİNCİ kez veriyordu; akış sırasında
+          iki kopya bir an birlikte DOM'da kalıyor ve e2e'de "strict mode violation: 2 elements" ile rastgele düşmeye yol açıyordu. */}
+      <div className="tenant-body flex min-w-0 flex-col"><Suspense fallback={null}><ScreenShell slug={slug}>{children}</ScreenShell></Suspense></div>
       <Suspense fallback={null}><BottomNav slug={slug} /></Suspense>
     </div>
   );
