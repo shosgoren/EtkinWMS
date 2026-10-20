@@ -106,7 +106,7 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
               const mine = task.status === "ASSIGNED";
               return (
                 <div key={task.id} role="listitem" data-testid="field-task" data-task-id={task.id} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                  <div className={`uc${mine ? "" : " low"}`} style={{ animationDelay: `${i * 30}ms` }}>
+                  <div className="uc" style={{ animationDelay: `${i * 30}ms` }}>
                     <span className="uic" style={{ background: kdz("dzl", v.color) }}>
                       <Ico d={v.d} size={26} />
                     </span>
