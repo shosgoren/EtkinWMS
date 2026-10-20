@@ -31,8 +31,10 @@ for (const device of DEVICES) {
       await expect(shell).toBeVisible();
       expect(await page.evaluate<string>('getComputedStyle(document.querySelector("[data-testid=screen-shell]")).getPropertyValue("--screen-mode").trim()')).toBe(device.mode);
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-      const back = page.getByTestId("screen-back").filter({ visible: true });
-      const home = page.getByTestId("screen-home").filter({ visible: true });
+      // T-969: saha ekranları (Saha kalıbı) ortak alt cam çubuğu kullanır (Geri / Ana ekran yuvaları); diğerleri eski ekran gezinmesi.
+      const saha = route.path.startsWith("/field/");
+      const back = page.getByTestId(saha ? "kabuk-back" : "screen-back").filter({ visible: true });
+      const home = page.getByTestId(saha ? "kabuk-home" : "screen-home").filter({ visible: true });
       await expect(back).toHaveAttribute("href", `/t/demo${route.back}`);
       await expect(home).toHaveAttribute("href", "/t/demo");
       for (const target of [back, home]) {
@@ -64,7 +66,7 @@ for (const device of DEVICES) {
       await back.click();
       await expect(page).toHaveURL(new RegExp(`/t/demo${route.back}$`));
       await page.goto(`/t/demo${route.path}`);
-      await page.getByTestId("screen-home").filter({ visible: true }).click();
+      await page.getByTestId(saha ? "kabuk-home" : "screen-home").filter({ visible: true }).click();
       await expect(page).toHaveURL(/\/t\/demo$/);
       await expect(page.locator("#main").getByTestId("pano")).toBeVisible();
     }
