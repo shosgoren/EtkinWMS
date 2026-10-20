@@ -46,18 +46,6 @@ async function expectBorderStrong(page: Page, rawField: Locator, name: string): 
   }
 }
 
-async function expectFocusRing(page: Page, rawField: Locator, name: string): Promise<void> {
-  const field = rawField.filter({ visible: true });
-  await expect(field, `${name}: tek görünür alan`).toHaveCount(1);
-  // Klavye ile odak (focus-visible): önce gövdeye, ardından Tab ile alana gelinir.
-  await field.focus();
-  await page.keyboard.press("Shift+Tab");
-  await page.keyboard.press("Tab");
-  await expect(field, `${name}: odakta`).toBeFocused();
-  expect(await computed(field, "outline-color"), `${name}: outline-color`).toBe(await tokenColor(page, "--color-focus"));
-  expect(await computed(field, "outline-style"), `${name}: outline-style`).toBe("solid");
-}
-
 /** T-974 (B-63 grup B): kalıp penceresindeki alan kaynağın `.fld` kutusundadır (kenarlık yok); klavye odağında kutu halkası görünür. */
 async function expectKalipField(page: Page, rawField: Locator, name: string, focus = true): Promise<void> {
   const field = rawField.filter({ visible: true });
@@ -68,7 +56,7 @@ async function expectKalipField(page: Page, rawField: Locator, name: string, foc
   await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Tab");
   await expect(field, `${name}: odakta`).toBeFocused();
-  const ring = await field.evaluate((el) => getComputedStyle(el.closest(".fld") as Element).boxShadow);
+  const ring = await computed(field.locator("xpath=ancestor::label[1]"), "box-shadow");
   expect(ring, `${name}: odak halkası`).not.toBe("none");
 }
 
