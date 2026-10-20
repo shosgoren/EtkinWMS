@@ -4,7 +4,7 @@
 // (savepoint: kuyruk yoksa talep yine kaydedilir; asıl kayıt panel rozetidir). Not metni ve bağlam audit'e/loga yazılmaz.
 import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { appendAudit, consumeRateLimit } from "@wms/db";
+import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import type { JobQueue } from "@wms/shared/queue";
 import { runTenantCommand, runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
@@ -158,18 +158,21 @@ export async function createTicket(
         changeSummary: { subject_kind: subject, number },
       });
       let notifyQueued = false;
-      // Tenant kovası talep kaydedildikten SONRA tüketilir (reddedilen/yetkisiz deneme başka tenant'ın kovasını tüketemez). Kendi kısa
-      // transaction'ında (platform tablosu, RLS yok); anahtar tenant kimliğinin özeti.
-      const allowed =
-        deps.queue === undefined
-          ? false
-          : (
-              await consumeRateLimit(params.db, {
-                scope: "support.notify",
-                keyHash: createHash("sha256").update(`support.notify:${m.tenantId}`).digest("hex"),
-                ...SUPPORT_NOTIFY_LIMIT,
-              })
-            ).allowed;
+      // Tenant kovası talep kaydedildikten SONRA ve AYNI transaction'da tüketilir (inceleme MINOR-1 · 2. tur: ikinci havuz bağlantısı istenmez;
+      // geri alınan talep kovayı tüketmez; reddedilen/yetkisiz deneme başka tenant'ın kovasına ulaşmaz). `request_rate_limits` platform
+      // tablosudur (RLS yok), sabit pencere `consumeRateLimit` ile aynı; anahtar tenant kimliğinin özeti.
+      let allowed = false;
+      if (deps.queue !== undefined) {
+        const windowMs = SUPPORT_NOTIFY_LIMIT.windowSeconds * 1000;
+        const start = new Date(Math.floor(Date.now() / windowMs) * windowMs).toISOString();
+        const key = createHash("sha256").update(`support.notify:${m.tenantId}`).digest("hex");
+        const bucket = await tx.execute<{ count: number | string }>(sql`
+          INSERT INTO public.request_rate_limits (scope, key_hash, window_start, count)
+          VALUES ('support.notify', ${key}, ${start}::timestamptz, 1)
+          ON CONFLICT (scope, key_hash, window_start) DO UPDATE SET count = public.request_rate_limits.count + 1
+          RETURNING count`);
+        allowed = Number(bucket[0]?.count ?? Number.POSITIVE_INFINITY) <= SUPPORT_NOTIFY_LIMIT.limit;
+      }
       if (deps.queue !== undefined && allowed) {
         const queue = deps.queue;
         try {
