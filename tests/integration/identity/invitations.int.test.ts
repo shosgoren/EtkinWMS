@@ -406,6 +406,19 @@ describe("invitation.deliver (worker)", () => {
 // acceptInvitation — mevcut hesapla kabul
 // ---------------------------------------------------------------------------------------------
 describe("acceptInvitation (mevcut hesap)", () => {
+  it("T-922 (B-16) inceleme MINOR-1: sahip OLMAYAN yöneticinin gönderdiği yönetici daveti kabul edilemez (NOT_FOUND); sahip gönderince edilir", async () => {
+    const fx = await mkTenant(); // davet gönderen fx.adminMembership: sahip değil
+    const email = rndEmail();
+    const user = await mkUser(email, true);
+    const inv = await mkInvite(fx, { email, role: "TENANT_ADMIN" });
+    expect((await failure(acceptInvitation({ db: app, token: inv.token, principal: { userId: user } }, acceptDeps()))).code).toBe("NOT_FOUND");
+    expect((await invRow(inv.id)).accepted_at).toBeNull();
+    await adm.query("UPDATE public.tenant_memberships SET is_owner = true WHERE id = $1", [fx.adminMembership]);
+    const ok = await acceptInvitation({ db: app, token: inv.token, principal: { userId: user } }, acceptDeps());
+    const roles = await adm.query("SELECT role_key FROM public.membership_roles WHERE membership_id = $1", [ok.membershipId]);
+    expect(roles.rows.map((x) => x.role_key)).toEqual(["TENANT_ADMIN"]);
+  });
+
   it("doğrulanmış ve e-postası birebir aynı hesap: üyelik + tek rol + accepted_at + audit; belirteç tek kullanımlık", async () => {
     const fx = await mkTenant();
     const email = rndEmail();
@@ -489,7 +502,8 @@ describe("acceptInvitation (mevcut hesap)", () => {
     const email = rndEmail();
     const user = await mkUser(email, true);
     const membership = await mkMember(fx.tenant, user, "READ_ONLY");
-    const inv = await mkInvite(fx, { email, role: "TENANT_ADMIN" });
+    // T-922: rol bu senaryoda önemsiz; sahip olmayan gönderenin yönetici daveti artık önce geçersiz sayıldığı için üst rol WAREHOUSE_MANAGER.
+    const inv = await mkInvite(fx, { email, role: "WAREHOUSE_MANAGER" });
     const e = await failure(acceptInvitation({ db: app, token: inv.token, principal: { userId: user } }, acceptDeps()));
     expect(e.code).toBe("VALIDATION_FAILED");
     const roles = await adm.query("SELECT role_key FROM public.membership_roles WHERE membership_id = $1", [membership]);
