@@ -5,13 +5,14 @@
 // çerezsiz/bozuk/başka kullanıcının/süresi dolmuş çerezle TOTP istenir; yeniden doğrulama girişinde (`x-wms-reauth: 1`) çerez yok
 // sayılır ve güvenilen oturum hassas işlem penceresini açmaz; parola değişimi, 2FA kapatma, yedek kod yenileme ve "tüm
 // cihazlardan çık" güvenilen cihaz kayıtlarını siler.
-import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { AuthError, REAUTH_HEADER, TRUST_DEVICE_MAX_AGE_SEC, createAuth, readAuthEnv, type AuthService } from "../../../packages/auth/src/index.ts";
 import { hashPassword } from "../../../packages/auth/src/password.ts";
+import { issuePasswordResetLink, type PasswordResetPort } from "../../../packages/domain/src/identity/memberships.ts";
 import { readAuthDatabaseUrl, readIntEnv, redactErrorChain } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
@@ -25,8 +26,15 @@ const SECRET = randomBytes(32).toString("hex");
 const TRUST = "better-auth.trust_device";
 
 let service: AuthService;
+let noPolicy: AuthService; // `trustDeviceAllowed` portu yok → güvenilen cihaz kapalı (fail-closed)
+let recoveryOn: AuthService; // AUTH_EMAIL_RECOVERY_ENABLED=true (A-55)
 let authClient: DbClient;
+let appDb: DbClient;
 let adm: pg.Client;
+let resetPort: PasswordResetPort;
+/** İnceleme M3: platform operatörü / panel yüzeyi yerine geçen engel listesi (web'de `webTrustDeviceAllowed`). */
+const blocked = new Set<string>();
+const createdUsers: string[] = [];
 
 async function connect(url: string): Promise<pg.Client> {
   const c = new pg.Client({ connectionString: url });
@@ -46,7 +54,11 @@ function nextIp(): string {
 }
 
 function post(path: string, body: unknown, ip: string, cookie?: string, extra: Record<string, string> = {}): Promise<Response> {
-  return service.handler(
+  return postWith(service, path, body, ip, cookie, extra);
+}
+
+function postWith(svc: AuthService, path: string, body: unknown, ip: string, cookie?: string, extra: Record<string, string> = {}): Promise<Response> {
+  return svc.handler(
     new Request(`${BASE}/api/auth${path}`, {
       method: "POST",
       headers: {
@@ -124,6 +136,7 @@ interface TfaUser {
 /** 2FA'sı etkin kullanıcı (fikstür: kullanıcı + parola migration rolüyle; 2FA gerçek uçlarla kurulur). */
 async function mkTfaUser(): Promise<TfaUser> {
   const id = randomUUID();
+  createdUsers.push(id);
   const email = `t923-${randomBytes(6).toString("hex")}@example.invalid`;
   await adm.query("INSERT INTO public.users (id, name, email, email_verified) VALUES ($1, 'T923 Kullanici', $2, true)", [id, email]);
   await adm.query("INSERT INTO public.accounts (account_id, provider_id, user_id, password) VALUES ($1, 'credential', $2, $3)", [
@@ -168,6 +181,74 @@ async function trustRows(userId: string): Promise<{ identifier: string; expires_
   return r.rows;
 }
 
+/** Elle güvenilen cihaz kaydı (iptal yollarını sınamak için; biçim üretilenle aynı önek). */
+async function seedTrust(userId: string): Promise<void> {
+  await adm.query("INSERT INTO public.verifications (identifier, value, expires_at) VALUES ($1, $2, now() + interval '20 days')", [
+    `trust-device:h.${randomBytes(32).toString("base64url")}`,
+    userId,
+  ]);
+}
+
+/** Yalnız bu kullanıcı + olay türü için `security_events` yazımını bozan geçici tetikleyici (M1 hata enjeksiyonu). */
+async function withEventFault<T>(userId: string, eventType: string, fn: () => Promise<T>): Promise<T> {
+  const name = `t923_fault_${randomBytes(4).toString("hex")}`;
+  await adm.query(`CREATE FUNCTION public.${name}() RETURNS trigger LANGUAGE plpgsql AS $f$ BEGIN RAISE EXCEPTION 't923 injected fault'; END $f$`);
+  await adm.query(
+    `CREATE TRIGGER ${name} BEFORE INSERT ON public.security_events FOR EACH ROW WHEN (NEW.user_id = '${userId}' AND NEW.event_type = '${eventType}') EXECUTE FUNCTION public.${name}()`,
+  );
+  try {
+    return await fn();
+  } finally {
+    await adm.query(`DROP TRIGGER ${name} ON public.security_events`);
+    await adm.query(`DROP FUNCTION public.${name}()`);
+  }
+}
+
+async function sessionCount(userId: string): Promise<number> {
+  const r = await adm.query<{ n: number }>("SELECT count(*)::int AS n FROM public.sessions WHERE user_id = $1", [userId]);
+  return r.rows[0]?.n ?? -1;
+}
+
+function resetWith(svc: AuthService, token: string): Promise<Response> {
+  return postWith(svc, "/reset-password", { token, newPassword: NEW_PASSWORD }, nextIp());
+}
+
+/** Self-servis sıfırlama kaydı (Better Auth biçimi: `reset-password:<belirteç>` özeti, değer kullanıcı kimliği). */
+async function selfServiceToken(userId: string): Promise<string> {
+  const token = randomBytes(16).toString("hex");
+  const identifier = createHash("sha256").update(`reset-password:${token}`).digest("base64url");
+  await adm.query("INSERT INTO public.verifications (identifier, value, expires_at) VALUES ($1, $2, now() + interval '30 minutes')", [identifier, userId]);
+  return token;
+}
+
+async function mkMember(tenant: string, role: string, o: { verified?: boolean; claim?: boolean; twoFactor?: boolean; owner?: boolean } = {}): Promise<{ userId: string; membershipId: string }> {
+  const u = await adm.query<{ id: string }>(
+    "INSERT INTO public.users (name, email, email_verified, invitation_claim_id, two_factor_enabled) VALUES ('T923 fixture', $1, $2, $3, $4) RETURNING id",
+    [`t923-m-${randomBytes(6).toString("hex")}@example.test`, o.verified ?? true, o.claim === true ? randomUUID() : null, o.twoFactor ?? false],
+  );
+  const userId = (u.rows[0] as { id: string }).id;
+  createdUsers.push(userId);
+  await adm.query("INSERT INTO public.accounts (account_id, provider_id, user_id, password) VALUES ($1::text, 'credential', $1::uuid, $2)", [userId, await hashPassword(PASSWORD)]);
+  if (o.twoFactor === true) await adm.query("INSERT INTO public.two_factors (secret, backup_codes, user_id) VALUES ('x', 'y', $1)", [userId]);
+  const m = await adm.query<{ id: string }>("INSERT INTO public.tenant_memberships (tenant_id, user_id, status, is_owner) VALUES ($1, $2, 'ACTIVE', $3) RETURNING id", [
+    tenant,
+    userId,
+    o.owner ?? false,
+  ]);
+  const membershipId = (m.rows[0] as { id: string }).id;
+  await adm.query("INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES ($1, $2, $3)", [tenant, membershipId, role]);
+  return { userId, membershipId };
+}
+
+async function mkTenant(): Promise<{ tenant: string; slug: string; admin: { userId: string; membershipId: string } }> {
+  const tenant = randomUUID();
+  const slug = `t923-${randomBytes(6).toString("hex")}`;
+  await adm.query("INSERT INTO public.tenants (id, slug, name, is_demo) VALUES ($1, $2, 'T923', false)", [tenant, slug]);
+  await mkMember(tenant, "TENANT_ADMIN", { owner: true });
+  const admin = await mkMember(tenant, "TENANT_ADMIN");
+  return { tenant, slug, admin };
+}
+
 async function eventTypes(userId: string): Promise<string[]> {
   const r = await adm.query<{ event_type: string }>("SELECT event_type FROM public.security_events WHERE user_id = $1 ORDER BY occurred_at", [userId]);
   return r.rows.map((x) => x.event_type);
@@ -175,15 +256,26 @@ async function eventTypes(userId: string): Promise<string[]> {
 
 beforeAll(async () => {
   authClient = createDbClient({ url: authUrl, poolMax: DB_CLIENT_SETTINGS.poolMax, prepare: env.prepare ?? DB_CLIENT_SETTINGS.prepare });
-  service = createAuth({
-    client: authClient,
-    env: readAuthEnv({ BETTER_AUTH_SECRET: SECRET, BETTER_AUTH_URL: BASE, DATABASE_URL: env.databaseUrl, AUTH_DATABASE_URL: authUrl }),
-  });
+  appDb = createDbClient({ url: env.databaseUrl, poolMax: DB_CLIENT_SETTINGS.poolMax, prepare: env.prepare ?? DB_CLIENT_SETTINGS.prepare });
+  const authEnv = (extra: Record<string, string> = {}) =>
+    readAuthEnv({ BETTER_AUTH_SECRET: SECRET, BETTER_AUTH_URL: BASE, DATABASE_URL: env.databaseUrl, AUTH_DATABASE_URL: authUrl, ...extra });
+  const trustDeviceAllowed = (userId: string): Promise<boolean> => Promise.resolve(!blocked.has(userId));
+  service = createAuth({ client: authClient, env: authEnv(), trustDeviceAllowed });
+  noPolicy = createAuth({ client: authClient, env: authEnv() });
+  recoveryOn = createAuth({ client: authClient, env: authEnv({ AUTH_EMAIL_RECOVERY_ENABLED: "true" }), trustDeviceAllowed });
+  resetPort = {
+    createToken: (u, t) => service.createPasswordResetToken(u, t),
+    discardToken: (id) => service.discardPasswordResetToken(id),
+    recordIssued: (i) => service.recordPasswordResetLinkIssued(i),
+  };
   adm = await connect(env.databaseUrlDirect);
 });
 
 afterAll(async () => {
+  // Paylaşılan veritabanında doğrulama kaydı bırakılmaz (auth-core sıfırlama kayıtlarını sayar).
+  await adm.query("DELETE FROM public.verifications WHERE value = ANY($1::text[])", [createdUsers]).catch(() => undefined);
   await authClient.close();
+  await appDb.close();
   await adm.end().catch(() => undefined);
 }, 60_000);
 
@@ -344,5 +436,120 @@ describe(`T-923 güvenilen cihaz (target=${env.target})`, () => {
     expect(await trustRows(u.id)).toHaveLength(1);
     await service.revokeUserSessions(u.id);
     expect(await trustRows(u.id)).toHaveLength(0);
+  });
+  it("inceleme M2: güvenilen girişte login_mfa_pending yazılmaz; iki adım çağrısında yazılır", async () => {
+    const u = await mkTfaUser();
+    const { jar } = await loginWithTotp(u, true);
+    const count = async (t: string): Promise<number> => (await eventTypes(u.id)).filter((x) => x === t).length;
+    const pending = await count("login_mfa_pending");
+    const ok = await count("login_succeeded");
+    const trusted = await passwordOnly(u, trustOnly(jar));
+    expect(trusted.redirect).toBe(false);
+    expect(await count("login_mfa_pending")).toBe(pending);
+    expect(await count("login_succeeded")).toBe(ok + 1);
+    expect((await passwordOnly(u, "")).redirect).toBe(true);
+    expect(await count("login_mfa_pending")).toBe(pending + 1);
+  });
+
+  it("inceleme M1: güvenilen girişte olay yazılamazsa oturum ve güven kaydı kalmaz (fail-closed); TOTP girişinde de oturum kalmaz", async () => {
+    const u = await mkTfaUser();
+    const { jar } = await loginWithTotp(u, true);
+    const before = await sessionCount(u.id);
+    const res = await withEventFault(u.id, "two_factor_trusted_device_used", () => passwordOnly(u, trustOnly(jar)));
+    expect(res.res.status).toBe(500);
+    expect(await sessionCount(u.id)).toBe(before);
+    expect(await service.getPrincipal(headersWith(res.jar))).toBeNull();
+    expect(await trustRows(u.id)).toHaveLength(0);
+
+    const ip = nextIp();
+    const first = await post("/sign-in/email", { email: u.email, password: PASSWORD }, ip);
+    const pendingJar = jarFrom(first);
+    const bad = await withEventFault(u.id, "login_succeeded", () => post("/two-factor/verify-totp", { code: totp(u.secret), trustDevice: true }, ip, pendingJar));
+    expect(bad.status).toBe(500);
+    expect(await sessionCount(u.id)).toBe(before);
+    expect(await trustRows(u.id)).toHaveLength(0);
+  });
+
+  it("inceleme M3: izinsiz kullanıcıda (platform operatörü / panel) kayıt açılmaz ve var olan çerez yok sayılır; port yoksa güven kapalı", async () => {
+    const op = await mkTfaUser();
+    blocked.add(op.id);
+    const issued = await loginWithTotp(op, true);
+    expect(issued.status).toBe(200);
+    expect(await trustRows(op.id)).toHaveLength(0);
+    expect(cookieOf(issued.jar, TRUST)).toBeUndefined();
+    expect(await eventTypes(op.id)).not.toContain("two_factor_trusted_device_added");
+
+    // Önce izinli iken güvenilmiş, sonra operatör olmuş kullanıcı: çerez yok sayılır → TOTP; kayıt dokunulmadan kalır.
+    const later = await mkTfaUser();
+    const { jar } = await loginWithTotp(later, true);
+    blocked.add(later.id);
+    const again = await passwordOnly(later, trustOnly(jar));
+    expect(again.redirect).toBe(true);
+    expect(await service.getPrincipal(headersWith(again.jar))).toBeNull();
+    blocked.delete(later.id);
+    expect((await passwordOnly(later, trustOnly(jar))).redirect).toBe(false);
+
+    // Politika portu verilmemiş kurulum: güvenilen cihaz hiç açılmaz, var olan çerez de geçmez.
+    const ip = nextIp();
+    const first = await postWith(noPolicy, "/sign-in/email", { email: later.email, password: PASSWORD }, ip, trustOnly(jar));
+    expect(((await first.json()) as { twoFactorRedirect?: boolean }).twoFactorRedirect).toBe(true);
+  });
+
+  it("inceleme M4: eşzamanlı iki giriş aynı çerezle → yalnız biri güvenilen, diğeri TOTP ister; tek kayıt kalır", async () => {
+    const u = await mkTfaUser();
+    const { jar } = await loginWithTotp(u, true);
+    const cookie = trustOnly(jar);
+    const results = await Promise.all([passwordOnly(u, cookie), passwordOnly(u, cookie), passwordOnly(u, cookie)]);
+    const trusted = results.filter((r) => r.res.status === 200 && !r.redirect);
+    expect(trusted).toHaveLength(1);
+    for (const r of results.filter((x) => x !== trusted[0])) expect(r.redirect || r.res.status >= 400).toBe(true);
+    expect(await trustRows(u.id)).toHaveLength(1);
+  });
+
+  it("inceleme M4: 2FA etkinleştirme ve self-servis sıfırlama güvenilen cihazları siler", async () => {
+    // 2FA kapalı kullanıcıda (önceden kalmış) kayıt → etkinleştirmede silinir.
+    const id = randomUUID();
+    createdUsers.push(id);
+    const email = `t923-e-${randomBytes(6).toString("hex")}@example.invalid`;
+    await adm.query("INSERT INTO public.users (id, name, email, email_verified) VALUES ($1, 'T923', $2, true)", [id, email]);
+    await adm.query("INSERT INTO public.accounts (account_id, provider_id, user_id, password) VALUES ($1, 'credential', $2, $3)", [id, id, await hashPassword(PASSWORD)]);
+    await seedTrust(id);
+    const ip = nextIp();
+    const jar = jarFrom(await post("/sign-in/email", { email, password: PASSWORD }, ip));
+    const enable = await post("/two-factor/enable", { password: PASSWORD }, ip, jar);
+    const secret = new URL(((await enable.json()) as { totpURI: string }).totpURI).searchParams.get("secret") ?? "";
+    expect((await post("/two-factor/verify-totp", { code: totp(secret) }, ip, jar)).status).toBe(200);
+    expect(await trustRows(id)).toHaveLength(0);
+
+    const u = await mkTfaUser();
+    await loginWithTotp(u, true);
+    expect(await trustRows(u.id)).toHaveLength(1);
+    expect((await resetWith(service, await selfServiceToken(u.id))).status).toBe(200);
+    expect(await trustRows(u.id)).toHaveLength(0);
+    expect(await eventTypes(u.id)).toContain("two_factor_trusted_devices_revoked");
+  });
+
+  it("inceleme M4: yönetici sıfırlama bağlantısı (tek transaction) güvenilen cihazları siler", async () => {
+    const fx = await mkTenant();
+    const target = await mkMember(fx.tenant, "WAREHOUSE_MANAGER");
+    await seedTrust(target.userId);
+    await seedTrust(target.userId);
+    expect(await trustRows(target.userId)).toHaveLength(2);
+    const link = await issuePasswordResetLink(
+      { db: appDb, principal: { userId: fx.admin.userId, mfaVerified: true }, tenantSlug: fx.slug, memberId: target.membershipId, recentAuth: () => Promise.resolve() },
+      { demoEmailDomain: "demo-t923.example.invalid", port: resetPort },
+    );
+    expect((await resetWith(service, link.token)).status).toBe(200);
+    expect(await trustRows(target.userId)).toHaveLength(0);
+    expect(await eventTypes(target.userId)).toContain("password_reset_link.consumed");
+  });
+
+  it("inceleme M4: A-55 e-posta kurtarma sonrası güvenilen cihaz kalmaz (kurtarma transaction'ı + onPasswordReset)", async () => {
+    const fx = await mkTenant();
+    const m = await mkMember(fx.tenant, "PICKER", { verified: false, claim: true, twoFactor: true });
+    await seedTrust(m.userId);
+    expect((await resetWith(recoveryOn, await selfServiceToken(m.userId))).status).toBe(200);
+    expect(await eventTypes(m.userId)).toContain("account.recovered_via_email");
+    expect(await trustRows(m.userId)).toHaveLength(0);
   });
 });

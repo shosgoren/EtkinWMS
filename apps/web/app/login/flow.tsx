@@ -281,7 +281,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
   );
 }
 
-function Mfa({ next }: { next: string }) {
+function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
   const t = useTranslations("auth.verify");
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
@@ -309,7 +309,7 @@ function Mfa({ next }: { next: string }) {
     }
     setBusy(true);
     setError(null);
-    const res = await authPost<unknown>(backup ? "/two-factor/verify-backup-code" : "/two-factor/verify-totp", { code: value, trustDevice: trust });
+    const res = await authPost<unknown>(backup ? "/two-factor/verify-backup-code" : "/two-factor/verify-totp", { code: value, trustDevice: trustOption && trust });
     if (res.ok) {
       window.location.assign(next);
       return;
@@ -367,12 +367,14 @@ function Mfa({ next }: { next: string }) {
               </div>
             </div>
           )}
-          <button type="button" role="checkbox" className={trust ? "chk on" : "chk"} aria-checked={trust} onClick={() => setTrust((v) => !v)}>
-            <i>
-              <Ico d={GICON.check} size={16} sw={3.2} />
-            </i>
-            {t("trust")}
-          </button>
+          {trustOption ? (
+            <button type="button" role="checkbox" className={trust ? "chk on" : "chk"} aria-checked={trust} onClick={() => setTrust((v) => !v)}>
+              <i>
+                <Ico d={GICON.check} size={16} sw={3.2} />
+              </i>
+              {t("trust")}
+            </button>
+          ) : null}
           <button
             type="button"
             className="lnk"
@@ -420,10 +422,10 @@ export function EmailSignIn({
   );
 }
 
-export function MfaVerify({ dark, next }: { dark: boolean; next: string }): ReactNode {
+export function MfaVerify({ dark, next, trustOption = false }: { dark: boolean; next: string; trustOption?: boolean }): ReactNode {
   return (
     <DzRoot dark={dark} scope="dzg" testId="mfa">
-      <Mfa next={next} />
+      <Mfa next={next} trustOption={trustOption} />
     </DzRoot>
   );
 }
