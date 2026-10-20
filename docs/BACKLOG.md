@@ -102,7 +102,6 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-69 | Üyeler ekranı ve davet penceresi: sahip olmayan yöneticide yönetici hedefli rol/çıkarma/sıfırlama düğmeleri ve TENANT_ADMIN davet seçeneği kilitli + nedeni görünür (sunucu zaten reddediyor; T-922 inceleme MINOR-2) |
 | B-67 | Cari kişisel alanlarının görünürlüğünü daralt; `settings.manage`'i böl; kullanılmayan `takeout.request` 🔒 |
 | B-75 | İlk kullanım rehberi (Kabuk.dc.html onaylı): her ekran ilk açılışta ≤ 5 adım, yaparak ilerleme, sesli anlatım, görüldü bilgisi sunucuda kullanıcıya bağlı, üst çubuk "?" ile tekrar; adım metinleri tek kaynakta + rehberi olmayan ekran bekçisi |
-| B-76 | "Bu cihazı 30 gün hatırla" (kullanıcı onayı 20 Ekim; ADR-014 §12 M4 değişikliği): cihaza bağlı httpOnly çerez + DB'de özet, parola yine sorulur, hassas işlemde MFA yine istenir, parola/2FA değişince ve "tüm cihazlardan çık"ta düşer, hatırlanan cihazlar listesi + iptal; Q-15/Q-16 bu kararla kapanır |
 | B-64b | E2E rastgele düşme kökü: kiracı yerleşiminde `Suspense fallback={children}` içeriği iki kez veriyordu ("strict mode violation: 2 elements", #117 ve #121'de görüldü). T-927 (KODDA VAR) |
 | B-68 | Defter–bakiye denetiminin ölçeği (her yazımda tüm geçmiş toplamı) — checkpoint tasarımı |
 | B-76 | Güvenilen cihaz "Bu cihazı 30 gün hatırla" (yönetici her girişte kod girmesin; kullanıcı kararı 20 Ekim) — T-923 (KODDA VAR); kalan: güvenilen cihaz listesi + tekil iptal arayüzü (sunucu tarafı toplu iptal var) |
