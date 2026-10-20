@@ -65,12 +65,14 @@ function MicIco({ size }: { size: number }) {
 export interface SupportState {
   readonly tickets: readonly SupportTicketView[] | null;
   readonly unread: number;
-  readonly reload: () => Promise<void>;
+  /** Yeniden yükler; talep sayısını döndürür (okunamazsa `null`). */
+  readonly reload: () => Promise<number | null>;
   readonly markSeen: () => void;
 }
 
-/** Taleplerim + okunmamış ekip yanıtı sayısı (açılışta bir kez; gönderim/yanıt sonrası yeniden). */
-export function useSupport(slug: string): SupportState {
+/** Taleplerim + okunmamış ekip yanıtı sayısı (açılışta bir kez; gönderim/yanıt sonrası yeniden). `auto: false` = açılışta yükleme yok
+ *  (kalıp ekranları: her ekran açılışında sunucu eylemi çağrılmaz, işlem hız sınırı bütçesi harcanmaz; Destek'e dokununca yüklenir). */
+export function useSupport(slug: string, auto = true): SupportState {
   const [tickets, setTickets] = useState<readonly SupportTicketView[] | null>(null);
   const [unread, setUnread] = useState(0);
   const reload = useCallback(async () => {
@@ -79,14 +81,16 @@ export function useSupport(slug: string): SupportState {
       if (r.ok) {
         setTickets(r.data.tickets);
         setUnread(r.data.unread);
+        return r.data.tickets.length;
       }
     } catch {
       /* bağlantı yok: rozet çizilmez, pencere yine açılır */
     }
+    return null;
   }, [slug]);
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (auto) void reload();
+  }, [reload, auto]);
   const markSeen = useCallback(() => {
     setUnread(0);
     void markSupportSeenAction({ slug }).catch(() => undefined);
