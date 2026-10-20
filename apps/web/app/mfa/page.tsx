@@ -5,6 +5,7 @@ import { MfaNotice, MfaSetupForm } from "../auth-forms.tsx";
 import { THEME_COOKIE } from "../design/theme.ts";
 import { MfaVerify } from "../login/flow.tsx";
 import { safeNext } from "../../lib/safe-redirect.ts";
+import { appSurface } from "../../lib/surface.ts";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { referrer: "no-referrer" };
@@ -27,7 +28,8 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
     const pending = jar.getAll().some((c) => TWO_FACTOR_COOKIE.test(c.name) && c.value !== "");
     if (!pending) redirect(`/login?next=${encodeURIComponent(next)}`);
     // T-999b: Giris.dc.html `v.mfa` birebir (login/flow.tsx).
-    return <MfaVerify dark={jar.get(THEME_COOKIE)?.value === "koyu"} next={next} />;
+    // T-923 (inceleme M3): panel yüzeyinde "Bu cihazı 30 gün hatırla" yok (sunucu da reddeder).
+    return <MfaVerify dark={jar.get(THEME_COOKIE)?.value === "koyu"} next={next} trustOption={appSurface() !== "panel"} />;
   }
   // Karar sunucuda, `principal` alanlarıyla (tek kaynak: @wms/auth `isDemoEmail`).
   if (principal.isDemo) return <MfaNotice kind="demo" next={next} />; // M9

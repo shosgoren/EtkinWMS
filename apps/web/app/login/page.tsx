@@ -31,5 +31,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const socialEnabled = process.env.AUTH_SOCIAL_ENABLED === "true";
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   // T-999b: Giris.dc.html `v.login` E-POSTA sekmesi birebir (flow.tsx); SAHA GİRİŞİ sekmesi `/field`'e gider (T-997).
-  return <EmailSignIn dark={dark} next={next} socialEnabled={socialEnabled} demo={demo} fieldTab={appSurface() !== "panel"} />;
+  return <EmailSignIn dark={dark} next={next} socialEnabled={socialEnabled} demo={demo} fieldTab={appSurface() !== "panel"} reauth={reauth} />;
 }

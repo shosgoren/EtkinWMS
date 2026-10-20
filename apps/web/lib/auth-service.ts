@@ -7,6 +7,9 @@
 import { isFieldEmail } from "@wms/shared/field-login";
 import { getAuthService as getBaseAuthService, type AuthService, type ResetMailPort } from "@wms/auth";
 import { createResetMailPort } from "@wms/domain/identity/memberships";
+import { isPlatformOperator } from "@wms/domain/platform/demo-requests";
+import { getAppDb } from "@wms/db";
+import { appSurface } from "./surface.ts";
 import { AppError } from "@wms/shared/errors";
 import { assertMailModeAllowed, loadMailConfig } from "@wms/shared/mailer";
 import { createSealer } from "@wms/shared/seal";
@@ -68,10 +71,19 @@ function webResetMail(): ResetMailPort | undefined {
   return resetMail;
 }
 
+/**
+ * T-923 (inceleme M3): güvenilen cihaz panel yüzeyinde (yonet.*) ve platform operatöründe KAPALI — her girişte TOTP.
+ * Operatör kararı DB'de (`wms_probe.platform_is_operator`, `wms_app`); hata `@wms/auth`'ta "kapalı" sayılır (fail-closed).
+ */
+export async function webTrustDeviceAllowed(userId: string, env: EnvLike = process.env): Promise<boolean> {
+  if (appSurface(env) === "panel") return false;
+  return !(await isPlatformOperator({ db: getAppDb(), principal: { userId, mfaVerified: true } }));
+}
+
 /** Web'in tekil Better Auth örneği (port enjekte). Kuyruk hazırlığı `authRouteHandlers` içinde yapılır. */
 export function getAuthService(): AuthService {
   const port = webResetMail();
-  return getBaseAuthService(process.env, port === undefined ? {} : { resetMail: port });
+  return getBaseAuthService(process.env, { ...(port === undefined ? {} : { resetMail: port }), trustDeviceAllowed: (userId) => webTrustDeviceAllowed(userId) });
 }
 
 /** Better Auth 1.7.7 kurulu yolu (`dist/api/routes/password.mjs`: createAuthEndpoint("/request-password-reset")). */

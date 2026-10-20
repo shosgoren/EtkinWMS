@@ -22,16 +22,16 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 ## P1 — yetki ve RLS (ilk güvenlik paketi; 0051/0052 canlıda; security-reviewer + QA zorunlu)
 | ID | İş |
 |---|---|
-| B-10 | Global kimlik/olay tablolarında uygulama rolü okuma yetkisini daralt 🔒 — `security_events` kısmı T-919 (0053, KODDA VAR); kalan kısım açık |
-| B-11 | Ekibe katılma onayını DB'de kod doğrulamasına bağla 🔒 — T-919 (0053, KODDA VAR; canlıya çıkınca BİTTİ) |
+| B-10 | Global kimlik/olay tablolarında uygulama rolü okuma yetkisini daralt 🔒 — `security_events` kısmı T-919 canlıda (#115, `6fa23e0`); kalan kısım açık |
+| B-11 | Ekibe katılma onayını DB'de kod doğrulamasına bağla 🔒 — BİTTİ #115 / main `6fa23e0` (canlı 20 Ekim) |
 | B-12 | Saha girişi migration'larının geri almasına veri bekçisi 🔒 |
-| B-13 | Pano bölümlerinde depo kapsamı tutarlılığı 🔒 — T-920 (KODDA VAR) |
-| B-14 | Paket/palet oluşturmada depo kapsamı 🔒 — T-920 (KODDA VAR) |
+| B-13 | Pano bölümlerinde depo kapsamı tutarlılığı 🔒 — BİTTİ #116 / main `abd7261` (canlı 20 Ekim) |
+| B-14 | Paket/palet oluşturmada depo kapsamı 🔒 — BİTTİ #116 / main `abd7261` (canlı 20 Ekim) |
 | B-15 | İzolasyon testini (AC-04) RLS'siz tabloların yetkilerini kapsayacak şekilde genişlet |
-| B-16 | Yöneticiyi yalnız hesap sahibi yönetir (kullanıcı kararı 20 Ekim: evet) 🔒 — T-922 (KODDA VAR) |
+| B-16 | Yöneticiyi yalnız hesap sahibi yönetir (kullanıcı kararı 20 Ekim: evet) 🔒 — BİTTİ #118 / main `abd7261` (canlı 20 Ekim) |
 | B-17 | DB işlevlerinde aktör kimliğini oturum bağlamından al 🔒 |
 | B-18 | Kuyruk RLS politikası simetrisi 🔒 |
-| B-19 | Hassas işlemlerde yeniden doğrulama tutarlılığı 🔒 — T-920 (KODDA VAR) |
+| B-19 | Hassas işlemlerde yeniden doğrulama tutarlılığı 🔒 — BİTTİ #116 / main `abd7261` (canlı 20 Ekim) |
 
 ## P1 — DB ikinci savunma
 | ID | İş |
@@ -81,6 +81,9 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-55 | Pasif üyelik; davet/saha hesabı yaşam döngüsü tutarlılığı | — |
 | B-56 | Donanım kabulü: telefon/notebook kamera, Epson/ZPL, Bluetooth, el terminali (AC-35) | Q-103 |
 | B-57 | Offline gereksinim ölçümü | Q-102, ADR-025 |
+| B-58 | **Canlı hata:** tablette (768–1199 px) eski "Geri / Ana ekran" çubuğu yeni tasarım ekranlarının (Ekip, Gruplar, Aktar, Cari, Pano alt ekranları) cam çubuğunun üstüne biniyor; orta ana işlem tıklanamıyor. T-921 | kullanıcı bildirimi 20 Ekim |
+| B-59 | Ekip: "Rol, depo ve şifre işlemleri · Kullanıcılar ekranı" bağlantı metni kesik çerçevenin üst çizgisine biniyor. T-921 | kullanıcı bildirimi 20 Ekim |
+| B-58b | **Canlı hata:** saha girişi (kayıtlı cihaz) iPhone'da sığmıyor, tuş takımı kesik. T-924 (KODDA VAR) | kullanıcı bildirimi 20 Ekim |
 
 ## P3 — Altın Kural / tasarım ve kod kalitesi
 | ID | İş |
@@ -89,14 +92,19 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya); saha akışlarına sesli geri bildirim |
 | B-62 | Etkin sesli komut (T-424; Kabuk.dc.html onaylı): bas-konuş / iki dokunuş uzun dinleme ("bitti"), stok/yetki değiştiren komutta "Anladım" onay kartı, okuma komutu doğrudan sonuç; sesli geri bildirim |
 | B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18) |
+| B-60 | Ortak alt ekran çubuğu (Geri + Ana ekran · ana işlem · Etkin) + kaydedilmemiş iş uyarısı (T-423 kalanı); eski `BottomNav`/`screen-nav` emekliye; e2e'ye tablet (768–1199) projesi |
+| B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya); saha akışlarına sesli geri bildirim |
+| B-62 | Etkin sesli asistan (T-424); sesle miktar/görev arama |
+| B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18). Kullanıcı 20 Ekim'de canlıda gördü: **Ayarlar** hâlâ eski görünümde (Kolay mod üst çubuğu, sol Ayarlar/Geri/Ana ekran kutusu, düz form, turuncu Kaydet); alt cam çubuk ve ikonlu yapı yok — önce Ayarlar tuvali |
 | B-64 | İstemci `void action().then()` zincirlerine hata yakalama (ör. `apps/web/app/activate/[token]/flow.tsx`); `loading.tsx`, panel `error.tsx`, `global-error`, `not-found` |
 | B-65 | `apps/web/app/t/[slug]/page.tsx` üyelik yoksa `return null` → `notFound()`; tanımsız roller için açılış ekranı |
 | B-66 | Panel hata kodlarını kullanıcı diline çevir |
 | B-69 | Üyeler ekranı ve davet penceresi: sahip olmayan yöneticide yönetici hedefli rol/çıkarma/sıfırlama düğmeleri ve TENANT_ADMIN davet seçeneği kilitli + nedeni görünür (sunucu zaten reddediyor; T-922 inceleme MINOR-2) |
 | B-67 | Cari kişisel alanlarının görünürlüğünü daralt; `settings.manage`'i böl; kullanılmayan `takeout.request` 🔒 |
 | B-75 | İlk kullanım rehberi (Kabuk.dc.html onaylı): her ekran ilk açılışta ≤ 5 adım, yaparak ilerleme, sesli anlatım, görüldü bilgisi sunucuda kullanıcıya bağlı, üst çubuk "?" ile tekrar; adım metinleri tek kaynakta + rehberi olmayan ekran bekçisi |
-| B-76 | "Bu cihazı 30 gün hatırla" (kullanıcı onayı 20 Ekim; ADR-014 §12 M4 değişikliği): cihaza bağlı httpOnly çerez + DB'de özet, parola yine sorulur, hassas işlemde MFA yine istenir, parola/2FA değişince ve "tüm cihazlardan çık"ta düşer, hatırlanan cihazlar listesi + iptal; Q-15/Q-16 bu kararla kapanır |
+| B-64b | E2E rastgele düşme kökü: kiracı yerleşiminde `Suspense fallback={children}` içeriği iki kez veriyordu ("strict mode violation: 2 elements", #117 ve #121'de görüldü). AÇIK: T-927'deki `fallback={null}` denemesi yönetim ekranlarında içeriği askıda bırakıp `theme-admin` e2e'sini ("İşlemler" düğmesi yok) kırdı ve geri alındı; kök neden (hangi ekran neden askıya alınıyor) araştırılacak |
 | B-68 | Defter–bakiye denetiminin ölçeği (her yazımda tüm geçmiş toplamı) — checkpoint tasarımı |
+| B-76 | Güvenilen cihaz "Bu cihazı 30 gün hatırla" (yönetici her girişte kod girmesin; kullanıcı kararı 20 Ekim) — T-923 (KODDA VAR); kalan: güvenilen cihaz listesi + tekil iptal arayüzü (sunucu tarafı toplu iptal var) |
 
 ## Eklemeler (kullanıcı onayı 20 Ekim)
 | ID | İş |
