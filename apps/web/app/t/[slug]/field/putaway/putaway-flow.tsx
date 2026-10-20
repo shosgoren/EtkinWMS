@@ -2,12 +2,16 @@
 // Saha yerleştirme (T-313): [kaynak (KABUL) →] ürün okut → hedef lokasyon okut → onay → bitti. `PUTAWAY` görevinden (miktar ve ürün görevle birebir:
 // poka-yoke, A-305-7) ya da serbest başlar. Yetki, sayım kilidi (`LOCATION_LOCKED`), hedef lokasyon türü ve stok kuralları domain'dedir (`putaway`);
 // bu dosya yalnızca girdi toplar ve sunucu hatasını (kod + sonraki eylem) gösterir. Ortak saha parçaları `receive-flow.tsx`'tedir.
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Banner, CircleCheck, MapPinned } from "@wms/ui";
+import { KICON } from "../../../../design/kabuk-icons.ts";
+import { dz } from "../../../../design/saha-tokens.ts";
+import { SICON } from "../../../../design/saha-icons.ts";
 import { ErrorNotice, errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { availableAtLocationAction, putawayAction, resolveItemScanAction, resolveLocationScanAction } from "../../receipts/actions.ts";
-import { CompoundLine, DroppedNotice, FlowShell, PrimaryButton, PrimaryLink, QtyStepper, ScanAlert, ScanPanel, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
+import { CompoundLine, DroppedNotice, PrimaryButton, PrimaryLink, ScanAlert, ScanPanel, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
+import { Ico, SahaDoneVeil, SahaShell, tone } from "../saha-shell.tsx";
+import { SahaQty } from "../saha-qty.tsx";
 
 export interface PutawayTask {
   readonly id: string;
@@ -31,8 +35,10 @@ interface Item {
   readonly code: string;
 }
 
-export function PutawayFlow({ slug, warehouseId, task }: { slug: string; warehouseId: string; task: PutawayTask | null }) {
+export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: string; warehouseId: string; task: PutawayTask | null; initialCode?: string }) {
   const t = useTranslations("receiving");
+  const ts = useTranslations("saha");
+  const [veil, setVeil] = useState(false);
   const holder = useKeyHolder();
   const fieldHome = `/t/${encodeURIComponent(slug)}/field`;
   const tasksHref = `${fieldHome}/tasks`;
@@ -63,7 +69,10 @@ export function PutawayFlow({ slug, warehouseId, task }: { slug: string; warehou
     const order: Stage[] = task === null ? ["source", "item", "target", "confirm", "done"] : ["item", "target", "confirm", "done"];
     return order.indexOf(s) + 1;
   };
-  const showAlert = (titleKey: string, reasonKey: string, code: string, back?: Stage): void => setAlert({ titleKey, reasonKey, code, ...(back === undefined ? {} : { back }) });
+  // Ses/titreşim: okuma anında kamera katmanı (cameraFeedback), uyarıda tam ekran uyarı (ScanAlert titreşimi) — T-313 sözleşmesi; ek ton yok.
+  const showAlert = (titleKey: string, reasonKey: string, code: string, back?: Stage): void => {
+    setAlert({ titleKey, reasonKey, code, ...(back === undefined ? {} : { back }) });
+  };
 
   const onScanned = useCallback(
     async (code: string) => {
@@ -165,8 +174,28 @@ export function PutawayFlow({ slug, warehouseId, task }: { slug: string; warehou
   const { service: scanner, camera, dropped, clearDropped } = useScanner((v) => void onScanned(v), scanning && alert === null && !busy, blocked);
   const scanPrimary = useScanPrimary(camera, { busy, name: lastName, code: last, alerting: alert !== null });
 
+  // T-969: OKUT ekranından gelen kod (raf ya da ürün) açılışta bir kez, aynı okuma yolundan işlenir; adres temizlenir.
+  const initialDone = useRef(false);
+  useEffect(() => {
+    if (initialDone.current || initialCode === undefined || initialCode === "") return;
+    initialDone.current = true;
+    const u = new URL(window.location.href);
+    u.searchParams.delete("code");
+    window.history.replaceState(null, "", `${u.pathname}${u.search}`);
+    void onScanned(initialCode);
+  }, [initialCode, onScanned]);
+  useEffect(() => {
+    if (!veil) return undefined;
+    const id = window.setTimeout(() => setVeil(false), 2400);
+    return () => window.clearTimeout(id);
+  }, [veil]);
+
   async function confirm() {
     if (busyRef.current || source === null || item === null || target === null) return;
+    if (qty < 1 || (task === null && avail !== null && qty > avail)) {
+      tone("err");
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     setError(null);
@@ -188,14 +217,20 @@ export function PutawayFlow({ slug, warehouseId, task }: { slug: string; warehou
       // Engelleyici sonuçlar (sayım kilidi, uygun olmayan raf, stok yok) tam ekran uyarıdır; kullanıcı başka raf okutur.
       if (key === "location_locked" || key === "putaway_invalid" || key === "insufficient_stock") {
         showAlert("alert.putawayTitle", key, out.error.detail === undefined ? out.error.code : `${out.error.code}/${out.error.detail}`, "target");
-      } else setError(out.error);
+      } else {
+        tone("err");
+        setError(out.error);
+      }
       return;
     }
+    tone("ok");
     setDonePair({ item: item.name, qty, to: target.name || target.code });
+    setVeil(true);
     setStage("done");
   }
 
-  const icon = <MapPinned aria-hidden="true" className="size-6" />;
+  const shell = { hue: "teal" as const, iconD: KICON.mDepo };
+  const phaseOf = (s: Stage): 1 | 2 | 3 | 4 => (s === "done" ? 4 : s === "confirm" ? 3 : s === "target" ? 2 : 1);
   const closeAlert = (): void => {
     if (alert?.back !== undefined) {
       holder.contentChanged();
@@ -240,12 +275,13 @@ export function PutawayFlow({ slug, warehouseId, task }: { slug: string; warehou
   if (stage === "done" && donePair !== null) {
     return withOverlay(
       <>
-        <FlowShell
-          hue="teal"
-          icon={icon}
+        <SahaShell
+          {...shell}
           step={stepOf("done")}
           total={total}
+          phase={4}
           title={t("putaway.savedTitle")}
+          overlay={veil ? <SahaDoneVeil title={ts("qty.putDone", { n: donePair.qty })} sub={donePair.to} /> : null}
           footer={
             task === null ? (
               <PrimaryButton
@@ -263,66 +299,90 @@ export function PutawayFlow({ slug, warehouseId, task }: { slug: string; warehou
             )
           }
         >
-          <Banner kind="success">
-            <p className="font-semibold" data-testid="saved-summary">
-              {t("putaway.saved", { name: donePair.item, qty: donePair.qty, to: donePair.to })}
-            </p>
-          </Banner>
-          <p className="flex items-center gap-2 text-lg font-bold text-ink">
-            <CircleCheck aria-hidden="true" className="size-6 text-success" />
-            {t("putaway.noNewStock")}
-          </p>
-        </FlowShell>
+          <div className="pcard">
+            <div className="cmp">
+              <div className="cm ok">
+                <small>{t("putaway.savedTitle")}</small>
+                <b data-testid="saved-summary">{t("putaway.saved", { name: donePair.item, qty: donePair.qty, to: donePair.to })}</b>
+              </div>
+            </div>
+          </div>
+          <div className="vres ok" role="status">
+            <span className="vic">
+              <Ico d={SICON.check} size={34} />
+            </span>
+            <span>
+              <b>{t("putaway.noNewStock")}</b>
+            </span>
+          </div>
+        </SahaShell>
         {alertView}
       </>
     );
   }
 
   if (stage === "confirm" && source !== null && item !== null && target !== null) {
+    const route = t("putaway.fromTo", { from: source.name || source.code, to: target.name || target.code });
+    const over = task === null && avail !== null && qty > avail;
     return withOverlay(
       <>
-        <FlowShell
-          hue="teal"
-          icon={icon}
+        <SahaShell
+          {...shell}
           step={stepOf("confirm")}
           total={total}
+          phase={3}
           title={t("putaway.confirmTitle")}
           instruction={t("putaway.confirmInstruction")}
           {...backProps}
-          footer={
-            <PrimaryButton loading={busy} onClick={() => void confirm()}>
-              {t("putaway.confirm")}
-            </PrimaryButton>
-          }
+          main={{ label: ts("qty.confirm"), aria: t("putaway.confirm"), d: SICON.check, onClick: () => void confirm(), disabled: busy || qty < 1, wait: over, testId: "flow-primary" }}
         >
-          <section className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border bg-surface p-3" aria-label={t("flow.verify")}>
-            <p className="break-words text-2xl font-extrabold text-ink" data-testid="verified-item">
-              {item.name}
-            </p>
-            <p className="break-words text-base text-ink">
-              {t("putaway.fromTo", { from: source.name || source.code, to: target.name || target.code })}
-            </p>
-            <CompoundLine slug={slug} itemId={item.id} baseQty={qty} />
-          </section>
           {task !== null ? (
-            <p className="rounded-card bg-bg p-3 text-lg font-bold text-ink" data-testid="fixed-qty">
-              {t("putaway.taskQty", { n: qty })}
-            </p>
+            <>
+              <div className="job" data-testid="verify-card">
+                <span className="uic" style={{ background: dz("8A5A12") }}>
+                  <Ico d={SICON.urun} size={22} />
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <b data-testid="verified-item">{item.name}</b>
+                  <small>{route}</small>
+                </span>
+                <span className="autosel">{ts("qty.okProduct")}</span>
+              </div>
+              <div className="qdisp" data-testid="fixed-qty">
+                <span className="qv">
+                  <b>{qty}</b>
+                </span>
+                <small>{t("putaway.taskQty", { n: qty })}</small>
+                <CompoundLine slug={slug} itemId={item.id} baseQty={qty} />
+              </div>
+            </>
           ) : (
-            <QtyStepper
-              label={t("putaway.qtyLabel")}
-              scan={{ label: t("flow.scanMore"), onClick: scanPrimary.press }}
-              value={qty}
-              min={1}
-              max={avail}
-              onChange={(n) => {
-                holder.contentChanged();
-                setQty(n);
+            <SahaQty
+              itemName={item.name}
+              itemSub={route}
+              verified={ts("qty.okProduct")}
+              main={{
+                label: t("putaway.qtyLabel"),
+                unit: "",
+                value: qty,
+                onChange: (n) => {
+                  holder.contentChanged();
+                  setQty(n);
+                },
               }}
+              max={avail}
+              line={avail === null ? route : ts("qty.available", { n: String(avail) })}
+              overText={ts("qty.over", { n: String(avail ?? "") })}
+              compound={<CompoundLine slug={slug} itemId={item.id} baseQty={qty} />}
+              side={
+                <button type="button" className="qbtn" aria-label={t("flow.scanMore")} title={t("flow.scanMore")} data-testid="scan-more" onClick={scanPrimary.press}>
+                  <Ico d={SICON.scan} size={22} />
+                </button>
+              }
             />
           )}
           {error === null ? null : <ErrorNotice error={error} context="putaway" />}
-        </FlowShell>
+        </SahaShell>
         {alertView}
       </>
     );
@@ -331,30 +391,41 @@ export function PutawayFlow({ slug, warehouseId, task }: { slug: string; warehou
   const titleKey = stage === "source" ? "putaway.sourceTitle" : stage === "item" ? "putaway.itemTitle" : "putaway.targetTitle";
   return withOverlay(
     <>
-      <FlowShell
-        hue="teal"
-        icon={icon}
+      <SahaShell
+        {...shell}
         step={stepOf(stage)}
         total={total}
+        phase={phaseOf(stage)}
         title={t(titleKey)}
         {...backProps}
         scanProxy
-        footer={<PrimaryButton onClick={scanPrimary.press}>{t("flow.scanNow")}</PrimaryButton>}
+        main={{ label: ts("okut.scanMain"), aria: t("flow.scanNow"), d: SICON.scan, onClick: scanPrimary.press, testId: "flow-primary" }}
       >
         {task !== null && stage === "item" ? (
-          <section className="flex min-w-0 flex-col gap-1 rounded-card border-2 border-border bg-surface p-3" data-testid="task-card">
-            <p className="break-words text-xl font-bold text-ink">{task.itemName}</p>
-            <p className="break-words text-base text-ink">{t("putaway.taskLine", { qty: intOf(task.quantity) ?? task.quantity, from: task.sourceName || task.sourceCode })}</p>
-          </section>
+          <div className="job" data-testid="task-card">
+            <span className="uic" style={{ background: dz("8A5A12") }}>
+              <Ico d={SICON.urun} size={22} />
+            </span>
+            <span style={{ minWidth: 0 }}>
+              <b>{task.itemName}</b>
+              <small>{t("putaway.taskLine", { qty: intOf(task.quantity) ?? task.quantity, from: task.sourceName || task.sourceCode })}</small>
+            </span>
+          </div>
         ) : null}
         {stage === "target" && item !== null ? (
-          <section className="flex min-w-0 flex-col gap-1 rounded-card border-2 border-border bg-surface p-3">
-            <p className="break-words text-xl font-bold text-ink">{item.name}</p>
-            {source === null ? null : <p className="break-words text-base text-ink">{t("putaway.takenFrom", { from: source.name || source.code })}</p>}
-          </section>
+          <div className="job">
+            <span className="uic" style={{ background: dz("8A5A12") }}>
+              <Ico d={SICON.urun} size={22} />
+            </span>
+            <span style={{ minWidth: 0 }}>
+              <b>{item.name}</b>
+              {source === null ? null : <small>{t("putaway.takenFrom", { from: source.name || source.code })}</small>}
+            </span>
+            <span className="autosel">{ts("qty.okProduct")}</span>
+          </div>
         ) : null}
         <ScanPanel service={scanner} prompt={busy ? t("flow.checking") : t(stage === "item" ? "putaway.itemPrompt" : stage === "source" ? "putaway.sourcePrompt" : "putaway.targetPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="teal" />
-      </FlowShell>
+      </SahaShell>
       {alertView}
     </>
   );

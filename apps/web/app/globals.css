@@ -16,6 +16,8 @@
 @import "./design/kalip-form.css";
 @import "./design/kalip-detay.css";
 @import "./design/kalip-frame.css";
+@import "./design/kalip-saha.css";
+@import "./design/saha-frame.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
@@ -2006,4 +2008,8 @@ body:has(.dzp, .dza, .dzr, .dze) [data-testid="screen-nav"] { display: none; }
 /* T-968 (kalip-frame.css): kalıp kaplarının tam ekran zemini — kaynakta `.app` (atlanan cihaz çerçevesi) geçişinin alt rengi. */
 .dzl, .dzf, .dzd {
   --color-kalip-bg-b: #dce3ea;
+}
+/* T-969 uyarlaması (saha-frame.css): kaynaktaki `.app` arka plan geçişinin alt rengi (üreteç atlanan `.app` kuralının rengini toplamaz). */
+.dzs {
+  --color-dz-x-nmodok: #dce3ea;
 }
