@@ -136,3 +136,4 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-71 | T-430 kimlik çakışması (STATE: müşteri sil/sıfırla; `tasks/T-430.md`: Ekip ekranı) |
 | B-72 | Spec `outbox_events` tablosu yok — I-07 pg-boss aynı transaction ile karşılanıyor; spec güncellensin |
 | B-73 | README "Yayın kaynakları" Neon satırı eskimiş |
+| B-93 | CI `deps` kırmızı (21 Ekim, T-973 PR #137'de görüldü): GHSA-587h-7wmj-h5pm vitest > vite ≤ 8.3.2 high. Çözüm: kök devDependency `vite@8.3.3` (+ STACK satırı) ya da ci.yml muafiyeti (dev zinciri, Windows-only); ikisi de korunan dosya → supervisor onayı + security-reviewer özeti gerekir | — |
