@@ -152,7 +152,8 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
           finding: line === undefined,
           barcode: code,
           step: r.step,
-          scale: line?.scale ?? 0,
+          // Rafta satırı olmayan bulguda ürün ölçeği istemcide bilinmez: ondalık alan açılır, ölçek denetimi sunucuda (`QUANTITY_SCALE`; tam sayı ürüne kesir yazılamaz).
+          scale: line === undefined ? 6 : line.scale,
           counted: line?.counted ?? null,
         });
       } catch {
