@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Alt çubuk ve Modüller</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-direction:column;width:100%;min-height:100vh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;color:#172E42;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* önizleme çubuğu */
+.prev{align-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;margin:10px 12px;padding:4px;border-radius:24px;background:#FFFFFF;border:1.5px solid #172E42;max-width:calc(100% - 24px)}
+.prev-l{padding:0 8px 0 10px;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476;white-space:nowrap}
+.prevb{appearance:none;min-height:36px;padding:0 12px;border:0;border-radius:999px;background:transparent;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.prevb.on{background:#172E42;color:#FFFFFF}
+.prevsep{width:1px;height:22px;background:#C9D2DA;margin:0 4px}
+
+.appzone{display:flex;flex-direction:column;align-items:center;gap:18px;padding:0 12px 24px}
+.app{position:relative;display:flex;flex-direction:column;width:100%;max-width:1440px;height:900px;background:linear-gradient(180deg,#EEF1F4 0%,#DCE3EA 100%);border-radius:28px;overflow:hidden;box-shadow:0 30px 80px -40px rgba(23,46,66,.45)}
+.fr-tablet .app{max-width:1180px;height:820px;border:12px solid #172E42}
+.fr-mobile .app{max-width:390px;height:844px;border:10px solid #172E42;border-radius:36px}
+.app :focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+
+/* üst çubuk */
+.top{display:flex;align-items:center;gap:12px;padding:14px 24px;flex:none;background:rgba(238,241,244,.85);border-bottom:1.5px solid rgba(23,46,66,.08)}
+.fr-mobile .top{padding:10px 12px;gap:8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.logo{position:relative;flex:none;width:40px;height:40px;border-radius:12px;background:#172E42;display:flex;align-items:center;justify-content:center}
+.brand b{display:block;font:800 17px/1.05 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{display:block;margin-top:3px;font:600 11px/1 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.net{position:absolute;right:-4px;top:-4px;display:flex;width:14px;height:14px;border-radius:50%;background:#EEF1F4;align-items:center;justify-content:center}
+.net i{width:9px;height:9px;border-radius:50%;background:#2F9E6B;animation:netpulse 1.6s ease-out infinite}
+@keyframes netpulse{0%{box-shadow:0 0 0 0 rgba(47,158,107,.6)}100%{box-shadow:0 0 0 8px rgba(47,158,107,0)}}
+.pgic{display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+
+/* içerik */
+.inner{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:14px;padding:20px 24px 8px}
+.fr-mobile .inner{padding:12px 12px 4px;gap:10px}
+.fr-desktop .inner{width:100%;max-width:1100px;margin:0 auto}
+.hello h1{margin:0;font:800 30px/1.05 'Bricolage Grotesque',sans-serif}
+.fr-mobile .hello h1{font-size:22px}
+.hello p{margin:5px 0 0;font:600 11.5px/1.3 'IBM Plex Mono',monospace;color:#4E6476}
+.sample{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;background:#E3E9EE;font:600 10.5px/1 'IBM Plex Mono',monospace;color:#30475A;letter-spacing:.06em}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.fr-mobile .tiles{grid-template-columns:repeat(2,minmax(0,1fr));flex:1;min-height:0;grid-template-rows:repeat(2,minmax(0,1fr));gap:10px}
+.tl{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:150px;padding:16px;border:0;border-radius:22px;color:#FFFFFF;text-align:left;cursor:pointer;transition:transform .15s;animation:rise .4s cubic-bezier(.2,.9,.2,1) backwards}
+.fr-mobile .tl{min-height:0;padding:12px}
+.tl:active{transform:scale(.96)}
+.tl.calm{background:#FFFFFF;color:#172E42;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.tl .ic{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.22)}
+.tl.calm .ic{background:var(--c);color:#FFFFFF}
+.tl .n{position:absolute;top:12px;right:14px;font:800 28px/1 'Bricolage Grotesque',sans-serif}
+.tl.calm .n{color:var(--c)}
+.tl b{font:800 16px/1.1 'Bricolage Grotesque',sans-serif}
+.tl small{font:600 10.5px/1.2 'IBM Plex Mono',monospace;opacity:.9}
+.tl.calm small{color:#4E6476;opacity:1}
+.rows{display:flex;flex-direction:column;gap:10px}
+.rw{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border-radius:18px;background:#FFFFFF;box-shadow:0 1px 0 rgba(23,46,66,.05),0 10px 22px -18px rgba(23,46,66,.35)}
+.rw .ic{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+.rw b{display:block;font:700 15px/1.2 'Instrument Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rw small{display:block;margin-top:3px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qty{font:800 20px/1 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;font:800 11.5px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.pill.ok{background:#E3F1E9;color:#17583C}
+.pill.warn{background:#E56A00;color:#FFFFFF}
+.more{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 14px;border:2px dashed rgba(23,46,66,.3);border-radius:18px;background:transparent;font:700 13.5px/1.2 'Instrument Sans',sans-serif;color:#30475A;cursor:pointer}
+.more i{display:flex;color:#6C4BD8}
+
+/* ===== YENİ ALT CAM ÇUBUK: Geri/Sorun · Ana ekran · [ana işlem] · Modüller · Etkin ===== */
+.dock{position:relative;flex:none;z-index:30;padding:14px 12px 22px}
+.fr-desktop .dock{padding:14px 16px 22px}
+.dockin{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.15fr) repeat(2,minmax(0,1fr));align-items:center;height:72px;padding:0 6px;border-radius:999px;background:rgba(23,46,66,.38);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border:1px solid rgba(255,255,255,.45);box-shadow:0 14px 34px -16px rgba(23,46,66,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+.fr-tablet .dockin{max-width:760px;margin:0 auto;padding:0 12px}
+.fr-desktop .dockin{max-width:720px;margin:0 auto;padding:0 12px}
+.dk{appearance:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:64px;min-width:0;padding:0;border:0;border-radius:999px;background:transparent;color:#FFFFFF;cursor:pointer;transition:transform .15s}
+.dk:active{transform:scale(.93)}
+.dk span{font:800 9.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.07em;opacity:.9;white-space:nowrap}
+.fr-mobile .dk span{font-size:8.5px;letter-spacing:.04em}
+.dk.cur{color:#F4C542}
+.dk.cur::after{content:"";position:absolute;bottom:3px;left:50%;width:18px;height:3px;margin-left:-9px;border-radius:3px;background:#F4C542}
+.dk.problem{color:#F4C542}
+.dk.problem .qm{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:2.4px solid currentColor;font:800 16px/1 'Bricolage Grotesque',sans-serif}
+.dk.big{justify-self:center;width:66px;height:66px;margin-top:-22px;border-radius:50%;background:#5FAF8A;color:#FFFFFF;box-shadow:0 12px 26px -8px rgba(95,175,138,.75),0 0 0 5px rgba(23,46,66,.5);gap:0;overflow:visible}
+.dk.big .ico{width:30px;height:30px;stroke-width:2.2}
+.dk.big .cap{position:absolute;top:72px;left:50%;transform:translateX(-50%);display:block;color:#FFFFFF;opacity:1;font-size:9.5px;letter-spacing:.1em;text-shadow:0 1px 2px rgba(23,46,66,.6)}
+.dk-etkin{appearance:none;justify-self:center;position:relative;display:flex;align-items:center;justify-content:center;width:62px;height:62px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none}
+.orb{position:relative;flex:none;width:50px;height:50px;border-radius:50%;transition:transform .2s cubic-bezier(.2,.9,.2,1)}
+.orb::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#F4C542,#E56A00,#C62828,#6C4BD8,#0E7C7B,#2F7D5B,#F4C542);animation:spin 3.2s linear infinite}
+.orb::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#172E42}
+.orb .ico{position:absolute;inset:0;margin:auto;z-index:1;color:#FFFFFF;width:22px;height:22px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dk-etkin.live .orb{transform:scale(1.22)}
+.dk-etkin.live .orb::before{animation-duration:1.4s}
+.dk-etkin.live .orb .ico{color:#F4C542}
+.mr{position:absolute;inset:6px;border-radius:50%;border:2.5px solid #F4C542;opacity:0;pointer-events:none}
+.dk-etkin.live .mr{animation:mring 1.3s ease-out infinite}
+.dk-etkin.live .mr.b{animation-delay:.45s;border-color:#6C4BD8}
+@keyframes mring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.9);opacity:0}}
+
+/* ===== MODÜLLER: buzlu perde + cam panel ===== */
+.hback{position:absolute;inset:0;z-index:20;background:rgba(5,9,13,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:0;padding:0;cursor:pointer;width:100%}
+.msheet{position:absolute;z-index:21;left:10px;right:10px;bottom:108px;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:24px;background:rgba(14,27,39,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,.16);box-shadow:0 24px 50px -20px rgba(0,0,0,.6);color:#FFFFFF;animation:rise .22s cubic-bezier(.2,.9,.2,1)}
+.fr-tablet .msheet{left:50%;right:auto;width:760px;max-width:calc(100% - 24px);transform:translateX(-50%);padding:16px;gap:12px;animation:none}
+.fr-desktop .msheet{left:50%;right:auto;width:980px;max-width:calc(100% - 48px);transform:translateX(-50%);padding:18px;gap:14px;animation:none}
+@keyframes rise{from{transform:translateY(16px);opacity:0}}
+.mh{display:flex;align-items:center;gap:10px}
+.mh .gi{display:flex;align-items:center;justify-content:center;flex:none;width:38px;height:38px;border-radius:12px;background:#F4C542;color:#1A1300}
+.mh b{display:block;font:800 18px/1 'Bricolage Grotesque',sans-serif}
+.mh small{display:block;margin-top:4px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#9FB2C2}
+.x{appearance:none;margin-left:auto;display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:0;border-radius:14px;background:rgba(255,255,255,.1);color:#FFFFFF;cursor:pointer}
+.srch{display:flex;align-items:center;gap:8px;height:50px;padding:0 4px 0 14px;border-radius:16px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.18)}
+.srch .ico{color:#9FB2C2}
+.srch input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:#FFFFFF;font:600 15px/1 'Instrument Sans',sans-serif}
+.srch input::placeholder{color:#B7C6D3}
+.smic{appearance:none;display:flex;align-items:center;justify-content:center;flex:none;width:42px;height:42px;border:0;border-radius:12px;background:#F4C542;color:#1A1300;cursor:pointer}
+.mgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(4,96px);gap:8px}
+.fr-tablet .mgrid{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,104px);gap:10px}
+.fr-desktop .mgrid{grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(4,104px);gap:10px}
+.mt{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:6px;min-width:0;padding:10px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:#FFFFFF;text-align:left;cursor:pointer;transition:background .15s,transform .15s;animation:pop .25s cubic-bezier(.2,.9,.2,1) backwards}
+.fr-tablet .mt,.fr-desktop .mt{flex-direction:row;align-items:center;gap:12px;padding:12px}
+.mt:hover{background:rgba(255,255,255,.16)}
+.mt:active{transform:scale(.95)}
+@keyframes pop{from{transform:translateY(8px);opacity:0}}
+.mi{display:flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;border-radius:12px;color:#FFFFFF}
+.fr-tablet .mi,.fr-desktop .mi{width:48px;height:48px;border-radius:14px}
+.mtx{display:flex;flex-direction:column;gap:3px;min-width:0;width:100%}
+.mt b{font:700 13px/1.15 'Instrument Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-tablet .mt b,.fr-desktop .mt b{font-size:15px}
+.mt small{font:600 9.5px/1.25 'IBM Plex Mono',monospace;color:#9FB2C2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fr-tablet .mt small,.fr-desktop .mt small{font-size:10.5px}
+.soon{position:absolute;top:7px;right:7px;padding:3px 6px;border-radius:999px;background:#F4C542;color:#1A1300;font:800 8px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em}
+.mt.soonT .mi{filter:saturate(.55)}
+.mt.plus{border:2px dashed rgba(255,255,255,.3);background:transparent;justify-content:center;align-items:center;text-align:center}
+.fr-tablet .mt.plus,.fr-desktop .mt.plus{flex-direction:column;justify-content:center;gap:6px}
+.mt.plus .mi{background:rgba(255,255,255,.12);color:#F4C542}
+.mt.plus b{white-space:normal;font-size:13px}
+.mt.plus small{color:#F4C542}
+.mempty{grid-column:1 / -1;display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;border-radius:16px;background:rgba(255,255,255,.06);font:600 13px/1.3 'Instrument Sans',sans-serif;color:#C9D6E0}
+
+/* ===== ETKİN DİNLEME: sade buzlu perde ===== */
+.veil{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;padding:20px 16px 112px;background:rgba(14,27,39,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#FFFFFF;animation:fade .2s ease-out}
+@keyframes fade{from{opacity:0}}
+.vorb{position:relative;display:flex;align-items:center;justify-content:center;width:110px;height:110px;margin-bottom:6px}
+.vcore{position:relative;z-index:2;width:76px;height:76px;border-radius:50%}
+.vcore::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#F4C542,#E56A00,#C62828,#6C4BD8,#0E7C7B,#2F7D5B,#F4C542);animation:spin 1.6s linear infinite}
+.vcore::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#0E1B27}
+.vcore .ico{position:absolute;inset:0;margin:auto;z-index:1;width:30px;height:30px;color:#F4C542}
+.vr{position:absolute;inset:17px;border-radius:50%;border:3px solid #F4C542;opacity:0}
+.vr.a{animation:vr 1.1s ease-out infinite}
+.vr.b{border-color:#6C4BD8;animation:vr 1.6s ease-out infinite .2s}
+.vr.c{border-color:#0E7C7B;animation:vr 2.1s ease-out infinite .5s}
+@keyframes vr{0%{transform:scale(1);opacity:.85}25%{transform:scale(1.32);opacity:.6}40%{transform:scale(1.14);opacity:.7}70%{transform:scale(1.58);opacity:.3}100%{transform:scale(1.85);opacity:0}}
+.wave{display:flex;align-items:center;gap:4px;height:30px}
+.wave span{width:5px;border-radius:5px;background:#F4C542;animation:wv 1s ease-in-out infinite}
+@keyframes wv{0%,100%{height:6px}50%{height:28px}}
+.said{max-width:560px;text-align:center;font:700 22px/1.3 'Instrument Sans',sans-serif}
+.fr-mobile .said{font-size:19px}
+.said .caret{display:inline-block;width:2px;height:1em;margin-left:3px;vertical-align:-3px;background:#F4C542;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.vhint{max-width:520px;text-align:center;font:600 11px/1.45 'IBM Plex Mono',monospace;color:#C9D6E0;letter-spacing:.03em}
+.vchips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.vchip{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1.5px solid rgba(255,255,255,.3);border-radius:999px;background:rgba(255,255,255,.08);color:#FFFFFF;cursor:pointer;font:700 13px/1.1 'Instrument Sans',sans-serif}
+.vchip i{display:flex;color:#F4C542}
+.timer{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(198,40,40,.22);font:600 12px/1 'IBM Plex Mono',monospace;color:#FFD9D9}
+.timer i{width:9px;height:9px;border-radius:50%;background:#FF5A5A;animation:blink 1s steps(2) infinite}
+.stop{appearance:none;display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 22px 0 14px;border:0;border-radius:999px;background:#C62828;color:#FFFFFF;cursor:pointer;font:800 15px/1 'Bricolage Grotesque',sans-serif;box-shadow:0 10px 24px -10px rgba(198,40,40,.8)}
+.stop i{display:block;width:16px;height:16px;border-radius:4px;background:#FFFFFF}
+
+/* Anladım: onay kartı */
+.card{width:540px;max-width:100%;display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:24px;background:rgba(14,27,39,.92);border:1.5px solid rgba(255,255,255,.16);box-shadow:0 24px 50px -20px rgba(0,0,0,.6);animation:rise .22s cubic-bezier(.2,.9,.2,1)}
+.ch{display:flex;align-items:center;gap:12px}
+.ch .ok{display:flex;align-items:center;justify-content:center;flex:none;width:42px;height:42px;border-radius:50%;background:#0E7C7B;color:#FFFFFF}
+.ch b{display:block;font:800 20px/1 'Bricolage Grotesque',sans-serif}
+.ch small{display:block;margin-top:4px;font:600 10.5px/1.25 'IBM Plex Mono',monospace;color:#F4C542}
+.quote{margin:0;font:600 14px/1.35 'Instrument Sans',sans-serif;color:#C9D6E0}
+.pchips{display:flex;flex-wrap:wrap;gap:8px}
+.pc{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:4px 12px 4px 4px;border-radius:999px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.14)}
+.pc i{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;color:#FFFFFF}
+.pc b{display:block;font:800 14px/1 'Bricolage Grotesque',sans-serif}
+.pc small{display:block;margin-top:2px;font:600 9px/1 'IBM Plex Mono',monospace;color:#9FB2C2;letter-spacing:.06em}
+.acts{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:0 16px;border:0;border-radius:16px;cursor:pointer;font:800 16px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.btn.go{background:#2F7D5B;color:#FFFFFF;box-shadow:0 10px 22px -10px rgba(47,125,91,.8)}
+.btn.fix{background:transparent;color:#FFFFFF;border:2px solid rgba(255,255,255,.35)}
+.say{display:flex;align-items:center;justify-content:center;gap:8px;font:600 11px/1.3 'IBM Plex Mono',monospace;color:#C9D6E0}
+.say i{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#F4C542;color:#1A1300}
+
+/* okuma sonucu */
+.res{display:flex;flex-direction:column;gap:8px}
+.rr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;border-radius:16px;background:rgba(255,255,255,.08)}
+.rr i{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;color:#FFFFFF}
+.rr b{display:block;font:700 14.5px/1.2 'Instrument Sans',sans-serif}
+.rr small{display:block;margin-top:2px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#9FB2C2}
+.rr .open{appearance:none;min-height:44px;padding:0 14px;border:0;border-radius:12px;background:#F4C542;color:#1A1300;cursor:pointer;font:800 13px/1 'Bricolage Grotesque',sans-serif}
+
+/* başarı / hata nabzı */
+.fb{position:relative;display:flex;align-items:center;justify-content:center;width:120px;height:120px}
+.fb .core{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;width:84px;height:84px;border-radius:50%;color:#FFFFFF;animation:popin .35s cubic-bezier(.2,1.4,.3,1)}
+@keyframes popin{from{transform:scale(.4);opacity:0}}
+.fb .pl{position:absolute;inset:18px;border-radius:50%;animation:fbp 1.2s ease-out infinite}
+.fb .pl.b{animation-delay:.4s}
+.fb.good .core{background:#2F7D5B}
+.fb.good .pl{border:4px solid #5FAF8A}
+.fb.bad .core{background:#C62828;animation:popin .35s cubic-bezier(.2,1.4,.3,1),shake .4s .35s}
+.fb.bad .pl{border:4px solid #FF7A7A}
+@keyframes fbp{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.fbt{text-align:center;font:800 24px/1.15 'Bricolage Grotesque',sans-serif}
+.snd{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.1);font:600 11px/1.3 'IBM Plex Mono',monospace;color:#E6EBEF}
+.snd .ico{color:#F4C542}
+
+/* bildirim balonu */
+.toast{position:absolute;z-index:40;top:76px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:calc(100% - 24px);padding:8px 16px 8px 8px;border-radius:999px;background:#172E42;color:#FFFFFF;font:700 13.5px/1.2 'Instrument Sans',sans-serif;box-shadow:0 14px 30px -14px rgba(23,46,66,.7);animation:rise .2s cubic-bezier(.2,.9,.2,1)}
+.toast i{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:50%}
+
+/* iki çubuk düzeni (açıklama şeridi) */
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;width:100%;max-width:1440px}
+.lg{display:flex;flex-direction:column;gap:8px;width:460px;max-width:100%}
+.lg > b{font:800 12px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;color:#30475A}
+.lg .dockin{height:64px;background:#30475A}
+.lg .dk{height:56px;cursor:default}
+.lg .dk.big{width:56px;height:56px;margin-top:-16px}
+.lg .dk.big .cap{top:60px}
+.lg .orb{width:42px;height:42px}
+.lgsp{height:14px}
+
+/* ===== KARANLIK TEMA: saf siyah yok ===== */
+.thd .app{background:linear-gradient(180deg,#121B24 0%,#0F171F 100%);color:#E6EBEF}
+.thd .top{background:rgba(18,27,36,.88);border-bottom-color:rgba(255,255,255,.08)}
+.thd .brand small,.thd .hello p{color:#9FB2C2}
+.thd .sample{background:#1C2833;color:#9FB2C2}
+.thd .logo{background:#0B1118;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.thd .net{background:#121B24}
+.thd .tl.calm,.thd .rw{background:#1C2833;color:#E6EBEF;box-shadow:none}
+.thd .tl.calm small,.thd .rw small{color:#9FB2C2}
+.thd .tl:not(.calm){filter:saturate(.85) brightness(.92)}
+.thd .pill.ok{background:#1F3A30;color:#9FE1BF}
+.thd .pill.warn{background:#B85A14}
+.thd .more{border-color:rgba(255,255,255,.22);color:#C9D6E0}
+.thd .more i{color:#B9A6F2}
+.thd .dockin{background:rgba(28,40,51,.72);border-color:rgba(255,255,255,.14)}
+.thd .dk.big{background:#4E9A78;box-shadow:0 12px 26px -8px rgba(78,154,120,.6),0 0 0 5px rgba(18,27,36,.9)}
+.thd .dk.problem,.thd .dk.cur{color:#E0B84A}
+.thd .dk.cur::after{background:#E0B84A}
+.thd .orb::after{background:#0F171F}
+.thd .msheet,.thd .card{background:rgba(18,27,36,.94)}
+.thd .veil{background:rgba(8,13,18,.55)}
+.thd .toast{background:#223040}
+.thd .prev{background:#1C2833;border-color:#3A4A5A;color:#E6EBEF}
+.thd .prevb.on{background:#E6EBEF;color:#121B24}
+.thd .prev-l{color:#9FB2C2}
+.wrap.thd{background:#0B1118}
+.thd .lg > b{color:#9FB2C2}
+.thd .lg .dockin{background:#1C2833}
+/* ===== İLK KULLANIM REHBERİ ===== */
+.helpb{appearance:none;display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:0;border-radius:14px;background:#FFFFFF;color:#B07D0B;cursor:pointer;box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.4)}
+.thd .helpb{background:#1C2833;color:#E0B84A;box-shadow:none}
+.tveil{position:absolute;inset:0;z-index:25;background:rgba(5,9,13,.45);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fade .2s ease-out}
+.touring .dk,.touring .dk-etkin{opacity:.32;filter:blur(1.5px);transition:opacity .2s,filter .2s}
+.touring .dk.spot,.touring .dk-etkin.spot{opacity:1;filter:none;z-index:3;outline:3px solid #F0C24B;outline-offset:3px;box-shadow:0 0 0 9px rgba(240,194,75,.22)}
+.touring .dk.big.spot{box-shadow:0 0 0 5px rgba(23,46,66,.5),0 0 0 12px rgba(240,194,75,.25)}
+.coach{position:absolute;z-index:35;bottom:136px;display:flex;flex-direction:column;gap:8px;width:340px;max-width:calc(100% - 24px);padding:14px 14px 12px 16px;border-radius:20px;background:#FFFFFF;color:#172E42;box-shadow:0 24px 50px -18px rgba(5,9,13,.6);animation:rise .22s cubic-bezier(.2,.9,.2,1)}
+.fr-tablet .coach,.fr-desktop .coach{animation:fade .2s ease-out}
+.fr-mobile .coach{left:12px !important;right:12px;width:auto;max-width:none;transform:none !important}
+.thd .coach{background:#EEF1F4}
+.cth{display:flex;align-items:center;gap:6px}
+.cstep{flex:1;font-size:11px;font-weight:600;letter-spacing:.1em;color:#4E6476}
+.cbtn{appearance:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:12px;background:#EEF1F4;color:#172E42;cursor:pointer}
+.cbtn.on{background:#F0C24B;color:#1A1300}
+.thd .cbtn{background:#DCE3EA}
+.ctt{font:800 20px/1.1 'Bricolage Grotesque',sans-serif}
+.ctx{margin:0;font:600 14.5px/1.4 'Instrument Sans',sans-serif;color:#30475A}
+.cdo{font-size:9.5px;font-weight:600;letter-spacing:.06em;color:#8A6400}
+.cft{display:flex;align-items:center;gap:10px;margin-top:2px}
+.dots{display:flex;gap:6px;flex:1}
+.dots i{width:8px;height:8px;border-radius:50%;background:#C9D2DA}
+.dots i.on{width:22px;border-radius:8px;background:#172E42}
+.dots i.done{background:#5FAF8A}
+.skip{appearance:none;min-height:44px;padding:0 6px;border:0;background:transparent;color:#4E6476;cursor:pointer;font:700 13px/1 'Instrument Sans',sans-serif;text-decoration:underline;text-underline-offset:3px}
+.nextb{appearance:none;min-height:46px;padding:0 18px;border:0;border-radius:14px;background:#172E42;color:#FFFFFF;cursor:pointer;font:800 15px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.carr{position:absolute;bottom:-8px;width:16px;height:16px;margin-left:-8px;background:inherit;transform:rotate(45deg);border-radius:3px}
+@media (prefers-reduced-motion:reduce){.wrap *{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div class="{{wrapCls}}">
+  <div class="prev" role="group" aria-label="Önizleme">
+    <span class="prev-l">CİHAZ</span>
+    <sc-for list="{{devs}}" as="d" hint-placeholder-count="3">
+      <button type="button" class="{{d.cls}}" aria-pressed="{{d.on}}" onClick="{{d.pick}}">{{d.label}}</button>
+    </sc-for>
+    <span class="prevsep"></span>
+    <span class="prev-l">TEMA</span>
+    <sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+      <button type="button" class="{{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button>
+    </sc-for>
+    <span class="prevsep"></span>
+    <span class="prev-l">ROL</span>
+    <sc-for list="{{roles}}" as="r" hint-placeholder-count="2">
+      <button type="button" class="{{r.cls}}" aria-pressed="{{r.on}}" onClick="{{r.pick}}">{{r.label}}</button>
+    </sc-for>
+    <span class="prevsep"></span>
+    <span class="prev-l">EKRAN</span>
+    <sc-for list="{{screens}}" as="e" hint-placeholder-count="3">
+      <button type="button" class="{{e.cls}}" aria-pressed="{{e.on}}" onClick="{{e.pick}}">{{e.label}}</button>
+    </sc-for>
+    <span class="prevsep"></span>
+    <span class="prev-l">DURUM</span>
+    <sc-for list="{{states}}" as="s" hint-placeholder-count="8">
+      <button type="button" class="{{s.cls}}" aria-pressed="{{s.on}}" onClick="{{s.pick}}">{{s.label}}</button>
+    </sc-for>
+  </div>
+
+  <div class="appzone">
+    <div class="app">
+      <header class="top">
+        <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+          <div class="brand">
+            <span class="logo"><span class="net" aria-label="Çevrimiçi"><i></i></span><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg></span>
+            <span style="min-width: 0"><b>Etkin WMS</b><small>ÖRNEK FİRMA · {{roleTitle}}</small></span>
+          </div>
+        </sc-if>
+        <sc-if value="{{isSub}}" hint-placeholder-val="{{ false }}">
+          <div class="brand">
+            <span class="pgic" style="{{pageIcStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{pageD}}"></path></svg></span>
+            <span style="min-width: 0"><b>{{pageTitle}}</b><small>{{pageSub}}</small></span>
+          </div>
+        </sc-if>
+        <button type="button" class="helpb" aria-label="Bu ekranı tekrar göster" title="Bu ekranı tekrar göster" onClick="{{startTour}}">
+          <svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"></circle><path d="M9.3 9.4a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.2 1-1.2 1.8v.4"></path><path d="M12 17.2v.01"></path></svg>
+        </button>
+      </header>
+
+      <main class="inner">
+        <!-- ANA EKRAN (role göre) -->
+        <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+          <div class="hello">
+            <h1>{{greet}}</h1>
+            <p>{{subline}} · <span class="sample">ÖRNEK VERİ</span></p>
+          </div>
+          <div class="tiles">
+            <sc-for list="{{homeTiles}}" as="h" hint-placeholder-count="4">
+              <button type="button" class="{{h.cls}}" style="{{h.style}}">
+                <span class="n">{{h.n}}</span>
+                <span class="ic"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{h.d}}"></path></svg></span>
+                <b>{{h.t}}</b><small>{{h.s}}</small>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <!-- ALT EKRAN: Ürünler / Sayım -->
+        <sc-if value="{{isSub}}" hint-placeholder-val="{{ false }}">
+          <div class="rows">
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+              <div class="rw">
+                <span class="ic" style="{{r.icStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.d}}"></path></svg></span>
+                <span style="min-width: 0"><b>{{r.name}}</b><small>{{r.meta}}</small></span>
+                <span class="{{r.pillCls}}">{{r.right}}</span>
+              </div>
+            </sc-for>
+            <button type="button" class="more" onClick="{{openMods}}"><i><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></i>{{moreRows}}</button>
+          </div>
+        </sc-if>
+      </main>
+
+      <!-- ===== ALT CAM ÇUBUK ===== -->
+      <nav class="dock" aria-label="Alt çubuk">
+        <div class="dockin">
+          <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+            <button type="button" class="{{probCls}}" aria-label="Sorun bildir" onClick="{{tapProblem}}">
+              <span class="qm" aria-hidden="true">?</span>
+              <span>SORUN</span>
+            </button>
+          </sc-if>
+          <sc-if value="{{isSub}}" hint-placeholder-val="{{ false }}">
+            <button type="button" class="{{backCls}}" aria-label="Geri" onClick="{{goBack}}">
+              <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+              <span>GERİ</span>
+            </button>
+          </sc-if>
+          <button type="button" class="{{homeCls}}" aria-label="Ana ekran" aria-current="{{homeCur}}" onClick="{{goHome}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg>
+            <span>ANA EKRAN</span>
+          </button>
+          <button type="button" class="{{centerCls}}" aria-label="{{centerAria}}" onClick="{{tapCenter}}">
+            <svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="{{centerD}}"></path></svg>
+            <span class="cap">{{centerLbl}}</span>
+          </button>
+          <button type="button" class="{{modsCls}}" aria-label="Modüller" aria-expanded="{{modsOpen}}" onClick="{{toggleMods}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg>
+            <span>MODÜLLER</span>
+          </button>
+          <button type="button" class="{{micCls}}" aria-label="Etkin: basılı tut ve konuş, iki kez dokun uzun konuşma" aria-pressed="{{micOn}}" onPointerDown="{{micDown}}" onPointerUp="{{micUp}}" onPointerCancel="{{micUp}}" onKeyDown="{{micKey}}" onContextMenu="{{noMenu}}">
+            <span class="mr" aria-hidden="true"></span><span class="mr b" aria-hidden="true"></span>
+            <span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- ===== MODÜLLER ===== -->
+      <sc-if value="{{modsOpen}}" hint-placeholder-val="{{ false }}">
+        <button type="button" class="hback" aria-label="Modülleri kapat" onClick="{{closeAll}}"></button>
+        <section class="msheet" role="dialog" aria-label="Modüller" onKeyDown="{{sheetKey}}">
+          <div class="mh">
+            <span class="gi"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg></span>
+            <span style="min-width: 0"><b>Modüller</b><small>{{modsSub}}</small></span>
+            <button type="button" class="x" aria-label="Kapat" onClick="{{closeAll}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+          <label class="srch">
+            <svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+            <span class="sr">Modül ara</span>
+            <input type="search" placeholder="Modül ara ya da söyle" value="{{q}}" onChange="{{onQ}}">
+            <button type="button" class="smic" aria-label="Modülü söyle" onClick="{{sayModule}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></button>
+          </label>
+          <div class="mgrid" role="list">
+            <sc-for list="{{tiles}}" as="m" hint-placeholder-count="12">
+              <button type="button" class="{{m.cls}}" style="{{m.delay}}" aria-label="{{m.aria}}" onClick="{{m.pick}}">
+                <span class="mi" style="{{m.icStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{m.d}}"></path></svg></span>
+                <span class="mtx"><b>{{m.name}}</b><small>{{m.sub}}</small></span>
+                <sc-if value="{{m.soon}}" hint-placeholder-val="{{ false }}"><span class="soon">YAKINDA</span></sc-if>
+              </button>
+            </sc-for>
+            <sc-if value="{{noMatch}}" hint-placeholder-val="{{ false }}">
+              <div class="mempty"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>Bulunamadı · başka bir ad söyle</div>
+            </sc-if>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ===== ETKİN: bas-konuş / uzun dinleme ===== -->
+      <sc-if value="{{listening}}" hint-placeholder-val="{{ false }}">
+        <div class="veil" role="status" aria-live="polite">
+          <span class="vorb" aria-hidden="true"><span class="vr a"></span><span class="vr b"></span><span class="vr c"></span><span class="vcore"><svg class="ico" width="30" height="30" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></span>
+          <span class="wave" aria-hidden="true"><span style="animation-delay: 0s"></span><span style="animation-delay: .15s"></span><span style="animation-delay: .3s"></span><span style="animation-delay: .1s"></span><span style="animation-delay: .25s"></span><span style="animation-delay: .05s"></span><span style="animation-delay: .2s"></span></span>
+          <sc-if value="{{isLong}}" hint-placeholder-val="{{ false }}">
+            <span class="timer"><i></i>DİNLİYORUM… ‘BİTTİ’ DE · {{clock}}</span>
+          </sc-if>
+          <p class="said" style="margin: 0">“{{said}}”<span class="caret"></span></p>
+          <sc-if value="{{isPtt}}" hint-placeholder-val="{{ true }}">
+            <p class="vhint" style="margin: 0">BIRAKINCA UYGULAR · İKİ KEZ DOKUN: UZUN KONUŞMA, ‘BİTTİ’ DEYİNCE BİTER</p>
+            <div class="vchips">
+              <button type="button" class="vchip" onClick="{{toConfirm}}"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></i>Bırak (uygula)</button>
+              <button type="button" class="vchip" onClick="{{toRead}}"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0"></path></svg></i>Örnek: “Ahmet’in görevleri”</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{isLong}}" hint-placeholder-val="{{ false }}">
+            <button type="button" class="stop" onClick="{{toConfirm}}"><i aria-hidden="true"></i>Bitti</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===== ANLADIM: stok/yetki değiştiren komutta onay kartı ===== -->
+      <sc-if value="{{confirming}}" hint-placeholder-val="{{ false }}">
+        <div class="veil">
+          <section class="card" role="dialog" aria-label="Anladım, onayla">
+            <div class="ch">
+              <span class="ok"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+              <span style="min-width: 0"><b>Anladım</b><small>STOĞU DEĞİŞTİRİR · ONAYSIZ KAYDEDİLMEZ</small></span>
+              <button type="button" class="x" aria-label="Vazgeç" onClick="{{closeAll}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+            </div>
+            <p class="quote">“{{fullSaid}}”</p>
+            <div class="pchips">
+              <sc-for list="{{parsed}}" as="p" hint-placeholder-count="4">
+                <span class="pc"><i style="{{p.icStyle}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="{{p.d}}"></path></svg></i><span><b>{{p.v}}</b><small>{{p.k}}</small></span></span>
+              </sc-for>
+            </div>
+            <div class="acts">
+              <button type="button" class="btn go" onClick="{{approve}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Onayla</button>
+              <button type="button" class="btn fix" onClick="{{fix}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="m13.5 6.5 4 4"></path></svg>Düzelt</button>
+            </div>
+            <span class="say"><i><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0"></path></svg></i>‘ONAYLA’ DE · ‘DÜZELT’ DE</span>
+          </section>
+        </div>
+      </sc-if>
+
+      <!-- ===== OKUMA SORGUSU: doğrudan sonuç ===== -->
+      <sc-if value="{{reading}}" hint-placeholder-val="{{ false }}">
+        <div class="veil">
+          <section class="card" role="dialog" aria-label="Ahmet’in görevleri">
+            <div class="ch">
+              <span class="ok" style="background: #6C4BD8"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5"></path></svg></span>
+              <span style="min-width: 0"><b>Ahmet’in görevleri · 3</b><small style="color: #9FB2C2">YALNIZ GÖSTERİR · ONAY GEREKMEZ</small></span>
+              <button type="button" class="x" aria-label="Kapat" onClick="{{closeAll}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+            </div>
+            <div class="res">
+              <sc-for list="{{tasks}}" as="t" hint-placeholder-count="3">
+                <div class="rr">
+                  <i style="{{t.icStyle}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="{{t.d}}"></path></svg></i>
+                  <span style="min-width: 0"><b>{{t.title}}</b><small>{{t.meta}}</small></span>
+                  <button type="button" class="open">Aç</button>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+      </sc-if>
+
+      <!-- ===== BAŞARI / HATA: görsel nabız + ses ===== -->
+      <sc-if value="{{feedback}}" hint-placeholder-val="{{ false }}">
+        <div class="veil" role="status" aria-live="assertive" style="justify-content: center; padding-bottom: 120px" onClick="{{closeAll}}">
+          <span class="{{fbCls}}" aria-hidden="true"><span class="pl"></span><span class="pl b"></span><span class="core"><svg class="ico" width="40" height="40" viewBox="0 0 24 24"><path d="{{fbD}}"></path></svg></span></span>
+          <span class="fbt">{{fbTitle}}</span>
+          <span class="snd"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"></path></svg>SESLİ GERİ BİLDİRİM · {{fbSound}}</span>
+          <sc-if value="{{isErr}}" hint-placeholder-val="{{ false }}">
+            <button type="button" class="vchip" onClick="{{retry}}"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0"></path></svg></i>Tekrar söyle</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===== İLK KULLANIM REHBERİ: hedef aydınlık, gerisi kısık + hafif bulanık ===== -->
+      <sc-if value="{{touring}}" hint-placeholder-val="{{ false }}">
+        <div class="tveil" aria-hidden="true"></div>
+        <section class="coach" style="{{coachStyle}}" role="dialog" aria-label="İlk kullanım rehberi" aria-live="polite" onKeyDown="{{coachKey}}">
+          <div class="cth">
+            <span class="mono cstep">ADIM {{tNo}}/{{tTotal}}</span>
+            <button type="button" class="{{speakCls}}" aria-label="Sesli anlat" aria-pressed="{{speakOn}}" onClick="{{speak}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"></path></svg></button>
+            <button type="button" class="cbtn" aria-label="Atla, rehberi kapat" onClick="{{endTour}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+          <b class="ctt">{{tTitle}}</b>
+          <p class="ctx">{{tText}}</p>
+          <span class="mono cdo">YA DA PARLAYAN DÜĞMEYE DOKUN · YAPARAK ÖĞREN</span>
+          <div class="cft">
+            <span class="dots" aria-hidden="true"><sc-for list="{{tDots}}" as="d" hint-placeholder-count="5"><i class="{{d.cls}}"></i></sc-for></span>
+            <button type="button" class="skip" onClick="{{endTour}}">Atla</button>
+            <button type="button" class="nextb" onClick="{{nextStep}}">{{tNext}}</button>
+          </div>
+          <span class="carr" style="{{arrStyle}}" aria-hidden="true"></span>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+        <div class="toast" role="status"><i style="{{toastIc}}"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="{{toastD}}"></path></svg></i>{{toastText}}</div>
+      </sc-if>
+    </div>
+
+    <!-- İki çubuk düzeni: ana ekran ve alt ekran -->
+    <div class="legend" aria-label="Alt çubuğun iki hâli">
+      <div class="lg">
+        <b>ANA EKRANDA</b>
+        <div class="dockin" aria-hidden="true">
+          <span class="dk problem"><span class="qm">?</span><span>SORUN</span></span>
+          <span class="dk cur"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></span>
+          <span class="dk big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"></path></svg><span class="cap">OKUT</span></span>
+          <span class="dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></span>
+          <span class="dk-etkin"><span class="orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></span>
+        </div>
+        <span class="lgsp"></span>
+      </div>
+      <div class="lg">
+        <b>ALT EKRANDA · ORTADA EKRANIN ANA İŞİ</b>
+        <div class="dockin" aria-hidden="true">
+          <span class="dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"></path></svg><span>GERİ</span></span>
+          <span class="dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></span>
+          <span class="dk big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg><span class="cap">EKLE · ONAYLA</span></span>
+          <span class="dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></span>
+          <span class="dk-etkin"><span class="orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></span>
+        </div>
+        <span class="lgsp"></span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { dev: 'mobile', dark: false, role: 'owner', screen: 'home', st: 'off', q: '', page: 0, w: 0, ticks: 0, toast: null, tstep: 0, seen: { home: true }, speak: false };
+    this._down = 0; this._last = 0; this._fromLong = false;
+  }
+  componentDidMount() {
+    try {
+      const w = window.innerWidth || 1440; let coarse = false;
+      try { coarse = window.matchMedia('(pointer: coarse)').matches; } catch (e) {}
+      this.setState({ dev: w < 700 ? 'mobile' : (coarse || w < 1100) ? 'tablet' : 'desktop' });
+    } catch (e) {}
+    this._t = setInterval(() => {
+      const v = this.state.st;
+      if (v === 'listen' || v === 'long') this.setState({ w: this.state.w + 1, ticks: this.state.ticks + 1 });
+    }, 420);
+  }
+  componentWillUnmount() { clearInterval(this._t); clearTimeout(this._tt); clearTimeout(this._ft); }
+  tone(kind) {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      this._ac = this._ac || new C(); const ac = this._ac; const t0 = ac.currentTime;
+      const seq = kind === 'ok' ? [660, 990] : kind === 'err' ? [330, 220] : [560];
+      seq.forEach((f, i) => {
+        const o = ac.createOscillator(); const g = ac.createGain(); const t = t0 + i * 0.13;
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.13);
+      });
+      if (navigator.vibrate) navigator.vibrate(kind === 'err' ? [60, 40, 60] : 30);
+    } catch (e) {}
+  }
+  toast(kind, text) {
+    clearTimeout(this._tt);
+    this.setState({ toast: { kind, text } });
+    this._tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  nav(screen, extra) {
+    const first = !this.state.seen[screen];
+    this.go(first ? 'tour' : 'off', Object.assign({ screen, tstep: 0, seen: Object.assign({}, this.state.seen, { [screen]: true }) }, extra || {}));
+  }
+  say(text) {
+    try { const ss = window.speechSynthesis; if (!ss) return; ss.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'tr-TR'; ss.speak(u); } catch (e) {}
+  }
+  go(st, extra) { clearTimeout(this._ft); this.setState(Object.assign({ st, w: 0, ticks: 0 }, extra || {})); }
+  renderVals() {
+    const s = this.state;
+    const dev = s.dev;
+    const P = (id, label, cur, fn) => ({ label, on: cur ? 'true' : 'false', cls: 'prevb' + (cur ? ' on' : ''), pick: fn });
+    const MIC = 'M9 3h6v11H9zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21';
+    const M = [
+      ['home', 'Ana ekran', 'Raporlar', '#0E7C7B', 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
+      ['urun', 'Ürünler', 'Kartlar · SKT · Lot', '#2F5DA8', 'M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8'],
+      ['depo', 'Depolar', 'Raf · Doluluk', '#30475A', 'M4 21V3h16v18M4 9h16M4 15h16M10 6h4M10 12h4M10 18h4'],
+      ['satin', 'Satın alma', 'Mal kabul', '#B5552B', 'M3 4h2.5l2.2 11h10.6L21 7H7M9.5 19.5h.01M17.5 19.5h.01'],
+      ['satis', 'Satış', 'Sevk · Kargo', '#C25A00', 'M2 16V6h11v10M13 9h4l3 3.5V16h-7M6.5 17.5h.01M16.5 17.5h.01'],
+      ['topla', 'Toplama', 'Görevlerim', '#2F7D5B', 'M10 6h10M10 12h10M10 18h10M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17'],
+      ['trans', 'Transfer', 'Depolar arası', '#6C4BD8', 'M4 8h14l-3-3M20 16H6l3 3'],
+      ['uret', 'Üretim', 'Reçete · Emir', '#8A5A12', 'M3 21V11l5 3v-3l5 3V7l8 4v10zM7 18h2M12 18h2M17 18h2'],
+      ['qr', 'QR / Barkod', 'Üret · Yazdır', '#172E42', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM18 14h2M14 18v2'],
+      ['koli', 'Koli & palet', 'Tekil QR', '#9A5B2E', 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10M7.5 5l9 4'],
+      ['tara', 'Tara', 'Kamera', '#0E7C7B', 'M4 8h3l2-3h6l2 3h3v12H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7'],
+      ['sayim', 'Sayım', 'Anlık · Yıl sonu', '#2F5DA8', 'M6 4h12v17H6zM9 4V2.8h6V4M9 13l2 2 4-4'],
+      ['ayin', 'Ayın personeli', 'Performans', '#B07D0B', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z'],
+      ['ses', 'Sesli komut', 'Konuş, bulayım', '#6C4BD8', MIC],
+      ['abone', 'Abonelik', 'Paket · Lisans', '#17804F', 'M3 6h18v12H3zM3 10h18M7 15h4'],
+      ['fis', 'Stok fişleri', 'Devir · Giriş · Çıkış', '#4E6476', 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h7M9 16h7'],
+      ['excel', 'Excel’den aktar', 'Ürün · Cari', '#1E7B45', 'M6 3h9l4 4v14H6zM15 3v4h4M9.5 11l5 6M14.5 11l-5 6'],
+      ['etiket', 'Etiket tasarımı', 'Şablon · Yazdır', '#B23A3A', 'M3 12V4h8l10 10-8 8zM7.5 8h.01'],
+      ['cari', 'Cariler', 'Müşteri · Tedarikçi', '#0F6E8C', 'M4 21V6l8-3 8 3v15M9 21v-5h6v5M8 9h2M14 9h2M8 13h2M14 13h2'],
+      ['ekip', 'Ekip', 'Kişiler · Yetki', '#7A4BC2', 'M9 8a3.5 3.5 0 1 0 0 .01M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.2 2.4 3.5 5.2'],
+    ];
+    const SOON = { satin: true, ayin: true, abone: true, etiket: true };
+    const FIELD = { home: true, topla: true, tara: true, sayim: true, koli: true, ses: true };
+    const allowed = M.filter((m) => s.role === 'owner' || FIELD[m[0]]);
+    const ql = (s.q || '').toLocaleLowerCase('tr').trim();
+    const list = ql ? allowed.filter((m) => (m[1] + ' ' + m[2]).toLocaleLowerCase('tr').indexOf(ql) >= 0) : allowed;
+    const cap = dev === 'mobile' ? 12 : dev === 'tablet' ? 16 : 20;
+    let shown = list; let plus = null;
+    if (list.length > cap) {
+      if (s.page === 0) { shown = list.slice(0, cap - 1); plus = { n: list.length - (cap - 1), first: true }; }
+      else { shown = list.slice(cap - 1, cap - 1 + cap - 1); plus = { first: false }; }
+    }
+    const openMod = (m) => {
+      const [id, name] = m;
+      if (SOON[id]) { this.tone('tap'); this.toast('info', name + ' yakında · hazır olunca haber veririz'); return; }
+      if (id === 'home' || id === 'urun' || id === 'sayim') { this.tone('tap'); this.nav(id, { q: '', page: 0 }); return; }
+      if (id === 'ses') { this.go('listen', { q: '', page: 0 }); return; }
+      this.tone('tap'); this.go('off', { q: '', page: 0 }); this.toast('ok', name + ' açılıyor (örnek)');
+    };
+    const tiles = shown.map((m, i) => ({
+      name: m[1], sub: m[2], d: m[4], soon: !!SOON[m[0]],
+      aria: m[1] + ', ' + m[2] + (SOON[m[0]] ? ', yakında' : ''),
+      cls: 'mt' + (SOON[m[0]] ? ' soonT' : ''), icStyle: 'background: ' + m[3], delay: 'animation-delay: ' + (i * 18) + 'ms',
+      pick: () => openMod(m),
+    }));
+    if (plus) {
+      tiles.push(plus.first ? {
+        name: '+' + plus.n + ' daha', sub: 'ARA YA DA SÖYLE', d: 'M12 5v14M5 12h14', soon: false, aria: plus.n + ' modül daha, ara ya da söyle',
+        cls: 'mt plus', icStyle: '', delay: '', pick: () => this.setState({ page: 1 }),
+      } : {
+        name: 'İlk sayfa', sub: 'ARA YA DA SÖYLE', d: 'M15 5l-7 7 7 7', soon: false, aria: 'İlk sayfaya dön',
+        cls: 'mt plus', icStyle: '', delay: '', pick: () => this.setState({ page: 0 }),
+      });
+    }
+    const isHome = s.screen === 'home';
+    const CENTER = {
+      home: ['OKUT', 'Okut: kamera ya da NFC', 'M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10', 'Kamera açılıyor · okut'],
+      urun: ['EKLE', 'Yeni ürün kartı ekle', 'M12 5v14M5 12h14', 'Yeni ürün kartı (örnek)'],
+      sayim: ['ONAYLA', 'Sayımı onayla', 'm5 12 5 5 9-10', 'Sayım onaylandı'],
+    }[s.screen];
+    const PAGES = {
+      urun: ['Ürünler · 248 kart', 'KARTLAR · SKT · LOT', '#2F5DA8', M[1][4]],
+      sayim: ['Sayım · Raf A-03', '6 ÜRÜN · 5 SAYILDI · 1 FARK', '#2F5DA8', M[11][4]],
+    };
+    const pg = PAGES[s.screen] || PAGES.urun;
+    const rowCap = dev === 'mobile' ? 4 : 6;
+    const box = M[1][4];
+    const URUN = [
+      ['Kauçuk granül 25 kg', 'HM-000012 · RAF A-03', '42 koli', '#2F5DA8', 'ok'],
+      ['Conta 40 mm', 'HM-000018 · RAF B-11 · SKT 3 AY', '1.200 ad', '#0E7C7B', 'ok'],
+      ['Hortum Ø12', 'MM-000204 · RAF C-02', '80 m', '#6C4BD8', 'ok'],
+      ['Silikon levha 3 mm', 'HM-000031 · RAF A-07 · LOT 24-118', '14 m²', '#9A5B2E', 'warn'],
+      ['Takoz 50×50', 'MM-000150 · RAF D-01', '60 ad', '#2F7D5B', 'ok'],
+      ['Yağ 5 L', 'HM-000044 · RAF E-04', '22 bidon', '#4E6476', 'ok'],
+    ];
+    const SAYIM = [
+      ['Kauçuk granül 25 kg', 'HM-000012 · BEKLENEN 42', '42 ✓', '#2F7D5B', 'ok'],
+      ['Conta 40 mm', 'HM-000018 · BEKLENEN 1.200', '1.180 · −20', '#E56A00', 'warn'],
+      ['Silikon levha 3 mm', 'HM-000031 · BEKLENEN 14', '14 ✓', '#2F7D5B', 'ok'],
+      ['Takoz 50×50', 'MM-000150 · BEKLENEN 60', '60 ✓', '#2F7D5B', 'ok'],
+      ['Hortum Ø12', 'MM-000204 · BEKLENEN 80', '80 ✓', '#2F7D5B', 'ok'],
+      ['Yağ 5 L', 'HM-000044 · BEKLENEN 22', 'SAYILACAK', '#4E6476', 'ok'],
+    ];
+    const src = s.screen === 'sayim' ? SAYIM : URUN;
+    const rows = src.slice(0, rowCap).map((r) => ({ name: r[0], meta: r[1], right: r[2], icStyle: 'background: ' + r[3], d: s.screen === 'sayim' ? M[11][4] : box, pillCls: 'pill ' + r[4] }));
+    const totalRows = s.screen === 'sayim' ? 6 : 248;
+    const moreRows = totalRows - rows.length > 0 ? '+' + (totalRows - rows.length) + ' daha · ara ya da söyle' : 'Hepsi bu kadar · başka ürün söyle';
+    const HOME = s.role === 'owner' ? [
+      ['tl', '#C62828', '8', 'Kritik stok', '3’Ü BUGÜN BİTER', 'M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8'],
+      ['tl', '#E56A00', '3', 'Geciken sipariş', 'EN ESKİSİ 4 GÜN', 'M2 16V6h11v10M13 9h4l3 3.5V16h-7M6.5 17.5h.01M16.5 17.5h.01'],
+      ['tl calm', '#0E7C7B', '14×', 'Devir hızı', '90 GÜN · NORMAL', 'M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4'],
+      ['tl calm', '#2F5DA8', '2', 'Sayım farkı', 'ONAY BEKLİYOR', 'M6 4h12v17H6zM9 4V2.8h6V4M9 13l2 2 4-4'],
+    ] : [
+      ['tl calm', '#2F7D5B', '2', 'Toplama', '14 KALEM KALDI', M[5][4]],
+      ['tl', '#C62828', '1', 'Çıkış · ACİL', '6 KALEM · RAMPA 1', 'M2 16V6h11v10M13 9h4l3 3.5V16h-7M6.5 17.5h.01M16.5 17.5h.01'],
+      ['tl calm', '#2F5DA8', '1', 'Sayım', 'RAF B-11 · 17:00', M[11][4]],
+      ['tl calm', '#9A5B2E', '0', 'Koli & palet', 'BEKLEYEN YOK', M[9][4]],
+    ];
+    const homeTiles = HOME.map((h, i) => ({ cls: h[0], style: (h[0] === 'tl' ? 'background: ' + h[1] : '--c: ' + h[1]) + '; animation-delay: ' + (i * 50) + 'ms', n: h[2], t: h[3], s: h[4], d: h[5] }));
+
+    const WORDS = 'Raf A-03’e 5 koli HM-000012 giriş yap'.split(' ');
+    const LONG = 'Akın Kimya’dan gelen 5 koli HM-000012’yi Raf A-03’e giriş yap, irsaliye 2041, kalan 2 koli yarın gelecek'.split(' ');
+    const words = s.st === 'long' ? LONG : WORDS;
+    const n = Math.min(words.length, 1 + s.w);
+    const said = words.slice(0, n).join(' ') + (n < words.length ? '…' : '');
+    const sec = Math.floor(s.ticks * 0.42);
+    const clock = '00:' + (sec < 10 ? '0' : '') + Math.min(59, sec);
+    const live = s.st === 'listen' || s.st === 'long';
+    const STATES = [['off', 'Kapalı'], ['tour', 'İlk kullanım rehberi'], ['mods', 'Modüller'], ['listen', 'Dinliyor (bas-konuş)'], ['long', 'Uzun dinleme'], ['confirm', 'Onay kartı'], ['read', 'Okuma sonucu'], ['ok', 'Başarı'], ['err', 'Hata']];
+    const TOASTS = { ok: ['#2F7D5B', 'm5 12 5 5 9-10'], err: ['#C62828', 'M6 6l12 12M18 6 6 18'], info: ['#E0A100', 'M12 8v5M12 16.5v.01'] };
+    const tk = s.toast ? TOASTS[s.toast.kind] : TOASTS.info;
+    const touring = s.st === 'tour';
+    const CUR = CENTER[0].charAt(0) + CENTER[0].slice(1).toLocaleLowerCase('tr');
+    const T_HOME = 'Kaybolursanız buraya dokunun, yapacağınız işleri görürsünüz.';
+    const T_MODS = 'Bütün ekranlar burada. Aradığınızı adını söyleyerek de bulursunuz.';
+    const T_ETK = 'Basılı tutun ve söyleyin, bırakınca uygular. Stok değişecekse önce onay sorar.';
+    const STEPS = isHome ? [
+      ['center', 'Okut', 'Ürünü, rafı ya da koliyi kamerayla veya NFC ile okutun; doğru ekran kendisi açılır.'],
+      ['home', 'Ana ekran', T_HOME],
+      ['mods', 'Modüller', T_MODS],
+      ['etkin', 'Etkin (bas-konuş)', T_ETK],
+      ['sorun', 'Sorun bildir', 'Hasarlı ürün ya da eksik mi var? Dokunun; fotoğraf çekin ya da söyleyin.'],
+    ] : [
+      ['center', CUR, 'Bu ekranın ana işi hep ortadadır; adı altında yazar.'],
+      ['geri', 'Geri', 'Bir önceki ekrana döner. Yarım iş varsa çıkmadan önce sorar.'],
+      ['home', 'Ana ekran', T_HOME],
+      ['mods', 'Modüller', T_MODS],
+      ['etkin', 'Etkin (bas-konuş)', T_ETK],
+    ];
+    const ti = Math.min(s.tstep, STEPS.length - 1);
+    const stp = STEPS[ti];
+    const spotKey = touring ? stp[0] : '';
+    const sp = (k) => (spotKey === k ? ' spot' : '');
+    const COL = { sorun: 0, geri: 0, home: 1, center: 2, mods: 3, etkin: 4 };
+    const FR = [0.5, 1.5, 2.575, 3.65, 4.65][COL[stp[0]]] / 5.15;
+    const dockW = dev === 'tablet' ? 736 : 696;
+    let coachStyle = '', arrStyle = '';
+    if (dev === 'mobile') { arrStyle = 'left: ' + (FR * 100).toFixed(1) + '%'; }
+    else {
+      const off = Math.round((FR - 0.5) * dockW);
+      const shift = Math.max(-190, Math.min(190, off));
+      coachStyle = 'left: calc(50% + ' + shift + 'px); transform: translateX(-50%)';
+      arrStyle = 'left: ' + (170 + off - shift) + 'px';
+    }
+    const advance = () => { this.tone('tap'); if (ti >= STEPS.length - 1) this.go('off', { tstep: 0 }); else this.setState({ tstep: ti + 1 }); if (this.state.speak) { const n2 = STEPS[ti + 1]; if (n2) this.say(n2[1] + '. ' + n2[2]); } };
+    const T = (k, fn) => (e) => { if (this.state.st === 'tour') { if (spotKey === k) advance(); return; } fn(e); };
+    return {
+      touring, tNo: ti + 1, tTotal: STEPS.length, tTitle: stp[1], tText: stp[2],
+      tNext: ti >= STEPS.length - 1 ? 'Bitti' : 'İleri →',
+      tDots: STEPS.map((x, i) => ({ cls: i === ti ? 'on' : i < ti ? 'done' : '' })),
+      coachStyle, arrStyle,
+      nextStep: advance,
+      endTour: () => { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} this.go('off', { tstep: 0 }); },
+      coachKey: (e) => { if (e && e.key === 'Escape') this.go('off', { tstep: 0 }); },
+      startTour: () => this.go('tour', { tstep: 0 }),
+      speakOn: s.speak ? 'true' : 'false', speakCls: 'cbtn' + (s.speak ? ' on' : ''),
+      speak: () => { const on = !this.state.speak; this.setState({ speak: on }); if (on) this.say(stp[1] + '. ' + stp[2]); else { try { window.speechSynthesis.cancel(); } catch (e) {} } },
+      probCls: 'dk problem' + sp('sorun'), backCls: 'dk' + sp('geri'), centerCls: 'dk big' + sp('center'),
+      goBack: T('geri', () => { this.tone('tap'); this.go('off', { screen: 'home' }); }),
+      wrapCls: 'wrap fr-' + dev + (s.dark ? ' thd' : '') + (touring ? ' touring' : ''),
+      devs: [['mobile', 'Telefon'], ['tablet', 'Tablet'], ['desktop', 'Masaüstü']].map(([id, l]) => P(id, l, dev === id, () => this.setState({ dev: id, page: 0 }))),
+      themes: [P('l', 'Açık', !s.dark, () => this.setState({ dark: false })), P('d', 'Koyu', s.dark, () => this.setState({ dark: true }))],
+      roles: [['owner', 'Hesap sahibi'], ['field', 'Saha personeli']].map(([id, l]) => P(id, l, s.role === id, () => this.setState({ role: id, page: 0, q: '' }))),
+      screens: [['home', 'Ana ekran'], ['urun', 'Alt: Ürünler'], ['sayim', 'Alt: Sayım']].map(([id, l]) => P(id, l, s.screen === id, () => this.setState({ screen: id }))),
+      states: STATES.map(([id, l]) => P(id, l, s.st === id, () => { this.go(id, { page: 0, tstep: 0 }); if (id === 'ok') this.tone('ok'); if (id === 'err') this.tone('err'); })),
+      isHome, isSub: !isHome,
+      roleTitle: s.role === 'owner' ? 'DEPO PANOSU' : 'GÖREVLERİM',
+      greet: s.role === 'owner' ? 'Günaydın' : 'Günaydın, Mehmet',
+      subline: s.role === 'owner' ? 'PAZARTESİ · 2 DEPO · 14 KİŞİ SAHADA' : 'VARDİYA 08:00–17:00 · ANA DEPO',
+      homeTiles,
+      pageTitle: pg[0], pageSub: pg[1], pageIcStyle: 'background: ' + pg[2], pageD: pg[3],
+      rows, moreRows,
+      homeCls: 'dk' + (isHome && s.st !== 'mods' ? ' cur' : '') + sp('home'), homeCur: isHome ? 'page' : 'false',
+      goHome: T('home', () => { this.tone('tap'); this.go('off', { screen: 'home' }); }),
+      tapProblem: T('sorun', () => { this.tone('tap'); this.toast('info', 'Sorun bildir · fotoğraf çek ya da söyle'); }),
+      centerLbl: CENTER[0], centerAria: CENTER[1], centerD: CENTER[2],
+      tapCenter: T('center', () => { this.tone('ok'); this.go('off'); this.toast('ok', CENTER[3]); }),
+      modsOpen: s.st === 'mods',
+      modsCls: 'dk' + (s.st === 'mods' ? ' cur' : '') + sp('mods'),
+      toggleMods: T('mods', () => { this.tone('tap'); this.go(s.st === 'mods' ? 'off' : 'mods', { page: 0 }); }),
+      openMods: () => this.go('mods', { page: 0 }),
+      closeAll: () => this.go('off', { q: '', page: 0 }),
+      sheetKey: (e) => { if (e && e.key === 'Escape') this.go('off', { q: '', page: 0 }); },
+      modsSub: (s.role === 'owner' ? 'HESAP SAHİBİ · ' : 'SAHA PERSONELİ · ') + allowed.length + ' MODÜL AÇIK' + (plus && !plus.first ? ' · SAYFA 2' : ''),
+      q: s.q,
+      onQ: (e) => this.setState({ q: e.target.value, page: 0 }),
+      sayModule: () => this.go('listen'),
+      tiles, noMatch: list.length === 0,
+      micCls: 'dk-etkin' + (live ? ' live' : '') + sp('etkin'), micOn: live ? 'true' : 'false',
+      micDown: (e) => {
+        if (this.state.st === 'tour') { this._down = 0; if (spotKey === 'etkin') advance(); return; }
+        this._down = Date.now(); this._fromLong = this.state.st === 'long';
+        if (!this._fromLong) this.go('listen');
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+      },
+      micUp: () => {
+        if (!this._down) return;
+        const held = Date.now() - this._down; const now = Date.now(); this._down = 0;
+        if (this._fromLong) { this._fromLong = false; this.tone('tap'); this.go('confirm'); return; }
+        if (held > 380) { this.tone('tap'); this.go('confirm'); return; }
+        if (this._last && now - this._last < 450) { this._last = 0; this.tone('tap'); this.go('long'); return; }
+        this._last = now; this.go('off'); this.toast('info', 'Basılı tut ve konuş · iki kez dokun: uzun konuşma');
+      },
+      micKey: (e) => { if (this.state.st === 'tour') { if (e && (e.key === 'Enter' || e.key === ' ') && spotKey === 'etkin') { e.preventDefault(); advance(); } return; } if (e && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); this.go(this.state.st === 'long' ? 'confirm' : 'long'); } },
+      noMenu: (e) => { if (e && e.preventDefault) e.preventDefault(); },
+      listening: live, isLong: s.st === 'long', isPtt: s.st === 'listen',
+      said, clock,
+      toConfirm: () => { this.tone('tap'); this.go('confirm'); },
+      toRead: () => { this.tone('tap'); this.go('read'); },
+      confirming: s.st === 'confirm',
+      fullSaid: WORDS.join(' '),
+      parsed: [
+        ['GİRİŞ', 'İŞLEM', '#2F7D5B', 'M12 3v12M7 10l5 5 5-5M4 19h16'],
+        ['5 koli', 'MİKTAR', '#9A5B2E', M[9][4]],
+        ['HM-000012', 'ÜRÜN', '#2F5DA8', M[8][4]],
+        ['Raf A-03', 'YER', '#3A6A8C', M[2][4]],
+      ].map(([v, k, c, d]) => ({ v, k, d, icStyle: 'background: ' + c })),
+      approve: () => { this.tone('ok'); this.go('ok'); this._ft = setTimeout(() => { if (this.state.st === 'ok') this.go('off'); }, 2600); },
+      fix: () => { this.tone('tap'); this.go('listen'); },
+      reading: s.st === 'read',
+      tasks: [
+        ['Toplama · SİP-2041', '8 KALEM · RAMPA 1 · 2/8 BİTTİ', '#2F7D5B', M[5][4]],
+        ['Transfer · Hammadde → Üretim', '4 PALET · 10:30', '#6C4BD8', M[6][4]],
+        ['Sayım · Raf B-11', '8 ÜRÜN · 17:00’YE KADAR', '#2F5DA8', M[11][4]],
+      ].map(([title, meta, c, d]) => ({ title, meta, d, icStyle: 'background: ' + c })),
+      feedback: s.st === 'ok' || s.st === 'err', isErr: s.st === 'err',
+      fbCls: 'fb ' + (s.st === 'err' ? 'bad' : 'good'),
+      fbD: s.st === 'err' ? 'M6 6l12 12M18 6 6 18' : 'm5 12 5 5 9-10',
+      fbTitle: s.st === 'err' ? 'Raf A-30 bulunamadı' : '5 koli girildi · Raf A-03',
+      fbSound: s.st === 'err' ? 'UYARI SESİ + “RAF BULUNAMADI, TEKRAR SÖYLE”' : 'ONAY SESİ + “5 KOLİ GİRİLDİ”',
+      retry: () => { this.tone('tap'); this.go('listen'); },
+      hasToast: !!s.toast, toastText: s.toast ? s.toast.text : '', toastIc: 'background: ' + tk[0], toastD: tk[1],
+    };
+  }
+}
+</script>
+</body>
+</html>
