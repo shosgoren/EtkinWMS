@@ -66,3 +66,32 @@ test.describe("Ekip (T-430)", () => {
     await expect(page.getByTestId("team-tab-people")).toBeVisible();
   });
 });
+
+test.describe("Tablet alt çubuk (T-921)", () => {
+  test("1180 px: eski iç ekran gezinmesi yeni tasarım ekranlarını örtmez; orta ana işlem en üstte; Kullanıcılar bağlantısı çerçevede ortalı", async ({ page }) => {
+    await loginAdmin(page);
+    await page.setViewportSize({ width: 1180, height: 820 });
+    // Aktar'ın ilk adımında (tür seçimi) tasarım gereği orta ana işlem yoktur: orada yalnız eski gezinmenin gizliliği denetlenir.
+    await page.goto("/t/demo/import");
+    await expect(page.getByTestId("aktar")).toBeVisible();
+    await expect(page.getByTestId("screen-nav")).toBeHidden();
+    for (const [url, root, main] of [
+      ["/t/demo/team", "team", "team-main"],
+      ["/t/demo/groups", "groups", "groups-main"],
+    ] as const) {
+      await page.goto(url);
+      await expect(page.getByTestId(root)).toBeVisible();
+      await expect(page.getByTestId("screen-nav")).toBeHidden();
+      await expect(page.getByTestId(main)).toBeVisible();
+      const onTop = await page.evaluate<boolean>(
+        `(() => { const el = document.querySelector('[data-testid="${main}"]'); if (el === null) return false;
+          const r = el.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return hit !== null && (hit === el || el.contains(hit)); })()`,
+      );
+      expect(onTop, `${url}: orta ana işlem başka bir katmanın altında kalmamalı`).toBe(true);
+    }
+    await page.goto("/t/demo/team");
+    await expect(page.getByTestId("team-manage")).toHaveCSS("display", "flex");
+    await expect(page.getByTestId("team-manage")).toHaveCSS("align-items", "center");
+  });
+});

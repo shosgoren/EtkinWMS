@@ -18,4 +18,7 @@ body:has(.dze) [data-testid="bottom-nav"], body:has(.dze) [data-testid="tenant-b
 /* Uygulama uyarlaması: kişi listesi kendi içinde kayar (gerçek ekip kaynaktaki örnek sayıdan büyük olabilir); "+N kişi daha" satırı çizilmez.
    Onay kartında doğrulama kodu yöneticinin yazdığı alandır (güvenlik: uygulama kodu okuyamaz). */
 .dze .plist { overflow-y: auto; min-height: 0; }
+/* T-921: kaynakta `.pmore` bir <button> (içerik dikey/yatay ortada); uygulamada Kullanıcılar ekranına bağlantı (<a>) olduğundan aynı
+   yerleşim açıkça verilir — aksi hâlde satır içi bağlantıda min-height işlemez ve metin kesik çerçevenin üstüne biner. */
+.dze a.pmore { display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 12px; }
 .dze .code input { width: 100%; min-height: 52px; border: 0; background: none; font: 800 28px/1 var(--font-plex-mono), monospace; letter-spacing: .25em; color: inherit; outline: none; }

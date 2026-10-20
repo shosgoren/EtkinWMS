@@ -769,6 +769,10 @@ body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-b
 /* T-403: arama kutusu yer tutucusu tarayıcı varsayılanı (kaynak sıfırlama yapmaz; Tailwind önyükü yarı saydam yapar). */
 .dzy .search input::placeholder { color: revert; opacity: revert; }
 body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-bar"], body:has(.dzy) .app-header { display: none; }
+/* T-921: kendi cam alt çubuğu (Geri + Ana ekran · ana işlem) olan yeni tasarım kökleri (Pano, Aktar/Cari, Gruplar, Ekip) eski iç ekran
+   gezinmesini (`screen-nav`, Geri/Ana ekran) göstermez. Tablette (768–1199) eski çubuk sabit konumda yeni çubuğun üstüne binip orta ana
+   işlemi örtüyordu; telefonda akışta kaldığı için görünmüyordu. */
+body:has(.dzp, .dza, .dzr, .dze) [data-testid="screen-nav"] { display: none; }
 /* design:bakis:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
 .dz {
   --color-dz-a-aaaaaa-be: rgba(0, 0, 0, .14);
