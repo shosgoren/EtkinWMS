@@ -81,6 +81,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-55 | Pasif üyelik; davet/saha hesabı yaşam döngüsü tutarlılığı | — |
 | B-56 | Donanım kabulü: telefon/notebook kamera, Epson/ZPL, Bluetooth, el terminali (AC-35) | Q-103 |
 | B-57 | Offline gereksinim ölçümü | Q-102, ADR-025 |
+| B-58b | **Canlı hata:** saha girişi (kayıtlı cihaz) iPhone'da sığmıyor, tuş takımı kesik. T-924 (KODDA VAR) | kullanıcı bildirimi 20 Ekim |
 
 ## P3 — Altın Kural / tasarım ve kod kalitesi
 | ID | İş |

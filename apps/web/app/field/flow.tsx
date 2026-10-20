@@ -188,6 +188,8 @@ function Flow({ host }: { host: string }) {
   const [staff, setStaff] = useState<readonly StaffPick[] | null>(null);
   const [who, setWho] = useState<StaffPick | null>(null);
   const [ws, setWs] = useState("");
+  // T-924: kayıtlı cihazda hatırlanan çalışma alanı tek satır olarak bantta gösterilir (telefonda kaydırmasız sığması için); "Değiştir" alanı açar.
+  const [wsEdit, setWsEdit] = useState(false);
   const [user, setUser] = useState("");
   const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
@@ -494,9 +496,18 @@ function Flow({ host }: { host: string }) {
             <span>
               <b>{t("deviceOk", { name: device.deviceName })}</b>
               {device.tenantName.toLocaleUpperCase("tr-TR")}
+              {ws.trim() !== "" && !wsEdit ? (
+                <span className="wsline" data-testid="field-ws-line">
+                  {`${host}/${ws.trim()}`}
+                  <button type="button" className="wsedit" onClick={() => setWsEdit(true)} data-testid="field-ws-edit">
+                    {t("workspaceChange")}
+                  </button>
+                </span>
+              ) : null}
             </span>
           </div>
           <div className="card" style={{ background: C.surface }}>
+            {ws.trim() !== "" && !wsEdit ? null : (
             <div className="fl">
               <label htmlFor="g-ws">{t("workspace")}</label>
               <div className="inp" style={{ background: C.chip }}>
@@ -507,6 +518,7 @@ function Flow({ host }: { host: string }) {
                 {t("workspaceHint")}
               </span>
             </div>
+            )}
             <div className="fl">
               <label htmlFor="g-user">{t("username")}</label>
               <div className="inp" style={{ background: C.chip }}>
