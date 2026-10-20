@@ -4,14 +4,17 @@
 // kuralları (ör. TRANSIT yalnızca kök) yeniden yazılmaz, sunucu reddi (`PARENT_INVALID` vb.) gösterilir.
 // Düzey etiketleri (Bölge/Raf/Göz) şimdilik sabit i18n varsayılanıdır; tenant terminolojisi okuyucusu Bulgular'da.
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Banner, Button, ConfirmDialog, EmptyState } from "@wms/ui";
+import type { CSSProperties } from "react";
+import { ConfirmDialog } from "@wms/ui";
+import { LICON } from "../../../../design/kalip-icons.ts";
 import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
-import { PageBody } from "../../easy-setup/sheet.tsx";
-import { SetupGuide, isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
+import { isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
+import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, type KalipHizliIslem } from "../../kalip/detay.tsx";
+import { Ico, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { kdz } from "../../kalip/tokens.ts";
 import { archiveLocationAction, createLocationAction, getSetupProgressAction, loadMoreLocationsAction, renameLocationAction, suggestCodeAction } from "../actions.ts";
 import { CreateDialog, ServerErrorBanner } from "../warehouses-view.tsx";
 import type { ServerError } from "../warehouses-view.tsx";
@@ -34,11 +37,13 @@ export interface TreeCursor {
   readonly id: string;
 }
 
-const BADGE = "inline-flex items-center rounded-full px-2 text-xs font-bold";
 const TOGGLE =
   "inline-flex size-12 shrink-0 items-center justify-center rounded-control border-2 border-border-strong bg-surface text-lg font-bold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-const LINK_CLS =
-  "inline-flex min-h-12 min-w-12 items-center justify-center rounded-control px-2 text-base font-semibold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const c = (hex: string): string => kdz("dzd", hex);
+/** Satır eylem düğmesi (kaynak `.btn`, küçük); kilitliyken soluk. */
+const actBtn = (bg: string, disabled: boolean): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48, opacity: disabled ? 0.5 : 1 });
+/** Lokasyon türü rengi (kaynak paletinden; yalnız ayırt etmek için, anlamı tür etiketi taşır). */
+const KIND_COLOR: Record<string, string> = { RECEIVING: "2F5DA8", STORAGE: "0E7C7B", STAGING: "E56A00", TRANSIT: "6C4BD8" };
 
 /** Bir seferde en çok bu kadar kademe girinti (mobilde yatay taşma olmasın); daha derinde düzey rozeti yol gösterir. */
 const MAX_INDENT_STEPS = 4;
@@ -55,6 +60,7 @@ function levelKey(depth: number): "zone" | "rack" | "bin" | "deeper" {
 
 export function LocationTree({
   slug,
+  dark,
   warehouseId,
   warehouseName,
   warehouseCode,
@@ -64,6 +70,7 @@ export function LocationTree({
   initialNext,
 }: {
   slug: string;
+  dark: boolean;
   warehouseId: string;
   warehouseName: string;
   warehouseCode: string;
@@ -76,6 +83,7 @@ export function LocationTree({
   const tk = useTranslations("warehouses.kind");
   const tw = useTranslations("warehouses");
   const tb = useTranslations("easySetup.bulk");
+  const te = useTranslations("easySetup");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -93,7 +101,17 @@ export function LocationTree({
   const [busy, setBusy] = useState(false);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<{ error: ServerError; scope: "warehouse" | "location" } | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const { say, node: toast } = useKalipToast("detay");
+  /** Başarı bildirimi: kalıp balonu + onay sesi (görsel + sesli geri bildirim). `null` = bildirim yok. */
+  const setNotice = (text: string | null): void => {
+    if (text === null) return;
+    tone("ok");
+    say("ok", text);
+  };
+  const fail = (e: { error: ServerError; scope: "warehouse" | "location" }): void => {
+    tone("err");
+    setError(e);
+  };
   const writable = canManage && warehouseActive;
   const clientReady = useSyncExternalStore(subscribeToClientReady, getClientReadySnapshot, getServerReadySnapshot);
   const canOpenDialogs = writable && clientReady;
@@ -157,7 +175,7 @@ export function LocationTree({
     const r = await changeCode(codeChanged.id, codeChanged.from);
     setUndoing(false);
     if (!r.ok) {
-      setError({ error: r.error, scope: "location" });
+      fail({ error: r.error, scope: "location" });
       return;
     }
     setCodeChanged(null);
@@ -174,7 +192,7 @@ export function LocationTree({
     setBusy(false);
     setArchiving(null);
     if (!res.ok) {
-      setError({ error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId }, scope: "location" });
+      fail({ error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId }, scope: "location" });
       return;
     }
     setNotice(t("done.archived"));
@@ -188,7 +206,7 @@ export function LocationTree({
     const res = await loadMoreLocationsAction({ slug, warehouseId, after: next });
     setMore(false);
     if (!res.ok) {
-      setError({ error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId }, scope: "location" });
+      fail({ error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId }, scope: "location" });
       return;
     }
     setItems((cur) => [...cur, ...res.data.items.map((i) => ({ id: i.id, parentId: i.parentId, code: i.code, name: i.name, depth: i.depth, kind: i.kind, status: i.status }))]);
@@ -197,105 +215,188 @@ export function LocationTree({
 
   const lockText = !canManage ? tw("lockedReason") : !warehouseActive ? t("warehouseArchived") : null;
 
+  const activeCount = items.filter((i) => i.status === "ACTIVE").length;
+  const countText = next === null ? String(activeCount) : `${activeCount}+`;
+  const openRoot = (): void => {
+    tone("tap");
+    setParent({ id: null, label: warehouseName });
+  };
+  const quick: KalipHizliIslem[] = canOpenDialogs
+    ? [
+        {
+          key: "bulk",
+          label: tb("open"),
+          d: LICON.raf,
+          color: "0E7C7B",
+          onClick: () => {
+            tone("tap");
+            setBulkOpen(true);
+          },
+        },
+      ]
+    : [];
+  // Kurulum sürüyorsa sıradaki adım tek satır (ağaç ekranında rehberin kısa hâli): raflar → oluşturucu, ürün → ürün formu.
+  const guideNext = !guide || progress === null ? null : !progress.hasLocation ? "locations" : !progress.hasItem ? "items" : null;
+
   return (
     <>
-      <PageBody hide={bulkOpen || parent !== undefined || editing !== null}>
-      <div data-location-tree-ready={clientReady} className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link href={base} className={LINK_CLS}>
-            {t("back")}
-          </Link>
-          <h1 className="break-words text-2xl font-extrabold text-ink">{warehouseName}</h1>
-          <p className="break-all text-base text-ink-muted">{tw("codeLabel", { code: warehouseCode })}</p>
-        </div>
-        <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:*:shrink-0 sm:*:whitespace-nowrap">
-          <Button onClick={() => setParent({ id: null, label: warehouseName })} disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : "tree-locked"}>
-            {t("addRoot")}
-          </Button>
-          <Button variant="secondary" onClick={() => setBulkOpen(true)} disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : "tree-locked"}>
-            {tb("open")}
-          </Button>
-          {lockText === null ? null : (
-            <p id="tree-locked" className="max-w-xs break-words text-sm text-ink-muted">
-              {lockText}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
-      {notice ? <Banner kind="info">{notice}</Banner> : null}
-      {error ? <ServerErrorBanner error={error.error} returnTo={returnTo} scope={error.scope} /> : null}
-      {guide && progress !== null ? <SetupGuide slug={slug} progress={progress} /> : null}
-
-      <section aria-label={t("label")} className="flex min-w-0 flex-col gap-3">
-        {visible.length === 0 ? (
-          guide ? null : <EmptyState title={t("empty")} description={writable ? t("emptyAction") : t("emptyReadOnly")} />
-        ) : (
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0" role="tree" aria-label={t("label")}>
-            {visible.map((it) => {
-              const hasChildren = (children.get(it.id) ?? []).length > 0;
-              const open = expanded.has(it.id);
-              const active = it.status === "ACTIVE";
-              const noteId = `loc-lock-${it.id}`;
-              return (
-                <li
-                  key={it.id}
-                  role="treeitem"
-                  aria-level={it.depth + 1}
-                  aria-expanded={hasChildren ? open : undefined}
-                  data-testid="location-row"
-                  style={{ marginLeft: Math.min(it.depth, MAX_INDENT_STEPS) * INDENT_PX }}
-                  className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border bg-surface p-3 shadow-card"
+      {/* SSR önizlemesi etkileşimsizdir: `data-location-tree-ready` hidrasyondan sonra true; o zamana dek pencere açan düğmeler kapalı. */}
+      <div data-location-tree-ready={clientReady} style={{ display: "contents" }}>
+        <KalipEkran
+          kind="detay"
+          dark={dark}
+          title={t("title")}
+          icon={{ d: LICON.raf, color: "0E7C7B" }}
+          heading={false}
+          testId="location-tree"
+          bar={{
+            back: { href: base, aria: t("back") },
+            main: { label: tw("k.addLoc"), aria: t("addRoot"), d: LICON.plus, disabled: !canOpenDialogs, onClick: openRoot, testId: "location-add" },
+          }}
+          overlays={toast}
+        >
+          <KalipDetayIzgara
+            left={
+              <>
+                <KalipHero
+                  label={tw("k.hero")}
+                  name={warehouseName}
+                  code={warehouseCode}
+                  tags={[warehouseActive ? tw("status.ACTIVE") : tw("status.ARCHIVED")]}
+                  d={LICON.depo}
+                  color={warehouseActive ? "30475A" : "4E6476"}
+                  total={{ value: countText, sub: tw("k.locSub"), crit: false }}
                 >
-                  <div className="flex min-w-0 items-start gap-2">
-                    {hasChildren ? (
-                      <button type="button" className={TOGGLE} aria-label={t(open ? "collapse" : "expand", { name: it.name })} aria-expanded={open} onClick={() => toggle(it.id)}>
-                        {open ? "−" : "+"}
-                      </button>
-                    ) : null}
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="min-w-0 break-words text-base font-bold text-ink">{it.name}</span>
-                      <span className="min-w-0 break-all text-sm text-ink-muted">{tw("codeLabel", { code: it.code })}</span>
-                      <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <span className={`${BADGE} bg-accent-soft text-accent-ink`}>{tk(it.kind)}</span>
-                        <span className={`${BADGE} bg-locked-bg text-locked-ink`}>{t(`level.${levelKey(it.depth)}`)}</span>
-                        {active ? null : <span className={`${BADGE} bg-warning-bg text-warning-ink`}>{tw("status.ARCHIVED")}</span>}
-                      </div>
-                    </div>
-                  </div>
-                  {active ? (
-                    <div role="group" aria-label={tw("actionsFor", { name: it.name })} className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:*:shrink-0 sm:*:whitespace-nowrap">
-                      <Button variant="secondary" disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setParent({ id: it.id, label: `${it.name} (${it.code})` })}>
-                        {t("addChild")}
-                      </Button>
-                      <Button variant="secondary" disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : noteId} aria-label={tw("codeEdit.for", { name: it.name })} onClick={() => setEditing(it)}>
-                        {tw("codeEdit.button")}
-                      </Button>
-                      <Button variant="danger" disabled={!canOpenDialogs} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setArchiving(it)}>
-                        {t("archive")}
-                      </Button>
-                    </div>
-                  ) : null}
-                  {active && lockText !== null ? (
-                    <p id={noteId} className="break-words text-sm text-ink-muted">
+                  {lockText === null ? null : (
+                    <small id="tree-locked" style={{ display: "block", marginTop: 6 }}>
                       {lockText}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {next === null ? null : (
-          <div>
-            <Button variant="secondary" loading={more} onClick={() => void loadMore()}>
-              {t("more")}
-            </Button>
-          </div>
-        )}
-      </section>
-      </PageBody>
+                    </small>
+                  )}
+                </KalipHero>
+                <KalipHizli label={tw("k.quick")} items={quick} />
+                {guideNext === null ? null : guideNext === "locations" ? (
+                  <button type="button" className="more" data-testid="setup-row" onClick={() => (canOpenDialogs ? setBulkOpen(true) : undefined)} disabled={!canOpenDialogs}>
+                    <i>
+                      <Ico d={LICON.clip} size={20} />
+                    </i>
+                    {tw("k.next", { step: te("guide.locations.title") })}
+                  </button>
+                ) : (
+                  <a className="more" data-testid="setup-row" href={`/t/${encodeURIComponent(slug)}/items?new=1`}>
+                    <i>
+                      <Ico d={LICON.clip} size={20} />
+                    </i>
+                    {tw("k.next", { step: te("guide.items.title") })}
+                  </a>
+                )}
+                {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
+                {error ? <ServerErrorBanner error={error.error} returnTo={returnTo} scope={error.scope} /> : null}
+              </>
+            }
+            right={
+              <KalipKartBolum label={t("label")} title={t("title")} sub={tw("k.treeSub", { n: countText })} d={LICON.raf} color="0E7C7B" testId="location-tree-card">
+                {visible.length === 0 ? (
+                  <p style={{ margin: 0 }} data-testid="location-empty">
+                    <b style={{ display: "block" }}>{t("empty")}</b>
+                    <small className="mono">{writable ? t("emptyAction") : t("emptyReadOnly")}</small>
+                  </p>
+                ) : (
+                  <ul className="whl" role="tree" aria-label={t("label")} style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                    {visible.map((it) => {
+                      const hasChildren = (children.get(it.id) ?? []).length > 0;
+                      const open = expanded.has(it.id);
+                      const active = it.status === "ACTIVE";
+                      const noteId = lockText === null ? undefined : "tree-locked";
+                      return (
+                        <li
+                          key={it.id}
+                          role="treeitem"
+                          aria-level={it.depth + 1}
+                          aria-expanded={hasChildren ? open : undefined}
+                          data-testid="location-row"
+                          data-status={it.status}
+                          className="whr"
+                          style={{ marginLeft: Math.min(it.depth, MAX_INDENT_STEPS) * INDENT_PX, opacity: active ? 1 : 0.7 }}
+                        >
+                          {hasChildren ? (
+                            <button type="button" className={TOGGLE} aria-label={t(open ? "collapse" : "expand", { name: it.name })} aria-expanded={open} onClick={() => toggle(it.id)}>
+                              {open ? "−" : "+"}
+                            </button>
+                          ) : (
+                            <span className="dot" style={{ background: c(KIND_COLOR[it.kind] ?? "4E6476") }} />
+                          )}
+                          <span style={{ minWidth: 0 }}>
+                            <b>{it.name}</b>
+                            <small>
+                              {it.code} · {tk(it.kind)} · {t(`level.${levelKey(it.depth)}`)}
+                            </small>
+                          </span>
+                          <span className={`pill ${active ? "ok" : "warn"}`}>{active ? tw("status.ACTIVE") : tw("status.ARCHIVED")}</span>
+                          {active ? (
+                            <span role="group" aria-label={tw("actionsFor", { name: it.name })} style={{ gridColumn: "1 / -1", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              <button
+                                type="button"
+                                className="btn"
+                                style={actBtn("0E7C7B", !canOpenDialogs)}
+                                disabled={!canOpenDialogs}
+                                aria-describedby={noteId}
+                                onClick={() => {
+                                  tone("tap");
+                                  setParent({ id: it.id, label: `${it.name} (${it.code})` });
+                                }}
+                              >
+                                <Ico d={LICON.plus} size={18} />
+                                {t("addChild")}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn"
+                                style={actBtn("172E42", !canOpenDialogs)}
+                                disabled={!canOpenDialogs}
+                                aria-describedby={noteId}
+                                aria-label={tw("codeEdit.for", { name: it.name })}
+                                onClick={() => {
+                                  tone("tap");
+                                  setEditing(it);
+                                }}
+                              >
+                                <Ico d={LICON.pencil} size={18} />
+                                {tw("codeEdit.button")}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn"
+                                style={actBtn("C62828", !canOpenDialogs)}
+                                disabled={!canOpenDialogs}
+                                aria-describedby={noteId}
+                                onClick={() => {
+                                  tone("tap");
+                                  setArchiving(it);
+                                }}
+                              >
+                                <Ico d={LICON.trash} size={18} />
+                                {t("archive")}
+                              </button>
+                            </span>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {next === null ? null : (
+                  <button type="button" className="more" onClick={() => void loadMore()} disabled={more} aria-busy={more} data-testid="location-more">
+                    <i>
+                      <Ico d={LICON.plus} size={20} />
+                    </i>
+                    {t("more")}
+                  </button>
+                )}
+              </KalipKartBolum>
+            }
+          />
+        </KalipEkran>
+      </div>
 
       <BulkBuilder
         open={bulkOpen}

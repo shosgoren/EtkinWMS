@@ -2,15 +2,21 @@
 // Depo listesi ekranı (T-207). Yetki ve iş kuralları SUNUCUDADIR: `canManage` yalnızca gösterimdir (kilit + açıklama);
 // eylemler sunucuda `settings.manage` ister. Kod normalleştirmesi (A-98) istemcide YOK: sunucunun döndürdüğü kod gösterilir.
 // Mobilde kart görünümü (tablo yok → yatay taşma yok). Sunucu reddi neden + sonraki eylemle gösterilir.
-import { useTranslations } from "next-intl";
-import Link from "next/link";
+// T-971 (B-63): LİSTE kalıbı (KalipListe.dc.html). Kart `.uc` bağlantısı "Lokasyonları aç"; kartın altında küçük `.btn` eylem satırı
+// (kod değiştir / arşivle — `<a>` içine düğme gömülmez). Bilinçli farklar: arama/süzgeç çipi yok (depo listesinde sunucu araması yok);
+// rozet = aktif lokasyon sayısı (sunucu sayımı); bildirimler kalıp balonunda (toast).
+import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
-import { Banner, Button, ConfirmDialog, EmptyState, TextField } from "@wms/ui";
-import { PageBody, Sheet } from "../easy-setup/sheet.tsx";
-import { SetupGuide, isSetupComplete, useSetupProgress } from "../easy-setup/setup-guide.tsx";
+import type { CSSProperties, FormEvent, ReactNode } from "react";
+import { Banner, Button, ConfirmDialog, TextField } from "@wms/ui";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { Sheet } from "../easy-setup/sheet.tsx";
+import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../code-edit-dialog.tsx";
+import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
+import { kdz } from "../kalip/tokens.ts";
 import { archiveWarehouseAction, createWarehouseAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği kullanılır. */
@@ -56,7 +62,6 @@ export function errorKey(error: Pick<ServerError, "code" | "detail">, scope: "wa
 const SUGGEST_TIMEOUT_MS = 5000;
 const LINK_CLS =
   "inline-flex min-h-12 min-w-12 items-center justify-center rounded-control px-2 text-base font-semibold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-const BADGE = "inline-flex items-center rounded-full px-2 text-xs font-bold";
 export const SELECT_CLS =
   "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
@@ -244,6 +249,7 @@ export function CreateDialog({
   );
 }
 
+
 export interface WarehouseView {
   readonly id: string;
   readonly code: string;
@@ -254,14 +260,31 @@ export interface WarehouseView {
   readonly locationCountCapped: boolean;
 }
 
+const c = (hex: string): string => kdz("dzl", hex);
+/** Kart eylem satırı düğmesi (kaynak `.btn`, küçük); kilitliyken soluk. */
+const actBtn = (bg: string, disabled: boolean): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48, opacity: disabled ? 0.5 : 1 });
+
+type StepKey = "warehouse" | "locations" | "items";
+
+function setupSteps(slug: string, p: SetupProgressView): { key: StepKey; done: boolean; href: string | null }[] {
+  const base = `/t/${encodeURIComponent(slug)}`;
+  return [
+    { key: "warehouse", done: p.hasWarehouse, href: null },
+    { key: "locations", done: p.hasLocation, href: p.nextWarehouseId === null ? null : `${base}/warehouses/${encodeURIComponent(p.nextWarehouseId)}?bulk=1` },
+    { key: "items", done: p.hasItem, href: `${base}/items?new=1` },
+  ];
+}
+
 export function WarehousesView({
   slug,
+  dark,
   canManage,
   warehouses,
   nextAfter,
   firstPage,
 }: {
   slug: string;
+  dark: boolean;
   canManage: boolean;
   warehouses: readonly WarehouseView[];
   /** Sonraki sayfa imleci (son görülen kod); yoksa `null`. */
@@ -269,9 +292,12 @@ export function WarehousesView({
   firstPage: boolean;
 }) {
   const t = useTranslations("warehouses");
+  const tk = useTranslations("warehouses.k");
   const te = useTranslations("easySetup");
+  const locale = useLocale();
   const router = useRouter();
-  const base = `/t/${encodeURIComponent(slug)}/warehouses`;
+  const home = `/t/${encodeURIComponent(slug)}`;
+  const base = `${home}/warehouses`;
   const [createOpen, setCreateOpen] = useState(false);
   const [archiving, setArchiving] = useState<WarehouseView | null>(null);
   const [editing, setEditing] = useState<WarehouseView | null>(null);
@@ -279,12 +305,20 @@ export function WarehousesView({
   const [undoing, setUndoing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ServerError | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const progress = useSetupProgress(slug, canManage, version);
   const guide = canManage && progress !== null && !isSetupComplete(progress);
   const pathname = usePathname();
   const params = useSearchParams();
+  const { say, node: toast } = useKalipToast("liste");
+  const ok = (text: string): void => {
+    tone("ok");
+    say("ok", text);
+  };
+  const fail = (e: ServerError): void => {
+    tone("err");
+    setError(e);
+  };
 
   // Rehberin büyük düğmesi `?new=1` ile gelir: formu aç, adresi temizle (yenilemede yeniden açılmasın).
   useEffect(() => {
@@ -306,11 +340,11 @@ export function WarehousesView({
     const r = await changeCode(codeChanged.id, codeChanged.from);
     setUndoing(false);
     if (!r.ok) {
-      setError(r.error);
+      fail(r.error);
       return;
     }
     setCodeChanged(null);
-    setNotice(t("done.codeUndone"));
+    ok(t("done.codeUndone"));
     router.refresh();
   }
 
@@ -318,98 +352,162 @@ export function WarehousesView({
     if (archiving === null) return;
     setBusy(true);
     setError(null);
-    setNotice(null);
     const res = await archiveWarehouseAction({ slug, warehouseId: archiving.id });
     setBusy(false);
     setArchiving(null);
     if (!res.ok) {
-      setError({ code: res.error.code, detail: res.error.detail, requestId: res.error.requestId });
+      fail({ code: res.error.code, detail: res.error.detail, requestId: res.error.requestId });
       return;
     }
-    setNotice(t("done.archived"));
+    ok(t("done.archived"));
     router.refresh();
   }
 
+  const openCreate = (): void => {
+    tone("tap");
+    setCreateOpen(true);
+  };
+
+  // Kurulum rehberi (KalipKurulum): şimdiki adım dolu renk; depo adımı bu ekranın formunu açar.
+  const steps = guide && progress !== null ? setupSteps(slug, progress) : [];
+  const nextStep = steps.find((s) => !s.done);
+  const stepText: Record<StepKey, [string, string, string, string, string]> = {
+    warehouse: [tk("stepWarehouse"), tk("stepWarehouseSub"), tk("stepWarehouseCta"), "30475A", LICON.depo],
+    locations: [tk("stepLocations"), tk("stepLocationsSub"), tk("stepLocationsCta"), "0E7C7B", LICON.raf],
+    items: [tk("stepItems"), tk("stepItemsSub"), tk("stepItemsCta"), "2F5DA8", LICON.box],
+  };
+  const blocked = (): void => {
+    tone("err");
+    say("warn", nextStep === undefined ? "" : stepText[nextStep.key][0]);
+  };
+  const adimlar: KalipAdim[] = steps.map((s) => {
+    const [title, sub, cta, color, d] = stepText[s.key];
+    const state = s.done ? "done" : s === nextStep ? "now" : "locked";
+    const act = state === "locked" || (s.key !== "warehouse" && s.href === null) ? { onClick: blocked } : s.href === null ? { onClick: openCreate } : { href: s.href };
+    return { key: s.key, title, sub, cta, color, d, state, ...act };
+  });
+  const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
+  const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
+  const showSetup = guide && warehouses.length === 0 && firstPage;
+  const countLbl = nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
+  const lockedId = "warehouse-locked";
+
   return (
     <>
-      <PageBody hide={createOpen || editing !== null}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="break-words text-2xl font-extrabold text-ink">{t("title")}</h1>
-          <p className="break-words text-base text-ink-muted">{t("intro")}</p>
-        </div>
-        <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:*:shrink-0 sm:*:whitespace-nowrap">
-          <Button onClick={() => setCreateOpen(true)} disabled={!canManage} aria-describedby={canManage ? undefined : "warehouse-locked"}>
-            {t("create")}
-          </Button>
-          {canManage ? null : (
-            <p id="warehouse-locked" className="max-w-xs break-words text-sm text-ink-muted">
-              {t("lockedReason")}
-            </p>
-          )}
-        </div>
-      </div>
+      <KalipEkran
+        kind="liste"
+        dark={dark}
+        title={t("title")}
+        icon={{ d: LICON.depo, color: "30475A" }}
+        testId="warehouses"
+        bar={{
+          back: { href: home },
+          main: { label: tk("add"), aria: t("create"), d: LICON.plus, disabled: !canManage, onClick: openCreate, testId: "warehouses-add" },
+        }}
+        overlays={toast}
+      >
+        {!canManage ? (
+          <p className="sr" id={lockedId}>
+            {t("lockedReason")}
+          </p>
+        ) : null}
+        {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
+        {error ? <ServerErrorBanner error={error} returnTo={base} /> : null}
+        {guide && nextStep !== undefined && !showSetup ? (
+          <KalipDaha
+            {...(nextStep.key === "warehouse" ? { onClick: openCreate } : nextStep.href === null ? { onClick: blocked } : { href: nextStep.href })}
+            iconD={LICON.clip}
+            testId="setup-row"
+          >
+            {setupSub}
+          </KalipDaha>
+        ) : null}
 
-      {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
-      {notice ? <Banner kind="info">{notice}</Banner> : null}
-      {error ? <ServerErrorBanner error={error} returnTo={base} /> : null}
-      {guide && progress !== null ? <SetupGuide slug={slug} progress={progress} /> : null}
-
-      <section aria-label={t("listLabel")} className="flex min-w-0 flex-col gap-3">
-        {warehouses.length === 0 ? (
-          guide ? null : <EmptyState title={t("empty")} description={canManage ? t("emptyAction") : t("emptyReadOnly")} />
+        {showSetup ? (
+          <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} testId="setup-guide" />
+        ) : warehouses.length === 0 ? (
+          <KalipBos title={t("empty")} hint={canManage ? t("emptyAction") : t("emptyReadOnly")} iconD={LICON.depo} />
         ) : (
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-3 p-0">
-            {warehouses.map((w) => {
-              const active = w.status === "ACTIVE";
-              const noteId = `archive-lock-${w.id}`;
-              return (
-                <li key={w.id} data-testid="warehouse-card" className="flex min-w-0 flex-col gap-3 rounded-card border-2 border-border bg-surface p-4 shadow-card">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="min-w-0 break-words text-lg font-bold text-ink">{w.name}</span>
-                    <span className={`${BADGE} ${active ? "bg-accent-soft text-accent-ink" : "bg-locked-bg text-locked-ink"}`}>{active ? t("status.ACTIVE") : t("status.ARCHIVED")}</span>
-                  </div>
-                  <p className="min-w-0 break-all text-base text-ink-muted">{t("codeLabel", { code: w.code })}</p>
-                  <p className="text-sm text-ink-muted">{w.locationCountCapped ? t("locationCountCapped", { count: w.locationCount }) : t("locationCount", { count: w.locationCount })}</p>
-                  <div role="group" aria-label={t("actionsFor", { name: w.name })} className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:*:shrink-0 sm:*:whitespace-nowrap">
-                    <Link href={`${base}/${encodeURIComponent(w.id)}`} className={LINK_CLS}>
-                      {t("open")}
-                    </Link>
+          <>
+            <KalipBaslik title={countLbl} hint={tk("hint")} />
+            <KalipKartListe label={t("listLabel")}>
+              {warehouses.map((w, i) => {
+                const active = w.status === "ACTIVE";
+                const count = w.locationCountCapped ? `${w.locationCount}+` : String(w.locationCount);
+                const countText = w.locationCountCapped ? t("locationCountCapped", { count: w.locationCount }) : t("locationCount", { count: w.locationCount });
+                const state = active ? t("status.ACTIVE") : t("status.ARCHIVED");
+                return (
+                  <div key={w.id} role="listitem" data-testid="warehouse-card" data-status={w.status} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                    <a className="uc" style={{ animationDelay: `${i * 30}ms` }} href={`${base}/${encodeURIComponent(w.id)}`} aria-label={tk("cardAria", { name: w.name, code: w.code, count: countText, state })}>
+                      <span className="uic" style={{ background: c(active ? "30475A" : "4E6476") }}>
+                        <Ico d={LICON.depo} size={26} />
+                      </span>
+                      <span className="ut">
+                        <b>{w.name}</b>
+                        <small className="mono">{w.code}</small>
+                        <span style={{ display: "flex", marginTop: 4 }}>
+                          <span className={`pill ${active ? "ok" : "warn"}`}>{state.toLocaleUpperCase(locale === "en" ? "en" : "tr")}</span>
+                        </span>
+                      </span>
+                      <span className="qb">
+                        <b>{count}</b>
+                        <small>{tk("locSub")}</small>
+                      </span>
+                    </a>
                     {active ? (
-                      <Button variant="secondary" disabled={!canManage} aria-describedby={canManage ? undefined : noteId} aria-label={t("codeEdit.for", { name: w.name })} onClick={() => setEditing(w)}>
-                        {t("codeEdit.button")}
-                      </Button>
-                    ) : null}
-                    {active ? (
-                      <Button variant="danger" disabled={!canManage} aria-describedby={canManage ? undefined : noteId} onClick={() => setArchiving(w)}>
-                        {t("archive")}
-                      </Button>
+                      <div role="group" aria-label={t("actionsFor", { name: w.name })} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={actBtn("172E42", !canManage)}
+                          disabled={!canManage}
+                          aria-describedby={canManage ? undefined : lockedId}
+                          aria-label={t("codeEdit.for", { name: w.name })}
+                          onClick={() => {
+                            tone("tap");
+                            setEditing(w);
+                          }}
+                        >
+                          <Ico d={LICON.pencil} size={18} />
+                          {t("codeEdit.button")}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={actBtn("C62828", !canManage)}
+                          disabled={!canManage}
+                          aria-describedby={canManage ? undefined : lockedId}
+                          onClick={() => {
+                            tone("tap");
+                            setArchiving(w);
+                          }}
+                        >
+                          <Ico d={LICON.trash} size={18} />
+                          {t("archive")}
+                        </button>
+                      </div>
                     ) : null}
                   </div>
-                  {active && !canManage ? (
-                    <p id={noteId} className="break-words text-sm text-ink-muted">
-                      {t("lockedReason")}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
+                );
+              })}
+            </KalipKartListe>
+          </>
         )}
-        <nav aria-label={t("paging")} className="flex flex-wrap gap-2">
-          {firstPage ? null : (
-            <Link href={base} className={LINK_CLS}>
-              {t("firstPage")}
-            </Link>
-          )}
-          {nextAfter === null ? null : (
-            <Link href={`${base}?after=${encodeURIComponent(nextAfter)}`} className={LINK_CLS}>
-              {t("more")}
-            </Link>
-          )}
-        </nav>
-      </section>
-      </PageBody>
+        {firstPage && nextAfter === null ? null : (
+          <nav aria-label={t("paging")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {firstPage ? null : (
+              <KalipDaha href={base} iconD={LICON.chev}>
+                {t("firstPage")}
+              </KalipDaha>
+            )}
+            {nextAfter === null ? null : (
+              <KalipDaha href={`${base}?after=${encodeURIComponent(nextAfter)}`} iconD={LICON.plus}>
+                {t("more")}
+              </KalipDaha>
+            )}
+          </nav>
+        )}
+      </KalipEkran>
 
       <CreateDialog
         open={createOpen}
@@ -424,7 +522,7 @@ export function WarehousesView({
         onClose={() => setCreateOpen(false)}
         onDone={(data) => {
           setCreateOpen(false);
-          setNotice(t("done.created"));
+          ok(t("done.created"));
           setVersion((n) => n + 1);
           // İlk depo: doğrudan raf oluşturucuya git (rehberin 2. adımı).
           const id = (data as { warehouseId?: string } | undefined)?.warehouseId;
@@ -449,9 +547,9 @@ export function WarehousesView({
           setEditing(null);
           setError(null);
           if (r.changed && id !== undefined) {
-            setNotice(null);
+            tone("ok");
             setCodeChanged({ id, from: r.from, to: r.to });
-          } else setNotice(t("done.codeSame"));
+          } else ok(t("done.codeSame"));
           router.refresh();
         }}
       />

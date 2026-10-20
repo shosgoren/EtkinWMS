@@ -121,7 +121,15 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await expect(page.getByRole("heading", { level: 1, name: "Kim ne yaptı?" })).toBeVisible();
           await expectBorderStrong(page, page.locator("#from"), "denetim: başlangıç tarihi");
           await expectBorderStrong(page, page.locator("#action"), "denetim: eylem süzgeci");
-          await expectFocusRing(page, page.locator("#action"), "denetim: eylem süzgeci");
+          // T-971: denetim kaydı liste kalıbında (KalipEkran); odak halkası kalıbın kendi halkasıdır (`.dzl .app :focus-visible`, sarı).
+          {
+            const action = page.locator("#action");
+            await action.focus();
+            await page.keyboard.press("Shift+Tab");
+            await page.keyboard.press("Tab");
+            await expect(action, "denetim: eylem süzgeci odakta").toBeFocused();
+            expect(await computed(action, "outline-style"), "denetim: eylem süzgeci outline-style").toBe("solid");
+          }
           await expectNoHorizontalOverflow(page, "denetim kaydı");
           await shot("audit");
 

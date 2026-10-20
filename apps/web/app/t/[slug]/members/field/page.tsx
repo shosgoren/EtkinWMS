@@ -10,7 +10,7 @@ import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../../design/theme.ts";
 import { FieldStaffView } from "./view.tsx";
 
-// Saha personeli ekle (T-997, ADR-026 §7.1): Giris.dc.html `v.mgr` bandı + `v.staff` birebir (view.tsx). Yalnız `users.manage`.
+// Saha personeli ekle (T-997, ADR-026 §7.1; T-971 form kalıbı, view.tsx). Yalnız `users.manage`.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -56,13 +56,15 @@ export default async function FieldStaffPage({ params }: { params: Promise<{ slu
     // biçimsiz yapılandırma: istek kökü kalır
   }
   return (
-    <FieldStaffView
-      dark={dark}
-      slug={slug}
-      host={host}
-      tenantName={tenantName}
-      warehouses={warehouses.items.map((w) => ({ id: w.id, name: w.name }))}
-      staff={staff}
-    />
+    <main className="flex w-full min-w-0 flex-col">
+      <FieldStaffView
+        dark={dark}
+        slug={slug}
+        host={host}
+        tenantName={tenantName}
+        warehouses={warehouses.items.map((w) => ({ id: w.id, name: w.name }))}
+        staff={staff}
+      />
+    </main>
   );
 }

@@ -9,7 +9,7 @@ import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../../design/theme.ts";
 import { DevicesView } from "./view.tsx";
 
-// Saha cihazları (T-998, ADR-026 §7.5): Giris.dc.html `v.mgr` bandı + `v.dev` birebir (view.tsx). Yalnız `users.manage`.
+// Saha cihazları (T-998, ADR-026 §7.5; T-971 liste kalıbı, view.tsx). Yalnız `users.manage`.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,12 +39,14 @@ export default async function DevicesPage({ params }: { params: Promise<{ slug: 
   const tenantName = summary.memberships.find((m) => m.slug === slug)?.tenantName ?? slug;
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
-    <DevicesView
-      dark={dark}
-      slug={slug}
-      tenantName={tenantName}
-      suspended={suspended.map((d) => ({ id: d.id, name: d.name }))}
-      devices={devices.map((d) => ({ id: d.id, kind: d.kind, name: d.name, owner: d.owner, lastUsedAt: d.lastUsedAt.toISOString() }))}
-    />
+    <main className="flex w-full min-w-0 flex-col">
+      <DevicesView
+        dark={dark}
+        slug={slug}
+        tenantName={tenantName}
+        suspended={suspended.map((d) => ({ id: d.id, name: d.name }))}
+        devices={devices.map((d) => ({ id: d.id, kind: d.kind, name: d.name, owner: d.owner, lastUsedAt: d.lastUsedAt.toISOString() }))}
+      />
+    </main>
   );
 }

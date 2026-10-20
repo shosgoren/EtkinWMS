@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
@@ -8,6 +8,9 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { getLocationTree, getWarehouse } from "@wms/domain/warehouse";
 import type { WarehouseRow } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { LocationTree } from "./location-tree.tsx";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +21,20 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("warehouses");
   return { title: t("tree.title") };
+}
+
+async function isDark(): Promise<boolean> {
+  return (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+}
+
+/** Okuma izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli ekran (ürünler deseni). */
+async function LockedTree({ slug }: { slug: string }) {
+  const t = await getTranslations("warehouses");
+  return (
+    <main className="flex w-full min-w-0 flex-col">
+      <KalipKilitliEkran title={t("tree.title")} icon={{ d: LICON.raf, color: "0E7C7B" }} text={t("k.locked")} hint={t("k.lockedAction")} dark={await isDark()} home={`/t/${encodeURIComponent(slug)}`} />
+    </main>
+  );
 }
 
 // Lokasyon ağacı (T-207): sunucu bileşeni. Depo bulunamaz/kapsam dışı/geçersiz kimlik → 404 (varlık sızdırılmaz).
@@ -48,14 +65,16 @@ export default async function LocationTreePage({ params }: { params: Promise<{ s
       if (e.code === "NOT_FOUND") notFound();
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
+      if (e.code === "FORBIDDEN") return <LockedTree slug={slug} />;
     }
     throw e;
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
+    <main className="flex w-full min-w-0 flex-col">
       <LocationTree
         slug={slug}
+        dark={await isDark()}
         warehouseId={warehouse.id}
         warehouseName={warehouse.name}
         warehouseCode={warehouse.code}

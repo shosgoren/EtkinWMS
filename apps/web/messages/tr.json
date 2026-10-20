@@ -417,6 +417,11 @@
       "save": "Depoları kaydet",
       "edit": "Depoları düzenle",
       "disabled": "Depo kısıtı bu ortamda kapalı: seçim kaydedilir, açıldığında uygulanır."
+    },
+    "k": {
+      "inviteShort": "DAVET ET",
+      "count": "{n} ÜYE",
+      "pendingCount": "{n} DAVET"
     }
   },
   "errors": {
@@ -1057,7 +1062,15 @@
         "enrolled": "Ortak cihaz kaydedildi",
         "revoked": "Saha cihazı iptal edildi"
       }
-    }
+    },
+    "quick": "Hızlı süzgeç",
+    "filterLabel": "Tarih ve işlem süzgeci",
+    "quickAll": "Tümü",
+    "quickToday": "Bugün",
+    "quickWeek": "Son 7 gün",
+    "clear": "Süzgeci temizle",
+    "listTitle": "KAYITLAR",
+    "exportShort": "CSV İNDİR"
   },
   "settings": {
     "title": "Çalışma alanı ayarları",
@@ -1558,6 +1571,35 @@
     "codeEdit": {
       "button": "Kodu değiştir",
       "for": "{name} için kodu değiştir"
+    },
+    "k": {
+      "add": "DEPO EKLE",
+      "count": "{n} DEPO",
+      "countMore": "{n}+ DEPO",
+      "hint": "DOKUN → LOKASYONLAR AÇILIR",
+      "cardAria": "{name}, {code}, {count}, {state} · Lokasyonları aç",
+      "locSub": "LOKASYON",
+      "setupTitle": "Kurulum rehberi",
+      "setupSub": "{step} · {n}/3",
+      "setupWarehouse": "ÖNCE DEPO EKLE",
+      "setupLocations": "SIRADA RAFLAR",
+      "setupItems": "SIRADA İLK ÜRÜN",
+      "stepWarehouse": "Depo ekle",
+      "stepWarehouseSub": "ADI YETER · ADRES SONRA",
+      "stepWarehouseCta": "Depo ekle",
+      "stepLocations": "Rafları oluştur",
+      "stepLocationsSub": "BÖLGE · RAF · GÖZ SAYISINI YAZ",
+      "stepLocationsCta": "Raf ekle",
+      "stepItems": "İlk ürünü ekle",
+      "stepItemsSub": "KOD VE BİRİM HAZIR GELİR",
+      "stepItemsCta": "Ürün ekle",
+      "locked": "Depoları görme yetkin yok.",
+      "lockedAction": "Sorumluna sor; yetki verilince bu ekran açılır.",
+      "addLoc": "LOKASYON EKLE",
+      "hero": "Depo bilgisi",
+      "quick": "Hızlı işlemler",
+      "treeSub": "{n} AKTİF LOKASYON",
+      "next": "Sıradaki adım: {step}"
     }
   },
   "field": {
@@ -1613,7 +1655,17 @@
       "charsetAction": "Ürün kodunu ya da barkodu ASCII karakterlerle düzelt.",
       "tooLong": "Barkod etiket genişliğine sığmıyor.",
       "tooLongAction": "Kodu ya da barkodu kısalt."
-    }
+    },
+    "printShort": "YAZDIR",
+    "settingsTitle": "ETİKET VE KÂĞIT",
+    "paper": "Kâğıt",
+    "paperA4": "A4 · normal yazıcı",
+    "paperLabel": "Rulo · etiket yazıcı",
+    "width": "Genişlik (mm)",
+    "height": "Yükseklik (mm)",
+    "paperHint": "Epson gibi normal yazıcılarda A4 seç. Yazdırma penceresinde ölçeği %100, üstbilgi/altbilgiyi kapalı tut. Etiket ölçüsü yazıcının kâğıdına uygun olmalı.",
+    "invalid": "Ölçü geçersiz veya kâğıda sığmıyor. A4 için en çok 190 × 277 mm seç.",
+    "customHint": "Özel ölçüde içerik oranı korunarak sığdırılır. Barkod okunurluğunu deneme baskısıyla kontrol et; ZPL çıktısı yalnız 100 × 50 mm destekler."
   },
   "easySetup": {
     "guide": {
@@ -1814,7 +1866,12 @@
       "tenant_closingAction": "Sorumluna başvur.",
       "internal": "Bir sorun oluştu.",
       "internalAction": "Biraz sonra yeniden dene; sürerse hata kodunu destek ekibine ilet."
-    }
+    },
+    "clear": "Süzgeci temizle",
+    "count": "{n} GÖREV",
+    "hint": "Ata ya da iptal et",
+    "qtySub": "miktar",
+    "paging": "Sayfalar"
   },
   "receiving": {
     "title": "Beklenen teslimler",
@@ -3188,7 +3245,11 @@
     "stPending": "KOD BEKLİYOR",
     "newCode": "YENİ KOD",
     "newCodeAria": "{name} için yeni kod üret",
-    "errWarehouse": "Personelin çalışacağı depoyu seçin (ya da \"Tüm depolar\")."
+    "errWarehouse": "Personelin çalışacağı depoyu seçin (ya da \"Tüm depolar\").",
+    "k": {
+      "addShort": "EKLE",
+      "person": "KİŞİ"
+    }
   },
   "fieldLogin": {
     "title": "Saha girişi",
@@ -3752,7 +3813,22 @@
       "save": "Kaydet ve çık",
       "leave": "Kaydetmeden çık",
       "stay": "Vazgeç, burada kalayım"
-    }
+    },
+    "saved": "Cari kart kaydedildi.",
+    "archivedDone": "Cari kart arşive alındı.",
+    "restoredDone": "Cari kart arşivden çıkarıldı.",
+    "saveShort": "KAYDET",
+    "readOnlySub": "Cari kartları değiştirmek için ayar yönetimi yetkisi gerekir. Sorumluna sor.",
+    "gIdentity": "Kimlik",
+    "gIdentitySub": "Kod, ünvan ve tür",
+    "gContact": "Vergi ve iletişim",
+    "gContactSub": "İsteğe bağlı",
+    "searchLabel": "Cari ara",
+    "filter": "Süzgeç",
+    "chipActive": "Etkin",
+    "chipArchived": "Arşivli",
+    "clear": "Süzgeci temizle",
+    "count": "{n} cari"
   },
   "gruplar": {
     "title": "Yetki grupları",

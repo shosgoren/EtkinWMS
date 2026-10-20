@@ -25,7 +25,6 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
-  const t = await getTranslations("parties");
   const q = typeof sp.q === "string" ? sp.q.slice(0, 100) : "";
   const archived = sp.arsiv === "1";
   let canEdit = false;
@@ -47,7 +46,6 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   const jar = await cookies();
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <h1 className="sr-only">{t("title")}</h1>
       <PartiesView slug={slug} dark={jar.get(THEME_COOKIE)?.value === "koyu"} canEdit={canEdit} q={q} archived={archived} items={data.items} total={data.total} />
     </main>
   );

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
@@ -7,6 +7,7 @@ import { getMembershipSummary, listMembers } from "@wms/domain/identity/member-q
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_KINDS, TASK_KIND_PERMISSION, TASK_STATUSES, listTasks, type TaskCursor, type TaskKind, type TaskStatus } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
+import { THEME_COOKIE } from "../../../design/theme.ts";
 import { TasksView } from "./tasks-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -74,10 +75,12 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
       ? null
       : `${returnTo}?${new URLSearchParams({ ...Object.fromEntries(filterQuery), after: `${result.next.createdKey}~${result.next.id}` }).toString()}`;
 
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
+    <main className="flex w-full min-w-0 flex-col">
       <TasksView
         slug={slug}
+        dark={dark}
         canManage={canManage}
         tasks={result.items.map((x) => ({
           id: x.id,

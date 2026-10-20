@@ -69,4 +69,28 @@
   .label-controls {
     display: none !important;
   }
+
+  /* T-971: kalıp kabı (KalipEkran) ekranda tam ekran sabit ve kendi içinde kayan bir kutudur; baskıda akışa döner ki etiketler kesilmesin.
+     Kalıp üst çubuğu, bildirim balonu ve ortak alt cam çubuk (KabukBar) basılmaz. */
+  .kalip,
+  .kalip .wrap,
+  .kalip .app,
+  .kalip .inner {
+    position: static !important;
+    inset: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+  }
+
+  .kalip .top,
+  .kalip .toast,
+  [data-testid="kabuk-dock"],
+  .dzk {
+    display: none !important;
+  }
 }
