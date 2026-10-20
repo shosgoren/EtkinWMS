@@ -128,7 +128,12 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
           return;
         }
         const mine = lines.filter((l) => l.itemId.toLowerCase() === res.data.itemId.toLowerCase());
-        const line = mine.find((l) => l.counted === null) ?? mine[0];
+        // Aynı ürün rafta birden çok stok durumunda (ör. kullanılabilir + hasarlı): sayı tek duruma sessizce yazılmaz, kullanıcı listeden seçer.
+        if (mine.length > 1) {
+          alertOf("alert.scanTitle", "multi_status", "MULTI_STATUS");
+          return;
+        }
+        const line = mine[0];
         setLastName(res.data.itemName);
         tone("ok");
         begin({
@@ -220,8 +225,8 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
       {alert === null ? null : (
         <ScanAlert
           title={tr(alert.titleKey)}
-          reason={alert.reasonKey === "wrong_location" ? t("count.wrong_location", { code: work.locationCode }) : tr(`errors.${alert.reasonKey}`, { remaining: "-" })}
-          action={alert.reasonKey === "wrong_location" ? t("count.wrong_locationAction") : tr(`errors.${alert.reasonKey}Action`)}
+          reason={alert.reasonKey === "wrong_location" || alert.reasonKey === "multi_status" ? t(`count.${alert.reasonKey}`, { code: work.locationCode }) : tr(`errors.${alert.reasonKey}`, { remaining: "-" })}
+          action={alert.reasonKey === "wrong_location" || alert.reasonKey === "multi_status" ? t(`count.${alert.reasonKey}Action`) : tr(`errors.${alert.reasonKey}Action`)}
           {...(alert.code === undefined ? {} : { code: alert.code })}
           onClose={() => {
             setAlert(null);

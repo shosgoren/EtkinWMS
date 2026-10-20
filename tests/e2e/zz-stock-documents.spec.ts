@@ -165,7 +165,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
   await page.goto(`/t/${slug}/counts?new=1`);
   const pilotWh=await page.locator("select option").filter({hasText:`Pilot ${suffix} (`}).getAttribute("value");
   await page.getByTestId("count-new-form").locator("select").selectOption(pilotWh!);await page.getByTestId("count-racks").fill("A-01-01");
-  await page.getByLabel(/Kör sayım/).uncheck();await page.getByRole("button",{name:"Sayımı başlat",exact:true}).click();
+  await page.getByLabel(/Kör sayım/).uncheck();await page.getByTestId("count-new-form").getByRole("button",{name:"Sayımı başlat",exact:true}).click();
   await expect(page).toHaveURL(/counts\?id=/);const countUrl=page.url();
   const countStatus=page.getByTestId("count-hero").getByRole("status");await expect(countStatus).toHaveText("Sayılıyor");
   await page.goto(`/t/${slug}/field/tasks`);

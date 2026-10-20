@@ -4628,7 +4628,10 @@
       "itemTitle": "Scan the item",
       "locationOk": "Correct shelf · {code}",
       "locationPrompt": "Scan the label of shelf {code}",
-      "itemPrompt": "Scan the item barcode"
+      "itemPrompt": "Scan the item barcode",
+      "decimalTitle": "Decimal quantity",
+      "decimal": "This pick is {qty} {unit}: the field screen takes whole numbers. Pick from the desktop Shipping screen.",
+      "toDesk": "Shipping screen"
     },
     "ship": {
       "title": "Shipping",
@@ -4701,7 +4704,9 @@
       "locationTitle": "Scan the shelf",
       "cardLine": "SHELF {code} · {n} ITEMS",
       "blind": "BLIND",
-      "locationPrompt": "Scan the label of shelf {code}"
+      "locationPrompt": "Scan the label of shelf {code}",
+      "multi_status": "This item is on the shelf in more than one status (e.g. damaged).",
+      "multi_statusAction": "Tap the right line in the list and count it."
     }
   },
   "counts": {

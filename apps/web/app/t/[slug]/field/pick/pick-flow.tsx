@@ -170,6 +170,16 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
   }
 
   const shell = { hue: "orange" as const, iconD: KICON.mTopla };
+  // Ondalık görev miktarı (ör. 2,5 kg): sayı tuşları tam sayıdır → sahada sessizce yuvarlanmaz, masaüstü Sevkiyat ekranına yönlendirilir.
+  if (expected === null) {
+    return (
+      <SahaShell {...shell} title={t("pick.decimalTitle")} instruction={work.orderNumber} backHref={`${base}/tasks`} footer={<PrimaryLink href={`/t/${encodeURIComponent(slug)}/shipping?${new URLSearchParams({ id: work.orderId })}`}>{t("pick.toDesk")}</PrimaryLink>}>
+        <p className="break-words text-lg text-ink" data-testid="pick-message">
+          {t("pick.decimal", { qty: work.quantity, unit: work.unitCode })}
+        </p>
+      </SahaShell>
+    );
+  }
   const taskCard = (verified: boolean) => (
     <div className="job" data-testid="pick-card">
       <span className="uic" style={{ background: dz("B85A14") }}>

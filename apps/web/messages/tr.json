@@ -4628,7 +4628,10 @@
       "itemTitle": "Ürünü okut",
       "locationOk": "Doğru raf · {code}",
       "locationPrompt": "{code} rafının etiketini okut",
-      "itemPrompt": "Ürün barkodunu okut"
+      "itemPrompt": "Ürün barkodunu okut",
+      "decimalTitle": "Ondalık miktar",
+      "decimal": "Bu toplama {qty} {unit}: sahada tam sayı girilir. Masaüstü Sevkiyat ekranından topla.",
+      "toDesk": "Sevkiyat ekranı"
     },
     "ship": {
       "title": "Sevk",
@@ -4701,7 +4704,9 @@
       "locationTitle": "Rafı okut",
       "cardLine": "RAF {code} · {n} ÜRÜN",
       "blind": "KÖR",
-      "locationPrompt": "{code} rafının etiketini okut"
+      "locationPrompt": "{code} rafının etiketini okut",
+      "multi_status": "Bu ürün rafta birden çok durumda (ör. hasarlı).",
+      "multi_statusAction": "Listeden doğru satıra dokunup say."
     }
   },
   "counts": {

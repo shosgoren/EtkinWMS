@@ -18,6 +18,7 @@ import {
   createSalesOrder,
   findFieldWork,
   getPickWork,
+  recordCount,
   reserveOrder,
   startCount,
 } from "../../../packages/domain/src/operations/index.ts";
@@ -223,6 +224,23 @@ describe("getPickWork / findFieldWork (T-977)", () => {
     expect((await failure(getPickWork(as(MGR), { taskId: c }))).code).toBe("VALIDATION_FAILED");
     await cancelCount(cmd(A.ownerUserId), { sessionId: sid, reason: "T977 test" });
     expect((await findFieldWork(as(COUNTER), { locationId: R })).count).toBeNull();
+  });
+
+  it("sayım yazma kuralı: raf görevi başkasına atanmışsa sayımcı yazamaz (FORBIDDEN, satır değişmez); atanan kişi ve yönetici yazar", async () => {
+    const Y = await mkItem();
+    const R = await mkLoc(`FWR-${hex(6)}`);
+    await stockIn(Y, R, "4");
+    const c2 = await mkUser(adm, reg, "A977 counter2");
+    const c2m = await mkMembership(adm, A.tenantId, c2, { roles: ["COUNTER"] });
+    const sid = (await startCount(cmd(A.ownerUserId), { warehouseId: A.warehouseId, locationIds: [R] })).sessionId;
+    await createCountTasks(as(MGR), { sessionId: sid, assigneeMembershipId: c2m });
+    const line = { locationId: R, itemId: Y, countedQuantity: "3" };
+    expect((await failure(recordCount(cmd(COUNTER), { sessionId: sid, lines: [line] }))).code).toBe("FORBIDDEN");
+    expect((await q<{ counted: string | null }>("SELECT counted_quantity::text AS counted FROM public.count_session_lines WHERE tenant_id = $1 AND session_id = $2", [A.tenantId, sid]))[0]?.counted).toBeNull();
+    await recordCount(cmd(c2), { sessionId: sid, lines: [line] });
+    await recordCount(cmd(MGR), { sessionId: sid, lines: [{ ...line, countedQuantity: "4" }] });
+    expect((await q<{ counted: string }>("SELECT counted_quantity::text AS counted FROM public.count_session_lines WHERE tenant_id = $1 AND session_id = $2", [A.tenantId, sid]))[0]?.counted).toMatch(/^4(\.0+)?$/);
+    await cancelCount(cmd(A.ownerUserId), { sessionId: sid, reason: "T977 test" });
   });
 
   it("girdi doğrulaması ve MFA: geçersiz kimlik VALIDATION_FAILED, MFA'sız sahip FORBIDDEN", async () => {
