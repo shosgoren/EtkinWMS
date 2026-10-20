@@ -9,7 +9,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { dz } from "../../../design/saha-tokens.ts";
+import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
 import { classifyCameraError, createFrameDecoder, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession } from "../../../../lib/scanner/camera-source.ts";
 import { useScanner } from "./receive/receive-flow.tsx";

@@ -126,7 +126,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-88 | Destek talebine ekran görüntüsü eki (B-84 kalanı, T-967 sonrası): depolama + boyut/tür sınırı + kiracı izolasyonu + operatör erişim denetimi; Destek penceresindeki gizli düğme açılır |
 | B-89 | Destek "Erişim iste": projede müşteri onaylı, süreli destek erişimi akışı yok (I-12 denetimli); panelde düğme şimdilik pasif (T-967) |
 | B-90 | Destek: müşterinin kendi talebini "Çözüldü" ile kapatması (tasarımda var, DB'de müşteri → CLOSED geçişi yok; T-967) ve not alanında sesle yazma (şimdilik "yakında") |
-| B-91 | `docs/design/ALTIN-KURAL.md` hâlâ "ana ekranda Geri yerine sarı ? Sorun" ve "üst çubuktaki ? ile rehber" diyor; T-967 ile Sorun/Destek üst çubuğa, rehber Destek penceresine taşındı. Kullanıcı kural dosyası: metin kullanıcı onayıyla güncellenir; eski ekranlarda rehber "?" düğmesi Destek gelene kadar kalır |
+| B-91 | **BİTTİ (toplu yayın 21 Ekim, int/21ekim-ekranlar)** — `docs/design/ALTIN-KURAL.md` kullanıcının 20 Ekim kararıyla güncellendi: üst çubukta yazısız iki ikon (Sorun bildir → yönetici, Destek → Etkin ekibi), alt çubuğun sol düğmesi her ekranda Geri, rehber tekrar Destek penceresinden. Eski kayıt: kural "ana ekranda Geri yerine sarı ? Sorun" ve "üst çubuktaki ? ile rehber" diyordu |
 
 ## Belge düzeltmeleri
 | ID | İş |

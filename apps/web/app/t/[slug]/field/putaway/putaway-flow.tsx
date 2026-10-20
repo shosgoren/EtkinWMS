@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { KICON } from "../../../../design/kabuk-icons.ts";
-import { dz } from "../../../../design/saha-tokens.ts";
+import { dz } from "../../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
 import { ErrorNotice, errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { availableAtLocationAction, putawayAction, resolveItemScanAction, resolveLocationScanAction } from "../../receipts/actions.ts";
