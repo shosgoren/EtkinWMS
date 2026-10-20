@@ -9,7 +9,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 **Güvenlik satırları (🔒):** depo herkese açık olduğundan ayrıntı (dosya:satır, senaryo, düzeltme) burada yazılmaz; depo yöneticilerine açık gizli danışma taslağı **GHSA-jxfh-5j2f-4mvg** içindedir (GitHub → Security → Advisories). Düzeltme birleşip canlıya çıkınca ayrıntı kart/PR'a taşınabilir. Yeni güvenlik bulgusu da önce oraya, burada yalnız kimlik + genel başlıkla eklenir.
 
 ## Kullanıcı onaylı sıra (20 Ekim, "Onaylıyorum")
-1. B-76 "Bu cihazı 30 gün hatırla" → 2. B-60 yeni alt çubuk + Modüller (Kabuk.dc.html) → 3. B-75 ilk kullanım rehberi → 4. B-62 Etkin sesli komut → 5. B-63 eski ekranlar (önce Ayarlar) → 6. P1 güvenlik kalanı → 7. B-51 sayım, B-50 QR akışı, B-56 donanım denemesi → 8. B-80…B-83 eklemeler. P0 yedek/izleme kullanıcının depolama hesabını bekler.
+1. B-76 "Bu cihazı 30 gün hatırla" → 2. B-60 yeni alt çubuk + Modüller (Kabuk.dc.html) → 2b. (20 Ekim ekleme, önce) B-87 yüzen kopya düğme, B-85 üst çubukta Sorun/Destek ikonları, B-84 destek talebi + panel + WhatsApp, B-86 OKUT doğrudan okutma → 3. B-75 ilk kullanım rehberi → 4. B-62 Etkin sesli komut → 5. B-63 eski ekranlar (önce Ayarlar) → 6. P1 güvenlik kalanı → 7. B-51 sayım, B-50 QR akışı, B-56 donanım denemesi → 8. B-80…B-83 eklemeler. P0 yedek/izleme kullanıcının depolama hesabını bekler.
 
 ## P0 — veri kaybı ve görünürlük
 | ID | İş | Kim |
@@ -112,6 +112,10 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-81 | Anlık bildirim (web push): kritik stok, geciken sipariş, bildirilen sorun — rol ve depo kapsamına göre |
 | B-82 | Ayın personeli / performans ekranı (okutma ve görev verisinden; Modüller'de "YAKINDA") |
 | B-83 | Satın alma önerisi listesi: minimum altındaki ürünler için "şu kadar al" (Pano satın alma altyapısı) |
+| B-84 | **Destek talebi (kullanıcı kararı 20 Ekim):** her kullanıcı üst çubuktaki Destek ikonundan bize yazar (konu, kısa not, otomatik ekran/sürüm/destek kodu, isteğe bağlı ekran görüntüsü). Talep yonet.etkinyazilim.com'da müşterinin Destek sekmesine ve genel gelen kutusuna (rozetli) düşer. Talepten tek tıkla "Erişim iste" (mevcut destek erişimi akışı) ve yanıt verilir; yanıt kullanıcının ekranına döner. Operatöre WhatsApp bildirimi gider (Meta WhatsApp Cloud API, onaylı "utility" şablonu; kullanıcı Meta işletme hesabı ve numarası açar). Tuval → onay → birebir (I-18). Kiracı verisi RLS'li; operatör okuması panel rolüyle denetimli |
+| B-85 | **Üst çubukta iki anlaşılır ikon (kullanıcı kararı 20 Ekim):** "Sorun bildir" (hasarlı, eksik, yanlış ürün → kendi yöneticisine; mevcut `problem-sheet`) ve "Destek" (bize, B-84). Alt çubuğun sol düğmesi her ekranda Geri olur; sarı "?" kalkar. Kabuk.dc.html tuvalinde güncelleme → onay |
+| B-86 | Alt çubuk OKUT eski "Saha" iş seçme menüsünü açıyor (kullanıcı 20 Ekim, telefon). OKUT doğrudan kamera/okuyucu ile okutmayı açmalı: okutulan koda göre ürün, raf veya görev bulunup ilgili işe geçilir. B-50 QR akışı ve B-63 saha ekranlarıyla birlikte |
+| B-87 | Ana ekranda sağda yüzen ızgara (Modüller) düğmesi alt çubuktaki Modüller'in kopyası; eski `BottomNav`/FAB kalıntısı kaldırılır (B-60 kalanı) |
 
 ## Belge düzeltmeleri
 | ID | İş |
