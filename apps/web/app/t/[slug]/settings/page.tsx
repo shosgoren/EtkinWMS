@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import Link from "next/link";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Banner, Button, TextField } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { getSampleDataStatus, hasActiveSample, type SampleDataStatus } from "@wms/domain/onboarding/sample-data";
 import { getTenantSettings } from "@wms/domain/onboarding/settings-queries";
 import { AppError } from "@wms/shared/errors";
 import { TIME_ZONES } from "../../../../lib/timezones.ts";
-import { saveSettingsAction } from "./actions.ts";
-import { clearSampleDataAction } from "./sample-actions.ts";
-import { setSeparationAction } from "./sod-actions.ts";
+import { THEME_COOKIE } from "../../../design/theme.ts";
+import { SettingsView } from "./settings-view.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +25,9 @@ function first(v: string | string[] | undefined): string | undefined {
 
 const SAMPLE_RESULTS = ["deleted", "archived", "none"] as const;
 
-// Ayarlar (T-122): okuma `getTenantSettings` (settings.manage), yazma `saveSettingsAction`. Yetki yoksa form kilitli + açıklama.
-// Yetki kararı sunucudadır; kilit yalnızca gösterimdir (eylem de aynı izni ister).
+// Ayarlar (T-122; T-968 form kalıbı): okuma `getTenantSettings` (settings.manage), yazma `saveSettingsFormAction` (ad/dil/saat dilimi +
+// görev ayrılığı) ve `clearSampleDataAction`. Yetki yoksa satırlar kilitli + açıklama bandı. Yetki kararı sunucudadır; kilit yalnızca
+// gösterimdir (eylemler de aynı izni ister).
 export default async function SettingsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
   const query = await searchParams;
@@ -38,7 +36,6 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   if (principal === null) redirect(`/login?next=${encodeURIComponent(`/t/${slug}/settings`)}`);
   const t = await getTranslations("settings");
   const ts = await getTranslations("serverErrors");
-  const home = `/t/${encodeURIComponent(slug)}`;
 
   let settings: Awaited<ReturnType<typeof getTenantSettings>> | null = null;
   try {
@@ -53,153 +50,46 @@ export default async function SettingsPage({ params, searchParams }: { params: P
 
   const errorCode = SHOWN.find((c) => c === first(query.error))?.toLowerCase();
   const locked = settings === null;
-  // Örnek veri durumu (T-996): yalnız ayar yetkisi olana; etkin örnek kayıt yoksa bölüm çizilmez.
+  // Örnek veri durumu (T-996): yalnız ayar yetkisi olana; etkin örnek kayıt yoksa satır çizilmez.
   const sample: SampleDataStatus | null = locked ? null : await getSampleDataStatus({ db: getAppDb(), principal, tenantSlug: slug });
   const sampleResult = SAMPLE_RESULTS.find((r) => r === first(query.sample));
   const sampleNotice = first(query.sample);
   const sodNotice = first(query.sod);
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+
+  // T-968: sonuç bildirimleri kalıbın balonunda (görsel + ses); yeniden giriş ve hata bant olarak kalır.
+  const notices: { kind: "ok" | "err" | "info"; text: string }[] = [];
+  if (first(query.saved) === "1") notices.push({ kind: "ok", text: t("saved") });
+  if (first(query.unchanged) === "1") notices.push({ kind: "info", text: t("unchanged") });
+  if (sodNotice === "on" || sodNotice === "off" || sodNotice === "unchanged") notices.push({ kind: "ok", text: t(`sod.${sodNotice}`) });
+  if (sampleResult !== undefined) notices.push({ kind: "ok", text: t(`sample.${sampleResult}`) });
+  if (sampleNotice === "in_use") notices.push({ kind: "err", text: `${t("sample.inUse")} ${t("sample.inUseAction")}` });
+  if (sampleNotice === "confirm") notices.push({ kind: "err", text: t("sample.confirmRequired") });
+  const reauthNext = `/login?reauth=1&next=${encodeURIComponent(`/t/${slug}/settings`)}`;
+  const reauth =
+    sodNotice === "reauth"
+      ? { text: t("sod.reauth"), href: reauthNext, link: t("sample.loginLink") }
+      : sampleNotice === "reauth"
+        ? { text: `${t("sample.reauth")} ${t("sample.reauthAction")}`, href: `/login?next=${encodeURIComponent(`/t/${slug}/settings`)}`, link: t("sample.loginLink") }
+        : null;
+  const error = errorCode === undefined ? null : { text: `${ts(errorCode)} ${ts(`${errorCode}Action`)}`, code: ts("code", { code: errorCode.toUpperCase() }) };
+  const values = { name: settings?.name ?? "", locale: settings?.locale ?? "tr", timeZone: settings?.timeZone ?? "Europe/Istanbul", sod: settings?.separationOfDuties ?? false };
 
   return (
-    <main className="mx-auto flex w-full max-w-xl min-w-0 flex-col gap-4 px-4 py-6">
-      <h1 className="break-words text-3xl font-extrabold text-ink">{t("title")}</h1>
-      <p className="text-lg text-ink-muted">{t("intro")}</p>
-      {locked ? (
-        <Banner kind="info">
-          <p>{t("locked")}</p>
-          <p className="mt-1">{t("lockedAction")}</p>
-        </Banner>
-      ) : null}
-      {first(query.saved) === "1" ? <Banner kind="info">{t("saved")}</Banner> : null}
-      {first(query.unchanged) === "1" ? <Banner kind="info">{t("unchanged")}</Banner> : null}
-      {errorCode === undefined ? null : (
-        <Banner kind="error">
-          <p>
-            {ts(errorCode)} {ts(`${errorCode}Action`)}
-          </p>
-          <p className="mt-1 text-sm">{ts("code", { code: errorCode.toUpperCase() })}</p>
-        </Banner>
-      )}
-      <form action={saveSettingsAction} className="flex min-w-0 flex-col gap-4 rounded-card bg-surface p-4 shadow-card">
-        <fieldset disabled={locked} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
-          <input type="hidden" name="slug" value={slug} />
-          <TextField label={t("name")} name="name" defaultValue={settings?.name ?? ""} maxLength={120} required />
-          <div className="flex min-w-0 flex-col gap-1">
-            <label htmlFor="locale" className="text-base font-semibold text-ink">
-              {t("locale")}
-            </label>
-            <select
-              id="locale"
-              name="locale"
-              defaultValue={settings?.locale ?? "tr"}
-              className="min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
-            >
-              <option value="tr">{t("localeTr")}</option>
-              <option value="en">{t("localeEn")}</option>
-            </select>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <label htmlFor="timeZone" className="text-base font-semibold text-ink">
-              {t("timeZone")}
-            </label>
-            <select
-              id="timeZone"
-              name="timeZone"
-              defaultValue={settings?.timeZone ?? "Europe/Istanbul"}
-              className="min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
-            >
-              {TIME_ZONES.map((z) => (
-                <option key={z} value={z}>
-                  {z}
-                </option>
-              ))}
-            </select>
-          </div>
-          {settings === null ? null : <p className="break-all text-sm text-ink-muted">{t("addressNote", { slug: settings.slug })}</p>}
-          <Button type="submit">{t("save")}</Button>
-        </fieldset>
-      </form>
-      {/* T-416 (A-03): görev ayrılığı. Ayarlar tasarımı henüz yok (DESIGN-PARITY): mevcut bileşenlerle. */}
-      {settings === null ? null : (
-        <section aria-labelledby="sod-title" className="flex min-w-0 flex-col gap-3 rounded-card bg-surface p-4 shadow-card" data-testid="sod">
-          <h2 id="sod-title" className="text-xl font-bold text-ink">
-            {t("sod.title")}
-          </h2>
-          <p className="text-base text-ink">{t("sod.body")}</p>
-          <p className="text-base font-semibold text-ink">{settings.separationOfDuties ? t("sod.stateOn") : t("sod.stateOff")}</p>
-          {sodNotice === "on" || sodNotice === "off" || sodNotice === "unchanged" ? <Banner kind="info">{t(`sod.${sodNotice}`)}</Banner> : null}
-          {sodNotice === "reauth" ? (
-            <Banner kind="error">
-              <p>{t("sod.reauth")}</p>
-              <a className="mt-1 inline-block font-bold text-ink underline" href={`/login?reauth=1&next=${encodeURIComponent(`/t/${slug}/settings`)}`}>
-                {t("sample.loginLink")}
-              </a>
-            </Banner>
-          ) : null}
-          <form action={setSeparationAction} className="flex min-w-0 flex-col gap-3">
-            <input type="hidden" name="slug" value={slug} />
-            <input type="hidden" name="enabled" value={settings.separationOfDuties ? "0" : "1"} />
-            <Button type="submit" variant={settings.separationOfDuties ? "secondary" : "primary"}>
-              {settings.separationOfDuties ? t("sod.turnOff") : t("sod.turnOn")}
-            </Button>
-          </form>
-        </section>
-      )}
-      {sampleResult === undefined ? null : (
-        <Banner kind="info">
-          <p>{t(`sample.${sampleResult}`)}</p>
-        </Banner>
-      )}
-      {sampleNotice === "in_use" ? (
-        <Banner kind="error">
-          <p>
-            {t("sample.inUse")} {t("sample.inUseAction")}
-          </p>
-        </Banner>
-      ) : null}
-      {sampleNotice === "confirm" ? <Banner kind="error">{t("sample.confirmRequired")}</Banner> : null}
-      {sampleNotice === "reauth" ? (
-        <Banner kind="error">
-          <p>
-            {t("sample.reauth")} {t("sample.reauthAction")}
-          </p>
-          <a className="mt-1 inline-block font-bold text-ink underline" href={`/login?next=${encodeURIComponent(`/t/${slug}/settings`)}`}>
-            {t("sample.loginLink")}
-          </a>
-        </Banner>
-      ) : null}
-      {sample !== null && hasActiveSample(sample) ? (
-        <section aria-labelledby="sample-title" className="flex min-w-0 flex-col gap-3 rounded-card bg-surface p-4 shadow-card" data-testid="sample-data">
-          <h2 id="sample-title" className="text-xl font-bold text-ink">
-            {t("sample.title")}
-          </h2>
-          <p className="text-base text-ink">{t("sample.body", { ...sample.active })}</p>
-          <p className="text-base text-ink-muted">{t("sample.rule")}</p>
-          <form action={clearSampleDataAction} className="flex min-w-0 flex-col gap-3">
-            <input type="hidden" name="slug" value={slug} />
-            <label className="flex min-h-12 items-center gap-3 text-base text-ink">
-              <input type="checkbox" name="confirm" value="1" required className="h-6 w-6 shrink-0" />
-              <span>{t("sample.confirm")}</span>
-            </label>
-            <Button type="submit">{t("sample.clear")}</Button>
-          </form>
-        </section>
-      ) : null}
-      {locked ? null : (
-        <Link
-          href={`${home}/import`}
-          className="inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-control border-2 border-border-strong bg-surface px-6 text-base font-bold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          {t("importLink")}
-        </Link>
-      )}
-      <div>
-        <Link
-          href={home}
-          className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-control border-2 border-border-strong bg-surface px-6 text-base font-bold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          {t("back")}
-        </Link>
-      </div>
-    </main>
+    <SettingsView
+      key={JSON.stringify(values)}
+      slug={slug}
+      dark={dark}
+      locked={locked}
+      values={values}
+      addressSlug={settings?.slug ?? null}
+      timeZones={TIME_ZONES}
+      sample={sample !== null && hasActiveSample(sample) ? sample.active : null}
+      mfaOn={principal.mfaVerified}
+      canImport={!locked}
+      notices={notices}
+      reauth={reauth}
+      error={error}
+    />
   );
 }

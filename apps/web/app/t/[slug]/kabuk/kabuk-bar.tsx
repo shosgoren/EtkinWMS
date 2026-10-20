@@ -19,9 +19,16 @@ export interface KabukContextValue {
   readonly modules: readonly KabukModule[];
   /** Modüller alt yazısındaki rol adı (ör. "Yönetici"). */
   readonly roleLabel: string;
+  /** T-968: kalıp üst çubuğundaki "firma · rol" satırı için çalışma alanı adı. */
+  readonly tenantName?: string;
 }
 
 const KabukContext = createContext<KabukContextValue | null>(null);
+
+/** Kiracı düzeninin verdiği kabuk bağlamı (yoksa `null`: ör. birim testi). */
+export function useKabuk(): KabukContextValue | null {
+  return useContext(KabukContext);
+}
 
 export function KabukProvider({ value, children }: { value: KabukContextValue; children: ReactNode }) {
   return <KabukContext.Provider value={value}>{children}</KabukContext.Provider>;

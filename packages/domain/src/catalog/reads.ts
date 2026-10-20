@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
 import type { ItemCardType, PickPolicy, TrackingMode } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type AccessTx } from "../identity/access.ts";
-import type { ItemRow } from "./items.ts";
+import { parseCardType, type ItemRow } from "./items.ts";
 import { loadItem, parseText, parseUuid, type CatalogCommandParams, type ItemHeader } from "./units.ts";
 
 export type CatalogReadParams = Omit<CatalogCommandParams, "requestId">;
@@ -27,6 +27,8 @@ export interface SearchItemsInput {
   /** Kod/ad öneki (büyük-küçük harf duyarsız) ya da barkod TAM eşleşmesi. Boş/yok: filtre yok. */
   readonly q?: string;
   readonly status?: ItemStatusFilter;
+  /** T-968: kart türü süzgeci (HM / YM / MM / TM); yok: hepsi. */
+  readonly cardType?: ItemCardType;
   /** Önceki sayfanın `nextCursor` değeri (opak). */
   readonly after?: string;
   /** 1..100; varsayılan 50. */
@@ -106,12 +108,14 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
   const qTrim = input.q === undefined ? "" : input.q.trim();
   const q = qTrim === "" ? undefined : parseText(qTrim, SEARCH_Q_MAX);
   const status = parseStatus(input.status);
+  const cardType = input.cardType === undefined ? undefined : parseCardType(input.cardType);
   const after = input.after === undefined ? undefined : decodeCursor(input.after);
   const limit = parseLimit(input.limit);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
     const tenant = actor.tenantId;
     const filters = [sql`i.tenant_id = ${tenant}::uuid`];
     if (status !== undefined) filters.push(sql`i.status = ${status}`);
+    if (cardType !== undefined) filters.push(sql`i.card_type = ${cardType}`);
     if (q !== undefined) {
       filters.push(
         sql`(starts_with(lower(i.code), lower(${q})) OR starts_with(lower(i.name), lower(${q}))
