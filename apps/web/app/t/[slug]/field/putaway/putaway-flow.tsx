@@ -69,8 +69,8 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
     const order: Stage[] = task === null ? ["source", "item", "target", "confirm", "done"] : ["item", "target", "confirm", "done"];
     return order.indexOf(s) + 1;
   };
+  // Ses/titreşim: okuma anında kamera katmanı (cameraFeedback), uyarıda tam ekran uyarı (ScanAlert titreşimi) — T-313 sözleşmesi; ek ton yok.
   const showAlert = (titleKey: string, reasonKey: string, code: string, back?: Stage): void => {
-    tone("err");
     setAlert({ titleKey, reasonKey, code, ...(back === undefined ? {} : { back }) });
   };
 
@@ -93,7 +93,6 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
             return;
           }
           const loc = { id: res.data.id, code: res.data.code, name: res.data.name };
-          tone("ok");
           holder.contentChanged();
           setLastName(loc.name);
           if (at === "source") {
@@ -127,7 +126,6 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
             const step = stepOf1();
             if (step === null) return;
             holder.contentChanged();
-            tone("ok");
             setLastName(res.data.itemName);
             setQty(Math.min(availRef.current ?? Infinity, qtyRef.current + step));
             return;
@@ -158,7 +156,6 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
             setQty(nextQty);
           }
           holder.contentChanged();
-          tone("ok");
           setLastName(res.data.itemName);
           setItem({ id: res.data.itemId, name: res.data.itemName, code: res.data.itemCode });
           setStage("target");

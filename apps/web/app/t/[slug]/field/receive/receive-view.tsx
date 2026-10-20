@@ -55,13 +55,8 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
 
   const base = `/t/${encodeURIComponent(slug)}/field/receive`;
   const open = receipt.lines.filter((l) => intOf(l.open) !== 0);
-  const warn = useCallback(
-    (a: AlertState) => {
-      tone("err");
-      setAlert(a);
-    },
-    [setAlert],
-  );
+  // Ses/titreşim: okuma anında kamera katmanı (cameraFeedback), uyarıda tam ekran uyarı (ScanAlert titreşimi) — T-313 sözleşmesi; ek ton yok.
+  const warn = useCallback((a: AlertState) => setAlert(a), [setAlert]);
 
   const onScanned = useCallback(
     async (code: string) => {
@@ -109,7 +104,6 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
         if (stageRef.current === "qty" && cur !== null && cur.line.id === line.id) {
           // Aynı ürünün koli barkodu yeniden okutuldu: adet eklenir (iki koli = iki katı).
           holder.contentChanged();
-          tone("ok");
           setPicked({ ...cur, received: Math.min(max ?? Infinity, cur.received + step) });
           return;
         }
@@ -119,7 +113,6 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
         }
         holder.contentChanged();
         setShowDamaged(false);
-        tone("ok");
         setPicked({ line, lineIsBase: isBaseUnit(line.unitId, res.data.baseUnitId), received: Math.max(1, Math.min(max ?? Infinity, step)), damaged: 0, locationId: receipt.receivingLocations[0]?.id ?? "" });
         setStage("qty");
       } finally {

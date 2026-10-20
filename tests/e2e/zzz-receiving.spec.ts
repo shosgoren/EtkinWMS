@@ -470,7 +470,7 @@ test("kabul → kalite onayı → yerleştirme (görevli ve serbest) + yanlış 
   await page.getByRole("textbox", { name: "Barkod" }).fill(BARCODE.koli);
   await page.getByRole("button", { name: "Onayla" }).click();
   await expect(page.getByRole("textbox", { name: /^Gelen \(/ })).toHaveValue("12");
-  await expect(page.getByText("Okuttuğun ürün:")).toBeVisible();
+  await expect(page.getByTestId("verified-ok")).toHaveText("Doğru ürün"); // T-969: "Okuttuğun ürün:" satırı yerine Saha kalıbı rozeti
   await expect(page.getByTestId("compound-qty")).toHaveText("1 E2E koli · toplam 12 E2E adet");
   // Aynı koli yeniden okutulunca adet eklenir ve kalan (18) ile sınırlanır: 12 + 12 → 18.
   await scan(page, BARCODE.koli);
