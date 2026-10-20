@@ -16,6 +16,7 @@ import { RICON } from "./design/gruplar-icons.ts";
 import { EICON } from "./design/ekip-icons.ts";
 import { KICON } from "./design/kabuk-icons.ts";
 import { LICON } from "./design/kalip-icons.ts";
+import { SICON } from "./design/saha-icons.ts";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 const source = readFileSync(join(repoRoot, "docs/design/source/Bakis.dc.html"), "utf8");
@@ -67,6 +68,11 @@ describe("I-18 tasarım birebir", () => {
 
   it.each(Object.entries(LICON))("Kalıp ikonu %s kalıp kaynaklarından birinde birebir geçer", (_k, d) => {
     expect(kalip.some(([, src]) => src.includes(`"${d}"`) || src.includes(`'${d}'`))).toBe(true);
+  });
+
+  it.each(Object.entries(SICON))("Saha ikonu %s KalipSaha kaynağında birebir geçer", (_k, d) => {
+    const saha = kalip.find(([n]) => n === "KalipSaha")![1];
+    expect(saha.includes(`"${d}"`) || saha.includes(`'${d}'`)).toBe(true);
   });
 
   it.each(kalip)("%s kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", (_n, src) => {

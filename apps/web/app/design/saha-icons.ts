@@ -1,5 +1,5 @@
-// I-18 / T-969: Saha kalıbı (KalipSaha.dc.html: Okut · Doğrula · Miktar) SVG yolları AYNEN. Kaynak dosya henüz depoda değil
-// (docs/design/source'a ekleme T-968); eklendiğinde design-parity.test.ts bu sözlüğü de kaynakla karşılaştırmalıdır (T-969 kartı).
+// I-18 / T-969: Saha kalıbı (KalipSaha.dc.html: Okut · Doğrula · Miktar) SVG yolları AYNEN. design-parity.test.ts her yolu
+// docs/design/source/KalipSaha.dc.html ile karşılaştırır.
 export const SICON = {
   /** Uygulama logosu yolu (viewBox 0 0 120 120; daire bu yol üzerinde hareket eder). */
   logo: "M32 62H88A28 28 0 1 0 80 82",
