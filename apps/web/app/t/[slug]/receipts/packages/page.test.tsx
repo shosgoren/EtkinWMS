@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@wms/shared/errors";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), principal: vi.fn(), membership: vi.fn(), db: {}, headers: new Headers() }));
-vi.mock("next/headers", () => ({ headers: async () => mocks.headers }));
+vi.mock("next/headers", () => ({ headers: async () => mocks.headers, cookies: async () => ({ get: () => undefined }) }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); }, redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); } }));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 vi.mock("@wms/db", () => ({ getAppDb: () => mocks.db }));

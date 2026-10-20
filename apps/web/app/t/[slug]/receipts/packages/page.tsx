@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { packageReceivingEnabled } from "../../../../../lib/package-receiving-config.ts";
+import { THEME_COOKIE } from "../../../../design/theme.ts";
 import { PackageFlow } from "./package-flow.tsx";
 
 export const dynamic = "force-dynamic";
@@ -42,5 +43,7 @@ export default async function PackageReceivingPage({ params, searchParams }: {
     if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
     return <main className="p-4"><h1>{t("title")}</h1><p role="alert">⚠ {t("loadError")} ({e.code})</p></main>;
   }
-  return <PackageFlow key={documentId ?? "new"} slug={slug} canWrite={canWrite} initial={initial} />;
+  // T-973: kalıp kabının teması (kullanıcı tema çerezi; Pano / Ayarlar ile aynı).
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  return <PackageFlow key={documentId ?? "new"} slug={slug} canWrite={canWrite} initial={initial} dark={dark} />;
 }

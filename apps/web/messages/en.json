@@ -2753,7 +2753,17 @@
     "accept": "Receive",
     "summary": "Receiving summary",
     "chooseProduct": "Select a product",
-    "optionalMetadata": "Lot / dates (optional)"
+    "optionalMetadata": "Lot / dates (optional)",
+    "k": {
+      "intro": "Pick or scan the product, enter the packages, review and accept; then print the labels.",
+      "nextShort": "NEXT",
+      "nextAria": "Go to the next step",
+      "labelsShort": "LABELS",
+      "labelsAria": "Go to package labels",
+      "labelsTitle": "Package labels",
+      "printShort": "PRINT",
+      "printAria": "Print the labels"
+    }
   },
   "packageMovement": {
     "title": "Package operation",

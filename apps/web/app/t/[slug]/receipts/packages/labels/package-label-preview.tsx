@@ -66,7 +66,7 @@ export function PackageLabelPreview({ packages }: { readonly packages: readonly 
       {current === null ? <p role="status">QR kodları hazırlanıyor…</p> : null}
       {current?.qrs === null ? <div role="alert">QR üretilemedi. <Button style={{ minHeight: 48 }} type="button" variant="secondary" onClick={() => setAttempt(v => v + 1)}>Tekrar dene</Button></div> : null}
       {measured && !fit.fits ? <p role="alert">QR veya metin bu ölçüye sığmıyor. Etiket genişliğini veya yüksekliğini artırın.</p> : null}
-      <Button style={{ minHeight: 56, width: "100%" }} type="button" disabled={!ready} onClick={() => { if (ready) window.print(); }}>Yazdır / PDF</Button>
+      <Button style={{ minHeight: 56, width: "100%" }} type="button" data-testid="package-label-print" disabled={!ready} onClick={() => { if (ready) window.print(); }}>Yazdır / PDF</Button>
     </div>
     {ready ? <style>{printCss(settings)}</style> : <style>{"@media print{.label-sheet{display:none!important}}"}</style>}
     {valid && qrs != null ? <PackageLabelPages packages={packages} qrs={qrs} width={width} height={height} sheetRef={sheetRef} /> : null}

@@ -35,3 +35,9 @@ body:has(.kalip) .screen-context { display: none; }
 /* Kaynak telefonda 5 karttan sonrasını gizler ve "+N daha · ara ya da söyle" (sesle, B-62) satırı koyar. Ses gelene dek gizli kart
    ulaşılamaz kalmasın: tüm kartlar çizilir, içerik alanı kendi içinde kayar. */
 @media (max-width: 699.98px) { .dzl.dzl .ulist .uc:nth-child(n+6) { display: grid; } }
+/* T-973 (B-63): kalıba taşınan eski içerik (paketli kabul adımları, paket etiketleri) Tailwind düğmelerini korur. Üretilmiş kalıp CSS'i
+   `button { color: inherit }` sıfırlaması yapar; adımın birincil düğmesi (`.flow-primary`) Saha kalıbındaki gibi kaynağın koyu düğmesidir,
+   vurgu zeminli düğmelerin yazısı vurgu üstü renktir (okunurluk ≥ 4,5:1). Renk sabiti yok. */
+.kalip .flow-primary { border: 0; border-radius: 16px; background: var(--color-dz-x-bhcoec); color: var(--color-dz-x-pppppp); }
+.kalip.dz-dark .flow-primary { background: var(--color-dz-x-ogolop); color: var(--color-dz-x-bcblce); }
+.kalip .text-on-accent { color: var(--color-on-accent); }

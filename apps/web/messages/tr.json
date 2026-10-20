@@ -2753,7 +2753,17 @@
     "accept": "Kabul et",
     "summary": "Kabul özeti",
     "chooseProduct": "Ürün seçin",
-    "optionalMetadata": "Lot / tarih (isteğe bağlı)"
+    "optionalMetadata": "Lot / tarih (isteğe bağlı)",
+    "k": {
+      "intro": "Ürünü seç ya da okut, paketleri gir, kontrol et ve kabul et; sonra etiketleri yazdır.",
+      "nextShort": "İLERİ",
+      "nextAria": "Sıradaki adıma geç",
+      "labelsShort": "ETİKET",
+      "labelsAria": "Paket etiketlerine git",
+      "labelsTitle": "Paket etiketleri",
+      "printShort": "YAZDIR",
+      "printAria": "Etiketleri yazdır"
+    }
   },
   "packageMovement": {
     "title": "Paket işlemi",

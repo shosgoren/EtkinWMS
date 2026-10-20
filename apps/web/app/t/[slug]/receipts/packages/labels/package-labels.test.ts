@@ -4,7 +4,9 @@ import type { PackageReceiptDto, ReceiptPackageDto } from "../actions.ts";
 const mocks = vi.hoisted(() => ({ receipt: vi.fn(), batch: vi.fn(), principal: vi.fn() }));
 vi.mock("@wms/domain/operations", () => ({ getPackageReceipt: mocks.receipt, getPackageProductionBatch: mocks.batch }));
 vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+// T-973: kalıp kabı burada sınanmaz (yalnız sunucu sınırı ve etiket verisi).
+vi.mock("./package-label-ekran.tsx", () => ({ PackageLabelEkran: ({ children }: { children: unknown }) => children }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => ({ get: () => undefined }) }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("404"); }, redirect: (url: string) => { throw new Error(url); } }));
 vi.mock("../../../../../../lib/auth-service.ts", () => ({ getAuthService: () => ({ getPrincipal: mocks.principal }) }));
 import { generatePackageQrs, packageQr, postedLabelPackages, validPackagePrintSettings } from "./package-labels.ts";

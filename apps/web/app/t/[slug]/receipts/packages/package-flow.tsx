@@ -1,11 +1,17 @@
 "use client";
+// Paketli kabul (T-938): ürün → paketler → kontrol → etiket. Hazırlama/işleme tek gönderim nesnesindedir (createPackageSubmission:
+// idempotency anahtarı ve içerik dondurulur); yetki ve kurallar sunucuda.
+// T-973 (B-63, I-18): FORM kalıbı kabı (KalipEkran `form`): kalıp üst çubuğu + ortak alt cam çubuk (Geri: Beklenen teslimler, Ana ekran,
+// ana işlem İLERİ = adımın kendi birincil düğmesine basar; kabul sonrası ETİKET). Adım içerikleri, alan adları ve düğme adları aynı.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Banner, PackagePlus } from "@wms/ui";
+import { Banner } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../../field/receive/receive-flow.tsx";
 import { FormSteps } from "../../screen-shell.tsx";
 import { ErrorNotice, type ErrorInfo, type ActionResult } from "../receipt-form.tsx";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { KalipEkran, tone } from "../../kalip/ekran.tsx";
 import { getPackageReceiptAction, packageItemOptionsAction, packageReceivingLocationsAction, packageWarehousesAction, postPackageReceiptAction, preparePackageReceiptAction, resolvePackageItemScanAction, searchPackageItemsAction, type PackageCommandDto, type PackageItemDto, type PackageItemOptionsDto, type PackageReceiptDto } from "./actions.ts";
 
 type Place = { readonly id: string; readonly code: string; readonly name: string };
@@ -118,7 +124,7 @@ export function createPackageSubmission(initial: PackageReceiptDto | null, ports
 }
 const control = "min-h-12 w-full min-w-0 rounded-control border-2 border-border-strong bg-surface px-3 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const card = "min-w-0 rounded-card border-2 border-border bg-surface p-4";
-export function PackageFlow({ slug, initial, canWrite }: { slug: string; initial: PackageReceiptDto | null; canWrite: boolean }) {
+export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: string; initial: PackageReceiptDto | null; canWrite: boolean; dark?: boolean }) {
   const t = useTranslations("packageReceiving");
   const [clientReady, setClientReady] = useState(false);
   useEffect(() => { setClientReady(true); }, []);
@@ -228,8 +234,20 @@ export function PackageFlow({ slug, initial, canWrite }: { slug: string; initial
       </> : null}
     </div>;
   }
-  return <main className="package-flow mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-4" data-testid="package-flow" data-stage={posted ? 4 : stage}>
-    <h1 className="flex items-center gap-2 break-words text-2xl font-extrabold text-ink"><PackagePlus aria-hidden="true" className="size-6 shrink-0" />{t("title")}</h1>
+  const home = `/t/${encodeURIComponent(slug)}`;
+  const pressPrimary = () => {
+    const primary = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="package-flow"] button.flow-primary'));
+    const target = primary.find(b => !b.disabled);
+    if (target === undefined) { tone("err"); primary[0]?.scrollIntoView({ block: "center" }); return; }
+    tone("tap"); target.click();
+  };
+  const main = posted && receipt
+    ? { label: t("k.labelsShort"), aria: t("k.labelsAria"), d: LICON.printer, href: packageLabelHref(slug, receipt.documentId), testId: "package-main" }
+    : { label: t("k.nextShort"), aria: t("k.nextAria"), d: LICON.arrow, onClick: pressPrimary, disabled: busy || (!canWrite && stage >= 3), testId: "package-main" };
+  return <KalipEkran kind="form" dark={dark} title={t("title")} icon={{ d: LICON.koli, color: "2F7D5B" }} testId="package-receiving"
+    bar={{ back: { href: `${home}/receipts`, testId: "screen-back" }, homeNav: { href: home, testId: "screen-home" }, main }}>
+  <div className="package-flow mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 py-2" data-testid="package-flow" data-stage={posted ? 4 : stage}>
+    <p className="sr">{t("k.intro")}</p>
     <FormSteps labels={[t("product"), t("packages"), t("review"), t("labels")]} />
     {error ? <ErrorNotice error={error} context="create" /> : null}
     {scanner.dropped ? <Banner kind="warning">⚠ {t("scanDropped")}</Banner> : null}
@@ -277,5 +295,6 @@ export function PackageFlow({ slug, initial, canWrite }: { slug: string; initial
     </div>
     {camera.overlay}
     <style>{`@media (min-width:768px) and (max-width:1199px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}} @media (max-width:767px),(pointer:coarse) and (max-height:500px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}.package-actions{position:sticky;bottom:0;background:var(--color-surface);z-index:5;padding-block:.5rem}.package-flow fieldset>div.grid,.package-flow fieldset section>div.grid{grid-template-columns:minmax(0,1fr)}}`}</style>
-  </main>;
+  </div>
+  </KalipEkran>;
 }
