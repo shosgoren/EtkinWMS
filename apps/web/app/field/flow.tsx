@@ -188,8 +188,6 @@ function Flow({ host }: { host: string }) {
   const [staff, setStaff] = useState<readonly StaffPick[] | null>(null);
   const [who, setWho] = useState<StaffPick | null>(null);
   const [ws, setWs] = useState("");
-  // T-924: kayıtlı cihazda hatırlanan çalışma alanı tek satır olarak bantta gösterilir (telefonda kaydırmasız sığması için); "Değiştir" alanı açar.
-  const [wsEdit, setWsEdit] = useState(false);
   const [user, setUser] = useState("");
   const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
@@ -491,34 +489,15 @@ function Flow({ host }: { host: string }) {
         </span>
       ) : device.registered ? (
         <>
-          <div className="ban" style={{ background: C["ok-bg"], color: C["ok-fg"] }}>
+          <div className="ban dev" style={{ background: C["ok-bg"], color: C["ok-fg"] }}>
             <Ico d={GICON.check} size={22} />
             <span>
               <b>{t("deviceOk", { name: device.deviceName })}</b>
-              {device.tenantName.toLocaleUpperCase("tr-TR")}
-              {ws.trim() !== "" && !wsEdit ? (
-                <span className="wsline" data-testid="field-ws-line">
-                  {`${host}/${ws.trim()}`}
-                  <button type="button" className="wsedit" onClick={() => setWsEdit(true)} data-testid="field-ws-edit">
-                    {t("workspaceChange")}
-                  </button>
-                </span>
-              ) : null}
+              {` · ${device.tenantName.toLocaleUpperCase("tr-TR")}`}
             </span>
           </div>
           <div className="card" style={{ background: C.surface }}>
-            {ws.trim() !== "" && !wsEdit ? null : (
-            <div className="fl">
-              <label htmlFor="g-ws">{t("workspace")}</label>
-              <div className="inp" style={{ background: C.chip }}>
-                <span className="pre">{`${host}/`}</span>
-                <input id="g-ws" type="text" autoComplete="organization" value={ws} onChange={(e) => setWs(e.target.value)} aria-describedby="g-ws-h" />
-              </div>
-              <span id="g-ws-h" className="hint">
-                {t("workspaceHint")}
-              </span>
-            </div>
-            )}
+            {/* T-959: kayıtlı cihaz tek firmaya bağlıdır; çalışma alanı cihaz kaydından gelir, gösterilmez/değiştirilmez. */}
             <div className="fl">
               <label htmlFor="g-user">{t("username")}</label>
               <div className="inp" style={{ background: C.chip }}>
