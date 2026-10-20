@@ -266,6 +266,8 @@ export async function resetFieldCode(params: FieldMemberParams, deps: ResetField
 export async function unlockFieldLogin(params: FieldMemberParams): Promise<void> {
   const { memberId: rawMember, requestId, ...access } = params;
   const memberId = parseUuid(rawMember);
+  // T-920 (BACKLOG B-19): kilit açmak kaba kuvvet korumasını kaldırır; kod yenilemeyle aynı kural, yakın zamanda doğrulama zorunlu.
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   try {
     await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
       await assertNotDemo(tx, actor.tenantId);

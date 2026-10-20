@@ -116,7 +116,10 @@ export async function getBoardAt(params: Params, now: Date): Promise<Board> {
            AND (${scope}::uuid[] IS NULL OR w.warehouse_id = ANY(${scope}::uuid[])))::text AS unassigned,
         (SELECT count(*) FROM onhand o WHERE NOT EXISTS (
            SELECT 1 FROM public.stock_ledger g WHERE g.tenant_id = ${t}::uuid AND g.item_id = o.item_id
-              AND g.occurred_at >= ${nowIso}::timestamptz - interval '90 days'))::text AS idle_items`);
+              AND g.occurred_at >= ${nowIso}::timestamptz - interval '90 days'
+              AND (${scope}::uuid[] IS NULL OR EXISTS (
+                SELECT 1 FROM public.stock_dimensions sd JOIN public.locations l ON l.tenant_id = sd.tenant_id AND l.id = sd.location_id
+                 WHERE sd.tenant_id = g.tenant_id AND sd.id = g.stock_dimension_id AND l.warehouse_id = ANY(${scope}::uuid[])))))::text AS idle_items`);
     const h = head[0];
     if (h === undefined) throw new AppError("INTERNAL");
 
@@ -185,16 +188,36 @@ export async function getBoardAt(params: Params, now: Date): Promise<Board> {
        WHERE w.tenant_id = ${t}::uuid AND w.status = 'OPEN' AND (${scope}::uuid[] IS NULL OR w.warehouse_id = ANY(${scope}::uuid[]))
        ORDER BY w.created_at, w.id LIMIT 4`);
 
+    // T-920 (BACKLOG B-13): depo kapsamı kısıtlı izleyici yalnız kendi depolarında çalışabilen üyeleri görür (kapsamı kesişen, kapsam
+    // satırı olmayan ya da TENANT_ADMIN — üye listesi ve görev atamasıyla aynı kural); görev/okutma sayıları ve son etkinlik yalnız
+    // kapsamdaki depolardan (görev ilerlemesi + tamamlanan görev), depodan bağımsız işlem kaydı kullanılmaz. Kısıtsızda davranış aynı.
     const teamRows = await tx.execute<{ membership_id: string; name: string; roles: string[]; scanning: boolean; assigned: string; last_at: string | null }>(sql`
       WITH d AS (SELECT (date_trunc('day', ${nowIso}::timestamptz AT TIME ZONE ${tz}) AT TIME ZONE ${tz}) AS s)
       SELECT tm.id AS membership_id, u.name,
              coalesce((SELECT array_agg(r.role_key ORDER BY r.role_key) FROM public.membership_roles r WHERE r.tenant_id = tm.tenant_id AND r.membership_id = tm.id), '{}') AS roles,
-             EXISTS (SELECT 1 FROM public.warehouse_task_progress p, d WHERE p.tenant_id = tm.tenant_id AND p.membership_id = tm.id AND p.updated_at >= d.s) AS scanning,
-             (SELECT count(*) FROM public.warehouse_tasks w WHERE w.tenant_id = tm.tenant_id AND w.assigned_membership_id = tm.id AND w.status = 'ASSIGNED')::text AS assigned,
-             (SELECT max(a.occurred_at) FROM public.audit_logs a, d WHERE a.tenant_id = tm.tenant_id AND a.actor_user_id = tm.user_id AND a.occurred_at >= d.s)::text AS last_at
+             EXISTS (SELECT 1 FROM public.warehouse_task_progress p
+                       JOIN public.warehouse_tasks w ON w.tenant_id = p.tenant_id AND w.id = p.task_id, d
+                      WHERE p.tenant_id = tm.tenant_id AND p.membership_id = tm.id AND p.updated_at >= d.s
+                        AND (${scope}::uuid[] IS NULL OR w.warehouse_id = ANY(${scope}::uuid[]))) AS scanning,
+             (SELECT count(*) FROM public.warehouse_tasks w WHERE w.tenant_id = tm.tenant_id AND w.assigned_membership_id = tm.id AND w.status = 'ASSIGNED'
+                AND (${scope}::uuid[] IS NULL OR w.warehouse_id = ANY(${scope}::uuid[])))::text AS assigned,
+             CASE WHEN ${scope}::uuid[] IS NULL
+               THEN (SELECT max(a.occurred_at) FROM public.audit_logs a, d WHERE a.tenant_id = tm.tenant_id AND a.actor_user_id = tm.user_id AND a.occurred_at >= d.s)
+               ELSE GREATEST(
+                 (SELECT max(p.updated_at) FROM public.warehouse_task_progress p
+                    JOIN public.warehouse_tasks w ON w.tenant_id = p.tenant_id AND w.id = p.task_id, d
+                   WHERE p.tenant_id = tm.tenant_id AND p.membership_id = tm.id AND p.updated_at >= d.s AND w.warehouse_id = ANY(${scope}::uuid[])),
+                 (SELECT max(w.completed_at) FROM public.warehouse_tasks w, d
+                   WHERE w.tenant_id = tm.tenant_id AND w.assigned_membership_id = tm.id AND w.completed_at >= d.s AND w.warehouse_id = ANY(${scope}::uuid[])))
+             END::text AS last_at
         FROM public.tenant_memberships tm
         JOIN public.users u ON u.id = tm.user_id
        WHERE tm.tenant_id = ${t}::uuid AND tm.status = 'ACTIVE'
+         AND (${scope}::uuid[] IS NULL
+              OR EXISTS (SELECT 1 FROM public.membership_roles r WHERE r.tenant_id = tm.tenant_id AND r.membership_id = tm.id AND r.role_key = 'TENANT_ADMIN')
+              OR NOT EXISTS (SELECT 1 FROM public.membership_warehouse_scopes ws WHERE ws.tenant_id = tm.tenant_id AND ws.membership_id = tm.id)
+              OR EXISTS (SELECT 1 FROM public.membership_warehouse_scopes ws WHERE ws.tenant_id = tm.tenant_id AND ws.membership_id = tm.id
+                           AND ws.warehouse_id = ANY(${scope}::uuid[])))
        ORDER BY u.name, tm.id LIMIT 50`);
     const team = teamRows.map((r): BoardPerson => {
       const assigned = n(r.assigned);

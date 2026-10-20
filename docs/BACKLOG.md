@@ -22,13 +22,13 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-10 | Global kimlik/olay tablolarında uygulama rolü okuma yetkisini daralt 🔒 — `security_events` kısmı T-919 (0053, KODDA VAR); kalan kısım açık |
 | B-11 | Ekibe katılma onayını DB'de kod doğrulamasına bağla 🔒 — T-919 (0053, KODDA VAR; canlıya çıkınca BİTTİ) |
 | B-12 | Saha girişi migration'larının geri almasına veri bekçisi 🔒 |
-| B-13 | Pano bölümlerinde depo kapsamı tutarlılığı 🔒 |
-| B-14 | Paket/palet oluşturmada depo kapsamı 🔒 |
+| B-13 | Pano bölümlerinde depo kapsamı tutarlılığı 🔒 — T-920 (KODDA VAR) |
+| B-14 | Paket/palet oluşturmada depo kapsamı 🔒 — T-920 (KODDA VAR) |
 | B-15 | İzolasyon testini (AC-04) RLS'siz tabloların yetkilerini kapsayacak şekilde genişlet |
 | B-16 | **Ürün kararı:** yöneticilerin birbirini yönetme yetkisi (öneri: yalnız hesap sahibi) 🔒 |
 | B-17 | DB işlevlerinde aktör kimliğini oturum bağlamından al 🔒 |
 | B-18 | Kuyruk RLS politikası simetrisi 🔒 |
-| B-19 | Hassas işlemlerde yeniden doğrulama tutarlılığı 🔒 |
+| B-19 | Hassas işlemlerde yeniden doğrulama tutarlılığı 🔒 — T-920 (KODDA VAR) |
 
 ## P1 — DB ikinci savunma
 | ID | İş |

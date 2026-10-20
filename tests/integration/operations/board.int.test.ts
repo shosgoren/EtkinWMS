@@ -106,6 +106,48 @@ describe("T-422 yönetici panosu", () => {
     expect(b.localHour).toBeLessThanOrEqual(23);
   });
 
+  it("T-920 (B-13): depo kapsamı kısıtlı yönetici ekipte yalnız kapsamı kesişen üyeleri ve kapsamdaki görev sayılarını görür", async () => {
+    const prior = process.env.WAREHOUSE_SCOPE_ENABLED;
+    process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+    try {
+      const w2 = uuid();
+      await q("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, 'T920 Depo 2')", [A.tenantId, w2, `D2-${hex(6)}`]);
+      const scope = async (membershipId: string, warehouseId: string): Promise<void> => {
+        await q("INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id) VALUES ($1, $2, $3)", [A.tenantId, membershipId, warehouseId]);
+      };
+      const mgr = await mkUser(adm, reg, "T920 yönetici");
+      const mgrM = await mkMembership(adm, A.tenantId, mgr, { roles: ["WAREHOUSE_MANAGER"] });
+      await scope(mgrM, A.warehouseId);
+      const p1 = await mkUser(adm, reg, "T920 depo1");
+      const p1M = await mkMembership(adm, A.tenantId, p1, { roles: ["PICKER"] });
+      await scope(p1M, A.warehouseId);
+      const p2 = await mkUser(adm, reg, "T920 depo2");
+      const p2M = await mkMembership(adm, A.tenantId, p2, { roles: ["PICKER"] });
+      await scope(p2M, w2);
+      // Kapsamsız toplayıcıya: bir görev depo 1'de, bir görev depo 2'de.
+      await q("INSERT INTO public.warehouse_tasks (tenant_id, warehouse_id, kind, status, assigned_membership_id) VALUES ($1,$2,'PICK','ASSIGNED',$3)", [A.tenantId, A.warehouseId, PICKER.membershipId]);
+      await q("INSERT INTO public.warehouse_tasks (tenant_id, warehouse_id, kind, status, assigned_membership_id) VALUES ($1,$2,'PICK','ASSIGNED',$3)", [A.tenantId, w2, PICKER.membershipId]);
+
+      const all = await getBoardAt(ownerP(), new Date());
+      const mine = await getBoardAt(callP(mgr), new Date());
+      const ids = (b: typeof all): string[] => b.team.map((x) => x.membershipId);
+      // Kısıtsız (hesap sahibi) hepsini görür.
+      expect(ids(all)).toEqual(expect.arrayContaining([p1M, p2M, mgrM, PICKER.membershipId]));
+      // Kapsamlı yönetici: depo 1 üyesi, kapsamsız toplayıcı ve (her depoda çalışabilen) hesap sahibi görünür; yalnız depo 2 üyesi görünmez
+      // (üye listesi ve görev atamasıyla aynı kural).
+      const ownerM = (await q<{ id: string }>("SELECT id FROM public.tenant_memberships WHERE tenant_id = $1 AND user_id = $2", [A.tenantId, A.ownerUserId]))[0]?.id;
+      expect(ids(mine)).toEqual(expect.arrayContaining([p1M, PICKER.membershipId, mgrM, ownerM]));
+      expect(ids(mine)).not.toContain(p2M);
+      // Görev sayısı yalnız kapsamdaki depodan: depo 2'deki görev sayılmaz.
+      const pAll = all.team.find((x) => x.membershipId === PICKER.membershipId)?.assigned ?? -1;
+      const pMine = mine.team.find((x) => x.membershipId === PICKER.membershipId)?.assigned ?? -1;
+      expect(pAll - pMine).toBe(1);
+    } finally {
+      if (prior === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      else process.env.WAREHOUSE_SCOPE_ENABLED = prior;
+    }
+  });
+
   it("geçersiz zaman reddedilir", async () => {
     await expect(getBoardAt(ownerP(), new Date(Number.NaN))).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
   });

@@ -289,6 +289,9 @@ describe("temizleme", () => {
     };
     const e = await failure(clearSampleData({ ...access(t), recentAuth: reauth }));
     expect([e.code, e.detail]).toEqual(["UNAUTHENTICATED", "RECENT_AUTH_REQUIRED"]);
+    // T-920 (B-19): yeniden doğrulama hiç verilmezse de ret (fail-closed).
+    const e2 = await failure(clearSampleData(access(t)));
+    expect([e2.code, e2.detail]).toEqual(["UNAUTHENTICATED", "RECENT_AUTH_REQUIRED"]);
     expect((await counts(t.tenantId)).w).toBe(1);
   }, 60_000);
 });
