@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { searchItems } from "@wms/domain/catalog";
+import { sumItemsStock } from "@wms/domain/stock";
 import { listUnits } from "@wms/domain/catalog/units";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
-import { ItemsView } from "./items-view.tsx";
-import type { ItemListView } from "./items-view.tsx";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { THEME_COOKIE } from "../../../design/theme.ts";
+import { KalipKilitliEkran } from "../kalip/liste.tsx";
+import { CARD_TYPES, ItemsView } from "./items-view.tsx";
+import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -25,15 +28,12 @@ function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-async function LockedItems() {
+async function LockedItems({ slug }: { slug: string }) {
   const t = await getTranslations("items");
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
-      <h1 className="break-words text-2xl font-extrabold text-ink">{t("title")}</h1>
-      <Banner kind="warning">
-        <p>{t("locked")}</p>
-        <p className="mt-1">{t("lockedAction")}</p>
-      </Banner>
+    <main className="flex w-full min-w-0 flex-col">
+      <KalipKilitliEkran title={t("title")} icon={{ d: LICON.box, color: "2F5DA8" }} text={t("locked")} hint={t("lockedAction")} dark={dark} home={`/t/${encodeURIComponent(slug)}`} />
     </main>
   );
 }
@@ -46,6 +46,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   const after = first(sp.after);
   const q = (first(sp.q) ?? "").slice(0, 128);
   const statusRaw = first(sp.status) ?? "";
+  const typeRaw = first(sp.type) ?? "";
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   const returnTo = `/t/${encodeURIComponent(slug)}/items`;
@@ -53,6 +54,8 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   // Bilinmeyen durum değeri kullanıcı hatasıdır: DB'ye gitmeden 404.
   if (statusRaw !== "" && statusRaw !== "ACTIVE" && statusRaw !== "ARCHIVED") notFound();
   const status = statusRaw as "" | "ACTIVE" | "ARCHIVED";
+  if (typeRaw !== "" && !(CARD_TYPES as readonly string[]).includes(typeRaw)) notFound();
+  const cardType = typeRaw as "" | CardType;
   const db = getAppDb();
   const call = { db, principal, tenantSlug: slug };
 
@@ -60,15 +63,19 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   let units: Awaited<ReturnType<typeof listUnits>>;
   let nextCursor: string | null;
   let canManage: boolean;
+  let canImport: boolean;
+  let stock: Record<string, ItemStockView> = {};
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
+    canImport = hasPermission(current.roles, "data.import", current.grants);
     const page = await searchItems(call, {
       limit: PAGE_SIZE,
       ...(q.trim() === "" ? {} : { q }),
       ...(status === "" ? {} : { status }),
+      ...(cardType === "" ? {} : { cardType }),
       ...(after === undefined || after === "" ? {} : { after }),
     });
     units = await listUnits(call);
@@ -80,6 +87,10 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
       return { id: it.id, code: it.code, name: it.name, status: it.status, baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
     });
     nextCursor = page.nextCursor;
+    // T-968: kart rozeti (kapsamdaki depoların eldeki toplamı + minimum); okunamazsa rozet çizilmez, liste yine açılır.
+    stock = Object.fromEntries(
+      (await sumItemsStock(call, rows.map((r) => r.id)).catch(() => [])).map((x) => [x.itemId, { have: x.have, min: x.min }] as const),
+    );
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND") notFound();
@@ -88,21 +99,25 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
       // Geçersiz imleç (`after`) kullanıcı hatasıdır: boş liste yerine 404.
       if (e.code === "VALIDATION_FAILED") notFound();
       // `stock.view` izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli görünüm (audit/members deseni).
-      if (e.code === "FORBIDDEN") return <LockedItems />;
+      if (e.code === "FORBIDDEN") return <LockedItems slug={slug} />;
     }
     throw e;
   }
 
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6 phone:flex-1 phone:gap-2 phone:pb-0 phone:pt-3">
+    <main className="flex w-full min-w-0 flex-col">
       <ItemsView
         slug={slug}
+        dark={dark}
         canManage={canManage}
+        canImport={canImport}
         items={rows}
+        stock={stock}
         units={units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }))}
         nextCursor={nextCursor}
         firstPage={after === undefined || after === ""}
-        query={{ q: q.trim() === "" ? "" : q, status }}
+        query={{ q: q.trim() === "" ? "" : q, status, type: cardType }}
       />
     </main>
   );

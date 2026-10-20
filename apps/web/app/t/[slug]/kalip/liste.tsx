@@ -7,7 +7,7 @@
 import { useTranslations } from "next-intl";
 import type { CSSProperties, FormEvent, InputHTMLAttributes, ReactNode, Ref } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Ico, MicIco } from "./ekran.tsx";
+import { Ico, KalipEkran, MicIco } from "./ekran.tsx";
 import { kdz } from "./tokens.ts";
 
 const c = (hex: string): string => kdz("dzl", hex);
@@ -130,11 +130,13 @@ export interface KalipKartProps {
   readonly aria: string;
   readonly index?: number;
   readonly testId?: string;
+  /** Erişilebilir rol (varsayılan listitem; canlı öneri listesinde option). */
+  readonly role?: "listitem" | "option";
   readonly children?: ReactNode;
 }
 
 /** Kaynak `.uc` kart (listitem). */
-export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href, onClick, aria, index = 0, testId, children }: KalipKartProps) {
+export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href, onClick, aria, index = 0, testId, role = "listitem", children }: KalipKartProps) {
   const cls = `uc${tone === "ok" ? "" : ` ${tone}`}`;
   const style: CSSProperties = { animationDelay: `${index * 30}ms` };
   const inner = (
@@ -157,20 +159,20 @@ export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href
     </>
   );
   return href !== undefined ? (
-    <a className={cls} style={style} role="listitem" aria-label={aria} href={href} onClick={onClick} data-testid={testId}>
+    <a className={cls} style={style} role={role} aria-label={aria} href={href} onClick={onClick} data-testid={testId}>
       {inner}
     </a>
   ) : (
-    <button type="button" className={cls} style={style} role="listitem" aria-label={aria} onClick={onClick} data-testid={testId}>
+    <button type="button" className={cls} style={style} role={role} aria-label={aria} onClick={onClick} data-testid={testId}>
       {inner}
     </button>
   );
 }
 
-/** Kaynak `.ulist` (role=list). */
-export function KalipKartListe({ label, children }: { label: string; children: ReactNode }) {
+/** Kaynak `.ulist` (role=list; canlı öneri listesinde listbox). */
+export function KalipKartListe({ label, children, role = "list", id }: { label: string; children: ReactNode; role?: "list" | "listbox"; id?: string }) {
   return (
-    <div className="ulist" role="list" aria-label={label}>
+    <div className="ulist" role={role} aria-label={label} id={id}>
       {children}
     </div>
   );
@@ -197,11 +199,11 @@ export function KalipDaha({ children, href, onClick, iconD, iconColor, mic, clas
 }
 
 /** Kaynak `.nomatch` (aramaya uyan yok): ikon, başlık, ipucu, eylem. */
-export function KalipBos({ title, hint, action, testId }: { title: string; hint?: string; action?: { readonly label: string; readonly href?: string; readonly onClick?: () => void }; testId?: string }) {
+export function KalipBos({ title, hint, action, testId, iconD = LICON.search }: { title: string; hint?: string; action?: { readonly label: string; readonly href?: string; readonly onClick?: () => void }; testId?: string; iconD?: string }) {
   return (
     <div className="nomatch" data-testid={testId ?? "kalip-empty"}>
       <span className="nic">
-        <Ico d={LICON.search} size={30} />
+        <Ico d={iconD} size={30} />
       </span>
       <b>{title}</b>
       {hint === undefined ? null : <small>{hint}</small>}
@@ -298,5 +300,14 @@ export function KalipKurulum({ title, sub, steps, testId }: { title: string; sub
         })}
       </ol>
     </section>
+  );
+}
+
+/** Yetkisiz (okuma izni yok) tam ekran: liste kalıbının boş durum kutusu kilit ikonuyla; Geri / Ana ekran ortak çubukta. */
+export function KalipKilitliEkran({ title, icon, text, hint, dark, home }: { title: string; icon: { readonly d: string; readonly color: string }; text: string; hint: string; dark: boolean; home: string }) {
+  return (
+    <KalipEkran kind="liste" dark={dark} title={title} icon={icon} bar={{ back: { href: home }, main: { label: "", d: LICON.lock, disabled: true } }} testId="kalip-locked-screen">
+      <KalipBos title={text} hint={hint} iconD={LICON.lock} testId="kalip-locked" />
+    </KalipEkran>
   );
 }

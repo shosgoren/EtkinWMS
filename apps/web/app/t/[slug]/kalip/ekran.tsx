@@ -112,6 +112,8 @@ export interface KalipEkranProps {
   /** Kabın içinde, `.inner` dışında çizilen katmanlar (kaynak `.sxback`, `.cfback/.cfbox`, `.toast`). */
   readonly overlays?: ReactNode;
   readonly testId?: string;
+  /** Üst çubuktaki ad sayfanın birinci düzey başlığı mı (varsayılan evet). Detayda başlık kaydın adıdır (`.hero`). */
+  readonly heading?: boolean;
   readonly children: ReactNode;
 }
 
@@ -130,7 +132,7 @@ function useOnline(): boolean {
   return online;
 }
 
-export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, children }: KalipEkranProps) {
+export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
   const t = useTranslations("kalip");
   const ctx = useKabuk();
   const online = useOnline();
@@ -175,9 +177,13 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
                 </span>
                 <span style={{ minWidth: 0 }}>
                   {/* Kaynakta `b`; erişilebilir ad için ekranın tek birinci düzey başlığı. */}
-                  <b role="heading" aria-level={1}>
-                    {title}
-                  </b>
+                  {heading ? (
+                    <b role="heading" aria-level={1}>
+                      {title}
+                    </b>
+                  ) : (
+                    <b>{title}</b>
+                  )}
                   {sub === "" ? null : <small>{sub}</small>}
                 </span>
               </div>
