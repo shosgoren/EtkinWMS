@@ -1,9 +1,17 @@
 "use client";
+// Saha paket işlemi (T-938…): paket QR okut → kalite onayı / yerleştirme / depoya taşıma. Yetki, sürüm ve tekrar (idempotency) kuralları
+// sunucuda; bu dosya yalnız girdi toplar.
+// T-973 (B-63, I-18): Saha kalıbı (KalipSaha.dc.html; `SahaShell`): üst çubuk + 3 adım (OKUT · DOĞRULA · MİKTAR karşılığı: paket okut,
+// paketi gör, işlemi onayla) + ortak alt cam çubuk. Okutma adımlarında çubuğun ana işlemi OKUT; diğer adımlarda adımın tek işlemi çubuğun
+// hemen üstündeki sabit düğmededir (eski düğme adları ve test kimlikleri korunur).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowLeftRight, CircleCheck, Lock, Package, ScanLine, TriangleAlert, Warehouse } from "@wms/ui";
-import { FlowShell, PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../receive/receive-flow.tsx";
+import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../receive/receive-flow.tsx";
 import { ErrorNotice, type ErrorInfo } from "../../receipts/receipt-form.tsx";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { SICON } from "../../../../design/saha-icons.ts";
+import { SahaShell } from "../saha-shell.tsx";
 import { getCurrentPackageAction, resolveCurrentPackageQrAction, qualityReleasePackageAction, putawayPackageAction, packageStorageLocationsAction, resolvePackageDestinationAction, transferPackageAction, packageTransferWarehousesAction, packageTransferLocationsAction, resolvePackageTransferDestinationAction, type CurrentPackageDto, type PackageDestinationCursor } from "./actions.ts";
 
 type Place = { readonly id: string; readonly code: string; readonly name: string };
@@ -15,6 +23,7 @@ const quantity = (q: string): string => q.replace(/\.0+$/, "").replace(".", ",")
 
 export function PackageMovementFlow({ slug, initial }: { slug: string; initial: CurrentPackageDto | null }) {
   const t = useTranslations("packageMovement");
+  const ts = useTranslations("saha");
   const [ready, setReady] = useState(false);
   useEffect(() => { setReady(true); }, []);
   const [current, setCurrent] = useState(initial);
@@ -168,10 +177,14 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
     : <PrimaryButton disabled={!ready || busy} onClick={nextPackage}>{t("nextPackage")}</PrimaryButton>;
 
   const backStage = stage === "transferConfirm" ? "transferDestination" : stage === "transferDestination" ? "transferWarehouse" : "current";
-  return <FlowShell hue="teal" icon={<Package className="size-6" />} title={t(stage === "transferWarehouse" ? "chooseWarehouse" : stage === "transferConfirm" ? "reviewTransfer" : isDestination ? "destinationTitle" : "title")}
+  const phase: 1 | 2 | 3 | 4 = stage === "package" ? 1 : stage === "current" ? (saved && !needsReload ? 4 : 2) : 3;
+  return <SahaShell hue="teal" iconD={LICON.koli} phase={phase} title={t(stage === "transferWarehouse" ? "chooseWarehouse" : stage === "transferConfirm" ? "reviewTransfer" : isDestination ? "destinationTitle" : "title")}
+    {...(current ? { instruction: `${current.kind} · ${current.packageNo}` } : {})}
     {...(frozen.current ? {} : stage !== "package" && stage !== "current" ? { onBack: () => { if (!pending.current) { setStage(backStage); setError(null); } } } : { backHref: home })}
+    navTestIds={{ back: "screen-back", home: "screen-home", homeHref: `/t/${encodeURIComponent(slug)}` }}
+    {...(scanMode && !retry && !needsReload ? { main: { label: ts("okut.scanMain"), aria: ts("okut.title"), d: SICON.scan, onClick: scanner.press, disabled: !ready || busy, testId: "package-main" } } : {})}
     footer={footer} scanProxy={scanMode}>
-    <div className="grid min-w-0 gap-3 min-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" data-testid="package-movement">
+    <div className="grid min-w-0 gap-3" data-testid="package-movement">
       {current && <section className={card} data-testid="package-current">
         <div className="flex items-center gap-2"><Package className="size-7 shrink-0 text-cat-teal-ink" aria-hidden="true" /><h2 className="break-words text-xl font-extrabold">{current.itemName}</h2></div>
         <p className="my-3 text-3xl font-extrabold" data-testid="package-current-quantity">{quantity(current.currentBaseQuantity)} <span className="text-lg">{current.baseUnitCode}</span></p>
@@ -219,11 +232,5 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
       </section>
     </div>
     {scanner.overlay}
-    <style jsx global>{`
-      @media (min-width: 1200px) {
-        .screen-field .field-screen:has([data-testid="package-movement"]) { max-width: 76rem; }
-        .screen-field [data-testid="flow-step"]:has([data-testid="package-movement"]) > [role="group"] > div { max-width: 44rem; }
-      }
-    `}</style>
-  </FlowShell>;
+  </SahaShell>;
 }

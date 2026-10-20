@@ -4,6 +4,19 @@ import { Button } from "@wms/ui";
 import { printCss, type PaperMode } from "../../../labels/print-settings.ts";
 import { generatePackageQrs, validPackagePrintSettings, type PackageQr, type PackageLabelMetadata } from "./package-labels.ts";
 import "../../../labels/print.css";
+import { LICON } from "../../../../../design/kalip-icons.ts";
+import { kdz } from "../../../kalip/tokens.ts";
+
+// T-973: kâğıt seçimi liste kalıbı süzgeç çipleri (`.fchips > .fch`, `labels` ekranındaki A4 / Rulo ile aynı); seçili çip `aria-pressed`.
+function PaperChips({ mode, onPick }: { mode: PaperMode; onPick: (m: PaperMode) => void }) {
+  const chips: readonly { id: PaperMode; label: string; d: string; color: string }[] = [
+    { id: "a4", label: "A4", d: LICON.printer, color: "2F5DA8" },
+    { id: "label", label: "Rulo", d: LICON.tag, color: "0E7C7B" },
+  ];
+  return <div className="fchips" role="group" aria-label="Kağıt">{chips.map(ch => <button key={ch.id} type="button" className={`fch${mode === ch.id ? " on" : ""}`} aria-pressed={mode === ch.id} onClick={() => onPick(ch.id)} data-chip={ch.id}>
+    <i style={{ background: kdz("dzl", ch.color) }}><svg className="ico" width={18} height={18} viewBox="0 0 24 24" aria-hidden="true"><path d={ch.d} /></svg></i>{ch.label}
+  </button>)}</div>;
+}
 
 export function PackageLabelPages({ packages, qrs, width, height, sheetRef }: {
   readonly packages: readonly PackageLabelMetadata[]; readonly qrs: readonly PackageQr[]; readonly width: number; readonly height: number; readonly sheetRef?: React.Ref<HTMLDivElement>;
@@ -54,11 +67,11 @@ export function PackageLabelPreview({ packages }: { readonly packages: readonly 
   const measured = fit?.qrs === qrs && fit?.width === width && fit?.height === height;
   const ready = valid && qrs != null && measured && fit.fits;
   return <section className="flex flex-col gap-4" aria-label="Paket etiket önizlemesi">
-    <div className="label-controls rounded-xl border border-border bg-surface p-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className="label-controls pk-card">
+      <PaperChips mode={mode} onPick={setMode} />
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <label>Genişlik (mm)<input className="mt-1 min-h-[48px] w-full rounded-lg border border-border-strong p-3" type="number" min="20" max="200" value={width} onChange={e => setWidth(Number(e.target.value))} /></label>
         <label>Yükseklik (mm)<input className="mt-1 min-h-[48px] w-full rounded-lg border border-border-strong p-3" type="number" min="15" max="280" value={height} onChange={e => setHeight(Number(e.target.value))} /></label>
-        <label>Kağıt<select className="mt-1 min-h-[48px] w-full rounded-lg border border-border-strong p-3" value={mode} onChange={e => setMode(e.target.value as PaperMode)}><option value="a4">A4</option><option value="label">Rulo</option></select></label>
       </div>
       <p className="my-3 text-sm">{packages.length} paket · Paket miktarı</p>
       <details className="mb-3 text-sm"><summary className="flex min-h-[48px] cursor-pointer items-center">Yazdırma yardımı</summary><p>Yazdırma/PDF penceresinde ölçeği %100, üstbilgi/altbilgiyi kapalı tutun. QR okunurluğunu deneme baskısıyla kontrol edin. Metin veya QR sığmazsa ölçüyü artırın.</p></details>
@@ -66,7 +79,7 @@ export function PackageLabelPreview({ packages }: { readonly packages: readonly 
       {current === null ? <p role="status">QR kodları hazırlanıyor…</p> : null}
       {current?.qrs === null ? <div role="alert">QR üretilemedi. <Button style={{ minHeight: 48 }} type="button" variant="secondary" onClick={() => setAttempt(v => v + 1)}>Tekrar dene</Button></div> : null}
       {measured && !fit.fits ? <p role="alert">QR veya metin bu ölçüye sığmıyor. Etiket genişliğini veya yüksekliğini artırın.</p> : null}
-      <Button style={{ minHeight: 56, width: "100%" }} type="button" disabled={!ready} onClick={() => { if (ready) window.print(); }}>Yazdır / PDF</Button>
+      <Button style={{ minHeight: 56, width: "100%" }} type="button" data-testid="package-label-print" disabled={!ready} onClick={() => { if (ready) window.print(); }}>Yazdır / PDF</Button>
     </div>
     {ready ? <style>{printCss(settings)}</style> : <style>{"@media print{.label-sheet{display:none!important}}"}</style>}
     {valid && qrs != null ? <PackageLabelPages packages={packages} qrs={qrs} width={width} height={height} sheetRef={sheetRef} /> : null}
