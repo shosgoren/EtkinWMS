@@ -321,7 +321,7 @@ jobs:
       # (security-reviewer bulgusu). Bunun yerine tek `pnpm audit --json` koşusu aşağıdaki
       # Node filtresinden geçer; JSON okunamazsa kırmızı.
       #
-      # Audit istisnası A-36 (Supervisor kararı 2026-10-05) — BİTİŞ 2026-10-19 (dahil):
+      # Audit istisnası A-36 (Supervisor kararı 2026-10-05; KULLANICI kararıyla uzatıldı 2026-10-20, T-918) — BİTİŞ 2026-11-03 (dahil):
       #   GHSA-vfj7-8cjw-p6xm / CVE-2026-93687 (braces <=3.0.3, high, yamalı sürüm yok).
       #   Yalnızca dev zinciri: apps/web devDependency @next/eslint-plugin-next → fast-glob →
       #   micromatch → braces. Muafiyet YALNIZCA bu advisory için ve YALNIZCA tüm bulgu
@@ -330,9 +330,11 @@ jobs:
       #   Bitiş geçince "A-36 expiry" adımı deps'i kırmızıya çevirir. Uzatma yeni bir Supervisor
       #   kararıyla değil, KULLANICI kararıyla yapılır (I-17 / ADR-012 — bekçi gevşetme); aksi
       #   hâlde istisna kaldırılır.
+      #   20.10.2026 kontrolü: braces 3.0.3 / micromatch 4.0.8 / fast-glob 3.3.1 (Next eklentisi 16.4.2 ve canary
+      #   dahil) güncel; yamalı braces yok — `pnpm update` zinciri değiştirmez. Bitişte yeniden kontrol edilir.
       - name: Audit exception A-36 expiry
         run: |
-          expires=2026-10-19
+          expires=2026-11-03
           today=$(date -u +%F)
           if [[ "$today" > "$expires" ]]; then
             echo "::error::audit exception A-36 expired (bitiş $expires, bugün $today) — GHSA-vfj7-8cjw-p6xm"
