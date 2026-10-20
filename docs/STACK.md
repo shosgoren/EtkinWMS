@@ -12,6 +12,7 @@ Kaynak sözdizimi: `<dosya>#<json.yolu>` (package.json alanı) veya `docker-comp
 | ESLint | eslint | 10.12.0 | package.json#devDependencies.eslint | |
 | typescript-eslint | typescript-eslint | 8.71.0 | package.json#devDependencies.typescript-eslint | |
 | Vitest | vitest | 5.0.3 | package.json#devDependencies.vitest | |
+| Vite (vitest eşi) | vite | 8.3.3 | package.json#devDependencies.vite | T-973: GHSA-587h-7wmj-h5pm (≤ 8.3.2 high) yamalı sürüm; vitest eş bağımlılığını sabitler |
 | Next.js | next | 16.3.8 | apps/web/package.json#dependencies.next | ADR-001 |
 | Next.js ESLint eklentisi | @next/eslint-plugin-next | 16.3.8 | apps/web/package.json#devDependencies.@next/eslint-plugin-next | ADR-001 |
 | React | react | 19.3.0 | apps/web/package.json#dependencies.react | ADR-001 |
