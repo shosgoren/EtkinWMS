@@ -40,6 +40,8 @@ interface Props {
   readonly backHref?: string;
   /** Başlıktaki eylem düğmesi (kaynak `head.act`, ör. "Yeni paket"). */
   readonly action?: { readonly label: string; readonly href: string };
+  /** Başlıktaki durum çipi (YonetDestek.dc.html talep detayı `.top > .chip`). */
+  readonly badge?: { readonly label: string; readonly bg: string; readonly fg: string };
   readonly children: ReactNode;
 }
 
@@ -60,7 +62,7 @@ function ThemeButton({ label }: { label: string }) {
   );
 }
 
-function Inner({ current, nav, title, sub, labels, backHref, action, children }: Omit<Props, "dark">) {
+function Inner({ current, nav, title, sub, labels, backHref, action, badge, children }: Omit<Props, "dark">) {
   const router = useRouter();
   const [failed, setFailed] = useState(false);
   async function signOut(): Promise<void> {
@@ -123,6 +125,11 @@ function Inner({ current, nav, title, sub, labels, backHref, action, children }:
             <h1 className="top-h">{title}</h1>
             <span className="top-s">{sub}</span>
           </div>
+          {badge === undefined ? null : (
+            <span className="chip" style={{ background: badge.bg, color: badge.fg }} data-testid="panel-badge">
+              {badge.label}
+            </span>
+          )}
           {action === undefined ? null : (
             <button type="button" className="btn" style={{ background: dz("172E42"), color: dz("FFFFFF") }} onClick={() => router.push(action.href)}>
               <Ico d={YICON.plus} size={20} sw={2.8} />

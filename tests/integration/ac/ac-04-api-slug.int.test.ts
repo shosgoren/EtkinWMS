@@ -380,7 +380,8 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
       as(A.admin);
       const missingSlug = `yok-${rnd()}`;
       const missing = await runLoader(rel, missingSlug);
-      expect(cross.outcome).toBe("render");
+      // T-969: field/page.tsx (OKUT) üyeliği kendisi de denetler → üye olmadığı slug ile var olmayan slug aynı 404; layout yalnız çizer.
+      expect(cross.outcome).toBe(rel === "field/page.tsx" ? "notFound" : "render");
       // React öğesinin `type` alanı (bileşen/modül nesnesi) döngüsel olabilir; yalnızca çizilen veri (props/anahtarlar) karşılaştırılır.
       const norm = (v: unknown, slug: string): string =>
         JSON.stringify(v, (k, x: unknown) => (k === "type" || k === "_owner" || k === "_store" ? undefined : x)).split(encodeURIComponent(slug)).join("<slug>");

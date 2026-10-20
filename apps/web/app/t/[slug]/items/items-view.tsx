@@ -1,16 +1,23 @@
 "use client";
-// Ürün listesi ekranı (T-216). Yetki ve iş kuralları SUNUCUDADIR: `canManage` yalnızca gösterimdir (kilit + açıklama); eylemler sunucuda
-// `settings.manage` ister. Kod normalleştirmesi, takip modu ve ölçek kuralları istemcide YOK. Arama sunucudadır (GET formu, keyset imleç,
-// OFFSET yok); barkod alanına okutma düz metin girişidir (tarama yolu ADR-010). Mobilde kart görünümü (tablo yok → yatay taşma yok).
-import { useTranslations } from "next-intl";
-import Link from "next/link";
+// Ürün listesi ekranı (T-216; T-968 liste kalıbı, KalipListe.dc.html). Yetki ve iş kuralları SUNUCUDADIR: `canManage` yalnızca gösterimdir
+// (kilit + açıklama); eylemler sunucuda `settings.manage` ister. Kod normalleştirmesi, takip modu ve ölçek kuralları istemcide YOK. Arama
+// sunucudadır (GET formu, keyset imleç, OFFSET yok); yazdıkça canlı sonuç (`searchItemsAction`), Enter tek eşleşmede ürünü açar; barkod
+// okuyucu (klavye kaması) ve kamera (CameraOverlay, T-286) aynı yolu kullanır. Süzgeç çipleri adresi değiştirir (kart türü / arşivli).
+// Bilinçli farklar (DESIGN-PARITY, T-968): "Kritik" çipi yok (sunucu süzgeci yok; sorunlu kart yine dolu renk); çip sayıları yok;
+// kart rozeti kapsamdaki depoların eldeki toplamı, trafik ışığı minimum politikasından (yoksa sakin); sesle arama Etkin (B-62) ile.
+import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Banner, Button, ChevronDown, ChevronRight, CircleCheck, EmptyState, Search, TextField } from "@wms/ui";
-import { PageBody, Sheet } from "../easy-setup/sheet.tsx";
-import { isSetupComplete, useSetupProgress } from "../easy-setup/setup-guide.tsx";
-import { Typeahead } from "../easy-setup/typeahead.tsx";
+import { Banner, Button, TextField } from "@wms/ui";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { Sheet } from "../easy-setup/sheet.tsx";
+import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
+import { CameraOverlay } from "../field/receive/receive-flow.tsx";
+import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { fmtQty, stockTone } from "../kalip/format.ts";
+import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
+import { CARD_VISUAL } from "./card-visual.ts";
 import { createItemAction, createUnitAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği kullanılır. */
@@ -375,9 +382,9 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
   );
 }
 
-type SetupStep = { readonly key: "warehouse" | "locations" | "items"; readonly done: boolean; readonly href: string | null };
+type StepKey = "warehouse" | "locations" | "items";
 
-function setupSteps(slug: string, p: { hasWarehouse: boolean; hasLocation: boolean; hasItem: boolean; nextWarehouseId: string | null }): SetupStep[] {
+function setupSteps(slug: string, p: SetupProgressView): { key: StepKey; done: boolean; href: string | null }[] {
   const base = `/t/${encodeURIComponent(slug)}`;
   return [
     { key: "warehouse", done: p.hasWarehouse, href: `${base}/warehouses?new=1` },
@@ -386,102 +393,54 @@ function setupSteps(slug: string, p: { hasWarehouse: boolean; hasLocation: boole
   ];
 }
 
-const ROW_CLS =
-  "flex min-h-12 w-full min-w-0 items-center gap-2 rounded-card border-2 border-border bg-surface px-3 text-left text-sm font-semibold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-
-/** Kurulum satırı: sıradaki adım tek satırda; ürün adımında satır "Yeni ürün" ile aynı eylemi açar (ikinci dolu düğme yok). */
-function SetupRow({ slug, progress, onCreate }: { slug: string; progress: { hasWarehouse: boolean; hasLocation: boolean; hasItem: boolean; nextWarehouseId: string | null }; onCreate: () => void }) {
-  const t = useTranslations("items.setup");
-  const steps = setupSteps(slug, progress);
-  const next = steps.find((s) => !s.done);
-  if (next === undefined) return null;
-  const label = next.key === "warehouse" ? t("warehouse") : next.key === "locations" ? t("locations") : t("item");
-  const chevron = <ChevronRight aria-hidden="true" className="size-5 shrink-0" />;
-  if (next.key === "items" || next.href === null) {
-    return (
-      <button type="button" data-testid="setup-row" onClick={onCreate} className={ROW_CLS}>
-        <span className="min-w-0 flex-1 break-words">{label}</span>
-        {chevron}
-      </button>
-    );
-  }
-  return (
-    <Link href={next.href} data-testid="setup-row" className={ROW_CLS}>
-      <span className="min-w-0 flex-1 break-words">{label}</span>
-      {chevron}
-    </Link>
-  );
-}
-
-/** Ürün yokken öğreten boş durum: sıralı kurulum adımları (adım + ipucu + ikincil metin bağlantısı); dolu düğme yok. */
-function SetupSteps({ slug, progress, onCreate }: { slug: string; progress: { hasWarehouse: boolean; hasLocation: boolean; hasItem: boolean; nextWarehouseId: string | null }; onCreate: () => void }) {
-  const t = useTranslations("items");
-  const tg = useTranslations("easySetup.guide");
-  const steps = setupSteps(slug, progress);
-  return (
-    <div data-testid="setup-steps" className="flex min-w-0 flex-col gap-3">
-      <h2 className="m-0 break-words text-lg font-bold text-ink">{t("empty")}</h2>
-      <p className="m-0 break-words text-base text-ink-muted">{t("setup.teach")}</p>
-      <ol aria-label={tg("listLabel")} className="m-0 flex min-w-0 list-none flex-col gap-5 p-0">
-        {steps.map((st, i) => {
-          const locked = st.key === "locations" && st.href === null && !st.done;
-          return (
-            <li key={st.key} data-done={st.done} className="flex min-w-0 items-start gap-3">
-              <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent-ink">
-                {st.done ? <CircleCheck className="size-5" /> : i + 1}
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="break-words text-base font-semibold text-ink">
-                  {tg(`${st.key}.title`)} <span className="text-sm text-ink-muted">· {st.done ? tg("done") : tg("todo")}</span>
-                </span>
-                <span className="break-words text-sm text-ink-muted">{locked ? tg("locations.locked") : tg(`${st.key}.hint`)}</span>
-                {st.done || locked ? null : st.href === null ? (
-                  <button type="button" onClick={onCreate} className={`${LINK_CLS} self-start px-0! text-left`}>
-                    {tg(`${st.key}.action`)}
-                  </button>
-                ) : (
-                  <Link href={st.href} className={`${LINK_CLS} self-start px-0!`}>
-                    {tg(`${st.key}.action`)}
-                  </Link>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
+/** Liste kartının stok rozeti verisi (sunucu: kapsamdaki depoların eldeki toplamı + minimum). */
+export interface ItemStockView {
+  readonly have: string;
+  readonly min: string | null;
 }
 
 export function ItemsView({
   slug,
+  dark,
   canManage,
+  canImport,
   items,
+  stock,
   units,
   nextCursor,
   firstPage,
   query,
 }: {
   slug: string;
+  dark: boolean;
   canManage: boolean;
+  canImport: boolean;
   items: readonly ItemListView[];
+  stock: Readonly<Record<string, ItemStockView>>;
   units: readonly UnitOption[];
   /** Sonraki sayfa imleci (opak); yoksa `null`. */
   nextCursor: string | null;
   firstPage: boolean;
-  query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED" };
+  query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED"; readonly type: "" | CardType };
 }) {
   const t = useTranslations("items");
-  const te = useTranslations("easySetup.items");
+  const tk = useTranslations("items.k");
+  const tx = useTranslations("kalip");
   const tc = useTranslations("items.cardType");
+  const te = useTranslations("easySetup.items");
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const base = `/t/${encodeURIComponent(slug)}/items`;
+  const home = `/t/${encodeURIComponent(slug)}`;
+  const base = `${home}/items`;
   const [createOpen, setCreateOpen] = useState(false);
   const [version, setVersion] = useState(0);
+  const [cam, setCam] = useState(false);
   const progress = useSetupProgress(slug, canManage, version);
   const guide = canManage && progress !== null && !isSetupComplete(progress);
+  const { say, node: toast } = useKalipToast("liste");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Rehberin büyük düğmesi `?new=1` ile gelir: formu aç, adresi temizle.
   useEffect(() => {
@@ -490,160 +449,271 @@ export function ItemsView({
       router.replace(pathname);
     }
   }, [params, canManage, pathname, router]);
-  const filtered = query.q !== "" || query.status !== "";
-  const keep = new URLSearchParams();
-  if (query.q !== "") keep.set("q", query.q);
-  if (query.status !== "") keep.set("status", query.status);
-  const withParams = (extra?: [string, string]): string => {
-    const p = new URLSearchParams(keep);
-    if (extra) p.set(extra[0], extra[1]);
+  const filtered = query.q !== "" || query.status !== "" || query.type !== "";
+  const href = (next: { q?: string; status?: string; type?: string; after?: string }): string => {
+    const p = new URLSearchParams();
+    const q = next.q ?? query.q;
+    const status = next.status ?? query.status;
+    const type = next.type ?? query.type;
+    if (q !== "") p.set("q", q);
+    if (status !== "") p.set("status", status);
+    if (type !== "") p.set("type", type);
+    if (next.after !== undefined) p.set("after", next.after);
     const s = p.toString();
     return s === "" ? base : `${base}?${s}`;
   };
 
-  const formRef = useRef<HTMLFormElement>(null);
-  const [submitting, setSubmitting] = useState(false);
-  // Aramanın sunucudaki karşılığı (GET `?q=&status=`): yalnızca adres üretir; arama kuralı sunucudadır.
-  const goSearch = (status: string): void => {
-    const form = formRef.current;
-    const q = form === null ? "" : String(new FormData(form).get("q") ?? "").trim();
-    const p = new URLSearchParams();
-    if (q !== "") p.set("q", q);
-    if (status !== "") p.set("status", status);
-    const s = p.toString();
-    router.push(s === "" ? base : `${base}?${s}`);
+  // Yazdıkça canlı sonuç (sunucu araması, 200 ms bekleme, eski yanıt yok sayılır).
+  const [typed, setTyped] = useState(query.q);
+  const [live, setLive] = useState<readonly ItemHit[] | null>(null);
+  const seq = useRef(0);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const onType = (value: string): void => {
+    setTyped(value);
+    window.clearTimeout(timer.current);
+    const q = value.trim();
+    if (q === "" || q === query.q) {
+      seq.current++;
+      setLive(null);
+      return;
+    }
+    timer.current = window.setTimeout(() => {
+      const mine = ++seq.current;
+      void searchItemsAction({ slug, q, limit: 8 }).then((r) => {
+        if (mine === seq.current) setLive(r.ok ? withRenamed(r.data) : []);
+      });
+    }, 200);
   };
-  // Enter (klavye ya da barkod okuyucunun sonundaki Enter): tek eşleşme varsa doğrudan ürünü aç, yoksa/çoksa sonuç listesine git.
-  async function onSearchSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const q = String(new FormData(form).get("q") ?? "").trim();
-    const status = String(new FormData(form).get("status") ?? "");
+
+  const [submitting, setSubmitting] = useState(false);
+  /** Enter / okutma: tek eşleşme varsa doğrudan ürünü aç, yoksa/çoksa sonuç listesine git. */
+  async function resolve(raw: string, fromScan: boolean): Promise<void> {
+    const q = raw.trim();
     if (q === "") {
-      goSearch(status);
+      router.push(href({ q: "" }));
       return;
     }
     setSubmitting(true);
     const r = await searchItemsAction({ slug, q, limit: 2 });
     setSubmitting(false);
     const hits = r.ok ? withRenamed(r.data) : [];
-    if (hits.length === 1 && hits[0] !== undefined) router.push(`${base}/${encodeURIComponent(hits[0].id)}`);
-    else goSearch(status);
+    if (hits.length === 1 && hits[0] !== undefined) {
+      tone("ok");
+      router.push(`${base}/${encodeURIComponent(hits[0].id)}`);
+      return;
+    }
+    if (fromScan && hits.length === 0) {
+      tone("err");
+      say("warn", tk("scanNone", { code: q }));
+    } else if (fromScan) say("info", tk("scanMany"));
+    seq.current++;
+    setLive(null);
+    router.push(href({ q }));
   }
+  function onSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void resolve(String(new FormData(event.currentTarget).get("q") ?? ""), false);
+  }
+
+  const visual = (type: CardType) => CARD_VISUAL[type];
+  const chips: KalipCip[] = [
+    { id: "all", label: tk("all"), d: LICON.grid, color: "172E42", on: query.type === "" && query.status === "", href: href({ type: "", status: "" }) },
+    // Kaynaktaki 2. çip (Kritik) yerinde Arşivli: telefonda ilk 4 çip görünür (kaynak `.fch:nth-child(n+5)` gizli); tür sırası kaynaktaki gibi HM · MM · YM.
+    { id: "archived", label: tk("archived"), d: LICON.lock, color: "4E6476", on: query.status === "ARCHIVED", href: href({ status: query.status === "ARCHIVED" ? "" : "ARCHIVED" }) },
+    ...(["HM", "MM", "YM", "TM"] as const).map((k) => ({ id: k, label: tc(k), d: visual(k).d, color: visual(k).color, on: query.type === k, href: href({ type: query.type === k ? "" : k }) })),
+  ];
+
+  const tones = items.map((it) => {
+    const st = stock[it.id];
+    return it.status === "ARCHIVED" || st === undefined ? "ok" : stockTone(st.have, st.min);
+  });
+  const attention = tones.filter((x) => x !== "ok").length;
+  const countLbl = (nextCursor === null ? tk("count", { n: items.length }) : tk("countMore", { n: items.length })) + (attention > 0 && !filtered ? tk("dikkat", { n: attention }) : "");
+
+  const steps = guide && progress !== null ? setupSteps(slug, progress) : [];
+  const nextStep = steps.find((s) => !s.done);
+  const stepTitle: Record<StepKey, [string, string, string, string, string]> = {
+    warehouse: [tk("stepWarehouse"), tk("stepWarehouseSub"), tk("stepWarehouseCta"), "30475A", LICON.depo],
+    locations: [tk("stepLocations"), tk("stepLocationsSub"), tk("stepLocationsCta"), "0E7C7B", LICON.raf],
+    items: [tk("stepItems"), tk("stepItemsSub"), tk("stepItemsCta"), "2F5DA8", LICON.box],
+  };
+  const blocked = (): void => {
+    tone("err");
+    say("warn", nextStep === undefined ? "" : stepTitle[nextStep.key][0]);
+  };
+  const adimlar: KalipAdim[] = steps.map((s) => {
+    const [title, sub, cta, color, d] = stepTitle[s.key];
+    const state = s.done ? "done" : s === nextStep ? "now" : "locked";
+    const act = state === "locked" ? { onClick: blocked } : s.href === null ? { onClick: () => setCreateOpen(true) } : { href: s.href };
+    return { key: s.key, title, sub, cta, color, d, state, ...act };
+  });
+  const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
+  const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
+  const noWarehouse = guide && progress !== null && !progress.hasWarehouse;
+
+  const listRows = live ?? null;
+  const showSetup = guide && items.length === 0 && !filtered && live === null;
 
   return (
     <>
-      <PageBody hide={createOpen}>
-      <div className="min-w-0">
-        <h1 className="break-words text-2xl font-extrabold text-ink phone:text-xl">{t("title")}</h1>
-        <p className="break-words text-base text-ink-muted phone:truncate phone:text-sm">{t("intro")}</p>
-      </div>
-
-      <form ref={formRef} method="get" action={base} role="search" aria-label={t("search.label")} aria-busy={submitting} onSubmit={(e) => void onSearchSubmit(e)} className="flex min-w-0 flex-col gap-2">
-        <Typeahead<ItemHit>
+      <KalipEkran
+        kind="liste"
+        dark={dark}
+        title={t("title")}
+        icon={{ d: LICON.box, color: "2F5DA8" }}
+        testId="items"
+        bar={{
+          back: { href: home },
+          main: noWarehouse
+            ? { label: tk("addWarehouse"), aria: tk("stepWarehouse"), d: LICON.plus, href: `${home}/warehouses?new=1`, testId: "items-add" }
+            : {
+                label: tk("add"),
+                aria: tk("addAria"),
+                d: LICON.plus,
+                disabled: !canManage,
+                onClick: () => {
+                  tone("tap");
+                  setCreateOpen(true);
+                },
+                testId: "items-add",
+              },
+        }}
+        overlays={toast}
+      >
+        <KalipAra
           label={t("search.label")}
-          hint={t("search.hint")}
-          placeholder={t("search.placeholder")}
-          icon={<Search aria-hidden="true" className="size-5" />}
-          name="q"
-          defaultValue={query.q}
-          listLabel={te("searchSuggestLabel")}
-          search={async (q) => {
-            const r = await searchItemsAction({ slug, q, limit: 8 });
-            return r.ok ? withRenamed(r.data) : [];
+          placeholder={tk("searchPh")}
+          action={base}
+          value={typed}
+          onChange={onType}
+          onSubmit={onSearchSubmit}
+          busy={submitting}
+          inputRef={inputRef}
+          onCamera={() => {
+            tone("tap");
+            setCam(true);
           }}
-          toSuggestion={(i) => ({
-            key: i.id,
-            primary: i.name,
-            secondary: i.oldCode === undefined ? t("codeLabel", { code: i.code }) : t("renamedNote", { code: i.code, old: i.oldCode }),
-          })}
-          onSelect={(i) => router.push(`${base}/${encodeURIComponent(i.id)}`)}
+          cameraLabel={tk("camera")}
+          onMic={() => {
+            tone("tap");
+            say("info", tx("voiceSoon"));
+          }}
+          micLabel={tk("mic")}
+          micSoon
         />
-        <details className="group min-w-0" open={query.status !== "" ? true : undefined}>
-          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-base font-semibold text-accent-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus [&::-webkit-details-marker]:hidden">
-            <span className="min-w-0 flex-1">{t("search.advanced")}</span>
-            <ChevronDown aria-hidden="true" className="size-5 shrink-0 transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="flex min-w-0 flex-col gap-1 pb-2">
-            <label htmlFor="item-status" className="text-base font-semibold">
-              {t("search.status")}
-            </label>
-            <select id="item-status" name="status" defaultValue={query.status} onChange={(e) => goSearch(e.target.value)} className={SELECT_CLS}>
-              <option value="">{t("search.all")}</option>
-              <option value="ACTIVE">{t("status.ACTIVE")}</option>
-              <option value="ARCHIVED">{t("status.ARCHIVED")}</option>
-            </select>
-          </div>
-        </details>
-        {filtered ? (
-          <Link href={base} className={`${LINK_CLS} self-start px-0!`}>
-            {t("search.clear")}
-          </Link>
+        <KalipCipler label={tk("filter")} chips={chips} />
+        {!canManage ? <p className="sr">{t("lockedReason")}</p> : null}
+        {guide && nextStep !== undefined && items.length > 0 ? (
+          <KalipDaha href={nextStep.href ?? undefined} onClick={nextStep.href === null ? () => setCreateOpen(true) : undefined} iconD={LICON.clip} testId="setup-row">
+            {setupSub}
+          </KalipDaha>
         ) : null}
-      </form>
 
-      {/* Kurulum satırı (S-01): eylem gibi okunur, sağda şevron, doğrudan sıradaki adıma gider; ürün adımında "Yeni ürün" ile AYNI eylemi açar. */}
-      {guide && progress !== null ? <SetupRow slug={slug} progress={progress} onCreate={() => setCreateOpen(true)} /> : null}
-
-      <section aria-label={t("listLabel")} className="flex min-w-0 flex-col gap-3">
-        {items.length === 0 ? (
-          guide && !filtered && progress !== null ? (
-            <SetupSteps slug={slug} progress={progress} onCreate={() => setCreateOpen(true)} />
-          ) : filtered ? (
-            <EmptyState title={query.q === "" ? t("emptyStatus") : t("emptyFiltered")} description={query.q === "" ? t("emptyStatusAction") : t("emptyFilteredAction")} />
+        {listRows !== null ? (
+          listRows.length === 0 ? (
+            <KalipBos title={tk("noMatch")} hint={tk("noMatchHint")} />
           ) : (
-            <EmptyState title={t("empty")} description={canManage ? t("emptyAction") : t("emptyReadOnly")} />
+            <KalipKartListe label={te("searchSuggestLabel")} role="listbox" id="items-live">
+              {listRows.map((it, i) => (
+                <KalipKart
+                  key={it.id}
+                  index={i}
+                  name={it.name}
+                  code={it.oldCode === undefined ? it.code : t("renamedNote", { code: it.code, old: it.oldCode })}
+                  d={LICON.box}
+                  color="2F5DA8"
+                  href={`${base}/${encodeURIComponent(it.id)}`}
+                  aria={`${it.name} · ${it.code}`}
+                  role="option"
+                  testId="item-hit"
+                />
+              ))}
+            </KalipKartListe>
+          )
+        ) : showSetup ? (
+          <>
+            <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} />
+            {canImport ? (
+              <KalipDaha href={`${home}/import`} iconD={LICON.excel} iconColor="1E7B45" testId="items-import">
+                {tk("import")}
+              </KalipDaha>
+            ) : null}
+          </>
+        ) : items.length === 0 ? (
+          filtered ? (
+            <KalipBos
+              title={query.q === "" ? tk("noStatus") : tk("noMatch")}
+              hint={query.q === "" ? tk("noStatusHint") : tk("noMatchHint")}
+              action={{ label: tk("clear"), href: base }}
+            />
+          ) : (
+            <KalipBos title={t("empty")} hint={canManage ? t("emptyAction") : t("emptyReadOnly")} />
           )
         ) : (
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-3 p-0">
-            {items.map((it) => {
-              const active = it.status === "ACTIVE";
-              return (
-                <li key={it.id} data-testid="item-card" className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border bg-surface p-4 shadow-card">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="min-w-0 break-words text-lg font-bold text-ink">{it.name}</span>
-                    <span className={`${BADGE} ${active ? "bg-accent-soft text-accent-ink" : "bg-locked-bg text-locked-ink"}`}>{active ? t("status.ACTIVE") : t("status.ARCHIVED")}</span>
-                    <span className={`${BADGE} bg-locked-bg text-ink`} data-testid="card-type">{tc(it.cardType)}</span>
-                  </div>
-                  <p className="min-w-0 break-all text-base text-ink-muted">{t("codeLabel", { code: it.code })}</p>
-                  {it.oldCode === undefined ? null : <p className="min-w-0 break-words text-sm font-semibold text-ink">{t("renamedNote", { code: it.code, old: it.oldCode })}</p>}
-                  <p className="min-w-0 break-all text-sm text-ink-muted">{t("baseUnitLabel", { unit: it.baseUnitCode })}</p>
-                  <div>
-                    <Link href={`${base}/${encodeURIComponent(it.id)}`} className={LINK_CLS} aria-label={t("openFor", { name: it.name })}>
-                      {t("open")}
-                    </Link>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <KalipBaslik title={countLbl} hint={tk("hint")} />
+            <KalipKartListe label={t("listLabel")}>
+              {items.map((it, i) => {
+                const v = visual(it.cardType);
+                const st = stock[it.id];
+                const tn = tones[i] ?? "ok";
+                const archived = it.status === "ARCHIVED";
+                const state = archived ? tk("archivedTag") : st === undefined ? "" : tn === "crit" ? tk("stockCrit") : tn === "low" ? tk("stockLow") : st.have.replace(/[0.]/g, "") === "" ? tk("stockNone") : tk("stockIn");
+                const qty = st === undefined ? "" : fmtQty(st.have, locale);
+                const meta = [tc(it.cardType).toLocaleUpperCase(locale === "en" ? "en" : "tr"), tk("unitTag", { unit: it.baseUnitCode })].join(" · ");
+                return (
+                  <KalipKart
+                    key={it.id}
+                    index={i}
+                    name={it.name}
+                    code={it.oldCode === undefined ? it.code : t("renamedNote", { code: it.code, old: it.oldCode })}
+                    meta={meta}
+                    d={v.d}
+                    color={v.color}
+                    tone={tn}
+                    {...(st === undefined ? {} : { badge: { value: qty, sub: `${it.baseUnitCode} · ${state}` } })}
+                    href={`${base}/${encodeURIComponent(it.id)}`}
+                    aria={tk("cardAria", { name: it.name, code: it.code, qty, unit: it.baseUnitCode, state })}
+                    testId="item-card"
+                  >
+                    <span hidden data-status={it.status} data-card-type={it.cardType} />
+                  </KalipKart>
+                );
+              })}
+            </KalipKartListe>
+            {firstPage && nextCursor === null ? null : (
+              <nav aria-label={t("paging")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {firstPage ? null : (
+                  <KalipDaha href={href({})} iconD={LICON.chev}>
+                    {t("firstPage")}
+                  </KalipDaha>
+                )}
+                {nextCursor === null ? null : (
+                  <KalipDaha href={href({ after: nextCursor })} iconD={LICON.plus}>
+                    {t("more")}
+                  </KalipDaha>
+                )}
+              </nav>
+            )}
+          </>
         )}
-        <nav aria-label={t("paging")} className="flex flex-wrap gap-2">
-          {firstPage ? null : (
-            <Link href={withParams()} className={LINK_CLS}>
-              {t("firstPage")}
-            </Link>
-          )}
-          {nextCursor === null ? null : (
-            <Link href={withParams(["after", nextCursor])} className={LINK_CLS}>
-              {t("more")}
-            </Link>
-          )}
-        </nav>
-      </section>
-      </PageBody>
+      </KalipEkran>
 
-      {/* Birincil eylem altta sabit (başparmak bölgesi); form açıkken gizli. */}
-      <div data-hide={createOpen} className="sticky bottom-0 z-10 -mx-4 mt-auto flex min-w-0 flex-col gap-1 border-t border-border bg-bg px-4 py-2 data-[hide=true]:hidden">
-        <Button onClick={() => setCreateOpen(true)} disabled={!canManage} aria-describedby={canManage ? undefined : "item-locked"}>
-          {t("create")}
-        </Button>
-        {canManage ? null : (
-          <p id="item-locked" className="break-words text-sm text-ink-muted">
-            {t("lockedReason")}
-          </p>
-        )}
-      </div>
+      {cam ? (
+        <CameraOverlay
+          onCode={(code) => {
+            setCam(false);
+            void resolve(code, true);
+            return true;
+          }}
+          onClose={() => setCam(false)}
+          onManual={() => {
+            setCam(false);
+            inputRef.current?.focus();
+          }}
+        />
+      ) : null}
 
       <CreateItemDialog
         open={createOpen}

@@ -57,6 +57,8 @@ export const QUEUE_EXPIRE_SECONDS: { readonly [T in JobType]: number } = {
   "stock.consistency.check": 1800,
   "platform.activation.deliver": 300,
   "trial.welcome": 300,
+  // T-967: tek HTTP GET (CallMeBot, 15 sn zaman aşımı).
+  "support.notify": 300,
 };
 
 /** İş zarfı: tenant kimliği yükten AYRI saklanır; yalnızca `enqueue` yazar. */

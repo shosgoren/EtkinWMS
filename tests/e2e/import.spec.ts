@@ -30,7 +30,7 @@ test.describe("Excel'den aktar (T-427)", () => {
 
     // Ayarlar sayfasındaki bağlantıyla gelinir; ekran Aktar tasarımıdır.
     await page.goto("/t/demo/settings");
-    await page.getByRole("link", { name: "Ürün ve stoku Excel'den içe aktar" }).click();
+    await page.getByTestId("settings-import").click(); // T-968: Ayarlar form kalıbındaki "Excel’den toplu aktar" satırı
     await expect(page).toHaveURL(/\/t\/demo\/import$/);
     const aktar = page.getByTestId("aktar");
     await expect(aktar).toBeVisible();

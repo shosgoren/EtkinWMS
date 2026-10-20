@@ -223,8 +223,9 @@ interface StepMetrics {
 async function measure(page: Page): Promise<StepMetrics> {
   return page.evaluate<StepMetrics>(`(() => {
     const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-    const prim = [...document.querySelectorAll('[data-variant="primary"]')].filter(vis);
-    const nav = document.querySelector('[data-testid="field-action-bar"]');
+    // T-969: saha adımlarında ana işlem ortak alt cam çubuğun ortasındadır (flow-primary); liste/mesaj ekranlarında çubuğun üstündeki bağlantı.
+    const prim = [...document.querySelectorAll('[data-variant="primary"], [data-testid="flow-primary"]')].filter(vis).filter((el) => getComputedStyle(el).visibility !== 'hidden');
+    const nav = document.querySelector('[data-testid="kabuk-dock"]');
     const p = prim[0];
     const small = [];
     for (const el of document.querySelectorAll('a[href], button, summary, input, select, textarea')) {
@@ -235,7 +236,7 @@ async function measure(page: Page): Promise<StepMetrics> {
     }
     return {
       primaries: prim.length,
-      primaryGap: p && nav ? Math.round(nav.getBoundingClientRect().top - p.getBoundingClientRect().bottom) : null,
+      primaryGap: p && nav ? (nav.contains(p) ? 0 : Math.round(nav.getBoundingClientRect().top - p.getBoundingClientRect().bottom)) : null,
       primaryHeight: p ? Math.round(p.getBoundingClientRect().height) : null,
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
@@ -245,7 +246,7 @@ async function measure(page: Page): Promise<StepMetrics> {
       numericInputs: document.querySelectorAll('input[inputmode="numeric"]').length,
       bodyOverflow: (() => {
         const step = document.querySelector('[data-testid="flow-step"]');
-        const bar = step && step.querySelector(':scope > [role="group"]');
+        const bar = step && (step.querySelector(':scope > [role="group"]') ?? document.querySelector('[data-testid="kabuk-dock"]'));
         if (!step || !bar) return 0;
         const bottoms = [...step.children].filter((c) => c !== bar).map((c) => c.getBoundingClientRect().bottom);
         return Math.round(Math.max(...bottoms) - bar.getBoundingClientRect().top);
@@ -263,6 +264,8 @@ async function login(page: Page, label: string): Promise<void> {
 }
 
 const isMobile = (name: string): boolean => name.endsWith("mobile");
+/** T-969: birincil eylem — liste/mesaj ekranında çubuğun üstündeki bağlantı, saha adımında alt cam çubuğun ortasındaki ana işlem. */
+const PRIMARY = '[data-variant="primary"]:visible, [data-testid="flow-primary"]:visible';
 
 /** Ekran ölçümleri ve görüntüleri (aynı oturum: demo girişi hız sınırlı olduğundan ikinci giriş yapılmaz). */
 async function screens(page: Page, projectName: string): Promise<void> {
@@ -289,9 +292,9 @@ async function screens(page: Page, projectName: string): Promise<void> {
     await page.waitForLoadState("networkidle");
     await shot("receive-scan");
     // Tarama adımı: tek birincil "Barkodu okut" (Elle gir ikincil).
-    const primary = page.locator('[data-variant="primary"]:visible');
+    const primary = page.locator(PRIMARY);
     await expect(primary).toHaveCount(1);
-    await expect(primary).toHaveText("Barkodu okut");
+    await expect(primary).toHaveAttribute("aria-label", "Barkodu okut");
     await primary.click();
     // T-286: kamera yolu telefonların hepsinde kurulabilir (uygulama içi çözücü); bu koşuda sahte kamera aygıtı yok → katman açılır ve kamera rehberini gösterir.
     // Vazgeç ile ekrana dönülür; klavye kaması (aşağıdaki tarama) kamera katmanından bağımsız çalışır.
@@ -316,7 +319,7 @@ async function screens(page: Page, projectName: string): Promise<void> {
     metrics[`${size.name}-receive-qty-fit`] = qtyM;
     expect(qtyM.bodyOverflow, `${size.name}: miktar adımı kaydırmasız sığmalı`).toBeLessThanOrEqual(1);
     const rack = await page.getByTestId("rack-choice").boundingBox();
-    const prim = await page.locator('[data-variant="primary"]:visible').boundingBox();
+    const prim = await page.locator(PRIMARY).boundingBox();
     expect(rack, `${size.name}: kabul rafı seçimi görünür`).not.toBeNull();
     expect((rack?.y ?? 0) + (rack?.height ?? 0), `${size.name}: raf seçimi birincil düğmenin üstünde`).toBeLessThanOrEqual((prim?.y ?? 0) + 1);
     await expect(page.getByTestId("rack-choice").locator("p", { hasText: "Kabul rafı" }), `${size.name}: "Kabul rafı" etiketi her boyutta görünür`).toBeVisible();
@@ -463,11 +466,11 @@ test("kabul → kalite onayı → yerleştirme (görevli ve serbest) + yanlış 
   await page.waitForLoadState("networkidle");
   // Elle giriş tek ikincil yoldur: "Elle gir" bağlantısı ScanField'ı açar (tarama sayılmaz, aynı servis yolu); açıkken birincil düğme gizlenir.
   await page.getByRole("button", { name: "Elle gir" }).click();
-  await expect(page.locator('[data-variant="primary"]:visible')).toHaveCount(0);
+  await expect(page.locator(PRIMARY)).toHaveCount(0);
   await page.getByRole("textbox", { name: "Barkod" }).fill(BARCODE.koli);
   await page.getByRole("button", { name: "Onayla" }).click();
   await expect(page.getByRole("textbox", { name: /^Gelen \(/ })).toHaveValue("12");
-  await expect(page.getByText("Okuttuğun ürün:")).toBeVisible();
+  await expect(page.getByTestId("verified-ok")).toHaveText("Doğru ürün"); // T-969: "Okuttuğun ürün:" satırı yerine Saha kalıbı rozeti
   await expect(page.getByTestId("compound-qty")).toHaveText("1 E2E koli · toplam 12 E2E adet");
   // Aynı koli yeniden okutulunca adet eklenir ve kalan (18) ile sınırlanır: 12 + 12 → 18.
   await scan(page, BARCODE.koli);
@@ -482,12 +485,22 @@ test("kabul → kalite onayı → yerleştirme (görevli ve serbest) + yanlış 
   await expect(page.getByText("Kalan: 6")).toBeVisible();
   const lines = await db<{ received: string; damaged: string }>("SELECT received_quantity::text AS received, damaged_quantity::text AS damaged FROM public.inbound_receipt_lines WHERE receipt_id = $1", [fx.receiptId]);
   expect(lines[0]).toEqual({ received: "24.000000", damaged: "2.000000" });
-  // Fazla okutma: kalan 6 iken stepper en çok 6'ya çıkar; sunucu kuralı ayrıca aşılamaz (actions.test.ts).
+  // Fazla okutma: kalan 6 iken koli okutması en çok 6'ya çıkar; tuşla fazlası yazılırsa turuncu uyarı + ONAYLA bekler (kayıt yok);
+  // TÜMÜ kalanı yazar. Sunucu kuralı ayrıca aşılamaz (actions.test.ts).
   await page.getByRole("button", { name: "Sıradaki ürüne geç" }).click();
   await page.waitForLoadState("networkidle");
   await scan(page, BARCODE.koli);
   await expect(page.getByRole("textbox", { name: /^Gelen \(/ })).toHaveValue("6");
-  await expect(page.getByRole("button", { name: /\+$/ }).first()).toBeDisabled();
+  await expect(page.getByTestId("qty-over")).toHaveCount(0);
+  await page.getByTestId("saha-keypad").getByRole("button", { name: "9", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: /^Gelen \(/ })).toHaveValue("9");
+  await expect(page.getByTestId("qty-over")).toContainText("Beklenenden fazla · kalan 6");
+  await expect(page.getByTestId("qty-display")).toHaveClass(/over/);
+  await page.getByRole("button", { name: "Kabul et" }).click();
+  await expect(page.getByTestId("saved-summary")).toHaveCount(0);
+  await page.getByTestId("saha-keypad").getByRole("button", { name: "Tümü: 6" }).click();
+  await expect(page.getByRole("textbox", { name: /^Gelen \(/ })).toHaveValue("6");
+  await expect(page.getByTestId("qty-over")).toHaveCount(0);
   await page.getByRole("button", { name: "Geri" }).click();
 
   // ---- Masaüstü liste: satır durumu, yeni teslim formu, kalite onayı ----------------------------------------------------------------
@@ -497,8 +510,10 @@ test("kabul → kalite onayı → yerleştirme (görevli ve serbest) + yanlış 
   await expect(row).toContainText("Kabul 24");
   await expect(row).toContainText("Hasarlı 2");
   await expect(row).toContainText("Kalan 6");
+  // Yeni teslim (T-972 form kalıbı, `?new=1`): ürün ara → birim → miktar → satır → kaydet; listeye dönülür.
+  await page.getByTestId("receipts-new").click();
+  await expect(page).toHaveURL(/\/receipts\?new=1$/);
   await expect(page.getByText("Kişisel veri girmeyin.")).toBeVisible();
-  // Yeni teslim: ürün ara → birim → miktar → satır → kaydet.
   await page.getByLabel("Tedarikçi referansı").fill(`E2E-IRS-2-${run}`);
   await page.getByLabel("Ürün", { exact: true }).fill(`E2E-${run}`);
   await page.getByRole("button", { name: new RegExp(`Somun ${run}`) }).click();
@@ -955,7 +970,7 @@ test("telefonda kamera ile iki koli: kabul ve yerleştirmede miktar/onay ekranı
   await page.waitForLoadState("networkidle");
   await readWithCamera("Barkodu okut");
   await expect(qty).toHaveValue("12");
-  await expect(page.locator('[data-variant="primary"]:visible')).toHaveCount(1);
+  await expect(page.locator(PRIMARY)).toHaveCount(1);
   await readWithCamera("Bir koli daha okut");
   await expect(qty).toHaveValue("24");
   // Kiracıda birden çok kabul rafı olabilir: bu çalışmanın rafı seçilir (stok yerleştirmede bu raftan alınır).
@@ -978,7 +993,7 @@ test("telefonda kamera ile iki koli: kabul ve yerleştirmede miktar/onay ekranı
   await expect(page.getByTestId("flow-step")).toHaveAttribute("data-step", "4");
   const putQty = page.getByRole("textbox", { name: "Kaç adet?" });
   await expect(putQty).toHaveValue("12");
-  await expect(page.locator('[data-variant="primary"]:visible')).toHaveCount(1);
+  await expect(page.locator(PRIMARY)).toHaveCount(1);
   await readWithCamera("Bir koli daha okut");
   await expect(putQty).toHaveValue("24");
   await expect(page.getByTestId("compound-qty")).toHaveText("2 E2E koli · toplam 24 E2E adet");
@@ -1004,7 +1019,7 @@ test("yetkisiz kullanıcı: kilit ekranı gerekçe + Yardım çağır yolu; tek 
       await expect(page.getByTestId("help-link")).toHaveAttribute("href", "/help");
       // R-08: birincil düğme fiillidir ("Saha işlerine dön") ve aynı adlı ikinci bir bağlantı yoktur.
       await expect(page.getByRole("link", { name: "Saha işlerine dön" })).toHaveCount(1);
-      await expect(page.locator('[data-variant="primary"]:visible')).toHaveCount(1);
+      await expect(page.locator(PRIMARY)).toHaveCount(1);
       const m = await measure(page);
       expect(m.scrollWidth).toBeLessThanOrEqual(m.clientWidth);
       expect(m.small, `${size.n} ${flow} kilit: 48 px altı hedef`).toEqual([]);

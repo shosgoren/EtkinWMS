@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { getItem, itemInUse, listItemBarcodes, listItemConversions } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
+import { getItemStockCard } from "@wms/domain/stock";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { ItemDetail } from "./item-detail.tsx";
 
 export const dynamic = "force-dynamic";
@@ -20,15 +23,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("detail.title") };
 }
 
-async function LockedItem() {
+async function LockedItem(slug: string) {
   const t = await getTranslations("items");
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
-      <h1 className="break-words text-2xl font-extrabold text-ink">{t("detail.title")}</h1>
-      <Banner kind="warning">
-        <p>{t("locked")}</p>
-        <p className="mt-1">{t("lockedAction")}</p>
-      </Banner>
+    <main className="flex w-full min-w-0 flex-col">
+      <KalipKilitliEkran title={t("detail.title")} icon={{ d: LICON.box, color: "2F5DA8" }} text={t("locked")} hint={t("lockedAction")} dark={dark} home={`/t/${encodeURIComponent(slug)}`} />
     </main>
   );
 }
@@ -58,11 +58,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
     const units = await listUnits(call);
     const activeUnits = units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }));
     const baseUnit = units.find((u) => u.id === item.baseUnitId);
+    // T-968: stok özeti (Nerede? + son hareketler) — okunamazsa bölümler çizilmez, kart yine açılır.
+    const stockCard = await getItemStockCard(call, item.id).catch(() => null);
+    const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+    const can = (p: Parameters<typeof hasPermission>[1]): boolean => hasPermission(current.roles, p, current.grants);
     return (
-      <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
+      <main className="flex w-full min-w-0 flex-col">
         <ItemDetail
           slug={slug}
+          dark={dark}
           canManage={canManage}
+          quick={{ label: can("stock.view"), count: can("document.create"), transfer: can("stock.post") }}
+          stockCard={stockCard}
           inUse={inUse}
           units={activeUnits}
           item={{
@@ -88,7 +95,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
       // `stock.view` izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli görünüm (audit/members deseni).
-      if (e.code === "FORBIDDEN") return <LockedItem />;
+      if (e.code === "FORBIDDEN") {
+        // Kilitli görünüm argümansız sunucu bileşenidir (AC-04 testi bileşeni props'suz çizer); slug kapanışla gelir.
+        const Locked = () => LockedItem(slug);
+        return <Locked />;
+      }
     }
     throw e;
   }

@@ -21,6 +21,11 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Pilot ürün ${suffix}`);
  await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
  const path=`/t/${slug}/stock/documents`;
+ // T-972 (liste kalıbı): stok kartı rozeti kullanılabilir miktarı kayan noktasız biçimler ("10.000000" → "10").
+ async function stockHas(item:string,qty:string){
+  await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(item)}`);
+  await expect.poll(async()=>page.getByTestId("stock-card").locator(".qb b").allTextContents()).toEqual(expect.arrayContaining([qty]));
+ }
  async function draft(kind:string,quantity:string){
   await page.goto(`${path}?new=${kind}`);
   await page.getByRole("searchbox",{name:"Depo",exact:true}).fill(`Pilot ${suffix}`);
@@ -39,12 +44,12 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  }
  await draft("STOCK_IN","10");
  await page.getByRole("button",{name:"Stoka işle",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Stoka işlendi"})).toBeVisible();
- await page.reload();await expect(page.getByRole("heading",{level:2})).toContainText("GRS-");
- await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot ürün ${suffix}`)}`);await expect(page.getByText("10.000000 ADET").first()).toBeVisible();
+ await page.reload();await expect(page.getByRole("heading",{level:1})).toContainText("GRS-");
+ await stockHas(`Pilot ürün ${suffix}`,"10");
  await draft("STOCK_OUT","99");await page.getByRole("button",{name:"Stoka işle",exact:true}).click();
  await expect(page.getByText(/Bu rafta yeterli mal yok/).first()).toBeVisible();await expect(page.getByRole("status").filter({hasText:"Onaylı"})).toBeVisible();
  await page.getByRole("button",{name:"Belgeyi iptal et"}).click();await expect(page.getByRole("status").filter({hasText:"İptal edildi"})).toBeVisible();
- await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot ürün ${suffix}`)}`);await expect(page.getByText("10.000000 ADET").first()).toBeVisible();
+ await stockHas(`Pilot ürün ${suffix}`,"10");
  await page.goto(`/t/${slug}/warehouses?new=1`);
  await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Target ${suffix}`);
  await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(dialog.locator('input[name="name"]')).toHaveCount(0);
@@ -60,8 +65,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await page.getByRole("button",{name:"Transferi onayla ve işle"}).click();await expect(page).toHaveURL(/documents\?id=/);
  await expect(page.getByRole("status").filter({hasText:"Stoka işlendi"})).toBeVisible();
  await expect(page.getByRole("link",{name:/Bağlı stok belgesi/})).toContainText("GRS-");
- await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot ürün ${suffix}`)}`);
- await expect(page.getByText("7.000000 ADET").first()).toBeVisible();await expect(page.getByText("3.000000 ADET").first()).toBeVisible();
+ await stockHas(`Pilot ürün ${suffix}`,"7");await stockHas(`Pilot ürün ${suffix}`,"3");
 
  await page.goto(`/t/${slug}/items?new=1`);await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Pilot mamul ${suffix}`);
  await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
@@ -81,8 +85,8 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await expect(page.getByRole("region",{name:"Tüketimi ve üretimi kontrol et"})).toContainText("−4.000000 ADET");
  await page.getByRole("button",{name:"Onayla ve üret"}).click();await expect(page).toHaveURL(/documents\?id=/);
  await expect(page.getByRole("status").filter({hasText:"Stoka işlendi"})).toBeVisible();await expect(page.getByRole("link",{name:/Bağlı stok belgesi/})).toContainText("CKS-");
- await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot mamul ${suffix}`)}`);await expect(page.getByText("2.000000 ADET").first()).toBeVisible();
- await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot ürün ${suffix}`)}`);await expect(page.getByText("3.000000 ADET").first()).toBeVisible();
+ await stockHas(`Pilot mamul ${suffix}`,"2");
+ await stockHas(`Pilot ürün ${suffix}`,"3");
  await page.goto(recipeUrl);await page.getByLabel(/Üretilecek miktar/).fill("99");
  for(const [name,query] of [[`Pilot ürün ${suffix}: Depo`,`Pilot ${suffix}`],[`Pilot ürün ${suffix}: Konum`,"A-01-01"],[`Mamul: Pilot mamul ${suffix}: Depo`,`Target ${suffix}`],[`Mamul: Pilot mamul ${suffix}: Konum`,"A-01-01"]]){
   await page.getByRole("searchbox",{name,exact:true}).fill(query!);await page.getByRole("option").first().click();
@@ -91,8 +95,8 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await expect(page.getByRole("region",{name:"Tüketimi ve üretimi kontrol et"})).toContainText("−198.000000 ADET");
  const productionDimensions=await page.evaluate<{width:number;viewport:number}>("({width:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth})");expect(productionDimensions.width).toBeLessThanOrEqual(productionDimensions.viewport);
  await page.getByRole("button",{name:"Onayla ve üret"}).click();await expect(page.getByText(/Bu rafta yeterli mal yok/).first()).toBeVisible();
- await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot mamul ${suffix}`)}`);await expect(page.getByText("2.000000 ADET").first()).toBeVisible();
- await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(`Pilot ürün ${suffix}`)}`);await expect(page.getByText("3.000000 ADET").first()).toBeVisible();
+ await stockHas(`Pilot mamul ${suffix}`,"2");
+ await stockHas(`Pilot ürün ${suffix}`,"3");
  // Existing production output is picked and shipped through the customer-facing workflow.
  // SSR must not expose a clickable launcher before its event handler is ready.
  const previewContext=await browser.newContext({...testClient,javaScriptEnabled:false,storageState:await page.context().storageState()});
@@ -149,7 +153,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await staged.getByRole("button",{name:"İşlemi kontrol et",exact:true}).click();await staged.getByRole("button",{name:"Sevki onayla",exact:true}).click();
  await expect(page.getByRole("status").filter({hasText:/^Tamamlandı$/})).toBeVisible();await page.reload();
  await expect(page.getByRole("region",{name:"Son 50 sevk belgesi"}).getByRole("link")).toHaveCount(2);
- await page.getByRole("link",{name:"Sevkiyat",exact:true}).click();await newOrder("1",`İptal ${suffix}`);
+ await page.getByTestId("kabuk-back").click();await expect(page).toHaveURL(/\/shipping$/);await newOrder("1",`İptal ${suffix}`);
  await page.getByRole("button",{name:"Siparişi iptal et",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Açık sipariş"})).toBeVisible();
  await page.getByRole("button",{name:"İptali onayla",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"İptal edildi"})).toBeVisible();
 

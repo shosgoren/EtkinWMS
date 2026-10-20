@@ -8,6 +8,7 @@ import { getTranslations } from "next-intl/server";
 import type { WorkSectionKey, WorkSummary } from "@wms/domain/operations";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
+import { appVersionOf } from "./app-version.ts";
 import { PanoShell, type PanoLink } from "./pano-shell.tsx";
 
 /** Kaynak kart renkleri: Giriş ve Çıkış kaynaktaki kartın aynısı; diğerleri kaynağın paletinden (Transfer mor, Üretim kiremit, Sayım mavi). */
@@ -115,6 +116,7 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
       settingsHref={settingsManage ? `${base}/settings` : undefined}
       scanHref={`${base}/field`}
       canReport={canReport}
+      appVersion={appVersionOf()}
     >
       <div className="hello">
         <div className="hl">

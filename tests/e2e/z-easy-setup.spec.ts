@@ -172,12 +172,12 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     await expect(item.locator("#create-base-unit")).toBeEnabled(); // T-911: standart birimler çalışma alanıyla kurulur; ADET seçili gelir
     await expect(item.locator("#create-base-unit")).toHaveValue(/.+/);
     await expect(item.locator("details")).not.toHaveAttribute("open", ""); // gelişmiş ayarlar kapalı
-    // T-274 S-01: ürün adımında kurulum satırı "Sıradaki: ilk ürünü ekle" ve "Yeni ürün" ile AYNI eylemi (bu formu) açar; ikinci dolu düğme yok.
+    // T-968 (liste kalıbı): ürün adımında kurulum rehberinin şimdiki adımı "İlk ürünü ekle" ve alt çubuğun ÜRÜN EKLE'siyle AYNI formu açar.
     await page.keyboard.press("Escape");
     await expect(item).toBeHidden();
-    const rowNext = page.getByTestId("setup-row");
-    await expect(rowNext).toHaveText("Sıradaki: ilk ürünü ekle");
-    await rowNext.click();
+    const stepItems = page.getByTestId("setup-steps").locator('[data-step="items"]');
+    await expect(stepItems).toContainText("İlk ürünü ekle");
+    await stepItems.click();
     await expect(page.getByRole("dialog").locator('input[name="code"]')).toHaveValue("HM-000001");
     await item.locator('input[name="name"]').fill(ITEM_NAME);
     await noPageScroll(page, "ürün formu");

@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin Yönetim — Destek</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+/* ===== Yonet.dc.html (birebir) ===== */
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-direction:column;width:100%;height:100vh;height:100dvh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+.app{position:relative;width:100%;height:100%;overflow:hidden;container-type:size}
+.app :focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.shell{position:absolute;inset:0;display:flex;overflow:hidden}
+.side{flex:none;display:flex;flex-direction:column;gap:6px;width:256px;padding:18px 14px;background:#172E42;color:#FFFFFF;overflow-y:auto}
+.sbrand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+.sbrand b{font:800 15px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em}
+.sbrand small{display:block;margin-top:4px;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#F4C542}
+.nav{appearance:none;display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0 12px;border:0;border-radius:14px;background:transparent;color:rgba(255,255,255,.78);cursor:pointer;font:700 15px/1 'Instrument Sans',sans-serif;text-align:left}
+.nav:hover{background:rgba(255,255,255,.08);color:#FFFFFF}
+.nav.on{background:#F4C542;color:#1A1300}
+.nav .cnt{margin-left:auto;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:#C62828;color:#FFFFFF;font:700 12px/24px 'IBM Plex Mono',monospace;text-align:center}
+.nav.on .cnt{background:#1A1300;color:#F4C542}
+.sfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}
+.who{display:flex;align-items:center;gap:10px;padding:6px 8px;font:600 12px/1.3 'IBM Plex Mono',monospace;color:rgba(255,255,255,.75)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.top{flex:none;display:flex;align-items:center;gap:12px;min-height:72px;padding:12px 28px}
+.top-t{flex:1;min-width:0}
+.top-h{display:block;margin:0;font:800 28px/1.1 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-s{display:block;margin-top:4px;font:600 11.5px/1.25 'IBM Plex Mono',monospace;opacity:.72;letter-spacing:.04em}
+.scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.inner{width:100%;max-width:1240px;margin:0 auto;padding:8px 28px 48px;display:flex;flex-direction:column;gap:18px}
+.icb{appearance:none;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;min-width:48px;height:48px;padding:0 14px;border-radius:16px;border:0;cursor:pointer;font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.03em}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border:0;border-radius:15px;cursor:pointer;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.03em;white-space:nowrap}
+.btn.sm{min-height:40px;padding:0 12px;border-radius:12px;font-size:13px}
+.kpi-s{font:600 11.5px/1.3 'IBM Plex Mono',monospace;opacity:.7}
+.card{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:24px;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.chd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chd b{font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.12em}
+.chd > span{font:600 11.5px/1 'IBM Plex Mono',monospace;opacity:.7}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:0 10px;border-radius:999px;font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;white-space:nowrap}
+.tbl{width:100%;border-collapse:separate;border-spacing:0}
+.tbl th{padding:10px 12px;text-align:left;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;opacity:.65;white-space:nowrap}
+.tbl td{padding:12px;border-top:1px solid rgba(23,46,66,.08);font:600 14.5px/1.3 'Instrument Sans',sans-serif;vertical-align:middle}
+.tbl tr.rowlink{cursor:pointer}
+.tbl tr.rowlink:hover td{background:rgba(244,197,66,.12)}
+.tname > b{display:block;font:800 16px/1.15 'Bricolage Grotesque',sans-serif}
+.tname > span{display:block;margin-top:3px;font:600 11.5px/1.2 'IBM Plex Mono',monospace;opacity:.65}
+.tbox{overflow-x:auto;margin:0 -6px}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:16px;overflow-x:auto;max-width:100%}
+.segb{appearance:none;flex:none;min-height:40px;padding:0 14px;border:0;border-radius:12px;background:transparent;cursor:pointer;font:700 13.5px/1 'Instrument Sans',sans-serif;white-space:nowrap}
+.segb.on{box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.5)}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:15px}
+.search input{flex:1;min-width:0;height:44px;border:0;outline:0;background:transparent;font:600 15px/1 'Instrument Sans',sans-serif}
+.dhead{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.av{flex:none;display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:18px;font:800 22px/1 'Bricolage Grotesque',sans-serif}
+.dname{flex:1;min-width:0}
+.dname > b{display:block;font:800 26px/1.1 'Bricolage Grotesque',sans-serif}
+.dname > span{display:block;margin-top:5px;font:600 12px/1.3 'IBM Plex Mono',monospace;opacity:.7}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 18px;margin:0;font:600 14px/1.3 'Instrument Sans',sans-serif}
+.kv dt{font:600 11.5px/1.5 'IBM Plex Mono',monospace;letter-spacing:.06em;opacity:.65}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.tl{display:flex;flex-direction:column;gap:0}
+.tli{display:flex;gap:12px;padding:10px 0;border-top:1px solid rgba(23,46,66,.08)}
+.tli:first-child{border-top:0}
+.tli time{flex:none;width:118px;font:600 12px/1.4 'IBM Plex Mono',monospace;opacity:.65}
+.tli > span{font:600 14px/1.4 'Instrument Sans',sans-serif}
+.fl{display:flex;flex-direction:column;gap:6px}
+.fl label,.fll{font:800 12px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em}
+.tg{appearance:none;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;padding:0 14px;border:0;border-radius:15px;cursor:pointer;font:700 14.5px/1.2 'Instrument Sans',sans-serif;text-align:left}
+.sw{flex:none;position:relative;width:46px;height:28px;border-radius:999px;transition:background .15s}
+.sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#FFFFFF;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw.on i{transform:translateX(18px)}
+.ban{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:18px;font:600 14px/1.45 'Instrument Sans',sans-serif}
+.ban b{display:block;font:800 15px/1.2 'Bricolage Grotesque',sans-serif;margin-bottom:3px}
+.ta{width:100%;min-height:96px;padding:12px 14px;border:0;border-radius:15px;resize:vertical;font:600 15px/1.4 'Instrument Sans',sans-serif;outline:0}
+.sacts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.empty{padding:28px;text-align:center;font:600 13px/1.4 'IBM Plex Mono',monospace;opacity:.6}
+
+/* ===== YENİ (B-84): yalnız eklenen parçalar ===== */
+/* okunmamış talep noktası (gelen kutusu) */
+.unr{display:inline-block;flex:none;width:10px;height:10px;margin-right:8px;border-radius:50%;background:#E56A00;vertical-align:1px}
+/* ekran görüntüsü yer tutucusu */
+.shot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:220px;border-radius:18px;border:2px dashed rgba(23,46,66,.25);font:600 12px/1.3 'IBM Plex Mono',monospace;letter-spacing:.06em;opacity:.8}
+
+/* ===== tuval düzeni (yalnız çalışma alanı; uygulamaya aktarılmaz) ===== */
+.cv{display:flex;flex-direction:column;gap:14px;padding:28px 0 40px}
+.cv-h{padding:0 28px}
+.cv-h b{display:block;font:800 30px/1.05 'Bricolage Grotesque',sans-serif;color:#172E42}
+.cv-h small{display:block;margin-top:6px;font:600 12px/1.3 'IBM Plex Mono',monospace;color:#4E6476;letter-spacing:.04em}
+.cv-cap{display:flex;align-items:center;gap:10px;margin-top:14px;padding:0 28px;font:800 15px/1.15 'Bricolage Grotesque',sans-serif;color:#172E42}
+.cv-cap i{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:10px;background:#172E42;color:#F4C542;font:800 15px/1 'Bricolage Grotesque',sans-serif;font-style:normal}
+.cv-cap small{display:block;margin-top:3px;font:600 10.5px/1.25 'IBM Plex Mono',monospace;color:#4E6476}
+@media (prefers-reduced-motion:reduce){.wrap *{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div class="wrap" style="height: auto">
+<div class="cv">
+  <div class="cv-h"><b>Yönetim paneli · Destek</b><small>YONET.ETKINYAZILIM.COM · B-84 · GELEN KUTUSU, TALEP, MÜŞTERİ SEKMESİ, BİLDİRİM AYARI · ÖRNEK VERİ</small></div>
+
+  <!-- ================= (E) GELEN KUTUSU ================= -->
+  <span class="cv-cap"><i>E</i><span>Destek gelen kutusu<small>ROZETLİ MENÜ · AÇIK / YANITLANDI / KAPANDI</small></span></span>
+  <div class="app" style="height: 900px">
+  <div class="shell" style="background: {{c.bg}}; color: {{c.fg}}">
+    <nav class="side" aria-label="Yönetim menüsü">
+      <div class="sbrand">
+        <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#FFFFFF"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#FFFFFF" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+        <span class="tx"><b>ETKİN YÖNETİM</b><small>YONET.ETKINYAZILIM.COM</small></span>
+      </div>
+      <sc-for list="{{navE}}" as="n" hint-placeholder-count="9"><button type="button" class="{{n.cls}}" aria-current="{{n.cur}}" aria-label="{{n.l}}" title="{{n.l}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.d}}"></path></svg><span class="tx">{{n.l}}</span><sc-if value="{{n.hasCnt}}" hint-placeholder-val="{{false}}"><span class="cnt">{{n.cnt}}</span></sc-if></button></sc-for>
+      <div class="sfoot">
+        <div class="who"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span class="tx">OPERATÖR · 2FA AÇIK</span></div>
+      </div>
+    </nav>
+    <div class="main">
+      <header class="top">
+        <div class="top-t"><h1 class="top-h">Destek</h1><span class="top-s">ETKİN WMS KULLANICILARINDAN · {{openCount}} AÇIK TALEP</span></div>
+      </header>
+      <div class="scroll"><div class="inner">
+        <div class="toolbar">
+          <div class="search" style="background: {{c.surface}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="opacity: .6"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5"></path></svg><input type="search" placeholder="Firma, kişi ya da destek kodu ara" aria-label="Talep ara"></div>
+          <div class="seg" role="tablist" aria-label="Durum" style="background: {{c.chip}}"><sc-for list="{{filters}}" as="f" hint-placeholder-count="4"><button type="button" role="tab" class="{{f.cls}}" aria-selected="{{f.sel}}" style="background: {{f.bg}}" onClick="{{f.go}}">{{f.l}}</button></sc-for></div>
+        </div>
+        <div class="card" style="background: {{c.surface}}; padding-top: 8px">
+          <div class="tbox"><table class="tbl">
+            <thead><tr><th>MÜŞTERİ</th><th>KULLANICI · ROL</th><th>KONU</th><th>MESAJ</th><th>ZAMAN</th><th>DURUM</th></tr></thead>
+            <tbody>
+              <sc-for list="{{inbox}}" as="r" hint-placeholder-count="6"><tr class="rowlink" onClick="{{r.go}}"><td><span class="tname"><b><sc-if value="{{r.unread}}" hint-placeholder-val="{{false}}"><span class="unr" aria-label="Okunmadı"></span></sc-if>{{r.cust}}</b><span>{{r.no}}</span></span></td><td><span class="tname"><b style="font: 700 14.5px/1.2 'Instrument Sans', sans-serif">{{r.user}}</b><span>{{r.role}}</span></span></td><td><span class="chip" style="background: {{c.chip}}"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="{{r.tStyle}}"><path d="{{r.tD}}"></path></svg>{{r.topic}}</span></td><td style="max-width: 360px">{{r.msg}}</td><td class="mono" style="font-size: 13px; white-space: nowrap">{{r.when}}</td><td><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></td></tr></sc-for>
+            </tbody>
+          </table></div>
+          <sc-if value="{{inboxEmpty}}" hint-placeholder-val="{{false}}"><div class="empty">BU FİLTREDE TALEP YOK</div></sc-if>
+        </div>
+        <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 8 2 8H4s2-2 2-8M10 20a2 2 0 0 0 4 0"></path></svg><span><b>Yeni talep menüde rozet olarak görünür</b>Panel kaydı esastır. WhatsApp bağlanınca ayrıca kısa bir bildirim gelir; mesajda müşteri verisi olmaz, yalnız talep numarası ve panel bağlantısı.</span></div>
+      </div></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= (F) TALEP DETAYI ================= -->
+  <span class="cv-cap"><i>F</i><span>Talep detayı<small>MESAJ · OTOMATİK BİLGİLER · ERİŞİM İSTE · YANIT · KAPAT</small></span></span>
+  <div class="app" style="height: 900px">
+  <div class="shell" style="background: {{c.bg}}; color: {{c.fg}}">
+    <nav class="side" aria-label="Yönetim menüsü">
+      <div class="sbrand">
+        <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#FFFFFF"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#FFFFFF" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+        <span class="tx"><b>ETKİN YÖNETİM</b><small>YONET.ETKINYAZILIM.COM</small></span>
+      </div>
+      <sc-for list="{{navE}}" as="n" hint-placeholder-count="9"><button type="button" class="{{n.cls}}" aria-current="{{n.cur}}" aria-label="{{n.l}}" title="{{n.l}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.d}}"></path></svg><span class="tx">{{n.l}}</span><sc-if value="{{n.hasCnt}}" hint-placeholder-val="{{false}}"><span class="cnt">{{n.cnt}}</span></sc-if></button></sc-for>
+      <div class="sfoot">
+        <div class="who"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span class="tx">OPERATÖR · 2FA AÇIK</span></div>
+      </div>
+    </nav>
+    <div class="main">
+      <header class="top">
+        <button type="button" class="icb" style="background: {{c.surface}}" aria-label="Geri"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button>
+        <div class="top-t"><h1 class="top-h">Raf A-03 okutunca ekran donuyor</h1><span class="top-s">DST-0142 · MOTIVE RUBBER · DESTEK KODU MTR-4F8K</span></div>
+        <span class="chip" style="background: {{tk.stBg}}; color: {{tk.stFg}}">{{tk.st}}</span>
+      </header>
+      <div class="scroll"><div class="inner">
+        <div class="grid2">
+          <div style="display: flex; flex-direction: column; gap: 18px; min-width: 0">
+            <div class="card" style="background: {{c.surface}}">
+              <div class="dhead">
+                <span class="av" style="background: #2F7D5B; color: #FFFFFF">MY</span>
+                <div class="dname"><b style="font-size: 20px">Mehmet Yılmaz</b><span>SAHA PERSONELİ · BUGÜN 10:42</span></div>
+                <span class="chip" style="background: {{c.chip}}"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="color: #C62828"><path d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 8v5M12 16.5v.01"></path></svg>ÇALIŞMIYOR</span>
+              </div>
+              <p style="margin: 0; font: 600 16px/1.5 'Instrument Sans', sans-serif">Raf A-03 etiketini okutunca ekran donuyor, geri tuşu da çalışmıyor. Uygulamayı kapatıp açınca düzeliyor.</p>
+              <div class="shot" style="background: {{c.chip}}"><svg class="ico" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v12H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"></path></svg>EKRAN GÖRÜNTÜSÜ · 1 · BÜYÜTMEK İÇİN TIKLA</div>
+            </div>
+            <div class="card" style="background: {{c.surface}}">
+              <div class="chd"><b>YANIT</b><span>KULLANICININ “TALEPLERİM” EKRANINA DÜŞER</span></div>
+              <textarea class="ta" style="background: {{c.chip}}" aria-label="Yanıt" placeholder="Kısa ve net yazın"></textarea>
+              <div class="sacts">
+                <button type="button" class="btn" style="background: {{c.chip}}" onClick="{{closeTk}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M4 12l5 5L20 6"></path></svg>Kapat</button>
+                <button type="button" class="btn" style="background: #17804F; color: #FFFFFF" onClick="{{replyTk}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.6"><path d="M4 12 20 4l-6 16-3-7z"></path></svg>Yanıtı gönder</button>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 18px; min-width: 0">
+            <div class="card" style="background: {{c.surface}}">
+              <div class="chd"><b>OTOMATİK BİLGİLER</b><span>TALEPLE GELDİ</span></div>
+              <dl class="kv">
+                <dt>EKRAN</dt><dd class="mono" style="font-size: 13px">/t/motive/okut</dd>
+                <dt>SÜRÜM</dt><dd class="mono" style="font-size: 13px">2026.10.20</dd>
+                <dt>DESTEK KODU</dt><dd class="mono" style="font-size: 13px">MTR-4F8K</dd>
+                <dt>CİHAZ</dt><dd>Android telefon · Chrome</dd>
+                <dt>ÇALIŞMA ALANI</dt><dd class="mono" style="font-size: 13px">wms.etkinyazilim.com/motive</dd>
+              </dl>
+            </div>
+            <div class="card" style="background: {{c.surface}}">
+              <div class="chd"><b>DESTEK ERİŞİMİ</b><span>{{acc.tag}}</span></div>
+              <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span><b>{{acc.h}}</b>{{acc.t}}</span></div>
+              <sc-if value="{{acc.can}}" hint-placeholder-val="{{true}}"><button type="button" class="btn" style="background: #172E42; color: #FFFFFF" onClick="{{askAccess}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path></svg>Erişim iste</button></sc-if>
+            </div>
+            <div class="card" style="background: {{c.surface}}">
+              <div class="chd"><b>GEÇMİŞ</b><span>KİM · NE</span></div>
+              <div class="tl">
+                <div class="tli"><time>BUGÜN 10:42</time><span>Mehmet Yılmaz talep açtı</span></div>
+                <sc-for list="{{tkHist}}" as="h" hint-placeholder-count="1"><div class="tli"><time>{{h.t}}</time><span>{{h.l}}</span></div></sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= (G) MÜŞTERİ DETAYI · DESTEK SEKMESİ ================= -->
+  <span class="cv-cap"><i>G</i><span>Müşteri detayında Destek sekmesi<small>YALNIZ BU MÜŞTERİNİN TALEPLERİ</small></span></span>
+  <div class="app" style="height: 900px">
+  <div class="shell" style="background: {{c.bg}}; color: {{c.fg}}">
+    <nav class="side" aria-label="Yönetim menüsü">
+      <div class="sbrand">
+        <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#FFFFFF"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#FFFFFF" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+        <span class="tx"><b>ETKİN YÖNETİM</b><small>YONET.ETKINYAZILIM.COM</small></span>
+      </div>
+      <sc-for list="{{navG}}" as="n" hint-placeholder-count="9"><button type="button" class="{{n.cls}}" aria-current="{{n.cur}}" aria-label="{{n.l}}" title="{{n.l}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.d}}"></path></svg><span class="tx">{{n.l}}</span><sc-if value="{{n.hasCnt}}" hint-placeholder-val="{{false}}"><span class="cnt">{{n.cnt}}</span></sc-if></button></sc-for>
+      <div class="sfoot">
+        <div class="who"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span class="tx">OPERATÖR · 2FA AÇIK</span></div>
+      </div>
+    </nav>
+    <div class="main">
+      <header class="top">
+        <button type="button" class="icb" style="background: {{c.surface}}" aria-label="Geri"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 3"><path d="M15 6l-6 6 6 6"></path></svg></button>
+        <div class="top-t"><h1 class="top-h">Motive Rubber</h1><span class="top-s">MÜŞTERİ DETAYI</span></div>
+      </header>
+      <div class="scroll"><div class="inner">
+        <div class="card" style="background: {{c.surface}}">
+          <div class="dhead">
+            <span class="av" style="background: #172E42; color: #F4C542">MR</span>
+            <div class="dname"><b>Motive Rubber</b><span>wms.etkinyazilim.com/motive · KAYIT 13.10.2026</span></div>
+            <span class="chip" style="background: {{c.okBg}}; color: {{c.okFg}}">AKTİF</span>
+          </div>
+          <div class="acts">
+            <button type="button" class="btn sm" style="background: #C62828; color: #FFFFFF"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 2.8"><path d="M9 5v14M15 5v14"></path></svg>Askıya al</button>
+            <button type="button" class="btn sm" style="background: {{c.chip}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"></path></svg>Paketi değiştir</button>
+            <button type="button" class="btn sm" style="background: {{c.chip}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path></svg>Destek erişimi iste</button>
+          </div>
+        </div>
+        <div class="seg" role="tablist" aria-label="Müşteri sekmeleri" style="background: {{c.chip}}; align-self: flex-start">
+          <button type="button" role="tab" class="segb" aria-selected="false">Genel</button>
+          <button type="button" role="tab" class="segb on" aria-selected="true" style="background: {{c.surface}}">Destek · {{custOpen}} açık</button>
+          <button type="button" role="tab" class="segb" aria-selected="false">Geçmiş</button>
+        </div>
+        <div class="card" style="background: {{c.surface}}; padding-top: 8px">
+          <div class="tbox"><table class="tbl">
+            <thead><tr><th>KULLANICI · ROL</th><th>KONU</th><th>MESAJ</th><th>ZAMAN</th><th>DURUM</th></tr></thead>
+            <tbody>
+              <sc-for list="{{custRows}}" as="r" hint-placeholder-count="3"><tr class="rowlink"><td><span class="tname"><b style="font: 700 14.5px/1.2 'Instrument Sans', sans-serif"><sc-if value="{{r.unread}}" hint-placeholder-val="{{false}}"><span class="unr" aria-label="Okunmadı"></span></sc-if>{{r.user}}</b><span>{{r.role}} · {{r.no}}</span></span></td><td><span class="chip" style="background: {{c.chip}}"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="{{r.tStyle}}"><path d="{{r.tD}}"></path></svg>{{r.topic}}</span></td><td style="max-width: 420px">{{r.msg}}</td><td class="mono" style="font-size: 13px; white-space: nowrap">{{r.when}}</td><td><span class="chip" style="background: {{r.stBg}}; color: {{r.stFg}}">{{r.st}}</span></td></tr></sc-for>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="ban" style="background: {{c.chip}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path></svg><span><b>Müşteri verisi burada da açılmaz</b>Talep metni ve otomatik bilgiler görünür. Depo verisine bakmak için talepten “Erişim iste”; kullanıcı onaylarsa süreli açılır.</span></div>
+      </div></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= AYARLAR · BİLDİRİM ================= -->
+  <span class="cv-cap"><i>+</i><span>Ayarlar · bildirim<small>WHATSAPP SATIRI · BAĞLANINCA DOLAR</small></span></span>
+  <div class="app" style="height: 520px">
+  <div class="shell" style="background: {{c.bg}}; color: {{c.fg}}">
+    <nav class="side" aria-label="Yönetim menüsü">
+      <div class="sbrand">
+        <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true" style="flex: none; display: block"><rect x="4" y="4" width="112" height="112" rx="28" fill="#FFFFFF"></rect><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#172E42" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#FFFFFF" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg>
+        <span class="tx"><b>ETKİN YÖNETİM</b><small>YONET.ETKINYAZILIM.COM</small></span>
+      </div>
+      <div class="who" style="padding-top: 0">MENÜ ÖNCEKİLERLE AYNI · AYARLAR SEÇİLİ</div>
+      <button type="button" class="nav on" aria-current="page"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{gearD}}"></path></svg><span class="tx">Ayarlar</span></button>
+    </nav>
+    <div class="main">
+      <header class="top">
+        <div class="top-t"><h1 class="top-h">Ayarlar</h1><span class="top-s">PANEL · BİLDİRİMLER</span></div>
+      </header>
+      <div class="scroll"><div class="inner" style="max-width: 760px; margin: 0">
+        <div class="card" style="background: {{c.surface}}">
+          <div class="chd"><b>BİLDİRİM · YENİ DESTEK TALEBİ</b><span>ASIL KAYIT PANEL ROZETİ</span></div>
+          <button type="button" class="tg" style="background: {{c.chip}}" role="switch" aria-checked="true">Panel rozeti<span class="sw on" style="background: #17804F"><i></i></span></button>
+          <div class="tg" style="background: {{c.chip}}; cursor: default"><span style="display: flex; align-items: center; gap: 10px"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="color: #17804F"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8z"></path><path d="M9 9.5c.3 1.8 2.2 3.8 4.5 4.5l1.2-1.2 1.8.8c-.2 1-1 1.8-2 1.8A6 6 0 0 1 8.5 9.4c0-1 .8-1.8 1.8-2l.8 1.8z"></path></svg>Bildirim: WhatsApp</span><span class="chip" style="background: #FFE7A8; color: #4A3500">BAĞLANMADI</span></div>
+          <span class="kpi-s">ANAHTAR SUNUCU ORTAMINA EKLENİNCE BAĞLANIR · MESAJDA MÜŞTERİ VERİSİ YOK, YALNIZ TALEP NO + PANEL BAĞLANTISI</span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3640}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filt: 'hepsi', access: 'none', tkSt: 'AÇIK', hist: [] };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var c = { bg: '#F4F2EE', fg: '#1E2F3E', surface: '#FFFFFF', chip: '#F1EEE8', track: '#E6E2DA', okBg: '#CFE8DA', okFg: '#0F3D27' };
+    var D = {
+      ozet: 'M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z', cust: 'M4 21V5h10v16M14 9h6v12M8 9h2M8 13h2M8 17h2',
+      help: 'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5zM18 20c0 1.2-1.6 2-4 2',
+      pk: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10', pay: 'M3 6h18v12H3zM3 10h18M7 15h4', req: 'M3 6h18v12H3zM3 7l9 6 9-6',
+      site: 'M3 5h18v14H3zM3 9h18M7 7h.01M10 7h.01', log: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+      gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1'
+    };
+    var T = {
+      bug: ['ÇALIŞMIYOR', 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 8v5M12 16.5v.01', '#C62828'],
+      how: ['NASIL YAPILIR', 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM9.3 9.4a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.2 1-1.2 1.8v.4M12 17.2v.01', '#2F5DA8'],
+      idea: ['ÖNERİ', 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z', '#B07D0B'],
+      other: ['DİĞER', 'M4 5h16v11H9l-5 4z', '#4E6476']
+    };
+    var ST = { 'AÇIK': ['#E56A00', '#FFFFFF'], 'YANITLANDI': [c.okBg, c.okFg], 'KAPANDI': [c.chip, c.fg] };
+    var RAW = [
+      { no: 'DST-0142', cust: 'Motive Rubber', user: 'Mehmet Yılmaz', role: 'SAHA PERSONELİ', t: 'bug', msg: 'Raf A-03 etiketini okutunca ekran donuyor.', when: 'BUGÜN 10:42', st: s.tkSt, unread: s.tkSt === 'AÇIK' },
+      { no: 'DST-0141', cust: 'Demo A.Ş', user: 'Ayşe Kaya', role: 'DEPO YÖNETİCİSİ', t: 'how', msg: 'Sevk etiketini yeniden nasıl basarım?', when: 'BUGÜN 09:15', st: 'AÇIK', unread: true },
+      { no: 'DST-0140', cust: 'Src', user: 'Can Demir', role: 'HESAP SAHİBİ', t: 'idea', msg: 'Sayım sonunda Excel çıktısı alınabilsin.', when: 'DÜN 17:20', st: 'AÇIK', unread: false },
+      { no: 'DST-0139', cust: 'Motive Rubber', user: 'Selin Arslan', role: 'SAYIM', t: 'how', msg: 'Sayımı yarıda bırakıp sonra devam edebilir miyim?', when: 'DÜN 14:02', st: 'YANITLANDI', unread: false },
+      { no: 'DST-0137', cust: 'Demo A.Ş', user: 'Ayşe Kaya', role: 'DEPO YÖNETİCİSİ', t: 'bug', msg: 'Bluetooth yazıcı bağlanmıyor.', when: '18.10 11:30', st: 'KAPANDI', unread: false },
+      { no: 'DST-0131', cust: 'Motive Rubber', user: 'Mehmet Yılmaz', role: 'SAHA PERSONELİ', t: 'other', msg: 'Gece vardiyasında koyu tema açılsın.', when: '16.10 22:05', st: 'KAPANDI', unread: false }
+    ];
+    var row = function (r) {
+      return { no: r.no, cust: r.cust, user: r.user, role: r.role, topic: T[r.t][0], tD: T[r.t][1], tStyle: 'color: ' + T[r.t][2], msg: r.msg, when: r.when, st: r.st, stBg: ST[r.st][0], stFg: ST[r.st][1], unread: r.unread, go: function () {} };
+    };
+    var FMAP = { hepsi: null, acik: 'AÇIK', yan: 'YANITLANDI', kap: 'KAPANDI' };
+    var cnt = function (st) { return RAW.filter(function (r) { return r.st === st; }).length; };
+    var openCount = cnt('AÇIK');
+    var inbox = RAW.filter(function (r) { return !FMAP[s.filt] || r.st === FMAP[s.filt]; }).map(row);
+    var filters = [['hepsi', 'Hepsi · ' + RAW.length], ['acik', 'Açık · ' + openCount], ['yan', 'Yanıtlandı · ' + cnt('YANITLANDI')], ['kap', 'Kapandı · ' + cnt('KAPANDI')]].map(function (f) {
+      var on = s.filt === f[0];
+      return { l: f[1], cls: 'segb' + (on ? ' on' : ''), sel: on ? 'true' : 'false', bg: on ? c.surface : 'transparent', go: function () { self.setState({ filt: f[0] }); } };
+    });
+    var navList = function (cur) {
+      return [['ozet', 'Özet', D.ozet, 0], ['musteriler', 'Müşteriler', D.cust, 0], ['destek', 'Destek', D.help, openCount], ['paketler', 'Paketler', D.pk, 0], ['odemeler', 'Ödemeler', D.pay, 1], ['talepler', 'Demo talepleri', D.req, 2], ['satis', 'Satış sayfası', D.site, 0], ['kayit', 'İşlem kaydı', D.log, 0], ['ayarlar', 'Ayarlar', D.gear, 0]].map(function (n) {
+        var on = cur === n[0];
+        return { l: n[1], d: n[2], cls: 'nav' + (on ? ' on' : ''), cur: on ? 'page' : 'false', hasCnt: n[3] > 0, cnt: String(n[3]) };
+      });
+    };
+    var ACC = {
+      none: { tag: 'KAPALI', h: 'Depo verisi kapalı', t: 'Erişim isteği kullanıcının ekranına düşer. Onaylarsa süreli açılır; her bakış işlem kaydına yazılır.', can: true },
+      wait: { tag: 'ONAY BEKLİYOR', h: 'Mehmet Yılmaz’ın onayı bekleniyor', t: 'Onay gelince süre başlar ve burada geri sayım görünür. Reddederse talep yine yanıtlanabilir.', can: false }
+    };
+    var custRows = RAW.filter(function (r) { return r.cust === 'Motive Rubber'; }).map(row);
+    return {
+      c: c, filters: filters, inbox: inbox, inboxEmpty: inbox.length === 0, openCount: String(openCount),
+      navE: navList('destek'), navG: navList('musteriler'), gearD: D.gear,
+      tk: { st: s.tkSt, stBg: ST[s.tkSt][0], stFg: ST[s.tkSt][1] },
+      acc: ACC[s.access], tkHist: s.hist,
+      askAccess: function () { self.setState({ access: 'wait', hist: s.hist.concat([{ t: 'BUGÜN 10:51', l: 'Operatör erişim istedi · kullanıcı onayı bekleniyor' }]) }); },
+      replyTk: function () { self.setState({ tkSt: 'YANITLANDI', hist: s.hist.concat([{ t: 'BUGÜN 10:55', l: 'Operatör yanıtladı' }]) }); },
+      closeTk: function () { self.setState({ tkSt: 'KAPANDI', hist: s.hist.concat([{ t: 'BUGÜN 10:58', l: 'Operatör talebi kapattı' }]) }); },
+      custRows: custRows, custOpen: String(custRows.filter(function (r) { return r.st === 'AÇIK'; }).length)
+    };
+  }
+}
+</script>
+</body>
+</html>

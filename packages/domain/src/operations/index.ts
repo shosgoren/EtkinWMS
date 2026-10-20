@@ -189,3 +189,4 @@ export { getCurrentPackage, resolveCurrentPackageQr, type CurrentPackageDto } fr
 export { transferPackage, type PackageTransferInput } from "./package-transfer.ts";
 
 export { previewPackageProduction, preparePackageProduction, postPackageProduction, getPackageProductionBatch, type ProducePackageInput, type PostPackageProductionInput, type PackageProductionPreview, type PackageProductionBatchView, type ProductionPackageView } from "./production.ts";
+export { resolveFieldScan, FIELD_SCAN_CODE_MAX, type FieldScanResult, type FieldScanReceipt } from "./field-scan.ts";
