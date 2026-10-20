@@ -417,6 +417,31 @@ describe("taşıma birimi", () => {
     await createHandlingUnit(admin(B), { kind: "KOLI", code: koliCode });
   });
 
+  it("T-920 (B-14): depo kapsamı dışındaki lokasyonda taşıma birimi açılamaz (NOT_FOUND, varlık sızmaz); kapsamdaki lokasyonda açılır", async () => {
+    const prior = process.env.WAREHOUSE_SCOPE_ENABLED;
+    process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+    try {
+      const w2 = randomUUID();
+      const loc2 = randomUUID();
+      await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, $3, 'T920 Depo 2')", [A.tenantId, w2, `D2-${rnd()}`]);
+      await adm.query(
+        "INSERT INTO public.locations (tenant_id, id, warehouse_id, parent_id, code, name, depth, kind) VALUES ($1,$2,$3,NULL,$4,'T920 lok',0,'STORAGE')",
+        [A.tenantId, loc2, w2, `L-${rnd()}`],
+      );
+      const u = await mkUser(adm, reg, "T920 sayımcı");
+      const m = await mkMembership(adm, A.tenantId, u, { roles: ["COUNTER"] });
+      await adm.query("INSERT INTO public.membership_warehouse_scopes (tenant_id, membership_id, warehouse_id) VALUES ($1, $2, $3)", [A.tenantId, m, A.warehouseId]);
+      await expectFail(createHandlingUnit(as(A, u), { kind: "PALET", code: `P${rnd()}`, locationId: loc2 }), "NOT_FOUND");
+      const ok = await createHandlingUnit(as(A, u), { kind: "PALET", code: `P${rnd()}`, locationId: A.rootLocationId });
+      expect(ok.handlingUnitId).toMatch(/^[0-9a-f-]{36}$/);
+      // Kısıtsız (hesap sahibi) depo 2'de açabilir.
+      expect((await createHandlingUnit(admin(A), { kind: "PALET", code: `P${rnd()}`, locationId: loc2 })).handlingUnitId).toMatch(/^[0-9a-f-]{36}$/);
+    } finally {
+      if (prior === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      else process.env.WAREHOUSE_SCOPE_ENABLED = prior;
+    }
+  });
+
   it("palet→koli→palet döngüsü DB tetikleyicisinde HANDLING_UNIT_CYCLE ile reddedilir (nest komutu yok; A-89)", async () => {
     const p = await createHandlingUnit(admin(A), { kind: "PALET", code: `P${rnd()}` });
     const k = await createHandlingUnit(admin(A), { kind: "KOLI", code: `K${rnd()}`, parentId: p.handlingUnitId });

@@ -13,6 +13,7 @@ import type { HandlingUnitKind } from "@wms/db";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery } from "../identity/access.ts";
+import { assertWarehouseVisible } from "../warehouse/scope.ts";
 import { parseNfcText } from "./lots.ts";
 import { parseUuid, type CatalogCommandParams } from "./units.ts";
 
@@ -66,10 +67,12 @@ export async function createHandlingUnit(params: CatalogCommandParams, input: Cr
       }
     }
     if (locationId !== undefined) {
-      const loc = await tx.execute<{ status: string }>(
-        sql`SELECT status FROM public.locations WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${locationId}::uuid FOR SHARE`,
+      const loc = await tx.execute<{ status: string; warehouse_id: string }>(
+        sql`SELECT status, warehouse_id FROM public.locations WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${locationId}::uuid FOR SHARE`,
       );
       if (loc[0] === undefined) throw new AppError("NOT_FOUND");
+      // T-920 (BACKLOG B-14): depo kapsamı dışındaki lokasyon varlık sızdırmadan NOT_FOUND (kart okumalarıyla aynı kural).
+      await assertWarehouseVisible(tx, actor, [loc[0].warehouse_id]);
       if (loc[0].status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
     }
     const rows = await tx.execute<{ id: string }>(

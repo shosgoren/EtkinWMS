@@ -403,6 +403,10 @@ describe("etkinleştirme ve giriş", () => {
     const locked = await post("/field/sign-in", { workspace: fx.slug, username: p.username, pin: p.pin }, device);
     expect([locked.status, await code(locked)]).toEqual([403, "FIELD_LOGIN_LOCKED"]);
     expect((await listFieldLogins(access(fx))).find((x) => x.username === p.username)?.locked).toBe(true);
+    // T-920 (B-19): yakın zamanda doğrulama verilmeden kilit açılmaz.
+    const { recentAuth: _ra, ...noReauth } = access(fx);
+    void _ra;
+    await expect(unlockFieldLogin({ ...noReauth, memberId: p.membershipId })).rejects.toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
     await unlockFieldLogin({ ...access(fx), memberId: p.membershipId });
     const again = await post("/field/sign-in", { workspace: fx.slug, username: p.username, pin: p.pin }, device);
     expect(again.status).toBe(200);

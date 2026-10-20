@@ -294,6 +294,8 @@ export async function clearSampleData(params: {
   readonly requestId?: string | null;
 }): Promise<ClearSampleDataResult> {
   const { requestId, ...access } = params;
+  // T-920 (BACKLOG B-19, A-39): yakın zamanda doğrulama zorunlu (fail-closed); çağıran vermezse ret.
+  if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, m) => {
     // Eşzamanlı iki temizlemeyi ve temizlik sırasında örnek depoya lokasyon açılmasını serileştirir.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${m.tenantId}:sample-data`}, 0))`);

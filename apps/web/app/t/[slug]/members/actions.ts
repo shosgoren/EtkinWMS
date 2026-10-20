@@ -279,7 +279,15 @@ export async function unlockFieldLoginAction(raw: unknown) {
   return guardedAction({ schema: memberSchema }, async (input, ctx) => {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
-    await unlockFieldLogin({ db: getAppDb(), principal, tenantSlug: input.slug, memberId: input.memberId, requestId: ctx.requestId });
+    const requestHeaders = await headers();
+    await unlockFieldLogin({
+      db: getAppDb(),
+      principal,
+      tenantSlug: input.slug,
+      memberId: input.memberId,
+      requestId: ctx.requestId,
+      recentAuth: () => ensureRecentAuth(requestHeaders),
+    });
     return { unlocked: true as const };
   })(raw);
 }
