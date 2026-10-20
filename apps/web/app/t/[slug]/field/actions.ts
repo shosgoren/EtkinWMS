@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import { runTenantQuery } from "@wms/domain/identity/access";
-import { FIELD_SCAN_CODE_MAX, resolveCurrentPackageQr, resolveFieldScan } from "@wms/domain/operations";
+import { FIELD_SCAN_CODE_MAX, findFieldWork, resolveCurrentPackageQr, resolveFieldScan, type FieldWork } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
 import { createProductionGuard } from "../../../../lib/action-guard.ts";
 import { packageReceivingEnabled } from "../../../../lib/package-receiving-config.ts";
@@ -15,7 +15,7 @@ const guardedAction = createProductionGuard(() => headers());
 const schema = z.object({ slug: z.string().min(1).max(63), code: z.string().min(1).max(FIELD_SCAN_CODE_MAX) }).strict();
 
 export type FieldScanTarget =
-  | { readonly kind: "receive" | "putaway" | "item" | "stock" | "receipts" | "package"; readonly href: string; readonly name: string; readonly sub: string }
+  | { readonly kind: "receive" | "putaway" | "item" | "stock" | "receipts" | "package" | "pick" | "count"; readonly href: string; readonly name: string; readonly sub: string }
   | { readonly kind: "unknown"; readonly reason: "not_found" | "ambiguous" };
 
 const PKG_PREFIX = "EWMS:PKG:";
@@ -44,6 +44,22 @@ export async function resolveFieldScanAction(raw: unknown) {
       throw e;
     });
     const q = (o: Record<string, string>): string => new URLSearchParams(o).toString();
+    // T-977: okutulan raf/ürün bekleyen bir toplama ya da sayım işine aitse o işe gidilir. Sıra: bana atanmış iş → (ürün) bekleyen kabul →
+    // üstlenilebilir iş → eski hedefler. Görev listesi domain'de yetki + kapsamla süzülür; gidilen ekranın komutu yeniden denetler.
+    const work: FieldWork =
+      found.kind === "item" ? await findFieldWork(params, { itemId: found.itemId }) : found.kind === "location" ? await findFieldWork(params, { locationId: found.locationId }) : { pick: null, count: null };
+    const pickTo = (taskId: string, name: string, sub: string, withCode: boolean): FieldScanTarget => ({ kind: "pick", href: `${base}/field/pick?${q({ task: taskId, ...(withCode ? { code } : {}) })}`, name, sub });
+    const countTo = (taskId: string, name: string, sub: string): FieldScanTarget => ({ kind: "count", href: `${base}/field/count?${q({ task: taskId, code })}`, name, sub });
+    if (found.kind === "location") {
+      const label = found.name || found.code;
+      if (work.count?.mine === true) return countTo(work.count.taskId, label, found.code);
+      if (work.pick?.mine === true) return pickTo(work.pick.taskId, label, found.code, true);
+      if (work.count !== null) return countTo(work.count.taskId, label, found.code);
+      if (work.pick !== null) return pickTo(work.pick.taskId, label, found.code, true);
+    }
+    if (found.kind === "item" && work.pick !== null && (work.pick.mine || found.receipt === null)) {
+      return pickTo(work.pick.taskId, found.itemName, found.itemCode, false);
+    }
     switch (found.kind) {
       case "item":
         if (canPost && found.receipt !== null) {

@@ -174,6 +174,12 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
         <p className="sr">{t("intro")}</p>
         <KalipCipler label={t("filters.kind")} chips={kindChips} />
         <KalipCipler label={t("filters.status")} chips={statusChips} />
+        {canManage && kindFilter === "COUNT" ? (
+          // T-977 (B-51): sayım görevleri sayım oturumundan doğar; oturum başlatma, fark onayı ve fiş yönetici sayım ekranındadır.
+          <KalipDaha href={`/t/${encodeURIComponent(slug)}/counts`} iconD={LICON.clip} testId="tasks-counts">
+            {t("countSessions")}
+          </KalipDaha>
+        ) : null}
         {canManage ? null : (
           <div id="task-locked">
             <Banner kind="info">{t("lockedReason")}</Banner>
