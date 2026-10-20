@@ -21,7 +21,7 @@
 --   sabit, PUBLIC EXECUTE yok, operatör denetimi `platform_is_operator`). Probe'a tenant tablosunda POLİTİKA EKLENMEZ (0042 kararı): işlev
 --   bağlamı her tenant için transaction-yerel kurar, TO'suz izolasyon politikasından geçer ve önceki bağlamı geri yükler. Probe'a dar sütun
 --   yetkileri: talepte SELECT + UPDATE (status, updated_at, operator_replied_at), mesajda SELECT + INSERT. Operatör işlemleri
---   `security_events` `platform.support.*` olarak yazılır (tenant + talep kimliği; içerik yok).
+--   `security_events` `platform.support.*` olarak yazılır (görüntüleme, yanıt, durum; tenant + talep kimliği; içerik yok).
 -- * Ekran görüntüsü bu sürümde YOK (sonraki tur; depolama + tarama ayrı karar).
 -- Koşturucu tek transaction içinde çalıştırır.
 
@@ -200,7 +200,17 @@ BEGIN
     IF NEW.status IS DISTINCT FROM OLD.status AND NOT (OLD.status = 'ANSWERED' AND NEW.status = 'OPEN') THEN
       RAISE EXCEPTION 'support_tickets: durum geçişi yetkisiz (% → %)', OLD.status, NEW.status USING ERRCODE = '42501';
     END IF;
+    -- ANSWERED → OPEN yalnız aynı transaction'da yazılmış müşteri yanıtıyla (mesaj created_at = now() tetikleyicide zorlanır).
+    IF NEW.status IS DISTINCT FROM OLD.status AND NOT EXISTS (
+         SELECT 1 FROM public.support_ticket_messages m
+          WHERE m.tenant_id = OLD.tenant_id AND m.ticket_id = OLD.id AND m.author_kind = 'CUSTOMER' AND m.created_at = now()) THEN
+      RAISE EXCEPTION 'support_tickets: yeniden açma yalnız müşteri yanıtıyla' USING ERRCODE = '42501';
+    END IF;
+    -- Okundu damgası yalnız talep sahibinindir (hesap yöneticisi başkasının uyarısını söndüremez); değer sunucu saatidir.
     IF NEW.customer_seen_at IS DISTINCT FROM OLD.customer_seen_at THEN
+      IF OLD.created_by IS DISTINCT FROM v_uid THEN
+        RAISE EXCEPTION 'support_tickets: okundu damgası yalnız talep sahibinindir' USING ERRCODE = '42501';
+      END IF;
       NEW.customer_seen_at := now();
     END IF;
   END IF;
@@ -335,6 +345,7 @@ END
 $fn$;
 
 -- Talep ayrıntısı (tek satır): bağlam bilgisiyle. Bulunamazsa P0002. Tenant kimliği çağırandan alınmaz; talepten bulunur.
+-- Açılış `platform.support.viewed` olarak denetlenir (güvenlik incelemesi MINOR-1).
 CREATE FUNCTION wms_probe.platform_support_get(p_ticket uuid)
 RETURNS TABLE (id uuid, number bigint, tenant_id uuid, tenant_name text, tenant_slug text, subject_kind text, status text,
                created_at timestamptz, updated_at timestamptz, body text, context jsonb, author_name text)
@@ -359,6 +370,10 @@ BEGIN
        WHERE s.tenant_id = r.tid AND s.id = p_ticket;
     IF FOUND THEN
       PERFORM pg_catalog.set_config('app.current_tenant_id', coalesce(v_prev, ''), true);
+      -- Destek erişimi denetimi (I-12): operatörün talep ayrıntısını açması iz bırakır (içerik yok).
+      INSERT INTO public.security_events (user_id, event_type, detail)
+      VALUES (NULLIF(pg_catalog.current_setting('app.current_user_id', true), '')::uuid, 'platform.support.viewed',
+              pg_catalog.jsonb_build_object('tenant_id', r.tid::text, 'ticket_id', p_ticket::text));
       RETURN;
     END IF;
   END LOOP;

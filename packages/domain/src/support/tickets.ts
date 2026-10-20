@@ -2,8 +2,9 @@
 // DB'dedir (RLS): üye yalnız kendi talebini, hesap yöneticisi (TENANT_ADMIN) firmanın bütün taleplerini görür. Hız sınırı (10 dakikada 5
 // talep / 20 yanıt) DB tetikleyicisindedir; aşım `RATE_LIMITED`. Yeni talep aynı transaction'da `support.notify` işini kuyruğa yazar
 // (savepoint: kuyruk yoksa talep yine kaydedilir; asıl kayıt panel rozetidir). Not metni ve bağlam audit'e/loga yazılmaz.
+import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { appendAudit } from "@wms/db";
+import { appendAudit, consumeRateLimit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import type { JobQueue } from "@wms/shared/queue";
 import { runTenantCommand, runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
@@ -16,6 +17,8 @@ export type SupportAuthorKind = "CUSTOMER" | "OPERATOR";
 export const SUPPORT_BODY_MAX = 2000;
 const CONTEXT_FIELD_MAX = { route: 300, app_version: 40, support_code: 80, user_agent: 400 } as const;
 const LIST_LIMIT = 20;
+/** Tenant başına bildirim üst sınırı (güvenlik incelemesi MINOR-2): 10 dakikada en çok 3 WhatsApp; fazlası yalnız panel rozetinde. */
+export const SUPPORT_NOTIFY_LIMIT = { limit: 3, windowSeconds: 600 } as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Params = Omit<TenantAccessParams, "permission" | "recentAuth">;
@@ -155,7 +158,19 @@ export async function createTicket(
         changeSummary: { subject_kind: subject, number },
       });
       let notifyQueued = false;
-      if (deps.queue !== undefined) {
+      // Tenant kovası talep kaydedildikten SONRA tüketilir (reddedilen/yetkisiz deneme başka tenant'ın kovasını tüketemez). Kendi kısa
+      // transaction'ında (platform tablosu, RLS yok); anahtar tenant kimliğinin özeti.
+      const allowed =
+        deps.queue === undefined
+          ? false
+          : (
+              await consumeRateLimit(params.db, {
+                scope: "support.notify",
+                keyHash: createHash("sha256").update(`support.notify:${m.tenantId}`).digest("hex"),
+                ...SUPPORT_NOTIFY_LIMIT,
+              })
+            ).allowed;
+      if (deps.queue !== undefined && allowed) {
         const queue = deps.queue;
         try {
           await tx.transaction((sp) => queue.enqueue(sp, { type: "support.notify", actorUserId: m.userId, payload: { ticketId: r.id, ticketNo: number } }));

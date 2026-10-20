@@ -210,6 +210,76 @@ describe("müşteri tarafı: açma ve görünürlük (RLS)", () => {
     expect((await failure(replyAsCustomer(owner(B), { ticketId: memberTicket.ticketId, body: "x" }))).code).toBe("NOT_FOUND");
   });
 
+  it("ham SQL (inceleme MINOR-5): başkasının üyeliğiyle açma, okundu damgası, durum geçişleri, kapalıya yazma, yetkisiz görünürlük", async () => {
+    // Kendi kullanıcı kimliği + başkasının üyeliği.
+    await asApp(A.tenantId, A.memberUserId, async (q) => {
+      expect(await sqlstate(q("INSERT INTO public.support_tickets (tenant_id, created_by, membership_id, subject_kind, body) VALUES ($1, $2, $3, 'BUG', 'x')", [A.tenantId, A.memberUserId, A.ownerMembershipId]))).toBe("42501");
+    });
+    // Okundu damgası sunucu saatine zorlanır (geçmiş/gelecek değer yazılamaz).
+    await asApp(A.tenantId, A.memberUserId, async (q) => {
+      const r = await q("UPDATE public.support_tickets SET customer_seen_at = '2000-01-01' WHERE id = $1 RETURNING customer_seen_at = now() AS forced", [memberTicket.ticketId]);
+      expect(r.rows[0]?.forced).toBe(true);
+    });
+    // Hesap yöneticisi başkasının okundu damgasını basamaz.
+    await asApp(A.tenantId, A.ownerUserId, async (q) => {
+      expect(await sqlstate(q("UPDATE public.support_tickets SET customer_seen_at = now() WHERE id = $1", [memberTicket.ticketId]))).toBe("42501");
+    });
+    // Uygulama rolü OPEN → ANSWERED / → CLOSED yapamaz; ANSWERED → OPEN yalnız aynı transaction'daki müşteri yanıtıyla.
+    for (const to of ["ANSWERED", "CLOSED"]) {
+      await asApp(A.tenantId, A.memberUserId, async (q) => {
+        expect(await sqlstate(q("UPDATE public.support_tickets SET status = $2 WHERE id = $1", [memberTicket.ticketId, to])), to).toBe("42501");
+      });
+    }
+    const t = await createTicket(owner(B), { subjectKind: "BUG", body: "geçiş denemesi" });
+    await replySupportTicket({ ...op(), ticketId: t.ticketId, body: "yanıt" });
+    await asApp(B.tenantId, B.ownerUserId, async (q) => {
+      expect(await sqlstate(q("UPDATE public.support_tickets SET status = 'OPEN' WHERE id = $1", [t.ticketId]))).toBe("42501");
+    });
+    await asApp(B.tenantId, B.ownerUserId, async (q) => {
+      await q("INSERT INTO public.support_ticket_messages (tenant_id, ticket_id, author_kind, author_user_id, body) VALUES ($1, $2, 'CUSTOMER', $3, 'ek')", [B.tenantId, t.ticketId, B.ownerUserId]);
+      expect((await q("UPDATE public.support_tickets SET status = 'OPEN' WHERE id = $1", [t.ticketId])).rowCount).toBe(1);
+    });
+    // CLOSED → OPEN uygulama rolüyle yok; kapalı talebe ham INSERT 55000.
+    await setSupportTicketStatus({ ...op(), ticketId: t.ticketId, status: "CLOSED" });
+    await asApp(B.tenantId, B.ownerUserId, async (q) => {
+      expect(await sqlstate(q("UPDATE public.support_tickets SET status = 'OPEN' WHERE id = $1", [t.ticketId]))).toBe("42501");
+    });
+    await asApp(B.tenantId, B.ownerUserId, async (q) => {
+      expect(await sqlstate(q("INSERT INTO public.support_ticket_messages (tenant_id, ticket_id, author_kind, author_user_id, body) VALUES ($1, $2, 'CUSTOMER', $3, 'x')", [B.tenantId, t.ticketId, B.ownerUserId]))).toBe("55000");
+    });
+    // ACTIVE olmayan yönetici ve TENANT_ADMIN rolü alınmış üye başkasının talebini görmez.
+    await adm.query("UPDATE public.tenant_memberships SET status = 'REMOVED', removed_at = now() WHERE id = $1", [B.ownerMembershipId]);
+    try {
+      await asApp(B.tenantId, B.ownerUserId, async (q) => {
+        expect((await q("SELECT count(*)::int AS n FROM public.support_tickets WHERE created_by <> $1", [B.ownerUserId])).rows[0]?.n).toBe(0);
+      });
+    } finally {
+      await adm.query("UPDATE public.tenant_memberships SET status = 'ACTIVE', removed_at = NULL WHERE id = $1", [B.ownerMembershipId]);
+    }
+    const bm = await createTicket(member(B), { subjectKind: "OTHER", body: "B üye" });
+    await adm.query("DELETE FROM public.membership_roles WHERE membership_id = $1 AND role_key = 'TENANT_ADMIN'", [B.ownerMembershipId]);
+    await adm.query("INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES ($1, $2, 'WAREHOUSE_MANAGER')", [B.tenantId, B.ownerMembershipId]);
+    try {
+      await asApp(B.tenantId, B.ownerUserId, async (q) => {
+        expect((await q("SELECT count(*)::int AS n FROM public.support_tickets WHERE id = $1", [bm.ticketId])).rows[0]?.n).toBe(0);
+      });
+    } finally {
+      await adm.query("DELETE FROM public.membership_roles WHERE membership_id = $1 AND role_key = 'WAREHOUSE_MANAGER'", [B.ownerMembershipId]);
+      await adm.query("INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES ($1, $2, 'TENANT_ADMIN')", [B.tenantId, B.ownerMembershipId]);
+    }
+  });
+
+  it("bildirim üst sınırı (inceleme MINOR-2): tenant başına 10 dakikada en çok 3 iş; fazlası yalnız panelde", async () => {
+    // B'de şimdiye kadar kuyruklu talep yok (kova boş): ilk üçü kuyruğa yazılır, dördüncüsü yazılmaz; talepler yine kaydedilir.
+    const jobs: Job[] = [];
+    const queue = { enqueue: (_tx: unknown, job: Job) => { jobs.push(job); return Promise.resolve({ jobId: null }); } };
+    const out = [];
+    for (let i = 0; i < 4; i++) out.push(await createTicket(member(B), { subjectKind: "OTHER", body: `üst sınır ${i}` }, { queue }));
+    expect(out.map((r) => r.notifyQueued)).toEqual([true, true, true, false]);
+    expect(jobs.map((j) => j.payload)).toEqual(out.slice(0, 3).map((r) => ({ ticketId: r.ticketId, ticketNo: r.number })));
+    expect((await adm.query("SELECT count(*)::int AS n FROM public.support_tickets WHERE id = ANY($1::uuid[])", [out.map((r) => r.ticketId)])).rows[0]?.n).toBe(4);
+  });
+
   it("doğrulama: konu, boş/uzun metin reddedilir", async () => {
     expect((await failure(createTicket(member(A), { subjectKind: "X" as never, body: "x" }))).code).toBe("VALIDATION_FAILED");
     expect((await failure(createTicket(member(A), { subjectKind: "BUG", body: "   " }))).code).toBe("VALIDATION_FAILED");
@@ -256,7 +326,9 @@ describe("operatör yolu (panel)", () => {
     expect(all.openCount).toBeGreaterThanOrEqual(2);
     expect(await countOpenSupportTickets(op())).toBe(all.openCount);
     const onlyB = await listSupportInbox({ ...op(), tenantId: B.tenantId });
-    expect(onlyB.rows.map((r) => r.id)).toEqual([bTicket.ticketId]);
+    expect(onlyB.rows.map((r) => r.id)).toContain(bTicket.ticketId);
+    expect(onlyB.rows.every((r) => r.tenantId === B.tenantId)).toBe(true);
+    expect(onlyB.rows.some((r) => r.id === memberTicket.ticketId)).toBe(false);
     expect((await listSupportInbox({ ...op(), status: "CLOSED", tenantId: A.tenantId })).rows).toEqual([]);
     expect((await failure(listSupportInbox({ ...op(), status: "NOPE" as never }))).code).toBe("VALIDATION_FAILED");
   });
@@ -305,6 +377,7 @@ describe("operatör yolu (panel)", () => {
       [memberTicket.ticketId],
     );
     expect(ev.rows.map((r) => [r.event_type, r.user_id, r.detail.tenant_id])).toEqual([
+      ["platform.support.viewed", operatorId, A.tenantId],
       ["platform.support.replied", operatorId, A.tenantId],
       ["platform.support.status", operatorId, A.tenantId],
       ["platform.support.status", operatorId, A.tenantId],

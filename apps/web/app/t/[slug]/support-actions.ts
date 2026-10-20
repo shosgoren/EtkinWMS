@@ -101,7 +101,7 @@ export async function replySupportTicketAction(raw: unknown) {
 
 export async function markSupportSeenAction(raw: unknown) {
   return guardedAction({ schema: listSchema }, async (i, ctx) => {
-    await markMyTicketsSeen(access(i.slug, ctx));
+    await markMyTicketsSeen(await writeAccess(i.slug, ctx));
     return { seen: true as const };
   })(raw);
 }

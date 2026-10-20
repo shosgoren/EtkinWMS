@@ -1,7 +1,9 @@
 // `support.notify` (T-967, B-84): yeni destek talebinde operatöre WhatsApp kısa bildirimi (CallMeBot; kullanıcı kararı 20 Ekim, resmi olmayan
 // ücretsiz yol). Metin YALNIZ "Etkin: yeni destek talebi #<no> <panel bağlantısı>": müşteri adı/içeriği yok. `CALLMEBOT_PHONE` ve
-// `CALLMEBOT_APIKEY` yoksa iş sessizce atlanır (asıl kayıt panel rozetidir). Çağrı `deliverExternalOnce` ile en çok bir kez başarıyla yapılır
-// (tekrar teslimde ikinci mesaj yok); hata yeniden deneme/geri çekilme ile kuyruğa döner. Adres (API anahtarı içerir), telefon ve yanıt
+// `CALLMEBOT_APIKEY` yoksa iş sessizce atlanır (asıl kayıt panel rozetidir). `deliverExternalOnce`: başarılı çağrı bir kez kaydedilir ve
+// sonraki teslimler atlanır; CallMeBot'un tekrar anahtarı olmadığından çağrı ile kayıt arasında bağlantı kopması ya da eşzamanlı iki teslim
+// nadiren çift mesaj üretebilir (içerik yalnız numara + bağlantı; kabul edildi). Hata yeniden deneme/geri çekilme ile kuyruğa döner. Tenant
+// başına üst sınır kuyruğa yazarken uygulanır (`SUPPORT_NOTIFY_LIMIT`). Adres (API anahtarı içerir), telefon ve yanıt
 // gövdesi hiçbir loga/hataya yazılmaz (G-09).
 import { deliverExternalOnce } from "@wms/queue-adapter";
 import type { JobHandler } from "@wms/shared/queue";
