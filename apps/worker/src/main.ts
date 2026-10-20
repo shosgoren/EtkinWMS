@@ -20,6 +20,7 @@ import { createActivationDeliverHandler, createTrialWelcomeHandler } from "./job
 import { startWorkerHeartbeat, workerInstanceId, workerVersion } from "./jobs/worker-heartbeat.js";
 import { consistencySingletonKey, createStockConsistencyHandler, startConsistencySchedule } from "./jobs/stock-consistency.js";
 import { createMailer, createSendEmailHandler } from "./jobs/send-email.js";
+import { createSupportNotifyHandler } from "./jobs/support-notify.js";
 import { createJsonLogger, createLifecycle, EXIT_FAILURE, parseShutdownTimeoutMs } from "./lifecycle.js";
 
 const logger = createJsonLogger();
@@ -111,6 +112,9 @@ HANDLERS["stock.document.post"] = createPostStockDocumentHandler({ db, consumeOn
 
 // Tutarlılık denetimi (T-225): salt okur + alarm; `processed_events` aynı transaction'da (ADR-019 §2, §8).
 HANDLERS["stock.consistency.check"] = createStockConsistencyHandler({ consumeOnce: consumeOnce as unknown as ConsumeOnceFn, logger });
+
+// T-967: yeni destek talebi → operatöre WhatsApp kısa bildirimi (CallMeBot). Anahtarlar yoksa iş sessizce atlanır (panel rozeti asıl kayıt).
+HANDLERS["support.notify"] = createSupportNotifyHandler({ env: process.env, logger });
 
 const undecided = JOB_TYPES.filter((t) => HANDLERS[t] === undefined && !DEFERRED_JOB_TYPES.includes(t));
 if (undecided.length > 0) {

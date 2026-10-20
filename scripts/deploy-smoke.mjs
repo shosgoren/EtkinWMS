@@ -196,6 +196,7 @@ export const ALLOWED_MSGS = new Set([
   "stock.count.abandon_incomplete", "stock.count.abandon_failed", "platform.demo_leads.ingested", "platform.demo_leads.failed",
   "activation email sent", "platform.activation.deliver failed", "platform.activation.deliver skipped",
   "welcome email sent", "trial.welcome failed", "trial.welcome skipped",
+  "support.notify sent", "support.notify failed", "support.notify skipped",
   "shutdown completed with errors", "shutdown hook failed", "shutdown timed out", "forced exit", "uncaught exception", "unhandled rejection",
   // Sabit iletiler (parantez/büyük harf içerir; tam eşleşme):
   "BETTER_AUTH_URL not set (warning); invitation.deliver jobs will fail until configured",

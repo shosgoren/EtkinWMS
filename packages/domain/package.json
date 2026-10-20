@@ -38,6 +38,8 @@
     "./stock/jobs": "./src/stock/jobs.ts",
     "./integrations": "./src/integrations/index.ts",
     "./platform/demo-requests": "./src/platform/demo-requests.ts",
+    "./platform/support": "./src/platform/support.ts",
+    "./support/tickets": "./src/support/tickets.ts",
     "./platform/activation": "./src/platform/activation.ts",
     "./platform/charges": "./src/platform/charges.ts",
     "./platform/customers": "./src/platform/customers.ts",

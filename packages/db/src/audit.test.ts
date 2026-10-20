@@ -60,6 +60,7 @@ describe("eylem listesi", () => {
         "party.created", "party.updated", "party.archived", "party.restored", "party.imported",
         "group.created", "group.updated", "group.archived", "group.restored", "member.group_changed",
         "team_join.link_created", "team_join.link_revoked", "team_join.approved", "team_join.rejected",
+        "support.ticket_created", "support.ticket_replied",
       ].sort(),
     );
   });
