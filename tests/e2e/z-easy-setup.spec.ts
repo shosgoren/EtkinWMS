@@ -108,7 +108,7 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
   await expect(page.getByRole("heading", { level: 1, name: "Depo ve raflar" })).toBeVisible();
   const guide = page.getByTestId("setup-guide");
   const fresh = await page
-    .locator('[data-step="warehouse"][data-done="false"]')
+    .locator('li[data-done="false"] > [data-step="warehouse"]')
     .waitFor({ state: "visible", timeout: 8_000 })
     .then(() => true)
     .catch(() => false);
@@ -119,7 +119,7 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     // Yazmayan koşu: rehber boş tenant'ta doğru görünür, büyük düğme formu hazır kodla açar; hiçbir şey kaydedilmez.
     await expect(guide).toBeVisible();
     await noHorizontalOverflow(page, "rehber (boş)");
-    const next = page.getByTestId("setup-next");
+    const next = guide.locator('[data-step="warehouse"]'); // T-971: liste kalıbı kurulum rehberi; şimdiki adım formu açar
     await touchTarget(next, "rehber: büyük düğme");
     await next.click();
     const dialog = page.getByRole("dialog");
@@ -133,11 +133,11 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
   if (fresh) {
     // --- Adım 1: Depo ekle (rehberin tek büyük düğmesi) ---
     await expect(guide).toBeVisible();
-    await expect(page.locator('[data-step="locations"][data-done="false"]')).toBeVisible();
-    await expect(page.locator('[data-step="items"][data-done="false"]')).toBeVisible();
+    await expect(page.locator('li[data-done="false"] > [data-step="locations"]')).toBeVisible();
+    await expect(page.locator('li[data-done="false"] > [data-step="items"]')).toBeVisible();
     await noHorizontalOverflow(page, "rehber (boş)"); // liste sayfası dikey kayabilir; yatay taşma yok
     await shot("guide-empty");
-    const next = page.getByTestId("setup-next");
+    const next = guide.locator('[data-step="warehouse"]'); // T-971: liste kalıbı kurulum rehberi; şimdiki adım formu açar
     await touchTarget(next, "rehber: büyük düğme");
     await next.click();
 

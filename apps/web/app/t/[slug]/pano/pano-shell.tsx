@@ -14,11 +14,9 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
-import { ICON } from "../../../design/bakis-icons.ts";
 import { THEME_COOKIE } from "../../../design/theme.ts";
-import { authPost } from "../../../../lib/auth-client.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
-import { openAppMenu } from "../app-bar.tsx";
+import { HesapDugme, HesapMenu } from "./hesap-menu.tsx";
 import { KabukBar, tone } from "../kabuk/kabuk-bar.tsx";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import { DICON } from "../../../design/destek-icons.ts";
@@ -84,7 +82,6 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
   const [mine, setMine] = useState<readonly string[] | null>(null);
   const [picker, setPicker] = useState<readonly string[] | null>(null);
   const [problem, setProblem] = useState(false);
-  const [signOutFailed, setSignOutFailed] = useState(false);
   const [online, setOnline] = useState(true);
   // Kaynak başlangıç konumu (fx .86, fy .66); kişisel kolaylık olarak tarayıcıda hatırlanır.
   const [pos, setPos] = useState<{ fx: number; fy: number }>({ fx: 0.86, fy: 0.66 });
@@ -148,12 +145,8 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
     });
   }, []);
 
-  const signOut = async (next: string): Promise<void> => {
-    setSignOutFailed(false);
-    const res = await authPost<unknown>("/sign-out", {});
-    if (res.ok) window.location.assign(next);
-    else setSignOutFailed(true);
-  };
+  const closeMenu = useCallback(() => setMenu(false), []);
+
 
   // Kaynak fabDown / fabMove / fabUp: 8 px'ten az oynarsa dokunuş (halka aç/kapa), fazlası sürükleme.
   const fabDown = (e: PointerEvent<HTMLDivElement>): void => {
@@ -199,17 +192,6 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
     ...(fy > 0.5 ? { bottom: `calc(${(100 - fy * 100).toFixed(1)}% - 24px)` } : { top: `calc(${(fy * 100).toFixed(1)}% - 24px)` }),
   };
 
-  const teamLbl = team ? t("team") : t("account");
-  const menuItems: Array<{ k: string; label: string; color: string; d: string; out?: boolean; go: () => void }> = [
-    ...(team ? [] : [{ k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => void signOut("/login") }]),
-    // Uygulama menüsü (tüm ekranlar): eski ana ekrandaki "Menü" ile aynı pencere; saha kişisi diğer ekranlara buradan ulaşır.
-    { k: "menu", label: t("allScreens"), color: "172E42", d: PICON.list, go: () => {
-        setMenu(false);
-        openAppMenu();
-      } },
-    { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: toggleTheme },
-    { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => void signOut("/login") },
-  ];
 
   const closeHelp = useCallback(() => {
     setHelp(null);
@@ -324,22 +306,14 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                       </em>
                     ) : null}
                   </button>
-                  <button
-                    type="button"
-                    className={`tb tb-team${menu ? " on" : ""}`}
-                    style={{ "--i": dz("6C4BD8") } as CSSProperties}
-                    aria-label={team ? t("teamAria") : t("accountAria")}
-                    aria-haspopup="menu"
-                    aria-expanded={menu}
+                  <HesapDugme
+                    team={team}
+                    open={menu}
                     onClick={() => {
                       setMenu((m) => !m);
                       setHaloOpen(false);
                     }}
-                    data-testid="home-actions"
-                  >
-                    <Ico d={PICON.team} size={24} />
-                    <span>{teamLbl}</span>
-                  </button>
+                  />
                   {settingsHref === undefined ? null : (
                     <a href={settingsHref} className="tb tb-gear" style={{ textDecoration: "none", "--i": dz("0E7C7B") } as CSSProperties} aria-label={t("settings")}>
                       <Ico d={PICON.gear} size={24} />
@@ -452,44 +426,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                 </div>
               ) : null}
 
-              {menu ? (
-                <>
-                  <div className="hback" onClick={() => setMenu(false)} />
-                  <div className="halo tmenu" role="menu" aria-label={teamLbl}>
-                    <div className="tmh">
-                      <span className="av" style={{ background: dz(me.color) }}>
-                        {me.ini}
-                      </span>
-                      <span style={{ minWidth: 0 }}>
-                        <b>{me.name}</b>
-                        <small>{me.group}</small>
-                      </span>
-                    </div>
-                    {teamLinks.map((l) => (
-                      <a key={l.k} href={l.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} data-testid={`pano-menu-${l.k}`}>
-                        <i style={{ background: dz(l.color) }}>
-                          <Ico d={l.d} size={20} />
-                        </i>
-                        <span>{l.label}</span>
-                        {l.n !== undefined && l.n > 0 ? <em className="hbn">{l.n}</em> : null}
-                      </a>
-                    ))}
-                    {menuItems.map((m) => (
-                      <button key={m.k} type="button" className={`hb${m.out === true ? " out" : ""}`} role="menuitem" onClick={m.go} data-testid={m.k === "menu" ? "app-bar-menu" : `pano-menu-${m.k}`} aria-haspopup={m.k === "menu" ? "dialog" : undefined}>
-                        <i style={{ background: dz(m.color) }}>
-                          <Ico d={m.d} size={20} />
-                        </i>
-                        <span>{m.label}</span>
-                      </button>
-                    ))}
-                    {signOutFailed ? (
-                      <p role="alert" style={{ margin: 0, padding: "4px 12px", color: dz("F4C542"), fontWeight: 700, fontSize: 13 }}>
-                        {t("signOutFailed")}
-                      </p>
-                    ) : null}
-                  </div>
-                </>
-              ) : null}
+              {menu ? <HesapMenu team={team} me={me} links={teamLinks} dark={dark} onToggleTheme={toggleTheme} onClose={closeMenu} /> : null}
             </div>
           </div>
         </div>

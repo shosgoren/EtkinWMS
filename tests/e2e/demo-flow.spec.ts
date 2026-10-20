@@ -207,7 +207,7 @@ test.describe("demo akışı", () => {
     await expect(page.locator("td, li span").filter({ hasText: "Üye davet edildi" })).toHaveCount(0);
     await expectNoHorizontalOverflow(page, "denetim kaydı");
 
-    // Çıkış → /login; korumalı sayfa /login'e döner.
+    // Çıkış → /login; korumalı sayfa /login'e döner. T-971: kalıp ekranında (denetim kaydı) menü sağ üstteki Hesap düğmesinden açılır.
     await openMenuIfPhone(page);
     await page.getByRole("button", { name: "Çıkış yap" }).click();
     await expect(page).toHaveURL(/\/login$/);

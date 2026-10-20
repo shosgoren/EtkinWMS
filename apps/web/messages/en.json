@@ -417,6 +417,11 @@
       "save": "Save warehouses",
       "edit": "Edit warehouses",
       "disabled": "Warehouse restriction is off in this environment: the choice is saved and applies once it is turned on."
+    },
+    "k": {
+      "inviteShort": "INVITE",
+      "count": "{n} MEMBERS",
+      "pendingCount": "{n} INVITES"
     }
   },
   "errors": {
@@ -1061,7 +1066,15 @@
         "enrolled": "Shared device registered",
         "revoked": "Field device revoked"
       }
-    }
+    },
+    "quick": "Quick filter",
+    "filterLabel": "Date and action filter",
+    "quickAll": "All",
+    "quickToday": "Today",
+    "quickWeek": "Last 7 days",
+    "clear": "Clear filter",
+    "listTitle": "RECORDS",
+    "exportShort": "CSV"
   },
   "settings": {
     "title": "Workspace settings",
@@ -1562,6 +1575,35 @@
     "codeEdit": {
       "button": "Change code",
       "for": "Change code for {name}"
+    },
+    "k": {
+      "add": "ADD WAREHOUSE",
+      "count": "{n} WAREHOUSES",
+      "countMore": "{n}+ WAREHOUSES",
+      "hint": "TAP → LOCATIONS OPEN",
+      "cardAria": "{name}, {code}, {count}, {state} · Open locations",
+      "locSub": "LOCATIONS",
+      "setupTitle": "Setup guide",
+      "setupSub": "{step} · {n}/3",
+      "setupWarehouse": "ADD A WAREHOUSE FIRST",
+      "setupLocations": "NEXT: RACKS",
+      "setupItems": "NEXT: FIRST ITEM",
+      "stepWarehouse": "Add warehouse",
+      "stepWarehouseSub": "NAME IS ENOUGH · ADDRESS LATER",
+      "stepWarehouseCta": "Add warehouse",
+      "stepLocations": "Create racks",
+      "stepLocationsSub": "ENTER ZONE · RACK · BIN COUNTS",
+      "stepLocationsCta": "Add racks",
+      "stepItems": "Add first item",
+      "stepItemsSub": "CODE AND UNIT COME READY",
+      "stepItemsCta": "Add item",
+      "locked": "You do not have permission to view warehouses.",
+      "lockedAction": "Ask your manager; this screen opens once access is granted.",
+      "addLoc": "ADD LOCATION",
+      "hero": "Warehouse details",
+      "quick": "Quick actions",
+      "treeSub": "{n} ACTIVE LOCATIONS",
+      "next": "Next step: {step}"
     }
   },
   "field": {
@@ -1617,7 +1659,17 @@
       "charsetAction": "Fix the item code or barcode to use ASCII characters.",
       "tooLong": "The barcode does not fit the label width.",
       "tooLongAction": "Shorten the code or barcode."
-    }
+    },
+    "printShort": "PRINT",
+    "settingsTitle": "LABEL AND PAPER",
+    "paper": "Paper",
+    "paperA4": "A4 · office printer",
+    "paperLabel": "Roll · label printer",
+    "width": "Width (mm)",
+    "height": "Height (mm)",
+    "paperHint": "Choose A4 for office printers such as Epson. In the print dialog keep scale at 100% and headers/footers off. The label size must fit the printer's paper.",
+    "invalid": "The size is invalid or does not fit the paper. For A4 choose at most 190 × 277 mm.",
+    "customHint": "With a custom size the content is scaled to fit. Check barcode readability with a test print; ZPL output supports 100 × 50 mm only."
   },
   "easySetup": {
     "guide": {
@@ -1818,7 +1870,12 @@
       "tenant_closingAction": "Contact your manager.",
       "internal": "Something went wrong.",
       "internalAction": "Try again shortly; if it continues, send the error code to support."
-    }
+    },
+    "clear": "Clear filter",
+    "count": "{n} TASKS",
+    "hint": "Assign or cancel",
+    "qtySub": "quantity",
+    "paging": "Pages"
   },
   "receiving": {
     "title": "Expected deliveries",
@@ -3362,7 +3419,11 @@
     "stPending": "CODE PENDING",
     "newCode": "NEW CODE",
     "newCodeAria": "Create a new code for {name}",
-    "errWarehouse": "Choose the warehouse this person will work in (or \"All warehouses\")."
+    "errWarehouse": "Choose the warehouse this person will work in (or \"All warehouses\").",
+    "k": {
+      "addShort": "ADD",
+      "person": "PERSON"
+    }
   },
   "fieldLogin": {
     "title": "Field sign-in",
@@ -3926,7 +3987,22 @@
       "save": "Save and leave",
       "leave": "Leave without saving",
       "stay": "Cancel, stay here"
-    }
+    },
+    "saved": "Account card saved.",
+    "archivedDone": "Account card archived.",
+    "restoredDone": "Account card restored from archive.",
+    "saveShort": "SAVE",
+    "readOnlySub": "Changing account cards needs the settings management permission. Ask your manager.",
+    "gIdentity": "Identity",
+    "gIdentitySub": "Code, title and type",
+    "gContact": "Tax and contact",
+    "gContactSub": "Optional",
+    "searchLabel": "Search accounts",
+    "filter": "Filter",
+    "chipActive": "Active",
+    "chipArchived": "Archived",
+    "clear": "Clear filter",
+    "count": "{n} accounts"
   },
   "gruplar": {
     "title": "Permission groups",

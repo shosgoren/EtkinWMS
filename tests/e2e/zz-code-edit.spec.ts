@@ -128,7 +128,7 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
     // --- Lokasyon: iki raf; ikincisini birincinin koduna çevirmek sunucuda reddedilir ---
     await page.goto(whUrl);
     for (const [code, name] of [[locA, "KE Raf A"], [locB, "KE Raf B"]] as const) {
-      await page.getByRole("button", { name: "Lokasyon ekle" }).first().click();
+      await page.getByRole("button", { name: "Lokasyon ekle", exact: true }).click(); // T-971: kök ekleme alt çubukta; satırlarda "Alt lokasyon ekle"
       const d = page.getByRole("dialog");
       await expect(d.locator('input[name="code"]')).not.toHaveValue("");
       await d.locator('input[name="name"]').fill(name);

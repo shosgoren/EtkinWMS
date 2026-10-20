@@ -1,16 +1,19 @@
 "use client";
-// T-429 (Ekip.dc.html "Onay bekliyor" + katılma QR'ı; kabuk Giris.dc.html `v.mgr` bandı + `v.dev` ile aynı sınıflar): solda bekleyen katılma
-// talepleri (`.shd` + `.rows`; satırda ONAYLA / REDDET), sağda katılma QR'ı kartı (`.kcard`: 7 gün, yenile / kapat) + "Onaysız kimse giremez"
-// bandı. Onay: kişinin telefonunda görünen 6 haneli kodu yaz + rol (Toplayıcı / Sayımcı). QR adresi yalnız bu bileşenin belleğinde (yenile
-// basılınca üretilir; eskisi o anda geçersiz). Bekleyen talepler 5 sn'de bir yenilenir.
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+// Ekibe katılma, yönetici tarafı (T-429, Ekip.dc.html "Onay bekliyor" + katılma QR'ı; T-971 LİSTE kalıbı, KalipListe.dc.html): bekleyen
+// katılma talepleri `.ulist` kartları (REDDET / ONAYLA; ONAYLA kartı açar: kişinin telefonunda görünen 6 haneli kod + rol Toplayıcı /
+// Sayımcı), PIN bekleyen onaylılar (İPTAL ET), katılma QR'ı kartı (7 gün; KAPAT / YAZDIR) + "Onaysız kimse giremez" notu. Ana işlem ortak
+// alt çubukta QR OLUŞTUR / YENİLE (demo alanında kapalı). Güvenlik: QR adresi yalnız bu bileşenin belleğinde (yenile basılınca üretilir;
+// eskisi o anda geçersiz); doğrulama kodu sayfaya gelmez, yönetici yazar. Bekleyen talepler 5 sn'de bir yenilenir.
+// Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
+import { useEffect, useState, type CSSProperties } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { create as createQr } from "qrcode";
-import { DzRoot, useDz } from "../../../../design/dz-root.tsx";
-import { C, dz } from "../../../../design/giris-tokens.ts";
-import { GICON } from "../../../../design/giris-icons.ts";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
+import { kdz } from "../../kalip/tokens.ts";
 import { approveJoinAction, createJoinLinkAction, rejectJoinAction, revokeJoinLinkAction } from "../actions.ts";
+import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
 
 export interface JoinPending {
   readonly id: string;
@@ -21,38 +24,6 @@ export interface JoinPending {
   readonly wrongTries: number;
 }
 
-function Ico({ d, size, sw, style }: { d: string; size: number; sw?: number; style?: CSSProperties }) {
-  return (
-    <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={sw === undefined ? style : { strokeWidth: sw, ...style }}>
-      <path d={d} />
-    </svg>
-  );
-}
-
-function Qr({ value, label }: { value: string; label: string }) {
-  const qr = useMemo(() => {
-    try {
-      const m = createQr(value, { errorCorrectionLevel: "M" }).modules;
-      const cells: { x: number; y: number }[] = [];
-      for (let y = 0; y < m.size; y++) for (let x = 0; x < m.size; x++) if (m.get(y, x)) cells.push({ x, y });
-      return { size: m.size, cells };
-    } catch {
-      return null;
-    }
-  }, [value]);
-  if (qr === null) return null;
-  return (
-    <div className="qr qrbig" role="img" aria-label={label} data-testid="join-qr">
-      <svg viewBox={`0 0 ${qr.size} ${qr.size}`} aria-hidden="true" shapeRendering="crispEdges">
-        {qr.cells.map((q) => (
-          <rect key={`${q.x}-${q.y}`} x={q.x} y={q.y} width="1" height="1" fill={dz("172E42")} />
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-type Err = { readonly text: string; readonly reauth: boolean } | null;
 export interface JoinApproved {
   readonly id: string;
   readonly name: string;
@@ -60,319 +31,12 @@ export interface JoinApproved {
   readonly decidedAt: string;
 }
 
-function View({ slug, tenantName, isDemo, link, pending, approved }: { slug: string; tenantName: string; isDemo: boolean; link: { readonly expiresAt: string } | null; pending: readonly JoinPending[]; approved: readonly JoinApproved[] }) {
-  const t = useTranslations("teamJoin");
-  const format = useFormatter();
-  const { toggleTheme } = useDz();
-  const router = useRouter();
-  const [url, setUrl] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(link?.expiresAt ?? null);
-  const [open, setOpen] = useState<string | null>(null);
-  const [code, setCode] = useState("");
-  const [role, setRole] = useState<"PICKER" | "COUNTER">("PICKER");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<Err>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const returnTo = `/t/${slug}/members/join`;
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(Date.now());
-      router.refresh();
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [router]);
-
-  const fail = (detail: string | undefined, code_?: string): Err =>
-    detail === "RECENT_AUTH_REQUIRED"
-      ? { text: t("errReauth"), reauth: true }
-      : detail === "DEMO"
-        ? { text: t("errDemo"), reauth: false }
-        : detail === "PLAN_LIMIT"
-          ? { text: t("errPlan"), reauth: false }
-          : code_ === "VERSION_CONFLICT"
-            ? { text: t("errGone"), reauth: false }
-            : { text: t("errServer"), reauth: false };
-
-  async function newLink(): Promise<void> {
-    setBusy(true);
-    setErr(null);
-    const r = await createJoinLinkAction({ slug });
-    setBusy(false);
-    if (!r.ok) {
-      setErr(fail(r.error.detail, r.error.code));
-      return;
-    }
-    setUrl(r.data.url);
-    setExpiresAt(r.data.expiresAt);
-  }
-
-  async function closeLink(): Promise<void> {
-    setBusy(true);
-    const r = await revokeJoinLinkAction({ slug });
-    setBusy(false);
-    if (!r.ok) {
-      setErr(fail(r.error.detail, r.error.code));
-      return;
-    }
-    setUrl(null);
-    setExpiresAt(null);
-    setNotice(t("linkClosed"));
-  }
-
-  async function approve(id: string): Promise<void> {
-    setBusy(true);
-    setErr(null);
-    const r = await approveJoinAction({ slug, requestId: id, code, roleKey: role });
-    setBusy(false);
-    if (!r.ok) {
-      setErr(fail(r.error.detail, r.error.code));
-      return;
-    }
-    if (!r.data.ok) {
-      setErr({ text: r.data.issue === "CODE_WRONG" ? t("errCode") : t("errGone"), reauth: false });
-      setCode("");
-      router.refresh();
-      return;
-    }
-    setOpen(null);
-    setCode("");
-    setNotice(t("approved", { username: r.data.username }));
-    router.refresh();
-  }
-
-  async function reject(id: string): Promise<void> {
-    setBusy(true);
-    const r = await rejectJoinAction({ slug, requestId: id });
-    setBusy(false);
-    if (!r.ok) {
-      setErr(fail(r.error.detail, r.error.code));
-      return;
-    }
-    setOpen(null);
-    setNotice(t("rejected"));
-    router.refresh();
-  }
-
-  const errLine =
-    err !== null ? (
-      <span className="hint bad" role="alert">
-        <Ico d={GICON.warn} size={16} />
-        {err.text}
-        {err.reauth ? (
-          <a href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`} style={{ textDecoration: "underline", marginLeft: "6px" }}>
-            {t("reauthLink")}
-          </a>
-        ) : null}
-      </span>
-    ) : null;
-
-  return (
-    <div className="mp" style={{ background: C.bg, color: C.fg }}>
-      <div className="band" style={{ background: dz("172E42") }}>
-        <a className="wb" href={`/t/${slug}/members`} aria-label={t("back")}>
-          <Ico d={GICON.back} size={26} sw={3} />
-        </a>
-        <div className="band-t">
-          <b className="band-h">{t("bandH")}</b>
-          <span className="band-s">{t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}</span>
-        </div>
-        <button type="button" className="wb" onClick={toggleTheme} aria-label={t("theme")}>
-          <Ico d={GICON.theme} size={22} />
-        </button>
-      </div>
-      <div className="lscroll wide">
-        <div className="lin">
-          <div className="mgrid">
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div className="shd">
-                <b>{t("listTitle")}</b>
-                <span>{t("listCount", { n: pending.length })}</span>
-              </div>
-              {notice !== null ? (
-                <span className="hint ok" role="status">
-                  <Ico d={GICON.check} size={16} />
-                  {notice}
-                </span>
-              ) : null}
-              {open === null ? errLine : null}
-              {pending.length === 0 ? (
-                <p className="ls" style={{ margin: 0 }} data-testid="join-empty">
-                  {t("empty")}
-                </p>
-              ) : null}
-              <div className="rows">
-                {pending.map((p) => {
-                  const when = format.relativeTime(new Date(p.createdAt), now).toLocaleUpperCase("tr-TR");
-                  const isOpen = open === p.id;
-                  return (
-                    <div key={p.id} className="row" style={{ background: C.surface, cursor: "default", flexWrap: "wrap" }} data-testid="join-row">
-                      <span className="av" style={{ background: C.chip, color: C.fg }}>
-                        <Ico d={GICON.phone} size={24} />
-                      </span>
-                      <span className="rt">
-                        <b>{p.name}</b>
-                        <span>{`@${p.username} · ${p.deviceHint ?? t("phone")} · ${when}`}</span>
-                      </span>
-                      {!isOpen ? (
-                        <div className="rbtns">
-                          <button type="button" className="sbtn" style={{ background: C.chip, color: C.fg }} onClick={() => void reject(p.id)} disabled={busy || isDemo} aria-label={t("rejectAria", { name: p.name })}>
-                            <Ico d={GICON.close} size={20} sw={2.8} />
-                            <span className="tx">{t("reject")}</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="sbtn"
-                            style={{ background: dz("17804F"), color: dz("FFFFFF") }}
-                            onClick={() => {
-                              setOpen(p.id);
-                              setCode("");
-                              setErr(null);
-                            }}
-                            disabled={busy || isDemo}
-                            aria-label={t("approveAria", { name: p.name })}
-                            data-testid="join-open"
-                          >
-                            <Ico d={GICON.check} size={20} sw={2.8} />
-                            <span className="tx">{t("approve")}</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
-                          <div className="fl" style={{ width: "100%", textAlign: "left" }}>
-                            <label htmlFor={`jc-${p.id}`}>{t("codeLabel")}</label>
-                            <div className="inp" style={{ background: C.chip }}>
-                              <input
-                                id={`jc-${p.id}`}
-                                type="text"
-                                inputMode="numeric"
-                                autoComplete="off"
-                                maxLength={6}
-                                placeholder="000000"
-                                value={code}
-                                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                                style={{ fontFamily: "var(--font-plex-mono), monospace", fontSize: "22px", letterSpacing: ".3em", textAlign: "center" }}
-                                data-testid="join-code-input"
-                              />
-                            </div>
-                            <span className="hint">{p.wrongTries > 0 ? t("codeTries", { n: 3 - p.wrongTries }) : t("codeHint")}</span>
-                          </div>
-                          <div className="rbtns" role="radiogroup" aria-label={t("roleLabel")}>
-                            {(["PICKER", "COUNTER"] as const).map((r) => (
-                              <button
-                                key={r}
-                                type="button"
-                                role="radio"
-                                aria-checked={role === r}
-                                className="sbtn"
-                                style={role === r ? { background: dz("172E42"), color: dz("FFFFFF") } : { background: C.chip, color: C.fg }}
-                                onClick={() => setRole(r)}
-                                data-role={r}
-                              >
-                                <Ico d={r === "PICKER" ? GICON.cikis : GICON.sayim} size={20} />
-                                <span className="tx">{t(`role.${r}`)}</span>
-                              </button>
-                            ))}
-                          </div>
-                          {errLine}
-                          <div className="act" style={{ position: "static", padding: 0, boxShadow: "none", width: "100%" }}>
-                            <button type="button" className="big ghost" style={{ background: C.chip, color: C.fg }} onClick={() => setOpen(null)} disabled={busy}>
-                              {t("cancel")}
-                            </button>
-                            <button
-                              type="button"
-                              className="big"
-                              style={{ background: dz("17804F"), color: dz("FFFFFF") }}
-                              onClick={() => void approve(p.id)}
-                              disabled={busy || code.length !== 6}
-                              data-testid="join-approve"
-                            >
-                              <Ico d={GICON.check} size={24} sw={3} />
-                              {t("approve")}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {approved.length > 0 ? (
-                <>
-                  <div className="shd">
-                    <b>{t("approvedTitle")}</b>
-                    <span>{t("listCount", { n: approved.length })}</span>
-                  </div>
-                  <div className="rows">
-                    {approved.map((a) => (
-                      <div key={a.id} className="row" style={{ background: C.surface, cursor: "default" }} data-testid="join-approved-row">
-                        <span className="av" style={{ background: C.chip, color: C.fg }}>
-                          <Ico d={GICON.clock} size={24} />
-                        </span>
-                        <span className="rt">
-                          <b>{a.name}</b>
-                          <span>{`@${a.username} · ${t("approvedHint")}`}</span>
-                        </span>
-                        <div className="rbtns">
-                          <button type="button" className="sbtn" style={{ background: dz("C62828"), color: dz("FFFFFF") }} onClick={() => void reject(a.id)} disabled={busy || isDemo} aria-label={t("cancelApprovedAria", { name: a.name })}>
-                            <Ico d={GICON.close} size={20} sw={2.8} />
-                            <span className="tx">{t("cancelApproved")}</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : null}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div className="kcard" style={{ background: C.surface }}>
-                <span className="kick">{t("qrKick")}</span>
-                {url !== null ? <Qr value={url} label={t("qrLabel")} /> : null}
-                {expiresAt !== null ? (
-                  <span className="timer" data-testid="join-expires">
-                    {t("validUntil", { when: format.dateTime(new Date(expiresAt), { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) })}
-                  </span>
-                ) : null}
-                <p className="ls" style={{ margin: 0 }}>
-                  {isDemo ? t("demoBody") : url !== null ? t("qrBody") : expiresAt !== null ? t("qrHidden") : t("qrNone")}
-                </p>
-                {open === null && url === null ? errLine : null}
-                {!isDemo ? (
-                  <div className="act" style={{ position: "static", padding: 0, boxShadow: "none", width: "100%" }}>
-                    {expiresAt !== null ? (
-                      <button type="button" className="big ghost" style={{ background: C.chip, color: C.fg }} onClick={() => void closeLink()} disabled={busy} data-testid="join-close">
-                        {t("close")}
-                      </button>
-                    ) : null}
-                    <button type="button" className="big" style={{ background: dz("172E42"), color: dz("FFFFFF") }} onClick={() => void newLink()} disabled={busy} data-testid="join-new">
-                      <Ico d={GICON.renew} size={22} sw={2.6} />
-                      {expiresAt !== null ? t("renew") : t("create")}
-                    </button>
-                  </div>
-                ) : null}
-                {url !== null ? (
-                  <button type="button" className="big ghost" style={{ background: C.chip, color: C.fg, width: "100%" }} onClick={() => window.print()}>
-                    <Ico d={GICON.print} size={22} />
-                    {t("print")}
-                  </button>
-                ) : null}
-              </div>
-              <div className="ban" style={{ background: C.chip }}>
-                <Ico d={GICON.lock} size={22} />
-                <span>
-                  <b>{t("banTitle")}</b>
-                  {t("banBody")}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+const c = (hex: string): string => kdz("dzl", hex);
+const CARD: CSSProperties = { display: "flex", flexDirection: "column", alignItems: "stretch", gap: 10, cursor: "default", transform: "none" };
+const HEAD: CSSProperties = { display: "grid", gridTemplateColumns: "auto minmax(0,1fr)", alignItems: "center", gap: 12 };
+const ROW: CSSProperties = { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 };
+const LBL: CSSProperties = { display: "flex", flexDirection: "column", gap: 6, font: "800 10.5px/1.2 var(--font-bricolage), sans-serif", letterSpacing: ".08em" };
+const HINT: CSSProperties = { margin: 0, fontSize: 12.5, opacity: 0.75 };
 
 export function JoinView({
   dark,
@@ -391,9 +55,275 @@ export function JoinView({
   pending: readonly JoinPending[];
   approved: readonly JoinApproved[];
 }) {
+  const t = useTranslations("teamJoin");
+  const format = useFormatter();
+  const router = useRouter();
+  const [url, setUrl] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(link?.expiresAt ?? null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [role, setRole] = useState<"PICKER" | "COUNTER">("PICKER");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<ErrState>(null);
+  const { say, node: toast } = useKalipToast("liste");
+  const returnTo = `/t/${slug}/members/join`;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      router.refresh();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [router]);
+
+  const fail = (detail: string | undefined, code_?: string): ErrState =>
+    detail === "RECENT_AUTH_REQUIRED"
+      ? { text: t("errReauth"), reauth: true }
+      : detail === "DEMO"
+        ? { text: t("errDemo"), reauth: false }
+        : detail === "PLAN_LIMIT"
+          ? { text: t("errPlan"), reauth: false }
+          : code_ === "VERSION_CONFLICT"
+            ? { text: t("errGone"), reauth: false }
+            : { text: t("errServer"), reauth: false };
+  const notify = (text: string): void => {
+    tone("ok");
+    say("ok", text);
+  };
+
+  async function newLink(): Promise<void> {
+    setBusy(true);
+    setErr(null);
+    const r = await createJoinLinkAction({ slug });
+    setBusy(false);
+    if (!r.ok) {
+      tone("err");
+      setErr(fail(r.error.detail, r.error.code));
+      return;
+    }
+    tone("ok");
+    setUrl(r.data.url);
+    setExpiresAt(r.data.expiresAt);
+  }
+
+  async function closeLink(): Promise<void> {
+    setBusy(true);
+    const r = await revokeJoinLinkAction({ slug });
+    setBusy(false);
+    if (!r.ok) {
+      tone("err");
+      setErr(fail(r.error.detail, r.error.code));
+      return;
+    }
+    setUrl(null);
+    setExpiresAt(null);
+    notify(t("linkClosed"));
+  }
+
+  async function approve(id: string): Promise<void> {
+    setBusy(true);
+    setErr(null);
+    const r = await approveJoinAction({ slug, requestId: id, code, roleKey: role });
+    setBusy(false);
+    if (!r.ok) {
+      tone("err");
+      setErr(fail(r.error.detail, r.error.code));
+      return;
+    }
+    if (!r.data.ok) {
+      tone("err");
+      setErr({ text: r.data.issue === "CODE_WRONG" ? t("errCode") : t("errGone"), reauth: false });
+      setCode("");
+      router.refresh();
+      return;
+    }
+    setOpen(null);
+    setCode("");
+    notify(t("approved", { username: r.data.username }));
+    router.refresh();
+  }
+
+  async function reject(id: string): Promise<void> {
+    setBusy(true);
+    const r = await rejectJoinAction({ slug, requestId: id });
+    setBusy(false);
+    if (!r.ok) {
+      tone("err");
+      setErr(fail(r.error.detail, r.error.code));
+      return;
+    }
+    setOpen(null);
+    notify(t("rejected"));
+    router.refresh();
+  }
+
+  const errLine = <ErrLine err={err} returnTo={returnTo} reauthLabel={t("reauthLink")} scope="dzl" />;
+
   return (
-    <DzRoot dark={dark} scope="dzg" testId="team-join">
-      <View slug={slug} tenantName={tenantName} isDemo={isDemo} link={link} pending={pending} approved={approved} />
-    </DzRoot>
+    <KalipEkran
+      kind="liste"
+      dark={dark}
+      title={t("title")}
+      subtitle={t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}
+      icon={{ d: LICON.people, color: "6C4BD8" }}
+      testId="team-join"
+      bar={{
+        back: { href: `/t/${slug}/members`, aria: t("back") },
+        main: {
+          label: expiresAt !== null ? t("renew") : t("create"),
+          aria: t("qrKick"),
+          d: LICON.plus,
+          disabled: isDemo || busy,
+          onClick: () => void newLink(),
+          testId: "join-new",
+        },
+      }}
+      overlays={toast}
+    >
+      <KalipBaslik title={t("listTitle")} hint={t("listCount", { n: pending.length })} />
+      {open === null ? errLine : null}
+      {pending.length === 0 ? (
+        <KalipBos title={t("empty")} iconD={LICON.people} testId="join-empty" />
+      ) : (
+        <KalipKartListe label={t("listTitle")}>
+          {pending.map((p, i) => {
+            const when = format.relativeTime(new Date(p.createdAt), now).toLocaleUpperCase("tr-TR");
+            const isOpen = open === p.id;
+            return (
+              <div key={p.id} role="listitem" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }} data-testid="join-row">
+                <div style={HEAD}>
+                  <span className="uic" style={{ background: c("E56A00") }}>
+                    <Ico d={LICON.people} size={26} />
+                  </span>
+                  <span className="ut">
+                    <b>{p.name}</b>
+                    <small className="mono">{`@${p.username} · ${p.deviceHint ?? t("phone")} · ${when}`}</small>
+                  </span>
+                </div>
+                {!isOpen ? (
+                  <div style={ROW}>
+                    <Btn kind="soft" scope="dzl" d={LICON.close} onClick={() => void reject(p.id)} disabled={busy || isDemo} aria-label={t("rejectAria", { name: p.name })}>
+                      {t("reject")}
+                    </Btn>
+                    <Btn
+                      kind="ok"
+                      scope="dzl"
+                      d={LICON.check}
+                      onClick={() => {
+                        tone("tap");
+                        setOpen(p.id);
+                        setCode("");
+                        setErr(null);
+                      }}
+                      disabled={busy || isDemo}
+                      aria-label={t("approveAria", { name: p.name })}
+                      data-testid="join-open"
+                    >
+                      {t("approve")}
+                    </Btn>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <label style={LBL}>
+                      {t("codeLabel")}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                        style={{ minHeight: 56, borderRadius: 14, border: `2px solid ${c("C9D6E0")}`, background: c("FFFFFF"), color: c("172E42"), fontFamily: "var(--font-plex-mono), monospace", fontSize: 22, letterSpacing: ".3em", textAlign: "center" }}
+                        data-testid="join-code-input"
+                      />
+                    </label>
+                    <p style={HINT}>{p.wrongTries > 0 ? t("codeTries", { n: 3 - p.wrongTries }) : t("codeHint")}</p>
+                    <div style={ROW} role="radiogroup" aria-label={t("roleLabel")}>
+                      {(["PICKER", "COUNTER"] as const).map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          role="radio"
+                          aria-checked={role === r}
+                          className={`fch${role === r ? " on" : ""}`}
+                          onClick={() => setRole(r)}
+                          data-role={r}
+                        >
+                          <i style={{ background: c(r === "PICKER" ? "B85A14" : "2F5DA8") }}>
+                            <Ico d={r === "PICKER" ? LICON.moveOut : LICON.clip} size={18} />
+                          </i>
+                          {t(`role.${r}`)}
+                        </button>
+                      ))}
+                    </div>
+                    {errLine}
+                    <div style={ROW}>
+                      <Btn kind="soft" scope="dzl" onClick={() => setOpen(null)} disabled={busy}>
+                        {t("cancel")}
+                      </Btn>
+                      <Btn kind="ok" scope="dzl" d={LICON.check} onClick={() => void approve(p.id)} disabled={busy || code.length !== 6} data-testid="join-approve">
+                        {t("approve")}
+                      </Btn>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </KalipKartListe>
+      )}
+
+      {approved.length > 0 ? (
+        <>
+          <KalipBaslik title={t("approvedTitle")} hint={t("listCount", { n: approved.length })} />
+          <KalipKartListe label={t("approvedTitle")}>
+            {approved.map((a, i) => (
+              <div key={a.id} role="listitem" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }} data-testid="join-approved-row">
+                <div style={HEAD}>
+                  <span className="uic" style={{ background: c("2F7D5B") }}>
+                    <Ico d={LICON.clock} size={26} />
+                  </span>
+                  <span className="ut">
+                    <b>{a.name}</b>
+                    <small className="mono">{`@${a.username} · ${t("approvedHint")}`}</small>
+                  </span>
+                </div>
+                <div>
+                  <Btn kind="danger" scope="dzl" d={LICON.close} onClick={() => void reject(a.id)} disabled={busy || isDemo} aria-label={t("cancelApprovedAria", { name: a.name })}>
+                    {t("cancelApproved")}
+                  </Btn>
+                </div>
+              </div>
+            ))}
+          </KalipKartListe>
+        </>
+      ) : null}
+
+      <section className="setup" aria-label={t("qrKick")} style={{ alignItems: "center", textAlign: "center", flex: "none" }} data-testid="join-qr-card">
+        <b style={{ font: "800 13px/1 var(--font-bricolage), sans-serif", letterSpacing: ".1em" }}>{t("qrKick")}</b>
+        {url !== null ? <QrCode value={url} label={t("qrLabel")} scope="dzl" size={240} testId="join-qr" /> : null}
+        {expiresAt !== null ? (
+          <span data-testid="join-expires" style={{ font: "800 15px/1 var(--font-bricolage), sans-serif", letterSpacing: ".06em" }}>
+            {t("validUntil", { when: format.dateTime(new Date(expiresAt), { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) })}
+          </span>
+        ) : null}
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.4, opacity: 0.85, maxWidth: 520 }}>{isDemo ? t("demoBody") : url !== null ? t("qrBody") : expiresAt !== null ? t("qrHidden") : t("qrNone")}</p>
+        <div style={{ ...ROW, justifyContent: "center" }}>
+          {!isDemo && expiresAt !== null ? (
+            <Btn kind="soft" scope="dzl" d={LICON.close} onClick={() => void closeLink()} disabled={busy} data-testid="join-close">
+              {t("close")}
+            </Btn>
+          ) : null}
+          {url !== null ? (
+            <Btn kind="n" scope="dzl" d={LICON.printer} onClick={() => window.print()}>
+              {t("print")}
+            </Btn>
+          ) : null}
+        </div>
+        <Note d={LICON.lock} title={t("banTitle")} body={t("banBody")} />
+      </section>
+    </KalipEkran>
   );
 }

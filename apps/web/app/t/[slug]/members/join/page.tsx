@@ -9,7 +9,7 @@ import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../../design/theme.ts";
 import { JoinView } from "./view.tsx";
 
-// Ekibe katılma, yönetici tarafı (T-429, Ekip.dc.html "Onay bekliyor"; görünüm Giris.dc.html `v.mgr` bandı + `v.dev` ile aynı kabuk).
+// Ekibe katılma, yönetici tarafı (T-429, Ekip.dc.html "Onay bekliyor"; T-971 liste kalıbı, view.tsx).
 // Yalnız `users.manage`. Doğrulama kodu ve belirteç özetleri bu sayfaya hiç gelmez (uygulama rolü okuyamaz).
 export const dynamic = "force-dynamic";
 
@@ -40,14 +40,16 @@ export default async function JoinRequestsPage({ params }: { params: Promise<{ s
   const tenantName = summary.memberships.find((m) => m.slug === slug)?.tenantName ?? slug;
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
-    <JoinView
-      dark={dark}
-      slug={slug}
-      tenantName={tenantName}
-      isDemo={overview.isDemo}
-      link={overview.link === null ? null : { expiresAt: overview.link.expiresAt.toISOString() }}
-      approved={overview.approvedWaiting.map((a) => ({ id: a.id, name: a.name, username: a.username, decidedAt: a.decidedAt.toISOString() }))}
-      pending={overview.pending.map((p) => ({ id: p.id, name: p.name, username: p.username, deviceHint: p.deviceHint, createdAt: p.createdAt.toISOString(), wrongTries: p.wrongTries }))}
-    />
+    <main className="flex w-full min-w-0 flex-col">
+      <JoinView
+        dark={dark}
+        slug={slug}
+        tenantName={tenantName}
+        isDemo={overview.isDemo}
+        link={overview.link === null ? null : { expiresAt: overview.link.expiresAt.toISOString() }}
+        approved={overview.approvedWaiting.map((a) => ({ id: a.id, name: a.name, username: a.username, decidedAt: a.decidedAt.toISOString() }))}
+        pending={overview.pending.map((p) => ({ id: p.id, name: p.name, username: p.username, deviceHint: p.deviceHint, createdAt: p.createdAt.toISOString(), wrongTries: p.wrongTries }))}
+      />
+    </main>
   );
 }

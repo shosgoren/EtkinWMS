@@ -1,11 +1,19 @@
 "use client";
-// Üyeler ekranı (T-119). Yetki ve iş kuralları SUNUCUDADIR: burada yalnızca sunucudan gelen durum gösterilir
-// (`users.manage` kararı sayfada `listPendingInvitations` sonucundan; sıfırlama uygunluğu `resetLinkAvailable`).
-// Sunucu reddi neden ayrıştırılmadan gösterilir (2. tur m6). Mobilde kart görünümü; tablo yok (yatay taşma yok).
+// Üyeler ekranı (T-119; T-971 liste kalıbı, KalipListe.dc.html). Yetki ve iş kuralları SUNUCUDADIR: burada yalnızca sunucudan gelen durum
+// gösterilir (`users.manage` kararı sayfada `listPendingInvitations` sonucundan; sıfırlama uygunluğu `resetLinkAvailable`). Sunucu reddi
+// neden ayrıştırılmadan gösterilir (2. tur m6). Üye ve bekleyen davet kartları `.uc` görünümündedir; kart bağlantı değildir (içinde rol
+// seçimi, Çıkar, sahiplik devri, sıfırlama bağlantısı, saha kodu, kilit açma, depoları düzenle düğmeleri — `<a>` içine düğme gömülmez).
+// Ana işlem ortak alt çubukta "Davet et" (InviteDialog; yetki yoksa ya da hidrasyon bitmeden kapalı, T-247). Saha personeli / Cihazlar
+// `.more` satırı. Bilinçli farklar (DESIGN-PARITY, T-971): arama / süzgeç çipi yok (üye listesi sayfalanmaz, sunucu araması yok); işlem
+// sonucu bildirimi balon (`.toast`), hata kutusu ve tek seferlik bağlantı kutusu mevcut bileşenlerle.
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
-import { Banner, Button, ConfirmDialog, EmptyState } from "@wms/ui";
+import { useState, useSyncExternalStore, type CSSProperties } from "react";
+import { Banner, ConfirmDialog } from "@wms/ui";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipBos, KalipDaha, KalipKartListe } from "../kalip/liste.tsx";
+import { kdz } from "../kalip/tokens.ts";
 import {
   changeRoleAction,
   issuePasswordResetLinkAction,
@@ -18,6 +26,7 @@ import {
 } from "./actions.ts";
 import { InviteDialog, LinkBox, ServerErrorBanner } from "./invite-dialog.tsx";
 import type { ServerError } from "./invite-dialog.tsx";
+import { Btn } from "./parts.tsx";
 
 export interface MemberView {
   /** Komutların `memberId`/`toMemberId` alanı üyelik kimliğidir (kullanıcı kimliği değil). */
@@ -68,14 +77,23 @@ interface Confirm {
   readonly scope?: ScopeDraft;
 }
 
+// Rol seçici: tema sözleşmesi (güçlü kenarlık + odak halkası, theme-admin e2e) korunur.
 const SELECT =
   "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-3 text-base text-ink sm:w-auto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-const BADGE = "inline-flex items-center rounded-full px-2 text-xs font-bold";
 
 const noopSubscribe = (): (() => void) => () => undefined;
 
+const c = (hex: string): string => kdz("dzl", hex);
+
+/** Kart kabı: `.uc` görünümü, bağlantı değil (eylemler içinde). */
+const CARD: CSSProperties = { display: "flex", flexDirection: "column", alignItems: "stretch", gap: 10, cursor: "default", transform: "none" };
+const HEAD: CSSProperties = { display: "grid", gridTemplateColumns: "auto minmax(0,1fr)", alignItems: "center", gap: 12 };
+const ROW: CSSProperties = { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, minWidth: 0 };
+const NOTE: CSSProperties = { margin: 0, fontSize: 13, lineHeight: 1.35, opacity: 0.8, overflowWrap: "anywhere" };
+
 export function MembersView({
   slug,
+  dark,
   selfUserId,
   members,
   pending,
@@ -84,6 +102,7 @@ export function MembersView({
   scopeEnabled = false,
 }: {
   slug: string;
+  dark: boolean;
   selfUserId: string;
   members: readonly MemberView[];
   /** `null`: yönetim yetkisi yok. */
@@ -99,6 +118,7 @@ export function MembersView({
   const format = useFormatter();
   const router = useRouter();
   const canManage = pending !== null;
+  const home = `/t/${encodeURIComponent(slug)}`;
   const [inviteOpen, setInviteOpen] = useState(false);
   // T-247: sunucu HTML'i hidrasyondan önce tıklanabilir görünür; o tıklama React'e ulaşmaz (staging'de yavaş JS yüklemesinde
   // davet diyaloğu açılmıyordu). Düğme hidrasyon bitene kadar devre dışı: sunucuda/ilk çizimde false, istemcide true.
@@ -108,12 +128,12 @@ export function MembersView({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ServerError | null>(null);
   const [resetUnavailable, setResetUnavailable] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<{ name: string; link: string } | null>(null);
   const [fieldCode, setFieldCode] = useState<{ name: string; code: string } | null>(null);
   const selfIsOwner = members.some((x) => x.userId === selfUserId && x.isOwner);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [scopeDraft, setScopeDraft] = useState<ScopeDraft | null>(null);
+  const { say, node: toast } = useKalipToast("liste");
   const whName = (id: string) => {
     const w = warehouses.find((x) => x.id === id);
     return w === undefined ? t("scope.unknown") : w.archived ? t("scope.archived", { name: w.name }) : w.name;
@@ -122,8 +142,13 @@ export function MembersView({
 
   const roleName = (keys: readonly string[]) => keys.map((k) => tr(k)).join(", ");
   const when = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" });
+  const notify = (text: string): void => {
+    tone("ok");
+    say("ok", text);
+  };
 
   function fail(res: { error: { code: string; detail?: string | undefined; requestId: string } }, kind?: Kind) {
+    tone("err");
     // Sıfırlama reddi: neden ayrıştırılmaz, nötr metin (2. tur m6); kimlik/oturum/MFA yönlendirmeleri korunur.
     if (kind === "reset" && res.error.code === "FORBIDDEN" && res.error.detail === undefined) {
       setResetUnavailable(true);
@@ -138,7 +163,6 @@ export function MembersView({
     setBusy(true);
     setError(null);
     setResetUnavailable(false);
-    setNotice(null);
     setResetLink(null);
     setFieldCode(null);
     if (kind === "fieldCode") {
@@ -155,7 +179,7 @@ export function MembersView({
       setBusy(false);
       setConfirm(null);
       if (!res.ok) return fail(res);
-      setNotice(t("done.unlock"));
+      notify(t("done.unlock"));
       router.refresh();
       return;
     }
@@ -169,7 +193,7 @@ export function MembersView({
       setConfirm(null);
       if (!res.ok) return fail(res);
       setScopeDraft(null);
-      setNotice(t(res.data.changed ? "done.scope" : "done.scopeUnchanged"));
+      notify(t(res.data.changed ? "done.scope" : "done.scopeUnchanged"));
       router.refresh();
       return;
     }
@@ -190,7 +214,7 @@ export function MembersView({
     setBusy(false);
     setConfirm(null);
     if (!res.ok) return fail(res);
-    setNotice(t(`done.${kind}`));
+    notify(t(`done.${kind}`));
     router.refresh();
   }
 
@@ -202,7 +226,7 @@ export function MembersView({
     setBusy(false);
     setRevoking(null);
     if (!res.ok) return fail(res);
-    setNotice(t("pending.revoked"));
+    notify(t("pending.revoked"));
     router.refresh();
   }
 
@@ -220,55 +244,59 @@ export function MembersView({
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="break-words text-2xl font-extrabold text-ink">{t("title")}</h1>
-          <p className="break-words text-base text-ink-muted">{t("intro")}</p>
-        </div>
-        <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:*:shrink-0 sm:*:whitespace-nowrap">
-          <Button onClick={() => setInviteOpen(true)} disabled={!canManage || !hydrated} aria-describedby={canManage ? undefined : "invite-locked"}>
-            {t("invite")}
-          </Button>
-          {canManage ? (
-            <a
-              href={`/t/${slug}/members/field`}
-              className="inline-flex min-h-12 items-center justify-center rounded-card border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink"
-            >
+      <KalipEkran
+        kind="liste"
+        dark={dark}
+        title={t("title")}
+        icon={{ d: LICON.people, color: "2F5DA8" }}
+        testId="members"
+        bar={{
+          back: { href: home },
+          main: {
+            label: t("k.inviteShort"),
+            aria: t("invite"),
+            d: LICON.plus,
+            disabled: !canManage || !hydrated,
+            onClick: () => {
+              tone("tap");
+              setInviteOpen(true);
+            },
+            testId: "members-invite",
+          },
+        }}
+        overlays={toast}
+      >
+        {canManage ? null : (
+          <p id="invite-locked" style={NOTE}>
+            {t("lockedReason")}
+          </p>
+        )}
+        {canManage ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <KalipDaha href={`/t/${slug}/members/field`} iconD={LICON.plus} iconColor="0E7C7B" testId="members-add-field">
               {t("addField")}
-            </a>
-          ) : null}
-          {canManage ? (
-            <a
-              href={`/t/${slug}/members/devices`}
-              className="inline-flex min-h-12 items-center justify-center rounded-card border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink"
-            >
+            </KalipDaha>
+            <KalipDaha href={`/t/${slug}/members/devices`} iconD={LICON.key} iconColor="30475A" testId="members-devices">
               {t("devices")}
-            </a>
-          ) : null}
-          {canManage ? null : (
-            <p id="invite-locked" className="max-w-xs break-words text-sm text-ink-muted">
-              {t("lockedReason")}
-            </p>
-          )}
-        </div>
-      </div>
+            </KalipDaha>
+          </div>
+        ) : null}
 
-      {notice ? <Banner kind="info">{notice}</Banner> : null}
-      {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
-      {resetUnavailable ? <Banner kind="error">{t("unavailableReason")}</Banner> : null}
-      {fieldCode ? (
-        <LinkBox title={`${t("linkBox.fieldCodeTitle")} · ${fieldCode.name}`} link={fieldCode.code} warning={t("linkBox.fieldCodeWarning")} onDismiss={() => setFieldCode(null)} />
-      ) : null}
-      {resetLink ? (
-        <LinkBox title={`${t("linkBox.resetTitle")} · ${resetLink.name}`} link={resetLink.link} warning={t("linkBox.resetWarning")} onDismiss={() => setResetLink(null)} />
-      ) : null}
+        {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
+        {resetUnavailable ? <Banner kind="error">{t("unavailableReason")}</Banner> : null}
+        {fieldCode ? (
+          <LinkBox title={`${t("linkBox.fieldCodeTitle")} · ${fieldCode.name}`} link={fieldCode.code} warning={t("linkBox.fieldCodeWarning")} onDismiss={() => setFieldCode(null)} />
+        ) : null}
+        {resetLink ? (
+          <LinkBox title={`${t("linkBox.resetTitle")} · ${resetLink.name}`} link={resetLink.link} warning={t("linkBox.resetWarning")} onDismiss={() => setResetLink(null)} />
+        ) : null}
 
-      <section aria-label={t("membersList")} className="flex min-w-0 flex-col gap-3">
+        <KalipBaslik title={t("k.count", { n: members.length })} hint={t("intro")} />
         {members.length === 0 ? (
-          <EmptyState title={t("empty")} description={t("emptyAction")} />
+          <KalipBos title={t("empty")} hint={t("emptyAction")} iconD={LICON.people} />
         ) : (
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-3 p-0">
-            {members.map((m) => {
+          <KalipKartListe label={t("membersList")}>
+            {members.map((m, i) => {
               const self = m.userId === selfUserId;
               // T-413: firma sahibinin rolü/üyeliği sunucuda kilitli (OWNER_ROLE/LAST_OWNER) — ekranda da kilitli; sahiplik devri yalnız sahibe.
               // Demo satırı: rol/çıkarma/devir için ayrı nötr metin; sıfırlama kilidi 2. tur m6 metninde kalır.
@@ -279,112 +307,106 @@ export function MembersView({
               const current = m.roles.length > 1 ? MULTI : (m.roles[0] ?? "");
               const selected = draft[m.userId] ?? current;
               const noteId = `lock-${m.userId}`;
+              const desc = lockText === null ? undefined : noteId;
+              const color = m.isOwner ? "B07D0B" : m.isDemo ? "4E6476" : m.field ? "0E7C7B" : "2F5DA8";
+              const sub =
+                m.field && m.field.username === ""
+                  ? null
+                  : m.field
+                    ? `@${m.field.username} · ${m.field.active ? t("fieldActive") : m.field.pendingUntil !== null ? t("fieldPending", { until: when(m.field.pendingUntil) }) : t("fieldNoCode")}`
+                    : m.email;
               return (
-                <li key={m.userId} data-testid="member-card" className="flex min-w-0 flex-col gap-3 rounded-card border-2 border-border bg-surface p-4 shadow-card">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="min-w-0 break-words text-lg font-bold text-ink">{m.displayName}</span>
-                    {m.isOwner ? <span className={`${BADGE} bg-warning-bg text-warning-ink`}>{t("ownerBadge")}</span> : null}
-                    {self ? <span className={`${BADGE} bg-accent-soft text-accent-ink`}>{t("selfBadge")}</span> : null}
-                    {m.isDemo ? <span className={`${BADGE} bg-locked-bg text-locked-ink`}>{t("demoBadge")}</span> : null}
-                    {m.field ? <span className={`${BADGE} bg-accent-soft text-accent-ink`}>{t("fieldBadge")}</span> : null}
-                    {m.field?.locked ? <span className={`${BADGE} bg-warning-bg text-warning-ink`}>{t("fieldLocked")}</span> : null}
+                <div key={m.userId} role="listitem" data-testid="member-card" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }}>
+                  <div style={HEAD}>
+                    <span className="uic" style={{ background: c(color) }}>
+                      <Ico d={m.isOwner ? LICON.key : LICON.people} size={26} />
+                    </span>
+                    <span className="ut">
+                      <b>{m.displayName}</b>
+                      {sub === null ? null : (
+                        <small className="mono" title={sub}>
+                          {sub}
+                        </small>
+                      )}
+                      <small className="um">
+                        {roleName(m.roles)} · {t("statusActive")}
+                      </small>
+                    </span>
                   </div>
-                  {m.field && m.field.username === "" ? null : m.field ? (
-                    <p className="min-w-0 truncate text-base text-ink-muted">
-                      {`@${m.field.username} · `}
-                      {m.field.active ? t("fieldActive") : m.field.pendingUntil !== null ? t("fieldPending", { until: when(m.field.pendingUntil) }) : t("fieldNoCode")}
-                    </p>
-                  ) : (
-                    <p className="min-w-0 truncate text-base text-ink-muted" title={m.email}>
-                      {m.email}
-                    </p>
-                  )}
-                  <p className="text-sm text-ink-muted">
-                    {roleName(m.roles)} · {t("statusActive")}
-                  </p>
+                  {m.isOwner || self || m.isDemo || m.field ? (
+                    <div style={ROW}>
+                      {m.isOwner ? <span className="pill warn">{t("ownerBadge")}</span> : null}
+                      {self ? <span className="pill ok">{t("selfBadge")}</span> : null}
+                      {m.isDemo ? <span className="pill" style={{ background: c("EEF1F4"), color: c("4E6476") }}>{t("demoBadge")}</span> : null}
+                      {m.field ? <span className="pill ok">{t("fieldBadge")}</span> : null}
+                      {m.field?.locked ? <span className="pill" style={{ background: c("C62828"), color: c("FFFFFF") }}>{t("fieldLocked")}</span> : null}
+                    </div>
+                  ) : null}
                   {m.warehouseIds === undefined ? null : (
-                    <p className="break-words text-sm text-ink" data-testid="member-scope">
-                      {m.roles.includes("TENANT_ADMIN")
-                        ? t("scope.admin")
-                        : m.warehouseIds === null
-                          ? t("scope.all")
-                          : t("scope.only", { names: m.warehouseIds.map(whName).join(", ") })}
+                    <p style={NOTE} data-testid="member-scope">
+                      {m.roles.includes("TENANT_ADMIN") ? t("scope.admin") : m.warehouseIds === null ? t("scope.all") : t("scope.only", { names: m.warehouseIds.map(whName).join(", ") })}
                     </p>
                   )}
                   {self ? null : (
-                    <div role="group" aria-label={t("actionsFor", { name: m.displayName })} className="flex min-w-0 flex-col gap-2">
-                      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:*:shrink-0 sm:*:whitespace-nowrap">
-                        <select
-                          aria-label={`${t("role")} · ${m.displayName}`}
-                          className={SELECT}
-                          value={selected}
-                          disabled={lockText !== null}
-                          onChange={(e) => setDraft({ ...draft, [m.userId]: e.target.value })}
-                        >
+                    <div role="group" aria-label={t("actionsFor", { name: m.displayName })} style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+                      <div style={ROW}>
+                        <select aria-label={`${t("role")} · ${m.displayName}`} className={SELECT} value={selected} disabled={lockText !== null} onChange={(e) => setDraft({ ...draft, [m.userId]: e.target.value })}>
                           {current === MULTI ? (
                             <option value={MULTI} disabled>
                               {roleName(m.roles)}
                             </option>
                           ) : null}
-                          {roleKeys.filter((r) => m.field === undefined || FIELD_ROLES.includes(r)).map((r) => (
-                            <option key={r} value={r}>
-                              {tr(r)}
-                            </option>
-                          ))}
+                          {roleKeys
+                            .filter((r) => m.field === undefined || FIELD_ROLES.includes(r))
+                            .map((r) => (
+                              <option key={r} value={r}>
+                                {tr(r)}
+                              </option>
+                            ))}
                         </select>
-                        <Button
-                          variant="secondary"
-                          disabled={lockText !== null || selected === current || selected === MULTI}
-                          aria-describedby={lockText === null ? undefined : noteId}
-                          onClick={() => setConfirm({ kind: "role", member: m, roleKey: selected })}
-                        >
+                        <Btn kind="n" scope="dzl" d={LICON.check} disabled={lockText !== null || selected === current || selected === MULTI} aria-describedby={desc} onClick={() => setConfirm({ kind: "role", member: m, roleKey: selected })}>
                           {t("applyRole")}
-                        </Button>
+                        </Btn>
                       </div>
-                      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:*:shrink-0 sm:*:whitespace-nowrap">
-                        <Button variant="danger" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "remove", member: m })}>
+                      <div style={ROW}>
+                        <Btn kind="danger" scope="dzl" d={LICON.trash} disabled={lockText !== null} aria-describedby={desc} onClick={() => setConfirm({ kind: "remove", member: m })}>
                           {t("remove")}
-                        </Button>
+                        </Btn>
                         {!selfIsOwner || m.isOwner || m.field ? null : (
-                          <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "transfer", member: m })}>
+                          <Btn kind="soft" scope="dzl" d={LICON.key} disabled={lockText !== null} aria-describedby={desc} onClick={() => setConfirm({ kind: "transfer", member: m })}>
                             {t("transfer")}
-                          </Button>
+                          </Btn>
                         )}
                         {m.field ? (
                           <>
-                            <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "fieldCode", member: m })}>
+                            <Btn kind="soft" scope="dzl" d={LICON.key} disabled={lockText !== null} aria-describedby={desc} onClick={() => setConfirm({ kind: "fieldCode", member: m })}>
                               {t("fieldNewCode")}
-                            </Button>
+                            </Btn>
                             {m.field.locked ? (
-                              <Button variant="secondary" disabled={lockText !== null} aria-describedby={lockText === null ? undefined : noteId} onClick={() => setConfirm({ kind: "unlock", member: m })}>
+                              <Btn kind="soft" scope="dzl" d={LICON.lock} disabled={lockText !== null} aria-describedby={desc} onClick={() => setConfirm({ kind: "unlock", member: m })}>
                                 {t("fieldUnlock")}
-                              </Button>
+                              </Btn>
                             ) : null}
                           </>
                         ) : (
-                          <Button variant="secondary" disabled={resetLocked} aria-describedby={resetText === null ? undefined : `${noteId}-reset`} onClick={() => setConfirm({ kind: "reset", member: m })}>
+                          <Btn kind="soft" scope="dzl" d={LICON.shield} disabled={resetLocked} aria-describedby={resetText === null ? undefined : `${noteId}-reset`} onClick={() => setConfirm({ kind: "reset", member: m })}>
                             {t("resetLink")}
-                          </Button>
+                          </Btn>
                         )}
                       </div>
                       {m.warehouseIds === undefined || m.roles.includes("TENANT_ADMIN") || m.isDemo ? null : scopeDraft?.memberId === m.membershipId ? (
-                        <fieldset className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border p-3" data-testid="scope-editor">
-                          <legend className="px-1 text-base font-bold text-ink">{t("scope.legend", { name: m.displayName })}</legend>
-                          {scopeEnabled ? null : <p className="break-words text-sm text-ink-muted">{t("scope.disabled")}</p>}
-                          <label className="flex min-h-12 items-center gap-3 text-base text-ink">
-                            <input
-                              type="checkbox"
-                              className="size-6"
-                              checked={scopeDraft.all}
-                              onChange={(e) => setScopeDraft({ ...scopeDraft, all: e.target.checked })}
-                            />
+                        <fieldset data-testid="scope-editor" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, margin: 0, padding: 12, border: `2px solid ${c("C9D6E0")}`, borderRadius: 16 }}>
+                          <legend style={{ padding: "0 4px", fontWeight: 800 }}>{t("scope.legend", { name: m.displayName })}</legend>
+                          {scopeEnabled ? null : <p style={NOTE}>{t("scope.disabled")}</p>}
+                          <label style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 48 }}>
+                            <input type="checkbox" style={{ width: 24, height: 24 }} checked={scopeDraft.all} onChange={(e) => setScopeDraft({ ...scopeDraft, all: e.target.checked })} />
                             {t("scope.allOption")}
                           </label>
                           {warehouses.map((w) => (
-                            <label key={w.id} className="flex min-h-12 min-w-0 items-center gap-3 text-base text-ink">
+                            <label key={w.id} style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 48, minWidth: 0 }}>
                               <input
                                 type="checkbox"
-                                className="size-6"
+                                style={{ width: 24, height: 24 }}
                                 disabled={scopeDraft.all || (w.archived && !scopeDraft.ids.includes(w.id))}
                                 checked={!scopeDraft.all && scopeDraft.ids.includes(w.id)}
                                 onChange={(e) =>
@@ -394,88 +416,79 @@ export function MembersView({
                                   })
                                 }
                               />
-                              <span className="min-w-0 break-words">{`${w.code} · ${whName(w.id)}`}</span>
+                              <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{`${w.code} · ${whName(w.id)}`}</span>
                             </label>
                           ))}
-                          {!scopeDraft.all && scopeDraft.ids.length === 0 ? <p className="text-sm text-ink-muted">{t("scope.pickOne")}</p> : null}
-                          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:*:shrink-0">
-                            <Button
-                              disabled={!scopeDraft.all && scopeDraft.ids.length === 0}
-                              onClick={() => setConfirm({ kind: "scope", member: m, scope: scopeDraft })}
-                            >
+                          {!scopeDraft.all && scopeDraft.ids.length === 0 ? <p style={NOTE}>{t("scope.pickOne")}</p> : null}
+                          <div style={ROW}>
+                            <Btn kind="n" scope="dzl" d={LICON.check} disabled={!scopeDraft.all && scopeDraft.ids.length === 0} onClick={() => setConfirm({ kind: "scope", member: m, scope: scopeDraft })}>
                               {t("scope.save")}
-                            </Button>
-                            <Button variant="secondary" onClick={() => setScopeDraft(null)}>
+                            </Btn>
+                            <Btn kind="soft" scope="dzl" onClick={() => setScopeDraft(null)}>
                               {t("confirmCancel")}
-                            </Button>
+                            </Btn>
                           </div>
                         </fieldset>
                       ) : (
-                        <div>
-                          <Button
-                            variant="secondary"
-                            disabled={lockText !== null}
-                            aria-describedby={lockText === null ? undefined : noteId}
-                            onClick={() =>
-                              setScopeDraft({ memberId: m.membershipId, all: m.warehouseIds === null, ids: m.warehouseIds ?? [] })
-                            }
-                          >
+                        <div style={ROW}>
+                          <Btn kind="soft" scope="dzl" d={LICON.depo} disabled={lockText !== null} aria-describedby={desc} onClick={() => setScopeDraft({ memberId: m.membershipId, all: m.warehouseIds === null, ids: m.warehouseIds ?? [] })}>
                             {t("scope.edit")}
-                          </Button>
+                          </Btn>
                         </div>
                       )}
                       {lockText === null ? null : (
-                        <p id={noteId} className="break-words text-sm text-ink-muted">
+                        <p id={noteId} style={NOTE}>
                           {lockText}
                         </p>
                       )}
                       {resetText === null || m.field ? null : (
-                        <p id={`${noteId}-reset`} className="break-words text-sm text-ink-muted">
+                        <p id={`${noteId}-reset`} style={NOTE}>
                           {resetText}
                         </p>
                       )}
                     </div>
                   )}
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </KalipKartListe>
         )}
-      </section>
 
-      <section aria-label={t("pending.title")} className="flex min-w-0 flex-col gap-3">
-        <h2 className="break-words text-xl font-bold text-ink">{t("pending.title")}</h2>
-        {pending === null ? (
-          <p className="break-words text-base text-ink-muted">{t("pending.locked")}</p>
-        ) : pending.length === 0 ? (
-          <p className="break-words text-base text-ink-muted">{t("pending.empty")}</p>
-        ) : (
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-3 p-0">
-            {pending.map((p) => (
-              <li key={p.invitationId} data-testid="pending-card" className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border bg-surface p-4 shadow-card">
-                <p className="min-w-0 break-all text-base font-bold text-ink">{p.email}</p>
-                <p className="text-sm text-ink-muted">
-                  {tr(p.role)} · {t("pending.expires", { date: when(p.expiresAt) })}
-                </p>
-                <p className="break-words text-sm text-ink-muted">{t("pending.invitedBy", { name: p.invitedBy })}</p>
-                <div>
-                  <Button variant="secondary" onClick={() => setRevoking(p)}>
-                    {t("pending.revoke")}
-                  </Button>
+        <section aria-label={t("pending.title")} style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0, flex: "none" }}>
+          <KalipBaslik title={t("pending.title")} hint={pending === null ? undefined : t("k.pendingCount", { n: pending.length })} />
+          {pending === null ? (
+            <p style={NOTE}>{t("pending.locked")}</p>
+          ) : pending.length === 0 ? (
+            <p style={NOTE}>{t("pending.empty")}</p>
+          ) : (
+            <KalipKartListe label={t("pending.title")}>
+              {pending.map((p, i) => (
+                <div key={p.invitationId} role="listitem" data-testid="pending-card" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }}>
+                  <div style={HEAD}>
+                    <span className="uic" style={{ background: c("E56A00") }}>
+                      <Ico d={LICON.clock} size={26} />
+                    </span>
+                    <span className="ut">
+                      <b title={p.email}>{p.email}</b>
+                      <small className="mono">
+                        {tr(p.role)} · {t("pending.expires", { date: when(p.expiresAt) })}
+                      </small>
+                      <small className="um">{t("pending.invitedBy", { name: p.invitedBy })}</small>
+                    </span>
+                  </div>
+                  <div style={ROW}>
+                    <Btn kind="soft" scope="dzl" d={LICON.close} onClick={() => setRevoking(p)}>
+                      {t("pending.revoke")}
+                    </Btn>
+                  </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              ))}
+            </KalipKartListe>
+          )}
+        </section>
+      </KalipEkran>
 
-      <InviteDialog
-        open={inviteOpen}
-        slug={slug}
-        roleKeys={roleKeys}
-        onClose={() => setInviteOpen(false)}
-        onInvited={() => router.refresh()}
-      />
+      <InviteDialog open={inviteOpen} slug={slug} roleKeys={roleKeys} onClose={() => setInviteOpen(false)} onInvited={() => router.refresh()} />
       <ConfirmDialog
         open={confirm !== null}
         title={confirmText.title}

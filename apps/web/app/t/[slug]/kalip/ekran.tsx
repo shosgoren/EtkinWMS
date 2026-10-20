@@ -6,9 +6,12 @@
 // Kök `.kalip` sınıfı taşır: kiracı kabuğunun eski üst çubuğu / Kolay mod / Geri-Ana ekran kutusu / eski alt gezinme bu ekranda çizilmez
 // (kalip-frame.css genel kuralı) — yeni ekran yalnız bu kabı kullanarak geçer.
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
+import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
+import { THEME_COOKIE } from "../../../design/theme.ts";
 import { KalipDestek } from "./destek.tsx";
 import { kdz, type KalipScope } from "./tokens.ts";
 
@@ -137,6 +140,19 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
   const t = useTranslations("kalip");
   const ctx = useKabuk();
   const online = useOnline();
+  const router = useRouter();
+  const [hesap, setHesap] = useState(false);
+  const closeHesap = useCallback(() => setHesap(false), []);
+  // Tema cihaz tercihidir (çerez, Pano ve Ayarlar ile aynı); sayfa sunucuda çerezi okuyarak yeniden çizilir.
+  const toggleTheme = useCallback(() => {
+    document.cookie = `${THEME_COOKIE}=${dark ? "acik" : "koyu"}; path=/; max-age=31536000; samesite=lax`;
+    setHesap(false);
+    router.refresh();
+  }, [dark, router]);
+  const userName = ctx?.userName ?? "";
+  const me = { ini: (userName.trim()[0] ?? "?").toLocaleUpperCase("tr"), name: userName, group: (ctx?.roleLabel ?? "").toLocaleUpperCase("tr"), color: "6C4BD8" };
+  // Pano kaynağının sınıfları (`.tb`, `.halo.tmenu`) `.dzp` kabında tanımlıdır; kutu üretmeyen kap (yeni stil yok).
+  const panoScope = `dzp${dark ? " dz-dark" : ""}`;
   const scope = SCOPE[kind];
   const c = (hex: string): string => kdz(scope, hex);
   const sub =
@@ -195,11 +211,20 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
                   {slot}
                 </div>
               )}
+              {/* T-971 (B-92): Pano'nun Hesap düğmesi — `actions` yuvasından ayrı öğe (Sorun/Destek o yuvada). */}
+              <span className={panoScope} style={{ display: "contents" }} data-testid="kalip-account">
+                <HesapDugme team={false} open={hesap} onClick={() => setHesap((o) => !o)} />
+              </span>
             </header>
             <main className="inner" id="kalip-main">
               {children}
             </main>
             {overlays}
+            {hesap ? (
+              <div className={panoScope} style={{ display: "contents" }}>
+                <HesapMenu team={false} me={me} dark={dark} onToggleTheme={toggleTheme} onClose={closeHesap} />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

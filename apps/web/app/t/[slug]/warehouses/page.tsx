@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
@@ -7,6 +7,9 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { countLocationsByWarehouse, listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { THEME_COOKIE } from "../../../design/theme.ts";
+import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { WarehousesView } from "./warehouses-view.tsx";
 import type { WarehouseView } from "./warehouses-view.tsx";
 
@@ -21,6 +24,20 @@ export async function generateMetadata(): Promise<Metadata> {
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
+}
+
+async function isDark(): Promise<boolean> {
+  return (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+}
+
+/** Okuma izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli ekran (ürünler deseni). */
+async function LockedWarehouses({ slug }: { slug: string }) {
+  const t = await getTranslations("warehouses");
+  return (
+    <main className="flex w-full min-w-0 flex-col">
+      <KalipKilitliEkran title={t("title")} icon={{ d: LICON.depo, color: "30475A" }} text={t("k.locked")} hint={t("k.lockedAction")} dark={await isDark()} home={`/t/${encodeURIComponent(slug)}`} />
+    </main>
+  );
 }
 
 // Depo listesi (T-207): sunucu bileşeni; veri T-205 okuyucularından. Sayfa kendi kararını verir: üye değil → 404;
@@ -55,13 +72,14 @@ export default async function WarehousesPage({ params, searchParams }: { params:
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
       // Geçersiz imleç (`after`) kullanıcı hatasıdır: boş liste yerine 404.
       if (e.code === "VALIDATION_FAILED") notFound();
+      if (e.code === "FORBIDDEN") return <LockedWarehouses slug={slug} />;
     }
     throw e;
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
-      <WarehousesView slug={slug} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} />
+    <main className="flex w-full min-w-0 flex-col">
+      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} />
     </main>
   );
 }

@@ -22,6 +22,8 @@ export interface KabukContextValue {
   readonly roleLabel: string;
   /** T-968: kalıp üst çubuğundaki "firma · rol" satırı için çalışma alanı adı. */
   readonly tenantName?: string;
+  /** T-971 (B-92): kalıp üst çubuğundaki Hesap menüsünün kişi başlığı (giriş yapan kullanıcının adı). */
+  readonly userName?: string;
   /** Toplu yayın (T-967 × T-968): kalıp üst çubuğu Sorun bildir + Destek için çalışma alanı kısa adı ve Sorun bildirme yetkisi. */
   readonly slug?: string;
   readonly canReport?: boolean;

@@ -72,15 +72,28 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await page.screenshot({ path: `${OUT}/${view.id}-${size.width}-${screen}.png`, fullPage: true });
         };
 
+        // T-971: önceki adım kalıp ekranında (depo/lokasyon) bitebilir; kalıp ekranları ve Genel bakış Pano'su eski kabuğun görünüm anahtarını
+        // çizmez. Anahtar erişilebilirse (ana ekranın eski kabuğu) tıklanır; değilse görünüm çerezi doğrudan yazılır (ekran yine `data-view` ile doğrulanır).
+        await page.goto("/t/demo");
         // Görünüm anahtarı: seçili durum aria-pressed + metinle (renk tek taşıyıcı değil).
         // T-254: telefon genişliğinde anahtar menüdedir; önce menü açılır, aynı düğme kullanılır.
         const inMenu = await appMenuReachable(page);
         if (inMenu) await openAppMenu(page);
-        await page.getByRole("button", { name: view.label, exact: true }).click();
-        await expect(page.getByRole("button", { name: view.label, exact: true })).toHaveAttribute("aria-pressed", "true");
-        if (inMenu) {
-          await page.keyboard.press("Escape");
-          await expect(page.getByRole("dialog")).toBeHidden();
+        const toggle = page.getByRole("button", { name: view.label, exact: true });
+        if ((await toggle.count()) > 0) {
+          await toggle.click();
+          await expect(page.locator("html")).toHaveAttribute("data-view", view.id);
+          // Genel bakış'a geçince ana ekran Pano olur (anahtar yok); anahtar kaldıysa seçili durumu doğrulanır.
+          const after = page.getByRole("button", { name: view.label, exact: true }).and(page.locator("[aria-pressed]"));
+          if ((await after.count()) > 0) await expect(after.first()).toHaveAttribute("aria-pressed", "true");
+          if (inMenu && (await page.getByRole("dialog").count()) > 0) {
+            await page.keyboard.press("Escape");
+            await expect(page.getByRole("dialog")).toBeHidden();
+          }
+        } else {
+          if (inMenu) await page.keyboard.press("Escape");
+          await page.context().addCookies([{ name: "view", value: view.id, url: new URL(page.url()).origin }]);
+          await page.reload();
         }
         await expect(page.locator("html")).toHaveAttribute("data-view", view.id);
 
@@ -121,7 +134,15 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await expect(page.getByRole("heading", { level: 1, name: "Kim ne yaptı?" })).toBeVisible();
           await expectBorderStrong(page, page.locator("#from"), "denetim: başlangıç tarihi");
           await expectBorderStrong(page, page.locator("#action"), "denetim: eylem süzgeci");
-          await expectFocusRing(page, page.locator("#action"), "denetim: eylem süzgeci");
+          // T-971: denetim kaydı liste kalıbında (KalipEkran); odak halkası kalıbın kendi halkasıdır (`.dzl .app :focus-visible`, sarı).
+          {
+            const action = page.locator("#action");
+            await action.focus();
+            await page.keyboard.press("Shift+Tab");
+            await page.keyboard.press("Tab");
+            await expect(action, "denetim: eylem süzgeci odakta").toBeFocused();
+            expect(await computed(action, "outline-style"), "denetim: eylem süzgeci outline-style").toBe("solid");
+          }
           await expectNoHorizontalOverflow(page, "denetim kaydı");
           await shot("audit");
 
