@@ -14,6 +14,7 @@ import { PICON } from "./design/pano-icons.ts";
 import { AICON } from "./design/aktar-icons.ts";
 import { RICON } from "./design/gruplar-icons.ts";
 import { EICON } from "./design/ekip-icons.ts";
+import { KICON } from "./design/kabuk-icons.ts";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 const source = readFileSync(join(repoRoot, "docs/design/source/Bakis.dc.html"), "utf8");
@@ -23,6 +24,7 @@ const pano = readFileSync(join(repoRoot, "docs/design/source/Pano.dc.html"), "ut
 const aktar = readFileSync(join(repoRoot, "docs/design/source/Aktar.dc.html"), "utf8");
 const gruplar = readFileSync(join(repoRoot, "docs/design/source/Gruplar.dc.html"), "utf8");
 const ekip = readFileSync(join(repoRoot, "docs/design/source/Ekip.dc.html"), "utf8");
+const kabuk = readFileSync(join(repoRoot, "docs/design/source/Kabuk.dc.html"), "utf8");
 
 describe("I-18 tasarım birebir", () => {
   it("üretilmiş CSS ve belirteçler kaynaktan yeniden üretilenle bayt bayt aynı", () => {
@@ -55,6 +57,16 @@ describe("I-18 tasarım birebir", () => {
 
   it.each(Object.entries(EICON))("Ekip ikonu %s kaynakta birebir geçer", (_k, d) => {
     expect(ekip.includes(`"${d}"`) || ekip.includes(`'${d}'`)).toBe(true);
+  });
+
+  it.each(Object.entries(KICON))("Kabuk ikonu %s kaynakta birebir geçer", (_k, d) => {
+    expect(kabuk.includes(`"${d}"`) || kabuk.includes(`'${d}'`)).toBe(true);
+  });
+
+  it("Kabuk kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {
+    const sum = createHash("sha256").update(kabuk).digest("hex");
+    expect(readFileSync(join(repoRoot, "docs/design/source/SOURCE.md"), "utf8")).toContain(sum);
+    expect(readFileSync(join(repoRoot, "scripts/design/port.mjs"), "utf8")).toContain(sum);
   });
 
   it("Ekip kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {

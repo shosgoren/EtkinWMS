@@ -24,13 +24,14 @@ export async function panoChecks(page: Page): Promise<void> {
       await page.goto("/t/demo");
       await expect(pano).toBeVisible();
       await expect(pano.locator(".top")).toBeVisible();
-      await expect(pano.locator(".dock")).toBeVisible();
-      await expect(pano.getByTestId("pano-scan")).toHaveAttribute("href", "/t/demo/field");
+      // T-958: alt cam çubuk ortak bileşendir (Kabuk.dc.html), Pano kabının dışında çizilir.
+      await expect(page.getByTestId("kabuk-dock")).toBeVisible();
+      await expect(page.getByTestId("pano-scan")).toHaveAttribute("href", "/t/demo/field");
       await expect(pano.locator(".tasks > .tk, .counthero").first()).toBeVisible();
       const m = await page.evaluate<{ sw: number; cw: number; ish: number; ich: number; ov: string; dockBottom: number }>(`(() => {
         const d = document.documentElement;
         const inner = document.querySelector('[data-testid="pano"] .inner');
-        const dock = document.querySelector('[data-testid="pano"] .dock').getBoundingClientRect();
+        const dock = document.querySelector('[data-testid="kabuk-dock"]').getBoundingClientRect();
         return { sw: d.scrollWidth, cw: d.clientWidth, ish: inner.scrollHeight, ich: inner.clientHeight, ov: getComputedStyle(inner).overflowY, dockBottom: dock.bottom };
       })()`);
       expect(m.sw, `${s.w}: yatay kaydırma yok`).toBeLessThanOrEqual(m.cw);

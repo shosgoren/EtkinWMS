@@ -13,6 +13,7 @@ import { readWorkbook, SheetError, type Workbook } from "../../../../lib/sheet/r
 import { FIELDS, autoMap, buildCsv, buildRecords, colLetter, detectHeader, headerSignature, samples, setColumn, waiting, type ImportKindKey, type Mapping } from "../../../../lib/sheet/mapping.ts";
 import { applyImportChunkAction, previewImportAction } from "./actions.ts";
 import { importPartiesAction } from "../parties/actions.ts";
+import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 
 type PreviewResult = Awaited<ReturnType<typeof previewImportAction>>;
 type ImportPreview = Extract<PreviewResult, { ok: true }>["data"];
@@ -379,6 +380,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const goList = kind === "stok" ? `${base}/items` : kind === "cari" ? `${base}/parties` : `${base}/stock`;
 
   return (
+    <>
     <div className={`dza${dark ? " dz-dark" : ""}`} data-testid="aktar">
       <div className="wrap">
         <div className="appzone">
@@ -740,45 +742,6 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
               ) : null}
             </main>
 
-            <nav className="dock subdock" aria-label={t("dock")}>
-              <div className="dockin">
-                <div className="dkl">
-                  {step === 1 ? (
-                    <a href={base} className="dk" aria-label={t("backHome")} style={{ textDecoration: "none" }} data-testid="aktar-back">
-                      <Ico d={AICON.back} size={26} />
-                      <span>{t("back")}</span>
-                    </a>
-                  ) : (
-                    <button type="button" className="dk" aria-label={t("back")} onClick={goBack} data-testid="aktar-back">
-                      <Ico d={AICON.back} size={26} />
-                      <span>{t("back")}</span>
-                    </button>
-                  )}
-                  {main !== null ? (
-                    dirty ? (
-                      <button type="button" className="dk dk-home" aria-label={t("home")} onClick={() => setCf(true)} data-testid="aktar-home">
-                        <Ico d={[AICON.homeA, AICON.homeB]} size={24} />
-                        <span>{t("homeShort")}</span>
-                      </button>
-                    ) : (
-                      <a href={base} className="dk dk-home" aria-label={t("home")} style={{ textDecoration: "none" }} data-testid="aktar-home">
-                        <Ico d={[AICON.homeA, AICON.homeB]} size={24} />
-                        <span>{t("homeShort")}</span>
-                      </a>
-                    )
-                  ) : null}
-                </div>
-                {main !== null ? (
-                  <button type="button" className={mainCls} aria-label={mainLabel} onClick={main} disabled={busy && step !== 2} data-testid="aktar-main">
-                    <Ico d={mainIcon} size={28} />
-                  </button>
-                ) : (
-                  <span />
-                )}
-                <span aria-hidden="true" />
-              </div>
-            </nav>
-            {main !== null ? <span className="mainlbl">{mainLabel}</span> : null}
 
             {pickF !== null && map !== null && loaded !== null ? (
               <div className="scrim" onClick={() => setPick(null)}>
@@ -870,5 +833,13 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
         </div>
       </div>
     </div>
+    {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
+    <KabukBar
+      dark={dark}
+      back={step === 1 ? { href: base, aria: t("backHome"), testId: "aktar-back" } : { onClick: goBack, aria: t("back"), testId: "aktar-back" }}
+      homeNav={main !== null && dirty ? { onClick: () => setCf(true), aria: t("home"), testId: "aktar-home" } : { href: base, aria: t("home"), testId: "aktar-home" }}
+      main={main === null ? null : { label: mainLabel, d: mainIcon, onClick: main, disabled: busy && step !== 2, testId: "aktar-main", wait: mainCls.includes(" wait") }}
+    />
+    </>
   );
 }

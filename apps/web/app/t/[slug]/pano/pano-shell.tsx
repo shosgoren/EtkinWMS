@@ -1,6 +1,6 @@
 "use client";
 // T-423 (I-18): Pano.dc.html uygulama kabuğu BİREBİR — `.wrap > .appzone > .app`, üst çubuk (`.top`: marka, `.tools`), alt cam çubuk
-// (`.dock > .dockin`: Sorun · OKUT · Etkin), sürüklenebilir yüzen kısayol (`.fab` + `.hback` + `.halo`), Ekip/Hesap menüsü (`.halo.tmenu`).
+// (T-958'den beri ortak `KabukBar`: Kabuk.dc.html Sorun · Ana ekran · OKUT · Modüller · Etkin), sürüklenebilir yüzen kısayol (`.fab` + `.hback` + `.halo`), Ekip/Hesap menüsü (`.halo.tmenu`).
 // Sınıf adları, öğe sırası ve ikon yolları kaynaktan (pano-icons.ts); renkler üretilmiş belirteçlerden (pano-tokens.ts).
 // Rol içeriği (`.inner` içi) sunucuda çizilir ve `children` olarak gelir.
 // Bilinçli farklar (docs/design/DESIGN-PARITY.md, T-423): bildirim zili yalnız yönetici panolarında, sayısı açık uyarılardan (kritik stok +
@@ -16,6 +16,8 @@ import { THEME_COOKIE } from "../../../design/theme.ts";
 import { authPost } from "../../../../lib/auth-client.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
 import { openAppMenu } from "../app-bar.tsx";
+import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { KICON } from "../../../design/kabuk-icons.ts";
 
 export interface PanoLink {
   readonly k: string;
@@ -277,31 +279,6 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
 
               <main className="inner">{children}</main>
 
-              <nav className="dock" aria-label={t("dock")}>
-                <div className="dockin">
-                  {canReport ? (
-                    <button type="button" className="dk problem" aria-label={t("report")} onClick={() => setProblem(true)} data-testid="pano-problem">
-                      <svg className="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9.5" />
-                        <path d={PICON.qmark} />
-                        <path d={PICON.qdot} />
-                      </svg>
-                      <span>{t("reportShort")}</span>
-                    </button>
-                  ) : (
-                    <span aria-hidden="true" />
-                  )}
-                  <a href={scanHref} className="dk scan big" aria-label={t("scan")} style={{ textDecoration: "none" }} data-testid="pano-scan">
-                    <svg className="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d={PICON.scanFrame} />
-                      <path d={PICON.scanLine} />
-                    </svg>
-                    <span>{t("scanShort")}</span>
-                  </a>
-                  <span aria-hidden="true" />
-                </div>
-              </nav>
-
               {halo.length > 0 ? (
                 <div className="fab" style={fabStyle} onPointerDown={fabDown} onPointerMove={fabMove} onPointerUp={fabUp} onPointerCancel={fabUp}>
                   <button type="button" className={`fabb${haloOpen ? " on" : ""}`} aria-label={t("shortcuts")} aria-expanded={haloOpen} data-testid="pano-fab">
@@ -447,6 +424,13 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
           </div>
         </div>
       </div>
+      {/* T-958: alt cam çubuk Kabuk.dc.html ortak bileşeni (Sorun · Ana ekran · OKUT · Modüller · Etkin). */}
+      <KabukBar
+        dark={dark}
+        home
+        problem={canReport ? { onClick: () => setProblem(true), testId: "pano-problem" } : undefined}
+        main={{ label: t("scanShort"), aria: t("scan"), d: KICON.scan, href: scanHref, testId: "pano-scan" }}
+      />
       {problem && canReport ? (
         <div className={`dz dzp-pop${dark ? " dz-dark" : ""}`}>
           <ProblemSheet slug={slug} onClose={() => setProblem(false)} />

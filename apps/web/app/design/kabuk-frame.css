@@ -1,0 +1,45 @@
+/* I-18 uyarlaması (DESIGN-PARITY §5, T-958): Kabuk kaynağında alt cam çubuk ve Modüller sayfası `.app` cihaz çerçevesinin içindedir
+   (`.dock` sütunun en altında, `.hback` / `.msheet` / `.toast` çerçeveye göre konumlu). Uygulamada çubuk tek ortak bileşendir ve
+   ekranların (Pano, Ekip, Gruplar, Aktar, Cariler) kendi kaynak kaplarının DIŞINDA çizilir (aynı sınıf adları — `.dock`, `.dk`, `.hback` —
+   o kaynakların kurallarıyla çakışmasın). Bu yüzden: `.wrap > .app` görüntü alanını kaplayan, tıklamayı geçiren sabit katmandır; çubuk
+   altta, ekranlar çubuğun yüksekliği kadar yer ayırır. Renk sabiti yok: üretilmiş belirteçler. */
+:root { --kabuk-h: calc(108px + env(safe-area-inset-bottom)); }
+.dzk .wrap, .dzk.dz-dark .wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  min-height: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.dzk .app, .dzk.dz-dark .app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  background: none;
+}
+/* Telefonun ev çubuğu: kaynaktaki 22 px alt boşluğa güvenli alan eklenir. */
+.dzk .wrap .dock { padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+.dzk .dockin, .dzk .hback, .dzk .msheet { pointer-events: auto; }
+.dzk .toast { pointer-events: none; }
+.dzk .msheet { bottom: var(--kabuk-h); }
+/* Ana ekranda yetkisi olmayan kişide Sorun tıklanmaz (I-18 öncelik: yetkisiz eylem tıklanmaz hâlde). */
+.dzk .dk:disabled { opacity: .45; cursor: not-allowed; }
+/* Ekip / Aktar kaynağındaki bekleyen karar (`.dk.big.wait`): sarı ana işlem. */
+.dzk .dk.big.wait { background: var(--color-dz-x-pemfec); color: var(--color-dz-x-bkbdaa); }
+/* Etkin (B-62) henüz yok: kaynaktaki düğme aynen, yalnız "yakında" balonu açar. */
+.dzk .dk-etkin[aria-disabled="true"] { cursor: default; }
+
+/* Kiracı kabuğunun eski alt gezinmesi (Geri / Ana ekran, saha çubuğu) ve telefon üst çubuğu ortak çubuğun olduğu ekranda çizilmez
+   (tasarımda yoktur; eski üst çubuk ekranın kendi üst çubuğunu ve Modüller perdesini örtüyordu). Uygulama menüsü penceresi ayrı öğedir. */
+body:has(.dzk) [data-testid="screen-nav"], body:has(.dzk) [data-testid="field-action-bar"], body:has(.dzk) [data-testid="bottom-nav"], body:has(.dzk) [data-testid="app-bar"] { display: none; }
+
+/* Ekranlar çubuğa yer ayırır (kaynakta `.dock` sütunun parçasıdır: içerik altında kalmaz). */
+body:has(.dzk) .dzp .app, body:has(.dzk) .dze .app, body:has(.dzk) .dzr .app, body:has(.dzk) .dza .app { padding-bottom: var(--kabuk-h); }
+/* Ekranın kendi perdesi / penceresi açıkken (kaynakta `.scrim`, `.cfback`, `.hback` çubuğun üstündedir) ekran çubuğun üstüne çıkar. */
+.dzp:has(.hback, .page), .dze:has(.scrim, .cfback), .dzr:has(.scrim, .cfback), .dza:has(.scrim, .cfback) { z-index: 26; }
+/* Sayfa açılınca odak kaba gelir (klavye açılmasın); kabın kendisi çerçeve çizmez, içindeki denetimler kaynaktaki odak halkasını alır. */
+.dzk .msheet:focus { outline: none; }

@@ -8,6 +8,7 @@ import { useState, type CSSProperties, type FormEvent } from "react";
 import { dz } from "../../../design/aktar-tokens.ts";
 import { AICON } from "../../../design/aktar-icons.ts";
 import { archivePartyAction, savePartyAction } from "./actions.ts";
+import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 
 export interface PartyView {
   readonly id: string;
@@ -97,6 +98,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
   const set = (k: keyof Form, v: string): void => setEdit((cur) => (cur === null ? cur : { ...cur, form: { ...cur.form, [k]: v } as Form }));
 
   return (
+    <>
     <div className={`dza${dark ? " dz-dark" : ""}`} data-testid="parties">
       <div className="wrap">
         <div className="appzone">
@@ -160,29 +162,6 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
               </div>
             </main>
 
-            <nav className="dock subdock" aria-label={t("dock")}>
-              <div className="dockin">
-                <div className="dkl">
-                  <a href={base} className="dk" aria-label={t("back")} style={{ textDecoration: "none" }}>
-                    <Ico d={AICON.back} size={26} />
-                    <span>{t("backShort")}</span>
-                  </a>
-                  <a href={base} className="dk dk-home" aria-label={t("home")} style={{ textDecoration: "none" }}>
-                    <Ico d={[AICON.homeA, AICON.homeB]} size={24} />
-                    <span>{t("homeShort")}</span>
-                  </a>
-                </div>
-                {canEdit ? (
-                  <button type="button" className="dk big scan" aria-label={t("new")} onClick={() => open(null)} data-testid="party-new">
-                    <Ico d={AICON.plus} size={28} />
-                  </button>
-                ) : (
-                  <span />
-                )}
-                <span aria-hidden="true" />
-              </div>
-            </nav>
-            {canEdit ? <span className="mainlbl">{t("newShort")}</span> : null}
 
             {edit !== null ? (
               <div className="scrim" onClick={close}>
@@ -279,5 +258,13 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
         </div>
       </div>
     </div>
+    {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
+    <KabukBar
+      dark={dark}
+      back={{ href: base, aria: t("back") }}
+      homeNav={{ href: base, aria: t("home") }}
+      main={canEdit ? { label: t("newShort"), aria: t("new"), d: AICON.plus, onClick: () => open(null), testId: "party-new" } : null}
+    />
+    </>
   );
 }

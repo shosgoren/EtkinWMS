@@ -13,6 +13,7 @@ import { dz } from "../../../design/ekip-tokens.ts";
 import { EICON } from "../../../design/ekip-icons.ts";
 import { approveJoinAction, createJoinLinkAction, inviteMemberAction, rejectJoinAction } from "../members/actions.ts";
 import { setMemberGroupAction } from "../groups/actions.ts";
+import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 
 type Role = "TENANT_ADMIN" | "WAREHOUSE_MANAGER" | "PICKER" | "COUNTER" | "READ_ONLY";
 export interface TeamPerson {
@@ -317,6 +318,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   };
 
   return (
+    <>
     <div className={`dze${dark ? " dz-dark" : ""}`} data-testid="team">
       <div className="wrap">
         <div className="appzone">
@@ -591,39 +593,6 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
               ) : null}
             </main>
 
-            <nav className="dock subdock" aria-label={t("dock")}>
-              <div className="dockin">
-                <div className="dkl">
-                  {view === "list" && !pendDirty ? (
-                    <a href={base} className="dk" aria-label={t("backHome")} style={{ textDecoration: "none" }} data-testid="team-back">
-                      <Ico d={EICON.back} size={26} />
-                      <span>{t("back")}</span>
-                    </a>
-                  ) : (
-                    <button type="button" className="dk" aria-label={t("back")} onClick={view === "list" ? () => setCf("home") : back} data-testid="team-back">
-                      <Ico d={EICON.back} size={26} />
-                      <span>{t("back")}</span>
-                    </button>
-                  )}
-                  {dirty ? (
-                    <button type="button" className="dk dk-home" aria-label={t("home")} onClick={() => setCf("home")} data-testid="team-home">
-                      <Ico d={[EICON.homeA, EICON.homeB]} size={24} />
-                      <span>{t("homeShort")}</span>
-                    </button>
-                  ) : (
-                    <a href={base} className="dk dk-home" aria-label={t("home")} style={{ textDecoration: "none" }} data-testid="team-home">
-                      <Ico d={[EICON.homeA, EICON.homeB]} size={24} />
-                      <span>{t("homeShort")}</span>
-                    </a>
-                  )}
-                </div>
-                <button type="button" className={mainCls} aria-label={mainLabel} onClick={main} disabled={busy || (isDemo && view !== "list")} data-testid="team-main">
-                  <Ico d={mainIcon} size={28} />
-                </button>
-                <span aria-hidden="true" />
-              </div>
-            </nav>
-            <span className="mainlbl">{mainLabel}</span>
 
             {add ? (
               <div className="scrim" onClick={() => setAdd(false)}>
@@ -712,5 +681,13 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
         </div>
       </div>
     </div>
+    {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
+    <KabukBar
+      dark={dark}
+      back={view === "list" && !pendDirty ? { href: base, aria: t("backHome"), testId: "team-back" } : { onClick: view === "list" ? () => setCf("home") : back, aria: t("back"), testId: "team-back" }}
+      homeNav={dirty ? { onClick: () => setCf("home"), aria: t("home"), testId: "team-home" } : { href: base, aria: t("home"), testId: "team-home" }}
+      main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy || (isDemo && view !== "list"), testId: "team-main", wait: mainCls.includes(" wait") }}
+    />
+    </>
   );
 }

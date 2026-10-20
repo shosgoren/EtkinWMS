@@ -1,0 +1,457 @@
+"use client";
+// T-958 (I-18): Kabuk.dc.html alt cam çubuk + Modüller sayfası BİREBİR — `.dock > .dockin` (Geri/Sorun · Ana ekran · `.dk.big` ana işlem ·
+// Modüller · `.dk-etkin`), `.hback` + `.msheet` (`.mh`, `.srch`, `.mgrid > .mt`, `.soon`, `.mt.plus`, `.mempty`) ve `.toast`.
+// Sınıf adları, öğe sırası ve ikon yolları kaynaktan (kabuk-icons.ts); renkler üretilmiş belirteçlerden (kabuk-tokens.ts). CSS
+// `design/kabuk.css` (üretilmiş) + `design/kabuk-frame.css` (uygulama uyarlaması: çubuk ekranın altında sabit, ekranlar yer ayırır).
+// Tek ortak bileşen: Pano ve yeni tasarım alt ekranları (Ekip, Gruplar, Aktar, Cariler) ana işlemini buraya verir; Modüller listesi
+// kiracı düzeninde (sunucuda) üyenin rol/yetki/grup ekranlarından hesaplanır (`modules.ts`) ve bağlamla gelir.
+// Bilinçli farklar (DESIGN-PARITY, T-958): Etkin (B-62) henüz yok → düğme kaynaktaki gibi çizilir, `aria-disabled`; dokununca kaynaktaki
+// "yakında" balonu. Arama kutusundaki mikrofon da aynı. İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { dz } from "../../../design/kabuk-tokens.ts";
+import { KICON } from "../../../design/kabuk-icons.ts";
+import type { KabukModule } from "./types.ts";
+
+export interface KabukContextValue {
+  /** `/t/<slug>` */
+  readonly base: string;
+  readonly modules: readonly KabukModule[];
+  /** Modüller alt yazısındaki rol adı (ör. "Yönetici"). */
+  readonly roleLabel: string;
+}
+
+const KabukContext = createContext<KabukContextValue | null>(null);
+
+export function KabukProvider({ value, children }: { value: KabukContextValue; children: ReactNode }) {
+  return <KabukContext.Provider value={value}>{children}</KabukContext.Provider>;
+}
+
+/** Kaynaktaki çubuk yuvaları (ilk kullanım rehberi `spot` anahtarları, kaynak COL). */
+export type KabukSlot = "sorun" | "geri" | "home" | "center" | "mods" | "etkin";
+
+export interface KabukNav {
+  readonly href?: string;
+  readonly onClick?: () => void;
+  readonly aria?: string;
+  readonly testId?: string;
+}
+
+export interface KabukMain {
+  /** Altındaki kısa etiket (kaynak `.cap`: OKUT, EKLE, ONAYLA…). */
+  readonly label: string;
+  readonly aria?: string;
+  readonly d: string | readonly string[];
+  readonly href?: string;
+  readonly onClick?: () => void;
+  readonly disabled?: boolean;
+  readonly testId?: string;
+  /** Bekleyen karar (Ekip/Aktar kaynağındaki sarı `.dk.big.wait`). */
+  readonly wait?: boolean;
+}
+
+export interface KabukBarProps {
+  readonly dark: boolean;
+  /** Ana ekran (Pano): solda Geri yerine sarı "?" Sorun, Ana ekran seçili. */
+  readonly home?: boolean;
+  /** Ana ekranda Sorun bildir; yoksa (yetki yok) düğme tıklanmaz hâlde çizilir (I-18 öncelik). */
+  readonly problem?: { readonly onClick: () => void; readonly testId?: string };
+  /** Alt ekranda Geri (kaydedilmemiş iş uyarısı ekranın kendisindedir). */
+  readonly back?: KabukNav;
+  /** Ana ekran düğmesi (varsayılan: kiracı köküne bağlantı). */
+  readonly homeNav?: KabukNav;
+  /** Ekranın ana işlemi; verilmezse OKUT (okutma ekranı). */
+  readonly main?: KabukMain | null;
+  /** B-75 ilk kullanım rehberi: parlayan yuva (kaynak `.touring` + `.spot`). */
+  readonly spot?: KabukSlot | null;
+  /** B-62 Etkin: verilince düğme çalışır (bas-konuş); verilmezse "yakında". */
+  readonly etkin?: { readonly live: boolean; readonly handlers: Pick<HTMLAttributes<HTMLButtonElement>, "onPointerDown" | "onPointerUp" | "onPointerCancel" | "onKeyDown"> };
+}
+
+type Dev = "mobile" | "tablet" | "desktop";
+// Kaynak detect() (port.mjs MEDIA ile aynı eşikler).
+const MQ_MOBILE = "(max-width: 699.98px)";
+const MQ_TABLET = "(min-width: 700px) and (max-width: 1099.98px), (min-width: 700px) and (pointer: coarse)";
+function detect(): Dev {
+  try {
+    if (window.matchMedia(MQ_MOBILE).matches) return "mobile";
+    if (window.matchMedia(MQ_TABLET).matches) return "tablet";
+  } catch {
+    /* matchMedia yok */
+  }
+  return "desktop";
+}
+/** Kaynak: telefonda 12, tablette 16, masaüstünde 20 kutu (4 satır); sığmayan "+N daha". */
+const CAP: Record<Dev, number> = { mobile: 12, tablet: 16, desktop: 20 };
+
+/** Kaynak tone(): dokunuş / onay / hata sesi + titreşim. */
+function tone(kind: "tap" | "ok" | "err"): void {
+  try {
+    const A = window.AudioContext;
+    if (A === undefined) return;
+    const ac = new A();
+    const t0 = ac.currentTime;
+    const seq = kind === "ok" ? [660, 990] : kind === "err" ? [330, 220] : [560];
+    seq.forEach((f, i) => {
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      const t = t0 + i * 0.13;
+      o.type = "sine";
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.connect(g);
+      g.connect(ac.destination);
+      o.start(t);
+      o.stop(t + 0.13);
+    });
+    window.setTimeout(() => void ac.close(), 600);
+    if (typeof navigator.vibrate === "function") navigator.vibrate(kind === "err" ? [60, 40, 60] : 30);
+  } catch {
+    /* ses yoksa sessiz */
+  }
+}
+
+function Ico({ d, size, className = "ico" }: { d: string | readonly string[]; size: number; className?: string }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      {(typeof d === "string" ? [d] : d).map((p) => (
+        <path key={p} d={p} />
+      ))}
+    </svg>
+  );
+}
+
+function GridIco({ size }: { size: number }) {
+  return (
+    <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.8" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8" />
+    </svg>
+  );
+}
+
+function MicIco({ size }: { size: number }) {
+  return (
+    <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d={KICON.micB} />
+    </svg>
+  );
+}
+
+function SearchIco() {
+  return (
+    <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" />
+      <path d={KICON.searchTail} />
+    </svg>
+  );
+}
+
+/** Bağlantı ya da düğme (aynı sınıf ve içerik). */
+function Slot({ nav, className, aria, testId, k, current, children }: { nav: KabukNav; className: string; aria: string; testId: string; k: KabukSlot; current?: boolean; children: ReactNode }) {
+  const common = { className, "aria-label": nav.aria ?? aria, "data-testid": nav.testId ?? testId, "data-k": k, "aria-current": current === true ? ("page" as const) : undefined };
+  return nav.href !== undefined && nav.onClick === undefined ? (
+    <a href={nav.href} {...common} style={{ textDecoration: "none" }}>
+      {children}
+    </a>
+  ) : (
+    <button type="button" {...common} onClick={nav.onClick}>
+      {children}
+    </button>
+  );
+}
+
+const TOASTS = { ok: ["2F7D5B", KICON.check], err: ["C62828", KICON.close], info: ["E0A100", KICON.info] } as const;
+
+export function KabukBar({ dark, home = false, problem, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
+  const t = useTranslations("kabuk");
+  const ctx = useContext(KabukContext);
+  const base = ctx?.base ?? "/";
+  const modules = ctx?.modules ?? [];
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(0);
+  const [dev, setDev] = useState<Dev>("mobile");
+  const [toast, setToast] = useState<{ kind: keyof typeof TOASTS; text: string } | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const modsBtn = useRef<HTMLButtonElement>(null);
+  const sheet = useRef<HTMLElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+
+  const say = useCallback((kind: keyof typeof TOASTS, text: string) => {
+    window.clearTimeout(toastTimer.current);
+    setToast({ kind, text });
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
+  }, []);
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setQ("");
+    setPage(0);
+    modsBtn.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setDev(detect());
+    // Odak sayfaya (telefonda klavye kendiliğinden açılmasın); Tab arama kutusundan başlar.
+    sheet.current?.focus();
+    const onKey = (e: globalThis.KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, close]);
+
+  // Odak tuzağı: Tab sayfa içinde döner.
+  const trap = (e: KeyboardEvent<HTMLElement>): void => {
+    if (e.key !== "Tab" || sheet.current === null) return;
+    const f = [...sheet.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), input")];
+    if (f.length === 0) return;
+    const first = f[0]!;
+    const last = f[f.length - 1]!;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  const soon = (name: string): void => {
+    tone("tap");
+    say("info", t("soonToast", { name }));
+  };
+
+  // Kaynak renderVals: arama (ad + alt yazı, Türkçe küçük harf), sayfa sınırı ve "+N daha" / "İlk sayfa" kutusu.
+  const named = modules.map((m) => ({ ...m, name: t(`mod.${m.id}.name`), sub: t(`mod.${m.id}.sub`) }));
+  const ql = q.toLocaleLowerCase("tr").trim();
+  const list = ql === "" ? named : named.filter((m) => `${m.name} ${m.sub}`.toLocaleLowerCase("tr").includes(ql));
+  const cap = CAP[dev];
+  let shown = list;
+  let plus: { first: true; n: number } | { first: false } | null = null;
+  if (list.length > cap) {
+    if (page === 0) {
+      shown = list.slice(0, cap - 1);
+      plus = { first: true, n: list.length - (cap - 1) };
+    } else {
+      shown = list.slice(cap - 1, cap - 1 + cap - 1);
+      plus = { first: false };
+    }
+  }
+  const roleLabel = (ctx?.roleLabel ?? "").toLocaleUpperCase("tr");
+  const modsSub = t("sub", { role: roleLabel, n: modules.length }) + (plus !== null && !plus.first ? t("page2") : "");
+
+  const sp = (k: KabukSlot): string => (spot === k ? " spot" : "");
+  const center: KabukMain = main ?? { label: t("scanShort"), aria: t("scan"), d: KICON.scan, href: `${base}/field`, testId: "kabuk-scan" };
+  const centerCls = `dk big${center.wait === true ? " wait" : ""}${sp("center")}`;
+  const centerInner = (
+    <>
+      <Ico d={center.d} size={30} />
+      <span className="cap">{center.label}</span>
+    </>
+  );
+  const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];
+
+  return (
+    <div className={`dzk${dark ? " dz-dark" : ""}`} data-testid="kabuk">
+      <div className={`wrap${spot !== null ? " touring" : ""}`}>
+        <div className="app">
+          <nav className="dock" aria-label={t("dock")} data-testid="kabuk-dock">
+            <div className="dockin">
+              {home ? (
+                <button
+                  type="button"
+                  className={`dk problem${sp("sorun")}`}
+                  aria-label={t("report")}
+                  onClick={problem?.onClick}
+                  disabled={problem === undefined}
+                  data-testid={problem?.testId ?? "kabuk-problem"}
+                  data-k="sorun"
+                >
+                  <span className="qm" aria-hidden="true">
+                    ?
+                  </span>
+                  <span>{t("reportShort")}</span>
+                </button>
+              ) : (
+                <Slot nav={back ?? { href: base }} className={`dk${sp("geri")}`} aria={t("back")} testId="kabuk-back" k="geri">
+                  <Ico d={KICON.back} size={26} />
+                  <span>{t("backShort")}</span>
+                </Slot>
+              )}
+              <Slot nav={homeNav ?? { href: base }} className={`dk${home && !open ? " cur" : ""}${sp("home")}`} aria={t("home")} testId="kabuk-home" k="home" current={home}>
+                <Ico d={[KICON.homeA, KICON.homeB, KICON.homeC]} size={26} />
+                <span>{t("homeShort")}</span>
+              </Slot>
+              {center.href !== undefined && center.onClick === undefined && center.disabled !== true ? (
+                <a href={center.href} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }}>
+                  {centerInner}
+                </a>
+              ) : (
+                <button type="button" className={centerCls} aria-label={center.aria ?? center.label} onClick={center.onClick} disabled={center.disabled === true} data-testid={center.testId ?? "kabuk-main"} data-k="center">
+                  {centerInner}
+                </button>
+              )}
+              <button
+                ref={modsBtn}
+                type="button"
+                className={`dk${open ? " cur" : ""}${sp("mods")}`}
+                aria-label={t("mods")}
+                aria-haspopup="dialog"
+                aria-expanded={open}
+                onClick={() => {
+                  tone("tap");
+                  if (open) close();
+                  else setOpen(true);
+                }}
+                data-testid="kabuk-mods"
+                data-k="mods"
+              >
+                <GridIco size={26} />
+                <span>{t("modsShort")}</span>
+              </button>
+              {etkin === undefined ? (
+                <button type="button" className={`dk-etkin${sp("etkin")}`} aria-label={t("etkinSoon")} aria-disabled="true" onClick={() => soon(t("etkinName"))} data-testid="kabuk-etkin" data-k="etkin">
+                  <span className="mr" aria-hidden="true" />
+                  <span className="mr b" aria-hidden="true" />
+                  <span className="orb">
+                    <MicIco size={22} />
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`dk-etkin${etkin.live ? " live" : ""}${sp("etkin")}`}
+                  aria-label={t("etkin")}
+                  aria-pressed={etkin.live}
+                  onContextMenu={(e) => e.preventDefault()}
+                  {...etkin.handlers}
+                  data-testid="kabuk-etkin"
+                  data-k="etkin"
+                >
+                  <span className="mr" aria-hidden="true" />
+                  <span className="mr b" aria-hidden="true" />
+                  <span className="orb">
+                    <MicIco size={22} />
+                  </span>
+                </button>
+              )}
+            </div>
+          </nav>
+
+          {open ? (
+            <>
+              <button type="button" className="hback" aria-label={t("closeMods")} tabIndex={-1} onClick={close} data-testid="kabuk-mods-back" />
+              <section ref={sheet} className="msheet" role="dialog" aria-modal="true" aria-label={t("mods")} tabIndex={-1} onKeyDown={trap} data-testid="kabuk-sheet">
+                <div className="mh">
+                  <span className="gi">
+                    <GridIco size={20} />
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    <b>{t("mods")}</b>
+                    <small>{modsSub}</small>
+                  </span>
+                  <button type="button" className="x" aria-label={t("close")} onClick={close} data-testid="kabuk-mods-close">
+                    <Ico d={KICON.close} size={20} />
+                  </button>
+                </div>
+                <label className="srch">
+                  <SearchIco />
+                  <span className="sr">{t("search")}</span>
+                  <input
+                    ref={search}
+                    type="search"
+                    placeholder={t("searchPh")}
+                    value={q}
+                    onChange={(e) => {
+                      setQ(e.target.value);
+                      setPage(0);
+                    }}
+                    data-testid="kabuk-search"
+                  />
+                  <button type="button" className="smic" aria-label={t("sayModule")} aria-disabled="true" onClick={() => soon(t("etkinName"))}>
+                    <MicIco size={20} />
+                  </button>
+                </label>
+                <div className="mgrid" role="list">
+                  {shown.map((m, i) => {
+                    const isSoon = m.href === null;
+                    const inner = (
+                      <>
+                        <span className="mi" style={{ background: dz(m.color) }}>
+                          <Ico d={m.d} size={22} />
+                        </span>
+                        <span className="mtx">
+                          <b>{m.name}</b>
+                          <small>{m.sub}</small>
+                        </span>
+                        {isSoon ? <span className="soon">{t("soon")}</span> : null}
+                      </>
+                    );
+                    const style: CSSProperties = { animationDelay: `${i * 18}ms` };
+                    return isSoon ? (
+                      <button key={m.id} type="button" role="listitem" className="mt soonT" style={style} aria-label={t("soonAria", { name: m.name, sub: m.sub })} onClick={() => soon(m.name)} data-module={m.id} data-soon="true">
+                        {inner}
+                      </button>
+                    ) : (
+                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={() => tone("tap")} data-module={m.id}>
+                        {inner}
+                      </a>
+                    );
+                  })}
+                  {plus !== null ? (
+                    <button
+                      type="button"
+                      role="listitem"
+                      className="mt plus"
+                      aria-label={plus.first ? t("moreAria", { n: plus.n }) : t("firstAria")}
+                      onClick={() => {
+                        tone("tap");
+                        setPage(plus.first ? 1 : 0);
+                      }}
+                      data-testid="kabuk-more"
+                    >
+                      <span className="mi">
+                        <Ico d={plus.first ? KICON.plus : KICON.back} size={22} />
+                      </span>
+                      <span className="mtx">
+                        <b>{plus.first ? t("more", { n: plus.n }) : t("first")}</b>
+                        <small>{t("moreSub")}</small>
+                      </span>
+                    </button>
+                  ) : null}
+                  {list.length === 0 ? (
+                    <div className="mempty">
+                      <SearchIco />
+                      {t("none")}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          {toast !== null ? (
+            <div className="toast" role="status">
+              <i style={{ background: dz(tk[0]) }}>
+                <Ico d={tk[1]} size={16} />
+              </i>
+              {toast.text}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
