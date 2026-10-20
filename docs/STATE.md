@@ -7,6 +7,8 @@ Son doğrulama: 17.10.2026 Europe/Istanbul (canlı yayın main `6dd9880`, T-999 
 
 - **T-923 (20 Ekim, dal `fix/T-923-trust-device`, KODDA VAR, canlı değil):** MFA ekranında "Bu cihazı 30 gün hatırla" (varsayılan kapalı; 30 gün mutlak; hassas işlem ve `/login?reauth=1` kodu yine ister; parola/2FA değişimi ve tüm cihazlardan çıkışta güven düşer). İnceleme MINOR 1–5 düzeltildi (operatör/panelde güven kapalı, eşzamanlı çerez yarışı, fail-closed olay). Doğrulama: auth+identity int 150/150, verify lint+typecheck OK; tasarım ekran görüntüsü karşılaştırması YAPILMADI (UNKNOWN). ADR-014 7. tur eki, B-76.
 
+- **T-967 (20 Ekim, dal `feat/T-967-support-tickets`, KODDA VAR, canlı değil):** B-84 destek talebi + B-85 üst çubuk Sorun/Destek + B-87 `.fabb.zap`. 0054 `support_tickets`/`support_ticket_messages` (FORCE RLS; üye kendi, TENANT_ADMIN tümü; 10 dk'da 5 talep), panel `/support` gelen kutusu + müşteri Destek sekmesi, `support.notify` CallMeBot (anahtar yoksa atlar; tenant başına 10 dk'da 3). Yerel: int 132/132 dosya · 2470 test, verify/check:all OK; güvenlik 3. tur 0/0/0 @ `f629135`. E2E yalnız CI. Kalan: ekran görüntüsü (B-88), "Erişim iste" akışı (B-89), müşteri kapatma/sesli not (B-90), ALTIN-KURAL metni (B-91). Canlı için: `CALLMEBOT_PHONE`/`CALLMEBOT_APIKEY` kullanıcı `worker.env` (+ panel durumu için `web.env`).
+
 ## 19 Ekim panel 2. tur (özet)
 - Canlıda: Pano (rol açılışı, sahip/yönetici panoları), Excel'den aktar, cari kartlar (0050). Sırada canlıya: yetki grupları (0051), ekibe katılma QR (0052), Ekip ekranı.
 - Yetki modeli: roller aynen; hesap sahibinin özel grubu yalnız EK yetki verir (kapalı liste; ekip yönetimi ve ayarlar verilemez); hassas yetki MFA ister.
