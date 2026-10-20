@@ -171,7 +171,7 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
     await measureDialog(page, dlg, "ürün penceresi 375", `${tag}-375-item-dialog`);
     await dlg.locator('button[type="submit"]').click();
     await expect(page.getByText(`Kod değişti: ${itemCode} → ${itemNew}.`)).toBeVisible();
-    await expect(page.getByText(`Kod: ${itemNew}`)).toBeVisible();
+    await expect(page.getByTestId("kalip-code")).toHaveText(itemNew); // T-968: detay kalıbı kod kutusu (`.hcode`)
     await touchTarget(page.getByRole("button", { name: /Geri al/ }), "ürün: Geri al");
     await noHorizontalOverflow(page, "ürün kartı (değişti)");
     await page.screenshot({ path: `${OUT}/${tag}-375-item-changed.png`, fullPage: true });
@@ -183,31 +183,13 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
     await expect(option).toContainText(itemName);
     await expect(option).toContainText(`Bu kod ${itemNew} olarak değişti`);
     await touchTarget(option, "arama önerisi");
-    // Normal kelimeler ortadan bölünmez; yalnızca sığmayan uzun kod kayabilir (overflow-wrap:anywhere, break-all değil).
-    // Tarayıcıda çalışan işlev; kök tsconfig'de DOM tipleri yok, bu yüzden yapısal tipler ve globalThis kullanılır.
-    interface Dom {
-      getComputedStyle: (el: unknown) => { wordBreak: string; overflowWrap: string };
-      document: { createRange: () => { setStart: (n: unknown, o: number) => void; setEnd: (n: unknown, o: number) => void; getClientRects: () => { length: number } } };
-    }
-    const wrap = await option.locator("span").nth(1).evaluate((el: { firstChild: { textContent: string | null } }) => {
-      const g = globalThis as unknown as Dom;
-      const cs = g.getComputedStyle(el);
-      const node = el.firstChild;
-      const at = (node.textContent ?? "").indexOf("eski");
-      const r = g.document.createRange();
-      r.setStart(node, at);
-      r.setEnd(node, at + 4);
-      return { wordBreak: cs.wordBreak, overflowWrap: cs.overflowWrap, eskiRects: r.getClientRects().length };
-    });
-    expect(wrap.wordBreak, "öneri metni break-all değil").not.toBe("break-all");
-    expect(wrap.overflowWrap).toBe("anywhere");
-    expect(wrap.eskiRects, '"eski" kelimesi tek satırda').toBe(1);
+    // T-968: öneri kartı liste kalıbındadır (KalipListe `.uc`): bilgi kod satırında tek satır, sığmayan kısım "…" (kaynak tasarım).
     await noHorizontalOverflow(page, "eski kodla arama");
     await page.screenshot({ path: `${OUT}/${tag}-375-old-code-search.png` });
     await option.click();
     await expect(page).toHaveURL(new RegExp(`${itemUrl}$`));
     await expect(page.getByRole("heading", { level: 1, name: itemName })).toBeVisible();
-    await expect(page.getByText(`Kod: ${itemNew}`)).toBeVisible();
+    await expect(page.getByTestId("kalip-code")).toHaveText(itemNew); // T-968: detay kalıbı kod kutusu (`.hcode`)
 
     // T-274 (T-257 bulgusu): GET sonuç sayfasında da (Enter ile gönderilen arama) eski kod bilgisi görünür.
     await page.goto(`/t/demo/items?q=${encodeURIComponent(itemCode)}`);

@@ -21,7 +21,6 @@ for (const device of DEVICES) {
       { path: "/production?new=1", back: "/production" },
       { path: "/shipping?new=1", back: "/shipping" },
       { path: "/stock/documents?new=TRANSFER", back: "/stock/documents" },
-      { path: "/items", back: "" },
       { path: "/field/receive", back: "/field" },
       { path: "/field/putaway", back: "/field" },
     ];
@@ -67,6 +66,26 @@ for (const device of DEVICES) {
       await page.getByTestId("screen-home").filter({ visible: true }).click();
       await expect(page).toHaveURL(/\/t\/demo$/);
       await expect(page.locator("#main").getByTestId("pano")).toBeVisible();
+    }
+
+    // T-968: kalıp ekranları (Ürünler, Ayarlar) eski kabuk yerine ortak alt cam çubuğu kullanır: Geri ve Ana ekran altta, ≥ 48 px.
+    for (const path of ["/items", "/settings"]) {
+      await page.goto(`/t/demo${path}`);
+      await expect(page.locator(".kalip")).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.getByTestId("screen-back").filter({ visible: true })).toHaveCount(0);
+      const back = page.getByTestId("kabuk-back");
+      const home = page.getByTestId("kabuk-home");
+      for (const target of [back, home]) {
+        await expect(target).toBeVisible();
+        const bounds = await target.boundingBox();
+        expect(bounds!.height).toBeGreaterThanOrEqual(48);
+        expect(bounds!.y, "geri/ana ekran alt erişim alanında").toBeGreaterThan(device.height * 0.6);
+        expect(bounds!.y + bounds!.height, "ekran altına taşmaz").toBeLessThanOrEqual(device.height + 1);
+      }
+      expect(await page.evaluate<boolean>("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true);
+      await home.click();
+      await expect(page).toHaveURL(/\/t\/demo$/);
     }
   });
 }

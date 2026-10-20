@@ -109,6 +109,7 @@ export default async function TenantLayout({ children, params }: { children: Rea
     base,
     modules: kabukModules(base, { roles: current.roles, grants: current.grants, screens: current.screens }),
     roleLabel: current.roles[0] === undefined ? "" : t(`roles.${current.roles[0]}`),
+    tenantName: current.tenantName,
   };
 
   return (

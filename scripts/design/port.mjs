@@ -6,7 +6,7 @@
 //   3. Renk sabitleri (#hex, rgba()) `var(--color-dz-…)` belirtecine çevrilir; belirteç tanımları globals.css işaretli bloğuna yazılır
 //      (theme-contrast.test.ts: renk sabiti yalnız globals.css `--color-*` satırlarında).
 //   4. Yazı tipi aileleri next/font değişkenlerine çevrilir (`'Bricolage Grotesque'` → `var(--font-bricolage)`).
-//   5. Yalnız tasarım aracına ait önizleme kuralları (`.prev*`, `.fr-*`) atlanır (DESIGN-PARITY §5).
+//   5. Yalnız tasarım aracına ait önizleme kuralları (`.prev*`, `.fr-*`, kalıp tuvalinde `.stage` / `.frm` / `.frl`) atlanır (DESIGN-PARITY §5).
 // Kullanım: node scripts/design/port.mjs [--check]   (--check: yazmaz, depodakiyle fark varsa çıkış 1)
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -37,6 +37,12 @@ export const SOURCES = [
   { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "2305dacb6a48c57a454ec6e84a2940309a83fe55718ececebabe3af73d9d5ce4", scope: "dzp", palette: "none", device: "fr" },
   // T-958: uygulama kabuğu (alt cam çubuk, Modüller sayfası, Etkin dinleme, ilk kullanım rehberi; aynı 19 Ekim kaynak biçimi).
   { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "d623311be817ea7ffed155350bb193bb29b286ba3e2ed3975065d878e44e9c61", scope: "dzk", palette: "none", device: "fr" },
+  // T-968 (B-63): 4 ekran kalıbı (Liste / Form / Detay / Saha; aynı 19 Ekim kaynak biçimi). Ortak üst çubuk (`.top`, `.brand`, `.pgic`,
+  // `.tph`) her kaynakta aynıdır; her kalıp kendi kabında. Tuvalin yan yana çerçeveleri (`.stage`, `.frm`, `.frl`) atlanır (SKIP).
+  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "e2b049f80da34fec010793cf52e847fab3275564f6cbda30b551f25ba5238bfd", scope: "dzl", palette: "none", device: "fr" },
+  { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "2581ba63eb6b0ff944f2227780d1b664b2ab84df042d3b61c25e1c93e7302ed5", scope: "dzf", palette: "none", device: "fr" },
+  { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "62de931056422b5cb53d33989784cd64357ddc4fefeef8a5e15090d57e3348bf", scope: "dzd", palette: "none", device: "fr" },
+  { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "f041df4aaeeb2f82c8609b40fe8a3b4d46211893cc7d821af6f568167dfa1b2d", scope: "dzs", palette: "none", device: "fr" },
 ];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.
@@ -47,7 +53,8 @@ export const MEDIA = {
 };
 /** @type {Record<string, string>} */
 const FONTS = { "'Bricolage Grotesque'": "var(--font-bricolage)", "'Instrument Sans'": "var(--font-instrument)", "'IBM Plex Mono'": "var(--font-plex-mono)" };
-const SKIP = [/^\.prev/, /^\.fr-/];
+// T-968: Kalıp kaynaklarında tuval çerçeveleri `.stage` / `.frm` / `.frl` (yalnız tasarım aracı; diğer kaynaklarda yok).
+const SKIP = [/^\.prev/, /^\.fr-/, /^\.stage(?![\w-])/, /^\.frm(?![\w-])/, /^\.frl(?![\w-])/];
 
 /** Onaltılık/rgba değerini yalnız harfli belirteç adına çevirir (globals muafiyeti `--color-[a-z-]+`). */
 const LETTERS = "abcdefghijklmnop";
