@@ -78,14 +78,16 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-55 | Pasif üyelik; davet/saha hesabı yaşam döngüsü tutarlılığı | — |
 | B-56 | Donanım kabulü: telefon/notebook kamera, Epson/ZPL, Bluetooth, el terminali (AC-35) | Q-103 |
 | B-57 | Offline gereksinim ölçümü | Q-102, ADR-025 |
+| B-58 | **Canlı hata:** tablette (768–1199 px) eski "Geri / Ana ekran" çubuğu yeni tasarım ekranlarının (Ekip, Gruplar, Aktar, Cari, Pano alt ekranları) cam çubuğunun üstüne biniyor; orta ana işlem tıklanamıyor. T-921 | kullanıcı bildirimi 20 Ekim |
+| B-59 | Ekip: "Rol, depo ve şifre işlemleri · Kullanıcılar ekranı" bağlantı metni kesik çerçevenin üst çizgisine biniyor. T-921 | kullanıcı bildirimi 20 Ekim |
 
 ## P3 — Altın Kural / tasarım ve kod kalitesi
 | ID | İş |
 |---|---|
-| B-60 | Ortak alt ekran çubuğu (Geri + Ana ekran · ana işlem · Etkin) + kaydedilmemiş iş uyarısı (T-423 kalanı) |
+| B-60 | Ortak alt ekran çubuğu (Geri + Ana ekran · ana işlem · Etkin) + kaydedilmemiş iş uyarısı (T-423 kalanı); eski `BottomNav`/`screen-nav` emekliye; e2e'ye tablet (768–1199) projesi |
 | B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya); saha akışlarına sesli geri bildirim |
 | B-62 | Etkin sesli asistan (T-424); sesle miktar/görev arama |
-| B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18) |
+| B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18). Kullanıcı 20 Ekim'de canlıda gördü: **Ayarlar** hâlâ eski görünümde (Kolay mod üst çubuğu, sol Ayarlar/Geri/Ana ekran kutusu, düz form, turuncu Kaydet); alt cam çubuk ve ikonlu yapı yok — önce Ayarlar tuvali |
 | B-64 | İstemci `void action().then()` zincirlerine hata yakalama (ör. `apps/web/app/activate/[token]/flow.tsx`); `loading.tsx`, panel `error.tsx`, `global-error`, `not-found` |
 | B-65 | `apps/web/app/t/[slug]/page.tsx` üyelik yoksa `return null` → `notFound()`; tanımsız roller için açılış ekranı |
 | B-66 | Panel hata kodlarını kullanıcı diline çevir |
