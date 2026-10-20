@@ -5,6 +5,8 @@ Son doğrulama: 17.10.2026 Europe/Istanbul (canlı yayın main `6dd9880`, T-999 
 
 - **20 Ekim statik inceleme:** bütün açık işler tek listede [BACKLOG](BACKLOG.md) (P0 yedek/izleme, P1 yetki-RLS paketi). Not: main `0993416` (0051/0052, yetki grupları + ekibe katılma) 19 Ekim 21:18'de canlıya çıktı (deploy-vps 39326385152, health ok); yukarıdaki 'sırada canlıya' satırı bununla güncellenir.
 
+- **T-923 (20 Ekim, dal `fix/T-923-trust-device`, KODDA VAR, canlı değil):** MFA ekranında "Bu cihazı 30 gün hatırla" (varsayılan kapalı; 30 gün mutlak; hassas işlem ve `/login?reauth=1` kodu yine ister; parola/2FA değişimi ve tüm cihazlardan çıkışta güven düşer). İnceleme MINOR 1–5 düzeltildi (operatör/panelde güven kapalı, eşzamanlı çerez yarışı, fail-closed olay). Doğrulama: auth+identity int 150/150, verify lint+typecheck OK; tasarım ekran görüntüsü karşılaştırması YAPILMADI (UNKNOWN). ADR-014 7. tur eki, B-76.
+
 ## 19 Ekim panel 2. tur (özet)
 - Canlıda: Pano (rol açılışı, sahip/yönetici panoları), Excel'den aktar, cari kartlar (0050). Sırada canlıya: yetki grupları (0051), ekibe katılma QR (0052), Ekip ekranı.
 - Yetki modeli: roller aynen; hesap sahibinin özel grubu yalnız EK yetki verir (kapalı liste; ekip yönetimi ve ayarlar verilemez); hassas yetki MFA ister.

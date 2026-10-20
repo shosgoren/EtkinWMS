@@ -21,13 +21,14 @@ export type AuthCallResult<T> =
   | { readonly ok: false; readonly error: AuthCallError };
 
 /** `POST /api/auth/<path>`: ağ/sunucu hatası dahil her durumda yapılandırılmış sonuç döner (yutulan hata yok). */
-export async function authPost<T>(path: string, body: Record<string, unknown>): Promise<AuthCallResult<T>> {
+export async function authPost<T>(path: string, body: Record<string, unknown>, headers?: Record<string, string>): Promise<AuthCallResult<T>> {
   let retryAfterSec: number | undefined;
   let attemptsLeft: number | undefined;
   try {
     const res = await authClient.$fetch<T>(path, {
       method: "POST",
       body,
+      ...(headers === undefined ? {} : { headers }),
       onError(ctx) {
         const raw = Number(ctx.response.headers.get("x-retry-after"));
         if (Number.isFinite(raw) && raw > 0) retryAfterSec = Math.ceil(raw);

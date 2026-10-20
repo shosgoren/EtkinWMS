@@ -25,7 +25,7 @@ flowchart LR
 | Web/API | `apps/web/app`, `apps/web/lib` | UI, ince HTTP/Server Action, kullanıcı oturumu |
 | İş kuralları | `packages/domain/src` | Tenant yetkisi, stok komutları, katalog, üretim, sevkiyat |
 | DB | `packages/db/src`, `packages/db/migrations` | Transaction, RLS, kilit sırası, şema, migration defteri |
-| Kimlik | `packages/auth/src` | Better Auth, parola, MFA, oturum, kurtarma politikaları |
+| Kimlik | `packages/auth/src` | Better Auth, parola, MFA (güvenilen cihaz 30 gün mutlak, hassas işlemde TOTP: ADR-014 7. tur eki), oturum, kurtarma politikaları |
 | Ortak sözleşme | `packages/shared/src` | Doğrulama, hata kodu, decimal, i18n/arayüz sözleşmeleri |
 | UI | `packages/ui/src` | Ortak erişilebilir form, kart, seçim alanı |
 | Worker/kuyruk | `apps/worker`, `packages/queue-adapter` | Outbox relay, pg-boss, arka plan işleri |

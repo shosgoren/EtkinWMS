@@ -58,6 +58,7 @@ Aşağıdakilerin hepsi kaynakla aynıdır:
 |---|---|---|
 | Sarı ⚠ düğmesi → "Demo örnekleri" açılır kutusu | Aynı düğme ve aynı açılır kutu; öğeler: **Sorun bildir**, **Nasıl kullanılır?**, **Menü** (çalışma alanı, görünüm, çıkış). Uygulama menüsünün ve çıkışın başka yeri yoktur | 15 Ekim 2026 kullanıcı kararı "altyapısını da kur" (Sorun) + menünün erişilebilir kalması zorunluluğu |
 | Bağlantı noktası düğmesi (tasarımda benzetim için açar/kapatır) | Tarayıcının gerçek çevrimiçi durumunu gösterir; tıklanınca durumu söyler | — |
+| `v.mfa` kartında yalnız kod alanı ve "Yedek kod kullan" bağlantısı | Kod alanının altına "Bu cihazı 30 gün hatırla" onay kutusu eklendi (aynı kaynağın `v.login` "Bu cihazda e-postamı hatırla" `.chk` öğesi birebir; varsayılan kapalı). Tasarım kaynağına henüz işlenmedi; ekran görüntüsü karşılaştırması T-923'te alınmadı | 20 Ekim 2026 kullanıcı (ürün sahibi) kararı: "Bu cihazı 30 gün hatırla" — yönetici her girişte Google Authenticator kodu girmesin (T-923) |
 
 Bu tablo dışındaki her sapma için kullanıcının yazılı onayı gerekir; onay tarih ve alıntıyla buraya eklenir.
 

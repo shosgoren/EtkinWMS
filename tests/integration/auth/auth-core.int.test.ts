@@ -368,12 +368,16 @@ describe(`auth çekirdek (target=${env.target})`, () => {
     expect(res.status).toBe(404);
   });
 
-  it("M4: verify-totp / verify-backup-code gövdesinde trustDevice → 400", async () => {
+  it("M4 (T-923 eki): trustDevice yalnız verify-otp'de reddedilir (400); verify-totp/backup'ta açık (tests/integration/auth/trust-device.int.test.ts)", async () => {
     const ip = nextIp();
+    const res = await post("/two-factor/verify-otp", { code: "000000", trustDevice: true }, ip);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { code?: string }).code).toBe("TRUST_DEVICE_DISABLED");
     for (const path of ["/two-factor/verify-totp", "/two-factor/verify-backup-code"]) {
-      const res = await post(path, { code: "000000", trustDevice: true }, ip);
-      expect(res.status).toBe(400);
-      expect(((await res.json()) as { code?: string }).code).toBe("TRUST_DEVICE_DISABLED");
+      // İki adım çerezi yok → eklentinin kendi reddi (güvenilen cihaz bayrağı artık kanca tarafından reddedilmez).
+      const r = await post(path, { code: "000000", trustDevice: true }, ip);
+      expect(r.status).toBe(401);
+      expect(((await r.json()) as { code?: string }).code).not.toBe("TRUST_DEVICE_DISABLED");
     }
   });
 
