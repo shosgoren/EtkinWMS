@@ -240,6 +240,7 @@ export function BulkBuilder({
             listLabel={tp("listLabel")}
             scanLabel={t("scanParent")}
             clearOnSelect
+            variant="kalip"
             search={async (q) => {
               const r = await searchLocationsAction({ slug, warehouseId, q, limit: 8 });
               return r.ok ? r.data : [];
