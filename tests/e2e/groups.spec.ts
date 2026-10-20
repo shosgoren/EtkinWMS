@@ -71,10 +71,13 @@ test.describe("Tablet alt çubuk (T-921)", () => {
   test("1180 px: eski iç ekran gezinmesi yeni tasarım ekranlarını örtmez; orta ana işlem en üstte; Kullanıcılar bağlantısı çerçevede ortalı", async ({ page }) => {
     await loginAdmin(page);
     await page.setViewportSize({ width: 1180, height: 820 });
+    // Aktar'ın ilk adımında (tür seçimi) tasarım gereği orta ana işlem yoktur: orada yalnız eski gezinmenin gizliliği denetlenir.
+    await page.goto("/t/demo/import");
+    await expect(page.getByTestId("aktar")).toBeVisible();
+    await expect(page.getByTestId("screen-nav")).toBeHidden();
     for (const [url, root, main] of [
       ["/t/demo/team", "team", "team-main"],
       ["/t/demo/groups", "groups", "groups-main"],
-      ["/t/demo/import", "aktar", "aktar-main"],
     ] as const) {
       await page.goto(url);
       await expect(page.getByTestId(root)).toBeVisible();
