@@ -1,8 +1,9 @@
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@wms/shared/errors";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), principal: vi.fn(), membership: vi.fn(), db: {}, headers: new Headers() }));
-vi.mock("next/headers", () => ({ headers: async () => mocks.headers }));
+vi.mock("next/headers", () => ({ headers: async () => mocks.headers, cookies: async () => ({ get: () => undefined }) }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); }, redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); } }));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 vi.mock("@wms/db", () => ({ getAppDb: () => mocks.db }));
@@ -13,6 +14,7 @@ vi.mock("@wms/domain/identity/member-queries", () => ({ getMembershipSummary: mo
 vi.mock("../../../../../lib/auth-service.ts", () => ({ getAuthService: () => ({ getPrincipal: mocks.principal }) }));
 vi.mock("../../../../../lib/package-receiving-config.ts", () => ({ packageReceivingEnabled: vi.fn(() => true) }));
 vi.mock("./package-flow.tsx", () => ({ PackageFlow: () => null }));
+vi.mock("../../kalip/liste.tsx", () => ({ KalipKilitliEkran: ({ text }: { text: string }) => createElement("p", { role: "alert" }, text), KalipHataEkran: ({ text }: { text: string }) => createElement("p", { role: "alert" }, text) }));
 import Page from "./page.tsx";
 import { PackageFlow } from "./package-flow.tsx";
 import { packageReceivingEnabled } from "../../../../../lib/package-receiving-config.ts";

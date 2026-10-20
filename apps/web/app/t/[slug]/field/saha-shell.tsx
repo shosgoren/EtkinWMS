@@ -98,6 +98,8 @@ export interface SahaFrameProps {
   readonly sub?: string;
   readonly back?: KabukNav;
   readonly main?: KabukMain | null;
+  /** Ana ekran yuvası (varsayılan: kiracı kökü). */
+  readonly homeNav?: KabukNav;
   readonly testId?: string;
   readonly children: ReactNode;
   /** `.app` içinde, içeriğin üstünde (başarı perdesi `.veil`, bildirim). */
@@ -105,7 +107,7 @@ export interface SahaFrameProps {
 }
 
 /** Kaynak `.wrap > .app > header.top` + ortak alt cam çubuk. İçerik (`main.inner`) çağırandadır. */
-export function SahaFrame({ hue, iconD, title, sub, back, main, testId, children, overlay }: SahaFrameProps) {
+export function SahaFrame({ hue, iconD, title, sub, back, main, homeNav, testId, children, overlay }: SahaFrameProps) {
   const dark = useSahaDark();
   const t = useTranslations("saha");
   return (
@@ -142,7 +144,7 @@ export function SahaFrame({ hue, iconD, title, sub, back, main, testId, children
           </div>
         </div>
       </div>
-      <KabukBar dark={dark} {...(back === undefined ? {} : { back })} {...(main === undefined ? {} : { main })} />
+      <KabukBar dark={dark} {...(back === undefined ? {} : { back })} {...(main === undefined ? {} : { main })} {...(homeNav === undefined ? {} : { homeNav })} />
     </>
   );
 }
@@ -167,17 +169,21 @@ export interface SahaShellProps {
   readonly scanProxy?: boolean;
   /** Çubuğun ortasındaki ana işlem (OKUT / ONAYLA). Verilmezse OKUT ekranına bağlantı. */
   readonly main?: KabukMain | null;
+  /** Geri / Ana ekran yuvalarının test kimlikleri (eski ekran gezinmesinin `screen-back` / `screen-home` sözleşmesini taşıyan ekranlar; T-973). */
+  readonly navTestIds?: { readonly back: string; readonly home: string; readonly homeHref: string };
   readonly overlay?: ReactNode;
   readonly children: ReactNode;
 }
 
 /** Saha adım çerçevesi (eski FlowShell sözleşmesi + kaynak görünümü): `data-testid="flow-step"`, `data-step`. */
-export function SahaShell({ hue, iconD, step, total, phase, title, instruction, backHref, onBack, footer, footerExtra, scanProxy, main, overlay, children }: SahaShellProps) {
+export function SahaShell({ hue, iconD, step, total, phase, title, instruction, backHref, onBack, footer, footerExtra, scanProxy, main, navTestIds, overlay, children }: SahaShellProps) {
   const t = useTranslations("receiving");
   const stepLabel = step === undefined || total === undefined ? null : t("stepOf", { n: step, total });
-  const back: KabukNav | undefined = backHref !== undefined ? { href: backHref, aria: t("back") } : onBack !== undefined ? { onClick: onBack, aria: t("back") } : undefined;
+  const bt = navTestIds === undefined ? {} : { testId: navTestIds.back };
+  const back: KabukNav | undefined = backHref !== undefined ? { href: backHref, aria: t("back"), ...bt } : onBack !== undefined ? { onClick: onBack, aria: t("back"), ...bt } : undefined;
+  const homeNav: KabukNav | undefined = navTestIds === undefined ? undefined : { href: navTestIds.homeHref, testId: navTestIds.home };
   return (
-    <SahaFrame hue={hue} iconD={iconD} title={title} {...(instruction === undefined ? {} : { sub: instruction })} {...(back === undefined ? {} : { back })} {...(main === undefined ? {} : { main })} overlay={overlay}>
+    <SahaFrame hue={hue} iconD={iconD} title={title} {...(instruction === undefined ? {} : { sub: instruction })} {...(back === undefined ? {} : { back })} {...(main === undefined ? {} : { main })} {...(homeNav === undefined ? {} : { homeNav })} overlay={overlay}>
       <main
         className={`inner sflow group ${footer === undefined ? "" : "hasfoot"} ${scanProxy === true ? "[&_[data-mode=scan]]:hidden" : ""}`}
         data-testid="flow-step"

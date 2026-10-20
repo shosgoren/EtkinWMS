@@ -7,13 +7,25 @@ import { getAppDb } from "@wms/db";
 import { TASK_KINDS, listMyTasks, type TaskCursor, type TaskKind } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
 import { claimTaskAction } from "../../tasks/actions.ts";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { kalipDark } from "../../stock/belge-kalip.ts";
+import { Ico, KalipBaslik, KalipEkran } from "../../kalip/ekran.tsx";
+import { KalipBos, KalipDaha, KalipKartListe } from "../../kalip/liste.tsx";
+import { kdz } from "../../kalip/tokens.ts";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 const ERROR_KEYS = ["forbidden", "unauthenticated", "not_found", "validation_failed", "validation_failed_document_state", "version_conflict", "rate_limited", "tenant_suspended", "tenant_closing", "internal"];
-const BTN =
-  "flex min-h-12 min-w-12 w-full items-center justify-center rounded-control px-4 text-base font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+// T-973 (B-63, I-18): LİSTE kalıbı (KalipListe.dc.html), saha görünümü: tür ikonlu kart (`.uc`), kartın altında tek büyük eylem (Üstlen /
+// Başla, `.btn`), sayfalama `.more`. Kart kendisi eylem değildir (düğme adı çakışmaz); alt çubuk ana işlemi OKUT.
+const KIND_VISUAL: Record<string, { readonly d: string; readonly color: string }> = {
+  PUTAWAY: { d: LICON.moveIn, color: "2F5DA8" },
+  PICK: { d: LICON.moveOut, color: "9A5B2E" },
+  REPUTAWAY: { d: LICON.transfer, color: "0E7C7B" },
+  COUNT: { d: LICON.clip, color: "6C4BD8" },
+};
+const BTN_STYLE = { width: "100%", minHeight: 56, fontSize: 16 } as const;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("tasks.field");
@@ -67,13 +79,12 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
 
   const errorKey = errorRaw === "" ? null : ERROR_KEYS.includes(errorRaw) ? errorRaw : "internal";
   const kindOf = (k: TaskKind) => ((TASK_KINDS as readonly string[]).includes(k) ? t(`kind.${k}`) : k);
+  const dark = await kalipDark();
+  const fieldHome = `/t/${encodeURIComponent(slug)}/field`;
 
   return (
-    <main className="flex w-full min-w-0 flex-col gap-4 px-4 py-4">
-      <header className="flex min-w-0 flex-col gap-1">
-        <h1 className="break-words text-3xl font-extrabold text-ink">{t("field.title")}</h1>
-        <p className="break-words text-lg text-ink">{t("field.intro")}</p>
-      </header>
+    <KalipEkran kind="liste" dark={dark} title={t("field.title")} icon={{ d: LICON.clip, color: "6C4BD8" }} testId="field-tasks" bar={{ back: { href: fieldHome } }}>
+      <p className="sr">{t("field.intro")}</p>
       {first(sp.claimed) === "1" ? (
         <p role="status" className="rounded-card bg-success-bg px-4 py-3 text-base font-semibold text-success-ink">
           {t("field.claimed")}
@@ -85,55 +96,69 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
         </p>
       )}
       {page.items.length === 0 ? (
-        <section className="flex min-w-0 flex-col gap-1 rounded-card border-2 border-border bg-surface p-4">
-          <h2 className="break-words text-xl font-bold text-ink">{t("field.empty.title")}</h2>
-          <p className="break-words text-base text-ink-muted">{t("field.empty.action")}</p>
-        </section>
+        <KalipBos title={t("field.empty.title")} hint={t("field.empty.action")} iconD={LICON.clip} testId="field-tasks-empty" />
       ) : (
-        <ul aria-label={t("field.listLabel")} className="m-0 flex min-w-0 list-none flex-col gap-3 p-0">
-          {page.items.map((task) => (
-            <li key={task.id} data-testid="field-task" data-task-id={task.id} className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border bg-surface p-4">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h2 className="break-words text-xl font-bold text-ink">{kindOf(task.kind)}</h2>
-                <span className="inline-flex items-center rounded-full bg-accent-soft px-2 text-xs font-bold text-accent-ink">
-                  {task.status === "ASSIGNED" ? t("field.mine") : t("field.available")}
-                </span>
-              </div>
-              {task.quantity === null ? null : <p className="break-words text-base text-ink-muted">{t("quantity", { quantity: task.quantity })}</p>}
-              {task.status === "OPEN" ? (
-                <form action={claim}>
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <input type="hidden" name="version" value={task.version} />
-                  <button type="submit" className={`${BTN} bg-accent text-on-accent`}>
-                    {t("field.claim")}
-                  </button>
-                </form>
-              ) : task.kind === "PUTAWAY" ? (
-                <Link href={`/t/${encodeURIComponent(slug)}/field/putaway?task=${encodeURIComponent(task.id)}`} className={`${BTN} bg-accent text-on-accent`}>
-                  {t("field.start")}
-                </Link>
-              ) : (
-                <>
-                  <button type="button" disabled aria-describedby={`start-${task.id}`} className={`${BTN} border-2 border-border-strong bg-surface text-ink opacity-60`}>
-                    {t("field.start")}
-                  </button>
-                  <p id={`start-${task.id}`} className="break-words text-sm text-ink-muted">
-                    {t("field.startLocked")}
-                  </p>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          <KalipBaslik title={t("field.title")} hint={t("field.intro")} />
+          <KalipKartListe label={t("field.listLabel")}>
+            {page.items.map((task, i) => {
+              const v = KIND_VISUAL[task.kind] ?? { d: LICON.clip, color: "6C4BD8" };
+              const mine = task.status === "ASSIGNED";
+              return (
+                <div key={task.id} role="listitem" data-testid="field-task" data-task-id={task.id} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                  <div className="uc" style={{ animationDelay: `${i * 30}ms` }}>
+                    <span className="uic" style={{ background: kdz("dzl", v.color) }}>
+                      <Ico d={v.d} size={26} />
+                    </span>
+                    <span className="ut">
+                      <h2 style={{ margin: 0, font: "inherit" }}>
+                        <b>{kindOf(task.kind)}</b>
+                      </h2>
+                      <small className="mono">{mine ? t("field.mine") : t("field.available")}</small>
+                    </span>
+                    {task.quantity === null ? null : (
+                      <span className="qb">
+                        <b>{task.quantity}</b>
+                        <small>{t("qtySub")}</small>
+                      </span>
+                    )}
+                  </div>
+                  {task.status === "OPEN" ? (
+                    <form action={claim}>
+                      <input type="hidden" name="taskId" value={task.id} />
+                      <input type="hidden" name="version" value={task.version} />
+                      <button type="submit" className="btn y" style={BTN_STYLE}>
+                        <Ico d={LICON.people} size={20} />
+                        {t("field.claim")}
+                      </button>
+                    </form>
+                  ) : task.kind === "PUTAWAY" ? (
+                    <Link href={`/t/${encodeURIComponent(slug)}/field/putaway?task=${encodeURIComponent(task.id)}`} className="btn n" style={{ ...BTN_STYLE, textDecoration: "none" }}>
+                      <Ico d={LICON.arrow} size={20} />
+                      {t("field.start")}
+                    </Link>
+                  ) : (
+                    <>
+                      <button type="button" disabled aria-describedby={`start-${task.id}`} className="btn n" style={{ ...BTN_STYLE, opacity: 0.6 }}>
+                        <Ico d={LICON.lock} size={20} />
+                        {t("field.start")}
+                      </button>
+                      <small id={`start-${task.id}`} style={{ overflowWrap: "anywhere" }}>
+                        {t("field.startLocked")}
+                      </small>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </KalipKartListe>
+        </>
       )}
       {page.next === null ? null : (
-        <Link
-          href={`${base}?after=${encodeURIComponent(`${page.next.createdKey}~${page.next.id}`)}`}
-          className={`${BTN} border-2 border-border-strong bg-surface text-ink`}
-        >
+        <KalipDaha href={`${base}?after=${encodeURIComponent(`${page.next.createdKey}~${page.next.id}`)}`} iconD={LICON.plus}>
           {t("field.more")}
-        </Link>
+        </KalipDaha>
       )}
-    </main>
+    </KalipEkran>
   );
 }

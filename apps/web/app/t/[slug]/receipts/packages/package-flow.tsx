@@ -1,11 +1,19 @@
 "use client";
+// Paketli kabul (T-938): ürün → paketler → kontrol → etiket. Hazırlama/işleme tek gönderim nesnesindedir (createPackageSubmission:
+// idempotency anahtarı ve içerik dondurulur); yetki ve kurallar sunucuda.
+// T-973 (B-63, I-18): FORM kalıbı kabı (KalipEkran `form`): kalıp üst çubuğu + ortak alt cam çubuk (Geri: Beklenen teslimler, Ana ekran,
+// ana işlem İLERİ = adımın kendi birincil düğmesine basar; kabul sonrası ETİKET). Adım içerikleri, alan adları ve düğme adları aynı.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Banner, PackagePlus } from "@wms/ui";
+import { Banner } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../../field/receive/receive-flow.tsx";
 import { FormSteps } from "../../screen-shell.tsx";
 import { ErrorNotice, type ErrorInfo, type ActionResult } from "../receipt-form.tsx";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
+import { KalipAlan, KalipAnahtar, KalipGrup, KalipSecenek } from "../../kalip/form.tsx";
+import { kdz } from "../../kalip/tokens.ts";
 import { getPackageReceiptAction, packageItemOptionsAction, packageReceivingLocationsAction, packageWarehousesAction, postPackageReceiptAction, preparePackageReceiptAction, resolvePackageItemScanAction, searchPackageItemsAction, type PackageCommandDto, type PackageItemDto, type PackageItemOptionsDto, type PackageReceiptDto } from "./actions.ts";
 
 type Place = { readonly id: string; readonly code: string; readonly name: string };
@@ -116,9 +124,7 @@ export function createPackageSubmission(initial: PackageReceiptDto | null, ports
     },
   };
 }
-const control = "min-h-12 w-full min-w-0 rounded-control border-2 border-border-strong bg-surface px-3 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-const card = "min-w-0 rounded-card border-2 border-border bg-surface p-4";
-export function PackageFlow({ slug, initial, canWrite }: { slug: string; initial: PackageReceiptDto | null; canWrite: boolean }) {
+export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: string; initial: PackageReceiptDto | null; canWrite: boolean; dark?: boolean }) {
   const t = useTranslations("packageReceiving");
   const [clientReady, setClientReady] = useState(false);
   useEffect(() => { setClientReady(true); }, []);
@@ -218,64 +224,92 @@ export function PackageFlow({ slug, initial, canWrite }: { slug: string; initial
       if (r) { setReceipt(r); if (r.documentStatus === "POSTED") setStage(4); }
     } catch (e) { fail(e); } finally { lock.current = false; setBusy(false); }
   }
+  // T-973: kalıp alanları (`.fld`); erişilebilir adlar (aria-label önekleri) e2e sözleşmesidir.
   function entryFields(value: PackageEntry, update: (row: PackageEntry) => void, prefix: string) {
-    return <div className="grid min-w-0 gap-3 md:grid-cols-2">
-      <label className="flex min-w-0 flex-col gap-1">{t("quantity")}<input aria-label={`${prefix} ${t("quantity")}`} className={control} inputMode="decimal" value={value.quantity} maxLength={32} onChange={e => update({ ...value, quantity: e.target.value })} /></label>
+    return <div className="pk-grid">
+      <KalipAlan label={t("quantity")} aria-label={`${prefix} ${t("quantity")}`} inputMode="decimal" value={value.quantity} maxLength={32} onChange={e => update({ ...value, quantity: e.target.value })} />
       {options?.item.trackingMode === "LOT" || optionalMetadata ? <>
-        <label className="flex min-w-0 flex-col gap-1">{t("lot")}<input aria-label={`${prefix} ${t("lot")}`} className={control} value={value.lotCode ?? ""} maxLength={64} onChange={e => { const next = { ...value }; if (e.target.value) next.lotCode = e.target.value; else delete next.lotCode; update(next); }} /></label>
-        <label className="flex min-w-0 flex-col gap-1">{t("produced")}<input aria-label={`${prefix} ${t("produced")}`} type="date" className={control} value={value.producedOn ?? ""} onChange={e => { const next = { ...value }; if (e.target.value) next.producedOn = e.target.value; else delete next.producedOn; update(next); }} /></label>
-        <label className="flex min-w-0 flex-col gap-1">{t("expires")}<input aria-label={`${prefix} ${t("expires")}`} type="date" className={control} value={value.expiresOn ?? ""} onChange={e => { const next = { ...value }; if (e.target.value) next.expiresOn = e.target.value; else delete next.expiresOn; update(next); }} /></label>
+        <KalipAlan label={t("lot")} aria-label={`${prefix} ${t("lot")}`} value={value.lotCode ?? ""} maxLength={64} onChange={e => { const next = { ...value }; if (e.target.value) next.lotCode = e.target.value; else delete next.lotCode; update(next); }} />
+        <KalipAlan label={t("produced")} aria-label={`${prefix} ${t("produced")}`} type="date" value={value.producedOn ?? ""} onChange={e => { const next = { ...value }; if (e.target.value) next.producedOn = e.target.value; else delete next.producedOn; update(next); }} />
+        <KalipAlan label={t("expires")} aria-label={`${prefix} ${t("expires")}`} type="date" value={value.expiresOn ?? ""} onChange={e => { const next = { ...value }; if (e.target.value) next.expiresOn = e.target.value; else delete next.expiresOn; update(next); }} />
       </> : null}
     </div>;
   }
-  return <main className="package-flow mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-4" data-testid="package-flow" data-stage={posted ? 4 : stage}>
-    <h1 className="flex items-center gap-2 break-words text-2xl font-extrabold text-ink"><PackagePlus aria-hidden="true" className="size-6 shrink-0" />{t("title")}</h1>
+  const home = `/t/${encodeURIComponent(slug)}`;
+  const pressPrimary = () => {
+    const primary = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="package-flow"] button.flow-primary'));
+    const target = primary.find(b => !b.disabled);
+    if (target === undefined) { tone("err"); primary[0]?.scrollIntoView({ block: "center" }); return; }
+    tone("tap"); target.click();
+  };
+  const main = posted && receipt
+    ? { label: t("k.labelsShort"), aria: t("k.labelsAria"), d: LICON.printer, href: packageLabelHref(slug, receipt.documentId), testId: "package-main" }
+    : { label: t("k.nextShort"), aria: t("k.nextAria"), d: LICON.arrow, onClick: pressPrimary, disabled: busy || (!canWrite && stage >= 3), testId: "package-main" };
+  return <KalipEkran kind="form" dark={dark} title={t("title")} icon={{ d: LICON.koli, color: "2F7D5B" }} testId="package-receiving"
+    bar={{ back: { href: `${home}/receipts`, testId: "screen-back" }, homeNav: { href: home, testId: "screen-home" }, main }}>
+  <div className="package-flow mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 py-2" data-testid="package-flow" data-stage={posted ? 4 : stage}>
+    <p className="sr">{t("k.intro")}</p>
     <FormSteps labels={[t("product"), t("packages"), t("review"), t("labels")]} />
     {error ? <ErrorNotice error={error} context="create" /> : null}
     {scanner.dropped ? <Banner kind="warning">⚠ {t("scanDropped")}</Banner> : null}
     <div className="package-layout grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
       <section className="flex min-w-0 flex-col gap-4">
-        {stage === 1 && !receipt ? <fieldset disabled={busy || frozen} className="flex min-w-0 flex-col gap-3">
-          <legend className="mb-2 text-xl font-bold">{t("product")}</legend>
-          <label className="flex min-w-0 flex-col gap-1">{t("search")}<input className={control} value={query} maxLength={128} onChange={e => void search(e.target.value)} /></label>
-          <ul className="flex min-w-0 flex-col gap-2">{found.map(item => <li key={item.id}><button type="button" className={`${control} text-left`} onClick={() => void choose(item.id)}>{item.code} · {item.name}</button></li>)}</ul>
-          <ScanPanel service={scanner.service} prompt={t("scan")} last={last} ready={camera.ready} hue="green" />
-          <SecondaryButton onClick={camera.press} disabled={busy}>{t("scan")}</SecondaryButton>
-          {options ? <p className="break-words font-bold">{options.item.code} · {options.item.name}</p> : null}
-          {unsupported ? <Banner kind="warning">⚠ {t("serial")}</Banner> : null}
-          <PrimaryButton disabled={!options || !!unsupported || busy} onClick={() => setStage(2)}>{t("next")}</PrimaryButton>
+        {stage === 1 && !receipt ? <fieldset disabled={busy || frozen} className="pk-fs">
+          <legend className="sr">{t("product")}</legend>
+          <KalipGrup title={t("product")} sub={t("chooseProduct")} d={LICON.search} color="2F7D5B" testId="package-product">
+            <div className="pk-body">
+              <KalipAlan label={t("search")} value={query} maxLength={128} onChange={e => void search(e.target.value)} />
+              {found.length > 0 ? <ul className="pk-list">{found.map(item => <li key={item.id}><button type="button" className="gp pk-pick" onClick={() => void choose(item.id)}>{item.code} · {item.name}</button></li>)}</ul> : null}
+              <ScanPanel service={scanner.service} prompt={t("scan")} last={last} ready={camera.ready} hue="green" />
+              <SecondaryButton onClick={camera.press} disabled={busy}>{t("scan")}</SecondaryButton>
+              {options ? <p className="pk-card pk-chosen"><Ico d={LICON.check} size={20} />{options.item.code} · {options.item.name}</p> : null}
+              {unsupported ? <Banner kind="warning">⚠ {t("serial")}</Banner> : null}
+              <PrimaryButton disabled={!options || !!unsupported || busy} onClick={() => setStage(2)}>{t("next")}</PrimaryButton>
+            </div>
+          </KalipGrup>
         </fieldset> : null}
-        {stage === 2 && !receipt ? <fieldset disabled={busy || frozen} className="flex min-w-0 flex-col gap-4">
-          <legend className="mb-2 text-xl font-bold">{t("packages")}</legend>
-          <div className="grid min-w-0 gap-3 md:grid-cols-2">
-            <label className="flex min-w-0 flex-col gap-1">{t("warehouse")}<select className={control} value={warehouseId} onChange={e => { const id = e.target.value; setWarehouseId(id); lock.current = true; setBusy(true); void loadLocations(id).catch(fail).finally(() => { lock.current = false; setBusy(false); }); }}><option value="">{t("choose")}</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
-            <label className="flex min-w-0 flex-col gap-1">{t("location")}<select className={control} value={locationId} onChange={e => setLocationId(e.target.value)}><option value="">{t("choose")}</option>{locations.map(l => <option key={l.id} value={l.id}>{l.code} · {l.name}</option>)}</select></label>
-            <label className="flex min-w-0 flex-col gap-1">{t("kind")}<select className={control} value={kind} onChange={e => setKind(e.target.value as "VARIL" | "KOLI")}><option value="VARIL">{t("barrel")}</option><option value="KOLI">{t("box")}</option></select></label>
-            <label className="flex min-w-0 flex-col gap-1">{t("unit")}<select className={control} value={unitId} onChange={e => setUnitId(e.target.value)}>{options?.units.map(u => <option key={u.unitId} value={u.unitId}>{u.unitCode} · {u.unitName}</option>)}</select></label>
+        {stage === 2 && !receipt ? <fieldset disabled={busy || frozen} className="pk-fs">
+          <legend className="sr">{t("packages")}</legend>
+          <KalipGrup title={t("packages")} sub={options ? `${options.item.code} · ${options.item.name}` : undefined} d={LICON.koli} color="0E7C7B" testId="package-packages">
+            <div className="pk-body">
+              <div className="pk-grid">
+                <label className="fld"><span>{t("warehouse")}</span><select value={warehouseId} onChange={e => { const id = e.target.value; setWarehouseId(id); lock.current = true; setBusy(true); void loadLocations(id).catch(fail).finally(() => { lock.current = false; setBusy(false); }); }}><option value="">{t("choose")}</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
+                <label className="fld"><span>{t("location")}</span><select value={locationId} onChange={e => setLocationId(e.target.value)}><option value="">{t("choose")}</option>{locations.map(l => <option key={l.id} value={l.id}>{l.code} · {l.name}</option>)}</select></label>
+              </div>
+              {warehouses.length === 0 ? <Banner kind="warning">⚠ {t("noWarehouse")}</Banner> : warehouseId && locations.length === 0 ? <Banner kind="warning">⚠ {t("noLocation")}</Banner> : null}
+              <div className="pk-body pk-tight"><span className="pk-lab">{t("kind")}</span>
+                <KalipSecenek label={t("kind")} color="0E7C7B" value={kind} onPick={id => setKind(id as "VARIL" | "KOLI")} options={[{ id: "VARIL", label: t("barrel"), d: LICON.koli }, { id: "KOLI", label: t("box"), d: LICON.box }]} />
+              </div>
+              <div className="pk-grid">
+                <label className="fld"><span>{t("unit")}</span><select value={unitId} onChange={e => setUnitId(e.target.value)}>{options?.units.map(u => <option key={u.unitId} value={u.unitId}>{u.unitCode} · {u.unitName}</option>)}</select></label>
+                <KalipAlan label={t("count")} inputMode="numeric" value={count} maxLength={4} aria-invalid={!/^\d{1,3}$/.test(count) || Number(count) < 1 || Number(count) > 200} onChange={e => { setCount(e.target.value); if (/^\d{1,3}$/.test(e.target.value) && Number(e.target.value) >= 1 && Number(e.target.value) <= 200) setRows(old => Array.from({ length: Number(e.target.value) }, (_, i) => old[i] ?? { ...entry })); }} />
+              </div>
+              <KalipAnahtar title={t("different")} d={LICON.grid} color="6C4BD8" on={!equal} aria={t("different")} onToggle={() => { if (equal && /^\d{1,3}$/.test(count) && Number(count) >= 1 && Number(count) <= 200) setRows(Array.from({ length: Number(count) }, () => ({ ...entry }))); setEqual(!equal); }} />
+              {options?.item.trackingMode === "NONE" ? <KalipAnahtar title={t("optionalMetadata")} d={LICON.tag} color="B85A14" on={optionalMetadata} aria={t("optionalMetadata")} onToggle={() => setOptionalMetadata(!optionalMetadata)} /> : null}
+              {equal ? <div className="pk-card"><h2 className="pk-h">{t("each")}</h2>{entryFields(entry, setEntry, t("each"))}</div> : rows.map((row, i) => <section className="pk-card" key={i}><h2 className="pk-h">{t("packageNo", { n: i + 1 })}</h2>{entryFields(row, value => setRows(old => old.map((r, j) => i === j ? value : r)), `${i + 1}`)}</section>)}
+              {!preview ? <p role="status" className="pill warn pk-note">⚠ {t("invalid")}</p> : null}
+              <div className="package-actions flex gap-3"><SecondaryButton onClick={() => setStage(1)}>{t("back")}</SecondaryButton><PrimaryButton disabled={!input} onClick={() => setStage(3)}>{t("review")}</PrimaryButton></div>
+            </div>
+          </KalipGrup>
+        </fieldset> : null}
+        {stage >= 3 || receipt ? <section className="sg" aria-label={posted ? t("posted") : t("review")} data-testid="package-review">
+          <div className="sgh"><i style={{ background: kdz("dzf", posted ? "2F7D5B" : "2F5DA8") }}><Ico d={posted ? LICON.check : LICON.clip} size={24} /></i><span><h2 className="pk-h2"><b>{posted ? `✓ ${t("posted")}` : t("review")}</b></h2></span></div>
+          <div className="pk-body">
+          {frozen && !posted ? <p className="pill warn pk-note">🔒 {t("draftLocked")}</p> : null}
+          {receipt ? <><p className="pk-meta">{receipt.receiptNumber}</p><p className="pk-strong">{t("countSummary", { n: receipt.packages.length })}</p><p className="pk-meta">{t("initialQuantity")}</p><ul className="pk-list">{receipt.packages.map(p => <li key={p.id} className="pk-card">{t("packageNo", { n: p.packageNo })} · {p.itemName} · {displayQuantity(p.quantity)} {p.unitCode}<p>{p.lotCode} {p.producedOn} {p.expiresOn}</p><p>{p.stockStatus === "QUARANTINE" ? `⚠ ${t("quarantine")}` : p.stockStatus}</p></li>)}</ul></> : <><p className="pk-strong">{options?.item.name}</p><p className="pk-meta">{warehouses.find(w => w.id === warehouseId)?.name} · {locations.find(l => l.id === locationId)?.name}</p><p className="pk-meta">{t(kind === "VARIL" ? "barrel" : "box")}</p><ul className="pk-list">{(equal ? Array.from({ length: preview?.count ?? 0 }, () => entry) : rows).map((r, i) => <li key={i} className="pk-card">{t("packageNo", { n: i + 1 })} · {r.quantity} {options?.units.find(u => u.unitId === unitId)?.unitCode}<p>{r.lotCode} {r.producedOn} {r.expiresOn}</p></li>)}</ul></>}
+          {!canWrite && !posted ? <p role="alert" className="pill warn pk-note">🔒 {t("locked")}</p> : null}
+          {posted && receipt ? <Link href={packageLabelHref(slug, receipt.documentId)} className="btn n pk-wide">{t("labels")}</Link> : canWrite ? <div className="package-actions flex gap-3">{!frozen ? <SecondaryButton disabled={busy} onClick={() => setStage(2)}>{t("edit")}</SecondaryButton> : null}<PrimaryButton loading={busy} disabled={!clientReady || (!input && !frozen)} onClick={() => void accept()}>{error || initial ? t("retry") : t("accept")}</PrimaryButton></div> : null}
           </div>
-          {warehouses.length === 0 ? <Banner kind="warning">⚠ {t("noWarehouse")}</Banner> : warehouseId && locations.length === 0 ? <Banner kind="warning">⚠ {t("noLocation")}</Banner> : null}
-          <label className="flex min-w-0 flex-col gap-1">{t("count")}<input className={control} inputMode="numeric" value={count} maxLength={4} aria-invalid={!/^\d{1,3}$/.test(count) || Number(count) < 1 || Number(count) > 200} onChange={e => { setCount(e.target.value); if (/^\d{1,3}$/.test(e.target.value) && Number(e.target.value) >= 1 && Number(e.target.value) <= 200) setRows(old => Array.from({ length: Number(e.target.value) }, (_, i) => old[i] ?? { ...entry })); }} /></label>
-          <SecondaryButton pressed={!equal} onClick={() => { if (equal && /^\d{1,3}$/.test(count) && Number(count) >= 1 && Number(count) <= 200) setRows(Array.from({ length: Number(count) }, () => ({ ...entry }))); setEqual(!equal); }}>{equal ? t("different") : t("equal")}</SecondaryButton>
-          {options?.item.trackingMode === "NONE" ? <SecondaryButton pressed={optionalMetadata} onClick={() => setOptionalMetadata(!optionalMetadata)}>{t("optionalMetadata")}</SecondaryButton> : null}
-          {equal ? <div className={card}>{entryFields(entry, setEntry, t("each"))}</div> : rows.map((row, i) => <section className={card} key={i}><h2 className="mb-3 font-bold">{t("packageNo", { n: i + 1 })}</h2>{entryFields(row, value => setRows(old => old.map((r, j) => i === j ? value : r)), `${i + 1}`)}</section>)}
-          {!preview ? <p role="status" className="text-danger-ink">⚠ {t("invalid")}</p> : null}
-          <div className="package-actions flex gap-3"><SecondaryButton onClick={() => setStage(1)}>{t("back")}</SecondaryButton><PrimaryButton disabled={!input} onClick={() => setStage(3)}>{t("review")}</PrimaryButton></div>
-        </fieldset> : null}
-        {stage >= 3 || receipt ? <section className={`${card} flex flex-col gap-3`}>
-          <h2 className="text-xl font-bold">{posted ? `✓ ${t("posted")}` : t("review")}</h2>
-          {frozen && !posted ? <p>🔒 {t("draftLocked")}</p> : null}
-          {receipt ? <><p>{receipt.receiptNumber}</p><p className="font-bold">{t("countSummary", { n: receipt.packages.length })}</p><p>{t("initialQuantity")}</p><ul className="flex min-w-0 flex-col gap-2">{receipt.packages.map(p => <li key={p.id} className={`${card} break-words`}>{t("packageNo", { n: p.packageNo })} · {p.itemName} · {displayQuantity(p.quantity)} {p.unitCode}<p>{p.lotCode} {p.producedOn} {p.expiresOn}</p><p>{p.stockStatus === "QUARANTINE" ? `⚠ ${t("quarantine")}` : p.stockStatus}</p></li>)}</ul></> : <><p>{options?.item.name}</p><p>{warehouses.find(w => w.id === warehouseId)?.name} · {locations.find(l => l.id === locationId)?.name}</p><p>{t(kind === "VARIL" ? "barrel" : "box")}</p><ul className="flex min-w-0 flex-col gap-2">{(equal ? Array.from({ length: preview?.count ?? 0 }, () => entry) : rows).map((r, i) => <li key={i} className={`${card} break-words`}>{t("packageNo", { n: i + 1 })} · {r.quantity} {options?.units.find(u => u.unitId === unitId)?.unitCode}<p>{r.lotCode} {r.producedOn} {r.expiresOn}</p></li>)}</ul></>}
-          {!canWrite && !posted ? <p role="alert">🔒 {t("locked")}</p> : null}
-          {posted && receipt ? <Link href={packageLabelHref(slug, receipt.documentId)} className="flex min-h-14 items-center justify-center rounded-control bg-accent px-4 font-bold text-on-accent">{t("labels")}</Link> : canWrite ? <div className="package-actions flex gap-3">{!frozen ? <SecondaryButton disabled={busy} onClick={() => setStage(2)}>{t("edit")}</SecondaryButton> : null}<PrimaryButton loading={busy} disabled={!clientReady || (!input && !frozen)} onClick={() => void accept()}>{error || initial ? t("retry") : t("accept")}</PrimaryButton></div> : null}
         </section> : null}
       </section>
-      <aside className={`${card} package-summary flex flex-col gap-2 self-start`} aria-live="polite">
-        <h2 className="text-lg font-bold">{t("summary")}</h2><p className="break-words">{options?.item.name ?? receipt?.packages[0]?.itemName ?? t("chooseProduct")}</p>
-        {preview && options ? <p className="text-xl font-extrabold" data-testid="package-total">{t("countSummary", { n: preview.count })} / {displayQuantity(preview.baseTotal)} {options.baseUnit.code}</p> : null}
-        <p>{t("initialQuantity")}</p>
+      <aside className="pk-card package-summary flex flex-col gap-2 self-start" aria-live="polite">
+        <h2 className="pk-h">{t("summary")}</h2><p className="break-words">{options?.item.name ?? receipt?.packages[0]?.itemName ?? t("chooseProduct")}</p>
+        {preview && options ? <p className="pk-total" data-testid="package-total">{t("countSummary", { n: preview.count })} / {displayQuantity(preview.baseTotal)} {options.baseUnit.code}</p> : null}
+        <p className="pk-meta">{t("initialQuantity")}</p>
       </aside>
     </div>
     {camera.overlay}
-    <style>{`@media (min-width:768px) and (max-width:1199px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}} @media (max-width:767px),(pointer:coarse) and (max-height:500px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}.package-actions{position:sticky;bottom:0;background:var(--color-surface);z-index:5;padding-block:.5rem}.package-flow fieldset>div.grid,.package-flow fieldset section>div.grid{grid-template-columns:minmax(0,1fr)}}`}</style>
-  </main>;
+    <style>{`@media (min-width:768px) and (max-width:1199px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}} @media (max-width:767px),(pointer:coarse) and (max-height:500px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}.package-actions{position:sticky;bottom:0;z-index:5;padding-block:.5rem}}`}</style>
+  </div>
+  </KalipEkran>;
 }
