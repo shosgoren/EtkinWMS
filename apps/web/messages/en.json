@@ -2762,7 +2762,11 @@
       "labelsAria": "Go to package labels",
       "labelsTitle": "Package labels",
       "printShort": "PRINT",
-      "printAria": "Print the labels"
+      "printAria": "Print the labels",
+      "lockedHint": "Ask an authorized person for stock view, document create and stock receive permissions.",
+      "loadHint": "Reopen the document from the list; if it persists, tell an authorized person.",
+      "paperLabel": "Paper",
+      "kindHint": "Barrel or box"
     }
   },
   "packageMovement": {
@@ -2802,7 +2806,9 @@
     "moreLocations": "More locations",
     "noWarehouse": "No eligible warehouse",
     "reloadWarehouses": "Reload warehouses",
-    "reloadLocations": "Reload locations"
+    "reloadLocations": "Reload locations",
+    "lockedHint": "Ask an authorized person for stock view permission.",
+    "loadHint": "Scan the package again; if it persists, tell an authorized person."
   },
   "panel": {
     "brand": "ETKİN ADMIN",

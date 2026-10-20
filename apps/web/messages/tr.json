@@ -2762,7 +2762,11 @@
       "labelsAria": "Paket etiketlerine git",
       "labelsTitle": "Paket etiketleri",
       "printShort": "YAZDIR",
-      "printAria": "Etiketleri yazdır"
+      "printAria": "Etiketleri yazdır",
+      "lockedHint": "Yetkili kişiden stok görüntüleme, belge oluşturma ve stok kabul yetkisi iste.",
+      "loadHint": "Belgeyi listeden yeniden aç; sürerse yetkiliye haber ver.",
+      "paperLabel": "Kağıt",
+      "kindHint": "Varil ya da koli"
     }
   },
   "packageMovement": {
@@ -2802,7 +2806,9 @@
     "moreLocations": "Diğer yerler",
     "noWarehouse": "Uygun depo yok",
     "reloadWarehouses": "Depoları tekrar al",
-    "reloadLocations": "Yerleri tekrar al"
+    "reloadLocations": "Yerleri tekrar al",
+    "lockedHint": "Yetkili kişiden stok görüntüleme yetkisi iste.",
+    "loadHint": "Paketi yeniden okut; sürerse yetkiliye haber ver."
   },
   "panel": {
     "brand": "ETKİN YÖNETİM",

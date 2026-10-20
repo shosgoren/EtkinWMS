@@ -41,3 +41,36 @@ body:has(.kalip) .screen-context { display: none; }
 .kalip .flow-primary { border: 0; border-radius: 16px; background: var(--color-dz-x-bhcoec); color: var(--color-dz-x-pppppp); }
 .kalip.dz-dark .flow-primary { background: var(--color-dz-x-ogolop); color: var(--color-dz-x-bcblce); }
 .kalip .text-on-accent { color: var(--color-on-accent); }
+/* T-973: paketli kabul adımları kalıp alanlarında (`.fld`, `.gp`, `.sr2`, `.sg`). Uygulama uyarlaması: `.fld` içinde `select` (kaynakta yok)
+   kaynağın `.fld input` görünümünü alır; paket alanları en az 48 px dokunma hedefi ve opak zemin (okunurluk ölçümü, tarih seçici).
+   Kart (`.pk-card`) kaynak `.fld` zemini; koyu temada kaynağın koyu alan zemini. Renk sabiti yok. */
+.dzf .fld select {
+  height: 34px; border: 0; background: transparent; color: var(--color-dz-x-bhcoec); min-width: 0;
+  font: 700 17px/1 var(--font-instrument), sans-serif;
+}
+.dzf.dz-dark .fld select { color: var(--color-dz-x-ogolop); }
+.dzf.dz-dark .fld select option { background: var(--color-dz-x-bmcidd); color: var(--color-dz-x-ogolop); }
+.dzf .package-flow .fld input, .dzf .package-flow .fld select { min-height: 48px; height: auto; padding: 0 6px; border-radius: 10px; background: var(--color-dz-x-pppppp); }
+@media (max-width: 699.98px) { .dzf.dzf .package-flow .fld input, .dzf.dzf .package-flow .fld select { background: var(--color-dz-x-oopbpe); } }
+.dzf.dz-dark .package-flow .fld input, .dzf.dz-dark .package-flow .fld select { background: var(--color-dz-x-bmcidd); color: var(--color-dz-x-ogolop); }
+.dzf.dz-dark .package-flow .fld input { color-scheme: dark; }
+.dzf .pk-fs { border: 0; margin: 0; padding: 0; min-width: 0; }
+.dzf .pk-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.dzf .pk-tight { gap: 6px; }
+.dzf .pk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; min-width: 0; }
+.dzf .pk-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.dzf .pk-pick { width: 100%; justify-content: flex-start; text-align: left; overflow-wrap: anywhere; }
+.dzf .pk-lab { font: 800 10.5px/1 var(--font-bricolage), sans-serif; letter-spacing: .1em; color: var(--color-dz-x-eogehg); }
+.dzf .pk-h, .dzf .pk-h2 { margin: 0 0 8px; font: 800 15px/1.2 var(--font-bricolage), sans-serif; }
+.dzf .pk-h2 { margin: 0; }
+.dzf .pk-meta { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.dzf .pk-strong { margin: 0; font-weight: 800; overflow-wrap: anywhere; }
+.dzf .pk-total { margin: 0; font: 800 20px/1.2 var(--font-bricolage), sans-serif; }
+.dzf .pk-note { margin: 0; align-self: flex-start; white-space: normal; }
+.dzf .pk-chosen { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 800; overflow-wrap: anywhere; }
+.dzf .pk-wide { width: 100%; min-height: 56px; text-decoration: none; }
+.dzf .package-flow .package-actions { background: var(--color-dz-a-oopbpe-if); }
+.dzf.dz-dark .package-flow .package-actions { background: var(--color-dz-a-bcblce-jf); }
+.kalip .pk-card { min-width: 0; padding: 12px 14px; border-radius: 16px; background: var(--color-dz-x-pppppp); color: var(--color-dz-x-bhcoec); overflow-wrap: anywhere; }
+.kalip.dz-dark .pk-card { background: var(--color-dz-x-bmcidd); color: var(--color-dz-x-ogolop); }
+.kalip .pk-card p { margin: 0; }

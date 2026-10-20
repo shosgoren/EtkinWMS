@@ -6,7 +6,7 @@ vi.mock("./actions.ts", () => ({ preparePackageReceiptAction: mocks.prepare, pos
 vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => createElement("a", { href }, children) }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => ({ get: () => undefined }) }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); }, redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); } }));
 vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
 vi.mock("@wms/domain/identity/member-queries", () => ({ getMembershipSummary: mocks.membership }));
@@ -16,7 +16,8 @@ vi.mock("../../field/receive/receive-flow.tsx", () => ({ PrimaryButton: ({ child
 vi.mock("../../screen-shell.tsx", () => ({ FormSteps: () => null }));
 vi.mock("../receipt-form.tsx", () => ({ ErrorNotice: () => null }));
 // T-973: kalıp kabı (üst çubuk, alt cam çubuk) burada sınanmaz; yalnız adım içeriği.
-vi.mock("../../kalip/ekran.tsx", () => ({ KalipEkran: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children), tone: () => undefined }));
+vi.mock("../../kalip/ekran.tsx", () => ({ KalipEkran: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children), tone: () => undefined, Ico: () => null }));
+vi.mock("../../kalip/liste.tsx", () => ({ KalipKilitliEkran: ({ text }: { text: string }) => createElement("p", { role: "alert" }, text), KalipHataEkran: ({ text }: { text: string }) => createElement("p", { role: "alert" }, text) }));
 import { createPackageSubmission, displayQuantity, PackageFlow, packageLabelHref, packagePreview, type PrepareInput } from "./package-flow.tsx";
 import Page from "./page.tsx";
 import type { PackageItemOptionsDto, PackageReceiptDto } from "./actions.ts";

@@ -9,6 +9,8 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { packageReceivingEnabled } from "../../../../../lib/package-receiving-config.ts";
 import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { KalipHataEkran, KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { PackageFlow } from "./package-flow.tsx";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +34,11 @@ export default async function PackageReceivingPage({ params, searchParams }: {
   const t = await getTranslations("packageReceiving");
   const canView = hasPermission(member.roles, "stock.view", member.grants);
   const canWrite = canView && hasPermission(member.roles, "document.create", member.grants) && hasPermission(member.roles, "stock.post", member.grants);
-  if (!canView || (!documentId && !canWrite)) return <main className="p-4"><h1>{t("title")}</h1><p role="alert">🔒 {t("locked")}</p></main>;
+  // T-973: kalıp kabının teması (kullanıcı tema çerezi; Pano / Ayarlar ile aynı).
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const icon = { d: LICON.koli, color: "2F7D5B" };
+  const home = `/t/${encodeURIComponent(slug)}`;
+  if (!canView || (!documentId && !canWrite)) return <KalipKilitliEkran title={t("title")} icon={icon} text={t("locked")} hint={t("k.lockedHint")} dark={dark} home={`${home}/receipts`} />;
   let initial = null;
   try {
     // Server GET reads use domain authorization; the client action still requires Origin.
@@ -41,9 +47,7 @@ export default async function PackageReceivingPage({ params, searchParams }: {
     if (!(e instanceof AppError)) throw e;
     if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
     if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
-    return <main className="p-4"><h1>{t("title")}</h1><p role="alert">⚠ {t("loadError")} ({e.code})</p></main>;
+    return <KalipHataEkran title={t("title")} icon={icon} text={`${t("loadError")} (${e.code})`} hint={t("k.loadHint")} dark={dark} back={`${home}/receipts`} />;
   }
-  // T-973: kalıp kabının teması (kullanıcı tema çerezi; Pano / Ayarlar ile aynı).
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return <PackageFlow key={documentId ?? "new"} slug={slug} canWrite={canWrite} initial={initial} dark={dark} />;
 }

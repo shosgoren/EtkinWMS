@@ -311,3 +311,14 @@ export function KalipKilitliEkran({ title, icon, text, hint, dark, home }: { tit
     </KalipEkran>
   );
 }
+
+/** T-973: yükleme hatası tam ekranı — liste kalıbının boş durum kutusu uyarı ikonuyla (`role=alert`); Geri / Ana ekran ortak çubukta. */
+export function KalipHataEkran({ title, icon, text, hint, dark, back }: { title: string; icon: { readonly d: string; readonly color: string }; text: string; hint?: string; dark: boolean; back: string }) {
+  return (
+    <KalipEkran kind="liste" dark={dark} title={title} icon={icon} bar={{ back: { href: back }, main: { label: "", d: LICON.warn, disabled: true } }} testId="kalip-error-screen">
+      <div role="alert">
+        <KalipBos title={text} {...(hint === undefined ? {} : { hint })} iconD={LICON.warn} testId="kalip-error" />
+      </div>
+    </KalipEkran>
+  );
+}
