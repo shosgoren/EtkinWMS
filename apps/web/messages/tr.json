@@ -3071,6 +3071,7 @@
     "deviceOk": "Kayıtlı cihaz · {name}",
     "workspace": "ÇALIŞMA ALANI",
     "workspaceHint": "Bu cihazda hatırlanır",
+    "workspaceChange": "Değiştir",
     "username": "KULLANICI ADI",
     "pin": "PIN",
     "pinAria": "{n} / 6 rakam girildi",
