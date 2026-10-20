@@ -91,6 +91,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-66 | Panel hata kodlarını kullanıcı diline çevir |
 | B-69 | Üyeler ekranı ve davet penceresi: sahip olmayan yöneticide yönetici hedefli rol/çıkarma/sıfırlama düğmeleri ve TENANT_ADMIN davet seçeneği kilitli + nedeni görünür (sunucu zaten reddediyor; T-922 inceleme MINOR-2) |
 | B-67 | Cari kişisel alanlarının görünürlüğünü daralt; `settings.manage`'i böl; kullanılmayan `takeout.request` 🔒 |
+| B-64b | E2E rastgele düşme kökü: kiracı yerleşiminde `Suspense fallback={children}` içeriği iki kez veriyordu ("strict mode violation: 2 elements", #117 ve #121'de görüldü). T-927 (KODDA VAR) |
 | B-68 | Defter–bakiye denetiminin ölçeği (her yazımda tüm geçmiş toplamı) — checkpoint tasarımı |
 
 ## Belge düzeltmeleri
