@@ -197,6 +197,22 @@ describe(`inviteMember (target=${env.target})`, () => {
     expect(n.rows[0].n).toBe(0);
   });
 
+  it("T-922 (B-16): yönetici (TENANT_ADMIN) davetini yalnız hesap sahibi gönderir", async () => {
+    const fx = await mkTenant(); // fx.admin: sahip OLMAYAN yönetici
+    const e = await failure(inviteMember({ db: app, principal: principalOf(fx.admin), tenantSlug: fx.slug, email: rndEmail(), roleKey: "TENANT_ADMIN" }, deps()));
+    expect(e.code).toBe("FORBIDDEN");
+    const none = await adm.query("SELECT count(*)::int AS n FROM public.invitations WHERE tenant_id = $1", [fx.tenant]);
+    expect(none.rows[0].n).toBe(0);
+    const owner = await mkUser(rndEmail());
+    await adm.query("INSERT INTO public.tenant_memberships (tenant_id, user_id, status, is_owner) VALUES ($1, $2, 'ACTIVE', true)", [fx.tenant, owner]);
+    await adm.query(
+      "INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) SELECT $1, id, 'TENANT_ADMIN' FROM public.tenant_memberships WHERE tenant_id = $1 AND user_id = $2",
+      [fx.tenant, owner],
+    );
+    const r = await inviteMember({ db: app, principal: principalOf(owner), tenantSlug: fx.slug, email: rndEmail(), roleKey: "TENANT_ADMIN" }, deps());
+    expect(r.invitationId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   it("teslim kapalı → SCREEN: belirteç bir kez döner, DB'de yalnızca SHA-256; audit ve kuyrukta düz değer yok", async () => {
     const fx = await mkTenant();
     const r = await inviteMember({ db: app, principal: principalOf(fx.admin), tenantSlug: fx.slug, email: rndEmail(), roleKey: "READ_ONLY" }, deps(mailOff));

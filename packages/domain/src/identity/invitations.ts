@@ -188,6 +188,8 @@ export async function inviteMember(params: InviteMemberParams, deps: InvitationD
         sql`SELECT is_demo FROM public.tenants WHERE id = ${membership.tenantId}::uuid`,
       );
       if (tenant[0]?.is_demo !== false) throw new AppError("FORBIDDEN"); // M9: demo tenant'ta davet tamamen kapalı
+      // T-922 (BACKLOG B-16, kullanıcı kararı 20 Ekim): yönetici (TENANT_ADMIN) daveti yalnız hesap sahibinden.
+      if (role === "TENANT_ADMIN" && !membership.isOwner) throw new AppError("FORBIDDEN");
 
       const alreadyMember = await tx.execute<{ one: number }>(
         sql`SELECT 1 AS one

@@ -112,6 +112,8 @@ function permissionsOf(roles: readonly RoleKey[]): ReadonlySet<string> {
  */
 export function checkRoleChange(i: {
   readonly actorUserId: string;
+  /** T-922 (BACKLOG B-16, kullanıcı kararı 20 Ekim): yönetici (TENANT_ADMIN) üyeyi ve yönetici atamasını yalnız hesap sahibi yönetir. */
+  readonly actorIsOwner: boolean;
   readonly target: RuleTarget;
   readonly newRole: RoleKey;
   readonly ownerCount: number;
@@ -125,6 +127,8 @@ export function checkRoleChange(i: {
   }
   // Sahibin rolü yalnızca TENANT_ADMIN olabilir (rolsüz/yöneticisiz sahip yok); düşürme için önce devir.
   if (target.isOwner && newRole !== "TENANT_ADMIN") return i.ownerCount <= 1 ? "LAST_OWNER" : "OWNER_ROLE";
+  // T-922: başka bir yöneticiyi değiştirmek ya da birine yöneticilik vermek yalnız hesap sahibinin işidir (kendi rolünü düşürmek serbest).
+  if (target.userId !== i.actorUserId && !i.actorIsOwner && (target.roles.includes("TENANT_ADMIN") || newRole === "TENANT_ADMIN")) return "NOT_OWNER";
   if (newRole !== "TENANT_ADMIN" && target.roles.includes("TENANT_ADMIN") && i.otherAdminCount < 1) return "LAST_ADMIN";
   return null;
 }
@@ -229,6 +233,7 @@ export async function changeRole(params: ChangeRoleParams, deps: MembershipDeps)
 
       const denied = checkRoleChange({
         actorUserId: actor.userId,
+        actorIsOwner: actor.isOwner,
         target,
         newRole: role,
         ownerCount: owners.length,
@@ -283,6 +288,7 @@ export async function removeMember(params: RemoveMemberParams, deps: MembershipD
         otherAdminCount: await countActiveAdminsExcept(tx, actor.tenantId, target.id),
       });
       if (denied !== null) throw deny(denied);
+      if (target.roles.includes("TENANT_ADMIN") && !actor.isOwner) throw deny("NOT_OWNER"); // T-922 (B-16)
       await deactivate(tx, actor.tenantId, target.id);
       await appendAudit(tx, {
         action: "member.removed",
@@ -421,7 +427,7 @@ export async function issuePasswordResetLink(
   if (access.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" }); // fail-closed
   const { port } = deps;
 
-  const checkTarget = async (tx: AccessTx, tenantId: string, actorUserId: string): Promise<TargetMembership> => {
+  const checkTarget = async (tx: AccessTx, tenantId: string, actorUserId: string, actorIsOwner: boolean): Promise<TargetMembership> => {
     await assertTenantNotDemo(tx, tenantId);
     // Bu tenant'ta ACTIVE olmayan hedef (çıkarılmış, sıfır üyelik, başka tenant kimliği): nötr FORBIDDEN (varlık sızmaz).
     const target = await loadTarget(tx, tenantId, memberId).catch((e: unknown) => {
@@ -431,6 +437,7 @@ export async function issuePasswordResetLink(
     if (isDemoAddress(target.email, deps.demoEmailDomain)) throw deny("DEMO");
     if (isFieldEmail(target.email)) throw deny("FIELD_ACCOUNT"); // saha hesabının parolası yok: kod yenileme kullanılır
     if (target.isOwner) throw deny("OWNER");
+    if (target.roles.includes("TENANT_ADMIN") && !actorIsOwner) throw deny("NOT_OWNER"); // T-922 (B-16): yöneticinin parolasını yalnız sahip sıfırlatır
     return target;
   };
 
@@ -442,7 +449,7 @@ export async function issuePasswordResetLink(
   try {
     // (1) ön denetim (recentAuth burada); kilit/transaction (2)'de tutulmaz.
     const pre = await runTenantCommand({ ...access, permission: "users.manage" }, async (tx, actor) => {
-      const target = await checkTarget(tx, actor.tenantId, actor.userId);
+      const target = await checkTarget(tx, actor.tenantId, actor.userId, actor.isOwner);
       return { tenantId: actor.tenantId, targetUserId: target.userId };
     });
     tenantIdForCleanup = pre.tenantId;
@@ -454,7 +461,7 @@ export async function issuePasswordResetLink(
     void _recentAuth;
     void _slug;
     issued = await runTenantCommandById({ ...rest, tenantId: pre.tenantId, permission: "users.manage" }, async (tx, actor) => {
-      const target = await checkTarget(tx, actor.tenantId, actor.userId);
+      const target = await checkTarget(tx, actor.tenantId, actor.userId, actor.isOwner);
       if (target.userId !== pre.targetUserId) throw deny("NOT_MEMBER"); // (1)-(3) arasında üyelik başka kullanıcıya geçmiş olamaz; fail-closed
       const exclusive = await tx.execute<{ ok: boolean }>(
         sql`SELECT wms_probe.identity_exclusive_to_tenant(${target.userId}::uuid) AS ok`,

@@ -25,7 +25,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-13 | Pano bölümlerinde depo kapsamı tutarlılığı 🔒 — T-920 (KODDA VAR) |
 | B-14 | Paket/palet oluşturmada depo kapsamı 🔒 — T-920 (KODDA VAR) |
 | B-15 | İzolasyon testini (AC-04) RLS'siz tabloların yetkilerini kapsayacak şekilde genişlet |
-| B-16 | **Ürün kararı:** yöneticilerin birbirini yönetme yetkisi (öneri: yalnız hesap sahibi) 🔒 |
+| B-16 | Yöneticiyi yalnız hesap sahibi yönetir (kullanıcı kararı 20 Ekim: evet) 🔒 — T-922 (KODDA VAR) |
 | B-17 | DB işlevlerinde aktör kimliğini oturum bağlamından al 🔒 |
 | B-18 | Kuyruk RLS politikası simetrisi 🔒 |
 | B-19 | Hassas işlemlerde yeniden doğrulama tutarlılığı 🔒 — T-920 (KODDA VAR) |
