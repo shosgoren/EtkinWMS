@@ -4,7 +4,7 @@ Bu dosya bütün açık işlerin **tek listesidir**; kural metni burada tekrar y
 İş başlarken satıra T-numarası (T-915+ boş numara) ve kart açılır; bitince satır silinmez, durumu `BİTTİ <PR/SHA>` olur, sonraki temizlikte Git geçmişine bırakılır.
 
 Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı). Etiketler [UPDATE_PROTOCOL](continuity/UPDATE_PROTOCOL.md) ile aynı.
-Öncelik: **P0** canlı müşteri açılmadan · **P1** 0051/0052 canlıya çıkmadan · **P2** ilk ücretli müşteri öncesi · **P3** ölçek/kalite.
+Öncelik: **P0** canlı müşteri açılmadan · **P1** en kısa sürede (0051/0052 19 Ekim 21:18'de canlıya çıktı, main `0993416`) · **P2** ilk ücretli müşteri öncesi · **P3** ölçek/kalite.
 
 **Güvenlik satırları (🔒):** depo herkese açık olduğundan ayrıntı (dosya:satır, senaryo, düzeltme) burada yazılmaz; depo yöneticilerine açık gizli danışma taslağı **GHSA-jxfh-5j2f-4mvg** içindedir (GitHub → Security → Advisories). Düzeltme birleşip canlıya çıkınca ayrıntı kart/PR'a taşınabilir. Yeni güvenlik bulgusu da önce oraya, burada yalnız kimlik + genel başlıkla eklenir.
 
@@ -16,7 +16,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-03 | Dış izleme ve alarm (sağlık, disk, sertifika, worker) + bildirim kanalı | AI + kullanıcı |
 | B-04 | Hata izleme (Q-21), KVKK uyumlu maskeleme | Kullanıcı kararı |
 
-## P1 — yetki ve RLS (0051/0052 yayınından önce, tek güvenlik paketi; security-reviewer + QA zorunlu)
+## P1 — yetki ve RLS (ilk güvenlik paketi; 0051/0052 canlıda; security-reviewer + QA zorunlu)
 | ID | İş |
 |---|---|
 | B-10 | Global kimlik/olay tablolarında uygulama rolü okuma yetkisini daralt 🔒 |
@@ -73,7 +73,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-51 | Sayım saha + yönetici ekranları (domain hazır) | T-990/T-991 |
 | B-52 | Toplama saha ekranı, iade ekranı (domain `returns.ts` var) | — |
 | B-53 | Üretim fixture hataları + kapılar; siparişsiz sevk kapıları | T-964, T-970–974 |
-| B-54 | Yetki grupları, ekibe katılma QR, Ekip ekranı canlıya (P1 güvenlik paketinden sonra) | T-421, T-429 |
+| B-54 | Yetki grupları, ekibe katılma QR, Ekip ekranı: canlıda (main `0993416`, 19 Ekim 21:18 deploy-vps 39326385152); kullanıcı kabulü ve P1 düzeltmeleri bekliyor | T-421, T-429 |
 | B-55 | Pasif üyelik; davet/saha hesabı yaşam döngüsü tutarlılığı | — |
 | B-56 | Donanım kabulü: telefon/notebook kamera, Epson/ZPL, Bluetooth, el terminali (AC-35) | Q-103 |
 | B-57 | Offline gereksinim ölçümü | Q-102, ADR-025 |
