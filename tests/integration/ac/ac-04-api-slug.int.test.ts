@@ -169,6 +169,7 @@ let inviteAccept: Actions;
 let itemActions: Actions;
 let taskActions: Actions;
 let receiptActions: Actions;
+let countActions: Actions;
 /** T-313: B tenant'ının GERÇEK kabul belgesi/satırı ve lokasyonları (yazma eylemleri bu kimliklerle çağrılır; rastgele kimlik "yok" olduğundan tek başına yalıtımı kanıtlamaz). */
 let bRcpt: { receipt: string; line: string; kabul: string; raf: string };
 let packageDocs: { draftA: string; postedA: string; postedB: string; deniedUser: string };
@@ -223,6 +224,7 @@ beforeAll(async () => {
   itemActions = (await load("app/t/[slug]/items/actions.ts")) as Actions;
   taskActions = (await load("app/t/[slug]/tasks/actions.ts")) as Actions;
   receiptActions = (await load("app/t/[slug]/receipts/actions.ts")) as Actions;
+  countActions = (await load("app/t/[slug]/counts/actions.ts")) as Actions;
   bTask = (await adm.query<{ id: string }>("INSERT INTO public.warehouse_tasks (tenant_id, warehouse_id, kind) VALUES ($1, $2, 'PICK') RETURNING id", [B.tenant, B.warehouse])).rows[0]!.id;
   const mkFx = async (t: Fx): Promise<ItemFx> => {
     const unit = (await adm.query<{ id: string }>("INSERT INTO public.units (tenant_id, id, code, name) VALUES ($1, gen_random_uuid(), $2, 'Birim') RETURNING id", [t.tenant, `U${rnd()}`])).rows[0]!.id;
@@ -332,6 +334,11 @@ const LOADERS = [
   "receipts/page.tsx",
   "field/receive/page.tsx",
   "field/putaway/page.tsx",
+  // T-977: saha toplama/sevk/sayım ve yönetici sayım ekranları; üyelik özeti ile sayfanın kendisinde çözülür (üye değil → 404), veri okuması sonra.
+  "field/pick/page.tsx",
+  "field/ship/page.tsx",
+  "field/count/page.tsx",
+  "counts/page.tsx",
 ] as const;
 /**
  * T-304: tenant verisi çizmeyen saha kabuğu sayfaları. Üyelik kararı üst `layout.tsx`'tedir (yukarıdaki LOADERS satırı çapraz tenant
@@ -904,15 +911,50 @@ const RECEIPT_ACTIONS: Record<string, Call> = {
   compoundQuantityAction: (slug) => receiptActions.compoundQuantityAction!({ slug, itemId: fx.B.item, baseQuantity: "5" }),
 };
 
+/** T-977: sayım eylemleri; rastgele kimliklerle çağrılır — üyelik `limitVerifiedTenant`'ta çözülür, B'nin slug'ı ile var olmayan slug ayırt edilemez. */
+const COUNT_ACTIONS: Record<string, Call> = {
+  startCountAction: (slug) => countActions.startCountAction!({ slug, clientKey: randomUUID(), warehouseId: randomUUID(), codes: ["A-01"], blind: true }),
+  recordCountAction: (slug) => countActions.recordCountAction!({ slug, clientKey: randomUUID(), sessionId: randomUUID(), locationId: randomUUID(), itemId: randomUUID(), countedQuantity: "1" }),
+  submitCountAction: (slug) => countActions.submitCountAction!({ slug, clientKey: randomUUID(), sessionId: randomUUID() }),
+  approveCountAction: (slug) => countActions.approveCountAction!({ slug, clientKey: randomUUID(), sessionId: randomUUID() }),
+  postCountAction: (slug) => countActions.postCountAction!({ slug, clientKey: randomUUID(), sessionId: randomUUID() }),
+  cancelCountAction: (slug) => countActions.cancelCountAction!({ slug, clientKey: randomUUID(), sessionId: randomUUID(), reason: "Ele geçirme" }),
+};
+
 describe("Server Action'lar", () => {
   it("@AC-04 kapsam: members/actions.ts dışa aktarımlarının tamamı tabloda; ayarlar eylemi ayrıca sınanır", () => {
     expect(Object.keys(members).sort()).toEqual(Object.keys(ACTIONS).sort());
     expect(Object.keys(itemActions).sort()).toEqual(Object.keys(ITEM_ACTIONS).sort());
     expect(Object.keys(taskActions).sort()).toEqual(Object.keys(TASK_ACTIONS).sort());
     expect(Object.keys(receiptActions).sort()).toEqual(Object.keys(RECEIPT_ACTIONS).sort());
+    expect(Object.keys(countActions).sort()).toEqual(Object.keys(COUNT_ACTIONS).sort());
     expect(Object.keys(settings)).toEqual(["saveSettingsAction"]);
     expect(Object.keys(inviteAccept)).toEqual(["acceptInvitationAction"]);
   });
+
+  // T-977: sayım eylemleri ayrı kullanıcılarla (A/B depo yöneticisi) sınanır: yönetici/okuyucu kullanıcılarının dakikalık yazma kotası (A-41, 120)
+  // ortak döngüyü taşırmasın. Kural aynı: başka tenant'ın slug'ı ile var olmayan slug ayırt edilemez, etki yok.
+  for (const [name, call] of Object.entries(COUNT_ACTIONS)) {
+    it(`@AC-04 ${name}: A depo yöneticisi B'nin slug'ıyla, B depo yöneticisi A'nın slug'ıyla -> NOT_FOUND (var olmayan slug ile aynı yanıt); etki yok`, async () => {
+      const victim = { membership: B.managerMembership, invitation: bInvite.invitationId };
+      const beforeA = await snapshot(A);
+      const beforeB = await snapshot(B);
+      as(A.manager);
+      const cross = await call(B.slug, victim);
+      as(A.manager);
+      const missing = await call(`yok-${rnd()}`, victim);
+      expect(cross.ok, JSON.stringify(cross)).toBe(false);
+      if (!cross.ok) expect(cross.error.code).toBe("NOT_FOUND");
+      expect(face(cross)).toEqual(face(missing));
+      expect(JSON.stringify(cross)).not.toContain(B.name);
+      as(B.manager);
+      const reverse = await call(A.slug, victim);
+      expect(reverse.ok).toBe(false);
+      if (!reverse.ok) expect(reverse.error.code).toBe("NOT_FOUND");
+      expect(await snapshot(A)).toEqual(beforeA);
+      expect(await snapshot(B)).toEqual(beforeB);
+    });
+  }
 
   for (const [name, call] of Object.entries({ ...ACTIONS, ...ITEM_ACTIONS, ...TASK_ACTIONS, ...RECEIPT_ACTIONS })) {
     it(`@AC-04 ${name}: A yöneticisi B'nin slug'ıyla -> NOT_FOUND (var olmayan slug ile aynı yanıt); B'de hiçbir değişiklik yok`, async () => {

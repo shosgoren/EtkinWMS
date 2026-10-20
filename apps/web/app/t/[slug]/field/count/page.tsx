@@ -47,6 +47,7 @@ export default async function FieldCountPage({ params, searchParams }: { params:
   if (current === undefined) notFound();
   if (!hasPermission(current.roles, "document.create", current.grants)) return message(t("count.lockedTitle"), t("count.lockedReason"), fieldHome, t("toField"));
   const taskId = first(sp.task) ?? "";
+  if (taskId === "") return message(t("count.goneTitle"), t("count.gone"));
   let work: CountWork;
   try {
     work = await getCountWork({ db, principal, tenantSlug: slug }, { taskId });

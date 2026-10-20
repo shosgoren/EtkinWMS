@@ -211,10 +211,12 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
    await next.click();await expect(page).toHaveURL(/field\/pick\?task=/);
   }
   await page.getByRole("link",{name:"Sevke geç",exact:true}).click();await expect(page).toHaveURL(/field\/ship\?order=/);
-  for(let i=0;i<2&&await page.getByTestId("ship-row").count()>0;i++){
-   await page.getByTestId("ship-row").first().click();await page.getByTestId("flow-primary").click();
+  // Sevk alanındaki satır sayısı tahsise göre 1 ya da 2 (iki depo); her yüklemeden sonra liste sunucudan yenilenir, sonuncusunda sipariş kapanır.
+  const rows=await page.getByTestId("ship-row").count();expect(rows).toBeGreaterThan(0);
+  for(let i=0;i<rows;i++){
+   await page.getByTestId("ship-row").first().click();await expect(page.getByTestId("ship-qty")).not.toHaveValue("0");await page.getByTestId("flow-primary").click();
    await expect(page.getByTestId("ship-confirm-card")).toBeVisible();await page.getByTestId("flow-primary").click();
-   await expect(page.getByTestId("ship-row").or(page.getByTestId("ship-message"))).toBeVisible();
+   if(i<rows-1)await expect(page.getByTestId("ship-row")).toHaveCount(rows-1-i);
   }
   await expect(page.getByTestId("ship-message")).toContainText("kapandı");
   await page.goto(orderUrl);await expect(page.getByRole("status").filter({hasText:/^Tamamlandı$/})).toBeVisible();
