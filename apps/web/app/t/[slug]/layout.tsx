@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { runTenantCommand, runTenantQuery } from "@wms/domain/identity/access";
@@ -154,8 +154,10 @@ export default async function TenantLayout({ children, params }: { children: Rea
         </details>
         <span className="min-w-0 truncate text-sm font-semibold text-ink-muted">{t("tenantBar.user", { name: summary.userName })}</span>
       </div>
-      <div className="tenant-body flex min-w-0 flex-col"><Suspense fallback={children}><ScreenShell slug={slug}>{children}</ScreenShell></Suspense></div>
-      <Suspense fallback={null}><BottomNav slug={slug} /></Suspense>
+      {/* T-965: Suspense yok. Bu yerleşim `force-dynamic` olduğundan `useSearchParams` sunucuda hazırdır (askıya almaz); eski
+          `<Suspense fallback={children}>` sayfayı iki kez veriyordu (görünür yedek + gizli `S:` kopyası, `$RC` ile geç değişim). */}
+      <div className="tenant-body flex min-w-0 flex-col"><ScreenShell slug={slug}>{children}</ScreenShell></div>
+      <BottomNav slug={slug} />
     </div>
     </KabukProvider>
   );
