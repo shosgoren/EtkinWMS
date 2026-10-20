@@ -129,6 +129,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-90 | Destek: müşterinin kendi talebini "Çözüldü" ile kapatması (tasarımda var, DB'de müşteri → CLOSED geçişi yok; T-967) ve not alanında sesle yazma (şimdilik "yakında") |
 | B-91 | **BİTTİ (toplu yayın 21 Ekim, int/21ekim-ekranlar)** — `docs/design/ALTIN-KURAL.md` kullanıcının 20 Ekim kararıyla güncellendi: üst çubukta yazısız iki ikon (Sorun bildir → yönetici, Destek → Etkin ekibi), alt çubuğun sol düğmesi her ekranda Geri, rehber tekrar Destek penceresinden. Eski kayıt: kural "ana ekranda Geri yerine sarı ? Sorun" ve "üst çubuktaki ? ile rehber" diyordu |
 | B-92 | BİTTİ PR #135 (T-971) — Kalıp ekranlarında çıkış/hesap erişimi: `KalipEkran` üst çubuğunun sağ üstünde (`actions` yuvasından ayrı öğe) Pano'nun Hesap düğmesi + menüsü (`.tb.tb-team` + `.halo.tmenu`, ortak `pano/hesap-menu.tsx`): Kullanıcı değiştir, Tüm ekranlar (Akış/Genel bakış + yetkili ekranlar), tema, Çıkış yap |
+| B-93 | CI `deps` kırmızı (21 Ekim, PR #136 T-974'te görüldü; main lockfile aynı): `vitest`→`vite` 8.3.2 high advisory GHSA-587h-7wmj-h5pm (launch-editor, Windows; yama ≥8.3.3). Kök devDependency `vite` 8.3.3 ile kapanır, ancak korunan kilit kapanışı değiştiği için PR açıklamasında supervisor onayı (ADR-012) + security-reviewer raporu gerekir (`check:protected`). Alternatif: A-36 gibi süreli muafiyet (kullanıcı/Supervisor kararı) | — |
 
 ## Belge düzeltmeleri
 | ID | İş |
