@@ -67,6 +67,16 @@ const SYSTEM_REASON_WRITE: Readonly<Record<string, string>> = { stock_consistenc
 const NULL_TENANT_TABLES: ReadonlySet<string> = new Set(["processed_events"]);
 const setSystemReason = (reason: string): Pre => ["SELECT set_config('app.system_reason', $1, true)", [reason]];
 const setUser = (id: string): Pre => ["SELECT set_config('app.current_user_id', $1, true)", [id]];
+/**
+ * T-967 (0054): talep sahibine/hesap yöneticisine kısıtlı tenant tabloları (izolasyon politikasına ek RESTRICTIVE TO wms_app politikası:
+ * üye yalnız kendi talebini, TENANT_ADMIN firmanın tümünü görür). Bu tablolarda A bağlamı = A tenant'ı + A sahibi (TENANT_ADMIN) kullanıcı
+ * kimliği; tenant izolasyonu matrisi aynen sınanır (B satırı görünmez/yazılamaz, A'nın bütün satırları görünür). Kullanıcı düzeyi
+ * ayrım tests/integration/support/support-tickets.int.test.ts'te. Liste katalogdan doğrulanır (politika app.current_user_id içerir).
+ */
+const USER_SCOPED_TABLES: ReadonlySet<string> = new Set(["support_ticket_messages", "support_tickets"]);
+/** Tablo matrisinde A bağlamı (kullanıcı kapsamlı tablolarda + A sahibi kimliği). */
+const aCtx = (t: { name: string }): Pre[] =>
+  USER_SCOPED_TABLES.has(t.name) ? [setTenant(A.tenantId), setUser(A.ownerUserId)] : [setTenant(A.tenantId)];
 
 /** `pre` ifadeleri + `stmt` tek transaction'da; daima ROLLBACK (kalıcı değişiklik yok). */
 async function attempt(c: pg.Client, pre: readonly Pre[], stmt: string, params: unknown[] = []): Promise<Attempt> {
@@ -326,6 +336,12 @@ beforeAll(async () => {
     // T-429: katılma bağlantısı + bekleyen talep.
     const jl = await admin.query<{ id: string }>("INSERT INTO public.team_join_links (tenant_id, token_hash, created_by) VALUES ($1, md5(random()::text) || md5(random()::text), $2) RETURNING id", [w.tenantId, w.ownerUserId]);
     await admin.query("INSERT INTO public.team_join_requests (tenant_id, link_id, request_hash, name, username, confirm_code) VALUES ($1, $2, md5(random()::text) || md5(random()::text), 'AC04 kişi', 'ac04-kisi', '123456')", [w.tenantId, jl.rows[0]?.id]);
+    // T-967: destek talebi + müşteri yanıtı (sahip adına; tetikleyici bağlamdaki kullanıcıyı ister, yönetici bağlantısında bağlam kurulur).
+    await admin.query("BEGIN");
+    await admin.query("SELECT set_config('app.current_tenant_id', $1, true), set_config('app.current_user_id', $2, true)", [w.tenantId, w.ownerUserId]);
+    const st = await admin.query<{ id: string }>("INSERT INTO public.support_tickets (tenant_id, created_by, membership_id, subject_kind, body) VALUES ($1, $2, $3, 'OTHER', 'AC04 destek') RETURNING id", [w.tenantId, w.ownerUserId, w.ownerMembershipId]);
+    await admin.query("INSERT INTO public.support_ticket_messages (tenant_id, ticket_id, author_kind, author_user_id, body) VALUES ($1, $2, 'CUSTOMER', $3, 'AC04 yanıt')", [w.tenantId, st.rows[0]?.id, w.ownerUserId]);
+    await admin.query("COMMIT");
   }
   tables = await discoverTables();
 }, 60_000);
@@ -357,6 +373,18 @@ describe("AC-04 DB — tenant tablosu keşfi ve RLS durumu", () => {
     ).toEqual([]);
   });
 
+  it("@AC-04 kullanıcı kapsamlı tablo listesi katalogla birebir: ek politika yalnız RESTRICTIVE ve yalnız TO wms_app (T-967)", async () => {
+    const r = await admin.query<{ tablename: string; permissive: string; roles: string[] }>(
+      `SELECT tablename, permissive, roles::text[] AS roles FROM pg_policies
+        WHERE schemaname = 'public' AND tablename <> ALL(ARRAY['tenants', 'tenant_memberships'])
+          AND (qual ~ 'app.current_user_id' OR with_check ~ 'app.current_user_id' OR qual ~ 'support_tickets')
+        ORDER BY 1`,
+    );
+    expect([...new Set(r.rows.map((x) => x.tablename))].sort()).toEqual([...USER_SCOPED_TABLES].sort());
+    for (const p of r.rows) expect([p.tablename, p.permissive, p.roles]).toEqual([p.tablename, "RESTRICTIVE", [APP_ROLE]]);
+    for (const name of USER_SCOPED_TABLES) expect(tables.map((t) => t.name), name).toContain(name);
+  });
+
   it("@AC-04 fikstür her keşfedilen tabloda A ve B için en az bir satır tohumlamış (yeni tablo → kırmızı)", async () => {
     const missing: string[] = [];
     for (const t of tables) {
@@ -379,14 +407,14 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
       const bRows = await admin.query<{ r: string }>(`SELECT ${rowText(t, "x")} AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [B.tenantId]);
       const aRows = await admin.query<{ r: string }>(`SELECT ${rowText(t, "x")} AS r FROM public.${q(t.name)} x WHERE x.${q(t.key)} = $1`, [A.tenantId]);
       for (const b of bRows.rows) {
-        const r = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} x WHERE ${rowText(t, "x")} = $1`, [b.r]);
+        const r = await attempt(appClient, aCtx(t), `SELECT count(*)::int AS n FROM public.${q(t.name)} x WHERE ${rowText(t, "x")} = $1`, [b.r]);
         if (!r.ok || (r.rows[0] as { n: number }).n !== 0) failures.push(`${t.name}: B satırı A bağlamında görünür/hata: ${fmt(r)}`);
       }
-      const byKey = await attempt(appClient, [setTenant(A.tenantId)], `SELECT count(*)::int AS n FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
+      const byKey = await attempt(appClient, aCtx(t), `SELECT count(*)::int AS n FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
       if (!byKey.ok || (byKey.rows[0] as { n: number }).n !== 0) failures.push(`${t.name}: ${t.key}=B sorgusu 0 değil: ${fmt(byKey)}`);
       const total = await attempt(
         appClient,
-        [setTenant(A.tenantId)],
+        aCtx(t),
         `SELECT count(*)::int AS total, count(*) FILTER (WHERE ${q(t.key)} = $1)::int AS own FROM public.${q(t.name)}`,
         [A.tenantId],
       );
@@ -405,17 +433,17 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
     for (const t of tables) {
       const col = t.updateCols[0];
       if (col === undefined) {
-        const r = await attempt(appClient, [setTenant(A.tenantId)], `UPDATE public.${q(t.name)} SET ${q(t.key)} = ${q(t.key)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
+        const r = await attempt(appClient, aCtx(t), `UPDATE public.${q(t.name)} SET ${q(t.key)} = ${q(t.key)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
         if (r.ok || r.code !== INSUFFICIENT_PRIVILEGE) failures.push(`${t.name}: UPDATE yetkisi yokken beklenen 42501, gelen ${fmt(r)}`);
         continue;
       }
-      const foreign = await attempt(appClient, [setTenant(A.tenantId)], `UPDATE public.${q(t.name)} SET ${q(col)} = ${q(col)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
+      const foreign = await attempt(appClient, aCtx(t), `UPDATE public.${q(t.name)} SET ${q(col)} = ${q(col)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
       if (!foreign.ok || foreign.rowCount !== 0) failures.push(`${t.name}: B satırına UPDATE 0 değil: ${fmt(foreign)}`);
       // The new package fixtures are immutable POSTED/CLOSED records. Positive write controls
       // must use the original writable DRAFT/open records; foreign probes above still cover all B rows.
       const writable = t.name === "documents" ? " AND status = 'DRAFT'"
         : t.name === "inbound_receipt_lines" ? " AND EXISTS (SELECT 1 FROM public.inbound_receipts r WHERE r.tenant_id=inbound_receipt_lines.tenant_id AND r.id=inbound_receipt_lines.receipt_id AND r.status IN ('DRAFT','OPEN'))" : "";
-      const own = await attempt(appClient, [setTenant(A.tenantId)], `UPDATE public.${q(t.name)} SET ${q(col)} = ${q(col)} WHERE ${q(t.key)} = $1${writable}`, [A.tenantId]);
+      const own = await attempt(appClient, aCtx(t), `UPDATE public.${q(t.name)} SET ${q(col)} = ${q(col)} WHERE ${q(t.key)} = $1${writable}`, [A.tenantId]);
       if (!own.ok || own.rowCount < 1) failures.push(`${t.name}: kontrol (A kendi satırı) UPDATE ≥1 değil: ${fmt(own)}`);
     }
     expect(failures).toEqual([]);
@@ -432,7 +460,7 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
   it("@AC-04 DELETE: B satırına 0 satır etkilenir (ya da yetki yok 42501); A'da silebilen tabloda kontrol ≥1", async () => {
     const failures: string[] = [];
     for (const t of tables) {
-      const foreign = await attempt(appClient, [setTenant(A.tenantId)], `DELETE FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
+      const foreign = await attempt(appClient, aCtx(t), `DELETE FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [B.tenantId]);
       if (t.canDelete) {
         if (!foreign.ok || foreign.rowCount !== 0) failures.push(`${t.name}: B satırına DELETE 0 değil: ${fmt(foreign)}`);
         // T-232: FK ile korunan satırı (ör. defter/rezervasyonun bağlandığı document_lines) silmek 23503 verir. Kontrol silmesi, fikstürün
@@ -441,8 +469,8 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
         const controlId = A.deletableControl[t.name];
         const own =
           controlId === undefined
-            ? await attempt(appClient, [setTenant(A.tenantId)], `DELETE FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [A.tenantId])
-            : await attempt(appClient, [setTenant(A.tenantId)], `DELETE FROM public.${q(t.name)} WHERE ${q(t.key)} = $1 AND id = $2`, [A.tenantId, controlId]);
+            ? await attempt(appClient, aCtx(t), `DELETE FROM public.${q(t.name)} WHERE ${q(t.key)} = $1`, [A.tenantId])
+            : await attempt(appClient, aCtx(t), `DELETE FROM public.${q(t.name)} WHERE ${q(t.key)} = $1 AND id = $2`, [A.tenantId, controlId]);
         if (!own.ok || own.rowCount < 1) failures.push(`${t.name}: kontrol (A kendi satırı) DELETE ≥1 değil: ${fmt(own)}`);
       } else if (foreign.ok || foreign.code !== INSUFFICIENT_PRIVILEGE) {
         failures.push(`${t.name}: DELETE yetkisi yokken beklenen 42501, gelen ${fmt(foreign)}`);
@@ -467,20 +495,20 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
         continue;
       }
       if (t.insertCols.length === 0) {
-        const r = await attempt(appClient, [setTenant(A.tenantId)], `INSERT INTO public.${q(t.name)} DEFAULT VALUES`);
+        const r = await attempt(appClient, aCtx(t), `INSERT INTO public.${q(t.name)} DEFAULT VALUES`);
         if (r.ok || r.code !== INSUFFICIENT_PRIVILEGE) failures.push(`${t.name}: INSERT yetkisi yokken beklenen 42501, gelen ${fmt(r)}`);
         continue;
       }
       if (!t.insertCols.includes(t.key)) {
         // Tenant anahtarı sütununa INSERT yetkisi yok (ör. audit_logs): B anahtarını açıkça vermek yetki hatasıdır; anahtarsız
         // kopya yalnızca bağlam tenant'ına (A) yazılabilir, asla B'ye.
-        const explicit = await attempt(appClient, [setTenant(A.tenantId)], `INSERT INTO public.${q(t.name)} (${q(t.key)}) VALUES ($1)`, [B.tenantId]);
+        const explicit = await attempt(appClient, aCtx(t), `INSERT INTO public.${q(t.name)} (${q(t.key)}) VALUES ($1)`, [B.tenantId]);
         if (explicit.ok || explicit.code !== INSUFFICIENT_PRIVILEGE) failures.push(`${t.name}: ${t.key}=B açık INSERT için 42501 beklenir, gelen ${fmt(explicit)}`);
         const cols2 = t.insertCols.map(q).join(", ");
         const sel2 = t.insertCols.map((c) => `r.${q(c)}`).join(", ");
         const viaDefault = await attempt(
           appClient,
-          [setTenant(A.tenantId)],
+          aCtx(t),
           `INSERT INTO public.${q(t.name)} (${cols2})
            SELECT ${sel2} FROM (SELECT (jsonb_populate_record(NULL::public.${q(t.name)}, ${rowJson(t, "a")})).* FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1 LIMIT 1) r
            RETURNING ${q(t.key)}::text AS k`,
@@ -507,7 +535,7 @@ describe("AC-04 DB — A bağlamında B kimliğiyle erişim (tablo başına)", (
              FROM public.${q(t.name)} a WHERE a.${q(t.key)} = $1${draftLine} LIMIT 1
          ) r`;
       const reason = SYSTEM_REASON_WRITE[t.name];
-      const insertCtx: Pre[] = reason === undefined ? [setTenant(A.tenantId)] : [setTenant(A.tenantId), setSystemReason(reason)];
+      const insertCtx: Pre[] = reason === undefined ? aCtx(t) : [...aCtx(t), setSystemReason(reason)];
       const foreign = await attempt(appClient, insertCtx, copy(), copyParams(B.tenantId));
       if (foreign.ok || foreign.code !== INSUFFICIENT_PRIVILEGE || !RLS_MESSAGE.test(foreign.message)) {
         failures.push(`${t.name}: B anahtarlı INSERT için RLS hatası beklenir, gelen ${fmt(foreign)}`);
@@ -883,6 +911,12 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.platform_site_public", // T-407 migration 0046: yayındaki içerik + yayındaki paketler (herkese açık bilgi; geçerli önizleme özetiyle taslak), yalnızca wms_app
     "wms_probe.platform_site_publish", // T-407 migration 0046: operatör taslağı yayınlar (değişmez sürüm) + security_events, yalnızca wms_app
     "wms_probe.platform_site_save", // T-407 migration 0046: operatör taslak kaydı + security_events, yalnızca wms_app
+    "wms_probe.platform_support_get", // T-967 migration 0054: operatöre destek talebi ayrıntısı (gövde + bağlam + firma/yazar adı), yalnızca wms_app
+    "wms_probe.platform_support_list", // T-967 migration 0054: operatöre destek gelen kutusu (önizleme 140 karakter, durum/müşteri süzgeci), yalnızca wms_app
+    "wms_probe.platform_support_messages", // T-967 migration 0054: operatöre talep yazışması, yalnızca wms_app
+    "wms_probe.platform_support_open_count", // T-967 migration 0054: açık talep SAYISI (rozet), yalnızca wms_app
+    "wms_probe.platform_support_reply", // T-967 migration 0054: operatör yanıtı (mesaj + ANSWERED) + security_events, yalnızca wms_app
+    "wms_probe.platform_support_set_status", // T-967 migration 0054: operatör OPEN/CLOSED + security_events, yalnızca wms_app
     "wms_probe.platform_tenant_plan_limit", // T-404 migration 0041: bağlam tenant'ının paket sınırı (başka tenant → NULL), yalnızca wms_app
     "wms_probe.platform_tenant_subscription", // T-995 migration 0039: bağlam tenant'ının deneme kaydı (salt okunur), yalnızca wms_app
     "wms_probe.platform_workspace_name_taken", // T-995 migration 0039: yalnız geçerli bağlantıyla ad yoklaması (salt okunur), yalnızca wms_app
@@ -958,6 +992,12 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_site_preview": [APP_ROLE],
       "wms_probe.platform_site_public": [APP_ROLE],
       "wms_probe.platform_list_events": [APP_ROLE],
+      "wms_probe.platform_support_list": [APP_ROLE],
+      "wms_probe.platform_support_open_count": [APP_ROLE],
+      "wms_probe.platform_support_get": [APP_ROLE],
+      "wms_probe.platform_support_messages": [APP_ROLE],
+      "wms_probe.platform_support_reply": [APP_ROLE],
+      "wms_probe.platform_support_set_status": [APP_ROLE],
       "wms_probe.field_device_status": [AUTH_ROLE],
       "wms_probe.field_signin_begin": [AUTH_ROLE],
       "wms_probe.field_signin_finish": [AUTH_ROLE],

@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import type { Board, WorkSummary } from "@wms/domain/operations";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
+import { appVersionOf } from "./app-version.ts";
 import { PanoShell, type PanoLink } from "./pano-shell.tsx";
 import { AssignWho, type AssignCandidate } from "./assign-who.tsx";
 
@@ -114,6 +115,7 @@ export async function PanoBoard(p: PanoBoardProps) {
       settingsHref={p.settingsManage ? `${base}/settings` : undefined}
       scanHref={`${base}/field`}
       canReport={p.canReport}
+      appVersion={appVersionOf()}
       bell={b === null ? undefined : { n: b.criticalCount + b.problems, href: owner ? "#pano-alerts" : `${base}/tasks` }}
     >
       <div className="hello">

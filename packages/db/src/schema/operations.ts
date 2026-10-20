@@ -10,7 +10,7 @@
 // - Sipariş/iade miktarları ürünün temel birimindedir (A-151); kabul satırı birim + katsayı taşır.
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { boolean, check, customType, date, index, integer, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, customType, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -473,3 +473,30 @@ export const problemReports = pgTable(
   },
   (t) => [primaryKey({ columns: [t.tenantId, t.id] }), index("problem_reports_open_idx").on(t.tenantId, t.subjectKind, t.subjectId)],
 );
+
+// T-967 (0054): destek talebi ve yazışması. RLS (izolasyon + yalnız wms_app için talep sahibi / hesap yöneticisi), sunucu alanları ve
+// hız sınırı tetikleyicileri migration'dadır. `number` kimlik sütunudur (GENERATED ALWAYS); Drizzle `insert` göndermez.
+export const supportTickets = pgTable("support_tickets", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  number: bigint("number", { mode: "number" }).notNull().generatedAlwaysAsIdentity(),
+  createdBy: uuid("created_by").notNull(),
+  membershipId: uuid("membership_id").notNull(),
+  subjectKind: text("subject_kind").$type<"BUG" | "HOWTO" | "IDEA" | "OTHER">().notNull(),
+  body: text("body").notNull(),
+  context: jsonb("context").$type<Record<string, string>>().notNull().default({}),
+  status: text("status").$type<"OPEN" | "ANSWERED" | "CLOSED">().notNull().default("OPEN"),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  operatorRepliedAt: timestamptz("operator_replied_at"),
+  customerSeenAt: timestamptz("customer_seen_at"),
+});
+export const supportTicketMessages = pgTable("support_ticket_messages", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: uuid("ticket_id").notNull(),
+  authorKind: text("author_kind").$type<"CUSTOMER" | "OPERATOR">().notNull(),
+  authorUserId: uuid("author_user_id").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+});

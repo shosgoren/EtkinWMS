@@ -1,10 +1,11 @@
 "use client";
-// T-958 (I-18): Kabuk.dc.html alt cam çubuk + Modüller sayfası BİREBİR — `.dock > .dockin` (Geri/Sorun · Ana ekran · `.dk.big` ana işlem ·
+// T-958 (I-18): Kabuk.dc.html alt cam çubuk + Modüller sayfası BİREBİR — `.dock > .dockin` (Geri · Ana ekran · `.dk.big` ana işlem ·
 // Modüller · `.dk-etkin`), `.hback` + `.msheet` (`.mh`, `.srch`, `.mgrid > .mt`, `.soon`, `.mt.plus`, `.mempty`) ve `.toast`.
 // Sınıf adları, öğe sırası ve ikon yolları kaynaktan (kabuk-icons.ts); renkler üretilmiş belirteçlerden (kabuk-tokens.ts). CSS
 // `design/kabuk.css` (üretilmiş) + `design/kabuk-frame.css` (uygulama uyarlaması: çubuk ekranın altında sabit, ekranlar yer ayırır).
 // Tek ortak bileşen: Pano ve yeni tasarım alt ekranları (Ekip, Gruplar, Aktar, Cariler) ana işlemini buraya verir; Modüller listesi
 // kiracı düzeninde (sunucuda) üyenin rol/yetki/grup ekranlarından hesaplanır (`modules.ts`) ve bağlamla gelir.
+// T-967 (Destek.dc.html): sol yuva her ekranda Geri; ana ekranda pasif `.dk.off` (CSS `design/destek-ek.css`, kap `.dzdx`).
 // Bilinçli farklar (DESIGN-PARITY, T-958): Etkin (B-62) henüz yok → düğme kaynaktaki gibi çizilir, `aria-disabled`; dokununca kaynaktaki
 // "yakında" balonu. Arama kutusundaki mikrofon da aynı. İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
@@ -34,8 +35,8 @@ export function KabukProvider({ value, children }: { value: KabukContextValue; c
   return <KabukContext.Provider value={value}>{children}</KabukContext.Provider>;
 }
 
-/** Kaynaktaki çubuk yuvaları (ilk kullanım rehberi `spot` anahtarları, kaynak COL). */
-export type KabukSlot = "sorun" | "geri" | "home" | "center" | "mods" | "etkin";
+/** Kaynaktaki çubuk yuvaları (ilk kullanım rehberi `spot` anahtarları, kaynak COL). T-967: Sorun yuvası üst çubuğa taşındı. */
+export type KabukSlot = "geri" | "home" | "center" | "mods" | "etkin";
 
 export interface KabukNav {
   readonly href?: string;
@@ -59,11 +60,9 @@ export interface KabukMain {
 
 export interface KabukBarProps {
   readonly dark: boolean;
-  /** Ana ekran (Pano): solda Geri yerine sarı "?" Sorun, Ana ekran seçili. */
+  /** Ana ekran (Pano): solda pasif Geri (Destek.dc.html `.dk.off`), Ana ekran seçili. `back` verilirse Geri yine çalışır. */
   readonly home?: boolean;
-  /** Ana ekranda Sorun bildir; yoksa (yetki yok) düğme tıklanmaz hâlde çizilir (I-18 öncelik). */
-  readonly problem?: { readonly onClick: () => void; readonly testId?: string };
-  /** Alt ekranda Geri (kaydedilmemiş iş uyarısı ekranın kendisindedir). */
+  /** Geri (kaydedilmemiş iş uyarısı ekranın kendisindedir). Alt ekranda verilmezse kiracı köküne gider. */
   readonly back?: KabukNav;
   /** Ana ekran düğmesi (varsayılan: kiracı köküne bağlantı). */
   readonly homeNav?: KabukNav;
@@ -92,7 +91,7 @@ function detect(): Dev {
 const CAP: Record<Dev, number> = { mobile: 12, tablet: 16, desktop: 20 };
 
 /** Kaynak tone(): dokunuş / onay / hata sesi + titreşim. */
-function tone(kind: "tap" | "ok" | "err"): void {
+export function tone(kind: "tap" | "ok" | "err"): void {
   try {
     const A = window.AudioContext;
     if (A === undefined) return;
@@ -175,7 +174,7 @@ function Slot({ nav, className, aria, testId, k, current, children }: { nav: Kab
 
 const TOASTS = { ok: ["2F7D5B", KICON.check], err: ["C62828", KICON.close], info: ["E0A100", KICON.info] } as const;
 
-export function KabukBar({ dark, home = false, problem, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
+export function KabukBar({ dark, home = false, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
   const t = useTranslations("kabuk");
   const ctx = useContext(KabukContext);
   const base = ctx?.base ?? "/";
@@ -271,25 +270,16 @@ export function KabukBar({ dark, home = false, problem, back, homeNav, main, spo
   const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];
 
   return (
-    <div className={`dzk${dark ? " dz-dark" : ""}`} data-testid="kabuk">
+    <div className={`dzk dzdx${dark ? " dz-dark" : ""}`} data-testid="kabuk">
       <div className={`wrap${spot !== null ? " touring" : ""}`}>
         <div className="app">
           <nav className="dock" aria-label={t("dock")} data-testid="kabuk-dock">
             <div className="dockin">
-              {home ? (
-                <button
-                  type="button"
-                  className={`dk problem${sp("sorun")}`}
-                  aria-label={t("report")}
-                  onClick={problem?.onClick}
-                  disabled={problem === undefined}
-                  data-testid={problem?.testId ?? "kabuk-problem"}
-                  data-k="sorun"
-                >
-                  <span className="qm" aria-hidden="true">
-                    ?
-                  </span>
-                  <span>{t("reportShort")}</span>
+              {home && back === undefined ? (
+                // T-967 (Destek.dc.html): ana ekranda Geri yeri korunur, pasif (`.dk.off`); sarı "?" Sorun üst çubuğa taşındı.
+                <button type="button" className={`dk off${sp("geri")}`} aria-label={t("back")} aria-disabled="true" tabIndex={-1} data-testid="kabuk-back" data-k="geri">
+                  <Ico d={KICON.back} size={26} />
+                  <span>{t("backShort")}</span>
                 </button>
               ) : (
                 <Slot nav={back ?? { href: base }} className={`dk${sp("geri")}`} aria={t("back")} testId="kabuk-back" k="geri">
