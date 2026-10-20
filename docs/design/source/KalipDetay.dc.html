@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin WMS — Kalıp · Detay (Ürün kartı)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-direction:column;width:100%;min-height:100vh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;color:#172E42;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* önizleme çubuğu */
+.prev{align-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;margin:10px 12px;padding:4px;border-radius:24px;background:#FFFFFF;border:1.5px solid #172E42;max-width:calc(100% - 24px)}
+.prev-l{padding:0 8px 0 10px;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476;white-space:nowrap}
+.prevb{appearance:none;min-height:36px;padding:0 12px;border:0;border-radius:999px;background:transparent;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.prevb.on{background:#172E42;color:#FFFFFF}
+.prevsep{width:1px;height:22px;background:#C9D2DA;margin:0 4px}
+
+/* tuval: telefon ve masaüstü yan yana (yalnız tasarım aracı; uygulamaya girmez) */
+.stage{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:32px;padding:4px 24px 32px}
+.frm{display:flex;flex-direction:column;gap:10px;flex:none}
+.frm.fr-mobile{width:390px}
+.frm.fr-desktop{width:1440px}
+.frl{display:flex;align-items:center;gap:8px;padding:0 4px;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476;white-space:nowrap}
+.frl b{font:800 12px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;color:#172E42}
+
+.app{position:relative;display:flex;flex-direction:column;width:100%;max-width:1440px;height:900px;background:linear-gradient(180deg,#EEF1F4 0%,#DCE3EA 100%);border-radius:28px;overflow:hidden;box-shadow:0 30px 80px -40px rgba(23,46,66,.45)}
+.fr-mobile .app{max-width:390px;height:844px;border:10px solid #172E42;border-radius:36px}
+.app :focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+
+/* üst çubuk */
+.top{display:flex;align-items:center;gap:12px;padding:14px 24px;flex:none;background:rgba(238,241,244,.85);border-bottom:1.5px solid rgba(23,46,66,.08)}
+.fr-mobile .top{padding:10px 12px;gap:8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.fr-mobile .brand{gap:8px}
+.logo{position:relative;flex:none;width:40px;height:40px;border-radius:12px;background:#172E42;display:flex;align-items:center;justify-content:center}
+.fr-mobile .logo{width:34px;height:34px;border-radius:10px}
+.brand b{display:block;font:800 17px/1.05 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-mobile .brand b{font-size:15px}
+.brand small{display:block;margin-top:3px;font:600 11px/1 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-mobile .brand small{font-size:9.5px}
+.net{position:absolute;right:-4px;top:-4px;display:flex;width:14px;height:14px;border-radius:50%;background:#EEF1F4;align-items:center;justify-content:center}
+.net i{width:9px;height:9px;border-radius:50%;background:#2F9E6B;animation:netpulse 1.6s ease-out infinite}
+@keyframes netpulse{0%{box-shadow:0 0 0 0 rgba(47,158,107,.6)}100%{box-shadow:0 0 0 8px rgba(47,158,107,0)}}
+.pgic{display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+.fr-mobile .pgic{width:38px;height:38px;border-radius:12px}
+/* sağ üst: Sorun bildir + Destek (yer tutucu; tasarımı ayrı çalışmada) */
+.tph{display:flex;align-items:center;gap:8px;flex:none}
+.fr-mobile .tph{gap:6px}
+.helpb{appearance:none;display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:0;border-radius:14px;background:#FFFFFF;color:#B07D0B;cursor:pointer;box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.4)}
+.fr-mobile .helpb{width:40px;height:40px;border-radius:13px}
+.helpb.sup{color:#0E7C7B}
+.helpb.ph{outline:1.5px dashed rgba(23,46,66,.28);outline-offset:2px}
+
+/* içerik */
+.inner{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:14px;padding:20px 24px 8px}
+.fr-mobile .inner{padding:12px 12px 4px;gap:10px}
+.fr-desktop .inner{width:100%;max-width:1100px;margin:0 auto}
+.shd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 2px -4px}
+.shd b{font:800 13px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.12em;white-space:nowrap}
+.shd span{font:600 11.5px/1 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-mobile .shd b{font-size:12px}
+.fr-mobile .shd span{font-size:10px}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;font:800 11.5px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.pill.ok{background:#E3F1E9;color:#17583C}
+.pill.warn{background:#E56A00;color:#FFFFFF}
+.more{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 14px;border:2px dashed rgba(23,46,66,.3);border-radius:18px;background:transparent;font:700 13.5px/1.2 'Instrument Sans',sans-serif;color:#30475A;cursor:pointer}
+.more i{display:flex;color:#6C4BD8}
+.sbtn{appearance:none;display:flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;border:0;border-radius:14px;cursor:pointer;transition:transform .15s}
+.fr-mobile .sbtn{width:44px;height:44px;border-radius:13px}
+.sbtn:active{transform:scale(.93)}
+.sbtn.cam{background:#0E7C7B;color:#FFFFFF}
+.sbtn.mic{background:#F4C542;color:#1A1300}
+
+/* ===== ALT CAM ÇUBUK (Kabuk): Geri · Ana ekran · [ana işlem] · Modüller · Etkin ===== */
+.dock{position:relative;flex:none;z-index:30;padding:14px 12px 22px}
+.fr-desktop .dock{padding:14px 16px 22px}
+.dockin{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.15fr) repeat(2,minmax(0,1fr));align-items:center;height:72px;padding:0 6px;border-radius:999px;background:rgba(23,46,66,.38);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border:1px solid rgba(255,255,255,.45);box-shadow:0 14px 34px -16px rgba(23,46,66,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+.fr-desktop .dockin{max-width:720px;margin:0 auto;padding:0 12px}
+.dk{appearance:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:64px;min-width:0;padding:0;border:0;border-radius:999px;background:transparent;color:#FFFFFF;cursor:pointer;transition:transform .15s}
+.dk:active{transform:scale(.93)}
+.dk span{font:800 9.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.07em;opacity:.9;white-space:nowrap}
+.fr-mobile .dk span{font-size:8.5px;letter-spacing:.04em}
+.dk.big{justify-self:center;width:66px;height:66px;margin-top:-22px;border-radius:50%;background:#5FAF8A;color:#FFFFFF;box-shadow:0 12px 26px -8px rgba(95,175,138,.75),0 0 0 5px rgba(23,46,66,.5);gap:0;overflow:visible}
+.dk.big .ico{width:30px;height:30px;stroke-width:2.2}
+.dk.big .cap{position:absolute;top:72px;left:50%;transform:translateX(-50%);display:block;color:#FFFFFF;opacity:1;font-size:9.5px;letter-spacing:.1em;text-shadow:0 1px 2px rgba(23,46,66,.6)}
+.dk.big.off{background:#9AA8B4;color:rgba(255,255,255,.8);box-shadow:0 0 0 5px rgba(23,46,66,.5);cursor:not-allowed}
+.dk.big.off:active{transform:none}
+.dk.big.wait{background:#F4C542;color:#1A1300}
+.dk-etkin{appearance:none;justify-self:center;position:relative;display:flex;align-items:center;justify-content:center;width:62px;height:62px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none}
+.orb{position:relative;flex:none;width:50px;height:50px;border-radius:50%;transition:transform .2s cubic-bezier(.2,.9,.2,1)}
+.orb::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#F4C542,#E56A00,#C62828,#6C4BD8,#0E7C7B,#2F7D5B,#F4C542);animation:spin 3.2s linear infinite}
+.orb::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#172E42}
+.orb .ico{position:absolute;inset:0;margin:auto;z-index:1;color:#FFFFFF;width:22px;height:22px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mr{position:absolute;inset:6px;border-radius:50%;border:2.5px solid #F4C542;opacity:0;pointer-events:none}
+.tbadge{position:absolute;top:-5px;right:-5px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#C62828;color:#FFFFFF;border:2.5px solid #EEF1F4;font:800 11px/17px 'Bricolage Grotesque',sans-serif;text-align:center}
+
+/* bildirim balonu (Kabuk) */
+.toast{position:absolute;z-index:40;top:76px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:calc(100% - 24px);padding:8px 16px 8px 8px;border-radius:999px;background:#172E42;color:#FFFFFF;font:700 13.5px/1.2 'Instrument Sans',sans-serif;box-shadow:0 14px 30px -14px rgba(23,46,66,.7);animation:rise .2s cubic-bezier(.2,.9,.2,1);white-space:nowrap}
+.toast i{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:50%}
+@keyframes rise{from{transform:translateY(16px);opacity:0}}
+@keyframes fade{from{opacity:0}}
+@keyframes popin{from{transform:scale(.4);opacity:0}}
+@keyframes fbp{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+@keyframes blink{50%{opacity:0}}
+@keyframes grow{from{width:0}}
+@keyframes breathe{50%{transform:scale(1.15)}}
+
+/* ===== KARANLIK TEMA: saf siyah yok ===== */
+.thd .app{background:linear-gradient(180deg,#121B24 0%,#0F171F 100%);color:#E6EBEF}
+.thd .top{background:rgba(18,27,36,.88);border-bottom-color:rgba(255,255,255,.08)}
+.thd .brand small,.thd .shd span,.thd .frl{color:#9FB2C2}
+.thd .shd b,.thd .frl b{color:#E6EBEF}
+.thd .logo{background:#0B1118;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.thd .net{background:#121B24}
+.thd .helpb{background:#1C2833;color:#E0B84A;box-shadow:none}
+.thd .helpb.sup{color:#5FC4C2}
+.thd .helpb.ph{outline-color:rgba(255,255,255,.22)}
+.thd .pill.ok{background:#1F3A30;color:#9FE1BF}
+.thd .pill.warn{background:#B85A14}
+.thd .more{border-color:rgba(255,255,255,.22);color:#C9D6E0}
+.thd .more i{color:#B9A6F2}
+.thd .sbtn.mic{background:#D9AE3A}
+.thd .dockin{background:rgba(28,40,51,.72);border-color:rgba(255,255,255,.14)}
+.thd .dk.big{background:#4E9A78;box-shadow:0 12px 26px -8px rgba(78,154,120,.6),0 0 0 5px rgba(18,27,36,.9)}
+.thd .dk.big.off{background:#3A4A5A;box-shadow:0 0 0 5px rgba(18,27,36,.9)}
+.thd .orb::after{background:#0F171F}
+.thd .toast{background:#223040}
+.thd .tbadge{border-color:#121B24}
+.thd .prev{background:#1C2833;border-color:#3A4A5A;color:#E6EBEF}
+.thd .prevb.on{background:#E6EBEF;color:#121B24}
+.thd .prev-l{color:#9FB2C2}
+.wrap.thd{background:#0B1118}
+
+/* ===================== KALIP 3 · DETAY (örnek: Ürün kartı) ===================== */
+.dgrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}
+.fr-mobile .dgrid{grid-template-columns:minmax(0,1fr);gap:10px}
+.dcol{display:flex;flex-direction:column;gap:14px;min-width:0}
+.fr-mobile .dcol{gap:10px}
+.hero{display:flex;align-items:center;gap:16px;padding:18px;border-radius:24px;background:#FFFFFF;box-shadow:0 1px 0 rgba(23,46,66,.06),0 12px 26px -20px rgba(23,46,66,.4)}
+.fr-mobile .hero{gap:12px;padding:12px;border-radius:20px}
+.hic{display:flex;align-items:center;justify-content:center;flex:none;width:88px;height:88px;border-radius:27px;color:#FFFFFF}
+.fr-mobile .hic{width:60px;height:60px;border-radius:19px}
+.fr-mobile .hic .ico{width:30px;height:30px}
+.hx{flex:1;min-width:0}
+.hx b{display:block;font:800 28px/1.05 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-mobile .hx b{font-size:19px}
+.hcode{display:inline-flex;margin-top:7px;padding:5px 9px;border-radius:9px;background:#EEF1F4;font:600 13px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;color:#172E42}
+.fr-mobile .hcode{margin-top:5px;font-size:11.5px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.fr-mobile .tags{margin-top:6px;gap:4px}
+.fr-mobile .tags .tag:nth-child(n+3){display:none}
+.tag{padding:5px 9px;border-radius:999px;background:#E3E9EE;font:800 10px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.06em;color:#30475A;white-space:nowrap}
+.htot{flex:none;text-align:right}
+.htot b{display:block;font:800 42px/.9 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums;color:#17583C}
+.fr-mobile .htot b{font-size:26px}
+.htot small{display:block;margin-top:6px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.fr-mobile .htot small{font-size:9px}
+.htot.crit b{color:#C62828}
+.qa{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fr-mobile .qa{gap:8px}
+.qab{appearance:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:108px;padding:12px;border:0;border-radius:22px;background:#FFFFFF;color:#172E42;cursor:pointer;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35);transition:transform .15s}
+.fr-mobile .qab{min-height:80px;gap:6px;padding:8px;border-radius:18px}
+.qab:active{transform:scale(.95)}
+.qab i{display:flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:17px;color:#FFFFFF}
+.fr-mobile .qab i{width:42px;height:42px;border-radius:13px}
+.qab b{font:800 14.5px/1.1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.fr-mobile .qab b{font-size:12.5px}
+.card{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:24px;background:#FFFFFF;box-shadow:0 1px 0 rgba(23,46,66,.06),0 12px 26px -20px rgba(23,46,66,.4)}
+.fr-mobile .card{padding:12px;gap:8px;border-radius:20px}
+.ch{display:flex;align-items:center;gap:12px}
+.ch i{display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+.fr-mobile .ch i{width:34px;height:34px;border-radius:11px}
+.ch b{display:block;font:800 19px/1.1 'Bricolage Grotesque',sans-serif}
+.fr-mobile .ch b{font-size:16px}
+.ch small{display:block;margin-top:3px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.fr-mobile .ch small{display:none}
+.ch .go{margin-left:auto}
+.warnb{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:#C62828;color:#FFFFFF;animation:rise .3s cubic-bezier(.2,.9,.2,1)}
+.fr-mobile .warnb{padding:8px 10px;gap:10px}
+.warnb i{display:flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.22)}
+.fr-mobile .warnb i{width:32px;height:32px}
+.warnb b{display:block;font:800 16px/1.15 'Bricolage Grotesque',sans-serif}
+.fr-mobile .warnb b{font-size:14px}
+.warnb small{display:block;margin-top:3px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;opacity:.9}
+.sbar{display:flex;gap:3px;height:20px;border-radius:10px;overflow:hidden}
+.fr-mobile .sbar{height:14px}
+.sbar span{display:block;height:100%;animation:grow .9s cubic-bezier(.2,.8,.2,1) backwards}
+.sbar .rest{flex:1;background:#E3E9EE}
+.whl{display:flex;flex-direction:column;gap:8px}
+.fr-mobile .whl{gap:6px}
+.whr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:10px 12px;border-radius:16px;background:#F6F3EE}
+.fr-mobile .whr{padding:7px 10px;gap:4px 10px;border-radius:14px}
+.whr .dot{width:14px;height:14px;border-radius:5px}
+.whr b{display:block;font:700 15px/1.2 'Instrument Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-mobile .whr b{font-size:14px}
+.whr small{display:block;margin-top:2px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qty{font:800 20px/1 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fr-mobile .qty{font-size:17px}
+.racks{grid-column:2 / -1;display:flex;flex-wrap:wrap;gap:6px}
+.fr-mobile .racks{display:none}
+.rk{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:10px;background:#FFFFFF;font:600 11.5px/1 'IBM Plex Mono',monospace;color:#30475A}
+.rk i{width:8px;height:8px;border-radius:50%}
+.minl{display:flex;align-items:center;justify-content:space-between;gap:8px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.fr-mobile .minl{display:none}
+.tline{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
+.ti{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:flex-start;gap:12px;padding:8px 0}
+.fr-mobile .ti{gap:10px;padding:5px 0}
+.ti::before{content:"";position:absolute;left:20px;top:52px;bottom:-4px;width:2.5px;margin-left:-1px;border-radius:2px;background:#E3E9EE}
+.fr-mobile .ti::before{left:17px;top:44px}
+.ti:last-child::before{display:none}
+.fr-mobile .tline .ti:nth-child(2)::before{display:none}
+.fr-mobile .tline .ti:nth-child(n+3){display:none}
+.tn{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;border-radius:13px;color:#FFFFFF}
+.fr-mobile .tn{width:34px;height:34px;border-radius:11px}
+.ti b{display:block;font:700 15px/1.25 'Instrument Sans',sans-serif}
+.fr-mobile .ti b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti small{display:block;margin-top:3px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#4E6476}
+.tq{padding-top:4px;font:800 18px/1 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fr-mobile .tq{font-size:15px}
+.tmore{flex:none}
+.fr-mobile .tmore{min-height:40px}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 14px;border:0;border-radius:14px;cursor:pointer;font:800 13.5px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.btn.y{background:#F4C542;color:#1A1300}
+.fr-mobile .ch .btn{display:none}
+/* karanlık */
+.thd .hero,.thd .qab,.thd .card{background:#1C2833;color:#E6EBEF;box-shadow:none}
+.thd .hcode,.thd .tag{background:#223040;color:#C5D0DA}
+.thd .htot b{color:#9FE1BF}
+.thd .htot.crit b{color:#FF8A8A}
+.thd .htot small,.thd .ch small,.thd .whr small,.thd .ti small,.thd .minl{color:#9FB2C2}
+.thd .whr{background:#223040}
+.thd .rk{background:#1C2833;color:#C5D0DA}
+.thd .sbar .rest,.thd .ti::before{background:#2E3E4F}
+.thd .hic,.thd .qab i,.thd .ch i,.thd .tn,.thd .warnb{filter:saturate(.85) brightness(.92)}
+.thd .btn.y{background:#D9AE3A}
+@media (prefers-reduced-motion:reduce){.wrap *{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div class="{{wrapCls}}">
+  <div class="prev" role="group" aria-label="Önizleme">
+    <span class="prev-l">DURUM</span>
+    <sc-for list="{{states}}" as="s" hint-placeholder-count="3">
+      <button type="button" class="{{s.cls}}" aria-pressed="{{s.on}}" onClick="{{s.pick}}">{{s.label}}</button>
+    </sc-for>
+    <span class="prevsep"></span>
+    <span class="prev-l">TEMA</span>
+    <sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+      <button type="button" class="{{t.cls}}" aria-pressed="{{t.on}}" onClick="{{t.pick}}">{{t.label}}</button>
+    </sc-for>
+  </div>
+  <div class="stage">
+    <div class="frm fr-mobile">
+      <div class="frl"><b>TELEFON</b>390 × 844</div>
+      <div class="app">
+      <header class="top">
+        <div class="brand">
+          <span class="logo"><span class="net" aria-label="Çevrimiçi"><i></i></span><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg></span>
+          <span class="pgic" style="background: #2F5DA8"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"></path></svg></span>
+          <span style="min-width: 0"><b>Ürün kartı</b><small>DEMO A.Ş · HESAP SAHİBİ</small></span>
+        </div>
+        <div class="tph" role="group" aria-label="Sorun bildir ve Destek (yer tutucu)">
+          <button type="button" class="helpb ph" aria-label="Sorun bildir" title="Sorun bildir · yer tutucu" onClick="{{tapProblem}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4.5M12 17.5v.01"></path></svg></button>
+          <button type="button" class="helpb ph sup" aria-label="Destek" title="Destek · yer tutucu" onClick="{{tapSupport}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5zM17 20c0 1.2-2 2-4.5 2"></path></svg></button>
+        </div>
+      </header>
+
+        <main class="inner">
+          <div class="dgrid">
+            <div class="dcol">
+              <section class="hero" aria-label="Ürün">
+                <span class="hic" style="background: #8A5A12"><svg class="ico" width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"></path></svg></span>
+                <span class="hx">
+                  <b>EPDM profil 12×8</b>
+                  <span class="hcode">HM-000001</span>
+                  <span class="tags"><span class="tag">HAMMADDE</span><span class="tag">BİRİM · m</span><span class="tag">LOT TAKİBİ</span><span class="tag">FIFO</span></span>
+                </span>
+                <span class="{{totCls}}"><b>{{tot}}</b><small>m · TOPLAM STOK</small></span>
+              </section>
+
+              <div class="qa" role="group" aria-label="Hızlı işlemler">
+                <sc-for list="{{quick}}" as="q" hint-placeholder-count="3">
+                  <button type="button" class="qab" aria-label="{{q.label}}" onClick="{{q.pick}}"><i style="{{q.icStyle}}"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="{{q.d}}"></path></svg></i><b>{{q.label}}</b></button>
+                </sc-for>
+              </div>
+
+              <section class="card" aria-label="Stok özeti">
+                <div class="ch">
+                  <i style="background: #2F5DA8"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V3h16v18M4 9h16M4 15h16M10 6h4M10 12h4M10 18h4"></path></svg></i>
+                  <span><b>Nerede?</b><small>DEPO VE RAF DAĞILIMI</small></span>
+                </div>
+                <sc-if value="{{crit}}" hint-placeholder-val="{{ false }}">
+                  <div class="warnb" role="status"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4.5M12 17.5v.01"></path></svg></i><span><b>Minimumun altında</b><small>{{tot}} / 500 m · SATIN ALMA GEREKİR</small></span></div>
+                </sc-if>
+                <div class="sbar" aria-hidden="true">
+                  <sc-for list="{{segs}}" as="g" hint-placeholder-count="3"><span style="{{g.style}}"></span></sc-for>
+                  <span class="rest"></span>
+                </div>
+                <div class="whl">
+                  <sc-for list="{{whs}}" as="w" hint-placeholder-count="2">
+                    <div class="whr">
+                      <span class="dot" style="{{w.dot}}"></span>
+                      <span style="min-width: 0"><b>{{w.name}}</b><small>{{w.meta}}</small></span>
+                      <span class="qty">{{w.qty}} m</span>
+                      <span class="racks"><sc-for list="{{w.racks}}" as="r" hint-placeholder-count="2"><span class="rk"><i style="{{r.dot}}"></i>{{r.code}} · {{r.qty}}</span></sc-for></span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div class="minl"><span>MİNİMUM 500 m</span><span class="{{minCls}}">{{minLbl}}</span></div>
+              </section>
+            </div>
+
+            <div class="dcol">
+              <section class="card" aria-label="Son hareketler">
+                <div class="ch">
+                  <i style="background: #0E7C7B"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18"></path></svg></i>
+                  <span><b>Son hareketler</b><small>EN YENİ ÜSTTE</small></span>
+                </div>
+                <ol class="tline">
+                  <sc-for list="{{moves}}" as="m" hint-placeholder-count="5">
+                    <li class="ti">
+                      <span class="tn" style="{{m.icStyle}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="{{m.d}}"></path></svg></span>
+                      <span style="min-width: 0"><b>{{m.title}}</b><small>{{m.meta}}</small></span>
+                      <span class="tq" style="{{m.qStyle}}">{{m.q}}</span>
+                    </li>
+                  </sc-for>
+                </ol>
+                <button type="button" class="more tmore" onClick="{{sayMoves}}"><i><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></i>{{moreLine}}</button>
+              </section>
+            </div>
+          </div>
+        </main>
+
+      <nav class="dock" aria-label="Alt çubuk">
+        <div class="dockin">
+          <button type="button" class="dk" aria-label="Geri" onClick="{{goBack}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+            <span>GERİ</span>
+          </button>
+          <button type="button" class="dk" aria-label="Ana ekran" onClick="{{goHome}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg>
+            <span>ANA EKRAN</span>
+          </button>
+          <button type="button" class="{{centerCls}}" aria-label="{{centerAria}}" aria-disabled="{{centerOff}}" onClick="{{tapCenter}}">
+            <svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="{{centerD}}"></path></svg>
+            <span class="cap">{{centerLbl}}</span>
+            <sc-if value="{{centerBadge}}" hint-placeholder-val="{{ false }}"><em class="tbadge" style="font-style: normal; background: #F4C542; color: #1A1300">{{centerN}}</em></sc-if>
+          </button>
+          <button type="button" class="dk" aria-label="Modüller" onClick="{{openMods}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg>
+            <span>MODÜLLER</span>
+          </button>
+          <button type="button" class="dk-etkin" aria-label="Etkin: basılı tut ve konuş" onClick="{{tapEtkin}}">
+            <span class="mr" aria-hidden="true"></span><span class="mr b" aria-hidden="true"></span>
+            <span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span>
+          </button>
+        </div>
+      </nav>
+      <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+        <div class="toast" role="status" aria-live="polite"><i style="{{toastIc}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="{{toastD}}"></path></svg></i>{{toastText}}</div>
+      </sc-if>
+      </div>
+    </div>
+    <div class="frm fr-desktop">
+      <div class="frl"><b>MASAÜSTÜ</b>1440 × 900</div>
+      <div class="app">
+      <header class="top">
+        <div class="brand">
+          <span class="logo"><span class="net" aria-label="Çevrimiçi"><i></i></span><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg></span>
+          <span class="pgic" style="background: #2F5DA8"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"></path></svg></span>
+          <span style="min-width: 0"><b>Ürün kartı</b><small>DEMO A.Ş · HESAP SAHİBİ</small></span>
+        </div>
+        <div class="tph" role="group" aria-label="Sorun bildir ve Destek (yer tutucu)">
+          <button type="button" class="helpb ph" aria-label="Sorun bildir" title="Sorun bildir · yer tutucu" onClick="{{tapProblem}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4.5M12 17.5v.01"></path></svg></button>
+          <button type="button" class="helpb ph sup" aria-label="Destek" title="Destek · yer tutucu" onClick="{{tapSupport}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5zM17 20c0 1.2-2 2-4.5 2"></path></svg></button>
+        </div>
+      </header>
+
+        <main class="inner">
+          <div class="dgrid">
+            <div class="dcol">
+              <section class="hero" aria-label="Ürün">
+                <span class="hic" style="background: #8A5A12"><svg class="ico" width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"></path></svg></span>
+                <span class="hx">
+                  <b>EPDM profil 12×8</b>
+                  <span class="hcode">HM-000001</span>
+                  <span class="tags"><span class="tag">HAMMADDE</span><span class="tag">BİRİM · m</span><span class="tag">LOT TAKİBİ</span><span class="tag">FIFO</span></span>
+                </span>
+                <span class="{{totCls}}"><b>{{tot}}</b><small>m · TOPLAM STOK</small></span>
+              </section>
+
+              <div class="qa" role="group" aria-label="Hızlı işlemler">
+                <sc-for list="{{quick}}" as="q" hint-placeholder-count="3">
+                  <button type="button" class="qab" aria-label="{{q.label}}" onClick="{{q.pick}}"><i style="{{q.icStyle}}"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="{{q.d}}"></path></svg></i><b>{{q.label}}</b></button>
+                </sc-for>
+              </div>
+
+              <section class="card" aria-label="Stok özeti">
+                <div class="ch">
+                  <i style="background: #2F5DA8"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V3h16v18M4 9h16M4 15h16M10 6h4M10 12h4M10 18h4"></path></svg></i>
+                  <span><b>Nerede?</b><small>DEPO VE RAF DAĞILIMI</small></span>
+                </div>
+                <sc-if value="{{crit}}" hint-placeholder-val="{{ false }}">
+                  <div class="warnb" role="status"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4.5M12 17.5v.01"></path></svg></i><span><b>Minimumun altında</b><small>{{tot}} / 500 m · SATIN ALMA GEREKİR</small></span></div>
+                </sc-if>
+                <div class="sbar" aria-hidden="true">
+                  <sc-for list="{{segs}}" as="g" hint-placeholder-count="3"><span style="{{g.style}}"></span></sc-for>
+                  <span class="rest"></span>
+                </div>
+                <div class="whl">
+                  <sc-for list="{{whs}}" as="w" hint-placeholder-count="2">
+                    <div class="whr">
+                      <span class="dot" style="{{w.dot}}"></span>
+                      <span style="min-width: 0"><b>{{w.name}}</b><small>{{w.meta}}</small></span>
+                      <span class="qty">{{w.qty}} m</span>
+                      <span class="racks"><sc-for list="{{w.racks}}" as="r" hint-placeholder-count="2"><span class="rk"><i style="{{r.dot}}"></i>{{r.code}} · {{r.qty}}</span></sc-for></span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div class="minl"><span>MİNİMUM 500 m</span><span class="{{minCls}}">{{minLbl}}</span></div>
+              </section>
+            </div>
+
+            <div class="dcol">
+              <section class="card" aria-label="Son hareketler">
+                <div class="ch">
+                  <i style="background: #0E7C7B"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18"></path></svg></i>
+                  <span><b>Son hareketler</b><small>EN YENİ ÜSTTE</small></span>
+                </div>
+                <ol class="tline">
+                  <sc-for list="{{moves}}" as="m" hint-placeholder-count="5">
+                    <li class="ti">
+                      <span class="tn" style="{{m.icStyle}}"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="{{m.d}}"></path></svg></span>
+                      <span style="min-width: 0"><b>{{m.title}}</b><small>{{m.meta}}</small></span>
+                      <span class="tq" style="{{m.qStyle}}">{{m.q}}</span>
+                    </li>
+                  </sc-for>
+                </ol>
+                <button type="button" class="more tmore" onClick="{{sayMoves}}"><i><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></i>{{moreLine}}</button>
+              </section>
+            </div>
+          </div>
+        </main>
+
+      <nav class="dock" aria-label="Alt çubuk">
+        <div class="dockin">
+          <button type="button" class="dk" aria-label="Geri" onClick="{{goBack}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+            <span>GERİ</span>
+          </button>
+          <button type="button" class="dk" aria-label="Ana ekran" onClick="{{goHome}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg>
+            <span>ANA EKRAN</span>
+          </button>
+          <button type="button" class="{{centerCls}}" aria-label="{{centerAria}}" aria-disabled="{{centerOff}}" onClick="{{tapCenter}}">
+            <svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="{{centerD}}"></path></svg>
+            <span class="cap">{{centerLbl}}</span>
+            <sc-if value="{{centerBadge}}" hint-placeholder-val="{{ false }}"><em class="tbadge" style="font-style: normal; background: #F4C542; color: #1A1300">{{centerN}}</em></sc-if>
+          </button>
+          <button type="button" class="dk" aria-label="Modüller" onClick="{{openMods}}">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg>
+            <span>MODÜLLER</span>
+          </button>
+          <button type="button" class="dk-etkin" aria-label="Etkin: basılı tut ve konuş" onClick="{{tapEtkin}}">
+            <span class="mr" aria-hidden="true"></span><span class="mr b" aria-hidden="true"></span>
+            <span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span>
+          </button>
+        </div>
+      </nav>
+      <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+        <div class="toast" role="status" aria-live="polite"><i style="{{toastIc}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="{{toastD}}"></path></svg></i>{{toastText}}</div>
+      </sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1910,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { dark: false, crit: false, toast: null };
+  }
+  componentWillUnmount() { clearTimeout(this._tt); }
+
+  tone(kind) {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      this._ac = this._ac || new C(); const ac = this._ac; const t0 = ac.currentTime;
+      const seq = kind === 'ok' ? [660, 990] : kind === 'err' ? [330, 220] : [560];
+      seq.forEach((f, i) => {
+        const o = ac.createOscillator(); const g = ac.createGain(); const t = t0 + i * 0.13;
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.13);
+      });
+      if (navigator.vibrate) navigator.vibrate(kind === 'err' ? [60, 40, 60] : 30);
+    } catch (e) {}
+  }
+  toast(kind, text, at) {
+    clearTimeout(this._tt);
+    this.setState({ toast: { kind, text, at: at || 0 } });
+    this._tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  commonVals() {
+    const s = this.state;
+    const T = s.toast;
+    const TK = { ok: ['#2F7D5B', 'm5 12 5 5 9-10'], err: ['#C62828', 'M6 6l12 12M18 6 6 18'], info: ['#2F5DA8', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 11v6M12 7.5v.01'], warn: ['#E56A00', 'M12 3 2 20h20zM12 10v4.5M12 17.5v.01'] };
+    const tk = T ? TK[T.kind] || TK.info : TK.info;
+    return {
+      wrapCls: 'wrap' + (s.dark ? ' thd' : ''),
+      themes: [['Açık', false], ['Karanlık', true]].map(([label, d]) => ({ label, on: s.dark === d ? 'true' : 'false', cls: 'prevb' + (s.dark === d ? ' on' : ''), pick: () => this.setState({ dark: d }) })),
+      hasToast: !!T, hasToast1: !!T && (T.at === 1 || T.at === 0), hasToast2: !!T && (T.at === 2 || T.at === 0), hasToast3: !!T && (T.at === 3 || T.at === 0),
+      toastText: T ? T.text : '', toastIc: 'background: ' + tk[0], toastD: tk[1],
+      tapProblem: () => { this.tone('tap'); this.toast('warn', 'Sorun bildir · yer tutucu', this._at || 0); },
+      tapSupport: () => { this.tone('tap'); this.toast('info', 'Destek · yer tutucu', this._at || 0); },
+      openMods: () => { this.tone('tap'); this.toast('info', 'Modüller açılıyor · Kabuk sayfası', this._at || 0); },
+      tapEtkin: () => { this.tone('tap'); this.toast('info', 'Etkin dinliyor · basılı tut, konuş', this._at || 0); },
+    };
+  }
+  renderVals() {
+    const s = this.state;
+    const C1 = '#2F5DA8'; const C2 = '#0E7C7B';
+    const WH = s.crit
+      ? [['Ana depo', C1, [['A-03', 220]]], ['Hammadde depo', C2, [['B-11', 140]]]]
+      : [['Ana depo', C1, [['A-03', 520], ['A-04', 340]]], ['Hammadde depo', C2, [['B-11', 380]]]];
+    const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const total = WH.reduce((a, w) => a + w[2].reduce((b, r) => b + r[1], 0), 0);
+    const scale = Math.max(total, 1240);
+    const segs = [];
+    WH.forEach((w) => w[2].forEach((r, i) => segs.push({ style: 'width: ' + ((r[1] / scale) * 100).toFixed(1) + '%; background: ' + w[1] + '; opacity: ' + (i ? '.7' : '1') })));
+    const whs = WH.map((w) => {
+      const q = w[2].reduce((b, r) => b + r[1], 0);
+      return { name: w[0], qty: fmt(q), dot: 'background: ' + w[1], meta: w[2].length + ' RAF · ' + w[2].map((r) => r[0]).join(', '), racks: w[2].map((r) => ({ code: r[0], qty: fmt(r[1]) + ' m', dot: 'background: ' + w[1] })) };
+    });
+    const MV = [
+      ['Giriş · Akın Kimya → A-03', 'BUGÜN 09:42 · MEHMET K.', '+400', '#2F7D5B', 'M12 3v12M7 10l5 5 5-5M4 19h16', '#17583C'],
+      ['Transfer · A-04 → B-11', 'DÜN 16:10 · ZEYNEP A.', '120', '#6C4BD8', 'M4 8h14l-3-3M20 16H6l3 3', '#4B2FA8'],
+      ['Çıkış · Üretim emri ÜE-0012', 'DÜN 11:05 · CAN D.', '−80', '#B5552B', 'M12 21V9M7 14l5-5 5 5M4 5h16', '#8A3E10'],
+      ['Sayım · Raf A-03 · fark yok', '2 GÜN ÖNCE · CAN D.', '±0', '#2F5DA8', 'M6 4h12v17H6zM9 4V2.8h6V4M9 13l2 2 4-4', '#1F4A8A'],
+      ['Etiket · 4 etiket yazdırıldı', '2 GÜN ÖNCE · AYŞE K.', '', '#172E42', 'M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z', '#172E42'],
+    ];
+    const Q = [
+      ['Etiket yazdır', '#172E42', 'M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z', 'Etiket yazdırılıyor · 1 adet'],
+      ['Sayım', '#2F5DA8', 'M6 4h12v17H6zM9 4V2.8h6V4M9 13l2 2 4-4', 'Sayım başlıyor · rafı okut'],
+      ['Transfer', '#6C4BD8', 'M4 8h14l-3-3M20 16H6l3 3', 'Transfer · hedef rafı okut'],
+    ];
+    return {
+      ...this.commonVals(),
+      states: [['Normal', false], ['Kritik stok', true]].map(([label, c]) => ({ label, on: s.crit === c ? 'true' : 'false', cls: 'prevb' + (s.crit === c ? ' on' : ''), pick: () => { if (c) this.tone('err'); this.setState({ crit: c }); } })),
+      crit: s.crit,
+      tot: fmt(total), totCls: 'htot' + (s.crit ? ' crit' : ''),
+      minCls: s.crit ? 'pill warn' : 'pill ok', minLbl: s.crit ? 'ALTINDA' : 'YETERLİ',
+      segs, whs,
+      moves: MV.map((m) => ({ title: m[0], meta: m[1], q: m[2], icStyle: 'background: ' + m[3], d: m[4], qStyle: 'color: ' + m[5] })),
+      moreLine: 'Tüm hareketler · ara ya da söyle',
+      sayMoves: () => { this.tone('tap'); this.toast('info', 'Hareketler açılıyor'); },
+      quick: Q.map((q) => ({ label: q[0], icStyle: 'background: ' + q[1], d: q[2], pick: () => { this.tone('ok'); this.toast('ok', q[3]); } })),
+      centerCls: 'dk big', centerOff: 'false', centerBadge: false, centerN: '',
+      centerD: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4', centerLbl: 'DÜZENLE', centerAria: 'Ürün kartını düzenle',
+      tapCenter: () => { this.tone('tap'); this.toast('info', 'Düzenleme açılıyor · form kalıbı'); },
+      goBack: () => { this.tone('tap'); this.toast('info', 'Ürünler listesine dönülüyor'); },
+      goHome: () => { this.tone('tap'); this.toast('info', 'Ana ekrana dönülüyor'); },
+    };
+  }
+}
+</script>
+</body>
+</html>

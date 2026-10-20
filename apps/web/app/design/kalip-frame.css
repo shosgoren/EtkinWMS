@@ -1,0 +1,34 @@
+/* I-18 uyarlaması (DESIGN-PARITY §5, T-968 / B-63): Kalıp kaynaklarında (KalipListe / KalipForm / KalipDetay) `.app` tuvaldeki cihaz
+   çerçevesidir ve port.mjs tarafından atlanır. Uygulamada `.app` tam ekran kaptır (Ekip/Aktar uyarlamasıyla aynı): arka plan kaynaktaki
+   geçiş, içerik dikey sütun. Alt cam çubuk kaynak kabın dışında ortak `KabukBar` (`.dzk`, kabuk-frame.css) olduğundan kap çubuk yüksekliği
+   kadar yer ayırır.
+   GENEL KURAL (sonraki ekranlar için): kökünde `.kalip` sınıfı olan ekranda (KalipEkran) kiracı kabuğunun eski süslemeleri — kök üst
+   çubuk (Kolay mod, İşlemler/Genel bakış, Çıkış, Nasıl kullanırım?, Yardım), masaüstü kiracı çubuğu, telefon üst çubuğu, soldaki
+   Geri/Ana ekran kutusu ve eski alt gezinme — çizilmez. Ekranın bunun için ayrıca bir şey yapması gerekmez. Renk sabiti yok. */
+.dzl, .dzf, .dzd { position: fixed; inset: 0; z-index: 20; }
+.dzl .app, .dzf .app, .dzd .app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-kalip-bg-b) 100%);
+  padding-bottom: var(--kabuk-h);
+}
+.dzl .wrap, .dzf .wrap, .dzd .wrap { min-height: 100dvh; }
+/* Gerçek veri kaynaktaki örnekten uzun olabilir (50 ürün, tüm ayarlar, ürün kartının düzenleme bölümleri): içerik alanı kendi içinde kayar;
+   sayfa gövdesi kaymaz. Kaynakta `.inner { overflow: hidden }` (örnek veri sığar). */
+.dzl .inner, .dzf .inner, .dzd .inner { overflow-y: auto; overscroll-behavior: contain; }
+/* Telefon üst çubuğuna güvenli alan. */
+.dzl .top, .dzf .top, .dzd .top { padding-top: max(10px, env(safe-area-inset-top)); }
+@media (min-width: 700px) { .dzl .top, .dzf .top, .dzd .top { padding-top: max(14px, env(safe-area-inset-top)); } }
+/* Bağlantı olarak çizilen kaynak düğmeleri (kart, hızlı işlem, sağ üst yardım): düğmeyle aynı görünüm. */
+.kalip a.uc, .kalip a.qab, .kalip a.helpb, .kalip a.st3, .kalip a.more, .kalip a.btn { text-decoration: none; }
+.kalip a.more { color: inherit; }
+/* Ekranın kendi perdesi (kaydedilmemiş iş kutusu) açıkken ekran ortak çubuğun üstüne çıkar (kaynakta `.cfback` çubuğun üstündedir). */
+.kalip:has(.cfback) { z-index: 26; }
+
+body:has(.kalip) [data-testid="bottom-nav"], body:has(.kalip) [data-testid="tenant-bar"], body:has(.kalip) [data-testid="app-bar"],
+body:has(.kalip) [data-testid="screen-nav"], body:has(.kalip) [data-testid="field-action-bar"], body:has(.kalip) .app-header,
+body:has(.kalip) .screen-context { display: none; }
