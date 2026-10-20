@@ -91,7 +91,7 @@ export function GirisAlan({ id, label, d, hint, error, ...input }: { id: string;
 }
 
 /** Kaynak `.act > .big` ana düğme (koyu lacivert; `back` verilirse soldaki geri düğmesi). */
-export function GirisEylem({ label, busy = false, type = "submit", onClick, back }: { label: string; busy?: boolean; type?: "submit" | "button"; onClick?: () => void; back?: { readonly href: string; readonly label: string } }) {
+export function GirisEylem({ label, busy = false, disabled = false, type = "submit", onClick, back }: { label: string; busy?: boolean; disabled?: boolean; type?: "submit" | "button"; onClick?: () => void; back?: { readonly href: string; readonly label: string } }) {
   return (
     <div className="act" style={{ background: C.bg }}>
       {back === undefined ? null : (
@@ -99,7 +99,7 @@ export function GirisEylem({ label, busy = false, type = "submit", onClick, back
           <Ico d={GICON.back} size={24} sw={3} />
         </a>
       )}
-      <button type={type} className="big" style={{ background: dz("172E42"), color: dz("FFFFFF") }} disabled={busy} aria-busy={busy || undefined} onClick={onClick}>
+      <button type={type} className="big" style={{ background: dz("172E42"), color: dz("FFFFFF") }} disabled={busy || disabled} aria-busy={busy || undefined} onClick={onClick}>
         {label}
         <Ico d={GICON.next} size={24} sw={3} />
       </button>

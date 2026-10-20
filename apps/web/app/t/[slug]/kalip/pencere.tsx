@@ -145,18 +145,40 @@ export function KalipPencereAlan({ label, hint, error, ...input }: { label: stri
   );
 }
 
-/** Kaynak `.fld` seçim kutusu. */
-export function KalipPencereSecim({ label, children, ...select }: { label: string; children: ReactNode } & SelectHTMLAttributes<HTMLSelectElement>) {
-  const id = useId();
+/** Kaynak `.fld` seçim kutusu (+ isteğe bağlı açıklama, alanın dışında). */
+export function KalipPencereSecim({ label, hint, note, children, ...select }: { label: string; hint?: string; note?: ReactNode; children: ReactNode } & SelectHTMLAttributes<HTMLSelectElement>) {
+  const auto = useId();
+  const id = select.id ?? auto;
+  const hintId = `${id}-h`;
   return (
     <div className="kpq">
-      <label className="fld" htmlFor={select.id ?? id}>
+      <label className="fld" htmlFor={id}>
         <span>{label}</span>
-        <select {...select} id={select.id ?? id}>
+        <select {...select} id={id} aria-describedby={hint === undefined ? undefined : hintId}>
           {children}
         </select>
       </label>
+      {hint === undefined ? null : (
+        <small id={hintId} className="kph">
+          {hint}
+        </small>
+      )}
+      {note}
     </div>
+  );
+}
+
+/** Kaynak `.sg` benzeri katlanır bölüm (`<details>`; "Gelişmiş ayarlar"). */
+export function KalipPencereBolum({ summary, children }: { summary: string; children: ReactNode }) {
+  return (
+    <details className="kpdet">
+      <summary>
+        <Ico d={LICON.gear} size={20} />
+        {summary}
+        <Ico d={LICON.chev} size={20} className="ico chev" />
+      </summary>
+      <div className="kpb2">{children}</div>
+    </details>
   );
 }
 

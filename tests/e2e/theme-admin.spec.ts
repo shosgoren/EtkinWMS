@@ -159,8 +159,9 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await page.getByRole("button", { name: "Yeni ürün" }).click();
           const itemDialog = page.getByRole("dialog");
           await expect(itemDialog).toBeVisible();
-          await expectBorderStrong(page, itemDialog.locator('input[name="code"]'), "ürün oluştur: kod");
-          await expectBorderStrong(page, itemDialog.locator("#create-base-unit"), "ürün oluştur: temel birim");
+          // T-974: ürün penceresi alanları kalıp alanı (`.fld`).
+          await expectKalipField(page, itemDialog.locator('input[name="code"]'), "ürün oluştur: kod", false);
+          await expectKalipField(page, itemDialog.locator("#create-base-unit"), "ürün oluştur: temel birim", false);
           await expectNoHorizontalOverflow(page, "ürün oluştur penceresi");
           await shot("items-create");
           await page.keyboard.press("Escape");

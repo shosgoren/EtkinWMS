@@ -86,6 +86,26 @@ dialog.dzf.kpen::backdrop { background: transparent; }
 .dzf.kpen .kpt { margin: 0; font: 600 14px/1.45 var(--font-instrument), sans-serif; color: var(--color-dz-x-mfnank); overflow-wrap: anywhere; }
 .dzf.kpen .kpt.b { font: 800 16px/1.3 var(--font-bricolage), sans-serif; color: inherit; }
 .dzf.kpen .kpt.m { font: 700 15px/1.4 var(--font-plex-mono), monospace; color: inherit; word-break: break-all; padding: 12px 14px; border-radius: 16px; background: var(--color-dz-x-oopbpe); }
+.dzf.kpen .kpdet { flex: none; border-radius: 16px; background: var(--color-dz-x-oopbpe); }
+.dzf.kpen .kpdet > summary {
+  display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; cursor: pointer; list-style: none;
+  font: 800 15px/1.1 var(--font-bricolage), sans-serif;
+}
+.dzf.kpen .kpdet > summary::-webkit-details-marker { display: none; }
+.dzf.kpen .kpdet > summary .chev { margin-left: auto; transform: rotate(90deg); transition: transform .15s; }
+.dzf.kpen .kpdet[open] > summary .chev { transform: rotate(-90deg); }
+.dzf.kpen .kpb2 { display: flex; flex-direction: column; gap: 12px; padding: 0 12px 12px; }
+.dzf.dzf.kpen .kpdet .fld { background: var(--color-dz-x-pppppp); }
+.dzf.kpen .sxr > .kpq { flex: 1; }
+.dzf.kpen .kplnk {
+  appearance: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 6px;
+  border: 0; background: transparent; color: inherit; cursor: pointer; font: 800 14px/1 var(--font-bricolage), sans-serif;
+  text-decoration: underline; text-underline-offset: 4px;
+}
+.dzf.kpen .kpbox { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px; border: 2px dashed var(--color-dz-x-ogokoo); }
+.dzf.dz-dark.kpen .kpdet { background: var(--color-dz-x-bmcidd); }
+.dzf.dzf.dz-dark.kpen .kpdet .fld { background: var(--color-dz-x-ccdaea); }
+.dzf.dz-dark.kpen .kpbox { border-color: var(--color-dz-x-dkekfk); }
 @media (max-width: 699.98px) {
   dialog.dzf.kpen[open] { align-items: flex-end; }
   .dzf.dzf.kpen .sx { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); margin-bottom: max(10px, env(safe-area-inset-bottom)); padding: 14px; }
