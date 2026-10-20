@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
@@ -10,7 +9,10 @@ import { listInboundReceipts, type ReceiptCursor } from "@wms/domain/operations"
 import { listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
 import { packageReceivingEnabled } from "../../../../lib/package-receiving-config.ts";
-import { ReceiptsView } from "./receipt-form.tsx";
+import { FormEkran } from "../stock/form-ekran.tsx";
+import { kalipDark } from "../stock/belge-kalip.ts";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { ReceiptNewForm, ReceiptsList } from "./receipts-view.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -67,26 +69,30 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
   }
 
   const nextHref = page.next === null ? null : `${returnTo}?${new URLSearchParams({ after: `${page.next.createdKey}~${page.next.id}` }).toString()}`;
+  const dark = await kalipDark();
+  const canCreate = hasPermission(roles, "document.create", grants);
+  const activeWarehouses = warehouses.items.filter((w) => w.status === "ACTIVE").map((w) => ({ id: w.id, code: w.code, name: w.name }));
+  if (first(sp.new) === "1" && canCreate) {
+    return (
+      <main className="flex w-full min-w-0 flex-col">
+        <FormEkran dark={dark} title={t("form.title")} icon={{ d: LICON.moveIn, color: "2F7D5B" }} back={returnTo} mainLabel={t("k.saveShort")} mainAria={t("form.save")} testId="receipt-new">
+          <ReceiptNewForm slug={slug} warehouses={activeWarehouses} />
+        </FormEkran>
+      </main>
+    );
+  }
+  const created = first(sp.created);
   return (
-    <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 px-4 py-6">
-      <header className="flex min-w-0 flex-col gap-1">
-        <h1 className="break-words text-3xl font-extrabold text-ink">{t("title")}</h1>
-        <p className="break-words text-lg text-ink">{t("intro")}</p>
-        <Link
-          href={`/t/${encodeURIComponent(slug)}`}
-          className="inline-flex min-h-12 w-fit items-center text-base font-bold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          {t("backHome")}
-        </Link>
-      </header>
-      {packageReceivingEnabled() && hasPermission(roles, "stock.view", grants) && hasPermission(roles, "document.create", grants) && hasPermission(roles, "stock.post", grants) ? <Link href={`${returnTo}/packages`} className="inline-flex min-h-14 items-center rounded-control bg-accent px-4 font-bold text-on-accent">{t("packageEntry")}</Link> : null}
-      <ReceiptsView
+    <main className="flex w-full min-w-0 flex-col">
+      <ReceiptsList
         slug={slug}
+        dark={dark}
         receipts={page.items}
         nextHref={nextHref}
-        warehouses={warehouses.items.filter((w) => w.status === "ACTIVE").map((w) => ({ id: w.id, code: w.code, name: w.name }))}
-        canCreate={hasPermission(roles, "document.create", grants)}
+        canCreate={canCreate}
         canApprove={hasPermission(roles, "document.approve", grants)}
+        packageHref={packageReceivingEnabled() && hasPermission(roles, "stock.view", grants) && canCreate && hasPermission(roles, "stock.post", grants) ? `${returnTo}/packages` : null}
+        created={created !== undefined && /^[A-Z0-9-]{1,40}$/.test(created) ? created : null}
       />
     </main>
   );

@@ -2,7 +2,9 @@
 import { useRef,useState,useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { FormSection, FormSteps } from "../screen-shell.tsx";
+import { FormSteps } from "../screen-shell.tsx";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { KalipGrup } from "../kalip/form.tsx";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Banner,ScanField } from "@wms/ui";
 import { StockPicker,OperationError,type Choice } from "../production/production-form.tsx";
@@ -19,15 +21,15 @@ export function NewOrderForm({slug}:{slug:string}){
   const result=await submitWithKey(key,clientKey=>createShippingOrderAction({slug,clientKey,customerRef:customer,lines:lines.map(l=>({itemId:l.item!.id,quantity:l.quantity}))}));
   if(result.ok){router.push(`/t/${encodeURIComponent(slug)}/shipping?id=${result.data.documentId}`);router.refresh();}else{setError(result.error);setUncertain(["NETWORK","INTERNAL"].includes(result.error.code));}
  }finally{flight.current=false;}});}}>
-  <p>{t("newHelp")}</p><FormSteps labels={[t("customer"),t("item"),t("review")]}/><fieldset disabled={pending||uncertain} className="flex min-w-0 flex-col gap-4" onChange={changed}>
-   <FormSection title={t("customer")}><label>{t("customer")}<input required maxLength={100} value={customer} className={`${control} block w-full`} onChange={e=>setCustomer(e.target.value)}/></label>
-   </FormSection><FormSection title={t("item")}>{lines.map((line,i)=><section key={line.key} className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border p-3">
+  <p className="text-ink-muted">{t("newHelp")}</p><fieldset disabled={pending||uncertain} className="flex min-w-0 flex-col gap-4" onChange={changed}>
+   <KalipGrup title={`1. ${t("customer")}`} d={LICON.people} color="2F5DA8"><div className="flex min-w-0 flex-col gap-3 p-3"><label>{t("customer")}<input required maxLength={100} value={customer} className={`${control} block w-full`} onChange={e=>setCustomer(e.target.value)}/></label>
+   </div></KalipGrup><KalipGrup title={`2. ${t("item")}`} sub={String(lines.length)} d={LICON.box} color="B85A14"><div className="flex min-w-0 flex-col gap-3 p-3">{lines.map((line,i)=><section key={line.key} className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border p-3">
     <StockPicker slug={slug} kind="item" label={`${t("item")} ${i+1}`} onChange={item=>{changed();setLines(old=>old.map(l=>l.key===line.key?{...l,item}:l));}}/>
     <label>{t("quantity")} {line.item?.unitCode}<input required inputMode="decimal" maxLength={32} value={line.quantity} className={`${control} block w-full`} onChange={e=>setLines(old=>old.map(l=>l.key===line.key?{...l,quantity:e.target.value}:l))}/></label>
     <button type="button" className={control} disabled={lines.length===1} onClick={()=>{changed();setLines(old=>old.filter(l=>l.key!==line.key));}}>{t("remove")}</button>
    </section>)}<button type="button" className={control} disabled={lines.length>=200} onClick={()=>{changed();setLines(old=>[...old,{key:crypto.randomUUID(),item:null,quantity:""}]);}}>{t("add")}</button>
-  </FormSection></fieldset>
-  <section className="workflow-section rounded-card border-2 border-border p-3" aria-label={t("review")}><h2 className="font-bold">{t("review")}</h2><p>{customer}</p><ul>{lines.map(l=><li key={l.key}>{l.item?.name}: {l.quantity} {l.item?.unitCode}</li>)}</ul></section>
+  </div></KalipGrup></fieldset>
+  <section className="workflow-section rounded-card border-2 border-border p-3" aria-label={t("review")}><h2 className="font-bold">3. {t("review")}</h2><p>{customer}</p><ul>{lines.map(l=><li key={l.key}>{l.item?.name}: {l.quantity} {l.item?.unitCode}</li>)}</ul></section>
   {unsupported&&<Banner kind="warning">{t("untracked")}</Banner>}{error&&<OperationError error={error}/>}{uncertain&&<p>{t("uncertain")}</p>}
   <button className={`workflow-primary ${control} bg-accent text-on-accent`} disabled={pending||unsupported||lines.some(l=>!l.item)}>{t(uncertain?"retry":"create")}</button>
  </form>;

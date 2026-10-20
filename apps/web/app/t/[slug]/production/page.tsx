@@ -1,34 +1,172 @@
 import { headers } from "next/headers";
-import { notFound,redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { notFound, redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getProductionRecipe,listProductionRecipes } from "@wms/domain/operations";
+import { getProductionRecipe, listProductionRecipes } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
-import { Banner } from "@wms/ui";
-import { NewRecipeForm,ProductionForm } from "./production-form.tsx";
-export const dynamic="force-dynamic";
-const control="inline-flex min-h-12 items-center rounded-lg border-2 border-border-strong bg-surface px-4 py-2 font-bold focus-visible:outline-3 focus-visible:outline-focus";
-const first=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v;
-export default async function ProductionPage({params,searchParams}:{params:Promise<{slug:string}>;searchParams:Promise<Record<string,string|string[]|undefined>>}){
- const {slug}=await params,sp=await searchParams,t=await getTranslations("production"),path=`/t/${encodeURIComponent(slug)}/production`;
- const id=first(sp.id),q=first(sp.q)??"",after=first(sp.after);
- const {getAuthService}=await import("../../../../lib/auth-service.ts");const principal=await getAuthService().getPrincipal(await headers());
- if(!principal)redirect(`/login?next=${encodeURIComponent(path)}`);
- let data:Awaited<ReturnType<typeof listProductionRecipes>>,recipe:Awaited<ReturnType<typeof getProductionRecipe>>|null;
- try{const context={db:getAppDb(),principal,tenantSlug:slug};data=await listProductionRecipes(context,{q,...(after?{after}:{})});recipe=id?await getProductionRecipe(context,id):null;}
- catch(e){if(e instanceof AppError){if(e.code==="NOT_FOUND"||e.code==="VALIDATION_FAILED")notFound();if(e.code==="FORBIDDEN"&&e.detail==="MFA_REQUIRED")redirect(`/mfa?next=${encodeURIComponent(path)}`);if(e.code==="UNAUTHENTICATED")redirect(`/login?next=${encodeURIComponent(path)}`);if(e.code==="FORBIDDEN")return <main className="p-4"><Banner kind="warning">{t("locked")}</Banner></main>;}throw e;}
- return <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6 text-ink">
-  <nav className="flex flex-wrap gap-2"><a className={control} href={`/t/${encodeURIComponent(slug)}/stock`}>{t("stock")}</a><a className={control} href={path}>{t("title")}</a></nav>
-  <h1 className="text-2xl font-extrabold">{t("title")}</h1>
-  {recipe?<><h2 className="text-xl font-bold">{recipe.code} / {recipe.version} — {recipe.name}</h2><p>{recipe.outputName}: {recipe.outputQuantity} {recipe.unitCode}</p>
-   <ul>{recipe.lines.map(line=><li key={line.lineNo}>{line.itemName}: {line.quantity} {line.unitCode}</li>)}</ul>
-   {data.canPost?<ProductionForm slug={slug} recipe={recipe}/>:<Banner kind="warning">{t("locked")}</Banner>}
-  </>:first(sp.new)==="1"?data.canCreate?<NewRecipeForm slug={slug}/>:<Banner kind="warning">{t("locked")}</Banner>:<>
-   {data.canCreate&&<a className={control} href={`${path}?new=1`}>{t("new")}</a>}
-   <form action={path} className="flex flex-wrap gap-2"><label className="flex-1">{t("search")}<input name="q" maxLength={128} defaultValue={q} className={`${control} block w-full`}/></label><button className={control}>{t("find")}</button></form>
-   {data.items.length===0&&<p>{t("empty")}</p>}
-   <ul className="flex flex-col gap-3">{data.items.map(row=><li key={row.id}><a className={`${control} flex-col items-start`} href={`${path}?id=${row.id}`}><span>{row.code} / {row.version} — {row.name}</span><span>{row.outputName}: {row.outputQuantity} {row.unitCode}</span></a></li>)}</ul>
-   {data.next&&<a className={control} href={`${path}?${new URLSearchParams({q,after:data.next})}`}>{t("next")}</a>}
-  </>}
- </main>;
+import { LICON } from "../../../design/kalip-icons.ts";
+import { KalipDetayIzgara, KalipHero, KalipKartBolum, KalipZaman, type KalipOlay } from "../kalip/detay.tsx";
+import { KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
+import { fmtQty } from "../kalip/format.ts";
+import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKilitliEkran } from "../kalip/liste.tsx";
+import { BOLUM_ICON, bolumCipleri, kalipDark } from "../stock/belge-kalip.ts";
+import { FormEkran } from "../stock/form-ekran.tsx";
+import { NewRecipeForm, ProductionForm } from "./production-form.tsx";
+
+// Üretim ve reçeteler (T-972, B-63 grup 2): reçete listesi (KalipListe), reçete ayrıntısı + üretim kaydı (KalipDetay; ana işlem formu
+// gönderir), yeni reçete (KalipForm). Veri, yetki ve eylemler değişmedi (tüketim + üretim tek işlemde, sunucuda; I-15 kilitleri eylemde).
+export const dynamic = "force-dynamic";
+const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+
+export default async function ProductionPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const { slug } = await params,
+    sp = await searchParams,
+    t = await getTranslations("production"),
+    so = await getTranslations("stockOverview"),
+    locale = await getLocale(),
+    home = `/t/${encodeURIComponent(slug)}`,
+    path = `${home}/production`;
+  const id = first(sp.id),
+    q = first(sp.q) ?? "",
+    after = first(sp.after);
+  const { getAuthService } = await import("../../../../lib/auth-service.ts");
+  const principal = await getAuthService().getPrincipal(await headers());
+  if (!principal) redirect(`/login?next=${encodeURIComponent(path)}`);
+  const dark = await kalipDark();
+  let data: Awaited<ReturnType<typeof listProductionRecipes>>, recipe: Awaited<ReturnType<typeof getProductionRecipe>> | null;
+  try {
+    const context = { db: getAppDb(), principal, tenantSlug: slug };
+    data = await listProductionRecipes(context, { q, ...(after ? { after } : {}) });
+    recipe = id ? await getProductionRecipe(context, id) : null;
+  } catch (e) {
+    if (e instanceof AppError) {
+      if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
+      if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(path)}`);
+      if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(path)}`);
+      if (e.code === "FORBIDDEN")
+        return (
+          <main className="flex w-full min-w-0 flex-col">
+            <KalipKilitliEkran title={t("title")} icon={BOLUM_ICON.production} text={t("locked")} hint={t("k.lockedHint")} dark={dark} home={home} />
+          </main>
+        );
+    }
+    throw e;
+  }
+  const fq = (v: string) => fmtQty(v, locale);
+
+  if (recipe) {
+    const materials: KalipOlay[] = recipe.lines.map((line) => ({
+      key: String(line.lineNo),
+      title: line.itemName,
+      meta: line.itemCode,
+      q: `−${fq(line.quantity)} ${line.unitCode}`,
+      d: LICON.box,
+      color: "0E7C7B",
+      qColor: "C62828",
+    }));
+    const hero = (
+      <KalipHero
+        label={t("k.hero")}
+        name={`${recipe.code} / ${recipe.version} — ${recipe.name}`}
+        code={recipe.outputCode}
+        tags={[recipe.outputName]}
+        d={BOLUM_ICON.production.d}
+        color={BOLUM_ICON.production.color}
+        total={{ value: fq(recipe.outputQuantity), sub: recipe.unitCode, crit: false }}
+        testId="recipe-hero"
+      />
+    );
+    const body = (
+      <KalipDetayIzgara
+        left={
+          <>
+            {hero}
+            <KalipKartBolum title={t("material")} sub={t("k.materialsSub", { qty: fq(recipe.outputQuantity), unit: recipe.unitCode, name: recipe.outputName })} d={LICON.box} color="0E7C7B" testId="recipe-materials">
+              <KalipZaman items={materials} />
+            </KalipKartBolum>
+          </>
+        }
+        right={
+          <KalipKartBolum title={t("k.produce")} sub={t("k.produceSub")} d={LICON.uret} color="30475A" testId="recipe-produce">
+            {data.canPost ? <ProductionForm slug={slug} recipe={recipe} /> : <small className="mono" data-testid="recipe-locked">{t("locked")}</small>}
+          </KalipKartBolum>
+        }
+      />
+    );
+    return (
+      <main className="flex w-full min-w-0 flex-col">
+        {data.canPost ? (
+          <FormEkran kind="detay" heading={false} dark={dark} title={t("title")} icon={BOLUM_ICON.production} back={path} mainLabel={t("k.produceShort")} mainAria={t("k.produce")} testId="recipe-detail">
+            {body}
+          </FormEkran>
+        ) : (
+          <KalipEkran kind="detay" dark={dark} title={t("title")} icon={BOLUM_ICON.production} heading={false} testId="recipe-detail" bar={{ back: { href: path }, main: { label: t("k.produceShort"), aria: t("k.produce"), d: LICON.uret, disabled: true } }}>
+            {body}
+          </KalipEkran>
+        )}
+      </main>
+    );
+  }
+
+  if (first(sp.new) === "1") {
+    if (!data.canCreate)
+      return (
+        <main className="flex w-full min-w-0 flex-col">
+          <KalipKilitliEkran title={t("new")} icon={BOLUM_ICON.production} text={t("locked")} hint={t("k.lockedHint")} dark={dark} home={path} />
+        </main>
+      );
+    return (
+      <main className="flex w-full min-w-0 flex-col">
+        <FormEkran dark={dark} title={t("new")} icon={BOLUM_ICON.production} back={path} mainLabel={t("k.saveShort")} mainAria={t("save")} testId="recipe-new">
+          <NewRecipeForm slug={slug} />
+        </FormEkran>
+      </main>
+    );
+  }
+
+  const chips = bolumCipleri(home, "production", { stock: so("k.chipStock"), documents: so("k.chipDocs"), shipping: so("k.chipShipping"), production: so("k.chipProduction") });
+  return (
+    <main className="flex w-full min-w-0 flex-col">
+      <KalipEkran
+        kind="liste"
+        dark={dark}
+        title={t("title")}
+        icon={BOLUM_ICON.production}
+        testId="production"
+        bar={{ back: { href: home }, main: { label: t("k.newShort"), aria: t("new"), d: LICON.plus, href: `${path}?new=1`, disabled: !data.canCreate, testId: "production-new" } }}
+      >
+        <KalipAra label={t("search")} placeholder={t("search")} action={path} defaultValue={q} />
+        <KalipCipler label={so("k.chips")} chips={chips} />
+        {data.items.length === 0 ? (
+          <KalipBos title={t("empty")} hint={data.canCreate ? t("k.emptyHint") : t("k.lockedHint")} {...(q !== "" ? { action: { label: so("reset"), href: path } } : {})} iconD={BOLUM_ICON.production.d} />
+        ) : (
+          <>
+            <KalipBaslik title={data.next === null && after === undefined ? t("k.count", { n: data.items.length }) : t("k.countMore", { n: data.items.length })} hint={t("k.hint")} />
+            <KalipKartListe label={t("title")}>
+              {data.items.map((row, i) => (
+                <KalipKart
+                  key={row.id}
+                  index={i}
+                  name={row.name}
+                  code={`${row.code} / ${row.version}`}
+                  meta={row.outputName}
+                  d={BOLUM_ICON.production.d}
+                  color={BOLUM_ICON.production.color}
+                  badge={{ value: fq(row.outputQuantity), sub: row.unitCode }}
+                  href={`${path}?id=${row.id}`}
+                  aria={t("k.cardAria", { code: row.code, version: row.version, name: row.name, output: row.outputName, qty: fq(row.outputQuantity), unit: row.unitCode })}
+                  testId="recipe-card"
+                />
+              ))}
+            </KalipKartListe>
+          </>
+        )}
+        {data.next ? (
+          <KalipDaha href={`${path}?${new URLSearchParams({ q, after: data.next })}`} iconD={LICON.plus}>
+            {t("next")}
+          </KalipDaha>
+        ) : null}
+      </KalipEkran>
+    </main>
+  );
 }
