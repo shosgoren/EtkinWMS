@@ -2068,7 +2068,8 @@
       "saveShort": "SAVE",
       "emptyHint": "Use NEW below to add the first delivery.",
       "hint": "{n} deliveries",
-      "groupSource": "Warehouse and delivery note"
+      "groupSource": "Warehouse and delivery note",
+      "saveAria": "Save"
     }
   },
   "import": {
@@ -2521,7 +2522,8 @@
       "count": "{n} documents",
       "countMore": "Latest {n} documents",
       "hint": "Tap a document to open it",
-      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}"
+      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
+      "saveAria": "Save"
     }
   },
   "production": {
@@ -2569,7 +2571,8 @@
       "countMore": "First {n} recipes",
       "hint": "Tap a recipe to produce",
       "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
-      "groupQty": "Quantity"
+      "groupQty": "Quantity",
+      "saveAria": "Save"
     }
   },
   "shipping": {
@@ -2642,7 +2645,8 @@
       "countMore": "First {n} orders",
       "hint": "Tap an order to open its steps",
       "groupCustomer": "Customer",
-      "groupItems": "Items"
+      "groupItems": "Items",
+      "saveAria": "Save"
     }
   },
   "packageReceiving": {

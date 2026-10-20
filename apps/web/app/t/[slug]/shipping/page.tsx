@@ -164,7 +164,7 @@ export default async function ShippingPage({ params, searchParams }: { params: P
       );
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <FormEkran dark={dark} title={t("new")} icon={BOLUM_ICON.shipping} back={path} mainLabel={t("k.saveShort")} mainAria={t("create")} testId="shipping-new-form">
+        <FormEkran dark={dark} title={t("new")} icon={BOLUM_ICON.shipping} back={path} mainLabel={t("k.saveShort")} mainAria={t("k.saveAria")} testId="shipping-new-form">
           <NewOrderForm slug={slug} />
         </FormEkran>
       </main>

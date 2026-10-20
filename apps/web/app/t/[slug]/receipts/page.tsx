@@ -75,7 +75,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
   if (first(sp.new) === "1" && canCreate) {
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <FormEkran dark={dark} title={t("form.title")} icon={{ d: LICON.moveIn, color: "2F7D5B" }} back={returnTo} mainLabel={t("k.saveShort")} mainAria={t("form.save")} testId="receipt-new">
+        <FormEkran dark={dark} title={t("form.title")} icon={{ d: LICON.moveIn, color: "2F7D5B" }} back={returnTo} mainLabel={t("k.saveShort")} mainAria={t("k.saveAria")} testId="receipt-new">
           <ReceiptNewForm slug={slug} warehouses={activeWarehouses} />
         </FormEkran>
       </main>

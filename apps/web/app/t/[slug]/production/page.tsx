@@ -117,7 +117,7 @@ export default async function ProductionPage({ params, searchParams }: { params:
       );
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <FormEkran dark={dark} title={t("new")} icon={BOLUM_ICON.production} back={path} mainLabel={t("k.saveShort")} mainAria={t("save")} testId="recipe-new">
+        <FormEkran dark={dark} title={t("new")} icon={BOLUM_ICON.production} back={path} mainLabel={t("k.saveShort")} mainAria={t("k.saveAria")} testId="recipe-new">
           <NewRecipeForm slug={slug} />
         </FormEkran>
       </main>

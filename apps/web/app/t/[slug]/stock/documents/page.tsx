@@ -131,7 +131,7 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
       );
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <FormEkran dark={dark} title={title} icon={icon} back={path} mainLabel={t("k.saveShort")} mainAria={kind === "TRANSFER" ? t("transferPost") : t("create")} testId="document-new">
+        <FormEkran dark={dark} title={title} icon={icon} back={path} mainLabel={t("k.saveShort")} mainAria={t("k.saveAria")} testId="document-new">
           <DocumentForm slug={slug} kind={kind} />
         </FormEkran>
       </main>

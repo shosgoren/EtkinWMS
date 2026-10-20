@@ -2068,7 +2068,8 @@
       "saveShort": "KAYDET",
       "emptyHint": "Alttaki YENİ ile ilk teslimi ekle.",
       "hint": "{n} teslim",
-      "groupSource": "Depo ve irsaliye"
+      "groupSource": "Depo ve irsaliye",
+      "saveAria": "Kaydet"
     }
   },
   "import": {
@@ -2521,7 +2522,8 @@
       "count": "{n} belge",
       "countMore": "Son {n} belge",
       "hint": "Belgeye dokun: ayrıntısı açılır",
-      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}"
+      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
+      "saveAria": "Kaydet"
     }
   },
   "production": {
@@ -2569,7 +2571,8 @@
       "countMore": "İlk {n} reçete",
       "hint": "Reçeteye dokun: üretim açılır",
       "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
-      "groupQty": "Miktar"
+      "groupQty": "Miktar",
+      "saveAria": "Kaydet"
     }
   },
   "shipping": {
@@ -2642,7 +2645,8 @@
       "countMore": "İlk {n} sipariş",
       "hint": "Siparişe dokun: adımları açılır",
       "groupCustomer": "Müşteri",
-      "groupItems": "Ürünler"
+      "groupItems": "Ürünler",
+      "saveAria": "Kaydet"
     }
   },
   "packageReceiving": {
