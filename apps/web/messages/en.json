@@ -2568,7 +2568,8 @@
       "count": "{n} recipes",
       "countMore": "First {n} recipes",
       "hint": "Tap a recipe to produce",
-      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}"
+      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
+      "groupQty": "Quantity"
     }
   },
   "shipping": {
@@ -2639,7 +2640,9 @@
       "emptyHint": "Use NEW below to create the first order.",
       "count": "{n} orders",
       "countMore": "First {n} orders",
-      "hint": "Tap an order to open its steps"
+      "hint": "Tap an order to open its steps",
+      "groupCustomer": "Customer",
+      "groupItems": "Items"
     }
   },
   "packageReceiving": {

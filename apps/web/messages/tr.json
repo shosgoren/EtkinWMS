@@ -2568,7 +2568,8 @@
       "count": "{n} reçete",
       "countMore": "İlk {n} reçete",
       "hint": "Reçeteye dokun: üretim açılır",
-      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}"
+      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
+      "groupQty": "Miktar"
     }
   },
   "shipping": {
@@ -2639,7 +2640,9 @@
       "emptyHint": "Alttaki YENİ ile ilk siparişi oluştur.",
       "count": "{n} sipariş",
       "countMore": "İlk {n} sipariş",
-      "hint": "Siparişe dokun: adımları açılır"
+      "hint": "Siparişe dokun: adımları açılır",
+      "groupCustomer": "Müşteri",
+      "groupItems": "Ürünler"
     }
   },
   "packageReceiving": {

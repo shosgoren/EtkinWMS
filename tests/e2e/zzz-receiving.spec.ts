@@ -497,8 +497,10 @@ test("kabul → kalite onayı → yerleştirme (görevli ve serbest) + yanlış 
   await expect(row).toContainText("Kabul 24");
   await expect(row).toContainText("Hasarlı 2");
   await expect(row).toContainText("Kalan 6");
+  // Yeni teslim (T-972 form kalıbı, `?new=1`): ürün ara → birim → miktar → satır → kaydet; listeye dönülür.
+  await page.getByTestId("receipts-new").click();
+  await expect(page).toHaveURL(/\/receipts\?new=1$/);
   await expect(page.getByText("Kişisel veri girmeyin.")).toBeVisible();
-  // Yeni teslim: ürün ara → birim → miktar → satır → kaydet.
   await page.getByLabel("Tedarikçi referansı").fill(`E2E-IRS-2-${run}`);
   await page.getByLabel("Ürün", { exact: true }).fill(`E2E-${run}`);
   await page.getByRole("button", { name: new RegExp(`Somun ${run}`) }).click();
