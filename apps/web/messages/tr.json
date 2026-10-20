@@ -4030,5 +4030,68 @@
         "sub": "Kişiler · Yetki"
       }
     }
+  },
+  "saha": {
+    "online": "Çevrimiçi",
+    "stepScan": "OKUT",
+    "stepVerify": "DOĞRULA",
+    "stepQty": "MİKTAR",
+    "keypad": "Sayı tuşları",
+    "all": "TÜMÜ",
+    "allAria": "Tümü: {n}",
+    "del": "Sil",
+    "okut": {
+      "title": "Okut",
+      "sub": "SAHA · KOD OKUT",
+      "camHint": "ÜRÜN · KOLİ · RAF · İRSALİYE",
+      "camRegion": "Kamera açık, kodu çerçeveye getir",
+      "say": "Okut ya da söyle",
+      "saySub": "KODU ÇERÇEVEYE GETİR · İŞ KENDİ AÇILIR",
+      "nfc": "NFC’YE DOKUN",
+      "kbd": "KODU YAZ",
+      "codeLabel": "Kod",
+      "codePh": "Kodu yaz",
+      "codeGo": "Bul",
+      "retry": "Tekrar dene",
+      "starting": "Kamera açılıyor…",
+      "checking": "Kontrol ediliyor…",
+      "found": "Bulundu",
+      "unknownTitle": "Kod tanınmadı",
+      "unknownReason": "Bu kod sistemde yok. Etiketi kontrol et, yeniden okut.",
+      "ambiguousReason": "Bu kod birden çok kayda ait. Ürün ya da raf etiketini okut.",
+      "rescan": "Anladım, tekrar okut",
+      "soundOk": "SES · TİTREŞİM",
+      "soundBad": "UYARI SESİ · TİTREŞİM",
+      "nfcNone": "Bu cihazda NFC yok. Kamerayla okut ya da kodu yaz.",
+      "nfcReady": "NFC etikete dokun.",
+      "nfcFail": "NFC açılamadı. Kamerayla okut ya da kodu yaz.",
+      "lockTitle": "Okuma görünümü",
+      "lockReason": "Stok yazma yetkin yok: okuttuğun kodun bilgisini görürsün; kabul ve yerleştirme kilitli. Yöneticine haber ver.",
+      "network": "Bağlantı yok. Tekrar dene.",
+      "errorCode": "Hata kodu: {code}",
+      "scanMain": "OKUT",
+      "scanAria": "Okut: kamerayı yeniden aç",
+      "go": {
+        "receive": "Kabule geçiliyor",
+        "putaway": "Yerleştirmeye geçiliyor",
+        "item": "Ürün kartı açılıyor",
+        "stock": "Stok açılıyor",
+        "receipts": "Teslimler açılıyor",
+        "package": "Paket açılıyor"
+      }
+    },
+    "qty": {
+      "expected": "BEKLENEN {e} · KALAN {k}",
+      "over": "Beklenenden fazla · kalan {n}",
+      "hint": "TUŞLA · AYNI KOLİYİ OKUT, ADET EKLENİR",
+      "confirm": "ONAYLA",
+      "okProduct": "Doğru ürün",
+      "sound": "SES · TİTREŞİM",
+      "done": "Kabul edildi · {n} {unit}",
+      "doneNext": "SIRADAKİ: YERLEŞTİR · OKUT",
+      "putDone": "Rafa kondu · {n}",
+      "fixed": "Görevdeki miktar",
+      "available": "RAFTA {n}"
+    }
   }
 }
