@@ -110,10 +110,49 @@ jobs:
   # docker-compose.yml'den yalnızca postgres + pgbouncer'ı (transaction mode) Testcontainers ile
   # kaldırır; parolalar koşu başına rastgele, portlar rastgele. Sır KULLANILMAZ; Neon hedefi
   # (test:int:neon) bu iş akışına eklenmez (T-005d, ayrı iş akışı).
-  int:
-    name: int
+  # T-925 (kullanıcı kararı 20 Ekim: "hatasız, hızlı sonuç ve yayın"): yalnız belge (docs/** ya da *.md) değişen PR'da ağır int/e2e
+  # parçaları koşmaz (testler belge dosyası okumaz). main/int dallarına push ve kod değişen her PR'da TAM takım koşar; yayın kapısı
+  # main'deki tam sonucu ister. Belirsizlikte (boş fark, hata) kod sayılır (fail-safe).
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          code=true
+          if [ "$EVENT" = pull_request ] && [[ "$BASE" =~ ^[0-9a-f]{40}$ ]] && [[ "$HEAD" =~ ^[0-9a-f]{40}$ ]]; then
+            # --no-renames: taşınan dosyanın ESKİ yolu da listelenir (kod dosyasını docs/ altına taşıyan PR "yalnız belge" sayılmasın).
+            files=$(git diff --no-renames --name-only "$BASE...$HEAD")
+            # Boru yok (SIGPIPE + pipefail yanlış "yalnız belge" sonucu veremesin): belge dışı tek dosya bile varsa kod.
+            if [ -n "$files" ] && ! grep -qvE '^docs/|\.md$' <<< "$files"; then code=false; fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "kod değişikliği: $code"
+
+  # T-925: aynı testler iki makineye bölünür (vitest --shard); her parça kendi compose veritabanını kurar. Kapsam değişmez; duvar
+  # süresi ~yarıya iner. Sabit `int` adı aşağıdaki toplayıcı iştedir.
+  int-shard:
+    name: int-shard (${{ matrix.shard }}/2)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -130,7 +169,7 @@ jobs:
         run: |
           mkdir -p .artifacts/test-int
           set -o pipefail
-          pnpm test:int 2>&1 | tee .artifacts/test-int/run.log
+          pnpm test:int --shard=${{ matrix.shard }}/2 2>&1 | tee .artifacts/test-int/run.log
       - name: Stage .artifacts/test-int
         if: always()
         run: |
@@ -140,18 +179,44 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: int-artifacts
+          name: int-artifacts-${{ matrix.shard }}
           path: ${{ runner.temp }}/int-artifacts/
           if-no-files-found: warn
           retention-days: 14
 
+  # Sabit ad `int` (deploy-vps / release.py dokuz kapı listesi): bütün parçalar başarılıysa ya da yalnız belge değiştiyse yeşil.
+  int:
+    name: int
+    needs: [changes, int-shard]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: All int shards succeeded (or docs-only PR)
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          RESULT: ${{ needs.int-shard.result }}
+        run: |
+          set -euo pipefail
+          test "$CHANGES" = success
+          if [ "$CODE" = false ]; then test "$RESULT" = skipped; else test "$RESULT" = success; fi
+
   # Uçtan uca duman testi (T-131): compose (postgres + pgbouncer) + migration + worker `demo.reseed` + web + yerel TLS vekili
   # `tests/e2e/global-setup.ts` içinde kurulur; `pnpm test:e2e` masaüstü + mobil projelerini koşar. Sır KULLANILMAZ:
   # .env.example yer tutucuları; BETTER_AUTH_SECRET/DEMO_PASSWORD/QUEUE_SEAL_KEY koşu başına rastgele üretilir.
-  e2e:
-    name: e2e
+  # T-925: proje grupları ayrı makinelerde (masaüstü / mobil); her parça kendi compose + web + worker ortamını kurar. Proje içi sıra
+  # (z/zz/zzz dosya adları) aynı kalır; projeler zaten birbirinden bağımsız sırayla koşuyordu. Sabit `e2e` adı toplayıcı iştedir.
+  e2e-shard:
+    name: e2e-shard (${{ matrix.group }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [desktop, mobile]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -169,7 +234,7 @@ jobs:
         run: |
           mkdir -p .artifacts/e2e
           set -o pipefail
-          pnpm test:e2e 2>&1 | tee .artifacts/e2e/run.log
+          pnpm test:e2e --project=${{ matrix.group }} --project=receiving-${{ matrix.group }} 2>&1 | tee .artifacts/e2e/run.log
       - name: Stage .artifacts/e2e
         if: always()
         run: |
@@ -180,13 +245,31 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-artifacts
+          name: e2e-artifacts-${{ matrix.group }}
           path: ${{ runner.temp }}/e2e-artifacts/
           if-no-files-found: warn
           retention-days: 14
       - name: Compose down
         if: always()
         run: docker compose down -v --remove-orphans
+
+  # Sabit ad `e2e` (deploy-vps / release.py dokuz kapı listesi): iki proje grubu da başarılıysa ya da yalnız belge değiştiyse yeşil.
+  e2e:
+    name: e2e
+    needs: [changes, e2e-shard]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: All e2e groups succeeded (or docs-only PR)
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          RESULT: ${{ needs.e2e-shard.result }}
+        run: |
+          set -euo pipefail
+          test "$CHANGES" = success
+          if [ "$CODE" = false ]; then test "$RESULT" = skipped; else test "$RESULT" = success; fi
 
   secrets:
     name: secrets
