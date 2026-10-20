@@ -1,24 +1,27 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
-import { Banner } from "@wms/ui";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { listStockOverview } from "@wms/domain/stock";
 import { AppError } from "@wms/shared/errors";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
+import { fmtQty } from "../kalip/format.ts";
+import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKilitliEkran } from "../kalip/liste.tsx";
+import { BOLUM_ICON, bolumCipleri, kalipDark } from "./belge-kalip.ts";
 
+// Stok durumu (T-972, B-63 grup 2): liste kalıbı (KalipListe.dc.html). Veri ve yetki değişmedi: `listStockOverview` (stock.view, keyset).
+// Kart: ürün + depo; rozet kullanılabilir miktar (decimal dizgisi kayan noktasız biçimlenir); ek satır fiziksel / ayrılmış. Karta dokununca
+// ürün kartı açılır. Bilinçli farklar (DESIGN-PARITY): minimum politikası bu sorguda yok → trafik ışığı yok; sesle arama Etkin (B-62) ile.
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("stockOverview");
   return { title: t("title") };
 }
-const first = (v: string | string[] | undefined): string | undefined => Array.isArray(v) ? v[0] : v;
-const control = "inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-border-strong px-4 py-2 font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+const first = (v: string | string[] | undefined): string | undefined => (Array.isArray(v) ? v[0] : v);
 
-export default async function StockPage({ params, searchParams }: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function StockPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
   const sp = await searchParams;
   const q = first(sp.q) ?? "";
@@ -27,71 +30,98 @@ export default async function StockPage({ params, searchParams }: {
   const home = `/t/${encodeURIComponent(slug)}`;
   const path = `${home}/stock`;
   const t = await getTranslations("stockOverview");
-  const documents = await getTranslations("stockDocuments");
+  const locale = await getLocale();
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect(`/login?next=${encodeURIComponent(path)}`);
+  const dark = await kalipDark();
   let data: Awaited<ReturnType<typeof listStockOverview>>;
   try {
-    data = await listStockOverview({ db: getAppDb(), principal, tenantSlug: slug }, {
-      q, ...(after ? { after } : {}), ...(warehouseId ? { warehouseId } : {}),
-    });
+    data = await listStockOverview({ db: getAppDb(), principal, tenantSlug: slug }, { q, ...(after ? { after } : {}), ...(warehouseId ? { warehouseId } : {}) });
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(path)}`);
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(path)}`);
-      if (e.code === "FORBIDDEN") return <main className="mx-auto max-w-3xl p-4"><h1 className="text-2xl font-extrabold">{t("title")}</h1><Banner kind="warning">{t("locked")}</Banner></main>;
+      if (e.code === "FORBIDDEN")
+        return (
+          <main className="flex w-full min-w-0 flex-col">
+            <KalipKilitliEkran title={t("title")} icon={BOLUM_ICON.stock} text={t("locked")} hint={t("k.lockedHint")} dark={dark} home={home} />
+          </main>
+        );
     }
     throw e;
   }
   const nextParams = new URLSearchParams({ q });
   if (warehouseId) nextParams.set("warehouse", warehouseId);
   if (data.next) nextParams.set("after", data.next);
+  const filtered = q !== "" || after !== undefined || warehouseId !== undefined;
+  const fq = (v: string): string => fmtQty(v, locale);
+  const chips = bolumCipleri(home, "stock", { stock: t("k.chipStock"), documents: t("k.chipDocs"), shipping: t("k.chipShipping"), production: t("k.chipProduction") });
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6 text-ink">
-      <a href={home} className={`${control} self-start`}>{t("home")}</a>
-      <nav className="flex flex-wrap gap-2" aria-label={documents("title")}>
-        <a href={`${path}/documents`} className={control}>{documents("title")}</a>
-        <a href={`${path}/documents?new=STOCK_IN`} className={control}>{documents("in")}</a>
-        <a href={`${path}/documents?new=STOCK_OUT`} className={control}>{documents("out")}</a>
-        <a href={`${path}/documents?new=TRANSFER`} className={control}>{documents("transfer")}</a>
-        <a href={`${home}/shipping`} className={control}>{documents("shipping")}</a>
-        <a href={`${home}/production`} className={control}>{documents("production")}</a>
-      </nav>
-      <h1 className="text-2xl font-extrabold">{t("title")}</h1>
-      <p className="text-ink-muted">{t("description")}</p>
-      <form action={path} className="flex flex-wrap items-end gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-1 font-bold">{t("search")}
-          <input name="q" defaultValue={q} maxLength={128} className="min-h-12 w-full rounded-lg border-2 border-border-strong bg-surface px-3 font-normal focus-visible:outline-3 focus-visible:outline-focus" />
-        </label>
-        {warehouseId && <input type="hidden" name="warehouse" value={warehouseId} />}
-        <button className={`${control} bg-accent text-on-accent`} type="submit">{t("find")}</button>
-        {(q || after || warehouseId) && <a className={control} href={path}>{t("reset")}</a>}
-      </form>
-      <details className="rounded-card border border-border bg-surface p-3">
-        <summary className="min-h-12 cursor-pointer content-center font-bold">{t("help")}</summary>
-        <p>{t("explanation")}</p>
-      </details>
-      {data.items.length === 0 ? <Banner kind="info"><p>{t("empty")}</p><p>{t("emptyAction")}</p></Banner> : (
-        <ul className="flex min-w-0 flex-col gap-3" aria-label={t("title")}>
-          {data.items.map((row) => <li key={`${row.warehouseId}:${row.itemId}`} className="min-w-0 rounded-card border-2 border-border bg-surface p-4 shadow-card">
-            <h2 className="break-words text-lg font-bold">{row.itemName}</h2>
-            <p className="break-words text-ink-muted">{row.itemCode}</p>
-            <p className="mt-2 break-words font-bold">{t("warehouse")}: {row.warehouseName} ({row.warehouseCode})</p>
-            <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {(["physical", "reserved", "available"] as const).map((key) => <div key={key}>
-                <dt className="text-sm text-ink-muted">{t(key)}</dt>
-                <dd className={`break-all font-bold tabular-nums ${key === "available" ? "text-xl" : "text-lg"}`}>{row[key]} {row.unitCode}</dd>
-              </div>)}
-            </dl>
-          </li>)}
-        </ul>
-      )}
-      <nav className="flex flex-wrap gap-2" aria-label={t("pages")}>
-        {after && <a href={`${path}?${new URLSearchParams({ q, ...(warehouseId ? { warehouse: warehouseId } : {}) })}`} className={control}>{t("first")}</a>}
-        {data.next && <a href={`${path}?${nextParams}`} className={control}>{t("next")}</a>}
-      </nav>
+    <main className="flex w-full min-w-0 flex-col">
+      <KalipEkran
+        kind="liste"
+        dark={dark}
+        title={t("title")}
+        icon={BOLUM_ICON.stock}
+        testId="stock"
+        bar={{ back: { href: home }, main: { label: t("k.newShort"), aria: t("k.newAria"), d: LICON.plus, href: `${path}/documents?new=STOCK_IN`, testId: "stock-new" } }}
+      >
+        <KalipAra
+          label={t("search")}
+          placeholder={t("k.searchPh")}
+          action={path}
+          defaultValue={q}
+          below={warehouseId ? <input type="hidden" name="warehouse" value={warehouseId} /> : undefined}
+        />
+        <KalipCipler label={t("k.chips")} chips={chips} />
+        <details className="more" data-testid="stock-help">
+          <summary style={{ cursor: "pointer", listStyle: "none" }}>{t("help")}</summary>
+          <p style={{ margin: "8px 0 0" }}>{t("explanation")}</p>
+        </details>
+        {data.items.length === 0 ? (
+          <KalipBos title={t("empty")} hint={t("emptyAction")} {...(filtered ? { action: { label: t("reset"), href: path } } : {})} />
+        ) : (
+          <>
+            <KalipBaslik title={data.next === null && after === undefined ? t("k.count", { n: data.items.length }) : t("k.countMore", { n: data.items.length })} hint={t("k.hint")} />
+            <KalipKartListe label={t("title")}>
+              {data.items.map((row, i) => {
+                const qty = fq(row.available);
+                return (
+                  <KalipKart
+                    key={`${row.warehouseId}:${row.itemId}`}
+                    index={i}
+                    name={row.itemName}
+                    code={row.itemCode}
+                    meta={t("k.meta", { warehouse: row.warehouseName, code: row.warehouseCode, physical: fq(row.physical), reserved: fq(row.reserved), unit: row.unitCode })}
+                    d={LICON.box}
+                    color="2F5DA8"
+                    badge={{ value: qty, sub: `${row.unitCode} · ${t("available")}` }}
+                    href={`${home}/items/${encodeURIComponent(row.itemId)}`}
+                    aria={t("k.cardAria", { name: row.itemName, code: row.itemCode, warehouse: row.warehouseName, qty, unit: row.unitCode })}
+                    testId="stock-card"
+                  />
+                );
+              })}
+            </KalipKartListe>
+          </>
+        )}
+        {after || data.next ? (
+          <nav aria-label={t("pages")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {after ? (
+              <KalipDaha href={`${path}?${new URLSearchParams({ q, ...(warehouseId ? { warehouse: warehouseId } : {}) })}`} iconD={LICON.chev}>
+                {t("first")}
+              </KalipDaha>
+            ) : null}
+            {data.next ? (
+              <KalipDaha href={`${path}?${nextParams}`} iconD={LICON.plus}>
+                {t("next")}
+              </KalipDaha>
+            ) : null}
+          </nav>
+        ) : null}
+      </KalipEkran>
     </main>
   );
 }

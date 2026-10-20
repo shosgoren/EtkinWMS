@@ -101,3 +101,10 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
   (evet/hayır, yalnız geçerli tenant üyesi, bağlam yoksa fail-closed). Ekibe katılma onayı DB'de kod doğrulamasına bağlı:
   `field_join_verify` damga basar (yalnız probe yazar), `team_join_requests_transition_guard` (ENABLE ALWAYS) geçişleri ve sunucu
   tarafı `decided_*`'ı zorlar. Down yalnız kısa ömürlü doğrulama damgasını siler.
+- 0054 (T-967, B-84; kaynakta, canlı değil): `support_tickets` + `support_ticket_messages` tenant tablolarıdır (ENABLE + FORCE RLS, TO'suz
+  izolasyon). Ek RESTRICTIVE TO wms_app politika: üye yalnız kendi talebini, TENANT_ADMIN firmanın tümünü görür (mesaj görünürlüğü talepten
+  türer); AC-04 matrisi bu iki tabloda A sahibinin kimliğiyle koşar (`USER_SCOPED_TABLES`, katalogla birebir). Tetikleyiciler: sunucu alanları,
+  yalnız ANSWERED → OPEN müşteri geçişi, okundu damgası, append-only yazışma, kapalı talebe yazma reddi (55000), hız sınırı 10 dk'da 5 talep /
+  20 yanıt (`P0429`), demo/ACTIVE olmayan tenant reddi. Operatör yalnız `wms_probe.platform_support_*` (SECDEF, yalnız wms_app EXECUTE,
+  `platform_is_operator`; probe'a tenant politikası yok, bağlam işlevde kurulup geri yüklenir); denetim `security_events` `platform.support.*`.
+  Kısa numara küresel kimlik sütunu. Down dolu veride `allow_destructive_down` olmadan reddeder. Ekran görüntüsü eki yok (sonraki tur).

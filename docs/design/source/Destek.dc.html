@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Sorun bildir ve Destek</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+/* ===== Kabuk.dc.html (birebir) ===== */
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-direction:column;width:100%;min-height:100vh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;color:#172E42;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.app{position:relative;display:flex;flex-direction:column;width:100%;max-width:1440px;height:900px;background:linear-gradient(180deg,#EEF1F4 0%,#DCE3EA 100%);border-radius:28px;overflow:hidden;box-shadow:0 30px 80px -40px rgba(23,46,66,.45)}
+.fr-mobile .app{max-width:390px;height:844px;border:10px solid #172E42;border-radius:36px}
+.app :focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.top{display:flex;align-items:center;gap:12px;padding:14px 24px;flex:none;background:rgba(238,241,244,.85);border-bottom:1.5px solid rgba(23,46,66,.08)}
+.fr-mobile .top{padding:10px 12px;gap:8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.logo{position:relative;flex:none;width:40px;height:40px;border-radius:12px;background:#172E42;display:flex;align-items:center;justify-content:center}
+.brand b{display:block;font:800 17px/1.05 'Bricolage Grotesque',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{display:block;margin-top:3px;font:600 11px/1 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.net{position:absolute;right:-4px;top:-4px;display:flex;width:14px;height:14px;border-radius:50%;background:#EEF1F4;align-items:center;justify-content:center}
+.net i{width:9px;height:9px;border-radius:50%;background:#2F9E6B;animation:netpulse 1.6s ease-out infinite}
+@keyframes netpulse{0%{box-shadow:0 0 0 0 rgba(47,158,107,.6)}100%{box-shadow:0 0 0 8px rgba(47,158,107,0)}}
+.pgic{display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+.inner{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:14px;padding:20px 24px 8px}
+.fr-mobile .inner{padding:12px 12px 4px;gap:10px}
+.hello h1{margin:0;font:800 30px/1.05 'Bricolage Grotesque',sans-serif}
+.fr-mobile .hello h1{font-size:22px}
+.hello p{margin:5px 0 0;font:600 11.5px/1.3 'IBM Plex Mono',monospace;color:#4E6476}
+.sample{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;background:#E3E9EE;font:600 10.5px/1 'IBM Plex Mono',monospace;color:#30475A;letter-spacing:.06em}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.fr-mobile .tiles{grid-template-columns:repeat(2,minmax(0,1fr));flex:1;min-height:0;grid-template-rows:repeat(2,minmax(0,1fr));gap:10px}
+.tl{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:150px;padding:16px;border:0;border-radius:22px;color:#FFFFFF;text-align:left;cursor:pointer;transition:transform .15s;animation:rise .4s cubic-bezier(.2,.9,.2,1) backwards}
+.fr-mobile .tl{min-height:0;padding:12px}
+.tl:active{transform:scale(.96)}
+.tl.calm{background:#FFFFFF;color:#172E42;box-shadow:0 1px 0 rgba(23,46,66,.06),0 10px 24px -18px rgba(23,46,66,.35)}
+.tl .ic{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.22)}
+.tl.calm .ic{background:var(--c);color:#FFFFFF}
+.tl .n{position:absolute;top:12px;right:14px;font:800 28px/1 'Bricolage Grotesque',sans-serif}
+.tl.calm .n{color:var(--c)}
+.tl b{font:800 16px/1.1 'Bricolage Grotesque',sans-serif}
+.tl small{font:600 10.5px/1.2 'IBM Plex Mono',monospace;opacity:.9}
+.tl.calm small{color:#4E6476;opacity:1}
+.rows{display:flex;flex-direction:column;gap:10px}
+.rw{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border-radius:18px;background:#FFFFFF;box-shadow:0 1px 0 rgba(23,46,66,.05),0 10px 22px -18px rgba(23,46,66,.35)}
+.rw .ic{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+.rw b{display:block;font:700 15px/1.2 'Instrument Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rw small{display:block;margin-top:3px;font:600 11px/1.2 'IBM Plex Mono',monospace;color:#4E6476;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;font:800 11.5px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.pill.ok{background:#E3F1E9;color:#17583C}
+.pill.warn{background:#E56A00;color:#FFFFFF}
+
+/* alt cam çubuk */
+.dock{position:relative;flex:none;z-index:30;padding:14px 12px 22px}
+.fr-desktop .dock{padding:14px 16px 22px}
+.dockin{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.15fr) repeat(2,minmax(0,1fr));align-items:center;height:72px;padding:0 6px;border-radius:999px;background:rgba(23,46,66,.38);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border:1px solid rgba(255,255,255,.45);box-shadow:0 14px 34px -16px rgba(23,46,66,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+.dk{appearance:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:64px;min-width:0;padding:0;border:0;border-radius:999px;background:transparent;color:#FFFFFF;cursor:pointer;transition:transform .15s}
+.dk:active{transform:scale(.93)}
+.dk span{font:800 9.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.07em;opacity:.9;white-space:nowrap}
+.fr-mobile .dk span{font-size:8.5px;letter-spacing:.04em}
+.dk.cur{color:#F4C542}
+.dk.cur::after{content:"";position:absolute;bottom:3px;left:50%;width:18px;height:3px;margin-left:-9px;border-radius:3px;background:#F4C542}
+.dk.big{justify-self:center;width:66px;height:66px;margin-top:-22px;border-radius:50%;background:#5FAF8A;color:#FFFFFF;box-shadow:0 12px 26px -8px rgba(95,175,138,.75),0 0 0 5px rgba(23,46,66,.5);gap:0;overflow:visible}
+.dk.big .ico{width:30px;height:30px;stroke-width:2.2}
+.dk.big .cap{position:absolute;top:72px;left:50%;transform:translateX(-50%);display:block;color:#FFFFFF;opacity:1;font-size:9.5px;letter-spacing:.1em;text-shadow:0 1px 2px rgba(23,46,66,.6)}
+.dk-etkin{appearance:none;justify-self:center;position:relative;display:flex;align-items:center;justify-content:center;width:62px;height:62px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none}
+.orb{position:relative;flex:none;width:50px;height:50px;border-radius:50%;transition:transform .2s cubic-bezier(.2,.9,.2,1)}
+.orb::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(#F4C542,#E56A00,#C62828,#6C4BD8,#0E7C7B,#2F7D5B,#F4C542);animation:spin 3.2s linear infinite}
+.orb::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#172E42}
+.orb .ico{position:absolute;inset:0;margin:auto;z-index:1;color:#FFFFFF;width:22px;height:22px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* buzlu perde + cam panel */
+.hback{position:absolute;inset:0;z-index:20;background:rgba(5,9,13,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:0;padding:0;cursor:pointer;width:100%}
+.msheet{position:absolute;z-index:21;left:10px;right:10px;bottom:108px;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:24px;background:rgba(14,27,39,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,.16);box-shadow:0 24px 50px -20px rgba(0,0,0,.6);color:#FFFFFF;animation:rise .22s cubic-bezier(.2,.9,.2,1)}
+@keyframes rise{from{transform:translateY(16px);opacity:0}}
+.mh{display:flex;align-items:center;gap:10px}
+.mh .gi{display:flex;align-items:center;justify-content:center;flex:none;width:38px;height:38px;border-radius:12px;background:#F4C542;color:#1A1300}
+.mh b{display:block;font:800 18px/1 'Bricolage Grotesque',sans-serif}
+.mh small{display:block;margin-top:4px;font:600 10.5px/1.2 'IBM Plex Mono',monospace;color:#9FB2C2}
+.x{appearance:none;margin-left:auto;display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:0;border-radius:14px;background:rgba(255,255,255,.1);color:#FFFFFF;cursor:pointer}
+.srch{display:flex;align-items:center;gap:8px;height:50px;padding:0 4px 0 14px;border-radius:16px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.18)}
+.srch .ico{color:#9FB2C2}
+.srch input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:#FFFFFF;font:600 15px/1 'Instrument Sans',sans-serif}
+.srch input::placeholder{color:#B7C6D3}
+.smic{appearance:none;display:flex;align-items:center;justify-content:center;flex:none;width:42px;height:42px;border:0;border-radius:12px;background:#F4C542;color:#1A1300;cursor:pointer}
+.mgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(4,96px);gap:8px}
+.mt{appearance:none;position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:6px;min-width:0;padding:10px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:#FFFFFF;text-align:left;cursor:pointer;transition:background .15s,transform .15s;animation:pop .25s cubic-bezier(.2,.9,.2,1) backwards}
+.mt:hover{background:rgba(255,255,255,.16)}
+.mt:active{transform:scale(.95)}
+@keyframes pop{from{transform:translateY(8px);opacity:0}}
+.mi{display:flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;border-radius:12px;color:#FFFFFF}
+.mtx{display:flex;flex-direction:column;gap:3px;min-width:0;width:100%}
+.mt b{font:700 13px/1.15 'Instrument Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt small{font:600 9.5px/1.25 'IBM Plex Mono',monospace;color:#9FB2C2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vhint{max-width:520px;text-align:center;font:600 11px/1.45 'IBM Plex Mono',monospace;color:#C9D6E0;letter-spacing:.03em}
+.vchip{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1.5px solid rgba(255,255,255,.3);border-radius:999px;background:rgba(255,255,255,.08);color:#FFFFFF;cursor:pointer;font:700 13px/1.1 'Instrument Sans',sans-serif}
+.vchip i{display:flex;color:#F4C542}
+.card{width:540px;max-width:100%;display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:24px;background:rgba(14,27,39,.92);border:1.5px solid rgba(255,255,255,.16);box-shadow:0 24px 50px -20px rgba(0,0,0,.6);animation:rise .22s cubic-bezier(.2,.9,.2,1)}
+.ch{display:flex;align-items:center;gap:12px}
+.ch .ok{display:flex;align-items:center;justify-content:center;flex:none;width:42px;height:42px;border-radius:50%;background:#0E7C7B;color:#FFFFFF}
+.ch b{display:block;font:800 20px/1 'Bricolage Grotesque',sans-serif}
+.ch small{display:block;margin-top:4px;font:600 10.5px/1.25 'IBM Plex Mono',monospace;color:#F4C542}
+.quote{margin:0;font:600 14px/1.35 'Instrument Sans',sans-serif;color:#C9D6E0}
+.acts{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:0 16px;border:0;border-radius:16px;cursor:pointer;font:800 16px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.btn.go{background:#2F7D5B;color:#FFFFFF;box-shadow:0 10px 22px -10px rgba(47,125,91,.8)}
+.btn.fix{background:transparent;color:#FFFFFF;border:2px solid rgba(255,255,255,.35)}
+.say{display:flex;align-items:center;justify-content:center;gap:8px;font:600 11px/1.3 'IBM Plex Mono',monospace;color:#C9D6E0}
+.say i{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#F4C542;color:#1A1300}
+.toast{position:absolute;z-index:40;top:76px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:calc(100% - 24px);padding:8px 16px 8px 8px;border-radius:999px;background:#172E42;color:#FFFFFF;font:700 13.5px/1.2 'Instrument Sans',sans-serif;box-shadow:0 14px 30px -14px rgba(23,46,66,.7);animation:rise .2s cubic-bezier(.2,.9,.2,1)}
+.toast i{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:50%}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;width:100%;max-width:1440px}
+.lg{display:flex;flex-direction:column;gap:8px;width:460px;max-width:100%}
+.lg > b{font:800 12px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;color:#30475A}
+.lg .dockin{height:64px;background:#30475A}
+.lg .dk{height:56px;cursor:default}
+.lg .dk.big{width:56px;height:56px;margin-top:-16px}
+.lg .dk.big .cap{top:60px}
+.lg .orb{width:42px;height:42px}
+.lgsp{height:14px}
+
+/* ===== Pano.dc.html (birebir): üst çubuk araçları + yüzen kısayol ===== */
+.tools{display:flex;align-items:center;gap:8px;flex:none}
+.tb{appearance:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:62px;height:62px;padding:6px 8px;border:0;border-radius:18px;cursor:pointer;color:#172E42;background:#FFFFFF !important;box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.4);transition:transform .15s}
+.tb .ico{color:var(--i,#172E42)}
+.tb.tb-bell{background:#E56A00 !important;color:#FFFFFF}
+.tb.tb-bell .ico{color:#FFFFFF}
+.tb:hover{transform:translateY(-2px)}
+.tb:active{transform:scale(.95)}
+.tb span{font:800 10.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.04em;white-space:nowrap}
+.fr-mobile .tools{gap:6px}
+.fr-mobile .brand small{display:block;font-size:9.5px}
+.fr-mobile .brand b{font-size:15px}
+.fr-mobile .brand{gap:8px}
+.fr-mobile .tb{min-width:42px;height:42px;border-radius:13px;padding:0}
+.fr-mobile .tb span{display:none}
+.tb-bell .ico{transform-origin:50% 10%;animation:ring 2.6s ease-in-out infinite}
+@keyframes ring{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(14deg)}80%{transform:rotate(-12deg)}85%{transform:rotate(8deg)}90%{transform:rotate(-5deg)}}
+.tbadge{position:absolute;top:-5px;right:-5px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#C62828;color:#FFFFFF;border:2.5px solid #EEF1F4;font:800 11px/17px 'Bricolage Grotesque',sans-serif;text-align:center}
+.tb.on{box-shadow:0 0 0 3px #6C4BD8 !important}
+.etkin{appearance:none;position:relative;display:flex;align-items:center;gap:10px;height:62px;padding:0 18px 0 8px;border:0;border-radius:999px;background:#172E42;color:#FFFFFF;cursor:pointer}
+.etl b{display:block;font:800 16px/1 'Bricolage Grotesque',sans-serif;text-align:left}
+.etl small{display:block;margin-top:3px;font:600 10.5px/1 'IBM Plex Mono',monospace;color:#F4C542;text-align:left}
+.fab{position:absolute;z-index:22;width:0;height:0;touch-action:none}
+.fabb{appearance:none;position:absolute;left:-24px;top:-24px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:1.5px solid rgba(255,255,255,.35);border-radius:50%;background:rgba(23,46,66,.72);backdrop-filter:blur(6px);color:#FFFFFF;cursor:grab;box-shadow:0 8px 20px -8px rgba(5,9,13,.5);transition:transform .15s,background .15s}
+.fabb:active{cursor:grabbing;transform:scale(.94)}
+.halo{position:absolute;z-index:21;display:flex;flex-direction:column;gap:8px;width:220px;padding:8px;border-radius:22px;background:rgba(14,27,39,.92);backdrop-filter:blur(12px);border:1.5px solid rgba(255,255,255,.16);box-shadow:0 24px 50px -20px rgba(0,0,0,.6);animation:rise .2s cubic-bezier(.2,.9,.2,1)}
+.hb{appearance:none;display:flex;align-items:center;gap:12px;min-height:54px;padding:0 12px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:#FFFFFF;cursor:pointer;text-align:left;animation:pop .25s cubic-bezier(.2,.9,.2,1) backwards}
+.hb i{display:flex;align-items:center;justify-content:center;flex:none;width:38px;height:38px;border-radius:12px}
+.hb span{font:700 14px/1.1 'Instrument Sans',sans-serif}
+
+/* ===== YENİ (B-85 / B-84 / B-87): yalnız eklenen parçalar ===== */
+/* üst çubuk: Sorun bildir (turuncu-kırmızı üçgen) ve Destek (mavi-teal kulaklık); yazısız, aria-label'lı, seyrek hafif hareket */
+.tb-issue{--i:#C62828}
+.tb-issue .tri{fill:#FFE1CC;stroke:#E56A00}
+.tb-issue .ico{transform-origin:50% 85%;animation:nudge 6s ease-in-out infinite}
+@keyframes nudge{0%,88%,100%{transform:rotate(0)}91%{transform:rotate(-8deg)}94%{transform:rotate(7deg)}97%{transform:rotate(-3deg)}}
+.tb-help{--i:#0E7C7B}
+.tb-help .cup{fill:#D7ECEC;stroke:#2F5DA8}
+.tb-help .ico{animation:tilt 6s ease-in-out 3s infinite}
+@keyframes tilt{0%,88%,100%{transform:translateY(0)}92%{transform:translateY(-2px)}96%{transform:translateY(0)}}
+/* alt çubuk: ana ekranda Geri pasif */
+.dk.off{opacity:.32;cursor:default}
+.dk.off:active{transform:none}
+/* sorun sebebi / destek konusu seçimi */
+.mt.on{background:rgba(244,197,66,.16);box-shadow:inset 0 0 0 2.5px #F4C542}
+.mgrid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mgrid.two .mt{flex-direction:row;align-items:center;gap:10px}
+/* yüzen kısayol, öneri 1: şimşek + mor cam; Modüller ızgarasıyla karışmaz */
+.fabb.zap{background:rgba(108,75,216,.88);border-color:rgba(255,255,255,.5);color:#FFFFFF}
+.fabb.zap .ico{fill:#F4C542;stroke:#F4C542;stroke-width:1.6}
+
+/* ===== tuval düzeni (yalnız çalışma alanı; uygulamaya aktarılmaz) ===== */
+.cv{display:flex;flex-direction:column;gap:22px;padding:28px 32px 40px}
+.cv-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.cv-h b{display:block;font:800 30px/1.05 'Bricolage Grotesque',sans-serif}
+.cv-h small{display:block;margin-top:6px;font:600 12px/1.3 'IBM Plex Mono',monospace;color:#4E6476;letter-spacing:.04em}
+.cv-row{display:flex;align-items:flex-start;gap:32px}
+.cv-col{display:flex;flex-direction:column;gap:10px;width:390px;flex:none}
+.cv-cap{display:flex;align-items:center;gap:10px;font:800 15px/1.15 'Bricolage Grotesque',sans-serif}
+.cv-cap i{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:10px;background:#172E42;color:#F4C542;font:800 15px/1 'Bricolage Grotesque',sans-serif;font-style:normal}
+.cv-cap small{display:block;margin-top:3px;font:600 10.5px/1.25 'IBM Plex Mono',monospace;color:#4E6476}
+.cv-box{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:24px;background:#FFFFFF;border:1.5px solid rgba(23,46,66,.12)}
+.cv-mini{position:relative;padding:44px 0 0}
+.cv-rec{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;padding:5px 10px;border-radius:999px;background:#F4C542;color:#1A1300;font:800 10.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em}
+.cv-x{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;padding:5px 10px;border-radius:999px;background:#E3E9EE;color:#30475A;font:800 10.5px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.08em}
+@media (prefers-reduced-motion:reduce){.wrap *{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div class="wrap">
+<div class="cv">
+  <div class="cv-h">
+    <span><b>Sorun bildir ve Destek</b><small>B-85 ÜST ÇUBUK İKİ İKON · B-84 DESTEK TALEBİ · B-87 YÜZEN KISAYOL · TELEFON 390 × 844 · ÖRNEK VERİ</small></span>
+    <span class="sample">DEMO A.Ş · SAHA PERSONELİ</span>
+  </div>
+
+  <div class="cv-row">
+    <!-- ================= (A) ANA EKRAN ================= -->
+    <div class="cv-col fr-mobile">
+      <span class="cv-cap"><i>A</i><span>Ana ekran<small>ÜSTTE SORUN + DESTEK · ALTTA SOLDA GERİ (PASİF)</small></span></span>
+      <div class="app">
+        <header class="top">
+          <div class="brand">
+            <span class="logo"><span class="net" aria-label="Çevrimiçi"><i></i></span><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg></span>
+            <span style="min-width: 0"><b>Etkin WMS</b><small>DEMO A.Ş · GÖREVLERİM</small></span>
+          </div>
+          <nav class="tools" aria-label="Hızlı araçlar">
+            <button type="button" class="tb tb-issue" aria-label="Sorun bildir: yöneticine gider" title="Sorun bildir" onClick="{{openIssue}}">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path class="tri" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17v.01"></path></svg>
+            </button>
+            <button type="button" class="tb tb-help" aria-label="Destek: Etkin ekibine yaz" title="Destek" onClick="{{openHelp}}">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path class="cup" d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path><path d="M18 20c0 1.2-1.6 2-4 2"></path></svg>
+            </button>
+            <button type="button" class="tb tb-team" style="--i: #6C4BD8" aria-label="Hesap: kullanıcı değiştir, çıkış yap">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5"></path></svg>
+            </button>
+          </nav>
+        </header>
+        <main class="inner">
+          <div class="hello">
+            <h1>Günaydın, Mehmet</h1>
+            <p>VARDİYA 08:00–17:00 · ANA DEPO · <span class="sample">ÖRNEK VERİ</span></p>
+          </div>
+          <div class="tiles">
+            <sc-for list="{{homeTiles}}" as="h" hint-placeholder-count="4">
+              <button type="button" class="{{h.cls}}" style="{{h.style}}">
+                <span class="n">{{h.n}}</span>
+                <span class="ic"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{h.d}}"></path></svg></span>
+                <b>{{h.t}}</b><small>{{h.s}}</small>
+              </button>
+            </sc-for>
+          </div>
+        </main>
+        <nav class="dock" aria-label="Alt çubuk">
+          <div class="dockin">
+            <button type="button" class="dk off" aria-label="Geri" aria-disabled="true">
+              <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+              <span>GERİ</span>
+            </button>
+            <button type="button" class="dk cur" aria-label="Ana ekran" aria-current="page">
+              <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg>
+              <span>ANA EKRAN</span>
+            </button>
+            <button type="button" class="dk big" aria-label="Okut: kamera ya da NFC">
+              <svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"></path></svg>
+              <span class="cap">OKUT</span>
+            </button>
+            <button type="button" class="dk" aria-label="Modüller">
+              <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg>
+              <span>MODÜLLER</span>
+            </button>
+            <button type="button" class="dk-etkin" aria-label="Etkin: basılı tut ve konuş">
+              <span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span>
+            </button>
+          </div>
+        </nav>
+        <div class="fab" style="left: 334px; top: 548px">
+          <button type="button" class="fabb zap" aria-label="Hızlı işlemler">
+            <svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= (B) SORUN BİLDİR ================= -->
+    <div class="cv-col fr-mobile">
+      <span class="cv-cap"><i>B</i><span>Sorun bildir<small>DEPO İÇİ · KENDİ YÖNETİCİNE GİDER</small></span></span>
+      <div class="app">
+        <header class="top">
+          <div class="brand">
+            <span class="logo"><span class="net" aria-label="Çevrimiçi"><i></i></span><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg></span>
+            <span style="min-width: 0"><b>Etkin WMS</b><small>DEMO A.Ş · GÖREVLERİM</small></span>
+          </div>
+          <nav class="tools" aria-label="Hızlı araçlar">
+            <button type="button" class="tb tb-issue on" aria-label="Sorun bildir: yöneticine gider" aria-expanded="true" title="Sorun bildir">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path class="tri" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17v.01"></path></svg>
+            </button>
+            <button type="button" class="tb tb-help" aria-label="Destek: Etkin ekibine yaz" title="Destek">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path class="cup" d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path><path d="M18 20c0 1.2-1.6 2-4 2"></path></svg>
+            </button>
+            <button type="button" class="tb tb-team" style="--i: #6C4BD8" aria-label="Hesap">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5"></path></svg>
+            </button>
+          </nav>
+        </header>
+        <main class="inner">
+          <div class="hello">
+            <h1>Günaydın, Mehmet</h1>
+            <p>VARDİYA 08:00–17:00 · ANA DEPO · <span class="sample">ÖRNEK VERİ</span></p>
+          </div>
+          <div class="tiles">
+            <sc-for list="{{homeTiles}}" as="h" hint-placeholder-count="4">
+              <button type="button" class="{{h.cls}}" style="{{h.style}}" tabindex="-1">
+                <span class="n">{{h.n}}</span>
+                <span class="ic"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{h.d}}"></path></svg></span>
+                <b>{{h.t}}</b><small>{{h.s}}</small>
+              </button>
+            </sc-for>
+          </div>
+        </main>
+        <nav class="dock" aria-label="Alt çubuk">
+          <div class="dockin">
+            <button type="button" class="dk off" aria-label="Geri" aria-disabled="true"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg><span>GERİ</span></button>
+            <button type="button" class="dk cur" aria-label="Ana ekran" aria-current="page"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></button>
+            <button type="button" class="dk big" aria-label="Okut: kamera ya da NFC"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"></path></svg><span class="cap">OKUT</span></button>
+            <button type="button" class="dk" aria-label="Modüller"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></button>
+            <button type="button" class="dk-etkin" aria-label="Etkin: basılı tut ve konuş"><span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></button>
+          </div>
+        </nav>
+        <button type="button" class="hback" aria-label="Kapat"></button>
+        <section class="msheet" role="dialog" aria-label="Sorun bildir">
+          <div class="mh">
+            <span class="gi" style="background: #C62828; color: #FFFFFF"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17v.01"></path></svg></span>
+            <span style="min-width: 0"><b>Sorun bildir</b><small>YÖNETİCİNE GİDER · SORUN KARTINDA GÖRÜNÜR</small></span>
+            <button type="button" class="x" aria-label="Vazgeç"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+          <p class="vhint" style="margin: 0; text-align: left">NE OLDU?</p>
+          <div class="mgrid" role="radiogroup" aria-label="Ne oldu?" style="grid-template-rows: repeat(2, 84px)">
+            <sc-for list="{{reasons}}" as="r" hint-placeholder-count="6">
+              <button type="button" role="radio" class="{{r.cls}}" aria-checked="{{r.on}}" style="{{r.delay}}" onClick="{{r.pick}}">
+                <span class="mi" style="{{r.icStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.d}}"></path></svg></span>
+                <span class="mtx"><b>{{r.name}}</b><small>{{r.sub}}</small></span>
+              </button>
+            </sc-for>
+          </div>
+          <p class="vhint" style="margin: 0; text-align: left">NOT · İSTEĞE BAĞLI</p>
+          <label class="srch">
+            <svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="m13.5 6.5 4 4"></path></svg>
+            <span class="sr">Not</span>
+            <input type="text" placeholder="Kısaca yaz ya da söyle" value="Palet köşesi ezik">
+            <button type="button" class="smic" aria-label="Notu söyle"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></button>
+          </label>
+          <button type="button" class="btn go" style="width: 100%; background: #C62828; box-shadow: 0 10px 22px -10px rgba(198,40,40,.8)" onClick="{{sendIssue}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7z"></path></svg>BİLDİR</button>
+          <span class="say"><i><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0"></path></svg></i>‘HASARLI, BİLDİR’ DE</span>
+        </section>
+      </div>
+    </div>
+
+    <!-- ================= (C) DESTEK ================= -->
+    <div class="cv-col fr-mobile">
+      <span class="cv-cap"><i>C</i><span>Destek<small>ETKİN DESTEK EKİBİNE (BİZE) GİDER</small></span></span>
+      <div class="app">
+        <header class="top">
+          <div class="brand">
+            <span class="logo"><span class="net" aria-label="Çevrimiçi"><i></i></span><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg></span>
+            <span style="min-width: 0"><b>Etkin WMS</b><small>DEMO A.Ş · GÖREVLERİM</small></span>
+          </div>
+          <nav class="tools" aria-label="Hızlı araçlar">
+            <button type="button" class="tb tb-issue" aria-label="Sorun bildir: yöneticine gider" title="Sorun bildir">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path class="tri" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17v.01"></path></svg>
+            </button>
+            <button type="button" class="tb tb-help on" aria-label="Destek: Etkin ekibine yaz" aria-expanded="true" title="Destek">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path class="cup" d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path><path d="M18 20c0 1.2-1.6 2-4 2"></path></svg>
+            </button>
+            <button type="button" class="tb tb-team" style="--i: #6C4BD8" aria-label="Hesap">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5"></path></svg>
+            </button>
+          </nav>
+        </header>
+        <main class="inner">
+          <div class="hello">
+            <h1>Günaydın, Mehmet</h1>
+            <p>VARDİYA 08:00–17:00 · ANA DEPO · <span class="sample">ÖRNEK VERİ</span></p>
+          </div>
+          <div class="tiles">
+            <sc-for list="{{homeTiles}}" as="h" hint-placeholder-count="4">
+              <button type="button" class="{{h.cls}}" style="{{h.style}}" tabindex="-1">
+                <span class="n">{{h.n}}</span>
+                <span class="ic"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="{{h.d}}"></path></svg></span>
+                <b>{{h.t}}</b><small>{{h.s}}</small>
+              </button>
+            </sc-for>
+          </div>
+        </main>
+        <nav class="dock" aria-label="Alt çubuk">
+          <div class="dockin">
+            <button type="button" class="dk off" aria-label="Geri" aria-disabled="true"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg><span>GERİ</span></button>
+            <button type="button" class="dk cur" aria-label="Ana ekran" aria-current="page"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></button>
+            <button type="button" class="dk big" aria-label="Okut: kamera ya da NFC"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"></path></svg><span class="cap">OKUT</span></button>
+            <button type="button" class="dk" aria-label="Modüller"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></button>
+            <button type="button" class="dk-etkin" aria-label="Etkin: basılı tut ve konuş"><span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></button>
+          </div>
+        </nav>
+        <button type="button" class="hback" aria-label="Kapat"></button>
+        <section class="msheet" role="dialog" aria-label="Destek">
+          <div class="mh">
+            <span class="gi" style="background: #0E7C7B; color: #FFFFFF"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path><path d="M18 20c0 1.2-1.6 2-4 2"></path></svg></span>
+            <span style="min-width: 0"><b>Destek</b><small>ETKİN DESTEK EKİBİNE GİDER</small></span>
+            <button type="button" class="x" aria-label="Vazgeç"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+          <div class="mgrid two" role="radiogroup" aria-label="Konu" style="grid-template-rows: repeat(2, 60px)">
+            <sc-for list="{{topics}}" as="t" hint-placeholder-count="4">
+              <button type="button" role="radio" class="{{t.cls}}" aria-checked="{{t.on}}" style="{{t.delay}}" onClick="{{t.pick}}">
+                <span class="mi" style="{{t.icStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{t.d}}"></path></svg></span>
+                <span class="mtx"><b>{{t.name}}</b><small>{{t.sub}}</small></span>
+              </button>
+            </sc-for>
+          </div>
+          <label class="srch">
+            <svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="m13.5 6.5 4 4"></path></svg>
+            <span class="sr">Kısa not</span>
+            <input type="text" placeholder="Kısaca yaz ya da söyle" value="Raf A-03 okutunca ekran donuyor">
+            <button type="button" class="smic" aria-label="Notu söyle"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></button>
+          </label>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <button type="button" class="vchip" aria-pressed="{{shotOn}}" onClick="{{toggleShot}}"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v12H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"></path></svg></i>{{shotLbl}}</button>
+            <button type="button" class="vchip"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"></circle><path d="M9.3 9.4a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.2 1-1.2 1.8v.4"></path><path d="M12 17.2v.01"></path></svg></i>Rehberi aç</button>
+          </div>
+          <p class="vhint mono" style="margin: 0; text-align: left; font-size: 10px; color: #9FB2C2">OTOMATİK EKLENİR · EKRAN /t/demo/gorevlerim · SÜRÜM 2026.10.20 · DESTEK KODU DMO-7K2Q</p>
+          <button type="button" class="btn go" style="width: 100%; min-height: 64px; font-size: 18px; background: #0E7C7B; box-shadow: 0 10px 22px -10px rgba(14,124,123,.8)" onClick="{{sendHelp}}"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7z"></path></svg>GÖNDER</button>
+        </section>
+      </div>
+    </div>
+
+    <!-- ================= (D) GÖNDERİLDİ + TALEPLERİM ================= -->
+    <div class="cv-col fr-mobile">
+      <span class="cv-cap"><i>D</i><span>Gönderildi · Taleplerim<small>DURUM + EKİP YANITI · DESTEK İKONUNDAN AÇILIR</small></span></span>
+      <div class="app">
+        <header class="top">
+          <div class="brand">
+            <span class="pgic" style="background: #0E7C7B"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path><path d="M18 20c0 1.2-1.6 2-4 2"></path></svg></span>
+            <span style="min-width: 0"><b>Taleplerim</b><small>ETKİN DESTEK · 3 TALEP</small></span>
+          </div>
+          <nav class="tools" aria-label="Hızlı araçlar">
+            <button type="button" class="tb tb-issue" aria-label="Sorun bildir: yöneticine gider" title="Sorun bildir">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path class="tri" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17v.01"></path></svg>
+            </button>
+            <button type="button" class="tb tb-help on" aria-label="Destek: 1 yeni yanıt" title="Destek">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path class="cup" d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path><path d="M18 20c0 1.2-1.6 2-4 2"></path></svg>
+              <em class="tbadge" style="font-style: normal; background: #0E7C7B">1</em>
+            </button>
+            <button type="button" class="tb tb-team" style="--i: #6C4BD8" aria-label="Hesap">
+              <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5"></path></svg>
+            </button>
+          </nav>
+        </header>
+        <main class="inner">
+          <div class="rows">
+            <sc-for list="{{tickets}}" as="k" hint-placeholder-count="3">
+              <div class="rw" role="button" tabindex="0" onClick="{{k.pick}}">
+                <span class="ic" style="{{k.icStyle}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="{{k.d}}"></path></svg></span>
+                <span style="min-width: 0"><b>{{k.title}}</b><small>{{k.meta}}</small></span>
+                <span class="pill" style="{{k.pillStyle}}">{{k.st}}</span>
+              </div>
+              <sc-if value="{{k.open}}" hint-placeholder-val="{{ false }}">
+                <section class="card" aria-label="Ekip yanıtı" style="animation: none">
+                  <div class="ch">
+                    <span class="ok"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path></svg></span>
+                    <span style="min-width: 0"><b>Etkin destek</b><small>YANITLADI · BUGÜN 09:40</small></span>
+                  </div>
+                  <p class="quote">Etiketler modülünde ürünü okutun, sağ üstteki yazıcıya dokunun. Aynı etiket yeniden basılır; stok değişmez.</p>
+                  <div class="acts">
+                    <button type="button" class="btn go"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Çözüldü</button>
+                    <button type="button" class="btn fix"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>Yanıtla</button>
+                  </div>
+                  <span class="say"><i><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path></svg></i>YANIT GELİNCE SES + ROZET</span>
+                </section>
+              </sc-if>
+            </sc-for>
+          </div>
+        </main>
+        <nav class="dock" aria-label="Alt çubuk">
+          <div class="dockin">
+            <button type="button" class="dk" aria-label="Geri"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg><span>GERİ</span></button>
+            <button type="button" class="dk" aria-label="Ana ekran"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></button>
+            <button type="button" class="dk big" aria-label="Yeni destek talebi" onClick="{{openHelp}}"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><span class="cap">YENİ TALEP</span></button>
+            <button type="button" class="dk" aria-label="Modüller"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></button>
+            <button type="button" class="dk-etkin" aria-label="Etkin: basılı tut ve konuş"><span class="orb"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></button>
+          </div>
+        </nav>
+        <div class="toast" role="status"><i style="background: #2F7D5B"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></i>Gönderildi · DMO-7K2Q</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Tablet / masaüstü: aynı ikonların yeri ================= -->
+  <div class="cv-box fr-desktop">
+    <span class="cv-cap"><i>+</i><span>Tablet ve masaüstü üst çubuğu<small>İKİ İKON EKİP DÜĞMESİNİN SOLUNDA · YAZISIZ, ÜZERİNE GELİNCE İPUCU · DİĞERLERİ ONAYLI HALİYLE</small></span></span>
+    <div class="app" style="height: auto; max-width: none; border-radius: 20px">
+      <header class="top">
+        <div class="brand">
+          <span class="logo"><span class="net" aria-label="Çevrimiçi"><i></i></span><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 62H88A28 28 0 1 0 80 82" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"></path><circle r="12" fill="#F2C53D" stroke="#172E42" stroke-width="4"><animateMotion dur="3.2s" repeatCount="indefinite" path="M32 62H88A28 28 0 1 0 80 82"></animateMotion></circle></svg></span>
+          <span style="min-width: 0"><b>Etkin WMS</b><small>DEMO A.Ş · DEPO PANOSU</small></span>
+        </div>
+        <nav class="tools" aria-label="Hızlı araçlar">
+          <button type="button" class="tb tb-bell" style="background: #E56A00" aria-label="Bildirimler, 4 yeni">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 8 2 8H4s2-2 2-8"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>
+            <span>BİLDİRİM</span><em class="tbadge" style="font-style: normal">4</em>
+          </button>
+          <button type="button" class="tb tb-issue" aria-label="Sorun bildir: yöneticine gider" title="Sorun bildir · yöneticine gider">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path class="tri" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17v.01"></path></svg>
+          </button>
+          <button type="button" class="tb tb-help" aria-label="Destek: Etkin ekibine yaz" title="Destek · Etkin ekibine gider">
+            <svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"></path><path class="cup" d="M4 14h3v6H5.5A1.5 1.5 0 0 1 4 18.5zM20 14h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"></path><path d="M18 20c0 1.2-1.6 2-4 2"></path></svg>
+          </button>
+          <button type="button" class="tb tb-team" style="--i: #6C4BD8" aria-label="Ekip menüsü, 2 onay bekliyor">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"></path><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"></path><path d="M18 14.8c2 .7 3.2 2.4 3.5 5.2"></path></svg>
+            <span>EKİP</span><em class="tbadge" style="font-style: normal; background: #E56A00">2</em>
+          </button>
+          <button type="button" class="tb tb-gear" style="--i: #0E7C7B" aria-label="Ayarlar">
+            <svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+            <span>AYARLAR</span>
+          </button>
+        </nav>
+      </header>
+    </div>
+  </div>
+
+  <!-- ================= B-87: yüzen kısayol seçenekleri ================= -->
+  <div class="cv-box">
+    <span class="cv-cap"><i>?</i><span>Yüzen kısayol (B-87)<small>BUGÜN MODÜLLER İLE AYNI IZGARA İKONU · İKİ SEÇENEK</small></span></span>
+    <div class="legend" style="justify-content: flex-start; max-width: none; gap: 28px">
+      <div class="lg">
+        <span class="cv-x">ŞİMDİ · KOPYA GİBİ</span>
+        <div class="cv-mini">
+          <div class="fab" style="left: 412px; top: 18px"><span class="fabb" aria-hidden="true"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg></span></div>
+          <div class="dockin" aria-hidden="true">
+            <span class="dk off"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"></path></svg><span>GERİ</span></span>
+            <span class="dk cur"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></span>
+            <span class="dk big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"></path></svg><span class="cap">OKUT</span></span>
+            <span class="dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></span>
+            <span class="dk-etkin"><span class="orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></span>
+          </div>
+        </div>
+        <span class="lgsp"></span>
+        <span class="cv-cap" style="font-size: 13px"><span>İki ızgara ikonu yan yana; hangisinin ne yaptığı belli değil.</span></span>
+      </div>
+      <div class="lg">
+        <span class="cv-rec"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>1 · ŞİMŞEK · ÖNERİLEN</span>
+        <div class="cv-mini">
+          <div class="fab" style="left: 412px; top: 18px"><span class="fabb zap" aria-hidden="true"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z"></path></svg></span></div>
+          <div class="dockin" aria-hidden="true">
+            <span class="dk off"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"></path></svg><span>GERİ</span></span>
+            <span class="dk cur"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></span>
+            <span class="dk big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"></path></svg><span class="cap">OKUT</span></span>
+            <span class="dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></span>
+            <span class="dk-etkin"><span class="orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></span>
+          </div>
+        </div>
+        <span class="lgsp"></span>
+        <span class="cv-cap" style="font-size: 13px"><span>Mor cam + sarı şimşek = “hızlı işlem”. Kullanıcının seçtiği en çok 6 kısayol kalır.</span></span>
+      </div>
+      <div class="lg">
+        <span class="cv-x">2 · KALDIR</span>
+        <div class="cv-mini">
+          <div class="dockin" aria-hidden="true">
+            <span class="dk off"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"></path></svg><span>GERİ</span></span>
+            <span class="dk cur"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"></path><path d="M5.5 10v10h13V10"></path><path d="M10 20v-5.5h4V20"></path></svg><span>ANA EKRAN</span></span>
+            <span class="dk big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"></path></svg><span class="cap">OKUT</span></span>
+            <span class="dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"></rect></svg><span>MODÜLLER</span></span>
+            <span class="dk-etkin"><span class="orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></span>
+          </div>
+        </div>
+        <span class="lgsp"></span>
+        <span class="cv-cap" style="font-size: 13px"><span>En sade. Kısayollar Modüller sayfasının başına “Sık kullandıklarım” olarak taşınır.</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1720,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { reason: 'DAMAGED', topic: 'bug', shot: true, open: 'DMO-6P1C' };
+  }
+  tone(kind) {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      this._ac = this._ac || new C(); const ac = this._ac; const t0 = ac.currentTime;
+      const seq = kind === 'ok' ? [660, 990] : kind === 'err' ? [330, 220] : [560];
+      seq.forEach((f, i) => {
+        const o = ac.createOscillator(); const g = ac.createGain(); const t = t0 + i * 0.13;
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.13);
+      });
+      if (navigator.vibrate) navigator.vibrate(kind === 'err' ? [60, 40, 60] : 30);
+    } catch (e) {}
+  }
+  renderVals() {
+    const s = this.state;
+    const BOX = 'M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8';
+    const HOME = [
+      ['tl calm', '#2F7D5B', '2', 'Toplama', '14 KALEM KALDI', 'M10 6h10M10 12h10M10 18h10M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17'],
+      ['tl', '#C62828', '1', 'Çıkış · ACİL', '6 KALEM · RAMPA 1', 'M2 16V6h11v10M13 9h4l3 3.5V16h-7M6.5 17.5h.01M16.5 17.5h.01'],
+      ['tl calm', '#2F5DA8', '1', 'Sayım', 'RAF B-11 · 17:00', 'M6 4h12v17H6zM9 4V2.8h6V4M9 13l2 2 4-4'],
+      ['tl calm', '#9A5B2E', '0', 'Koli & palet', 'BEKLEYEN YOK', 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10M7.5 5l9 4'],
+    ];
+    const homeTiles = HOME.map((h, i) => ({ cls: h[0], style: (h[0] === 'tl' ? 'background: ' + h[1] : '--c: ' + h[1]) + '; animation-delay: ' + (i * 50) + 'ms', n: h[2], t: h[3], s: h[4], d: h[5] }));
+    const REASONS = [
+      ['DAMAGED', 'Hasarlı', 'KIRIK · EZİK', '#C62828', BOX + 'M8 9.5l2 1.5-1 2'],
+      ['MISSING', 'Eksik', 'AZ GELDİ', '#E56A00', 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM8 12h8'],
+      ['WRONG_ITEM', 'Yanlış ürün', 'BAŞKA ÜRÜN', '#6C4BD8', 'M4 4h16v16H4zM9 9l6 6M15 9l-6 6'],
+      ['NO_LABEL', 'Etiket yok', 'OKUTULAMIYOR', '#B23A3A', 'M3 12V4h8l10 10-8 8zM7.5 8h.01M3 21 21 3'],
+      ['LOCATION', 'Yer yanlış', 'RAF · ADRES', '#30475A', 'M4 21V3h16v18M4 9h16M4 15h16M10 6h4M10 12h4M10 18h4'],
+      ['OTHER', 'Diğer', 'YAZ YA DA SÖYLE', '#4E6476', 'M5 12h.01M12 12h.01M19 12h.01'],
+    ];
+    const reasons = REASONS.map((r, i) => ({
+      name: r[1], sub: r[2], d: r[4], icStyle: 'background: ' + r[3], delay: 'animation-delay: ' + (i * 18) + 'ms',
+      cls: 'mt' + (s.reason === r[0] ? ' on' : ''), on: s.reason === r[0] ? 'true' : 'false',
+      pick: () => { this.tone('tap'); this.setState({ reason: r[0] }); },
+    }));
+    const T_BUG = 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 8v5M12 16.5v.01';
+    const T_HOW = 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM9.3 9.4a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.2 1-1.2 1.8v.4M12 17.2v.01';
+    const T_IDEA = 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z';
+    const T_OTHER = 'M4 5h16v11H9l-5 4z';
+    const TOPICS = [
+      ['bug', 'Çalışmıyor', 'HATA', '#C62828', T_BUG],
+      ['how', 'Nasıl yapılır', 'SORU', '#2F5DA8', T_HOW],
+      ['idea', 'Öneri', 'FİKİR', '#B07D0B', T_IDEA],
+      ['other', 'Diğer', 'YAZ YA DA SÖYLE', '#4E6476', T_OTHER],
+    ];
+    const topics = TOPICS.map((t, i) => ({
+      name: t[1], sub: t[2], d: t[4], icStyle: 'background: ' + t[3], delay: 'animation-delay: ' + (i * 18) + 'ms',
+      cls: 'mt' + (s.topic === t[0] ? ' on' : ''), on: s.topic === t[0] ? 'true' : 'false',
+      pick: () => { this.tone('tap'); this.setState({ topic: t[0] }); },
+    }));
+    const ST = {
+      'AÇIK': 'background: #E56A00; color: #FFFFFF',
+      'YANITLANDI': 'background: #0E7C7B; color: #FFFFFF',
+      'KAPANDI': 'background: #E3F1E9; color: #17583C',
+    };
+    const TK = [
+      ['DMO-7K2Q', 'Raf A-03 okutunca donuyor', 'DMO-7K2Q · ŞİMDİ', 'AÇIK', '#C62828', T_BUG],
+      ['DMO-6P1C', 'Etiketi yeniden nasıl basarım?', 'DMO-6P1C · BUGÜN 09:12', 'YANITLANDI', '#2F5DA8', T_HOW],
+      ['DMO-5D8M', 'Sayım listesi yazdırılsın', 'DMO-5D8M · 17.10', 'KAPANDI', '#B07D0B', T_IDEA],
+    ];
+    const tickets = TK.map((k) => ({
+      title: k[1], meta: k[2], st: k[3], pillStyle: ST[k[3]], icStyle: 'background: ' + k[4], d: k[5],
+      open: s.open === k[0],
+      pick: () => { this.tone('tap'); this.setState({ open: s.open === k[0] ? '' : k[0] }); },
+    }));
+    return {
+      homeTiles, reasons, topics, tickets,
+      shotOn: s.shot ? 'true' : 'false',
+      shotLbl: s.shot ? 'Ekran görüntüsü eklendi' : 'Ekran görüntüsü ekle',
+      toggleShot: () => { this.tone('tap'); this.setState({ shot: !this.state.shot }); },
+      openIssue: () => this.tone('tap'),
+      openHelp: () => this.tone('tap'),
+      sendIssue: () => this.tone('ok'),
+      sendHelp: () => this.tone('ok'),
+    };
+  }
+}
+</script>
+</body>
+</html>

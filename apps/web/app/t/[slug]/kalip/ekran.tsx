@@ -12,6 +12,7 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { THEME_COOKIE } from "../../../design/theme.ts";
+import { KalipDestek } from "./destek.tsx";
 import { kdz, type KalipScope } from "./tokens.ts";
 
 export type KalipKind = "liste" | "form" | "detay";
@@ -108,7 +109,7 @@ export interface KalipEkranProps {
   readonly icon: { readonly d: string; readonly color: string };
   /** Alt satır; verilmezse "FİRMA · ROL" (kiracı düzeninin bağlamından). */
   readonly subtitle?: string;
-  /** Sağ üst `.tph` yuvası (Sorun / Destek B-84/B-85). Verilmezse Yardım bağlantısı. `null` = boş. */
+  /** Sağ üst `.tph` yuvası. Verilmezse Sorun bildir + Destek (T-967, kiracı bağlamı varsa; yoksa Yardım bağlantısı). `null` = boş. */
   readonly actions?: ReactNode | null;
   /** Alt cam çubuk (ortak KabukBar): ekranın ana işlemi, Geri, Ana ekran. `dark` kabdan gelir. */
   readonly bar: Omit<KabukBarProps, "dark" | "home">;
@@ -161,7 +162,9 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
       .join(" · ")
       .toLocaleUpperCase("tr");
   const slot =
-    actions === undefined ? (
+    actions === undefined && ctx?.slug !== undefined ? (
+      <KalipDestek slug={ctx.slug} dark={dark} canReport={ctx.canReport === true} />
+    ) : actions === undefined ? (
       <a className="helpb sup" href="/help" aria-label={t("help")} title={t("help")} data-testid="kalip-help">
         <Ico d={LICON.info} size={22} />
       </a>
@@ -208,7 +211,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
                   {slot}
                 </div>
               )}
-              {/* T-971 (B-89): Pano'nun Hesap düğmesi — `actions` yuvasından ayrı öğe (Sorun/Destek o yuvada). */}
+              {/* T-971 (B-92): Pano'nun Hesap düğmesi — `actions` yuvasından ayrı öğe (Sorun/Destek o yuvada). */}
               <span className={panoScope} style={{ display: "contents" }} data-testid="kalip-account">
                 <HesapDugme team={false} open={hesap} onClick={() => setHesap((o) => !o)} />
               </span>

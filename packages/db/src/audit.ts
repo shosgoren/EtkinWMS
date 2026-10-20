@@ -117,6 +117,9 @@ export const AUDIT_ACTIONS = [
   "team_join.link_revoked",
   "team_join.approved",
   "team_join.rejected",
+  // T-967 (0054): destek talebi (müşteri tarafı; operatör yanıtı/durumu security_events `platform.support.*`).
+  "support.ticket_created",
+  "support.ticket_replied",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

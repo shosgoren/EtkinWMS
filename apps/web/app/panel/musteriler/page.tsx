@@ -5,6 +5,8 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getCustomerActivity, listCustomers, type CustomerEvent, type CustomerRow } from "@wms/domain/platform/customers";
 import { listPlans } from "@wms/domain/platform/plans";
+import { listSupportInbox } from "@wms/domain/platform/support";
+import { destekMsgs, rowItem } from "../support/format.ts";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../design/theme.ts";
 import { panelOperatorOrExit } from "../gate.ts";
@@ -19,6 +21,7 @@ import {
   type CustomerListItem,
   type CustomerMeter,
   type CustomerStateKey,
+  type CustomerTab,
   type MusterilerLabels,
   type PlanOption,
 } from "./view.tsx";
@@ -162,7 +165,13 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
   const cx = picked === undefined ? undefined : rows.find((r) => r.id === picked);
   if (picked !== undefined) {
     if (cx === undefined) return notFound();
-    const act = await getCustomerActivity({ db, principal, tenantId: cx.id }).catch(onMissing);
+    const [act, sup, dm] = await Promise.all([
+      getCustomerActivity({ db, principal, tenantId: cx.id }).catch(onMissing),
+      listSupportInbox({ db, principal, status: "ALL", tenantId: cx.id }).catch(onMissing),
+      destekMsgs(),
+    ]);
+    const tabParam = first(query.tab);
+    const tab: CustomerTab = tabParam === "destek" || tabParam === "gecmis" ? tabParam : "genel";
     const rank = (id: string | null): number => (id === null ? -1 : plans.findIndex((p) => p.id === id));
     const st = stateOf(cx);
     const planPrice = cx.plan === null ? "" : ` · ₺${priceLabel(cx.plan.price)} ${t.perMonth.toLocaleLowerCase("tr")}`;
@@ -211,7 +220,22 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
     }));
     return (
       <PanelShell {...shell} current="musteriler" title={cx.name} sub={t.detailSub} backHref={PATH}>
-        <MusteriDetail key={`${cx.id}-${st}-${cu.planId ?? ""}`} cu={cu} plans={options} labels={labels} action={customerAction} />
+        <MusteriDetail
+          key={`${cx.id}-${st}-${cu.planId ?? ""}`}
+          cu={cu}
+          plans={options}
+          labels={labels}
+          action={customerAction}
+          tab={tab}
+          support={{
+            rows: sup.rows.map((r) => rowItem(r, now, dm)),
+            open: sup.rows.filter((r) => r.status === "OPEN").length,
+            labels: dm,
+            tabs: dm.tabs,
+            banH: dm.custBanH,
+            banT: dm.custBanT,
+          }}
+        />
       </PanelShell>
     );
   }

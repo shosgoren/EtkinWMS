@@ -998,6 +998,10 @@
       "link_revoked": "Team join QR closed",
       "approved": "Join request approved, field account opened",
       "rejected": "Join request rejected"
+    },
+    "support": {
+      "ticket_created": "Support ticket opened",
+      "ticket_replied": "Support ticket replied"
     }
   },
   "auditLog": {
@@ -2119,7 +2123,15 @@
         "failed": "The camera did not open. Try again or type the barcode."
       }
     },
-    "packageEntry": "Package receiving"
+    "packageEntry": "Package receiving",
+    "k": {
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "emptyHint": "Use NEW below to add the first delivery.",
+      "hint": "{n} deliveries",
+      "groupSource": "Warehouse and delivery note",
+      "saveAria": "Save"
+    }
   },
   "import": {
     "title": "Import products and stock",
@@ -2496,7 +2508,23 @@
     "locked": "You do not have permission to view this stock. Contact your workspace administrator.",
     "pages": "Stock pages",
     "first": "First page",
-    "next": "Next page"
+    "next": "Next page",
+    "k": {
+      "chips": "Sections",
+      "chipStock": "Stock",
+      "chipDocs": "Documents",
+      "chipShipping": "Shipping",
+      "chipProduction": "Production",
+      "newShort": "DOC",
+      "newAria": "New stock document",
+      "searchPh": "Item, code or warehouse",
+      "count": "{n} stock rows",
+      "countMore": "First {n} stock rows",
+      "hint": "Tap an item to open its card",
+      "meta": "Warehouse: {warehouse} ({code}) · Physical {physical} · Reserved {reserved} {unit}",
+      "cardAria": "{name} · {code} · {warehouse}: available {qty} {unit}",
+      "lockedHint": "Ask your workspace admin for stock view access."
+    }
   },
   "stockDocuments": {
     "shipping": "Shipping",
@@ -2540,7 +2568,24 @@
     "transferHelp": "Choose different source and target warehouses. Check the summary: confirming moves the quantity from source to target. Both sides complete together or stock remains unchanged.",
     "transferPost": "Confirm and post transfer",
     "related": "Linked stock document",
-    "production": "Production"
+    "production": "Production",
+    "k": {
+      "lockedHint": "Ask your admin for access to this action.",
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "hero": "Document identity",
+      "lineUnit": "lines",
+      "lines": "Document lines",
+      "linesSub": "{n} lines",
+      "state": "Status and actions",
+      "related": "Linked documents",
+      "emptyHint": "Use NEW below to record the first stock receipt.",
+      "count": "{n} documents",
+      "countMore": "Latest {n} documents",
+      "hint": "Tap a document to open it",
+      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
+      "saveAria": "Save"
+    }
   },
   "production": {
     "title": "Production and recipes",
@@ -2572,7 +2617,24 @@
     "search": "Find a recipe",
     "find": "Search",
     "next": "Next recipes",
-    "empty": "No recipes yet."
+    "empty": "No recipes yet.",
+    "k": {
+      "lockedHint": "Ask your admin for production access.",
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "hero": "Recipe identity",
+      "materialsSub": "For {qty} {unit} {name}",
+      "produce": "Production entry",
+      "produceSub": "Choose material sources and where the product goes",
+      "produceShort": "MAKE",
+      "emptyHint": "Use NEW below to define the first recipe.",
+      "count": "{n} recipes",
+      "countMore": "First {n} recipes",
+      "hint": "Tap a recipe to produce",
+      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
+      "groupQty": "Quantity",
+      "saveAria": "Save"
+    }
   },
   "shipping": {
     "newHelp": "Choose items in their base units. Creating an order does not reduce stock; reserve stock in the next step.",
@@ -2631,7 +2693,22 @@
     "noStaged": "No visible quantities ready to ship. Complete picking first.",
     "posted": "Last 50 shipment documents",
     "nextTasks": "Next picking tasks",
-    "nextStaged": "Next staged lines"
+    "nextStaged": "Next staged lines",
+    "k": {
+      "lockedHint": "Ask your admin for shipping access.",
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "hero": "Order identity",
+      "lineUnit": "lines",
+      "noPosted": "No shipment documents yet.",
+      "emptyHint": "Use NEW below to create the first order.",
+      "count": "{n} orders",
+      "countMore": "First {n} orders",
+      "hint": "Tap an order to open its steps",
+      "groupCustomer": "Customer",
+      "groupItems": "Items",
+      "saveAria": "Save"
+    }
   },
   "packageReceiving": {
     "title": "Package receiving",
@@ -2727,6 +2804,7 @@
     "theme": "Light / dark view",
     "nav": {
       "musteriler": "Customers",
+      "destek": "Support",
       "talepler": "Demo requests",
       "paketler": "Plans",
       "odemeler": "Payments",
@@ -3124,7 +3202,103 @@
         "charge.paid": "{company} · {month} payment recorded ({method})",
         "site.saved": "Sales page draft saved · version {version}",
         "site.published": "Sales page published · version {version}",
-        "site.preview": "Sales page preview link issued · version {version}"
+        "site.preview": "Sales page preview link issued · version {version}",
+        "support.viewed": "{company} · support request viewed",
+        "support.replied": "{company} · support request replied",
+        "support.status": "{company} · support request status changed"
+      }
+    },
+    "destek": {
+      "title": "Support",
+      "sub": "FROM ETKIN WMS USERS · {n} OPEN REQUESTS",
+      "detailSub": "",
+      "searchPh": "Search company, person or support code",
+      "searchAria": "Search requests",
+      "filterAria": "Status",
+      "fAll": "All",
+      "fOpen": "Open",
+      "fAnswered": "Answered",
+      "fClosed": "Closed",
+      "thCust": "CUSTOMER",
+      "thUser": "USER · ROLE",
+      "thTopic": "TOPIC",
+      "thMsg": "MESSAGE",
+      "thWhen": "TIME",
+      "thStatus": "STATUS",
+      "unread": "Unread",
+      "empty": "NO REQUESTS IN THIS FILTER",
+      "banH": "New requests appear as a menu badge",
+      "banT": "The panel record is the source of truth. Once WhatsApp is connected a short notice is also sent; it carries no customer data, only the request number and a panel link.",
+      "topics": {
+        "BUG": "NOT WORKING",
+        "HOWTO": "HOW DO I",
+        "IDEA": "SUGGESTION",
+        "OTHER": "OTHER"
+      },
+      "st": {
+        "OPEN": "OPEN",
+        "ANSWERED": "ANSWERED",
+        "CLOSED": "CLOSED"
+      },
+      "reply": "REPLY",
+      "replyNote": "SHOWS ON THE USER'S “MY REQUESTS” SCREEN",
+      "replyAria": "Reply",
+      "replyPh": "Write briefly and clearly",
+      "close": "Close",
+      "reopen": "Reopen",
+      "send": "Send reply",
+      "sent": "REPLY SENT",
+      "auto": "AUTOMATIC DETAILS",
+      "autoNote": "CAME WITH THE REQUEST",
+      "access": "SUPPORT ACCESS",
+      "accessTag": "CLOSED",
+      "accessH": "Warehouse data is closed",
+      "accessT": "An access request goes to the user's screen. If approved it opens for a limited time; every view is written to the activity log.",
+      "askAccess": "Request access",
+      "askSoon": "Coming soon: customer-approved, time-limited support access",
+      "hist": "HISTORY",
+      "histNote": "WHO · WHAT",
+      "error": "Action failed ({code}). Refresh the page and try again.",
+      "now": "NOW",
+      "today": "TODAY {time}",
+      "yesterday": "YESTERDAY {time}",
+      "msgs": "{n} MESSAGES",
+      "noName": "Unnamed user",
+      "kRoute": "SCREEN",
+      "kVersion": "VERSION",
+      "kCode": "SUPPORT CODE",
+      "kDevice": "DEVICE",
+      "kWorkspace": "WORKSPACE",
+      "hOpened": "{name} opened the request",
+      "hOperator": "Operator replied: {body}",
+      "hCustomer": "{name} wrote: {body}",
+      "host": "wms.etkinyazilim.com",
+      "devices": {
+        "android": "Android phone",
+        "iphone": "iPhone",
+        "ipad": "iPad",
+        "windows": "Windows computer",
+        "mac": "Mac",
+        "linux": "Linux",
+        "other": "Unknown device"
+      },
+      "phone": "phone",
+      "tabs": {
+        "aria": "Customer tabs",
+        "genel": "General",
+        "destek": "Support · {n} open",
+        "gecmis": "History"
+      },
+      "custBanH": "Customer data stays closed here too",
+      "custBanT": "The request text and automatic details are visible. To look at warehouse data, use “Request access” on the request; it opens for a limited time if the user approves.",
+      "notify": {
+        "head": "NOTIFICATION · NEW SUPPORT REQUEST",
+        "headNote": "PANEL BADGE IS THE RECORD",
+        "badge": "Panel badge",
+        "whatsapp": "Notification: WhatsApp",
+        "connected": "CONNECTED",
+        "notConnected": "NOT CONNECTED",
+        "note": "CONNECTS WHEN THE KEY IS ADDED TO THE SERVER ENVIRONMENT · NO CUSTOMER DATA IN THE MESSAGE, ONLY REQUEST NO + PANEL LINK"
       }
     }
   },
@@ -4262,5 +4436,135 @@
     "stepLocked": ", next",
     "stepDone": ", done",
     "voiceSoon": "Voice input coming soon · Etkin"
+  },
+  "saha": {
+    "online": "Online",
+    "stepScan": "SCAN",
+    "stepVerify": "VERIFY",
+    "stepQty": "QUANTITY",
+    "keypad": "Number keys",
+    "all": "ALL",
+    "allAria": "All: {n}",
+    "del": "Delete",
+    "okut": {
+      "title": "Scan",
+      "sub": "FIELD · SCAN A CODE",
+      "camHint": "ITEM · CASE · SHELF · DELIVERY NOTE",
+      "camRegion": "Camera on, bring the code into the frame",
+      "say": "Scan or say",
+      "saySub": "FRAME THE CODE · THE JOB OPENS ITSELF",
+      "nfc": "TAP NFC",
+      "kbd": "TYPE CODE",
+      "codeLabel": "Code",
+      "codePh": "Type the code",
+      "codeGo": "Find",
+      "retry": "Try again",
+      "starting": "Opening camera…",
+      "checking": "Checking…",
+      "found": "Found",
+      "unknownTitle": "Code not recognised",
+      "unknownReason": "This code is not in the system. Check the label and scan again.",
+      "ambiguousReason": "This code belongs to more than one record. Scan the item or shelf label.",
+      "rescan": "OK, scan again",
+      "soundOk": "SOUND · VIBRATION",
+      "soundBad": "ALERT SOUND · VIBRATION",
+      "nfcNone": "This device has no NFC. Scan with the camera or type the code.",
+      "nfcReady": "Tap the NFC tag.",
+      "nfcFail": "NFC could not start. Scan with the camera or type the code.",
+      "lockTitle": "Read-only view",
+      "lockReason": "You have no stock write permission: you can see what you scan; receiving and put-away are locked. Tell your manager.",
+      "network": "No connection. Try again.",
+      "errorCode": "Error code: {code}",
+      "scanMain": "SCAN",
+      "scanAria": "Scan: reopen the camera",
+      "go": {
+        "receive": "Opening receiving",
+        "putaway": "Opening put-away",
+        "item": "Opening item card",
+        "stock": "Opening stock",
+        "receipts": "Opening deliveries",
+        "package": "Opening package"
+      }
+    },
+    "qty": {
+      "expected": "EXPECTED {e} · LEFT {k}",
+      "over": "More than expected · left {n}",
+      "hint": "TAP KEYS · SCAN THE SAME CASE TO ADD",
+      "confirm": "CONFIRM",
+      "okProduct": "Right item",
+      "sound": "SOUND · VIBRATION",
+      "done": "Received · {n} {unit}",
+      "doneNext": "NEXT: PUT AWAY · SCAN",
+      "putDone": "Put away · {n}",
+      "fixed": "Task quantity",
+      "available": "ON SHELF {n}"
+    }
+  },
+  "destek": {
+    "issue": "Report a problem: goes to your manager",
+    "issueTitle": "Report a problem",
+    "help": "Support: write to the Etkin team",
+    "helpTitle": "Support",
+    "helpUnread": "Support: {n} new replies",
+    "helpNew": "Support: write a new request",
+    "title": "Support",
+    "sub": "GOES TO THE ETKIN SUPPORT TEAM",
+    "close": "Cancel",
+    "backdrop": "Close",
+    "topic": "Topic",
+    "topics": {
+      "BUG": {
+        "name": "Not working",
+        "sub": "BUG"
+      },
+      "HOWTO": {
+        "name": "How do I",
+        "sub": "QUESTION"
+      },
+      "IDEA": {
+        "name": "Suggestion",
+        "sub": "IDEA"
+      },
+      "OTHER": {
+        "name": "Other",
+        "sub": "TYPE OR SAY IT"
+      }
+    },
+    "note": "Short note",
+    "notePh": "Type or say it briefly",
+    "sayNote": "Say the note",
+    "voiceSoon": "Voice input coming soon",
+    "guide": "Open the guide",
+    "auto": "ADDED AUTOMATICALLY · SCREEN {route} · VERSION {version} · SUPPORT CODE {code}",
+    "unknown": "—",
+    "send": "SEND",
+    "sent": "Sent · {code}",
+    "failed": "Could not send; try again shortly",
+    "rateLimited": "Sent too often; try again in a few minutes",
+    "listTitle": "My requests",
+    "listSub": "ETKIN SUPPORT · {n} REQUESTS",
+    "empty": "No requests yet",
+    "loadFailed": "Requests could not be loaded; check your connection",
+    "newTicket": "New support request",
+    "newShort": "NEW REQUEST",
+    "st": {
+      "OPEN": "OPEN",
+      "ANSWERED": "ANSWERED",
+      "CLOSED": "CLOSED"
+    },
+    "team": "Etkin support",
+    "you": "Your request",
+    "replied": "REPLIED · {when}",
+    "delivered": "DELIVERED · {when}",
+    "reply": "Reply",
+    "replyPh": "Write your reply",
+    "replySend": "Send",
+    "replySent": "Reply sent",
+    "closedNote": "Request closed; open a new one",
+    "ring": "SOUND + BADGE WHEN A REPLY ARRIVES",
+    "replyAria": "Team reply",
+    "now": "NOW",
+    "today": "TODAY {time}",
+    "yesterday": "YESTERDAY {time}"
   }
 }

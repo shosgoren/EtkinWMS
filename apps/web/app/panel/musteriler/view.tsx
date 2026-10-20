@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import type { CustomerActionState } from "./actions.ts";
+import { DestekScope, SupportTable, type SupportLabels, type SupportRowItem } from "../support/view.tsx";
+import { YDICON } from "../../design/yonet-destek-icons.ts";
 
 export type CustomerStateKey = "ACTIVE" | "TRIAL" | "SUSPENDED" | "OVERDUE";
 
@@ -213,17 +215,34 @@ export function MusterilerList({
   );
 }
 
+export type CustomerTab = "genel" | "destek" | "gecmis";
+
+/** T-967 (YonetDestek.dc.html G): müşteri detayındaki Destek sekmesi — yalnız bu müşterinin talepleri. */
+export interface CustomerSupport {
+  readonly rows: readonly SupportRowItem[];
+  readonly open: number;
+  readonly labels: SupportLabels;
+  readonly tabs: { readonly aria: string; readonly genel: string; readonly destek: string; readonly gecmis: string };
+  readonly banH: string;
+  readonly banT: string;
+}
+
 export function MusteriDetail({
   cu,
   plans,
   labels: t,
   action,
+  tab = "genel",
+  support,
 }: {
   cu: CustomerDetail;
   plans: readonly PlanOption[];
   labels: MusterilerLabels;
   action: (prev: CustomerActionState, form: FormData) => Promise<CustomerActionState>;
+  tab?: CustomerTab;
+  support?: CustomerSupport;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(action, {});
   const [sheet, setSheet] = useState<"suspend" | "plan" | null>(null);
   const [why, setWhy] = useState("");
@@ -287,6 +306,43 @@ export function MusteriDetail({
           </button>
         </form>
       </div>
+      {support === undefined ? null : (
+        <div className="seg" role="tablist" aria-label={support.tabs.aria} style={{ background: C.chip, alignSelf: "flex-start" }}>
+          {(["genel", "destek", "gecmis"] as const).map((k) => {
+            const on = k === tab;
+            return (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                className={`segb${on ? " on" : ""}`}
+                aria-selected={on}
+                style={on ? { background: C.surface } : undefined}
+                onClick={() => router.push(`/musteriler?m=${encodeURIComponent(cu.id)}${k === "genel" ? "" : `&tab=${k}`}`)}
+                data-testid={`customer-tab-${k}`}
+              >
+                {k === "destek" ? support.tabs.destek.replace("{n}", String(support.open)) : support.tabs[k]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {support !== undefined && tab === "destek" ? (
+        <DestekScope>
+          <div className="card" style={{ background: C.surface, paddingTop: 8 }}>
+            <SupportTable rows={support.rows} labels={support.labels} withCustomer={false} />
+            {support.rows.length === 0 ? <div className="empty">{support.labels.empty}</div> : null}
+          </div>
+          <div className="ban" style={{ background: C.chip }}>
+            <Ico d={YDICON.eye} size={22} />
+            <span>
+              <b>{support.banH}</b>
+              {support.banT}
+            </span>
+          </div>
+        </DestekScope>
+      ) : null}
+      {support === undefined || tab === "genel" ? (
       <div className="grid2">
         <div className="card" style={{ background: C.surface }}>
           <div className="chd">
@@ -320,6 +376,8 @@ export function MusteriDetail({
           </dl>
         </div>
       </div>
+      ) : null}
+      {support === undefined || tab === "gecmis" ? (
       <div className="card" style={{ background: C.surface }}>
         <div className="chd">
           <b>{t.history}</b>
@@ -341,6 +399,7 @@ export function MusteriDetail({
           )}
         </div>
       </div>
+      ) : null}
 
       {sheet === "suspend" ? (
         <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-sh">

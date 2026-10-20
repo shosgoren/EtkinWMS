@@ -998,6 +998,10 @@
       "link_revoked": "Ekibe katılma QR'ı kapatıldı",
       "approved": "Katılma talebi onaylandı, saha hesabı açıldı",
       "rejected": "Katılma talebi reddedildi"
+    },
+    "support": {
+      "ticket_created": "Destek talebi açıldı",
+      "ticket_replied": "Destek talebine yanıt yazıldı"
     }
   },
   "auditLog": {
@@ -2119,7 +2123,15 @@
         "failed": "Kamera açılamadı. Tekrar dene ya da barkodu elle gir."
       }
     },
-    "packageEntry": "Paket kabulü"
+    "packageEntry": "Paket kabulü",
+    "k": {
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "emptyHint": "Alttaki YENİ ile ilk teslimi ekle.",
+      "hint": "{n} teslim",
+      "groupSource": "Depo ve irsaliye",
+      "saveAria": "Kaydet"
+    }
   },
   "import": {
     "title": "Ürün ve stok içe aktar",
@@ -2496,7 +2508,23 @@
     "locked": "Bu stokları görme yetkiniz yok. Çalışma alanı yöneticinizle görüşün.",
     "pages": "Stok sayfaları",
     "first": "İlk sayfa",
-    "next": "Sonraki sayfa"
+    "next": "Sonraki sayfa",
+    "k": {
+      "chips": "Bölümler",
+      "chipStock": "Stok",
+      "chipDocs": "Belgeler",
+      "chipShipping": "Sevkiyat",
+      "chipProduction": "Üretim",
+      "newShort": "BELGE",
+      "newAria": "Yeni stok belgesi",
+      "searchPh": "Ürün, kod ya da depo",
+      "count": "{n} stok satırı",
+      "countMore": "İlk {n} stok satırı",
+      "hint": "Ürüne dokun: kartı açılır",
+      "meta": "Depo: {warehouse} ({code}) · Fiziksel {physical} · Ayrılmış {reserved} {unit}",
+      "cardAria": "{name} · {code} · {warehouse}: kullanılabilir {qty} {unit}",
+      "lockedHint": "Çalışma alanı yöneticinden stok görme yetkisi iste."
+    }
   },
   "stockDocuments": {
     "shipping": "Sevkiyat",
@@ -2540,7 +2568,24 @@
     "transferHelp": "Kaynak ve hedef farklı depolarda olmalıdır. Özeti kontrol edin; onaylayınca miktar kaynaktan düşer ve hedefe eklenir. İşlem bütünüyle tamamlanır veya stok değişmez.",
     "transferPost": "Transferi onayla ve işle",
     "related": "Bağlı stok belgesi",
-    "production": "Üretim"
+    "production": "Üretim",
+    "k": {
+      "lockedHint": "Yöneticinden bu işlem için yetki iste.",
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "hero": "Belge kimliği",
+      "lineUnit": "satır",
+      "lines": "Belge satırları",
+      "linesSub": "{n} satır",
+      "state": "Durum ve işlemler",
+      "related": "Bağlı belgeler",
+      "emptyHint": "Alttaki YENİ ile ilk stok girişini yap.",
+      "count": "{n} belge",
+      "countMore": "Son {n} belge",
+      "hint": "Belgeye dokun: ayrıntısı açılır",
+      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
+      "saveAria": "Kaydet"
+    }
   },
   "production": {
     "title": "Üretim ve reçeteler",
@@ -2572,7 +2617,24 @@
     "search": "Reçete ara",
     "find": "Ara",
     "next": "Sonraki reçeteler",
-    "empty": "Henüz reçete yok."
+    "empty": "Henüz reçete yok.",
+    "k": {
+      "lockedHint": "Yöneticinden üretim yetkisi iste.",
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "hero": "Reçete kimliği",
+      "materialsSub": "{qty} {unit} {name} için",
+      "produce": "Üretim kaydı",
+      "produceSub": "Malzeme kaynağını ve mamulün gideceği konumu seç",
+      "produceShort": "ÜRET",
+      "emptyHint": "Alttaki YENİ ile ilk reçeteyi tanımla.",
+      "count": "{n} reçete",
+      "countMore": "İlk {n} reçete",
+      "hint": "Reçeteye dokun: üretim açılır",
+      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
+      "groupQty": "Miktar",
+      "saveAria": "Kaydet"
+    }
   },
   "shipping": {
     "newHelp": "Ürünleri temel birimleriyle seç. Sipariş kaydı stok düşürmez; sonraki adımda stok ayrılır.",
@@ -2631,7 +2693,22 @@
     "noStaged": "Görünür sevke hazır miktar yok. Önce toplama adımını tamamla.",
     "posted": "Son 50 sevk belgesi",
     "nextTasks": "Sonraki toplama görevleri",
-    "nextStaged": "Sonraki hazır satırlar"
+    "nextStaged": "Sonraki hazır satırlar",
+    "k": {
+      "lockedHint": "Yöneticinden sevkiyat yetkisi iste.",
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "hero": "Sipariş kimliği",
+      "lineUnit": "satır",
+      "noPosted": "Henüz sevk belgesi yok.",
+      "emptyHint": "Alttaki YENİ ile ilk siparişi oluştur.",
+      "count": "{n} sipariş",
+      "countMore": "İlk {n} sipariş",
+      "hint": "Siparişe dokun: adımları açılır",
+      "groupCustomer": "Müşteri",
+      "groupItems": "Ürünler",
+      "saveAria": "Kaydet"
+    }
   },
   "packageReceiving": {
     "title": "Paket kabulü",
@@ -2727,6 +2804,7 @@
     "theme": "Açık / koyu görünüm",
     "nav": {
       "musteriler": "Müşteriler",
+      "destek": "Destek",
       "talepler": "Demo talepleri",
       "paketler": "Paketler",
       "odemeler": "Ödemeler",
@@ -3124,7 +3202,103 @@
         "charge.paid": "{company} · {month} ödemesi kaydedildi ({method})",
         "site.saved": "Satış sayfası taslağı kaydedildi · sürüm {version}",
         "site.published": "Satış sayfası yayınlandı · sürüm {version}",
-        "site.preview": "Satış sayfası önizleme bağlantısı üretildi · sürüm {version}"
+        "site.preview": "Satış sayfası önizleme bağlantısı üretildi · sürüm {version}",
+        "support.viewed": "{company} · destek talebi görüntülendi",
+        "support.replied": "{company} · destek talebine yanıt yazıldı",
+        "support.status": "{company} · destek talebinin durumu değişti"
+      }
+    },
+    "destek": {
+      "title": "Destek",
+      "sub": "ETKİN WMS KULLANICILARINDAN · {n} AÇIK TALEP",
+      "detailSub": "",
+      "searchPh": "Firma, kişi ya da destek kodu ara",
+      "searchAria": "Talep ara",
+      "filterAria": "Durum",
+      "fAll": "Hepsi",
+      "fOpen": "Açık",
+      "fAnswered": "Yanıtlandı",
+      "fClosed": "Kapandı",
+      "thCust": "MÜŞTERİ",
+      "thUser": "KULLANICI · ROL",
+      "thTopic": "KONU",
+      "thMsg": "MESAJ",
+      "thWhen": "ZAMAN",
+      "thStatus": "DURUM",
+      "unread": "Okunmadı",
+      "empty": "BU FİLTREDE TALEP YOK",
+      "banH": "Yeni talep menüde rozet olarak görünür",
+      "banT": "Panel kaydı esastır. WhatsApp bağlanınca ayrıca kısa bir bildirim gelir; mesajda müşteri verisi olmaz, yalnız talep numarası ve panel bağlantısı.",
+      "topics": {
+        "BUG": "ÇALIŞMIYOR",
+        "HOWTO": "NASIL YAPILIR",
+        "IDEA": "ÖNERİ",
+        "OTHER": "DİĞER"
+      },
+      "st": {
+        "OPEN": "AÇIK",
+        "ANSWERED": "YANITLANDI",
+        "CLOSED": "KAPANDI"
+      },
+      "reply": "YANIT",
+      "replyNote": "KULLANICININ “TALEPLERİM” EKRANINA DÜŞER",
+      "replyAria": "Yanıt",
+      "replyPh": "Kısa ve net yazın",
+      "close": "Kapat",
+      "reopen": "Yeniden aç",
+      "send": "Yanıtı gönder",
+      "sent": "YANIT GÖNDERİLDİ",
+      "auto": "OTOMATİK BİLGİLER",
+      "autoNote": "TALEPLE GELDİ",
+      "access": "DESTEK ERİŞİMİ",
+      "accessTag": "KAPALI",
+      "accessH": "Depo verisi kapalı",
+      "accessT": "Erişim isteği kullanıcının ekranına düşer. Onaylarsa süreli açılır; her bakış işlem kaydına yazılır.",
+      "askAccess": "Erişim iste",
+      "askSoon": "Yakında: müşteri onaylı, süreli destek erişimi",
+      "hist": "GEÇMİŞ",
+      "histNote": "KİM · NE",
+      "error": "İşlem yapılamadı ({code}). Sayfayı yenileyip tekrar deneyin.",
+      "now": "ŞİMDİ",
+      "today": "BUGÜN {time}",
+      "yesterday": "DÜN {time}",
+      "msgs": "{n} MESAJ",
+      "noName": "Adsız kullanıcı",
+      "kRoute": "EKRAN",
+      "kVersion": "SÜRÜM",
+      "kCode": "DESTEK KODU",
+      "kDevice": "CİHAZ",
+      "kWorkspace": "ÇALIŞMA ALANI",
+      "hOpened": "{name} talep açtı",
+      "hOperator": "Operatör yanıtladı: {body}",
+      "hCustomer": "{name} yazdı: {body}",
+      "host": "wms.etkinyazilim.com",
+      "devices": {
+        "android": "Android telefon",
+        "iphone": "iPhone",
+        "ipad": "iPad",
+        "windows": "Windows bilgisayar",
+        "mac": "Mac",
+        "linux": "Linux",
+        "other": "Bilinmeyen cihaz"
+      },
+      "phone": "telefon",
+      "tabs": {
+        "aria": "Müşteri sekmeleri",
+        "genel": "Genel",
+        "destek": "Destek · {n} açık",
+        "gecmis": "Geçmiş"
+      },
+      "custBanH": "Müşteri verisi burada da açılmaz",
+      "custBanT": "Talep metni ve otomatik bilgiler görünür. Depo verisine bakmak için talepten “Erişim iste”; kullanıcı onaylarsa süreli açılır.",
+      "notify": {
+        "head": "BİLDİRİM · YENİ DESTEK TALEBİ",
+        "headNote": "ASIL KAYIT PANEL ROZETİ",
+        "badge": "Panel rozeti",
+        "whatsapp": "Bildirim: WhatsApp",
+        "connected": "BAĞLI",
+        "notConnected": "BAĞLANMADI",
+        "note": "ANAHTAR SUNUCU ORTAMINA EKLENİNCE BAĞLANIR · MESAJDA MÜŞTERİ VERİSİ YOK, YALNIZ TALEP NO + PANEL BAĞLANTISI"
       }
     }
   },
@@ -4262,5 +4436,135 @@
     "stepLocked": ", sırada",
     "stepDone": ", tamam",
     "voiceSoon": "Sesle söyleme yakında · Etkin geliyor"
+  },
+  "saha": {
+    "online": "Çevrimiçi",
+    "stepScan": "OKUT",
+    "stepVerify": "DOĞRULA",
+    "stepQty": "MİKTAR",
+    "keypad": "Sayı tuşları",
+    "all": "TÜMÜ",
+    "allAria": "Tümü: {n}",
+    "del": "Sil",
+    "okut": {
+      "title": "Okut",
+      "sub": "SAHA · KOD OKUT",
+      "camHint": "ÜRÜN · KOLİ · RAF · İRSALİYE",
+      "camRegion": "Kamera açık, kodu çerçeveye getir",
+      "say": "Okut ya da söyle",
+      "saySub": "KODU ÇERÇEVEYE GETİR · İŞ KENDİ AÇILIR",
+      "nfc": "NFC’YE DOKUN",
+      "kbd": "KODU YAZ",
+      "codeLabel": "Kod",
+      "codePh": "Kodu yaz",
+      "codeGo": "Bul",
+      "retry": "Tekrar dene",
+      "starting": "Kamera açılıyor…",
+      "checking": "Kontrol ediliyor…",
+      "found": "Bulundu",
+      "unknownTitle": "Kod tanınmadı",
+      "unknownReason": "Bu kod sistemde yok. Etiketi kontrol et, yeniden okut.",
+      "ambiguousReason": "Bu kod birden çok kayda ait. Ürün ya da raf etiketini okut.",
+      "rescan": "Anladım, tekrar okut",
+      "soundOk": "SES · TİTREŞİM",
+      "soundBad": "UYARI SESİ · TİTREŞİM",
+      "nfcNone": "Bu cihazda NFC yok. Kamerayla okut ya da kodu yaz.",
+      "nfcReady": "NFC etikete dokun.",
+      "nfcFail": "NFC açılamadı. Kamerayla okut ya da kodu yaz.",
+      "lockTitle": "Okuma görünümü",
+      "lockReason": "Stok yazma yetkin yok: okuttuğun kodun bilgisini görürsün; kabul ve yerleştirme kilitli. Yöneticine haber ver.",
+      "network": "Bağlantı yok. Tekrar dene.",
+      "errorCode": "Hata kodu: {code}",
+      "scanMain": "OKUT",
+      "scanAria": "Okut: kamerayı yeniden aç",
+      "go": {
+        "receive": "Kabule geçiliyor",
+        "putaway": "Yerleştirmeye geçiliyor",
+        "item": "Ürün kartı açılıyor",
+        "stock": "Stok açılıyor",
+        "receipts": "Teslimler açılıyor",
+        "package": "Paket açılıyor"
+      }
+    },
+    "qty": {
+      "expected": "BEKLENEN {e} · KALAN {k}",
+      "over": "Beklenenden fazla · kalan {n}",
+      "hint": "TUŞLA · AYNI KOLİYİ OKUT, ADET EKLENİR",
+      "confirm": "ONAYLA",
+      "okProduct": "Doğru ürün",
+      "sound": "SES · TİTREŞİM",
+      "done": "Kabul edildi · {n} {unit}",
+      "doneNext": "SIRADAKİ: YERLEŞTİR · OKUT",
+      "putDone": "Rafa kondu · {n}",
+      "fixed": "Görevdeki miktar",
+      "available": "RAFTA {n}"
+    }
+  },
+  "destek": {
+    "issue": "Sorun bildir: yöneticine gider",
+    "issueTitle": "Sorun bildir",
+    "help": "Destek: Etkin ekibine yaz",
+    "helpTitle": "Destek",
+    "helpUnread": "Destek: {n} yeni yanıt",
+    "helpNew": "Destek: yeni talep yaz",
+    "title": "Destek",
+    "sub": "ETKİN DESTEK EKİBİNE GİDER",
+    "close": "Vazgeç",
+    "backdrop": "Kapat",
+    "topic": "Konu",
+    "topics": {
+      "BUG": {
+        "name": "Çalışmıyor",
+        "sub": "HATA"
+      },
+      "HOWTO": {
+        "name": "Nasıl yapılır",
+        "sub": "SORU"
+      },
+      "IDEA": {
+        "name": "Öneri",
+        "sub": "FİKİR"
+      },
+      "OTHER": {
+        "name": "Diğer",
+        "sub": "YAZ YA DA SÖYLE"
+      }
+    },
+    "note": "Kısa not",
+    "notePh": "Kısaca yaz ya da söyle",
+    "sayNote": "Notu söyle",
+    "voiceSoon": "Sesle yazma yakında",
+    "guide": "Rehberi aç",
+    "auto": "OTOMATİK EKLENİR · EKRAN {route} · SÜRÜM {version} · DESTEK KODU {code}",
+    "unknown": "—",
+    "send": "GÖNDER",
+    "sent": "Gönderildi · {code}",
+    "failed": "Gönderilemedi; biraz sonra yeniden dene",
+    "rateLimited": "Çok sık gönderildi; birkaç dakika sonra yeniden dene",
+    "listTitle": "Taleplerim",
+    "listSub": "ETKİN DESTEK · {n} TALEP",
+    "empty": "Henüz talebin yok",
+    "loadFailed": "Talepler yüklenemedi; bağlantını kontrol et",
+    "newTicket": "Yeni destek talebi",
+    "newShort": "YENİ TALEP",
+    "st": {
+      "OPEN": "AÇIK",
+      "ANSWERED": "YANITLANDI",
+      "CLOSED": "KAPANDI"
+    },
+    "team": "Etkin destek",
+    "you": "Talebin",
+    "replied": "YANITLADI · {when}",
+    "delivered": "İLETİLDİ · {when}",
+    "reply": "Yanıtla",
+    "replyPh": "Yanıtını yaz",
+    "replySend": "Gönder",
+    "replySent": "Yanıt gönderildi",
+    "closedNote": "Talep kapandı; yeni talep aç",
+    "ring": "YANIT GELİNCE SES + ROZET",
+    "replyAria": "Ekip yanıtı",
+    "now": "ŞİMDİ",
+    "today": "BUGÜN {time}",
+    "yesterday": "DÜN {time}"
   }
 }

@@ -8,7 +8,7 @@ import { z } from "zod";
 
 /** Kayıtlı iş türleri. `email.send` T-116, `invitation.deliver` T-117, `demo.reseed` T-123 tarafından doldurulur;
  * `stock.document.post` T-222, `stock.consistency.check` T-225 (handler'lar o kartlarda; ADR-019 §5);
- * `platform.activation.deliver` ve `trial.welcome` T-995 (ADR-026 §3). */
+ * `platform.activation.deliver` ve `trial.welcome` T-995 (ADR-026 §3); `support.notify` T-967 (B-84, operatöre WhatsApp kısa bildirimi). */
 export const JOB_TYPES = [
   "email.send",
   "invitation.deliver",
@@ -17,6 +17,7 @@ export const JOB_TYPES = [
   "stock.consistency.check",
   "platform.activation.deliver",
   "trial.welcome",
+  "support.notify",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
@@ -47,6 +48,8 @@ export const JOB_PAYLOAD_SCHEMAS = {
   "platform.activation.deliver": z.object({ demoRequestId: z.string().uuid() }).strict(),
   /** Hoş geldiniz e-postası (T-995): tenant işi, yük yok; alıcı (sahip) ve adres işte tenant'tan okunur, sırsızdır. */
   "trial.welcome": z.object({}).strict(),
+  /** Yeni destek talebi bildirimi (T-967): tenant işi; yalnız talep kimliği ve kısa numara (müşteri adı/içeriği yok). */
+  "support.notify": z.object({ ticketId: z.string().uuid(), ticketNo: z.number().int().positive() }).strict(),
 } as const satisfies Record<JobType, z.ZodType>;
 
 export type JobPayload<T extends JobType> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[T]>;
