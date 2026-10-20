@@ -90,6 +90,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-66 | Panel hata kodlarını kullanıcı diline çevir |
 | B-67 | Cari kişisel alanlarının görünürlüğünü daralt; `settings.manage`'i böl; kullanılmayan `takeout.request` 🔒 |
 | B-68 | Defter–bakiye denetiminin ölçeği (her yazımda tüm geçmiş toplamı) — checkpoint tasarımı |
+| B-76 | Güvenilen cihaz "Bu cihazı 30 gün hatırla" (yönetici her girişte kod girmesin; kullanıcı kararı 20 Ekim) — T-923 (KODDA VAR); kalan: güvenilen cihaz listesi + tekil iptal arayüzü (sunucu tarafı toplu iptal var) |
 
 ## Belge düzeltmeleri
 | ID | İş |

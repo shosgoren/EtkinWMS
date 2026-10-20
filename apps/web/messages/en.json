@@ -227,6 +227,7 @@
       "codeAria": "Verification code",
       "backupLabel": "BACKUP CODE",
       "backupHint": "Each backup code works only once",
+      "trust": "Remember this device for 30 days",
       "useBackup": "Use a backup code",
       "useApp": "Use the app code",
       "submit": "VERIFY",

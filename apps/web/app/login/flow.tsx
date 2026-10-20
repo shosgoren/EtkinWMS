@@ -2,7 +2,7 @@
 // I-18 (DESIGN-PARITY): Giris.dc.html `v.auth` kabuğu + `v.login`/`v.loginMail` (E-POSTA sekmesi) ve `v.mfa` (iki adımlı doğrulama) BİREBİR,
 // T-999b tasarım ekleriyle (tuval 1792237021-ec8d, kullanıcı onayı 17 Ekim): hata bandı, e-posta biçimi uyarısı, Caps Lock uyarısı,
 // "Bu cihazda e-postamı hatırla", Google/Microsoft (bayrakla), demo bandı; doğrulamada kod hatalı / kilitli / süre doldu bantları ve yedek
-// kod. Kabuk saha girişiyle ortaktır (`field/flow.tsx` `Shell`); SAHA GİRİŞİ sekmesi `/field`'e gider. Önizleme `DURUM` çubuğu yoktur.
+// kod. T-923 (kullanıcı kararı 20 Ekim 2026): doğrulama kartına "Bu cihazı 30 gün hatırla" onay kutusu (girişteki `.chk` ile aynı öğe). Kabuk saha girişiyle ortaktır (`field/flow.tsx` `Shell`); SAHA GİRİŞİ sekmesi `/field`'e gider. Önizleme `DURUM` çubuğu yoktur.
 // Hesap varlığı sızdırılmaz: kayıtlı olmayan e-posta ile yanlış parola AYNI mesajı alır (kullanıcı kararı 17 Ekim). Kalan deneme hakkı
 // e-posta başına sayaçtan gelir (`x-attempts-left`; kayıtlı/kayıtsız aynı). Parola yalnız form alanında yaşar; e-posta yalnız kullanıcı
 // "hatırla" derse bu tarayıcıda saklanır.
@@ -87,7 +87,7 @@ function Tabs() {
   );
 }
 
-function Login({ next, socialEnabled, demo, fieldTab }: { next: string; socialEnabled: boolean; demo: boolean; fieldTab: boolean }) {
+function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; socialEnabled: boolean; demo: boolean; fieldTab: boolean; reauth: boolean }) {
   const t = useTranslations("auth.signin");
   const [email, setEmail] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -133,7 +133,8 @@ function Login({ next, socialEnabled, demo, fieldTab }: { next: string; socialEn
     setError(null);
     if (mh !== null || ph !== null) return;
     setBusy(true);
-    const res = await authPost<{ readonly twoFactorRedirect?: boolean }>("/sign-in/email", { email: mail, password });
+    // T-923 (A-39): hassas işlem yeniden doğrulamasında güvenilen cihaz çerezi sunucuda yok sayılır → doğrulama kodu yine sorulur.
+    const res = await authPost<{ readonly twoFactorRedirect?: boolean }>("/sign-in/email", { email: mail, password }, reauth ? { "x-wms-reauth": "1" } : undefined);
     if (res.ok) {
       writeRemembered(remember ? mail : null);
       // Tam gezinme: sunucu bileşenleri yeni çerezle yeniden çizilir. `next` sunucuda `safeNext`'ten geçmiştir.
@@ -285,6 +286,8 @@ function Mfa({ next }: { next: string }) {
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  // T-923: "Bu cihazı 30 gün hatırla" — varsayılan kapalı; hassas işlemlerde kod yine sorulur.
+  const [trust, setTrust] = useState(false);
   const [error, setError] = useState<(Shown & { readonly kind: "bad" | "locked" | "expired" | "net" }) | null>(null);
 
   function explain(e: AuthCallError): Shown & { readonly kind: "bad" | "locked" | "expired" | "net" } {
@@ -306,7 +309,7 @@ function Mfa({ next }: { next: string }) {
     }
     setBusy(true);
     setError(null);
-    const res = await authPost<unknown>(backup ? "/two-factor/verify-backup-code" : "/two-factor/verify-totp", { code: value });
+    const res = await authPost<unknown>(backup ? "/two-factor/verify-backup-code" : "/two-factor/verify-totp", { code: value, trustDevice: trust });
     if (res.ok) {
       window.location.assign(next);
       return;
@@ -364,6 +367,12 @@ function Mfa({ next }: { next: string }) {
               </div>
             </div>
           )}
+          <button type="button" role="checkbox" className={trust ? "chk on" : "chk"} aria-checked={trust} onClick={() => setTrust((v) => !v)}>
+            <i>
+              <Ico d={GICON.check} size={16} sw={3.2} />
+            </i>
+            {t("trust")}
+          </button>
           <button
             type="button"
             className="lnk"
@@ -389,10 +398,24 @@ function Mfa({ next }: { next: string }) {
   );
 }
 
-export function EmailSignIn({ dark, next, socialEnabled, demo, fieldTab }: { dark: boolean; next: string; socialEnabled: boolean; demo: boolean; fieldTab: boolean }): ReactNode {
+export function EmailSignIn({
+  dark,
+  next,
+  socialEnabled,
+  demo,
+  fieldTab,
+  reauth = false,
+}: {
+  dark: boolean;
+  next: string;
+  socialEnabled: boolean;
+  demo: boolean;
+  fieldTab: boolean;
+  reauth?: boolean;
+}): ReactNode {
   return (
     <DzRoot dark={dark} scope="dzg" testId="login">
-      <Login next={next} socialEnabled={socialEnabled} demo={demo} fieldTab={fieldTab} />
+      <Login next={next} socialEnabled={socialEnabled} demo={demo} fieldTab={fieldTab} reauth={reauth} />
     </DzRoot>
   );
 }

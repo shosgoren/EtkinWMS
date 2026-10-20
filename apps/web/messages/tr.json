@@ -227,6 +227,7 @@
       "codeAria": "Doğrulama kodu",
       "backupLabel": "YEDEK KOD",
       "backupHint": "Her yedek kod yalnız bir kez kullanılır",
+      "trust": "Bu cihazı 30 gün hatırla",
       "useBackup": "Yedek kod kullan",
       "useApp": "Uygulama kodunu kullan",
       "submit": "DOĞRULA",

@@ -267,10 +267,25 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export function hashVerificationIdentifier(identifier: string): string {
   const digest = createHash("sha256").update(identifier, "utf8").digest("base64url");
   // `h.` ayracı belirteç alfabesinin (ve `adm_` biçiminin) dışındadır: saklanan kimlik gönderilebilir belirteç olamaz.
-  return identifier.startsWith("reset-password:") && ADMIN_TOKEN_RE.test(identifier.slice("reset-password:".length))
-    ? `reset-password:h.${digest}`
-    : digest;
+  if (identifier.startsWith("reset-password:") && ADMIN_TOKEN_RE.test(identifier.slice("reset-password:".length))) {
+    return `reset-password:h.${digest}`;
+  }
+  // T-923: güvenilen cihaz kayıtları da önekli saklanır → kullanıcının bütün güvenilen cihazları tek sorguyla iptal edilir
+  // (`value = user_id AND identifier LIKE 'trust-device:h.%'`); düz kimlik yine DB'de yoktur.
+  return TRUST_ID_RE.test(identifier) ? `${TRUST_STORED_PREFIX}${digest}` : digest;
 }
+
+/**
+ * T-923 (ADR-014 §12 M4 eki, kullanıcı kararı 20 Ekim 2026): "Bu cihazı 30 gün hatırla". Better Auth 1.7.7 iki adım eklentisinin
+ * kimliği `trust-device-<generateRandomString(32)>` (alfabe a-z 0-9 A-Z - _; plugins/two-factor/verify-two-factor.mjs, index.mjs).
+ * Süre MUTLAKTIR: ilk TOTP/yedek kod doğrulamasından itibaren 30 gün (eklentinin kayan yenilemesi kancada geri alınır).
+ */
+export const TRUST_DEVICE_MAX_AGE_SEC = 30 * 24 * 60 * 60;
+const TRUST_ID_RE = /^trust-device-[A-Za-z0-9_-]{32}$/;
+const TRUST_STORED_PREFIX = "trust-device:h.";
+const TRUST_COOKIE = "trust_device";
+/** Hassas işlem yeniden doğrulamasında (`/login?reauth=1`) giriş isteği bu başlıkla gelir: güvenilen cihaz çerezi yok sayılır. */
+export const REAUTH_HEADER = "x-wms-reauth";
 
 /** Yeniden doğrulama olayları (T-112c); yazımı DB'de yalnızca wms_auth'a açık sınıf (`reauth.`). */
 const REAUTH_EVENT = Object.freeze({ succeeded: "reauth.succeeded", failed: "reauth.failed" });
@@ -285,6 +300,10 @@ const SECURITY_EVENT = Object.freeze({
   twoFactorEnabled: "two_factor_enabled",
   twoFactorDisabled: "two_factor_disabled",
   twoFactorFailed: "two_factor_failed",
+  // T-923: `two_factor_` öneki kimlik sınıfıdır (0005): yalnızca wms_auth yazar.
+  trustedDeviceAdded: "two_factor_trusted_device_added",
+  trustedDeviceUsed: "two_factor_trusted_device_used",
+  trustedDevicesRevoked: "two_factor_trusted_devices_revoked",
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -913,6 +932,161 @@ export function createAuth(params: CreateAuthParams): AuthService {
   }
 
   // ---------------------------------------------------------------------------------------------
+  // T-923 güvenilen cihaz ("Bu cihazı 30 gün hatırla"; ADR-014 §12 M4 eki). Better Auth iki adım eklentisi çerezi
+  // (`trust_device` = HMAC(secret, userId!kimlik)!kimlik, imzalı) ve `verifications` kaydını kendisi yazar/doğrular; burada:
+  // (1) eklentinin her girişte süreyi 30 gün UZATMASI geri alınır (mutlak süre: yeni kaydın bitişi eski kaydınki),
+  // (2) güvenilen girişte oturuma `mfa_verified_at` = ilk TOTP doğrulama zamanı yazılır (MFA zorunluluğu geçer, hassas işlem
+  //     yeniden doğrulaması GEÇMEZ: `recentAuthWithin` TOTP'nin pencere içinde olmasını ister),
+  // (3) yeniden doğrulama girişinde (`x-wms-reauth: 1`) çerez yok sayılır → TOTP sorulur,
+  // (4) parola/2FA değişiminde ve "tüm cihazlardan çık"ta kullanıcının güvenilen cihaz kayıtları silinir (sunucu tarafı iptal).
+  // ---------------------------------------------------------------------------------------------
+  interface TrustCapture {
+    readonly userId: string;
+    readonly expiresAt: Date;
+    readonly at: number;
+  }
+  const trustCaptures = new Map<string, TrustCapture>();
+  const TRUST_CAPTURE_TTL_MS = 2 * 60 * 1000;
+  type HookCtx = Parameters<typeof getSessionFromCtx>[0];
+
+  function trustCookieName(ctx: HookCtx): string {
+    return ctx.context.createAuthCookie(TRUST_COOKIE).name;
+  }
+
+  /** İstekteki imzası geçerli güvenilen cihaz çerezinin kimliği (yoksa/biçim dışıysa `null`). */
+  async function requestTrustId(ctx: HookCtx): Promise<string | null> {
+    const signed: unknown = await ctx.getSignedCookie(trustCookieName(ctx), ctx.context.secret);
+    if (typeof signed !== "string") return null;
+    const bang = signed.indexOf("!");
+    const id = bang < 0 ? "" : signed.slice(bang + 1);
+    return TRUST_ID_RE.test(id) ? id : null;
+  }
+
+  /** Yanıtta eklentinin yazdığı YENİ güvenilen cihaz çerezinin kimliği (Set-Cookie değeri `belirteç!kimlik.imza`). */
+  function responseTrustId(ctx: HookCtx): string | null {
+    const name = trustCookieName(ctx);
+    const headers = (ctx.context as { responseHeaders?: Headers }).responseHeaders;
+    for (const line of headers?.getSetCookie() ?? []) {
+      const first = line.split(";")[0] ?? "";
+      if (!first.startsWith(`${name}=`)) continue;
+      let value: string;
+      try {
+        value = decodeURIComponent(first.slice(name.length + 1));
+      } catch {
+        return null;
+      }
+      const bang = value.indexOf("!");
+      const dot = value.lastIndexOf(".");
+      if (bang < 0 || dot <= bang) return null;
+      const id = value.slice(bang + 1, dot);
+      return TRUST_ID_RE.test(id) ? id : null;
+    }
+    return null;
+  }
+
+  /** Giriş öncesi: eklenti kaydı döndürmeden ÖNCE eski kaydın bitişi saklanır (mutlak süre için; parola henüz doğrulanmadı). */
+  async function captureTrust(ctx: HookCtx, trustId: string): Promise<void> {
+    const now = Date.now();
+    for (const [k, v] of trustCaptures) if (now - v.at > TRUST_CAPTURE_TTL_MS) trustCaptures.delete(k);
+    let record: { value: string; expiresAt: Date } | null = null;
+    try {
+      const found = await ctx.context.internalAdapter.findVerificationValue(trustId);
+      record = found === null || found === undefined ? null : { value: found.value, expiresAt: new Date(found.expiresAt) };
+    } catch (error) {
+      logMasked("error", "trusted device lookup failed; trust ignored", error);
+    }
+    // Kayıt yoksa saklanacak bir şey yok: eklenti de kabul etmez. Kayıt okunamadıysa da yok: eklenti kabul ederse kanca reddeder.
+    if (record === null || !UUID_RE.test(record.value)) return;
+    trustCaptures.set(sha256Hex(trustId), { userId: record.value, expiresAt: record.expiresAt, at: now });
+  }
+
+  /**
+   * Kullanıcının güvenilen cihaz kayıtları silinir (`keepId`: bu cihazınki kalır). Hata yutulmaz (çağıran isteği düşürür).
+   * Silinen varsa `two_factor_trusted_devices_revoked` olayı yazılır.
+   */
+  async function revokeTrustedDevices(
+    userId: string,
+    reason: string,
+    source: Headerish,
+    options: Parameters<typeof getIP>[1] | undefined,
+    keepId: string | null = null,
+  ): Promise<void> {
+    if (!UUID_RE.test(userId)) return;
+    const like = `${TRUST_STORED_PREFIX}%`;
+    const rows = await authDb.execute<{ id: string }>(
+      keepId === null
+        ? sql`DELETE FROM public.verifications WHERE value = ${userId} AND identifier LIKE ${like} RETURNING id`
+        : sql`DELETE FROM public.verifications WHERE value = ${userId} AND identifier LIKE ${like}
+                AND identifier <> ${hashVerificationIdentifier(keepId)} RETURNING id`,
+    );
+    if (rows.length === 0) return;
+    if (options === undefined) {
+      await write(SECURITY_EVENT.trustedDevicesRevoked, userId, () => ({ ip: null, ua: null }), { reason, count: rows.length }, false, true);
+    } else {
+      await emit(SECURITY_EVENT.trustedDevicesRevoked, userId, source, options, { reason, count: rows.length });
+    }
+  }
+
+  /**
+   * İki adım eklentisinin `/sign-in/email` kancasından SONRA çalışır (eklenti sırası). 2FA'lı kullanıcının oturumu hâlâ
+   * duruyorsa eklenti güvenilen cihaz çerezini kabul etmiştir: süre mutlaklaştırılır, oturuma MFA zamanı yazılır, olay yazılır.
+   * Herhangi bir adım tutmazsa oturum ve yeni kayıt silinir, istek hata ile biter (fail-closed).
+   */
+  async function afterTrustedSignIn(ctx: HookCtx): Promise<void> {
+    const oldId = await requestTrustId(ctx);
+    const key = oldId === null ? null : sha256Hex(oldId);
+    const captured = key === null ? undefined : trustCaptures.get(key);
+    if (key !== null) trustCaptures.delete(key);
+    if (isAPIError((ctx.context as { returned?: unknown }).returned)) return;
+    const data = ctx.context.newSession as { session: { token: string }; user: { id: string; email: string; twoFactorEnabled?: boolean | null } } | null;
+    if (data === null || data === undefined || data.user.twoFactorEnabled !== true) return;
+    const token = data.session.token;
+    const newId = responseTrustId(ctx);
+    const fail = async (error?: unknown): Promise<never> => {
+      logMasked("error", "trusted device sign-in rejected; session revoked", error);
+      try {
+        await authDb.execute(sql`DELETE FROM public.sessions WHERE token = ${token}`);
+        if (newId !== null) await authDb.execute(sql`DELETE FROM public.verifications WHERE identifier = ${hashVerificationIdentifier(newId)}`);
+      } catch (inner) {
+        logMasked("error", "trusted device cleanup failed", inner);
+      }
+      throw new APIError("INTERNAL_SERVER_ERROR", { message: "SESSION_POLICY_FAILED", code: "SESSION_POLICY_FAILED" });
+    };
+    if (captured === undefined || captured.userId !== data.user.id || newId === null) return fail();
+    try {
+      const updated = await authDb.execute<{ id: string }>(
+        sql`UPDATE public.verifications SET expires_at = ${captured.expiresAt.toISOString()}::timestamptz, updated_at = now()
+             WHERE identifier = ${hashVerificationIdentifier(newId)} AND value = ${data.user.id} RETURNING id`,
+      );
+      if (updated.length !== 1) return fail();
+    } catch (error) {
+      return fail(error);
+    }
+    // MFA zamanı = ilk TOTP doğrulaması (kayıt bitişi − 30 gün); gelecekteki zaman yazılmaz.
+    const issued = new Date(captured.expiresAt.getTime() - TRUST_DEVICE_MAX_AGE_SEC * 1000).toISOString();
+    await sessionWriteOrRevoke(token, () =>
+      authDb.execute(sql`UPDATE public.sessions SET mfa_verified_at = LEAST(now(), ${issued}::timestamptz) WHERE token = ${token}`),
+    );
+    const source = ctx.request ?? ctx.headers;
+    await emit(SECURITY_EVENT.trustedDeviceUsed, data.user.id, source, ctx.context.options, {}, false, false, data.user.email);
+    await emit(SECURITY_EVENT.loginSucceeded, data.user.id, source, ctx.context.options, { mfa: true, trusted_device: true }, false, false, data.user.email);
+  }
+
+  const trustDeviceGuard = {
+    id: "wms-trust-device",
+    hooks: {
+      after: [
+        {
+          matcher: (context: { path?: string }) => context.path === "/sign-in/email",
+          handler: createAuthMiddleware(async (ctx) => {
+            await afterTrustedSignIn(ctx);
+          }),
+        },
+      ],
+    },
+  };
+
+  // ---------------------------------------------------------------------------------------------
   // /reset-password kancaları (T-117b; ADR-016 §9, 3.-5. tur ekleri; ADR-014 4. tur MINOR-5, A-55; T-283)
   // Kurulu Better Auth 1.7.7 `/reset-password` işleyicisi (api/routes/password.mjs:148-171) `before` kancasıyla parola
   // güncellemesini ORTAK transaction'da çalıştırmaz. Bu yüzden YÖNETİCİ belirteçleri (`adm_…`) Better Auth işleyicisine
@@ -1076,8 +1250,9 @@ export function createAuth(params: CreateAuthParams): AuthService {
                 VALUES (${target}, 'credential', ${target}::uuid, ${hashed})`,
           );
         }
-        // 4) Hedefin tüm oturumları iptal (revokeSessionsOnPasswordReset ile aynı).
+        // 4) Hedefin tüm oturumları iptal (revokeSessionsOnPasswordReset ile aynı) + güvenilen cihazları (T-923).
         await tx.execute(sql`DELETE FROM public.sessions WHERE user_id = ${target}::uuid`);
+        await tx.execute(sql`DELETE FROM public.verifications WHERE value = ${target} AND identifier LIKE ${`${TRUST_STORED_PREFIX}%`}`);
         // 5) Güvenlik olayı (aynı transaction'da; yazılamazsa hiçbir şey commit edilmez).
         const { json } = maskChangeSummary({ issuing_tenant_id: issuingTenant, tenant_verified: true });
         await tx.execute(
@@ -1160,6 +1335,7 @@ export function createAuth(params: CreateAuthParams): AuthService {
         if (updated.length === 0) return; // koşullar sağlanmıyor: etki yok
         await tx.execute(sql`DELETE FROM public.sessions WHERE user_id = ${userId}::uuid`);
         await tx.execute(sql`DELETE FROM public.two_factors WHERE user_id = ${userId}::uuid`);
+        await tx.execute(sql`DELETE FROM public.verifications WHERE value = ${userId} AND identifier LIKE ${`${TRUST_STORED_PREFIX}%`}`);
         await tx.execute(
           sql`INSERT INTO public.security_events (user_id, event_type, ip, user_agent, detail)
               VALUES (${userId}::uuid, 'account.recovered_via_email', ${ip}, ${ua}, '{}'::jsonb)`,
@@ -1238,6 +1414,8 @@ export function createAuth(params: CreateAuthParams): AuthService {
       },
       onPasswordReset: async ({ user }, request) => {
         await emit(SECURITY_EVENT.passwordReset, user.id, request, {});
+        // T-923: parola sıfırlanınca güvenilen cihazlar düşer.
+        await revokeTrustedDevices(user.id, "password_reset", request, {});
       },
     },
     ...(env.requireEmailVerification
@@ -1329,11 +1507,9 @@ export function createAuth(params: CreateAuthParams): AuthService {
             throw new APIError("FORBIDDEN", { message: "FIELD_ACCOUNT_FORBIDDEN", code: "FIELD_ACCOUNT_FORBIDDEN" });
           }
         }
-        // M4 (ADR-014 §12): "trust device" kapalı — 2FA doğrulama gövdesinde reddedilir.
-        if (
-          (ctx.path === "/two-factor/verify-totp" || ctx.path === "/two-factor/verify-backup-code" || ctx.path === "/two-factor/verify-otp") &&
-          (ctx.body as { trustDevice?: unknown } | undefined)?.trustDevice
-        ) {
+        // M4 (ADR-014 §12; T-923 eki 20 Ekim 2026): "trust device" yalnızca TOTP ve yedek kod doğrulamasında açık (30 gün, mutlak).
+        // E-posta/SMS OTP yapılandırılmadı; orada istek reddedilmeye devam eder.
+        if (ctx.path === "/two-factor/verify-otp" && (ctx.body as { trustDevice?: unknown } | undefined)?.trustDevice) {
           throw new APIError("BAD_REQUEST", { message: "TRUST_DEVICE_DISABLED", code: "TRUST_DEVICE_DISABLED" });
         }
         // M9 (A-43): demo kullanıcısı için hesap/oturum yönetimi uçları kapalı; olayda IP/UA saklanmaz.
@@ -1395,6 +1571,31 @@ export function createAuth(params: CreateAuthParams): AuthService {
           // yapabilmeli; kalan oturum güvenlik riski, eksik çıkış olayı değil). Hata maskeli loglanır.
           await emit(SECURITY_EVENT.logout, current?.user.id ?? null, ctx.request ?? ctx.headers, ctx.context.options, {}, true, false, current?.user.email ?? null);
         }
+        // T-923: "tüm cihazlardan çık" güvenilen cihazları da düşürür (oturum silinmeden ÖNCE: kullanıcı kimliği oturumdan).
+        // `/revoke-other-sessions` bu cihazın kaydını korur.
+        if (ctx.path === "/revoke-sessions" || ctx.path === "/revoke-other-sessions") {
+          const current = await getSessionFromCtx(ctx);
+          if (current !== null) {
+            const keep = ctx.path === "/revoke-other-sessions" ? await requestTrustId(ctx) : null;
+            await revokeTrustedDevices(current.user.id, ctx.path.slice(1), ctx.request ?? ctx.headers, ctx.context.options, keep);
+          }
+        }
+        if (ctx.path === "/sign-in/email") {
+          // T-923 (A-39): hassas işlem yeniden doğrulamasında güvenilen cihaz çerezi yok sayılır → iki adım (TOTP) zorunlu.
+          if (ctx.headers?.get(REAUTH_HEADER) === "1") {
+            const name = trustCookieName(ctx);
+            const cookie = ctx.headers.get("cookie") ?? "";
+            const kept = cookie
+              .split(";")
+              .map((part) => part.trim())
+              .filter((part) => part !== "" && !part.startsWith(`${name}=`))
+              .join("; ");
+            if (kept !== cookie) return { context: { headers: new Headers({ cookie: kept }) } };
+            return;
+          }
+          const trustId = await requestTrustId(ctx);
+          if (trustId !== null) await captureTrust(ctx, trustId);
+        }
       }),
       after: createAuthMiddleware(async (ctx) => {
         // better-call doğrulama (zod) hataları dahil her API hatası (MINOR-4).
@@ -1443,6 +1644,10 @@ export function createAuth(params: CreateAuthParams): AuthService {
                 authDb.execute(sql`UPDATE public.sessions SET mfa_verified_at = now() WHERE token = ${created.session.token}`),
               );
               await emit(SECURITY_EVENT.loginSucceeded, created.user.id, source, options, { mfa: true }, false, false, created.user.email);
+              // T-923: eklenti yalnız giriş ikinci adımında ve `trustDevice: true` ile güvenilen cihaz çerezi yazar.
+              if (responseTrustId(ctx) !== null) {
+                await emit(SECURITY_EVENT.trustedDeviceAdded, created.user.id, source, options, { max_age_days: TRUST_DEVICE_MAX_AGE_SEC / 86400 }, false, false, created.user.email);
+              }
             }
             return;
           }
@@ -1469,8 +1674,16 @@ export function createAuth(params: CreateAuthParams): AuthService {
             const current = fresh ?? (await getSessionFromCtx(ctx));
             if (current !== null && current !== undefined) {
               await revokeFailClosed(current.user.id, current.session.token, [current.session.token, fresh?.session.token]);
+              await revokeTrustedDevices(current.user.id, "password_changed", source, options);
             }
             await emit(SECURITY_EVENT.passwordChanged, current?.user.id ?? null, source, options);
+            return;
+          }
+          case "/two-factor/generate-backup-codes": {
+            if (failed) return;
+            // T-923: yedek kodlar yenilenince güvenilen cihazlar düşer (eski kodla güvenilmiş cihaz kalmasın).
+            const current = await getSessionFromCtx(ctx);
+            if (current !== null) await revokeTrustedDevices(current.user.id, "backup_codes_regenerated", source, options);
             return;
           }
           default:
@@ -1489,10 +1702,12 @@ export function createAuth(params: CreateAuthParams): AuthService {
             if (enabling && user.twoFactorEnabled === true) {
               // M5: 2FA etkinleştirmede tüm eski oturumlar iptal; eklenti hemen ardından yeni oturum açar.
               await revokeFailClosed(user.id, null, [await currentTokenOf(ctx)]);
+              await revokeTrustedDevices(user.id, "two_factor_enabled", ctx.request ?? ctx.headers, ctx.context.options);
               await emit(SECURITY_EVENT.twoFactorEnabled, user.id, ctx.request ?? ctx.headers, ctx.context.options);
             } else if (ctx.path === "/two-factor/disable" && user.twoFactorEnabled === false) {
               // M5: devre dışı bırakmada tüm eski oturumlar iptal; yeni oturum eklentinin ardından açılır.
               await revokeFailClosed(user.id, null, [await currentTokenOf(ctx)]);
+              await revokeTrustedDevices(user.id, "two_factor_disabled", ctx.request ?? ctx.headers, ctx.context.options);
               await emit(SECURITY_EVENT.twoFactorDisabled, user.id, ctx.request ?? ctx.headers, ctx.context.options);
             }
           },
@@ -1505,6 +1720,8 @@ export function createAuth(params: CreateAuthParams): AuthService {
         // TOTP gizi her durumda şifreli (totp/index.mjs → symmetricEncrypt); yedek kodlar da şifreli saklanır.
         backupCodeOptions: { storeBackupCodes: "encrypted" },
         accountLockout: TWO_FACTOR_LOCKOUT,
+        // T-923: güvenilen cihaz 30 gün; kayan uzatma `trustDeviceGuard` kancasında geri alınır (mutlak süre).
+        trustDeviceMaxAge: TRUST_DEVICE_MAX_AGE_SEC,
       }),
       // T-997: saha girişi (çalışma alanı + kullanıcı adı + PIN, yalnız kayıtlı cihaz). Oturumu iç bağdaştırıcıyla açar.
       fieldLoginPlugin({
@@ -1519,6 +1736,8 @@ export function createAuth(params: CreateAuthParams): AuthService {
         secureCookies: new URL(env.baseUrl).protocol === "https:",
         log: (message, error) => logMasked("error", message, error),
       }),
+      // T-923: iki adım eklentisinden SONRA (onun `/sign-in/email` kancasının kararını görür).
+      trustDeviceGuard,
       // Her zaman SON eklenti (cookie-plugin-guard.mjs uyarısı).
       nextCookies(),
     ],
@@ -1536,6 +1755,19 @@ export function createAuth(params: CreateAuthParams): AuthService {
     );
     const age = Number(rows[0]?.age);
     if (!Number.isFinite(age) || age > maxAgeSec) throw new AuthError("REAUTH_REQUIRED");
+    // T-923: 2FA'lı kullanıcıda ikinci etken de pencere içinde doğrulanmış olmalı. Güvenilen cihazla açılan oturumun
+    // `mfa_verified_at`'ı ilk TOTP zamanıdır → yeni parola girişi tek başına hassas işlemi açmaz (TOTP yeniden istenir).
+    if (principal.twoFactorEnabled === true) {
+      const mfa = await masked(() =>
+        authDb.execute<{ age: string | number | null }>(
+          sql`SELECT EXTRACT(EPOCH FROM (now() - mfa_verified_at)) AS age FROM public.sessions
+               WHERE id = ${principal.sessionId}::uuid AND user_id = ${principal.userId}::uuid`,
+        ),
+      );
+      const raw = mfa[0]?.age;
+      const mfaAge = raw === null || raw === undefined ? Number.NaN : Number(raw);
+      if (!Number.isFinite(mfaAge) || mfaAge > maxAgeSec) throw new AuthError("REAUTH_REQUIRED");
+    }
   }
 
   /** Davet ve aktivasyon hesap açmanın ortak bağımlılıkları (kullanıcı + parola hesabı tek transaction'da). */
@@ -1731,6 +1963,8 @@ export function createAuth(params: CreateAuthParams): AuthService {
       await masked(async () => {
         const context = await auth.$context;
         await context.internalAdapter.deleteUserSessions(userId);
+        // T-923: "tüm cihazlardan çık" güvenilen cihazları da düşürür.
+        await revokeTrustedDevices(userId, "sessions_revoked", undefined, undefined);
       });
     },
 
