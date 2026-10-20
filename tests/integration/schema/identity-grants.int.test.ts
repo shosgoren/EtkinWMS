@@ -105,10 +105,12 @@ describe(`identity grants (target=${env.target})`, () => {
     await expectDenied(app, `INSERT INTO public.users (name, email) VALUES ('a', 'a@example.invalid')`);
   });
 
-  it("wms_app: security_events yalniz INSERT+SELECT; UPDATE/DELETE/TRUNCATE yetki hatasi", async () => {
+  it("wms_app: security_events yalniz INSERT + SELECT(id) (T-919, 0053); icerik okuma, UPDATE/DELETE/TRUNCATE yetki hatasi", async () => {
     const app = await open(env.databaseUrl);
     await expectAllowed(app, `INSERT INTO public.security_events (event_type) VALUES ('t102.test')`);
-    await expectAllowed(app, "SELECT id, occurred_at, created_xid FROM public.security_events");
+    await expectAllowed(app, "SELECT id FROM public.security_events");
+    await expectDenied(app, "SELECT id, occurred_at, created_xid FROM public.security_events");
+    await expectDenied(app, "SELECT user_id, ip, detail FROM public.security_events");
     await expectDenied(app, `UPDATE public.security_events SET event_type = 'x'`);
     await expectDenied(app, "DELETE FROM public.security_events");
     await expectDenied(app, "TRUNCATE public.security_events");

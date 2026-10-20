@@ -832,6 +832,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.active_tenant_ids", // T-211 migration 0014: yalnızca ACTIVE tenant kimlikleri, yalnızca wms_worker EXECUTE (ADR-019 §1)
     "wms_probe.admin_reset_cleanup_on_membership", // T-103 üyelik tetikleyici işlevi (ADR-016 Sonuçlar)
     "wms_probe.consume_admin_reset_grant",
+    "wms_probe.credentials_changed_since", // T-919 migration 0053: MFA kefaleti için yalnız evet/hayır (geçerli tenant üyesi; bağlam yoksa true), security_events içeriği dönmez, yalnızca wms_app
     "wms_probe.field_activate", // T-997 migration 0044: saha etkinleştirme (kod tek kullanım + PIN özeti + kişisel cihaz) + security_events, yalnızca wms_auth
     "wms_probe.field_admin_reset", // T-997 migration 0044: yönetici kod yenileme/kilit açma (tenant bağlamı zorunlu) + security_events, yalnızca wms_app
     "wms_probe.field_device_revoke", // T-998 migration 0045: yönetici cihaz iptali + security_events (tenant bağlamı zorunlu), yalnızca wms_app
@@ -971,6 +972,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.field_join_request": [AUTH_ROLE],
       "wms_probe.field_join_status": [AUTH_ROLE],
       "wms_probe.field_join_verify": [APP_ROLE],
+      "wms_probe.credentials_changed_since": [APP_ROLE],
       "wms_probe.field_lock_spree_check": [AUTH_ROLE],
     };
     for (const [k, grantees] of Object.entries(expected)) {
@@ -1014,7 +1016,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
 // ---------------------------------------------------------------------------------------------
 describe("T-102 ek — security_events append-only + sunucu alanları (AC etiketsiz)", () => {
   const INSERT_APP = `INSERT INTO public.security_events (event_type, detail) VALUES ('t104.probe', '{}'::jsonb)
-                      RETURNING created_xid::text AS created_xid, pg_current_xact_id()::text AS xid, occurred_at, now() AS now`;
+                      RETURNING id, pg_current_xact_id()::text AS xid, now() AS now`;
 
   it("security_events: wms_app açık created_xid / occurred_at / id yazamaz (42501)", async () => {
     for (const col of ["created_xid", "occurred_at", "id"]) {
@@ -1026,13 +1028,31 @@ describe("T-102 ek — security_events append-only + sunucu alanları (AC etiket
   });
 
   it("security_events: wms_app normal INSERT'te created_xid = geçerli transaction, occurred_at = now()", async () => {
-    const r = await attempt(appClient, [], INSERT_APP);
-    expect(r.ok, fmt(r)).toBe(true);
-    if (r.ok) {
-      const row = r.rows[0] as { created_xid: string; xid: string; occurred_at: Date; now: Date };
-      expect(row.created_xid).toBe(row.xid);
-      expect(row.occurred_at.getTime()).toBe(row.now.getTime());
+    // T-919 (0053): wms_app yalnız `id` okur; sunucu alanları yönetici bağlantısından, işlenmiş satırdan doğrulanır.
+    await appClient.query("BEGIN");
+    let ins: { id: string; xid: string; now: Date } | undefined;
+    try {
+      ins = (await appClient.query<{ id: string; xid: string; now: Date }>(INSERT_APP)).rows[0];
+      await appClient.query("COMMIT");
+    } catch (e) {
+      await appClient.query("ROLLBACK");
+      throw e;
     }
+    expect(ins, "INSERT ... RETURNING id").toBeDefined();
+    const row = (await admin.query<{ created_xid: string; occurred_at: Date }>(
+      "SELECT created_xid::text AS created_xid, occurred_at FROM public.security_events WHERE id = $1", [ins?.id],
+    )).rows[0];
+    expect(row?.created_xid).toBe(ins?.xid);
+    expect(row?.occurred_at.getTime()).toBe(ins?.now.getTime());
+  });
+
+  it("security_events: wms_app içerik okuyamaz, yalnız id (T-919, 0053)", async () => {
+    for (const col of ["user_id", "event_type", "ip", "user_agent", "detail", "occurred_at", "created_xid"]) {
+      const r = await attempt(appClient, [], `SELECT ${col} FROM public.security_events LIMIT 1`);
+      expect(r.ok, `${col}: ${fmt(r)}`).toBe(false);
+      if (!r.ok) expect(r.code, r.message).toBe(INSUFFICIENT_PRIVILEGE);
+    }
+    expect((await attempt(appClient, [], "SELECT id FROM public.security_events LIMIT 1")).ok).toBe(true);
   });
 
   it("security_events: yetkili rol (migration) sahte created_xid / occurred_at verse bile tetikleyici sunucu değerine zorlar", async () => {

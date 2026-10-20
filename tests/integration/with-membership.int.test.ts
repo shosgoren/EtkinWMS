@@ -1569,6 +1569,7 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
     expect(r.funcs.map((f) => f.proname)).toEqual([
       "active_tenant_ids", // T-211 migration 0014 (yalnız ACTIVE tenant kimlikleri; yalnızca wms_worker EXECUTE; ADR-019 §1)
       "admin_reset_cleanup_on_membership", "consume_admin_reset_grant",
+      "credentials_changed_since", // T-919 migration 0053: MFA kefaleti evet/hayır (security_events içeriği dönmez), yalnızca wms_app
       "field_activate", "field_admin_reset", "field_device_revoke", "field_device_staff", "field_device_status", "field_enroll_approve",
       "field_enroll_claim", "field_join_activate", "field_join_link", "field_join_request", "field_join_status", "field_join_verify", // T-429 0052: katılma
       "field_lock_spree_check", "field_signin_begin", "field_signin_finish", // T-997 0044: saha girişi; T-998 0045: ortak cihaz

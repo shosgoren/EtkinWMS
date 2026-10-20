@@ -245,4 +245,7 @@ export const teamJoinRequests = pgTable("team_join_requests", {
   decidedAt: timestamptz("decided_at"),
   membershipId: uuid("membership_id"),
   claimedAt: timestamptz("claimed_at"),
+  // T-919 (0053): onay kodu doğrulama damgası; yalnız wms_probe.field_join_verify yazar, onay tetikleyicisi okur.
+  codeVerifiedBy: uuid("code_verified_by"),
+  codeVerifiedAt: timestamptz("code_verified_at"),
 });
