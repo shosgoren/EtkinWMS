@@ -58,6 +58,20 @@ async function expectFocusRing(page: Page, rawField: Locator, name: string): Pro
   expect(await computed(field, "outline-style"), `${name}: outline-style`).toBe("solid");
 }
 
+/** T-974 (B-63 grup B): kalıp penceresindeki alan kaynağın `.fld` kutusundadır (kenarlık yok); klavye odağında kutu halkası görünür. */
+async function expectKalipField(page: Page, rawField: Locator, name: string, focus = true): Promise<void> {
+  const field = rawField.filter({ visible: true });
+  await expect(field, `${name}: tek görünür alan`).toHaveCount(1);
+  await expect(field.locator("xpath=ancestor::label[contains(concat(' ', @class, ' '), ' fld ')]"), `${name}: kalıp alanı (.fld)`).toHaveCount(1);
+  if (!focus) return;
+  await field.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(field, `${name}: odakta`).toBeFocused();
+  const ring = await field.evaluate((el) => getComputedStyle(el.closest(".fld") as Element).boxShadow);
+  expect(ring, `${name}: odak halkası`).not.toBe("none");
+}
+
 // Tek test, tek demo girişi: demo girişi hız sınırlıdır (kombinasyon başına giriş "Çok fazla deneme" döndürür).
 test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
   await page.goto("/");
@@ -122,8 +136,8 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           const dialog = page.getByRole("dialog");
           await expect(dialog).toBeVisible();
           const email = dialog.getByLabel("E-posta");
-          await expectBorderStrong(page, email, "davet: e-posta");
-          await expectFocusRing(page, email, "davet: e-posta");
+          await expectKalipField(page, email, "davet: e-posta"); // T-974: kalıp penceresi
+
           await expectNoHorizontalOverflow(page, "davet penceresi");
           await shot("members-invite");
           await dialog.getByRole("button", { name: "Kapat" }).click();
@@ -172,9 +186,9 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await page.getByRole("button", { name: "Yeni depo" }).click();
           const whDialog = page.getByRole("dialog");
           await expect(whDialog).toBeVisible();
-          await expectBorderStrong(page, whDialog.locator('input[name="code"]'), "depo oluştur: kod");
-          await expectBorderStrong(page, whDialog.locator('input[name="name"]'), "depo oluştur: ad");
-          await expectFocusRing(page, whDialog.locator('input[name="name"]'), "depo oluştur: ad");
+          // T-974: kalıp penceresi alanları (`.fld`).
+          await expectKalipField(page, whDialog.locator('input[name="code"]'), "depo oluştur: kod", false);
+          await expectKalipField(page, whDialog.locator('input[name="name"]'), "depo oluştur: ad");
           await expectNoHorizontalOverflow(page, "depo oluştur penceresi");
           await shot("warehouses-create");
           await page.keyboard.press("Escape");
@@ -189,7 +203,7 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
             await shot("location-tree");
             await page.getByRole("button", { name: "Lokasyon ekle", exact: true }).click();
             const locDialog = page.getByRole("dialog");
-            await expectBorderStrong(page, locDialog.locator("#create-kind"), "lokasyon oluştur: tür");
+            await expectKalipField(page, locDialog.locator("#create-kind"), "lokasyon oluştur: tür", false); // T-974
             await expectNoHorizontalOverflow(page, "lokasyon oluştur penceresi");
             await page.keyboard.press("Escape");
             await expect(locDialog).toBeHidden();
