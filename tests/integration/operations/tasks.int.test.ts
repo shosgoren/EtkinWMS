@@ -306,4 +306,61 @@ describe("görev sorguları", () => {
     expect((await listTasks(admin(w), { after: lowest })).items.length).toBeGreaterThan(0); // her görev bu imleçten sonradır; DB sorgusu hata vermez
     expect((await listMyTasks(picker(w), { after: lowest })).items).toBeDefined();
   });
+
+  it("T-978: listMyTasks tür/durum süzgeci + arama (ürün kodu/adı, raf kodu/adı); listTasks atanan kişi adıyla arar; desen kaçışlı; kapsam ve tenant korunur", async () => {
+    const w = await seedWorld(adm, reg, "S978");
+    const other = await seedWorld(adm, reg, "S978B");
+    const [pickItem, putLoc, plain, countTask] = await runTenantCommand({ ...admin(w), permission: "stock.post" }, (tx, m) =>
+      createTasks(tx, m, [
+        { warehouseId: w.warehouseId, kind: "PICK", itemId: w.itemTwoId, quantity: "3" },
+        { warehouseId: w.warehouseId, kind: "PUTAWAY", locationId: w.childLocationId },
+        { warehouseId: w.warehouseId, kind: "PICK" },
+        { warehouseId: w.warehouseId, kind: "COUNT", locationId: w.childLocationId },
+      ]),
+    );
+    // Aynı ürün koduyla (U2) B tenant'ında görev: A'nın aramasında görünmez.
+    const [foreign] = await runTenantCommand({ ...admin(other), permission: "stock.post" }, (tx, m) =>
+      createTasks(tx, m, [{ warehouseId: other.warehouseId, kind: "PICK", itemId: other.itemTwoId, quantity: "1" }]),
+    );
+    await assignTask(admin(w), { taskId: plain as string, membershipId: w.memberMembershipId, expectedVersion: 1 });
+    const my = async (input: Parameters<typeof listMyTasks>[1]) => (await listMyTasks(picker(w), { limit: 200, ...input })).items.map((t) => t.id);
+
+    // Tür ve durum çipleri.
+    const picks = await my({ kind: "PICK" });
+    expect(picks).toContain(pickItem);
+    expect(picks).toContain(plain);
+    expect(picks).not.toContain(putLoc);
+    expect(await my({ status: "ASSIGNED" })).toEqual([plain]);
+    const open = await my({ status: "OPEN" });
+    expect(open).toContain(pickItem);
+    expect(open).not.toContain(plain);
+    expect(await my({ kind: "PICK", status: "ASSIGNED" })).toEqual([plain]);
+    // Arama: ürün kodu (büyük/küçük harf duyarsız), ürün adı, raf kodu, raf adı.
+    expect(await my({ q: "u2" })).toEqual([pickItem]);
+    expect(await my({ q: "Urun 2" })).toEqual([pickItem]);
+    expect(await my({ q: "z1-r1" })).toEqual([putLoc]);
+    expect(await my({ q: "raf 1", kind: "PUTAWAY" })).toEqual([putLoc]);
+    // COUNT izni olmayan PICKER rafla eşleşen sayım görevini görmez (izin süzgeci aramadan önce).
+    expect(await my({ q: "Z1-R1" })).not.toContain(countTask);
+    // LIKE joker karakterleri kaçışlı: "%" ve "_" tek başına her şeyi eşlemez; boş/boşluk süzgeç değildir.
+    expect(await my({ q: "%" })).toEqual([]);
+    expect(await my({ q: "_" })).toEqual([]);
+    expect((await my({ q: "   " })).length).toBeGreaterThanOrEqual(3);
+    expect(await my({ q: "yok-boyle-bir-sey" })).toEqual([]);
+    // Geçersiz tür/durum VALIDATION_FAILED.
+    expect((await failure(listMyTasks(picker(w), { kind: "XX" as TaskKind }))).code).toBe("VALIDATION_FAILED");
+    expect((await failure(listMyTasks(picker(w), { status: "NOPE" as ops.TaskStatus }))).code).toBe("VALIDATION_FAILED");
+    expect((await failure(listMyTasks(picker(w), { q: 5 as unknown as string }))).code).toBe("VALIDATION_FAILED");
+
+    // Yönetici listesi: atanan kişinin adıyla arama + ürün araması; B tenant'ı görünmez.
+    const memberName = (await adm.query<{ name: string }>("SELECT name FROM public.users WHERE id = $1", [w.memberUserId])).rows[0]?.name as string;
+    const byName = (await listTasks(admin(w), { q: memberName, limit: 200 })).items.map((t) => t.id);
+    expect(byName).toContain(plain);
+    expect(byName).not.toContain(pickItem);
+    const byItem = (await listTasks(admin(w), { q: "U2", limit: 200 })).items.map((t) => t.id);
+    expect(byItem).toEqual([pickItem]);
+    expect(byItem).not.toContain(foreign);
+    expect((await listTasks(admin(w), { q: "U2", kind: "PUTAWAY" })).items).toEqual([]);
+    expect((await listTasks(admin(other), { q: "U2" })).items.map((t) => t.id)).toEqual([foreign]);
+  });
 });

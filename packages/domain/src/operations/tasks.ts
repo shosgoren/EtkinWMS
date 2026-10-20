@@ -409,8 +409,46 @@ function page(rows: readonly TaskDbRow[], limit: number): TaskPage {
 }
 
 export interface ListMyTasksInput {
+  /** T-978: tür süzgeci (çip). */
+  readonly kind?: TaskKind;
+  /** T-978: durum süzgeci — OPEN (üstlenilebilir) ya da ASSIGNED (bana atanmış); diğer durumlar bu listede yoktur. */
+  readonly status?: TaskStatus;
+  /** T-978: ürün kodu/adı ya da raf kodu/adı içinde arama (ILIKE; en çok 100 karakter). */
+  readonly q?: string;
   readonly after?: TaskCursor;
   readonly limit?: number;
+}
+
+const SEARCH_MAX = 100;
+const SEARCH_CONTROL_RE = /\p{C}/gu;
+
+/** T-978: arama metni → ILIKE deseni (`%`, `_`, `\\` kaçışlı); boşsa `null`. */
+function taskSearchPattern(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "string") throw new AppError("VALIDATION_FAILED");
+  const q = raw.replace(SEARCH_CONTROL_RE, " ").trim().slice(0, SEARCH_MAX);
+  return q === "" ? null : `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
+/** Görevin ürünü (kod/ad) ya da rafı (kod/ad) desene uyar; isteğe bağlı olarak atanan kişinin adı. RLS + tenant koşulu alt sorgularda da geçerli. */
+function searchSql(like: string | null, withAssignee: boolean) {
+  if (like === null) return sql``;
+  const assignee = withAssignee
+    ? sql` OR EXISTS (SELECT 1 FROM public.tenant_memberships tm JOIN public.users u ON u.id = tm.user_id
+                       WHERE tm.tenant_id = warehouse_tasks.tenant_id AND tm.id = warehouse_tasks.assigned_membership_id AND u.name ILIKE ${like})`
+    : sql``;
+  return sql`AND (   EXISTS (SELECT 1 FROM public.items i
+                         WHERE i.tenant_id = warehouse_tasks.tenant_id AND i.id = warehouse_tasks.item_id AND (i.code ILIKE ${like} OR i.name ILIKE ${like}))
+                  OR EXISTS (SELECT 1 FROM public.locations l
+                         WHERE l.tenant_id = warehouse_tasks.tenant_id AND l.id = warehouse_tasks.location_id AND (l.code ILIKE ${like} OR l.name ILIKE ${like}))${assignee})`;
+}
+
+function kindStatusOf(input: { readonly kind?: TaskKind; readonly status?: TaskStatus }): { kind: TaskKind | null; status: TaskStatus | null } {
+  const kind = input.kind ?? null;
+  const status = input.status ?? null;
+  if (kind !== null && !(TASK_KINDS as readonly string[]).includes(kind)) throw new AppError("VALIDATION_FAILED");
+  if (status !== null && !(TASK_STATUSES as readonly string[]).includes(status)) throw new AppError("VALIDATION_FAILED");
+  return { kind, status };
 }
 
 /**
@@ -420,6 +458,8 @@ export interface ListMyTasksInput {
 export async function listMyTasks(params: TaskCallParams, input: ListMyTasksInput = {}): Promise<TaskPage> {
   const limit = limitOf(input.limit);
   const cur = cursorOf(input.after);
+  const { kind, status } = kindStatusOf(input);
+  const like = taskSearchPattern(input.q);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
     const kinds = TASK_KINDS.filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k], m.grants));
@@ -429,7 +469,10 @@ export async function listMyTasks(params: TaskCallParams, input: ListMyTasksInpu
            WHERE tenant_id = ${m.tenantId}::uuid
              AND (   (status = 'ASSIGNED' AND assigned_membership_id = ${m.membershipId}::uuid)
                   OR (status = 'OPEN' AND kind = ANY(${`{${kinds.join(",")}}`}::text[])))
+             AND (${kind}::text IS NULL OR kind = ${kind}::text)
+             AND (${status}::text IS NULL OR status = ${status}::text)
              AND (${scope === null}::boolean OR warehouse_id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))
+             ${searchSql(like, false)}
              AND (${cur === null}::boolean OR (created_at, id) > (${cur?.key ?? "1970-01-01T00:00:00.000000Z"}::timestamptz, ${cur?.id ?? "00000000-0000-0000-0000-000000000000"}::uuid))
            ORDER BY created_at, id
            LIMIT ${limit + 1}`,
@@ -442,6 +485,8 @@ export interface ListTasksInput {
   readonly kind?: TaskKind;
   readonly status?: TaskStatus;
   readonly warehouseId?: string;
+  /** T-978: ürün kodu/adı, raf kodu/adı ya da atanan kişinin adı içinde arama. */
+  readonly q?: string;
   readonly after?: TaskCursor;
   readonly limit?: number;
 }
@@ -450,10 +495,8 @@ export interface ListTasksInput {
 export async function listTasks(params: TaskCallParams, input: ListTasksInput = {}): Promise<TaskPage> {
   const limit = limitOf(input.limit);
   const cur = cursorOf(input.after);
-  const kind = input.kind ?? null;
-  const status = input.status ?? null;
-  if (kind !== null && !(TASK_KINDS as readonly string[]).includes(kind)) throw new AppError("VALIDATION_FAILED");
-  if (status !== null && !(TASK_STATUSES as readonly string[]).includes(status)) throw new AppError("VALIDATION_FAILED");
+  const { kind, status } = kindStatusOf(input);
+  const like = taskSearchPattern(input.q);
   const warehouseId = input.warehouseId === undefined ? null : uuid(input.warehouseId);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
@@ -465,6 +508,7 @@ export async function listTasks(params: TaskCallParams, input: ListTasksInput = 
              AND (${status}::text IS NULL OR status = ${status}::text)
              AND (${warehouseId}::uuid IS NULL OR warehouse_id = ${warehouseId}::uuid)
              AND (${scope === null}::boolean OR warehouse_id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))
+             ${searchSql(like, true)}
              AND (${cur === null}::boolean OR (created_at, id) > (${cur?.key ?? "1970-01-01T00:00:00.000000Z"}::timestamptz, ${cur?.id ?? "00000000-0000-0000-0000-000000000000"}::uuid))
            ORDER BY created_at, id
            LIMIT ${limit + 1}`,

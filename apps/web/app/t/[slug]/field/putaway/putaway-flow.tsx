@@ -424,7 +424,7 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
             <span className="autosel">{ts("qty.okProduct")}</span>
           </div>
         ) : null}
-        <ScanPanel service={scanner} prompt={busy ? t("flow.checking") : t(stage === "item" ? "putaway.itemPrompt" : stage === "source" ? "putaway.sourcePrompt" : "putaway.targetPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="teal" />
+        <ScanPanel variant="kalip" service={scanner} prompt={busy ? t("flow.checking") : t(stage === "item" ? "putaway.itemPrompt" : stage === "source" ? "putaway.sourcePrompt" : "putaway.targetPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="teal" />
       </SahaShell>
       {alertView}
     </>

@@ -44,7 +44,9 @@ async function LockedWarehouses({ slug }: { slug: string }) {
 // zorunlu MFA → kurulum; oturum yok → giriş. Yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda `settings.manage` ister).
 export default async function WarehousesPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
-  const after = first((await searchParams).after);
+  const sp = await searchParams;
+  const after = first(sp.after);
+  const q = (first(sp.q) ?? "").trim().slice(0, 100);
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   const returnTo = `/t/${encodeURIComponent(slug)}/warehouses`;
@@ -60,7 +62,7 @@ export default async function WarehousesPage({ params, searchParams }: { params:
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
-    const page = await listWarehouses(call, { includeArchived: true, limit: PAGE_SIZE, ...(after === undefined || after === "" ? {} : { afterCode: after }) });
+    const page = await listWarehouses(call, { includeArchived: true, limit: PAGE_SIZE, q, ...(after === undefined || after === "" ? {} : { afterCode: after }) });
     nextAfter = page.nextAfterCode;
     // Sayfa en çok PAGE_SIZE (50) depo döndürür → toplu sayım sınırı (100) içinde; boş sayfada sorgu yapılmaz.
     const counts = page.items.length === 0 ? new Map<string, number>() : await countLocationsByWarehouse(call, { warehouseIds: page.items.map((w) => w.id) });
@@ -79,7 +81,7 @@ export default async function WarehousesPage({ params, searchParams }: { params:
 
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} />
+      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} />
     </main>
   );
 }

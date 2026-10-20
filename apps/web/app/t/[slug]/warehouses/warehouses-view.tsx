@@ -3,8 +3,8 @@
 // eylemler sunucuda `settings.manage` ister. Kod normalleştirmesi (A-98) istemcide YOK: sunucunun döndürdüğü kod gösterilir.
 // Mobilde kart görünümü (tablo yok → yatay taşma yok). Sunucu reddi neden + sonraki eylemle gösterilir.
 // T-971 (B-63): LİSTE kalıbı (KalipListe.dc.html). Kart `.uc` bağlantısı "Lokasyonları aç"; kartın altında küçük `.btn` eylem satırı
-// (kod değiştir / arşivle — `<a>` içine düğme gömülmez). Bilinçli farklar: arama/süzgeç çipi yok (depo listesinde sunucu araması yok);
-// rozet = aktif lokasyon sayısı (sunucu sayımı); bildirimler kalıp balonunda (toast).
+// (kod değiştir / arşivle — `<a>` içine düğme gömülmez). T-978: arama (`.lsearch`, GET `q`: kod/ad, sunucuda listWarehouses). Bilinçli
+// farklar: süzgeç çipi yok (yalnız aktif/arşivli; kart rozeti gösterir); rozet = aktif lokasyon sayısı (sunucu sayımı); bildirimler kalıp balonunda (toast).
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +15,7 @@ import { Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../code-edit-dialog.tsx";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
-import { KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
 import { KalipOnay, KalipPencereAlan, KalipPencereDugme, KalipPencereSecim } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { archiveWarehouseAction, createWarehouseAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
@@ -278,6 +278,7 @@ export function WarehousesView({
   warehouses,
   nextAfter,
   firstPage,
+  q = "",
 }: {
   slug: string;
   dark: boolean;
@@ -286,6 +287,8 @@ export function WarehousesView({
   /** Sonraki sayfa imleci (son görülen kod); yoksa `null`. */
   nextAfter: string | null;
   firstPage: boolean;
+  /** T-978: sunucu araması (kod/ad); boş = tümü. */
+  q?: string;
 }) {
   const t = useTranslations("warehouses");
   const tk = useTranslations("warehouses.k");
@@ -384,7 +387,7 @@ export function WarehousesView({
   });
   const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
   const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
-  const showSetup = guide && warehouses.length === 0 && firstPage;
+  const showSetup = guide && warehouses.length === 0 && firstPage && q === "";
   const countLbl = nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
   const lockedId = "warehouse-locked";
 
@@ -419,8 +422,11 @@ export function WarehousesView({
           </KalipDaha>
         ) : null}
 
+        {showSetup ? null : <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={base} defaultValue={q} />}
         {showSetup ? (
           <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} testId="setup-guide" />
+        ) : warehouses.length === 0 && q !== "" ? (
+          <KalipBos title={t("noMatch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: base }} />
         ) : warehouses.length === 0 ? (
           <KalipBos title={t("empty")} hint={canManage ? t("emptyAction") : t("emptyReadOnly")} iconD={LICON.depo} />
         ) : (
@@ -492,12 +498,12 @@ export function WarehousesView({
         {firstPage && nextAfter === null ? null : (
           <nav aria-label={t("paging")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {firstPage ? null : (
-              <KalipDaha href={base} iconD={LICON.chev}>
+              <KalipDaha href={q === "" ? base : `${base}?q=${encodeURIComponent(q)}`} iconD={LICON.chev}>
                 {t("firstPage")}
               </KalipDaha>
             )}
             {nextAfter === null ? null : (
-              <KalipDaha href={`${base}?after=${encodeURIComponent(nextAfter)}`} iconD={LICON.plus}>
+              <KalipDaha href={`${base}?${q === "" ? "" : `q=${encodeURIComponent(q)}&`}after=${encodeURIComponent(nextAfter)}`} iconD={LICON.plus}>
                 {t("more")}
               </KalipDaha>
             )}

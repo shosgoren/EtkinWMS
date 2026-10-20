@@ -4,7 +4,8 @@
 // neden ayrıştırılmadan gösterilir (2. tur m6). Üye ve bekleyen davet kartları `.uc` görünümündedir; kart bağlantı değildir (içinde rol
 // seçimi, Çıkar, sahiplik devri, sıfırlama bağlantısı, saha kodu, kilit açma, depoları düzenle düğmeleri — `<a>` içine düğme gömülmez).
 // Ana işlem ortak alt çubukta "Davet et" (InviteDialog; yetki yoksa ya da hidrasyon bitmeden kapalı, T-247). Saha personeli / Cihazlar
-// `.more` satırı. Bilinçli farklar (DESIGN-PARITY, T-971): arama / süzgeç çipi yok (üye listesi sayfalanmaz, sunucu araması yok); işlem
+// `.more` satırı. T-978: arama (`.lsearch`, GET `q`: ad; yöneticide e-posta/kullanıcı adı — sunucuda listMembers). Bilinçli farklar
+// (DESIGN-PARITY, T-971): süzgeç çipi yok (üye listesi sayfalanmaz); işlem
 // sonucu bildirimi balon (`.toast`), hata kutusu ve tek seferlik bağlantı kutusu mevcut bileşenlerle.
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -12,7 +13,7 @@ import { useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
-import { KalipBos, KalipDaha, KalipKartListe } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipDaha, KalipKartListe } from "../kalip/liste.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import {
@@ -101,6 +102,7 @@ export function MembersView({
   roleKeys,
   warehouses = [],
   scopeEnabled = false,
+  q = "",
 }: {
   slug: string;
   dark: boolean;
@@ -113,6 +115,8 @@ export function MembersView({
   warehouses?: readonly WarehouseOption[];
   /** `WAREHOUSE_SCOPE_ENABLED`: kapalıysa kısıt kaydedilir ama uygulanmaz; ekran bunu söyler. */
   scopeEnabled?: boolean;
+  /** T-978: sunucu araması; boş = tümü. */
+  q?: string;
 }) {
   const t = useTranslations("members");
   const tr = useTranslations("roles");
@@ -292,8 +296,11 @@ export function MembersView({
           <LinkBox title={`${t("linkBox.resetTitle")} · ${resetLink.name}`} link={resetLink.link} warning={t("linkBox.resetWarning")} onDismiss={() => setResetLink(null)} />
         ) : null}
 
+        <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={`/t/${slug}/members`} defaultValue={q} />
         <KalipBaslik title={t("k.count", { n: members.length })} hint={t("intro")} />
-        {members.length === 0 ? (
+        {members.length === 0 && q !== "" ? (
+          <KalipBos title={t("noMatch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: `/t/${slug}/members` }} />
+        ) : members.length === 0 ? (
           <KalipBos title={t("empty")} hint={t("emptyAction")} iconD={LICON.people} />
         ) : (
           <KalipKartListe label={t("membersList")}>

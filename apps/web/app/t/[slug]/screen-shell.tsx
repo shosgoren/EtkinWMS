@@ -56,6 +56,3 @@ export function FormSteps({ labels }: { labels: readonly string[] }) {
   const t = useTranslations("shell.screen");
   return <ol className="workflow-steps" aria-label={t("steps")}>{labels.map((label, index) => <li key={label}><span aria-hidden="true">{index + 1}</span>{label}</li>)}</ol>;
 }
-export function FormSection({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="workflow-section"><h3 className="workflow-section-title"><FileText className="size-5 shrink-0" aria-hidden="true"/>{title}</h3>{children}</section>;
-}

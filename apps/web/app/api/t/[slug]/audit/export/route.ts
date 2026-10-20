@@ -17,8 +17,8 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const guard = createProductionRouteGuard();
 
 function filtersOf(url: URL): AuditFilters {
-  const f: { from?: string; to?: string; action?: string } = {};
-  for (const k of ["from", "to", "action"] as const) {
+  const f: { from?: string; to?: string; action?: string; q?: string } = {};
+  for (const k of ["from", "to", "action", "q"] as const) {
     const v = url.searchParams.get(k);
     if (v !== null && v !== "") f[k] = v;
   }

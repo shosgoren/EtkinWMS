@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Keyboard, ScanLine } from "lucide-react";
 import type { FieldError } from "./controls.tsx";
 
@@ -18,13 +18,20 @@ export interface ScanFieldProps {
   error?: FieldError;
   /** Elle girilen değer; çağıran bunu `source: "manual"` olarak işaretler (tarama sayılmaz). */
   onManualSubmit: (value: string) => void;
+  /**
+   * T-978: `kalip` = ekran kalıbı görünümü (KalipSaha/KalipForm kabının belirteçleriyle; koyu tema kabın `dz-dark` sınıfından). Sınıflar
+   * uygulamanın `design/kalip-frame.css` dosyasındadır (`.kscan*`); DOM, roller ve `data-mode` varsayılanla aynıdır. Varsayılan eski görünüm.
+   */
+  variant?: "default" | "kalip";
+  /** Kalıp görünümünde "Elle gir" düğmesinin ikonu (uygulama tasarım kaynağından verir); verilmezse klavye ikonu. */
+  manualIcon?: ReactNode;
 }
 
 const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const BTN = `inline-flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-control px-4 text-base font-bold ${FOCUS}`;
 
 /** Tarama alanı: varsayılan salt okunur + `inputmode="none"` (sanal klavye açılmaz); elle yazım ayrı düğmeyle. */
-export function ScanField({ label, value, manualLabel, confirmLabel, cancelLabel, placeholder, error, onManualSubmit }: ScanFieldProps) {
+export function ScanField({ label, value, manualLabel, confirmLabel, cancelLabel, placeholder, error, onManualSubmit, variant = "default", manualIcon }: ScanFieldProps) {
   const id = useId();
   const errId = `${id}-err`;
   const [manual, setManual] = useState(false);
@@ -37,6 +44,61 @@ export function ScanField({ label, value, manualLabel, confirmLabel, cancelLabel
     setDraft("");
     setManual(false);
   };
+
+  if (variant === "kalip") {
+    const input = manual ? (
+      <input
+        id={id}
+        type="text"
+        inputMode="text"
+        autoFocus
+        autoComplete="off"
+        value={draft}
+        placeholder={placeholder}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errId : undefined}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        className="kscani"
+      />
+    ) : (
+      <input id={id} type="text" inputMode="none" readOnly autoComplete="off" value={value} placeholder={placeholder} aria-invalid={error ? true : undefined} aria-describedby={error ? errId : undefined} className="kscani mono" />
+    );
+    return (
+      <div className="kscan" data-mode={manual ? "manual" : "scan"}>
+        <label htmlFor={id} className="kscanl">
+          {label}
+        </label>
+        {input}
+        {manual ? (
+          <div className="kscanb">
+            <button type="button" onClick={submit} className="btn n">
+              {confirmLabel}
+            </button>
+            <button type="button" onClick={() => setManual(false)} className="btn kscan2">
+              {cancelLabel}
+            </button>
+          </div>
+        ) : null}
+        {manual ? null : (
+          <button type="button" onClick={() => setManual(true)} className="btn kscan2">
+            {manualIcon ?? <Keyboard aria-hidden="true" className="size-5" />}
+            {manualLabel}
+          </button>
+        )}
+        {error ? (
+          <span id={errId} role="alert" className="kscane">
+            {error.reason} {error.action}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-2" data-mode={manual ? "manual" : "scan"}>

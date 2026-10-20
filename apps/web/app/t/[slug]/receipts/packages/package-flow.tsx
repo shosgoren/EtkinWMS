@@ -260,7 +260,7 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
             <div className="pk-body">
               <KalipAlan label={t("search")} value={query} maxLength={128} onChange={e => void search(e.target.value)} />
               {found.length > 0 ? <ul className="pk-list">{found.map(item => <li key={item.id}><button type="button" className="gp pk-pick" onClick={() => void choose(item.id)}>{item.code} · {item.name}</button></li>)}</ul> : null}
-              <ScanPanel service={scanner.service} prompt={t("scan")} last={last} ready={camera.ready} hue="green" />
+              <ScanPanel variant="kalip" service={scanner.service} prompt={t("scan")} last={last} ready={camera.ready} hue="green" />
               <SecondaryButton onClick={camera.press} disabled={busy}>{t("scan")}</SecondaryButton>
               {options ? <p className="pk-card pk-chosen"><Ico d={LICON.check} size={20} />{options.item.code} · {options.item.name}</p> : null}
               {unsupported ? <Banner kind="warning">⚠ {t("serial")}</Banner> : null}
