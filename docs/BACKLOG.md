@@ -53,6 +53,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-36 | Neon/Fly kalıntıları: `restore-drill`, `deploy-migrate`, `deploy-smoke`, `uptime-check` betikleri, RUNBOOK-ops, Dockerfile/compose yorumları |
 | B-37 | Satış sitesi form/önizleme sıkılaştırma 🔒 |
 | B-38 | Panel kökeninde gereksiz kimlik uçlarını kapat 🔒 |
+| B-39b | CI hızlandırma: int/e2e paralel parçalar, yalnız belge PR'da ağır testler atlanır, yayın tek tetikleme. T-925 (KODDA VAR) |
 | B-39 | Dependabot/Renovate; `pnpm audit` CI işi; DB TLS sertifika yenileme otomasyonu |
 
 ## P2 — satılabilir SaaS

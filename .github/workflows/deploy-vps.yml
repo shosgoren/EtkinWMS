@@ -1,7 +1,9 @@
 name: deploy-vps
 on:
+  # T-925: yalnız `ci` bitince tetiklenir (önceden ci + guards: önce biten tetikleme diğeri sürerken RELEASE_BLOCKED ile düşüyordu);
+  # kapı adımı guards kapılarının bitmesini en çok 15 dk bekler.
   workflow_run:
-    workflows: [ci, guards]
+    workflows: [ci]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -69,16 +71,29 @@ jobs:
           test "$REQUEST_SHA" = "$main_sha"
           ancestry=$(gh api "repos/shosgoren/EtkinWMS/compare/024a800bace33c2dc3df397d56fda7e449d1d9dc...$REQUEST_SHA" --jq .status)
           test "$ancestry" = ahead || test "$ancestry" = identical
-          gh api "repos/shosgoren/EtkinWMS/commits/$REQUEST_SHA/check-runs?per_page=100" > "$RUNNER_TEMP/checks.json"
-          python3 - "$RUNNER_TEMP/checks.json" <<'PY'
+          # Dokuz kapı: hepsi tamamlanıp başarılı olana kadar en çok 30 × 30 sn bekle; biri başarısızsa hemen dur (fail-closed).
+          for attempt in $(seq 1 30); do
+            gh api "repos/shosgoren/EtkinWMS/commits/$REQUEST_SHA/check-runs?per_page=100" > "$RUNNER_TEMP/checks.json"
+            rc=0
+            python3 - "$RUNNER_TEMP/checks.json" <<'PY' || rc=$?
           import json,sys
           checks=json.load(open(sys.argv[1]))['check_runs']
+          pending=False
           for name in ['verify','infra','secrets','deps','int','e2e','check-all','test-ac','check-pilot']:
               runs=[r for r in checks if r['name']==name and r.get('app',{}).get('slug')=='github-actions']
               latest=max(runs,key=lambda r:r['id'],default=None)
-              if latest is None or latest['status']!='completed' or latest['conclusion']!='success':
-                  sys.exit('RELEASE_BLOCKED:'+name)
+              if latest is None or latest['status']!='completed':
+                  pending=True
+                  continue
+              if latest['conclusion']!='success':
+                  print('RELEASE_BLOCKED:'+name)
+                  sys.exit(1)
+          sys.exit(3 if pending else 0)
           PY
+            if [ "$rc" = 0 ]; then break; fi
+            if [ "$rc" != 3 ] || [ "$attempt" = 30 ]; then echo "RELEASE_BLOCKED (rc=$rc)"; exit 1; fi
+            sleep 30
+          done
           echo "sha=$REQUEST_SHA" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
