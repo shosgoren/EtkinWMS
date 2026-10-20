@@ -33,6 +33,7 @@
 ## Bu makinenin ortamı (macOS)
 - Xcode lisansı onaylı değil: git `/Library/Developer/CommandLineTools/usr/bin/git`; çalışan klon `…/EtkinWMS/EtkinWMS-repo` (indirilen `EtkinWMS-main` git deposu değildir). `gh` girişli; `gh pr create` git ister → PR'lar `gh api …/pulls` ile.
 - Node 24: `~/.local/node24/bin` (pnpm 10.28 sarmalayıcısı aynı yerde). Docker Desktop çalışır; `pnpm test:int [dosyalar]` testcontainers ile.
+- Paralel çalışma ağaçları (`git worktree`) aynı `.git`'i paylaşır: bu yerel depoda `gc.auto=0`, `maintenance.auto=false`, `fetch.writeCommitGraph=false` (20 Ekim'de eşzamanlı işlemlerde paket bozuldu; onarım: bozuk paketi yedeğe taşı + `fetch --refetch` + multi-pack-index/commit-graph önbelleklerini kaldır).
 - Bilinen ortam hatası: `scripts/initial-owner.test.mjs` macOS `/var` sembolik bağı yüzünden `PRIVATE_DIRECTORY_REQUIRED` (gerçek TMPDIR ile geçer; CI'da geçer).
 
 ## Raporlama

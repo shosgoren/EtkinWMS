@@ -90,11 +90,10 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 |---|---|
 | B-60 | Yeni alt cam çubuk (Geri/Sorun · Ana ekran · ana işlem · Modüller · Etkin) + Modüller sayfası (rol/yetki) + kaydedilmemiş iş uyarısı — kaynak `Kabuk.dc.html` (kullanıcı onayı 20 Ekim); eski `BottomNav`/`screen-nav` emekliye; e2e ortak yerleşim taraması (telefon/tablet/masaüstü) — T-958 (KODDA VAR): Pano + Ekip/Gruplar/Aktar/Cariler ortak çubukta; eski `screen-shell` ekranlarının `screen-nav`/saha çubuğu B-63 ile ekranlar tasarıma geçerken |
 | B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya + T-958 `kabuk-bar.tsx` `tone()`); saha akışlarına sesli geri bildirim |
-| B-62 | Etkin sesli komut (T-424; Kabuk.dc.html onaylı): bas-konuş / iki dokunuş uzun dinleme ("bitti"), stok/yetki değiştiren komutta "Anladım" onay kartı, okuma komutu doğrudan sonuç; sesli geri bildirim |
+| B-62 | Etkin sesli komut (T-424; Kabuk.dc.html onaylı): bas-konuş / iki dokunuş uzun dinleme ("bitti"), stok/yetki değiştiren komutta "Anladım" onay kartı, okuma komutu doğrudan sonuç; sesli geri bildirim — teknoloji (20 Ekim kullanıcı kararı, Q-129): yerel faster-whisper + Silero VAD, ses için EMA Lightning; ilk adım ölçüm (model seçimi) |
 | B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18) |
 | B-60 | Ortak alt ekran çubuğu (Geri + Ana ekran · ana işlem · Etkin) + kaydedilmemiş iş uyarısı (T-423 kalanı); eski `BottomNav`/`screen-nav` emekliye; e2e'ye tablet (768–1199) projesi |
 | B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya); saha akışlarına sesli geri bildirim |
-| B-62 | Etkin sesli asistan (T-424); sesle miktar/görev arama |
 | B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18). Kullanıcı 20 Ekim'de canlıda gördü: **Ayarlar** hâlâ eski görünümde (Kolay mod üst çubuğu, sol Ayarlar/Geri/Ana ekran kutusu, düz form, turuncu Kaydet); alt cam çubuk ve ikonlu yapı yok — önce Ayarlar tuvali |
 | B-64 | İstemci `void action().then()` zincirlerine hata yakalama (ör. `apps/web/app/activate/[token]/flow.tsx`); `loading.tsx`, panel `error.tsx`, `global-error`, `not-found` |
 | B-65 | `apps/web/app/t/[slug]/page.tsx` üyelik yoksa `return null` → `notFound()`; tanımsız roller için açılış ekranı |
