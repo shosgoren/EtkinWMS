@@ -2,9 +2,11 @@
 // Davet penceresi + tek seferlik bağlantı kutusu + sunucu hatası gösterimi (T-119). Düz bağlantı YALNIZCA bileşen
 // durumunda tutulur (URL, depolama, log yok); kapatılınca ya da sayfa yenilenince kaybolur (A-42).
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Banner, Button, TextField, TriangleAlert } from "@wms/ui";
+import { Banner, Button, TriangleAlert } from "@wms/ui";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { KalipPencere, KalipPencereAlan, KalipPencereDugme, KalipPencereSecim } from "../kalip/pencere.tsx";
 import { inviteMemberAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`); yalnızca kod + ayrıntı + istek kimliği kullanılır. */
@@ -110,21 +112,21 @@ export function InviteDialog({
   const t = useTranslations("members.inviteDialog");
   const tr = useTranslations("roles");
   const tl = useTranslations("members.linkBox");
-  const ref = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ServerError | null>(null);
   const [result, setResult] = useState<InviteResult | null>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
     if (open) {
       setError(null);
       setResult(null);
     }
   }, [open]);
+
+  const close = (): void => {
+    setResult(null); // bağlantı kapanışta bellekten düşer
+    onClose();
+  };
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,70 +143,51 @@ export function InviteDialog({
     onInvited();
   }
 
+  // T-974 (B-63 grup B): kalıp penceresi (telefonda alt cam sayfa, masaüstünde ortada).
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby="invite-title"
-      onClose={() => {
-        setResult(null); // bağlantı kapanışta bellekten düşer
-        if (open) onClose();
-      }}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-card border-0 bg-surface p-6 text-ink shadow-card backdrop:bg-ink/50"
-    >
-      <h2 id="invite-title" className="mb-4 break-words text-xl font-bold">
-        {t("title")}
-      </h2>
-      {open && result === null ? (
-        <form onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4">
-          <TextField label={t("email")} hint={t("emailHint")} name="email" type="email" autoComplete="off" required />
-          <div className="flex min-w-0 flex-col gap-1">
-            <label htmlFor="invite-role" className="text-base font-semibold">
-              {t("role")}
-            </label>
-            <select
-              id="invite-role"
-              name="roleKey"
-              defaultValue="READ_ONLY"
-              className="min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            >
-              {roleKeys.map((r) => (
-                <option key={r} value={r}>
-                  {tr(r)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {error ? <ServerErrorBanner error={error} returnTo={`/t/${slug}/members`} /> : null}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose} disabled={busy}>
+    <KalipPencere
+      open={open}
+      title={t("title")}
+      titleId="invite-title"
+      icon={{ d: LICON.people, color: "6C4BD8" }}
+      busy={busy}
+      onClose={close}
+      {...(result === null ? { onSubmit: (e: FormEvent<HTMLFormElement>) => void onSubmit(e) } : {})}
+      footer={
+        result === null ? (
+          <>
+            <KalipPencereDugme kind="cancel" onClick={close} disabled={busy}>
               {t("close")}
-            </Button>
-            <Button type="submit" loading={busy}>
+            </KalipPencereDugme>
+            <KalipPencereDugme type="submit" loading={busy}>
               {t("submit")}
-            </Button>
-          </div>
-        </form>
-      ) : null}
-      {open && result !== null ? (
-        <div className="flex flex-col gap-4">
-          {result.delivery === "EMAIL" || result.inviteLink === undefined ? (
-            <Banner kind="info">{t("sentEmail")}</Banner>
-          ) : (
-            <>
-              <Banner kind="warning">{t("sentScreen")}</Banner>
-              <LinkBox
-                title={t("linkLabel")}
-                link={result.inviteLink}
-                warning={tl("warning")}
-                onDismiss={onClose}
-              />
-            </>
-          )}
-          <div className="flex flex-col sm:flex-row sm:justify-end">
-            <Button onClick={onClose}>{t("close")}</Button>
-          </div>
-        </div>
-      ) : null}
-    </dialog>
+            </KalipPencereDugme>
+          </>
+        ) : (
+          <KalipPencereDugme onClick={close}>{t("close")}</KalipPencereDugme>
+        )
+      }
+    >
+      {result === null ? (
+        <>
+          <KalipPencereAlan label={t("email")} hint={t("emailHint")} name="email" type="email" autoComplete="off" required />
+          <KalipPencereSecim label={t("role")} id="invite-role" name="roleKey" defaultValue="READ_ONLY">
+            {roleKeys.map((r) => (
+              <option key={r} value={r}>
+                {tr(r)}
+              </option>
+            ))}
+          </KalipPencereSecim>
+          {error ? <ServerErrorBanner error={error} returnTo={`/t/${slug}/members`} /> : null}
+        </>
+      ) : result.delivery === "EMAIL" || result.inviteLink === undefined ? (
+        <Banner kind="info">{t("sentEmail")}</Banner>
+      ) : (
+        <>
+          <Banner kind="warning">{t("sentScreen")}</Banner>
+          <LinkBox title={t("linkLabel")} link={result.inviteLink} warning={tl("warning")} onDismiss={close} />
+        </>
+      )}
+    </KalipPencere>
   );
 }

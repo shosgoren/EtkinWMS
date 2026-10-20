@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import Link from "next/link";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Banner, Button, TextField } from "@wms/ui";
 import { TEMPLATE_KEYS, getTemplate } from "@wms/domain/onboarding/templates";
 import { slugCandidates, workspaceCreationAllowed } from "@wms/domain/onboarding/workspace";
 import { saveWorkspaceNameAction } from "./actions.ts";
 import { NAME_MAX, readWizardDraft } from "./draft.ts";
+import { THEME_COOKIE } from "../design/theme.ts";
+import { GICON, GirisAlan, GirisBaglanti, GirisBant, GirisBaslik, GirisEylem, GirisKabuk, GirisKart } from "../giris-ui.tsx";
 import { Wizard } from "./wizard.tsx";
 import type { TemplatePreview } from "./wizard.tsx";
 
@@ -26,32 +26,25 @@ function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-const SHELL = "mx-auto flex w-full max-w-xl min-w-0 flex-col gap-4 px-4 py-6";
 
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { getAuthService } = await import("../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect("/login?next=%2Fonboarding");
   const t = await getTranslations("onboarding");
+  // T-974 (B-63 grup B): Giris.dc.html `v.auth` kabuğu (aktivasyon sihirbazıyla aynı öğeler); adım/çerez/sunucu kuralı aynı.
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
 
   // A-50 / m11: kayıt kapalıysa (staging/prod) ya da demo kullanıcısıysa sihirbaz açılmaz; sunucu da aynı kararı verir.
   if (!workspaceCreationAllowed(process.env) || principal.isDemo) {
     return (
-      <main className={SHELL}>
-        <h1 className="break-words text-3xl font-extrabold text-ink">{t("closed.title")}</h1>
-        <Banner kind="info">
-          <p>{t("closed.body")}</p>
-          <p className="mt-1">{t("closed.action")}</p>
-        </Banner>
-        <div>
-          <Link
-            href="/login"
-            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-control border-2 border-border-strong bg-surface px-6 text-base font-bold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
-            {t("closed.signIn")}
-          </Link>
-        </div>
-      </main>
+      <GirisKabuk dark={dark} testId="onboarding">
+        <GirisBaslik title={t("closed.title")} />
+        <GirisBant kind="info" title={t("closed.body")} d={GICON.lock}>
+          {t("closed.action")}
+        </GirisBant>
+        <GirisBaglanti href="/login">{t("closed.signIn")}</GirisBaglanti>
+      </GirisKabuk>
     );
   }
 
@@ -64,30 +57,32 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
 
   if (draft === null || edit) {
     return (
-      <main className={SHELL}>
-        <h1 className="break-words text-3xl font-extrabold text-ink">{t("title")}</h1>
-        <p className="text-lg text-ink-muted">{t("intro")}</p>
-        <p className="text-base font-semibold text-accent-ink">{t("stepOf", { current: 1, total: 2 })}</p>
-        <form action={saveWorkspaceNameAction} className="flex flex-col gap-4 rounded-card bg-surface p-4 shadow-card">
-          <h2 className="text-xl font-bold text-ink">{t("step1.title")}</h2>
-          <TextField
-            label={t("step1.label")}
-            hint={t("step1.hint")}
-            name="name"
-            defaultValue={draft?.name ?? ""}
-            maxLength={NAME_MAX}
-            required
-            autoComplete="organization"
-            error={invalid ? { reason: ts("validation_failed"), action: ts("validation_failedAction") } : undefined}
-          />
+      <GirisKabuk dark={dark} testId="onboarding">
+        <GirisBaslik kick={t("stepOf", { current: 1, total: 2 }).toLocaleUpperCase("tr")} title={t("title")} sub={t("intro")} />
+        <form action={saveWorkspaceNameAction} style={{ display: "contents" }}>
+          <GirisKart>
+            <h2 style={{ margin: 0, font: "800 18px/1.15 var(--font-bricolage), sans-serif" }}>{t("step1.title")}</h2>
+            <GirisAlan
+              id="ob-name"
+              label={t("step1.label")}
+              hint={t("step1.hint")}
+              d={GICON.company}
+              name="name"
+              defaultValue={draft?.name ?? ""}
+              maxLength={NAME_MAX}
+              required
+              autoComplete="organization"
+              {...(invalid ? { error: `${ts("validation_failed")} ${ts("validation_failedAction")}` } : {})}
+            />
+          </GirisKart>
           {errorCode === undefined ? null : (
-            <Banner kind="error">
-              {ts(errorCode)} {ts(`${errorCode}Action`)}
-            </Banner>
+            <GirisBant kind="err" title={ts(errorCode)}>
+              {ts(`${errorCode}Action`)}
+            </GirisBant>
           )}
-          <Button type="submit">{t("step1.next")}</Button>
+          <GirisEylem label={t("step1.next")} />
         </form>
-      </main>
+      </GirisKabuk>
     );
   }
 
@@ -99,10 +94,9 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   }
 
   return (
-    <main className={SHELL}>
-      <h1 className="break-words text-3xl font-extrabold text-ink">{t("title")}</h1>
-      <p className="text-base font-semibold text-accent-ink">{t("stepOf", { current: 2, total: 2 })}</p>
+    <GirisKabuk dark={dark} testId="onboarding">
+      <GirisBaslik kick={t("stepOf", { current: 2, total: 2 }).toLocaleUpperCase("tr")} title={t("title")} />
       <Wizard name={draft.name} slug={slug} templates={templates} defaultTemplateKey="PACKAGING_SUPPLIES" backHref="/onboarding?edit=1" />
-    </main>
+    </GirisKabuk>
   );
 }

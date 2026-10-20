@@ -32,7 +32,9 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
     return <MfaVerify dark={jar.get(THEME_COOKIE)?.value === "koyu"} next={next} trustOption={appSurface() !== "panel"} />;
   }
   // Karar sunucuda, `principal` alanlarıyla (tek kaynak: @wms/auth `isDemoEmail`).
-  if (principal.isDemo) return <MfaNotice kind="demo" next={next} />; // M9
-  if (principal.mfaVerified || principal.twoFactorEnabled) return <MfaNotice kind="enabled" next={next} />;
-  return <MfaSetupForm next={next} />;
+  // T-974: kurulum ve bildirim de giriş tasarım dilinde (tema çerezi sunucudan).
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  if (principal.isDemo) return <MfaNotice kind="demo" next={next} dark={dark} />; // M9
+  if (principal.mfaVerified || principal.twoFactorEnabled) return <MfaNotice kind="enabled" next={next} dark={dark} />;
+  return <MfaSetupForm next={next} dark={dark} />;
 }

@@ -1,11 +1,13 @@
 "use client";
 // Kimlik ekranı istemci formları (T-118). Alan kuralları (parola uzunluğu, hız sınırı, kilit) SUNUCUDADIR (A-41);
 // burada yalnızca sunucu yanıtı (kod + sonraki eylem) gösterilir. Tüm metin `messages/*.json` `auth.*` altındadır.
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Banner, Button, CircleAlert, TextField } from "@wms/ui";
+import { Button, CircleAlert } from "@wms/ui";
+import { C } from "./design/giris-tokens.ts";
+import { Ico as GirisIco } from "./field/flow.tsx";
+import { GICON, GirisAlan, GirisBaglanti, GirisBant, GirisBaslik, GirisEylem, GirisKabuk, GirisKart } from "./giris-ui.tsx";
 import { QrCode } from "./qr-code.tsx";
 import { acceptInvitationAction } from "./invite/[token]/actions.ts";
 import { authPost } from "../lib/auth-client.ts";
@@ -13,8 +15,6 @@ import type { AuthCallError } from "../lib/auth-client.ts";
 
 type Translator = ReturnType<typeof useTranslations>;
 
-const LINK =
-  "inline-flex min-h-12 min-w-12 items-center justify-center rounded-control px-2 text-base font-semibold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 interface ShownError {
   readonly reason: string;
@@ -39,30 +39,6 @@ function commonError(t: Translator, e: AuthCallError): ShownError | null {
   return null;
 }
 
-function FormError({ id, error }: { id: string; error: ShownError | null }) {
-  const t = useTranslations("auth");
-  if (error === null) return <div id={id} />;
-  return (
-    <div id={id}>
-      <Banner kind="error">
-        <p>
-          {error.reason} {error.action}
-        </p>
-        {error.code ? <p className="mt-1 text-sm">{t("common.errorCode", { code: error.code })}</p> : null}
-      </Banner>
-    </div>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <main className="auth-card mx-auto flex w-full max-w-md min-w-0 flex-col gap-4 px-4 py-6">
-      <h1 className="break-words text-2xl font-extrabold text-ink">{title}</h1>
-      {children}
-    </main>
-  );
-}
-
 function fieldValue(form: HTMLFormElement, name: string): string {
   const v = new FormData(form).get(name);
   return typeof v === "string" ? v : "";
@@ -72,7 +48,22 @@ function fieldValue(form: HTMLFormElement, name: string): string {
 // Parola sıfırlama (e-posta girişi ve doğrulama ekranı T-999b'den beri `login/flow.tsx`)
 // ---------------------------------------------------------------------------------------------
 
-export function ResetRequestForm() {
+/** T-974 (B-63 grup B): giriş tasarım dilinde hata bandı (`.ban.err`); kod destek içindir. */
+function GirisHata({ id, error }: { id: string; error: ShownError | null }) {
+  const t = useTranslations("auth");
+  return (
+    <div id={id} style={{ display: "contents" }}>
+      {error === null ? null : (
+        <GirisBant kind="err" title={error.reason}>
+          {error.action}
+          {error.code ? ` ${t("common.errorCode", { code: error.code })}` : null}
+        </GirisBant>
+      )}
+    </div>
+  );
+}
+
+export function ResetRequestForm({ dark = false }: { dark?: boolean }) {
   const t = useTranslations("auth");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
@@ -101,25 +92,23 @@ export function ResetRequestForm() {
   }
 
   return (
-    <Card title={t("reset.requestTitle")}>
-      {outcome === "sent" ? <Banner kind="info">{t("reset.sent")}</Banner> : null}
-      {outcome === "undeliverable" ? <Banner kind="warning">{t("reset.undeliverable")}</Banner> : null}
-      <p className="break-words text-base text-ink-muted">{t("reset.requestIntro")}</p>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="reset-error">
-        <TextField label={t("login.email")} name="email" type="email" autoComplete="username" required />
-        <FormError id="reset-error" error={error} />
-        <Button type="submit" loading={busy}>
-          {t("reset.requestSubmit")}
-        </Button>
+    <GirisKabuk dark={dark} testId="reset-request">
+      <GirisBaslik title={t("reset.requestTitle")} sub={t("reset.requestIntro")} />
+      {outcome === "sent" ? <GirisBant kind="ok">{t("reset.sent")}</GirisBant> : null}
+      {outcome === "undeliverable" ? <GirisBant kind="warn">{t("reset.undeliverable")}</GirisBant> : null}
+      <form onSubmit={onSubmit} style={{ display: "contents" }} aria-describedby="reset-error" aria-busy={busy}>
+        <GirisKart>
+          <GirisAlan id="reset-mail" label={t("login.email")} d={GICON.mail} name="email" type="email" autoComplete="username" placeholder="ad@firma.com" required />
+        </GirisKart>
+        <GirisHata id="reset-error" error={error} />
+        <GirisEylem label={t("reset.requestSubmit")} busy={busy} />
       </form>
-      <Link href="/login" className={LINK}>
-        {t("common.backToLogin")}
-      </Link>
-    </Card>
+      <GirisBaglanti href="/login">{t("common.backToLogin")}</GirisBaglanti>
+    </GirisKabuk>
   );
 }
 
-export function ResetPasswordForm({ token, linkError }: { token: string; linkError: boolean }) {
+export function ResetPasswordForm({ token, linkError, dark = false }: { token: string; linkError: boolean; dark?: boolean }) {
   const t = useTranslations("auth");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
@@ -128,24 +117,22 @@ export function ResetPasswordForm({ token, linkError }: { token: string; linkErr
 
   if (linkError) {
     return (
-      <Card title={t("reset.newTitle")}>
-        <Banner kind="error">
-          {t("reset.invalidLink")} {t("reset.invalidLinkAction")}
-        </Banner>
-        <Link href="/reset-password" className={LINK}>
-          {t("reset.requestAgain")}
-        </Link>
-      </Card>
+      <GirisKabuk dark={dark} testId="reset-new">
+        <GirisBaslik title={t("reset.newTitle")} />
+        <GirisBant kind="err" title={t("reset.invalidLink")}>
+          {t("reset.invalidLinkAction")}
+        </GirisBant>
+        <GirisBaglanti href="/reset-password">{t("reset.requestAgain")}</GirisBaglanti>
+      </GirisKabuk>
     );
   }
   if (done) {
     return (
-      <Card title={t("reset.newTitle")}>
-        <Banner kind="info">{t("reset.done")}</Banner>
-        <Link href="/login" className={LINK}>
-          {t("common.backToLogin")}
-        </Link>
-      </Card>
+      <GirisKabuk dark={dark} testId="reset-new">
+        <GirisBaslik title={t("reset.newTitle")} />
+        <GirisBant kind="ok">{t("reset.done")}</GirisBant>
+        <GirisBaglanti href="/login">{t("common.backToLogin")}</GirisBaglanti>
+      </GirisKabuk>
     );
   }
 
@@ -177,32 +164,37 @@ export function ResetPasswordForm({ token, linkError }: { token: string; linkErr
   }
 
   return (
-    <Card title={t("reset.newTitle")}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="reset-new-error">
-        <TextField
-          label={t("reset.newPassword")}
-          hint={t("reset.passwordHint")}
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={12}
-          maxLength={128}
-          required
-        />
-        <TextField
-          label={t("reset.confirmPassword")}
-          name="confirm"
-          type="password"
-          autoComplete="new-password"
-          required
-          {...(mismatch ? { error: { reason: t("reset.mismatch"), action: t("reset.mismatchAction") } } : {})}
-        />
-        <FormError id="reset-new-error" error={error} />
-        <Button type="submit" loading={busy}>
-          {t("reset.newSubmit")}
-        </Button>
+    <GirisKabuk dark={dark} testId="reset-new">
+      <GirisBaslik title={t("reset.newTitle")} />
+      <form onSubmit={onSubmit} style={{ display: "contents" }} aria-describedby="reset-new-error" aria-busy={busy}>
+        <GirisKart>
+          <GirisAlan
+            id="reset-pw"
+            label={t("reset.newPassword")}
+            hint={t("reset.passwordHint")}
+            d={GICON.lock}
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={128}
+            required
+          />
+          <GirisAlan
+            id="reset-pw2"
+            label={t("reset.confirmPassword")}
+            d={GICON.lock}
+            name="confirm"
+            type="password"
+            autoComplete="new-password"
+            required
+            {...(mismatch ? { error: `${t("reset.mismatch")} ${t("reset.mismatchAction")}` } : {})}
+          />
+        </GirisKart>
+        <GirisHata id="reset-new-error" error={error} />
+        <GirisEylem label={t("reset.newSubmit")} busy={busy} />
       </form>
-    </Card>
+    </GirisKabuk>
   );
 }
 
@@ -233,20 +225,21 @@ function secretOf(uri: string): string {
   }
 }
 
-/** Kurulum formu yerine durum bildirimi (sunucu karar verir: demo kullanıcı M9, 2FA zaten etkin). */
-export function MfaNotice({ kind, next }: { kind: "demo" | "enabled"; next: string }) {
+/** Kurulum formu yerine durum bildirimi (sunucu karar verir: demo kullanıcı M9, 2FA zaten etkin). T-974: giriş tasarım dili. */
+export function MfaNotice({ kind, next, dark = false }: { kind: "demo" | "enabled"; next: string; dark?: boolean }) {
   const t = useTranslations("auth");
   return (
-    <Card title={t("mfa.setupTitle")}>
-      <Banner kind="info">{kind === "demo" ? t("mfa.demoDisabled") : t("mfa.alreadyEnabled")}</Banner>
-      <Link href={next} className={LINK}>
-        {t("common.continue")}
-      </Link>
-    </Card>
+    <GirisKabuk dark={dark} testId="mfa-setup">
+      <GirisBaslik title={t("mfa.setupTitle")} />
+      <GirisBant kind={kind === "demo" ? "info" : "ok"}>{kind === "demo" ? t("mfa.demoDisabled") : t("mfa.alreadyEnabled")}</GirisBant>
+      <GirisBaglanti href={next}>{t("common.continue")}</GirisBaglanti>
+    </GirisKabuk>
   );
 }
 
-export function MfaSetupForm({ next }: { next: string }) {
+// T-974 (B-63 grup B): 2FA kurulumu Giris.dc.html dilinde (aktivasyonun MFA adımıyla aynı öğeler: `.card` QR + anahtar `.addr`, yedek kodlar
+// `.kv`, onay `.chk`, kod alanı `.fl > .inp`). Sunucu çağrıları, sıra (parola → anahtar → yedek kod onayı → ilk kod) ve hata eşlemesi aynı.
+export function MfaSetupForm({ next, dark = false }: { next: string; dark?: boolean }) {
   const t = useTranslations("auth");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
@@ -256,12 +249,11 @@ export function MfaSetupForm({ next }: { next: string }) {
 
   if (finished) {
     return (
-      <Card title={t("mfa.setupTitle")}>
-        <Banner kind="info">{t("mfa.setupDone")}</Banner>
-        <Link href={next} className={LINK}>
-          {t("common.continue")}
-        </Link>
-      </Card>
+      <GirisKabuk dark={dark} testId="mfa-setup">
+        <GirisBaslik title={t("mfa.setupTitle")} />
+        <GirisBant kind="ok">{t("mfa.setupDone")}</GirisBant>
+        <GirisBaglanti href={next}>{t("common.continue")}</GirisBaglanti>
+      </GirisKabuk>
     );
   }
 
@@ -295,74 +287,83 @@ export function MfaSetupForm({ next }: { next: string }) {
 
   if (enable === null) {
     return (
-      <Card title={t("mfa.setupTitle")}>
-        <p className="break-words text-base text-ink-muted">{t("mfa.setupIntro")}</p>
-        <form onSubmit={onPassword} className="flex flex-col gap-4" aria-describedby="mfa-setup-error">
-          <TextField
-            label={t("mfa.confirmPassword")}
-            hint={t("mfa.confirmPasswordHint")}
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-          <FormError id="mfa-setup-error" error={error} />
-          <Button type="submit" loading={busy}>
-            {t("mfa.setupStart")}
-          </Button>
+      <GirisKabuk dark={dark} testId="mfa-setup">
+        <GirisBaslik kick={t("mfa.verifyTitle").toLocaleUpperCase("tr")} title={t("mfa.setupTitle")} sub={t("mfa.setupIntro")} />
+        <form onSubmit={onPassword} style={{ display: "contents" }} aria-describedby="mfa-setup-error" aria-busy={busy}>
+          <GirisKart>
+            <GirisAlan
+              id="mfa-pw"
+              label={t("mfa.confirmPassword")}
+              hint={t("mfa.confirmPasswordHint")}
+              d={GICON.lock}
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </GirisKart>
+          <GirisHata id="mfa-setup-error" error={error} />
+          <GirisEylem label={t("mfa.setupStart")} busy={busy} />
         </form>
-      </Card>
+      </GirisKabuk>
     );
   }
 
   const secret = secretOf(enable.totpURI);
   return (
-    <Card title={t("mfa.setupTitle")}>
-      <section className="flex flex-col gap-2" aria-labelledby="mfa-key-title">
-        <h2 id="mfa-key-title" className="text-lg font-bold text-ink">
+    <GirisKabuk dark={dark} testId="mfa-setup">
+      <GirisBaslik kick={t("mfa.verifyTitle").toLocaleUpperCase("tr")} title={t("mfa.setupTitle")} />
+      <section className="card" style={{ background: C.surface, alignItems: "center", textAlign: "center" }} aria-labelledby="mfa-key-title">
+        <h2 id="mfa-key-title" style={{ margin: 0, font: "800 18px/1.15 var(--font-bricolage), sans-serif" }}>
           {t("mfa.keyTitle")}
         </h2>
-        <p className="break-words text-base text-ink-muted">{t("mfa.keyIntro")}</p>
-        <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-center">
-          <QrCode value={enable.totpURI} label={t("mfa.qrLabel")} />
-          <p className="break-words text-base text-ink-muted">{t("mfa.qrHint")}</p>
-        </div>
-        <p className="break-words text-sm font-semibold text-ink">{t("mfa.keyManual")}</p>
-        <code className="break-all rounded-card bg-accent-soft p-3 font-mono text-base text-ink select-all">{secret}</code>
-        <a href={enable.totpURI} className={LINK}>
-          {t("mfa.openApp")}
-        </a>
+        <p className="ls" style={{ margin: 0 }}>
+          {t("mfa.keyIntro")}
+        </p>
+        <QrCode value={enable.totpURI} label={t("mfa.qrLabel")} />
+        <span className="hint" style={{ justifyContent: "center" }}>
+          {t("mfa.qrHint")}
+        </span>
+        <span className="fll">{t("mfa.keyManual")}</span>
+        <code className="addr" style={{ background: C.chip, maxWidth: "100%", overflowWrap: "anywhere", minHeight: "40px", fontSize: "13px", userSelect: "all" }}>
+          {secret}
+        </code>
+        <GirisBaglanti href={enable.totpURI}>{t("mfa.openApp")}</GirisBaglanti>
       </section>
-      <section className="flex flex-col gap-2" aria-labelledby="mfa-backup-title">
-        <h2 id="mfa-backup-title" className="text-lg font-bold text-ink">
+      <section className="card" style={{ background: C.surface }} aria-labelledby="mfa-backup-title">
+        <h2 id="mfa-backup-title" className="fll" style={{ margin: 0 }}>
           {t("mfa.backupTitle")}
         </h2>
-        <Banner kind="warning">{t("mfa.backupWarning")}</Banner>
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {enable.backupCodes.map((c) => (
-            <li key={c} className="break-all rounded-card border-2 border-border p-2 font-mono text-base select-all">
-              {c}
-            </li>
+        <GirisBant kind="warn">{t("mfa.backupWarning")}</GirisBant>
+        <dl className="kv" style={{ background: C.chip, margin: "1em 0", userSelect: "all" }}>
+          {enable.backupCodes.map((c, i) => (
+            <BackupCodeRow key={c} i={i + 1} code={c} />
           ))}
-        </ul>
-        <label className="flex min-h-12 items-center gap-3 text-base font-semibold text-ink">
-          <input
-            type="checkbox"
-            checked={saved}
-            onChange={(e) => setSaved(e.target.checked)}
-            className="size-6 shrink-0 accent-accent"
-          />
+        </dl>
+        <button type="button" role="checkbox" className={saved ? "chk on" : "chk"} aria-checked={saved} onClick={() => setSaved((v) => !v)}>
+          <i>
+            <GirisIco d={GICON.check} size={16} sw={3.2} />
+          </i>
           {t("mfa.backupSaved")}
-        </label>
+        </button>
       </section>
-      <form onSubmit={onVerify} className="flex flex-col gap-4" aria-describedby="mfa-setup-error">
-        <TextField label={t("mfa.code")} hint={t("mfa.codeHint")} name="code" type="text" inputMode="numeric" autoComplete="one-time-code" required />
-        <FormError id="mfa-setup-error" error={error} />
-        <Button type="submit" loading={busy} disabled={!saved}>
-          {t("mfa.setupFinish")}
-        </Button>
+      <form onSubmit={onVerify} style={{ display: "contents" }} aria-describedby="mfa-setup-error" aria-busy={busy}>
+        <GirisKart>
+          <GirisAlan id="mfa-code" label={t("mfa.code")} hint={t("mfa.codeHint")} name="code" type="text" inputMode="numeric" autoComplete="one-time-code" required />
+        </GirisKart>
+        <GirisHata id="mfa-setup-error" error={error} />
+        <GirisEylem label={t("mfa.setupFinish")} busy={busy} disabled={!saved} />
       </form>
-    </Card>
+    </GirisKabuk>
+  );
+}
+
+function BackupCodeRow({ i, code }: { i: number; code: string }) {
+  return (
+    <>
+      <dt>{`${i < 10 ? "0" : ""}${i}`}</dt>
+      <dd>{code}</dd>
+    </>
   );
 }
 
@@ -417,7 +418,7 @@ export function SignOutButton() {
 // Davet kabulü
 // ---------------------------------------------------------------------------------------------
 
-export function InviteAcceptForm({ token, signedIn }: { token: string; signedIn: boolean }) {
+export function InviteAcceptForm({ token, signedIn, dark = false, preview }: { token: string; signedIn: boolean; dark?: boolean; preview?: ReactNode }) {
   const t = useTranslations("auth");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
@@ -451,15 +452,18 @@ export function InviteAcceptForm({ token, signedIn }: { token: string; signedIn:
   }
 
   return (
-    <Card title={t("invite.title")}>
-      <p className="break-words text-base text-ink-muted">{signedIn ? t("invite.introSignedIn") : t("invite.intro")}</p>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="invite-error">
+    <GirisKabuk dark={dark} testId="invite">
+      <GirisBaslik title={t("invite.title")} sub={signedIn ? t("invite.introSignedIn") : t("invite.intro")} />
+      {preview}
+      <form onSubmit={onSubmit} style={{ display: "contents" }} aria-describedby="invite-error" aria-busy={busy}>
         {signedIn ? null : (
-          <>
-            <TextField label={t("invite.name")} name="name" type="text" autoComplete="name" maxLength={200} required />
-            <TextField
+          <GirisKart>
+            <GirisAlan id="invite-name" label={t("invite.name")} d={GICON.user} name="name" type="text" autoComplete="name" maxLength={200} required />
+            <GirisAlan
+              id="invite-pw"
               label={t("reset.newPassword")}
               hint={t("reset.passwordHint")}
+              d={GICON.lock}
               name="password"
               type="password"
               autoComplete="new-password"
@@ -467,18 +471,12 @@ export function InviteAcceptForm({ token, signedIn }: { token: string; signedIn:
               maxLength={128}
               required
             />
-          </>
+          </GirisKart>
         )}
-        <FormError id="invite-error" error={error} />
-        <Button type="submit" loading={busy}>
-          {signedIn ? t("invite.acceptSignedIn") : t("invite.acceptNew")}
-        </Button>
+        <GirisHata id="invite-error" error={error} />
+        <GirisEylem label={signedIn ? t("invite.acceptSignedIn") : t("invite.acceptNew")} busy={busy} />
       </form>
-      {signedIn ? null : (
-        <Link href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`} className={LINK}>
-          {t("invite.haveAccount")}
-        </Link>
-      )}
-    </Card>
+      {signedIn ? null : <GirisBaglanti href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}>{t("invite.haveAccount")}</GirisBaglanti>}
+    </GirisKabuk>
   );
 }

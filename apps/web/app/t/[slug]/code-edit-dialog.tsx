@@ -7,8 +7,10 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Banner, Button, TextField } from "@wms/ui";
+import { Banner, Button } from "@wms/ui";
+import { LICON } from "../../design/kalip-icons.ts";
 import { Sheet } from "./easy-setup/sheet.tsx";
+import { KalipPencereAlan, KalipPencereDugme, KalipPencereMetin } from "./kalip/pencere.tsx";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği. */
 export interface CodeEditError {
@@ -75,22 +77,24 @@ export function CodeEditDialog({
       open={open}
       title={t("title")}
       titleId={titleId}
+      icon={{ d: LICON.pencil, color: "2F5DA8" }}
+      busy={busy}
       onClose={onClose}
       onSubmit={(e) => void onSubmit(e)}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
             {t("cancel")}
-          </Button>
-          <Button type="submit" loading={busy} disabled={unchanged}>
+          </KalipPencereDugme>
+          <KalipPencereDugme type="submit" loading={busy} disabled={unchanged}>
             {t("submit")}
-          </Button>
+          </KalipPencereDugme>
         </>
       }
     >
-      <p className="min-w-0 break-words text-sm font-semibold text-ink-muted">{subject}</p>
-      <p className="min-w-0 break-all text-base text-ink-muted">{t("current", { code: current })}</p>
-      <TextField
+      <KalipPencereMetin strong>{subject}</KalipPencereMetin>
+      <KalipPencereMetin>{t("current", { code: current })}</KalipPencereMetin>
+      <KalipPencereAlan
         label={t("newCode")}
         hint={t("newCodeHint")}
         name="newCode"
@@ -101,10 +105,10 @@ export function CodeEditDialog({
         required
         maxLength={512}
       />
-      <p data-testid="code-edit-preview" aria-live="polite" className="min-w-0 break-all rounded-card bg-accent-soft p-3 text-base font-bold text-accent-ink">
+      <KalipPencereMetin mono live testId="code-edit-preview">
         {unchanged ? t("previewSame") : t("preview", { from: current, to: next })}
-      </p>
-      <p className="break-words text-sm text-ink-muted">{t("history")}</p>
+      </KalipPencereMetin>
+      <KalipPencereMetin>{t("history")}</KalipPencereMetin>
       {error ? renderError(error) : null}
     </Sheet>
   );

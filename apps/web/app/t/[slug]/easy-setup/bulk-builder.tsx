@@ -5,10 +5,12 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Banner, Button, TextField } from "@wms/ui";
+import { Banner } from "@wms/ui";
 import { createBulkLocationsAction, previewBulkLocationsAction, searchLocationsAction } from "../warehouses/actions.ts";
 import type { ServerError } from "../warehouses/warehouses-view.tsx";
 import { ServerErrorBanner } from "../warehouses/warehouses-view.tsx";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { KalipPencereAlan, KalipPencereBolum, KalipPencereDugme, KalipPencereMetin } from "../kalip/pencere.tsx";
 import { Sheet } from "./sheet.tsx";
 import { Typeahead } from "./typeahead.tsx";
 
@@ -149,20 +151,22 @@ export function BulkBuilder({
       open={open}
       title={t("title")}
       titleId={titleId}
+      icon={{ d: LICON.raf, color: "2F7D5B" }}
+      busy={busy}
       onClose={onClose}
       onSubmit={(e) => void onSubmit(e)}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
             {t("cancel")}
-          </Button>
-          <Button type="submit" loading={busy} disabled={!canSubmit}>
+          </KalipPencereDugme>
+          <KalipPencereDugme type="submit" loading={busy} disabled={!canSubmit}>
             {preview === null ? t("submit") : t("submitCount", { count: preview.count })}
-          </Button>
+          </KalipPencereDugme>
         </>
       }
     >
-      <p className="break-words text-base text-ink-muted">{t("intro")}</p>
+      <KalipPencereMetin>{t("intro")}</KalipPencereMetin>
       <section aria-label={t("previewTitle")} data-testid="bulk-preview" aria-live="polite" className="flex min-w-0 flex-col gap-2">
         <h3 className="text-base font-bold text-ink">{t("previewTitle")}</h3>
         {loading && preview === null ? <p className="text-sm text-ink-muted">{t("previewLoading")}</p> : null}
@@ -211,22 +215,24 @@ export function BulkBuilder({
         )}
       </section>
 
-      <TextField label={t("zone")} hint={t("zoneHint")} name="zone" value={zone} onChange={(e) => setZone(e.target.value)} autoCapitalize="characters" autoComplete="off" maxLength={8} required />
-      <TextField label={t("rackFrom")} name="rackFrom" value={rackFrom} onChange={(e) => setRackFrom(e.target.value)} required {...NUM} />
-      <TextField label={t("rackTo")} name="rackTo" value={rackTo} onChange={(e) => setRackTo(e.target.value)} required {...NUM} />
-      <TextField label={t("levelFrom")} name="levelFrom" value={levelFrom} onChange={(e) => setLevelFrom(e.target.value)} required {...NUM} />
-      <TextField label={t("levelTo")} name="levelTo" value={levelTo} onChange={(e) => setLevelTo(e.target.value)} required {...NUM} />
+      <KalipPencereAlan label={t("zone")} hint={t("zoneHint")} name="zone" value={zone} onChange={(e) => setZone(e.target.value)} autoCapitalize="characters" autoComplete="off" maxLength={8} required />
+      <div className="sxr">
+        <KalipPencereAlan label={t("rackFrom")} name="rackFrom" value={rackFrom} onChange={(e) => setRackFrom(e.target.value)} required {...NUM} />
+        <KalipPencereAlan label={t("rackTo")} name="rackTo" value={rackTo} onChange={(e) => setRackTo(e.target.value)} required {...NUM} />
+      </div>
+      <div className="sxr">
+        <KalipPencereAlan label={t("levelFrom")} name="levelFrom" value={levelFrom} onChange={(e) => setLevelFrom(e.target.value)} required {...NUM} />
+        <KalipPencereAlan label={t("levelTo")} name="levelTo" value={levelTo} onChange={(e) => setLevelTo(e.target.value)} required {...NUM} />
+      </div>
 
-      <details className="min-w-0 rounded-card border-2 border-border p-3">
-        <summary className="flex min-h-12 cursor-pointer items-center text-base font-semibold">{t("advanced")}</summary>
-        <div className="mt-2 flex min-w-0 flex-col gap-3">
+      <KalipPencereBolum summary={t("advanced")}>
           {parent === null ? null : (
-            <div className="flex min-w-0 flex-col gap-2">
-              <p className="break-words text-sm font-semibold text-ink">{tp("selected", { name: `${parent.name} (${parent.code})` })}</p>
-              <Button variant="secondary" onClick={() => setParent(null)}>
+            <>
+              <KalipPencereMetin strong>{tp("selected", { name: `${parent.name} (${parent.code})` })}</KalipPencereMetin>
+              <KalipPencereDugme kind="cancel" onClick={() => setParent(null)}>
                 {t("parentClear")}
-              </Button>
-            </div>
+              </KalipPencereDugme>
+            </>
           )}
           <Typeahead<LocOption>
             label={t("parent")}
@@ -234,6 +240,7 @@ export function BulkBuilder({
             listLabel={tp("listLabel")}
             scanLabel={t("scanParent")}
             clearOnSelect
+            variant="kalip"
             search={async (q) => {
               const r = await searchLocationsAction({ slug, warehouseId, q, limit: 8 });
               return r.ok ? r.data : [];
@@ -249,8 +256,7 @@ export function BulkBuilder({
               },
             }}
           />
-        </div>
-      </details>
+      </KalipPencereBolum>
       {error ? <ServerErrorBanner error={error} returnTo={returnTo} scope={errScope} /> : null}
     </Sheet>
   );

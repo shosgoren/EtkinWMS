@@ -7,13 +7,13 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
-import { ConfirmDialog } from "@wms/ui";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
 import { isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, type KalipHizliIslem } from "../../kalip/detay.tsx";
 import { Ico, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { KalipOnay } from "../../kalip/pencere.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { archiveLocationAction, createLocationAction, getSetupProgressAction, loadMoreLocationsAction, renameLocationAction, suggestCodeAction } from "../actions.ts";
 import { CreateDialog, ServerErrorBanner } from "../warehouses-view.tsx";
@@ -459,7 +459,7 @@ export function LocationTree({
           router.refresh();
         }}
       />
-      <ConfirmDialog
+      <KalipOnay
         open={archiving !== null}
         title={t("confirmArchive.title", { name: archiving?.name ?? "" })}
         description={t("confirmArchive.description", { name: archiving?.name ?? "", code: archiving?.code ?? "" })}

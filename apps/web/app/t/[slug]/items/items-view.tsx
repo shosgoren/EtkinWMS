@@ -9,14 +9,15 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Banner, Button, TextField } from "@wms/ui";
+import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
-import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
+import { KalipPencereAlan, KalipPencereBolum, KalipPencereDugme, KalipPencereMetin, KalipPencereSecim } from "../kalip/pencere.tsx";
 import { CARD_VISUAL } from "./card-visual.ts";
 import { createItemAction, createUnitAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
@@ -255,34 +256,30 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
       open={open}
       title={t("createTitle")}
       titleId="create-item-title"
+      icon={{ d: LICON.box, color: "2F5DA8" }}
+      busy={busy}
       onClose={onClose}
       onSubmit={(e) => void onSubmit(e)}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
             {t("cancel")}
-          </Button>
-          <Button type="submit" loading={busy} disabled={codeState === "loading"}>
+          </KalipPencereDugme>
+          <KalipPencereDugme type="submit" loading={busy} disabled={codeState === "loading"}>
             {t("submit")}
-          </Button>
+          </KalipPencereDugme>
         </>
       }
     >
-      <TextField label={t("name")} name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required maxLength={512} />
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor="create-card-type" className="text-base font-semibold">
-          {t("cardType")}
-        </label>
-        <span className="text-sm text-ink-muted">{t("cardTypeHint")}</span>
-        <select id="create-card-type" name="cardType" value={cardType} onChange={(e) => setCardType(e.target.value as CardType)} className={SELECT_CLS}>
-          {CARD_TYPES.map((k) => (
-            <option key={k} value={k}>
-              {k} · {tc(k)}
-            </option>
-          ))}
-        </select>
-      </div>
-      <TextField
+      <KalipPencereAlan label={t("name")} name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required maxLength={512} />
+      <KalipPencereSecim label={t("cardType")} hint={t("cardTypeHint")} id="create-card-type" name="cardType" value={cardType} onChange={(e) => setCardType(e.target.value as CardType)}>
+        {CARD_TYPES.map((k) => (
+          <option key={k} value={k}>
+            {k} · {tc(k)}
+          </option>
+        ))}
+      </KalipPencereSecim>
+      <KalipPencereAlan
         label={t("code")}
         hint={codeState === "loading" ? te("code.loading") : codeState === "failed" ? te("code.failed") : touched ? `${te("code.custom")} ${t("codeHint")}` : `${te("code.suggested")} ${t("codeHint")}`}
         name="code"
@@ -299,84 +296,69 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
         maxLength={512}
       />
       {unitList.length === 0 ? <Banner kind="info">{te("items.unitAuto")}</Banner> : null}
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor="create-base-unit" className="text-base font-semibold">
-          {t("baseUnit")}
-        </label>
-        <span className="text-sm text-ink-muted">{t("baseUnitHint")}</span>
-        {unitList.length > 0 && !unitList.some((u) => u.code.toUpperCase() === "ADET") ? <span className="text-sm font-semibold text-ink">{t("baseUnitChoose")}</span> : null}
-        <select id="create-base-unit" name="baseUnitId" required={unitList.length > 0} disabled={unitList.length === 0} value={unitId} onChange={(e) => setUnitId(e.target.value)} className={SELECT_CLS}>
-          {unitList.length === 0 ? <option value="">{te("items.unitDefaultOption")}</option> : null}
-          {unitList.length > 0 && unitId === "" ? <option value="">{t("baseUnitPlaceholder")}</option> : null}
-          {unitList.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.code} · {u.name}
-            </option>
-          ))}
-        </select>
-        {unitOpen ? (
-          <div data-testid="new-unit" className="mt-2 flex min-w-0 flex-col gap-3 rounded-card border-2 border-border p-3">
-            <TextField label={t("newUnitCode")} hint={t("newUnitCodeHint")} name="newUnitCode" value={unitCode} onChange={(e) => setUnitCode(e.target.value)} autoComplete="off" autoCapitalize="characters" maxLength={64} />
-            <TextField label={t("newUnitName")} name="newUnitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} autoComplete="off" maxLength={200} />
-            {unitError ? <ServerErrorBanner error={unitError} returnTo={returnTo} /> : null}
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" loading={unitBusy} disabled={unitCode.trim() === "" || unitName.trim() === ""} onClick={() => void onAddUnit()}>
-                {t("newUnitAdd")}
-              </Button>
-              <Button type="button" variant="secondary" disabled={unitBusy} onClick={() => setUnitOpen(false)}>
-                {t("cancel")}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setUnitOpen(true)} className={`${LINK_CLS} self-start`}>
-            {t("newUnit")}
-          </button>
-        )}
-      </div>
-      <details className="min-w-0 rounded-card border-2 border-border p-3">
-        <summary className="flex min-h-12 cursor-pointer items-center text-base font-semibold">{t("advanced")}</summary>
-        <div className="mt-2 flex min-w-0 flex-col gap-4">
-          <p className="break-words text-sm text-ink-muted">{t("advancedHint")}</p>
-          <div className="flex min-w-0 flex-col gap-1">
-            <label htmlFor="create-scale" className="text-base font-semibold">
-              {t("scale")}
-            </label>
-            <span className="text-sm text-ink-muted">{t("scaleHint")}</span>
-            <select id="create-scale" name="quantityScale" value={scale} onChange={(e) => setScale(e.target.value)} className={SELECT_CLS}>
-              {SCALES.map((n) => (
-                <option key={n} value={n}>
-                  {n === 0 ? t("scaleInteger") : t("scaleDecimals", { count: n })}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <label htmlFor="create-tracking" className="text-base font-semibold">
-              {t("tracking")}
-            </label>
-            <select id="create-tracking" name="trackingMode" value={tracking} onChange={(e) => setTracking(e.target.value)} className={SELECT_CLS}>
-              {TRACKING.map((k) => (
-                <option key={k} value={k}>
-                  {tt(k)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <label htmlFor="create-pick" className="text-base font-semibold">
-              {t("pick")}
-            </label>
-            <select id="create-pick" name="pickPolicy" value={pick} onChange={(e) => setPick(e.target.value)} className={SELECT_CLS}>
-              {PICK.map((k) => (
-                <option key={k} value={k}>
-                  {tp(k)}
-                </option>
-              ))}
-            </select>
+      <KalipPencereSecim
+        label={t("baseUnit")}
+        hint={t("baseUnitHint")}
+        id="create-base-unit"
+        name="baseUnitId"
+        required={unitList.length > 0}
+        disabled={unitList.length === 0}
+        value={unitId}
+        onChange={(e) => setUnitId(e.target.value)}
+        note={unitList.length > 0 && !unitList.some((u) => u.code.toUpperCase() === "ADET") ? <KalipPencereMetin strong>{t("baseUnitChoose")}</KalipPencereMetin> : undefined}
+      >
+        {unitList.length === 0 ? <option value="">{te("items.unitDefaultOption")}</option> : null}
+        {unitList.length > 0 && unitId === "" ? <option value="">{t("baseUnitPlaceholder")}</option> : null}
+        {unitList.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.code} · {u.name}
+          </option>
+        ))}
+      </KalipPencereSecim>
+      {unitOpen ? (
+        <div data-testid="new-unit" className="kpbox">
+          <KalipPencereAlan label={t("newUnitCode")} hint={t("newUnitCodeHint")} name="newUnitCode" value={unitCode} onChange={(e) => setUnitCode(e.target.value)} autoComplete="off" autoCapitalize="characters" maxLength={64} />
+          <KalipPencereAlan label={t("newUnitName")} name="newUnitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} autoComplete="off" maxLength={200} />
+          {unitError ? <ServerErrorBanner error={unitError} returnTo={returnTo} /> : null}
+          <div className="kpf">
+            <KalipPencereDugme kind="cancel" disabled={unitBusy} onClick={() => setUnitOpen(false)}>
+              {t("cancel")}
+            </KalipPencereDugme>
+            <KalipPencereDugme loading={unitBusy} disabled={unitCode.trim() === "" || unitName.trim() === ""} onClick={() => void onAddUnit()}>
+              {t("newUnitAdd")}
+            </KalipPencereDugme>
           </div>
         </div>
-      </details>
+      ) : (
+        <button type="button" onClick={() => setUnitOpen(true)} className="kplnk">
+          <Ico d={LICON.plus} size={18} />
+          {t("newUnit")}
+        </button>
+      )}
+      <KalipPencereBolum summary={t("advanced")}>
+        <KalipPencereMetin>{t("advancedHint")}</KalipPencereMetin>
+        <KalipPencereSecim label={t("scale")} hint={t("scaleHint")} id="create-scale" name="quantityScale" value={scale} onChange={(e) => setScale(e.target.value)}>
+          {SCALES.map((n) => (
+            <option key={n} value={n}>
+              {n === 0 ? t("scaleInteger") : t("scaleDecimals", { count: n })}
+            </option>
+          ))}
+        </KalipPencereSecim>
+        <KalipPencereSecim label={t("tracking")} id="create-tracking" name="trackingMode" value={tracking} onChange={(e) => setTracking(e.target.value)}>
+          {TRACKING.map((k) => (
+            <option key={k} value={k}>
+              {tt(k)}
+            </option>
+          ))}
+        </KalipPencereSecim>
+        <KalipPencereSecim label={t("pick")} id="create-pick" name="pickPolicy" value={pick} onChange={(e) => setPick(e.target.value)}>
+          {PICK.map((k) => (
+            <option key={k} value={k}>
+              {tp(k)}
+            </option>
+          ))}
+        </KalipPencereSecim>
+      </KalipPencereBolum>
       {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
     </Sheet>
   );

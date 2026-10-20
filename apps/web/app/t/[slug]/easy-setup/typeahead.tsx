@@ -4,6 +4,8 @@
 // - Öneri listesi akış içindedir (mutlak konum yok) ve kendi içinde kayar → ekran dışına taşmaz; her satır ≥48 px.
 // - Barkod: `scan` verilirse `ScanField` (T-303) gösterilir; okutulan değer `resolve` ile çözülür, tek eşleşme doğrudan seçilir.
 // Rol `searchbox` kalır (liste `aria-controls` + `aria-activedescendant` ile bağlanır).
+// T-974 (B-63 grup B): `variant="kalip"` kalıp penceresi içinde KalipForm `.fld` alanı + kalıp öneri listesi (`.kplist`, kalip-frame.css);
+// varsayılan görünüm diğer kullanım yerleri (stok belgesi, üretim formu) için aynen kalır. Davranış iki varyantta da aynıdır.
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -39,6 +41,7 @@ export function Typeahead<T>({
   listLabel,
   clearOnSelect = false,
   extra,
+  variant = "default",
 }: {
   label: string;
   hint?: string;
@@ -58,6 +61,8 @@ export function Typeahead<T>({
   listLabel: string;
   clearOnSelect?: boolean;
   extra?: ReactNode;
+  /** Görünüm: `kalip` = kalıp penceresi alanı (`.fld`); varsayılan eski görünüm. */
+  variant?: "default" | "kalip";
 }) {
   const t = useTranslations("easySetup.picker");
   const id = useId();
@@ -129,8 +134,60 @@ export function Typeahead<T>({
   }
 
   const expanded = open && q.trim() !== "";
+  const kalip = variant === "kalip";
+  const input = (
+    <input
+      id={id}
+      name={name}
+      type="search"
+      placeholder={placeholder}
+      autoComplete="off"
+      maxLength={128}
+      value={q}
+      disabled={!clientReady}
+      aria-autocomplete="list"
+      aria-controls={expanded ? listId : undefined}
+      aria-activedescendant={expanded && active >= 0 ? `${listId}-${active}` : undefined}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowDown" && items.length > 0) {
+          e.preventDefault();
+          setOpen(true);
+          setActive((a) => Math.min(items.length - 1, a + 1));
+        } else if (e.key === "ArrowUp" && items.length > 0) {
+          e.preventDefault();
+          setActive((a) => Math.max(0, a - 1));
+        } else if (e.key === "Enter" && expanded && active >= 0 && items[active] !== undefined) {
+          e.preventDefault();
+          choose(items[active] as T);
+        } else if (e.key === "Enter" && name === undefined) {
+          // Üst formu (ör. toplu oluşturucu) yanlışlıkla göndermesin.
+          e.preventDefault();
+        } else if (e.key === "Escape" && expanded) {
+          e.stopPropagation();
+          e.preventDefault();
+          setOpen(false);
+        }
+      }}
+      className={kalip ? undefined : icon ? `${INPUT_CLS} pl-12 placeholder:text-sm` : INPUT_CLS}
+      aria-describedby={kalip && hint ? `${id}-h` : undefined}
+    />
+  );
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className={kalip ? "kpq kpta" : "flex min-w-0 flex-col gap-2"}>
+      {kalip ? (
+        <>
+          <label className="fld" htmlFor={id}>
+            <span>{label}</span>
+            {input}
+          </label>
+          {hint ? (
+            <small id={`${id}-h`} className="kph">
+              {hint}
+            </small>
+          ) : null}
+        </>
+      ) : (
       <div className="flex min-w-0 flex-col gap-1">
         <label htmlFor={id} className="text-base font-semibold text-ink">
           {label}
@@ -138,48 +195,15 @@ export function Typeahead<T>({
         {hint ? <span className="text-sm text-ink-muted">{hint}</span> : null}
         <div className="relative min-w-0">
           {icon ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-ink-muted">{icon}</span> : null}
-          <input
-            id={id}
-            name={name}
-            type="search"
-            placeholder={placeholder}
-            autoComplete="off"
-            maxLength={128}
-            value={q}
-            disabled={!clientReady}
-            aria-autocomplete="list"
-            aria-controls={expanded ? listId : undefined}
-            aria-activedescendant={expanded && active >= 0 ? `${listId}-${active}` : undefined}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown" && items.length > 0) {
-                e.preventDefault();
-                setOpen(true);
-                setActive((a) => Math.min(items.length - 1, a + 1));
-              } else if (e.key === "ArrowUp" && items.length > 0) {
-                e.preventDefault();
-                setActive((a) => Math.max(0, a - 1));
-              } else if (e.key === "Enter" && expanded && active >= 0 && items[active] !== undefined) {
-                e.preventDefault();
-                choose(items[active] as T);
-              } else if (e.key === "Enter" && name === undefined) {
-                // Üst formu (ör. toplu oluşturucu) yanlışlıkla göndermesin.
-                e.preventDefault();
-              } else if (e.key === "Escape" && expanded) {
-                e.stopPropagation();
-                e.preventDefault();
-                setOpen(false);
-              }
-            }}
-            className={icon ? `${INPUT_CLS} pl-12 placeholder:text-sm` : INPUT_CLS}
-          />
+          {input}
         </div>
       </div>
+      )}
       {expanded ? (
         items.length === 0 && !busy ? (
-          <p className="break-words rounded-card bg-bg px-4 py-3 text-sm text-ink-muted">{t("none")}</p>
+          <p className={kalip ? "kpt kpnone" : "break-words rounded-card bg-bg px-4 py-3 text-sm text-ink-muted"}>{t("none")}</p>
         ) : (
-          <ul id={listId} role="listbox" aria-label={listLabel} className="m-0 flex max-h-56 min-w-0 list-none flex-col gap-1 overflow-y-auto overscroll-contain rounded-card border-2 border-border bg-surface p-1">
+          <ul id={listId} role="listbox" aria-label={listLabel} className={kalip ? "kplist" : "m-0 flex max-h-56 min-w-0 list-none flex-col gap-1 overflow-y-auto overscroll-contain rounded-card border-2 border-border bg-surface p-1"}>
             {items.map((item, i) => {
               const s = toSuggestion(item);
               return (
@@ -190,10 +214,10 @@ export function Typeahead<T>({
                   aria-selected={i === active}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => choose(item)}
-                  className="flex min-h-12 min-w-0 cursor-pointer flex-col justify-center rounded-control px-3 py-1 text-ink aria-selected:bg-accent-soft aria-selected:text-accent-ink"
+                  className={kalip ? "kpopt" : "flex min-h-12 min-w-0 cursor-pointer flex-col justify-center rounded-control px-3 py-1 text-ink aria-selected:bg-accent-soft aria-selected:text-accent-ink"}
                 >
-                  <span className="min-w-0 break-words text-base font-semibold">{s.primary}</span>
-                  {s.secondary ? <span className="min-w-0 [overflow-wrap:anywhere] text-sm text-ink-muted">{s.secondary}</span> : null}
+                  <span className={kalip ? "kpo1" : "min-w-0 break-words text-base font-semibold"}>{s.primary}</span>
+                  {s.secondary ? <span className={kalip ? "kpo2" : "min-w-0 [overflow-wrap:anywhere] text-sm text-ink-muted"}>{s.secondary}</span> : null}
                 </li>
               );
             })}
