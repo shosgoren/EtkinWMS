@@ -12,6 +12,7 @@ import { cameraFeedback, classifyCameraError, createFrameDecoder, iosShareLocati
 import type { CameraFailure, CameraSession, FrameDecoder, RejectReason } from "../../../../../lib/scanner/camera-source.ts";
 import { intOf } from "../../receipts/receipt-form.tsx";
 import { compoundQuantityAction } from "../../receipts/actions.ts";
+import { SICON } from "../../../../design/saha-icons.ts";
 
 const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 /** Saha alt gezinme çubuğunun yüksekliği (field/layout.tsx: min-h-14 + py-2 + border-t-2 = 74 px); sabit birincil çubuk hemen üstünde durur. */
@@ -545,11 +546,60 @@ function useInstallHint(): { show: boolean; where: "bottom" | "address"; dismiss
 /**
  * Tarama paneli (tek yol): büyük okut ikonu + tek cümle; alt birincil düğme "Barkodu okut". ScanField (T-303) yalnızca "Elle gir" bağlantısıyla açılır
  * (ikincil); okuma hazır olduğunda `ready` vurgusu görünür.
+ * T-978: `variant="kalip"` — ekran kalıbı görünümü (`.kscanp`, design/kalip-frame.css; Saha/Form kabının belirteçleri, koyu tema kabın
+ * `dz-dark` sınıfından; ikonlar saha kaynağından). Test kimlikleri, roller, metinler ve "Elle gir" davranışı varsayılanla aynıdır.
  */
-export function ScanPanel({ service, prompt, last, lastName, ready, hue }: { service: ScannerService | null; prompt: string; last: string; lastName?: string; ready: boolean; hue: FlowHue }) {
+export function ScanPanel({ service, prompt, last, lastName, ready, hue, variant = "default" }: { service: ScannerService | null; prompt: string; last: string; lastName?: string; ready: boolean; hue: FlowHue; variant?: "default" | "kalip" }) {
   const t = useTranslations("receiving");
   const wrap = useRef<HTMLDivElement>(null);
   const install = useInstallHint();
+  const openManual = (): void => wrap.current?.querySelector<HTMLButtonElement>('[data-mode="scan"] > button')?.click();
+  if (variant === "kalip") {
+    const svg = (d: string, size: number) => (
+      <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    );
+    return (
+      <section data-testid="scan-panel" data-ready={ready ? "true" : "false"} aria-live="polite" className={`kscanp ${hue}${ready ? " on" : ""}`}>
+        <span className="kscanic">{svg(SICON.scan, 40)}</span>
+        <p className="kscant">{ready ? t("flow.readerReady") : prompt}</p>
+        {last === "" ? null : (
+          <p className="kscanlast" data-testid="last-scan">
+            {lastName === undefined ? null : <b>{t("flow.lastScan", { name: lastName })} </b>}
+            <span className="mono" data-testid="last-scan-code">
+              {t("flow.lastCode", { code: last })}
+            </span>
+          </p>
+        )}
+        <div ref={wrap} className="kscanw">
+          <ScanField
+            variant="kalip"
+            manualIcon={svg(SICON.kbd, 20)}
+            label={t("flow.scanLabel")}
+            value={last}
+            manualLabel={t("flow.manual")}
+            confirmLabel={t("flow.manualConfirm")}
+            cancelLabel={t("cancel")}
+            placeholder={t("flow.scanPlaceholder")}
+            onManualSubmit={(v) => service?.submitManual(v)}
+          />
+        </div>
+        <button type="button" onClick={openManual} className="kscanlink group-has-[[data-mode=manual]]:hidden">
+          {svg(SICON.kbd, 18)}
+          {t("flow.manual")}
+        </button>
+        {install.show ? (
+          <div data-testid="install-hint" className="kscanhint">
+            <p>{t(install.where === "address" ? "camera.installHintChrome" : "camera.installHintSafari")}</p>
+            <button type="button" onClick={install.dismiss} className="btn kscan2">
+              {t("camera.ok")}
+            </button>
+          </div>
+        ) : null}
+      </section>
+    );
+  }
   return (
     <section
       data-testid="scan-panel"
@@ -578,7 +628,7 @@ export function ScanPanel({ service, prompt, last, lastName, ready, hue }: { ser
       </div>
       <button
         type="button"
-        onClick={() => wrap.current?.querySelector<HTMLButtonElement>('[data-mode="scan"] > button')?.click()}
+        onClick={openManual}
         className={`flex min-h-12 min-w-12 items-center justify-center rounded-control px-4 text-base font-bold ${SCAN_LINK[hue]} underline group-has-[[data-mode=manual]]:hidden ${FOCUS}`}
       >
         {t("flow.manual")}

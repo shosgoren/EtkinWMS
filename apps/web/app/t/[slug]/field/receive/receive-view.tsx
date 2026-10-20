@@ -392,7 +392,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
         scanProxy
         main={{ label: ts("okut.scanMain"), aria: t("flow.scanNow"), d: SICON.scan, onClick: scanPrimary.press, testId: "flow-primary" }}
       >
-        <ScanPanel service={scanner} prompt={busy ? t("flow.checking") : t("flow.scanPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="green" />
+        <ScanPanel variant="kalip" service={scanner} prompt={busy ? t("flow.checking") : t("flow.scanPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="green" />
         <section aria-label={t("flow.expectedItems")} className="flex min-w-0 flex-col gap-2">
           <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="expected-lines">
             {receipt.lines.map((l) => (

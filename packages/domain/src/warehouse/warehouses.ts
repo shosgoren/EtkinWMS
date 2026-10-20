@@ -242,6 +242,8 @@ export interface ListWarehousesInput {
   /** Keyset imleci: son görülen `code` (tam eşleşme sırası, `COLLATE "C"`); OFFSET yok (I-14). */
   readonly afterCode?: string;
   readonly limit?: number;
+  /** T-978: kod ya da ad içinde arama (ILIKE; en çok 100 karakter; boş = süzgeç yok). */
+  readonly q?: string;
 }
 
 export interface ListWarehousesResult {
@@ -263,6 +265,9 @@ export async function listWarehouses(params: WarehouseCallParams, input: ListWar
   const limit = parseLimit(input.limit);
   const after = input.afterCode === undefined ? null : normalizeCode(input.afterCode);
   const includeArchived = input.includeArchived === true;
+  if (input.q !== undefined && typeof input.q !== "string") throw new AppError("VALIDATION_FAILED");
+  const q = (input.q ?? "").replace(/\p{C}/gu, " ").trim().slice(0, 100);
+  const like = q === "" ? null : `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
     const rows = await tx.execute<WarehouseDbRow>(
@@ -270,6 +275,7 @@ export async function listWarehouses(params: WarehouseCallParams, input: ListWar
             FROM public.warehouses
            WHERE tenant_id = ${m.tenantId}::uuid
              AND (${includeArchived} OR status = 'ACTIVE')
+             AND (${like}::text IS NULL OR code ILIKE ${like} OR name ILIKE ${like})
              AND (${after}::text IS NULL OR code COLLATE "C" > ${after}::text COLLATE "C")
              AND (${scope === null}::boolean OR id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))
            ORDER BY code COLLATE "C"

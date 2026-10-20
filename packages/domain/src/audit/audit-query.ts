@@ -27,6 +27,8 @@ export interface AuditFilters {
   readonly to?: string;
   /** Kayıtlı eylem (`AUDIT_ACTIONS`). */
   readonly action?: string;
+  /** T-978: kişi adı, gerekçe ya da kayıt kimliği içinde arama (ILIKE; 1–100 karakter, denetim karakteri yok). */
+  readonly q?: string;
 }
 
 export interface AuditRow {
@@ -105,7 +107,14 @@ function checkFilters(f: AuditFilters | undefined): AuditFilters {
   }
   if (f.from !== undefined && f.to !== undefined && f.from > f.to) throw new AppError("VALIDATION_FAILED");
   if (f.action !== undefined && (typeof f.action !== "string" || !KNOWN.has(f.action))) throw new AppError("VALIDATION_FAILED");
-  return { ...(f.from === undefined ? {} : { from: f.from }), ...(f.to === undefined ? {} : { to: f.to }), ...(f.action === undefined ? {} : { action: f.action }) };
+  if (f.q !== undefined && (typeof f.q !== "string" || /\p{C}/u.test(f.q) || f.q.length > 100)) throw new AppError("VALIDATION_FAILED");
+  const q = f.q?.trim() ?? "";
+  return {
+    ...(f.from === undefined ? {} : { from: f.from }),
+    ...(f.to === undefined ? {} : { to: f.to }),
+    ...(f.action === undefined ? {} : { action: f.action }),
+    ...(q === "" ? {} : { q }),
+  };
 }
 
 async function tenantTimeZone(tx: AccessTx, tenantId: string): Promise<string> {
@@ -175,6 +184,8 @@ async function selectRows(
   const from = filters.from === undefined ? sql`` : sql`AND a.occurred_at >= ((${filters.from}::date)::timestamp AT TIME ZONE ${tz})`;
   const to = filters.to === undefined ? sql`` : sql`AND a.occurred_at < (((${filters.to}::date + 1))::timestamp AT TIME ZONE ${tz})`;
   const act = filters.action === undefined ? sql`` : sql`AND a.action = ${filters.action}`;
+  const like = filters.q === undefined ? null : `%${filters.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  const text = like === null ? sql`` : sql`AND (u.name ILIKE ${like} OR a.reason ILIKE ${like} OR a.entity_id ILIKE ${like})`;
   const after =
     cursor === undefined
       ? sql``
@@ -192,7 +203,7 @@ async function selectRows(
                  ${summary} AS summary
             FROM public.audit_logs a
             LEFT JOIN public.users u ON u.id = a.actor_user_id
-           WHERE a.tenant_id = ${tenantId}::uuid ${from} ${to} ${act} ${after} ${snap} ${own} ${identity} ${scopeFilter(scope)}
+           WHERE a.tenant_id = ${tenantId}::uuid ${from} ${to} ${act} ${text} ${after} ${snap} ${own} ${identity} ${scopeFilter(scope)}
            ORDER BY a.occurred_at DESC, a.id ASC
            LIMIT ${limit}`,
     )),

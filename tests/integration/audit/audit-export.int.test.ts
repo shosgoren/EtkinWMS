@@ -138,6 +138,40 @@ afterAll(async () => {
   await app.close();
 }, 60_000);
 
+
+describe("listAudit q (T-978)", () => {
+  it("kişi adı, gerekçe ve kayıt kimliğinde arar (jokerler kaçışlı); kimlik olayı gizleme ve tenant sınırı korunur; geçersiz q VALIDATION_FAILED", async () => {
+    const Q = await mkTenant("Q", 0);
+    const tag = rnd();
+    const entity = randomUUID();
+    await adm.query(
+      `INSERT INTO public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id, reason, change_summary) VALUES
+         ($1, $2, 'warehouse.updated', 'warehouse', $3, $4, '{}'::jsonb),
+         ($1, $5, 'warehouse.updated', 'warehouse', gen_random_uuid()::text, NULL, '{}'::jsonb),
+         ($1, $2, 'member.invited', 'invitation', gen_random_uuid()::text, $6, '{}'::jsonb)`,
+      [Q.tenant, Q.admin.userId, entity, `raf duzeltme ${tag}`, Q.manager.userId, `davet ${tag}`],
+    );
+    // Aynı gerekçe B tenant'ında: Q aramasında görünmez.
+    await adm.query("INSERT INTO public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id, reason, change_summary) VALUES ($1, $2, 'warehouse.updated', 'warehouse', gen_random_uuid()::text, $3, '{}'::jsonb)", [B.tenant, B.admin.userId, `raf duzeltme ${tag}`]);
+    const reasons = async (q: string, who = Q.admin.userId) => (await listAudit(access(Q, who), { filters: { q } })).items.map((r) => r.reason);
+    expect(await reasons(`RAF DUZELTME ${tag}`)).toEqual([`raf duzeltme ${tag}`]);
+    expect((await listAudit(access(Q, Q.admin.userId), { filters: { q: entity.slice(0, 13) } })).items.map((r) => r.entityId)).toEqual([entity]);
+    // Kişi adı (Depocu Q): yalnız onun satırı; tarih/işlem süzgeciyle birlikte çalışır.
+    const byActor = await listAudit(access(Q, Q.admin.userId), { filters: { q: "depocu q", action: "warehouse.updated" } });
+    expect(byActor.items.map((r) => r.actorName)).toEqual(["Depocu Q"]);
+    // Jokerler kaçışlı.
+    expect(await reasons("%")).toEqual([]);
+    expect(await reasons(`raf_duzeltme_${tag}`)).toEqual([]);
+    // Depo sorumlusu kimlik olayını (member.invited) aramayla da göremez; yönetici görür.
+    expect(await reasons(`davet ${tag}`)).toEqual([`davet ${tag}`]);
+    expect(await reasons(`davet ${tag}`, Q.manager.userId)).toEqual([]);
+    // Boşluk süzgeç değildir; 100+ karakter ve denetim karakteri reddedilir.
+    expect((await listAudit(access(Q, Q.admin.userId), { filters: { q: "   " } })).items.length).toBe(3);
+    await expectCode(listAudit(access(Q, Q.admin.userId), { filters: { q: "x".repeat(101) } }), "VALIDATION_FAILED");
+    await expectCode(listAudit(access(Q, Q.admin.userId), { filters: { q: "a\u0000b" } }), "VALIDATION_FAILED");
+  });
+});
+
 describe("listAudit (keyset)", () => {
   it("sayfa sayfa gezilir: tekrar/eksik yok, yalnızca A satırları, sıra (occurred_at DESC, id ASC)", async () => {
     const seen = new Set<string>();
