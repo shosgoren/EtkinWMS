@@ -1347,7 +1347,9 @@
         "archiveSub": "LİSTEDEN KALDIR",
         "today": "BUGÜN {time}",
         "yesterday": "DÜN {time}",
-        "daysAgo": "{n} GÜN ÖNCE"
+        "daysAgo": "{n} GÜN ÖNCE",
+        "kind_COUNT_ADJUSTMENT": "Sayım farkı",
+        "kind_OTHER": "Hareket"
       }
     },
     "errors": {

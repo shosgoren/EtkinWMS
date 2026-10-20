@@ -22,6 +22,7 @@ export interface CountFlowLine {
   readonly itemCode: string;
   readonly itemName: string;
   readonly unitCode: string;
+  readonly scale: number;
   readonly stockStatus: string;
   readonly counted: string | null;
   readonly reference: string | null;
@@ -49,6 +50,9 @@ interface Target {
   readonly finding: boolean;
   readonly barcode: string | null;
   readonly step: number;
+  /** Ondalık ölçekli ürün (kg, m…): sayı tuşları yerine ondalık alan; değer dizge olarak gider, ölçek denetimi sunucuda (`QUANTITY_SCALE`). */
+  readonly scale: number;
+  readonly counted: string | null;
 }
 const norm = (v: string): string => v.normalize("NFC").trim().replace(/[a-z]/g, (c) => c.toUpperCase());
 
@@ -62,6 +66,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
   const [stage, setStage, stageRef] = useStateRef<Stage>("location");
   const [target, setTarget, targetRef] = useStateRef<Target | null>(null);
   const [qty, setQty, qtyRef] = useStateRef(0);
+  const [qtyText, setQtyText] = useState("");
   const [last, setLast] = useState("");
   const [lastName, setLastName] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -82,7 +87,8 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
       holder.contentChanged();
       setError(null);
       setTarget(tgt);
-      setQty(tgt.barcode === null ? (intOf(lines.find((l) => l.itemId === tgt.itemId && l.stockStatus === tgt.stockStatus)?.counted) ?? 0) : tgt.step);
+      setQty(tgt.barcode === null ? (intOf(tgt.counted) ?? 0) : tgt.step);
+      setQtyText(tgt.barcode === null ? (tgt.counted ?? "") : String(tgt.step));
       setStage("qty");
     },
     [holder, lines, setQty, setStage, setTarget],
@@ -111,6 +117,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
       if (at === "qty" && cur !== null && cur.barcode === code) {
         holder.contentChanged();
         setQty(qtyRef.current + cur.step);
+        if (cur.scale > 0) setQtyText((prev) => String(Math.round(((Number(prev.replace(",", ".")) || 0) + cur.step) * 1e6) / 1e6));
         setLastName(cur.itemName);
         return;
       }
@@ -145,6 +152,8 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
           finding: line === undefined,
           barcode: code,
           step: r.step,
+          scale: line?.scale ?? 0,
+          counted: line?.counted ?? null,
         });
       } catch {
         alertOf("alert.networkTitle", "network", "NETWORK");
@@ -176,12 +185,17 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
 
   async function save() {
     const tgt = target;
-    if (busyRef.current || tgt === null || qty < 0) return;
+    const decimal = tgt !== null && tgt.scale > 0;
+    const value = decimal ? qtyText.trim().replace(",", ".") : String(qty);
+    if (busyRef.current || tgt === null || qty < 0 || (decimal && !/^\d{1,12}(?:\.\d{1,6})?$/.test(value))) {
+      tone("err");
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     setError(null);
     const out = await submitWithKey(holder, (clientKey) =>
-      recordCountAction({ slug, clientKey, sessionId: work.sessionId, locationId: work.locationId, itemId: tgt.itemId, countedQuantity: String(qty), stockStatus: tgt.stockStatus }),
+      recordCountAction({ slug, clientKey, sessionId: work.sessionId, locationId: work.locationId, itemId: tgt.itemId, countedQuantity: value, stockStatus: tgt.stockStatus }),
     );
     busyRef.current = false;
     setBusy(false);
@@ -190,10 +204,11 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
       setError(out.error);
       return;
     }
-    const ref = tgt.reference === null ? null : intOf(tgt.reference);
-    const diff = tgt.finding ? qty : ref === null ? null : qty - ref;
+    const n = Number(value);
+    const ref = tgt.reference === null ? null : Number(tgt.reference);
+    const diff = tgt.finding ? n : ref === null ? null : Math.round((n - ref) * 1e6) / 1e6;
     tone(diff !== null && diff !== 0 ? "err" : "ok");
-    setSaved({ item: tgt.itemName, n: qty, diff });
+    setSaved({ item: tgt.itemName, n, diff });
     setVeil(true);
     setTarget(null);
     setStage("list");
@@ -244,8 +259,10 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
   );
 
   if (stage === "qty" && target !== null) {
-    const ref = target.reference === null ? null : intOf(target.reference);
-    const diff = target.finding ? qty : ref === null ? null : qty - ref;
+    const decimal = target.scale > 0;
+    const shown = decimal ? Number(qtyText.trim().replace(",", ".")) : qty;
+    const ref = target.reference === null ? null : Number(target.reference);
+    const diff = Number.isFinite(shown) ? (target.finding ? shown : ref === null ? null : Math.round((shown - ref) * 1e6) / 1e6) : null;
     return withOverlay(
       <>
         <SahaShell
@@ -259,6 +276,38 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
           }}
           main={{ label: t("count.save"), aria: t("count.saveAria"), d: SICON.check, onClick: () => void save(), disabled: busy, wait: diff !== null && diff !== 0, testId: "flow-primary" }}
         >
+          {decimal ? (
+            <>
+              <div className="job" data-testid="verify-card">
+                <span className="uic" style={{ background: dz("8A5A12") }}>
+                  <Ico d={SICON.urun} size={22} />
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <b>{target.itemName}</b>
+                  <small>{work.locationCode}</small>
+                </span>
+              </div>
+              <div className="qdisp" data-testid="qty-display">
+                <span className="qv">
+                  <input
+                    aria-label={t("count.qtyLabel")}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    maxLength={20}
+                    value={qtyText}
+                    data-testid="count-qty-decimal"
+                    onChange={(e) => {
+                      holder.contentChanged();
+                      setQtyText(e.target.value.replace(/[^0-9.,]/g, ""));
+                    }}
+                    style={{ width: `${Math.max(2, qtyText.length) + 0.4}ch` }}
+                  />
+                  <span>{target.unitCode}</span>
+                </span>
+                <small>{work.blind ? t("count.blindLine") : t("count.refLine", { n: target.reference ?? "0", unit: target.unitCode })}</small>
+              </div>
+            </>
+          ) : (
           <SahaQty
             itemName={target.itemName}
             itemSub={work.locationCode}
@@ -278,6 +327,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
             overText=""
             hint={t("count.hint")}
           />
+          )}
           {target.finding ? <SahaVerdict ok={false} title={t("count.finding")} sound={t("count.findingHint")} /> : null}
           {!target.finding && diff !== null && diff !== 0 ? (
             <div className="vres bad" role="status" data-testid="count-diff-warn">
@@ -356,7 +406,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
                   disabled={submitted || busy}
                   onClick={() => {
                     tone("tap");
-                    begin({ itemId: l.itemId, itemName: l.itemName, unitCode: l.unitCode, stockStatus: l.stockStatus, reference: l.reference, finding: false, barcode: null, step: 1 });
+                    begin({ itemId: l.itemId, itemName: l.itemName, unitCode: l.unitCode, stockStatus: l.stockStatus, reference: l.reference, finding: false, barcode: null, step: 1, scale: l.scale, counted: l.counted });
                   }}
                 >
                   <span className="uic" style={{ background: dz(l.counted === null ? "8A5A12" : "2F7D5B") }}>

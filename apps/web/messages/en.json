@@ -1347,7 +1347,9 @@
         "archiveSub": "REMOVE FROM LIST",
         "today": "TODAY {time}",
         "yesterday": "YESTERDAY {time}",
-        "daysAgo": "{n} DAYS AGO"
+        "daysAgo": "{n} DAYS AGO",
+        "kind_COUNT_ADJUSTMENT": "Count adjustment",
+        "kind_OTHER": "Movement"
       }
     },
     "errors": {
