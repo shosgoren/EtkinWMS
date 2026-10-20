@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("detail.title") };
 }
 
-async function LockedItem({ slug }: { slug: string }) {
+async function LockedItem(slug: string) {
   const t = await getTranslations("items");
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
@@ -95,7 +95,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
       // `stock.view` izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli görünüm (audit/members deseni).
-      if (e.code === "FORBIDDEN") return <LockedItem slug={slug} />;
+      if (e.code === "FORBIDDEN") {
+        // Kilitli görünüm argümansız sunucu bileşenidir (AC-04 testi bileşeni props'suz çizer); slug kapanışla gelir.
+        const Locked = () => LockedItem(slug);
+        return <Locked />;
+      }
     }
     throw e;
   }

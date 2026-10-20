@@ -28,7 +28,7 @@ function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-async function LockedItems({ slug }: { slug: string }) {
+async function LockedItems(slug: string) {
   const t = await getTranslations("items");
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
   return (
@@ -99,7 +99,11 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
       // Geçersiz imleç (`after`) kullanıcı hatasıdır: boş liste yerine 404.
       if (e.code === "VALIDATION_FAILED") notFound();
       // `stock.view` izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli görünüm (audit/members deseni).
-      if (e.code === "FORBIDDEN") return <LockedItems slug={slug} />;
+      if (e.code === "FORBIDDEN") {
+        // Kilitli görünüm argümansız sunucu bileşenidir (AC-04 testi bileşeni props'suz çizer); slug kapanışla gelir.
+        const Locked = () => LockedItems(slug);
+        return <Locked />;
+      }
     }
     throw e;
   }
