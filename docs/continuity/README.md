@@ -12,6 +12,7 @@ Bu dizin yeni bir AI'ın bütün sohbeti okumadan devam etmesi içindir. Başlan
 | Web/mobil/tablet ve görsel dil | [UI_UX](UI_UX.md) | `docs/design/`, `docs/ux/`, `apps/web/app/globals.css` |
 | Tenant, stok, migration, RLS | [DATABASE](DATABASE.md) | `docs/INVARIANTS.md`, `packages/db/`, `packages/domain/` |
 | VPS/GitHub erişimi, yayın, yedek | [OPERATIONS](OPERATIONS.md) | `deploy/vps/`, gerçek operatör dosyaları |
+| Açık işler / öncelik | [BACKLOG](../BACKLOG.md) | İlgili T- kartı, PR |
 | Güncel tutma / az token / teslim | [UPDATE_PROTOCOL](UPDATE_PROTOCOL.md) | Görev kartı + kısa kanıt kaydı |
 
 ## Gerçek otoriteler
