@@ -133,7 +133,8 @@ jobs:
           set -euo pipefail
           code=true
           if [ "$EVENT" = pull_request ] && [[ "$BASE" =~ ^[0-9a-f]{40}$ ]] && [[ "$HEAD" =~ ^[0-9a-f]{40}$ ]]; then
-            files=$(git diff --name-only "$BASE...$HEAD")
+            # --no-renames: taşınan dosyanın ESKİ yolu da listelenir (kod dosyasını docs/ altına taşıyan PR "yalnız belge" sayılmasın).
+            files=$(git diff --no-renames --name-only "$BASE...$HEAD")
             # Boru yok (SIGPIPE + pipefail yanlış "yalnız belge" sonucu veremesin): belge dışı tek dosya bile varsa kod.
             if [ -n "$files" ] && ! grep -qvE '^docs/|\.md$' <<< "$files"; then code=false; fi
           fi

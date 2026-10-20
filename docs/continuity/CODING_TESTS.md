@@ -35,7 +35,9 @@ pnpm test:ac --ci
 Test dengesi (T-925, kullanıcı kararı 20 Ekim: hatasız + hızlı):
 - Kural, yetki, RLS ve stok doğruluğu birim + entegrasyon testlerinde (hızlı, kapsam kaybı yok). Bu projede DB/RLS değişikliği ilgisiz test dosyalarını kırabildiği için (T-919: 6 dosya) kod değişen PR'da "yalnız ilgili test" seçimi yapılmaz; TAM takım koşar.
 - Hız paralellikten gelir: `int` iki parçaya (`vitest --shard`), `e2e` iki proje grubuna (masaüstü / mobil) bölünür; her parça kendi ortamını kurar. Sabit adlı `int` / `e2e` toplayıcı işleri parçaların sonucunu raporlar.
-- Yalnız belge (`docs/**`, `*.md`) değişen PR'da int/e2e parçaları koşmaz (`changes` işi; belirsizlikte kod sayılır). main ve int dallarına push her zaman tam takım; yayın kapısı main sonucunu ister.
+- Yalnız belge (`docs/**`, `*.md`) değişen PR'da int/e2e parçaları koşmaz (`changes` işi; `--no-renames`, belirsizlikte kod sayılır). main ve int dallarına push her zaman tam takım; yayın kapısı main sonucunu ister.
+- e2e proje grupları ayrı veritabanlarında koşar: mobil grup masaüstü grubunun bıraktığı veriyi görmez (testler bağımsız olmalı).
+- Yayın (`deploy-vps`) yalnız `ci` tamamlanınca tetiklenir ve guards kapılarını ≤ 15 dk bekler; guards sonradan yeniden koşturulup yeşile dönerse otomatik yayın olmaz — `workflow_dispatch mode=deploy` ile elle başlatılır.
 - E2E yalnız kritik uçtan uca akışlar + ortak yerleşim taraması (telefon/tablet/masaüstü; taşma, kaydırma, örtme) içindir; her hata için ayrı e2e yazılmaz (B-60). Gerçek cihaz (iPhone Safari çubukları vb.) kontrolü kullanıcı/ekip tarafından.
 
 Zorunlu check adları: **verify, infra, secrets, deps, int, e2e, check-all, test-ac, check-pilot**. Ayrı build/deploy/check işleri ürün CI veya canlı kabul yerine geçmez. Aynı exact SHA'nın son `github-actions` sonucunu doğrula; eski dal testi yeni birleşik SHA testi değildir.

@@ -53,7 +53,7 @@ jobs:
       checks: read
       id-token: write
       attestations: write
-    timeout-minutes: 35
+    timeout-minutes: 45  # T-925: kapı ≤ 15 dk bekleyebilir + imaj kurulumu
     outputs:
       sha: ${{ steps.gate.outputs.sha }}
       schema: ${{ steps.bundle.outputs.schema }}
@@ -94,6 +94,8 @@ jobs:
             if [ "$rc" != 3 ] || [ "$attempt" = 30 ]; then echo "RELEASE_BLOCKED (rc=$rc)"; exit 1; fi
             sleep 30
           done
+          # Bekleme sırasında main ilerlediyse eski SHA için imaj kurulmaz (sunucu da NOT_CURRENT_MAIN ile reddeder).
+          test "$REQUEST_SHA" = "$(gh api repos/shosgoren/EtkinWMS/git/ref/heads/main --jq .object.sha)"
           echo "sha=$REQUEST_SHA" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
