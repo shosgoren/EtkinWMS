@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { MapPinned } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { getItem } from "@wms/domain/catalog";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
@@ -11,7 +10,10 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_LIST_LIMIT_MAX, getLocationBrief, listMyTasks, type TaskCursor, type TaskRow } from "@wms/domain/operations";
 import { listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
-import { FlowShell, PrimaryLink } from "../receive/receive-flow.tsx";
+import { KICON } from "../../../../design/kabuk-icons.ts";
+import { dz } from "../../../../design/saha-tokens.ts";
+import { PrimaryLink } from "../receive/receive-flow.tsx";
+import { Ico, SahaShell } from "../saha-shell.tsx";
 import { PutawayFlow, type PutawayTask } from "./putaway-flow.tsx";
 
 export const dynamic = "force-dynamic";
@@ -39,9 +41,8 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
   if (principal === null) redirect(`/login?next=${encodeURIComponent(base)}`);
   const db = getAppDb();
   const call = { db, principal, tenantSlug: slug };
-  const icon = <MapPinned aria-hidden="true" className="size-6" />;
   const message = (title: string, body: string, href: string, label: string, help = false) => (
-    <FlowShell hue="teal" icon={icon} title={title} backHref={href} footer={<PrimaryLink href={href}>{label}</PrimaryLink>}>
+    <SahaShell hue="teal" iconD={KICON.mDepo} title={title} backHref={href} footer={<PrimaryLink href={href}>{label}</PrimaryLink>}>
       <p className="break-words text-lg text-ink" data-testid="putaway-message">
         {body}
       </p>
@@ -50,7 +51,7 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
             {t("flow.helpCall")}
           </Link>
       ) : null}
-    </FlowShell>
+    </SahaShell>
   );
   const guard = (e: unknown): never => {
     if (e instanceof AppError) {
@@ -66,6 +67,9 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
   const roles = current.roles;
   if (!hasPermission(roles, "stock.post", current.grants)) return message(t("putaway.lockedTitle"), t("putaway.lockedReason"), fieldHome, t("flow.toField"), true);
 
+  // T-969: OKUT ekranından `?code=` ile gelinirse okutulan raf/ürün kodu akışta bir kez işlenir.
+  const code = first(sp.code);
+  const codeProp = code === undefined || code === "" ? {} : { initialCode: code.slice(0, 256) };
   const taskId = first(sp.task);
   if (taskId !== undefined && taskId !== "") {
     let found: TaskRow | undefined;
@@ -87,7 +91,7 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
     try {
       const [item, loc] = await Promise.all([getItem(call, { itemId: found.itemId }), getLocationBrief(call, { locationId: found.locationId })]);
       const task: PutawayTask = { id: found.id, itemId: item.id, itemName: item.name, itemCode: item.code, quantity: found.quantity, sourceId: loc.id, sourceCode: loc.code, sourceName: loc.name };
-      return <PutawayFlow slug={slug} warehouseId={found.warehouseId} task={task} />;
+      return <PutawayFlow slug={slug} warehouseId={found.warehouseId} task={task} {...codeProp} />;
     } catch (e) {
       if (e instanceof AppError && e.code === "NOT_FOUND") return message(t("putaway.taskGoneTitle"), t("putaway.taskGone"), tasksHref, t("putaway.backToTasks"));
       return guard(e);
@@ -103,23 +107,25 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
   }
   const wh = first(sp.wh);
   const chosen = warehouses.length === 1 ? warehouses[0] : warehouses.find((w) => w.id === wh);
-  if (chosen !== undefined) return <PutawayFlow slug={slug} warehouseId={chosen.id} task={null} />;
+  if (chosen !== undefined) return <PutawayFlow slug={slug} warehouseId={chosen.id} task={null} {...codeProp} />;
   if (warehouses.length === 0) return message(t("putaway.noWarehouseTitle"), t("putaway.noWarehouse"), fieldHome, t("flow.toField"));
   return (
-    <FlowShell hue="teal" icon={icon} step={1} total={5} title={t("putaway.warehouseTitle")} instruction={t("putaway.warehouseInstruction")} backHref={fieldHome} footer={<PrimaryLink href={tasksHref}>{t("putaway.toTasks")}</PrimaryLink>}>
+    <SahaShell hue="teal" iconD={KICON.mDepo} step={1} total={5} title={t("putaway.warehouseTitle")} instruction={t("putaway.warehouseInstruction")} backHref={fieldHome} footer={<PrimaryLink href={tasksHref}>{t("putaway.toTasks")}</PrimaryLink>}>
       <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0" aria-label={t("putaway.warehouseTitle")}>
         {warehouses.map((w) => (
           <li key={w.id} className="flex min-w-0">
-            <Link
-              href={`${base}?wh=${encodeURIComponent(w.id)}`}
-              className="flex min-h-16 w-full min-w-0 flex-col justify-center rounded-card border-2 border-border bg-surface p-3 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            >
-              <span className="break-words text-lg font-bold text-ink">{w.name}</span>
-              <span className="text-sm text-ink-muted">{w.code}</span>
+            <Link href={`${base}?${new URLSearchParams({ wh: w.id, ...(code === undefined || code === "" ? {} : { code: code.slice(0, 256) }) })}`} className="job w-full">
+              <span className="uic" style={{ background: dz("0E7C7B") }}>
+                <Ico d={KICON.mDepo} size={22} />
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <b>{w.name}</b>
+                <small>{w.code}</small>
+              </span>
             </Link>
           </li>
         ))}
       </ul>
-    </FlowShell>
+    </SahaShell>
   );
 }

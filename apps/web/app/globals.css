@@ -1746,4 +1746,6 @@ body:has(.dzp, .dza, .dzr, .dze) [data-testid="screen-nav"] { display: none; }
 }
 /* design:saha:end */
 /* T-969 uyarlaması (saha-frame.css): kaynaktaki `.app` arka plan geçişinin alt rengi (üreteç atlanan `.app` kuralının rengini toplamaz). */
-.dzf { --color-dz-x-nmodok: #dce3ea; }
+.dzf {
+  --color-dz-x-nmodok: #dce3ea;
+}

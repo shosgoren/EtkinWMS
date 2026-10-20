@@ -63,3 +63,35 @@ body:has(.dzf) [data-testid="tenant-bar"], body:has(.dzf) .app-header { display:
 /* OKUT: bulunan işe geçiş satırı (kaynak `.shd span` yazı dili). */
 .dzf .okgo { margin: 0 2px; font: 600 11px/1.3 var(--font-plex-mono), monospace; letter-spacing: .06em; color: var(--color-dz-x-eogehg); }
 .dzf.dz-dark .okgo { color: var(--color-dz-x-jplcmc); }
+/* (c) Miktar: sayının yanında küçük eylemler (Bir koli daha okut, Hasarlı ekle); kaynak `.k.fn` renkleri, en az 48 px. */
+.dzf .qrow { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; }
+.dzf .qside { display: flex; gap: 8px; margin-left: auto; }
+.dzf .qrow .qv { margin-left: auto; }
+.dzf .qbtn {
+  appearance: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 48px; min-height: 48px; padding: 0 8px;
+  border: 0; border-radius: 14px; background: var(--color-dz-x-odojoo); color: var(--color-dz-x-daehfk); cursor: pointer;
+  font: 800 9.5px/1 var(--font-bricolage), sans-serif; letter-spacing: .06em;
+}
+.dzf .qbtn[aria-pressed="true"] { background: var(--color-dz-x-odpboj); color: var(--color-dz-x-bhfidm); }
+.dzf.dz-dark .qbtn { background: var(--color-dz-x-ccdaea); color: var(--color-dz-x-mfnank); }
+.dzf .q2 { align-items: center; gap: 10px; }
+.dzf .q2l { font: 800 12px/1 var(--font-bricolage), sans-serif; letter-spacing: .08em; color: var(--color-dz-x-eogehg); }
+.dzf .q2 input { font-size: 32px; }
+.dzf .qdisp:has(.q2) input[data-active="true"] { box-shadow: inset 0 -3px 0 var(--color-dz-x-fpkpik); }
+.dzf .qdisp [data-testid="compound-qty"] { margin: 0; font: 600 11px/1.3 var(--font-plex-mono), monospace; text-align: center; }
+/* Kabul rafı seçimi (birden çok kabul rafı): kaynak `.pill` dilinde düğmeler, en az 48 px. */
+.dzf .rack { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dzf .rack p { margin: 0; flex: none; font: 800 11px/1 var(--font-bricolage), sans-serif; letter-spacing: .1em; color: var(--color-dz-x-eogehg); }
+.dzf .rack .chips { display: flex; gap: 8px; min-width: 0; overflow-x: auto; }
+.dzf .rack button { appearance: none; flex: none; min-height: 48px; padding: 0 14px; border: 2px solid var(--color-dz-a-bhcoec-d); border-radius: 999px; background: var(--color-dz-x-pppppp); color: var(--color-dz-x-bhcoec); font: 800 13px/1 var(--font-bricolage), sans-serif; cursor: pointer; }
+.dzf .rack button[aria-pressed="true"] { border-color: var(--color-dz-x-cphnfl); background: var(--color-dz-x-odpboj); color: var(--color-dz-x-bhfidm); }
+.dzf.dz-dark .rack button { background: var(--color-dz-x-bmcidd); color: var(--color-dz-x-ogolop); }
+.dzf .rackauto { margin: 0 2px; font: 600 11px/1.3 var(--font-plex-mono), monospace; color: var(--color-dz-x-eogehg); }
+/* Mesaj ekranları (kabul rafı yok, teslim tamam): kaynak `.pcard` yazı dili. */
+.dzf .sflowmsg { margin: 0; padding: 14px; border-radius: 24px; background: var(--color-dz-x-pppppp); font: 600 16px/1.35 var(--font-instrument), sans-serif; }
+.dzf.dz-dark .sflowmsg { background: var(--color-dz-x-bmcidd); }
+.dzf .cm b[data-testid="saved-summary"] { white-space: normal; }
+/* Liste satırı bağlantıları (teslim seç, depo seç): kaynak `.job` kartı. */
+.dzf a.job { min-height: 64px; color: inherit; text-decoration: none; }
+.dzf a.job:focus-visible { outline: 4px solid var(--color-dz-x-pemfec); outline-offset: 2px; }
+.dzf.dz-dark a.job { background: var(--color-dz-x-bmcidd); }

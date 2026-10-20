@@ -3,13 +3,16 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { PackagePlus } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { getInboundReceipt, listInboundReceipts, type ReceiptCursor, type ReceiptDetail } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
-import { FlowShell, PrimaryLink, ReceiveFlow } from "./receive-flow.tsx";
+import { SICON } from "../../../../design/saha-icons.ts";
+import { dz } from "../../../../design/saha-tokens.ts";
+import { Ico, SahaShell } from "../saha-shell.tsx";
+import { PrimaryLink } from "./receive-flow.tsx";
+import { ReceiveFlow } from "./receive-view.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +46,6 @@ export default async function FieldReceivePage({ params, searchParams }: { param
   if (principal === null) redirect(`/login?next=${encodeURIComponent(base)}`);
   const db = getAppDb();
   const call = { db, principal, tenantSlug: slug };
-  const icon = <PackagePlus aria-hidden="true" className="size-6" />;
 
   const summary = await getMembershipSummary({ db, principal });
   const current = summary.memberships.find((m) => m.slug === slug);
@@ -51,7 +53,7 @@ export default async function FieldReceivePage({ params, searchParams }: { param
   const roles = current.roles;
   if (!hasPermission(roles, "stock.post", current.grants)) {
     return (
-      <FlowShell hue="green" icon={icon} title={t("flow.lockedTitle")} backHref={fieldHome} footer={<PrimaryLink href={fieldHome}>{t("flow.toField")}</PrimaryLink>}>
+      <SahaShell hue="green" iconD={SICON.kabul} title={t("flow.lockedTitle")} backHref={fieldHome} footer={<PrimaryLink href={fieldHome}>{t("flow.toField")}</PrimaryLink>}>
         <p className="break-words text-lg text-ink" data-testid="receive-locked">
           {t("flow.lockedReason")}
         </p>
@@ -59,7 +61,7 @@ export default async function FieldReceivePage({ params, searchParams }: { param
             {t("flow.helpCall")}
           </Link>
 
-      </FlowShell>
+      </SahaShell>
     );
   }
 
@@ -82,12 +84,13 @@ export default async function FieldReceivePage({ params, searchParams }: { param
     // KAPALI teslim (son kalem alındı) de akışa gider: akış "Teslim tamam" ekranını gösterir; yenilemeden sonra "kaydedildi" ekranı kaybolmaz.
     if (receipt === null || (receipt.status !== "OPEN" && receipt.status !== "CLOSED")) {
       return (
-        <FlowShell hue="green" icon={icon} title={t("flow.notOpenTitle")} backHref={base} footer={<PrimaryLink href={base}>{t("flow.otherReceipt")}</PrimaryLink>}>
+        <SahaShell hue="green" iconD={SICON.kabul} title={t("flow.notOpenTitle")} backHref={base} footer={<PrimaryLink href={base}>{t("flow.otherReceipt")}</PrimaryLink>}>
           <p className="break-words text-lg text-ink">{t("flow.notOpen")}</p>
-        </FlowShell>
+        </SahaShell>
       );
     }
-    return <ReceiveFlow slug={slug} receipt={receipt} />;
+    const code = first(sp.code);
+    return <ReceiveFlow slug={slug} receipt={receipt} {...(code === undefined || code === "" ? {} : { initialCode: code.slice(0, 256) })} />;
   }
 
   let page: Awaited<ReturnType<typeof listInboundReceipts>>;
@@ -99,12 +102,11 @@ export default async function FieldReceivePage({ params, searchParams }: { param
   }
   const canCreate = hasPermission(roles, "document.create", current.grants);
   const firstReceipt = page.items[0];
-  const rowCls =
-    "flex min-h-16 min-w-0 flex-col justify-center gap-1 rounded-card border-2 border-border bg-surface p-3 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+  const rowCls = "job pickrow";
   return (
-    <FlowShell
+    <SahaShell
       hue="green"
-      icon={icon}
+      iconD={SICON.kabul}
       step={1}
       total={4}
       title={t("flow.pickTitle")}
@@ -132,12 +134,17 @@ export default async function FieldReceivePage({ params, searchParams }: { param
             return (
               <li key={r.id} className="flex min-w-0">
                 <Link href={`${base}?receipt=${encodeURIComponent(r.id)}`} className={`${rowCls} w-full`} data-testid="receive-pick" data-receipt-id={r.id}>
-                  <span className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="break-words text-lg font-bold text-ink">{r.number}</span>
-                    {i === 0 ? <span className="rounded-full bg-cat-green-bg px-2 text-xs font-bold text-cat-green-ink">{t("flow.next")}</span> : null}
+                  <span className="uic" style={{ background: dz("2F7D5B") }}>
+                    <Ico d={SICON.kabul} size={22} />
                   </span>
-                  {r.supplierRef === null ? null : <span className="break-words text-sm text-ink-muted">{r.supplierRef}</span>}
-                  <span className="text-sm text-ink">{t("flow.pickSummary", { lines: r.lines.length, open: openCount })}</span>
+                  <span style={{ minWidth: 0 }}>
+                    <b>{r.number}</b>
+                    <small>
+                      {r.supplierRef === null ? "" : `${r.supplierRef} · `}
+                      {t("flow.pickSummary", { lines: r.lines.length, open: openCount })}
+                    </small>
+                  </span>
+                  {i === 0 ? <span className="autosel">{t("flow.next")}</span> : null}
                 </Link>
               </li>
             );
@@ -154,6 +161,6 @@ export default async function FieldReceivePage({ params, searchParams }: { param
           {t("flow.addReceipt")}
         </Link>
       ) : null}
-    </FlowShell>
+    </SahaShell>
   );
 }
