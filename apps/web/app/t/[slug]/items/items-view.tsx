@@ -519,8 +519,9 @@ export function ItemsView({
   const visual = (type: CardType) => CARD_VISUAL[type];
   const chips: KalipCip[] = [
     { id: "all", label: tk("all"), d: LICON.grid, color: "172E42", on: query.type === "" && query.status === "", href: href({ type: "", status: "" }) },
-    ...CARD_TYPES.map((k) => ({ id: k, label: tc(k), d: visual(k).d, color: visual(k).color, on: query.type === k, href: href({ type: query.type === k ? "" : k }) })),
+    // Kaynaktaki 2. çip (Kritik) yerinde Arşivli: telefonda ilk 4 çip görünür (kaynak `.fch:nth-child(n+5)` gizli); tür sırası kaynaktaki gibi HM · MM · YM.
     { id: "archived", label: tk("archived"), d: LICON.lock, color: "4E6476", on: query.status === "ARCHIVED", href: href({ status: query.status === "ARCHIVED" ? "" : "ARCHIVED" }) },
+    ...(["HM", "MM", "YM", "TM"] as const).map((k) => ({ id: k, label: tc(k), d: visual(k).d, color: visual(k).color, on: query.type === k, href: href({ type: query.type === k ? "" : k }) })),
   ];
 
   const tones = items.map((it) => {

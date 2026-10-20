@@ -130,9 +130,12 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
       await expect(main).toHaveAccessibleName("Depo ekle");
     } else {
       await expect(page.getByTestId("setup-steps"), `${where}: kurulum tamam, rehber yok`).toHaveCount(0);
-      const rows = page.getByRole("link", { name: /^Ayrıntıyı aç: / });
-      expect(await rows.count(), `${where}: demo ürün kartları görünür`).toBeGreaterThanOrEqual(3);
+      // Kart bir bağlantıdır ama rolü kaynaktaki gibi listitem (`.ulist > .uc`); ad "Ayrıntıyı aç: …".
+      const rows = page.getByTestId("item-card");
       await expect(rows.first()).toBeVisible();
+      await expect(rows.first()).toHaveAccessibleName(/^Ayrıntıyı aç: /);
+      await expect(rows.first()).toHaveAttribute("href", /\/items\/[0-9a-f-]{36}$/);
+      expect(await rows.count(), `${where}: demo ürün kartları görünür`).toBeGreaterThanOrEqual(3);
       expect((await rows.first().boundingBox())?.height ?? 0, `${where}: kart yüksekliği`).toBeGreaterThanOrEqual(48);
       await expect(main).toHaveAccessibleName("Yeni ürün");
     }

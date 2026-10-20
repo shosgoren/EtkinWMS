@@ -91,7 +91,7 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           // T-968: Ayarlar form kalıbında (KalipForm): satıra dokununca düzenleyici açılır; kaynak tasarımın kendi kenarlık/odak dili.
           await page.getByTestId("settings-locale").click();
           await expect(page.getByTestId("settings-locale-editor")).toBeVisible();
-          await page.getByTestId("settings-locale").click();
+          await page.keyboard.press("Escape"); // telefonda alt sayfa perdesi satırı örter; Escape kapatır
           await expect(page.getByTestId("settings-locale-editor")).toHaveCount(0);
           await expectNoHorizontalOverflow(page, "ayarlar");
           await shot("settings");

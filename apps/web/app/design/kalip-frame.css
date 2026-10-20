@@ -32,3 +32,6 @@
 body:has(.kalip) [data-testid="bottom-nav"], body:has(.kalip) [data-testid="tenant-bar"], body:has(.kalip) [data-testid="app-bar"],
 body:has(.kalip) [data-testid="screen-nav"], body:has(.kalip) [data-testid="field-action-bar"], body:has(.kalip) .app-header,
 body:has(.kalip) .screen-context { display: none; }
+/* Kaynak telefonda 5 karttan sonrasını gizler ve "+N daha · ara ya da söyle" (sesle, B-62) satırı koyar. Ses gelene dek gizli kart
+   ulaşılamaz kalmasın: tüm kartlar çizilir, içerik alanı kendi içinde kayar. */
+@media (max-width: 699.98px) { .dzl.dzl .ulist .uc:nth-child(n+6) { display: grid; } }
