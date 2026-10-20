@@ -3072,7 +3072,6 @@
     "deviceOk": "Registered device · {name}",
     "workspace": "WORKSPACE",
     "workspaceHint": "Remembered on this device",
-    "workspaceChange": "Change",
     "username": "USERNAME",
     "pin": "PIN",
     "pinAria": "{n} of 6 digits entered",

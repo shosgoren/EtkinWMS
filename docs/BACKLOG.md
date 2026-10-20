@@ -83,7 +83,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-57 | Offline gereksinim ölçümü | Q-102, ADR-025 |
 | B-58 | **Canlı hata:** tablette (768–1199 px) eski "Geri / Ana ekran" çubuğu yeni tasarım ekranlarının (Ekip, Gruplar, Aktar, Cari, Pano alt ekranları) cam çubuğunun üstüne biniyor; orta ana işlem tıklanamıyor. T-921 | kullanıcı bildirimi 20 Ekim |
 | B-59 | Ekip: "Rol, depo ve şifre işlemleri · Kullanıcılar ekranı" bağlantı metni kesik çerçevenin üst çizgisine biniyor. T-921 | kullanıcı bildirimi 20 Ekim |
-| B-58b | **Canlı hata:** saha girişi (kayıtlı cihaz) iPhone'da sığmıyor, tuş takımı kesik. T-924 (KODDA VAR) | kullanıcı bildirimi 20 Ekim |
+| B-58b | **Canlı hata:** saha girişi (kayıtlı cihaz) iPhone'da sığmıyor, tuş takımı kesik. T-924 canlıda (`4f7d907`) son satır hâlâ yarım → T-959: kayıtlı cihazda çalışma alanı kaldırıldı, bant tek satır (KODDA VAR) | kullanıcı bildirimi 20 Ekim |
 
 ## P3 — Altın Kural / tasarım ve kod kalitesi
 | ID | İş |
