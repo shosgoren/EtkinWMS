@@ -993,6 +993,10 @@
       "link_revoked": "Team join QR closed",
       "approved": "Join request approved, field account opened",
       "rejected": "Join request rejected"
+    },
+    "support": {
+      "ticket_created": "Support ticket opened",
+      "ticket_replied": "Support ticket replied"
     }
   },
   "auditLog": {
@@ -2531,6 +2535,7 @@
     "theme": "Light / dark view",
     "nav": {
       "musteriler": "Customers",
+      "destek": "Support",
       "talepler": "Demo requests",
       "paketler": "Plans",
       "odemeler": "Payments",
@@ -2928,7 +2933,103 @@
         "charge.paid": "{company} · {month} payment recorded ({method})",
         "site.saved": "Sales page draft saved · version {version}",
         "site.published": "Sales page published · version {version}",
-        "site.preview": "Sales page preview link issued · version {version}"
+        "site.preview": "Sales page preview link issued · version {version}",
+        "support.viewed": "{company} · support request viewed",
+        "support.replied": "{company} · support request replied",
+        "support.status": "{company} · support request status changed"
+      }
+    },
+    "destek": {
+      "title": "Support",
+      "sub": "FROM ETKIN WMS USERS · {n} OPEN REQUESTS",
+      "detailSub": "",
+      "searchPh": "Search company, person or support code",
+      "searchAria": "Search requests",
+      "filterAria": "Status",
+      "fAll": "All",
+      "fOpen": "Open",
+      "fAnswered": "Answered",
+      "fClosed": "Closed",
+      "thCust": "CUSTOMER",
+      "thUser": "USER · ROLE",
+      "thTopic": "TOPIC",
+      "thMsg": "MESSAGE",
+      "thWhen": "TIME",
+      "thStatus": "STATUS",
+      "unread": "Unread",
+      "empty": "NO REQUESTS IN THIS FILTER",
+      "banH": "New requests appear as a menu badge",
+      "banT": "The panel record is the source of truth. Once WhatsApp is connected a short notice is also sent; it carries no customer data, only the request number and a panel link.",
+      "topics": {
+        "BUG": "NOT WORKING",
+        "HOWTO": "HOW DO I",
+        "IDEA": "SUGGESTION",
+        "OTHER": "OTHER"
+      },
+      "st": {
+        "OPEN": "OPEN",
+        "ANSWERED": "ANSWERED",
+        "CLOSED": "CLOSED"
+      },
+      "reply": "REPLY",
+      "replyNote": "SHOWS ON THE USER'S “MY REQUESTS” SCREEN",
+      "replyAria": "Reply",
+      "replyPh": "Write briefly and clearly",
+      "close": "Close",
+      "reopen": "Reopen",
+      "send": "Send reply",
+      "sent": "REPLY SENT",
+      "auto": "AUTOMATIC DETAILS",
+      "autoNote": "CAME WITH THE REQUEST",
+      "access": "SUPPORT ACCESS",
+      "accessTag": "CLOSED",
+      "accessH": "Warehouse data is closed",
+      "accessT": "An access request goes to the user's screen. If approved it opens for a limited time; every view is written to the activity log.",
+      "askAccess": "Request access",
+      "askSoon": "Coming soon: customer-approved, time-limited support access",
+      "hist": "HISTORY",
+      "histNote": "WHO · WHAT",
+      "error": "Action failed ({code}). Refresh the page and try again.",
+      "now": "NOW",
+      "today": "TODAY {time}",
+      "yesterday": "YESTERDAY {time}",
+      "msgs": "{n} MESSAGES",
+      "noName": "Unnamed user",
+      "kRoute": "SCREEN",
+      "kVersion": "VERSION",
+      "kCode": "SUPPORT CODE",
+      "kDevice": "DEVICE",
+      "kWorkspace": "WORKSPACE",
+      "hOpened": "{name} opened the request",
+      "hOperator": "Operator replied: {body}",
+      "hCustomer": "{name} wrote: {body}",
+      "host": "wms.etkinyazilim.com",
+      "devices": {
+        "android": "Android phone",
+        "iphone": "iPhone",
+        "ipad": "iPad",
+        "windows": "Windows computer",
+        "mac": "Mac",
+        "linux": "Linux",
+        "other": "Unknown device"
+      },
+      "phone": "phone",
+      "tabs": {
+        "aria": "Customer tabs",
+        "genel": "General",
+        "destek": "Support · {n} open",
+        "gecmis": "History"
+      },
+      "custBanH": "Customer data stays closed here too",
+      "custBanT": "The request text and automatic details are visible. To look at warehouse data, use “Request access” on the request; it opens for a limited time if the user approves.",
+      "notify": {
+        "head": "NOTIFICATION · NEW SUPPORT REQUEST",
+        "headNote": "PANEL BADGE IS THE RECORD",
+        "badge": "Panel badge",
+        "whatsapp": "Notification: WhatsApp",
+        "connected": "CONNECTED",
+        "notConnected": "NOT CONNECTED",
+        "note": "CONNECTS WHEN THE KEY IS ADDED TO THE SERVER ENVIRONMENT · NO CUSTOMER DATA IN THE MESSAGE, ONLY REQUEST NO + PANEL LINK"
       }
     }
   },
@@ -4030,5 +4131,72 @@
         "sub": "People · Permissions"
       }
     }
+  },
+  "destek": {
+    "issue": "Report a problem: goes to your manager",
+    "issueTitle": "Report a problem",
+    "help": "Support: write to the Etkin team",
+    "helpTitle": "Support",
+    "helpUnread": "Support: {n} new replies",
+    "helpNew": "Support: write a new request",
+    "title": "Support",
+    "sub": "GOES TO THE ETKIN SUPPORT TEAM",
+    "close": "Cancel",
+    "backdrop": "Close",
+    "topic": "Topic",
+    "topics": {
+      "BUG": {
+        "name": "Not working",
+        "sub": "BUG"
+      },
+      "HOWTO": {
+        "name": "How do I",
+        "sub": "QUESTION"
+      },
+      "IDEA": {
+        "name": "Suggestion",
+        "sub": "IDEA"
+      },
+      "OTHER": {
+        "name": "Other",
+        "sub": "TYPE OR SAY IT"
+      }
+    },
+    "note": "Short note",
+    "notePh": "Type or say it briefly",
+    "sayNote": "Say the note",
+    "voiceSoon": "Voice input coming soon",
+    "guide": "Open the guide",
+    "auto": "ADDED AUTOMATICALLY · SCREEN {route} · VERSION {version} · SUPPORT CODE {code}",
+    "unknown": "—",
+    "send": "SEND",
+    "sent": "Sent · {code}",
+    "failed": "Could not send; try again shortly",
+    "rateLimited": "Sent too often; try again in a few minutes",
+    "listTitle": "My requests",
+    "listSub": "ETKIN SUPPORT · {n} REQUESTS",
+    "empty": "No requests yet",
+    "loadFailed": "Requests could not be loaded; check your connection",
+    "newTicket": "New support request",
+    "newShort": "NEW REQUEST",
+    "st": {
+      "OPEN": "OPEN",
+      "ANSWERED": "ANSWERED",
+      "CLOSED": "CLOSED"
+    },
+    "team": "Etkin support",
+    "you": "Your request",
+    "replied": "REPLIED · {when}",
+    "delivered": "DELIVERED · {when}",
+    "reply": "Reply",
+    "replyPh": "Write your reply",
+    "replySend": "Send",
+    "replySent": "Reply sent",
+    "closedNote": "Request closed; open a new one",
+    "ring": "SOUND + BADGE WHEN A REPLY ARRIVES",
+    "replyAria": "Team reply",
+    "now": "NOW",
+    "today": "TODAY {time}",
+    "yesterday": "YESTERDAY {time}"
   }
 }

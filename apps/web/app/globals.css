@@ -2,6 +2,7 @@
 @import "./design/bakis.css";
 @import "./design/giris.css";
 @import "./design/yonet.css";
+@import "./design/yonet-destek.css";
 @import "./design/pano.css";
 @import "./design/pano-frame.css";
 @import "./design/aktar.css";
@@ -12,6 +13,9 @@
 @import "./design/ekip-frame.css";
 @import "./design/kabuk.css";
 @import "./design/kabuk-frame.css";
+@import "./design/destek.css";
+@import "./design/destek-ek.css";
+@import "./design/destek-frame.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
@@ -1652,3 +1656,144 @@ body:has(.dzp, .dza, .dzr, .dze) [data-testid="screen-nav"] { display: none; }
 .dzk.dz-dark {
 }
 /* design:kabuk:end */
+
+/* design:destek:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzd {
+  --color-dz-a-aaaaaa-g: rgba(0, 0, 0, .6);
+  --color-dz-a-afajan-df: rgba(5, 9, 13, .35);
+  --color-dz-a-afajan-f: rgba(5, 9, 13, .5);
+  --color-dz-a-aoblch-jc: rgba(14, 27, 39, .92);
+  --color-dz-a-aohmhl-i: rgba(14, 124, 123, .8);
+  --color-dz-a-bhcoec-af: rgba(23, 46, 66, .05);
+  --color-dz-a-bhcoec-ag: rgba(23, 46, 66, .06);
+  --color-dz-a-bhcoec-ai: rgba(23, 46, 66, .08);
+  --color-dz-a-bhcoec-bc: rgba(23, 46, 66, .12);
+  --color-dz-a-bhcoec-df: rgba(23, 46, 66, .35);
+  --color-dz-a-bhcoec-di: rgba(23, 46, 66, .38);
+  --color-dz-a-bhcoec-e: rgba(23, 46, 66, .4);
+  --color-dz-a-bhcoec-f: rgba(23, 46, 66, .5);
+  --color-dz-a-bhcoec-g: rgba(23, 46, 66, .6);
+  --color-dz-a-bhcoec-h: rgba(23, 46, 66, .7);
+  --color-dz-a-bhcoec-hc: rgba(23, 46, 66, .72);
+  --color-dz-a-cphnfl-i: rgba(47, 125, 91, .8);
+  --color-dz-a-cpjogl-a: rgba(47, 158, 107, 0);
+  --color-dz-a-cpjogl-g: rgba(47, 158, 107, .6);
+  --color-dz-a-fpkpik-hf: rgba(95, 175, 138, .75);
+  --color-dz-a-gmelni-ii: rgba(108, 75, 216, .88);
+  --color-dz-a-mgcici-i: rgba(198, 40, 40, .8);
+  --color-dz-a-oopbpe-if: rgba(238, 241, 244, .85);
+  --color-dz-a-pemfec-bg: rgba(244, 197, 66, .16);
+  --color-dz-a-pppppp-ai: rgba(255, 255, 255, .08);
+  --color-dz-a-pppppp-b: rgba(255, 255, 255, .1);
+  --color-dz-a-pppppp-bg: rgba(255, 255, 255, .16);
+  --color-dz-a-pppppp-bi: rgba(255, 255, 255, .18);
+  --color-dz-a-pppppp-cc: rgba(255, 255, 255, .22);
+  --color-dz-a-pppppp-d: rgba(255, 255, 255, .3);
+  --color-dz-a-pppppp-df: rgba(255, 255, 255, .35);
+  --color-dz-a-pppppp-ef: rgba(255, 255, 255, .45);
+  --color-dz-a-pppppp-f: rgba(255, 255, 255, .5);
+  --color-dz-x-aohmhl: #0e7c7b;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhfidm: #17583c;
+  --color-dz-x-bkbdaa: #1a1300;
+  --color-dz-x-cpfnki: #2f5da8;
+  --color-dz-x-cphnfl: #2f7d5b;
+  --color-dz-x-cpjogl: #2f9e6b;
+  --color-dz-x-daehfk: #30475a;
+  --color-dz-x-eogehg: #4e6476;
+  --color-dz-x-fpkpik: #5faf8a;
+  --color-dz-x-gmelni: #6c4bd8;
+  --color-dz-x-jkflco: #9a5b2e;
+  --color-dz-x-jplcmc: #9fb2c2;
+  --color-dz-x-lahnal: #b07d0b;
+  --color-dz-x-lcdkdk: #b23a3a;
+  --color-dz-x-lhmgnd: #b7c6d3;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-mjngoa: #c9d6e0;
+  --color-dz-x-nhomom: #d7ecec;
+  --color-dz-x-odojoo: #e3e9ee;
+  --color-dz-x-odpboj: #e3f1e9;
+  --color-dz-x-ofgkaa: #e56a00;
+  --color-dz-x-ojoenk: #e9e4da;
+  --color-dz-x-oopbpe: #eef1f4;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-ppobmm: #ffe1cc;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzd.dz-dark {
+}
+/* design:destek:end */
+
+/* design:destek-ek:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzdx {
+  --color-dz-a-aohmhl-i: rgba(14, 124, 123, .8);
+  --color-dz-a-gmelni-ii: rgba(108, 75, 216, .88);
+  --color-dz-a-mgcici-i: rgba(198, 40, 40, .8);
+  --color-dz-a-pemfec-bg: rgba(244, 197, 66, .16);
+  --color-dz-a-pppppp-f: rgba(255, 255, 255, .5);
+  --color-dz-x-aohmhl: #0e7c7b;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhfidm: #17583c;
+  --color-dz-x-cpfnki: #2f5da8;
+  --color-dz-x-cphnfl: #2f7d5b;
+  --color-dz-x-daehfk: #30475a;
+  --color-dz-x-eogehg: #4e6476;
+  --color-dz-x-gmelni: #6c4bd8;
+  --color-dz-x-jkflco: #9a5b2e;
+  --color-dz-x-jplcmc: #9fb2c2;
+  --color-dz-x-lahnal: #b07d0b;
+  --color-dz-x-lcdkdk: #b23a3a;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-nhomom: #d7ecec;
+  --color-dz-x-odpboj: #e3f1e9;
+  --color-dz-x-ofgkaa: #e56a00;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-ppobmm: #ffe1cc;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzdx.dz-dark {
+}
+/* design:destek-ek:end */
+
+/* design:yonet-destek:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzyd {
+  --color-dz-a-bhcoec-cf: rgba(23, 46, 66, .25);
+  --color-dz-x-apdnch: #0f3d27;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhiaep: #17804f;
+  --color-dz-x-bocpdo: #1e2f3e;
+  --color-dz-x-cpfnki: #2f5da8;
+  --color-dz-x-cphnfl: #2f7d5b;
+  --color-dz-x-ekdfaa: #4a3500;
+  --color-dz-x-eogehg: #4e6476;
+  --color-dz-x-lahnal: #b07d0b;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-mpoink: #cfe8da;
+  --color-dz-x-ofgkaa: #e56a00;
+  --color-dz-x-ogocnk: #e6e2da;
+  --color-dz-x-pboooi: #f1eee8;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-pepcoo: #f4f2ee;
+  --color-dz-x-ppohki: #ffe7a8;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzyd.dz-dark {
+}
+/* design:yonet-destek:end */
+
+/* T-967: Destek katmanı (`.dzd`) karanlık tema belirteçleri — Kabuk.dc.html / Pano.dc.html `.thd` değerleri (Destek kaynağında karanlık
+   kural yok; kullanımı design/destek-frame.css). Elle yazılır; üreteç bloğu değildir. */
+.dzd.dz-dark {
+  --color-dzd-dk-app-a: #121b24;
+  --color-dzd-dk-app-b: #0f171f;
+  --color-dzd-dk-fg: #e6ebef;
+  --color-dzd-dk-top: rgba(18, 27, 36, 0.88);
+  --color-dzd-dk-line: rgba(255, 255, 255, 0.08);
+  --color-dzd-dk-muted: #9fb2c2;
+  --color-dzd-dk-card: #1c2833;
+  --color-dzd-dk-sheet: rgba(18, 27, 36, 0.94);
+  --color-dzd-dk-toast: #223040;
+}

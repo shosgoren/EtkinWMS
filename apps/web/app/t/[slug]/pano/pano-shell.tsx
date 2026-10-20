@@ -1,6 +1,9 @@
 "use client";
 // T-423 (I-18): Pano.dc.html uygulama kabuğu BİREBİR — `.wrap > .appzone > .app`, üst çubuk (`.top`: marka, `.tools`), alt cam çubuk
-// (T-958'den beri ortak `KabukBar`: Kabuk.dc.html Sorun · Ana ekran · OKUT · Modüller · Etkin), sürüklenebilir yüzen kısayol (`.fab` + `.hback` + `.halo`), Ekip/Hesap menüsü (`.halo.tmenu`).
+// (T-958'den beri ortak `KabukBar`: Kabuk.dc.html Geri · Ana ekran · OKUT · Modüller · Etkin), sürüklenebilir yüzen kısayol (`.fab` + `.hback` + `.halo`), Ekip/Hesap menüsü (`.halo.tmenu`).
+// T-967 (Destek.dc.html, B-84/85/87): üst çubukta kişi ikonunun solunda yazısız Sorun bildir (`.tb-issue`, mevcut Sorun penceresi) ve Destek
+// (`.tb-help`: Destek penceresi / Taleplerim, okunmamış ekip yanıtında rozet + tek seferlik hareket); yüzen kısayol şimşek (`.fabb.zap`).
+// Ek sınıflar `design/destek-ek.css` (kap `.dzdx`).
 // Sınıf adları, öğe sırası ve ikon yolları kaynaktan (pano-icons.ts); renkler üretilmiş belirteçlerden (pano-tokens.ts).
 // Rol içeriği (`.inner` içi) sunucuda çizilir ve `children` olarak gelir.
 // Bilinçli farklar (docs/design/DESIGN-PARITY.md, T-423): bildirim zili yalnız yönetici panolarında, sayısı açık uyarılardan (kritik stok +
@@ -16,8 +19,10 @@ import { THEME_COOKIE } from "../../../design/theme.ts";
 import { authPost } from "../../../../lib/auth-client.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
 import { openAppMenu } from "../app-bar.tsx";
-import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { KabukBar, tone } from "../kabuk/kabuk-bar.tsx";
 import { KICON } from "../../../design/kabuk-icons.ts";
+import { DICON } from "../../../design/destek-icons.ts";
+import { HelpIco, IssueIco, SupportList, SupportSheet, useSupport } from "./support-layer.tsx";
 
 export interface PanoLink {
   readonly k: string;
@@ -46,6 +51,8 @@ export interface PanoShellProps {
   readonly canReport: boolean;
   /** Bildirim zili (yalnız yönetici panoları): açık uyarı sayısı (kritik stok + sorun) ve gideceği yer. */
   readonly bell?: { readonly n: number; readonly href: string };
+  /** Destek talebine otomatik eklenen uygulama sürümü (sunucu imaj etiketi; yoksa null). */
+  readonly appVersion?: string | null;
   readonly children: ReactNode;
 }
 
@@ -61,8 +68,15 @@ function Ico({ d, size, className = "ico", style }: { d: string; size: number; c
   );
 }
 
-export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, bell, children }: PanoShellProps) {
+export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, bell, appVersion = null, children }: PanoShellProps) {
   const t = useTranslations("pano");
+  const td = useTranslations("destek");
+  // T-967: Destek penceresi (C) ve Taleplerim (D); okunmamış ekip yanıtı rozeti açılışta bir kez okunur.
+  const support = useSupport(slug);
+  const [help, setHelp] = useState<"form" | "list" | null>(null);
+  const [sentCode, setSentCode] = useState<string | null>(null);
+  const [iconPx, setIconPx] = useState(24);
+  const hasTickets = (support.tickets?.length ?? 0) > 0;
   const [dark, setDark] = useState(initialDark);
   const [menu, setMenu] = useState(false);
   const [haloOpen, setHaloOpen] = useState(false);
@@ -97,6 +111,12 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
       }
     } catch {
       /* tarayıcı depolaması yoksa varsayılan konum */
+    }
+    // Kaynak: telefonda 24 px, tablet/masaüstü üst çubuğunda 26 px ikon (Destek.dc.html).
+    try {
+      setIconPx(window.matchMedia("(max-width: 699.98px)").matches ? 24 : 26);
+    } catch {
+      /* matchMedia yok */
     }
     const sync = (): void => setOnline(navigator.onLine);
     sync();
@@ -191,6 +211,16 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => void signOut("/login") },
   ];
 
+  const closeHelp = useCallback(() => {
+    setHelp(null);
+    setSentCode(null);
+  }, []);
+  const openForm = useCallback(() => {
+    tone("tap");
+    setSentCode(null);
+    setHelp("form");
+  }, []);
+
   const pick = (h: PanoLink): void => {
     setHaloOpen(false);
     if (h.action === "problem") setProblem(true);
@@ -215,7 +245,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
 
   return (
     <>
-      <div className={`dzp${dark ? " dz-dark" : ""}`} data-testid="pano">
+      <div className={`dzp dzdx${dark ? " dz-dark" : ""}`} data-testid="pano">
         <div className="wrap">
           <div className="appzone">
             <div className="app">
@@ -252,6 +282,48 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                       ) : null}
                     </a>
                   ) : null}
+                  {canReport ? (
+                    <button
+                      type="button"
+                      className={`tb tb-issue${problem ? " on" : ""}`}
+                      aria-label={td("issue")}
+                      title={td("issueTitle")}
+                      aria-haspopup="dialog"
+                      aria-expanded={problem}
+                      onClick={() => {
+                        tone("tap");
+                        setMenu(false);
+                        setHaloOpen(false);
+                        setProblem(true);
+                      }}
+                      data-testid="pano-problem"
+                    >
+                      <IssueIco size={iconPx} />
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`tb tb-help${help !== null ? " on" : ""}${support.unread > 0 ? " unr" : ""}`}
+                    aria-label={support.unread > 0 ? td("helpUnread", { n: support.unread }) : td("help")}
+                    title={td("helpTitle")}
+                    aria-haspopup="dialog"
+                    aria-expanded={help !== null}
+                    onClick={() => {
+                      tone("tap");
+                      setMenu(false);
+                      setHaloOpen(false);
+                      setSentCode(null);
+                      setHelp(hasTickets ? "list" : "form");
+                    }}
+                    data-testid="pano-help"
+                  >
+                    <HelpIco size={iconPx} cup />
+                    {support.unread > 0 ? (
+                      <em className="tbadge" style={{ fontStyle: "normal", background: dz("0E7C7B") }}>
+                        {support.unread > 99 ? "99+" : support.unread}
+                      </em>
+                    ) : null}
+                  </button>
                   <button
                     type="button"
                     className={`tb tb-team${menu ? " on" : ""}`}
@@ -281,12 +353,10 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
 
               {halo.length > 0 ? (
                 <div className="fab" style={fabStyle} onPointerDown={fabDown} onPointerMove={fabMove} onPointerUp={fabUp} onPointerCancel={fabUp}>
-                  <button type="button" className={`fabb${haloOpen ? " on" : ""}`} aria-label={t("shortcuts")} aria-expanded={haloOpen} data-testid="pano-fab">
+                  {/* T-967 (B-87, Destek.dc.html öneri 1): Modüller ızgarasıyla karışmasın diye şimşek + mor cam. */}
+                  <button type="button" className={`fabb zap${haloOpen ? " on" : ""}`} aria-label={t("shortcuts")} aria-expanded={haloOpen} data-testid="pano-fab">
                     <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                      <rect x="4" y="4" width="6.5" height="6.5" rx="1.8" />
-                      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" />
-                      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" />
-                      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8" />
+                      <path d={DICON.zap} />
                     </svg>
                   </button>
                 </div>
@@ -424,13 +494,52 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
           </div>
         </div>
       </div>
-      {/* T-958: alt cam çubuk Kabuk.dc.html ortak bileşeni (Sorun · Ana ekran · OKUT · Modüller · Etkin). */}
+      {/* T-958: alt cam çubuk Kabuk.dc.html ortak bileşeni (Geri pasif · Ana ekran · OKUT · Modüller · Etkin). T-967: Taleplerim açıkken
+          Geri / Ana ekran sayfayı kapatır, ana işlem YENİ TALEP (Destek.dc.html D). */}
       <KabukBar
         dark={dark}
-        home
-        problem={canReport ? { onClick: () => setProblem(true), testId: "pano-problem" } : undefined}
-        main={{ label: t("scanShort"), aria: t("scan"), d: KICON.scan, href: scanHref, testId: "pano-scan" }}
+        home={help !== "list"}
+        back={help === "list" ? { onClick: closeHelp } : undefined}
+        homeNav={help === "list" ? { onClick: closeHelp } : undefined}
+        main={
+          help === "list"
+            ? { label: td("newShort"), aria: td("newTicket"), d: DICON.plus, onClick: () => openForm(), testId: "support-new" }
+            : { label: t("scanShort"), aria: t("scan"), d: KICON.scan, href: scanHref, testId: "pano-scan" }
+        }
       />
+      {help === "list" ? (
+        <SupportList
+          slug={slug}
+          dark={dark}
+          state={support}
+          sentCode={sentCode}
+          canReport={canReport}
+          team={team}
+          onIssue={() => {
+            tone("tap");
+            setProblem(true);
+          }}
+          onNew={openForm}
+          onTeam={() => {
+            closeHelp();
+            setMenu(true);
+          }}
+          onClose={closeHelp}
+        />
+      ) : null}
+      {help === "form" ? (
+        <SupportSheet
+          slug={slug}
+          dark={dark}
+          appVersion={appVersion}
+          onClose={closeHelp}
+          onSent={(code) => {
+            setSentCode(code);
+            setHelp("list");
+            void support.reload();
+          }}
+        />
+      ) : null}
       {problem && canReport ? (
         <div className={`dz dzp-pop${dark ? " dz-dark" : ""}`}>
           <ProblemSheet slug={slug} onClose={() => setProblem(false)} />

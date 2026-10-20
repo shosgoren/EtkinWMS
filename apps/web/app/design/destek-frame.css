@@ -1,0 +1,62 @@
+/* I-18 uyarlaması (DESIGN-PARITY §5, T-967): Destek.dc.html'in C (Destek penceresi) ve D (Taleplerim) çalışma alanları `.app` cihaz
+   çerçevesinin içindedir. Uygulamada ikisi tek katmandır (`.dzd`): Pano'nun üstünde, ortak alt cam çubuğun (`.dzk`, z-index 25) altında —
+   kaynakta da çubuk (`.dock` z-index 30) perdenin (`.hback` 20) ve pencerenin üstünde kalır. Pencere çubuğun üstünde açılır (Kabuk
+   uyarlamasıyla aynı `--kabuk-h`), Taleplerim sayfası çubuğa yer ayırır. Renk sabiti yok: üretilmiş belirteçler ve globals.css'teki
+   karanlık tema belirteçleri. */
+.dzd { position: fixed; inset: 0; z-index: 24; }
+.dzd .wrap, .dzd.dz-dark .wrap {
+  min-height: 0;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+}
+.dzd .app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.dzd .hback, .dzd .msheet, .dzd .app.pg { pointer-events: auto; }
+.dzd .toast { pointer-events: none; }
+.dzd .msheet { bottom: var(--kabuk-h); }
+.dzd .msheet:focus { outline: none; }
+/* D · Taleplerim: kaynaktaki `.app` zemini; içerik çubuğun üstünde biter, liste kendi içinde kayar. */
+.dzd .app.pg {
+  background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-dz-x-nmodok) 100%);
+  padding-bottom: var(--kabuk-h);
+}
+.dzd .app.pg .inner { overflow-y: auto; }
+/* Ekip yanıtı kartı (`.card`) Kabuk'ta koyu perde üstündedir ve yazı rengini oradan alır; açık Taleplerim zemininde başlık yazısı beyaz verilir. */
+.dzd .rows .card { color: var(--color-dz-x-pppppp); }
+/* Kaynakta C/D yalnız telefonda çizilir; tablet ve masaüstünde pencere ve liste Kabuk.dc.html Modüller sayfasının aynı ölçüleriyle ortalanır
+   (`.fr-tablet .msheet`, `.fr-desktop .msheet`, `.fr-desktop .inner`). */
+@media (min-width: 700px) and (max-width: 1099.98px), (min-width: 700px) and (pointer: coarse) {
+  .dzd.dzd .msheet { left: 50%; right: auto; width: 760px; max-width: calc(100% - 24px); transform: translateX(-50%); padding: 16px; gap: 12px; animation: none; }
+}
+@media (min-width: 1100px) and (pointer: fine), (min-width: 1100px) and (pointer: none) {
+  .dzd.dzd .msheet { left: 50%; right: auto; width: 980px; max-width: calc(100% - 48px); transform: translateX(-50%); padding: 18px; gap: 14px; animation: none; }
+  .dzd.dzd .app.pg .inner { width: 100%; max-width: 1100px; margin: 0 auto; }
+}
+
+/* Kullanıcı kararı (T-967, ALTIN-KURAL "düğme ikonları hareketsiz"): kaynaktaki sürekli `nudge` / `tilt` hareketi kullanılmaz. Okunmamış ekip
+   yanıtı varsa Destek ikonu yalnız bir kez dikkat çeker (kaynağın `nudge` karesi, son salınımından başlatılır). */
+.dzdx .tools .tb-issue .ico, .dzdx .tools .tb-help .ico, .dzd .tools .tb-issue .ico, .dzd .tools .tb-help .ico { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .dzdx .tools .tb-help.unr .ico { transform-origin: 50% 85%; animation: dzdx-nudge 6s ease-in-out -5.2s 1; }
+}
+/* Ekran görüntüsü ve sesle not bu turda yok: mikrofon düğmesi "yakında" balonu açar (Kabuk Etkin ile aynı). */
+.dzd .smic[aria-disabled="true"] { cursor: default; }
+.dzd .btn:disabled { opacity: .5; cursor: default; }
+
+/* Karanlık tema: Destek kaynağında karanlık kural yoktur; aynı sınıfların Kabuk.dc.html / Pano.dc.html `.thd` değerleri. */
+.dzd.dz-dark .app.pg { background: linear-gradient(180deg, var(--color-dzd-dk-app-a) 0%, var(--color-dzd-dk-app-b) 100%); color: var(--color-dzd-dk-fg); }
+.dzd.dz-dark .top { background: var(--color-dzd-dk-top); border-bottom-color: var(--color-dzd-dk-line); }
+.dzd.dz-dark .brand small { color: var(--color-dzd-dk-muted); }
+.dzd.dz-dark .rw { background: var(--color-dzd-dk-card); color: var(--color-dzd-dk-fg); box-shadow: none; }
+.dzd.dz-dark .rw small { color: var(--color-dzd-dk-muted); }
+.dzd.dz-dark .msheet, .dzd.dz-dark .card { background: var(--color-dzd-dk-sheet); }
+.dzd.dz-dark .toast { background: var(--color-dzd-dk-toast); }
+.dzd.dz-dark .tb { background: var(--color-dzd-dk-card) !important; color: var(--color-dzd-dk-fg); box-shadow: none; }
+.dzd.dz-dark .tbadge { border-color: var(--color-dzd-dk-app-a); }

@@ -1,0 +1,57 @@
+/* destek-ek.css — docs/design/source dosyasından scripts/design/port.mjs ile ÜRETİLDİ. Elle düzenlemeyin (I-18, DESIGN-PARITY §3). */
+.dzdx .tb-issue {
+  --i:var(--color-dz-x-mgcici);
+}
+.dzdx .tb-issue .tri {
+  fill:var(--color-dz-x-ppobmm);
+  stroke:var(--color-dz-x-ofgkaa);
+}
+.dzdx .tb-issue .ico {
+  transform-origin:50% 85%;
+  animation:dzdx-nudge 6s ease-in-out infinite;
+}
+@keyframes dzdx-nudge {
+0%,88%,100%{transform:rotate(0)}91%{transform:rotate(-8deg)}94%{transform:rotate(7deg)}97%{transform:rotate(-3deg)}
+}
+.dzdx .tb-help {
+  --i:var(--color-dz-x-aohmhl);
+}
+.dzdx .tb-help .cup {
+  fill:var(--color-dz-x-nhomom);
+  stroke:var(--color-dz-x-cpfnki);
+}
+.dzdx .tb-help .ico {
+  animation:dzdx-tilt 6s ease-in-out 3s infinite;
+}
+@keyframes dzdx-tilt {
+0%,88%,100%{transform:translateY(0)}92%{transform:translateY(-2px)}96%{transform:translateY(0)}
+}
+.dzdx .dk.off {
+  opacity:.32;
+  cursor:default;
+}
+.dzdx .dk.off:active {
+  transform:none;
+}
+.dzdx .mt.on {
+  background:var(--color-dz-a-pemfec-bg);
+  box-shadow:inset 0 0 0 2.5px var(--color-dz-x-pemfec);
+}
+.dzdx .mgrid.two {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.dzdx .mgrid.two .mt {
+  flex-direction:row;
+  align-items:center;
+  gap:10px;
+}
+.dzdx .fabb.zap {
+  background:var(--color-dz-a-gmelni-ii);
+  border-color:var(--color-dz-a-pppppp-f);
+  color:var(--color-dz-x-pppppp);
+}
+.dzdx .fabb.zap .ico {
+  fill:var(--color-dz-x-pemfec);
+  stroke:var(--color-dz-x-pemfec);
+  stroke-width:1.6;
+}

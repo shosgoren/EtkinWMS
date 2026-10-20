@@ -7,6 +7,8 @@
 //      (theme-contrast.test.ts: renk sabiti yalnız globals.css `--color-*` satırlarında).
 //   4. Yazı tipi aileleri next/font değişkenlerine çevrilir (`'Bricolage Grotesque'` → `var(--font-bricolage)`).
 //   5. Yalnız tasarım aracına ait önizleme kuralları (`.prev*`, `.fr-*`) atlanır (DESIGN-PARITY §5).
+//   6. `section` verilen kaynakta yalnız o bölüm başlığından (`/* ===== <section>`) bir sonraki bölüm başlığına kadarki kurallar alınır
+//      (T-967: Destek kaynağı Kabuk/Pano kopyası + "YENİ" eklerinden oluşur; ekler var olan ekranlara ayrı kapla bağlanır, kopya çakışmaz).
 // Kullanım: node scripts/design/port.mjs [--check]   (--check: yazmaz, depodakiyle fark varsa çıkış 1)
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -21,7 +23,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
  * `device: "fr"` (19 Ekim kaynakları): cihaz öneki `.fr-mobile/.fr-tablet/.fr-desktop` (önizleme çerçevesi değil, ekran kırılımı) medya
  * sorgusuna taşınır; yalnız çerçeveyi çizen `.app` / `.appzone` kuralları ve `.auto` (Otomatik önizleme) atlanır; `.thd` karanlık tema
  * sınıfı `.<scope>.dz-dark` olur. `palette: "none"`: betikte tema paleti yok (karanlık tema CSS'tedir).
- * @type {ReadonlyArray<{ name: string, file: string, sha256: string, scope: string, palette: "bakis" | "c" | "none", device?: "fr" }>}
+ * `section`: yalnız bu bölüm başlığıyla başlayan kaynak bölümü (dönüşüm 6).
+ * @type {ReadonlyArray<{ name: string, file: string, sha256: string, scope: string, palette: "bakis" | "c" | "none", device?: "fr", section?: string }>}
  */
 export const SOURCES = [
   { name: "bakis", file: "docs/design/source/Bakis.dc.html", sha256: "f38a508b237a99683972698d34fdc639467864b4763f66d48e1c77d357bff457", scope: "dz", palette: "bakis" },
@@ -37,6 +40,12 @@ export const SOURCES = [
   { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "2305dacb6a48c57a454ec6e84a2940309a83fe55718ececebabe3af73d9d5ce4", scope: "dzp", palette: "none", device: "fr" },
   // T-958: uygulama kabuğu (alt cam çubuk, Modüller sayfası, Etkin dinleme, ilk kullanım rehberi; aynı 19 Ekim kaynak biçimi).
   { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "d623311be817ea7ffed155350bb193bb29b286ba3e2ed3975065d878e44e9c61", scope: "dzk", palette: "none", device: "fr" },
+  // T-967: Sorun/Destek (B-84/85/87). Tam kaynak `.dzd` (Destek penceresi + Taleplerim katmanı); yalnız "YENİ" bölümü `.dzdx` (Pano üst
+  // çubuğundaki iki ikon, yüzen kısayolun şimşeği, alt çubukta pasif Geri — var olan Pano/Kabuk kaplarına ek sınıf olarak).
+  { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "960469107ab36286b59e7f6a007c17d147c4f65603958f88b507a155271d72a7", scope: "dzd", palette: "none", device: "fr" },
+  { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "960469107ab36286b59e7f6a007c17d147c4f65603958f88b507a155271d72a7", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
+  // T-967: Yönetim paneli Destek gelen kutusu; kaynak Yonet kopyası + "YENİ" (okunmamış noktası) — yalnız ek bölüm, panel `.dzy` ile birlikte.
+  { name: "yonet-destek", file: "docs/design/source/YonetDestek.dc.html", sha256: "a2155d8f675436bab7d1d45f4f7cdabd6ac942a9d84a4e57f065c00beaa9a4f0", scope: "dzyd", palette: "none", section: "YENİ" },
 ];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.
@@ -339,11 +348,18 @@ const BEGIN = (n) => `/* design:${n}:begin — scripts/design/port.mjs üretir; 
 const END = (n) => `/* design:${n}:end */`;
 
 /**
- * @param {string} name @param {string} html @param {string} [scope] @param {"bakis" | "c" | "none"} [palette] @param {"fr"} [device]
+ * @param {string} name @param {string} html @param {string} [scope] @param {"bakis" | "c" | "none"} [palette] @param {"fr"} [device] @param {string} [section]
  * @returns {{ css: string, tokenBlock: string, ts: string }}
  */
-export function build(name, html, scope = "dz", palette = "bakis", device = undefined) {
-  const style = extract(extract(html, "<helmet>", "</helmet>").text, "<style>", "</style>").text;
+export function build(name, html, scope = "dz", palette = "bakis", device = undefined, section = undefined) {
+  const full = extract(extract(html, "<helmet>", "</helmet>").text, "<style>", "</style>").text;
+  let style = full;
+  if (section !== undefined) {
+    const a = full.indexOf(`/* ===== ${section}`);
+    if (a < 0) throw new Error(`port: bölüm ${section} bulunamadı`);
+    const b = full.indexOf("/* =====", a + 8);
+    style = full.slice(a, b < 0 ? full.length : b);
+  }
   const { css, tokens } = portCss(style, scope, device);
   // İşaretlemedeki satır içi renkler (fill, stroke, style) da belirteç olur; TSX bunlara `dz("17804F")` ile başvurur.
   const markup = extract(html, "</helmet>", "</x-dc>").text;
@@ -419,7 +435,7 @@ async function main() {
     const html = readFileSync(path.join(root, s.file), "utf8");
     const sum = createHash("sha256").update(html).digest("hex");
     if (sum !== s.sha256) throw new Error(`port: ${s.file} sha256 ${sum} ≠ kayıtlı ${s.sha256} (SOURCE.md ve SOURCES birlikte güncellenir)`);
-    const out = build(s.name, html, s.scope, s.palette, s.device);
+    const out = build(s.name, html, s.scope, s.palette, s.device, s.section);
     const cssPath = path.join(root, `apps/web/app/design/${s.name}.css`);
     const tsPath = path.join(root, `apps/web/app/design/${s.name}-tokens.ts`);
     const next = spliceGlobals(globals, s.name, out.tokenBlock);
