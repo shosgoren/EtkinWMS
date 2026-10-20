@@ -98,3 +98,4 @@ Son doğrulama: 17.10.2026 Europe/Istanbul (canlı yayın main `6dd9880`, T-999 
 - **20 Ekim T-920 (KODDA VAR):** Pano ekip bölümü ve taşıma birimi oluşturma depo kapsamına uyar; saha kilidi açma ve örnek veri silme yakın zamanda doğrulamayı zorunlu tutar (fail-closed). Migration yok.
 - **20 Ekim T-922 (KODDA VAR):** kullanıcı kararı — yöneticiyi (rol değişimi, çıkarma, parola sıfırlama, yönetici daveti) yalnız hesap sahibi yönetir.
 - **20 Ekim T-925 (KODDA VAR):** kullanıcı kararı "hatasız hızlı sonuç" — CI'da int ve e2e ikiye bölündü (kapsam aynı), yalnız belge PR'ında ağır testler atlanır, yayın yalnız `ci` ile tetiklenip kapıları bekler. Ölçüm öncesi: e2e 14,2 dk, int 11,7 dk.
+- **20 Ekim kullanıcı kararı:** "her şeyi sen yap, bana sadece rapor ver" — PR birleştirme ve canlıya alma (migration dahil) ajanda; müşteri verisini kalıcı silen işlemden önce haber; kapılar aynen (CLAUDE.md, T-957).
