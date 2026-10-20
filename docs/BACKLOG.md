@@ -88,8 +88,8 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 ## P3 — Altın Kural / tasarım ve kod kalitesi
 | ID | İş |
 |---|---|
-| B-60 | Yeni alt cam çubuk (Geri/Sorun · Ana ekran · ana işlem · Modüller · Etkin) + Modüller sayfası (rol/yetki) + kaydedilmemiş iş uyarısı — kaynak `Kabuk.dc.html` (kullanıcı onayı 20 Ekim); eski `BottomNav`/`screen-nav` emekliye; e2e ortak yerleşim taraması (telefon/tablet/masaüstü) |
-| B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya); saha akışlarına sesli geri bildirim |
+| B-60 | Yeni alt cam çubuk (Geri/Sorun · Ana ekran · ana işlem · Modüller · Etkin) + Modüller sayfası (rol/yetki) + kaydedilmemiş iş uyarısı — kaynak `Kabuk.dc.html` (kullanıcı onayı 20 Ekim); eski `BottomNav`/`screen-nav` emekliye; e2e ortak yerleşim taraması (telefon/tablet/masaüstü) — T-958 (KODDA VAR): Pano + Ekip/Gruplar/Aktar/Cariler ortak çubukta; eski `screen-shell` ekranlarının `screen-nav`/saha çubuğu B-63 ile ekranlar tasarıma geçerken |
+| B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya + T-958 `kabuk-bar.tsx` `tone()`); saha akışlarına sesli geri bildirim |
 | B-62 | Etkin sesli komut (T-424; Kabuk.dc.html onaylı): bas-konuş / iki dokunuş uzun dinleme ("bitti"), stok/yetki değiştiren komutta "Anladım" onay kartı, okuma komutu doğrudan sonuç; sesli geri bildirim |
 | B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18) |
 | B-60 | Ortak alt ekran çubuğu (Geri + Ana ekran · ana işlem · Etkin) + kaydedilmemiş iş uyarısı (T-423 kalanı); eski `BottomNav`/`screen-nav` emekliye; e2e'ye tablet (768–1199) projesi |

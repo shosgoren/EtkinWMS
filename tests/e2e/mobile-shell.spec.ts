@@ -11,6 +11,7 @@ import { enterDemoReal, enterDemoShared } from "./support/demo-session.ts";
 import { panoChecks } from "./support/pano-checks.ts";
 import { T270_SIZES, chevronInfo, expectBand, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
 import { openAppMenu } from "./support/app-menu.ts";
+import { expectKabukBar, expectModulesSheet } from "./support/kabuk-checks.ts";
 
 const OUT = process.env.T254_OUT ?? path.resolve(import.meta.dirname, "../../.artifacts/t-254");
 const PHONES = [
@@ -638,4 +639,9 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   await expect(menu.getByRole("link", { name: "Stok", exact: true })).toHaveAttribute("href", "/t/demo/stock");
   await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveCount(0);
   await expect(menu.getByRole("link", { name: "Ayarlar", exact: true })).toHaveCount(0);
+  // T-958: ortak alt çubuğun Modüller sayfası salt okuyana yönetici / yazma modüllerini göstermez.
+  await page.keyboard.press("Escape");
+  await page.goto("/t/demo/parties");
+  await expectKabukBar(page, "kabuk-scan", "cariler salt okunur");
+  await expectModulesSheet(page, ["home", "urun", "cari"], ["ekip", "excel", "abone", "etiket", "satin", "trans", "topla"]);
 });

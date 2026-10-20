@@ -10,6 +10,8 @@
 @import "./design/gruplar-frame.css";
 @import "./design/ekip.css";
 @import "./design/ekip-frame.css";
+@import "./design/kabuk.css";
+@import "./design/kabuk-frame.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
@@ -1546,3 +1548,107 @@ body:has(.dzp, .dza, .dzr, .dze) [data-testid="screen-nav"] { display: none; }
 .dze.dz-dark {
 }
 /* design:ekip:end */
+
+/* design:kabuk:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzk {
+  --color-dz-a-aaaaaa-g: rgba(0, 0, 0, .6);
+  --color-dz-a-afajan-df: rgba(5, 9, 13, .35);
+  --color-dz-a-afajan-ef: rgba(5, 9, 13, .45);
+  --color-dz-a-afajan-g: rgba(5, 9, 13, .6);
+  --color-dz-a-aianbc-ff: rgba(8, 13, 18, .55);
+  --color-dz-a-aoblch-f: rgba(14, 27, 39, .5);
+  --color-dz-a-aoblch-jc: rgba(14, 27, 39, .92);
+  --color-dz-a-bcblce-ii: rgba(18, 27, 36, .88);
+  --color-dz-a-bcblce-j: rgba(18, 27, 36, .9);
+  --color-dz-a-bcblce-je: rgba(18, 27, 36, .94);
+  --color-dz-a-bhcoec-af: rgba(23, 46, 66, .05);
+  --color-dz-a-bhcoec-ag: rgba(23, 46, 66, .06);
+  --color-dz-a-bhcoec-ai: rgba(23, 46, 66, .08);
+  --color-dz-a-bhcoec-d: rgba(23, 46, 66, .3);
+  --color-dz-a-bhcoec-df: rgba(23, 46, 66, .35);
+  --color-dz-a-bhcoec-di: rgba(23, 46, 66, .38);
+  --color-dz-a-bhcoec-e: rgba(23, 46, 66, .4);
+  --color-dz-a-bhcoec-f: rgba(23, 46, 66, .5);
+  --color-dz-a-bhcoec-g: rgba(23, 46, 66, .6);
+  --color-dz-a-bhcoec-h: rgba(23, 46, 66, .7);
+  --color-dz-a-bmcidd-hc: rgba(28, 40, 51, .72);
+  --color-dz-a-cphnfl-i: rgba(47, 125, 91, .8);
+  --color-dz-a-cpjogl-a: rgba(47, 158, 107, 0);
+  --color-dz-a-cpjogl-g: rgba(47, 158, 107, .6);
+  --color-dz-a-eojkhi-g: rgba(78, 154, 120, .6);
+  --color-dz-a-fpkpik-hf: rgba(95, 175, 138, .75);
+  --color-dz-a-mgcici-cc: rgba(198, 40, 40, .22);
+  --color-dz-a-mgcici-i: rgba(198, 40, 40, .8);
+  --color-dz-a-oopbpe-if: rgba(238, 241, 244, .85);
+  --color-dz-a-pamcel-cc: rgba(240, 194, 75, .22);
+  --color-dz-a-pamcel-cf: rgba(240, 194, 75, .25);
+  --color-dz-a-pppppp-ag: rgba(255, 255, 255, .06);
+  --color-dz-a-pppppp-ai: rgba(255, 255, 255, .08);
+  --color-dz-a-pppppp-b: rgba(255, 255, 255, .1);
+  --color-dz-a-pppppp-bc: rgba(255, 255, 255, .12);
+  --color-dz-a-pppppp-be: rgba(255, 255, 255, .14);
+  --color-dz-a-pppppp-bg: rgba(255, 255, 255, .16);
+  --color-dz-a-pppppp-bi: rgba(255, 255, 255, .18);
+  --color-dz-a-pppppp-cc: rgba(255, 255, 255, .22);
+  --color-dz-a-pppppp-d: rgba(255, 255, 255, .3);
+  --color-dz-a-pppppp-df: rgba(255, 255, 255, .35);
+  --color-dz-a-pppppp-ef: rgba(255, 255, 255, .45);
+  --color-dz-x-albbbi: #0b1118;
+  --color-dz-x-aoblch: #0e1b27;
+  --color-dz-x-aohmhl: #0e7c7b;
+  --color-dz-x-apbhbp: #0f171f;
+  --color-dz-x-apgoim: #0f6e8c;
+  --color-dz-x-bcblce: #121b24;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhfidm: #17583c;
+  --color-dz-x-bhiaep: #17804f;
+  --color-dz-x-bkbdaa: #1a1300;
+  --color-dz-x-bmcidd: #1c2833;
+  --color-dz-x-bohlef: #1e7b45;
+  --color-dz-x-bpdkda: #1f3a30;
+  --color-dz-x-ccdaea: #223040;
+  --color-dz-x-cpfnki: #2f5da8;
+  --color-dz-x-cphnfl: #2f7d5b;
+  --color-dz-x-cpjogl: #2f9e6b;
+  --color-dz-x-daehfk: #30475a;
+  --color-dz-x-dkgkim: #3a6a8c;
+  --color-dz-x-eogehg: #4e6476;
+  --color-dz-x-eojkhi: #4e9a78;
+  --color-dz-x-fpkpik: #5faf8a;
+  --color-dz-x-gmelni: #6c4bd8;
+  --color-dz-x-hkelmc: #7a4bc2;
+  --color-dz-x-ikfkbc: #8a5a12;
+  --color-dz-x-ikgeaa: #8a6400;
+  --color-dz-x-jkflco: #9a5b2e;
+  --color-dz-x-jplcmc: #9fb2c2;
+  --color-dz-x-jpoblp: #9fe1bf;
+  --color-dz-x-lahnal: #b07d0b;
+  --color-dz-x-lcdkdk: #b23a3a;
+  --color-dz-x-lfffcl: #b5552b;
+  --color-dz-x-lhmgnd: #b7c6d3;
+  --color-dz-x-lifkbe: #b85a14;
+  --color-dz-x-ljkgpc: #b9a6f2;
+  --color-dz-x-mcfkaa: #c25a00;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-mjncnk: #c9d2da;
+  --color-dz-x-mjngoa: #c9d6e0;
+  --color-dz-x-nmodok: #dce3ea;
+  --color-dz-x-oakbaa: #e0a100;
+  --color-dz-x-oaliek: #e0b84a;
+  --color-dz-x-odojoo: #e3e9ee;
+  --color-dz-x-odpboj: #e3f1e9;
+  --color-dz-x-ofgkaa: #e56a00;
+  --color-dz-x-ogolop: #e6ebef;
+  --color-dz-x-ojoenk: #e9e4da;
+  --color-dz-x-oopbpe: #eef1f4;
+  --color-dz-x-pamcel: #f0c24b;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-ppfkfk: #ff5a5a;
+  --color-dz-x-pphkhk: #ff7a7a;
+  --color-dz-x-ppnjnj: #ffd9d9;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzk.dz-dark {
+}
+/* design:kabuk:end */

@@ -3915,5 +3915,120 @@
       "leave": "Leave without saving",
       "stay": "Cancel, stay here"
     }
+  },
+  "kabuk": {
+    "dock": "Bottom bar",
+    "report": "Report a problem",
+    "reportShort": "PROBLEM",
+    "back": "Back",
+    "backShort": "BACK",
+    "home": "Home",
+    "homeShort": "HOME",
+    "scan": "Scan: camera or NFC",
+    "scanShort": "SCAN",
+    "mods": "Modules",
+    "modsShort": "MODULES",
+    "etkin": "Etkin: hold and speak, double tap for long speech",
+    "etkinSoon": "Etkin (voice command): coming soon",
+    "etkinName": "Etkin",
+    "close": "Close",
+    "closeMods": "Close modules",
+    "search": "Search modules",
+    "searchPh": "Search or say a module",
+    "sayModule": "Say a module (coming soon)",
+    "sub": "{role} · {n} MODULES OPEN",
+    "page2": " · PAGE 2",
+    "more": "+{n} more",
+    "moreSub": "SEARCH OR SAY",
+    "moreAria": "{n} more modules, search or say",
+    "first": "First page",
+    "firstAria": "Back to first page",
+    "soon": "SOON",
+    "soonAria": "{name}, {sub}, coming soon",
+    "tileAria": "{name}, {sub}",
+    "soonToast": "{name} is coming soon · we will let you know",
+    "none": "Not found · say another name",
+    "mod": {
+      "home": {
+        "name": "Home",
+        "sub": "Reports"
+      },
+      "urun": {
+        "name": "Products",
+        "sub": "Cards · Expiry · Lot"
+      },
+      "depo": {
+        "name": "Warehouses",
+        "sub": "Shelf · Occupancy"
+      },
+      "satin": {
+        "name": "Purchasing",
+        "sub": "Goods receipt"
+      },
+      "satis": {
+        "name": "Sales",
+        "sub": "Shipping · Cargo"
+      },
+      "topla": {
+        "name": "Picking",
+        "sub": "My tasks"
+      },
+      "trans": {
+        "name": "Transfer",
+        "sub": "Between warehouses"
+      },
+      "uret": {
+        "name": "Production",
+        "sub": "Recipe · Order"
+      },
+      "qr": {
+        "name": "QR / Barcode",
+        "sub": "Create · Print"
+      },
+      "koli": {
+        "name": "Box & pallet",
+        "sub": "Unique QR"
+      },
+      "tara": {
+        "name": "Scan",
+        "sub": "Camera"
+      },
+      "sayim": {
+        "name": "Count",
+        "sub": "Spot · Year-end"
+      },
+      "ayin": {
+        "name": "Staff of the month",
+        "sub": "Performance"
+      },
+      "ses": {
+        "name": "Voice command",
+        "sub": "Speak, I'll find it"
+      },
+      "abone": {
+        "name": "Subscription",
+        "sub": "Plan · License"
+      },
+      "fis": {
+        "name": "Stock documents",
+        "sub": "Opening · In · Out"
+      },
+      "excel": {
+        "name": "Import from Excel",
+        "sub": "Product · Party"
+      },
+      "etiket": {
+        "name": "Label design",
+        "sub": "Template · Print"
+      },
+      "cari": {
+        "name": "Parties",
+        "sub": "Customer · Supplier"
+      },
+      "ekip": {
+        "name": "Team",
+        "sub": "People · Permissions"
+      }
+    }
   }
 }

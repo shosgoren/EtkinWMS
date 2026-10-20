@@ -35,6 +35,8 @@ export const SOURCES = [
   // T-421: Yetki grupları (aynı 19 Ekim kaynak biçimi).
   { name: "gruplar", file: "docs/design/source/Gruplar.dc.html", sha256: "e7f4c23629c9f7058c47416f9ddced3ac0e5aee89da74b99903344362cef7baa", scope: "dzr", palette: "none", device: "fr" },
   { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "2305dacb6a48c57a454ec6e84a2940309a83fe55718ececebabe3af73d9d5ce4", scope: "dzp", palette: "none", device: "fr" },
+  // T-958: uygulama kabuğu (alt cam çubuk, Modüller sayfası, Etkin dinleme, ilk kullanım rehberi; aynı 19 Ekim kaynak biçimi).
+  { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "d623311be817ea7ffed155350bb193bb29b286ba3e2ed3975065d878e44e9c61", scope: "dzk", palette: "none", device: "fr" },
 ];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.

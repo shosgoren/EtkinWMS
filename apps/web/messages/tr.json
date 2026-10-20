@@ -3915,5 +3915,120 @@
       "leave": "Kaydetmeden çık",
       "stay": "Vazgeç, burada kalayım"
     }
+  },
+  "kabuk": {
+    "dock": "Alt çubuk",
+    "report": "Sorun bildir",
+    "reportShort": "SORUN",
+    "back": "Geri",
+    "backShort": "GERİ",
+    "home": "Ana ekran",
+    "homeShort": "ANA EKRAN",
+    "scan": "Okut: kamera ya da NFC",
+    "scanShort": "OKUT",
+    "mods": "Modüller",
+    "modsShort": "MODÜLLER",
+    "etkin": "Etkin: basılı tut ve konuş, iki kez dokun uzun konuşma",
+    "etkinSoon": "Etkin (sesli komut): yakında",
+    "etkinName": "Etkin",
+    "close": "Kapat",
+    "closeMods": "Modülleri kapat",
+    "search": "Modül ara",
+    "searchPh": "Modül ara ya da söyle",
+    "sayModule": "Modülü söyle (yakında)",
+    "sub": "{role} · {n} MODÜL AÇIK",
+    "page2": " · SAYFA 2",
+    "more": "+{n} daha",
+    "moreSub": "ARA YA DA SÖYLE",
+    "moreAria": "{n} modül daha, ara ya da söyle",
+    "first": "İlk sayfa",
+    "firstAria": "İlk sayfaya dön",
+    "soon": "YAKINDA",
+    "soonAria": "{name}, {sub}, yakında",
+    "tileAria": "{name}, {sub}",
+    "soonToast": "{name} yakında · hazır olunca haber veririz",
+    "none": "Bulunamadı · başka bir ad söyle",
+    "mod": {
+      "home": {
+        "name": "Ana ekran",
+        "sub": "Raporlar"
+      },
+      "urun": {
+        "name": "Ürünler",
+        "sub": "Kartlar · SKT · Lot"
+      },
+      "depo": {
+        "name": "Depolar",
+        "sub": "Raf · Doluluk"
+      },
+      "satin": {
+        "name": "Satın alma",
+        "sub": "Mal kabul"
+      },
+      "satis": {
+        "name": "Satış",
+        "sub": "Sevk · Kargo"
+      },
+      "topla": {
+        "name": "Toplama",
+        "sub": "Görevlerim"
+      },
+      "trans": {
+        "name": "Transfer",
+        "sub": "Depolar arası"
+      },
+      "uret": {
+        "name": "Üretim",
+        "sub": "Reçete · Emir"
+      },
+      "qr": {
+        "name": "QR / Barkod",
+        "sub": "Üret · Yazdır"
+      },
+      "koli": {
+        "name": "Koli & palet",
+        "sub": "Tekil QR"
+      },
+      "tara": {
+        "name": "Tara",
+        "sub": "Kamera"
+      },
+      "sayim": {
+        "name": "Sayım",
+        "sub": "Anlık · Yıl sonu"
+      },
+      "ayin": {
+        "name": "Ayın personeli",
+        "sub": "Performans"
+      },
+      "ses": {
+        "name": "Sesli komut",
+        "sub": "Konuş, bulayım"
+      },
+      "abone": {
+        "name": "Abonelik",
+        "sub": "Paket · Lisans"
+      },
+      "fis": {
+        "name": "Stok fişleri",
+        "sub": "Devir · Giriş · Çıkış"
+      },
+      "excel": {
+        "name": "Excel’den aktar",
+        "sub": "Ürün · Cari"
+      },
+      "etiket": {
+        "name": "Etiket tasarımı",
+        "sub": "Şablon · Yazdır"
+      },
+      "cari": {
+        "name": "Cariler",
+        "sub": "Müşteri · Tedarikçi"
+      },
+      "ekip": {
+        "name": "Ekip",
+        "sub": "Kişiler · Yetki"
+      }
+    }
   }
 }

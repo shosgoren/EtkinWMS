@@ -6,6 +6,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { localClient } from "./support/empty-tenant.ts";
 import { DESKTOP_SIZES, OUT, PHONE_SIZES, loginAdmin } from "./support/import-screen.ts";
+import { KABUK_SIZES, expectKabukBar, expectModulesSheet, settle } from "./support/kabuk-checks.ts";
 
 test.use({ ...localClient("198.51.100.43") });
 
@@ -93,5 +94,50 @@ test.describe("Tablet alt çubuk (T-921)", () => {
     await page.goto("/t/demo/team");
     await expect(page.getByTestId("team-manage")).toHaveCSS("display", "flex");
     await expect(page.getByTestId("team-manage")).toHaveCSS("align-items", "center");
+  });
+});
+
+// T-958 (Kabuk.dc.html): ortak alt cam çubuk Pano (ana ekran) ve alt ekranda (Ekip) aynı bileşen; Modüller sayfası yetkiye göre.
+test.describe("Ortak alt çubuk ve Modüller (T-958)", () => {
+  test("yönetici: 5 yuva, ana işlem üstte, Modüller açılır/kapanır, taşma yok", async ({ page }, testInfo) => {
+    await loginAdmin(page);
+    const desk = testInfo.project.name === "desktop";
+    for (const s of KABUK_SIZES) {
+      await page.setViewportSize({ width: s.w, height: s.h });
+      await page.goto("/t/demo");
+      await expect(page.getByTestId("pano-problem")).toBeVisible();
+      await expect(page.getByTestId("pano-scan")).toHaveAttribute("href", "/t/demo/field");
+      await expect(page.getByTestId("kabuk-home")).toHaveAttribute("aria-current", "page");
+      await expectKabukBar(page, "pano-scan", `pano ${s.w}`);
+      await settle(page);
+      if (desk) await page.screenshot({ path: testInfo.outputPath(`app-pano-${s.w}.png`) });
+      await page.goto("/t/demo/team");
+      await expect(page.getByTestId("team")).toBeVisible();
+      await expect(page.getByTestId("team-back")).toBeVisible();
+      await expectKabukBar(page, "team-main", `ekip ${s.w}`);
+      await settle(page);
+      if (desk) await page.screenshot({ path: testInfo.outputPath(`app-ekip-${s.w}.png`) });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectModulesSheet(page, ["home", "urun", "satin"], [], desk ? "app-moduller-390.png" : undefined);
+    // YAKINDA modülü bağlantı değildir; gerçek modül gerçek ekrana gider.
+    await page.getByTestId("kabuk-mods").click();
+    const sheet = page.getByRole("dialog", { name: "Modüller" });
+    await expect(sheet.locator('[data-module="satin"]')).toHaveAttribute("data-soon", "true");
+    await expect(sheet.locator('a[data-module="satin"]')).toHaveCount(0);
+    // Telefonda 12 kutu: 20 modülün 11'i + "+9 daha"; arama sığmayanı bulur.
+    await expect(page.getByTestId("kabuk-more")).toContainText("+9 daha");
+    await page.getByTestId("kabuk-search").fill("ekip");
+    await sheet.locator('[data-module="ekip"]').click();
+    await expect(page).toHaveURL(/\/t\/demo\/team$/);
+    if (desk) {
+      for (const s of KABUK_SIZES.slice(1)) {
+        await page.setViewportSize({ width: s.w, height: s.h });
+        await page.getByTestId("kabuk-mods").click();
+        await settle(page);
+        await page.screenshot({ path: testInfo.outputPath(`app-moduller-${s.w}.png`) });
+        await page.keyboard.press("Escape");
+      }
+    }
   });
 });

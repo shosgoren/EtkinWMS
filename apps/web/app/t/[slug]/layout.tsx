@@ -14,6 +14,8 @@ import { AppError } from "@wms/shared/errors";
 import { AppBar } from "./app-bar.tsx";
 import { BottomNav } from "./bottom-nav.tsx";
 import { ScreenShell } from "./screen-shell.tsx";
+import { KabukProvider } from "./kabuk/kabuk-bar.tsx";
+import { kabukModules } from "./kabuk/modules.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -102,8 +104,15 @@ export default async function TenantLayout({ children, params }: { children: Rea
   )
     .filter(([, , ok]) => ok)
     .map(([key, path]) => ({ href: `${base}${path}`, label: t(`home.easy.${key}`) }));
+  // T-958: ortak alt çubuğun Modüller sayfası — yalnız üyenin rol/yetki/grup ekranlarının açtığı modüller (sunucuda; hedef sayfa ayrıca denetler).
+  const kabuk = {
+    base,
+    modules: kabukModules(base, { roles: current.roles, grants: current.grants, screens: current.screens }),
+    roleLabel: current.roles[0] === undefined ? "" : t(`roles.${current.roles[0]}`),
+  };
 
   return (
+    <KabukProvider value={kabuk}>
     <div className="tenant-shell flex min-w-0 flex-col">
       <AppBar
         slug={slug}
@@ -148,5 +157,6 @@ export default async function TenantLayout({ children, params }: { children: Rea
       <div className="tenant-body flex min-w-0 flex-col"><Suspense fallback={children}><ScreenShell slug={slug}>{children}</ScreenShell></Suspense></div>
       <Suspense fallback={null}><BottomNav slug={slug} /></Suspense>
     </div>
+    </KabukProvider>
   );
 }

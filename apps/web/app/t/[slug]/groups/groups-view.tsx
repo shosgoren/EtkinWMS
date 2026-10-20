@@ -9,6 +9,7 @@ import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
+import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 
 type Overview = {
   readonly groups: readonly { id: string; name: string; color: string; screens: readonly string[]; grants: readonly string[]; archived: boolean; version: number; memberCount: number }[];
@@ -366,6 +367,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const [mainLabel, mainIcon, main] = MAIN[view];
 
   return (
+    <>
     <div className={`dzr${dark ? " dz-dark" : ""}`} data-testid="groups">
       <div className="wrap">
         <div className="appzone">
@@ -577,39 +579,6 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
               ) : null}
             </main>
 
-            <nav className="dock subdock" aria-label={t("dock")}>
-              <div className="dockin">
-                <div className="dkl">
-                  {view === "list" ? (
-                    <a href={`${base}/team`} className="dk" aria-label={t("backTeam")} style={{ textDecoration: "none" }} data-testid="groups-back">
-                      <Ico d={RICON.back} size={26} />
-                      <span>{t("back")}</span>
-                    </a>
-                  ) : (
-                    <button type="button" className="dk" aria-label={t("back")} onClick={back} data-testid="groups-back">
-                      <Ico d={RICON.back} size={26} />
-                      <span>{t("back")}</span>
-                    </button>
-                  )}
-                  {dirty ? (
-                    <button type="button" className="dk dk-home" aria-label={t("home")} onClick={() => setCf("home")} data-testid="groups-home">
-                      <Ico d={[RICON.homeA, RICON.homeB]} size={24} />
-                      <span>{t("homeShort")}</span>
-                    </button>
-                  ) : (
-                    <a href={base} className="dk dk-home" aria-label={t("home")} style={{ textDecoration: "none" }} data-testid="groups-home">
-                      <Ico d={[RICON.homeA, RICON.homeB]} size={24} />
-                      <span>{t("homeShort")}</span>
-                    </a>
-                  )}
-                </div>
-                <button type="button" className="dk big scan" aria-label={mainLabel} onClick={main} disabled={busy || (view === "list" && !data.canEdit)} data-testid="groups-main">
-                  <Ico d={mainIcon} size={28} />
-                </button>
-                <span aria-hidden="true" />
-              </div>
-            </nav>
-            <span className="mainlbl">{mainLabel}</span>
 
             {cf !== null ? (
               <>
@@ -665,5 +634,13 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
         </div>
       </div>
     </div>
+    {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
+    <KabukBar
+      dark={dark}
+      back={view === "list" ? { href: `${base}/team`, aria: t("backTeam"), testId: "groups-back" } : { onClick: back, aria: t("back"), testId: "groups-back" }}
+      homeNav={dirty ? { onClick: () => setCf("home"), aria: t("home"), testId: "groups-home" } : { href: base, aria: t("home"), testId: "groups-home" }}
+      main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy || (view === "list" && !data.canEdit), testId: "groups-main" }}
+    />
+    </>
   );
 }
