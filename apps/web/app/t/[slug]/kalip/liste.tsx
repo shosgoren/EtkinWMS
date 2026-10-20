@@ -130,8 +130,8 @@ export interface KalipKartProps {
   readonly aria: string;
   readonly index?: number;
   readonly testId?: string;
-  /** Erişilebilir rol (varsayılan listitem; canlı öneri listesinde option). */
-  readonly role?: "listitem" | "option";
+  /** Erişilebilir rol (varsayılan listitem; canlı öneri listesinde option; `null` = rol yok — kart eylem satırıyla birlikte `listitem` sarmalayıcı içindeyse). */
+  readonly role?: "listitem" | "option" | null;
   readonly children?: ReactNode;
 }
 
@@ -159,11 +159,11 @@ export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href
     </>
   );
   return href !== undefined ? (
-    <a className={cls} style={style} role={role} aria-label={aria} href={href} onClick={onClick} data-testid={testId}>
+    <a className={cls} style={style} role={role ?? undefined} aria-label={aria} href={href} onClick={onClick} data-testid={testId}>
       {inner}
     </a>
   ) : (
-    <button type="button" className={cls} style={style} role={role} aria-label={aria} onClick={onClick} data-testid={testId}>
+    <button type="button" className={cls} style={style} role={role ?? undefined} aria-label={aria} onClick={onClick} data-testid={testId}>
       {inner}
     </button>
   );

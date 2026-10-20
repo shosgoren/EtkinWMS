@@ -203,8 +203,9 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
                 const who = task.assignedMembershipId === null ? t("unassigned") : task.assignedName === null ? t("assigneeUnknown") : t("assignee", { name: task.assignedName });
                 const qty = task.quantity === null ? null : fmtQty(task.quantity, locale);
                 return (
-                  <div key={task.id} data-testid="task-row" data-task-id={task.id} data-status={task.status} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                  <div key={task.id} role="listitem" data-testid="task-row" data-task-id={task.id} data-status={task.status} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
                     <KalipKart
+                      role={null}
                       index={i}
                       name={t(`kind.${task.kind}`)}
                       code={t(`status.${task.status}`).toLocaleUpperCase(locale === "en" ? "en" : "tr")}

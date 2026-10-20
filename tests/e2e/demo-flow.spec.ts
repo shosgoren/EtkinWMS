@@ -207,7 +207,8 @@ test.describe("demo akışı", () => {
     await expect(page.locator("td, li span").filter({ hasText: "Üye davet edildi" })).toHaveCount(0);
     await expectNoHorizontalOverflow(page, "denetim kaydı");
 
-    // Çıkış → /login; korumalı sayfa /login'e döner.
+    // Çıkış → /login; korumalı sayfa /login'e döner. T-971: denetim kaydı kalıp ekranıdır (eski üst çubuk yok); çıkış ana ekranın hesap menüsünde.
+    await page.goto("/t/demo");
     await openMenuIfPhone(page);
     await page.getByRole("button", { name: "Çıkış yap" }).click();
     await expect(page).toHaveURL(/\/login$/);
@@ -254,6 +255,8 @@ test.describe("demo akışı", () => {
     await page.goto("/t/demo/audit");
     await expect(page.getByText("Denetim kaydını görmek için yetkin yok.")).toBeVisible();
 
+    // T-971: kalıp ekranında eski üst çubuk yok; çıkış ana ekranın hesap menüsünde.
+    await page.goto("/t/demo");
     await openMenuIfPhone(page);
     await page.getByRole("button", { name: "Çıkış yap" }).click();
     await expect(page).toHaveURL(/\/login$/);
