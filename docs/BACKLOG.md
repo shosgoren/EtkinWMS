@@ -8,6 +8,9 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 
 **Güvenlik satırları (🔒):** depo herkese açık olduğundan ayrıntı (dosya:satır, senaryo, düzeltme) burada yazılmaz; depo yöneticilerine açık gizli danışma taslağı **GHSA-jxfh-5j2f-4mvg** içindedir (GitHub → Security → Advisories). Düzeltme birleşip canlıya çıkınca ayrıntı kart/PR'a taşınabilir. Yeni güvenlik bulgusu da önce oraya, burada yalnız kimlik + genel başlıkla eklenir.
 
+## Kullanıcı onaylı sıra (20 Ekim, "Onaylıyorum")
+1. B-76 "Bu cihazı 30 gün hatırla" → 2. B-60 yeni alt çubuk + Modüller (Kabuk.dc.html) → 3. B-75 ilk kullanım rehberi → 4. B-62 Etkin sesli komut → 5. B-63 eski ekranlar (önce Ayarlar) → 6. P1 güvenlik kalanı → 7. B-51 sayım, B-50 QR akışı, B-56 donanım denemesi → 8. B-80…B-83 eklemeler. P0 yedek/izleme kullanıcının depolama hesabını bekler.
+
 ## P0 — veri kaybı ve görünürlük
 | ID | İş | Kim |
 |---|---|---|
@@ -82,16 +85,26 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 ## P3 — Altın Kural / tasarım ve kod kalitesi
 | ID | İş |
 |---|---|
-| B-60 | Ortak alt ekran çubuğu (Geri + Ana ekran · ana işlem · Etkin) + kaydedilmemiş iş uyarısı (T-423 kalanı) |
+| B-60 | Yeni alt cam çubuk (Geri/Sorun · Ana ekran · ana işlem · Modüller · Etkin) + Modüller sayfası (rol/yetki) + kaydedilmemiş iş uyarısı — kaynak `Kabuk.dc.html` (kullanıcı onayı 20 Ekim); eski `BottomNav`/`screen-nav` emekliye; e2e ortak yerleşim taraması (telefon/tablet/masaüstü) |
 | B-61 | Ortak ses/geri bildirim modülü (`beep()` üç kopya); saha akışlarına sesli geri bildirim |
-| B-62 | Etkin sesli asistan (T-424); sesle miktar/görev arama |
+| B-62 | Etkin sesli komut (T-424; Kabuk.dc.html onaylı): bas-konuş / iki dokunuş uzun dinleme ("bitti"), stok/yetki değiştiren komutta "Anladım" onay kartı, okuma komutu doğrudan sonuç; sesli geri bildirim |
 | B-63 | Tasarım kaynağı olmayan ~49 ekran (stok, kabul, sevk, üretim, etiket, ayarlar, saha) için tuval → birebir aktarım (I-18) |
 | B-64 | İstemci `void action().then()` zincirlerine hata yakalama (ör. `apps/web/app/activate/[token]/flow.tsx`); `loading.tsx`, panel `error.tsx`, `global-error`, `not-found` |
 | B-65 | `apps/web/app/t/[slug]/page.tsx` üyelik yoksa `return null` → `notFound()`; tanımsız roller için açılış ekranı |
 | B-66 | Panel hata kodlarını kullanıcı diline çevir |
 | B-69 | Üyeler ekranı ve davet penceresi: sahip olmayan yöneticide yönetici hedefli rol/çıkarma/sıfırlama düğmeleri ve TENANT_ADMIN davet seçeneği kilitli + nedeni görünür (sunucu zaten reddediyor; T-922 inceleme MINOR-2) |
 | B-67 | Cari kişisel alanlarının görünürlüğünü daralt; `settings.manage`'i böl; kullanılmayan `takeout.request` 🔒 |
+| B-75 | İlk kullanım rehberi (Kabuk.dc.html onaylı): her ekran ilk açılışta ≤ 5 adım, yaparak ilerleme, sesli anlatım, görüldü bilgisi sunucuda kullanıcıya bağlı, üst çubuk "?" ile tekrar; adım metinleri tek kaynakta + rehberi olmayan ekran bekçisi |
+| B-76 | "Bu cihazı 30 gün hatırla" (kullanıcı onayı 20 Ekim; ADR-014 §12 M4 değişikliği): cihaza bağlı httpOnly çerez + DB'de özet, parola yine sorulur, hassas işlemde MFA yine istenir, parola/2FA değişince ve "tüm cihazlardan çık"ta düşer, hatırlanan cihazlar listesi + iptal; Q-15/Q-16 bu kararla kapanır |
 | B-68 | Defter–bakiye denetiminin ölçeği (her yazımda tüm geçmiş toplamı) — checkpoint tasarımı |
+
+## Eklemeler (kullanıcı onayı 20 Ekim)
+| ID | İş |
+|---|---|
+| B-80 | Face ID / parmak iziyle giriş (passkey/WebAuthn; ADR-026 sonraki eklemeler) |
+| B-81 | Anlık bildirim (web push): kritik stok, geciken sipariş, bildirilen sorun — rol ve depo kapsamına göre |
+| B-82 | Ayın personeli / performans ekranı (okutma ve görev verisinden; Modüller'de "YAKINDA") |
+| B-83 | Satın alma önerisi listesi: minimum altındaki ürünler için "şu kadar al" (Pano satın alma altyapısı) |
 
 ## Belge düzeltmeleri
 | ID | İş |
