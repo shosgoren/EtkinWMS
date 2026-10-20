@@ -1586,6 +1586,8 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       "platform_list_customers", "platform_list_demo_requests", "platform_list_events", "platform_list_plans", "platform_mark_charge_paid",
       "platform_prepare_activation_delivery", "platform_published_plans", "platform_save_plan", "platform_set_customer_status",
       "platform_site_get", "platform_site_preview", "platform_site_public", "platform_site_publish", "platform_site_save", // T-407 0046: satış sayfası içeriği
+      "platform_support_get", "platform_support_list", "platform_support_messages", "platform_support_open_count", "platform_support_reply",
+      "platform_support_set_status", // T-967 0054: destek gelen kutusu (operatör; tenant bağlamı işlev içinde, izolasyon politikasından)
       "platform_tenant_plan_limit", "platform_tenant_subscription",
       "platform_workspace_name_taken", // T-404 0041: paket; T-403 0042: müşteri; T-406 0043: tahakkuk işlevleri
     ]);
