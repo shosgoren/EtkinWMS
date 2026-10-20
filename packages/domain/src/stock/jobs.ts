@@ -137,7 +137,7 @@ export function postingMfaWindowSeconds(q: {
 /**
  * Worker'ın istek sahibi adına verdiği MFA kararı (T-222 inceleme MAJOR-1). `mfaVerified: true` YALNIZCA şunların hepsi doğruysa: işleme kilidi bu işe
  * ait (`posting_job_id`), istek sahibi = zarf aktörü, kayıt kimliği = yük kimliği, istek anında MFA damgası var (sunucu tarafında yazıldı, 0023),
- * damga pencere içinde ve damgadan sonra kullanıcının MFA faktörü/parolası sıfırlanmadı (`security_events`: `two_factor_disabled|enabled`,
+ * damga pencere içinde ve damgadan sonra kullanıcının MFA faktörü/parolası sıfırlanmadı (0053 `wms_probe.credentials_changed_since`; `security_events`: `two_factor_disabled|enabled`,
  * `password_reset|changed`). Oturum iptali için ayrı bir olay türü YOKTUR (`session.*` öneki ayrılmış ama üretilmiyor; rapor Bulgusu): bu yüzden
  * yalnızca bu olaylar sinyaldir. Kilit dışı okuma güvenlidir: değerler yalnızca istek transaction'ında yazılır ve kilit boyunca değişmez.
  */
@@ -158,9 +158,7 @@ async function mayVouchMfa(ctx: AsyncPostingContext, tenantId: string, documentI
       sql`SELECT d.posting_job_id, d.posting_requested_by, d.posting_idempotency_record_id,
                  d.posting_mfa_verified_at IS NOT NULL AS stamped,
                  EXTRACT(EPOCH FROM (pg_catalog.now() - d.posting_mfa_verified_at)) AS age_seconds,
-                 EXISTS (SELECT 1 FROM public.security_events e
-                          WHERE e.user_id = d.posting_requested_by AND e.occurred_at > d.posting_mfa_verified_at
-                            AND e.event_type IN ('two_factor_disabled', 'two_factor_enabled', 'password_reset', 'password_changed')) AS reset,
+                 wms_probe.credentials_changed_since(d.posting_requested_by, d.posting_mfa_verified_at) AS reset,
                  j.expire_seconds, j.retry_limit, j.retry_delay, j.retry_backoff
             FROM public.documents d LEFT JOIN pgboss.job j ON j.id = ${ctx.jobId}::uuid
            WHERE d.tenant_id = ${tenantId}::uuid AND d.id = ${documentId}::uuid`,

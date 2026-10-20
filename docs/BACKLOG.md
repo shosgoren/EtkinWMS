@@ -19,8 +19,8 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 ## P1 — yetki ve RLS (ilk güvenlik paketi; 0051/0052 canlıda; security-reviewer + QA zorunlu)
 | ID | İş |
 |---|---|
-| B-10 | Global kimlik/olay tablolarında uygulama rolü okuma yetkisini daralt 🔒 |
-| B-11 | Ekibe katılma onayını DB'de atomik işleve taşı 🔒 |
+| B-10 | Global kimlik/olay tablolarında uygulama rolü okuma yetkisini daralt 🔒 — `security_events` kısmı T-919 (0053, KODDA VAR); kalan kısım açık |
+| B-11 | Ekibe katılma onayını DB'de kod doğrulamasına bağla 🔒 — T-919 (0053, KODDA VAR; canlıya çıkınca BİTTİ) |
 | B-12 | Saha girişi migration'larının geri almasına veri bekçisi 🔒 |
 | B-13 | Pano bölümlerinde depo kapsamı tutarlılığı 🔒 |
 | B-14 | Paket/palet oluşturmada depo kapsamı 🔒 |

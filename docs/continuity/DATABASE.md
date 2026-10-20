@@ -97,3 +97,7 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
   komutlarında (onay, sayım onayı, ters kayıt), DB tetikleyicisi yok.
 - Yayınlanmış satış içeriği ve ödenmiş tahakkuk tetikleyiciyle değişmez. Veri kaybettiren down migration'lar dolu veride
   `allow_destructive_down` olmadan reddeder.
+- 0053 (T-919): `wms_app` `security_events`'ten yalnız `id` okur (içerik yok); MFA kefaleti `wms_probe.credentials_changed_since`
+  (evet/hayır, yalnız geçerli tenant üyesi, bağlam yoksa fail-closed). Ekibe katılma onayı DB'de kod doğrulamasına bağlı:
+  `field_join_verify` damga basar (yalnız probe yazar), `team_join_requests_transition_guard` (ENABLE ALWAYS) geçişleri ve sunucu
+  tarafı `decided_*`'ı zorlar. Down yalnız kısa ömürlü doğrulama damgasını siler.

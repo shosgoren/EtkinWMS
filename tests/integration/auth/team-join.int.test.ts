@@ -145,6 +145,34 @@ async function request(join: string, username: string, name = "Ahmet Yılmaz"): 
   return { res, cookie, code };
 }
 
+/** wms_app bağlantısında tenant + kullanıcı bağlamıyla sırayla sorgu; her sorgunun sonucu "ok" ya da SQLSTATE (T-919). Sonunda geri alınmaz: COMMIT. */
+async function appAs(tenant: string, user: string, queries: ReadonlyArray<readonly [string, readonly unknown[]]>): Promise<string[]> {
+  const c = new pg.Client({ connectionString: env.databaseUrl });
+  c.on("error", () => undefined);
+  await c.connect();
+  const out: string[] = [];
+  try {
+    for (const [q, args] of queries) {
+      await c.query("BEGIN");
+      await c.query("SELECT set_config('app.current_tenant_id', $1, true), set_config('app.current_user_id', $2, true)", [tenant, user]);
+      const r = await c.query(q, [...args]).then(
+        () => "ok",
+        (e: { code?: string }) => e.code ?? "error",
+      );
+      await c.query(r === "ok" ? "COMMIT" : "ROLLBACK");
+      out.push(r);
+    }
+    return out;
+  } finally {
+    await c.end();
+  }
+}
+
+async function ownerMembership(fx: Fx): Promise<string> {
+  const m = await adm.query<{ id: string }>("SELECT id FROM public.tenant_memberships WHERE tenant_id = $1 AND user_id = $2", [fx.tenant, fx.ownerId]);
+  return (m.rows[0] as { id: string }).id;
+}
+
 describe("T-429 ekibe katılma", () => {
   it("uçtan uca: QR → talep → onay → PIN → oturum; tek kullanım; uygulama rolü kodu okuyamaz", async () => {
     const fx = await mkTenant();
@@ -252,6 +280,86 @@ describe("T-429 ekibe katılma", () => {
 
     const demo = await mkTenant(true);
     expect((await failure(createJoinLink(access(demo)))).code).toBe("FORBIDDEN");
+  });
+
+  it("T-919 (0053): onay DB'de kod doğrulamasına bağlı; geçersiz geçiş ve karar alanı oynaması 42501; security_events yalnız id", async () => {
+    const fx = await mkTenant();
+    const mem = await ownerMembership(fx);
+    const link = await createJoinLink(access(fx));
+    const join = `${link.tenantId}.${link.token}`;
+    const upd = "UPDATE public.team_join_requests SET status = 'APPROVED', decided_by = $2, decided_at = now(), membership_id = $3 WHERE id = $1";
+    const idOf = async (name: string): Promise<string> => (await getJoinOverview(access(fx))).pending.find((p) => p.name === name)?.id ?? "";
+
+    // (a) Kod doğrulanmadan doğrudan onay yazılamaz.
+    const a = await request(join, `ayse.${randomBytes(3).toString("hex")}`, "Ayşe Kaya");
+    expect(a.res.status).toBe(200);
+    const ida = await idOf("Ayşe Kaya");
+    expect(await appAs(fx.tenant, fx.ownerId, [[upd, [ida, fx.ownerId, mem]]])).toEqual(["42501"]);
+    // Uygulama rolü doğrulama damgasını kendisi basamaz.
+    expect(await appAs(fx.tenant, fx.ownerId, [["UPDATE public.team_join_requests SET code_verified_by = $2, code_verified_at = now() WHERE id = $1", [ida, fx.ownerId]]])).toEqual(["42501"]);
+
+    // (b) Başka kullanıcının doğruladığı talebi bu kullanıcı onaylayamaz.
+    const other = randomUUID();
+    expect(await appAs(fx.tenant, other, [["SELECT wms_probe.field_join_verify($1::uuid, $2)", [ida, a.code]]])).toEqual(["ok"]);
+    const st = await adm.query<{ code_verified_by: string | null }>("SELECT code_verified_by FROM public.team_join_requests WHERE id = $1", [ida]);
+    expect(st.rows[0]?.code_verified_by).toBe(other);
+    expect(await appAs(fx.tenant, fx.ownerId, [[upd, [ida, fx.ownerId, mem]]])).toEqual(["42501"]);
+
+    // (c) Kendi doğrulaması sonrası onay geçer; karar zamanı ve kişisi sunucuda üretilir (istemci değeri yok sayılır).
+    const future = "UPDATE public.team_join_requests SET status = 'APPROVED', decided_by = $2, decided_at = now() + interval '30 days', membership_id = $3 WHERE id = $1";
+    expect(await appAs(fx.tenant, fx.ownerId, [["SELECT wms_probe.field_join_verify($1::uuid, $2)", [ida, a.code]], [future, [ida, other, mem]]])).toEqual(["ok", "ok"]);
+    const dec = await adm.query<{ decided_by: string; late: boolean }>(
+      "SELECT decided_by, decided_at > now() + interval '1 minute' AS late FROM public.team_join_requests WHERE id = $1", [ida]);
+    expect(dec.rows[0]).toEqual({ decided_by: fx.ownerId, late: false });
+    // Durum değişmeden karar alanı oynanamaz (24 saatlik etkinleştirme penceresi uzatılamaz).
+    expect(await appAs(fx.tenant, fx.ownerId, [["UPDATE public.team_join_requests SET decided_at = now() + interval '30 days' WHERE id = $1", [ida]]])).toEqual(["42501"]);
+
+    // (d) 3 yanlış kodla iptal edilen talep geri onaylanamaz; REJECTED → APPROVED da yok.
+    const b = await request(join, `veli.${randomBytes(3).toString("hex")}`, "Veli Er");
+    const idb = await idOf("Veli Er");
+    const bad = b.code === "000000" ? "111111" : "000000";
+    for (let i = 0; i < 3; i++) expect(await approveJoinRequest({ ...access(fx), joinRequestId: idb, code: bad, roleKey: "PICKER" }, accountPort)).toMatchObject({ ok: false });
+    expect(await appAs(fx.tenant, fx.ownerId, [["UPDATE public.team_join_requests SET status = 'PENDING' WHERE id = $1", [idb]], [upd, [idb, fx.ownerId, mem]]])).toEqual(["42501", "42501"]);
+    const c = await request(join, `nil.${randomBytes(3).toString("hex")}`, "Nil Su");
+    const idc = await idOf("Nil Su");
+    expect(await rejectJoinRequest({ ...access(fx), joinRequestId: idc })).toEqual({ changed: true });
+    expect(await appAs(fx.tenant, fx.ownerId, [["SELECT wms_probe.field_join_verify($1::uuid, $2)", [idc, c.code]], [upd, [idc, fx.ownerId, mem]]])).toEqual(["ok", "42501"]);
+    // Uygulama rolü bekleyen talebi sessizce iptal edemez / CLAIMED yapamaz (yalnız probe).
+    const d = await request(join, `ece.${randomBytes(3).toString("hex")}`, "Ece Tan");
+    const idd = await idOf("Ece Tan");
+    expect(d.res.status).toBe(200);
+    expect(await appAs(fx.tenant, fx.ownerId, [["UPDATE public.team_join_requests SET status = 'CANCELLED' WHERE id = $1", [idd]]])).toEqual(["42501"]);
+
+    // (e) security_events: uygulama rolü içeriği okuyamaz, yalnız id (INSERT ... RETURNING id); kefalet işlevi yalnız evet/hayır.
+    expect(await appQuery(fx.tenant, "SELECT user_id FROM public.security_events LIMIT 1")).toBe("42501");
+    expect(await appQuery(fx.tenant, "SELECT ip, detail FROM public.security_events LIMIT 1")).toBe("42501");
+    expect(await appQuery(fx.tenant, "SELECT id FROM public.security_events LIMIT 1")).toBe("ok");
+    const since = (await adm.query<{ t: string }>("SELECT (now() - interval '1 second')::text AS t")).rows[0]?.t ?? "";
+    const vouch = async (user: string): Promise<boolean | undefined> => {
+      const cl = new pg.Client({ connectionString: env.databaseUrl });
+      cl.on("error", () => undefined);
+      await cl.connect();
+      try {
+        await cl.query("BEGIN");
+        await cl.query("SELECT set_config('app.current_tenant_id', $1, true)", [fx.tenant]);
+        const r = await cl.query<{ v: boolean }>("SELECT wms_probe.credentials_changed_since($1::uuid, $2::timestamptz) AS v", [user, since]);
+        return r.rows[0]?.v;
+      } finally {
+        await cl.query("ROLLBACK").catch(() => undefined);
+        await cl.end();
+      }
+    };
+    expect(await vouch(fx.ownerId)).toBe(false);
+    expect(await vouch(randomUUID())).toBe(true); // bu alanın üyesi değil: kefalet yok (fail-closed)
+    const authC = new pg.Client({ connectionString: authUrl });
+    authC.on("error", () => undefined);
+    await authC.connect();
+    try {
+      await authC.query("INSERT INTO public.security_events (user_id, event_type) VALUES ($1, 'two_factor_disabled')", [fx.ownerId]);
+    } finally {
+      await authC.end();
+    }
+    expect(await vouch(fx.ownerId)).toBe(true);
   });
 
   it("başka alanın talebi görünmez ve onaylanamaz", async () => {
