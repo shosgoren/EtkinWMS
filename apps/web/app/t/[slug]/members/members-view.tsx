@@ -9,10 +9,11 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Banner, ConfirmDialog } from "@wms/ui";
+import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipBos, KalipDaha, KalipKartListe } from "../kalip/liste.tsx";
+import { KalipOnay } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import {
   changeRoleAction,
@@ -489,7 +490,7 @@ export function MembersView({
       </KalipEkran>
 
       <InviteDialog open={inviteOpen} slug={slug} roleKeys={roleKeys} onClose={() => setInviteOpen(false)} onInvited={() => router.refresh()} />
-      <ConfirmDialog
+      <KalipOnay
         open={confirm !== null}
         title={confirmText.title}
         description={confirmText.description}
@@ -500,7 +501,7 @@ export function MembersView({
         onConfirm={() => void run()}
         onCancel={() => setConfirm(null)}
       />
-      <ConfirmDialog
+      <KalipOnay
         open={revoking !== null}
         title={t("pending.revokeTitle")}
         description={t("pending.revokeDescription", { email: revoking?.email ?? "" })}

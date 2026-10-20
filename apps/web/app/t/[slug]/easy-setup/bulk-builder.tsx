@@ -9,6 +9,8 @@ import { Banner, Button, TextField } from "@wms/ui";
 import { createBulkLocationsAction, previewBulkLocationsAction, searchLocationsAction } from "../warehouses/actions.ts";
 import type { ServerError } from "../warehouses/warehouses-view.tsx";
 import { ServerErrorBanner } from "../warehouses/warehouses-view.tsx";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { KalipPencereDugme } from "../kalip/pencere.tsx";
 import { Sheet } from "./sheet.tsx";
 import { Typeahead } from "./typeahead.tsx";
 
@@ -149,16 +151,18 @@ export function BulkBuilder({
       open={open}
       title={t("title")}
       titleId={titleId}
+      icon={{ d: LICON.raf, color: "2F7D5B" }}
+      busy={busy}
       onClose={onClose}
       onSubmit={(e) => void onSubmit(e)}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
             {t("cancel")}
-          </Button>
-          <Button type="submit" loading={busy} disabled={!canSubmit}>
+          </KalipPencereDugme>
+          <KalipPencereDugme type="submit" loading={busy} disabled={!canSubmit}>
             {preview === null ? t("submit") : t("submitCount", { count: preview.count })}
-          </Button>
+          </KalipPencereDugme>
         </>
       }
     >

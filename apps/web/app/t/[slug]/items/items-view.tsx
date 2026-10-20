@@ -17,6 +17,7 @@ import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
+import { KalipPencereDugme } from "../kalip/pencere.tsx";
 import { CARD_VISUAL } from "./card-visual.ts";
 import { createItemAction, createUnitAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
@@ -255,16 +256,18 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
       open={open}
       title={t("createTitle")}
       titleId="create-item-title"
+      icon={{ d: LICON.box, color: "2F5DA8" }}
+      busy={busy}
       onClose={onClose}
       onSubmit={(e) => void onSubmit(e)}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
             {t("cancel")}
-          </Button>
-          <Button type="submit" loading={busy} disabled={codeState === "loading"}>
+          </KalipPencereDugme>
+          <KalipPencereDugme type="submit" loading={busy} disabled={codeState === "loading"}>
             {t("submit")}
-          </Button>
+          </KalipPencereDugme>
         </>
       }
     >

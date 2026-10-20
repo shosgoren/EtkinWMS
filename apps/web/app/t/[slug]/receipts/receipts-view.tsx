@@ -8,7 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Banner, Button, ConfirmDialog, TextField } from "@wms/ui";
+import { Banner, Button, TextField } from "@wms/ui";
+import { KalipOnay } from "../kalip/pencere.tsx";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { kdz } from "../kalip/tokens.ts";
 import { Ico, KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
@@ -162,7 +163,7 @@ export function ReceiptsList({ slug, dark, receipts, nextHref, canCreate, canApp
           </KalipDaha>
         )}
       </KalipEkran>
-      <ConfirmDialog
+      <KalipOnay
         open={confirm !== null}
         title={t("quality.confirmTitle")}
         description={t("quality.confirmBody", { number: confirm?.number ?? "" })}

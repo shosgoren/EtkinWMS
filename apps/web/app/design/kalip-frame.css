@@ -35,3 +35,66 @@ body:has(.kalip) .screen-context { display: none; }
 /* Kaynak telefonda 5 karttan sonrasını gizler ve "+N daha · ara ya da söyle" (sesle, B-62) satırı koyar. Ses gelene dek gizli kart
    ulaşılamaz kalmasın: tüm kartlar çizilir, içerik alanı kendi içinde kayar. */
 @media (max-width: 699.98px) { .dzl.dzl .ulist .uc:nth-child(n+6) { display: grid; } }
+
+/* T-974 (B-63 grup B): kalıp PENCERESİ (`kalip/pencere.tsx` KalipPencere) — KalipForm kaynağının `.sx` düzenleyicisi + `.sxback` perdesi
+   satırdan bağımsız. Yerel `<dialog>` üst katmanda (ortak alt çubuğun üstünde) tam ekran saydam kaptır. Telefonda kaynaktaki alt cam sayfa
+   (altta, kenarlardan 10px), masaüstünde aynı kutu ortada. Başlık (`.sxh`) her boyutta görünür; gövde (`.kpb`) kendi içinde kayar, düğme
+   satırı (`.kpf`, kaynak `.cfb`) altta sabittir. Alanlar `.fld` (≥48px dokunma). Renk sabiti yok. */
+dialog.dzf.kpen {
+  position: fixed; inset: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none;
+  margin: 0; padding: 0; border: 0; background: transparent; color: var(--color-dz-x-bhcoec); overflow: hidden;
+  font-family: var(--font-instrument), system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+}
+.dzf.kpen *, .dzf.kpen *::before, .dzf.kpen *::after { box-sizing: border-box; }
+dialog.dzf.kpen[open] { display: flex; align-items: center; justify-content: center; }
+dialog.dzf.kpen::backdrop { background: transparent; }
+.dzf.dzf.kpen .sxback {
+  display: block; position: absolute; inset: 0; z-index: 0; background: var(--color-dz-a-afajan-df);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); animation: dzf-fade .2s ease-out;
+}
+.dzf.dzf.kpen .sx {
+  position: relative; z-index: 1; left: auto; right: auto; bottom: auto; display: flex; flex-direction: column; gap: 12px;
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: 0; padding: 16px; border-radius: 24px; overflow: hidden;
+  background: var(--color-dz-x-pppppp); box-shadow: 0 24px 50px -20px var(--color-dz-a-afajan-g);
+}
+.dzf.dzf.kpen .sxh { display: flex; flex: none; }
+.dzf.kpen .sxh h2 { flex: 1; min-width: 0; margin: 0; font: 800 18px/1.15 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.dzf.kpen .sxh .ri { flex: none; }
+.dzf.kpen .kpb { display: flex; flex: 1 1 auto; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.dzf.kpen .kpf { display: flex; flex: none; flex-direction: column-reverse; gap: 8px; }
+@media (min-width: 700px) {
+  .dzf.kpen .kpf { flex-direction: row; justify-content: flex-end; }
+  .dzf.kpen .kpf .cfb { width: auto; padding: 0 22px; }
+}
+.dzf.kpen .cfb { min-height: 52px; }
+.dzf.kpen .cfb.stay { border: 2px solid var(--color-dz-x-ogokoo); }
+.dzf.kpen .cfb[disabled] { opacity: .45; cursor: not-allowed; }
+.dzf.kpen .kpspin {
+  width: 18px; height: 18px; border-radius: 50%; border: 3px solid currentColor; border-right-color: transparent;
+  animation: kpen-spin .8s linear infinite;
+}
+@keyframes kpen-spin { to { transform: rotate(360deg); } }
+.dzf.kpen .kpq { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dzf.dzf.kpen .fld { flex: none; background: var(--color-dz-x-oopbpe); }
+.dzf.kpen .fld input, .dzf.kpen .fld select {
+  width: 100%; min-width: 0; height: 48px; border: 0; background: transparent; outline: none;
+  font: 700 17px/1 var(--font-instrument), sans-serif; color: var(--color-dz-x-bhcoec);
+}
+.dzf.kpen .fld:focus-within { box-shadow: 0 0 0 3px var(--color-dz-x-bhcoec); }
+.dzf.kpen .kph { margin: 0 6px; font: 600 12.5px/1.35 var(--font-instrument), sans-serif; color: var(--color-dz-x-mfnank); }
+.dzf.kpen .kph.bad { color: var(--color-dz-x-mgcici); }
+.dzf.kpen .kpt { margin: 0; font: 600 14px/1.45 var(--font-instrument), sans-serif; color: var(--color-dz-x-mfnank); overflow-wrap: anywhere; }
+.dzf.kpen .kpt.b { font: 800 16px/1.3 var(--font-bricolage), sans-serif; color: inherit; }
+.dzf.kpen .kpt.m { font: 700 15px/1.4 var(--font-plex-mono), monospace; color: inherit; word-break: break-all; padding: 12px 14px; border-radius: 16px; background: var(--color-dz-x-oopbpe); }
+@media (max-width: 699.98px) {
+  dialog.dzf.kpen[open] { align-items: flex-end; }
+  .dzf.dzf.kpen .sx { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); margin-bottom: max(10px, env(safe-area-inset-bottom)); padding: 14px; }
+}
+.dzf.dz-dark.kpen { color: var(--color-dz-x-ogolop); }
+.dzf.dzf.dz-dark.kpen .sx { background: var(--color-dz-x-ccdaea); }
+.dzf.dzf.dz-dark.kpen .fld { background: var(--color-dz-x-bmcidd); }
+.dzf.dz-dark.kpen .fld input, .dzf.dz-dark.kpen .fld select { color: var(--color-dz-x-ogolop); }
+.dzf.dz-dark.kpen .fld:focus-within { box-shadow: 0 0 0 3px var(--color-dz-x-ogolop); }
+.dzf.dz-dark.kpen .kpt.m { background: var(--color-dz-x-bmcidd); }
+.dzf.dz-dark.kpen .cfb.stay { border-color: var(--color-dz-x-dkekfk); color: var(--color-dz-x-ogolop); }
+@media (prefers-reduced-motion: reduce) { .dzf.kpen * { animation: none !important; } }

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Banner, Button, CircleAlert, TextField } from "@wms/ui";
+import { GICON, GirisAlan, GirisBaglanti, GirisBant, GirisBaslik, GirisEylem, GirisKabuk, GirisKart } from "./giris-ui.tsx";
 import { QrCode } from "./qr-code.tsx";
 import { acceptInvitationAction } from "./invite/[token]/actions.ts";
 import { authPost } from "../lib/auth-client.ts";
@@ -72,7 +73,22 @@ function fieldValue(form: HTMLFormElement, name: string): string {
 // Parola sıfırlama (e-posta girişi ve doğrulama ekranı T-999b'den beri `login/flow.tsx`)
 // ---------------------------------------------------------------------------------------------
 
-export function ResetRequestForm() {
+/** T-974 (B-63 grup B): giriş tasarım dilinde hata bandı (`.ban.err`); kod destek içindir. */
+function GirisHata({ id, error }: { id: string; error: ShownError | null }) {
+  const t = useTranslations("auth");
+  return (
+    <div id={id} style={{ display: "contents" }}>
+      {error === null ? null : (
+        <GirisBant kind="err" title={error.reason}>
+          {error.action}
+          {error.code ? ` ${t("common.errorCode", { code: error.code })}` : null}
+        </GirisBant>
+      )}
+    </div>
+  );
+}
+
+export function ResetRequestForm({ dark = false }: { dark?: boolean }) {
   const t = useTranslations("auth");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
@@ -101,25 +117,23 @@ export function ResetRequestForm() {
   }
 
   return (
-    <Card title={t("reset.requestTitle")}>
-      {outcome === "sent" ? <Banner kind="info">{t("reset.sent")}</Banner> : null}
-      {outcome === "undeliverable" ? <Banner kind="warning">{t("reset.undeliverable")}</Banner> : null}
-      <p className="break-words text-base text-ink-muted">{t("reset.requestIntro")}</p>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="reset-error">
-        <TextField label={t("login.email")} name="email" type="email" autoComplete="username" required />
-        <FormError id="reset-error" error={error} />
-        <Button type="submit" loading={busy}>
-          {t("reset.requestSubmit")}
-        </Button>
+    <GirisKabuk dark={dark} testId="reset-request">
+      <GirisBaslik title={t("reset.requestTitle")} sub={t("reset.requestIntro")} />
+      {outcome === "sent" ? <GirisBant kind="ok">{t("reset.sent")}</GirisBant> : null}
+      {outcome === "undeliverable" ? <GirisBant kind="warn">{t("reset.undeliverable")}</GirisBant> : null}
+      <form onSubmit={onSubmit} style={{ display: "contents" }} aria-describedby="reset-error" aria-busy={busy}>
+        <GirisKart>
+          <GirisAlan id="reset-mail" label={t("login.email")} d={GICON.mail} name="email" type="email" autoComplete="username" placeholder="ad@firma.com" required />
+        </GirisKart>
+        <GirisHata id="reset-error" error={error} />
+        <GirisEylem label={t("reset.requestSubmit")} busy={busy} />
       </form>
-      <Link href="/login" className={LINK}>
-        {t("common.backToLogin")}
-      </Link>
-    </Card>
+      <GirisBaglanti href="/login">{t("common.backToLogin")}</GirisBaglanti>
+    </GirisKabuk>
   );
 }
 
-export function ResetPasswordForm({ token, linkError }: { token: string; linkError: boolean }) {
+export function ResetPasswordForm({ token, linkError, dark = false }: { token: string; linkError: boolean; dark?: boolean }) {
   const t = useTranslations("auth");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
@@ -128,24 +142,22 @@ export function ResetPasswordForm({ token, linkError }: { token: string; linkErr
 
   if (linkError) {
     return (
-      <Card title={t("reset.newTitle")}>
-        <Banner kind="error">
-          {t("reset.invalidLink")} {t("reset.invalidLinkAction")}
-        </Banner>
-        <Link href="/reset-password" className={LINK}>
-          {t("reset.requestAgain")}
-        </Link>
-      </Card>
+      <GirisKabuk dark={dark} testId="reset-new">
+        <GirisBaslik title={t("reset.newTitle")} />
+        <GirisBant kind="err" title={t("reset.invalidLink")}>
+          {t("reset.invalidLinkAction")}
+        </GirisBant>
+        <GirisBaglanti href="/reset-password">{t("reset.requestAgain")}</GirisBaglanti>
+      </GirisKabuk>
     );
   }
   if (done) {
     return (
-      <Card title={t("reset.newTitle")}>
-        <Banner kind="info">{t("reset.done")}</Banner>
-        <Link href="/login" className={LINK}>
-          {t("common.backToLogin")}
-        </Link>
-      </Card>
+      <GirisKabuk dark={dark} testId="reset-new">
+        <GirisBaslik title={t("reset.newTitle")} />
+        <GirisBant kind="ok">{t("reset.done")}</GirisBant>
+        <GirisBaglanti href="/login">{t("common.backToLogin")}</GirisBaglanti>
+      </GirisKabuk>
     );
   }
 
@@ -177,32 +189,37 @@ export function ResetPasswordForm({ token, linkError }: { token: string; linkErr
   }
 
   return (
-    <Card title={t("reset.newTitle")}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="reset-new-error">
-        <TextField
-          label={t("reset.newPassword")}
-          hint={t("reset.passwordHint")}
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={12}
-          maxLength={128}
-          required
-        />
-        <TextField
-          label={t("reset.confirmPassword")}
-          name="confirm"
-          type="password"
-          autoComplete="new-password"
-          required
-          {...(mismatch ? { error: { reason: t("reset.mismatch"), action: t("reset.mismatchAction") } } : {})}
-        />
-        <FormError id="reset-new-error" error={error} />
-        <Button type="submit" loading={busy}>
-          {t("reset.newSubmit")}
-        </Button>
+    <GirisKabuk dark={dark} testId="reset-new">
+      <GirisBaslik title={t("reset.newTitle")} />
+      <form onSubmit={onSubmit} style={{ display: "contents" }} aria-describedby="reset-new-error" aria-busy={busy}>
+        <GirisKart>
+          <GirisAlan
+            id="reset-pw"
+            label={t("reset.newPassword")}
+            hint={t("reset.passwordHint")}
+            d={GICON.lock}
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={128}
+            required
+          />
+          <GirisAlan
+            id="reset-pw2"
+            label={t("reset.confirmPassword")}
+            d={GICON.lock}
+            name="confirm"
+            type="password"
+            autoComplete="new-password"
+            required
+            {...(mismatch ? { error: `${t("reset.mismatch")} ${t("reset.mismatchAction")}` } : {})}
+          />
+        </GirisKart>
+        <GirisHata id="reset-new-error" error={error} />
+        <GirisEylem label={t("reset.newSubmit")} busy={busy} />
       </form>
-    </Card>
+    </GirisKabuk>
   );
 }
 
@@ -417,7 +434,7 @@ export function SignOutButton() {
 // Davet kabulü
 // ---------------------------------------------------------------------------------------------
 
-export function InviteAcceptForm({ token, signedIn }: { token: string; signedIn: boolean }) {
+export function InviteAcceptForm({ token, signedIn, dark = false, preview }: { token: string; signedIn: boolean; dark?: boolean; preview?: ReactNode }) {
   const t = useTranslations("auth");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
@@ -451,15 +468,18 @@ export function InviteAcceptForm({ token, signedIn }: { token: string; signedIn:
   }
 
   return (
-    <Card title={t("invite.title")}>
-      <p className="break-words text-base text-ink-muted">{signedIn ? t("invite.introSignedIn") : t("invite.intro")}</p>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-describedby="invite-error">
+    <GirisKabuk dark={dark} testId="invite">
+      <GirisBaslik title={t("invite.title")} sub={signedIn ? t("invite.introSignedIn") : t("invite.intro")} />
+      {preview}
+      <form onSubmit={onSubmit} style={{ display: "contents" }} aria-describedby="invite-error" aria-busy={busy}>
         {signedIn ? null : (
-          <>
-            <TextField label={t("invite.name")} name="name" type="text" autoComplete="name" maxLength={200} required />
-            <TextField
+          <GirisKart>
+            <GirisAlan id="invite-name" label={t("invite.name")} d={GICON.user} name="name" type="text" autoComplete="name" maxLength={200} required />
+            <GirisAlan
+              id="invite-pw"
               label={t("reset.newPassword")}
               hint={t("reset.passwordHint")}
+              d={GICON.lock}
               name="password"
               type="password"
               autoComplete="new-password"
@@ -467,18 +487,12 @@ export function InviteAcceptForm({ token, signedIn }: { token: string; signedIn:
               maxLength={128}
               required
             />
-          </>
+          </GirisKart>
         )}
-        <FormError id="invite-error" error={error} />
-        <Button type="submit" loading={busy}>
-          {signedIn ? t("invite.acceptSignedIn") : t("invite.acceptNew")}
-        </Button>
+        <GirisHata id="invite-error" error={error} />
+        <GirisEylem label={signedIn ? t("invite.acceptSignedIn") : t("invite.acceptNew")} busy={busy} />
       </form>
-      {signedIn ? null : (
-        <Link href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`} className={LINK}>
-          {t("invite.haveAccount")}
-        </Link>
-      )}
-    </Card>
+      {signedIn ? null : <GirisBaglanti href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}>{t("invite.haveAccount")}</GirisBaglanti>}
+    </GirisKabuk>
   );
 }

@@ -11,7 +11,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Banner, Button, ConfirmDialog, TextField } from "@wms/ui";
+import { Banner, Button, TextField } from "@wms/ui";
+import { KalipOnay } from "../../kalip/pencere.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, KalipMinimum, KalipNerede, KalipTumu, KalipUyari, KalipZaman, type KalipHizliIslem, type KalipOlay, type KalipYer } from "../../kalip/detay.tsx";
@@ -508,7 +509,7 @@ export function ItemDetail({
           router.refresh();
         }}
       />
-      <ConfirmDialog
+      <KalipOnay
         open={archiveOpen}
         title={td("confirmArchive.title", { name: item.name })}
         description={td("confirmArchive.description", { name: item.name, code: item.code })}
@@ -518,7 +519,7 @@ export function ItemDetail({
         onConfirm={() => void onArchive()}
         onCancel={() => setArchiveOpen(false)}
       />
-      <ConfirmDialog
+      <KalipOnay
         open={removing !== null}
         title={td("confirmRemove.title")}
         description={td("confirmRemove.description", { barcode: removing?.barcode ?? "" })}

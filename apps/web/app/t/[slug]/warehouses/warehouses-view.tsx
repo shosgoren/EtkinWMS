@@ -9,13 +9,14 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
-import { Banner, Button, ConfirmDialog, TextField } from "@wms/ui";
+import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../code-edit-dialog.tsx";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
+import { KalipOnay, KalipPencereAlan, KalipPencereDugme, KalipPencereSecim } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { archiveWarehouseAction, createWarehouseAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
 
@@ -62,8 +63,6 @@ export function errorKey(error: Pick<ServerError, "code" | "detail">, scope: "wa
 const SUGGEST_TIMEOUT_MS = 5000;
 const LINK_CLS =
   "inline-flex min-h-12 min-w-12 items-center justify-center rounded-control px-2 text-base font-semibold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-export const SELECT_CLS =
-  "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 export function ServerErrorBanner({ error, returnTo, scope = "warehouse" }: { error: ServerError; returnTo: string; scope?: "warehouse" | "location" | "bulk" }) {
   const t = useTranslations("warehouses.errors");
@@ -198,22 +197,24 @@ export function CreateDialog({
       open={open}
       title={title}
       titleId="create-dialog-title"
+      icon={scope === "warehouse" ? { d: LICON.depo, color: "2F5DA8" } : { d: LICON.raf, color: "2F7D5B" }}
+      busy={busy}
       onClose={onClose}
       onSubmit={(e) => void onSubmit(e)}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
             {t("cancel")}
-          </Button>
-          <Button type="submit" loading={busy} disabled={codeState === "loading"}>
+          </KalipPencereDugme>
+          <KalipPencereDugme type="submit" loading={busy} disabled={codeState === "loading"}>
             {t("submit")}
-          </Button>
+          </KalipPencereDugme>
         </>
       }
     >
-      {intro ? <div className="break-words text-base text-ink-muted">{intro}</div> : null}
-      <TextField label={t("name")} name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required maxLength={512} />
-      <TextField
+      {intro ? <div className="kpt">{intro}</div> : null}
+      <KalipPencereAlan label={t("name")} name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required maxLength={512} />
+      <KalipPencereAlan
         label={t("code")}
         hint={codeState === "loading" ? te("loading") : codeState === "failed" ? te("failed") : touched ? `${te("custom")} ${t("codeHint")}` : `${te("suggested")} ${t("codeHint")}`}
         name="code"
@@ -231,18 +232,13 @@ export function CreateDialog({
         maxLength={512}
       />
       {kinds === undefined ? null : (
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="create-kind" className="text-base font-semibold">
-            {t("kind")}
-          </label>
-          <select id="create-kind" name="kind" value={kind} onChange={(e) => setKind(e.target.value)} className={SELECT_CLS}>
-            {kinds.map((k) => (
-              <option key={k} value={k}>
-                {tk(k)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <KalipPencereSecim label={t("kind")} id="create-kind" name="kind" value={kind} onChange={(e) => setKind(e.target.value)}>
+          {kinds.map((k) => (
+            <option key={k} value={k}>
+              {tk(k)}
+            </option>
+          ))}
+        </KalipPencereSecim>
       )}
       {error ? <ServerErrorBanner error={error} returnTo={returnTo} scope={scope} /> : null}
     </Sheet>
@@ -553,7 +549,7 @@ export function WarehousesView({
           router.refresh();
         }}
       />
-      <ConfirmDialog
+      <KalipOnay
         open={archiving !== null}
         title={t("confirmArchive.title", { name: archiving?.name ?? "" })}
         description={t("confirmArchive.description", { name: archiving?.name ?? "", code: archiving?.code ?? "" })}

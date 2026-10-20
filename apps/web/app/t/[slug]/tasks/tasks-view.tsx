@@ -10,12 +10,13 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Banner, Button, TextField } from "@wms/ui";
+import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Sheet } from "../easy-setup/sheet.tsx";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty } from "../kalip/format.ts";
 import { KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { KalipPencereAlan, KalipPencereDugme, KalipPencereMetin, KalipPencereSecim } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { assignTaskAction, cancelTaskAction } from "./actions.ts";
 
@@ -67,8 +68,6 @@ const STATUS_VISUAL: Record<TaskStatusValue, { readonly d: string; readonly colo
   CANCELLED: { d: LICON.close, color: "C62828" },
 };
 
-const SELECT_CLS =
-  "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 export interface TasksViewProps {
   readonly slug: string;
   readonly dark: boolean;
@@ -260,34 +259,33 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
         open={assigning !== null}
         title={t("assignTitle")}
         titleId="task-assign-title"
+        icon={{ d: LICON.people, color: "2F5DA8" }}
+        busy={busy}
         onClose={close}
         onSubmit={(e) => void submitAssign(e)}
         footer={
           <>
-            <Button variant="secondary" onClick={close} disabled={busy}>
+            <KalipPencereDugme kind="cancel" onClick={close} disabled={busy}>
               {t("back")}
-            </Button>
-            <Button type="submit" loading={busy} disabled={memberId === ""}>
+            </KalipPencereDugme>
+            <KalipPencereDugme type="submit" loading={busy} disabled={memberId === ""}>
               {t("submit")}
-            </Button>
+            </KalipPencereDugme>
           </>
         }
       >
-        {assigning === null ? null : <p className="break-words text-base font-bold text-ink">{t(`kind.${assigning.kind}`)}</p>}
+        {assigning === null ? null : <KalipPencereMetin strong>{t(`kind.${assigning.kind}`)}</KalipPencereMetin>}
         {eligible.length === 0 ? (
           <Banner kind="info">{t("noEligible")}</Banner>
         ) : (
-          <label className="flex min-w-0 flex-col gap-1 text-base font-semibold text-ink">
-            {t("member")}
-            <select name="membershipId" value={memberId} onChange={(e) => setMemberId(e.target.value)} required className={SELECT_CLS}>
-              <option value="">{t("memberPlaceholder")}</option>
-              {eligible.map((m) => (
-                <option key={m.membershipId} value={m.membershipId}>
-                  {m.displayName}
-                </option>
-              ))}
-            </select>
-          </label>
+          <KalipPencereSecim label={t("member")} name="membershipId" value={memberId} onChange={(e) => setMemberId(e.target.value)} required>
+            <option value="">{t("memberPlaceholder")}</option>
+            {eligible.map((m) => (
+              <option key={m.membershipId} value={m.membershipId}>
+                {m.displayName}
+              </option>
+            ))}
+          </KalipPencereSecim>
         )}
       </Sheet>
 
@@ -295,21 +293,23 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
         open={cancelling !== null}
         title={t("cancelTitle")}
         titleId="task-cancel-title"
+        icon={{ d: LICON.close, color: "C62828" }}
+        busy={busy}
         onClose={close}
         onSubmit={(e) => void submitCancel(e)}
         footer={
           <>
-            <Button variant="secondary" onClick={close} disabled={busy}>
+            <KalipPencereDugme kind="cancel" onClick={close} disabled={busy}>
               {t("back")}
-            </Button>
-            <Button type="submit" variant="danger" loading={busy} disabled={reason.trim() === ""}>
+            </KalipPencereDugme>
+            <KalipPencereDugme type="submit" kind="danger" loading={busy} disabled={reason.trim() === ""}>
               {t("confirmCancel")}
-            </Button>
+            </KalipPencereDugme>
           </>
         }
       >
-        {cancelling === null ? null : <p className="break-words text-base font-bold text-ink">{t(`kind.${cancelling.kind}`)}</p>}
-        <TextField label={t("reasonLabel")} hint={t("reasonHint")} name="reason" value={reason} onChange={(e) => setReason(e.target.value)} autoComplete="off" required maxLength={500} />
+        {cancelling === null ? null : <KalipPencereMetin strong>{t(`kind.${cancelling.kind}`)}</KalipPencereMetin>}
+        <KalipPencereAlan label={t("reasonLabel")} hint={t("reasonHint")} name="reason" value={reason} onChange={(e) => setReason(e.target.value)} autoComplete="off" required maxLength={500} />
       </Sheet>
     </>
   );
