@@ -116,7 +116,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-85 | **Üst çubukta iki anlaşılır ikon (kullanıcı kararı 20 Ekim):** "Sorun bildir" (hasarlı, eksik, yanlış ürün → kendi yöneticisine; mevcut `problem-sheet`) ve "Destek" (bize, B-84). Alt çubuğun sol düğmesi her ekranda Geri olur; sarı "?" kalkar. Kabuk.dc.html tuvalinde güncelleme → onay |
 | B-86 | Alt çubuk OKUT eski "Saha" iş seçme menüsünü açıyor (kullanıcı 20 Ekim, telefon). OKUT doğrudan kamera/okuyucu ile okutmayı açmalı: okutulan koda göre ürün, raf veya görev bulunup ilgili işe geçilir. B-50 QR akışı ve B-63 saha ekranlarıyla birlikte |
 | B-87 | Ana ekranda sağda yüzen ızgara düğmesi (`pano-fab`, sürüklenebilir kısayol halkası) alt çubuktaki Modüller ile aynı görünüyor; kullanıcı kopya olarak algıladı (20 Ekim). Pano/Gruplar/Aktar onaylı kaynağında var (I-18) → kaldırma veya farklılaştırma B-85 tuval güncellemesiyle birlikte onaya sunulur |
-| B-88 | Kalıp ekranlarında (T-968/T-971) eski üst çubuk gizli olduğundan "Çıkış yap" ve görünüm/hesap menüsü yalnız Ana ekranda (Pano hesap menüsü); I-18 "çıkış ve menü her ekranda erişilebilir" için kalıp üst çubuğunun sağ üst yuvasına hesap/çıkış eklenmeli (B-84/B-85 Sorun/Destek ile aynı yuva). e2e (demo-flow, theme-admin) şimdilik Ana ekrandan çıkış yapıyor |
+| B-92 | BİTTİ PR #135 (T-971) — Kalıp ekranlarında çıkış/hesap erişimi: `KalipEkran` üst çubuğunun sağ üstünde (`actions` yuvasından ayrı öğe) Pano'nun Hesap düğmesi + menüsü (`.tb.tb-team` + `.halo.tmenu`, ortak `pano/hesap-menu.tsx`): Kullanıcı değiştir, Tüm ekranlar (Akış/Genel bakış + yetkili ekranlar), tema, Çıkış yap |
 
 ## Belge düzeltmeleri
 | ID | İş |
