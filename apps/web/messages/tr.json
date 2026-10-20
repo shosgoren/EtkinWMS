@@ -2062,7 +2062,15 @@
         "failed": "Kamera açılamadı. Tekrar dene ya da barkodu elle gir."
       }
     },
-    "packageEntry": "Paket kabulü"
+    "packageEntry": "Paket kabulü",
+    "k": {
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "emptyHint": "Alttaki YENİ ile ilk teslimi ekle.",
+      "hint": "{n} teslim",
+      "groupSource": "Depo ve irsaliye",
+      "saveAria": "Kaydet"
+    }
   },
   "import": {
     "title": "Ürün ve stok içe aktar",
@@ -2439,7 +2447,23 @@
     "locked": "Bu stokları görme yetkiniz yok. Çalışma alanı yöneticinizle görüşün.",
     "pages": "Stok sayfaları",
     "first": "İlk sayfa",
-    "next": "Sonraki sayfa"
+    "next": "Sonraki sayfa",
+    "k": {
+      "chips": "Bölümler",
+      "chipStock": "Stok",
+      "chipDocs": "Belgeler",
+      "chipShipping": "Sevkiyat",
+      "chipProduction": "Üretim",
+      "newShort": "BELGE",
+      "newAria": "Yeni stok belgesi",
+      "searchPh": "Ürün, kod ya da depo",
+      "count": "{n} stok satırı",
+      "countMore": "İlk {n} stok satırı",
+      "hint": "Ürüne dokun: kartı açılır",
+      "meta": "Depo: {warehouse} ({code}) · Fiziksel {physical} · Ayrılmış {reserved} {unit}",
+      "cardAria": "{name} · {code} · {warehouse}: kullanılabilir {qty} {unit}",
+      "lockedHint": "Çalışma alanı yöneticinden stok görme yetkisi iste."
+    }
   },
   "stockDocuments": {
     "shipping": "Sevkiyat",
@@ -2483,7 +2507,24 @@
     "transferHelp": "Kaynak ve hedef farklı depolarda olmalıdır. Özeti kontrol edin; onaylayınca miktar kaynaktan düşer ve hedefe eklenir. İşlem bütünüyle tamamlanır veya stok değişmez.",
     "transferPost": "Transferi onayla ve işle",
     "related": "Bağlı stok belgesi",
-    "production": "Üretim"
+    "production": "Üretim",
+    "k": {
+      "lockedHint": "Yöneticinden bu işlem için yetki iste.",
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "hero": "Belge kimliği",
+      "lineUnit": "satır",
+      "lines": "Belge satırları",
+      "linesSub": "{n} satır",
+      "state": "Durum ve işlemler",
+      "related": "Bağlı belgeler",
+      "emptyHint": "Alttaki YENİ ile ilk stok girişini yap.",
+      "count": "{n} belge",
+      "countMore": "Son {n} belge",
+      "hint": "Belgeye dokun: ayrıntısı açılır",
+      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
+      "saveAria": "Kaydet"
+    }
   },
   "production": {
     "title": "Üretim ve reçeteler",
@@ -2515,7 +2556,24 @@
     "search": "Reçete ara",
     "find": "Ara",
     "next": "Sonraki reçeteler",
-    "empty": "Henüz reçete yok."
+    "empty": "Henüz reçete yok.",
+    "k": {
+      "lockedHint": "Yöneticinden üretim yetkisi iste.",
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "hero": "Reçete kimliği",
+      "materialsSub": "{qty} {unit} {name} için",
+      "produce": "Üretim kaydı",
+      "produceSub": "Malzeme kaynağını ve mamulün gideceği konumu seç",
+      "produceShort": "ÜRET",
+      "emptyHint": "Alttaki YENİ ile ilk reçeteyi tanımla.",
+      "count": "{n} reçete",
+      "countMore": "İlk {n} reçete",
+      "hint": "Reçeteye dokun: üretim açılır",
+      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
+      "groupQty": "Miktar",
+      "saveAria": "Kaydet"
+    }
   },
   "shipping": {
     "newHelp": "Ürünleri temel birimleriyle seç. Sipariş kaydı stok düşürmez; sonraki adımda stok ayrılır.",
@@ -2574,7 +2632,22 @@
     "noStaged": "Görünür sevke hazır miktar yok. Önce toplama adımını tamamla.",
     "posted": "Son 50 sevk belgesi",
     "nextTasks": "Sonraki toplama görevleri",
-    "nextStaged": "Sonraki hazır satırlar"
+    "nextStaged": "Sonraki hazır satırlar",
+    "k": {
+      "lockedHint": "Yöneticinden sevkiyat yetkisi iste.",
+      "newShort": "YENİ",
+      "saveShort": "KAYDET",
+      "hero": "Sipariş kimliği",
+      "lineUnit": "satır",
+      "noPosted": "Henüz sevk belgesi yok.",
+      "emptyHint": "Alttaki YENİ ile ilk siparişi oluştur.",
+      "count": "{n} sipariş",
+      "countMore": "İlk {n} sipariş",
+      "hint": "Siparişe dokun: adımları açılır",
+      "groupCustomer": "Müşteri",
+      "groupItems": "Ürünler",
+      "saveAria": "Kaydet"
+    }
   },
   "packageReceiving": {
     "title": "Paket kabulü",

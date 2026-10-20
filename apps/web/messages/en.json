@@ -2062,7 +2062,15 @@
         "failed": "The camera did not open. Try again or type the barcode."
       }
     },
-    "packageEntry": "Package receiving"
+    "packageEntry": "Package receiving",
+    "k": {
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "emptyHint": "Use NEW below to add the first delivery.",
+      "hint": "{n} deliveries",
+      "groupSource": "Warehouse and delivery note",
+      "saveAria": "Save"
+    }
   },
   "import": {
     "title": "Import products and stock",
@@ -2439,7 +2447,23 @@
     "locked": "You do not have permission to view this stock. Contact your workspace administrator.",
     "pages": "Stock pages",
     "first": "First page",
-    "next": "Next page"
+    "next": "Next page",
+    "k": {
+      "chips": "Sections",
+      "chipStock": "Stock",
+      "chipDocs": "Documents",
+      "chipShipping": "Shipping",
+      "chipProduction": "Production",
+      "newShort": "DOC",
+      "newAria": "New stock document",
+      "searchPh": "Item, code or warehouse",
+      "count": "{n} stock rows",
+      "countMore": "First {n} stock rows",
+      "hint": "Tap an item to open its card",
+      "meta": "Warehouse: {warehouse} ({code}) · Physical {physical} · Reserved {reserved} {unit}",
+      "cardAria": "{name} · {code} · {warehouse}: available {qty} {unit}",
+      "lockedHint": "Ask your workspace admin for stock view access."
+    }
   },
   "stockDocuments": {
     "shipping": "Shipping",
@@ -2483,7 +2507,24 @@
     "transferHelp": "Choose different source and target warehouses. Check the summary: confirming moves the quantity from source to target. Both sides complete together or stock remains unchanged.",
     "transferPost": "Confirm and post transfer",
     "related": "Linked stock document",
-    "production": "Production"
+    "production": "Production",
+    "k": {
+      "lockedHint": "Ask your admin for access to this action.",
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "hero": "Document identity",
+      "lineUnit": "lines",
+      "lines": "Document lines",
+      "linesSub": "{n} lines",
+      "state": "Status and actions",
+      "related": "Linked documents",
+      "emptyHint": "Use NEW below to record the first stock receipt.",
+      "count": "{n} documents",
+      "countMore": "Latest {n} documents",
+      "hint": "Tap a document to open it",
+      "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
+      "saveAria": "Save"
+    }
   },
   "production": {
     "title": "Production and recipes",
@@ -2515,7 +2556,24 @@
     "search": "Find a recipe",
     "find": "Search",
     "next": "Next recipes",
-    "empty": "No recipes yet."
+    "empty": "No recipes yet.",
+    "k": {
+      "lockedHint": "Ask your admin for production access.",
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "hero": "Recipe identity",
+      "materialsSub": "For {qty} {unit} {name}",
+      "produce": "Production entry",
+      "produceSub": "Choose material sources and where the product goes",
+      "produceShort": "MAKE",
+      "emptyHint": "Use NEW below to define the first recipe.",
+      "count": "{n} recipes",
+      "countMore": "First {n} recipes",
+      "hint": "Tap a recipe to produce",
+      "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
+      "groupQty": "Quantity",
+      "saveAria": "Save"
+    }
   },
   "shipping": {
     "newHelp": "Choose items in their base units. Creating an order does not reduce stock; reserve stock in the next step.",
@@ -2574,7 +2632,22 @@
     "noStaged": "No visible quantities ready to ship. Complete picking first.",
     "posted": "Last 50 shipment documents",
     "nextTasks": "Next picking tasks",
-    "nextStaged": "Next staged lines"
+    "nextStaged": "Next staged lines",
+    "k": {
+      "lockedHint": "Ask your admin for shipping access.",
+      "newShort": "NEW",
+      "saveShort": "SAVE",
+      "hero": "Order identity",
+      "lineUnit": "lines",
+      "noPosted": "No shipment documents yet.",
+      "emptyHint": "Use NEW below to create the first order.",
+      "count": "{n} orders",
+      "countMore": "First {n} orders",
+      "hint": "Tap an order to open its steps",
+      "groupCustomer": "Customer",
+      "groupItems": "Items",
+      "saveAria": "Save"
+    }
   },
   "packageReceiving": {
     "title": "Package receiving",

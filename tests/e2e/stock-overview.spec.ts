@@ -16,16 +16,18 @@ test("stok: ana menü, gerçek veriler, arama, yardım ve mobil taşma", async (
   await expect(page.getByRole("heading", { name: "Stok durumu", exact: true })).toBeVisible();
   const rows = page.getByRole("list", { name: "Stok durumu" }).getByRole("listitem");
   expect(await rows.count()).toBeGreaterThan(0);
-  await expect(rows.first().getByText("Kullanılabilir", { exact: true })).toBeVisible();
+  // T-972 (liste kalıbı): rozet kullanılabilir miktar + birim; ek satır depo / fiziksel / ayrılmış. Karta dokununca ürün kartı açılır.
+  await expect(rows.first()).toContainText("Kullanılabilir");
   await expect(rows.first()).toContainText("Depo:");
+  await expect(rows.first()).toHaveAttribute("href", /\/t\/demo\/items\/[0-9a-f-]{36}$/);
   await page.getByText("Miktarlar ne anlama geliyor?", { exact: true }).click();
   await expect(page.getByText(/Kabul alanı, hasarlı/)).toBeVisible();
   const layout = await page.evaluate("({scroll: document.documentElement.scrollWidth, width: document.documentElement.clientWidth})") as { scroll: number; width: number };
   expect(layout.scroll).toBeLessThanOrEqual(layout.width);
-  const button = await page.getByRole("button", { name: "Ara", exact: true }).boundingBox();
-  expect(button?.height).toBeGreaterThanOrEqual(48);
-  await page.getByLabel("Ürün veya depo ara").fill("missing-item-903");
-  await page.getByRole("button", { name: "Ara", exact: true }).click();
+  const back = await page.getByTestId("kabuk-back").boundingBox();
+  expect(back?.height).toBeGreaterThanOrEqual(48);
+  await page.getByRole("searchbox", { name: "Ürün veya depo ara" }).fill("missing-item-903");
+  await page.getByRole("searchbox", { name: "Ürün veya depo ara" }).press("Enter");
   await expect(page.getByText("Gösterilecek stok bulunamadı.")).toBeVisible();
   await page.getByRole("link", { name: "Temizle" }).click();
   await expect(rows.first()).toBeVisible();
