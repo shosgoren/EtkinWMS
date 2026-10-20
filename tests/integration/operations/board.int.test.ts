@@ -133,11 +133,11 @@ describe("T-422 yönetici panosu", () => {
       const ids = (b: typeof all): string[] => b.team.map((x) => x.membershipId);
       // Kısıtsız (hesap sahibi) hepsini görür.
       expect(ids(all)).toEqual(expect.arrayContaining([p1M, p2M, mgrM, PICKER.membershipId]));
-      // Kapsamlı yönetici: depo 1 üyesi ve kapsamsız toplayıcı görünür; depo 2 üyesi ve hesap sahibi görünmez.
-      expect(ids(mine)).toEqual(expect.arrayContaining([p1M, PICKER.membershipId, mgrM]));
-      expect(ids(mine)).not.toContain(p2M);
+      // Kapsamlı yönetici: depo 1 üyesi, kapsamsız toplayıcı ve (her depoda çalışabilen) hesap sahibi görünür; yalnız depo 2 üyesi görünmez
+      // (üye listesi ve görev atamasıyla aynı kural).
       const ownerM = (await q<{ id: string }>("SELECT id FROM public.tenant_memberships WHERE tenant_id = $1 AND user_id = $2", [A.tenantId, A.ownerUserId]))[0]?.id;
-      expect(ids(mine)).not.toContain(ownerM);
+      expect(ids(mine)).toEqual(expect.arrayContaining([p1M, PICKER.membershipId, mgrM, ownerM]));
+      expect(ids(mine)).not.toContain(p2M);
       // Görev sayısı yalnız kapsamdaki depodan: depo 2'deki görev sayılmaz.
       const pAll = all.team.find((x) => x.membershipId === PICKER.membershipId)?.assigned ?? -1;
       const pMine = mine.team.find((x) => x.membershipId === PICKER.membershipId)?.assigned ?? -1;

@@ -435,7 +435,11 @@ describe("taşıma birimi", () => {
       const ok = await createHandlingUnit(as(A, u), { kind: "PALET", code: `P${rnd()}`, locationId: A.rootLocationId });
       expect(ok.handlingUnitId).toMatch(/^[0-9a-f-]{36}$/);
       // Kısıtsız (hesap sahibi) depo 2'de açabilir.
-      expect((await createHandlingUnit(admin(A), { kind: "PALET", code: `P${rnd()}`, locationId: loc2 })).handlingUnitId).toMatch(/^[0-9a-f-]{36}$/);
+      const pal2 = await createHandlingUnit(admin(A), { kind: "PALET", code: `P${rnd()}`, locationId: loc2 });
+      expect(pal2.handlingUnitId).toMatch(/^[0-9a-f-]{36}$/);
+      // Konumu ebeveynden devralma yolu da kapsama tabi; kapsam dışı ebeveynin durumu/konumu sızmaz (NOT_FOUND, PARENT_INVALID değil).
+      await expectFail(createHandlingUnit(as(A, u), { kind: "KOLI", code: `K${rnd()}`, parentId: pal2.handlingUnitId }), "NOT_FOUND");
+      await expectFail(createHandlingUnit(as(A, u), { kind: "KOLI", code: `K${rnd()}`, parentId: pal2.handlingUnitId, locationId: A.rootLocationId }), "NOT_FOUND");
     } finally {
       if (prior === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
       else process.env.WAREHOUSE_SCOPE_ENABLED = prior;

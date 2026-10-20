@@ -55,6 +55,13 @@ export async function createHandlingUnit(params: CatalogCommandParams, input: Cr
         sql`SELECT location_id, status FROM public.handling_units WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${parentId}::uuid FOR SHARE`,
       );
       if (parent[0] === undefined) throw new AppError("NOT_FOUND");
+      // T-920 inceleme MINOR-3: kapsam dışı depodaki ebeveynin durumu/konumu sızmasın — kapsam denetimi diğer denetimlerden önce.
+      if (parent[0].location_id !== null) {
+        const pl = await tx.execute<{ warehouse_id: string }>(
+          sql`SELECT warehouse_id FROM public.locations WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${parent[0].location_id}::uuid`,
+        );
+        if (pl[0] !== undefined) await assertWarehouseVisible(tx, actor, [pl[0].warehouse_id]);
+      }
       // Kapalı/boşaltılmış ebeveynin altına yeni birim bağlanmaz (Q-58 ihtiyatlı varsayılanı).
       if (parent[0].status !== "OPEN") throw new AppError("VALIDATION_FAILED", { detail: "PARENT_INVALID" });
       const parentLoc = parent[0].location_id;
