@@ -104,3 +104,4 @@ Son doğrulama: 17.10.2026 Europe/Istanbul (canlı yayın main `6dd9880`, T-999 
 - **20 Ekim canlı:** T-919 (0053) main `6fa23e0` deploy-vps 39404330857 başarılı (yedek → 0053 → kuyruk → derin sağlık ok).
 - **20 Ekim T-924 (KODDA VAR):** saha girişi kayıtlı cihazda telefonda kaydırmasız (çalışma alanı bantta tek satır, kısa ekranda sıkı yerleşim); parite görüntüleri 390×844 olduğu için gerçek telefon yüksekliği yakalanmamıştı.
 - **20 Ekim kullanıcı kararı:** "her şeyi sen yap, bana sadece rapor ver" — PR birleştirme ve canlıya alma (migration dahil) ajanda; müşteri verisini kalıcı silen işlemden önce haber; kapılar aynen (CLAUDE.md, T-957).
+- **20 Ekim canlı:** main `abd7261` (T-920 depo kapsamı/yeniden doğrulama + T-922 yöneticiyi yalnız sahip yönetir) deploy-vps başarılı, sağlık ok. CI hızlandırma (T-925) main `e6947c0`. Kalan PR'lar `int/20ekim-paket` ile tek CI/tek yayın.
