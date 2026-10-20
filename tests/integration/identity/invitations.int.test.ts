@@ -197,6 +197,22 @@ describe(`inviteMember (target=${env.target})`, () => {
     expect(n.rows[0].n).toBe(0);
   });
 
+  it("T-922 (B-16): yönetici (TENANT_ADMIN) davetini yalnız hesap sahibi gönderir", async () => {
+    const fx = await mkTenant(); // fx.admin: sahip OLMAYAN yönetici
+    const e = await failure(inviteMember({ db: app, principal: principalOf(fx.admin), tenantSlug: fx.slug, email: rndEmail(), roleKey: "TENANT_ADMIN" }, deps()));
+    expect(e.code).toBe("FORBIDDEN");
+    const none = await adm.query("SELECT count(*)::int AS n FROM public.invitations WHERE tenant_id = $1", [fx.tenant]);
+    expect(none.rows[0].n).toBe(0);
+    const owner = await mkUser(rndEmail());
+    await adm.query("INSERT INTO public.tenant_memberships (tenant_id, user_id, status, is_owner) VALUES ($1, $2, 'ACTIVE', true)", [fx.tenant, owner]);
+    await adm.query(
+      "INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) SELECT $1, id, 'TENANT_ADMIN' FROM public.tenant_memberships WHERE tenant_id = $1 AND user_id = $2",
+      [fx.tenant, owner],
+    );
+    const r = await inviteMember({ db: app, principal: principalOf(owner), tenantSlug: fx.slug, email: rndEmail(), roleKey: "TENANT_ADMIN" }, deps());
+    expect(r.invitationId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   it("teslim kapalı → SCREEN: belirteç bir kez döner, DB'de yalnızca SHA-256; audit ve kuyrukta düz değer yok", async () => {
     const fx = await mkTenant();
     const r = await inviteMember({ db: app, principal: principalOf(fx.admin), tenantSlug: fx.slug, email: rndEmail(), roleKey: "READ_ONLY" }, deps(mailOff));
@@ -390,6 +406,19 @@ describe("invitation.deliver (worker)", () => {
 // acceptInvitation — mevcut hesapla kabul
 // ---------------------------------------------------------------------------------------------
 describe("acceptInvitation (mevcut hesap)", () => {
+  it("T-922 (B-16) inceleme MINOR-1: sahip OLMAYAN yöneticinin gönderdiği yönetici daveti kabul edilemez (NOT_FOUND); sahip gönderince edilir", async () => {
+    const fx = await mkTenant(); // davet gönderen fx.adminMembership: sahip değil
+    const email = rndEmail();
+    const user = await mkUser(email, true);
+    const inv = await mkInvite(fx, { email, role: "TENANT_ADMIN" });
+    expect((await failure(acceptInvitation({ db: app, token: inv.token, principal: { userId: user } }, acceptDeps()))).code).toBe("NOT_FOUND");
+    expect((await invRow(inv.id)).accepted_at).toBeNull();
+    await adm.query("UPDATE public.tenant_memberships SET is_owner = true WHERE id = $1", [fx.adminMembership]);
+    const ok = await acceptInvitation({ db: app, token: inv.token, principal: { userId: user } }, acceptDeps());
+    const roles = await adm.query("SELECT role_key FROM public.membership_roles WHERE membership_id = $1", [ok.membershipId]);
+    expect(roles.rows.map((x) => x.role_key)).toEqual(["TENANT_ADMIN"]);
+  });
+
   it("doğrulanmış ve e-postası birebir aynı hesap: üyelik + tek rol + accepted_at + audit; belirteç tek kullanımlık", async () => {
     const fx = await mkTenant();
     const email = rndEmail();
@@ -473,7 +502,8 @@ describe("acceptInvitation (mevcut hesap)", () => {
     const email = rndEmail();
     const user = await mkUser(email, true);
     const membership = await mkMember(fx.tenant, user, "READ_ONLY");
-    const inv = await mkInvite(fx, { email, role: "TENANT_ADMIN" });
+    // T-922: rol bu senaryoda önemsiz; sahip olmayan gönderenin yönetici daveti artık önce geçersiz sayıldığı için üst rol WAREHOUSE_MANAGER.
+    const inv = await mkInvite(fx, { email, role: "WAREHOUSE_MANAGER" });
     const e = await failure(acceptInvitation({ db: app, token: inv.token, principal: { userId: user } }, acceptDeps()));
     expect(e.code).toBe("VALIDATION_FAILED");
     const roles = await adm.query("SELECT role_key FROM public.membership_roles WHERE membership_id = $1", [membership]);

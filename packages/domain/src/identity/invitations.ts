@@ -188,6 +188,8 @@ export async function inviteMember(params: InviteMemberParams, deps: InvitationD
         sql`SELECT is_demo FROM public.tenants WHERE id = ${membership.tenantId}::uuid`,
       );
       if (tenant[0]?.is_demo !== false) throw new AppError("FORBIDDEN"); // M9: demo tenant'ta davet tamamen kapalı
+      // T-922 (BACKLOG B-16, kullanıcı kararı 20 Ekim): yönetici (TENANT_ADMIN) daveti yalnız hesap sahibinden.
+      if (role === "TENANT_ADMIN" && !membership.isOwner) throw new AppError("FORBIDDEN");
 
       const alreadyMember = await tx.execute<{ one: number }>(
         sql`SELECT 1 AS one
@@ -387,6 +389,11 @@ async function lockValidInvitation(tx: AccessTx, tenantId: string, tokenHash: st
          WHERE i.tenant_id = ${tenantId}::uuid AND i.token_hash = ${tokenHash}
            AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > now()
            AND t.status = 'ACTIVE' AND NOT t.is_demo
+           -- T-922 (B-16) inceleme MINOR-1: yönetici daveti yalnız gönderen HÂLÂ aktif hesap sahibiyse kabul edilir (kural öncesi
+           -- sahip olmayan yöneticinin gönderdiği bekleyen davetler de dahil); değilse davet geçersiz (NOT_FOUND, varlık sızmaz).
+           AND (i.role_key <> 'TENANT_ADMIN' OR EXISTS (
+                 SELECT 1 FROM public.tenant_memberships m
+                  WHERE m.tenant_id = i.tenant_id AND m.id = i.invited_by_membership_id AND m.status = 'ACTIVE' AND m.is_owner))
            FOR UPDATE OF i`,
   );
   const r = rows[0];
@@ -610,6 +617,11 @@ export async function prepareInvitationDelivery(tx: AccessTx, invitationId: stri
            AND i.delivered_via = 'EMAIL'
            AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > now()
            AND t.status = 'ACTIVE' AND NOT t.is_demo
+           -- T-922 (B-16) inceleme MINOR-1: yönetici daveti yalnız gönderen HÂLÂ aktif hesap sahibiyse kabul edilir (kural öncesi
+           -- sahip olmayan yöneticinin gönderdiği bekleyen davetler de dahil); değilse davet geçersiz (NOT_FOUND, varlık sızmaz).
+           AND (i.role_key <> 'TENANT_ADMIN' OR EXISTS (
+                 SELECT 1 FROM public.tenant_memberships m
+                  WHERE m.tenant_id = i.tenant_id AND m.id = i.invited_by_membership_id AND m.status = 'ACTIVE' AND m.is_owner))
            FOR UPDATE OF i`,
   );
   const inv = rows[0];

@@ -25,7 +25,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-13 | Pano bölümlerinde depo kapsamı tutarlılığı 🔒 — T-920 (KODDA VAR) |
 | B-14 | Paket/palet oluşturmada depo kapsamı 🔒 — T-920 (KODDA VAR) |
 | B-15 | İzolasyon testini (AC-04) RLS'siz tabloların yetkilerini kapsayacak şekilde genişlet |
-| B-16 | **Ürün kararı:** yöneticilerin birbirini yönetme yetkisi (öneri: yalnız hesap sahibi) 🔒 |
+| B-16 | Yöneticiyi yalnız hesap sahibi yönetir (kullanıcı kararı 20 Ekim: evet) 🔒 — T-922 (KODDA VAR) |
 | B-17 | DB işlevlerinde aktör kimliğini oturum bağlamından al 🔒 |
 | B-18 | Kuyruk RLS politikası simetrisi 🔒 |
 | B-19 | Hassas işlemlerde yeniden doğrulama tutarlılığı 🔒 — T-920 (KODDA VAR) |
@@ -88,6 +88,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-64 | İstemci `void action().then()` zincirlerine hata yakalama (ör. `apps/web/app/activate/[token]/flow.tsx`); `loading.tsx`, panel `error.tsx`, `global-error`, `not-found` |
 | B-65 | `apps/web/app/t/[slug]/page.tsx` üyelik yoksa `return null` → `notFound()`; tanımsız roller için açılış ekranı |
 | B-66 | Panel hata kodlarını kullanıcı diline çevir |
+| B-69 | Üyeler ekranı ve davet penceresi: sahip olmayan yöneticide yönetici hedefli rol/çıkarma/sıfırlama düğmeleri ve TENANT_ADMIN davet seçeneği kilitli + nedeni görünür (sunucu zaten reddediyor; T-922 inceleme MINOR-2) |
 | B-67 | Cari kişisel alanlarının görünürlüğünü daralt; `settings.manage`'i böl; kullanılmayan `takeout.request` 🔒 |
 | B-68 | Defter–bakiye denetiminin ölçeği (her yazımda tüm geçmiş toplamı) — checkpoint tasarımı |
 

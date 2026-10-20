@@ -202,6 +202,29 @@ describe("changeRole", () => {
   });
 });
 
+describe("T-922 (B-16): yöneticiyi yalnız hesap sahibi yönetir", () => {
+  it("sahip olmayan yönetici başka yöneticiyi düşüremez/çıkaramaz, kimseyi yönetici yapamaz; yönetici olmayanları yönetir; sahip hepsini yapar", async () => {
+    const fx = await mkTenant();
+    const a2 = await mkMember(fx.tenant, "TENANT_ADMIN"); // sahip olmayan yönetici (çağıran)
+    const a3 = await mkMember(fx.tenant, "TENANT_ADMIN"); // hedef yönetici
+    const p = await mkMember(fx.tenant, "PICKER");
+    await expectDenied(changeRole({ ...access(fx, a2), memberId: a3.membershipId, roleKey: "PICKER" }, deps), "NOT_OWNER");
+    await expectDenied(changeRole({ ...access(fx, a2), memberId: p.membershipId, roleKey: "TENANT_ADMIN" }, deps), "NOT_OWNER");
+    await expectDenied(removeMember({ ...access(fx, a2), memberId: a3.membershipId }, deps), "NOT_OWNER");
+    expect((await row(a3.membershipId)).roles).toEqual(["TENANT_ADMIN"]);
+    expect((await row(a3.membershipId)).status).toBe("ACTIVE");
+    expect((await row(p.membershipId)).roles).toEqual(["PICKER"]);
+    // Yönetici olmayanlar arasında rol değişimi serbest.
+    await changeRole({ ...access(fx, a2), memberId: p.membershipId, roleKey: "COUNTER" }, deps);
+    expect((await row(p.membershipId)).roles).toEqual(["COUNTER"]);
+    // Hesap sahibi yöneticiyi düşürür ve çıkarır.
+    await changeRole({ ...access(fx, fx.owner), memberId: a3.membershipId, roleKey: "WAREHOUSE_MANAGER" }, deps);
+    expect((await row(a3.membershipId)).roles).toEqual(["WAREHOUSE_MANAGER"]);
+    await removeMember({ ...access(fx, fx.owner), memberId: a2.membershipId }, deps);
+    expect((await row(a2.membershipId)).status).toBe("REMOVED");
+  });
+});
+
 describe("removeMember / leaveTenant / AC-18", () => {
   it("çıkarma: REMOVED + audit; oturumlar silinmez ama sonraki yazma FORBIDDEN (AC-18)", async () => {
     const fx = await mkTenant();

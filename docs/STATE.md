@@ -96,3 +96,4 @@ Son doğrulama: 17.10.2026 Europe/Istanbul (canlı yayın main `6dd9880`, T-999 
 - **20 Ekim A-36:** CI `deps` istisnası 19 Ekim'de bitti (bütün CI/yayın kırmızı); kullanıcı kararıyla 2026-11-03'e uzatıldı (T-918). Yamalı braces yok.
 - **20 Ekim T-919 (0053, KODDA VAR):** ekibe katılma onayı DB'de cihaz kodu doğrulamasına bağlandı (geçiş tetikleyicisi, sunucu tarafı karar alanları); uygulama rolü `security_events` içeriğini okuyamaz (MFA kefaleti dar işlevle). Yerel tam int 129 dosya / 2434 test PASS; security-reviewer 0/0/2. Canlıya çıkış ayrı (yedek → migration → sağlık).
 - **20 Ekim T-920 (KODDA VAR):** Pano ekip bölümü ve taşıma birimi oluşturma depo kapsamına uyar; saha kilidi açma ve örnek veri silme yakın zamanda doğrulamayı zorunlu tutar (fail-closed). Migration yok.
+- **20 Ekim T-922 (KODDA VAR):** kullanıcı kararı — yöneticiyi (rol değişimi, çıkarma, parola sıfırlama, yönetici daveti) yalnız hesap sahibi yönetir.

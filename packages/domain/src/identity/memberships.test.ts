@@ -29,8 +29,24 @@ describe("checkDeparture (çıkarma / ayrılma)", () => {
   });
 });
 
+describe("checkRoleChange — T-922 (B-16): yöneticiyi yalnız hesap sahibi yönetir", () => {
+  const nb = { actorUserId: ME, actorIsOwner: false, ownerCount: 1, otherAdminCount: 2 } as const;
+  it("sahip olmayan yönetici başka yöneticiyi düşüremez, kimseyi yönetici yapamaz", () => {
+    expect(checkRoleChange({ ...nb, target: admin(), newRole: "PICKER" })).toBe("NOT_OWNER");
+    expect(checkRoleChange({ ...nb, target: member("PICKER"), newRole: "TENANT_ADMIN" })).toBe("NOT_OWNER");
+  });
+  it("sahip olmayan yönetici yönetici olmayanlar arasında rol değiştirebilir ve kendi rolünü düşürebilir", () => {
+    expect(checkRoleChange({ ...nb, target: member("PICKER"), newRole: "COUNTER" })).toBeNull();
+    expect(checkRoleChange({ ...nb, target: admin(ME), newRole: "WAREHOUSE_MANAGER" })).toBeNull();
+  });
+  it("hesap sahibi yöneticiyi düşürebilir ve yönetici atayabilir", () => {
+    expect(checkRoleChange({ ...nb, actorIsOwner: true, target: admin(), newRole: "PICKER" })).toBeNull();
+    expect(checkRoleChange({ ...nb, actorIsOwner: true, target: member("PICKER"), newRole: "TENANT_ADMIN" })).toBeNull();
+  });
+});
+
 describe("checkRoleChange (rol geçişleri)", () => {
-  const base = { actorUserId: ME, ownerCount: 2, otherAdminCount: 2 } as const;
+  const base = { actorUserId: ME, actorIsOwner: true, ownerCount: 2, otherAdminCount: 2 } as const;
   it("sahibin rolü TENANT_ADMIN dışına düşürülemez (önce devir)", () => {
     expect(checkRoleChange({ ...base, target: owner(), newRole: "PICKER" })).toBe("OWNER_ROLE");
     expect(checkRoleChange({ ...base, ownerCount: 1, target: owner(), newRole: "READ_ONLY" })).toBe("LAST_OWNER");
