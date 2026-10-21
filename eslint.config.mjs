@@ -1164,6 +1164,48 @@ const stockSqlGuard = {
     return listener;
   },
 };
+// T-436 (ALTIN-KURAL 16): sabit dil yasağı. Görüntü katmanında (apps/web, packages/ui) "tr-TR" hiçbir dizgede yazılmaz; "tr" (ya da
+// "tr-TR") biçim / harf çevirme çağrısının dil bağımsız değişkeni olamaz (`toLocaleUpperCase`, `toLocaleLowerCase`, `toLocaleString`,
+// `toLocaleDateString`, `toLocaleTimeString`, `new Intl.*`). Kullanıcının dili ortak `@wms/ui` format yardımcısıyla verilir; tek muaf
+// dosya yardımcının dil tablosudur (packages/ui/src/format.ts). Veri eşleştirmesi (ör. Excel başlıkları) adlı sabitle yapılır.
+const MSG_FIXED_LOCALE = 'Sabit dil yazılmaz (ALTIN-KURAL 16): kullanıcının dilini `@wms/ui` format yardımcısıyla ver (`sayi`, `tarih`, `tarihBicimi`, `buyukHarf`, `kucukHarf`, `intlDil(locale)`).';
+const LOCALE_METHODS = new Set(["toLocaleUpperCase", "toLocaleLowerCase", "toLocaleString", "toLocaleDateString", "toLocaleTimeString"]);
+const FIXED_TR = /^tr(?:[-_]tr)?$/i;
+const noFixedLocale = {
+  meta: { type: "problem", schema: [], messages: { fixed: MSG_FIXED_LOCALE } },
+  create(context) {
+    /** @param {any} n */
+    const lit = (n) => {
+      if (n === undefined || n === null) return null;
+      if (n.type === "Literal" && typeof n.value === "string") return n.value;
+      if (n.type === "TemplateLiteral" && n.expressions.length === 0) return n.quasis[0]?.value.cooked ?? null;
+      return null;
+    };
+    /** @param {any} node */
+    const check = (node) => {
+      const callee = node.callee;
+      const first = node.arguments[0];
+      const v = lit(first);
+      if (v === null || !FIXED_TR.test(v) || /^tr-TR$/i.test(v)) return; // "tr-TR" dizgesini Literal ziyaretçisi raporlar
+      const isLocaleMethod = callee.type === "MemberExpression" && !callee.computed && LOCALE_METHODS.has(callee.property.name);
+      const isIntl = callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "Intl";
+      if (isLocaleMethod || isIntl) context.report({ node: first, messageId: "fixed" });
+    };
+    return {
+      CallExpression: check,
+      NewExpression: check,
+      /** @param {any} node */
+      Literal(node) {
+        if (typeof node.value === "string" && /^tr-TR$/i.test(node.value)) context.report({ node, messageId: "fixed" });
+      },
+      /** @param {any} node */
+      TemplateElement(node) {
+        if (/^tr-TR$/i.test(node.value.cooked ?? "")) context.report({ node, messageId: "fixed" });
+      },
+    };
+  },
+};
+
 const WMS_PLUGIN = {
   meta: { name: "wms-local" },
   rules: {
@@ -1172,6 +1214,7 @@ const WMS_PLUGIN = {
     "no-client-server-import": noClientServerImport,
     "no-client-server-loader": noClientServerLoader,
     "stock-sql-guard": stockSqlGuard,
+    "no-fixed-locale": noFixedLocale,
   },
 };
 
@@ -1376,6 +1419,14 @@ export default defineConfig(
     files: ["apps/web/**/*.{js,mjs,cjs,ts,mts,cts,tsx}", "packages/ui/**/*.{js,mjs,cjs,ts,mts,cts,tsx}"],
     plugins: { wms: WMS_PLUGIN },
     rules: { "wms/no-client-server-import": "error", "wms/no-client-server-loader": "error" },
+  },
+  {
+    // T-436 (ALTIN-KURAL 16): görüntü katmanında sabit dil yasağı. Yalnızca EK kural; mevcut hiçbir kural değiştirilmedi. Tek muaf dosya
+    // ortak biçim yardımcısının dil tablosu. Domain veri anahtarları (kod normalleştirme) ve testler kapsam dışıdır.
+    files: ["apps/web/**/*.{js,mjs,cjs,ts,mts,cts,tsx}", "packages/ui/**/*.{js,mjs,cjs,ts,mts,cts,tsx}"],
+    ignores: ["packages/ui/src/format.ts", "**/*.test.{ts,tsx,mjs}", "**/*.spec.{ts,tsx}"],
+    plugins: { wms: WMS_PLUGIN },
+    rules: { "wms/no-fixed-locale": "error" },
   },
   {
     // T-210 (I-04, I-15, G-01): stok tablolarında kilit/yazma SQL'i ve şema nesnesi erişimi yalnızca izinli dosyalarda.
