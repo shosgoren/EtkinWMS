@@ -248,6 +248,7 @@ async function pushStock(rc: RunCtx): Promise<void> {
 // --- Etkin -> ERP (irsaliye) --------------------------------------------------------------------------------------------------------
 interface ShipmentPayload {
   readonly outboxId: string;
+  readonly attempts: number;
   readonly documentId: string;
   readonly number: string;
   readonly issueDate: string;
@@ -299,6 +300,7 @@ async function claimShipment(rc: RunCtx): Promise<ShipmentPayload | "none" | "de
     await tx.execute(sql`UPDATE public.integration_outbox SET status = 'SENDING', attempts = ${attempts}, last_error_code = NULL WHERE tenant_id = ${rc.tenantId}::uuid AND id = ${row.id}::uuid`);
     return {
       outboxId: row.id,
+      attempts,
       documentId: row.entity_id,
       number: h.number,
       issueDate: h.business_date,
@@ -351,8 +353,8 @@ async function pushShipments(rc: RunCtx): Promise<void> {
       const code = errCode(e);
       await rc.deps.inTenant((tx) =>
         tx.execute(sql`
-          UPDATE public.integration_outbox SET status = ${!definite ? "CHECK" : retry ? "PENDING" : "FAILED"}, last_error_code = ${code},
-                 next_attempt_at = now() + make_interval(mins => ${backoffMinutes(1)})
+          UPDATE public.integration_outbox SET status = ${!definite ? "CHECK" : retry && claim.attempts < SYNC_LIMITS.outboxMaxAttempts ? "PENDING" : "FAILED"}, last_error_code = ${code},
+                 next_attempt_at = now() + make_interval(mins => ${backoffMinutes(claim.attempts)})
            WHERE tenant_id = ${rc.tenantId}::uuid AND id = ${claim.outboxId}::uuid`),
       );
       rc.c.failed++;
