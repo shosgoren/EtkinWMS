@@ -1183,6 +1183,7 @@ const MSG_UI = {
   backdrop: "Perde tek ortak perdedir (`KalipPerdeKatman`, design/perde.css): satır içi backdropFilter yok (T-990).",
   overlayClass: "Kalıp dışında perde/çıkış kutusu sınıfı (`kperde`, `cfback`, `cfbox`) yazılmaz: `KalipPerdeKatman` / `KalipCikisUyarisi` (T-990).",
 };
+/** @type {import("eslint").Rule.RuleModule} */
 const uiStandard = {
   meta: { type: "problem", schema: [], messages: MSG_UI },
   create(context) {
@@ -1190,38 +1191,42 @@ const uiStandard = {
     if (!rel.startsWith("apps/web/app/") || /\.test\.(tsx?|mjs)$/.test(rel)) return {};
     const tenant = rel.startsWith("apps/web/app/t/");
     const inKalip = rel.startsWith(UI_KALIP_DIR);
-    const src = context.sourceCode ?? context.getSourceCode();
+    const src = context.sourceCode;
     /** İhlalin hemen üstündeki satırda gerekçeli istisna yorumu var mı. @param {any} node */
     const excused = (node) => {
       const line = node.loc?.start.line ?? 0;
-      return src.getAllComments().some((c) => c.loc.end.line === line - 1 && /ui-standard-istisna:\s*\S{3,}/.test(c.value));
+      return src.getAllComments().some((/** @type {any} */ c) => c.loc?.end.line === line - 1 && /ui-standard-istisna:\s*\S{3,}/.test(c.value));
     };
-    /** @param {any} node @param {keyof typeof MSG_UI} messageId */
+    /** @param {any} node @param {string} messageId */
     const report = (node, messageId) => {
       if (!excused(node)) context.report({ node, messageId });
     };
     return {
+      /** @param {any} node */
       CallExpression(node) {
         const c = node.callee;
         // Genel `alert(…)` ve `window.confirm/alert`; yerel `confirm()` işlevleri (ör. saha akışı) serbest.
         if (c.type === "Identifier" && c.name === "alert") report(node, "browserBox");
         if (c.type === "MemberExpression" && !c.computed && c.object.type === "Identifier" && (c.object.name === "window" || c.object.name === "globalThis") && (c.property.name === "confirm" || c.property.name === "alert")) report(node, "browserBox");
       },
+      /** @param {any} node */
       Literal(node) {
         if (node.value === "beforeunload" && rel !== UI_BEFOREUNLOAD_FILE) report(node, "beforeunload");
       },
+      /** @param {any} node */
       JSXOpeningElement(node) {
         if (!tenant || node.name.type !== "JSXIdentifier") return;
         if (node.name.name === "select") report(node, "select");
         if (node.name.name === "dialog" && !UI_DIALOG_FILES.includes(rel)) report(node, "dialog");
       },
+      /** @param {any} node */
       JSXAttribute(node) {
         if (node.name.name === "style" && node.value?.type === "JSXExpressionContainer" && node.value.expression.type === "ObjectExpression") {
           for (const p of node.value.expression.properties) if (p.type === "Property" && ((p.key.type === "Identifier" && p.key.name === "backdropFilter") || (p.key.type === "Literal" && /backdrop/i.test(String(p.key.value))))) report(p, "backdrop");
         }
         if (node.name.name === "className" && !inKalip && tenant) {
           const v = node.value;
-          const text = v?.type === "Literal" ? String(v.value) : v?.type === "JSXExpressionContainer" && v.expression.type === "TemplateLiteral" ? v.expression.quasis.map((q) => q.value.raw).join(" ") : "";
+          const text = v?.type === "Literal" ? String(v.value) : v?.type === "JSXExpressionContainer" && v.expression.type === "TemplateLiteral" ? v.expression.quasis.map((/** @type {any} */ q) => q.value.raw).join(" ") : "";
           if (/(^|\s)(kperde|cfback|cfbox)(\s|$)/.test(text)) report(node, "overlayClass");
         }
       },
