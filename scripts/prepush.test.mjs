@@ -18,7 +18,7 @@ describe("verifyOnlyKnownEnv", () => {
 });
 
 describe("guardsOnlyUnverifiableApproval", () => {
-  const sum = (p) => `check:all → scope OK | tests OK | ac-ratchet OK | protected ${p} | assertions OK | docs OK`;
+  const sum = (/** @type {string} */ p) => `check:all → scope OK | tests OK | ac-ratchet OK | protected ${p} | assertions OK | docs OK`;
   it("yalnız APPROVAL_UNVERIFIABLE → istisna", () => {
     expect(guardsOnlyUnverifiableApproval(`[check:protected] FAIL APPROVAL_UNVERIFIABLE .github/x.yml — PR bağlamı yok\n${sum("FAIL")}`)).toBe(true);
   });
