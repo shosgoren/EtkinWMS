@@ -162,6 +162,14 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
     await page.goto(`${base}/items`);
     await page.getByTestId("setup-steps").locator('[data-step="warehouse"]').click();
     await expect(page).toHaveURL(new RegExp(`/t/${tenant.slug}/warehouses`));
+    // T-990: depo ekleme pencere değil tam ekran formdur (`?new=1`); önerili ilk depo adı yarım iş sayılır → Geri, cam kutuda "Kaydetmeden çık".
+    const form = page.getByTestId("warehouse-form");
+    await expect(form).toBeVisible();
+    await page.getByTestId("kabuk-back").click();
+    const leave = page.getByTestId("kalip-unsaved-leave");
+    await expect.poll(async () => (await leave.isVisible()) || !(await form.isVisible())).toBe(true);
+    if (await leave.isVisible()) await leave.click();
+    await expect(form).toBeHidden();
   }
   await page.goto(base); // depo formu açık kalmasın (çıkış menüsü önde)
 }

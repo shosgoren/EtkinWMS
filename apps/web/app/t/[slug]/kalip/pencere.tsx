@@ -5,7 +5,7 @@
 // Düğmeler kaynağın `.cfb` (save / leave / stay) öğeleri; alanlar `.fld`. Eski Sheet / ConfirmDialog / davet penceresi bunu kullanır.
 // Sunucu çağrısı sürerken (`busy`) Esc ve perde kapatmaz (ConfirmDialog sözleşmesi aynı). T-990: pencere YALNIZ tek soruluk onaylar içindir
 // (arşivle, iptal et…); ekleme/düzenleme tam ekran formdur (form-ekran.tsx). Yarım işte (`dirty`) kapatma ortak çıkış kutusuna sorar.
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { KalipCikisUyarisi } from "./cikis.tsx";
@@ -162,29 +162,6 @@ export function KalipPencereAlan({ label, hint, error, ...input }: { label: stri
           {error}
         </small>
       )}
-    </div>
-  );
-}
-
-/** Kaynak `.fld` seçim kutusu (+ isteğe bağlı açıklama, alanın dışında). */
-export function KalipPencereSecim({ label, hint, note, children, ...select }: { label: string; hint?: string; note?: ReactNode; children: ReactNode } & SelectHTMLAttributes<HTMLSelectElement>) {
-  const auto = useId();
-  const id = select.id ?? auto;
-  const hintId = `${id}-h`;
-  return (
-    <div className="kpq">
-      <label className="fld" htmlFor={id}>
-        <span>{label}</span>
-        <select {...select} id={id} aria-describedby={hint === undefined ? undefined : hintId}>
-          {children}
-        </select>
-      </label>
-      {hint === undefined ? null : (
-        <small id={hintId} className="kph">
-          {hint}
-        </small>
-      )}
-      {note}
     </div>
   );
 }

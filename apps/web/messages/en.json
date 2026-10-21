@@ -1367,7 +1367,11 @@
         "yesterday": "YESTERDAY {time}",
         "daysAgo": "{n} DAYS AGO",
         "kind_COUNT_ADJUSTMENT": "Count adjustment",
-        "kind_OTHER": "Movement"
+        "kind_OTHER": "Movement",
+        "fixedTitle": "Fixed details",
+        "convAdd": "Add conversion",
+        "convNoUnit": "There is no other unit for a conversion; add a new unit first.",
+        "bcAdd": "Add barcode"
       }
     },
     "errors": {
@@ -1541,7 +1545,8 @@
         "title": "Archive {name}?",
         "description": "Location {name} ({code}) will be archived. It cannot be archived while it holds stock, has an open count or active sub-locations; empty or archive those first.",
         "button": "Archive"
-      }
+      },
+      "addWait": "The screen is getting ready; tap again in a second."
     },
     "errors": {
       "code": "Error code: {code}",
@@ -1789,7 +1794,10 @@
       "submitCount": "Create {count} locations",
       "cancel": "Cancel",
       "done": "{count} locations created: {first} … {last}",
-      "doneReplayed": "This request was already processed; {count} locations exist."
+      "doneReplayed": "This request was already processed; {count} locations exist.",
+      "submitShort": "CREATE",
+      "leaveText": "The racks are not created yet. If you leave without saving, the range you typed is lost.",
+      "leaveSave": "Create and leave"
     }
   },
   "codeEdit": {
@@ -1803,7 +1811,11 @@
     "cancel": "Cancel",
     "submit": "Change code",
     "done": "Code changed: {from} → {to}.",
-    "undo": "Undo (go back to {code})"
+    "undo": "Undo (go back to {code})",
+    "saveShort": "CHANGE",
+    "leaveText": "The new code is not saved. If you leave without saving, the current code stays.",
+    "leaveSave": "Change code and leave",
+    "currentShort": "Current code"
   },
   "tasks": {
     "title": "Tasks",

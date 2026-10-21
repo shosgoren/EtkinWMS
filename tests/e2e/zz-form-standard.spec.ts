@@ -72,7 +72,7 @@ test("ortak form standardı: çıkış kutusu, zorunlu alan uyarısı, ortak per
   await page.goto(`/t/${slug}/parties`);
   await page.getByTestId("kabuk-mods").click();
   await expect(page.getByTestId("kabuk-sheet")).toBeVisible();
-  const blur = await page.locator(".dzk .hback").evaluate((el) => getComputedStyle(el).backdropFilter);
+  const blur = await page.locator(".dzk .hback").evaluate((el) => el.ownerDocument.defaultView!.getComputedStyle(el).getPropertyValue("backdrop-filter"));
   expect(blur).toMatch(/blur\((8|9|\d{2,})px\)/);
 
   expect(seen, "tarayıcının kendi penceresi açılmamalı").toEqual([]);

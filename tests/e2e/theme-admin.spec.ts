@@ -115,20 +115,20 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await page.goto("/t/demo/members");
           await expect(page.getByRole("heading", { level: 1, name: "Üyeler" })).toBeVisible();
           await expect(page.getByTestId("member-card").getByText("Sahip", { exact: true }).first()).toBeVisible();
-          await expectBorderStrong(page, page.getByRole("combobox").first(), "üyeler: rol seçimi");
+          await expectBorderStrong(page, page.getByTestId("member-role").first(), "üyeler: rol seçimi"); // T-990: tetik düğmesi (yerel liste yok)
           await expectNoHorizontalOverflow(page, "üyeler");
           await shot("members");
           const invite = page.getByRole("button", { name: "Üye davet et" });
           await expect(invite).toBeEnabled();
           await invite.click();
-          const dialog = page.getByRole("dialog");
+          const dialog = page.getByTestId("invite-form"); // T-990: davet tam ekran form (`?invite=1`)
           await expect(dialog).toBeVisible();
           const email = dialog.getByLabel("E-posta");
-          await expectKalipField(page, email, "davet: e-posta"); // T-974: kalıp penceresi
+          await expectKalipField(page, email, "davet: e-posta"); // T-974: kalıp alanı (.fld)
 
           await expectNoHorizontalOverflow(page, "davet penceresi");
           await shot("members-invite");
-          await dialog.getByRole("button", { name: "Kapat" }).click();
+          await page.getByTestId("kabuk-back").click();
           await expect(dialog).toBeHidden();
 
           // Denetim kaydı.

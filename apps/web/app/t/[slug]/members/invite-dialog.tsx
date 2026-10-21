@@ -156,7 +156,8 @@ export function InviteForm({
       return { ok: false, mesaj: t("failed") };
     }
     sonuc.current = { delivery: res.data.delivery, ...(res.data.inviteLink === undefined ? {} : { inviteLink: res.data.inviteLink }) };
-    return { ok: true };
+    // Tek seferlik bağlantı ekranda gösterilecekse "Gönder ve çık" seçilse bile ekranda kalınır (bağlantı kaybolmasın).
+    return res.data.inviteLink === undefined ? { ok: true } : { ok: true, kal: true };
   }
 
   const close = (): void => {

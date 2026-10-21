@@ -1,4 +1,4 @@
-// T-257: kod değiştirme arayüzü (ürün / depo / lokasyon) 375 px mobil görünümde. Akış: kayıt oluştur → "Kodu değiştir" penceresi
+// T-257: kod değiştirme arayüzü (ürün / depo / lokasyon) 375 px mobil görünümde (T-990: pencere yerine tam ekran form). Akış: kayıt oluştur → "Kodu değiştir"
 // (eski → yeni önizleme, "geçmiş hareketler etkilenmez" açıklaması) → değişti bildirimi + "Geri al" → sunucu reddi (CODE_TAKEN) neden +
 // sonraki eylemle pencerede kalır → ürün için ESKİ kodla arama yeni karta yönlenir ve "Bu kod X olarak değişti" der.
 // Ortak demo tenant'a yalnızca mobile projesinde yazar (bkz. aşağıdaki not): kayıtlar kendi rastgele kodlarını taşır ve test sonunda arşivlenir
@@ -42,14 +42,18 @@ async function inViewport(page: Page, locator: Locator, name: string): Promise<v
   expect(box && vp && box.y >= 0 && box.y + box.height <= vp.height && box.x >= 0 && box.x + box.width <= vp.width, `${name}: görünüm içinde`).toBe(true);
 }
 
-/** Pencere açıkken: kaymaz, düğmeler ≥48 px ve görünüm içinde, açıklama görünür; sonra yeni kodu yazar. */
+/** T-990: "Kodu değiştir" tam ekran formdur; ana işlem (Kodu değiştir) alt çubuğun ortasında, Vazgeç = alt çubuğun Geri'si. */
+const codeSave = (page: Page): Locator => page.getByTestId("code-edit-form-save");
+
+/** Form açıkken: kaymaz, düğmeler ≥48 px ve görünüm içinde, açıklama görünür; sonra yeni kodu yazar. */
 async function measureDialog(page: Page, dialog: Locator, where: string, shot: string): Promise<void> {
   await expect(dialog.getByText(/Geçmiş hareketler etkilenmez/)).toBeVisible();
   await noPageScroll(page, where);
-  await touchTarget(dialog.getByRole("button", { name: "Kodu değiştir" }).or(dialog.locator('button[type="submit"]')), `${where}: Kodu değiştir`);
-  await inViewport(page, dialog.getByRole("button", { name: "Vazgeç" }), `${where}: Vazgeç`);
-  await inViewport(page, dialog.locator('button[type="submit"]'), `${where}: gönder`);
-  await touchTarget(dialog.locator('input[name="newCode"]'), `${where}: kod alanı`);
+  await touchTarget(page.getByRole("button", { name: "Kodu değiştir", exact: true }).or(codeSave(page)), `${where}: Kodu değiştir`);
+  await inViewport(page, page.getByTestId("kabuk-back"), `${where}: Vazgeç (Geri)`);
+  await inViewport(page, codeSave(page), `${where}: gönder`);
+  // Dokunma hedefi alanın etiket kutusudur (`.fld`; dokununca kod alanına odaklanır).
+  await touchTarget(dialog.locator('label.fld:has(input[name="newCode"])'), `${where}: kod alanı`);
   await page.screenshot({ path: `${OUT}/${shot}.png` });
 }
 
@@ -97,11 +101,12 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
   try {
     // --- Depo: oluştur, kodu değiştir, geri al ---
     await page.goto("/t/demo/warehouses?new=1");
-    const create = page.getByRole("dialog");
+    const create = page.getByTestId("warehouse-form"); // T-990: tam ekran form
     await expect(create.locator('input[name="code"]')).toHaveValue(/^DEPO-\d{2}$/); // öneri hazır, sonra özel kod yazılır
     await create.locator('input[name="name"]').fill(`KE Depo ${id}`);
     await create.locator('input[name="code"]').fill(whCode);
-    await create.getByRole("button", { name: "Kaydet" }).click();
+    await page.getByTestId("warehouse-form-save").click();
+    await expect(create).toBeHidden(); // kayıttan sonra listeye döner
     await page.waitForLoadState("networkidle");
     await page.goto(warehousesAt(whCode));
     const card = page.getByTestId("warehouse-card").filter({ hasText: whCode });
@@ -112,13 +117,13 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
     await touchTarget(whEdit, "depo satırı: Kodu değiştir");
     await noHorizontalOverflow(page, "depo listesi");
     await whEdit.click();
-    let dlg = page.getByRole("dialog");
+    let dlg = page.getByTestId("code-edit-form");
     await expect(dlg.getByText(`Şimdiki kod: ${whCode}`)).toBeVisible();
-    await expect(dlg.locator('button[type="submit"]')).toBeDisabled(); // aynı kodla gönderilemez
+    await expect(codeSave(page)).toBeDisabled(); // aynı kodla gönderilemez
     await dlg.locator('input[name="newCode"]').fill(whNew.toLowerCase());
     await expect(dlg.getByTestId("code-edit-preview")).toContainText(`${whCode} → ${whNew.toLowerCase()}`);
     await measureDialog(page, dlg, "depo penceresi 375", `${tag}-375-warehouse-dialog`);
-    await dlg.locator('button[type="submit"]').click();
+    await codeSave(page).click();
     await expect(page.getByText(`Kod değişti: ${whCode} → `)).toBeVisible();
     await expect(page.getByTestId("warehouse-card").filter({ hasText: whNew })).toHaveCount(1); // sunucu büyük harfe çevirdi (A-98)
     await page.getByRole("button", { name: /Geri al/ }).click();
@@ -129,47 +134,47 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
     await page.goto(whUrl);
     for (const [code, name] of [[locA, "KE Raf A"], [locB, "KE Raf B"]] as const) {
       await page.getByRole("button", { name: "Lokasyon ekle", exact: true }).click(); // T-971: kök ekleme alt çubukta; satırlarda "Alt lokasyon ekle"
-      const d = page.getByRole("dialog");
+      const d = page.getByTestId("location-form"); // T-990: tam ekran form
       await expect(d.locator('input[name="code"]')).not.toHaveValue("");
       await d.locator('input[name="name"]').fill(name);
       await d.locator('input[name="code"]').fill(code);
-      await d.getByRole("button", { name: "Kaydet" }).click();
+      await page.getByTestId("location-form-save").click();
       await expect(page.getByTestId("location-row").filter({ hasText: code })).toHaveCount(1);
     }
     const rowB = page.getByTestId("location-row").filter({ hasText: locB });
     await touchTarget(rowB.getByRole("button", { name: "KE Raf B için kodu değiştir" }), "lokasyon satırı: Kodu değiştir");
     await noHorizontalOverflow(page, "lokasyon ağacı");
     await rowB.getByRole("button", { name: "KE Raf B için kodu değiştir" }).click();
-    dlg = page.getByRole("dialog");
+    dlg = page.getByTestId("code-edit-form");
     await dlg.locator('input[name="newCode"]').fill(locA);
-    await dlg.locator('button[type="submit"]').click();
+    await codeSave(page).click();
     // N-06: neden + sonraki eylem; pencere ve yazılan değer korunur.
     await expect(dlg.getByText(/Bu kod zaten kullanılıyor\. Farklı bir kod gir\./)).toBeVisible();
     await expect(dlg.locator('input[name="newCode"]')).toHaveValue(locA);
     await page.screenshot({ path: `${OUT}/${tag}-375-location-error.png` });
     await dlg.locator('input[name="newCode"]').fill(locNew);
     await measureDialog(page, dlg, "lokasyon penceresi 375", `${tag}-375-location-dialog`);
-    await dlg.locator('button[type="submit"]').click();
+    await codeSave(page).click();
     await expect(page.getByText(`Kod değişti: ${locB} → `)).toBeVisible();
     await expect(page.getByTestId("location-row").filter({ hasText: locNew })).toHaveCount(1);
 
     // --- Ürün: oluştur, kodu değiştir ---
     await page.goto("/t/demo/items?new=1");
-    const ic = page.getByRole("dialog");
+    const ic = page.getByTestId("item-form"); // T-990: tam ekran form
     await expect(ic.locator('input[name="code"]')).toHaveValue(/^HM-\d{6}$/); // T-911: kart türü öneki + 6 hane
     await ic.locator('input[name="name"]').fill(itemName);
     await ic.locator('input[name="code"]').fill(itemCode);
-    await ic.getByRole("button", { name: "Kaydet" }).click();
+    await page.getByTestId("item-form-save").click();
     await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
     itemUrl = new URL(page.url()).pathname;
     const itemEdit = page.getByRole("button", { name: `${itemName} için kodu değiştir` });
     await touchTarget(itemEdit, "ürün kartı: Kodu değiştir");
     await noHorizontalOverflow(page, "ürün kartı");
     await itemEdit.click();
-    dlg = page.getByRole("dialog");
+    dlg = page.getByTestId("code-edit-form");
     await dlg.locator('input[name="newCode"]').fill(itemNew);
     await measureDialog(page, dlg, "ürün penceresi 375", `${tag}-375-item-dialog`);
-    await dlg.locator('button[type="submit"]').click();
+    await codeSave(page).click();
     await expect(page.getByText(`Kod değişti: ${itemCode} → ${itemNew}.`)).toBeVisible();
     await expect(page.getByTestId("kalip-code")).toHaveText(itemNew); // T-968: detay kalıbı kod kutusu (`.hcode`)
     await touchTarget(page.getByRole("button", { name: /Geri al/ }), "ürün: Geri al");
@@ -242,10 +247,10 @@ test("demo kataloğunda yazdıkça arama: kendi ürünün ilk öneri (375 px)", 
   try {
     if (write) {
       await page.goto("/t/demo/items?new=1");
-      const ic = page.getByRole("dialog");
+      const ic = page.getByTestId("item-form"); // T-990: tam ekran form
       await ic.locator('input[name="name"]').fill(itemName);
       await ic.locator('input[name="code"]').fill(itemCode);
-      await ic.getByRole("button", { name: "Kaydet" }).click();
+      await page.getByTestId("item-form-save").click();
       await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
       itemUrl = new URL(page.url()).pathname;
     }

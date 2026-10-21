@@ -22,7 +22,8 @@ import { kdzOrtak } from "./tokens.ts";
 const c = (hex: string): string => kdzOrtak(hex);
 
 /** Kaydetme sonucu: başarı ya da alan hataları / genel neden (formda kalınır). */
-export type KaydetSonuc = { readonly ok: true } | { readonly ok: false; readonly alan?: Readonly<Record<string, string>>; readonly mesaj?: string };
+/** `kal`: kaydedildi ama ekrandan çıkılmaz (ör. tek seferlik davet bağlantısı gösterilecek; "… ve çık" seçilse bile kalınır). */
+export type KaydetSonuc = { readonly ok: true; readonly kal?: boolean } | { readonly ok: false; readonly alan?: Readonly<Record<string, string>>; readonly mesaj?: string };
 
 export interface KalipFormEkranProps<V extends Readonly<Record<string, unknown>>> {
   readonly dark: boolean;
@@ -141,7 +142,7 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
     [values, say, msg, t],
   );
 
-  const kaydet = useCallback(async (): Promise<boolean> => {
+  const kaydet = useCallback(async (): Promise<false | "git" | "kal"> => {
     if (!canEdit || busy) return false;
     setGenel(null);
     const h = dogrula(rules, values, msg);
@@ -179,14 +180,18 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
     tone("ok");
     say("ok", savedText ?? t("saved"));
     setHatalar({});
-    return true;
+    return r.kal === true ? "kal" : "git";
   }, [canEdit, busy, rules, values, msg, goster, onSave, say, t, savedText]);
 
   const korunan = useCikisKorumasi(dirty, {
     dark,
     ...(leaveText === undefined ? {} : { text: leaveText }),
     saveLabel: leaveSaveLabel ?? t("saveLeave"),
-    onSave: kaydet,
+    onSave: async () => {
+      const r = await kaydet();
+      if (r === "kal") onDone();
+      return r === "git";
+    },
   });
 
   const onKaydet = (e?: FormEvent): void => {
@@ -197,8 +202,8 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
       say("info", t("noChange"));
       return;
     }
-    void kaydet().then((ok) => {
-      if (ok) onDone();
+    void kaydet().then((r) => {
+      if (r !== false) onDone();
     });
   };
 

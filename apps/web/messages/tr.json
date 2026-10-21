@@ -1367,7 +1367,11 @@
         "yesterday": "DÜN {time}",
         "daysAgo": "{n} GÜN ÖNCE",
         "kind_COUNT_ADJUSTMENT": "Sayım farkı",
-        "kind_OTHER": "Hareket"
+        "kind_OTHER": "Hareket",
+        "fixedTitle": "Değişmeyen bilgiler",
+        "convAdd": "Dönüşüm ekle",
+        "convNoUnit": "Dönüşüm için başka birim yok; önce yeni birim ekle.",
+        "bcAdd": "Barkod ekle"
       }
     },
     "errors": {
@@ -1541,7 +1545,8 @@
         "title": "{name} arşivlensin mi?",
         "description": "{name} ({code}) lokasyonu arşivli olur. Stok, açık sayım veya aktif alt lokasyon varsa arşivlenmez; önce boşalt/arşivle.",
         "button": "Arşivle"
-      }
+      },
+      "addWait": "Ekran hazırlanıyor; bir saniye sonra yeniden dokun."
     },
     "errors": {
       "code": "Hata kodu: {code}",
@@ -1789,7 +1794,10 @@
       "submitCount": "{count} lokasyonu oluştur",
       "cancel": "Vazgeç",
       "done": "{count} lokasyon oluşturuldu: {first} … {last}",
-      "doneReplayed": "Bu istek zaten işlenmişti; {count} lokasyon var."
+      "doneReplayed": "Bu istek zaten işlenmişti; {count} lokasyon var.",
+      "submitShort": "OLUŞTUR",
+      "leaveText": "Raflar henüz oluşturulmadı. Kaydetmeden çıkarsan yazdığın aralık kaybolur.",
+      "leaveSave": "Oluştur ve çık"
     }
   },
   "codeEdit": {
@@ -1803,7 +1811,11 @@
     "cancel": "Vazgeç",
     "submit": "Kodu değiştir",
     "done": "Kod değişti: {from} → {to}.",
-    "undo": "Geri al ({code} koduna dön)"
+    "undo": "Geri al ({code} koduna dön)",
+    "saveShort": "DEĞİŞTİR",
+    "leaveText": "Yeni kod kaydedilmedi. Kaydetmeden çıkarsan şimdiki kod kalır.",
+    "leaveSave": "Kodu değiştir ve çık",
+    "currentShort": "Şimdiki kod"
   },
   "tasks": {
     "title": "Görevler",

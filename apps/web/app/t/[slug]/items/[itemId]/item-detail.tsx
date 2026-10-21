@@ -7,20 +7,29 @@
 // bölümüne götürür. Düzenleme bölümleri (kart, birim katsayıları, barkodlar, arşiv) aynı eylemlerle kalıbın kartlarında.
 // Bilinçli farklar: "Sayım" kısayolu ürün sayımı değil görev listesidir (ürüne özel sayım başlatma yok); stok sorgusu okunamazsa
 // toplam / Nerede? / hareketler çizilmez (uydurma yok).
+// T-990 (B-97): düzenleme, kod değiştirme, birim dönüşümü ve barkod ekleme sayfa içi form/pencere değil TAM EKRAN FORMDUR
+// (`KalipFormEkran`; adres `?edit=1` / `?kod=1` / `?conv=1` / `?barcode=1`); yerel açılır liste yok (renkli seçim kutuları / aramalı
+// seçim sayfası). Kaydet yalnız değişiklikte etkin, doğrulama ve yarım işte çıkış kutusu ortak kalıptadır. Geri ürün kartına döner.
+// Tek soruluk onaylar (arşivle, barkodu kaldır) pencere kalır.
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import type { FormEvent, ReactNode } from "react";
-import { Banner, Button, TextField } from "@wms/ui";
+import type { CSSProperties, ReactNode } from "react";
+import { Banner } from "@wms/ui";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
+import { CodeChangedNotice, CodeEditForm } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, KalipMinimum, KalipNerede, KalipTumu, KalipUyari, KalipZaman, type KalipHizliIslem, type KalipOlay, type KalipYer } from "../../kalip/detay.tsx";
+import type { AlanKurali } from "../../kalip/dogrula.ts";
 import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
+import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../../kalip/form-ekran.tsx";
+import { KalipAlan, KalipGrup, KalipSabit } from "../../kalip/form.tsx";
 import { approx, fmtQty, stockTone, sumDecimal } from "../../kalip/format.ts";
+import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
+import { kdz } from "../../kalip/tokens.ts";
 import { addBarcodeAction, archiveItemAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
 import { CARD_VISUAL } from "../card-visual.ts";
-import { CARD_TYPES, SELECT_CLS, ServerErrorBanner, toServerError } from "../items-view.tsx";
+import { CARD_TYPES, errorKey, ServerErrorBanner, toServerError } from "../items-view.tsx";
 import type { CardType, ServerError, UnitOption } from "../items-view.tsx";
 
 export interface ItemDetailItem {
@@ -51,6 +60,11 @@ export interface BarcodeView {
 }
 
 const PICK = ["FIFO", "FEFO"] as const;
+type ItemForm = "edit" | "kod" | "conv" | "barcode";
+const FORMS: readonly ItemForm[] = ["edit", "kod", "conv", "barcode"];
+const c = (hex: string): string => kdz("dzd", hex);
+/** Kart içi küçük işlem düğmesi (kaynak `.btn`); kilitliyken soluk. */
+const actBtn = (bg: string): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48 });
 
 /** Düzenleme bölümü: kalıbın başlıklı kartı (`.card > .ch`); içerik mevcut formlar. */
 function Section({ title, sub, d, color, children, id }: { title: string; sub: string; d: string; color: string; children: ReactNode; id: string }) {
@@ -89,6 +103,224 @@ const MOVE_FALLBACK = { d: LICON.clip, color: "4E6476", q: "172E42" } as const;
 const KNOWN_KINDS: readonly string[] = Object.keys(MOVE_VIS);
 const PLACE_COLORS = ["2F5DA8", "0E7C7B", "6C4BD8", "B07D0B", "2F7D5B"] as const;
 
+/** Sunucu reddi → formda gösterim: alanla ilgili ret o alanın altında, diğerleri genel neden. */
+function itemErr(e: ServerError, tr: (k: string) => string, field: (key: string) => string | null): KaydetSonuc {
+  const key = errorKey(e);
+  const text = `${tr(key)} ${tr(`${key}Action`)}`.trim();
+  const alan = field(key);
+  if (alan !== null) return { ok: false, alan: { [alan]: text } };
+  return { ok: false, mesaj: e.requestId === undefined ? text : `${text} · ${e.requestId}` };
+}
+
+/** Ürün kartı düzenleme — TAM EKRAN FORM (`?edit=1`): ad, kart türü ve çıkış kuralı; değişmeyen bilgiler kilitli satırlar. */
+function ItemEditForm({ slug, dark, item, inUse, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; inUse: boolean; onBack: () => void; onDone: () => void }) {
+  const t = useTranslations("items");
+  const td = useTranslations("items.detail");
+  const tk = useTranslations("items.detail.k");
+  const terr = useTranslations("items.errors");
+  const tc = useTranslations("items.cardType");
+  const tp = useTranslations("items.pick");
+  const tt = useTranslations("items.tracking");
+  const [initial] = useState(() => ({ name: item.name, cardType: item.cardType as string, pick: item.pickPolicy }));
+  const [v, setV] = useState(initial);
+  const set = (k: keyof typeof v, val: string): void => setV((cur) => ({ ...cur, [k]: val }));
+  const rules: AlanKurali[] = [{ name: "name", label: t("form.name"), required: true, maxLength: 512 }];
+  const vis = CARD_VISUAL[(CARD_TYPES as readonly string[]).includes(v.cardType) ? (v.cardType as CardType) : item.cardType];
+
+  async function save(): Promise<KaydetSonuc> {
+    const r = await updateItemAction({ slug, itemId: item.id, name: v.name, pickPolicy: v.pick, cardType: v.cardType });
+    if (!r.ok) return itemErr(toServerError(r.error), (k) => terr(k), (key) => (key === "validation_failed" ? "name" : null));
+    return { ok: true };
+  }
+  const scale = item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale });
+  const fixed = [
+    { k: t("form.baseUnit"), v: item.baseUnitCode, d: LICON.tag },
+    { k: t("form.scale"), v: scale, d: LICON.gear },
+    { k: t("form.tracking"), v: tt(item.trackingMode), d: LICON.lock },
+  ];
+  return (
+    <KalipFormEkran
+      dark={dark}
+      title={tk("editAria")}
+      icon={{ d: vis.d, color: vis.color }}
+      subtitle={item.code}
+      testId="item-edit-form"
+      values={v}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={onDone}
+      onBack={onBack}
+      saveAria={td("save")}
+      savedText={td("done.saved")}
+      preview={<KalipOnizleme name={v.name} code={item.code} d={vis.d} color={vis.color} kind={tc(v.cardType)} rows={[{ k: t("form.baseUnit"), v: item.baseUnitCode }, { k: t("form.pick"), v: tp(v.pick) }]} />}
+    >
+      <KalipGrup title={tk("editSection")} sub={tk("editSub")} d={vis.d} color={vis.color}>
+        <KalipAlan label={`${t("form.name")} *`} name="name" value={v.name} onChange={(e) => set("name", e.target.value)} autoComplete="off" maxLength={512} />
+        <KalipSecimGrubu
+          name="cardType"
+          label={t("form.cardType")}
+          hint={t("form.cardTypeHint")}
+          value={v.cardType}
+          color={vis.color}
+          onPick={(id) => set("cardType", id)}
+          options={CARD_TYPES.map((k) => ({ id: k, label: tc(k), sub: k, d: CARD_VISUAL[k].d, color: CARD_VISUAL[k].color }))}
+          testId="item-card-type"
+        />
+        <KalipSecimGrubu
+          name="pick"
+          label={t("form.pick")}
+          value={v.pick}
+          color="0E7C7B"
+          onPick={(id) => set("pick", id)}
+          options={PICK.map((k) => ({ id: k, label: tp(k), d: k === "FIFO" ? LICON.arrow : LICON.clock }))}
+          testId="item-pick"
+        />
+      </KalipGrup>
+      <KalipGrup title={tk("fixedTitle")} sub={inUse ? td("lockedInUse") : td("lockedFixed")} d={LICON.lock} color="4E6476">
+        {fixed.map((f) => (
+          <KalipSabit key={f.k} title={f.k} d={f.d} color="4E6476" pill={{ label: f.v, ok: true }} aria={`${f.k}: ${f.v}`} />
+        ))}
+      </KalipGrup>
+    </KalipFormEkran>
+  );
+}
+
+/** Birim dönüşümü ekle/güncelle — TAM EKRAN FORM (`?conv=1`). Katsayı DİZGİ olarak iletilir (I-09); biçim/ölçek denetimi sunucuda. */
+function ConversionForm({ slug, dark, item, units, conversions, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; units: readonly UnitOption[]; conversions: readonly ConversionView[]; onBack: () => void; onDone: () => void }) {
+  const td = useTranslations("items.detail");
+  const tk = useTranslations("items.detail.k");
+  const terr = useTranslations("items.errors");
+  const [initial] = useState(() => ({ unitId: units[0]?.id ?? "", factor: "" }));
+  const [v, setV] = useState(initial);
+  const set = (k: keyof typeof v, val: string): void => setV((cur) => ({ ...cur, [k]: val }));
+  const rules: AlanKurali[] = [
+    { name: "unitId", label: td("conversionUnit"), required: true },
+    { name: "factor", label: td("conversionFactor", { base: item.baseUnitCode }), required: true, kind: "decimal", maxLength: 64 },
+  ];
+  const unit = units.find((u) => u.id === v.unitId);
+  const existing = conversions.find((x) => x.unitId === v.unitId);
+  async function save(): Promise<KaydetSonuc> {
+    const r = await setConversionAction({ slug, itemId: item.id, unitId: v.unitId, factor: v.factor });
+    if (!r.ok) return itemErr(toServerError(r.error), (k) => terr(k), (key) => (key === "validation_failed" || key === "validation_failed_unit_conversion_invalid" ? "factor" : null));
+    return { ok: true };
+  }
+  return (
+    <KalipFormEkran
+      dark={dark}
+      title={td("conversionsTitle")}
+      icon={{ d: LICON.grid, color: "6C4BD8" }}
+      subtitle={`${item.name} · ${item.code}`}
+      testId="conversion-form"
+      values={v}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={onDone}
+      onBack={onBack}
+      saveAria={td("conversionSave")}
+      savedText={td("done.conversion")}
+      preview={
+        <KalipOnizleme
+          name={item.name}
+          code={unit === undefined || v.factor.trim() === "" ? item.code : td("conversionLine", { unit: unit.code, factor: v.factor.trim(), base: item.baseUnitCode })}
+          d={LICON.grid}
+          color="6C4BD8"
+          kind={tk("convSub")}
+          rows={existing === undefined ? [] : [{ k: existing.unitCode, v: td("conversionLine", { unit: existing.unitCode, factor: existing.factor, base: item.baseUnitCode }) }]}
+        />
+      }
+    >
+      <KalipGrup title={td("conversionsTitle")} sub={td("conversionsHint", { unit: item.baseUnitCode })} d={LICON.grid} color="6C4BD8">
+        <KalipSecim
+          name="unitId"
+          label={td("conversionUnit")}
+          value={v.unitId}
+          color="6C4BD8"
+          list
+          icon={{ d: LICON.tag, color: "6C4BD8" }}
+          onPick={(id) => set("unitId", id)}
+          options={units.map((u) => ({ id: u.id, label: u.code, sub: u.name, keys: [u.name] }))}
+          testId="conversion-unit"
+        />
+        <KalipAlan
+          label={`${td("conversionFactor", { base: item.baseUnitCode })} *`}
+          hint={td("conversionFactorHint")}
+          name="factor"
+          value={v.factor}
+          onChange={(e) => set("factor", e.target.value)}
+          inputMode="decimal"
+          autoComplete="off"
+          maxLength={64}
+        />
+      </KalipGrup>
+    </KalipFormEkran>
+  );
+}
+
+/** Barkod ekle — TAM EKRAN FORM (`?barcode=1`). Okutma metin girişidir (el okuyucusu alana yazar). */
+function BarcodeForm({ slug, dark, item, units, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; units: readonly UnitOption[]; onBack: () => void; onDone: () => void }) {
+  const td = useTranslations("items.detail");
+  const tk = useTranslations("items.detail.k");
+  const terr = useTranslations("items.errors");
+  const [initial] = useState(() => ({ barcode: "", unitId: "", quantity: "" }));
+  const [v, setV] = useState(initial);
+  const set = (k: keyof typeof v, val: string): void => setV((cur) => ({ ...cur, [k]: val }));
+  const rules: AlanKurali[] = [
+    { name: "barcode", label: td("barcodeValue"), required: true, maxLength: 512 },
+    { name: "quantity", label: td("barcodeQuantity"), kind: "decimal", maxLength: 64 },
+  ];
+  const unit = units.find((u) => u.id === v.unitId);
+  async function save(): Promise<KaydetSonuc> {
+    const q = v.quantity.trim();
+    const r = await addBarcodeAction({ slug, itemId: item.id, unitId: v.unitId === "" ? null : v.unitId, barcode: v.barcode, quantity: q === "" ? null : q });
+    if (!r.ok) return itemErr(toServerError(r.error), (k) => terr(k), (key) => (key === "validation_failed" || key === "validation_failed_code_taken" ? "barcode" : null));
+    return { ok: true };
+  }
+  return (
+    <KalipFormEkran
+      dark={dark}
+      title={td("barcodesTitle")}
+      icon={{ d: LICON.cam, color: "0E7C7B" }}
+      subtitle={`${item.name} · ${item.code}`}
+      testId="barcode-form"
+      values={v}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={onDone}
+      onBack={onBack}
+      saveAria={td("barcodeAdd")}
+      preview={
+        <KalipOnizleme
+          name={item.name}
+          code={v.barcode}
+          d={LICON.cam}
+          color="0E7C7B"
+          kind={tk("bcSub")}
+          rows={[{ k: td("barcodeUnit"), v: unit === undefined ? item.baseUnitCode : unit.code }, { k: td("barcodeQuantity"), v: v.quantity.trim() === "" ? "1" : v.quantity.trim() }]}
+        />
+      }
+    >
+      <KalipGrup title={td("barcodesTitle")} sub={td("barcodesHint")} d={LICON.cam} color="0E7C7B">
+        <KalipAlan label={`${td("barcodeValue")} *`} hint={td("barcodeValueHint")} name="barcode" value={v.barcode} onChange={(e) => set("barcode", e.target.value)} autoComplete="off" autoCapitalize="off" maxLength={512} />
+        <KalipSecim
+          name="unitId"
+          label={td("barcodeUnit")}
+          value={v.unitId}
+          color="0E7C7B"
+          list
+          icon={{ d: LICON.tag, color: "0E7C7B" }}
+          onPick={(id) => set("unitId", id)}
+          options={[{ id: "", label: td("barcodeUnitBase", { unit: item.baseUnitCode }) }, ...units.map((u) => ({ id: u.id, label: u.code, sub: u.name, keys: [u.name] }))]}
+          testId="barcode-unit"
+        />
+        <KalipAlan label={td("barcodeQuantity")} hint={td("barcodeQuantityHint")} name="quantity" value={v.quantity} onChange={(e) => set("quantity", e.target.value)} inputMode="decimal" autoComplete="off" maxLength={64} />
+      </KalipGrup>
+    </KalipFormEkran>
+  );
+}
+
 export function ItemDetail({
   slug,
   dark,
@@ -118,8 +350,10 @@ export function ItemDetail({
   const tp = useTranslations("items.pick");
   const tc = useTranslations("items.cardType");
   const tk = useTranslations("items.detail.k");
+  const terr = useTranslations("items.errors");
   const locale = useLocale();
   const router = useRouter();
+  const params = useSearchParams();
   const base = `/t/${encodeURIComponent(slug)}/items`;
   const returnTo = `${base}/${encodeURIComponent(item.id)}`;
   const active = item.status === "ACTIVE";
@@ -129,11 +363,26 @@ export function ItemDetail({
   const [notice, setNotice] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [removing, setRemoving] = useState<BarcodeView | null>(null);
-  const [round, setRound] = useState(0);
-  const [codeOpen, setCodeOpen] = useState(false);
   const [codeChanged, setCodeChanged] = useState<{ readonly from: string; readonly to: string } | null>(null);
   const [undoing, setUndoing] = useState(false);
   const otherUnits = units.filter((u) => u.id !== item.baseUnitId);
+  // Açık tam ekran form adresten okunur (yalnız yazma yetkisi ve aktif ürün; yoksa kart görünür).
+  const form = writable ? (FORMS.find((f) => params.get(f) === "1") ?? null) : null;
+  const open = (f: ItemForm): void => {
+    tone("tap");
+    setError(null);
+    router.push(`${returnTo}?${f}=1`);
+  };
+  /** Formdan karta dönüş: başarıda bildirim + sunucu verisini yenile. */
+  const back = (doneText?: string): void => {
+    if (doneText !== undefined) {
+      tone("ok");
+      setError(null);
+      setNotice(doneText);
+    }
+    router.push(returnTo);
+    if (doneText !== undefined) router.refresh();
+  };
 
   /** Ortak eylem sarmalayıcısı: hata banner'da kalır; başarıda bildirim + sunucu verisini yenile. */
   async function run(name: string, doneKey: string, call: () => Promise<{ ok: true } | { ok: false; error: ServerError }>): Promise<boolean> {
@@ -143,11 +392,12 @@ export function ItemDetail({
     const res = await call();
     setBusy(null);
     if (!res.ok) {
+      tone("err");
       setError(toServerError(res.error));
       return false;
     }
+    tone("ok");
     setNotice(td(doneKey));
-    setRound((n) => n + 1);
     router.refresh();
     return true;
   }
@@ -172,33 +422,6 @@ export function ItemDetail({
     router.refresh();
   }
 
-  async function onSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const f = new FormData(event.currentTarget);
-    await run("save", "done.saved", async () => {
-      const r = await updateItemAction({ slug, itemId: item.id, name: String(f.get("name") ?? ""), pickPolicy: String(f.get("pickPolicy") ?? ""), cardType: String(f.get("cardType") ?? "") });
-      return r.ok ? { ok: true } : { ok: false, error: r.error };
-    });
-  }
-  async function onConversion(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const f = new FormData(event.currentTarget);
-    // Katsayı DİZGİ olarak iletilir (I-09); biçim/ölçek denetimi sunucuda.
-    await run("conversion", "done.conversion", async () => {
-      const r = await setConversionAction({ slug, itemId: item.id, unitId: String(f.get("unitId") ?? ""), factor: String(f.get("factor") ?? "") });
-      return r.ok ? { ok: true } : { ok: false, error: r.error };
-    });
-  }
-  async function onBarcode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const f = new FormData(event.currentTarget);
-    const unitId = String(f.get("unitId") ?? "");
-    const quantity = String(f.get("quantity") ?? "").trim();
-    await run("barcode", "done.barcodeAdded", async () => {
-      const r = await addBarcodeAction({ slug, itemId: item.id, unitId: unitId === "" ? null : unitId, barcode: String(f.get("barcode") ?? ""), quantity: quantity === "" ? null : quantity });
-      return r.ok ? { ok: true } : { ok: false, error: r.error };
-    });
-  }
   async function onRemove() {
     if (removing === null) return;
     const target = removing;
@@ -273,13 +496,40 @@ export function ItemDetail({
     ...(quick.transfer ? [{ key: "transfer", label: tk("qTransfer"), d: LICON.transfer, color: "6C4BD8", href: `/t/${encodeURIComponent(slug)}/stock/documents?new=TRANSFER` }] : []),
   ];
   const tags = [tc(item.cardType), tk("unitTag", { unit }), ...(item.trackingMode === "NONE" ? [] : [tt(item.trackingMode)]), tp(item.pickPolicy), ...(active ? [] : [t("status.ARCHIVED")])].map((x) => x.toLocaleUpperCase(locale === "en" ? "en" : "tr"));
-  const toEdit = (): void => {
-    tone("tap");
-    const el = document.getElementById("sec-card");
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    el?.querySelector<HTMLInputElement>('input[name="name"]')?.focus({ preventScroll: true });
-  };
 
+  if (form === "edit") return <ItemEditForm key="edit" slug={slug} dark={dark} item={item} inUse={inUse} onBack={() => back()} onDone={() => back(td("done.saved"))} />;
+  if (form === "conv") return <ConversionForm key="conv" slug={slug} dark={dark} item={item} units={otherUnits} conversions={conversions} onBack={() => back()} onDone={() => back(td("done.conversion"))} />;
+  if (form === "barcode") return <BarcodeForm key="barcode" slug={slug} dark={dark} item={item} units={otherUnits} onBack={() => back()} onDone={() => back(td("done.barcodeAdded"))} />;
+  if (form === "kod") {
+    return (
+      <CodeEditForm
+        key="kod"
+        dark={dark}
+        subject={item.name}
+        current={item.code}
+        icon={{ d: vis.d, color: vis.color }}
+        onBack={() => back()}
+        submit={changeCode}
+        errorText={(e) => {
+          const key = errorKey(e);
+          return `${terr(key)} ${terr(`${key}Action`)}`.trim();
+        }}
+        renderError={(e) => <ServerErrorBanner error={e} returnTo={returnTo} />}
+        onDone={(r) => {
+          setError(null);
+          if (r.changed) {
+            tone("ok");
+            setNotice(null);
+            setCodeChanged({ from: r.from, to: r.to });
+            back();
+            router.refresh();
+          } else back(td("done.codeSame"));
+        }}
+      />
+    );
+  }
+
+  const lockReason = canManage ? td("archivedNote") : t("lockedReason");
   return (
     <>
       <KalipEkran
@@ -291,7 +541,7 @@ export function ItemDetail({
         testId="item-detail"
         bar={{
           back: { href: base, aria: td("back") },
-          main: { label: tk("edit"), aria: tk("editAria"), d: LICON.pencil, onClick: toEdit, disabled: !writable, testId: "item-edit" },
+          main: { label: tk("edit"), aria: tk("editAria"), d: LICON.pencil, onClick: () => open("edit"), disabled: !writable, disabledReason: lockReason, testId: "item-edit" },
         }}
       >
         <KalipDetayIzgara
@@ -312,7 +562,7 @@ export function ItemDetail({
               </KalipHero>
               <KalipHizli label={tk("quick")} items={quickItems} />
               {writable ? (
-                <button type="button" className="more" onClick={() => setCodeOpen(true)} aria-label={td("codeEdit.for", { name: item.name })}>
+                <button type="button" className="more" onClick={() => open("kod")} aria-label={td("codeEdit.for", { name: item.name })}>
                   <i>
                     <Ico d={LICON.pencil} size={18} />
                   </i>
@@ -343,57 +593,30 @@ export function ItemDetail({
               {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
 
               <Section id="sec-card" title={td("cardTitle")} sub={tk("editSub")} d={LICON.pencil} color="2F5DA8">
-                <form key={`save-${round}`} onSubmit={(e) => void onSave(e)} className="flex min-w-0 flex-col gap-4">
-                  <TextField label={t("form.name")} name="name" defaultValue={item.name} autoComplete="off" required maxLength={512} disabled={!writable} />
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <label htmlFor="detail-card-type" className="text-base font-semibold">
-                      {t("form.cardType")}
-                    </label>
-                    <select id="detail-card-type" name="cardType" defaultValue={item.cardType} disabled={!writable} className={SELECT_CLS}>
-                      {CARD_TYPES.map((k) => (
-                        <option key={k} value={k}>
-                          {k} · {tc(k)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <label htmlFor="detail-pick" className="text-base font-semibold">
-                      {t("form.pick")}
-                    </label>
-                    <select id="detail-pick" name="pickPolicy" defaultValue={item.pickPolicy} disabled={!writable} className={SELECT_CLS}>
-                      {PICK.map((k) => (
-                        <option key={k} value={k}>
-                          {tp(k)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {writable ? (
-                    <div>
-                      <Button type="submit" loading={busy === "save"}>
-                        {td("save")}
-                      </Button>
-                    </div>
-                  ) : null}
-                </form>
                 <dl className="m-0 flex min-w-0 flex-col gap-2">
-                  <div className="min-w-0">
-                    <dt className="text-sm font-semibold text-ink-muted">{t("form.baseUnit")}</dt>
-                    <dd className="m-0 break-words text-base text-ink">{item.baseUnitCode}</dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-sm font-semibold text-ink-muted">{t("form.scale")}</dt>
-                    <dd className="m-0 break-words text-base text-ink">{item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale })}</dd>
-                  </div>
-                  {item.trackingMode === "NONE" ? null : (
-                    <div className="min-w-0">
-                      <dt className="text-sm font-semibold text-ink-muted">{t("form.tracking")}</dt>
-                      <dd className="m-0 break-words text-base text-ink">{tt(item.trackingMode)}</dd>
+                  {[
+                    { k: t("form.name"), v: item.name },
+                    { k: t("form.cardType"), v: `${item.cardType} · ${tc(item.cardType)}` },
+                    { k: t("form.pick"), v: tp(item.pickPolicy) },
+                    { k: t("form.baseUnit"), v: item.baseUnitCode },
+                    { k: t("form.scale"), v: item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale }) },
+                    ...(item.trackingMode === "NONE" ? [] : [{ k: t("form.tracking"), v: tt(item.trackingMode) }]),
+                  ].map((r) => (
+                    <div key={r.k} className="min-w-0">
+                      <dt className="text-sm font-semibold text-ink-muted">{r.k}</dt>
+                      <dd className="m-0 break-words text-base text-ink">{r.v}</dd>
                     </div>
-                  )}
+                  ))}
                 </dl>
                 <p className="break-words text-sm text-ink-muted">{inUse ? td("lockedInUse") : td("lockedFixed")}</p>
+                {writable ? (
+                  <div>
+                    <button type="button" className="btn" style={actBtn("2F5DA8")} onClick={() => open("edit")} data-testid="item-edit-open">
+                      <Ico d={LICON.pencil} size={18} />
+                      {tk("editAria")}
+                    </button>
+                  </div>
+                ) : null}
               </Section>
 
               <Section id="sec-conv" title={td("conversionsTitle")} sub={tk("convSub")} d={LICON.grid} color="6C4BD8">
@@ -402,34 +625,40 @@ export function ItemDetail({
                   <p className="break-words text-base text-ink-muted">{td("conversionsEmpty")}</p>
                 ) : (
                   <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0">
-                    {conversions.map((c) => (
-                      <li key={c.unitId} data-testid="conversion-row" className="min-w-0 break-words rounded-card border-2 border-border p-3 text-base text-ink">
-                        {td("conversionLine", { unit: c.unitCode, factor: c.factor, base: item.baseUnitCode })}
+                    {conversions.map((cv) => (
+                      <li key={cv.unitId} data-testid="conversion-row" className="min-w-0 break-words rounded-card border-2 border-border p-3 text-base text-ink">
+                        {td("conversionLine", { unit: cv.unitCode, factor: cv.factor, base: item.baseUnitCode })}
                       </li>
                     ))}
                   </ul>
                 )}
                 {writable ? (
-                  <form key={`conv-${round}`} onSubmit={(e) => void onConversion(e)} className="flex min-w-0 flex-col gap-3">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <label htmlFor="conv-unit" className="text-base font-semibold">
-                        {td("conversionUnit")}
-                      </label>
-                      <select id="conv-unit" name="unitId" required defaultValue={otherUnits[0]?.id ?? ""} className={SELECT_CLS}>
-                        {otherUnits.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.code} · {u.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <TextField label={td("conversionFactor", { base: item.baseUnitCode })} hint={td("conversionFactorHint")} name="factor" inputMode="decimal" autoComplete="off" required maxLength={64} />
-                    <div>
-                      <Button type="submit" loading={busy === "conversion"}>
-                        {td("conversionSave")}
-                      </Button>
-                    </div>
-                  </form>
+                  <div>
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ ...actBtn("6C4BD8"), opacity: otherUnits.length === 0 ? 0.5 : 1 }}
+                      aria-disabled={otherUnits.length === 0 ? true : undefined}
+                      aria-describedby={otherUnits.length === 0 ? "conv-none" : undefined}
+                      onClick={() => {
+                        if (otherUnits.length === 0) {
+                          tone("err");
+                          setNotice(tk("convNoUnit"));
+                          return;
+                        }
+                        open("conv");
+                      }}
+                      data-testid="conversion-add"
+                    >
+                      <Ico d={LICON.plus} size={18} />
+                      {tk("convAdd")}
+                    </button>
+                    {otherUnits.length === 0 ? (
+                      <small id="conv-none" className="sr">
+                        {tk("convNoUnit")}
+                      </small>
+                    ) : null}
+                  </div>
                 ) : null}
               </Section>
 
@@ -443,12 +672,23 @@ export function ItemDetail({
                       <li key={b.id} data-testid="barcode-row" className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border p-3">
                         <span className="min-w-0 break-all text-base font-semibold text-ink">{b.barcode}</span>
                         <span className="min-w-0 break-words text-sm text-ink-muted">{td("barcodeMeta", { unit: b.unitCode, quantity: b.quantity })}</span>
-                        {b.ambiguous ? <Banner kind="warning">{td("barcodeAmbiguous")}</Banner> : null}
+                        {b.ambiguous ? <KalipUyari title={td("barcodeAmbiguous")} sub={b.barcode} /> : null}
                         {writable ? (
                           <div>
-                            <Button variant="secondary" onClick={() => setRemoving(b)} aria-label={td("barcodeRemoveFor", { barcode: b.barcode })}>
+                            <button
+                              type="button"
+                              className="btn"
+                              style={actBtn("C62828")}
+                              disabled={busy === "remove"}
+                              onClick={() => {
+                                tone("tap");
+                                setRemoving(b);
+                              }}
+                              aria-label={td("barcodeRemoveFor", { barcode: b.barcode })}
+                            >
+                              <Ico d={LICON.trash} size={18} />
                               {td("barcodeRemove")}
-                            </Button>
+                            </button>
                           </div>
                         ) : null}
                       </li>
@@ -456,28 +696,12 @@ export function ItemDetail({
                   </ul>
                 )}
                 {writable ? (
-                  <form key={`bc-${round}`} onSubmit={(e) => void onBarcode(e)} className="flex min-w-0 flex-col gap-3">
-                    <TextField label={td("barcodeValue")} hint={td("barcodeValueHint")} name="barcode" autoComplete="off" autoCapitalize="off" required maxLength={512} />
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <label htmlFor="bc-unit" className="text-base font-semibold">
-                        {td("barcodeUnit")}
-                      </label>
-                      <select id="bc-unit" name="unitId" defaultValue="" className={SELECT_CLS}>
-                        <option value="">{td("barcodeUnitBase", { unit: item.baseUnitCode })}</option>
-                        {otherUnits.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.code} · {u.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <TextField label={td("barcodeQuantity")} hint={td("barcodeQuantityHint")} name="quantity" inputMode="decimal" autoComplete="off" maxLength={64} />
-                    <div>
-                      <Button type="submit" loading={busy === "barcode"}>
-                        {td("barcodeAdd")}
-                      </Button>
-                    </div>
-                  </form>
+                  <div>
+                    <button type="button" className="btn" style={actBtn("0E7C7B")} onClick={() => open("barcode")} data-testid="barcode-add">
+                      <Ico d={LICON.plus} size={18} />
+                      {tk("bcAdd")}
+                    </button>
+                  </div>
                 ) : null}
               </Section>
 
@@ -485,36 +709,28 @@ export function ItemDetail({
                 <Section id="sec-archive" title={td("archiveTitle")} sub={tk("archiveSub")} d={LICON.lock} color="B5552B">
                   <p className="break-words text-sm text-ink-muted">{td("archiveHint")}</p>
                   <div>
-                    <Button variant="danger" onClick={() => setArchiveOpen(true)} loading={busy === "archive"}>
+                    <button
+                      type="button"
+                      className="btn"
+                      style={actBtn("C62828")}
+                      disabled={busy === "archive"}
+                      aria-busy={busy === "archive" || undefined}
+                      onClick={() => {
+                        tone("tap");
+                        setArchiveOpen(true);
+                      }}
+                    >
+                      <Ico d={LICON.trash} size={18} />
                       {td("archive")}
-                    </Button>
+                    </button>
                   </div>
                 </Section>
               ) : null}
-
             </>
           }
         />
       </KalipEkran>
 
-      <CodeEditDialog
-        open={codeOpen}
-        subject={item.name}
-        current={item.code}
-        titleId="code-edit-item-title"
-        onClose={() => setCodeOpen(false)}
-        submit={changeCode}
-        renderError={(e) => <ServerErrorBanner error={e} returnTo={returnTo} />}
-        onDone={(r) => {
-          setCodeOpen(false);
-          setError(null);
-          if (r.changed) {
-            setNotice(null);
-            setCodeChanged({ from: r.from, to: r.to });
-          } else setNotice(td("done.codeSame"));
-          router.refresh();
-        }}
-      />
       <KalipOnay
         open={archiveOpen}
         title={td("confirmArchive.title", { name: item.name })}

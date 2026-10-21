@@ -163,8 +163,9 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  async function scanManual(code:string){await page.getByRole("button",{name:"Elle gir"}).click();await page.getByRole("textbox",{name:"Barkod"}).fill(code);await page.getByRole("button",{name:"Onayla",exact:true}).click();}
  await test.step("saha sayım",async()=>{
   await page.goto(`/t/${slug}/counts?new=1`);
-  const pilotWh=await page.locator("select option").filter({hasText:`Pilot ${suffix} (`}).getAttribute("value");
-  await page.getByTestId("count-new-form").locator("select").selectOption(pilotWh!);await page.getByTestId("count-racks").fill("A-01-01");
+  // T-990: depo seçimi ortak aramalı seçim sayfası (yerel açılır liste yok).
+  await page.getByTestId("count-new-form").getByTestId("count-warehouse").click();
+  await page.getByRole("listbox").getByRole("option").filter({has:page.locator("b",{hasText:new RegExp(`^Pilot ${suffix}$`)})}).click();await page.getByTestId("count-racks").fill("A-01-01");
   await page.getByLabel(/Kör sayım/).uncheck();await page.getByTestId("count-new-form").getByRole("button",{name:"Sayımı başlat",exact:true}).click();
   await expect(page).toHaveURL(/counts\?id=/);const countUrl=page.url();
   const countStatus=page.getByTestId("count-hero").getByRole("status");await expect(countStatus).toHaveText("Sayılıyor");
