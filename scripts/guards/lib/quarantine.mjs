@@ -38,7 +38,7 @@ export const CODES = Object.freeze({
 });
 
 const QID_RE = /^Q-\d+$/;
-const CARD_RE = /^T-\d{3}[a-z]?$/;
+const CARD_RE = /^T-\d{3,4}[a-z]?$/; // 3–4 hane (T-1000+, B-103 / T-445); cards.mjs ile aynı
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const AC_TAG_RE = /@(AC-\d+)(?!\d)/g;
 

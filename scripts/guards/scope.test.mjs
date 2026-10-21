@@ -707,6 +707,14 @@ describe("lib/cards.mjs", () => {
     expect(cardIdFromBranch("int/faz0")).toBeNull();
   });
 
+  it("4 haneli kart numarası (T-1000+, B-103 / T-445); 5 hane ve önek dışı yine reddedilir", () => {
+    expect(cardIdFromBranch("feat/T-1000-x")).toBe("T-1000");
+    expect(cardIdFromBranch("fix/T-1001b-y")).toBe("T-1001b");
+    expect(cardIdFromBranch("feat/T-10000-x")).toBeNull();
+    expect(cardIdFromBranch("chore/T-1000-x")).toBeNull();
+    expect(mergedWorkBranches(["Merge pull request #9 from shosgoren/feat/T-1002-z", "Merge branch 'fix/T-10000-q'"])).toEqual(["feat/T-1002-z"]);
+  });
+
   it("birleştirme konularından çalışma dalları", () => {
     expect(
       mergedWorkBranches([
