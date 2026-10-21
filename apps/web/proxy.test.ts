@@ -28,6 +28,14 @@ describe("proxy: x-request-id, erişim günlüğü (T-129)", () => {
     expect(res.headers.get("x-middleware-request-x-request-id")).toBe(id);
   });
 
+  it("T-999c: tenant alanı yalnız yoldan dil seçimine iletilir; istemcinin gönderdiği başlık silinir", () => {
+    const cookie = "better-auth.session_token=x";
+    const inTenant = proxy(req("/t/acme/items", { cookie, "x-wms-tenant-slug": "evil" }));
+    expect(inTenant.headers.get("x-middleware-request-x-wms-tenant-slug")).toBe("acme");
+    const outside = proxy(req("/login", { "x-wms-tenant-slug": "evil" }));
+    expect(outside.headers.get("x-middleware-request-x-wms-tenant-slug")).toBeNull();
+  });
+
   it("başlık yoksa yeni UUID; her istekte farklı", () => {
     const a = proxy(req("/login")).headers.get("x-request-id");
     const b = proxy(req("/login")).headers.get("x-request-id");

@@ -2795,6 +2795,29 @@
       "loadHint": "Reopen the document from the list; if it persists, tell an authorized person.",
       "paperLabel": "Paper",
       "kindHint": "Barrel or box"
+    },
+    "labelPreview": {
+      "paper": "Paper",
+      "roll": "Roll",
+      "qrAria": "Package QR {no}",
+      "packageOf": "Package {no} / {total} · {kind}",
+      "quantity": "Package quantity: {qty} {unit}",
+      "quarantine": "⚠ Quarantine",
+      "lot": "Lot: {lot}",
+      "dates": "Produced: {produced} · Expiry: {expires}",
+      "previewAria": "Package label preview",
+      "width": "Width (mm)",
+      "height": "Height (mm)",
+      "summary": "{count} packages · Package quantity",
+      "helpTitle": "Printing help",
+      "helpBody": "In the print/PDF window keep the scale at 100% and headers/footers off. Check QR readability with a test print. If text or QR does not fit, increase the size.",
+      "invalid": "Invalid size. For A4 choose at most 190 × 277 mm.",
+      "preparing": "Preparing QR codes…",
+      "qrFailed": "QR codes could not be generated.",
+      "retry": "Try again",
+      "noFit": "QR or text does not fit this size. Increase the label width or height.",
+      "print": "Print / PDF",
+      "stockViewRequired": "Labels need a posted document and permission to view stock in this warehouse."
     }
   },
   "packageMovement": {

@@ -96,3 +96,6 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - **Entegrasyon (`/t/<alan>/integrations`, T-991):** form kalıbı + `Entegrasyon.dc.html` "YENİ" bölümü (`.dzen`, iç sarmalayıcı `display: contents`).
   Bağlan penceresi KalipPencere, Kes onayı KalipOnay; akış = KalipAnahtar + KalipSecenek (yön). Ana düğme BAĞLAN / EŞİTLE hiçbir durumda sessiz
   değil. Ayarlar > Bağlantılar (T-981) kartı bu adrese bağlanacak.
+## Arayüz dili (T-999c)
+- Görünür metin yalnız `apps/web/messages/{tr,en}.json`; JSX'e sabit metin yazılmaz. İki dosyanın anahtar kümesi, tek dilde boş metin ve `{yer tutucu}` adları `apps/web/messages/messages.test.ts` ile bekçide.
+- Dil sırası (`apps/web/i18n/request.ts`): `locale` çerezi (cihaz tercihi; bugün yazan yok) → tenant sayfalarında Ayarlar > Dil (`tenant_settings.locale`, her üye okur) → tarayıcı dili → `tr`. Tenant dışı sayfalar tarayıcı dilindedir (B-105).

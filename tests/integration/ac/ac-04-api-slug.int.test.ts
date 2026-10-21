@@ -552,7 +552,7 @@ describe("paket kabulü ve etiket yükleyicileri — gerçek DB üyelik/izin/RLS
       expect(body).not.toContain(packageDocs.postedA);
       expect(body).not.toContain("200.000000");
       if (rel === PACKAGE_LOADERS[0]) expect(body).toContain("locked");
-      else expect(body).toContain("stok görüntüleme yetkisi");
+      else expect(body).toContain("stockViewRequired"); // T-999c: yetki uyarısı mesaj anahtarıyla çizilir (intl sahte modülü anahtarı döndürür)
       expect(await snapshot(A)).toEqual(before);
     });
 

@@ -6,7 +6,7 @@ import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { listMyActionsToday } from "../../../packages/domain/src/audit/today.ts";
 import { listMyActionsTodayAt } from "../../../packages/domain/src/audit/today-impl.ts";
-import { getTenantSettings } from "../../../packages/domain/src/onboarding/settings-queries.ts";
+import { getTenantSettings, getWorkspaceLocale } from "../../../packages/domain/src/onboarding/settings-queries.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
 const env = readIntEnv(process.env);
@@ -89,6 +89,21 @@ describe("getTenantSettings", () => {
     const a = await mkTenant();
     const b = await mkTenant();
     await expect(getTenantSettings({ ...acc(b, b.owner), tenantSlug: a.slug })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("getWorkspaceLocale (T-999c)", () => {
+  it("her üye (PICKER dahil) alanın dilini okur; değişince yeni dil döner", async () => {
+    const fx = await mkTenant();
+    const picker = await mkMember(fx.tenant, "PICKER");
+    expect(await getWorkspaceLocale(acc(fx, picker))).toBe("tr");
+    await adm.query("UPDATE public.tenant_settings SET locale = 'en' WHERE tenant_id = $1", [fx.tenant]);
+    expect(await getWorkspaceLocale(acc(fx, picker))).toBe("en");
+  });
+  it("başka tenant'ın slug'ı (üye değil) → NOT_FOUND", async () => {
+    const a = await mkTenant();
+    const b = await mkTenant();
+    await expect(getWorkspaceLocale({ ...acc(b, b.owner), tenantSlug: a.slug })).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
 
