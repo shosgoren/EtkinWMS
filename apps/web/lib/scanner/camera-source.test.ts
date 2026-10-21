@@ -6,7 +6,7 @@ import { classifyCameraError, createFrameDecoder, videoRoi, gs1CheckDigitValid, 
 import type { DecoderEnv, FrameDecoder, RawRead, RejectReason, VideoRect, WasmReader } from "./camera-source.ts";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { ean13CheckDigit, ean13Modules } from "../../../../tests/e2e/support/barcode-y4m.ts";
+import { ean13CheckDigit, ean13Modules } from "./barcode-y4m.fixture.ts";
 
 describe("validateCameraRead (T-287g)", () => {
   it("geçerli EAN-13, EAN-8, UPC-A değerlerini aynen kabul eder", () => {
