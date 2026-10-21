@@ -722,7 +722,7 @@ test("Kokpit 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir); l
     await expect(pendingCard.getByTestId("now-putaway")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[0]?.id}`);
     // Fiil ve şevron HER yükseklikte görünür (anlam kısa ekranda kaybolmaz).
     for (const k of ["now-receive", "now-putaway"]) {
-      await expect(pendingCard.getByTestId(k).locator("svg"), `${w}x${h}: ${k} şevron görünür`).toBeVisible();
+      await expect(pendingCard.getByTestId(k).locator(".qb svg"), `${w}x${h}: ${k} şevron görünür`).toBeVisible();
       await expect(pendingCard.getByTestId(k).locator(".now-label"), `${w}x${h}: ${k} fiil görünür`).toContainText("bekliyor");
     }
     // T-979: Kokpit liste kalıbında içerik alanı kayar; "Sıradaki" (kısa biçim) ve "Ardından" satırları her boyutta görünür (DB'deki en eski açık işler).

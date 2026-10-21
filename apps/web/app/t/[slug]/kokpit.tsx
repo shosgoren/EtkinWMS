@@ -179,7 +179,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
       ) : showNow ? null : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
           <KalipBos title={t("myTasks.empty")} iconD={LICON.clip} testId="my-tasks-empty" />
-          <a className="btn n" href={`${base}/field`} style={ROW}>
+          <a className="btn n" href={`${base}/field`} style={{ ...ROW, minHeight: 56 }}>
             <Ico d={LICON.arrow} size={18} />
             {t("myTasks.start")}
           </a>
@@ -189,7 +189,8 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
       <KalipBaslik title={t("tasksLabel")} />
       <KalipKartListe label={t("tasksLabel")}>
         {active.map((d) => (
-          <a key={d.key} role="listitem" className="uc" style={{ ...ROW, animationDelay: `${i++ * 30}ms` }} href={hrefs[d.key]?.href} data-state="active" data-task={d.key}>
+          <div key={d.key} role="listitem" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <a className="uc" style={{ ...ROW, animationDelay: `${i++ * 30}ms` }} href={hrefs[d.key]?.href} data-state="active" data-task={d.key}>
             {icon(d.d, d.color)}
             <span className="ut">
               <b>{t(`tasks.${d.key}.title`)}</b>
@@ -201,6 +202,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
               </b>
             </span>
           </a>
+          </div>
         ))}
         {locked.map((d) => (
           <div key={d.key} role="listitem" className="uc" aria-disabled="true" aria-label={`${t(`tasks.${d.key}.title`)} · ${t("lockedReason")}`} data-state="locked" data-task={d.key} style={{ opacity: 0.72 }}>

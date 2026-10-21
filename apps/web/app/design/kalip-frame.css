@@ -248,7 +248,6 @@ dialog.dzf.kpen::backdrop { background: transparent; }
   --color-ink: var(--color-dz-x-bhcoec);
   --color-ink-muted: var(--color-dz-x-eogehg);
   --color-border: var(--color-dz-x-mjngoa);
-  --color-border-strong: var(--color-dz-x-eogehg);
   --color-accent: var(--color-dz-x-bhcoec);
   --color-accent-ink: var(--color-dz-x-bhcoec);
   --color-accent-soft: var(--color-dz-x-oopbpe);
