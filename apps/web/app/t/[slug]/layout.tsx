@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { GirisBant, GirisBaslik, GirisKabuk } from "../../giris-ui.tsx";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { getAppDb } from "@wms/db";
 import { runTenantCommand, runTenantQuery } from "@wms/domain/identity/access";
 import { MARK_TIMEOUTS, markWorkspaceUsed, needsMark } from "@wms/domain/identity/last-workspace";
@@ -53,7 +53,7 @@ export default async function TenantLayout({ children, params }: { children: Rea
         // kodla yakalanır ve çerçeveli bir durum olarak render edilir (çocuklar render edilmez).
         const te = await getTranslations("members.errors");
         const key = e.code.toLowerCase();
-        const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+        const dark = temaKoyu(await cookies());
         return (
           <GirisKabuk dark={dark} testId="tenant-status">
             <GirisBaslik title={te("tenantStatusTitle")} />

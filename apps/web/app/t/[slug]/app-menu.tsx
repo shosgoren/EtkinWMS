@@ -9,9 +9,10 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { SignOutButton } from "../../auth-forms.tsx";
 import { LICON } from "../../design/kalip-icons.ts";
-import { Ico, tone } from "./kalip/ekran.tsx";
+import { Ico } from "./kalip/ekran.tsx";
 import { KalipPencere, KalipPencereDugme } from "./kalip/pencere.tsx";
 import { kdz } from "./kalip/tokens.ts";
+import { feedback } from "@wms/ui";
 
 export const APP_MENU_ID = "app-menu";
 const OPEN_EVENT = "wms:app-menu-open";
@@ -53,7 +54,7 @@ export function AppMenu({ slug, userName, memberships, view, setViewAction, link
     const onOpen = (e: Event) => {
       const from = (e as CustomEvent<Element | null>).detail;
       opener.current = from instanceof HTMLElement && from !== document.body ? from : null;
-      tone("tap");
+      feedback.minor();
       setOpen(true);
     };
     window.addEventListener(OPEN_EVENT, onOpen);
@@ -61,7 +62,7 @@ export function AppMenu({ slug, userName, memberships, view, setViewAction, link
   }, []);
 
   const close = useCallback(() => {
-    tone("tap");
+    feedback.minor();
     setOpen(false);
     // Pencere DOM'dan kalkınca odak açan öğeye döner; o öğe artık yoksa (Hesap menüsü kapandı) sayfanın Hesap düğmesine.
     window.requestAnimationFrame(() => {

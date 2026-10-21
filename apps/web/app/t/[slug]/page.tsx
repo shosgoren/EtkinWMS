@@ -257,7 +257,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     <main className="flex w-full min-w-0 flex-col">
       <Kokpit
         slug={slug}
-        dark={jar.get(THEME_COOKIE)?.value === "koyu"}
+        dark={temaKoyu(jar)}
         firstName={firstName}
         allowed={allowed}
         today={todayList}
