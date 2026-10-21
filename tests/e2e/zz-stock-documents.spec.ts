@@ -1,4 +1,4 @@
-import { expect,test } from "@playwright/test";
+import { expect,test,type Page } from "@playwright/test";
 import { localClient,loginEmptyTenant,scrubSecretInputs } from "./support/empty-tenant.ts";
 test.use({...localClient("198.51.100.12"),trace:"off"});
 test.afterEach(async({page})=>scrubSecretInputs(page));
@@ -8,19 +8,20 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  test.setTimeout(180_000); // T-977: saha sayım + saha toplama/sevk adımları eklendi; yalnız süre, assertion değişmez
  const {slug}=await loginEmptyTenant(page,info.project.name.includes("mobile")?"stockMobile":"stockDesktop"),suffix=info.project.name;
  await page.goto(`/t/${slug}/warehouses?new=1`);
- const dialog=page.getByRole("dialog");await expect(dialog).toBeVisible();
- await dialog.locator('input[name="name"]').fill(`Pilot ${suffix}`);
- await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();
- await expect(dialog.locator('input[name="name"]')).toHaveCount(0);
+ // T-990: ekleme pencere değil tam ekran formdur (Kaydet alt çubukta).
+ const whForm=page.getByTestId("warehouse-form");await expect(whForm).toBeVisible();
+ await whForm.locator('input[name="name"]').fill(`Pilot ${suffix}`);
+ await page.getByTestId("warehouse-form-save").click();
+ await expect(whForm).toHaveCount(0);
  await page.goto(`/t/${slug}/warehouses`);
  const card=page.getByTestId("warehouse-card").filter({hasText:`Pilot ${suffix}`});
  const href=await card.getByRole("link",{name:"Lokasyonları aç"}).getAttribute("href");
  expect(href).toBeTruthy();await page.goto(`${href}?bulk=1`);
- const bulk=page.getByRole("dialog");await expect(bulk.getByRole("button",{name:"50 lokasyonu oluştur"})).toBeVisible();
+ const bulk=page;await expect(page.getByTestId("bulk-form")).toBeVisible();await expect(bulk.getByRole("button",{name:"50 lokasyonu oluştur"})).toBeVisible();
  await bulk.getByRole("button",{name:"50 lokasyonu oluştur"}).click();
  await page.goto(`/t/${slug}/items?new=1`);
- await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Pilot ürün ${suffix}`);
- await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
+ const itemForm=page.getByTestId("item-form");await expect(itemForm).toBeVisible();await expect(itemForm.locator('input[name="code"]')).toHaveValue(/.+/);await itemForm.locator('input[name="name"]').fill(`Pilot ürün ${suffix}`);
+ await page.getByTestId("item-form-save").click();await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
  const urunUrl=page.url();
  const path=`/t/${slug}/stock/documents`;
  // T-972 (liste kalıbı): stok kartı rozeti kullanılabilir miktarı kayan noktasız biçimler ("10.000000" → "10").
@@ -53,8 +54,8 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await page.getByRole("button",{name:"Belgeyi iptal et"}).click();await expect(page.getByRole("status").filter({hasText:"İptal edildi"})).toBeVisible();
  await stockHas(`Pilot ürün ${suffix}`,"10");
  await page.goto(`/t/${slug}/warehouses?new=1`);
- await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Target ${suffix}`);
- await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(dialog.locator('input[name="name"]')).toHaveCount(0);
+ await expect(whForm).toBeVisible();await whForm.locator('input[name="name"]').fill(`Target ${suffix}`);
+ await page.getByTestId("warehouse-form-save").click();await expect(whForm).toHaveCount(0);
  await page.goto(`/t/${slug}/warehouses`);
  const targetHref=await page.getByTestId("warehouse-card").filter({hasText:`Target ${suffix}`}).getByRole("link",{name:"Lokasyonları aç"}).getAttribute("href");
  expect(targetHref).toBeTruthy();await page.goto(`${targetHref}?bulk=1`);
@@ -69,9 +70,9 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await expect(page.getByRole("link",{name:/Bağlı stok belgesi/})).toContainText("GRS-");
  await stockHas(`Pilot ürün ${suffix}`,"7");await stockHas(`Pilot ürün ${suffix}`,"3");
 
- await page.goto(`/t/${slug}/items?new=1`);await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Pilot mamul ${suffix}`);
- await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
- await page.locator('input[name="barcode"]').fill(`PILOT-MAMUL-${suffix}`);await page.getByRole("button",{name:"Barkodu ekle"}).click();await expect(page.getByText("Barkod eklendi.")).toBeVisible();
+ await page.goto(`/t/${slug}/items?new=1`);await expect(itemForm).toBeVisible();await expect(itemForm.locator('input[name="code"]')).toHaveValue(/.+/);await itemForm.locator('input[name="name"]').fill(`Pilot mamul ${suffix}`);
+ await page.getByTestId("item-form-save").click();await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
+ await addBarcode(page,`PILOT-MAMUL-${suffix}`);
  await page.goto(`/t/${slug}/production?new=1`);
  await page.getByLabel("Reçete kodu",{exact:true}).fill(`RECIPE-${suffix}`);await page.getByLabel("Reçete adı",{exact:true}).fill(`Pilot reçete ${suffix}`);
  await page.getByRole("searchbox",{name:"Mamul",exact:true}).fill(`Pilot mamul ${suffix}`);await page.getByRole("option").first().click();
@@ -113,9 +114,9 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await expect(page.locator('[data-location-tree-ready="true"]')).toHaveCount(1);
  const addLocation=page.getByRole("button",{name:"Lokasyon ekle",exact:true});
  await expect(addLocation).toBeEnabled();await addLocation.click();
- await expect(dialog).toBeVisible();await dialog.locator('input[name="name"]').fill(`Sevk ${suffix}`);
- await expect(dialog.locator('input[name="code"]')).not.toHaveAttribute("readonly","");
- await dialog.locator('input[name="code"]').fill("SHIP");await dialog.locator('select[name="kind"]').selectOption("STAGING");await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(dialog).toBeHidden();
+ const locForm=page.getByTestId("location-form");await expect(locForm).toBeVisible();await locForm.locator('input[name="name"]').fill(`Sevk ${suffix}`);
+ await expect(locForm.locator('input[name="code"]')).not.toHaveAttribute("readonly","");
+ await locForm.locator('input[name="code"]').fill("SHIP");await pickKind(page,"STAGING");await page.getByTestId("location-form-save").click();await expect(locForm).toBeHidden();
  await page.goto(`/t/${slug}/stock`);await page.getByRole("link",{name:"Sevkiyat",exact:true}).click();
  async function newOrder(quantity:string,reference:string){
   await page.getByRole("link",{name:"Yeni sipariş",exact:true}).click();await page.getByLabel("Müşteri / sipariş açıklaması").fill(reference);
@@ -191,10 +192,10 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  // T-977 (B-52/B-63): saha toplama (raf okut → ürün okut → miktar → onay) ve saha sevk (satır → miktar → yükleme onayı).
  await test.step("saha toplama ve sevk",async()=>{
   await page.goto(href!);await expect(page.locator('[data-location-tree-ready="true"]')).toHaveCount(1);
-  await page.getByRole("button",{name:"Lokasyon ekle",exact:true}).click();await expect(dialog).toBeVisible();
-  await dialog.locator('input[name="name"]').fill(`Sevk 2 ${suffix}`);await dialog.locator('input[name="code"]').fill("SHIP");
-  await dialog.locator('select[name="kind"]').selectOption("STAGING");await dialog.getByRole("button",{name:"Kaydet",exact:true}).click();await expect(dialog).toBeHidden();
-  await page.goto(urunUrl);await page.locator('input[name="barcode"]').fill(`PILOT-URUN-${suffix}`);await page.getByRole("button",{name:"Barkodu ekle"}).click();await expect(page.getByText("Barkod eklendi.")).toBeVisible();
+  await page.getByRole("button",{name:"Lokasyon ekle",exact:true}).click();const locForm2=page.getByTestId("location-form");await expect(locForm2).toBeVisible();
+  await locForm2.locator('input[name="name"]').fill(`Sevk 2 ${suffix}`);await expect(locForm2.locator('input[name="code"]')).not.toHaveAttribute("readonly","");await locForm2.locator('input[name="code"]').fill("SHIP");
+  await pickKind(page,"STAGING");await page.getByTestId("location-form-save").click();await expect(locForm2).toBeHidden();
+  await page.goto(urunUrl);await addBarcode(page,`PILOT-URUN-${suffix}`);
   await page.goto(`/t/${slug}/shipping?new=1`);await page.getByLabel("Müşteri / sipariş açıklaması").fill(`Saha müşteri ${suffix}`);
   await page.getByRole("searchbox",{name:"Ürün 1",exact:true}).fill(`Pilot ürün ${suffix}`);await page.getByRole("option").first().click();
   await page.getByLabel(/Sipariş miktarı/).fill("2");await page.getByRole("button",{name:"Siparişi oluştur",exact:true}).click();await expect(page).toHaveURL(/shipping\?id=/);
@@ -223,3 +224,8 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
   await page.goto(orderUrl);await expect(page.getByRole("status").filter({hasText:/^Tamamlandı$/})).toBeVisible();
  });
 });
+
+/** T-990: lokasyon türü seçim kutusu (radiogroup; yerel select yok). */
+async function pickKind(page:Page,kind:string):Promise<void>{const box=page.locator(`[data-alan="kind"] [data-option="${kind}"]`);await box.click();await expect(box).toHaveAttribute("aria-checked","true");}
+/** T-990: barkod ekleme ürün kartından tam ekran forma (`barcode-add` → `barcode-form`). */
+async function addBarcode(page:Page,code:string):Promise<void>{await page.getByTestId("barcode-add").click();const f=page.getByTestId("barcode-form");await expect(f).toBeVisible();await f.locator('input[name="barcode"]').fill(code);await page.getByTestId("barcode-form-save").click();await expect(page.getByText("Barkod eklendi.").first()).toBeVisible();}

@@ -14,7 +14,7 @@ import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { KalipDestek } from "./destek.tsx";
 import { KalipSurumBekcisi } from "./surum.tsx";
-import { kdz, type KalipScope } from "./tokens.ts";
+import { kdz, kdzOrtak, type KalipScope } from "./tokens.ts";
 
 export type KalipKind = "liste" | "form" | "detay";
 const SCOPE: Record<KalipKind, KalipScope> = { liste: "dzl", form: "dzf", detay: "dzd" };
@@ -155,7 +155,14 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
   // Pano kaynağının sınıfları (`.tb`, `.halo.tmenu`) `.dzp` kabında tanımlıdır; kutu üretmeyen kap (yeni stil yok).
   const panoScope = `dzp${dark ? " dz-dark" : ""}`;
   const scope = SCOPE[kind];
-  const c = (hex: string): string => kdz(scope, hex);
+  // T-990: ekran ikonu rengi (ör. tam ekran ürün formunda kart türü rengi) önce kabın, yoksa diğer kalıp kaynaklarının belirteci.
+  const c = (hex: string): string => {
+    try {
+      return kdz(scope, hex);
+    } catch {
+      return kdzOrtak(hex);
+    }
+  };
   const sub =
     subtitle ??
     [ctx?.tenantName, ctx?.roleLabel]

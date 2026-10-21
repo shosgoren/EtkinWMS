@@ -1371,7 +1371,8 @@
         "fixedTitle": "Fixed details",
         "convAdd": "Add conversion",
         "convNoUnit": "There is no other unit for a conversion; add a new unit first.",
-        "bcAdd": "Add barcode"
+        "bcAdd": "Add barcode",
+        "unitTag": "UNIT · {unit}"
       }
     },
     "errors": {

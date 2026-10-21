@@ -1371,7 +1371,8 @@
         "fixedTitle": "Değişmeyen bilgiler",
         "convAdd": "Dönüşüm ekle",
         "convNoUnit": "Dönüşüm için başka birim yok; önce yeni birim ekle.",
-        "bcAdd": "Barkod ekle"
+        "bcAdd": "Barkod ekle",
+        "unitTag": "BİRİM · {unit}"
       }
     },
     "errors": {
