@@ -8,6 +8,7 @@ import type { NextRequest } from "next/server";
 import { createConsoleLogger, maskAccessPath, maskString, requestIdFrom } from "@wms/shared/log";
 import { safeNext } from "./lib/safe-redirect.ts";
 import { appSurface, isPanelInternal, panelRoute, shortWorkspaceTarget } from "./lib/surface.ts";
+import { TENANT_SLUG_HEADER, tenantSlugFromPath } from "./i18n/tenant-slug.ts";
 
 const logger = createConsoleLogger("web");
 
@@ -62,6 +63,11 @@ export function proxy(request: NextRequest): NextResponse {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("content-security-policy", csp);
   requestHeaders.set("x-request-id", requestId);
+  // T-999c: tenant sayfasının alanı dil seçimine (`i18n/request.ts`) iletilir. İstemcinin gönderdiği değer her zaman silinir; yalnız yoldan
+  // türetilir. Güvenlik sınırı değildir: dil okuması üyelik + izin + RLS ile sunucuda yapılır.
+  requestHeaders.delete(TENANT_SLUG_HEADER);
+  const tenantSlug = tenantSlugFromPath(pathname);
+  if (tenantSlug !== null) requestHeaders.set(TENANT_SLUG_HEADER, tenantSlug);
   // Erişim günlüğü: yol + sorgu MASKELİ (davet/sıfırlama belirteci, `next=` içindeki dahil); başlık/çerez/IP yok.
   const rawPath = `${pathname}${search}`;
   // Günlükte yol maskeli; sorgu YALNIZCA izinli anahtarlarla (değerler maskeli), diğerleri düşürülür (kişisel veri yazılmaz).

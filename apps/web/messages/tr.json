@@ -2798,7 +2798,30 @@
       "kindHint": "Varil ya da koli"
     },
     "toWarehouses": "Depolara git",
-    "toLocations": "Lokasyon ekle"
+    "toLocations": "Lokasyon ekle",
+    "labelPreview": {
+      "paper": "Kâğıt",
+      "roll": "Rulo",
+      "qrAria": "Paket QR {no}",
+      "packageOf": "Paket {no} / {total} · {kind}",
+      "quantity": "Paket miktarı: {qty} {unit}",
+      "quarantine": "⚠ Karantina",
+      "lot": "Lot: {lot}",
+      "dates": "Üretim: {produced} · SKT: {expires}",
+      "previewAria": "Paket etiket önizlemesi",
+      "width": "Genişlik (mm)",
+      "height": "Yükseklik (mm)",
+      "summary": "{count} paket · Paket miktarı",
+      "helpTitle": "Yazdırma yardımı",
+      "helpBody": "Yazdırma/PDF penceresinde ölçeği %100, üstbilgi/altbilgiyi kapalı tutun. QR okunurluğunu deneme baskısıyla kontrol edin. Metin veya QR sığmazsa ölçüyü artırın.",
+      "invalid": "Ölçü geçersiz. A4 için en çok 190 × 277 mm seçin.",
+      "preparing": "QR kodları hazırlanıyor…",
+      "qrFailed": "QR üretilemedi.",
+      "retry": "Tekrar dene",
+      "noFit": "QR veya metin bu ölçüye sığmıyor. Etiket genişliğini veya yüksekliğini artırın.",
+      "print": "Yazdır / PDF",
+      "stockViewRequired": "Etiket için işlenmiş belge ve bu depoda stok görüntüleme yetkisi gerekir."
+    }
   },
   "packageMovement": {
     "title": "Paket işlemi",
