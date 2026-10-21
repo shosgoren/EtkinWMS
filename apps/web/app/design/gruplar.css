@@ -243,7 +243,6 @@ body:has(.dzr) {
   border-radius:999px;
   background:var(--color-dz-a-bhcoec-di);
   backdrop-filter:blur(18px) saturate(1.3);
-  -webkit-backdrop-filter:blur(18px) saturate(1.3);
   border:1px solid var(--color-dz-a-pppppp-ef);
   box-shadow:0 14px 34px -16px var(--color-dz-a-bhcoec-f),inset 0 1px 0 var(--color-dz-a-pppppp-df);
 }
@@ -2831,7 +2830,6 @@ from{transform:scale(.4);opacity:0}
   z-index:40;
   background:var(--color-dz-a-afajan-df);
   backdrop-filter:blur(3px);
-  -webkit-backdrop-filter:blur(3px);
   animation:dzr-fadein .2s;
 }
 @keyframes dzr-fadein {
@@ -2853,7 +2851,6 @@ from{opacity:0}
   border-radius:26px;
   background:var(--color-dz-a-aoblch-jc);
   backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
   border:1.5px solid var(--color-dz-a-pppppp-bg);
   box-shadow:0 30px 60px -24px var(--color-dz-a-aaaaaa-g);
   color:var(--color-dz-x-pppppp);

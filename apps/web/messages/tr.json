@@ -4454,7 +4454,8 @@
         "name": "Ekip",
         "sub": "Kişiler · Yetki"
       }
-    }
+    },
+    "mainOff": "Bu işlem şu an yapılamaz."
   },
   "kalip": {
     "help": "Yardım",
@@ -4471,7 +4472,37 @@
     "stepAria": "Adım {n} / {total}: {title}",
     "stepLocked": ", sırada",
     "stepDone": ", tamam",
-    "voiceSoon": "Sesle söyleme yakında · Etkin geliyor"
+    "voiceSoon": "Sesle söyleme yakında · Etkin geliyor",
+    "unsavedText": "Kaydedilmemiş değişiklik var. Kaydetmeden çıkarsan kaybolur.",
+    "back": "Geri",
+    "save": "Kaydet",
+    "saveShort": "KAYDET",
+    "saved": "Kaydedildi",
+    "saving": "Kaydediliyor…",
+    "saveFailed": "Kaydedilemedi. Bağlantını kontrol edip yeniden dene.",
+    "noChange": "Değişiklik yok — kaydedilecek bir şey yok.",
+    "readOnly": "Yalnız görüntüleme",
+    "readOnlySub": "Değiştirme yetkin yok; yöneticine sor.",
+    "preview": "Önizleme",
+    "previewName": "Adı yaz",
+    "vRequired": "Zorunlu",
+    "vEmail": "Geçerli bir e-posta yaz",
+    "vNumber": "Sayı yaz",
+    "vTooLong": "Çok uzun",
+    "vMissing": "{n} alan eksik: {list}",
+    "vInvalid": "{n} alan hatalı: {list}",
+    "secSearch": "Ara ya da okut…",
+    "secSearchLabel": "{title} içinde ara",
+    "secScan": "Okut",
+    "secMic": "Sesle söyle (yakında)",
+    "secNone": "Eşleşen yok",
+    "secScanNone": "{code} listede yok",
+    "secPick": "Seç",
+    "updatedTitle": "Uygulama güncellendi",
+    "updatedText": "Yeni sürüm yüklendi. Devam etmek için sayfayı yenile; bu işlem eski sürümle gönderilemedi.",
+    "updatedReload": "Yenile",
+    "updatedLater": "Sonra",
+    "mainOff": "Bu işlem şu an yapılamaz."
   },
   "saha": {
     "online": "Çevrimiçi",

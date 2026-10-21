@@ -22,6 +22,7 @@
 @import "./design/destek.css";
 @import "./design/destek-ek.css";
 @import "./design/destek-frame.css";
+@import "./design/perde.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */

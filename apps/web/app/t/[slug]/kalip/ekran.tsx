@@ -13,6 +13,7 @@ import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { KalipDestek } from "./destek.tsx";
+import { KalipSurumBekcisi } from "./surum.tsx";
 import { kdz, type KalipScope } from "./tokens.ts";
 
 export type KalipKind = "liste" | "form" | "detay";
@@ -220,6 +221,8 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
               {children}
             </main>
             {overlays}
+            {/* T-990: yayından sonra açık kalan sayfa eski eylem kimliğiyle çağırırsa "Uygulama güncellendi — Yenile". */}
+            <KalipSurumBekcisi />
             {hesap ? (
               <div className={panoScope} style={{ display: "contents" }}>
                 <HesapMenu team={false} me={me} dark={dark} onToggleTheme={toggleTheme} onClose={closeHesap} />

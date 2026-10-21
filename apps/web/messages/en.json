@@ -4454,7 +4454,8 @@
         "name": "Team",
         "sub": "People · Permissions"
       }
-    }
+    },
+    "mainOff": "This action is not available right now."
   },
   "kalip": {
     "help": "Help",
@@ -4471,7 +4472,37 @@
     "stepAria": "Step {n} / {total}: {title}",
     "stepLocked": ", next",
     "stepDone": ", done",
-    "voiceSoon": "Voice input coming soon · Etkin"
+    "voiceSoon": "Voice input coming soon · Etkin",
+    "unsavedText": "There are unsaved changes. They will be lost if you leave without saving.",
+    "back": "Back",
+    "save": "Save",
+    "saveShort": "SAVE",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "saveFailed": "Could not save. Check your connection and try again.",
+    "noChange": "No changes — nothing to save.",
+    "readOnly": "View only",
+    "readOnlySub": "You cannot change this; ask your manager.",
+    "preview": "Preview",
+    "previewName": "Type a name",
+    "vRequired": "Required",
+    "vEmail": "Enter a valid email",
+    "vNumber": "Enter a number",
+    "vTooLong": "Too long",
+    "vMissing": "{n} fields missing: {list}",
+    "vInvalid": "{n} fields invalid: {list}",
+    "secSearch": "Search or scan…",
+    "secSearchLabel": "Search in {title}",
+    "secScan": "Scan",
+    "secMic": "Say it (coming soon)",
+    "secNone": "No match",
+    "secScanNone": "{code} is not in the list",
+    "secPick": "Choose",
+    "updatedTitle": "App updated",
+    "updatedText": "A new version is live. Reload the page to continue; this action could not be sent with the old version.",
+    "updatedReload": "Reload",
+    "updatedLater": "Later",
+    "mainOff": "This action is not available right now."
   },
   "saha": {
     "online": "Online",

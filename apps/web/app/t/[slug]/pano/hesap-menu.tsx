@@ -2,9 +2,12 @@
 // T-971 (B-92): Pano.dc.html Ekip/Hesap düğmesi (`.tb.tb-team`) ve menüsü (`.hback` + `.halo.tmenu`) — Pano ve kalıp ekranlarının ORTAK
 // bileşeni. Sınıflar ve renkler Pano kaynağının üretilmiş CSS'inden (`.dzp` kabı); kalıp ekranı bunları `display: contents` bir `.dzp`
 // kabında çizer (yeni stil yok). Menü: kişi başlığı, (ekip bağlantıları), Kullanıcı değiştir, Tüm ekranlar (uygulama menüsü: Akış/Genel
-// bakış anahtarı ve yetkili ekranlar), tema, Çıkış yap. Çıkış mevcut `/sign-out` uç noktasıyla (Pano'daki ile aynı).
-import { useEffect, useState, type CSSProperties } from "react";
+// bakış anahtarı ve yetkili ekranlar), tema, Çıkış yap. Çıkış mevcut `/sign-out` uç noktasıyla (Pano'daki ile aynı). T-990: bağlantılar
+// istemci içi geçiş; bağlantı, Kullanıcı değiştir ve Çıkış yarım işte önce ortak çıkış kutusuna sorar (`cikisSor`).
+import { useEffect, useState, type CSSProperties, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { cikisSor } from "../kalip/cikis.tsx";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { ICON } from "../../../design/bakis-icons.ts";
@@ -59,6 +62,7 @@ export function HesapDugme({ team, open, onClick }: { team: boolean; open: boole
 /** Kaynak `.hback` + `.halo.tmenu`. Açıkken çizilir; Escape ve perde kapatır. */
 export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }: { team: boolean; me: HesapKisi; links?: readonly HesapBaglanti[]; dark: boolean; onToggleTheme: () => void; onClose: () => void }) {
   const t = useTranslations("pano");
+  const router = useRouter();
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -75,7 +79,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
   };
   const label = team ? t("team") : t("account");
   const items: Array<{ k: string; label: string; color: string; d: string; out?: boolean; go: () => void }> = [
-    ...(team ? [] : [{ k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => void signOut("/login") }]),
+    ...(team ? [] : [{ k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => cikisSor(() => void signOut("/login")) }]),
     // Uygulama menüsü (tüm ekranlar): Akış / Genel bakış anahtarı ve yetkili ekranlar; eski ana ekrandaki "Menü" ile aynı pencere.
     {
       k: "menu",
@@ -88,8 +92,15 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
       },
     },
     { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: onToggleTheme },
-    { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => void signOut("/login") },
+    { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => cikisSor(() => void signOut("/login")) },
   ];
+  // T-990: menü bağlantıları istemci içi geçiştir ve yarım işte önce uygulamanın çıkış kutusuna sorar (tarayıcı penceresi çıkmaz).
+  const follow = (e: MouseEvent<HTMLAnchorElement>, href: string | undefined): void => {
+    if (href === undefined || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    onClose();
+    cikisSor(() => router.push(href));
+  };
   return (
     <>
       <div className="hback" onClick={onClose} />
@@ -104,7 +115,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
           </span>
         </div>
         {links.map((l) => (
-          <a key={l.k} href={l.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} data-testid={`pano-menu-${l.k}`}>
+          <a key={l.k} href={l.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={(e) => follow(e, l.href)} data-testid={`pano-menu-${l.k}`}>
             <i style={{ background: dz(l.color) }}>
               <Ico d={l.d} size={20} />
             </i>

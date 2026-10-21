@@ -8,8 +8,14 @@
 // T-967 (Destek.dc.html): sol yuva her ekranda Geri; ana ekranda pasif `.dk.off` (CSS `design/destek-ek.css`, kap `.dzdx`).
 // Bilinçli farklar (DESIGN-PARITY, T-958): Etkin (B-62) henüz yok → düğme kaynaktaki gibi çizilir, `aria-disabled`; dokununca kaynaktaki
 // "yakında" balonu. Arama kutusundaki mikrofon da aynı. İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+// T-990 (B-97, kullanıcı 21 Ekim): (1) Geri / Ana ekran / ana işlem bağlantısı / Modüller kutuları İSTEMCİ İÇİ geçiştir (tam sayfa yüklemesi
+// yok) ve önce `cikisSor`'a sorar: yarım işte yalnız uygulamanın cam kutusu açılır, tarayıcının "Siteden çıkılsın mı?" penceresi çıkmaz.
+// (2) Ana işlem hiçbir zaman sessizce kapalı kalmaz: pasif görünür (`aria-disabled`), dokununca hata sesi + nedenini söyleyen balon
+// (`disabledReason`, ör. "Değişiklik yok"). Ortak davranış burada; ekranlar yalnız nedeni verir.
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { cikisSor } from "../kalip/cikis.tsx";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
@@ -61,6 +67,8 @@ export interface KabukMain {
   readonly testId?: string;
   /** Bekleyen karar (Ekip/Aktar kaynağındaki sarı `.dk.big.wait`). */
   readonly wait?: boolean;
+  /** Pasifken dokununca balonda söylenen neden (verilmezse genel metin). */
+  readonly disabledReason?: string;
 }
 
 export interface KabukBarProps {
@@ -163,11 +171,28 @@ function SearchIco() {
   );
 }
 
-/** Bağlantı ya da düğme (aynı sınıf ve içerik). */
+/** Düz sol tıklama mı (yeni sekme / indirme istekleri tarayıcıya bırakılır)? */
+function plainClick(e: MouseEvent<HTMLElement>): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
+
+/** Bağlantı ya da düğme (aynı sınıf ve içerik). Bağlantı istemci içi geçiştir ve yarım işte önce çıkış kutusuna sorar. */
 function Slot({ nav, className, aria, testId, k, current, children }: { nav: KabukNav; className: string; aria: string; testId: string; k: KabukSlot; current?: boolean; children: ReactNode }) {
+  const router = useRouter();
   const common = { className, "aria-label": nav.aria ?? aria, "data-testid": nav.testId ?? testId, "data-k": k, "aria-current": current === true ? ("page" as const) : undefined };
-  return nav.href !== undefined && nav.onClick === undefined ? (
-    <a href={nav.href} {...common} style={{ textDecoration: "none" }}>
+  const href = nav.href;
+  return href !== undefined && nav.onClick === undefined ? (
+    <a
+      href={href}
+      {...common}
+      style={{ textDecoration: "none" }}
+      onClick={(e) => {
+        if (!plainClick(e)) return;
+        e.preventDefault();
+        tone("tap");
+        cikisSor(() => router.push(href));
+      }}
+    >
       {children}
     </a>
   ) : (
@@ -181,6 +206,7 @@ const TOASTS = { ok: ["2F7D5B", KICON.check], err: ["C62828", KICON.close], info
 
 export function KabukBar({ dark, home = false, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
   const t = useTranslations("kabuk");
+  const router = useRouter();
   const ctx = useContext(KabukContext);
   const base = ctx?.base ?? "/";
   const modules = ctx?.modules ?? [];
@@ -297,11 +323,41 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 <span>{t("homeShort")}</span>
               </Slot>
               {center.href !== undefined && center.onClick === undefined && center.disabled !== true ? (
-                <a href={center.href} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }}>
+                <a
+                  href={center.href}
+                  className={centerCls}
+                  aria-label={center.aria ?? center.label}
+                  data-testid={center.testId ?? "kabuk-main"}
+                  data-k="center"
+                  style={{ textDecoration: "none" }}
+                  onClick={(e) => {
+                    const href = center.href;
+                    if (href === undefined || !plainClick(e)) return;
+                    e.preventDefault();
+                    tone("tap");
+                    cikisSor(() => router.push(href));
+                  }}
+                >
                   {centerInner}
                 </a>
               ) : (
-                <button type="button" className={centerCls} aria-label={center.aria ?? center.label} onClick={center.onClick} disabled={center.disabled === true} data-testid={center.testId ?? "kabuk-main"} data-k="center">
+                <button
+                  type="button"
+                  className={centerCls}
+                  aria-label={center.aria ?? center.label}
+                  aria-disabled={center.disabled === true ? true : undefined}
+                  onClick={() => {
+                    if (center.disabled === true) {
+                      // Sessiz kapalı düğme yok: hata sesi + neden balonu.
+                      tone("err");
+                      say("err", center.disabledReason ?? t("mainOff"));
+                      return;
+                    }
+                    center.onClick?.();
+                  }}
+                  data-testid={center.testId ?? "kabuk-main"}
+                  data-k="center"
+                >
                   {centerInner}
                 </button>
               )}
@@ -407,7 +463,25 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                         {inner}
                       </button>
                     ) : (
-                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={() => tone("tap")} data-module={m.id}>
+                      <a
+                        key={m.id}
+                        role="listitem"
+                        href={m.href ?? base}
+                        className="mt"
+                        style={{ ...style, textDecoration: "none" }}
+                        aria-label={t("tileAria", { name: m.name, sub: m.sub })}
+                        onClick={(e) => {
+                          if (!plainClick(e)) return;
+                          e.preventDefault();
+                          tone("tap");
+                          const href = m.href ?? base;
+                          setOpen(false);
+                          setQ("");
+                          setPage(0);
+                          cikisSor(() => router.push(href));
+                        }}
+                        data-module={m.id}
+                      >
                         {inner}
                       </a>
                     );

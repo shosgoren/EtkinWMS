@@ -10,6 +10,7 @@ import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { useCikisKorumasi } from "../kalip/cikis.tsx";
 
 type Overview = {
   readonly groups: readonly { id: string; name: string; color: string; screens: readonly string[]; grants: readonly string[]; archived: boolean; version: number; memberCount: number }[];
@@ -116,7 +117,6 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const [tab, setTab] = useState<"scr" | "pow">("scr");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState<Draft | null>(null);
-  const [cf, setCf] = useState<null | "home" | "back">(null);
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -320,11 +320,10 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
         ],
     done: [t("main.done"), RICON.check, goList],
   };
+  // T-990: tek ortak çıkış kutusu (cikis.tsx); yarım grup düzenlemesinde Geri, Ana ekran, Modüller ve bağlantılar yalnız bunu açar.
+  const korunan = useCikisKorumasi(dirty, { dark, title: t("cf.title"), text: t("cf.text", { name: draft?.name ?? "" }), saveLabel: t("cf.save"), onSave: () => save() });
   const back = (): void => {
-    if (view === "edit") {
-      if (dirty) setCf("back");
-      else goList();
-    } else if (view === "people") setView("edit");
+    if (view === "edit") korunan.sor(goList); else if (view === "people") setView("edit");
     else if (view === "done") goList();
   };
 
@@ -580,65 +579,17 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
             </main>
 
 
-            {cf !== null ? (
-              <>
-                <div className="cfback" onClick={() => setCf(null)} />
-                <div className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
-                  <span className="cfic">
-                    <Ico d={RICON.warn} size={26} />
-                  </span>
-                  <b>{t("cf.title")}</b>
-                  <p>{t("cf.text", { name: draft?.name ?? "" })}</p>
-                  <button
-                    type="button"
-                    className="cfb save"
-                    disabled={busy}
-                    onClick={() =>
-                      void save().then((ok) => {
-                        setCf(null);
-                        if (!ok) return;
-                        if (cf === "home") window.location.assign(base);
-                        else goList();
-                      })
-                    }
-                  >
-                    <Ico d={RICON.check} size={20} />
-                    {t("cf.save")}
-                  </button>
-                  {cf === "home" ? (
-                    <a href={base} className="cfb leave">
-                      <Ico d={RICON.leave} size={20} />
-                      {t("cf.leave")}
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      className="cfb leave"
-                      onClick={() => {
-                        setCf(null);
-                        goList();
-                      }}
-                    >
-                      <Ico d={RICON.leave} size={20} />
-                      {t("cf.leave")}
-                    </button>
-                  )}
-                  <button type="button" className="cfb stay" onClick={() => setCf(null)}>
-                    {t("cf.stay")}
-                  </button>
-                </div>
-              </>
-            ) : null}
             {toast !== "" ? <div className="toast">{toast}</div> : null}
           </div>
         </div>
       </div>
     </div>
+    {korunan.kutu}
     {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
     <KabukBar
       dark={dark}
       back={view === "list" ? { href: `${base}/team`, aria: t("backTeam"), testId: "groups-back" } : { onClick: back, aria: t("back"), testId: "groups-back" }}
-      homeNav={dirty ? { onClick: () => setCf("home"), aria: t("home"), testId: "groups-home" } : { href: base, aria: t("home"), testId: "groups-home" }}
+      homeNav={{ href: base, aria: t("home"), testId: "groups-home" }}
       main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy || (view === "list" && !data.canEdit), testId: "groups-main" }}
     />
     </>

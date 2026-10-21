@@ -213,9 +213,21 @@ function convertValues(body, tokens) {
   });
 }
 
+/**
+ * T-990: `-webkit-backdrop-filter` bildirimi atılır. Derlemedeki CSS küçültücü (Lightning CSS) aynı blokta standart özelliğin ARDINDAN
+ * gelen önekli özelliği "son söz" sayıp standart `backdrop-filter`'ı siliyordu; Chrome yalnız standardı okuduğundan Modüller perdesi,
+ * cam çubuk ve cam kutular bulanıklaşmıyordu (canlı, 21 Ekim). Önek küçültücü tarafından kendiliğinden eklenir (Safari korunur).
+ * @param {string} body
+ */
+const dropPrefixed = (body) =>
+  body
+    .split(/;(?![^(]*\))/)
+    .filter((d) => !/^\s*-webkit-backdrop-filter\s*:/.test(d))
+    .join(";");
+
 /** @param {string} body */
 const fmtDecls = (body) =>
-  body
+  dropPrefixed(body)
     .split(/;(?![^(]*\))/)
     .map((d) => d.trim())
     .filter(Boolean)
@@ -249,7 +261,7 @@ export function portCss(css, scope = "dz", device = undefined) {
           .map((r) => {
             const sels = splitSelectors(r.head).map((x) => scopeSelector(x, scope, device)).filter(/** @returns {x is Scoped} */ (x) => x !== null);
             if (sels.some((x) => x.mode)) throw new Error("port: @media içinde mod seçicisi");
-            return `  ${sels.map((x) => x.sel).join(", ")} { ${conv(r.body)} }`;
+            return `  ${sels.map((x) => x.sel).join(", ")} { ${dropPrefixed(conv(r.body))} }`;
           })
           .join("\n");
         blocks.push(`${item.head} {\n${inner}\n}`);
