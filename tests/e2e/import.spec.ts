@@ -143,7 +143,7 @@ test.describe("Excel'den aktar (T-427)", () => {
     await expect(box).toBeHidden();
     await expect(aktar.locator('[data-field="kod"]')).toBeVisible();
     await page.getByTestId("aktar-home").click();
-    await page.getByRole("alertdialog").getByRole("link", { name: "Kaydetmeden çık" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Kaydetmeden çık" }).click();
     await expect(page).toHaveURL(/\/t\/demo$/);
   });
 

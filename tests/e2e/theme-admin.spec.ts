@@ -157,14 +157,14 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await expectNoHorizontalOverflow(page, "ürünler");
           await shot("items");
           await page.getByRole("button", { name: "Yeni ürün" }).click();
-          const itemDialog = page.getByRole("dialog");
+          // T-990: ekleme tam ekran formdur (pencere değil); alanlar kalıp alanı (`.fld`), seçimler kutu/aramalı seçim.
+          const itemDialog = page.getByTestId("item-form");
           await expect(itemDialog).toBeVisible();
-          // T-974: ürün penceresi alanları kalıp alanı (`.fld`).
           await expectKalipField(page, itemDialog.locator('input[name="code"]'), "ürün oluştur: kod", false);
-          await expectKalipField(page, itemDialog.locator("#create-base-unit"), "ürün oluştur: temel birim", false);
-          await expectNoHorizontalOverflow(page, "ürün oluştur penceresi");
+          await expect(itemDialog.locator('[data-alan="unitId"]'), "ürün oluştur: temel birim").toBeVisible();
+          await expectNoHorizontalOverflow(page, "ürün oluştur formu");
           await shot("items-create");
-          await page.keyboard.press("Escape");
+          await page.getByTestId("kabuk-back").click();
           await expect(itemDialog).toBeHidden();
 
           // T-246d — Depolar: oluşturma penceresi (girdi + seçim) ve varsa lokasyon ağacı.
@@ -173,14 +173,16 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await expectNoHorizontalOverflow(page, "depolar");
           await shot("warehouses");
           await page.getByRole("button", { name: "Yeni depo" }).click();
-          const whDialog = page.getByRole("dialog");
+          const whDialog = page.getByTestId("warehouse-form");
           await expect(whDialog).toBeVisible();
-          // T-974: kalıp penceresi alanları (`.fld`).
+          // T-990: tam ekran form alanları (`.fld`).
           await expectKalipField(page, whDialog.locator('input[name="code"]'), "depo oluştur: kod", false);
           await expectKalipField(page, whDialog.locator('input[name="name"]'), "depo oluştur: ad");
-          await expectNoHorizontalOverflow(page, "depo oluştur penceresi");
+          await expectNoHorizontalOverflow(page, "depo oluştur formu");
           await shot("warehouses-create");
-          await page.keyboard.press("Escape");
+          await page.getByTestId("kabuk-back").click();
+          const leave = page.getByTestId("kalip-unsaved-leave");
+          if (await leave.isVisible()) await leave.click(); // ilk depoda önerilen ad değişiklik sayılır
           await expect(whDialog).toBeHidden();
           const openTree = page.getByRole("link", { name: "Lokasyonları aç" }).first();
           if (await openTree.count()) {
@@ -191,10 +193,12 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
             await expectNoHorizontalOverflow(page, "lokasyon ağacı");
             await shot("location-tree");
             await page.getByRole("button", { name: "Lokasyon ekle", exact: true }).click();
-            const locDialog = page.getByRole("dialog");
-            await expectKalipField(page, locDialog.locator("#create-kind"), "lokasyon oluştur: tür", false); // T-974
-            await expectNoHorizontalOverflow(page, "lokasyon oluştur penceresi");
-            await page.keyboard.press("Escape");
+            const locDialog = page.getByTestId("location-form");
+            await expect(locDialog.locator('[data-alan="kind"]').getByRole("radiogroup"), "lokasyon oluştur: tür").toBeVisible(); // T-990
+            await expectNoHorizontalOverflow(page, "lokasyon oluştur formu");
+            await page.getByTestId("kabuk-back").click();
+            const leaveLoc = page.getByTestId("kalip-unsaved-leave");
+            if (await leaveLoc.isVisible()) await leaveLoc.click();
             await expect(locDialog).toBeHidden();
           }
       });

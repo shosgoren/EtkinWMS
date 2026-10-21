@@ -102,7 +102,9 @@ export function CodeEditForm({
       leaveSaveLabel={t("leaveSave")}
       preview={<KalipOnizleme name={subject} code={unchanged ? current : next} d={icon.d} color={icon.color} rows={[{ k: t("currentShort"), v: current }]} />}
     >
-      <KalipGrup title={subject} sub={t("current", { code: current })} d={icon.d} color={icon.color}>
+      <KalipGrup title={subject} d={icon.d} color={icon.color}>
+        {/* Telefonda grup alt yazısı (kaynak `.sgh small`) gizli: şimdiki kod her boyutta görünür satırda. */}
+        <p className="khint">{t("current", { code: current })}</p>
         <KalipAlan
           label={`${t("newCode")} *`}
           hint={t("newCodeHint")}

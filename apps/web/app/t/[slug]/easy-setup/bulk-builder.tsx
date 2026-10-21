@@ -280,7 +280,9 @@ export function BulkBuilder({
             </section>
           </KalipGrup>
 
-          <KalipGrup title={t("advanced")} sub={parent === null ? t("parentNone") : tp("selected", { name: `${parent.name} (${parent.code})` })} d={LICON.gear} color="4E6476">
+          <KalipGrup title={t("advanced")} d={LICON.gear} color="4E6476">
+            {/* Telefonda grup alt yazısı (kaynak `.sgh small`) gizli: seçim her boyutta görünür satırda. */}
+            <p className="khint" aria-live="polite">{parent === null ? t("parentNone") : tp("selected", { name: `${parent.name} (${parent.code})` })}</p>
             {parent === null ? null : (
               <button type="button" className="btn n" onClick={() => setParent(null)} style={{ alignSelf: "flex-start" }}>
                 {t("parentClear")}

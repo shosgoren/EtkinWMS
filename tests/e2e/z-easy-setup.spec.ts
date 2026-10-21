@@ -259,7 +259,7 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
   await expect(page.getByRole("button", { name: /lokasyonu oluştur/ })).toBeDisabled();
   await shot("bulk-conflict");
   // Üst lokasyon seçici (gelişmiş): yazarken öneri.
-  await dlg.getByText("Gelişmiş ayarlar").click();
+  await dlg.getByText("Gelişmiş ayarlar").scrollIntoViewIfNeeded(); // T-990: tam ekran formda bölüm hep açık (katlanır değil)
   await dlg.getByRole("searchbox", { name: /Üst lokasyon/ }).fill("A-02");
   const loc = dlg.getByRole("option").first();
   await expect(loc).toContainText("A-02-01");
