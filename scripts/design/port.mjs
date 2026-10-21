@@ -39,13 +39,13 @@ export const SOURCES = [
   { name: "gruplar", file: "docs/design/source/Gruplar.dc.html", sha256: "5c6f78b72c233247ff518519aa29a114c338fa70eec8e023bbf171a9e22bd056", scope: "dzr", palette: "none", device: "fr" },
   { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "74fba77cb748a61cae914e9203035ad64f22c08acbda6225973552271f998c46", scope: "dzp", palette: "none", device: "fr" },
   // T-958: uygulama kabuğu (alt cam çubuk, Modüller sayfası, Etkin dinleme, ilk kullanım rehberi; aynı 19 Ekim kaynak biçimi).
-  { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "d623311be817ea7ffed155350bb193bb29b286ba3e2ed3975065d878e44e9c61", scope: "dzk", palette: "none", device: "fr" },
+  { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "0c67278bb5851b08110337d3dfdee8e64fc15a381ac308dab5b5607728f047f0", scope: "dzk", palette: "none", device: "fr" },
   // T-968 (B-63): 4 ekran kalıbı (Liste / Form / Detay / Saha; aynı 19 Ekim kaynak biçimi). Ortak üst çubuk (`.top`, `.brand`, `.pgic`,
   // `.tph`) her kaynakta aynıdır; her kalıp kendi kabında. Tuvalin yan yana çerçeveleri (`.stage`, `.frm`, `.frl`) atlanır (SKIP).
-  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "491394848be8e6ec379034fe097cbff216a14f822d5e280a6369e45494bba8a5", scope: "dzl", palette: "none", device: "fr" },
-  { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "0eaed24123dd76848a52d8ffc4cd8b007f2c85146ee3e685b36b051d972b4fa3", scope: "dzf", palette: "none", device: "fr" },
-  { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "402ad6a96a9c5913c66ce610e7de9d70dad233d81104a03e033c03ff2a9ea907", scope: "dzd", palette: "none", device: "fr" },
-  { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "ba730acd703e0e57d6dc6e32571964663d57ada57083d929bcf9fac2386b0f26", scope: "dzs", palette: "none", device: "fr" },
+  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "91ac734955f8fa7163bbeb79af7f9e3f8a190c46a21e42fbe0503963b370ccfb", scope: "dzl", palette: "none", device: "fr" },
+  { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "13b75f300aff10b915b3171684af4cd63481455e19e2a289ea9a72f7257608c7", scope: "dzf", palette: "none", device: "fr" },
+  { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "f7902618fe78e2603ddd8d0e1761c1fa4b3b24b069598f0d40ebcc2bee411fa0", scope: "dzd", palette: "none", device: "fr" },
+  { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "d3b4edb7f5be37a60d16b3533c0e7e51338ca32b5bce3a9ff8249f770c91c4f2", scope: "dzs", palette: "none", device: "fr" },
   // T-967: Sorun/Destek (B-84/85/87). Tam kaynak `.dzt` (toplu yayın: `.dzd` kalıp-detay kabıyla çakıştığı için) (Destek penceresi + Taleplerim katmanı); yalnız "YENİ" bölümü `.dzdx` (Pano üst
   // çubuğundaki iki ikon, yüzen kısayolun şimşeği, alt çubukta pasif Geri — var olan Pano/Kabuk kaplarına ek sınıf olarak).
   { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "de2d492bc3d59e11957ba39cfc53bf28c4fd83886697e142acd89dfdaaad4031", scope: "dzt", palette: "none", device: "fr" },
