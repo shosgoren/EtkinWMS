@@ -6,7 +6,7 @@
 
 import { buyukHarf } from "@wms/ui";
 
-// T-1001 (ALTIN-KURAL 16): sayfa adı dosyanın kendi verisidir ve Türkçe sütun/sayfa adlarıyla eşleştirilir (veri eşleştirme,
+// T-436 (ALTIN-KURAL 16): sayfa adı dosyanın kendi verisidir ve Türkçe sütun/sayfa adlarıyla eşleştirilir (veri eşleştirme,
 // görüntü dili değildir); büyük harfe çevirme sözlüğün dilinde yapılır.
 const ESLESTIRME_DILI = "tr";
 

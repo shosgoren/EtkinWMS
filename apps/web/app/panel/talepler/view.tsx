@@ -97,7 +97,7 @@ export function TaleplerView({
   initialError?: string | undefined;
   action: (prev: TaleplerActionState, form: FormData) => Promise<TaleplerActionState>;
 }) {
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [state, formAction, pending] = useActionState(action, initialError === undefined ? {} : { error: initialError });
   const [copied, setCopied] = useState<string | null>(null);
   const chipText: Readonly<Record<Exclude<RowState, "open">, string>> = {

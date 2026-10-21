@@ -47,7 +47,7 @@ export const FIELDS: Readonly<Record<ImportKindKey, readonly FieldDef[]>> = {
   ],
 };
 
-// T-1001 (ALTIN-KURAL 16): başlık eşleştirmesi Türkçe eş anlamlı sözlükle yapılır (veri eşleştirme, görüntü değildir);
+// T-436 (ALTIN-KURAL 16): başlık eşleştirmesi Türkçe eş anlamlı sözlükle yapılır (veri eşleştirme, görüntü değildir);
 // bu yüzden katlama dili kullanıcının dili değil, sözlüğün dilidir.
 const ESLESTIRME_DILI = "tr";
 

@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 6, 9): sunucuya giden işlemin ortak sarmalı. Aynı işlem sürerken ikinci kez gönderilmez (`busy` anında
+// T-436 (ALTIN-KURAL 6, 9): sunucuya giden işlemin ortak sarmalı. Aynı işlem sürerken ikinci kez gönderilmez (`busy` anında
 // `true`, düğme `aria-busy` + kapalı); 1 sn'den uzun sürerse düğmedeki dönen gösterge (`.kyuk`, CSS gecikmesiyle) görünür.
 // Çevrimdışıyken işlem başlamaz: "Bağlantı yok · bağlanınca tekrar dene" balonu + uyarı sesi (çevrimdışı kuyruk yok).
 import { useCallback, useRef, useState } from "react";

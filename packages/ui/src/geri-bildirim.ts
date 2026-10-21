@@ -1,4 +1,4 @@
-// T-1001 (ALTIN-KURAL 5, 9, 10, 11, 17): ortak geri bildirim API'si. Ekranlar ses ve balonu yalnız buradan çağırır.
+// T-436 (ALTIN-KURAL 5, 9, 10, 11, 17): ortak geri bildirim API'si. Ekranlar ses ve balonu yalnız buradan çağırır.
 // - `feedback.minor()`: küçük işlem (kopyala, aç/kapat, sekme): SESSİZ, balon yok. Görsel değişim düğmenin kendisindedir.
 // - `feedback.ok/warn/error/info(metin?)`: anlamlı sonuç (kaydetme, okutma, onay, uyarı, hata). Metin verilirse ortak balon açılır
 //   ve balon kendi sesini çalar; metin yoksa yalnız ses + titreşim.

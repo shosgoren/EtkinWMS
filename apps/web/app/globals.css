@@ -22,7 +22,7 @@
 @import "./design/destek.css";
 @import "./design/destek-ek.css";
 @import "./design/destek-frame.css";
-/* T-1001: ALTIN-KURAL 5–17 ortak katman (odak, hareket azaltma, balon, çevrimdışı, iskelet, hata ekranı). */
+/* T-436: ALTIN-KURAL 5–17 ortak katman (odak, hareket azaltma, balon, çevrimdışı, iskelet, hata ekranı). */
 @import "./design/kural.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
@@ -166,7 +166,7 @@ body {
   outline-offset: 2px;
 }
 
-/* T-1001 (ALTIN-KURAL 5–17): ortak katman belirteçleri (design/kural.css kullanır; renkler kaynak tasarımların paletinden). */
+/* T-436 (ALTIN-KURAL 5–17): ortak katman belirteçleri (design/kural.css kullanır; renkler kaynak tasarımların paletinden). */
 :root {
   --color-kr-ink: #172e42;
   --color-kr-ink-dark: #223040;
@@ -188,7 +188,7 @@ body {
   --color-kr-shadow-soft: rgba(23, 46, 66, .45);
 }
 
-/* T-1001 (ALTIN-KURAL 14): eski (Tailwind belirteçli) yüzeylerin koyu teması; kök düzen `html[data-tema]` verir. */
+/* T-436 (ALTIN-KURAL 14): eski (Tailwind belirteçli) yüzeylerin koyu teması; kök düzen `html[data-tema]` verir. */
 html[data-tema="koyu"] {
   color-scheme: dark;
   --color-ink: #e6ebef;

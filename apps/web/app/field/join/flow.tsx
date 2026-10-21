@@ -18,7 +18,7 @@ const CODE_KEY = "etkin-katilma-kod";
 
 function Flow() {
   const t = useTranslations("fieldLogin");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const { dark } = useDz();
   const secret = useRef<string | null>(null);
   const [ready, setReady] = useState(false);

@@ -23,7 +23,7 @@ function fill(s: string, v: Readonly<Record<string, string | number>>): string {
   return s.replace(/\{(\w+)\}/g, (m, k: string) => (k in v ? String(v[k]) : m));
 }
 
-// T-1001 (ALTIN-KURAL 16): biçim dili çağıranın verdiği kullanıcı dili (`locale`); verilmezse ürünün varsayılan dili.
+// T-436 (ALTIN-KURAL 16): biçim dili çağıranın verdiği kullanıcı dili (`locale`); verilmezse ürünün varsayılan dili.
 const WHEN: Intl.DateTimeFormatOptions = { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false };
 const DATE: Intl.DateTimeFormatOptions = { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" };
 

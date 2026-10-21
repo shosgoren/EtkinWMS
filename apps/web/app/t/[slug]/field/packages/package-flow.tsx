@@ -42,7 +42,7 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
   const [needsReload, setNeedsReload] = useState(false);
   const [retry, setRetry] = useState(false);
   const pending = useRef(false);
-  // T-1001 (ALTIN-KURAL 5): hata ve kayıt sonucu sesli.
+  // T-436 (ALTIN-KURAL 5): hata ve kayıt sonucu sesli.
   useSonucSesi({ hata: error, tamam: saved });
   const frozen = useRef<{ action: "QC_RELEASE" | "PUTAWAY" | "TRANSFER"; input: FrozenCommand } | null>(null);
   const uncertain = useRef(false);

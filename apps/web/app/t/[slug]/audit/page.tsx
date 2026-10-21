@@ -35,7 +35,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   if (principal === null) redirect(`/login?next=${encodeURIComponent(here)}`);
   const t = await getTranslations("auditLog");
   const ts = await getTranslations("serverErrors");
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
 
   const filters: { from?: string; to?: string; action?: string; q?: string } = {};
   for (const k of ["from", "to", "action", "q"] as const) {

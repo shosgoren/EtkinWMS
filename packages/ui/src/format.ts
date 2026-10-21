@@ -1,4 +1,4 @@
-// T-1001 (ALTIN-KURAL 16): ortak sayı / tarih / büyük-küçük harf biçimi. Sabit dil ("tr-TR") yazılmaz: çağıran kullanıcının
+// T-436 (ALTIN-KURAL 16): ortak sayı / tarih / büyük-küçük harf biçimi. Sabit dil ("tr-TR") yazılmaz: çağıran kullanıcının
 // dilini verir (istemcide `useLocale()`, sunucuda `getLocale()`; dil okuma T-984'ün işidir). ESLint `wms/no-fixed-locale` bekçisi
 // biçim çağrılarında sabit dil etiketini yakalar. Bilinmeyen/boş dil Türkçe kabul edilir (ürünün varsayılan dili).
 

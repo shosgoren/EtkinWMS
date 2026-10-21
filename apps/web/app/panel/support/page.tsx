@@ -45,7 +45,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   };
   const query = await searchParams;
   const m = await destekMsgs();
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const dark = temaKoyu(await cookies());
   const now = new Date();
   const inbox = await listSupportInbox({ db, principal, status: "ALL" }).catch(onMissing);

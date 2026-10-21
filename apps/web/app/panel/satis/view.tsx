@@ -72,7 +72,7 @@ export function SatisView({
   action: (prev: SiteActionState, form: FormData) => Promise<SiteActionState>;
 }) {
   const { dark } = useDz();
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [state, formAction, pending] = useActionState(action, {});
   const [h, setH] = useState(initial.title1);
   const [h2, setH2] = useState(initial.title2);
@@ -83,7 +83,7 @@ export function SatisView({
   async function copy(link: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(link);
-      // T-1001 (ALTIN-KURAL 5): küçük işlem — sessiz; düğmede 2 sn "Kopyalandı".
+      // T-436 (ALTIN-KURAL 5): küçük işlem — sessiz; düğmede 2 sn "Kopyalandı".
       setCopied(link);
       window.setTimeout(() => setCopied((c) => (c === link ? null : c)), 2000);
     } catch {

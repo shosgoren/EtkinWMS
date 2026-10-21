@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 11): perde / pencere / menü odak davranışı tek kancada. T-980 perdeyi tek bileşende birleştirince bu kanca o
+// T-436 (ALTIN-KURAL 11): perde / pencere / menü odak davranışı tek kancada. T-980 perdeyi tek bileşende birleştirince bu kanca o
 // bileşene bağlanır; o zamana kadar mevcut perde ve pencereler kullanır.
 // - Esc kapatır (`busy` iken kapatmaz).
 // - Odak perdenin içinde tutulur (Tab / Shift+Tab döner).

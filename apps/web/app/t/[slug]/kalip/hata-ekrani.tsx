@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 7, 14): hata ve "bulunamadı" ekranı — tasarım dilinde (ikon, tek cümle, Tekrar dene / Ana ekran, destek kodu),
+// T-436 (ALTIN-KURAL 7, 14): hata ve "bulunamadı" ekranı — tasarım dilinde (ikon, tek cümle, Tekrar dene / Ana ekran, destek kodu),
 // hata sesiyle. Ham hata metni ve yığın HİÇ gösterilmez; yalnız Next'in `digest` kimliği destek kodu olarak. Tema tercihi (otomatik
 // dahil) izlenir. Kiracı alanı, yönetim paneli ve 404 aynı bileşeni kullanır.
 import { useTranslations } from "next-intl";

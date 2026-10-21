@@ -1,4 +1,4 @@
-// T-1001: ALTIN-KURAL 5–17 mekanik bekçileri (birim testi; kaynak taraması).
+// T-436: ALTIN-KURAL 5–17 mekanik bekçileri (birim testi; kaynak taraması).
 // 5  — ses ve titreşim TEK kaynaktan: `AudioContext` / `navigator.vibrate` yalnız packages/ui/src/ses.ts'te.
 // 5  — balon TEK bileşen: uygulamada `className="toast"` çizen kopya yok (ortak katman `kalip/balon.tsx`, sınıf `.kbl`).
 // 16 — sabit dil yok: biçim çağrılarında "tr-TR" / "tr" yazılmaz (ortak `@wms/ui` format yardımcısı; ESLint `wms/no-fixed-locale` aynısı).

@@ -33,7 +33,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect("/login?next=%2Fonboarding");
   const t = await getTranslations("onboarding");
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   // T-974 (B-63 grup B): Giris.dc.html `v.auth` kabuğu (aktivasyon sihirbazıyla aynı öğeler); adım/çerez/sunucu kuralı aynı.
   const dark = temaKoyu(await cookies());
 

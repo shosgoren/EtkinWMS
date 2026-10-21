@@ -241,7 +241,7 @@ export function MfaNotice({ kind, next, dark = false }: { kind: "demo" | "enable
 // `.kv`, onay `.chk`, kod alanı `.fl > .inp`). Sunucu çağrıları, sıra (parola → anahtar → yedek kod onayı → ilk kod) ve hata eşlemesi aynı.
 export function MfaSetupForm({ next, dark = false }: { next: string; dark?: boolean }) {
   const t = useTranslations("auth");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
   const [enable, setEnable] = useState<EnableData | null>(null);

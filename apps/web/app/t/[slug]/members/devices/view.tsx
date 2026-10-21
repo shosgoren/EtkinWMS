@@ -52,7 +52,7 @@ export function DevicesView({
 }) {
   const t = useTranslations("fieldDevices");
   const format = useFormatter();
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [enr, setEnr] = useState<Enrollment | null>(null);
   const [claim, setClaim] = useState<string | null>(null);

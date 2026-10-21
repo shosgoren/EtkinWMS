@@ -51,7 +51,7 @@ export default async function SatisPage() {
     throw e;
   });
   const t = ((await getMessages()).panel as unknown as { satis: Msgs }).satis;
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   // İlk kez: satış sayfasının bugünkü metni ve yayındaki bütün paketler seçili (kaynaktaki varsayılan).
   const selected = new Set(content?.planIds ?? plans.filter((p) => p.published).map((p) => p.id));
   const items: SitePlanItem[] = plans.map((p) => ({

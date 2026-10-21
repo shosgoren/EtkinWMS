@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 5): "Sessiz" tercihi (cihazda saklanır; @wms/ui ses kaynağı okur). Hesap menüsü bu kancayı kullanır.
+// T-436 (ALTIN-KURAL 5): "Sessiz" tercihi (cihazda saklanır; @wms/ui ses kaynağı okur). Hesap menüsü bu kancayı kullanır.
 import { useCallback, useEffect, useState } from "react";
 import { SESSIZ_OLAY, sessizMi, sessizYap } from "@wms/ui";
 

@@ -49,7 +49,7 @@ function saveWs(v: string): void {
   }
 }
 
-/** Hatalı giriş: ortak hata sesi + titreşim (T-1001, ALTIN-KURAL 5: tek kaynak). */
+/** Hatalı giriş: ortak hata sesi + titreşim (T-436, ALTIN-KURAL 5: tek kaynak). */
 export function buzz(): void {
   feedback.error();
 }
@@ -180,7 +180,7 @@ function errorText(t: ReturnType<typeof useTranslations>, code: string | undefin
 
 function Flow({ host }: { host: string }) {
   const t = useTranslations("fieldLogin");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const { dark } = useDz();
   const [device, setDevice] = useState<Device | null>(null);
   const [scr, setScr] = useState<"login" | "fact" | "sw">("login");

@@ -1,4 +1,4 @@
-/* T-1001 — ALTIN-KURAL 5–17 ortak davranış katmanı (elle yazılır; üretilmiş kaynak CSS'i değildir).
+/* T-436 — ALTIN-KURAL 5–17 ortak davranış katmanı (elle yazılır; üretilmiş kaynak CSS'i değildir).
    Renkler kaynak tasarımların paletinden (Kabuk/KalipListe `.toast`, `.dock`); belirteçler globals.css'te (`--color-kr-*`).
    Kaynak kaplarının (`.dzk`, `.dzl`…) DIŞINDA çizilen ortak katmanlar: balon, çevrimdışı şeridi, iskelet, hata ekranı. */
 

@@ -1,4 +1,4 @@
-// T-1001 (ALTIN-KURAL 12): dokunma hedefi ölçüm yardımcısı. Ekrandaki görünür her dokunulabilir öğe (bağlantı, düğme, rol=button/menuitem/
+// T-436 (ALTIN-KURAL 12): dokunma hedefi ölçüm yardımcısı. Ekrandaki görünür her dokunulabilir öğe (bağlantı, düğme, rol=button/menuitem/
 // tab/switch, seçim kutusu, özet) en az `min` px (genel 44, saha 48). Etkin alan: öğenin kendisi ya da onu saran `<label>` (kaynak
 // tasarımdaki `.fld`, `.lsearch` gibi alan kutuları dokunma alanıdır). Muaf: metin içi bağlantı (paragraf içinde, WCAG 2.5.8 satır içi
 // istisnası), ekran okuyucuya özel (≤ 2 px) ve `aria-hidden` öğeler, `disabled` olmayan ama görünmeyen öğeler.

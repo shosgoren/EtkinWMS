@@ -199,7 +199,7 @@ export function KalipDaha({ children, href, onClick, iconD, iconColor, mic, clas
 }
 
 /**
- * Kaynak `.nomatch` (aramaya uyan yok / boş liste): ikon, tek cümle, ipucu ve SIRADAKİ ADIM düğmesi (T-1001, ALTIN-KURAL 8).
+ * Kaynak `.nomatch` (aramaya uyan yok / boş liste): ikon, tek cümle, ipucu ve SIRADAKİ ADIM düğmesi (T-436, ALTIN-KURAL 8).
  * `action.kind`: `clear` (aramayı temizle, ✕ — varsayılan), `add` (yeni kayıt, +), `go` (başka ekrana, →).
  * Arama sonucu yoksa başlık ortak cümledir: "Bulunamadı · ara ya da söyle" (`kural.notFoundSearch`).
  */

@@ -28,7 +28,7 @@ export default async function KayitPage() {
     throw e;
   });
   const t = ((await getMessages()).panel as unknown as { kayit: KayitMsgs }).kayit;
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const rows = events.map((e) => ({ t: stamp(e.at, locale), l: describe(e, t, locale) }));
   const dark = temaKoyu(await cookies());
   return (

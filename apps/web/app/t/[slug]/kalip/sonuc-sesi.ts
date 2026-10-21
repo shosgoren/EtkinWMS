@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 5): durum değişkeninden ses. Ekranın hata ya da başarı durumu boşken dolunca bir kez hata / başarı sesi çalar
+// T-436 (ALTIN-KURAL 5): durum değişkeninden ses. Ekranın hata ya da başarı durumu boşken dolunca bir kez hata / başarı sesi çalar
 // (aynı değer tekrar çizilince çalmaz). Kendi balonu olmayan eski ekranlar (kabul, paket akışı) sesi böyle alır.
 import { useEffect, useRef } from "react";
 import { feedback } from "@wms/ui";

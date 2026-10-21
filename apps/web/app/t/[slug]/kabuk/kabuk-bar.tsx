@@ -62,7 +62,7 @@ export interface KabukMain {
   readonly testId?: string;
   /** Bekleyen karar (Ekip/Aktar kaynağındaki sarı `.dk.big.wait`). */
   readonly wait?: boolean;
-  /** T-1001 (ALTIN-KURAL 6): işlem sürüyor — ikinci dokunuş gönderilmez; 1 sn'den uzun sürerse dönen gösterge. */
+  /** T-436 (ALTIN-KURAL 6): işlem sürüyor — ikinci dokunuş gönderilmez; 1 sn'den uzun sürerse dönen gösterge. */
   readonly busy?: boolean;
 }
 
@@ -154,7 +154,7 @@ function Slot({ nav, className, aria, testId, k, current, children }: { nav: Kab
 
 export function KabukBar({ dark, home = false, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
   const t = useTranslations("kabuk");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useContext(KabukContext);
   const base = ctx?.base ?? "/";
   const modules = ctx?.modules ?? [];

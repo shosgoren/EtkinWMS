@@ -42,7 +42,7 @@ function Ico({ d, size, sw, className = "ico", style }: { d: string; size: numbe
 export async function EasyOperations({ slug, allowed, summary, firstName, dark = false, canReport = false }: EasyHomeProps) {
   const t = await getTranslations("home");
   const tg = await getTranslations("home.gv");
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const name = firstName ?? "";
   const sections = summary?.sections ?? [];

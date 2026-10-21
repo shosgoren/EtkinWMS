@@ -1,5 +1,5 @@
 "use client";
-// T-1001: ALTIN-KURAL 5–17 için kök düzende BİR KEZ çizilen ortak katman (müşteri uygulaması ve yönetim paneli). Ekranlar bunları
+// T-436: ALTIN-KURAL 5–17 için kök düzende BİR KEZ çizilen ortak katman (müşteri uygulaması ve yönetim paneli). Ekranlar bunları
 // kendiliğinden alır:
 // - 5/10/11/17: ortak balon (`BalonKatmani`; tek `aria-live` bölgesi).
 // - 9: çevrimdışı şeridi (üstte) + çevrimdışıyken form gönderimi engeli ("Bağlantı yok · bağlanınca tekrar dene").

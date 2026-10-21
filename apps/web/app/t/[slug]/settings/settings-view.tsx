@@ -28,7 +28,7 @@ export interface SettingsValues {
 export interface SettingsViewProps {
   readonly slug: string;
   readonly dark: boolean;
-  /** T-1001 (ALTIN-KURAL 14): cihazdaki tema tercihi (açık / koyu / otomatik). */
+  /** T-436 (ALTIN-KURAL 14): cihazdaki tema tercihi (açık / koyu / otomatik). */
   readonly theme?: TemaTercihi;
   readonly locked: boolean;
   /** Ayar yoksa (yetkisiz) boş değerler gösterilir; satırlar kilitli. */
@@ -54,7 +54,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
   const ts = useTranslations("settings");
   const tk = useTranslations("kalip");
   const tr = useTranslations("kural");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstTheme: TemaTercihi = initialTheme ?? (initialDark ? "koyu" : "acik");

@@ -368,7 +368,7 @@ export interface FeedbackResult {
 
 /**
  * Geri bildirim: destek yoksa (iOS Safari `vibrate`, ses kilitli) ilgili kanal atlanır ve `false` döner; sahte "titreşti" bildirilmez (G-07).
- * T-1001 (ALTIN-KURAL 5): ses ve titreşim uygulamanın TEK kaynağından (`@wms/ui` `sesCal`; "Sessiz" ve "Hareketi azalt" orada).
+ * T-436 (ALTIN-KURAL 5): ses ve titreşim uygulamanın TEK kaynağından (`@wms/ui` `sesCal`; "Sessiz" ve "Hareketi azalt" orada).
  */
 export function cameraFeedback(kind: FeedbackKind): FeedbackResult {
   return sesCal(kind === "ok" ? "okutma-iyi" : "okutma-kotu");

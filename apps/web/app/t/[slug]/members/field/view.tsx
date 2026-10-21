@@ -56,7 +56,7 @@ export function FieldStaffView({
   staff: readonly StaffRow[];
 }) {
   const t = useTranslations("fieldStaff");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");

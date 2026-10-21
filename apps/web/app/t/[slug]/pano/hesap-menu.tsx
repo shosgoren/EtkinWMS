@@ -64,9 +64,9 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
   const t = useTranslations("pano");
   const [failed, setFailed] = useState(false);
   const tk = useTranslations("kural");
-  // T-1001 (ALTIN-KURAL 5): "Sessiz" tercihi cihazda saklanır.
+  // T-436 (ALTIN-KURAL 5): "Sessiz" tercihi cihazda saklanır.
   const [silent, setSilent] = useSessiz();
-  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak menüde kalır, kapanınca Hesap düğmesine döner.
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak menüde kalır, kapanınca Hesap düğmesine döner.
   const box = useRef<HTMLDivElement>(null);
   useModalFocus(true, box, { onClose, initial: "first" });
   const signOut = async (next: string): Promise<void> => {

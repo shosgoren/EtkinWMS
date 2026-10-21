@@ -58,7 +58,7 @@ export function JoinView({
 }) {
   const t = useTranslations("teamJoin");
   const format = useFormatter();
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [url, setUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(link?.expiresAt ?? null);

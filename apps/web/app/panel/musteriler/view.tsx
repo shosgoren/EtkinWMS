@@ -137,7 +137,7 @@ export function MusterilerList({
   labels: MusterilerLabels;
 }) {
   const router = useRouter();
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [query, setQuery] = useState(q);
   const ql = kucukHarf(query.trim(), locale);
   const shown = rows.filter((r) => (tab === "all" || r.state === tab) && (ql === "" || kucukHarf(`${r.name} ${r.slug}`, locale).includes(ql)));
@@ -259,7 +259,7 @@ export function MusteriDetail({
     setWhy("");
     setPick(cu.planId);
   };
-  // T-1001 (ALTIN-KURAL 11): perde Esc ile kapanır, odak içinde kalır ve açan düğmeye döner.
+  // T-436 (ALTIN-KURAL 11): perde Esc ile kapanır, odak içinde kalır ve açan düğmeye döner.
   useModalFocus(sheet !== null, sheetRef, { onClose: close, initial: "first" });
   return (
     <>

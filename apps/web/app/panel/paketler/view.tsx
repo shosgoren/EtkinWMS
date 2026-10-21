@@ -93,7 +93,7 @@ export function PaketlerView({
 }) {
   const router = useRouter();
   const { dark } = useDz();
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ep = plans[selected] ?? plans[0];
   const [state, formAction, pending] = useActionState(action, {});
   const [feat, setFeat] = useState(ep?.features ?? { qr: true, ship: false, prod: false, api: false });

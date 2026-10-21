@@ -143,7 +143,7 @@ export default async function PanelHome() {
     mailOn = false;
   }
   const t = ((await getMessages()).panel as unknown as { ozet: Msgs }).ozet;
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const now = new Date();
   const today = day(now);
   const pending = requests.filter((r) => r.status === "PENDING").length;

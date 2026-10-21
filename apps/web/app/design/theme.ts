@@ -1,7 +1,7 @@
 // I-18: tasarım teması (kaynak cycleTheme: acik / koyu). Sunucu ilk çizimde çerezi okur; istemci dz-root.tsx yazar.
 export const THEME_COOKIE = "dz-theme";
 
-// T-1001 (ALTIN-KURAL 14): "Otomatik (sistem)". Tercih `oto` (ya da hiç seçilmemiş) iken tema cihazın açık/koyu ayarını izler.
+// T-436 (ALTIN-KURAL 14): "Otomatik (sistem)". Tercih `oto` (ya da hiç seçilmemiş) iken tema cihazın açık/koyu ayarını izler.
 // Sunucu cihaz ayarını bilemez: kök katman (`KuralKatmani`) cihaz ayarını `dz-sys` çerezine yazar ve değişince sayfayı yeniler.
 export const THEME_SYS_COOKIE = "dz-sys";
 export type TemaTercihi = "acik" | "koyu" | "oto";

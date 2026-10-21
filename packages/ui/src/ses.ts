@@ -1,4 +1,4 @@
-// T-1001 (ALTIN-KURAL 5, 13): uygulamanın TEK ses ve titreşim kaynağı. `AudioContext` yalnız bu dosyada açılır (bekçi:
+// T-436 (ALTIN-KURAL 5, 13): uygulamanın TEK ses ve titreşim kaynağı. `AudioContext` yalnız bu dosyada açılır (bekçi:
 // `ses-tek-kaynak.test.ts`). Ses yalnız anlamlı sonuçlardadır (kaydetme, okutma, onay, hata, uyarı; kullanıcı kararı 21 Ekim):
 // küçük işlemler (kopyala, aç/kapat, sekme) sessizdir — onlar için `geri-bildirim.ts` `feedback.minor()` ses çalmaz.
 // "Sessiz" tercihi cihazda saklanır (localStorage); "Hareketi azalt" açıksa titreşim de durur.

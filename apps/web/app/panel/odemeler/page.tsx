@@ -66,7 +66,7 @@ export default async function OdemelerPage({ searchParams }: { searchParams: Pro
     throw e;
   });
   const query = await searchParams;
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const t = ((await getMessages()).panel as unknown as { odemeler: Msgs }).odemeler;
   const now = new Date();
   const td = todayParts(now);

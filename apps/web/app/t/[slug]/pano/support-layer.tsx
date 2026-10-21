@@ -104,7 +104,7 @@ export interface SupportToast {
   readonly text: string;
 }
 
-/** T-1001 (ALTIN-KURAL 5): ortak balon (kök düzendeki tek katman; kendi sesini çalar). */
+/** T-436 (ALTIN-KURAL 5): ortak balon (kök düzendeki tek katman; kendi sesini çalar). */
 function useToast(): [null, (t: SupportToast) => void] {
   const say = useCallback((t: SupportToast) => balonGoster({ tur: t.kind, metin: t.text }), []);
   return [null, say];

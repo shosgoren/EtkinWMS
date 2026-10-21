@@ -45,11 +45,11 @@ export type ToastKind = BalonTur;
 
 export interface KalipToast {
   readonly say: (kind: ToastKind, text: string) => void;
-  /** T-1001: balon artık kök düzendeki ORTAK katmanda çizilir (`BalonKatmani`); yuva boş kalır (eski çağıranlar için). */
+  /** T-436: balon artık kök düzendeki ORTAK katmanda çizilir (`BalonKatmani`); yuva boş kalır (eski çağıranlar için). */
   readonly node: ReactNode;
 }
 
-/** Kaynak `toast()`: ortak balon (T-1001, ALTIN-KURAL 5). Balon kendi sesini çalar; `scope` yalnız eski imza içindir. */
+/** Kaynak `toast()`: ortak balon (T-436, ALTIN-KURAL 5). Balon kendi sesini çalar; `scope` yalnız eski imza içindir. */
 export function useKalipToast(scope?: KalipKind): KalipToast {
   void scope;
   const say = useCallback((kind: ToastKind, text: string) => balonGoster({ tur: kind, metin: text, ses: kind !== "info" }), []);
@@ -79,7 +79,7 @@ export interface KalipEkranProps {
 
 export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
   const t = useTranslations("kalip");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useKabuk();
   const online = useCevrimici();
   const router = useRouter();

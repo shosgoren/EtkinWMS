@@ -38,7 +38,7 @@ interface NdefReaderLike {
 export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost: boolean; tenantName: string }) {
   const t = useTranslations("saha.okut");
   const tr = useTranslations("receiving");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const video = useRef<HTMLVideoElement>(null);

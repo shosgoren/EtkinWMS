@@ -1,5 +1,5 @@
 // Paket metin biçimleri (Yonet.dc.html `pkSum` ve fiyat gösterimi). Sunucu ve istemci bileşenlerinin ortak, saf yardımcıları.
-// T-1001 (ALTIN-KURAL 16): sayı biçimi çağıranın verdiği kullanıcı diliyle (`locale`).
+// T-436 (ALTIN-KURAL 16): sayı biçimi çağıranın verdiği kullanıcı diliyle (`locale`).
 import { sayi } from "@wms/ui";
 
 /** Kaynaktaki `pkSum`: "3 yönetici", "Sınırsız saha personeli"… */

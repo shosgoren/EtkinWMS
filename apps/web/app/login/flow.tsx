@@ -90,7 +90,7 @@ function Tabs() {
 
 function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; socialEnabled: boolean; demo: boolean; fieldTab: boolean; reauth: boolean }) {
   const t = useTranslations("auth.signin");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [email, setEmail] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -285,7 +285,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
 
 function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
   const t = useTranslations("auth.verify");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);

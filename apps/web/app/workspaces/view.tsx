@@ -45,7 +45,7 @@ export function WorkspacePicker({ dark, host, rows }: { dark: boolean; host: str
 
 function Picker({ host, rows }: { host: string; rows: readonly PickRow[] }) {
   const t = useTranslations("workspaces");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   return (
     <Shell fact={false}>
       <span className="kick">{t("kick")}</span>

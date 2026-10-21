@@ -156,7 +156,7 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
   const query = await searchParams;
   const m = (await getMessages()).panel as unknown as { musteriler: Msgs };
   const t = m.musteriler;
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const labels: MusterilerLabels = t;
   const dark = temaKoyu(await cookies());
   const shell = { dark, nav: await panelNav(principal), labels: await panelLabels() };

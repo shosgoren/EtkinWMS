@@ -35,7 +35,7 @@ her seferinde hatırlatması beklenmez.
 - **Arka plan** #EEF1F4 → #DCE3EA; **karanlık tema** saf siyah değil (#121B24 → #0F171F), yazı #E6EBEF, vurgular kısık.
 - **Otomatik cihaz:** < 700 px telefon, < 1100 px ya da dokunmatik tablet, diğerleri masaüstü (Görevlerim `detect()` ile aynı).
 
-## Ortak davranış kuralları (kullanıcı onayı 21 Ekim; madde 5–17 — T-1001)
+## Ortak davranış kuralları (kullanıcı onayı 21 Ekim; madde 5–17 — T-436)
 Maddeler 1–4 ve ortak perde T-980'dedir. Aşağıdakiler ortak bileşenlerdedir; ekran bunları kullanınca kuralı kendiliğinden alır.
 
 5. **Ses ve titreşim tek kaynaktan.** Tek işlev `@wms/ui` `sesCal` (dokunma/tamam/uyarı/hata, okutma); ekranlar `feedback.*` çağırır.
@@ -52,7 +52,7 @@ Maddeler 1–4 ve ortak perde T-980'dedir. Aşağıdakiler ortak bileşenlerdedi
 9. **Çevrimdışı.** Bağlantı kopunca üstte ortak şerit; çevrimdışı gönderim açıkça engellenir, "Bağlantı yok · bağlanınca tekrar dene"
    balonu. Çevrimdışı kuyruk yoktur (saklayıp sonra gönderme yapılmaz).
 10. **Silme ve arşivleme.** Geri dönüşü olan işlem onay sormaz; birkaç saniye "Geri al" balonu (`feedback.undo`) sunucuda geri alır.
-    Geri dönüşü olmayan işlem onay penceresinde kalır. Gruplama listesi: `docs/tasks/T-1001.md`.
+    Geri dönüşü olmayan işlem onay penceresinde kalır. Gruplama listesi: `docs/tasks/T-436.md`.
 11. **Odak ve klavye.** Her perde Esc ile kapanır, odak içinde kalır ve kapanınca açan düğmeye döner (`kalip/odak.ts` `useModalFocus`;
     T-980 ortak perdesi buna bağlanır). Odak çerçevesi 4 px sarı. Balonlar kalıcı `aria-live` bölgesinden duyurulur.
 12. **Dokunma hedefi.** En az 44 px, saha ekranlarında 48 px (e2e ölçüm yardımcısı `tests/e2e/support/dokunma.ts`).

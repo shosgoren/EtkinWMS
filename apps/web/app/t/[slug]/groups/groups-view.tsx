@@ -92,7 +92,7 @@ const grantsOf = (powers: readonly string[]): string[] => POWERS.filter((p) => p
 export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const t = useTranslations("gruplar");
   const tr = useTranslations("kural");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const [groups, setGroups] = useState(data.groups);
   const [members, setMembers] = useState(data.members);
@@ -101,13 +101,13 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState<Draft | null>(null);
   const [cf, setCf] = useState<null | "home" | "back">(null);
-  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
   const cfRef = useRef<HTMLDivElement>(null);
   useModalFocus(cf !== null, cfRef, { onClose: () => setCf(null), initial: "first" });
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  // T-1001 (ALTIN-KURAL 5, 17): yetkisiz dokunuş — ortak sarı balon + hata sesi.
+  // T-436 (ALTIN-KURAL 5, 17): yetkisiz dokunuş — ortak sarı balon + hata sesi.
   const flash = (msg: string): void => kilitliDokunus(msg);
 
   const active = useMemo(() => groups.filter((g) => !g.archived), [groups]);
@@ -249,7 +249,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       }
       const id = draft.id;
       setGroups((list) => list.map((x) => (x.id === id ? { ...x, archived: true } : x)));
-      // T-1001 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay yok; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
+      // T-436 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay yok; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
       const version = r.data.ok ? r.data.version : draft.version;
       feedback.undo(t("archived", { name: draft.name }), tr("undo"), async () => {
         const u = await archiveGroupAction({ slug, id, expectedVersion: version, archived: false });

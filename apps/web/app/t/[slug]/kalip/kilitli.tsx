@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 17): yetkisiz dokunuş. Kilitli öğe gizlenmiyorsa dokununca sarı "Değiştirme yetkin yok · sorumluna sor"
+// T-436 (ALTIN-KURAL 17): yetkisiz dokunuş. Kilitli öğe gizlenmiyorsa dokununca sarı "Değiştirme yetkin yok · sorumluna sor"
 // balonu + uyarı/hata sesi. Öğe gerçek `disabled` DEĞİLDİR (dokunuş yakalansın): `aria-disabled="true"` + `data-kilitli`, işlem çağrılmaz.
 // Satırlar (`KalipSatir`, `KalipAnahtar`) `locked` iken aynı işlevi kullanır.
 import { useTranslations } from "next-intl";

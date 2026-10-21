@@ -50,7 +50,7 @@ const P = ({ d }: { d: string }) => <path d={d} />;
 export async function PanoBoard(p: PanoBoardProps) {
   const t = await getTranslations("pano");
   const tg = await getTranslations("home.gv");
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(p.slug)}`;
   const b = p.board;
   const firstName = p.userName.trim().split(/\s+/)[0] ?? p.userName;

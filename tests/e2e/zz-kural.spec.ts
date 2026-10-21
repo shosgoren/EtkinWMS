@@ -1,4 +1,4 @@
-// T-1001: ALTIN-KURAL 5–17 uçtan uca bekçileri (yönetici demo oturumu).
+// T-436: ALTIN-KURAL 5–17 uçtan uca bekçileri (yönetici demo oturumu).
 // - 11: perde / menü Esc ile kapanır, odak açan düğmeye döner.
 // - 10: arşivleme onay sormaz; "Geri al" balonu kaydı sunucuda arşivden çıkarır (cari kart).
 // - 9: bağlantı kopunca üstte şerit; çevrimdışı gönderim engellenir ve balon çıkar.
@@ -8,7 +8,7 @@ import { expect, test } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
 import { expectTouchTargets, smallTouchTargets } from "./support/dokunma.ts";
 
-test("T-1001 Esc: Modüller ve Hesap menüsü kapanır, odak açan düğmeye döner", async ({ page }) => {
+test("T-436 Esc: Modüller ve Hesap menüsü kapanır, odak açan düğmeye döner", async ({ page }) => {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.goto("/t/demo/items");
@@ -31,7 +31,7 @@ test("T-1001 Esc: Modüller ve Hesap menüsü kapanır, odak açan düğmeye dö
   await expect(account).toBeFocused();
 });
 
-test("T-1001 Geri al: arşive alınan cari kart balondaki Geri al ile listeye döner", async ({ page }) => {
+test("T-436 Geri al: arşive alınan cari kart balondaki Geri al ile listeye döner", async ({ page }) => {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   const id = `${Date.now().toString(36)}${test.info().project.name.slice(0, 1)}`.toUpperCase();
@@ -59,7 +59,7 @@ test("T-1001 Geri al: arşive alınan cari kart balondaki Geri al ile listeye d�
   await expect(page.getByTestId("party-card").filter({ hasText: name })).toBeVisible();
 });
 
-test("T-1001 çevrimdışı: şerit görünür, gönderim engellenir", async ({ page, context }) => {
+test("T-436 çevrimdışı: şerit görünür, gönderim engellenir", async ({ page, context }) => {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.goto("/t/demo/parties");
@@ -78,7 +78,7 @@ test("T-1001 çevrimdışı: şerit görünür, gönderim engellenir", async ({ 
   await expect(page.getByTestId("cevrimdisi-serit")).toBeHidden();
 });
 
-test("T-1001 bulunamadı: tasarım dilinde, tek başlık, Ana ekran düğmesi", async ({ page }) => {
+test("T-436 bulunamadı: tasarım dilinde, tek başlık, Ana ekran düğmesi", async ({ page }) => {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.goto("/t/demo/boyle-bir-ekran-yok");
@@ -88,7 +88,7 @@ test("T-1001 bulunamadı: tasarım dilinde, tek başlık, Ana ekran düğmesi", 
   await expect(nf.getByTestId("hata-ana")).toBeVisible();
 });
 
-test("T-1001 dokunma hedefi: kalıp ekranlarında içerik ve alt çubuk ≥ 44 px", async ({ page }) => {
+test("T-436 dokunma hedefi: kalıp ekranlarında içerik ve alt çubuk ≥ 44 px", async ({ page }) => {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   const bad: Record<string, unknown> = {};

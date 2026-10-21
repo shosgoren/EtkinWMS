@@ -143,12 +143,12 @@ export function FlowShell({ hue, icon, step, total, title, instruction, backHref
 export function ScanAlert({ title, reason, action, code, onClose }: { title: string; reason: string; action: string; code?: string; onClose: () => void }) {
   const t = useTranslations("receiving");
   const btn = useRef<HTMLButtonElement>(null);
-  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
   const alertRef = useRef<HTMLDivElement>(null);
   useModalFocus(true, alertRef, { onClose, initial: "none" });
   useEffect(() => {
     btn.current?.focus();
-    // Kötü okutma sesi + titreşim (T-1001: tek kaynak; iOS titreşimi desteklemeyebilir, görsel uyarı yeterlidir, N-13).
+    // Kötü okutma sesi + titreşim (T-436: tek kaynak; iOS titreşimi desteklemeyebilir, görsel uyarı yeterlidir, N-13).
     feedback.scan(false);
   }, []);
   return (
@@ -318,7 +318,7 @@ const ACCEPT_AFTER_RESOLVE_MS = 700;
 export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onCode: (code: string) => boolean; onClose: () => void; onManual: () => void; resolvedName?: string | undefined }) {
   const t = useTranslations("receiving");
   const video = useRef<HTMLVideoElement>(null);
-  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
   const overlayRef = useRef<HTMLDivElement>(null);
   useModalFocus(true, overlayRef, { onClose, initial: "none" });
   const onCodeRef = useRef(onCode);
@@ -710,7 +710,7 @@ export function useScanPrimary(camera: (code: string) => boolean, outcome: ScanO
     if (cameraPossible()) setCam(true);
     else {
       setReady(true);
-      // Küçük işlem (okuyucu hazır): sessiz (T-1001, kullanıcı kararı 21 Ekim).
+      // Küçük işlem (okuyucu hazır): sessiz (T-436, kullanıcı kararı 21 Ekim).
       feedback.minor();
     }
   };

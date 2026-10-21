@@ -84,7 +84,7 @@ function store<T>(key: string, value?: T): T | null {
 export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const t = useTranslations("aktar");
   const ti = useTranslations("import");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const [step, setStep] = useState(1);
   const [kind, setKind] = useState<ImportKindKey>("stok");
@@ -100,7 +100,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cf, setCf] = useState(false);
-  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
   const pickRef = useRef<HTMLElement>(null);
   const cfRef = useRef<HTMLDivElement>(null);
   useModalFocus(pick !== null, pickRef, { onClose: () => setPick(null), initial: "first" });
@@ -112,7 +112,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     setRecent(store<{ name: string; rows: number; cols: number }>(RECENT(slug, kind)));
   }, [slug, kind]);
 
-  // T-1001 (ALTIN-KURAL 5): ortak balon.
+  // T-436 (ALTIN-KURAL 5): ortak balon.
   const flash = (msg: string): void => feedback.info(msg);
 
   const sheet = loaded === null ? null : (loaded.wb.sheets[loaded.sheet] ?? null);

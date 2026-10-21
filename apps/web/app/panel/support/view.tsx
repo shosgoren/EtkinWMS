@@ -164,7 +164,7 @@ export type InboxFilter = "ALL" | SupportStatusKey;
 /** E · Destek gelen kutusu. */
 export function SupportInbox({ rows, filter, q: q0, labels: t, settings }: { rows: readonly SupportRowItem[]; filter: InboxFilter; q: string; labels: SupportLabels; settings: ReactNode }) {
   const router = useRouter();
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [q, setQ] = useState(q0);
   const cnt = (s: SupportStatusKey): number => rows.filter((r) => r.status === s).length;
   const ql = kucukHarf(q, locale).trim();

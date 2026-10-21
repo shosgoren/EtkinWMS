@@ -97,7 +97,7 @@ function QrSvg({ value, label }: { value: string; label: string }) {
 
 export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pending, hasLink }: TeamViewProps) {
   const t = useTranslations("ekip");
-  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const [view, setView] = useState<"list" | "invite" | "qr">("list");
@@ -111,7 +111,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [cf, setCf] = useState<null | "home" | "back">(null);
-  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
   const addRef = useRef<HTMLElement>(null);
   const cfRef = useRef<HTMLDivElement>(null);
   useModalFocus(add, addRef, { onClose: () => setAdd(false), initial: "first" });
@@ -123,7 +123,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     const timer = setInterval(() => router.refresh(), 5000);
     return () => clearInterval(timer);
   }, [router]);
-  // T-1001 (ALTIN-KURAL 5): ortak balon (kendi sesini çalar).
+  // T-436 (ALTIN-KURAL 5): ortak balon (kendi sesini çalar).
   const flash = (m: string, tur: BalonTur = "ok"): void => balonGoster({ tur, metin: m });
 
   const groupOf = (id: string | null): TeamGroup | undefined => (id === null ? undefined : groups.find((g) => g.id === id));

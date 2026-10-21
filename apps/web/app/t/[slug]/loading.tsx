@@ -1,4 +1,4 @@
-// T-1001 (ALTIN-KURAL 6): kiracı ekranı yüklenirken iskelet (üst çubuk, arama, kartlar). İçeriğin kopyası DEĞİLDİR (T-965: tek render).
+// T-436 (ALTIN-KURAL 6): kiracı ekranı yüklenirken iskelet (üst çubuk, arama, kartlar). İçeriğin kopyası DEĞİLDİR (T-965: tek render).
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { temaKoyu } from "../../design/theme.ts";

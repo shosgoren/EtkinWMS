@@ -60,7 +60,7 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
   const canReport = canReportRole && (screens === null || screens.includes("problem"));
   const t = await getTranslations("pano");
   const tg = await getTranslations("home.gv");
-  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstName = userName.trim().split(/\s+/)[0] ?? userName;
   const sections = (summary?.sections ?? []).filter((s) => screens === null || screens.includes(SCREEN_OF[s.key]));

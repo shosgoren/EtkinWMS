@@ -1,4 +1,4 @@
-// T-1001 (ALTIN-KURAL 7): eşleşmeyen her adres (müşteri uygulaması ve yönetim paneli) — ortak "bulunamadı" ekranı, tasarım dilinde.
+// T-436 (ALTIN-KURAL 7): eşleşmeyen her adres (müşteri uygulaması ve yönetim paneli) — ortak "bulunamadı" ekranı, tasarım dilinde.
 import { cookies } from "next/headers";
 import { temaKoyu } from "./design/theme.ts";
 import { HataEkrani } from "./t/[slug]/kalip/hata-ekrani.tsx";

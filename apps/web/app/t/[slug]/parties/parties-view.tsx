@@ -107,7 +107,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
     }
     if (edit.party.archived) say("ok", t("restoredDone"));
     else {
-      // T-1001 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay sorulmaz; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
+      // T-436 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay sorulmaz; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
       const id = edit.party.id;
       const version = r.data.version;
       feedback.undo(t("archivedDone"), tr("undo"), async () => {

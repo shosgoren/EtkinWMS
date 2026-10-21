@@ -50,7 +50,7 @@ export function KalipPencere({ open, title, titleId, describedBy, icon, onClose,
   const dark = useKalipDark(open);
   const busyRef = useRef(busy);
   busyRef.current = busy;
-  // T-1001 (ALTIN-KURAL 11): Esc ve odak tuzağı yerel `<dialog>`dan; kapanınca odak AÇAN düğmeye döner (kanca önce açanı kaydeder).
+  // T-436 (ALTIN-KURAL 11): Esc ve odak tuzağı yerel `<dialog>`dan; kapanınca odak AÇAN düğmeye döner (kanca önce açanı kaydeder).
   useModalFocus(open, ref, { trap: false, initial: "none" });
   useEffect(() => {
     const el = ref.current;

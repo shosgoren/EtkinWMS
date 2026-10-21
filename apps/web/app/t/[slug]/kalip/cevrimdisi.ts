@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 9): bağlantı durumu ve çevrimdışı engeli — tek kaynak. Uygulamada çevrimdışı kuyruk (saklayıp sonra gönderme)
+// T-436 (ALTIN-KURAL 9): bağlantı durumu ve çevrimdışı engeli — tek kaynak. Uygulamada çevrimdışı kuyruk (saklayıp sonra gönderme)
 // YOKTUR (taranmıştır: yalnız sunucu tarafı pg-boss kuyruğu var); bu yüzden çevrimdışıyken gönderilmek istenen işlem açıkça engellenir
 // ve "Bağlantı yok · bağlanınca tekrar dene" balonu çıkar. Kök düzendeki `KuralKatmani` form gönderimlerini de aynı kuralla durdurur.
 import { useEffect, useState } from "react";

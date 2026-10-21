@@ -1,5 +1,5 @@
 "use client";
-// T-1001 (ALTIN-KURAL 5, 10, 11): uygulamanın TEK balon katmanı. Ekranlar balonu `feedback.*` / `balonGoster` (@wms/ui) ile açar;
+// T-436 (ALTIN-KURAL 5, 10, 11): uygulamanın TEK balon katmanı. Ekranlar balonu `feedback.*` / `balonGoster` (@wms/ui) ile açar;
 // kök düzende bir kez çizilen bu katman kaynak `.toast` görünümünü (ikon dairesi + kısa metin) verir, kendi sesini çalar (balonGoster)
 // ve kalıcı `aria-live` bölgesidir (ekran okuyucu her durum değişikliğini duyurur). Açık pencerelerin üstünde kalsın diye üst katmanda
 // (popover) açılır. "Geri al" gibi eylemli balon birkaç saniye kalır; eylem bir kez çalışır.

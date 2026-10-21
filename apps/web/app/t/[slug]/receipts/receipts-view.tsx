@@ -63,7 +63,7 @@ export function ReceiptsList({ slug, dark, receipts, nextHref, total, canCreate,
   const [error, setError] = useState<ErrorInfo | null>(null);
   const [confirm, setConfirm] = useState<ReceiptView | null>(null);
   const [approved, setApproved] = useState<string | null>(null);
-  // T-1001 (ALTIN-KURAL 5): onay / oluşturma başarısı ve hata sesli.
+  // T-436 (ALTIN-KURAL 5): onay / oluşturma başarısı ve hata sesli.
   useSonucSesi({ hata: error, tamam: approved ?? created });
   const home = `/t/${encodeURIComponent(slug)}`;
   const base = `${home}/receipts`;

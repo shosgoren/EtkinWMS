@@ -110,7 +110,7 @@ export function OdemelerView({
     setAccrue(false);
     if (accrueOpen) router.replace(tab === "all" ? "/odemeler" : `/odemeler?d=${tab}`);
   };
-  // T-1001 (ALTIN-KURAL 11): perdeler Esc ile kapanır, odak içinde kalır ve açan düğmeye döner.
+  // T-436 (ALTIN-KURAL 11): perdeler Esc ile kapanır, odak içinde kalır ve açan düğmeye döner.
   const pdRef = useRef<HTMLDivElement>(null);
   const acRef = useRef<HTMLDivElement>(null);
   useModalFocus(pick !== null, pdRef, { onClose: () => setPick(null), initial: "first" });

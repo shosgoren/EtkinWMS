@@ -113,7 +113,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <div id="main" tabIndex={-1}>
             {children}
           </div>
-          {/* T-1001: ALTIN-KURAL 5–17 ortak katman (balon, çevrimdışı, hareket azaltma, otomatik tema) — her yüzeyde bir kez. */}
+          {/* T-436: ALTIN-KURAL 5–17 ortak katman (balon, çevrimdışı, hareket azaltma, otomatik tema) — her yüzeyde bir kez. */}
           <KuralKatmani />
         </NextIntlClientProvider>
       </body>
