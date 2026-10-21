@@ -4,7 +4,7 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
-import { appMenuReachable, openAppMenu } from "./support/app-menu.ts";
+import { selectView } from "./support/app-menu.ts";
 
 const SIZES = [
   { width: 375, height: 812 },
@@ -74,17 +74,10 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await page.screenshot({ path: `${OUT}/${view.id}-${size.width}-${screen}.png`, fullPage: true });
         };
 
-        // T-971: önceki adım kalıp ekranında (depo/lokasyon) bitebilir; kalıp ekranları ve Genel bakış Pano'su eski kabuğun görünüm anahtarını
-        // çizmez. Anahtar erişilebilirse (ana ekranın eski kabuğu) tıklanır; değilse görünüm çerezi doğrudan yazılır (ekran yine `data-view` ile doğrulanır).
+        // T-979c: görünüm geçişi ortak alt çubuğun Modüller sayfasında (ana ekran Pano / Kokpit); seçim `data-view` ile doğrulanır.
         await page.goto("/t/demo");
-        // Görünüm anahtarı: seçili durum aria-pressed + metinle (renk tek taşıyıcı değil).
-        // T-254: telefon genişliğinde anahtar menüdedir; önce menü açılır, aynı düğme kullanılır.
-        const inMenu = await appMenuReachable(page);
-        if (inMenu) await openAppMenu(page);
-        const toggle = page.getByRole("button", { name: view.label, exact: true });
-        if ((await toggle.count()) > 0) {
-          await toggle.click();
-          await expect(page.locator("html")).toHaveAttribute("data-view", view.id);
+        await selectView(page, view.id as "flow" | "cockpit");
+        await expect(page.locator("html")).toHaveAttribute("data-view", view.id);
           // Genel bakış'a geçince ana ekran Pano olur (anahtar yok); anahtar kaldıysa seçili durumu doğrulanır.
           const after = page.getByRole("button", { name: view.label, exact: true }).and(page.locator("[aria-pressed]"));
           if ((await after.count()) > 0) await expect(after.first()).toHaveAttribute("aria-pressed", "true");

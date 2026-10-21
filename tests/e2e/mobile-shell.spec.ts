@@ -1,6 +1,6 @@
 // T-254 / T-979: cihaza uyumlu kabuk. Eski telefon üst çubuğu, masaüstü çalışma alanı satırı, ScreenShell ve alt sekme çubuğu T-979'da
-// kaldırıldı: her ekran kendi kalıp/Pano üst çubuğunu ve ortak alt cam çubuğu (Kabuk) çizer; uygulama menüsü (Akış/Genel bakış, çalışma
-// alanı, yönetim sayfaları, Yardım, Çıkış) Hesap menüsündeki "Tüm ekranlar"dan açılır. Kokpit ("Genel bakış") LİSTE kalıbındadır: işler kart
+// kaldırıldı: her ekran kendi kalıp/Pano üst çubuğunu ve ortak alt cam çubuğu (Kabuk) çizer. T-979c: eski "Tüm ekranlar" penceresi de yok —
+// görünüm geçişi (Genel bakış ↔ İşlemler) ve ekranlar Modüller'de; Hesap menüsünde kullanıcı / çalışma alanı değiştir, tema, çıkış. Kokpit ("Genel bakış") LİSTE kalıbındadır: işler kart
 // listesi (etkin / kilitli + gerekçe / yakında), "Şimdi", "Görevlerim", "Bugün yaptıklarım". Piksel karşılaştırma yok: ölçülen yerleşim
 // değerleri (taşma, kaydırma, dokunma hedefi). Ekran görüntüleri `.artifacts/t-254/` altına yazılır (git'e girmez).
 import { mkdirSync } from "node:fs";
@@ -11,7 +11,7 @@ import type { Browser, Page } from "@playwright/test";
 import { enterDemoReal, enterDemoShared } from "./support/demo-session.ts";
 import { panoChecks } from "./support/pano-checks.ts";
 import { T270_SIZES, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
-import { openAppMenu } from "./support/app-menu.ts";
+import { openAccountMenu, selectView, signOut, signOutItem } from "./support/app-menu.ts";
 import { expectKabukBar, expectModulesSheet } from "./support/kabuk-checks.ts";
 
 const OUT = process.env.T254_OUT ?? path.resolve(import.meta.dirname, "../../.artifacts/t-254");
@@ -77,28 +77,22 @@ test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüs
     await page.screenshot({ path: path.join(OUT, `${tag}-${size.name}-kokpit.png`) });
   }
 
-  // Menü: Akış/Kokpit, çalışma alanı, "Giriş yapan", Yardım ve Çıkış erişilebilir; hedefler >= 48 px.
+  // T-979c: Hesap menüsü — Kullanıcı değiştir, tema, Çıkış (eski "Tüm ekranlar" maddesi yok; tek çalışma alanında "Çalışma alanı değiştir" yok);
+  // görünüm geçişi Modüller'de (İşlemler ↔ Genel bakış), hedefler ≥ 48 px.
   await page.setViewportSize({ width: 390, height: 664 });
   await page.goto("/t/demo");
-  await openAppMenu(page);
-  const menu = page.getByRole("dialog", { name: "Menü" });
-  await expect(menu).toBeVisible();
-  await expect(menu.getByText("Giriş yapan: Demo Yönetici")).toBeVisible();
-  await expect(menu.getByRole("link", { name: /Demo Ambalaj/ })).toHaveAttribute("aria-current", "page");
-  await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toHaveAttribute("href", "/help");
-  expect(await smallTargets(page, '[data-testid="app-menu"]'), "menü: 48 px altı dokunma hedefi").toEqual([]);
-  const mm = await metrics(page);
-  expect(mm.scrollWidth, "menü açıkken yatay taşma yok").toBeLessThanOrEqual(mm.clientWidth);
-  await menu.getByRole("button", { name: "İşlemler", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
-  await expect(menu.getByRole("button", { name: "İşlemler", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await menu.getByRole("button", { name: "Genel bakış", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
-  await expect(menu.getByRole("button", { name: "Genel bakış", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await openAccountMenu(page);
+  const account = page.getByRole("menu", { name: "HESAP" });
+  await expect(account.getByRole("menuitem", { name: "Kullanıcı değiştir" })).toBeVisible();
+  await expect(account.getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
+  await expect(account.getByRole("menuitem", { name: "Çalışma alanı değiştir" })).toHaveCount(0);
+  expect(await smallTargets(page, '[role="menu"]'), "hesap menüsü: 48 px altı dokunma hedefi").toEqual([]);
   await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
-  // T-979b (B-100): kalıp penceresi kapanınca odak menüyü açan yere (Hesap düğmesi) döner.
-  await expect(page.locator('#main [data-testid="home-actions"]').filter({ visible: true })).toBeFocused();
+  await expect(account).toBeHidden();
+  await selectView(page, "flow");
+  await expect(page.locator("#main").getByTestId("pano")).toBeVisible();
+  await selectView(page, "cockpit");
+  await expect(page.getByTestId("kokpit")).toBeVisible();
 
   // İç ekran: üyeler ekranında gövde kaymaz, yalnız içerik alanı kayar, yatay taşma yok; eski kabuk yok.
   await page.goto("/t/demo/members");
@@ -108,12 +102,12 @@ test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüs
   expect(inner.scrollWidth, "üyeler: yatay taşma yok").toBeLessThanOrEqual(inner.clientWidth);
   await expectNewShell(page, "üyeler");
 
-  // Sunucu/ağ hatası: çıkış başarısızsa neden + sonraki eylem menüde görünür.
+  // Sunucu/ağ hatası: çıkış başarısızsa neden menüde görünür.
   await page.goto("/t/demo");
-  await openAppMenu(page);
+  await openAccountMenu(page);
   await page.route("**/sign-out", (route) => route.fulfill({ status: 500, contentType: "application/json", body: "{}" }));
-  await menu.getByRole("button", { name: "Çıkış yap" }).click();
-  await expect(menu.getByRole("alert")).toContainText("Çıkış yapılamadı. Bağlantını kontrol edip yeniden dene.");
+  await signOutItem(page).click();
+  await expect(page.getByRole("menu", { name: "HESAP" }).getByRole("alert")).toBeVisible();
   await page.unroute("**/sign-out");
   await page.keyboard.press("Escape");
 
@@ -127,12 +121,10 @@ test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüs
   // T-292: aynı oturumla yatay telefon (dokunmatik) ve karşılaştırma boyutları.
   await landscapePhoneChecks(browser, page, tag);
 
-  // Gerçek çıkış (uygulama menüsünden).
+  // Gerçek çıkış (Hesap menüsünden).
   await page.setViewportSize({ width: 390, height: 664 });
   await page.goto("/t/demo");
-  await openAppMenu(page);
-  await menu.getByRole("button", { name: "Çıkış yap" }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await signOut(page);
 });
 
 // T-270 / T-979: role göre Kokpit kartları (toplayıcı: 4 etkin, 3 yetkisiz + gerekçe, 2 yakında) üç telefon boyutunda; "bekleyen iş yok"
@@ -174,9 +166,7 @@ test("Kokpit role göre (T-270): etkin, yetkisiz ve yakında işler kartları; b
       await expect(page.getByTestId("now-empty")).toHaveText("Bekleyen iş yok");
       await itemsScreenChecks(page, { slug: "demo", empty: false });
     }
-    await openAppMenu(page);
-    await page.getByRole("button", { name: "Çıkış yap" }).click();
-    await expect(page).toHaveURL(/\/login$/);
+    await signOut(page);
   }
 });
 
@@ -248,22 +238,18 @@ test("Pano hesap sahibi: rapor kartları, kaydırmasız telefon/tablet, ekip men
     })()`);
     expect(m.sw, `${width}: yatay taşma yok`).toBeLessThanOrEqual(m.cw);
     if (m.ov === "hidden") expect(m.ish, `${width}: içerik alanı taşmaz`).toBeLessThanOrEqual(m.ich + 1);
-    // Ekip menüsü: Kullanıcılar bağlantısı; Tüm ekranlar uygulama menüsünü açar.
+    // Ekip menüsü: Kullanıcılar bağlantısı; eski "Tüm ekranlar" yok (T-979c).
     await pano.getByTestId("home-actions").click();
-    await expect(pano.getByRole("menu", { name: "EKİP" }).getByRole("menuitem", { name: "Kullanıcılar" })).toHaveAttribute("href", "/t/demo/team");
+    const team = pano.getByRole("menu", { name: "EKİP" });
+    await expect(team.getByRole("menuitem", { name: "Kullanıcılar" })).toHaveAttribute("href", "/t/demo/team");
+    await expect(team.getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
     await page.keyboard.press("Escape");
-    await openAppMenu(page);
-    const menu = page.getByRole("dialog", { name: "Menü" });
-    await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveAttribute("href", "/t/demo/members");
-    await page.keyboard.press("Escape");
-    await expect(menu).toBeHidden();
+    await expect(team).toBeHidden();
   }
   await page.locator("#main").getByTestId("pano").locator('[data-report="orders"]').click();
   await expect(page).toHaveURL(/\/t\/demo\/shipping$/);
   await page.goto("/t/demo");
-  await openAppMenu(page);
-  await page.getByRole("dialog", { name: "Menü" }).getByRole("button", { name: "Genel bakış", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
+  await selectView(page, "cockpit");
   await expect(page.locator("#main").getByTestId("pano")).toHaveCount(0);
   await expect(page.getByRole("list", { name: "İşler" })).toBeVisible();
 });
@@ -283,18 +269,14 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   }
   // Plan dışı (manuel giriş/çıkış) yazma işidir: salt okuyana çizilmez.
   await expect(easy.locator("[data-manual]")).toHaveCount(0);
-  // I-18 öncelik: yetkisiz eylem çizilmez — salt okuyan "Sorun bildir" görmez; menü erişilebilir.
+  // I-18 öncelik: yetkisiz eylem çizilmez — salt okuyan "Sorun bildir" görmez; ⚠ kutusunda Genel bakış ve Çıkış yap (T-979c, eski Menü yok).
   await page.locator("#main").getByTestId("home-actions").click();
-  await expect(page.locator("#main").getByTestId("app-bar-menu")).toBeVisible();
+  await expect(page.locator("#main").getByTestId("home-overview")).toBeVisible();
+  await expect(page.locator("#main").getByTestId("home-signout")).toBeVisible();
+  await expect(page.locator("#main").getByTestId("app-bar-menu")).toHaveCount(0);
   await expect(page.locator("#main").getByTestId("report-problem")).toHaveCount(0);
-  await page.locator("#main").getByTestId("app-bar-menu").click();
-  const menu = page.getByRole("dialog", { name: "Menü" });
-  await expect(menu.getByRole("link", { name: "Stok", exact: true })).toHaveAttribute("href", "/t/demo/stock");
-  await expect(menu.getByRole("link", { name: "Ekip", exact: true })).toHaveCount(0);
-  await expect(menu.getByRole("link", { name: "Ayarlar", exact: true })).toHaveCount(0);
-  // T-958: ortak alt çubuğun Modüller sayfası salt okuyana yönetici / yazma modüllerini göstermez.
-  await page.keyboard.press("Escape");
+  // T-958 / T-979c: ortak alt çubuğun Modüller sayfası salt okuyana yönetici / yazma modüllerini göstermez; Stok durumu ve Genel bakış görünür.
   await page.goto("/t/demo/parties");
   await expectKabukBar(page, "kabuk-scan", "cariler salt okunur");
-  await expectModulesSheet(page, ["home", "urun", "cari"], ["ekip", "excel", "abone", "etiket", "satin", "trans", "topla"]);
+  await expectModulesSheet(page, ["home", "kokpit", "urun", "cari", "stok"], ["ekip", "excel", "abone", "etiket", "satin", "trans", "topla", "ayar"]);
 });
