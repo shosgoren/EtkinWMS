@@ -95,10 +95,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
       <KalipBaslik title={t("greeting", { name: firstName })} hint={t("intro")} />
 
       {now === undefined || !showNow ? null : (
-        <section aria-labelledby="now-title" className="now-card" data-testid="now-card" data-state={now.kind} style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-          <h2 id="now-title" className="sr">
-            {t("now.title")}
-          </h2>
+        <section aria-label={t("now.title")} className="now-card" data-testid="now-card" data-state={now.kind} style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
           <KalipBaslik title={t("now.title")} />
           {now.kind === "error" ? (
             <Banner kind="warning">
@@ -229,10 +226,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
         ))}
       </KalipKartListe>
 
-      <section aria-labelledby="today-title" data-testid="today" style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-        <h2 id="today-title" className="sr">
-          {t("today.title")}
-        </h2>
+      <section aria-label={t("today.title")} data-testid="today" style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
         <KalipBaslik title={t("today.title")} />
         {today.kind === "error" ? (
           <Banner kind="warning">
