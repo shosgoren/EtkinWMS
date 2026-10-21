@@ -4540,6 +4540,7 @@
       "title": "Scan",
       "sub": "FIELD · SCAN A CODE",
       "camHint": "ITEM · CASE · SHELF · DELIVERY NOTE",
+      "distanceHint": "Move back a little · 25–30 cm",
       "camRegion": "Camera on, bring the code into the frame",
       "say": "Scan or say",
       "saySub": "FRAME THE CODE · THE JOB OPENS ITSELF",
