@@ -1,9 +1,8 @@
 // T-423 (I-18): saha personelinin yeni ana ekranı (Pano.dc.html kabuğu). Toplayıcı oturumu AÇIKKEN çağrılır (ek demo girişi yok:
 // demo girişi hız sınırlıdır). Ölçülenler: üst çubuk + alt cam çubuk görünür, yatay kaydırma yok, telefon/tablette içerik alanı taşmaz,
-// Hesap menüsü cam kutusu açılır/kapanır, yüzen kısayol halkası açılır, uygulama menüsüne ("Tüm ekranlar") ulaşılır, tema kalıcıdır.
+// Hesap menüsü cam kutusu açılır/kapanır, yüzen kısayol halkası açılır, görünüm geçişi (Genel bakış) Modüller'de (T-979c), tema kalıcıdır.
 // Eşlik görüntüleri (açık/koyu × 390/1180/1440) test çıktısına yazılır.
 import { expect, test, type Page } from "@playwright/test";
-import { openAppMenu } from "./app-menu.ts";
 
 const SIZES = [
   { w: 390, h: 844 },
@@ -54,12 +53,13 @@ export async function panoChecks(page: Page): Promise<void> {
       await expect(halo).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(halo).toBeHidden();
-      // Uygulama menüsü (tüm ekranlar) erişilebilir.
-      await openAppMenu(page);
-      const app = page.getByRole("dialog", { name: "Menü" });
-      await expect(app).toBeVisible();
+      // T-979c: eski "Tüm ekranlar" maddesi yok; görünüm geçişi Modüller'de (her üye).
+      await pano.getByTestId("home-actions").click();
+      await expect(pano.getByRole("menu", { name: "HESAP" }).getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
       await page.keyboard.press("Escape");
-      await expect(app).toBeHidden();
+      await page.getByTestId("kabuk-mods").click();
+      await expect(page.getByRole("dialog", { name: "Modüller" }).locator('[data-module="kokpit"]')).toBeVisible();
+      await page.keyboard.press("Escape");
       // Tema: menüden karanlık.
       await pano.getByTestId("home-actions").click();
       await pano.getByTestId("pano-menu-theme").click();

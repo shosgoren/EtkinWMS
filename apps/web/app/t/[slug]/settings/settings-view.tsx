@@ -13,7 +13,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { sistemKoyu, temaYaz, type TemaTercihi } from "../../../design/theme.ts";
 import { Ico, KalipBaslik, KalipEkran, MicIco, useKalipToast } from "../kalip/ekran.tsx";
-import { KalipAlan, KalipAnahtar, KalipCikisUyarisi, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek, useLeaveGuard } from "../kalip/form.tsx";
+import { useCikisKorumasi } from "../kalip/cikis.tsx";
+import { KalipAlan, KalipAnahtar, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek } from "../kalip/form.tsx";
+import { KalipSecimListe, KalipSekme } from "../kalip/secim.tsx";
 import { saveSettingsFormAction } from "./form-actions.ts";
 import { clearSampleDataAction } from "./sample-actions.ts";
 import { buyukHarf, feedback } from "@wms/ui";
@@ -55,13 +57,13 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
   const tk = useTranslations("kalip");
   const tr = useTranslations("kural");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
+  const tb = useTranslations("baglantilar");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstTheme: TemaTercihi = initialTheme ?? (initialDark ? "koyu" : "acik");
   const [savedTheme, setSavedTheme] = useState<TemaTercihi>(firstTheme);
   const [v, setV] = useState<SettingsValues & { readonly dark: boolean; readonly tema: TemaTercihi }>({ ...values, dark: initialDark, tema: firstTheme });
   const [open, setOpen] = useState<RowId | null>(null);
-  const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { say, node: toast } = useKalipToast("form");
   const formRef = useRef<HTMLFormElement>(null);
@@ -84,10 +86,8 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
   if (v.sod !== values.sod) chg.push("sod");
   if (v.tema !== savedTheme) chg.push("theme");
   const dirty = chg.length > 0 && !locked && v.name.trim() !== "";
-  useLeaveGuard(chg.length > 0 && !locked);
 
   const denied = (): void => {
-    feedback.error();
     say("warn", t("lockToast"));
   };
   const toggle = (id: RowId) => (): void => {
@@ -114,9 +114,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
     }
     const server = chg.some((k) => k !== "theme");
     setOpen(null);
-    setConfirm(null);
     if (!server) {
-      feedback.ok();
       say("ok", t("themeSaved"));
       return;
     }
@@ -124,21 +122,22 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
     formRef.current?.requestSubmit();
   };
 
+  // T-990: yarım işte Geri / Ana ekran / bağlantılar yalnız ortak çıkış kutusunu açar ("Kaydet ve çık" sunucu formunu gönderir, sayfada kalınır).
+  const korunan = useCikisKorumasi(chg.length > 0 && !locked, {
+    dark: v.dark,
+    text: t("unsavedText", { n: chg.length }),
+    ...(dirty
+      ? {
+          onSave: () => {
+            save();
+            return false;
+          },
+        }
+      : {}),
+  });
   const go = (href: string) => (): void => {
-    if (chg.length > 0 && !locked) {
-      feedback.error();
-      setOpen(null);
-      setConfirm(href);
-      return;
-    }
     feedback.minor();
-    router.push(href);
-  };
-  const leave = (): void => {
-    const to = confirm;
-    setConfirm(null);
-    setV({ ...values, tema: savedTheme, dark: savedTheme === "oto" ? sistemKoyu() : savedTheme === "koyu" });
-    if (to !== null) router.push(to);
+    korunan.sor(() => router.push(href));
   };
 
   const tzLabel = (z: string): string => (z === "Europe/Istanbul" ? t("tzIstanbul") : z === "Europe/Berlin" ? t("tzBerlin") : z === "Europe/London" ? t("tzLondon") : z);
@@ -155,12 +154,13 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
       testId="settings"
       bar={{
         back: { onClick: go(base), testId: "kabuk-back" },
-        homeNav: { onClick: go(base), testId: "kabuk-home" },
+        homeNav: { href: base, testId: "kabuk-home" },
         main: {
           label: t("save"),
           aria: dirty ? t("saveAria", { n: chg.length }) : t("saveNone"),
           d: LICON.check,
           disabled: !dirty || busy,
+          disabledReason: busy ? tk("saving") : t("saveNone"),
           onClick: save,
           testId: "settings-save",
         },
@@ -169,16 +169,21 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
         <>
           <KalipPerde open={open !== null} onClose={close} />
           {toast}
-          <KalipCikisUyarisi
-            open={confirm !== null}
-            text={t("unsavedText", { n: chg.length })}
-            onSave={dirty ? save : undefined}
-            onLeave={leave}
-            onStay={() => setConfirm(null)}
-          />
+          {korunan.kutu}
         </>
       }
     >
+      {/* T-981b: sekme şeridi (Genel · Bağlantılar); Bağlantılar toplu Excel işlemleri ve entegrasyonlar. */}
+      <KalipSekme
+        label={tb("tabs")}
+        color="0E7C7B"
+        current="genel"
+        onGo={(href) => go(href)()}
+        items={[
+          { id: "genel", label: tb("tabGeneral"), d: LICON.gear, href: `${base}/settings` },
+          { id: "baglantilar", label: tb("tabLinks"), d: LICON.excel, href: `${base}/settings/baglantilar` },
+        ]}
+      />
       {locked ? <KalipKilit title={t("lockTitle")} sub={t("lockSub")} /> : null}
       {reauth === null ? null : (
         <div className="lockb" role="alert">
@@ -258,21 +263,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
             </KalipSatir>
             <KalipSatir id="tz" title={t("tz")} value={buyukHarf(tzLabel(v.timeZone), locale)} d={LICON.clock} color="6C4BD8" open={open === "tz"} changed={chg.includes("tz")} locked={locked} onToggle={toggle("tz")} onClose={close} testId="settings-tz">
               <KalipSecenek label={t("tz")} value={v.timeZone} color="6C4BD8" onPick={(id) => set("timeZone", id)} options={tzOptions} />
-              <label className="fld">
-                <span>{t("tzOther")}</span>
-                <select
-                  value={v.timeZone}
-                  aria-label={t("tz")}
-                  onChange={(e) => set("timeZone", e.target.value)}
-                  style={{ height: 34, border: 0, background: "transparent", font: "inherit", fontWeight: 700, color: "inherit", minWidth: 0 }}
-                >
-                  {timeZones.map((z) => (
-                    <option key={z} value={z}>
-                      {z}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <KalipSecimListe label={t("tzOther")} value={v.timeZone} onPick={(id) => set("timeZone", id)} options={timeZones.map((z) => ({ id: z, label: tzLabel(z) === z ? z : `${tzLabel(z)}`, sub: tzLabel(z) === z ? undefined : z }))} icon={{ d: LICON.clock, color: "6C4BD8" }} scan={false} testId="settings-tz-other" />
             </KalipSatir>
             {hasSample ? (
               <KalipSatir id="smp" title={t("sample")} value={t("sampleHas")} d={LICON.koli} color="9A5B2E" open={open === "smp"} locked={locked} onToggle={toggle("smp")} onClose={close} testId="sample-data">

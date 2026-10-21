@@ -15,6 +15,7 @@ import { kdz } from "../kalip/tokens.ts";
 import { Ico, KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
 import { fmtQty, sumDecimal } from "../kalip/format.ts";
 import { KalipGrup } from "../kalip/form.tsx";
+import { KalipSecim } from "../kalip/secim.tsx";
 import { KalipBos, KalipDaha } from "../kalip/liste.tsx";
 import { searchItemsAction } from "../items/actions.ts";
 import { approveQualityAction, createReceiptAction, itemUnitsAction } from "./actions.ts";
@@ -224,6 +225,8 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
   const [error, setError] = useState<{ info: ErrorInfo; ctx: ErrorContext } | null>(null);
   useSonucSesi({ hata: error });
   const changed = (): void => createKey.contentChanged();
+  // T-990: React durumundaki seçim/satırlar çıkış korumasına `data-dirty` ile bildirilir (FormEkran alan olaylarını ayrıca karşılaştırır).
+  const dirty = lines.length > 0 || picked !== null || warehouseId !== (warehouses[0]?.id ?? "");
 
   async function search(q: string) {
     setQuery(q);
@@ -289,6 +292,7 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
   return (
     <form
       className="workflow-form flex min-w-0 flex-col gap-4"
+      data-dirty={dirty ? "true" : "false"}
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
@@ -299,23 +303,18 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
       <KalipGrup title={`1. ${t("k.groupSource")}`} sub={wh === undefined ? undefined : `${wh.code} · ${wh.name}`} d={LICON.depo} color="30475A">
         <div className="flex min-w-0 flex-col gap-3 p-3">
           {warehouses.length > 1 ? (
-            <label className="flex min-w-0 flex-col gap-1 text-base font-semibold">
-              {t("form.warehouse")}
-              <select
-                value={warehouseId}
-                onChange={(e) => {
-                  changed();
-                  setWarehouseId(e.target.value);
-                }}
-                className={`min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-3 text-base text-ink ${FOCUS}`}
-              >
-                {warehouses.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.code} · {w.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <KalipSecim
+              name="warehouseId"
+              label={t("form.warehouse")}
+              color="30475A"
+              icon={{ d: LICON.depo, color: "30475A" }}
+              value={warehouseId}
+              options={warehouses.map((w) => ({ id: w.id, label: `${w.code} · ${w.name}`, d: LICON.depo }))}
+              onPick={(id) => {
+                changed();
+                setWarehouseId(id);
+              }}
+            />
           ) : null}
           <TextField
             label={t("form.supplierRef")}
@@ -370,16 +369,14 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
             )}
             {picked === null ? null : (
               <>
-                <label className="flex min-w-0 flex-col gap-1 text-base font-semibold">
-                  {t("form.unit")}
-                  <select value={unitId} onChange={(e) => setUnitId(e.target.value)} className={`min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-3 text-base text-ink ${FOCUS}`}>
-                    {picked.units.map((u) => (
-                      <option key={u.unitId} value={u.unitId}>
-                        {u.unitName || u.unitCode}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <KalipSecim
+                  name="unitId"
+                  label={t("form.unit")}
+                  color="2F5DA8"
+                  value={unitId}
+                  options={picked.units.map((u) => ({ id: u.unitId, label: u.unitName || u.unitCode }))}
+                  onPick={setUnitId}
+                />
                 <TextField label={t("form.expected")} inputMode="numeric" pattern="[0-9]*" value={qty} onChange={(e) => setQty(e.target.value.replace(/\D/g, "").slice(0, 9))} />
                 <Button variant="secondary" onClick={addLine} disabled={!/^[1-9][0-9]{0,8}$/.test(qty)}>
                   {t("form.addLine")}

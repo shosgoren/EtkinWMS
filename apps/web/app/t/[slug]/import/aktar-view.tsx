@@ -10,13 +10,18 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/aktar-tokens.ts";
 import { AICON } from "../../../design/aktar-icons.ts";
+import { LICON } from "../../../design/kalip-icons.ts";
 import { readWorkbook, SheetError, type Workbook } from "../../../../lib/sheet/read.ts";
 import { FIELDS, autoMap, buildCsv, buildRecords, colLetter, detectHeader, headerSignature, samples, setColumn, waiting, type ImportKindKey, type Mapping } from "../../../../lib/sheet/mapping.ts";
 import { applyImportChunkAction, previewImportAction } from "./actions.ts";
 import { importPartiesAction } from "../parties/actions.ts";
+import { importLocationsAction, importWarehousesAction } from "./master-actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 import { buyukHarf, feedback, sayi } from "@wms/ui";
 
+import { useCikisKorumasi } from "../kalip/cikis.tsx";
+import { KalipSecimSayfasi } from "../kalip/secim.tsx";
+import { UstDugmeler } from "../ust-dugmeler.tsx";
 
 type PreviewResult = Awaited<ReturnType<typeof previewImportAction>>;
 type ImportPreview = Extract<PreviewResult, { ok: true }>["data"];
@@ -24,14 +29,25 @@ type ApplyResult = Awaited<ReturnType<typeof applyImportChunkAction>>;
 type ChunkReport = Extract<ApplyResult, { ok: true }>["data"];
 type PartyResult = Awaited<ReturnType<typeof importPartiesAction>>;
 type PartyReport = Extract<PartyResult, { ok: true }>["data"];
-type PartyRec = { row: number } & Partial<Record<"code" | "name" | "kind" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "address", string>>;
+type PartyRec = { row: number } & Partial<Record<"code" | "name" | "kind" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "address" | "warehouseCode" | "parentCode", string>>;
 const PARTY_CHUNK = 500;
+/** T-981b: kayıt olarak giden türler (cari, depo, raf); sunucuda kontrol = yazmadan deneme (dryRun). */
+type RecordKind = "cari" | "depo" | "raf";
+const isRecordKind = (k: ImportKindKey): k is RecordKind => k === "cari" || k === "depo" || k === "raf";
+type RecordRow = { readonly row: number; readonly status: string; readonly issue?: string; readonly warning?: string };
+type RecordCall = { ok: true; data: { rows: readonly RecordRow[] } } | { ok: false; error: { code: string } };
 
 export interface AktarViewProps {
   readonly slug: string;
   readonly dark: boolean;
   readonly maxRows: number;
   readonly chunkSize: number;
+  /** T-981b: ekran Excel menüsünden / Bağlantılar'dan seçili tür (verilirse 2. adımdan, dosya seçimiyle açılır). */
+  readonly initialKind?: ImportKindKey;
+  /** T-981b: "Güncelle" kipi (kod eşleşen kaydı günceller). */
+  readonly initialUpdate?: boolean;
+  /** T-981b: depo / raf aktarımı (Yönetici: `settings.manage` + `data.import`). */
+  readonly canMaster?: boolean;
 }
 
 interface Loaded {
@@ -49,6 +65,8 @@ interface Check {
   readonly rowMap: readonly number[];
   readonly nNew: number;
   readonly nUpd: number;
+  /** T-981b: Güncelle kipinde eklenmeyecek (atlanacak) yeni kod sayısı. */
+  readonly nSkip: number;
   readonly bad: readonly { readonly row: number; readonly code: string; readonly params: Record<string, string | number> }[];
   readonly badRows: number;
   readonly blocked: boolean;
@@ -81,13 +99,16 @@ function store<T>(key: string, value?: T): T | null {
   }
 }
 
-export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
+export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initialUpdate = false, canMaster = false }: AktarViewProps) {
   const t = useTranslations("aktar");
   const ti = useTranslations("import");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
-  const [step, setStep] = useState(1);
-  const [kind, setKind] = useState<ImportKindKey>("stok");
+  const [step, setStep] = useState(initialKind === undefined ? 1 : 2);
+  const [kind, setKind] = useState<ImportKindKey>(initialKind ?? "stok");
+  // T-981b: Güncelle kipi (açılış stokunda yok: stok yalnız belgeyle değişir) ve yeni kodların eklenip eklenmeyeceği.
+  const [update, setUpdate] = useState(initialUpdate && initialKind !== "acilis");
+  const [addMissing, setAddMissing] = useState(true);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [map, setMap] = useState<Mapping | null>(null);
   const [remembered, setRemembered] = useState(false);
@@ -99,12 +120,10 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const [partyReports, setPartyReports] = useState<readonly PartyReport[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cf, setCf] = useState(false);
+  const [sheetPick, setSheetPick] = useState(false);
   // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
   const pickRef = useRef<HTMLElement>(null);
-  const cfRef = useRef<HTMLDivElement>(null);
   useModalFocus(pick !== null, pickRef, { onClose: () => setPick(null), initial: "first" });
-  useModalFocus(cf, cfRef, { onClose: () => setCf(false), initial: "first" });
   const [recent, setRecent] = useState<{ name: string; rows: number; cols: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -162,16 +181,24 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     store(MEM(slug, kind, headerSignature(head)), map.col);
   }
 
+  /** Kayıt türleri (cari / depo / raf) için sunucu eylemi; `addMissing` yalnız Güncelle kipinde gönderilir. */
+  async function recordCall(k: RecordKind, dryRun: boolean, part: readonly PartyRec[]): Promise<RecordCall> {
+    if (k === "cari") return (await importPartiesAction({ slug, dryRun, rows: part, ...(update ? { addMissing } : {}) })) as RecordCall;
+    const opts = { slug, dryRun, update, addMissing: !update || addMissing };
+    if (k === "depo") return (await importWarehousesAction({ ...opts, rows: part.map((x) => ({ row: x.row, code: x.code, name: x.name })) })) as RecordCall;
+    return (await importLocationsAction({ ...opts, rows: part.map((x) => ({ row: x.row, warehouseCode: x.warehouseCode, code: x.code, name: x.name, parentCode: x.parentCode, kind: x.kind })) })) as RecordCall;
+  }
+
   async function runCheck(): Promise<void> {
     if (map === null || loaded === null) return;
     setBusy(true);
     setError(null);
-    if (kind === "cari") {
-      // T-428: cari kartlar kayıt olarak gider; kontrol = sunucuda yazmadan deneme (dryRun), aynı kurallar.
+    if (isRecordKind(kind)) {
+      // T-428: cari kartlar kayıt olarak gider; kontrol = sunucuda yazmadan deneme (dryRun), aynı kurallar. T-981b: depo / raf aynı yol.
       const records = buildRecords(rows, loaded.header, map, kind) as unknown as PartyRec[];
-      const res: PartyReport["rows"][number][] = [];
+      const res: RecordRow[] = [];
       for (let i = 0; i < records.length; i += PARTY_CHUNK) {
-        const r = await importPartiesAction({ slug, dryRun: true, rows: records.slice(i, i + PARTY_CHUNK) });
+        const r = await recordCall(kind, true, records.slice(i, i + PARTY_CHUNK));
         if (!r.ok) {
           setBusy(false);
           feedback.error();
@@ -191,8 +218,9 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
         rowMap: [],
         nNew: res.filter((x) => x.status === "CREATED").length,
         nUpd: res.filter((x) => x.status === "UPDATED").length,
+        nSkip: res.filter((x) => x.status === "SKIPPED").length,
         bad: [
-          ...invalid.map((x) => ({ row: x.row, code: `P:${x.issue ?? "UNKNOWN"}`, params: {} })),
+          ...invalid.map((x) => ({ row: x.row, code: `${kind === "cari" ? "P" : "M"}:${x.issue ?? "UNKNOWN"}`, params: {} })),
           ...res.filter((x) => x.warning !== undefined && x.status !== "INVALID").map((x) => ({ row: x.row, code: `W:${x.warning ?? ""}`, params: {} })),
         ].sort((a, b) => a.row - b.row).slice(0, 20),
         badRows: invalid.length,
@@ -203,8 +231,9 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
       setStep(4);
       return;
     }
+    const mode = kind === "stok" && update ? { update: true, addMissing } : undefined;
     const first = buildCsv(rows, loaded.header, map, kind);
-    const r = await previewImportAction({ slug, text: first.text });
+    const r = await previewImportAction({ slug, text: first.text, mode });
     if (!r.ok) {
       setBusy(false);
       feedback.error();
@@ -219,14 +248,16 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     // Sorunluları atla: sorunlu dosya satırları çıkarılıp temiz dosya yeniden önizlenir (sunucu yine her şeyi doğrular).
     if (!headerLevel && p.issueTotal > 0 && p.issueTotal === p.issues.length && skip) {
       const second = buildCsv(rows, loaded.header, map, kind, badFileRows);
-      const r2 = await previewImportAction({ slug, text: second.text });
+      const r2 = await previewImportAction({ slug, text: second.text, mode });
       if (r2.ok) final = { text: second.text, rowMap: second.rowMap, preview: r2.data };
     }
     const fp = final.preview;
     const clean = fp.issueTotal === 0;
     const nNew = !clean ? 0 : "products" in fp && fp.products !== undefined ? fp.products.create : (fp.summary?.stockLines ?? 0);
-    const nUpd = !clean ? 0 : "products" in fp && fp.products !== undefined ? fp.products.existing : 0;
-    setCheck({ preview: fp, text: final.text, rowMap: final.rowMap, nNew, nUpd, bad: issues.slice(0, 20), badRows: headerLevel ? 0 : p.summary?.errorRows ?? badFileRows.size, blocked: !clean });
+    // T-981b: "güncellenecek" = gerçekten değişecek mevcut ürün (ad [Güncelle kipi], koli, barkod); değişmeyen mevcut ürün sayılmaz.
+    const nUpd = !clean ? 0 : "products" in fp && fp.products !== undefined ? fp.products.changes : 0;
+    const nSkip = !clean ? 0 : "products" in fp && fp.products !== undefined ? fp.products.skipped : 0;
+    setCheck({ preview: fp, text: final.text, rowMap: final.rowMap, nNew, nUpd, nSkip, bad: issues.slice(0, 20), badRows: headerLevel ? 0 : p.summary?.errorRows ?? badFileRows.size, blocked: !clean });
     setBusy(false);
     (clean ? feedback.ok : feedback.error)();
     setStep(4);
@@ -241,12 +272,12 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
       const total = check.records.length;
       setProgress({ done: 0, total });
       for (let i = 0; i < total; i += PARTY_CHUNK) {
-        const r = await importPartiesAction({ slug, dryRun: false, rows: check.records.slice(i, i + PARTY_CHUNK) });
+        const r = await recordCall(kind as RecordKind, false, check.records.slice(i, i + PARTY_CHUNK));
         if (!r.ok) {
           setError(t("serverError", { code: r.error.code }));
           break;
         }
-        acc.push(r.data);
+        acc.push(r.data as PartyReport);
         setPartyReports([...acc]);
         setProgress({ done: Math.min(total, i + PARTY_CHUNK), total });
       }
@@ -262,7 +293,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     const total = preview.rowCount;
     setProgress({ done: 0, total });
     for (let c = 0; c < preview.chunkCount; c++) {
-      const r = await applyImportChunkAction({ slug, text: check.text, chunk: c, digest: preview.digest });
+      const r = await applyImportChunkAction({ slug, text: check.text, chunk: c, digest: preview.digest, ...(kind === "stok" && update ? { mode: { update: true, addMissing } } : {}) });
       if (!r.ok) {
         setError(t("serverError", { code: r.error.code }));
         break;
@@ -280,7 +311,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
 
   // ---- görünüm değerleri (kaynak renderVals) ----
   const STEPS = [t("steps.1"), t("steps.2"), t("steps.3"), t("steps.4"), t("steps.5")];
-  const title = step === 1 ? t("title") : `${kindTitle} · ${t("title")}`;
+  const title = step === 1 ? t("title") : `${kindTitle} · ${update ? t("mode.update") : t("title")}`;
   const stepLine = t("stepLine", { n: Math.min(step, 4), name: buyukHarf(STEPS[step - 1] ?? "", locale) });
   const colSample = (i: number): string => (loaded === null ? "" : samples(rows, loaded.header, i).join(" · "));
   const colName = (i: number): string => `${colLetter(i)} · ${buyukHarf(head[i] ?? "", locale)}`;
@@ -301,11 +332,12 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const dirty = step === 3 || step === 4;
   const partyRows = partyReports.flatMap((r) => r.rows);
   const applied: readonly { readonly row: number; readonly code: string; readonly status: string; readonly reason?: string }[] =
-    kind === "cari" ? partyRows.map((r) => ({ row: r.row, code: r.issue ?? "", status: r.status === "INVALID" ? "FAILED" : r.status })) : reports.flatMap((r) => r.rows);
+    isRecordKind(kind) ? partyRows.map((r) => ({ row: r.row, code: r.issue ?? "", status: r.status === "INVALID" ? "FAILED" : r.status })) : reports.flatMap((r) => r.rows);
   const count = (...s: string[]): number => applied.filter((r) => s.includes(r.status)).length;
   const added = count("CREATED", "APPLIED");
   const updated = count("UPDATED");
   const same = count("UNCHANGED", "REPLAYED");
+  const skippedNew = count("SKIPPED");
   const failedRows = applied.filter((r) => r.status === "FAILED");
   const failed = failedRows.length;
   const expected = check === null ? 0 : check.records !== undefined ? check.records.length : (check.preview?.rowCount ?? 0);
@@ -360,7 +392,19 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     if (step > 1) setStep(step === 3 ? 2 : step - 1);
   };
   const pickF = pick === null ? null : (fields.find((f) => f.id === pick) ?? null);
-  const goList = kind === "stok" ? `${base}/items` : kind === "cari" ? `${base}/parties` : `${base}/stock`;
+  const goList = kind === "stok" ? `${base}/items` : kind === "cari" ? `${base}/parties` : kind === "depo" || kind === "raf" ? `${base}/warehouses` : `${base}/stock`;
+
+  // T-990: tek ortak çıkış kutusu; eşleştirme/kontrol adımında Ana ekran, Modüller ve bağlantılar yalnız bunu açar ("… ve çık" eşleştirmeyi hatırlar).
+  const korunan = useCikisKorumasi(main !== null && dirty, {
+    dark,
+    title: t("cf.title"),
+    text: t("cf.text"),
+    saveLabel: t("cf.save"),
+    onSave: () => {
+      remember();
+      return true;
+    },
+  });
 
   return (
     <>
@@ -381,6 +425,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
               <span className="net" style={{ position: "static", flex: "none" }} title={t("online")}>
                 <i />
               </span>
+              <UstDugmeler dark={dark} />
             </header>
             <div className="stepbar" aria-hidden="true">
               <span style={{ width: `${step * 20}%` }} />
@@ -409,6 +454,13 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                         ["stok", "2F7D5B", [AICON.boxA, AICON.boxB], true],
                         ["cari", "6C4BD8", [AICON.cariA, AICON.cariB], true],
                         ["acilis", "0E7C7B", [AICON.shelf], true],
+                        // T-981b: depolar ve raflar yalnız Yönetici (depo/raf yazımı `settings.manage`); yetkisizde kart çizilmez.
+                        ...(canMaster
+                          ? ([
+                              ["depo", "30475A", [LICON.depo], true],
+                              ["raf", "2F5DA8", [LICON.raf], true],
+                            ] as const)
+                          : []),
                       ] as const
                     ).map(([k, color, icon, on]) => (
                       <button
@@ -423,6 +475,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                           if (!on) return;
                           feedback.ok();
                           setKind(k as ImportKindKey);
+                          if (k === "acilis") setUpdate(false);
                           setError(null);
                           setStep(2);
                         }}
@@ -477,6 +530,53 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                       <em>CSV</em>
                     </span>
                   </button>
+                  {/* T-981b: kip seçimi (İçeri al / Güncelle). Açılış stoku güncellenemez: stok yalnız belgeyle değişir (I-04). */}
+                  {kind === "acilis" ? (
+                    <div className="memo" data-testid="aktar-stock-rule">
+                      <span className="mic" style={{ background: dz("F4C542"), color: dz("1A1300") }}>
+                        <Ico d={AICON.bulb} size={18} />
+                      </span>
+                      <span>{t("mode.stockRule")}</span>
+                    </div>
+                  ) : (
+                    <div className="opts">
+                      <button
+                        type="button"
+                        className={`opt${update ? " on" : ""}`}
+                        aria-pressed={update}
+                        data-testid="aktar-mode-update"
+                        onClick={() => {
+                          feedback.ok();
+                          setUpdate(!update);
+                          setCheck(null);
+                          flash(update ? t("mode.insertOn") : t("mode.updateOn"));
+                        }}
+                      >
+                        <span className="tg">
+                          <i />
+                        </span>
+                        <span>{t("mode.updateToggle")}</span>
+                      </button>
+                      {update ? (
+                        <button
+                          type="button"
+                          className={`opt${addMissing ? " on" : ""}`}
+                          aria-pressed={addMissing}
+                          data-testid="aktar-mode-add"
+                          onClick={() => {
+                            feedback.ok();
+                            setAddMissing(!addMissing);
+                            setCheck(null);
+                          }}
+                        >
+                          <span className="tg">
+                            <i />
+                          </span>
+                          <span>{t("mode.addMissing")}</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
                   {recent !== null ? (
                     <>
                       <div className="shd">
@@ -515,25 +615,37 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                       </small>
                     </span>
                     {loaded.wb.sheets.length > 1 ? (
-                      <select
-                        aria-label={t("s3.sheet")}
-                        value={loaded.sheet}
-                        onChange={(e) => {
-                          const i = Number(e.target.value);
-                          const sh = loaded.wb.sheets[i];
-                          if (sh === undefined) return;
-                          const h = detectHeader(sh.rows, kind);
-                          setLoaded({ ...loaded, sheet: i, header: h });
-                          setMap(autoMap(sh.rows, h, kind));
-                        }}
-                        style={{ minHeight: 44 }}
-                      >
-                        {loaded.wb.sheets.map((s, i) => (
-                          <option key={s.name + String(i)} value={i}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                      <>
+                        {/* T-990: yerel açılır liste yok — sayfa seçimi ortak aramalı seçim sayfasında. */}
+                        <button
+                          type="button"
+                          className="btn"
+                          aria-haspopup="listbox"
+                          aria-label={`${t("s3.sheet")}: ${sheet?.name ?? ""}`}
+                          onClick={() => setSheetPick(true)}
+                          style={{ minHeight: 48, display: "inline-flex", alignItems: "center", gap: 6, padding: "0 12px" }}
+                          data-testid="aktar-sheet"
+                        >
+                          {sheet?.name ?? ""}
+                          <Ico d={LICON.chev} size={18} />
+                        </button>
+                        <KalipSecimSayfasi
+                          open={sheetPick}
+                          title={t("s3.sheet")}
+                          value={String(loaded.sheet)}
+                          options={loaded.wb.sheets.map((s, i) => ({ id: String(i), label: s.name }))}
+                          scan={false}
+                          onClose={() => setSheetPick(false)}
+                          onPick={(id) => {
+                            const i = Number(id);
+                            const sh = loaded.wb.sheets[i];
+                            if (sh === undefined) return;
+                            const h = detectHeader(sh.rows, kind);
+                            setLoaded({ ...loaded, sheet: i, header: h });
+                            setMap(autoMap(sh.rows, h, kind));
+                          }}
+                        />
+                      </>
                     ) : null}
                   </div>
                   <div className="sums">
@@ -627,7 +739,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                 <>
                   <div className="lead">
                     <b>{check.blocked ? t("s4.blocked", { bad: check.badRows }) : t("s4.ready", { n: fmt(expected), bad: check.badRows })}</b>
-                    <small>{t("s4.hint")}</small>
+                    <small>{check.nSkip > 0 ? `${t("s4.hint")} · ${t("mode.skipped", { n: fmt(check.nSkip) })}` : t("s4.hint")}</small>
                   </div>
                   <div className="chk3">
                     <div className="ck">
@@ -641,8 +753,8 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                       <span className="kic" style={{ background: dz("2F5DA8") }}>
                         <Ico d={AICON.update} size={22} />
                       </span>
-                      <b>{fmt(check.nUpd)}</b>
-                      <small>{t("s4.upd")}</small>
+                      <b data-testid="aktar-upd">{fmt(check.nUpd)}</b>
+                      <small>{update ? t("mode.updCount") : t("s4.upd")}</small>
                     </div>
                     <div className="ck bad">
                       <span className="kic">
@@ -657,8 +769,8 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                       <div className="pr" key={`${p.row}-${p.code}-${String(i)}`}>
                         <span className="prn">{p.row > 0 ? t("s4.row", { n: p.row }) : t("s4.file")}</span>
                         <span className="kt" style={{ minWidth: 0 }}>
-                          <b>{p.code.startsWith("P:") ? t(`partyIssue.${p.code.slice(2)}`) : p.code.startsWith("W:") ? t(`partyWarning.${p.code.slice(2)}`) : ti(`issue.${p.code}.reason`, p.params)}</b>
-                          <small>{p.code.startsWith("P:") ? t("partyIssueFix") : p.code.startsWith("W:") ? t("partyWarningFix") : ti(`issue.${p.code}.fix`, p.params)}</small>
+                          <b>{p.code.startsWith("P:") ? t(`partyIssue.${p.code.slice(2)}`) : p.code.startsWith("M:") ? t(`masterIssue.${p.code.slice(2)}`) : p.code.startsWith("W:") ? t(`partyWarning.${p.code.slice(2)}`) : ti(`issue.${p.code}.reason`, p.params)}</b>
+                          <small>{p.code.startsWith("P:") || p.code.startsWith("M:") ? t("partyIssueFix") : p.code.startsWith("W:") ? t("partyWarningFix") : ti(`issue.${p.code}.fix`, p.params)}</small>
                         </span>
                       </div>
                     ))}
@@ -691,14 +803,17 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                     <Ico d={partial ? AICON.warn : AICON.check} size={56} />
                   </span>
                   <b>{partial ? t("s5.partial", { n: fmt(added + updated) }) : t(`kind.${kind}.done`, { n: fmt(added + updated) })}</b>
-                  <small data-testid="aktar-counts">{t("s5.sub", { added: fmt(added), updated: fmt(updated), same: fmt(same), failed: fmt(failed), notTried: fmt(notTried), skipped: fmt(check?.badRows ?? 0) })}</small>
+                  <small data-testid="aktar-counts">
+                    {t("s5.sub", { added: fmt(added), updated: fmt(updated), same: fmt(same), failed: fmt(failed), notTried: fmt(notTried), skipped: fmt(check?.badRows ?? 0) })}
+                    {skippedNew > 0 ? ` · ${t("mode.skippedDone", { n: fmt(skippedNew) })}` : ""}
+                  </small>
                   {failedRows.length > 0 ? (
                     <div className="probs" data-testid="aktar-failed">
                       {failedRows.slice(0, 20).map((r) => (
                         <div className="pr" key={`${r.row}-${r.code}`}>
                           <span className="prn">{t("s4.row", { n: check?.rowMap[r.row] ?? r.row })}</span>
                           <span className="kt" style={{ minWidth: 0 }}>
-                            <b>{kind === "cari" && r.code !== "" ? t(`partyIssue.${r.code}`) : r.code}</b>
+                            <b>{kind === "cari" && r.code !== "" ? t(`partyIssue.${r.code}`) : (kind === "depo" || kind === "raf") && r.code !== "" ? t(`masterIssue.${r.code}`) : r.code}</b>
                             <small>{r.reason !== undefined ? ti(`result.reason.${r.reason}`) : t("s5.failedRow")}</small>
                           </span>
                         </div>
@@ -788,38 +903,16 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
               </div>
             ) : null}
 
-            {cf ? (
-              <>
-                <div className="cfback" onClick={() => setCf(false)} />
-                <div ref={cfRef} className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
-                  <span className="cfic">
-                    <Ico d={AICON.warn} size={26} />
-                  </span>
-                  <b>{t("cf.title")}</b>
-                  <p>{t("cf.text")}</p>
-                  <a href={base} className="cfb save" onClick={remember}>
-                    <Ico d={AICON.check} size={20} />
-                    {t("cf.save")}
-                  </a>
-                  <a href={base} className="cfb leave">
-                    <Ico d={AICON.signOut} size={20} />
-                    {t("cf.leave")}
-                  </a>
-                  <button type="button" className="cfb stay" onClick={() => setCf(false)}>
-                    {t("cf.stay")}
-                  </button>
-                </div>
-              </>
-            ) : null}
           </div>
         </div>
       </div>
     </div>
+    {korunan.kutu}
     {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
     <KabukBar
       dark={dark}
       back={step === 1 ? { href: base, aria: t("backHome"), testId: "aktar-back" } : { onClick: goBack, aria: t("back"), testId: "aktar-back" }}
-      homeNav={main !== null && dirty ? { onClick: () => setCf(true), aria: t("home"), testId: "aktar-home" } : { href: base, aria: t("home"), testId: "aktar-home" }}
+      homeNav={{ href: base, aria: t("home"), testId: "aktar-home" }}
       main={main === null ? null : { label: mainLabel, d: mainIcon, onClick: main, disabled: busy && step !== 2, testId: "aktar-main", wait: mainCls.includes(" wait") }}
     />
     </>

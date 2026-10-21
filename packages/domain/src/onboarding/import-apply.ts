@@ -18,7 +18,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
 import { addBarcode } from "../catalog/barcodes.ts";
-import { createItem } from "../catalog/items.ts";
+import { createItem, updateItem } from "../catalog/items.ts";
 import { createUnit, setUnitConversion } from "../catalog/units.ts";
 import { runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
 import { resolveWarehouseScope } from "../warehouse/scope.ts";
@@ -49,6 +49,27 @@ import {
 
 export type ImportCallParams = Omit<TenantAccessParams, "permission" | "recentAuth"> & { readonly requestId?: string };
 
+/**
+ * T-981b: içe aktarma kipi. Varsayılan ("İçeri al"): yeni ürün eklenir, mevcut üründe yalnız eksik koli/barkod tamamlanır (ad değişmez).
+ * `update` ("Güncelle"): kod eşleşen ürünün ADI da dosyadakiyle güncellenir; sistemde olmayan kod `addMissing` (varsayılan evet) ise eklenir,
+ * değilse atlanır (`SKIPPED`). Stok bu yolla DEĞİŞMEZ (I-04): açılış stoku dosyasında güncelleme kipi reddedilir.
+ */
+export interface ImportMode {
+  readonly update?: boolean;
+  readonly addMissing?: boolean;
+}
+
+function checkMode(kind: ImportKind, mode: ImportMode | undefined): { readonly update: boolean; readonly addMissing: boolean } {
+  const update = mode?.update === true;
+  if (update && kind !== "PRODUCTS") throw new AppError("VALIDATION_FAILED");
+  return { update, addMissing: !update || mode?.addMissing !== false };
+}
+
+/** Kip özete girer: önizleme bir kiple, uygulama başka kiple çağrılamaz (varsayılan kipte özet eskisiyle aynı). */
+function modeDigest(base: string, m: { readonly update: boolean; readonly addMissing: boolean }): string {
+  return m.update ? sha(`${base}|update|${m.addMissing ? "add" : "skip"}`) : base;
+}
+
 /** Önizlemede dönen en çok sorun sayısı: ilk 50 (toplam `issueTotal` ayrıca verilir; UI "İlk 50 hata gösteriliyor" yazar). */
 export const PREVIEW_ISSUE_LIMIT = 50;
 export const STOCK_REASON = "import.opening_stock";
@@ -71,7 +92,17 @@ export interface ImportPreview {
    */
   readonly summary?: { readonly items: number; readonly stockLines: number; readonly errorRows: number };
   /** Yalnız ürünler: yeni oluşturulacak / sistemde zaten olan ürün sayısı, koli tanımı ve barkod sayıları. */
-  readonly products?: { readonly create: number; readonly existing: number; readonly packs: number; readonly barcodes: number; readonly willCreatePackUnit: boolean };
+  readonly products?: {
+    readonly create: number;
+    readonly existing: number;
+    /** T-981b: mevcut üründe gerçekten değişecek olan (ad [güncelle kipi], koli, barkod) ürün sayısı. */
+    readonly changes: number;
+    /** T-981b: güncelle kipinde "yeni kodları ekleme" seçiliyse atlanacak yeni kod sayısı. */
+    readonly skipped: number;
+    readonly packs: number;
+    readonly barcodes: number;
+    readonly willCreatePackUnit: boolean;
+  };
   /** Yalnız açılış stoku: satır, ürün ve depo sayısı; toplam miktar (kanonik dizgi). */
   readonly stock?: { readonly lines: number; readonly alreadyApplied: number; readonly items: number; readonly warehouses: number; readonly totalQuantity: string; readonly tenantHasStock: boolean };
   /** Hata yoksa kaç parçada uygulanır. */
@@ -288,9 +319,10 @@ async function loadPairStates(params: ImportCallParams, itemIds: readonly string
   return runTenantQuery({ ...params, permission: "stock.view" }, (tx, m) => readPairStates(tx, m.tenantId, itemIds));
 }
 
-export async function previewImport(params: ImportCallParams, text: string): Promise<ImportPreview> {
+export async function previewImport(params: ImportCallParams, text: string, modeIn?: ImportMode): Promise<ImportPreview> {
   const ev = await evaluate(params, text);
   if ("early" in ev) return ev.early;
+  const mode = checkMode(ev.kind, modeIn);
   const { result } = ev;
   const issues = result.issues.slice(0, PREVIEW_ISSUE_LIMIT);
   const headerLevel = result.issues.some((i) => i.row <= 1);
@@ -311,17 +343,21 @@ export async function previewImport(params: ImportCallParams, text: string): Pro
     const packBarcodeNeeded = (p: ProductPlan): boolean => p.packBarcode !== null && !(p.exists && packId !== undefined && hasBarcode(p.packBarcode, p.code, (u) => u === packId));
     const packs = plans.filter(packNeeded).length;
     const clean = result.issues.length === 0;
+    const renamed = (p: ProductPlan): boolean => mode.update && p.exists && pctx?.items.get(p.code)?.name !== p.name;
+    const changes = plans.filter((p) => p.exists && (renamed(p) || packNeeded(p) || unitBarcodeNeeded(p) || packBarcodeNeeded(p))).length;
     return {
       ...base,
       products: {
-        create: clean ? plans.filter((p) => !p.exists).length : 0,
+        create: clean && mode.addMissing ? plans.filter((p) => !p.exists).length : 0,
         existing: clean ? plans.filter((p) => p.exists).length : 0,
+        changes: clean ? changes : 0,
+        skipped: clean && !mode.addMissing ? plans.filter((p) => !p.exists).length : 0,
         packs: clean ? packs : 0,
         barcodes: clean ? plans.reduce((n, p) => n + (unitBarcodeNeeded(p) ? 1 : 0) + (packBarcodeNeeded(p) ? 1 : 0), 0) : 0,
         willCreatePackUnit: clean && (packs > 0 || plans.some((p) => p.packBarcode !== null)) && packUnit === undefined,
       },
       chunkCount: clean ? Math.ceil(plans.length / IMPORT_CHUNK_SIZE) : 0,
-      digest: clean ? digestOf("PRODUCTS", plans) : "",
+      digest: clean ? modeDigest(digestOf("PRODUCTS", plans), mode) : "",
     };
   }
   const plans = result.plans as readonly StockPlan[];
@@ -343,7 +379,7 @@ export async function previewImport(params: ImportCallParams, text: string): Pro
 
 // --- uygulama ---------------------------------------------------------------------------------------------------------
 
-export type RowStatus = "CREATED" | "UPDATED" | "UNCHANGED" | "APPLIED" | "REPLAYED" | "FAILED" | "NOT_ATTEMPTED";
+export type RowStatus = "CREATED" | "UPDATED" | "UNCHANGED" | "SKIPPED" | "APPLIED" | "REPLAYED" | "FAILED" | "NOT_ATTEMPTED";
 
 export interface RowReport {
   readonly row: number;
@@ -368,7 +404,7 @@ export interface ChunkReport {
 }
 
 function counts(rows: readonly RowReport[]): Record<RowStatus, number> {
-  const c: Record<RowStatus, number> = { CREATED: 0, UPDATED: 0, UNCHANGED: 0, APPLIED: 0, REPLAYED: 0, FAILED: 0, NOT_ATTEMPTED: 0 };
+  const c: Record<RowStatus, number> = { CREATED: 0, UPDATED: 0, UNCHANGED: 0, SKIPPED: 0, APPLIED: 0, REPLAYED: 0, FAILED: 0, NOT_ATTEMPTED: 0 };
   for (const r of rows) c[r.status]++;
   return c;
 }
@@ -384,19 +420,20 @@ const isCodeTaken = (e: unknown): boolean => e instanceof AppError && e.code ===
  * Bir parçayı uygular. Yetki/doğrulama hataları (`FORBIDDEN`, `VALIDATION_FAILED`) FIRLATILIR (hiçbir şey yazılmamıştır); satır düzeyindeki
  * komut hataları rapora `FAILED` olarak girer ve parça orada durur (sonraki satırlar `NOT_ATTEMPTED`).
  */
-export async function applyImportChunk(params: ImportCallParams, input: { readonly text: string; readonly chunk: number; readonly digest: string }): Promise<ChunkReport> {
+export async function applyImportChunk(params: ImportCallParams, input: { readonly text: string; readonly chunk: number; readonly digest: string; readonly mode?: ImportMode }): Promise<ChunkReport> {
   if (!Number.isSafeInteger(input.chunk) || input.chunk < 0 || typeof input.digest !== "string") throw new AppError("VALIDATION_FAILED");
   const ev = await evaluate(params, input.text);
   if ("early" in ev || ev.result.issues.length > 0) throw new AppError("VALIDATION_FAILED"); // hata varken HİÇBİR şey yazılmaz
+  const mode = checkMode(ev.kind, input.mode);
   // Önizlemedeki içerik özeti: önizleme ile uygulama arasında dosya içeriği ya da bağlı veri değiştiyse reddedilir (HİÇBİR şey yazılmaz).
-  if (digestOf(ev.kind, ev.result.plans) !== input.digest) throw new AppError("VALIDATION_FAILED");
+  if (modeDigest(digestOf(ev.kind, ev.result.plans), mode) !== input.digest) throw new AppError("VALIDATION_FAILED");
   const chunkCount = Math.ceil(ev.result.plans.length / IMPORT_CHUNK_SIZE);
   if (input.chunk >= chunkCount) throw new AppError("VALIDATION_FAILED");
   const from = input.chunk * IMPORT_CHUNK_SIZE;
   if (ev.kind === "PRODUCTS") {
     const plans = (ev.result.plans as readonly ProductPlan[]).slice(from, from + IMPORT_CHUNK_SIZE);
-    const rows = await applyProducts(params, plans, ev.productCtx as ProductContext);
-    return { kind: "PRODUCTS", chunk: input.chunk, chunkCount, digest: digestOf("PRODUCTS", ev.result.plans), rows, counts: counts(rows), complete: !rows.some((r) => r.status === "FAILED") };
+    const rows = await applyProducts(params, plans, ev.productCtx as ProductContext, mode);
+    return { kind: "PRODUCTS", chunk: input.chunk, chunkCount, digest: input.digest, rows, counts: counts(rows), complete: !rows.some((r) => r.status === "FAILED") };
   }
   const all = ev.result.plans as readonly StockPlan[];
   const digest = digestOf("STOCK", all);
@@ -404,7 +441,7 @@ export async function applyImportChunk(params: ImportCallParams, input: { readon
   return { kind: "STOCK", chunk: input.chunk, chunkCount, digest, rows, counts: counts(rows), complete: !rows.some((r) => r.status === "FAILED") };
 }
 
-async function applyProducts(params: ImportCallParams, plans: readonly ProductPlan[], ctx: ProductContext): Promise<RowReport[]> {
+async function applyProducts(params: ImportCallParams, plans: readonly ProductPlan[], ctx: ProductContext, mode: { readonly update: boolean; readonly addMissing: boolean }): Promise<RowReport[]> {
   // T-421: kart yazmaları aktarım izniyle (`data.import`); grupla aktarım yetkisi alan üye `settings.manage` almadan ürün açabilir.
   const p = { ...params, writePermission: "data.import" as const };
   const rows: RowReport[] = [];
@@ -433,9 +470,16 @@ async function applyProducts(params: ImportCallParams, plans: readonly ProductPl
       let itemId = ctx.items.get(plan.code)?.id;
       const baseUnit = unitId.get(plan.baseUnitCode) ?? ctx.units.find((u) => u.code === plan.baseUnitCode)?.id;
       if (baseUnit === undefined) throw new AppError("NOT_FOUND");
+      if (itemId === undefined && !mode.addMissing) {
+        rows.push({ row: plan.row, code: plan.code, status: "SKIPPED" });
+        continue;
+      }
       if (itemId === undefined) {
         itemId = (await createItem(p, { code: plan.code, name: plan.name, baseUnitId: baseUnit })).itemId;
         created = true;
+      } else if (mode.update && ctx.items.get(plan.code)?.name !== plan.name) {
+        // T-981b "Güncelle": yalnız ad (kod eşleşmesiyle); birim/takip/ölçek değişmez (A-87), stok tablosuna dokunulmaz.
+        if ((await updateItem(p, { itemId, name: plan.name })).changed) changed = true;
       }
       const needsPack = plan.packQty !== null || plan.packBarcode !== null;
       const pack = needsPack ? await ensurePackUnit() : undefined;

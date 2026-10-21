@@ -9,7 +9,7 @@ Kısa rehberler tekrar eden metin deposu değildir; invariant/ADR/kod otoritesin
 1. Git status + mevcut branch/HEAD; diğer AI'ın işini ve task ID'lerini kontrol et.
 2. Tek somut sonuç, kapsam, risk, gerekli kanıt ve en fazla5 okuma kaynağı. Karttaki dosya globs gerçek değişiklikle eşleşsin.
 3. Uygula; anlamlı test/check; riskin istediği bağımsız exact diff incelemesi. Sırf rapor büyütmek için tekrar test yok.
-4. Aynı PR'da STATE ve etkilenen kısa rehberi güncelle. Sadece belgenin adı değil, çalışan davranış/kanıt değişir.
+4. Aynı PR'da `docs/changes/<T-xxx>.md` parçasını (STATE satırı + BACKLOG değişiklikleri; [biçim](../changes/README.md)) ve etkilenen kısa rehberi güncelle; iş PR'ı STATE.md/BACKLOG.md'ye doğrudan dokunmaz (çakışma olmasın, T-445). Koordinatör `node scripts/changes/fold.mjs` ile işler. Sadece belgenin adı değil, çalışan davranış/kanıt değişir.
 5. CI/run/commit linkleri, actual command sonucu ve eksik doğrulama. Fake APPROVED-BY/security-reviewer raporu yok.
 6. Merge sonrası PR merge ile source HEAD; deploy varsa gerçek release/DBkanıtı. Kod merge, deploy ve kullanıcı kabulünü ayrı işaretle.
 

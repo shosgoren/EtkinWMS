@@ -1,18 +1,21 @@
 "use client";
 // T-971 (B-92): Pano.dc.html Ekip/Hesap düğmesi (`.tb.tb-team`) ve menüsü (`.hback` + `.halo.tmenu`) — Pano ve kalıp ekranlarının ORTAK
 // bileşeni. Sınıflar ve renkler Pano kaynağının üretilmiş CSS'inden (`.dzp` kabı); kalıp ekranı bunları `display: contents` bir `.dzp`
-// kabında çizer (yeni stil yok). Menü: kişi başlığı, (ekip bağlantıları), Kullanıcı değiştir, Tüm ekranlar (uygulama menüsü: Akış/Genel
-// bakış anahtarı ve yetkili ekranlar), tema, Çıkış yap. Çıkış mevcut `/sign-out` uç noktasıyla (Pano'daki ile aynı).
-import { useRef, useState, type CSSProperties } from "react";
+// kabında çizer (yeni stil yok). Menü: kişi başlığı, (ekip bağlantıları), Kullanıcı değiştir, Çalışma alanı değiştir (birden fazla alan; T-979c),
+// tema, Çıkış yap. Görünüm geçişi (Genel bakış) ve ekranlar ortak alt çubuğun Modüller sayfasındadır. Çıkış mevcut `/sign-out` uç noktasıyla (Pano'daki ile aynı).
+// T-990: bağlantılar istemci içi geçiş; bağlantı, Kullanıcı değiştir, Çalışma alanı ve Çıkış yarım işte önce ortak çıkış kutusuna sorar (`cikisSor`).
+import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { cikisSor } from "../kalip/cikis.tsx";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { ICON } from "../../../design/bakis-icons.ts";
 import { authPost } from "../../../../lib/auth-client.ts";
-import { openAppMenu } from "../app-menu.tsx";
 import { DICON } from "../../../design/destek-icons.ts";
 import { useSessiz } from "../kalip/sessiz.ts";
 import { useModalFocus } from "../kalip/odak.ts";
+import { useKabuk } from "../kabuk/kabuk-bar.tsx";
 
 function Ico({ d, size }: { d: string; size: number }) {
   return (
@@ -62,6 +65,7 @@ export function HesapDugme({ team, open, onClick }: { team: boolean; open: boole
 /** Kaynak `.hback` + `.halo.tmenu`. Açıkken çizilir; Escape ve perde kapatır. */
 export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }: { team: boolean; me: HesapKisi; links?: readonly HesapBaglanti[]; dark: boolean; onToggleTheme: () => void; onClose: () => void }) {
   const t = useTranslations("pano");
+  const kabuk = useKabuk();
   const [failed, setFailed] = useState(false);
   const tk = useTranslations("kural");
   // T-436 (ALTIN-KURAL 5): "Sessiz" tercihi cihazda saklanır.
@@ -77,22 +81,20 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
   };
   const label = team ? t("team") : t("account");
   const items: Array<{ k: string; label: string; color: string; d: string; out?: boolean; go: () => void }> = [
-    ...(team ? [] : [{ k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => void signOut("/login") }]),
-    // Uygulama menüsü (tüm ekranlar): Akış / Genel bakış anahtarı ve yetkili ekranlar; eski ana ekrandaki "Menü" ile aynı pencere.
-    {
-      k: "menu",
-      label: t("allScreens"),
-      color: "172E42",
-      d: PICON.list,
-      go: () => {
-        onClose();
-        openAppMenu();
-      },
-    },
+    ...(team ? [] : [{ k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => cikisSor(() => void signOut("/login")) }]),
+    // T-979c: eski "Tüm ekranlar" penceresi kaldırıldı (görünüm geçişi ve ekranlar Modüller'de, yardım üst çubuktaki Destek'te).
+    // Birden fazla çalışma alanı varsa seçim ekranı.
+    ...(team || (kabuk?.workspaces ?? 1) < 2 ? [] : [{ k: "workspace", label: t("workspace"), color: "0E7C7B", d: PICON.list, go: () => cikisSor(() => window.location.assign("/workspaces")) }]),
     { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: onToggleTheme },
     { k: "sound", label: silent ? tk("soundOn") : tk("silent"), color: "6A7F91", d: DICON.speaker, go: () => setSilent(!silent) },
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => void signOut("/login") },
+    { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => cikisSor(() => void signOut("/login")) },
   ];
+  // T-990: menü bağlantıları Next `Link` (istemci içi geçiş); yarım işte ortak çıkış koruması tıklamayı yakalar (tarayıcı penceresi çıkmaz).
+  const follow = (e: MouseEvent<HTMLAnchorElement>): void => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    onClose();
+  };
   return (
     <>
       <div className="hback" onClick={onClose} />
@@ -107,16 +109,16 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
           </span>
         </div>
         {links.map((l) => (
-          <a key={l.k} href={l.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} data-testid={`pano-menu-${l.k}`}>
+          <Link key={l.k} href={l.href ?? "#"} prefetch={false} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={follow} data-testid={`pano-menu-${l.k}`}>
             <i style={{ background: dz(l.color) }}>
               <Ico d={l.d} size={20} />
             </i>
             <span>{l.label}</span>
             {l.n !== undefined && l.n > 0 ? <em className="hbn">{l.n}</em> : null}
-          </a>
+          </Link>
         ))}
         {items.map((m) => (
-          <button key={m.k} type="button" className={`hb${m.out === true ? " out" : ""}`} role="menuitem" onClick={m.go} data-testid={m.k === "menu" ? "app-bar-menu" : `pano-menu-${m.k}`} aria-haspopup={m.k === "menu" ? "dialog" : undefined}>
+          <button key={m.k} type="button" className={`hb${m.out === true ? " out" : ""}`} role="menuitem" onClick={m.go} data-testid={`pano-menu-${m.k}`}>
             <i style={{ background: dz(m.color) }}>
               <Ico d={m.d} size={20} />
             </i>

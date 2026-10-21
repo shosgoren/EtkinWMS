@@ -3,18 +3,21 @@
 // gösterilir (`users.manage` kararı sayfada `listPendingInvitations` sonucundan; sıfırlama uygunluğu `resetLinkAvailable`). Sunucu reddi
 // neden ayrıştırılmadan gösterilir (2. tur m6). Üye ve bekleyen davet kartları `.uc` görünümündedir; kart bağlantı değildir (içinde rol
 // seçimi, Çıkar, sahiplik devri, sıfırlama bağlantısı, saha kodu, kilit açma, depoları düzenle düğmeleri — `<a>` içine düğme gömülmez).
-// Ana işlem ortak alt çubukta "Davet et" (InviteDialog; yetki yoksa ya da hidrasyon bitmeden kapalı, T-247). Saha personeli / Cihazlar
+// Ana işlem ortak alt çubukta "Davet et" (T-990: TAM EKRAN davet formu `InviteForm`, adres `?invite=1`; yetki yoksa ya da hidrasyon
+// bitmeden kapalı + neden balonu, T-247). Kart içindeki rol seçimi yerel açılır liste değil: güçlü kenarlıklı tetik düğmesi ortak aramalı
+// seçim sayfasını (`KalipSecimSayfasi`) açar; seçilen rol "Rolü uygula" ile onaya gider. Saha personeli / Cihazlar
 // `.more` satırı. T-978: arama (`.lsearch`, GET `q`: ad; yöneticide e-posta/kullanıcı adı — sunucuda listMembers). Bilinçli farklar
 // (DESIGN-PARITY, T-971): süzgeç çipi yok (üye listesi sayfalanmaz); işlem
 // sonucu bildirimi balon (`.toast`), hata kutusu ve tek seferlik bağlantı kutusu mevcut bileşenlerle.
 import { useFormatter, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipDaha, KalipKartListe } from "../kalip/liste.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
+import { KalipSecimSayfasi } from "../kalip/secim.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import {
   changeRoleAction,
@@ -26,7 +29,7 @@ import {
   transferOwnershipAction,
   unlockFieldLoginAction,
 } from "./actions.ts";
-import { InviteDialog, LinkBox, ServerErrorBanner } from "./invite-dialog.tsx";
+import { InviteForm, LinkBox, ROLE_VISUAL, ServerErrorBanner } from "./invite-dialog.tsx";
 import type { ServerError } from "./invite-dialog.tsx";
 import { Btn } from "./parts.tsx";
 
@@ -79,9 +82,9 @@ interface Confirm {
   readonly scope?: ScopeDraft;
 }
 
-// Rol seçici: tema sözleşmesi (güçlü kenarlık + odak halkası, theme-admin e2e) korunur.
+// Rol seçimi tetiği: tema sözleşmesi (güçlü kenarlık + odak halkası, theme-admin e2e) korunur.
 const SELECT =
-  "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-3 text-base text-ink sm:w-auto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+  "inline-flex min-h-12 w-full min-w-0 items-center justify-between gap-2 rounded-card border-2 border-border-strong bg-surface px-3 text-left text-base text-ink sm:w-auto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50";
 
 const noopSubscribe = (): (() => void) => () => undefined;
 
@@ -123,9 +126,11 @@ export function MembersView({
   const tku = useTranslations("kural");
   const format = useFormatter();
   const router = useRouter();
+  const params = useSearchParams();
   const canManage = pending !== null;
   const home = `/t/${encodeURIComponent(slug)}`;
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const inviting = canManage && params.get("invite") === "1";
+  const [rolePick, setRolePick] = useState<MemberView | null>(null);
   // T-247: sunucu HTML'i hidrasyondan önce tıklanabilir görünür; o tıklama React'e ulaşmaz (staging'de yavaş JS yüklemesinde
   // davet diyaloğu açılmıyordu). Düğme hidrasyon bitene kadar devre dışı: sunucuda/ilk çizimde false, istemcide true.
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -145,11 +150,11 @@ export function MembersView({
     return w === undefined ? t("scope.unknown") : w.archived ? t("scope.archived", { name: w.name }) : w.name;
   };
   const returnTo = `/t/${slug}/members`;
+  const listHref = q === "" ? returnTo : `${returnTo}?q=${encodeURIComponent(q)}`;
 
   const roleName = (keys: readonly string[]) => keys.map((k) => tr(k)).join(", ");
   const when = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" });
   const notify = (text: string): void => {
-    feedback.ok();
     say("ok", text);
   };
 
@@ -248,6 +253,12 @@ export function MembersView({
       }
     : { title: "", description: "", button: "" };
 
+  if (inviting) {
+    return <InviteForm slug={slug} dark={dark} roleKeys={roleKeys} onClose={() => router.push(listHref)} onInvited={() => router.refresh()} />;
+  }
+
+  const pickRoles = rolePick === null ? [] : roleKeys.filter((r) => rolePick.field === undefined || FIELD_ROLES.includes(r));
+
   return (
     <>
       <KalipEkran
@@ -263,9 +274,10 @@ export function MembersView({
             aria: t("invite"),
             d: LICON.plus,
             disabled: !canManage || !hydrated,
+            disabledReason: canManage ? t("k.wait") : t("lockedReason"),
             onClick: () => {
               feedback.minor();
-              setInviteOpen(true);
+              router.push(`${listHref}${listHref.includes("?") ? "&" : "?"}invite=1`);
             },
             testId: "members-invite",
           },
@@ -313,7 +325,7 @@ export function MembersView({
                     kind: "add",
                     onClick: () => {
                       feedback.minor();
-                      setInviteOpen(true);
+                      router.push(`${listHref}${listHref.includes("?") ? "&" : "?"}invite=1`);
                     },
                   }
                 : { label: tku("home"), href: home, kind: "go" }
@@ -375,20 +387,27 @@ export function MembersView({
                   {self ? null : (
                     <div role="group" aria-label={t("actionsFor", { name: m.displayName })} style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
                       <div style={ROW}>
-                        <select aria-label={`${t("role")} · ${m.displayName}`} className={SELECT} value={selected} disabled={lockText !== null} onChange={(e) => setDraft({ ...draft, [m.userId]: e.target.value })}>
-                          {current === MULTI ? (
-                            <option value={MULTI} disabled>
-                              {roleName(m.roles)}
-                            </option>
-                          ) : null}
-                          {roleKeys
-                            .filter((r) => m.field === undefined || FIELD_ROLES.includes(r))
-                            .map((r) => (
-                              <option key={r} value={r}>
-                                {tr(r)}
-                              </option>
-                            ))}
-                        </select>
+                        <button
+                          type="button"
+                          aria-label={`${t("role")} · ${m.displayName}: ${selected === MULTI ? roleName(m.roles) : tr(selected)}`}
+                          aria-haspopup="listbox"
+                          aria-expanded={rolePick?.userId === m.userId}
+                          className={SELECT}
+                          disabled={lockText !== null}
+                          aria-describedby={desc}
+                          onClick={() => {
+                            feedback.minor();
+                            setRolePick(m);
+                          }}
+                          data-testid="member-role"
+                          data-value={selected}
+                        >
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                            <Ico d={(ROLE_VISUAL[selected] ?? { d: LICON.people }).d} size={18} />
+                            {selected === MULTI ? roleName(m.roles) : tr(selected)}
+                          </span>
+                          <Ico d={LICON.chev} size={18} />
+                        </button>
                         <Btn kind="n" scope="dzl" d={LICON.check} disabled={lockText !== null || selected === current || selected === MULTI} aria-describedby={desc} onClick={() => setConfirm({ kind: "role", member: m, roleKey: selected })}>
                           {t("applyRole")}
                         </Btn>
@@ -513,7 +532,19 @@ export function MembersView({
         </section>
       </KalipEkran>
 
-      <InviteDialog open={inviteOpen} slug={slug} roleKeys={roleKeys} onClose={() => setInviteOpen(false)} onInvited={() => router.refresh()} />
+      <KalipSecimSayfasi
+        open={rolePick !== null}
+        title={rolePick === null ? t("role") : `${t("role")} · ${rolePick.displayName}`}
+        icon={{ d: LICON.shield, color: "2F5DA8" }}
+        value={rolePick === null ? "" : (draft[rolePick.userId] ?? (rolePick.roles.length > 1 ? MULTI : (rolePick.roles[0] ?? "")))}
+        options={pickRoles.map((r) => ({ id: r, label: tr(r), d: (ROLE_VISUAL[r] ?? { d: LICON.people }).d, color: (ROLE_VISUAL[r] ?? { color: "2F5DA8" }).color }))}
+        scan={false}
+        onPick={(id) => {
+          if (rolePick !== null) setDraft({ ...draft, [rolePick.userId]: id });
+        }}
+        onClose={() => setRolePick(null)}
+        testId="member-role-sheet"
+      />
       <KalipOnay
         open={confirm !== null}
         title={confirmText.title}

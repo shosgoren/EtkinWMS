@@ -3,20 +3,22 @@
 // (yalnızca gösterim). Yetki/iş kuralları sunucudadır: `canManage` yalnızca kilit gösterimidir; tür/derinlik/ebeveyn
 // kuralları (ör. TRANSIT yalnızca kök) yeniden yazılmaz, sunucu reddi (`PARENT_INVALID` vb.) gösterilir.
 // Düzey etiketleri (Bölge/Raf/Göz) şimdilik sabit i18n varsayılanıdır; tenant terminolojisi okuyucusu Bulgular'da.
+// T-990 (B-97): lokasyon ekleme, kod değiştirme ve toplu raf oluşturucu pencere değil TAM EKRAN FORMDUR; adres `?new=1` (kök) /
+// `?new=1&parent=<id>` (alt lokasyon) / `?kod=<id>` / `?bulk=1` (rehberin 2. adımı). Geri ağaca döner.
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
 import { isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
-import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
+import { CodeChangedNotice, CodeEditForm } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, type KalipHizliIslem } from "../../kalip/detay.tsx";
 import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { archiveLocationAction, createLocationAction, getSetupProgressAction, loadMoreLocationsAction, renameLocationAction, suggestCodeAction } from "../actions.ts";
-import { CreateDialog, ServerErrorBanner } from "../warehouses-view.tsx";
+import { CreateForm, ServerErrorBanner, useErrorText } from "../warehouses-view.tsx";
 import type { ServerError } from "../warehouses-view.tsx";
 import { feedback } from "@wms/ui";
 
@@ -89,7 +91,6 @@ export function LocationTree({
   const tb = useTranslations("easySetup.bulk");
   const te = useTranslations("easySetup");
   const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
   const base = `/t/${encodeURIComponent(slug)}/warehouses`;
   const returnTo = `${base}/${encodeURIComponent(warehouseId)}`;
@@ -97,9 +98,7 @@ export function LocationTree({
   const [items, setItems] = useState<readonly LocationItem[]>(initialItems);
   const [next, setNext] = useState<TreeCursor | null>(initialNext);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(initialItems.filter((i) => i.parentId === null).map((i) => i.id)));
-  const [parent, setParent] = useState<{ readonly id: string | null; readonly label: string } | undefined>(undefined);
   const [archiving, setArchiving] = useState<LocationItem | null>(null);
-  const [editing, setEditing] = useState<LocationItem | null>(null);
   const [codeChanged, setCodeChanged] = useState<{ readonly id: string; readonly from: string; readonly to: string } | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -109,7 +108,6 @@ export function LocationTree({
   /** Başarı bildirimi: kalıp balonu + onay sesi (görsel + sesli geri bildirim). `null` = bildirim yok. */
   const setNotice = (text: string | null): void => {
     if (text === null) return;
-    feedback.ok();
     say("ok", text);
   };
   const fail = (e: { error: ServerError; scope: "warehouse" | "location" }): void => {
@@ -119,18 +117,20 @@ export function LocationTree({
   const writable = canManage && warehouseActive;
   const clientReady = useSyncExternalStore(subscribeToClientReady, getClientReadySnapshot, getServerReadySnapshot);
   const canOpenDialogs = writable && clientReady;
-  const [bulkOpen, setBulkOpen] = useState(false);
   const [version, setVersion] = useState(0);
   const progress = useSetupProgress(slug, canManage, version);
   const guide = canManage && progress !== null && !isSetupComplete(progress);
 
-  // Rehberin büyük düğmesi `?bulk=1` ile gelir: oluşturucuyu aç, adresi temizle.
-  useEffect(() => {
-    if (params.get("bulk") === "1" && writable) {
-      setBulkOpen(true);
-      router.replace(pathname);
-    }
-  }, [params, writable, pathname, router]);
+  const errText = useErrorText();
+  const go = (qs: string): void => router.push(qs === "" ? returnTo : `${returnTo}?${qs}`);
+  const toTree = (): void => go("");
+  const bulkOpen = params.get("bulk") === "1" && writable;
+  const parentId = params.get("parent");
+  const parentItem = parentId === null ? undefined : items.find((i) => i.id === parentId && i.status === "ACTIVE");
+  const parent: { readonly id: string | null; readonly label: string } | undefined =
+    params.get("new") !== "1" || !writable ? undefined : parentItem !== undefined ? { id: parentItem.id, label: `${parentItem.name} (${parentItem.code})` } : parentId === null ? { id: null, label: warehouseName } : undefined;
+  const kodId = params.get("kod");
+  const editing = kodId === null || !writable ? undefined : items.find((i) => i.id === kodId && i.status === "ACTIVE");
 
   // `router.refresh()` sonrası sunucu verisi yeni gelir: yerel (daha fazla yüklenmiş) liste sunucuyla eşitlenir.
   useEffect(() => {
@@ -223,7 +223,11 @@ export function LocationTree({
   const countText = activeTotal !== undefined ? String(activeTotal) : next === null ? String(activeCount) : `${activeCount}+`;
   const openRoot = (): void => {
     feedback.minor();
-    setParent({ id: null, label: warehouseName });
+    go("new=1");
+  };
+  const openBulk = (): void => {
+    feedback.minor();
+    go("bulk=1");
   };
   const quick: KalipHizliIslem[] = canOpenDialogs
     ? [
@@ -232,15 +236,90 @@ export function LocationTree({
           label: tb("open"),
           d: LICON.raf,
           color: "0E7C7B",
-          onClick: () => {
-            feedback.minor();
-            setBulkOpen(true);
-          },
+          onClick: openBulk,
         },
       ]
     : [];
   // Kurulum sürüyorsa sıradaki adım tek satır (ağaç ekranında rehberin kısa hâli): raflar → oluşturucu, ürün → ürün formu.
   const guideNext = !guide || progress === null ? null : !progress.hasLocation ? "locations" : !progress.hasItem ? "items" : null;
+
+  if (bulkOpen) {
+    return (
+      <BulkBuilder
+        dark={dark}
+        slug={slug}
+        warehouseId={warehouseId}
+        warehouseName={warehouseName}
+        returnTo={returnTo}
+        onBack={toTree}
+        onDone={async (r) => {
+          setNotice(r.replayed ? tb("doneReplayed", { count: r.created }) : tb("done", { count: r.created, first: r.first, last: r.last }));
+          setVersion((n) => n + 1);
+          // Rehberin 3. adımı: ürün yoksa ürün formuna git.
+          const p = await getSetupProgressAction({ slug }).catch(() => null);
+          if (p !== null && p.ok && !p.data.hasItem) router.push(`/t/${encodeURIComponent(slug)}/items?new=1`);
+          else {
+            toTree();
+            router.refresh();
+          }
+        }}
+      />
+    );
+  }
+  if (parent !== undefined) {
+    return (
+      <CreateForm
+        key={parent.id ?? "root"}
+        dark={dark}
+        title={parent.id === null ? t("createRootTitle") : t("createChildTitle")}
+        intro={t("parentIs", { parent: parent.label })}
+        kinds={KINDS}
+        returnTo={returnTo}
+        scope="location"
+        testId="location-form"
+        suggest={async () => {
+          const r = await suggestCodeAction({ slug, kind: "location", warehouseId });
+          return r.ok ? r.data.code : null;
+        }}
+        onBack={toTree}
+        onDone={() => {
+          setVersion((n) => n + 1);
+          // Yeni alt lokasyon görünsün: ebeveyn açılır.
+          const pid = parent.id;
+          if (pid !== null) setExpanded((cur) => new Set(cur).add(pid));
+          setNotice(t("done.created"));
+          toTree();
+          router.refresh();
+        }}
+        submit={async (v) => {
+          const res = await createLocationAction({ slug, warehouseId, parentId: parent.id, code: v.code, name: v.name, kind: v.kind, autoCode: v.autoCode });
+          return res.ok ? { ok: true, data: res.data } : { ok: false, error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId } };
+        }}
+      />
+    );
+  }
+  if (editing !== undefined) {
+    return (
+      <CodeEditForm
+        key={editing.id}
+        dark={dark}
+        subject={editing.name}
+        current={editing.code}
+        icon={{ d: LICON.raf, color: KIND_COLOR[editing.kind] ?? "0E7C7B" }}
+        onBack={toTree}
+        submit={(code) => changeCode(editing.id, code)}
+        errorText={(e) => errText(e, "location")}
+        renderError={(e) => <ServerErrorBanner error={e} returnTo={returnTo} scope="location" />}
+        onDone={(r) => {
+          setError(null);
+          if (r.changed) setCodeChanged({ id: editing.id, from: r.from, to: r.to });
+          else setNotice(t("done.codeSame"));
+          toTree();
+          router.refresh();
+        }}
+      />
+    );
+  }
 
   return (
     <>
@@ -252,10 +331,11 @@ export function LocationTree({
           title={t("title")}
           icon={{ d: LICON.raf, color: "0E7C7B" }}
           heading={false}
+          excel={{ kind: "locations", warehouseId }}
           testId="location-tree"
           bar={{
             back: { href: base, aria: t("back") },
-            main: { label: tw("k.addLoc"), aria: t("addRoot"), d: LICON.plus, disabled: !canOpenDialogs, onClick: openRoot, testId: "location-add" },
+            main: { label: tw("k.addLoc"), aria: t("addRoot"), d: LICON.plus, disabled: !canOpenDialogs, disabledReason: lockText ?? t("addWait"), onClick: openRoot, testId: "location-add" },
           }}
           overlays={toast}
         >
@@ -279,7 +359,7 @@ export function LocationTree({
                 </KalipHero>
                 <KalipHizli label={tw("k.quick")} items={quick} />
                 {guideNext === null ? null : guideNext === "locations" ? (
-                  <button type="button" className="more" data-testid="setup-row" onClick={() => (canOpenDialogs ? setBulkOpen(true) : undefined)} disabled={!canOpenDialogs}>
+                  <button type="button" className="more" data-testid="setup-row" onClick={() => (canOpenDialogs ? openBulk() : undefined)} disabled={!canOpenDialogs}>
                     <i>
                       <Ico d={LICON.clip} size={20} />
                     </i>
@@ -360,7 +440,7 @@ export function LocationTree({
                                 aria-describedby={noteId}
                                 onClick={() => {
                                   feedback.minor();
-                                  setParent({ id: it.id, label: `${it.name} (${it.code})` });
+                                  go(`new=1&parent=${encodeURIComponent(it.id)}`);
                                 }}
                               >
                                 <Ico d={LICON.plus} size={18} />
@@ -375,7 +455,7 @@ export function LocationTree({
                                 aria-label={tw("codeEdit.for", { name: it.name })}
                                 onClick={() => {
                                   feedback.minor();
-                                  setEditing(it);
+                                  go(`kod=${encodeURIComponent(it.id)}`);
                                 }}
                               >
                                 <Ico d={LICON.pencil} size={18} />
@@ -416,67 +496,6 @@ export function LocationTree({
         </KalipEkran>
       </div>
 
-      <BulkBuilder
-        open={bulkOpen}
-        slug={slug}
-        warehouseId={warehouseId}
-        returnTo={returnTo}
-        onClose={() => setBulkOpen(false)}
-        onDone={async (r) => {
-          setBulkOpen(false);
-          setNotice(r.replayed ? tb("doneReplayed", { count: r.created }) : tb("done", { count: r.created, first: r.first, last: r.last }));
-          setVersion((n) => n + 1);
-          // Rehberin 3. adımı: ürün yoksa ürün formuna git.
-          const p = await getSetupProgressAction({ slug });
-          if (p.ok && !p.data.hasItem) router.push(`/t/${encodeURIComponent(slug)}/items?new=1`);
-          else router.refresh();
-        }}
-      />
-      <CreateDialog
-        open={parent !== undefined}
-        title={parent?.id === null || parent === undefined ? t("createRootTitle") : t("createChildTitle")}
-        intro={parent === undefined ? undefined : t("parentIs", { parent: parent.label })}
-        kinds={KINDS}
-        returnTo={returnTo}
-        scope="location"
-        suggest={async () => {
-          const r = await suggestCodeAction({ slug, kind: "location", warehouseId });
-          return r.ok ? r.data.code : null;
-        }}
-        onClose={() => setParent(undefined)}
-        onDone={() => {
-          setVersion((n) => n + 1);
-          // Yeni alt lokasyon görünsün: ebeveyn açılır.
-          const pid = parent?.id;
-          if (pid !== undefined && pid !== null) setExpanded((cur) => new Set(cur).add(pid));
-          setParent(undefined);
-          setNotice(t("done.created"));
-          router.refresh();
-        }}
-        submit={async (v) => {
-          const res = await createLocationAction({ slug, warehouseId, parentId: parent?.id ?? null, code: v.code, name: v.name, kind: v.kind, autoCode: v.autoCode });
-          return res.ok ? { ok: true, data: res.data } : { ok: false, error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId } };
-        }}
-      />
-      <CodeEditDialog
-        open={editing !== null}
-        subject={editing?.name ?? ""}
-        current={editing?.code ?? ""}
-        titleId="code-edit-location-title"
-        onClose={() => setEditing(null)}
-        submit={(code) => (editing === null ? Promise.resolve({ ok: false, error: { code: "NOT_FOUND" } } as const) : changeCode(editing.id, code))}
-        renderError={(e) => <ServerErrorBanner error={e} returnTo={returnTo} scope="location" />}
-        onDone={(r) => {
-          const id = editing?.id;
-          setEditing(null);
-          setError(null);
-          if (r.changed && id !== undefined) {
-            setNotice(null);
-            setCodeChanged({ id, from: r.from, to: r.to });
-          } else setNotice(t("done.codeSame"));
-          router.refresh();
-        }}
-      />
       <KalipOnay
         open={archiving !== null}
         title={t("confirmArchive.title", { name: archiving?.name ?? "" })}

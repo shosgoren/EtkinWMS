@@ -1171,6 +1171,7 @@ const stockSqlGuard = {
 const MSG_FIXED_LOCALE = 'Sabit dil yazılmaz (ALTIN-KURAL 16): kullanıcının dilini `@wms/ui` format yardımcısıyla ver (`sayi`, `tarih`, `tarihBicimi`, `buyukHarf`, `kucukHarf`, `intlDil(locale)`).';
 const LOCALE_METHODS = new Set(["toLocaleUpperCase", "toLocaleLowerCase", "toLocaleString", "toLocaleDateString", "toLocaleTimeString"]);
 const FIXED_TR = /^tr(?:[-_]tr)?$/i;
+/** @type {import("eslint").Rule.RuleModule} */
 const noFixedLocale = {
   meta: { type: "problem", schema: [], messages: { fixed: MSG_FIXED_LOCALE } },
   create(context) {
@@ -1205,6 +1206,75 @@ const noFixedLocale = {
     };
   },
 };
+// T-990 / B-99 (ALTIN-KURAL "Ekran standardı", kullanıcı kararları 20–21 Ekim): "doğru yol tek yol" — form, perde, seçim, uyarı yalnız
+// `apps/web/app/t/[slug]/kalip/` ortak bileşenleriyle. İhlal yazılır yazılmaz editörde ve `pnpm lint`'te görünür (aynı kurallar
+// `apps/web/app/ui-standards.test.ts` birim bekçisinde de). Yalnızca EK kural; mevcut hiçbir kural değiştirilmedi. İstisna: dosya bu
+// listede gerekçeyle ya da ihlalin hemen üstündeki satırda `// ui-standard-istisna: <gerekçe>` yorumu (gerekçesiz yorum geçersiz).
+const UI_KALIP_DIR = "apps/web/app/t/[slug]/kalip/";
+const UI_BEFOREUNLOAD_FILE = "apps/web/app/t/[slug]/kalip/cikis.tsx";
+const UI_DIALOG_FILES = [
+  "apps/web/app/t/[slug]/kalip/pencere.tsx", // ortak pencere (tek soruluk onay)
+  "apps/web/app/t/[slug]/more-sheet.tsx", // eski kabuk — B-95 ile kalkar
+  "apps/web/app/t/[slug]/app-bar.tsx", // eski kabuk — B-95 ile kalkar
+];
+const MSG_UI = {
+  browserBox: "Tarayıcı kutusu (window.confirm / alert) yok: onay `KalipOnay`, çıkış `useCikisKorumasi` (ALTIN-KURAL, T-990).",
+  beforeunload: "`beforeunload` yalnız ortak çıkış korumasında (kalip/cikis.tsx): uygulama içi gezinmede tarayıcı penceresi çıkmaz (T-990).",
+  select: "Yerel açılır liste `<select>` yok: ≤6 seçenek `KalipSecimGrubu`, çok seçenek `KalipSecimListe` (kalip/secim.tsx, T-990).",
+  dialog: "Elle `<dialog>` yok: tek soruluk onay `KalipPencere`/`KalipOnay`, ekleme/düzenleme `KalipFormEkran` (T-990).",
+  backdrop: "Perde tek ortak perdedir (`KalipPerdeKatman`, design/perde.css): satır içi backdropFilter yok (T-990).",
+  overlayClass: "Kalıp dışında perde/çıkış kutusu sınıfı (`kperde`, `cfback`, `cfbox`) yazılmaz: `KalipPerdeKatman` / `KalipCikisUyarisi` (T-990).",
+};
+/** @type {import("eslint").Rule.RuleModule} */
+const uiStandard = {
+  meta: { type: "problem", schema: [], messages: MSG_UI },
+  create(context) {
+    const rel = path.posix.normalize(repoRelative(context.filename));
+    if (!rel.startsWith("apps/web/app/") || /\.test\.(tsx?|mjs)$/.test(rel)) return {};
+    const tenant = rel.startsWith("apps/web/app/t/");
+    const inKalip = rel.startsWith(UI_KALIP_DIR);
+    const src = context.sourceCode;
+    /** İhlalin hemen üstündeki satırda gerekçeli istisna yorumu var mı. @param {any} node */
+    const excused = (node) => {
+      const line = node.loc?.start.line ?? 0;
+      return src.getAllComments().some((/** @type {any} */ c) => c.loc?.end.line === line - 1 && /ui-standard-istisna:\s*\S{3,}/.test(c.value));
+    };
+    /** @param {any} node @param {string} messageId */
+    const report = (node, messageId) => {
+      if (!excused(node)) context.report({ node, messageId });
+    };
+    return {
+      /** @param {any} node */
+      CallExpression(node) {
+        const c = node.callee;
+        // Genel `alert(…)` ve `window.confirm/alert`; yerel `confirm()` işlevleri (ör. saha akışı) serbest.
+        if (c.type === "Identifier" && c.name === "alert") report(node, "browserBox");
+        if (c.type === "MemberExpression" && !c.computed && c.object.type === "Identifier" && (c.object.name === "window" || c.object.name === "globalThis") && (c.property.name === "confirm" || c.property.name === "alert")) report(node, "browserBox");
+      },
+      /** @param {any} node */
+      Literal(node) {
+        if (node.value === "beforeunload" && rel !== UI_BEFOREUNLOAD_FILE) report(node, "beforeunload");
+      },
+      /** @param {any} node */
+      JSXOpeningElement(node) {
+        if (!tenant || node.name.type !== "JSXIdentifier") return;
+        if (node.name.name === "select") report(node, "select");
+        if (node.name.name === "dialog" && !UI_DIALOG_FILES.includes(rel)) report(node, "dialog");
+      },
+      /** @param {any} node */
+      JSXAttribute(node) {
+        if (node.name.name === "style" && node.value?.type === "JSXExpressionContainer" && node.value.expression.type === "ObjectExpression") {
+          for (const p of node.value.expression.properties) if (p.type === "Property" && ((p.key.type === "Identifier" && p.key.name === "backdropFilter") || (p.key.type === "Literal" && /backdrop/i.test(String(p.key.value))))) report(p, "backdrop");
+        }
+        if (node.name.name === "className" && !inKalip && tenant) {
+          const v = node.value;
+          const text = v?.type === "Literal" ? String(v.value) : v?.type === "JSXExpressionContainer" && v.expression.type === "TemplateLiteral" ? v.expression.quasis.map((/** @type {any} */ q) => q.value.raw).join(" ") : "";
+          if (/(^|\s)(kperde|cfback|cfbox)(\s|$)/.test(text)) report(node, "overlayClass");
+        }
+      },
+    };
+  },
+};
 
 const WMS_PLUGIN = {
   meta: { name: "wms-local" },
@@ -1215,6 +1285,7 @@ const WMS_PLUGIN = {
     "no-client-server-loader": noClientServerLoader,
     "stock-sql-guard": stockSqlGuard,
     "no-fixed-locale": noFixedLocale,
+    "ui-standard": uiStandard,
   },
 };
 
@@ -1427,6 +1498,12 @@ export default defineConfig(
     ignores: ["packages/ui/src/format.ts", "**/*.test.{ts,tsx,mjs}", "**/*.spec.{ts,tsx}"],
     plugins: { wms: WMS_PLUGIN },
     rules: { "wms/no-fixed-locale": "error" },
+  },
+  {
+    // T-990b (B-99): ALTIN-KURAL ekran standardı — yalnızca EK kural (`wms/ui-standard`); mevcut hiçbir kural değiştirilmedi.
+    files: ["apps/web/app/**/*.{ts,tsx}"],
+    plugins: { wms: WMS_PLUGIN },
+    rules: { "wms/ui-standard": "error" },
   },
   {
     // T-210 (I-04, I-15, G-01): stok tablolarında kilit/yazma SQL'i ve şema nesnesi erişimi yalnızca izinli dosyalarda.

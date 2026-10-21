@@ -335,7 +335,7 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
           title={t("putaway.confirmTitle")}
           instruction={t("putaway.confirmInstruction")}
           {...backProps}
-          main={{ label: ts("qty.confirm"), aria: t("putaway.confirm"), d: SICON.check, onClick: () => void confirm(), disabled: busy || qty < 1, wait: over, testId: "flow-primary" }}
+          main={{ label: ts("qty.confirm"), aria: t("putaway.confirm"), d: SICON.check, onClick: () => void confirm(), disabled: busy || qty < 1, disabledReason: busy ? ts("qty.busy") : ts("qty.needOne"), wait: over, testId: "flow-primary" }}
         >
           {task !== null ? (
             <>

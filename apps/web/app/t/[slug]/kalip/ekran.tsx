@@ -13,7 +13,9 @@ import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { temaYaz } from "../../../design/theme.ts";
 import { KalipDestek } from "./destek.tsx";
-import { kdz, type KalipScope } from "./tokens.ts";
+import { useKalipExcel, type KalipExcelProps } from "./excel.tsx";
+import { KalipSurumBekcisi } from "./surum.tsx";
+import { kdz, kdzOrtak, type KalipScope } from "./tokens.ts";
 import { balonGoster, buyukHarf, type BalonTur } from "@wms/ui";
 import { useCevrimici } from "./cevrimdisi.ts";
 
@@ -67,6 +69,8 @@ export interface KalipEkranProps {
   readonly subtitle?: string;
   /** Sağ üst `.tph` yuvası. Verilmezse Sorun bildir + Destek (T-967, kiracı bağlamı varsa; yoksa Yardım bağlantısı). `null` = boş. */
   readonly actions?: ReactNode | null;
+  /** T-981b: üst çubukta Excel düğmesi (İçeri al / Güncelle / Dışarı aktar); yalnız aktarım yetkisi olana çizilir (kiracı bağlamı). */
+  readonly excel?: KalipExcelProps;
   /** Alt cam çubuk (ortak KabukBar): ekranın ana işlemi, Geri, Ana ekran. `dark` kabdan gelir. */
   readonly bar: Omit<KabukBarProps, "dark">;
   /** Kabın içinde, `.inner` dışında çizilen katmanlar (kaynak `.sxback`, `.cfback/.cfbox`, `.toast`). */
@@ -77,7 +81,7 @@ export interface KalipEkranProps {
   readonly children: ReactNode;
 }
 
-export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
+export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
   const t = useTranslations("kalip");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useKabuk();
@@ -85,6 +89,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
   const router = useRouter();
   const [hesap, setHesap] = useState(false);
   const closeHesap = useCallback(() => setHesap(false), []);
+  const xls = useKalipExcel(kind, ctx?.slug, excel, ctx?.excel, dark, closeHesap);
   // Tema cihaz tercihidir (çerez, Pano ve Ayarlar ile aynı); sayfa sunucuda çerezi okuyarak yeniden çizilir.
   const toggleTheme = useCallback(() => {
     temaYaz(dark ? "acik" : "koyu");
@@ -96,7 +101,14 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
   // Pano kaynağının sınıfları (`.tb`, `.halo.tmenu`) `.dzp` kabında tanımlıdır; kutu üretmeyen kap (yeni stil yok).
   const panoScope = `dzp${dark ? " dz-dark" : ""}`;
   const scope = SCOPE[kind];
-  const c = (hex: string): string => kdz(scope, hex);
+  // T-990: ekran ikonu rengi (ör. tam ekran ürün formunda kart türü rengi) önce kabın, yoksa diğer kalıp kaynaklarının belirteci.
+  const c = (hex: string): string => {
+    try {
+      return kdz(scope, hex);
+    } catch {
+      return kdzOrtak(hex);
+    }
+  };
   const sub =
     subtitle ??
     buyukHarf(
@@ -148,20 +160,31 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
                   {sub === "" ? null : <small>{sub}</small>}
                 </span>
               </div>
-              {slot === null ? null : (
+              {slot === null && xls.button === null ? null : (
                 <div className="tph" role="group" aria-label={t("topActions")}>
+                  {xls.button}
                   {slot}
                 </div>
               )}
               {/* T-971 (B-92): Pano'nun Hesap düğmesi — `actions` yuvasından ayrı öğe (Sorun/Destek o yuvada). */}
               <span className={panoScope} style={{ display: "contents" }} data-testid="kalip-account">
-                <HesapDugme team={false} open={hesap} onClick={() => setHesap((o) => !o)} />
+                <HesapDugme
+                  team={false}
+                  open={hesap}
+                  onClick={() => {
+                    xls.close();
+                    setHesap((o) => !o);
+                  }}
+                />
               </span>
             </header>
             <main className="inner" id="kalip-main">
               {children}
             </main>
             {overlays}
+            {/* T-990: yayından sonra açık kalan sayfa eski eylem kimliğiyle çağırırsa "Uygulama güncellendi — Yenile". */}
+            <KalipSurumBekcisi />
+            {xls.layer}
             {hesap ? (
               <div className={panoScope} style={{ display: "contents" }}>
                 <HesapMenu team={false} me={me} dark={dark} onToggleTheme={toggleTheme} onClose={closeHesap} />

@@ -5,14 +5,15 @@
 // yazma yalnız hesap sahibine açıktır (domain denetler; `canEdit` yalnız gösterim). Ekip yönetimi grupla verilmez (kart kilitli).
 // Bilinçli farklar (DESIGN-PARITY): Etkin (sesle) T-424; özel grup için "Arşivle" düğmesi (kaynakta yok; grup silinmez); kişi aramasında yazı kutusu.
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useRef, useState, type CSSProperties } from "react";
-import { useModalFocus } from "../kalip/odak.ts";
+import { useMemo, useState, type CSSProperties } from "react";
 import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 import { kilitliDokunus } from "../kalip/kilitli.tsx";
+import { useCikisKorumasi } from "../kalip/cikis.tsx";
+import { UstDugmeler } from "../ust-dugmeler.tsx";
 
 type Overview = {
   readonly groups: readonly { id: string; name: string; color: string; screens: readonly string[]; grants: readonly string[]; archived: boolean; version: number; memberCount: number }[];
@@ -100,10 +101,6 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const [tab, setTab] = useState<"scr" | "pow">("scr");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState<Draft | null>(null);
-  const [cf, setCf] = useState<null | "home" | "back">(null);
-  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
-  const cfRef = useRef<HTMLDivElement>(null);
-  useModalFocus(cf !== null, cfRef, { onClose: () => setCf(null), initial: "first" });
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -311,11 +308,10 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
         ],
     done: [t("main.done"), RICON.check, goList],
   };
+  // T-990: tek ortak çıkış kutusu (cikis.tsx); yarım grup düzenlemesinde Geri, Ana ekran, Modüller ve bağlantılar yalnız bunu açar.
+  const korunan = useCikisKorumasi(dirty, { dark, title: t("cf.title"), text: t("cf.text", { name: draft?.name ?? "" }), saveLabel: t("cf.save"), onSave: () => save() });
   const back = (): void => {
-    if (view === "edit") {
-      if (dirty) setCf("back");
-      else goList();
-    } else if (view === "people") setView("edit");
+    if (view === "edit") korunan.sor(goList); else if (view === "people") setView("edit");
     else if (view === "done") goList();
   };
 
@@ -376,6 +372,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
               <span className="net" style={{ position: "static", flex: "none" }} title={t("online")}>
                 <i />
               </span>
+              <UstDugmeler dark={dark} />
             </header>
             <div className="stepbar" aria-hidden="true">
               <span style={{ width: `${STEPW[view]}%` }} />
@@ -571,64 +568,16 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
             </main>
 
 
-            {cf !== null ? (
-              <>
-                <div className="cfback" onClick={() => setCf(null)} />
-                <div ref={cfRef} className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
-                  <span className="cfic">
-                    <Ico d={RICON.warn} size={26} />
-                  </span>
-                  <b>{t("cf.title")}</b>
-                  <p>{t("cf.text", { name: draft?.name ?? "" })}</p>
-                  <button
-                    type="button"
-                    className="cfb save"
-                    disabled={busy}
-                    onClick={() =>
-                      void save().then((ok) => {
-                        setCf(null);
-                        if (!ok) return;
-                        if (cf === "home") window.location.assign(base);
-                        else goList();
-                      })
-                    }
-                  >
-                    <Ico d={RICON.check} size={20} />
-                    {t("cf.save")}
-                  </button>
-                  {cf === "home" ? (
-                    <a href={base} className="cfb leave">
-                      <Ico d={RICON.leave} size={20} />
-                      {t("cf.leave")}
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      className="cfb leave"
-                      onClick={() => {
-                        setCf(null);
-                        goList();
-                      }}
-                    >
-                      <Ico d={RICON.leave} size={20} />
-                      {t("cf.leave")}
-                    </button>
-                  )}
-                  <button type="button" className="cfb stay" onClick={() => setCf(null)}>
-                    {t("cf.stay")}
-                  </button>
-                </div>
-              </>
-            ) : null}
           </div>
         </div>
       </div>
     </div>
+    {korunan.kutu}
     {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
     <KabukBar
       dark={dark}
       back={view === "list" ? { href: `${base}/team`, aria: t("backTeam"), testId: "groups-back" } : { onClick: back, aria: t("back"), testId: "groups-back" }}
-      homeNav={dirty ? { onClick: () => setCf("home"), aria: t("home"), testId: "groups-home" } : { href: base, aria: t("home"), testId: "groups-home" }}
+      homeNav={{ href: base, aria: t("home"), testId: "groups-home" }}
       main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy || (view === "list" && !data.canEdit), testId: "groups-main" }}
     />
     </>

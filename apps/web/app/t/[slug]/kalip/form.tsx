@@ -2,16 +2,18 @@
 // T-968 (B-63, I-18): FORM kalıbı parçaları — KalipForm.dc.html BİREBİR: yetkisiz bandı (`.lockb`), iki sütun ızgara (`.sgrid > .scol`),
 // ikonlu grup (`.sg > .sgh`), dokununca açılan satır (`.srw > .sr2` + `.sx` düzenleyici: masaüstünde satırın altında, telefonda alt cam
 // sayfa + `.sxback` perde), açık/kapalı anahtar satırı (`.sr2 > .act2`), salt okunur satır (`.sr2.lock` + `.pill`), seçenek düğmeleri
-// (`.gpick > .gp`), metin alanı (`.fld`), değişiklik rozeti (`.sr2.chg`), kaydedilmemiş iş uyarısı (`.cfback` + `.cfbox`).
+// (`.gpick > .gp`), metin alanı (`.fld`), değişiklik rozeti (`.sr2.chg`). Kaydedilmemiş iş uyarısı tek ortak bileşen `cikis.tsx` (T-990).
 // "Yalnız değişince etkin Kaydet" ana işlemi ortak KabukBar'dadır (ekran `main.disabled` verir). Renkler `.dzf` belirteçlerinden.
 import { useTranslations } from "next-intl";
-import { useEffect, type CSSProperties, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, type CSSProperties, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico } from "./ekran.tsx";
-import { kdz } from "./tokens.ts";
+import { useAlanHata, useSalla, useZorunlu } from "./form-baglam.tsx";
+import { kdzOrtak } from "./tokens.ts";
 import { kilitliDokunus } from "./kilitli.tsx";
 
-const c = (hex: string): string => kdz("dzf", hex);
+// T-990: form kabının kaynağında olmayan ama başka kalıp kaynağında geçen renk (ör. Hammadde kahvesi) de kullanılabilir.
+const c = (hex: string): string => kdzOrtak(hex);
 
 /** Kaynak `.lockb`: değiştirme yetkisi yok (görebilir). */
 export function KalipKilit({ title, sub }: { title: string; sub: string }) {
@@ -158,14 +160,14 @@ export interface KalipSecenekItem {
   readonly d: string;
 }
 
-/** Kaynak `.gpick > .gp` seçenek düğmeleri (seçili: grubun rengi). */
+/** Kaynak `.gpick > .gp` seçenek düğmeleri (seçili: grubun rengi). T-990: rol radiogroup/radio (`KalipSecimGrubu` ile aynı sözleşme). */
 export function KalipSecenek({ options, value, color, onPick, label }: { options: readonly KalipSecenekItem[]; value: string; color: string; onPick: (id: string) => void; label: string }) {
   return (
-    <div className="gpick" role="group" aria-label={label}>
+    <div className="gpick" role="radiogroup" aria-label={label}>
       {options.map((o) => {
         const on = o.id === value;
         return (
-          <button key={o.id} type="button" className={`gp${on ? " on" : ""}`} style={on ? { background: c(color) } : undefined} aria-pressed={on} onClick={() => onPick(o.id)} data-option={o.id}>
+          <button key={o.id} type="button" role="radio" className={`gp${on ? " on" : ""}`} style={on ? { background: c(color) } : undefined} aria-checked={on} onClick={() => onPick(o.id)} data-option={o.id}>
             <Ico d={o.d} size={20} />
             {o.label}
           </button>
@@ -175,13 +177,42 @@ export function KalipSecenek({ options, value, color, onPick, label }: { options
   );
 }
 
-/** Kaynak `.fld` (etiketli metin alanı). */
-export function KalipAlan({ label, ...input }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+/**
+ * Kaynak `.fld` (etiketli metin alanı). T-990: ortak form bağlamında (`KalipFormEkran`) `name` ile alan hatası taşır — kırmızı çerçeve,
+ * kısa sarsılma, altında tek satır neden (`aria-invalid` + `aria-describedby`); `hint` alanın altında kısa açıklama.
+ */
+export function KalipAlan({ label, hint, error, multiline = false, ...input }: { label: string; hint?: string | undefined; error?: string | undefined; multiline?: boolean } & InputHTMLAttributes<HTMLInputElement>) {
+  const id = useId();
+  const ctxErr = useAlanHata(typeof input.name === "string" ? input.name : undefined);
+  const salla = useSalla();
+  const req = useZorunlu(typeof input.name === "string" ? input.name : undefined);
+  const err = error ?? ctxErr;
+  const shown = req && !label.trimEnd().endsWith("*") ? `${label} *` : label;
+  const hid = `${id}-h`;
+  const eid = `${id}-e`;
+  const desc = [hint === undefined ? null : hid, err === undefined ? null : eid].filter((x) => x !== null).join(" ") || undefined;
   return (
-    <label className="fld">
-      <span>{label}</span>
-      <input {...input} />
-    </label>
+    <>
+      <label key={err === undefined ? "ok" : `bad-${salla}`} className={`fld${err === undefined ? "" : " bad"}`} data-alan={input.name}>
+        <span>{shown}</span>
+        {multiline ? (
+          <textarea {...(input as unknown as TextareaHTMLAttributes<HTMLTextAreaElement>)} aria-invalid={err === undefined ? undefined : true} aria-describedby={desc} />
+        ) : (
+          <input {...input} aria-invalid={err === undefined ? undefined : true} aria-describedby={desc} />
+        )}
+      </label>
+      {hint === undefined ? null : (
+        <small id={hid} className="khint">
+          {hint}
+        </small>
+      )}
+      {err === undefined ? null : (
+        <small id={eid} className="kerr" role="alert" data-testid={typeof input.name === "string" ? `err-${input.name}` : undefined}>
+          <Ico d={LICON.warn} size={16} />
+          {err}
+        </small>
+      )}
+    </>
   );
 }
 
@@ -199,52 +230,5 @@ export function KalipPerde({ open, onClose }: { open: boolean; onClose: () => vo
   return open ? <button type="button" className="sxback" aria-label={t("close")} tabIndex={-1} onClick={onClose} /> : null;
 }
 
-/** Kaynak `.cfback` + `.cfbox` kaydedilmemiş iş uyarısı. Kabın `overlays` yuvasına. */
-export function KalipCikisUyarisi({ open, text, saveLabel, onSave, onLeave, onStay }: { open: boolean; text: string; saveLabel?: string; onSave?: () => void; onLeave: () => void; onStay: () => void }) {
-  const t = useTranslations("kalip");
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onStay();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onStay]);
-  if (!open) return null;
-  return (
-    <>
-      <div className="cfback" onClick={onStay} />
-      <div className="cfbox" role="alertdialog" aria-modal="true" aria-label={t("unsavedTitle")} data-testid="kalip-unsaved">
-        <span className="cfic">
-          <Ico d={LICON.warn} size={28} />
-        </span>
-        <b>{t("unsavedTitle")}</b>
-        <p>{text}</p>
-        {onSave === undefined ? null : (
-          <button type="button" className="cfb save" onClick={onSave} autoFocus>
-            <Ico d={LICON.check} size={20} />
-            {saveLabel ?? t("saveLeave")}
-          </button>
-        )}
-        <button type="button" className="cfb leave" onClick={onLeave}>
-          {t("leave")}
-        </button>
-        <button type="button" className="cfb stay" onClick={onStay}>
-          {t("stay")}
-        </button>
-      </div>
-    </>
-  );
-}
-
-/** Kaydedilmemiş iş varken sekme kapatma / yenileme uyarısı (tarayıcının kendi kutusu). */
-export function useLeaveGuard(dirty: boolean): void {
-  useEffect(() => {
-    if (!dirty) return;
-    const onBefore = (e: BeforeUnloadEvent): void => {
-      e.preventDefault();
-    };
-    window.addEventListener("beforeunload", onBefore);
-    return () => window.removeEventListener("beforeunload", onBefore);
-  }, [dirty]);
-}
+/** Kaydedilmemiş iş uyarısı TEK ortak bileşendir (T-990): `cikis.tsx`. Eski içe aktarmalar için yeniden dışa aktarılır. */
+export { KalipCikisUyarisi, useCikisKorumasi } from "./cikis.tsx";

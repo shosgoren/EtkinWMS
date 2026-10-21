@@ -5,12 +5,16 @@
 // karta dokununca tam kayıt bilgisi balonda. Sayfalama imleçle (`KalipDaha`); ana işlem alt çubukta CSV İNDİR.
 // T-978: arama (`.lsearch`, GET `q`: kişi adı / gerekçe / kayıt kimliği; sunucuda listAudit) — tarih ve işlem süzgeci korunur.
 // Bilinçli fark (DESIGN-PARITY, T-971): çip sayıları yok.
+// T-990 (B-97): işlem süzgeci yerel açılır liste değil: `#action` güçlü kenarlıklı tetik düğmesi ortak aramalı seçim sayfasını
+// (`KalipSecimSayfasi`) açar; seçim gizli `action` alanına yazılır ve GET formu hemen gönderilir (adres değişir). JS yokken "Süz" düğmesi
+// tarih süzgecini yine gönderir.
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
-import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { feedback } from "@wms/ui";
+import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { KalipSecimSayfasi } from "../kalip/secim.tsx";
 
 export interface AuditRowView {
   readonly id: string;
@@ -70,6 +74,10 @@ export function AuditView({
   const t = useTranslations("auditLog");
   const tk = useTranslations("kural");
   const { say, node: toast } = useKalipToast("liste");
+  const [action, setAction] = useState(filters.action ?? "");
+  const [pick, setPick] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+  const actionLabel = action === "" ? t("allActions") : (actions.find((a) => a.id === action)?.label ?? action);
   const ALL = { d: LICON.grid, color: "172E42" };
   const ICONS: Record<string, { d: string; color: string }> = {
     all: ALL,
@@ -87,7 +95,26 @@ export function AuditView({
     <KalipEkran kind="liste" dark={dark} title={t("title")} icon={{ d: LICON.shield, color: "172E42" }} testId="audit" bar={{
         back: { href: home, aria: t("back") },
         main: rows === null ? { label: "", d: LICON.excel, disabled: true } : { label: t("exportShort"), aria: t("export"), d: LICON.excel, href: exportHref, testId: "audit-export" },
-      }} overlays={toast}>
+      }} overlays={
+        <>
+          {toast}
+          <KalipSecimSayfasi
+            open={pick}
+            title={t("action")}
+            icon={{ d: LICON.check, color: "6C4BD8" }}
+            value={action}
+            options={[{ id: "", label: t("allActions"), d: LICON.grid, color: "172E42" }, ...actions.map((a) => ({ id: a.id, label: a.label, keys: [a.id], d: visual(a.id).d, color: visual(a.id).color }))]}
+            scan={false}
+            onPick={(id) => {
+              setAction(id);
+              // Gizli alan güncellendikten sonra gönder (aynı karede değer henüz yazılmamış olabilir).
+              window.requestAnimationFrame(() => form.current?.requestSubmit());
+            }}
+            onClose={() => setPick(false)}
+            testId="audit-action-sheet"
+          />
+        </>
+      }>
       <KalipAra
         label={t("search")}
         placeholder={t("searchPlaceholder")}
@@ -96,7 +123,7 @@ export function AuditView({
         below={(["from", "to", "action"] as const).map((k) => (filters[k] === undefined ? null : <input key={k} type="hidden" name={k} value={filters[k]} />))}
       />
       <KalipCipler label={t("quick")} chips={chips} />
-      <form method="get" action={here} aria-label={t("filterLabel")} className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-4 sm:items-end" style={{ flex: "none" }}>
+      <form ref={form} method="get" action={here} aria-label={t("filterLabel")} className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-4 sm:items-end" style={{ flex: "none" }}>
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor="from" className="text-sm font-semibold">
             {t("from")}
@@ -113,14 +140,24 @@ export function AuditView({
           <label htmlFor="action" className="text-sm font-semibold">
             {t("action")}
           </label>
-          <select id="action" name="action" defaultValue={filters.action ?? ""} className={FIELD_CLS}>
-            <option value="">{t("allActions")}</option>
-            {actions.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.label}
-              </option>
-            ))}
-          </select>
+          <button
+            type="button"
+            id="action"
+            className={`${FIELD_CLS} flex items-center justify-between gap-2 text-left`}
+            aria-haspopup="listbox"
+            aria-expanded={pick}
+            aria-label={`${t("action")}: ${actionLabel}`}
+            onClick={() => {
+              feedback.minor();
+              setPick(true);
+            }}
+            data-testid="audit-action"
+            data-value={action}
+          >
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{actionLabel}</span>
+            <Ico d={LICON.chev} size={18} />
+          </button>
+          {action === "" ? null : <input type="hidden" name="action" value={action} />}
         </div>
         {filters.q === undefined ? null : <input type="hidden" name="q" value={filters.q} />}
         <button type="submit" className="btn n">

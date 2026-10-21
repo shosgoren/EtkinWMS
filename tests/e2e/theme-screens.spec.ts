@@ -6,7 +6,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
-import { appMenuReachable, openAppMenu } from "./support/app-menu.ts";
+import { selectView } from "./support/app-menu.ts";
 
 const OUT = path.resolve(import.meta.dirname, "../../.artifacts/t-246b");
 const SIZES = [
@@ -28,20 +28,6 @@ async function tokenColor(page: Page, token: string): Promise<string> {
   return page.evaluate<string>(
     `(() => { const e = document.createElement("i"); e.style.backgroundColor = "var(--color-${token})"; document.body.append(e); const c = getComputedStyle(e).backgroundColor; e.remove(); return c; })()`,
   );
-}
-
-async function selectView(page: Page, label: string): Promise<void> {
-  // T-254: telefon genişliğinde görünüm anahtarı menüdedir; önce menü açılır, aynı düğme kullanılır (beklenen davranış aynı).
-  const inMenu = await appMenuReachable(page);
-  if (inMenu) await openAppMenu(page);
-  const button = page.getByRole("button", { name: label, exact: true });
-  await button.click();
-  // T-988: Akış ana ekranında üst çubuk gizlenir (menü düğmesi Görevlerim başlığındadır); düğme DOM'da kalır, görünürlük şartı aranmaz.
-  await expect(page.locator('button[name="view"]', { hasText: label }).first()).toHaveAttribute("aria-pressed", "true");
-  if (inMenu) {
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toBeHidden();
-  }
 }
 
 async function expectFocusRing(page: Page, locator: ReturnType<Page["locator"]>, where: string, expected?: string): Promise<void> {
@@ -88,7 +74,7 @@ for (const size of SIZES) {
       await expect(page).toHaveURL(/\/t\/demo$/);
 
       for (const view of [...VIEWS].reverse()) {
-        await selectView(page, view.label);
+        await selectView(page, view.key);
         await expect(page.locator("html")).toHaveAttribute("data-view", view.key);
         // T-422: Akış görünümünde hesap sahibinin ana ekranı Pano (rapor kartları).
         const tasks = view.key === "flow" ? page.locator("#main").getByTestId("pano") : page.getByRole("list", { name: "İşler" });

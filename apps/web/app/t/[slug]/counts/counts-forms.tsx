@@ -1,11 +1,13 @@
 "use client";
 // T-977 (B-51 yönetici): sayım başlat formu ve oturum komutları (onayla / fişi işle / iptal). Anahtarlı gönderim (`useKeyHolder`): ağ hatasında aynı
 // anahtarla yeniden deneme önceki sonucu döndürür. Yetki, görev ayrılığı ve durum kuralları sunucu komutundadır; düğmeler yalnız görünürlüktür.
+// T-990 (B-97): depo seçimi yerel açılır liste değil, ortak `KalipSecim` (depo sayısı büyüyecek veri: aramalı seçim sayfası, okutma dahil).
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { KalipGrup } from "../kalip/form.tsx";
+import { KalipSecim } from "../kalip/secim.tsx";
 import { OperationError } from "../production/production-form.tsx";
 import { control } from "../stock/documents/document-form.tsx";
 import { submitWithKey, useKeyHolder, type ErrorInfo } from "../receipts/receipt-form.tsx";
@@ -60,16 +62,21 @@ export function NewCountForm({ slug, warehouses }: { slug: string; warehouses: r
       <fieldset disabled={pending} className="flex min-w-0 flex-col gap-4" onChange={changed}>
         <KalipGrup title={`1. ${t("warehouse")}`} d={LICON.depo} color="30475A">
           <div className="flex min-w-0 flex-col gap-3 p-3">
-            <label>
-              {t("warehouse")}
-              <select className={`${control} block w-full`} value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} required>
-                {warehouses.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} ({w.code})
-                  </option>
-                ))}
-              </select>
-            </label>
+            <KalipSecim
+              list
+              name="warehouseId"
+              label={t("warehouse")}
+              value={warehouseId}
+              color="30475A"
+              icon={{ d: LICON.depo, color: "30475A" }}
+              disabled={pending}
+              onPick={(id) => {
+                setWarehouseId(id);
+                changed();
+              }}
+              options={warehouses.map((w) => ({ id: w.id, label: w.name, sub: w.code, keys: [w.code], d: LICON.depo, color: "30475A" }))}
+              testId="count-warehouse"
+            />
           </div>
         </KalipGrup>
         <KalipGrup title={`2. ${t("racks")}`} sub={String(list.length)} d={LICON.raf} color="6C4BD8">

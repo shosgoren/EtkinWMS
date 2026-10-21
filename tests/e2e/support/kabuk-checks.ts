@@ -37,6 +37,32 @@ export async function expectKabukBar(page: Page, mainTestId: string, where: stri
   if (m.vw >= 1100) expect((m.boxes[4]?.r ?? 0) - (m.boxes[0]?.l ?? 0), `${where}: masaüstünde ortalı hap ≤ 720 px`).toBeLessThanOrEqual(720);
   expect(m.hit, `${where}: ana işlem dokunuşta en üstte`).toBe(true);
   expect(m.sw, `${where}: yatay taşma yok`).toBeLessThanOrEqual(m.cw);
+  await expectCenterCapInside(page, where);
+}
+
+/**
+ * T-979c: orta ana işlem etiketi (`.cap`) çubuğun (`.dockin`) İÇİNDE, diğer yuvaların etiketleriyle aynı taban çizgisinde (±2 px), aynı yazı
+ * boyutu ve rengiyle; tek satır, kesilmeden (≤ 10 karakter); ekranın içinde.
+ */
+export async function expectCenterCapInside(page: Page, where: string): Promise<void> {
+  const c = await page.evaluate<{ bar: { t: number; b: number; l: number; r: number }; cap: { t: number; b: number; l: number; r: number; h: number }; others: number[]; fs: string; ofs: string[]; color: string; ocolor: string[]; text: string; cut: boolean; vw: number }>(`(() => {
+    const r = (e) => { const b = e.getBoundingClientRect(); return { t: b.top, b: b.bottom, l: b.left, r: b.right, h: b.height }; };
+    const bar = document.querySelector('[data-testid="kabuk-dock"] .dockin');
+    const cap = bar.querySelector('.dk.big .cap');
+    const others = [...bar.querySelectorAll('.dk:not(.big) > span')].filter((e) => e.getBoundingClientRect().height > 0);
+    const cs = getComputedStyle(cap);
+    return { bar: r(bar), cap: r(cap), others: others.map((e) => e.getBoundingClientRect().bottom), fs: cs.fontSize, ofs: others.map((e) => getComputedStyle(e).fontSize),
+      color: cs.color, ocolor: others.map((e) => getComputedStyle(e).color), text: cap.textContent.trim(), cut: cap.scrollWidth > cap.clientWidth + 0.5 || cap.getClientRects().length > 1, vw: innerWidth };
+  })()`);
+  expect(c.cap.t, `${where}: orta etiket çubuğun içinde (üst)`).toBeGreaterThanOrEqual(c.bar.t - 0.5);
+  expect(c.cap.b, `${where}: orta etiket çubuğun içinde (alt)`).toBeLessThanOrEqual(c.bar.b + 0.5);
+  expect(c.cap.l, `${where}: orta etiket ekranın içinde`).toBeGreaterThanOrEqual(0);
+  expect(c.cap.r, `${where}: orta etiket ekranın içinde`).toBeLessThanOrEqual(c.vw + 0.5);
+  expect(c.cut, `${where}: orta etiket tek satır, kesilmeden`).toBe(false);
+  expect(Array.from(c.text).length, `${where}: orta etiket ≤ 10 karakter`).toBeLessThanOrEqual(10);
+  expect(c.others.length, `${where}: diğer yuva etiketleri`).toBeGreaterThan(0);
+  for (const b of c.others) expect(Math.abs(b - c.cap.b), `${where}: orta etiket diğer etiketlerle aynı taban çizgisinde`).toBeLessThanOrEqual(2);
+  for (const f of c.ofs) expect(c.fs, `${where}: orta etiket yazı boyutu diğerleriyle aynı`).toBe(f);
 }
 
 /** Modüller sayfası: açılır; arama süzer; X, perde ve Esc kapatır. `mustSee` / `mustNotSee`: modül kimlikleri. */

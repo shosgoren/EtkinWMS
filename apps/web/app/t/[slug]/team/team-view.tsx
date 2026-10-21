@@ -8,15 +8,19 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { create as createQr } from "qrcode";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/ekip-tokens.ts";
 import { EICON } from "../../../design/ekip-icons.ts";
+import { SHICON } from "../../../design/paylas-icons.ts";
 import { approveJoinAction, createJoinLinkAction, inviteMemberAction, rejectJoinAction } from "../members/actions.ts";
 import { setMemberGroupAction } from "../groups/actions.ts";
-import { KabukBar } from "../kabuk/kabuk-bar.tsx";
-import { buyukHarf, feedback } from "@wms/ui";
-import { balonGoster, type BalonTur } from "@wms/ui";
+import { KabukBar, useKabuk } from "../kabuk/kabuk-bar.tsx";
+import { useCikisKorumasi } from "../kalip/cikis.tsx";
+import { JoinShareRow, useJoinShare } from "../members/join-share.tsx";
+import { UstDugmeler } from "../ust-dugmeler.tsx";
+import type { ToastKind } from "../kalip/ekran.tsx";
+import { balonGoster, buyukHarf, feedback } from "@wms/ui";
 
 type Role = "TENANT_ADMIN" | "WAREHOUSE_MANAGER" | "PICKER" | "COUNTER" | "READ_ONLY";
 export interface TeamPerson {
@@ -98,6 +102,7 @@ function QrSvg({ value, label }: { value: string; label: string }) {
 export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pending, hasLink }: TeamViewProps) {
   const t = useTranslations("ekip");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
+  const tk = useTranslations("kalip");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const [view, setView] = useState<"list" | "invite" | "qr">("list");
@@ -110,21 +115,25 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   const [invRole, setInvRole] = useState<Role | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [cf, setCf] = useState<null | "home" | "back">(null);
   // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
   const addRef = useRef<HTMLElement>(null);
-  const cfRef = useRef<HTMLDivElement>(null);
   useModalFocus(add, addRef, { onClose: () => setAdd(false), initial: "first" });
-  useModalFocus(cf !== null, cfRef, { onClose: () => setCf(null), initial: "first" });
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  // T-990 (ALTIN-KURAL "Form doğrulama"): davet alanlarının hatası alanın altında; kırmızı çerçeve + sarsılma + balon + ses.
+  const [fieldErr, setFieldErr] = useState<{ email?: string; role?: string }>({});
+  const [shake, setShake] = useState(0);
+  const tenantName = useKabuk()?.tenantName ?? slug;
 
   useEffect(() => {
     const timer = setInterval(() => router.refresh(), 5000);
     return () => clearInterval(timer);
   }, [router]);
-  // T-436 (ALTIN-KURAL 5): ortak balon (kendi sesini çalar).
-  const flash = (m: string, tur: BalonTur = "ok"): void => balonGoster({ tur, metin: m });
+  // T-436 (ALTIN-KURAL 5): ortak balon (kendi sesini çalar; bilgi balonu sessiz).
+  const flash = (m: string, tur: ToastKind = "ok"): void => balonGoster({ tur, metin: m });
+  // T-986b: paylaşma satırı ve PAYLAŞ ana işleminin balonu (sarı = kilit/uyarı, kırmızı = hata).
+  const say = useCallback((kind: ToastKind, m: string): void => balonGoster({ tur: kind, metin: m }), []);
+  const { share, rowRef } = useJoinShare({ url: qrUrl, tenantName, isDemo, say });
 
   const groupOf = (id: string | null): TeamGroup | undefined => (id === null ? undefined : groups.find((g) => g.id === id));
   const labelOf = (p: TeamPerson): { text: string; color: string } => {
@@ -212,16 +221,24 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   }
 
   async function invite(): Promise<boolean> {
-    if (invRole === null) {
-      feedback.error();
-      flash(t("pickGroupFirst"), "warn");
+    const fe: { email?: string; role?: string } = {};
+    if (email.trim() === "") fe.email = tk("vRequired");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) fe.email = tk("vEmail");
+    if (invRole === null) fe.role = tk("vRequired");
+    if (fe.email !== undefined || fe.role !== undefined) {
+      setFieldErr(fe);
+      setShake((n) => n + 1);
+      const missing = [fe.email === tk("vRequired") ? t("emailLabel") : null, fe.role !== undefined ? t("whichGroup") : null].filter((x): x is string => x !== null);
+      const invalid = fe.email === tk("vEmail") ? [t("emailLabel")] : [];
+      flash([missing.length > 0 ? tk("vMissing", { n: missing.length, list: missing.join(", ") }) : null, invalid.length > 0 ? tk("vInvalid", { n: invalid.length, list: invalid.join(", ") }) : null].filter((x) => x !== null).join(" · "), "err");
+      window.requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(fe.email !== undefined ? '[data-testid="team-email"]' : '[data-alan="role"] button');
+        el?.scrollIntoView({ block: "center" });
+        el?.focus({ preventScroll: true });
+      });
       return false;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      feedback.error();
-      setIssue(t("emailBad"));
-      return false;
-    }
+    setFieldErr({});
     setBusy(true);
     setIssue(null);
     try {
@@ -269,7 +286,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   };
 
   let mainLabel = t("main.add");
-  let mainIcon: string = EICON.plus;
+  let mainIcon: string | readonly string[] = EICON.plus;
   let main: () => void = () => setAdd(true);
   let mainCls = "dk big scan";
   if (view === "list" && tab === "pend" && req !== undefined) {
@@ -283,22 +300,42 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     mainLabel = t("main.invite");
     mainIcon = EICON.send;
     main = () => void invite();
+    if (isDemo) {
+      // Ana işlem sessiz kapanmaz (ALTIN-KURAL): demoda pasif görünür, dokununca neden + hata sesi.
+      mainCls = "dk big scan wait";
+      main = () => {
+        say("warn", t("err.demo"));
+      };
+    }
   }
   if (view === "qr") {
-    mainLabel = qrUrl === null ? t("main.qrCreate") : t("main.print");
-    mainIcon = qrUrl === null ? EICON.renew : EICON.print;
-    main = qrUrl === null ? () => void newQr() : () => window.print();
+    // T-986b: QR hazırsa (ve demoda, kilitli) ana işlem PAYLAŞ; değilse QR OLUŞTUR.
+    const sharing = qrUrl !== null || isDemo;
+    mainLabel = sharing ? t("main.share") : t("main.qrCreate");
+    mainIcon = sharing ? [SHICON.shareA, SHICON.shareB] : EICON.renew;
+    main = sharing ? share : () => void newQr();
+    if (isDemo) mainCls = "dk big scan wait";
   }
   const titles = { list: [t("title"), t("sub.list")], invite: [t("inviteTitle"), t("sub.invite")], qr: [t("qrTitle"), t("sub.qr")] } as const;
-  const back = (): void => {
-    if (view === "invite" && dirty) setCf("back");
-    else go("list");
-  };
   const discard = (): void => {
     setPick({});
     setCode("");
     setEmail("");
     setInvRole(null);
+  };
+  // T-990: tek ortak çıkış kutusu (cikis.tsx). Yarım davet / bekleyen onay varken Geri, Ana ekran, Modüller ve bağlantılar yalnız bunu açar.
+  const korunan = useCikisKorumasi(dirty, {
+    dark,
+    title: view === "invite" ? t("cf.inviteTitle") : t("cf.pendTitle"),
+    text: view === "invite" ? t("cf.inviteText") : t("cf.pendText", { name: req?.name ?? "" }),
+    saveLabel: view === "invite" ? t("cf.inviteSave") : t("cf.pendSave"),
+    onSave: () => (view === "invite" ? invite() : approve()),
+  });
+  const back = (): void => {
+    korunan.sor(() => {
+      discard();
+      go("list");
+    });
   };
 
   return (
@@ -325,6 +362,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
               <span className="net" style={{ position: "static", flex: "none" }} title={t("online")}>
                 <i />
               </span>
+              <UstDugmeler dark={dark} />
             </header>
 
             <main className="inner">
@@ -497,24 +535,58 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                     <b>{t("inviteLead")}</b>
                     <small>{t("inviteSub")}</small>
                   </div>
-                  <label className="fld">
+                  <label key={`e${fieldErr.email === undefined ? "" : shake}`} className={`fld${fieldErr.email === undefined ? "" : " bad"}`} data-alan="email">
                     <span>{t("emailLabel")}</span>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("emailLabel")} autoComplete="off" data-testid="team-email" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setFieldErr((cur) => ({ ...cur, email: undefined }));
+                      }}
+                      aria-label={t("emailLabel")}
+                      aria-invalid={fieldErr.email === undefined ? undefined : true}
+                      aria-describedby={fieldErr.email === undefined ? undefined : "team-email-err"}
+                      autoComplete="off"
+                      data-testid="team-email"
+                    />
                   </label>
+                  {fieldErr.email === undefined ? null : (
+                    <small id="team-email-err" className="kerr" role="alert" data-testid="err-email">
+                      {fieldErr.email}
+                    </small>
+                  )}
                   <div className="shd" style={{ margin: "2px 2px 0" }}>
                     <b>{t("whichGroup")}</b>
                     <span>{t("tapPick")}</span>
                   </div>
-                  <div className="gpick">
+                  <div key={`r${fieldErr.role === undefined ? "" : shake}`} className={`gpick${fieldErr.role === undefined ? "" : " bad"}`} role="radiogroup" aria-label={t("whichGroup")} data-alan="role">
                     {INVITE_ROLES.map((r) => {
                       const on = invRole === r;
                       return (
-                        <button key={r} type="button" className={`gp${on ? " on" : ""}`} style={on ? { background: dz(ROLE_COLOR[r] ?? "6A7F91") } : undefined} onClick={() => setInvRole(r)} data-role={r}>
+                        <button
+                          key={r}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          className={`gp${on ? " on" : ""}`}
+                          style={on ? { background: dz(ROLE_COLOR[r] ?? "6A7F91") } : undefined}
+                          onClick={() => {
+                            setInvRole(r);
+                            setFieldErr((cur) => ({ ...cur, role: undefined }));
+                          }}
+                          data-role={r}
+                        >
                           {t(`role.${r}`)}
                         </button>
                       );
                     })}
                   </div>
+                  {fieldErr.role === undefined ? null : (
+                    <small className="kerr" role="alert" data-testid="err-role">
+                      {fieldErr.role}
+                    </small>
+                  )}
                   {inviteLink !== null ? (
                     <div className="memo" data-testid="team-invite-link">
                       <span className="mic" style={{ background: dz("F4C542"), color: dz("1A1300") }}>
@@ -573,6 +645,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                       {t("qrNew")}
                     </button>
                   </div>
+                  <JoinShareRow url={qrUrl} tenantName={tenantName} isDemo={isDemo} say={say} dark={dark} rowRef={rowRef} />
                 </>
               ) : null}
             </main>
@@ -609,67 +682,17 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
               </div>
             ) : null}
 
-            {cf !== null ? (
-              <>
-                <div className="cfback" onClick={() => setCf(null)} />
-                <div ref={cfRef} className="cfbox" role="alertdialog" aria-label={view === "invite" ? t("cf.inviteTitle") : t("cf.pendTitle")}>
-                  <span className="cfic">
-                    <Ico d={EICON.warn} size={26} />
-                  </span>
-                  <b>{view === "invite" ? t("cf.inviteTitle") : t("cf.pendTitle")}</b>
-                  <p>{view === "invite" ? t("cf.inviteText") : t("cf.pendText", { name: req?.name ?? "" })}</p>
-                  <button
-                    type="button"
-                    className="cfb save"
-                    disabled={busy}
-                    onClick={() =>
-                      void (view === "invite" ? invite() : approve()).then((ok) => {
-                        const where = cf;
-                        setCf(null);
-                        if (!ok) return;
-                        if (where === "home") window.location.assign(base);
-                        else go("list");
-                      })
-                    }
-                  >
-                    <Ico d={EICON.check} size={20} />
-                    {view === "invite" ? t("cf.inviteSave") : t("cf.pendSave")}
-                  </button>
-                  {cf === "home" ? (
-                    <a href={base} className="cfb leave">
-                      <Ico d={EICON.leave} size={20} />
-                      {t("cf.leave")}
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      className="cfb leave"
-                      onClick={() => {
-                        setCf(null);
-                        discard();
-                        go("list");
-                      }}
-                    >
-                      <Ico d={EICON.leave} size={20} />
-                      {t("cf.leave")}
-                    </button>
-                  )}
-                  <button type="button" className="cfb stay" onClick={() => setCf(null)}>
-                    {t("cf.stay")}
-                  </button>
-                </div>
-              </>
-            ) : null}
           </div>
         </div>
       </div>
     </div>
+    {korunan.kutu}
     {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
     <KabukBar
       dark={dark}
-      back={view === "list" && !pendDirty ? { href: base, aria: t("backHome"), testId: "team-back" } : { onClick: view === "list" ? () => setCf("home") : back, aria: t("back"), testId: "team-back" }}
-      homeNav={dirty ? { onClick: () => setCf("home"), aria: t("home"), testId: "team-home" } : { href: base, aria: t("home"), testId: "team-home" }}
-      main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy || (isDemo && view !== "list"), testId: "team-main", wait: mainCls.includes(" wait") }}
+      back={view === "list" ? { href: base, aria: t("backHome"), testId: "team-back" } : { onClick: back, aria: t("back"), testId: "team-back" }}
+      homeNav={{ href: base, aria: t("home"), testId: "team-home" }}
+      main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy, testId: "team-main", wait: mainCls.includes(" wait") }}
     />
     </>
   );

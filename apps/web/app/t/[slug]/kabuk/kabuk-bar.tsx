@@ -8,8 +8,13 @@
 // T-967 (Destek.dc.html): sol yuva her ekranda Geri; ana ekranda pasif `.dk.off` (CSS `design/destek-ek.css`, kap `.dzdx`).
 // Bilinçli farklar (DESIGN-PARITY, T-958): Etkin (B-62) henüz yok → düğme kaynaktaki gibi çizilir, `aria-disabled`; dokununca kaynaktaki
 // "yakında" balonu. Arama kutusundaki mikrofon da aynı. İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+// T-990 (B-97, kullanıcı 21 Ekim): (1) Geri / Ana ekran / ana işlem bağlantısı / Modüller kutuları Next `Link` — İSTEMCİ İÇİ geçiş (tam
+// sayfa yüklemesi yok); yarım işte ortak çıkış koruması tıklamayı yakalar: yarım işte yalnız uygulamanın cam kutusu açılır, tarayıcının "Siteden çıkılsın mı?" penceresi çıkmaz.
+// (2) Ana işlem hiçbir zaman sessizce kapalı kalmaz: pasif görünür (`aria-disabled`), dokununca hata sesi + nedenini söyleyen balon
+// (`disabledReason`, ör. "Değişiklik yok"). Ortak davranış burada; ekranlar yalnız nedeni verir.
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import Link from "next/link";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
@@ -28,6 +33,16 @@ export interface KabukContextValue {
   /** Toplu yayın (T-967 × T-968): kalıp üst çubuğu Sorun bildir + Destek için çalışma alanı kısa adı ve Sorun bildirme yetkisi. */
   readonly slug?: string;
   readonly canReport?: boolean;
+  /** T-981b: kalıp üst çubuğu Excel düğmesi gösterimi — `data`: `data.import` (düğme + dışarı aktar), `master`: ayrıca `settings.manage` (depo/raf içe aktarma). */
+  readonly excel?: { readonly data: boolean; readonly master: boolean };
+  /** T-979c: üyenin çalışma alanı sayısı (Hesap menüsünde "Çalışma alanı değiştir" yalnız birden fazlaysa). */
+  readonly workspaces?: number;
+}
+
+/** T-979c: görünüm geçişi (eski "Tüm ekranlar" menüsündeki Akış/Genel bakış anahtarı ile aynı çerez sözleşmesi: `view`, 1 yıl). */
+export function switchView(base: string, view: "flow" | "cockpit"): void {
+  document.cookie = `view=${view}; path=/; max-age=31536000; samesite=lax${window.location.protocol === "https:" ? "; secure" : ""}`;
+  window.location.assign(base);
 }
 
 const KabukContext = createContext<KabukContextValue | null>(null);
@@ -51,6 +66,16 @@ export interface KabukNav {
   readonly testId?: string;
 }
 
+/** T-979c: orta ana işlem etiketi tek satır, en çok 10 karakter (çubuğun içinde okunur). Uzunsa son kelime (eylem: "ÜRÜN EKLE" → "EKLE"),
+ * o da uzunsa ilk 10 karakter. Tam metin erişilebilir addadır (`aria` yoksa özgün etiket). */
+export const CAP_MAX = 10;
+export function capOf(label: string): string {
+  const v = label.trim();
+  if (Array.from(v).length <= CAP_MAX) return v;
+  const last = v.split(/\s+/).at(-1) ?? v;
+  return Array.from(last).length <= CAP_MAX ? last : Array.from(last).slice(0, CAP_MAX).join("");
+}
+
 export interface KabukMain {
   /** Altındaki kısa etiket (kaynak `.cap`: OKUT, EKLE, ONAYLA…). */
   readonly label: string;
@@ -64,6 +89,10 @@ export interface KabukMain {
   readonly wait?: boolean;
   /** T-436 (ALTIN-KURAL 6): işlem sürüyor — ikinci dokunuş gönderilmez; 1 sn'den uzun sürerse dönen gösterge. */
   readonly busy?: boolean;
+  /** Pasifken dokununca balonda söylenen neden (verilmezse genel metin). */
+  readonly disabledReason?: string;
+  /** Kaydedilmemiş değişiklik sayısı (ALTIN-KURAL: değişiklik varsa ana işlemde sayı rozeti). */
+  readonly badge?: number;
 }
 
 export interface KabukBarProps {
@@ -137,13 +166,22 @@ function SearchIco() {
   );
 }
 
-/** Bağlantı ya da düğme (aynı sınıf ve içerik). */
+/** Düz sol tıklama mı (yeni sekme / indirme istekleri tarayıcıya bırakılır)? */
+function plainClick(e: MouseEvent<HTMLElement>): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
+
+/**
+ * Bağlantı ya da düğme (aynı sınıf ve içerik). Bağlantı Next `Link`'tir: hidrasyondan önce doğal gezinme, sonra istemci içi geçiş (tam sayfa
+ * yüklemesi yok). Yarım iş varken tıklamayı ortak çıkış koruması (kalip/cikis.tsx, belge düzeyinde yakalama) durdurur ve cam kutuyu açar.
+ */
 function Slot({ nav, className, aria, testId, k, current, children }: { nav: KabukNav; className: string; aria: string; testId: string; k: KabukSlot; current?: boolean; children: ReactNode }) {
   const common = { className, "aria-label": nav.aria ?? aria, "data-testid": nav.testId ?? testId, "data-k": k, "aria-current": current === true ? ("page" as const) : undefined };
-  return nav.href !== undefined && nav.onClick === undefined ? (
-    <a href={nav.href} {...common} style={{ textDecoration: "none" }}>
+  const href = nav.href;
+  return href !== undefined && nav.onClick === undefined ? (
+    <Link href={href} prefetch={false} {...common} style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && feedback.minor()}>
       {children}
-    </a>
+    </Link>
   ) : (
     <button type="button" {...common} onClick={nav.onClick}>
       {children}
@@ -235,7 +273,14 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const centerInner = (
     <>
       {center.busy === true ? <span className="kyuk" aria-hidden="true" /> : <Ico d={center.d} size={30} />}
-      <span className="cap">{center.label}</span>
+      <span className="cap" aria-hidden={capOf(center.label) === center.label ? undefined : true}>
+        {capOf(center.label)}
+      </span>
+      {center.badge !== undefined && center.badge > 0 ? (
+        <span className="kbadge" aria-hidden="true" data-testid="kabuk-main-badge">
+          {center.badge}
+        </span>
+      ) : null}
     </>
   );
 
@@ -262,11 +307,28 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 <span>{t("homeShort")}</span>
               </Slot>
               {center.href !== undefined && center.onClick === undefined && center.disabled !== true && center.busy !== true ? (
-                <a href={center.href} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }}>
+                <Link href={center.href} prefetch={false} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && feedback.minor()}>
                   {centerInner}
-                </a>
+                </Link>
               ) : (
-                <button type="button" className={centerCls} aria-label={center.aria ?? center.label} onClick={center.busy === true ? undefined : center.onClick} disabled={center.disabled === true} aria-busy={center.busy === true || undefined} data-testid={center.testId ?? "kabuk-main"} data-k="center">
+                <button
+                  type="button"
+                  className={centerCls}
+                  aria-label={center.aria ?? center.label}
+                  aria-disabled={center.disabled === true ? true : undefined}
+                  aria-busy={center.busy === true || undefined}
+                  onClick={() => {
+                    if (center.busy === true) return;
+                    if (center.disabled === true) {
+                      // Sessiz kapalı düğme yok: hata sesi + neden balonu.
+                      feedback.error(center.disabledReason ?? t("mainOff"));
+                      return;
+                    }
+                    center.onClick?.();
+                  }}
+                  data-testid={center.testId ?? "kabuk-main"}
+                  data-k="center"
+                >
                   {centerInner}
                 </button>
               )}
@@ -372,9 +434,31 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                         {inner}
                       </button>
                     ) : (
-                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={() => feedback.minor()} data-module={m.id}>
+                      <Link
+                        key={m.id}
+                        role="listitem"
+                        href={m.href ?? base}
+                        prefetch={false}
+                        className="mt"
+                        style={{ ...style, textDecoration: "none" }}
+                        aria-label={t("tileAria", { name: m.name, sub: m.sub })}
+                        onClick={(e) => {
+                          if (!plainClick(e)) return;
+                          feedback.minor();
+                          if (m.view !== undefined) {
+                            // T-979c görünüm geçişi (Akış / Genel bakış). Yarım işte ortak çıkış kutusu bağlantıyı yakalama evresinde durdurur (T-990).
+                            e.preventDefault();
+                            switchView(base, m.view);
+                          }
+                          setOpen(false);
+                          setQ("");
+                          setPage(0);
+                        }}
+                        data-module={m.id}
+                        data-view={m.view}
+                      >
                         {inner}
-                      </a>
+                      </Link>
                     );
                   })}
                   {plus !== null ? (

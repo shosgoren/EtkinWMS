@@ -2,8 +2,11 @@
 // Tarayıcı olmadan (DecoderEnv enjekte) koşar; gerçek kamera akışı ve WASM çözümü e2e'dedir (tests/e2e/camera-scan.spec.ts).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SCANNER_CONFIG } from "./scanner-config.ts";
-import { classifyCameraError, createFrameDecoder, gs1CheckDigitValid, iosShareLocation, loadZxingReader, platformOf, resetZxingReaderForTest, startScanLoop, symbologyOf, validateCameraRead } from "./camera-source.ts";
-import type { DecoderEnv, FrameDecoder, RawRead, RejectReason, WasmReader } from "./camera-source.ts";
+import { classifyCameraError, createFrameDecoder, IOS_MAX_ZOOM, iosVirtualRank, openCamera, pickIosBackCamera, pickMainBackCamera, TARGET_ZOOM, videoRoi, gs1CheckDigitValid, iosShareLocation, loadZxingReader, platformOf, resetZxingReaderForTest, startScanLoop, symbologyOf, validateCameraRead } from "./camera-source.ts";
+import type { DecoderEnv, FrameDecoder, RawRead, RejectReason, VideoRect, WasmReader } from "./camera-source.ts";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { ean13CheckDigit, ean13Modules } from "./barcode-y4m.fixture.ts";
 
 describe("validateCameraRead (T-287g)", () => {
   it("geçerli EAN-13, EAN-8, UPC-A değerlerini aynen kabul eder", () => {
@@ -118,11 +121,13 @@ describe("createFrameDecoder: çözücü seçimi", () => {
     expect(await d.decode(video)).toEqual({ text: "4006381333931", format: "ean_13" });
   });
 
-  it("yerleşik API yoksa uygulama içi WASM çözücü kullanılır; kare büyük kenarı 960 px ile sınırlanır", async () => {
+  it("yerleşik API yoksa uygulama içi WASM çözücü kullanılır; nişangâh yokken tüm kare en çok 1280 px'e küçültülür, ilk geçiş hızlıdır", async () => {
     const reads: ImageData[] = [];
+    const efforts: unknown[] = [];
     const reader: WasmReader = {
-      read: (f) => {
+      read: (f, e) => {
         reads.push(f);
+        efforts.push(e);
         return Promise.resolve([{ text: "4006381333931", format: "EAN13", isValid: true }]);
       },
     };
@@ -130,13 +135,14 @@ describe("createFrameDecoder: çözücü seçimi", () => {
     const d = await createFrameDecoder(
       env({
         loadWasm: () => Promise.resolve(reader),
-        makeCanvas: () => ({ canvas: { width: 0, height: 0 }, draw: (_v, w, h) => (sizes.push([w, h]), { width: w, height: h, data: new Uint8ClampedArray(4) } as unknown as ImageData) }),
+        makeCanvas: () => ({ canvas: { width: 0, height: 0 }, draw: (_v, _src, w, h) => (sizes.push([w, h]), { width: w, height: h, data: new Uint8ClampedArray(4) } as unknown as ImageData) }),
       }),
     );
     expect(d.kind).toBe("wasm");
     expect(await d.decode({ videoWidth: 1920, videoHeight: 1080 } as HTMLVideoElement)).toEqual({ text: "4006381333931", format: "EAN13" });
-    expect(sizes).toEqual([[960, 540]]);
+    expect(sizes).toEqual([[1280, 720]]);
     expect(reads).toHaveLength(1);
+    expect(efforts).toEqual([{ tryHarder: false, tryInvert: false }]);
   });
 
   it("WASM çözücüde geçersiz sonuç yok sayılır ve kare yokken (0×0) çözülmez", async () => {
@@ -277,5 +283,140 @@ describe("loadZxingReader: hazırlık tek kez (T-286 MAJOR-1)", () => {
     await loadZxingReader(importer);
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(seen).toHaveLength(1);
+  });
+});
+
+describe("ROI'li çözme (T-446): gerçek zxing-wasm", () => {
+  it("1080p dikey karede küçük EAN-13'ü ilk karede nişangâh bölgesinden okur (tüm kare küçültülmez)", async () => {
+    const zx = (await import("zxing-wasm/reader")) as unknown as {
+      prepareZXingModule: (o: unknown) => Promise<unknown>;
+      readBarcodes: (f: ImageData, o: Record<string, unknown>) => Promise<Array<{ text: string; format: string; isValid: boolean }>>;
+    };
+    const bin = readFileSync(createRequire(import.meta.url).resolve("zxing-wasm/reader/zxing_reader.wasm"));
+    await zx.prepareZXingModule({ overrides: { wasmBinary: bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) }, fireImmediately: true });
+    // iPhone dikey akış 1080×1920; barkod 2 px'lik modüllerle (190 px) nişangâhın ortasında. Eski yol (tüm kare → 960 px) modülü 1 px'e indiriyordu.
+    const vw = 1080;
+    const vh = 1920;
+    const body = "869012345678";
+    const code = body + ean13CheckDigit(body);
+    const mods = ean13Modules(code);
+    const luma = new Uint8Array(vw * vh).fill(235);
+    const x0 = Math.floor((vw - mods.length * 2) / 2);
+    for (let y = 900; y < 1020; y++) for (let m = 0; m < mods.length; m++) if (mods[m] === "1") luma.fill(16, y * vw + x0 + m * 2, y * vw + x0 + m * 2 + 2);
+    const sizes: Array<[number, number]> = [];
+    const draw = (_v: HTMLVideoElement, src: VideoRect, w: number, h: number): ImageData => {
+      sizes.push([w, h]);
+      const data = new Uint8ClampedArray(w * h * 4);
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++) {
+          const l = luma[(src.sy + Math.floor((y * src.sh) / h)) * vw + src.sx + Math.floor((x * src.sw) / w)] ?? 235;
+          data.set([l, l, l, 255], (y * w + x) * 4);
+        }
+      return { data, width: w, height: h, colorSpace: "srgb" } as ImageData;
+    };
+    const reader: WasmReader = { read: (f, e) => zx.readBarcodes(f, { formats: ["EAN13", "Code128"], tryHarder: e?.tryHarder ?? true, tryInvert: e?.tryInvert ?? true, tryRotate: true, maxNumberOfSymbols: 1 }) };
+    const d = await createFrameDecoder(env({ loadWasm: () => Promise.resolve(reader), makeCanvas: () => ({ canvas: { width: 0, height: 0 }, draw }) }));
+    // Ekran 390×693 (object-fit: cover), nişangâh 240×180 ortada.
+    const roi = videoRoi(vw, vh, { width: 390, height: 693 }, { left: 75, top: 256, width: 240, height: 180 });
+    expect(roi).not.toBeNull();
+    expect(await d.decode({ videoWidth: vw, videoHeight: vh } as HTMLVideoElement, roi)).toEqual({ text: code, format: "EAN13" });
+    expect(sizes).toHaveLength(1);
+    const [w] = sizes[0] ?? [0];
+    expect(w).toBe(roi?.sw); // kırpılan bölge küçültülmeden çözüldü
+  });
+});
+
+describe("iPhone netlik (T-450): arka kamera seçimi ve zoom", () => {
+  const dev = (deviceId: string, label: string) => ({ kind: "videoinput", deviceId, label });
+  const EN = [dev("u", "Back Ultra Wide Camera"), dev("w", "Back Camera"), dev("t", "Back Telephoto Camera"), dev("dw", "Back Dual Wide Camera"), dev("d", "Back Dual Camera"), dev("tr", "Back Triple Camera"), dev("f", "Front Camera")];
+  const TR = [dev("u", "Arka Ultra Geniş Kamera"), dev("w", "Arka Kamera"), dev("t", "Arka Telefoto Kamera"), dev("dw", "Arka Çift Geniş Kamera"), dev("d", "Arka Çift Kamera"), dev("tr", "Arka Üçlü Kamera"), dev("f", "Ön Kamera")];
+  const IPHONE_SAFARI = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1";
+  const IPHONE_CHROME = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/130.0.6723.90 Mobile/15E148 Safari/604.1";
+  const ANDROID = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36";
+
+  it("sıra: üçlü → çift geniş → çift → normal; EN ve TR etiketler", () => {
+    for (const list of [EN, TR]) {
+      expect(pickIosBackCamera(list)).toMatchObject({ deviceId: "tr", virtual: true });
+      expect(pickIosBackCamera(list.filter((d) => d.deviceId !== "tr"))).toMatchObject({ deviceId: "dw", virtual: true });
+      expect(pickIosBackCamera(list.filter((d) => !["tr", "dw"].includes(d.deviceId)))).toMatchObject({ deviceId: "d", virtual: true });
+      expect(pickIosBackCamera(list.filter((d) => !["tr", "dw", "d"].includes(d.deviceId)))).toMatchObject({ deviceId: "w", virtual: false });
+    }
+  });
+  it("ultra geniş ya da tele tek başına seçilmez; etiketsiz liste null", () => {
+    expect(pickIosBackCamera([dev("u", "Back Ultra Wide Camera"), dev("t", "Back Telephoto Camera")])).toBeNull();
+    expect(pickIosBackCamera([dev("u", "Arka Ultra Geniş Kamera"), dev("f", "Ön Kamera")])).toBeNull();
+    expect(pickIosBackCamera([dev("", ""), dev("", "")])).toBeNull();
+  });
+  it("iosVirtualRank", () => {
+    expect(iosVirtualRank("Back Triple Camera")).toBe(0);
+    expect(iosVirtualRank("Arka Çift Geniş Kamera")).toBe(1);
+    expect(iosVirtualRank("Arka Çift Kamera")).toBe(2);
+    expect(iosVirtualRank("Back Camera")).toBe(-1);
+  });
+  it("Android: düz ana kamera (T-446 davranışı değişmedi)", () => {
+    expect(pickMainBackCamera([dev("a", "camera2 2, facing back ultra"), dev("b", "camera2 0, facing back"), dev("c", "camera2 1, facing front")])?.deviceId).toBe("b");
+    expect(pickMainBackCamera(EN)?.deviceId).toBe("w");
+  });
+  it("platformOf: iPhone Safari, iPhone Chrome (CriOS), iPadOS → ios; Android → android", () => {
+    expect(platformOf(IPHONE_SAFARI)).toBe("ios");
+    expect(platformOf(IPHONE_CHROME)).toBe("ios");
+    expect(platformOf("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 CriOS/130", 5)).toBe("ios");
+    expect(platformOf(ANDROID)).toBe("android");
+  });
+
+  type Applied = Record<string, unknown>[];
+  function fakeTrack(label: string, deviceId: string, applied: Applied) {
+    return {
+      label,
+      readyState: "live",
+      stop: vi.fn(),
+      getSettings: () => ({ deviceId }),
+      getCapabilities: () => ({ zoom: { min: 1, max: 10, step: 0.1 }, focusMode: ["continuous"] }),
+      applyConstraints: vi.fn((c: { advanced: Record<string, unknown>[] }) => {
+        applied.push(...c.advanced);
+        return Promise.resolve();
+      }),
+    };
+  }
+  async function open(ua: string, devices: ReturnType<typeof dev>[], firstLabel: string) {
+    const applied: Applied = [];
+    const opened: unknown[] = [];
+    const getUserMedia = vi.fn((c: { video: { deviceId?: { exact: string } } }) => {
+      opened.push(c.video);
+      const id = c.video.deviceId?.exact;
+      const d = id === undefined ? devices.find((x) => x.label === firstLabel)! : devices.find((x) => x.deviceId === id)!;
+      const tr = fakeTrack(d.label, d.deviceId, applied);
+      return Promise.resolve({ getVideoTracks: () => [tr], getTracks: () => [tr] });
+    });
+    vi.stubGlobal("window", { isSecureContext: true });
+    vi.stubGlobal("navigator", { userAgent: ua, maxTouchPoints: 5, mediaDevices: { getUserMedia, enumerateDevices: () => Promise.resolve(devices), getSupportedConstraints: () => ({}) } });
+    const s = await openCamera();
+    vi.unstubAllGlobals();
+    return { s, applied, opened, label: s.stream.getVideoTracks()[0]!.label };
+  }
+
+  it("iPhone Chrome (CriOS) + TR: düz Arka Kamera verilse de Arka Üçlü Kamera'ya geçer, zoom en çok 1,5×", async () => {
+    const r = await open(IPHONE_CHROME, TR, "Arka Kamera");
+    expect(r.label).toBe("Arka Üçlü Kamera");
+    expect(r.s.zoom).toBe(IOS_MAX_ZOOM);
+    expect(r.applied.some((a) => "zoom" in a && (a.zoom as number) > 1.5)).toBe(false);
+  });
+  it("iPhone Safari + EN: üçlü yoksa çift geniş; ilk akış zaten doğru aygıtsa yeniden açılmaz", async () => {
+    const r = await open(IPHONE_SAFARI, EN.filter((d) => d.deviceId !== "tr"), "Back Dual Wide Camera");
+    expect(r.label).toBe("Back Dual Wide Camera");
+    expect(r.opened).toHaveLength(1);
+    expect(r.s.zoom).toBe(1.5);
+  });
+  it("iPhone yalnız düz arka kamera: zoom uygulanmaz", async () => {
+    const r = await open(IPHONE_SAFARI, [dev("u", "Back Ultra Wide Camera"), dev("w", "Back Camera")], "Back Ultra Wide Camera");
+    expect(r.label).toBe("Back Camera");
+    expect(r.s.zoom).toBeNull();
+    expect(r.applied.some((a) => "zoom" in a)).toBe(false);
+  });
+  it("Android: ultra geniş verilirse ana kameraya geçer, 2× zoom sürer", async () => {
+    const list = [dev("a", "camera2 2, facing back ultra wide"), dev("b", "camera2 0, facing back")];
+    const r = await open(ANDROID, list, "camera2 2, facing back ultra wide");
+    expect(r.label).toBe("camera2 0, facing back");
+    expect(r.s.zoom).toBe(TARGET_ZOOM);
   });
 });

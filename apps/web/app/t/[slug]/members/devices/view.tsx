@@ -5,10 +5,13 @@
 // kayıt iptal edilip yenisi üretilir), talep varken ONAYLA. Güvenlik: QR kayıt belirtecini adresin `#` parçasında taşır (sunucuya/günlüğe
 // gitmez); belirteç yalnız bu bileşenin belleğinde. Talep 3 sn'de bir sorgulanır; süre dolunca yeni QR; onay yalnız bu yöneticiden.
 // Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
+// T-990 (ALTIN-KURAL): kapalı ONAYLA sessiz kalmaz (alt çubukta `disabledReason`; karttaki düğme dokununca hata sesi + neden balonu);
+// kod yazılmışken Geri / Ana ekran / bağlantılar ortak cam çıkış kutusunu açar (`useCikisKorumasi`).
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
+import { useCikisKorumasi } from "../../kalip/cikis.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
@@ -133,7 +136,6 @@ export function DevicesView({
       return;
     }
     setErr(null);
-    feedback.ok();
     say("ok", t("approved"));
     router.refresh();
     void start();
@@ -160,7 +162,6 @@ export function DevicesView({
       setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
-    feedback.ok();
     say("ok", t("sessionsClosed"));
   }
 
@@ -173,7 +174,6 @@ export function DevicesView({
       setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
-    feedback.ok();
     say("ok", t("revoked"));
     router.refresh();
   }
@@ -181,6 +181,16 @@ export function DevicesView({
   const mm = String(Math.floor(left / 60)).padStart(2, "0");
   const ss = String(left % 60).padStart(2, "0");
   const errLine = <ErrLine err={err} returnTo={returnTo} reauthLabel={t("reauthLink")} scope="dzl" />;
+  // Yarım iş: talep var ve kod yazılmaya başlanmış.
+  const korunan = useCikisKorumasi(claim !== null && cc !== "", { dark, text: t("leaveText") });
+  const offReason = busy ? t("offBusy") : t("offCode");
+  const onApprove = (): void => {
+    if (busy || cc.length !== 6) {
+      say("err", offReason);
+      return;
+    }
+    void approve();
+  };
 
   return (
     <KalipEkran
@@ -198,15 +208,21 @@ export function DevicesView({
                 label: t("newQr"),
                 d: LICON.plus,
                 disabled: busy,
+                disabledReason: t("offBusy"),
                 onClick: () => {
                   feedback.minor();
                   void reject();
                 },
                 testId: "devices-new-qr",
               }
-            : { label: t("approve"), d: LICON.check, disabled: busy || cc.length !== 6, onClick: () => void approve(), wait: true, testId: "devices-approve" },
+            : { label: t("approve"), d: LICON.check, disabled: busy || cc.length !== 6, disabledReason: offReason, onClick: () => void approve(), wait: true, testId: "devices-approve" },
       }}
-      overlays={toast}
+      overlays={
+        <>
+          {toast}
+          {korunan.kutu}
+        </>
+      }
     >
       {suspended.map((d) => (
         <div key={d.id} className="uc crit" role="alert" style={CARD}>
@@ -268,7 +284,7 @@ export function DevicesView({
             <Btn kind="soft" scope="dzl" d={LICON.close} onClick={() => void reject()} disabled={busy}>
               {t("reject")}
             </Btn>
-            <Btn kind="ok" scope="dzl" d={LICON.check} onClick={() => void approve()} disabled={busy || cc.length !== 6}>
+            <Btn kind="ok" scope="dzl" d={LICON.check} onClick={onApprove} aria-disabled={busy || cc.length !== 6} style={busy || cc.length !== 6 ? { opacity: 0.5 } : undefined}>
               {t("approve")}
             </Btn>
           </div>

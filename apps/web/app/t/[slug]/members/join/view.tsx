@@ -5,16 +5,20 @@
 // alt çubukta QR OLUŞTUR / YENİLE (demo alanında kapalı). Güvenlik: QR adresi yalnız bu bileşenin belleğinde (yenile basılınca üretilir;
 // eskisi o anda geçersiz); doğrulama kodu sayfaya gelmez, yönetici yazar. Bekleyen talepler 5 sn'de bir yenilenir.
 // Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
-import { useEffect, useState, type CSSProperties } from "react";
+// T-990 (ALTIN-KURAL): kapalı ana işlem ve karttaki ONAYLA sessiz kalmaz (hata sesi + neden balonu: demo / işlem sürüyor / kod eksik);
+// onay kartında kod yazılmışken Geri / Ana ekran / bağlantılar ortak cam çıkış kutusunu açar (`useCikisKorumasi`).
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
+import { useCikisKorumasi } from "../../kalip/cikis.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveJoinAction, createJoinLinkAction, rejectJoinAction, revokeJoinLinkAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
 import { buyukHarf, feedback } from "@wms/ui";
+import { JoinShareRow } from "../join-share.tsx";
 
 export interface JoinPending {
   readonly id: string;
@@ -68,6 +72,8 @@ export function JoinView({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<ErrState>(null);
   const { say, node: toast } = useKalipToast("liste");
+  // T-986b: paylaşma satırı (WhatsApp, kopyala, PNG, yazdır). Ana işlem bu ekranda QR OLUŞTUR / YENİLE kalır (yenileme başka yerde yok).
+  const rowRef = useRef<HTMLDivElement | null>(null);
   const returnTo = `/t/${slug}/members/join`;
   const [now, setNow] = useState(() => Date.now());
 
@@ -90,7 +96,6 @@ export function JoinView({
             ? { text: t("errGone"), reauth: false }
             : { text: t("errServer"), reauth: false };
   const notify = (text: string): void => {
-    feedback.ok();
     say("ok", text);
   };
 
@@ -161,6 +166,15 @@ export function JoinView({
   }
 
   const errLine = <ErrLine err={err} returnTo={returnTo} reauthLabel={t("reauthLink")} scope="dzl" />;
+  const korunan = useCikisKorumasi(open !== null && code !== "", { dark, text: t("leaveText") });
+  const approveOff = busy || code.length !== 6;
+  const onApprove = (id: string): void => {
+    if (approveOff) {
+      say("err", busy ? t("offBusy") : t("offCode"));
+      return;
+    }
+    void approve(id);
+  };
 
   return (
     <KalipEkran
@@ -177,11 +191,17 @@ export function JoinView({
           aria: t("qrKick"),
           d: LICON.plus,
           disabled: isDemo || busy,
+          disabledReason: isDemo ? t("errDemo") : t("offBusy"),
           onClick: () => void newLink(),
           testId: "join-new",
         },
       }}
-      overlays={toast}
+      overlays={
+        <>
+          {toast}
+          {korunan.kutu}
+        </>
+      }
     >
       <KalipBaslik title={t("listTitle")} hint={t("listCount", { n: pending.length })} />
       {open === null ? errLine : null}
@@ -265,7 +285,7 @@ export function JoinView({
                       <Btn kind="soft" scope="dzl" onClick={() => setOpen(null)} disabled={busy}>
                         {t("cancel")}
                       </Btn>
-                      <Btn kind="ok" scope="dzl" d={LICON.check} onClick={() => void approve(p.id)} disabled={busy || code.length !== 6} data-testid="join-approve">
+                      <Btn kind="ok" scope="dzl" d={LICON.check} onClick={() => onApprove(p.id)} aria-disabled={approveOff} style={approveOff ? { opacity: 0.5 } : undefined} data-testid="join-approve">
                         {t("approve")}
                       </Btn>
                     </div>
@@ -318,12 +338,8 @@ export function JoinView({
               {t("close")}
             </Btn>
           ) : null}
-          {url !== null ? (
-            <Btn kind="n" scope="dzl" d={LICON.printer} onClick={() => window.print()}>
-              {t("print")}
-            </Btn>
-          ) : null}
         </div>
+        <JoinShareRow url={url} tenantName={tenantName} isDemo={isDemo} say={say} dark={dark} rowRef={rowRef} />
         <Note d={LICON.lock} title={t("banTitle")} body={t("banBody")} />
       </section>
     </KalipEkran>

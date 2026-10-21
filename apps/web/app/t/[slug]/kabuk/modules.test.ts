@@ -7,13 +7,26 @@ const base = "/t/demo";
 const ids = (roles: string[], grants: string[] = [], screens: string[] | null = null) => kabukModules(base, { roles, grants, screens }).map((m) => m.id);
 
 describe("Kabuk modülleri (T-958)", () => {
-  it("kaynak listesinin sırası ve 20 modül", () => {
-    expect(MODULE_DEFS.map((m) => m.id)).toEqual(["home", "urun", "depo", "satin", "satis", "topla", "trans", "uret", "qr", "koli", "tara", "sayim", "ayin", "ses", "abone", "fis", "excel", "etiket", "cari", "ekip"]);
+  it("T-979c: görünüm geçişi Ana ekrandan hemen sonra; İşlemler'deyken Genel bakış, Genel bakış'tayken İşlemler; saha personeli de görür", () => {
+    const flow = kabukModules(base, { roles: ["READ_ONLY"], grants: [], screens: null }, "flow");
+    expect(flow.slice(0, 2).map((m) => m.id)).toEqual(["home", "kokpit"]);
+    expect(flow[1]).toMatchObject({ view: "cockpit", href: "/t/demo" });
+    const cockpit = kabukModules(base, { roles: ["PICKER"], grants: [], screens: null }, "cockpit");
+    expect(cockpit.slice(0, 2).map((m) => m.id)).toEqual(["home", "akis"]);
+    expect(cockpit[1]).toMatchObject({ view: "flow" });
+    expect(kabukModules(base, { roles: ["PICKER"], grants: [], screens: null }).some((m) => m.view !== undefined)).toBe(false);
+  });
+
+  it("kaynak listesinin sırası (20 modül) + T-979c eski menüden taşınan 3 yönetim ekranı", () => {
+    expect(MODULE_DEFS.map((m) => m.id)).toEqual(["home", "urun", "depo", "satin", "satis", "topla", "trans", "uret", "qr", "koli", "tara", "sayim", "ayin", "ses", "abone", "fis", "excel", "etiket", "cari", "ekip", "stok", "ayar", "kayit"]);
   });
 
   it("hesap sahibi hepsini görür; gerçek ekranlar bağlantı, ekranı olmayanlar YAKINDA", () => {
     const all = kabukModules(base, { roles: ["TENANT_ADMIN"], grants: [], screens: null });
-    expect(all).toHaveLength(20);
+    expect(all).toHaveLength(23);
+    expect(all.find((m) => m.id === "stok")?.href).toBe("/t/demo/stock");
+    expect(all.find((m) => m.id === "ayar")?.href).toBe("/t/demo/settings");
+    expect(all.find((m) => m.id === "kayit")?.href).toBe("/t/demo/audit");
     const soon = all.filter((m) => m.href === null).map((m) => m.id);
     expect(soon).toEqual(["satin", "ayin", "ses", "abone", "etiket"]);
     expect(all.find((m) => m.id === "ekip")?.href).toBe("/t/demo/team");
@@ -24,8 +37,9 @@ describe("Kabuk modülleri (T-958)", () => {
 
   it("salt okunur: yönetici ve yazma modülleri yok (Ekip, Excel, Abonelik, Etiket, Ayın personeli, Satın alma, Transfer, Toplama, Sayım)", () => {
     const r = ids(["READ_ONLY"]);
-    for (const admin of ["ekip", "excel", "abone", "etiket", "ayin", "satin", "trans", "topla", "sayim"]) expect(r).not.toContain(admin);
-    expect(r).toEqual(["home", "urun", "depo", "satis", "uret", "qr", "koli", "tara", "ses", "fis", "cari"]);
+    for (const admin of ["ekip", "excel", "abone", "etiket", "ayin", "satin", "trans", "topla", "sayim", "ayar"]) expect(r).not.toContain(admin);
+    expect(r.slice(0, 11)).toEqual(["home", "urun", "depo", "satis", "uret", "qr", "koli", "tara", "ses", "fis", "cari"]);
+    expect(r).toContain("stok");
   });
 
   it("depo sorumlusu: ekip / içe aktarma / abonelik yok; transfer ve satın alma var", () => {

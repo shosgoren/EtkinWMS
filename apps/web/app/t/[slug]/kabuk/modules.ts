@@ -9,6 +9,7 @@
 // - `path: null`: ekranı henüz yok → "YAKINDA" (bağlantı değildir). Yine de yetki kuralına uyar (yönetici modülü salt okuyana görünmez).
 import { hasPermission, type Permission } from "@wms/domain/identity/permissions";
 import { KICON } from "../../../design/kabuk-icons.ts";
+import { LICON } from "../../../design/kalip-icons.ts";
 import type { KabukModule, KabukModuleId } from "./types.ts";
 
 export type { KabukModule, KabukModuleId } from "./types.ts";
@@ -48,6 +49,10 @@ export const MODULE_DEFS: readonly ModuleDef[] = Object.freeze([
   { id: "etiket", color: "B23A3A", d: KICON.mEtiket, path: null, need: "settings.manage" },
   { id: "cari", color: "0F6E8C", d: KICON.mCari, path: "/parties", need: "stock.view" },
   { id: "ekip", color: "7A4BC2", d: KICON.mEkip, path: "/team", need: "users.manage" },
+  // T-979c (eski "Tüm ekranlar" menüsünden): stok durumu, ayarlar, denetim kaydı. İkonlar kalıp kaynağından (KalipListe.dc.html).
+  { id: "stok", color: "9A5B2E", d: LICON.koli, path: "/stock", need: "stock.view" },
+  { id: "ayar", color: "4E6476", d: LICON.gear, path: "/settings", need: "settings.manage" },
+  { id: "kayit", color: "172E42", d: LICON.shield, path: "/audit", need: "audit.view" },
 ] satisfies ModuleDef[]);
 
 export interface KabukMember {
@@ -64,8 +69,19 @@ export function isFieldOnly(roles: readonly string[]): boolean {
   return roles.length > 0 && roles.every((r) => FIELD_ROLES.includes(r));
 }
 
-/** Üyenin görebileceği modüller (kaynak sırası). `base`: `/t/<slug>`. */
-export function kabukModules(base: string, member: KabukMember): KabukModule[] {
+/**
+ * Üyenin görebileceği modüller (kaynak sırası). `base`: `/t/<slug>`. T-979c: `view` verilirse Ana ekrandan hemen sonra görünüm geçişi
+ * kutusu gelir (İşlemler görünümündeyken "Genel bakış", Genel bakıştayken "İşlemler"); her üye görür (yetki gerektirmez, yalnız görünüm).
+ */
+export function kabukModules(base: string, member: KabukMember, view?: "flow" | "cockpit"): KabukModule[] {
+  const list = allowedModules(base, member);
+  if (view === undefined) return list;
+  const toggle: KabukModule =
+    view === "cockpit" ? { id: "akis", color: "0E7C7B", d: LICON.clip, href: base, view: "flow" } : { id: "kokpit", color: "172E42", d: LICON.grid, href: base, view: "cockpit" };
+  return [...list.slice(0, 1), toggle, ...list.slice(1)];
+}
+
+function allowedModules(base: string, member: KabukMember): KabukModule[] {
   const field = isFieldOnly(member.roles);
   return MODULE_DEFS.filter((m) => {
     if (field && m.field !== true) return false;

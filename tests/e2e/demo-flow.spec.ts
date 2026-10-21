@@ -6,7 +6,7 @@ import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 import { expect, test } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
 import { enterDemoReal } from "./support/demo-session.ts";
-import { appMenuReachable, openAppMenu } from "./support/app-menu.ts";
+import { openAccountMenu, signOutItem } from "./support/app-menu.ts";
 
 const DEMO_BANNER = "Demo ortamı — gerçek kişisel veri girmeyin";
 
@@ -26,10 +26,9 @@ async function expectTouchTarget(page: Page, locator: ReturnType<Page["locator"]
   expect(box?.width ?? 0, `${name}: genişlik`).toBeGreaterThanOrEqual(47.5);
 }
 
-/** T-254: telefon genişliğinde "Çıkış yap" menüdedir; menü düğmesi görünürse önce menü açılır. Açıldıysa true döner. */
+/** T-979c: "Çıkış yap" ekranın hesap menüsündedir (Hesap düğmesi / Görevlerim ⚠ kutusu); menü açılır, true döner. */
 async function openMenuIfPhone(page: Page): Promise<boolean> {
-  if (!(await appMenuReachable(page))) return false;
-  await openAppMenu(page);
+  await openAccountMenu(page);
   return true;
 }
 
@@ -159,10 +158,10 @@ test.describe("demo akışı", () => {
     await expectNoHorizontalOverflow(page, "ana ekran");
     await expectNoCspViolations(page, "ana ekran");
     const menuOpened = await openMenuIfPhone(page);
-    await expectTouchTarget(page, page.getByRole("button", { name: "Çıkış yap" }), "başlık: Çıkış yap");
+    await expectTouchTarget(page, signOutItem(page), "hesap menüsü: Çıkış yap");
     if (menuOpened) {
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("dialog")).toBeHidden();
+      await expect(signOutItem(page)).toBeHidden();
     }
 
     // Üyeler.
@@ -181,15 +180,17 @@ test.describe("demo akışı", () => {
 
     // Davet: demo tenant'ta tamamen kapalı (M9) — hata bildirimi görünür, bağlantı kutusu ÇIKMAZ.
     await invite.click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByTestId("invite-form"); // T-990: davet tam ekran form (`?invite=1`)
     await expect(dialog).toBeVisible();
     await dialog.getByLabel("E-posta").fill(`e2e-${Date.now()}@smoke.example.invalid`);
-    await dialog.getByRole("button", { name: "Davet gönder" }).click();
+    await page.getByRole("button", { name: "Davet gönder" }).click();
     await expect(dialog.getByText("Bu işlem yapılamadı.")).toBeVisible();
     await expect(dialog.getByText(/Hata kodu: FORBIDDEN/)).toBeVisible();
     await expect(page.getByTestId("link-box")).toHaveCount(0);
     await expectNoHorizontalOverflow(page, "davet penceresi");
-    await dialog.getByRole("button", { name: "Kapat" }).click();
+    // Yarım davet: Geri ortak cam çıkış kutusunu açar; "Kaydetmeden çık" listeye döner.
+    await page.getByTestId("kabuk-back").click();
+    await page.getByTestId("kalip-unsaved-leave").click();
     await expect(dialog).toBeHidden();
 
     // Yenilemede bağlantı yok, bekleyen davet yok.
@@ -209,7 +210,7 @@ test.describe("demo akışı", () => {
 
     // Çıkış → /login; korumalı sayfa /login'e döner. T-971: kalıp ekranında (denetim kaydı) menü sağ üstteki Hesap düğmesinden açılır.
     await openMenuIfPhone(page);
-    await page.getByRole("button", { name: "Çıkış yap" }).click();
+    await signOutItem(page).click();
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "Giriş yap" })).toBeVisible();
     await page.goto("/t/demo/members");
@@ -255,7 +256,7 @@ test.describe("demo akışı", () => {
     await expect(page.getByText("Denetim kaydını görmek için yetkin yok.")).toBeVisible();
 
     await openMenuIfPhone(page);
-    await page.getByRole("button", { name: "Çıkış yap" }).click();
+    await signOutItem(page).click();
     await expect(page).toHaveURL(/\/login$/);
   });
 });

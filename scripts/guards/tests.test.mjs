@@ -439,6 +439,8 @@ describe("parseRegistry — tests/QUARANTINE.md (T-008e)", () => {
     expect(r.errors[2]?.message).toContain("T-xxx");
     expect(r.errors[2]?.message).toContain("2026-02-30");
     expect(r.errors[5]?.message).toContain("Q-06 yinelenmiş");
+    expect(parseRegistry(`${H}| Q-07 | t | \`a.ts\` | n | T-1000 | 2026-10-01 | 2026-10-02 |\n`).entries.get("Q-07")?.card).toBe("T-1000"); // B-103
+    expect(parseRegistry(`${H}| Q-08 | t | \`a.ts\` | n | T-10000 | 2026-10-01 | 2026-10-02 |\n`).errors[0]?.message).toContain("T-xxx");
     expect(parseRegistry("tablo yok").errors[0]?.message).toContain("bulunan: 0");
     expect(parseRegistry("| A | B |\n|---|---|\n").errors[0]?.message).toContain("başlık");
   });

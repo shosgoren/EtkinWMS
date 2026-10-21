@@ -263,7 +263,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
             holder.contentChanged();
             setStage("item");
           }}
-          main={{ label: ts("qty.confirm"), aria: t("pick.confirm"), d: SICON.check, onClick: () => void confirm(), disabled: busy || qty > maxScans, wait: short > 0, testId: "flow-primary" }}
+          main={{ label: ts("qty.confirm"), aria: t("pick.confirm"), d: SICON.check, onClick: () => void confirm(), disabled: busy || qty > maxScans, disabledReason: busy ? ts("qty.busy") : ts("qty.overMax"), wait: short > 0, testId: "flow-primary" }}
         >
           <SahaQty
             itemName={work.itemName}

@@ -108,3 +108,9 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
   20 yanıt (`P0429`), demo/ACTIVE olmayan tenant reddi. Operatör yalnız `wms_probe.platform_support_*` (SECDEF, yalnız wms_app EXECUTE,
   `platform_is_operator`; probe'a tenant politikası yok, bağlam işlevde kurulup geri yüklenir); denetim `security_events` `platform.support.*`.
   Kısa numara küresel kimlik sütunu. Down dolu veride `allow_destructive_down` olmadan reddeder. Ekran görüntüsü eki yok (sonraki tur).
+- 0055 (T-991; kaynakta, canlı değil): ERP entegrasyonu — `integrations` (sağlayıcı başına tek bağlantı; `credentials` yalnız mühürlü kutu
+  {v,kid,iv,tag,ct}, CHECK; DISCONNECTED ⇔ NULL; parola saklanmaz), `integration_flows` (aç/kapa, yön; CHECK: STOCK/SHIPMENTS yalnız PUSH,
+  SALES_ORDERS yalnız PULL — I-04; `enabled_at` tetikleyicide), `integration_runs` (biten koşu değişmez, 55000), `integration_outbox` (irsaliye;
+  belge başına tekil; SENT değişmez; belirsiz sonuç CHECK — kör yeniden gönderim yok), `integration_stock_marks` (son gönderilen stok toplamı;
+  stok kaynağı değil). Eşleme 0019 `external_refs` (`system = PARASUT`). Hepsi ENABLE + FORCE RLS, TO'suz izolasyon, wms_app sütun düzeyi
+  INSERT/UPDATE, DELETE yok. Down dolu veride `allow_destructive_down` olmadan reddeder. Ayrıntı: [T-991](../changes/T-991.md).

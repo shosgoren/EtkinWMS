@@ -234,6 +234,8 @@ test("uygulama içi çözücü yolu: BarcodeDetector yok; WASM yalnızca tarama 
     await page.getByRole("button", { name: "Barkodu okut" }).click();
     await expect(overlay).toHaveAttribute("data-phase", "accepted", { timeout: 30_000 });
     await expect(page.getByTestId("camera-accepted-value")).toHaveText(CODE);
+    // T-446 ölçüm: ilk görüntülü kareden kabule (ms) ve kare başına çözme süresi; rapora not düşülür (eşik CI makinesine göre değişir, sınanmaz).
+    testInfo.annotations.push({ type: "scan-ms", description: `${size.name} ilk-okuma=${await overlay.getAttribute("data-first-read-ms")} kare=${await overlay.getAttribute("data-scan-frames")} çözme-ort=${await overlay.getAttribute("data-decode-avg-ms")}` });
     expectRubric(await layout(page), `${size.name} okundu (kod)`, { alert: false });
     await page.screenshot({ path: path.join(SHOTS, `${size.name}-okundu-kod.png`) });
   }

@@ -62,6 +62,17 @@ async function inViewport(page: Page, locator: Locator, name: string): Promise<v
   expect(box && vp && box.y >= 0 && box.y + box.height <= vp.height && box.x >= 0 && box.x + box.width <= vp.width, `${name}: görünüm içinde`).toBe(true);
 }
 
+/**
+ * T-990: ekleme formları pencere değil TAM EKRAN formdur (eski Escape = alt çubuğun Geri'si). Yarım işte uygulamanın cam kutusu açılır:
+ * "Kaydetmeden çık". Form ekranı kapanana dek beklenir (sonraki `goto` yarım işte tarayıcı uyarısına takılmasın).
+ */
+async function leaveForm(page: Page, form: Locator): Promise<void> {
+  await page.getByTestId("kabuk-back").click();
+  const leave = page.getByTestId("kalip-unsaved-leave");
+  await expect.poll(async () => (await leave.isVisible()) || !(await form.isVisible())).toBe(true);
+  if (await leave.isVisible()) await leave.click();
+  await expect(form).toBeHidden();
+}
 
 /** El terminali kuralı: form açıkken sayfa gövdesi kaymaz (3 ekran boyutu). `treeHref` yoksa (henüz raf yok) oluşturucu atlanır. */
 async function measureForms(page: Page, tag: string, treeHref: string | null, slug: string): Promise<void> {
@@ -70,28 +81,28 @@ async function measureForms(page: Page, tag: string, treeHref: string | null, sl
       await page.setViewportSize(vp);
       const where = `${vp.width}x${vp.height}`;
       await page.goto(`/t/${slug}/warehouses?new=1`);
-      const wh = page.getByRole("dialog");
+      const wh = page.getByTestId("warehouse-form"); // T-990: tam ekran form (pencere değil)
       await expect(wh.locator('input[name="code"]')).toHaveValue(/^DEPO-\d{2}$/);
       await noPageScroll(page, `depo formu ${where}`);
-      await inViewport(page, wh.getByRole("button", { name: "Kaydet" }), `depo Kaydet ${where}`);
-      await page.keyboard.press("Escape");
+      await inViewport(page, page.getByTestId("warehouse-form-save"), `depo Kaydet ${where}`);
+      await leaveForm(page, wh);
 
       await page.goto(`/t/${slug}/items?new=1`);
-      const it = page.getByRole("dialog");
+      const it = page.getByTestId("item-form");
       await expect(it.locator('input[name="code"]')).toHaveValue(/^HM-\d{6}$/);
-      await it.getByText("Gelişmiş ayarlar").click(); // en uzun hâl
+      await it.getByText("Gelişmiş ayarlar").click(); // en uzun hâl (T-990: gelişmiş grup her zaman açık)
       await noPageScroll(page, `ürün formu ${where}`);
-      await inViewport(page, it.getByRole("button", { name: "Kaydet" }), `ürün Kaydet ${where}`);
-      await page.keyboard.press("Escape");
+      await inViewport(page, page.getByTestId("item-form-save"), `ürün Kaydet ${where}`);
+      await leaveForm(page, it);
 
       if (treeHref === null) return;
       await page.goto(`${treeHref}?bulk=1`);
-      const bk = page.getByRole("dialog");
+      const bk = page.getByTestId("bulk-form");
       await expect(page.getByTestId("bulk-summary")).toBeVisible();
       await noPageScroll(page, `toplu oluşturucu ${where}`);
-      await inViewport(page, bk.getByRole("button", { name: "Vazgeç" }), `oluşturucu Vazgeç ${where}`);
+      await inViewport(page, page.getByTestId("kabuk-back"), `oluşturucu Vazgeç (Geri) ${where}`);
       await page.screenshot({ path: `${OUT}/${tag}-${vp.width}x${vp.height}-bulk-open.png` });
-      await page.keyboard.press("Escape");
+      await leaveForm(page, bk);
     });
   }
 }
@@ -122,11 +133,11 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     const next = guide.locator('[data-step="warehouse"]'); // T-971: liste kalıbı kurulum rehberi; şimdiki adım formu açar
     await touchTarget(next, "rehber: büyük düğme");
     await next.click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByTestId("warehouse-form"); // T-990: tam ekran form
     await expect(dialog.locator('input[name="code"]')).toHaveValue("DEPO-01");
     await expect(dialog.locator('input[name="name"]')).toHaveValue("Ana depo");
-    await touchTarget(dialog.getByRole("button", { name: "Kaydet" }), "depo formu: Kaydet");
-    await page.keyboard.press("Escape");
+    await touchTarget(page.getByTestId("warehouse-form-save"), "depo formu: Kaydet");
+    await leaveForm(page, dialog);
     await measureForms(page, tag, null, slug);
     return;
   }
@@ -141,50 +152,58 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     await touchTarget(next, "rehber: büyük düğme");
     await next.click();
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByTestId("warehouse-form"); // T-990: tam ekran form
+    const whSave = page.getByTestId("warehouse-form-save");
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('input[name="code"]')).toHaveValue("DEPO-01"); // kod hazır gelir
     await expect(dialog.locator('input[name="name"]')).toHaveValue("Ana depo"); // akıllı varsayılan ad
     await noPageScroll(page, "depo formu");
-    await inViewport(page, dialog.getByRole("button", { name: "Kaydet" }), "depo formu: Kaydet");
-    await touchTarget(dialog.getByRole("button", { name: "Kaydet" }), "depo formu: Kaydet");
+    await inViewport(page, whSave, "depo formu: Kaydet");
+    await touchTarget(whSave, "depo formu: Kaydet");
     await shot("warehouse-form");
-    await dialog.getByRole("button", { name: "Kaydet" }).click();
+    await whSave.click();
 
     // --- Adım 2: Rafları oluştur (ilk depodan sonra doğrudan oluşturucu) ---
     await expect(page).toHaveURL(/\/warehouses\/[0-9a-f-]{36}/);
-    const bulk = page.getByRole("dialog");
-    await expect(bulk.getByRole("heading", { name: "Rafları oluştur" })).toBeVisible();
+    const bulk = page.getByTestId("bulk-form"); // T-990: tam ekran form; ana işlem alt çubukta
+    const bulkSubmit = page.getByRole("button", { name: "50 lokasyonu oluştur" });
+    await expect(bulk).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rafları oluştur" })).toBeVisible();
     await expect(page.getByTestId("bulk-summary")).toHaveText("50 lokasyon oluşacak: A-01-01 … A-10-05");
     await noPageScroll(page, "toplu raf oluşturucu");
-    await inViewport(page, bulk.getByRole("button", { name: "50 lokasyonu oluştur" }), "oluşturucu: eylem düğmesi");
+    await inViewport(page, bulkSubmit, "oluşturucu: eylem düğmesi");
     // Önizleme listesi sayfayı değil yalnızca kendi içinde kayar.
     const list = page.getByTestId("bulk-preview-list");
     expect(await scrollsInside(list)).toBe(true);
     await shot("bulk-preview");
-    await bulk.getByRole("button", { name: "50 lokasyonu oluştur" }).click();
+    await bulkSubmit.click();
 
     // --- Adım 3: Ürün ekle (raflardan sonra ürün formu açılır) ---
     await expect(page).toHaveURL(new RegExp(`/t/${slug}/items`));
-    const item = page.getByRole("dialog");
+    const item = page.getByTestId("item-form"); // T-990: tam ekran form (`?new=1`)
+    // Temel birim: ≤6 birimde renkli kutular (radiogroup), çoksa aramalı seçim düğmesi (listbox); yerel <select> yok.
+    const baseUnit = page.getByTestId("item-base-unit");
     await expect(item.locator('input[name="code"]')).toHaveValue("HM-000001"); // T-911: kart türü öneki (varsayılan HM) + 6 hane
-    await expect(item.locator("#create-base-unit")).toContainText("ADET");
-    await expect(item.locator("#create-base-unit")).toBeEnabled(); // T-911: standart birimler çalışma alanıyla kurulur; ADET seçili gelir
-    await expect(item.locator("#create-base-unit")).toHaveValue(/.+/);
-    await expect(item.locator("details")).not.toHaveAttribute("open", ""); // gelişmiş ayarlar kapalı
+    await expect(baseUnit).toContainText("ADET");
+    await expect(baseUnit).toBeEnabled(); // T-911: standart birimler çalışma alanıyla kurulur; ADET seçili gelir
+    await expect(page.locator('[data-testid="item-base-unit"][data-value]:not([data-value=""]), [data-testid="item-base-unit"] [role="radio"][aria-checked="true"]')).toHaveCount(1);
+    // T-990: gelişmiş ayarlar ayrı açılır bölüm değil, akıllı varsayılanlarla dolu grup: takip modu "Takip yok" seçili gelir.
+    await expect(page.getByTestId("item-tracking").getByRole("radio", { checked: true })).toHaveAttribute("data-option", "NONE");
     // T-968 (liste kalıbı): ürün adımında kurulum rehberinin şimdiki adımı "İlk ürünü ekle" ve alt çubuğun ÜRÜN EKLE'siyle AYNI formu açar.
-    await page.keyboard.press("Escape");
+    await leaveForm(page, item);
     await expect(item).toBeHidden();
     const stepItems = page.getByTestId("setup-steps").locator('[data-step="items"]');
     await expect(stepItems).toContainText("İlk ürünü ekle");
     await stepItems.click();
-    await expect(page.getByRole("dialog").locator('input[name="code"]')).toHaveValue("HM-000001");
+    await expect(page.getByTestId("item-form").locator('input[name="code"]')).toHaveValue("HM-000001");
     await item.locator('input[name="name"]').fill(ITEM_NAME);
     await noPageScroll(page, "ürün formu");
     await shot("item-form");
-    await item.getByRole("button", { name: "Kaydet" }).click();
+    await page.getByTestId("item-form-save").click();
     await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
-    await page.locator('input[name="barcode"]').fill(BARCODE);
+    // T-990: barkod ekleme ürün kartından açılan tam ekran formdur (`?barcode=1`).
+    await page.getByTestId("barcode-add").click();
+    await page.getByTestId("barcode-form").locator('input[name="barcode"]').fill(BARCODE);
     await page.getByRole("button", { name: "Barkodu ekle" }).click();
     await expect(page.getByText("Barkod eklendi.")).toBeVisible();
 
@@ -234,19 +253,20 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
   const treeHref = await page.getByRole("link", { name: "Lokasyonları aç" }).first().getAttribute("href");
   expect(treeHref).not.toBeNull();
   await page.goto(`${treeHref}?bulk=1`);
-  const dlg = page.getByRole("dialog");
+  const dlg = page.getByTestId("bulk-form"); // T-990: tam ekran form; ana işlem alt çubukta
   await expect(page.getByTestId("bulk-conflicts")).toBeVisible();
   await expect(dlg.getByText(/50 kod zaten var; oluşturulmaz/)).toBeVisible();
-  await expect(dlg.getByRole("button", { name: /lokasyonu oluştur/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /lokasyonu oluştur/ })).toBeDisabled();
   await shot("bulk-conflict");
   // Üst lokasyon seçici (gelişmiş): yazarken öneri.
-  await dlg.getByText("Gelişmiş ayarlar").click();
+  await dlg.getByText("Gelişmiş ayarlar").scrollIntoViewIfNeeded(); // T-990: tam ekran formda bölüm hep açık (katlanır değil)
   await dlg.getByRole("searchbox", { name: /Üst lokasyon/ }).fill("A-02");
   const loc = dlg.getByRole("option").first();
   await expect(loc).toContainText("A-02-01");
   await touchTarget(loc, "lokasyon önerisi");
   await loc.click();
   await expect(dlg.getByText(/Seçildi: A-02-01/)).toBeVisible();
+  await leaveForm(page, dlg); // yarım iş (üst lokasyon seçildi): cam kutudan kaydetmeden çık
 
   await measureForms(page, tag, treeHref, slug);
 });
