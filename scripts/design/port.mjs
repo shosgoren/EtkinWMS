@@ -39,17 +39,17 @@ export const SOURCES = [
   { name: "gruplar", file: "docs/design/source/Gruplar.dc.html", sha256: "5c6f78b72c233247ff518519aa29a114c338fa70eec8e023bbf171a9e22bd056", scope: "dzr", palette: "none", device: "fr" },
   { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "74fba77cb748a61cae914e9203035ad64f22c08acbda6225973552271f998c46", scope: "dzp", palette: "none", device: "fr" },
   // T-958: uygulama kabuğu (alt cam çubuk, Modüller sayfası, Etkin dinleme, ilk kullanım rehberi; aynı 19 Ekim kaynak biçimi).
-  { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "0c67278bb5851b08110337d3dfdee8e64fc15a381ac308dab5b5607728f047f0", scope: "dzk", palette: "none", device: "fr" },
+  { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "dc4ce9aec20bb6b3a4649795318ced59acf18a67a168573efa613fa81befb73f", scope: "dzk", palette: "none", device: "fr" },
   // T-968 (B-63): 4 ekran kalıbı (Liste / Form / Detay / Saha; aynı 19 Ekim kaynak biçimi). Ortak üst çubuk (`.top`, `.brand`, `.pgic`,
   // `.tph`) her kaynakta aynıdır; her kalıp kendi kabında. Tuvalin yan yana çerçeveleri (`.stage`, `.frm`, `.frl`) atlanır (SKIP).
-  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "91ac734955f8fa7163bbeb79af7f9e3f8a190c46a21e42fbe0503963b370ccfb", scope: "dzl", palette: "none", device: "fr" },
-  { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "13b75f300aff10b915b3171684af4cd63481455e19e2a289ea9a72f7257608c7", scope: "dzf", palette: "none", device: "fr" },
-  { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "f7902618fe78e2603ddd8d0e1761c1fa4b3b24b069598f0d40ebcc2bee411fa0", scope: "dzd", palette: "none", device: "fr" },
-  { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "d3b4edb7f5be37a60d16b3533c0e7e51338ca32b5bce3a9ff8249f770c91c4f2", scope: "dzs", palette: "none", device: "fr" },
+  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "cef70a7ed7edd8ccbb6034e75cc19460049d60847cfd519ad1a3a481f75b792b", scope: "dzl", palette: "none", device: "fr" },
+  { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "d42cde1cd5a7650cfe473a0a4d3961ea7177c1a7dc688b52ca76c49ccff4f371", scope: "dzf", palette: "none", device: "fr" },
+  { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "1241ab0453ab8ce825c0e3a0a633d03cd74a33a73461c28f59715488e674ca5e", scope: "dzd", palette: "none", device: "fr" },
+  { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "3cf889101686f39f580fef473aba6645e503bd49f05940f518a5f9c1db86038d", scope: "dzs", palette: "none", device: "fr" },
   // T-967: Sorun/Destek (B-84/85/87). Tam kaynak `.dzt` (toplu yayın: `.dzd` kalıp-detay kabıyla çakıştığı için) (Destek penceresi + Taleplerim katmanı); yalnız "YENİ" bölümü `.dzdx` (Pano üst
   // çubuğundaki iki ikon, yüzen kısayolun şimşeği, alt çubukta pasif Geri — var olan Pano/Kabuk kaplarına ek sınıf olarak).
-  { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "de2d492bc3d59e11957ba39cfc53bf28c4fd83886697e142acd89dfdaaad4031", scope: "dzt", palette: "none", device: "fr" },
-  { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "de2d492bc3d59e11957ba39cfc53bf28c4fd83886697e142acd89dfdaaad4031", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
+  { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "949c99f33393c0b5fa357911b5af2a35d8b82dcc6d414510f25042fc53f6580c", scope: "dzt", palette: "none", device: "fr" },
+  { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "949c99f33393c0b5fa357911b5af2a35d8b82dcc6d414510f25042fc53f6580c", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
   // T-967: Yönetim paneli Destek gelen kutusu; kaynak Yonet kopyası + "YENİ" (okunmamış noktası) — yalnız ek bölüm, panel `.dzy` ile birlikte.
   { name: "yonet-destek", file: "docs/design/source/YonetDestek.dc.html", sha256: "a2155d8f675436bab7d1d45f4f7cdabd6ac942a9d84a4e57f065c00beaa9a4f0", scope: "dzyd", palette: "none", section: "YENİ" },
 ];

@@ -834,7 +834,9 @@
           "LOCATION": "RAF SORUNU",
           "OTHER": "DİĞER"
         }
-      }
+      },
+      "overview": "Genel bakış",
+      "signOut": "Çıkış yap"
     }
   },
   "audit": {
@@ -3808,7 +3810,8 @@
     "save": "Kaydet",
     "saveShort": "KAYDET",
     "bell": "BİLDİRİM",
-    "bellAria": "Bildirimler, {n} açık uyarı"
+    "bellAria": "Bildirimler, {n} açık uyarı",
+    "workspace": "Çalışma alanı değiştir"
   },
   "aktar": {
     "title": "Excel’den aktar",
@@ -4476,6 +4479,26 @@
       "ekip": {
         "name": "Ekip",
         "sub": "Kişiler · Yetki"
+      },
+      "kokpit": {
+        "name": "Genel bakış",
+        "sub": "Tüm işler tek listede"
+      },
+      "akis": {
+        "name": "İşlemler",
+        "sub": "Görevlerim ana ekranı"
+      },
+      "stok": {
+        "name": "Stok durumu",
+        "sub": "Nerede · Ne kadar"
+      },
+      "ayar": {
+        "name": "Ayarlar",
+        "sub": "Dil · Saat · Kurallar"
+      },
+      "kayit": {
+        "name": "Kim ne yaptı?",
+        "sub": "İşlem kaydı"
       }
     }
   },
