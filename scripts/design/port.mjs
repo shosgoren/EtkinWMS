@@ -51,6 +51,8 @@ export const SOURCES = [
   { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "949c99f33393c0b5fa357911b5af2a35d8b82dcc6d414510f25042fc53f6580c", scope: "dzt", palette: "none", device: "fr" },
   { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "949c99f33393c0b5fa357911b5af2a35d8b82dcc6d414510f25042fc53f6580c", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
   // T-967: Yönetim paneli Destek gelen kutusu; kaynak Yonet kopyası + "YENİ" (okunmamış noktası) — yalnız ek bölüm, panel `.dzy` ile birlikte.
+  // T-986b: katılma QR'ı paylaşma satırı (Ekip katılma QR'ı + Ekibe katılma); yalnız "YENİ" bölümü `.dzsh` (var olan ekranlara ek kap).
+  { name: "paylas", file: "docs/design/source/Paylas.dc.html", sha256: "f5294d37406c3d14fcce5e05e30b69b8d6ebf50528a5d3740e84d2d526a4b037", scope: "dzsh", palette: "none", device: "fr", section: "YENİ" },
   { name: "yonet-destek", file: "docs/design/source/YonetDestek.dc.html", sha256: "a2155d8f675436bab7d1d45f4f7cdabd6ac942a9d84a4e57f065c00beaa9a4f0", scope: "dzyd", palette: "none", section: "YENİ" },
   // T-991: ERP entegrasyonu (Paraşüt). Kaynak Kalıp · Form birebir kopyası + "YENİ" bölümü (sağlayıcı kartı, bağlantı şeridi, akış satırı,
   // son çalışmalar, bağlan notu); yalnız ek bölüm `.dzen` kabında (ekran `.dzf` form kalıbının içinde).

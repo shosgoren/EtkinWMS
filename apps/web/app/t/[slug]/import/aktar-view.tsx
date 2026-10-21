@@ -14,6 +14,7 @@ import { FIELDS, autoMap, buildCsv, buildRecords, colLetter, detectHeader, heade
 import { applyImportChunkAction, previewImportAction } from "./actions.ts";
 import { importPartiesAction } from "../parties/actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { UstDugmeler } from "../ust-dugmeler.tsx";
 
 type PreviewResult = Awaited<ReturnType<typeof previewImportAction>>;
 type ImportPreview = Extract<PreviewResult, { ok: true }>["data"];
@@ -398,6 +399,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
               <span className="net" style={{ position: "static", flex: "none" }} title={t("online")}>
                 <i />
               </span>
+              <UstDugmeler dark={dark} />
             </header>
             <div className="stepbar" aria-hidden="true">
               <span style={{ width: `${step * 20}%` }} />

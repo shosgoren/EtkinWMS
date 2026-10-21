@@ -8,12 +8,16 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { create as createQr } from "qrcode";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { dz } from "../../../design/ekip-tokens.ts";
 import { EICON } from "../../../design/ekip-icons.ts";
+import { SHICON } from "../../../design/paylas-icons.ts";
 import { approveJoinAction, createJoinLinkAction, inviteMemberAction, rejectJoinAction } from "../members/actions.ts";
 import { setMemberGroupAction } from "../groups/actions.ts";
-import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { KabukBar, useKabuk } from "../kabuk/kabuk-bar.tsx";
+import { JoinShareRow, useJoinShare } from "../members/join-share.tsx";
+import { UstDugmeler } from "../ust-dugmeler.tsx";
+import type { ToastKind } from "../kalip/ekran.tsx";
 
 type Role = "TENANT_ADMIN" | "WAREHOUSE_MANAGER" | "PICKER" | "COUNTER" | "READ_ONLY";
 export interface TeamPerson {
@@ -130,6 +134,8 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [toast, setToast] = useState("");
+  const [toastKind, setToastKind] = useState<ToastKind>("info");
+  const tenantName = useKabuk()?.tenantName ?? slug;
 
   useEffect(() => {
     const timer = setInterval(() => router.refresh(), 5000);
@@ -137,10 +143,19 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   }, [router]);
   useEffect(() => {
     if (toast === "") return;
-    const timer = setTimeout(() => setToast(""), 1600);
+    const timer = setTimeout(() => setToast(""), 2600);
     return () => clearTimeout(timer);
   }, [toast]);
-  const flash = (m: string): void => setToast(m);
+  const flash = (m: string): void => {
+    setToastKind("info");
+    setToast(m);
+  };
+  // T-986b: paylaşma satırı ve PAYLAŞ ana işleminin balonu (sarı = kilit/uyarı, kırmızı = hata).
+  const say = useCallback((kind: ToastKind, m: string): void => {
+    setToastKind(kind);
+    setToast(m);
+  }, []);
+  const { share, rowRef } = useJoinShare({ url: qrUrl, tenantName, isDemo, say });
 
   const groupOf = (id: string | null): TeamGroup | undefined => (id === null ? undefined : groups.find((g) => g.id === id));
   const labelOf = (p: TeamPerson): { text: string; color: string } => {
@@ -285,7 +300,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   };
 
   let mainLabel = t("main.add");
-  let mainIcon: string = EICON.plus;
+  let mainIcon: string | readonly string[] = EICON.plus;
   let main: () => void = () => setAdd(true);
   let mainCls = "dk big scan";
   if (view === "list" && tab === "pend" && req !== undefined) {
@@ -299,11 +314,22 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     mainLabel = t("main.invite");
     mainIcon = EICON.send;
     main = () => void invite();
+    if (isDemo) {
+      // Ana işlem sessiz kapanmaz (ALTIN-KURAL): demoda pasif görünür, dokununca neden + hata sesi.
+      mainCls = "dk big scan wait";
+      main = () => {
+        beep(false);
+        say("warn", t("err.demo"));
+      };
+    }
   }
   if (view === "qr") {
-    mainLabel = qrUrl === null ? t("main.qrCreate") : t("main.print");
-    mainIcon = qrUrl === null ? EICON.renew : EICON.print;
-    main = qrUrl === null ? () => void newQr() : () => window.print();
+    // T-986b: QR hazırsa (ve demoda, kilitli) ana işlem PAYLAŞ; değilse QR OLUŞTUR.
+    const sharing = qrUrl !== null || isDemo;
+    mainLabel = sharing ? t("main.share") : t("main.qrCreate");
+    mainIcon = sharing ? [SHICON.shareA, SHICON.shareB] : EICON.renew;
+    main = sharing ? share : () => void newQr();
+    if (isDemo) mainCls = "dk big scan wait";
   }
   const titles = { list: [t("title"), t("sub.list")], invite: [t("inviteTitle"), t("sub.invite")], qr: [t("qrTitle"), t("sub.qr")] } as const;
   const back = (): void => {
@@ -341,6 +367,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
               <span className="net" style={{ position: "static", flex: "none" }} title={t("online")}>
                 <i />
               </span>
+              <UstDugmeler dark={dark} />
             </header>
 
             <main className="inner">
@@ -589,6 +616,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                       {t("qrNew")}
                     </button>
                   </div>
+                  <JoinShareRow url={qrUrl} tenantName={tenantName} isDemo={isDemo} say={say} dark={dark} rowRef={rowRef} />
                 </>
               ) : null}
             </main>
@@ -676,7 +704,17 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                 </div>
               </>
             ) : null}
-            {toast !== "" ? <div className="toast">{toast}</div> : null}
+            {toast !== "" ? (
+              <div
+                className="toast"
+                role="status"
+                aria-live="polite"
+                style={toastKind === "warn" ? { background: dz("F4C542"), color: dz("1A1300") } : toastKind === "err" ? { background: dz("C62828"), color: dz("FFFFFF") } : undefined}
+                data-testid="team-toast"
+              >
+                {toast}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -686,7 +724,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
       dark={dark}
       back={view === "list" && !pendDirty ? { href: base, aria: t("backHome"), testId: "team-back" } : { onClick: view === "list" ? () => setCf("home") : back, aria: t("back"), testId: "team-back" }}
       homeNav={dirty ? { onClick: () => setCf("home"), aria: t("home"), testId: "team-home" } : { href: base, aria: t("home"), testId: "team-home" }}
-      main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy || (isDemo && view !== "list"), testId: "team-main", wait: mainCls.includes(" wait") }}
+      main={{ label: mainLabel, d: mainIcon, onClick: main, disabled: busy, testId: "team-main", wait: mainCls.includes(" wait") }}
     />
     </>
   );

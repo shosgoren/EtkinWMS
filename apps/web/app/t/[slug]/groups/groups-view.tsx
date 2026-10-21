@@ -10,6 +10,7 @@ import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { UstDugmeler } from "../ust-dugmeler.tsx";
 
 type Overview = {
   readonly groups: readonly { id: string; name: string; color: string; screens: readonly string[]; grants: readonly string[]; archived: boolean; version: number; memberCount: number }[];
@@ -385,6 +386,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
               <span className="net" style={{ position: "static", flex: "none" }} title={t("online")}>
                 <i />
               </span>
+              <UstDugmeler dark={dark} />
             </header>
             <div className="stepbar" aria-hidden="true">
               <span style={{ width: `${STEPW[view]}%` }} />

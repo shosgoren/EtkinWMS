@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin WMS — Katılma QR'ı paylaşma</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:24px;min-height:100vh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;color:#172E42}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.app{width:390px;padding:16px;border-radius:28px;background:linear-gradient(180deg,#EEF1F4 0%,#DCE3EA 100%)}
+.fr-desktop .app{width:720px}
+.app.thd{background:linear-gradient(180deg,#121B24 0%,#0F171F 100%);color:#E6EBEF}
+.cap{margin:0 0 10px;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476}
+
+/* ===== YENİ (T-986b): katılma QR'ı paylaşma satırı — Ekip "Saha personeli: katılma QR'ı" ve Ekibe katılma ===== */
+.shr{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;margin-top:4px}
+.fr-mobile .shr{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.shc{appearance:none;position:relative;display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0;min-height:56px;padding:8px 12px;border:0;border-radius:16px;background:#FFFFFF;color:#172E42;font:800 14px/1.15 'Bricolage Grotesque',sans-serif;text-align:left;text-decoration:none;cursor:pointer;box-shadow:0 1px 0 rgba(23,46,66,.08),0 8px 18px -14px rgba(23,46,66,.5);transition:transform .15s ease,background .2s ease,color .2s ease}
+.shc:active{transform:scale(.96)}
+.shc:focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.shc>i{display:flex;align-items:center;justify-content:center;flex:none;width:38px;height:38px;border-radius:12px;color:#FFFFFF}
+.shc>span{min-width:0;overflow-wrap:anywhere}
+.shc.wa>i{background:#1E8E4E}
+.shc.cp>i{background:#2F5DA8}
+.shc.dl>i{background:#0E7C7B}
+.shc.pr>i{background:#172E42}
+.shc.done{background:#2F7D5B;color:#FFFFFF;animation:shpop .3s cubic-bezier(.2,.9,.2,1)}
+.shc.done>i{background:rgba(255,255,255,.22)}
+.shc.lock{background:#E4E9EE;color:#6A7F91;box-shadow:none;cursor:not-allowed}
+.shc.lock>i{background:#C9D2DA;color:#4E6476}
+.shc .lk{position:absolute;right:6px;top:6px;display:flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:7px;background:#F4C542;color:#1A1300}
+.thd .shc{background:#1B2833;color:#E6EBEF;box-shadow:none}
+.thd .shc.done{background:#2F7D5B;color:#FFFFFF}
+.thd .shc.lock{background:#16212B;color:#8A9BAA}
+.thd .shc.lock>i{background:#24323F;color:#8A9BAA}
+@keyframes shpop{0%{transform:scale(.92)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.shc,.shc.done{animation:none;transition:none}}
+/* ===== son ===== */
+</style>
+</helmet>
+<div class="wrap">
+  <!-- Telefon, açık tema: bağlantı hazır; "Bağlantıyı kopyala" dokunulmuş (2 sn yeşil tik + "Kopyalandı", ses ve balon yok). -->
+  <div class="fr-mobile">
+    <div class="app">
+      <p class="cap">TELEFON · AÇIK · KOPYALANDI</p>
+      <div class="shr" role="group" aria-label="Paylaş">
+        <a class="shc wa" href="#"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 20.5l1.4-4.3A8.5 8.5 0 1 1 8 19.3z"></path><path d="M9 8.6c.2 3.4 3 6.2 6.4 6.4l1.1-1.5-2.1-1.1-1 .9a5 5 0 0 1-2.6-2.6l.9-1-1.1-2.1z"></path></svg></i><span>WhatsApp ile gönder</span></a>
+        <button type="button" class="shc cp done"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></i><span>Kopyalandı</span></button>
+        <button type="button" class="shc dl"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg></i><span>QR'ı indir (PNG)</span></button>
+        <button type="button" class="shc pr"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i><span>Yazdır</span></button>
+      </div>
+    </div>
+  </div>
+  <!-- Telefon, koyu tema, demo alanı: hepsi kilitli; dokununca sarı "Paylaşma yetkin yok" balonu + hata sesi. -->
+  <div class="fr-mobile">
+    <div class="app thd">
+      <p class="cap">TELEFON · KOYU · DEMO (KİLİTLİ)</p>
+      <div class="shr" role="group" aria-label="Paylaş">
+        <button type="button" class="shc wa lock" aria-disabled="true"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 20.5l1.4-4.3A8.5 8.5 0 1 1 8 19.3z"></path><path d="M9 8.6c.2 3.4 3 6.2 6.4 6.4l1.1-1.5-2.1-1.1-1 .9a5 5 0 0 1-2.6-2.6l.9-1-1.1-2.1z"></path></svg></i><span>WhatsApp ile gönder</span><b class="lk"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg></b></button>
+        <button type="button" class="shc cp lock" aria-disabled="true"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z"></path><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg></i><span>Bağlantıyı kopyala</span><b class="lk"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg></b></button>
+        <button type="button" class="shc dl lock" aria-disabled="true"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg></i><span>QR'ı indir (PNG)</span></button>
+        <button type="button" class="shc pr lock" aria-disabled="true"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i><span>Yazdır</span></button>
+      </div>
+    </div>
+  </div>
+  <!-- Masaüstü: tek satır dört çip. Alt çubuğun orta ana işlemi PAYLAŞ (sistem paylaşım sayfası; yoksa bu satıra odak). -->
+  <div class="fr-desktop">
+    <div class="app">
+      <p class="cap">MASAÜSTÜ · AÇIK · ANA İŞLEM PAYLAŞ</p>
+      <svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"></path><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg>
+      <div class="shr" role="group" aria-label="Paylaş">
+        <a class="shc wa" href="#"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 20.5l1.4-4.3A8.5 8.5 0 1 1 8 19.3z"></path><path d="M9 8.6c.2 3.4 3 6.2 6.4 6.4l1.1-1.5-2.1-1.1-1 .9a5 5 0 0 1-2.6-2.6l.9-1-1.1-2.1z"></path></svg></i><span>WhatsApp ile gönder</span></a>
+        <button type="button" class="shc cp"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z"></path><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg></i><span>Bağlantıyı kopyala</span></button>
+        <button type="button" class="shc dl"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"></path><path d="M5 20h14"></path></svg></i><span>QR'ı indir (PNG)</span></button>
+        <button type="button" class="shc pr"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i><span>Yazdır</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+/* Önizleme: dokununca "Kopyalandı" 2 sn (tasarım aracı benzetimi). */
+</script>
+</body>
+</html>

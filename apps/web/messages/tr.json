@@ -4273,6 +4273,26 @@
     "cancelApproved": "İPTAL ET",
     "cancelApprovedAria": "{name} için onayı iptal et"
   },
+  "paylas": {
+    "title": "Etkin WMS ekibine katıl",
+    "text": "Etkin WMS'de {tenant} ekibine katıl: {url} (7 gün geçerli)",
+    "rowLabel": "Katılma bağlantısını paylaş",
+    "whatsapp": "WhatsApp ile gönder",
+    "copy": "Bağlantıyı kopyala",
+    "copied": "Kopyalandı",
+    "copiedLive": "Katılma bağlantısı panoya kopyalandı",
+    "copyFailed": "Kopyalanamadı · tekrar dene",
+    "png": "QR'ı indir (PNG)",
+    "pngDone": "QR resmi indirildi",
+    "pngFailed": "QR resmi indirilemedi · tekrar dene",
+    "print": "Yazdır",
+    "locked": "Paylaşma yetkin yok · demo alanında kapalı",
+    "needQr": "Önce QR oluştur, sonra paylaş",
+    "pickBelow": "Aşağıdan bir yol seç: WhatsApp, kopyala, indir, yazdır",
+    "shared": "Paylaşıldı",
+    "shareFailed": "Paylaşılamadı · aşağıdan bir yol seç",
+    "file": "etkin-wms-katilma-qr"
+  },
   "ekip": {
     "title": "Ekip",
     "inviteTitle": "Ofis kullanıcısı davet et",
@@ -4314,7 +4334,8 @@
       "pickGroup": "GRUP SEÇ",
       "invite": "DAVET GÖNDER",
       "qrCreate": "QR OLUŞTUR",
-      "print": "YAZDIR"
+      "print": "YAZDIR",
+      "share": "PAYLAŞ"
     },
     "tabPeople": "KİŞİ",
     "tabPend": "ONAY BEKLİYOR",

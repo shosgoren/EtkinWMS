@@ -5,7 +5,7 @@
 // alt çubukta QR OLUŞTUR / YENİLE (demo alanında kapalı). Güvenlik: QR adresi yalnız bu bileşenin belleğinde (yenile basılınca üretilir;
 // eskisi o anda geçersiz); doğrulama kodu sayfaya gelmez, yönetici yazar. Bekleyen talepler 5 sn'de bir yenilenir.
 // Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
@@ -14,6 +14,7 @@ import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveJoinAction, createJoinLinkAction, rejectJoinAction, revokeJoinLinkAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
+import { JoinShareRow } from "../join-share.tsx";
 
 export interface JoinPending {
   readonly id: string;
@@ -66,6 +67,8 @@ export function JoinView({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<ErrState>(null);
   const { say, node: toast } = useKalipToast("liste");
+  // T-986b: paylaşma satırı (WhatsApp, kopyala, PNG, yazdır). Ana işlem bu ekranda QR OLUŞTUR / YENİLE kalır (yenileme başka yerde yok).
+  const rowRef = useRef<HTMLDivElement | null>(null);
   const returnTo = `/t/${slug}/members/join`;
   const [now, setNow] = useState(() => Date.now());
 
@@ -316,12 +319,8 @@ export function JoinView({
               {t("close")}
             </Btn>
           ) : null}
-          {url !== null ? (
-            <Btn kind="n" scope="dzl" d={LICON.printer} onClick={() => window.print()}>
-              {t("print")}
-            </Btn>
-          ) : null}
         </div>
+        <JoinShareRow url={url} tenantName={tenantName} isDemo={isDemo} say={say} dark={dark} rowRef={rowRef} />
         <Note d={LICON.lock} title={t("banTitle")} body={t("banBody")} />
       </section>
     </KalipEkran>

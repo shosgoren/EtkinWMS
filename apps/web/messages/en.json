@@ -4273,6 +4273,26 @@
     "cancelApproved": "CANCEL",
     "cancelApprovedAria": "Cancel approval for {name}"
   },
+  "paylas": {
+    "title": "Join the Etkin WMS team",
+    "text": "Join the {tenant} team on Etkin WMS: {url} (valid for 7 days)",
+    "rowLabel": "Share the join link",
+    "whatsapp": "Send via WhatsApp",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "copiedLive": "Join link copied to clipboard",
+    "copyFailed": "Could not copy · try again",
+    "png": "Download QR (PNG)",
+    "pngDone": "QR image downloaded",
+    "pngFailed": "Could not download the QR image · try again",
+    "print": "Print",
+    "locked": "You can't share · disabled in the demo workspace",
+    "needQr": "Create the QR first, then share",
+    "pickBelow": "Pick a way below: WhatsApp, copy, download, print",
+    "shared": "Shared",
+    "shareFailed": "Could not share · pick a way below",
+    "file": "etkin-wms-join-qr"
+  },
   "ekip": {
     "title": "Team",
     "inviteTitle": "Invite an office user",
@@ -4314,7 +4334,8 @@
       "pickGroup": "PICK GROUP",
       "invite": "SEND INVITE",
       "qrCreate": "CREATE QR",
-      "print": "PRINT"
+      "print": "PRINT",
+      "share": "SHARE"
     },
     "tabPeople": "PEOPLE",
     "tabPend": "WAITING",
