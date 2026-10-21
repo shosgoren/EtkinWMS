@@ -238,9 +238,9 @@ export function gitResolver(root) {
     const [addSha, addSubject] = added.split("\t");
     const esc = task.replace(/[-]/g, "\\-");
     const re = new RegExp(`^Merge pull request #(\\d+) from \\S+/(?:feat|fix)/${esc}-`);
-    // Parçayı getiren birleşme: first-parent geçmişinde, ekleyen commit'i içeren en eski birleşme commit'i.
+    // Parçayı getiren birleşme: ekleyen commitin soyundan gelen (ancestry-path) ve konusu bu kartın dalını anan en eski PR birleşmesi; ara "main into dal" birleşmeleri konu kalıbına uymaz, atlanır.
     const range = addSha ? ["--ancestry-path", `${addSha}..HEAD`] : [];
-    const merges = git(["log", "--merges", "--first-parent", "--reverse", "--format=%h%x09%s", ...range]).split("\n");
+    const merges = git(["log", "--merges", "--reverse", "--topo-order", "--format=%h%x09%s", ...range]).split("\n");
     for (const l of merges) {
       const [sha, subject] = l.split("\t");
       const m = re.exec(subject ?? "");
