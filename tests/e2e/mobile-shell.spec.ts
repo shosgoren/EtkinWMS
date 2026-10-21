@@ -97,6 +97,8 @@ test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüs
   await expect(menu.getByRole("button", { name: "Genel bakış", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
+  // T-979b (B-100): kalıp penceresi kapanınca odak menüyü açan yere (Hesap düğmesi) döner.
+  await expect(page.locator('#main [data-testid="home-actions"]').filter({ visible: true })).toBeFocused();
 
   // İç ekran: üyeler ekranında gövde kaymaz, yalnız içerik alanı kayar, yatay taşma yok; eski kabuk yok.
   await page.goto("/t/demo/members");
