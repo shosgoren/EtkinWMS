@@ -1,9 +1,9 @@
 import { cookies, headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
-import { Banner } from "@wms/ui";
+import { GirisBant, GirisBaslik, GirisKabuk } from "../../giris-ui.tsx";
+import { THEME_COOKIE } from "../../design/theme.ts";
 import { getAppDb } from "@wms/db";
 import { runTenantCommand, runTenantQuery } from "@wms/domain/identity/access";
 import { MARK_TIMEOUTS, markWorkspaceUsed, needsMark } from "@wms/domain/identity/last-workspace";
@@ -11,15 +11,12 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { appSurface } from "../../../lib/surface.ts";
 import { AppError } from "@wms/shared/errors";
-import { AppBar } from "./app-bar.tsx";
-import { BottomNav } from "./bottom-nav.tsx";
-import { ScreenShell } from "./screen-shell.tsx";
+import { AppMenu } from "./app-menu.tsx";
 import { KabukProvider } from "./kabuk/kabuk-bar.tsx";
 import { kabukModules } from "./kabuk/modules.ts";
 
 export const dynamic = "force-dynamic";
 
-const TOUCH = "min-h-12 min-w-12";
 
 // Görünüm çerezi kök düzendeki `setView` ile aynı sözleşmeyi kullanır (`view`: flow | cockpit, 1 yıl); telefon menüsündeki anahtar
 // bu eylemi çağırır. Kök düzenin eylemi dışa aktarılamaz (layout dosyası yalnızca varsayılan dışa aktarım taşır).
@@ -56,16 +53,15 @@ export default async function TenantLayout({ children, params }: { children: Rea
         // kodla yakalanır ve çerçeveli bir durum olarak render edilir (çocuklar render edilmez).
         const te = await getTranslations("members.errors");
         const key = e.code.toLowerCase();
+        const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
         return (
-          <main className="mx-auto flex w-full max-w-md min-w-0 flex-col gap-4 px-4 py-6">
-            <h1 className="break-words text-2xl font-extrabold text-ink">{te("tenantStatusTitle")}</h1>
-            <Banner kind="warning">
-              <p>
-                {te(key)} {te(`${key}Action`)}
-              </p>
-              <p className="mt-1 text-sm">{te("code", { code: e.code })}</p>
-            </Banner>
-          </main>
+          <GirisKabuk dark={dark} testId="tenant-status">
+            <GirisBaslik title={te("tenantStatusTitle")} />
+            <GirisBant kind="warn">
+              {te(key)} {te(`${key}Action`)}
+              <small style={{ display: "block" }}>{te("code", { code: e.code })}</small>
+            </GirisBant>
+          </GirisKabuk>
         );
       }
     }
@@ -86,7 +82,6 @@ export default async function TenantLayout({ children, params }: { children: Rea
     });
   }
   const t = await getTranslations();
-  const roleName = current.roles.map((r) => t(`roles.${r}`)).join(", ");
   const view = (await cookies()).get("view")?.value === "cockpit" ? "cockpit" : "flow";
   // T-988 (I-18): Görevlerim tasarımında sayfa bağlantıları yoktur; yönetim sayfalarına uygulama menüsünden gidilir (yetkiye göre).
   const base = `/t/${encodeURIComponent(slug)}`;
@@ -126,9 +121,11 @@ export default async function TenantLayout({ children, params }: { children: Rea
   return (
     <KabukProvider value={kabuk}>
     <div className="tenant-shell flex min-w-0 flex-col">
-      <AppBar
+      {/* T-979 (B-95): eski telefon üst çubuğu, masaüstü çalışma alanı satırı, ScreenShell ve alt sekme çubuğu kaldırıldı; her ekran kendi
+          kalıp/Pano üst çubuğunu ve ortak alt cam çubuğu (Kabuk) çizer. Uygulama menüsü (Akış/Genel bakış, çalışma alanı, yönetim
+          sayfaları, Yardım, Çıkış) Hesap menüsündeki "Tüm ekranlar"dan açılır. */}
+      <AppMenu
         slug={slug}
-        tenantName={current.tenantName}
         userName={summary.userName}
         view={view}
         setViewAction={setView}
@@ -136,40 +133,8 @@ export default async function TenantLayout({ children, params }: { children: Rea
         linksLabel={t("home.easy.links")}
         memberships={summary.memberships.map((m) => ({ slug: m.slug, tenantName: m.tenantName, rolesLabel: m.roles.map((r) => t(`roles.${r}`)).join(", ") }))}
       />
-      <div className="desk-only flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-surface px-4 py-2" data-testid="tenant-bar">
-        <details className="relative min-w-0">
-          <summary
-            className={`${TOUCH} flex cursor-pointer list-none items-center gap-2 rounded-full bg-accent-soft px-4 text-sm font-bold text-accent-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus`}
-            aria-label={t("tenantBar.switchTitle")}
-          >
-            <span className="min-w-0 truncate">{current.tenantName}</span>
-            <span aria-hidden="true">·</span>
-            <span className="shrink-0">{t("tenantBar.roleChip", { role: roleName })}</span>
-          </summary>
-          <ul className="absolute left-0 z-30 mt-2 w-[min(20rem,calc(100vw-2rem))] list-none rounded-card border-2 border-border bg-surface p-2 shadow-card">
-            {summary.memberships.map((m) => (
-              <li key={m.slug}>
-                <Link
-                  href={`/t/${m.slug}/members`}
-                  aria-current={m.slug === slug ? "page" : undefined}
-                  className={`${TOUCH} flex flex-col justify-center rounded-card px-3 py-1 text-base font-semibold text-ink focus-visible:outline-3 focus-visible:outline-focus aria-[current=page]:bg-accent-soft`}
-                >
-                  <span className="break-words">{m.tenantName}</span>
-                  <span className="text-sm font-normal text-ink-muted">
-                    {m.roles.map((r) => t(`roles.${r}`)).join(", ")}
-                    {m.slug === slug ? ` · ${t("tenantBar.current")}` : ""}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </details>
-        <span className="min-w-0 truncate text-sm font-semibold text-ink-muted">{t("tenantBar.user", { name: summary.userName })}</span>
-      </div>
-      {/* T-965: Suspense yok. Bu yerleşim `force-dynamic` olduğundan `useSearchParams` sunucuda hazırdır (askıya almaz); eski
-          `<Suspense fallback={children}>` sayfayı iki kez veriyordu (görünür yedek + gizli `S:` kopyası, `$RC` ile geç değişim). */}
-      <div className="tenant-body flex min-w-0 flex-col"><ScreenShell slug={slug}>{children}</ScreenShell></div>
-      <BottomNav slug={slug} />
+      {/* T-965: Suspense yok. Bu yerleşim `force-dynamic` olduğundan `useSearchParams` sunucuda hazırdır (askıya almaz). */}
+      <div className="tenant-body flex min-w-0 flex-col">{children}</div>
     </div>
     </KabukProvider>
   );

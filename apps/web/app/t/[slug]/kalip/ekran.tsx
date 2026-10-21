@@ -115,7 +115,7 @@ export interface KalipEkranProps {
   /** T-981b: üst çubukta Excel düğmesi (İçeri al / Güncelle / Dışarı aktar); yalnız aktarım yetkisi olana çizilir (kiracı bağlamı). */
   readonly excel?: KalipExcelProps;
   /** Alt cam çubuk (ortak KabukBar): ekranın ana işlemi, Geri, Ana ekran. `dark` kabdan gelir. */
-  readonly bar: Omit<KabukBarProps, "dark" | "home">;
+  readonly bar: Omit<KabukBarProps, "dark">;
   /** Kabın içinde, `.inner` dışında çizilen katmanlar (kaynak `.sxback`, `.cfback/.cfbox`, `.toast`). */
   readonly overlays?: ReactNode;
   readonly testId?: string;

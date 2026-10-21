@@ -5,7 +5,6 @@ import { DzRoot } from "../../design/dz-root.tsx";
 import { C, dz } from "../../design/bakis-tokens.ts";
 import { ICON } from "../../design/bakis-icons.ts";
 import { HomeControls, HomeOverlays } from "./home-controls.tsx";
-import type { TaskMenuProps } from "./task-menu.tsx";
 
 // I-18 (docs/design/DESIGN-PARITY.md): Görevlerim = Bakis.dc.html `v.home` BİREBİR. Sınıf adları, öğe sırası, ikon yolları ve metinler kaynaktan;
 // CSS `apps/web/app/design/bakis.css` (üretilmiş). Yalnız `{{…}}` bağları gerçek veriye bağlanır (getWorkSummary). Hesaplar kaynaktaki renderVals ile
@@ -21,7 +20,9 @@ const SECS: ReadonlyArray<{ k: WorkSectionKey; operation?: string; path: string 
   { k: "sayim", path: "/field/tasks" },
 ];
 
-export interface EasyHomeProps extends TaskMenuProps {
+export interface EasyHomeProps {
+  readonly slug: string;
+  readonly allowed: { readonly usersManage: boolean; readonly settingsManage: boolean; readonly auditView: boolean; readonly stockView: boolean; readonly stockPost?: boolean };
   readonly summary?: WorkSummary | null;
   readonly firstName?: string;
   readonly dark?: boolean;

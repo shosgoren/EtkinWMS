@@ -17,7 +17,7 @@
 }
 /* Kap görüntü alanını kaplar; kiracı kabuğunun eski üst çubuğu / alt sekmeleri bu ekranda çizilmez (Bakış `.dz` ile aynı uyarlama). */
 .dza { position: fixed; inset: 0; z-index: 20; }
-body:has(.dza) [data-testid="bottom-nav"], body:has(.dza) [data-testid="tenant-bar"], body:has(.dza) .app-header { display: none; }
+body:has(.dza) .app-header { display: none; }
 /* T-428 uyarlaması (tasarım kaynağı yok: cari kart listesi/formu). Aktar kabuğunun kendi belirteçleriyle metin kutusu ve arama; renk sabiti yok. */
 .dza .pf { display: flex; flex-direction: column; gap: 6px; }
 .dza .pf span { font: 800 10.5px/1 var(--font-bricolage), sans-serif; letter-spacing: .08em; color: var(--color-dz-x-eogehg); }
