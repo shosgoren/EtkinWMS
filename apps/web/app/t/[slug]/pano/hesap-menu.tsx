@@ -6,7 +6,7 @@
 // istemci içi geçiş; bağlantı, Kullanıcı değiştir ve Çıkış yarım işte önce ortak çıkış kutusuna sorar (`cikisSor`).
 import { useEffect, useState, type CSSProperties, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { cikisSor } from "../kalip/cikis.tsx";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
@@ -62,7 +62,6 @@ export function HesapDugme({ team, open, onClick }: { team: boolean; open: boole
 /** Kaynak `.hback` + `.halo.tmenu`. Açıkken çizilir; Escape ve perde kapatır. */
 export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }: { team: boolean; me: HesapKisi; links?: readonly HesapBaglanti[]; dark: boolean; onToggleTheme: () => void; onClose: () => void }) {
   const t = useTranslations("pano");
-  const router = useRouter();
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -94,12 +93,10 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
     { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: onToggleTheme },
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => cikisSor(() => void signOut("/login")) },
   ];
-  // T-990: menü bağlantıları istemci içi geçiştir ve yarım işte önce uygulamanın çıkış kutusuna sorar (tarayıcı penceresi çıkmaz).
-  const follow = (e: MouseEvent<HTMLAnchorElement>, href: string | undefined): void => {
-    if (href === undefined || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
+  // T-990: menü bağlantıları Next `Link` (istemci içi geçiş); yarım işte ortak çıkış koruması tıklamayı yakalar (tarayıcı penceresi çıkmaz).
+  const follow = (e: MouseEvent<HTMLAnchorElement>): void => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     onClose();
-    cikisSor(() => router.push(href));
   };
   return (
     <>
@@ -115,13 +112,13 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
           </span>
         </div>
         {links.map((l) => (
-          <a key={l.k} href={l.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={(e) => follow(e, l.href)} data-testid={`pano-menu-${l.k}`}>
+          <Link key={l.k} href={l.href ?? "#"} prefetch={false} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={follow} data-testid={`pano-menu-${l.k}`}>
             <i style={{ background: dz(l.color) }}>
               <Ico d={l.d} size={20} />
             </i>
             <span>{l.label}</span>
             {l.n !== undefined && l.n > 0 ? <em className="hbn">{l.n}</em> : null}
-          </a>
+          </Link>
         ))}
         {items.map((m) => (
           <button key={m.k} type="button" className={`hb${m.out === true ? " out" : ""}`} role="menuitem" onClick={m.go} data-testid={m.k === "menu" ? "app-bar-menu" : `pano-menu-${m.k}`} aria-haspopup={m.k === "menu" ? "dialog" : undefined}>

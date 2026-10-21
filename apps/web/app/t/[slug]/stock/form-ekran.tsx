@@ -11,7 +11,6 @@
 //  - Tarayıcı alan denetimi geçmezse tarayıcının kendi balonu yerine: ilk geçersiz alana kaydırma + odak, hata sesi, balon
 //    "N alan eksik: <etiketler>" (etiketler `labels` / `aria-label` / çevreleyen `label`'dan).
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
@@ -72,7 +71,6 @@ function etiket(el: Alan): string {
 
 export function FormEkran({ kind = "form", heading, dark, title, icon, back, mainLabel, mainAria, children, testId }: { kind?: "form" | "detay"; heading?: boolean; dark: boolean; title: string; icon: { readonly d: string; readonly color: string }; back: string; mainLabel: string; mainAria: string; children: ReactNode; testId?: string }) {
   const t = useTranslations("kalip");
-  const router = useRouter();
   const { say, node: toast } = useKalipToast("form");
   const [dirty, setDirty] = useState(false);
   // Form başına açılış görüntüsü (adım değişip yeni form gelirse ilk dokunuşta alınır: odak/basma her zaman yazmadan önce gelir).
@@ -168,7 +166,8 @@ export function FormEkran({ kind = "form", heading, dark, title, icon, back, mai
       icon={icon}
       testId={testId ?? "kalip-form"}
       bar={{
-        back: { onClick: () => korunan.sor(() => router.push(back)), aria: t("back") },
+        // Bağlantı kalır (href); KabukBar bağlantısı istemci içi geçiştir ve yarım işte `cikisSor` ile ortak cam kutuya sorar.
+        back: { href: back, aria: t("back") },
         main: {
           label: mainLabel,
           aria: mainAria,

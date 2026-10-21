@@ -3,7 +3,10 @@
 //  penceresi asla açılmaz); yazılıp silinen alan değişiklik sayılmaz; (3) boş zorunlu alanla Kaydet: alan altında neden, balon, odak;
 //  (4) Modüller açıkken perde ortak buzlu perdedir (backdrop-filter, ≥8px).
 import { expect, test, type Page } from "@playwright/test";
-import { loginEmptyTenant } from "./support/empty-tenant.ts";
+import { localClient, loginEmptyTenant } from "./support/empty-tenant.ts";
+
+// Kendi istemci adresi: projenin ortak giriş kovasını (sonraki panel/demo girişleri) tüketmesin (T-278 deseni).
+test.use(localClient("198.51.100.51"));
 
 /** Tarayıcının kendi kutusu (beforeunload / confirm / alert) açılırsa test düşer. */
 function noBrowserDialog(page: Page): string[] {

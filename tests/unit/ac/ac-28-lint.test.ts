@@ -1161,18 +1161,30 @@ function listSources(dir: string, out: string[] = []): string[] {
 /** Yasaklı kümeye ulaşan zincirler: ["apps/web/…/a.tsx", "apps/web/lib/x.ts", "@wms/db"]. */
 function clientGraph(root: string): { roots: string[]; violations: string[] } {
   const rel = (f: string): string => toPosix(path.relative(root, f));
-  const roots = [...listSources(path.join(root, "apps/web")), ...listSources(path.join(root, "packages/ui"))].filter((f) => {
-    const text = readIfFile(f);
-    return text !== null && parseModule(f, text).useClient;
-  });
+  // T-990: dosya okuma + ayrıştırma ve çözümleme her kök için tekrarlanıyordu (kök × erişilen dosya); ortak kalıp bileşenleri büyüyünce
+  // CI'da 5 sn sınırı aşıldı. Sonuçlar dosya başına bir kez hesaplanır; yürüyüş, zincirler ve ihlal kuralları AYNEN.
+  const parsed = new Map<string, ReturnType<typeof parseModule> | null>();
+  const parseOnce = (f: string): ReturnType<typeof parseModule> | null => {
+    if (!parsed.has(f)) {
+      const text = readIfFile(f);
+      parsed.set(f, text === null ? null : parseModule(f, text));
+    }
+    return parsed.get(f) ?? null;
+  };
+  const resolved = new Map<string, string | null>();
+  const resolveOnce = (from: string, bare: string, local: boolean): string | null => {
+    const key = local ? path.resolve(path.dirname(from), bare) : `ws:${bare}`;
+    if (!resolved.has(key)) resolved.set(key, local ? resolveWithExt(key) : resolveWorkspace(root, bare));
+    return resolved.get(key) ?? null;
+  };
+  const roots = [...listSources(path.join(root, "apps/web")), ...listSources(path.join(root, "packages/ui"))].filter((f) => parseOnce(f)?.useClient === true);
   const violations: string[] = [];
   for (const start of roots) {
     const seen = new Set<string>([start]);
     const queue: Array<{ file: string; chain: string[] }> = [{ file: start, chain: [rel(start)] }];
     for (let item = queue.shift(); item !== undefined; item = queue.shift()) {
-      const text = readIfFile(item.file);
-      if (text === null) continue;
-      const info = parseModule(item.file, text);
+      const info = parseOnce(item.file);
+      if (info === null) continue;
       if (info.useServer && item.file !== start) continue;
       for (const spec of info.imports) {
         const bare = spec.replace(/[?#].*$/, "");
@@ -1183,7 +1195,7 @@ function clientGraph(root: string): { roots: string[]; violations: string[] } {
         const local = bare.startsWith(".") || path.isAbsolute(bare);
         const workspace = /^@wms\//.test(bare);
         if (!local && !workspace) continue; // üçüncü taraf paket
-        const target = local ? resolveWithExt(path.resolve(path.dirname(item.file), bare)) : resolveWorkspace(root, bare);
+        const target = resolveOnce(item.file, bare, local);
         if (target === null) {
           // Çözülemeyen yerel/iş alanı belirteci güvenli tarafta ihlaldir (fail-closed).
           violations.push([...item.chain, `${spec} (ÇÖZÜLEMEDİ)`].join(" -> "));
