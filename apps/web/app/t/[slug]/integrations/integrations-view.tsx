@@ -375,6 +375,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                           color={ui.color}
                           on={s.enabled}
                           locked={na}
+                          lockedReason={na ? t("flowNa", { provider: pn }) : undefined}
                           aria={na ? t("flowNaAria", { name, provider: pn }) : s.enabled ? t("flowOnAria", { name }) : t("flowOffAria", { name })}
                           onToggle={toggle(f)}
                           testId={`flow-${f.flow}-toggle`}

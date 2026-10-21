@@ -114,10 +114,10 @@ export function KalipSatir({ id, title, value, d, color, open, changed = false, 
 }
 
 /** Kaynak `.sr2` + `.act2` açık/kapalı anahtar satırı. */
-export function KalipAnahtar({ title, sub, d, color, on, changed = false, locked = false, onToggle, aria, testId }: { title: string; sub?: string; d: string; color: string; on: boolean; changed?: boolean; locked?: boolean; onToggle: () => void; aria: string; testId?: string }) {
+export function KalipAnahtar({ title, sub, d, color, on, changed = false, locked = false, lockedReason, onToggle, aria, testId }: { title: string; sub?: string; d: string; color: string; on: boolean; changed?: boolean; locked?: boolean; /** Kilitliyken balondaki özel gerekçe (yoksa ortak "yetkin yok" cümlesi). */ lockedReason?: string | undefined; onToggle: () => void; aria: string; testId?: string }) {
   const t = useTranslations("kalip");
   return (
-    <button type="button" className={`sr2${changed ? " chg" : ""}${locked ? " lock" : ""}`} style={{ "--c": c(color) } as CSSProperties} aria-pressed={on} aria-label={aria} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus() : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
+    <button type="button" className={`sr2${changed ? " chg" : ""}${locked ? " lock" : ""}`} style={{ "--c": c(color) } as CSSProperties} aria-pressed={on} aria-label={aria} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus(lockedReason) : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
       <span className="ri">
         <Ico d={d} size={20} />
       </span>

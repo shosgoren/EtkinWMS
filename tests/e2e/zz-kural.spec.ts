@@ -42,7 +42,7 @@ test("T-436 Geri al: arşive alınan cari kart balondaki Geri al ile listeye dö
   await expect(form).toBeVisible();
   await form.getByLabel("Cari kodu *").fill(`GA-${id}`);
   await form.getByLabel("Ünvan *").fill(name);
-  await page.getByTestId("party-save").click();
+  await page.getByTestId("party-form-save").click();
   const card = page.getByTestId("party-card").filter({ hasText: name });
   await expect(card).toBeVisible();
 

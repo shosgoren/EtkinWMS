@@ -295,7 +295,7 @@ test("yerleşik API yolu: seçilir, WASM yüklenmez; yanlış okuma satır içi 
   await expect(overlay.getByRole("button", { name: "Elle gir" })).toBeVisible();
 
   // Doğru okuma: yeşil onay görünür, katman kapanır, kod TEK kez akışa gider (sunucu çağrısı sayısı = 1).
-  const before = await page.evaluate<{ vibrate: unknown[]; tones: number }>("window.__fb");
+  const before = await page.evaluate<{ vibrate: unknown[]; tones: number; freqs: number[] }>("window.__fb");
   const posts: string[] = [];
   page.on("request", (r) => {
     if (r.method() === "POST") posts.push(r.url());
@@ -308,11 +308,13 @@ test("yerleşik API yolu: seçilir, WASM yüklenmez; yanlış okuma satır içi 
   await page.screenshot({ path: path.join(SHOTS, "390x844-okundu.png") });
   await expect(overlay).toHaveCount(0);
   await expect(page.getByTestId("last-scan-code")).toContainText(CODE);
-  const after = await page.evaluate<{ vibrate: unknown[]; tones: number }>("window.__fb");
-  // Okuma anında tek kısa titreşim (60) ve tek ton; ardından sunucu reddi mevcut tam ekran uyarının kendi titreşimini ekleyebilir (sıra: önce okuma).
+  const after = await page.evaluate<{ vibrate: unknown[]; tones: number; freqs: number[] }>("window.__fb");
+  // Okuma anında tek kısa titreşim (60) ve tek olumlu bip (1200 Hz); ardından sunucu reddi tam ekran uyarının kendi sesini ve titreşimini
+  // ekleyebilir (sıra: önce okuma). T-436: uyarı sesi de ortak kaynaktan çaldığı için toplam ton sayısı değil, olumlu bip sayısı denetlenir.
   expect(after.vibrate[before.vibrate.length]).toBe(60);
   expect(after.vibrate.slice(before.vibrate.length).filter((v) => v === 60)).toHaveLength(1);
-  expect(after.tones).toBe(before.tones + 1);
+  expect(after.freqs[before.freqs.length], "okuma anında ilk ses olumlu bip").toBe(1200);
+  expect(after.freqs.slice(before.freqs.length).filter((f) => f === 1200), "tek olumlu bip").toHaveLength(1);
   await expect(page.getByTestId("scan-alert")).toBeVisible();
   await page.waitForTimeout(1200);
   expect(posts.length, "kod sunucuya tek kez gitti (çift okuma yok)").toBe(1);

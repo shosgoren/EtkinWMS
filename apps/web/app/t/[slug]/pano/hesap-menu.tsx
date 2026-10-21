@@ -87,7 +87,6 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
     ...(team || (kabuk?.workspaces ?? 1) < 2 ? [] : [{ k: "workspace", label: t("workspace"), color: "0E7C7B", d: PICON.list, go: () => cikisSor(() => window.location.assign("/workspaces")) }]),
     { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: onToggleTheme },
     { k: "sound", label: silent ? tk("soundOn") : tk("silent"), color: "6A7F91", d: DICON.speaker, go: () => setSilent(!silent) },
-    { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => void signOut("/login") },
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => cikisSor(() => void signOut("/login")) },
   ];
   // T-990: menü bağlantıları Next `Link` (istemci içi geçiş); yarım işte ortak çıkış koruması tıklamayı yakalar (tarayıcı penceresi çıkmaz).
