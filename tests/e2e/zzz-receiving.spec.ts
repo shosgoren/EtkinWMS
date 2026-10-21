@@ -739,7 +739,7 @@ test("Kokpit 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir); l
     const pw = await measure(page);
     metrics[`admin-${w}x${h}`] = pw;
     expect(pw.scrollWidth).toBeLessThanOrEqual(pw.clientWidth);
-    // T-979: kalıp üst çubuğu düğmeleri (Sorun / Destek / Hesap) tasarım kaynağındaki boyuttadır (B-97); ölçüm Kokpit içeriği + alt cam çubuk.
+    // T-979: kalıp üst çubuğu düğmeleri (Sorun / Destek / Hesap) tasarım kaynağındaki boyuttadır (B-99); ölçüm Kokpit içeriği + alt cam çubuk.
     expect([...(await smallTargets(page, '[data-testid="kokpit"] .inner')), ...(await smallTargets(page, '[data-testid="kabuk-dock"]'))], `${w}x${h}: 48 px altı hedef`).toEqual([]);
     if (mobile) await page.screenshot({ path: path.join(OUT, `final-home-admin-${w}x${h}.png`) });
   }
