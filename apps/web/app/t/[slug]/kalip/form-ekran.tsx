@@ -17,9 +17,9 @@ import { Ico, KalipEkran, tone, useKalipToast, type ToastKind } from "./ekran.ts
 import { FormBaglamCtx } from "./form-baglam.tsx";
 import { KalipKilit } from "./form.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "./surum.tsx";
-import { kdz } from "./tokens.ts";
+import { kdzOrtak } from "./tokens.ts";
 
-const c = (hex: string): string => kdz("dzf", hex);
+const c = (hex: string): string => kdzOrtak(hex);
 
 /** Kaydetme sonucu: başarı ya da alan hataları / genel neden (formda kalınır). */
 export type KaydetSonuc = { readonly ok: true } | { readonly ok: false; readonly alan?: Readonly<Record<string, string>>; readonly mesaj?: string };

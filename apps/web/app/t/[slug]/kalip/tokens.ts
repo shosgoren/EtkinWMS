@@ -10,3 +10,18 @@ const BY: Record<KalipScope, (hex: string) => string> = { dzl: dzListe, dzf: dzF
 export function kdz(scope: KalipScope, hex: string): string {
   return BY[scope](hex);
 }
+
+/**
+ * T-990: ortak seçim/önizleme bileşenleri için renk: önce form kabı, yoksa liste/detay/saha kabının kaynağında geçen renk (belirteçler
+ * genel CSS değişkenidir; kaynakta hiç olmayan renk yine hata verir). Ör. Hammadde kahvesi yalnız liste kaynağında geçer.
+ */
+export function kdzOrtak(hex: string): string {
+  for (const s of ["dzf", "dzl", "dzd"] as const) {
+    try {
+      return BY[s](hex);
+    } catch {
+      // sonraki kap
+    }
+  }
+  return BY.dzf(hex);
+}

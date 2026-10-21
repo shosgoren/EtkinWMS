@@ -6,18 +6,21 @@
 // Bilinçli farklar (DESIGN-PARITY, T-968): "Kritik" çipi yok (sunucu süzgeci yok; sorunlu kart yine dolu renk); çip sayıları yok;
 // kart rozeti kapsamdaki depoların eldeki toplamı, trafik ışığı minimum politikasından (yoksa sakin); sesle arama Etkin (B-62) ile.
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
-import { KalipPencereAlan, KalipPencereBolum, KalipPencereDugme, KalipPencereMetin, KalipPencereSecim } from "../kalip/pencere.tsx";
+import type { AlanKurali } from "../kalip/dogrula.ts";
+import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
+import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
+import { KalipSecim, KalipSecimGrubu } from "../kalip/secim.tsx";
+import { eskiSurumBildir, eskiSurumMu, eylem } from "../kalip/surum.tsx";
 import { CARD_VISUAL } from "./card-visual.ts";
 import { createItemAction, createUnitAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
@@ -136,58 +139,49 @@ function withRenamed(data: {
   });
 }
 
-function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { open: boolean; slug: string; units: readonly UnitOption[]; returnTo: string; onClose: () => void; onDone: (itemId: string) => void }) {
+/** Sunucu hatası → formda gösterim: kod çakışması kod alanının altında, diğerleri genel neden. */
+function itemSaveError(e: ServerError, tr: (k: string) => string): KaydetSonuc {
+  const key = errorKey(e);
+  const text = `${tr(key)} ${tr(`${key}Action`)}`.trim();
+  if (key === "validation_failed_code_taken") return { ok: false, alan: { code: text } };
+  return { ok: false, mesaj: e.requestId === undefined ? text : `${text} · ${e.requestId}` };
+}
+
+/**
+ * Yeni ürün — TAM EKRAN FORM (T-990; adres `?new=1`). Akıllı varsayılanlar: kart türü HM, birim ADET (yoksa sessiz seçim yok), 0 ondalık,
+ * takip yok, FIFO; kod sunucudan önerilir (tür önekiyle, `HM-000001`). Kart türü/birim/takip/toplama renkli seçim kutuları ya da aramalı
+ * seçim sayfası (yerel açılır liste yok). Doğrulama, çıkış kutusu ve Kaydet ortak `KalipFormEkran`'dadır.
+ */
+function ItemForm({ slug, dark, units, onBack, onDone }: { slug: string; dark: boolean; units: readonly UnitOption[]; onBack: () => void; onDone: (itemId: string) => void }) {
   const t = useTranslations("items.form");
+  const terr = useTranslations("items.errors");
   const te = useTranslations("easySetup");
   const tt = useTranslations("items.tracking");
   const tp = useTranslations("items.pick");
   const tc = useTranslations("items.cardType");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<ServerError | null>(null);
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
+  const initialV = { name: "", code: "", cardType: "HM" as CardType, unitId: defaultUnitId(units), scale: "0", tracking: "NONE", pick: "FIFO" };
+  const [initial, setInitial] = useState(initialV);
+  const [v, setV] = useState(initialV);
   const [touched, setTouched] = useState(false);
   // Gecikmeli öneri yanıtı kapanışın (closure) bayat `touched` değerini görmesin diye ref (T-259 MINOR-2).
   const touchedRef = useRef(false);
   const [codeState, setCodeState] = useState<"loading" | "ready" | "failed">("loading");
   const [unitList, setUnitList] = useState<readonly UnitOption[]>(units);
-  const [unitId, setUnitId] = useState(() => defaultUnitId(units));
-  const [cardType, setCardType] = useState<CardType>("HM");
-  const [scale, setScale] = useState("0");
-  const [tracking, setTracking] = useState("NONE");
-  const [pick, setPick] = useState("FIFO");
   const [unitOpen, setUnitOpen] = useState(false);
   const [unitCode, setUnitCode] = useState("");
   const [unitName, setUnitName] = useState("");
   const [unitBusy, setUnitBusy] = useState(false);
-  const [unitError, setUnitError] = useState<ServerError | null>(null);
+  const [unitError, setUnitError] = useState<string | null>(null);
+  const set = <K extends keyof typeof v>(k: K, val: (typeof v)[K]): void => setV((cur) => ({ ...cur, [k]: val }));
 
-  // Her açılışta akıllı varsayılanlar: HM, ADET, 0 ondalık, takip yok, FIFO; sıradaki kod sunucudan hazır gelir.
   // Kod önerisi kart türü önekiyle alınır (`HM-000001`, T-911); tür değişince kullanıcı koda dokunmadıysa öneri yenilenir.
+  // T-990 kök neden: çağrı reddedilirse (yayından sonra eski sayfa: "Server Action not found") `.then` hiç çalışmıyor, 5 sn sonra
+  // yanıltıcı "öneri alınamadı" yazıyordu. Ret yakalanır; eski sürümse "Uygulama güncellendi — Yenile" penceresi açılır.
+  const cardType = v.cardType;
   useEffect(() => {
-    if (!open) return;
-    setError(null);
-    setName("");
-    setCode("");
-    setTouched(false);
-    touchedRef.current = false;
-    setUnitList(units);
-    setUnitId(defaultUnitId(units));
-    setCardType("HM");
-    setScale("0");
-    setTracking("NONE");
-    setPick("FIFO");
-    setUnitOpen(false);
-    setUnitCode("");
-    setUnitName("");
-    setUnitError(null);
-    // units yalnızca açılışta okunur.
-  }, [open, slug]);
-  useEffect(() => {
-    if (!open || touchedRef.current) return;
+    if (touchedRef.current) return;
     let live = true;
     setCodeState("loading");
-    // Öneri hiç dönmezse alan sonsuza dek salt okunur kalmasın: süre dolunca "failed" (kullanıcı kodu kendisi yazar).
     let settled = false;
     const timer = setTimeout(() => {
       if (live && !settled) {
@@ -195,172 +189,193 @@ function CreateItemDialog({ open, slug, units, returnTo, onClose, onDone }: { op
         setCodeState("failed");
       }
     }, SUGGEST_TIMEOUT_MS);
-    void suggestItemCodeAction({ slug, prefix: cardType }).then((r) => {
+    const done = (code: string | null): void => {
       if (!live || settled) return;
       settled = true;
       clearTimeout(timer);
-      if (r.ok) {
-        // Kullanıcı kodu değiştirdiyse (`touched`; silip boş bırakmak dahil) öneri uygulanmaz (N-14: sessiz değişiklik yok).
-        if (!touchedRef.current) setCode(r.data.code);
-        setCodeState("ready");
-      } else setCodeState("failed");
-    });
+      if (code === null) {
+        setCodeState("failed");
+        return;
+      }
+      // Kullanıcı kodu değiştirdiyse öneri uygulanmaz (N-14: sessiz değişiklik yok). Öneri "değişiklik" sayılmaz: başlangıç da güncellenir.
+      if (!touchedRef.current) {
+        setV((cur) => ({ ...cur, code }));
+        setInitial((cur) => ({ ...cur, code }));
+      }
+      setCodeState("ready");
+    };
+    suggestItemCodeAction({ slug, prefix: cardType }).then(
+      (r) => done(r.ok ? r.data.code : null),
+      (e: unknown) => {
+        if (eskiSurumMu(e)) eskiSurumBildir();
+        done(null);
+      },
+    );
     return () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [open, slug, cardType]);
+  }, [slug, cardType]);
 
-  async function onAddUnit() {
-    setUnitBusy(true);
-    setUnitError(null);
-    const res = await createUnitAction({ slug, code: unitCode, name: unitName });
-    setUnitBusy(false);
-    if (!res.ok) {
-      setUnitError(toServerError(res.error));
+  async function onAddUnit(): Promise<void> {
+    if (unitCode.trim() === "" || unitName.trim() === "") {
+      tone("err");
+      setUnitError(te("form.required"));
       return;
     }
+    setUnitBusy(true);
+    setUnitError(null);
+    const res = await eylem(() => createUnitAction({ slug, code: unitCode, name: unitName }));
+    setUnitBusy(false);
+    if (res === null || !res.ok) {
+      tone("err");
+      setUnitError(res === null ? terr("internal") : `${terr(errorKey(res.error))} ${terr(`${errorKey(res.error)}Action`)}`);
+      return;
+    }
+    tone("ok");
     const added: UnitOption = { id: (res.data as { unitId: string }).unitId, code: unitCode.trim().toUpperCase(), name: unitName.trim() };
     setUnitList((list) => [...list, added].sort((a, b) => a.code.localeCompare(b.code)));
-    setUnitId(added.id);
+    set("unitId", added.id);
     setUnitOpen(false);
     setUnitCode("");
     setUnitName("");
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
+  async function save(): Promise<KaydetSonuc> {
     const res = await createItemAction({
       slug,
-      code,
-      name,
-      ...(unitList.length === 0 ? {} : { baseUnitId: unitId }),
-      quantityScale: Number(scale),
-      trackingMode: tracking,
-      pickPolicy: pick,
-      cardType,
+      code: v.code,
+      name: v.name,
+      ...(unitList.length === 0 ? {} : { baseUnitId: v.unitId }),
+      quantityScale: Number(v.scale),
+      trackingMode: v.tracking,
+      pickPolicy: v.pick,
+      cardType: v.cardType,
       autoCode: !touched && codeState === "ready",
     });
-    setBusy(false);
-    if (!res.ok) {
-      setError(toServerError(res.error));
-      return;
-    }
-    onDone((res.data as { itemId: string }).itemId);
+    if (!res.ok) return itemSaveError(toServerError(res.error), (k) => terr(k));
+    created.current = (res.data as { itemId: string }).itemId;
+    return { ok: true };
   }
+  const created = useRef<string | null>(null);
 
+  const rules: AlanKurali[] = [
+    { name: "name", label: t("name"), required: true, maxLength: 512 },
+    { name: "cardType", label: t("cardType"), required: true },
+    { name: "code", label: t("code"), required: true, maxLength: 512 },
+    ...(unitList.length === 0 ? [] : [{ name: "unitId", label: t("baseUnit"), required: true }]),
+  ];
+  const vis = CARD_VISUAL[v.cardType];
+  const unit = unitList.find((u) => u.id === v.unitId);
+  const codeHint =
+    codeState === "loading" ? te("code.loading") : codeState === "failed" ? te("code.failed") : touched ? `${te("code.custom")} ${t("codeHint")}` : `${te("code.suggested")} ${t("codeHint")}`;
   return (
-    <Sheet
-      open={open}
+    <KalipFormEkran
+      dark={dark}
       title={t("createTitle")}
-      titleId="create-item-title"
-      icon={{ d: LICON.box, color: "2F5DA8" }}
-      busy={busy}
-      onClose={onClose}
-      onSubmit={(e) => void onSubmit(e)}
-      footer={
-        <>
-          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
-            {t("cancel")}
-          </KalipPencereDugme>
-          <KalipPencereDugme type="submit" loading={busy} disabled={codeState === "loading"}>
-            {t("submit")}
-          </KalipPencereDugme>
-        </>
+      icon={{ d: vis.d, color: vis.color }}
+      testId="item-form"
+      values={v}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={() => {
+        if (created.current !== null) onDone(created.current);
+      }}
+      onBack={onBack}
+      preview={
+        <KalipOnizleme
+          name={v.name}
+          code={v.code}
+          d={vis.d}
+          color={vis.color}
+          kind={tc(v.cardType)}
+          rows={unit === undefined ? [] : [{ k: t("baseUnit"), v: `${unit.code} · ${unit.name}` }]}
+        />
       }
     >
-      <KalipPencereAlan label={t("name")} name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required maxLength={512} />
-      <KalipPencereSecim label={t("cardType")} hint={t("cardTypeHint")} id="create-card-type" name="cardType" value={cardType} onChange={(e) => setCardType(e.target.value as CardType)}>
-        {CARD_TYPES.map((k) => (
-          <option key={k} value={k}>
-            {k} · {tc(k)}
-          </option>
-        ))}
-      </KalipPencereSecim>
-      <KalipPencereAlan
-        label={t("code")}
-        hint={codeState === "loading" ? te("code.loading") : codeState === "failed" ? te("code.failed") : touched ? `${te("code.custom")} ${t("codeHint")}` : `${te("code.suggested")} ${t("codeHint")}`}
-        name="code"
-        value={code}
-        readOnly={codeState === "loading"}
-        aria-busy={codeState === "loading"}
-        onChange={(e) => {
-          touchedRef.current = true;
-          setTouched(true);
-          setCode(e.target.value);
-        }}
-        autoComplete="off"
-        required
-        maxLength={512}
-      />
-      {unitList.length === 0 ? <Banner kind="info">{te("items.unitAuto")}</Banner> : null}
-      <KalipPencereSecim
-        label={t("baseUnit")}
-        hint={t("baseUnitHint")}
-        id="create-base-unit"
-        name="baseUnitId"
-        required={unitList.length > 0}
-        disabled={unitList.length === 0}
-        value={unitId}
-        onChange={(e) => setUnitId(e.target.value)}
-        note={unitList.length > 0 && !unitList.some((u) => u.code.toUpperCase() === "ADET") ? <KalipPencereMetin strong>{t("baseUnitChoose")}</KalipPencereMetin> : undefined}
-      >
-        {unitList.length === 0 ? <option value="">{te("items.unitDefaultOption")}</option> : null}
-        {unitList.length > 0 && unitId === "" ? <option value="">{t("baseUnitPlaceholder")}</option> : null}
-        {unitList.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.code} · {u.name}
-          </option>
-        ))}
-      </KalipPencereSecim>
-      {unitOpen ? (
-        <div data-testid="new-unit" className="kpbox">
-          <KalipPencereAlan label={t("newUnitCode")} hint={t("newUnitCodeHint")} name="newUnitCode" value={unitCode} onChange={(e) => setUnitCode(e.target.value)} autoComplete="off" autoCapitalize="characters" maxLength={64} />
-          <KalipPencereAlan label={t("newUnitName")} name="newUnitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} autoComplete="off" maxLength={200} />
-          {unitError ? <ServerErrorBanner error={unitError} returnTo={returnTo} /> : null}
-          <div className="kpf">
-            <KalipPencereDugme kind="cancel" disabled={unitBusy} onClick={() => setUnitOpen(false)}>
-              {t("cancel")}
-            </KalipPencereDugme>
-            <KalipPencereDugme loading={unitBusy} disabled={unitCode.trim() === "" || unitName.trim() === ""} onClick={() => void onAddUnit()}>
-              {t("newUnitAdd")}
-            </KalipPencereDugme>
+      <KalipGrup title={t("createTitle")} sub={t("cardTypeHint")} d={vis.d} color={vis.color}>
+        <KalipAlan label={`${t("name")} *`} name="name" value={v.name} onChange={(e) => set("name", e.target.value)} autoComplete="off" maxLength={512} />
+        <KalipSecimGrubu
+          name="cardType"
+          label={t("cardType")}
+          value={v.cardType}
+          color={vis.color}
+          onPick={(id) => set("cardType", id as CardType)}
+          options={CARD_TYPES.map((k) => ({ id: k, label: tc(k), sub: k, d: CARD_VISUAL[k].d, color: CARD_VISUAL[k].color }))}
+          testId="item-card-type"
+        />
+        <KalipAlan
+          label={`${t("code")} *`}
+          hint={codeHint}
+          name="code"
+          value={v.code}
+          readOnly={codeState === "loading"}
+          aria-busy={codeState === "loading"}
+          onChange={(e) => {
+            touchedRef.current = true;
+            setTouched(true);
+            set("code", e.target.value);
+          }}
+          autoComplete="off"
+          maxLength={512}
+        />
+      </KalipGrup>
+      <KalipGrup title={t("baseUnit")} sub={t("baseUnitHint")} d={LICON.tag} color="2F5DA8">
+        {unitList.length === 0 ? (
+          <KalipSabit title={te("items.unitDefaultOption")} d={LICON.tag} color="2F5DA8" pill={{ label: te("items.unitAuto"), ok: true }} aria={te("items.unitAuto")} />
+        ) : (
+          <KalipSecim
+            name="unitId"
+            label={t("baseUnit")}
+            {...(unitList.some((u) => u.code.toUpperCase() === "ADET") ? {} : { hint: t("baseUnitChoose") })}
+            value={v.unitId}
+            color="2F5DA8"
+            placeholder={t("baseUnitPlaceholder")}
+            icon={{ d: LICON.tag, color: "2F5DA8" }}
+            onPick={(id) => set("unitId", id)}
+            options={unitList.map((u) => ({ id: u.id, label: u.code, sub: u.name, keys: [u.name] }))}
+            testId="item-base-unit"
+          />
+        )}
+        {unitOpen ? (
+          <div data-testid="new-unit" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <KalipAlan label={t("newUnitCode")} hint={t("newUnitCodeHint")} error={unitError ?? undefined} name="newUnitCode" value={unitCode} onChange={(e) => setUnitCode(e.target.value)} autoComplete="off" autoCapitalize="characters" maxLength={64} />
+            <KalipAlan label={t("newUnitName")} name="newUnitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} autoComplete="off" maxLength={200} />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" className="btn n" disabled={unitBusy} onClick={() => setUnitOpen(false)}>
+                {t("cancel")}
+              </button>
+              <button type="button" className="btn" aria-busy={unitBusy || undefined} onClick={() => void onAddUnit()}>
+                <Ico d={LICON.plus} size={18} />
+                {t("newUnitAdd")}
+              </button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <button type="button" onClick={() => setUnitOpen(true)} className="kplnk">
-          <Ico d={LICON.plus} size={18} />
-          {t("newUnit")}
-        </button>
-      )}
-      <KalipPencereBolum summary={t("advanced")}>
-        <KalipPencereMetin>{t("advancedHint")}</KalipPencereMetin>
-        <KalipPencereSecim label={t("scale")} hint={t("scaleHint")} id="create-scale" name="quantityScale" value={scale} onChange={(e) => setScale(e.target.value)}>
-          {SCALES.map((n) => (
-            <option key={n} value={n}>
-              {n === 0 ? t("scaleInteger") : t("scaleDecimals", { count: n })}
-            </option>
-          ))}
-        </KalipPencereSecim>
-        <KalipPencereSecim label={t("tracking")} id="create-tracking" name="trackingMode" value={tracking} onChange={(e) => setTracking(e.target.value)}>
-          {TRACKING.map((k) => (
-            <option key={k} value={k}>
-              {tt(k)}
-            </option>
-          ))}
-        </KalipPencereSecim>
-        <KalipPencereSecim label={t("pick")} id="create-pick" name="pickPolicy" value={pick} onChange={(e) => setPick(e.target.value)}>
-          {PICK.map((k) => (
-            <option key={k} value={k}>
-              {tp(k)}
-            </option>
-          ))}
-        </KalipPencereSecim>
-      </KalipPencereBolum>
-      {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
-    </Sheet>
+        ) : (
+          <button type="button" className="btn n" onClick={() => setUnitOpen(true)} style={{ alignSelf: "flex-start" }}>
+            <Ico d={LICON.plus} size={18} />
+            {t("newUnit")}
+          </button>
+        )}
+      </KalipGrup>
+      <KalipGrup title={t("advanced")} sub={t("advancedHint")} d={LICON.gear} color="4E6476">
+        <KalipSecim
+          name="scale"
+          label={t("scale")}
+          hint={t("scaleHint")}
+          value={v.scale}
+          color="4E6476"
+          list
+          icon={{ d: LICON.gear, color: "4E6476" }}
+          onPick={(id) => set("scale", id)}
+          options={SCALES.map((n) => ({ id: String(n), label: n === 0 ? t("scaleInteger") : t("scaleDecimals", { count: n }) }))}
+          testId="item-scale"
+        />
+        <KalipSecimGrubu name="tracking" label={t("tracking")} value={v.tracking} color="6C4BD8" onPick={(id) => set("tracking", id)} options={TRACKING.map((k) => ({ id: k, label: tt(k), d: k === "NONE" ? LICON.close : LICON.tag }))} testId="item-tracking" />
+        <KalipSecimGrubu name="pick" label={t("pick")} value={v.pick} color="0E7C7B" onPick={(id) => set("pick", id)} options={PICK.map((k) => ({ id: k, label: tp(k), d: k === "FIFO" ? LICON.arrow : LICON.clock }))} testId="item-pick" />
+      </KalipGrup>
+    </KalipFormEkran>
   );
 }
 
@@ -412,25 +427,22 @@ export function ItemsView({
   const te = useTranslations("easySetup.items");
   const locale = useLocale();
   const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
   const home = `/t/${encodeURIComponent(slug)}`;
   const base = `${home}/items`;
-  const [createOpen, setCreateOpen] = useState(false);
-  const [version, setVersion] = useState(0);
+
   const [cam, setCam] = useState(false);
-  const progress = useSetupProgress(slug, canManage, version);
+  const progress = useSetupProgress(slug, canManage, 0);
   const guide = canManage && progress !== null && !isSetupComplete(progress);
   const { say, node: toast } = useKalipToast("liste");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Rehberin büyük düğmesi `?new=1` ile gelir: formu aç, adresi temizle.
-  useEffect(() => {
-    if (params.get("new") === "1" && canManage) {
-      setCreateOpen(true);
-      router.replace(pathname);
-    }
-  }, [params, canManage, pathname, router]);
+  // T-990: ekleme tam ekran formdur; adres `?new=1` (rehberin büyük düğmesi de buraya gelir). Geri listeye döner.
+  const creating = params.get("new") === "1" && canManage;
+  const openCreate = (): void => {
+    tone("tap");
+    router.push(`${base}?new=1`);
+  };
   const filtered = query.q !== "" || query.status !== "" || query.type !== "";
   const href = (next: { q?: string; status?: string; type?: string; after?: string }): string => {
     const p = new URLSearchParams();
@@ -527,12 +539,24 @@ export function ItemsView({
   const adimlar: KalipAdim[] = steps.map((s) => {
     const [title, sub, cta, color, d] = stepTitle[s.key];
     const state = s.done ? "done" : s === nextStep ? "now" : "locked";
-    const act = state === "locked" ? { onClick: blocked } : s.href === null ? { onClick: () => setCreateOpen(true) } : { href: s.href };
+    const act = state === "locked" ? { onClick: blocked } : s.href === null ? { onClick: openCreate } : { href: s.href };
     return { key: s.key, title, sub, cta, color, d, state, ...act };
   });
   const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
   const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
   const noWarehouse = guide && progress !== null && !progress.hasWarehouse;
+
+  if (creating) {
+    return (
+      <ItemForm
+        slug={slug}
+        dark={dark}
+        units={units}
+        onBack={() => router.push(base)}
+        onDone={(itemId) => router.push(`${base}/${encodeURIComponent(itemId)}`)}
+      />
+    );
+  }
 
   const listRows = live ?? null;
   const showSetup = guide && items.length === 0 && !filtered && live === null;
@@ -554,10 +578,8 @@ export function ItemsView({
                 aria: tk("addAria"),
                 d: LICON.plus,
                 disabled: !canManage,
-                onClick: () => {
-                  tone("tap");
-                  setCreateOpen(true);
-                },
+                disabledReason: t("lockedReason"),
+                onClick: openCreate,
                 testId: "items-add",
               },
         }}
@@ -587,7 +609,7 @@ export function ItemsView({
         <KalipCipler label={tk("filter")} chips={chips} />
         {!canManage ? <p className="sr">{t("lockedReason")}</p> : null}
         {guide && nextStep !== undefined && items.length > 0 ? (
-          <KalipDaha href={nextStep.href ?? undefined} onClick={nextStep.href === null ? () => setCreateOpen(true) : undefined} iconD={LICON.clip} testId="setup-row">
+          <KalipDaha href={nextStep.href ?? undefined} onClick={nextStep.href === null ? openCreate : undefined} iconD={LICON.clip} testId="setup-row">
             {setupSub}
           </KalipDaha>
         ) : null}
@@ -697,18 +719,6 @@ export function ItemsView({
         />
       ) : null}
 
-      <CreateItemDialog
-        open={createOpen}
-        slug={slug}
-        units={units}
-        returnTo={base}
-        onClose={() => setCreateOpen(false)}
-        onDone={(itemId) => {
-          setCreateOpen(false);
-          setVersion((n) => n + 1);
-          router.push(`${base}/${encodeURIComponent(itemId)}`);
-        }}
-      />
     </>
   );
 }

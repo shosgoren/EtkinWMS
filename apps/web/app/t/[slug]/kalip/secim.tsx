@@ -13,9 +13,9 @@ import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, MicIco, tone } from "./ekran.tsx";
 import { useAlanHata } from "./form-baglam.tsx";
 import { KalipPerdeKatman } from "./perde.tsx";
-import { kdz } from "./tokens.ts";
+import { kdzOrtak } from "./tokens.ts";
 
-const c = (hex: string): string => kdz("dzf", hex);
+const c = (hex: string): string => kdzOrtak(hex);
 
 export interface KalipSecimSecenek {
   readonly id: string;
