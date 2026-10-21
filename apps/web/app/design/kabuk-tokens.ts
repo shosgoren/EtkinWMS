@@ -30,7 +30,6 @@ const T: Readonly<Record<string, string>> = {
   "23,46,66,.38": "var(--color-dz-a-bhcoec-di)",
   "23,46,66,.4": "var(--color-dz-a-bhcoec-e)",
   "23,46,66,.5": "var(--color-dz-a-bhcoec-f)",
-  "23,46,66,.6": "var(--color-dz-a-bhcoec-g)",
   "23,46,66,.7": "var(--color-dz-a-bhcoec-h)",
   "238,241,244,.85": "var(--color-dz-a-oopbpe-if)",
   "240,194,75,.22": "var(--color-dz-a-pamcel-cc)",

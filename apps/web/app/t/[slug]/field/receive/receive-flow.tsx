@@ -3,13 +3,13 @@
 // uyarıyla durdurulur (N-13); miktar 48 px adım tuşlarıyla (N-02). Yetki, fazla kabul ve durum kuralları domain'dedir (`receiveGoods`);
 // bu dosya yalnızca girdi toplar, sunucu hatasını (kod + sonraki eylem) gösterir. Bu dosyadaki ortak saha parçaları `putaway-flow.tsx` ile paylaşılır.
 import Link from "next/link";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, CircleAlert, CircleCheck, ScanField, ScanLine } from "@wms/ui";
 import { ScannerService, gateScan, type ScanSource, type ScannerSource } from "../../../../../lib/scanner/scanner-core.ts";
 import { createKeystrokeSource } from "../../../../../lib/scanner/keystroke-source.ts";
 import { cameraFeedback, classifyCameraError, createFrameDecoder, iosShareLocation, openCamera, platformOf, startScanLoop } from "../../../../../lib/scanner/camera-source.ts";
-import type { CameraFailure, CameraSession, FrameDecoder, RejectReason } from "../../../../../lib/scanner/camera-source.ts";
+import type { CameraFailure, CameraSession, FrameDecoder, RejectReason, ScanStats } from "../../../../../lib/scanner/camera-source.ts";
 import { intOf } from "../../receipts/receipt-form.tsx";
 import { compoundQuantityAction } from "../../receipts/actions.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
@@ -323,12 +323,17 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
   const [attempt, setAttempt] = useState(0);
   const [torch, setTorch] = useState<{ supported: boolean; on: boolean; failed: boolean }>({ supported: false, on: false, failed: false });
   const [decoderKind, setDecoderKind] = useState<"native" | "wasm" | "">("");
+  const reticle = useRef<HTMLDivElement>(null);
+  const [stats, setStats] = useState<ScanStats | null>(null);
   useEffect(() => {
     let cancelled = false;
     let stopLoop: (() => void) | null = null;
     let cam: CameraSession | null = null;
     setState({ phase: "starting" });
     setTorch({ supported: false, on: false, failed: false });
+    // T-446: çözücü (WASM indirme + derleme) kamera izni/açılışıyla PARALEL hazırlanır (yalnızca tarama ekranında).
+    const decoderP = createFrameDecoder();
+    decoderP.catch(() => undefined);
     void (async () => {
       try {
         cam = await openCamera();
@@ -354,7 +359,7 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
       setTorch({ supported: cam.torchSupported, on: false, failed: false });
       let decoder: FrameDecoder;
       try {
-        decoder = await createFrameDecoder(); // WASM yolunda çözücü burada tembel yüklenir (yalnızca tarama ekranında)
+        decoder = await decoderP;
       } catch {
         cam.stop();
         if (!cancelled) setState({ phase: "failed", failure: "decoder" });
@@ -372,6 +377,8 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
         stopLoop = startScanLoop({
           decoder,
           video: v,
+          roiTarget: () => reticle.current,
+          onStats: setStats,
           onRejected: (reason) => {
             cameraFeedback("bad");
             setState({ phase: "rejected", reason });
@@ -406,6 +413,13 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
     };
   }, [attempt]);
 
+  // Dokun-odakla (T-446): görüntüye dokununca o noktaya (destek varsa) yeniden odaklanır.
+  const focusTap = (e: ReactPointerEvent<HTMLVideoElement>): void => {
+    const s = session.current;
+    const r = e.currentTarget.getBoundingClientRect();
+    if (s === null || r.width === 0 || r.height === 0) return;
+    void s.focusAt((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+  };
   const toggleTorch = (): void => {
     const s = session.current;
     if (s === null) return;
@@ -458,12 +472,16 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
       data-testid="camera-overlay"
       data-phase={state.phase}
       data-decoder={decoderKind}
+      data-first-read-ms={stats?.firstReadMs}
+      data-decode-avg-ms={stats?.decodeAvgMs}
+      data-decode-max-ms={stats?.decodeMaxMs}
+      data-scan-frames={stats?.frames}
       className="fixed inset-0 z-40 grid grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden bg-ink p-3 text-on-accent landscape:grid-cols-[minmax(0,1fr)_20rem] landscape:grid-rows-[minmax(0,1fr)_auto]"
     >
       <div className="row-start-1 landscape:col-start-2 landscape:self-center">{text}</div>
       <div data-testid="camera-viewport" className="relative row-start-2 min-h-0 min-w-0 overflow-hidden rounded-card bg-ink landscape:col-start-1 landscape:row-span-2 landscape:row-start-1">
-        <video ref={video} muted playsInline data-testid="camera-video" className={`size-full object-cover ${failed ? "invisible" : ""}`} />
-        {live ? <div aria-hidden="true" data-testid="camera-reticle" className="pointer-events-none absolute inset-x-[10%] inset-y-[25%] rounded-card border-4 border-success" /> : null}
+        <video ref={video} muted playsInline data-testid="camera-video" onPointerUp={focusTap} className={`size-full object-cover ${failed ? "invisible" : ""}`} />
+        {live ? <div ref={reticle} aria-hidden="true" data-testid="camera-reticle" className="pointer-events-none absolute inset-x-[10%] inset-y-[25%] rounded-card border-4 border-success" /> : null}
         {state.phase === "starting" ? (
           <p role="status" data-testid="camera-opening" className="absolute inset-x-0 top-1/2 mx-auto w-fit max-w-[90%] -translate-y-1/2 rounded-control bg-ink px-4 py-2 text-center text-lg font-bold text-on-accent">
             {t("camera.starting")}

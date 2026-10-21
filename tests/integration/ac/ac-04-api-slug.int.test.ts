@@ -341,6 +341,8 @@ const LOADERS = [
   "counts/page.tsx",
   // T-981b: Ayarlar › Bağlantılar (üyelik özeti sayfanın kendisinde; çapraz tenant 404, veri okuması yok).
   "settings/baglantilar/page.tsx",
+  // T-991: ERP entegrasyonu (settings.manage; `getIntegrationOverview` çapraz tenant 404).
+  "integrations/page.tsx",
 ] as const;
 /**
  * T-304: tenant verisi çizmeyen saha kabuğu sayfaları. Üyelik kararı üst `layout.tsx`'tedir (yukarıdaki LOADERS satırı çapraz tenant
@@ -552,7 +554,7 @@ describe("paket kabulü ve etiket yükleyicileri — gerçek DB üyelik/izin/RLS
       expect(body).not.toContain(packageDocs.postedA);
       expect(body).not.toContain("200.000000");
       if (rel === PACKAGE_LOADERS[0]) expect(body).toContain("locked");
-      else expect(body).toContain("stok görüntüleme yetkisi");
+      else expect(body).toContain("stockViewRequired"); // T-999c: yetki uyarısı mesaj anahtarıyla çizilir (intl sahte modülü anahtarı döndürür)
       expect(await snapshot(A)).toEqual(before);
     });
 

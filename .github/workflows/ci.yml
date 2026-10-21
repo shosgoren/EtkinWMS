@@ -55,6 +55,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
+      # T-445: iş PR'ları STATE/BACKLOG yerine docs/changes/<T-xxx>.md parçası yazar; biçim ve B kimlikleri burada doğrulanır
+      # (yazmaz, {PR}/{SHA} çözmez). İşleme koordinatörün `node scripts/changes/fold.mjs` komutudur.
+      - name: docs/changes parçaları (fold --check)
+        run: node scripts/changes/fold.mjs --check
       # upload-artifact gizli (.ile başlayan) yolları varsayılan olarak atlar; include-hidden-files
       # açmak yerine .artifacts/ gizli olmayan bir geçici dizine kopyalanır.
       - name: Stage .artifacts
@@ -141,10 +145,11 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "kod değişikliği: $code"
 
-  # T-925: aynı testler iki makineye bölünür (vitest --shard); her parça kendi compose veritabanını kurar. Kapsam değişmez; duvar
-  # süresi ~yarıya iner. Sabit `int` adı aşağıdaki toplayıcı iştedir.
+  # T-925: aynı testler makinelere bölünür (vitest --shard); her parça kendi compose veritabanını kurar. Kapsam değişmez.
+  # T-445 (kullanıcı kararı 21 Ekim "süreler çok uzun"): 2 → 3 parça (parça 1/2 ~6,2 dk idi; e2e parçalarının altında kalsın).
+  # Sabit `int` adı aşağıdaki toplayıcı iştedir; parça sayısı değişince yalnız `matrix.shard` ve `--shard=…/N` birlikte değişir.
   int-shard:
-    name: int-shard (${{ matrix.shard }}/2)
+    name: int-shard (${{ matrix.shard }}/3)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
@@ -152,7 +157,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -169,7 +174,7 @@ jobs:
         run: |
           mkdir -p .artifacts/test-int
           set -o pipefail
-          pnpm test:int --shard=${{ matrix.shard }}/2 2>&1 | tee .artifacts/test-int/run.log
+          pnpm test:int --shard=${{ matrix.shard }}/3 2>&1 | tee .artifacts/test-int/run.log
       - name: Stage .artifacts/test-int
         if: always()
         run: |
@@ -207,8 +212,12 @@ jobs:
   # .env.example yer tutucuları; BETTER_AUTH_SECRET/DEMO_PASSWORD/QUEUE_SEAL_KEY koşu başına rastgele üretilir.
   # T-925: proje grupları ayrı makinelerde (masaüstü / mobil); her parça kendi compose + web + worker ortamını kurar. Proje içi sıra
   # (z/zz/zzz dosya adları) aynı kalır; projeler zaten birbirinden bağımsız sırayla koşuyordu. Sabit `e2e` adı toplayıcı iştedir.
+  # T-445: her grup ayrıca Playwright `--shard=k/2` ile ikiye bölünür (4 makine). `fullyParallel: false` olduğundan Playwright dosyaları
+  # bölmez, dosya sırasını koruyarak ARDIŞIK dilimler verir (playwright 1.56.1 runner/testGroups.js filterForShard): her dosya tam
+  # olarak bir parçada, aynı göreli sırada ve taze bir yığında (global-setup) koşar; receiving-* projesi grubun son dilimindedir.
+  # Kapsam değişmez (iki parçanın toplamı = grubun tamamı); karantina/atlama yok.
   e2e-shard:
-    name: e2e-shard (${{ matrix.group }})
+    name: e2e-shard (${{ matrix.group }} ${{ matrix.part }}/2)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
@@ -217,6 +226,7 @@ jobs:
       fail-fast: false
       matrix:
         group: [desktop, mobile]
+        part: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -227,14 +237,36 @@ jobs:
           node-version-file: package.json
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm exec playwright install --with-deps chromium
+      # T-445: Playwright tarayıcı önbelleği (anahtar = kurulu @playwright/test sürümü). Önbellek yalnız bu deponun iş akışlarınca
+      # yazılır; PR koşusu kendi PR kapsamına yazar, main'in önbelleğini değiştiremez. İsabette yalnız işletim sistemi bağımlılıkları kurulur.
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      # T-445: Next derleme önbelleği (global-setup `next build`). Anahtar kilit dosyası + web/paket kaynakları; kısmi isabet restore-keys ile.
+      - name: Cache Next build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/**/*.ts', 'apps/web/**/*.tsx', 'apps/web/**/*.css', '!apps/web/node_modules/**', '!apps/web/.next/**', 'packages/*/src/**') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: cp .env.example .env
       - run: docker compose up -d --wait --wait-timeout 300
       - name: pnpm test:e2e
         run: |
           mkdir -p .artifacts/e2e
           set -o pipefail
-          pnpm test:e2e --project=${{ matrix.group }} --project=receiving-${{ matrix.group }} 2>&1 | tee .artifacts/e2e/run.log
+          pnpm test:e2e --project=${{ matrix.group }} --project=receiving-${{ matrix.group }} --shard=${{ matrix.part }}/2 2>&1 | tee .artifacts/e2e/run.log
       - name: Stage .artifacts/e2e
         if: always()
         run: |
@@ -245,7 +277,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-artifacts-${{ matrix.group }}
+          name: e2e-artifacts-${{ matrix.group }}-${{ matrix.part }}
           path: ${{ runner.temp }}/e2e-artifacts/
           if-no-files-found: warn
           retention-days: 14
@@ -253,7 +285,7 @@ jobs:
         if: always()
         run: docker compose down -v --remove-orphans
 
-  # Sabit ad `e2e` (deploy-vps / release.py dokuz kapı listesi): iki proje grubu da başarılıysa ya da yalnız belge değiştiyse yeşil.
+  # Sabit ad `e2e` (deploy-vps / release.py dokuz kapı listesi): bütün parçalar (2 grup × 2 dilim) başarılıysa ya da yalnız belge değiştiyse yeşil.
   e2e:
     name: e2e
     needs: [changes, e2e-shard]

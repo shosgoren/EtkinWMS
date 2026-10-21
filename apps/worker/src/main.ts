@@ -21,6 +21,8 @@ import { startWorkerHeartbeat, workerInstanceId, workerVersion } from "./jobs/wo
 import { consistencySingletonKey, createStockConsistencyHandler, startConsistencySchedule } from "./jobs/stock-consistency.js";
 import { createMailer, createSendEmailHandler } from "./jobs/send-email.js";
 import { createSupportNotifyHandler } from "./jobs/support-notify.js";
+import { createIntegrationSyncHandler, startIntegrationSchedule } from "./jobs/integration-sync.js";
+import { integrationSyncSingletonKey, scheduledIntegrations } from "@wms/domain/integrations";
 import { createJsonLogger, createLifecycle, EXIT_FAILURE, parseShutdownTimeoutMs } from "./lifecycle.js";
 
 const logger = createJsonLogger();
@@ -116,6 +118,9 @@ HANDLERS["stock.consistency.check"] = createStockConsistencyHandler({ consumeOnc
 // T-967: yeni destek talebi → operatöre WhatsApp kısa bildirimi (CallMeBot). Anahtarlar yoksa iş sessizce atlanır (panel rozeti asıl kayıt).
 HANDLERS["support.notify"] = createSupportNotifyHandler({ env: process.env, logger });
 
+// T-991: ERP senkronu (Paraşüt). Sır DB'de mühürlü (QUEUE_SEAL_KEY); sağlayıcı adresi sabit (PARASUT_BASE_URL yalnız geri döngü sahte sunucu).
+HANDLERS["integration.sync"] = createIntegrationSyncHandler({ env: process.env, logger });
+
 const undecided = JOB_TYPES.filter((t) => HANDLERS[t] === undefined && !DEFERRED_JOB_TYPES.includes(t));
 if (undecided.length > 0) {
   logger.error("job types without handler", { types: undecided });
@@ -203,6 +208,21 @@ const countAbandonSchedule = startCountAbandonSchedule({
   logger,
 });
 
+// ERP senkron zamanlayıcısı (T-991): açılışta bir kez + saatte bir; açık akışlı bağlı entegrasyon başına tek iş (singletonKey).
+const integrationSchedule = startIntegrationSchedule({
+  listActiveTenantIds: (after, limit) => queue.listActiveTenantIds(after, limit),
+  enqueueFor: (tenantId) =>
+    withSystemTenant(db, tenantId, "integration.schedule", async (tx) => {
+      let n = 0;
+      for (const integrationId of await scheduledIntegrations(tx, tenantId)) {
+        const r = await queue.enqueue(tx, { type: "integration.sync", payload: { integrationId, trigger: "SCHEDULE" }, singletonKey: integrationSyncSingletonKey(integrationId) });
+        if (r.jobId !== null) n += 1;
+      }
+      return n;
+    }),
+  logger,
+});
+
 // Demo talebi içe alma (T-994, ADR-026 §3): `DEMO_LEADS_FILE` (satış sitesi JSONL, salt okunur bağlama) tanımlıysa dakikada bir.
 // Tanımsızsa kapalıdır (yerel/CI). Bir koşuda en çok 1 MiB okunur; kalan bir sonraki koşuda.
 const DEMO_LEADS_MAX_READ = 1024 * 1024;
@@ -242,6 +262,7 @@ lifecycle.register({ name: "worker-heartbeat", run: () => workerHeartbeat.stop()
 lifecycle.register({ name: "queue-maintenance", run: () => queueMaintenance.stop() });
 lifecycle.register({ name: "consistency-schedule", run: () => consistencySchedule.stop() });
 lifecycle.register({ name: "count-abandon-schedule", run: () => countAbandonSchedule.stop() });
+lifecycle.register({ name: "integration-schedule", run: () => integrationSchedule.stop() });
 lifecycle.register({ name: "demo-leads-schedule", run: () => demoLeadsSchedule?.stop() });
 lifecycle.register({ name: "job-queue", run: () => queue.stop() });
 lifecycle.register({ name: "db", run: () => db.close() });

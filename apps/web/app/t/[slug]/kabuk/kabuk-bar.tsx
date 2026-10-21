@@ -29,6 +29,14 @@ export interface KabukContextValue {
   readonly canReport?: boolean;
   /** T-981b: kalıp üst çubuğu Excel düğmesi gösterimi — `data`: `data.import` (düğme + dışarı aktar), `master`: ayrıca `settings.manage` (depo/raf içe aktarma). */
   readonly excel?: { readonly data: boolean; readonly master: boolean };
+  /** T-979c: üyenin çalışma alanı sayısı (Hesap menüsünde "Çalışma alanı değiştir" yalnız birden fazlaysa). */
+  readonly workspaces?: number;
+}
+
+/** T-979c: görünüm geçişi (eski "Tüm ekranlar" menüsündeki Akış/Genel bakış anahtarı ile aynı çerez sözleşmesi: `view`, 1 yıl). */
+export function switchView(base: string, view: "flow" | "cockpit"): void {
+  document.cookie = `view=${view}; path=/; max-age=31536000; samesite=lax${window.location.protocol === "https:" ? "; secure" : ""}`;
+  window.location.assign(base);
 }
 
 const KabukContext = createContext<KabukContextValue | null>(null);
@@ -50,6 +58,16 @@ export interface KabukNav {
   readonly onClick?: () => void;
   readonly aria?: string;
   readonly testId?: string;
+}
+
+/** T-979c: orta ana işlem etiketi tek satır, en çok 10 karakter (çubuğun içinde okunur). Uzunsa son kelime (eylem: "ÜRÜN EKLE" → "EKLE"),
+ * o da uzunsa ilk 10 karakter. Tam metin erişilebilir addadır (`aria` yoksa özgün etiket). */
+export const CAP_MAX = 10;
+export function capOf(label: string): string {
+  const v = label.trim();
+  if (Array.from(v).length <= CAP_MAX) return v;
+  const last = v.split(/\s+/).at(-1) ?? v;
+  return Array.from(last).length <= CAP_MAX ? last : Array.from(last).slice(0, CAP_MAX).join("");
 }
 
 export interface KabukMain {
@@ -271,7 +289,9 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const centerInner = (
     <>
       <Ico d={center.d} size={30} />
-      <span className="cap">{center.label}</span>
+      <span className="cap" aria-hidden={capOf(center.label) === center.label ? undefined : true}>
+        {capOf(center.label)}
+      </span>
     </>
   );
   const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];
@@ -409,7 +429,13 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                         {inner}
                       </button>
                     ) : (
-                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={() => tone("tap")} data-module={m.id}>
+                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={(e) => {
+                          tone("tap");
+                          if (m.view !== undefined) {
+                            e.preventDefault();
+                            switchView(base, m.view);
+                          }
+                        }} data-module={m.id} data-view={m.view}>
                         {inner}
                       </a>
                     );

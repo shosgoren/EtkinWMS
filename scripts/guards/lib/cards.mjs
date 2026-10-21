@@ -3,10 +3,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-/** `feat|fix/T-xxx[a-z]?-…` */
-const WORK_BRANCH = /^(?:feat|fix)\/(T-\d{3}[a-z]?)-[^\s]+$/;
+/** `feat|fix/T-xxx[a-z]?-…`; xxx 3 ya da 4 hane (T-1000+, B-103 / T-445). Kart dosyası yine zorunlu. */
+const WORK_BRANCH = /^(?:feat|fix)\/(T-\d{3,4}[a-z]?)-[^\s]+$/;
 /** Birleştirme commit konusunda geçen çalışma dalı (`origin/feat/…`, `owner/feat/…`, `'feat/…'`). */
-const MERGED_BRANCH = /(?:^|[\s'"/])((?:feat|fix)\/T-\d{3}[a-z]?-[^\s'"]+)/g;
+const MERGED_BRANCH = /(?:^|[\s'"/])((?:feat|fix)\/T-\d{3,4}[a-z]?-[^\s'"]+)/g;
 const INT_BRANCH = /^int\/[^\s]+$/;
 
 export const TASKS_DIR = "docs/tasks";

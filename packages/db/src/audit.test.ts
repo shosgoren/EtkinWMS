@@ -62,6 +62,7 @@ describe("eylem listesi", () => {
         "team_join.link_created", "team_join.link_revoked", "team_join.approved", "team_join.rejected",
         "support.ticket_created", "support.ticket_replied",
         "data.exported", "data.imported",
+        "integration.connected", "integration.checked", "integration.disconnected", "integration.flow_changed", "integration.run_requested", "integration.synced",
       ].sort(),
     );
   });

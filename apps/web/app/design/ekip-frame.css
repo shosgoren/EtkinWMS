@@ -22,3 +22,7 @@ body:has(.dze) .app-header { display: none; }
    yerleşim açıkça verilir — aksi hâlde satır içi bağlantıda min-height işlemez ve metin kesik çerçevenin üstüne biner. */
 .dze a.pmore { display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 12px; }
 .dze .code input { width: 100%; min-height: 52px; border: 0; background: none; font: 800 28px/1 var(--font-plex-mono), monospace; letter-spacing: .25em; color: inherit; outline: none; }
+/* T-986b (ALTIN-KURAL 12): "Yeni QR · eskisi geçersiz" dokunma hedefi en az 44 px (kaynak 40 px). */
+.dze .qnew {
+  min-height: 44px;
+}
