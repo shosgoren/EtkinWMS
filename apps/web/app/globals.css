@@ -23,6 +23,7 @@
 @import "./design/destek-ek.css";
 @import "./design/entegrasyon.css";
 @import "./design/destek-frame.css";
+@import "./design/perde.css";
 @import "./design/paylas.css";
 @import "./design/ust-frame.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */

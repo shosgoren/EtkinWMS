@@ -346,7 +346,17 @@
       "close": "Close",
       "sentEmail": "The invitation was sent by email. It is valid for 72 hours.",
       "sentScreen": "The invitation email could not be sent. Pass the link below on to the person you invited.",
-      "linkLabel": "Invitation link"
+      "linkLabel": "Invitation link",
+      "sendShort": "SEND",
+      "sent": "Invitation sent",
+      "failed": "Invitation could not be sent — see the reason below.",
+      "sub": "Type the email, pick a role, press SEND.",
+      "gWho": "Who are you inviting?",
+      "gRole": "With which role?",
+      "leaveText": "The invitation was not sent. If you leave, what you typed is lost.",
+      "leaveSave": "Send and leave",
+      "doneShort": "DONE",
+      "resultSub": "Invitation result"
     },
     "linkBox": {
       "copy": "Copy",
@@ -421,7 +431,8 @@
     "k": {
       "inviteShort": "INVITE",
       "count": "{n} MEMBERS",
-      "pendingCount": "{n} INVITES"
+      "pendingCount": "{n} INVITES",
+      "wait": "The screen is getting ready, one moment…"
     },
     "search": "Search members",
     "searchPlaceholder": "Search name or email",
@@ -1370,7 +1381,12 @@
         "yesterday": "YESTERDAY {time}",
         "daysAgo": "{n} DAYS AGO",
         "kind_COUNT_ADJUSTMENT": "Count adjustment",
-        "kind_OTHER": "Movement"
+        "kind_OTHER": "Movement",
+        "fixedTitle": "Fixed details",
+        "convAdd": "Add conversion",
+        "convNoUnit": "There is no other unit for a conversion; add a new unit first.",
+        "bcAdd": "Add barcode",
+        "unitTag": "UNIT · {unit}"
       }
     },
     "errors": {
@@ -1544,7 +1560,8 @@
         "title": "Archive {name}?",
         "description": "Location {name} ({code}) will be archived. It cannot be archived while it holds stock, has an open count or active sub-locations; empty or archive those first.",
         "button": "Archive"
-      }
+      },
+      "addWait": "The screen is getting ready; tap again in a second."
     },
     "errors": {
       "code": "Error code: {code}",
@@ -1792,7 +1809,10 @@
       "submitCount": "Create {count} locations",
       "cancel": "Cancel",
       "done": "{count} locations created: {first} … {last}",
-      "doneReplayed": "This request was already processed; {count} locations exist."
+      "doneReplayed": "This request was already processed; {count} locations exist.",
+      "submitShort": "CREATE",
+      "leaveText": "The racks are not created yet. If you leave without saving, the range you typed is lost.",
+      "leaveSave": "Create and leave"
     }
   },
   "codeEdit": {
@@ -1806,7 +1826,11 @@
     "cancel": "Cancel",
     "submit": "Change code",
     "done": "Code changed: {from} → {to}.",
-    "undo": "Undo (go back to {code})"
+    "undo": "Undo (go back to {code})",
+    "saveShort": "CHANGE",
+    "leaveText": "The new code is not saved. If you leave without saving, the current code stays.",
+    "leaveSave": "Change code and leave",
+    "currentShort": "Current code"
   },
   "tasks": {
     "title": "Tasks",
@@ -1907,7 +1931,19 @@
     "paging": "Pages",
     "countSessions": "Count sessions",
     "search": "Search tasks",
-    "searchPlaceholder": "Search item, location or person"
+    "searchPlaceholder": "Search item, location or person",
+    "k": {
+      "assignShort": "ASSIGN",
+      "cancelShort": "CANCEL",
+      "assignSub": "Pick who will do the task, then press ASSIGN.",
+      "cancelSub": "Write the reason, then press CANCEL.",
+      "leaveAssign": "The task was not assigned. If you leave, your choice is lost.",
+      "leaveAssignSave": "Assign and leave",
+      "leaveCancel": "The task was not cancelled. If you leave, the reason you typed is lost.",
+      "leaveCancelSave": "Cancel task and leave",
+      "gTask": "Task",
+      "notFound": "This task is no longer in the list (the page may have changed)."
+    }
   },
   "receiving": {
     "title": "Expected deliveries",
@@ -3496,7 +3532,12 @@
     "k": {
       "addShort": "ADD",
       "person": "PERSON"
-    }
+    },
+    "offName": "Full name must be at least 2 letters.",
+    "offUsername": "Username must be at least 3 characters.",
+    "offBusy": "Working on it, one moment…",
+    "leaveText": "The staff member was not added. If you leave, what you typed is lost.",
+    "leaveSave": "Add and leave"
   },
   "fieldLogin": {
     "title": "Field sign-in",
@@ -3649,7 +3690,10 @@
     "suspendedTitle": "Automatically stopped · {name}",
     "suspendedBody": "3 accounts were locked from this device within an hour; the device was revoked and its sessions closed. Unlock the accounts from the Members screen.",
     "closeSessions": "CLOSE SESSIONS",
-    "sessionsClosed": "Sessions closed."
+    "sessionsClosed": "Sessions closed.",
+    "offCode": "First type the 6-digit code shown on the terminal.",
+    "offBusy": "Working on it, one moment…",
+    "leaveText": "Device approval is unfinished. If you leave, the code you typed is lost."
   },
   "workspaces": {
     "title": "Choose a workspace",
@@ -4326,7 +4370,10 @@
     "approvedTitle": "WAITING FOR PIN",
     "approvedHint": "APPROVED · PERSON WILL SET A PIN (24 HOURS)",
     "cancelApproved": "CANCEL",
-    "cancelApprovedAria": "Cancel approval for {name}"
+    "cancelApprovedAria": "Cancel approval for {name}",
+    "offCode": "First type the 6-digit code from the person's phone.",
+    "offBusy": "Working on it, one moment…",
+    "leaveText": "Approval is unfinished. If you leave, the code you typed is lost."
   },
   "paylas": {
     "title": "Join the Etkin WMS team",
@@ -4584,7 +4631,8 @@
         "name": "Who did what?",
         "sub": "Audit log"
       }
-    }
+    },
+    "mainOff": "This action is not available right now."
   },
   "kalip": {
     "help": "Help",
@@ -4602,6 +4650,38 @@
     "stepLocked": ", next",
     "stepDone": ", done",
     "voiceSoon": "Voice input coming soon · Etkin",
+    "unsavedText": "There are unsaved changes. They will be lost if you leave without saving.",
+    "back": "Back",
+    "save": "Save",
+    "saveShort": "SAVE",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "saveFailed": "Could not save. Check your connection and try again.",
+    "noChange": "No changes — nothing to save.",
+    "readOnly": "View only",
+    "readOnlySub": "You cannot change this; ask your manager.",
+    "preview": "Preview",
+    "previewName": "Type a name",
+    "vRequired": "Required",
+    "vEmail": "Enter a valid email",
+    "vNumber": "Enter a number",
+    "vTooLong": "Too long",
+    "vMissing": "{n} fields missing: {list}",
+    "vInvalid": "{n} fields invalid: {list}",
+    "secSearch": "Search or scan…",
+    "secSearchLabel": "Search in {title}",
+    "secScan": "Scan",
+    "secMic": "Say it (coming soon)",
+    "secNone": "No match",
+    "secScanNone": "{code} is not in the list",
+    "secPick": "Choose",
+    "updatedTitle": "App updated",
+    "updatedText": "A new version is live. Reload the page to continue; this action could not be sent with the old version.",
+    "updatedReload": "Reload",
+    "updatedLater": "Later",
+    "mainOff": "This action is not available right now.",
+    "discarded": "Changes discarded",
+    "formFirst": "Fill in the required fields and make the selections first.",
     "excel": {
       "aria": "Excel · {kind}: import, update or download",
       "menu": "Excel · {kind}",
@@ -4694,7 +4774,10 @@
       "doneNext": "NEXT: PUT AWAY · SCAN",
       "putDone": "Put away · {n}",
       "fixed": "Task quantity",
-      "available": "ON SHELF {n}"
+      "available": "ON SHELF {n}",
+      "busy": "Working on it, one moment…",
+      "overMax": "You cannot pick more than expected — lower the quantity.",
+      "needOne": "Enter or scan at least 1 first."
     }
   },
   "destek": {

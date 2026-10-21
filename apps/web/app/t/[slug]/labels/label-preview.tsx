@@ -7,7 +7,10 @@
 // Bilinçli farklar (DESIGN-PARITY, T-971): arama / kart listesi yok (ekran tek kaynağın etiketlerini gösterir; kaynak adresle gelir).
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { LICON } from "../../../design/kalip-icons.ts";
+import { useCikisKorumasi } from "../kalip/cikis.tsx";
+import { degisti } from "../kalip/dogrula.ts";
 import { KalipBaslik, KalipEkran, tone } from "../kalip/ekran.tsx";
 import { KalipBos, KalipCipler, KalipDaha } from "../kalip/liste.tsx";
 import { printCss, validPrintSettings, type PaperMode } from "./print-settings.ts";
@@ -51,6 +54,11 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
   const settings = { width, height, mode, gap: 3 };
   const valid = validPrintSettings(settings);
   const custom = width !== 100 || height !== 50;
+  // T-990 (ALTIN-KURAL "Kaydedilmemiş iş uyarısı"): ayarlanmış ama yazdırılmamış kâğıt/ölçü yarım iştir; Geri / Ana ekran / bağlantılar
+  // uygulamanın cam kutusunu açar. Yazdırınca o ayarlar başlangıç sayılır.
+  const router = useRouter();
+  const [ilk, setIlk] = useState(settings);
+  const korunan = useCikisKorumasi(degisti(settings, ilk), { dark });
 
   function downloadZpl(): void {
     tone("tap");
@@ -71,15 +79,18 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
       title={t("title")}
       icon={ICON}
       testId="labels"
+      overlays={korunan.kutu}
       bar={{
-        back: { href: back },
+        back: { onClick: () => korunan.sor(() => router.push(back)) },
         main: {
           label: t("printShort"),
           aria: t("print"),
           d: LICON.printer,
           disabled: !valid,
+          disabledReason: t("invalid"),
           onClick: () => {
             tone("tap");
+            setIlk(settings);
             window.print();
           },
           testId: "labels-print",

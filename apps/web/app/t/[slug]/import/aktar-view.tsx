@@ -9,13 +9,15 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { dz } from "../../../design/aktar-tokens.ts";
 import { AICON } from "../../../design/aktar-icons.ts";
+import { LICON } from "../../../design/kalip-icons.ts";
 import { readWorkbook, SheetError, type Workbook } from "../../../../lib/sheet/read.ts";
 import { FIELDS, autoMap, buildCsv, buildRecords, colLetter, detectHeader, headerSignature, samples, setColumn, waiting, type ImportKindKey, type Mapping } from "../../../../lib/sheet/mapping.ts";
 import { applyImportChunkAction, previewImportAction } from "./actions.ts";
 import { importPartiesAction } from "../parties/actions.ts";
 import { importLocationsAction, importWarehousesAction } from "./master-actions.ts";
-import { LICON } from "../../../design/kalip-icons.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { useCikisKorumasi } from "../kalip/cikis.tsx";
+import { KalipSecimSayfasi } from "../kalip/secim.tsx";
 import { UstDugmeler } from "../ust-dugmeler.tsx";
 
 type PreviewResult = Awaited<ReturnType<typeof previewImportAction>>;
@@ -136,7 +138,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState("");
-  const [cf, setCf] = useState(false);
+  const [sheetPick, setSheetPick] = useState(false);
   const [recent, setRecent] = useState<{ name: string; rows: number; cols: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | null>(null);
@@ -411,6 +413,18 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
   const pickF = pick === null ? null : (fields.find((f) => f.id === pick) ?? null);
   const goList = kind === "stok" ? `${base}/items` : kind === "cari" ? `${base}/parties` : kind === "depo" || kind === "raf" ? `${base}/warehouses` : `${base}/stock`;
 
+  // T-990: tek ortak çıkış kutusu; eşleştirme/kontrol adımında Ana ekran, Modüller ve bağlantılar yalnız bunu açar ("… ve çık" eşleştirmeyi hatırlar).
+  const korunan = useCikisKorumasi(main !== null && dirty, {
+    dark,
+    title: t("cf.title"),
+    text: t("cf.text"),
+    saveLabel: t("cf.save"),
+    onSave: () => {
+      remember();
+      return true;
+    },
+  });
+
   return (
     <>
     <div className={`dza${dark ? " dz-dark" : ""}`} data-testid="aktar">
@@ -620,25 +634,37 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                       </small>
                     </span>
                     {loaded.wb.sheets.length > 1 ? (
-                      <select
-                        aria-label={t("s3.sheet")}
-                        value={loaded.sheet}
-                        onChange={(e) => {
-                          const i = Number(e.target.value);
-                          const sh = loaded.wb.sheets[i];
-                          if (sh === undefined) return;
-                          const h = detectHeader(sh.rows, kind);
-                          setLoaded({ ...loaded, sheet: i, header: h });
-                          setMap(autoMap(sh.rows, h, kind));
-                        }}
-                        style={{ minHeight: 44 }}
-                      >
-                        {loaded.wb.sheets.map((s, i) => (
-                          <option key={s.name + String(i)} value={i}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                      <>
+                        {/* T-990: yerel açılır liste yok — sayfa seçimi ortak aramalı seçim sayfasında. */}
+                        <button
+                          type="button"
+                          className="btn"
+                          aria-haspopup="listbox"
+                          aria-label={`${t("s3.sheet")}: ${sheet?.name ?? ""}`}
+                          onClick={() => setSheetPick(true)}
+                          style={{ minHeight: 48, display: "inline-flex", alignItems: "center", gap: 6, padding: "0 12px" }}
+                          data-testid="aktar-sheet"
+                        >
+                          {sheet?.name ?? ""}
+                          <Ico d={LICON.chev} size={18} />
+                        </button>
+                        <KalipSecimSayfasi
+                          open={sheetPick}
+                          title={t("s3.sheet")}
+                          value={String(loaded.sheet)}
+                          options={loaded.wb.sheets.map((s, i) => ({ id: String(i), label: s.name }))}
+                          scan={false}
+                          onClose={() => setSheetPick(false)}
+                          onPick={(id) => {
+                            const i = Number(id);
+                            const sh = loaded.wb.sheets[i];
+                            if (sh === undefined) return;
+                            const h = detectHeader(sh.rows, kind);
+                            setLoaded({ ...loaded, sheet: i, header: h });
+                            setMap(autoMap(sh.rows, h, kind));
+                          }}
+                        />
+                      </>
                     ) : null}
                   </div>
                   <div className="sums">
@@ -896,39 +922,17 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
               </div>
             ) : null}
 
-            {cf ? (
-              <>
-                <div className="cfback" onClick={() => setCf(false)} />
-                <div className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
-                  <span className="cfic">
-                    <Ico d={AICON.warn} size={26} />
-                  </span>
-                  <b>{t("cf.title")}</b>
-                  <p>{t("cf.text")}</p>
-                  <a href={base} className="cfb save" onClick={remember}>
-                    <Ico d={AICON.check} size={20} />
-                    {t("cf.save")}
-                  </a>
-                  <a href={base} className="cfb leave">
-                    <Ico d={AICON.signOut} size={20} />
-                    {t("cf.leave")}
-                  </a>
-                  <button type="button" className="cfb stay" onClick={() => setCf(false)}>
-                    {t("cf.stay")}
-                  </button>
-                </div>
-              </>
-            ) : null}
             {toast !== "" ? <div className="toast">{toast}</div> : null}
           </div>
         </div>
       </div>
     </div>
+    {korunan.kutu}
     {/* T-958: ortak alt cam çubuk (Kabuk.dc.html): Geri · Ana ekran · ekranın ana işlemi · Modüller · Etkin. */}
     <KabukBar
       dark={dark}
       back={step === 1 ? { href: base, aria: t("backHome"), testId: "aktar-back" } : { onClick: goBack, aria: t("back"), testId: "aktar-back" }}
-      homeNav={main !== null && dirty ? { onClick: () => setCf(true), aria: t("home"), testId: "aktar-home" } : { href: base, aria: t("home"), testId: "aktar-home" }}
+      homeNav={{ href: base, aria: t("home"), testId: "aktar-home" }}
       main={main === null ? null : { label: mainLabel, d: mainIcon, onClick: main, disabled: busy && step !== 2, testId: "aktar-main", wait: mainCls.includes(" wait") }}
     />
     </>

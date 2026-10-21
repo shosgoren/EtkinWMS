@@ -1,16 +1,18 @@
 "use client";
-// Kodu değiştir penceresi (T-257): ürün, depo ve lokasyon ekranlarının ortak parçası. Kod normalleştirmesi, benzersizlik ve yetki
-// SUNUCUDADIR (T-251 domain komutları); burada yeniden yazılmaz. İstemci yalnızca boş/aynı değeri göndermez (kısa yol, kural değil).
-// Tek ekran (T-250 deseni): başlık sabit, eylem çubuğu altta sabit; eski → yeni önizlemesi ve "geçmiş hareketler etkilenmez" açıklaması
+// Kodu değiştir (T-257): ürün, depo ve lokasyon ekranlarının ortak parçası. Kod normalleştirmesi, benzersizlik ve yetki SUNUCUDADIR
+// (T-251 domain komutları); burada yeniden yazılmaz. İstemci yalnızca boş/aynı değeri göndermez (kısa yol, kural değil).
+// T-990 (B-97): pencere değil TAM EKRAN FORM (`KalipFormEkran`; çağıran ekran adresle açar, ör. `?kod=1` / `?kod=<id>`). Kaydet alt
+// çubuğun ana işlemidir ve yalnız yeni kod yazılınca etkindir; eski → yeni önizlemesi ve "geçmiş hareketler etkilenmez" açıklaması
 // her zaman görünür. Onay ek bir soru değildir (N-03): değişiklik geri alınabilir, bu yüzden sonuç bildiriminde "Geri al" düğmesi vardır.
-// Sunucu hatası pencerede kalır, yazılan değer korunur (çağıranın `renderError` bileşeni neden + sonraki eylemi gösterir).
+// Sunucu reddi (kod zaten var) yeni kod alanının altında; yazılan değer korunur. Yarım işte çıkış ortak cam kutuyu açar.
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Banner, Button } from "@wms/ui";
 import { LICON } from "../../design/kalip-icons.ts";
-import { Sheet } from "./easy-setup/sheet.tsx";
-import { KalipPencereAlan, KalipPencereDugme, KalipPencereMetin } from "./kalip/pencere.tsx";
+import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "./kalip/form-ekran.tsx";
+import { KalipAlan, KalipGrup } from "./kalip/form.tsx";
+import type { AlanKurali } from "./kalip/dogrula.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği. */
 export interface CodeEditError {
@@ -21,96 +23,105 @@ export interface CodeEditError {
 
 export type CodeEditResult = { readonly ok: true; readonly changed: boolean } | { readonly ok: false; readonly error: CodeEditError };
 
-export function CodeEditDialog({
-  open,
+/** Alanın altında gösterilecek ret (kod zaten var / belirsiz / geçersiz biçim); diğerleri formun genel nedeni. */
+function alanHatasi(e: CodeEditError): boolean {
+  return e.code === "VALIDATION_FAILED" && (e.detail === undefined || e.detail === "CODE_TAKEN" || e.detail === "CODE_AMBIGUOUS");
+}
+
+/** Tam ekran "Kodu değiştir" formu. */
+export function CodeEditForm({
+  dark,
   subject,
   current,
-  titleId,
-  onClose,
+  icon = { d: LICON.pencil, color: "2F5DA8" },
+  testId = "code-edit-form",
+  homeHref,
+  onBack,
   onDone,
   submit,
+  errorText,
   renderError,
 }: {
-  open: boolean;
-  /** Kartın adı (başlıkta gösterilir). */
+  dark: boolean;
+  /** Kartın adı (başlıkta ve önizlemede). */
   subject: string;
   /** Şimdiki kod (sunucunun döndürdüğü hâliyle). */
   current: string;
-  titleId: string;
-  onClose: () => void;
+  icon?: { readonly d: string; readonly color: string };
+  testId?: string;
+  homeHref?: string;
+  onBack: () => void;
   onDone: (result: { readonly from: string; readonly to: string; readonly changed: boolean }) => void;
   submit: (code: string) => Promise<CodeEditResult>;
-  renderError: (error: CodeEditError) => ReactNode;
+  /** Sunucu reddinin tek satırlık nedeni + sonraki eylem ("Bu kod zaten kullanılıyor. Farklı bir kod gir."). */
+  errorText: (error: CodeEditError) => string;
+  /** Bağlantı gerektiren ret (MFA / yeniden giriş) için ekranın kendi hata bildirimi. */
+  renderError?: (error: CodeEditError) => ReactNode;
 }) {
   const t = useTranslations("codeEdit");
-  const [code, setCode] = useState(current);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<CodeEditError | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setCode(current);
-    setError(null);
-    setBusy(false);
-    // Her açılışta şimdiki kodla başlar; açıkken `current` değişse de yazılan korunur.
-  }, [open]);
-
-  const next = code.trim();
+  const [initial] = useState(() => ({ newCode: current }));
+  const [v, setV] = useState(initial);
+  const [linkErr, setLinkErr] = useState<CodeEditError | null>(null);
+  const done = useRef<{ from: string; to: string; changed: boolean } | null>(null);
+  const next = v.newCode.trim();
   const unchanged = next === "" || next === current;
+  const rules: AlanKurali[] = [{ name: "newCode", label: t("newCode"), required: true, maxLength: 512 }];
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (unchanged || busy) return;
-    setBusy(true);
-    setError(null);
+  async function save(): Promise<KaydetSonuc> {
+    setLinkErr(null);
     const res = await submit(next);
-    setBusy(false);
     if (!res.ok) {
-      setError(res.error);
-      return;
+      const text = errorText(res.error);
+      if (alanHatasi(res.error)) return { ok: false, alan: { newCode: text } };
+      if (res.error.detail === "MFA_REQUIRED" || res.error.detail === "RECENT_AUTH_REQUIRED") setLinkErr(res.error);
+      return { ok: false, mesaj: res.error.requestId === undefined ? text : `${text} · ${res.error.requestId}` };
     }
-    onDone({ from: current, to: next, changed: res.changed });
+    done.current = { from: current, to: next, changed: res.changed };
+    return { ok: true };
   }
 
   return (
-    <Sheet
-      open={open}
+    <KalipFormEkran
+      dark={dark}
       title={t("title")}
-      titleId={titleId}
-      icon={{ d: LICON.pencil, color: "2F5DA8" }}
-      busy={busy}
-      onClose={onClose}
-      onSubmit={(e) => void onSubmit(e)}
-      footer={
-        <>
-          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
-            {t("cancel")}
-          </KalipPencereDugme>
-          <KalipPencereDugme type="submit" loading={busy} disabled={unchanged}>
-            {t("submit")}
-          </KalipPencereDugme>
-        </>
-      }
+      icon={icon}
+      subtitle={subject}
+      testId={testId}
+      values={v}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={() => {
+        if (done.current !== null) onDone(done.current);
+      }}
+      onBack={onBack}
+      {...(homeHref === undefined ? {} : { homeHref })}
+      saveShort={t("saveShort")}
+      saveAria={t("submit")}
+      leaveText={t("leaveText")}
+      leaveSaveLabel={t("leaveSave")}
+      preview={<KalipOnizleme name={subject} code={unchanged ? current : next} d={icon.d} color={icon.color} rows={[{ k: t("currentShort"), v: current }]} />}
     >
-      <KalipPencereMetin strong>{subject}</KalipPencereMetin>
-      <KalipPencereMetin>{t("current", { code: current })}</KalipPencereMetin>
-      <KalipPencereAlan
-        label={t("newCode")}
-        hint={t("newCodeHint")}
-        name="newCode"
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        autoComplete="off"
-        autoCapitalize="characters"
-        required
-        maxLength={512}
-      />
-      <KalipPencereMetin mono live testId="code-edit-preview">
-        {unchanged ? t("previewSame") : t("preview", { from: current, to: next })}
-      </KalipPencereMetin>
-      <KalipPencereMetin>{t("history")}</KalipPencereMetin>
-      {error ? renderError(error) : null}
-    </Sheet>
+      <KalipGrup title={subject} d={icon.d} color={icon.color}>
+        {/* Telefonda grup alt yazısı (kaynak `.sgh small`) gizli: şimdiki kod her boyutta görünür satırda. */}
+        <p className="khint">{t("current", { code: current })}</p>
+        <KalipAlan
+          label={`${t("newCode")} *`}
+          hint={t("newCodeHint")}
+          name="newCode"
+          value={v.newCode}
+          onChange={(e) => setV({ newCode: e.target.value })}
+          autoComplete="off"
+          autoCapitalize="characters"
+          maxLength={512}
+        />
+        <small className="khint" aria-live="polite" data-testid="code-edit-preview">
+          <b>{unchanged ? t("previewSame") : t("preview", { from: current, to: next })}</b>
+        </small>
+        <small className="khint">{t("history")}</small>
+        {linkErr !== null && renderError !== undefined ? renderError(linkErr) : null}
+      </KalipGrup>
+    </KalipFormEkran>
   );
 }
 

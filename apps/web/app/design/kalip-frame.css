@@ -48,8 +48,8 @@ dialog.dzf.kpen {
 dialog.dzf.kpen[open] { display: flex; align-items: center; justify-content: center; }
 dialog.dzf.kpen::backdrop { background: transparent; }
 .dzf.dzf.kpen .sxback {
-  display: block; position: absolute; inset: 0; z-index: 0; background: var(--color-dz-a-afajan-df);
-  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); animation: dzf-fade .2s ease-out;
+  display: block; position: absolute; inset: 0; z-index: 0; /* zemin ve bulanıklık: ortak perde (perde.css) */
+  animation: dzf-fade .2s ease-out;
 }
 .dzf.dzf.kpen .sx {
   position: relative; z-index: 1; left: auto; right: auto; bottom: auto; display: flex; flex-direction: column; gap: 12px;
@@ -237,6 +237,123 @@ dialog.dzf.kpen::backdrop { background: transparent; }
 :is(.dzs, .dzf, .dzl, .dzd).dz-dark .workflow-steps > li { background: var(--color-dz-x-bmcidd); color: var(--color-dz-x-ogolop); }
 :is(.dzs, .dzf, .dzl, .dzd).dz-dark .workflow-steps > li > span { background: var(--color-dz-x-ogolop); color: var(--color-dz-x-bcblce); }
 
+/* T-990 (B-97): TAM EKRAN FORM ve ortak form standardı (kalip/form-ekran.tsx, secim.tsx, cikis.tsx). Kaynak KalipForm.dc.html sınıfları
+   (`.sg`, `.fld`, `.gpick > .gp`, `.cfbox`, `.sxh`) aynen; uyarlama: (1) form sütunu masaüstünde en çok 720px, sağda canlı önizleme kartı
+   (≥1100px; yer yoksa gizli), telefonda tam ekran; (2) alan hatası: kırmızı çerçeve + kısa sarsılma + alan altı tek satır neden;
+   (3) seçim kutuları (radiogroup) ve aramalı seçim sayfası (listbox) — yerel `<select>` yok; (4) çıkış kutusu ve seçim sayfası kendi sabit
+   `.dzf` katmanında (her ekranda aynı görünüş). Perde ortak buzlu perdedir (perde.css). Renk sabiti yok. */
+.dzf .kfl { display: flex; align-items: flex-start; gap: 18px; width: 100%; max-width: 1120px; margin: 0 auto; }
+.dzf .kfc { display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; min-width: 0; max-width: 720px; margin: 0 auto; }
+.dzf .konz { display: none; }
+@media (min-width: 1100px) {
+  .dzf .kfc { margin: 0; }
+  .dzf .konz { display: block; flex: 0 0 300px; position: sticky; top: 0; }
+}
+.dzf .konc {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px; border-radius: 24px;
+  background: var(--color-dz-x-pppppp); box-shadow: 0 1px 0 var(--color-dz-a-bhcoec-ag), 0 12px 26px -20px var(--color-dz-a-bhcoec-e);
+}
+.dzf .konh { font: 800 10.5px/1 var(--font-bricolage), sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--color-dz-x-eogehg); }
+.dzf .konic { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 18px; color: var(--color-dz-x-pppppp); }
+.dzf .konk { font: 800 11px/1 var(--font-bricolage), sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--color-dz-x-mfnank); }
+.dzf .konn { font: 800 22px/1.15 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.dzf .konco { font: 700 14px/1.2 var(--font-plex-mono), monospace; color: var(--color-dz-x-mfnank); overflow-wrap: anywhere; }
+.dzf .konr { display: flex; flex-direction: column; gap: 6px; width: 100%; margin: 6px 0 0; padding-top: 10px; border-top: 1.5px solid var(--color-dz-x-ogokoo); }
+.dzf .konr div { display: flex; justify-content: space-between; gap: 10px; }
+.dzf .konr dt { font: 600 13px/1.3 var(--font-instrument), sans-serif; color: var(--color-dz-x-mfnank); }
+.dzf .konr dd { margin: 0; font: 800 13px/1.3 var(--font-bricolage), sans-serif; text-align: right; overflow-wrap: anywhere; }
+.dzf.dz-dark .konc { background: var(--color-dz-x-bmcidd); color: var(--color-dz-x-ogolop); box-shadow: none; }
+.dzf.dz-dark .konr { border-color: var(--color-dz-x-dkekfk); }
+.dzf .fld textarea {
+  min-height: 72px; border: 0; background: transparent; resize: vertical; outline: none; min-width: 0;
+  font: 700 16px/1.35 var(--font-instrument), sans-serif; color: var(--color-dz-x-bhcoec);
+}
+.dzf.dz-dark .fld textarea { color: var(--color-dz-x-ogolop); }
+.dzf .fld:focus-within { box-shadow: 0 0 0 3px var(--color-dz-x-bhcoec); }
+.dzf.dz-dark .fld:focus-within { box-shadow: 0 0 0 3px var(--color-dz-x-ogolop); }
+.kalip .fld.bad, .dze .fld.bad, .dzr .fld.bad, .dza .fld.bad, .dzf .ksecg.bad .gpick, .dzf .ksecw.bad .ksecb, .dze .gpick.bad { box-shadow: 0 0 0 2.5px var(--color-dz-x-mgcici); animation: kalip-salla .32s ease-in-out; }
+.dzf .ksecg.bad .gpick, .dze .gpick.bad { border-radius: 16px; padding: 4px; }
+@keyframes kalip-salla { 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+@media (prefers-reduced-motion: reduce) { .kalip .fld.bad, .dze .fld.bad, .dzr .fld.bad, .dza .fld.bad, .dzf .ksecg.bad .gpick, .dzf .ksecw.bad .ksecb, .dze .gpick.bad { animation: none; } }
+/* Alan altı neden: ortak ekran kaplarının hepsinde aynı (kalıp + Ekip/Gruplar/Aktar). */
+:is(.dzf, .dzl, .dzd, .dzs, .dze, .dzr, .dza) .kerr { display: flex; align-items: center; gap: 6px; margin: -2px 6px 0; font: 700 13px/1.3 var(--font-instrument), sans-serif; color: var(--color-dz-x-mgcici); overflow-wrap: anywhere; }
+.dzf .khint { display: block; margin: -2px 6px 0; font: 600 12.5px/1.35 var(--font-instrument), sans-serif; color: var(--color-dz-x-mfnank); overflow-wrap: anywhere; }
+.dzf .kgenel {
+  display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px; border-radius: 16px;
+  background: var(--color-dz-x-pppppp); color: var(--color-dz-x-mgcici); font: 700 14px/1.35 var(--font-instrument), sans-serif; overflow-wrap: anywhere;
+}
+.dzf.dz-dark .kgenel { background: var(--color-dz-x-bmcidd); }
+/* Seçim kutuları (≤6): kaynak `.gp`; ikon kendi renginde, seçiliyken kutu o renkte. */
+.dzf .ksecg { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dzf .ksecl { margin: 2px 6px 0; font: 800 10.5px/1 var(--font-bricolage), sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--color-dz-x-eogehg); }
+.dzf.dz-dark .ksecl { color: var(--color-dz-x-jplcmc); }
+.dzf .ksecg .gp { flex: 1 1 140px; justify-content: flex-start; min-height: 56px; text-align: left; }
+.dzf .ksecg .gp:focus-visible { outline: 4px solid var(--color-dz-x-pemfec); outline-offset: 2px; }
+.dzf .ksecg .gp[disabled] { opacity: .45; cursor: not-allowed; }
+.dzf .ksecic { display: grid; place-items: center; flex: none; }
+.dzf .ksect { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dzf .ksect b { font: 800 14px/1.15 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.dzf .ksect small { font: 600 11.5px/1.2 var(--font-instrument), sans-serif; opacity: .8; overflow-wrap: anywhere; }
+/* Aramalı seçim alanı (çok seçenek): `.fld` görünümünde düğme. */
+.dzf .ksecw { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dzf .fld.ksecb {
+  appearance: none; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 8px; row-gap: 6px;
+  align-items: center; width: 100%; min-height: 64px; border: 0; text-align: left; cursor: pointer; color: inherit;
+}
+.dzf .fld.ksecb > span { grid-column: 1; grid-row: 1; }
+.dzf .fld.ksecb > em { grid-column: 1; grid-row: 2; font: 700 17px/1.2 var(--font-instrument), sans-serif; font-style: normal; color: var(--color-dz-x-bhcoec); overflow-wrap: anywhere; }
+.dzf .fld.ksecb.ph > em { color: var(--color-dz-x-mfnank); }
+.dzf .fld.ksecb > .chev { grid-column: 2; grid-row: 1 / span 2; transform: rotate(90deg); color: var(--color-dz-x-mfnank); }
+.dzf .fld.ksecb:focus-visible { outline: 4px solid var(--color-dz-x-pemfec); outline-offset: 2px; }
+.dzf .fld.ksecb[disabled] { opacity: .5; cursor: not-allowed; }
+.dzf.dz-dark .fld.ksecb > em { color: var(--color-dz-x-ogolop); }
+/* Aramalı seçim sayfası ve çıkış kutusu: kendi sabit katmanı (ortak alt çubuğun ve ekranların üstünde). */
+.dzf.ksecp, .dzf.kcikis {
+  position: fixed; inset: 0; z-index: 60; font-family: var(--font-instrument), system-ui, sans-serif; color: var(--color-dz-x-bhcoec);
+  -webkit-font-smoothing: antialiased;
+}
+.dzf.ksecp *, .dzf.ksecp *::before, .dzf.ksecp *::after, .dzf.kcikis *, .dzf.kcikis *::before, .dzf.kcikis *::after { box-sizing: border-box; }
+.dzf.dzf.kcikis .cfback, .dzf.dzf.kcikis .cfbox { position: fixed; }
+.dzf.ksecp .kperde { z-index: 0; }
+.dzf .ksheet {
+  position: fixed; z-index: 1; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 10px; width: min(560px, calc(100vw - 20px)); max-height: min(78dvh, 640px); padding: 14px;
+  border-radius: 26px; background: var(--color-dz-x-pppppp); border: 1.5px solid var(--color-dz-a-pppppp-bg);
+  box-shadow: 0 30px 60px -24px var(--color-dz-a-aaaaaa-g); animation: dzf-rise .22s cubic-bezier(.2,.9,.2,1);
+}
+@media (min-width: 700px) { .dzf .ksheet { bottom: auto; top: 50%; transform: translate(-50%, -50%); } }
+@media (prefers-reduced-motion: reduce) { .dzf .ksheet, .dzf .cfbox { animation: none; } }
+.dzf .ksheet .sxh { display: flex; align-items: center; gap: 10px; }
+.dzf .ksheet .sxh b { flex: 1; min-width: 0; font: 800 18px/1.15 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.dzf .ksrch { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 6px 0 14px; border-radius: 16px; background: var(--color-dz-x-oopbpe); }
+.dzf .ksrch:focus-within { box-shadow: 0 0 0 3px var(--color-dz-x-bhcoec); }
+.dzf .ksrch input { flex: 1; min-width: 0; height: 48px; border: 0; outline: none; background: transparent; color: inherit; font: 700 17px/1 var(--font-instrument), sans-serif; }
+.dzf .ksbtn {
+  appearance: none; display: grid; place-items: center; flex: none; width: 48px; height: 48px; border: 0; border-radius: 14px; cursor: pointer;
+  background: var(--color-dz-x-pppppp); color: inherit;
+}
+.dzf .ksbtn:focus-visible { outline: 4px solid var(--color-dz-x-pemfec); outline-offset: 2px; }
+.dzf .ksnote { margin: 0 6px; font: 700 13px/1.3 var(--font-instrument), sans-serif; color: var(--color-dz-x-mfnank); }
+.dzf .kslist { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+.dzf .ksopt { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px; border-radius: 14px; cursor: pointer; }
+.dzf .ksopt.act { background: var(--color-dz-x-oopbpe); }
+.dzf .ksopt.on { box-shadow: inset 0 0 0 2px var(--color-dz-x-bhcoec); }
+.dzf .ksopt[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.dzf .ksoic { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 12px; color: var(--color-dz-x-pppppp); }
+.dzf .ksot { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.dzf .ksot b { font: 800 15px/1.2 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.dzf .ksot small { font: 600 12.5px/1.3 var(--font-instrument), sans-serif; color: var(--color-dz-x-mfnank); overflow-wrap: anywhere; }
+.dzf .kschk { flex: none; }
+.dzf .ksnone { padding: 14px; border-radius: 14px; background: var(--color-dz-x-oopbpe); font: 700 14px/1.3 var(--font-instrument), sans-serif; }
+.dzf.dz-dark.ksecp, .dzf.dz-dark.kcikis { color: var(--color-dz-x-ogolop); }
+.dzf.dz-dark .ksheet { background: var(--color-dz-x-ccdaea); }
+.dzf.dz-dark .ksrch, .dzf.dz-dark .ksnone, .dzf.dz-dark .ksopt.act { background: var(--color-dz-x-bmcidd); }
+.dzf.dz-dark .ksbtn { background: var(--color-dz-x-ccdaea); }
+.dzf.dz-dark .ksopt.on { box-shadow: inset 0 0 0 2px var(--color-dz-x-ogolop); }
+.dzf.dz-dark .ksrch:focus-within { box-shadow: 0 0 0 3px var(--color-dz-x-ogolop); }
+/* T-990: "Değişiklikler bırakıldı" balonu — kaynak `.toast`, belgeye bağlı (gidilen ekranın kabından bağımsız). */
+.dzf.kbirak { position: fixed; inset: auto 0 auto 0; top: 0; z-index: 70; pointer-events: none; font-family: var(--font-instrument), system-ui, sans-serif; }
+.dzf.kbirak .toast { position: fixed; top: max(76px, calc(env(safe-area-inset-top) + 64px)); padding: 10px 18px; }
 /* T-979 (B-94): kalıp kabının içinde kalan eski Tailwind parçaları (uyarı/hata kutusu `Banner`, eski form alanları, kutu kenarları, sevk
    toplama formu, saha paket kartları) kalıp renkleriyle çizilir: uygulama belirteçleri kap içinde kalıbın üretilmiş belirteçlerine bağlanır,
    koyu temada kabın `dz-dark` sınıfıyla koyu karşılıklarına. Böylece ekran kodu değişmeden açık/koyu tema kalıpla aynı olur. Renk sabiti yok. */
@@ -304,7 +421,6 @@ dialog.dzf.kpen::backdrop { background: transparent; }
 /* Kokpit (T-979): kısa bilgi satırı (bekleyen iş yok, bugün kayıt yok). */
 .dzl .kknote { margin: 0; padding: 12px 14px; border-radius: 16px; background: var(--color-dz-x-pppppp); font: 600 15px/1.3 var(--font-instrument), sans-serif; color: var(--color-dz-x-eogehg); }
 .dzl.dz-dark .kknote { background: var(--color-dz-x-bmcidd); color: var(--color-dz-x-jplcmc); }
-<<<<<<< HEAD
 /* T-979b (B-100): uygulama menüsü ("Tüm ekranlar") kalıp penceresinde — seçili çalışma alanı satırı, bağlantı satırlarının odak halkası. */
 .dzf.kpen a.kpopt { text-decoration: none; }
 .dzf.kpen .kpopt[aria-current="page"] { background: var(--color-dz-x-oopbpe); box-shadow: inset 4px 0 0 var(--color-dz-x-bhcoec); }
@@ -327,5 +443,3 @@ dialog.dzf.kpen::backdrop { background: transparent; }
 .dzf .gpick.big .gp[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
 .dzf .gpick.tabs { margin: 0 0 2px; }
 .dzf .gpick.tabs a.gp { text-decoration: none; }
-=======
->>>>>>> origin/main

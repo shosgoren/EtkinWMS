@@ -8,8 +8,13 @@
 // T-967 (Destek.dc.html): sol yuva her ekranda Geri; ana ekranda pasif `.dk.off` (CSS `design/destek-ek.css`, kap `.dzdx`).
 // Bilinçli farklar (DESIGN-PARITY, T-958): Etkin (B-62) henüz yok → düğme kaynaktaki gibi çizilir, `aria-disabled`; dokununca kaynaktaki
 // "yakında" balonu. Arama kutusundaki mikrofon da aynı. İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+// T-990 (B-97, kullanıcı 21 Ekim): (1) Geri / Ana ekran / ana işlem bağlantısı / Modüller kutuları Next `Link` — İSTEMCİ İÇİ geçiş (tam
+// sayfa yüklemesi yok); yarım işte ortak çıkış koruması tıklamayı yakalar: yarım işte yalnız uygulamanın cam kutusu açılır, tarayıcının "Siteden çıkılsın mı?" penceresi çıkmaz.
+// (2) Ana işlem hiçbir zaman sessizce kapalı kalmaz: pasif görünür (`aria-disabled`), dokununca hata sesi + nedenini söyleyen balon
+// (`disabledReason`, ör. "Değişiklik yok"). Ortak davranış burada; ekranlar yalnız nedeni verir.
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
@@ -81,6 +86,10 @@ export interface KabukMain {
   readonly testId?: string;
   /** Bekleyen karar (Ekip/Aktar kaynağındaki sarı `.dk.big.wait`). */
   readonly wait?: boolean;
+  /** Pasifken dokununca balonda söylenen neden (verilmezse genel metin). */
+  readonly disabledReason?: string;
+  /** Kaydedilmemiş değişiklik sayısı (ALTIN-KURAL: değişiklik varsa ana işlemde sayı rozeti). */
+  readonly badge?: number;
 }
 
 export interface KabukBarProps {
@@ -183,13 +192,22 @@ function SearchIco() {
   );
 }
 
-/** Bağlantı ya da düğme (aynı sınıf ve içerik). */
+/** Düz sol tıklama mı (yeni sekme / indirme istekleri tarayıcıya bırakılır)? */
+function plainClick(e: MouseEvent<HTMLElement>): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
+
+/**
+ * Bağlantı ya da düğme (aynı sınıf ve içerik). Bağlantı Next `Link`'tir: hidrasyondan önce doğal gezinme, sonra istemci içi geçiş (tam sayfa
+ * yüklemesi yok). Yarım iş varken tıklamayı ortak çıkış koruması (kalip/cikis.tsx, belge düzeyinde yakalama) durdurur ve cam kutuyu açar.
+ */
 function Slot({ nav, className, aria, testId, k, current, children }: { nav: KabukNav; className: string; aria: string; testId: string; k: KabukSlot; current?: boolean; children: ReactNode }) {
   const common = { className, "aria-label": nav.aria ?? aria, "data-testid": nav.testId ?? testId, "data-k": k, "aria-current": current === true ? ("page" as const) : undefined };
-  return nav.href !== undefined && nav.onClick === undefined ? (
-    <a href={nav.href} {...common} style={{ textDecoration: "none" }}>
+  const href = nav.href;
+  return href !== undefined && nav.onClick === undefined ? (
+    <Link href={href} prefetch={false} {...common} style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && tone("tap")}>
       {children}
-    </a>
+    </Link>
   ) : (
     <button type="button" {...common} onClick={nav.onClick}>
       {children}
@@ -292,6 +310,11 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
       <span className="cap" aria-hidden={capOf(center.label) === center.label ? undefined : true}>
         {capOf(center.label)}
       </span>
+      {center.badge !== undefined && center.badge > 0 ? (
+        <span className="kbadge" aria-hidden="true" data-testid="kabuk-main-badge">
+          {center.badge}
+        </span>
+      ) : null}
     </>
   );
   const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];
@@ -319,11 +342,27 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 <span>{t("homeShort")}</span>
               </Slot>
               {center.href !== undefined && center.onClick === undefined && center.disabled !== true ? (
-                <a href={center.href} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }}>
+                <Link href={center.href} prefetch={false} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && tone("tap")}>
                   {centerInner}
-                </a>
+                </Link>
               ) : (
-                <button type="button" className={centerCls} aria-label={center.aria ?? center.label} onClick={center.onClick} disabled={center.disabled === true} data-testid={center.testId ?? "kabuk-main"} data-k="center">
+                <button
+                  type="button"
+                  className={centerCls}
+                  aria-label={center.aria ?? center.label}
+                  aria-disabled={center.disabled === true ? true : undefined}
+                  onClick={() => {
+                    if (center.disabled === true) {
+                      // Sessiz kapalı düğme yok: hata sesi + neden balonu.
+                      tone("err");
+                      say("err", center.disabledReason ?? t("mainOff"));
+                      return;
+                    }
+                    center.onClick?.();
+                  }}
+                  data-testid={center.testId ?? "kabuk-main"}
+                  data-k="center"
+                >
                   {centerInner}
                 </button>
               )}
@@ -429,15 +468,31 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                         {inner}
                       </button>
                     ) : (
-                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={(e) => {
+                      <Link
+                        key={m.id}
+                        role="listitem"
+                        href={m.href ?? base}
+                        prefetch={false}
+                        className="mt"
+                        style={{ ...style, textDecoration: "none" }}
+                        aria-label={t("tileAria", { name: m.name, sub: m.sub })}
+                        onClick={(e) => {
+                          if (!plainClick(e)) return;
                           tone("tap");
                           if (m.view !== undefined) {
+                            // T-979c görünüm geçişi (Akış / Genel bakış). Yarım işte ortak çıkış kutusu bağlantıyı yakalama evresinde durdurur (T-990).
                             e.preventDefault();
                             switchView(base, m.view);
                           }
-                        }} data-module={m.id} data-view={m.view}>
+                          setOpen(false);
+                          setQ("");
+                          setPage(0);
+                        }}
+                        data-module={m.id}
+                        data-view={m.view}
+                      >
                         {inner}
-                      </a>
+                      </Link>
                     );
                   })}
                   {plus !== null ? (

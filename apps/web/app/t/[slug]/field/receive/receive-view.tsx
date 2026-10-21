@@ -310,7 +310,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
             setStage("scan");
             setError(null);
           }}
-          main={{ label: ts("qty.confirm"), aria: t("flow.confirm"), d: SICON.check, onClick: () => void confirm(), disabled: busy || picked.received < 1, wait: over, testId: "flow-primary" }}
+          main={{ label: ts("qty.confirm"), aria: t("flow.confirm"), d: SICON.check, onClick: () => void confirm(), disabled: busy || picked.received < 1, disabledReason: busy ? ts("qty.busy") : ts("qty.needOne"), wait: over, testId: "flow-primary" }}
         >
           <SahaQty
             itemName={picked.line.itemName}

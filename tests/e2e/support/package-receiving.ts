@@ -70,14 +70,25 @@ export async function seedPackage(page: Page, mobile: boolean, lot = false, work
  await db("INSERT INTO public.unit_conversions(tenant_id,item_id,unit_id,to_base_factor) VALUES($1,$2,$3,0.001)",[tenantId,f.itemId,gr]);
  return f;
 }
+// T-990: yerel <select> yok (KalipSecim). ≤6 seçenek: radiogroup içindeki kutu; çoksa "<Etiket>: …" tetik düğmesi → aramalı listbox.
+// Seçenekler kimliğiyle (`data-option`) seçilir; konum listesi depo seçiminden sonra yüklendiğinden hangi biçim görünürse onu bekler.
+async function pick(page:Page,label:string,id:string){
+ const radio=page.getByRole("radiogroup",{name:label,exact:true}).locator(`[data-option="${id}"]`);
+ const trigger=page.getByRole("button",{name:new RegExp(`^${label}: `)});
+ await expect(radio.or(trigger)).toBeVisible();
+ if(await radio.isVisible()){await radio.click();await expect(radio).toHaveAttribute("aria-checked","true");return;}
+ await trigger.click();
+ await page.getByRole("listbox",{name:label,exact:true}).locator(`[data-option="${id}"]`).click();
+ await expect(trigger).toHaveAttribute("data-value",id);
+}
 export async function fillPackage(page:Page,f:PackageFixture,unit=f.kg,count="5",quantity="200") {
  await page.goto(`/t/${f.slug}/receipts/packages`);
  await page.getByLabel("Ürün ara").fill(f.name);
  await page.getByRole("button",{name:`${f.itemId} · ${f.name}`,exact:true}).click();
  await page.getByRole("button",{name:"Paketlere geç",exact:true}).click();
- await page.getByRole("combobox",{name:"Depo",exact:true}).selectOption(f.warehouseId);
- await page.getByLabel("Kabul lokasyonu").selectOption(f.locationId);
- await page.getByLabel("Miktar birimi").selectOption(unit);
+ await pick(page,"Depo",f.warehouseId);
+ await pick(page,"Kabul lokasyonu",f.locationId);
+ await pick(page,"Miktar birimi",unit);
  await page.getByLabel("Paket adedi (1–200)",{exact:true}).fill(count);
  await page.getByRole("textbox",{name:"Her paket Paket miktarı",exact:true}).fill(quantity);
 }

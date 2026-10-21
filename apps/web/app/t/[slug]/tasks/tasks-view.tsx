@@ -3,21 +3,24 @@
 // sunucuda `document.approve` ister (A-132). Atanabilir kişiler sunucuda hesaplanır (`kinds`: kişinin yapabildiği görev türleri).
 // Sunucu reddi neden + sonraki eylemle gösterilir.
 // T-971 (B-63, I-18): LİSTE kalıbı (KalipListe.dc.html): tür ve durum süzgeç çipleri (adresi değiştirir: `?kind=` / `?status=`), görev kartları,
-// kartın altında Ata / İptal et eylem satırı (kart içine düğme gömülmez), sayfalama `KalipDaha`. Ata / İptal pencereleri (Sheet) korunur.
+// kartın altında Ata / İptal et eylem satırı (kart içine düğme gömülmez), sayfalama `KalipDaha`.
+// T-990 (B-97): Ata ve İptal et pencere değil TAM EKRAN FORMDUR (`KalipFormEkran`; adres `?assign=<id>` / `?cancel=<id>`, liste süzgeci ve
+// sayfa imleci korunur). Kişi seçimi ortak `KalipSecim` (çok kişide aramalı seçim sayfası); iptal gerekçesi zorunlu alan kuralıdır.
 // T-978: arama (`.lsearch`, GET `q`: ürün kodu/adı, raf, atanan kişi — sunucuda listTasks; çiplerle birlikte çalışır).
 // Bilinçli farklar (DESIGN-PARITY, T-971): çip sayıları yok; alt çubuk ana işlemi OKUT (ekranın
 // kendi oluşturma işlemi yok — görevler mal kabul / sipariş / sayımdan doğar).
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import type { FormEvent } from "react";
 import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Sheet } from "../easy-setup/sheet.tsx";
+import type { AlanKurali } from "../kalip/dogrula.ts";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
+import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { fmtQty } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
-import { KalipPencereAlan, KalipPencereDugme, KalipPencereMetin, KalipPencereSecim } from "../kalip/pencere.tsx";
+import { KalipSecim } from "../kalip/secim.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { assignTaskAction, cancelTaskAction } from "./actions.ts";
 
@@ -84,64 +87,164 @@ export interface TasksViewProps {
   readonly search?: string;
 }
 
+/** Sunucu reddi → tek satırlık neden (formun altında + balon). */
+function useHataMetni(): (error: ServerError) => string {
+  const te = useTranslations("tasks.errors");
+  return (error) => {
+    const k = taskErrorKey(error);
+    return `${te(k)} ${te(`${k}Action`)} · ${te("code", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}${error.requestId ? ` · ${error.requestId}` : ""}`;
+  };
+}
+
+/** Görevi ata: tam ekran form (kişi seçimi; yeniden atamada açılış değeri mevcut sorumlu). */
+function TaskAssignForm({ slug, dark, task, members, onClose }: { slug: string; dark: boolean; task: TaskView; members: readonly TaskMemberView[]; onClose: (msg?: string) => void }) {
+  const t = useTranslations("tasks");
+  const hata = useHataMetni();
+  const router = useRouter();
+  const eligible = members.filter((m) => m.kinds.includes(task.kind));
+  const [initial] = useState(() => ({ member: task.assignedMembershipId !== null && eligible.some((m) => m.membershipId === task.assignedMembershipId) ? task.assignedMembershipId : "" }));
+  const [f, setF] = useState(initial);
+  const v = KIND_VISUAL[task.kind];
+  const rules: AlanKurali[] = [{ name: "member", label: t("member"), required: true }];
+  const who = eligible.find((m) => m.membershipId === f.member)?.displayName ?? "";
+
+  async function save(): Promise<KaydetSonuc> {
+    const res = await assignTaskAction({ slug, taskId: task.id, membershipId: f.member, expectedVersion: task.version });
+    return res.ok ? { ok: true } : { ok: false, mesaj: hata(res.error) };
+  }
+
+  return (
+    <KalipFormEkran
+      dark={dark}
+      title={t("assignTitle")}
+      subtitle={t("k.assignSub")}
+      icon={{ d: LICON.people, color: "2F5DA8" }}
+      testId="task-assign"
+      values={f}
+      initial={initial}
+      rules={rules}
+      canEdit={eligible.length > 0}
+      lockedTitle={t("noEligible")}
+      lockedSub={t("lockedReason")}
+      onSave={save}
+      onDone={() => {
+        onClose(t("done.assigned"));
+        router.refresh();
+      }}
+      onBack={() => onClose()}
+      homeHref={`/t/${encodeURIComponent(slug)}`}
+      saveShort={t("k.assignShort")}
+      saveAria={t("assignTitle")}
+      savedText={t("done.assigned")}
+      leaveText={t("k.leaveAssign")}
+      leaveSaveLabel={t("k.leaveAssignSave")}
+      preview={<KalipOnizleme name={t(`kind.${task.kind}`)} code={t(`status.${task.status}`)} d={v.d} color={v.color} kind={t("k.gTask")} rows={who === "" ? [] : [{ k: t("member"), v: who }]} />}
+    >
+      <KalipGrup title={t(`kind.${task.kind}`)} sub={t(`status.${task.status}`)} d={v.d} color={v.color}>
+        {eligible.length === 0 ? (
+          <Banner kind="info">{t("noEligible")}</Banner>
+        ) : (
+          <KalipSecim
+            name="member"
+            label={t("member")}
+            placeholder={t("memberPlaceholder")}
+            value={f.member}
+            color="2F5DA8"
+            icon={{ d: LICON.people, color: "2F5DA8" }}
+            onPick={(id) => setF({ member: id })}
+            options={eligible.map((m) => ({ id: m.membershipId, label: m.displayName, d: LICON.people, color: "0E7C7B" }))}
+            testId="task-assign-member"
+          />
+        )}
+      </KalipGrup>
+    </KalipFormEkran>
+  );
+}
+
+/** Görevi iptal et: tam ekran form (zorunlu gerekçe; denetim kaydına yazılır). */
+function TaskCancelForm({ slug, dark, task, onClose }: { slug: string; dark: boolean; task: TaskView; onClose: (msg?: string) => void }) {
+  const t = useTranslations("tasks");
+  const hata = useHataMetni();
+  const router = useRouter();
+  const [initial] = useState({ reason: "" });
+  const [f, setF] = useState(initial);
+  const v = KIND_VISUAL[task.kind];
+  const rules: AlanKurali[] = [{ name: "reason", label: t("reasonLabel"), required: true, maxLength: 500 }];
+
+  async function save(): Promise<KaydetSonuc> {
+    const res = await cancelTaskAction({ slug, taskId: task.id, expectedVersion: task.version, reason: f.reason });
+    return res.ok ? { ok: true } : { ok: false, mesaj: hata(res.error) };
+  }
+
+  return (
+    <KalipFormEkran
+      dark={dark}
+      title={t("cancelTitle")}
+      subtitle={t("k.cancelSub")}
+      icon={{ d: LICON.close, color: "C62828" }}
+      testId="task-cancel"
+      values={f}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={() => {
+        onClose(t("done.cancelled"));
+        router.refresh();
+      }}
+      onBack={() => onClose()}
+      homeHref={`/t/${encodeURIComponent(slug)}`}
+      saveShort={t("k.cancelShort")}
+      saveAria={t("confirmCancel")}
+      savedText={t("done.cancelled")}
+      leaveText={t("k.leaveCancel")}
+      leaveSaveLabel={t("k.leaveCancelSave")}
+      preview={<KalipOnizleme name={t(`kind.${task.kind}`)} code={t(`status.${task.status}`)} d={v.d} color={v.color} kind={t("k.gTask")} />}
+    >
+      <KalipGrup title={t(`kind.${task.kind}`)} sub={t(`status.${task.status}`)} d={v.d} color="C62828">
+        <KalipAlan label={`${t("reasonLabel")} *`} hint={t("reasonHint")} name="reason" value={f.reason} onChange={(e) => setF({ reason: e.target.value })} autoComplete="off" maxLength={500} multiline />
+      </KalipGrup>
+    </KalipFormEkran>
+  );
+}
+
 export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage, search = "" }: TasksViewProps) {
   const t = useTranslations("tasks");
-  const te = useTranslations("tasks.errors");
   const router = useRouter();
+  const params = useSearchParams();
   const locale = useLocale();
   const home = `/t/${encodeURIComponent(slug)}`;
   const base = `${home}/tasks`;
   const { say, node: toast } = useKalipToast("liste");
-  const [assigning, setAssigning] = useState<TaskView | null>(null);
-  const [cancelling, setCancelling] = useState<TaskView | null>(null);
-  const [memberId, setMemberId] = useState("");
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<ServerError | null>(null);
 
-  const eligible = assigning === null ? [] : members.filter((m) => m.kinds.includes(assigning.kind));
-
-  function close() {
-    if (busy) return;
-    setAssigning(null);
-    setCancelling(null);
-    setMemberId("");
-    setReason("");
-  }
-
-  async function finish(res: { ok: true } | { ok: false; error: ServerError }, done: string) {
-    setBusy(false);
-    setAssigning(null);
-    setCancelling(null);
-    setMemberId("");
-    setReason("");
-    if (!res.ok) {
-      tone("err");
-      setError({ code: res.error.code, detail: res.error.detail, requestId: res.error.requestId });
-      return;
+  // Liste adresi (süzgeç + sayfa imleci korunur; form parametreleri düşer).
+  const listQs = (() => {
+    const p = new URLSearchParams(params.toString());
+    p.delete("assign");
+    p.delete("cancel");
+    return p.toString();
+  })();
+  const listHref = listQs === "" ? base : `${base}?${listQs}`;
+  const go = (param: "assign" | "cancel", task: TaskView): void => {
+    tone("tap");
+    const p = new URLSearchParams(listQs);
+    p.set(param, task.id);
+    router.push(`${base}?${p.toString()}`);
+  };
+  const close = (msg?: string): void => {
+    router.push(listHref);
+    if (msg !== undefined) {
+      tone("ok");
+      say("ok", msg);
     }
-    tone("ok");
-    say("ok", done);
-    router.refresh();
-  }
+  };
+  const assignId = params.get("assign");
+  const cancelId = params.get("cancel");
+  const isOpen = (x: TaskView): boolean => x.status === "OPEN" || x.status === "ASSIGNED";
+  const assigning = canManage && assignId !== null ? tasks.find((x) => x.id === assignId && isOpen(x)) : undefined;
+  const cancelling = canManage && cancelId !== null ? tasks.find((x) => x.id === cancelId && isOpen(x)) : undefined;
+  if (assigning !== undefined) return <TaskAssignForm key={assigning.id} slug={slug} dark={dark} task={assigning} members={members} onClose={close} />;
+  if (cancelling !== undefined) return <TaskCancelForm key={cancelling.id} slug={slug} dark={dark} task={cancelling} onClose={close} />;
 
-  async function submitAssign(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (assigning === null || memberId === "") return;
-    setBusy(true);
-    setError(null);
-    await finish(await assignTaskAction({ slug, taskId: assigning.id, membershipId: memberId, expectedVersion: assigning.version }), t("done.assigned"));
-  }
-
-  async function submitCancel(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (cancelling === null || reason.trim() === "") return;
-    setBusy(true);
-    setError(null);
-    await finish(await cancelTaskAction({ slug, taskId: cancelling.id, expectedVersion: cancelling.version, reason }), t("done.cancelled"));
-  }
-
-  const key = error === null ? "" : taskErrorKey(error);
   const href = (next: { kind?: string; status?: string }): string => {
     const p = new URLSearchParams();
     const k = next.kind ?? kindFilter;
@@ -161,16 +264,8 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
     ...STATUSES.map((st) => ({ id: st, label: t(`status.${st}`), d: STATUS_VISUAL[st].d, color: STATUS_VISUAL[st].color, on: statusFilter === st, href: href({ status: statusFilter === st ? "" : st }) })),
   ];
   const filtered = kindFilter !== "" || statusFilter !== "" || search !== "";
-  const openAssign = (task: TaskView): void => {
-    tone("tap");
-    setError(null);
-    setAssigning(task);
-  };
-  const openCancel = (task: TaskView): void => {
-    tone("tap");
-    setError(null);
-    setCancelling(task);
-  };
+  const openAssign = (task: TaskView): void => go("assign", task);
+  const openCancel = (task: TaskView): void => go("cancel", task);
 
   return (
     <>
@@ -201,17 +296,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
             <Banner kind="info">{t("lockedReason")}</Banner>
           </div>
         )}
-        {error === null ? null : (
-          <Banner kind="error">
-            <p>
-              {te(key)} {te(`${key}Action`)}
-            </p>
-            <p className="mt-1 break-all text-sm">
-              {te("code", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}
-              {error.requestId ? ` · ${error.requestId}` : ""}
-            </p>
-          </Banner>
-        )}
+        {canManage && (assignId ?? cancelId) !== null ? <Banner kind="info">{t("k.notFound")}</Banner> : null}
         {tasks.length === 0 ? (
           <KalipBos title={t("empty.title")} hint={t("empty.action")} iconD={LICON.clip} {...(filtered ? { action: { label: t("clear"), href: base } } : {})} />
         ) : (
@@ -277,62 +362,6 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
         )}
       </KalipEkran>
 
-      <Sheet
-        open={assigning !== null}
-        title={t("assignTitle")}
-        titleId="task-assign-title"
-        icon={{ d: LICON.people, color: "2F5DA8" }}
-        busy={busy}
-        onClose={close}
-        onSubmit={(e) => void submitAssign(e)}
-        footer={
-          <>
-            <KalipPencereDugme kind="cancel" onClick={close} disabled={busy}>
-              {t("back")}
-            </KalipPencereDugme>
-            <KalipPencereDugme type="submit" loading={busy} disabled={memberId === ""}>
-              {t("submit")}
-            </KalipPencereDugme>
-          </>
-        }
-      >
-        {assigning === null ? null : <KalipPencereMetin strong>{t(`kind.${assigning.kind}`)}</KalipPencereMetin>}
-        {eligible.length === 0 ? (
-          <Banner kind="info">{t("noEligible")}</Banner>
-        ) : (
-          <KalipPencereSecim label={t("member")} name="membershipId" value={memberId} onChange={(e) => setMemberId(e.target.value)} required>
-            <option value="">{t("memberPlaceholder")}</option>
-            {eligible.map((m) => (
-              <option key={m.membershipId} value={m.membershipId}>
-                {m.displayName}
-              </option>
-            ))}
-          </KalipPencereSecim>
-        )}
-      </Sheet>
-
-      <Sheet
-        open={cancelling !== null}
-        title={t("cancelTitle")}
-        titleId="task-cancel-title"
-        icon={{ d: LICON.close, color: "C62828" }}
-        busy={busy}
-        onClose={close}
-        onSubmit={(e) => void submitCancel(e)}
-        footer={
-          <>
-            <KalipPencereDugme kind="cancel" onClick={close} disabled={busy}>
-              {t("back")}
-            </KalipPencereDugme>
-            <KalipPencereDugme type="submit" kind="danger" loading={busy} disabled={reason.trim() === ""}>
-              {t("confirmCancel")}
-            </KalipPencereDugme>
-          </>
-        }
-      >
-        {cancelling === null ? null : <KalipPencereMetin strong>{t(`kind.${cancelling.kind}`)}</KalipPencereMetin>}
-        <KalipPencereAlan label={t("reasonLabel")} hint={t("reasonHint")} name="reason" value={reason} onChange={(e) => setReason(e.target.value)} autoComplete="off" required maxLength={500} />
-      </Sheet>
     </>
   );
 }

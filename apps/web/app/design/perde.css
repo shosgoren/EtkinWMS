@@ -1,0 +1,38 @@
+/* T-990 (B-97, ALTIN-KURAL "Katman standardı", kullanıcı 21 Ekim): uygulamadaki BÜTÜN engelleyen katmanlar tek buzlu perdedir.
+   Değer: belirteçli koyu katman (`--color-dz-a-afajan-ef`) + 8px bulanıklık (kullanıcı denetimi 21 Ekim: Pano hesap menüsünün 3–4px
+   perdesi zayıf kalıyordu; "en az 8px"). Kaynakların kendi perde
+   sınıfları (`.hback`, `.scrim`, `.cfback`, `.sxback`, `.veil`; ilk kullanım rehberinin delikli `.tveil` perdesi hariç: hedef net kalmalı) burada aynı değere eşitlenir; yeni katman yalnız `.kperde`
+   sınıfıyla (ortak bileşen `KalipPerdeKatman`, kalip/perde.tsx) çizilir — başka dosyada `backdrop-filter` yazılmaz (bekçi:
+   ui-standards.test.ts). Önekli `-webkit-backdrop-filter` YAZILMAZ: CSS küçültücü kendisi ekler; elle yazılınca standart özelliği
+   siliyordu (Modüller perdesi bulanık değildi, kök neden). Yerel `<dialog>` perdesi (`::backdrop`, ör. eski Daha fazla sayfası) da aynı
+   değeri alır; kalıp penceresi kendi `.sxback` perdesini çizdiğinden `::backdrop`'u saydamdır (kalip-frame.css). Hareketi azaltma: yalnız animasyon kapanır, bulanıklık kalır. Renk sabiti yok. */
+:root { --perde-bg: var(--color-dz-a-afajan-ef); --perde-blur: blur(8px); }
+
+.kperde,
+.dzk .hback, .dzk .veil,
+.dzp .hback, .dzp .scrim,
+.dze .hback, .dze .scrim, .dze .cfback,
+.dzr .hback, .dzr .scrim, .dzr .cfback,
+.dza .hback, .dza .scrim, .dza .cfback,
+.dzt .hback,
+.dzs .veil,
+.dzf .cfback, .dzf.dzf .sxback, .dzf.dzf.kpen .sxback,
+.dz .ovl, .dzy .scrim,
+dialog::backdrop {
+  background: var(--perde-bg);
+  backdrop-filter: var(--perde-blur);
+}
+.kperde { position: fixed; inset: 0; z-index: 40; border: 0; padding: 0; margin: 0; cursor: pointer; animation: kperde-fade .2s ease-out; }
+@keyframes kperde-fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .kperde,
+  .dzk .hback, .dzk .veil,
+  .dzp .hback, .dzp .scrim,
+  .dze .hback, .dze .scrim, .dze .cfback,
+  .dzr .hback, .dzr .scrim, .dzr .cfback,
+  .dza .hback, .dza .scrim, .dza .cfback,
+  .dzt .hback,
+  .dzs .veil,
+  .dzf .cfback, .dzf.dzf .sxback, .dzf.dzf.kpen .sxback,
+  .dz .ovl, .dzy .scrim { animation: none; }
+}

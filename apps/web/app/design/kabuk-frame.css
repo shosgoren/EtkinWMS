@@ -45,3 +45,11 @@ body:has(.dzk) .dzp .app, body:has(.dzk) .dze .app, body:has(.dzk) .dzr .app, bo
 .dzp:has(.hback, .page), .dze:has(.scrim, .cfback), .dzr:has(.scrim, .cfback), .dza:has(.scrim, .cfback) { z-index: 26; }
 /* Sayfa açılınca odak kaba gelir (klavye açılmasın); kabın kendisi çerçeve çizmez, içindeki denetimler kaynaktaki odak halkasını alır. */
 .dzk .msheet:focus { outline: none; }
+/* T-990: ana işlem pasifken basılabilir kalır (dokununca neden balonu); görünüş pasif. */
+.dzk .dk.big[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+/* T-990: ana işlemde kaydedilmemiş değişiklik sayısı rozeti (sarı, koyu yazı; belirteçli). */
+.dzk .dk.big { position: relative; }
+.dzk .dk.big .kbadge {
+  position: absolute; top: -4px; right: -4px; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 999px; background: var(--color-dz-x-pemfec); color: var(--color-dz-x-bkbdaa); font: 800 12px/1 var(--font-bricolage), sans-serif;
+}

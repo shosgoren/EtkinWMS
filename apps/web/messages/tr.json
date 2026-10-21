@@ -346,7 +346,17 @@
       "close": "Kapat",
       "sentEmail": "Davet e-posta ile gönderildi. Davet 72 saat geçerlidir.",
       "sentScreen": "Davet e-postası gönderilemedi. Aşağıdaki bağlantıyı davet ettiğin kişiye kendin ilet.",
-      "linkLabel": "Davet bağlantısı"
+      "linkLabel": "Davet bağlantısı",
+      "sendShort": "GÖNDER",
+      "sent": "Davet gönderildi",
+      "failed": "Davet gönderilemedi — nedeni aşağıda.",
+      "sub": "E-postayı yaz, rolü seç, GÖNDER'e bas.",
+      "gWho": "Kimi davet ediyorsun?",
+      "gRole": "Hangi rolle?",
+      "leaveText": "Davet gönderilmedi. Çıkarsan yazdıkların kaybolur.",
+      "leaveSave": "Gönder ve çık",
+      "doneShort": "TAMAM",
+      "resultSub": "Davet sonucu"
     },
     "linkBox": {
       "copy": "Kopyala",
@@ -421,7 +431,8 @@
     "k": {
       "inviteShort": "DAVET ET",
       "count": "{n} ÜYE",
-      "pendingCount": "{n} DAVET"
+      "pendingCount": "{n} DAVET",
+      "wait": "Ekran hazırlanıyor, bir saniye…"
     },
     "search": "Üye ara",
     "searchPlaceholder": "Ad ya da e-posta ara",
@@ -1370,7 +1381,12 @@
         "yesterday": "DÜN {time}",
         "daysAgo": "{n} GÜN ÖNCE",
         "kind_COUNT_ADJUSTMENT": "Sayım farkı",
-        "kind_OTHER": "Hareket"
+        "kind_OTHER": "Hareket",
+        "fixedTitle": "Değişmeyen bilgiler",
+        "convAdd": "Dönüşüm ekle",
+        "convNoUnit": "Dönüşüm için başka birim yok; önce yeni birim ekle.",
+        "bcAdd": "Barkod ekle",
+        "unitTag": "BİRİM · {unit}"
       }
     },
     "errors": {
@@ -1544,7 +1560,8 @@
         "title": "{name} arşivlensin mi?",
         "description": "{name} ({code}) lokasyonu arşivli olur. Stok, açık sayım veya aktif alt lokasyon varsa arşivlenmez; önce boşalt/arşivle.",
         "button": "Arşivle"
-      }
+      },
+      "addWait": "Ekran hazırlanıyor; bir saniye sonra yeniden dokun."
     },
     "errors": {
       "code": "Hata kodu: {code}",
@@ -1792,7 +1809,10 @@
       "submitCount": "{count} lokasyonu oluştur",
       "cancel": "Vazgeç",
       "done": "{count} lokasyon oluşturuldu: {first} … {last}",
-      "doneReplayed": "Bu istek zaten işlenmişti; {count} lokasyon var."
+      "doneReplayed": "Bu istek zaten işlenmişti; {count} lokasyon var.",
+      "submitShort": "OLUŞTUR",
+      "leaveText": "Raflar henüz oluşturulmadı. Kaydetmeden çıkarsan yazdığın aralık kaybolur.",
+      "leaveSave": "Oluştur ve çık"
     }
   },
   "codeEdit": {
@@ -1806,7 +1826,11 @@
     "cancel": "Vazgeç",
     "submit": "Kodu değiştir",
     "done": "Kod değişti: {from} → {to}.",
-    "undo": "Geri al ({code} koduna dön)"
+    "undo": "Geri al ({code} koduna dön)",
+    "saveShort": "DEĞİŞTİR",
+    "leaveText": "Yeni kod kaydedilmedi. Kaydetmeden çıkarsan şimdiki kod kalır.",
+    "leaveSave": "Kodu değiştir ve çık",
+    "currentShort": "Şimdiki kod"
   },
   "tasks": {
     "title": "Görevler",
@@ -1907,7 +1931,19 @@
     "paging": "Sayfalar",
     "countSessions": "Sayım oturumları",
     "search": "Görev ara",
-    "searchPlaceholder": "Ürün, raf ya da kişi ara"
+    "searchPlaceholder": "Ürün, raf ya da kişi ara",
+    "k": {
+      "assignShort": "ATA",
+      "cancelShort": "İPTAL ET",
+      "assignSub": "Görevi yapacak kişiyi seç, ATA'ya bas.",
+      "cancelSub": "Gerekçeyi yaz, İPTAL ET'e bas.",
+      "leaveAssign": "Görev atanmadı. Çıkarsan seçimin kaybolur.",
+      "leaveAssignSave": "Ata ve çık",
+      "leaveCancel": "Görev iptal edilmedi. Çıkarsan yazdığın gerekçe kaybolur.",
+      "leaveCancelSave": "İptal et ve çık",
+      "gTask": "Görev",
+      "notFound": "Bu görev artık listede yok (sayfa değişmiş olabilir)."
+    }
   },
   "receiving": {
     "title": "Beklenen teslimler",
@@ -3496,7 +3532,12 @@
     "k": {
       "addShort": "EKLE",
       "person": "KİŞİ"
-    }
+    },
+    "offName": "Ad soyad en az 2 harf olmalı.",
+    "offUsername": "Kullanıcı adı en az 3 karakter olmalı.",
+    "offBusy": "İşlem sürüyor, bir saniye…",
+    "leaveText": "Personel eklenmedi. Çıkarsan yazdıkların kaybolur.",
+    "leaveSave": "Ekle ve çık"
   },
   "fieldLogin": {
     "title": "Saha girişi",
@@ -3649,7 +3690,10 @@
     "suspendedTitle": "Otomatik durduruldu · {name}",
     "suspendedBody": "Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi ve oturumları kapatıldı. Hesapların kilidini Üyeler ekranından açın.",
     "closeSessions": "OTURUMLARI KAPAT",
-    "sessionsClosed": "Oturumlar kapatıldı."
+    "sessionsClosed": "Oturumlar kapatıldı.",
+    "offCode": "Önce terminaldeki 6 haneli kodu yaz.",
+    "offBusy": "İşlem sürüyor, bir saniye…",
+    "leaveText": "Cihaz onayı yarım kaldı. Çıkarsan yazdığın kod kaybolur."
   },
   "workspaces": {
     "title": "Çalışma alanı seçin",
@@ -4326,7 +4370,10 @@
     "approvedTitle": "PIN BEKLEYENLER",
     "approvedHint": "ONAYLANDI · KİŞİ PIN BELİRLEYECEK (24 SAAT)",
     "cancelApproved": "İPTAL ET",
-    "cancelApprovedAria": "{name} için onayı iptal et"
+    "cancelApprovedAria": "{name} için onayı iptal et",
+    "offCode": "Önce kişinin telefonundaki 6 haneli kodu yaz.",
+    "offBusy": "İşlem sürüyor, bir saniye…",
+    "leaveText": "Onay yarım kaldı. Çıkarsan yazdığın kod kaybolur."
   },
   "paylas": {
     "title": "Etkin WMS ekibine katıl",
@@ -4584,7 +4631,8 @@
         "name": "Kim ne yaptı?",
         "sub": "İşlem kaydı"
       }
-    }
+    },
+    "mainOff": "Bu işlem şu an yapılamaz."
   },
   "kalip": {
     "help": "Yardım",
@@ -4602,6 +4650,38 @@
     "stepLocked": ", sırada",
     "stepDone": ", tamam",
     "voiceSoon": "Sesle söyleme yakında · Etkin geliyor",
+    "unsavedText": "Kaydedilmemiş değişiklik var. Kaydetmeden çıkarsan kaybolur.",
+    "back": "Geri",
+    "save": "Kaydet",
+    "saveShort": "KAYDET",
+    "saved": "Kaydedildi",
+    "saving": "Kaydediliyor…",
+    "saveFailed": "Kaydedilemedi. Bağlantını kontrol edip yeniden dene.",
+    "noChange": "Değişiklik yok — kaydedilecek bir şey yok.",
+    "readOnly": "Yalnız görüntüleme",
+    "readOnlySub": "Değiştirme yetkin yok; yöneticine sor.",
+    "preview": "Önizleme",
+    "previewName": "Adı yaz",
+    "vRequired": "Zorunlu",
+    "vEmail": "Geçerli bir e-posta yaz",
+    "vNumber": "Sayı yaz",
+    "vTooLong": "Çok uzun",
+    "vMissing": "{n} alan eksik: {list}",
+    "vInvalid": "{n} alan hatalı: {list}",
+    "secSearch": "Ara ya da okut…",
+    "secSearchLabel": "{title} içinde ara",
+    "secScan": "Okut",
+    "secMic": "Sesle söyle (yakında)",
+    "secNone": "Eşleşen yok",
+    "secScanNone": "{code} listede yok",
+    "secPick": "Seç",
+    "updatedTitle": "Uygulama güncellendi",
+    "updatedText": "Yeni sürüm yüklendi. Devam etmek için sayfayı yenile; bu işlem eski sürümle gönderilemedi.",
+    "updatedReload": "Yenile",
+    "updatedLater": "Sonra",
+    "mainOff": "Bu işlem şu an yapılamaz.",
+    "discarded": "Değişiklikler bırakıldı",
+    "formFirst": "Önce zorunlu alanları doldur, seçimleri tamamla.",
     "excel": {
       "aria": "Excel · {kind}: içeri al, güncelle ya da indir",
       "menu": "Excel · {kind}",
@@ -4694,7 +4774,10 @@
       "doneNext": "SIRADAKİ: YERLEŞTİR · OKUT",
       "putDone": "Rafa kondu · {n}",
       "fixed": "Görevdeki miktar",
-      "available": "RAFTA {n}"
+      "available": "RAFTA {n}",
+      "busy": "İşleniyor, bir saniye…",
+      "overMax": "Beklenenden fazla toplanamaz — adedi azalt.",
+      "needOne": "Önce en az 1 adet gir ya da okut."
     }
   },
   "destek": {

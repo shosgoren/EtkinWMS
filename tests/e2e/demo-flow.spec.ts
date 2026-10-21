@@ -180,15 +180,17 @@ test.describe("demo akışı", () => {
 
     // Davet: demo tenant'ta tamamen kapalı (M9) — hata bildirimi görünür, bağlantı kutusu ÇIKMAZ.
     await invite.click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByTestId("invite-form"); // T-990: davet tam ekran form (`?invite=1`)
     await expect(dialog).toBeVisible();
     await dialog.getByLabel("E-posta").fill(`e2e-${Date.now()}@smoke.example.invalid`);
-    await dialog.getByRole("button", { name: "Davet gönder" }).click();
+    await page.getByRole("button", { name: "Davet gönder" }).click();
     await expect(dialog.getByText("Bu işlem yapılamadı.")).toBeVisible();
     await expect(dialog.getByText(/Hata kodu: FORBIDDEN/)).toBeVisible();
     await expect(page.getByTestId("link-box")).toHaveCount(0);
     await expectNoHorizontalOverflow(page, "davet penceresi");
-    await dialog.getByRole("button", { name: "Kapat" }).click();
+    // Yarım davet: Geri ortak cam çıkış kutusunu açar; "Kaydetmeden çık" listeye döner.
+    await page.getByTestId("kabuk-back").click();
+    await page.getByTestId("kalip-unsaved-leave").click();
     await expect(dialog).toBeHidden();
 
     // Yenilemede bağlantı yok, bekleyen davet yok.

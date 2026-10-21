@@ -1,12 +1,15 @@
 "use client";
-// Davet penceresi + tek seferlik bağlantı kutusu + sunucu hatası gösterimi (T-119). Düz bağlantı YALNIZCA bileşen
+// Davet formu (T-990: tam ekran) + tek seferlik bağlantı kutusu + sunucu hatası gösterimi (T-119). Düz bağlantı YALNIZCA bileşen
 // durumunda tutulur (URL, depolama, log yok); kapatılınca ya da sayfa yenilenince kaybolur (A-42).
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import { useRef, useState } from "react";
 import { Banner, Button, TriangleAlert } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { KalipPencere, KalipPencereAlan, KalipPencereDugme, KalipPencereSecim } from "../kalip/pencere.tsx";
+import type { AlanKurali } from "../kalip/dogrula.ts";
+import { KalipEkran } from "../kalip/ekran.tsx";
+import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
+import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
+import { KalipSecim } from "../kalip/secim.tsx";
 import { inviteMemberAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`); yalnızca kod + ayrıntı + istek kimliği kullanılır. */
@@ -95,15 +98,36 @@ interface InviteResult {
   readonly inviteLink?: string;
 }
 
-export function InviteDialog({
-  open,
+/** Rol kutularının ikonu ve rengi (yalnız görsel; yetki sunucuda). */
+export const ROLE_VISUAL: Readonly<Record<string, { readonly d: string; readonly color: string }>> = {
+  TENANT_ADMIN: { d: LICON.shield, color: "172E42" },
+  WAREHOUSE_MANAGER: { d: LICON.depo, color: "2F5DA8" },
+  PICKER: { d: LICON.moveOut, color: "B85A14" },
+  COUNTER: { d: LICON.clip, color: "6C4BD8" },
+  READ_ONLY: { d: LICON.info, color: "4E6476" },
+};
+const ROLE_DEFAULT = { d: LICON.people, color: "2F5DA8" };
+
+interface InviteValues extends Readonly<Record<string, unknown>> {
+  readonly email: string;
+  readonly roleKey: string;
+}
+
+/**
+ * T-990 (B-97): üye daveti TAM EKRAN FORMDUR (pencere değil; adres `?invite=1`, ekran yönetir). Alanlar: e-posta (`kind: "email"` kuralı) +
+ * rol kutuları (≤6 seçenek, `KalipSecim`). Doğrulama, GÖNDER (yalnız değişiklikte etkin), çıkış uyarısı `KalipFormEkran` içindedir.
+ * Sunucu reddi neden ayrıştırılmadan formun altında (`ServerErrorBanner`). Başarıda aynı adreste sonuç ekranı: e-postayla gitti bilgisi ya
+ * da tek seferlik bağlantı kutusu (bağlantı yalnız bu bileşenin belleğinde; TAMAM/Geri ile düşer).
+ */
+export function InviteForm({
   slug,
+  dark,
   roleKeys,
   onClose,
   onInvited,
 }: {
-  open: boolean;
   slug: string;
+  dark: boolean;
   roleKeys: readonly string[];
   onClose: () => void;
   /** Bağlantı üst bileşene verilmez; yalnızca liste yenilenir. */
@@ -112,82 +136,116 @@ export function InviteDialog({
   const t = useTranslations("members.inviteDialog");
   const tr = useTranslations("roles");
   const tl = useTranslations("members.linkBox");
-  const [busy, setBusy] = useState(false);
+  const home = `/t/${encodeURIComponent(slug)}`;
+  const [initial] = useState<InviteValues>(() => ({ email: "", roleKey: roleKeys.includes("READ_ONLY") ? "READ_ONLY" : (roleKeys[0] ?? "") }));
+  const [f, setF] = useState<InviteValues>(initial);
   const [error, setError] = useState<ServerError | null>(null);
   const [result, setResult] = useState<InviteResult | null>(null);
+  const sonuc = useRef<InviteResult | null>(null);
+  const rules: AlanKurali[] = [
+    { name: "email", label: t("email"), required: true, kind: "email", maxLength: 320 },
+    { name: "roleKey", label: t("role"), required: true },
+  ];
+  const v = ROLE_VISUAL[f.roleKey] ?? ROLE_DEFAULT;
 
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      setResult(null);
+  async function save(): Promise<KaydetSonuc> {
+    setError(null);
+    const res = await inviteMemberAction({ slug, email: f.email.trim(), roleKey: f.roleKey });
+    if (!res.ok) {
+      setError({ code: res.error.code, detail: res.error.detail, requestId: res.error.requestId });
+      return { ok: false, mesaj: t("failed") };
     }
-  }, [open]);
+    sonuc.current = { delivery: res.data.delivery, ...(res.data.inviteLink === undefined ? {} : { inviteLink: res.data.inviteLink }) };
+    // Tek seferlik bağlantı ekranda gösterilecekse "Gönder ve çık" seçilse bile ekranda kalınır (bağlantı kaybolmasın).
+    return res.data.inviteLink === undefined ? { ok: true } : { ok: true, kal: true };
+  }
 
   const close = (): void => {
     setResult(null); // bağlantı kapanışta bellekten düşer
+    sonuc.current = null;
     onClose();
   };
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setBusy(true);
-    setError(null);
-    const res = await inviteMemberAction({ slug, email: String(form.get("email") ?? ""), roleKey: String(form.get("roleKey") ?? "") });
-    setBusy(false);
-    if (!res.ok) {
-      setError({ code: res.error.code, detail: res.error.detail, requestId: res.error.requestId });
-      return;
-    }
-    setResult({ delivery: res.data.delivery, ...(res.data.inviteLink === undefined ? {} : { inviteLink: res.data.inviteLink }) });
-    onInvited();
+  if (result !== null) {
+    return (
+      <KalipEkran
+        kind="form"
+        dark={dark}
+        title={t("title")}
+        subtitle={t("resultSub")}
+        icon={{ d: LICON.people, color: "6C4BD8" }}
+        testId="invite-result"
+        bar={{
+          back: { onClick: close, aria: t("close") },
+          homeNav: { href: home },
+          main: { label: t("doneShort"), aria: t("close"), d: LICON.check, onClick: close, testId: "invite-done" },
+        }}
+      >
+        <div className="kfl">
+          <div className="kfc">
+            {result.delivery === "EMAIL" || result.inviteLink === undefined ? (
+              <Banner kind="info">{t("sentEmail")}</Banner>
+            ) : (
+              <>
+                <Banner kind="warning">{t("sentScreen")}</Banner>
+                <LinkBox title={t("linkLabel")} link={result.inviteLink} warning={tl("warning")} onDismiss={close} />
+              </>
+            )}
+          </div>
+        </div>
+      </KalipEkran>
+    );
   }
 
-  // T-974 (B-63 grup B): kalıp penceresi (telefonda alt cam sayfa, masaüstünde ortada).
   return (
-    <KalipPencere
-      open={open}
+    <KalipFormEkran
+      dark={dark}
       title={t("title")}
-      titleId="invite-title"
+      subtitle={t("sub")}
       icon={{ d: LICON.people, color: "6C4BD8" }}
-      busy={busy}
-      onClose={close}
-      {...(result === null ? { onSubmit: (e: FormEvent<HTMLFormElement>) => void onSubmit(e) } : {})}
-      footer={
-        result === null ? (
-          <>
-            <KalipPencereDugme kind="cancel" onClick={close} disabled={busy}>
-              {t("close")}
-            </KalipPencereDugme>
-            <KalipPencereDugme type="submit" loading={busy}>
-              {t("submit")}
-            </KalipPencereDugme>
-          </>
-        ) : (
-          <KalipPencereDugme onClick={close}>{t("close")}</KalipPencereDugme>
-        )
-      }
+      testId="invite-form"
+      values={f}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={() => {
+        setResult(sonuc.current ?? { delivery: "EMAIL" });
+        onInvited();
+      }}
+      onBack={close}
+      homeHref={home}
+      saveShort={t("sendShort")}
+      saveAria={t("submit")}
+      savedText={t("sent")}
+      leaveText={t("leaveText")}
+      leaveSaveLabel={t("leaveSave")}
+      preview={<KalipOnizleme name={f.email} code={tr(f.roleKey)} d={v.d} color={v.color} kind={t("role")} />}
     >
-      {result === null ? (
-        <>
-          <KalipPencereAlan label={t("email")} hint={t("emailHint")} name="email" type="email" autoComplete="off" required />
-          <KalipPencereSecim label={t("role")} id="invite-role" name="roleKey" defaultValue="READ_ONLY">
-            {roleKeys.map((r) => (
-              <option key={r} value={r}>
-                {tr(r)}
-              </option>
-            ))}
-          </KalipPencereSecim>
-          {error ? <ServerErrorBanner error={error} returnTo={`/t/${slug}/members`} /> : null}
-        </>
-      ) : result.delivery === "EMAIL" || result.inviteLink === undefined ? (
-        <Banner kind="info">{t("sentEmail")}</Banner>
-      ) : (
-        <>
-          <Banner kind="warning">{t("sentScreen")}</Banner>
-          <LinkBox title={t("linkLabel")} link={result.inviteLink} warning={tl("warning")} onDismiss={close} />
-        </>
-      )}
-    </KalipPencere>
+      <KalipGrup title={t("gWho")} d={LICON.people} color="6C4BD8">
+        <KalipAlan
+          label={`${t("email")} *`}
+          hint={t("emailHint")}
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="off"
+          maxLength={320}
+          value={f.email}
+          onChange={(e) => setF((cur) => ({ ...cur, email: e.target.value }))}
+        />
+      </KalipGrup>
+      <KalipGrup title={t("gRole")} d={LICON.shield} color={v.color}>
+        <KalipSecim
+          name="roleKey"
+          label={t("role")}
+          value={f.roleKey}
+          color={v.color}
+          onPick={(id) => setF((cur) => ({ ...cur, roleKey: id }))}
+          options={roleKeys.map((r) => ({ id: r, label: tr(r), d: (ROLE_VISUAL[r] ?? ROLE_DEFAULT).d, color: (ROLE_VISUAL[r] ?? ROLE_DEFAULT).color }))}
+          testId="invite-role"
+        />
+      </KalipGrup>
+      {error ? <ServerErrorBanner error={error} returnTo={`/t/${slug}/members`} /> : null}
+    </KalipFormEkran>
   );
 }

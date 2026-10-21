@@ -3,14 +3,17 @@
 // Telefonda kaynaktaki alt cam sayfa, masaüstünde aynı kutu ortada (uyarlama kalip-frame.css `.kpen`). Yerel `<dialog>` (showModal):
 // üst katman (ortak alt çubuğun üstünde), odak tuzağı ve Esc tarayıcıdan; erişilebilir ad başlıktan (`aria-labelledby`), rol `dialog`.
 // Düğmeler kaynağın `.cfb` (save / leave / stay) öğeleri; alanlar `.fld`. Eski Sheet / ConfirmDialog / davet penceresi bunu kullanır.
-// Sunucu çağrısı sürerken (`busy`) Esc ve perde kapatmaz (ConfirmDialog sözleşmesi aynı).
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+// Sunucu çağrısı sürerken (`busy`) Esc ve perde kapatmaz (ConfirmDialog sözleşmesi aynı). T-990: pencere YALNIZ tek soruluk onaylar içindir
+// (arşivle, iptal et…); ekleme/düzenleme tam ekran formdur (form-ekran.tsx). Yarım işte (`dirty`) kapatma ortak çıkış kutusuna sorar.
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { THEME_COOKIE } from "../../../design/theme.ts";
+import { KalipCikisUyarisi } from "./cikis.tsx";
 import { Ico } from "./ekran.tsx";
-import { kdz } from "./tokens.ts";
+import { kdzOrtak } from "./tokens.ts";
 
-const c = (hex: string): string => kdz("dzf", hex);
+// T-990: form kabının kaynağında olmayan ama başka kalıp kaynağında geçen renk (ör. Hammadde kahvesi) de kullanılabilir.
+const c = (hex: string): string => kdzOrtak(hex);
 
 /** Açık kalıp ekranının teması (kök `.kalip.dz-dark`); kalıp dışı ekranda tema çerezi. */
 function useKalipDark(open: boolean): boolean {
@@ -38,12 +41,22 @@ export interface KalipPencereProps {
   readonly footer?: ReactNode;
   /** Sunucu çağrısı sürüyor: Esc ve perde kapatmaz. */
   readonly busy?: boolean;
+  /** T-990: yarım iş var (başlangıçla karşılaştırılmış): Esc / perde / Kapat soru sormadan kapatmaz, ortak çıkış kutusu açılır. */
+  readonly dirty?: boolean;
   readonly testId?: string;
   readonly children: ReactNode;
 }
 
-export function KalipPencere({ open, title, titleId, describedBy, icon, onClose, onSubmit, footer, busy = false, testId, children }: KalipPencereProps) {
+export function KalipPencere({ open, title, titleId, describedBy, icon, onClose: closeNow, onSubmit, footer, busy = false, dirty = false, testId, children }: KalipPencereProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [soru, setSoru] = useState(false);
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  // Yarım işte kapatma isteği önce sorulur (ortak cam kutu); değişiklik yoksa hemen kapanır.
+  const onClose = (): void => {
+    if (dirtyRef.current) setSoru(true);
+    else closeNow();
+  };
   const autoId = useId();
   const hid = titleId ?? `${autoId}-title`;
   const dark = useKalipDark(open);
@@ -104,6 +117,15 @@ export function KalipPencere({ open, title, titleId, describedBy, icon, onClose,
           {body}
         </form>
       )}
+      <KalipCikisUyarisi
+        open={soru}
+        dark={dark}
+        onLeave={() => {
+          setSoru(false);
+          closeNow();
+        }}
+        onStay={() => setSoru(false)}
+      />
     </dialog>
   );
 }
@@ -141,29 +163,6 @@ export function KalipPencereAlan({ label, hint, error, ...input }: { label: stri
           {error}
         </small>
       )}
-    </div>
-  );
-}
-
-/** Kaynak `.fld` seçim kutusu (+ isteğe bağlı açıklama, alanın dışında). */
-export function KalipPencereSecim({ label, hint, note, children, ...select }: { label: string; hint?: string; note?: ReactNode; children: ReactNode } & SelectHTMLAttributes<HTMLSelectElement>) {
-  const auto = useId();
-  const id = select.id ?? auto;
-  const hintId = `${id}-h`;
-  return (
-    <div className="kpq">
-      <label className="fld" htmlFor={id}>
-        <span>{label}</span>
-        <select {...select} id={id} aria-describedby={hint === undefined ? undefined : hintId}>
-          {children}
-        </select>
-      </label>
-      {hint === undefined ? null : (
-        <small id={hintId} className="kph">
-          {hint}
-        </small>
-      )}
-      {note}
     </div>
   );
 }

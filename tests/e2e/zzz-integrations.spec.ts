@@ -53,7 +53,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await page.getByTestId("flow-PRODUCTS-toggle").click();
     await expect(page.getByTestId("flow-PRODUCTS")).toHaveAttribute("data-enabled", "true");
     await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları açıldı");
-    await expect(page.getByTestId("flow-PRODUCTS").getByRole("button", { name: "Paraşüt → Etkin" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("flow-PRODUCTS").getByRole("radio", { name: "Paraşüt → Etkin" })).toHaveAttribute("aria-checked", "true");
 
     await page.getByTestId("integrations-test").click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Bağlantı sağlam");
