@@ -31,7 +31,7 @@ const ctx = (tenant: string | null) =>
           } catch {
             text = "";
           }
-          return text.includes("current_setting") && tenant !== null ? [{ id: tenant }] : [];
+          return text.includes("current_setting") && tenant !== null ? [{ tenant_id: tenant }] : [];
         },
       }),
     inPlatform: async () => {

@@ -64,16 +64,21 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
+/** Sentetik varsayılan bilgiler (sır değildir; e2e formu bunlarla doldurur). */
+export const FAKE_PARASUT_DEFAULTS = Object.freeze({
+  clientId: "fake-client",
+  clientSecret: "fake-client-secret-value",
+  username: "muhasebe@example.test",
+  password: "fake-parasut-password",
+  companyId: "115",
+  companyName: "Örnek Muhasebe A.Ş",
+  expiresIn: 7200,
+});
+
 export async function startFakeParasut(options: FakeParasutOptions = {}): Promise<FakeParasut> {
-  const opts = {
-    clientId: options.clientId ?? "fake-client",
-    clientSecret: options.clientSecret ?? "fake-client-secret-value",
-    username: options.username ?? "muhasebe@example.test",
-    password: options.password ?? "fake-parasut-password",
-    companyId: options.companyId ?? "115",
-    companyName: options.companyName ?? "Örnek Muhasebe A.Ş",
-    expiresIn: options.expiresIn ?? 7200,
-  };
+  const { port: _port, ...given } = options;
+  void _port;
+  const opts = { ...FAKE_PARASUT_DEFAULTS, ...given };
   let tokenSeq = 0;
   const issue = (): { access_token: string; refresh_token: string } => {
     tokenSeq += 1;
@@ -81,7 +86,6 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     state.refreshToken = `ref-${tokenSeq}-${Math.random().toString(36).slice(2)}`;
     return { access_token: state.accessToken, refresh_token: state.refreshToken };
   };
-  let server: Server;
   const state: FakeParasut = {
     url: "",
     opts,
@@ -105,7 +109,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
   };
   const collections: Record<string, FakeRecord[]> = { products: state.products, contacts: state.contacts, warehouses: state.warehouses };
 
-  server = createServer(async (req, res) => {
+  const server: Server = createServer(async (req, res) => {
     const body = await readBody(req);
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     state.requests.push({ method: req.method ?? "", path: `${url.pathname}${url.search}`, authorization: req.headers.authorization ?? null, contentType: req.headers["content-type"] ?? null, body });

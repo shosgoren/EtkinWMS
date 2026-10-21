@@ -13,7 +13,7 @@
 // `CONNECTOR_REVOKED` olur ve hiçbir akış çalışmaz (yetkisini kaybeden yöneticinin bağlantısı arka planda yazmaya devam etmez).
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { appendAudit } from "@wms/db";
+import { appendAudit, currentTenantId } from "@wms/db";
 import type { Sealer } from "@wms/shared/seal";
 import type { AccessTx } from "../identity/access.ts";
 import { applyContact, applyProduct, applyWarehouse, link, refExternal, type ApplyContext, type ApplyOutcome } from "./apply.ts";
@@ -395,8 +395,7 @@ async function runFlow(rc: RunCtx): Promise<void> {
 /** Tek bağlantının açık akışlarını (ya da istenen tek akışı) sırayla çalıştırır. */
 export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, actorUserId: string | null): Promise<SyncResult> {
   const head = await deps.inTenant(async (tx) => {
-    const t = await tx.execute<{ id: string | null }>(sql`SELECT NULLIF(pg_catalog.current_setting('app.current_tenant_id', true), '') AS id`);
-    const tenantId = t[0]?.id ?? null;
+    const tenantId = (await currentTenantId(tx)) ?? null;
     if (tenantId === null) return { kind: "skip" as const, reason: "NO_TENANT" };
     const row = await loadIntegration(tx, tenantId, { id: payload.integrationId });
     if (row === null || row.status === "DISCONNECTED" || row.connectedBy === null || row.connectedMembershipId === null) return { kind: "skip" as const, reason: "NOT_CONNECTED" };
