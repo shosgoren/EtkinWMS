@@ -13,7 +13,7 @@ vi.mock("@wms/domain/identity/member-queries", () => ({ getMembershipSummary: mo
 vi.mock("../../../../../lib/auth-service.ts", () => ({ getAuthService: () => ({ getPrincipal: mocks.principal }) }));
 vi.mock("@wms/ui", () => ({ Banner: ({ children }: { children: React.ReactNode }) => createElement("p", {}, children), PackagePlus: () => null }));
 vi.mock("../../field/receive/receive-flow.tsx", () => ({ PrimaryButton: ({ children, disabled }: { children: React.ReactNode; disabled: boolean }) => createElement("button", { disabled, className: "min-h-14" }, children), SecondaryButton: ({ children }: { children: React.ReactNode }) => createElement("button", {}, children), ScanPanel: () => null, useScanner: () => ({ service: null, camera: vi.fn(), dropped: false }), useScanPrimary: () => ({ ready: false, press: vi.fn(), overlay: null }) }));
-vi.mock("../../screen-shell.tsx", () => ({ FormSteps: () => null }));
+vi.mock("../../kalip/adimlar.tsx", () => ({ KalipAdimlar: () => null }));
 vi.mock("../receipt-form.tsx", () => ({ ErrorNotice: () => null }));
 // T-973: kalıp kabı (üst çubuk, alt cam çubuk) burada sınanmaz; yalnız adım içeriği.
 vi.mock("../../kalip/ekran.tsx", () => ({ KalipEkran: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children), tone: () => undefined, Ico: () => null }));

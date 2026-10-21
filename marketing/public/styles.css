@@ -256,9 +256,41 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 @media (max-width:860px){.hide-md{display:none!important}}
 @media (max-width:640px){.filmdots{top:10px;right:10px;bottom:auto!important}.appzoom{padding:10px 10px 64px}.capt{left:10px!important;right:10px;bottom:10px!important;padding:10px 12px!important;border-radius:12px!important}.capt-t{font-size:16px!important}.hide-sm{display:none!important}.show-sm{display:block}.stage{aspect-ratio:1/1.02}.world{top:55%}}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-.fstatus{grid-column:1 / -1;margin:0;min-height:1.4em;font-size:14px;font-weight:600;color:#172E42}
-.fstatus.ok{color:#1E6B45}
-.fstatus.err{color:#A3261B}
+/* T-431: demo formu geri bildirimi — gönderim göstergesi, alan altı uyarı, yumuşak kırmızı hata satırı, başarı kutusu */
+.fstatus{grid-column:1 / -1;margin:0;font-size:15px;font-weight:600;color:#172E42}
+.fstatus.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+.fstatus.err{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-height:48px;padding:10px 14px;border-radius:12px;background:#FDECEA;border:1.5px solid #F2B8B0;color:#A3261B;animation:fShake .38s ease both}
+.fstatus .ferr-ic{flex:none}
+.fretry{appearance:none;min-height:36px;padding:6px 14px;border:1.5px solid #A3261B;border-radius:999px;background:#FFFFFF;color:#A3261B;font:700 14px/1 'Instrument Sans',system-ui,sans-serif;cursor:pointer}
+.fretry:hover{background:#A3261B;color:#FFFFFF}
+@keyframes fShake{0%,100%{transform:none}25%{transform:translateX(-5px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+.ferr{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;line-height:1.35;color:#A3261B}
+.ferr::before{content:'!';flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#A3261B;color:#FFFFFF;font:800 12px/1 'Instrument Sans',system-ui,sans-serif}
+.ferr-consent{grid-column:1 / -1;margin-top:-8px}
+.field[aria-invalid=true]{border-color:#C8412F;background:#FFF7F6}
+.dform input[type=checkbox][aria-invalid=true]{outline:2px solid #C8412F;outline-offset:2px}
+.dform > *{transition:opacity .28s ease,transform .28s ease}
+.dform.leaving > :not(.fstatus){opacity:0;transform:translateY(-8px)}
+.fsubmit[aria-disabled=true]{cursor:progress;opacity:.92}
+.fsubmit[aria-disabled=true]:hover{transform:none;box-shadow:none}
+.fspin{flex:none;width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,.3);border-top-color:#FFFFFF;animation:fSpin .8s linear infinite}
+@keyframes fSpin{to{transform:rotate(360deg)}}
+.fdone{grid-column:1 / -1;display:flex;flex-direction:column;align-items:center;gap:14px;padding:clamp(16px,4vw,40px) 4px;text-align:center;animation:fDoneIn .45s cubic-bezier(.2,.7,.1,1) both}
+.fdone-ic{display:block;width:104px;height:104px;overflow:visible;animation:fPop .5s cubic-bezier(.2,.9,.3,1.3) both}
+.fdone-tick{stroke-dasharray:100;stroke-dashoffset:0;animation:fTick .5s .28s ease-out both}
+.fdone-ring{transform-box:fill-box;transform-origin:center;animation:fRing 1s .55s ease-out both}
+@keyframes fDoneIn{from{opacity:0;transform:translateY(12px)}}
+@keyframes fPop{from{opacity:0;transform:scale(.6)}}
+@keyframes fTick{from{stroke-dashoffset:100}}
+@keyframes fRing{from{opacity:.7;transform:scale(1)}to{opacity:0;transform:scale(1.35)}}
+.fdone-h{margin:0;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(24px,3vw,32px);line-height:1.1;letter-spacing:-.02em;color:#172E42}
+.fdone-h:focus{outline:none}
+.fdone-h:focus-visible{outline:2px solid #172E42;outline-offset:4px;border-radius:6px}
+.fdone-p{margin:0;max-width:420px;font-size:17px;color:#3D5468}
+.fdone-ref{margin:0;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:#EEF1F4;font-size:13px;font-weight:600;color:#3D5468}
+.fdone-ref b{font:600 14px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#172E42}
+.fdone-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin-top:4px}
+.fdone-links a{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:0 6px;color:#172E42;font-weight:600}
 /* T-942: çözünürlüğe göre hero ve kap genişliği */
 :root{--wrap:1240px;--wrap-wide:1320px}
 @media (min-width:1680px){:root{--wrap:1400px;--wrap-wide:1480px}}
