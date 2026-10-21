@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
+import { hasPermission } from "../identity/permissions.ts";
 
 export type PartyKind = "CUSTOMER" | "SUPPLIER" | "BOTH";
 export const PARTY_KINDS: readonly PartyKind[] = ["CUSTOMER", "SUPPLIER", "BOTH"];
@@ -237,12 +238,14 @@ export async function setPartyArchived(params: PartyCommandParams, input: { read
   });
 }
 
-export type PartyImportStatus = "CREATED" | "UPDATED" | "UNCHANGED" | "INVALID";
+export type PartyImportStatus = "CREATED" | "UPDATED" | "UNCHANGED" | "SKIPPED" | "INVALID";
 export interface PartyImportResult {
   readonly rows: readonly { readonly row: number; readonly status: PartyImportStatus; readonly issue?: PartyIssue; readonly warning?: PartyWarning }[];
   readonly created: number;
   readonly updated: number;
   readonly unchanged: number;
+  /** T-981b: "Güncelle" kipinde yeni kod eklenmeyecekse atlanan satırlar. */
+  readonly skipped: number;
   readonly invalid: number;
 }
 
@@ -250,11 +253,15 @@ export interface PartyImportResult {
  * Excel'den aktarım (`data.import`; T-421). `rows[i].row`: kullanıcının dosyasındaki satır no (rapor için). Aynı kod varsa yalnız DOLU hücreler yazılır;
  * değişmeyen satır UNCHANGED. Dosyada tekrarlayan kod: ilki alınır. `dryRun` yazmaz (aynı karar). Bir çağrıda en çok 500 satır.
  */
-export async function importParties(params: PartyCommandParams, input: { readonly rows: readonly (PartyInput & { readonly row: number })[]; readonly dryRun: boolean }): Promise<PartyImportResult> {
+export async function importParties(
+  params: PartyCommandParams,
+  input: { readonly rows: readonly (PartyInput & { readonly row: number })[]; readonly dryRun: boolean; /** T-981b: `false` = sistemde olmayan kodu ekleme (Güncelle kipi). */ readonly addMissing?: boolean },
+): Promise<PartyImportResult> {
   if (!Array.isArray(input.rows) || input.rows.length === 0 || input.rows.length > PARTY_IMPORT_MAX_ROWS) throw new AppError("VALIDATION_FAILED");
   const { requestId, ...access } = params;
   const run = input.dryRun ? runTenantQuery : runTenantCommand;
   return run({ ...access, permission: "data.import" }, async (tx, m) => {
+    const personal = hasPermission(m.roles, "settings.manage", m.grants);
     const out: { row: number; status: PartyImportStatus; issue?: PartyIssue; warning?: PartyWarning }[] = [];
     const seen = new Set<string>();
     const cleaned: { row: number; v: Clean; warning?: PartyWarning }[] = [];
@@ -283,6 +290,10 @@ export async function importParties(params: PartyCommandParams, input: { readonl
       const v = x.v;
       const cur = existing.get(v.codeKey);
       const w = x.warning === undefined ? {} : { warning: x.warning };
+      if (cur === undefined && input.addMissing === false) {
+        out.push({ row: x.row, status: "SKIPPED", ...w });
+        continue;
+      }
       if (cur === undefined) {
         if (v.name === null) {
           out.push({ row: x.row, status: "INVALID", issue: "NAME_MISSING" });
@@ -297,15 +308,18 @@ export async function importParties(params: PartyCommandParams, input: { readonl
         continue;
       }
       // Boş hücre mevcut değeri silmez: yalnız dolu ve farklı alanlar yazılır.
+      // T-981b (B-67, güvenlik incelemesi MINOR-1): `settings.manage` olmayan (yalnız aktarım yetkili) üye MEVCUT carinin kişisel alanlarını
+      // (VKN/TCKN, vergi dairesi, telefon, e-posta, adres) ne karşılaştırır ne yazar — kontrol adımı tahmin doğrulama aracı olamaz; o hücreler yok sayılır.
+      const p = personal;
       const next = {
         name: v.name ?? cur.name,
         kind: v.kind ?? cur.kind,
-        tax_no: v.taxNo ?? cur.tax_no,
-        tax_office: v.taxOffice ?? cur.tax_office,
-        phone: v.phone ?? cur.phone,
-        email: v.email ?? cur.email,
+        tax_no: p ? (v.taxNo ?? cur.tax_no) : cur.tax_no,
+        tax_office: p ? (v.taxOffice ?? cur.tax_office) : cur.tax_office,
+        phone: p ? (v.phone ?? cur.phone) : cur.phone,
+        email: p ? (v.email ?? cur.email) : cur.email,
         city: v.city ?? cur.city,
-        address: v.address ?? cur.address,
+        address: p ? (v.address ?? cur.address) : cur.address,
       };
       const changed = (Object.keys(next) as (keyof typeof next)[]).some((k) => next[k] !== cur[k]);
       if (!changed) {
@@ -322,7 +336,7 @@ export async function importParties(params: PartyCommandParams, input: { readonl
     }
     out.sort((a, b) => a.row - b.row);
     const count = (s: PartyImportStatus): number => out.filter((r) => r.status === s).length;
-    const result = { rows: out, created: count("CREATED"), updated: count("UPDATED"), unchanged: count("UNCHANGED"), invalid: count("INVALID") };
+    const result = { rows: out, created: count("CREATED"), updated: count("UPDATED"), unchanged: count("UNCHANGED"), skipped: count("SKIPPED"), invalid: count("INVALID") };
     if (!input.dryRun && result.created + result.updated > 0) {
       await appendAudit(tx, { action: "party.imported", actorUserId: m.userId, entityType: "party", requestId: requestId ?? null, changeSummary: { created: result.created, updated: result.updated, unchanged: result.unchanged, invalid: result.invalid } });
     }

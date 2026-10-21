@@ -26,7 +26,7 @@ const fields = {
 const saveSchema = z.object({ slug: slugSchema, id: z.string().uuid().optional(), expectedVersion: z.number().int().min(1).max(2_147_483_647).optional(), ...fields }).strict();
 const archiveSchema = z.object({ slug: slugSchema, id: z.string().uuid(), expectedVersion: z.number().int().min(1).max(2_147_483_647), archived: z.boolean() }).strict();
 const importSchema = z
-  .object({ slug: slugSchema, dryRun: z.boolean(), rows: z.array(z.object({ row: z.number().int().min(1).max(100_000), ...fields }).strict()).min(1).max(PARTY_IMPORT_MAX_ROWS) })
+  .object({ slug: slugSchema, dryRun: z.boolean(), addMissing: z.boolean().optional(), rows: z.array(z.object({ row: z.number().int().min(1).max(100_000), ...fields }).strict()).min(1).max(PARTY_IMPORT_MAX_ROWS) })
   .strict();
 
 async function writeContext(slug: string, ctx: ActionContext, permission: "settings.manage" | "data.import" = "settings.manage") {
@@ -56,6 +56,6 @@ export async function archivePartyAction(raw: unknown) {
 export async function importPartiesAction(raw: unknown) {
   return guardedAction({ schema: importSchema }, async (input, ctx) => {
     const params = await writeContext(input.slug, ctx, "data.import");
-    return importParties({ ...params, requestId: ctx.requestId }, { rows: input.rows, dryRun: input.dryRun });
+    return importParties({ ...params, requestId: ctx.requestId }, { rows: input.rows, dryRun: input.dryRun, ...(input.addMissing === undefined ? {} : { addMissing: input.addMissing }) });
   })(raw);
 }

@@ -14,9 +14,11 @@ const guardedAction = createProductionGuard(() => headers());
 const slugSchema = z.string().min(1).max(63);
 // Karakter üst sınırı baytın üst sınırıdır değil: asıl bayt/satır sınırları domain'dedir (`classify`); bu yalnız kaba kötüye kullanım sınırı.
 const textSchema = z.string().min(1).max(IMPORT_MAX_BYTES);
-const previewSchema = z.object({ slug: slugSchema, text: textSchema }).strict();
+// T-981b: "Güncelle" kipi (kod eşleşen ürünün adı güncellenir; yeni kod `addMissing` ise eklenir). Açılış stokunda domain reddeder.
+const modeSchema = z.object({ update: z.boolean(), addMissing: z.boolean() }).strict().optional();
+const previewSchema = z.object({ slug: slugSchema, text: textSchema, mode: modeSchema }).strict();
 // `digest`: önizlemenin içerik özeti (sha-256 hex); uygulama dosyayı yeniden ayrıştırır ve özet uyuşmazsa reddeder.
-const applySchema = z.object({ slug: slugSchema, text: textSchema, chunk: z.number().int().min(0).max(1000), digest: z.string().regex(/^[0-9a-f]{64}$/) }).strict();
+const applySchema = z.object({ slug: slugSchema, text: textSchema, chunk: z.number().int().min(0).max(1000), digest: z.string().regex(/^[0-9a-f]{64}$/), mode: modeSchema }).strict();
 
 async function writeContext(slug: string, ctx: ActionContext) {
   const principal = ctx.principal;
@@ -29,7 +31,7 @@ async function writeContext(slug: string, ctx: ActionContext) {
 export async function previewImportAction(raw: unknown) {
   return guardedAction({ schema: previewSchema }, async (input, ctx) => {
     const params = await writeContext(input.slug, ctx);
-    return previewImport({ ...params, requestId: ctx.requestId }, input.text);
+    return previewImport({ ...params, requestId: ctx.requestId }, input.text, input.mode);
   })(raw);
 }
 
@@ -37,7 +39,7 @@ export async function previewImportAction(raw: unknown) {
 export async function applyImportChunkAction(raw: unknown) {
   return guardedAction({ schema: applySchema }, async (input, ctx) => {
     const params = await writeContext(input.slug, ctx);
-    const report = await applyImportChunk({ ...params, requestId: ctx.requestId }, { text: input.text, chunk: input.chunk, digest: input.digest });
+    const report = await applyImportChunk({ ...params, requestId: ctx.requestId }, { text: input.text, chunk: input.chunk, digest: input.digest, ...(input.mode === undefined ? {} : { mode: input.mode }) });
     // Ayrıntı kodu (errorDetail) istemciye gönderilmez: ekranda yalnız sade metin gösterilir.
     return { ...report, rows: report.rows.map((r) => ({ row: r.row, code: r.code, status: r.status, ...(r.errorCode === undefined ? {} : { errorCode: r.errorCode }), ...(r.reason === undefined ? {} : { reason: r.reason }) })) };
   })(raw);

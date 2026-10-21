@@ -398,6 +398,7 @@ export function WarehousesView({
         dark={dark}
         title={t("title")}
         icon={{ d: LICON.depo, color: "30475A" }}
+        excel={{ kind: "warehouses" }}
         testId="warehouses"
         bar={{
           back: { href: home },

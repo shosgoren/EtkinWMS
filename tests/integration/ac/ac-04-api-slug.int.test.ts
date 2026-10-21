@@ -339,6 +339,8 @@ const LOADERS = [
   "field/ship/page.tsx",
   "field/count/page.tsx",
   "counts/page.tsx",
+  // T-981b: Ayarlar › Bağlantılar (üyelik özeti sayfanın kendisinde; çapraz tenant 404, veri okuması yok).
+  "settings/baglantilar/page.tsx",
   // T-991: ERP entegrasyonu (settings.manage; `getIntegrationOverview` çapraz tenant 404).
   "integrations/page.tsx",
 ] as const;

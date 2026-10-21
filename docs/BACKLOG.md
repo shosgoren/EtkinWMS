@@ -143,7 +143,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-105 | T-999c kalanları: (1) kullanıcı başına dil tercihi yok; tenant dışı sayfalar (`/login`, `/help`, `/workspaces`, `/mfa`) tarayıcı diliyle açılır; (2) saat dilimi arayüzde sabit `Europe/Istanbul`; (3) sunucu/istemci biçimlemede sabit `"tr"` yerel ayarları (`toLocaleUpperCase("tr")` vb.) taranmadı (T-numara alanının tükenmesi: B-103) |
 | B-106 | CI eşzamanlı iş sınırı: bir PR artık 14 `ci` + guards işi açar; aynı anda 2+ PR'da GitHub ücretsiz plan eşzamanlı iş sınırı (20) kuyruk yaratabilir. Ölçülürse parça sayısı ya da `changes` filtresi genişletilir (T-445 ölçümü PR gövdesinde) |
 | B-107 | **T-450 iOS sanal kamera + ≤1,5× zoom #157; gerçek iPhone doğrulaması hâlâ bekliyor** — iPhone'da OKUT hızını gerçek cihazda doğrula (T-446); yetmezse ücretli SDK (STRICH/Dynamsoft/Scandit) ya da yerel uygulama kararı |
-| B-108 | YARIM PR'ları bitir (T-447): #145 QR paylaş, #146 Excel/Bağlantılar, #151 tam ekran form + kurallar 1–4, #152 UI lint, #150 kurallar 5–17 — main merge + `pnpm prepush` + sıralı birleştirme |
+| B-108 | **#145 QR paylaş birleşti #145 (T-986b)** — YARIM PR'ları bitir (T-447): #145 QR paylaş, #146 Excel/Bağlantılar, #151 tam ekran form + kurallar 1–4, #152 UI lint, #150 kurallar 5–17 — main merge + `pnpm prepush` + sıralı birleştirme |
 | B-109 | Tuvale (Claude Design) T-979c orta etiket ve T-979b 48 px düzeltmelerini işle (kaynak `docs/design/source` ile eşitle) |
 | B-110 | ERP · Paraşüt canlı ilk bağlantıda doğrula: token gövdesi, irsaliye deposu/cari türü, 429 (T-991) |
 | B-111 | ERP · Logo entegrasyonu — ürün bilgisi bekleniyor (Tiger/Go/İşbaşı; aynı altyapı) |
@@ -152,6 +152,8 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-114 | ERP · Aynı bağlantıda iki koşu çakışmasını kilitle (MINOR-1) |
 | B-115 | ERP · Paraşüt yanıtını akışla oku, 5 MiB'de kes (MINOR-5) |
 | B-116 | ERP · Paraşüt sipariş karşılığı — kullanıcı kararı |
+| B-117 | **BİTTİ #145 (T-986b)** — Ekip › "Saha personeli: katılma QR'ı" paylaşma (kullanıcı isteği 21 Ekim): alt çubuk ortası PAYLAŞ (sistem paylaşım sayfası; yoksa satıra odak), kartın altında WhatsApp ile gönder (`wa.me/?text=`), Bağlantıyı kopyala (2 sn yeşil tik + "Kopyalandı", ses/balon yok — kullanıcı kararı 21 Ekim; `aria-live`), QR'ı indir (PNG), Yazdır; demoda kilitli + sarı balon; Ekibe katılma ekranında aynı satır. Ekip, Gruplar, Aktar üst çubuğuna Sorun bildir + Destek + Hesap (ortak `ust-dugmeler.tsx`) |
+| B-118 | T-986b kalanları: (1) `Paylas.dc.html` ajan taslağı, tuvalde yok → tuvale alınıp kullanıcı onayı + ekran görüntüsü karşılaştırması; (2) `KalipEkran` üst çubuk Hesap/Destek mantığı `ust-dugmeler.tsx` ile ikinci kopya → KalipEkran bu bileşeni kullansın; (3) Ekibe katılma ekranında ana işlem QR OLUŞTUR/YENİLE kaldı (yenileme başka yerde yok), PAYLAŞ değil; (4) gerçek telefonda sistem paylaşım sayfası (WhatsApp/Mesajlar/e-posta) denemesi UNKNOWN; (5) kopyalamanın sessiz olması ALTIN-KURAL 3'e kullanıcı kararıyla istisna — ALTIN-KURAL metnine yazılmalı |
 
 ## Belge düzeltmeleri
 | ID | İş |

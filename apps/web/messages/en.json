@@ -1010,6 +1010,10 @@
       "ticket_created": "Support ticket opened",
       "ticket_replied": "Support ticket replied"
     },
+    "data": {
+      "exported": "Exported to Excel",
+      "imported": "Warehouses / shelves imported from Excel"
+    },
     "integration": {
       "connected": "ERP connection set up",
       "checked": "ERP connection checked",
@@ -3851,7 +3855,19 @@
         "done": "{n} shelf lines written as opening stock",
         "goList": "Go to stock"
       },
-      "soon": "OPENS WITH THE CUSTOMER SCREEN"
+      "soon": "OPENS WITH THE CUSTOMER SCREEN",
+      "depo": {
+        "title": "Warehouses",
+        "sub": "WAREHOUSE CODE · NAME",
+        "done": "{n} warehouses added or updated",
+        "goList": "Go to warehouses"
+      },
+      "raf": {
+        "title": "Shelves",
+        "sub": "WAREHOUSE · SHELF CODE · PARENT · TYPE",
+        "done": "{n} shelves added or updated",
+        "goList": "Go to warehouses"
+      }
     },
     "s1": {
       "lead": "What will you import?",
@@ -3911,6 +3927,17 @@
         "il": "City",
         "adres": "Address",
         "tur": "Type (customer / supplier)"
+      },
+      "depo": {
+        "kod": "Warehouse code",
+        "ad": "Warehouse name"
+      },
+      "raf": {
+        "depo": "Warehouse code",
+        "kod": "Shelf code",
+        "ad": "Shelf name",
+        "ust": "Parent shelf code",
+        "tur": "Type (receiving / storage / staging)"
       }
     },
     "s4": {
@@ -3991,7 +4018,35 @@
     "partyWarning": {
       "TAX_NO_LENGTH": "Tax no has 10 digits, national ID 11"
     },
-    "partyWarningFix": "WARNING · THE RECORD IS STILL SAVED"
+    "partyWarningFix": "WARNING · THE RECORD IS STILL SAVED",
+    "mode": {
+      "update": "Update",
+      "updateToggle": "Update by code (change the record with a matching code)",
+      "addMissing": "Also add codes not in the system",
+      "insertOn": "Import: only new records are added",
+      "updateOn": "Update: records with a matching code change",
+      "stockRule": "Opening stock is written only to empty shelves; existing stock never changes this way (stock changes only with documents)",
+      "skipped": "{n} new codes will be skipped",
+      "updCount": "WILL BE UPDATED",
+      "skippedDone": "{n} new codes skipped"
+    },
+    "masterIssue": {
+      "CODE_MISSING": "Code is empty",
+      "CODE_INVALID": "Code is too long or invalid",
+      "NAME_MISSING": "Name is empty (new record)",
+      "NAME_INVALID": "Name is too long or invalid",
+      "CODE_DUPLICATE_FILE": "This code appears earlier in the file",
+      "WAREHOUSE_MISSING": "Warehouse code is empty",
+      "WAREHOUSE_UNKNOWN": "Warehouse not found",
+      "PARENT_UNKNOWN": "Parent shelf not found (write the parent first)",
+      "PARENT_CHANGE": "An existing shelf's parent can't change",
+      "PARENT_INVALID": "This type can't have a parent",
+      "KIND_UNKNOWN": "Type not understood (receiving / storage / staging / transit)",
+      "IN_USE": "Shelf has stock; type can't change",
+      "CODE_TAKEN": "This code is in use",
+      "TOO_MANY": "Warehouse shelf limit exceeded",
+      "UNKNOWN": "Row could not be read"
+    }
   },
   "parties": {
     "title": "Customer cards",
@@ -4546,7 +4601,35 @@
     "stepAria": "Step {n} / {total}: {title}",
     "stepLocked": ", next",
     "stepDone": ", done",
-    "voiceSoon": "Voice input coming soon · Etkin"
+    "voiceSoon": "Voice input coming soon · Etkin",
+    "excel": {
+      "aria": "Excel · {kind}: import, update or download",
+      "menu": "Excel · {kind}",
+      "title": "Excel · {kind}",
+      "sub": "Import, update or download",
+      "subExport": "Download this list to Excel",
+      "import": "Import",
+      "update": "Update (by code)",
+      "export": "Export",
+      "exporting": "Preparing…",
+      "done": "{n} rows downloaded to Excel",
+      "doneTruncated": "First {n} rows downloaded · narrow the list with search",
+      "donePersonal": "{n} rows downloaded · personal fields left empty (no permission)",
+      "kind": {
+        "items": "Items",
+        "parties": "Customers",
+        "warehouses": "Warehouses",
+        "locations": "Shelves"
+      },
+      "err": {
+        "rate": "Too many downloads · try again in a minute",
+        "forbidden": "You don't have permission · ask your manager",
+        "network": "No connection · try again when online",
+        "notFound": "Not found",
+        "generic": "Download failed · try again",
+        "reauth": "Sign in again for security · taking you to sign-in"
+      }
+    }
   },
   "saha": {
     "online": "Online",
@@ -4863,6 +4946,88 @@
     "approveConfirm": "Give approval",
     "postConfirm": "Post adjustment",
     "cancelConfirm": "Confirm cancel"
+  },
+  "baglantilar": {
+    "title": "Connections",
+    "back": "Back to settings",
+    "tabs": "Settings tabs",
+    "tabGeneral": "General",
+    "tabLinks": "Connections",
+    "lockTitle": "No bulk data permission",
+    "lockSub": "Ask your manager for Excel import permission",
+    "lockData": "No Excel import permission · ask your manager",
+    "lockMaster": "Only a manager can import warehouses and shelves",
+    "lockStock": "Opening stock can't be updated · stock changes only with documents",
+    "head": "BULK ACTION",
+    "headHint": "Pick the area first, then the action",
+    "step1": "1 · Area",
+    "step1Sub": "Which records?",
+    "step2": "2 · Action",
+    "step2Sub": "What to do?",
+    "alan": {
+      "items": "Items",
+      "parties": "Customers",
+      "warehouses": "Warehouses",
+      "locations": "Shelves",
+      "stock": "Opening stock"
+    },
+    "alanSub": {
+      "items": "CODE · NAME · BARCODE",
+      "parties": "CUSTOMER · SUPPLIER",
+      "warehouses": "CODE · NAME",
+      "locations": "SHELF · PARENT · TYPE",
+      "stock": "ITEM · SHELF · QTY"
+    },
+    "islem": {
+      "import": "Import",
+      "update": "Update",
+      "export": "Export"
+    },
+    "islemSub": {
+      "import": "NEW RECORDS",
+      "update": "BY CODE",
+      "export": "DOWNLOAD .XLSX"
+    },
+    "pickFirst": "Pick the area and the action first",
+    "pickArea": "Pick the area first",
+    "pickOp": "Now pick the action",
+    "hint": {
+      "import": "You'll choose your Excel file; I map the columns and check first",
+      "update": "Records with a matching code are updated; choose to add or skip new ones",
+      "export": "The whole list downloads as .xlsx; edit and upload it back"
+    },
+    "template": "Empty template",
+    "templateSub": "Excel with the column headers",
+    "templatePick": "Pick the area first",
+    "templateBtn": "Download {alan} template",
+    "templateDone": "Template downloaded",
+    "done": "{n} rows downloaded to Excel",
+    "doneTruncated": "First {n} rows downloaded · the list is longer",
+    "donePersonal": "{n} rows downloaded · personal fields left empty (no permission)",
+    "err": {
+      "rate": "Too many downloads · try again in a minute",
+      "forbidden": "You don't have permission · ask your manager",
+      "network": "No connection · try again when online",
+      "notFound": "Not found",
+      "generic": "Download failed · try again",
+      "reauth": "Sign in again for security · taking you to sign-in"
+    },
+    "main": {
+      "import": "GO TO IMPORT",
+      "update": "UPDATE",
+      "export": "DOWNLOAD",
+      "exporting": "PREPARING"
+    },
+    "mainAria": "{alan} · {islem}",
+    "integrations": "Integrations",
+    "integrationsHint": "Paraşüt ready · Logo soon",
+    "integrationsSub": "Accounting and ERP connections",
+    "parasut": "Paraşüt",
+    "logo": "Logo",
+    "soon": "SOON",
+    "soonAria": "{name} connection coming soon",
+    "open": "Open",
+    "openAria": "Open {name} connection"
   },
   "integrations": {
     "title": "Integration",

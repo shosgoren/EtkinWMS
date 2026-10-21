@@ -27,6 +27,8 @@ export interface KabukContextValue {
   /** Toplu yayın (T-967 × T-968): kalıp üst çubuğu Sorun bildir + Destek için çalışma alanı kısa adı ve Sorun bildirme yetkisi. */
   readonly slug?: string;
   readonly canReport?: boolean;
+  /** T-981b: kalıp üst çubuğu Excel düğmesi gösterimi — `data`: `data.import` (düğme + dışarı aktar), `master`: ayrıca `settings.manage` (depo/raf içe aktarma). */
+  readonly excel?: { readonly data: boolean; readonly master: boolean };
   /** T-979c: üyenin çalışma alanı sayısı (Hesap menüsünde "Çalışma alanı değiştir" yalnız birden fazlaysa). */
   readonly workspaces?: number;
 }
