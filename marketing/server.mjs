@@ -138,7 +138,8 @@ export const server = createServer(async (req,res) => {
         if (r.status !== null && !r.ok) console.error(`lead-notify failed status=${r.status}`);
         if (r.capped) console.error('lead-notify skipped hourly-cap');
       }).catch(() => console.error('lead-notify failed'));
-      return json(201,{ok:true});
+      // T-431: kaydın kimliği yanıtta döner; site kısa halini "Talep no" olarak gösterir (panelde aynı kayıt, ADR-026 §3). Başka alan dönmez.
+      return json(201,{ok:true,id:record.id});
     } catch {return json(503,{error:'Talep kaydedilemedi. Lütfen tekrar deneyin.'});}
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(405,{error:'Yöntem desteklenmiyor.'});

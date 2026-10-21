@@ -25,6 +25,8 @@ Fiyat bölümünün işaretlemesi tuval (`Saha.dc.html`) ile aynıdır; üretim 
 
 Sunulan dosyalar açılışta `public/` altından listelenir (`/` → index.html, `/privacy` → privacy.html; diğer `.html`, nokta ile başlayan adlar ve bilinmeyen uzantılar sunulmaz). CSP: betik yalnız `'self'`; tasarım satır içi `style` öznitelikleri kullandığı için `style-src 'self' 'unsafe-inline'`.
 
+Demo formu geri bildirimi (T-431): gönderirken düğmede gösterge ve çift gönderim engeli; alan altı uyarılar; hata olursa bilgiler korunur ve kırmızı "Gönderilemedi · tekrar dene" satırı; başarıda aynı kutuda √, talep no (yanıttaki `id`'nin ilk 8 hanesi) ve odak başlıkta. Mantık `src/boot.js`, görünüm `src/landing.dc.html` (demo bölümü); e2e `tests/e2e/zzz-demo-form.spec.ts`.
+
 Demo formu gerçek talepleri `/data/demo-requests.jsonl` dosyasına, Docker named volume üzerinde saklar. Kayıttan sonra (T-945) bildirim ayarı varsa Resend HTTP API ile işletmeciye e-posta gönderir; e-posta hatası kaydı bozmaz, yanıtı bekletmez, loga yalnız durum kodu yazılır.
 
 ### E-posta bildirimi ayarı (işletmeci, bir kez)

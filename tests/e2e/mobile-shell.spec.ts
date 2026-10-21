@@ -1,15 +1,16 @@
-// T-254: cihaza uyumlu kabuk. Telefonda (iPhone 13 profili 390x664 ve 390x844, 360x740) ana ekran tek ekrandır: sayfa kaymaz,
-// yatay taşma yok, üst çubuk <= 56 px, dokunma hedefleri >= 48 px, Akış/Kokpit ve Çıkış menüden erişilir. Masaüstünde (1280x800)
-// eski kök üst bar korunur, telefon üst çubuğu ve alt sekme çubuğu görünmez. Piksel karşılaştırma yok: ölçülen yerleşim değerleri.
-// Tek demo girişi (demo girişi hız sınırlıdır). Ekran görüntüleri `.artifacts/t-254/` altına yazılır (git'e girmez).
-import { mkdirSync, writeFileSync } from "node:fs";
+// T-254 / T-979: cihaza uyumlu kabuk. Eski telefon üst çubuğu, masaüstü çalışma alanı satırı, ScreenShell ve alt sekme çubuğu T-979'da
+// kaldırıldı: her ekran kendi kalıp/Pano üst çubuğunu ve ortak alt cam çubuğu (Kabuk) çizer; uygulama menüsü (Akış/Genel bakış, çalışma
+// alanı, yönetim sayfaları, Yardım, Çıkış) Hesap menüsündeki "Tüm ekranlar"dan açılır. Kokpit ("Genel bakış") LİSTE kalıbındadır: işler kart
+// listesi (etkin / kilitli + gerekçe / yakında), "Şimdi", "Görevlerim", "Bugün yaptıklarım". Piksel karşılaştırma yok: ölçülen yerleşim
+// değerleri (taşma, kaydırma, dokunma hedefi). Ekran görüntüleri `.artifacts/t-254/` altına yazılır (git'e girmez).
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import tr from "../../apps/web/messages/tr.json" with { type: "json" };
-import type { Browser, Locator, Page } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
 import { enterDemoReal, enterDemoShared } from "./support/demo-session.ts";
 import { panoChecks } from "./support/pano-checks.ts";
-import { T270_SIZES, chevronInfo, expectBand, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
+import { T270_SIZES, itemsScreenChecks, metrics, smallTargets } from "./support/items-screen.ts";
 import { openAppMenu } from "./support/app-menu.ts";
 import { expectKabukBar, expectModulesSheet } from "./support/kabuk-checks.ts";
 
@@ -18,9 +19,9 @@ const PHONES = [
   { name: "iphone13", width: 390, height: 664 }, // Playwright "iPhone 13" cihaz profili (Safari araç çubukları dahil görünür alan)
   { name: "iphone13-tam", width: 390, height: 844 }, // standalone / tam ekran
   { name: "android-360", width: 360, height: 740 },
-  { name: "android-430", width: 430, height: 932 }, // T-903: 7 etkin iş (stok işlemleri stok ekranında) için büyük telefon da kaydırmasız sınanır
+  { name: "android-430", width: 430, height: 932 },
 ] as const;
-
+const OLD_SHELL = ["app-bar", "bottom-nav", "tenant-bar", "screen-shell", "screen-nav", "field-action-bar"] as const;
 
 async function selectCockpitPreference(page: Page): Promise<void> {
   await page.context().addCookies([{ name: "view", value: "cockpit", url: new URL(page.url()).origin }]);
@@ -28,498 +29,159 @@ async function selectCockpitPreference(page: Page): Promise<void> {
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
 }
 
-async function height(locator: Locator): Promise<number> {
-  const box = await locator.boundingBox();
-  expect(box, "boundingBox").not.toBeNull();
-  return box?.height ?? 0;
+/** Eski kabuk parçaları DOM'da yok; ortak alt cam çubuk görünür. */
+async function expectNewShell(page: Page, where: string): Promise<void> {
+  for (const old of OLD_SHELL) await expect(page.getByTestId(old), `${where}: eski ${old} yok`).toHaveCount(0);
+  await expect(page.locator(".app-header"), `${where}: kök üst bar gizli`).toBeHidden();
+  await expect(page.getByTestId("kabuk-dock"), `${where}: ortak alt cam çubuk`).toBeVisible();
 }
 
-test("telefon kabuğu: ana ekran tek ekran, menü, alt sekme; masaüstü korunur", async ({ page, browser }, testInfo) => {
+/** Kokpit kart listesi: etkin kartlar bağlantı, kilitli/yakında kartlar bağlantı değil (gerekçe metniyle); kartlar ≥ 48 px, yatay taşma yok. */
+async function expectCockpit(page: Page, where: string, counts: { active: number; locked: number; soon: number }): Promise<void> {
+  const screen = page.getByTestId("kokpit");
+  await expect(screen, `${where}: Kokpit liste kalıbında`).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
+  const tasks = page.getByRole("list", { name: "İşler" });
+  await expect(tasks.locator('a[data-state="active"]')).toHaveCount(counts.active);
+  await expect(tasks.locator('[data-state="locked"]')).toHaveCount(counts.locked);
+  await expect(tasks.locator('[data-state="soon"]')).toHaveCount(counts.soon);
+  await expect(tasks.locator('a[data-state="soon"], a[data-state="locked"]')).toHaveCount(0);
+  for (const key of ["count", "undo"] as const) await expect(tasks.locator('[data-state="soon"]').filter({ hasText: tr.home.tasks[key].title })).toContainText("Yakında");
+  if (counts.locked > 0) await expect(tasks.locator('[data-state="locked"]').first()).toContainText(tr.home.lockedReason);
+  for (const card of await tasks.locator("[data-state]").all()) expect((await card.boundingBox())?.height ?? 0, `${where}: kart yüksekliği`).toBeGreaterThanOrEqual(48);
+  // T-979b (B-99): bütün ekran (üst çubuk Sorun / Destek / Hesap ve alt cam çubuk dahil).
+  expect(await smallTargets(page, "body"), `${where}: 48 px altı dokunma hedefi`).toEqual([]);
+  const m = await metrics(page);
+  expect(m.scrollWidth, `${where}: yatay taşma yok`).toBeLessThanOrEqual(m.clientWidth);
+  expect(m.scrollHeight, `${where}: sayfa gövdesi kaymaz (içerik alanı kayar)`).toBeLessThanOrEqual(m.innerHeight);
+  await expectNewShell(page, where);
+}
+
+test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüsü; masaüstü ve yatay telefon", async ({ page, browser }, testInfo) => {
   mkdirSync(OUT, { recursive: true });
-  const rows: string[] = [];
   const tag = testInfo.project.name;
 
   await page.setViewportSize({ width: PHONES[0].width, height: PHONES[0].height });
   await page.goto("/");
   await enterDemoReal(page, "Yönetici");
   await expect(page).toHaveURL(/\/t\/demo$/);
-  // T-422: hesap sahibinin açılışı Pano (depo panosu).
+  // T-422: hesap sahibinin açılışı Pano (depo panosu); eski kabuk yok.
   await expect(page.locator("#main").getByTestId("pano")).toBeVisible();
+  await expectNewShell(page, "pano");
 
-  // T-928: legacy detailed menu geometry is the cockpit contract, not the new four-action flow.
   await selectCockpitPreference(page);
   for (const size of PHONES) {
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto("/t/demo");
-    const tasks = page.getByRole("list", { name: "İşler" });
-    await expect(tasks.locator('[data-state="active"]')).toHaveCount(7);
-    await expect(tasks.locator('[data-state="soon"]')).toHaveCount(2);
-    await page.screenshot({ path: path.join(OUT, `${tag}-${size.name}-ana-ekran.png`) });
-
-    // Kaydırmasız: sayfa yüksekliği = görünür yükseklik, yatay taşma yok.
-    const m = await metrics(page);
-    rows.push(`${size.name} ${size.width}x${size.height}: scrollHeight=${m.scrollHeight} innerHeight=${m.innerHeight} scrollWidth=${m.scrollWidth} clientWidth=${m.clientWidth}`);
-    expect(m.scrollHeight, `${size.name}: scrollHeight(${m.scrollHeight}) <= innerHeight(${m.innerHeight})`).toBeLessThanOrEqual(m.innerHeight);
-    expect(m.scrollWidth, `${size.name}: scrollWidth(${m.scrollWidth}) <= clientWidth(${m.clientWidth})`).toBeLessThanOrEqual(m.clientWidth);
-
-    // Üst çubuk <= 56 px; eski büyük başlık yok; alt sekme çubuğu var.
-    const bar = page.getByTestId("app-bar");
-    await expect(bar).toBeVisible();
-    expect(await height(bar), `${size.name}: üst çubuk yüksekliği`).toBeLessThanOrEqual(56);
-    await expect(page.getByTestId("app-bar-name")).toHaveText("Demo Ambalaj A.Ş.");
-    await expect(page.getByRole("button", { name: "Çıkış yap" })).toHaveCount(0); // menüde (kapalı)
-    await expect(page.getByTestId("bottom-nav")).toBeVisible();
-
-    // T-270 (Supervisor kararı: kasıtlı şartname değişikliği): 7 etkin döşeme (T-903: stok görünümü etkinleşti) kaydırmadan görünür alanda, üst çubuk ile alt sekme
-    // çubuğu arasında (kutu sınırı assertion'ları aynı). 2 "Yakında" iş ızgarada döşeme değil, tek satırlık düğmenin arkasındadır:
-    // düğme görünür alanda; dokununca tam 2 iş adı + "Yakında" listelenir (toplam 9 ana menü işi erişilebilir).
-    const barBottom = (await bar.boundingBox())?.y ?? 0;
-    const navTop = (await page.getByTestId("bottom-nav").boundingBox())?.y ?? 0;
-    const cards = tasks.locator('[data-state="active"]');
-    expect(await cards.count()).toBe(7);
-    for (let i = 0; i < 7; i++) {
-      const box = await cards.nth(i).boundingBox();
-      expect(box, `${size.name}: kart ${i}`).not.toBeNull();
-      expect((box?.y ?? 0) + (box?.height ?? 0), `${size.name}: kart ${i} alt sekmenin üstünde`).toBeLessThanOrEqual(navTop + 0.5);
-      expect(box?.y ?? 0, `${size.name}: kart ${i} üst çubuğun altında`).toBeGreaterThanOrEqual(barBottom);
-      expect((box?.x ?? 0) + (box?.width ?? 0), `${size.name}: kart ${i} sağ kenar`).toBeLessThanOrEqual(size.width);
-    }
-    const soonRow = page.locator(".soon-toggle");
-    const soonBox = await soonRow.boundingBox();
-    expect(soonBox, `${size.name}: Yakında satırı görünür`).not.toBeNull();
-    expect((soonBox?.y ?? 0) + (soonBox?.height ?? 0), `${size.name}: Yakında satırı alt sekmenin üstünde`).toBeLessThanOrEqual(navTop + 0.5);
-    expect(soonBox?.y ?? 0, `${size.name}: Yakında satırı üst çubuğun altında`).toBeGreaterThanOrEqual(barBottom);
-    await expect(soonRow).toContainText("Yakında gelecekler (2)");
-    await soonRow.click();
-    // T-274: açık liste alt sayfadır (diyalog); aynı 2 iş ve aynı içerik.
-    const soonCards = page.getByRole("dialog").locator('[data-state="soon"]');
-    await expect(soonCards).toHaveCount(2);
-    for (const key of ["count", "undo"] as const) {
-      const name = tr.home.tasks[key].title;
-      const card = soonCards.filter({ hasText: name });
-      await expect(card, `${size.name}: ${name}`).toHaveCount(1);
-      await expect(card).toBeVisible();
-      await expect(card).toContainText("Yakında");
-    }
-    await page.getByRole("dialog").getByRole("button", { name: "İşlere dön" }).click();
-    await expect(page.getByRole("dialog")).toBeHidden();
-    await expect(cards.first()).toBeVisible();
-
-    // Dokunma hedefleri >= 48 px (üst çubuk, kartlar, alt sekmeler).
-    expect(await smallTargets(page, "body"), `${size.name}: 48 px altı dokunma hedefi`).toEqual([]);
+    await expectCockpit(page, size.name, { active: 7, locked: 0, soon: 2 });
+    await page.screenshot({ path: path.join(OUT, `${tag}-${size.name}-kokpit.png`) });
   }
 
-  // Alt sekme çubuğu: 4 sekme, ana sayfa geçerli, Tara saha ekranına gider, Görevlerim görev listesine gider (T-270).
+  // Menü: Akış/Kokpit, çalışma alanı, "Giriş yapan", Yardım ve Çıkış erişilebilir; hedefler >= 48 px.
   await page.setViewportSize({ width: 390, height: 664 });
   await page.goto("/t/demo");
-  const nav = page.getByTestId("bottom-nav");
-  await expect(nav.getByRole("link", { name: "Ana sayfa" })).toHaveAttribute("aria-current", "page");
-  await expect(nav.getByRole("link", { name: "Tara" })).toHaveAttribute("href", "/t/demo/field");
-  // T-270 (Supervisor kararı): "Görevlerim" artık gerçek ekrana (T-304) bağlı; tıklanamaz/Yakında durumu kalktı.
-  await expect(nav.getByRole("link", { name: "Görevlerim" })).toHaveAttribute("href", "/t/demo/field/tasks");
-  await expect(nav.getByRole("group", { name: "Görevlerim" })).toHaveCount(0);
-  await expect(nav.getByRole("button", { name: "Menü" })).toBeVisible();
-
-  // Menü: Akış/Kokpit, çalışma alanı, "Giriş yapan", Yardım ve Çıkış erişilebilir; hedefler >= 48 px.
   await openAppMenu(page);
   const menu = page.getByRole("dialog", { name: "Menü" });
   await expect(menu).toBeVisible();
   await expect(menu.getByText("Giriş yapan: Demo Yönetici")).toBeVisible();
   await expect(menu.getByRole("link", { name: /Demo Ambalaj/ })).toHaveAttribute("aria-current", "page");
-  await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toBeVisible();
   await expect(menu.getByRole("link", { name: "Yardıma ihtiyacım var" })).toHaveAttribute("href", "/help");
+  expect(await smallTargets(page, '[data-testid="app-menu"]'), "menü: 48 px altı dokunma hedefi").toEqual([]);
+  const mm = await metrics(page);
+  expect(mm.scrollWidth, "menü açıkken yatay taşma yok").toBeLessThanOrEqual(mm.clientWidth);
   await menu.getByRole("button", { name: "İşlemler", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
   await expect(menu.getByRole("button", { name: "İşlemler", exact: true })).toHaveAttribute("aria-pressed", "true");
-  expect(await smallTargets(page, '[data-testid="app-menu"]'), "menü: 48 px altı dokunma hedefi").toEqual([]);
-  await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-menu.png`) });
-  const mm = await metrics(page);
-  expect(mm.scrollWidth, "menü açıkken yatay taşma yok").toBeLessThanOrEqual(mm.clientWidth);
-
-  // Kokpit menüden seçilir ve kalıcıdır.
   await menu.getByRole("button", { name: "Genel bakış", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-view", "cockpit");
-  // Menü açık kalır (seçili durum görünür); sunucu eylemi sonrası sayfa yenilenir.
   await expect(menu.getByRole("button", { name: "Genel bakış", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-kokpit.png`) });
-  await menu.getByRole("button", { name: "İşlemler", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
-
-  // İç ekran: Escape menüyü kapatır; üyeler ekranında gövde kaymaz, yalnız içerik alanı kayar, yatay taşma yok.
-  await expect(menu).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
+  // T-979b (B-100): kalıp penceresi kapanınca odak menüyü açan yere (Hesap düğmesi) döner.
+  await expect(page.locator('#main [data-testid="home-actions"]').filter({ visible: true })).toBeFocused();
+
+  // İç ekran: üyeler ekranında gövde kaymaz, yalnız içerik alanı kayar, yatay taşma yok; eski kabuk yok.
   await page.goto("/t/demo/members");
   await expect(page.getByRole("heading", { level: 1, name: "Üyeler" })).toBeVisible();
   const inner = await metrics(page);
   expect(inner.scrollHeight, "üyeler: sayfa gövdesi kaymaz").toBeLessThanOrEqual(inner.innerHeight);
   expect(inner.scrollWidth, "üyeler: yatay taşma yok").toBeLessThanOrEqual(inner.clientWidth);
-  await page.screenshot({ path: path.join(OUT, `${tag}-iphone13-uyeler.png`) });
-  await page.goto("/t/demo");
+  await expectNewShell(page, "üyeler");
 
-  // Sunucu/ağ hatası: çıkış başarısızsa neden + sonraki eylem menüde görünür; sonra gerçek çıkış.
+  // Sunucu/ağ hatası: çıkış başarısızsa neden + sonraki eylem menüde görünür.
+  await page.goto("/t/demo");
   await openAppMenu(page);
   await page.route("**/sign-out", (route) => route.fulfill({ status: 500, contentType: "application/json", body: "{}" }));
   await menu.getByRole("button", { name: "Çıkış yap" }).click();
   await expect(menu.getByRole("alert")).toContainText("Çıkış yapılamadı. Bağlantını kontrol edip yeniden dene.");
   await page.unroute("**/sign-out");
+  await page.keyboard.press("Escape");
 
-  // Masaüstü (1280x800): ayrıntılı Kokpit üst barı + çalışma alanı satırı korunur.
-  await selectCockpitPreference(page);
+  // Masaüstü (1280x800): aynı Kokpit kalıbı; eski kök üst bar ve çalışma alanı satırı yok.
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/t/demo");
-  await expect(page.getByTestId("app-bar")).toBeHidden();
-  await expect(page.getByTestId("bottom-nav")).toBeHidden();
-  await expect(page.getByTestId("tenant-bar")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Çıkış yap" })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
+  await expectCockpit(page, "masaüstü", { active: 7, locked: 0, soon: 2 });
   await expect(page.getByText("Yapmak istediğin işe dokun.")).toBeVisible();
-  await page.screenshot({ path: path.join(OUT, `${tag}-masaustu-ana-ekran.png`) });
+  await page.screenshot({ path: path.join(OUT, `${tag}-masaustu-kokpit.png`) });
 
-  // T-292: aynı oturumla yatay telefon (844x390, dokunmatik) ve karşılaştırma boyutları.
+  // T-292: aynı oturumla yatay telefon (dokunmatik) ve karşılaştırma boyutları.
   await landscapePhoneChecks(browser, page, tag);
 
-  // Gerçek çıkış (telefon menüsünden).
+  // Gerçek çıkış (uygulama menüsünden).
   await page.setViewportSize({ width: 390, height: 664 });
   await page.goto("/t/demo");
   await openAppMenu(page);
   await menu.getByRole("button", { name: "Çıkış yap" }).click();
   await expect(page).toHaveURL(/\/login$/);
-
-  console.log(`T254-METRICS ${tag}\n${rows.join("\n")}`);
 });
 
-// T-270: telefon ana ekranı düzeni. Ölçülen yerleşim değerleri (piksel karşılaştırma yok): eşit döşeme, başparmak bölgesi,
-// boş alan oranı, role göre sıra ve "Yakında" listesi. Rol başına ayrı demo girişi (yönetici + toplayıcı). Ekran görüntüleri
-// `.artifacts/t-270/final-*.png` (git'e girmez).
-const OUT_T270 = process.env.T270_OUT ?? path.resolve(import.meta.dirname, "../../.artifacts/t-270");
+// T-270 / T-979: role göre Kokpit kartları (toplayıcı: 4 etkin, 3 yetkisiz + gerekçe, 2 yakında) üç telefon boyutunda; "bekleyen iş yok"
+// durumu (yönetici: "Şimdi" boş) ve Ürünler ekranı denetimleri. Rol başına ayrı demo girişi.
 const T270_ROLES = [
-  { label: "Yönetici", shot: "admin" },
-  { label: "Toplayıcı", shot: "picker" },
+  { label: "Yönetici", shot: "admin", counts: { active: 7, locked: 0, soon: 2 } },
+  { label: "Toplayıcı", shot: "picker", counts: { active: 4, locked: 3, soon: 2 } },
 ] as const;
 
-interface HomeLayout {
-  readonly tiles: ReadonlyArray<{ readonly href: string; readonly x: number; readonly y: number; readonly w: number; readonly h: number }>;
-  readonly navTop: number;
-  readonly areaTop: number;
-  readonly emptyRatio: number;
-  readonly lastBottom: number;
-}
-
-/** Görünür döşeme/satır kutuları ve boş dikey alan oranı (selam + üst düğmeler + görünür öğelerin birleşimi dışında kalan alan). */
-async function homeLayout(page: Page, itemSelector: string): Promise<HomeLayout> {
-  return page.evaluate<HomeLayout>(`(() => {
-    const box = (el) => { const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, b: b.y + b.height }; };
-    const visible = (el) => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0; };
-    const bar = box(document.querySelector('[data-testid="app-bar"]'));
-    const nav = box(document.querySelector('[data-testid="bottom-nav"]'));
-    const tiles = [...document.querySelectorAll(${JSON.stringify(itemSelector)})].filter(visible).map((el) => ({ href: el.getAttribute('href') || '', ...box(el) }));
-    const parts = [box(document.querySelector('main header')), ...tiles];
-    const top = document.querySelector('.top-rows');
-    if (top && visible(top)) parts.push(box(top));
-    for (const sel of ['.locked-note', '.soon-note', '.my-tasks-row', '.now-card:not([data-state="empty"])']) { const n = document.querySelector(sel); if (n && visible(n)) parts.push(box(n)); }
-    const topY = bar.b, bottom = nav.y;
-    const spans = parts.map((p) => [Math.max(p.y, topY), Math.min(p.b, bottom)]).sort((a, b) => a[0] - b[0]);
-    let covered = 0, cur = null;
-    for (const [s, e] of spans) { if (cur && s <= cur[1]) cur[1] = Math.max(cur[1], e); else { if (cur) covered += cur[1] - cur[0]; cur = [s, e]; } }
-    if (cur) covered += cur[1] - cur[0];
-    const all = [...tiles, ...(top && visible(top) ? [box(top)] : [])];
-    return { tiles: tiles.map((t) => ({ href: t.href, x: t.x, y: t.y, w: t.w, h: t.h })), navTop: nav.y, areaTop: topY, emptyRatio: (bottom - topY - covered) / (bottom - topY), lastBottom: Math.max(...all.map((p) => p.b)) };
-  })()`);
-}
-
-
-/** T-274 B-01: alt sayfa açıkken yapı ölçümleri; saat/kilit simgesi boyutu döner (H-03). */
-async function expectSheet(page: Page, where: string, rows: number): Promise<number> {
-  const dialog = page.getByRole("dialog");
-  await expect(dialog, `${where}: alt sayfa açık`).toBeVisible();
-  await expect(dialog).toHaveAttribute("aria-modal", "true");
-  const g = await page.evaluate<{ top: number; bottom: number; vh: number; fits: boolean; closeGap: number; closeH: number; closeLast: boolean; rows: number; icon: number; inset: number }>(`(() => {
-    const d = document.querySelector('[data-testid="more-sheet"]');
-    const panel = d.firstElementChild, pr = panel.getBoundingClientRect();
-    const btn = [...panel.querySelectorAll('button')].pop(), br = btn.getBoundingClientRect();
-    const icon = panel.querySelector('[data-testid="sheet-header"] svg').getBoundingClientRect();
-    return { top: pr.top, bottom: pr.bottom, vh: window.innerHeight, fits: panel.scrollHeight <= panel.clientHeight + 1, closeGap: pr.bottom - br.bottom, closeH: br.height,
-      closeLast: panel.lastElementChild === btn, rows: panel.querySelectorAll('[data-state]').length, icon: icon.width, inset: window.innerHeight - pr.bottom };
-  })()`);
-  expect(g.bottom - g.top, `${where}: yükseklik ≤ %85 (B-01)`).toBeLessThanOrEqual(g.vh * 0.85 + 1);
-  expect(g.fits, `${where}: içeriğine uyar (kaymaz)`).toBe(true);
-  expect(g.inset, `${where}: alt sayfa ekranın altında`).toBeLessThanOrEqual(1);
-  expect(g.closeLast, `${where}: kapatma düğmesi en altta`).toBe(true);
-  expect(g.closeGap, `${where}: kapatma düğmesi sayfanın ≤ 16 px içinde`).toBeLessThanOrEqual(16);
-  expect(g.closeH, `${where}: kapatma düğmesi dokunma yüksekliği`).toBeGreaterThanOrEqual(48);
-  expect(g.rows, `${where}: satır sayısı`).toBe(rows);
-  await expectBand(page, `${where}: alt sayfa içi`, '[data-testid="more-sheet"] > div');
-  // Açılışta odak başlık satırındadır (ilk satırda değil).
-  expect(await page.evaluate<boolean>(`document.activeElement?.closest('[data-testid="sheet-header"]') !== null && document.activeElement?.closest('[data-state]') === null`), `${where}: odak başlıkta`).toBe(true);
-  // Odak tuzağı: Tab döngüsü alt sayfadan çıkmaz.
-  for (let i = 0; i < 12; i++) {
-    await page.keyboard.press("Tab");
-    expect(await page.evaluate<boolean>(`document.querySelector('[data-testid="more-sheet"]').contains(document.activeElement)`), `${where}: odak alt sayfada (Tab ${i + 1})`).toBe(true);
-  }
-  return g.icon;
-}
-
-/** T-274 B-01: üç kapanış yolu (Esc + odak dönüşü, arka plana dokunma, aşağı kaydırma); alt sayfa her seferinde yeniden açılır. */
-async function expectSheetCloses(page: Page, where: string, opener: Locator, width: number): Promise<void> {
-  const dialog = page.getByRole("dialog");
-  await page.keyboard.press("Escape");
-  await expect(dialog, `${where}: Esc kapatır`).toBeHidden();
-  await expect(opener, `${where}: odak açan düğmeye döner`).toBeFocused();
-  await opener.click();
-  await expect(dialog).toBeVisible();
-  await page.mouse.click(width / 2, 70); // kararmış arka plan (alt sayfanın çok üstü)
-  await expect(dialog, `${where}: arka plana dokunma kapatır`).toBeHidden();
-  await opener.click();
-  await expect(dialog).toBeVisible();
-  const h = await page.getByTestId("sheet-header").boundingBox();
-  expect(h, `${where}: tutamaç`).not.toBeNull();
-  const x = (h?.x ?? 0) + (h?.width ?? 0) / 2, y = (h?.y ?? 0) + 12;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  await page.mouse.move(x, y + 40, { steps: 4 });
-  await page.mouse.move(x, y + 120, { steps: 6 });
-  await page.mouse.up();
-  await expect(dialog, `${where}: aşağı kaydırma kapatır`).toBeHidden();
-}
-
-test("ana ekran düzeni (T-270): eşit döşemeler, başparmak bölgesi, boş alan, saha işi önce, Yakında ve yetkisiz işler listeleri", async ({ page }) => {
+test("Kokpit role göre (T-270): etkin, yetkisiz ve yakında işler kartları; bekleyen iş yok; Ürünler ekranı", async ({ page }) => {
+  const OUT_T270 = process.env.T270_OUT ?? path.resolve(import.meta.dirname, "../../.artifacts/t-270");
   mkdirSync(OUT_T270, { recursive: true });
   const tag = test.info().project.name;
-  const clockSizes: number[] = [];
   for (const role of T270_ROLES) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     await enterDemoReal(page, role.label);
     await expect(page).toHaveURL(/\/t\/demo$/);
-    // T-423: toplayıcının varsayılan açılışı Pano; Kokpit tercihi seçilince eski ızgara (aşağıdaki ölçümler) görünür.
+    // T-423: toplayıcının varsayılan açılışı Pano.
     if (role.shot === "picker") {
       await panoChecks(page);
       await page.setViewportSize({ width: 390, height: 844 });
     }
     await selectCockpitPreference(page);
-    const tasks = page.getByRole("list", { name: "İşler" });
-    const isAdmin = role.shot === "admin";
-    const activeCount = isAdmin ? 7 : 4; // toplayıcı: Depoya mal geldi (stock.post, T-313) + Stok durumu + Depo ve raflar + Ürünlerim izinli; 3 yönetim işi yetkisiz
-    const soonRow = page.locator(".soon-toggle");
-    const lockedRow = page.locator(".locked-toggle");
-
     for (const size of T270_SIZES) {
       await page.setViewportSize({ width: size.width, height: size.height });
       await page.goto("/t/demo");
-      await expect(tasks).toBeVisible();
-      const L = await homeLayout(page, ".task-grid > .task-item > [data-state]");
       const where = `${role.shot} ${size.width}x${size.height}`;
-      expect(L.tiles.length, `${where}: görünür döşeme sayısı (izinli işler)`).toBe(activeCount);
-
-      // Eşit ızgara: tüm genişlik ve yükseklikler ±2 px; yükseklik 88-140 px (her rol).
-      // T-313 (DESIGN_REVIEW §7.4): ≤5 izinli iş tek sütun, ≥6 eşit 2 sütun; tek sayıda iş varsa en üstteki son döşeme tam genişlik (yetim değil).
-      // İki kipte de aynı güçte: eşit boyut (±2 px), 88-140 px, alt yaslı ≤ 16 px, boş alan ≤ %15, ilk iş en alt satırda.
-      const twoCol = activeCount >= 6;
-      const perRow = new Map<number, number>();
-      for (const t of L.tiles) perRow.set(Math.round(t.y), (perRow.get(Math.round(t.y)) ?? 0) + 1);
-      const orphanRows = twoCol ? [...perRow.entries()].filter(([, n]) => n === 1).map(([y]) => y) : [];
-      expect(new Set(L.tiles.filter((t) => !orphanRows.includes(Math.round(t.y))).map((t) => Math.round(t.x))).size, `${where}: sütun sayısı`).toBe(twoCol ? 2 : 1);
-      if (twoCol) {
-        expect(orphanRows.length, `${where}: tek döşemeli satır sayısı (tek sayıda iş → 1, çift → 0)`).toBe(L.tiles.length % 2);
-        for (const y of orphanRows) {
-          const o = L.tiles.find((t) => Math.round(t.y) === y);
-          const regularW = Math.max(...L.tiles.filter((t) => Math.round(t.y) !== y).map((t) => t.w));
-          expect(o?.w ?? 0, `${where}: tek döşeme tam genişlik`).toBeGreaterThan(regularW * 1.9);
-          expect(y, `${where}: tek döşeme en üst satırda`).toBe(Math.min(...L.tiles.map((t) => Math.round(t.y))));
-        }
+      await expectCockpit(page, where, role.counts);
+      if (role.shot === "picker") {
+        const locked = page.getByRole("list", { name: "İşler" }).locator('[data-state="locked"]');
+        for (const name of ["Ekibimi yönet", "Ayarlar", "Kim ne yaptı?"]) await expect(locked.filter({ hasText: name })).toBeVisible();
       }
-      const regular = L.tiles.filter((t) => !orphanRows.includes(Math.round(t.y)));
-      const ws = regular.map((t) => t.w);
-      const hs = L.tiles.map((t) => t.h);
-      expect(Math.max(...ws) - Math.min(...ws), `${where}: genişlik farkı`).toBeLessThanOrEqual(2);
-      expect(Math.max(...hs) - Math.min(...hs), `${where}: yükseklik farkı`).toBeLessThanOrEqual(2);
-      expect(Math.min(...hs), `${where}: en küçük döşeme yüksekliği`).toBeGreaterThanOrEqual(88);
-      // D-04 SIKI (DESIGN_REVIEW §7.4.1, T-280): her iki kipte döşeme ≤ 140 px, İSTİSNA YOK. 2 sütunda ayrıca: ikon boyutu tüm döşemelerde eşit ve sabit (3 rem),
-      // açıklama TEK satır ve KESİLMEMİŞ (scrollWidth ≤ clientWidth), D-04b: döşeme içi dikey boşluk ≤ 24 px (iç yükseklik = yükseklik − kenarlık 2×2 − dolgu 2×12).
-      expect(Math.max(...hs), `${where}: en büyük döşeme yüksekliği (≤ 140, istisna yok)`).toBeLessThanOrEqual(140);
-      if (twoCol) {
-        const inside = await page.evaluate<Array<{ h: number; blank: number; badge: number; descLines: number; descCut: boolean; titleLines: number; label: string }>>(`[...document.querySelectorAll('.task-grid > .task-item > [data-state]')].filter((t) => t.getBoundingClientRect().height > 0).map((t) => {
-          const r = (e) => e.getBoundingClientRect();
-          const h = r(t).height;
-          const blocks = [...t.querySelectorAll('.tile-badge, .tile-title, .tile-desc')].map((e) => r(e).height);
-          const desc = t.querySelector('.tile-desc'), title = t.querySelector('.tile-title'), badge = t.querySelector('.tile-badge');
-          const lines = (e) => Math.round(r(e).height / parseFloat(getComputedStyle(e).lineHeight));
-          return { h, blank: h - 4 - 24 - blocks.reduce((a, b) => a + b, 0), badge: Math.round(r(badge).width * 10) / 10, descLines: desc ? lines(desc) : 0, descCut: desc ? desc.scrollWidth > desc.clientWidth + 0.5 : true, titleLines: lines(title), label: title.textContent || '' };
-        })`);
-        expect(new Set(inside.map((x) => x.badge)).size, `${where}: ikon boyutu tüm döşemelerde eşit`).toBe(1);
-        expect(inside[0]?.badge, `${where}: ikon boyutu sabit (48 px)`).toBe(48);
-        for (const tile of inside) {
-          expect(tile.descLines, `${where}: ${tile.label} açıklaması tek satır`).toBe(1);
-          expect(tile.descCut, `${where}: ${tile.label} açıklaması kesilmemiş`).toBe(false);
-          expect(tile.titleLines, `${where}: ${tile.label} başlığı ≤ 2 satır (D-09)`).toBeLessThanOrEqual(2);
-          expect(tile.blank, `${where}: ${tile.label} döşeme içi dikey boşluk (D-04b, ${Math.round(tile.h)} px döşeme)`).toBeLessThanOrEqual(24);
-          expect(tile.blank, `${where}: ${tile.label} içerik döşemeye sığıyor (taşma yok)`).toBeGreaterThanOrEqual(-1);
-        }
-      }
-
-      // Başparmak bölgesi: ızgara alt sekmeye yaslı (<= 16 px), boş dikey alan <= %15, ilk iş en alt satırda.
-      // T-280: 2 sütunda "bekleyen iş yok" durumunda (Şimdi kartı gerçek veri satırı içermez) emptyRatio ve B-02 ÖLÇÜLÜR + kaydedilir, assert edilmez.
-      const gridBottom = Math.max(...L.tiles.map((t) => t.y + t.h));
-      expect(L.navTop - gridBottom, `${where}: ızgara alt kenarı ile alt sekme arası`).toBeLessThanOrEqual(16);
-      const nowState = twoCol ? await page.getByTestId("now-card").getAttribute("data-state") : null;
-      const honestEmpty = twoCol && nowState === "empty"; // hata durumu bekleyen iş YOK değildir: assert edilir
-      if (twoCol) expect(nowState, `${where}: Şimdi kartı çizilir (stock.post)`).not.toBeNull();
-      if (nowState === "empty") await expect(page.getByTestId("now-empty"), `${where}: bekleyen iş yok satırı`).toHaveText("Bekleyen iş yok");
-      if (!honestEmpty) expect(L.emptyRatio, `${where}: boş dikey alan oranı`).toBeLessThanOrEqual(0.15);
-      expect(L.tiles[0]?.y, `${where}: ilk (en öncelikli) döşeme en alt satırda`).toBe(Math.max(...L.tiles.map((t) => t.y)));
-
-      // Sıra: saha işleri (depo, ürün) yönetim işlerinden önce; ilk döşeme saha işi.
-      const hrefs = L.tiles.map((t) => t.href);
-      const idx = (suffix: string) => hrefs.findIndex((h) => h.endsWith(suffix));
-      const field = [idx("/warehouses"), idx("/items")].filter((i) => i >= 0);
-      const admin = [idx("/audit"), idx("/members"), idx("/settings")].filter((i) => i >= 0);
-      expect(field.length, `${where}: saha işleri görünür`).toBe(2);
-      if (admin.length > 0) expect(Math.max(...field), `${where}: saha işleri yönetimden önce`).toBeLessThan(Math.min(...admin));
-      expect(hrefs[0], `${where}: ilk döşeme saha işi`).toMatch(/\/(warehouses|items|field\/receive)$/); // T-313: "Depoya mal geldi" (saha işi, TASKS sırasında ilk) etkinleşti; niyet aynı: ilk döşeme saha işi
-
-      // Kategori rengi yalnız ikon dairesinde: döşeme zemini beyaz (yüzey), ikon dairesi zemini döşemeden farklı.
-      const tints = await page.evaluate<string[]>(`[...document.querySelectorAll('.task-grid > .task-item > [data-state] .tile-badge')].map((b) => getComputedStyle(b.closest('[data-state]')).backgroundColor + '|' + getComputedStyle(b).backgroundColor)`);
-      for (const t of tints) {
-        const [tileBg, circleBg] = t.split("|");
-        expect(circleBg, `${where}: ikon dairesi döşemeden farklı renkte`).not.toBe(tileBg);
-      }
-
-      // Üst düğme etiketleri kesilmez (…).
-      const cut = await page.evaluate<string[]>(`[...document.querySelectorAll('.top-rows .when-closed')].filter((e) => e.getBoundingClientRect().width > 0 && e.scrollWidth > e.clientWidth).map((e) => e.textContent)`);
-      expect(cut, `${where}: kesilen üst düğme etiketi`).toEqual([]);
-
-      // "Görevlerim" özeti yalnız saha rolünde: gerçek sayı + tek dokunuşla görev listesi, ya da sakin boş durum satırı.
-      if (isAdmin) await expect(page.locator(".my-tasks-row")).toBeHidden();
-      else {
-        const card = page.getByTestId("my-tasks-card");
-        if ((await card.count()) > 0) {
-          await expect(card).toHaveAttribute("href", "/t/demo/field/tasks");
-          await expect(card).toContainText(/Sana atanmış \d+\+? iş/);
-        } else {
-          // T-274: boş durum kartı artık sonraki adımı da taşır; ileti metni aynı güçte (tam eşitlik) doğrulanır, kart ≤ 120 px ve bağlantı gerçek.
-          const empty = page.getByTestId("my-tasks-empty");
-          await expect(empty.locator("p")).toHaveText("Şu an sana atanmış iş yok.");
-          await expect(empty.getByRole("link", { name: "Tara ile başla" })).toHaveAttribute("href", "/t/demo/field");
-          expect((await empty.boundingBox())?.height ?? 999, `${where}: boş durum kartı yüksekliği (H-02)`).toBeLessThanOrEqual(120);
-        }
-        expect(await smallTargets(page, ".my-tasks-row"), `${where}: Görevlerim özeti dokunma hedefi`).toEqual([]);
-      }
-
-      // Üst düğmeler: kapalı, görünür alanda; toplayıcıda yetkisiz işler tek satırda (varsayılan kapalı); alt sayfa kapalı.
-      await expect(soonRow).toContainText("Yakında gelecekler (2)");
-      if (isAdmin) await expect(lockedRow).toHaveCount(0);
-      else {
-        await expect(lockedRow).toContainText("Yetkin olmayan işler (3)");
-        await expect(tasks.locator('[data-state="locked"]').first()).toBeHidden();
-      }
-      await expect(page.getByRole("dialog")).toBeHidden();
-      // B-02 (kapalı ana ekran): en büyük boş dikey bant ≤ 120 px; B-04: şevron sağda, ≥ 48 px, kapalıyken dönmemiş.
-      await expectBand(page, `${where}: kapalı ana ekran`, null, !honestEmpty);
-      const sc = await chevronInfo(page, ".soon-toggle");
-      expect(sc.h, `${where}: Yakında düğmesi yüksekliği (B-04)`).toBeGreaterThanOrEqual(48);
-      expect(sc.rightGap, `${where}: şevron sağda (B-04)`).toBeLessThanOrEqual(16);
-      expect(sc.rotated, `${where}: şevron kapalıyken dönmemiş`).toBe(false);
-
-      // Dokunma hedefleri ve taşma.
-      expect(await smallTargets(page, "body"), `${where}: 48 px altı dokunma hedefi`).toEqual([]);
-      const m = await metrics(page);
-      expect(m.scrollWidth, `${where}: yatay taşma`).toBeLessThanOrEqual(m.clientWidth);
-      expect(m.scrollHeight, `${where}: sayfa gövdesi kaymaz`).toBeLessThanOrEqual(m.innerHeight);
-      await page.screenshot({ path: path.join(OUT_T270, `final-${tag}-${role.shot}-${size.width}.png`) });
-
-      // "Yakında" açık (B-01/B-02): kararmış ana ekran üzerinde alt sayfa; 2 iş, tek kompakt başlık satırı, kapatma altta.
-      await soonRow.click();
-      await expect(soonRow).toHaveAttribute("aria-expanded", "true");
-      const soonIcon = await expectSheet(page, `${where}: Yakında`, 2);
-      clockSizes.push(soonIcon);
-      expect((await chevronInfo(page, ".soon-toggle")).rotated, `${where}: şevron açılınca döner (B-04)`).toBe(true);
-      const dlg = page.getByRole("dialog");
-      for (const card of await dlg.locator('[data-state="soon"]').all()) {
-        await expect(card).toBeVisible();
-        await expect(card).toContainText("Yakında");
-      }
-      await expect(dlg.getByTestId("sheet-header")).toContainText("Bu işler depo kurulumundan sonra açılacak."); // çoğul (T-01)
-      for (const t of await dlg.locator('[data-state="soon"]').all()) {
-        const hh = (await t.boundingBox())?.height ?? 0;
-        expect(hh, `${where}: alt sayfa satır yüksekliği`).toBeGreaterThanOrEqual(56);
-        expect(hh, `${where}: alt sayfa satır yüksekliği (kompakt)`).toBeLessThanOrEqual(72);
-      }
-      const rowFlat = await page.evaluate<string[]>(`[...document.querySelectorAll('[data-testid="more-sheet"] [data-state]')].map((e) => getComputedStyle(e).boxShadow)`);
-      for (const sh of rowFlat) expect(sh, `${where}: Yakında satırı gölgesiz`).toBe("none");
-      const titles = await page.evaluate<number[]>(`[...document.querySelectorAll('[data-testid="more-sheet"] .tile-title')].map((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)))`);
-      for (const lines of titles) expect(lines, `${where}: Yakında başlığı en çok 2 satır`).toBeLessThanOrEqual(2);
-      expect(await smallTargets(page, '[data-testid="more-sheet"]'), `${where}: Yakında alt sayfası 48 px altı hedef`).toEqual([]);
-      await page.screenshot({ path: path.join(OUT_T270, `final-${tag}-${role.shot}-${size.width}-yakinda-acik.png`) });
-      await expectSheetCloses(page, `${where}: Yakında`, soonRow, size.width);
-      await expect(tasks.locator('a[data-state="active"]').first()).toBeVisible();
-
-      // Toplayıcı: yetkisiz işler alt sayfası: tek başlık satırı + 3 kompakt iş; kapatma altta.
-      if (!isAdmin) {
-        await lockedRow.click();
-        await expectSheet(page, `${where}: yetkisiz`, 3);
-        const ldlg = page.getByRole("dialog");
-        await expect(ldlg.getByTestId("sheet-header")).toHaveText("Bu işler için yetkin yok. Sorumluna sorabilirsin.");
-        const lockedCards = ldlg.locator('[data-state="locked"]');
-        await expect(lockedCards).toHaveCount(3);
-        for (const name of ["Ekibimi yönet", "Ayarlar", "Kim ne yaptı?"]) await expect(lockedCards.filter({ hasText: name })).toBeVisible();
-        for (const t of await lockedCards.all()) {
-          const hh = (await t.boundingBox())?.height ?? 0;
-          expect(hh, `${where}: yetkisiz satır yüksekliği`).toBeGreaterThanOrEqual(56);
-          expect(hh, `${where}: yetkisiz satır yüksekliği (kompakt)`).toBeLessThanOrEqual(72);
-        }
-        const lockedFlat = await page.evaluate<string[]>(`[...document.querySelectorAll('[data-testid="more-sheet"] [data-state]')].map((e) => getComputedStyle(e).boxShadow)`);
-        for (const sh of lockedFlat) expect(sh, `${where}: yetkisiz satır gölgesiz`).toBe("none");
-        await page.screenshot({ path: path.join(OUT_T270, `final-${tag}-${role.shot}-${size.width}-yetkisiz-acik.png`) });
-        await expectSheetCloses(page, `${where}: yetkisiz`, lockedRow, size.width);
-      }
+      await page.screenshot({ path: path.join(OUT_T270, `final-${tag}-${role.shot}-${size.width}-kokpit.png`) });
     }
-
-    if (isAdmin) {
-      await zeroStateChecks(page);
+    if (role.shot === "admin") {
+      // T-280: "bekleyen iş yok" durumu dürüstçe söylenir (sayı uydurulmaz).
+      await expect(page.getByTestId("now-card")).toHaveAttribute("data-state", "empty");
+      await expect(page.getByTestId("now-empty")).toHaveText("Bekleyen iş yok");
       await itemsScreenChecks(page, { slug: "demo", empty: false });
     }
-
     await openAppMenu(page);
     await page.getByRole("button", { name: "Çıkış yap" }).click();
     await expect(page).toHaveURL(/\/login$/);
   }
-  // H-03: saat ikonu 360/390/430'da tutarlı (rol başına 3 ölçüm; hepsi birbirine ≤ 1 px).
-  expect(clockSizes.length, "saat ikonu ölçümleri").toBe(T270_ROLES.length * T270_SIZES.length);
-  expect(Math.max(...clockSizes) - Math.min(...clockSizes), `saat ikonu boyutu tutarlı (${clockSizes.join("/")})`).toBeLessThanOrEqual(1);
 });
 
-// T-280 K-1: "bekleyen iş yok" ana ekranı DÜRÜST ölçülür (assert edilmez, Supervisor kararı; DESIGN_REVIEW §7.4.1): "Şimdi" kartı ızgaraya yaslıdır (tek üst boşluk),
-// kartın içeriği (başlık + "Bekleyen iş yok") B-02 bantında içerik sayılmaz. Dört boyutta ölçüm + görüntü; değerler raporlanır.
-/** Yönetici oturumu AÇIKKEN çağrılır (ek demo girişi yok: demo girişi hız sınırlıdır). */
-async function zeroStateChecks(page: Page): Promise<void> {
-  await selectCockpitPreference(page);
-  const outHome = path.resolve(import.meta.dirname, "../../.artifacts/t-313");
-  mkdirSync(outHome, { recursive: true });
-  mkdirSync(OUT_T270, { recursive: true });
-  const tag = test.info().project.name;
-  const rows: Array<Record<string, unknown>> = [];
-  for (const [w, h] of [[360, 740], [390, 664], [390, 844], [430, 932]] as const) {
-    await page.setViewportSize({ width: w, height: h });
-    await page.goto("/t/demo");
-    const where = `${w}x${h}`;
-    await expect(page.getByTestId("now-card"), `${where}: Şimdi kartı bekleyen iş yok durumunda`).toHaveAttribute("data-state", "empty");
-    await expect(page.getByTestId("now-empty")).toHaveText("Bekleyen iş yok");
-    const L = await homeLayout(page, ".task-grid > .task-item > [data-state]");
-    const band = await expectBand(page, `${where}: bekleyen iş yok`, null, false);
-    // Kart ızgaranın hemen üstüne yaslı: kart ile ızgara arası ≤ 16 px; kalan alan tek üst boşluktur (iki yana bölünmez).
-    const geo = await page.evaluate<{ gap: number; head: number; above: number }>(`(() => { const r = (e) => e.getBoundingClientRect(); const c = r(document.querySelector('.now-card')); const g = r(document.querySelector('.task-grid')); const hd = r(document.querySelector('main header')); return { gap: g.top - c.bottom, head: hd.bottom, above: c.top - hd.bottom }; })()`);
-    expect(geo.gap, `${where}: kart ızgaraya yaslı`).toBeLessThanOrEqual(16);
-    expect(geo.gap, `${where}: kart ızgarayla çakışmaz`).toBeGreaterThanOrEqual(0);
-    rows.push({ where, band: Math.round(band), emptyRatio: Math.round(L.emptyRatio * 1000) / 1000, cardToGridGap: Math.round(geo.gap), topGapAboveCard: Math.round(geo.above) });
-    await page.screenshot({ path: path.join(outHome, `final-home-zero-${tag}-${w}x${h}.png`) });
-  }
-  writeFileSync(path.join(OUT_T270, `metrics-home-zero-state-${tag}.json`), JSON.stringify(rows, null, 2));
-}
-
-// T-292: yatay telefon. `phone` varyantı iki koşulda da (dar ekran YA DA dokunmatik + alçak ekran) TÜM telefon sınıflarını uygulamalı.
-// Demo girişi hız sınırlı olduğundan yeni giriş yapılmaz: T-254 testinin oturumu, dokunmatik + mobil yeni bağlama taşınır; boyutlar
-// setViewportSize ile değişir. Ölçülen değerler: ana başlık/selam yazı boyutu, alt sekme, taşma. Görüntüler `.artifacts/t-292/` altına (git'e girmez).
+// T-292: yatay telefon. Demo girişi hız sınırlı olduğundan yeni giriş yapılmaz: T-254 testinin oturumu, dokunmatik + mobil yeni bağlama
+// taşınır. Ölçülen değerler: Kokpit kalıbı, ortak alt cam çubuk, taşma. Görüntüler `.artifacts/t-292/` altına (git'e girmez).
 const OUT_T292 = process.env.T292_OUT ?? path.resolve(import.meta.dirname, "../../.artifacts/t-292");
 
 async function landscapePhoneChecks(browser: Browser, source: Page, tag: string): Promise<void> {
@@ -536,30 +198,21 @@ async function landscapePhoneChecks(browser: Browser, source: Page, tag: string)
   });
   try {
     const page = await context.newPage();
-    // T-928: legacy cockpit typography/device geometry remains a separate contract.
     await context.addCookies([{ name: "view", value: "cockpit", url: new URL(source.url()).origin }]);
-    const fontSize = (selector: string): Promise<string> =>
-      page.evaluate<string>(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).fontSize`);
     const cases = [
-      { name: "yatay-844x390", width: 844, height: 390, phone: true },
-      { name: "yatay-740x360", width: 740, height: 360, phone: true },
-      { name: "dikey-390x844", width: 390, height: 844, phone: true },
-      { name: "masaustu-1280x800", width: 1280, height: 800, phone: false },
+      { name: "yatay-844x390", width: 844, height: 390 },
+      { name: "yatay-740x360", width: 740, height: 360 },
+      { name: "dikey-390x844", width: 390, height: 844 },
+      { name: "masaustu-1280x800", width: 1280, height: 800 },
     ] as const;
     for (const c of cases) {
       await page.setViewportSize({ width: c.width, height: c.height });
       await page.goto("/t/demo");
+      await expect(page.getByTestId("kokpit")).toBeVisible();
       await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
-      expect(await fontSize("main h1"), `${c.name}: ana başlık yazı boyutu`).toBe(c.phone ? "20px" : "36px");
-      expect(await fontSize("main header p"), `${c.name}: selam yazı boyutu`).toBe(c.phone ? "14px" : "20px");
       const m = await metrics(page);
       expect(m.scrollWidth, `${c.name}: yatay taşma yok`).toBeLessThanOrEqual(m.clientWidth);
-      if (c.phone) {
-        await expect(page.getByTestId("bottom-nav"), `${c.name}: alt sekme görünür`).toBeVisible();
-        await expect(page.getByTestId("app-bar"), `${c.name}: üst çubuk görünür`).toBeVisible();
-      } else {
-        await expect(page.getByTestId("bottom-nav"), `${c.name}: alt sekme yok`).toBeHidden();
-      }
+      await expectNewShell(page, c.name);
       await page.screenshot({ path: path.join(OUT_T292, `${tag}-${c.name}.png`) });
     }
   } finally {

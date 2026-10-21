@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { ActivityList, Banner } from "@wms/ui";
 import { AppError } from "@wms/shared/errors";
 import { listMyActionsToday } from "@wms/domain/audit/today";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary, listMembers } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_KIND_PERMISSION, TASK_LIST_LIMIT_MAX, getBoard, getWorkSummary, type Board, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
-import { TaskMenu, type MyTasksSummary, type NowSummary } from "./task-menu.tsx";
+import { Kokpit, type MyTasksSummary, type NowSummary, type TodayList } from "./kokpit.tsx";
 import { EasyOperations } from "./easy-operations.tsx";
 import { PanoHome, type PanoRole } from "./pano/pano-home.tsx";
 import { PanoBoard, type Assignee, type BoardRole } from "./pano/pano-board.tsx";
@@ -127,7 +126,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       </main>
     );
   }
-  const Menu = jar.get("view")?.value === "cockpit" ? TaskMenu : EasyOperations;
+  const cockpit = jar.get("view")?.value === "cockpit";
   const firstName = summary.userName.trim().split(/\s+/)[0] ?? summary.userName;
   const allowed = {
     usersManage: hasPermission(current.roles, "users.manage", current.grants),
@@ -136,7 +135,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     stockView: hasPermission(current.roles, "stock.view", current.grants),
     stockPost: hasPermission(current.roles, "stock.post", current.grants),
   };
-  if (Menu === EasyOperations) {
+  if (!cockpit) {
     // T-988: Görevlerim ana ekranı (tasarım birebir). Özet okunamazsa ekran düşmez: bölümler "veri yok" der, sayı uydurulmaz.
     let work: WorkSummary | null = null;
     try {
@@ -242,47 +241,29 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     }
   }
 
-  return (
-    <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6 px-4 py-6 phone:min-h-0 phone:flex-1 phone:gap-2 phone:px-3 phone:pb-2 phone:pt-1">
-      {/* Telefonda iki kısa satır (selam + soru); açıklama paragrafı yalnız geniş ekranda (T-254, T-270). */}
-      <header className="flex min-w-0 flex-col gap-2 phone:gap-0">
-        <p className="break-words text-xl font-semibold text-ink-muted phone:text-sm">{t("home.greeting", { name: firstName })}</p>
-        <h1 className="break-words text-4xl font-extrabold text-ink phone:text-xl">{t("home.title")}</h1>
-        {Menu === TaskMenu ? <p className="desk-only max-w-2xl basis-full break-words text-lg text-ink">{t("home.intro")}</p> : null}
-      </header>
-      <Menu
-        slug={slug}
-        myTasks={myTasks}
-        now={now}
-        todayDone={today === null ? undefined : { count: today.items.length, more: today.nextCursor !== null }}
-        allowed={allowed}
-      />
-      {today === null ? (
-        <section aria-labelledby="today-title" className="flex flex-col gap-2 rounded-card bg-surface p-4 shadow-card">
-          <h2 id="today-title" className="text-lg font-bold text-ink">
-            {t("home.today.title")}
-          </h2>
-          <Banner kind="warning">
-            <p>
-              {ts(errKey)} {ts(`${errKey}Action`)}
-            </p>
-            <p className="mt-1 text-sm">{ts("code", { code: todayError ?? "INTERNAL" })}</p>
-          </Banner>
-        </section>
-      ) : (
-        <div className="desk-only flex min-w-0 flex-col">
-        <ActivityList
-          title={t("home.today.title")}
-          emptyText={t("home.today.empty")}
-          items={today.items.map((it, i) => ({
+  const todayList: TodayList =
+    today === null
+      ? { kind: "error", message: `${ts(errKey)} ${ts(`${errKey}Action`)}`, code: ts("code", { code: todayError ?? "INTERNAL" }) }
+      : {
+          kind: "rows",
+          rows: today.items.map((it, i) => ({
             id: `${it.occurredAt.toISOString()}-${i}`,
             time: format.dateTime(it.occurredAt, { hour: "2-digit", minute: "2-digit", timeZone: today.timeZone }),
             dateTime: it.occurredAt.toISOString(),
             text: t(it.summaryKey),
-          }))}
-        />
-        </div>
-      )}
+          })),
+        };
+  return (
+    <main className="flex w-full min-w-0 flex-col">
+      <Kokpit
+        slug={slug}
+        dark={jar.get(THEME_COOKIE)?.value === "koyu"}
+        firstName={firstName}
+        allowed={allowed}
+        today={todayList}
+        {...(myTasks === undefined ? {} : { myTasks })}
+        {...(now === undefined ? {} : { now })}
+      />
     </main>
   );
 }

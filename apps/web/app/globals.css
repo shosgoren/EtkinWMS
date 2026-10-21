@@ -233,11 +233,6 @@ html {
 }
 
 /* Masaüstü/tablet: döşemede sağ ok yok; üst düğmeler ve yetki notu telefona özgü (telefon bloğu aşağıda geçersiz kılar). */
-.tile-chevron,
-.top-rows,
-.my-tasks-row {
-  display: none;
-}
 
 /* Telefon yalnız öğeleri masaüstünde gizlidir; masaüstüne özgü öğeler telefonda gizlenir. */
 .phone-only {
@@ -286,329 +281,45 @@ html {
   /* Ana ekran (T-270): ızgara kalan dikey alanı doldurur ve alt sekmeye yaslanır. Satır 1 = üstteki düğmeler (`.top-rows`, otomatik
      yükseklik); altında `--rows` eşit satır, ilk iş en alt satırda (`--row`, task-menu.tsx). Yetkisiz ve "Yakında" işler ızgarada
      yer kaplamaz: düğmeler kararmış ana ekran üzerinde ALT SAYFA açar (T-274, DESIGN_REVIEW §7.3 B-01). */
-  .task-grid {
-    flex: 1 1 0%;
-  }
-
-  .task-grid-fill {
-    grid-template-rows: auto repeat(var(--rows), minmax(0, 1fr));
-    min-height: calc(var(--rows) * 4.5rem + (var(--rows) - 1) * 0.5rem + 3.5rem);
-  }
-
-  .task-grid-fill > .task-item {
-    grid-row: var(--row);
-  }
 
   /* Ana ekran kabı: ızgara (ve 2 sütunda "Şimdi" kartı) kalan alanı paylaşır. */
-  .task-menu {
-    flex: 1 1 0%;
-    min-height: 0;
-  }
-
-  .task-menu.task-menu-2col {
-    justify-content: flex-end;
-  }
-
-  .task-menu.task-menu-2col:has(.now-card:not([data-state="empty"])) {
-    /* Ek stok satırı ve bekleyen işler sığmazsa içerik alanı kayar;
-       alta yaslama kartı selam başlığının üstüne taşıyamaz. */
-    min-height: min-content;
-  }
 
   /* "Şimdi" kartı ızgaranın hemen üstüne yaslıdır (kart + ızgara alta yaslı kabın içinde); kalan dikey alan selam başlığının altında TEK boşluk olarak kalır
      (DESIGN_REVIEW §7.4.1: kartı iki yana otomatik boşlukla ortalayıp boşluğu bölmek yasak). */
   /* İkinci sıradaki iş satırı yalnız yüksek ekranda (≥ 880 px) görünür: yer varsa GERÇEK ek bilgi gösterilir (dolgu değil; veri yoksa satır hiç yoktur). */
-  .now-extra {
-    display: none;
-  }
-
-  @media (min-height: 880px) {
-    .now-extra {
-      display: flex;
-    }
-  }
 
   /* "Şimdi" kartı görünür yüksekliğe göre sığar; yalnız YERLEŞİM değişir, anlam kaybolmaz (fiil, şevron, doğrudan bağlantı hep var; DESIGN_REVIEW §7.4.2):
      ≥ 800 px tam kart (başlık + "Sıradaki"); 700-799 px başlıksız, satırlar alt alta, "Sıradaki" satırı var; < 700 px iki satır yan yana, etiket sarılır, "Sıradaki" yok
      (satırın kendisi sıradaki işi açar). */
-  @media (max-height: 799px) {
-    .now-card {
-      gap: 0;
-      padding: 0.25rem;
-    }
-
-    .now-card .now-title {
-      display: none;
-    }
-
-    .now-card .now-list {
-      gap: 0.25rem;
-    }
-
-    .now-card .now-list > li > a:first-child {
-      min-height: 3rem;
-      padding-block: 0;
-      gap: 0.5rem;
-    }
-
-    .now-card .now-list > li > a:first-child > span:first-child {
-      width: 2rem;
-      height: 2rem;
-      font-size: 1rem;
-    }
-  }
 
   @media (max-height: 699px) {
-    .now-card .now-list {
-      flex-direction: row;
-    }
-
-    .now-card .now-list > li {
-      flex: 1 1 0%;
-      min-width: 0;
-    }
-
-    .now-card .now-next {
-      display: none;
-    }
-
     /* Sayı rozeti etiketin içinde zaten yazılı ("2 yerleştirme görevi bekliyor"); dar yarım satırda yer açmak için yalnız burada gizlenir. */
-    .now-card .now-list > li > a:first-child > span:first-child {
-      display: none;
-    }
-
-    .now-card .now-label {
-      font-size: 0.875rem;
-      line-height: 1.15;
-    }
-
-    .now-card .now-list > li > a:first-child > svg {
-      width: 1.25rem;
-      height: 1.25rem;
-    }
   }
-
 
   /* 6+ izinli iş (DESIGN_REVIEW §7.4, §7.4.1 SIKI): eşit 2 sütun; döşeme yüksekliği İÇERİKTEN gelir (ızgara alanı doldurmak için uzatmaz, ikon büyümez):
      satırlar eşit (en yüksek içeriğe göre), alta yaslı; tek sayıda iş varsa en üstteki son döşeme tam genişlik (`--col: 1 / -1`).
      Kalan dikey alan dolgu ile değil gerçek bilgiyle ("Şimdi" kartı, §7.4.2) kullanılır. */
-  .task-grid.task-grid-2col {
-    flex: 0 0 auto;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto repeat(var(--rows), 1fr);
-    min-height: 0;
-  }
-
-  .task-grid.task-grid-2col > .top-rows {
-    grid-column: 1 / -1;
-  }
-
-  .task-grid.task-grid-2col > .task-item {
-    grid-column: var(--col);
-  }
-
-  .task-grid.task-grid-2col .task-tile {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 0.25rem;
-    padding: 0.75rem;
-  }
 
   /* İkon dairesi SABİT boyutta ve tüm döşemelerde eşit (3 rem); flex/yüzde ile büyümez. */
-  .task-grid.task-grid-2col .tile-badge {
-    flex: none;
-    width: 3rem;
-    height: 3rem;
-  }
-
-  .task-grid.task-grid-2col .tile-badge svg {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-
-  .task-grid.task-grid-2col .tile-body {
-    flex: none;
-    width: 100%;
-    gap: 0.125rem;
-  }
 
   /* Başlık: sabit boy (yalnız görünüm genişliğine bağlı), en çok 2 satır; açıklama: TEK satır, kesilmez (sığmayan metin çeviri anahtarında kısaltılır). */
-  .task-grid.task-grid-2col .tile-title {
-    font-size: 0.9375rem;
-    line-height: 1.2;
-    display: block;
-  }
-
-  .task-grid.task-grid-2col .tile-desc {
-    display: block;
-    font-size: 0.875rem;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: visible;
-    color: var(--color-ink-muted);
-  }
-
-  .task-grid.task-grid-2col .tile-chevron {
-    display: none;
-  }
-
-  .top-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .top-rows > button {
-    gap: 0.375rem;
-    font-size: 0.8125rem;
-  }
-
-  .top-rows > button[aria-expanded="true"] .row-chevron {
-    transform: rotate(180deg);
-  }
-
-  .task-grid > .soon-item,
-  .task-grid > .locked-item {
-    display: none;
-  }
 
   /* Alt sayfa: içeriğine uyar (en çok %85), altta sabit; satırlar ızgara kurallarını paylaşır (`task-grid sheet-rows`). */
   .sheet-rows {
     flex: none;
   }
 
-  .sheet-rows > li > .task-tile {
-    height: 4.5rem;
-  }
-
-  .sheet-rows .tile-chevron {
-    display: none;
-  }
-
   /* "Görevlerim" özeti (saha rolleri): ızgaranın üstünde esnek satır; döşemeler en çok 140 px, altta. */
-  .task-grid-card {
-    grid-template-rows: minmax(10rem, 1fr) repeat(var(--rows), minmax(5.5rem, 8.75rem));
-    min-height: calc(var(--rows) * 5.5rem + (var(--rows) - 1) * 0.5rem + 10.5rem);
-  }
 
   /* Saha rolünde "Şimdi" satırları özetin yerine girdiğinde ilk satır içeriğe göre büyür (kırpma/çakışma yok); döşemeler kalan alanı 72-140 px arasında paylaşır. */
-  .task-grid-card.task-grid-now {
-    grid-template-rows: auto repeat(var(--rows), minmax(4.5rem, 8.75rem));
-  }
-
-  @media (min-height: 700px) {
-    .task-grid-card.task-grid-now {
-      grid-template-rows: auto repeat(var(--rows), minmax(5.5rem, 8.75rem));
-    }
-  }
-
-  .task-grid-card > .my-tasks-row {
-    display: flex;
-    grid-row: 1;
-  }
-
-  .my-tasks-stack > .my-tasks:not(.my-tasks-empty),
-  .my-tasks-stack > [role="alert"] {
-    flex: 1 1 auto;
-  }
 
   /* Döşeme: tek sütun yatay satır (ikon dairesi solda, başlık + açıklama, sağ ok). Boyutlar görünür yüksekliğe göre ölçeklenir
      (düşük ekranda 72 px döşeme, yüksekte büyük ikon ve başlık). */
-  .task-grid .task-tile {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.875rem;
-    padding: 0.5rem 1rem;
-    overflow: hidden;
-    border-radius: 1rem;
-  }
-
-  .task-grid .tile-head {
-    display: contents;
-  }
-
-  .task-grid .tile-head > :not(.tile-badge) {
-    order: 3;
-  }
-
-  .task-grid .tile-badge {
-    width: clamp(3rem, 7.5dvh, 5rem);
-    height: clamp(3rem, 7.5dvh, 5rem);
-  }
-
-  .task-grid .tile-badge svg {
-    width: 50%;
-    height: 50%;
-  }
-
-  .task-grid .tile-body {
-    flex: 1 1 0%;
-  }
-
-  .task-grid .tile-title {
-    font-size: clamp(1.0625rem, 2.4dvh, 1.5rem);
-    line-height: 1.2;
-  }
-
-  .task-grid .tile-desc {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    font-size: clamp(0.8125rem, 1.8dvh, 1.0625rem);
-    line-height: 1.25;
-  }
-
-  .task-grid .tile-chevron {
-    display: block;
-  }
-
-  .task-grid:not(.task-grid-fill) .task-tile {
-    min-height: 4.5rem;
-  }
 
   /* "Yakında" ve yetkisiz işler: kompakt, gölgesiz, nötr satırlar (tıklanamaz; renk yalnız küçük ikon dairesinde). Gerekçe cümlesi
      bir kez panelde; satırlardaki tekrarı gizli. */
-  .task-grid .task-tile[data-state="soon"],
-  .task-grid .task-tile[data-state="locked"] {
-    gap: 0.75rem;
-    min-height: 0;
-    padding: 0.375rem 0.75rem;
-    box-shadow: none;
-    border-width: 1px;
-  }
-
-  .task-grid .task-tile[data-state="soon"] .tile-badge,
-  .task-grid .task-tile[data-state="locked"] .tile-badge {
-    width: 2.25rem;
-    height: 2.25rem;
-  }
-
-  .task-grid .task-tile[data-state="soon"] .tile-title,
-  .task-grid .task-tile[data-state="locked"] .tile-title {
-    color: var(--color-ink-muted);
-    font-size: 0.9375rem;
-  }
-
-  .task-grid .task-tile[data-state="soon"] .tile-desc,
-  .task-grid .task-tile[data-state="locked"] .tile-desc,
-  .task-grid .task-tile[data-state="soon"] .tile-chevron {
-    display: none;
-  }
 
   /* Açık listelerde her satır işin ne yaptığını tek satırda söyler (gerçek `tasks.*.description`; T-274). */
-  .task-grid .task-tile[data-state="soon"] .tile-what,
-  .task-grid .task-tile[data-state="locked"] .tile-what {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-    overflow: hidden;
-    color: var(--color-ink-muted);
-    font-size: 0.8125rem;
-    line-height: 1.25;
-  }
 }
 
 /* Etkin WMS: özgün lacivert/turuncu kabuk ve ilk kullanım yolu. */
@@ -686,18 +397,6 @@ select.bg-none { background-image:none; }
 
 /* T-986: Görevlerim tasarımı Aşama 3 — stok/transfer/manuel belge ekranlarında başlık bandı (yalnız bu bölümler; yönetici ekranları aynı).
    Transfer, ana ekrandaki döşemesiyle aynı mor tonu kullanır; zemin ton koyusu + yüzey yazısı. */
-.screen-shell[data-section="transfer"] { --screen-tone-bg: var(--color-cat-purple-bg); --screen-tone-ink: var(--color-cat-purple-ink); }
-.screen-interior:is([data-section="stock"], [data-section="transfer"]) .screen-content > main > h1 {
-  border-bottom: 0;
-  padding: .875rem 1.125rem;
-  border-radius: 1.25rem;
-  background: var(--screen-tone-ink);
-  color: var(--color-surface);
-  box-shadow: 0 12px 24px -18px color-mix(in srgb, var(--color-ink) 80%, transparent);
-}
-.screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-section { border-radius: 1.25rem; }
-.screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-form { border-radius: 1.5rem; }
-.screen-interior:is([data-section="stock"], [data-section="transfer"]) .workflow-form > .workflow-primary { border-radius: 1rem; font-weight: 800; letter-spacing: .02em; }
 
 /* T-985: saha adım bandı (Görevlerim tasarımı). Zemin kategori koyu tonu (bileşende), yarı saydam yüzey kutuları. */
 .flow-band { box-shadow: 0 10px 22px -18px color-mix(in srgb, var(--color-ink) 80%, transparent); }
@@ -707,31 +406,7 @@ select.bg-none { background-image:none; }
 .flow-primary { box-shadow: 0 10px 20px -14px color-mix(in srgb, var(--color-accent) 80%, transparent); }
 
 /* T-929: interior screens only. Home, dialogs, camera overlays and print surfaces retain their own layouts. */
-.screen-shell {
-  --screen-mode: desktop;
-  --screen-tone-bg: var(--color-cat-slate-bg);
-  --screen-tone-ink: var(--color-cat-slate-ink);
-  --screen-nav-height: calc(74px + env(safe-area-inset-bottom));
-  min-width: 0;
-  width: 100%;
-}
-.screen-shell[data-tone="purple"] { --screen-tone-bg: var(--color-cat-purple-bg); --screen-tone-ink: var(--color-cat-purple-ink); }
-.screen-shell[data-tone="green"] { --screen-tone-bg: var(--color-cat-green-bg); --screen-tone-ink: var(--color-cat-green-ink); }
-.screen-shell[data-tone="sky"] { --screen-tone-bg: var(--color-cat-sky-bg); --screen-tone-ink: var(--color-cat-sky-ink); }
-.screen-shell[data-tone="orange"] { --screen-tone-bg: var(--color-cat-orange-bg); --screen-tone-ink: var(--color-cat-orange-ink); }
-.screen-shell[data-tone="teal"] { --screen-tone-bg: var(--color-cat-teal-bg); --screen-tone-ink: var(--color-cat-teal-ink); }
-.screen-shell[data-tone="indigo"] { --screen-tone-bg: var(--color-cat-indigo-bg); --screen-tone-ink: var(--color-cat-indigo-ink); }
-.screen-interior { display: grid; grid-template-columns: 14rem minmax(0, 1fr); max-width: 88rem; margin-inline: auto; gap: 1.5rem; padding: 1.5rem; }
-.screen-content { min-width: 0; }
-.screen-context { align-self: start; display: flex; flex-direction: column; gap: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); padding: 1rem; }
-.screen-category { display: flex; align-items: center; gap: .75rem; min-width: 0; }
-.screen-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 3rem; height: 3rem; border-radius: 1rem; background: var(--screen-tone-bg); color: var(--screen-tone-ink); }
-.screen-desktop-nav { display: flex; flex-direction: column; gap: .75rem; }
-.screen-interior .screen-content > main { max-width: none; padding: 0; }
-.screen-interior .screen-content > main > h1 { border-bottom: 3px solid var(--screen-tone-ink); padding-bottom: .75rem; }
-.screen-interior .screen-content > main > ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.screen-interior .screen-content > main > ul > li { min-width: 0; }
-.screen-interior .screen-content > main > ul > li > a { width: 100%; height: 100%; background: var(--color-surface); border-radius: var(--radius-card); }
+
 .workflow-form { min-width: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 1rem; }
 .workflow-form > fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 1rem; }
 .workflow-section { min-width: 0; display: flex; flex-direction: column; gap: .75rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-bg); }
@@ -741,66 +416,32 @@ select.bg-none { background-image:none; }
 .workflow-steps > li { display: flex; align-items: center; gap: .5rem; min-width: 0; font-weight: 700; }
 .workflow-steps > li > span { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 50%; background: var(--screen-tone-bg); color: var(--screen-tone-ink); }
 .workflow-form > .workflow-primary { min-height: 3.5rem; width: 100%; margin-top: .5rem; background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); }
-.screen-bottom-nav { display: none; }
-.screen-field-nav { position: fixed; inset-inline: 0; bottom: 0; display: flex; z-index: 20; }
-.screen-bottom-nav { gap: .5rem; flex-shrink: 0; border-top: 2px solid var(--color-border); background: var(--color-surface); padding: .5rem 1rem calc(.5rem + env(safe-area-inset-bottom)); }
-.screen-nav-link { display: flex; flex: 1 1 0%; min-width: 3rem; min-height: 3.5rem; align-items: center; justify-content: center; gap: .5rem; border: 2px solid var(--color-border-strong); border-radius: var(--radius-control); font-weight: 700; color: var(--color-ink); }
+
 /* The field primary and its navigation share the original 74px geometry, including the device's safe inset. */
-.screen-field [data-testid="flow-step"] > [role="group"] { bottom: var(--screen-nav-height); }
+
 .field-screen { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
-.screen-field [data-testid="flow-step"] { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
-.screen-field [data-testid="flow-step"].pb-44 { padding-bottom: calc(11rem + env(safe-area-inset-bottom)); }
-.screen-interior input, .screen-interior select, .screen-interior textarea { scroll-margin-block: 6rem; }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-  .screen-shell { --screen-mode: tablet; }
-  .screen-interior { grid-template-columns: minmax(0, 1fr); gap: 1rem; padding: 1.25rem; padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
-  .screen-context { flex-direction: row; align-items: center; justify-content: space-between; }
-  .screen-desktop-nav { display: none; }
-  .screen-interior .screen-content > main > ul { grid-template-columns: minmax(0, 1fr); }
-  .screen-interior .screen-content > main > ul > li > a { min-height: 4.5rem; padding: 1rem; }
-  .screen-bottom-nav { position: fixed; inset-inline: 0; bottom: 0; z-index: 20; display: flex; }
   .workflow-form > fieldset { grid-template-columns: minmax(0, 1fr); }
   .workflow-section { padding: 1.25rem; gap: 1rem; }
-  .screen-field .field-screen { max-width: 44rem; }
 }
 
 @media (max-width: 767px), ((pointer: coarse) and (max-height: 500px)) {
-  .screen-shell { --screen-mode: phone; }
-  .screen-interior { display: flex; flex-direction: column; gap: .75rem; padding: .75rem; }
-  .screen-context { padding: .75rem; }
-  .screen-category { gap: .5rem; }
-  .screen-icon { width: 2.5rem; height: 2.5rem; border-radius: .75rem; }
-  .screen-desktop-nav { display: none; }
-  .screen-interior .screen-content > main > ul { grid-template-columns: minmax(0, 1fr); }
-  .screen-interior .screen-content > main > ul > li > a { min-height: 3.5rem; padding: .75rem; }
-  .screen-interior .screen-content > main > nav { gap: .5rem; }
   .workflow-form { padding: .75rem; }
   .workflow-form > fieldset { display: flex; flex-direction: column; }
   .workflow-section { width: 100%; padding: .75rem; }
   .workflow-steps { flex-direction: column; gap: .5rem; }
   .workflow-form > .workflow-primary { position: sticky; bottom: 0; z-index: 5; box-shadow: 0 0 0 .5rem var(--color-surface); }
-  .screen-bottom-nav { position: static; display: flex; }
-  .screen-field-nav { position: fixed; }
-  .screen-field .field-screen { max-width: 28rem; }
-  .tenant-body:has(.screen-shell) { scroll-padding-bottom: 1rem; }
 }
 
 @media print {
-  .screen-context, .screen-bottom-nav, .workflow-steps { display: none; }
-  .screen-interior { display: block; padding: 0; }
+  .workflow-steps { display: none; }
+
   .workflow-form > .workflow-primary { position: static; box-shadow: none; }
 }
 
 /* Items already owns a sticky create action. Carry the available phone height through the shared shell so
    its mt-auto still reaches the lower navigation; keep the list in normal scroll flow. */
-@media (max-width: 767px), ((pointer: coarse) and (max-height: 500px)) {
-  .screen-interior[data-section="items"] { min-height: 100%; padding-bottom: 0; }
-  .screen-interior[data-section="items"] > .screen-context { flex-shrink: 0; }
-  .screen-interior[data-section="items"] > .screen-content { display: flex; flex: 1 0 auto; flex-direction: column; }
-  .screen-interior[data-section="items"] > .screen-content > main { flex: 1 0 auto; }
-  .screen-interior[data-section="items"] > .screen-content > main > .sticky { margin-inline: -.75rem; }
-}
 
 /* T-981: marka işareti (Rota e). Yalnız belirteç renkleri; marka sarısı aşağıdaki tanım satırında. Eski giriş sahnesi (`login-*`)
    T-999b'de Giris.dc.html tasarımına geçti (login/flow.tsx, giris.css). */
@@ -816,12 +457,12 @@ select.bg-none { background-image:none; }
 /* I-18 uyarlama (DESIGN-PARITY §3): tasarım kökü `.wrap` tam görüntü alanıdır (100dvh). Uygulamada `.dz` kabı görüntü alanını
    kaplar ve kiracı kabuğunun üst çubuğu / alt sekmeleri bu ekranlarda gösterilmez (tasarımda yoktur). Renk yok; yalnız yerleşim. */
 .dz { position: fixed; inset: 0; z-index: 20; }
-body:has(.dz) [data-testid="bottom-nav"], body:has(.dz) [data-testid="tenant-bar"], body:has(.dz) .app-header { display: none; }
+body:has(.dz) .app-header { display: none; }
 /* Kaynak `tb.show: m === 'mobile'`: başparmak çubuğu yalnız mobilde çizilir (kaynak JS koşulu; burada aynı eşik). */
 @media (min-width: 700px) { .dz .thumb { display: none; } }
 /* Giriş ve hesap kaynağı (Giris.dc.html, T-993) ayrı kapta (`.dzg`): Bakış kurallarıyla çakışmaz; yerleşim uyarlaması aynı. */
 .dzg { position: fixed; inset: 0; z-index: 20; }
-body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-bar"], body:has(.dzg) .app-header { display: none; }
+body:has(.dzg) .app-header { display: none; }
 /* T-995: kaynak tarayıcı varsayılanlarıyla çizilir (Tailwind preflight sıfırlar): metin kutusu iç boşluğu 1px 2px (birebir). */
 .dzg .inp input { padding: 1px 2px; }
 /* T-924 (kullanıcı bildirimi 20 Ekim): saha girişi telefonda kaydırmasız sığar (ALTIN-KURAL: telefonda kaydırma yok). Kayıtlı cihazda
@@ -848,11 +489,11 @@ body:has(.dzg) [data-testid="bottom-nav"], body:has(.dzg) [data-testid="tenant-b
 .dzy .inp input, .dzy .search input { padding: 1px 2px; }
 /* T-403: arama kutusu yer tutucusu tarayıcı varsayılanı (kaynak sıfırlama yapmaz; Tailwind önyükü yarı saydam yapar). */
 .dzy .search input::placeholder { color: revert; opacity: revert; }
-body:has(.dzy) [data-testid="bottom-nav"], body:has(.dzy) [data-testid="tenant-bar"], body:has(.dzy) .app-header { display: none; }
+body:has(.dzy) .app-header { display: none; }
 /* T-921: kendi cam alt çubuğu (Geri + Ana ekran · ana işlem) olan yeni tasarım kökleri (Pano, Aktar/Cari, Gruplar, Ekip) eski iç ekran
    gezinmesini (`screen-nav`, Geri/Ana ekran) göstermez. Tablette (768–1199) eski çubuk sabit konumda yeni çubuğun üstüne binip orta ana
    işlemi örtüyordu; telefonda akışta kaldığı için görünmüyordu. */
-body:has(.dzp, .dza, .dzr, .dze) [data-testid="screen-nav"] { display: none; }
+
 /* design:bakis:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
 .dz {
   --color-dz-a-aaaaaa-be: rgba(0, 0, 0, .14);
