@@ -14,6 +14,7 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { Ico, KalipBaslik, KalipEkran, MicIco, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAlan, KalipAnahtar, KalipCikisUyarisi, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek, useLeaveGuard } from "../kalip/form.tsx";
+import { KalipSekme } from "../kalip/secim.tsx";
 import { saveSettingsFormAction } from "./form-actions.ts";
 import { clearSampleDataAction } from "./sample-actions.ts";
 
@@ -50,6 +51,7 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
   const t = useTranslations("settings.k");
   const ts = useTranslations("settings");
   const tk = useTranslations("kalip");
+  const tb = useTranslations("baglantilar");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const [savedDark, setSavedDark] = useState(initialDark);
@@ -173,6 +175,17 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
         </>
       }
     >
+      {/* T-981b: sekme şeridi (Genel · Bağlantılar); Bağlantılar toplu Excel işlemleri ve entegrasyonlar. */}
+      <KalipSekme
+        label={tb("tabs")}
+        color="0E7C7B"
+        current="genel"
+        onGo={(href) => go(href)()}
+        items={[
+          { id: "genel", label: tb("tabGeneral"), d: LICON.gear, href: `${base}/settings` },
+          { id: "baglantilar", label: tb("tabLinks"), d: LICON.excel, href: `${base}/settings/baglantilar` },
+        ]}
+      />
       {locked ? <KalipKilit title={t("lockTitle")} sub={t("lockSub")} /> : null}
       {reauth === null ? null : (
         <div className="lockb" role="alert">

@@ -155,8 +155,9 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
   const baseUnitId = input.baseUnitId === undefined ? undefined : parseUuid(input.baseUnitId);
   const quantityScale = input.quantityScale === undefined ? undefined : parseScale(input.quantityScale);
   const cardType = input.cardType === undefined ? undefined : parseCardType(input.cardType);
-  const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  // T-981b: Excel "Güncelle" kipi (`onboarding/import-apply`) ad güncellemesini `data.import` ile yapar (createItem ile aynı T-421 kuralı).
+  const { requestId, writePermission, ...access } = params;
+  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
     if (cur === undefined) throw new AppError("NOT_FOUND");
     const immutableChange =

@@ -13,7 +13,7 @@ import { assertConversionFactor } from "./quantity.ts";
 
 export type CatalogCommandParams = Omit<TenantAccessParams, "permission"> & {
   readonly requestId?: string;
-  /** T-421: yalnız Excel'den aktarım yolu (`onboarding/import-apply`) `data.import` ile yazar; diğer tüm çağrılar `settings.manage`. */
+  /** T-421: yalnız Excel'den aktarım yolu (`onboarding/import-apply`) `data.import` ile yazar (createItem, T-981b updateItem ad); diğer tüm çağrılar `settings.manage`. */
   readonly writePermission?: "data.import";
 };
 

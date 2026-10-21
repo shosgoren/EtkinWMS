@@ -116,6 +116,11 @@ export default async function TenantLayout({ children, params }: { children: Rea
     canReport:
       (hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)) &&
       (current.screens === null || current.screens.includes("problem")),
+    // T-981b: kalıp üst çubuğu Excel düğmesi (gösterim; dışa aktarma ve aktarım sunucuda yine denetlenir).
+    excel: {
+      data: hasPermission(current.roles, "data.import", current.grants),
+      master: hasPermission(current.roles, "data.import", current.grants) && hasPermission(current.roles, "settings.manage", current.grants),
+    },
   };
 
   return (
