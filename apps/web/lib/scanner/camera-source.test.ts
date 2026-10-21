@@ -2,8 +2,11 @@
 // Tarayıcı olmadan (DecoderEnv enjekte) koşar; gerçek kamera akışı ve WASM çözümü e2e'dedir (tests/e2e/camera-scan.spec.ts).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SCANNER_CONFIG } from "./scanner-config.ts";
-import { classifyCameraError, createFrameDecoder, gs1CheckDigitValid, iosShareLocation, loadZxingReader, platformOf, resetZxingReaderForTest, startScanLoop, symbologyOf, validateCameraRead } from "./camera-source.ts";
-import type { DecoderEnv, FrameDecoder, RawRead, RejectReason, WasmReader } from "./camera-source.ts";
+import { classifyCameraError, createFrameDecoder, videoRoi, gs1CheckDigitValid, iosShareLocation, loadZxingReader, platformOf, resetZxingReaderForTest, startScanLoop, symbologyOf, validateCameraRead } from "./camera-source.ts";
+import type { DecoderEnv, FrameDecoder, RawRead, RejectReason, VideoRect, WasmReader } from "./camera-source.ts";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { ean13CheckDigit, ean13Modules } from "../../../../tests/e2e/support/barcode-y4m.ts";
 
 describe("validateCameraRead (T-287g)", () => {
   it("geçerli EAN-13, EAN-8, UPC-A değerlerini aynen kabul eder", () => {
@@ -118,11 +121,13 @@ describe("createFrameDecoder: çözücü seçimi", () => {
     expect(await d.decode(video)).toEqual({ text: "4006381333931", format: "ean_13" });
   });
 
-  it("yerleşik API yoksa uygulama içi WASM çözücü kullanılır; kare büyük kenarı 960 px ile sınırlanır", async () => {
+  it("yerleşik API yoksa uygulama içi WASM çözücü kullanılır; nişangâh yokken tüm kare en çok 1280 px'e küçültülür, ilk geçiş hızlıdır", async () => {
     const reads: ImageData[] = [];
+    const efforts: unknown[] = [];
     const reader: WasmReader = {
-      read: (f) => {
+      read: (f, e) => {
         reads.push(f);
+        efforts.push(e);
         return Promise.resolve([{ text: "4006381333931", format: "EAN13", isValid: true }]);
       },
     };
@@ -130,13 +135,14 @@ describe("createFrameDecoder: çözücü seçimi", () => {
     const d = await createFrameDecoder(
       env({
         loadWasm: () => Promise.resolve(reader),
-        makeCanvas: () => ({ canvas: { width: 0, height: 0 }, draw: (_v, w, h) => (sizes.push([w, h]), { width: w, height: h, data: new Uint8ClampedArray(4) } as unknown as ImageData) }),
+        makeCanvas: () => ({ canvas: { width: 0, height: 0 }, draw: (_v, _src, w, h) => (sizes.push([w, h]), { width: w, height: h, data: new Uint8ClampedArray(4) } as unknown as ImageData) }),
       }),
     );
     expect(d.kind).toBe("wasm");
     expect(await d.decode({ videoWidth: 1920, videoHeight: 1080 } as HTMLVideoElement)).toEqual({ text: "4006381333931", format: "EAN13" });
-    expect(sizes).toEqual([[960, 540]]);
+    expect(sizes).toEqual([[1280, 720]]);
     expect(reads).toHaveLength(1);
+    expect(efforts).toEqual([{ tryHarder: false, tryInvert: false }]);
   });
 
   it("WASM çözücüde geçersiz sonuç yok sayılır ve kare yokken (0×0) çözülmez", async () => {
@@ -277,5 +283,45 @@ describe("loadZxingReader: hazırlık tek kez (T-286 MAJOR-1)", () => {
     await loadZxingReader(importer);
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(seen).toHaveLength(1);
+  });
+});
+
+describe("ROI'li çözme (T-446): gerçek zxing-wasm", () => {
+  it("1080p dikey karede küçük EAN-13'ü ilk karede nişangâh bölgesinden okur (tüm kare küçültülmez)", async () => {
+    const zx = (await import("zxing-wasm/reader")) as unknown as {
+      prepareZXingModule: (o: unknown) => Promise<unknown>;
+      readBarcodes: (f: ImageData, o: Record<string, unknown>) => Promise<Array<{ text: string; format: string; isValid: boolean }>>;
+    };
+    const bin = readFileSync(createRequire(import.meta.url).resolve("zxing-wasm/reader/zxing_reader.wasm"));
+    await zx.prepareZXingModule({ overrides: { wasmBinary: bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) }, fireImmediately: true });
+    // iPhone dikey akış 1080×1920; barkod 2 px'lik modüllerle (190 px) nişangâhın ortasında. Eski yol (tüm kare → 960 px) modülü 1 px'e indiriyordu.
+    const vw = 1080;
+    const vh = 1920;
+    const body = "869012345678";
+    const code = body + ean13CheckDigit(body);
+    const mods = ean13Modules(code);
+    const luma = new Uint8Array(vw * vh).fill(235);
+    const x0 = Math.floor((vw - mods.length * 2) / 2);
+    for (let y = 900; y < 1020; y++) for (let m = 0; m < mods.length; m++) if (mods[m] === "1") luma.fill(16, y * vw + x0 + m * 2, y * vw + x0 + m * 2 + 2);
+    const sizes: Array<[number, number]> = [];
+    const draw = (_v: HTMLVideoElement, src: VideoRect, w: number, h: number): ImageData => {
+      sizes.push([w, h]);
+      const data = new Uint8ClampedArray(w * h * 4);
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++) {
+          const l = luma[(src.sy + Math.floor((y * src.sh) / h)) * vw + src.sx + Math.floor((x * src.sw) / w)] ?? 235;
+          data.set([l, l, l, 255], (y * w + x) * 4);
+        }
+      return { data, width: w, height: h, colorSpace: "srgb" } as ImageData;
+    };
+    const reader: WasmReader = { read: (f, e) => zx.readBarcodes(f, { formats: ["EAN13", "Code128"], tryHarder: e?.tryHarder ?? true, tryInvert: e?.tryInvert ?? true, tryRotate: true, maxNumberOfSymbols: 1 }) };
+    const d = await createFrameDecoder(env({ loadWasm: () => Promise.resolve(reader), makeCanvas: () => ({ canvas: { width: 0, height: 0 }, draw }) }));
+    // Ekran 390×693 (object-fit: cover), nişangâh 240×180 ortada.
+    const roi = videoRoi(vw, vh, { width: 390, height: 693 }, { left: 75, top: 256, width: 240, height: 180 });
+    expect(roi).not.toBeNull();
+    expect(await d.decode({ videoWidth: vw, videoHeight: vh } as HTMLVideoElement, roi)).toEqual({ text: code, format: "EAN13" });
+    expect(sizes).toHaveLength(1);
+    const [w] = sizes[0] ?? [0];
+    expect(w).toBe(roi?.sw); // kırpılan bölge küçültülmeden çözüldü
   });
 });
