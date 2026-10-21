@@ -21,6 +21,7 @@
 @import "./design/saha-frame.css";
 @import "./design/destek.css";
 @import "./design/destek-ek.css";
+@import "./design/entegrasyon.css";
 @import "./design/destek-frame.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
@@ -1795,3 +1796,50 @@ body:has(.dzy) .app-header { display: none; }
   --color-dzt-dk-sheet: rgba(18, 27, 36, 0.94);
   --color-dzt-dk-toast: #223040;
 }
+
+/* design:entegrasyon:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzen {
+  --color-dz-a-bhcoec-ag: rgba(23, 46, 66, .06);
+  --color-dz-a-bhcoec-e: rgba(23, 46, 66, .4);
+  --color-dz-x-apgoim: #0f6e8c;
+  --color-dz-x-bcblce: #121b24;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhfidm: #17583c;
+  --color-dz-x-bhiaep: #17804f;
+  --color-dz-x-bkbdaa: #1a1300;
+  --color-dz-x-bmcidd: #1c2833;
+  --color-dz-x-bpdkda: #1f3a30;
+  --color-dz-x-ccdaea: #223040;
+  --color-dz-x-cpfnki: #2f5da8;
+  --color-dz-x-cphnfl: #2f7d5b;
+  --color-dz-x-cpjogl: #2f9e6b;
+  --color-dz-x-daehfk: #30475a;
+  --color-dz-x-dkbocc: #3a1e22;
+  --color-dz-x-dkcobc: #3a2e12;
+  --color-dz-x-eogehg: #4e6476;
+  --color-dz-x-glekaa: #6b4a00;
+  --color-dz-x-gmelni: #6c4bd8;
+  --color-dz-x-hkbpbp: #7a1f1f;
+  --color-dz-x-jkflco: #9a5b2e;
+  --color-dz-x-jplcmc: #9fb2c2;
+  --color-dz-x-jpoblp: #9fe1bf;
+  --color-dz-x-lahnal: #b07d0b;
+  --color-dz-x-mfnank: #c5d0da;
+  --color-dz-x-mgcici: #c62828;
+  --color-dz-x-odojoo: #e3e9ee;
+  --color-dz-x-odpboj: #e3f1e9;
+  --color-dz-x-ofgkaa: #e56a00;
+  --color-dz-x-ogolop: #e6ebef;
+  --color-dz-x-oopbpe: #eef1f4;
+  --color-dz-x-pckdkd: #f2a3a3;
+  --color-dz-x-pcmfdn: #f2c53d;
+  --color-dz-x-pcnfik: #f2d58a;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-pgpdoo: #f6f3ee;
+  --color-dz-x-pnomom: #fdecec;
+  --color-dz-x-pppdnb: #fff3d1;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzen.dz-dark {
+}
+/* design:entegrasyon:end */

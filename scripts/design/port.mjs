@@ -52,6 +52,9 @@ export const SOURCES = [
   { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "949c99f33393c0b5fa357911b5af2a35d8b82dcc6d414510f25042fc53f6580c", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
   // T-967: Yönetim paneli Destek gelen kutusu; kaynak Yonet kopyası + "YENİ" (okunmamış noktası) — yalnız ek bölüm, panel `.dzy` ile birlikte.
   { name: "yonet-destek", file: "docs/design/source/YonetDestek.dc.html", sha256: "a2155d8f675436bab7d1d45f4f7cdabd6ac942a9d84a4e57f065c00beaa9a4f0", scope: "dzyd", palette: "none", section: "YENİ" },
+  // T-991: ERP entegrasyonu (Paraşüt). Kaynak Kalıp · Form birebir kopyası + "YENİ" bölümü (sağlayıcı kartı, bağlantı şeridi, akış satırı,
+  // son çalışmalar, bağlan notu); yalnız ek bölüm `.dzen` kabında (ekran `.dzf` form kalıbının içinde).
+  { name: "entegrasyon", file: "docs/design/source/Entegrasyon.dc.html", sha256: "4a28d128a489434aa3b648a2408245253af54ca3586c8376d297d6db5a7d5797", scope: "dzen", palette: "none", device: "fr", section: "YENİ" },
 ];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.
