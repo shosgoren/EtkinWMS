@@ -278,5 +278,10 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   // T-958 / T-979c: ortak alt çubuğun Modüller sayfası salt okuyana yönetici / yazma modüllerini göstermez; Stok durumu ve Genel bakış görünür.
   await page.goto("/t/demo/parties");
   await expectKabukBar(page, "kabuk-scan", "cariler salt okunur");
-  await expectModulesSheet(page, ["home", "kokpit", "urun", "cari", "stok"], ["ekip", "excel", "abone", "etiket", "satin", "trans", "topla", "ayar"]);
+  await expectModulesSheet(page, ["home", "kokpit", "urun"], ["ekip", "excel", "abone", "etiket", "satin", "trans", "topla", "ayar"]);
+  // Telefonda ilk sayfaya sığmayan modüller aramayla bulunur.
+  await page.getByTestId("kabuk-mods").click();
+  await page.getByTestId("kabuk-search").fill("Stok durumu");
+  await expect(page.getByRole("dialog", { name: "Modüller" }).locator('[data-module="stok"]')).toHaveCount(1);
+  await page.keyboard.press("Escape");
 });

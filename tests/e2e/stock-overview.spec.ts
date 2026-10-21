@@ -11,6 +11,8 @@ test("stok: ana menü, gerçek veriler, arama, yardım ve mobil taşma", async (
   // T-979c: Stok durumu ortak alt çubuğun Modüller sayfasında (eski "Tüm ekranlar" penceresi yok).
   await expect(page).toHaveURL(/\/t\/demo$/);
   await page.getByTestId("kabuk-mods").click();
+  // Telefonda ilk sayfaya sığmayabilir: arama ile bulunur (kaynaktaki "ara ya da söyle").
+  await page.getByTestId("kabuk-search").fill("Stok durumu");
   await page.getByRole("dialog", { name: "Modüller" }).locator('[data-module="stok"]').click();
   await expect(page.getByRole("heading", { name: "Stok durumu", exact: true })).toBeVisible();
   const rows = page.getByRole("list", { name: "Stok durumu" }).getByRole("listitem");
