@@ -49,9 +49,12 @@ jobs:
           trap 'rm -rf "$RUNNER_TEMP/ssh"' EXIT
           ssh -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" -i "$RUNNER_TEMP/ssh/key" etkinwms-deploy@187.7.76.72 check
   build:
+    # T-445 (security-reviewer MINOR 1): otomatik tetikleme yalnız bu deponun main'ine PUSH ile koşan `ci`'dan; çatal (fork) PR'ın
+    # `main` adlı dalından gelen workflow_run iş kuyruğuna hiç girmez (atlanan iş eşzamanlılık grubuna girmez → gerçek build'i iptal edemez).
     if: >-
       github.ref == 'refs/heads/main' &&
-      ((github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      ((github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository) ||
        (github.event_name == 'workflow_dispatch' && inputs.mode == 'deploy'))
     concurrency:
       group: etkinwms-build

@@ -1,9 +1,10 @@
 // T-445 `scripts/changes/fold.mjs` testleri: ayrıştırma, STATE/BACKLOG işleme, idempotentlik, hepsi-ya-da-hiçbiri.
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { applyBacklog, applyState, FoldError, fold, parseFragment } from "./fold.mjs";
+import { applyBacklog, applyState, FoldError, fold, gitResolver, parseFragment } from "./fold.mjs";
 
 const STATE = ["# Durum", "", "Son doğrulama: x", "", "- **T-431 (21 Ekim):** eski", "- **T-979b (21 Ekim):** eski 2", ""].join("\n");
 const BACKLOG = [
@@ -84,6 +85,7 @@ describe("parseFragment", () => {
     ["docs/changes/T-445.md", "## BACKLOG\n- B-103 bitti\n", /tanınmadı/],
     ["docs/changes/T-445.md", "## BACKLOG\n- yeni: | B-200 | x |\n", /B numarası yazılmaz/],
     ["docs/changes/T-445.md", "## BACKLOG\n- yeni: | x |  |\n", /boş hücre/],
+    ["docs/changes/T-445.md", "## BACKLOG\n- B-103: BİTTİ | x\n", /"\|" olamaz/],
   ])("hatalı parça reddedilir: %s", (file, text, re) => {
     expect(() => parseFragment(text, file)).toThrow(re);
   });
@@ -171,5 +173,33 @@ describe("fold", () => {
   it("dizinde parça adına uymayan dosya hatadır", () => {
     const root = repo({ "notlar.md": "x" });
     expect(() => fold({ root, mode: "check", log: quiet })).toThrow(/dosya adı/);
+  });
+});
+
+describe("gitResolver", () => {
+  it("parçayı getiren birleşmenin PR numarası; aynı kart numarası daha önce başka PR'da kullanılmış olsa da", () => {
+    const root = repo({});
+    /** @param {string[]} a */
+    const git = (...a) => execFileSync("git", a, { cwd: root, encoding: "utf8", env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@x", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@x" } }).trim();
+    git("init", "-q", "-b", "main");
+    git("add", "-A");
+    git("commit", "-qm", "ilk");
+    // Eski PR #10: aynı kart numarasıyla, parça yok.
+    git("checkout", "-qb", "feat/T-445-eski");
+    writeFileSync(path.join(root, "a.txt"), "a");
+    git("add", "-A");
+    git("commit", "-qm", "eski iş");
+    git("checkout", "-q", "main");
+    git("merge", "-q", "--no-ff", "feat/T-445-eski", "-m", "Merge pull request #10 from o/feat/T-445-eski");
+    // Yeni PR #20: parçayı ekler.
+    git("checkout", "-qb", "fix/T-445-yeni");
+    writeFileSync(path.join(root, "docs/changes/T-445.md"), "## STATE\n- x\n");
+    git("add", "-A");
+    git("commit", "-qm", "parça");
+    git("checkout", "-q", "main");
+    git("merge", "-q", "--no-ff", "fix/T-445-yeni", "-m", "Merge pull request #20 from o/fix/T-445-yeni");
+    const head = git("rev-parse", "--short=7", "HEAD");
+    expect(gitResolver(root)("T-445")).toEqual({ pr: "#20", sha: head });
+    expect(gitResolver(root)("T-446")).toBeNull();
   });
 });

@@ -23,6 +23,7 @@
 - Veri ve yetki kuralları INVARIANTS kimlikleriyle uygulanır: tenant I-01…I-03 (+ negatif test), defter/negatif stok/idempotency/ters kayıt/decimal I-04…I-09, kilit yalnız `acquireStockLocks` I-15 (elle FOR UPDATE yok), audit I-12, tasarım I-18.
 
 ## Doğrulama ve kanıt
+- **Push'tan önce `pnpm prepush` yeşil olmalı; CI hata bulma aracı değil, son doğrulamadır** (kullanıcı kararı 21 Ekim, T-445). `prepush` = verify + check:all + `test:ac -- AC-04` + dalda değişen e2e spec'leri (Docker yoksa `--skip-e2e`, özet UYARI yazar). Yerel istisnalar yalnız iki: initial-owner (macOS `/var`) ve yerelde doğrulanamayan korunan dosya onayı (UYARI). İsteğe bağlı kanca: `git config etkin.prepush true` → her push önce `pnpm prepush`; atlamak `git push --no-verify`.
 - Kod, testler, lint/typecheck, CI, migration (DB defteri), imaj, deploy ve canlı ayrı ayrı raporlanır; biri diğerinin kanıtı değildir. Çalıştırılmayan = UNKNOWN. Testi geçmek için test/bekçi gevşetilmez (G-11).
 - Test dengesi (kullanıcı kararı): kural/güvenlik birim + entegrasyonda; kod değişen her PR'da TAM takım (int 3, e2e 4 parçaya bölünmüş; T-445); yalnız `docs/**`/`*.md` PR'da ağır testler atlanır; e2e yalnız kritik akış + ortak yerleşim taraması (`docs/continuity/CODING_TESTS.md`). Gerçek cihaz (iPhone Safari) kontrolü kullanıcıdan istenir.
 - Arka planda test koşarken aynı çalışma ağacında dal değiştirilmez / dosya düzenlenmez (sonuç geçersiz olur); paralel iş için ayrı `git worktree`.

@@ -97,6 +97,7 @@ export function parseFragment(text, file) {
       if (line.trim() === "") continue;
       const s = STATUS_RE.exec(line);
       if (s !== null) {
+        if ((s[2] ?? "").includes("|")) throw new FoldError(file, `durum metninde "|" olamaz (tablo hücresini böler): "${line}"`);
         frag.status.push({ id: /** @type {string} */ (s[1]), text: /** @type {string} */ (s[2]).trim() });
         continue;
       }
@@ -147,6 +148,7 @@ export function resolvePlaceholders(frag, resolve) {
 export function applyState(state, items) {
   const lines = state.split("\n");
   const existing = new Set(lines.map((l) => l.trimEnd()));
+  /** @type {string[]} */
   const fresh = [];
   for (const i of items) if (!existing.has(i) && !fresh.includes(i)) fresh.push(i);
   if (fresh.length === 0) return { text: state, added: 0 };
@@ -230,18 +232,23 @@ export function gitResolver(root) {
     }
   };
   return (task) => {
+    const rel = `${CHANGES_DIR}/${task}.md`;
+    // Parçayı (en son) ekleyen commit: aynı kart numarası birden çok PR'da kullanıldıysa doğru PR bu commit'i getiren birleşmedir.
+    const added = git(["log", "--diff-filter=A", "--format=%H%x09%s", "-n", "1", "--", rel]).trim();
+    const [addSha, addSubject] = added.split("\t");
     const esc = task.replace(/[-]/g, "\\-");
-    const merges = git(["log", "--merges", "--first-parent", "--format=%h%x09%s", "-n", "500"]).split("\n");
     const re = new RegExp(`^Merge pull request #(\\d+) from \\S+/(?:feat|fix)/${esc}-`);
+    // Parçayı getiren birleşme: first-parent geçmişinde, ekleyen commit'i içeren en eski birleşme commit'i.
+    const range = addSha ? ["--ancestry-path", `${addSha}..HEAD`] : [];
+    const merges = git(["log", "--merges", "--first-parent", "--reverse", "--format=%h%x09%s", ...range]).split("\n");
     for (const l of merges) {
       const [sha, subject] = l.split("\t");
       const m = re.exec(subject ?? "");
-      if (m !== null && sha) return { pr: `#${m[1]}`, sha: sha };
+      if (m !== null && sha) return { pr: `#${m[1]}`, sha };
     }
-    const added = git(["log", "--diff-filter=A", "--format=%h%x09%s", "-n", "1", "--", `${CHANGES_DIR}/${task}.md`]).trim();
-    const [sha, subject] = added.split("\t");
-    const sq = /\(#(\d+)\)\s*$/.exec(subject ?? "");
-    if (sq !== null && sha) return { pr: `#${sq[1]}`, sha };
+    // Squash birleşmesi: parçayı ekleyen commit'in konusu `… (#N)`.
+    const sq = /\(#(\d+)\)\s*$/.exec(addSubject ?? "");
+    if (sq !== null && addSha) return { pr: `#${sq[1]}`, sha: addSha.slice(0, 7) };
     return null;
   };
 }

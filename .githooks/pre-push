@@ -1,0 +1,10 @@
+#!/bin/sh
+# İsteğe bağlı push öncesi ön kontrol (T-445). Varsayılan KAPALI; açmak için bir kez:
+#   git config etkin.prepush true
+# Açıkken her `git push` önce `pnpm prepush` koşar (verify, check:all, test:ac AC-04, değişen e2e spec'leri).
+# Atlamak için: git push --no-verify. Bilinen yerel ortam istisnaları (initial-owner / macOS /var, yerelde doğrulanamayan
+# korunan dosya onayı) scripts/prepush.mjs içinde UYARI sayılır. Zorlama bu kanca değil, CI'dır.
+if [ "$(git config --bool etkin.prepush 2>/dev/null)" != "true" ]; then
+  exit 0
+fi
+exec pnpm prepush
