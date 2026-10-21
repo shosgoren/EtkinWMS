@@ -49,7 +49,8 @@ async function expectCockpit(page: Page, where: string, counts: { active: number
   for (const key of ["count", "undo"] as const) await expect(tasks.locator('[data-state="soon"]').filter({ hasText: tr.home.tasks[key].title })).toContainText("Yakında");
   if (counts.locked > 0) await expect(tasks.locator('[data-state="locked"]').first()).toContainText(tr.home.lockedReason);
   for (const card of await tasks.locator("[data-state]").all()) expect((await card.boundingBox())?.height ?? 0, `${where}: kart yüksekliği`).toBeGreaterThanOrEqual(48);
-  expect(await smallTargets(page, '[data-testid="kokpit"] .inner'), `${where}: 48 px altı dokunma hedefi`).toEqual([]);
+  // T-979b (B-99): bütün ekran (üst çubuk Sorun / Destek / Hesap ve alt cam çubuk dahil).
+  expect(await smallTargets(page, "body"), `${where}: 48 px altı dokunma hedefi`).toEqual([]);
   const m = await metrics(page);
   expect(m.scrollWidth, `${where}: yatay taşma yok`).toBeLessThanOrEqual(m.clientWidth);
   expect(m.scrollHeight, `${where}: sayfa gövdesi kaymaz (içerik alanı kayar)`).toBeLessThanOrEqual(m.innerHeight);
@@ -96,6 +97,8 @@ test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüs
   await expect(menu.getByRole("button", { name: "Genel bakış", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
+  // T-979b (B-100): kalıp penceresi kapanınca odak menüyü açan yere (Hesap düğmesi) döner.
+  await expect(page.locator('#main [data-testid="home-actions"]').filter({ visible: true })).toBeFocused();
 
   // İç ekran: üyeler ekranında gövde kaymaz, yalnız içerik alanı kayar, yatay taşma yok; eski kabuk yok.
   await page.goto("/t/demo/members");
