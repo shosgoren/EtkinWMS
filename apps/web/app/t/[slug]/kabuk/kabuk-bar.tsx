@@ -58,6 +58,16 @@ export interface KabukNav {
   readonly testId?: string;
 }
 
+/** T-979c: orta ana işlem etiketi tek satır, en çok 10 karakter (çubuğun içinde okunur). Uzunsa son kelime (eylem: "ÜRÜN EKLE" → "EKLE"),
+ * o da uzunsa ilk 10 karakter. Tam metin erişilebilir addadır (`aria` yoksa özgün etiket). */
+export const CAP_MAX = 10;
+export function capOf(label: string): string {
+  const v = label.trim();
+  if (Array.from(v).length <= CAP_MAX) return v;
+  const last = v.split(/\s+/).at(-1) ?? v;
+  return Array.from(last).length <= CAP_MAX ? last : Array.from(last).slice(0, CAP_MAX).join("");
+}
+
 export interface KabukMain {
   /** Altındaki kısa etiket (kaynak `.cap`: OKUT, EKLE, ONAYLA…). */
   readonly label: string;
@@ -277,7 +287,9 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const centerInner = (
     <>
       <Ico d={center.d} size={30} />
-      <span className="cap">{center.label}</span>
+      <span className="cap" aria-hidden={capOf(center.label) === center.label ? undefined : true}>
+        {capOf(center.label)}
+      </span>
     </>
   );
   const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];

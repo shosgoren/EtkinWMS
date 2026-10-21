@@ -28,13 +28,16 @@
 .dzk .msheet { bottom: var(--kabuk-h); }
 /* Ana ekranda yetkisi olmayan kişide Sorun tıklanmaz (I-18 öncelik: yetkisiz eylem tıklanmaz hâlde). */
 .dzk .dk:disabled { opacity: .45; cursor: not-allowed; }
+/* T-979c: pasif ana işlem de okunur — daire soluklaşır (renk doygunluğu düşer), etiket diğer etiketlerle aynı kontrastta kalır. */
+.dzk .dk.big:disabled { opacity: 1; filter: saturate(.2) brightness(.8); }
+.dzk .dk.big:disabled .ico { opacity: .6; }
 /* Ekip / Aktar kaynağındaki bekleyen karar (`.dk.big.wait`): sarı ana işlem. */
 .dzk .dk.big.wait { background: var(--color-dz-x-pemfec); color: var(--color-dz-x-bkbdaa); }
 /* Etkin (B-62) henüz yok: kaynaktaki düğme aynen, yalnız "yakında" balonu açar. */
 .dzk .dk-etkin[aria-disabled="true"] { cursor: default; }
 
 /* Kiracı kabuğunun eski alt gezinmesi (Geri / Ana ekran, saha çubuğu) ve telefon üst çubuğu ortak çubuğun olduğu ekranda çizilmez
-   (tasarımda yoktur; eski üst çubuk ekranın kendi üst çubuğunu ve Modüller perdesini örtüyordu). Uygulama menüsü penceresi ayrı öğedir. */
+   (tasarımda yoktur; eski üst çubuk ekranın kendi üst çubuğunu ve Modüller perdesini örtüyordu). */
 
 /* Ekranlar çubuğa yer ayırır (kaynakta `.dock` sütunun parçasıdır: içerik altında kalmaz). */
 body:has(.dzk) .dzp .app, body:has(.dzk) .dze .app, body:has(.dzk) .dzr .app, body:has(.dzk) .dza .app { padding-bottom: var(--kabuk-h); }
