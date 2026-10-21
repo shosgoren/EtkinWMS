@@ -5020,12 +5020,14 @@
     },
     "mainAria": "{alan} · {islem}",
     "integrations": "Entegrasyonlar",
-    "integrationsHint": "YAKINDA",
+    "integrationsHint": "Paraşüt hazır · Logo yakında",
     "integrationsSub": "Muhasebe ve ERP bağlantıları",
     "parasut": "Paraşüt",
     "logo": "Logo",
     "soon": "YAKINDA",
-    "soonAria": "{name} bağlantısı yakında"
+    "soonAria": "{name} bağlantısı yakında",
+    "open": "Aç",
+    "openAria": "{name} bağlantısını aç"
   },
   "integrations": {
     "title": "Entegrasyon",

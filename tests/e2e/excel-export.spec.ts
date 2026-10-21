@@ -28,3 +28,15 @@ test("Ürünler: Excel menüsü → Dışarı aktar .xlsx indirir", async ({ pag
   await expect(menu).toBeHidden();
   await expect(page.getByTestId("kalip-toast").last()).toContainText("Excel'e indirildi");
 });
+
+// B-112: Ayarlar › Bağlantılar'da Paraşüt satırı Entegrasyon ekranına gider; Logo YAKINDA yer tutucusu kalır.
+test("Bağlantılar: Paraşüt → Entegrasyon ekranı, Logo YAKINDA", async ({ page }) => {
+  test.setTimeout(120_000);
+  await loginAdmin(page);
+  await page.goto("/t/demo/settings/baglantilar");
+  const parasut = page.getByTestId("entegrasyon-parasut");
+  await expect(parasut).toHaveAttribute("href", "/t/demo/integrations");
+  await expect(page.getByTestId("entegrasyon-logo")).toContainText("YAKINDA");
+  await parasut.click();
+  await expect(page).toHaveURL(/\/t\/demo\/integrations$/);
+});

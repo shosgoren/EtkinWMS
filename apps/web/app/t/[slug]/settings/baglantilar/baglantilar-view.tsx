@@ -1,17 +1,19 @@
 "use client";
 // T-981b: Ayarlar › Bağlantılar — form kalıbı (KalipForm.dc.html sınıfları; tuvalde kaynağı yok, DESIGN-PARITY T-981b). Sekme şeridi
 // (Genel · Bağlantılar), 1 · Alan ve 2 · İşlem büyük ikonlu seçim kutuları, boş şablon indirme, Entegrasyonlar (Paraşüt, Logo: YAKINDA
-// yer tutucusu — bağlantı, form ya da sahte durum yok; ileride `integrations` ekranına bağlanır). Ana işlem alt cam çubukta: seçime göre
+// yer tutucusu; B-112: Paraşüt satırı `/t/<alan>/integrations` ekranını açar, Logo YAKINDA kalır). Ana işlem alt cam çubukta: seçime göre
 // AKTAR'A GEÇ / GÜNCELLE / İNDİR (seçim tamamlanmadan pasif). İçeri al ve Güncelle mevcut Aktar akışını açar (`/import?tur=&kip=`),
 // Dışarı aktar ortak `excelIndir` ile .xlsx indirir. Her dokunuşta ses; sonuç balonu renk + ses.
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
 import { excelHata, excelIndir, excelYenidenGiris } from "../../kalip/excel.tsx";
 import { KalipGrup, KalipIzgara, KalipKilit, KalipSabit } from "../../kalip/form.tsx";
 import { KalipSecimKutulari, KalipSekme } from "../../kalip/secim.tsx";
+import { kdz } from "../../kalip/tokens.ts";
 
 type Alan = "items" | "parties" | "warehouses" | "locations" | "stock";
 type Islem = "import" | "update" | "export";
@@ -163,8 +165,17 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
       />
       <KalipBaslik title={t("integrations")} hint={t("integrationsHint")} />
       <KalipGrup title={t("integrations")} sub={t("integrationsSub")} d={LICON.transfer} color="6C4BD8" testId="baglantilar-entegrasyon">
-        {/* Yer tutucu: gerçek bağlantı ayrı iş (Paraşüt, Logo). Dokunulmaz satır + YAKINDA hapı; ileride `integrations` ekranına bağlantı olur. */}
-        <KalipSabit title={t("parasut")} d={LICON.workspace} color="0F6E8C" pill={{ label: t("soon"), ok: false }} aria={t("soonAria", { name: t("parasut") })} testId="entegrasyon-parasut" />
+        {/* B-112: Paraşüt `/t/<alan>/integrations` ekranına gider (yetki kararı orada: settings.manage, değilse kilitli ekran). Logo hâlâ YAKINDA yer tutucusu. */}
+        <Link href={`${base}/integrations`} className="sr2" style={{ "--c": kdz("dzf", "0F6E8C") } as CSSProperties} aria-label={t("openAria", { name: t("parasut") })} onClick={() => tone("tap")} data-testid="entegrasyon-parasut">
+          <span className="ri">
+            <Ico d={LICON.workspace} size={20} />
+          </span>
+          <span className="rt">
+            <b>{t("parasut")}</b>
+          </span>
+          <span className="rv">{t("open")}</span>
+          <Ico d={LICON.chev} size={20} className="ico chev" />
+        </Link>
         <KalipSabit title={t("logo")} d={LICON.workspace} color="E56A00" pill={{ label: t("soon"), ok: false }} aria={t("soonAria", { name: t("logo") })} testId="entegrasyon-logo" />
       </KalipGrup>
     </KalipEkran>

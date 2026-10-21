@@ -5020,12 +5020,14 @@
     },
     "mainAria": "{alan} · {islem}",
     "integrations": "Integrations",
-    "integrationsHint": "SOON",
+    "integrationsHint": "Paraşüt ready · Logo soon",
     "integrationsSub": "Accounting and ERP connections",
     "parasut": "Paraşüt",
     "logo": "Logo",
     "soon": "SOON",
-    "soonAria": "{name} connection coming soon"
+    "soonAria": "{name} connection coming soon",
+    "open": "Open",
+    "openAria": "Open {name} connection"
   },
   "integrations": {
     "title": "Integration",
