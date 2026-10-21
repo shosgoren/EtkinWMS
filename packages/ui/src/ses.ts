@@ -114,9 +114,12 @@ export function sesCal(tur: SesTur): SesSonucu {
         const t = t0 + at;
         o.type = "sine";
         o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        // Zarf (tık sesi olmasın); zarf desteklemeyen ortamda sabit ses düzeyi.
+        if (typeof g.gain.setValueAtTime === "function" && typeof g.gain.exponentialRampToValueAtTime === "function") {
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        } else g.gain.value = 0.16;
         o.connect(g);
         g.connect(ctx.destination);
         o.start(t);

@@ -34,11 +34,11 @@ test.use({
 
 /** Ses/titreşim çağrılarını sayan sahteler (gerçek cihaz yok); sayaçlar `window.__fb` altındadır. */
 const FEEDBACK_STUBS = `
-  window.__fb = { vibrate: [], tones: 0 };
+  window.__fb = { vibrate: [], tones: 0, freqs: [] };
   navigator.vibrate = (p) => { window.__fb.vibrate.push(p); return true; };
   window.AudioContext = class { constructor() { this.state = "running"; this.currentTime = 0; this.destination = {}; }
     resume() { return Promise.resolve(); }
-    createOscillator() { window.__fb.tones++; return { frequency: {}, connect() {}, start() {}, stop() {} }; }
+    createOscillator() { window.__fb.tones++; const f = {}; Object.defineProperty(f, "value", { set(v) { window.__fb.freqs.push(v); } }); return { frequency: f, connect() {}, start() {}, stop() {} }; }
     createGain() { return { gain: {}, connect() {} }; } };
 `;
 
@@ -408,7 +408,8 @@ test("kamera ile el terminali aynı anda: tek sunucu çağrısı, tek uyarı; ge
   await expect(page.getByTestId("camera-accepted-value")).toHaveCount(0);
   await expect(page.getByTestId("camera-status")).not.toContainText("Okundu.");
   await expect(page.getByTestId("camera-status")).toContainText("Kod işlenmedi");
-  expect(await page.evaluate<number>("window.__fb.tones"), "düşürülen okumada olumlu bip çalmaz").toBe(0);
+  // T-436 (ALTIN-KURAL 5): el terminalinin hatalı okuması artık ortak ret sesini (alçak çift ton) çalar; olumlu bip (1200 Hz) yoktur.
+  expect(await page.evaluate<number[]>("window.__fb.freqs"), "düşürülen okumada olumlu bip çalmaz").not.toContain(1200);
   // T-287c güvenlik MAJOR-1: düşürülen kod hiçbir yolla işlenmez. Uyarı kapandıktan sonra kamera aynı kodu kendiliğinden yeniden göndermez;
   // yalnız kullanıcının açık yeni okutma eylemi (Yeniden okut) kabul edilir.
   await page.getByRole("button", { name: "Anladım, tekrar okut" }).click();
