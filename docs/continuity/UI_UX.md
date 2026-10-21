@@ -90,3 +90,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 ## QR depo transferi (T949)
 - SameQR → hedefdepo → konum okut/seç → sunucu miktarı ve iki depo görselkontrolü → POSTED sonuç. Tüm seçim sayfaları yüklenir; tek el48px kontrol/56px anaeylem/geri/anaekran.
 - Kayıp cevap aynıkey/payload; başarılı kayıt sonrası readhatası ikinci yazma yaratmaz, sonraki işlem freshstate olmadan kapalı. Gerçek desktop/mobile4PASS dörtviewport, sameQR/lot/tarihler/diğer800KG ve A→B→A; fizikselkamera/yazıcıUNKNOWN. CI/yayın/flag ayrı.
+
+## Arayüz dili (T-999c)
+- Görünür metin yalnız `apps/web/messages/{tr,en}.json`; JSX'e sabit metin yazılmaz. İki dosyanın anahtar kümesi, tek dilde boş metin ve `{yer tutucu}` adları `apps/web/messages/messages.test.ts` ile bekçide.
+- Dil sırası (`apps/web/i18n/request.ts`): `locale` çerezi (cihaz tercihi; bugün yazan yok) → tenant sayfalarında Ayarlar > Dil (`tenant_settings.locale`, her üye okur) → tarayıcı dili → `tr`. Tenant dışı sayfalar tarayıcı dilindedir (B-102).

@@ -1,9 +1,13 @@
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderRaw } from "react-dom/server";
+import { NextIntlClientProvider } from "next-intl";
+import tr from "../../../../../../messages/tr.json";
 import { describe, expect, it } from "vitest";
 import type { ReceiptPackageDto } from "../actions.ts";
 import { PackageLabelPages, PackageLabelPreview } from "./package-label-preview.tsx";
 import { generatePackageQrs, type PackageLabelMetadata } from "./package-labels.ts";
+// T-999c: metinler mesaj dosyasından gelir; testler Türkçe mesajlarla sağlayıcı içinde çizer.
+const renderToStaticMarkup = (node: React.ReactElement): string => renderRaw(<NextIntlClientProvider locale="tr" messages={tr} timeZone="Europe/Istanbul">{node}</NextIntlClientProvider>);
 const id = "11111111-1111-4111-8111-111111111111";
 const p: ReceiptPackageDto = { id, qr: `EWMS:PKG:1:${id}`, packageNo: 1, kind: "VARIL", receiptLineId: id, documentLineId: id, itemId: id, itemCode: "HM-000001", itemName: '<script>alert("x")</script>', unitId: id, unitCode: "KG", unitName: "Kilogram", quantity: "200.000", conversionFactor: "1", baseQuantity: "200.000", receivingLocationId: id, stockStatus: "QUARANTINE", lotId: id, lotCode: '<img src=x onerror="alert(1)">', producedOn: "2026-10-01", expiresOn: "2027-10-01" };
 describe("package label preview", () => {
