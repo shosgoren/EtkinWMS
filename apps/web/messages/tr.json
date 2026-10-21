@@ -2809,7 +2809,7 @@
       "retry": "Tekrar dene",
       "noFit": "QR veya metin bu ölçüye sığmıyor. Etiket genişliğini veya yüksekliğini artırın.",
       "print": "Yazdır / PDF",
-      "forbidden": "Etiket için işlenmiş belge ve bu depoda stok görüntüleme yetkisi gerekir."
+      "stockViewRequired": "Etiket için işlenmiş belge ve bu depoda stok görüntüleme yetkisi gerekir."
     }
   },
   "packageMovement": {

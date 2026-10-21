@@ -55,7 +55,7 @@ export default async function PackageLabelsPage({ params, searchParams }: {
       if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
-      if (e.code === "FORBIDDEN") return shell(<Banner kind="warning">{(await getTranslations("packageReceiving.labelPreview"))("forbidden")}</Banner>);
+      if (e.code === "FORBIDDEN") return shell(<Banner kind="warning">{(await getTranslations("packageReceiving.labelPreview"))("stockViewRequired")}</Banner>);
     }
     throw e;
   }
