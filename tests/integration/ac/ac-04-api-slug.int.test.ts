@@ -339,6 +339,8 @@ const LOADERS = [
   "field/ship/page.tsx",
   "field/count/page.tsx",
   "counts/page.tsx",
+  // T-981b: Ayarlar › Bağlantılar (üyelik özeti sayfanın kendisinde; çapraz tenant 404, veri okuması yok).
+  "settings/baglantilar/page.tsx",
 ] as const;
 /**
  * T-304: tenant verisi çizmeyen saha kabuğu sayfaları. Üyelik kararı üst `layout.tsx`'tedir (yukarıdaki LOADERS satırı çapraz tenant
