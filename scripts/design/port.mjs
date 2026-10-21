@@ -32,24 +32,24 @@ export const SOURCES = [
   { name: "yonet", file: "docs/design/source/Yonet.dc.html", sha256: "5135ec250d1dd609b2415d5d834fc73d21b2a79df273d5cc44f21d4c4bfff425", scope: "dzy", palette: "c" },
   // T-423: Pano (19 Ekim kaynakları): cihaz kuralları `.fr-*` önekiyle, karanlık tema `.thd` sınıfıyla (palet betikte değil, CSS'te).
   // T-427: Excel'den aktar (aynı 19 Ekim kaynak biçimi).
-  { name: "aktar", file: "docs/design/source/Aktar.dc.html", sha256: "68f488a1e4d81af8da378238f1bebdf10004d4400b7547857800d79f5f1c508b", scope: "dza", palette: "none", device: "fr" },
+  { name: "aktar", file: "docs/design/source/Aktar.dc.html", sha256: "3e4d62a9fa6001559a1dffca63457dfb5215de17f4556dd46c5497371a201d65", scope: "dza", palette: "none", device: "fr" },
   // T-430: Ekip (kişiler, onay bekleyenler, davet, katılma QR'ı; aynı 19 Ekim kaynak biçimi).
-  { name: "ekip", file: "docs/design/source/Ekip.dc.html", sha256: "3b7ef2e4567e6db32939c3023a3b8d509b0fadfd1182bd16ea0473c232fa56dd", scope: "dze", palette: "none", device: "fr" },
+  { name: "ekip", file: "docs/design/source/Ekip.dc.html", sha256: "1bfae41fb669caaea715c9a4ebeac5bf453167baa11f137b761d4eed8c5bc8dd", scope: "dze", palette: "none", device: "fr" },
   // T-421: Yetki grupları (aynı 19 Ekim kaynak biçimi).
-  { name: "gruplar", file: "docs/design/source/Gruplar.dc.html", sha256: "e7f4c23629c9f7058c47416f9ddced3ac0e5aee89da74b99903344362cef7baa", scope: "dzr", palette: "none", device: "fr" },
-  { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "2305dacb6a48c57a454ec6e84a2940309a83fe55718ececebabe3af73d9d5ce4", scope: "dzp", palette: "none", device: "fr" },
+  { name: "gruplar", file: "docs/design/source/Gruplar.dc.html", sha256: "5c6f78b72c233247ff518519aa29a114c338fa70eec8e023bbf171a9e22bd056", scope: "dzr", palette: "none", device: "fr" },
+  { name: "pano", file: "docs/design/source/Pano.dc.html", sha256: "74fba77cb748a61cae914e9203035ad64f22c08acbda6225973552271f998c46", scope: "dzp", palette: "none", device: "fr" },
   // T-958: uygulama kabuğu (alt cam çubuk, Modüller sayfası, Etkin dinleme, ilk kullanım rehberi; aynı 19 Ekim kaynak biçimi).
   { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "d623311be817ea7ffed155350bb193bb29b286ba3e2ed3975065d878e44e9c61", scope: "dzk", palette: "none", device: "fr" },
   // T-968 (B-63): 4 ekran kalıbı (Liste / Form / Detay / Saha; aynı 19 Ekim kaynak biçimi). Ortak üst çubuk (`.top`, `.brand`, `.pgic`,
   // `.tph`) her kaynakta aynıdır; her kalıp kendi kabında. Tuvalin yan yana çerçeveleri (`.stage`, `.frm`, `.frl`) atlanır (SKIP).
-  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "e2b049f80da34fec010793cf52e847fab3275564f6cbda30b551f25ba5238bfd", scope: "dzl", palette: "none", device: "fr" },
-  { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "2581ba63eb6b0ff944f2227780d1b664b2ab84df042d3b61c25e1c93e7302ed5", scope: "dzf", palette: "none", device: "fr" },
-  { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "62de931056422b5cb53d33989784cd64357ddc4fefeef8a5e15090d57e3348bf", scope: "dzd", palette: "none", device: "fr" },
-  { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "f041df4aaeeb2f82c8609b40fe8a3b4d46211893cc7d821af6f568167dfa1b2d", scope: "dzs", palette: "none", device: "fr" },
+  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "491394848be8e6ec379034fe097cbff216a14f822d5e280a6369e45494bba8a5", scope: "dzl", palette: "none", device: "fr" },
+  { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "0eaed24123dd76848a52d8ffc4cd8b007f2c85146ee3e685b36b051d972b4fa3", scope: "dzf", palette: "none", device: "fr" },
+  { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "402ad6a96a9c5913c66ce610e7de9d70dad233d81104a03e033c03ff2a9ea907", scope: "dzd", palette: "none", device: "fr" },
+  { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "ba730acd703e0e57d6dc6e32571964663d57ada57083d929bcf9fac2386b0f26", scope: "dzs", palette: "none", device: "fr" },
   // T-967: Sorun/Destek (B-84/85/87). Tam kaynak `.dzt` (toplu yayın: `.dzd` kalıp-detay kabıyla çakıştığı için) (Destek penceresi + Taleplerim katmanı); yalnız "YENİ" bölümü `.dzdx` (Pano üst
   // çubuğundaki iki ikon, yüzen kısayolun şimşeği, alt çubukta pasif Geri — var olan Pano/Kabuk kaplarına ek sınıf olarak).
-  { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "960469107ab36286b59e7f6a007c17d147c4f65603958f88b507a155271d72a7", scope: "dzt", palette: "none", device: "fr" },
-  { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "960469107ab36286b59e7f6a007c17d147c4f65603958f88b507a155271d72a7", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
+  { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "de2d492bc3d59e11957ba39cfc53bf28c4fd83886697e142acd89dfdaaad4031", scope: "dzt", palette: "none", device: "fr" },
+  { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "de2d492bc3d59e11957ba39cfc53bf28c4fd83886697e142acd89dfdaaad4031", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
   // T-967: Yönetim paneli Destek gelen kutusu; kaynak Yonet kopyası + "YENİ" (okunmamış noktası) — yalnız ek bölüm, panel `.dzy` ile birlikte.
   { name: "yonet-destek", file: "docs/design/source/YonetDestek.dc.html", sha256: "a2155d8f675436bab7d1d45f4f7cdabd6ac942a9d84a4e57f065c00beaa9a4f0", scope: "dzyd", palette: "none", section: "YENİ" },
 ];

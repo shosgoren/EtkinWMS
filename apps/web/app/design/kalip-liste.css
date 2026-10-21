@@ -187,9 +187,9 @@ body:has(.dzl) {
 }
 @media (max-width: 699.98px) {
   .dzl.dzl .helpb {
-    width:40px;
-    height:40px;
-    border-radius:13px;
+    width:48px;
+    height:48px;
+    border-radius:14px;
   }
 }
 .dzl .helpb.sup {
