@@ -31,6 +31,7 @@ export interface ExcelIndirSonuc {
   readonly truncated?: boolean;
   readonly personalOmitted?: boolean;
   readonly code?: string;
+  readonly detail?: string;
 }
 
 /**
@@ -42,13 +43,15 @@ export async function excelIndir(href: string): Promise<ExcelIndirSonuc> {
     const res = await fetch(href, { credentials: "same-origin", headers: { accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" } });
     if (!res.ok) {
       let code = "INTERNAL";
+      let detail: string | undefined;
       try {
-        const body = (await res.json()) as { error?: { code?: unknown } };
+        const body = (await res.json()) as { error?: { code?: unknown; detail?: unknown } };
         if (typeof body.error?.code === "string") code = body.error.code;
+        if (typeof body.error?.detail === "string") detail = body.error.detail;
       } catch {
         /* gövde yok */
       }
-      return { ok: false, code };
+      return { ok: false, code, ...(detail === undefined ? {} : { detail }) };
     }
     const blob = await res.blob();
     const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "etkin.xlsx";
@@ -67,9 +70,17 @@ export async function excelIndir(href: string): Promise<ExcelIndirSonuc> {
   }
 }
 
+/** Kişisel veri dosyası yeniden giriş istedi: kısa balondan sonra yeniden giriş ekranı (dönüş bu sayfa). */
+export function excelYenidenGiris(r: ExcelIndirSonuc): boolean {
+  if (r.detail !== "RECENT_AUTH_REQUIRED") return false;
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.setTimeout(() => window.location.assign(`/login?reauth=1&next=${encodeURIComponent(next)}`), 1600);
+  return true;
+}
+
 /** Hata kodu → `kalip.excel.err.*` anahtarı. */
-export function excelHata(code: string | undefined): string {
-  return code === "RATE_LIMITED" ? "rate" : code === "FORBIDDEN" || code === "UNAUTHENTICATED" ? "forbidden" : code === "NETWORK" ? "network" : code === "NOT_FOUND" ? "notFound" : "generic";
+export function excelHata(code: string | undefined, detail?: string): string {
+  return detail === "RECENT_AUTH_REQUIRED" ? "reauth" : code === "RATE_LIMITED" ? "rate" : code === "FORBIDDEN" || code === "UNAUTHENTICATED" ? "forbidden" : code === "NETWORK" ? "network" : code === "NOT_FOUND" ? "notFound" : "generic";
 }
 
 /** Ekranın o anki arama / süzgeci (adres sorgusu): `q`, cari arşivi. */
@@ -126,7 +137,8 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
     setOpen(false);
     if (!r.ok) {
       tone("err");
-      say("err", t(`err.${excelHata(r.code)}`));
+      say(r.detail === "RECENT_AUTH_REQUIRED" ? "warn" : "err", t(`err.${excelHata(r.code, r.detail)}`));
+      excelYenidenGiris(r);
       return;
     }
     tone("ok");

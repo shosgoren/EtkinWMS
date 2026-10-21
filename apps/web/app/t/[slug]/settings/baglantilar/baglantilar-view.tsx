@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
-import { excelHata, excelIndir } from "../../kalip/excel.tsx";
+import { excelHata, excelIndir, excelYenidenGiris } from "../../kalip/excel.tsx";
 import { KalipGrup, KalipIzgara, KalipKilit, KalipSabit } from "../../kalip/form.tsx";
 import { KalipSecimKutulari, KalipSekme } from "../../kalip/secim.tsx";
 
@@ -51,7 +51,8 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
     setBusy(false);
     if (!r.ok) {
       tone("err");
-      say("err", t(`err.${excelHata(r.code)}`));
+      say(r.detail === "RECENT_AUTH_REQUIRED" ? "warn" : "err", t(`err.${excelHata(r.code, r.detail)}`));
+      excelYenidenGiris(r);
       return;
     }
     tone("ok");

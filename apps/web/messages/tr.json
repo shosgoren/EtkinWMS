@@ -4551,7 +4551,8 @@
         "forbidden": "Bu işlem için yetkin yok · yöneticine sor",
         "network": "Bağlantı yok · internet gelince yeniden dene",
         "notFound": "Kayıt bulunamadı",
-        "generic": "İndirilemedi · yeniden dene"
+        "generic": "İndirilemedi · yeniden dene",
+        "reauth": "Güvenlik için yeniden giriş yap · seni giriş ekranına götürüyorum"
       }
     }
   },
@@ -4932,7 +4933,8 @@
       "forbidden": "Bu işlem için yetkin yok · yöneticine sor",
       "network": "Bağlantı yok · internet gelince yeniden dene",
       "notFound": "Kayıt bulunamadı",
-      "generic": "İndirilemedi · yeniden dene"
+      "generic": "İndirilemedi · yeniden dene",
+      "reauth": "Güvenlik için yeniden giriş yap · seni giriş ekranına götürüyorum"
     },
     "main": {
       "import": "AKTAR'A GEÇ",

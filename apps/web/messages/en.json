@@ -4551,7 +4551,8 @@
         "forbidden": "You don't have permission · ask your manager",
         "network": "No connection · try again when online",
         "notFound": "Not found",
-        "generic": "Download failed · try again"
+        "generic": "Download failed · try again",
+        "reauth": "Sign in again for security · taking you to sign-in"
       }
     }
   },
@@ -4932,7 +4933,8 @@
       "forbidden": "You don't have permission · ask your manager",
       "network": "No connection · try again when online",
       "notFound": "Not found",
-      "generic": "Download failed · try again"
+      "generic": "Download failed · try again",
+      "reauth": "Sign in again for security · taking you to sign-in"
     },
     "main": {
       "import": "GO TO IMPORT",

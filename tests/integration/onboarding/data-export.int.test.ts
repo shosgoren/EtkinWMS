@@ -117,7 +117,11 @@ describe("T-981b Excel dışa aktarma", () => {
   it("yetkisiz üye FORBIDDEN; kişisel cari alanları yalnız settings.manage olana dolu", async () => {
     await expect(exportData(call(PLAIN, A), { kind: "items" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(exportData(call(A.memberUserId, A), { kind: "parties" })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    const own = await exportData(call(A.ownerUserId, A), { kind: "parties", q: "C981" });
+    // Kişisel sütunlu cari dosyası yeniden doğrulama ister (fail-closed); kişisel sütunsuz (grup yetkili) dosya istemez.
+    await expect(exportData(call(A.ownerUserId, A), { kind: "parties", q: "C981" })).rejects.toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
+    let reauthCalls = 0;
+    const own = await exportData({ ...call(A.ownerUserId, A), recentAuth: async () => void reauthCalls++ }, { kind: "parties", q: "C981" });
+    expect(reauthCalls).toBe(1);
     expect(own.personalOmitted).toBe(false);
     expect(own.rows).toEqual([["C981", "Kaya Ltd", "", "", "0532 111 22 33", "a@kaya.com", "İzmir", "", "Tedarikçi"]]);
     const grant = await exportData(call(SCOPED, A), { kind: "parties", q: "C981" });
@@ -125,6 +129,16 @@ describe("T-981b Excel dışa aktarma", () => {
     expect(grant.rows).toEqual([["C981", "Kaya Ltd", "", "", "", "", "İzmir", "", "Tedarikçi"]]);
     // Kişisel alanla arama da yetkisizde eşleşmez (telefon numarasıyla arayıp varlık sorgulanamaz).
     expect((await exportData(call(SCOPED, A), { kind: "parties", q: "0532 111" })).rows).toHaveLength(0);
+    // Diğer türler yeniden doğrulama istemez (hesap sahibi ürün dosyası).
+    let other = 0;
+    await exportData({ ...call(A.ownerUserId, A), recentAuth: async () => void other++ }, { kind: "items" });
+    expect(other).toBe(0);
+    // Aktarım yetkili ama settings.manage olmayan üye mevcut carinin kişisel alanını kontrol adımıyla doğrulayamaz ve yazamaz:
+    // doğru ve yanlış tahmin aynı sonucu verir; yazımda telefon değişmez.
+    const guess = (phone: string) => importParties(call(SCOPED, A), { dryRun: true, rows: [{ row: 2, code: "C981", phone }] });
+    expect((await guess("0532 111 22 33")).rows[0]?.status).toBe((await guess("0599 000 00 00")).rows[0]?.status);
+    await importParties(call(SCOPED, A), { dryRun: false, rows: [{ row: 2, code: "C981", phone: "0599 000 00 00", email: "x@y.com" }] });
+    expect((await adm.query<{ phone: string; email: string }>("SELECT phone, email FROM public.parties WHERE tenant_id = $1 AND code = 'C981'", [A.tenantId])).rows[0]).toEqual({ phone: "0532 111 22 33", email: "a@kaya.com" });
   });
 
   it("audit: her dışa aktarma data.exported (kim, tür, kaç satır); arama metni yazılmaz", async () => {

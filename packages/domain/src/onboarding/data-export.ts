@@ -7,6 +7,8 @@
 //   depo, raf ve stok satırları yalnız kapsamdaki depolardan (kapsam dışı depo görünmez, varlık sızmaz).
 // - Kişisel veri (B-67): cari VKN/TCKN, vergi dairesi, telefon, e-posta ve adres sütunları yalnız `settings.manage` (cariyi düzenleyebilen)
 //   üyede doldurulur; diğerinde sütun BOŞ gelir (içe aktarmada boş hücre mevcut değeri silmez — dosya yine güvenle geri yüklenir).
+//   Kişisel sütunlu cari dosyası (toplu kişisel veri çıkışı) ayrıca YENİDEN DOĞRULAMA ister (`recentAuth`, denetim kaydı dışa aktarmasıyla aynı
+//   A-39 kuralı; güvenlik incelemesi MINOR-2): çalınmış ama MFA'lı oturumla tüm cari iletişim listesi indirilemez. `recentAuth` yoksa ret (fail-closed).
 // - Sınır: en çok `EXPORT_MAX_ROWS` satır (içe aktarma sınırıyla aynı; dosya tek seferde geri yüklenebilsin). Fazlası kesilir, `truncated`
 //   bildirilir (sahte "tamamı" yok). Tek kısa transaction, OFFSET yok (I-14: 5.000 satır kısa okumadır).
 // - Audit (I-12): her dışa aktarma aynı transaction'da `data.exported` — kim (aktör), ne (tür), kaç satır, kesildi mi, arama var mı. Arama
@@ -87,9 +89,12 @@ export async function exportData(params: ExportParams, input: ExportInput): Prom
   if (!(EXPORT_KINDS as readonly string[]).includes(input.kind)) throw new AppError("VALIDATION_FAILED");
   if (input.warehouseId !== undefined && (typeof input.warehouseId !== "string" || !UUID_RE.test(input.warehouseId))) throw new AppError("VALIDATION_FAILED");
   const like = likeOf(input.q);
-  const { requestId, ...access } = params;
+  const { requestId, recentAuth, ...access } = params;
   const limit = EXPORT_MAX_ROWS;
-  return runTenantQuery({ ...access, permission: "data.import" }, async (tx, m) => {
+  // Kişisel sütunlar dolacaksa (cari + settings.manage) önce yeniden doğrulama; diğer türlerde istenmez.
+  const reauth = input.kind === "parties" && (await runTenantQuery({ ...access, permission: "data.import" }, (_tx, m) => Promise.resolve(hasPermission(m.roles, "settings.manage", m.grants))));
+  if (reauth && recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
+  return runTenantQuery({ ...access, permission: "data.import", ...(reauth && recentAuth !== undefined ? { recentAuth } : {}) }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
     const inScope = scope === null ? sql`true` : sql`w.id = ANY(${pgUuidArray(scope)}::uuid[])`;
     let rows: string[][] = [];

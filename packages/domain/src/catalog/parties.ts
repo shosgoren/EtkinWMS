@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
+import { hasPermission } from "../identity/permissions.ts";
 
 export type PartyKind = "CUSTOMER" | "SUPPLIER" | "BOTH";
 export const PARTY_KINDS: readonly PartyKind[] = ["CUSTOMER", "SUPPLIER", "BOTH"];
@@ -260,6 +261,7 @@ export async function importParties(
   const { requestId, ...access } = params;
   const run = input.dryRun ? runTenantQuery : runTenantCommand;
   return run({ ...access, permission: "data.import" }, async (tx, m) => {
+    const personal = hasPermission(m.roles, "settings.manage", m.grants);
     const out: { row: number; status: PartyImportStatus; issue?: PartyIssue; warning?: PartyWarning }[] = [];
     const seen = new Set<string>();
     const cleaned: { row: number; v: Clean; warning?: PartyWarning }[] = [];
@@ -306,15 +308,18 @@ export async function importParties(
         continue;
       }
       // Boş hücre mevcut değeri silmez: yalnız dolu ve farklı alanlar yazılır.
+      // T-981b (B-67, güvenlik incelemesi MINOR-1): `settings.manage` olmayan (yalnız aktarım yetkili) üye MEVCUT carinin kişisel alanlarını
+      // (VKN/TCKN, vergi dairesi, telefon, e-posta, adres) ne karşılaştırır ne yazar — kontrol adımı tahmin doğrulama aracı olamaz; o hücreler yok sayılır.
+      const p = personal;
       const next = {
         name: v.name ?? cur.name,
         kind: v.kind ?? cur.kind,
-        tax_no: v.taxNo ?? cur.tax_no,
-        tax_office: v.taxOffice ?? cur.tax_office,
-        phone: v.phone ?? cur.phone,
-        email: v.email ?? cur.email,
+        tax_no: p ? (v.taxNo ?? cur.tax_no) : cur.tax_no,
+        tax_office: p ? (v.taxOffice ?? cur.tax_office) : cur.tax_office,
+        phone: p ? (v.phone ?? cur.phone) : cur.phone,
+        email: p ? (v.email ?? cur.email) : cur.email,
         city: v.city ?? cur.city,
-        address: v.address ?? cur.address,
+        address: p ? (v.address ?? cur.address) : cur.address,
       };
       const changed = (Object.keys(next) as (keyof typeof next)[]).some((k) => next[k] !== cur[k]);
       if (!changed) {

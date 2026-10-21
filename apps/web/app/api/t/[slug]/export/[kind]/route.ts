@@ -3,6 +3,7 @@
 // Sıra: routeGuard (IP/kullanıcı sınırı) → aynı site denetimi → `data.import` ön denetimi (yetkisiz çağıran sayaç tüketmez) → kullanıcı
 // başına dakikada EXPORTS_PER_MINUTE dışa aktarma (şablon ayrı sayaç) → okuma + `data.exported` audit'i (aynı transaction) → dosya.
 // Dosya içeriği diske/loga yazılmaz (G-09); yanıt `no-store`.
+import { ensureRecentAuth } from "../../../../../../lib/auth-service.ts";
 import { getAppDb } from "@wms/db";
 import { EXPORT_HEADERS, EXPORT_KINDS, assertExportAllowed, exportData, type ExportKind } from "@wms/domain/onboarding/data-export";
 import { AppError } from "@wms/shared/errors";
@@ -65,8 +66,9 @@ export async function GET(request: Request, nextCtx: { params: Promise<{ slug: s
       const body = buildXlsx(sheet, EXPORT_HEADERS[kind], []);
       return new Response(body as BodyInit, { status: 200, headers: { ...headers, "content-disposition": `attachment; filename="etkin-sablon-${file}.xlsx"` } });
     }
+    // Kişisel sütunlu cari dosyası yeniden doğrulama ister (domain karar verir; diğer türlerde çağrılmaz).
     const r = await exportData(
-      { ...access, requestId: ctx.requestId },
+      { ...access, requestId: ctx.requestId, recentAuth: () => ensureRecentAuth(req.headers) },
       { kind, ...(q === "" ? {} : { q }), ...(warehouse === null ? {} : { warehouseId: warehouse }), ...(url.searchParams.get("arsiv") === "1" ? { archived: true } : {}) },
     );
     const body = buildXlsx(sheet, r.headers, r.rows);
