@@ -19,7 +19,7 @@ const KIND: Record<BannerKind, { cls: string; iconCls: string; role: "status" | 
 export function Banner({ kind, children }: BannerProps) {
   const { cls, iconCls, role, Icon } = KIND[kind];
   return (
-    <div role={role} data-kind={kind} className={`flex min-h-12 items-start gap-3 rounded-card px-4 py-3 ${cls}`}>
+    <div role={role} data-kind={kind} className={`wms-banner flex min-h-12 items-start gap-3 rounded-card px-4 py-3 ${cls}`}>
       <Icon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${iconCls}`} />
       <div className="min-w-0 break-words text-base font-medium">{children}</div>
     </div>

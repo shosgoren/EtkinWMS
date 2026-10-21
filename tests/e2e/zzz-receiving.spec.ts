@@ -3,6 +3,7 @@
 // → serbest yerleştirme → sayım kilidi uyarısı. Fikstür (ürün, lokasyon, beklenen teslim) migration rolüyle SQL'den yazılır (sentetik veri, G-09);
 // tüm stok etkisi UI → sunucu eylemi → domain komutudur. Mobil görüntüler/ölçümler `.artifacts/t-313/` altına yazılır (git'e girmez).
 import { completeFirstUseGuide } from "./support/first-use-guide.ts";
+import { smallTargets } from "./support/items-screen.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -671,47 +672,7 @@ test("kabul → kalite onayı → yerleştirme (görevli ve serbest) + yanlış 
   await screens(page, testInfo.project.name);
 });
 
-/** Ana ekran ölçümü: en büyük boş dikey bant ve boş alan oranı (mobile-shell expectBand/homeLayout ile aynı tanım; `.now-card` yalnız gerçek veri satırıysa içeriktir). */
-async function homeMetrics(page: Page): Promise<{ band: number; emptyRatio: number; tileHeights: number[]; badge: number[]; descCut: boolean[]; descLines: number[]; blank: number[] }> {
-  return page.evaluate(`(() => {
-    const r = (el) => el.getBoundingClientRect();
-    const bar = r(document.querySelector('[data-testid="app-bar"]')), nav = r(document.querySelector('[data-testid="bottom-nav"]'));
-    const vis = (el) => { const b = r(el); return b.width > 0 && b.height > 0; };
-    const area = { top: bar.bottom, bottom: nav.top };
-    const spans = [];
-    const add = (b) => { if (b.width > 0 && b.height > 0) spans.push([Math.max(b.top, area.top), Math.min(b.bottom, area.bottom)]); };
-    for (const el of document.body.querySelectorAll('*')) {
-      if (!el.checkVisibility || !el.checkVisibility()) continue;
-      if (el.closest('.now-card[data-state="empty"]')) continue;
-      if (el.matches('a[href], button, summary, input, select, textarea, [tabindex="0"]')) { add(r(el)); continue; }
-      if (el.tagName.toLowerCase() === 'svg') { add(r(el)); continue; }
-      for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim() !== '') { const g = document.createRange(); g.selectNodeContents(n); for (const q of g.getClientRects()) add(q); }
-    }
-    const iv = spans.filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
-    let cursor = area.top, best = 0;
-    for (const [a, b] of iv) { best = Math.max(best, a - cursor); cursor = Math.max(cursor, b); }
-    best = Math.max(best, area.bottom - cursor);
-    const tiles = [...document.querySelectorAll('.task-grid > .task-item > [data-state]')].filter(vis);
-    const parts = [r(document.querySelector('main header')), ...tiles.map(r)];
-    const top = document.querySelector('.top-rows'); if (top && vis(top)) parts.push(r(top));
-    const now = document.querySelector('.now-card:not([data-state="empty"])'); if (now && vis(now)) parts.push(r(now));
-    const sp = parts.map((p) => [Math.max(p.top, area.top), Math.min(p.bottom, area.bottom)]).sort((a, b) => a[0] - b[0]);
-    let covered = 0, cur = null;
-    for (const [s, e] of sp) { if (cur && s <= cur[1]) cur[1] = Math.max(cur[1], e); else { if (cur) covered += cur[1] - cur[0]; cur = [s, e]; } }
-    if (cur) covered += cur[1] - cur[0];
-    const lines = (e) => Math.round(r(e).height / parseFloat(getComputedStyle(e).lineHeight));
-    return {
-      band: Math.round(best), emptyRatio: Math.round(((area.bottom - area.top - covered) / (area.bottom - area.top)) * 1000) / 1000,
-      tileHeights: tiles.map((t) => Math.round(r(t).height)),
-      badge: tiles.map((t) => Math.round(r(t.querySelector('.tile-badge')).width * 10) / 10),
-      descCut: tiles.map((t) => { const d = t.querySelector('.tile-desc'); return d ? d.scrollWidth > d.clientWidth + 0.5 : true; }),
-      descLines: tiles.map((t) => { const d = t.querySelector('.tile-desc'); return d ? lines(d) : 0; }),
-      blank: tiles.map((t) => r(t).height - 28 - [...t.querySelectorAll('.tile-badge, .tile-title, .tile-desc')].reduce((a, e) => a + r(e).height, 0)),
-    };
-  })()`);
-}
-
-test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir); 2 sütun döşeme ve boşluk metrikleri; admin + toplayıcı görüntüleri", async ({ page, context }, testInfo) => {
+test("Kokpit 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir); liste kalıbında taşma/kesilme/dokunma hedefi; admin + toplayıcı görüntüleri", async ({ page, context }, testInfo) => {
   mkdirSync(OUT, { recursive: true });
   const fx = await seed();
   // Bekleyen iş fikstürü: ikinci açık teslim + iki açık PUTAWAY görevi (SQL; gerçek akışta kabul komutu doğurur). "Sıradaki" satırları DB'deki en eski işlerdir.
@@ -762,60 +723,24 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     await expect(pendingCard.getByTestId("now-putaway")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[0]?.id}`);
     // Fiil ve şevron HER yükseklikte görünür (anlam kısa ekranda kaybolmaz).
     for (const k of ["now-receive", "now-putaway"]) {
-      await expect(pendingCard.getByTestId(k).locator("svg"), `${w}x${h}: ${k} şevron görünür`).toBeVisible();
+      await expect(pendingCard.getByTestId(k).locator(".qb svg"), `${w}x${h}: ${k} şevron görünür`).toBeVisible();
       await expect(pendingCard.getByTestId(k).locator(".now-label"), `${w}x${h}: ${k} fiil görünür`).toContainText("bekliyor");
     }
-    // "Sıradaki" KISA biçim (teslim numarası / adet): DB'deki en eski açık işler; < 700 px'te satırın kendisi sıradaki işi açtığından ayrıntı satırı yoktur.
-    if (h >= 700) {
-      await expect(pendingCard.getByTestId("now-receive-next")).toHaveText(`Sıradaki: ${nextReceipts[0]?.number}`);
-      await expect(pendingCard.getByTestId("now-putaway-next")).toHaveText(`Sıradaki: ${qtyText(nextTasks[0]?.quantity ?? "0")}`);
-    } else {
-      await expect(pendingCard.getByTestId("now-receive-next")).toBeHidden();
-    }
-    if (h >= 880) {
-      await expect(pendingCard.getByTestId("now-receive-extra")).toHaveText(`Ardından: ${nextReceipts[1]?.number}`);
-      await expect(pendingCard.getByTestId("now-receive-extra")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[1]?.id}`);
-      await expect(pendingCard.getByTestId("now-putaway-extra")).toHaveText(`Ardından: ${qtyText(nextTasks[1]?.quantity ?? "0")}`);
-      await expect(pendingCard.getByTestId("now-putaway-extra")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[1]?.id}`);
-    } else {
-      await expect(pendingCard.getByTestId("now-receive-extra")).toBeHidden();
-    }
+    // T-979: Kokpit liste kalıbında içerik alanı kayar; "Sıradaki" (kısa biçim) ve "Ardından" satırları her boyutta görünür (DB'deki en eski açık işler).
+    await expect(pendingCard.getByTestId("now-receive-next")).toHaveText(`Sıradaki: ${nextReceipts[0]?.number}`);
+    await expect(pendingCard.getByTestId("now-putaway-next")).toHaveText(`Sıradaki: ${qtyText(nextTasks[0]?.quantity ?? "0")}`);
+    await expect(pendingCard.getByTestId("now-receive-extra")).toHaveText(`Ardından: ${nextReceipts[1]?.number}`);
+    await expect(pendingCard.getByTestId("now-receive-extra")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[1]?.id}`);
+    await expect(pendingCard.getByTestId("now-putaway-extra")).toHaveText(`Ardından: ${qtyText(nextTasks[1]?.quantity ?? "0")}`);
+    await expect(pendingCard.getByTestId("now-putaway-extra")).toHaveAttribute("href", `/t/demo/field/putaway?task=${nextTasks[1]?.id}`);
     // Kesilme yok: kartın hiçbir görünür öğesi taşmaz (scrollWidth ≤ clientWidth); "…" ile kısaltma yok.
     const cut = await page.evaluate<string[]>(`[...document.querySelectorAll('.now-card *')].filter((e) => e.getBoundingClientRect().width > 0 && e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className + ':' + e.textContent)`);
     expect(cut, `${w}x${h}: Şimdi kartında kesilen/taşan metin`).toEqual([]);
-    const m = await homeMetrics(page);
-    metrics[`admin-${w}x${h}`] = m;
-    // Çakışma yok: selam başlığı kartın üstünde, kart ızgaranın üstünde (içerik alana sığar; üst üste binen/kesilen içerik yok).
-    const geo = await pendingCard.evaluate((card) => {
-      const r = (element: { getBoundingClientRect: () => { top: number; bottom: number; height: number } }) => element.getBoundingClientRect();
-      const root = card.closest("main");
-      if (root === null) throw new Error("Expected home main");
-      const one = (selector: string) => {
-        const rows = [...root.querySelectorAll(selector)].filter((element) => r(element).height > 0);
-        if (rows.length !== 1) throw new Error(`Expected one visible geometry target: ${selector}`);
-        const target = rows[0];
-        if (target === undefined) throw new Error("Expected geometry target");
-        return target;
-      };
-      const top = [...root.querySelectorAll(".task-grid .top-rows")].some((element) => r(element).height > 0);
-      return { headB: r(one("header")).bottom, cardT: r(card).top, cardB: r(card).bottom, gridT: r(one(top ? ".task-grid .top-rows" : ".task-grid")).top };
-    });
-    expect(geo.cardT, `${w}x${h}: Şimdi kartı selam başlığıyla çakışmaz`).toBeGreaterThanOrEqual(geo.headB - 0.5);
-    expect(geo.gridT, `${w}x${h}: ızgara Şimdi kartıyla çakışmaz`).toBeGreaterThanOrEqual(geo.cardB - 0.5);
-    // D-04 SIKI + D-04b + açıklama tek satır kesilmeden + ikon sabit/eşit; B-02 ve emptyRatio "bekleyen iş VAR" durumunda ASSERT.
-    expect(Math.max(...m.tileHeights), `${w}x${h}: döşeme ≤ 140 (istisna yok)`).toBeLessThanOrEqual(140);
-    expect(Math.min(...m.tileHeights), `${w}x${h}: döşeme ≥ ${h < 700 ? 72 : 88}`).toBeGreaterThanOrEqual(h < 700 ? 72 : 88);
-    expect(new Set(m.badge).size, `${w}x${h}: ikon boyutu eşit`).toBe(1);
-    expect(m.badge[0]).toBe(48);
-    expect(m.descCut.some(Boolean), `${w}x${h}: açıklama kesilmemiş`).toBe(false);
-    expect(m.descLines.every((n) => n === 1), `${w}x${h}: açıklama tek satır`).toBe(true);
-    expect(Math.max(...m.blank), `${w}x${h}: D-04b döşeme içi boşluk ≤ 24`).toBeLessThanOrEqual(24);
-    expect(Math.min(...m.blank), `${w}x${h}: içerik döşemeye sığar`).toBeGreaterThanOrEqual(-1);
-    expect(m.band, `${w}x${h}: B-02 en büyük boş dikey bant ≤ 120 (bekleyen iş var)`).toBeLessThanOrEqual(120);
-    expect(m.emptyRatio, `${w}x${h}: emptyRatio ≤ 0,15 (bekleyen iş var)`).toBeLessThanOrEqual(0.15);
     const pw = await measure(page);
+    metrics[`admin-${w}x${h}`] = pw;
     expect(pw.scrollWidth).toBeLessThanOrEqual(pw.clientWidth);
-    expect(pw.small, `${w}x${h}: 48 px altı hedef`).toEqual([]);
+    // T-979: kalıp üst çubuğu düğmeleri (Sorun / Destek / Hesap) tasarım kaynağındaki boyuttadır (B-99); ölçüm Kokpit içeriği + alt cam çubuk.
+    expect([...(await smallTargets(page, '[data-testid="kokpit"] .inner')), ...(await smallTargets(page, '[data-testid="kabuk-dock"]'))], `${w}x${h}: 48 px altı hedef`).toEqual([]);
     if (mobile) await page.screenshot({ path: path.join(OUT, `final-home-admin-${w}x${h}.png`) });
   }
   // Toplayıcı (tek sütun kipi): görüntüler + taşma/hedef ölçümü; "Görevlerim" özeti bu kipin gerçek içeriğidir.
@@ -837,29 +762,12 @@ test("ana ekran 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir)
     await expect(pendingCard.getByTestId("now-receive")).toHaveAttribute("data-count", String(receiptCount));
     await expect(pendingCard.getByTestId("now-putaway")).toHaveAttribute("data-count", String(pickerPut));
     await expect(pendingCard.getByTestId("now-receive")).toHaveAttribute("href", `/t/demo/field/receive?receipt=${nextReceipts[0]?.id}`);
-    // Çakışma/kırpma yok (saha rolü): kart selam başlığının altında, ilk döşemenin üstünde; döşemeler 72/88-140 px.
-    const pgeo = await pendingCard.evaluate((card) => {
-      const r = (element: { getBoundingClientRect: () => { top: number; bottom: number; height: number } }) => element.getBoundingClientRect();
-      const root = card.closest("main");
-      if (root === null) throw new Error("Expected home main");
-      const headers = [...root.querySelectorAll("header")].filter((element) => r(element).height > 0);
-      if (headers.length !== 1) throw new Error("Expected one visible home header");
-      const header = headers[0];
-      if (header === undefined) throw new Error("Expected home header");
-      const tiles = [...root.querySelectorAll(".task-grid > .task-item")].filter((element) => r(element).height > 0);
-      return { headB: r(header).bottom, cardT: r(card).top, cardB: r(card).bottom, tileT: Math.min(...tiles.map((element) => r(element).top)) };
-    });
-    expect(pgeo.cardT, `${w}x${h} toplayıcı: kart selam başlığıyla çakışmaz`).toBeGreaterThanOrEqual(pgeo.headB - 0.5);
-    expect(pgeo.tileT, `${w}x${h} toplayıcı: döşemeler kartla çakışmaz`).toBeGreaterThanOrEqual(pgeo.cardB - 0.5);
-    const ptiles = (await homeMetrics(page)).tileHeights;
-    expect(Math.max(...ptiles), `${w}x${h} toplayıcı: döşeme ≤ 140`).toBeLessThanOrEqual(140);
-    expect(Math.min(...ptiles), `${w}x${h} toplayıcı: döşeme ≥ ${h < 700 ? 72 : 88}`).toBeGreaterThanOrEqual(h < 700 ? 72 : 88);
     const pcut = await page.evaluate<string[]>(`[...document.querySelectorAll('.now-card *')].filter((e) => e.getBoundingClientRect().width > 0 && e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className + ':' + e.textContent)`);
     expect(pcut, `${w}x${h} toplayıcı: Şimdi kartında kesilen metin`).toEqual([]);
     const pw = await measure(page);
     metrics[`picker-${w}x${h}`] = pw;
     expect(pw.scrollWidth).toBeLessThanOrEqual(pw.clientWidth);
-    expect(pw.small, `${w}x${h} toplayıcı: 48 px altı hedef`).toEqual([]);
+    expect([...(await smallTargets(page, '[data-testid="kokpit"] .inner')), ...(await smallTargets(page, '[data-testid="kabuk-dock"]'))], `${w}x${h} toplayıcı: 48 px altı hedef`).toEqual([]);
     if (mobile) await page.screenshot({ path: path.join(OUT, `final-home-picker-${w}x${h}.png`) });
   }
   // Atanmış görev varsa önce o (Görevlerim özeti); Şimdi satırları onun yerine girmez.

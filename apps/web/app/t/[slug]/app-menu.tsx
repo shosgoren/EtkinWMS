@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { GuideTrigger } from "../../first-use-guide.tsx";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef } from "react";
-import { Package } from "@wms/ui";
 import { SignOutButton } from "../../auth-forms.tsx";
 
-// Telefon üst çubuğu ve menü sayfası (T-254). Üst çubuk <= 56 px: küçük logo + kısaltılmış çalışma alanı adı + tek "≡" düğmesi.
-// Akış/Kokpit, çalışma alanı değiştirme, "Giriş yapan", Yardım ve Çıkış menü sayfasındadır. Masaüstünde üst çubuk gizlidir
-// (`phone-only`, globals.css) ve eski kök üst bar + `tenant-bar` aynen çalışır. Yetki/üyelik kararı sunucuda (layout.tsx).
+// Uygulama menüsü sayfası (T-254; T-979'da eski telefon üst çubuğu, masaüstü `tenant-bar`, `ScreenShell` ve `BottomNav` kaldırıldı).
+// Menü Pano/kalıp ekranlarındaki Hesap menüsünün "Tüm ekranlar" öğesinden ve Görevlerim ⚠ kutusundan açılır: Akış/Genel bakış,
+// çalışma alanı değiştirme, "Giriş yapan", yetkili yönetim sayfaları, Yardım ve Çıkış. Yetki/üyelik kararı sunucuda (layout.tsx).
 
 export const APP_MENU_ID = "app-menu";
 
@@ -20,17 +18,16 @@ export function openAppMenu(): void {
   if (el instanceof HTMLDialogElement && !el.open) el.showModal();
 }
 
-export interface AppBarMembership {
+export interface AppMenuMembership {
   readonly slug: string;
   readonly tenantName: string;
   readonly rolesLabel: string;
 }
 
-export interface AppBarProps {
+export interface AppMenuProps {
   readonly slug: string;
-  readonly tenantName: string;
   readonly userName: string;
-  readonly memberships: readonly AppBarMembership[];
+  readonly memberships: readonly AppMenuMembership[];
   readonly view: "flow" | "cockpit";
   /** Kök düzendeki `setView` ile aynı çerez sözleşmesi (`view`); sunucu eylemi olarak geçirilir. */
   readonly setViewAction: (formData: FormData) => Promise<void>;
@@ -42,7 +39,7 @@ export interface AppBarProps {
 const TOUCH = "min-h-12 min-w-12";
 const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
-export function AppBar({ slug, tenantName, userName, memberships, view, setViewAction, links = [], linksLabel }: AppBarProps) {
+export function AppMenu({ slug, userName, memberships, view, setViewAction, links = [], linksLabel }: AppMenuProps) {
   const t = useTranslations("shell");
   const tb = useTranslations("tenantBar");
   const ref = useRef<HTMLDialogElement>(null);
@@ -55,35 +52,8 @@ export function AppBar({ slug, tenantName, userName, memberships, view, setViewA
     if (el?.open) el.close();
   }, [pathname]);
 
-  // T-988: Akış ana ekranı kendi Görevlerim başlığını çizer (marka, selam, menü düğmesi); orada üst çubuk yoktur, menü sayfası aynıdır.
-  const homeFlow = view === "flow" && pathname === `/t/${encodeURIComponent(slug)}`;
-
   return (
     <>
-      {homeFlow ? null : <header
-        data-testid="app-bar"
-        className="phone-only z-30 h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border bg-surface pl-3 pr-1 pt-[env(safe-area-inset-top)]"
-      >
-        <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-xl border-b-4 border-accent bg-ink text-on-accent">
-          <Package className="size-5 text-accent" strokeWidth={2} aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-base font-extrabold text-ink" data-testid="app-bar-name">
-          {tenantName}
-        </span>
-        {/* T-912: rehber telefonda üst çubukta (yüzen düğme kaldırıldı); masaüstünde kök üst çubuktaki hap. */}
-        <GuideTrigger iconOnly className={`${TOUCH} cursor-pointer rounded-control text-xl font-extrabold leading-none text-ink ${FOCUS}`} />
-        <button
-          type="button"
-          aria-label={t("menu.open")}
-          aria-haspopup="dialog"
-          data-testid="app-bar-menu"
-          onClick={openAppMenu}
-          className={`${TOUCH} cursor-pointer rounded-control text-3xl font-bold leading-none text-ink ${FOCUS}`}
-        >
-          <span aria-hidden="true">≡</span>
-        </button>
-      </header>}
-
       <dialog
         ref={ref}
         id={APP_MENU_ID}
