@@ -5,7 +5,7 @@
 // Başlık satırı: ilk 10 satırda en çok alanla eşleşen satır (üstte firma adı / boş satır olan Excel'ler).
 // Sunucuya gidecek dosya mevcut içe aktarma biçimindeki düz CSV'dir (sabit Türkçe başlıklar); sunucu her şeyi yeniden doğrular.
 
-export type ImportKindKey = "stok" | "cari" | "acilis";
+export type ImportKindKey = "stok" | "cari" | "acilis" | "depo" | "raf";
 export type MapState = "auto" | "sug" | "user" | "none";
 
 export interface FieldDef {
@@ -42,6 +42,18 @@ export const FIELDS: Readonly<Record<ImportKindKey, readonly FieldDef[]>> = {
     { id: "urun", header: "ürün kodu", required: true, synonyms: ["urun kodu", "stok kodu", "kod", "kodu", "malzeme kodu", "mal kodu", "sku", "item code"] },
     { id: "raf", header: "raf kodu", required: true, synonyms: ["raf", "raf kodu", "lokasyon", "lokasyon kodu", "konum", "adres", "location", "yer", "goz", "raf adresi"] },
     { id: "miktar", header: "miktar", required: true, synonyms: ["miktar", "miktari", "adet", "mevcut", "sayim", "sayilan", "stok", "stok miktari", "quantity", "qty", "eldeki"], content: "int" },
+  ],
+  // T-981b: depolar ve raflar (sunucuya alan adlarıyla kayıt gider; `header` sunucu alan adıdır). Dışa aktarma başlıkları ("depo kodu", "raf adı"…) birebir bulunur.
+  depo: [
+    { id: "kod", header: "code", required: true, synonyms: ["depo kodu", "depo kod", "kod", "kodu", "code", "warehouse code"] },
+    { id: "ad", header: "name", required: false, synonyms: ["depo adi", "depo ad", "ad", "adi", "isim", "name", "warehouse"] },
+  ],
+  raf: [
+    { id: "depo", header: "warehouseCode", required: true, synonyms: ["depo kodu", "depo", "depo kod", "warehouse", "warehouse code"] },
+    { id: "kod", header: "code", required: true, synonyms: ["raf kodu", "raf kod", "lokasyon kodu", "lokasyon", "konum kodu", "adres kodu", "kod", "kodu", "code", "location code"] },
+    { id: "ad", header: "name", required: false, synonyms: ["raf adi", "raf ad", "lokasyon adi", "ad", "adi", "isim", "name"] },
+    { id: "ust", header: "parentCode", required: false, synonyms: ["ust raf kodu", "ust raf", "ust lokasyon", "ust kod", "parent", "parent code", "bagli oldugu"] },
+    { id: "tur", header: "kind", required: false, synonyms: ["tur", "raf turu", "lokasyon turu", "tip", "kind", "type"] },
   ],
 };
 

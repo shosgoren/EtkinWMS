@@ -568,6 +568,7 @@ export function ItemsView({
         dark={dark}
         title={t("title")}
         icon={{ d: LICON.box, color: "2F5DA8" }}
+        excel={{ kind: "items" }}
         testId="items"
         bar={{
           back: { href: home },

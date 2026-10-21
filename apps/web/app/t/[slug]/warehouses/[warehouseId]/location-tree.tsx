@@ -328,6 +328,7 @@ export function LocationTree({
           title={t("title")}
           icon={{ d: LICON.raf, color: "0E7C7B" }}
           heading={false}
+          excel={{ kind: "locations", warehouseId }}
           testId="location-tree"
           bar={{
             back: { href: base, aria: t("back") },

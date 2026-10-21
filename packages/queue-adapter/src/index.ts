@@ -59,6 +59,8 @@ export const QUEUE_EXPIRE_SECONDS: { readonly [T in JobType]: number } = {
   "trial.welcome": 300,
   // T-967: tek HTTP GET (CallMeBot, 15 sn zaman aşımı).
   "support.notify": 300,
+  // T-991: ERP senkronu; sayfa başına HTTP (10 istek / 10 sn sınırı) + kısa transaction'lar; koşu başına sayfa üst sınırı var → 1800 sn.
+  "integration.sync": 1800,
 };
 
 /** İş zarfı: tenant kimliği yükten AYRI saklanır; yalnızca `enqueue` yazar. */

@@ -8,6 +8,7 @@ vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
 vi.mock("./package-label-ekran.tsx", () => ({ PackageLabelEkran: ({ children }: { children: unknown }) => children }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => ({ get: () => undefined }) }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("404"); }, redirect: (url: string) => { throw new Error(url); } }));
+vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 vi.mock("../../../../../../lib/auth-service.ts", () => ({ getAuthService: () => ({ getPrincipal: mocks.principal }) }));
 import { generatePackageQrs, packageQr, postedLabelPackages, validPackagePrintSettings } from "./package-labels.ts";
 import Page from "./page.tsx";

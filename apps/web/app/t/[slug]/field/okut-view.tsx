@@ -7,11 +7,11 @@
 // Bilinçli farklar (T-969 kartı): "söyle" (sesli komut) Etkin B-62 ile gelir; şimdilik ipucu metnidir. Web NFC yalnız destekleyen
 // tarayıcıda (Android Chrome) çalışır; yoksa açık bildirim.
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
-import { classifyCameraError, createFrameDecoder, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession } from "../../../../lib/scanner/camera-source.ts";
+import { classifyCameraError, createFrameDecoder, DISTANCE_HINT_MS, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession, type ScanStats } from "../../../../lib/scanner/camera-source.ts";
 import { useScanner } from "./receive/receive-flow.tsx";
 import { resolveFieldScanAction, type FieldScanTarget } from "./actions.ts";
 import { Ico, MicIco, SahaFrame, SahaSteps, SahaVerdict, tone } from "./saha-shell.tsx";
@@ -48,6 +48,11 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
   const [typed, setTyped] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const beginRef = useRef<(() => void) | null>(null);
+  const sessionRef = useRef<CameraSession | null>(null);
+  const vf = useRef<HTMLDivElement>(null);
+  const [stats, setStats] = useState<ScanStats | null>(null);
+  // T-450: kamera açıldıktan 1,5 sn sonra hâlâ okuma yoksa "biraz uzaklaştır" ipucu (iPhone ana kamerası ~20 cm'den yakını netleyemez).
+  const [farHint, setFarHint] = useState(false);
   const show = useCallback((v: View) => {
     viewRef.current = v;
     setView(v);
@@ -91,8 +96,12 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
   useEffect(() => {
     let cancelled = false;
     let stopLoop: (() => void) | null = null;
+    let hintTimer: ReturnType<typeof setTimeout> | null = null;
     let session: CameraSession | null = null;
     setCam({ phase: "starting" });
+    // T-446: çözücü (WASM indirme + derleme) kamera izni/açılışıyla PARALEL hazırlanır; kamera açılınca ilk kare beklemeden çözülür.
+    const decoderP = createFrameDecoder();
+    decoderP.catch(() => undefined);
     void (async () => {
       try {
         session = await openCamera();
@@ -109,7 +118,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
       void v.play().catch(() => undefined);
       let decoder: Awaited<ReturnType<typeof createFrameDecoder>>;
       try {
-        decoder = await createFrameDecoder();
+        decoder = await decoderP;
       } catch {
         session.stop();
         if (!cancelled) setCam({ phase: "failed", failure: "decoder" });
@@ -119,15 +128,24 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
         session.stop();
         return;
       }
+      sessionRef.current = session;
       const begin = (): void => {
         stopLoop?.();
         setCam({ phase: "scanning" });
+        setFarHint(false);
+        if (hintTimer !== null) clearTimeout(hintTimer);
+        hintTimer = setTimeout(() => setFarHint(true), DISTANCE_HINT_MS);
         stopLoop = startScanLoop({
           decoder,
           video: v,
+          roiTarget: () => vf.current,
+          onStats: setStats,
           onRejected: () => undefined,
           // Tek kabul: döngü kendini durdurur; sonuç ekranından "tekrar okut" yeni döngü başlatır.
           onAccepted: (value) => {
+            if (hintTimer !== null) clearTimeout(hintTimer);
+            setFarHint(false);
+            tone("tap"); // anında "tok" + kısa titreşim; sunucu sonucu ayrıca onay/hata sesi verir
             setCam({ phase: "paused" });
             camera(value);
           },
@@ -138,11 +156,25 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
     })();
     return () => {
       cancelled = true;
+      if (hintTimer !== null) clearTimeout(hintTimer);
       beginRef.current = null;
+      sessionRef.current = null;
       stopLoop?.();
       session?.stop();
     };
   }, [attempt, camera]);
+
+  // Dokun-odakla (T-446): kamera alanına dokununca o noktaya (destek varsa) yeniden odaklanır; düğmeler etkilenmez.
+  const focusTap = (e: ReactPointerEvent<HTMLDivElement>): void => {
+    const s = sessionRef.current;
+    const v = video.current;
+    if (s === null || v === null || (e.target as Element).closest("button,form,input,a") !== null) return;
+    const r = v.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return;
+    void s.focusAt((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height).then((ok) => {
+      if (ok) tone("tap");
+    });
+  };
 
   const rescan = (): void => {
     tone("tap");
@@ -179,7 +211,8 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
 
   const platform = typeof navigator === "undefined" ? "other" : platformOf(navigator.userAgent, navigator.maxTouchPoints);
   const failText = cam.phase !== "failed" ? null : tr(`camera.error.${cam.failure === "denied" ? `denied_${platform}` : cam.failure}`);
-  const live = cam.phase === "scanning" || cam.phase === "starting";
+  // Okunan kod sunucuda çözülürken vizör ekranda kalır (okundu anı görünür).
+  const live = cam.phase === "scanning" || cam.phase === "starting" || (cam.phase === "paused" && view.kind === "checking");
 
   return (
     <SahaFrame
@@ -231,13 +264,30 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
             </div>
           </>
         ) : null}
-        <div className="cam" role="img" aria-label={t("camRegion")} data-testid="okut-camera">
+        <div
+          className="cam"
+          role="img"
+          aria-label={t("camRegion")}
+          data-testid="okut-camera"
+          data-first-read-ms={stats?.firstReadMs}
+          data-decode-avg-ms={stats?.decodeAvgMs}
+      data-decode-max-ms={stats?.decodeMaxMs}
+      data-scan-frames={stats?.frames}
+          onPointerUp={focusTap}
+        >
           <video ref={video} muted playsInline aria-hidden="true" style={cam.phase === "failed" ? { visibility: "hidden" } : undefined} />
           <div className="camt">
-            <span>{view.kind === "checking" ? t("checking") : cam.phase === "starting" ? t("starting") : t("camHint")}</span>
+            {farHint && cam.phase === "scanning" && view.kind === "idle" ? (
+              <span role="status" data-testid="okut-distance-hint">
+                <Ico d={SICON.info} size={14} />
+                {t("distanceHint")}
+              </span>
+            ) : (
+              <span>{view.kind === "checking" ? t("checking") : cam.phase === "starting" ? t("starting") : t("camHint")}</span>
+            )}
           </div>
           {live ? (
-            <div className="vf" aria-hidden="true">
+            <div ref={vf} className="vf" aria-hidden="true">
               <i className="a" />
               <i className="b" />
               <i className="c" />

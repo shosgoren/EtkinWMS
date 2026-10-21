@@ -26,3 +26,18 @@ export async function getTenantSettings(params: Omit<TenantAccessParams, "permis
     return { name: r.name, locale: r.locale, timeZone: r.time_zone, slug: r.slug, separationOfDuties: r.separation_of_duties === true };
   });
 }
+
+/**
+ * T-999c: çalışma alanının arayüz dili (Ayarlar > Dil; `tenant_settings.locale`). Her üye okur (`stock.view`); yalnız dil kodu döner,
+ * başka ayar sızmaz. Web dil seçimi (`apps/web/i18n/request.ts`) tenant sayfalarında bunu kullanır.
+ */
+export async function getWorkspaceLocale(params: Omit<TenantAccessParams, "permission" | "recentAuth">): Promise<string> {
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, membership) => {
+    const rows = await tx.execute<{ locale: string }>(
+      sql`SELECT s.locale FROM public.tenant_settings s WHERE s.tenant_id = ${membership.tenantId}::uuid`,
+    );
+    const r = rows[0];
+    if (r === undefined) throw new AppError("NOT_FOUND");
+    return r.locale;
+  });
+}

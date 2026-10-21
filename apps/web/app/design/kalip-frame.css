@@ -432,3 +432,14 @@ dialog.dzf.kpen::backdrop { background: transparent; }
 .dzf.kpen .kmlist .kpo1, .dzf.kpen a.kpopt > .kpo1 { font: 700 16px/1.25 var(--font-instrument), sans-serif; }
 .dzf.kpen .kmlist .kpo2 { color: var(--color-dz-x-eogehg); }
 .dzf.dz-dark.kpen .kmlist .kpo2 { color: var(--color-dz-x-jplcmc); }
+
+/* T-981b (Ayarlar › Bağlantılar; tuvalde kaynağı yok, DESIGN-PARITY T-981b): büyük ikonlu seçim kutuları = kaynak `.gpick > .gp` seçenek
+   düğmesinin büyük hâli (ikon üstte, ad + kısa alt yazı altta), ızgara. Sekme şeridi aynı `.gp` bağlantılarıyla. Üst çubuk Excel düğmesi
+   kaynak `.helpb` (renk satır içi belirteç). Renk sabiti yok. */
+.dzf .gpick.big { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
+.dzf .gpick.big .gp { flex-direction: column; justify-content: center; gap: 8px; min-height: 108px; padding: 12px 10px; text-align: center; line-height: 1.15; }
+.dzf .gpick.big .gp .ico { width: 34px; height: 34px; }
+.dzf .gpick.big .gp small { display: block; font: 700 11px/1.25 var(--font-instrument), sans-serif; opacity: .8; }
+.dzf .gpick.big .gp[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.dzf .gpick.tabs { margin: 0 0 2px; }
+.dzf .gpick.tabs a.gp { text-decoration: none; }

@@ -120,6 +120,16 @@ export const AUDIT_ACTIONS = [
   // T-967 (0054): destek talebi (müşteri tarafı; operatör yanıtı/durumu security_events `platform.support.*`).
   "support.ticket_created",
   "support.ticket_replied",
+  // T-981b: ekran bazlı Excel dışa aktarma (kim, ne, kaç satır) ve depo/raf toplu içe aktarma özeti (her kayıt kendi komutunun audit'ini de yazar).
+  "data.exported",
+  "data.imported",
+  // T-991 (0055): ERP entegrasyonu (bağlan / sına / kes, akış aç-kapa-yön, elle çalıştırma, senkron özeti). Sır/parola/belirteç yazılmaz.
+  "integration.connected",
+  "integration.checked",
+  "integration.disconnected",
+  "integration.flow_changed",
+  "integration.run_requested",
+  "integration.synced",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

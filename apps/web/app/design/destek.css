@@ -377,9 +377,9 @@ body:has(.dzt) {
 }
 .dzt .dk.big {
   justify-self:center;
-  width:66px;
-  height:66px;
-  margin-top:-22px;
+  width:58px;
+  height:58px;
+  margin-top:-44px;
   border-radius:50%;
   background:var(--color-dz-x-fpkpik);
   color:var(--color-dz-x-pppppp);
@@ -394,15 +394,22 @@ body:has(.dzt) {
 }
 .dzt .dk.big .cap {
   position:absolute;
-  top:72px;
+  top:calc(100% + 3px);
   left:50%;
   transform:translateX(-50%);
   display:block;
+  max-width:76px;
+  overflow:hidden;
   color:var(--color-dz-x-pppppp);
-  opacity:1;
+  opacity:.9;
   font-size:9.5px;
-  letter-spacing:.1em;
-  text-shadow:0 1px 2px var(--color-dz-a-bhcoec-g);
+  letter-spacing:.07em;
+}
+@media (max-width: 699.98px) {
+  .dzt.dzt .dk.big .cap {
+    font-size:8.5px;
+    letter-spacing:.04em;
+  }
 }
 .dzt .dk-etkin {
   appearance:none;
@@ -809,10 +816,10 @@ from{transform:translateY(8px);opacity:0}
 .dzt .lg .dk.big {
   width:56px;
   height:56px;
-  margin-top:-16px;
+  margin-top:-44px;
 }
 .dzt .lg .dk.big .cap {
-  top:60px;
+  top:calc(100% + 3px);
 }
 .dzt .lg .orb {
   width:42px;

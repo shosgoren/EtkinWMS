@@ -845,7 +845,9 @@
           "LOCATION": "RAF SORUNU",
           "OTHER": "DİĞER"
         }
-      }
+      },
+      "overview": "Genel bakış",
+      "signOut": "Çıkış yap"
     }
   },
   "audit": {
@@ -1018,6 +1020,18 @@
     "support": {
       "ticket_created": "Destek talebi açıldı",
       "ticket_replied": "Destek talebine yanıt yazıldı"
+    },
+    "data": {
+      "exported": "Excel'e dışarı aktarıldı",
+      "imported": "Excel'den depo / raf aktarıldı"
+    },
+    "integration": {
+      "connected": "ERP bağlantısı kuruldu",
+      "checked": "ERP bağlantısı sınandı",
+      "disconnected": "ERP bağlantısı kesildi",
+      "flow_changed": "ERP aktarım akışı değişti",
+      "run_requested": "ERP aktarımı elle başlatıldı",
+      "synced": "ERP aktarımı çalıştı"
     }
   },
   "auditLog": {
@@ -2823,6 +2837,29 @@
       "loadHint": "Belgeyi listeden yeniden aç; sürerse yetkiliye haber ver.",
       "paperLabel": "Kağıt",
       "kindHint": "Varil ya da koli"
+    },
+    "labelPreview": {
+      "paper": "Kâğıt",
+      "roll": "Rulo",
+      "qrAria": "Paket QR {no}",
+      "packageOf": "Paket {no} / {total} · {kind}",
+      "quantity": "Paket miktarı: {qty} {unit}",
+      "quarantine": "⚠ Karantina",
+      "lot": "Lot: {lot}",
+      "dates": "Üretim: {produced} · SKT: {expires}",
+      "previewAria": "Paket etiket önizlemesi",
+      "width": "Genişlik (mm)",
+      "height": "Yükseklik (mm)",
+      "summary": "{count} paket · Paket miktarı",
+      "helpTitle": "Yazdırma yardımı",
+      "helpBody": "Yazdırma/PDF penceresinde ölçeği %100, üstbilgi/altbilgiyi kapalı tutun. QR okunurluğunu deneme baskısıyla kontrol edin. Metin veya QR sığmazsa ölçüyü artırın.",
+      "invalid": "Ölçü geçersiz. A4 için en çok 190 × 277 mm seçin.",
+      "preparing": "QR kodları hazırlanıyor…",
+      "qrFailed": "QR üretilemedi.",
+      "retry": "Tekrar dene",
+      "noFit": "QR veya metin bu ölçüye sığmıyor. Etiket genişliğini veya yüksekliğini artırın.",
+      "print": "Yazdır / PDF",
+      "stockViewRequired": "Etiket için işlenmiş belge ve bu depoda stok görüntüleme yetkisi gerekir."
     }
   },
   "packageMovement": {
@@ -3829,7 +3866,8 @@
     "save": "Kaydet",
     "saveShort": "KAYDET",
     "bell": "BİLDİRİM",
-    "bellAria": "Bildirimler, {n} açık uyarı"
+    "bellAria": "Bildirimler, {n} açık uyarı",
+    "workspace": "Çalışma alanı değiştir"
   },
   "aktar": {
     "title": "Excel’den aktar",
@@ -3861,7 +3899,19 @@
         "done": "{n} raf satırı açılış stoku olarak yazıldı",
         "goList": "Stok durumuna git"
       },
-      "soon": "CARİ KART EKRANI GELİNCE AÇILIR"
+      "soon": "CARİ KART EKRANI GELİNCE AÇILIR",
+      "depo": {
+        "title": "Depolar",
+        "sub": "DEPO KODU · DEPO ADI",
+        "done": "{n} depo eklendi ya da güncellendi",
+        "goList": "Depolara git"
+      },
+      "raf": {
+        "title": "Raflar",
+        "sub": "DEPO · RAF KODU · ÜST RAF · TÜR",
+        "done": "{n} raf eklendi ya da güncellendi",
+        "goList": "Depolara git"
+      }
     },
     "s1": {
       "lead": "Ne aktaracaksın?",
@@ -3921,6 +3971,17 @@
         "il": "İl",
         "adres": "Adres",
         "tur": "Tür (müşteri / tedarikçi)"
+      },
+      "depo": {
+        "kod": "Depo kodu",
+        "ad": "Depo adı"
+      },
+      "raf": {
+        "depo": "Depo kodu",
+        "kod": "Raf kodu",
+        "ad": "Raf adı",
+        "ust": "Üst raf kodu",
+        "tur": "Tür (kabul / depolama / sevk)"
       }
     },
     "s4": {
@@ -4001,7 +4062,35 @@
     "partyWarning": {
       "TAX_NO_LENGTH": "Vergi no 10, TC no 11 hane olur"
     },
-    "partyWarningFix": "UYARI · KAYIT YİNE DE YAZILIR"
+    "partyWarningFix": "UYARI · KAYIT YİNE DE YAZILIR",
+    "mode": {
+      "update": "Güncelle",
+      "updateToggle": "Koda göre güncelle (kodu eşleşen kaydı değiştir)",
+      "addMissing": "Sistemde olmayan kodları da ekle",
+      "insertOn": "İçeri al: yalnız yeni kayıtlar eklenir",
+      "updateOn": "Güncelle: kodu eşleşen kayıt değişir",
+      "stockRule": "Açılış stoku yalnız boş rafa yazılır; var olan stok bu yolla değişmez (stok yalnız belgeyle değişir)",
+      "skipped": "{n} yeni kod atlanacak",
+      "updCount": "GÜNCELLENECEK",
+      "skippedDone": "{n} yeni kod atlandı"
+    },
+    "masterIssue": {
+      "CODE_MISSING": "Kod boş",
+      "CODE_INVALID": "Kod çok uzun ya da geçersiz",
+      "NAME_MISSING": "Ad boş (yeni kayıt)",
+      "NAME_INVALID": "Ad çok uzun ya da geçersiz",
+      "CODE_DUPLICATE_FILE": "Bu kod dosyada daha önce var",
+      "WAREHOUSE_MISSING": "Depo kodu boş",
+      "WAREHOUSE_UNKNOWN": "Depo bulunamadı",
+      "PARENT_UNKNOWN": "Üst raf bulunamadı (önce üst rafı yaz)",
+      "PARENT_CHANGE": "Mevcut rafın üst rafı değiştirilemez",
+      "PARENT_INVALID": "Bu türde üst raf olamaz",
+      "KIND_UNKNOWN": "Tür anlaşılmadı (kabul / depolama / sevk / yolda)",
+      "IN_USE": "Rafta stok var; tür değiştirilemez",
+      "CODE_TAKEN": "Bu kod kullanımda",
+      "TOO_MANY": "Depodaki raf sınırı aşılıyor",
+      "UNKNOWN": "Satır okunamadı"
+    }
   },
   "parties": {
     "title": "Cari kartlar",
@@ -4286,6 +4375,26 @@
     "offBusy": "İşlem sürüyor, bir saniye…",
     "leaveText": "Onay yarım kaldı. Çıkarsan yazdığın kod kaybolur."
   },
+  "paylas": {
+    "title": "Etkin WMS ekibine katıl",
+    "text": "Etkin WMS'de {tenant} ekibine katıl: {url} (7 gün geçerli)",
+    "rowLabel": "Katılma bağlantısını paylaş",
+    "whatsapp": "WhatsApp ile gönder",
+    "copy": "Bağlantıyı kopyala",
+    "copied": "Kopyalandı",
+    "copiedLive": "Katılma bağlantısı panoya kopyalandı",
+    "copyFailed": "Kopyalanamadı · tekrar dene",
+    "png": "QR'ı indir (PNG)",
+    "pngDone": "QR resmi indirildi",
+    "pngFailed": "QR resmi indirilemedi · tekrar dene",
+    "print": "Yazdır",
+    "locked": "Paylaşma yetkin yok · demo alanında kapalı",
+    "needQr": "Önce QR oluştur, sonra paylaş",
+    "pickBelow": "Aşağıdan bir yol seç: WhatsApp, kopyala, indir, yazdır",
+    "shared": "Paylaşıldı",
+    "shareFailed": "Paylaşılamadı · aşağıdan bir yol seç",
+    "file": "etkin-wms-katilma-qr"
+  },
   "ekip": {
     "title": "Ekip",
     "inviteTitle": "Ofis kullanıcısı davet et",
@@ -4327,7 +4436,8 @@
       "pickGroup": "GRUP SEÇ",
       "invite": "DAVET GÖNDER",
       "qrCreate": "QR OLUŞTUR",
-      "print": "YAZDIR"
+      "print": "YAZDIR",
+      "share": "PAYLAŞ"
     },
     "tabPeople": "KİŞİ",
     "tabPend": "ONAY BEKLİYOR",
@@ -4500,6 +4610,26 @@
       "ekip": {
         "name": "Ekip",
         "sub": "Kişiler · Yetki"
+      },
+      "kokpit": {
+        "name": "Genel bakış",
+        "sub": "Tüm işler tek listede"
+      },
+      "akis": {
+        "name": "İşlemler",
+        "sub": "Görevlerim ana ekranı"
+      },
+      "stok": {
+        "name": "Stok durumu",
+        "sub": "Nerede · Ne kadar"
+      },
+      "ayar": {
+        "name": "Ayarlar",
+        "sub": "Dil · Saat · Kurallar"
+      },
+      "kayit": {
+        "name": "Kim ne yaptı?",
+        "sub": "İşlem kaydı"
       }
     },
     "mainOff": "Bu işlem şu an yapılamaz."
@@ -4551,7 +4681,35 @@
     "updatedLater": "Sonra",
     "mainOff": "Bu işlem şu an yapılamaz.",
     "discarded": "Değişiklikler bırakıldı",
-    "formFirst": "Önce zorunlu alanları doldur, seçimleri tamamla."
+    "formFirst": "Önce zorunlu alanları doldur, seçimleri tamamla.",
+    "excel": {
+      "aria": "Excel · {kind}: içeri al, güncelle ya da indir",
+      "menu": "Excel · {kind}",
+      "title": "Excel · {kind}",
+      "sub": "İçeri al, güncelle ya da indir",
+      "subExport": "Bu listeyi Excel'e indir",
+      "import": "İçeri al",
+      "update": "Güncelle (koda göre)",
+      "export": "Dışarı aktar",
+      "exporting": "Hazırlanıyor…",
+      "done": "{n} satır Excel'e indirildi",
+      "doneTruncated": "İlk {n} satır indirildi · liste daha uzun, aramayla daralt",
+      "donePersonal": "{n} satır indirildi · kişisel alanlar yetkin olmadığı için boş",
+      "kind": {
+        "items": "Ürünler",
+        "parties": "Cariler",
+        "warehouses": "Depolar",
+        "locations": "Raflar"
+      },
+      "err": {
+        "rate": "Çok sık indirdin · 1 dakika sonra yeniden dene",
+        "forbidden": "Bu işlem için yetkin yok · yöneticine sor",
+        "network": "Bağlantı yok · internet gelince yeniden dene",
+        "notFound": "Kayıt bulunamadı",
+        "generic": "İndirilemedi · yeniden dene",
+        "reauth": "Güvenlik için yeniden giriş yap · seni giriş ekranına götürüyorum"
+      }
+    }
   },
   "saha": {
     "online": "Çevrimiçi",
@@ -4566,6 +4724,7 @@
       "title": "Okut",
       "sub": "SAHA · KOD OKUT",
       "camHint": "ÜRÜN · KOLİ · RAF · İRSALİYE",
+      "distanceHint": "Biraz uzaklaştır · 25–30 cm",
       "camRegion": "Kamera açık, kodu çerçeveye getir",
       "say": "Okut ya da söyle",
       "saySub": "KODU ÇERÇEVEYE GETİR · İŞ KENDİ AÇILIR",
@@ -4870,5 +5029,260 @@
     "approveConfirm": "Onayı ver",
     "postConfirm": "Fişi işle",
     "cancelConfirm": "İptali onayla"
+  },
+  "baglantilar": {
+    "title": "Bağlantılar",
+    "back": "Ayarlara dön",
+    "tabs": "Ayarlar sekmeleri",
+    "tabGeneral": "Genel",
+    "tabLinks": "Bağlantılar",
+    "lockTitle": "Toplu işlem yetkin yok",
+    "lockSub": "Excel aktarımı için yöneticin sana yetki versin",
+    "lockData": "Excel aktarımı yetkin yok · yöneticine sor",
+    "lockMaster": "Depo ve raf içeri almayı yalnız yönetici yapar",
+    "lockStock": "Açılış stoku güncellenemez · stok yalnız belgeyle değişir",
+    "head": "TOPLU İŞLEM",
+    "headHint": "Önce alanı, sonra işlemi seç",
+    "step1": "1 · Alan",
+    "step1Sub": "Hangi kayıtlar?",
+    "step2": "2 · İşlem",
+    "step2Sub": "Ne yapılsın?",
+    "alan": {
+      "items": "Ürünler",
+      "parties": "Cariler",
+      "warehouses": "Depolar",
+      "locations": "Raflar",
+      "stock": "Açılış stoku"
+    },
+    "alanSub": {
+      "items": "KOD · AD · BARKOD",
+      "parties": "MÜŞTERİ · TEDARİKÇİ",
+      "warehouses": "DEPO KODU · AD",
+      "locations": "RAF · ÜST RAF · TÜR",
+      "stock": "ÜRÜN · RAF · MİKTAR"
+    },
+    "islem": {
+      "import": "İçeri al",
+      "update": "Güncelle",
+      "export": "Dışarı aktar"
+    },
+    "islemSub": {
+      "import": "YENİ KAYITLAR",
+      "update": "KODA GÖRE",
+      "export": ".XLSX İNDİR"
+    },
+    "pickFirst": "Önce alanı ve işlemi seç",
+    "pickArea": "Önce alanı seç",
+    "pickOp": "Şimdi işlemi seç",
+    "hint": {
+      "import": "Excel dosyanı seçeceksin; sütunları ben eşlerim, önce kontrol ederim",
+      "update": "Kodu eşleşen kayıt güncellenir; yenileri ekle ya da atla seçersin",
+      "export": "Tüm liste .xlsx olarak iner; düzenleyip geri yükleyebilirsin"
+    },
+    "template": "Boş şablon",
+    "templateSub": "Sütun başlıkları hazır Excel",
+    "templatePick": "Önce alanı seç",
+    "templateBtn": "{alan} şablonunu indir",
+    "templateDone": "Şablon indirildi",
+    "done": "{n} satır Excel'e indirildi",
+    "doneTruncated": "İlk {n} satır indirildi · liste daha uzun",
+    "donePersonal": "{n} satır indirildi · kişisel alanlar yetkin olmadığı için boş",
+    "err": {
+      "rate": "Çok sık indirdin · 1 dakika sonra yeniden dene",
+      "forbidden": "Bu işlem için yetkin yok · yöneticine sor",
+      "network": "Bağlantı yok · internet gelince yeniden dene",
+      "notFound": "Kayıt bulunamadı",
+      "generic": "İndirilemedi · yeniden dene",
+      "reauth": "Güvenlik için yeniden giriş yap · seni giriş ekranına götürüyorum"
+    },
+    "main": {
+      "import": "AKTAR'A GEÇ",
+      "update": "GÜNCELLE",
+      "export": "İNDİR",
+      "exporting": "HAZIRLANIYOR"
+    },
+    "mainAria": "{alan} · {islem}",
+    "integrations": "Entegrasyonlar",
+    "integrationsHint": "Paraşüt hazır · Logo yakında",
+    "integrationsSub": "Muhasebe ve ERP bağlantıları",
+    "parasut": "Paraşüt",
+    "logo": "Logo",
+    "soon": "YAKINDA",
+    "soonAria": "{name} bağlantısı yakında",
+    "open": "Aç",
+    "openAria": "{name} bağlantısını aç"
+  },
+  "integrations": {
+    "title": "Entegrasyon",
+    "locked": "Bu ekran yalnız hesap sahibinde",
+    "lockedHint": "ERP bağlantısını yalnız hesap sahibi kurar ve değiştirir.",
+    "head": "ERP BAĞLANTISI",
+    "hintNone": "ERP'Nİ SEÇ · BİLGİLERİ GİR · BAĞLAN",
+    "hintOn": "AÇ / KAPAT · YÖNÜ SEÇ · GERİSİ KENDİLİĞİNDEN",
+    "demo": "Örnek (demo) alanda ERP bağlanmaz",
+    "demoSub": "GERÇEK ÇALIŞMA ALANINDA BAĞLAN",
+    "providerList": "ERP seç",
+    "providers": {
+      "PARASUT": {
+        "name": "Paraşüt",
+        "sub": "ÖN MUHASEBE · BULUT",
+        "ini": "P"
+      },
+      "LOGO": {
+        "name": "Logo",
+        "sub": "ÜRÜN BİLGİSİ BEKLENİYOR",
+        "ini": "L"
+      }
+    },
+    "pillConnect": "BAĞLAN",
+    "pillOn": "BAĞLI",
+    "pillErr": "HATA",
+    "pillSoon": "YAKINDA",
+    "soonToast": "Logo yakında · ürün bilgisi bekleniyor",
+    "connTitle": "Bağlı · {label}",
+    "connSub": "{provider} · SON SINAMA {at}",
+    "connSubNever": "{provider} · HENÜZ SINANMADI",
+    "connErrTitle": "{provider} bağlantısında sorun var",
+    "connErrSub": "BAĞLANTIYI SINA YA DA YENİDEN BAĞLAN",
+    "test": "Bağlantıyı sına",
+    "cut": "Kes",
+    "reconnect": "Yeniden bağlan",
+    "flowsTitle": "Ne aktarılsın?",
+    "flowsSub": "AÇ · YÖNÜ SEÇ · GERİSİ KENDİLİĞİNDEN",
+    "runsTitle": "Son çalışmalar",
+    "runsSub": "HATA OLURSA KIRMIZI · NEDENİ YAZAR",
+    "runsEmpty": "Henüz çalışma yok · bir akış aç",
+    "flows": {
+      "PRODUCTS": {
+        "name": "Ürün kartları",
+        "sub": "KOD · AD · BİRİM · STOK DEĞİŞMEZ"
+      },
+      "CONTACTS": {
+        "name": "Cari kartlar",
+        "sub": "MÜŞTERİ · TEDARİKÇİ"
+      },
+      "WAREHOUSES": {
+        "name": "Depolar",
+        "sub": "DEPO ADI"
+      },
+      "SALES_ORDERS": {
+        "name": "Siparişler",
+        "sub": "{provider}'TE SİPARİŞ YOK"
+      },
+      "SHIPMENTS": {
+        "name": "İrsaliye",
+        "sub": "SEVK EDİLİNCE {provider}'E"
+      },
+      "STOCK": {
+        "name": "Stok miktarı",
+        "sub": "ELDEKİ MİKTAR → {provider}"
+      }
+    },
+    "dirs": {
+      "PULL": "{provider} → Etkin",
+      "PUSH": "Etkin → {provider}",
+      "BOTH": "İki yönlü"
+    },
+    "dirAria": "{name} yönü",
+    "flowOnAria": "{name}: açık. Kapatmak için dokun",
+    "flowOffAria": "{name}: kapalı. Açmak için dokun",
+    "flowNaAria": "{name}: {provider}'te karşılığı yok",
+    "flowNa": "{provider}'te karşılığı yok · Logo gelince açılır",
+    "flowOn": "{name} açıldı · ilk aktarım başladı",
+    "flowOnNoQueue": "{name} açıldı · saatlik aktarımda çalışır",
+    "flowOff": "{name} kapandı",
+    "dirSet": "{name}: {dir}",
+    "never": "HENÜZ ÇALIŞMADI",
+    "lastOk": "SON ÇALIŞMA {at}",
+    "lastErr": "SON ÇALIŞMA {at} · {reason}",
+    "errBadge": "{n} HATA",
+    "runNow": "Şimdi çalıştır",
+    "runQueued": "{name} sıraya alındı · birazdan biter",
+    "runBusy": "Zaten sırada · birazdan biter",
+    "runAllQueued": "Açık akışlar sıraya alındı",
+    "mainConnect": "BAĞLAN",
+    "mainConnectAria": "{provider}'e bağlan",
+    "mainSync": "EŞİTLE",
+    "mainSyncAria": "Açık akışları şimdi eşitle",
+    "mainSyncNone": "Önce aktarılacak bir şey aç",
+    "runStatus": {
+      "SUCCESS": "TAMAM",
+      "PARTIAL": "KISMEN",
+      "FAILED": "HATA",
+      "RUNNING": "SÜRÜYOR"
+    },
+    "runMeta": "{at} · {summary}",
+    "runCounts": "{created} YENİ · {updated} GÜNCEL · {linked} EŞLENDİ",
+    "runFailedRows": "{n} SATIR OLMADI",
+    "runNoChange": "DEĞİŞİKLİK YOK",
+    "trigger": {
+      "SCHEDULE": "SAATLİK",
+      "MANUAL": "ELLE"
+    },
+    "outboxCheck": "{n} irsaliye kontrol bekliyor",
+    "outboxCheckSub": "PARAŞÜT YANIT VERMEDİ · ÇİFT OLMASIN DİYE TEKRAR GÖNDERİLMEDİ",
+    "outboxFailed": "{n} irsaliye gönderilemedi",
+    "form": {
+      "title": "{provider}'e bağlan",
+      "note": "Şirket numarası ve istemci bilgisi Paraşüt'ten gelir (destek@parasut.com). Parolan saklanmaz; yalnız bağlantı anahtarı şifreli tutulur.",
+      "company": "ŞİRKET NUMARASI",
+      "companyHint": "Paraşüt adres çubuğundaki sayı: uygulama.parasut.com/115 → 115",
+      "clientId": "İSTEMCİ KİMLİĞİ",
+      "clientSecret": "İSTEMCİ SIRRI",
+      "email": "PARAŞÜT E-POSTASI",
+      "password": "PARAŞÜT PAROLASI",
+      "submit": "Bağlan",
+      "cancel": "Vazgeç",
+      "missing": "Beş alanın hepsi gerekli",
+      "connected": "Bağlandı · {label}"
+    },
+    "cutTitle": "Bağlantı kesilsin mi?",
+    "cutText": "Aktarım durur, bağlantı anahtarı silinir. Kartlar ve eşleşmeler Etkin'de kalır; yeniden bağlanınca kaldığı yerden devam eder.",
+    "cutConfirm": "Bağlantıyı kes",
+    "cutCancel": "Vazgeç, bağlı kalsın",
+    "cutDone": "Bağlantı kesildi",
+    "testOk": "Bağlantı sağlam · {label}",
+    "reauth": "Bu işlem için yeniden giriş gerekiyor",
+    "reauthLink": "Giriş yap",
+    "reasons": {
+      "AUTH_FAILED": "Paraşüt bilgileri kabul etmedi · kontrol et",
+      "COMPANY_NOT_FOUND": "Bu şirket numarası bu hesapta yok",
+      "NETWORK": "Paraşüt'e ulaşılamadı · biraz sonra dene",
+      "RATE_LIMITED": "Paraşüt çok istek dedi · biraz sonra dene",
+      "UNAVAILABLE": "Paraşüt şu an yanıt vermiyor",
+      "INVALID": "Paraşüt isteği reddetti",
+      "FORBIDDEN": "Bu Paraşüt hesabının izni yok",
+      "NOT_FOUND": "Paraşüt'te kayıt bulunamadı",
+      "BAD_RESPONSE": "Paraşüt'ten anlaşılmayan yanıt geldi",
+      "CONFIG": "Sunucu ayarı eksik · Etkin ekibine bildir",
+      "DEMO": "Örnek (demo) alanda ERP bağlanmaz",
+      "COMPANY_CHANGED": "Başka şirkete geçmek için Etkin ekibiyle görüş",
+      "UNAVAILABLE_PROVIDER": "Bu ERP henüz yok",
+      "REAUTH_REQUIRED": "Paraşüt yeniden giriş istiyor · yeniden bağlan",
+      "SECRET_UNREADABLE": "Bağlantı anahtarı okunamadı · yeniden bağlan",
+      "NOT_CONNECTED": "Bağlı değil",
+      "CONNECTOR_REVOKED": "Bağlayan kişinin yetkisi kalktı · yeniden bağlan",
+      "UNSUPPORTED": "Bu yön bu ERP'de yok",
+      "NO_ENABLED_FLOW": "Önce aktarılacak bir şey aç",
+      "QUEUE_UNAVAILABLE": "Arka plan şu an kapalı · saatlik aktarım alır",
+      "CONTACT_NOT_LINKED": "Cari Paraşüt'e bağlı değil",
+      "ITEM_NOT_LINKED": "Ürün Paraşüt'e bağlı değil",
+      "DOCUMENT_EMPTY": "Belgede satır yok",
+      "DOCUMENT_NOT_POSTED": "Belge işlenmemiş",
+      "UNCERTAIN": "Paraşüt yanıt vermedi · kontrol et",
+      "ROWS_FAILED": "Bazı satırlar aktarılamadı",
+      "INTERNAL": "Beklenmeyen hata · Etkin ekibine bildir",
+      "PROVIDER_AUTH_FAILED": "Paraşüt girişi reddetti",
+      "PROVIDER_NETWORK": "Paraşüt'e ulaşılamadı",
+      "PROVIDER_RATE_LIMITED": "Paraşüt çok istek dedi",
+      "PROVIDER_UNAVAILABLE": "Paraşüt yanıt vermedi",
+      "PROVIDER_INVALID": "Paraşüt kaydı reddetti",
+      "PROVIDER_FORBIDDEN": "Paraşüt izni yok",
+      "PROVIDER_NOT_FOUND": "Paraşüt'te bulunamadı",
+      "PROVIDER_BAD_RESPONSE": "Paraşüt yanıtı okunamadı",
+      "PROVIDER_COMPANY_NOT_FOUND": "Şirket bulunamadı",
+      "PROVIDER_CONFIG": "Sunucu ayarı eksik",
+      "UNKNOWN": "Bir şey ters gitti · tekrar dene"
+    }
   }
 }

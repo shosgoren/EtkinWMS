@@ -222,6 +222,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
       dark={dark}
       title={t("title")}
       icon={ICON}
+      excel={{ kind: "parties" }}
       testId="parties"
       bar={{
         back: { href: base, aria: t("back") },

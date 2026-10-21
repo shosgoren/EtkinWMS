@@ -13,6 +13,7 @@ import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { KalipDestek } from "./destek.tsx";
+import { useKalipExcel, type KalipExcelProps } from "./excel.tsx";
 import { KalipSurumBekcisi } from "./surum.tsx";
 import { kdz, kdzOrtak, type KalipScope } from "./tokens.ts";
 
@@ -112,6 +113,8 @@ export interface KalipEkranProps {
   readonly subtitle?: string;
   /** Sağ üst `.tph` yuvası. Verilmezse Sorun bildir + Destek (T-967, kiracı bağlamı varsa; yoksa Yardım bağlantısı). `null` = boş. */
   readonly actions?: ReactNode | null;
+  /** T-981b: üst çubukta Excel düğmesi (İçeri al / Güncelle / Dışarı aktar); yalnız aktarım yetkisi olana çizilir (kiracı bağlamı). */
+  readonly excel?: KalipExcelProps;
   /** Alt cam çubuk (ortak KabukBar): ekranın ana işlemi, Geri, Ana ekran. `dark` kabdan gelir. */
   readonly bar: Omit<KabukBarProps, "dark">;
   /** Kabın içinde, `.inner` dışında çizilen katmanlar (kaynak `.sxback`, `.cfback/.cfbox`, `.toast`). */
@@ -137,13 +140,14 @@ function useOnline(): boolean {
   return online;
 }
 
-export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
+export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
   const t = useTranslations("kalip");
   const ctx = useKabuk();
   const online = useOnline();
   const router = useRouter();
   const [hesap, setHesap] = useState(false);
   const closeHesap = useCallback(() => setHesap(false), []);
+  const xls = useKalipExcel(kind, ctx?.slug, excel, ctx?.excel, dark, closeHesap);
   // Tema cihaz tercihidir (çerez, Pano ve Ayarlar ile aynı); sayfa sunucuda çerezi okuyarak yeniden çizilir.
   const toggleTheme = useCallback(() => {
     document.cookie = `${THEME_COOKIE}=${dark ? "acik" : "koyu"}; path=/; max-age=31536000; samesite=lax`;
@@ -214,14 +218,22 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
                   {sub === "" ? null : <small>{sub}</small>}
                 </span>
               </div>
-              {slot === null ? null : (
+              {slot === null && xls.button === null ? null : (
                 <div className="tph" role="group" aria-label={t("topActions")}>
+                  {xls.button}
                   {slot}
                 </div>
               )}
               {/* T-971 (B-92): Pano'nun Hesap düğmesi — `actions` yuvasından ayrı öğe (Sorun/Destek o yuvada). */}
               <span className={panoScope} style={{ display: "contents" }} data-testid="kalip-account">
-                <HesapDugme team={false} open={hesap} onClick={() => setHesap((o) => !o)} />
+                <HesapDugme
+                  team={false}
+                  open={hesap}
+                  onClick={() => {
+                    xls.close();
+                    setHesap((o) => !o);
+                  }}
+                />
               </span>
             </header>
             <main className="inner" id="kalip-main">
@@ -230,6 +242,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
             {overlays}
             {/* T-990: yayından sonra açık kalan sayfa eski eylem kimliğiyle çağırırsa "Uygulama güncellendi — Yenile". */}
             <KalipSurumBekcisi />
+            {xls.layer}
             {hesap ? (
               <div className={panoScope} style={{ display: "contents" }}>
                 <HesapMenu team={false} me={me} dark={dark} onToggleTheme={toggleTheme} onClose={closeHesap} />

@@ -1449,7 +1449,7 @@ export default defineConfig(
     rules: { "wms/no-client-server-import": "error", "wms/no-client-server-loader": "error" },
   },
   {
-    // T-991 (B-99): ALTIN-KURAL ekran standardı — yalnızca EK kural (`wms/ui-standard`); mevcut hiçbir kural değiştirilmedi.
+    // T-990b (B-99): ALTIN-KURAL ekran standardı — yalnızca EK kural (`wms/ui-standard`); mevcut hiçbir kural değiştirilmedi.
     files: ["apps/web/app/**/*.{ts,tsx}"],
     plugins: { wms: WMS_PLUGIN },
     rules: { "wms/ui-standard": "error" },
