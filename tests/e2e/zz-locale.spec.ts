@@ -32,6 +32,7 @@ async function expectProducts(page: Page, m: typeof en | typeof tr, locale: "tr"
 
 test.describe("çalışma alanı dili (T-999c)", () => {
   test("English seçilince Ürünler ve alt çubuk İngilizce; Türkçe'ye geri dönülür", async ({ page }) => {
+    await page.goto("/"); // rehber denetimi localStorage okur; about:blank'te okunamaz (diğer spec'lerle aynı)
     await enterDemoShared(page, "Yönetici");
     try {
       await pickLocale(page, "en");
