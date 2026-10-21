@@ -8,7 +8,7 @@ import { z } from "zod";
 
 /** Kayıtlı iş türleri. `email.send` T-116, `invitation.deliver` T-117, `demo.reseed` T-123 tarafından doldurulur;
  * `stock.document.post` T-222, `stock.consistency.check` T-225 (handler'lar o kartlarda; ADR-019 §5);
- * `platform.activation.deliver` ve `trial.welcome` T-995 (ADR-026 §3); `support.notify` T-967 (B-84, operatöre WhatsApp kısa bildirimi). */
+ * `platform.activation.deliver` ve `trial.welcome` T-995 (ADR-026 §3); `support.notify` T-967 (B-84, operatöre WhatsApp kısa bildirimi); `integration.sync` T-991 (ERP senkronu). */
 export const JOB_TYPES = [
   "email.send",
   "invitation.deliver",
@@ -18,6 +18,7 @@ export const JOB_TYPES = [
   "platform.activation.deliver",
   "trial.welcome",
   "support.notify",
+  "integration.sync",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
@@ -50,6 +51,14 @@ export const JOB_PAYLOAD_SCHEMAS = {
   "trial.welcome": z.object({}).strict(),
   /** Yeni destek talebi bildirimi (T-967): tenant işi; yalnız talep kimliği ve kısa numara (müşteri adı/içeriği yok). */
   "support.notify": z.object({ ticketId: z.string().uuid(), ticketNo: z.number().int().positive() }).strict(),
+  /** ERP senkronu (T-991): tenant işi; yalnız bağlantı kimliği, isteğe bağlı tek akış ve tetikleyici. Sır yükte yoktur (DB'de mühürlü). */
+  "integration.sync": z
+    .object({
+      integrationId: z.string().uuid(),
+      flow: z.enum(["PRODUCTS", "CONTACTS", "WAREHOUSES", "SALES_ORDERS", "SHIPMENTS", "STOCK"]).optional(),
+      trigger: z.enum(["SCHEDULE", "MANUAL"]),
+    })
+    .strict(),
 } as const satisfies Record<JobType, z.ZodType>;
 
 export type JobPayload<T extends JobType> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[T]>;

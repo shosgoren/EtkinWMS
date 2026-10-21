@@ -1,0 +1,50 @@
+// Stok OKUMALARI — yalnız SELECT (T-991; I-04, G-01). Stok tablosu adı yalnız bu dosyadadır (`wms/stock-sql-guard` dosya düzeyinde ad arar;
+// kardeş örnek ledger-reads.ts). Yazma ve kilit yoktur: ERP'ye gönderilecek "eldeki miktar" eşlemeli ürün × eşlemeli depo için okunur.
+import { sql } from "drizzle-orm";
+import type { AccessTx } from "../identity/access.ts";
+
+export type StockLevelRow = {
+  item_id: string;
+  warehouse_id: string;
+  /** Ondalık metin (I-09). */
+  quantity: string;
+  product_ext: string;
+  warehouse_ext: string;
+};
+
+/**
+ * Son gönderimden (integration_stock_marks) farklı olan eşlemeli ürün × depo toplamları; bakiyesi kalmayan eski işaretli çift 0 ile döner.
+ * Sınır `limit` (koşu başına en çok bu kadar satır; kalan sonraki koşuda).
+ */
+export async function selectChangedStockLevels(tx: AccessTx, tenantId: string, integrationId: string, system: string, limit: number): Promise<StockLevelRow[]> {
+  return tx.execute<StockLevelRow>(
+    sql`WITH it AS (
+          SELECT entity_id AS item_id, external_id AS ext FROM public.external_refs WHERE tenant_id = ${tenantId}::uuid AND system = ${system} AND entity_type = 'ITEM'
+        ), wh AS (
+          SELECT entity_id AS warehouse_id, external_id AS ext FROM public.external_refs WHERE tenant_id = ${tenantId}::uuid AND system = ${system} AND entity_type = 'WAREHOUSE'
+        ), totals AS (
+          SELECT d.item_id, l.warehouse_id, SUM(b.quantity) AS q
+            FROM public.stock_balances b
+            JOIN public.stock_dimensions d ON d.tenant_id = b.tenant_id AND d.id = b.stock_dimension_id
+            JOIN public.locations l ON l.tenant_id = d.tenant_id AND l.id = d.location_id
+           WHERE b.tenant_id = ${tenantId}::uuid
+             AND d.item_id IN (SELECT item_id FROM it) AND l.warehouse_id IN (SELECT warehouse_id FROM wh)
+           GROUP BY d.item_id, l.warehouse_id
+        ), pairs AS (
+          SELECT item_id, warehouse_id, q FROM totals
+          UNION ALL
+          SELECT m.item_id, m.warehouse_id, 0::numeric FROM public.integration_stock_marks m
+           WHERE m.tenant_id = ${tenantId}::uuid AND m.integration_id = ${integrationId}::uuid
+             AND NOT EXISTS (SELECT 1 FROM totals t WHERE t.item_id = m.item_id AND t.warehouse_id = m.warehouse_id)
+        )
+        SELECT p.item_id, p.warehouse_id, p.q::text AS quantity, it.ext AS product_ext, wh.ext AS warehouse_ext
+          FROM pairs p
+          JOIN it ON it.item_id = p.item_id
+          JOIN wh ON wh.warehouse_id = p.warehouse_id
+          LEFT JOIN public.integration_stock_marks m
+                 ON m.tenant_id = ${tenantId}::uuid AND m.integration_id = ${integrationId}::uuid AND m.item_id = p.item_id AND m.warehouse_id = p.warehouse_id
+         WHERE m.quantity IS DISTINCT FROM p.q AND NOT (m.quantity IS NULL AND p.q = 0)
+         ORDER BY p.item_id, p.warehouse_id
+         LIMIT ${limit}`,
+  );
+}
