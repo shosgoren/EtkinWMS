@@ -428,7 +428,9 @@ class Component extends DCLogic {
         fNeedHint: 'Kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.',
         fConsentA: 'Demo talebime ilişkin', notice: 'Aydınlatma Metni', fConsentB: '’ni okudum.',
         privacy: 'Aydınlatma Metni', fSubmit: 'Teklif ve demo iste',
-        fSending: 'Talebiniz kaydediliyor…', fOk: 'Talebiniz kaydedildi. Demo ve kapsam için sizinle iletişime geçeceğiz.', fErr: 'Talep kaydedilemedi. Lütfen tekrar deneyin.', fInvalid: 'Ad, firma, geçerli e-posta ve Aydınlatma Metni kutusunu kontrol edin.',
+        fSending: 'Talebiniz gönderiliyor…', fSendingBtn: 'Gönderiliyor…', fErr: 'Gönderilemedi', fRetry: 'tekrar dene', fLimit: 'Çok fazla deneme oldu. Biraz sonra tekrar deneyin.', fInvalid: 'Eksik ya da hatalı alanları düzeltin.',
+        fDoneTitle: 'Talebiniz başarıyla gönderildi', fDoneBody: 'En geç 1 iş günü içinde sizinle iletişime geçeceğiz.', fRef: 'Talep no', fHome: 'Ana sayfaya dön',
+        eNameReq: 'Adınızı yazın.', eCompanyReq: 'Firma adını yazın.', eEmailReq: 'E-posta adresinizi yazın.', eEmailBad: 'Geçerli bir e-posta yazın (ör. ad@firma.com).', eConsentReq: 'Devam etmek için Aydınlatma Metni kutusunu işaretleyin.',
         footTag: 'Uçtan uca izlenebilir depo yönetimi.'
       },
       en: {
@@ -542,7 +544,9 @@ class Component extends DCLogic {
         fNeedHint: 'Please do not include ID numbers, health data, passwords or your customers’ personal data.',
         fConsentA: 'I have read the', notice: 'Privacy Notice', fConsentB: ' for my demo request.',
         privacy: 'Privacy Notice', fSubmit: 'Request an offer & demo',
-        fSending: 'Sending your request…', fOk: 'Your request has been saved. We will contact you about a demo and scope.', fErr: 'The request could not be saved. Please try again.', fInvalid: 'Please check name, company, a valid email and the Privacy Notice box.',
+        fSending: 'Sending your request…', fSendingBtn: 'Sending…', fErr: 'Could not send', fRetry: 'try again', fLimit: 'Too many attempts. Please try again a little later.', fInvalid: 'Please fix the missing or invalid fields.',
+        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        eNameReq: 'Please enter your name.', eCompanyReq: 'Please enter your company.', eEmailReq: 'Please enter your email address.', eEmailBad: 'Please enter a valid email (e.g. name@company.com).', eConsentReq: 'Please tick the Privacy Notice box to continue.',
         footTag: 'End-to-end traceable warehouse management.'
       }
     };
@@ -552,6 +556,10 @@ class Component extends DCLogic {
     var lang = this.state.lang || this.props.lang || 'tr';
     var d = this.dict();
     var t = d[lang] || d.tr;
+    var fk = this.state.formKey || '';
+    var fe = this.state.fe || {};
+    var fBusy = fk === 'fSending' || fk === 'fLeaving';
+    var fErrRow = fk === 'fErr' || fk === 'fLimit' || fk === 'fInvalid';
     // T-407 (üretim düzeltmesi): panelden yayınlanan içerik (boot.js `props.site`). Metin Türkçedir; İngilizce görünümde tasarım metni kalır.
     var site = this.props.site && typeof this.props.site === 'object' ? this.props.site : null;
     if (site && lang === 'tr') t = Object.assign({}, t, { title1: site.title1, title2: site.title2, heroSub: site.subtitle });
@@ -852,9 +860,26 @@ class Component extends DCLogic {
       setTr: () => { this.setState({ lang: 'tr' }); },
       setEn: () => { this.setState({ lang: 'en' }); },
       lang: lang,
-      formMsg: this.state.formKey ? t[this.state.formKey] || this.state.formText || '' : '',
-      formCls: 'fstatus' + (this.state.formKey === 'fOk' ? ' ok' : this.state.formKey && this.state.formKey !== 'fSending' ? ' err' : ''),
-      formBusyAttr: this.state.formKey === 'fSending' ? 'disabled' : null
+      // T-431: demo formu durumu (boot.js yazar): null | fSending | fLeaving | fOk | fErr | fLimit | fInvalid; alan hataları `fe` (kod, metin değil: dil değişince çevrilir).
+      formOpen: fk !== 'fOk',
+      formDone: fk === 'fOk',
+      formSending: fk === 'fSending',
+      formIdle: fk !== 'fSending',
+      formBoxCls: 'dform' + (fk === 'fLeaving' ? ' leaving' : ''),
+      formBusy: fBusy ? 'true' : 'false',
+      formBusyAttr: fBusy ? 'true' : null,
+      formMsg: fk === 'fOk' ? t.fDoneTitle + '. ' + t.fDoneBody : fk === 'fSending' ? t.fSending : fErrRow ? t[fk] : '',
+      formCls: 'fstatus' + (fErrRow ? ' err' : ' sr'),
+      formErrRow: fErrRow,
+      formRetry: fk === 'fErr',
+      formRef: this.state.formRef || '',
+      retry: () => { var f = document.getElementById('demo-form'); if (!f || !f.requestSubmit) return; var b = f.querySelector('.fsubmit'); if (b) b.focus(); f.requestSubmit(); },
+      fe: {
+        name: fe.name ? 'true' : null, nameDesc: fe.name ? 'err-name' : null, nameMsg: fe.name ? t.eNameReq : '',
+        company: fe.company ? 'true' : null, companyDesc: fe.company ? 'err-company' : null, companyMsg: fe.company ? t.eCompanyReq : '',
+        email: fe.email ? 'true' : null, emailDesc: fe.email ? 'err-email' : null, emailMsg: fe.email === 'bad' ? t.eEmailBad : fe.email ? t.eEmailReq : '',
+        consent: fe.consent ? 'true' : null, consentDesc: fe.consent ? 'err-consent' : null, consentMsg: fe.consent ? t.eConsentReq : ''
+      }
     };
     for (var k in phX) base[k] = phX[k];
     for (var h in heroX) base[h] = heroX[h];
@@ -886,13 +911,54 @@ window.EtkinDCComponent = Component;
   const comp = new window.EtkinDCComponent(props);
   window.EtkinDC.mount(root, tpl, comp);
 
-  document.addEventListener("submit", async (event) => {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement) || form.id !== "demo-form") return;
-    event.preventDefault();
-    if (comp.state.formKey === "fSending") return;
+  // T-431: demo formu geri bildirimi (ALTIN-KURAL 3): görsel + sesli; çift gönderim engeli; hata olursa girilen bilgi korunur.
+  const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // sunucu validateLead ile aynı
+  const FIELDS = ["name", "company", "email", "consent"];
+  const reduced = () => props.motion === false;
+  /** @type {AudioContext | null} */
+  let audio = null;
+  const unlockAudio = () => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!audio && Ctx) audio = new Ctx();
+      if (audio && audio.state === "suspended") void audio.resume();
+    } catch {
+      audio = null;
+    }
+  };
+  /** Kısa ve yumuşak ses: başarıda yükselen iki nota, uyarı/hatada alçak tek nota. Ses kapalıysa sessizce geçer. */
+  const tone = (kind) => {
+    try {
+      if (!audio) return;
+      const notes = kind === "ok" ? [[660, 0], [880, 0.12]] : [[220, 0], [196, 0.14]];
+      for (const [freq, at] of notes) {
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        const t0 = audio.currentTime + at;
+        osc.type = kind === "ok" ? "sine" : "triangle";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+        osc.connect(gain).connect(audio.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.24);
+      }
+    } catch {
+      // ses desteklenmiyor: görsel geri bildirim yeterli
+    }
+  };
+  /** Bir sonraki çizimden sonra (setState mikro görevde çizer) odağı taşır. */
+  const focusLater = (selector) => setTimeout(() => {
+    const target = document.querySelector(selector);
+    if (target instanceof HTMLElement) {
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: "center", behavior: reduced() ? "auto" : "smooth" });
+    }
+  }, 0);
+  const readForm = (form) => {
     const el = form.elements;
-    const data = {
+    return {
       name: String(el.namedItem("name")?.value || ""),
       company: String(el.namedItem("company")?.value || ""),
       email: String(el.namedItem("email")?.value || ""),
@@ -901,27 +967,88 @@ window.EtkinDCComponent = Component;
       website: String(el.namedItem("website")?.value || ""),
       consent: Boolean(el.namedItem("consent")?.checked),
     };
-    if (!form.checkValidity() || !data.consent) {
-      comp.setState({ formKey: "fInvalid", formText: "" });
-      form.reportValidity();
+  };
+  /** Alan hataları (kod): name/company/consent "req", email "req" | "bad". */
+  const validate = (data) => {
+    /** @type {Record<string, string>} */
+    const fe = {};
+    if (!data.name.trim()) fe.name = "req";
+    if (!data.company.trim()) fe.company = "req";
+    const email = data.email.trim();
+    if (!email) fe.email = "req";
+    else if (!EMAIL.test(email)) fe.email = "bad";
+    if (!data.consent) fe.consent = "req";
+    return fe;
+  };
+  const busy = () => ["fSending", "fLeaving", "fOk"].includes(comp.state.formKey);
+
+  // Düzeltilen alanın uyarısı yazarken kalkar; hepsi düzelince üstteki kırmızı satır da kalkar.
+  const revalidate = (event) => {
+    const field = event.target;
+    const form = field instanceof Element ? field.closest("form") : null;
+    if (!(form instanceof HTMLFormElement) || form.id !== "demo-form") return;
+    const current = comp.state.fe || {};
+    const name = field.getAttribute("name") || "";
+    if (!current[name]) return;
+    const fresh = validate(readForm(form));
+    const next = {};
+    for (const key of FIELDS) if (current[key] && fresh[key]) next[key] = fresh[key];
+    const update = { fe: next };
+    if (comp.state.formKey === "fInvalid" && Object.keys(next).length === 0) update.formKey = null;
+    comp.setState(update);
+  };
+  document.addEventListener("input", revalidate);
+  document.addEventListener("change", revalidate);
+
+  document.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.id !== "demo-form") return;
+    event.preventDefault();
+    if (busy()) return; // çift gönderim yok
+    unlockAudio();
+    const data = readForm(form);
+    const fe = validate(data);
+    if (Object.keys(fe).length > 0) {
+      comp.setState({ formKey: "fInvalid", fe });
+      tone("warn");
+      focusLater(`#demo-form [name="${FIELDS.find((k) => fe[k])}"]`);
       return;
     }
-    comp.setState({ formKey: "fSending", formText: "" });
+    comp.setState({ formKey: "fSending", fe: {}, formRef: "" });
+    const failed = (key) => {
+      comp.setState({ formKey: key });
+      tone("warn");
+    };
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);
     try {
       const response = await fetch("/api/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        signal: ctrl.signal,
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        comp.setState({ formKey: response.status === 400 ? "fInvalid" : "fErr", formText: "" });
+      if (!response.ok || !result || result.ok !== true) {
+        failed(response.status === 400 ? "fInvalid" : response.status === 429 ? "fLimit" : "fErr");
         return;
       }
-      if (result && result.ok) form.reset();
-      comp.setState({ formKey: "fOk", formText: "" });
+      // Talep numarası: sunucunun döndürdüğü kimliğin kısa hali (panelde aynı kaydın kimliğinin başı).
+      const id = typeof result.id === "string" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(result.id) ? result.id.slice(0, 8).toUpperCase() : "";
+      tone("ok");
+      const done = () => {
+        comp.setState({ formKey: "fOk", formRef: id });
+        focusLater("#demo-done-title");
+      };
+      if (reduced()) done();
+      else {
+        comp.setState({ formKey: "fLeaving" });
+        setTimeout(done, 300);
+      }
     } catch {
-      comp.setState({ formKey: "fErr", formText: "" });
+      failed("fErr");
+    } finally {
+      clearTimeout(timer);
     }
   });
 })();

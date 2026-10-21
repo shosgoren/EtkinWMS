@@ -457,10 +457,11 @@
         <!--]-->
       </div>
     </div>
-    <form id="demo-form" novalidate="" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Adınız</span><input class="field" type="text" name="name" autocomplete="name" required="" maxlength="100"></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>Firma</span><input class="field" type="text" name="company" autocomplete="organization" required="" maxlength="150"></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>İş e-postası</span><input class="field" type="email" name="email" autocomplete="email" required="" maxlength="254"></label>
+    <form id="demo-form" class="dform" novalidate="" aria-busy="false" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
+      <!--[-->
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Adınız</span><input class="field" type="text" name="name" autocomplete="name" required="" maxlength="100"><!--[--><!--]--></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>Firma</span><input class="field" type="text" name="company" autocomplete="organization" required="" maxlength="150"><!--[--><!--]--></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>İş e-postası</span><input class="field" type="email" name="email" autocomplete="email" required="" maxlength="254"><!--[--><!--]--></label>
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Sektörünüz</span>
         <select class="field" name="sector" data-dc-options="t.options"><option>Üretim</option><option>Toptan ticaret</option><option>Depo ve lojistik</option><option>Perakende</option><option>Diğer</option></select>
       </label>
@@ -469,9 +470,12 @@
         <input type="checkbox" name="consent" required="" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
         <span><span>Demo talebime ilişkin</span> <a href="/privacy"><span>Aydınlatma Metni</span></a><span>’ni okudum.</span></span>
       </label>
+      <!--[--><!--]-->
       <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
-      <button type="submit" class="cta" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer"><span>Teklif ve demo iste</span> <span aria-hidden="true" style="color: #F4C542">↗</span></button>
-      <p id="form-status" class="fstatus" role="status" aria-live="polite"><span></span></p>
+      <button type="submit" class="cta fsubmit" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer"><!--[--><!--]--><!--[--><span>Teklif ve demo iste</span> <span aria-hidden="true" style="color: #F4C542">↗</span><!--]--></button>
+      <!--]-->
+      <!--[--><!--]-->
+      <p id="form-status" class="fstatus sr" role="status" aria-live="polite"><!--[--><!--]--><span><span></span></span><!--[--><!--]--></p>
     </form>
   </div>
 </section>
@@ -820,21 +824,33 @@
         </sc-for>
       </div>
     </div>
-    <form id="demo-form" novalidate style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100"></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150"></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254"></label>
+    <form id="demo-form" class="{{formBoxCls}}" novalidate aria-busy="{{formBusy}}" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
+      <sc-if value="{{formOpen}}" hint-placeholder-val="{{true}}">
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100" aria-invalid="{{fe.name}}" aria-describedby="{{fe.nameDesc}}"><sc-if value="{{fe.name}}"><small id="err-name" class="ferr">{{fe.nameMsg}}</small></sc-if></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150" aria-invalid="{{fe.company}}" aria-describedby="{{fe.companyDesc}}"><sc-if value="{{fe.company}}"><small id="err-company" class="ferr">{{fe.companyMsg}}</small></sc-if></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254" aria-invalid="{{fe.email}}" aria-describedby="{{fe.emailDesc}}"><sc-if value="{{fe.email}}"><small id="err-email" class="ferr">{{fe.emailMsg}}</small></sc-if></label>
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fSector}}
         <select class="field" name="sector" data-dc-options="t.options"></select>
       </label>
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" aria-describedby="need-hint" style="resize: vertical"></textarea><small id="need-hint" style="font-size: 13px; font-weight: 500; color: #4C6275; line-height: 1.45">{{t.fNeedHint}}</small></label>
       <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
-        <input type="checkbox" name="consent" required style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
+        <input type="checkbox" name="consent" required aria-invalid="{{fe.consent}}" aria-describedby="{{fe.consentDesc}}" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
         <span>{{t.fConsentA}} <a href="/privacy">{{t.notice}}</a>{{t.fConsentB}}</span>
       </label>
+      <sc-if value="{{fe.consent}}"><small id="err-consent" class="ferr ferr-consent">{{fe.consentMsg}}</small></sc-if>
       <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
-      <button type="submit" class="cta" disabled="{{formBusyAttr}}" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer">{{t.fSubmit}} <span aria-hidden="true" style="color: {{accent}}">↗</span></button>
-      <p id="form-status" class="{{formCls}}" role="status" aria-live="polite">{{formMsg}}</p>
+      <button type="submit" class="cta fsubmit" aria-disabled="{{formBusyAttr}}" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer"><sc-if value="{{formSending}}"><span class="fspin" aria-hidden="true"></span>{{t.fSendingBtn}}</sc-if><sc-if value="{{formIdle}}">{{t.fSubmit}} <span aria-hidden="true" style="color: {{accent}}">↗</span></sc-if></button>
+      </sc-if>
+      <sc-if value="{{formDone}}" hint-placeholder-val="{{false}}">
+      <div class="fdone" data-testid="demo-success">
+        <svg class="fdone-ic" viewBox="0 0 104 104" aria-hidden="true"><circle class="fdone-ring" cx="52" cy="52" r="46" fill="none" stroke="#5FAF8A" stroke-width="3"></circle><circle cx="52" cy="52" r="46" fill="#E3F4EA" stroke="#5FAF8A" stroke-width="3"></circle><path class="fdone-tick" d="M32 53l13 13 27-28" pathLength="100" fill="none" stroke="#1E7A4C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <h3 id="demo-done-title" class="fdone-h" tabindex="-1">{{t.fDoneTitle}}</h3>
+        <p class="fdone-p">{{t.fDoneBody}}</p>
+        <sc-if value="{{formRef}}"><p class="fdone-ref" data-testid="demo-ref">{{t.fRef}} <b>{{formRef}}</b></p></sc-if>
+        <div class="fdone-links"><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
+      </div>
+      </sc-if>
+      <p id="form-status" class="{{formCls}}" role="status" aria-live="polite"><sc-if value="{{formErrRow}}"><svg class="ferr-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3261B" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5M12 16.5v.01"></path></svg></sc-if><span>{{formMsg}}</span><sc-if value="{{formRetry}}"><span aria-hidden="true">·</span><button type="button" class="fretry" onClick="{{retry}}">{{t.fRetry}}</button></sc-if></p>
     </form>
   </div>
 </section>
