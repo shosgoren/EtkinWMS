@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getPackageReceipt, getPackageProductionBatch } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
@@ -54,7 +55,7 @@ export default async function PackageLabelsPage({ params, searchParams }: {
       if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
-      if (e.code === "FORBIDDEN") return shell(<Banner kind="warning">Etiket için işlenmiş belge ve bu depoda stok görüntüleme yetkisi gerekir.</Banner>);
+      if (e.code === "FORBIDDEN") return shell(<Banner kind="warning">{(await getTranslations("packageReceiving.labelPreview"))("stockViewRequired")}</Banner>);
     }
     throw e;
   }

@@ -8,6 +8,7 @@
   },
   "scripts": {
     "verify": "node scripts/verify.mjs",
+    "prepush": "node scripts/prepush.mjs",
     "db:migrate": "pnpm --filter @wms/db db:migrate",
     "db:rollback": "pnpm --filter @wms/db db:rollback",
     "infra:smoke": "node scripts/compose-smoke.mjs",

@@ -11,21 +11,11 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { appSurface } from "../../../lib/surface.ts";
 import { AppError } from "@wms/shared/errors";
-import { AppMenu } from "./app-menu.tsx";
 import { KabukProvider } from "./kabuk/kabuk-bar.tsx";
 import { kabukModules } from "./kabuk/modules.ts";
 
 export const dynamic = "force-dynamic";
 
-
-// Görünüm çerezi kök düzendeki `setView` ile aynı sözleşmeyi kullanır (`view`: flow | cockpit, 1 yıl); telefon menüsündeki anahtar
-// bu eylemi çağırır. Kök düzenin eylemi dışa aktarılamaz (layout dosyası yalnızca varsayılan dışa aktarım taşır).
-async function setView(formData: FormData): Promise<void> {
-  "use server";
-  const raw = String(formData.get("view") ?? "");
-  const next = raw === "cockpit" ? "cockpit" : "flow";
-  (await cookies()).set("view", next, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
-}
 
 // Tenant kabuğu (T-119): üyelik SUNUCUDA doğrulanır (üye değil → 404; varlık sızdırılmaz). Yetki kararı domain'dedir
 // (`runTenantQuery`); burada yalnızca kullanıcı adı, aktif rol çipi ve tenant değiştirici gösterilir.
@@ -83,26 +73,13 @@ export default async function TenantLayout({ children, params }: { children: Rea
   }
   const t = await getTranslations();
   const view = (await cookies()).get("view")?.value === "cockpit" ? "cockpit" : "flow";
-  // T-988 (I-18): Görevlerim tasarımında sayfa bağlantıları yoktur; yönetim sayfalarına uygulama menüsünden gidilir (yetkiye göre).
   const base = `/t/${encodeURIComponent(slug)}`;
-  const menuLinks = (
-    [
-      ["stock", "/stock", hasPermission(current.roles, "stock.view", current.grants)],
-      ["items", "/items", hasPermission(current.roles, "stock.view", current.grants)],
-      ["parties", "/parties", hasPermission(current.roles, "stock.view", current.grants)],
-      ["warehouses", "/warehouses", true],
-      ["tasks", "/field/tasks", hasPermission(current.roles, "stock.view", current.grants)],
-      ["members", "/members", hasPermission(current.roles, "users.manage", current.grants)],
-      ["settings", "/settings", hasPermission(current.roles, "settings.manage", current.grants)],
-      ["audit", "/audit", hasPermission(current.roles, "audit.view", current.grants)],
-    ] as const
-  )
-    .filter(([, , ok]) => ok)
-    .map(([key, path]) => ({ href: `${base}${path}`, label: t(`home.easy.${key}`) }));
   // T-958: ortak alt çubuğun Modüller sayfası — yalnız üyenin rol/yetki/grup ekranlarının açtığı modüller (sunucuda; hedef sayfa ayrıca denetler).
   const kabuk = {
     base,
-    modules: kabukModules(base, { roles: current.roles, grants: current.grants, screens: current.screens }),
+    // T-979c: görünüm geçişi (Genel bakış ↔ İşlemler) Modüller'de; eski "Tüm ekranlar" penceresi yok.
+    modules: kabukModules(base, { roles: current.roles, grants: current.grants, screens: current.screens }, view),
+    workspaces: summary.memberships.length,
     roleLabel: current.roles[0] === undefined ? "" : t(`roles.${current.roles[0]}`),
     tenantName: current.tenantName,
     userName: summary.userName,
@@ -116,18 +93,8 @@ export default async function TenantLayout({ children, params }: { children: Rea
   return (
     <KabukProvider value={kabuk}>
     <div className="tenant-shell flex min-w-0 flex-col">
-      {/* T-979 (B-95): eski telefon üst çubuğu, masaüstü çalışma alanı satırı, ScreenShell ve alt sekme çubuğu kaldırıldı; her ekran kendi
-          kalıp/Pano üst çubuğunu ve ortak alt cam çubuğu (Kabuk) çizer. Uygulama menüsü (Akış/Genel bakış, çalışma alanı, yönetim
-          sayfaları, Yardım, Çıkış) Hesap menüsündeki "Tüm ekranlar"dan açılır. */}
-      <AppMenu
-        slug={slug}
-        userName={summary.userName}
-        view={view}
-        setViewAction={setView}
-        links={menuLinks}
-        linksLabel={t("home.easy.links")}
-        memberships={summary.memberships.map((m) => ({ slug: m.slug, tenantName: m.tenantName, rolesLabel: m.roles.map((r) => t(`roles.${r}`)).join(", ") }))}
-      />
+      {/* T-979 (B-95) / T-979c: eski kabuk ve "Tüm ekranlar" penceresi yok; her ekran kendi kalıp/Pano üst çubuğunu (Hesap menüsü:
+          kullanıcı / çalışma alanı değiştir, tema, çıkış) ve ortak alt cam çubuğu (Modüller: ekranlar + Genel bakış geçişi) çizer. */}
       {/* T-965: Suspense yok. Bu yerleşim `force-dynamic` olduğundan `useSearchParams` sunucuda hazırdır (askıya almaz). */}
       <div className="tenant-body flex min-w-0 flex-col">{children}</div>
     </div>

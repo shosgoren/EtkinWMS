@@ -342,6 +342,13 @@ beforeAll(async () => {
     const st = await admin.query<{ id: string }>("INSERT INTO public.support_tickets (tenant_id, created_by, membership_id, subject_kind, body) VALUES ($1, $2, $3, 'OTHER', 'AC04 destek') RETURNING id", [w.tenantId, w.ownerUserId, w.ownerMembershipId]);
     await admin.query("INSERT INTO public.support_ticket_messages (tenant_id, ticket_id, author_kind, author_user_id, body) VALUES ($1, $2, 'CUSTOMER', $3, 'AC04 yanıt')", [w.tenantId, st.rows[0]?.id, w.ownerUserId]);
     await admin.query("COMMIT");
+    // T-991: ERP bağlantısı (kesilmiş: mühürlü kutu yok), akış, ÇALIŞAN koşu (biten koşu değişmez), bekleyen gönderim, stok işareti.
+    const ig = await admin.query<{ id: string }>("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED') RETURNING id", [w.tenantId]);
+    const igId = ig.rows[0]?.id;
+    await admin.query("INSERT INTO public.integration_flows (tenant_id, integration_id, flow, direction) VALUES ($1, $2, 'PRODUCTS', 'PULL')", [w.tenantId, igId]);
+    await admin.query("INSERT INTO public.integration_runs (tenant_id, integration_id, flow, trigger) VALUES ($1, $2, 'PRODUCTS', 'SCHEDULE')", [w.tenantId, igId]);
+    await admin.query("INSERT INTO public.integration_outbox (tenant_id, integration_id, flow, entity_type, entity_id) VALUES ($1, $2, 'SHIPMENTS', 'DOCUMENT', $3)", [w.tenantId, igId, w.documentId]);
+    await admin.query("INSERT INTO public.integration_stock_marks (tenant_id, integration_id, item_id, warehouse_id, quantity) VALUES ($1, $2, $3, $4, 1)", [w.tenantId, igId, w.itemNoneId, w.warehouseId]);
   }
   tables = await discoverTables();
 }, 60_000);

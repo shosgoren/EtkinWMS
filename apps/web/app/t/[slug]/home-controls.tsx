@@ -1,13 +1,15 @@
 "use client";
 // I-18: Görevlerim üst sağ düğmeleri (kaynak `.hic`) ve `.app` içindeki açılır kutu/pencere. Görünüm kaynakla aynı; işlevler gerçek
 // (DESIGN-PARITY §6): bağlantı noktası tarayıcının gerçek çevrimiçi durumu, tema düğmesi kaynaktaki açık/koyu geçişi, sarı ⚠ düğmesi
-// kaynaktaki "demo" açılır kutusu (`.demo`/`.dm`) görünümünde Sorun bildir · Nasıl kullanılır? · Menü.
+// kaynaktaki "demo" açılır kutusu (`.demo`/`.dm`) görünümünde Sorun bildir · Nasıl kullanılır? · Genel bakış · (Çalışma alanı değiştir) · Çıkış yap.
+// T-979c: eski "Menü" (Tüm ekranlar penceresi) kaldırıldı; görünüm geçişi, alan seçimi ve çıkış doğrudan bu kutuda.
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useDz } from "../../design/dz-root.tsx";
 import { C, dz } from "../../design/bakis-tokens.ts";
 import { ICON } from "../../design/bakis-icons.ts";
-import { openAppMenu } from "./app-menu.tsx";
+import { authPost } from "../../../lib/auth-client.ts";
+import { switchView, useKabuk } from "./kabuk/kabuk-bar.tsx";
 import { ProblemSheet } from "./problem-sheet.tsx";
 
 const GUIDE_EVENT = "etkinwms:guide-open";
@@ -70,7 +72,10 @@ export function HomeControls() {
 
 export function HomeOverlays({ slug, canReport }: { slug: string; canReport: boolean }) {
   const t = useTranslations("home.gv");
+  const tp = useTranslations("pano");
   const { overlay, setOverlay } = useDz();
+  const kabuk = useKabuk();
+  const [failed, setFailed] = useState(false);
   if (overlay === PROBLEM && canReport) return <ProblemSheet slug={slug} onClose={() => setOverlay(null)} />;
   if (overlay !== MENU) return null;
   const items = [
@@ -79,21 +84,34 @@ export function HomeOverlays({ slug, canReport }: { slug: string; canReport: boo
         setOverlay(null);
         window.dispatchEvent(new Event(GUIDE_EVENT));
       }, testId: "guide-trigger" },
-    { k: "menu", l: t("menu"), d: ICON.list, bg: dz("172E42"), fg: dz("F4C542"), go: () => {
+    { k: "overview", l: t("overview"), d: ICON.list, bg: dz("172E42"), fg: dz("F4C542"), go: () => {
         setOverlay(null);
-        openAppMenu();
-      }, testId: "app-bar-menu" },
+        switchView(kabuk?.base ?? `/t/${encodeURIComponent(slug)}`, "cockpit");
+      }, testId: "home-overview" },
+    ...((kabuk?.workspaces ?? 1) > 1 ? [{ k: "workspace", l: tp("workspace"), d: ICON.transfer, bg: dz("172E42"), fg: dz("FFFFFF"), go: () => window.location.assign("/workspaces"), testId: "home-workspace" }] : []),
+    { k: "out", l: t("signOut"), d: ICON.back, bg: dz("C62828"), fg: dz("FFFFFF"), go: () => {
+        setFailed(false);
+        void authPost<unknown>("/sign-out", {}).then((res) => {
+          if (res.ok) window.location.assign("/login");
+          else setFailed(true);
+        });
+      }, testId: "home-signout" },
   ].filter((dm) => dm.k !== "problem" || canReport);
   return (
     <div className="demo" role="menu" aria-label={t("actions")}>
       {items.map((dm) => (
-        <button key={dm.k} type="button" className="dm" role="menuitem" onClick={dm.go} data-testid={dm.testId} aria-haspopup={dm.k === "menu" ? "dialog" : undefined}>
+        <button key={dm.k} type="button" className="dm" role="menuitem" onClick={dm.go} data-testid={dm.testId}>
           <span className="dmi" style={{ background: dm.bg, color: dm.fg }}>
             <Ico d={dm.d} size={20} />
           </span>
           {dm.l}
         </button>
       ))}
+      {failed ? (
+        <p role="alert" style={{ margin: 0, padding: "4px 12px", fontWeight: 700, fontSize: 13 }}>
+          {tp("signOutFailed")}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import path from "node:path";
 import { chromium } from "@playwright/test";
 import { clearSharedSession, mintSharedSession } from "./support/demo-session.ts";
 import { PACKAGE_ACTORS, provisionEmptyTenant } from "./support/empty-tenant.ts";
+import { startFakeParasut, type FakeParasut } from "../integration/fixtures/fake-parasut.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, ".artifacts/e2e");
@@ -154,6 +155,9 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   // T-413 (A-77 kararı 18 Ekim): canlıda depo kapsamı açık; uçtan uca testler aynı kipte koşar.
   env.WAREHOUSE_SCOPE_ENABLED = "true";
   assertLoopbackDatabase(env);
+  // T-991: sahte Paraşüt (yalnız 127.0.0.1; gerçek ağ yok). Web ve worker sağlayıcı adresini buradan alır (geri döngü dışı adres reddedilir).
+  const fakeParasut: FakeParasut = await startFakeParasut();
+  env.PARASUT_BASE_URL = fakeParasut.url;
   // T-938: local, loopback-asserted web subprocesses only. Remote early return above never enables this flag.
   const packageWebEnv = { ...env, PACKAGE_RECEIVING_ENABLED: "true" };
 
@@ -166,7 +170,8 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   let proxyPanel: https.Server | undefined;
   const teardown = async (): Promise<void> => {
     clearSharedSession();
-    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
+    await fakeParasut.close().catch(() => undefined);
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", "E2E_ERP", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
     }
     proxy?.close();
@@ -379,6 +384,22 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       process.env.E2E_MULTI_EMAIL = multiEmail;
       process.env.E2E_MULTI_PASSWORD = multiPassword;
       process.env.E2E_MULTI_TOTP_SECRET = multiMade.totpSecret;
+      // T-991: ERP entegrasyonu (sahte Paraşüt'e bağlanır; kendi alanı, başka spec'in boş alan varsayımını bozmaz).
+      const erpEmail = `erp-${suffix}@example.test`;
+      const erpPassword = randomBytes(18).toString("hex");
+      const erpMade = await provisionEmptyTenant({
+        browser,
+        origin: `https://localhost:${portB}`,
+        clientIp: "198.51.100.26",
+        name: "E2E ERP",
+        email: erpEmail,
+        password: erpPassword,
+        workspaceName: `E2E ERP ${suffix}`,
+      });
+      process.env.E2E_ERP_SLUG = erpMade.slug;
+      process.env.E2E_ERP_EMAIL = erpEmail;
+      process.env.E2E_ERP_PASSWORD = erpPassword;
+      process.env.E2E_ERP_TOTP_SECRET = erpMade.totpSecret;
     } catch (e) {
       setupError = e;
     }

@@ -1,0 +1,377 @@
+// Paraşüt API v4 istemcisi (T-991). Kaynak: https://apidocs.parasut.com/swagger.json (21 Ekim okundu; ayrıntı catalog.ts başında).
+//
+// GÜVENLİK
+// - SSRF: adres sabittir (`https://api.parasut.com`). Kullanıcı adres veremez; şirket numarası ve kaynak kimlikleri yalnız rakamdır ve yola
+//   girmeden doğrulanır. Test/yerel sahte sunucu yalnız `PARASUT_BASE_URL` ortam değişkeniyle ve YALNIZ geri döngü adresinde (127.0.0.1,
+//   localhost, ::1; http) kabul edilir; başka değer açılışı reddeder (sessiz geri düşüş yok).
+// - Sırlar (istemci sırrı, parola, belirteçler) hata iletisine, loga ve dönüş değerine girmez; hata yalnız sabit kod + HTTP durumu taşır.
+//   Yanıt gövdesi en çok 5 MiB okunur; yönlendirme izlenmez (`redirect: "manual"`).
+// - Hız sınırı (belge: 10 saniyede 10 istek): istemci örneği başına kayan pencere; 429 gelirse `Retry-After` (en çok 60 sn) ya da 10 sn bekleyip
+//   en çok 3 kez yeniden dener (429 davranışı belgede yok; savunmacı). Zaman aşımı istek başına 15 sn.
+//
+// OAuth2: parola akışı (bağlanırken bir kez; parola saklanmaz) ve yenileme akışı (her yenilemede YENİ yenileme belirteci döner, belge).
+// Gövde `application/x-www-form-urlencoded` (RFC 6749 §4.3/§6); belgedeki curl örneği çok parçalı form kullanır — canlı ilk bağlantıda doğrulanacak.
+import { AppError } from "@wms/shared/errors";
+
+export const PARASUT_BASE_URL = "https://api.parasut.com";
+export const PARASUT_REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+export const PARASUT_PAGE_SIZE = 25;
+const MAX_BODY = 5 * 1024 * 1024;
+const TIMEOUT_MS = 15_000;
+const WINDOW_MS = 10_000;
+const WINDOW_MAX = 10;
+const RETRY_429 = 3;
+
+export type ProviderErrorCode =
+  | "AUTH_FAILED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "RATE_LIMITED"
+  | "INVALID"
+  | "UNAVAILABLE"
+  | "NETWORK"
+  | "BAD_RESPONSE"
+  | "COMPANY_NOT_FOUND"
+  | "CONFIG";
+
+/** Sağlayıcı hatası: yalnız sabit kod + durum (sır/gövde yok). `retryable`: geçici (ağ, 5xx, 429). */
+export class ProviderError extends Error {
+  override name = "ProviderError";
+  readonly code: ProviderErrorCode;
+  readonly status: number | null;
+  readonly retryable: boolean;
+  constructor(code: ProviderErrorCode, status: number | null = null) {
+    super(`provider error (${code}${status === null ? "" : ` ${status}`})`);
+    this.code = code;
+    this.status = status;
+    this.retryable = code === "RATE_LIMITED" || code === "UNAVAILABLE" || code === "NETWORK";
+  }
+}
+
+const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
+
+/** Sabit adres; `PARASUT_BASE_URL` yalnız geri döngü http(s) adresi olabilir (yerel/test sahte sunucu). */
+export function resolveParasutBaseUrl(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  const raw = env.PARASUT_BASE_URL?.trim() ?? "";
+  if (raw === "") return PARASUT_BASE_URL;
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    throw new ProviderError("CONFIG");
+  }
+  if ((u.protocol !== "http:" && u.protocol !== "https:") || !LOOPBACK.has(u.hostname) || u.username !== "" || u.password !== "" || (u.pathname !== "/" && u.pathname !== "")) {
+    throw new ProviderError("CONFIG");
+  }
+  return `${u.protocol}//${u.host}`;
+}
+
+const COMPANY_RE = /^[0-9]{1,12}$/;
+const ID_RE = /^[0-9]{1,18}$/;
+
+export function parseCompanyId(raw: unknown): string {
+  if (typeof raw !== "string" || !COMPANY_RE.test(raw.trim())) throw new AppError("VALIDATION_FAILED");
+  return raw.trim();
+}
+function id(raw: unknown): string {
+  const v = typeof raw === "number" ? String(raw) : raw;
+  if (typeof v !== "string" || !ID_RE.test(v)) throw new ProviderError("BAD_RESPONSE");
+  return v;
+}
+
+export interface FetchLike {
+  (url: string, init: { method: string; headers: Record<string, string>; body?: string; signal: AbortSignal; redirect: "manual" }): Promise<{
+    status: number;
+    headers: { get(name: string): string | null };
+    text(): Promise<string>;
+  }>;
+}
+
+export interface ParasutClientOptions {
+  readonly baseUrl?: string;
+  readonly fetch?: FetchLike;
+  readonly now?: () => number;
+  readonly sleep?: (ms: number) => Promise<void>;
+  readonly timeoutMs?: number;
+}
+
+export interface TokenSet {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  /** Bitiş (epoch ms). */
+  readonly expiresAt: number;
+}
+
+export interface JsonApiResource {
+  readonly id: string;
+  readonly type: string;
+  readonly attributes: Readonly<Record<string, unknown>>;
+  readonly relationships: Readonly<Record<string, unknown>>;
+}
+
+export interface Page {
+  readonly items: readonly JsonApiResource[];
+  readonly page: number;
+  readonly totalPages: number;
+}
+
+export interface Company {
+  readonly id: string;
+  readonly name: string;
+}
+
+const str = (v: unknown, max: number): string | null => (typeof v === "string" && v.trim() !== "" ? v.trim().slice(0, max) : null);
+
+function resource(raw: unknown): JsonApiResource {
+  if (typeof raw !== "object" || raw === null) throw new ProviderError("BAD_RESPONSE");
+  const r = raw as Record<string, unknown>;
+  const attrs = typeof r.attributes === "object" && r.attributes !== null ? (r.attributes as Record<string, unknown>) : {};
+  const rels = typeof r.relationships === "object" && r.relationships !== null ? (r.relationships as Record<string, unknown>) : {};
+  if (typeof r.type !== "string") throw new ProviderError("BAD_RESPONSE");
+  return { id: id(r.id), type: r.type, attributes: attrs, relationships: rels };
+}
+
+/** İstemci: tek bağlantı (şirket) için; hız sınırı örnek başınadır (bir senkron koşusu tek örnek kullanır). */
+export class ParasutClient {
+  private readonly baseUrl: string;
+  private readonly doFetch: FetchLike;
+  private readonly now: () => number;
+  private readonly sleep: (ms: number) => Promise<void>;
+  private readonly timeoutMs: number;
+  private readonly sent: number[] = [];
+  /** Bu örnekte yapılan istek sayısı (test / çalışma özeti). */
+  requests = 0;
+
+  constructor(opts: ParasutClientOptions = {}) {
+    this.baseUrl = opts.baseUrl ?? resolveParasutBaseUrl();
+    this.doFetch = opts.fetch ?? ((url, init) => fetch(url, init));
+    this.now = opts.now ?? (() => Date.now());
+    this.sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+    this.timeoutMs = opts.timeoutMs ?? TIMEOUT_MS;
+  }
+
+  private async throttle(): Promise<void> {
+    for (;;) {
+      const t = this.now();
+      while (this.sent.length > 0 && t - (this.sent[0] as number) >= WINDOW_MS) this.sent.shift();
+      if (this.sent.length < WINDOW_MAX) {
+        this.sent.push(t);
+        return;
+      }
+      await this.sleep(WINDOW_MS - (t - (this.sent[0] as number)) + 5);
+    }
+  }
+
+  /**
+   * `lockSafe` (yenileme, satır kilidi altında): pencere beklemesi ve 429 yeniden denemesi YOK — kilit en çok tek istek zaman aşımı kadar
+   * (15 sn) tutulur (güvenlik incelemesi MAJOR-1). Pencereye yine sayılır.
+   */
+  private async request(method: string, path: string, opts: { token?: string; json?: unknown; form?: Record<string, string>; lockSafe?: boolean } = {}): Promise<{ status: number; body: unknown }> {
+    for (let attempt = 0; ; attempt++) {
+      if (opts.lockSafe === true) this.sent.push(this.now());
+      else await this.throttle();
+      this.requests++;
+      const headers: Record<string, string> = { Accept: "application/json" };
+      let body: string | undefined;
+      if (opts.token !== undefined) headers.Authorization = `Bearer ${opts.token}`;
+      if (opts.json !== undefined) {
+        headers["Content-Type"] = "application/json";
+        body = JSON.stringify(opts.json);
+      } else if (opts.form !== undefined) {
+        headers["Content-Type"] = "application/x-www-form-urlencoded";
+        body = new URLSearchParams(opts.form).toString();
+      }
+      let res: Awaited<ReturnType<FetchLike>>;
+      try {
+        res = await this.doFetch(`${this.baseUrl}${path}`, { method, headers, body, signal: AbortSignal.timeout(this.timeoutMs), redirect: "manual" });
+      } catch {
+        throw new ProviderError("NETWORK"); // kök hata adresi/başlık taşıyabilir: yayılmaz
+      }
+      if (res.status === 429 && attempt < RETRY_429 && opts.lockSafe !== true) {
+        const ra = Number(res.headers.get("retry-after"));
+        await this.sleep(Number.isFinite(ra) && ra > 0 ? Math.min(ra, 60) * 1000 : WINDOW_MS);
+        continue;
+      }
+      const declared = Number(res.headers.get("content-length"));
+      if (Number.isFinite(declared) && declared > MAX_BODY) throw new ProviderError("BAD_RESPONSE", res.status);
+      let text: string;
+      try {
+        text = await res.text();
+      } catch {
+        throw new ProviderError("NETWORK");
+      }
+      if (text.length > MAX_BODY) throw new ProviderError("BAD_RESPONSE", res.status);
+      let parsed: unknown = null;
+      if (text.trim() !== "") {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          parsed = null;
+        }
+      }
+      return { status: res.status, body: parsed };
+    }
+  }
+
+  private static fail(status: number, auth = false): ProviderError {
+    if (status === 401 || (auth && status === 400)) return new ProviderError("AUTH_FAILED", status);
+    if (status === 403) return new ProviderError("FORBIDDEN", status);
+    if (status === 404) return new ProviderError("NOT_FOUND", status);
+    if (status === 429) return new ProviderError("RATE_LIMITED", status);
+    if (status === 400 || status === 422) return new ProviderError("INVALID", status);
+    if (status >= 500) return new ProviderError("UNAVAILABLE", status);
+    return new ProviderError("BAD_RESPONSE", status);
+  }
+
+  private tokens(body: unknown): TokenSet {
+    const b = (body ?? {}) as Record<string, unknown>;
+    const access = str(b.access_token, 4096);
+    const refresh = str(b.refresh_token, 4096);
+    const exp = typeof b.expires_in === "number" && b.expires_in > 0 ? b.expires_in : 7200;
+    if (access === null || refresh === null) throw new ProviderError("BAD_RESPONSE");
+    // 60 sn pay: bitişe yakın belirteç kullanılmaz.
+    return { accessToken: access, refreshToken: refresh, expiresAt: this.now() + Math.max(60, exp - 60) * 1000 };
+  }
+
+  /** Parola akışı (bağlanırken bir kez). Hatalı bilgi → `AUTH_FAILED`. */
+  async passwordGrant(input: { readonly clientId: string; readonly clientSecret: string; readonly username: string; readonly password: string }): Promise<TokenSet> {
+    const r = await this.request("POST", "/oauth/token", {
+      form: { grant_type: "password", client_id: input.clientId, client_secret: input.clientSecret, username: input.username, password: input.password, redirect_uri: PARASUT_REDIRECT_URI },
+    });
+    if (r.status !== 200) throw ParasutClient.fail(r.status, true);
+    return this.tokens(r.body);
+  }
+
+  /** Yenileme akışı: yeni erişim + YENİ yenileme belirteci (eskisi bir daha kullanılmaz). */
+  async refreshGrant(input: { readonly clientId: string; readonly clientSecret: string; readonly refreshToken: string }): Promise<TokenSet> {
+    const r = await this.request("POST", "/oauth/token", {
+      form: { grant_type: "refresh_token", client_id: input.clientId, client_secret: input.clientSecret, refresh_token: input.refreshToken },
+      lockSafe: true,
+    });
+    if (r.status !== 200) throw ParasutClient.fail(r.status, true);
+    return this.tokens(r.body);
+  }
+
+  /** `GET /v4/me?include=companies`: kullanıcının şirketleri (bağlantı sınaması). */
+  async companies(token: string): Promise<readonly Company[]> {
+    const r = await this.request("GET", "/v4/me?include=companies", { token });
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const inc = (r.body as { included?: unknown } | null)?.included;
+    if (!Array.isArray(inc)) return [];
+    const out: Company[] = [];
+    for (const raw of inc) {
+      const o = raw as { type?: unknown; id?: unknown; attributes?: { name?: unknown } };
+      if (o?.type !== "companies") continue;
+      const cid = typeof o.id === "number" ? String(o.id) : o.id;
+      if (typeof cid !== "string" || !COMPANY_RE.test(cid)) continue;
+      out.push({ id: cid, name: str(o.attributes?.name, 120) ?? cid });
+    }
+    return out;
+  }
+
+  /** Şirket kapsamında liste sayfası (`page[size]` en çok 25, `sort=id`). */
+  async list(token: string, companyId: string, kind: "products" | "contacts" | "warehouses", page: number): Promise<Page> {
+    const cid = parseCompanyId(companyId);
+    if (!Number.isInteger(page) || page < 1 || page > 100_000) throw new AppError("VALIDATION_FAILED");
+    const r = await this.request("GET", `/v4/${cid}/${kind}?sort=id&page%5Bnumber%5D=${page}&page%5Bsize%5D=${PARASUT_PAGE_SIZE}`, { token });
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const b = (r.body ?? {}) as { data?: unknown; meta?: { total_pages?: unknown } };
+    if (!Array.isArray(b.data)) throw new ProviderError("BAD_RESPONSE", r.status);
+    const total = typeof b.meta?.total_pages === "number" && Number.isInteger(b.meta.total_pages) && b.meta.total_pages >= 0 ? b.meta.total_pages : page;
+    return { items: b.data.map(resource), page, totalPages: total };
+  }
+
+  /** Ürün koduna göre ara (`filter[code]`): Etkin -> Paraşüt gönderiminde çift kayıt açmamak için. */
+  async findProductByCode(token: string, companyId: string, code: string): Promise<JsonApiResource | null> {
+    const cid = parseCompanyId(companyId);
+    const r = await this.request("GET", `/v4/${cid}/products?filter%5Bcode%5D=${encodeURIComponent(code)}&page%5Bsize%5D=2`, { token });
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const data = (r.body as { data?: unknown } | null)?.data;
+    if (!Array.isArray(data)) throw new ProviderError("BAD_RESPONSE", r.status);
+    const exact = data.map(resource).filter((p) => p.attributes.code === code);
+    return exact.length === 1 ? (exact[0] as JsonApiResource) : null;
+  }
+
+  /** Cari: vergi numarasına (yoksa ada) göre ara (`filter[tax_number]` / `filter[name]`). */
+  async findContact(token: string, companyId: string, by: { readonly taxNumber?: string | null; readonly name: string }): Promise<JsonApiResource | null> {
+    const cid = parseCompanyId(companyId);
+    const q = by.taxNumber ? `filter%5Btax_number%5D=${encodeURIComponent(by.taxNumber)}` : `filter%5Bname%5D=${encodeURIComponent(by.name)}`;
+    const r = await this.request("GET", `/v4/${cid}/contacts?${q}&page%5Bsize%5D=2`, { token });
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const data = (r.body as { data?: unknown } | null)?.data;
+    if (!Array.isArray(data)) throw new ProviderError("BAD_RESPONSE", r.status);
+    const rows = data.map(resource).filter((c) => (by.taxNumber ? c.attributes.tax_number === by.taxNumber : c.attributes.name === by.name));
+    return rows.length === 1 ? (rows[0] as JsonApiResource) : null;
+  }
+
+  /** Depo: ada göre ara (`filter[name]`). */
+  async findWarehouse(token: string, companyId: string, name: string): Promise<JsonApiResource | null> {
+    const cid = parseCompanyId(companyId);
+    const r = await this.request("GET", `/v4/${cid}/warehouses?filter%5Bname%5D=${encodeURIComponent(name)}&page%5Bsize%5D=2`, { token });
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const data = (r.body as { data?: unknown } | null)?.data;
+    if (!Array.isArray(data)) throw new ProviderError("BAD_RESPONSE", r.status);
+    const rows = data.map(resource).filter((w) => w.attributes.name === name);
+    return rows.length === 1 ? (rows[0] as JsonApiResource) : null;
+  }
+
+  private async create(token: string, companyId: string, kind: string, data: unknown): Promise<string> {
+    const cid = parseCompanyId(companyId);
+    const r = await this.request("POST", `/v4/${cid}/${kind}`, { token, json: { data } });
+    if (r.status !== 201 && r.status !== 200) throw ParasutClient.fail(r.status);
+    return resource((r.body as { data?: unknown } | null)?.data).id;
+  }
+
+  async createProduct(token: string, companyId: string, p: { readonly code: string; readonly name: string; readonly unit: string | null }): Promise<string> {
+    return this.create(token, companyId, "products", { type: "products", attributes: { code: p.code, name: p.name, ...(p.unit === null ? {} : { unit: p.unit }), inventory_tracking: true } });
+  }
+
+  async createContact(
+    token: string,
+    companyId: string,
+    c: { readonly name: string; readonly accountType: "customer" | "supplier"; readonly taxNumber: string | null; readonly taxOffice: string | null; readonly email: string | null; readonly phone: string | null; readonly city: string | null; readonly address: string | null },
+  ): Promise<string> {
+    const attrs: Record<string, unknown> = { name: c.name, account_type: c.accountType, contact_type: "company" };
+    for (const [k, v] of [["tax_number", c.taxNumber], ["tax_office", c.taxOffice], ["email", c.email], ["phone", c.phone], ["city", c.city], ["address", c.address]] as const) if (v !== null) attrs[k] = v;
+    return this.create(token, companyId, "contacts", { type: "contacts", attributes: attrs });
+  }
+
+  async createWarehouse(token: string, companyId: string, w: { readonly name: string }): Promise<string> {
+    return this.create(token, companyId, "warehouses", { type: "warehouses", attributes: { name: w.name } });
+  }
+
+  /**
+   * Satış irsaliyesi (`inflow: false`). Stok hareketi yalnız ürün + miktar taşır (belgede depo ilişkisi yok; Paraşüt'ün depo seçimi canlıda
+   * doğrulanacak). Cari ilişki türü belgede `contact` yazıyor, okuma modelinde `contacts`; JSON:API çoğul türü gönderilir (doğrulanacak).
+   */
+  async createShipmentDocument(
+    token: string,
+    companyId: string,
+    d: { readonly issueDate: string; readonly shipmentDate: string; readonly description: string; readonly procurementNumber: string; readonly contactId: string; readonly lines: readonly { readonly productId: string; readonly quantity: number }[] },
+  ): Promise<string> {
+    return this.create(token, companyId, "shipment_documents", {
+      type: "shipment_documents",
+      attributes: { issue_date: d.issueDate, shipment_date: d.shipmentDate, inflow: false, description: d.description, procurement_number: d.procurementNumber },
+      relationships: {
+        contact: { data: { id: id(d.contactId), type: "contacts" } },
+        stock_movements: { data: d.lines.map((l) => ({ type: "stock_movements", attributes: { quantity: l.quantity }, relationships: { product: { data: { id: id(l.productId), type: "products" } } } })) },
+      },
+    });
+  }
+
+  /** Stok güncelleme fişi: ürün + depo başına yeni toplam (mutlak değer → tekrar gönderim aynı sonucu verir). */
+  async createStockUpdate(token: string, companyId: string, details: readonly { readonly productId: string; readonly warehouseId: string; readonly total: number }[]): Promise<string> {
+    return this.create(token, companyId, "stock_updates", {
+      type: "stock_updates",
+      relationships: {
+        details: {
+          data: details.map((x) => ({
+            type: "stock_update_details",
+            attributes: { new_total_inventory: x.total },
+            relationships: { product: { data: { id: id(x.productId), type: "products" } }, warehouse: { data: { id: id(x.warehouseId), type: "warehouses" } } },
+          })),
+        },
+      },
+    });
+  }
+}

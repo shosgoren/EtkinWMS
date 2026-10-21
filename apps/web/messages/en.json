@@ -834,7 +834,9 @@
           "LOCATION": "SHELF ISSUE",
           "OTHER": "OTHER"
         }
-      }
+      },
+      "overview": "Overview",
+      "signOut": "Sign out"
     }
   },
   "audit": {
@@ -1007,6 +1009,14 @@
     "support": {
       "ticket_created": "Support ticket opened",
       "ticket_replied": "Support ticket replied"
+    },
+    "integration": {
+      "connected": "ERP connection set up",
+      "checked": "ERP connection checked",
+      "disconnected": "ERP connection removed",
+      "flow_changed": "ERP transfer flow changed",
+      "run_requested": "ERP transfer started manually",
+      "synced": "ERP transfer ran"
     }
   },
   "auditLog": {
@@ -2787,6 +2797,29 @@
       "loadHint": "Reopen the document from the list; if it persists, tell an authorized person.",
       "paperLabel": "Paper",
       "kindHint": "Barrel or box"
+    },
+    "labelPreview": {
+      "paper": "Paper",
+      "roll": "Roll",
+      "qrAria": "Package QR {no}",
+      "packageOf": "Package {no} / {total} · {kind}",
+      "quantity": "Package quantity: {qty} {unit}",
+      "quarantine": "⚠ Quarantine",
+      "lot": "Lot: {lot}",
+      "dates": "Produced: {produced} · Expiry: {expires}",
+      "previewAria": "Package label preview",
+      "width": "Width (mm)",
+      "height": "Height (mm)",
+      "summary": "{count} packages · Package quantity",
+      "helpTitle": "Printing help",
+      "helpBody": "In the print/PDF window keep the scale at 100% and headers/footers off. Check QR readability with a test print. If text or QR does not fit, increase the size.",
+      "invalid": "Invalid size. For A4 choose at most 190 × 277 mm.",
+      "preparing": "Preparing QR codes…",
+      "qrFailed": "QR codes could not be generated.",
+      "retry": "Try again",
+      "noFit": "QR or text does not fit this size. Increase the label width or height.",
+      "print": "Print / PDF",
+      "stockViewRequired": "Labels need a posted document and permission to view stock in this warehouse."
     }
   },
   "packageMovement": {
@@ -3785,7 +3818,8 @@
     "save": "Save",
     "saveShort": "SAVE",
     "bell": "ALERTS",
-    "bellAria": "Alerts, {n} open"
+    "bellAria": "Alerts, {n} open",
+    "workspace": "Switch workspace"
   },
   "aktar": {
     "title": "Import from Excel",
@@ -4474,6 +4508,26 @@
       "ekip": {
         "name": "Team",
         "sub": "People · Permissions"
+      },
+      "kokpit": {
+        "name": "Overview",
+        "sub": "All work in one list"
+      },
+      "akis": {
+        "name": "Operations",
+        "sub": "My tasks home"
+      },
+      "stok": {
+        "name": "Stock",
+        "sub": "Where · How much"
+      },
+      "ayar": {
+        "name": "Settings",
+        "sub": "Language · Time · Rules"
+      },
+      "kayit": {
+        "name": "Who did what?",
+        "sub": "Audit log"
       }
     }
   },
@@ -4507,6 +4561,7 @@
       "title": "Scan",
       "sub": "FIELD · SCAN A CODE",
       "camHint": "ITEM · CASE · SHELF · DELIVERY NOTE",
+      "distanceHint": "Move back a little · 25–30 cm",
       "camRegion": "Camera on, bring the code into the frame",
       "say": "Scan or say",
       "saySub": "FRAME THE CODE · THE JOB OPENS ITSELF",
@@ -4808,5 +4863,178 @@
     "approveConfirm": "Give approval",
     "postConfirm": "Post adjustment",
     "cancelConfirm": "Confirm cancel"
+  },
+  "integrations": {
+    "title": "Integration",
+    "locked": "Only the account owner can open this screen",
+    "lockedHint": "Only the account owner connects and changes the ERP link.",
+    "head": "ERP CONNECTION",
+    "hintNone": "PICK YOUR ERP · ENTER DETAILS · CONNECT",
+    "hintOn": "TURN ON / OFF · PICK DIRECTION · THE REST IS AUTOMATIC",
+    "demo": "ERP cannot be connected in the demo workspace",
+    "demoSub": "CONNECT IN A REAL WORKSPACE",
+    "providerList": "Pick an ERP",
+    "providers": {
+      "PARASUT": {
+        "name": "Paraşüt",
+        "sub": "PRE-ACCOUNTING · CLOUD",
+        "ini": "P"
+      },
+      "LOGO": {
+        "name": "Logo",
+        "sub": "WAITING FOR PRODUCT DETAILS",
+        "ini": "L"
+      }
+    },
+    "pillConnect": "CONNECT",
+    "pillOn": "CONNECTED",
+    "pillErr": "ERROR",
+    "pillSoon": "SOON",
+    "soonToast": "Logo is coming · waiting for product details",
+    "connTitle": "Connected · {label}",
+    "connSub": "{provider} · LAST CHECK {at}",
+    "connSubNever": "{provider} · NOT CHECKED YET",
+    "connErrTitle": "Problem with the {provider} connection",
+    "connErrSub": "CHECK THE CONNECTION OR RECONNECT",
+    "test": "Check connection",
+    "cut": "Disconnect",
+    "reconnect": "Reconnect",
+    "flowsTitle": "What should move?",
+    "flowsSub": "TURN ON · PICK DIRECTION · THE REST IS AUTOMATIC",
+    "runsTitle": "Recent runs",
+    "runsSub": "ERRORS IN RED · WITH THE REASON",
+    "runsEmpty": "No runs yet · turn on a flow",
+    "flows": {
+      "PRODUCTS": {
+        "name": "Item cards",
+        "sub": "CODE · NAME · UNIT · STOCK UNCHANGED"
+      },
+      "CONTACTS": {
+        "name": "Parties",
+        "sub": "CUSTOMER · SUPPLIER"
+      },
+      "WAREHOUSES": {
+        "name": "Warehouses",
+        "sub": "WAREHOUSE NAME"
+      },
+      "SALES_ORDERS": {
+        "name": "Orders",
+        "sub": "{provider} HAS NO ORDERS"
+      },
+      "SHIPMENTS": {
+        "name": "Waybill",
+        "sub": "TO {provider} WHEN SHIPPED"
+      },
+      "STOCK": {
+        "name": "Stock quantity",
+        "sub": "ON HAND → {provider}"
+      }
+    },
+    "dirs": {
+      "PULL": "{provider} → Etkin",
+      "PUSH": "Etkin → {provider}",
+      "BOTH": "Both ways"
+    },
+    "dirAria": "{name} direction",
+    "flowOnAria": "{name}: on. Tap to turn off",
+    "flowOffAria": "{name}: off. Tap to turn on",
+    "flowNaAria": "{name}: not available in {provider}",
+    "flowNa": "Not available in {provider} · comes with Logo",
+    "flowOn": "{name} on · first transfer started",
+    "flowOnNoQueue": "{name} on · runs with the hourly transfer",
+    "flowOff": "{name} off",
+    "dirSet": "{name}: {dir}",
+    "never": "NOT RUN YET",
+    "lastOk": "LAST RUN {at}",
+    "lastErr": "LAST RUN {at} · {reason}",
+    "errBadge": "{n} ERRORS",
+    "runNow": "Run now",
+    "runQueued": "{name} queued · done shortly",
+    "runBusy": "Already queued · done shortly",
+    "runAllQueued": "Enabled flows queued",
+    "mainConnect": "CONNECT",
+    "mainConnectAria": "Connect to {provider}",
+    "mainSync": "SYNC",
+    "mainSyncAria": "Sync enabled flows now",
+    "mainSyncNone": "Turn on something to transfer first",
+    "runStatus": {
+      "SUCCESS": "DONE",
+      "PARTIAL": "PARTIAL",
+      "FAILED": "ERROR",
+      "RUNNING": "RUNNING"
+    },
+    "runMeta": "{at} · {summary}",
+    "runCounts": "{created} NEW · {updated} UPDATED · {linked} MATCHED",
+    "runFailedRows": "{n} ROWS FAILED",
+    "runNoChange": "NO CHANGE",
+    "trigger": {
+      "SCHEDULE": "HOURLY",
+      "MANUAL": "MANUAL"
+    },
+    "outboxCheck": "{n} waybills need a check",
+    "outboxCheckSub": "PARAŞÜT DID NOT ANSWER · NOT RESENT TO AVOID DUPLICATES",
+    "outboxFailed": "{n} waybills could not be sent",
+    "form": {
+      "title": "Connect to {provider}",
+      "note": "Company number and client details come from Paraşüt (destek@parasut.com). Your password is not stored; only the connection key is kept encrypted.",
+      "company": "COMPANY NUMBER",
+      "companyHint": "The number in the Paraşüt address bar: uygulama.parasut.com/115 → 115",
+      "clientId": "CLIENT ID",
+      "clientSecret": "CLIENT SECRET",
+      "email": "PARAŞÜT E-MAIL",
+      "password": "PARAŞÜT PASSWORD",
+      "submit": "Connect",
+      "cancel": "Cancel",
+      "missing": "All five fields are required",
+      "connected": "Connected · {label}"
+    },
+    "cutTitle": "Disconnect?",
+    "cutText": "Transfers stop and the connection key is deleted. Cards and matches stay in Etkin; reconnecting continues where it left off.",
+    "cutConfirm": "Disconnect",
+    "cutCancel": "Cancel, stay connected",
+    "cutDone": "Disconnected",
+    "testOk": "Connection is fine · {label}",
+    "reauth": "Sign in again to do this",
+    "reauthLink": "Sign in",
+    "reasons": {
+      "AUTH_FAILED": "Paraşüt rejected the details · check them",
+      "COMPANY_NOT_FOUND": "This company number is not in this account",
+      "NETWORK": "Could not reach Paraşüt · try again shortly",
+      "RATE_LIMITED": "Paraşüt said too many requests · try again shortly",
+      "UNAVAILABLE": "Paraşüt is not answering",
+      "INVALID": "Paraşüt rejected the request",
+      "FORBIDDEN": "This Paraşüt account has no permission",
+      "NOT_FOUND": "Record not found in Paraşüt",
+      "BAD_RESPONSE": "Unreadable answer from Paraşüt",
+      "CONFIG": "Server setting missing · tell the Etkin team",
+      "DEMO": "ERP cannot be connected in the demo workspace",
+      "COMPANY_CHANGED": "Talk to the Etkin team to switch company",
+      "UNAVAILABLE_PROVIDER": "This ERP is not available yet",
+      "REAUTH_REQUIRED": "Paraşüt wants a new sign-in · reconnect",
+      "SECRET_UNREADABLE": "Connection key unreadable · reconnect",
+      "NOT_CONNECTED": "Not connected",
+      "CONNECTOR_REVOKED": "The person who connected lost permission · reconnect",
+      "UNSUPPORTED": "This direction is not available in this ERP",
+      "NO_ENABLED_FLOW": "Turn on something to transfer first",
+      "QUEUE_UNAVAILABLE": "Background jobs are off · the hourly run will pick it up",
+      "CONTACT_NOT_LINKED": "Party not linked to Paraşüt",
+      "ITEM_NOT_LINKED": "Item not linked to Paraşüt",
+      "DOCUMENT_EMPTY": "Document has no lines",
+      "DOCUMENT_NOT_POSTED": "Document not posted",
+      "UNCERTAIN": "Paraşüt did not answer · check it",
+      "ROWS_FAILED": "Some rows could not be transferred",
+      "INTERNAL": "Unexpected error · tell the Etkin team",
+      "PROVIDER_AUTH_FAILED": "Paraşüt rejected the sign-in",
+      "PROVIDER_NETWORK": "Could not reach Paraşüt",
+      "PROVIDER_RATE_LIMITED": "Paraşüt said too many requests",
+      "PROVIDER_UNAVAILABLE": "Paraşüt did not answer",
+      "PROVIDER_INVALID": "Paraşüt rejected the record",
+      "PROVIDER_FORBIDDEN": "No Paraşüt permission",
+      "PROVIDER_NOT_FOUND": "Not found in Paraşüt",
+      "PROVIDER_BAD_RESPONSE": "Paraşüt answer unreadable",
+      "PROVIDER_COMPANY_NOT_FOUND": "Company not found",
+      "PROVIDER_CONFIG": "Server setting missing",
+      "UNKNOWN": "Something went wrong · try again"
+    }
   }
 }
