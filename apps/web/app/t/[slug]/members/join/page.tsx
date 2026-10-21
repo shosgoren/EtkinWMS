@@ -6,7 +6,7 @@ import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { getJoinOverview } from "@wms/domain/identity/team-join";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { temaKoyu } from "../../../../design/theme.ts";
 import { JoinView } from "./view.tsx";
 
 // Ekibe katılma, yönetici tarafı (T-429, Ekip.dc.html "Onay bekliyor"; T-971 liste kalıbı, view.tsx).
@@ -38,7 +38,7 @@ export default async function JoinRequestsPage({ params }: { params: Promise<{ s
   }
   const summary = await getMembershipSummary({ db, principal });
   const tenantName = summary.memberships.find((m) => m.slug === slug)?.tenantName ?? slug;
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <JoinView

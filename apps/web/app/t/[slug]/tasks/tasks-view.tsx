@@ -11,10 +11,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Sheet } from "../easy-setup/sheet.tsx";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipPencereAlan, KalipPencereDugme, KalipPencereMetin, KalipPencereSecim } from "../kalip/pencere.tsx";
@@ -116,11 +116,11 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
     setMemberId("");
     setReason("");
     if (!res.ok) {
-      tone("err");
+      feedback.error();
       setError({ code: res.error.code, detail: res.error.detail, requestId: res.error.requestId });
       return;
     }
-    tone("ok");
+    feedback.ok();
     say("ok", done);
     router.refresh();
   }
@@ -162,12 +162,12 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
   ];
   const filtered = kindFilter !== "" || statusFilter !== "" || search !== "";
   const openAssign = (task: TaskView): void => {
-    tone("tap");
+    feedback.minor();
     setError(null);
     setAssigning(task);
   };
   const openCancel = (task: TaskView): void => {
-    tone("tap");
+    feedback.minor();
     setError(null);
     setCancelling(task);
   };
@@ -238,7 +238,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
                       onClick={() => {
                         if (open && canManage) openAssign(task);
                         else {
-                          tone("tap");
+                          feedback.minor();
                           say("info", `${t(`kind.${task.kind}`)} · ${t(`status.${task.status}`)} · ${who}`);
                         }
                       }}

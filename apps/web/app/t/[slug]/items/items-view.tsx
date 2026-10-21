@@ -9,12 +9,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
 import { KalipPencereAlan, KalipPencereBolum, KalipPencereDugme, KalipPencereMetin, KalipPencereSecim } from "../kalip/pencere.tsx";
@@ -481,12 +481,12 @@ export function ItemsView({
     setSubmitting(false);
     const hits = r.ok ? withRenamed(r.data) : [];
     if (hits.length === 1 && hits[0] !== undefined) {
-      tone("ok");
+      feedback.ok();
       router.push(`${base}/${encodeURIComponent(hits[0].id)}`);
       return;
     }
     if (fromScan && hits.length === 0) {
-      tone("err");
+      feedback.error();
       say("warn", tk("scanNone", { code: q }));
     } else if (fromScan) say("info", tk("scanMany"));
     seq.current++;
@@ -521,7 +521,7 @@ export function ItemsView({
     items: [tk("stepItems"), tk("stepItemsSub"), tk("stepItemsCta"), "2F5DA8", LICON.box],
   };
   const blocked = (): void => {
-    tone("err");
+    feedback.error();
     say("warn", nextStep === undefined ? "" : stepTitle[nextStep.key][0]);
   };
   const adimlar: KalipAdim[] = steps.map((s) => {
@@ -555,7 +555,7 @@ export function ItemsView({
                 d: LICON.plus,
                 disabled: !canManage,
                 onClick: () => {
-                  tone("tap");
+                  feedback.minor();
                   setCreateOpen(true);
                 },
                 testId: "items-add",
@@ -573,12 +573,12 @@ export function ItemsView({
           busy={submitting}
           inputRef={inputRef}
           onCamera={() => {
-            tone("tap");
+            feedback.minor();
             setCam(true);
           }}
           cameraLabel={tk("camera")}
           onMic={() => {
-            tone("tap");
+            feedback.minor();
             say("info", tx("voiceSoon"));
           }}
           micLabel={tk("mic")}

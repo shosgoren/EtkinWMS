@@ -12,8 +12,9 @@ import { SICON } from "../../../../design/saha-icons.ts";
 import { ErrorNotice, errorKeyOf, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { confirmShippingPickAction, previewShippingPickAction } from "../../shipping/actions.ts";
 import { DroppedNotice, PrimaryLink, ScanAlert, ScanPanel, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, SahaVerdict, tone } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaShell, SahaVerdict } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
+import { feedback } from "@wms/ui";
 
 export interface PickFlowWork {
   readonly taskId: string;
@@ -105,7 +106,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
         setPerScan(step);
         setQty(max);
         setLastName(work.itemName);
-        tone("ok");
+        feedback.ok();
         setStage("qty");
       } catch {
         alertOf("alert.networkTitle", "network", "NETWORK");
@@ -142,7 +143,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
 
   async function confirm() {
     if (busyRef.current || stage !== "qty" || maxScans === null || qty > maxScans || qty < 0) {
-      tone("err");
+      feedback.error();
       return;
     }
     busyRef.current = true;
@@ -154,7 +155,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
     busyRef.current = false;
     setBusy(false);
     if (!out.ok) {
-      tone("err");
+      feedback.error();
       if (out.error.detail === "SCAN_MISMATCH") {
         alertOf("alert.mismatchTitle", "wrong_item", "SCAN_MISMATCH");
         setStage("location");
@@ -163,7 +164,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
       setError(out.error);
       return;
     }
-    tone(out.data.notFound === undefined ? "ok" : "err");
+    (out.data.notFound === undefined ? feedback.ok : feedback.error)();
     setResult({ base: baseQty, short: out.data.notFound?.shortQuantity ?? null });
     setVeil(true);
     setStage("done");

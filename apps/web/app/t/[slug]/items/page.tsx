@@ -10,7 +10,7 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { CARD_TYPES, ItemsView } from "./items-view.tsx";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
@@ -30,7 +30,7 @@ function first(v: string | string[] | undefined): string | undefined {
 
 async function LockedItems(slug: string) {
   const t = await getTranslations("items");
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <KalipKilitliEkran title={t("title")} icon={{ d: LICON.box, color: "2F5DA8" }} text={t("locked")} hint={t("lockedAction")} dark={dark} home={`/t/${encodeURIComponent(slug)}`} />
@@ -108,7 +108,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     throw e;
   }
 
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <ItemsView

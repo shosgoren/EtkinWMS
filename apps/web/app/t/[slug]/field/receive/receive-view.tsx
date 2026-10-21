@@ -12,8 +12,9 @@ import { dz } from "../../../../design/kalip-saha-tokens.ts";
 import { ErrorNotice, LineStatus, errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo, type ReceiptDetail, type ReceiptLineView } from "../../receipts/receipt-form.tsx";
 import { receiveGoodsAction, resolveItemScanAction } from "../../receipts/actions.ts";
 import { CompoundLine, DroppedNotice, PrimaryButton, PrimaryLink, ScanAlert, ScanPanel, isBaseUnit, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "./receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, tone } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaShell } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
+import { feedback } from "@wms/ui";
 
 type Stage = "scan" | "qty" | "done";
 interface Picked {
@@ -144,7 +145,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
     if (picked === null || busyRef.current) return;
     const max = intOf(picked.line.open);
     if (picked.received < 1 || (max !== null && picked.received > max)) {
-      tone("err");
+      feedback.error();
       return;
     }
     busyRef.current = true;
@@ -168,12 +169,12 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
     busyRef.current = false;
     setBusy(false);
     if (!out.ok) {
-      tone("err");
+      feedback.error();
       setError(out.error);
       return;
     }
     const open0 = intOf(picked.line.open);
-    tone("ok");
+    feedback.ok();
     setDone({
       itemName: picked.line.itemName,
       unitName: picked.line.unitName,
@@ -281,7 +282,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
                 type="button"
                 aria-pressed={picked.locationId === l.id}
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   holder.contentChanged();
                   setPicked({ ...picked, locationId: l.id });
                 }}
@@ -352,7 +353,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
                   aria-label={t("flow.hasDamaged")}
                   aria-pressed={showDamaged}
                   onClick={() => {
-                    tone("tap");
+                    feedback.minor();
                     holder.contentChanged();
                     setShowDamaged(true);
                   }}

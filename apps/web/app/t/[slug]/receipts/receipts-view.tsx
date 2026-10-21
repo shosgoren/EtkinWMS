@@ -19,6 +19,7 @@ import { KalipBos, KalipDaha } from "../kalip/liste.tsx";
 import { searchItemsAction } from "../items/actions.ts";
 import { approveQualityAction, createReceiptAction, itemUnitsAction } from "./actions.ts";
 import { ErrorNotice, LineStatus, submitWithKey, useKeyHolder, type ErrorContext, type ErrorInfo, type ReceiptView } from "./receipt-form.tsx";
+import { useSonucSesi } from "../kalip/sonuc-sesi.ts";
 
 const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const LINK_BTN = `inline-flex min-h-12 min-w-12 items-center justify-center rounded-control border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink ${FOCUS}`;
@@ -59,6 +60,8 @@ export function ReceiptsList({ slug, dark, receipts, nextHref, canCreate, canApp
   const [error, setError] = useState<ErrorInfo | null>(null);
   const [confirm, setConfirm] = useState<ReceiptView | null>(null);
   const [approved, setApproved] = useState<string | null>(null);
+  // T-1001 (ALTIN-KURAL 5): onay / oluşturma başarısı ve hata sesli.
+  useSonucSesi({ hata: error, tamam: approved ?? created });
   const home = `/t/${encodeURIComponent(slug)}`;
   const base = `${home}/receipts`;
   const field = `${home}/field/receive`;
@@ -211,6 +214,7 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
   const [qty, setQty] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ info: ErrorInfo; ctx: ErrorContext } | null>(null);
+  useSonucSesi({ hata: error });
   const changed = (): void => createKey.contentChanged();
 
   async function search(q: string) {

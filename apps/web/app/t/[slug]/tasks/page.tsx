@@ -7,7 +7,7 @@ import { getMembershipSummary, listMembers } from "@wms/domain/identity/member-q
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_KINDS, TASK_KIND_PERMISSION, TASK_STATUSES, listTasks, type TaskCursor, type TaskKind, type TaskStatus } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { TasksView } from "./tasks-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -76,7 +76,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
       ? null
       : `${returnTo}?${new URLSearchParams({ ...Object.fromEntries(filterQuery), after: `${result.next.createdKey}~${result.next.id}` }).toString()}`;
 
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <TasksView

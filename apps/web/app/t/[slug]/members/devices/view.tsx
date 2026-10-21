@@ -9,11 +9,12 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveEnrollmentAction, cancelEnrollmentAction, enrollmentStatusAction, revokeDeviceAction, startEnrollmentAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
+import { feedback } from "@wms/ui";
 
 export interface DeviceItem {
   readonly id: string;
@@ -115,7 +116,7 @@ export function DevicesView({
     const r = await approveEnrollmentAction({ slug, enrollmentId: enr.id, confirmCode: cc });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       if (r.error.detail === "CODE_MISMATCH") {
         setErr({ text: t("errCode"), reauth: false });
         setCc("");
@@ -131,7 +132,7 @@ export function DevicesView({
       return;
     }
     setErr(null);
-    tone("ok");
+    feedback.ok();
     say("ok", t("approved"));
     router.refresh();
     void start();
@@ -154,11 +155,11 @@ export function DevicesView({
     const r = await revokeDeviceAction({ slug, deviceId });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
-    tone("ok");
+    feedback.ok();
     say("ok", t("sessionsClosed"));
   }
 
@@ -167,11 +168,11 @@ export function DevicesView({
     const r = await revokeDeviceAction({ slug, deviceId: d.id });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
-    tone("ok");
+    feedback.ok();
     say("ok", t("revoked"));
     router.refresh();
   }
@@ -197,7 +198,7 @@ export function DevicesView({
                 d: LICON.plus,
                 disabled: busy,
                 onClick: () => {
-                  tone("tap");
+                  feedback.minor();
                   void reject();
                 },
                 testId: "devices-new-qr",

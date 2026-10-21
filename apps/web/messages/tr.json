@@ -4372,7 +4372,7 @@
     "soonAria": "{name}, {sub}, yakında",
     "tileAria": "{name}, {sub}",
     "soonToast": "{name} yakında · hazır olunca haber veririz",
-    "none": "Bulunamadı · başka bir ad söyle",
+    "none": "Bulunamadı · ara ya da söyle",
     "mod": {
       "home": {
         "name": "Ana ekran",
@@ -4787,5 +4787,27 @@
     "approveConfirm": "Onayı ver",
     "postConfirm": "Fişi işle",
     "cancelConfirm": "İptali onayla"
+  },
+  "kural": {
+    "offline": "Bağlantı yok · bağlanınca tekrar dene",
+    "offlineStrip": "Bağlantı yok · işlemler bağlanınca yapılabilir",
+    "backOnline": "Bağlantı geldi",
+    "locked": "Değiştirme yetkin yok · sorumluna sor",
+    "undo": "Geri al",
+    "undone": "Geri alındı",
+    "undoFailed": "Geri alınamadı · tekrar dene",
+    "errorTitle": "Bir şeyler ters gitti",
+    "errorText": "Bu ekran şu an açılamadı. Tekrar dene; sürerse destek koduyla bize yaz.",
+    "retry": "Tekrar dene",
+    "home": "Ana ekran",
+    "supportCode": "Destek kodu:",
+    "notFoundTitle": "Bu sayfa bulunamadı",
+    "notFoundText": "Adres değişmiş ya da bu kayda erişimin yok.",
+    "loading": "Yükleniyor",
+    "notFoundSearch": "Bulunamadı · ara ya da söyle",
+    "total": "Toplam {n}",
+    "silent": "Sessiz",
+    "soundOn": "Sesi aç",
+    "themeAuto": "Otomatik (sistem)"
   }
 }

@@ -10,7 +10,7 @@ import { packageReceivingEnabled } from "../../../../../../lib/package-receiving
 import { postedLabelPackages } from "./package-labels.ts";
 import { PackageLabelPreview } from "./package-label-preview.tsx";
 import { PackageLabelEkran } from "./package-label-ekran.tsx";
-import { THEME_COOKIE } from "../../../../../design/theme.ts";
+import { temaKoyu } from "../../../../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Paket etiketleri" };
@@ -25,7 +25,7 @@ export default async function PackageLabelsPage({ params, searchParams }: {
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
   // T-973 (B-63): LİSTE kalıbı kabı; Geri kabul belgesine (üretim partisinde Üretim'e) döner. Baskıda kalıp üst/alt çubuğu basılmaz (labels/print.css).
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   const home = `/t/${encodeURIComponent(slug)}`;
   // Belge kimliği yalnız yetkili okuma başarılı olunca bağlantıya girer (yetkisiz ekranda belge verisi çizilmez, AC-04).
   let back = `${home}/receipts`;

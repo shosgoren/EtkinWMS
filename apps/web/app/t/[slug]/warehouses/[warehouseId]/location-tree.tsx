@@ -12,12 +12,13 @@ import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
 import { isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, type KalipHizliIslem } from "../../kalip/detay.tsx";
-import { Ico, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { archiveLocationAction, createLocationAction, getSetupProgressAction, loadMoreLocationsAction, renameLocationAction, suggestCodeAction } from "../actions.ts";
 import { CreateDialog, ServerErrorBanner } from "../warehouses-view.tsx";
 import type { ServerError } from "../warehouses-view.tsx";
+import { feedback } from "@wms/ui";
 
 export const KINDS = ["RECEIVING", "STORAGE", "STAGING", "TRANSIT"] as const;
 
@@ -105,11 +106,11 @@ export function LocationTree({
   /** Başarı bildirimi: kalıp balonu + onay sesi (görsel + sesli geri bildirim). `null` = bildirim yok. */
   const setNotice = (text: string | null): void => {
     if (text === null) return;
-    tone("ok");
+    feedback.ok();
     say("ok", text);
   };
   const fail = (e: { error: ServerError; scope: "warehouse" | "location" }): void => {
-    tone("err");
+    feedback.error();
     setError(e);
   };
   const writable = canManage && warehouseActive;
@@ -218,7 +219,7 @@ export function LocationTree({
   const activeCount = items.filter((i) => i.status === "ACTIVE").length;
   const countText = next === null ? String(activeCount) : `${activeCount}+`;
   const openRoot = (): void => {
-    tone("tap");
+    feedback.minor();
     setParent({ id: null, label: warehouseName });
   };
   const quick: KalipHizliIslem[] = canOpenDialogs
@@ -229,7 +230,7 @@ export function LocationTree({
           d: LICON.raf,
           color: "0E7C7B",
           onClick: () => {
-            tone("tap");
+            feedback.minor();
             setBulkOpen(true);
           },
         },
@@ -341,7 +342,7 @@ export function LocationTree({
                                 disabled={!canOpenDialogs}
                                 aria-describedby={noteId}
                                 onClick={() => {
-                                  tone("tap");
+                                  feedback.minor();
                                   setParent({ id: it.id, label: `${it.name} (${it.code})` });
                                 }}
                               >
@@ -356,7 +357,7 @@ export function LocationTree({
                                 aria-describedby={noteId}
                                 aria-label={tw("codeEdit.for", { name: it.name })}
                                 onClick={() => {
-                                  tone("tap");
+                                  feedback.minor();
                                   setEditing(it);
                                 }}
                               >
@@ -370,7 +371,7 @@ export function LocationTree({
                                 disabled={!canOpenDialogs}
                                 aria-describedby={noteId}
                                 onClick={() => {
-                                  tone("tap");
+                                  feedback.minor();
                                   setArchiving(it);
                                 }}
                               >

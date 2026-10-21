@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getSupportTicket, isSupportWhatsAppConfigured, listSupportInbox } from "@wms/domain/platform/support";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { ticketNo } from "../../support-format.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { panelLabels, panelNav } from "../nav.ts";
@@ -44,7 +44,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   };
   const query = await searchParams;
   const m = await destekMsgs();
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   const now = new Date();
   const inbox = await listSupportInbox({ db, principal, status: "ALL" }).catch(onMissing);
   const shell = { dark, nav: await panelNav(principal, undefined, undefined, inbox.openCount), labels: await panelLabels() };

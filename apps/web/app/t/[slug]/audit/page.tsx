@@ -7,7 +7,7 @@ import { AUDIT_ACTIONS, getAppDb } from "@wms/db";
 import { listAudit, type AuditFilters, type AuditPage } from "@wms/domain/audit/audit-query";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { AuditView } from "./audit-view.tsx";
 
@@ -66,7 +66,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   };
   const exportHref = `/api/t/${encodeURIComponent(slug)}/audit/export${qs({})}`;
   const home = `/t/${encodeURIComponent(slug)}`;
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   if (locked) {
     return (
       <main className="flex w-full min-w-0 flex-col">

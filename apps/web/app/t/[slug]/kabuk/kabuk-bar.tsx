@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
+import { feedback } from "@wms/ui";
 
 export interface KabukContextValue {
   /** `/t/<slug>` */
@@ -61,6 +62,8 @@ export interface KabukMain {
   readonly testId?: string;
   /** Bekleyen karar (Ekip/Aktar kaynağındaki sarı `.dk.big.wait`). */
   readonly wait?: boolean;
+  /** T-1001 (ALTIN-KURAL 6): işlem sürüyor — ikinci dokunuş gönderilmez; 1 sn'den uzun sürerse dönen gösterge. */
+  readonly busy?: boolean;
 }
 
 export interface KabukBarProps {
@@ -94,35 +97,6 @@ function detect(): Dev {
 }
 /** Kaynak: telefonda 12, tablette 16, masaüstünde 20 kutu (4 satır); sığmayan "+N daha". */
 const CAP: Record<Dev, number> = { mobile: 12, tablet: 16, desktop: 20 };
-
-/** Kaynak tone(): dokunuş / onay / hata sesi + titreşim. */
-export function tone(kind: "tap" | "ok" | "err"): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const t0 = ac.currentTime;
-    const seq = kind === "ok" ? [660, 990] : kind === "err" ? [330, 220] : [560];
-    seq.forEach((f, i) => {
-      const o = ac.createOscillator();
-      const g = ac.createGain();
-      const t = t0 + i * 0.13;
-      o.type = "sine";
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      o.connect(g);
-      g.connect(ac.destination);
-      o.start(t);
-      o.stop(t + 0.13);
-    });
-    window.setTimeout(() => void ac.close(), 600);
-    if (typeof navigator.vibrate === "function") navigator.vibrate(kind === "err" ? [60, 40, 60] : 30);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
 
 function Ico({ d, size, className = "ico" }: { d: string | readonly string[]; size: number; className?: string }) {
   return (
@@ -177,7 +151,6 @@ function Slot({ nav, className, aria, testId, k, current, children }: { nav: Kab
   );
 }
 
-const TOASTS = { ok: ["2F7D5B", KICON.check], err: ["C62828", KICON.close], info: ["E0A100", KICON.info] } as const;
 
 export function KabukBar({ dark, home = false, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
   const t = useTranslations("kabuk");
@@ -188,18 +161,10 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [dev, setDev] = useState<Dev>("mobile");
-  const [toast, setToast] = useState<{ kind: keyof typeof TOASTS; text: string } | null>(null);
-  const toastTimer = useRef<number | undefined>(undefined);
   const modsBtn = useRef<HTMLButtonElement>(null);
   const sheet = useRef<HTMLElement>(null);
   const search = useRef<HTMLInputElement>(null);
 
-  const say = useCallback((kind: keyof typeof TOASTS, text: string) => {
-    window.clearTimeout(toastTimer.current);
-    setToast({ kind, text });
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
-  }, []);
-  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -240,8 +205,8 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   };
 
   const soon = (name: string): void => {
-    tone("tap");
-    say("info", t("soonToast", { name }));
+    feedback.minor();
+    feedback.info(t("soonToast", { name }));
   };
 
   // Kaynak renderVals: arama (ad + alt yazı, Türkçe küçük harf), sayfa sınırı ve "+N daha" / "İlk sayfa" kutusu.
@@ -268,11 +233,10 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const centerCls = `dk big${center.wait === true ? " wait" : ""}${sp("center")}`;
   const centerInner = (
     <>
-      <Ico d={center.d} size={30} />
+      {center.busy === true ? <span className="kyuk" aria-hidden="true" /> : <Ico d={center.d} size={30} />}
       <span className="cap">{center.label}</span>
     </>
   );
-  const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];
 
   return (
     <div className={`dzk dzdx${dark ? " dz-dark" : ""}`} data-testid="kabuk">
@@ -296,12 +260,12 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 <Ico d={[KICON.homeA, KICON.homeB, KICON.homeC]} size={26} />
                 <span>{t("homeShort")}</span>
               </Slot>
-              {center.href !== undefined && center.onClick === undefined && center.disabled !== true ? (
+              {center.href !== undefined && center.onClick === undefined && center.disabled !== true && center.busy !== true ? (
                 <a href={center.href} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }}>
                   {centerInner}
                 </a>
               ) : (
-                <button type="button" className={centerCls} aria-label={center.aria ?? center.label} onClick={center.onClick} disabled={center.disabled === true} data-testid={center.testId ?? "kabuk-main"} data-k="center">
+                <button type="button" className={centerCls} aria-label={center.aria ?? center.label} onClick={center.busy === true ? undefined : center.onClick} disabled={center.disabled === true} aria-busy={center.busy === true || undefined} data-testid={center.testId ?? "kabuk-main"} data-k="center">
                   {centerInner}
                 </button>
               )}
@@ -313,7 +277,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 aria-haspopup="dialog"
                 aria-expanded={open}
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   if (open) close();
                   else setOpen(true);
                 }}
@@ -407,7 +371,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                         {inner}
                       </button>
                     ) : (
-                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={() => tone("tap")} data-module={m.id}>
+                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={() => feedback.minor()} data-module={m.id}>
                         {inner}
                       </a>
                     );
@@ -419,7 +383,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                       className="mt plus"
                       aria-label={plus.first ? t("moreAria", { n: plus.n }) : t("firstAria")}
                       onClick={() => {
-                        tone("tap");
+                        feedback.minor();
                         setPage(plus.first ? 1 : 0);
                       }}
                       data-testid="kabuk-more"
@@ -444,14 +408,6 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
             </>
           ) : null}
 
-          {toast !== null ? (
-            <div className="toast" role="status">
-              <i style={{ background: dz(tk[0]) }}>
-                <Ico d={tk[1]} size={16} />
-              </i>
-              {toast.text}
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

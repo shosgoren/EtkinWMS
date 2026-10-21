@@ -14,7 +14,8 @@ import { SICON } from "../../../design/saha-icons.ts";
 import { classifyCameraError, createFrameDecoder, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession } from "../../../../lib/scanner/camera-source.ts";
 import { useScanner } from "./receive/receive-flow.tsx";
 import { resolveFieldScanAction, type FieldScanTarget } from "./actions.ts";
-import { Ico, MicIco, SahaFrame, SahaSteps, SahaVerdict, tone } from "./saha-shell.tsx";
+import { Ico, MicIco, SahaFrame, SahaSteps, SahaVerdict } from "./saha-shell.tsx";
+import { feedback } from "@wms/ui";
 
 type Cam = { readonly phase: "starting" } | { readonly phase: "scanning" } | { readonly phase: "paused" } | { readonly phase: "failed"; readonly failure: CameraFailure | "decoder" };
 type View =
@@ -64,22 +65,22 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
       try {
         res = await resolveFieldScanAction({ slug, code });
       } catch {
-        tone("err");
+        feedback.error();
         show({ kind: "unknown", code, reason: "network", errorCode: "NETWORK" });
         return;
       }
       if (!res.ok) {
-        tone("err");
+        feedback.error();
         show({ kind: "unknown", code, reason: res.error.code === "VALIDATION_FAILED" ? "not_found" : "network", errorCode: res.error.code });
         return;
       }
       const target = res.data;
       if (target.kind === "unknown") {
-        tone("err");
+        feedback.error();
         show({ kind: "unknown", code, reason: target.reason });
         return;
       }
-      tone("ok");
+      feedback.ok();
       show({ kind: "found", code, target });
       router.push(target.href);
     },
@@ -145,7 +146,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
   }, [attempt, camera]);
 
   const rescan = (): void => {
-    tone("tap");
+    feedback.minor();
     show({ kind: "idle" });
     setNote(null);
     if (cam.phase === "failed") setAttempt((n) => n + 1);
@@ -153,7 +154,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
   };
 
   const nfc = async (): Promise<void> => {
-    tone("tap");
+    feedback.minor();
     const Ctor = (window as unknown as { NDEFReader?: new () => NdefReaderLike }).NDEFReader;
     if (Ctor === undefined) {
       setNote(t("nfcNone"));
@@ -298,7 +299,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
                 className="cx"
                 aria-pressed={typing}
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   setTyping((v) => !v);
                 }}
                 data-testid="okut-type"

@@ -8,7 +8,7 @@ import { listPlans } from "@wms/domain/platform/plans";
 import { listSupportInbox } from "@wms/domain/platform/support";
 import { destekMsgs, rowItem } from "../support/format.ts";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { panelLabels, panelNav } from "../nav.ts";
 import { planLines, priceLabel } from "../plan-format.ts";
@@ -156,7 +156,7 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
   const m = (await getMessages()).panel as unknown as { musteriler: Msgs };
   const t = m.musteriler;
   const labels: MusterilerLabels = t;
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   const shell = { dark, nav: await panelNav(principal), labels: await panelLabels() };
   const now = new Date();
   const planName = (id: string | undefined): string => plans.find((p) => p.id === id)?.name ?? "—";

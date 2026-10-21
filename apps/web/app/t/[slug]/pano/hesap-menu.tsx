@@ -3,13 +3,16 @@
 // bileşeni. Sınıflar ve renkler Pano kaynağının üretilmiş CSS'inden (`.dzp` kabı); kalıp ekranı bunları `display: contents` bir `.dzp`
 // kabında çizer (yeni stil yok). Menü: kişi başlığı, (ekip bağlantıları), Kullanıcı değiştir, Tüm ekranlar (uygulama menüsü: Akış/Genel
 // bakış anahtarı ve yetkili ekranlar), tema, Çıkış yap. Çıkış mevcut `/sign-out` uç noktasıyla (Pano'daki ile aynı).
-import { useEffect, useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { ICON } from "../../../design/bakis-icons.ts";
 import { authPost } from "../../../../lib/auth-client.ts";
 import { openAppMenu } from "../app-bar.tsx";
+import { DICON } from "../../../design/destek-icons.ts";
+import { useSessiz } from "../kalip/sessiz.ts";
+import { useModalFocus } from "../kalip/odak.ts";
 
 function Ico({ d, size }: { d: string; size: number }) {
   return (
@@ -60,13 +63,12 @@ export function HesapDugme({ team, open, onClick }: { team: boolean; open: boole
 export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }: { team: boolean; me: HesapKisi; links?: readonly HesapBaglanti[]; dark: boolean; onToggleTheme: () => void; onClose: () => void }) {
   const t = useTranslations("pano");
   const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const tk = useTranslations("kural");
+  // T-1001 (ALTIN-KURAL 5): "Sessiz" tercihi cihazda saklanır.
+  const [silent, setSilent] = useSessiz();
+  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak menüde kalır, kapanınca Hesap düğmesine döner.
+  const box = useRef<HTMLDivElement>(null);
+  useModalFocus(true, box, { onClose, initial: "first" });
   const signOut = async (next: string): Promise<void> => {
     setFailed(false);
     const res = await authPost<unknown>("/sign-out", {});
@@ -88,12 +90,13 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
       },
     },
     { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: onToggleTheme },
+    { k: "sound", label: silent ? tk("soundOn") : tk("silent"), color: "6A7F91", d: DICON.speaker, go: () => setSilent(!silent) },
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => void signOut("/login") },
   ];
   return (
     <>
       <div className="hback" onClick={onClose} />
-      <div className="halo tmenu" role="menu" aria-label={label}>
+      <div ref={box} className="halo tmenu" role="menu" aria-label={label}>
         <div className="tmh">
           <span className="av" style={{ background: dz(me.color) }}>
             {me.ini}

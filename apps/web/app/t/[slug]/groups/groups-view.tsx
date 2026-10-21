@@ -6,10 +6,13 @@
 // Bilinçli farklar (DESIGN-PARITY): Etkin (sesle) T-424; özel grup için "Arşivle" düğmesi (kaynakta yok; grup silinmez); kişi aramasında yazı kutusu.
 import { useTranslations } from "next-intl";
 import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { feedback } from "@wms/ui";
+import { kilitliDokunus } from "../kalip/kilitli.tsx";
 
 type Overview = {
   readonly groups: readonly { id: string; name: string; color: string; screens: readonly string[]; grants: readonly string[]; archived: boolean; version: number; memberCount: number }[];
@@ -81,27 +84,6 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
   );
 }
 
-function beep(ok: boolean): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.value = ok ? 880 : 300;
-    o.type = "sine";
-    g.gain.setValueAtTime(0.12, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
-    o.connect(g);
-    g.connect(ac.destination);
-    o.start();
-    o.stop(ac.currentTime + 0.2);
-    window.setTimeout(() => void ac.close(), 400);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
-
 const hexKey = (c: string): string => c.replace("#", "").toUpperCase();
 const initial = (name: string): string => (name.trim()[0] ?? "?").toLocaleUpperCase("tr-TR");
 const powersOf = (grants: readonly string[]): string[] => POWERS.filter(([, , , g]) => g.length > 0 && g.every((x) => grants.includes(x))).map((p) => p[0]);
@@ -109,6 +91,7 @@ const grantsOf = (powers: readonly string[]): string[] => POWERS.filter((p) => p
 
 export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const t = useTranslations("gruplar");
+  const tr = useTranslations("kural");
   const base = `/t/${encodeURIComponent(slug)}`;
   const [groups, setGroups] = useState(data.groups);
   const [members, setMembers] = useState(data.members);
@@ -117,16 +100,14 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState<Draft | null>(null);
   const [cf, setCf] = useState<null | "home" | "back">(null);
+  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const cfRef = useRef<HTMLDivElement>(null);
+  useModalFocus(cf !== null, cfRef, { onClose: () => setCf(null), initial: "first" });
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [toast, setToast] = useState("");
-  const toastTimer = useRef<number | null>(null);
-  const flash = (msg: string): void => {
-    setToast(msg);
-    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(""), 1600);
-  };
+  // T-1001 (ALTIN-KURAL 5, 17): yetkisiz dokunuş — ortak sarı balon + hata sesi.
+  const flash = (msg: string): void => kilitliDokunus(msg);
 
   const active = useMemo(() => groups.filter((g) => !g.archived), [groups]);
   const roleOf = (m: (typeof members)[number]): string => m.roles[0] ?? "READ_ONLY";
@@ -160,7 +141,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const readOnly = draft === null || draft.template !== null || !data.canEdit;
 
   function open(tile: (typeof tiles)[number]): void {
-    beep(true);
+    feedback.ok();
     setIssue(null);
     let d: Draft;
     if (tile.template !== null) {
@@ -182,7 +163,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       flash(t("ownerOnly"));
       return;
     }
-    beep(true);
+    feedback.ok();
     const d: Draft = { id: null, version: null, template: null, name: t("newName"), color: withHash(COLORS[0]), screens: [], powers: [], picked: [] };
     setDraft(d);
     setSaved({ ...d, name: "" });
@@ -194,7 +175,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const upd = (patch: Partial<Draft>): void => setDraft((d) => (d === null ? d : { ...d, ...patch }));
   const toggle = (key: "screens" | "powers" | "picked", id: string): void => {
     if (readOnly || draft === null) return;
-    beep(true);
+    feedback.ok();
     const list = draft[key];
     upd({ [key]: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] } as Partial<Draft>);
   };
@@ -222,12 +203,12 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
         grants: grantsOf(draft.powers),
       });
       if (!r.ok) {
-        beep(false);
+        feedback.error();
         setIssue(errorText(r.error.code, r.error.detail));
         return false;
       }
       if (!r.data.ok) {
-        beep(false);
+        feedback.error();
         setIssue(t(`issue.${r.data.issue}`));
         return false;
       }
@@ -249,7 +230,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       setDraft(done);
       setSaved(done);
       if (skipped.length > 0) setIssue(t("skipped", { names: skipped.join(", ") }));
-      beep(true);
+      feedback.ok();
       return true;
     } finally {
       setBusy(false);
@@ -267,7 +248,16 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       }
       const id = draft.id;
       setGroups((list) => list.map((x) => (x.id === id ? { ...x, archived: true } : x)));
-      flash(t("archived", { name: draft.name }));
+      // T-1001 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay yok; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
+      const version = r.data.ok ? r.data.version : draft.version;
+      feedback.undo(t("archived", { name: draft.name }), tr("undo"), async () => {
+        const u = await archiveGroupAction({ slug, id, expectedVersion: version, archived: false });
+        if (u.ok && u.data.ok) {
+          const v = u.data.version;
+          setGroups((list) => list.map((x) => (x.id === id ? { ...x, archived: false, version: v } : x)));
+          feedback.ok(tr("undone"));
+        } else feedback.error(tr("undoFailed"));
+      });
       setDraft(null);
       setSaved(null);
       setView("list");
@@ -300,7 +290,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       RICON.next,
       () => {
         if (draft !== null && draft.template === null && draft.name.trim() === "") {
-          beep(false);
+          feedback.error();
           setIssue(t("issue.NAME_MISSING"));
           return;
         }
@@ -343,7 +333,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
           data-card={id}
           onClick={() => {
             if (key === "powers" && LOCKED.includes(id) && !readOnly) {
-              beep(false);
+              feedback.error();
               flash(t("teamLocked"));
               return;
             }
@@ -515,7 +505,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                         type="button"
                         className="allb"
                         onClick={() => {
-                          beep(true);
+                          feedback.ok();
                           upd({ picked: members.filter((m) => !m.isOwner).map((m) => m.membershipId) });
                         }}
                       >
@@ -538,7 +528,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                           data-person={m.name}
                           onClick={() => {
                             if (m.isOwner && !readOnly) {
-                              beep(false);
+                              feedback.error();
                               flash(t("ownerNoGroup"));
                               return;
                             }
@@ -583,7 +573,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
             {cf !== null ? (
               <>
                 <div className="cfback" onClick={() => setCf(null)} />
-                <div className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
+                <div ref={cfRef} className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
                   <span className="cfic">
                     <Ico d={RICON.warn} size={26} />
                   </span>
@@ -629,7 +619,6 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                 </div>
               </>
             ) : null}
-            {toast !== "" ? <div className="toast">{toast}</div> : null}
           </div>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { getSampleDataStatus, hasActiveSample, type SampleDataStatus } from "@wm
 import { getTenantSettings } from "@wms/domain/onboarding/settings-queries";
 import { AppError } from "@wms/shared/errors";
 import { TIME_ZONES } from "../../../../lib/timezones.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu, temaTercihi } from "../../../design/theme.ts";
 import { SettingsView } from "./settings-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +55,9 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const sampleResult = SAMPLE_RESULTS.find((r) => r === first(query.sample));
   const sampleNotice = first(query.sample);
   const sodNotice = first(query.sod);
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const jar = await cookies();
+  const dark = temaKoyu(jar);
+  const theme = temaTercihi(jar);
 
   // T-968: sonuç bildirimleri kalıbın balonunda (görsel + ses); yeniden giriş ve hata bant olarak kalır.
   const notices: { kind: "ok" | "err" | "info"; text: string }[] = [];
@@ -80,6 +82,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
       key={JSON.stringify(values)}
       slug={slug}
       dark={dark}
+      theme={theme}
       locked={locked}
       values={values}
       addressSlug={settings?.slug ?? null}

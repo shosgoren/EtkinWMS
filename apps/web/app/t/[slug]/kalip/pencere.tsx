@@ -6,9 +6,10 @@
 // Sunucu çağrısı sürerken (`busy`) Esc ve perde kapatmaz (ConfirmDialog sözleşmesi aynı).
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { belgeCerezleri, temaKoyu } from "../../../design/theme.ts";
 import { Ico } from "./ekran.tsx";
 import { kdz } from "./tokens.ts";
+import { useModalFocus } from "./odak.ts";
 
 const c = (hex: string): string => kdz("dzf", hex);
 
@@ -18,7 +19,7 @@ function useKalipDark(open: boolean): boolean {
   useLayoutEffect(() => {
     if (!open) return;
     const root = document.querySelector(".kalip");
-    setDark(root === null ? document.cookie.split(";").some((x) => x.trim() === `${THEME_COOKIE}=koyu`) : root.classList.contains("dz-dark"));
+    setDark(root === null ? temaKoyu(belgeCerezleri()) : root.classList.contains("dz-dark"));
   }, [open]);
   return dark;
 }
@@ -49,6 +50,8 @@ export function KalipPencere({ open, title, titleId, describedBy, icon, onClose,
   const dark = useKalipDark(open);
   const busyRef = useRef(busy);
   busyRef.current = busy;
+  // T-1001 (ALTIN-KURAL 11): Esc ve odak tuzağı yerel `<dialog>`dan; kapanınca odak AÇAN düğmeye döner (kanca önce açanı kaydeder).
+  useModalFocus(open, ref, { trap: false, initial: "none" });
   useEffect(() => {
     const el = ref.current;
     if (el === null) return;

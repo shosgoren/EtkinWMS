@@ -4,6 +4,7 @@
 // tarama ekranı açılana kadar ne betik ne WASM indirilir. Stok/iş kuralı burada YOKTUR: bu dosya yalnızca "okunan metin" üretir;
 // ürün/lokasyon çözümü ve kurallar sunucuda (domain) kalır.
 import { SCANNER_CONFIG } from "./scanner-config.ts";
+import { sesCal } from "@wms/ui";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Biçim doğrulaması
@@ -364,50 +365,11 @@ export interface FeedbackResult {
   readonly vibrated: boolean;
   readonly sounded: boolean;
 }
-const VIBRATE: Record<FeedbackKind, number | number[]> = { ok: 60, bad: [200, 80, 200] };
-// [frekans Hz, başlangıç s, süre s]
-const TONES: Record<FeedbackKind, ReadonlyArray<readonly [number, number, number]>> = {
-  ok: [[1200, 0, 0.12]],
-  bad: [
-    [220, 0, 0.18],
-    [220, 0.26, 0.18],
-  ],
-};
-type AudioCtor = new () => AudioContext;
-let audio: AudioContext | null = null;
 
 /**
  * Geri bildirim: destek yoksa (iOS Safari `vibrate`, ses kilitli) ilgili kanal atlanır ve `false` döner; sahte "titreşti" bildirilmez (G-07).
- * Ses bağlamı kullanıcı dokunuşuyla açılan tarama ekranında oluşturulur (iOS otomatik oynatma kuralı).
+ * T-1001 (ALTIN-KURAL 5): ses ve titreşim uygulamanın TEK kaynağından (`@wms/ui` `sesCal`; "Sessiz" ve "Hareketi azalt" orada).
  */
 export function cameraFeedback(kind: FeedbackKind): FeedbackResult {
-  let vibrated = false;
-  let sounded = false;
-  try {
-    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") vibrated = navigator.vibrate(VIBRATE[kind]);
-  } catch {
-    vibrated = false;
-  }
-  try {
-    const Ctor = typeof window === "undefined" ? undefined : ((window as unknown as { AudioContext?: AudioCtor; webkitAudioContext?: AudioCtor }).AudioContext ?? (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext);
-    if (Ctor !== undefined) {
-      audio ??= new Ctor();
-      const ctx = audio;
-      if (ctx.state === "suspended") void ctx.resume().catch(() => undefined);
-      for (const [freq, at, dur] of TONES[kind]) {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = freq;
-        gain.gain.value = 0.2;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + at);
-        osc.stop(ctx.currentTime + at + dur);
-      }
-      sounded = true;
-    }
-  } catch {
-    sounded = false;
-  }
-  return { vibrated, sounded };
+  return sesCal(kind === "ok" ? "okutma-iyi" : "okutma-kotu");
 }

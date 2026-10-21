@@ -8,10 +8,11 @@
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { KalipBaslik, KalipEkran, tone } from "../kalip/ekran.tsx";
+import { KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
 import { KalipBos, KalipCipler, KalipDaha } from "../kalip/liste.tsx";
 import { printCss, validPrintSettings, type PaperMode } from "./print-settings.ts";
 import "./print.css";
+import { feedback } from "@wms/ui";
 
 export interface LabelPreviewProps {
   readonly dark: boolean;
@@ -53,7 +54,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
   const custom = width !== 100 || height !== 50;
 
   function downloadZpl(): void {
-    tone("tap");
+    feedback.minor();
     const url = URL.createObjectURL(new Blob([zpl], { type: "application/octet-stream" }));
     const a = document.createElement("a");
     a.href = url;
@@ -79,7 +80,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
           d: LICON.printer,
           disabled: !valid,
           onClick: () => {
-            tone("tap");
+            feedback.minor();
             window.print();
           },
           testId: "labels-print",

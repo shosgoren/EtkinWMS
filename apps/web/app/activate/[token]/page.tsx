@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { previewActivation } from "@wms/domain/platform/activation";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { appSurface } from "../../../lib/surface.ts";
 import { ActivationFlow } from "./flow.tsx";
 
@@ -21,7 +21,7 @@ export default async function ActivatePage({ params }: { params: Promise<{ token
   if (appSurface() === "panel") notFound();
   const { token } = await params;
   const preview = await previewActivation({ db: getAppDb(), token });
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   // Gösterilen adres yapılandırılmış uygulama kökünden (istek Host başlığına güvenilmez; inceleme nit); tanımsızsa istek kökü.
   let host = (await headers()).get("host") ?? "wms.etkinyazilim.com";
   try {

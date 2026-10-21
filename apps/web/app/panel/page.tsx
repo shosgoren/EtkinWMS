@@ -8,7 +8,7 @@ import { listCustomers, type CustomerRow } from "@wms/domain/platform/customers"
 import { listDemoRequests } from "@wms/domain/platform/demo-requests";
 import { AppError } from "@wms/shared/errors";
 import { loadMailConfig } from "@wms/shared/mailer";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { C, dz } from "../design/yonet-tokens.ts";
 import { YICON } from "../design/yonet-icons.ts";
 import { panelOperatorOrExit } from "./gate.ts";
@@ -171,7 +171,7 @@ export default async function PanelHome() {
     ...limitTodos(customers, t),
   ];
   const time = new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <PanelShell
       dark={dark}

@@ -5,7 +5,7 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { listPanelEvents } from "@wms/domain/platform/events";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { panelLabels, panelNav } from "../nav.ts";
 import { PanelShell } from "../shell.tsx";
@@ -29,7 +29,7 @@ export default async function KayitPage() {
   });
   const t = ((await getMessages()).panel as unknown as { kayit: KayitMsgs }).kayit;
   const rows = events.map((e) => ({ t: stamp(e.at), l: describe(e, t) }));
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <PanelShell dark={dark} current="kayit" title={t.title} sub={t.sub} nav={await panelNav(principal)} labels={await panelLabels()}>
       <KayitView rows={rows} head={t.head} tag={t.tag} empty={t.empty} />

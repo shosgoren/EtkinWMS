@@ -7,6 +7,7 @@
 // Etkin (sesle eşleme) T-424; eşleştirme hafızası tarayıcıda (alan + başlık imzası); "Kritik stok (en az)" alanı minimum stok aktarımıyla gelir.
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/aktar-tokens.ts";
 import { AICON } from "../../../design/aktar-icons.ts";
 import { readWorkbook, SheetError, type Workbook } from "../../../../lib/sheet/read.ts";
@@ -14,6 +15,8 @@ import { FIELDS, autoMap, buildCsv, buildRecords, colLetter, detectHeader, heade
 import { applyImportChunkAction, previewImportAction } from "./actions.ts";
 import { importPartiesAction } from "../parties/actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { feedback } from "@wms/ui";
+
 
 type PreviewResult = Awaited<ReturnType<typeof previewImportAction>>;
 type ImportPreview = Extract<PreviewResult, { ok: true }>["data"];
@@ -65,27 +68,6 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
   );
 }
 
-function beep(ok: boolean): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.value = ok ? 880 : 300;
-    o.type = "sine";
-    g.gain.setValueAtTime(0.12, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
-    o.connect(g);
-    g.connect(ac.destination);
-    o.start();
-    o.stop(ac.currentTime + 0.2);
-    window.setTimeout(() => void ac.close(), 400);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
-
 function store<T>(key: string, value?: T): T | null {
   try {
     if (value !== undefined) {
@@ -116,21 +98,21 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const [partyReports, setPartyReports] = useState<readonly PartyReport[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState("");
   const [cf, setCf] = useState(false);
+  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const pickRef = useRef<HTMLElement>(null);
+  const cfRef = useRef<HTMLDivElement>(null);
+  useModalFocus(pick !== null, pickRef, { onClose: () => setPick(null), initial: "first" });
+  useModalFocus(cf, cfRef, { onClose: () => setCf(false), initial: "first" });
   const [recent, setRecent] = useState<{ name: string; rows: number; cols: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
     setRecent(store<{ name: string; rows: number; cols: number }>(RECENT(slug, kind)));
   }, [slug, kind]);
 
-  const flash = (msg: string): void => {
-    setToast(msg);
-    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(""), 1600);
-  };
+  // T-1001 (ALTIN-KURAL 5): ortak balon.
+  const flash = (msg: string): void => feedback.info(msg);
 
   const sheet = loaded === null ? null : (loaded.wb.sheets[loaded.sheet] ?? null);
   const rows = useMemo(() => sheet?.rows ?? [], [sheet]);
@@ -163,10 +145,10 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
       setPartyReports([]);
       setProgress(null);
       store(RECENT(slug, kind), { name: file.name, rows: Math.max(0, first.rows.length - header - 1), cols: (first.rows[header] ?? []).length });
-      beep(true);
+      feedback.ok();
       setStep(3);
     } catch (e) {
-      beep(false);
+      feedback.error();
       setError(t(`fileError.${e instanceof SheetError ? e.code : "UNREADABLE"}`));
     } finally {
       setBusy(false);
@@ -191,7 +173,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
         const r = await importPartiesAction({ slug, dryRun: true, rows: records.slice(i, i + PARTY_CHUNK) });
         if (!r.ok) {
           setBusy(false);
-          beep(false);
+          feedback.error();
           setError(t("serverError", { code: r.error.code }));
           return;
         }
@@ -216,7 +198,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
         blocked,
       });
       setBusy(false);
-      beep(!blocked);
+      (!blocked ? feedback.ok : feedback.error)();
       setStep(4);
       return;
     }
@@ -224,7 +206,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     const r = await previewImportAction({ slug, text: first.text });
     if (!r.ok) {
       setBusy(false);
-      beep(false);
+      feedback.error();
       setError(t("serverError", { code: r.error.code }));
       return;
     }
@@ -245,7 +227,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     const nUpd = !clean ? 0 : "products" in fp && fp.products !== undefined ? fp.products.existing : 0;
     setCheck({ preview: fp, text: final.text, rowMap: final.rowMap, nNew, nUpd, bad: issues.slice(0, 20), badRows: headerLevel ? 0 : p.summary?.errorRows ?? badFileRows.size, blocked: !clean });
     setBusy(false);
-    beep(clean);
+    (clean ? feedback.ok : feedback.error)();
     setStep(4);
   }
 
@@ -269,7 +251,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
       }
       remember();
       setBusy(false);
-      beep(true);
+      feedback.ok();
       setStep(5);
       return;
     }
@@ -291,7 +273,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
     }
     remember();
     setBusy(false);
-    beep(true);
+    feedback.ok();
     setStep(5);
   }
 
@@ -344,7 +326,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
       mainCls = "dk big scan wait";
       mainIcon = AICON.qmark;
       main = () => {
-        beep(false);
+        feedback.error();
         setPick(wait[0] ?? null);
       };
     } else {
@@ -438,7 +420,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                         data-kind={k}
                         onClick={() => {
                           if (!on) return;
-                          beep(true);
+                          feedback.ok();
                           setKind(k as ImportKindKey);
                           setError(null);
                           setStep(2);
@@ -596,7 +578,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                                 className="mok"
                                 aria-label={t("s3.yes")}
                                 onClick={() => {
-                                  beep(true);
+                                  feedback.ok();
                                   setMap({ col: map.col, state: { ...map.state, [f.id]: "user" } });
                                 }}
                               >
@@ -686,7 +668,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                       className={`opt${skip ? " on" : ""}`}
                       aria-pressed={skip}
                       onClick={() => {
-                        beep(true);
+                        feedback.ok();
                         setSkip(!skip);
                         setCheck(null);
                         setStep(3);
@@ -745,7 +727,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
 
             {pickF !== null && map !== null && loaded !== null ? (
               <div className="scrim" onClick={() => setPick(null)}>
-                <section className="sheet" role="dialog" aria-label={t("pick.aria")} onClick={(e) => e.stopPropagation()}>
+                <section ref={pickRef} className="sheet" role="dialog" aria-label={t("pick.aria")} onClick={(e) => e.stopPropagation()}>
                   <div className="sh">
                     <span>
                       <b>
@@ -769,7 +751,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                           className={`colb${cur ? " cur" : owner !== undefined ? " taken" : ""}`}
                           data-col={colLetter(i)}
                           onClick={() => {
-                            beep(true);
+                            feedback.ok();
                             setMap(setColumn(map, pickF.id, i));
                             setPick(null);
                           }}
@@ -808,7 +790,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
             {cf ? (
               <>
                 <div className="cfback" onClick={() => setCf(false)} />
-                <div className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
+                <div ref={cfRef} className="cfbox" role="alertdialog" aria-label={t("cf.title")}>
                   <span className="cfic">
                     <Ico d={AICON.warn} size={26} />
                   </span>
@@ -828,7 +810,6 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                 </div>
               </>
             ) : null}
-            {toast !== "" ? <div className="toast">{toast}</div> : null}
           </div>
         </div>
       </div>

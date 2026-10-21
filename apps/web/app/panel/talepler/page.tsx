@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { listDemoRequests } from "@wms/domain/platform/demo-requests";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { panelLabels, panelNav } from "../nav.ts";
 import { PanelShell } from "../shell.tsx";
@@ -61,7 +61,7 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
     error: tt.raw("error") as string,
   };
   const pending = rows.filter((r) => r.status === "PENDING").length;
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <PanelShell
       dark={dark}

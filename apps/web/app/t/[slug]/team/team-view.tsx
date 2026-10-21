@@ -8,12 +8,15 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { create as createQr } from "qrcode";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/ekip-tokens.ts";
 import { EICON } from "../../../design/ekip-icons.ts";
 import { approveJoinAction, createJoinLinkAction, inviteMemberAction, rejectJoinAction } from "../members/actions.ts";
 import { setMemberGroupAction } from "../groups/actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { feedback } from "@wms/ui";
+import { balonGoster, type BalonTur } from "@wms/ui";
 
 type Role = "TENANT_ADMIN" | "WAREHOUSE_MANAGER" | "PICKER" | "COUNTER" | "READ_ONLY";
 export interface TeamPerson {
@@ -72,26 +75,6 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
   );
 }
 
-function beep(ok: boolean): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.value = ok ? 880 : 300;
-    g.gain.setValueAtTime(0.12, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
-    o.connect(g);
-    g.connect(ac.destination);
-    o.start();
-    o.stop(ac.currentTime + 0.2);
-    window.setTimeout(() => void ac.close(), 400);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
-
 function QrSvg({ value, label }: { value: string; label: string }) {
   const qr = useMemo(() => {
     try {
@@ -127,20 +110,20 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [cf, setCf] = useState<null | "home" | "back">(null);
+  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const addRef = useRef<HTMLElement>(null);
+  const cfRef = useRef<HTMLDivElement>(null);
+  useModalFocus(add, addRef, { onClose: () => setAdd(false), initial: "first" });
+  useModalFocus(cf !== null, cfRef, { onClose: () => setCf(null), initial: "first" });
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
-  const [toast, setToast] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => router.refresh(), 5000);
     return () => clearInterval(timer);
   }, [router]);
-  useEffect(() => {
-    if (toast === "") return;
-    const timer = setTimeout(() => setToast(""), 1600);
-    return () => clearTimeout(timer);
-  }, [toast]);
-  const flash = (m: string): void => setToast(m);
+  // T-1001 (ALTIN-KURAL 5): ortak balon (kendi sesini çalar).
+  const flash = (m: string, tur: BalonTur = "ok"): void => balonGoster({ tur, metin: m });
 
   const groupOf = (id: string | null): TeamGroup | undefined => (id === null ? undefined : groups.find((g) => g.id === id));
   const labelOf = (p: TeamPerson): { text: string; color: string } => {
@@ -173,12 +156,12 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   async function approve(): Promise<boolean> {
     if (req === undefined) return false;
     if (chosen === undefined) {
-      beep(false);
-      flash(t("pickGroupFirst"));
+      feedback.error();
+      flash(t("pickGroupFirst"), "warn");
       return false;
     }
     if (!/^\d{6}$/.test(code)) {
-      beep(false);
+      feedback.error();
       setIssue(t("codeMissing"));
       return false;
     }
@@ -187,12 +170,12 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     try {
       const r = await approveJoinAction({ slug, requestId: req.id, code, roleKey: chosen.role });
       if (!r.ok) {
-        beep(false);
+        feedback.error();
         setIssue(errText(r.error.code, r.error.detail));
         return false;
       }
       if (!r.data.ok) {
-        beep(false);
+        feedback.error();
         setCode("");
         setIssue(r.data.issue === "CODE_WRONG" ? t("codeWrong", { n: Math.max(0, 2 - req.wrongTries) }) : t("err.gone"));
         router.refresh();
@@ -200,9 +183,9 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
       }
       if (chosen.groupId !== null) {
         const g = await setMemberGroupAction({ slug, memberId: r.data.membershipId, groupId: chosen.groupId });
-        if (!g.ok || !g.data.ok) flash(t("groupNotSet", { group: chosen.label }));
+        if (!g.ok || !g.data.ok) flash(t("groupNotSet", { group: chosen.label }), "warn");
       }
-      beep(true);
+      feedback.ok();
       flash(t("approved", { name: req.name, group: chosen.label }));
       setCode("");
       router.refresh();
@@ -221,7 +204,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
       setIssue(errText(r.error.code, r.error.detail));
       return;
     }
-    beep(false);
+    feedback.error();
     flash(t("rejected", { name: req.name }));
     setCode("");
     router.refresh();
@@ -229,12 +212,12 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
 
   async function invite(): Promise<boolean> {
     if (invRole === null) {
-      beep(false);
-      flash(t("pickGroupFirst"));
+      feedback.error();
+      flash(t("pickGroupFirst"), "warn");
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      beep(false);
+      feedback.error();
       setIssue(t("emailBad"));
       return false;
     }
@@ -243,11 +226,11 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     try {
       const r = await inviteMemberAction({ slug, email: email.trim(), roleKey: invRole });
       if (!r.ok) {
-        beep(false);
+        feedback.error();
         setIssue(errText(r.error.code, r.error.detail));
         return false;
       }
-      beep(true);
+      feedback.ok();
       if (r.data.inviteLink !== undefined) {
         setInviteLink(r.data.inviteLink);
         return false;
@@ -268,11 +251,11 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     const r = await createJoinLinkAction({ slug });
     setBusy(false);
     if (!r.ok) {
-      beep(false);
+      feedback.error();
       setIssue(errText(r.error.code, r.error.detail));
       return;
     }
-    beep(true);
+    feedback.ok();
     setQrUrl(r.data.url);
     flash(t("qrReady"));
   }
@@ -479,7 +462,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                               className={`gp${on ? " on" : ""}`}
                               style={on ? { background: dz(c.color) } : undefined}
                               onClick={() => {
-                                beep(true);
+                                feedback.ok();
                                 setPick({ ...pick, [req.id]: c.key });
                               }}
                               data-chip={c.key}
@@ -596,7 +579,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
 
             {add ? (
               <div className="scrim" onClick={() => setAdd(false)}>
-                <section className="sheet" role="dialog" aria-label={t("addTitle")} onClick={(e) => e.stopPropagation()}>
+                <section ref={addRef} className="sheet" role="dialog" aria-label={t("addTitle")} onClick={(e) => e.stopPropagation()}>
                   <div className="sh">
                     <span>
                       <b>{t("addTitle")}</b>
@@ -628,7 +611,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
             {cf !== null ? (
               <>
                 <div className="cfback" onClick={() => setCf(null)} />
-                <div className="cfbox" role="alertdialog" aria-label={view === "invite" ? t("cf.inviteTitle") : t("cf.pendTitle")}>
+                <div ref={cfRef} className="cfbox" role="alertdialog" aria-label={view === "invite" ? t("cf.inviteTitle") : t("cf.pendTitle")}>
                   <span className="cfic">
                     <Ico d={EICON.warn} size={26} />
                   </span>
@@ -676,7 +659,6 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                 </div>
               </>
             ) : null}
-            {toast !== "" ? <div className="toast">{toast}</div> : null}
           </div>
         </div>
       </div>

@@ -15,7 +15,7 @@ import {
 } from "@wms/domain/labels";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { LabelNotice, LabelPreview, LabelShell } from "./label-preview.tsx";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
   const copies = copiesRaw === undefined ? 1 : /^\d{1,4}$/.test(copiesRaw) ? Number(copiesRaw) : 0;
   const call = { db: getAppDb(), principal, tenantSlug: slug };
 
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   // Geri: etiketin geldiği ekran (ürün kartı / depo), yoksa ana ekran.
   const home = `/t/${encodeURIComponent(slug)}`;
   const itemId = one(sp.item);

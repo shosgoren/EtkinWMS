@@ -10,7 +10,7 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS } from "@wms/domain/onboarding/import";
 import { AppError } from "@wms/shared/errors";
 import { AktarView } from "./aktar-view.tsx";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export default async function ImportPage({ params }: { params: Promise<{ slug: s
   return (
     <main className="flex w-full min-w-0 flex-col">
       <h1 className="sr-only">{t("title")}</h1>
-      <AktarView slug={slug} dark={jar.get(THEME_COOKIE)?.value === "koyu"} maxRows={IMPORT_MAX_ROWS} chunkSize={IMPORT_CHUNK_SIZE} />
+      <AktarView slug={slug} dark={temaKoyu(jar)} maxRows={IMPORT_MAX_ROWS} chunkSize={IMPORT_CHUNK_SIZE} />
     </main>
   );
 }

@@ -6,7 +6,7 @@ import { getAppDb } from "@wms/db";
 import { listGroups } from "@wms/domain/identity/groups";
 import { getJoinOverview } from "@wms/domain/identity/team-join";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { TeamView } from "./team-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
     }
     throw e;
   }
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <TeamView

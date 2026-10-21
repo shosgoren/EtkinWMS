@@ -11,6 +11,7 @@ import { DzRoot, useDz } from "../design/dz-root.tsx";
 import { C, dz } from "../design/giris-tokens.ts";
 import { GICON } from "../design/giris-icons.ts";
 import { pinProblem } from "./pin.ts";
+import { feedback } from "@wms/ui";
 
 type Device =
   | { readonly registered: false }
@@ -48,12 +49,9 @@ function saveWs(v: string): void {
   }
 }
 
+/** Hatalı giriş: ortak hata sesi + titreşim (T-1001, ALTIN-KURAL 5: tek kaynak). */
 export function buzz(): void {
-  try {
-    navigator.vibrate?.([80, 40, 80]);
-  } catch {
-    // titreşim yok
-  }
+  feedback.error();
 }
 
 export function Shell({ fact, children }: { fact: boolean; children: ReactNode }) {

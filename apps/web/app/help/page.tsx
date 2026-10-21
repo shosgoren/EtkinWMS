@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { GICON, GirisBaglanti, GirisBant, GirisBaslik, GirisKabuk } from "../giris-ui.tsx";
 
 // Kısa, statik yardım sayfası (T-122 Supervisor eki): üst bardaki "Yardım çağır" bağlantısının hedefi. Sahte işlev yok
@@ -20,7 +20,7 @@ const ITEMS = [
 
 export default async function HelpPage() {
   const t = await getTranslations("help");
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <GirisKabuk dark={dark} testId="help">
       <GirisBaslik title={t("title")} sub={t("intro")} />

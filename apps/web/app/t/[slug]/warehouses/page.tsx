@@ -8,7 +8,7 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { countLocationsByWarehouse, listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { WarehousesView } from "./warehouses-view.tsx";
 import type { WarehouseView } from "./warehouses-view.tsx";
@@ -27,7 +27,7 @@ function first(v: string | string[] | undefined): string | undefined {
 }
 
 async function isDark(): Promise<boolean> {
-  return (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  return temaKoyu(await cookies());
 }
 
 /** Okuma izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli ekran (ürünler deseni). */

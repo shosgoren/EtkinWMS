@@ -9,10 +9,11 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAlan, KalipCikisUyarisi, KalipGrup, KalipIzgara, KalipKilit, KalipSecenek, useLeaveGuard } from "../kalip/form.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { archivePartyAction, savePartyAction } from "./actions.ts";
+import { feedback } from "@wms/ui";
 
 export interface PartyView {
   readonly id: string;
@@ -43,6 +44,7 @@ const ICON = { d: LICON.people, color: "6C4BD8" } as const;
 
 export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: { slug: string; dark: boolean; canEdit: boolean; q: string; archived: boolean; items: readonly PartyView[]; total: number }) {
   const t = useTranslations("parties");
+  const tr = useTranslations("kural");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const list = `${base}/parties`;
@@ -56,7 +58,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
   useLeaveGuard(dirty);
 
   const open = (p: PartyView | null): void => {
-    tone("tap");
+    feedback.minor();
     const f = p === null ? empty : fromParty(p);
     setIssue(null);
     setEdit({ party: p, form: f, initial: f });
@@ -75,18 +77,18 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
     const r = await savePartyAction(body);
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setAsk(false);
       setIssue(r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }));
       return;
     }
     if (!r.data.ok) {
-      tone("err");
+      feedback.error();
       setAsk(false);
       setIssue(t(`issue.${r.data.issue}`));
       return;
     }
-    tone("ok");
+    feedback.ok();
     setEdit(null);
     setAsk(false);
     say("ok", t("saved"));
@@ -99,12 +101,22 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
     const r = await archivePartyAction({ slug, id: edit.party.id, expectedVersion: edit.party.version, archived: !edit.party.archived });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setIssue(r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }));
       return;
     }
-    tone("ok");
-    say("ok", edit.party.archived ? t("restoredDone") : t("archivedDone"));
+    if (edit.party.archived) say("ok", t("restoredDone"));
+    else {
+      // T-1001 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay sorulmaz; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
+      const id = edit.party.id;
+      const version = r.data.version;
+      feedback.undo(t("archivedDone"), tr("undo"), async () => {
+        const u = await archivePartyAction({ slug, id, expectedVersion: version, archived: false });
+        if (u.ok) feedback.ok(tr("undone"));
+        else feedback.error(tr("undoFailed"));
+        router.refresh();
+      });
+    }
     setEdit(null);
     router.refresh();
   }

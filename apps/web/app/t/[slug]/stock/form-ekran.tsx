@@ -4,7 +4,8 @@
 // kendi gönder düğmesi ve sunucu eylemi değişmez. Geri: bölüm listesi.
 import type { ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { KalipEkran, tone } from "../kalip/ekran.tsx";
+import { KalipEkran } from "../kalip/ekran.tsx";
+import { feedback } from "@wms/ui";
 
 export function FormEkran({ kind = "form", heading, dark, title, icon, back, mainLabel, mainAria, children, testId }: { kind?: "form" | "detay"; heading?: boolean; dark: boolean; title: string; icon: { readonly d: string; readonly color: string }; back: string; mainLabel: string; mainAria: string; children: ReactNode; testId?: string }) {
   return (
@@ -26,11 +27,11 @@ export function FormEkran({ kind = "form", heading, dark, title, icon, back, mai
             const form = document.querySelector<HTMLFormElement>(".kalip form.workflow-form");
             const primary = form?.querySelector<HTMLButtonElement>(".workflow-primary") ?? form?.querySelector<HTMLButtonElement>('button[type="submit"]');
             if (form === null || form === undefined || primary?.disabled === true) {
-              tone("err");
+              feedback.error();
               primary?.scrollIntoView({ block: "center" });
               return;
             }
-            tone("tap");
+            feedback.minor();
             form.requestSubmit(primary ?? undefined);
           },
         },

@@ -5,7 +5,8 @@
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { LICON } from "../../../../../design/kalip-icons.ts";
-import { KalipEkran, tone } from "../../../kalip/ekran.tsx";
+import { KalipEkran } from "../../../kalip/ekran.tsx";
+import { feedback } from "@wms/ui";
 
 export function PackageLabelEkran({ dark, back, children }: { dark: boolean; back: string; children: ReactNode }) {
   const t = useTranslations("packageReceiving.k");
@@ -26,11 +27,11 @@ export function PackageLabelEkran({ dark, back, children }: { dark: boolean; bac
           onClick: () => {
             const print = document.querySelector<HTMLButtonElement>('[data-testid="package-label-print"]');
             if (print === null || print.disabled) {
-              tone("err");
+              feedback.error();
               print?.scrollIntoView({ block: "center" });
               return;
             }
-            tone("tap");
+            feedback.minor();
             print.click();
           },
         },

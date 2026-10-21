@@ -4372,7 +4372,7 @@
     "soonAria": "{name}, {sub}, coming soon",
     "tileAria": "{name}, {sub}",
     "soonToast": "{name} is coming soon · we will let you know",
-    "none": "Not found · say another name",
+    "none": "Not found · search or say it",
     "mod": {
       "home": {
         "name": "Home",
@@ -4787,5 +4787,27 @@
     "approveConfirm": "Give approval",
     "postConfirm": "Post adjustment",
     "cancelConfirm": "Confirm cancel"
+  },
+  "kural": {
+    "offline": "No connection · try again when you are back online",
+    "offlineStrip": "No connection · actions will work again once you reconnect",
+    "backOnline": "Back online",
+    "locked": "You cannot change this · ask your manager",
+    "undo": "Undo",
+    "undone": "Undone",
+    "undoFailed": "Could not undo · try again",
+    "errorTitle": "Something went wrong",
+    "errorText": "This screen could not open right now. Try again; if it continues, write to us with the support code.",
+    "retry": "Try again",
+    "home": "Home",
+    "supportCode": "Support code:",
+    "notFoundTitle": "Page not found",
+    "notFoundText": "The address has changed or you do not have access to this record.",
+    "loading": "Loading",
+    "notFoundSearch": "Not found · search or say it",
+    "total": "Total {n}",
+    "silent": "Silent",
+    "soundOn": "Sound on",
+    "themeAuto": "Automatic (system)"
   }
 }

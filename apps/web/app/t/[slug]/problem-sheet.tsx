@@ -3,7 +3,8 @@
 // (`.ovl > .sheet`, `.k3` başlık, `.ucs/.uc` seçim çipleri ve kaynaktaki chipSt seçili stili, `.qfoot` + `.qbtns` + `.big`, kapatma `.qx`).
 // Başarıda kaynaktaki tamam ekranı (`.ov.okov`) kısa süre gösterilir. Not alanı isteğe bağlıdır (en çok 500 karakter).
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type CSSProperties } from "react";
+import { useRef, useState, useTransition, type CSSProperties } from "react";
+import { useModalFocus } from "./kalip/odak.ts";
 import { useTranslations } from "next-intl";
 import { C, dz } from "../../design/bakis-tokens.ts";
 import { ICON } from "../../design/bakis-icons.ts";
@@ -24,6 +25,9 @@ export function ProblemSheet({ slug, onClose, subjectKind, subjectId }: { slug: 
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // T-1001 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useModalFocus(true, sheetRef, { onClose, initial: "first" });
   const [pending, start] = useTransition();
 
   const submit = (): void => {
@@ -55,7 +59,7 @@ export function ProblemSheet({ slug, onClose, subjectKind, subjectId }: { slug: 
 
   return (
     <div className="ovl" onClick={onClose}>
-      <div className="sheet" style={{ background: C.surface, color: C.fg }} role="dialog" aria-modal="true" aria-label={t("title")} onClick={(e) => e.stopPropagation()} data-testid="problem-sheet">
+      <div ref={sheetRef} className="sheet" style={{ background: C.surface, color: C.fg }} role="dialog" aria-modal="true" aria-label={t("title")} onClick={(e) => e.stopPropagation()} data-testid="problem-sheet">
         <div className="qh">
           <span className="dmi" style={{ background: dz("C62828"), color: dz("FFFFFF"), width: 56, height: 56, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
             <svg className="ico" width={28} height={28} viewBox="0 0 24 24" aria-hidden="true">

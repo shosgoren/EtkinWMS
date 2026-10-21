@@ -7,45 +7,18 @@
 // (kalip-frame.css genel kuralı) — yeni ekran yalnız bu kabı kullanarak geçer.
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaYaz } from "../../../design/theme.ts";
 import { KalipDestek } from "./destek.tsx";
 import { kdz, type KalipScope } from "./tokens.ts";
+import { balonGoster, type BalonTur } from "@wms/ui";
+import { useCevrimici } from "./cevrimdisi.ts";
 
 export type KalipKind = "liste" | "form" | "detay";
 const SCOPE: Record<KalipKind, KalipScope> = { liste: "dzl", form: "dzf", detay: "dzd" };
-
-/** Kaynak tone(): dokunuş / onay / hata sesi + titreşim (görsel + sesli geri bildirim, ALTIN KURAL 3). */
-export function tone(kind: "tap" | "ok" | "err"): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const t0 = ac.currentTime;
-    const seq = kind === "ok" ? [660, 990] : kind === "err" ? [330, 220] : [560];
-    seq.forEach((f, i) => {
-      const o = ac.createOscillator();
-      const g = ac.createGain();
-      const t = t0 + i * 0.13;
-      o.type = "sine";
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      o.connect(g);
-      g.connect(ac.destination);
-      o.start(t);
-      o.stop(t + 0.13);
-    });
-    window.setTimeout(() => void ac.close(), 600);
-    if (typeof navigator.vibrate === "function") navigator.vibrate(kind === "err" ? [60, 40, 60] : 30);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
 
 /** Kaynak `.ico` SVG (tek ya da çok yol). */
 export function Ico({ d, size, className = "ico" }: { d: string | readonly string[]; size: number; className?: string }) {
@@ -68,36 +41,19 @@ export function MicIco({ size }: { size: number }) {
   );
 }
 
-export type ToastKind = "ok" | "err" | "info" | "warn";
-// Kaynak TK: renk + ikon.
-const TK: Record<ToastKind, readonly [string, string]> = { ok: ["2F7D5B", LICON.check], err: ["C62828", LICON.close], info: ["2F5DA8", LICON.info], warn: ["E56A00", LICON.warn] };
+export type ToastKind = BalonTur;
 
 export interface KalipToast {
   readonly say: (kind: ToastKind, text: string) => void;
+  /** T-1001: balon artık kök düzendeki ORTAK katmanda çizilir (`BalonKatmani`); yuva boş kalır (eski çağıranlar için). */
   readonly node: ReactNode;
 }
 
-/** Kaynak `toast()`: 2,6 sn görünen balon (`.toast`, `role=status`). Kabın `toast` yuvasına `node` verilir. */
-export function useKalipToast(scope: KalipKind): KalipToast {
-  const [toast, setToast] = useState<{ kind: ToastKind; text: string } | null>(null);
-  const timer = useRef<number | undefined>(undefined);
-  const say = useCallback((kind: ToastKind, text: string) => {
-    window.clearTimeout(timer.current);
-    setToast({ kind, text });
-    timer.current = window.setTimeout(() => setToast(null), 2600);
-  }, []);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-  const tk = TK[toast?.kind ?? "info"];
-  const node =
-    toast === null ? null : (
-      <div className="toast" role="status" aria-live="polite" data-testid="kalip-toast">
-        <i style={{ background: kdz(SCOPE[scope], tk[0]) }}>
-          <Ico d={tk[1]} size={18} />
-        </i>
-        {toast.text}
-      </div>
-    );
-  return { say, node };
+/** Kaynak `toast()`: ortak balon (T-1001, ALTIN-KURAL 5). Balon kendi sesini çalar; `scope` yalnız eski imza içindir. */
+export function useKalipToast(scope?: KalipKind): KalipToast {
+  void scope;
+  const say = useCallback((kind: ToastKind, text: string) => balonGoster({ tur: kind, metin: text, ses: kind !== "info" }), []);
+  return { say, node: null };
 }
 
 export interface KalipEkranProps {
@@ -121,31 +77,16 @@ export interface KalipEkranProps {
   readonly children: ReactNode;
 }
 
-function useOnline(): boolean {
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    const sync = (): void => setOnline(navigator.onLine);
-    sync();
-    window.addEventListener("online", sync);
-    window.addEventListener("offline", sync);
-    return () => {
-      window.removeEventListener("online", sync);
-      window.removeEventListener("offline", sync);
-    };
-  }, []);
-  return online;
-}
-
 export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
   const t = useTranslations("kalip");
   const ctx = useKabuk();
-  const online = useOnline();
+  const online = useCevrimici();
   const router = useRouter();
   const [hesap, setHesap] = useState(false);
   const closeHesap = useCallback(() => setHesap(false), []);
   // Tema cihaz tercihidir (çerez, Pano ve Ayarlar ile aynı); sayfa sunucuda çerezi okuyarak yeniden çizilir.
   const toggleTheme = useCallback(() => {
-    document.cookie = `${THEME_COOKIE}=${dark ? "acik" : "koyu"}; path=/; max-age=31536000; samesite=lax`;
+    temaYaz(dark ? "acik" : "koyu");
     setHesap(false);
     router.refresh();
   }, [dark, router]);

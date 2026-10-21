@@ -6,7 +6,7 @@ import { isWellFormedInvitationToken, previewInvitation } from "@wms/domain/iden
 import { guardInvitePreview } from "../../../lib/invite-guard.ts";
 import { createProductionLimiter } from "../../../lib/rate-limit.ts";
 import { InviteAcceptForm } from "../../auth-forms.tsx";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { GirisBant, GirisBaslik, GirisKabuk } from "../../giris-ui.tsx";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export const metadata: Metadata = { referrer: "no-referrer" };
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const t = await getTranslations("auth");
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   const notFound = (
     <GirisKabuk dark={dark} testId="invite">
       <GirisBaslik title={t("invite.title")} />

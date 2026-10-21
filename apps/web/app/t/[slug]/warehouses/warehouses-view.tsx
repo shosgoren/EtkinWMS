@@ -9,12 +9,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditDialog } from "../code-edit-dialog.tsx";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
 import { KalipOnay, KalipPencereAlan, KalipPencereDugme, KalipPencereSecim } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
@@ -311,11 +311,11 @@ export function WarehousesView({
   const params = useSearchParams();
   const { say, node: toast } = useKalipToast("liste");
   const ok = (text: string): void => {
-    tone("ok");
+    feedback.ok();
     say("ok", text);
   };
   const fail = (e: ServerError): void => {
-    tone("err");
+    feedback.error();
     setError(e);
   };
 
@@ -363,7 +363,7 @@ export function WarehousesView({
   }
 
   const openCreate = (): void => {
-    tone("tap");
+    feedback.minor();
     setCreateOpen(true);
   };
 
@@ -376,7 +376,7 @@ export function WarehousesView({
     items: [tk("stepItems"), tk("stepItemsSub"), tk("stepItemsCta"), "2F5DA8", LICON.box],
   };
   const blocked = (): void => {
-    tone("err");
+    feedback.error();
     say("warn", nextStep === undefined ? "" : stepText[nextStep.key][0]);
   };
   const adimlar: KalipAdim[] = steps.map((s) => {
@@ -466,7 +466,7 @@ export function WarehousesView({
                           aria-describedby={canManage ? undefined : lockedId}
                           aria-label={t("codeEdit.for", { name: w.name })}
                           onClick={() => {
-                            tone("tap");
+                            feedback.minor();
                             setEditing(w);
                           }}
                         >
@@ -480,7 +480,7 @@ export function WarehousesView({
                           disabled={!canManage}
                           aria-describedby={canManage ? undefined : lockedId}
                           onClick={() => {
-                            tone("tap");
+                            feedback.minor();
                             setArchiving(w);
                           }}
                         >
@@ -549,7 +549,7 @@ export function WarehousesView({
           setEditing(null);
           setError(null);
           if (r.changed && id !== undefined) {
-            tone("ok");
+            feedback.ok();
             setCodeChanged({ id, from: r.from, to: r.to });
           } else ok(t("done.codeSame"));
           router.refresh();

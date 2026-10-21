@@ -9,7 +9,7 @@ import { listGroups } from "@wms/domain/identity/groups";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { GroupsView } from "./groups-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -63,7 +63,7 @@ export default async function GroupsPage({ params }: { params: Promise<{ slug: s
   return (
     <main className="flex w-full min-w-0 flex-col">
       <h1 className="sr-only">{t("title")}</h1>
-      <GroupsView slug={slug} dark={jar.get(THEME_COOKIE)?.value === "koyu"} data={data} />
+      <GroupsView slug={slug} dark={temaKoyu(jar)} data={data} />
     </main>
   );
 }

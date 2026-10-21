@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { listPlans } from "@wms/domain/platform/plans";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { panelLabels, panelNav } from "../nav.ts";
 import { PanelShell } from "../shell.tsx";
@@ -86,7 +86,7 @@ export default async function PaketlerPage({ searchParams }: { searchParams: Pro
     savePublish: t("savePublish"),
     error: t.raw("error") as string,
   };
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <PanelShell
       dark={dark}

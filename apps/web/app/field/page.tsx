@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { appSurface } from "../../lib/surface.ts";
 import { FieldSignIn } from "./flow.tsx";
 
@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function FieldPage() {
   if (appSurface() === "panel") notFound();
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   // Gösterilen adres yapılandırılmış uygulama kökünden (istek Host başlığına güvenilmez); tanımsızsa istek kökü.
   let host = (await headers()).get("host") ?? "wms.etkinyazilim.com";
   try {

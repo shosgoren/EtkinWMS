@@ -7,7 +7,7 @@ import { listParties } from "@wms/domain/catalog/parties";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { PartiesView } from "./parties-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   const jar = await cookies();
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <PartiesView slug={slug} dark={jar.get(THEME_COOKIE)?.value === "koyu"} canEdit={canEdit} q={q} archived={archived} items={data.items} total={data.total} />
+      <PartiesView slug={slug} dark={temaKoyu(jar)} canEdit={canEdit} q={q} archived={archived} items={data.items} total={data.total} />
     </main>
   );
 }

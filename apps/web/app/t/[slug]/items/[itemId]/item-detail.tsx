@@ -11,12 +11,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Banner, Button, TextField } from "@wms/ui";
+import { Banner, Button, TextField, feedback } from "@wms/ui";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { CodeChangedNotice, CodeEditDialog } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, KalipMinimum, KalipNerede, KalipTumu, KalipUyari, KalipZaman, type KalipHizliIslem, type KalipOlay, type KalipYer } from "../../kalip/detay.tsx";
-import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran } from "../../kalip/ekran.tsx";
 import { approx, fmtQty, stockTone, sumDecimal } from "../../kalip/format.ts";
 import { addBarcodeAction, archiveItemAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
 import { CARD_VISUAL } from "../card-visual.ts";
@@ -274,7 +274,7 @@ export function ItemDetail({
   ];
   const tags = [tc(item.cardType), tk("unitTag", { unit }), ...(item.trackingMode === "NONE" ? [] : [tt(item.trackingMode)]), tp(item.pickPolicy), ...(active ? [] : [t("status.ARCHIVED")])].map((x) => x.toLocaleUpperCase(locale === "en" ? "en" : "tr"));
   const toEdit = (): void => {
-    tone("tap");
+    feedback.minor();
     const el = document.getElementById("sec-card");
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
     el?.querySelector<HTMLInputElement>('input[name="name"]')?.focus({ preventScroll: true });

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { packageReceivingEnabled } from "../../../../../lib/package-receiving-config.ts";
-import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { temaKoyu } from "../../../../design/theme.ts";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { KalipHataEkran, KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { PackageFlow } from "./package-flow.tsx";
@@ -35,7 +35,7 @@ export default async function PackageReceivingPage({ params, searchParams }: {
   const canView = hasPermission(member.roles, "stock.view", member.grants);
   const canWrite = canView && hasPermission(member.roles, "document.create", member.grants) && hasPermission(member.roles, "stock.post", member.grants);
   // T-973: kalıp kabının teması (kullanıcı tema çerezi; Pano / Ayarlar ile aynı).
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   const icon = { d: LICON.koli, color: "2F7D5B" };
   const home = `/t/${encodeURIComponent(slug)}`;
   if (!canView || (!documentId && !canWrite)) return <KalipKilitliEkran title={t("title")} icon={icon} text={t("locked")} hint={t("k.lockedHint")} dark={dark} home={`${home}/receipts`} />;

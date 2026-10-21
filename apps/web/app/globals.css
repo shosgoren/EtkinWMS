@@ -22,6 +22,8 @@
 @import "./design/destek.css";
 @import "./design/destek-ek.css";
 @import "./design/destek-frame.css";
+/* T-1001: ALTIN-KURAL 5–17 ortak katman (odak, hareket azaltma, balon, çevrimdışı, iskelet, hata ekranı). */
+@import "./design/kural.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
@@ -162,6 +164,54 @@ body {
 :focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* T-1001 (ALTIN-KURAL 5–17): ortak katman belirteçleri (design/kural.css kullanır; renkler kaynak tasarımların paletinden). */
+:root {
+  --color-kr-ink: #172e42;
+  --color-kr-ink-dark: #223040;
+  --color-kr-on: #ffffff;
+  --color-kr-ok: #2f7d5b;
+  --color-kr-err: #c62828;
+  --color-kr-warn: #f4c542;
+  --color-kr-warn-ink: #1a1300;
+  --color-kr-info: #2f5da8;
+  --color-kr-bg-a: #eef1f4;
+  --color-kr-bg-b: #dce3ea;
+  --color-kr-bg-dark-a: #121b24;
+  --color-kr-bg-dark-b: #0f171f;
+  --color-kr-text-dark: #e6ebef;
+  --color-kr-muted: #6a7f91;
+  --color-kr-card: #ffffff;
+  --color-kr-card-dark: #1c2833;
+  --color-kr-shadow: rgba(23, 46, 66, .6);
+  --color-kr-shadow-soft: rgba(23, 46, 66, .45);
+}
+
+/* T-1001 (ALTIN-KURAL 14): eski (Tailwind belirteçli) yüzeylerin koyu teması; kök düzen `html[data-tema]` verir. */
+html[data-tema="koyu"] {
+  color-scheme: dark;
+  --color-ink: #e6ebef;
+  --color-ink-muted: #a9b6c2;
+  --color-surface: #1c2833;
+  --color-border: #2c3a47;
+  --color-border-strong: #8193a3;
+  --color-bg: #121b24;
+  --color-accent-ink: #ffd9c4;
+  --color-accent-soft: #3a2418;
+  --color-locked-bg: #24313d;
+  --color-locked-ink: #a9b6c2;
+  --color-warning-ink: #f6cf86;
+  --color-warning-bg: #3a2c0f;
+  --color-undo-ink: #ffb889;
+  --color-undo-bg: #3a2414;
+  --color-danger-ink: #ff9b9f;
+  --color-danger-bg: #3d1a1c;
+  --color-success-ink: #8fd6ad;
+  --color-success-bg: #12301f;
+  --color-info-ink: #9cc8f2;
+  --color-info-bg: #142a40;
+  --color-focus: #f4c542;
 }
 
 /* ---- T-254: cihaza uyumlu kabuk ---------------------------------------------------------------------------------------- */

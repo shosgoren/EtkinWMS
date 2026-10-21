@@ -9,6 +9,7 @@ import { useEffect, type CSSProperties, type InputHTMLAttributes, type ReactNode
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico } from "./ekran.tsx";
 import { kdz } from "./tokens.ts";
+import { kilitliDokunus } from "./kilitli.tsx";
 
 const c = (hex: string): string => kdz("dzf", hex);
 
@@ -82,7 +83,7 @@ export function KalipSatir({ id, title, value, d, color, open, changed = false, 
   const head = editorTitle ?? title;
   return (
     <div className="srw" data-row={id}>
-      <button type="button" className={cls} style={style} aria-expanded={open} aria-label={`${title}: ${value}`} onClick={onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
+      <button type="button" className={cls} style={style} aria-expanded={open} aria-label={`${title}: ${value}`} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus() : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
         <span className="ri">
           <Ico d={d} size={20} />
         </span>
@@ -114,7 +115,7 @@ export function KalipSatir({ id, title, value, d, color, open, changed = false, 
 export function KalipAnahtar({ title, sub, d, color, on, changed = false, locked = false, onToggle, aria, testId }: { title: string; sub?: string; d: string; color: string; on: boolean; changed?: boolean; locked?: boolean; onToggle: () => void; aria: string; testId?: string }) {
   const t = useTranslations("kalip");
   return (
-    <button type="button" className={`sr2${changed ? " chg" : ""}${locked ? " lock" : ""}`} style={{ "--c": c(color) } as CSSProperties} aria-pressed={on} aria-label={aria} onClick={onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
+    <button type="button" className={`sr2${changed ? " chg" : ""}${locked ? " lock" : ""}`} style={{ "--c": c(color) } as CSSProperties} aria-pressed={on} aria-label={aria} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus() : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
       <span className="ri">
         <Ico d={d} size={20} />
       </span>

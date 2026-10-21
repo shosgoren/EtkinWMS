@@ -7,7 +7,7 @@ import { listFieldLogins } from "@wms/domain/identity/field-users";
 import { getMembershipSummary, listMembers } from "@wms/domain/identity/member-queries";
 import { listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { temaKoyu } from "../../../../design/theme.ts";
 import { FieldStaffView } from "./view.tsx";
 
 // Saha personeli ekle (T-997, ADR-026 §7.1; T-971 form kalıbı, view.tsx). Yalnız `users.manage`.
@@ -47,7 +47,7 @@ export default async function FieldStaffPage({ params }: { params: Promise<{ slu
       : [{ membershipId: m.membershipId, name: m.displayName, username: m.field.username, role: m.roles[0] ?? "", active: m.field.active, locked: m.field.locked }],
   );
   const tenantName = summary.memberships.find((m) => m.slug === slug)?.tenantName ?? slug;
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   let host = (await headers()).get("host") ?? "wms.etkinyazilim.com";
   try {
     const configured = process.env.BETTER_AUTH_URL?.trim();

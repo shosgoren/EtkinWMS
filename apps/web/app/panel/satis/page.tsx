@@ -6,7 +6,7 @@ import { getAppDb } from "@wms/db";
 import { listPlans } from "@wms/domain/platform/plans";
 import { getSiteContent } from "@wms/domain/platform/site-content";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { panelLabels, panelNav } from "../nav.ts";
 import { PanelShell } from "../shell.tsx";
@@ -65,7 +65,7 @@ export default async function SatisPage() {
     content?.publishedAt == null || content.publishedVersion === null
       ? t.pubNever
       : t.pubAt.replace("{when}", when(content.publishedAt)).replace("{v}", String(content.publishedVersion));
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <PanelShell dark={dark} current="satis" title={t.title} sub={t.sub} nav={await panelNav(principal)} labels={await panelLabels()}>
       <SatisView

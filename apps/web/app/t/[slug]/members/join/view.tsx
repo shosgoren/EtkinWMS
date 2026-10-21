@@ -9,11 +9,12 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveJoinAction, createJoinLinkAction, rejectJoinAction, revokeJoinLinkAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
+import { feedback } from "@wms/ui";
 
 export interface JoinPending {
   readonly id: string;
@@ -88,7 +89,7 @@ export function JoinView({
             ? { text: t("errGone"), reauth: false }
             : { text: t("errServer"), reauth: false };
   const notify = (text: string): void => {
-    tone("ok");
+    feedback.ok();
     say("ok", text);
   };
 
@@ -98,11 +99,11 @@ export function JoinView({
     const r = await createJoinLinkAction({ slug });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
-    tone("ok");
+    feedback.ok();
     setUrl(r.data.url);
     setExpiresAt(r.data.expiresAt);
   }
@@ -112,7 +113,7 @@ export function JoinView({
     const r = await revokeJoinLinkAction({ slug });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
@@ -127,12 +128,12 @@ export function JoinView({
     const r = await approveJoinAction({ slug, requestId: id, code, roleKey: role });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
     if (!r.data.ok) {
-      tone("err");
+      feedback.error();
       setErr({ text: r.data.issue === "CODE_WRONG" ? t("errCode") : t("errGone"), reauth: false });
       setCode("");
       router.refresh();
@@ -149,7 +150,7 @@ export function JoinView({
     const r = await rejectJoinAction({ slug, requestId: id });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
@@ -211,7 +212,7 @@ export function JoinView({
                       scope="dzl"
                       d={LICON.check}
                       onClick={() => {
-                        tone("tap");
+                        feedback.minor();
                         setOpen(p.id);
                         setCode("");
                         setErr(null);

@@ -6,12 +6,12 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../../field/receive/receive-flow.tsx";
 import { FormSteps } from "../../screen-shell.tsx";
 import { ErrorNotice, type ErrorInfo, type ActionResult } from "../receipt-form.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipAlan, KalipAnahtar, KalipGrup, KalipSecenek } from "../../kalip/form.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { getPackageReceiptAction, packageItemOptionsAction, packageReceivingLocationsAction, packageWarehousesAction, postPackageReceiptAction, preparePackageReceiptAction, resolvePackageItemScanAction, searchPackageItemsAction, type PackageCommandDto, type PackageItemDto, type PackageItemOptionsDto, type PackageReceiptDto } from "./actions.ts";
@@ -239,8 +239,8 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
   const pressPrimary = () => {
     const primary = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="package-flow"] button.flow-primary'));
     const target = primary.find(b => !b.disabled);
-    if (target === undefined) { tone("err"); primary[0]?.scrollIntoView({ block: "center" }); return; }
-    tone("tap"); target.click();
+    if (target === undefined) { feedback.error(); primary[0]?.scrollIntoView({ block: "center" }); return; }
+    feedback.minor(); target.click();
   };
   const main = posted && receipt
     ? { label: t("k.labelsShort"), aria: t("k.labelsAria"), d: LICON.printer, href: packageLabelHref(slug, receipt.documentId), testId: "package-main" }

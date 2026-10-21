@@ -9,11 +9,12 @@ import { useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { Ico, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipAlan, KalipGrup, KalipIzgara, KalipSecenek } from "../../kalip/form.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { createFieldUserAction, resetFieldCodeAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
+import { feedback } from "@wms/ui";
 
 interface Warehouse {
   readonly id: string;
@@ -82,18 +83,18 @@ export function FieldStaffView({
     const res = await resetFieldCodeAction({ slug, memberId: row.membershipId });
     setBusy(false);
     if (res.ok) {
-      tone("ok");
+      feedback.ok();
       setIssued({ username: row.username, code: res.data.code });
       router.refresh();
       return;
     }
-    tone("err");
+    feedback.error();
     setErr(failText(res.error.code, res.error.detail));
   }
 
   async function add(): Promise<void> {
     if (wh === undefined) {
-      tone("err");
+      feedback.error();
       setErr({ text: t("errWarehouse"), reauth: false });
       return;
     }
@@ -103,13 +104,13 @@ export function FieldStaffView({
     setBusy(false);
     if (res.ok) {
       // Form değerleri kartla birlikte görünür kalır (kart hangi personele ait, ekranda okunur).
-      tone("ok");
+      feedback.ok();
       setIssued({ username: res.data.username, code: res.data.code });
       say("ok", t("cardKick", { username: res.data.username }));
       router.refresh();
       return;
     }
-    tone("err");
+    feedback.error();
     setErr(failText(res.error.code, res.error.detail));
     router.refresh();
   }

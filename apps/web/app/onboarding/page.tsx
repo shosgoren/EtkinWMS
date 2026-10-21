@@ -6,7 +6,7 @@ import { TEMPLATE_KEYS, getTemplate } from "@wms/domain/onboarding/templates";
 import { slugCandidates, workspaceCreationAllowed } from "@wms/domain/onboarding/workspace";
 import { saveWorkspaceNameAction } from "./actions.ts";
 import { NAME_MAX, readWizardDraft } from "./draft.ts";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { GICON, GirisAlan, GirisBaglanti, GirisBant, GirisBaslik, GirisEylem, GirisKabuk, GirisKart } from "../giris-ui.tsx";
 import { Wizard } from "./wizard.tsx";
 import type { TemplatePreview } from "./wizard.tsx";
@@ -33,7 +33,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   if (principal === null) redirect("/login?next=%2Fonboarding");
   const t = await getTranslations("onboarding");
   // T-974 (B-63 grup B): Giris.dc.html `v.auth` kabuğu (aktivasyon sihirbazıyla aynı öğeler); adım/çerez/sunucu kuralı aynı.
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
 
   // A-50 / m11: kayıt kapalıysa (staging/prod) ya da demo kullanıcısıysa sihirbaz açılmaz; sunucu da aynı kararı verir.
   if (!workspaceCreationAllowed(process.env) || principal.isDemo) {

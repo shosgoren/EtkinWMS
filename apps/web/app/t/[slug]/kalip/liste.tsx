@@ -198,8 +198,13 @@ export function KalipDaha({ children, href, onClick, iconD, iconColor, mic, clas
   );
 }
 
-/** Kaynak `.nomatch` (aramaya uyan yok): ikon, başlık, ipucu, eylem. */
-export function KalipBos({ title, hint, action, testId, iconD = LICON.search }: { title: string; hint?: string; action?: { readonly label: string; readonly href?: string; readonly onClick?: () => void }; testId?: string; iconD?: string }) {
+/**
+ * Kaynak `.nomatch` (aramaya uyan yok / boş liste): ikon, tek cümle, ipucu ve SIRADAKİ ADIM düğmesi (T-1001, ALTIN-KURAL 8).
+ * `action.kind`: `clear` (aramayı temizle, ✕ — varsayılan), `add` (yeni kayıt, +), `go` (başka ekrana, →).
+ * Arama sonucu yoksa başlık ortak cümledir: "Bulunamadı · ara ya da söyle" (`kural.notFoundSearch`).
+ */
+export function KalipBos({ title, hint, action, testId, iconD = LICON.search }: { title: string; hint?: string; action?: { readonly label: string; readonly href?: string; readonly onClick?: () => void; readonly kind?: "clear" | "add" | "go" }; testId?: string; iconD?: string }) {
+  const aIco = action?.kind === "add" ? LICON.plus : action?.kind === "go" ? LICON.arrow : LICON.close;
   return (
     <div className="nomatch" data-testid={testId ?? "kalip-empty"}>
       <span className="nic">
@@ -208,13 +213,13 @@ export function KalipBos({ title, hint, action, testId, iconD = LICON.search }: 
       <b>{title}</b>
       {hint === undefined ? null : <small>{hint}</small>}
       {action === undefined ? null : action.href !== undefined ? (
-        <a className="btn n" href={action.href} onClick={action.onClick}>
-          <Ico d={LICON.close} size={18} />
+        <a className="btn n" href={action.href} onClick={action.onClick} data-testid="kalip-empty-action">
+          <Ico d={aIco} size={18} />
           {action.label}
         </a>
       ) : (
-        <button type="button" className="btn n" onClick={action.onClick}>
-          <Ico d={LICON.close} size={18} />
+        <button type="button" className="btn n" onClick={action.onClick} data-testid="kalip-empty-action">
+          <Ico d={aIco} size={18} />
           {action.label}
         </button>
       )}

@@ -8,8 +8,9 @@
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { feedback } from "@wms/ui";
 
 export interface AuditRowView {
   readonly id: string;
@@ -146,7 +147,7 @@ export function AuditView({
                   color={v.color}
                   aria={`${r.actionLabel} · ${r.actor} · ${r.when}${meta === "" ? "" : ` · ${meta}`}`}
                   onClick={() => {
-                    tone("tap");
+                    feedback.minor();
                     say("info", [r.actionLabel, r.actor, r.when, r.record, r.reason].filter((x): x is string => x !== null && x !== "").join(" · "));
                   }}
                   testId="audit-row"
