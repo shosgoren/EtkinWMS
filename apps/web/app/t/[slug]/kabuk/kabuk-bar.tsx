@@ -27,6 +27,14 @@ export interface KabukContextValue {
   /** Toplu yayın (T-967 × T-968): kalıp üst çubuğu Sorun bildir + Destek için çalışma alanı kısa adı ve Sorun bildirme yetkisi. */
   readonly slug?: string;
   readonly canReport?: boolean;
+  /** T-979c: üyenin çalışma alanı sayısı (Hesap menüsünde "Çalışma alanı değiştir" yalnız birden fazlaysa). */
+  readonly workspaces?: number;
+}
+
+/** T-979c: görünüm geçişi (eski "Tüm ekranlar" menüsündeki Akış/Genel bakış anahtarı ile aynı çerez sözleşmesi: `view`, 1 yıl). */
+export function switchView(base: string, view: "flow" | "cockpit"): void {
+  document.cookie = `view=${view}; path=/; max-age=31536000; samesite=lax${window.location.protocol === "https:" ? "; secure" : ""}`;
+  window.location.assign(base);
 }
 
 const KabukContext = createContext<KabukContextValue | null>(null);
@@ -407,7 +415,13 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                         {inner}
                       </button>
                     ) : (
-                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={() => tone("tap")} data-module={m.id}>
+                      <a key={m.id} role="listitem" href={m.href ?? base} className="mt" style={{ ...style, textDecoration: "none" }} aria-label={t("tileAria", { name: m.name, sub: m.sub })} onClick={(e) => {
+                          tone("tap");
+                          if (m.view !== undefined) {
+                            e.preventDefault();
+                            switchView(base, m.view);
+                          }
+                        }} data-module={m.id} data-view={m.view}>
                         {inner}
                       </a>
                     );

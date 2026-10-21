@@ -834,7 +834,9 @@
           "LOCATION": "SHELF ISSUE",
           "OTHER": "OTHER"
         }
-      }
+      },
+      "overview": "Overview",
+      "signOut": "Sign out"
     }
   },
   "audit": {
@@ -3785,7 +3787,8 @@
     "save": "Save",
     "saveShort": "SAVE",
     "bell": "ALERTS",
-    "bellAria": "Alerts, {n} open"
+    "bellAria": "Alerts, {n} open",
+    "workspace": "Switch workspace"
   },
   "aktar": {
     "title": "Import from Excel",
@@ -4453,6 +4456,26 @@
       "ekip": {
         "name": "Team",
         "sub": "People · Permissions"
+      },
+      "kokpit": {
+        "name": "Overview",
+        "sub": "All work in one list"
+      },
+      "akis": {
+        "name": "Operations",
+        "sub": "My tasks home"
+      },
+      "stok": {
+        "name": "Stock",
+        "sub": "Where · How much"
+      },
+      "ayar": {
+        "name": "Settings",
+        "sub": "Language · Time · Rules"
+      },
+      "kayit": {
+        "name": "Who did what?",
+        "sub": "Audit log"
       }
     }
   },
