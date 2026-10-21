@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { TASK_KINDS, listMyTasks, type TaskCursor, type TaskKind, type TaskStatus } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
+import { Banner } from "@wms/ui";
 import { claimTaskAction } from "../../tasks/actions.ts";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { kalipDark } from "../../stock/belge-kalip.ts";
@@ -123,14 +124,12 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
     <KalipEkran kind="liste" dark={dark} title={t("field.title")} icon={{ d: LICON.clip, color: "6C4BD8" }} testId="field-tasks" bar={{ back: { href: fieldHome } }}>
       <p className="sr">{t("field.intro")}</p>
       {first(sp.claimed) === "1" ? (
-        <p role="status" className="rounded-card bg-success-bg px-4 py-3 text-base font-semibold text-success-ink">
-          {t("field.claimed")}
-        </p>
+        <Banner kind="success">{t("field.claimed")}</Banner>
       ) : null}
       {errorKey === null ? null : (
-        <p role="alert" className="rounded-card bg-danger-bg px-4 py-3 text-base font-semibold text-danger-ink">
+        <Banner kind="error">
           {te(errorKey)} {te(`${errorKey}Action`)}
-        </p>
+        </Banner>
       )}
       <KalipAra
         label={t("search")}

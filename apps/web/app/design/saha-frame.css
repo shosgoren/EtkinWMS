@@ -17,7 +17,7 @@
   padding-bottom: calc(var(--kabuk-h) + 8px);
 }
 .dzs.dz-dark .app { background: linear-gradient(180deg, var(--color-dz-x-bcblce) 0%, var(--color-dz-x-apbhbp) 100%); color: var(--color-dz-x-ogolop); }
-body:has(.dzs) [data-testid="tenant-bar"], body:has(.dzs) .app-header { display: none; }
+body:has(.dzs) .app-header { display: none; }
 /* Başlık: kaynakta `.brand b`; uygulamada ekran başlığı `h1` içinde (erişilebilirlik), görünüm aynı. */
 .dzs .sh1 { margin: 0; font: inherit; min-width: 0; }
 /* Telefon ölçüsünde içerik: tablet ve masaüstünde ortalı (kaynak yalnız telefon). */

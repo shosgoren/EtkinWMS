@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useDz } from "../../design/dz-root.tsx";
 import { C, dz } from "../../design/bakis-tokens.ts";
 import { ICON } from "../../design/bakis-icons.ts";
-import { openAppMenu } from "./app-bar.tsx";
+import { openAppMenu } from "./app-menu.tsx";
 import { ProblemSheet } from "./problem-sheet.tsx";
 
 const GUIDE_EVENT = "etkinwms:guide-open";

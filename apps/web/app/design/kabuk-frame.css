@@ -35,7 +35,6 @@
 
 /* Kiracı kabuğunun eski alt gezinmesi (Geri / Ana ekran, saha çubuğu) ve telefon üst çubuğu ortak çubuğun olduğu ekranda çizilmez
    (tasarımda yoktur; eski üst çubuk ekranın kendi üst çubuğunu ve Modüller perdesini örtüyordu). Uygulama menüsü penceresi ayrı öğedir. */
-body:has(.dzk) [data-testid="screen-nav"], body:has(.dzk) [data-testid="field-action-bar"], body:has(.dzk) [data-testid="bottom-nav"], body:has(.dzk) [data-testid="app-bar"] { display: none; }
 
 /* Ekranlar çubuğa yer ayırır (kaynakta `.dock` sütunun parçasıdır: içerik altında kalmaz). */
 body:has(.dzk) .dzp .app, body:has(.dzk) .dze .app, body:has(.dzk) .dzr .app, body:has(.dzk) .dza .app { padding-bottom: var(--kabuk-h); }

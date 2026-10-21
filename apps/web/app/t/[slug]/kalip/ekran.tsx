@@ -112,7 +112,7 @@ export interface KalipEkranProps {
   /** Sağ üst `.tph` yuvası. Verilmezse Sorun bildir + Destek (T-967, kiracı bağlamı varsa; yoksa Yardım bağlantısı). `null` = boş. */
   readonly actions?: ReactNode | null;
   /** Alt cam çubuk (ortak KabukBar): ekranın ana işlemi, Geri, Ana ekran. `dark` kabdan gelir. */
-  readonly bar: Omit<KabukBarProps, "dark" | "home">;
+  readonly bar: Omit<KabukBarProps, "dark">;
   /** Kabın içinde, `.inner` dışında çizilen katmanlar (kaynak `.sxback`, `.cfback/.cfbox`, `.toast`). */
   readonly overlays?: ReactNode;
   readonly testId?: string;

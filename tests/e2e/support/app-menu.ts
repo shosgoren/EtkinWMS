@@ -1,10 +1,10 @@
 // T-988 (I-18): Akış ana ekranında (Görevlerim tasarımı) uygulama menüsü sarı ⚠ düğmesinin açılır kutusundadır
-// (`home-actions` → `app-bar-menu`); diğer ekranlarda menü düğmesi üst çubuktadır. Testler menüyü bu yardımcıyla açar.
+// (`home-actions` → `app-bar-menu`); Pano ve kalıp ekranlarında Hesap menüsündeki "Tüm ekranlar" (`home-actions` → `app-bar-menu`). T-979'dan
+// beri eski telefon üst çubuğu yoktur. Testler menüyü bu yardımcıyla açar.
 // Aramalar `#main` içindedir: akış (streaming) sırasında React çözülmüş içeriği kısa süre gizli bir kopyada tutar.
 import { expect, type Page } from "@playwright/test";
 
-// T-971: kalıp ekranlarında eski üst çubuk (içindeki menü düğmesiyle) DOM'da gizli durur; Hesap menüsündeki "Tüm ekranlar" aynı kimliği taşır.
-// Bu yüzden yalnız görünen öğe alınır.
+// Hesap menüsü kapanırken öğe kısa süre DOM'da kalabilir; yalnız görünen öğe alınır.
 const home = (page: Page) => page.locator("#main").getByTestId("home-actions").filter({ visible: true });
 const bar = (page: Page) => page.locator("#main").getByTestId("app-bar-menu").filter({ visible: true });
 

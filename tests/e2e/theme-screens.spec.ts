@@ -94,19 +94,19 @@ for (const size of SIZES) {
         await expect(tasks).toBeVisible();
         if (view.key === "flow") await expect(tasks.locator("[data-report]")).toHaveCount(5);
 
-        // Kart ikonları dekoratif. Kokpit: Lucide (svg.lucide). Akış (I-18): tasarım kaynağının kendi SVG yolları (svg.ico).
-        const icons = tasks.locator(view.key === "flow" ? "svg.ico" : "svg.lucide");
+        // Kart ikonları dekoratif; iki görünümde de (I-18; T-979 Kokpit liste kalıbında) tasarım kaynağının kendi SVG yolları (svg.ico).
+        const icons = tasks.locator("svg.ico");
         expect(await icons.count(), "kart ikonları").toBeGreaterThanOrEqual(view.key === "flow" ? 5 : 9);
         await expect(icons.first()).toHaveAttribute("aria-hidden", "true");
         // T-902 marka kabı ink rengindedir; telefon uygulama çubuğu görünüm accent rengini korur.
         await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
         const landingAccent = accents[view.key];
         if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
-        // T-988: Akış ana ekranı Görevlerim başlığını kullanır (ayrı uygulama çubuğu yok); Kokpit telefon çubuğu ink logoyu korur.
-        if (size.width < 768 && view.key === "cockpit") await expect(page.getByTestId("app-bar").locator("span.bg-ink")).toHaveCSS("background-color", await tokenColor(page, "ink"));
-        if (view.key === "flow") await expect(page.locator("#main").getByTestId("home-actions")).toBeVisible();
-        // I-18: Görevlerim odak halkası tasarım kaynağındaki gibi 4 px sarı (#F4C542); diğer ekranlar --color-focus.
-        await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`, view.key === "flow" ? "rgb(244, 197, 66)" : undefined);
+        // T-979 (B-95): eski telefon uygulama çubuğu kaldırıldı; iki görünümde de ekranın kendi kalıp/Pano başlığı var.
+        await expect(page.getByTestId("app-bar")).toHaveCount(0);
+        await expect(page.locator("#main").getByTestId("home-actions")).toBeVisible();
+        // I-18: Pano ve Kokpit (liste kalıbı) odak halkası tasarım kaynağındaki gibi 4 px sarı (#F4C542).
+        await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`, "rgb(244, 197, 66)");
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);
         await page.screenshot({ path: path.join(OUT, `${view.key}-${size.width}-ana-ekran.png`), fullPage: true });
       }
