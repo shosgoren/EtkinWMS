@@ -4,6 +4,7 @@
 // (T-416; settings.manage, yeniden giriş, audit). Bu dosya yalnız ince giriş katmanıdır: Origin + hız sınırı + hata maskeleme
 // (`createProductionGuard`), tenant sayacı, sonuca göre yönlendirme. Ayrı eylemler (`saveSettingsAction`, `setSeparationAction`) değişmedi.
 // Görev ayrılığı yeniden giriş isterse önce kaydedilen alanlar korunur, yönlendirme ikisini birlikte söyler (`saved=1&sod=reauth`).
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -37,6 +38,8 @@ export async function saveSettingsFormAction(form: FormData): Promise<void> {
       return updateTenantSettings(db, input.slug, principal, { name: input.name, locale: input.locale, timeZone: input.timeZone });
     })({ slug, name: field(form, "name"), locale: field(form, "locale"), timeZone: field(form, "timeZone") });
     if (!result.ok) redirect(`${base}?error=${encodeURIComponent(result.error.code)}`);
+    // T-999c: dil/ad değişince bütün düzenler (kök düzendeki dil sağlayıcısı dahil) yeni değerle yeniden çizilir; istemci önbelleği bayatlamaz.
+    if (result.data.changed) revalidatePath("/", "layout");
     parts.set(result.data.changed ? "saved" : "unchanged", "1");
   }
   const sod = field(form, "sod");
