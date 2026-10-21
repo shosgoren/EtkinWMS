@@ -57,7 +57,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
     if (current === undefined) notFound();
     roles = current.roles;
     grants = current.grants;
-    page = await listInboundReceipts(call, { limit: PAGE_SIZE, ...(after === undefined ? {} : { after }) });
+    page = await listInboundReceipts(call, { limit: PAGE_SIZE, withTotal: true, ...(after === undefined ? {} : { after }) });
     warehouses = await listWarehouses(call);
   } catch (e) {
     if (e instanceof AppError) {
@@ -89,6 +89,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
         dark={dark}
         receipts={page.items}
         nextHref={nextHref}
+        {...(page.total === undefined ? {} : { total: page.total })}
         canCreate={canCreate}
         canApprove={hasPermission(roles, "document.approve", grants)}
         packageHref={packageReceivingEnabled() && hasPermission(roles, "stock.view", grants) && canCreate && hasPermission(roles, "stock.post", grants) ? `${returnTo}/packages` : null}

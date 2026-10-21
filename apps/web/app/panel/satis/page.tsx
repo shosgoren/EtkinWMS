@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { tarihBicimi } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { listPlans } from "@wms/domain/platform/plans";
 import { getSiteContent } from "@wms/domain/platform/site-content";
@@ -36,8 +37,8 @@ interface Msgs extends SatisLabels {
   readonly pubAt: string;
 }
 
-function when(d: Date): string {
-  const p = new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
+function when(d: Date, locale: string): string {
+  const p = tarihBicimi(locale, { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
   const g = (k: string): string => p.find((x) => x.type === k)?.value ?? "";
   return `${g("day")}.${g("month")} ${g("hour")}:${g("minute")}`;
 }
@@ -50,6 +51,7 @@ export default async function SatisPage() {
     throw e;
   });
   const t = ((await getMessages()).panel as unknown as { satis: Msgs }).satis;
+  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   // İlk kez: satış sayfasının bugünkü metni ve yayındaki bütün paketler seçili (kaynaktaki varsayılan).
   const selected = new Set(content?.planIds ?? plans.filter((p) => p.published).map((p) => p.id));
   const items: SitePlanItem[] = plans.map((p) => ({
@@ -64,7 +66,7 @@ export default async function SatisPage() {
   const pub =
     content?.publishedAt == null || content.publishedVersion === null
       ? t.pubNever
-      : t.pubAt.replace("{when}", when(content.publishedAt)).replace("{v}", String(content.publishedVersion));
+      : t.pubAt.replace("{when}", when(content.publishedAt, locale)).replace("{v}", String(content.publishedVersion));
   const dark = temaKoyu(await cookies());
   return (
     <PanelShell dark={dark} current="satis" title={t.title} sub={t.sub} nav={await panelNav(principal)} labels={await panelLabels()}>

@@ -130,6 +130,14 @@ describe("listInboundReceipts / getInboundReceipt", () => {
     }
     expect(new Set(seen).size).toBe(seen.length);
     for (const id of ids) expect(seen).toContain(id);
+    // ALTIN-KURAL 15: toplam yalnız istenince; imleçten bağımsız, aynı süzgeçle.
+    expect((await listInboundReceipts(owner(A), { limit: 2 })).total).toBeUndefined();
+    const first = await listInboundReceipts(owner(A), { limit: 2, withTotal: true });
+    expect(first.total).toBe(seen.length);
+    if (first.next !== null) expect((await listInboundReceipts(owner(A), { limit: 2, after: first.next, withTotal: true })).total).toBe(seen.length);
+    const drafts = await listInboundReceipts(owner(A), { status: "DRAFT", limit: 100, withTotal: true });
+    expect(drafts.total).toBe(drafts.items.length);
+    expect((await listInboundReceipts(owner(A), { warehouseId: B.warehouseId, withTotal: true })).total).toBe(0);
     for (const bad of [0, -1, 1.5, RECEIPT_LIST_LIMIT_MAX + 1]) {
       expect((await failure(listInboundReceipts(owner(A), { limit: bad }))).code).toBe("VALIDATION_FAILED");
     }

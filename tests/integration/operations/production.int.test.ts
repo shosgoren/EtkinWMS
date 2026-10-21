@@ -34,6 +34,10 @@ describe("atomic recipe production",()=>{
   recipeId=one.recipeId;expect(two.recipeId).toBe(recipeId);expect([one.replayed,two.replayed].sort()).toEqual([false,true]);
   const saved=await getProductionRecipe(params(),recipeId);expect(saved).toMatchObject({version:1,outputQuantity:"2.000000",lines:[{quantity:"2.000000"},{quantity:"0.500000"}]});
   expect((await listProductionRecipes(params(),{q:"RUBBER"})).items).toHaveLength(1);
+  // ALTIN-KURAL 15: toplam yalnız istenince; arama süzgeciyle; başka tenant sayılmaz.
+  expect((await listProductionRecipes(params(),{q:"RUBBER"})).total).toBeUndefined();
+  expect((await listProductionRecipes(params(),{q:"RUBBER",withTotal:true})).total).toBe(1);
+  expect((await listProductionRecipes(params(B),{q:"RUBBER",withTotal:true})).total).toBe(0);
   const application=new pg.Client({connectionString:env.databaseUrl});await application.connect();
   try{await application.query("BEGIN");expect((await application.query("SELECT current_user AS role")).rows[0]?.role).toBe("wms_app");
    await application.query("SELECT set_config('app.current_tenant_id',$1,true)",[A.tenantId]);

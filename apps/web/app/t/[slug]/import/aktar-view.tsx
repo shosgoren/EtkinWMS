@@ -5,7 +5,7 @@
 // doğrulama, yetki ve idempotans sunucudadır (previewImportAction / applyImportChunkAction). Dosya içeriği yalnız bellekte tutulur (G-09).
 // Bilinçli farklar (DESIGN-PARITY): Cari kartlar T-428 ile açılır (o zamana dek kart kapalı); eski ikili .xls okunmaz (".xlsx olarak kaydet");
 // Etkin (sesle eşleme) T-424; eşleştirme hafızası tarayıcıda (alan + başlık imzası); "Kritik stok (en az)" alanı minimum stok aktarımıyla gelir.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/aktar-tokens.ts";
@@ -15,7 +15,7 @@ import { FIELDS, autoMap, buildCsv, buildRecords, colLetter, detectHeader, heade
 import { applyImportChunkAction, previewImportAction } from "./actions.ts";
 import { importPartiesAction } from "../parties/actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback, sayi } from "@wms/ui";
 
 
 type PreviewResult = Awaited<ReturnType<typeof previewImportAction>>;
@@ -84,6 +84,7 @@ function store<T>(key: string, value?: T): T | null {
 export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const t = useTranslations("aktar");
   const ti = useTranslations("import");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const [step, setStep] = useState(1);
   const [kind, setKind] = useState<ImportKindKey>("stok");
@@ -120,7 +121,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   const dataRows = loaded === null ? 0 : Math.max(0, rows.length - loaded.header - 1);
   const fields = FIELDS[kind];
   const kindTitle = t(`kind.${kind}.title`);
-  const fmt = (n: number): string => n.toLocaleString("tr-TR");
+  const fmt = (n: number): string => sayi(n, locale);
 
   async function onFile(file: File | undefined): Promise<void> {
     if (file === undefined) return;
@@ -280,9 +281,9 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
   // ---- görünüm değerleri (kaynak renderVals) ----
   const STEPS = [t("steps.1"), t("steps.2"), t("steps.3"), t("steps.4"), t("steps.5")];
   const title = step === 1 ? t("title") : `${kindTitle} · ${t("title")}`;
-  const stepLine = t("stepLine", { n: Math.min(step, 4), name: (STEPS[step - 1] ?? "").toLocaleUpperCase("tr-TR") });
+  const stepLine = t("stepLine", { n: Math.min(step, 4), name: buyukHarf(STEPS[step - 1] ?? "", locale) });
   const colSample = (i: number): string => (loaded === null ? "" : samples(rows, loaded.header, i).join(" · "));
-  const colName = (i: number): string => `${colLetter(i)} · ${(head[i] ?? "").toLocaleUpperCase("tr-TR")}`;
+  const colName = (i: number): string => `${colLetter(i)} · ${buyukHarf(head[i] ?? "", locale)}`;
   const fieldOf = (i: number) => fields.find((f) => map?.col[f.id] === i);
   const missIds = map === null ? [] : fields.filter((f) => f.required && (map.col[f.id] ?? null) === null).map((f) => f.id);
   const wait = map === null ? [] : waiting(map, kind);
@@ -599,7 +600,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                         <div className="pvr pvh">
                           {shown.map((f) => (
                             <span key={f.id} className={(map.col[f.id] ?? null) !== null ? "" : "need"}>
-                              {t(`field.${kind}.${f.id}`).toLocaleUpperCase("tr-TR")}
+                              {buyukHarf(t(`field.${kind}.${f.id}`), locale)}
                             </span>
                           ))}
                         </div>
@@ -761,7 +762,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize }: AktarViewProps) {
                             <b>{h === "" ? t("pick.noHeader") : h}</b>
                             <small>{colSample(i) || t("pick.empty")}</small>
                           </span>
-                          <span className="cu">{cur ? t("pick.current") : owner !== undefined ? `→ ${t(`field.${kind}.${owner.id}`).toLocaleUpperCase("tr-TR")}` : ""}</span>
+                          <span className="cu">{cur ? t("pick.current") : owner !== undefined ? `→ ${buyukHarf(t(`field.${kind}.${owner.id}`), locale)}` : ""}</span>
                         </button>
                       );
                     })}

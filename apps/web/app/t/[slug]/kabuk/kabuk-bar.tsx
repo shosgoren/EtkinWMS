@@ -9,11 +9,11 @@
 // Bilinçli farklar (DESIGN-PARITY, T-958): Etkin (B-62) henüz yok → düğme kaynaktaki gibi çizilir, `aria-disabled`; dokununca kaynaktaki
 // "yakında" balonu. Arama kutusundaki mikrofon da aynı. İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 
 export interface KabukContextValue {
   /** `/t/<slug>` */
@@ -154,6 +154,7 @@ function Slot({ nav, className, aria, testId, k, current, children }: { nav: Kab
 
 export function KabukBar({ dark, home = false, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
   const t = useTranslations("kabuk");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useContext(KabukContext);
   const base = ctx?.base ?? "/";
   const modules = ctx?.modules ?? [];
@@ -209,10 +210,10 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
     feedback.info(t("soonToast", { name }));
   };
 
-  // Kaynak renderVals: arama (ad + alt yazı, Türkçe küçük harf), sayfa sınırı ve "+N daha" / "İlk sayfa" kutusu.
+  // Kaynak renderVals: arama (ad + alt yazı, kullanıcının dilinde küçük harf), sayfa sınırı ve "+N daha" / "İlk sayfa" kutusu.
   const named = modules.map((m) => ({ ...m, name: t(`mod.${m.id}.name`), sub: t(`mod.${m.id}.sub`) }));
-  const ql = q.toLocaleLowerCase("tr").trim();
-  const list = ql === "" ? named : named.filter((m) => `${m.name} ${m.sub}`.toLocaleLowerCase("tr").includes(ql));
+  const ql = kucukHarf(q, locale).trim();
+  const list = ql === "" ? named : named.filter((m) => kucukHarf(`${m.name} ${m.sub}`, locale).includes(ql));
   const cap = CAP[dev];
   let shown = list;
   let plus: { first: true; n: number } | { first: false } | null = null;
@@ -225,7 +226,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
       plus = { first: false };
     }
   }
-  const roleLabel = (ctx?.roleLabel ?? "").toLocaleUpperCase("tr");
+  const roleLabel = buyukHarf(ctx?.roleLabel ?? "", locale);
   const modsSub = t("sub", { role: roleLabel, n: modules.length }) + (plus !== null && !plus.first ? t("page2") : "");
 
   const sp = (k: KabukSlot): string => (spot === k ? " spot" : "");

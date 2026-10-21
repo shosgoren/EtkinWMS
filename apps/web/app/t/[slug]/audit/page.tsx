@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
-import { Banner } from "@wms/ui";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Banner, tarih } from "@wms/ui";
 import { AUDIT_ACTIONS, getAppDb } from "@wms/db";
 import { listAudit, type AuditFilters, type AuditPage } from "@wms/domain/audit/audit-query";
 import { AppError } from "@wms/shared/errors";
@@ -35,6 +35,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   if (principal === null) redirect(`/login?next=${encodeURIComponent(here)}`);
   const t = await getTranslations("auditLog");
   const ts = await getTranslations("serverErrors");
+  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
 
   const filters: { from?: string; to?: string; action?: string; q?: string } = {};
   for (const k of ["from", "to", "action", "q"] as const) {
@@ -75,7 +76,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
     );
   }
   const timeZone = page?.timeZone ?? "UTC";
-  const fmt = (d: Date): string => new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "medium", timeZone }).format(d);
+  const fmt = (d: Date): string => tarih(d, locale, { dateStyle: "medium", timeStyle: "medium", timeZone });
   const actionName = (a: string, known: boolean): string => (known ? t(`actions.${a}`) : t("actions.other"));
   // Hızlı çipler: bugünün tarihi kiracı saat diliminde (YYYY-AA-GG); süzgeç sunucuda aynı `from`/`to` alanlarıdır.
   const day = (d: Date): string => new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);

@@ -5,13 +5,13 @@
 // Akış (ADR-026 §7.4–7.5): kayıtlı cihazda alan + kullanıcı adı + 6 hane PIN → `/api/auth/field/sign-in`; kayıtsız cihazda etkinleştirme
 // kodu → PIN iki kez → `/api/auth/field/activate` (cihaz kaydı + oturum). PIN ve kod yalnız bu bileşenin belleğinde yaşar.
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { authClient, authPost } from "../../lib/auth-client.ts";
 import { DzRoot, useDz } from "../design/dz-root.tsx";
 import { C, dz } from "../design/giris-tokens.ts";
 import { GICON } from "../design/giris-icons.ts";
 import { pinProblem } from "./pin.ts";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback } from "@wms/ui";
 
 type Device =
   | { readonly registered: false }
@@ -180,6 +180,7 @@ function errorText(t: ReturnType<typeof useTranslations>, code: string | undefin
 
 function Flow({ host }: { host: string }) {
   const t = useTranslations("fieldLogin");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const { dark } = useDz();
   const [device, setDevice] = useState<Device | null>(null);
   const [scr, setScr] = useState<"login" | "fact" | "sw">("login");
@@ -303,15 +304,17 @@ function Flow({ host }: { host: string }) {
       ["F6D9C9", "5C2410"],
     ];
     const ini = (n: string): string =>
-      n
-        .split(" ")
-        .map((x) => x.charAt(0))
-        .join("")
-        .slice(0, 2)
-        .toLocaleUpperCase("tr-TR");
+      buyukHarf(
+        n
+          .split(" ")
+          .map((x) => x.charAt(0))
+          .join("")
+          .slice(0, 2),
+        locale,
+      );
     return (
       <Shell fact={false}>
-        <span className="kick">{`${device.deviceName} · ${device.tenantName}`.toLocaleUpperCase("tr-TR")}</span>
+        <span className="kick">{buyukHarf(`${device.deviceName} · ${device.tenantName}`, locale)}</span>
         <h1 className="lh">{who === null ? t("swH") : t("swPinH", { name: who.name })}</h1>
         {who === null ? (
           <div className="rows">
@@ -335,7 +338,7 @@ function Flow({ host }: { host: string }) {
                   </span>
                   <span className="rt">
                     <b>{p.name}</b>
-                    <span>{(p.role === "COUNTER" ? t("roleCounter") : t("rolePicker")).toLocaleUpperCase("tr-TR")}</span>
+                    <span>{buyukHarf(p.role === "COUNTER" ? t("roleCounter") : t("rolePicker"), locale)}</span>
                   </span>
                   <Ico d={GICON.next} size={26} sw={3} />
                 </button>
@@ -491,7 +494,7 @@ function Flow({ host }: { host: string }) {
             <Ico d={GICON.check} size={22} />
             <span>
               <b>{t("deviceOk", { name: device.deviceName })}</b>
-              {` · ${device.tenantName.toLocaleUpperCase("tr-TR")}`}
+              {` · ${buyukHarf(device.tenantName, locale)}`}
             </span>
           </div>
           <div className="card" style={{ background: C.surface }}>

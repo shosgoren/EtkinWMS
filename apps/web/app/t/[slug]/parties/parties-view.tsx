@@ -243,10 +243,18 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
       <KalipCipler label={t("filter")} chips={chips} />
       {shown.length === 0 ? (
         <>
-          <KalipBos
-            title={q === "" && kind === "" ? t("empty") : t("noMatch")}
-            {...(q === "" && kind === "" ? {} : { action: { label: t("clear"), ...(kind === "" ? { href: archived ? `${list}?arsiv=1` : list } : { onClick: () => setKind("") }) } })}
-          />
+          {q === "" && kind === "" && !archived ? (
+            <KalipBos
+              title={t("empty")}
+              iconD={ICON.d}
+              action={canEdit ? { label: t("firstParty"), kind: "add", onClick: () => open(null) } : { label: tr("home"), href: base, kind: "go" }}
+            />
+          ) : (
+            <KalipBos
+              title={tr("notFoundSearch")}
+              action={{ label: t("clear"), kind: "clear", ...(kind !== "" && q === "" && !archived ? { onClick: () => setKind("") } : { href: list }) }}
+            />
+          )}
           {canEdit ? (
             <KalipDaha href={`${base}/import`} iconD={LICON.excel} iconColor="1E7B45">
               {t("importLink")}

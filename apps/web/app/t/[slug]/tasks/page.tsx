@@ -56,7 +56,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "document.approve", current.grants);
-    result = await listTasks(call, { ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }), ...(after === undefined ? {} : { after }), ...(search === "" ? {} : { q: search }), limit: PAGE_SIZE });
+    result = await listTasks(call, { ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }), ...(after === undefined ? {} : { after }), ...(search === "" ? {} : { q: search }), limit: PAGE_SIZE, withTotal: true });
     members = await listMembers(call, { demoEmailDomain: process.env.DEMO_EMAIL_DOMAIN?.trim().toLowerCase() || null });
   } catch (e) {
     if (e instanceof AppError) {
@@ -102,6 +102,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
         nextHref={nextHref}
         firstPage={afterRaw === undefined || afterRaw === ""}
         search={search}
+        {...(result.total === undefined ? {} : { total: result.total })}
       />
     </main>
   );

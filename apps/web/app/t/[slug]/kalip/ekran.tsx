@@ -5,7 +5,7 @@
 // CSS: `design/kalip-{liste,form,detay}.css` (üretilmiş) + `design/kalip-frame.css` (tam ekran, eski kabuk süslemeleri gizli).
 // Kök `.kalip` sınıfı taşır: kiracı kabuğunun eski üst çubuğu / Kolay mod / Geri-Ana ekran kutusu / eski alt gezinme bu ekranda çizilmez
 // (kalip-frame.css genel kuralı) — yeni ekran yalnız bu kabı kullanarak geçer.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -14,7 +14,7 @@ import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { temaYaz } from "../../../design/theme.ts";
 import { KalipDestek } from "./destek.tsx";
 import { kdz, type KalipScope } from "./tokens.ts";
-import { balonGoster, type BalonTur } from "@wms/ui";
+import { balonGoster, buyukHarf, type BalonTur } from "@wms/ui";
 import { useCevrimici } from "./cevrimdisi.ts";
 
 export type KalipKind = "liste" | "form" | "detay";
@@ -79,6 +79,7 @@ export interface KalipEkranProps {
 
 export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
   const t = useTranslations("kalip");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useKabuk();
   const online = useCevrimici();
   const router = useRouter();
@@ -91,17 +92,17 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
     router.refresh();
   }, [dark, router]);
   const userName = ctx?.userName ?? "";
-  const me = { ini: (userName.trim()[0] ?? "?").toLocaleUpperCase("tr"), name: userName, group: (ctx?.roleLabel ?? "").toLocaleUpperCase("tr"), color: "6C4BD8" };
+  const me = { ini: buyukHarf(userName.trim()[0] ?? "?", locale), name: userName, group: buyukHarf(ctx?.roleLabel ?? "", locale), color: "6C4BD8" };
   // Pano kaynağının sınıfları (`.tb`, `.halo.tmenu`) `.dzp` kabında tanımlıdır; kutu üretmeyen kap (yeni stil yok).
   const panoScope = `dzp${dark ? " dz-dark" : ""}`;
   const scope = SCOPE[kind];
   const c = (hex: string): string => kdz(scope, hex);
   const sub =
     subtitle ??
-    [ctx?.tenantName, ctx?.roleLabel]
-      .filter((x): x is string => x !== undefined && x !== "")
-      .join(" · ")
-      .toLocaleUpperCase("tr");
+    buyukHarf(
+      [ctx?.tenantName, ctx?.roleLabel].filter((x): x is string => x !== undefined && x !== "").join(" · "),
+      locale,
+    );
   const slot =
     actions === undefined && ctx?.slug !== undefined ? (
       <KalipDestek slug={ctx.slug} dark={dark} canReport={ctx.canReport === true} />

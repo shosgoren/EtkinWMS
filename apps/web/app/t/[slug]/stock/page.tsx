@@ -30,6 +30,7 @@ export default async function StockPage({ params, searchParams }: { params: Prom
   const home = `/t/${encodeURIComponent(slug)}`;
   const path = `${home}/stock`;
   const t = await getTranslations("stockOverview");
+  const tk = await getTranslations("kural");
   const locale = await getLocale();
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
@@ -37,7 +38,7 @@ export default async function StockPage({ params, searchParams }: { params: Prom
   const dark = await kalipDark();
   let data: Awaited<ReturnType<typeof listStockOverview>>;
   try {
-    data = await listStockOverview({ db: getAppDb(), principal, tenantSlug: slug }, { q, ...(after ? { after } : {}), ...(warehouseId ? { warehouseId } : {}) });
+    data = await listStockOverview({ db: getAppDb(), principal, tenantSlug: slug }, { q, withTotal: true, ...(after ? { after } : {}), ...(warehouseId ? { warehouseId } : {}) });
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
@@ -81,10 +82,14 @@ export default async function StockPage({ params, searchParams }: { params: Prom
           <p style={{ margin: "8px 0 0" }}>{t("explanation")}</p>
         </details>
         {data.items.length === 0 ? (
-          <KalipBos title={t("empty")} hint={t("emptyAction")} {...(filtered ? { action: { label: t("reset"), href: path } } : {})} />
+          <KalipBos
+            title={filtered ? tk("notFoundSearch") : t("empty")}
+            hint={t("emptyAction")}
+            action={filtered ? { label: t("reset"), href: path, kind: "clear" } : { label: t("k.firstIn"), href: `${path}/documents?new=STOCK_IN`, kind: "add" }}
+          />
         ) : (
           <>
-            <KalipBaslik title={data.next === null && after === undefined ? t("k.count", { n: data.items.length }) : t("k.countMore", { n: data.items.length })} hint={t("k.hint")} />
+            <KalipBaslik title={data.total !== undefined ? t("k.count", { n: data.total }) : data.next === null && after === undefined ? t("k.count", { n: data.items.length }) : t("k.countMore", { n: data.items.length })} hint={t("k.hint")} />
             <KalipKartListe label={t("title")}>
               {data.items.map((row, i) => {
                 const qty = fq(row.available);

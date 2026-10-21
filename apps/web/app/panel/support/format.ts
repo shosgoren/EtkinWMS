@@ -1,6 +1,7 @@
 // T-967 (B-84): panel Destek satır/zaman/cihaz biçimi (sayfa ve müşteri sekmesi ortak). Saf yardımcı + ileti kataloğu okuma.
 import { getMessages } from "next-intl/server";
 import type { SupportInboxRow } from "@wms/domain/platform/support";
+import { buyukHarf } from "@wms/ui";
 import { ticketNo, whenOf } from "../../support-format.ts";
 import type { NotifyLabels, SupportDetailLabels, SupportLabels, SupportRowItem } from "./view.tsx";
 
@@ -48,10 +49,10 @@ export function deviceOf(ua: string | null, m: Pick<DestekMsgs, "devices">): str
   return br === null ? os : `${os} · ${br}`;
 }
 
-export function initials(name: string): string {
+export function initials(name: string, locale: string): string {
   const words = name.trim().split(/\s+/).filter((w) => w !== "");
   const s = words.length >= 2 ? `${words[0]?.charAt(0) ?? ""}${words[1]?.charAt(0) ?? ""}` : name.trim().slice(0, 2);
-  return s.toLocaleUpperCase("tr") || "?";
+  return buyukHarf(s, locale) || "?";
 }
 
 /** Gelen kutusu ve müşteri sekmesi satırı. Okunmamış: kapalı olmayan ve son yazan müşteri (operatör yanıtı bekliyor). */

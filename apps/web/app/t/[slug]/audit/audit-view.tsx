@@ -68,6 +68,7 @@ export function AuditView({
   banner: ReactNode;
 }) {
   const t = useTranslations("auditLog");
+  const tk = useTranslations("kural");
   const { say, node: toast } = useKalipToast("liste");
   const ALL = { d: LICON.grid, color: "172E42" };
   const ICONS: Record<string, { d: string; color: string }> = {
@@ -128,7 +129,10 @@ export function AuditView({
       </form>
       {banner}
       {rows === null ? null : rows.length === 0 ? (
-        <KalipBos title={t("empty")} {...(filtered ? { action: { label: t("clear"), href: here } } : {})} />
+        <KalipBos
+          title={filtered ? tk("notFoundSearch") : t("empty")}
+          action={filtered ? { label: t("clear"), href: here, kind: "clear" } : { label: tk("home"), href: home, kind: "go" }}
+        />
       ) : (
         <>
           <KalipBaslik title={t("listTitle")} hint={t("intro")} />

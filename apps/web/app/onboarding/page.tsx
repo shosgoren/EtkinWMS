@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { buyukHarf } from "@wms/ui";
 import { TEMPLATE_KEYS, getTemplate } from "@wms/domain/onboarding/templates";
 import { slugCandidates, workspaceCreationAllowed } from "@wms/domain/onboarding/workspace";
 import { saveWorkspaceNameAction } from "./actions.ts";
@@ -32,6 +33,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect("/login?next=%2Fonboarding");
   const t = await getTranslations("onboarding");
+  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   // T-974 (B-63 grup B): Giris.dc.html `v.auth` kabuğu (aktivasyon sihirbazıyla aynı öğeler); adım/çerez/sunucu kuralı aynı.
   const dark = temaKoyu(await cookies());
 
@@ -58,7 +60,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   if (draft === null || edit) {
     return (
       <GirisKabuk dark={dark} testId="onboarding">
-        <GirisBaslik kick={t("stepOf", { current: 1, total: 2 }).toLocaleUpperCase("tr")} title={t("title")} sub={t("intro")} />
+        <GirisBaslik kick={buyukHarf(t("stepOf", { current: 1, total: 2 }), locale)} title={t("title")} sub={t("intro")} />
         <form action={saveWorkspaceNameAction} style={{ display: "contents" }}>
           <GirisKart>
             <h2 style={{ margin: 0, font: "800 18px/1.15 var(--font-bricolage), sans-serif" }}>{t("step1.title")}</h2>
@@ -95,7 +97,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
 
   return (
     <GirisKabuk dark={dark} testId="onboarding">
-      <GirisBaslik kick={t("stepOf", { current: 2, total: 2 }).toLocaleUpperCase("tr")} title={t("title")} />
+      <GirisBaslik kick={buyukHarf(t("stepOf", { current: 2, total: 2 }), locale)} title={t("title")} />
       <Wizard name={draft.name} slug={slug} templates={templates} defaultTemplateKey="PACKAGING_SUPPLIES" backHref="/onboarding?edit=1" />
     </GirisKabuk>
   );

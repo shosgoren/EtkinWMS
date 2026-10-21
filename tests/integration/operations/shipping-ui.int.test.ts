@@ -36,6 +36,10 @@ describe("shipping UI query and command contract",()=>{
   await expect(previewShippingPick(params(B),{taskId,barcode:"SHIP-PAIR",quantity:"2"})).rejects.toMatchObject({code:"NOT_FOUND"});
   await expect(getShippingOrder({...params(),principal:{userId:A.ownerUserId,mfaVerified:false}},orderId)).rejects.toMatchObject({code:"FORBIDDEN"});
   expect((await listShippingOrders(params(B),{q:"Pilot UI"})).items).toEqual([]);
+  // ALTIN-KURAL 15: toplam yalnız istenince; arama süzgeciyle; başka tenant sayılmaz.
+  expect((await listShippingOrders(params(),{q:"Pilot UI"})).total).toBeUndefined();
+  expect((await listShippingOrders(params(),{q:"Pilot UI",withTotal:true})).total).toBe(1);
+  expect((await listShippingOrders(params(B),{q:"Pilot UI",withTotal:true})).total).toBe(0);
   const other=(await createWarehouse(params(),{code:"OTHER",name:"Other"})).warehouseId;
   await setMembershipWarehouseScopes({ ...params(), recentAuth: async () => undefined },{membershipId:A.memberMembershipId,warehouseIds:[other]});
   const prior=process.env.WAREHOUSE_SCOPE_ENABLED;

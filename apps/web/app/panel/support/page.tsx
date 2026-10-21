@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { buyukHarf } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { getSupportTicket, isSupportWhatsAppConfigured, listSupportInbox } from "@wms/domain/platform/support";
 import { AppError } from "@wms/shared/errors";
@@ -44,6 +45,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   };
   const query = await searchParams;
   const m = await destekMsgs();
+  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const dark = temaKoyu(await cookies());
   const now = new Date();
   const inbox = await listSupportInbox({ db, principal, status: "ALL" }).catch(onMissing);
@@ -58,7 +60,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
     const author = tk.authorName ?? m.noName;
     const st = statusStyle(tk.status);
     const code = tk.context.supportCode;
-    const sub = [ticketNo(tk.number), tk.tenantName, ...(code === null ? [] : [`${m.kCode} ${code}`])].join(" · ").toLocaleUpperCase("tr");
+    const sub = buyukHarf([ticketNo(tk.number), tk.tenantName, ...(code === null ? [] : [`${m.kCode} ${code}`])].join(" · "), locale);
     const firstLine = tk.body.split("\n")[0] ?? "";
     const hist = [
       { t: panelWhen(tk.createdAt, now, m), l: m.hOpened.replace("{name}", () => author) },
@@ -73,7 +75,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
           tk={{
             id: tk.id,
             status: tk.status,
-            initials: initials(author),
+            initials: initials(author, locale),
             author,
             authorSub: panelWhen(tk.createdAt, now, m),
             topic: tk.subjectKind,

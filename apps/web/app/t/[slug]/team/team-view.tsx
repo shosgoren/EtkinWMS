@@ -5,7 +5,7 @@
 // Bilinçli farklar (DESIGN-PARITY): onay kartında kod GÖSTERİLMEZ, yönetici personelin ekranındaki kodu YAZAR (uygulama rolü kodu okuyamaz);
 // aktif/pasif anahtarı ve "son görülme" yok (pasif üyelik ayrı iş) — filtre Hepsi / Saha / Ofis; davette ad alanı yok (kişi kabulde yazar);
 // Etkin (sesle) T-424; QR adresi yalnız üretildiği anda gösterilir (güvenlik: eskisi yeniden gösterilmez, yenile → yeni QR).
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { create as createQr } from "qrcode";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -15,7 +15,7 @@ import { EICON } from "../../../design/ekip-icons.ts";
 import { approveJoinAction, createJoinLinkAction, inviteMemberAction, rejectJoinAction } from "../members/actions.ts";
 import { setMemberGroupAction } from "../groups/actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback } from "@wms/ui";
 import { balonGoster, type BalonTur } from "@wms/ui";
 
 type Role = "TENANT_ADMIN" | "WAREHOUSE_MANAGER" | "PICKER" | "COUNTER" | "READ_ONLY";
@@ -97,6 +97,7 @@ function QrSvg({ value, label }: { value: string; label: string }) {
 
 export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pending, hasLink }: TeamViewProps) {
   const t = useTranslations("ekip");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const [view, setView] = useState<"list" | "invite" | "qr">("list");
@@ -389,14 +390,14 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                           return (
                             <div key={p.id} className="pr2" role="listitem">
                               <span className="av" style={{ background: dz(l.color) }}>
-                                {(p.name.trim()[0] ?? "?").toLocaleUpperCase("tr-TR")}
+                                {buyukHarf(p.name.trim()[0] ?? "?", locale)}
                               </span>
                               <span className="pt">
                                 <b>{p.name}</b>
-                                <small>{`${l.text.toLocaleUpperCase("tr-TR")} · ${p.isOwner ? t("owner") : p.isField ? t("field") : t("office")}`}</small>
+                                <small>{`${buyukHarf(l.text, locale)} · ${p.isOwner ? t("owner") : p.isField ? t("field") : t("office")}`}</small>
                               </span>
                               <span className="gch" style={{ background: dz(l.color) }}>
-                                {l.text.toLocaleUpperCase("tr-TR")}
+                                {buyukHarf(l.text, locale)}
                               </span>
                             </div>
                           );
@@ -412,7 +413,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                     <div className="req" data-testid="team-req">
                       <div className="rqh">
                         <span className="av" style={{ background: dz("6A7F91"), width: 52, height: 52, fontSize: 18 }}>
-                          {(req.name.trim()[0] ?? "?").toLocaleUpperCase("tr-TR")}
+                          {buyukHarf(req.name.trim()[0] ?? "?", locale)}
                         </span>
                         <span className="pt" style={{ flex: 1 }}>
                           <b style={{ fontSize: 20 }}>{req.name}</b>

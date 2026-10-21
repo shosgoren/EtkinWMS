@@ -6,7 +6,7 @@
 // gitmez); belirteç yalnız bu bileşenin belleğinde. Talep 3 sn'de bir sorgulanır; süre dolunca yeni QR; onay yalnız bu yöneticiden.
 // Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
@@ -14,7 +14,7 @@ import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveEnrollmentAction, cancelEnrollmentAction, enrollmentStatusAction, revokeDeviceAction, startEnrollmentAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback } from "@wms/ui";
 
 export interface DeviceItem {
   readonly id: string;
@@ -52,6 +52,7 @@ export function DevicesView({
 }) {
   const t = useTranslations("fieldDevices");
   const format = useFormatter();
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [enr, setEnr] = useState<Enrollment | null>(null);
   const [claim, setClaim] = useState<string | null>(null);
@@ -186,7 +187,7 @@ export function DevicesView({
       kind="liste"
       dark={dark}
       title={t("title")}
-      subtitle={t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}
+      subtitle={t("bandS", { tenant: buyukHarf(tenantName, locale) })}
       icon={{ d: LICON.key, color: "30475A" }}
       testId="field-devices"
       bar={{
@@ -282,7 +283,7 @@ export function DevicesView({
         <KalipKartListe label={t("listTitle")}>
           {devices.map((d, i) => {
             const label = d.kind === "PERSONAL" && d.owner !== null ? `${d.owner} · ${d.name}` : d.name;
-            const when = format.relativeTime(new Date(d.lastUsedAt), now).toLocaleUpperCase("tr-TR");
+            const when = buyukHarf(format.relativeTime(new Date(d.lastUsedAt), now), locale);
             return (
               <div key={d.id} role="listitem" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }} data-testid="device-row">
                 <div style={HEAD}>

@@ -25,6 +25,7 @@ export default async function ShippingPage({ params, searchParams }: { params: P
     sp = await searchParams,
     t = await getTranslations("shipping"),
     so = await getTranslations("stockOverview"),
+    tk = await getTranslations("kural"),
     locale = await getLocale(),
     home = `/t/${encodeURIComponent(slug)}`,
     path = `${home}/shipping`;
@@ -40,7 +41,7 @@ export default async function ShippingPage({ params, searchParams }: { params: P
   let data: Awaited<ReturnType<typeof listShippingOrders>>, order: Awaited<ReturnType<typeof getShippingOrder>> | null;
   try {
     const context = { db: getAppDb(), principal, tenantSlug: slug };
-    data = await listShippingOrders(context, { q, ...(after ? { after } : {}) });
+    data = await listShippingOrders(context, { q, withTotal: !id && first(sp.new) !== "1", ...(after ? { after } : {}) });
     order = id ? await getShippingOrder(context, id, { ...(taskAfter ? { taskAfter } : {}), ...(stageAfter ? { stageAfter } : {}) }) : null;
   } catch (e) {
     if (e instanceof AppError) {
@@ -189,10 +190,15 @@ export default async function ShippingPage({ params, searchParams }: { params: P
         <KalipAra label={t("search")} placeholder={t("search")} action={path} defaultValue={q} />
         <KalipCipler label={so("k.chips")} chips={chips} />
         {data.items.length === 0 ? (
-          <KalipBos title={t("empty")} hint={data.permissions.create ? t("k.emptyHint") : t("help")} {...(q !== "" ? { action: { label: so("reset"), href: path } } : {})} iconD={BOLUM_ICON.shipping.d} />
+          <KalipBos
+            title={q !== "" ? tk("notFoundSearch") : t("empty")}
+            hint={data.permissions.create ? t("k.emptyHint") : t("help")}
+            action={q !== "" ? { label: so("reset"), href: path, kind: "clear" } : data.permissions.create ? { label: t("k.firstOrder"), href: `${path}?new=1`, kind: "add" } : { label: tk("home"), href: home, kind: "go" }}
+            iconD={BOLUM_ICON.shipping.d}
+          />
         ) : (
           <>
-            <KalipBaslik title={data.next === null && after === undefined ? t("k.count", { n: data.items.length }) : t("k.countMore", { n: data.items.length })} hint={t("k.hint")} />
+            <KalipBaslik title={data.total !== undefined ? t("k.count", { n: data.total }) : data.next === null && after === undefined ? t("k.count", { n: data.items.length }) : t("k.countMore", { n: data.items.length })} hint={t("k.hint")} />
             <KalipKartListe label={t("title")}>
               {data.items.map((row, i) => (
                 <KalipKart

@@ -390,6 +390,7 @@ export function ItemsView({
   stock,
   units,
   nextCursor,
+  total,
   firstPage,
   query,
 }: {
@@ -402,6 +403,8 @@ export function ItemsView({
   units: readonly UnitOption[];
   /** Sonraki sayfa imleci (opak); yoksa `null`. */
   nextCursor: string | null;
+  /** Sunucudan süzgece uyan toplam ürün sayısı (ALTIN-KURAL 15). */
+  total?: number;
   firstPage: boolean;
   query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED"; readonly type: "" | CardType };
 }) {
@@ -410,6 +413,7 @@ export function ItemsView({
   const tx = useTranslations("kalip");
   const tc = useTranslations("items.cardType");
   const te = useTranslations("easySetup.items");
+  const tr = useTranslations("kural");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -511,7 +515,7 @@ export function ItemsView({
     return it.status === "ARCHIVED" || st === undefined ? "ok" : stockTone(st.have, st.min);
   });
   const attention = tones.filter((x) => x !== "ok").length;
-  const countLbl = (nextCursor === null ? tk("count", { n: items.length }) : tk("countMore", { n: items.length })) + (attention > 0 && !filtered ? tk("dikkat", { n: attention }) : "");
+  const countLbl = (total !== undefined ? tk("count", { n: total }) : nextCursor === null ? tk("count", { n: items.length }) : tk("countMore", { n: items.length })) + (attention > 0 && !filtered ? tk("dikkat", { n: attention }) : "");
 
   const steps = guide && progress !== null ? setupSteps(slug, progress) : [];
   const nextStep = steps.find((s) => !s.done);
@@ -594,7 +598,21 @@ export function ItemsView({
 
         {listRows !== null ? (
           listRows.length === 0 ? (
-            <KalipBos title={tk("noMatch")} hint={tk("noMatchHint")} />
+            <KalipBos
+              title={tr("notFoundSearch")}
+              hint={tk("noMatchHint")}
+              action={{
+                label: tk("clear"),
+                kind: "clear",
+                onClick: () => {
+                  seq.current++;
+                  setTyped("");
+                  setLive(null);
+                  if (query.q !== "") router.push(href({ q: "" }));
+                  else inputRef.current?.focus();
+                },
+              }}
+            />
           ) : (
             <KalipKartListe label={te("searchSuggestLabel")} role="listbox" id="items-live">
               {listRows.map((it, i) => (
@@ -625,12 +643,28 @@ export function ItemsView({
         ) : items.length === 0 ? (
           filtered ? (
             <KalipBos
-              title={query.q === "" ? tk("noStatus") : tk("noMatch")}
+              title={tr("notFoundSearch")}
               hint={query.q === "" ? tk("noStatusHint") : tk("noMatchHint")}
-              action={{ label: tk("clear"), href: base }}
+              action={{ label: tk("clear"), href: base, kind: "clear" }}
             />
           ) : (
-            <KalipBos title={t("empty")} hint={canManage ? t("emptyAction") : t("emptyReadOnly")} />
+            <KalipBos
+              title={t("empty")}
+              hint={canManage ? t("emptyAction") : t("emptyReadOnly")}
+              iconD={LICON.box}
+              action={
+                canManage
+                  ? {
+                      label: tk("stepItemsCta"),
+                      kind: "add",
+                      onClick: () => {
+                        feedback.minor();
+                        setCreateOpen(true);
+                      },
+                    }
+                  : { label: tr("home"), href: home, kind: "go" }
+              }
+            />
           )
         ) : (
           <>

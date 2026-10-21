@@ -6,7 +6,7 @@
 // eskisi o anda geçersiz); doğrulama kodu sayfaya gelmez, yönetici yazar. Bekleyen talepler 5 sn'de bir yenilenir.
 // Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
 import { useEffect, useState, type CSSProperties } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
@@ -14,7 +14,7 @@ import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveJoinAction, createJoinLinkAction, rejectJoinAction, revokeJoinLinkAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback } from "@wms/ui";
 
 export interface JoinPending {
   readonly id: string;
@@ -58,6 +58,7 @@ export function JoinView({
 }) {
   const t = useTranslations("teamJoin");
   const format = useFormatter();
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [url, setUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(link?.expiresAt ?? null);
@@ -166,7 +167,7 @@ export function JoinView({
       kind="liste"
       dark={dark}
       title={t("title")}
-      subtitle={t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}
+      subtitle={t("bandS", { tenant: buyukHarf(tenantName, locale) })}
       icon={{ d: LICON.people, color: "6C4BD8" }}
       testId="team-join"
       bar={{
@@ -189,7 +190,7 @@ export function JoinView({
       ) : (
         <KalipKartListe label={t("listTitle")}>
           {pending.map((p, i) => {
-            const when = format.relativeTime(new Date(p.createdAt), now).toLocaleUpperCase("tr-TR");
+            const when = buyukHarf(format.relativeTime(new Date(p.createdAt), now), locale);
             const isOpen = open === p.id;
             return (
               <div key={p.id} role="listitem" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }} data-testid="join-row">

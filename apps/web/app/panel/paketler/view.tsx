@@ -9,6 +9,7 @@ import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import type { PlanActionState } from "./actions.ts";
 import { planLines, priceLabel } from "../plan-format.ts";
+import { useLocale } from "next-intl";
 
 /** Paket (sunucudaki `PlanRow` ile aynı biçim; istemci dosyası sunucu paketini içe aktarmaz — T-127b). */
 export interface PlanItem {
@@ -92,6 +93,7 @@ export function PaketlerView({
 }) {
   const router = useRouter();
   const { dark } = useDz();
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const ep = plans[selected] ?? plans[0];
   const [state, formAction, pending] = useActionState(action, {});
   const [feat, setFeat] = useState(ep?.features ?? { qr: true, ship: false, prod: false, api: false });
@@ -139,11 +141,11 @@ export function PaketlerView({
             </div>
             <span className="pk-n">{p.name}</span>
             <span className="pk-p">
-              ₺{priceLabel(p.price)}
+              ₺{priceLabel(p.price, locale)}
               <small>{t.perMonth}</small>
             </span>
             <ul className="pk-l">
-              {planLines(p, t).map((l) => (
+              {planLines(p, t, locale).map((l) => (
                 <li key={l}>
                   <Ico d={YICON.check} size={16} sw={3} />
                   {l}

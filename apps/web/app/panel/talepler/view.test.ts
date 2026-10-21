@@ -27,8 +27,8 @@ describe("T-995 talep durumu (Yonet.dc.html RST)", () => {
     expect(rowState({ ...base, activation: null }, now)).toBe("expired");
   });
   it("zaman etiketi İstanbul saatiyle", () => {
-    expect(whenLabel(new Date("2026-10-16T08:05:00+03:00"), now, "BUGÜN", "DÜN")).toBe("BUGÜN 08:05");
-    expect(whenLabel(new Date("2026-10-15T23:59:00+03:00"), now, "BUGÜN", "DÜN")).toBe("DÜN 23:59");
-    expect(whenLabel(new Date("2026-10-12T16:45:00+03:00"), now, "BUGÜN", "DÜN")).toBe("12.10 16:45");
+    expect(whenLabel(new Date("2026-10-16T08:05:00+03:00"), now, "BUGÜN", "DÜN", "tr")).toBe("BUGÜN 08:05");
+    expect(whenLabel(new Date("2026-10-15T23:59:00+03:00"), now, "BUGÜN", "DÜN", "tr")).toBe("DÜN 23:59");
+    expect(whenLabel(new Date("2026-10-12T16:45:00+03:00"), now, "BUGÜN", "DÜN", "tr")).toBe("12.10 16:45");
   });
 });

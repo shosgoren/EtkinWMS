@@ -111,7 +111,19 @@ function useCevrimdisiGonderim(): void {
       }
     };
     document.addEventListener("submit", onSubmit, true);
-    return () => document.removeEventListener("submit", onSubmit, true);
+    // Düğmeden çağrılan sunucu eylemleri (form olmadan): çevrimdışıyken istek hiç gönderilmez, balon çıkar; çağıran ağ hatası alır
+    // (gerçek kopuşla aynı yol — ekran kendi hata metnini gösterir). Yalnız yazma istekleri (GET dışı) engellenir.
+    const orijinal = window.fetch;
+    const sarili: typeof window.fetch = (input, init) => {
+      const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+      if (method !== "GET" && method !== "HEAD" && cevrimdisiEngel()) return Promise.reject(new TypeError("offline"));
+      return orijinal(input, init);
+    };
+    window.fetch = sarili;
+    return () => {
+      document.removeEventListener("submit", onSubmit, true);
+      if (window.fetch === sarili) window.fetch = orijinal;
+    };
   }, []);
 }
 

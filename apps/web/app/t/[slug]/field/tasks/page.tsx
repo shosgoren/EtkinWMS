@@ -58,6 +58,7 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
   const errorRaw = first(sp.error) ?? "";
   const t = await getTranslations("tasks");
   const te = await getTranslations("tasks.errors");
+  const tk = await getTranslations("kural");
   const base = `/t/${encodeURIComponent(slug)}/field/tasks`;
   const { getAuthService } = await import("../../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
@@ -68,6 +69,7 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
   try {
     page = await listMyTasks({ db: getAppDb(), principal, tenantSlug: slug }, {
       limit: PAGE_SIZE,
+      withTotal: true,
       ...(after === undefined ? {} : { after }),
       ...(kind === undefined ? {} : { kind }),
       ...(status === undefined ? {} : { status }),
@@ -156,15 +158,15 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
       <KalipCipler label={t("filters.status")} chips={statusChips} />
       {page.items.length === 0 ? (
         <KalipBos
-          title={t("field.empty.title")}
+          title={filtered ? tk("notFoundSearch") : t("field.empty.title")}
           hint={t("field.empty.action")}
           iconD={LICON.clip}
           testId="field-tasks-empty"
-          {...(filtered ? { action: { label: t("clear"), href: base } } : {})}
+          action={filtered ? { label: t("clear"), href: base, kind: "clear" } : { label: t("field.backToField"), href: fieldHome, kind: "go" }}
         />
       ) : (
         <>
-          <KalipBaslik title={t("field.title")} hint={t("field.intro")} />
+          <KalipBaslik title={t("field.title")} hint={tk("total", { n: page.total ?? page.items.length })} />
           <KalipKartListe label={t("field.listLabel")}>
             {page.items.map((task, i) => {
               const v = KIND_VISUAL[task.kind] ?? { d: LICON.clip, color: "6C4BD8" };

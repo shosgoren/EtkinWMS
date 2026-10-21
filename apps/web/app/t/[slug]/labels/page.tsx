@@ -50,6 +50,7 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
   const warehouseId = one(sp.warehouse);
   const back = itemId !== undefined ? `${home}/items/${encodeURIComponent(itemId)}` : warehouseId !== undefined ? `${home}/warehouses/${encodeURIComponent(warehouseId)}` : home;
   const main = (children: React.ReactNode) => <main className="flex w-full min-w-0 flex-col">{children}</main>;
+  const backAction = { label: t("goBack"), href: back };
   const shell = (children: React.ReactNode) =>
     main(
       <LabelShell dark={dark} back={back} title={t("title")}>
@@ -58,10 +59,10 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
     );
 
   try {
-    if (copies < 1) return shell(<LabelNotice title={t("errors.copies", { max: MAX_LABELS_PER_DOCUMENT })} />);
+    if (copies < 1) return shell(<LabelNotice title={t("errors.copies", { max: MAX_LABELS_PER_DOCUMENT })} action={backAction} />);
     const source = await loadLabelSource(call, { itemId, warehouseId, locationId: one(sp.location), subtree: one(sp.subtree) === "1" });
     if (source === null) {
-      return shell(<LabelNotice title={t("noSource")} hint={t("noSourceAction")} />);
+      return shell(<LabelNotice title={t("noSource")} hint={t("noSourceAction")} action={{ label: t("toItems"), href: `${home}/items` }} />);
     }
     let pages: readonly string[];
     let zpl: string;
@@ -69,9 +70,9 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
       pages = toSvgPages(source.template, source.datas, copies);
       zpl = toZplDocument(source.template, source.datas, copies);
     } catch (e) {
-      if (e instanceof LabelCharsetError) return shell(<LabelNotice title={t("errors.charset")} hint={t("errors.charsetAction")} />);
-      if (e instanceof LabelTooLongError) return shell(<LabelNotice title={t("errors.tooLong")} hint={t("errors.tooLongAction")} />);
-      if (e instanceof AppError && e.code === "VALIDATION_FAILED") return shell(<LabelNotice title={t("errors.copies", { max: MAX_LABELS_PER_DOCUMENT })} />);
+      if (e instanceof LabelCharsetError) return shell(<LabelNotice title={t("errors.charset")} hint={t("errors.charsetAction")} action={backAction} />);
+      if (e instanceof LabelTooLongError) return shell(<LabelNotice title={t("errors.tooLong")} hint={t("errors.tooLongAction")} action={backAction} />);
+      if (e instanceof AppError && e.code === "VALIDATION_FAILED") return shell(<LabelNotice title={t("errors.copies", { max: MAX_LABELS_PER_DOCUMENT })} action={backAction} />);
       throw e;
     }
     return main(

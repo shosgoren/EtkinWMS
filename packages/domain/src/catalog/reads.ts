@@ -33,12 +33,16 @@ export interface SearchItemsInput {
   readonly after?: string;
   /** 1..100; varsayılan 50. */
   readonly limit?: number;
+  /** Toplam sayıyı da döndür (aynı işlem, aynı süzgeç/arama; imleç hariç — ALTIN-KURAL 15). */
+  readonly withTotal?: boolean;
 }
 
 export interface SearchItemsResult {
   readonly items: readonly ItemRow[];
   /** Sonraki sayfa yoksa `null`. */
   readonly nextCursor: string | null;
+  /** `withTotal: true` istendiğinde süzgece uyan toplam ürün sayısı. */
+  readonly total?: number;
   /**
    * T-251: `q` bir kartın ESKİ koduyla tam eşleştiyse (kod değişmiş) o kart `items` içinde döner ve burada "bu kod X olarak değişti"
    * bilgisi yer alır. Eski kod eşleşmesi yoksa alan hiç bulunmaz.
@@ -124,6 +128,10 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
                                 AND lower(h.old_code) = lower(${q})))`,
       );
     }
+    const total =
+      input.withTotal === true
+        ? Number((await tx.execute<{ n: number | string }>(sql`SELECT count(*)::int AS n FROM public.items i WHERE ${sql.join(filters, sql` AND `)}`))[0]?.n ?? 0)
+        : undefined;
     if (after !== undefined) filters.push(sql`(i.code, i.id) > (${after.code}, ${after.id}::uuid)`);
     const rows = await tx.execute<ItemHeader>(
       sql`SELECT i.id, i.code, i.name, i.base_unit_id, i.tracking_mode, i.quantity_scale, i.pick_policy, i.status, i.card_type
@@ -136,7 +144,8 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
     const last = page[page.length - 1];
     const nextCursor = rows.length > limit && last !== undefined ? encodeCursor(last.code, last.id) : null;
     const items = page.map(toItemRow);
-    if (q === undefined || items.length === 0) return { items, nextCursor };
+    const counted = total === undefined ? {} : { total };
+    if (q === undefined || items.length === 0) return { items, nextCursor, ...counted };
     const ids = items.map((r) => r.id);
     const hist = await tx.execute<{ old_code: string; item_id: string; current_code: string }>(
       sql`SELECT DISTINCT ON (h.entity_id) h.old_code, h.entity_id AS item_id, i.code AS current_code
@@ -145,8 +154,8 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
              AND lower(i.code) <> lower(${q}) AND h.entity_id IN (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})
            ORDER BY h.entity_id, h.changed_at DESC, h.id DESC`,
     );
-    if (hist.length === 0) return { items, nextCursor };
-    return { items, nextCursor, renamedFrom: hist.map((h) => ({ oldCode: h.old_code, itemId: h.item_id, currentCode: h.current_code })) };
+    if (hist.length === 0) return { items, nextCursor, ...counted };
+    return { items, nextCursor, ...counted, renamedFrom: hist.map((h) => ({ oldCode: h.old_code, itemId: h.item_id, currentCode: h.current_code })) };
   });
 }
 

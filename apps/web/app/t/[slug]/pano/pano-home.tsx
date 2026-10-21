@@ -4,7 +4,8 @@
 // Yalnız işi olan bölümlerin kartı çizilir (kaynak: grubun izin verdiği görev ekranları); hiç iş yoksa kaynaktaki kapalı kart (`.tk.off`)
 // "bugün görevin yok" der. Yetki grupları (T-421) gelene kadar kapalı kartın "GRUBUN …" satırı çizilmez.
 import type { CSSProperties } from "react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { buyukHarf } from "@wms/ui";
 import type { WorkSectionKey, WorkSummary } from "@wms/domain/operations";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
@@ -59,6 +60,7 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
   const canReport = canReportRole && (screens === null || screens.includes("problem"));
   const t = await getTranslations("pano");
   const tg = await getTranslations("home.gv");
+  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstName = userName.trim().split(/\s+/)[0] ?? userName;
   const sections = (summary?.sections ?? []).filter((s) => screens === null || screens.includes(SCREEN_OF[s.key]));
@@ -78,11 +80,11 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
   const allO = leftO + doneO + (probO - (summary?.generalProblems ?? 0));
   const hour = summary?.localHour ?? 12;
   const greet = tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name: firstName });
-  const where = (summary?.warehouseName ?? tg("allWarehouses")).toLocaleUpperCase("tr");
+  const where = buyukHarf(summary?.warehouseName ?? tg("allWarehouses"), locale);
   const subline = role === "counter" ? t("counterSub") : summary === null ? where : tg("shift", { start: summary.shift.start, end: summary.shift.end, where });
   const roleTitle = role === "counter" ? t("counterTitle") : t("fieldTitle");
-  const brandSub = `${tenantName.toLocaleUpperCase("tr")} · ${roleTitle.toLocaleUpperCase("tr")}`;
-  const ini = (firstName.trim()[0] ?? "?").toLocaleUpperCase("tr");
+  const brandSub = `${buyukHarf(tenantName, locale)} · ${buyukHarf(roleTitle, locale)}`;
+  const ini = buyukHarf(firstName.trim()[0] ?? "?", locale);
 
   const halo: PanoLink[] =
     role === "counter"
@@ -111,7 +113,7 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
       dark={dark}
       brandSub={brandSub}
       team={false}
-      me={{ ini, name: userName, group: roleTitle.toLocaleUpperCase("tr"), color: role === "counter" ? "2F5DA8" : "2F7D5B" }}
+      me={{ ini, name: userName, group: buyukHarf(roleTitle, locale), color: role === "counter" ? "2F5DA8" : "2F7D5B" }}
       halo={halo}
       settingsHref={settingsManage ? `${base}/settings` : undefined}
       scanHref={`${base}/field`}

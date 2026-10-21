@@ -6,7 +6,7 @@
 // (kaydedilmez, e-postayla gitmez); QR yalnız saha giriş adresini taşır (kod URL'ye girmez); depo önceden seçili gelmez ve seçilmeden
 // gönderilemez (T-413 m2). Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
 import { useState, type CSSProperties } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
@@ -14,7 +14,7 @@ import { KalipAlan, KalipGrup, KalipIzgara, KalipSecenek } from "../../kalip/for
 import { kdz } from "../../kalip/tokens.ts";
 import { createFieldUserAction, resetFieldCodeAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback } from "@wms/ui";
 
 interface Warehouse {
   readonly id: string;
@@ -56,6 +56,7 @@ export function FieldStaffView({
   staff: readonly StaffRow[];
 }) {
   const t = useTranslations("fieldStaff");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -123,7 +124,7 @@ export function FieldStaffView({
       kind="form"
       dark={dark}
       title={t("title")}
-      subtitle={t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}
+      subtitle={t("bandS", { tenant: buyukHarf(tenantName, locale) })}
       icon={{ d: LICON.people, color: "0E7C7B" }}
       testId="field-staff"
       bar={{
@@ -210,7 +211,7 @@ export function FieldStaffView({
                     </span>
                     <span className="rt">
                       <b>{p.name}</b>
-                      <small>{`${p.username} · ${roleText.toLocaleUpperCase("tr-TR")}`}</small>
+                      <small>{`${p.username} · ${buyukHarf(roleText, locale)}`}</small>
                     </span>
                     <span className={`pill ${p.active && !p.locked ? "ok" : "warn"}`}>{st}</span>
                     <Btn kind="soft" scope="dzf" d={LICON.key} onClick={() => void newCode(p)} aria-label={t("newCodeAria", { name: p.name })} disabled={busy} style={{ minHeight: 44 }}>

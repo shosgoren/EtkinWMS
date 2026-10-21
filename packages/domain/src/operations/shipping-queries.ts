@@ -8,14 +8,17 @@ import { microToDecimal,uuidOf } from "./field-posting.ts";
 import { scaledBaseQuantity } from "./picking.ts";
 type Params=Omit<TenantAccessParams,"permission"|"recentAuth">;
 type Order={id:string;number:string;customerRef:string|null;status:string;version:number};
-export async function listShippingOrders(params:Params,input:{q?:string;after?:string}={}){
+/** `withTotal: true` → aynı işlemde aynı arama süzgeciyle (imleç hariç) toplam sipariş sayısı da döner (ALTIN-KURAL 15). */
+export async function listShippingOrders(params:Params,input:{q?:string;after?:string;withTotal?:boolean}={}){
  const q=input.q??"";if(typeof q!=="string"||q.length>128)throw new AppError("VALIDATION_FAILED");
  const after=input.after?uuidOf(input.after):null,pattern=`%${q.replace(/[\\%_]/g,"\\$&")}%`;
  return runTenantQuery({...params,permission:"stock.view"},async(tx,m)=>{
+  const where=sql`tenant_id=${m.tenantId}::uuid AND (number ILIKE ${pattern} OR customer_ref ILIKE ${pattern})`;
   const rows=await tx.execute<Order>(sql`SELECT id,number,customer_ref AS "customerRef",status,version FROM public.sales_orders
-   WHERE tenant_id=${m.tenantId}::uuid AND (number ILIKE ${pattern} OR customer_ref ILIKE ${pattern}) AND (${after}::uuid IS NULL OR id>${after}::uuid) ORDER BY id LIMIT 51`);
+   WHERE ${where} AND (${after}::uuid IS NULL OR id>${after}::uuid) ORDER BY id LIMIT 51`);
   const items=rows.slice(0,50),last=items.at(-1);
-  return {items,next:rows.length>50&&last?last.id:null,permissions:{create:hasPermission(m.roles, "document.create", m.grants),approve:hasPermission(m.roles, "document.approve", m.grants),post:hasPermission(m.roles, "stock.post", m.grants)}};
+  const total=input.withTotal===true?Number((await tx.execute<{n:number|string}>(sql`SELECT count(*)::int AS n FROM public.sales_orders WHERE ${where}`))[0]?.n??0):undefined;
+  return {items,next:rows.length>50&&last?last.id:null,...(total===undefined?{}:{total}),permissions:{create:hasPermission(m.roles, "document.create", m.grants),approve:hasPermission(m.roles, "document.approve", m.grants),post:hasPermission(m.roles, "stock.post", m.grants)}};
  });
 }
 export async function getShippingOrder(params:Params,orderId:string,input:{taskAfter?:string;stageAfter?:string}={}){

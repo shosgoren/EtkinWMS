@@ -1,5 +1,6 @@
 // İşlem kaydı satır biçimi (T-408): `platform.*` olayı → "Operatör · …" metni. Saf yardımcı (sayfa ve birim testi).
 import type { PanelEvent } from "@wms/domain/platform/events";
+import { tarih, tarihBicimi } from "@wms/ui";
 
 const TZ = "Europe/Istanbul";
 
@@ -22,20 +23,21 @@ function fill(s: string, v: Readonly<Record<string, string | number>>): string {
   return s.replace(/\{(\w+)\}/g, (m, k: string) => (k in v ? String(v[k]) : m));
 }
 
-const when = new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
-const date = new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" });
+// T-1001 (ALTIN-KURAL 16): biçim dili çağıranın verdiği kullanıcı dili (`locale`); verilmezse ürünün varsayılan dili.
+const WHEN: Intl.DateTimeFormatOptions = { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false };
+const DATE: Intl.DateTimeFormatOptions = { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" };
 
-export function stamp(d: Date): string {
-  const p = when.formatToParts(d);
+export function stamp(d: Date, locale: string): string {
+  const p = tarihBicimi(locale, WHEN).formatToParts(d);
   const g = (k: string): string => p.find((x) => x.type === k)?.value ?? "";
   return `${g("day")}.${g("month")} ${g("hour")}:${g("minute")}`;
 }
 
 /** Olay → tek satır metin (tasarım: "Operatör · Satış sayfası … yayınlandı"). Bilinmeyen tür ham adıyla gösterilir (kayıt gizlenmez). */
-export function describe(e: PanelEvent, t: KayitMsgs): string {
+export function describe(e: PanelEvent, t: KayitMsgs, locale: string): string {
   const period = e.info.period;
   const month = period !== undefined && /^\d{4}-\d{2}/.test(period) ? `${t.monthNames[Number(period.slice(5, 7)) - 1] ?? ""} ${period.slice(0, 4)}` : "";
-  const trial = e.info.trialEndsAt === undefined || Number.isNaN(Date.parse(e.info.trialEndsAt)) ? "" : date.format(new Date(e.info.trialEndsAt));
+  const trial = e.info.trialEndsAt === undefined || Number.isNaN(Date.parse(e.info.trialEndsAt)) ? "" : tarih(new Date(e.info.trialEndsAt), locale, DATE);
   const tpl = t.kinds[e.kind.replace(/^platform\./, "")];
   const body =
     tpl === undefined

@@ -69,6 +69,7 @@ export function LocationTree({
   canManage,
   initialItems,
   initialNext,
+  activeTotal,
 }: {
   slug: string;
   dark: boolean;
@@ -79,6 +80,8 @@ export function LocationTree({
   canManage: boolean;
   initialItems: readonly LocationItem[];
   initialNext: TreeCursor | null;
+  /** Sunucudan depodaki toplam aktif lokasyon sayısı (ALTIN-KURAL 15); yoksa yüklenenlerden sayılır ("N+"). */
+  activeTotal?: number;
 }) {
   const t = useTranslations("warehouses.tree");
   const tk = useTranslations("warehouses.kind");
@@ -217,7 +220,7 @@ export function LocationTree({
   const lockText = !canManage ? tw("lockedReason") : !warehouseActive ? t("warehouseArchived") : null;
 
   const activeCount = items.filter((i) => i.status === "ACTIVE").length;
-  const countText = next === null ? String(activeCount) : `${activeCount}+`;
+  const countText = activeTotal !== undefined ? String(activeTotal) : next === null ? String(activeCount) : `${activeCount}+`;
   const openRoot = (): void => {
     feedback.minor();
     setParent({ id: null, label: warehouseName });
@@ -297,10 +300,24 @@ export function LocationTree({
             right={
               <KalipKartBolum label={t("label")} title={t("title")} sub={tw("k.treeSub", { n: countText })} d={LICON.raf} color="0E7C7B" testId="location-tree-card">
                 {visible.length === 0 ? (
-                  <p style={{ margin: 0 }} data-testid="location-empty">
-                    <b style={{ display: "block" }}>{t("empty")}</b>
-                    <small className="mono">{writable ? t("emptyAction") : t("emptyReadOnly")}</small>
-                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }} data-testid="location-empty">
+                    <p style={{ margin: 0 }}>
+                      <b style={{ display: "block" }}>{t("empty")}</b>
+                      <small className="mono">{writable ? t("emptyAction") : t("emptyReadOnly")}</small>
+                    </p>
+                    {/* ALTIN-KURAL 8: boş listede sıradaki adım — yazabilen için ilk lokasyonu ekle (+), diğerine depo listesine dön (→). */}
+                    {writable ? (
+                      <button type="button" className="btn" style={actBtn("0E7C7B", !canOpenDialogs)} disabled={!canOpenDialogs} onClick={openRoot} data-testid="kalip-empty-action">
+                        <Ico d={LICON.plus} size={18} />
+                        {t("addFirst")}
+                      </button>
+                    ) : (
+                      <a className="btn" style={{ ...actBtn("172E42", false), textDecoration: "none" }} href={base} data-testid="kalip-empty-action">
+                        <Ico d={LICON.arrow} size={18} />
+                        {t("back")}
+                      </a>
+                    )}
+                  </div>
                 ) : (
                   <ul className="whl" role="tree" aria-label={t("label")} style={{ margin: 0, padding: 0, listStyle: "none" }}>
                     {visible.map((it) => {

@@ -62,6 +62,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   let rows: ItemListView[];
   let units: Awaited<ReturnType<typeof listUnits>>;
   let nextCursor: string | null;
+  let total: number | undefined;
   let canManage: boolean;
   let canImport: boolean;
   let stock: Record<string, ItemStockView> = {};
@@ -73,6 +74,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     canImport = hasPermission(current.roles, "data.import", current.grants);
     const page = await searchItems(call, {
       limit: PAGE_SIZE,
+      withTotal: true,
       ...(q.trim() === "" ? {} : { q }),
       ...(status === "" ? {} : { status }),
       ...(cardType === "" ? {} : { cardType }),
@@ -87,6 +89,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
       return { id: it.id, code: it.code, name: it.name, status: it.status, baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
     });
     nextCursor = page.nextCursor;
+    total = page.total;
     // T-968: kart rozeti (kapsamdaki depoların eldeki toplamı + minimum); okunamazsa rozet çizilmez, liste yine açılır.
     stock = Object.fromEntries(
       (await sumItemsStock(call, rows.map((r) => r.id)).catch(() => [])).map((x) => [x.itemId, { have: x.have, min: x.min }] as const),
@@ -120,6 +123,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
         stock={stock}
         units={units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }))}
         nextCursor={nextCursor}
+        {...(total === undefined ? {} : { total })}
         firstPage={after === undefined || after === ""}
         query={{ q: q.trim() === "" ? "" : q, status, type: cardType }}
       />

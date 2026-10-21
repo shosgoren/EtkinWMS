@@ -41,17 +41,20 @@ async function readRecipe(tx:AccessTx,tenantId:string,recipeId:string) {
 export async function getProductionRecipe(params:ReadParams,recipeId:string) {
  const id=uuidOf(recipeId);return runTenantQuery({...params,permission:"stock.view"},(tx,m)=>readRecipe(tx,m.tenantId,id));
 }
-export async function listProductionRecipes(params:ReadParams,input:{q?:string;after?:string}={}) {
+/** `withTotal: true` → aynı işlemde aynı arama süzgeciyle (imleç hariç) toplam reçete sayısı da döner (ALTIN-KURAL 15). */
+export async function listProductionRecipes(params:ReadParams,input:{q?:string;after?:string;withTotal?:boolean}={}) {
  const q=input.q??"";if(typeof q!=="string" || q.length>128)throw new AppError("VALIDATION_FAILED");
  const pattern=`%${q.replace(/[\\%_]/g,"\\$&")}%`,after=input.after?uuidOf(input.after):null;
  return runTenantQuery({...params,permission:"stock.view"},async(tx,m)=>{
-  const rows=await tx.execute<Recipe>(sql`SELECT r.id,r.code,r.version,r.name,r.output_item_id AS "outputItemId",i.code AS "outputCode",i.name AS "outputName",u.code AS "unitCode",i.tracking_mode AS "outputTrackingMode",r.output_quantity::text AS "outputQuantity"
-  FROM public.production_recipes r JOIN public.items i ON i.tenant_id=r.tenant_id AND i.id=r.output_item_id
+  const from=sql`FROM public.production_recipes r JOIN public.items i ON i.tenant_id=r.tenant_id AND i.id=r.output_item_id
   JOIN public.units u ON u.tenant_id=i.tenant_id AND u.id=i.base_unit_id
-  WHERE r.tenant_id=${m.tenantId}::uuid AND (r.code ILIKE ${pattern} OR r.name ILIKE ${pattern}) AND (${after}::uuid IS NULL OR r.id>${after}::uuid)
+  WHERE r.tenant_id=${m.tenantId}::uuid AND (r.code ILIKE ${pattern} OR r.name ILIKE ${pattern})`;
+  const rows=await tx.execute<Recipe>(sql`SELECT r.id,r.code,r.version,r.name,r.output_item_id AS "outputItemId",i.code AS "outputCode",i.name AS "outputName",u.code AS "unitCode",i.tracking_mode AS "outputTrackingMode",r.output_quantity::text AS "outputQuantity"
+  ${from} AND (${after}::uuid IS NULL OR r.id>${after}::uuid)
   ORDER BY r.id LIMIT 51`);
   const items=rows.slice(0,50),last=items.at(-1);
-  return {items,next:rows.length>50&&last?last.id:null,canCreate:hasPermission(m.roles, "settings.manage", m.grants),canPost:hasPermission(m.roles, "stock.post", m.grants)};
+  const total=input.withTotal===true?Number((await tx.execute<{n:number|string}>(sql`SELECT count(*)::int AS n ${from}`))[0]?.n??0):undefined;
+  return {items,next:rows.length>50&&last?last.id:null,...(total===undefined?{}:{total}),canCreate:hasPermission(m.roles, "settings.manage", m.grants),canPost:hasPermission(m.roles, "stock.post", m.grants)};
  });
 }
 export interface CreateRecipeInput {readonly code:string;readonly version:number;readonly name:string;readonly outputItemId:string;readonly outputQuantity:string;readonly lines:readonly {readonly itemId:string;readonly quantity:string}[];readonly requestId?:string|null}

@@ -427,7 +427,8 @@
     "searchPlaceholder": "Search name or email",
     "noMatch": "No member matches",
     "noMatchHint": "Try another name.",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "inviteFirst": "Invite the first member"
   },
   "errors": {
     "validation_failed": "The information entered is not valid.",
@@ -1530,7 +1531,8 @@
         "title": "Archive {name}?",
         "description": "Location {name} ({code}) will be archived. It cannot be archived while it holds stock, has an open count or active sub-locations; empty or archive those first.",
         "button": "Archive"
-      }
+      },
+      "addFirst": "Add the first location"
     },
     "errors": {
       "code": "Error code: {code}",
@@ -1683,7 +1685,9 @@
     "height": "Height (mm)",
     "paperHint": "Choose A4 for office printers such as Epson. In the print dialog keep scale at 100% and headers/footers off. The label size must fit the printer's paper.",
     "invalid": "The size is invalid or does not fit the paper. For A4 choose at most 190 × 277 mm.",
-    "customHint": "With a custom size the content is scaled to fit. Check barcode readability with a test print; ZPL output supports 100 × 50 mm only."
+    "customHint": "With a custom size the content is scaled to fit. Check barcode readability with a test print; ZPL output supports 100 × 50 mm only.",
+    "toItems": "Go to items",
+    "goBack": "Go back"
   },
   "easySetup": {
     "guide": {
@@ -2541,7 +2545,8 @@
       "hint": "Tap an item to open its card",
       "meta": "Warehouse: {warehouse} ({code}) · Physical {physical} · Reserved {reserved} {unit}",
       "cardAria": "{name} · {code} · {warehouse}: available {qty} {unit}",
-      "lockedHint": "Ask your workspace admin for stock view access."
+      "lockedHint": "Ask your workspace admin for stock view access.",
+      "firstIn": "Make the first stock entry"
     }
   },
   "stockDocuments": {
@@ -2602,7 +2607,9 @@
       "countMore": "Latest {n} documents",
       "hint": "Tap a document to open it",
       "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
-      "saveAria": "Save"
+      "saveAria": "Save",
+      "firstIn": "Make the first stock entry",
+      "toStock": "Go to the stock list"
     }
   },
   "production": {
@@ -2651,7 +2658,8 @@
       "hint": "Tap a recipe to produce",
       "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
       "groupQty": "Quantity",
-      "saveAria": "Save"
+      "saveAria": "Save",
+      "firstRecipe": "Define the first recipe"
     }
   },
   "shipping": {
@@ -2727,7 +2735,8 @@
       "groupItems": "Items",
       "saveAria": "Save",
       "fieldPick": "Pick in the field",
-      "fieldShip": "Ship in the field"
+      "fieldShip": "Ship in the field",
+      "firstOrder": "Create the first order"
     }
   },
   "packageReceiving": {
@@ -2787,7 +2796,9 @@
       "loadHint": "Reopen the document from the list; if it persists, tell an authorized person.",
       "paperLabel": "Paper",
       "kindHint": "Barrel or box"
-    }
+    },
+    "toWarehouses": "Go to warehouses",
+    "toLocations": "Add a location"
   },
   "packageMovement": {
     "title": "Package operation",
@@ -4038,7 +4049,8 @@
     "chipActive": "Active",
     "chipArchived": "Archived",
     "clear": "Clear filter",
-    "count": "{n} accounts"
+    "count": "{n} accounts",
+    "firstParty": "Add the first party"
   },
   "gruplar": {
     "title": "Permission groups",
@@ -4786,7 +4798,9 @@
     "cancelHelp": "No difference is applied; locks are released. Write a reason.",
     "approveConfirm": "Give approval",
     "postConfirm": "Post adjustment",
-    "cancelConfirm": "Confirm cancel"
+    "cancelConfirm": "Confirm cancel",
+    "toWarehouses": "Go to warehouses",
+    "firstCount": "Start the first count"
   },
   "kural": {
     "offline": "No connection · try again when you are back online",

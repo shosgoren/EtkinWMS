@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { buyukHarf, kucukHarf, sayi } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { getCustomerActivity, listCustomers, type CustomerEvent, type CustomerRow } from "@wms/domain/platform/customers";
 import { listPlans } from "@wms/domain/platform/plans";
@@ -70,10 +71,10 @@ function lastLogin(d: Date | null, now: Date, t: { today: string; yesterday: str
   return t.daysAgo.replace("{n}", String(diff));
 }
 
-function initials(name: string): string {
+function initials(name: string, locale: string): string {
   const words = name.trim().split(/\s+/).filter((w) => w !== "");
   const s = words.length >= 2 ? `${words[0]?.charAt(0) ?? ""}${words[1]?.charAt(0) ?? ""}` : name.trim().slice(0, 2);
-  return s.toLocaleUpperCase("tr");
+  return buyukHarf(s, locale);
 }
 
 function stateOf(r: CustomerRow): CustomerStateKey {
@@ -119,10 +120,10 @@ interface Msgs extends MusterilerLabels {
   readonly unlimited: string;
 }
 
-function meter(label: string, v: number, max: number | null, unlimited: string): CustomerMeter {
+function meter(label: string, v: number, max: number | null, unlimited: string, locale: string): CustomerMeter {
   const m = max ?? 0;
   const width = m === 0 ? 8 : Math.min(100, Math.round((v / m) * 100));
-  return { label, value: v.toLocaleString("tr-TR"), max: m === 0 ? unlimited : m.toLocaleString("tr-TR"), width: `${width}%`, hot: m !== 0 && v / m >= 0.8 };
+  return { label, value: sayi(v, locale), max: m === 0 ? unlimited : sayi(m, locale), width: `${width}%`, hot: m !== 0 && v / m >= 0.8 };
 }
 
 function historyLine(e: CustomerEvent, m: Msgs, planName: (id: string | undefined) => string): string {
@@ -155,6 +156,7 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
   const query = await searchParams;
   const m = (await getMessages()).panel as unknown as { musteriler: Msgs };
   const t = m.musteriler;
+  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const labels: MusterilerLabels = t;
   const dark = temaKoyu(await cookies());
   const shell = { dark, nav: await panelNav(principal), labels: await panelLabels() };
@@ -174,7 +176,7 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
     const tab: CustomerTab = tabParam === "destek" || tabParam === "gecmis" ? tabParam : "genel";
     const rank = (id: string | null): number => (id === null ? -1 : plans.findIndex((p) => p.id === id));
     const st = stateOf(cx);
-    const planPrice = cx.plan === null ? "" : ` · ₺${priceLabel(cx.plan.price)} ${t.perMonth.toLocaleLowerCase("tr")}`;
+    const planPrice = cx.plan === null ? "" : ` · ₺${priceLabel(cx.plan.price, locale)} ${kucukHarf(t.perMonth, locale)}`;
     const sub =
       st === "TRIAL"
         ? [
@@ -182,14 +184,14 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
             { k: t.kPlan, v: cx.plan?.name ?? t.noPlan },
             { k: t.kCard, v: t.vNoCard },
             { k: t.kNext, v: t.vNextTrial },
-            { k: t.kMoves, v: act.movesThisMonth.toLocaleString("tr-TR") },
+            { k: t.kMoves, v: sayi(act.movesThisMonth, locale) },
           ]
         : [
             { k: t.kState, v: st === "SUSPENDED" ? t.vSuspended : st === "OVERDUE" ? t.vOverdue : t.vActive },
             { k: t.kPlan, v: cx.plan === null ? t.noPlan : `${cx.plan.name}${planPrice}` },
             { k: t.kCard, v: t.vNoCard },
             { k: t.kNext, v: t.vNextNone },
-            { k: t.kMoves, v: act.movesThisMonth.toLocaleString("tr-TR") },
+            { k: t.kMoves, v: sayi(act.movesThisMonth, locale) },
           ];
     const lim = cx.plan?.limits ?? null;
     const cu: CustomerDetail = {
@@ -197,16 +199,16 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
       name: cx.name,
       slug: cx.slug,
       since: day(cx.createdAt),
-      initials: initials(cx.name),
+      initials: initials(cx.name, locale),
       state: st,
-      planLabel: (cx.plan?.name ?? t.noPlan).toLocaleUpperCase("tr"),
+      planLabel: buyukHarf(cx.plan?.name ?? t.noPlan, locale),
       planId: cx.plan?.id ?? null,
       planRank: rank(cx.plan?.id ?? null),
       meters: [
-        meter(t.mAdmins, cx.counts.admins, lim?.admins ?? null, t.unlimitedMax),
-        meter(t.mField, cx.counts.field, lim?.field ?? null, t.unlimitedMax),
-        meter(t.mWarehouses, cx.counts.warehouses, lim?.warehouses ?? null, t.unlimitedMax),
-        meter(t.mItems, cx.counts.items, lim?.items ?? null, t.unlimitedMax),
+        meter(t.mAdmins, cx.counts.admins, lim?.admins ?? null, t.unlimitedMax, locale),
+        meter(t.mField, cx.counts.field, lim?.field ?? null, t.unlimitedMax, locale),
+        meter(t.mWarehouses, cx.counts.warehouses, lim?.warehouses ?? null, t.unlimitedMax, locale),
+        meter(t.mItems, cx.counts.items, lim?.items ?? null, t.unlimitedMax, locale),
       ],
       sub,
       hist: act.history.map((e) => ({ t: stamp(e.at), l: historyLine(e, t, planName) })),
@@ -214,8 +216,8 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
     const options: PlanOption[] = plans.map((p, i) => ({
       id: p.id,
       name: p.name,
-      price: priceLabel(p.price),
-      sum: planLines(p, { unlimited: t.unlimited, admins: t.unitAdmins, field: t.unitField, warehouses: t.unitWarehouses, items: t.unitItems }).slice(0, 2).join(" · "),
+      price: priceLabel(p.price, locale),
+      sum: planLines(p, { unlimited: t.unlimited, admins: t.unitAdmins, field: t.unitField, warehouses: t.unitWarehouses, items: t.unitItems }, locale).slice(0, 2).join(" · "),
       rank: i,
     }));
     return (
@@ -251,8 +253,8 @@ export default async function MusterilerPage({ searchParams }: { searchParams: P
     state: stateOf(r),
     plan: r.plan?.name ?? "—",
     users: `${r.counts.admins} + ${r.counts.field}`,
-    warehouses: r.counts.warehouses.toLocaleString("tr-TR"),
-    items: r.counts.items.toLocaleString("tr-TR"),
+    warehouses: sayi(r.counts.warehouses, locale),
+    items: sayi(r.counts.items, locale),
     last: lastLogin(r.lastLogin, now, t),
   }));
   return (

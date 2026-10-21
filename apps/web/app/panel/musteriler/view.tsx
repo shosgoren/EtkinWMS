@@ -6,6 +6,8 @@
 import { useActionState, useRef, useState, type CSSProperties } from "react";
 import { useModalFocus } from "../../t/[slug]/kalip/odak.ts";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+import { kucukHarf } from "@wms/ui";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import type { CustomerActionState } from "./actions.ts";
@@ -135,9 +137,10 @@ export function MusterilerList({
   labels: MusterilerLabels;
 }) {
   const router = useRouter();
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const [query, setQuery] = useState(q);
-  const ql = query.trim().toLocaleLowerCase("tr");
-  const shown = rows.filter((r) => (tab === "all" || r.state === tab) && (ql === "" || `${r.name} ${r.slug}`.toLocaleLowerCase("tr").includes(ql)));
+  const ql = kucukHarf(query.trim(), locale);
+  const shown = rows.filter((r) => (tab === "all" || r.state === tab) && (ql === "" || kucukHarf(`${r.name} ${r.slug}`, locale).includes(ql)));
   const tabs = (["all", "ACTIVE", "TRIAL", "OVERDUE", "SUSPENDED"] as const).map((k) => [k, `${t.tabs[k]} · ${counts[k]}`] as const);
   const go = (k: "all" | CustomerStateKey): void => {
     const p = new URLSearchParams();

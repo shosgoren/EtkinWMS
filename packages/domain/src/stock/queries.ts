@@ -22,6 +22,8 @@ export interface StockOverviewInput {
   readonly warehouseId?: string;
   readonly after?: string;
   readonly limit?: number;
+  /** Toplam satır (depo × ürün) sayısını da döndür: aynı işlem, aynı süzgeç/arama/kapsam; imleç hariç (ALTIN-KURAL 15). */
+  readonly withTotal?: boolean;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,7 +36,7 @@ function uuid(value: string): string {
 export async function listStockOverview(
   params: Omit<TenantAccessParams, "permission" | "recentAuth">,
   input: StockOverviewInput = {},
-): Promise<{ readonly items: readonly StockOverviewRow[]; readonly next: string | null }> {
+): Promise<{ readonly items: readonly StockOverviewRow[]; readonly next: string | null; readonly total?: number }> {
   const limit = input.limit ?? 50;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new AppError("VALIDATION_FAILED");
   if (input.q !== undefined && (typeof input.q !== "string" || input.q.length > 128)) throw new AppError("VALIDATION_FAILED");
@@ -53,14 +55,7 @@ export async function listStockOverview(
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, member) => {
     const allowed = await resolveWarehouseScope(tx, member);
     const scope = allowed === null ? null : pgUuidArray(allowed);
-    const rows = await tx.execute<StockOverviewRow>(sql`
-      SELECT w.id AS "warehouseId", w.code AS "warehouseCode", w.name AS "warehouseName",
-             i.id AS "itemId", i.code AS "itemCode", i.name AS "itemName", u.code AS "unitCode",
-             sum(b.quantity)::text AS physical, sum(b.reserved_quantity)::text AS reserved,
-             coalesce(sum(b.quantity - b.reserved_quantity) FILTER (
-               WHERE d.stock_status = 'AVAILABLE' AND l.kind IN ('STORAGE', 'STAGING') AND l.pick_blocked = false
-             ), 0)::text AS available
-        FROM public.stock_balances b
+    const from = sql`FROM public.stock_balances b
         JOIN public.stock_dimensions d ON d.tenant_id = b.tenant_id AND d.id = b.stock_dimension_id
         JOIN public.locations l ON l.tenant_id = d.tenant_id AND l.id = d.location_id
         JOIN public.warehouses w ON w.tenant_id = l.tenant_id AND w.id = l.warehouse_id
@@ -69,14 +64,26 @@ export async function listStockOverview(
        WHERE b.tenant_id = ${member.tenantId}::uuid
          AND (${scope}::uuid[] IS NULL OR w.id = ANY(${scope}::uuid[]))
          AND (${warehouse}::uuid IS NULL OR w.id = ${warehouse}::uuid)
-         AND (${query} = '' OR i.code ILIKE ${pattern} OR i.name ILIKE ${pattern} OR w.code ILIKE ${pattern} OR w.name ILIKE ${pattern})
+         AND (${query} = '' OR i.code ILIKE ${pattern} OR i.name ILIKE ${pattern} OR w.code ILIKE ${pattern} OR w.name ILIKE ${pattern})`;
+    const groupHaving = sql`GROUP BY w.id, w.code, w.name, i.id, i.code, i.name, u.code
+      HAVING sum(b.quantity) <> 0 OR sum(b.reserved_quantity) <> 0`;
+    const rows = await tx.execute<StockOverviewRow>(sql`
+      SELECT w.id AS "warehouseId", w.code AS "warehouseCode", w.name AS "warehouseName",
+             i.id AS "itemId", i.code AS "itemCode", i.name AS "itemName", u.code AS "unitCode",
+             sum(b.quantity)::text AS physical, sum(b.reserved_quantity)::text AS reserved,
+             coalesce(sum(b.quantity - b.reserved_quantity) FILTER (
+               WHERE d.stock_status = 'AVAILABLE' AND l.kind IN ('STORAGE', 'STAGING') AND l.pick_blocked = false
+             ), 0)::text AS available
+        ${from}
          AND (${afterWarehouse}::uuid IS NULL OR (w.id, i.id) > (${afterWarehouse}::uuid, ${afterItem}::uuid))
-       GROUP BY w.id, w.code, w.name, i.id, i.code, i.name, u.code
-      HAVING sum(b.quantity) <> 0 OR sum(b.reserved_quantity) <> 0
+       ${groupHaving}
        ORDER BY w.id, i.id
        LIMIT ${limit + 1}`);
     const items = rows.slice(0, limit);
     const last = items.at(-1);
-    return { items, next: rows.length > limit && last !== undefined ? `${last.warehouseId}:${last.itemId}` : null };
+    const next = rows.length > limit && last !== undefined ? `${last.warehouseId}:${last.itemId}` : null;
+    if (input.withTotal !== true) return { items, next };
+    const cnt = await tx.execute<{ n: number | string }>(sql`SELECT count(*)::int AS n FROM (SELECT 1 ${from} ${groupHaving}) x`);
+    return { items, next, total: Number(cnt[0]?.n ?? 0) };
   });
 }

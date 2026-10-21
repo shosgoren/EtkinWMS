@@ -10,7 +10,7 @@
 //   görev görünmez/NOT_FOUND. `tenant_id` yalnızca doğrulanmış üyelikten gelir; kimlik başka tenant'ınsa RLS + tenant süzgeci → NOT_FOUND.
 // - Görev durum geçişleri tek tabloda (`nextTaskStatus`); DB tetikleyicisi (0017 `warehouse_tasks_guard_state`) ikinci savunmadır.
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx, type Membership, type TenantAccessParams } from "../identity/access.ts";
@@ -382,6 +382,8 @@ export interface TaskCursor {
 export interface TaskPage {
   readonly items: readonly TaskRow[];
   readonly next: TaskCursor | null;
+  /** `withTotal: true` istendiğinde: aynı süzgeç, arama ve kapsamla (imleç hariç) toplam görev sayısı (ALTIN-KURAL 15). */
+  readonly total?: number;
 }
 
 /**
@@ -402,6 +404,12 @@ function cursorOf(raw: TaskCursor | undefined): { key: string; id: string } | nu
   return { key: raw.createdKey, id: uuid(raw.id) };
 }
 
+/** Liste ile aynı işlem ve aynı WHERE (imleç hariç) üzerinden toplam (ALTIN-KURAL 15). */
+async function countTasks(tx: Pick<AccessTx, "execute">, where: SQL): Promise<number> {
+  const r = await tx.execute<{ n: number | string }>(sql`SELECT count(*)::int AS n FROM public.warehouse_tasks WHERE ${where}`);
+  return Number(r[0]?.n ?? 0);
+}
+
 function page(rows: readonly TaskDbRow[], limit: number): TaskPage {
   const items = rows.slice(0, limit);
   const last = items[items.length - 1];
@@ -417,6 +425,8 @@ export interface ListMyTasksInput {
   readonly q?: string;
   readonly after?: TaskCursor;
   readonly limit?: number;
+  /** Toplam sayıyı da döndür (aynı işlem ve süzgeç; imleç hariç). */
+  readonly withTotal?: boolean;
 }
 
 const SEARCH_MAX = 100;
@@ -463,21 +473,22 @@ export async function listMyTasks(params: TaskCallParams, input: ListMyTasksInpu
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
     const kinds = TASK_KINDS.filter((k) => hasPermission(m.roles, TASK_KIND_PERMISSION[k], m.grants));
-    const rows = await tx.execute<TaskDbRow>(
-      sql`SELECT ${COLUMNS}
-            FROM public.warehouse_tasks
-           WHERE tenant_id = ${m.tenantId}::uuid
+    const where = sql`tenant_id = ${m.tenantId}::uuid
              AND (   (status = 'ASSIGNED' AND assigned_membership_id = ${m.membershipId}::uuid)
                   OR (status = 'OPEN' AND kind = ANY(${`{${kinds.join(",")}}`}::text[])))
              AND (${kind}::text IS NULL OR kind = ${kind}::text)
              AND (${status}::text IS NULL OR status = ${status}::text)
              AND (${scope === null}::boolean OR warehouse_id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))
-             ${searchSql(like, false)}
+             ${searchSql(like, false)}`;
+    const rows = await tx.execute<TaskDbRow>(
+      sql`SELECT ${COLUMNS}
+            FROM public.warehouse_tasks
+           WHERE ${where}
              AND (${cur === null}::boolean OR (created_at, id) > (${cur?.key ?? "1970-01-01T00:00:00.000000Z"}::timestamptz, ${cur?.id ?? "00000000-0000-0000-0000-000000000000"}::uuid))
            ORDER BY created_at, id
            LIMIT ${limit + 1}`,
     );
-    return page(rows, limit);
+    return input.withTotal === true ? { ...page(rows, limit), total: await countTasks(tx, where) } : page(rows, limit);
   });
 }
 
@@ -489,6 +500,8 @@ export interface ListTasksInput {
   readonly q?: string;
   readonly after?: TaskCursor;
   readonly limit?: number;
+  /** Toplam sayıyı da döndür (aynı işlem ve süzgeç; imleç hariç). */
+  readonly withTotal?: boolean;
 }
 
 /** Yönetici listesi: tür/durum/depo süzgeci; sıra created_at, id; keyset. Okuma `stock.view` (eylemler kendi izinlerini ister). */
@@ -500,19 +513,20 @@ export async function listTasks(params: TaskCallParams, input: ListTasksInput = 
   const warehouseId = input.warehouseId === undefined ? null : uuid(input.warehouseId);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
-    const rows = await tx.execute<TaskDbRow>(
-      sql`SELECT ${COLUMNS}
-            FROM public.warehouse_tasks
-           WHERE tenant_id = ${m.tenantId}::uuid
+    const where = sql`tenant_id = ${m.tenantId}::uuid
              AND (${kind}::text IS NULL OR kind = ${kind}::text)
              AND (${status}::text IS NULL OR status = ${status}::text)
              AND (${warehouseId}::uuid IS NULL OR warehouse_id = ${warehouseId}::uuid)
              AND (${scope === null}::boolean OR warehouse_id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))
-             ${searchSql(like, true)}
+             ${searchSql(like, true)}`;
+    const rows = await tx.execute<TaskDbRow>(
+      sql`SELECT ${COLUMNS}
+            FROM public.warehouse_tasks
+           WHERE ${where}
              AND (${cur === null}::boolean OR (created_at, id) > (${cur?.key ?? "1970-01-01T00:00:00.000000Z"}::timestamptz, ${cur?.id ?? "00000000-0000-0000-0000-000000000000"}::uuid))
            ORDER BY created_at, id
            LIMIT ${limit + 1}`,
     );
-    return page(rows, limit);
+    return input.withTotal === true ? { ...page(rows, limit), total: await countTasks(tx, where) } : page(rows, limit);
   });
 }

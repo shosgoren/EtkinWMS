@@ -82,10 +82,13 @@ export interface TasksViewProps {
   readonly firstPage: boolean;
   /** T-978: sunucu araması; boş = tümü. */
   readonly search?: string;
+  /** Sunucudan süzgece uyan toplam görev sayısı (ALTIN-KURAL 15); yoksa sayfadaki satır sayısı. */
+  readonly total?: number;
 }
 
-export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage, search = "" }: TasksViewProps) {
+export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage, search = "", total }: TasksViewProps) {
   const t = useTranslations("tasks");
+  const tk = useTranslations("kural");
   const te = useTranslations("tasks.errors");
   const router = useRouter();
   const locale = useLocale();
@@ -213,10 +216,15 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
           </Banner>
         )}
         {tasks.length === 0 ? (
-          <KalipBos title={t("empty.title")} hint={t("empty.action")} iconD={LICON.clip} {...(filtered ? { action: { label: t("clear"), href: base } } : {})} />
+          <KalipBos
+            title={filtered ? tk("notFoundSearch") : t("empty.title")}
+            hint={t("empty.action")}
+            iconD={LICON.clip}
+            action={filtered ? { label: t("clear"), href: base, kind: "clear" } : { label: tk("home"), href: home, kind: "go" }}
+          />
         ) : (
           <>
-            <KalipBaslik title={t("count", { n: tasks.length })} hint={t("hint")} />
+            <KalipBaslik title={t("count", { n: total ?? tasks.length })} hint={t("hint")} />
             <KalipKartListe label={t("listLabel")}>
               {tasks.map((task, i) => {
                 const open = task.status === "OPEN" || task.status === "ASSIGNED";

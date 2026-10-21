@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { listPanelEvents } from "@wms/domain/platform/events";
 import { AppError } from "@wms/shared/errors";
@@ -28,7 +28,8 @@ export default async function KayitPage() {
     throw e;
   });
   const t = ((await getMessages()).panel as unknown as { kayit: KayitMsgs }).kayit;
-  const rows = events.map((e) => ({ t: stamp(e.at), l: describe(e, t) }));
+  const locale = await getLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
+  const rows = events.map((e) => ({ t: stamp(e.at, locale), l: describe(e, t, locale) }));
   const dark = temaKoyu(await cookies());
   return (
     <PanelShell dark={dark} current="kayit" title={t.title} sub={t.sub} nav={await panelNav(principal)} labels={await panelLabels()}>

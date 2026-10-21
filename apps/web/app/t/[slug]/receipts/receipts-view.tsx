@@ -42,6 +42,8 @@ export interface ReceiptsListProps {
   readonly dark: boolean;
   readonly receipts: readonly ReceiptView[];
   readonly nextHref: string | null;
+  /** Sunucudan toplam teslim sayısı (ALTIN-KURAL 15); yoksa sayfadaki satır sayısı gösterilir. */
+  readonly total?: number;
   readonly canCreate: boolean;
   readonly canApprove: boolean;
   /** Paket kabulü girişi (yapılandırma + yetki sunucuda hesaplanır). */
@@ -50,8 +52,9 @@ export interface ReceiptsListProps {
   readonly created: string | null;
 }
 
-export function ReceiptsList({ slug, dark, receipts, nextHref, canCreate, canApprove, packageHref, created }: ReceiptsListProps) {
+export function ReceiptsList({ slug, dark, receipts, nextHref, total, canCreate, canApprove, packageHref, created }: ReceiptsListProps) {
   const t = useTranslations("receiving");
+  const tk = useTranslations("kural");
   const locale = useLocale();
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -106,10 +109,15 @@ export function ReceiptsList({ slug, dark, receipts, nextHref, canCreate, canApp
           </p>
         )}
         {receipts.length === 0 ? (
-          <KalipBos title={t("list.empty")} hint={canCreate ? t("k.emptyHint") : t("form.locked")} iconD={LICON.moveIn} />
+          <KalipBos
+            title={t("list.empty")}
+            hint={canCreate ? t("k.emptyHint") : t("form.locked")}
+            iconD={LICON.moveIn}
+            action={canCreate ? { label: t("form.title"), href: `${base}?new=1`, kind: "add" } : { label: tk("home"), href: home, kind: "go" }}
+          />
         ) : (
           <>
-            <KalipBaslik title={t("list.title")} hint={t("k.hint", { n: receipts.length })} />
+            <KalipBaslik title={t("list.title")} hint={tk("total", { n: total ?? receipts.length })} />
             <div className="ulist" role="list" aria-label={t("list.title")} data-testid="receipt-list">
               {receipts.map((r, i) => {
                 const open = fmtQty(sumDecimal(r.lines.map((l) => l.open)), locale);

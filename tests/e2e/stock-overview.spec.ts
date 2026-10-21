@@ -28,7 +28,7 @@ test("stok: ana menü, gerçek veriler, arama, yardım ve mobil taşma", async (
   expect(back?.height).toBeGreaterThanOrEqual(48);
   await page.getByRole("searchbox", { name: "Ürün veya depo ara" }).fill("missing-item-903");
   await page.getByRole("searchbox", { name: "Ürün veya depo ara" }).press("Enter");
-  await expect(page.getByText("Gösterilecek stok bulunamadı.")).toBeVisible();
+  await expect(page.getByText("Bulunamadı · ara ya da söyle", { exact: true })).toBeVisible(); // ALTIN-KURAL 8: ortak arama-sonuç-yok cümlesi
   await page.getByRole("link", { name: "Temizle" }).click();
   await expect(rows.first()).toBeVisible();
 });

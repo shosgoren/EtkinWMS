@@ -5,6 +5,8 @@
 // Başlık satırı: ilk 10 satırda en çok alanla eşleşen satır (üstte firma adı / boş satır olan Excel'ler).
 // Sunucuya gidecek dosya mevcut içe aktarma biçimindeki düz CSV'dir (sabit Türkçe başlıklar); sunucu her şeyi yeniden doğrular.
 
+import { kucukHarf } from "@wms/ui";
+
 export type ImportKindKey = "stok" | "cari" | "acilis";
 export type MapState = "auto" | "sug" | "user" | "none";
 
@@ -45,12 +47,15 @@ export const FIELDS: Readonly<Record<ImportKindKey, readonly FieldDef[]>> = {
   ],
 };
 
+// T-1001 (ALTIN-KURAL 16): başlık eşleştirmesi Türkçe eş anlamlı sözlükle yapılır (veri eşleştirme, görüntü değildir);
+// bu yüzden katlama dili kullanıcının dili değil, sözlüğün dilidir.
+const ESLESTIRME_DILI = "tr";
+
 const TR: Readonly<Record<string, string>> = { ı: "i", İ: "i", ş: "s", ğ: "g", ü: "u", ö: "o", ç: "c", â: "a", î: "i", û: "u" };
 
 /** Başlık katlama: Türkçe küçük harf, aksansız, harf/rakam dışı tek boşluk. "Koli Mik." → "koli mik". */
 export function fold(h: string): string {
-  return h
-    .toLocaleLowerCase("tr")
+  return kucukHarf(h, ESLESTIRME_DILI)
     .replace(/[ışğüöçâîûİ]/g, (c) => TR[c] ?? c)
     .replace(/[^a-z0-9]+/g, " ")
     .trim();

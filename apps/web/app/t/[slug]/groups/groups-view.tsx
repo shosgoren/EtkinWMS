@@ -4,14 +4,14 @@
 // Model (güvenlik): "HAZIR" gruplar rollerin kendisidir (salt okunur; rol Ekip ekranında değişir). Özel grup role EK yetki ve ekran verir;
 // yazma yalnız hesap sahibine açıktır (domain denetler; `canEdit` yalnız gösterim). Ekip yönetimi grupla verilmez (kart kilitli).
 // Bilinçli farklar (DESIGN-PARITY): Etkin (sesle) T-424; özel grup için "Arşivle" düğmesi (kaynakta yok; grup silinmez); kişi aramasında yazı kutusu.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 import { kilitliDokunus } from "../kalip/kilitli.tsx";
 
 type Overview = {
@@ -85,13 +85,14 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
 }
 
 const hexKey = (c: string): string => c.replace("#", "").toUpperCase();
-const initial = (name: string): string => (name.trim()[0] ?? "?").toLocaleUpperCase("tr-TR");
+const initial = (name: string, locale: string): string => buyukHarf(name.trim()[0] ?? "?", locale);
 const powersOf = (grants: readonly string[]): string[] => POWERS.filter(([, , , g]) => g.length > 0 && g.every((x) => grants.includes(x))).map((p) => p[0]);
 const grantsOf = (powers: readonly string[]): string[] => POWERS.filter((p) => powers.includes(p[0])).flatMap((p) => [...p[3]]);
 
 export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const t = useTranslations("gruplar");
   const tr = useTranslations("kural");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const [groups, setGroups] = useState(data.groups);
   const [members, setMembers] = useState(data.members);
@@ -113,7 +114,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const roleOf = (m: (typeof members)[number]): string => m.roles[0] ?? "READ_ONLY";
   const groupName = (id: string | null): string | null => (id === null ? null : (groups.find((g) => g.id === id)?.name ?? null));
   const nowLabel = (m: (typeof members)[number]): string =>
-    m.isOwner ? t("owner") : (groupName(m.groupId) ?? t(`role.${roleOf(m)}`)).toLocaleUpperCase("tr-TR");
+    m.isOwner ? t("owner") : buyukHarf(groupName(m.groupId) ?? t(`role.${roleOf(m)}`), locale);
   const nowColor = (m: (typeof members)[number]): string => {
     const g = m.groupId === null ? undefined : groups.find((x) => x.id === m.groupId);
     if (g !== undefined) return hexKey(g.color);
@@ -352,7 +353,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       );
     });
 
-  const shown = members.filter((m) => q.trim() === "" || m.name.toLocaleLowerCase("tr-TR").includes(q.trim().toLocaleLowerCase("tr-TR")));
+  const shown = members.filter((m) => q.trim() === "" || kucukHarf(m.name, locale).includes(kucukHarf(q.trim(), locale)));
   const peopleList = readOnly && draft !== null ? shown.filter((m) => draft.picked.includes(m.membershipId)) : shown;
   const [mainLabel, mainIcon, main] = MAIN[view];
 
@@ -408,7 +409,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                         <span className="faces">
                           {g.who.slice(0, 3).map((m) => (
                             <span key={m.membershipId} style={{ background: dz(g.color) }}>
-                              {initial(m.name)}
+                              {initial(m.name, locale)}
                             </span>
                           ))}
                         </span>
@@ -536,7 +537,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                           }}
                         >
                           <span className="av" style={{ background: dz(nowColor(m)) }}>
-                            {initial(m.name)}
+                            {initial(m.name, locale)}
                           </span>
                           <span style={{ minWidth: 0 }}>
                             <b>{m.name}</b>

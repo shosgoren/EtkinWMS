@@ -38,7 +38,7 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
   let list: Awaited<ReturnType<typeof listStockDocuments>>, doc: Awaited<ReturnType<typeof getStockDocument>> | null;
   try {
     const context = { db: getAppDb(), principal, tenantSlug: slug };
-    list = await listStockDocuments(context, after ? { after } : {});
+    list = await listStockDocuments(context, { withTotal: !id && !kind, ...(after ? { after } : {}) });
     doc = id ? await getStockDocument(context, id) : null;
   } catch (e) {
     if (e instanceof AppError) {
@@ -154,10 +154,15 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
           </KalipDaha>
         ) : null}
         {list.items.length === 0 ? (
-          <KalipBos title={t("empty")} hint={list.permissions.create ? t("k.emptyHint") : t("k.lockedHint")} iconD={LICON.clip} />
+          <KalipBos
+            title={t("empty")}
+            hint={list.permissions.create ? t("k.emptyHint") : t("k.lockedHint")}
+            iconD={LICON.clip}
+            action={list.permissions.create ? { label: t("k.firstIn"), href: `${path}?new=STOCK_IN`, kind: "add" } : { label: t("k.toStock"), href: `${home}/stock`, kind: "go" }}
+          />
         ) : (
           <>
-            <KalipBaslik title={list.next === null && after === undefined ? t("k.count", { n: list.items.length }) : t("k.countMore", { n: list.items.length })} hint={t("k.hint")} />
+            <KalipBaslik title={list.total !== undefined ? t("k.count", { n: list.total }) : list.next === null && after === undefined ? t("k.count", { n: list.items.length }) : t("k.countMore", { n: list.items.length })} hint={t("k.hint")} />
             <KalipKartListe label={t("title")}>
               {list.items.map((row, i) => {
                 const state = t(`states.${row.status}`);

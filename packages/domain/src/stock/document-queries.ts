@@ -12,8 +12,8 @@ export type DocumentSummary = { id: string; kind: string; status: string; versio
 export type DocumentLineView = { id: string; itemCode: string; itemName: string; quantity: string; unitCode: string; sourceCode: string | null; targetCode: string | null; lotCode: string | null; serialNo: string | null };
 export type StockChoice = { id: string; code: string; name: string; unitCode: string | null; trackingMode: string | null };
 
-/** Bounded warehouse-scoped document history. No writes, including when loading a draft. */
-export async function listStockDocuments(params: Params, input: { after?: string } = {}) {
+/** Bounded warehouse-scoped document history. No writes, including when loading a draft. `withTotal` adds the same-scope count (cursor ignored). */
+export async function listStockDocuments(params: Params, input: { after?: string; withTotal?: boolean } = {}) {
   const parts = input.after?.split(":");
   if (parts && parts.length !== 2) throw new AppError("VALIDATION_FAILED");
   const date = parts?.[0] ?? null;
@@ -22,16 +22,18 @@ export async function listStockDocuments(params: Params, input: { after?: string
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const allowed = await resolveWarehouseScope(tx, m);
     const scope = allowed === null ? null : pgUuidArray(allowed);
+    const from = sql`FROM public.documents d JOIN public.warehouses w ON w.tenant_id=d.tenant_id AND w.id=d.warehouse_id
+      WHERE d.tenant_id=${m.tenantId}::uuid AND d.kind IN ('STOCK_IN','STOCK_OUT')
+        AND (${scope}::uuid[] IS NULL OR d.warehouse_id=ANY(${scope}::uuid[]))`;
     const rows = await tx.execute<DocumentSummary>(sql`
       SELECT d.id,d.kind,d.status,d.version,d.number,d.warehouse_id AS "warehouseId",w.name AS "warehouseName",
         d.business_date::text AS "businessDate",d.reason,(d.posting_job_id IS NOT NULL) AS processing
-      FROM public.documents d JOIN public.warehouses w ON w.tenant_id=d.tenant_id AND w.id=d.warehouse_id
-      WHERE d.tenant_id=${m.tenantId}::uuid AND d.kind IN ('STOCK_IN','STOCK_OUT')
-        AND (${scope}::uuid[] IS NULL OR d.warehouse_id=ANY(${scope}::uuid[]))
+      ${from}
         AND (${date}::date IS NULL OR (d.business_date,d.id)<(${date}::date,${afterId}::uuid))
       ORDER BY d.business_date DESC,d.id DESC LIMIT 51`);
     const items = rows.slice(0,50), last = items.at(-1);
-    return { items, next: rows.length > 50 && last ? `${last.businessDate}:${last.id}` : null,
+    const total = input.withTotal === true ? Number((await tx.execute<{ n: number | string }>(sql`SELECT count(*)::int AS n ${from}`))[0]?.n ?? 0) : undefined;
+    return { items, next: rows.length > 50 && last ? `${last.businessDate}:${last.id}` : null, ...(total === undefined ? {} : { total }),
       permissions: { create: hasPermission(m.roles, "document.create", m.grants), approve: hasPermission(m.roles, "document.approve", m.grants), post: hasPermission(m.roles, "stock.post", m.grants) } };
   });
 }

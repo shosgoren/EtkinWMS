@@ -244,11 +244,15 @@ export interface ListWarehousesInput {
   readonly limit?: number;
   /** T-978: kod ya da ad içinde arama (ILIKE; en çok 100 karakter; boş = süzgeç yok). */
   readonly q?: string;
+  /** Toplam sayıyı da döndür (aynı işlem, aynı süzgeç/arama/kapsam; imleç hariç). */
+  readonly withTotal?: boolean;
 }
 
 export interface ListWarehousesResult {
   readonly items: readonly WarehouseRow[];
   readonly nextAfterCode: string | null;
+  /** `withTotal: true` istendiğinde toplam depo sayısı (ALTIN-KURAL 15). */
+  readonly total?: number;
 }
 
 export const LIST_LIMIT_DEFAULT = 200;
@@ -270,20 +274,24 @@ export async function listWarehouses(params: WarehouseCallParams, input: ListWar
   const like = q === "" ? null : `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
+    const where = sql`tenant_id = ${m.tenantId}::uuid
+             AND (${includeArchived} OR status = 'ACTIVE')
+             AND (${like}::text IS NULL OR code ILIKE ${like} OR name ILIKE ${like})
+             AND (${scope === null}::boolean OR id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))`;
     const rows = await tx.execute<WarehouseDbRow>(
       sql`SELECT id, code, name, status, created_at, archived_at
             FROM public.warehouses
-           WHERE tenant_id = ${m.tenantId}::uuid
-             AND (${includeArchived} OR status = 'ACTIVE')
-             AND (${like}::text IS NULL OR code ILIKE ${like} OR name ILIKE ${like})
+           WHERE ${where}
              AND (${after}::text IS NULL OR code COLLATE "C" > ${after}::text COLLATE "C")
-             AND (${scope === null}::boolean OR id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))
            ORDER BY code COLLATE "C"
            LIMIT ${limit + 1}`,
     );
     const page = rows.slice(0, limit).map(toRow);
     const last = page[page.length - 1];
-    return { items: page, nextAfterCode: rows.length > limit && last !== undefined ? last.code : null };
+    const nextAfterCode = rows.length > limit && last !== undefined ? last.code : null;
+    if (input.withTotal !== true) return { items: page, nextAfterCode };
+    const cnt = await tx.execute<{ n: number | string }>(sql`SELECT count(*)::int AS n FROM public.warehouses WHERE ${where}`);
+    return { items: page, nextAfterCode, total: Number(cnt[0]?.n ?? 0) };
   });
 }
 

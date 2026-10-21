@@ -427,7 +427,8 @@
     "searchPlaceholder": "Ad ya da e-posta ara",
     "noMatch": "Aramaya uyan üye yok",
     "noMatchHint": "Başka bir ad deneyin.",
-    "clearSearch": "Aramayı temizle"
+    "clearSearch": "Aramayı temizle",
+    "inviteFirst": "İlk üyeyi davet et"
   },
   "errors": {
     "validation_failed": "Girilen bilgiler geçersiz.",
@@ -1530,7 +1531,8 @@
         "title": "{name} arşivlensin mi?",
         "description": "{name} ({code}) lokasyonu arşivli olur. Stok, açık sayım veya aktif alt lokasyon varsa arşivlenmez; önce boşalt/arşivle.",
         "button": "Arşivle"
-      }
+      },
+      "addFirst": "İlk lokasyonu ekle"
     },
     "errors": {
       "code": "Hata kodu: {code}",
@@ -1683,7 +1685,9 @@
     "height": "Yükseklik (mm)",
     "paperHint": "Epson gibi normal yazıcılarda A4 seç. Yazdırma penceresinde ölçeği %100, üstbilgi/altbilgiyi kapalı tut. Etiket ölçüsü yazıcının kâğıdına uygun olmalı.",
     "invalid": "Ölçü geçersiz veya kâğıda sığmıyor. A4 için en çok 190 × 277 mm seç.",
-    "customHint": "Özel ölçüde içerik oranı korunarak sığdırılır. Barkod okunurluğunu deneme baskısıyla kontrol et; ZPL çıktısı yalnız 100 × 50 mm destekler."
+    "customHint": "Özel ölçüde içerik oranı korunarak sığdırılır. Barkod okunurluğunu deneme baskısıyla kontrol et; ZPL çıktısı yalnız 100 × 50 mm destekler.",
+    "toItems": "Ürünlere git",
+    "goBack": "Geri dön"
   },
   "easySetup": {
     "guide": {
@@ -2541,7 +2545,8 @@
       "hint": "Ürüne dokun: kartı açılır",
       "meta": "Depo: {warehouse} ({code}) · Fiziksel {physical} · Ayrılmış {reserved} {unit}",
       "cardAria": "{name} · {code} · {warehouse}: kullanılabilir {qty} {unit}",
-      "lockedHint": "Çalışma alanı yöneticinden stok görme yetkisi iste."
+      "lockedHint": "Çalışma alanı yöneticinden stok görme yetkisi iste.",
+      "firstIn": "İlk stok girişini yap"
     }
   },
   "stockDocuments": {
@@ -2602,7 +2607,9 @@
       "countMore": "Son {n} belge",
       "hint": "Belgeye dokun: ayrıntısı açılır",
       "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
-      "saveAria": "Kaydet"
+      "saveAria": "Kaydet",
+      "firstIn": "İlk stok girişini yap",
+      "toStock": "Stok listesine git"
     }
   },
   "production": {
@@ -2651,7 +2658,8 @@
       "hint": "Reçeteye dokun: üretim açılır",
       "cardAria": "{code} / {version} — {name} · {output}: {qty} {unit}",
       "groupQty": "Miktar",
-      "saveAria": "Kaydet"
+      "saveAria": "Kaydet",
+      "firstRecipe": "İlk reçeteyi tanımla"
     }
   },
   "shipping": {
@@ -2727,7 +2735,8 @@
       "groupItems": "Ürünler",
       "saveAria": "Kaydet",
       "fieldPick": "Sahada topla",
-      "fieldShip": "Sahada sevk et"
+      "fieldShip": "Sahada sevk et",
+      "firstOrder": "İlk siparişi oluştur"
     }
   },
   "packageReceiving": {
@@ -2787,7 +2796,9 @@
       "loadHint": "Belgeyi listeden yeniden aç; sürerse yetkiliye haber ver.",
       "paperLabel": "Kağıt",
       "kindHint": "Varil ya da koli"
-    }
+    },
+    "toWarehouses": "Depolara git",
+    "toLocations": "Lokasyon ekle"
   },
   "packageMovement": {
     "title": "Paket işlemi",
@@ -4038,7 +4049,8 @@
     "chipActive": "Etkin",
     "chipArchived": "Arşivli",
     "clear": "Süzgeci temizle",
-    "count": "{n} cari"
+    "count": "{n} cari",
+    "firstParty": "İlk cariyi ekle"
   },
   "gruplar": {
     "title": "Yetki grupları",
@@ -4786,7 +4798,9 @@
     "cancelHelp": "Fark uygulanmaz, kilitler açılır. Gerekçe yaz.",
     "approveConfirm": "Onayı ver",
     "postConfirm": "Fişi işle",
-    "cancelConfirm": "İptali onayla"
+    "cancelConfirm": "İptali onayla",
+    "toWarehouses": "Depolara git",
+    "firstCount": "İlk sayımı başlat"
   },
   "kural": {
     "offline": "Bağlantı yok · bağlanınca tekrar dene",

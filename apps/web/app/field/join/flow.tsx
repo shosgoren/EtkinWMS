@@ -4,7 +4,8 @@
 // 3 yönetici onaylayınca PIN iki kez → `/api/auth/field/join/activate` (kişisel cihaz + oturum). Katılma belirteci adresin `#` parçasından
 // okunur ve hemen adres çubuğundan silinir; talep belirteci httpOnly çerezdedir (betik okuyamaz). PIN yalnız bu bileşenin belleğinde.
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { buyukHarf } from "@wms/ui";
 import { authClient, authPost } from "../../../lib/auth-client.ts";
 import { DzRoot, useDz } from "../../design/dz-root.tsx";
 import { C, dz } from "../../design/giris-tokens.ts";
@@ -17,6 +18,7 @@ const CODE_KEY = "etkin-katilma-kod";
 
 function Flow() {
   const t = useTranslations("fieldLogin");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const { dark } = useDz();
   const secret = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -169,7 +171,7 @@ function Flow() {
   const head = ended !== null ? t("joinEndedH") : [t("join1H"), t("join2H"), pin1 === null ? t("join3H") : t("join3H2"), t("joinDoneH")][step - 1];
   return (
     <Shell fact={false}>
-      <span className="kick">{tenantName === "" ? t("joinKick") : tenantName.toLocaleUpperCase("tr-TR")}</span>
+      <span className="kick">{tenantName === "" ? t("joinKick") : buyukHarf(tenantName, locale)}</span>
       <div className="steps" aria-hidden="true">
         {bars.map((bg, i) => (
           <i key={i} style={{ background: bg }} />

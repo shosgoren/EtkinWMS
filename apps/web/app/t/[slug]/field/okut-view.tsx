@@ -8,14 +8,14 @@
 // tarayıcıda (Android Chrome) çalışır; yoksa açık bildirim.
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
 import { classifyCameraError, createFrameDecoder, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession } from "../../../../lib/scanner/camera-source.ts";
 import { useScanner } from "./receive/receive-flow.tsx";
 import { resolveFieldScanAction, type FieldScanTarget } from "./actions.ts";
 import { Ico, MicIco, SahaFrame, SahaSteps, SahaVerdict } from "./saha-shell.tsx";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback } from "@wms/ui";
 
 type Cam = { readonly phase: "starting" } | { readonly phase: "scanning" } | { readonly phase: "paused" } | { readonly phase: "failed"; readonly failure: CameraFailure | "decoder" };
 type View =
@@ -38,6 +38,7 @@ interface NdefReaderLike {
 export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost: boolean; tenantName: string }) {
   const t = useTranslations("saha.okut");
   const tr = useTranslations("receiving");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const video = useRef<HTMLVideoElement>(null);
@@ -187,7 +188,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
       hue="green"
       iconD={SICON.scan}
       title={t("title")}
-      sub={`${tenantName.toLocaleUpperCase("tr")} · ${t("sub")}`}
+      sub={`${buyukHarf(tenantName, locale)} · ${t("sub")}`}
       back={{ href: base }}
       main={{ label: t("scanMain"), aria: t("scanAria"), d: SICON.scan, onClick: rescan, testId: "okut-main" }}
       testId="okut"

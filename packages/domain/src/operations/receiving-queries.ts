@@ -50,6 +50,8 @@ export interface ReceiptCursor {
 export interface ReceiptPage {
   readonly items: readonly ReceiptView[];
   readonly next: ReceiptCursor | null;
+  /** `withTotal: true` istendiğinde: aynı süzgeç ve kapsamla (imleç hariç) toplam teslim sayısı (ALTIN-KURAL 15). */
+  readonly total?: number;
 }
 export interface ReceivingLocationView {
   readonly id: string;
@@ -146,6 +148,8 @@ export interface ListInboundReceiptsInput {
   readonly warehouseId?: string;
   readonly after?: ReceiptCursor;
   readonly limit?: number;
+  /** Toplam sayıyı da döndür (aynı işlem, aynı süzgeç; imleç hariç). */
+  readonly withTotal?: boolean;
 }
 
 /** Beklenen teslim listesi (satırlarıyla): eskiden yeniye (created_at, id), keyset; kapsam dışı depo satırları görünmez. */
@@ -157,19 +161,23 @@ export async function listInboundReceipts(params: TaskCallParams, input: ListInb
   const warehouseId = input.warehouseId === undefined ? null : uuid(input.warehouseId);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
-    const rows = await tx.execute<ReceiptDbRow>(
-      sql`${RECEIPT_SELECT}
-           WHERE r.tenant_id = ${m.tenantId}::uuid
+    const where = sql`r.tenant_id = ${m.tenantId}::uuid
              AND (${status}::text IS NULL OR r.status = ${status}::text)
              AND (${warehouseId}::uuid IS NULL OR r.warehouse_id = ${warehouseId}::uuid)
-             AND (${scope === null}::boolean OR r.warehouse_id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))
+             AND (${scope === null}::boolean OR r.warehouse_id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))`;
+    const rows = await tx.execute<ReceiptDbRow>(
+      sql`${RECEIPT_SELECT}
+           WHERE ${where}
              AND (${cur === null}::boolean OR (r.created_at, r.id) > (${cur?.key ?? "1970-01-01T00:00:00.000000Z"}::timestamptz, ${cur?.id ?? "00000000-0000-0000-0000-000000000000"}::uuid))
            ORDER BY r.created_at, r.id
            LIMIT ${limit + 1}`,
     );
     const items = rows.slice(0, limit);
     const last = items[items.length - 1];
-    return { items: items.map(toView), next: rows.length > limit && last !== undefined ? { createdKey: last.created_key, id: last.id } : null };
+    const next = rows.length > limit && last !== undefined ? { createdKey: last.created_key, id: last.id } : null;
+    if (input.withTotal !== true) return { items: items.map(toView), next };
+    const cnt = await tx.execute<{ n: number | string }>(sql`SELECT count(*)::int AS n FROM public.inbound_receipts r WHERE ${where}`);
+    return { items: items.map(toView), next, total: Number(cnt[0]?.n ?? 0) };
   });
 }
 

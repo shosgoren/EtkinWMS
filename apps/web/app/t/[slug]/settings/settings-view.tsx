@@ -7,7 +7,7 @@
 // Bilinçli farklar (DESIGN-PARITY, T-968): tema seçeneğinde "Otomatik" yok (uygulamada sistem teması izleme yok); saat diliminde kaynaktaki
 // üç seçenek + mevcut değer düğme, tam liste "Diğer" seçicisinde; iki adımlı doğrulama satırı oturumun gerçek durumunu gösterir;
 // "Bağlantı gönder" parola sıfırlama sayfasını açar (bağlantıyı o sayfa e-postayla gönderir); örnek veri yoksa satır çizilmez.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -16,7 +16,7 @@ import { Ico, KalipBaslik, KalipEkran, MicIco, useKalipToast } from "../kalip/ek
 import { KalipAlan, KalipAnahtar, KalipCikisUyarisi, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek, useLeaveGuard } from "../kalip/form.tsx";
 import { saveSettingsFormAction } from "./form-actions.ts";
 import { clearSampleDataAction } from "./sample-actions.ts";
-import { feedback } from "@wms/ui";
+import { buyukHarf, feedback } from "@wms/ui";
 
 export interface SettingsValues {
   readonly name: string;
@@ -54,6 +54,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
   const ts = useTranslations("settings");
   const tk = useTranslations("kalip");
   const tr = useTranslations("kural");
+  const locale = useLocale(); // T-1001 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstTheme: TemaTercihi = initialTheme ?? (initialDark ? "koyu" : "acik");
@@ -255,7 +256,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
                 ]}
               />
             </KalipSatir>
-            <KalipSatir id="tz" title={t("tz")} value={tzLabel(v.timeZone).toLocaleUpperCase("tr")} d={LICON.clock} color="6C4BD8" open={open === "tz"} changed={chg.includes("tz")} locked={locked} onToggle={toggle("tz")} onClose={close} testId="settings-tz">
+            <KalipSatir id="tz" title={t("tz")} value={buyukHarf(tzLabel(v.timeZone), locale)} d={LICON.clock} color="6C4BD8" open={open === "tz"} changed={chg.includes("tz")} locked={locked} onToggle={toggle("tz")} onClose={close} testId="settings-tz">
               <KalipSecenek label={t("tz")} value={v.timeZone} color="6C4BD8" onPick={(id) => set("timeZone", id)} options={tzOptions} />
               <label className="fld">
                 <span>{t("tzOther")}</span>

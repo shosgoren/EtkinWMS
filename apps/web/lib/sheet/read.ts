@@ -4,6 +4,12 @@
 // Sınırlar (sıkıştırma bombasına karşı): dosya ≤ 10 MB, açılmış her parça ≤ 40 MB, satır ≤ IMPORT_MAX_ROWS + 10, sütun ≤ 40, hücre ≤ 1.000 karakter.
 // Sunucu her şeyi yeniden doğrular; buradaki tablo yalnız eşleştirme önizlemesi ve sunucuya gidecek düz CSV'nin kaynağıdır.
 
+import { buyukHarf } from "@wms/ui";
+
+// T-1001 (ALTIN-KURAL 16): sayfa adı dosyanın kendi verisidir ve Türkçe sütun/sayfa adlarıyla eşleştirilir (veri eşleştirme,
+// görüntü dili değildir); büyük harfe çevirme sözlüğün dilinde yapılır.
+const ESLESTIRME_DILI = "tr";
+
 export const SHEET_MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const SHEET_MAX_PART_BYTES = 40 * 1024 * 1024;
 export const SHEET_MAX_COLS = 40;
@@ -35,7 +41,7 @@ export async function readWorkbook(file: File, maxRows: number): Promise<Workboo
   if (buf[0] === 0x50 && buf[1] === 0x4b) return readXlsx(buf, maxRows);
   if (buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0) throw new SheetError("XLS_OLD");
   const text = decodeText(buf);
-  return { sheets: [{ name: file.name.replace(/\.[^.]+$/, "").toLocaleUpperCase("tr"), rows: limitRows(parseCsv(text), maxRows) }] };
+  return { sheets: [{ name: buyukHarf(file.name.replace(/\.[^.]+$/, ""), ESLESTIRME_DILI), rows: limitRows(parseCsv(text), maxRows) }] };
 }
 
 function decodeText(buf: Uint8Array): string {
@@ -274,7 +280,7 @@ async function readXlsx(b: Uint8Array, maxRows: number): Promise<Workbook> {
     const trimmed = trimRows(rows);
     if (trimmed.length === 0) continue;
     if (trimmed.length > maxRows) throw new SheetError("TOO_MANY_ROWS");
-    sheets.push({ name: (s.getAttribute("name") ?? `SAYFA${i + 1}`).toLocaleUpperCase("tr"), rows: trimmed });
+    sheets.push({ name: buyukHarf(s.getAttribute("name") ?? `SAYFA${i + 1}`, ESLESTIRME_DILI), rows: trimmed });
   }
   if (sheets.length === 0) throw new SheetError("EMPTY");
   return { sheets };

@@ -55,6 +55,11 @@ describe("manual stock document UI contract",()=>{
  it("reads history with human labels and enforces tenant, MFA and read-only permissions",async()=>{
   const history=await listStockDocuments(params());expect(history.items.length).toBeGreaterThan(0);
   expect(history.permissions).toEqual({create:true,approve:true,post:true});
+  // ALTIN-KURAL 15: toplam yalnız istenince; aynı tenant/kapsam süzgeci; imleçten bağımsız.
+  expect(history.total).toBeUndefined();
+  const counted=await listStockDocuments(params(),{withTotal:true});
+  expect(counted.total).toBe(Number((await adm.query<{n:string}>("SELECT count(*)::text AS n FROM public.documents WHERE tenant_id=$1 AND kind IN ('STOCK_IN','STOCK_OUT')",[A.tenantId])).rows[0]!.n));
+  if(counted.next)expect((await listStockDocuments(params(),{after:counted.next,withTotal:true})).total).toBe(counted.total);
   const documentId=history.items[0]!.id;
   await expect(getStockDocument(params(B),documentId)).rejects.toMatchObject({code:"NOT_FOUND"});
   await expect(getStockDocument({...params(),principal:{userId:A.ownerUserId,mfaVerified:false}},documentId)).rejects.toMatchObject({code:"FORBIDDEN"});

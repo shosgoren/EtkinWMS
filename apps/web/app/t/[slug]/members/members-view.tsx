@@ -120,6 +120,7 @@ export function MembersView({
 }) {
   const t = useTranslations("members");
   const tr = useTranslations("roles");
+  const tku = useTranslations("kural");
   const format = useFormatter();
   const router = useRouter();
   const canManage = pending !== null;
@@ -299,9 +300,25 @@ export function MembersView({
         <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={`/t/${slug}/members`} defaultValue={q} />
         <KalipBaslik title={t("k.count", { n: members.length })} hint={t("intro")} />
         {members.length === 0 && q !== "" ? (
-          <KalipBos title={t("noMatch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: `/t/${slug}/members` }} />
+          <KalipBos title={tku("notFoundSearch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: `/t/${slug}/members`, kind: "clear" }} />
         ) : members.length === 0 ? (
-          <KalipBos title={t("empty")} hint={t("emptyAction")} iconD={LICON.people} />
+          <KalipBos
+            title={t("empty")}
+            hint={t("emptyAction")}
+            iconD={LICON.people}
+            action={
+              canManage
+                ? {
+                    label: t("inviteFirst"),
+                    kind: "add",
+                    onClick: () => {
+                      feedback.minor();
+                      setInviteOpen(true);
+                    },
+                  }
+                : { label: tku("home"), href: home, kind: "go" }
+            }
+          />
         ) : (
           <KalipKartListe label={t("membersList")}>
             {members.map((m, i) => {

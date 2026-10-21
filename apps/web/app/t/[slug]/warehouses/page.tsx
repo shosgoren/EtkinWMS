@@ -56,14 +56,16 @@ export default async function WarehousesPage({ params, searchParams }: { params:
 
   let rows: WarehouseView[];
   let nextAfter: string | null;
+  let total: number | undefined;
   let canManage: boolean;
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
-    const page = await listWarehouses(call, { includeArchived: true, limit: PAGE_SIZE, q, ...(after === undefined || after === "" ? {} : { afterCode: after }) });
+    const page = await listWarehouses(call, { includeArchived: true, limit: PAGE_SIZE, q, withTotal: true, ...(after === undefined || after === "" ? {} : { afterCode: after }) });
     nextAfter = page.nextAfterCode;
+    total = page.total;
     // Sayfa en çok PAGE_SIZE (50) depo döndürür → toplu sayım sınırı (100) içinde; boş sayfada sorgu yapılmaz.
     const counts = page.items.length === 0 ? new Map<string, number>() : await countLocationsByWarehouse(call, { warehouseIds: page.items.map((w) => w.id) });
     rows = page.items.map((w) => ({ id: w.id, code: w.code, name: w.name, status: w.status, locationCount: counts.get(w.id) ?? 0, locationCountCapped: false }));
@@ -81,7 +83,7 @@ export default async function WarehousesPage({ params, searchParams }: { params:
 
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} />
+      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} {...(total === undefined ? {} : { total })} />
     </main>
   );
 }

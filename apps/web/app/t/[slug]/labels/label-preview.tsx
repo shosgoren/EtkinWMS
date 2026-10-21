@@ -39,9 +39,9 @@ export function LabelShell({ dark, back, title, children }: { dark: boolean; bac
   );
 }
 
-/** Önizleme dışı durum kutusu (kaynak `.nomatch`). */
-export function LabelNotice({ title, hint }: { title: string; hint?: string }) {
-  return <KalipBos title={title} {...(hint === undefined ? {} : { hint })} iconD={LICON.tag} testId="labels-notice" />;
+/** Önizleme dışı durum kutusu (kaynak `.nomatch`); ALTIN-KURAL 8: her zaman sıradaki adım düğmesiyle (çıkmaz yok). */
+export function LabelNotice({ title, hint, action }: { title: string; hint?: string; action: { readonly label: string; readonly href: string } }) {
+  return <KalipBos title={title} {...(hint === undefined ? {} : { hint })} iconD={LICON.tag} testId="labels-notice" action={{ ...action, kind: "go" }} />;
 }
 
 export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion, bridgeEnabled }: LabelPreviewProps) {
