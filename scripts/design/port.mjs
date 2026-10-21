@@ -51,6 +51,8 @@ export const SOURCES = [
   { name: "destek", file: "docs/design/source/Destek.dc.html", sha256: "960469107ab36286b59e7f6a007c17d147c4f65603958f88b507a155271d72a7", scope: "dzt", palette: "none", device: "fr" },
   { name: "destek-ek", file: "docs/design/source/Destek.dc.html", sha256: "960469107ab36286b59e7f6a007c17d147c4f65603958f88b507a155271d72a7", scope: "dzdx", palette: "none", device: "fr", section: "YENİ" },
   // T-967: Yönetim paneli Destek gelen kutusu; kaynak Yonet kopyası + "YENİ" (okunmamış noktası) — yalnız ek bölüm, panel `.dzy` ile birlikte.
+  // T-986b: katılma QR'ı paylaşma satırı (Ekip katılma QR'ı + Ekibe katılma); yalnız "YENİ" bölümü `.dzsh` (var olan ekranlara ek kap).
+  { name: "paylas", file: "docs/design/source/Paylas.dc.html", sha256: "f5294d37406c3d14fcce5e05e30b69b8d6ebf50528a5d3740e84d2d526a4b037", scope: "dzsh", palette: "none", device: "fr", section: "YENİ" },
   { name: "yonet-destek", file: "docs/design/source/YonetDestek.dc.html", sha256: "a2155d8f675436bab7d1d45f4f7cdabd6ac942a9d84a4e57f065c00beaa9a4f0", scope: "dzyd", palette: "none", section: "YENİ" },
 ];
 

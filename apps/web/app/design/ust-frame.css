@@ -1,0 +1,11 @@
+/* T-986b uyarlaması (DESIGN-PARITY §5): Ekip / Gruplar / Aktar üst çubuğuna kalıp ekranlarının ORTAK sağ üst düğmeleri (Sorun bildir + Destek
+   `.helpb` — KalipListe kaynağı `.dzl`; Hesap `.tb.tb-team` — Pano kaynağı `.dzp`) kutu üretmeyen kaplarla taşınır (yeni görünüm yok).
+   ALTIN-KURAL (12): dokunma hedefi en az 44×44 px — kaynakların dar ekran ölçüsü (40/42 px) burada alt sınıra çekilir. Renk yok. */
+.ust-dz {
+  display: contents;
+}
+.ust-dz .helpb,
+.ust-dz .tb {
+  min-width: 44px;
+  min-height: 44px;
+}

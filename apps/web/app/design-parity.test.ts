@@ -19,6 +19,7 @@ import { LICON } from "./design/kalip-icons.ts";
 import { SICON } from "./design/saha-icons.ts";
 import { DICON } from "./design/destek-icons.ts";
 import { YDICON } from "./design/yonet-destek-icons.ts";
+import { SHICON } from "./design/paylas-icons.ts";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 const source = readFileSync(join(repoRoot, "docs/design/source/Bakis.dc.html"), "utf8");
@@ -32,6 +33,7 @@ const kabuk = readFileSync(join(repoRoot, "docs/design/source/Kabuk.dc.html"), "
 const kalip = ["KalipListe", "KalipForm", "KalipDetay", "KalipSaha"].map((n) => [n, readFileSync(join(repoRoot, `docs/design/source/${n}.dc.html`), "utf8")] as const);
 const destek = readFileSync(join(repoRoot, "docs/design/source/Destek.dc.html"), "utf8");
 const yonetDestek = readFileSync(join(repoRoot, "docs/design/source/YonetDestek.dc.html"), "utf8");
+const paylas = readFileSync(join(repoRoot, "docs/design/source/Paylas.dc.html"), "utf8");
 
 describe("I-18 tasarım birebir", () => {
   it("üretilmiş CSS ve belirteçler kaynaktan yeniden üretilenle bayt bayt aynı", () => {
@@ -104,6 +106,16 @@ describe("I-18 tasarım birebir", () => {
 
   it("Kabuk kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {
     const sum = createHash("sha256").update(kabuk).digest("hex");
+    expect(readFileSync(join(repoRoot, "docs/design/source/SOURCE.md"), "utf8")).toContain(sum);
+    expect(readFileSync(join(repoRoot, "scripts/design/port.mjs"), "utf8")).toContain(sum);
+  });
+
+  it.each(Object.entries(SHICON))("Paylaş ikonu %s kaynakta birebir geçer", (_k, d) => {
+    expect(paylas.includes(`"${d}"`) || paylas.includes(`'${d}'`)).toBe(true);
+  });
+
+  it("Paylaş kaynağı (T-986b): SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", () => {
+    const sum = createHash("sha256").update(paylas).digest("hex");
     expect(readFileSync(join(repoRoot, "docs/design/source/SOURCE.md"), "utf8")).toContain(sum);
     expect(readFileSync(join(repoRoot, "scripts/design/port.mjs"), "utf8")).toContain(sum);
   });
