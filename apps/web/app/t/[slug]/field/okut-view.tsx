@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
-import { classifyCameraError, createFrameDecoder, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession, type ScanStats } from "../../../../lib/scanner/camera-source.ts";
+import { classifyCameraError, createFrameDecoder, DISTANCE_HINT_MS, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession, type ScanStats } from "../../../../lib/scanner/camera-source.ts";
 import { useScanner } from "./receive/receive-flow.tsx";
 import { resolveFieldScanAction, type FieldScanTarget } from "./actions.ts";
 import { Ico, MicIco, SahaFrame, SahaSteps, SahaVerdict, tone } from "./saha-shell.tsx";
@@ -51,6 +51,8 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
   const sessionRef = useRef<CameraSession | null>(null);
   const vf = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<ScanStats | null>(null);
+  // T-450: kamera açıldıktan 1,5 sn sonra hâlâ okuma yoksa "biraz uzaklaştır" ipucu (iPhone ana kamerası ~20 cm'den yakını netleyemez).
+  const [farHint, setFarHint] = useState(false);
   const show = useCallback((v: View) => {
     viewRef.current = v;
     setView(v);
@@ -94,6 +96,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
   useEffect(() => {
     let cancelled = false;
     let stopLoop: (() => void) | null = null;
+    let hintTimer: ReturnType<typeof setTimeout> | null = null;
     let session: CameraSession | null = null;
     setCam({ phase: "starting" });
     // T-446: çözücü (WASM indirme + derleme) kamera izni/açılışıyla PARALEL hazırlanır; kamera açılınca ilk kare beklemeden çözülür.
@@ -129,6 +132,9 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
       const begin = (): void => {
         stopLoop?.();
         setCam({ phase: "scanning" });
+        setFarHint(false);
+        if (hintTimer !== null) clearTimeout(hintTimer);
+        hintTimer = setTimeout(() => setFarHint(true), DISTANCE_HINT_MS);
         stopLoop = startScanLoop({
           decoder,
           video: v,
@@ -137,6 +143,8 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
           onRejected: () => undefined,
           // Tek kabul: döngü kendini durdurur; sonuç ekranından "tekrar okut" yeni döngü başlatır.
           onAccepted: (value) => {
+            if (hintTimer !== null) clearTimeout(hintTimer);
+            setFarHint(false);
             tone("tap"); // anında "tok" + kısa titreşim; sunucu sonucu ayrıca onay/hata sesi verir
             setCam({ phase: "paused" });
             camera(value);
@@ -148,6 +156,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
     })();
     return () => {
       cancelled = true;
+      if (hintTimer !== null) clearTimeout(hintTimer);
       beginRef.current = null;
       sessionRef.current = null;
       stopLoop?.();
@@ -268,7 +277,14 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
         >
           <video ref={video} muted playsInline aria-hidden="true" style={cam.phase === "failed" ? { visibility: "hidden" } : undefined} />
           <div className="camt">
-            <span>{view.kind === "checking" ? t("checking") : cam.phase === "starting" ? t("starting") : t("camHint")}</span>
+            {farHint && cam.phase === "scanning" && view.kind === "idle" ? (
+              <span role="status" data-testid="okut-distance-hint">
+                <Ico d={SICON.info} size={14} />
+                {t("distanceHint")}
+              </span>
+            ) : (
+              <span>{view.kind === "checking" ? t("checking") : cam.phase === "starting" ? t("starting") : t("camHint")}</span>
+            )}
           </div>
           {live ? (
             <div ref={vf} className="vf" aria-hidden="true">

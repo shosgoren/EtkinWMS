@@ -494,6 +494,55 @@ export function isSecondaryLens(label: string): boolean {
   return /ultra|tele/i.test(label);
 }
 
+/** iOS yakın çekim için en fazla yakınlaştırma (T-450): dijital zoom görüntüyü yumuşatır; yalnız sanal çoklu kamerada ve en çok 1,5×. */
+export const IOS_MAX_ZOOM = 1.5;
+
+/** Kullanıcıya "biraz uzaklaştır" ipucunun çıkacağı süre (T-450): kamera açıldıktan bu kadar sonra hâlâ okuma yoksa. */
+export const DISTANCE_HINT_MS = 1500;
+
+export interface CameraDeviceLike {
+  readonly kind: string;
+  readonly deviceId: string;
+  readonly label: string;
+}
+
+/**
+ * iOS sanal çoklu kamerası mı (T-450): "Back Triple/Dual Wide/Dual Camera" — Türkçe iOS "Arka Üçlü/Çift Geniş/Çift Kamera".
+ * Yalnız bu aygıtlar yakına gelince makro/ultra geniş lense kendiliğinden geçer; düz "Back Camera" (Pro'larda en yakın odak ~20 cm) geçemez.
+ */
+export function iosVirtualRank(label: string): number {
+  if (/triple|üçlü/i.test(label)) return 0;
+  if (/dual\s*wide|çift\s*geniş/i.test(label)) return 1;
+  if (/dual|çift/i.test(label)) return 2;
+  return -1;
+}
+
+const BACK_RE = /back|rear|arka|environment/i;
+
+/**
+ * iOS arka kamera tercihi (T-450): üçlü → çift geniş → çift → normal arka kamera. Ultra geniş ya da tele lens tek başına seçilmez.
+ * Etiketsiz (izin öncesi) ya da uygun aygıt yoksa `null`.
+ */
+export function pickIosBackCamera(devices: readonly CameraDeviceLike[]): { readonly deviceId: string; readonly label: string; readonly virtual: boolean } | null {
+  const back = devices.filter((d) => d.kind === "videoinput" && d.deviceId !== "" && BACK_RE.test(d.label));
+  let best: CameraDeviceLike | null = null;
+  let bestRank = Number.POSITIVE_INFINITY;
+  for (const d of back) {
+    const v = iosVirtualRank(d.label);
+    const rank = v >= 0 ? v : isSecondaryLens(d.label) ? -1 : 3;
+    if (rank >= 0 && rank < bestRank) {
+      best = d;
+      bestRank = rank;
+    }
+  }
+  return best === null ? null : { deviceId: best.deviceId, label: best.label, virtual: bestRank < 3 };
+}
+
+/** Android/diğer: tarayıcı ultra geniş/tele verdiyse geçilecek düz ana arka kamera (T-446 davranışı, değişmedi). */
+export function pickMainBackCamera(devices: readonly CameraDeviceLike[]): CameraDeviceLike | undefined {
+  return devices.find((d) => d.kind === "videoinput" && d.deviceId !== "" && BACK_RE.test(d.label) && !isSecondaryLens(d.label) && !/dual|triple|çift|üçlü/i.test(d.label));
+}
+
 const SIZE_CONSTRAINTS: MediaTrackConstraints = {
   // T-446: 720p → 1080p ideal. Düşük çözünürlük ince 1D çubukları bulanıklaştırır; çözme yine yalnız nişangâh bölgesinde yapılır.
   width: { ideal: 1920 },
@@ -504,7 +553,8 @@ const VIDEO_CONSTRAINTS: MediaTrackConstraints = { ...SIZE_CONSTRAINTS, facingMo
 
 /**
  * Arka kamerayı açar (HTTPS zorunlu: `isSecureContext`). 1080p ideal, sürekli otomatik odak (destek varsa) ve ~2× yakınlaştırma (destek varsa) istenir;
- * desteklenmeyen kısıt sessizce yok sayılır. Tarayıcı ultra geniş açıyı verdiyse aynı yönlü ana kameraya geçilir.
+ * desteklenmeyen kısıt sessizce yok sayılır. iOS (her tarayıcı, T-450): makro geçişli sanal çoklu kamera (üçlü → çift geniş → çift) seçilir, zoom yalnız onda ve ≤1,5×.
+ * Android/diğer: tarayıcı ultra geniş açıyı verdiyse aynı yönlü ana kameraya geçilir (T-446).
  */
 export async function openCamera(): Promise<CameraSession> {
   if (typeof window === "undefined" || !window.isSecureContext) throw Object.assign(new Error("camera: güvenli bağlam (HTTPS) yok"), { name: "InsecureContext" });
@@ -512,20 +562,38 @@ export async function openCamera(): Promise<CameraSession> {
   if (md === undefined || typeof md.getUserMedia !== "function") throw Object.assign(new Error("camera: mediaDevices yok"), { name: "NotFoundError" });
   let stream = await md.getUserMedia({ video: VIDEO_CONSTRAINTS, audio: false });
   let track = stream.getVideoTracks()[0];
-  if (track !== undefined && isSecondaryLens(track.label) && typeof md.enumerateDevices === "function") {
+  const ios = platformOf(navigator.userAgent, navigator.maxTouchPoints ?? 0) === "ios";
+  // iOS (Safari, Chrome/CriOS, iPadOS — hepsi WebKit): makro geçişli sanal çoklu kamera tercih edilir (T-450).
+  let iosVirtual = false;
+  const switchTo = async (deviceId: string): Promise<void> => {
+    for (const t of stream.getTracks()) t.stop();
+    stream = await md.getUserMedia({ video: { ...SIZE_CONSTRAINTS, deviceId: { exact: deviceId } }, audio: false });
+    track = stream.getVideoTracks()[0];
+  };
+  const recover = async (): Promise<void> => {
+    // Seçilen kamera açılamadı: ilk akışla sürülür (hiç kamera yoksa bu dalda olunmaz).
+    if (stream.getVideoTracks().every((t) => t.readyState === "ended")) {
+      stream = await md.getUserMedia({ video: VIDEO_CONSTRAINTS, audio: false });
+      track = stream.getVideoTracks()[0];
+    }
+  };
+  if (track !== undefined && ios && typeof md.enumerateDevices === "function") {
     try {
-      const main = (await md.enumerateDevices()).find((d) => d.kind === "videoinput" && d.deviceId !== "" && /back|rear|arka|environment/i.test(d.label) && !isSecondaryLens(d.label) && !/dual|triple|çift|üçlü/i.test(d.label));
-      if (main !== undefined) {
-        for (const t of stream.getTracks()) t.stop();
-        stream = await md.getUserMedia({ video: { ...SIZE_CONSTRAINTS, deviceId: { exact: main.deviceId } }, audio: false });
-        track = stream.getVideoTracks()[0];
+      const pick = pickIosBackCamera(await md.enumerateDevices());
+      if (pick !== null) {
+        const current = track.getSettings?.().deviceId;
+        if (pick.deviceId !== current && pick.label !== track.label) await switchTo(pick.deviceId);
+        iosVirtual = pick.virtual && track !== undefined && iosVirtualRank(track.label) >= 0;
       }
     } catch {
-      // Ana kamera açılamadı: ilk akışla sürülür (hiç kamera yoksa bu dalda olunmaz).
-      if (stream.getVideoTracks().every((t) => t.readyState === "ended")) {
-        stream = await md.getUserMedia({ video: VIDEO_CONSTRAINTS, audio: false });
-        track = stream.getVideoTracks()[0];
-      }
+      await recover();
+    }
+  } else if (track !== undefined && isSecondaryLens(track.label) && typeof md.enumerateDevices === "function") {
+    try {
+      const main = pickMainBackCamera(await md.enumerateDevices());
+      if (main !== undefined) await switchTo(main.deviceId);
+    } catch {
+      await recover();
     }
   }
   const caps = (track?.getCapabilities?.() ?? {}) as TrackCaps;
@@ -534,7 +602,8 @@ export async function openCamera(): Promise<CameraSession> {
   if (track !== undefined && continuous) {
     await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] }).catch(() => undefined);
   }
-  const wantZoom = pickZoom(caps.zoom);
+  // iOS: zoom yalnız sanal aygıtta ve en çok 1,5× (dijital zoom yakın çekimi yumuşatır); Android/diğer: T-446 hedefi (2×).
+  const wantZoom = ios ? (iosVirtual ? pickZoom(caps.zoom, IOS_MAX_ZOOM) : null) : pickZoom(caps.zoom);
   let zoom: number | null = null;
   if (track !== undefined && wantZoom !== null) {
     zoom = await track
