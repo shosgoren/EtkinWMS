@@ -61,7 +61,7 @@ beforeEach(async () => {
   fake = await startFakeParasut();
 });
 
-const admin = (w: TenantWorld) => ({ db: app, principal: { userId: w.ownerUserId, mfaVerified: true }, tenantSlug: w.slug });
+const admin = (w: TenantWorld) => ({ db: app, principal: { userId: w.ownerUserId, mfaVerified: true }, tenantSlug: w.slug, recentAuth: async () => undefined });
 const picker = (w: TenantWorld) => ({ db: app, principal: { userId: w.memberUserId, mfaVerified: true }, tenantSlug: w.slug });
 const deps = () => ({ client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer });
 const input = () => ({ companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password });
@@ -144,9 +144,13 @@ describe("katalog: RLS ve yetkiler (0055)", () => {
 describe("yetki ve demo", () => {
   it("yetkisiz (PICKER) okuyamaz, bağlanamaz, akış açamaz, kesemez", async () => {
     expect((await fail(getIntegrationOverview(picker(A)))).code).toBe("FORBIDDEN");
-    expect((await fail(connectParasut(picker(A), input(), deps()))).code).toBe("FORBIDDEN");
+    expect((await fail(connectParasut({ ...picker(A), recentAuth: async () => undefined }, input(), deps()))).code).toBe("FORBIDDEN");
     expect((await fail(setIntegrationFlow(picker(A), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" }))).code).toBe("FORBIDDEN");
-    expect((await fail(disconnectIntegration(picker(A), { provider: "PARASUT" }))).code).toBe("FORBIDDEN");
+    expect((await fail(disconnectIntegration({ ...picker(A), recentAuth: async () => undefined }, { provider: "PARASUT" }))).code).toBe("FORBIDDEN");
+    // Yakın zamanda giriş bağlanmadan bağlan / kes çağrılamaz.
+    const noRecent = { db: app, principal: { userId: A.ownerUserId, mfaVerified: true }, tenantSlug: A.slug };
+    expect((await fail(connectParasut(noRecent, input(), deps()))).detail).toBe("RECENT_AUTH_REQUIRED");
+    expect((await fail(disconnectIntegration(noRecent, { provider: "PARASUT" }))).detail).toBe("RECENT_AUTH_REQUIRED");
     expect((await fail(requestIntegrationRun(picker(A), { provider: "PARASUT" }, { queue: { enqueue: async () => ({ jobId: "x" }) } }))).code).toBe("FORBIDDEN");
     // Sahte sağlayıcıya hiç istek gitmedi (yetki ağdan önce).
     expect(fake.requests).toHaveLength(0);

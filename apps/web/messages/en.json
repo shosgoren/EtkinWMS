@@ -1007,6 +1007,14 @@
     "support": {
       "ticket_created": "Support ticket opened",
       "ticket_replied": "Support ticket replied"
+    },
+    "integration": {
+      "connected": "ERP connection set up",
+      "checked": "ERP connection checked",
+      "disconnected": "ERP connection removed",
+      "flow_changed": "ERP transfer flow changed",
+      "run_requested": "ERP transfer started manually",
+      "synced": "ERP transfer ran"
     }
   },
   "auditLog": {

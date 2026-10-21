@@ -1007,6 +1007,14 @@
     "support": {
       "ticket_created": "Destek talebi açıldı",
       "ticket_replied": "Destek talebine yanıt yazıldı"
+    },
+    "integration": {
+      "connected": "ERP bağlantısı kuruldu",
+      "checked": "ERP bağlantısı sınandı",
+      "disconnected": "ERP bağlantısı kesildi",
+      "flow_changed": "ERP aktarım akışı değişti",
+      "run_requested": "ERP aktarımı elle başlatıldı",
+      "synced": "ERP aktarımı çalıştı"
     }
   },
   "auditLog": {

@@ -197,6 +197,8 @@ export async function connectParasut(params: ConnectionCallParams, input: Connec
   const clientSecret = token(input.clientSecret, 200);
   const username = email(input.username);
   const pass = password(input.password);
+  // Yakın zamanda giriş domain'de zorunlu (inceleme MINOR-3): çağıran bağlamazsa ret.
+  if (params.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   const pre = await runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
     const cur = await loadIntegration(tx, m.tenantId, { provider: "PARASUT" });
     const links = await tx.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM public.external_refs WHERE tenant_id = ${m.tenantId}::uuid AND system = 'PARASUT'`);
@@ -221,6 +223,12 @@ export async function connectParasut(params: ConnectionCallParams, input: Connec
   }
   return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
     if (m.tenantId !== pre.tenantId) throw new AppError("FORBIDDEN");
+    // Şirket değişimi denetimi yazma transaction'ında kilit altında yinelenir (inceleme MINOR-4: okuma ile yazma arası yarış).
+    const cur = await loadIntegration(tx, m.tenantId, { provider: "PARASUT" }, true);
+    if (cur?.accountRef != null && cur.accountRef !== companyId) {
+      const links = await tx.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM public.external_refs WHERE tenant_id = ${m.tenantId}::uuid AND system = 'PARASUT'`);
+      if (Number(links[0]?.n ?? 0) > 0) return { ok: false, reason: "COMPANY_CHANGED" } as const;
+    }
     const ins = await tx.execute<{ id: string }>(sql`
       INSERT INTO public.integrations (tenant_id, id, provider, status, account_label, account_ref, credentials, connected_by, connected_membership_id, connected_at, last_checked_at)
       VALUES (${m.tenantId}::uuid, ${randomUUID()}::uuid, 'PARASUT', 'CONNECTED', ${label}, ${companyId}, ${JSON.stringify(box)}::jsonb, ${m.userId}::uuid, ${m.membershipId}::uuid, now(), now())
@@ -297,6 +305,7 @@ export async function checkIntegration(params: ConnectionCallParams, input: { re
 /** Bağlantıyı kes: mühürlü kutu silinir (NULL), bütün akışlar kapanır; eşlemeler yeniden bağlanma için kalır. */
 export async function disconnectIntegration(params: ConnectionCallParams, input: { readonly provider: string; readonly requestId?: string | null }): Promise<{ readonly changed: boolean }> {
   const provider = parseProvider(input.provider);
+  if (params.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
     const r = await tx.execute<{ id: string }>(sql`
       UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL, last_error_code = NULL

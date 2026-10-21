@@ -3,7 +3,9 @@
 //
 // Belirteç yenileme TEK YAZARLIDIR: yenileme belirteci her kullanımda değişir (Paraşüt belgesi). Erişim belirtecinin süresi dolduysa satır
 // `FOR UPDATE` ile kilitlenir, kilit altında yeniden okunur (başkası yenilediyse yeni belirteç kullanılır) ve yalnız gerekiyorsa sağlayıcıya
-// gidilir; yeni kutu aynı transaction'da yazılır. Kilit en çok bir HTTP çağrısı (15 sn zaman aşımı) sürer ve iki saatte bir gerekir.
+// gidilir; yeni kutu aynı transaction'da yazılır. Kilit en çok bir HTTP çağrısı sürer: yenileme isteği pencere beklemesi ve 429 yeniden denemesi
+// yapmaz (`lockSafe`), zaman aşımı 15 sn; iki saatte bir gerekir. Commit yenilemeden sonra düşerse dönmüş belirteç kaybolur → REAUTH_REQUIRED
+// (nadir; müşteri yeniden bağlanır, veri kaybı yok).
 // Sağlayıcı yenilemeyi reddederse bağlantı ERROR + `REAUTH_REQUIRED` olur (müşteri yeniden bağlanır); sır loga/hataya girmez.
 import { sql } from "drizzle-orm";
 import { SealOpenError, type Sealer } from "@wms/shared/seal";
@@ -90,6 +92,8 @@ export interface TokenDeps {
   readonly client: ParasutClient;
   readonly sealer: Sealer;
   readonly now?: () => number;
+  /** Belirtecin en az bu kadar daha geçerli olması istenir; değilse yenilenir (senkron: işin en uzun süresi). Varsayılan 30 sn. */
+  readonly minValidityMs?: number;
 }
 
 function open(deps: TokenDeps, row: IntegrationRow) {
@@ -104,7 +108,7 @@ function open(deps: TokenDeps, row: IntegrationRow) {
 /** Geçerli erişim belirteci + şirket numarası. Gerekirse kilit altında yeniler (tek yazar). */
 export async function accessToken(deps: TokenDeps): Promise<{ readonly token: string; readonly accountRef: string }> {
   const now = deps.now ?? (() => Date.now());
-  const fresh = (exp: string): boolean => Number(exp) > now() + 30_000;
+  const fresh = (exp: string): boolean => Number(exp) > now() + (deps.minValidityMs ?? 30_000);
   const row = await deps.runTx((tx) => loadIntegration(tx, deps.tenantId, { id: deps.integrationId }));
   if (row === null || row.status === "DISCONNECTED" || row.accountRef === null) throw new IntegrationStateError("NOT_CONNECTED");
   const s = open(deps, row);

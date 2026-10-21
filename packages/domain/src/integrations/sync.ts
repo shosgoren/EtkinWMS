@@ -27,6 +27,7 @@ export const SYNC_LIMITS = Object.freeze({ pagesPerRun: 40, pushPerRun: 50, ship
 /** Akış sırası: önce eşlemeler (depo, ürün, cari), sonra stok ve irsaliye. */
 const ORDER: readonly Flow[] = ["WAREHOUSES", "PRODUCTS", "CONTACTS", "STOCK", "SHIPMENTS"];
 const STALE_SENDING_MINUTES = 40;
+const RUN_TOKEN_VALIDITY_MS = 35 * 60_000;
 
 export interface SyncDeps {
   /** `ctx.inTenant` (worker): tenant bağlamı işin zarfından. */
@@ -346,7 +347,7 @@ async function pushShipments(rc: RunCtx): Promise<void> {
     } catch (e) {
       // Kesin 4xx red → oluşmadı; diğer her şey (ağ, 5xx, okunamayan başarı) belirsiz → CHECK.
       const definite = e instanceof ProviderError && e.status !== null && e.status >= 400 && e.status < 500;
-      const retry = definite && (e as ProviderError).code === "RATE_LIMITED";
+      const retry = definite && ((e as ProviderError).code === "RATE_LIMITED" || (e as ProviderError).code === "AUTH_FAILED");
       const code = errCode(e);
       await rc.deps.inTenant((tx) =>
         tx.execute(sql`
@@ -415,7 +416,8 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
   const { tenantId, row } = head;
   let token: { token: string; accountRef: string };
   try {
-    token = await accessToken({ runTx: deps.inTenant, tenantId, integrationId: row.id, client: deps.client, sealer: deps.sealer, ...(deps.now === undefined ? {} : { now: deps.now }) });
+    // Belirteç koşunun en uzun süresi boyunca geçerli olmalı (iş süresi 30 dk): koşu ortasında 401 ile kalıcı hata / sahte yeniden giriş olmasın.
+    token = await accessToken({ runTx: deps.inTenant, tenantId, integrationId: row.id, client: deps.client, sealer: deps.sealer, minValidityMs: RUN_TOKEN_VALIDITY_MS, ...(deps.now === undefined ? {} : { now: deps.now }) });
   } catch (e) {
     if (e instanceof IntegrationStateError) return { kind: "skipped", reason: e.code };
     if (e instanceof ProviderError && !e.retryable) {
@@ -428,6 +430,12 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
   const results: FlowResult[] = [];
   const ordered = [...head.flows].sort((a, b) => ORDER.indexOf(a.flow) - ORDER.indexOf(b.flow));
   for (const flow of ordered) {
+    // Koşu sürerken bağlantı kesildiyse / bağlayanın yetkisi kalktıysa sonraki akış çalışmaz (inceleme MINOR-2).
+    const still = await deps.inTenant(async (tx) => {
+      const cur = await loadIntegration(tx, tenantId, { id: row.id });
+      return cur !== null && cur.status === "CONNECTED" && (await connectorAllowed(tx, tenantId, row.connectedMembershipId as string, row.connectedBy as string));
+    });
+    if (!still) break;
     const runId = randomUUID();
     const requestedBy = payload.trigger === "MANUAL" ? actorUserId : null;
     await deps.inTenant((tx) =>
@@ -455,7 +463,6 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
                error_count = CASE WHEN ${status} = 'SUCCESS' THEN 0 ELSE error_count + 1 END,
                last_error_code = ${errorCode ?? (c.failed > 0 ? "ROWS_FAILED" : null)}
          WHERE tenant_id = ${tenantId}::uuid AND integration_id = ${row.id}::uuid AND flow = ${flow.flow}`);
-      if (fatal instanceof ProviderError && fatal.code === "AUTH_FAILED") await markIntegrationError(tx, tenantId, row.id, "REAUTH_REQUIRED");
       await appendAudit(tx, {
         action: "integration.synced",
         actorUserId: requestedBy ?? ac.actorUserId,

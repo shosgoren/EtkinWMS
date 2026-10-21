@@ -162,9 +162,14 @@ export class ParasutClient {
     }
   }
 
-  private async request(method: string, path: string, opts: { token?: string; json?: unknown; form?: Record<string, string> } = {}): Promise<{ status: number; body: unknown }> {
+  /**
+   * `lockSafe` (yenileme, satır kilidi altında): pencere beklemesi ve 429 yeniden denemesi YOK — kilit en çok tek istek zaman aşımı kadar
+   * (15 sn) tutulur (güvenlik incelemesi MAJOR-1). Pencereye yine sayılır.
+   */
+  private async request(method: string, path: string, opts: { token?: string; json?: unknown; form?: Record<string, string>; lockSafe?: boolean } = {}): Promise<{ status: number; body: unknown }> {
     for (let attempt = 0; ; attempt++) {
-      await this.throttle();
+      if (opts.lockSafe === true) this.sent.push(this.now());
+      else await this.throttle();
       this.requests++;
       const headers: Record<string, string> = { Accept: "application/json" };
       let body: string | undefined;
@@ -182,11 +187,13 @@ export class ParasutClient {
       } catch {
         throw new ProviderError("NETWORK"); // kök hata adresi/başlık taşıyabilir: yayılmaz
       }
-      if (res.status === 429 && attempt < RETRY_429) {
+      if (res.status === 429 && attempt < RETRY_429 && opts.lockSafe !== true) {
         const ra = Number(res.headers.get("retry-after"));
         await this.sleep(Number.isFinite(ra) && ra > 0 ? Math.min(ra, 60) * 1000 : WINDOW_MS);
         continue;
       }
+      const declared = Number(res.headers.get("content-length"));
+      if (Number.isFinite(declared) && declared > MAX_BODY) throw new ProviderError("BAD_RESPONSE", res.status);
       let text: string;
       try {
         text = await res.text();
@@ -239,6 +246,7 @@ export class ParasutClient {
   async refreshGrant(input: { readonly clientId: string; readonly clientSecret: string; readonly refreshToken: string }): Promise<TokenSet> {
     const r = await this.request("POST", "/oauth/token", {
       form: { grant_type: "refresh_token", client_id: input.clientId, client_secret: input.clientSecret, refresh_token: input.refreshToken },
+      lockSafe: true,
     });
     if (r.status !== 200) throw ParasutClient.fail(r.status, true);
     return this.tokens(r.body);
