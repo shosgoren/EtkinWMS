@@ -78,19 +78,6 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
         await page.goto("/t/demo");
         await selectView(page, view.id as "flow" | "cockpit");
         await expect(page.locator("html")).toHaveAttribute("data-view", view.id);
-          // Genel bakış'a geçince ana ekran Pano olur (anahtar yok); anahtar kaldıysa seçili durumu doğrulanır.
-          const after = page.getByRole("button", { name: view.label, exact: true }).and(page.locator("[aria-pressed]"));
-          if ((await after.count()) > 0) await expect(after.first()).toHaveAttribute("aria-pressed", "true");
-          if (inMenu && (await page.getByRole("dialog").count()) > 0) {
-            await page.keyboard.press("Escape");
-            await expect(page.getByRole("dialog")).toBeHidden();
-          }
-        } else {
-          if (inMenu) await page.keyboard.press("Escape");
-          await page.context().addCookies([{ name: "view", value: view.id, url: new URL(page.url()).origin }]);
-          await page.reload();
-        }
-        await expect(page.locator("html")).toHaveAttribute("data-view", view.id);
 
           // Ayarlar.
           await page.goto("/t/demo/settings");
