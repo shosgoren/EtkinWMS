@@ -9,7 +9,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  const {slug}=await loginEmptyTenant(page,info.project.name.includes("mobile")?"stockMobile":"stockDesktop"),suffix=info.project.name;
  await page.goto(`/t/${slug}/warehouses?new=1`);
  // T-990: ekleme pencere değil tam ekran formdur (Kaydet alt çubukta).
- const whForm=page.getByTestId("warehouse-form");await expect(whForm).toBeVisible();
+ const whForm=page.getByTestId("warehouse-form");await expect(whForm).toBeVisible();await expect(whForm.locator('input[name="code"]')).toHaveValue(/.+/);
  await whForm.locator('input[name="name"]').fill(`Pilot ${suffix}`);
  await page.getByTestId("warehouse-form-save").click();
  await expect(whForm).toHaveCount(0);
@@ -54,7 +54,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await page.getByRole("button",{name:"Belgeyi iptal et"}).click();await expect(page.getByRole("status").filter({hasText:"İptal edildi"})).toBeVisible();
  await stockHas(`Pilot ürün ${suffix}`,"10");
  await page.goto(`/t/${slug}/warehouses?new=1`);
- await expect(whForm).toBeVisible();await whForm.locator('input[name="name"]').fill(`Target ${suffix}`);
+ await expect(whForm).toBeVisible();await expect(whForm.locator('input[name="code"]')).toHaveValue(/.+/);await whForm.locator('input[name="name"]').fill(`Target ${suffix}`);
  await page.getByTestId("warehouse-form-save").click();await expect(whForm).toHaveCount(0);
  await page.goto(`/t/${slug}/warehouses`);
  const targetHref=await page.getByTestId("warehouse-card").filter({hasText:`Target ${suffix}`}).getByRole("link",{name:"Lokasyonları aç"}).getAttribute("href");

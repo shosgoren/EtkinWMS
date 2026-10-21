@@ -9,9 +9,10 @@ import { useEffect, useId, type CSSProperties, type InputHTMLAttributes, type Re
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico } from "./ekran.tsx";
 import { useAlanHata, useSalla, useZorunlu } from "./form-baglam.tsx";
-import { kdz } from "./tokens.ts";
+import { kdzOrtak } from "./tokens.ts";
 
-const c = (hex: string): string => kdz("dzf", hex);
+// T-990: form kabının kaynağında olmayan ama başka kalıp kaynağında geçen renk (ör. Hammadde kahvesi) de kullanılabilir.
+const c = (hex: string): string => kdzOrtak(hex);
 
 /** Kaynak `.lockb`: değiştirme yetkisi yok (görebilir). */
 export function KalipKilit({ title, sub }: { title: string; sub: string }) {

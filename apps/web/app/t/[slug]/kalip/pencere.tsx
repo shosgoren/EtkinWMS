@@ -10,9 +10,10 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { KalipCikisUyarisi } from "./cikis.tsx";
 import { Ico } from "./ekran.tsx";
-import { kdz } from "./tokens.ts";
+import { kdzOrtak } from "./tokens.ts";
 
-const c = (hex: string): string => kdz("dzf", hex);
+// T-990: form kabının kaynağında olmayan ama başka kalıp kaynağında geçen renk (ör. Hammadde kahvesi) de kullanılabilir.
+const c = (hex: string): string => kdzOrtak(hex);
 
 /** Açık kalıp ekranının teması (kök `.kalip.dz-dark`); kalıp dışı ekranda tema çerezi. */
 function useKalipDark(open: boolean): boolean {
