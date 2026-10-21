@@ -14,8 +14,9 @@
 
 ## İş ve kart
 - İş BACKLOG'dan seçilir (`B-xx`); her bağımsız iş `docs/tasks/T-xxx.md` kartı + `fix|feat/T-xxx-…` dalı. Boş numara: `docs/tasks/`, uzak dallar, PR başlıkları ve STATE/BACKLOG/JOURNAL birlikte taranır (ör. T-928/T-929 eski işlerde kullanılmış). Kartın "Dokunulacak dosyalar" listesi `check:scope` ile birebir; `[slug]` yerine `*`.
-- Bitince aynı PR'da: BACKLOG satırı (`KODDA VAR` → canlıya çıkınca `BİTTİ <PR/SHA>`) + STATE satırı + ilgili kısa rehber. Yeni bulgu hemen BACKLOG'a; sohbette kalan bulgu kayıptır.
-- Her PR STATE.md sonuna satır eklediği için PR'lar birbirleriyle çakışır: birleştirmeden önce main'e rebase, iki taraf korunur.
+- **STATE/BACKLOG güncellemesi parça dosyasıyla yapılır (kullanıcı kararı 21 Ekim, T-445):** iş PR'ı `docs/STATE.md` ve `docs/BACKLOG.md`'ye **dokunmaz**; bitince aynı PR'da `docs/changes/<T-xxx>.md` yazar: STATE satırı + BACKLOG değişiklikleri (`- B-xx: BİTTİ {PR}` / `KODDA VAR`, yeni bulgu `- yeni [Bölüm]: | … |`; B numarasını fold verir). Biçim: `docs/changes/README.md`. "Her iş STATE ve BACKLOG'u günceller" kuralı bu parçayla karşılanır; parçasız iş PR'ı eksik teslimdir. İlgili kısa rehber yine aynı PR'da güncellenir. Yeni bulgu hemen parçaya; sohbette kalan bulgu kayıptır.
+- **Koordinatör** birleşmelerden sonra main'den açtığı belge dalında `node scripts/changes/fold.mjs` koşar (parçaları STATE + BACKLOG'a işler ve siler; idempotent, hata varsa hiçbir dosya yazılmaz; önce `--dry-run`), STATE ≤80 satırı gözden geçirir ve tek belge PR'ı açar. Böylece paralel PR'lar STATE/BACKLOG'da çakışmaz; kesilen işin dal/commit durumu da parçaya yazılır. CI `verify` parçaları `fold --check` ile doğrular.
+- Kart numarası 3 ya da 4 hanedir (T-1000+ geçerli; B-103).
 
 ## Güvenlik bilgisi (depo herkese açık)
 - Açık depodaki belgeye güvenlik zayıflığı ayrıntısı (dosya:satır, senaryo) yazılmaz: BACKLOG'da yalnız 🔒 genel başlık; ayrıntı gizli danışma taslağında (GitHub Security Advisory **GHSA-jxfh-5j2f-4mvg**). Düzeltilip canlıya çıkan açık PR'da anlatılabilir.
@@ -23,7 +24,7 @@
 
 ## Doğrulama ve kanıt
 - Kod, testler, lint/typecheck, CI, migration (DB defteri), imaj, deploy ve canlı ayrı ayrı raporlanır; biri diğerinin kanıtı değildir. Çalıştırılmayan = UNKNOWN. Testi geçmek için test/bekçi gevşetilmez (G-11).
-- Test dengesi (kullanıcı kararı): kural/güvenlik birim + entegrasyonda; kod değişen her PR'da TAM takım (iki parçaya bölünmüş); yalnız `docs/**`/`*.md` PR'da ağır testler atlanır; e2e yalnız kritik akış + ortak yerleşim taraması (`docs/continuity/CODING_TESTS.md`). Gerçek cihaz (iPhone Safari) kontrolü kullanıcıdan istenir.
+- Test dengesi (kullanıcı kararı): kural/güvenlik birim + entegrasyonda; kod değişen her PR'da TAM takım (int 3, e2e 4 parçaya bölünmüş; T-445); yalnız `docs/**`/`*.md` PR'da ağır testler atlanır; e2e yalnız kritik akış + ortak yerleşim taraması (`docs/continuity/CODING_TESTS.md`). Gerçek cihaz (iPhone Safari) kontrolü kullanıcıdan istenir.
 - Arka planda test koşarken aynı çalışma ağacında dal değiştirilmez / dosya düzenlenmez (sonuç geçersiz olur); paralel iş için ayrı `git worktree`.
 
 ## Tasarım

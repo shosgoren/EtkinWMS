@@ -34,10 +34,10 @@ pnpm test:ac --ci
 
 Test dengesi (T-925, kullanıcı kararı 20 Ekim: hatasız + hızlı):
 - Kural, yetki, RLS ve stok doğruluğu birim + entegrasyon testlerinde (hızlı, kapsam kaybı yok). Bu projede DB/RLS değişikliği ilgisiz test dosyalarını kırabildiği için (T-919: 6 dosya) kod değişen PR'da "yalnız ilgili test" seçimi yapılmaz; TAM takım koşar.
-- Hız paralellikten gelir: `int` iki parçaya (`vitest --shard`), `e2e` iki proje grubuna (masaüstü / mobil) bölünür; her parça kendi ortamını kurar. Sabit adlı `int` / `e2e` toplayıcı işleri parçaların sonucunu raporlar.
+- Hız paralellikten gelir: `int` üç parçaya (`vitest --shard=k/3`), `e2e` iki proje grubu (masaüstü / mobil) × iki dilime (`playwright --shard=k/2`; dosyalar bölünmez, sıra korunur) — 4 makine (T-445); her parça kendi ortamını kurar. Sabit adlı `int` / `e2e` toplayıcı işleri parçaların sonucunu raporlar. Önbellek: pnpm deposu (setup-node), Playwright tarayıcısı ve Next derleme önbelleği (`actions/cache`).
 - Yalnız belge (`docs/**`, `*.md`) değişen PR'da int/e2e parçaları koşmaz (`changes` işi; `--no-renames`, belirsizlikte kod sayılır). main ve int dallarına push her zaman tam takım; yayın kapısı main sonucunu ister.
-- e2e proje grupları ayrı veritabanlarında koşar: mobil grup masaüstü grubunun bıraktığı veriyi görmez (testler bağımsız olmalı).
-- Yayın (`deploy-vps`) yalnız `ci` tamamlanınca tetiklenir ve guards kapılarını ≤ 15 dk bekler; guards sonradan yeniden koşturulup yeşile dönerse otomatik yayın olmaz — `workflow_dispatch mode=deploy` ile elle başlatılır.
+- e2e parçaları ayrı veritabanlarında koşar: bir parça diğerinin bıraktığı veriyi görmez; bir spec dosyası kendinden önceki dosyanın verisine dayanmamalı (dilim sınırı test sayısıyla kayabilir).
+- Yayın (`deploy-vps`) yalnız `ci` tamamlanınca tetiklenir ve guards kapılarını ≤ 15 dk bekler; arka arkaya birleşmede eski SHA'nın imaj kurulumu (`build`) iptal edilir, main ilerlediyse eski SHA "SUPERSEDED" ile yeşil atlanır, çalışan yayın (`deploy`, migration dahil) asla iptal edilmez (T-445); guards sonradan yeniden koşturulup yeşile dönerse otomatik yayın olmaz — `workflow_dispatch mode=deploy` ile elle başlatılır.
 - E2E yalnız kritik uçtan uca akışlar + ortak yerleşim taraması (telefon/tablet/masaüstü; taşma, kaydırma, örtme) içindir; her hata için ayrı e2e yazılmaz (B-60). Gerçek cihaz (iPhone Safari çubukları vb.) kontrolü kullanıcı/ekip tarafından.
 
 Zorunlu check adları: **verify, infra, secrets, deps, int, e2e, check-all, test-ac, check-pilot**. Ayrı build/deploy/check işleri ürün CI veya canlı kabul yerine geçmez. Aynı exact SHA'nın son `github-actions` sonucunu doğrula; eski dal testi yeni birleşik SHA testi değildir.

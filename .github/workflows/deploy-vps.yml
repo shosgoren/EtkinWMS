@@ -20,12 +20,18 @@ on:
 permissions:
   contents: read
   checks: read
-concurrency:
-  group: etkinwms-production
-  cancel-in-progress: false
+# T-445 (kullanıcı kararı 21 Ekim "süreler çok uzun"): eşzamanlılık iş düzeyinde, iki ayrı grup.
+#   - `build` (imaj kurulumu, sunucuya dokunmaz): `etkinwms-build`, cancel-in-progress: true — arka arkaya birleşmelerde yeni main
+#     gelince eski SHA'nın kapı beklemesi/imaj kurulumu iptal edilir, onun `deploy` işi de koşmaz (needs: build).
+#   - `deploy` ve `check` (sunucuya bağlanan işler): `etkinwms-production`, cancel-in-progress: false — ÇALIŞAN yayın (migration dahil)
+#     asla iptal edilmez; GitHub grupta en çok bir bekleyen tutar, yeni gelen bekleyen eskisinin yerini alır (başlamamış eski yayın düşer).
+#     Böylece yayın sırası seri kalır ve yalnız en son main yayınlanır. Sunucu (release.py) ayrıca NOT_CURRENT_MAIN ile eski SHA'yı reddeder.
 jobs:
   check:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.mode == 'check'
+    concurrency:
+      group: etkinwms-production
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     environment: etkinwms-production
     timeout-minutes: 5
@@ -47,6 +53,9 @@ jobs:
       github.ref == 'refs/heads/main' &&
       ((github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
        (github.event_name == 'workflow_dispatch' && inputs.mode == 'deploy'))
+    concurrency:
+      group: etkinwms-build
+      cancel-in-progress: true
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -68,7 +77,12 @@ jobs:
           set -euo pipefail
           [[ "$REQUEST_SHA" =~ ^[0-9a-f]{40}$ ]]
           main_sha=$(gh api repos/shosgoren/EtkinWMS/git/ref/heads/main --jq .object.sha)
-          test "$REQUEST_SHA" = "$main_sha"
+          # T-445: otomatik tetiklemede main ilerlediyse bu SHA yayınlanmaz ve iş kırmızı değil "geçildi" biter (sha çıktısı boş →
+          # sonraki adımlar ve deploy koşmaz; yeni main kendi koşusuyla yayınlanır). Elle (workflow_dispatch) istekte eskisi gibi kırmızı.
+          if [ "$REQUEST_SHA" != "$main_sha" ]; then
+            if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then echo "::notice::SUPERSEDED $REQUEST_SHA (main $main_sha)"; exit 0; fi
+            echo "RELEASE_BLOCKED: istenen SHA main değil"; exit 1
+          fi
           ancestry=$(gh api "repos/shosgoren/EtkinWMS/compare/024a800bace33c2dc3df397d56fda7e449d1d9dc...$REQUEST_SHA" --jq .status)
           test "$ancestry" = ahead || test "$ancestry" = identical
           # Dokuz kapı: hepsi tamamlanıp başarılı olana kadar en çok 30 × 30 sn bekle; biri başarısızsa hemen dur (fail-closed).
@@ -95,13 +109,19 @@ jobs:
             sleep 30
           done
           # Bekleme sırasında main ilerlediyse eski SHA için imaj kurulmaz (sunucu da NOT_CURRENT_MAIN ile reddeder).
-          test "$REQUEST_SHA" = "$(gh api repos/shosgoren/EtkinWMS/git/ref/heads/main --jq .object.sha)"
+          main_sha=$(gh api repos/shosgoren/EtkinWMS/git/ref/heads/main --jq .object.sha)
+          if [ "$REQUEST_SHA" != "$main_sha" ]; then
+            if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then echo "::notice::SUPERSEDED $REQUEST_SHA (main $main_sha)"; exit 0; fi
+            echo "RELEASE_BLOCKED: main bekleme sırasında ilerledi"; exit 1
+          fi
           echo "sha=$REQUEST_SHA" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: steps.gate.outputs.sha != ''
         with:
           ref: ${{ steps.gate.outputs.sha }}
           persist-credentials: false
       - name: Build immutable application and marketing image
+        if: steps.gate.outputs.sha != ''
         env:
           RELEASE_SHA: ${{ steps.gate.outputs.sha }}
         run: |
@@ -119,16 +139,19 @@ jobs:
           docker run --rm --network none "etkinwms-migrate:$RELEASE_SHA" node --input-type=module -e "await import('/migrator/src/migrate.ts')"
           docker save "etkinwms:$RELEASE_SHA" "etkinwms-migrate:$RELEASE_SHA" | gzip > "$RUNNER_TEMP/image.tar.gz"
       - name: Record bundle identity
+        if: steps.gate.outputs.sha != ''
         id: bundle
         run: |
           set -euo pipefail
           echo "schema=$(python3 deploy/vps/automation/schema.py packages/db/migrations)" >> "$GITHUB_OUTPUT"
           echo "digest=$(sha256sum "$RUNNER_TEMP/image.tar.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - name: Sign exact artifact provenance with GitHub OIDC
+        if: steps.gate.outputs.sha != ''
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: ${{ runner.temp }}/image.tar.gz
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: steps.gate.outputs.sha != ''
         with:
           name: etkinwms-release
           path: ${{ runner.temp }}/image.tar.gz
@@ -136,6 +159,11 @@ jobs:
           if-no-files-found: error
   deploy:
     needs: build
+    # T-445: geçilen (SUPERSEDED) SHA'da build sha çıktısı boştur → yayın işi koşmaz.
+    if: needs.build.outputs.sha != ''
+    concurrency:
+      group: etkinwms-production
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: etkinwms-production
