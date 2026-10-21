@@ -57,7 +57,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
     if (current === undefined) notFound();
     roles = current.roles;
     grants = current.grants;
-    page = await listInboundReceipts(call, { limit: PAGE_SIZE, withTotal: true, ...(after === undefined ? {} : { after }) });
+    page = await listInboundReceipts(call, { limit: PAGE_SIZE, withTotal: after === undefined, ...(after === undefined ? {} : { after }) });
     warehouses = await listWarehouses(call);
   } catch (e) {
     if (e instanceof AppError) {

@@ -38,7 +38,7 @@ export default async function StockPage({ params, searchParams }: { params: Prom
   const dark = await kalipDark();
   let data: Awaited<ReturnType<typeof listStockOverview>>;
   try {
-    data = await listStockOverview({ db: getAppDb(), principal, tenantSlug: slug }, { q, withTotal: true, ...(after ? { after } : {}), ...(warehouseId ? { warehouseId } : {}) });
+    data = await listStockOverview({ db: getAppDb(), principal, tenantSlug: slug }, { q, withTotal: !after, ...(after ? { after } : {}), ...(warehouseId ? { warehouseId } : {}) });
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
@@ -78,7 +78,7 @@ export default async function StockPage({ params, searchParams }: { params: Prom
         />
         <KalipCipler label={t("k.chips")} chips={chips} />
         <details className="more" data-testid="stock-help">
-          <summary style={{ cursor: "pointer", listStyle: "none" }}>{t("help")}</summary>
+          <summary style={{ cursor: "pointer", listStyle: "none", minHeight: 44, display: "flex", alignItems: "center" }}>{t("help")}</summary>
           <p style={{ margin: "8px 0 0" }}>{t("explanation")}</p>
         </details>
         {data.items.length === 0 ? (

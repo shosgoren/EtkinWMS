@@ -74,7 +74,8 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     canImport = hasPermission(current.roles, "data.import", current.grants);
     const page = await searchItems(call, {
       limit: PAGE_SIZE,
-      withTotal: true,
+      // T-1001: toplam yalnız ilk sayfada (sayfa başına tam COUNT yükü olmasın; güvenlik incelemesi MINOR).
+      withTotal: after === undefined || after === "",
       ...(q.trim() === "" ? {} : { q }),
       ...(status === "" ? {} : { status }),
       ...(cardType === "" ? {} : { cardType }),

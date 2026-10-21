@@ -130,12 +130,11 @@ function useCevrimdisiGonderim(): void {
 function CevrimdisiSerit() {
   const t = useTranslations("kural");
   const online = useCevrimici();
-  const once = useRef(true);
+  // Yalnız bağlantı durumu GERÇEKTEN değişince (sayfa yenilemesi / dil nesnesi değişimi balon üretmez).
+  const prev = useRef(true);
   useEffect(() => {
-    if (once.current) {
-      once.current = false;
-      return;
-    }
+    if (prev.current === online) return;
+    prev.current = online;
     if (online) feedback.ok(t("backOnline"));
     else feedback.warn(t("offline"));
   }, [online, t]);

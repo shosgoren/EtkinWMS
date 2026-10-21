@@ -216,3 +216,7 @@
 
 /* ---- 14: eski (Tailwind belirteçli) yüzeyler de temayı izler: alt sayfa (more-sheet), ilk kullanım rehberi, Banner/Button…
    Kök düzen `html[data-tema]` verir (sunucu çerezi; istemci tema değişince günceller). Koyu palet saf siyah değil (ALTIN-KURAL). ---- */
+/* Liste süzgeç çipleri: kaynak telefonda 40 px → en az 44 px (ALTIN-KURAL 12; kural kaynak ölçüsünden önce gelir). */
+@media (max-width: 699.98px) {
+  .dzl.dzl .fch { min-height: 44px; }
+}

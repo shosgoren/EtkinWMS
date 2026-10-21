@@ -38,7 +38,7 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
   let list: Awaited<ReturnType<typeof listStockDocuments>>, doc: Awaited<ReturnType<typeof getStockDocument>> | null;
   try {
     const context = { db: getAppDb(), principal, tenantSlug: slug };
-    list = await listStockDocuments(context, { withTotal: !id && !kind, ...(after ? { after } : {}) });
+    list = await listStockDocuments(context, { withTotal: !id && !kind && !after, ...(after ? { after } : {}) });
     doc = id ? await getStockDocument(context, id) : null;
   } catch (e) {
     if (e instanceof AppError) {

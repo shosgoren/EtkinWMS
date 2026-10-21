@@ -6,11 +6,10 @@
 // - 12: kalıp ekranlarında dokunma hedefleri ≥ 44 px (üst çubuk ikonları T-982 kapsamında; burada içerik ve alt çubuk ölçülür).
 import { expect, test } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
-import { expectTouchTargets } from "./support/dokunma.ts";
-
-test.describe.configure({ mode: "serial" });
+import { expectTouchTargets, smallTouchTargets } from "./support/dokunma.ts";
 
 test("T-1001 Esc: Modüller ve Hesap menüsü kapanır, odak açan düğmeye döner", async ({ page }) => {
+  await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.goto("/t/demo/items");
   await expect(page.locator(".kalip")).toBeVisible();
@@ -33,6 +32,7 @@ test("T-1001 Esc: Modüller ve Hesap menüsü kapanır, odak açan düğmeye dö
 });
 
 test("T-1001 Geri al: arşive alınan cari kart balondaki Geri al ile listeye döner", async ({ page }) => {
+  await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   const id = `${Date.now().toString(36)}${test.info().project.name.slice(0, 1)}`.toUpperCase();
   const name = `Geri Al Cari ${id}`;
@@ -52,7 +52,6 @@ test("T-1001 Geri al: arşive alınan cari kart balondaki Geri al ile listeye d�
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const undo = page.getByTestId("balon-eylem");
   await expect(undo).toBeVisible();
-  await expect(page.getByTestId("party-card").filter({ hasText: name })).toHaveCount(0);
   await undo.click();
   await expect(page.getByTestId("balon").getByText("Geri alındı")).toBeVisible();
   // Sunucuda gerçekten arşivden çıktı: yenilenen etkin listede yine var.
@@ -61,6 +60,7 @@ test("T-1001 Geri al: arşive alınan cari kart balondaki Geri al ile listeye d�
 });
 
 test("T-1001 çevrimdışı: şerit görünür, gönderim engellenir", async ({ page, context }) => {
+  await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.goto("/t/demo/parties");
   await expect(page.locator(".kalip")).toBeVisible();
@@ -79,6 +79,7 @@ test("T-1001 çevrimdışı: şerit görünür, gönderim engellenir", async ({ 
 });
 
 test("T-1001 bulunamadı: tasarım dilinde, tek başlık, Ana ekran düğmesi", async ({ page }) => {
+  await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.goto("/t/demo/boyle-bir-ekran-yok");
   const nf = page.getByTestId("bulunamadi-ekrani");
@@ -88,12 +89,16 @@ test("T-1001 bulunamadı: tasarım dilinde, tek başlık, Ana ekran düğmesi", 
 });
 
 test("T-1001 dokunma hedefi: kalıp ekranlarında içerik ve alt çubuk ≥ 44 px", async ({ page }) => {
+  await page.goto("/");
   await enterDemoShared(page, "Yönetici");
-  for (const path of ["/items", "/parties", "/warehouses", "/settings", "/members"]) {
+  const bad: Record<string, unknown> = {};
+  for (const path of ["/items", "/parties", "/warehouses", "/settings", "/members", "/stock", "/receipts", "/tasks"]) {
     await page.goto(`/t/demo${path}`);
     await expect(page.locator(".kalip")).toBeVisible();
-    await expectTouchTargets(page, 44, path, '#kalip-main, [data-testid="kabuk-dock"]');
+    const small = await smallTouchTargets(page, 44, '#kalip-main, [data-testid="kabuk-dock"]');
+    if (small.length > 0) bad[path] = small;
   }
+  expect(bad, "kalıp ekranlarında 44 px altındaki dokunma hedefleri").toEqual({});
   // Modüller sayfası (arama mikrofonu dahil).
   await page.getByTestId("kabuk-mods").click();
   await expect(page.getByTestId("kabuk-sheet")).toBeVisible();

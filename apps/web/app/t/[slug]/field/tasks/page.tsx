@@ -70,7 +70,7 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
   try {
     page = await listMyTasks({ db: getAppDb(), principal, tenantSlug: slug }, {
       limit: PAGE_SIZE,
-      withTotal: true,
+      withTotal: after === undefined,
       ...(after === undefined ? {} : { after }),
       ...(kind === undefined ? {} : { kind }),
       ...(status === undefined ? {} : { status }),

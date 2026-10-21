@@ -37,7 +37,7 @@ export default async function ProductionPage({ params, searchParams }: { params:
   let data: Awaited<ReturnType<typeof listProductionRecipes>>, recipe: Awaited<ReturnType<typeof getProductionRecipe>> | null;
   try {
     const context = { db: getAppDb(), principal, tenantSlug: slug };
-    data = await listProductionRecipes(context, { q, withTotal: !id && first(sp.new) !== "1", ...(after ? { after } : {}) });
+    data = await listProductionRecipes(context, { q, withTotal: !id && first(sp.new) !== "1" && !after, ...(after ? { after } : {}) });
     recipe = id ? await getProductionRecipe(context, id) : null;
   } catch (e) {
     if (e instanceof AppError) {

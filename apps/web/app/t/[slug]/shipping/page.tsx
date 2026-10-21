@@ -41,7 +41,7 @@ export default async function ShippingPage({ params, searchParams }: { params: P
   let data: Awaited<ReturnType<typeof listShippingOrders>>, order: Awaited<ReturnType<typeof getShippingOrder>> | null;
   try {
     const context = { db: getAppDb(), principal, tenantSlug: slug };
-    data = await listShippingOrders(context, { q, withTotal: !id && first(sp.new) !== "1", ...(after ? { after } : {}) });
+    data = await listShippingOrders(context, { q, withTotal: !id && first(sp.new) !== "1" && !after, ...(after ? { after } : {}) });
     order = id ? await getShippingOrder(context, id, { ...(taskAfter ? { taskAfter } : {}), ...(stageAfter ? { stageAfter } : {}) }) : null;
   } catch (e) {
     if (e instanceof AppError) {
