@@ -109,6 +109,12 @@ export default async function ShippingPage({ params, searchParams }: { params: P
                   )}
                   <KalipKartBolum label={t("tasks")} title={t("tasks")} d={LICON.raf} color="0E7C7B" testId="shipping-tasks">
                     {order.tasks.length === 0 && <small className="mono">{t("noTasks")}</small>}
+                    {data.permissions.post && order.tasks.some((x) => x.canPick) ? (
+                      // T-977: aynı toplama görevleri sahada (okut → doğrula → miktar) yürütülebilir.
+                      <a className="more" href={`${home}/field/pick?${new URLSearchParams({ task: order.tasks.find((x) => x.canPick)?.id ?? "" })}`} data-testid="shipping-field-pick">
+                        {t("k.fieldPick")}
+                      </a>
+                    ) : null}
                     {order.tasks.map((task) =>
                       data.permissions.post && task.canPick ? (
                         <PickForm key={task.id} slug={slug} task={task} />
@@ -126,6 +132,11 @@ export default async function ShippingPage({ params, searchParams }: { params: P
                   </KalipKartBolum>
                   <KalipKartBolum label={t("staged")} title={t("staged")} d={LICON.moveOut} color="B85A14" testId="shipping-staged">
                     {order.staged.length === 0 && <small className="mono">{t("noStaged")}</small>}
+                    {data.permissions.post && order.staged.length > 0 ? (
+                      <a className="more" href={`${home}/field/ship?${new URLSearchParams({ order: order.id })}`} data-testid="shipping-field-ship">
+                        {t("k.fieldShip")}
+                      </a>
+                    ) : null}
                     {order.staged.map((row) =>
                       data.permissions.post ? (
                         <ShipForm key={`${row.lineId}:${row.warehouseId}:${row.quantity}`} slug={slug} orderId={order.id} row={row} />

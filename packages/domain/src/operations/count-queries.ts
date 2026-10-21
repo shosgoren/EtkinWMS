@@ -31,6 +31,8 @@ export interface CountWorkLine {
   readonly itemCode: string;
   readonly itemName: string;
   readonly unitCode: string;
+  /** Ürünün miktar ölçeği (ondalık hane; 0 = tam sayı). T-977: saha ekranı ondalıklı ürünü tam sayıya zorlamaz. */
+  readonly scale: number;
   readonly stockStatus: string;
   /** Sayımcının girdiği değer (henüz sayılmadıysa null). */
   readonly counted: string | null;
@@ -73,8 +75,8 @@ export async function getCountWork(params: CountQueryParams, input: { readonly t
     );
     const loc = locs[0];
     if (loc === undefined) throw new AppError("NOT_FOUND");
-    const rows = await tx.execute<{ id: string; item_id: string; code: string; name: string; unit_code: string; stock_status: string | null; counted: string | null; reference: string }>(
-      sql`SELECT l.id, l.item_id, i.code, i.name, u.code AS unit_code, d.stock_status,
+    const rows = await tx.execute<{ id: string; item_id: string; code: string; name: string; unit_code: string; quantity_scale: number | string; stock_status: string | null; counted: string | null; reference: string }>(
+      sql`SELECT l.id, l.item_id, i.code, i.name, u.code AS unit_code, i.quantity_scale, d.stock_status,
                  l.counted_quantity::text AS counted, l.reference_quantity::text AS reference
             FROM public.count_session_lines l
             JOIN public.items i ON i.tenant_id = l.tenant_id AND i.id = l.item_id
@@ -97,6 +99,7 @@ export async function getCountWork(params: CountQueryParams, input: { readonly t
         itemCode: r.code,
         itemName: r.name,
         unitCode: r.unit_code,
+        scale: Number(r.quantity_scale),
         stockStatus: r.stock_status ?? "AVAILABLE",
         counted: trimQty(r.counted),
         reference: s.blind ? null : trimQty(r.reference),

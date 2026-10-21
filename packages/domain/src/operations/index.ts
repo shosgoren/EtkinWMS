@@ -190,3 +190,5 @@ export { transferPackage, type PackageTransferInput } from "./package-transfer.t
 
 export { previewPackageProduction, preparePackageProduction, postPackageProduction, getPackageProductionBatch, type ProducePackageInput, type PostPackageProductionInput, type PackageProductionPreview, type PackageProductionBatchView, type ProductionPackageView } from "./production.ts";
 export { resolveFieldScan, FIELD_SCAN_CODE_MAX, type FieldScanResult, type FieldScanReceipt } from "./field-scan.ts";
+// T-977: saha toplama / sayım okumaları (salt okuma): toplama kartı ve OKUT iş yönlendirmesi.
+export { findFieldWork, getPickWork, type FieldWork, type FieldWorkTask, type PickWork } from "./field-work.ts";

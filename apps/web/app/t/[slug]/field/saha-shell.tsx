@@ -71,8 +71,9 @@ export function tone(kind: "tap" | "ok" | "err"): void {
 }
 
 /** Sayfa ikonu rengi (kaynak `.pgic` / `.uic`): kabul yeşil, yerleştirme camgöbeği, ürün kahve. */
-export type SahaHue = "green" | "teal";
-export const HUE: Record<SahaHue, string> = { green: "2F7D5B", teal: "0E7C7B" };
+export type SahaHue = "green" | "teal" | "orange" | "purple" | "blue";
+// T-977: toplama turuncu (Görevlerim PICK), sayım mor (COUNT), sevk mavi — Görevler türü renkleriyle aynı aile.
+export const HUE: Record<SahaHue, string> = { green: "2F7D5B", teal: "0E7C7B", orange: "B85A14", purple: "6C4BD8", blue: "2F5DA8" };
 
 /** Kaynaktaki 3 adım (`.flow > .fl`): 1 OKUT · 2 DOĞRULA · 3 MİKTAR; `now` 4 = hepsi tamam. */
 export function SahaSteps({ now, label }: { now: 1 | 2 | 3 | 4; label: string }) {

@@ -95,6 +95,14 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
   const kindOf = (k: TaskKind) => ((TASK_KINDS as readonly string[]).includes(k) ? t(`kind.${k}`) : k);
   const dark = await kalipDark();
   const fieldHome = `/t/${encodeURIComponent(slug)}/field`;
+  // T-977: Başla → görevin saha akışı (yerleştirme, toplama, oturumlu sayım). Toplama eksiğinden doğan oturumsuz sayım görevi kilitli kalır (önce yönetici sayım başlatır).
+  const startHref = (task: { readonly id: string; readonly kind: string; readonly sourceKind: string | null }): string | null => {
+    const q = `task=${encodeURIComponent(task.id)}`;
+    if (task.kind === "PUTAWAY") return `${fieldHome}/putaway?${q}`;
+    if (task.kind === "PICK") return `${fieldHome}/pick?${q}`;
+    if (task.kind === "COUNT" && task.sourceKind === "COUNT_SESSION") return `${fieldHome}/count?${q}`;
+    return null;
+  };
   const href = (next: { kind?: string; status?: string; after?: string }): string => {
     const p = new URLSearchParams();
     const k = next.kind ?? kind ?? "";
@@ -188,8 +196,8 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
                         {t("field.claim")}
                       </button>
                     </form>
-                  ) : task.kind === "PUTAWAY" ? (
-                    <Link href={`/t/${encodeURIComponent(slug)}/field/putaway?task=${encodeURIComponent(task.id)}`} className="btn n" style={{ ...BTN_STYLE, textDecoration: "none" }}>
+                  ) : startHref(task) !== null ? (
+                    <Link href={startHref(task) ?? ""} className="btn n" style={{ ...BTN_STYLE, textDecoration: "none" }} data-testid="field-task-start">
                       <Ico d={LICON.arrow} size={20} />
                       {t("field.start")}
                     </Link>
@@ -200,7 +208,7 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
                         {t("field.start")}
                       </button>
                       <small id={`start-${task.id}`} style={{ overflowWrap: "anywhere" }}>
-                        {t("field.startLocked")}
+                        {task.kind === "COUNT" ? t("field.countNoSession") : t("field.startLocked")}
                       </small>
                     </>
                   )}
