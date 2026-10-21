@@ -69,6 +69,8 @@ export interface KabukMain {
   readonly wait?: boolean;
   /** Pasifken dokununca balonda söylenen neden (verilmezse genel metin). */
   readonly disabledReason?: string;
+  /** Kaydedilmemiş değişiklik sayısı (ALTIN-KURAL: değişiklik varsa ana işlemde sayı rozeti). */
+  readonly badge?: number;
 }
 
 export interface KabukBarProps {
@@ -296,6 +298,11 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
     <>
       <Ico d={center.d} size={30} />
       <span className="cap">{center.label}</span>
+      {center.badge !== undefined && center.badge > 0 ? (
+        <span className="kbadge" aria-hidden="true" data-testid="kabuk-main-badge">
+          {center.badge}
+        </span>
+      ) : null}
     </>
   );
   const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];

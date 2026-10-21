@@ -39,3 +39,5 @@
 ## Raporlama
 - Kullanıcıya: sade Türkçe — canlıda / bitti, canlıya çıkıyor / kalan (onaylı sıra) / eklenebilir / senden bekleyen. Teknik ayrıntı PR'da.
 - PR açıklaması: Yapılan · Doğrulama (komut + sayı) · Durum (kod / CI / migration / canlı ayrı) · Backlog · Kalanlar (risk, UNKNOWN) · Devir.
+- **Kural atlanmaz (kullanıcı kararı 21 Ekim):** 20 Ekim hız kararı yalnız tasarım onayı bekleme, ekran görüntüsü karşılaştırma ve ekran başına e2e şartlarını kaldırır; ALTIN-KURAL, INVARIANTS ve PROTOCOL kurallarının hiçbirini kaldırmaz. Her ekran işi PR açmadan önce ALTIN-KURAL kontrol listesini tek tek uygular ve PR gövdesinde "ALTIN-KURAL kontrolü" başlığı altında ilgili maddeleri "uyuldu" ya da gerekçeli "uygulanamaz" olarak listeler.
+- Ekran kodu yazmaya başlamadan önce ALTIN-KURAL okunur ve yalnız `apps/web/app/t/[slug]/kalip/` ortak bileşenleriyle yazılır (form: `KalipFormEkran`, seçim: `KalipSecim`, çıkış: `useCikisKorumasi`, perde: `KalipPerdeKatman`, balon/ses: `useKalipToast`/`tone`); yeni bir ortak davranış gerekiyorsa önce ortak bileşene eklenir, sonra ekranda kullanılır. Mekanik bekçi `apps/web/app/ui-standards.test.ts`.

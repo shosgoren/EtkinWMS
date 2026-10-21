@@ -6,17 +6,21 @@
 // (kod değiştir / arşivle — `<a>` içine düğme gömülmez). T-978: arama (`.lsearch`, GET `q`: kod/ad, sunucuda listWarehouses). Bilinçli
 // farklar: süzgeç çipi yok (yalnız aktif/arşivli; kart rozeti gösterir); rozet = aktif lokasyon sayısı (sunucu sayımı); bildirimler kalıp balonunda (toast).
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, FormEvent, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { Banner } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Sheet } from "../easy-setup/sheet.tsx";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
-import { CodeChangedNotice, CodeEditDialog } from "../code-edit-dialog.tsx";
+import { CodeChangedNotice, CodeEditForm } from "../code-edit-dialog.tsx";
+import type { AlanKurali } from "../kalip/dogrula.ts";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
+import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { KalipAra, KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
-import { KalipOnay, KalipPencereAlan, KalipPencereDugme, KalipPencereSecim } from "../kalip/pencere.tsx";
+import { KalipOnay } from "../kalip/pencere.tsx";
+import { KalipSecim } from "../kalip/secim.tsx";
+import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { archiveWarehouseAction, createWarehouseAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
 
@@ -98,12 +102,31 @@ export interface CreateValues {
   readonly autoCode: boolean;
 }
 
+/** Lokasyon türü görünümü (kaynak paletinden; anlamı tür etiketi taşır). */
+export const KIND_VISUAL: Readonly<Record<string, { readonly d: string; readonly color: string }>> = {
+  RECEIVING: { d: LICON.moveIn, color: "2F5DA8" },
+  STORAGE: { d: LICON.raf, color: "0E7C7B" },
+  STAGING: { d: LICON.koli, color: "E56A00" },
+  TRANSIT: { d: LICON.transfer, color: "6C4BD8" },
+};
+
+/** Sunucu reddinin tek satırlık metni (neden + sonraki eylem). */
+export function useErrorText(): (e: ServerError, scope?: "warehouse" | "location" | "bulk") => string {
+  const t = useTranslations("warehouses.errors");
+  return (e, scope = "warehouse") => {
+    const key = errorKey(e, scope);
+    return `${t(key)} ${t(`${key}Action`)}`.trim();
+  };
+}
+
 /**
- * Oluşturma penceresi (depo ve lokasyon ortak, T-250). Açılışta sıradaki kod SUNUCUDAN istenir ve hazır gelir; zorunlu olan yalnızca ad.
- * `submit` sunucu eylemini çağırır; hata pencerede kalır, yazılanlar korunur. Telefonda tam ekran tek sütun, eylem çubuğu altta sabit.
+ * Oluşturma — TAM EKRAN FORM (T-990; depo ve lokasyon ortak, T-250). Açılışta sıradaki kod SUNUCUDAN istenir ve hazır gelir (öneri
+ * "değişiklik" sayılmaz); zorunlu olan yalnızca ad. Akıllı varsayılan ad (ilk depo "Ana depo") önerilmiş bir kayıttır: Kaydet hemen
+ * etkindir. Lokasyon türü renkli seçim kutuları (yerel açılır liste yok). Kod çakışması kod alanının altında, diğer ret genel neden.
+ * Doğrulama, çıkış kutusu ve Kaydet ortak `KalipFormEkran`'dadır.
  */
-export function CreateDialog({
-  open,
+export function CreateForm({
+  dark,
   title,
   intro,
   kinds,
@@ -111,140 +134,165 @@ export function CreateDialog({
   scope,
   defaultName = "",
   suggest,
-  onClose,
+  onBack,
   onDone,
   submit,
+  testId,
 }: {
-  open: boolean;
+  dark: boolean;
   title: string;
-  intro?: ReactNode;
+  /** Grubun alt satırı (ör. "Bağlı olduğu yer: …"). */
+  intro?: string;
   /** Verilirse tür seçimi gösterilir (değerler domain `LocationKindValue`). */
   kinds?: readonly string[];
   returnTo: string;
   scope: "warehouse" | "location";
-  /** Ad alanının önerilen başlangıç değeri (akıllı varsayılan). */
+  /** Ad alanının önerilen başlangıç değeri (akıllı varsayılan; geç gelirse yazılmamış ada uygulanır). */
   defaultName?: string;
-  /** Sıradaki kodu sunucudan ister; başarısızsa `null` (kullanıcı kodu kendisi yazar). */
+  /** Sıradaki kodu sunucudan ister; başarısızsa `null` (kullanıcı kodu kendisi yazar). Ret yakalanır. */
   suggest: () => Promise<string | null>;
-  onClose: () => void;
+  onBack: () => void;
   onDone: (result: unknown) => void;
   submit: (v: CreateValues) => Promise<{ ok: true; data?: unknown } | { ok: false; error: ServerError }>;
+  testId: string;
 }) {
   const t = useTranslations("warehouses.form");
   const te = useTranslations("easySetup.code");
   const tk = useTranslations("warehouses.kind");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<ServerError | null>(null);
-  const [name, setName] = useState(defaultName);
-  const [code, setCode] = useState("");
-  const [kind, setKind] = useState("STORAGE");
+  const errText = useErrorText();
+  const [initial, setInitial] = useState({ name: "", code: "", kind: "STORAGE" });
+  const [v, setV] = useState({ name: defaultName, code: "", kind: "STORAGE" });
   const [touched, setTouched] = useState(false);
   // Gecikmeli öneri yanıtı kapanışın (closure) bayat `touched` değerini görmesin diye ref (T-259 MINOR-2).
   const touchedRef = useRef(false);
+  const nameTouched = useRef(false);
   const [codeState, setCodeState] = useState<"loading" | "ready" | "failed">("loading");
+  const [linkErr, setLinkErr] = useState<ServerError | null>(null);
+  const created = useRef<unknown>(undefined);
+  const set = (k: "name" | "code" | "kind", val: string): void => setV((cur) => ({ ...cur, [k]: val }));
 
+  // Akıllı varsayılan ad sonradan gelirse (kurulum durumu okunur) kullanıcı adı yazmadıysa uygulanır.
   useEffect(() => {
-    if (!open) return;
+    if (defaultName === "" || nameTouched.current) return;
+    setV((cur) => (cur.name === "" ? { ...cur, name: defaultName } : cur));
+  }, [defaultName]);
+
+  // T-990 kök neden (ItemForm ile aynı): öneri çağrısı reddedilirse (yayından sonra eski sayfa) `.then` hiç çalışmıyor, 5 sn sonra
+  // yanıltıcı "öneri alınamadı" yazıyordu. Ret yakalanır; eski sürümse "Uygulama güncellendi — Yenile" penceresi açılır.
+  useEffect(() => {
     let live = true;
-    setError(null);
-    setName(defaultName);
-    setKind("STORAGE");
-    setTouched(false);
-    touchedRef.current = false;
-    setCode("");
-    setCodeState("loading");
-    // Öneri hiç dönmezse alan sonsuza dek salt okunur kalmasın: süre dolunca "failed" (kullanıcı kodu kendisi yazar).
     let settled = false;
+    // Öneri hiç dönmezse alan sonsuza dek salt okunur kalmasın: süre dolunca "failed" (kullanıcı kodu kendisi yazar).
     const timer = setTimeout(() => {
       if (live && !settled) {
         settled = true;
         setCodeState("failed");
       }
     }, SUGGEST_TIMEOUT_MS);
-    void suggest().then((c) => {
+    const done = (c: string | null): void => {
       if (!live || settled) return;
       settled = true;
       clearTimeout(timer);
-      if (c === null) setCodeState("failed");
-      else {
-        // Kullanıcı kodu değiştirdiyse (`touched`; silip boş bırakmak dahil) öneri uygulanmaz (N-14: sessiz değişiklik yok).
-        if (!touchedRef.current) setCode(c);
-        setCodeState("ready");
+      if (c === null) {
+        setCodeState("failed");
+        return;
       }
+      // Kullanıcı kodu değiştirdiyse (`touched`; silip boş bırakmak dahil) öneri uygulanmaz (N-14: sessiz değişiklik yok).
+      if (!touchedRef.current) {
+        setV((cur) => ({ ...cur, code: c }));
+        setInitial((cur) => ({ ...cur, code: c }));
+      }
+      setCodeState("ready");
+    };
+    suggest().then(done, (e: unknown) => {
+      if (eskiSurumMu(e)) eskiSurumBildir();
+      done(null);
     });
     return () => {
       live = false;
       clearTimeout(timer);
     };
-    // `suggest`/`defaultName` her açılışta okunur; kimlikleri değişse de form yeniden başlamaz.
-  }, [open]);
+    // Açılışta bir kez (`suggest` kimliği değişse de form yeniden başlamaz).
+  }, []);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    const res = await submit({ code, name, kind, autoCode: !touched && codeState === "ready" });
-    setBusy(false);
+  async function save(): Promise<KaydetSonuc> {
+    setLinkErr(null);
+    const res = await submit({ code: v.code, name: v.name, kind: v.kind, autoCode: !touched && codeState === "ready" });
     if (!res.ok) {
-      setError(res.error);
-      return;
+      const text = errText(res.error, scope);
+      const key = errorKey(res.error, scope);
+      if (key === "validation_failed_code_taken" || key === "validation_failed_code_ambiguous") return { ok: false, alan: { code: text } };
+      if (res.error.detail === "MFA_REQUIRED" || res.error.detail === "RECENT_AUTH_REQUIRED") setLinkErr(res.error);
+      return { ok: false, mesaj: res.error.requestId === undefined ? text : `${text} · ${res.error.requestId}` };
     }
-    onDone(res.data);
+    created.current = res.data;
+    return { ok: true };
   }
 
+  const rules: AlanKurali[] = [
+    { name: "name", label: t("name"), required: true, maxLength: 512 },
+    { name: "code", label: t("code"), required: true, maxLength: 512 },
+  ];
+  const vis = scope === "warehouse" ? { d: LICON.depo, color: "30475A" } : (KIND_VISUAL[v.kind] ?? { d: LICON.raf, color: "0E7C7B" });
+  const codeHint = codeState === "loading" ? te("loading") : codeState === "failed" ? te("failed") : touched ? `${te("custom")} ${t("codeHint")}` : `${te("suggested")} ${t("codeHint")}`;
   return (
-    <Sheet
-      open={open}
+    <KalipFormEkran
+      dark={dark}
       title={title}
-      titleId="create-dialog-title"
-      icon={scope === "warehouse" ? { d: LICON.depo, color: "2F5DA8" } : { d: LICON.raf, color: "2F7D5B" }}
-      busy={busy}
-      onClose={onClose}
-      onSubmit={(e) => void onSubmit(e)}
-      footer={
-        <>
-          <KalipPencereDugme kind="cancel" onClick={onClose} disabled={busy}>
-            {t("cancel")}
-          </KalipPencereDugme>
-          <KalipPencereDugme type="submit" loading={busy} disabled={codeState === "loading"}>
-            {t("submit")}
-          </KalipPencereDugme>
-        </>
-      }
+      icon={vis}
+      testId={testId}
+      values={v}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={() => onDone(created.current)}
+      onBack={onBack}
+      preview={<KalipOnizleme name={v.name} code={v.code} d={vis.d} color={vis.color} {...(kinds === undefined ? {} : { kind: tk(v.kind) })} />}
     >
-      {intro ? <div className="kpt">{intro}</div> : null}
-      <KalipPencereAlan label={t("name")} name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" required maxLength={512} />
-      <KalipPencereAlan
-        label={t("code")}
-        hint={codeState === "loading" ? te("loading") : codeState === "failed" ? te("failed") : touched ? `${te("custom")} ${t("codeHint")}` : `${te("suggested")} ${t("codeHint")}`}
-        name="code"
-        value={code}
-        readOnly={codeState === "loading"}
-        aria-busy={codeState === "loading"}
-        onChange={(e) => {
-          touchedRef.current = true;
-          setTouched(true);
-          setCode(e.target.value);
-        }}
-        autoComplete="off"
-        autoCapitalize="characters"
-        required
-        maxLength={512}
-      />
-      {kinds === undefined ? null : (
-        <KalipPencereSecim label={t("kind")} id="create-kind" name="kind" value={kind} onChange={(e) => setKind(e.target.value)}>
-          {kinds.map((k) => (
-            <option key={k} value={k}>
-              {tk(k)}
-            </option>
-          ))}
-        </KalipPencereSecim>
-      )}
-      {error ? <ServerErrorBanner error={error} returnTo={returnTo} scope={scope} /> : null}
-    </Sheet>
+      <KalipGrup title={title} {...(intro === undefined ? {} : { sub: intro })} d={vis.d} color={vis.color}>
+        <KalipAlan
+          label={`${t("name")} *`}
+          name="name"
+          value={v.name}
+          onChange={(e) => {
+            nameTouched.current = true;
+            set("name", e.target.value);
+          }}
+          autoComplete="off"
+          maxLength={512}
+        />
+        <KalipAlan
+          label={`${t("code")} *`}
+          hint={codeHint}
+          name="code"
+          value={v.code}
+          readOnly={codeState === "loading"}
+          aria-busy={codeState === "loading"}
+          onChange={(e) => {
+            touchedRef.current = true;
+            setTouched(true);
+            set("code", e.target.value);
+          }}
+          autoComplete="off"
+          autoCapitalize="characters"
+          maxLength={512}
+        />
+        {kinds === undefined ? null : (
+          <KalipSecim
+            name="kind"
+            label={t("kind")}
+            value={v.kind}
+            color={vis.color}
+            onPick={(id) => set("kind", id)}
+            options={kinds.map((k) => ({ id: k, label: tk(k), d: KIND_VISUAL[k]?.d ?? LICON.raf, color: KIND_VISUAL[k]?.color ?? "0E7C7B" }))}
+            testId="create-kind"
+          />
+        )}
+        {linkErr === null ? null : <ServerErrorBanner error={linkErr} returnTo={returnTo} scope={scope} />}
+      </KalipGrup>
+    </KalipFormEkran>
   );
 }
-
 
 export interface WarehouseView {
   readonly id: string;
@@ -297,9 +345,7 @@ export function WarehousesView({
   const router = useRouter();
   const home = `/t/${encodeURIComponent(slug)}`;
   const base = `${home}/warehouses`;
-  const [createOpen, setCreateOpen] = useState(false);
   const [archiving, setArchiving] = useState<WarehouseView | null>(null);
-  const [editing, setEditing] = useState<WarehouseView | null>(null);
   const [codeChanged, setCodeChanged] = useState<{ readonly id: string; readonly from: string; readonly to: string } | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -307,9 +353,9 @@ export function WarehousesView({
   const [version, setVersion] = useState(0);
   const progress = useSetupProgress(slug, canManage, version);
   const guide = canManage && progress !== null && !isSetupComplete(progress);
-  const pathname = usePathname();
   const params = useSearchParams();
   const { say, node: toast } = useKalipToast("liste");
+  const errText = useErrorText();
   const ok = (text: string): void => {
     tone("ok");
     say("ok", text);
@@ -319,13 +365,20 @@ export function WarehousesView({
     setError(e);
   };
 
-  // Rehberin büyük düğmesi `?new=1` ile gelir: formu aç, adresi temizle (yenilemede yeniden açılmasın).
-  useEffect(() => {
-    if (params.get("new") === "1" && canManage) {
-      setCreateOpen(true);
-      router.replace(pathname);
-    }
-  }, [params, canManage, pathname, router]);
+  // T-990: ekleme ve kod değiştirme TAM EKRAN FORMDUR; adres `?new=1` (rehberin büyük düğmesi de buraya gelir) / `?kod=<depo kimliği>`.
+  // Geri listeye (arama ve sayfa imleci korunur) döner.
+  const listHref = (() => {
+    const p = new URLSearchParams(params.toString());
+    p.delete("new");
+    p.delete("kod");
+    const qs = p.toString();
+    return qs === "" ? base : `${base}?${qs}`;
+  })();
+  const withParam = (k: string, val: string): string => `${listHref}${listHref.includes("?") ? "&" : "?"}${k}=${encodeURIComponent(val)}`;
+  const creating = params.get("new") === "1" && canManage;
+  const kodId = params.get("kod");
+  const editing = kodId === null || !canManage ? undefined : warehouses.find((w) => w.id === kodId && w.status === "ACTIVE");
+  const toList = (): void => router.push(listHref);
 
   async function changeCode(id: string, code: string) {
     const r = await renameWarehouseAction({ slug, warehouseId: id, code });
@@ -364,7 +417,7 @@ export function WarehousesView({
 
   const openCreate = (): void => {
     tone("tap");
-    setCreateOpen(true);
+    router.push(withParam("new", "1"));
   };
 
   // Kurulum rehberi (KalipKurulum): şimdiki adım dolu renk; depo adımı bu ekranın formunu açar.
@@ -391,6 +444,64 @@ export function WarehousesView({
   const countLbl = nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
   const lockedId = "warehouse-locked";
 
+  if (creating) {
+    return (
+      <CreateForm
+        dark={dark}
+        title={t("createTitle")}
+        returnTo={base}
+        scope="warehouse"
+        testId="warehouse-form"
+        defaultName={progress !== null && !progress.hasWarehouse ? te("form.defaultWarehouseName") : ""}
+        suggest={async () => {
+          const r = await suggestCodeAction({ slug, kind: "warehouse" });
+          return r.ok ? r.data.code : null;
+        }}
+        onBack={toList}
+        onDone={(data) => {
+          ok(t("done.created"));
+          setVersion((n) => n + 1);
+          // İlk depo: doğrudan raf oluşturucuya git (rehberin 2. adımı).
+          const id = (data as { warehouseId?: string } | undefined)?.warehouseId;
+          if (progress !== null && !progress.hasLocation && id !== undefined) router.push(`${base}/${encodeURIComponent(id)}?bulk=1`);
+          else {
+            toList();
+            router.refresh();
+          }
+        }}
+        submit={async (v) => {
+          const res = await createWarehouseAction({ slug, code: v.code, name: v.name, autoCode: v.autoCode });
+          return res.ok ? { ok: true, data: res.data } : { ok: false, error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId } };
+        }}
+      />
+    );
+  }
+  if (editing !== undefined) {
+    return (
+      <CodeEditForm
+        key={editing.id}
+        dark={dark}
+        subject={editing.name}
+        current={editing.code}
+        icon={{ d: LICON.depo, color: "30475A" }}
+        testId="code-edit-form"
+        onBack={toList}
+        submit={(code) => changeCode(editing.id, code)}
+        errorText={(e) => errText(e)}
+        renderError={(e) => <ServerErrorBanner error={e} returnTo={base} />}
+        onDone={(r) => {
+          setError(null);
+          if (r.changed) {
+            tone("ok");
+            setCodeChanged({ id: editing.id, from: r.from, to: r.to });
+          } else ok(t("done.codeSame"));
+          toList();
+          router.refresh();
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <KalipEkran
@@ -401,7 +512,7 @@ export function WarehousesView({
         testId="warehouses"
         bar={{
           back: { href: home },
-          main: { label: tk("add"), aria: t("create"), d: LICON.plus, disabled: !canManage, onClick: openCreate, testId: "warehouses-add" },
+          main: { label: tk("add"), aria: t("create"), d: LICON.plus, disabled: !canManage, disabledReason: t("lockedReason"), onClick: openCreate, testId: "warehouses-add" },
         }}
         overlays={toast}
       >
@@ -467,7 +578,7 @@ export function WarehousesView({
                           aria-label={t("codeEdit.for", { name: w.name })}
                           onClick={() => {
                             tone("tap");
-                            setEditing(w);
+                            router.push(withParam("kod", w.id));
                           }}
                         >
                           <Ico d={LICON.pencil} size={18} />
@@ -511,50 +622,6 @@ export function WarehousesView({
         )}
       </KalipEkran>
 
-      <CreateDialog
-        open={createOpen}
-        title={t("createTitle")}
-        returnTo={base}
-        scope="warehouse"
-        defaultName={progress !== null && !progress.hasWarehouse ? te("form.defaultWarehouseName") : ""}
-        suggest={async () => {
-          const r = await suggestCodeAction({ slug, kind: "warehouse" });
-          return r.ok ? r.data.code : null;
-        }}
-        onClose={() => setCreateOpen(false)}
-        onDone={(data) => {
-          setCreateOpen(false);
-          ok(t("done.created"));
-          setVersion((n) => n + 1);
-          // İlk depo: doğrudan raf oluşturucuya git (rehberin 2. adımı).
-          const id = (data as { warehouseId?: string } | undefined)?.warehouseId;
-          if (progress !== null && !progress.hasLocation && id !== undefined) router.push(`${base}/${encodeURIComponent(id)}?bulk=1`);
-          else router.refresh();
-        }}
-        submit={async (v) => {
-          const res = await createWarehouseAction({ slug, code: v.code, name: v.name, autoCode: v.autoCode });
-          return res.ok ? { ok: true, data: res.data } : { ok: false, error: { code: res.error.code, detail: res.error.detail, requestId: res.error.requestId } };
-        }}
-      />
-      <CodeEditDialog
-        open={editing !== null}
-        subject={editing?.name ?? ""}
-        current={editing?.code ?? ""}
-        titleId="code-edit-warehouse-title"
-        onClose={() => setEditing(null)}
-        submit={(code) => (editing === null ? Promise.resolve({ ok: false, error: { code: "NOT_FOUND" } } as const) : changeCode(editing.id, code))}
-        renderError={(e) => <ServerErrorBanner error={e} returnTo={base} />}
-        onDone={(r) => {
-          const id = editing?.id;
-          setEditing(null);
-          setError(null);
-          if (r.changed && id !== undefined) {
-            tone("ok");
-            setCodeChanged({ id, from: r.from, to: r.to });
-          } else ok(t("done.codeSame"));
-          router.refresh();
-        }}
-      />
       <KalipOnay
         open={archiving !== null}
         title={t("confirmArchive.title", { name: archiving?.name ?? "" })}

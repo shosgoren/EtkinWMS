@@ -5,10 +5,14 @@
 // listesi (satırda YENİ KOD). Ana işlem ortak alt çubukta PERSONELİ EKLE. Güvenlik: kod yalnız bu yanıtta ve bu bileşenin belleğinde
 // (kaydedilmez, e-postayla gitmez); QR yalnız saha giriş adresini taşır (kod URL'ye girmez); depo önceden seçili gelmez ve seçilmeden
 // gönderilemez (T-413 m2). Bilinçli fark (T-971): ekran içi tema düğmesi yok (tema Hesap menüsünde).
+// T-990 (ALTIN-KURAL): kapalı PERSONELİ EKLE sessiz kalmaz (`disabledReason`: hangi alan eksik); yazılıp eklenmemiş personel varken Geri /
+// Ana ekran / bağlantılar ortak cam çıkış kutusunu açar ("Ekle ve çık"). Eklenen personelin değerleri ekranda kalır, koruma kalkar.
 import { useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
+import { useCikisKorumasi } from "../../kalip/cikis.tsx";
+import { degisti } from "../../kalip/dogrula.ts";
 import { Ico, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipAlan, KalipGrup, KalipIzgara, KalipSecenek } from "../../kalip/form.tsx";
 import { kdz } from "../../kalip/tokens.ts";
@@ -66,6 +70,8 @@ export function FieldStaffView({
   const [issued, setIssued] = useState<Issued | null>(null);
   const { say, node: toast } = useKalipToast("form");
   const returnTo = `/t/${slug}/members/field`;
+  // Son eklenen (ya da açılıştaki boş) değerler: yalnız bunlardan farklıysa yarım iş sayılır.
+  const [kayitli, setKayitli] = useState<Readonly<Record<string, unknown>>>({ name: "", username: "", role: "PICKER", wh: undefined });
 
   function failText(code: string, detail: string | undefined): { text: string; reauth: boolean } {
     if (detail === "RECENT_AUTH_REQUIRED") return { text: t("errReauth"), reauth: true };
@@ -91,11 +97,11 @@ export function FieldStaffView({
     setErr(failText(res.error.code, res.error.detail));
   }
 
-  async function add(): Promise<void> {
+  async function add(): Promise<boolean> {
     if (wh === undefined) {
       tone("err");
       setErr({ text: t("errWarehouse"), reauth: false });
-      return;
+      return false;
     }
     setBusy(true);
     setErr(null);
@@ -106,15 +112,29 @@ export function FieldStaffView({
       tone("ok");
       setIssued({ username: res.data.username, code: res.data.code });
       say("ok", t("cardKick", { username: res.data.username }));
+      setKayitli({ name, username, role, wh });
       router.refresh();
-      return;
+      return true;
     }
     tone("err");
     setErr(failText(res.error.code, res.error.detail));
     router.refresh();
+    return false;
   }
 
   const canAdd = !busy && name.trim().length >= 2 && username.trim().length >= 3;
+  const offReason = busy ? t("offBusy") : name.trim().length < 2 ? t("offName") : t("offUsername");
+  const korunan = useCikisKorumasi(degisti({ name, username, role, wh }, kayitli), {
+    dark,
+    text: t("leaveText"),
+    saveLabel: t("leaveSave"),
+    onSave: () => {
+      if (canAdd) return add();
+      tone("err");
+      say("err", offReason);
+      return false;
+    },
+  });
   const whValue = wh === undefined ? "" : wh === null ? ALL : wh;
 
   return (
@@ -132,11 +152,17 @@ export function FieldStaffView({
           aria: t("add"),
           d: LICON.plus,
           disabled: !canAdd,
+          disabledReason: offReason,
           onClick: () => void add(),
           testId: "field-staff-add",
         },
       }}
-      overlays={toast}
+      overlays={
+        <>
+          {toast}
+          {korunan.kutu}
+        </>
+      }
     >
       <KalipIzgara
         left={

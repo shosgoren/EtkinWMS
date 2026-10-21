@@ -346,7 +346,17 @@
       "close": "Close",
       "sentEmail": "The invitation was sent by email. It is valid for 72 hours.",
       "sentScreen": "The invitation email could not be sent. Pass the link below on to the person you invited.",
-      "linkLabel": "Invitation link"
+      "linkLabel": "Invitation link",
+      "sendShort": "SEND",
+      "sent": "Invitation sent",
+      "failed": "Invitation could not be sent — see the reason below.",
+      "sub": "Type the email, pick a role, press SEND.",
+      "gWho": "Who are you inviting?",
+      "gRole": "With which role?",
+      "leaveText": "The invitation was not sent. If you leave, what you typed is lost.",
+      "leaveSave": "Send and leave",
+      "doneShort": "DONE",
+      "resultSub": "Invitation result"
     },
     "linkBox": {
       "copy": "Copy",
@@ -421,7 +431,8 @@
     "k": {
       "inviteShort": "INVITE",
       "count": "{n} MEMBERS",
-      "pendingCount": "{n} INVITES"
+      "pendingCount": "{n} INVITES",
+      "wait": "The screen is getting ready, one moment…"
     },
     "search": "Search members",
     "searchPlaceholder": "Search name or email",
@@ -1893,7 +1904,19 @@
     "paging": "Pages",
     "countSessions": "Count sessions",
     "search": "Search tasks",
-    "searchPlaceholder": "Search item, location or person"
+    "searchPlaceholder": "Search item, location or person",
+    "k": {
+      "assignShort": "ASSIGN",
+      "cancelShort": "CANCEL",
+      "assignSub": "Pick who will do the task, then press ASSIGN.",
+      "cancelSub": "Write the reason, then press CANCEL.",
+      "leaveAssign": "The task was not assigned. If you leave, your choice is lost.",
+      "leaveAssignSave": "Assign and leave",
+      "leaveCancel": "The task was not cancelled. If you leave, the reason you typed is lost.",
+      "leaveCancelSave": "Cancel task and leave",
+      "gTask": "Task",
+      "notFound": "This task is no longer in the list (the page may have changed)."
+    }
   },
   "receiving": {
     "title": "Expected deliveries",
@@ -3459,7 +3482,12 @@
     "k": {
       "addShort": "ADD",
       "person": "PERSON"
-    }
+    },
+    "offName": "Full name must be at least 2 letters.",
+    "offUsername": "Username must be at least 3 characters.",
+    "offBusy": "Working on it, one moment…",
+    "leaveText": "The staff member was not added. If you leave, what you typed is lost.",
+    "leaveSave": "Add and leave"
   },
   "fieldLogin": {
     "title": "Field sign-in",
@@ -3612,7 +3640,10 @@
     "suspendedTitle": "Automatically stopped · {name}",
     "suspendedBody": "3 accounts were locked from this device within an hour; the device was revoked and its sessions closed. Unlock the accounts from the Members screen.",
     "closeSessions": "CLOSE SESSIONS",
-    "sessionsClosed": "Sessions closed."
+    "sessionsClosed": "Sessions closed.",
+    "offCode": "First type the 6-digit code shown on the terminal.",
+    "offBusy": "Working on it, one moment…",
+    "leaveText": "Device approval is unfinished. If you leave, the code you typed is lost."
   },
   "workspaces": {
     "title": "Choose a workspace",
@@ -4237,7 +4268,10 @@
     "approvedTitle": "WAITING FOR PIN",
     "approvedHint": "APPROVED · PERSON WILL SET A PIN (24 HOURS)",
     "cancelApproved": "CANCEL",
-    "cancelApprovedAria": "Cancel approval for {name}"
+    "cancelApprovedAria": "Cancel approval for {name}",
+    "offCode": "First type the 6-digit code from the person's phone.",
+    "offBusy": "Working on it, one moment…",
+    "leaveText": "Approval is unfinished. If you leave, the code you typed is lost."
   },
   "ekip": {
     "title": "Team",
@@ -4502,7 +4536,9 @@
     "updatedText": "A new version is live. Reload the page to continue; this action could not be sent with the old version.",
     "updatedReload": "Reload",
     "updatedLater": "Later",
-    "mainOff": "This action is not available right now."
+    "mainOff": "This action is not available right now.",
+    "discarded": "Changes discarded",
+    "formFirst": "Fill in the required fields and make the selections first."
   },
   "saha": {
     "online": "Online",
@@ -4566,7 +4602,10 @@
       "doneNext": "NEXT: PUT AWAY · SCAN",
       "putDone": "Put away · {n}",
       "fixed": "Task quantity",
-      "available": "ON SHELF {n}"
+      "available": "ON SHELF {n}",
+      "busy": "Working on it, one moment…",
+      "overMax": "You cannot pick more than expected — lower the quantity.",
+      "needOne": "Enter or scan at least 1 first."
     }
   },
   "destek": {

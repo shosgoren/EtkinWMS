@@ -13,6 +13,7 @@ import { ErrorNotice, type ErrorInfo, type ActionResult } from "../receipt-form.
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
 import { KalipAlan, KalipAnahtar, KalipGrup, KalipSecenek } from "../../kalip/form.tsx";
+import { KalipSecim } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { getPackageReceiptAction, packageItemOptionsAction, packageReceivingLocationsAction, packageWarehousesAction, postPackageReceiptAction, preparePackageReceiptAction, resolvePackageItemScanAction, searchPackageItemsAction, type PackageCommandDto, type PackageItemDto, type PackageItemOptionsDto, type PackageReceiptDto } from "./actions.ts";
 
@@ -273,15 +274,15 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
           <KalipGrup title={t("packages")} sub={options ? `${options.item.code} · ${options.item.name}` : undefined} d={LICON.koli} color="0E7C7B" testId="package-packages">
             <div className="pk-body">
               <div className="pk-grid">
-                <label className="fld"><span>{t("warehouse")}</span><select value={warehouseId} onChange={e => { const id = e.target.value; setWarehouseId(id); lock.current = true; setBusy(true); void loadLocations(id).catch(fail).finally(() => { lock.current = false; setBusy(false); }); }}><option value="">{t("choose")}</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}</select></label>
-                <label className="fld"><span>{t("location")}</span><select value={locationId} onChange={e => setLocationId(e.target.value)}><option value="">{t("choose")}</option>{locations.map(l => <option key={l.id} value={l.id}>{l.code} · {l.name}</option>)}</select></label>
+                <KalipSecim name="warehouseId" label={t("warehouse")} placeholder={t("choose")} color="30475A" icon={{ d: LICON.depo, color: "30475A" }} value={warehouseId} options={warehouses.map(w => ({ id: w.id, label: `${w.code} · ${w.name}`, d: LICON.depo }))} onPick={id => { if (id === warehouseId) return; setWarehouseId(id); lock.current = true; setBusy(true); void loadLocations(id).catch(fail).finally(() => { lock.current = false; setBusy(false); }); }} testId="package-warehouse" />
+                <KalipSecim name="locationId" label={t("location")} placeholder={t("choose")} color="2F7D5B" icon={{ d: LICON.moveIn, color: "2F7D5B" }} value={locationId} options={locations.map(l => ({ id: l.id, label: `${l.code} · ${l.name}`, d: LICON.moveIn }))} onPick={setLocationId} testId="package-location" />
               </div>
               {warehouses.length === 0 ? <Banner kind="warning">⚠ {t("noWarehouse")}</Banner> : warehouseId && locations.length === 0 ? <Banner kind="warning">⚠ {t("noLocation")}</Banner> : null}
               <div className="pk-body pk-tight"><span className="pk-lab">{t("kind")}</span>
                 <KalipSecenek label={t("kind")} color="0E7C7B" value={kind} onPick={id => setKind(id as "VARIL" | "KOLI")} options={[{ id: "VARIL", label: t("barrel"), d: LICON.koli }, { id: "KOLI", label: t("box"), d: LICON.box }]} />
               </div>
               <div className="pk-grid">
-                <label className="fld"><span>{t("unit")}</span><select value={unitId} onChange={e => setUnitId(e.target.value)}>{options?.units.map(u => <option key={u.unitId} value={u.unitId}>{u.unitCode} · {u.unitName}</option>)}</select></label>
+                <KalipSecim name="unitId" label={t("unit")} color="0E7C7B" value={unitId} options={(options?.units ?? []).map(u => ({ id: u.unitId, label: `${u.unitCode} · ${u.unitName}` }))} onPick={setUnitId} testId="package-unit" />
                 <KalipAlan label={t("count")} inputMode="numeric" value={count} maxLength={4} aria-invalid={!/^\d{1,3}$/.test(count) || Number(count) < 1 || Number(count) > 200} onChange={e => { setCount(e.target.value); if (/^\d{1,3}$/.test(e.target.value) && Number(e.target.value) >= 1 && Number(e.target.value) <= 200) setRows(old => Array.from({ length: Number(e.target.value) }, (_, i) => old[i] ?? { ...entry })); }} />
               </div>
               <KalipAnahtar title={t("different")} d={LICON.grid} color="6C4BD8" on={!equal} aria={t("different")} onToggle={() => { if (equal && /^\d{1,3}$/.test(count) && Number(count) >= 1 && Number(count) <= 200) setRows(Array.from({ length: Number(count) }, () => ({ ...entry }))); setEqual(!equal); }} />

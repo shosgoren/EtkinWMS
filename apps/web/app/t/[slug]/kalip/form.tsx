@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useId, type CSSProperties, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico } from "./ekran.tsx";
-import { useAlanHata, useSalla } from "./form-baglam.tsx";
+import { useAlanHata, useSalla, useZorunlu } from "./form-baglam.tsx";
 import { kdz } from "./tokens.ts";
 
 const c = (hex: string): string => kdz("dzf", hex);
@@ -183,14 +183,16 @@ export function KalipAlan({ label, hint, error, multiline = false, ...input }: {
   const id = useId();
   const ctxErr = useAlanHata(typeof input.name === "string" ? input.name : undefined);
   const salla = useSalla();
+  const req = useZorunlu(typeof input.name === "string" ? input.name : undefined);
   const err = error ?? ctxErr;
+  const shown = req && !label.trimEnd().endsWith("*") ? `${label} *` : label;
   const hid = `${id}-h`;
   const eid = `${id}-e`;
   const desc = [hint === undefined ? null : hid, err === undefined ? null : eid].filter((x) => x !== null).join(" ") || undefined;
   return (
     <>
       <label key={err === undefined ? "ok" : `bad-${salla}`} className={`fld${err === undefined ? "" : " bad"}`} data-alan={input.name}>
-        <span>{label}</span>
+        <span>{shown}</span>
         {multiline ? (
           <textarea {...(input as unknown as TextareaHTMLAttributes<HTMLTextAreaElement>)} aria-invalid={err === undefined ? undefined : true} aria-describedby={desc} />
         ) : (
@@ -204,6 +206,7 @@ export function KalipAlan({ label, hint, error, multiline = false, ...input }: {
       )}
       {err === undefined ? null : (
         <small id={eid} className="kerr" role="alert" data-testid={typeof input.name === "string" ? `err-${input.name}` : undefined}>
+          <Ico d={LICON.warn} size={16} />
           {err}
         </small>
       )}

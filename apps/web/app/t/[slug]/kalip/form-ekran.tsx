@@ -202,7 +202,10 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
     });
   };
 
-  const baglam = useMemo(() => ({ hatalar, salla }), [hatalar, salla]);
+  const zorunlu = useMemo(() => new Set(rules.filter((r) => r.required === true).map((r) => r.name)), [rules]);
+  const baglam = useMemo(() => ({ hatalar, salla, zorunlu }), [hatalar, salla, zorunlu]);
+  // Değişen alan sayısı (ana işlem rozeti).
+  const changedN = canEdit ? Object.keys({ ...initial, ...values }).filter((k) => degisti(values[k], initial[k])).length : 0;
   return (
     <KalipEkran
       kind="form"
@@ -222,6 +225,7 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
               onClick: () => onKaydet(),
               disabled: !dirty || busy,
               disabledReason: busy ? t("saving") : t("noChange"),
+              badge: changedN,
               testId: `${testId ?? "kalip-form"}-save`,
             }
           : { label: "", aria: lockedTitle ?? t("readOnly"), d: LICON.lock, disabled: true, disabledReason: lockedTitle ?? t("readOnly") },

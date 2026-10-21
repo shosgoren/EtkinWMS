@@ -8,6 +8,8 @@ export interface FormBaglam {
   readonly hatalar: Hatalar;
   /** Her geçersiz Kaydet denemesinde artar: alan sarsılması yeniden başlar. */
   readonly salla: number;
+  /** Zorunlu alan adları (etikete "*" işareti). */
+  readonly zorunlu?: ReadonlySet<string>;
 }
 
 export const FormBaglamCtx = createContext<FormBaglam | null>(null);
@@ -22,4 +24,10 @@ export function useAlanHata(name: string | undefined): string | undefined {
 /** Alanın sarsılma anahtarı (`key` olarak verilince animasyon yeniden oynar). */
 export function useSalla(): number {
   return useContext(FormBaglamCtx)?.salla ?? 0;
+}
+
+/** Alan zorunlu mu (form kurallarından). */
+export function useZorunlu(name: string | undefined): boolean {
+  const ctx = useContext(FormBaglamCtx);
+  return name !== undefined && ctx?.zorunlu?.has(name) === true;
 }

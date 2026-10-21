@@ -11,7 +11,7 @@ import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type K
 import { LICON } from "../../../design/kalip-icons.ts";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, MicIco, tone } from "./ekran.tsx";
-import { useAlanHata } from "./form-baglam.tsx";
+import { useAlanHata, useZorunlu } from "./form-baglam.tsx";
 import { KalipPerdeKatman } from "./perde.tsx";
 import { kdzOrtak } from "./tokens.ts";
 
@@ -38,6 +38,7 @@ function Hata({ name }: { name: string | undefined }) {
   const h = useAlanHata(name);
   return h === undefined ? null : (
     <small className="kerr" role="alert" data-testid={`err-${name}`}>
+      <Ico d={LICON.warn} size={16} />
       {h}
     </small>
   );
@@ -69,6 +70,7 @@ export function KalipSecimGrubu({
   const lid = useId();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const hata = useAlanHata(name);
+  const req = useZorunlu(name);
   const cur = Math.max(
     0,
     options.findIndex((o) => o.id === value),
@@ -93,7 +95,7 @@ export function KalipSecimGrubu({
   return (
     <div className={`ksecg${hata === undefined ? "" : " bad"}`} data-alan={name} data-testid={testId}>
       <span className="ksecl" id={lid}>
-        {label}
+        {req && !label.trimEnd().endsWith("*") ? `${label} *` : label}
       </span>
       <div className="gpick" role="radiogroup" aria-labelledby={lid} aria-invalid={hata === undefined ? undefined : true}>
         {options.map((o, i) => {
@@ -388,6 +390,7 @@ export function KalipSecimListe({
   const t = useTranslations("kalip");
   const [open, setOpen] = useState(false);
   const hata = useAlanHata(name);
+  const req = useZorunlu(name);
   const sel = options.find((o) => o.id === value);
   const shown = sel === undefined ? (placeholder ?? t("secPick")) : sel.sub === undefined ? sel.label : `${sel.label} · ${sel.sub}`;
   return (
@@ -407,7 +410,7 @@ export function KalipSecimListe({
         data-testid={testId}
         data-value={value}
       >
-        <span>{label}</span>
+        <span>{req && !label.trimEnd().endsWith("*") ? `${label} *` : label}</span>
         <em>{shown}</em>
         <Ico d={LICON.chev} size={20} className="ico chev" />
       </button>

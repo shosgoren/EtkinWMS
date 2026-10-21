@@ -35,6 +35,28 @@ export function cikisKorumasiAcik(): boolean {
   return korumalar.length > 0;
 }
 
+/**
+ * "Kaydetmeden çık" sonrası "Değişiklikler bırakıldı" balonu (ALTIN-KURAL). Gidilen ekran kalıp kabı olmayabilir; balon belgeye bağlı tek
+ * kalıp balonu olarak çizilir (istemci içi geçişte yaşar), 2,6 sn sonra kalkar. Görünüş kaynak `.toast` (KalipForm), ses `tone`.
+ */
+function birakildiBalonu(text: string, dark: boolean): void {
+  try {
+    document.querySelector(".kbirak")?.remove();
+    const host = document.createElement("div");
+    host.className = `dzf kbirak${dark ? " dz-dark" : ""}`;
+    const box = document.createElement("div");
+    box.className = "toast";
+    box.setAttribute("role", "status");
+    box.setAttribute("data-testid", "kalip-toast-discarded");
+    box.textContent = text;
+    host.appendChild(box);
+    document.body.appendChild(host);
+    window.setTimeout(() => host.remove(), 2600);
+  } catch {
+    /* belge yoksa balon yok */
+  }
+}
+
 /** Kaydetmeden çık / kaydedip çık: `beforeunload` bir kez susturulur, sonra gidilir. */
 function serbestGit(proceed: () => void): void {
   gecis = true;
@@ -91,6 +113,7 @@ export interface CikisSecenek {
  */
 export function useCikisKorumasi(dirty: boolean, opts: CikisSecenek = {}): CikisKorumasi {
   const id = useId();
+  const t = useTranslations("kalip");
   const router = useRouter();
   const [bekleyen, setBekleyen] = useState<(() => void) | null>(null);
   const [busy, setBusy] = useState(false);
@@ -167,6 +190,8 @@ export function useCikisKorumasi(dirty: boolean, opts: CikisSecenek = {}): Cikis
       onLeave={() => {
         const go = bekleyen;
         setBekleyen(null);
+        tone("tap");
+        birakildiBalonu(t("discarded"), opts.dark === true || document.querySelector(".dz-dark") !== null);
         if (go !== null) serbestGit(go);
       }}
       onStay={() => setBekleyen(null)}

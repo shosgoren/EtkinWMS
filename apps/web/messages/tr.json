@@ -346,7 +346,17 @@
       "close": "Kapat",
       "sentEmail": "Davet e-posta ile gönderildi. Davet 72 saat geçerlidir.",
       "sentScreen": "Davet e-postası gönderilemedi. Aşağıdaki bağlantıyı davet ettiğin kişiye kendin ilet.",
-      "linkLabel": "Davet bağlantısı"
+      "linkLabel": "Davet bağlantısı",
+      "sendShort": "GÖNDER",
+      "sent": "Davet gönderildi",
+      "failed": "Davet gönderilemedi — nedeni aşağıda.",
+      "sub": "E-postayı yaz, rolü seç, GÖNDER'e bas.",
+      "gWho": "Kimi davet ediyorsun?",
+      "gRole": "Hangi rolle?",
+      "leaveText": "Davet gönderilmedi. Çıkarsan yazdıkların kaybolur.",
+      "leaveSave": "Gönder ve çık",
+      "doneShort": "TAMAM",
+      "resultSub": "Davet sonucu"
     },
     "linkBox": {
       "copy": "Kopyala",
@@ -421,7 +431,8 @@
     "k": {
       "inviteShort": "DAVET ET",
       "count": "{n} ÜYE",
-      "pendingCount": "{n} DAVET"
+      "pendingCount": "{n} DAVET",
+      "wait": "Ekran hazırlanıyor, bir saniye…"
     },
     "search": "Üye ara",
     "searchPlaceholder": "Ad ya da e-posta ara",
@@ -1893,7 +1904,19 @@
     "paging": "Sayfalar",
     "countSessions": "Sayım oturumları",
     "search": "Görev ara",
-    "searchPlaceholder": "Ürün, raf ya da kişi ara"
+    "searchPlaceholder": "Ürün, raf ya da kişi ara",
+    "k": {
+      "assignShort": "ATA",
+      "cancelShort": "İPTAL ET",
+      "assignSub": "Görevi yapacak kişiyi seç, ATA'ya bas.",
+      "cancelSub": "Gerekçeyi yaz, İPTAL ET'e bas.",
+      "leaveAssign": "Görev atanmadı. Çıkarsan seçimin kaybolur.",
+      "leaveAssignSave": "Ata ve çık",
+      "leaveCancel": "Görev iptal edilmedi. Çıkarsan yazdığın gerekçe kaybolur.",
+      "leaveCancelSave": "İptal et ve çık",
+      "gTask": "Görev",
+      "notFound": "Bu görev artık listede yok (sayfa değişmiş olabilir)."
+    }
   },
   "receiving": {
     "title": "Beklenen teslimler",
@@ -3459,7 +3482,12 @@
     "k": {
       "addShort": "EKLE",
       "person": "KİŞİ"
-    }
+    },
+    "offName": "Ad soyad en az 2 harf olmalı.",
+    "offUsername": "Kullanıcı adı en az 3 karakter olmalı.",
+    "offBusy": "İşlem sürüyor, bir saniye…",
+    "leaveText": "Personel eklenmedi. Çıkarsan yazdıkların kaybolur.",
+    "leaveSave": "Ekle ve çık"
   },
   "fieldLogin": {
     "title": "Saha girişi",
@@ -3612,7 +3640,10 @@
     "suspendedTitle": "Otomatik durduruldu · {name}",
     "suspendedBody": "Bu cihazdan 1 saatte 3 hesap kilitlendi; cihaz iptal edildi ve oturumları kapatıldı. Hesapların kilidini Üyeler ekranından açın.",
     "closeSessions": "OTURUMLARI KAPAT",
-    "sessionsClosed": "Oturumlar kapatıldı."
+    "sessionsClosed": "Oturumlar kapatıldı.",
+    "offCode": "Önce terminaldeki 6 haneli kodu yaz.",
+    "offBusy": "İşlem sürüyor, bir saniye…",
+    "leaveText": "Cihaz onayı yarım kaldı. Çıkarsan yazdığın kod kaybolur."
   },
   "workspaces": {
     "title": "Çalışma alanı seçin",
@@ -4237,7 +4268,10 @@
     "approvedTitle": "PIN BEKLEYENLER",
     "approvedHint": "ONAYLANDI · KİŞİ PIN BELİRLEYECEK (24 SAAT)",
     "cancelApproved": "İPTAL ET",
-    "cancelApprovedAria": "{name} için onayı iptal et"
+    "cancelApprovedAria": "{name} için onayı iptal et",
+    "offCode": "Önce kişinin telefonundaki 6 haneli kodu yaz.",
+    "offBusy": "İşlem sürüyor, bir saniye…",
+    "leaveText": "Onay yarım kaldı. Çıkarsan yazdığın kod kaybolur."
   },
   "ekip": {
     "title": "Ekip",
@@ -4502,7 +4536,9 @@
     "updatedText": "Yeni sürüm yüklendi. Devam etmek için sayfayı yenile; bu işlem eski sürümle gönderilemedi.",
     "updatedReload": "Yenile",
     "updatedLater": "Sonra",
-    "mainOff": "Bu işlem şu an yapılamaz."
+    "mainOff": "Bu işlem şu an yapılamaz.",
+    "discarded": "Değişiklikler bırakıldı",
+    "formFirst": "Önce zorunlu alanları doldur, seçimleri tamamla."
   },
   "saha": {
     "online": "Çevrimiçi",
@@ -4566,7 +4602,10 @@
       "doneNext": "SIRADAKİ: YERLEŞTİR · OKUT",
       "putDone": "Rafa kondu · {n}",
       "fixed": "Görevdeki miktar",
-      "available": "RAFTA {n}"
+      "available": "RAFTA {n}",
+      "busy": "İşleniyor, bir saniye…",
+      "overMax": "Beklenenden fazla toplanamaz — adedi azalt.",
+      "needOne": "Önce en az 1 adet gir ya da okut."
     }
   },
   "destek": {
