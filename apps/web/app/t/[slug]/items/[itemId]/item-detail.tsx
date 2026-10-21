@@ -67,7 +67,7 @@ function Section({ title, sub, d, color, children, id }: { title: string; sub: s
 export interface ItemStockCardView {
   readonly places: readonly { readonly warehouseId: string; readonly warehouseName: string; readonly locationCode: string; readonly quantity: string }[];
   readonly min: string | null;
-  readonly moves: readonly { readonly documentId: string; readonly kind: "STOCK_IN" | "STOCK_OUT" | "STOCK_MOVE" | "REVERSAL"; readonly number: string | null; readonly occurredAt: string; readonly actorName: string | null; readonly net: string; readonly moved: string; readonly locations: string }[];
+  readonly moves: readonly { readonly documentId: string; readonly kind: string; readonly number: string | null; readonly occurredAt: string; readonly actorName: string | null; readonly net: string; readonly moved: string; readonly locations: string }[];
 }
 
 export interface ItemQuickAccess {
@@ -82,7 +82,11 @@ const MOVE_VIS = {
   STOCK_OUT: { d: LICON.moveOut, color: "B5552B", q: "8A3E10" },
   STOCK_MOVE: { d: LICON.transfer, color: "6C4BD8", q: "4B2FA8" },
   REVERSAL: { d: LICON.transfer, color: "172E42", q: "172E42" },
+  // T-977: sayım fark fişi artık arayüzden işlenir; ürün kartı bu belge türünde çökmemeli.
+  COUNT_ADJUSTMENT: { d: LICON.clip, color: "6C4BD8", q: "4B2FA8" },
 } as const;
+const MOVE_FALLBACK = { d: LICON.clip, color: "4E6476", q: "172E42" } as const;
+const KNOWN_KINDS: readonly string[] = Object.keys(MOVE_VIS);
 const PLACE_COLORS = ["2F5DA8", "0E7C7B", "6C4BD8", "B07D0B", "2F7D5B"] as const;
 
 export function ItemDetail({
@@ -248,8 +252,10 @@ export function ItemDetail({
     return diff <= 0 ? tk("today", { time }) : diff === 1 ? tk("yesterday", { time }) : tk("daysAgo", { n: diff });
   };
   const events: KalipOlay[] = (stockCard?.moves ?? []).map((m) => {
-    const v = MOVE_VIS[m.kind];
-    const kindName = tk(`kind_${m.kind}`);
+    // Belge türü listesi dışındaki tür (ileride eklenecek) çökme yerine genel "Hareket" olarak gösterilir.
+    const known = KNOWN_KINDS.includes(m.kind);
+    const v = known ? MOVE_VIS[m.kind as keyof typeof MOVE_VIS] : MOVE_FALLBACK;
+    const kindName = known ? tk(`kind_${m.kind}`) : tk("kind_OTHER");
     const q = m.kind === "STOCK_MOVE" ? fq(m.moved) : approx(m.net) > 0 ? `+${fq(m.net)}` : fq(m.net);
     return {
       key: m.documentId,

@@ -356,6 +356,18 @@ export async function recordCount(params: StockDocCallParams, input: RecordCount
     if (s.status !== "COUNTING" && s.status !== "SUBMITTED") throw documentState();
     const locations = new Set(await sessionLocationIds(tx, m.tenantId, sessionId));
     if (parsed.some((p) => !locations.has(p.locationId))) throw new AppError("VALIDATION_FAILED");
+    // T-977 (güvenlik incelemesi MINOR-1): raf sayım görevi BAŞKASINA atanmışsa (o rafta açık ya da bana atanmış görev yoksa) sayım değeri yazılamaz;
+    // `document.approve` sahibi (yönetici düzeltmesi) hariç. Görevsiz oturumda (eski akış) kural yoktur. Okuma görünürlüğüyle (`getCountWork`) aynı kural.
+    if (!hasPermission(m.roles, "document.approve", m.grants)) {
+      const rows = await tx.execute<{ location_id: string; usable: boolean }>(
+        sql`SELECT location_id, bool_or(status = 'OPEN' OR (status = 'ASSIGNED' AND assigned_membership_id = ${m.membershipId}::uuid)) AS usable
+              FROM public.warehouse_tasks
+             WHERE tenant_id = ${m.tenantId}::uuid AND kind = 'COUNT' AND source_kind = 'COUNT_SESSION' AND source_id = ${sessionId}::uuid
+               AND status IN ('OPEN', 'ASSIGNED') AND location_id = ANY(${pgUuidArray([...new Set(parsed.map((p) => p.locationId))])}::uuid[])
+             GROUP BY location_id`,
+      );
+      if (rows.some((r) => !r.usable)) throw new AppError("FORBIDDEN");
+    }
     const items = await itemScales(tx, m.tenantId, [...new Set(parsed.map((p) => p.itemId))]);
     const lines = await readLines(tx, m.tenantId, sessionId);
     let written = 0;
