@@ -210,7 +210,7 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
           {error && warehouses.length === 0 && <SecondaryButton disabled={!ready || busy || retry} onClick={() => void transferWarehouses()}>{t("reloadWarehouses")}</SecondaryButton>}
           {!busy && !error && warehouses.length === 0 && !warehouseAfter && <p>{t("noWarehouse")}</p>}
         </div>}
-        {scanMode && <fieldset disabled={!ready || busy || retry} className="min-w-0"><ScanPanel service={ready && !busy && !retry ? service : null} prompt={t(isDestination ? "scanLocation" : "scanPackage")} last={last} ready={ready && scanner.ready && !busy} hue="teal" /></fieldset>}
+        {scanMode && <fieldset disabled={!ready || busy || retry} className="min-w-0"><ScanPanel variant="kalip" service={ready && !busy && !retry ? service : null} prompt={t(isDestination ? "scanLocation" : "scanPackage")} last={last} ready={ready && scanner.ready && !busy} hue="teal" /></fieldset>}
         {isDestination && <div className={`${card} flex flex-col gap-2`}>
           {stage === "transferDestination" && targetWarehouse && <p className="flex items-center gap-2 rounded-control bg-cat-sky-bg p-3 font-bold text-cat-sky-ink" data-testid="transfer-target-warehouse"><Warehouse className="size-6 shrink-0" aria-hidden="true" />{targetWarehouse.code} · {targetWarehouse.name}</p>}
           <h2 className="font-extrabold">{t("location")}</h2>

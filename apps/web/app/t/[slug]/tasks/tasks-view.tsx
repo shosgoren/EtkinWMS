@@ -4,7 +4,8 @@
 // Sunucu reddi neden + sonraki eylemle gösterilir.
 // T-971 (B-63, I-18): LİSTE kalıbı (KalipListe.dc.html): tür ve durum süzgeç çipleri (adresi değiştirir: `?kind=` / `?status=`), görev kartları,
 // kartın altında Ata / İptal et eylem satırı (kart içine düğme gömülmez), sayfalama `KalipDaha`. Ata / İptal pencereleri (Sheet) korunur.
-// Bilinçli farklar (DESIGN-PARITY, T-971): arama yok (sunucuda görev araması yok); çip sayıları yok; alt çubuk ana işlemi OKUT (ekranın
+// T-978: arama (`.lsearch`, GET `q`: ürün kodu/adı, raf, atanan kişi — sunucuda listTasks; çiplerle birlikte çalışır).
+// Bilinçli farklar (DESIGN-PARITY, T-971): çip sayıları yok; alt çubuk ana işlemi OKUT (ekranın
 // kendi oluşturma işlemi yok — görevler mal kabul / sipariş / sayımdan doğar).
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -15,7 +16,7 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { Sheet } from "../easy-setup/sheet.tsx";
 import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty } from "../kalip/format.ts";
-import { KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipPencereAlan, KalipPencereDugme, KalipPencereMetin, KalipPencereSecim } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { assignTaskAction, cancelTaskAction } from "./actions.ts";
@@ -79,9 +80,11 @@ export interface TasksViewProps {
   /** Sonraki sayfa bağlantısı (keyset imleci sorgu dizesinde); yoksa `null`. */
   readonly nextHref: string | null;
   readonly firstPage: boolean;
+  /** T-978: sunucu araması; boş = tümü. */
+  readonly search?: string;
 }
 
-export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage }: TasksViewProps) {
+export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage, search = "" }: TasksViewProps) {
   const t = useTranslations("tasks");
   const te = useTranslations("tasks.errors");
   const router = useRouter();
@@ -145,6 +148,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
     const st = next.status ?? statusFilter;
     if (k !== "") p.set("kind", k);
     if (st !== "") p.set("status", st);
+    if (search !== "") p.set("q", search);
     const q = p.toString();
     return q === "" ? base : `${base}?${q}`;
   };
@@ -156,7 +160,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
     { id: "all", label: t("filters.all"), d: LICON.grid, color: "172E42", on: statusFilter === "", href: href({ status: "" }) },
     ...STATUSES.map((st) => ({ id: st, label: t(`status.${st}`), d: STATUS_VISUAL[st].d, color: STATUS_VISUAL[st].color, on: statusFilter === st, href: href({ status: statusFilter === st ? "" : st }) })),
   ];
-  const filtered = kindFilter !== "" || statusFilter !== "";
+  const filtered = kindFilter !== "" || statusFilter !== "" || search !== "";
   const openAssign = (task: TaskView): void => {
     tone("tap");
     setError(null);
@@ -172,6 +176,18 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
     <>
       <KalipEkran kind="liste" dark={dark} title={t("title")} icon={{ d: LICON.clip, color: "6C4BD8" }} testId="tasks" bar={{ back: { href: home } }} overlays={toast}>
         <p className="sr">{t("intro")}</p>
+        <KalipAra
+          label={t("search")}
+          placeholder={t("searchPlaceholder")}
+          action={base}
+          defaultValue={search}
+          below={
+            <>
+              {kindFilter === "" ? null : <input type="hidden" name="kind" value={kindFilter} />}
+              {statusFilter === "" ? null : <input type="hidden" name="status" value={statusFilter} />}
+            </>
+          }
+        />
         <KalipCipler label={t("filters.kind")} chips={kindChips} />
         <KalipCipler label={t("filters.status")} chips={statusChips} />
         {canManage && kindFilter === "COUNT" ? (

@@ -62,6 +62,33 @@ afterAll(async () => {
   await app.close();
 }, 60_000);
 
+describe("listWarehouses q (T-978)", () => {
+  it("kod ya da ad içinde arar (büyük/küçük harf duyarsız, jokerler kaçışlı); arşivli yalnız istenirse; kapsam ve tenant korunur; sayfalama aramayla çalışır", async () => {
+    const tag = randomUUID().slice(0, 6);
+    const one = (await createWarehouse(admin(A), { code: `SR-${tag}-1`, name: `Arama Ana ${tag}` })).warehouseId;
+    const two = (await createWarehouse(admin(A), { code: `SR-${tag}-2`, name: `Yedek ${tag}` })).warehouseId;
+    await createWarehouse(admin(B), { code: `SR-${tag}-1`, name: `Arama Ana ${tag}` });
+    const ids = async (input: Parameters<typeof listWarehouses>[1], who = admin(A)) => (await listWarehouses(who, input)).items.map((w) => w.id);
+    expect(await ids({ q: `sr-${tag}` })).toEqual([one, two]);
+    expect(await ids({ q: `arama ana ${tag}` })).toEqual([one]);
+    expect(await ids({ q: `SR_${tag}` })).toEqual([]);
+    expect(await ids({ q: "%" })).toEqual([]);
+    expect(await ids({ q: "zz-yok-zz" })).toEqual([]);
+    // Sayfalama: limit 1 + afterCode aramayla birlikte.
+    const p1 = await listWarehouses(admin(A), { q: `SR-${tag}`, limit: 1 });
+    expect(p1.items.map((w) => w.id)).toEqual([one]);
+    expect(p1.nextAfterCode).not.toBeNull();
+    const p2 = await listWarehouses(admin(A), { q: `SR-${tag}`, limit: 1, afterCode: p1.nextAfterCode as string });
+    expect(p2.items.map((w) => w.id)).toEqual([two]);
+    expect(p2.nextAfterCode).toBeNull();
+    // Kapsam açıkken kapsam dışı depo aramada da görünmez.
+    process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+    await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [one] });
+    expect(await ids({ q: `SR-${tag}` }, picker(A))).toEqual([one]);
+    expect((await failure(listWarehouses(admin(A), { q: 5 as unknown as string }))).code).toBe("VALIDATION_FAILED");
+  });
+});
+
 describe("getWarehouse", () => {
   it("returns the same row listWarehouses returns, archived included", async () => {
     const id = await newWarehouse();

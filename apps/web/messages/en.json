@@ -422,7 +422,12 @@
       "inviteShort": "INVITE",
       "count": "{n} MEMBERS",
       "pendingCount": "{n} INVITES"
-    }
+    },
+    "search": "Search members",
+    "searchPlaceholder": "Search name or email",
+    "noMatch": "No member matches",
+    "noMatchHint": "Try another name.",
+    "clearSearch": "Clear search"
   },
   "errors": {
     "validation_failed": "The information entered is not valid.",
@@ -1074,7 +1079,9 @@
     "quickWeek": "Last 7 days",
     "clear": "Clear filter",
     "listTitle": "RECORDS",
-    "exportShort": "CSV"
+    "exportShort": "CSV",
+    "search": "Search records",
+    "searchPlaceholder": "Person, reason or record id"
   },
   "settings": {
     "title": "Workspace settings",
@@ -1606,7 +1613,12 @@
       "quick": "Quick actions",
       "treeSub": "{n} ACTIVE LOCATIONS",
       "next": "Next step: {step}"
-    }
+    },
+    "search": "Search warehouses",
+    "searchPlaceholder": "Warehouse code or name",
+    "noMatch": "No warehouse matches",
+    "noMatchHint": "Try another code or name.",
+    "clearSearch": "Clear search"
   },
   "field": {
     "title": "Field",
@@ -1879,7 +1891,9 @@
     "hint": "Assign or cancel",
     "qtySub": "quantity",
     "paging": "Pages",
-    "countSessions": "Count sessions"
+    "countSessions": "Count sessions",
+    "search": "Search tasks",
+    "searchPlaceholder": "Search item, location or person"
   },
   "receiving": {
     "title": "Expected deliveries",

@@ -103,7 +103,12 @@ export function resetLinkPrechecks(i: ResetLinkInput): boolean {
 }
 
 /** Aktif üyeler: ad, e-posta (yetkiye göre), roller, sahiplik, demo, sıfırlama bağlantısı üretilebilirliği. */
-export async function listMembers(params: QueryParams, deps: MemberQueryDeps): Promise<MemberRow[]> {
+export async function listMembers(params: QueryParams, deps: MemberQueryDeps, opts: { readonly q?: string } = {}): Promise<MemberRow[]> {
+  // T-978: ad içinde arama (ILIKE; en çok 100 karakter). E-posta ve saha kullanıcı adı yalnız yöneticinin araması — yetkisiz okuyucu
+  // maskeli e-postayı arayarak tam adresi tahmin edemesin.
+  if (opts.q !== undefined && typeof opts.q !== "string") throw new AppError("VALIDATION_FAILED");
+  const q = (opts.q ?? "").replace(/\p{C}/gu, " ").trim().slice(0, 100);
+  const like = q === "" ? null : `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
     const canManage = hasPermission(actor.roles, "users.manage", actor.grants);
     const tenantRows = await tx.execute<{ is_demo: boolean }>(sql`SELECT is_demo FROM public.tenants WHERE id = ${actor.tenantId}::uuid`);
@@ -128,6 +133,8 @@ export async function listMembers(params: QueryParams, deps: MemberQueryDeps): P
             JOIN public.users u ON u.id = m.user_id
             LEFT JOIN public.field_logins f ON f.tenant_id = m.tenant_id AND f.membership_id = m.id
            WHERE m.tenant_id = ${actor.tenantId}::uuid AND m.status = 'ACTIVE'
+             AND (${like}::text IS NULL OR u.name ILIKE ${like}
+                  OR (${canManage}::boolean AND (u.email ILIKE ${like} OR f.username ILIKE ${like})))
            ORDER BY u.name, u.email, m.id`,
     );
     const roleRows = await tx.execute<{ membership_id: string; role_key: RoleKey }>(

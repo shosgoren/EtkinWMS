@@ -228,6 +228,7 @@ export function Typeahead<T>({
       {scan === undefined ? null : (
         <>
           <ScanField
+            variant={kalip ? "kalip" : "default"}
             label={scanLabel ?? t("scanLabel")}
             value={scanned}
             manualLabel={t("scanManual")}

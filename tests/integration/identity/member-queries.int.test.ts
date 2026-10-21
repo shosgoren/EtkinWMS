@@ -80,6 +80,27 @@ async function mkInvite(fx: Fx, by: Member, email: string, over: { expires?: str
 const acc = (fx: Fx, actor: Member) => ({ db: app, principal: { userId: actor.userId, mfaVerified: true }, tenantSlug: fx.slug });
 
 describe("listMembers", () => {
+  it("T-978: q ada göre süzer (büyük/küçük harf duyarsız, LIKE jokerleri kaçışlı); e-posta yalnız users.manage aramasında; başka tenant sızmaz", async () => {
+    const a = await mkTenant();
+    const b = await mkTenant();
+    const tag = rnd();
+    const ayse = await mkMember(a.tenant, "PICKER", { name: `Ayse ${tag}`, email: `zz-${tag}@example.test` });
+    const mehmet = await mkMember(a.tenant, "COUNTER", { name: `Mehmet_${tag}` });
+    await mkMember(b.tenant, "PICKER", { name: `Ayse ${tag} B` });
+    const ids = async (actor: Member, q: string) => (await listMembers(acc(a, actor), deps, { q })).map((r) => r.userId);
+    expect(await ids(a.owner, `ayse ${tag}`)).toEqual([ayse.userId]);
+    expect(await ids(a.owner, `mehmet_${tag}`)).toEqual([mehmet.userId]);
+    // "_" ve "%" joker değil: "Ayse_" Ayse'yi, "%" kimseyi eşlemez; boşluk süzgeç değildir.
+    expect(await ids(a.owner, `ayse_${tag}`)).toEqual([]);
+    expect(await ids(a.owner, "%")).toEqual([]);
+    expect((await ids(a.owner, "  ")).sort()).toEqual([a.owner.userId, ayse.userId, mehmet.userId].sort());
+    // E-posta araması: yönetici bulur, PICKER bulamaz (maskeli adresten tahmin yok).
+    expect(await ids(a.owner, `zz-${tag}@`)).toEqual([ayse.userId]);
+    expect(await ids(ayse, `zz-${tag}@`)).toEqual([]);
+    expect(await ids(ayse, `Ayse ${tag}`)).toEqual([ayse.userId]);
+    await expect(listMembers(acc(a, a.owner), deps, { q: 5 as unknown as string })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
+
   it("başka tenant üyesi sızmaz; satır şekli ve roller doğru", async () => {
     const a = await mkTenant();
     const b = await mkTenant();

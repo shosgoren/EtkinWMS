@@ -422,7 +422,12 @@
       "inviteShort": "DAVET ET",
       "count": "{n} ÜYE",
       "pendingCount": "{n} DAVET"
-    }
+    },
+    "search": "Üye ara",
+    "searchPlaceholder": "Ad ya da e-posta ara",
+    "noMatch": "Aramaya uyan üye yok",
+    "noMatchHint": "Başka bir ad deneyin.",
+    "clearSearch": "Aramayı temizle"
   },
   "errors": {
     "validation_failed": "Girilen bilgiler geçersiz.",
@@ -1074,7 +1079,9 @@
     "quickWeek": "Son 7 gün",
     "clear": "Süzgeci temizle",
     "listTitle": "KAYITLAR",
-    "exportShort": "CSV İNDİR"
+    "exportShort": "CSV İNDİR",
+    "search": "Kayıtlarda ara",
+    "searchPlaceholder": "Kişi, gerekçe ya da kayıt no"
   },
   "settings": {
     "title": "Çalışma alanı ayarları",
@@ -1606,7 +1613,12 @@
       "quick": "Hızlı işlemler",
       "treeSub": "{n} AKTİF LOKASYON",
       "next": "Sıradaki adım: {step}"
-    }
+    },
+    "search": "Depo ara",
+    "searchPlaceholder": "Depo kodu ya da adı",
+    "noMatch": "Aramaya uyan depo yok",
+    "noMatchHint": "Başka bir kod ya da ad deneyin.",
+    "clearSearch": "Aramayı temizle"
   },
   "field": {
     "title": "Saha",
@@ -1879,7 +1891,9 @@
     "hint": "Ata ya da iptal et",
     "qtySub": "miktar",
     "paging": "Sayfalar",
-    "countSessions": "Sayım oturumları"
+    "countSessions": "Sayım oturumları",
+    "search": "Görev ara",
+    "searchPlaceholder": "Ürün, raf ya da kişi ara"
   },
   "receiving": {
     "title": "Beklenen teslimler",

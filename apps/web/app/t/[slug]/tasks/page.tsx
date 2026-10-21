@@ -38,6 +38,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
   const statusRaw = first(sp.status) ?? "";
   const kind = (TASK_KINDS as readonly string[]).includes(kindRaw) ? (kindRaw as TaskKind) : undefined;
   const status = (TASK_STATUSES as readonly string[]).includes(statusRaw) ? (statusRaw as TaskStatus) : undefined;
+  const search = (first(sp.q) ?? "").trim().slice(0, 100);
   const afterRaw = first(sp.after);
   const after = parseCursor(afterRaw);
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
@@ -55,7 +56,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "document.approve", current.grants);
-    result = await listTasks(call, { ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }), ...(after === undefined ? {} : { after }), limit: PAGE_SIZE });
+    result = await listTasks(call, { ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }), ...(after === undefined ? {} : { after }), ...(search === "" ? {} : { q: search }), limit: PAGE_SIZE });
     members = await listMembers(call, { demoEmailDomain: process.env.DEMO_EMAIL_DOMAIN?.trim().toLowerCase() || null });
   } catch (e) {
     if (e instanceof AppError) {
@@ -69,7 +70,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
   }
 
   const names = new Map(members.map((m) => [m.membershipId, m.displayName]));
-  const filterQuery = new URLSearchParams({ ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }) });
+  const filterQuery = new URLSearchParams({ ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }), ...(search === "" ? {} : { q: search }) });
   const nextHref =
     result.next === null
       ? null
@@ -100,6 +101,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
         statusFilter={status ?? ""}
         nextHref={nextHref}
         firstPage={afterRaw === undefined || afterRaw === ""}
+        search={search}
       />
     </main>
   );

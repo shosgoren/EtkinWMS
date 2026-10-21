@@ -36,8 +36,8 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   const t = await getTranslations("auditLog");
   const ts = await getTranslations("serverErrors");
 
-  const filters: { from?: string; to?: string; action?: string } = {};
-  for (const k of ["from", "to", "action"] as const) {
+  const filters: { from?: string; to?: string; action?: string; q?: string } = {};
+  for (const k of ["from", "to", "action", "q"] as const) {
     const v = first(query[k]);
     if (v !== undefined) filters[k] = v;
   }
@@ -89,12 +89,12 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
     return s === "" ? here : `${here}?${s}`;
   };
   const quick = [
-    { id: "all", label: t("quickAll"), href: here, on: filters.from === undefined && filters.to === undefined && filters.action === undefined },
-    { id: "today", label: t("quickToday"), href: link({ from: today, to: today, action: filters.action }), on: filters.from === today && filters.to === today },
-    { id: "week", label: t("quickWeek"), href: link({ from: weekFrom, to: today, action: filters.action }), on: filters.from === weekFrom && filters.to === today },
+    { id: "all", label: t("quickAll"), href: here, on: filters.from === undefined && filters.to === undefined && filters.action === undefined && filters.q === undefined },
+    { id: "today", label: t("quickToday"), href: link({ from: today, to: today, action: filters.action, q: filters.q }), on: filters.from === today && filters.to === today },
+    { id: "week", label: t("quickWeek"), href: link({ from: weekFrom, to: today, action: filters.action, q: filters.q }), on: filters.from === weekFrom && filters.to === today },
     ...(filters.action === undefined
       ? []
-      : [{ id: "action", label: (AUDIT_ACTIONS as readonly string[]).includes(filters.action) ? t(`actions.${filters.action}`) : t("actions.other"), href: link({ from: filters.from, to: filters.to }), on: true }]),
+      : [{ id: "action", label: (AUDIT_ACTIONS as readonly string[]).includes(filters.action) ? t(`actions.${filters.action}`) : t("actions.other"), href: link({ from: filters.from, to: filters.to, q: filters.q }), on: true }]),
   ];
   const banner =
     errorCode === undefined ? null : (
