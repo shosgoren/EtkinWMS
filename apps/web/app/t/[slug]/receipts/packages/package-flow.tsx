@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Banner } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../../field/receive/receive-flow.tsx";
-import { FormSteps } from "../../screen-shell.tsx";
+import { KalipAdimlar } from "../../kalip/adimlar.tsx";
 import { ErrorNotice, type ErrorInfo, type ActionResult } from "../receipt-form.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
@@ -250,7 +250,7 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
     bar={{ back: { href: `${home}/receipts`, testId: "screen-back" }, homeNav: { href: home, testId: "screen-home" }, main }}>
   <div className="package-flow mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 py-2" data-testid="package-flow" data-stage={posted ? 4 : stage}>
     <p className="sr">{t("k.intro")}</p>
-    <FormSteps labels={[t("product"), t("packages"), t("review"), t("labels")]} />
+    <KalipAdimlar labels={[t("product"), t("packages"), t("review"), t("labels")]} />
     {error ? <ErrorNotice error={error} context="create" /> : null}
     {scanner.dropped ? <Banner kind="warning">⚠ {t("scanDropped")}</Banner> : null}
     <div className="package-layout grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">

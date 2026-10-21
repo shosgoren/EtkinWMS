@@ -261,9 +261,41 @@ a{color:#172E42}a:hover{color:#0E1D2B}
 @media (max-width:860px){.hide-md{display:none!important}}
 @media (max-width:640px){.filmdots{top:10px;right:10px;bottom:auto!important}.appzoom{padding:10px 10px 64px}.capt{left:10px!important;right:10px;bottom:10px!important;padding:10px 12px!important;border-radius:12px!important}.capt-t{font-size:16px!important}.hide-sm{display:none!important}.show-sm{display:block}.stage{aspect-ratio:1/1.02}.world{top:55%}}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-.fstatus{grid-column:1 / -1;margin:0;min-height:1.4em;font-size:14px;font-weight:600;color:#172E42}
-.fstatus.ok{color:#1E6B45}
-.fstatus.err{color:#A3261B}
+/* T-431: demo formu geri bildirimi — gönderim göstergesi, alan altı uyarı, yumuşak kırmızı hata satırı, başarı kutusu */
+.fstatus{grid-column:1 / -1;margin:0;font-size:15px;font-weight:600;color:#172E42}
+.fstatus.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+.fstatus.err{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-height:48px;padding:10px 14px;border-radius:12px;background:#FDECEA;border:1.5px solid #F2B8B0;color:#A3261B;animation:fShake .38s ease both}
+.fstatus .ferr-ic{flex:none}
+.fretry{appearance:none;min-height:36px;padding:6px 14px;border:1.5px solid #A3261B;border-radius:999px;background:#FFFFFF;color:#A3261B;font:700 14px/1 'Instrument Sans',system-ui,sans-serif;cursor:pointer}
+.fretry:hover{background:#A3261B;color:#FFFFFF}
+@keyframes fShake{0%,100%{transform:none}25%{transform:translateX(-5px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+.ferr{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;line-height:1.35;color:#A3261B}
+.ferr::before{content:'!';flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#A3261B;color:#FFFFFF;font:800 12px/1 'Instrument Sans',system-ui,sans-serif}
+.ferr-consent{grid-column:1 / -1;margin-top:-8px}
+.field[aria-invalid=true]{border-color:#C8412F;background:#FFF7F6}
+.dform input[type=checkbox][aria-invalid=true]{outline:2px solid #C8412F;outline-offset:2px}
+.dform > *{transition:opacity .28s ease,transform .28s ease}
+.dform.leaving > :not(.fstatus){opacity:0;transform:translateY(-8px)}
+.fsubmit[aria-disabled=true]{cursor:progress;opacity:.92}
+.fsubmit[aria-disabled=true]:hover{transform:none;box-shadow:none}
+.fspin{flex:none;width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,.3);border-top-color:#FFFFFF;animation:fSpin .8s linear infinite}
+@keyframes fSpin{to{transform:rotate(360deg)}}
+.fdone{grid-column:1 / -1;display:flex;flex-direction:column;align-items:center;gap:14px;padding:clamp(16px,4vw,40px) 4px;text-align:center;animation:fDoneIn .45s cubic-bezier(.2,.7,.1,1) both}
+.fdone-ic{display:block;width:104px;height:104px;overflow:visible;animation:fPop .5s cubic-bezier(.2,.9,.3,1.3) both}
+.fdone-tick{stroke-dasharray:100;stroke-dashoffset:0;animation:fTick .5s .28s ease-out both}
+.fdone-ring{transform-box:fill-box;transform-origin:center;animation:fRing 1s .55s ease-out both}
+@keyframes fDoneIn{from{opacity:0;transform:translateY(12px)}}
+@keyframes fPop{from{opacity:0;transform:scale(.6)}}
+@keyframes fTick{from{stroke-dashoffset:100}}
+@keyframes fRing{from{opacity:.7;transform:scale(1)}to{opacity:0;transform:scale(1.35)}}
+.fdone-h{margin:0;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(24px,3vw,32px);line-height:1.1;letter-spacing:-.02em;color:#172E42}
+.fdone-h:focus{outline:none}
+.fdone-h:focus-visible{outline:2px solid #172E42;outline-offset:4px;border-radius:6px}
+.fdone-p{margin:0;max-width:420px;font-size:17px;color:#3D5468}
+.fdone-ref{margin:0;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:#EEF1F4;font-size:13px;font-weight:600;color:#3D5468}
+.fdone-ref b{font:600 14px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#172E42}
+.fdone-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin-top:4px}
+.fdone-links a{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:0 6px;color:#172E42;font-weight:600}
 /* T-942: çözünürlüğe göre hero ve kap genişliği */
 :root{--wrap:1240px;--wrap-wide:1320px}
 @media (min-width:1680px){:root{--wrap:1400px;--wrap-wide:1480px}}
@@ -672,21 +704,33 @@ a{color:#172E42}a:hover{color:#0E1D2B}
         </sc-for>
       </div>
     </div>
-    <form id="demo-form" novalidate style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100"></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150"></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254"></label>
+    <form id="demo-form" class="{{formBoxCls}}" novalidate aria-busy="{{formBusy}}" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
+      <sc-if value="{{formOpen}}" hint-placeholder-val="{{true}}">
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100" aria-invalid="{{fe.name}}" aria-describedby="{{fe.nameDesc}}"><sc-if value="{{fe.name}}"><small id="err-name" class="ferr">{{fe.nameMsg}}</small></sc-if></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150" aria-invalid="{{fe.company}}" aria-describedby="{{fe.companyDesc}}"><sc-if value="{{fe.company}}"><small id="err-company" class="ferr">{{fe.companyMsg}}</small></sc-if></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254" aria-invalid="{{fe.email}}" aria-describedby="{{fe.emailDesc}}"><sc-if value="{{fe.email}}"><small id="err-email" class="ferr">{{fe.emailMsg}}</small></sc-if></label>
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fSector}}
         <select class="field" name="sector" data-dc-options="t.options"></select>
       </label>
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" aria-describedby="need-hint" style="resize: vertical"></textarea><small id="need-hint" style="font-size: 13px; font-weight: 500; color: #4C6275; line-height: 1.45">{{t.fNeedHint}}</small></label>
       <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
-        <input type="checkbox" name="consent" required style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
+        <input type="checkbox" name="consent" required aria-invalid="{{fe.consent}}" aria-describedby="{{fe.consentDesc}}" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
         <span>{{t.fConsentA}} <a href="/privacy">{{t.notice}}</a>{{t.fConsentB}}</span>
       </label>
+      <sc-if value="{{fe.consent}}"><small id="err-consent" class="ferr ferr-consent">{{fe.consentMsg}}</small></sc-if>
       <label class="hp" aria-hidden="true">Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
-      <button type="submit" class="cta" disabled="{{formBusyAttr}}" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer">{{t.fSubmit}} <span aria-hidden="true" style="color: {{accent}}">↗</span></button>
-      <p id="form-status" class="{{formCls}}" role="status" aria-live="polite">{{formMsg}}</p>
+      <button type="submit" class="cta fsubmit" aria-disabled="{{formBusyAttr}}" style="grid-column: 1 / -1; display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 56px; border: 0; border-radius: 999px; background: #172E42; color: #FFFFFF; font: 600 17px/1 'Instrument Sans', system-ui, sans-serif; cursor: pointer"><sc-if value="{{formSending}}"><span class="fspin" aria-hidden="true"></span>{{t.fSendingBtn}}</sc-if><sc-if value="{{formIdle}}">{{t.fSubmit}} <span aria-hidden="true" style="color: {{accent}}">↗</span></sc-if></button>
+      </sc-if>
+      <sc-if value="{{formDone}}" hint-placeholder-val="{{false}}">
+      <div class="fdone" data-testid="demo-success">
+        <svg class="fdone-ic" viewBox="0 0 104 104" aria-hidden="true"><circle class="fdone-ring" cx="52" cy="52" r="46" fill="none" stroke="#5FAF8A" stroke-width="3"></circle><circle cx="52" cy="52" r="46" fill="#E3F4EA" stroke="#5FAF8A" stroke-width="3"></circle><path class="fdone-tick" d="M32 53l13 13 27-28" pathLength="100" fill="none" stroke="#1E7A4C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <h3 id="demo-done-title" class="fdone-h" tabindex="-1">{{t.fDoneTitle}}</h3>
+        <p class="fdone-p">{{t.fDoneBody}}</p>
+        <sc-if value="{{formRef}}"><p class="fdone-ref" data-testid="demo-ref">{{t.fRef}} <b>{{formRef}}</b></p></sc-if>
+        <div class="fdone-links"><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
+      </div>
+      </sc-if>
+      <p id="form-status" class="{{formCls}}" role="status" aria-live="polite"><sc-if value="{{formErrRow}}"><svg class="ferr-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3261B" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5M12 16.5v.01"></path></svg></sc-if><span>{{formMsg}}</span><sc-if value="{{formRetry}}"><span aria-hidden="true">·</span><button type="button" class="fretry" onClick="{{retry}}">{{t.fRetry}}</button></sc-if></p>
     </form>
   </div>
 </section>
@@ -882,7 +926,9 @@ class Component extends DCLogic {
         fNeedHint: 'Kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.',
         fConsentA: 'Demo talebime ilişkin', notice: 'Aydınlatma Metni', fConsentB: '’ni okudum.',
         privacy: 'Aydınlatma Metni', fSubmit: 'Teklif ve demo iste',
-        fSending: 'Talebiniz kaydediliyor…', fOk: 'Talebiniz kaydedildi. Demo ve kapsam için sizinle iletişime geçeceğiz.', fErr: 'Talep kaydedilemedi. Lütfen tekrar deneyin.', fInvalid: 'Ad, firma, geçerli e-posta ve Aydınlatma Metni kutusunu kontrol edin.',
+        fSending: 'Talebiniz gönderiliyor…', fSendingBtn: 'Gönderiliyor…', fErr: 'Gönderilemedi', fRetry: 'tekrar dene', fLimit: 'Çok fazla deneme oldu. Biraz sonra tekrar deneyin.', fInvalid: 'Eksik ya da hatalı alanları düzeltin.',
+        fDoneTitle: 'Talebiniz başarıyla gönderildi', fDoneBody: 'En geç 1 iş günü içinde sizinle iletişime geçeceğiz.', fRef: 'Talep no', fHome: 'Ana sayfaya dön',
+        eNameReq: 'Adınızı yazın.', eCompanyReq: 'Firma adını yazın.', eEmailReq: 'E-posta adresinizi yazın.', eEmailBad: 'Geçerli bir e-posta yazın (ör. ad@firma.com).', eConsentReq: 'Devam etmek için Aydınlatma Metni kutusunu işaretleyin.',
         footTag: 'Uçtan uca izlenebilir depo yönetimi.'
       },
       en: {
@@ -996,7 +1042,9 @@ class Component extends DCLogic {
         fNeedHint: 'Please do not include ID numbers, health data, passwords or your customers’ personal data.',
         fConsentA: 'I have read the', notice: 'Privacy Notice', fConsentB: ' for my demo request.',
         privacy: 'Privacy Notice', fSubmit: 'Request an offer & demo',
-        fSending: 'Sending your request…', fOk: 'Your request has been saved. We will contact you about a demo and scope.', fErr: 'The request could not be saved. Please try again.', fInvalid: 'Please check name, company, a valid email and the Privacy Notice box.',
+        fSending: 'Sending your request…', fSendingBtn: 'Sending…', fErr: 'Could not send', fRetry: 'try again', fLimit: 'Too many attempts. Please try again a little later.', fInvalid: 'Please fix the missing or invalid fields.',
+        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        eNameReq: 'Please enter your name.', eCompanyReq: 'Please enter your company.', eEmailReq: 'Please enter your email address.', eEmailBad: 'Please enter a valid email (e.g. name@company.com).', eConsentReq: 'Please tick the Privacy Notice box to continue.',
         footTag: 'End-to-end traceable warehouse management.'
       }
     };
@@ -1006,6 +1054,10 @@ class Component extends DCLogic {
     var lang = this.state.lang || this.props.lang || 'tr';
     var d = this.dict();
     var t = d[lang] || d.tr;
+    var fk = this.state.formKey || '';
+    var fe = this.state.fe || {};
+    var fBusy = fk === 'fSending' || fk === 'fLeaving';
+    var fErrRow = fk === 'fErr' || fk === 'fLimit' || fk === 'fInvalid';
     // T-407 (üretim düzeltmesi): panelden yayınlanan içerik (boot.js `props.site`). Metin Türkçedir; İngilizce görünümde tasarım metni kalır.
     var site = this.props.site && typeof this.props.site === 'object' ? this.props.site : null;
     if (site && lang === 'tr') t = Object.assign({}, t, { title1: site.title1, title2: site.title2, heroSub: site.subtitle });
@@ -1306,9 +1358,26 @@ class Component extends DCLogic {
       setTr: function () { self.setState({ lang: 'tr' }); },
       setEn: function () { self.setState({ lang: 'en' }); },
       lang: lang,
-      formMsg: this.state.formKey ? t[this.state.formKey] || this.state.formText || '' : '',
-      formCls: 'fstatus' + (this.state.formKey === 'fOk' ? ' ok' : this.state.formKey && this.state.formKey !== 'fSending' ? ' err' : ''),
-      formBusyAttr: this.state.formKey === 'fSending' ? 'disabled' : null
+      // T-431: demo formu durumu (boot.js yazar): null | fSending | fLeaving | fOk | fErr | fLimit | fInvalid; alan hataları `fe` (kod, metin değil: dil değişince çevrilir).
+      formOpen: fk !== 'fOk',
+      formDone: fk === 'fOk',
+      formSending: fk === 'fSending',
+      formIdle: fk !== 'fSending',
+      formBoxCls: 'dform' + (fk === 'fLeaving' ? ' leaving' : ''),
+      formBusy: fBusy ? 'true' : 'false',
+      formBusyAttr: fBusy ? 'true' : null,
+      formMsg: fk === 'fOk' ? t.fDoneTitle + '. ' + t.fDoneBody : fk === 'fSending' ? t.fSending : fErrRow ? t[fk] : '',
+      formCls: 'fstatus' + (fErrRow ? ' err' : ' sr'),
+      formErrRow: fErrRow,
+      formRetry: fk === 'fErr',
+      formRef: this.state.formRef || '',
+      retry: function () { var f = document.getElementById('demo-form'); if (!f || !f.requestSubmit) return; var b = f.querySelector('.fsubmit'); if (b) b.focus(); f.requestSubmit(); },
+      fe: {
+        name: fe.name ? 'true' : null, nameDesc: fe.name ? 'err-name' : null, nameMsg: fe.name ? t.eNameReq : '',
+        company: fe.company ? 'true' : null, companyDesc: fe.company ? 'err-company' : null, companyMsg: fe.company ? t.eCompanyReq : '',
+        email: fe.email ? 'true' : null, emailDesc: fe.email ? 'err-email' : null, emailMsg: fe.email === 'bad' ? t.eEmailBad : fe.email ? t.eEmailReq : '',
+        consent: fe.consent ? 'true' : null, consentDesc: fe.consent ? 'err-consent' : null, consentMsg: fe.consent ? t.eConsentReq : ''
+      }
     };
     for (var k in phX) base[k] = phX[k];
     for (var h in heroX) base[h] = heroX[h];

@@ -170,8 +170,8 @@ body:has(.dza) {
 }
 @media (max-width: 699.98px) {
   .dza.dza .tb {
-    min-width:46px;
-    height:46px;
+    min-width:48px;
+    height:48px;
     border-radius:14px;
     padding:0;
   }
@@ -214,9 +214,9 @@ body:has(.dza) {
 }
 @media (max-width: 699.98px) {
   .dza.dza .tb {
-    min-width:42px;
-    height:42px;
-    border-radius:13px;
+    min-width:48px;
+    height:48px;
+    border-radius:14px;
   }
 }
 .dza .more {

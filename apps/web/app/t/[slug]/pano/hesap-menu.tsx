@@ -12,7 +12,7 @@ import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { ICON } from "../../../design/bakis-icons.ts";
 import { authPost } from "../../../../lib/auth-client.ts";
-import { openAppMenu } from "../app-bar.tsx";
+import { openAppMenu } from "../app-menu.tsx";
 
 function Ico({ d, size }: { d: string; size: number }) {
   return (
