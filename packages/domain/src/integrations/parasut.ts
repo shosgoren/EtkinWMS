@@ -314,11 +314,11 @@ export class ParasutClient {
     return resource((r.body as { data?: unknown } | null)?.data).id;
   }
 
-  createProduct(token: string, companyId: string, p: { readonly code: string; readonly name: string; readonly unit: string | null }): Promise<string> {
+  async createProduct(token: string, companyId: string, p: { readonly code: string; readonly name: string; readonly unit: string | null }): Promise<string> {
     return this.create(token, companyId, "products", { type: "products", attributes: { code: p.code, name: p.name, ...(p.unit === null ? {} : { unit: p.unit }), inventory_tracking: true } });
   }
 
-  createContact(
+  async createContact(
     token: string,
     companyId: string,
     c: { readonly name: string; readonly accountType: "customer" | "supplier"; readonly taxNumber: string | null; readonly taxOffice: string | null; readonly email: string | null; readonly phone: string | null; readonly city: string | null; readonly address: string | null },
@@ -328,7 +328,7 @@ export class ParasutClient {
     return this.create(token, companyId, "contacts", { type: "contacts", attributes: attrs });
   }
 
-  createWarehouse(token: string, companyId: string, w: { readonly name: string }): Promise<string> {
+  async createWarehouse(token: string, companyId: string, w: { readonly name: string }): Promise<string> {
     return this.create(token, companyId, "warehouses", { type: "warehouses", attributes: { name: w.name } });
   }
 
@@ -336,7 +336,7 @@ export class ParasutClient {
    * Satış irsaliyesi (`inflow: false`). Stok hareketi yalnız ürün + miktar taşır (belgede depo ilişkisi yok; Paraşüt'ün depo seçimi canlıda
    * doğrulanacak). Cari ilişki türü belgede `contact` yazıyor, okuma modelinde `contacts`; JSON:API çoğul türü gönderilir (doğrulanacak).
    */
-  createShipmentDocument(
+  async createShipmentDocument(
     token: string,
     companyId: string,
     d: { readonly issueDate: string; readonly shipmentDate: string; readonly description: string; readonly procurementNumber: string; readonly contactId: string; readonly lines: readonly { readonly productId: string; readonly quantity: number }[] },
@@ -352,7 +352,7 @@ export class ParasutClient {
   }
 
   /** Stok güncelleme fişi: ürün + depo başına yeni toplam (mutlak değer → tekrar gönderim aynı sonucu verir). */
-  createStockUpdate(token: string, companyId: string, details: readonly { readonly productId: string; readonly warehouseId: string; readonly total: number }[]): Promise<string> {
+  async createStockUpdate(token: string, companyId: string, details: readonly { readonly productId: string; readonly warehouseId: string; readonly total: number }[]): Promise<string> {
     return this.create(token, companyId, "stock_updates", {
       type: "stock_updates",
       relationships: {
