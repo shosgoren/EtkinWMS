@@ -28,7 +28,7 @@ vi.mock("@wms/domain/identity/access", () => ({ runTenantQuery: () => Promise.re
 
 import { addBarcodeAction, archiveItemAction, createItemAction, removeBarcodeAction, searchItemsAction, setConversionAction, updateItemAction } from "./actions.ts";
 import { errorKey } from "./items-view.tsx";
-import { TaskMenu } from "../task-menu.tsx";
+import { Kokpit } from "../kokpit.tsx";
 
 const IID = "11111111-1111-4111-8111-111111111111";
 const UID = "22222222-2222-4222-8222-222222222222";
@@ -177,11 +177,11 @@ describe("errorKey eşlemesi ve mesaj anahtarları", () => {
 
 describe('"Ürünler" kartı izne bağlı (stock.view)', () => {
   interface El {
-    props?: { children?: unknown; locked?: unknown; href?: unknown; title?: unknown };
+    props?: { children?: unknown; href?: unknown; "data-task"?: unknown; "data-state"?: unknown };
   }
-  /** Kart ızgarasındaki `items` kartının TaskCard özellikleri (başlık anahtarına göre bulunur). */
+  /** T-979: Kokpit (liste kalıbı) işler listesindeki `items` kartının özellikleri (`data-task` ile bulunur). */
   async function itemsCard(stockView: boolean): Promise<NonNullable<El["props"]>> {
-    const ul = (await TaskMenu({ slug: "acme", allowed: { usersManage: true, settingsManage: true, auditView: true, stockView } })) as El;
+    const root = (await Kokpit({ slug: "acme", dark: false, firstName: "A", today: { kind: "rows", rows: [] }, allowed: { usersManage: true, settingsManage: true, auditView: true, stockView, stockPost: false } })) as El;
     function findItem(node: unknown): El | undefined {
       if (Array.isArray(node)) {
         for (const child of node) { const found = findItem(child); if (found) return found; }
@@ -189,21 +189,21 @@ describe('"Ürünler" kartı izne bağlı (stock.view)', () => {
       }
       if (node === null || typeof node !== "object") return undefined;
       const element = node as El;
-      return element.props?.title === "tasks.items.title" ? element : findItem(element.props?.children);
+      return element.props?.["data-task"] === "items" ? element : findItem(element.props?.children);
     }
-    const found = findItem(ul);
+    const found = findItem(root);
     expect(found).toBeDefined();
     return (found as El).props as NonNullable<El["props"]>;
   }
   it("stock.view varsa bağlantı (kilit yok)", async () => {
     const p = await itemsCard(true);
     expect(p.href).toBe("/t/acme/items");
-    expect(p.locked).toBeUndefined();
+    expect(p["data-state"]).toBe("active");
   });
   it("stock.view yoksa (rolsüz üye) kilitli ve bağlantısız; yönetici izinleri bunu açmaz", async () => {
     const p = await itemsCard(false);
     expect(p.href).toBeUndefined();
-    expect(p.locked).toEqual({ reason: "lockedReason" });
+    expect(p["data-state"]).toBe("locked");
   });
 });
 
