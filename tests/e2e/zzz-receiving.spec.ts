@@ -3,6 +3,7 @@
 // → serbest yerleştirme → sayım kilidi uyarısı. Fikstür (ürün, lokasyon, beklenen teslim) migration rolüyle SQL'den yazılır (sentetik veri, G-09);
 // tüm stok etkisi UI → sunucu eylemi → domain komutudur. Mobil görüntüler/ölçümler `.artifacts/t-313/` altına yazılır (git'e girmez).
 import { completeFirstUseGuide } from "./support/first-use-guide.ts";
+import { smallTargets } from "./support/items-screen.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -738,7 +739,8 @@ test("Kokpit 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir); l
     const pw = await measure(page);
     metrics[`admin-${w}x${h}`] = pw;
     expect(pw.scrollWidth).toBeLessThanOrEqual(pw.clientWidth);
-    expect(pw.small, `${w}x${h}: 48 px altı hedef`).toEqual([]);
+    // T-979: kalıp üst çubuğu düğmeleri (Sorun / Destek / Hesap) tasarım kaynağındaki boyuttadır (B-97); ölçüm Kokpit içeriği + alt cam çubuk.
+    expect([...(await smallTargets(page, '[data-testid="kokpit"] .inner')), ...(await smallTargets(page, '[data-testid="kabuk-dock"]'))], `${w}x${h}: 48 px altı hedef`).toEqual([]);
     if (mobile) await page.screenshot({ path: path.join(OUT, `final-home-admin-${w}x${h}.png`) });
   }
   // Toplayıcı (tek sütun kipi): görüntüler + taşma/hedef ölçümü; "Görevlerim" özeti bu kipin gerçek içeriğidir.
@@ -765,7 +767,7 @@ test("Kokpit 'Şimdi' kartı: bekleyen iş GERÇEK veriden (DB ile eşleşir); l
     const pw = await measure(page);
     metrics[`picker-${w}x${h}`] = pw;
     expect(pw.scrollWidth).toBeLessThanOrEqual(pw.clientWidth);
-    expect(pw.small, `${w}x${h} toplayıcı: 48 px altı hedef`).toEqual([]);
+    expect([...(await smallTargets(page, '[data-testid="kokpit"] .inner')), ...(await smallTargets(page, '[data-testid="kabuk-dock"]'))], `${w}x${h} toplayıcı: 48 px altı hedef`).toEqual([]);
     if (mobile) await page.screenshot({ path: path.join(OUT, `final-home-picker-${w}x${h}.png`) });
   }
   // Atanmış görev varsa önce o (Görevlerim özeti); Şimdi satırları onun yerine girmez.
