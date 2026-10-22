@@ -1,9 +1,9 @@
-// T-1006: ilk kurulum SPOTLIGHT TURU uçtan uca (kullanıcı kararı 22 Ekim). Yeni kiracı (kayıt + MFA ile kurulmuş kendi alanı, `E2E_MULTI`)
+// T-1006: ilk kurulum SPOTLIGHT TURU uçtan uca (kullanıcı kararı 22 Ekim). Yeni kiracı (kayıt + MFA ile kurulmuş kendi alanı, `E2E_TOUR`)
 // girişte turu görür → ortak buzlu perde (`backdrop-filter` + karartma) → "Ekranı aç" ile Ürünler → yalnız Excel düğmesi delikte görünür,
 // dokunulabilir ve nabız halkalı; balon ekran içinde (390 / 1180 / 1440, dokunma ≥ 44 px) → ← / → klavye → Atla (sıradaki adım, Geri al balonu)
 // → Turu kapat → Pano küçük halkasından adım listesi → "Başla" turu tekrar açar → Esc kapatır → Destek › Rehberi aç da turu açar.
 // Masaüstü ve mobil projeler aynı alanı kullanır (CI'da ayrı veritabanları): ikinci yerel koşuda tur kapalı olabilir; o zaman halkadan açılır
-// (veri temelli, ortam atlaması değil). Dosya en son koşar (alanı başka spec kullanmaz).
+// (veri temelli, ortam atlaması değil). Alanı ve e-postayı başka spec kullanmaz (giriş sınırı paylaşılmaz).
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
@@ -77,7 +77,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     test.setTimeout(180_000);
     mkdirSync(OUT, { recursive: true });
     const shot = (name: string) => page.screenshot({ path: path.join(OUT, `${info.project.name}-${name}.png`) });
-    const { slug } = await loginEmptyTenant(page, "multi", { keepTour: true });
+    const { slug } = await loginEmptyTenant(page, "tour", { keepTour: true });
     const layer = page.getByTestId("yol-layer");
     const coach = page.getByTestId("yol-coach");
     await expect.poll(async () => layer.getAttribute("data-state"), { timeout: 20_000 }).toMatch(/^(on|off)$/);
