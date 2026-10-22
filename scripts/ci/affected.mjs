@@ -29,6 +29,8 @@ const SKIP_DIRS = new Set(["node_modules", ".next", "dist", ".artifacts", ".turb
  * "int" (yalnız int ortamı; e2e grafikle). Glob değil: düzenli ifade. Değişen dosyayı (dolaylı) kullanan ortak dosya yalnız e2e'yi tam yapar
  * (int testleri içe aktarma grafiğiyle zaten bulunur).
  */
+/** @typedef {"both" | "e2e" | "int"} Scope */
+/** @type {ReadonlyArray<readonly [RegExp, string, Scope]>} */
 const FULL_RULES = [
   [/^\.github\//, "workflow", "both"],
   [/(^|\/)package\.json$/, "package.json", "both"],
@@ -92,11 +94,12 @@ const MAX_INT_SHARDS = 3;
 export const FULL_E2E_MATRIX = { include: ["desktop", "mobile"].flatMap((group) => [1, 2].map((part) => ({ group, part, of: 2 }))) };
 export const FULL_INT_MATRIX = { include: [1, 2, 3].map((shard) => ({ shard, of: 3 })) };
 
-const posix = (p) => p.split(path.sep).join("/");
-
 /** Depo dosyaları (git ls-files yerine dizin taraması: birleşme ağacında izlenmeyen derleme çıktıları SKIP_DIRS ile dışarıda). */
+/** @param {string} root @returns {string[]} */
 export function listRepoFiles(root) {
+  /** @type {string[]} */
   const out = [];
+  /** @param {string} rel */
   const walk = (rel) => {
     let entries;
     try {
@@ -120,7 +123,12 @@ export function listRepoFiles(root) {
   return out;
 }
 
+/**
+ * @param {string} root @param {string[]} files
+ * @returns {Map<string, { dir: string, exports: unknown }>}
+ */
 function workspacePackages(root, files) {
+  /** @type {Map<string, { dir: string, exports: unknown }>} */
   const pkgs = new Map();
   for (const f of files) {
     if (!/^(apps|packages)\/[^/]+\/package\.json$/.test(f)) continue;
@@ -135,16 +143,23 @@ function workspacePackages(root, files) {
 }
 
 /** İçe aktarma grafiği: dosya → içe aktardığı depo dosyaları. Çözülemeyen `@wms/*` → paketin bütün dosyaları (temkinli). */
+/**
+ * @typedef {{ deps: Map<string, Set<string>>, rdeps: Map<string, Set<string>>, wildcard: Set<string> }} Graph
+ * @param {string} root @param {string[]} files @returns {Graph}
+ */
 export function buildGraph(root, files) {
   const fileSet = new Set(files);
   const pkgs = workspacePackages(root, files);
+  /** @type {Map<string, string[]>} */
   const byDir = new Map();
   for (const f of files) {
     for (let d = path.posix.dirname(f); d !== "."; d = path.posix.dirname(d)) {
-      if (!byDir.has(d)) byDir.set(d, []);
-      byDir.get(d).push(f);
+      const list = byDir.get(d) ?? [];
+      list.push(f);
+      byDir.set(d, list);
     }
   }
+  /** @param {string} p @returns {string[] | null} */
   const tryFile = (p) => {
     const n = path.posix.normalize(p);
     if (fileSet.has(n)) return [n];
@@ -155,18 +170,22 @@ export function buildGraph(root, files) {
     }
     return null;
   };
+  /** @param {string} from @param {string} spec @returns {string[] | "unresolved"} */
   const resolve = (from, spec) => {
     if (spec.startsWith(".")) return tryFile(path.posix.join(path.posix.dirname(from), spec)) ?? "unresolved";
     const m = /^(@wms\/[^/]+)(\/.*)?$/.exec(spec);
     if (m === null) return []; // dış paket
-    const pkg = pkgs.get(m[1]);
+    const pkg = pkgs.get(m[1] ?? "");
     if (pkg === undefined) return "unresolved";
     const sub = m[2] ? `.${m[2]}` : ".";
-    const target = typeof pkg.exports === "string" ? (sub === "." ? pkg.exports : null) : pkg.exports?.[sub];
+    const ex = pkg.exports;
+    const target = typeof ex === "string" ? (sub === "." ? ex : null) : ex !== null && typeof ex === "object" ? /** @type {Record<string, unknown>} */ (ex)[sub] : null;
     const hit = typeof target === "string" ? tryFile(path.posix.join(pkg.dir, target)) : null;
     return hit ?? (byDir.get(pkg.dir) ?? []);
   };
+  /** @type {Map<string, Set<string>>} */
   const deps = new Map();
+  /** @type {Set<string>} */
   const wildcard = new Set();
   for (const f of files) {
     if (!CODE_EXT.includes(path.posix.extname(f)) && path.posix.extname(f) !== ".css") continue;
@@ -178,10 +197,13 @@ export function buildGraph(root, files) {
       continue;
     }
     if (WILDCARD_RE.test(text)) wildcard.add(f);
+    /** @type {Set<string>} */
     const out = new Set();
     for (const re of IMPORT_RES) {
       for (const m of text.matchAll(re)) {
-        const r = resolve(f, m[1]);
+        const spec = m[1];
+        if (spec === undefined) continue;
+        const r = resolve(f, spec);
         // Çözülemeyen göreli içe aktarım: hedef depoda yok (derleme/typecheck zaten kırmızı) ya da üretilen dosya (.next/types). Hesaplanmış
         // yollu içe aktarımlar burada değil, WILDCARD_RE ile (joker test) ele alınır.
         if (r !== "unresolved") for (const g of r) out.add(g);
@@ -190,20 +212,22 @@ export function buildGraph(root, files) {
     out.delete(f);
     deps.set(f, out);
   }
+  /** @type {Map<string, Set<string>>} */
   const rdeps = new Map();
   for (const [f, ds] of deps) for (const d of ds) {
-    if (!rdeps.has(d)) rdeps.set(d, new Set());
-    rdeps.get(d).add(f);
+    const set = rdeps.get(d) ?? new Set();
+    set.add(f);
+    rdeps.set(d, set);
   }
   return { deps, rdeps, wildcard };
 }
 
 /** `f`'yi doğrudan ya da dolaylı içe aktaran bütün dosyalar (f dahil). */
+/** @param {Graph} graph @param {string} f @returns {Set<string>} */
 function dependents(graph, f) {
   const seen = new Set([f]);
   const queue = [f];
-  while (queue.length > 0) {
-    const cur = queue.pop();
+  for (let cur = queue.pop(); cur !== undefined; cur = queue.pop()) {
     for (const p of graph.rdeps.get(cur) ?? []) if (!seen.has(p)) {
       seen.add(p);
       queue.push(p);
@@ -213,6 +237,7 @@ function dependents(graph, f) {
 }
 
 /** Web rota dosyasının e2e bölümü; paylaşılan yerse `null` (tam e2e). Rota dışı web dosyası (lib/…) `undefined`. */
+/** @param {string} f @returns {string | null | undefined} */
 export function webSection(f) {
   if (!f.startsWith("apps/web/app/")) return undefined;
   const rest = f.slice("apps/web/app/".length).split("/");
@@ -227,6 +252,7 @@ export function webSection(f) {
   return rest[0];
 }
 
+/** @param {string} section @param {Map<string, string>} specTexts @returns {string[]} */
 export function specsForSection(section, specTexts) {
   const re = new RegExp(`/${section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9_-])`);
   return [...specTexts].filter(([, text]) => re.test(text)).map(([spec]) => spec);
@@ -237,10 +263,13 @@ export function specsForSection(section, specTexts) {
  * @returns {{ full: boolean, fullE2e: boolean, fullInt: boolean, reasons: string[], e2e: string[], int: string[], code: boolean }}
  */
 export function selectTests({ root, changed, files = listRepoFiles(root) }) {
+  /** @type {string[]} */
   const reasons = [];
   let fullE2e = false;
   let fullInt = false;
+  /** @type {Set<string>} */
   const e2e = new Set();
+  /** @type {Set<string>} */
   const int = new Set();
   const code = changed.some((f) => !DOC_RE.test(f));
   if (changed.length === 0) return { full: true, fullE2e: true, fullInt: true, reasons: ["boş fark"], e2e: [], int: [], code: true };
@@ -249,6 +278,7 @@ export function selectTests({ root, changed, files = listRepoFiles(root) }) {
   const specs = files.filter((f) => E2E_SPEC_RE.test(f));
   const intTests = files.filter((f) => INT_TEST_RE.test(f));
   const specTexts = new Map(specs.map((s) => [s, readFileSync(path.join(root, s), "utf8")]));
+  /** @type {Graph | null} */
   let graph = null;
   const g = () => (graph ??= buildGraph(root, files));
   let sourceChanged = false;
@@ -264,14 +294,15 @@ export function selectTests({ root, changed, files = listRepoFiles(root) }) {
     if (UNIT_TEST_RE.test(f) && !INT_TEST_RE.test(f) && fileSet.has(f) && dependents(g(), f).size === 1) continue;
     const rules = FULL_RULES.filter(([re]) => re.test(f));
     if (rules.some(([, , scope]) => scope === "both") || (rules.some(([, , sc]) => sc === "e2e") && rules.some(([, , sc]) => sc === "int"))) {
-      reasons.push(`${f}: ${rules[0][1]}`);
+      reasons.push(`${f}: ${rules.map(([, why]) => why).join(", ")}`);
       fullE2e = fullInt = true;
       continue;
     }
-    if (rules.length > 0) {
+    const first = rules[0];
+    if (first !== undefined) {
       // Tek takımlık ortak dosya: o takım tam, diğeri aşağıda grafikle.
-      reasons.push(`${f}: ${rules[0][1]} (${rules[0][2]})`);
-      if (rules[0][2] === "e2e") fullE2e = true;
+      reasons.push(`${f}: ${first[1]} (${first[2]})`);
+      if (first[2] === "e2e") fullE2e = true;
       else fullInt = true;
     }
     if (VOICE_RE.test(f)) continue;
@@ -344,6 +375,10 @@ export function selectTests({ root, changed, files = listRepoFiles(root) }) {
 }
 
 /** GitHub Actions çıktıları: `*_run`, `*_files`, `*_matrix` (parça sayısı seçime göre; işçi sayısı artmaz). */
+/**
+ * @param {{ code: boolean, full: boolean, fullE2e: boolean, fullInt: boolean, reasons: string[], e2e: string[], int: string[] }} sel
+ * @returns {{ code: string, full: string, e2e_run: string, int_run: string, e2e_files: string, int_files: string, e2e_matrix: string, int_matrix: string }}
+ */
 export function toOutputs(sel) {
   const e2eRun = sel.code && (sel.fullE2e || sel.e2e.length > 0);
   const intRun = sel.code && (sel.fullInt || sel.int.length > 0);
@@ -365,7 +400,9 @@ export function toOutputs(sel) {
 
 export const FULL_OUTPUTS = Object.freeze(toOutputs({ code: true, full: true, fullE2e: true, fullInt: true, reasons: [], e2e: [], int: [] }));
 
+/** @param {string[]} argv */
 function main(argv) {
+  /** @param {string} name */
   const arg = (name) => {
     const i = argv.indexOf(name);
     return i === -1 ? undefined : argv[i + 1];

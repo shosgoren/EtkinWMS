@@ -5,7 +5,8 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { FULL_E2E_MATRIX, FULL_INT_MATRIX, FULL_OUTPUTS, selectTests, specsForSection, toOutputs, webSection } from "./affected.mjs";
 
-let root;
+/** @type {string} */
+let root = "";
 const FILES = {
   "package.json": "{}",
   "packages/domain/package.json": JSON.stringify({ name: "@wms/domain", exports: { "./catalog": "./src/catalog/index.ts" } }),
@@ -40,6 +41,7 @@ beforeAll(() => {
 });
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
+/** @param {...string} changed */
 const sel = (...changed) => selectTests({ root, changed });
 
 describe("selectTests", () => {
