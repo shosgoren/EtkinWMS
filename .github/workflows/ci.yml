@@ -133,7 +133,8 @@ jobs:
   # parçaları koşmaz (testler belge dosyası okumaz). main/int dallarına push ve kod değişen her PR'da TAM takım koşar; yayın kapısı
   # main'deki tam sonucu ister. Belirsizlikte (boş fark, hata) kod sayılır (fail-safe).
   # T-1022 (kullanıcı kararı 22 Ekim): PR'da yalnız ETKİLENEN int/e2e testleri. Seçici `scripts/ci/affected.mjs` PR'ın değil TABANIN
-  # kopyasından koşar (PR ağacı yalnız veri olarak okunur; PR kodu çalışmaz, seçiciyi değiştiren PR kendi seçimini etkileyemez). Ortak dosya
+  # kopyasından koşar (`git show BASE:…` → RUNNER_TEMP; PR ağacı yalnız veri olarak okunur, PR kodu çalışmaz; seçiciyi değiştiren PR
+  # kendi seçimini etkileyemez). Ortak dosya
   # (kalip/kabuk/layout/globals.css, packages/db|auth|domain ortakları, migration, workflow, package.json/lockfile, playwright/vitest ayarı)
   # ya da eşlemesi olmayan dosya → tam takım; seçici yoksa/hata verirse tam takım. main/int push'unda her zaman TAM takım (yayın kapısı).
   # Parça sayısı seçime göre küçülür (boş parça açılmaz), en çok mevcut 4 e2e / 3 int; işçi sayısı artmaz.
@@ -170,14 +171,6 @@ jobs:
           fi
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "kod değişikliği: $code"
-      # Güvenilir seçici: tabanın commit'inden ayrı dizine (PR ağacından bağımsız) çıkarılır.
-      - name: Checkout base (trusted selector)
-        if: github.event_name == 'pull_request' && steps.diff.outputs.code == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-          path: .trusted-base
-          persist-credentials: false
       - id: pick
         env:
           EVENT: ${{ github.event_name }}
@@ -196,8 +189,10 @@ jobs:
           }
           if [ "$EVENT" != pull_request ]; then full "push: her zaman tam"; exit 0; fi
           if [ "$CODE" != true ]; then full "yalnız belge: ağır işler atlanır"; exit 0; fi
-          sel=.trusted-base/scripts/ci/affected.mjs
-          if [ ! -f "$sel" ]; then full "tabanda seçici yok"; exit 0; fi
+          # Güvenilir seçici: TABAN commit'inden PR ağacının dışına (RUNNER_TEMP) çıkarılır; yalnız node: yerleşik modüllerini kullanır.
+          mkdir -p "$RUNNER_TEMP/selector"
+          sel="$RUNNER_TEMP/selector/affected.mjs"
+          if ! git show "$BASE:scripts/ci/affected.mjs" > "$sel" 2>/dev/null; then full "tabanda seçici yok"; exit 0; fi
           out="$RUNNER_TEMP/affected.out"
           if ! GITHUB_OUTPUT="$out" node "$sel" --root . --base "$BASE" --head "$HEAD"; then full "seçici hata verdi"; exit 0; fi
           # Seçici çıktısı doğrulanır (beklenmeyen anahtar/değer → tam takım); yalnız bilinen 8 anahtar iletilir.
@@ -211,8 +206,16 @@ jobs:
           for f in kv["e2e_files"].split(): assert re.fullmatch(r"tests/e2e/[A-Za-z0-9._-]+\.spec\.ts", f), f
           for f in kv["int_files"].split(): assert re.fullmatch(r"tests/integration/[A-Za-z0-9._/-]+\.int\.test\.ts", f) and ".." not in f, f
           em, im = json.loads(kv["e2e_matrix"]), json.loads(kv["int_matrix"])
-          assert 1 <= len(em["include"]) <= 4 and all(set(e) == {"group", "part", "of"} and e["group"] in ("desktop", "mobile") and 1 <= e["part"] <= e["of"] <= 2 for e in em["include"])
-          assert 1 <= len(im["include"]) <= 3 and all(set(e) == {"shard", "of"} and 1 <= e["shard"] <= e["of"] <= 3 for e in im["include"])
+          isint = lambda v: type(v) is int
+          # Tam ve tutarlı matris: iki grup, her grupta 1..of dilimlerinin hepsi (of ∈ {1,2}); int 1..of parçalarının hepsi (of ≤ 3).
+          assert all(set(e) == {"group", "part", "of"} and all(isint(e[k]) for k in ("part", "of")) for e in em["include"])
+          eof = {e["of"] for e in em["include"]}
+          assert len(eof) == 1 and eof <= {1, 2}
+          assert sorted((e["group"], e["part"]) for e in em["include"]) == sorted((g, p) for g in ("desktop", "mobile") for p in range(1, eof.pop() + 1))
+          assert all(set(e) == {"shard", "of"} and isint(e["shard"]) and isint(e["of"]) for e in im["include"])
+          iof = {e["of"] for e in im["include"]}
+          assert len(iof) == 1 and iof <= {1, 2, 3}
+          assert sorted(e["shard"] for e in im["include"]) == list(range(1, iof.pop() + 1))
           if kv["e2e_run"] == "true" and kv["e2e_files"] == "": assert len(em["include"]) == 4
           if kv["int_run"] == "true" and kv["int_files"] == "": assert len(im["include"]) == 3
           with open(dst, "a") as o:

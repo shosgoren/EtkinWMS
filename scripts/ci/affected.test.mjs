@@ -130,6 +130,28 @@ describe("selectTests", () => {
     expect(sel("apps/web/app/t/[slug]/items/a$(x).tsx").full).toBe(true);
   });
 
+  it.each(["tests/integration/a b.int.test.ts", "packages/domain/src/stock/x.int.test.ts", "tests/e2e/sub/x.spec.ts", "apps/web/x.spec.tsx"])(
+    "koşturucunun test sayacağı ama kalıp dışı dosya → tam: %s",
+    (f) => {
+      expect(sel(f).full).toBe(true);
+    },
+  );
+
+  it("kalıp dışı test dosyasının kullandığı kaynak → tam", () => {
+    writeFileSync(path.join(root, "packages/domain/src/stock/orphan.int.test.ts"), 'import { orphan } from "./orphan.ts";\n');
+    try {
+      expect(sel("packages/domain/src/stock/orphan.ts").full).toBe(true);
+    } finally {
+      rmSync(path.join(root, "packages/domain/src/stock/orphan.int.test.ts"));
+    }
+  });
+
+  it("satır sonu içeren ad → tam ve günlükte ham satır yok", () => {
+    const s = sel("apps/web/a\n::error::x.tsx");
+    expect(s.full).toBe(true);
+    expect(s.reasons.join("")).not.toContain("\n");
+  });
+
   it("ses servisi int/e2e'yi tetiklemez (voice işi koşar)", () => {
     const o = toOutputs(sel("services/voice/app.py"));
     expect([o.e2e_run, o.int_run]).toEqual(["false", "false"]);

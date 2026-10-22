@@ -78,6 +78,8 @@ const DOC_RE = /^docs\/|\.md$/;
 const E2E_SPEC_RE = /^tests\/e2e\/[A-Za-z0-9._-]+\.spec\.ts$/;
 const INT_TEST_RE = /^tests\/integration\/[A-Za-z0-9._/-]+\.int\.test\.ts$/;
 const UNIT_TEST_RE = /\.test\.(ts|tsx|mts|mjs|js)$/;
+/** int/e2e koşturucusunun test sayacağı, ama katı kalıba (INT_TEST_RE / E2E_SPEC_RE) uymayan dosya: seçilemez → tam takım. */
+const looseTest = (/** @type {string} */ f) => (/\.int\.test\.[cm]?[jt]sx?$/.test(f) && !INT_TEST_RE.test(f)) || (/\.spec\.[cm]?[jt]sx?$/.test(f) && !E2E_SPEC_RE.test(f));
 /** Ses servisi kendi `voice` işinde (her kod değişikliğinde) test edilir; int/e2e onu sahte sunucuyla kullanır. */
 const VOICE_RE = /^services\/voice\//;
 /** Grafiği kesin olmayan test: hesaplanmış yolla dinamik içe aktarım, kaynak/dosya okuma. Her kaynak değişikliğinde seçilir. */
@@ -286,7 +288,13 @@ export function selectTests({ root, changed, files = listRepoFiles(root) }) {
   for (const f of changed) {
     if (DOC_RE.test(f)) continue;
     if (!/^[A-Za-z0-9._@/[\] -]+$/.test(f)) {
-      reasons.push(`${f}: beklenmeyen karakter`);
+      reasons.push(`${JSON.stringify(f)}: beklenmeyen karakter`);
+      fullE2e = fullInt = true;
+      continue;
+    }
+    // Koşturucunun test sayacağı ama seçicinin katı kalıbına uymayan ad (vitest int: `**/*.int.test.ts` her yerde; Playwright: `*.spec.ts`).
+    if (looseTest(f)) {
+      reasons.push(`${f}: test kalıbı dışında test dosyası`);
       fullE2e = fullInt = true;
       continue;
     }
@@ -324,6 +332,11 @@ export function selectTests({ root, changed, files = listRepoFiles(root) }) {
     sourceChanged = true;
     let mapped = false;
     for (const u of users) {
+      if (looseTest(u)) {
+        reasons.push(`${f}: test kalıbı dışındaki test dosyası kullanıyor (${u})`);
+        fullE2e = fullInt = true;
+        mapped = true;
+      }
       if (INT_TEST_RE.test(u)) {
         int.add(u);
         mapped = true;
@@ -424,7 +437,7 @@ function main(argv) {
   }
   if (sel !== undefined) {
     console.log(`kod: ${sel.code} · tam e2e: ${sel.fullE2e} · tam int: ${sel.fullInt}`);
-    for (const r of [...new Set(sel.reasons)].slice(0, 40)) console.log(`  tam takım nedeni: ${r}`);
+    for (const r of [...new Set(sel.reasons)].slice(0, 40)) console.log(`  tam takım nedeni: ${r.replace(/[\r\n]/g, " ").replace(/^::/, ": :")}`);
     if (!sel.fullE2e) console.log(`e2e (${sel.e2e.length}): ${sel.e2e.join(" ") || "—"}`);
     if (!sel.fullInt) console.log(`int (${sel.int.length}): ${sel.int.join(" ") || "—"}`);
   }
