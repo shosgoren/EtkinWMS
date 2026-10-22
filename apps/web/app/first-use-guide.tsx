@@ -8,8 +8,6 @@ import { usePathname } from "next/navigation";
 
 const KEY = "etkinwms.guide.v1";
 const OPEN_EVENT = "etkinwms:guide-open";
-// T-995: aktivasyon (oturumsuz kurulum) ekranında da ilk rehber açılmaz; rehber kurulumdan sonraki ilk iş ekranındadır.
-const AUTH_PATHS = ["/login", "/mfa", "/reset-password", "/activate"];
 
 /** Rehberi açan düğme; görünümü çağıranın sınıfıyla (üst çubuk hapı / menü satırı). */
 export function GuideTrigger({ className, iconOnly = false }: { className: string; iconOnly?: boolean }) {
@@ -32,11 +30,11 @@ export function FirstUseGuide() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState(0);
   const pathname = usePathname();
-  // T-983: giriş adımları (giriş, iki adımlı doğrulama, parola sıfırlama) sade kalır; ilk rehber girişten sonraki ilk ekranda açılır.
+  // T-983 / T-995: giriş, iki adımlı doğrulama, parola sıfırlama ve aktivasyon sade kalır. T-1012: eski rehber kendiliğinden YALNIZ karşılama
+  // sayfasında (`/`, tetikleyicisinin bulunduğu eski başlık) açılır; çalışma alanı kendi kurulum turunu (T-1006), seçici/kurulum/saha ekranları
+  // kendi kabuğunu kullanır. Destek > Rehberi aç olayı (aşağıda) her yerde elle açar.
   useEffect(() => {
-    // T-1012: kiracı kendi rehberini/kabuğunu kullanır; Destek > Rehberi aç olayı aşağıda çalışmaya devam eder.
-    if (pathname === "/t" || pathname.startsWith("/t/")) return;
-    if (AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
+    if (pathname !== "/") return;
     try { if (localStorage.getItem(KEY) !== "seen" && !dialog.current?.open) dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
   }, [pathname]);
   useEffect(() => {
