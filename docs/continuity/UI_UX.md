@@ -1,5 +1,6 @@
 # Web, mobil ve tablet UI/UX
 
+- T-1011: Görevlerim kartında ürün adı/kodu, görev türü/durum ve depo/raf bilgisi ortak `kalip/gorev-karti.tsx` ile gösterilir. Ayırt edici satırlar telefonda gizlenen `.um` içine konmaz. Ürün/rafı olmayan görevde bilgi uydurulmaz; liste adları mevcut tenant transaction'ı ve depo kapsamı içinde gelir. Salt okuma değişikliğidir; Üstlen/Başla komutları aynıdır.
 - T-1010: ortak seçim/önizleme renkleri `kalip/tokens.ts` içindeki `kdzOrtak` ile çözülür. CSS renk belirteci kalıp kapsamında yoksa yalnız doğrulanmış tasarım kaynağındaki renk yedek olarak kullanılır (Yeni ürün / Hammadde: #8A5A12); mevcut açık/koyu tema belirteci önceliklidir. Üretilmiş CSS elle değiştirilmez.
 
 ## Temel kullanıcı kuralı

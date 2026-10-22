@@ -386,6 +386,49 @@ export interface TaskPage {
   readonly total?: number;
 }
 
+/** Görevlerim için gösterim bilgisi; kimlik/komut sözleşmesi TaskRow olarak kalır. */
+export interface MyTaskRow extends TaskRow {
+  readonly itemName: string | null;
+  readonly itemCode: string | null;
+  readonly warehouseName: string | null;
+  readonly locationCode: string | null;
+  readonly locationName: string | null;
+}
+
+export interface MyTaskPage extends Omit<TaskPage, "items"> {
+  readonly items: readonly MyTaskRow[];
+}
+
+/** Yalnız görünür sayfadaki görevleri aynı tenant transaction'ında topluca zenginleştirir (N+1 yok). */
+async function taskDisplay(tx: AccessTx, tenantId: string, tasks: TaskPage): Promise<MyTaskPage> {
+  if (tasks.items.length === 0) return { ...tasks, items: [] };
+  const rows = await tx.execute<{
+    id: string; item_name: string | null; item_code: string | null; warehouse_name: string | null;
+    location_code: string | null; location_name: string | null;
+  }>(sql`SELECT wt.id, i.name AS item_name, i.code AS item_code, w.name AS warehouse_name,
+                l.code AS location_code, l.name AS location_name
+           FROM public.warehouse_tasks wt
+           LEFT JOIN public.items i ON i.tenant_id = wt.tenant_id AND i.id = wt.item_id
+           LEFT JOIN public.warehouses w ON w.tenant_id = wt.tenant_id AND w.id = wt.warehouse_id
+           LEFT JOIN public.locations l ON l.tenant_id = wt.tenant_id AND l.warehouse_id = wt.warehouse_id AND l.id = wt.location_id
+          WHERE wt.tenant_id = ${tenantId}::uuid AND wt.id = ANY(${pgUuidArray(tasks.items.map((t) => t.id))}::uuid[])`);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return {
+    ...tasks,
+    items: tasks.items.map((task) => {
+      const display = byId.get(task.id);
+      return {
+        ...task,
+        itemName: display?.item_name ?? null,
+        itemCode: display?.item_code ?? null,
+        warehouseName: display?.warehouse_name ?? null,
+        locationCode: display?.location_code ?? null,
+        locationName: display?.location_name ?? null,
+      };
+    }),
+  };
+}
+
 /**
  * Biçim doğru ama takvimde olmayan zaman (ör. 2026-02-31, 25:00) Postgres'te 500 verirdi; burada reddedilir. Yıl 0000 de reddedilir (T-273): JS
  * onu geçerli sayar (MÖ 1) ama PostgreSQL `timestamptz` aralığında yıl 0 yoktur (4713 MÖ…294276 MS, MÖ 1 = `0001 BC`; ISO `0000` metni
@@ -465,7 +508,7 @@ function kindStatusOf(input: { readonly kind?: TaskKind; readonly status?: TaskS
  * Personelin listesi: bana atanmış ASSIGNED görevler + türünün izni bende olan üstlenilebilir OPEN görevler (A-132). Sıra: eskiden yeniye
  * (created_at, id). DONE/CANCELLED görünmez.
  */
-export async function listMyTasks(params: TaskCallParams, input: ListMyTasksInput = {}): Promise<TaskPage> {
+export async function listMyTasks(params: TaskCallParams, input: ListMyTasksInput = {}): Promise<MyTaskPage> {
   const limit = limitOf(input.limit);
   const cur = cursorOf(input.after);
   const { kind, status } = kindStatusOf(input);
@@ -488,7 +531,8 @@ export async function listMyTasks(params: TaskCallParams, input: ListMyTasksInpu
            ORDER BY created_at, id
            LIMIT ${limit + 1}`,
     );
-    return input.withTotal === true ? { ...page(rows, limit), total: await countTasks(tx, where) } : page(rows, limit);
+    const result = input.withTotal === true ? { ...page(rows, limit), total: await countTasks(tx, where) } : page(rows, limit);
+    return taskDisplay(tx, m.tenantId, result);
   });
 }
 

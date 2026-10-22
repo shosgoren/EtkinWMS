@@ -255,6 +255,61 @@ describe("görev komutları", () => {
 });
 
 describe("görev sorguları", () => {
+  it("T-1011: ürün/depo/raf etiketleri aynı tenant'tan gelir; null bilgiler, keyset ve toplam korunur", async () => {
+    const w = await seedWorld(adm, reg, "D1011");
+    const foreign = await seedWorld(adm, reg, "D1011B");
+    await adm.query("UPDATE public.items SET name = 'Yabanci urun' WHERE tenant_id = $1 AND id = $2", [foreign.tenantId, foreign.itemTwoId]);
+    const [detailed, plain] = await runTenantCommand({ ...admin(w), permission: "stock.post" }, (tx, m) => createTasks(tx, m, [
+      { warehouseId: w.warehouseId, kind: "PICK", itemId: w.itemTwoId, quantity: "3.5", locationId: w.childLocationId },
+      { warehouseId: w.warehouseId, kind: "PICK" },
+    ]));
+    const [foreignTask] = await runTenantCommand({ ...admin(foreign), permission: "stock.post" }, (tx, m) => createTasks(tx, m, [
+      { warehouseId: foreign.warehouseId, kind: "PICK", itemId: foreign.itemTwoId, quantity: "1", locationId: foreign.childLocationId },
+    ]));
+    const first = await listMyTasks(picker(w), { kind: "PICK", limit: 1, withTotal: true });
+    expect(first.total).toBe(2);
+    expect(first.items).toHaveLength(1);
+    expect(first.next).not.toBeNull();
+    const second = await listMyTasks(picker(w), { kind: "PICK", limit: 1, withTotal: true, after: first.next as ops.TaskCursor });
+    expect(second.total).toBe(2);
+    expect(second.next).toBeNull();
+    const items = [...first.items, ...second.items];
+    expect(new Set(items.map((t) => t.id)).size).toBe(2);
+    expect(items.find((t) => t.id === detailed)).toMatchObject({
+      itemName: "Urun 2", itemCode: "U2", warehouseName: "T202 Depo D1011", locationCode: "Z1-R1", locationName: "Raf 1", quantity: "3.500000",
+    });
+    expect(items.find((t) => t.id === plain)).toMatchObject({
+      itemName: null, itemCode: null, warehouseName: "T202 Depo D1011", locationCode: null, locationName: null, quantity: null,
+    });
+    expect(items.map((t) => t.id)).not.toContain(foreignTask);
+    expect(JSON.stringify(items)).not.toContain("Yabanci urun");
+    expect(JSON.stringify(items)).not.toContain("T202 Depo D1011B");
+  });
+
+  it("T-1011: depo kapsamı dışındaki görevin etiketlerini döndürmez", async () => {
+    const w = await seedWorld(adm, reg, "D1011S");
+    const other = await createWarehouse(admin(w), { code: `d${randomUUID().slice(0, 8)}`, name: "Gizli depo" });
+    const [visible, hidden] = await runTenantCommand({ ...admin(w), permission: "stock.post" }, (tx, m) => createTasks(tx, m, [
+      { warehouseId: w.warehouseId, kind: "PICK", itemId: w.itemTwoId, quantity: "2", locationId: w.childLocationId },
+      { warehouseId: other.warehouseId, kind: "PICK", itemId: w.itemId, quantity: "4" },
+    ]));
+    await setMembershipWarehouseScopes({ ...admin(w), recentAuth: async () => undefined }, { membershipId: w.memberMembershipId, warehouseIds: [w.warehouseId] });
+    const previous = process.env.WAREHOUSE_SCOPE_ENABLED;
+    try {
+      process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+      const result = await listMyTasks(picker(w), { kind: "PICK", withTotal: true });
+      expect(result.total).toBe(1);
+      expect(result.items.map((t) => t.id)).toEqual([visible]);
+      expect(result.items.map((t) => t.id)).not.toContain(hidden);
+      expect(result.items[0]).toMatchObject({ warehouseName: "T202 Depo D1011S", itemName: "Urun 2", locationCode: "Z1-R1" });
+      expect(JSON.stringify(result)).not.toContain("Gizli depo");
+      expect(JSON.stringify(result)).not.toContain("Urun 1");
+    } finally {
+      if (previous === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      else process.env.WAREHOUSE_SCOPE_ENABLED = previous;
+    }
+  });
+
   it("listMyTasks: bana atanmış + izinli OPEN; başkasına atanmış, izinsiz tür ve sonlanmış görünmez", async () => {
     const w = await seedWorld(adm, reg, "L304");
     const wCounter = await mkUser(adm, reg, "L304 counter");
