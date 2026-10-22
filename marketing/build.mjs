@@ -80,8 +80,13 @@ function must(html, re, what) {
   return m;
 }
 
+let privacyOverlay = "";
 function build() {
-  const dc = readFileSync(src("landing.dc.html"), "utf8");
+  const formSource = readFileSync(resolve(here, "../docs/design/source/DemoForm.dc.html"), "utf8");
+  const sector = must(formSource, /<template id="demo-sector-source">([\s\S]*?)<\/template>/, "sector")[1];
+  const fields = must(formSource, /<template id="demo-fields-source">([\s\S]*?)<\/template>/, "fields")[1];
+  const dc = readFileSync(src("landing.dc.html"), "utf8").replace("<!-- demo-sector-source -->", sector).replace("<!-- demo-fields-source -->", fields);
+  const formCss = must(formSource, /<style>([\s\S]*?)<\/style>/, "form CSS")[1];
   const helmet = must(dc, /<helmet>([\s\S]*?)<\/helmet>/, "<helmet>")[1] ?? "";
   const css = [...helmet.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n");
   const body = must(dc, /<\/helmet>([\s\S]*?)<\/x-dc>/, "şablon gövdesi")[1]?.trim() ?? "";
@@ -93,15 +98,19 @@ function build() {
   for (const [k, v] of Object.entries(propSpec)) if (!k.startsWith("$")) props[k] = v.default;
   const component = transformComponent(scriptTag[2] ?? "");
 
-  writeFileSync(pub("styles.css"), `/* Etkin WMS — üretilmiş dosya (marketing/build.mjs). Elle düzenlemeyin. */\n${FONT_FACES}\n${css.trim()}\n`);
+  writeFileSync(pub("styles.css"), `/* Etkin WMS — üretilmiş dosya (marketing/build.mjs). Elle düzenlemeyin. */\n${FONT_FACES}\n${css.trim()}\n${formCss}\n`);
   const site = [
     "/* Etkin WMS — üretilmiş dosya (marketing/build.mjs). Elle düzenlemeyin. */",
     `(function () {\n"use strict";\n${readFileSync(src("runtime.js"), "utf8")}\n})();`,
     `window.EtkinDCProps = ${JSON.stringify(props)};`,
     `(function () {\n"use strict";\nconst DCLogic = window.EtkinDC.DCLogic;\n${component.trim()}\nwindow.EtkinDCComponent = Component;\n})();`,
+    readFileSync(src("form-ui.js"), "utf8"),
     readFileSync(src("boot.js"), "utf8"),
   ].join("\n");
   writeFileSync(pub("site.js"), site);
+  const privacy = must(readFileSync(pub("privacy.html"), "utf8"), /<main[^>]*>([\s\S]*?)<\/main>/, "privacy")[1];
+  const overlay = must(formSource, /<template id="demo-privacy-source">([\s\S]*?)<\/template>/, "privacy component")[1].replace("{{privacyContent}}", privacy);
+  privacyOverlay = overlay;
   return { body };
 }
 
@@ -138,6 +147,7 @@ function page(prerendered, template) {
 </head>
 <body>
 <div id="dc-root">${prerendered}</div>
+${privacyOverlay}
 <template id="dc-tpl">${template}</template>
 </body>
 </html>
@@ -148,7 +158,7 @@ const TYPES = { ".html": "text/html", ".css": "text/css", ".js": "text/javascrip
 
 async function prerender(template) {
   writeFileSync(pub("index.html"), page("", template));
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : {});
   try {
     const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await p.route("**/*", (route) => {

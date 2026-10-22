@@ -40,3 +40,10 @@ read -rsp 'Resend API anahtarı: ' K && echo && case "$K" in re_*) ;; *) echo 'a
 Alan adı Resend'de doğrulanmadıkça gönderen `onboarding@resend.dev` olur ve yalnız Resend hesabının e-postasına gönderim yapılabilir. Kapatmak için `notify.json` silinir. Tüm IP'ler için saatte en çok 20 bildirim gider; fazlası yalnız dosyaya kaydedilir. Not: marketing-leads birimi yedeklenirse anahtar da yedekte bulunur. Kayıtlar herkese açık bir API'den okunamaz. Bu sürümde talepleri sunucu erişimi olan işletmeci kontrol eder. Formda iletişim onayı, kaynak denetimi, 8KB gövde sınırı ve IP başına saatte 5 deneme sınırı vardır.
 
 Ürün arayüzleri temsili olarak etiketlenmiştir. Müşteri referansı, fiyat veya tamamlanmamış modülün hazır olduğuna dair iddia içermez. Cihaz uyumluluğu ve pilot kabul kapsamı açıkça belirtilir.
+
+## T-1025 hazırlığı (henüz yayınlanmadı)
+Zorunlu alanlar ve sektör seçenekleri `docs/design/source/DemoForm.dc.html` kaynağından build sırasında alınır.
+`src/form-ui.js` gizlilik metnini aynı sayfada erişilebilir bir katmanda açar; geri bağlantısı, Esc ve tarayıcı geri düğmesi formun mevcut DOM'una döner. Kişisel veri tarayıcı depolamasına veya URL'ye yazılmaz. Sektörler yerel radio semantiğiyle klavyeden seçilir.
+İzole tarayıcı deneyi: `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium node marketing/form-browser.mjs` (yerel sunucu, gönderim uçları sahte; gerçek posta yok).
+0057 migration hazırlığı ingestion'da kalıcı e-posta ve request ID tekilliği sağlar; mevcut marketing POST henüz bu yola bağlanmamıştır. Bu yüzden uçtan uca mükerrerlik düzeltmesi tamamlanmış değildir.
+Son kullanıcı seçimi e-postaya süreli sahiplik bağlantısıdır; bu akış henüz uygulanmadı. PR/yayın kapalıdır.

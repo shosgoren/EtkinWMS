@@ -41,3 +41,6 @@ Not (T-979b, 21 Ekim, B-99): ALTIN-KURAL ≥ 48 px dokunma hedefi için üst çu
 Not (T-979c, 21 Ekim): alt cam çubuğun orta ana işlem etiketi çubuk çerçevesinin dışına taşıyordu (kullanıcı canlıda gördü). Yerel kaynakta (`Kabuk` + aynı kuralı taşıyan `KalipListe/Form/Detay/Saha`, `Destek`): `.dk.big` 66 → 58 px ve daire yukarı (`margin-top:-44px`; `.lg` çeşidinde de), `.dk.big .cap` dairenin hemen altında (`top:calc(100% + 3px)`) — diğer yuvaların etiketleriyle aynı taban çizgisi ve çubuğun içinde; yazı boyutu / harf aralığı / saydamlık diğer etiketlerle aynı (9.5 px, telefonda 8.5 px; gölge yok), en çok 76 px. Tuvale aynı düzeltme işlenmeli.
 
 Not (Yolculuk, 22 Ekim): kaynaktaki `.pv-veil` / `.pv-btn` yalnız tuval önizlemesidir (perde uygulamada ortak `.kperde`, delik `clip-path` ile hedefin çevresinde); örnek sayılar (124 ürün, 48 raf, 22.10) benzetimdir, uygulamada gerçek veriden gelir.
+
+## T-1025 marketing form hazırlığı (22 Ekim 2026)
+`DemoForm.dc.html`: kullanıcı mevcut marketing çalışma zamanında ortak parçaları kabul etti; yerel kaynak, henüz tuvale aktarılmadı/yayınlanmadı. SHA256 `d013b8fcb7100392edd4f6ff90cb58e46a4c1f3d6f8e6a41334ffad35df29e64`. 390/1180/1440 render ve gözle kontrol yerel testte; kapsam tamamlanmadı.

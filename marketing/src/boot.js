@@ -20,6 +20,9 @@
   }
   const comp = new window.EtkinDCComponent(props);
   window.EtkinDC.mount(root, tpl, comp);
+  window.EtkinFormUI.mountPrivacy();
+  let requestId;
+  let requestSnapshot;
 
   // T-431: demo formu geri bildirimi (ALTIN-KURAL 3): görsel + sesli; çift gönderim engeli; hata olursa girilen bilgi korunur.
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // sunucu validateLead ile aynı
@@ -124,6 +127,11 @@
       focusLater(`#demo-form [name="${FIELDS.find((k) => fe[k])}"]`);
       return;
     }
+    const snapshot = JSON.stringify(data);
+    if (snapshot !== requestSnapshot) {
+      requestId = crypto.randomUUID();
+      requestSnapshot = snapshot;
+    }
     comp.setState({ formKey: "fSending", fe: {}, formRef: "" });
     const failed = (key) => {
       comp.setState({ formKey: key });
@@ -135,7 +143,7 @@
       const response = await fetch("/api/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, requestId }),
         signal: ctrl.signal,
       });
       const result = await response.json().catch(() => ({}));
