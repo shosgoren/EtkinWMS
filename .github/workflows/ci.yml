@@ -211,11 +211,12 @@ jobs:
           assert all(set(e) == {"group", "part", "of"} and all(isint(e[k]) for k in ("part", "of")) for e in em["include"])
           eof = {e["of"] for e in em["include"]}
           assert len(eof) == 1 and eof <= {1, 2}
-          assert sorted((e["group"], e["part"]) for e in em["include"]) == sorted((g, p) for g in ("desktop", "mobile") for p in range(1, eof.pop() + 1))
+          en = min(eof)
+          assert sorted((e["group"], e["part"]) for e in em["include"]) == sorted((g, p) for g in ("desktop", "mobile") for p in range(1, en + 1))
           assert all(set(e) == {"shard", "of"} and isint(e["shard"]) and isint(e["of"]) for e in im["include"])
           iof = {e["of"] for e in im["include"]}
           assert len(iof) == 1 and iof <= {1, 2, 3}
-          assert sorted(e["shard"] for e in im["include"]) == list(range(1, iof.pop() + 1))
+          assert sorted(e["shard"] for e in im["include"]) == list(range(1, min(iof) + 1))
           if kv["e2e_run"] == "true" and kv["e2e_files"] == "": assert len(em["include"]) == 4
           if kv["int_run"] == "true" and kv["int_files"] == "": assert len(im["include"]) == 3
           with open(dst, "a") as o:
