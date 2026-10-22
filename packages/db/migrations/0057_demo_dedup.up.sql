@@ -33,6 +33,11 @@ BEGIN
 END
 $fn$;
 REVOKE ALL ON FUNCTION wms_probe.demo_email_reserve() FROM PUBLIC;
+-- CREATE TRIGGER checks EXECUTE even for the table owner. The migration role
+-- has SET but no INHERIT membership; this transaction-only grant is removed below.
+DO $grant$ BEGIN
+  EXECUTE format('GRANT EXECUTE ON FUNCTION wms_probe.demo_email_reserve() TO %I', session_user);
+END $grant$;
 -- Existing narrow worker entry point: ID is the durable idempotency key.
 CREATE OR REPLACE FUNCTION wms_probe.platform_ingest_demo_request(
   p_id uuid, p_received_at timestamptz, p_name text, p_company text, p_email text, p_sector text, p_message text
@@ -62,6 +67,11 @@ RESET ROLE;
 REVOKE CREATE ON SCHEMA wms_probe FROM wms_identity_probe;
 CREATE TRIGGER demo_email_reserve BEFORE INSERT ON wms_platform.demo_requests
 FOR EACH ROW EXECUTE FUNCTION wms_probe.demo_email_reserve();
+SET ROLE wms_identity_probe;
+DO $revoke$ BEGIN
+  EXECUTE format('REVOKE EXECUTE ON FUNCTION wms_probe.demo_email_reserve() FROM %I', session_user);
+END $revoke$;
+RESET ROLE;
 
 ALTER TABLE wms_platform.demo_requests ADD COLUMN owner_link_issued_at timestamptz;
 GRANT UPDATE(owner_link_issued_at) ON wms_platform.demo_requests TO wms_identity_probe;
