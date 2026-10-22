@@ -25,6 +25,7 @@
     "./onboarding/import": "./src/onboarding/index.ts",
     "./onboarding/data-export": "./src/onboarding/data-export.ts",
     "./onboarding/master-import": "./src/onboarding/master-import.ts",
+    "./onboarding/journey": "./src/onboarding/journey.ts",
     "./demo/seed": "./src/demo/seed.ts",
     "./catalog": "./src/catalog/index.ts",
     "./catalog/units": "./src/catalog/units.ts",

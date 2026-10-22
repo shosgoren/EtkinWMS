@@ -63,6 +63,7 @@ describe("eylem listesi", () => {
         "support.ticket_created", "support.ticket_replied",
         "data.exported", "data.imported",
         "integration.connected", "integration.checked", "integration.disconnected", "integration.flow_changed", "integration.run_requested", "integration.synced",
+        "setup_journey.updated", "setup_journey.labels_printed", "integration.opening_stock_setting", "integration.opening_stock_taken",
       ].sort(),
     );
   });

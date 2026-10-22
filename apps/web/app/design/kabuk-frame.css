@@ -12,6 +12,9 @@
   background: transparent;
   pointer-events: none;
 }
+/* T-1006 (kurulum yolculuğu, Kabuk.dc.html `.touring`): ipucu kartı alt çubuktaki bir yuvayı gösterirken çubuk ortak buzlu perdenin (z 40)
+   ÜSTÜNE çıkar; diğer yuvalar kaynak kuralıyla kısık + hafif bulanık, yalnız `.spot` net ve parlak. İpucu kartı (z 46) yine üstte. */
+.dzk .wrap.touring, .dzk.dz-dark .wrap.touring { z-index: 42; }
 .dzk .app, .dzk.dz-dark .app {
   position: relative;
   display: flex;

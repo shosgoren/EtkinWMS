@@ -14,6 +14,8 @@ import { degisti } from "../kalip/dogrula.ts";
 import { KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
 import { KalipBos, KalipCipler, KalipDaha } from "../kalip/liste.tsx";
 import { printCss, validPrintSettings, type PaperMode } from "./print-settings.ts";
+import { useKabuk } from "../kabuk/kabuk-bar.tsx";
+import { markLabelsPrintedAction } from "../yolculuk/actions.ts";
 import "./print.css";
 import { feedback } from "@wms/ui";
 
@@ -60,6 +62,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
   const router = useRouter();
   const [ilk, setIlk] = useState(settings);
   const korunan = useCikisKorumasi(degisti(settings, ilk), { dark });
+  const slug = useKabuk()?.slug;
 
   function downloadZpl(): void {
     feedback.minor();
@@ -92,6 +95,8 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
           onClick: () => {
             feedback.minor();
             setIlk(settings);
+            // T-1006: kurulum yolculuğu adım 4'ün gerçek kaydı (ilk yazdırma; hata yazdırmayı durdurmaz).
+            if (slug !== undefined) void markLabelsPrintedAction({ slug }).catch(() => undefined);
             window.print();
           },
           testId: "labels-print",

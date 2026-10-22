@@ -10,6 +10,8 @@ import { PICON } from "../../../design/pano-icons.ts";
 import { appVersionOf } from "./app-version.ts";
 import { PanoShell, type PanoLink } from "./pano-shell.tsx";
 import { AssignWho, type AssignCandidate } from "./assign-who.tsx";
+import { YolculukKart } from "../yolculuk/yolculuk.tsx";
+import type { JourneyData } from "../yolculuk/steps.ts";
 
 export type BoardRole = "owner" | "manager";
 
@@ -34,6 +36,8 @@ export interface PanoBoardProps {
   readonly usersManage: boolean;
   readonly settingsManage: boolean;
   readonly assignees: readonly Assignee[];
+  /** T-1006: ilk kurulum yolculuğu (okunamadıysa `null`: kart yok). */
+  readonly journey?: JourneyData | null;
 }
 
 const AV = ["2F7D5B", "0E7C7B", "2F5DA8", "6C4BD8", "B5552B", "172E42"] as const;
@@ -141,6 +145,7 @@ export async function PanoBoard(p: PanoBoardProps) {
           </div>
         </div>
       </div>
+      {p.journey != null && !p.journey.dismissed ? <YolculukKart data={p.journey} dark={p.dark} /> : null}
 
       {b === null ? null : owner ? (
         <>
