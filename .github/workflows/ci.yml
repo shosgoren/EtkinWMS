@@ -237,6 +237,9 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      # mcr.microsoft.com/playwright:v1.56.1-noble — çok mimarili indeks digest'i (22 Ekim 2026, `docker buildx imagetools inspect`).
+      PW_IMAGE: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
     strategy:
       fail-fast: false
       matrix:
@@ -252,21 +255,18 @@ jobs:
           node-version-file: package.json
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      # T-445: Playwright tarayıcı önbelleği (anahtar = kurulu @playwright/test sürümü). Önbellek yalnız bu deponun iş akışlarınca
-      # yazılır; PR koşusu kendi PR kapsamına yazar, main'in önbelleğini değiştiremez. İsabette yalnız işletim sistemi bağımlılıkları kurulur.
-      - name: Playwright version
-        id: pw
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: pw-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
-      - if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
-      - if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+      # T-1020 (kullanıcı kararı 22 Ekim "CI hızlansın"): testler resmî Playwright imajında koşar; tarayıcı ve işletim sistemi
+      # bağımlılıkları imajdadır → `playwright install-deps` (Ubuntu aynası yavaşken 8–23 dk) kalktı. İmaj çok mimarili indeks digest'iyle
+      # sabittir; etiket sürümü kurulu @playwright/test ile eşleşmezse iş kırmızıdır (imaj ve paket birlikte güncellenir).
+      - name: Playwright image matches @playwright/test
+        run: |
+          set -euo pipefail
+          # Sürüm imaj etiketinden türetilir (mcr.microsoft.com/playwright:v<sürüm>-noble@sha256:…); ayrı sabit yok.
+          [[ "$PW_IMAGE" =~ ^mcr\.microsoft\.com/playwright:v([0-9]+\.[0-9]+\.[0-9]+)-noble@sha256:[0-9a-f]{64}$ ]] || { echo "::error::PW_IMAGE biçimi beklenmiyor"; exit 1; }
+          PW_VERSION=${BASH_REMATCH[1]}
+          v=$(node -p "require('@playwright/test/package.json').version")
+          if [ "$v" != "$PW_VERSION" ]; then echo "::error::@playwright/test $v, Playwright imajı $PW_VERSION — ci.yml e2e-shard imajı (etiket + digest) güncellenmeli"; exit 1; fi
+          echo "@playwright/test $v = imaj $PW_VERSION"
       # T-445: Next derleme önbelleği (global-setup `next build`). Anahtar kilit dosyası + web/paket kaynakları; kısmi isabet restore-keys ile.
       - name: Cache Next build
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -276,12 +276,56 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: cp .env.example .env
-      - run: docker compose up -d --wait --wait-timeout 300
-      - name: pnpm test:e2e
+      # İmaj indirme compose kurulumuyla paralel; indirme en çok 3 deneme × 5 dk (ayna/kayıt yavaşlığı işi 30 dk asmasın).
+      - name: Compose up + pull Playwright image
         run: |
-          mkdir -p .artifacts/e2e
+          set -euo pipefail
+          ( for i in 1 2 3; do
+              if timeout 300 docker pull -q "$PW_IMAGE"; then exit 0; fi
+              echo "Playwright imajı indirilemedi (deneme $i)"; sleep 5
+            done; exit 1 ) > "$RUNNER_TEMP/pw-pull.log" 2>&1 &
+          pull=$!
+          docker compose up -d --wait --wait-timeout 300
+          rc=0; wait "$pull" || rc=$?
+          cat "$RUNNER_TEMP/pw-pull.log"
+          exit "$rc"
+      # Konteyner: host ağı (compose servisleri ve global-setup'ın web/worker/TLS vekili 127.0.0.1'de; yalnız-loopback denetimi aynen geçer),
+      # çalışma alanı ve runner geçici dizini AYNI yolda bağlanır (spec'lerdeki mutlak yollar çalışır), süreçler runner kullanıcısıyla koşar.
+      # Node 24 ve pnpm runner'daki kurulu sürümlerdir (salt okunur bağlama; imajın Node 22'si kullanılmaz). Testlerin fikstür `psql`'i
+      # imajda yok: küçük köprü aynı argüman ve PG* ortamıyla compose postgres konteynerindeki psql'i çalıştırır (parola argv'ye girmez).
+      # Docker soketi yalnız bu köprü için bağlanır; runner kullanıcısı zaten docker grubundadır (yeni yetki yok). Sır kullanılmaz.
+      - name: pnpm test:e2e
+        env:
+          GROUP: ${{ matrix.group }}
+          PART: ${{ matrix.part }}
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/e2e "$RUNNER_TEMP/pw-bin" "$RUNNER_TEMP/pw-home"
+          pg=$(docker compose ps -q postgres)
+          [[ "$pg" =~ ^[0-9a-f]{12,64}$ ]] || { echo "::error::compose postgres konteyneri bulunamadı"; exit 1; }
+          # Konteyner kimliği betiğe gömülür: spec'ler psql'i yalnız PATH + PG* ortamıyla çağırır (başka değişken geçmez).
+          printf '%s\n' '#!/bin/sh' "exec docker exec -i -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE $pg psql \"\$@\"" > "$RUNNER_TEMP/pw-bin/psql"
+          chmod 755 "$RUNNER_TEMP/pw-bin/psql"
+          node_bin=$(dirname "$(readlink -f "$(command -v node)")")
+          pnpm_real=$(readlink -f "$(command -v pnpm)")
+          pnpm_pkg=$(dirname "$(dirname "$pnpm_real")")
+          ln -sf "$pnpm_real" "$RUNNER_TEMP/pw-bin/pnpm"
+          docker_cli=$(readlink -f "$(command -v docker)")
+          echo "node $(node -v) ($node_bin) · pnpm $(pnpm -v) ($pnpm_pkg) · docker cli $docker_cli"
+          pw_run() {
+            docker run --rm --init --ipc=host --network host \
+              --user "$(id -u):$(id -g)" --group-add "$(stat -c %g /var/run/docker.sock)" \
+              -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -v "$RUNNER_TEMP:$RUNNER_TEMP" -w "$GITHUB_WORKSPACE" \
+              -v "$(dirname "$node_bin"):$(dirname "$node_bin"):ro" -v "$pnpm_pkg:$pnpm_pkg:ro" \
+              -v "$docker_cli:/usr/local/bin/docker:ro" -v /var/run/docker.sock:/var/run/docker.sock \
+              -e HOME="$RUNNER_TEMP/pw-home" -e PATH="$RUNNER_TEMP/pw-bin:$node_bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+              -e CI -e GITHUB_ACTIONS -e npm_config_ignore_pnpmfile \
+              "$PW_IMAGE" "$@"
+          }
+          # Ön kontrol (hızlı başarısızlık): konteyner içinden Node 24, pnpm ve psql köprüsü — spec'lerin çağırdığı biçimde yalnız PATH + PG* ortamıyla.
+          pw_run sh -ec 'node -v | grep -q "^v24\."; pnpm -v; u=$(grep "^DATABASE_URL_DIRECT=" .env | cut -d= -f2-); env -i PATH="$PATH" psql "$u" -X -q -A -t -c "select 1" | grep -qx 1; echo "konteyner ön kontrolü OK"'
           set -o pipefail
-          pnpm test:e2e --project=${{ matrix.group }} --project=receiving-${{ matrix.group }} --shard=${{ matrix.part }}/2 2>&1 | tee .artifacts/e2e/run.log
+          pw_run pnpm test:e2e --project="$GROUP" --project="receiving-$GROUP" --shard="$PART/2" 2>&1 | tee .artifacts/e2e/run.log
       - name: Stage .artifacts/e2e
         if: always()
         run: |
