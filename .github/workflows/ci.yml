@@ -302,7 +302,8 @@ jobs:
           mkdir -p .artifacts/e2e "$RUNNER_TEMP/pw-bin" "$RUNNER_TEMP/pw-home"
           pg=$(docker compose ps -q postgres)
           [[ "$pg" =~ ^[0-9a-f]{12,64}$ ]] || { echo "::error::compose postgres konteyneri bulunamadı"; exit 1; }
-          printf '%s\n' '#!/bin/sh' 'exec docker exec -i -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE "$E2E_PG_CONTAINER" psql "$@"' > "$RUNNER_TEMP/pw-bin/psql"
+          # Konteyner kimliği betiğe gömülür: spec'ler psql'i yalnız PATH + PG* ortamıyla çağırır (başka değişken geçmez).
+          printf '%s\n' '#!/bin/sh' "exec docker exec -i -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE $pg psql \"\$@\"" > "$RUNNER_TEMP/pw-bin/psql"
           chmod 755 "$RUNNER_TEMP/pw-bin/psql"
           node_bin=$(dirname "$(readlink -f "$(command -v node)")")
           pnpm_real=$(readlink -f "$(command -v pnpm)")
@@ -310,16 +311,20 @@ jobs:
           ln -sf "$pnpm_real" "$RUNNER_TEMP/pw-bin/pnpm"
           docker_cli=$(readlink -f "$(command -v docker)")
           echo "node $(node -v) ($node_bin) · pnpm $(pnpm -v) ($pnpm_pkg) · docker cli $docker_cli"
+          pw_run() {
+            docker run --rm --init --ipc=host --network host \
+              --user "$(id -u):$(id -g)" --group-add "$(stat -c %g /var/run/docker.sock)" \
+              -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -v "$RUNNER_TEMP:$RUNNER_TEMP" -w "$GITHUB_WORKSPACE" \
+              -v "$(dirname "$node_bin"):$(dirname "$node_bin"):ro" -v "$pnpm_pkg:$pnpm_pkg:ro" \
+              -v "$docker_cli:/usr/local/bin/docker:ro" -v /var/run/docker.sock:/var/run/docker.sock \
+              -e HOME="$RUNNER_TEMP/pw-home" -e PATH="$RUNNER_TEMP/pw-bin:$node_bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+              -e CI -e GITHUB_ACTIONS -e npm_config_ignore_pnpmfile \
+              "$PW_IMAGE" "$@"
+          }
+          # Ön kontrol (hızlı başarısızlık): konteyner içinden Node 24, pnpm ve psql köprüsü — spec'lerin çağırdığı biçimde yalnız PATH + PG* ortamıyla.
+          pw_run sh -ec 'node -v | grep -q "^v24\."; pnpm -v; u=$(grep "^DATABASE_URL_DIRECT=" .env | cut -d= -f2-); env -i PATH="$PATH" psql "$u" -X -q -A -t -c "select 1" | grep -qx 1; echo "konteyner ön kontrolü OK"'
           set -o pipefail
-          docker run --rm --init --ipc=host --network host \
-            --user "$(id -u):$(id -g)" --group-add "$(stat -c %g /var/run/docker.sock)" \
-            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -v "$RUNNER_TEMP:$RUNNER_TEMP" -w "$GITHUB_WORKSPACE" \
-            -v "$(dirname "$node_bin"):$(dirname "$node_bin"):ro" -v "$pnpm_pkg:$pnpm_pkg:ro" \
-            -v "$docker_cli:/usr/local/bin/docker:ro" -v /var/run/docker.sock:/var/run/docker.sock \
-            -e HOME="$RUNNER_TEMP/pw-home" -e PATH="$RUNNER_TEMP/pw-bin:$node_bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-            -e CI -e GITHUB_ACTIONS -e npm_config_ignore_pnpmfile -e E2E_PG_CONTAINER="$pg" \
-            "$PW_IMAGE" \
-            pnpm test:e2e --project="$GROUP" --project="receiving-$GROUP" --shard="$PART/2" 2>&1 | tee .artifacts/e2e/run.log
+          pw_run pnpm test:e2e --project="$GROUP" --project="receiving-$GROUP" --shard="$PART/2" 2>&1 | tee .artifacts/e2e/run.log
       - name: Stage .artifacts/e2e
         if: always()
         run: |
