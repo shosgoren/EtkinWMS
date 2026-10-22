@@ -1,5 +1,7 @@
 # Web, mobil ve tablet UI/UX
 
+- T-1010: ortak seçim/önizleme renkleri `kalip/tokens.ts` içindeki `kdzOrtak` ile çözülür. CSS renk belirteci kalıp kapsamında yoksa yalnız doğrulanmış tasarım kaynağındaki renk yedek olarak kullanılır (Yeni ürün / Hammadde: #8A5A12); mevcut açık/koyu tema belirteci önceliklidir. Üretilmiş CSS elle değiştirilmez.
+
 ## Temel kullanıcı kuralı
 İlk defa bilgisayar kullanan kişi bile sıradaki işi anlamalı. Müşteri sisteme hizmet etmez; sistem yanlış miktarı, yanlış yeri, mükerrer işlemi ve yetkisiz işi önleyerek müşteriye fayda sağlar. Bu bir hedef ve test kabulüdür; ekranın güzel olması hedefin ölçüldüğü anlamına gelmez.
 
