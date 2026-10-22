@@ -29,3 +29,9 @@
       <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>{{t.fCompany}} *</span><input class="field" type="text" name="company" autocomplete="organization" required maxlength="150" aria-invalid="{{fe.company}}" aria-describedby="{{fe.companyDesc}}"><sc-if value="{{fe.company}}"><small id="err-company" class="ferr">{{fe.companyMsg}}</small></sc-if></label>
       <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>{{t.fEmail}} *</span><input class="field" type="email" name="email" autocomplete="email" required maxlength="254" aria-invalid="{{fe.email}}" aria-describedby="{{fe.emailDesc}}"><sc-if value="{{fe.email}}"><small id="err-email" class="ferr">{{fe.emailMsg}}</small></sc-if></label>
 </template>
+<style data-owner-style>
+.demo-owner{min-height:100dvh;background:#EEF1F4;color:#172E42;display:grid;place-items:center;padding:24px;box-sizing:border-box;font-family:'Instrument Sans',sans-serif}
+.demo-owner-card{width:min(100%,560px);box-sizing:border-box;background:#FFFFFF;border:2px solid #172E42;border-radius:20px;padding:32px;display:flex;flex-direction:column;gap:20px}
+.demo-owner-card h1,.demo-owner-card p{margin:0;line-height:1.5}.demo-owner-card a,.demo-owner-card button{min-height:48px;padding:12px 18px;border-radius:14px;box-sizing:border-box;font:inherit;font-weight:600;border:2px solid #172E42;color:#172E42;background:#FFFFFF;cursor:pointer;text-align:center;text-decoration:none}
+.demo-owner-card [hidden]{display:none}.demo-owner-card button#owner-confirm{background:#172E42;color:#FFFFFF}.demo-owner-card :focus-visible{outline:4px solid #F5C842;outline-offset:3px}.demo-owner-languages{display:flex;gap:8px}
+</style>

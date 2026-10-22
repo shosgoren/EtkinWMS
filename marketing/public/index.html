@@ -875,8 +875,7 @@
         <svg class="fdone-ic" viewBox="0 0 104 104" aria-hidden="true"><circle class="fdone-ring" cx="52" cy="52" r="46" fill="none" stroke="#5FAF8A" stroke-width="3"></circle><circle cx="52" cy="52" r="46" fill="#E3F4EA" stroke="#5FAF8A" stroke-width="3"></circle><path class="fdone-tick" d="M32 53l13 13 27-28" pathLength="100" fill="none" stroke="#1E7A4C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         <h3 id="demo-done-title" class="fdone-h" tabindex="-1">{{t.fDoneTitle}}</h3>
         <p class="fdone-p">{{t.fDoneBody}}</p>
-        <sc-if value="{{formRef}}"><p class="fdone-ref" data-testid="demo-ref">{{t.fRef}} <b>{{formRef}}</b></p></sc-if>
-        <div class="fdone-links"><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
+        <div class="fdone-links"><a href="https://wms.etkinyazilim.com/login">{{t.login}}</a><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
       </div>
       </sc-if>
       <p id="form-status" class="{{formCls}}" role="status" aria-live="polite"><sc-if value="{{formErrRow}}"><svg class="ferr-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3261B" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5M12 16.5v.01"></path></svg></sc-if><span>{{formMsg}}</span><sc-if value="{{formRetry}}"><span aria-hidden="true">·</span><button type="button" class="fretry" onClick="{{retry}}">{{t.fRetry}}</button></sc-if></p>

@@ -870,6 +870,10 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.admin_reset_cleanup_on_membership", // T-103 üyelik tetikleyici işlevi (ADR-016 Sonuçlar)
     "wms_probe.consume_admin_reset_grant",
     "wms_probe.credentials_changed_since", // T-919 migration 0053: MFA kefaleti için yalnız evet/hayır (geçerli tenant üyesi; bağlam yoksa true), security_events içeriği dönmez, yalnızca wms_app
+    "wms_probe.demo_delivery_claim", // T-1025: sealed mail outbox, wms_worker
+    "wms_probe.demo_delivery_finish", // T-1025: delivery completion, wms_worker
+    "wms_probe.demo_status_consume", // T-1025: single-use owner proof, wms_app
+    "wms_probe.demo_submit", // T-1025: internal marketing submit, wms_app
     "wms_probe.field_activate", // T-997 migration 0044: saha etkinleştirme (kod tek kullanım + PIN özeti + kişisel cihaz) + security_events, yalnızca wms_auth
     "wms_probe.field_admin_reset", // T-997 migration 0044: yönetici kod yenileme/kilit açma (tenant bağlamı zorunlu) + security_events, yalnızca wms_app
     "wms_probe.field_device_revoke", // T-998 migration 0045: yönetici cihaz iptali + security_events (tenant bağlamı zorunlu), yalnızca wms_app
@@ -969,6 +973,10 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.ops_session_audited": ["wms_ops"],
       "wms_probe.admin_reset_cleanup_on_membership": [migrator],
       "wms_probe.platform_is_operator": [APP_ROLE],
+      "wms_probe.demo_submit": [APP_ROLE],
+      "wms_probe.demo_status_consume": [APP_ROLE],
+      "wms_probe.demo_delivery_claim": [WORKER_ROLE],
+      "wms_probe.demo_delivery_finish": [WORKER_ROLE],
       "wms_probe.platform_ingest_demo_request": [WORKER_ROLE],
       "wms_probe.platform_list_demo_requests": [APP_ROLE],
       "wms_probe.platform_decide_demo_request": [APP_ROLE],

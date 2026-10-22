@@ -1,9 +1,10 @@
 import { createServer } from 'node:http';
-import { readFile, mkdir, appendFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { readdirSync } from 'node:fs';
 import { resolve, dirname, extname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { legacyDemo, demoBridge } from './demo-bridge.mjs';
 import { loadNotifyConfig, notifyLead } from './notify.mjs';
 
 const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), 'public');
@@ -16,7 +17,7 @@ const limits = new Map();
 // Nokta ile başlayan adlar ve bilinmeyen uzantılar sunulmaz; istek yolu dosya sistemine hiç ulaşmaz.
 const TYPES = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.txt':'text/plain; charset=utf-8','.xml':'application/xml; charset=utf-8','.svg':'image/svg+xml','.webp':'image/webp','.png':'image/png','.jpg':'image/jpeg','.woff':'font/woff'};
 export function publicFiles(dir = publicDir) {
-  const files = {'/':'index.html','/privacy':'privacy.html'};
+  const files = {'/':'index.html','/privacy':'privacy.html','/demo-status':'demo-status.html'};
   const walk = (d) => {
     for (const entry of readdirSync(d,{withFileTypes:true})) {
       if (entry.name.startsWith('.')) continue;
@@ -117,7 +118,7 @@ export const server = createServer(async (req,res) => {
   } catch {
     return json(400,{error:'Geçersiz istek adresi.'});
   }
-  if (path === '/api/demo' && req.method === 'POST') {
+  if ((path === '/api/demo' || path === '/api/demo-status') && req.method === 'POST') {
     if (!allowedOrigins.has(req.headers.origin || '')) return json(403,{error:'İstek doğrulanamadı.'});
     const ip = req.headers['x-forwarded-for']?.toString().split(',').at(-1)?.trim() || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
@@ -128,25 +129,37 @@ export const server = createServer(async (req,res) => {
     try {
       let size=0,body='';
       for await (const chunk of req) {size+=chunk.length;if(size>8192)return json(413,{error:'Mesaj çok uzun.'});body+=chunk.toString();}
-      const lead = validateLead(JSON.parse(body));
+      const input = JSON.parse(body);
+      if(path === '/api/demo-status') {
+        const result=await demoBridge(siteContentUrl,{operation:'consume',token:input.token});
+        const status=['pending','setup','ready','in_progress'].includes(result.status)?result.status:'invalid';
+        const href=status==='setup' && /^[A-Za-z0-9_-]{43}$/.test(result.activationToken||'') ? `https://wms.etkinyazilim.com/activate/${result.activationToken}` : status==='ready'?'https://wms.etkinyazilim.com/login':null;
+        return json(200,{status,href});
+      }
+      const lead = validateLead(input);
       if (!lead) return json(400,{error:'Ad, firma, geçerli e-posta ve iletişim onayını kontrol edin.'});
-      await mkdir(demoLeadsDir,{recursive:true,mode:0o700});
-      const record = {id:randomUUID(),createdAt:new Date().toISOString(),...lead};
-      await appendFile(resolve(demoLeadsDir,'demo-requests.jsonl'),JSON.stringify(record)+'\n',{mode:0o600});
+      const requestId=typeof input.requestId==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.requestId)?input.requestId:randomUUID();
+      const normalize=async(emails)=>(await demoBridge(siteContentUrl,{operation:'normalize',emails})).emails;
+      [lead.email]=await normalize([lead.email]);
+      const legacy=await legacyDemo(resolve(demoLeadsDir,'demo-requests.jsonl'),lead.email,normalize);
+      const result=await demoBridge(siteContentUrl,{...lead,requestId,locale:input.locale==='en'?'en':'tr',legacy});
+      if(result.ok!==true)throw new Error('demo backend unavailable');
+      const record={id:requestId,createdAt:new Date().toISOString(),...lead};
       // T-945: kayıt yazıldıktan sonra e-posta bildirimi; sonucu yanıtı bekletmez ve kaydı etkilemez.
-      loadNotifyConfig(process.env, leadDir).then((config) => notifyLead(record, config)).then((r) => {
+      if(result.inserted===true) loadNotifyConfig(process.env, leadDir).then((config) => notifyLead(record, config)).then((r) => {
         if (r.status !== null && !r.ok) console.error(`lead-notify failed status=${r.status}`);
         if (r.capped) console.error('lead-notify skipped hourly-cap');
       }).catch(() => console.error('lead-notify failed'));
-      // T-431: kaydın kimliği yanıtta döner; site kısa halini "Talep no" olarak gösterir (panelde aynı kayıt, ADR-026 §3). Başka alan dönmez.
-      return json(201,{ok:true,id:record.id});
-    } catch {return json(503,{error:'Talep kaydedilemedi. Lütfen tekrar deneyin.'});}
+      // Identical response for first submission, duplicate email and retry; no historical ID or status.
+      return json(202,{ok:true});
+    } catch {return json(503,{error:'İşlem sonucu doğrulanamadı. Lütfen tekrar deneyin.'});}
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(405,{error:'Yöntem desteklenmiyor.'});
   const file = Object.hasOwn(files,path) ? files[path] : undefined;
   if (!file) return json(404,{error:'Sayfa bulunamadı.'});
   try {
     let content = await readFile(resolve(publicDir,file));
+    if(file==='demo-status.html'){res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Robots-Tag','noindex');}
     const type = TYPES[extname(file)] || 'application/octet-stream';
     let cache = file.endsWith('.html') ? 'no-cache' : /^(img|fonts)\//.test(file) ? 'public, max-age=86400' : 'public, max-age=300';
     if (file === 'index.html') {
@@ -159,7 +172,7 @@ export const server = createServer(async (req,res) => {
         res.setHeader('Referrer-Policy','no-referrer');
       }
     }
-    res.writeHead(200,{'Content-Type':type,'Cache-Control':cache});
+    res.writeHead(200,{'Content-Type':type,'Cache-Control':file==='demo-status.html'?'no-store':cache});
     res.end(req.method==='HEAD'?undefined:content);
   } catch {json(503,{error:'Sayfa geçici olarak yüklenemiyor.'});}
 });

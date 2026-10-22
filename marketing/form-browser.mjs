@@ -16,6 +16,29 @@ const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
 const shots = process.env.DEMO_SCREENSHOTS || join(tmpdir(), 'etkin-demo-shots');
 await mkdir(shots, { recursive: true });
 try {
+  for(const width of [390,1180,1440]) {
+    const page=await browser.newPage({viewport:{width,height:900}});
+    let calls=0;
+    await page.route('**/*',async route=>{
+      if(!route.request().url().startsWith(base))return route.abort();
+      if(!route.request().url().endsWith('/api/demo-status'))return route.continue();
+      calls++;return route.fulfill({json:{status:'setup',href:'https://wms.etkinyazilim.com/activate/'+'b'.repeat(43)}});
+    });
+    await page.goto(base+'/demo-status#'+'a'.repeat(43));
+    assert.equal(new URL(page.url()).hash,'');assert.equal(calls,0);
+    assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
+    await page.screenshot({path:join(shots,`owner-${width}-TR.png`)});
+    await page.getByRole('button',{name:'Talebimi görüntüle'}).click();
+    await page.locator('#owner-next').waitFor({state:'visible'});
+    assert.equal(calls,1);
+    assert.equal(await page.locator('#owner-title').evaluate(el=>el===document.activeElement),true);
+    assert.equal(await page.locator('#owner-next').getAttribute('href'),'https://wms.etkinyazilim.com/activate/'+'b'.repeat(43));
+    await page.getByRole('button',{name:'EN',exact:true}).click();
+    assert.match(await page.locator('#owner-message').innerText(),/approved/);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await page.screenshot({path:join(shots,`owner-${width}-EN.png`)});
+    await page.close();
+  }
   for (const [width, language] of [[390, "TR"], [1180, "TR"], [1440, "TR"], [390, "EN"]]) {
     const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     let sends = 0;
@@ -29,7 +52,7 @@ try {
       payload = next;
       if (sends === 1) return route.abort('failed');
       await new Promise(resolve => setTimeout(resolve, 200));
-      return route.fulfill({ json: { ok: true, id: '11111111-1111-4111-8111-111111111111' } });
+      return route.fulfill({ json: { ok: true } });
     });
     await page.goto(base + '/#demo');
     if (language === 'EN') await page.getByRole('button', { name: 'EN', exact: true }).click();

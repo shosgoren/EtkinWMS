@@ -86,7 +86,9 @@ function build() {
   const sector = must(formSource, /<template id="demo-sector-source">([\s\S]*?)<\/template>/, "sector")[1];
   const fields = must(formSource, /<template id="demo-fields-source">([\s\S]*?)<\/template>/, "fields")[1];
   const dc = readFileSync(src("landing.dc.html"), "utf8").replace("<!-- demo-sector-source -->", sector).replace("<!-- demo-fields-source -->", fields);
-  const formCss = must(formSource, /<style>([\s\S]*?)<\/style>/, "form CSS")[1];
+  const formCss = [...formSource.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m=>m[1]).join("\n");
+  writeFileSync(pub("demo-status.html"),readFileSync(resolve(here,"../docs/design/source/DemoStatus.dc.html")));
+  writeFileSync(pub("demo-status.js"),readFileSync(src("demo-status.js")));
   const helmet = must(dc, /<helmet>([\s\S]*?)<\/helmet>/, "<helmet>")[1] ?? "";
   const css = [...helmet.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n");
   const body = must(dc, /<\/helmet>([\s\S]*?)<\/x-dc>/, "şablon gövdesi")[1]?.trim() ?? "";

@@ -43,4 +43,4 @@ Not (T-979c, 21 Ekim): alt cam çubuğun orta ana işlem etiketi çubuk çerçev
 Not (Yolculuk, 22 Ekim): kaynaktaki `.pv-veil` / `.pv-btn` yalnız tuval önizlemesidir (perde uygulamada ortak `.kperde`, delik `clip-path` ile hedefin çevresinde); örnek sayılar (124 ürün, 48 raf, 22.10) benzetimdir, uygulamada gerçek veriden gelir.
 
 ## T-1025 marketing form hazırlığı (22 Ekim 2026)
-`DemoForm.dc.html`: kullanıcı mevcut marketing çalışma zamanında ortak parçaları kabul etti; yerel kaynak, henüz tuvale aktarılmadı/yayınlanmadı. SHA256 `d013b8fcb7100392edd4f6ff90cb58e46a4c1f3d6f8e6a41334ffad35df29e64`. 390/1180/1440 render ve gözle kontrol yerel testte; kapsam tamamlanmadı.
+`DemoForm.dc.html` ve `DemoStatus.dc.html`: kullanıcı mevcut marketing çalışma zamanında ortak parçaları kabul etti; yerel kaynak, tuvale aktarılmadı/yayınlanmadı. Form ve süreli bağlantı doğrulama ekranı390/1180/1440 render edilip gözle kontrol edildi. TR/EN sentetik tarayıcı akışları geçer; yayın test kapıları kartta.

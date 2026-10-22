@@ -1,4 +1,5 @@
 // Worker giriş noktası: `node dist/main.js`. Web'den bağımsız, uzun ömürlü süreç (ADR-001).
+import { startDemoStatusSchedule } from "./jobs/demo-status.js";
 import { open } from "node:fs/promises";
 import { hostname } from "node:os";
 import { DEMO_TENANT_ID, createDbClient, withSystemTenant, withUser } from "@wms/db";
@@ -108,6 +109,10 @@ try {
 // Handler'lar tenant verisine yalnızca `ctx.inTenant` ile erişir; bu, withSystemTenant ile (tenant ACTIVE
 // denetimli, transaction-local bağlam) kurulur (ADR-016 §6). Havuz ayarları `DB_CLIENT_SETTINGS` ile aynıdır.
 const db = createDbClient({ url: databaseUrl, poolMax: 10, prepare: false });
+const demoStatusConfig = loadMailConfig(process.env);
+const demoStatusSchedule = startDemoStatusSchedule({db:workerDb,sealer:createSealer(process.env.QUEUE_SEAL_KEY),config:demoStatusConfig,mailer:createMailer(demoStatusConfig)},()=>logger.error("demo status delivery failed",{}));
+lifecycle.register({name:"demo-status-schedule",run:()=>demoStatusSchedule.stop()});
+
 
 // Eşik üstü belge işleme (T-222): istek sahibi adına tek transaction; `processed_events` aynı transaction'da (ADR-019 §2).
 HANDLERS["stock.document.post"] = createPostStockDocumentHandler({ db, consumeOnce: consumeOnce as unknown as ConsumeOnceFn, logger });

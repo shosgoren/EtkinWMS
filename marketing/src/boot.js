@@ -143,7 +143,7 @@
       const response = await fetch("/api/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, requestId }),
+        body: JSON.stringify({ ...data, requestId, locale: comp.state.lang || props.lang || "tr" }),
         signal: ctrl.signal,
       });
       const result = await response.json().catch(() => ({}));
@@ -151,11 +151,9 @@
         failed(response.status === 400 ? "fInvalid" : response.status === 429 ? "fLimit" : "fErr");
         return;
       }
-      // Talep numarası: sunucunun döndürdüğü kimliğin kısa hali (panelde aynı kaydın kimliğinin başı).
-      const id = typeof result.id === "string" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(result.id) ? result.id.slice(0, 8).toUpperCase() : "";
       tone("ok");
       const done = () => {
-        comp.setState({ formKey: "fOk", formRef: id });
+        comp.setState({ formKey: "fOk", formRef: "" });
         focusLater("#demo-done-title");
       };
       if (reduced()) done();

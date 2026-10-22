@@ -722,8 +722,7 @@ a{color:#172E42}a:hover{color:#0E1D2B}
         <svg class="fdone-ic" viewBox="0 0 104 104" aria-hidden="true"><circle class="fdone-ring" cx="52" cy="52" r="46" fill="none" stroke="#5FAF8A" stroke-width="3"></circle><circle cx="52" cy="52" r="46" fill="#E3F4EA" stroke="#5FAF8A" stroke-width="3"></circle><path class="fdone-tick" d="M32 53l13 13 27-28" pathLength="100" fill="none" stroke="#1E7A4C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         <h3 id="demo-done-title" class="fdone-h" tabindex="-1">{{t.fDoneTitle}}</h3>
         <p class="fdone-p">{{t.fDoneBody}}</p>
-        <sc-if value="{{formRef}}"><p class="fdone-ref" data-testid="demo-ref">{{t.fRef}} <b>{{formRef}}</b></p></sc-if>
-        <div class="fdone-links"><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
+        <div class="fdone-links"><a href="https://wms.etkinyazilim.com/login">{{t.login}}</a><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
       </div>
       </sc-if>
       <p id="form-status" class="{{formCls}}" role="status" aria-live="polite"><sc-if value="{{formErrRow}}"><svg class="ferr-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3261B" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5M12 16.5v.01"></path></svg></sc-if><span>{{formMsg}}</span><sc-if value="{{formRetry}}"><span aria-hidden="true">·</span><button type="button" class="fretry" onClick="{{retry}}">{{t.fRetry}}</button></sc-if></p>
@@ -923,7 +922,7 @@ class Component extends DCLogic {
         fConsentA: 'Demo talebime ilişkin', notice: 'Aydınlatma Metni', fConsentB: '’ni okudum.',
         privacy: 'Aydınlatma Metni', fSubmit: 'Teklif ve demo iste',
         fSending: 'Talebiniz gönderiliyor…', fSendingBtn: 'Gönderiliyor…', fErr: 'Gönderilemedi', fRetry: 'tekrar dene', fLimit: 'Çok fazla deneme oldu. Biraz sonra tekrar deneyin.', fInvalid: 'Eksik ya da hatalı alanları düzeltin.',
-        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        fDoneTitle: 'Request received', fDoneBody: 'Open the secure link sent to your email to view your request. New links are not sent at short intervals.', fRef: 'Request no', fHome: 'Back to home',
         eNameReq: 'Adınızı yazın.', eCompanyReq: 'Firma adını yazın.', eEmailReq: 'E-posta adresinizi yazın.', eEmailBad: 'Geçerli bir e-posta yazın (ör. ad@firma.com).', eConsentReq: 'Devam etmek için Aydınlatma Metni kutusunu işaretleyin.',
         footTag: 'Uçtan uca izlenebilir depo yönetimi.'
       },
@@ -1039,7 +1038,7 @@ class Component extends DCLogic {
         fConsentA: 'I have read the', notice: 'Privacy Notice', fConsentB: ' for my demo request.',
         privacy: 'Privacy Notice', fSubmit: 'Request an offer & demo',
         fSending: 'Sending your request…', fSendingBtn: 'Sending…', fErr: 'Could not send', fRetry: 'try again', fLimit: 'Too many attempts. Please try again a little later.', fInvalid: 'Please fix the missing or invalid fields.',
-        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        fDoneTitle: 'Request received', fDoneBody: 'Open the secure link sent to your email to view your request. New links are not sent at short intervals.', fRef: 'Request no', fHome: 'Back to home',
         eNameReq: 'Please enter your name.', eCompanyReq: 'Please enter your company.', eEmailReq: 'Please enter your email address.', eEmailBad: 'Please enter a valid email (e.g. name@company.com).', eConsentReq: 'Please tick the Privacy Notice box to continue.',
         footTag: 'End-to-end traceable warehouse management.'
       }

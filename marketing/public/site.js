@@ -429,7 +429,7 @@ class Component extends DCLogic {
         fConsentA: 'Demo talebime ilişkin', notice: 'Aydınlatma Metni', fConsentB: '’ni okudum.',
         privacy: 'Aydınlatma Metni', fSubmit: 'Teklif ve demo iste',
         fSending: 'Talebiniz gönderiliyor…', fSendingBtn: 'Gönderiliyor…', fErr: 'Gönderilemedi', fRetry: 'tekrar dene', fLimit: 'Çok fazla deneme oldu. Biraz sonra tekrar deneyin.', fInvalid: 'Eksik ya da hatalı alanları düzeltin.',
-        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        fDoneTitle: 'Request received', fDoneBody: 'Open the secure link sent to your email to view your request. New links are not sent at short intervals.', fRef: 'Request no', fHome: 'Back to home',
         eNameReq: 'Adınızı yazın.', eCompanyReq: 'Firma adını yazın.', eEmailReq: 'E-posta adresinizi yazın.', eEmailBad: 'Geçerli bir e-posta yazın (ör. ad@firma.com).', eConsentReq: 'Devam etmek için Aydınlatma Metni kutusunu işaretleyin.',
         footTag: 'Uçtan uca izlenebilir depo yönetimi.'
       },
@@ -545,7 +545,7 @@ class Component extends DCLogic {
         fConsentA: 'I have read the', notice: 'Privacy Notice', fConsentB: ' for my demo request.',
         privacy: 'Privacy Notice', fSubmit: 'Request an offer & demo',
         fSending: 'Sending your request…', fSendingBtn: 'Sending…', fErr: 'Could not send', fRetry: 'try again', fLimit: 'Too many attempts. Please try again a little later.', fInvalid: 'Please fix the missing or invalid fields.',
-        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        fDoneTitle: 'Request received', fDoneBody: 'Open the secure link sent to your email to view your request. New links are not sent at short intervals.', fRef: 'Request no', fHome: 'Back to home',
         eNameReq: 'Please enter your name.', eCompanyReq: 'Please enter your company.', eEmailReq: 'Please enter your email address.', eEmailBad: 'Please enter a valid email (e.g. name@company.com).', eConsentReq: 'Please tick the Privacy Notice box to continue.',
         footTag: 'End-to-end traceable warehouse management.'
       }
@@ -1093,7 +1093,7 @@ window.EtkinFormUI = {
       const response = await fetch("/api/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, requestId }),
+        body: JSON.stringify({ ...data, requestId, locale: comp.state.lang || props.lang || "tr" }),
         signal: ctrl.signal,
       });
       const result = await response.json().catch(() => ({}));
@@ -1101,11 +1101,9 @@ window.EtkinFormUI = {
         failed(response.status === 400 ? "fInvalid" : response.status === 429 ? "fLimit" : "fErr");
         return;
       }
-      // Talep numarası: sunucunun döndürdüğü kimliğin kısa hali (panelde aynı kaydın kimliğinin başı).
-      const id = typeof result.id === "string" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(result.id) ? result.id.slice(0, 8).toUpperCase() : "";
       tone("ok");
       const done = () => {
-        comp.setState({ formKey: "fOk", formRef: id });
+        comp.setState({ formKey: "fOk", formRef: "" });
         focusLater("#demo-done-title");
       };
       if (reduced()) done();

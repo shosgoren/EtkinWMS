@@ -328,3 +328,5 @@ export async function ingestDemoLeads(params: { readonly db: AccessDbClient; rea
   }
   return { inserted, skipped };
 }
+
+export { DEMO_SEAL_CONTEXT, normalizeDemoEmails, parseDemoSubmission, submitDemo, consumeDemoStatus, claimDemoMail, finishDemoMail } from './demo-submit.ts';
