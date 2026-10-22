@@ -44,6 +44,8 @@ export const PROTECTED_GLOBS = Object.freeze([
   "scripts/guards/**",
   "scripts/test-ac/**",
   "scripts/lib/**",
+  // Etkilenen test seçicisi (T-1022): PR'da hangi int/e2e testlerinin koşacağına karar verir
+  "scripts/ci/**",
   ".githooks/**",
   // Gizli bilgi taraması muafiyet listesi (T-017): parmak izi eklemek taramayı susturur
   ".gitleaksignore",

@@ -113,6 +113,11 @@ jobs:
             if [ "$rc" != 3 ] || [ "$attempt" = 30 ]; then echo "RELEASE_BLOCKED (rc=$rc)"; exit 1; fi
             sleep 30
           done
+          # T-1022: PR'da yalnız etkilenen testler koşar; dokuz kapının PR koşusundan (kısmi takım) gelmemesi için bu SHA'da main'e PUSH ile
+          # koşmuş, başarıyla biten bir `ci` (her zaman tam takım) da istenir (elle tetiklemede de).
+          push_ci=$(gh api "repos/shosgoren/EtkinWMS/actions/runs?head_sha=$REQUEST_SHA&event=push&branch=main&per_page=50" \
+            --jq '[.workflow_runs[] | select(.name == "ci" and .path == ".github/workflows/ci.yml" and .head_repository.full_name == "shosgoren/EtkinWMS" and .status == "completed" and .conclusion == "success")] | length')
+          if ! [ "$push_ci" -ge 1 ] 2>/dev/null; then echo "RELEASE_BLOCKED: main push ci (tam takım) yok"; exit 1; fi
           # Bekleme sırasında main ilerlediyse eski SHA için imaj kurulmaz (sunucu da NOT_CURRENT_MAIN ile reddeder).
           main_sha=$(gh api repos/shosgoren/EtkinWMS/git/ref/heads/main --jq .object.sha)
           if [ "$REQUEST_SHA" != "$main_sha" ]; then

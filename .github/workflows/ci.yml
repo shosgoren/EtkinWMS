@@ -132,12 +132,24 @@ jobs:
   # T-925 (kullanıcı kararı 20 Ekim: "hatasız, hızlı sonuç ve yayın"): yalnız belge (docs/** ya da *.md) değişen PR'da ağır int/e2e
   # parçaları koşmaz (testler belge dosyası okumaz). main/int dallarına push ve kod değişen her PR'da TAM takım koşar; yayın kapısı
   # main'deki tam sonucu ister. Belirsizlikte (boş fark, hata) kod sayılır (fail-safe).
+  # T-1022 (kullanıcı kararı 22 Ekim): PR'da yalnız ETKİLENEN int/e2e testleri. Seçici `scripts/ci/affected.mjs` PR'ın değil TABANIN
+  # kopyasından koşar (`git show BASE:…` → RUNNER_TEMP; PR ağacı yalnız veri olarak okunur, PR kodu çalışmaz; seçiciyi değiştiren PR
+  # kendi seçimini etkileyemez). Ortak dosya
+  # (kalip/kabuk/layout/globals.css, packages/db|auth|domain ortakları, migration, workflow, package.json/lockfile, playwright/vitest ayarı)
+  # ya da eşlemesi olmayan dosya → tam takım; seçici yoksa/hata verirse tam takım. main/int push'unda her zaman TAM takım (yayın kapısı).
+  # Parça sayısı seçime göre küçülür (boş parça açılmaz), en çok mevcut 4 e2e / 3 int; işçi sayısı artmaz.
   changes:
     name: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      e2e_run: ${{ steps.pick.outputs.e2e_run }}
+      int_run: ${{ steps.pick.outputs.int_run }}
+      e2e_files: ${{ steps.pick.outputs.e2e_files }}
+      int_files: ${{ steps.pick.outputs.int_files }}
+      e2e_matrix: ${{ steps.pick.outputs.e2e_matrix }}
+      int_matrix: ${{ steps.pick.outputs.int_matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -159,20 +171,73 @@ jobs:
           fi
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "kod değişikliği: $code"
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          CODE: ${{ steps.diff.outputs.code }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          full() {
+            {
+              echo "e2e_run=$CODE"; echo "int_run=$CODE"; echo "e2e_files="; echo "int_files="
+              echo 'e2e_matrix={"include":[{"group":"desktop","part":1,"of":2},{"group":"desktop","part":2,"of":2},{"group":"mobile","part":1,"of":2},{"group":"mobile","part":2,"of":2}]}'
+              echo 'int_matrix={"include":[{"shard":1,"of":3},{"shard":2,"of":3},{"shard":3,"of":3}]}'
+            } >> "$GITHUB_OUTPUT"
+            echo "seçim: TAM takım ($1)"
+          }
+          if [ "$EVENT" != pull_request ]; then full "push: her zaman tam"; exit 0; fi
+          if [ "$CODE" != true ]; then full "yalnız belge: ağır işler atlanır"; exit 0; fi
+          # Güvenilir seçici: TABAN commit'inden PR ağacının dışına (RUNNER_TEMP) çıkarılır; yalnız node: yerleşik modüllerini kullanır.
+          mkdir -p "$RUNNER_TEMP/selector"
+          sel="$RUNNER_TEMP/selector/affected.mjs"
+          if ! git show "$BASE:scripts/ci/affected.mjs" > "$sel" 2>/dev/null; then full "tabanda seçici yok"; exit 0; fi
+          out="$RUNNER_TEMP/affected.out"
+          if ! GITHUB_OUTPUT="$out" node "$sel" --root . --base "$BASE" --head "$HEAD"; then full "seçici hata verdi"; exit 0; fi
+          # Seçici çıktısı doğrulanır (beklenmeyen anahtar/değer → tam takım); yalnız bilinen 8 anahtar iletilir.
+          if ! python3 -I - "$out" "$GITHUB_OUTPUT" <<'PY'
+          import json, re, sys
+          src, dst = sys.argv[1], sys.argv[2]
+          kv = dict(l.split("=", 1) for l in open(src).read().splitlines() if "=" in l)
+          keys = ["code", "full", "e2e_run", "int_run", "e2e_files", "int_files", "e2e_matrix", "int_matrix"]
+          assert sorted(kv) == sorted(keys), kv.keys()
+          for k in ("code", "full", "e2e_run", "int_run"): assert kv[k] in ("true", "false"), k
+          for f in kv["e2e_files"].split(): assert re.fullmatch(r"tests/e2e/[A-Za-z0-9._-]+\.spec\.ts", f), f
+          for f in kv["int_files"].split(): assert re.fullmatch(r"tests/integration/[A-Za-z0-9._/-]+\.int\.test\.ts", f) and ".." not in f, f
+          em, im = json.loads(kv["e2e_matrix"]), json.loads(kv["int_matrix"])
+          isint = lambda v: type(v) is int
+          # Tam ve tutarlı matris: iki grup, her grupta 1..of dilimlerinin hepsi (of ∈ {1,2}); int 1..of parçalarının hepsi (of ≤ 3).
+          assert all(set(e) == {"group", "part", "of"} and all(isint(e[k]) for k in ("part", "of")) for e in em["include"])
+          eof = {e["of"] for e in em["include"]}
+          assert len(eof) == 1 and eof <= {1, 2}
+          en = min(eof)
+          assert sorted((e["group"], e["part"]) for e in em["include"]) == sorted((g, p) for g in ("desktop", "mobile") for p in range(1, en + 1))
+          assert all(set(e) == {"shard", "of"} and isint(e["shard"]) and isint(e["of"]) for e in im["include"])
+          iof = {e["of"] for e in im["include"]}
+          assert len(iof) == 1 and iof <= {1, 2, 3}
+          assert sorted(e["shard"] for e in im["include"]) == list(range(1, min(iof) + 1))
+          if kv["e2e_run"] == "true" and kv["e2e_files"] == "": assert len(em["include"]) == 4
+          if kv["int_run"] == "true" and kv["int_files"] == "": assert len(im["include"]) == 3
+          with open(dst, "a") as o:
+              for k in keys[2:]: o.write(f"{k}={kv[k]}\n")
+          n = lambda k: "yok" if kv[f"{k}_run"] == "false" else (len(kv[f"{k}_files"].split()) or "tam")
+          print(f"seçim: e2e {n('e2e')} · int {n('int')}")
+          PY
+          then full "seçici çıktısı geçersiz"; fi
 
   # T-925: aynı testler makinelere bölünür (vitest --shard); her parça kendi compose veritabanını kurar. Kapsam değişmez.
   # T-445 (kullanıcı kararı 21 Ekim "süreler çok uzun"): 2 → 3 parça (parça 1/2 ~6,2 dk idi; e2e parçalarının altında kalsın).
   # Sabit `int` adı aşağıdaki toplayıcı iştedir; parça sayısı değişince yalnız `matrix.shard` ve `--shard=…/N` birlikte değişir.
   int-shard:
-    name: int-shard (${{ matrix.shard }}/3)
+    name: int-shard (${{ matrix.shard }}/${{ matrix.of }})
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.int_run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
+      matrix: ${{ fromJSON(needs.changes.outputs.int_matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -185,11 +250,19 @@ jobs:
       # T-008j: Testcontainers zincirinin betikleri (ssh2, cpu-features, protobufjs) pnpm 10'da zaten onaysız.
       - run: pnpm install --frozen-lockfile --ignore-scripts
       # Tam döküm .artifacts/test-int/ (JSON raporu + konsol çıktısı).
+      # T-1022: INT_FILES boşsa tam takım; doluysa yalnız seçilen dosyalar (changes işinde biçimi doğrulandı, burada yeniden denetlenir).
       - name: pnpm test:int
+        env:
+          SHARD: ${{ matrix.shard }}
+          OF: ${{ matrix.of }}
+          INT_FILES: ${{ needs.changes.outputs.int_files }}
         run: |
+          set -euo pipefail
           mkdir -p .artifacts/test-int
-          set -o pipefail
-          pnpm test:int --shard=${{ matrix.shard }}/3 2>&1 | tee .artifacts/test-int/run.log
+          read -ra files <<< "$INT_FILES"
+          for f in "${files[@]}"; do [[ "$f" =~ ^tests/integration/[A-Za-z0-9._/-]+\.int\.test\.ts$ && "$f" != *..* && -f "$f" ]] || { echo "::error::geçersiz int dosyası: $f"; exit 1; }; done
+          echo "int: ${#files[@]} dosya (0 = tam takım) · parça $SHARD/$OF"
+          pnpm test:int --shard="$SHARD/$OF" "${files[@]}" 2>&1 | tee .artifacts/test-int/run.log
       - name: Stage .artifacts/test-int
         if: always()
         run: |
@@ -199,7 +272,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: int-artifacts-${{ matrix.shard }}
+          name: int-artifacts-${{ matrix.shard }}-of-${{ matrix.of }}
           path: ${{ runner.temp }}/int-artifacts/
           if-no-files-found: warn
           retention-days: 14
@@ -212,15 +285,18 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: All int shards succeeded (or docs-only PR)
+      - name: All int shards succeeded (or nothing affected / docs-only PR)
         env:
           CHANGES: ${{ needs.changes.result }}
-          CODE: ${{ needs.changes.outputs.code }}
+          RUN: ${{ needs.changes.outputs.int_run }}
           RESULT: ${{ needs.int-shard.result }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           test "$CHANGES" = success
-          if [ "$CODE" = false ]; then test "$RESULT" = skipped; else test "$RESULT" = success; fi
+          # Push (main/int) her zaman koşar: atlanmış int push'ta kırmızıdır.
+          if [ "$EVENT" != pull_request ]; then test "$RUN" = true; fi
+          if [ "$RUN" = true ]; then test "$RESULT" = success; else test "$RESULT" = skipped; fi
 
   # Uçtan uca duman testi (T-131): compose (postgres + pgbouncer) + migration + worker `demo.reseed` + web + yerel TLS vekili
   # `tests/e2e/global-setup.ts` içinde kurulur; `pnpm test:e2e` masaüstü + mobil projelerini koşar. Sır KULLANILMAZ:
@@ -232,9 +308,9 @@ jobs:
   # olarak bir parçada, aynı göreli sırada ve taze bir yığında (global-setup) koşar; receiving-* projesi grubun son dilimindedir.
   # Kapsam değişmez (iki parçanın toplamı = grubun tamamı); karantina/atlama yok.
   e2e-shard:
-    name: e2e-shard (${{ matrix.group }} ${{ matrix.part }}/2)
+    name: e2e-shard (${{ matrix.group }} ${{ matrix.part }}/${{ matrix.of }})
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.e2e_run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -242,9 +318,7 @@ jobs:
       PW_IMAGE: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
     strategy:
       fail-fast: false
-      matrix:
-        group: [desktop, mobile]
-        part: [1, 2]
+      matrix: ${{ fromJSON(needs.changes.outputs.e2e_matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -298,9 +372,15 @@ jobs:
         env:
           GROUP: ${{ matrix.group }}
           PART: ${{ matrix.part }}
+          OF: ${{ matrix.of }}
+          E2E_FILES: ${{ needs.changes.outputs.e2e_files }}
         run: |
           set -euo pipefail
           mkdir -p .artifacts/e2e "$RUNNER_TEMP/pw-bin" "$RUNNER_TEMP/pw-home"
+          # T-1022: E2E_FILES boşsa tam takım; doluysa yalnız seçilen spec dosyaları (biçim burada yeniden denetlenir).
+          read -ra files <<< "$E2E_FILES"
+          for f in "${files[@]}"; do [[ "$f" =~ ^tests/e2e/[A-Za-z0-9._-]+\.spec\.ts$ && -f "$f" ]] || { echo "::error::geçersiz e2e dosyası: $f"; exit 1; }; done
+          echo "e2e: ${#files[@]} spec (0 = tam takım) · $GROUP $PART/$OF"
           pg=$(docker compose ps -q postgres)
           [[ "$pg" =~ ^[0-9a-f]{12,64}$ ]] || { echo "::error::compose postgres konteyneri bulunamadı"; exit 1; }
           # Konteyner kimliği betiğe gömülür: spec'ler psql'i yalnız PATH + PG* ortamıyla çağırır (başka değişken geçmez).
@@ -325,7 +405,7 @@ jobs:
           # Ön kontrol (hızlı başarısızlık): konteyner içinden Node 24, pnpm ve psql köprüsü — spec'lerin çağırdığı biçimde yalnız PATH + PG* ortamıyla.
           pw_run sh -ec 'node -v | grep -q "^v24\."; pnpm -v; u=$(grep "^DATABASE_URL_DIRECT=" .env | cut -d= -f2-); env -i PATH="$PATH" psql "$u" -X -q -A -t -c "select 1" | grep -qx 1; echo "konteyner ön kontrolü OK"'
           set -o pipefail
-          pw_run pnpm test:e2e --project="$GROUP" --project="receiving-$GROUP" --shard="$PART/2" 2>&1 | tee .artifacts/e2e/run.log
+          pw_run pnpm test:e2e --project="$GROUP" --project="receiving-$GROUP" --shard="$PART/$OF" "${files[@]}" 2>&1 | tee .artifacts/e2e/run.log
       - name: Stage .artifacts/e2e
         if: always()
         run: |
@@ -336,7 +416,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-artifacts-${{ matrix.group }}-${{ matrix.part }}
+          name: e2e-artifacts-${{ matrix.group }}-${{ matrix.part }}-of-${{ matrix.of }}
           path: ${{ runner.temp }}/e2e-artifacts/
           if-no-files-found: warn
           retention-days: 14
@@ -352,15 +432,18 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: All e2e groups succeeded (or docs-only PR)
+      - name: All e2e shards succeeded (or nothing affected / docs-only PR)
         env:
           CHANGES: ${{ needs.changes.result }}
-          CODE: ${{ needs.changes.outputs.code }}
+          RUN: ${{ needs.changes.outputs.e2e_run }}
           RESULT: ${{ needs.e2e-shard.result }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           test "$CHANGES" = success
-          if [ "$CODE" = false ]; then test "$RESULT" = skipped; else test "$RESULT" = success; fi
+          # Push (main/int) her zaman koşar: atlanmış e2e push'ta kırmızıdır.
+          if [ "$EVENT" != pull_request ]; then test "$RUN" = true; fi
+          if [ "$RUN" = true ]; then test "$RESULT" = success; else test "$RESULT" = skipped; fi
 
   secrets:
     name: secrets
