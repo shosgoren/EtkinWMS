@@ -14,7 +14,6 @@
   background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-dz-x-nmodok) 100%);
 }
 .dzr { position: fixed; inset: 0; z-index: 20; }
-body:has(.dzr) .app-header { display: none; }
 /* Hazır (rol) grupları ve ekip yönetimi yetkisi salt okunur: kart kilitli görünür. */
 .dzr .pm[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 .dzr .gnm input[readonly] { cursor: default; }

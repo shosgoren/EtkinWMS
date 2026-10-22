@@ -6,6 +6,7 @@
 //    okuyucusu arama kutusuna yazar) ve mikrofon (Etkin, B-62 gelene dek "yakında"); liste rolü listbox/option. Alanı `KalipSecimListe`.
 //  - `KalipSecim` seçenek sayısına göre ikisinden birini seçer (ekran ayrıca karar vermez).
 // Alan adı (`name`) ortak doğrulamanın (`KalipFormEkran`) hata/odak bağlantısıdır (`data-alan`). Renkler `.dzf` belirteçlerinden.
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -459,7 +460,7 @@ export function KalipSekme({ items, current, color, label, onGo }: { items: read
       {items.map((o) => {
         const on = o.id === current;
         return (
-          <a
+          <Link
             key={o.id}
             href={o.href}
             className={`gp${on ? " on" : ""}`}
@@ -477,7 +478,7 @@ export function KalipSekme({ items, current, color, label, onGo }: { items: read
           >
             <Ico d={o.d} size={20} />
             {o.label}
-          </a>
+          </Link>
         );
       })}
     </nav>

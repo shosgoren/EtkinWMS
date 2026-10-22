@@ -5,6 +5,7 @@
 // doğrulama, yetki ve idempotans sunucudadır (previewImportAction / applyImportChunkAction). Dosya içeriği yalnız bellekte tutulur (G-09).
 // Bilinçli farklar (DESIGN-PARITY): Cari kartlar T-428 ile açılır (o zamana dek kart kapalı); eski ikili .xls okunmaz (".xlsx olarak kaydet");
 // Etkin (sesle eşleme) T-424; eşleştirme hafızası tarayıcıda (alan + başlık imzası); "Kritik stok (en az)" alanı minimum stok aktarımıyla gelir.
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useModalFocus } from "../kalip/odak.ts";
@@ -833,9 +834,9 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                       <span>{t("s5.memo")}</span>
                     </div>
                   )}
-                  <a className="btn n" href={goList} style={{ minHeight: 52, padding: "0 22px", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
+                  <Link className="btn n" href={goList} style={{ minHeight: 52, padding: "0 22px", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
                     {t(`kind.${kind}.goList`)}
-                  </a>
+                  </Link>
                 </div>
               ) : null}
             </main>

@@ -5,6 +5,7 @@
 // CSS: `design/kalip-{liste,form,detay}.css` (üretilmiş) + `design/kalip-frame.css` (tam ekran, eski kabuk süslemeleri gizli).
 // Kök `.kalip` sınıfı taşır: kiracı kabuğunun eski üst çubuğu / Kolay mod / Geri-Ana ekran kutusu / eski alt gezinme bu ekranda çizilmez
 // (kalip-frame.css genel kuralı) — yeni ekran yalnız bu kabı kullanarak geçer.
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
@@ -119,9 +120,9 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, 
     actions === undefined && ctx?.slug !== undefined ? (
       <KalipDestek slug={ctx.slug} dark={dark} canReport={ctx.canReport === true} />
     ) : actions === undefined ? (
-      <a className="helpb sup" href="/help" aria-label={t("help")} title={t("help")} data-testid="kalip-help">
+      <Link className="helpb sup" href="/help" aria-label={t("help")} title={t("help")} data-testid="kalip-help">
         <Ico d={LICON.info} size={22} />
-      </a>
+      </Link>
     ) : (
       actions
     );

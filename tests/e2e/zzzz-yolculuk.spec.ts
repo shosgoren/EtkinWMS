@@ -22,6 +22,8 @@ async function expectSpot(page: Page, target: string): Promise<void> {
       () =>
         page.evaluate<boolean>(`(() => {
       const e = document.querySelector(${JSON.stringify(target)});
+      // T-1012: iç bağlantılar istemci içi (önceden yükleme): adres hemen değişir, ekran iskeletteyken hedef henüz yoktur.
+      if (e === null) return false;
       const b = e.getBoundingClientRect();
       const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
       return hit !== null && e.contains(hit);

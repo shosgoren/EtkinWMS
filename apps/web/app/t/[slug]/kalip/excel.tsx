@@ -6,6 +6,7 @@
 // yalnız kaynakta var olan sınıf, ikon ve renkler kullanılır; yeni stil yok.
 // Yetki gösterimdir: düğme yalnız `data.import` olana çizilir; depo/raf içe aktarma ayrıca `settings.manage` ister. Asıl karar sunucuda
 // (`/api/t/<alan>/export/<tür>` ve aktarım eylemleri). Her işlemde görsel (balon, renk) + sesli (`tone`) geri bildirim.
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { dz } from "../../../design/pano-tokens.ts";
@@ -197,12 +198,12 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
             </div>
             {items.map((m, i) =>
               m.href !== undefined ? (
-                <a key={m.k} href={m.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={() => feedback.minor()} data-testid={`kalip-excel-${m.k}`} autoFocus={i === 0}>
+                <Link key={m.k} href={m.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={() => feedback.minor()} data-testid={`kalip-excel-${m.k}`} autoFocus={i === 0}>
                   <i style={{ background: dz(m.color) }}>
                     <Ico d={m.d} size={20} />
                   </i>
                   <span>{m.label}</span>
-                </a>
+                </Link>
               ) : (
                 <button key={m.k} type="button" className="hb" role="menuitem" onClick={m.go} aria-busy={busy || undefined} disabled={busy} data-testid={`kalip-excel-${m.k}`} autoFocus={i === 0}>
                   <i style={{ background: dz(m.color) }}>

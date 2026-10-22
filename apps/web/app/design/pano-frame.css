@@ -17,7 +17,6 @@
 }
 /* Kap görüntü alanını kaplar; kiracı kabuğunun eski üst çubuğu / alt sekmeleri bu ekranda çizilmez (Bakış `.dz` ile aynı uyarlama). */
 .dzp { position: fixed; inset: 0; z-index: 20; }
-body:has(.dzp) .app-header { display: none; }
 /* Sorun penceresi Bakış kaynağının kendi penceresidir (`.dz .ovl`); Pano'nun üstünde ayrı kapta açılır. */
 .dzp ~ .dz, .dz.dzp-pop { z-index: 30; }
 /* Telefonda 4+ görev kartı tek ekrana sığsın (kaydırma yok kuralı): ilerleme satırı gizlenir, kart iç boşluğu daralır. Kaynakta en çok

@@ -5,6 +5,7 @@
 // Düzey etiketleri (Bölge/Raf/Göz) şimdilik sabit i18n varsayılanıdır; tenant terminolojisi okuyucusu Bulgular'da.
 // T-990 (B-97): lokasyon ekleme, kod değiştirme ve toplu raf oluşturucu pencere değil TAM EKRAN FORMDUR; adres `?new=1` (kök) /
 // `?new=1&parent=<id>` (alt lokasyon) / `?kod=<id>` / `?bulk=1` (rehberin 2. adımı). Geri ağaca döner.
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
@@ -366,12 +367,12 @@ export function LocationTree({
                     {tw("k.next", { step: te("guide.locations.title") })}
                   </button>
                 ) : (
-                  <a className="more" data-testid="setup-row" href={`/t/${encodeURIComponent(slug)}/items?new=1`}>
+                  <Link className="more" data-testid="setup-row" href={`/t/${encodeURIComponent(slug)}/items?new=1`}>
                     <i>
                       <Ico d={LICON.clip} size={20} />
                     </i>
                     {tw("k.next", { step: te("guide.items.title") })}
-                  </a>
+                  </Link>
                 )}
                 {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
                 {error ? <ServerErrorBanner error={error.error} returnTo={returnTo} scope={error.scope} /> : null}
@@ -392,10 +393,10 @@ export function LocationTree({
                         {t("addFirst")}
                       </button>
                     ) : (
-                      <a className="btn" style={{ ...actBtn("172E42", false), textDecoration: "none" }} href={base} data-testid="kalip-empty-action">
+                      <Link className="btn" style={{ ...actBtn("172E42", false), textDecoration: "none" }} href={base} data-testid="kalip-empty-action">
                         <Ico d={LICON.arrow} size={18} />
                         {t("back")}
-                      </a>
+                      </Link>
                     )}
                   </div>
                 ) : (

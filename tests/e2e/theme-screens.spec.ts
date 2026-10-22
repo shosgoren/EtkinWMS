@@ -85,8 +85,12 @@ for (const size of SIZES) {
         const icons = tasks.locator("svg.ico");
         expect(await icons.count(), "kart ikonları").toBeGreaterThanOrEqual(view.key === "flow" ? 5 : 9);
         await expect(icons.first()).toHaveAttribute("aria-hidden", "true");
-        // T-902 marka kabı ink rengindedir; telefon uygulama çubuğu görünüm accent rengini korur.
-        await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
+        // T-1012: kaldırılan kök başlık yerine gerçek Pano/Kalıp logosu kaynak paletiyle sınanır.
+        await expect(page.locator(".app-header")).toHaveCount(0);
+        const logo = page.locator("#main .top .brand > .logo").filter({ visible: true });
+        await expect(logo).toBeVisible();
+        const dark = await page.locator("#main .dzp.dz-dark, #main .kalip.dz-dark").count() > 0;
+        await expect(logo).toHaveCSS("background-color", dark ? "rgb(11, 17, 24)" : "rgb(23, 46, 66)");
         const landingAccent = accents[view.key];
         if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
         // T-979 (B-95): eski telefon uygulama çubuğu kaldırıldı; iki görünümde de ekranın kendi kalıp/Pano başlığı var.

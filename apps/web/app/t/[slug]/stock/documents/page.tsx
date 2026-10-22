@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -105,9 +106,9 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
                 {doc.related.length === 0 ? null : (
                   <KalipKartBolum title={t("k.related")} d={LICON.transfer} color="0E7C7B" testId="document-related">
                     {doc.related.map((other) => (
-                      <a key={other.id} className="more" href={`${path}?id=${other.id}`}>
+                      <Link key={other.id} className="more" href={`${path}?id=${other.id}`}>
                         {t("related")}: {other.number} · {other.warehouseName}
-                      </a>
+                      </Link>
                     ))}
                   </KalipKartBolum>
                 )}
