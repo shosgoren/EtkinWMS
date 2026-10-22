@@ -58,3 +58,9 @@ body:has(.dzk) .dzp .app, body:has(.dzk) .dze .app, body:has(.dzk) .dzr .app, bo
   position: absolute; top: -4px; right: -4px; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
   border-radius: 999px; background: var(--color-dz-x-pemfec); color: var(--color-dz-x-bkbdaa); font: 800 12px/1 var(--font-bricolage), sans-serif;
 }
+/* T-1002: ortak perde (perde.css, kullanıcı 21 Ekim tek perde) açık temada açık renklidir; kaynakta koyu perde üstündeki beyaz yazılar
+   (`.said`, `.vhint`, `.fbt`, `.snd`) okunur kalsın diye açık temada koyu mürekkep; `.vchip` koyu hap (kaynak kart rengi). Koyu temada kaynak aynen. */
+.dzk:not(.dz-dark) .veil { color: var(--color-dz-x-aoblch); }
+.dzk:not(.dz-dark) .veil .vhint, .dzk:not(.dz-dark) .veil .snd { color: var(--color-dz-x-dkgkim); }
+.dzk:not(.dz-dark) .veil > .vchip, .dzk:not(.dz-dark) .veil .vchips .vchip { background: var(--color-dz-a-aoblch-jc); color: var(--color-dz-x-pppppp); }
+.dzk:not(.dz-dark) .veil .card { color: var(--color-dz-x-pppppp); }

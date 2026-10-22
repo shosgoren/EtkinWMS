@@ -51,7 +51,7 @@ const D = {
   person: "M12 4.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5",
   ok: "m5 12 5 5 9-10",
   bad: "M6 6l12 12M18 6 6 18",
-  mic: "M5.5 11a6.5 6.5 0 0 0 13 0",
+  mic: KICON.mSes,
   fix: "M4 20h4L19 9l-4-4L4 16z",
 } as const;
 const OP_COLOR: Record<WriteOp, string> = { stockIn: "2F7D5B", stockOut: "C62828", transfer: "6C4BD8", count: "2F5DA8" };
@@ -92,8 +92,10 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
   const [said, setSaid] = useState("");
   const [tick, setTick] = useState(0);
   const rec = useRef<Kayit | null>(null);
-  const starting = useRef(false);
+  const startP = useRef<Promise<void> | null>(null);
   const releaseWanted = useRef(false);
+  const cancelWanted = useRef(false);
+  const tapTimer = useRef<number | undefined>(undefined);
   const downAt = useRef(0);
   const lastTap = useRef(0);
   const card = useRef<Extract<St, { s: "write" }> | null>(null);
@@ -246,21 +248,42 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
     handle(res);
   }, [fail, handle, slug, t]);
 
+  // Mikrofon açılışı birkaç yüz ms sürebilir: başlatmalar sıraya girer (iki dokunuşta önceki kısa kayıt kapanır, sonra uzun dinleme açılır).
   const begin = useCallback(
-    async (mode: "listen" | "long") => {
-      if (rec.current !== null || starting.current) return;
-      starting.current = true;
-      releaseWanted.current = false;
-      try {
-        rec.current = await kayitBaslat({ long: mode === "long", onAuto: () => void finish() });
-        setSaid("");
-        setSt({ s: mode, at: Date.now() });
-        if (mode === "listen" && releaseWanted.current) void finish();
-      } catch {
-        fail(t("err.mic"));
-      } finally {
-        starting.current = false;
-      }
+    (mode: "listen" | "long") => {
+      // Perde hemen açılır (dokunur dokunmaz görsel geri bildirim); mikrofon arkada açılır.
+      setSaid("");
+      setSt({ s: mode, at: Date.now() });
+      const runStart = async (): Promise<void> => {
+        if (startP.current !== null) await startP.current.catch(() => undefined);
+        if (rec.current !== null) return;
+        releaseWanted.current = false;
+        try {
+          // Mikrofon 6 sn içinde açılmazsa (izin penceresi/aygıt yok) hata balonu; kayıt açılırsa sonradan kapatılır.
+          const opening = kayitBaslat({ long: mode === "long", onAuto: () => void finish() });
+          const r = await Promise.race([opening, new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("mic-timeout")), 6000))]).catch((e: unknown) => {
+            void opening.then((late) => late.cancel()).catch(() => undefined);
+            throw e;
+          });
+          if (cancelWanted.current) {
+            cancelWanted.current = false;
+            r.cancel();
+            return;
+          }
+          rec.current = r;
+          setSaid("");
+          setSt({ s: mode, at: Date.now() });
+          if (mode === "listen" && releaseWanted.current) void finish();
+        } catch {
+          cancelWanted.current = false;
+          fail(t("err.mic"));
+        }
+      };
+      const p = runStart();
+      startP.current = p;
+      void p.finally(() => {
+        if (startP.current === p) startP.current = null;
+      });
     },
     [fail, finish, t],
   );
@@ -274,6 +297,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
   useEffect(() => () => {
     rec.current?.cancel();
     window.clearTimeout(fbTimer.current);
+    window.clearTimeout(tapTimer.current);
   }, []);
 
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>): void => {
@@ -290,7 +314,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
     }
     if (st.s === "think") return;
     downAt.current = Date.now();
-    void begin("listen");
+    begin("listen");
   };
   const onPointerUp = (e: PointerEvent<HTMLButtonElement>): void => {
     if (!opts.enabled || downAt.current === 0) return;
@@ -302,24 +326,30 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
       else void finish();
       return;
     }
-    // Kısa dokunuş: kayıt atılır; ikinci dokunuş 450 ms içinde gelirse uzun dinleme.
-    rec.current?.cancel();
-    rec.current = null;
-    releaseWanted.current = true;
+    // Kısa dokunuş: kısa kayıt atılır (henüz açılıyorsa açılınca kapanır); ikinci dokunuş 450 ms içinde gelirse uzun dinleme, gelmezse
+    // "Basılı tut ve konuş" ipucu.
+    if (rec.current !== null) {
+      rec.current.cancel();
+      rec.current = null;
+    } else cancelWanted.current = true;
+    window.clearTimeout(tapTimer.current);
+    setSt(card.current ?? { s: "idle" });
     const now = Date.now();
     if (now - lastTap.current < 450) {
       lastTap.current = 0;
-      void begin("long");
+      begin("long");
     } else {
       lastTap.current = now;
-      setSt(card.current ?? { s: "idle" });
+      tapTimer.current = window.setTimeout(() => {
+        if (lastTap.current === now && rec.current === null) feedback.info(t("err.tooShort"));
+      }, 460);
     }
   };
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>): void => {
     if (!opts.enabled || (e.key !== "Enter" && e.key !== " ")) return;
     e.preventDefault();
     if (st.s === "long" || st.s === "listen") void finish();
-    else void begin("long");
+    else begin("long");
   };
 
   const choose = (slot: keyof Picks, o: PickOption): void => {
@@ -495,7 +525,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
                 className="btn fix"
                 onClick={() => {
                   feedback.minor();
-                  void begin("long");
+                  begin("long");
                 }}
                 data-testid="etkin-fix"
               >
@@ -632,7 +662,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
             className="vchip"
             onClick={(e) => {
               e.stopPropagation();
-              void begin("long");
+              begin("long");
             }}
             data-testid="etkin-retry"
           >

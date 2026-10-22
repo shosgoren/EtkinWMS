@@ -1,10 +1,23 @@
-// T-1002 (B-62): Etkin bas-konuş uçtan uca — sahte iç ses servisiyle (tests/e2e/support/fake-voice.ts; tarayıcıda sahte mikrofon).
+// T-1002 (B-62): Etkin bas-konuş uçtan uca — sahte iç ses servisiyle (tests/e2e/support/fake-voice.ts). Mikrofon test çifti: getUserMedia
+// 440 Hz osilatör akışı döndürür (Chromium'un sahte aygıt bayrağı macOS başsız kipte izin beklerken asılı kalıyor; kayıt/WAV yolu aynı).
 // Basılı tut (≈1,2 sn) → buzlu dinleme perdesi → "Anladım" kartı (işlem, miktar, ürün, raf çipleri) → Onayla → başarı nabzı + mevcut stok
 // belgesi taslağı (createManualStockAction) açılır. İkinci tur: kart açıkken uzun basış (≥2 sn) sahte serviste "Onayla." → sesli onay (A-172).
 import { expect, test, type Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
 
-test.use({ permissions: ["microphone"], launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] } });
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = (): Promise<MediaStream> => {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      osc.frequency.value = 440;
+      const dest = ctx.createMediaStreamDestination();
+      osc.connect(dest);
+      osc.start();
+      return Promise.resolve(dest.stream);
+    };
+  });
+});
 
 async function hold(page: Page, ms: number): Promise<void> {
   const btn = page.getByTestId("kabuk-etkin").filter({ visible: true });
