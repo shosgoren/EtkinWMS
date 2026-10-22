@@ -5,6 +5,7 @@
 // `.sbar3`, `.steps3 > .st3`). Renkler `.dzl` kabının üretilmiş belirteçlerinden (kalip-liste-tokens.ts).
 // Kart ve adım bağlantı (`<a>`) ya da düğme olabilir; görünüm aynı (kalip-frame.css).
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import type { CSSProperties, FormEvent, InputHTMLAttributes, ReactNode, Ref } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, KalipEkran, MicIco } from "./ekran.tsx";
@@ -100,9 +101,9 @@ export function KalipCipler({ label, chips }: { label: string; chips: readonly K
           </>
         );
         return ch.href !== undefined ? (
-          <a key={ch.id} className={`fch${ch.on ? " on" : ""}`} href={ch.href} aria-current={ch.on ? "true" : undefined} onClick={ch.onClick} style={{ textDecoration: "none" }} data-chip={ch.id}>
+          <Link key={ch.id} className={`fch${ch.on ? " on" : ""}`} href={ch.href} aria-current={ch.on ? "true" : undefined} onClick={ch.onClick} style={{ textDecoration: "none" }} data-chip={ch.id}>
             {inner}
-          </a>
+          </Link>
         ) : (
           <button key={ch.id} type="button" className={`fch${ch.on ? " on" : ""}`} aria-pressed={ch.on} onClick={ch.onClick} data-chip={ch.id}>
             {inner}
@@ -159,9 +160,9 @@ export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href
     </>
   );
   return href !== undefined ? (
-    <a className={cls} style={style} role={role ?? undefined} aria-label={aria} href={href} onClick={onClick} data-testid={testId}>
+    <Link className={cls} style={style} role={role ?? undefined} aria-label={aria} href={href} onClick={onClick} data-testid={testId}>
       {inner}
-    </a>
+    </Link>
   ) : (
     <button type="button" className={cls} style={style} role={role ?? undefined} aria-label={aria} onClick={onClick} data-testid={testId}>
       {inner}
@@ -186,10 +187,10 @@ export function KalipDaha({ children, href, onClick, iconD, iconColor, mic, clas
     </i>
   );
   return href !== undefined ? (
-    <a className={className} href={href} onClick={onClick} data-testid={testId}>
+    <Link className={className} href={href} onClick={onClick} data-testid={testId}>
       {icon}
       {children}
-    </a>
+    </Link>
   ) : (
     <button type="button" className={className} onClick={onClick} data-testid={testId}>
       {icon}
@@ -213,10 +214,10 @@ export function KalipBos({ title, hint, action, testId, iconD = LICON.search }: 
       <b>{title}</b>
       {hint === undefined ? null : <small>{hint}</small>}
       {action === undefined ? null : action.href !== undefined ? (
-        <a className="btn n" href={action.href} onClick={action.onClick} data-testid="kalip-empty-action">
+        <Link className="btn n" href={action.href} onClick={action.onClick} data-testid="kalip-empty-action">
           <Ico d={aIco} size={18} />
           {action.label}
-        </a>
+        </Link>
       ) : (
         <button type="button" className="btn n" onClick={action.onClick} data-testid="kalip-empty-action">
           <Ico d={aIco} size={18} />
@@ -292,9 +293,9 @@ export function KalipKurulum({ title, sub, steps, testId }: { title: string; sub
           return (
             <li key={s.key} style={{ display: "contents" }} data-done={s.state === "done"}>
               {s.href !== undefined && s.state !== "locked" ? (
-                <a className={cls} style={style} aria-label={aria} href={s.href} onClick={s.onClick} data-step={s.key}>
+                <Link className={cls} style={style} aria-label={aria} href={s.href} onClick={s.onClick} data-step={s.key}>
                   {inner}
-                </a>
+                </Link>
               ) : (
                 <button type="button" className={cls} style={style} aria-label={aria} onClick={s.onClick} aria-disabled={s.state === "locked" ? "true" : undefined} data-step={s.key}>
                   {inner}

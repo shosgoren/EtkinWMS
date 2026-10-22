@@ -34,6 +34,8 @@ export function FirstUseGuide() {
   const pathname = usePathname();
   // T-983: giriş adımları (giriş, iki adımlı doğrulama, parola sıfırlama) sade kalır; ilk rehber girişten sonraki ilk ekranda açılır.
   useEffect(() => {
+    // T-1012: kiracı kendi rehberini/kabuğunu kullanır; Destek > Rehberi aç olayı aşağıda çalışmaya devam eder.
+    if (pathname === "/t" || pathname.startsWith("/t/")) return;
     if (AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
     try { if (localStorage.getItem(KEY) !== "seen" && !dialog.current?.open) dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
   }, [pathname]);

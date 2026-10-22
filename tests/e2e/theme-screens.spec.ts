@@ -85,8 +85,12 @@ for (const size of SIZES) {
         const icons = tasks.locator("svg.ico");
         expect(await icons.count(), "kart ikonları").toBeGreaterThanOrEqual(view.key === "flow" ? 5 : 9);
         await expect(icons.first()).toHaveAttribute("aria-hidden", "true");
-        // T-902 marka kabı ink rengindedir; telefon uygulama çubuğu görünüm accent rengini korur.
-        await expect(page.locator(".app-header > div:first-child > span")).toHaveCSS("background-color", await tokenColor(page, "ink"));
+        // T-1012: kaldırılan kök başlık yerine gerçek Pano/Kalıp logosu kaynak paletiyle sınanır.
+        await expect(page.locator(".app-header")).toHaveCount(0);
+        const logo = page.locator("#main .top .brand > .logo").filter({ visible: true });
+        await expect(logo).toBeVisible();
+        const dark = await page.locator("#main .dzp.dz-dark, #main .kalip.dz-dark").count() > 0;
+        await expect(logo).toHaveCSS("background-color", dark ? "rgb(11, 17, 24)" : "rgb(23, 46, 66)");
         const landingAccent = accents[view.key];
         if (landingAccent === undefined) throw new Error(`Eksik landing accent ölçümü: ${view.key}`);
         // T-979 (B-95): eski telefon uygulama çubuğu kaldırıldı; iki görünümde de ekranın kendi kalıp/Pano başlığı var.
@@ -100,5 +104,84 @@ for (const size of SIZES) {
 
       expect(accents.cockpit, "Kokpit vurgusu Akış'tan farklı").not.toBe(accents.flow);
     });
+  });
+}
+
+// T-1012: eski kök kabuk SSR/yükleme/geçişte çalışma alanına dönmez; manuel rehber korunur.
+
+const LEGACY_SIZES = [
+  { width: 390, height: 680 },
+  { width: 1180, height: 820 },
+  { width: 1440, height: 900 },
+] as const;
+
+async function expectNoLegacyShell(page: Page) {
+  await expect(page.locator(".app-header")).toHaveCount(0);
+  await expect(page.locator(".guide-dialog")).not.toBeVisible();
+}
+
+/** Kaynak DOM'a bir anlık eklenme de hata: yalnız son görüntüde CSS ile gizlemek testi geçirmez. */
+async function observeNavigation(page: Page) {
+  await page.evaluate(`(() => {
+    window.__legacyShellProbe = { seen: false };
+    const inspect = () => {
+      if (document.querySelector('.app-header, .guide-dialog[open]')) window.__legacyShellProbe.seen = true;
+    };
+    inspect();
+    new MutationObserver(records => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node instanceof Element && (node.matches('.app-header, .guide-dialog[open]') || node.querySelector('.app-header, .guide-dialog[open]'))) {
+            window.__legacyShellProbe.seen = true;
+          }
+        }
+        if (record.type === 'attributes' && record.target instanceof Element && record.target.matches('.guide-dialog') &&
+            (record.oldValue !== null || record.target.hasAttribute('open'))) window.__legacyShellProbe.seen = true;
+      }
+      inspect();
+    }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'], attributeOldValue: true });
+  })()`);
+}
+
+for (const size of LEGACY_SIZES) {
+  test(`eski kabuk DOM'a girmez, iç gezinme belgeyi yenilemez (${size.width}×${size.height})`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await enterDemoShared(page, "Yönetici");
+    await expect(page).toHaveURL(/\/t\/demo$/);
+    await completeFirstUseGuide(page);
+    await expectNoLegacyShell(page);
+
+    // Daha önce görülmemiş rehber tercihi: tenant'ta otomatik açılış yine olmamalı.
+    await page.evaluate("localStorage.removeItem('etkinwms.guide.v1')");
+    await page.goto("/t/demo/items");
+    await completeFirstUseGuide(page);
+    await expectNoLegacyShell(page);
+    await observeNavigation(page);
+    await page.getByRole("link", { name: "Arşivli", exact: true }).click();
+    await expect(page).toHaveURL(/\/items\?status=ARCHIVED$/);
+    await expectNoLegacyShell(page);
+    // Probe kaybolursa tam belge yüklemesi olmuştur; korunup seen=true olursa eski kabuk kısa süreli de olsa çizilmiştir.
+    expect(await page.evaluate("window.__legacyShellProbe")).toEqual({ seen: false });
+    await page.getByRole("navigation", { name: "Alt çubuk", exact: true }).getByRole("link", { name: "Ana ekran", exact: true }).click();
+    await expect(page).toHaveURL(/\/t\/demo$/);
+    await expectNoLegacyShell(page);
+    expect(await page.evaluate("window.__legacyShellProbe")).toEqual({ seen: false });
+
+    await page.goto("/t/demo/olmayan-t1012-ekran");
+    await expect(page.getByTestId("bulunamadi-ekrani")).toBeVisible();
+    await expectNoLegacyShell(page);
+    await page.goto("/t/demo");
+    await expectNoLegacyShell(page);
+    await page.getByTestId("pano-help").click();
+    // Talebi bulunan kullanıcıda önce Taleplerim açılır; gerçek arayüzün Yeni talep düğmesiyle yardım sayfasına geçilir.
+    if (await page.getByTestId("support-list").isVisible()) await page.getByRole("button", { name: "Destek: yeni talep yaz", exact: true }).click();
+    await page.getByTestId("support-guide").click();
+    const guide = page.getByRole("dialog", { name: "Birlikte, adım adım." });
+    await expect(guide).toBeVisible();
+    await expect(guide.getByText("Adım 1 / 3", { exact: true })).toBeVisible();
+    await guide.locator(".guide-skip").click();
+    await expect(guide).not.toBeVisible();
+    await expect(page.locator(".app-header")).toHaveCount(0);
   });
 }

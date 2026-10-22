@@ -1,5 +1,7 @@
 # Web, mobil ve tablet UI/UX
 
+- T-1012: Çalışma alanında (`/t` ve alt yolları) eski kök `.app-header` artık yalnız tasarım sınıfına göre CSS ile gizlenmez; `LegacyShell` yol sınırında hiç çizmez. Yükleme `.kisk` ve hata `.khe` dahil bu kural geçerlidir. Eski ilk rehber tenant'ta otomatik açılmaz; Destek/Rehberi aç olayıyla manuel kullanım korunur. Ortak Kalip liste bağlantıları Next Link kullanır; kaynak CSS ve yeni ekran tasarımları değişmedi.
+
 ## Temel kullanıcı kuralı
 İlk defa bilgisayar kullanan kişi bile sıradaki işi anlamalı. Müşteri sisteme hizmet etmez; sistem yanlış miktarı, yanlış yeri, mükerrer işlemi ve yetkisiz işi önleyerek müşteriye fayda sağlar. Bu bir hedef ve test kabulüdür; ekranın güzel olması hedefin ölçüldüğü anlamına gelmez.
 

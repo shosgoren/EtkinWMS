@@ -9,6 +9,7 @@ import { BrandMark } from "./brand-mark.tsx";
 import "./globals.css";
 import { designFontVars } from "./fonts.ts";
 import { FirstUseGuide, GuideTrigger } from "./first-use-guide.tsx";
+import { LegacyShell } from "./legacy-shell.tsx";
 import { appSurface } from "../lib/surface.ts";
 import { temaKoyu } from "./design/theme.ts";
 import { KuralKatmani } from "./t/[slug]/kalip/kural-katmani.tsx";
@@ -63,51 +64,53 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             {t("skipToContent")}
           </a>
           {panel ? null : (
-            <header className="app-header sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-surface px-4 py-2">
-              <div className="flex min-w-0 items-center gap-3">
-                <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center">
-                  <BrandMark className="size-full" />
-                </span>
-                <div className="flex min-w-0 flex-col leading-tight">
-                  <span className="truncate text-xl font-extrabold">{t("productName")}</span>
-                  <span className="w-fit rounded-full bg-accent-soft px-2 text-xs font-bold text-accent-ink">
-                    {t("easyMode")}
+            <LegacyShell>
+              <header className="app-header sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-surface px-4 py-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center">
+                    <BrandMark className="size-full" />
                   </span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {hasSession ? <form action={setView} aria-label={t("viewSwitch.label")}>
-                  <div className="flex rounded-full bg-accent-soft p-1" role="group">
-                    {VIEWS.map((v) => (
-                      <button
-                        key={v}
-                        type="submit"
-                        name="view"
-                        value={v}
-                        aria-pressed={view === v}
-                        className={`${TOUCH} cursor-pointer rounded-full px-4 text-sm font-bold ${
-                          view === v ? "bg-ink text-surface" : "text-ink"
-                        }`}
-                      >
-                        {t(`viewSwitch.${v}`)}
-                      </button>
-                    ))}
+                  <div className="flex min-w-0 flex-col leading-tight">
+                    <span className="truncate text-xl font-extrabold">{t("productName")}</span>
+                    <span className="w-fit rounded-full bg-accent-soft px-2 text-xs font-bold text-accent-ink">
+                      {t("easyMode")}
+                    </span>
                   </div>
-                </form> : null}
+                </div>
 
-                {hasSession ? <SignOutButton /> : null}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {hasSession ? <form action={setView} aria-label={t("viewSwitch.label")}>
+                    <div className="flex rounded-full bg-accent-soft p-1" role="group">
+                      {VIEWS.map((v) => (
+                        <button
+                          key={v}
+                          type="submit"
+                          name="view"
+                          value={v}
+                          aria-pressed={view === v}
+                          className={`${TOUCH} cursor-pointer rounded-full px-4 text-sm font-bold ${
+                            view === v ? "bg-ink text-surface" : "text-ink"
+                          }`}
+                        >
+                          {t(`viewSwitch.${v}`)}
+                        </button>
+                      ))}
+                    </div>
+                  </form> : null}
 
-                <GuideTrigger className={`${TOUCH} inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-border-strong bg-surface px-4 text-sm font-bold text-ink`} />
-                <Link
-                  href="/help"
-                  className={`${TOUCH} inline-flex items-center justify-center rounded-full bg-accent-soft px-4 text-sm font-bold text-accent-ink`}
-                >
-                  <span className="sm:hidden">{t("help.short")}</span>
-                  <span className="hidden sm:inline">{t("help.full")}</span>
-                </Link>
-              </div>
-            </header>
+                  {hasSession ? <SignOutButton /> : null}
+
+                  <GuideTrigger className={`${TOUCH} inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-border-strong bg-surface px-4 text-sm font-bold text-ink`} />
+                  <Link
+                    href="/help"
+                    className={`${TOUCH} inline-flex items-center justify-center rounded-full bg-accent-soft px-4 text-sm font-bold text-accent-ink`}
+                  >
+                    <span className="sm:hidden">{t("help.short")}</span>
+                    <span className="hidden sm:inline">{t("help.full")}</span>
+                  </Link>
+                </div>
+              </header>
+            </LegacyShell>
           )}
           {panel ? null : <FirstUseGuide />}
           <div id="main" tabIndex={-1}>

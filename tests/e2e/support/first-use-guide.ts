@@ -2,6 +2,11 @@ import { expect, type Page } from "@playwright/test";
 
 /** Rehberi gerçek düğmeleriyle tamamlar; tercihi önceden yazmaz, modalı DOM'dan kaldırmaz. */
 export async function completeFirstUseGuide(page: Page): Promise<void> {
+  const pathname = new URL(page.url()).pathname;
+  if (pathname === "/t" || pathname.startsWith("/t/")) {
+    await expect(page.locator(".guide-dialog")).not.toBeVisible();
+    return;
+  }
   // SSR'de kapalı gelen dialog, hydration sonrasında açılır. isVisible ile tek seferlik
   // kontrol bu açılışı kaçırabilir. Tercih yalnız okunur; yazmayı uygulama yapar.
   // T-970 (B-64c): eski `waitForFunction("() => {...}")` dizesi bir İFADE olarak değerlendirilip fonksiyon nesnesi döndürüyordu
