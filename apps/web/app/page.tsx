@@ -10,6 +10,7 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { ROLE_KEYS } from "@wms/domain/identity/permissions";
 import { workspaceCreationAllowed } from "@wms/domain/onboarding/workspace";
 import { demoSignInAction } from "./demo-actions.ts";
+import { WelcomeHeader } from "./welcome-header.tsx";
 import { demoLoginStatus } from "../lib/demo-config.ts";
 
 // Landing (T-122). Oturumlu kullanıcı çalışma alanına ya da `/onboarding`'e gider. Ortam bayrakları istek anında okunur.
@@ -63,6 +64,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const demoError = SHOWN_CODES.find((c): c is ShownCode => c === rawError);
 
   return (
+    <>
+    {/* T-1012: eski üst çubuk yalnız bu karşılama sayfasında (kök yerleşimden çıkarıldı). */}
+    <WelcomeHeader />
     <main className="welcome-shell">
       {demo ? <Banner kind="warning">{t("auth.login.demoBanner")}</Banner> : null}
       <section className="welcome-hero">
@@ -115,5 +119,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </section>
       ) : null}
     </main>
+    </>
   );
 }

@@ -29,7 +29,6 @@
 /* Ekranın kendi perdesi (kaydedilmemiş iş kutusu) açıkken ekran ortak çubuğun üstüne çıkar (kaynakta `.cfback` çubuğun üstündedir). */
 .kalip:has(.cfback) { z-index: 26; }
 
-body:has(.kalip) .app-header { display: none; }
 
 /* Kaynak telefonda 5 karttan sonrasını gizler ve "+N daha · ara ya da söyle" (sesle, B-62) satırı koyar. Ses gelene dek gizli kart
    ulaşılamaz kalmasın: tüm kartlar çizilir, içerik alanı kendi içinde kayar. */

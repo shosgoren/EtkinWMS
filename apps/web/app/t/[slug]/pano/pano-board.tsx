@@ -1,6 +1,7 @@
 // T-422 (I-18): Pano.dc.html hesap sahibi (`isOwner`) ve depo yöneticisi (`isManager`) ana ekranı BİREBİR — sınıf adları, öğe sırası, ikon
 // yolları kaynaktan; sayılar `getBoard` + `getWorkSummary` (uydurma yok, G-07). Tanımlar board.ts başlığında. Karşılığı olmayan kaynak düğmeleri
 // (Hepsini listeye ekle, Depo yöneticisine öne al, Listeyi gör) ilgili ekranlara bağlantıdır; satın alma listesi özelliği yoktur.
+import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { buyukHarf } from "@wms/ui";
@@ -146,67 +147,67 @@ export async function PanoBoard(p: PanoBoardProps) {
         <>
           {shd(t("reports"), t("reportsHint"))}
           <div className="rep" role="list" aria-label={t("reportsAria")} data-testid="pano-reports">
-            <a href={`${base}/stock`} className="rp" role="listitem" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }} data-report="critical">
+            <Link href={`${base}/stock`} className="rp" role="listitem" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }} data-report="critical">
               <span className="n">{b.criticalCount}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.box} /></Svg></span>
               <b>{t("r.critical")}</b>
               <small>{b.criticalCount > 0 ? t("r.criticalSub") : t("r.none")}</small>
-            </a>
-            <a href={`${base}/shipping`} className="rp" role="listitem" style={{ background: dz("E56A00"), animationDelay: ".05s", textDecoration: "none" }} data-report="orders">
+            </Link>
+            <Link href={`${base}/shipping`} className="rp" role="listitem" style={{ background: dz("E56A00"), animationDelay: ".05s", textDecoration: "none" }} data-report="orders">
               <span className="n">{b.orderCount}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.truck} /></Svg></span>
               <b>{t("r.orders")}</b>
               <small>{b.orderCount > 0 ? t("r.ordersSub", { d: b.oldestOrderDays }) : t("r.none")}</small>
-            </a>
-            <a href={`${base}/stock`} className="rp calm" role="listitem" style={{ "--c": dz("0E7C7B"), "--t": dz("0E7C7B"), animationDelay: ".1s", textDecoration: "none" } as CSSProperties} data-report="turn">
+            </Link>
+            <Link href={`${base}/stock`} className="rp calm" role="listitem" style={{ "--c": dz("0E7C7B"), "--t": dz("0E7C7B"), animationDelay: ".1s", textDecoration: "none" } as CSSProperties} data-report="turn">
               <span className="n">{b.fast[0]?.times ?? 0}×</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.turn} /></Svg></span>
               <b>{t("r.turn")}</b>
               <small>{t("r.turnSub")}</small>
-            </a>
-            <a href={`${base}/stock`} className="rp calm" role="listitem" style={{ "--c": dz("172E42"), "--t": dz("172E42"), animationDelay: ".15s", textDecoration: "none" } as CSSProperties} data-report="buy">
+            </Link>
+            <Link href={`${base}/stock`} className="rp calm" role="listitem" style={{ "--c": dz("172E42"), "--t": dz("172E42"), animationDelay: ".15s", textDecoration: "none" } as CSSProperties} data-report="buy">
               <span className="n">{b.buyCount}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.cikis} /></Svg></span>
               <b>{t("r.buy")}</b>
               <small>{t("r.buySub")}</small>
-            </a>
-            <a href={`${base}/tasks?kind=COUNT`} className="rp calm" role="listitem" style={{ "--c": dz("2F5DA8"), "--t": dz("2F5DA8"), animationDelay: ".2s", textDecoration: "none" } as CSSProperties} data-report="count">
+            </Link>
+            <Link href={`${base}/tasks?kind=COUNT`} className="rp calm" role="listitem" style={{ "--c": dz("2F5DA8"), "--t": dz("2F5DA8"), animationDelay: ".2s", textDecoration: "none" } as CSSProperties} data-report="count">
               <span className="n">{b.countReview}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.clip} /></Svg></span>
               <b>{t("r.count")}</b>
               <small>{t("r.countSub")}</small>
-            </a>
-            <a href={`${base}/stock`} className="rp all" role="listitem" style={{ textDecoration: "none" }}>
+            </Link>
+            <Link href={`${base}/stock`} className="rp all" role="listitem" style={{ textDecoration: "none" }}>
               <span className="alic" style={{ background: dz("EEF1F4"), color: dz("172E42") }}><Svg size={22}><P d={PICON.reports} /></Svg></span>
               <b>{t("r.all")}</b>
               <small style={{ color: dz("4E6476") }}>{t("r.allSub")}</small>
-            </a>
+            </Link>
           </div>
 
           {shd(t("alerts"), <><span className="dotlive" />{t("liveNow")}</>, "shd alerts-hd")}
           <div className="alerts" id="pano-alerts">
-            <a href={`${base}/stock`} className="al" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }}>
+            <Link href={`${base}/stock`} className="al" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }}>
               {b.criticalCount > 0 ? <span className="pulse" /> : null}
               <span className="alic"><Svg size={28}><P d={PICON.boxA} /><P d={PICON.boxB} /><P d={PICON.boxC} /></Svg></span>
               <span className="txt"><span className="n">{b.criticalCount}</span><span className="t">{t("a.critical")}</span><span className="s">{t("r.criticalSub")}</span></span>
-            </a>
-            <a href={`${base}/shipping`} className="al" style={{ background: dz("E56A00"), animationDelay: ".06s", textDecoration: "none" }}>
+            </Link>
+            <Link href={`${base}/shipping`} className="al" style={{ background: dz("E56A00"), animationDelay: ".06s", textDecoration: "none" }}>
               {b.orderCount > 0 ? <span className="pulse" /> : null}
               <span className="alic"><Svg size={28}><P d={PICON.truckA} /><circle cx="6.5" cy="17.5" r="2" /><circle cx="16.5" cy="17.5" r="2" /><P d={PICON.truckB} /></Svg></span>
               <span className="txt"><span className="n">{b.orderCount}</span><span className="t">{t("a.orders")}</span><span className="s">{b.orderCount > 0 ? t("r.ordersSub", { d: b.oldestOrderDays }) : t("r.none")}</span></span>
-            </a>
-            <a href={`${base}/tasks?kind=COUNT`} className="al" style={{ background: dz("2F5DA8"), animationDelay: ".12s", textDecoration: "none" }}>
+            </Link>
+            <Link href={`${base}/tasks?kind=COUNT`} className="al" style={{ background: dz("2F5DA8"), animationDelay: ".12s", textDecoration: "none" }}>
               <span className="alic"><Svg size={28}><rect x="6" y="4" width="12" height="17" rx="2" /><P d={PICON.clipA} /><P d={PICON.clipB} /></Svg></span>
               <span className="txt"><span className="n">{b.countReview}</span><span className="t">{t("a.count")}</span><span className="s">{t("r.countSub")}</span></span>
-            </a>
-            <a href={`${base}/tasks`} className="al" style={{ background: dz("6C4BD8"), animationDelay: ".18s", textDecoration: "none" }}>
+            </Link>
+            <Link href={`${base}/tasks`} className="al" style={{ background: dz("6C4BD8"), animationDelay: ".18s", textDecoration: "none" }}>
               <span className="alic"><Svg size={28}><P d={PICON.warnA} /><P d={PICON.warnB} /></Svg></span>
               <span className="txt">
                 <span className="n">{b.problems}</span>
                 <span className="t">{t("a.problems")}</span>
                 <span className="s">{b.lastProblem === null ? t("r.none") : `${tg(`problemSheet.reasons.${b.lastProblem.reason}`)} · ${t("minutes", { n: b.lastProblem.minutes })}`}</span>
               </span>
-            </a>
+            </Link>
           </div>
 
           <div className="grid2">
@@ -221,7 +222,7 @@ export async function PanoBoard(p: PanoBoardProps) {
                 return (
                   <div className="row" key={x.itemId}>
                     <span className="nm">{x.name}</span>
-                    <span className="act"><a className="btn g" href={`${base}/items/${encodeURIComponent(x.itemId)}`} style={{ textDecoration: "none" }}>+{x.suggest} {x.unit}</a></span>
+                    <span className="act"><Link className="btn g" href={`${base}/items/${encodeURIComponent(x.itemId)}`} style={{ textDecoration: "none" }}>+{x.suggest} {x.unit}</Link></span>
                     <span className="meter">
                       <span className="bar"><span style={{ width: `${pct}%`, background: dz(x.critical ? "C62828" : "E56A00") }} /></span>
                       <span className="mono" style={{ fontSize: 11, fontWeight: 600 }}>{x.have} / {x.min}</span>
@@ -246,7 +247,7 @@ export async function PanoBoard(p: PanoBoardProps) {
                   <span className="meta">{o.number} · {t("linesN", { n: o.lines })} · {o.urgent ? tg("urgent") : t("waitShip")}</span>
                 </div>
               ))}
-              <a className="btn n" href={`${base}/shipping`} style={{ alignSelf: "flex-start", textDecoration: "none" }}>{t("ordersOpen")}</a>
+              <Link className="btn n" href={`${base}/shipping`} style={{ alignSelf: "flex-start", textDecoration: "none" }}>{t("ordersOpen")}</Link>
             </section>
           </div>
 
@@ -282,7 +283,7 @@ export async function PanoBoard(p: PanoBoardProps) {
                 <b><Svg size={20}><P d={PICON.boxA} /><P d={PICON.idleB} /></Svg>{t("idle")}</b>
                 <span className="big">{t("itemsN", { n: b.idleItems })}</span>
                 <span className="mono" style={{ fontSize: 11.5, fontWeight: 600, color: dz("C9D6E0") }}>{t("idleHint")}</span>
-                <a className="btn y" href={`${base}/stock`} style={{ alignSelf: "flex-start", textDecoration: "none" }}>{t("idleOpen")}</a>
+                <Link className="btn y" href={`${base}/stock`} style={{ alignSelf: "flex-start", textDecoration: "none" }}>{t("idleOpen")}</Link>
               </div>
             </div>
           </section>
@@ -290,21 +291,21 @@ export async function PanoBoard(p: PanoBoardProps) {
       ) : (
         <>
           <div className="quick">
-            <a href={`${base}/tasks?status=OPEN`} className={`qt${tasks.unassigned > 0 ? " hot" : ""}`} style={{ "--q": dz("2F7D5B"), textDecoration: "none" } as CSSProperties} data-quick="plan">
+            <Link href={`${base}/tasks?status=OPEN`} className={`qt${tasks.unassigned > 0 ? " hot" : ""}`} style={{ "--q": dz("2F7D5B"), textDecoration: "none" } as CSSProperties} data-quick="plan">
               <span className="alic"><Svg size={26}><rect x="3" y="4" width="18" height="16" rx="2" /><P d={PICON.calA} /><P d={PICON.calB} /></Svg></span>
               <b>{t("q.plan")}</b>
               <small>{tasks.unassigned > 0 ? t("q.planSub", { n: tasks.unassigned }) : t("q.planNone")}</small>
-            </a>
-            <a href={`${base}/labels`} className="qt" style={{ "--q": dz("172E42"), textDecoration: "none" } as CSSProperties} data-quick="label">
+            </Link>
+            <Link href={`${base}/labels`} className="qt" style={{ "--q": dz("172E42"), textDecoration: "none" } as CSSProperties} data-quick="label">
               <span className="alic"><Svg size={26}><P d={PICON.printA} /><rect x="3" y="9" width="18" height="8" rx="2" /><P d={PICON.printB} /></Svg></span>
               <b>{t("q.label")}</b>
               <small>{t("q.labelSub")}</small>
-            </a>
-            <a href={`${base}/stock`} className="qt" style={{ "--q": dz("0E7C7B"), textDecoration: "none" } as CSSProperties} data-quick="reports">
+            </Link>
+            <Link href={`${base}/stock`} className="qt" style={{ "--q": dz("0E7C7B"), textDecoration: "none" } as CSSProperties} data-quick="reports">
               <span className="alic"><Svg size={26}><P d={PICON.reports} /></Svg></span>
               <b>{t("q.reports")}</b>
               <small>{where}</small>
-            </a>
+            </Link>
           </div>
           <div className="grid2">
             <section className="card" aria-labelledby="plan-t">

@@ -5,6 +5,7 @@
 // T-971 (B-63): LİSTE kalıbı (KalipListe.dc.html). Kart `.uc` bağlantısı "Lokasyonları aç"; kartın altında küçük `.btn` eylem satırı
 // (kod değiştir / arşivle — `<a>` içine düğme gömülmez). T-978: arama (`.lsearch`, GET `q`: kod/ad, sunucuda listWarehouses). Bilinçli
 // farklar: süzgeç çipi yok (yalnız aktif/arşivli; kart rozeti gösterir); rozet = aktif lokasyon sayısı (sunucu sayımı); bildirimler kalıp balonunda (toast).
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -559,7 +560,7 @@ export function WarehousesView({
                 const state = active ? t("status.ACTIVE") : t("status.ARCHIVED");
                 return (
                   <div key={w.id} role="listitem" data-testid="warehouse-card" data-status={w.status} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                    <a className="uc" style={{ animationDelay: `${i * 30}ms` }} href={`${base}/${encodeURIComponent(w.id)}`} aria-label={tk("cardAria", { name: w.name, code: w.code, count: countText, state })}>
+                    <Link className="uc" style={{ animationDelay: `${i * 30}ms` }} href={`${base}/${encodeURIComponent(w.id)}`} aria-label={tk("cardAria", { name: w.name, code: w.code, count: countText, state })}>
                       <span className="uic" style={{ background: c(active ? "30475A" : "4E6476") }}>
                         <Ico d={LICON.depo} size={26} />
                       </span>
@@ -574,7 +575,7 @@ export function WarehousesView({
                         <b>{count}</b>
                         <small>{tk("locSub")}</small>
                       </span>
-                    </a>
+                    </Link>
                     {active ? (
                       <div role="group" aria-label={t("actionsFor", { name: w.name })} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <button

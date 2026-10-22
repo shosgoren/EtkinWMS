@@ -3,6 +3,7 @@
 // halka = biten / tüm iş (yay 94.25 birim), kart ilerlemesi = (tüm − kalan) / tüm, ACİL = kalan işlerden biri acil.
 // Yalnız işi olan bölümlerin kartı çizilir (kaynak: grubun izin verdiği görev ekranları); hiç iş yoksa kaynaktaki kapalı kart (`.tk.off`)
 // "bugün görevin yok" der. Yetki grupları (T-421) gelene kadar kapalı kartın "GRUBUN …" satırı çizilmez.
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { buyukHarf } from "@wms/ui";
@@ -156,9 +157,9 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
             <small>{t("countHint")}</small>
           </span>
           {leftO > 0 ? (
-            <a href={`${base}/field/tasks`} className="btn y" style={{ minHeight: 60, fontSize: 16, padding: "0 24px", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
+            <Link href={`${base}/field/tasks`} className="btn y" style={{ minHeight: 60, fontSize: 16, padding: "0 24px", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
               {t("countStart")}
-            </a>
+            </Link>
           ) : null}
         </div>
       ) : (
@@ -222,9 +223,9 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
                 "aria-label": tg("tileLabel", { title, open: s.open, unit, lines: s.openLines }),
               };
               return live ? (
-                <a key={x.k} href={`${base}${x.path}`} {...props}>
+                <Link key={x.k} href={`${base}${x.path}`} {...props}>
                   {body}
-                </a>
+                </Link>
               ) : (
                 <div key={x.k} role="group" aria-disabled="true" {...props}>
                   {body}

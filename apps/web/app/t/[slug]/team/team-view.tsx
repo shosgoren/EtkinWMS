@@ -5,6 +5,7 @@
 // Bilinçli farklar (DESIGN-PARITY): onay kartında kod GÖSTERİLMEZ, yönetici personelin ekranındaki kodu YAZAR (uygulama rolü kodu okuyamaz);
 // aktif/pasif anahtarı ve "son görülme" yok (pasif üyelik ayrı iş) — filtre Hepsi / Saha / Ofis; davette ad alanı yok (kişi kabulde yazar);
 // Etkin (sesle) T-424; QR adresi yalnız üretildiği anda gösterilir (güvenlik: eskisi yeniden gösterilmez, yenile → yeni QR).
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { create as createQr } from "qrcode";
@@ -402,9 +403,9 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                       <b>{pending.length}</b> {t("tabPend")}
                       {pending.length > 0 ? <i className="pdot" /> : null}
                     </button>
-                    <a href={`${base}/groups`} className="sg3" style={{ textDecoration: "none" }} role="tab" data-testid="team-tab-groups">
+                    <Link href={`${base}/groups`} className="sg3" style={{ textDecoration: "none" }} role="tab" data-testid="team-tab-groups">
                       <b>{groups.length}</b> {t("tabGroups")}
-                    </a>
+                    </Link>
                   </div>
 
                   {tab === "people" ? (
@@ -440,9 +441,9 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                             </div>
                           );
                         })}
-                        <a href={`${base}/members`} className="pmore" style={{ textDecoration: "none" }} data-testid="team-manage">
+                        <Link href={`${base}/members`} className="pmore" style={{ textDecoration: "none" }} data-testid="team-manage">
                           {t("manageMore")}
-                        </a>
+                        </Link>
                       </div>
                     </>
                   ) : null}

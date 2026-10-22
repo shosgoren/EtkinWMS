@@ -3,6 +3,7 @@
 // (`.hero`: `.hic`, `.hx` ad + `.hcode` + `.tags`, `.htot` toplam), hızlı işlemler (`.qa > .qab`), başlıklı kart (`.card > .ch`),
 // "Nerede?" dağılımı (`.warnb`, `.sbar`, `.whl > .whr` + `.racks > .rk`, `.minl`), zaman çizgisi (`.tline > .ti`).
 // Veride olmayan bölüm çağıran tarafından çizilmez (uydurma yok). Renkler `.dzd` belirteçlerinden.
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, MicIco } from "./ekran.tsx";
@@ -83,9 +84,9 @@ export function KalipHizli({ label, items }: { label: string; items: readonly Ka
           </>
         );
         return q.href !== undefined ? (
-          <a key={q.key} className="qab" href={q.href} aria-label={q.label} onClick={q.onClick} data-quick={q.key}>
+          <Link key={q.key} className="qab" href={q.href} aria-label={q.label} onClick={q.onClick} data-quick={q.key}>
             {inner}
-          </a>
+          </Link>
         ) : (
           <button key={q.key} type="button" className="qab" aria-label={q.label} onClick={q.onClick} data-quick={q.key}>
             {inner}
@@ -221,11 +222,11 @@ export function KalipZaman({ items }: { items: readonly KalipOlay[] }) {
 /** Kaynak `.more.tmore` (zaman çizgisinin altındaki "Tüm hareketler" satırı). */
 export function KalipTumu({ children, href }: { children: ReactNode; href: string }) {
   return (
-    <a className="more tmore" href={href}>
+    <Link className="more tmore" href={href}>
       <i>
         <MicIco size={18} />
       </i>
       {children}
-    </a>
+    </Link>
   );
 }

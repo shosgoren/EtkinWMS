@@ -14,7 +14,6 @@
   background: linear-gradient(180deg, var(--color-dz-x-oopbpe) 0%, var(--color-dz-x-nmodok) 100%);
 }
 .dze { position: fixed; inset: 0; z-index: 20; }
-body:has(.dze) .app-header { display: none; }
 /* Uygulama uyarlaması: kişi listesi kendi içinde kayar (gerçek ekip kaynaktaki örnek sayıdan büyük olabilir); "+N kişi daha" satırı çizilmez.
    Onay kartında doğrulama kodu yöneticinin yazdığı alandır (güvenlik: uygulama kodu okuyamaz). */
 .dze .plist { overflow-y: auto; min-height: 0; }

@@ -10,6 +10,7 @@
 // sorun; ayrı bildirim kutusu yok, zil uyarılar bölümüne götürür); Etkin (T-424) çizilmez; kaynakta
 // uygulama içi tema düğmesi olmadığından tema Hesap menüsünde bir öğedir. "Düzenle" kısayol seçicisi (`.page > .pk > .pp`): yalnız yetkili
 // ekranlar listelenir, en çok 6; seçim kişisel kolaylık olarak tarayıcıda hatırlanır (kaynaktaki her öğede liste ikonu yerine öğenin ikonu).
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/pano-tokens.ts";
@@ -252,7 +253,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                 </div>
                 <nav className="tools" aria-label={t("tools")}>
                   {bell !== undefined ? (
-                    <a href={bell.href} className="tb tb-bell" style={{ background: dz("E56A00"), textDecoration: "none" }} aria-label={t("bellAria", { n: bell.n })} data-testid="pano-bell">
+                    <Link href={bell.href} className="tb tb-bell" style={{ background: dz("E56A00"), textDecoration: "none" }} aria-label={t("bellAria", { n: bell.n })} data-testid="pano-bell">
                       <svg className="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                         <path d={PICON.bell} />
                         <path d={PICON.bellFoot} />
@@ -263,7 +264,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                           {bell.n > 99 ? "99+" : bell.n}
                         </em>
                       ) : null}
-                    </a>
+                    </Link>
                   ) : null}
                   {canReport ? (
                     <button
@@ -316,10 +317,10 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                     }}
                   />
                   {settingsHref === undefined ? null : (
-                    <a href={settingsHref} className="tb tb-gear" style={{ textDecoration: "none", "--i": dz("0E7C7B") } as CSSProperties} aria-label={t("settings")}>
+                    <Link href={settingsHref} className="tb tb-gear" style={{ textDecoration: "none", "--i": dz("0E7C7B") } as CSSProperties} aria-label={t("settings")}>
                       <Ico d={PICON.gear} size={24} />
                       <span>{t("settingsShort")}</span>
-                    </a>
+                    </Link>
                   )}
                 </nav>
               </header>
@@ -355,9 +356,9 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                           {inner}
                         </button>
                       ) : (
-                        <a key={h.k} href={h.href} className="hb" role="menuitem" style={style}>
+                        <Link key={h.k} href={h.href} className="hb" role="menuitem" style={style}>
                           {inner}
-                        </a>
+                        </Link>
                       );
                     })}
                     <button type="button" className="hb" role="menuitem" style={{ animationDelay: `${shown.length * 35}ms` }} onClick={openPicker} data-testid="pano-edit">

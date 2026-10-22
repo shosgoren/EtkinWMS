@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -90,9 +91,9 @@ export default async function ShippingPage({ params, searchParams }: { params: P
                 <KalipKartBolum label={t("posted")} title={t("posted")} d={LICON.clip} color="6C4BD8" testId="shipping-posted">
                   {order.posted.length === 0 ? <small className="mono">{t("k.noPosted")}</small> : null}
                   {order.posted.map((doc) => (
-                    <a key={doc.id} className="more" href={`${home}/stock/documents?id=${doc.id}`}>
+                    <Link key={doc.id} className="more" href={`${home}/stock/documents?id=${doc.id}`}>
                       {doc.number} · {doc.warehouseName} · {doc.date}
-                    </a>
+                    </Link>
                   ))}
                 </KalipKartBolum>
               </>
@@ -112,9 +113,9 @@ export default async function ShippingPage({ params, searchParams }: { params: P
                     {order.tasks.length === 0 && <small className="mono">{t("noTasks")}</small>}
                     {data.permissions.post && order.tasks.some((x) => x.canPick) ? (
                       // T-977: aynı toplama görevleri sahada (okut → doğrula → miktar) yürütülebilir.
-                      <a className="more" href={`${home}/field/pick?${new URLSearchParams({ task: order.tasks.find((x) => x.canPick)?.id ?? "" })}`} data-testid="shipping-field-pick">
+                      <Link className="more" href={`${home}/field/pick?${new URLSearchParams({ task: order.tasks.find((x) => x.canPick)?.id ?? "" })}`} data-testid="shipping-field-pick">
                         {t("k.fieldPick")}
-                      </a>
+                      </Link>
                     ) : null}
                     {order.tasks.map((task) =>
                       data.permissions.post && task.canPick ? (
@@ -126,17 +127,17 @@ export default async function ShippingPage({ params, searchParams }: { params: P
                       ),
                     )}
                     {order.taskNext && (
-                      <a className="more" href={`${path}?${new URLSearchParams({ id: order.id, taskAfter: order.taskNext, ...(stageAfter ? { stageAfter } : {}) })}`}>
+                      <Link className="more" href={`${path}?${new URLSearchParams({ id: order.id, taskAfter: order.taskNext, ...(stageAfter ? { stageAfter } : {}) })}`}>
                         {t("nextTasks")}
-                      </a>
+                      </Link>
                     )}
                   </KalipKartBolum>
                   <KalipKartBolum label={t("staged")} title={t("staged")} d={LICON.moveOut} color="B85A14" testId="shipping-staged">
                     {order.staged.length === 0 && <small className="mono">{t("noStaged")}</small>}
                     {data.permissions.post && order.staged.length > 0 ? (
-                      <a className="more" href={`${home}/field/ship?${new URLSearchParams({ order: order.id })}`} data-testid="shipping-field-ship">
+                      <Link className="more" href={`${home}/field/ship?${new URLSearchParams({ order: order.id })}`} data-testid="shipping-field-ship">
                         {t("k.fieldShip")}
-                      </a>
+                      </Link>
                     ) : null}
                     {order.staged.map((row) =>
                       data.permissions.post ? (
@@ -148,9 +149,9 @@ export default async function ShippingPage({ params, searchParams }: { params: P
                       ),
                     )}
                     {order.stageNext && (
-                      <a className="more" href={`${path}?${new URLSearchParams({ id: order.id, stageAfter: order.stageNext, ...(taskAfter ? { taskAfter } : {}) })}`}>
+                      <Link className="more" href={`${path}?${new URLSearchParams({ id: order.id, stageAfter: order.stageNext, ...(taskAfter ? { taskAfter } : {}) })}`}>
                         {t("nextStaged")}
-                      </a>
+                      </Link>
                     )}
                   </KalipKartBolum>
                   {data.permissions.approve && order.lines.every((line) => zero(line.shipped)) && (

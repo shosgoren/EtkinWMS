@@ -1,6 +1,6 @@
 # Web, mobil ve tablet UI/UX
 
-- T-1012: Çalışma alanında (`/t` ve alt yolları) eski kök `.app-header` artık yalnız tasarım sınıfına göre CSS ile gizlenmez; `LegacyShell` yol sınırında hiç çizmez. Yükleme `.kisk` ve hata `.khe` dahil bu kural geçerlidir. Eski ilk rehber tenant'ta otomatik açılmaz; Destek/Rehberi aç olayıyla manuel kullanım korunur. Ortak Kalip liste bağlantıları Next Link kullanır; kaynak CSS ve yeni ekran tasarımları değişmedi.
+- T-1012: Eski kök üst çubuğu (`.app-header`: Kolay mod · İşlemler/Genel bakış · Nasıl kullanırım? · Yardım) kök yerleşimde YOK; yalnız karşılama sayfası `/` (`welcome-header.tsx`, yalnız demo/kayıt açık ortam) çizer. Ekran ekran `body:has(.x) .app-header` gizleme kuralları silindi; yeni ekran bu kuralı eklemez (bekçi `apps/web/app/eski-kabuk.test.ts`). Kiracı ekranlarındaki iç bağlantılar `next/link` (istemci içi geçiş); oturum/parola (`/login?reauth`, `/mfa`, `/reset-password`), dış bağlantı, indirmeler ve hata ekranının Ana ekran bağlantısı tam sayfa kalır. Çıkış koruması belge yakalama evresinde çalıştığından Link ile de tetiklenir. Eski ilk rehber `/t/*` altında kendiliğinden açılmaz (Destek > Rehberi aç elle açar). e2e `tests/e2e/eski-cubuk.spec.ts`.
 
 ## Temel kullanıcı kuralı
 İlk defa bilgisayar kullanan kişi bile sıradaki işi anlamalı. Müşteri sisteme hizmet etmez; sistem yanlış miktarı, yanlış yeri, mükerrer işlemi ve yetkisiz işi önleyerek müşteriye fayda sağlar. Bu bir hedef ve test kabulüdür; ekranın güzel olması hedefin ölçüldüğü anlamına gelmez.

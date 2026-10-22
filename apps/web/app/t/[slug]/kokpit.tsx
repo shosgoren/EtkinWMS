@@ -3,6 +3,7 @@
 // (`my-tasks-card` / `my-tasks-empty`), işler listesi ("İşler"; durum `data-state`: active | locked | soon — kilitli/yakında işler kart
 // olarak görünür, gerekçeleriyle), "Bugün yaptıklarım". Sunucu bileşeni: izin kararı çağıran sayfadan (`allowed`) gelir ve yalnız
 // gösterimdir; asıl yetki hedef sayfa/eylemde sunucuda denetlenir. Sahte veri yok (G-07). Renkler liste kalıbı kaynağından (`kdz`).
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
 import { Banner } from "@wms/ui";
@@ -115,7 +116,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
                 const color = r.key === "receive" ? "2F7D5B" : "0E7C7B";
                 return (
                   <div key={r.key} role="listitem" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                    <a
+                    <Link
                       className="uc"
                       style={{ ...ROW, animationDelay: `${i++ * 30}ms` }}
                       href={first?.href ?? (r.key === "receive" ? `${base}/field/receive` : `${base}/field/tasks`)}
@@ -137,14 +138,14 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
                           <Ico d={LICON.chev} size={14} />
                         </small>
                       </span>
-                    </a>
+                    </Link>
                     {second === undefined ? null : (
-                      <a className="uc" style={ROW} href={second.href} data-testid={`now-${r.key}-extra`}>
+                      <Link className="uc" style={ROW} href={second.href} data-testid={`now-${r.key}-extra`}>
                         {icon(LICON.arrow, color)}
                         <span className="ut">
                           <b>{t("now.then", { label: second.label })}</b>
                         </span>
-                      </a>
+                      </Link>
                     )}
                   </div>
                 );
@@ -160,7 +161,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
           <p>{myTasks.code}</p>
         </Banner>
       ) : myTasks.count > 0 ? (
-        <a className="uc" style={ROW} href={`${base}/field/tasks`} data-testid="my-tasks-card">
+        <Link className="uc" style={ROW} href={`${base}/field/tasks`} data-testid="my-tasks-card">
           {icon(LICON.clip, "6C4BD8")}
           <span className="ut">
             <b>{t("myTasks.assigned", { count: myTasks.more ? `${myTasks.count}+` : String(myTasks.count) })}</b>
@@ -172,14 +173,14 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
               <Ico d={LICON.chev} size={14} />
             </small>
           </span>
-        </a>
+        </Link>
       ) : showNow ? null : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
           <KalipBos title={t("myTasks.empty")} iconD={LICON.clip} testId="my-tasks-empty" />
-          <a className="btn n" href={`${base}/field`} style={{ ...ROW, minHeight: 56 }}>
+          <Link className="btn n" href={`${base}/field`} style={{ ...ROW, minHeight: 56 }}>
             <Ico d={LICON.arrow} size={18} />
             {t("myTasks.start")}
-          </a>
+          </Link>
         </div>
       )}
 
@@ -187,7 +188,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
       <KalipKartListe label={t("tasksLabel")}>
         {active.map((d) => (
           <div key={d.key} role="listitem" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <a className="uc" style={{ ...ROW, animationDelay: `${i++ * 30}ms` }} href={hrefs[d.key]?.href} data-state="active" data-task={d.key}>
+          <Link className="uc" style={{ ...ROW, animationDelay: `${i++ * 30}ms` }} href={hrefs[d.key]?.href ?? base} data-state="active" data-task={d.key}>
             {icon(d.d, d.color)}
             <span className="ut">
               <b>{t(`tasks.${d.key}.title`)}</b>
@@ -198,7 +199,7 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
                 <Ico d={LICON.chev} size={20} />
               </b>
             </span>
-          </a>
+          </Link>
           </div>
         ))}
         {locked.map((d) => (

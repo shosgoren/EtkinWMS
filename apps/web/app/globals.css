@@ -252,11 +252,6 @@ html {
     display: none;
   }
 
-  /* Kök üst bar yerine telefon üst çubuğu (yalnız çalışma alanı ekranlarında). */
-  body:has(.tenant-shell) .app-header {
-    display: none;
-  }
-
   /* Tek ekran: gövde kaymaz; üst çubuk + içerik + alt sekme çubuğu 100dvh içinde. İçerik taşarsa yalnız içerik alanı kayar. */
   html:has(.tenant-shell),
   body:has(.tenant-shell) {
@@ -461,12 +456,10 @@ select.bg-none { background-image:none; }
 /* I-18 uyarlama (DESIGN-PARITY §3): tasarım kökü `.wrap` tam görüntü alanıdır (100dvh). Uygulamada `.dz` kabı görüntü alanını
    kaplar ve kiracı kabuğunun üst çubuğu / alt sekmeleri bu ekranlarda gösterilmez (tasarımda yoktur). Renk yok; yalnız yerleşim. */
 .dz { position: fixed; inset: 0; z-index: 20; }
-body:has(.dz) .app-header { display: none; }
 /* Kaynak `tb.show: m === 'mobile'`: başparmak çubuğu yalnız mobilde çizilir (kaynak JS koşulu; burada aynı eşik). */
 @media (min-width: 700px) { .dz .thumb { display: none; } }
 /* Giriş ve hesap kaynağı (Giris.dc.html, T-993) ayrı kapta (`.dzg`): Bakış kurallarıyla çakışmaz; yerleşim uyarlaması aynı. */
 .dzg { position: fixed; inset: 0; z-index: 20; }
-body:has(.dzg) .app-header { display: none; }
 /* T-995: kaynak tarayıcı varsayılanlarıyla çizilir (Tailwind preflight sıfırlar): metin kutusu iç boşluğu 1px 2px (birebir). */
 .dzg .inp input { padding: 1px 2px; }
 /* T-924 (kullanıcı bildirimi 20 Ekim): saha girişi telefonda kaydırmasız sığar (ALTIN-KURAL: telefonda kaydırma yok). Kayıtlı cihazda
@@ -493,7 +486,6 @@ body:has(.dzg) .app-header { display: none; }
 .dzy .inp input, .dzy .search input { padding: 1px 2px; }
 /* T-403: arama kutusu yer tutucusu tarayıcı varsayılanı (kaynak sıfırlama yapmaz; Tailwind önyükü yarı saydam yapar). */
 .dzy .search input::placeholder { color: revert; opacity: revert; }
-body:has(.dzy) .app-header { display: none; }
 /* T-921: kendi cam alt çubuğu (Geri + Ana ekran · ana işlem) olan yeni tasarım kökleri (Pano, Aktar/Cari, Gruplar, Ekip) eski iç ekran
    gezinmesini (`screen-nav`, Geri/Ana ekran) göstermez. Tablette (768–1199) eski çubuk sabit konumda yeni çubuğun üstüne binip orta ana
    işlemi örtüyordu; telefonda akışta kaldığı için görünmüyordu. */

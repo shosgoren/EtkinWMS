@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { buyukHarf } from "@wms/ui";
@@ -185,9 +186,9 @@ export async function EasyOperations({ slug, allowed, summary, firstName, dark =
                   </>
                 );
                 return live ? (
-                  <a key={x.k} href={`${base}${x.path}`} {...props}>
+                  <Link key={x.k} href={`${base}${x.path}`} {...props}>
                     {body}
-                  </a>
+                  </Link>
                 ) : (
                   <div key={x.k} role="group" aria-disabled="true" {...props}>
                     {body}
@@ -203,14 +204,14 @@ export async function EasyOperations({ slug, allowed, summary, firstName, dark =
                   <span>{tg("manualHint")}</span>
                 </div>
                 <div className="quick">
-                  <a className="qb" href={`${base}/stock/documents?new=STOCK_IN`} style={{ color: C.in }} data-manual="in">
+                  <Link className="qb" href={`${base}/stock/documents?new=STOCK_IN`} style={{ color: C.in }} data-manual="in">
                     <Ico d={ICON.inn} size={22} sw={2.8} />
                     {tg("manualIn")}
-                  </a>
-                  <a className="qb" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ color: C.out }} data-manual="out">
+                  </Link>
+                  <Link className="qb" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ color: C.out }} data-manual="out">
                     <Ico d={ICON.out} size={22} sw={2.8} />
                     {tg("manualOut")}
-                  </a>
+                  </Link>
                 </div>
               </>
             ) : null}
@@ -221,25 +222,25 @@ export async function EasyOperations({ slug, allowed, summary, firstName, dark =
       <nav className="thumb" style={{ background: C.surface, color: C.fg }} aria-label={tg("thumbLabel")}>
         <div className="trow">
           {active ? (
-            <a className="tside" href={`${base}/stock/documents?new=STOCK_IN`} style={{ background: C["tin-bg"], color: C.in }} aria-label={tg("manualIn")}>
+            <Link className="tside" href={`${base}/stock/documents?new=STOCK_IN`} style={{ background: C["tin-bg"], color: C.in }} aria-label={tg("manualIn")}>
               <Ico d={ICON.inn} size={26} sw={2.8} />
               {tg("thumbIn")}
-            </a>
+            </Link>
           ) : (
             <span className="tside off" style={{ background: C["tin-bg"], color: C.in }} aria-hidden="true">
               <Ico d={ICON.inn} size={26} sw={2.8} />
               {tg("thumbIn")}
             </span>
           )}
-          <a className="tprim" href={`${base}/field`} style={{ background: C["prim-bg"], color: C["prim-fg"] }}>
+          <Link className="tprim" href={`${base}/field`} style={{ background: C["prim-bg"], color: C["prim-fg"] }}>
             <Ico d={ICON.scan} size={26} sw={2.8} />
             {tot.leftO > 0 ? tg("scanStart") : tg("dayComplete")}
-          </a>
+          </Link>
           {active ? (
-            <a className="tside" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ background: C["tout-bg"], color: C.out }} aria-label={tg("manualOut")}>
+            <Link className="tside" href={`${base}/stock/documents?new=STOCK_OUT`} style={{ background: C["tout-bg"], color: C.out }} aria-label={tg("manualOut")}>
               <Ico d={ICON.out} size={26} sw={2.8} />
               {tg("thumbOut")}
-            </a>
+            </Link>
           ) : (
             <span className="tside off" style={{ background: C["tout-bg"], color: C.out }} aria-hidden="true">
               <Ico d={ICON.out} size={26} sw={2.8} />

@@ -7,6 +7,7 @@
 // Bilinçli farklar (DESIGN-PARITY, T-968): tema seçeneğinde "Otomatik" yok (uygulamada sistem teması izleme yok); saat diliminde kaynaktaki
 // üç seçenek + mevcut değer düğme, tam liste "Diğer" seçicisinde; iki adımlı doğrulama satırı oturumun gerçek durumunu gösterir;
 // "Bağlantı gönder" parola sıfırlama sayfasını açar (bağlantıyı o sayfa e-postayla gönderir); örnek veri yoksa satır çizilmez.
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -333,12 +334,12 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
         }
       />
       {canImport ? (
-        <a className="more" href={`${base}/import`} data-testid="settings-import">
+        <Link className="more" href={`${base}/import`} data-testid="settings-import">
           <i>
             <Ico d={LICON.excel} size={20} />
           </i>
           {t("import")}
-        </a>
+        </Link>
       ) : null}
     </KalipEkran>
   );

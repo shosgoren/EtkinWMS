@@ -4,6 +4,7 @@
 // (önizleme `previewShippingPickAction`, salt okuma) eşleşmeden miktar adımı açılmaz. Miktar OKUTULAN BARKODUN birimindedir (A-307-2: koli barkodu →
 // koli sayısı); ekran temel birim karşılığını gösterir. Beklenenden azı "eksik" uyarısıdır (sunucu eksik kısmı serbest bırakır, rafı sayıma alır);
 // fazlası engellenir. Anahtar yaşam döngüsü `useKeyHolder` (aynı içerik → aynı anahtar; ağ hatasında yeniden deneme önceki sonucu döndürür).
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { KICON } from "../../../../design/kabuk-icons.ts";
@@ -242,9 +243,9 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
               </span>
             </div>
           )}
-          <a className="more" href={`${base}/tasks`}>
+          <Link className="more" href={`${base}/tasks`}>
             {t("toTasks")}
-          </a>
+          </Link>
         </SahaShell>
         {alertView}
       </>,
