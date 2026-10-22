@@ -194,6 +194,7 @@ export const ALLOWED_MSGS = new Set([
   "stock.consistency.schedule_enqueue_failed", "stock.consistency.schedule_failed",
   "stock.count.abandoned", "stock.count.abandon_checked", "stock.count.abandon_check_failed", "stock.count.abandon_list_failed",
   "stock.count.abandon_incomplete", "stock.count.abandon_failed", "platform.demo_leads.ingested", "platform.demo_leads.failed",
+  "demo status delivery failed",
   "activation email sent", "platform.activation.deliver failed", "platform.activation.deliver skipped",
   "welcome email sent", "trial.welcome failed", "trial.welcome skipped",
   "support.notify sent", "support.notify failed", "support.notify skipped",

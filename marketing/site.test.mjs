@@ -99,7 +99,7 @@ test('yalnız yayımlanan dosyalar sunulur; kaynak, gizli ve üst dizin yolları
   const files = publicFiles(resolve(here, 'public'));
   for (const [route, file] of Object.entries(files)) {
     assert.ok(!route.includes('..') && !file.startsWith('.') && !file.includes('/.'), route);
-    if (route !== '/' && route !== '/privacy') assert.ok(!file.endsWith('.html'), route);
+    if (route !== '/' && route !== '/privacy' && route !== '/demo-status') assert.ok(!file.endsWith('.html'), route);
   }
   assert.equal(files['/'], 'index.html');
   assert.equal(files['/site.js'], 'site.js');

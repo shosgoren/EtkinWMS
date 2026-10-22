@@ -25,9 +25,13 @@ Fiyat bölümünün işaretlemesi tuval (`Saha.dc.html`) ile aynıdır; üretim 
 
 Sunulan dosyalar açılışta `public/` altından listelenir (`/` → index.html, `/privacy` → privacy.html; diğer `.html`, nokta ile başlayan adlar ve bilinmeyen uzantılar sunulmaz). CSP: betik yalnız `'self'`; tasarım satır içi `style` öznitelikleri kullandığı için `style-src 'self' 'unsafe-inline'`.
 
-Demo formu geri bildirimi (T-431): gönderirken düğmede gösterge ve çift gönderim engeli; alan altı uyarılar; hata olursa bilgiler korunur ve kırmızı "Gönderilemedi · tekrar dene" satırı; başarıda aynı kutuda √, talep no (yanıttaki `id`'nin ilk 8 hanesi) ve odak başlıkta. Mantık `src/boot.js`, görünüm `src/landing.dc.html` (demo bölümü); e2e `tests/e2e/zzz-demo-form.spec.ts`.
+Demo formu (T-1025): zorunlu alan işaretleri, ikonlu native radio ve form DOM'unu koruyan gizlilik katmanı `docs/design/source/DemoForm.dc.html` kaynağından üretilir. Gönderim anahtarı aynı içerik retry'ında korunur. Başarı yeşil onay ve giriş bağlantısıdır; yeni/eski adrese aynı202 `{ok:true}`, talep numarası veya durum dönmez. TR/EN ve odak davranışı `tests/e2e/zzz-demo-form.spec.ts`, izole üç genişlik/privacy/retry/sahiplik akışı `node marketing/form-browser.mjs` ile sınanır.
 
-Demo formu gerçek talepleri `/data/demo-requests.jsonl` dosyasına, Docker named volume üzerinde saklar. Kayıttan sonra (T-945) bildirim ayarı varsa Resend HTTP API ile işletmeciye e-posta gönderir; e-posta hatası kaydı bozmaz, yanıtı bekletmez, loga yalnız durum kodu yazılır.
+Yeni talepler mevcut `SITE_CONTENT_URL` kökenindeki **yalnız iç ağda erişilen** `/api/public/demo` köprüsü üzerinden PostgreSQL'e yazılır.0057 migration gereklidir. Eski `/data/demo-requests.jsonl` dosyası korunur ve yeni talepten önce taranır; tüm adres normalizasyonunda PostgreSQL tek otoritedir. Eski worker ingestion ve yeni gönderim aynı kalıcı e-posta rezervasyonunu kullanır; statüden bağımsız ikinci kayıt ve retry bildirimi engellenir. DB/köprü yoksa JSONL'ye geri dönüş yapılmaz;503 ve aynı anahtarla retry gerekir.
+
+Sahiplik bağlantısı mevcut worker mailer + `QUEUE_SEAL_KEY` kullanır; yeni credential/servis gerekmez. DB outbox15dakika süre, hash/mühür, tek kullanım, adres başına15dakika aralık/3günlük, global100saatlik sınır taşır. Bağlantı fragment'i URL'den temizlenir; açık düğme POST'u doğrular. GET/mail tarayıcısı tüketmez. Yalnız doğrulanmış okuyucu bekleme, kurulum veya giriş yönlendirmesini alır; yönetici onayı ve giriş değişmez. Başarısız satır diğer postaları durdurmaz; retry sağlayıcı idempotency anahtarını korur.
+
+Kayıttan sonra mevcut işletmeci bildirimi yalnız yeni DB kaydı için tetiklenir; yanıt kaybı ikinci bildirim açmaz. Bu eski bildirim en iyi çaba esasıyla çalışır; sahiplik postası kalıcı outbox'tadır.
 
 ### E-posta bildirimi ayarı (işletmeci, bir kez)
 
@@ -37,6 +41,13 @@ Ayar ortamdan (`RESEND_API_KEY`, `LEAD_NOTIFY_TO`, `LEAD_NOTIFY_FROM`) ya da ver
 read -rsp 'Resend API anahtarı: ' K && echo && case "$K" in re_*) ;; *) echo 'anahtar re_ ile başlamalı'; false;; esac && case "$K" in *[!A-Za-z0-9_]*) echo 'anahtarda beklenmeyen karakter'; false;; esac && printf '{"resendApiKey":"%s","to":"hosgorens@gmail.com"}' "$K" | docker exec -i etkinwms-marketing-1 sh -c 'umask 077 && cat > /data/notify.json' && unset K && echo tamam
 ```
 
-Alan adı Resend'de doğrulanmadıkça gönderen `onboarding@resend.dev` olur ve yalnız Resend hesabının e-postasına gönderim yapılabilir. Kapatmak için `notify.json` silinir. Tüm IP'ler için saatte en çok 20 bildirim gider; fazlası yalnız dosyaya kaydedilir. Not: marketing-leads birimi yedeklenirse anahtar da yedekte bulunur. Kayıtlar herkese açık bir API'den okunamaz. Bu sürümde talepleri sunucu erişimi olan işletmeci kontrol eder. Formda iletişim onayı, kaynak denetimi, 8KB gövde sınırı ve IP başına saatte 5 deneme sınırı vardır.
+Alan adı Resend'de doğrulanmadıkça gönderen `onboarding@resend.dev` olur ve yalnız Resend hesabının e-postasına gönderim yapılabilir. Kapatmak için `notify.json` silinir. Tüm IP'ler için saatte en çok 20 bildirim gider; fazlasının DB kaydı korunur. Not: marketing-leads birimi yedeklenirse anahtar da yedekte bulunur. Kayıtlar herkese açık bir API'den okunamaz. Talepler mevcut yönetim panelinde işlenir. Formda iletişim onayı, kaynak denetimi, 8KB gövde sınırı ve IP başına saatte 5 deneme sınırı vardır.
 
 Ürün arayüzleri temsili olarak etiketlenmiştir. Müşteri referansı, fiyat veya tamamlanmamış modülün hazır olduğuna dair iddia içermez. Cihaz uyumluluğu ve pilot kabul kapsamı açıkça belirtilir.
+
+## T-1025 hazırlığı (henüz yayınlanmadı)
+Zorunlu alanlar ve sektör seçenekleri `docs/design/source/DemoForm.dc.html` kaynağından build sırasında alınır.
+`src/form-ui.js` gizlilik metnini aynı sayfada erişilebilir bir katmanda açar; geri bağlantısı, Esc ve tarayıcı geri düğmesi formun mevcut DOM'una döner. Kişisel veri tarayıcı depolamasına veya URL'ye yazılmaz. Sektörler yerel radio semantiğiyle klavyeden seçilir.
+İzole tarayıcı deneyi: `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium node marketing/form-browser.mjs` (yerel sunucu, gönderim uçları sahte; gerçek posta yok).
+0057 migration hazırlığı ingestion'da kalıcı e-posta ve request ID tekilliği sağlar; mevcut marketing POST henüz bu yola bağlanmamıştır. Bu yüzden uçtan uca mükerrerlik düzeltmesi tamamlanmış değildir.
+Son kullanıcı seçimi e-postaya süreli sahiplik bağlantısıdır; bu akış henüz uygulanmadı. PR/yayın kapalıdır.

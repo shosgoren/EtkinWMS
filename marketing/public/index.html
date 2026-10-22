@@ -459,12 +459,16 @@
     </div>
     <form id="demo-form" class="dform" novalidate="" aria-busy="false" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
       <!--[-->
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Adınız</span><input class="field" type="text" name="name" autocomplete="name" required="" maxlength="100"><!--[--><!--]--></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>Firma</span><input class="field" type="text" name="company" autocomplete="organization" required="" maxlength="150"><!--[--><!--]--></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>İş e-postası</span><input class="field" type="email" name="email" autocomplete="email" required="" maxlength="254"><!--[--><!--]--></label>
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>Sektörünüz</span>
-        <select class="field" name="sector" data-dc-options="t.options"><option>Üretim</option><option>Toptan ticaret</option><option>Depo ve lojistik</option><option>Perakende</option><option>Diğer</option></select>
-      </label>
+      
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span><span>Adınız</span> *</span><input class="field" type="text" name="name" autocomplete="name" required="" maxlength="100"><!--[--><!--]--></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span><span>Firma</span> *</span><input class="field" type="text" name="company" autocomplete="organization" required="" maxlength="150"><!--[--><!--]--></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span><span>İş e-postası</span> *</span><input class="field" type="email" name="email" autocomplete="email" required="" maxlength="254"><!--[--><!--]--></label>
+
+      
+<fieldset class="demo-options"><legend><span>Sektörünüz</span></legend><div class="demo-choices">
+<!--[--><label class="demo-choice"><input type="radio" name="sector" value="manufacturing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V10l6 3V8l6 3V3h6v18H3Z"></path></svg><span><span>Üretim</span></span></label><label class="demo-choice"><input type="radio" name="sector" value="wholesale"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5v13H3V8ZM3 8l9 5 9-5M12 13v8"></path></svg><span><span>Toptan ticaret</span></span></label><label class="demo-choice"><input type="radio" name="sector" value="logistics"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 7h13v11H2V7ZM15 11h4l3 4v3h-7M5 18v3M18 18v3"></path></svg><span><span>Depo ve lojistik</span></span></label><label class="demo-choice"><input type="radio" name="sector" value="retail"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l2-6h14l2 6M4 9v12h16V9M9 21v-8h6v8"></path></svg><span><span>Perakende</span></span></label><label class="demo-choice"><input type="radio" name="sector" value="other"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4V4ZM14 4h6v6h-6V4ZM4 14h6v6H4v-6ZM14 14h6v6h-6v-6Z"></path></svg><span><span>Diğer</span></span></label><!--]-->
+</div></fieldset>
+
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>İhtiyacınız</span><textarea class="field" name="message" rows="3" maxlength="2000" aria-describedby="need-hint" style="resize: vertical"></textarea><small id="need-hint" style="font-size: 13px; font-weight: 500; color: #4C6275; line-height: 1.45"><span>Kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.</span></small></label>
       <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
         <input type="checkbox" name="consent" required="" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
@@ -496,6 +500,27 @@
 </footer>
 
 </div></div>
+
+<div class="demo-privacy" hidden><section class="demo-privacy-card" role="dialog" aria-modal="true" aria-label="Aydınlatma Metni" tabindex="-1">
+  <p class="kicker">KVKK · DEMO TALEBİ</p>
+  <h1>Aydınlatma Metni</h1>
+  <p>Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) 10. maddesi uyarınca, etkinyazilim.com demo formunda paylaştığınız bilgilerin nasıl işlendiğini açıklar.</p>
+  <h2>Hangi veriler, hangi amaçla?</h2>
+  <p>Demo formunda adınızı, firma adınızı, e-posta adresinizi, sektörünüzü ve isteğe bağlı ihtiyaç açıklamanızı alıyoruz. Bu bilgiler yalnız talebinizi değerlendirmek, demo ve teklif kapsamını belirlemek ve size dönüş yapmak için kullanılır. Pazarlama bülteni gönderilmez.</p>
+  <h2>Toplama yöntemi ve hukuki sebep</h2>
+  <p>Veriler, formu kendiniz göndermenizle elektronik ortamda toplanır. Hukuki sebep, talebiniz üzerine bir sözleşmenin kurulmasına yönelik ön görüşme yapılması (KVKK m. 5/2-c) ve talebinize yanıt verme konusundaki meşru menfaatimizdir (KVKK m. 5/2-f). Bu nedenle formda ayrıca açık rıza istenmez; kutu yalnız bu metni okuduğunuzu teyit eder.</p>
+  <h2>Kimlere ve nereye aktarılır?</h2>
+  <p>Talepler, Türkiye dışında bulunan Hostinger barındırma sunucusunda saklanır ve herkese açık değildir. Talebiniz kaydedildiğinde aynı bilgiler, size hızlı dönebilmemiz için bir bildirim e-postasıyla Resend (ABD merkezli e-posta gönderim hizmeti) üzerinden iletilir; gönderim kayıtları Resend’de sınırlı bir süre tutulabilir. Bu iki hizmet sağlayıcı dışında kimseyle paylaşılmaz.</p>
+  <h2>Güvenlik</h2>
+  <p>Form istekleri kötüye kullanıma karşı sınırlandırılır; istek sayacı sunucu belleğinde tutulur ve talep kaydına IP adresi eklenmez. Açıklama alanına kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.</p>
+  <h2>Çerezler</h2>
+  <p>Bu site çerez kullanmaz; reklam takibi, analiz aracı veya dış kaynaktan yüklenen yazı tipi ve betik bulunmaz. Bu nedenle çerez onay penceresi gösterilmez.</p>
+  <h2>Haklarınız</h2>
+  <p>KVKK 11. maddesindeki haklarınızı (verinizin işlenip işlenmediğini öğrenme, bilgi isteme, düzeltme, silme, aktarıldığı tarafları öğrenme ve itiraz) kullanmak için, size dönüş yaptığımız e-postayı yanıtlayarak başvurabilirsiniz. Başvurular en geç 30 gün içinde yanıtlanır.</p>
+  <p class="date">Son güncelleme: 14 Ekim 2026.</p>
+  <a class="cta" href="/#demo">Demo formuna dön <span aria-hidden="true">↗</span></a>
+</section></div>
+
 <template id="dc-tpl"><div class="{{rootCls}}" id="top" style="background: #F6F4EF; color: #172E42; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden">
 
 <!-- ═════════ HERO ═════════ -->
@@ -826,12 +851,16 @@
     </div>
     <form id="demo-form" class="{{formBoxCls}}" novalidate aria-busy="{{formBusy}}" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
       <sc-if value="{{formOpen}}" hint-placeholder-val="{{true}}">
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100" aria-invalid="{{fe.name}}" aria-describedby="{{fe.nameDesc}}"><sc-if value="{{fe.name}}"><small id="err-name" class="ferr">{{fe.nameMsg}}</small></sc-if></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150" aria-invalid="{{fe.company}}" aria-describedby="{{fe.companyDesc}}"><sc-if value="{{fe.company}}"><small id="err-company" class="ferr">{{fe.companyMsg}}</small></sc-if></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254" aria-invalid="{{fe.email}}" aria-describedby="{{fe.emailDesc}}"><sc-if value="{{fe.email}}"><small id="err-email" class="ferr">{{fe.emailMsg}}</small></sc-if></label>
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fSector}}
-        <select class="field" name="sector" data-dc-options="t.options"></select>
-      </label>
+      
+      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600"><span>{{t.fName}} *</span><input class="field" type="text" name="name" autocomplete="name" required maxlength="100" aria-invalid="{{fe.name}}" aria-describedby="{{fe.nameDesc}}"><sc-if value="{{fe.name}}"><small id="err-name" class="ferr">{{fe.nameMsg}}</small></sc-if></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>{{t.fCompany}} *</span><input class="field" type="text" name="company" autocomplete="organization" required maxlength="150" aria-invalid="{{fe.company}}" aria-describedby="{{fe.companyDesc}}"><sc-if value="{{fe.company}}"><small id="err-company" class="ferr">{{fe.companyMsg}}</small></sc-if></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0"><span>{{t.fEmail}} *</span><input class="field" type="email" name="email" autocomplete="email" required maxlength="254" aria-invalid="{{fe.email}}" aria-describedby="{{fe.emailDesc}}"><sc-if value="{{fe.email}}"><small id="err-email" class="ferr">{{fe.emailMsg}}</small></sc-if></label>
+
+      
+<fieldset class="demo-options"><legend>{{t.fSector}}</legend><div class="demo-choices">
+<sc-for list="{{t.options}}" as="option"><label class="demo-choice"><input type="radio" name="sector" value="{{option.id}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{option.icon}}"></path></svg><span>{{option.n}}</span></label></sc-for>
+</div></fieldset>
+
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" aria-describedby="need-hint" style="resize: vertical"></textarea><small id="need-hint" style="font-size: 13px; font-weight: 500; color: #4C6275; line-height: 1.45">{{t.fNeedHint}}</small></label>
       <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
         <input type="checkbox" name="consent" required aria-invalid="{{fe.consent}}" aria-describedby="{{fe.consentDesc}}" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
@@ -846,8 +875,7 @@
         <svg class="fdone-ic" viewBox="0 0 104 104" aria-hidden="true"><circle class="fdone-ring" cx="52" cy="52" r="46" fill="none" stroke="#5FAF8A" stroke-width="3"></circle><circle cx="52" cy="52" r="46" fill="#E3F4EA" stroke="#5FAF8A" stroke-width="3"></circle><path class="fdone-tick" d="M32 53l13 13 27-28" pathLength="100" fill="none" stroke="#1E7A4C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         <h3 id="demo-done-title" class="fdone-h" tabindex="-1">{{t.fDoneTitle}}</h3>
         <p class="fdone-p">{{t.fDoneBody}}</p>
-        <sc-if value="{{formRef}}"><p class="fdone-ref" data-testid="demo-ref">{{t.fRef}} <b>{{formRef}}</b></p></sc-if>
-        <div class="fdone-links"><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
+        <div class="fdone-links"><a href="https://wms.etkinyazilim.com/login">{{t.login}}</a><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
       </div>
       </sc-if>
       <p id="form-status" class="{{formCls}}" role="status" aria-live="polite"><sc-if value="{{formErrRow}}"><svg class="ferr-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3261B" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5M12 16.5v.01"></path></svg></sc-if><span>{{formMsg}}</span><sc-if value="{{formRetry}}"><span aria-hidden="true">·</span><button type="button" class="fretry" onClick="{{retry}}">{{t.fRetry}}</button></sc-if></p>

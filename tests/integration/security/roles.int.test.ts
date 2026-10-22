@@ -267,7 +267,8 @@ describe(`T-108 M-B / m4 / MINOR-2,3,4,6 — ${PROBE_ROLE} (target=${env.target}
           WHERE p.oid = $1::oid AND a.grantee <> p.proowner AND a.grantee <> 0`,
         [f.oid],
       );
-      expect(named.rows.map((x) => x.g), `${f.fn}: sahip dışı girdiler`).toEqual([migrationRole]);
+      // 0057 rezervasyon tetikleyicisi yalnız sahibine açık; migration rolüne ek EXECUTE verilmez.
+      expect(named.rows.map((x) => x.g), `${f.fn}: sahip dışı girdiler`).toEqual(f.fn === "wms_probe.demo_email_reserve()" ? [] : [migrationRole]);
       for (const role of [APP_ROLE, AUTH_ROLE]) {
         const x = await adm.query<{ ok: boolean }>(`SELECT has_function_privilege($1, $2::oid, 'EXECUTE') AS ok`, [role, f.oid]);
         expect(x.rows[0]?.ok, `${f.fn}: ${role} EXECUTE`).toBe(false);

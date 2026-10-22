@@ -113,8 +113,9 @@ services:
       - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
     volumes:
       - minio-data:/home/minio
+      - ./infra/minio/healthcheck.sh:/healthcheck.sh:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9000/minio/health/live"]
+      test: ["CMD", "/bin/sh", "/healthcheck.sh"]
       interval: 5s
       timeout: 5s
       retries: 20

@@ -1554,7 +1554,7 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
     });
   });
 
-  it("katalog: wms_probe işlevleri probe sahipli, SECURITY DEFINER, search_path sabit, ACL'de PUBLIC yok; demo bekçi işlevi migration rolü sahipli ve SECURITY DEFINER değil (m3)", async () => {
+  it("katalog: wms_probe işlevleri probe sahipli, yalnız demo_email_reserve SECURITY INVOKER, search_path sabit, ACL'de PUBLIC yok; demo bekçi işlevi migration rolü sahipli ve SECURITY DEFINER değil (m3)", async () => {
     const r = await admin(async (c) => {
       const funcs = await c.query<{ proname: string; owner: string; prosecdef: boolean; proconfig: string[]; acl: string[] | null }>(
         `SELECT p.proname, pg_get_userbyid(p.proowner) AS owner, p.prosecdef, p.proconfig, p.proacl::text[] AS acl
@@ -1570,6 +1570,7 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       "active_tenant_ids", // T-211 migration 0014 (yalnız ACTIVE tenant kimlikleri; yalnızca wms_worker EXECUTE; ADR-019 §1)
       "admin_reset_cleanup_on_membership", "consume_admin_reset_grant",
       "credentials_changed_since", // T-919 migration 0053: MFA kefaleti evet/hayır (security_events içeriği dönmez), yalnızca wms_app
+      "demo_delivery_claim", "demo_delivery_finish", "demo_email_reserve", "demo_status_consume", "demo_submit", // T-1025 migration 0057
       "field_activate", "field_admin_reset", "field_device_revoke", "field_device_staff", "field_device_status", "field_enroll_approve",
       "field_enroll_claim", "field_join_activate", "field_join_link", "field_join_request", "field_join_status", "field_join_verify", // T-429 0052: katılma
       "field_lock_spree_check", "field_signin_begin", "field_signin_finish", // T-997 0044: saha girişi; T-998 0045: ortak cihaz
@@ -1592,7 +1593,8 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       "platform_workspace_name_taken", // T-404 0041: paket; T-403 0042: müşteri; T-406 0043: tahakkuk işlevleri
     ]);
     for (const f of r.funcs) {
-      expect([f.proname, f.owner, f.prosecdef, f.proconfig]).toEqual([f.proname, PROBE_ROLE, true, ["search_path=pg_catalog, pg_temp"]]);
+      // Rezervasyon tetikleyicisi çağıranın yetkisiyle çalışır; ayrı bir yetki yükseltmesi yoktur.
+      expect([f.proname, f.owner, f.prosecdef, f.proconfig]).toEqual([f.proname, PROBE_ROLE, f.proname !== "demo_email_reserve", ["search_path=pg_catalog, pg_temp"]]);
       expect(f.acl, f.proname).not.toBeNull();
       expect((f.acl ?? []).filter((a) => a.startsWith("=")), `${f.proname}: PUBLIC`).toEqual([]);
     }

@@ -706,12 +706,8 @@ a{color:#172E42}a:hover{color:#0E1D2B}
     </div>
     <form id="demo-form" class="{{formBoxCls}}" novalidate aria-busy="{{formBusy}}" style="flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; padding: clamp(20px, 3vw, 32px); background: #FFFFFF; border: 2px solid #172E42; border-radius: 20px; box-shadow: 8px 10px 0 #172E42">
       <sc-if value="{{formOpen}}" hint-placeholder-val="{{true}}">
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fName}}<input class="field" type="text" name="name" autocomplete="name" required maxlength="100" aria-invalid="{{fe.name}}" aria-describedby="{{fe.nameDesc}}"><sc-if value="{{fe.name}}"><small id="err-name" class="ferr">{{fe.nameMsg}}</small></sc-if></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fCompany}}<input class="field" type="text" name="company" autocomplete="organization" required maxlength="150" aria-invalid="{{fe.company}}" aria-describedby="{{fe.companyDesc}}"><sc-if value="{{fe.company}}"><small id="err-company" class="ferr">{{fe.companyMsg}}</small></sc-if></label>
-      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; min-width: 0">{{t.fEmail}}<input class="field" type="email" name="email" autocomplete="email" required maxlength="254" aria-invalid="{{fe.email}}" aria-describedby="{{fe.emailDesc}}"><sc-if value="{{fe.email}}"><small id="err-email" class="ferr">{{fe.emailMsg}}</small></sc-if></label>
-      <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fSector}}
-        <select class="field" name="sector" data-dc-options="t.options"></select>
-      </label>
+      <!-- demo-fields-source -->
+      <!-- demo-sector-source -->
       <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">{{t.fNeed}}<textarea class="field" name="message" rows="3" maxlength="2000" aria-describedby="need-hint" style="resize: vertical"></textarea><small id="need-hint" style="font-size: 13px; font-weight: 500; color: #4C6275; line-height: 1.45">{{t.fNeedHint}}</small></label>
       <label style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #3D5468; line-height: 1.5">
         <input type="checkbox" name="consent" required aria-invalid="{{fe.consent}}" aria-describedby="{{fe.consentDesc}}" style="width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #172E42">
@@ -726,8 +722,7 @@ a{color:#172E42}a:hover{color:#0E1D2B}
         <svg class="fdone-ic" viewBox="0 0 104 104" aria-hidden="true"><circle class="fdone-ring" cx="52" cy="52" r="46" fill="none" stroke="#5FAF8A" stroke-width="3"></circle><circle cx="52" cy="52" r="46" fill="#E3F4EA" stroke="#5FAF8A" stroke-width="3"></circle><path class="fdone-tick" d="M32 53l13 13 27-28" pathLength="100" fill="none" stroke="#1E7A4C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         <h3 id="demo-done-title" class="fdone-h" tabindex="-1">{{t.fDoneTitle}}</h3>
         <p class="fdone-p">{{t.fDoneBody}}</p>
-        <sc-if value="{{formRef}}"><p class="fdone-ref" data-testid="demo-ref">{{t.fRef}} <b>{{formRef}}</b></p></sc-if>
-        <div class="fdone-links"><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
+        <div class="fdone-links"><a href="https://wms.etkinyazilim.com/login">{{t.login}}</a><a href="/">{{t.fHome}} <span aria-hidden="true">↑</span></a></div>
       </div>
       </sc-if>
       <p id="form-status" class="{{formCls}}" role="status" aria-live="polite"><sc-if value="{{formErrRow}}"><svg class="ferr-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3261B" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5M12 16.5v.01"></path></svg></sc-if><span>{{formMsg}}</span><sc-if value="{{formRetry}}"><span aria-hidden="true">·</span><button type="button" class="fretry" onClick="{{retry}}">{{t.fRetry}}</button></sc-if></p>
@@ -922,12 +917,12 @@ class Component extends DCLogic {
         demoBody: 'Firmanızı ve ihtiyacınızı bırakın. Size uygun demo ve pilot kapsamı için iletişime geçelim.',
         demoChips: [{ n: 'Birden fazla depo' }, { n: 'Kamera ile barkod' }, { n: 'Etiket çıktısı' }],
         fName: 'Adınız', fCompany: 'Firma', fEmail: 'İş e-postası', fSector: 'Sektörünüz', fNeed: 'İhtiyacınız',
-        options: [{ n: 'Üretim' }, { n: 'Toptan ticaret' }, { n: 'Depo ve lojistik' }, { n: 'Perakende' }, { n: 'Diğer' }],
+        options: [{ id: 'manufacturing', n: 'Üretim', icon: 'M3 21V10l6 3V8l6 3V3h6v18H3Z' }, { id: 'wholesale', n: 'Toptan ticaret', icon: 'M3 8l9-5 9 5v13H3V8ZM3 8l9 5 9-5M12 13v8' }, { id: 'logistics', n: 'Depo ve lojistik', icon: 'M2 7h13v11H2V7ZM15 11h4l3 4v3h-7M5 18v3M18 18v3' }, { id: 'retail', n: 'Perakende', icon: 'M3 9l2-6h14l2 6M4 9v12h16V9M9 21v-8h6v8' }, { id: 'other', n: 'Diğer', icon: 'M4 4h6v6H4V4ZM14 4h6v6h-6V4ZM4 14h6v6H4v-6ZM14 14h6v6h-6v-6Z' }],
         fNeedHint: 'Kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.',
         fConsentA: 'Demo talebime ilişkin', notice: 'Aydınlatma Metni', fConsentB: '’ni okudum.',
         privacy: 'Aydınlatma Metni', fSubmit: 'Teklif ve demo iste',
         fSending: 'Talebiniz gönderiliyor…', fSendingBtn: 'Gönderiliyor…', fErr: 'Gönderilemedi', fRetry: 'tekrar dene', fLimit: 'Çok fazla deneme oldu. Biraz sonra tekrar deneyin.', fInvalid: 'Eksik ya da hatalı alanları düzeltin.',
-        fDoneTitle: 'Talebiniz başarıyla gönderildi', fDoneBody: 'En geç 1 iş günü içinde sizinle iletişime geçeceğiz.', fRef: 'Talep no', fHome: 'Ana sayfaya dön',
+        fDoneTitle: 'Talebiniz alındı', fDoneBody: 'Talebinizi görmek için e-postanıza iletilen güvenli bağlantıyı açın. Kısa aralıklarla yeni bağlantı gönderilmez.', fRef: 'Talep no', fHome: 'Ana sayfaya dön',
         eNameReq: 'Adınızı yazın.', eCompanyReq: 'Firma adını yazın.', eEmailReq: 'E-posta adresinizi yazın.', eEmailBad: 'Geçerli bir e-posta yazın (ör. ad@firma.com).', eConsentReq: 'Devam etmek için Aydınlatma Metni kutusunu işaretleyin.',
         footTag: 'Uçtan uca izlenebilir depo yönetimi.'
       },
@@ -1038,12 +1033,12 @@ class Component extends DCLogic {
         demoBody: 'Leave your company details and what you need. We’ll get in touch about the right demo and pilot scope.',
         demoChips: [{ n: 'Multiple warehouses' }, { n: 'Camera barcode' }, { n: 'Label printing' }],
         fName: 'Your name', fCompany: 'Company', fEmail: 'Work email', fSector: 'Industry', fNeed: 'What you need',
-        options: [{ n: 'Manufacturing' }, { n: 'Wholesale' }, { n: 'Warehousing & logistics' }, { n: 'Retail' }, { n: 'Other' }],
+        options: [{ id: 'manufacturing', n: 'Manufacturing', icon: 'M3 21V10l6 3V8l6 3V3h6v18H3Z' }, { id: 'wholesale', n: 'Wholesale', icon: 'M3 8l9-5 9 5v13H3V8ZM3 8l9 5 9-5M12 13v8' }, { id: 'logistics', n: 'Warehousing & logistics', icon: 'M2 7h13v11H2V7ZM15 11h4l3 4v3h-7M5 18v3M18 18v3' }, { id: 'retail', n: 'Retail', icon: 'M3 9l2-6h14l2 6M4 9v12h16V9M9 21v-8h6v8' }, { id: 'other', n: 'Other', icon: 'M4 4h6v6H4V4ZM14 4h6v6h-6V4ZM4 14h6v6H4v-6ZM14 14h6v6h-6v-6Z' }],
         fNeedHint: 'Please do not include ID numbers, health data, passwords or your customers’ personal data.',
         fConsentA: 'I have read the', notice: 'Privacy Notice', fConsentB: ' for my demo request.',
         privacy: 'Privacy Notice', fSubmit: 'Request an offer & demo',
         fSending: 'Sending your request…', fSendingBtn: 'Sending…', fErr: 'Could not send', fRetry: 'try again', fLimit: 'Too many attempts. Please try again a little later.', fInvalid: 'Please fix the missing or invalid fields.',
-        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        fDoneTitle: 'Request received', fDoneBody: 'Open the secure link sent to your email to view your request. New links are not sent at short intervals.', fRef: 'Request no', fHome: 'Back to home',
         eNameReq: 'Please enter your name.', eCompanyReq: 'Please enter your company.', eEmailReq: 'Please enter your email address.', eEmailBad: 'Please enter a valid email (e.g. name@company.com).', eConsentReq: 'Please tick the Privacy Notice box to continue.',
         footTag: 'End-to-end traceable warehouse management.'
       }

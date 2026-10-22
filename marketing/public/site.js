@@ -424,12 +424,12 @@ class Component extends DCLogic {
         demoBody: 'Firmanızı ve ihtiyacınızı bırakın. Size uygun demo ve pilot kapsamı için iletişime geçelim.',
         demoChips: [{ n: 'Birden fazla depo' }, { n: 'Kamera ile barkod' }, { n: 'Etiket çıktısı' }],
         fName: 'Adınız', fCompany: 'Firma', fEmail: 'İş e-postası', fSector: 'Sektörünüz', fNeed: 'İhtiyacınız',
-        options: [{ n: 'Üretim' }, { n: 'Toptan ticaret' }, { n: 'Depo ve lojistik' }, { n: 'Perakende' }, { n: 'Diğer' }],
+        options: [{ id: 'manufacturing', n: 'Üretim', icon: 'M3 21V10l6 3V8l6 3V3h6v18H3Z' }, { id: 'wholesale', n: 'Toptan ticaret', icon: 'M3 8l9-5 9 5v13H3V8ZM3 8l9 5 9-5M12 13v8' }, { id: 'logistics', n: 'Depo ve lojistik', icon: 'M2 7h13v11H2V7ZM15 11h4l3 4v3h-7M5 18v3M18 18v3' }, { id: 'retail', n: 'Perakende', icon: 'M3 9l2-6h14l2 6M4 9v12h16V9M9 21v-8h6v8' }, { id: 'other', n: 'Diğer', icon: 'M4 4h6v6H4V4ZM14 4h6v6h-6V4ZM4 14h6v6H4v-6ZM14 14h6v6h-6v-6Z' }],
         fNeedHint: 'Kimlik numarası, sağlık bilgisi, şifre veya müşterilerinize ait kişisel veri yazmayın.',
         fConsentA: 'Demo talebime ilişkin', notice: 'Aydınlatma Metni', fConsentB: '’ni okudum.',
         privacy: 'Aydınlatma Metni', fSubmit: 'Teklif ve demo iste',
         fSending: 'Talebiniz gönderiliyor…', fSendingBtn: 'Gönderiliyor…', fErr: 'Gönderilemedi', fRetry: 'tekrar dene', fLimit: 'Çok fazla deneme oldu. Biraz sonra tekrar deneyin.', fInvalid: 'Eksik ya da hatalı alanları düzeltin.',
-        fDoneTitle: 'Talebiniz başarıyla gönderildi', fDoneBody: 'En geç 1 iş günü içinde sizinle iletişime geçeceğiz.', fRef: 'Talep no', fHome: 'Ana sayfaya dön',
+        fDoneTitle: 'Talebiniz alındı', fDoneBody: 'Talebinizi görmek için e-postanıza iletilen güvenli bağlantıyı açın. Kısa aralıklarla yeni bağlantı gönderilmez.', fRef: 'Talep no', fHome: 'Ana sayfaya dön',
         eNameReq: 'Adınızı yazın.', eCompanyReq: 'Firma adını yazın.', eEmailReq: 'E-posta adresinizi yazın.', eEmailBad: 'Geçerli bir e-posta yazın (ör. ad@firma.com).', eConsentReq: 'Devam etmek için Aydınlatma Metni kutusunu işaretleyin.',
         footTag: 'Uçtan uca izlenebilir depo yönetimi.'
       },
@@ -540,12 +540,12 @@ class Component extends DCLogic {
         demoBody: 'Leave your company details and what you need. We’ll get in touch about the right demo and pilot scope.',
         demoChips: [{ n: 'Multiple warehouses' }, { n: 'Camera barcode' }, { n: 'Label printing' }],
         fName: 'Your name', fCompany: 'Company', fEmail: 'Work email', fSector: 'Industry', fNeed: 'What you need',
-        options: [{ n: 'Manufacturing' }, { n: 'Wholesale' }, { n: 'Warehousing & logistics' }, { n: 'Retail' }, { n: 'Other' }],
+        options: [{ id: 'manufacturing', n: 'Manufacturing', icon: 'M3 21V10l6 3V8l6 3V3h6v18H3Z' }, { id: 'wholesale', n: 'Wholesale', icon: 'M3 8l9-5 9 5v13H3V8ZM3 8l9 5 9-5M12 13v8' }, { id: 'logistics', n: 'Warehousing & logistics', icon: 'M2 7h13v11H2V7ZM15 11h4l3 4v3h-7M5 18v3M18 18v3' }, { id: 'retail', n: 'Retail', icon: 'M3 9l2-6h14l2 6M4 9v12h16V9M9 21v-8h6v8' }, { id: 'other', n: 'Other', icon: 'M4 4h6v6H4V4ZM14 4h6v6h-6V4ZM4 14h6v6H4v-6ZM14 14h6v6h-6v-6Z' }],
         fNeedHint: 'Please do not include ID numbers, health data, passwords or your customers’ personal data.',
         fConsentA: 'I have read the', notice: 'Privacy Notice', fConsentB: ' for my demo request.',
         privacy: 'Privacy Notice', fSubmit: 'Request an offer & demo',
         fSending: 'Sending your request…', fSendingBtn: 'Sending…', fErr: 'Could not send', fRetry: 'try again', fLimit: 'Too many attempts. Please try again a little later.', fInvalid: 'Please fix the missing or invalid fields.',
-        fDoneTitle: 'Your request has been sent', fDoneBody: 'We will get in touch within 1 business day at the latest.', fRef: 'Request no', fHome: 'Back to home',
+        fDoneTitle: 'Request received', fDoneBody: 'Open the secure link sent to your email to view your request. New links are not sent at short intervals.', fRef: 'Request no', fHome: 'Back to home',
         eNameReq: 'Please enter your name.', eCompanyReq: 'Please enter your company.', eEmailReq: 'Please enter your email address.', eEmailBad: 'Please enter a valid email (e.g. name@company.com).', eConsentReq: 'Please tick the Privacy Notice box to continue.',
         footTag: 'End-to-end traceable warehouse management.'
       }
@@ -888,6 +888,66 @@ class Component extends DCLogic {
 }
 window.EtkinDCComponent = Component;
 })();
+// Shared marketing form behaviour. Draft values stay in the current DOM only.
+window.EtkinFormUI = {
+  mountPrivacy() {
+    const overlay = document.querySelector('.demo-privacy');
+    const card = overlay?.querySelector('[role="dialog"]');
+    const root = document.getElementById('dc-root');
+    if (!overlay || !card || !root) return;
+    let opener = null;
+    let scroll = 0;
+    let overflow = '';
+    const close = () => {
+      overlay.hidden = true;
+      root.inert = false;
+      document.body.style.overflow = overflow;
+      window.scrollTo(0, scroll);
+      opener?.focus({ preventScroll: true });
+    };
+    document.addEventListener('click', (event) => {
+      const link = event.target instanceof Element ? event.target.closest('a') : null;
+      if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      if (overlay.contains(link) && link.getAttribute('href') === '/#demo') {
+        event.preventDefault();
+        history.back();
+        return;
+      }
+      if (link.getAttribute('href') !== '/privacy' || !overlay.hidden) return;
+      event.preventDefault();
+      opener = link;
+      scroll = window.scrollY;
+      overflow = document.body.style.overflow;
+      history.pushState({ demoPrivacy: true }, '', '/privacy');
+      overlay.hidden = false;
+      root.inert = true;
+      document.body.style.overflow = 'hidden';
+      card.focus();
+    });
+    window.addEventListener('popstate', () => {
+      if (!overlay.hidden) close();
+      else if (history.state?.demoPrivacy) {
+        overlay.hidden = false;
+        root.inert = true;
+        document.body.style.overflow = 'hidden';
+        card.focus();
+      }
+    });
+    overlay.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); history.back(); }
+      if (event.key !== 'Tab') return;
+      const links = [...card.querySelectorAll('a[href],button,[tabindex="0"]')];
+      const first = links[0], last = links.at(-1);
+      if (!first) { event.preventDefault(); card.focus(); }
+      else if (event.shiftKey && (document.activeElement === first || document.activeElement === card)) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    });
+  },
+};
+
 // Etkin WMS satış sitesi — açılış ve demo formu (T-941). Bileşen sınıfı `Component` bu dosyadan
 // önce, `EtkinDC.DCLogic` ile tanımlanır (build.mjs birleştirir).
 
@@ -910,6 +970,9 @@ window.EtkinDCComponent = Component;
   }
   const comp = new window.EtkinDCComponent(props);
   window.EtkinDC.mount(root, tpl, comp);
+  window.EtkinFormUI.mountPrivacy();
+  let requestId;
+  let requestSnapshot;
 
   // T-431: demo formu geri bildirimi (ALTIN-KURAL 3): görsel + sesli; çift gönderim engeli; hata olursa girilen bilgi korunur.
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // sunucu validateLead ile aynı
@@ -1014,6 +1077,11 @@ window.EtkinDCComponent = Component;
       focusLater(`#demo-form [name="${FIELDS.find((k) => fe[k])}"]`);
       return;
     }
+    const snapshot = JSON.stringify(data);
+    if (snapshot !== requestSnapshot) {
+      requestId = crypto.randomUUID();
+      requestSnapshot = snapshot;
+    }
     comp.setState({ formKey: "fSending", fe: {}, formRef: "" });
     const failed = (key) => {
       comp.setState({ formKey: key });
@@ -1025,7 +1093,7 @@ window.EtkinDCComponent = Component;
       const response = await fetch("/api/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, requestId, locale: comp.state.lang || props.lang || "tr" }),
         signal: ctrl.signal,
       });
       const result = await response.json().catch(() => ({}));
@@ -1033,11 +1101,9 @@ window.EtkinDCComponent = Component;
         failed(response.status === 400 ? "fInvalid" : response.status === 429 ? "fLimit" : "fErr");
         return;
       }
-      // Talep numarası: sunucunun döndürdüğü kimliğin kısa hali (panelde aynı kaydın kimliğinin başı).
-      const id = typeof result.id === "string" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(result.id) ? result.id.slice(0, 8).toUpperCase() : "";
       tone("ok");
       const done = () => {
-        comp.setState({ formKey: "fOk", formRef: id });
+        comp.setState({ formKey: "fOk", formRef: "" });
         focusLater("#demo-done-title");
       };
       if (reduced()) done();
