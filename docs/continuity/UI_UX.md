@@ -1,6 +1,7 @@
 # Web, mobil ve tablet UI/UX
 
 - T-1012: Eski kök üst çubuğu (`.app-header`: Kolay mod · İşlemler/Genel bakış · Nasıl kullanırım? · Yardım) kök yerleşimde YOK; yalnız karşılama sayfası `/` (`welcome-header.tsx`, yalnız demo/kayıt açık ortam) çizer. Ekran ekran `body:has(.x) .app-header` gizleme kuralları silindi; yeni ekran bu kuralı eklemez (bekçi `apps/web/app/eski-kabuk.test.ts`). Kiracı ekranlarındaki iç bağlantılar `next/link` (istemci içi geçiş); oturum/parola (`/login?reauth`, `/mfa`, `/reset-password`), dış bağlantı, indirmeler ve hata ekranının Ana ekran bağlantısı tam sayfa kalır. Çıkış koruması belge yakalama evresinde çalıştığından Link ile de tetiklenir. Eski ilk rehber `/t/*` altında kendiliğinden açılmaz (Destek > Rehberi aç elle açar). e2e `tests/e2e/eski-cubuk.spec.ts`.
+- T-1010: ortak seçim/önizleme renkleri `kalip/tokens.ts` içindeki `kdzOrtak` ile çözülür. CSS renk belirteci kalıp kapsamında yoksa yalnız doğrulanmış tasarım kaynağındaki renk yedek olarak kullanılır (Yeni ürün / Hammadde: #8A5A12); mevcut açık/koyu tema belirteci önceliklidir. Üretilmiş CSS elle değiştirilmez.
 
 ## Temel kullanıcı kuralı
 İlk defa bilgisayar kullanan kişi bile sıradaki işi anlamalı. Müşteri sisteme hizmet etmez; sistem yanlış miktarı, yanlış yeri, mükerrer işlemi ve yetkisiz işi önleyerek müşteriye fayda sağlar. Bu bir hedef ve test kabulüdür; ekranın güzel olması hedefin ölçüldüğü anlamına gelmez.
@@ -104,3 +105,5 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 ## Arayüz dili (T-999c)
 - Görünür metin yalnız `apps/web/messages/{tr,en}.json`; JSX'e sabit metin yazılmaz. İki dosyanın anahtar kümesi, tek dilde boş metin ve `{yer tutucu}` adları `apps/web/messages/messages.test.ts` ile bekçide.
 - Dil sırası (`apps/web/i18n/request.ts`): `locale` çerezi (cihaz tercihi; bugün yazan yok) → tenant sayfalarında Ayarlar > Dil (`tenant_settings.locale`, her üye okur) → tarayıcı dili → `tr`. Tenant dışı sayfalar tarayıcı dilindedir (B-105).
+## İlk kurulum yolculuğu (T-1006)
+- Asıl deneyim spotlight tur (`t/[slug]/yolculuk/yolculuk.tsx` `YolculukKatman`, kiracı düzeninde yalnız hesap sahibi/yönetici): hedefler `data-tour="…"` (KabukBar ana işlemi `main`, Ürünler Excel `excel` + menüsü `data-tour-follow`, Entegrasyon `opening-pull`); adım planı `steps.ts` `stepPlan`/`stopFor`; delik `KalipPerdeKatman delik`; tur durumu sunucuda `tour_state`, seçili adım oturumda. Tamamlanma gerçek veriden (domain `onboarding/journey.ts`). Pano küçük halka → adım listesi; Destek › Rehberi aç → tur (iptal edilebilir `etkinwms:yolculuk-open`). E2E giriş yardımcısı `closeSetupTour` turu kapatır.

@@ -349,6 +349,8 @@ beforeAll(async () => {
     await admin.query("INSERT INTO public.integration_runs (tenant_id, integration_id, flow, trigger) VALUES ($1, $2, 'PRODUCTS', 'SCHEDULE')", [w.tenantId, igId]);
     await admin.query("INSERT INTO public.integration_outbox (tenant_id, integration_id, flow, entity_type, entity_id) VALUES ($1, $2, 'SHIPMENTS', 'DOCUMENT', $3)", [w.tenantId, igId, w.documentId]);
     await admin.query("INSERT INTO public.integration_stock_marks (tenant_id, integration_id, item_id, warehouse_id, quantity) VALUES ($1, $2, $3, $4, 1)", [w.tenantId, igId, w.itemNoneId, w.warehouseId]);
+    // T-1006 (0056): kurulum yolculuğu seçim satırı (tenant başına tek).
+    await admin.query("INSERT INTO public.setup_journeys (tenant_id, skipped) VALUES ($1, '{labels}'::text[])", [w.tenantId]);
   }
   tables = await discoverTables();
 }, 60_000);

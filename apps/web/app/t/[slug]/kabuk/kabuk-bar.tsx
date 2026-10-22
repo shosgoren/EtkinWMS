@@ -19,6 +19,7 @@ import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
 import { useEtkin } from "./etkin.tsx";
+import { useYolSpot } from "../yolculuk/spot.ts";
 import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 
 export interface KabukContextValue {
@@ -193,7 +194,10 @@ function Slot({ nav, className, aria, testId, k, current, children }: { nav: Kab
 }
 
 
-export function KabukBar({ dark, home = false, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
+export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotProp = null, etkin }: KabukBarProps) {
+  // T-1006: ekran spot vermediyse kurulum yolculuğunun ipucu kartının yuvası (yolculuk/spot.ts).
+  const yolSpot = useYolSpot();
+  const spot = spotProp ?? yolSpot;
   const t = useTranslations("kabuk");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useContext(KabukContext);
@@ -318,7 +322,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 <span>{t("homeShort")}</span>
               </Slot>
               {center.href !== undefined && center.onClick === undefined && center.disabled !== true && center.busy !== true ? (
-                <Link href={center.href} prefetch={false} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && feedback.minor()}>
+                <Link href={center.href} prefetch={false} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" data-tour="main" style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && feedback.minor()}>
                   {centerInner}
                 </Link>
               ) : (
@@ -338,7 +342,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                     center.onClick?.();
                   }}
                   data-testid={center.testId ?? "kabuk-main"}
-                  data-k="center"
+                  data-k="center" data-tour="main"
                 >
                   {centerInner}
                 </button>

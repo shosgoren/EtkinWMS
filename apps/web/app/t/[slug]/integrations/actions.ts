@@ -5,7 +5,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
-import { checkIntegration, connectParasut, disconnectIntegration, requestIntegrationRun, setIntegrationFlow, FLOWS, DIRECTIONS } from "@wms/domain/integrations";
+import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, FLOWS, DIRECTIONS } from "@wms/domain/integrations";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { getSenderQueue } from "../../../../lib/queue.ts";
 
@@ -26,6 +26,8 @@ const connectSchema = z
 const providerSchema = z.object({ slug, provider }).strict();
 const flowSchema = z.object({ slug, provider, flow: z.enum(FLOWS), enabled: z.boolean(), direction: z.enum(DIRECTIONS) }).strict();
 const runSchema = z.object({ slug, provider, flow: z.enum(FLOWS).optional() }).strict();
+const openingSchema = z.object({ slug, provider, enabled: z.boolean(), via: z.literal("journey").optional() }).strict();
+const pullSchema = z.object({ slug, provider, locationId: z.string().uuid() }).strict();
 
 async function access(tenantSlug: string, ctx: ActionContext) {
   if (ctx.principal === null) throw new Error("unreachable: principal required");
@@ -71,4 +73,17 @@ export async function runIntegrationAction(raw: unknown) {
   return guardedAction({ schema: runSchema }, async (i, ctx) =>
     requestIntegrationRun(await access(i.slug, ctx), { provider: i.provider, ...(i.flow === undefined ? {} : { flow: i.flow }), requestId: ctx.requestId }, { queue }),
   )(raw);
+}
+
+/** T-1006: "Açılış stokunu Paraşüt'ten al" ayarı (varsayılan kapalı; alındıktan sonra değişmez). */
+export async function setOpeningStockAction(raw: unknown) {
+  return guardedAction({ schema: openingSchema }, async (i, ctx) => setOpeningStockSetting(await access(i.slug, ctx), { provider: i.provider, enabled: i.enabled, requestId: ctx.requestId, ...(i.via === undefined ? {} : { via: i.via }) }))(raw);
+}
+
+/** T-1006: açılış stokunu ERP'den BİR KEZ al (seçilen rafa; tekrarı domain + DB kilidiyle reddedilir). Dönüşte tarih metindir. */
+export async function pullOpeningStockAction(raw: unknown) {
+  return guardedAction({ schema: pullSchema }, async (i, ctx) => {
+    const r = await pullOpeningStock(await access(i.slug, ctx), { provider: i.provider, locationId: i.locationId, requestId: ctx.requestId });
+    return r.ok ? { ...r, takenAt: r.takenAt.toISOString() } : r;
+  })(raw);
 }

@@ -176,7 +176,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
     clearSharedSession();
     await fakeParasut.close().catch(() => undefined);
     await fakeVoice.close().catch(() => undefined);
-    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", "E2E_ERP", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", "E2E_ERP", "E2E_TOUR", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
     }
     proxy?.close();
@@ -405,6 +405,22 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       process.env.E2E_ERP_EMAIL = erpEmail;
       process.env.E2E_ERP_PASSWORD = erpPassword;
       process.env.E2E_ERP_TOTP_SECRET = erpMade.totpSecret;
+      // T-1006: kurulum turu (yeni kiracı, hiç adım tamam değil → tur ilk girişte başlar; kendi alanı ve e-postası: giriş sınırı paylaşılmaz).
+      const tourEmail = `tour-${suffix}@example.test`;
+      const tourPassword = randomBytes(18).toString("hex");
+      const tourMade = await provisionEmptyTenant({
+        browser,
+        origin: `https://localhost:${portB}`,
+        clientIp: "198.51.100.30",
+        name: "E2E kurulum turu",
+        email: tourEmail,
+        password: tourPassword,
+        workspaceName: `E2E tur ${suffix}`,
+      });
+      process.env.E2E_TOUR_SLUG = tourMade.slug;
+      process.env.E2E_TOUR_EMAIL = tourEmail;
+      process.env.E2E_TOUR_PASSWORD = tourPassword;
+      process.env.E2E_TOUR_TOTP_SECRET = tourMade.totpSecret;
     } catch (e) {
       setupError = e;
     }

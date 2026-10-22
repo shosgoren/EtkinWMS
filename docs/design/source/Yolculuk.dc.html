@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Etkin WMS — İlk kurulum yolculuğu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Instrument+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E4DA}
+.wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box}
+.wrap{position:relative;min-height:100vh;background:#E9E4DA;font-family:'Instrument Sans',system-ui,sans-serif;color:#172E42}
+.ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mono{font-family:'IBM Plex Mono',monospace}
+/* Tuval: üç cihaz çerçevesi yan yana (Kalıp kaynaklarındaki .stage / .frm / .frl; uygulamaya girmez) */
+.stage{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:32px;padding:24px 24px 32px}
+.frm{display:flex;flex-direction:column;gap:16px;flex:none}
+.frm.fr-mobile{width:390px}
+.frm.fr-tablet{width:1180px}
+.frm.fr-desktop{width:1440px}
+.frl{display:flex;align-items:center;gap:8px;padding:0 4px;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476;white-space:nowrap}
+.frl b{font:800 12px/1 'Bricolage Grotesque',sans-serif;letter-spacing:.1em;color:#172E42}
+.app{position:relative;width:100%;padding:16px;border-radius:28px;overflow:hidden;background:linear-gradient(180deg,#EEF1F4 0%,#DCE3EA 100%)}
+.fr-mobile .app{height:844px}
+.fr-tablet .app{height:820px}
+.fr-desktop .app{height:900px}
+.app.thd{background:linear-gradient(180deg,#121B24 0%,#0F171F 100%);color:#E6EBEF}
+.cap{margin:0 0 10px;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476}
+/* Tuval önizlemesi: arkadaki ekran, ORTAK BUZLU PERDE (uygulamada design/perde.css `.kperde`: belirteçli karartma + 8px bulanıklık; Modüller
+   ve menülerle aynı) ve alt cam çubuk. Yolculukta çubuk perdenin ÜSTÜNE çıkar; diğer yuvalar kısık (Kabuk `.touring .dk`), yalnız
+   basılacak düğme net ve parlak (`.spot` + `.yhole`). */
+.pv-screen{position:absolute;inset:64px 16px 120px;border-radius:22px;background:#FFFFFF;box-shadow:0 8px 18px -14px rgba(23,46,66,.4)}
+.thd .pv-screen{background:#1C2833}
+.pv-veil{position:absolute;inset:0;z-index:20;background:rgba(5,9,13,.45);backdrop-filter:blur(8px)}
+.pv-dock{position:absolute;z-index:30;left:50%;bottom:20px;display:flex;align-items:center;gap:14px;padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.72);transform:translateX(-50%)}
+.thd .pv-dock{background:rgba(28,40,51,.72)}
+.pv-dk{display:flex;align-items:center;justify-content:center;width:48px;height:48px;color:#172E42;opacity:.32;filter:blur(1.5px)}
+.thd .pv-dk{color:#E6EBEF}
+.pv-orb{border-radius:50%;background:#6C4BD8;color:#FFFFFF}
+.pv-top{position:relative;display:flex;align-items:center;gap:10px;height:48px;margin-top:4px}
+.pv-top b{font:800 20px/1 'Bricolage Grotesque',sans-serif}
+.pv-ic{width:40px;height:40px;border-radius:12px;background:#9A5B2E}
+.pv-x0{margin-left:auto;width:48px;height:48px;border-radius:14px;background:#FFFFFF}
+.thd .pv-x0{background:#1C2833}
+.pv-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.pv-row{height:72px;border-radius:18px;background:#FFFFFF}
+.thd .pv-row{background:#1C2833}
+.pv-x{position:absolute;z-index:30;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:14px;background:#FFFFFF;color:#1E7B45}
+.pv-under{z-index:10}
+.pv-big{width:58px;height:58px;margin-top:-30px;border-radius:50%;background:#5FAF8A;color:#FFFFFF}
+.ymini{position:relative;margin-top:16px}
+.pv-btn{position:relative;display:flex;align-items:center;justify-content:center;width:58px;height:58px;margin-top:-30px;border-radius:50%;background:#5FAF8A;color:#FFFFFF;outline:3px solid #F0C24B;outline-offset:3px;box-shadow:0 0 0 9px rgba(240,194,75,.22)}
+
+/* ===== YENİ (T-1006 İlk kurulum yolculuğu): spotlight tur (perde deliği + nabız halkası + ipucu balonu) · Pano küçük halkası · adım listesi · stok sorusu · kutlama ===== */
+.ycard,.ycard *,.ysheet,.ysheet *,.ycoach,.ycoach *,.yhole{box-sizing:border-box}
+.ycard,.ysheet,.ycoach{font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.ycard .ico,.ysheet .ico,.ycoach .ico{display:block;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ycard{display:flex;align-items:center;gap:14px;width:100%;min-width:0;padding:14px 16px;border-radius:22px;background:#FFFFFF;color:#172E42;box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.4);animation:yrise .25s cubic-bezier(.2,.9,.2,1)}
+.ycard .yt{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.ycard .yt b{font:800 18px/1.1 'Bricolage Grotesque',sans-serif;overflow-wrap:break-word}
+.ycard .yt small{font:600 11px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#4E6476;overflow-wrap:break-word}
+.yring{position:relative;flex:none;width:58px;height:58px}
+.yring svg{display:block;width:58px;height:58px}
+.yring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 17px/1 'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums}
+.yring b small{font:700 11px/1 'Instrument Sans',sans-serif;color:#4E6476}
+.yring .ytrack{stroke:rgba(23,46,66,.12)}
+.yring .ydone{stroke:#2F7D5B;transition:stroke-dasharray .5s cubic-bezier(.2,.9,.2,1)}
+.ygo{appearance:none;display:flex;align-items:center;justify-content:center;gap:8px;flex:none;min-height:48px;padding:0 18px;border:0;border-radius:14px;background:#172E42;color:#FFFFFF;cursor:pointer;font:800 15px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.ygo:focus-visible,.yst button:focus-visible,.yopt:focus-visible,.ycls:focus-visible,.ych:focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.fr-mobile .ycard{flex-wrap:wrap}
+.fr-mobile .ycard .ygo{width:100%}
+.thd .ycard{background:#1C2833;color:#E6EBEF;box-shadow:none}
+.thd .ycard .yt small,.thd .yring b small{color:#9FB2C2}
+.thd .yring .ytrack{stroke:rgba(255,255,255,.14)}
+.thd .yring .ydone{stroke:#5FAF8A}
+.thd .ygo{background:#E6EBEF;color:#121B24}
+
+/* adım listesi: alttan açılan cam sayfa (telefon) / ortada cam kutu (masaüstü) */
+.ysheet{position:fixed;z-index:45;left:50%;bottom:16px;display:flex;flex-direction:column;gap:12px;width:560px;max-width:calc(100% - 24px);max-height:calc(100% - 32px);padding:16px;border-radius:26px;background:rgba(255,255,255,.94);color:#172E42;transform:translateX(-50%);box-shadow:0 30px 80px -30px rgba(5,9,13,.6);animation:yrise .25s cubic-bezier(.2,.9,.2,1)}
+.fr-mobile .ysheet{bottom:0;width:100%;max-width:none;border-radius:26px 26px 0 0;padding:14px 12px 18px}
+.ysh{display:flex;align-items:center;gap:12px;min-width:0}
+.ysh .yt{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.ysh .yt b{font:800 20px/1.1 'Bricolage Grotesque',sans-serif}
+.ysh .yt small{font:600 11px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#4E6476}
+.ycls{appearance:none;display:flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;border:0;border-radius:14px;background:#EEF1F4;color:#172E42;cursor:pointer}
+.ylist{display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto;margin:0;padding:0;list-style:none}
+.yst{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;column-gap:12px;min-width:0;min-height:64px;padding:8px 10px 12px 8px;border-radius:18px;background:#FFFFFF;box-shadow:0 1px 0 rgba(23,46,66,.06)}
+.yst>i{display:flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:14px;color:#FFFFFF}
+.yst .yt{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
+.yst .yt b{max-width:100%;font:800 15.5px/1.15 'Bricolage Grotesque',sans-serif;overflow-wrap:break-word}
+.yst .yt small{max-width:100%;font:600 10.5px/1.25 'IBM Plex Mono',monospace;letter-spacing:.05em;color:#4E6476;overflow-wrap:break-word}
+.yst .ybadge{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;border-radius:50%;background:#2F7D5B;color:#FFFFFF;animation:ypop .35s cubic-bezier(.2,.9,.2,1)}
+.yst .yact{appearance:none;display:flex;align-items:center;gap:6px;flex:none;min-height:44px;padding:0 14px;border:0;border-radius:12px;background:#172E42;color:#FFFFFF;cursor:pointer;font:800 14px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.yst .yskip{appearance:none;min-height:44px;margin:-10px 0 -8px;padding:0;border:0;background:transparent;color:#4E6476;cursor:pointer;font:700 12.5px/1.1 'Instrument Sans',sans-serif;text-decoration:underline;text-underline-offset:3px;text-align:left;white-space:nowrap}
+.yst>.yskip{margin:0;padding:0 6px}
+.yst.done{background:#E3F1E9}
+.yst.done .yt b{color:#17583C}
+.yst.now{outline:3px solid #F0C24B;outline-offset:-3px;box-shadow:0 0 0 6px rgba(240,194,75,.22)}
+.yst.skip{background:#E4E9EE;box-shadow:none}
+.yst.skip>i{background:#C9D2DA !important;color:#4E6476}
+.yst.skip .yt b{color:#6A7F91;text-decoration:line-through}
+.yprod{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-radius:18px;background:#FFF3D1;color:#6B4A00}
+.yprod b{flex:1 1 180px;min-width:0;font:800 15px/1.2 'Bricolage Grotesque',sans-serif}
+.ych{appearance:none;display:flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border:2px solid #172E42;border-radius:999px;background:#FFFFFF;color:#172E42;cursor:pointer;font:700 14px/1 'Instrument Sans',sans-serif}
+.ych.on{background:#172E42;color:#FFFFFF}
+.thd .ysheet{background:rgba(18,27,36,.94);color:#E6EBEF}
+.thd .ysh .yt small,.thd .yst .yt small,.thd .yst .yskip{color:#9FB2C2}
+.thd .ycls{background:#1C2833;color:#E6EBEF}
+.thd .yst{background:#1C2833;box-shadow:none}
+.thd .yst.done{background:#1F3A30}
+.thd .yst.done .yt b{color:#9FD3B8}
+.thd .yst.skip{background:#16212B}
+.thd .yst.skip>i{background:#24323F !important;color:#8A9BAA}
+.thd .yst.skip .yt b{color:#8A9BAA}
+.thd .yst .yact{background:#E6EBEF;color:#121B24}
+.thd .yprod{background:#3A3015;color:#F0D27A}
+.thd .ych{background:#1C2833;border-color:#E6EBEF;color:#E6EBEF}
+.thd .ych.on{background:#E6EBEF;color:#121B24}
+
+/* Pano küçük halkası (ikincil): dokununca adım listesi */
+.ymini{appearance:none;align-self:flex-start;display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:4px 14px 4px 4px;border:0;border-radius:999px;background:#FFFFFF;color:#172E42;cursor:pointer;box-shadow:0 1px 0 rgba(23,46,66,.06),0 8px 18px -14px rgba(23,46,66,.4)}
+.ymini .yring,.ymini .yring svg{width:44px;height:44px}
+.ymini .yring b{font-size:13px}
+.ymini>span:last-child{display:flex;flex-direction:column;gap:2px;text-align:left}
+.ymini>span:last-child b{font:800 14px/1.1 'Bricolage Grotesque',sans-serif}
+.ymini>span:last-child small{font:600 10px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#4E6476}
+.ymini:focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.thd .ymini{background:#1C2833;color:#E6EBEF;box-shadow:none}
+.thd .ymini>span:last-child small{color:#9FB2C2}
+/* spot: hedefin çevresinde sarı nabız halkası (perde deliği hedefi net bırakır; hedefe dokunmak gerçek işlemi yapar) */
+.yhole{position:fixed;z-index:44;pointer-events:none;border-radius:20px;outline:3px solid #F0C24B;outline-offset:3px;box-shadow:0 0 0 9px rgba(240,194,75,.22);animation:ypulse 1.6s ease-in-out infinite}
+/* ipucu kartı (ADIM n/N · başlık · tek cümle · Söyle · Bunu kullanmıyorum) */
+.ycoach{position:fixed;z-index:46;display:flex;flex-direction:column;gap:8px;width:360px;max-width:calc(100% - 24px);padding:14px 14px 12px 16px;border-radius:20px;background:#FFFFFF;color:#172E42;box-shadow:0 24px 50px -18px rgba(5,9,13,.6);animation:yrise .22s cubic-bezier(.2,.9,.2,1)}
+.fr-mobile .ycoach{width:auto}
+.ycoach .yarr{position:absolute;width:16px;height:16px;margin-left:-8px;background:inherit;transform:rotate(45deg);border-radius:3px}
+.ycoach.above .yarr{bottom:-7px}
+.ycoach.below .yarr{top:-7px}
+.ycoach .cth{display:flex;align-items:center;gap:6px}
+.ycoach .cstep{flex:1;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#4E6476}
+.ycoach .cbtn{appearance:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:12px;background:#EEF1F4;color:#172E42;cursor:pointer}
+.ycoach .cbtn.on{background:#F0C24B;color:#1A1300}
+.ycoach .ctt{font:800 20px/1.1 'Bricolage Grotesque',sans-serif}
+.ycoach .ctx{margin:0;font:600 14.5px/1.4 'Instrument Sans',sans-serif;color:#30475A}
+.ysay{display:flex;align-items:center;gap:8px;min-height:40px;padding:6px 12px 6px 6px;border-radius:999px;background:#EFE9FB;color:#4A2FA8;font:700 13.5px/1.2 'Instrument Sans',sans-serif}
+.ysay i{display:flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border-radius:50%;background:#6C4BD8;color:#FFFFFF}
+.ycoach .cft{display:flex;align-items:center;gap:10px;margin-top:2px}
+.ycoach .cft .yskip{appearance:none;flex:1;min-height:44px;padding:0 4px;border:0;background:transparent;color:#4E6476;cursor:pointer;font:700 13px/1.1 'Instrument Sans',sans-serif;text-decoration:underline;text-underline-offset:3px;text-align:left}
+.ycoach .cft .ygo{min-height:46px}
+.ycoach .ynav{display:flex;align-items:center;gap:8px;margin-top:2px}
+.ycoach .ynav .yskip{appearance:none;flex:1;min-height:44px;padding:0 4px;border:0;background:transparent;color:#4E6476;cursor:pointer;font:700 13px/1.1 'Instrument Sans',sans-serif;text-decoration:underline;text-underline-offset:3px;text-align:center}
+.ycoach .ynb{appearance:none;display:flex;align-items:center;justify-content:center;gap:6px;min-width:46px;min-height:46px;padding:0 12px;border:0;border-radius:14px;background:#EEF1F4;color:#172E42;cursor:pointer;font:800 14px/1 'Bricolage Grotesque',sans-serif}
+.ycoach .ynb.go{background:#172E42;color:#FFFFFF;padding:0 16px}
+.ycoach .ynb:focus-visible,.ycoach .cbtn:focus-visible,.ycoach .yskip:focus-visible{outline:4px solid #F4C542;outline-offset:2px}
+.ycoach .yq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:#FFF3D1;color:#6B4A00}
+.ycoach .yq b{flex:1 1 160px;min-width:0;font:800 14px/1.2 'Bricolage Grotesque',sans-serif}
+.ycoach .yalt{appearance:none;align-self:flex-start;min-height:44px;padding:0;border:0;background:transparent;color:#2F5DA8;cursor:pointer;font:700 13px/1.1 'Instrument Sans',sans-serif;text-decoration:underline;text-underline-offset:3px}
+.ycoach.ok{background:#E3F1E9}
+.ycoach.ok .ctt{color:#17583C}
+.thd .ycoach{background:#EEF1F4}
+.thd .ycoach .cbtn,.thd .ycoach .ynb{background:#DCE3EA}
+.thd .ycoach .ynb.go{background:#172E42;color:#FFFFFF}
+
+/* adım 1: kaynak seçimi ve "Mevcut stok miktarlarını da alalım mı?" sorusu (büyük ikonlu seçim kutuları, radiogroup) */
+.yask{display:flex;flex-direction:column;gap:10px}
+.yask>b{font:800 18px/1.2 'Bricolage Grotesque',sans-serif}
+.yask>small{font:600 11px/1.3 'IBM Plex Mono',monospace;letter-spacing:.05em;color:#4E6476}
+.yopts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fr-mobile .yopts{grid-template-columns:minmax(0,1fr)}
+.yopt{appearance:none;display:flex;align-items:center;gap:12px;min-width:0;min-height:72px;padding:12px;border:2px solid transparent;border-radius:18px;background:#FFFFFF;color:#172E42;cursor:pointer;text-align:left;box-shadow:0 1px 0 rgba(23,46,66,.08),0 8px 18px -14px rgba(23,46,66,.5);transition:transform .15s ease}
+.yopt:active{transform:scale(.97)}
+.yopt>i{display:flex;align-items:center;justify-content:center;flex:none;width:46px;height:46px;border-radius:14px;color:#FFFFFF}
+.yopt>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.yopt b{font:800 16px/1.15 'Bricolage Grotesque',sans-serif;overflow-wrap:break-word}
+.yopt small{font:600 10.5px/1.3 'IBM Plex Mono',monospace;letter-spacing:.05em;color:#4E6476;overflow-wrap:break-word}
+.yopt.on{border-color:#172E42}
+.thd .yask>small,.thd .yopt small{color:#9FB2C2}
+.thd .yopt{background:#1C2833;color:#E6EBEF;box-shadow:none}
+.thd .yopt.on{border-color:#E6EBEF}
+
+/* tamamlandı kutlaması */
+.ycele{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 16px 18px;text-align:center}
+.ycele .yburst{display:flex;align-items:center;justify-content:center;width:84px;height:84px;border-radius:50%;background:#2F7D5B;color:#FFFFFF;box-shadow:0 0 0 10px rgba(47,125,91,.18);animation:ypop .5s cubic-bezier(.2,.9,.2,1)}
+.ycele b{font:800 24px/1.1 'Bricolage Grotesque',sans-serif}
+.ycele p{margin:0;font:600 14.5px/1.4 'Instrument Sans',sans-serif;color:#30475A}
+.ycf{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.ycf i{position:absolute;top:-10px;width:8px;height:14px;border-radius:3px;animation:yfall 1.4s cubic-bezier(.3,.6,.4,1) forwards}
+.ycf i:nth-child(1){left:12%;background:#F0C24B;animation-delay:0s}
+.ycf i:nth-child(2){left:26%;background:#5FAF8A;animation-delay:.08s}
+.ycf i:nth-child(3){left:40%;background:#2F5DA8;animation-delay:.16s}
+.ycf i:nth-child(4){left:56%;background:#C25A00;animation-delay:.04s}
+.ycf i:nth-child(5){left:70%;background:#6C4BD8;animation-delay:.12s}
+.ycf i:nth-child(6){left:86%;background:#F0C24B;animation-delay:.2s}
+.thd .ycele p{color:#C9D6E0}
+
+@keyframes yrise{from{opacity:0;transform:translateY(12px)}}
+@keyframes ypop{0%{transform:scale(.6)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes ypulse{0%,100%{box-shadow:0 0 0 9px rgba(240,194,75,.22)}50%{box-shadow:0 0 0 14px rgba(240,194,75,.1)}}
+@keyframes yfall{to{transform:translateY(320px) rotate(300deg);opacity:0}}
+@media (prefers-reduced-motion: reduce){.ycard,.ysheet,.ycoach,.yhole,.yst .ybadge,.ycele .yburst,.ycf i,.yring .ydone,.yopt{animation:none;transition:none}}
+/* ===== son ===== */
+</style>
+</helmet>
+<div class="wrap">
+  <div class="stage">
+    <div class="frm fr-mobile">
+      <div class="frl"><b>TELEFON</b>390 × 844</div>
+      <div class="app"><p class="cap">TELEFON · AÇIK · TUR: ÜRÜNLER › EXCEL (PERDE + DELİK + NABIZ + BALON)</p><div class="pv-top"><span class="pv-ic"></span><b>Ürünler</b><span class="pv-x0"></span></div><div class="pv-list"><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span></div><div class="pv-veil" aria-hidden="true"></div><span class="pv-x" style="left:294px;top:58px"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 9h16M4 14h16M9 4v16"></path></svg><span class="yhole" aria-hidden="true" style="position:absolute;inset:-8px;border-radius:18px"></span></span><section class="ycoach below" role="dialog" aria-label="Kurulum turu" aria-live="polite" style="position:absolute;left:12px;top:124px;width:334px"><div class="cth"><span class="cstep">ADIM 1/8 · KARTLARINI GETİR</span><button type="button" class="cbtn" aria-label="Sesli anlat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"></path></svg></button><button type="button" class="cbtn" aria-label="Turu kapat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div><b class="ctt">Ürünlerini Excel&#39;den getir</b><p class="ctx">Ürünlerini Excel&#39;den getirmek için buraya dokun.</p><span class="ysay"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></i>Söyle: “Excel aç”</span><button type="button" class="yalt">Paraşüt kullanıyorum</button><div class="ynav"><button type="button" class="ynb" aria-label="Geri"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button><button type="button" class="yskip">Atla</button><button type="button" class="ynb go">İleri<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></div><span class="yarr" aria-hidden="true" style="left:306px"></span></section><div class="pv-dock pv-under"><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></span><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10"></path></svg></span><span class="pv-dk pv-big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"></path></svg></span><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z"></path></svg></span><span class="pv-dk pv-orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></div></div>
+      <div class="app"><p class="cap">TELEFON · AÇIK · PANO KÜÇÜK HALKA → ADIM LİSTESİ (İKİNCİL)</p><div class="pv-top"><span class="pv-ic"></span><b>Ana ekran</b></div><button type="button" class="ymini" aria-label="Kurulum turu: 3/8 tamam"><span class="yring" role="img" aria-label="3/8 tamam"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="ytrack" cx="18" cy="18" r="15" fill="none" stroke-width="4"></circle><circle class="ydone" cx="18" cy="18" r="15" fill="none" stroke-width="4" stroke-linecap="round" transform="rotate(-90 18 18)" style="stroke-dasharray:35.34 94.25"></circle></svg><b>3<small>/8</small></b></span><span><b>Kurulum</b><small>3/8 TAMAM</small></span></button><div class="pv-veil" aria-hidden="true"></div><section class="ysheet" role="dialog" aria-modal="true" aria-label="Kurulum yolculuğu" style="position:absolute"><div class="ysh"><span class="yring" role="img" aria-label="3/8 tamam"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="ytrack" cx="18" cy="18" r="15" fill="none" stroke-width="4"></circle><circle class="ydone" cx="18" cy="18" r="15" fill="none" stroke-width="4" stroke-linecap="round" transform="rotate(-90 18 18)" style="stroke-dasharray:35.34 94.25"></circle></svg><b>3<small>/8</small></b></span><span class="yt"><b>Kurulum yolculuğu</b><small>YAPARAK ÖĞREN · VERİ OLUŞUNCA KENDİLİĞİNDEN TAMAM</small></span><button type="button" class="ycls" aria-label="Kapat"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div><ol class="ylist"><li class="yst done"><i style="background:#2F5DA8"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10"></path></svg></i><span class="yt"><b>Kartlarını getir</b><small>124 ÜRÜN · PARAŞÜT</small></span><span class="ybadge"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span></li><li class="yst done"><i style="background:#30475A"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16M20 4v16M4 9h16M4 15h16"></path></svg></i><span class="yt"><b>Depo ve raflar</b><small>2 DEPO · 48 RAF</small></span><span class="ybadge"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span></li><li class="yst done"><i style="background:#2F7D5B"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg></i><span class="yt"><b>Stok girişi</b><small>AÇILIŞ STOKU ALINDI · 22.10</small></span><span class="ybadge"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span></li><li class="yst now"><i style="background:#B23A3A"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8zM7.5 7.5h.01"></path></svg></i><span class="yt"><b>Etiket üret ve yazdır</b><small>ÜRÜN VE RAF ETİKETLERİ</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li><li class="yprod"><b>Üretim yapıyor musun?</b><button type="button" class="ych">Evet</button><button type="button" class="ych">Hayır</button></li><li class="yst"><i style="background:#8A5A12"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM9 12h7M9 16h5M14 3v5h5"></path></svg></i><span class="yt"><b>Reçete (BOM) tanımla</b><small>YALNIZ ÜRETİM YAPAN FİRMADA</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li><li class="yst"><i style="background:#C25A00"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V10l6 4V10l6 4V6l6 4v11zM7 17h2M12 17h2M17 17h2"></path></svg></i><span class="yt"><b>Üretim emri ver</b><small>REÇETEDEN ÜRET</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li><li class="yst skip"><i style="background:#7A4BC2"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14a6 6 0 0 1 3.5 6"></path></svg></i><span class="yt"><b>Saha personeli ekle</b><small>KULLANMIYORUM · GERİ AL</small></span><button type="button" class="yskip">Geri al</button></li><li class="yst"><i style="background:#0E7C7B"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM6 5.5H5v15h14v-15h-1M8.5 13l2.5 2.5 5-5"></path></svg></i><span class="yt"><b>İlk görevi ata</b><small>TOPLAMA YA DA SAYIM</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li></ol></section></div>
+    </div>
+    <div class="frm fr-tablet">
+      <div class="frl"><b>TABLET</b>1180 × 820</div>
+      <div class="app thd"><p class="cap">TABLET · KOYU · TUR: ÜRÜNLER › EXCEL (PERDE + DELİK + NABIZ + BALON)</p><div class="pv-top"><span class="pv-ic"></span><b>Ürünler</b><span class="pv-x0"></span></div><div class="pv-list"><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span></div><div class="pv-veil" aria-hidden="true"></div><span class="pv-x" style="left:1084px;top:58px"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 9h16M4 14h16M9 4v16"></path></svg><span class="yhole" aria-hidden="true" style="position:absolute;inset:-8px;border-radius:18px"></span></span><section class="ycoach below" role="dialog" aria-label="Kurulum turu" aria-live="polite" style="position:absolute;left:768px;top:124px;width:380px"><div class="cth"><span class="cstep">ADIM 1/8 · KARTLARINI GETİR</span><button type="button" class="cbtn" aria-label="Sesli anlat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"></path></svg></button><button type="button" class="cbtn" aria-label="Turu kapat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div><b class="ctt">Ürünlerini Excel&#39;den getir</b><p class="ctx">Ürünlerini Excel&#39;den getirmek için buraya dokun.</p><span class="ysay"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></i>Söyle: “Excel aç”</span><button type="button" class="yalt">Paraşüt kullanıyorum</button><div class="ynav"><button type="button" class="ynb" aria-label="Geri"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button><button type="button" class="yskip">Atla</button><button type="button" class="ynb go">İleri<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></div><span class="yarr" aria-hidden="true" style="left:340px"></span></section><div class="pv-dock pv-under"><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></span><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10"></path></svg></span><span class="pv-dk pv-big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"></path></svg></span><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z"></path></svg></span><span class="pv-dk pv-orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></div></div>
+      <div class="app thd"><p class="cap">TABLET · KOYU · PANO KÜÇÜK HALKA → ADIM LİSTESİ (İKİNCİL)</p><div class="pv-top"><span class="pv-ic"></span><b>Ana ekran</b></div><button type="button" class="ymini" aria-label="Kurulum turu: 3/8 tamam"><span class="yring" role="img" aria-label="3/8 tamam"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="ytrack" cx="18" cy="18" r="15" fill="none" stroke-width="4"></circle><circle class="ydone" cx="18" cy="18" r="15" fill="none" stroke-width="4" stroke-linecap="round" transform="rotate(-90 18 18)" style="stroke-dasharray:35.34 94.25"></circle></svg><b>3<small>/8</small></b></span><span><b>Kurulum</b><small>3/8 TAMAM</small></span></button><div class="pv-veil" aria-hidden="true"></div><section class="ysheet" role="dialog" aria-modal="true" aria-label="Kurulum yolculuğu" style="position:absolute"><div class="ysh"><span class="yring" role="img" aria-label="3/8 tamam"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="ytrack" cx="18" cy="18" r="15" fill="none" stroke-width="4"></circle><circle class="ydone" cx="18" cy="18" r="15" fill="none" stroke-width="4" stroke-linecap="round" transform="rotate(-90 18 18)" style="stroke-dasharray:35.34 94.25"></circle></svg><b>3<small>/8</small></b></span><span class="yt"><b>Kurulum yolculuğu</b><small>YAPARAK ÖĞREN · VERİ OLUŞUNCA KENDİLİĞİNDEN TAMAM</small></span><button type="button" class="ycls" aria-label="Kapat"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div><ol class="ylist"><li class="yst done"><i style="background:#2F5DA8"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10"></path></svg></i><span class="yt"><b>Kartlarını getir</b><small>124 ÜRÜN · PARAŞÜT</small></span><span class="ybadge"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span></li><li class="yst done"><i style="background:#30475A"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16M20 4v16M4 9h16M4 15h16"></path></svg></i><span class="yt"><b>Depo ve raflar</b><small>2 DEPO · 48 RAF</small></span><span class="ybadge"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span></li><li class="yst done"><i style="background:#2F7D5B"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg></i><span class="yt"><b>Stok girişi</b><small>AÇILIŞ STOKU ALINDI · 22.10</small></span><span class="ybadge"><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span></li><li class="yst now"><i style="background:#B23A3A"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8zM7.5 7.5h.01"></path></svg></i><span class="yt"><b>Etiket üret ve yazdır</b><small>ÜRÜN VE RAF ETİKETLERİ</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li><li class="yprod"><b>Üretim yapıyor musun?</b><button type="button" class="ych">Evet</button><button type="button" class="ych">Hayır</button></li><li class="yst"><i style="background:#8A5A12"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM9 12h7M9 16h5M14 3v5h5"></path></svg></i><span class="yt"><b>Reçete (BOM) tanımla</b><small>YALNIZ ÜRETİM YAPAN FİRMADA</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li><li class="yst"><i style="background:#C25A00"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V10l6 4V10l6 4V6l6 4v11zM7 17h2M12 17h2M17 17h2"></path></svg></i><span class="yt"><b>Üretim emri ver</b><small>REÇETEDEN ÜRET</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li><li class="yst skip"><i style="background:#7A4BC2"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14a6 6 0 0 1 3.5 6"></path></svg></i><span class="yt"><b>Saha personeli ekle</b><small>KULLANMIYORUM · GERİ AL</small></span><button type="button" class="yskip">Geri al</button></li><li class="yst"><i style="background:#0E7C7B"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM6 5.5H5v15h14v-15h-1M8.5 13l2.5 2.5 5-5"></path></svg></i><span class="yt"><b>İlk görevi ata</b><small>TOPLAMA YA DA SAYIM</small><button type="button" class="yskip">Bunu kullanmıyorum</button></span><button type="button" class="yact">Başla<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></li></ol></section></div>
+    </div>
+    <div class="frm fr-desktop">
+      <div class="frl"><b>MASAÜSTÜ</b>1440 × 900</div>
+      <div class="app"><p class="cap">MASAÜSTÜ · AÇIK · TUR: ÜRÜNLER › EXCEL (PERDE + DELİK + NABIZ + BALON)</p><div class="pv-top"><span class="pv-ic"></span><b>Ürünler</b><span class="pv-x0"></span></div><div class="pv-list"><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span></div><div class="pv-veil" aria-hidden="true"></div><span class="pv-x" style="left:1344px;top:58px"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 9h16M4 14h16M9 4v16"></path></svg><span class="yhole" aria-hidden="true" style="position:absolute;inset:-8px;border-radius:18px"></span></span><section class="ycoach below" role="dialog" aria-label="Kurulum turu" aria-live="polite" style="position:absolute;left:1028px;top:124px;width:380px"><div class="cth"><span class="cstep">ADIM 1/8 · KARTLARINI GETİR</span><button type="button" class="cbtn" aria-label="Sesli anlat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"></path></svg></button><button type="button" class="cbtn" aria-label="Turu kapat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div><b class="ctt">Ürünlerini Excel&#39;den getir</b><p class="ctx">Ürünlerini Excel&#39;den getirmek için buraya dokun.</p><span class="ysay"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></i>Söyle: “Excel aç”</span><button type="button" class="yalt">Paraşüt kullanıyorum</button><div class="ynav"><button type="button" class="ynb" aria-label="Geri"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button><button type="button" class="yskip">Atla</button><button type="button" class="ynb go">İleri<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></div><span class="yarr" aria-hidden="true" style="left:340px"></span></section><div class="pv-dock pv-under"><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></span><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 10v10h13V10"></path></svg></span><span class="pv-dk pv-big"><svg class="ico" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"></path></svg></span><span class="pv-dk"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z"></path></svg></span><span class="pv-dk pv-orb"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></span></div></div>
+      <div class="app"><p class="cap">MASAÜSTÜ · AÇIK · ADIM 1 · MEVCUT STOKU DA ALALIM MI?</p><div class="pv-top"><span class="pv-ic"></span><b>Ürünler</b><span class="pv-x0"></span></div><div class="pv-list"><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span><span class="pv-row"></span></div><div class="pv-veil" aria-hidden="true"></div><span class="pv-x" style="left:1344px;top:58px"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 9h16M4 14h16M9 4v16"></path></svg><span class="yhole" aria-hidden="true" style="position:absolute;inset:-8px;border-radius:18px"></span></span><section class="ycoach below" role="dialog" aria-label="Kurulum turu" aria-live="polite" style="position:absolute;left:1028px;top:124px;width:380px"><div class="cth"><span class="cstep">ADIM 1/8 · KARTLARINI GETİR</span><button type="button" class="cbtn" aria-label="Sesli anlat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"></path></svg></button><button type="button" class="cbtn" aria-label="Turu kapat"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div><b class="ctt">Ürünlerini Excel&#39;den getir</b><p class="ctx">Ürünlerini Excel&#39;den getirmek için buraya dokun.</p><div class="yq"><b>Mevcut stok miktarlarını da alalım mı?</b><button type="button" class="ych on" aria-pressed="true">Evet</button><button type="button" class="ych" aria-pressed="false">Hayır</button></div><span class="ysay"><i><svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></i>Söyle: “Excel aç”</span><button type="button" class="yalt">Paraşüt kullanıyorum</button><div class="ynav"><button type="button" class="ynb" aria-label="Geri"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button><button type="button" class="yskip">Atla</button><button type="button" class="ynb go">İleri<svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button></div><span class="yarr" aria-hidden="true" style="left:340px"></span></section></div>
+      <div class="app"><p class="cap">MASAÜSTÜ · AÇIK · KUTLAMA</p><div class="pv-top"><span class="pv-ic"></span><b>Ana ekran</b></div><div class="pv-veil" aria-hidden="true"></div><section class="ysheet" role="dialog" aria-modal="true" aria-label="Kurulum tamam" style="position:absolute"><div class="ycele"><span class="ycf" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="yburst"><svg class="ico" width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"></path></svg></span><b>Kurulum tamam!</b><p>Depon hazır. Artık her gün Pano&#39;dan izle.</p><button type="button" class="ygo">Panoya dön</button></div></section></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3200,"height":2900}}'>
+class Component extends DCLogic { renderVals(){ return {}; } }
+</script>
+</body>
+</html>

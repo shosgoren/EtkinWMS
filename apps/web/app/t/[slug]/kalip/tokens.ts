@@ -12,13 +12,16 @@ export function kdz(scope: KalipScope, hex: string): string {
 }
 
 /**
- * T-990: ortak seçim/önizleme bileşenleri için renk: önce form kabı, yoksa liste/detay/saha kabının kaynağında geçen renk (belirteçler
- * genel CSS değişkenidir; kaynakta hiç olmayan renk yine hata verir). Ör. Hammadde kahvesi yalnız liste kaynağında geçer.
+ * T-990: ortak seçim/önizleme bileşenleri için renk: önce form, sonra liste/detay kaynağında arar.
+ * T-1010: belirteçler kalıp kapsamında tanımlıdır. Başka kalıbın rengi (ör. Hammadde kahvesi) mevcut kapta yoksa
+ * doğrulanmış kaynak rengi yedektir; belirteç varsa açık/koyu tema değeri önceliğini korur. Kaynakta olmayan renk yine hata verir.
  */
 export function kdzOrtak(hex: string): string {
   for (const s of ["dzf", "dzl", "dzd"] as const) {
     try {
-      return BY[s](hex);
+      const token = BY[s](hex);
+      const source = hex.includes(",") ? `${hex.split(",").length === 4 ? "rgba" : "rgb"}(${hex})` : `#${hex}`;
+      return `${token.slice(0, -1)}, ${source})`;
     } catch {
       // sonraki kap
     }

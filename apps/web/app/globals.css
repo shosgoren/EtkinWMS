@@ -27,9 +27,14 @@
 @import "./design/kural.css";
 @import "./design/perde.css";
 @import "./design/paylas.css";
+@import "./design/yolculuk.css";
 @import "./design/ust-frame.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
+/* T-1006: ortak buzlu perdenin karartması (design/perde.css; Kabuk kaynağındaki `.veil` değeri). Kök düzeyde tanımlıdır: perde her kapta aynı. */
+:root {
+  --color-perde: rgba(5, 9, 13, .45);
+}
 /* `packages/ui/src` sınıfları (Button, Banner…) Tailwind 4 otomatik algılamasının dışındadır (T-119). Yol bu dosyaya göredir. */
 @source "../../../packages/ui/src";
 
@@ -1914,3 +1919,61 @@ select.bg-none { background-image:none; }
 .dzen.dz-dark {
 }
 /* design:entegrasyon:end */
+
+/* design:yolculuk:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzj {
+  --color-dz-a-afajan-g: rgba(5, 9, 13, .6);
+  --color-dz-a-bcblce-je: rgba(18, 27, 36, .94);
+  --color-dz-a-bhcoec-ag: rgba(23, 46, 66, .06);
+  --color-dz-a-bhcoec-ai: rgba(23, 46, 66, .08);
+  --color-dz-a-bhcoec-bc: rgba(23, 46, 66, .12);
+  --color-dz-a-bhcoec-e: rgba(23, 46, 66, .4);
+  --color-dz-a-bhcoec-f: rgba(23, 46, 66, .5);
+  --color-dz-a-cphnfl-bi: rgba(47, 125, 91, .18);
+  --color-dz-a-pamcel-b: rgba(240, 194, 75, .1);
+  --color-dz-a-pamcel-cc: rgba(240, 194, 75, .22);
+  --color-dz-a-pppppp-be: rgba(255, 255, 255, .14);
+  --color-dz-a-pppppp-je: rgba(255, 255, 255, .94);
+  --color-dz-x-aohmhl: #0e7c7b;
+  --color-dz-x-bcblce: #121b24;
+  --color-dz-x-bgcbcl: #16212b;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bhfidm: #17583c;
+  --color-dz-x-bkbdaa: #1a1300;
+  --color-dz-x-bmcidd: #1c2833;
+  --color-dz-x-bpdkda: #1f3a30;
+  --color-dz-x-cedcdp: #24323f;
+  --color-dz-x-cpfnki: #2f5da8;
+  --color-dz-x-cphnfl: #2f7d5b;
+  --color-dz-x-daehfk: #30475a;
+  --color-dz-x-dkdabf: #3a3015;
+  --color-dz-x-ekcpki: #4a2fa8;
+  --color-dz-x-eogehg: #4e6476;
+  --color-dz-x-fpkpik: #5faf8a;
+  --color-dz-x-gkhpjb: #6a7f91;
+  --color-dz-x-glekaa: #6b4a00;
+  --color-dz-x-gmelni: #6c4bd8;
+  --color-dz-x-hkelmc: #7a4bc2;
+  --color-dz-x-ikfkbc: #8a5a12;
+  --color-dz-x-ikjlkk: #8a9baa;
+  --color-dz-x-jplcmc: #9fb2c2;
+  --color-dz-x-jpndli: #9fd3b8;
+  --color-dz-x-lcdkdk: #b23a3a;
+  --color-dz-x-mcfkaa: #c25a00;
+  --color-dz-x-mjncnk: #c9d2da;
+  --color-dz-x-mjngoa: #c9d6e0;
+  --color-dz-x-nmodok: #dce3ea;
+  --color-dz-x-odpboj: #e3f1e9;
+  --color-dz-x-oeojoo: #e4e9ee;
+  --color-dz-x-ogolop: #e6ebef;
+  --color-dz-x-oopbpe: #eef1f4;
+  --color-dz-x-opojpl: #efe9fb;
+  --color-dz-x-pamcel: #f0c24b;
+  --color-dz-x-panchk: #f0d27a;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-pppdnb: #fff3d1;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzj.dz-dark {
+}
+/* design:yolculuk:end */

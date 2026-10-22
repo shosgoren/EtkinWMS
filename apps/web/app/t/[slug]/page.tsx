@@ -12,6 +12,9 @@ import { Kokpit, type MyTasksSummary, type NowSummary, type TodayList } from "./
 import { EasyOperations } from "./easy-operations.tsx";
 import { PanoHome, type PanoRole } from "./pano/pano-home.tsx";
 import { PanoBoard, type Assignee, type BoardRole } from "./pano/pano-board.tsx";
+import { getSetupJourney } from "@wms/domain/onboarding/journey";
+import { toJourneyData } from "./yolculuk/serialize.ts";
+import type { JourneyData } from "./yolculuk/steps.ts";
 import { temaKoyu } from "../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +62,13 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     } catch (e) {
       guard(e, "work summary");
     }
+    // T-1006: ilk kurulum yolculuğu kartı (hesap sahibi / depo yöneticisi). Okunamazsa kart çizilmez, pano düşmez.
+    let journey: JourneyData | null = null;
+    try {
+      journey = toJourneyData(await getSetupJourney(call));
+    } catch (e) {
+      guard(e, "journey");
+    }
     const canAssign = hasPermission(current.roles, "document.approve", current.grants);
     if (canAssign) {
       try {
@@ -91,6 +101,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
           usersManage={hasPermission(current.roles, "users.manage", current.grants)}
           settingsManage={hasPermission(current.roles, "settings.manage", current.grants)}
           assignees={assignees}
+          journey={journey}
         />
       </main>
     );
