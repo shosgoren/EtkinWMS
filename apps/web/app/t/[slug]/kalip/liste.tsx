@@ -128,6 +128,8 @@ export interface KalipKartProps {
   readonly href?: string;
   readonly onClick?: () => void;
   readonly aria: string;
+  /** Eylemi ayrı düğmede olan kartın bilgi alanı; boş bir düğme oluşturmaz. */
+  readonly passive?: boolean;
   readonly index?: number;
   readonly testId?: string;
   /** Erişilebilir rol (varsayılan listitem; canlı öneri listesinde option; `null` = rol yok — kart eylem satırıyla birlikte `listitem` sarmalayıcı içindeyse). */
@@ -136,7 +138,7 @@ export interface KalipKartProps {
 }
 
 /** Kaynak `.uc` kart (listitem). */
-export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href, onClick, aria, index = 0, testId, role = "listitem", children }: KalipKartProps) {
+export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href, onClick, aria, passive = false, index = 0, testId, role = "listitem", children }: KalipKartProps) {
   const cls = `uc${tone === "ok" ? "" : ` ${tone}`}`;
   const style: CSSProperties = { animationDelay: `${index * 30}ms` };
   const inner = (
@@ -158,7 +160,11 @@ export function KalipKart({ name, code, meta, d, color, badge, tone = "ok", href
       )}
     </>
   );
-  return href !== undefined ? (
+  return passive ? (
+    <div className={cls} style={style} role={role ?? undefined} aria-label={aria} data-testid={testId}>
+      {inner}
+    </div>
+  ) : href !== undefined ? (
     <a className={cls} style={style} role={role ?? undefined} aria-label={aria} href={href} onClick={onClick} data-testid={testId}>
       {inner}
     </a>

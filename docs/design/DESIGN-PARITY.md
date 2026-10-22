@@ -2,6 +2,8 @@
 
 > **Kullanıcı kararı 20 Ekim 2026:** görüntü karşılaştırması (§7) ve ekran başına yeni e2e zorunlu değil; teslim ölçütü **CI yeşil + kaynak birebir** (CSS üreteçle, işaretleme/ikon/metin kaynaktan). Tasarım onayı beklenmez; görsel kusuru kullanıcı canlıda görüp söyler.
 
+**T-1011 (22 Ekim, kullanıcının görev kartını ayırt edilebilir yapma isteği):** Görevlerim kartları mevcut KalipListe `.uc/.ut/.qb` parçalarını ortak `kalip/gorev-karti.tsx` üzerinden kullanır; ürün adı/kodu, görev türü/durum ve depo/raf satırları eklenir. Ayırt edici bilgiler mobilde gizlenen `.um` değildir. Renk, ikon, kaynak CSS ve Üstlen/Başla akışı korunur; ürün/raf olmayan görevde gerçek mevcut bilgiler gösterilir. Bu içerik eklemesi kullanıcı isteğidir; tasarım tuvali ayrıca güncellenmedi. Tarayıcı ve gerçek cihaz doğrulaması kartta ayrı raporlanır.
+
 **Kullanıcı kararı (15 Ekim 2026):** "Yaptığın tasarım birebir uygulamada olmalı, her şeyiyle; bunu standart kural haline getir: tasarım, yerleşim, renk, font, her anlamda."
 
 Bu belge `docs/INVARIANTS.md` **I-18**'in uygulama kılavuzudur. Üreteç (`scripts/design/port.mjs`), bekçi (`design-parity.test.ts`) ve kaynak klasörü (`docs/design/source/`) T-988 ile gelir.

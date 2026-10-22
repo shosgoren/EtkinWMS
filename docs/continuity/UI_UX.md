@@ -1,5 +1,7 @@
 # Web, mobil ve tablet UI/UX
 
+- T-1011: Görevlerim kartında ürün adı/kodu, görev türü/durum ve depo/raf bilgisi ortak `kalip/gorev-karti.tsx` ile gösterilir. Ayırt edici satırlar telefonda gizlenen `.um` içine konmaz. Ürün/rafı olmayan görevde bilgi uydurulmaz; liste adları mevcut tenant transaction'ı ve depo kapsamı içinde gelir. Salt okuma değişikliğidir; Üstlen/Başla komutları aynıdır.
+
 ## Temel kullanıcı kuralı
 İlk defa bilgisayar kullanan kişi bile sıradaki işi anlamalı. Müşteri sisteme hizmet etmez; sistem yanlış miktarı, yanlış yeri, mükerrer işlemi ve yetkisiz işi önleyerek müşteriye fayda sağlar. Bu bir hedef ve test kabulüdür; ekranın güzel olması hedefin ölçüldüğü anlamına gelmez.
 
