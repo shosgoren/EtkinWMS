@@ -169,6 +169,15 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-131 | Etkin yetki grubu izni (ekran anahtarı `etkin`: migration `permission_groups_screens_chk` + Gruplar tuvali) — şimdilik `stock.view` olan her üye; yazma onayda mevcut eylem izinleriyle (B-62) |
 | B-132 | Etkin canlı yazı (akışlı tanıma) + Modüller arama kutusundaki mikrofon + 390/1180/1440 px görüntü karşılaştırması (B-62 kalanı) |
 | B-133 | Etkin güvenlik incelemesi MINOR (T-1002): (1) ses servisi tüm kiracılarca paylaşılır, hız sınırı yalnız kullanıcı başına → kiracı başına `voice` kovası; (2) yayında `up --wait` ses servisinin sağlığını da bekler (bozuk ses imajı web yayınını geri alır) → ses servisini ayrı, başarısızlığı yayını durdurmayan adımda başlat; ayrıca test dosyalarını üretim imajından ayır |
+| B-134 | Etkin sesli yanıt (EMA Lightning TTS) — kullanıcı kararı 22 Ekim: kiracı Ayarlar'ında "Sesli yanıt" aç/kapat (varsayılan kapalı), kullanıcı "Sessiz" tercihi ayrıca kapatır |
+| B-135 | release.py: aynı SHA yeniden yayında yeni ses imajı varsa servisi yine kur ("already_deployed" kısa devresi ses imajını atlamasın) |
+| B-136 | Yayın alıcısı (release.py): aynı SHA yeniden yayınında yeni ses imajı varsa `already_deployed` kısa devresini atlamamalı — root kurulumu gerektirir, sonraki alıcı güncellemesiyle (T-1004) |
+| B-137 | Müşteri sıfırlama canlıda: kullanıcı `deploy/vps/ops/RESET.md` adımlarını root olarak çalıştırır (yedek → kuru → gerçek → panel kontrolü); sonra `/opt/etkinwms/backups/reset-*` yedeğinin ne zaman silineceğine karar (T-1005) |
+| B-138 | **BİTTİ #165 (T-1006)** — İlk kurulum yolculuğu (Pano halkası, gerçek ekranda spot + ipucu, tamamlanma gerçek veriden, atla, Destek › Rehberi aç) + Paraşüt'ten bir kezlik açılış stoku ayarı (varsayılan kapalı) |
+| B-139 | Paraşüt açılış stoku: depo bazlı miktar (`stock_count` toplamdır, tek rafa yazılır) ve 200 satırdan büyük açılış (birden çok belge, tek kilit) — canlı Paraşüt'te `stock_count` alanı ilk bağlantıda doğrulanacak (T-1006) |
+| B-140 | Yolculuk ipucu kartı başka ekrana geçince perdesiz kalır (oturumda arka planda izlenir, tamam olunca "Sıradaki" balonu); hedef ekranlarda `data-yol` hedefleri artırılabilir (T-1006) |
+| B-142 | Kiracı hata sınırı (`error.tsx`) için gerçek sunucu hatası e2e'si: üretim yapısında güvenli tetikleyici yok (RSC yanıtı bozulunca Next tam sayfa yüklemesine döner); şimdilik birim bekçisi + ortak `HataEkrani` bulunamadı e2e'si (T-1012) |
+| B-143 | CI: ortak `kalip/secim.tsx` rota modülünü (`field/receive/receive-flow.tsx` → `receipts/receipt-form.tsx`) içe aktarıyor; `globals.css` bütün tasarım CSS'ini içeriyor. Bu yüzden web PR'larının çoğu e2e'de tam takıma düşüyor (T-1022). `CameraOverlay` gibi ortak parçalar `kalip/`a taşınırsa seçim daralır. |
 
 ## Belge düzeltmeleri
 | ID | İş |
@@ -177,3 +186,4 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-71 | T-430 kimlik çakışması (STATE: müşteri sil/sıfırla; `tasks/T-430.md`: Ekip ekranı) |
 | B-72 | Spec `outbox_events` tablosu yok — I-07 pg-boss aynı transaction ile karşılanıyor; spec güncellensin |
 | B-73 | README "Yayın kaynakları" Neon satırı eskimiş |
+| B-141 | `Yolculuk.dc.html` Claude Design tuvaline yüklenecek (sayfa "Uygulama", İlk kurulum yolculuğu; T-1006) |
