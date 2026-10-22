@@ -6,17 +6,16 @@ import { expect, test, type Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    navigator.mediaDevices.getUserMedia = (): Promise<MediaStream> => {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      osc.frequency.value = 440;
-      const dest = ctx.createMediaStreamDestination();
-      osc.connect(dest);
-      osc.start();
-      return Promise.resolve(dest.stream);
-    };
-  });
+  // Tarayıcıda çalışan betik metni (e2e tsconfig'inde DOM tipleri yok; diğer spec'ler de değerlendirmeyi metinle yapar).
+  await page.addInitScript(`navigator.mediaDevices.getUserMedia = () => {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    osc.frequency.value = 440;
+    const dest = ctx.createMediaStreamDestination();
+    osc.connect(dest);
+    osc.start();
+    return Promise.resolve(dest.stream);
+  };`);
 });
 
 async function hold(page: Page, ms: number): Promise<void> {
