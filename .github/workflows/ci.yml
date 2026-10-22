@@ -259,10 +259,11 @@ jobs:
       # bağımlılıkları imajdadır → `playwright install-deps` (Ubuntu aynası yavaşken 8–23 dk) kalktı. İmaj çok mimarili indeks digest'iyle
       # sabittir; etiket sürümü kurulu @playwright/test ile eşleşmezse iş kırmızıdır (imaj ve paket birlikte güncellenir).
       - name: Playwright image matches @playwright/test
-        env:
-          PW_VERSION: "1.56.1"
         run: |
           set -euo pipefail
+          # Sürüm imaj etiketinden türetilir (mcr.microsoft.com/playwright:v<sürüm>-noble@sha256:…); ayrı sabit yok.
+          [[ "$PW_IMAGE" =~ ^mcr\.microsoft\.com/playwright:v([0-9]+\.[0-9]+\.[0-9]+)-noble@sha256:[0-9a-f]{64}$ ]] || { echo "::error::PW_IMAGE biçimi beklenmiyor"; exit 1; }
+          PW_VERSION=${BASH_REMATCH[1]}
           v=$(node -p "require('@playwright/test/package.json').version")
           if [ "$v" != "$PW_VERSION" ]; then echo "::error::@playwright/test $v, Playwright imajı $PW_VERSION — ci.yml e2e-shard imajı (etiket + digest) güncellenmeli"; exit 1; fi
           echo "@playwright/test $v = imaj $PW_VERSION"
