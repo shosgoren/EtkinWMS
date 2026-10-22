@@ -3,12 +3,13 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getIntegrationOverview, type IntegrationOverview } from "@wms/domain/integrations";
+import { getIntegrationOverview, getOpeningStockState, type IntegrationOverview } from "@wms/domain/integrations";
+import { getSetupJourney } from "@wms/domain/onboarding/journey";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { NICON } from "../../../design/entegrasyon-icons.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
-import { IntegrationsView, type OverviewData } from "./integrations-view.tsx";
+import { IntegrationsView, type OpeningData, type OverviewData } from "./integrations-view.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -55,5 +56,22 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ s
     if (e.code !== "FORBIDDEN") throw e;
     return <KalipKilitliEkran title={t("title")} icon={{ d: NICON.plug, color: "2F5DA8" }} text={t("locked")} hint={t("lockedHint")} dark={dark} home={`/t/${encodeURIComponent(slug)}`} />;
   }
-  return <IntegrationsView slug={slug} dark={dark} data={serialize(overview)} />;
+  // T-1006: açılış stoku ayarı + alındı bilgisi + raf seçenekleri; yolculuk adım 1'deki "Mevcut stoku da alalım mı?" cevabı (bağlanınca ayara işlenir).
+  // Bölüm hatası ekranı düşürmez: okunamazsa bölüm çizilmez.
+  const call = { db: getAppDb(), principal, tenantSlug: slug };
+  let opening: OpeningData | null = null;
+  try {
+    const st = await getOpeningStockState(call, { provider: "PARASUT" });
+    opening = st === null ? null : { enabled: st.enabled, takenAt: iso(st.takenAt), locations: st.locations.map((l) => ({ ...l })) };
+  } catch (e) {
+    console.error(JSON.stringify({ level: "error", msg: "opening stock state failed", code: e instanceof AppError ? e.code : "INTERNAL" }));
+  }
+  let journeyWish: boolean | null = null;
+  try {
+    const j = await getSetupJourney(call);
+    journeyWish = j.cardSource === "PARASUT" ? j.openingStockWanted : null;
+  } catch {
+    journeyWish = null; // yolculuğu göremeyen rol: bilgi yok
+  }
+  return <IntegrationsView slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} />;
 }

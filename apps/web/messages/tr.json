@@ -1032,7 +1032,13 @@
       "disconnected": "ERP bağlantısı kesildi",
       "flow_changed": "ERP aktarım akışı değişti",
       "run_requested": "ERP aktarımı elle başlatıldı",
-      "synced": "ERP aktarımı çalıştı"
+      "synced": "ERP aktarımı çalıştı",
+      "opening_stock_setting": "Açılış stoku ayarı değişti",
+      "opening_stock_taken": "Açılış stoku ERP'den alındı"
+    },
+    "setup_journey": {
+      "updated": "Kurulum yolculuğu seçimi değişti",
+      "labels_printed": "İlk etiket yazdırıldı"
     }
   },
   "auditLog": {
@@ -5319,6 +5325,33 @@
       "PROVIDER_COMPANY_NOT_FOUND": "Şirket bulunamadı",
       "PROVIDER_CONFIG": "Sunucu ayarı eksik",
       "UNKNOWN": "Bir şey ters gitti · tekrar dene"
+    },
+    "opening": {
+      "title": "Açılış stoku",
+      "sub": "{provider}'teki miktarlar · bir kez",
+      "toggle": "Açılış stokunu {provider}'ten al",
+      "toggleSub": "Bir kez alınır · sonra stok yalnız Etkin'den {provider}'e gider",
+      "onAria": "Açılış stokunu {provider}'ten al: açık",
+      "offAria": "Açılış stokunu {provider}'ten al: kapalı",
+      "on": "Açılış stoku ayarı açıldı",
+      "off": "Açılış stoku ayarı kapatıldı",
+      "takenAt": "Açılış stoku alındı · {at}",
+      "shelf": "Stok hangi rafa yazılsın?",
+      "noShelf": "Önce bir raf oluştur; sonra buradan al",
+      "once": "Bir kez çalışır",
+      "pull": "Şimdi al",
+      "pickShelf": "Önce rafı seç",
+      "done": "Açılış stoku alındı: {n} ürün",
+      "reasons": {
+        "DISABLED": "Ayar kapalı · önce aç",
+        "ALREADY_TAKEN": "Açılış stoku zaten alındı · tekrar alınmaz",
+        "LOCATION_INVALID": "Bu raf kullanılamıyor · başka raf seç",
+        "NOTHING": "Alınacak stok yok · önce ürün kartlarını çek",
+        "TOO_MANY": "Çok fazla ürün · Excel açılış stoku şablonunu kullan",
+        "PAIR_HAS_STOCK": "Bazı ürünlerde stok var · tekrar dene",
+        "NOT_CONNECTED": "Bağlantı yok · önce bağlan",
+        "DEMO": "Deneme alanında kullanılamaz"
+      }
     }
   },
   "etkin": {
@@ -5424,5 +5457,205 @@
     },
     "opening": "Açılıyor…",
     "reason": "Etkin sesli komut"
+  },
+  "yolculuk": {
+    "title": "Kurulum yolculuğu",
+    "titleDone": "Kurulum tamam",
+    "sub": "{done}/{total} tamam · Sıradaki: {next}",
+    "subDone": "{done}/{total} tamam · Depon hazır",
+    "go": "Devam et",
+    "finish": "Bitir",
+    "cardAria": "İlk kurulum yolculuğu: {done}/{total} tamam",
+    "ringAria": "{done}/{total} tamam",
+    "sheetSub": "Yaparak öğren · veri oluşunca kendiliğinden tamam",
+    "close": "Kapat",
+    "start": "Başla",
+    "skip": "Bunu kullanmıyorum",
+    "unskip": "Geri al",
+    "skippedSub": "Kullanmıyorum · geri al",
+    "doneAria": "Tamam",
+    "prodQ": "Üretim yapıyor musun?",
+    "yes": "Evet",
+    "no": "Hayır",
+    "steps": {
+      "cards": {
+        "title": "Kartlarını getir",
+        "sub": "Excel ya da Paraşüt",
+        "count": "{n} ürün"
+      },
+      "shelves": {
+        "title": "Depo ve raflar",
+        "sub": "Toplu raf oluşturucu",
+        "count": "{n} raf"
+      },
+      "stock": {
+        "title": "Stok girişi",
+        "sub": "Açılış stoku",
+        "count": "{n} hareket"
+      },
+      "labels": {
+        "title": "Etiket üret ve yazdır",
+        "sub": "Ürün ve raf etiketleri",
+        "count": "Basıldı"
+      },
+      "bom": {
+        "title": "Reçete (BOM) tanımla",
+        "sub": "Yalnız üretim yapan firmada",
+        "count": "{n} reçete"
+      },
+      "order": {
+        "title": "Üretim emri ver",
+        "sub": "Reçeteden üret",
+        "count": "{n} üretim"
+      },
+      "people": {
+        "title": "Saha personeli ekle",
+        "sub": "QR ile katılma",
+        "count": "{n} kişi"
+      },
+      "task": {
+        "title": "İlk görevi ata",
+        "sub": "Toplama ya da sayım",
+        "count": "{n} görev"
+      }
+    },
+    "cards": {
+      "step": "Adım {n}/{total}",
+      "srcQ": "Kartlar nereden gelsin?",
+      "src": {
+        "EXCEL": "Excel'den",
+        "EXCELSub": "Şablonu doldur · yükle",
+        "PARASUT": "Paraşüt'ten",
+        "PARASUTSub": "Bağlan · kendiliğinden gelsin"
+      },
+      "stockQ": "Mevcut stok miktarlarını da alalım mı?",
+      "stockQSub": "Bir kez alınır · sonra stok yalnız Etkin'den Paraşüt'e gider",
+      "stockQSubExcel": "Açılış stoku şablonuyla · bir kez",
+      "stock": {
+        "yes": "Evet, stokları da al",
+        "yesSub": "Açılış stoku olarak",
+        "no": "Hayır, yalnız kartlar",
+        "noSub": "Stoğu sonra girerim"
+      },
+      "open": "Ekranı aç",
+      "pickSource": "Önce kartların nereden geleceğini seç",
+      "pickStock": "Stok sorusunu cevapla: Evet ya da Hayır"
+    },
+    "coach": {
+      "aria": "Kurulum turu",
+      "step": "Adım {n}/{total} · {title}",
+      "stepDone": "Adım {n}/{total} · Tamam",
+      "speak": "Sesli anlat",
+      "close": "Turu kapat",
+      "steps": "Adımlar",
+      "say": "Söyle: “{phrase}”",
+      "doneTitle": "{title} tamam",
+      "nextLine": "Sıradaki: {title}.",
+      "allDone": "Bütün adımlar tamam.",
+      "next": "Sıradaki",
+      "backList": "Listeye dön",
+      "noSpeech": "Bu cihazda sesli anlatım yok",
+      "goText": "Bu adımın ekranını açalım; orada dokunacağın yeri göstereceğim.",
+      "noNext": "Son adımdasın",
+      "noPrev": "İlk adımdasın",
+      "useExcel": "Excel kullanıyorum",
+      "useParasut": "Paraşüt kullanıyorum",
+      "prev": "Geri",
+      "skip": "Atla",
+      "open": "Ekranı aç",
+      "forward": "İleri"
+    },
+    "hint": {
+      "cardsExcel": {
+        "title": "Excel'den ürün kartları",
+        "text": "Parlayan düğmeye dokun, Excel dosyanı seç; ürünlerin kendiliğinden eşleşir."
+      },
+      "cardsParasut": {
+        "title": "Paraşüt'e bağlan",
+        "text": "Parlayan BAĞLAN düğmesine dokun; ürün kartların kendiliğinden gelir."
+      },
+      "cardsSync": {
+        "title": "Kartları Paraşüt'ten çek",
+        "text": "Ürün kartları akışını aç, sonra parlayan EŞİTLE düğmesine dokun."
+      },
+      "warehouse": {
+        "title": "İlk deponu ekle",
+        "text": "Parlayan EKLE düğmesine dokun, deponun adını yaz."
+      },
+      "shelves": {
+        "title": "Rafları oluştur",
+        "text": "Parlayan düğmeye dokun; toplu raf oluşturucuyla bütün rafları tek seferde aç."
+      },
+      "stockParasut": {
+        "title": "Açılış stokunu Paraşüt'ten al",
+        "text": "Rafı seç ve parlayan Şimdi al düğmesine dokun; stok bir kez gelir."
+      },
+      "stockExcel": {
+        "title": "Açılış stoku şablonu",
+        "text": "Parlayan düğmeye dokun, açılış stoku dosyanı yükle."
+      },
+      "stockManual": {
+        "title": "İlk stok girişini yap",
+        "text": "Ürünü ve miktarı seç, parlayan düğmeyle kaydet."
+      },
+      "labelsItems": {
+        "title": "Etiket bas",
+        "text": "Bir ürün aç, Etiket'e dokun ve yazdır."
+      },
+      "labels": {
+        "title": "Raf etiketlerini yazdır",
+        "text": "Parlayan YAZDIR düğmesine dokun; etiketler yazıcıya gider."
+      },
+      "bom": {
+        "title": "İlk reçeteni tanımla",
+        "text": "Üretilen ürünü ve hammaddeleri seç, parlayan düğmeyle kaydet."
+      },
+      "orderList": {
+        "title": "Reçeteyi seç",
+        "text": "Listeden bir reçeteye dokun, sonra ÜRET."
+      },
+      "order": {
+        "title": "Üretim emri ver",
+        "text": "Miktarı yaz ve parlayan ÜRET düğmesine dokun."
+      },
+      "people": {
+        "title": "Saha personelini ekle",
+        "text": "Parlayan düğmeye dokun; katılma QR'ını WhatsApp ile gönder."
+      },
+      "task": {
+        "title": "İlk görevi ata",
+        "text": "Bir toplama ya da sayım görevini seç ve bir kişiye ata."
+      },
+      "cardsItems": {
+        "title": "Ürünlerini Excel'den getir",
+        "text": "Ürünlerini Excel'den getirmek için buraya dokun, sonra İçeri al."
+      }
+    },
+    "voice": {
+      "cards": "Excel aç",
+      "shelves": "Depo aç",
+      "stock": "10 koli conta mal kabul et",
+      "labels": "Etiket aç",
+      "bom": "Üretim aç",
+      "order": "Üretim aç",
+      "people": "Ekip aç",
+      "task": "Görev ata"
+    },
+    "cele": {
+      "title": "Kurulum tamam!",
+      "text": "Depon hazır. Artık her gün Pano'dan izle.",
+      "button": "Panoya dön",
+      "toast": "Kurulum tamamlandı"
+    },
+    "toast": {
+      "stepDone": "Adım tamam: {title}",
+      "skipped": "{title} atlandı",
+      "failed": "Kaydedilemedi · tekrar dene",
+      "prodYes": "Üretim adımları açık",
+      "prodNo": "Üretim adımları gizlendi",
+      "openingNotSet": "Açılış stoku ayarı Entegrasyon ekranında açılır"
+    },
+    "mini": "Kurulum",
+    "miniSub": "{done}/{total} tamam"
   }
 }

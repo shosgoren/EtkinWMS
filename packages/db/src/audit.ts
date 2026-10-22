@@ -130,6 +130,12 @@ export const AUDIT_ACTIONS = [
   "integration.flow_changed",
   "integration.run_requested",
   "integration.synced",
+  // T-1006 (0056): ilk kurulum yolculuğu seçimleri (atla / geri al, üretim cevabı, kaynak, kutlamayı kapat), etiket basıldı işareti ve ERP'den
+  // BİR KEZLİK açılış stoku (ayar aç/kapa, alındı: belge kimliği + satır sayısı; miktar listesi yazılmaz).
+  "setup_journey.updated",
+  "setup_journey.labels_printed",
+  "integration.opening_stock_setting",
+  "integration.opening_stock_taken",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

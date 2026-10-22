@@ -6,3 +6,17 @@ export { ParasutClient, ProviderError, resolveParasutBaseUrl, PARASUT_BASE_URL, 
 export { runIntegrationSync, SYNC_LIMITS, type SyncDeps, type SyncPayload, type SyncResult, type FlowResult } from "./sync.ts";
 export { integrationSealer } from "./secrets.ts";
 export { IntegrationStateError } from "./store.ts";
+export {
+  getOpeningStockState,
+  setOpeningStockSetting,
+  pullOpeningStock,
+  providerQuantity,
+  OPENING_STOCK_REASON,
+  OPENING_MAX_LINES,
+  type OpeningStockState,
+  type OpeningLocation,
+  type OpeningSettingResult,
+  type OpeningPullResult,
+  type OpeningPullReason,
+  type OpeningSkipCounts,
+} from "./opening-stock.ts";

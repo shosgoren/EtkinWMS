@@ -57,6 +57,9 @@ export const SOURCES = [
   // T-991: ERP entegrasyonu (Paraşüt). Kaynak Kalıp · Form birebir kopyası + "YENİ" bölümü (sağlayıcı kartı, bağlantı şeridi, akış satırı,
   // son çalışmalar, bağlan notu); yalnız ek bölüm `.dzen` kabında (ekran `.dzf` form kalıbının içinde).
   { name: "entegrasyon", file: "docs/design/source/Entegrasyon.dc.html", sha256: "4a28d128a489434aa3b648a2408245253af54ca3586c8376d297d6db5a7d5797", scope: "dzen", palette: "none", device: "fr", section: "YENİ" },
+  // T-1006: ilk kurulum yolculuğu (Pano kartı, adım listesi, spot + ipucu kartı, stok sorusu, kutlama); yalnız "YENİ" bölümü `.dzj`
+  // (perde ortak `.kperde`; kaynaktaki `.pv-*` yalnız tuval önizlemesi).
+  { name: "yolculuk", file: "docs/design/source/Yolculuk.dc.html", sha256: "6e1d2787e389d0d9feb18defda563865de8385ccd079a0d7f73770d2022dd962", scope: "dzj", palette: "none", device: "fr", section: "YENİ" },
 ];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.

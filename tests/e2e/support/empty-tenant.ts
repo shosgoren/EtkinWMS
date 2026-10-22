@@ -136,7 +136,7 @@ export async function scrubSecretInputs(page: Page): Promise<void> {
 }
 
 /** Normal e-posta/parola giriş formu + iki adım (TOTP) ekranı; girişten sonra kiracı ana ekranı. */
-export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "empty"): Promise<EmptyTenant> {
+export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "empty", opts: { readonly keepTour?: boolean } = {}): Promise<EmptyTenant> {
   const t = emptyTenant(fixture);
   await bindSecrets(page, { password: t.password, totpSecret: t.totpSecret });
   await page.goto(`/login?next=${encodeURIComponent(`/t/${t.slug}`)}`);
@@ -147,8 +147,8 @@ export async function loginEmptyTenant(page: Page, fixture: TenantFixture = "emp
   await fillSecret(page, 'input[name="code"]', "totp");
   await page.getByRole("button", { name: "Doğrula" }).click();
   await expect(page).toHaveURL(new RegExp(`/t/${t.slug}$`));
-  // T-983: giriş adımlarında rehber açılmaz; girişten sonraki ilk ekranda tamamlanır.
-  await completeFirstUseGuide(page);
+  // T-983: giriş adımlarında rehber açılmaz; girişten sonraki ilk ekranda tamamlanır. T-1006: kurulum turu da (sınayan spec hariç) kapatılır.
+  await completeFirstUseGuide(page, opts);
   return t;
 }
 

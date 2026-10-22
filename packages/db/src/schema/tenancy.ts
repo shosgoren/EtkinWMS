@@ -249,3 +249,20 @@ export const teamJoinRequests = pgTable("team_join_requests", {
   codeVerifiedBy: uuid("code_verified_by"),
   codeVerifiedAt: timestamptz("code_verified_at"),
 });
+
+// T-1006 (0056): ilk kurulum yolculuğu — tenant başına tek satır; yalnız kullanıcı seçimleri (atlanan adımlar, üretim yapıyor mu, kartların
+// kaynağı, Excel'de açılış stoku isteği, etiket basıldı işareti, kutlamanın kapatılması). Adımın "tamam"ı gerçek veriden hesaplanır (domain).
+export const setupJourneys = pgTable("setup_journeys", {
+  tenantId: uuid("tenant_id").primaryKey(),
+  makesProduction: boolean("makes_production"),
+  cardSource: text("card_source"),
+  openingStockWanted: boolean("opening_stock_wanted"),
+  skipped: text("skipped").array().notNull().default(sql`'{}'::text[]`),
+  labelsPrintedAt: timestamptz("labels_printed_at"),
+  dismissedAt: timestamptz("dismissed_at"),
+  tourState: text("tour_state"),
+  updatedBy: uuid("updated_by"),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  version: integer("version").notNull().default(1),
+});

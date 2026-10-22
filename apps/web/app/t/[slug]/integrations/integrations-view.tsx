@@ -12,9 +12,10 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { NICON } from "../../../design/entegrasyon-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAnahtar, KalipGrup, KalipIzgara, KalipSecenek } from "../kalip/form.tsx";
+import { KalipSecim } from "../kalip/secim.tsx";
 import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
-import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, runIntegrationAction, setIntegrationFlowAction } from "./actions.ts";
+import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction } from "./actions.ts";
 import { feedback, intlDil } from "@wms/ui";
 
 type Provider = "PARASUT" | "LOGO";
@@ -43,6 +44,13 @@ export interface OverviewData {
   readonly runs: readonly { readonly id: string; readonly flow: Flow; readonly trigger: "SCHEDULE" | "MANUAL"; readonly status: "RUNNING" | "SUCCESS" | "PARTIAL" | "FAILED"; readonly startedAt: string; readonly created: number; readonly updated: number; readonly linked: number; readonly skipped: number; readonly failed: number; readonly errorCode: string | null }[];
 }
 
+/** T-1006: açılış stoku ayarı (varsayılan kapalı) + alındı zamanı + yazılabilecek raflar. */
+export interface OpeningData {
+  readonly enabled: boolean;
+  readonly takenAt: string | null;
+  readonly locations: readonly { readonly id: string; readonly code: string; readonly name: string; readonly warehouse: string }[];
+}
+
 /** Kaynak FL: akış ikonu ve rengi. */
 const FLOW_UI: Readonly<Record<Flow, { readonly d: string; readonly color: string }>> = {
   PRODUCTS: { d: LICON.box, color: "9A5B2E" },
@@ -59,7 +67,7 @@ const c = (hex: string): string => kdz("dzf", hex);
 
 const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: "", password: "" };
 
-export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boolean; data: OverviewData }) {
+export function IntegrationsView({ slug, dark, data, opening = null, journeyWish = null }: { slug: string; dark: boolean; data: OverviewData; opening?: OpeningData | null; journeyWish?: boolean | null }) {
   const t = useTranslations("integrations");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ts = useTranslations("serverErrors");
@@ -75,6 +83,10 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
   // İyimser akış durumu (sunucu yanıtı gelene dek); sunucu verisi değişince sıfırlanır.
   const [local, setLocal] = useState<Partial<Record<Flow, { enabled: boolean; direction: Direction }>>>({});
   useEffect(() => setLocal({}), [data]);
+  // T-1006: açılış stoku ayarının iyimser durumu ve hedef raf.
+  const [openingOn, setOpeningOn] = useState<boolean | null>(null);
+  useEffect(() => setOpeningOn(null), [opening]);
+  const [openingLoc, setOpeningLoc] = useState<string>(opening?.locations[0]?.id ?? "");
 
   const parasut = data.providers.find((p) => p.provider === "PARASUT");
   const conn = parasut?.connection ?? null;
@@ -186,6 +198,8 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     setForm(EMPTY_FORM); // girilen sır bellekte tutulmaz
     setFormOpen(false);
     say("ok", t("form.connected", { label: r.data.label }));
+    // T-1006: yolculuk adım 1'de "Mevcut stok miktarlarını da alalım mı?" cevaplandıysa bağlanınca ayara işlenir ("Hayır" = kapalı kalır).
+    if (journeyWish === true) await setOpeningStockAction({ slug, provider: "PARASUT", enabled: true, via: "journey" });
     router.refresh();
   };
 
@@ -206,6 +220,54 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     }
     feedback.minor();
     setFormOpen(true);
+  };
+
+  const openingEnabled = openingOn ?? opening?.enabled === true;
+  const openingTaken = opening?.takenAt ?? null;
+  const toggleOpening = async (): Promise<void> => {
+    if (busy !== null) return;
+    if (openingTaken !== null) {
+      feedback.error();
+      say("warn", t("opening.takenAt", { at: when(openingTaken) }));
+      return;
+    }
+    const next = !openingEnabled;
+    setOpeningOn(next);
+    setBusy("opening");
+    const r = await setOpeningStockAction({ slug, provider: "PARASUT", enabled: next });
+    setBusy(null);
+    if (!r.ok) {
+      setOpeningOn(null);
+      return failed(r);
+    }
+    if (!r.data.ok) {
+      setOpeningOn(null);
+      say("err", reasonText(r.data.reason));
+      return;
+    }
+    feedback.minor();
+    say(next ? "ok" : "info", next ? t("opening.on") : t("opening.off"));
+    router.refresh();
+  };
+  const pullOpening = async (): Promise<void> => {
+    if (busy !== null) return;
+    if (openingLoc === "") {
+      feedback.error();
+      say("warn", t("opening.pickShelf"));
+      return;
+    }
+    setBusy("pull");
+    const r = await pullOpeningStockAction({ slug, provider: "PARASUT", locationId: openingLoc });
+    setBusy(null);
+    if (!r.ok) return failed(r);
+    if (!r.data.ok) {
+      feedback.error();
+      say(r.data.reason === "NOTHING" ? "warn" : "err", t.has(`opening.reasons.${r.data.reason}`) ? t(`opening.reasons.${r.data.reason}`) : reasonText(r.data.reason));
+      router.refresh();
+      return;
+    }
+    say("ok", t("opening.done", { n: r.data.lines }));
+    router.refresh();
   };
 
   const flows = parasut?.flows ?? [];
@@ -358,6 +420,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
             ) : null}
             <KalipIzgara
               left={
+                <>
                 <KalipGrup title={t("flowsTitle")} sub={t("flowsSub")} d={NICON.sync} color="2F5DA8" testId="integrations-flows">
                   {flows.map((f) => {
                     const ui = FLOW_UI[f.flow];
@@ -418,7 +481,63 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                       </div>
                     );
                   })}
-                </KalipGrup>
+                  </KalipGrup>
+                  {opening !== null ? (
+                    <KalipGrup title={t("opening.title")} sub={t("opening.sub", { provider: pn.toLocaleUpperCase(intlDil(locale)) })} d={NICON.chart} color="B07D0B" testId="integrations-opening">
+                      <div className={`flw${openingEnabled ? " on" : ""}`} data-testid="opening-row" data-enabled={openingEnabled ? "true" : "false"} data-taken={openingTaken === null ? "false" : "true"}>
+                        <KalipAnahtar
+                          title={t("opening.toggle", { provider: pn })}
+                          sub={openingTaken !== null ? t("opening.takenAt", { at: when(openingTaken) }).toLocaleUpperCase(intlDil(locale)) : t("opening.toggleSub", { provider: pn.toLocaleUpperCase(intlDil(locale)) })}
+                          d={NICON.pull}
+                          color="B07D0B"
+                          on={openingEnabled}
+                          locked={openingTaken !== null}
+                          lockedReason={openingTaken !== null ? t("opening.takenAt", { at: when(openingTaken) }) : undefined}
+                          aria={openingEnabled ? t("opening.onAria", { provider: pn }) : t("opening.offAria", { provider: pn })}
+                          onToggle={() => void toggleOpening()}
+                          testId="opening-toggle"
+                        />
+                        {openingTaken !== null ? (
+                          <div className="fmeta">
+                            <span className="ok" data-testid="opening-taken">
+                              {t("opening.takenAt", { at: when(openingTaken) })}
+                            </span>
+                          </div>
+                        ) : openingEnabled ? (
+                          <>
+                            {opening.locations.length === 0 ? (
+                              <div className="fmeta">
+                                <span data-testid="opening-noshelf">{t("opening.noShelf")}</span>
+                              </div>
+                            ) : (
+                              <div className="fdir">
+                                <KalipSecim
+                                  label={t("opening.shelf")}
+                                  value={openingLoc}
+                                  color="B07D0B"
+                                  list
+                                  onPick={(id) => {
+                                    feedback.minor();
+                                    setOpeningLoc(id);
+                                  }}
+                                  options={opening.locations.map((l) => ({ id: l.id, label: `${l.code} · ${l.name}`, sub: l.warehouse, keys: [l.code] }))}
+                                  testId="opening-shelf"
+                                />
+                              </div>
+                            )}
+                            <div className="fmeta">
+                              <span>{t("opening.once")}</span>
+                              <button type="button" className="frun" onClick={() => void pullOpening()} aria-busy={busy === "pull"} data-tour="opening-pull" data-testid="opening-pull">
+                                <Ico d={NICON.pull} size={16} />
+                                {t("opening.pull")}
+                              </button>
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                    </KalipGrup>
+                  ) : null}
+                </>
               }
               right={
                 <KalipGrup title={t("runsTitle")} sub={t("runsSub")} d={LICON.clock} color="30475A" testId="integrations-runs">
