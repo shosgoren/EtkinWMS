@@ -9,7 +9,7 @@ FROM ${PY_IMAGE} AS model
 COPY fetch_model.py /fetch_model.py
 RUN python -I /fetch_model.py /models/whisper-small
 
-FROM ${PY_IMAGE} AS runtime
+FROM ${PY_IMAGE} AS build
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     HF_HUB_OFFLINE=1 \
@@ -24,6 +24,21 @@ COPY --from=model /models /models
 WORKDIR /srv
 COPY app.py test_app.py ./
 COPY testdata ./testdata
+
+# T-1004: tek katmana düzleştirilir. Yayın alıcısı (release.py) arşivdeki manifest.json'u en çok 10 000 bayt kabul eder; ses imajının
+# 10 katmanı (her biri LayerSources kaydıyla) üç imajlı arşivde sınırı aşıyordu (10 063 bayt → BAD_MANIFEST). İçerik aynı; taban imajın
+# ortam değişkenleri burada yeniden verilir (scratch hiçbirini taşımaz).
+FROM scratch AS runtime
+COPY --from=build / /
+ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
+    LANG=C.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    HF_HUB_OFFLINE=1 \
+    HF_HUB_DISABLE_TELEMETRY=1 \
+    VOICE_MODEL_DIR=/models/whisper-small \
+    VOICE_THREADS=2
+WORKDIR /srv
 USER node
 EXPOSE 8000
 # Erişim günlüğü kapalı (istek gövdesi zaten loglanmaz; yol/IP de yazılmaz). Eşzamanlı bağlantı sınırı aşılırsa uvicorn 503 döner.

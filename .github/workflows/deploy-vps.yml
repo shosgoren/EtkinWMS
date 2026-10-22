@@ -152,6 +152,17 @@ jobs:
           docker run --rm --network none --read-only --tmpfs /tmp "etkinwms-voice:$RELEASE_SHA" python -m unittest test_app
           docker save "etkinwms:$RELEASE_SHA" "etkinwms-migrate:$RELEASE_SHA" "etkinwms-voice:$RELEASE_SHA" | gzip -1 > "$RUNNER_TEMP/image-voice.tar.gz"
           echo "$voice_tree" > "$RUNNER_TEMP/voice-tree.txt"
+          # T-1004: alıcının arşiv sınırları (release.py: manifest.json ≤ 10 000 bayt, imaj yapılandırması ≤ 1 MiB) burada da denetlenir;
+          # sınırı aşan arşiv yayına gitmeden derlemede kırmızı olur (önceki koşu sunucuda BAD_MANIFEST ile reddedilmişti).
+          for archive in "$RUNNER_TEMP/image.tar.gz" "$RUNNER_TEMP/image-voice.tar.gz"; do
+            python3 -I -c 'import json,sys,tarfile
+          with tarfile.open(sys.argv[1], "r:gz") as a:
+              m = a.getmember("manifest.json")
+              assert m.size <= 10000, f"manifest.json {m.size} bayt > 10000"
+              for e in json.load(a.extractfile(m)):
+                  assert a.getmember(e["Config"]).size <= 1024 * 1024, "imaj yapılandırması > 1 MiB"
+              print(sys.argv[1].rsplit("/", 1)[-1], "manifest", m.size, "bayt")' "$archive"
+          done
       - name: Record bundle identity
         if: steps.gate.outputs.sha != ''
         id: bundle
@@ -225,5 +236,14 @@ jobs:
           print("voice" if "etkinwms-voice" in (d.get("images") or []) and d.get("voice_tree")!=sys.argv[2] else "base")' "$check" "$VOICE_TREE")
           if [ "$choice" = voice ]; then file="$RUNNER_TEMP/bundle/image-voice.tar.gz"; hash="$VOICE_HASH"; else file="$RUNNER_TEMP/bundle/image.tar.gz"; hash="$ARCHIVE_HASH"; fi
           echo "arşiv: $choice"
+          # T-1004: alıcı aynı SHA'yı "already_deployed" ile arşivi okumadan geçer; ses imajı ilk kez gidecekse yeni bir main commit'i gerekir.
+          if [ "$choice" = voice ] && python3 -c 'import json,sys
+          try:
+              d=json.loads(sys.argv[1].strip().splitlines()[0])
+          except Exception:
+              d={}
+          sys.exit(0 if d.get("release")==sys.argv[2] else 1)' "$check" "$RELEASE_SHA"; then
+            echo "::warning::$RELEASE_SHA zaten yayında; alıcı aynı SHA'da arşivi okumaz, ses imajı bir sonraki main commit'iyle gider."
+          fi
           test "$(sha256sum "$file" | cut -d' ' -f1)" = "$hash"
           remote "deploy $RELEASE_SHA $hash $SCHEMA_HASH" < "$file"
