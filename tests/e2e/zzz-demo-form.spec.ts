@@ -1,10 +1,8 @@
 // T-431: satış sitesi demo formu geri bildirimi, uçtan uca (gerçek satış sitesi sunucusu marketing/server.mjs, gerçek tarayıcı).
 // `/api/demo` yanıtı tarayıcıda karşılanır: yerel e2e kökeni (localhost:<port>) sunucunun izinli köken listesinde yoktur ve
-// gerçek talep kaydı/bildirim bu testin konusu değildir (kayıt ucunun kimlik dönüşü marketing/demo-api.test.mjs'de).
+// gerçek talep kaydı/bildirim bu testin konusu değildir (kayıt ucunun genel yanıtı marketing/demo-api.test.mjs'de).
 // Uzak hedefte (E2E_BASE_URL) satış sitesi örneği olmadığından bu dosya KAYITLI DEĞİLDİR (atlama değil; zzz-site-content ile aynı kural).
 import { expect, test, type Page, type Route } from "@playwright/test";
-
-const ID = "1a2b3c4d-5e6f-4a1b-9c2d-0123456789ab";
 
 async function fill(page: Page): Promise<void> {
   const form = page.locator("#demo-form");
@@ -22,7 +20,7 @@ async function open(page: Page): Promise<void> {
 }
 
 if (!process.env.E2E_BASE_URL?.trim() || process.env.E2E_SITE_URL) {
-  test("T-431: boş gönderimde alan altı uyarılar; gönderilirken gösterge ve tek istek; başarıda onay kutusu, talep no ve odak", async ({ page }) => {
+  test("T-431: boş gönderimde alan altı uyarılar; gönderilirken gösterge ve tek istek; başarıda genel onay kutusu, giriş bağlantısı ve odak", async ({ page }) => {
     await open(page);
     const form = page.locator("#demo-form");
     const submit = form.locator("button[type=submit]");
@@ -48,7 +46,7 @@ if (!process.env.E2E_BASE_URL?.trim() || process.env.E2E_SITE_URL) {
     await page.route("**/api/demo", async (route: Route) => {
       calls++;
       await held;
-      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ ok: true, id: ID }) });
+      await route.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ ok: true }) });
     });
     await submit.click();
     await expect(submit).toHaveAttribute("aria-disabled", "true");
@@ -60,13 +58,14 @@ if (!process.env.E2E_BASE_URL?.trim() || process.env.E2E_SITE_URL) {
 
     const done = page.getByTestId("demo-success");
     await expect(done).toBeVisible();
-    const title = page.getByRole("heading", { name: "Talebiniz başarıyla gönderildi" });
+    const title = page.getByRole("heading", { name: "Talebiniz alındı" });
     await expect(title).toBeFocused();
-    await expect(done).toContainText("En geç 1 iş günü içinde sizinle iletişime geçeceğiz.");
-    await expect(page.getByTestId("demo-ref")).toContainText("1A2B3C4D");
+    await expect(done).toContainText("Talebinizi görmek için e-postanıza iletilen güvenli bağlantıyı açın.");
+    await expect(page.getByTestId("demo-ref")).toHaveCount(0);
     await expect(done.getByRole("link", { name: /Ana sayfaya dön/ })).toHaveAttribute("href", "/");
-    await expect(page.locator("#form-status")).toHaveText(/Talebiniz başarıyla gönderildi\. En geç 1 iş günü/);
+    await expect(page.locator("#form-status")).toHaveText(/Talebiniz alındı\. Talebinizi görmek için/);
     await expect(form.locator('[name="name"]')).toHaveCount(0);
+    await expect(done.getByRole("link",{name:"Uygulamaya giriş"})).toHaveAttribute("href","https://wms.etkinyazilim.com/login");
     expect(calls).toBe(1);
   });
 
@@ -79,7 +78,7 @@ if (!process.env.E2E_BASE_URL?.trim() || process.env.E2E_SITE_URL) {
     await page.route("**/api/demo", (route: Route) =>
       fail
         ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "x" }) })
-        : route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ ok: true, id: ID }) }),
+        : route.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ ok: true }) }),
     );
     await form.locator("button[type=submit]").click();
     const status = page.locator("#form-status");
@@ -91,8 +90,8 @@ if (!process.env.E2E_BASE_URL?.trim() || process.env.E2E_SITE_URL) {
 
     fail = false;
     await status.getByRole("button", { name: "try again" }).click();
-    await expect(page.getByRole("heading", { name: "Your request has been sent" })).toBeFocused();
-    await expect(page.getByTestId("demo-success")).toContainText("We will get in touch within 1 business day at the latest.");
-    await expect(page.getByTestId("demo-ref")).toContainText("1A2B3C4D");
+    await expect(page.getByRole("heading", { name: "Request received" })).toBeFocused();
+    await expect(page.getByTestId("demo-success")).toContainText("Open the secure link sent to your email to view your request.");
+    await expect(page.getByTestId("demo-ref")).toHaveCount(0);
   });
 }

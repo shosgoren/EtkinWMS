@@ -84,6 +84,8 @@ try {
     await form.evaluate(el => el.requestSubmit());
     await page.getByTestId('demo-success').waitFor();
     assert.equal(sends, 2);
+    assert.equal(await page.locator('#demo-done-title').innerText(),language==='TR'?'Talebiniz alındı':'Request received');
+    assert.equal(await page.getByTestId('demo-ref').count(),0);
     assert.equal(await page.locator('#demo-done-title').evaluate(el => el === document.activeElement), true);
     await page.close();
   }
