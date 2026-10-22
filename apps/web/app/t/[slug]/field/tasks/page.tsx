@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { TASK_KINDS, listMyTasks, type TaskCursor, type TaskKind, type TaskStatus } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
@@ -12,7 +12,7 @@ import { LICON } from "../../../../design/kalip-icons.ts";
 import { kalipDark } from "../../stock/belge-kalip.ts";
 import { Ico, KalipBaslik, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKartListe, type KalipCip } from "../../kalip/liste.tsx";
-import { kdz } from "../../kalip/tokens.ts";
+import { KalipGorevKarti } from "../../kalip/gorev-karti.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +58,7 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
   const q = (first(sp.q) ?? "").trim().slice(0, 100);
   const errorRaw = first(sp.error) ?? "";
   const t = await getTranslations("tasks");
+  const locale = await getLocale();
   const te = await getTranslations("tasks.errors");
   const tk = await getTranslations("kural");
   const base = `/t/${encodeURIComponent(slug)}/field/tasks`;
@@ -172,23 +173,8 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
               const mine = task.status === "ASSIGNED";
               return (
                 <div key={task.id} role="listitem" data-testid="field-task" data-task-id={task.id} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                  <div className="uc" style={{ animationDelay: `${i * 30}ms` }}>
-                    <span className="uic" style={{ background: kdz("dzl", v.color) }}>
-                      <Ico d={v.d} size={26} />
-                    </span>
-                    <span className="ut">
-                      <h2 style={{ margin: 0, font: "inherit" }}>
-                        <b>{kindOf(task.kind)}</b>
-                      </h2>
-                      <small className="mono">{mine ? t("field.mine") : t("field.available")}</small>
-                    </span>
-                    {task.quantity === null ? null : (
-                      <span className="qb">
-                        <b>{task.quantity}</b>
-                        <small>{t("qtySub")}</small>
-                      </span>
-                    )}
-                  </div>
+                  <KalipGorevKarti task={task} kind={kindOf(task.kind)} status={mine ? t("field.mine") : t("field.available")}
+                    quantityLabel={t("qtySub")} locale={locale} d={v.d} color={v.color} index={i} />
                   {task.status === "OPEN" ? (
                     <form action={claim}>
                       <input type="hidden" name="taskId" value={task.id} />
