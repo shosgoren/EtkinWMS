@@ -113,14 +113,14 @@ function tipPosition(hole: PerdeDelik | null, vw: number, vh: number): TipPos {
 }
 
 /** Kiracı düzeninde (yalnız hesap sahibi / depo yöneticisi): spotlight tur, adım listesi ve kutlama. */
-export function YolculukKatman({ slug, dark: initialDark }: { slug: string; dark: boolean }) {
+export function YolculukKatman({ slug, dark: initialDark, initial = null }: { slug: string; dark: boolean; initial?: JourneyData | null }) {
   const t = useTranslations("yolculuk");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const base = `/t/${encodeURIComponent(slug)}`;
 
-  const [data, setData] = useState<JourneyData | null>(null);
+  const [data, setData] = useState<JourneyData | null>(initial);
   const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dark, setDark] = useState(initialDark);
@@ -163,11 +163,14 @@ export function YolculukKatman({ slug, dark: initialDark }: { slug: string; dark
     [slug, t],
   );
 
-  // İlk yükleme + ekran değişince; eski 3 adımlı rehber açıkken tur bekler.
+  // İlk durum düzenden (sunucu). Ekran değişince yalnız tur sürerken (ya da ilk durum okunamadıysa) yeniden okunur: eylem hız sınırı
+  // kovası her gezinmede tüketilmesin.
+  const needRead = useRef(true);
+  needRead.current = data === null || data.tour === "ACTIVE";
   useEffect(() => {
     setOverride(readActive());
     syncDark();
-    void load();
+    if (needRead.current) void load();
   }, [pathname, load, syncDark]);
   // Görünüm alanı (balon konumu hedefsiz de ekran içinde kalsın).
   useEffect(() => {

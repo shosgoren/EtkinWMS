@@ -13,7 +13,9 @@ import { appSurface } from "../../../lib/surface.ts";
 import { AppError } from "@wms/shared/errors";
 import { KabukProvider } from "./kabuk/kabuk-bar.tsx";
 import { kabukModules } from "./kabuk/modules.ts";
-import { canSeeJourney } from "@wms/domain/onboarding/journey";
+import { canSeeJourney, getSetupJourney } from "@wms/domain/onboarding/journey";
+import { toJourneyData } from "./yolculuk/serialize.ts";
+import type { JourneyData } from "./yolculuk/steps.ts";
 import { YolculukKatman } from "./yolculuk/yolculuk.tsx";
 
 export const dynamic = "force-dynamic";
@@ -99,6 +101,15 @@ export default async function TenantLayout({ children, params }: { children: Rea
     },
   };
 
+  // T-1006: kurulum turu ilk durumu sunucudan (istemci her ekranda eylem çağırmaz; hız sınırı kovası korunur). Okunamazsa katman kendisi okur.
+  let journey: JourneyData | null = null;
+  if (canSeeJourney(current.roles)) {
+    try {
+      journey = toJourneyData(await getSetupJourney({ db, principal, tenantSlug: slug }));
+    } catch (e) {
+      console.error(JSON.stringify({ event: "journey.read_failed", code: e instanceof AppError ? e.code : "UNKNOWN" }));
+    }
+  }
   return (
     <KabukProvider value={kabuk}>
     <div className="tenant-shell flex min-w-0 flex-col">
@@ -107,7 +118,7 @@ export default async function TenantLayout({ children, params }: { children: Rea
       {/* T-965: Suspense yok. Bu yerleşim `force-dynamic` olduğundan `useSearchParams` sunucuda hazırdır (askıya almaz). */}
       <div className="tenant-body flex min-w-0 flex-col">{children}</div>
       {/* T-1006: ilk kurulum yolculuğu (adım listesi, spot + ipucu kartı) yalnız hesap sahibi ve depo yöneticisinde; eylemler rolü yeniden denetler. */}
-      {canSeeJourney(current.roles) ? <YolculukKatman slug={slug} dark={temaKoyu(await cookies())} /> : null}
+      {canSeeJourney(current.roles) ? <YolculukKatman slug={slug} dark={temaKoyu(await cookies())} initial={journey} /> : null}
     </div>
     </KabukProvider>
   );
