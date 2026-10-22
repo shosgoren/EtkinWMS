@@ -70,6 +70,8 @@ jobs:
       sha: ${{ steps.gate.outputs.sha }}
       schema: ${{ steps.bundle.outputs.schema }}
       digest: ${{ steps.bundle.outputs.digest }}
+      digest_voice: ${{ steps.bundle.outputs.digest_voice }}
+      voice_tree: ${{ steps.bundle.outputs.voice_tree }}
     steps:
       - name: Gate exact main commit and all required checks
         id: gate
@@ -141,6 +143,15 @@ jobs:
           # Migrator smoke: module graph loads (no DB, CLI entry not triggered by import).
           docker run --rm --network none "etkinwms-migrate:$RELEASE_SHA" node --input-type=module -e "await import('/migrator/src/migrate.ts')"
           docker save "etkinwms:$RELEASE_SHA" "etkinwms-migrate:$RELEASE_SHA" | gzip > "$RUNNER_TEMP/image.tar.gz"
+          # T-1002 (B-62): iç ses servisi imajı (aynı revision/schema etiketleri + `services/voice` ağaç kimliği). Model derlemede sabit
+          # revizyon + SHA-256 ile iner; imaj içinde ağsız birim testi (örnek wav → metin). İkinci arşiv üç imajı taşır; yayın işi onu
+          # yalnız alıcı destekliyor ve ses içeriği değiştiyse gönderir (aksi halde sunucudaki önceki ses imajı sürer).
+          voice_tree=$(git rev-parse "HEAD:services/voice")
+          [[ "$voice_tree" =~ ^[0-9a-f]{40}$ ]]
+          docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$RELEASE_SHA" --label "org.etkinwms.schema.sha256=$schema_hash" --label "org.etkinwms.voice.tree=$voice_tree" -t "etkinwms-voice:$RELEASE_SHA" services/voice
+          docker run --rm --network none --read-only --tmpfs /tmp "etkinwms-voice:$RELEASE_SHA" python -m unittest test_app
+          docker save "etkinwms:$RELEASE_SHA" "etkinwms-migrate:$RELEASE_SHA" "etkinwms-voice:$RELEASE_SHA" | gzip -1 > "$RUNNER_TEMP/image-voice.tar.gz"
+          echo "$voice_tree" > "$RUNNER_TEMP/voice-tree.txt"
       - name: Record bundle identity
         if: steps.gate.outputs.sha != ''
         id: bundle
@@ -148,16 +159,22 @@ jobs:
           set -euo pipefail
           echo "schema=$(python3 deploy/vps/automation/schema.py packages/db/migrations)" >> "$GITHUB_OUTPUT"
           echo "digest=$(sha256sum "$RUNNER_TEMP/image.tar.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "digest_voice=$(sha256sum "$RUNNER_TEMP/image-voice.tar.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "voice_tree=$(cat "$RUNNER_TEMP/voice-tree.txt")" >> "$GITHUB_OUTPUT"
       - name: Sign exact artifact provenance with GitHub OIDC
         if: steps.gate.outputs.sha != ''
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: ${{ runner.temp }}/image.tar.gz
+          subject-path: |
+            ${{ runner.temp }}/image.tar.gz
+            ${{ runner.temp }}/image-voice.tar.gz
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: steps.gate.outputs.sha != ''
         with:
           name: etkinwms-release
-          path: ${{ runner.temp }}/image.tar.gz
+          path: |
+            ${{ runner.temp }}/image.tar.gz
+            ${{ runner.temp }}/image-voice.tar.gz
           retention-days: 3
           if-no-files-found: error
   deploy:
@@ -182,15 +199,31 @@ jobs:
           RELEASE_SHA: ${{ needs.build.outputs.sha }}
           SCHEMA_HASH: ${{ needs.build.outputs.schema }}
           ARCHIVE_HASH: ${{ needs.build.outputs.digest }}
+          VOICE_HASH: ${{ needs.build.outputs.digest_voice }}
+          VOICE_TREE: ${{ needs.build.outputs.voice_tree }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$SCHEMA_HASH" =~ ^[0-9a-f]{64}$ ]]
           [[ "$ARCHIVE_HASH" =~ ^[0-9a-f]{64}$ ]]
-          test "$(sha256sum "$RUNNER_TEMP/bundle/image.tar.gz" | cut -d' ' -f1)" = "$ARCHIVE_HASH"
+          [[ "$VOICE_HASH" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$VOICE_TREE" =~ ^[0-9a-f]{40}$ ]]
           umask 077
           mkdir -p "$RUNNER_TEMP/ssh"
           printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/ssh/key"
           printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
           trap 'rm -rf "$RUNNER_TEMP/ssh"' EXIT
-          ssh -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" -i "$RUNNER_TEMP/ssh/key" etkinwms-deploy@187.7.76.72 "deploy $RELEASE_SHA $ARCHIVE_HASH $SCHEMA_HASH" < "$RUNNER_TEMP/bundle/image.tar.gz"
+          remote() { ssh -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" -i "$RUNNER_TEMP/ssh/key" etkinwms-deploy@187.7.76.72 "$@"; }
+          # T-1002: ses imajlı arşiv yalnız alıcı (release.py) ses imajını tanıyorsa ve sunucudaki ses içeriği farklıysa; aksi halde iki imajlı
+          # arşiv (eski alıcı da kabul eder). `check` okunamazsa güvenli varsayılan iki imajlı arşivdir.
+          check=$(remote check 2>/dev/null || true)
+          choice=$(python3 -c 'import json,sys
+          try:
+              d=json.loads(sys.argv[1].strip().splitlines()[0])
+          except Exception:
+              d={}
+          print("voice" if "etkinwms-voice" in (d.get("images") or []) and d.get("voice_tree")!=sys.argv[2] else "base")' "$check" "$VOICE_TREE")
+          if [ "$choice" = voice ]; then file="$RUNNER_TEMP/bundle/image-voice.tar.gz"; hash="$VOICE_HASH"; else file="$RUNNER_TEMP/bundle/image.tar.gz"; hash="$ARCHIVE_HASH"; fi
+          echo "arşiv: $choice"
+          test "$(sha256sum "$file" | cut -d' ' -f1)" = "$hash"
+          remote "deploy $RELEASE_SHA $hash $SCHEMA_HASH" < "$file"

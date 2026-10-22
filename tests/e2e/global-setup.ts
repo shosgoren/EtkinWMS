@@ -17,6 +17,7 @@ import { chromium } from "@playwright/test";
 import { clearSharedSession, mintSharedSession } from "./support/demo-session.ts";
 import { PACKAGE_ACTORS, provisionEmptyTenant } from "./support/empty-tenant.ts";
 import { startFakeParasut, type FakeParasut } from "../integration/fixtures/fake-parasut.ts";
+import { startFakeVoice, type FakeVoice } from "./support/fake-voice.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const OUT = path.join(ROOT, ".artifacts/e2e");
@@ -158,6 +159,9 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   // T-991: sahte Paraşüt (yalnız 127.0.0.1; gerçek ağ yok). Web ve worker sağlayıcı adresini buradan alır (geri döngü dışı adres reddedilir).
   const fakeParasut: FakeParasut = await startFakeParasut();
   env.PARASUT_BASE_URL = fakeParasut.url;
+  // T-1002: sahte iç ses servisi (yalnız 127.0.0.1; model yok). Web Etkin isteğini buraya iletir.
+  const fakeVoice: FakeVoice = await startFakeVoice();
+  env.VOICE_URL = fakeVoice.url;
   // T-938: local, loopback-asserted web subprocesses only. Remote early return above never enables this flag.
   const packageWebEnv = { ...env, PACKAGE_RECEIVING_ENABLED: "true" };
 
@@ -171,6 +175,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   const teardown = async (): Promise<void> => {
     clearSharedSession();
     await fakeParasut.close().catch(() => undefined);
+    await fakeVoice.close().catch(() => undefined);
     for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", "E2E_ERP", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
     }

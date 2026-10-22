@@ -11,6 +11,9 @@ services:
     environment:
       PORT: 3000
       HOSTNAME: 0.0.0.0
+      VOICE_URL: http://voice:8000
+    # T-1002: ses servisine yalnız `voice` iç ağından.
+    networks: [default, voice]
     expose: ["3000"]
     mem_limit: 1536m
     logging:
@@ -66,6 +69,24 @@ services:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
 
+  # T-1002 (B-62): Etkin yerel konuşma → yazı. Canlı tanım deploy/vps/automation/compose.yml (profil `voice`, iç ağ, kaynak sınırları).
+  voice:
+    image: etkinwms-voice:${WMS_VOICE_RELEASE:-none}
+    build:
+      context: ../../services/voice
+    profiles: [voice]
+    restart: unless-stopped
+    networks: [voice]
+    expose: ["8000"]
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1280m
+    cpus: 1.5
+    cpu_shares: 256
+    pids_limit: 128
+
   proxy:
     image: caddy:2
     restart: unless-stopped
@@ -114,6 +135,10 @@ services:
     logging:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
+
+networks:
+  voice:
+    internal: true
 
 volumes:
   caddy-data:

@@ -543,5 +543,92 @@ class ReleaseBoundaryTests(unittest.TestCase):
                 self.assertNotIn('GH_TOKEN',verifier.call_args.kwargs['env'])
 
 
+class VoiceImageTests(unittest.TestCase):
+    """T-1002: isteğe bağlı ses imajı — kimlik/etiket denetimi, profil yalnız kayıtlı ses imajıyla, yoksa önceki ses imajı sürer."""
+
+    def voice_archive(self, path, user='node', tree='e'*40, revision=SHA):
+        images = [('etkinwms:' + SHA, SHA), ('etkinwms-migrate:' + SHA, SHA), ('etkinwms-voice:' + SHA, revision)]
+        make_archive(path, images=images, user=user)
+        if tree is not None:
+            # make_archive tüm imajlara aynı etiketleri yazar; ses ağacı etiketini yalnız ses imajının yapılandırmasına ekle.
+            with tarfile.open(path, 'r:gz') as src:
+                members = {m.name: src.extractfile(m).read() for m in src}
+            cfg = json.loads(members['config2.json'])
+            cfg['config']['Labels'][release.VOICE_TREE_LABEL] = tree
+            members['config2.json'] = json.dumps(cfg).encode()
+            with tarfile.open(path, 'w:gz') as out:
+                for name, data in members.items():
+                    info = tarfile.TarInfo(name)
+                    info.size = len(data)
+                    out.addfile(info, io.BytesIO(data))
+
+    def test_archive_with_or_without_voice(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'image.tar.gz'
+            make_archive(path)
+            self.assertIsNone(release.validate_archive(path, SHA, 'b'*64))
+            self.voice_archive(path)
+            self.assertEqual(release.validate_archive(path, SHA, 'b'*64), 'e'*40)
+            for kwargs in [{'tree': None}, {'tree': 'x; rm -rf /'}, {'user': 'root'}, {'revision': 'c'*40}]:
+                self.voice_archive(path, **kwargs)
+                with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                    release.validate_archive(path, SHA, 'b'*64)
+            for images in [[('etkinwms-voice:' + SHA, SHA)], [('etkinwms:' + SHA, SHA), ('etkinwms-voice:' + SHA, SHA)],
+                           [('etkinwms:' + SHA, SHA), ('etkinwms-migrate:' + SHA, SHA), ('etkinwms-voice:latest', SHA)]]:
+                make_archive(path, images=images)
+                with self.subTest(images=images), self.assertRaisesRegex(ValueError, 'IMAGE_TAG_REJECTED'):
+                    release.validate_archive(path, SHA, 'b'*64)
+
+    def test_voice_profile_only_with_recorded_voice_image(self):
+        with patch.dict(os.environ, {'COMPOSE_PROFILES': 'voice', 'WMS_VOICE_RELEASE': 'x'}):
+            _, env = release.compose({'tag': SHA, 'compose': '/c.yml', 'project': 'etkinwms'})
+            self.assertNotIn('COMPOSE_PROFILES', env)
+            self.assertNotIn('WMS_VOICE_RELEASE', env)
+        _, env = release.compose({'tag': SHA, 'compose': '/c.yml', 'project': 'etkinwms', 'voice': 'd'*40})
+        self.assertEqual((env['COMPOSE_PROFILES'], env['WMS_VOICE_RELEASE']), ('voice', 'd'*40))
+        for bad in ['', 'latest', 'd'*40 + ' --x', 7]:
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, 'VOICE_STATE_REJECTED'):
+                release.compose({'tag': SHA, 'compose': '/c.yml', 'project': 'etkinwms', 'voice': bad})
+
+    def deploy_with(self, previous_extra, voice_tree):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            automation = base / 'automation'
+            automation.mkdir()
+            (base / 'releases').mkdir()
+            previous_release = base / 'releases' / 'previous'
+            previous_release.mkdir()
+            (base / 'current').symlink_to(previous_release)
+            previous = dict({'tag': 'f'*40, 'sha': 'f'*40, 'compose': str(previous_release / 'compose.yml'),
+                             'release': str(previous_release), 'schema': 'b'*64, 'project': 'etkinwms'}, **previous_extra)
+            (automation / 'state.json').write_text(json.dumps(previous))
+            (automation / 'approved-schema.sha256').write_text('b'*64)
+            with patch.object(release, 'BASE', base), patch.object(release, 'AUTOMATION', automation), \
+                 patch.object(release, 'assert_ci'), patch.object(release, 'assert_descendant'), \
+                 patch.object(release, 'validate_archive', return_value=voice_tree), patch.object(release, 'verify_provenance'), \
+                 patch.object(release, 'receive', return_value='d'*64), patch.object(release.signal, 'alarm'), \
+                 patch.object(release.time, 'sleep'), patch.object(release, 'run') as run, \
+                 patch.object(release, 'healthy', return_value=True):
+                release.deploy(SHA, 'd'*64, 'b'*64)
+                state = json.loads((automation / 'state.json').read_text())
+                up = [c for c in run.call_args_list if 'up' in c.args[0]][-1]
+                return state, up.kwargs['env']
+
+    def test_new_voice_image_is_recorded_and_started(self):
+        state, env = self.deploy_with({}, 'e'*40)
+        self.assertEqual((state['voice'], state['voice_tree']), (SHA, 'e'*40))
+        self.assertEqual((env['COMPOSE_PROFILES'], env['WMS_VOICE_RELEASE']), ('voice', SHA))
+
+    def test_release_without_voice_keeps_previous_voice_image(self):
+        state, env = self.deploy_with({'voice': 'c'*40, 'voice_tree': 'e'*40}, None)
+        self.assertEqual((state['tag'], state['voice'], state['voice_tree']), (SHA, 'c'*40, 'e'*40))
+        self.assertEqual(env['WMS_VOICE_RELEASE'], 'c'*40)
+
+    def test_no_voice_ever_means_no_profile(self):
+        state, env = self.deploy_with({}, None)
+        self.assertNotIn('voice', state)
+        self.assertNotIn('COMPOSE_PROFILES', env)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -25,6 +25,14 @@ project=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("p
 # Kurulacak dosyanın proje adı (compose `name:`) da aynı olmalı: başka projeye ait dosya bu betikle kurulmaz.
 grep -qx "name: $project" "$src/compose.yml"
 docker image inspect "etkinwms:$tag" >/dev/null
+# T-1002: ses servisi (profil `voice`) yalnız state'te kayıtlı ses imajı varsa başlar (release.py ile aynı kural); yoksa compose onu atlar.
+unset COMPOSE_PROFILES WMS_VOICE_RELEASE
+voice=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("voice") or "")' "$auto/state.json")
+if [[ -n $voice ]]; then
+  [[ $voice =~ ^[0-9a-f]{40}$ ]]
+  docker image inspect "etkinwms-voice:$voice" >/dev/null
+  export COMPOSE_PROFILES=voice WMS_VOICE_RELEASE="$voice"
+fi
 # 1. Doğrula (kurmadan önce).
 WMS_RELEASE="$tag" docker compose -p "$project" -f "$src/compose.yml" config --quiet
 docker run --rm -v "$(readlink -f "$src/Caddyfile"):/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

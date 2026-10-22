@@ -94,3 +94,20 @@ yayın güvenle durur):
 ```bash
 install -m 755 -o root -g root release.py /usr/local/sbin/etkinwms-release
 ```
+
+## Etkin ses servisi (T-1002, B-62)
+
+Ayrı imaj `etkinwms-voice:<SHA>` (services/voice: faster-whisper small int8 + Silero VAD; model imajda, çalışırken ağ yok). Yalnız
+`etkinwms_voice` iç ağında (`internal: true`: dış çıkış yok, DB ağına bağlı değil), port yayımlanmaz; web ona `VOICE_URL=http://voice:8000`
+ile ulaşır. Kaynak: `cpus 1.5`, `cpu_shares 256` (web/worker önce), `mem_limit 1280m`, `pids_limit 128`, salt okunur kök, tüm yetenekler düşük.
+
+- **Alıcı:** arşiv iki imajlı (eski davranış) ya da üç imajlı olabilir; üçüncü imaj aynı revision/schema etiketleri, `node` kullanıcısı ve
+  `org.etkinwms.voice.tree` (`services/voice` git ağaç kimliği) taşımalıdır. Gelen ses imajı state'e `voice`/`voice_tree` olarak yazılır;
+  gelmezse önceki yayının ses imajı sürer. Compose `voice` profili yalnız state'te ses imajı varken (`COMPOSE_PROFILES=voice`) açılır.
+  Yükleme üst sınırı 1,5 GB.
+- **Yayın hattı:** build işi iki arşiv üretir ve ikisini de imzalar; deploy işi önce `check` çağırır: alıcı `images` listesinde ses imajını
+  tanıyorsa ve `voice_tree` farklıysa üç imajlı arşivi, aksi halde iki imajlıyı gönderir (eski alıcı ile uyumlu).
+- **Bir kez (root):** aynı commit'ten `install -m 755 -o root -g root release.py /usr/local/sbin/etkinwms-release`, ardından
+  `deploy/vps/automation/compose.yml` + `deploy/vps/Caddyfile` + `update-config.sh` bir klasöre ve `bash update-config.sh <klasör>`.
+  Sonraki otomatik yayın ses imajını gönderir ve servis kendiliğinden başlar. Servis yoksa ya da çökerse uygulama çalışır; Etkin
+  "şu an kullanılamıyor" der.
