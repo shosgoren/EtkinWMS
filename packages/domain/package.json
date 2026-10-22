@@ -47,7 +47,8 @@
     "./platform/customers": "./src/platform/customers.ts",
     "./platform/plans": "./src/platform/plans.ts",
     "./platform/site-content": "./src/platform/site-content.ts",
-    "./platform/events": "./src/platform/events.ts"
+    "./platform/events": "./src/platform/events.ts",
+    "./voice": "./src/voice/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"

@@ -35,6 +35,11 @@
 .dzk .dk.big.wait { background: var(--color-dz-x-pemfec); color: var(--color-dz-x-bkbdaa); }
 /* Etkin (B-62) henüz yok: kaynaktaki düğme aynen, yalnız "yakında" balonu açar. */
 .dzk .dk-etkin[aria-disabled="true"] { cursor: default; }
+/* T-1002 (B-62): Etkin perdesi (`.veil`) görüntü alanını kaplar ve tıklanır; çubuk (`.dock` z 30) perdenin üstünde kalır (bas-konuş ve
+   "onayla" demek için Etkin düğmesi her durumda erişilir). Belirsiz eşleşmede aday satırları (`.res`) kartın içinde; eksik parça çipi kırmızı. */
+.dzk .veil { pointer-events: auto; }
+.dzk .card .vhint { text-align: left; }
+.dzk .btn.go[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 
 /* Kiracı kabuğunun eski alt gezinmesi (Geri / Ana ekran, saha çubuğu) ve telefon üst çubuğu ortak çubuğun olduğu ekranda çizilmez
    (tasarımda yoktur; eski üst çubuk ekranın kendi üst çubuğunu ve Modüller perdesini örtüyordu). */
@@ -53,3 +58,9 @@ body:has(.dzk) .dzp .app, body:has(.dzk) .dze .app, body:has(.dzk) .dzr .app, bo
   position: absolute; top: -4px; right: -4px; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
   border-radius: 999px; background: var(--color-dz-x-pemfec); color: var(--color-dz-x-bkbdaa); font: 800 12px/1 var(--font-bricolage), sans-serif;
 }
+/* T-1002: ortak perde (perde.css, kullanıcı 21 Ekim tek perde) açık temada açık renklidir; kaynakta koyu perde üstündeki beyaz yazılar
+   (`.said`, `.vhint`, `.fbt`, `.snd`) okunur kalsın diye açık temada koyu mürekkep; `.vchip` koyu hap (kaynak kart rengi). Koyu temada kaynak aynen. */
+.dzk:not(.dz-dark) .veil { color: var(--color-dz-x-aoblch); }
+.dzk:not(.dz-dark) .veil .vhint, .dzk:not(.dz-dark) .veil .snd { color: var(--color-dz-x-dkgkim); }
+.dzk:not(.dz-dark) .veil > .vchip, .dzk:not(.dz-dark) .veil .vchips .vchip { background: var(--color-dz-a-aoblch-jc); color: var(--color-dz-x-pppppp); }
+.dzk:not(.dz-dark) .veil .card { color: var(--color-dz-x-pppppp); }

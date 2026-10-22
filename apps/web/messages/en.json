@@ -5320,5 +5320,109 @@
       "PROVIDER_CONFIG": "Server setting missing",
       "UNKNOWN": "Something went wrong · try again"
     }
+  },
+  "etkin": {
+    "hint": "RELEASE TO APPLY · DOUBLE-TAP: LONG TALK, ENDS WHEN YOU SAY ‘DONE’ AND PAUSE",
+    "listening": "Listening…",
+    "timer": "LISTENING… SAY ‘DONE’ · {clock}",
+    "stop": "Done",
+    "thinking": "Understanding…",
+    "example": "Example: “What is on shelf C one”",
+    "release": "Release (apply)",
+    "understood": "Got it",
+    "writeSub": "CHANGES STOCK · NOT SAVED WITHOUT APPROVAL",
+    "countSub": "STARTS A COUNT · NOT SAVED WITHOUT APPROVAL",
+    "approve": "Approve",
+    "fix": "Correct",
+    "sayHint": "SAY ‘APPROVE’ · SAY ‘CORRECT’",
+    "cancel": "Cancel",
+    "close": "Close",
+    "readSub": "SHOWS ONLY · NO APPROVAL NEEDED",
+    "open": "Open",
+    "choose": "Pick",
+    "more": "Open all · {n}",
+    "k": {
+      "op": "ACTION",
+      "qty": "QUANTITY",
+      "item": "ITEM",
+      "loc": "PLACE",
+      "from": "FROM SHELF",
+      "to": "TO SHELF",
+      "unit": "UNIT",
+      "wh": "TO WAREHOUSE",
+      "missing": "MISSING",
+      "pick": "{n} OPTIONS · PICK"
+    },
+    "op": {
+      "count": "COUNT",
+      "stockIn": "STOCK IN",
+      "stockOut": "STOCK OUT",
+      "transfer": "TRANSFER"
+    },
+    "slot": {
+      "qty": "quantity",
+      "item": "item",
+      "loc": "shelf",
+      "from": "source shelf",
+      "to": "target shelf",
+      "unit": "unit",
+      "wh": "warehouse"
+    },
+    "missing": "Missing: {list} · say it again or finish on screen",
+    "unitConflict": "Different unit: the item's unit is {unit}",
+    "completeOnScreen": "Finish on screen",
+    "done": {
+      "count": "Count started · Shelf {code}",
+      "stockIn": "Stock-in draft ready · opening for approval",
+      "stockOut": "Stock-out draft ready · opening for approval",
+      "transfer": "Transfer saved"
+    },
+    "soundOk": "SOUND FEEDBACK · OK TONE",
+    "soundErr": "SOUND FEEDBACK · ERROR TONE",
+    "retry": "Say again",
+    "err": {
+      "unavailable": "Etkin is not available right now · try again shortly",
+      "busy": "Etkin is busy · say it again in a few seconds",
+      "empty": "I couldn't hear you · say it again",
+      "unknown": "I didn't understand: “{text}”",
+      "mic": "No microphone permission · allow it in browser settings",
+      "rate": "Too many tries · wait a moment",
+      "forbidden": "You don't have permission for this · ask your supervisor",
+      "stock": "Not enough stock",
+      "tracking": "This item needs lot/serial · finish on screen",
+      "missingLoc": "Shelf not found · say it again",
+      "generic": "Could not save · support code {code}",
+      "tooShort": "Hold and speak",
+      "notFound": "Not found · search or say it",
+      "noCard": "Nothing to approve"
+    },
+    "title": {
+      "tasksOf": "{name} · tasks · {n}",
+      "myTasks": "My tasks · {n}",
+      "loc": "Shelf {code} · {n} items",
+      "item": "{name} · stock",
+      "choose": "Which one? · {text}"
+    },
+    "empty": {
+      "loc": "Shelf not found",
+      "items": "This shelf is empty",
+      "item": "Item not found",
+      "tasks": "No open tasks",
+      "person": "Person not found"
+    },
+    "task": {
+      "PUTAWAY": "Putaway",
+      "PICK": "Picking",
+      "REPUTAWAY": "Re-putaway",
+      "COUNT": "Count"
+    },
+    "status": {
+      "OPEN": "OPEN",
+      "ASSIGNED": "ASSIGNED",
+      "DONE": "DONE",
+      "CANCELLED": "CANCELLED"
+    },
+    "opening": "Opening…",
+    "reason": "Etkin voice command"
   }
 }

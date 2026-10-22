@@ -121,3 +121,8 @@ main531e9034440ac1dc0d67fb11353a7ea09785c9f1 için ci38442505462/guards384425054
 - İlk deploy-vps koşusu (guards bitince) "tüm kontroller" kapısında durdu (beklenen); main e2e bir kez dalgalı (mobile-shell) → iş yeniden koşuldu.
 - Canlı doğrulama: `/login` yeni tasarım; sentetik adresle yanlış giriş 401 + `x-attempts-left: 4`.
 
+## 22 Ekim — Etkin ses servisi (T-1002, B-62)
+Yeni iç servis `voice` (ayrı imaj, iç ağ, port yok). Canlıya çıkması için bir kez root adımı gerekir: aynı commit'in `release.py`'si
+`/usr/local/sbin/etkinwms-release`'e ve `update-config.sh` ile yeni `compose.yml`. Ayrıntı: `deploy/vps/automation/README.md` §Etkin ses
+servisi. Bu adım yapılmadan yayınlar iki imajlı sürer; Etkin "şu an kullanılamıyor" der. VPS'te `/stt` süresi: UNKNOWN (ölçülmedi).
+

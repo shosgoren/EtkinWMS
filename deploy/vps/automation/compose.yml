@@ -4,8 +4,10 @@ services:
     image: etkinwms:${WMS_RELEASE:?required}
     restart: unless-stopped
     env_file: /opt/etkinwms/secrets/web.env
-    environment: {PORT: 3000, HOSTNAME: 0.0.0.0, NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt}
+    environment: {PORT: 3000, HOSTNAME: 0.0.0.0, NODE_EXTRA_CA_CERTS: /run/etkinwms-db-ca.crt, VOICE_URL: 'http://voice:8000'}
     volumes: [/opt/etkinwms/database/tls/ca.crt:/run/etkinwms-db-ca.crt:ro]
+    # T-1002: ses servisine yalnız `voice` iç ağından erişir (o ağda başka servis ve dış çıkış yok).
+    networks: [default, voice]
     expose: ['3000']
     mem_limit: 1536m
     logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
@@ -61,6 +63,31 @@ services:
     mem_limit: 256m
     expose: ['3200']
     logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+  # T-1002 (B-62): Etkin yerel konuşma → yazı (faster-whisper small int8 + Silero VAD; model imajda). Yalnız `voice` iç ağında
+  # (internal: dış çıkış yok, DB/Redis ağına bağlı değil), port yayımlanmaz. Yalnız kayıtlı ses imajı varsa başlar (release.py
+  # `COMPOSE_PROFILES=voice`). Kaynak sınırı: web/worker aç kalmasın diye CPU payı düşük ve tavanlı, bellek sınırlı, salt okunur kök.
+  voice:
+    image: etkinwms-voice:${WMS_VOICE_RELEASE:-none}
+    profiles: [voice]
+    restart: unless-stopped
+    networks: [voice]
+    expose: ['8000']
+    environment: {VOICE_THREADS: '2', VOICE_QUEUE_MAX: '4'}
+    read_only: true
+    tmpfs: ['/tmp:size=16m']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 1280m
+    cpus: 1.5
+    cpu_shares: 256
+    pids_limit: 128
+    logging: {driver: json-file, options: {max-size: 5m, max-file: '2'}}
+    healthcheck:
+      test: [CMD, python, '-c', "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
   proxy:
     image: caddy:2
     ports: ['80:80', '443:443', '443:443/udp']
@@ -73,6 +100,10 @@ services:
 networks:
   default:
     name: etkinwms_default
+  # T-1002: web ↔ voice iç ağı; internal (dış çıkış yok).
+  voice:
+    name: etkinwms_voice
+    internal: true
 volumes:
   caddy-data:
   caddy-config:

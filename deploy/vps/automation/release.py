@@ -29,9 +29,15 @@ REPO = 'shosgoren/EtkinWMS'
 CHECKS = {'verify', 'infra', 'secrets', 'deps', 'int', 'e2e', 'check-all', 'test-ac', 'check-pilot'}
 HEX40 = re.compile(r'[0-9a-f]{40}\Z')
 HEX64 = re.compile(r'[0-9a-f]{64}\Z')
-MAX_UPLOAD = 512 * 1024 * 1024
+# T-1002: ses servisi imajı (~250 MB sıkıştırılmış) yalnız değiştiğinde arşive girer; üst sınır buna göre.
+MAX_UPLOAD = 1536 * 1024 * 1024
 BASELINE_SHA = '024a800bace33c2dc3df397d56fda7e449d1d9dc'
 IMAGES = ('etkinwms', 'etkinwms-migrate')
+# T-1002 (B-62): isteğe bağlı iç ses servisi imajı. Arşivde ya hiç yoktur (önceki ses imajı sürer) ya da aynı revision/schema ve `node`
+# kullanıcısıyla vardır; içerik özeti (`services/voice` ağaç kimliği) etikettedir ve state'e yazılır (yayın hattı yalnız değişince gönderir).
+VOICE_IMAGE = 'etkinwms-voice'
+VOICE_TREE_LABEL = 'org.etkinwms.voice.tree'
+
 KEEP_BACKUPS = 10
 DB_CONTAINER = 'etkinwms-postgres'
 # T-410: Compose proje adı ve uygulama ağı state.json'dan okunur (yeniden adlandırma betiği `project`/`network` yazar). Kayıt yoksa eski
@@ -91,9 +97,12 @@ def validate_archive(path, sha, schema_hash):
             raise ValueError('BAD_MANIFEST')
         entries = json.load(archive.extractfile(manifest))
         tags = sorted(tag for entry in entries for tag in (entry.get('RepoTags') or []))
-        if len(entries) != len(IMAGES) or tags != sorted(name + ':' + sha for name in IMAGES) \
+        base = sorted(name + ':' + sha for name in IMAGES)
+        full = sorted(name + ':' + sha for name in IMAGES + (VOICE_IMAGE,))
+        if tags not in (base, full) or len(entries) != len(tags) \
                 or any(len(entry.get('RepoTags') or []) != 1 for entry in entries):
             raise ValueError('IMAGE_TAG_REJECTED')
+        voice_tree = None
         for entry in entries:
             config = archive.getmember(entry['Config'])
             if config.size > 1024 * 1024:
@@ -103,6 +112,12 @@ def validate_archive(path, sha, schema_hash):
                 raise ValueError('IMAGE_IDENTITY_REJECTED')
             if data.get('Labels', {}).get('org.etkinwms.schema.sha256') != schema_hash:
                 raise ValueError('SIGNED_SCHEMA_MISMATCH')
+            if entry['RepoTags'][0] == VOICE_IMAGE + ':' + sha:
+                voice_tree = data.get('Labels', {}).get(VOICE_TREE_LABEL)
+                if not isinstance(voice_tree, str) or not HEX40.fullmatch(voice_tree):
+                    raise ValueError('IMAGE_IDENTITY_REJECTED')
+    # Ses imajı yoksa None; varsa içerik özeti (state'e yazılır).
+    return voice_tree
 
 
 def run(args, **kwargs):
@@ -125,6 +140,15 @@ def db_network():
 def compose(state):
     env = os.environ.copy()
     env['WMS_RELEASE'] = state['tag']
+    env.pop('COMPOSE_PROFILES', None)
+    env.pop('WMS_VOICE_RELEASE', None)
+    # T-1002: ses servisi yalnız yüklenmiş bir ses imajı kaydı varsa (`voice` profili) başlar; yoksa compose onu hiç başlatmaz.
+    voice = state.get('voice')
+    if voice is not None:
+        if not isinstance(voice, str) or not HEX40.fullmatch(voice):
+            raise ValueError('VOICE_STATE_REJECTED')
+        env['WMS_VOICE_RELEASE'] = voice
+        env['COMPOSE_PROFILES'] = 'voice'
     return ['docker', 'compose', '-p', project(state), '-f', state['compose']], env
 
 
@@ -315,7 +339,7 @@ def deploy(sha, archive_hash, schema_hash):
         if receive(sys.stdin.buffer, package) != archive_hash:
             raise ValueError('UPLOAD_HASH_MISMATCH')
         signal.alarm(0)
-        validate_archive(package, sha, schema_hash)
+        voice_tree = validate_archive(package, sha, schema_hash)
         verify_provenance(package, sha, archive_hash)
         assert_ci(sha)  # main/CI may have changed during upload
         run(['docker', 'load', '-i', str(package)], stdout=subprocess.DEVNULL)
@@ -324,6 +348,11 @@ def deploy(sha, archive_hash, schema_hash):
     (release / 'release.json').write_text(json.dumps({'sha': sha, 'schema': schema_hash}))
     current = {'tag': sha, 'sha': sha, 'compose': str(AUTOMATION / 'compose.yml'), 'release': str(release), 'schema': schema_hash,
                'project': project(previous)}
+    # T-1002: yeni ses imajı geldiyse o; gelmediyse önceki yayının ses imajı sürer (geri dönüşte önceki state kendi ses kaydını taşır).
+    if isinstance(voice_tree, str):
+        current.update(voice=sha, voice_tree=voice_tree)
+    elif previous.get('voice') is not None:
+        current.update(voice=previous['voice'], voice_tree=previous.get('voice_tree'))
     args, env = compose(current)
     run(args + ['config', '--quiet'], env=env)
     # Queue sync is additive (missing queues only). Without a migration it runs while the previous release still serves,
@@ -407,10 +436,14 @@ def main():
     with (AUTOMATION / 'release.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if parts == ['check']:
+            state = json.loads((AUTOMATION / 'state.json').read_text())
             print(json.dumps({'scope': REPO, 'health': 'ok' if healthy() else 'failed',
                               'schema': (AUTOMATION / 'approved-schema.sha256').read_text().strip(),
                               'auto_migrate': migrate_env().is_file(),
-                              'release': json.loads((AUTOMATION / 'state.json').read_text())['tag']}))
+                              'release': state['tag'],
+                              # T-1002: yayın hattı ses imajını yalnız alıcı destekliyorsa ve içerik değiştiyse gönderir.
+                              'images': list(IMAGES + (VOICE_IMAGE,)),
+                              'voice_tree': state.get('voice_tree')}), flush=True)
             if not healthy():
                 raise ValueError('HEALTH_FAILED')
         else:

@@ -6,8 +6,8 @@
 // Tek ortak bileşen: Pano ve yeni tasarım alt ekranları (Ekip, Gruplar, Aktar, Cariler) ana işlemini buraya verir; Modüller listesi
 // kiracı düzeninde (sunucuda) üyenin rol/yetki/grup ekranlarından hesaplanır (`modules.ts`) ve bağlamla gelir.
 // T-967 (Destek.dc.html): sol yuva her ekranda Geri; ana ekranda pasif `.dk.off` (CSS `design/destek-ek.css`, kap `.dzdx`).
-// Bilinçli farklar (DESIGN-PARITY, T-958): Etkin (B-62) henüz yok → düğme kaynaktaki gibi çizilir, `aria-disabled`; dokununca kaynaktaki
-// "yakında" balonu. Arama kutusundaki mikrofon da aynı. İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
+// T-1002 (B-62): Etkin bas-konuş `etkin.tsx` (kabuk bağlamında `etkin: true` iken; aksi halde düğme kaynaktaki gibi çizilir, `aria-disabled`,
+// dokununca "yakında" balonu). Arama kutusundaki mikrofon hâlâ "yakında". İlk kullanım rehberi (B-75) için `spot` kancası (kaynak `.touring` / `.spot`).
 // T-990 (B-97, kullanıcı 21 Ekim): (1) Geri / Ana ekran / ana işlem bağlantısı / Modüller kutuları Next `Link` — İSTEMCİ İÇİ geçiş (tam
 // sayfa yüklemesi yok); yarım işte ortak çıkış koruması tıklamayı yakalar: yarım işte yalnız uygulamanın cam kutusu açılır, tarayıcının "Siteden çıkılsın mı?" penceresi çıkmaz.
 // (2) Ana işlem hiçbir zaman sessizce kapalı kalmaz: pasif görünür (`aria-disabled`), dokununca hata sesi + nedenini söyleyen balon
@@ -18,6 +18,7 @@ import Link from "next/link";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
+import { useEtkin } from "./etkin.tsx";
 import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 
 export interface KabukContextValue {
@@ -37,6 +38,8 @@ export interface KabukContextValue {
   readonly excel?: { readonly data: boolean; readonly master: boolean };
   /** T-979c: üyenin çalışma alanı sayısı (Hesap menüsünde "Çalışma alanı değiştir" yalnız birden fazlaysa). */
   readonly workspaces?: number;
+  /** T-1002 (B-62): Etkin sesli komut açık mı (üyelik + `stock.view`; yazma eylemleri kendi izinlerini ayrıca ister). */
+  readonly etkin?: boolean;
 }
 
 /** T-979c: görünüm geçişi (eski "Tüm ekranlar" menüsündeki Akış/Genel bakış anahtarı ile aynı çerez sözleşmesi: `view`, 1 yıl). */
@@ -203,6 +206,14 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const modsBtn = useRef<HTMLButtonElement>(null);
   const sheet = useRef<HTMLElement>(null);
   const search = useRef<HTMLInputElement>(null);
+  // T-1002 (B-62): ekran kendi `etkin` işleyicisini vermediyse kabuk bağlamındaki ortak Etkin denetleyicisi.
+  const etk = useEtkin({
+    enabled: etkin === undefined && ctx?.etkin === true && ctx.slug !== undefined,
+    base,
+    slug: ctx?.slug ?? "",
+    modules: modules.map((m) => ({ id: m.id, name: t(`mod.${m.id}.name`), href: m.href })),
+  });
+  const etkinBtn = etkin ?? (ctx?.etkin === true && ctx.slug !== undefined ? { live: etk.live, handlers: etk.handlers } : undefined);
 
 
   const close = useCallback(() => {
@@ -350,7 +361,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 <GridIco size={26} />
                 <span>{t("modsShort")}</span>
               </button>
-              {etkin === undefined ? (
+              {etkinBtn === undefined ? (
                 <button type="button" className={`dk-etkin${sp("etkin")}`} aria-label={t("etkinSoon")} aria-disabled="true" onClick={() => soon(t("etkinName"))} data-testid="kabuk-etkin" data-k="etkin">
                   <span className="mr" aria-hidden="true" />
                   <span className="mr b" aria-hidden="true" />
@@ -361,11 +372,11 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
               ) : (
                 <button
                   type="button"
-                  className={`dk-etkin${etkin.live ? " live" : ""}${sp("etkin")}`}
+                  className={`dk-etkin${etkinBtn.live ? " live" : ""}${sp("etkin")}`}
                   aria-label={t("etkin")}
-                  aria-pressed={etkin.live}
+                  aria-pressed={etkinBtn.live}
                   onContextMenu={(e) => e.preventDefault()}
-                  {...etkin.handlers}
+                  {...etkinBtn.handlers}
                   data-testid="kabuk-etkin"
                   data-k="etkin"
                 >
@@ -492,7 +503,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
               </section>
             </>
           ) : null}
-
+          {etk.overlay}
         </div>
       </div>
     </div>

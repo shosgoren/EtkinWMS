@@ -5320,5 +5320,109 @@
       "PROVIDER_CONFIG": "Sunucu ayarı eksik",
       "UNKNOWN": "Bir şey ters gitti · tekrar dene"
     }
+  },
+  "etkin": {
+    "hint": "BIRAKINCA UYGULAR · İKİ KEZ DOKUN: UZUN KONUŞMA, ‘BİTTİ’ DEYİP SUSUNCA BİTER",
+    "listening": "Dinliyorum…",
+    "timer": "DİNLİYORUM… ‘BİTTİ’ DE · {clock}",
+    "stop": "Bitti",
+    "thinking": "Anlıyorum…",
+    "example": "Örnek: “C bir rafında ne var”",
+    "release": "Bırak (uygula)",
+    "understood": "Anladım",
+    "writeSub": "STOĞU DEĞİŞTİRİR · ONAYSIZ KAYDEDİLMEZ",
+    "countSub": "SAYIM BAŞLATIR · ONAYSIZ KAYDEDİLMEZ",
+    "approve": "Onayla",
+    "fix": "Düzelt",
+    "sayHint": "‘ONAYLA’ DE · ‘DÜZELT’ DE",
+    "cancel": "Vazgeç",
+    "close": "Kapat",
+    "readSub": "YALNIZ GÖSTERİR · ONAY GEREKMEZ",
+    "open": "Aç",
+    "choose": "Seç",
+    "more": "Tümünü aç · {n}",
+    "k": {
+      "op": "İŞLEM",
+      "qty": "MİKTAR",
+      "item": "ÜRÜN",
+      "loc": "YER",
+      "from": "KAYNAK RAF",
+      "to": "HEDEF RAF",
+      "unit": "BİRİM",
+      "wh": "HEDEF DEPO",
+      "missing": "EKSİK",
+      "pick": "{n} ADAY · SEÇ"
+    },
+    "op": {
+      "count": "SAYIM",
+      "stockIn": "GİRİŞ",
+      "stockOut": "ÇIKIŞ",
+      "transfer": "TRANSFER"
+    },
+    "slot": {
+      "qty": "miktar",
+      "item": "ürün",
+      "loc": "raf",
+      "from": "kaynak raf",
+      "to": "hedef raf",
+      "unit": "birim",
+      "wh": "depo"
+    },
+    "missing": "Eksik: {list} · tekrar söyle ya da ekranda tamamla",
+    "unitConflict": "Birim farklı: ürünün birimi {unit}",
+    "completeOnScreen": "Ekranda tamamla",
+    "done": {
+      "count": "Sayım başladı · Raf {code}",
+      "stockIn": "Giriş taslağı hazır · onaya açılıyor",
+      "stockOut": "Çıkış taslağı hazır · onaya açılıyor",
+      "transfer": "Transfer kaydedildi"
+    },
+    "soundOk": "SESLİ GERİ BİLDİRİM · ONAY SESİ",
+    "soundErr": "SESLİ GERİ BİLDİRİM · HATA SESİ",
+    "retry": "Tekrar söyle",
+    "err": {
+      "unavailable": "Etkin şu an kullanılamıyor · birazdan tekrar dene",
+      "busy": "Etkin meşgul · birkaç saniye sonra tekrar söyle",
+      "empty": "Duyamadım · tekrar söyle",
+      "unknown": "Anlayamadım: “{text}”",
+      "mic": "Mikrofon izni yok · tarayıcı ayarından izin ver",
+      "rate": "Çok sık denedin · biraz bekle",
+      "forbidden": "Bu işlem için yetkin yok · sorumluna sor",
+      "stock": "Stok yetmiyor",
+      "tracking": "Bu ürün lot/seri ister · ekranda tamamla",
+      "missingLoc": "Raf bulunamadı · tekrar söyle",
+      "generic": "Kaydedilemedi · destek kodu {code}",
+      "tooShort": "Basılı tut ve konuş",
+      "notFound": "Bulunamadı · ara ya da söyle",
+      "noCard": "Onaylanacak bir şey yok"
+    },
+    "title": {
+      "tasksOf": "{name} · görevler · {n}",
+      "myTasks": "Görevlerim · {n}",
+      "loc": "Raf {code} · {n} ürün",
+      "item": "{name} · stok",
+      "choose": "Hangisi? · {text}"
+    },
+    "empty": {
+      "loc": "Bu raf bulunamadı",
+      "items": "Bu raf boş",
+      "item": "Bu ürün bulunamadı",
+      "tasks": "Açık görev yok",
+      "person": "Bu kişi bulunamadı"
+    },
+    "task": {
+      "PUTAWAY": "Yerleştirme",
+      "PICK": "Toplama",
+      "REPUTAWAY": "Yeniden yerleştirme",
+      "COUNT": "Sayım"
+    },
+    "status": {
+      "OPEN": "AÇIK",
+      "ASSIGNED": "ATANDI",
+      "DONE": "BİTTİ",
+      "CANCELLED": "İPTAL"
+    },
+    "opening": "Açılıyor…",
+    "reason": "Etkin sesli komut"
   }
 }

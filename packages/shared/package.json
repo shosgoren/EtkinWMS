@@ -11,7 +11,8 @@
     "./storage": "./src/storage.ts",
     "./cache-key": "./src/cache-key.ts",
     "./log": "./src/log.ts",
-    "./field-login": "./src/field-login.ts"
+    "./field-login": "./src/field-login.ts",
+    "./voice": "./src/voice/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
