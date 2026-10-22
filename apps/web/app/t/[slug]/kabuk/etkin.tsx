@@ -12,15 +12,14 @@
 import { useCallback, useEffect, useRef, useState, type HTMLAttributes, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { feedback, sayi } from "@wms/ui";
-import { completePlan, decide, type Draft, type PickOption, type Plan, type ReadRow, type Slot, type VoiceAnswer, type WriteOp } from "@wms/domain/voice/match";
+import { feedback, kayitBaslat, sayi, type Kayit } from "@wms/ui";
+import { completePlan, decide, type Draft, type PickOption, type Plan, type ReadRow, type Slot, type VoiceAnswer, type WriteOp } from "@wms/shared/voice";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import { etkinAnlaAction } from "../etkin/actions.ts";
 import { startCountAction } from "../counts/actions.ts";
 import { createManualStockAction, transferStockAction } from "../stock/documents/actions.ts";
 import { useModalFocus } from "../kalip/odak.ts";
-import { startRecorder, type Recorder } from "./kayit.ts";
 
 type WriteAnswer = Extract<VoiceAnswer, { type: "write" }>;
 type ReadAnswer = Extract<VoiceAnswer, { type: "read" }>;
@@ -92,7 +91,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
   const [st, setSt] = useState<St>({ s: "idle" });
   const [said, setSaid] = useState("");
   const [tick, setTick] = useState(0);
-  const rec = useRef<Recorder | null>(null);
+  const rec = useRef<Kayit | null>(null);
   const starting = useRef(false);
   const releaseWanted = useRef(false);
   const downAt = useRef(0);
@@ -253,7 +252,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
       starting.current = true;
       releaseWanted.current = false;
       try {
-        rec.current = await startRecorder({ long: mode === "long", onAuto: () => void finish() });
+        rec.current = await kayitBaslat({ long: mode === "long", onAuto: () => void finish() });
         setSaid("");
         setSt({ s: mode, at: Date.now() });
         if (mode === "listen" && releaseWanted.current) void finish();

@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
 import { assertWarehouseVisible, pgUuidArray, resolveWarehouseScope } from "../warehouse/scope.ts";
-import type { Candidate } from "./eslestir.ts";
+import type { Candidate } from "@wms/shared/voice";
 
 export type VoiceParams = Omit<TenantAccessParams, "permission" | "recentAuth">;
 
@@ -113,7 +113,7 @@ export async function locationContents(params: VoiceParams, locationId: string):
        GROUP BY i.id, i.code, i.name, u.code
       HAVING sum(b.quantity) <> 0
        ORDER BY i.code, i.id LIMIT 20`);
-    return { rows: rows.map(({ total: _t, ...r }) => r), total: Number(rows[0]?.total ?? 0) };
+    return { rows: rows.map((r) => ({ itemId: r.itemId, code: r.code, name: r.name, quantity: r.quantity, unitCode: r.unitCode })), total: Number(rows[0]?.total ?? 0) };
   });
 }
 

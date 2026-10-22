@@ -1,5 +1,6 @@
 // T-1002 (B-62): iç ses servisi istemcisi — adres yalnız ortamdan (SSRF yok), yönlendirme izlenmez, hata/zaman aşımı "unavailable".
 import { describe, expect, it, vi } from "vitest";
+import { wavYaz, yenidenOrnekle } from "@wms/ui";
 import { isAcceptedWav, transcribe, voiceBaseUrl } from "./voice.ts";
 
 function wav(n = 1600): Uint8Array<ArrayBuffer> {
@@ -26,6 +27,14 @@ describe("voice client", () => {
     expect(isAcceptedWav(bad)).toBe(false);
     expect(isAcceptedWav(wav(16000 * 9))).toBe(false);
     expect(isAcceptedWav(new Uint8Array(10))).toBe(false);
+  });
+
+  it("tarayıcı kaydedicisinin ürettiği WAV sunucu sözleşmesine uyar (48 kHz → 16 kHz)", () => {
+    const pcm = yenidenOrnekle(new Float32Array(48000).fill(0.25), 48000);
+    expect(pcm.length).toBe(16000);
+    const out = wavYaz(pcm);
+    expect(out.length).toBe(44 + 32000);
+    expect(isAcceptedWav(new Uint8Array(out))).toBe(true);
   });
 
   it("adres yalnız http(s), kimlik bilgisiz; varsayılan iç ağ adı", () => {

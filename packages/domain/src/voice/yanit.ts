@@ -2,11 +2,8 @@
 // (RLS + tenant süzgeci + depo kapsamı). Yazma niyetinde yalnız taslak döner; kayıt istemcinin Onayla'sıyla mevcut eylemlerden yapılır.
 import { listMyTasks, listTasks, type TaskKind, type TaskRow } from "../operations/tasks.ts";
 import { sumItemsStock } from "../stock/item-card.ts";
-import { resolveWrite, type ReadRow, type VoiceAnswer } from "./cozum.ts";
-import { decide, decideLocation } from "./eslestir.ts";
-import { parseCommand, type TaskKindHint } from "./niyet.ts";
+import { decide, decideLocation, fold, parseCommand, resolveWrite, type ReadRow, type TaskKindHint, type VoiceAnswer } from "@wms/shared/voice";
 import { describeTaskRefs, loadVoiceCatalog, locationContents, type VoiceParams } from "./sorgu.ts";
-import { fold } from "./turkce.ts";
 
 const enc = encodeURIComponent;
 
