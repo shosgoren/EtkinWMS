@@ -216,6 +216,31 @@ function expectCatalog(cat: Catalog): void {
 }
 
 describe("migrations — süper kullanıcı olmayan migrator (ikinci Testcontainers örneği)", () => {
+  it("0056 → 0057: sınırlı migration sahibi tetikleyiciyi kurar; geçici EXECUTE kalmaz ve mükerrer kayıt engellenir", async () => {
+    await setProbeMemberships(STANDARD_GRANT);
+    const u = await freshDatabase();
+    await migrateUp({ url: u, dir: copyMigrations("0056") });
+    await withClient(u, async (c) => {
+      expect((await c.query("SELECT current_user = session_user AS same, rolsuper, rolbypassrls FROM pg_roles WHERE rolname=current_user")).rows[0])
+        .toEqual({ same: true, rolsuper: false, rolbypassrls: false });
+      expect((await c.query("SELECT inherit_option, set_option FROM pg_auth_members WHERE member=current_user::regrole AND roleid='wms_identity_probe'::regrole")).rows)
+        .toEqual([{ inherit_option: false, set_option: true }]);
+    });
+    expect((await migrateUp({ url: u, dir: copyMigrations("0057") })).applied).toEqual(["0057"]);
+    await withClient(u, async (c) => {
+      const fn = (await c.query("SELECT proowner::regrole::text AS owner, prosecdef, proconfig, proacl::text[] AS acl FROM pg_proc WHERE oid='wms_probe.demo_email_reserve()'::regprocedure")).rows[0];
+      expect(fn).toEqual({ owner: PROBE, prosecdef: false, proconfig: ["search_path=pg_catalog, pg_temp"], acl: [`${PROBE}=X/${PROBE}`] });
+      expect((await c.query("SELECT has_function_privilege(current_user,'wms_probe.demo_email_reserve()','EXECUTE') AS allowed")).rows[0]).toEqual({ allowed: false });
+      const email = `synthetic-${randomUUID()}@example.test`;
+      await c.query("SET ROLE wms_identity_probe");
+      const ingest = async (address: string) => (await c.query("SELECT wms_probe.platform_ingest_demo_request($1,now(),'Synthetic','Synthetic',$2,'','') AS inserted", [randomUUID(), address])).rows[0]?.inserted;
+      expect(await ingest(email)).toBe(true);
+      expect(await ingest(` ${email.toUpperCase()} `)).toBe(false);
+      await c.query("RESET ROLE");
+      expect((await c.query("SELECT count(*)::int AS n FROM wms_platform.demo_requests WHERE email=$1", [email])).rows[0]).toEqual({ n: 1 });
+    });
+  });
+
   it("ileri → geri → ileri hatasız; sahiplik/ACL/üyelik katalog denetimi; geri sonrası wms_probe yok", async () => {
     await setProbeMemberships(STANDARD_GRANT);
     const u = await freshDatabase();

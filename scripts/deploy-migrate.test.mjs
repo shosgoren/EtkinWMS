@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -196,6 +196,9 @@ describe("resolveDirectUri (Migrate adımı; NEON_API_KEY görmez)", () => {
   it("grup/herkes okuyabilen URI dosyası → ret", () => {
     const f = tmpFile();
     writeFileSync(f, `${URI}\n`, { mode: 0o644 });
+    // A restrictive host umask must not turn this invalid synthetic fixture into 0600.
+    // Its parent is a private mkdtemp directory; no real credential is used.
+    chmodSync(f, 0o644);
     expect(() => readUriFile(f)).toThrow(/0600/);
   });
 });
