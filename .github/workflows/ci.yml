@@ -217,7 +217,8 @@ jobs:
           if kv["int_run"] == "true" and kv["int_files"] == "": assert len(im["include"]) == 3
           with open(dst, "a") as o:
               for k in keys[2:]: o.write(f"{k}={kv[k]}\n")
-          print(f"seçim: e2e_run={kv['e2e_run']} ({len(kv['e2e_files'].split()) or 'tam'}) · int_run={kv['int_run']} ({len(kv['int_files'].split()) or 'tam'})")
+          n = lambda k: "yok" if kv[f"{k}_run"] == "false" else (len(kv[f"{k}_files"].split()) or "tam")
+          print(f"seçim: e2e {n('e2e')} · int {n('int')}")
           PY
           then full "seçici çıktısı geçersiz"; fi
 
