@@ -99,6 +99,7 @@ Operatör betiği tuzakları (aynı hataları tekrarlama):
 - Sözleşmedeki RPO≤15dk/RTO≤4saat hedefleri için günlük dump yeterli değil; WAL/PITR veya uygun hizmet ve ölçülmüş tatbikat gerekir. Hedefi test etmeden sağlandı deme.
 - Restore izole DB'de; schema/defter, ACL/RLS/fonksiyon owner, sayımlar ve hedef imaj health/iş akışı. Canlı DB'ye yanlışlıkla test restore yok.
 - Her yedekte saat, kaynakDB kimlik metadatası, schema, checksum/boyut, saklama yeri, restore denemesi/sonuç. Backup/restore komutları task+planla review edilir; veri silen reset kullanıcı onayı ister.
+- **Müşteri sıfırlama (T-1004):** bütün kiracıları silip panel operatörünü koruyan betik `deploy/vps/ops/reset-tenants.sql`; adımlar (durdur → `reset-*.dump` yedek → kuru → gerçek → demo JSONL'i taşı → başlat) `deploy/vps/ops/RESET.md`. Yalnız kullanıcı root olarak çalıştırır; canlıda çalıştırıldığı ayrıca kaydedilir.
 
 ## Hesap / kurtarma
 Yeni tenant/ilk-owner tekrar açılmadan mevcut üyelik, password/MFA boolean'ları kontrol edilir. İlk sahip aracı source ledger=DBledger eşleşmesine göre çalışır; eski “tam27” notu güncel build için kör uygulanmaz. MAIL_MODE disabled ise mail teslimini varsayma. Private tek kullanımlık link sohbet/log/CI artifact'a konmaz; kullanıcı kendi parolasını ve MFA'sını girer. Geçersiz/expired link için journal'ı silme veya normal resume guard'ını aşma; aynı hedefe bağlı incelenmiş recovery kullan. Şu an Motive'de password veMFA var; geçmiş başarısız kurulum yeniden uygulanmaz.
