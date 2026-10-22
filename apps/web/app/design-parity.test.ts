@@ -21,6 +21,7 @@ import { DICON } from "./design/destek-icons.ts";
 import { YDICON } from "./design/yonet-destek-icons.ts";
 import { SHICON } from "./design/paylas-icons.ts";
 import { NICON } from "./design/entegrasyon-icons.ts";
+import { JICON } from "./design/yolculuk-icons.ts";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 const source = readFileSync(join(repoRoot, "docs/design/source/Bakis.dc.html"), "utf8");
@@ -36,6 +37,7 @@ const destek = readFileSync(join(repoRoot, "docs/design/source/Destek.dc.html"),
 const yonetDestek = readFileSync(join(repoRoot, "docs/design/source/YonetDestek.dc.html"), "utf8");
 const paylas = readFileSync(join(repoRoot, "docs/design/source/Paylas.dc.html"), "utf8");
 const entegrasyon = readFileSync(join(repoRoot, "docs/design/source/Entegrasyon.dc.html"), "utf8");
+const yolculuk = readFileSync(join(repoRoot, "docs/design/source/Yolculuk.dc.html"), "utf8");
 
 describe("I-18 tasarım birebir", () => {
   it("üretilmiş CSS ve belirteçler kaynaktan yeniden üretilenle bayt bayt aynı", () => {
@@ -101,10 +103,15 @@ describe("I-18 tasarım birebir", () => {
     expect(entegrasyon.includes(`"${d}"`) || entegrasyon.includes(`'${d}'`)).toBe(true);
   });
 
+  it.each(Object.entries(JICON))("Yolculuk ikonu %s kaynakta birebir geçer (T-1006)", (_k, d) => {
+    expect(yolculuk.includes(`"${d}"`) || yolculuk.includes(`'${d}'`)).toBe(true);
+  });
+
   it.each([
     ["Destek", destek],
     ["Yönetim · Destek", yonetDestek],
     ["Entegrasyon", entegrasyon],
+    ["Yolculuk", yolculuk],
   ])("%s kaynağı: SOURCE.md ve üreteç sha256 kaydı dosyayla aynı", (_n, html) => {
     const sum = createHash("sha256").update(html).digest("hex");
     expect(readFileSync(join(repoRoot, "docs/design/source/SOURCE.md"), "utf8")).toContain(sum);

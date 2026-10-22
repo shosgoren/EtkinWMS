@@ -1,0 +1,21 @@
+// T-1006 (I-18): Yolculuk.dc.html'deki SVG path verileri — birebir, elle çizim yok. design-parity.test.ts her değerin kaynakta aynen geçtiğini denetler.
+export const JICON = {
+  cards: "M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10",
+  shelves: "M4 4v16M20 4v16M4 9h16M4 15h16",
+  stock: "M12 3v12M7 10l5 5 5-5M4 19h16",
+  labels: "M3 12V4h8l10 10-8 8zM7.5 7.5h.01",
+  bom: "M6 3h9l4 4v14H6zM9 12h7M9 16h5M14 3v5h5",
+  order: "M3 21V10l6 4V10l6 4V6l6 4v11zM7 17h2M12 17h2M17 17h2",
+  people: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14a6 6 0 0 1 3.5 6",
+  task: "M9 4h6v3H9zM6 5.5H5v15h14v-15h-1M8.5 13l2.5 2.5 5-5",
+  check: "m5 12 5 5 9-10",
+  close: "M6 6l12 12M18 6 6 18",
+  next: "M5 12h14M13 6l6 6-6 6",
+  speak: "M4 9v6h4l5 4V5L8 9z",
+  speakWave: "M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12",
+  mic: "M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21",
+  excel: "M4 4h16v16H4zM4 9h16M4 14h16M9 4v16",
+  plug: "M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4",
+  flag: "M5 21V4M5 4h11l-2 4 2 4H5",
+  back: "M15 5l-7 7 7 7",
+} as const;

@@ -174,6 +174,7 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
         setOpen((o) => !o);
       }}
       data-testid="kalip-excel"
+      data-tour="excel"
     >
       <Ico d={LICON.excel} size={22} />
     </button>
@@ -184,7 +185,7 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
       {open ? (
         <div className={panoScope} style={{ display: "contents" }}>
           <div className="hback" onClick={close} />
-          <div className="halo tmenu" role="menu" aria-label={t("menu", { kind: label })} data-testid="kalip-excel-menu">
+          <div className="halo tmenu" role="menu" aria-label={t("menu", { kind: label })} data-testid="kalip-excel-menu" data-tour-follow="excel">
             <div className="tmh">
               <span className="av" style={{ background: dz("2F7D5B") }}>
                 <Ico d={LICON.excel} size={20} />

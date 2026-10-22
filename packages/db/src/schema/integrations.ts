@@ -92,6 +92,10 @@ export const integrations = pgTable(
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     version: integer("version").notNull().default(1),
+    // T-1006 (0056): ERP'den BİR KEZLİK açılış stoku — ayar (varsayılan kapalı) + kilit (alındı zamanı + belge; bir kez dolar, değişmez).
+    openingStockEnabled: boolean("opening_stock_enabled").notNull().default(false),
+    openingStockTakenAt: timestamptz("opening_stock_taken_at"),
+    openingStockDocumentId: uuid("opening_stock_document_id"),
   },
   (t) => [unique("integrations_tenant_id_id_key").on(t.tenantId, t.id), unique("integrations_tenant_provider_key").on(t.tenantId, t.provider)],
 );

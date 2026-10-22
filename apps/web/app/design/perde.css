@@ -6,7 +6,9 @@
    ui-standards.test.ts). Önekli `-webkit-backdrop-filter` YAZILMAZ: CSS küçültücü kendisi ekler; elle yazılınca standart özelliği
    siliyordu (Modüller perdesi bulanık değildi, kök neden). Yerel `<dialog>` perdesi (`::backdrop`, ör. eski Daha fazla sayfası) da aynı
    değeri alır; kalıp penceresi kendi `.sxback` perdesini çizdiğinden `::backdrop`'u saydamdır (kalip-frame.css). Hareketi azaltma: yalnız animasyon kapanır, bulanıklık kalır. Renk sabiti yok. */
-:root { --perde-bg: var(--color-dz-a-afajan-ef); --perde-blur: blur(8px); }
+/* T-1006 düzeltmesi: `--color-dz-a-afajan-ef` yalnız `.dzk` kabında tanımlıydı; `:root`ta çözülemeyen değer bütün perdelerde karartmayı
+   saydam bırakıyordu (yalnız bulanıklık kalıyordu). Karartma artık kök belirteçten (`globals.css` `--color-perde`, aynı değer). */
+:root { --perde-bg: var(--color-perde); --perde-blur: blur(8px); }
 
 .kperde,
 .dzk .hback, .dzk .veil,

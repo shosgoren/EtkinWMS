@@ -14,6 +14,7 @@ import { newSupportCode, ticketNo, whenOf } from "../../../support-format.ts";
 import {  } from "../kabuk/kabuk-bar.tsx";
 import { listMySupportTicketsAction, markSupportSeenAction, replySupportTicketAction, submitSupportTicketAction, type SupportTicketView } from "../support-actions.ts";
 import { balonGoster, feedback } from "@wms/ui";
+import { JOURNEY_OPEN_EVENT } from "../yolculuk/steps.ts";
 
 const SUBJECTS: readonly SupportSubjectKind[] = ["BUG", "HOWTO", "IDEA", "OTHER"];
 const BODY_MAX = 2000;
@@ -243,7 +244,9 @@ export function SupportSheet({ slug, dark, appVersion, onClose, onSent }: { slug
                 onClick={() => {
                   feedback.minor();
                   onClose();
-                  window.dispatchEvent(new Event(GUIDE_EVENT));
+                  // T-1006: hesap sahibi / yöneticide "Rehberi aç" kurulum yolculuğunu açar (dinleyen olayı iptal eder); diğerlerinde eski rehber.
+                  const handled = !window.dispatchEvent(new Event(JOURNEY_OPEN_EVENT, { cancelable: true }));
+                  if (!handled) window.dispatchEvent(new Event(GUIDE_EVENT));
                 }}
                 data-testid="support-guide"
               >

@@ -1032,7 +1032,13 @@
       "disconnected": "ERP connection removed",
       "flow_changed": "ERP transfer flow changed",
       "run_requested": "ERP transfer started manually",
-      "synced": "ERP transfer ran"
+      "synced": "ERP transfer ran",
+      "opening_stock_setting": "Opening stock setting changed",
+      "opening_stock_taken": "Opening stock taken from ERP"
+    },
+    "setup_journey": {
+      "updated": "Setup journey choice changed",
+      "labels_printed": "First label printed"
     }
   },
   "auditLog": {
@@ -5319,6 +5325,33 @@
       "PROVIDER_COMPANY_NOT_FOUND": "Company not found",
       "PROVIDER_CONFIG": "Server setting missing",
       "UNKNOWN": "Something went wrong · try again"
+    },
+    "opening": {
+      "title": "Opening stock",
+      "sub": "Quantities in {provider} · once",
+      "toggle": "Take opening stock from {provider}",
+      "toggleSub": "Taken once · afterwards stock only flows from Etkin to {provider}",
+      "onAria": "Take opening stock from {provider}: on",
+      "offAria": "Take opening stock from {provider}: off",
+      "on": "Opening stock setting turned on",
+      "off": "Opening stock setting turned off",
+      "takenAt": "Opening stock taken · {at}",
+      "shelf": "Which shelf should the stock go to?",
+      "noShelf": "Create a shelf first, then take it here",
+      "once": "Runs once",
+      "pull": "Take now",
+      "pickShelf": "Pick the shelf first",
+      "done": "Opening stock taken: {n} items",
+      "reasons": {
+        "DISABLED": "Setting is off · turn it on first",
+        "ALREADY_TAKEN": "Opening stock already taken · not taken again",
+        "LOCATION_INVALID": "This shelf can't be used · pick another",
+        "NOTHING": "No stock to take · pull item cards first",
+        "TOO_MANY": "Too many items · use the Excel opening stock template",
+        "PAIR_HAS_STOCK": "Some items already have stock · try again",
+        "NOT_CONNECTED": "Not connected · connect first",
+        "DEMO": "Not available in the trial workspace"
+      }
     }
   },
   "etkin": {
@@ -5424,5 +5457,205 @@
     },
     "opening": "Opening…",
     "reason": "Etkin voice command"
+  },
+  "yolculuk": {
+    "title": "Setup journey",
+    "titleDone": "Setup complete",
+    "sub": "{done}/{total} done · Next: {next}",
+    "subDone": "{done}/{total} done · Your warehouse is ready",
+    "go": "Continue",
+    "finish": "Finish",
+    "cardAria": "First setup journey: {done}/{total} done",
+    "ringAria": "{done}/{total} done",
+    "sheetSub": "Learn by doing · done automatically when data exists",
+    "close": "Close",
+    "start": "Start",
+    "skip": "I don't use this",
+    "unskip": "Undo",
+    "skippedSub": "Not used · undo",
+    "doneAria": "Done",
+    "prodQ": "Do you manufacture?",
+    "yes": "Yes",
+    "no": "No",
+    "steps": {
+      "cards": {
+        "title": "Bring your cards",
+        "sub": "Excel or Paraşüt",
+        "count": "{n} items"
+      },
+      "shelves": {
+        "title": "Warehouse and shelves",
+        "sub": "Bulk shelf builder",
+        "count": "{n} shelves"
+      },
+      "stock": {
+        "title": "Stock entry",
+        "sub": "Opening stock",
+        "count": "{n} movements"
+      },
+      "labels": {
+        "title": "Make and print labels",
+        "sub": "Item and shelf labels",
+        "count": "Printed"
+      },
+      "bom": {
+        "title": "Define a recipe (BOM)",
+        "sub": "Only if you manufacture",
+        "count": "{n} recipes"
+      },
+      "order": {
+        "title": "Issue a production order",
+        "sub": "Produce from a recipe",
+        "count": "{n} productions"
+      },
+      "people": {
+        "title": "Add field staff",
+        "sub": "Join by QR",
+        "count": "{n} people"
+      },
+      "task": {
+        "title": "Assign the first task",
+        "sub": "Picking or counting",
+        "count": "{n} tasks"
+      }
+    },
+    "cards": {
+      "step": "Step {n}/{total}",
+      "srcQ": "Where should the cards come from?",
+      "src": {
+        "EXCEL": "From Excel",
+        "EXCELSub": "Fill the template · upload",
+        "PARASUT": "From Paraşüt",
+        "PARASUTSub": "Connect · they arrive automatically"
+      },
+      "stockQ": "Shall we also take current stock quantities?",
+      "stockQSub": "Taken once · afterwards stock only flows from Etkin to Paraşüt",
+      "stockQSubExcel": "With the opening stock template · once",
+      "stock": {
+        "yes": "Yes, take stock too",
+        "yesSub": "As opening stock",
+        "no": "No, cards only",
+        "noSub": "I'll enter stock later"
+      },
+      "open": "Open the screen",
+      "pickSource": "First choose where the cards come from",
+      "pickStock": "Answer the stock question: Yes or No"
+    },
+    "coach": {
+      "aria": "Setup tour",
+      "step": "Step {n}/{total} · {title}",
+      "stepDone": "Step {n}/{total} · Done",
+      "speak": "Read aloud",
+      "close": "Close tour",
+      "steps": "Steps",
+      "say": "Say: “{phrase}”",
+      "doneTitle": "{title} done",
+      "nextLine": "Next: {title}.",
+      "allDone": "All steps are done.",
+      "next": "Next",
+      "backList": "Back to list",
+      "noSpeech": "Read aloud is not available on this device",
+      "goText": "Let's open this step's screen; I'll show you where to tap.",
+      "noNext": "This is the last step",
+      "noPrev": "This is the first step",
+      "useExcel": "I use Excel",
+      "useParasut": "I use Paraşüt",
+      "prev": "Back",
+      "skip": "Skip",
+      "open": "Open screen",
+      "forward": "Next"
+    },
+    "hint": {
+      "cardsExcel": {
+        "title": "Item cards from Excel",
+        "text": "Tap the glowing button and choose your Excel file; items are matched automatically."
+      },
+      "cardsParasut": {
+        "title": "Connect to Paraşüt",
+        "text": "Tap the glowing CONNECT button; your item cards arrive automatically."
+      },
+      "cardsSync": {
+        "title": "Pull cards from Paraşüt",
+        "text": "Turn on the item cards flow, then tap the glowing SYNC button."
+      },
+      "warehouse": {
+        "title": "Add your first warehouse",
+        "text": "Tap the glowing ADD button and type the warehouse name."
+      },
+      "shelves": {
+        "title": "Create shelves",
+        "text": "Tap the glowing button; the bulk shelf builder opens all shelves at once."
+      },
+      "stockParasut": {
+        "title": "Take opening stock from Paraşüt",
+        "text": "Pick the shelf and tap the glowing Take now button; stock arrives once."
+      },
+      "stockExcel": {
+        "title": "Opening stock template",
+        "text": "Tap the glowing button and upload your opening stock file."
+      },
+      "stockManual": {
+        "title": "Make the first stock entry",
+        "text": "Pick the item and quantity, save with the glowing button."
+      },
+      "labelsItems": {
+        "title": "Print a label",
+        "text": "Open an item, tap Label and print."
+      },
+      "labels": {
+        "title": "Print shelf labels",
+        "text": "Tap the glowing PRINT button; labels go to the printer."
+      },
+      "bom": {
+        "title": "Define your first recipe",
+        "text": "Choose the product and raw materials, save with the glowing button."
+      },
+      "orderList": {
+        "title": "Choose a recipe",
+        "text": "Tap a recipe in the list, then PRODUCE."
+      },
+      "order": {
+        "title": "Issue a production order",
+        "text": "Type the quantity and tap the glowing PRODUCE button."
+      },
+      "people": {
+        "title": "Add field staff",
+        "text": "Tap the glowing button; send the join QR via WhatsApp."
+      },
+      "task": {
+        "title": "Assign the first task",
+        "text": "Pick a picking or counting task and assign it to someone."
+      },
+      "cardsItems": {
+        "title": "Bring your items from Excel",
+        "text": "Tap here to bring your items from Excel, then choose Import."
+      }
+    },
+    "voice": {
+      "cards": "Open Excel",
+      "shelves": "Open warehouse",
+      "stock": "Receive 10 boxes of seal",
+      "labels": "Open labels",
+      "bom": "Open production",
+      "order": "Open production",
+      "people": "Open team",
+      "task": "Assign task"
+    },
+    "cele": {
+      "title": "Setup complete!",
+      "text": "Your warehouse is ready. Follow it every day from the Board.",
+      "button": "Back to Board",
+      "toast": "Setup completed"
+    },
+    "toast": {
+      "stepDone": "Step done: {title}",
+      "skipped": "{title} skipped",
+      "failed": "Could not save · try again",
+      "prodYes": "Production steps are on",
+      "prodNo": "Production steps hidden",
+      "openingNotSet": "Turn on opening stock on the Integration screen"
+    },
+    "mini": "Setup",
+    "miniSub": "{done}/{total} done"
   }
 }
