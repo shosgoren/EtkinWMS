@@ -34,11 +34,11 @@ test.use({
 
 /** Ses/titreşim çağrılarını sayan sahteler (gerçek cihaz yok); sayaçlar `window.__fb` altındadır. */
 const FEEDBACK_STUBS = `
-  window.__fb = { vibrate: [], tones: 0 };
+  window.__fb = { vibrate: [], tones: 0, freqs: [] };
   navigator.vibrate = (p) => { window.__fb.vibrate.push(p); return true; };
   window.AudioContext = class { constructor() { this.state = "running"; this.currentTime = 0; this.destination = {}; }
     resume() { return Promise.resolve(); }
-    createOscillator() { window.__fb.tones++; return { frequency: {}, connect() {}, start() {}, stop() {} }; }
+    createOscillator() { window.__fb.tones++; const f = {}; Object.defineProperty(f, "value", { set(v) { window.__fb.freqs.push(v); } }); return { frequency: f, connect() {}, start() {}, stop() {} }; }
     createGain() { return { gain: {}, connect() {} }; } };
 `;
 
@@ -295,7 +295,7 @@ test("yerleşik API yolu: seçilir, WASM yüklenmez; yanlış okuma satır içi 
   await expect(overlay.getByRole("button", { name: "Elle gir" })).toBeVisible();
 
   // Doğru okuma: yeşil onay görünür, katman kapanır, kod TEK kez akışa gider (sunucu çağrısı sayısı = 1).
-  const before = await page.evaluate<{ vibrate: unknown[]; tones: number }>("window.__fb");
+  const before = await page.evaluate<{ vibrate: unknown[]; tones: number; freqs: number[] }>("window.__fb");
   const posts: string[] = [];
   page.on("request", (r) => {
     if (r.method() === "POST") posts.push(r.url());
@@ -308,11 +308,13 @@ test("yerleşik API yolu: seçilir, WASM yüklenmez; yanlış okuma satır içi 
   await page.screenshot({ path: path.join(SHOTS, "390x844-okundu.png") });
   await expect(overlay).toHaveCount(0);
   await expect(page.getByTestId("last-scan-code")).toContainText(CODE);
-  const after = await page.evaluate<{ vibrate: unknown[]; tones: number }>("window.__fb");
-  // Okuma anında tek kısa titreşim (60) ve tek ton; ardından sunucu reddi mevcut tam ekran uyarının kendi titreşimini ekleyebilir (sıra: önce okuma).
+  const after = await page.evaluate<{ vibrate: unknown[]; tones: number; freqs: number[] }>("window.__fb");
+  // Okuma anında tek kısa titreşim (60) ve tek olumlu bip (1200 Hz); ardından sunucu reddi tam ekran uyarının kendi sesini ve titreşimini
+  // ekleyebilir (sıra: önce okuma). T-436: uyarı sesi de ortak kaynaktan çaldığı için toplam ton sayısı değil, olumlu bip sayısı denetlenir.
   expect(after.vibrate[before.vibrate.length]).toBe(60);
   expect(after.vibrate.slice(before.vibrate.length).filter((v) => v === 60)).toHaveLength(1);
-  expect(after.tones).toBe(before.tones + 1);
+  expect(after.freqs[before.freqs.length], "okuma anında ilk ses olumlu bip").toBe(1200);
+  expect(after.freqs.slice(before.freqs.length).filter((f) => f === 1200), "tek olumlu bip").toHaveLength(1);
   await expect(page.getByTestId("scan-alert")).toBeVisible();
   await page.waitForTimeout(1200);
   expect(posts.length, "kod sunucuya tek kez gitti (çift okuma yok)").toBe(1);
@@ -410,7 +412,8 @@ test("kamera ile el terminali aynı anda: tek sunucu çağrısı, tek uyarı; ge
   await expect(page.getByTestId("camera-accepted-value")).toHaveCount(0);
   await expect(page.getByTestId("camera-status")).not.toContainText("Okundu.");
   await expect(page.getByTestId("camera-status")).toContainText("Kod işlenmedi");
-  expect(await page.evaluate<number>("window.__fb.tones"), "düşürülen okumada olumlu bip çalmaz").toBe(0);
+  // T-436 (ALTIN-KURAL 5): el terminalinin hatalı okuması artık ortak ret sesini (alçak çift ton) çalar; olumlu bip (1200 Hz) yoktur.
+  expect(await page.evaluate<number[]>("window.__fb.freqs"), "düşürülen okumada olumlu bip çalmaz").not.toContain(1200);
   // T-287c güvenlik MAJOR-1: düşürülen kod hiçbir yolla işlenmez. Uyarı kapandıktan sonra kamera aynı kodu kendiliğinden yeniden göndermez;
   // yalnız kullanıcının açık yeni okutma eylemi (Yeniden okut) kabul edilir.
   await page.getByRole("button", { name: "Anladım, tekrar okut" }).click();

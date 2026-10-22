@@ -8,15 +8,16 @@
 // T-990 (ALTIN-KURAL): kapalı ONAYLA sessiz kalmaz (alt çubukta `disabledReason`; karttaki düğme dokununca hata sesi + neden balonu);
 // kod yazılmışken Geri / Ana ekran / bağlantılar ortak cam çıkış kutusunu açar (`useCikisKorumasi`).
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../../kalip/cikis.tsx";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveEnrollmentAction, cancelEnrollmentAction, enrollmentStatusAction, revokeDeviceAction, startEnrollmentAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
+import { buyukHarf, feedback } from "@wms/ui";
 
 export interface DeviceItem {
   readonly id: string;
@@ -54,6 +55,7 @@ export function DevicesView({
 }) {
   const t = useTranslations("fieldDevices");
   const format = useFormatter();
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [enr, setEnr] = useState<Enrollment | null>(null);
   const [claim, setClaim] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export function DevicesView({
     const r = await approveEnrollmentAction({ slug, enrollmentId: enr.id, confirmCode: cc });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       if (r.error.detail === "CODE_MISMATCH") {
         setErr({ text: t("errCode"), reauth: false });
         setCc("");
@@ -134,7 +136,6 @@ export function DevicesView({
       return;
     }
     setErr(null);
-    tone("ok");
     say("ok", t("approved"));
     router.refresh();
     void start();
@@ -157,11 +158,10 @@ export function DevicesView({
     const r = await revokeDeviceAction({ slug, deviceId });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
-    tone("ok");
     say("ok", t("sessionsClosed"));
   }
 
@@ -170,11 +170,10 @@ export function DevicesView({
     const r = await revokeDeviceAction({ slug, deviceId: d.id });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(r.error.detail === "RECENT_AUTH_REQUIRED" ? { text: t("errReauth"), reauth: true } : { text: t("errServer"), reauth: false });
       return;
     }
-    tone("ok");
     say("ok", t("revoked"));
     router.refresh();
   }
@@ -187,7 +186,6 @@ export function DevicesView({
   const offReason = busy ? t("offBusy") : t("offCode");
   const onApprove = (): void => {
     if (busy || cc.length !== 6) {
-      tone("err");
       say("err", offReason);
       return;
     }
@@ -199,7 +197,7 @@ export function DevicesView({
       kind="liste"
       dark={dark}
       title={t("title")}
-      subtitle={t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}
+      subtitle={t("bandS", { tenant: buyukHarf(tenantName, locale) })}
       icon={{ d: LICON.key, color: "30475A" }}
       testId="field-devices"
       bar={{
@@ -212,7 +210,7 @@ export function DevicesView({
                 disabled: busy,
                 disabledReason: t("offBusy"),
                 onClick: () => {
-                  tone("tap");
+                  feedback.minor();
                   void reject();
                 },
                 testId: "devices-new-qr",
@@ -301,7 +299,7 @@ export function DevicesView({
         <KalipKartListe label={t("listTitle")}>
           {devices.map((d, i) => {
             const label = d.kind === "PERSONAL" && d.owner !== null ? `${d.owner} · ${d.name}` : d.name;
-            const when = format.relativeTime(new Date(d.lastUsedAt), now).toLocaleUpperCase("tr-TR");
+            const when = buyukHarf(format.relativeTime(new Date(d.lastUsedAt), now), locale);
             return (
               <div key={d.id} role="listitem" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }} data-testid="device-row">
                 <div style={HEAD}>

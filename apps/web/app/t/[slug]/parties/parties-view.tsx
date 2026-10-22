@@ -11,12 +11,13 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
-import { KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipIzgara } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { archivePartyAction, savePartyAction } from "./actions.ts";
+import { feedback } from "@wms/ui";
 
 export interface PartyView {
   readonly id: string;
@@ -61,6 +62,7 @@ const ISSUE_FIELD: Record<string, keyof Form> = {
 
 function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark: boolean; canEdit: boolean; party: PartyView | null; onClose: (msg?: string) => void }) {
   const t = useTranslations("parties");
+  const tr = useTranslations("kural");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const [initial] = useState<Form>(() => (party === null ? empty : fromParty(party)));
@@ -92,11 +94,24 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
     const r = await archivePartyAction({ slug, id: party.id, expectedVersion: party.version, archived: !party.archived });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error(r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }));
       return;
     }
-    tone("ok");
-    onClose(party.archived ? t("restoredDone") : t("archivedDone"));
+    if (party.archived) {
+      onClose(t("restoredDone"));
+      router.refresh();
+      return;
+    }
+    // T-436 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay sorulmaz; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
+    const id = party.id;
+    const version = r.data.version;
+    onClose();
+    feedback.undo(t("archivedDone"), tr("undo"), async () => {
+      const u = await archivePartyAction({ slug, id, expectedVersion: version, archived: false });
+      if (u.ok) feedback.ok(tr("undone"));
+      else feedback.error(tr("undoFailed"));
+      router.refresh();
+    });
     router.refresh();
   }
 
@@ -184,6 +199,7 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
 
 export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: { slug: string; dark: boolean; canEdit: boolean; q: string; archived: boolean; items: readonly PartyView[]; total: number }) {
   const t = useTranslations("parties");
+  const tr = useTranslations("kural");
   const router = useRouter();
   const params = useSearchParams();
   const base = `/t/${encodeURIComponent(slug)}`;
@@ -196,7 +212,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
   const editing = editId === null ? undefined : items.find((p) => p.id === editId);
 
   const open = (p: PartyView | null): void => {
-    tone("tap");
+    feedback.minor();
     const sep = listHref.includes("?") ? "&" : "?";
     router.push(p === null ? `${listHref}${sep}new=1` : `${listHref}${sep}edit=${encodeURIComponent(p.id)}`);
   };
@@ -235,10 +251,18 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
       <KalipCipler label={t("filter")} chips={chips} />
       {shown.length === 0 ? (
         <>
-          <KalipBos
-            title={q === "" && kind === "" ? t("empty") : t("noMatch")}
-            {...(q === "" && kind === "" ? {} : { action: { label: t("clear"), ...(kind === "" ? { href: archived ? `${list}?arsiv=1` : list } : { onClick: () => setKind("") }) } })}
-          />
+          {q === "" && kind === "" && !archived ? (
+            <KalipBos
+              title={t("empty")}
+              iconD={ICON.d}
+              action={canEdit ? { label: t("firstParty"), kind: "add", onClick: () => open(null) } : { label: tr("home"), href: base, kind: "go" }}
+            />
+          ) : (
+            <KalipBos
+              title={tr("notFoundSearch")}
+              action={{ label: t("clear"), kind: "clear", ...(kind !== "" && q === "" && !archived ? { onClick: () => setKind("") } : { href: list }) }}
+            />
+          )}
           {canEdit ? (
             <KalipDaha href={`${base}/import`} iconD={LICON.excel} iconColor="1E7B45">
               {t("importLink")}

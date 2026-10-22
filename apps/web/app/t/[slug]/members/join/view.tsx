@@ -8,15 +8,16 @@
 // T-990 (ALTIN-KURAL): kapalı ana işlem ve karttaki ONAYLA sessiz kalmaz (hata sesi + neden balonu: demo / işlem sürüyor / kod eksik);
 // onay kartında kod yazılmışken Geri / Ana ekran / bağlantılar ortak cam çıkış kutusunu açar (`useCikisKorumasi`).
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../../kalip/cikis.tsx";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipBos, KalipKartListe } from "../../kalip/liste.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { approveJoinAction, createJoinLinkAction, rejectJoinAction, revokeJoinLinkAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
+import { buyukHarf, feedback } from "@wms/ui";
 import { JoinShareRow } from "../join-share.tsx";
 
 export interface JoinPending {
@@ -61,6 +62,7 @@ export function JoinView({
 }) {
   const t = useTranslations("teamJoin");
   const format = useFormatter();
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [url, setUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(link?.expiresAt ?? null);
@@ -94,7 +96,6 @@ export function JoinView({
             ? { text: t("errGone"), reauth: false }
             : { text: t("errServer"), reauth: false };
   const notify = (text: string): void => {
-    tone("ok");
     say("ok", text);
   };
 
@@ -104,11 +105,11 @@ export function JoinView({
     const r = await createJoinLinkAction({ slug });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
-    tone("ok");
+    feedback.ok();
     setUrl(r.data.url);
     setExpiresAt(r.data.expiresAt);
   }
@@ -118,7 +119,7 @@ export function JoinView({
     const r = await revokeJoinLinkAction({ slug });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
@@ -133,12 +134,12 @@ export function JoinView({
     const r = await approveJoinAction({ slug, requestId: id, code, roleKey: role });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
     if (!r.data.ok) {
-      tone("err");
+      feedback.error();
       setErr({ text: r.data.issue === "CODE_WRONG" ? t("errCode") : t("errGone"), reauth: false });
       setCode("");
       router.refresh();
@@ -155,7 +156,7 @@ export function JoinView({
     const r = await rejectJoinAction({ slug, requestId: id });
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       setErr(fail(r.error.detail, r.error.code));
       return;
     }
@@ -169,7 +170,6 @@ export function JoinView({
   const approveOff = busy || code.length !== 6;
   const onApprove = (id: string): void => {
     if (approveOff) {
-      tone("err");
       say("err", busy ? t("offBusy") : t("offCode"));
       return;
     }
@@ -181,7 +181,7 @@ export function JoinView({
       kind="liste"
       dark={dark}
       title={t("title")}
-      subtitle={t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}
+      subtitle={t("bandS", { tenant: buyukHarf(tenantName, locale) })}
       icon={{ d: LICON.people, color: "6C4BD8" }}
       testId="team-join"
       bar={{
@@ -210,7 +210,7 @@ export function JoinView({
       ) : (
         <KalipKartListe label={t("listTitle")}>
           {pending.map((p, i) => {
-            const when = format.relativeTime(new Date(p.createdAt), now).toLocaleUpperCase("tr-TR");
+            const when = buyukHarf(format.relativeTime(new Date(p.createdAt), now), locale);
             const isOpen = open === p.id;
             return (
               <div key={p.id} role="listitem" className="uc" style={{ ...CARD, animationDelay: `${i * 30}ms` }} data-testid="join-row">
@@ -233,7 +233,7 @@ export function JoinView({
                       scope="dzl"
                       d={LICON.check}
                       onClick={() => {
-                        tone("tap");
+                        feedback.minor();
                         setOpen(p.id);
                         setCode("");
                         setErr(null);

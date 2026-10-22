@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { ResetPasswordForm, ResetRequestForm } from "../auth-forms.tsx";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 
 // Sıfırlama belirteci sorguda gelir: Referer ile sızmasın.
 export const metadata: Metadata = { referrer: "no-referrer" };
@@ -16,7 +16,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
   const token = first(q.token);
   const hasError = first(q.error) !== undefined;
   // T-974 (B-63 grup B): Giris.dc.html `v.auth` kabuğu; tema çerezi sunucudan.
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   if (token === undefined && !hasError) return <ResetRequestForm dark={dark} />;
   return <ResetPasswordForm token={token ?? ""} linkError={hasError || token === ""} dark={dark} />;
 }

@@ -14,12 +14,13 @@ import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
 import { isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditForm } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, type KalipHizliIslem } from "../../kalip/detay.tsx";
-import { Ico, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { archiveLocationAction, createLocationAction, getSetupProgressAction, loadMoreLocationsAction, renameLocationAction, suggestCodeAction } from "../actions.ts";
 import { CreateForm, ServerErrorBanner, useErrorText } from "../warehouses-view.tsx";
 import type { ServerError } from "../warehouses-view.tsx";
+import { feedback } from "@wms/ui";
 
 export const KINDS = ["RECEIVING", "STORAGE", "STAGING", "TRANSIT"] as const;
 
@@ -70,6 +71,7 @@ export function LocationTree({
   canManage,
   initialItems,
   initialNext,
+  activeTotal,
 }: {
   slug: string;
   dark: boolean;
@@ -80,6 +82,8 @@ export function LocationTree({
   canManage: boolean;
   initialItems: readonly LocationItem[];
   initialNext: TreeCursor | null;
+  /** Sunucudan depodaki toplam aktif lokasyon sayısı (ALTIN-KURAL 15); yoksa yüklenenlerden sayılır ("N+"). */
+  activeTotal?: number;
 }) {
   const t = useTranslations("warehouses.tree");
   const tk = useTranslations("warehouses.kind");
@@ -104,11 +108,10 @@ export function LocationTree({
   /** Başarı bildirimi: kalıp balonu + onay sesi (görsel + sesli geri bildirim). `null` = bildirim yok. */
   const setNotice = (text: string | null): void => {
     if (text === null) return;
-    tone("ok");
     say("ok", text);
   };
   const fail = (e: { error: ServerError; scope: "warehouse" | "location" }): void => {
-    tone("err");
+    feedback.error();
     setError(e);
   };
   const writable = canManage && warehouseActive;
@@ -217,13 +220,13 @@ export function LocationTree({
   const lockText = !canManage ? tw("lockedReason") : !warehouseActive ? t("warehouseArchived") : null;
 
   const activeCount = items.filter((i) => i.status === "ACTIVE").length;
-  const countText = next === null ? String(activeCount) : `${activeCount}+`;
+  const countText = activeTotal !== undefined ? String(activeTotal) : next === null ? String(activeCount) : `${activeCount}+`;
   const openRoot = (): void => {
-    tone("tap");
+    feedback.minor();
     go("new=1");
   };
   const openBulk = (): void => {
-    tone("tap");
+    feedback.minor();
     go("bulk=1");
   };
   const quick: KalipHizliIslem[] = canOpenDialogs
@@ -377,10 +380,24 @@ export function LocationTree({
             right={
               <KalipKartBolum label={t("label")} title={t("title")} sub={tw("k.treeSub", { n: countText })} d={LICON.raf} color="0E7C7B" testId="location-tree-card">
                 {visible.length === 0 ? (
-                  <p style={{ margin: 0 }} data-testid="location-empty">
-                    <b style={{ display: "block" }}>{t("empty")}</b>
-                    <small className="mono">{writable ? t("emptyAction") : t("emptyReadOnly")}</small>
-                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }} data-testid="location-empty">
+                    <p style={{ margin: 0 }}>
+                      <b style={{ display: "block" }}>{t("empty")}</b>
+                      <small className="mono">{writable ? t("emptyAction") : t("emptyReadOnly")}</small>
+                    </p>
+                    {/* ALTIN-KURAL 8: boş listede sıradaki adım — yazabilen için ilk lokasyonu ekle (+), diğerine depo listesine dön (→). */}
+                    {writable ? (
+                      <button type="button" className="btn" style={actBtn("0E7C7B", !canOpenDialogs)} disabled={!canOpenDialogs} onClick={openRoot} data-testid="kalip-empty-action">
+                        <Ico d={LICON.plus} size={18} />
+                        {t("addFirst")}
+                      </button>
+                    ) : (
+                      <a className="btn" style={{ ...actBtn("172E42", false), textDecoration: "none" }} href={base} data-testid="kalip-empty-action">
+                        <Ico d={LICON.arrow} size={18} />
+                        {t("back")}
+                      </a>
+                    )}
+                  </div>
                 ) : (
                   <ul className="whl" role="tree" aria-label={t("label")} style={{ margin: 0, padding: 0, listStyle: "none" }}>
                     {visible.map((it) => {
@@ -422,7 +439,7 @@ export function LocationTree({
                                 disabled={!canOpenDialogs}
                                 aria-describedby={noteId}
                                 onClick={() => {
-                                  tone("tap");
+                                  feedback.minor();
                                   go(`new=1&parent=${encodeURIComponent(it.id)}`);
                                 }}
                               >
@@ -437,7 +454,7 @@ export function LocationTree({
                                 aria-describedby={noteId}
                                 aria-label={tw("codeEdit.for", { name: it.name })}
                                 onClick={() => {
-                                  tone("tap");
+                                  feedback.minor();
                                   go(`kod=${encodeURIComponent(it.id)}`);
                                 }}
                               >
@@ -451,7 +468,7 @@ export function LocationTree({
                                 disabled={!canOpenDialogs}
                                 aria-describedby={noteId}
                                 onClick={() => {
-                                  tone("tap");
+                                  feedback.minor();
                                   setArchiving(it);
                                 }}
                               >

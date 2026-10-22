@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { EmailSignIn } from "./flow.tsx";
 import { safeNext } from "../../lib/safe-redirect.ts";
 import { appSurface } from "../../lib/surface.ts";
@@ -29,7 +29,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   // A-43: demo uyarısı yalnızca sunucuda karar verilir; bayraklar yokken demo metni hiç render edilmez.
   const demo = process.env.DEMO_MODE === "1" && process.env.WMS_ENV === "staging";
   const socialEnabled = process.env.AUTH_SOCIAL_ENABLED === "true";
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   // T-999b: Giris.dc.html `v.login` E-POSTA sekmesi birebir (flow.tsx); SAHA GİRİŞİ sekmesi `/field`'e gider (T-997).
   return <EmailSignIn dark={dark} next={next} socialEnabled={socialEnabled} demo={demo} fieldTab={appSurface() !== "panel"} reauth={reauth} />;
 }

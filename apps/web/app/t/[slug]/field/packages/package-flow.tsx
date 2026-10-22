@@ -13,6 +13,7 @@ import { LICON } from "../../../../design/kalip-icons.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
 import { SahaShell } from "../saha-shell.tsx";
 import { getCurrentPackageAction, resolveCurrentPackageQrAction, qualityReleasePackageAction, putawayPackageAction, packageStorageLocationsAction, resolvePackageDestinationAction, transferPackageAction, packageTransferWarehousesAction, packageTransferLocationsAction, resolvePackageTransferDestinationAction, type CurrentPackageDto, type PackageDestinationCursor } from "./actions.ts";
+import { useSonucSesi } from "../../kalip/sonuc-sesi.ts";
 
 type Place = { readonly id: string; readonly code: string; readonly name: string };
 type FrozenCommand = { slug: string; clientKey: string; packageId: string; predecessorVersion: number; currentBalanceVersion: string; targetLocationId?: string };
@@ -41,6 +42,8 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
   const [needsReload, setNeedsReload] = useState(false);
   const [retry, setRetry] = useState(false);
   const pending = useRef(false);
+  // T-436 (ALTIN-KURAL 5): hata ve kayıt sonucu sesli.
+  useSonucSesi({ hata: error, tamam: saved });
   const frozen = useRef<{ action: "QC_RELEASE" | "PUTAWAY" | "TRANSFER"; input: FrozenCommand } | null>(null);
   const uncertain = useRef(false);
   const home = `/t/${encodeURIComponent(slug)}/field`;

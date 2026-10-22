@@ -11,8 +11,9 @@ import { SICON } from "../../../../design/saha-icons.ts";
 import { ErrorNotice, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { postShipmentAction } from "../../shipping/actions.ts";
 import { PrimaryLink } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, SahaVerdict, tone } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaShell, SahaVerdict } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
+import { feedback } from "@wms/ui";
 
 export interface ShipRow {
   readonly lineId: string;
@@ -48,7 +49,7 @@ export function ShipFlow({ slug, orderId, orderNumber, customerRef, rows, openPi
 
   async function ship() {
     if (busyRef.current || row === null || max === null || qty < 1 || qty > max) {
-      tone("err");
+      feedback.error();
       return;
     }
     busyRef.current = true;
@@ -58,11 +59,11 @@ export function ShipFlow({ slug, orderId, orderNumber, customerRef, rows, openPi
     busyRef.current = false;
     setBusy(false);
     if (!out.ok) {
-      tone("err");
+      feedback.error();
       setError(out.error);
       return;
     }
-    tone("ok");
+    feedback.ok();
     setDone({ n: qty, item: row.itemName });
     setVeil(true);
     setRow(null);
@@ -103,7 +104,7 @@ export function ShipFlow({ slug, orderId, orderNumber, customerRef, rows, openPi
         title={t("ship.qtyTitle")}
         instruction={orderNumber}
         onBack={() => setStage("list")}
-        main={{ label: t("ship.next"), aria: t("ship.nextAria"), d: SICON.next, onClick: () => (qty >= 1 && qty <= max ? setStage("confirm") : tone("err")), disabled: qty < 1 || qty > max, testId: "flow-primary" }}
+        main={{ label: t("ship.next"), aria: t("ship.nextAria"), d: SICON.next, onClick: () => (qty >= 1 && qty <= max ? setStage("confirm") : feedback.error()), disabled: qty < 1 || qty > max, testId: "flow-primary" }}
       >
         <SahaQty
           itemName={row.itemName}
@@ -164,7 +165,7 @@ export function ShipFlow({ slug, orderId, orderNumber, customerRef, rows, openPi
                   disabled={n === null || n < 1}
                   onClick={() => {
                     if (n === null || n < 1) return;
-                    tone("tap");
+                    feedback.minor();
                     holder.contentChanged();
                     setError(null);
                     setRow(r);

@@ -8,13 +8,14 @@
 // tarayıcıda (Android Chrome) çalışır; yoksa açık bildirim.
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
 import { classifyCameraError, createFrameDecoder, DISTANCE_HINT_MS, openCamera, platformOf, startScanLoop, type CameraFailure, type CameraSession, type ScanStats } from "../../../../lib/scanner/camera-source.ts";
 import { useScanner } from "./receive/receive-flow.tsx";
 import { resolveFieldScanAction, type FieldScanTarget } from "./actions.ts";
-import { Ico, MicIco, SahaFrame, SahaSteps, SahaVerdict, tone } from "./saha-shell.tsx";
+import { Ico, MicIco, SahaFrame, SahaSteps, SahaVerdict } from "./saha-shell.tsx";
+import { buyukHarf, feedback } from "@wms/ui";
 
 type Cam = { readonly phase: "starting" } | { readonly phase: "scanning" } | { readonly phase: "paused" } | { readonly phase: "failed"; readonly failure: CameraFailure | "decoder" };
 type View =
@@ -37,6 +38,7 @@ interface NdefReaderLike {
 export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost: boolean; tenantName: string }) {
   const t = useTranslations("saha.okut");
   const tr = useTranslations("receiving");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const video = useRef<HTMLVideoElement>(null);
@@ -69,22 +71,22 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
       try {
         res = await resolveFieldScanAction({ slug, code });
       } catch {
-        tone("err");
+        feedback.error();
         show({ kind: "unknown", code, reason: "network", errorCode: "NETWORK" });
         return;
       }
       if (!res.ok) {
-        tone("err");
+        feedback.error();
         show({ kind: "unknown", code, reason: res.error.code === "VALIDATION_FAILED" ? "not_found" : "network", errorCode: res.error.code });
         return;
       }
       const target = res.data;
       if (target.kind === "unknown") {
-        tone("err");
+        feedback.error();
         show({ kind: "unknown", code, reason: target.reason });
         return;
       }
-      tone("ok");
+      feedback.ok();
       show({ kind: "found", code, target });
       router.push(target.href);
     },
@@ -145,7 +147,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
           onAccepted: (value) => {
             if (hintTimer !== null) clearTimeout(hintTimer);
             setFarHint(false);
-            tone("tap"); // anında "tok" + kısa titreşim; sunucu sonucu ayrıca onay/hata sesi verir
+            feedback.minor(); // anında "tok" + kısa titreşim; sunucu sonucu ayrıca onay/hata sesi verir
             setCam({ phase: "paused" });
             camera(value);
           },
@@ -172,12 +174,12 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
     const r = v.getBoundingClientRect();
     if (r.width === 0 || r.height === 0) return;
     void s.focusAt((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height).then((ok) => {
-      if (ok) tone("tap");
+      if (ok) feedback.minor();
     });
   };
 
   const rescan = (): void => {
-    tone("tap");
+    feedback.minor();
     show({ kind: "idle" });
     setNote(null);
     if (cam.phase === "failed") setAttempt((n) => n + 1);
@@ -185,7 +187,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
   };
 
   const nfc = async (): Promise<void> => {
-    tone("tap");
+    feedback.minor();
     const Ctor = (window as unknown as { NDEFReader?: new () => NdefReaderLike }).NDEFReader;
     if (Ctor === undefined) {
       setNote(t("nfcNone"));
@@ -219,7 +221,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
       hue="green"
       iconD={SICON.scan}
       title={t("title")}
-      sub={`${tenantName.toLocaleUpperCase("tr")} · ${t("sub")}`}
+      sub={`${buyukHarf(tenantName, locale)} · ${t("sub")}`}
       back={{ href: base }}
       main={{ label: t("scanMain"), aria: t("scanAria"), d: SICON.scan, onClick: rescan, testId: "okut-main" }}
       testId="okut"
@@ -348,7 +350,7 @@ export function OkutView({ slug, canPost, tenantName }: { slug: string; canPost:
                 className="cx"
                 aria-pressed={typing}
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   setTyping((v) => !v);
                 }}
                 data-testid="okut-type"

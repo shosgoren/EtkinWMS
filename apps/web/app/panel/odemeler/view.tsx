@@ -2,7 +2,8 @@
 // I-18 (DESIGN-PARITY): Yonet.dc.html `odemeler` BİREBİR — dört gösterge (`.kpis`), durum sekmeleri, `.tbl` tablo (satırda "Ödendi
 // işaretle" ve gecikende "Hatırlat"), fatura bandı; "Ödeme kaydı" ve "Dönem tahakkuku" pencereleri (T-406 tasarım eki). Değerler
 // gerçek veridir (wms_platform.charges). "Hatırlat" e-postası kuyruk kurulumu (T-411) gelene dek pasiftir.
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
+import { useModalFocus } from "../../t/[slug]/kalip/odak.ts";
 import { useRouter } from "next/navigation";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
@@ -109,6 +110,11 @@ export function OdemelerView({
     setAccrue(false);
     if (accrueOpen) router.replace(tab === "all" ? "/odemeler" : `/odemeler?d=${tab}`);
   };
+  // T-436 (ALTIN-KURAL 11): perdeler Esc ile kapanır, odak içinde kalır ve açan düğmeye döner.
+  const pdRef = useRef<HTMLDivElement>(null);
+  const acRef = useRef<HTMLDivElement>(null);
+  useModalFocus(pick !== null, pdRef, { onClose: () => setPick(null), initial: "first" });
+  useModalFocus(accrue, acRef, { onClose: closeAccrue, initial: "first" });
   return (
     <>
       {state.error !== undefined ? (
@@ -224,7 +230,7 @@ export function OdemelerView({
       </div>
 
       {pick !== null ? (
-        <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-pd">
+        <div ref={pdRef} className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-pd">
           <form className="sheet" style={{ background: C.surface, color: C.fg }} action={formAction} onSubmit={() => setPick(null)}>
             <input type="hidden" name="intent" value="PAID" />
             <input type="hidden" name="id" value={pick.id} />
@@ -269,7 +275,7 @@ export function OdemelerView({
       ) : null}
 
       {accrue ? (
-        <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-ac">
+        <div ref={acRef} className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-ac">
           <form className="sheet" style={{ background: C.surface, color: C.fg }} action={formAction} onSubmit={closeAccrue}>
             <input type="hidden" name="intent" value="ACCRUE" />
             <h2 id="y-ac">{t.accrueTitle}</h2>

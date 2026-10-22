@@ -81,10 +81,16 @@ describe("listWarehouses q (T-978)", () => {
     const p2 = await listWarehouses(admin(A), { q: `SR-${tag}`, limit: 1, afterCode: p1.nextAfterCode as string });
     expect(p2.items.map((w) => w.id)).toEqual([two]);
     expect(p2.nextAfterCode).toBeNull();
+    // ALTIN-KURAL 15: toplam yalnız istenince; aramayla aynı süzgeç, imleçten bağımsız; B tenant'ı sayılmaz.
+    expect(p1.total).toBeUndefined();
+    expect((await listWarehouses(admin(A), { q: `SR-${tag}`, limit: 1, withTotal: true })).total).toBe(2);
+    expect((await listWarehouses(admin(A), { q: `SR-${tag}`, limit: 1, afterCode: p1.nextAfterCode as string, withTotal: true })).total).toBe(2);
+    expect((await listWarehouses(admin(A), { q: "zz-yok-zz", withTotal: true })).total).toBe(0);
     // Kapsam açıkken kapsam dışı depo aramada da görünmez.
     process.env.WAREHOUSE_SCOPE_ENABLED = "true";
     await setMembershipWarehouseScopes({ ...admin(A), recentAuth: async () => undefined }, { membershipId: A.memberMembershipId, warehouseIds: [one] });
     expect(await ids({ q: `SR-${tag}` }, picker(A))).toEqual([one]);
+    expect((await listWarehouses(picker(A), { q: `SR-${tag}`, withTotal: true })).total).toBe(1);
     expect((await failure(listWarehouses(admin(A), { q: 5 as unknown as string }))).code).toBe("VALIDATION_FAILED");
   });
 });

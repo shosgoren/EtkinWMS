@@ -1,10 +1,10 @@
 "use client";
 // Kimlik ekranı istemci formları (T-118). Alan kuralları (parola uzunluğu, hız sınırı, kilit) SUNUCUDADIR (A-41);
 // burada yalnızca sunucu yanıtı (kod + sonraki eylem) gösterilir. Tüm metin `messages/*.json` `auth.*` altındadır.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Button, CircleAlert } from "@wms/ui";
+import { Button, CircleAlert, buyukHarf } from "@wms/ui";
 import { C } from "./design/giris-tokens.ts";
 import { Ico as GirisIco } from "./field/flow.tsx";
 import { GICON, GirisAlan, GirisBaglanti, GirisBant, GirisBaslik, GirisEylem, GirisKabuk, GirisKart } from "./giris-ui.tsx";
@@ -241,6 +241,7 @@ export function MfaNotice({ kind, next, dark = false }: { kind: "demo" | "enable
 // `.kv`, onay `.chk`, kod alanı `.fl > .inp`). Sunucu çağrıları, sıra (parola → anahtar → yedek kod onayı → ilk kod) ve hata eşlemesi aynı.
 export function MfaSetupForm({ next, dark = false }: { next: string; dark?: boolean }) {
   const t = useTranslations("auth");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
   const [enable, setEnable] = useState<EnableData | null>(null);
@@ -288,7 +289,7 @@ export function MfaSetupForm({ next, dark = false }: { next: string; dark?: bool
   if (enable === null) {
     return (
       <GirisKabuk dark={dark} testId="mfa-setup">
-        <GirisBaslik kick={t("mfa.verifyTitle").toLocaleUpperCase("tr")} title={t("mfa.setupTitle")} sub={t("mfa.setupIntro")} />
+        <GirisBaslik kick={buyukHarf(t("mfa.verifyTitle"), locale)} title={t("mfa.setupTitle")} sub={t("mfa.setupIntro")} />
         <form onSubmit={onPassword} style={{ display: "contents" }} aria-describedby="mfa-setup-error" aria-busy={busy}>
           <GirisKart>
             <GirisAlan
@@ -312,7 +313,7 @@ export function MfaSetupForm({ next, dark = false }: { next: string; dark?: bool
   const secret = secretOf(enable.totpURI);
   return (
     <GirisKabuk dark={dark} testId="mfa-setup">
-      <GirisBaslik kick={t("mfa.verifyTitle").toLocaleUpperCase("tr")} title={t("mfa.setupTitle")} />
+      <GirisBaslik kick={buyukHarf(t("mfa.verifyTitle"), locale)} title={t("mfa.setupTitle")} />
       <section className="card" style={{ background: C.surface, alignItems: "center", textAlign: "center" }} aria-labelledby="mfa-key-title">
         <h2 id="mfa-key-title" style={{ margin: 0, font: "800 18px/1.15 var(--font-bricolage), sans-serif" }}>
           {t("mfa.keyTitle")}

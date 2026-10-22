@@ -10,8 +10,9 @@ import { SICON } from "../../../../design/saha-icons.ts";
 import { ErrorNotice, errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { availableAtLocationAction, putawayAction, resolveItemScanAction, resolveLocationScanAction } from "../../receipts/actions.ts";
 import { CompoundLine, DroppedNotice, PrimaryButton, PrimaryLink, ScanAlert, ScanPanel, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, tone } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaShell } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
+import { feedback } from "@wms/ui";
 
 export interface PutawayTask {
   readonly id: string;
@@ -193,7 +194,7 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
   async function confirm() {
     if (busyRef.current || source === null || item === null || target === null) return;
     if (qty < 1 || (task === null && avail !== null && qty > avail)) {
-      tone("err");
+      feedback.error();
       return;
     }
     busyRef.current = true;
@@ -218,12 +219,12 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
       if (key === "location_locked" || key === "putaway_invalid" || key === "insufficient_stock") {
         showAlert("alert.putawayTitle", key, out.error.detail === undefined ? out.error.code : `${out.error.code}/${out.error.detail}`, "target");
       } else {
-        tone("err");
+        feedback.error();
         setError(out.error);
       }
       return;
     }
-    tone("ok");
+    feedback.ok();
     setDonePair({ item: item.name, qty, to: target.name || target.code });
     setVeil(true);
     setStage("done");

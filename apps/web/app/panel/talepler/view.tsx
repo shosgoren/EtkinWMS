@@ -3,6 +3,8 @@
 // Satırlar gerçek veridir (wms_platform.demo_requests, aktivasyon durumuyla). Kapı ve veri page.tsx'te; eylem actions.ts'te.
 // Ekranda teslimde bağlantı yalnız eylem yanıtıyla gelir ve yalnız bu bileşenin durumunda yaşar (yenilemede kaybolur; "Yeni bağlantı").
 import { useActionState, useState } from "react";
+import { useLocale } from "next-intl";
+import { tarih } from "@wms/ui";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import type { TaleplerActionState } from "./actions.ts";
@@ -52,10 +54,10 @@ export interface TaleplerLabels {
 }
 
 /** Kaynaktaki zaman biçimi: "BUGÜN 14:22", "DÜN 09:10", "12.10 16:45" (İstanbul saati). */
-export function whenLabel(at: Date, now: Date, today: string, yesterday: string): string {
+export function whenLabel(at: Date, now: Date, today: string, yesterday: string, locale: string): string {
   const tz = "Europe/Istanbul";
   const day = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-  const hm = new Intl.DateTimeFormat("tr-TR", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(at);
+  const hm = tarih(at, locale, { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
   const d0 = day(at);
   if (d0 === day(now)) return `${today} ${hm}`;
   if (d0 === day(new Date(now.getTime() - 86_400_000))) return `${yesterday} ${hm}`;
@@ -95,6 +97,7 @@ export function TaleplerView({
   initialError?: string | undefined;
   action: (prev: TaleplerActionState, form: FormData) => Promise<TaleplerActionState>;
 }) {
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [state, formAction, pending] = useActionState(action, initialError === undefined ? {} : { error: initialError });
   const [copied, setCopied] = useState<string | null>(null);
   const chipText: Readonly<Record<Exclude<RowState, "open">, string>> = {
@@ -173,7 +176,7 @@ export function TaleplerView({
                       {r.message}
                     </td>
                     <td data-l={t.lWhen} className="mono" style={{ fontSize: "13px" }}>
-                      {whenLabel(r.receivedAt, now, t.today, t.yesterday)}
+                      {whenLabel(r.receivedAt, now, t.today, t.yesterday, locale)}
                     </td>
                     <td>
                       {st === "open" ? (

@@ -7,7 +7,7 @@ import { listMembers, listPendingInvitations } from "@wms/domain/identity/member
 import { ROLE_KEYS } from "@wms/domain/identity/permissions";
 import { isWarehouseScopeEnabled, listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { MembersView } from "./members-view.tsx";
 import type { PendingView, WarehouseOption } from "./members-view.tsx";
 
@@ -56,7 +56,7 @@ export default async function MembersPage({ params, searchParams }: { params: Pr
     warehouses = res.items.map((w) => ({ id: w.id, code: w.code, name: w.name, archived: w.status !== "ACTIVE" }));
   }
 
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <MembersView slug={slug} dark={dark} selfUserId={principal.userId} members={members.map((m) => ({ membershipId: m.membershipId, userId: m.userId, displayName: m.displayName, email: m.email, roles: m.roles, isOwner: m.isOwner, isDemo: m.isDemo, resetLinkAvailable: m.resetLinkAvailable, ...(m.warehouseIds === undefined ? {} : { warehouseIds: m.warehouseIds }), ...(m.field === undefined ? {} : { field: { username: m.field.username, active: m.field.active, pendingUntil: m.field.pendingUntil === null ? null : m.field.pendingUntil.toISOString(), locked: m.field.locked } }) }))} pending={pending} roleKeys={[...ROLE_KEYS]} warehouses={warehouses} scopeEnabled={isWarehouseScopeEnabled()} q={q} />

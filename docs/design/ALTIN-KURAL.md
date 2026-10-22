@@ -41,3 +41,31 @@ her seferinde hatırlatması beklenmez.
 - **Renk (trafik ışığı):** yalnız sorunlu kart dolu renk (kırmızı / turuncu); sakin kartlar beyaz, renk ikon ve sayıda. Düğme ikonları hareketsiz; hareket yalnız logo noktası, çevrimiçi nabız, zil ve Etkin halkası.
 - **Arka plan** #EEF1F4 → #DCE3EA; **karanlık tema** saf siyah değil (#121B24 → #0F171F), yazı #E6EBEF, vurgular kısık.
 - **Otomatik cihaz:** < 700 px telefon, < 1100 px ya da dokunmatik tablet, diğerleri masaüstü (Görevlerim `detect()` ile aynı).
+
+## Ortak davranış kuralları (kullanıcı onayı 21 Ekim; madde 5–17 — T-436)
+Maddeler 1–4 ve ortak perde T-980'dedir. Aşağıdakiler ortak bileşenlerdedir; ekran bunları kullanınca kuralı kendiliğinden alır.
+
+5. **Ses ve titreşim tek kaynaktan.** Tek işlev `@wms/ui` `sesCal` (dokunma/tamam/uyarı/hata, okutma); ekranlar `feedback.*` çağırır.
+   **Ses ve balon yalnız anlamlı sonuçlarda kullanılır: kaydetme, okutma, onay, hata, uyarı. Kopyala, aç/kapat, sekme değiştir gibi küçük
+   işlemler sessizdir; bunlarda yalnız düğmenin kendi içinde kısa bir görsel değişim olur (ör. tik + "Kopyalandı", 2 sn).** API ayrımı:
+   `feedback.minor()` sessiz, `feedback.ok/warn/error()` sesli. Hesap menüsünde "Sessiz" (cihazda saklanır). Balon tek ortak katmandır
+   (`kalip/balon.tsx`, kök düzende) ve kendi sesini çalar. Bekçi: `apps/web/app/kural-bekci.test.ts`.
+6. **Yükleniyor.** 1 sn'den uzun işlemde düğmede dönen gösterge (`.kyuk`), aynı işlem iki kez gönderilmez (`useTekGonderim`, alt çubuk
+   ana işleminde `busy`, `KalipPencereDugme loading`). Kiracı yerleşiminde iskelet ekran (`t/[slug]/loading.tsx`).
+7. **Hata ve yeniden dene.** Ortak hata ekranı (`kalip/hata-ekrani.tsx`): ikon, tek cümle, Tekrar dene, destek kodu, hata sesi; ham hata
+   metni gösterilmez. Kiracı `error.tsx` + `not-found.tsx`, panel `error.tsx`.
+8. **Boş durum.** Her listede ikon + tek cümle + sıradaki adım düğmesi (`KalipBos action.kind`: add/clear/go). Arama sonucu yoksa
+   "Bulunamadı · ara ya da söyle".
+9. **Çevrimdışı.** Bağlantı kopunca üstte ortak şerit; çevrimdışı gönderim açıkça engellenir, "Bağlantı yok · bağlanınca tekrar dene"
+   balonu. Çevrimdışı kuyruk yoktur (saklayıp sonra gönderme yapılmaz).
+10. **Silme ve arşivleme.** Geri dönüşü olan işlem onay sormaz; birkaç saniye "Geri al" balonu (`feedback.undo`) sunucuda geri alır.
+    Geri dönüşü olmayan işlem onay penceresinde kalır. Gruplama listesi: `docs/tasks/T-436.md`.
+11. **Odak ve klavye.** Her perde Esc ile kapanır, odak içinde kalır ve kapanınca açan düğmeye döner (`kalip/odak.ts` `useModalFocus`;
+    T-980 ortak perdesi buna bağlanır). Odak çerçevesi 4 px sarı. Balonlar kalıcı `aria-live` bölgesinden duyurulur.
+12. **Dokunma hedefi.** En az 44 px, saha ekranlarında 48 px (e2e ölçüm yardımcısı `tests/e2e/support/dokunma.ts`).
+13. **Hareket azaltma.** "Hareketi azalt" açıksa CSS animasyonları, SVG `animateMotion` (logo noktası), nabız halkası ve titreşim durur.
+14. **Karanlık tema.** Tema seçiminde "Otomatik (sistem)"; eski yüzeyler (alt sayfa, ilk kullanım rehberi, hata ekranı) de temayı izler.
+15. **Uzun listeler.** Sunucu sayfalaması ve toplam sayı.
+16. **Sayı ve tarih biçimi.** Sabit "tr-TR" yok; kullanıcının dili ortak `@wms/ui` format yardımcısıyla (bekçi: ESLint + birim testi).
+17. **Yetkisiz dokunuş.** Kilitli öğe gizlenmezse dokununca sarı "Değiştirme yetkin yok · sorumluna sor" balonu + hata sesi
+    (`kalip/kilitli.tsx`, `KalipSatir`/`KalipAnahtar` `locked`).

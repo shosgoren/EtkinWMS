@@ -12,7 +12,9 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Ico, tone } from "./ekran.tsx";
+import { Ico } from "./ekran.tsx";
+import { useModalFocus } from "./odak.ts";
+import { feedback } from "@wms/ui";
 
 type Ask = (proceed: () => void) => void;
 interface Kayit {
@@ -120,7 +122,7 @@ export function useCikisKorumasi(dirty: boolean, opts: CikisSecenek = {}): Cikis
   const optsRef = useRef(opts);
   optsRef.current = opts;
   const ask = useCallback<Ask>((proceed) => {
-    tone("tap");
+    feedback.minor();
     setBekleyen(() => proceed);
   }, []);
 
@@ -190,7 +192,7 @@ export function useCikisKorumasi(dirty: boolean, opts: CikisSecenek = {}): Cikis
       onLeave={() => {
         const go = bekleyen;
         setBekleyen(null);
-        tone("tap");
+        feedback.minor();
         birakildiBalonu(t("discarded"), opts.dark === true || document.querySelector(".dz-dark") !== null);
         if (go !== null) serbestGit(go);
       }}
@@ -229,21 +231,19 @@ export function KalipCikisUyarisi({
 }) {
   const t = useTranslations("kalip");
   const [koyu, setKoyu] = useState(dark === true);
+  // T-436 (ALTIN-KURAL 11): ortak çıkış kutusu — Esc "Kal" demektir, odak kutuda kalır, kapanınca açan öğeye döner.
+  const box = useRef<HTMLDivElement>(null);
+  useModalFocus(open, box, { onClose: onStay, busy, initial: "none" });
   useEffect(() => {
     if (!open) return;
     if (dark !== undefined) setKoyu(dark);
     else setKoyu(document.querySelector(".dz-dark") !== null);
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onStay();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onStay, dark]);
+  }, [open, dark]);
   if (!open) return null;
   return (
     <div className={`dzf kcikis${koyu ? " dz-dark" : ""}`} data-testid="kalip-unsaved-layer">
       <div className="cfback" onClick={onStay} />
-      <div className="cfbox" role="alertdialog" aria-modal="true" aria-label={title ?? t("unsavedTitle")} data-testid="kalip-unsaved">
+      <div ref={box} className="cfbox" role="alertdialog" aria-modal="true" aria-label={title ?? t("unsavedTitle")} data-testid="kalip-unsaved">
         <span className="cfic">
           <Ico d={LICON.warn} size={28} />
         </span>

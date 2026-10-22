@@ -10,6 +10,7 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico } from "./ekran.tsx";
 import { useAlanHata, useSalla, useZorunlu } from "./form-baglam.tsx";
 import { kdzOrtak } from "./tokens.ts";
+import { kilitliDokunus } from "./kilitli.tsx";
 
 // T-990: form kabının kaynağında olmayan ama başka kalıp kaynağında geçen renk (ör. Hammadde kahvesi) de kullanılabilir.
 const c = (hex: string): string => kdzOrtak(hex);
@@ -84,7 +85,7 @@ export function KalipSatir({ id, title, value, d, color, open, changed = false, 
   const head = editorTitle ?? title;
   return (
     <div className="srw" data-row={id}>
-      <button type="button" className={cls} style={style} aria-expanded={open} aria-label={`${title}: ${value}`} onClick={onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
+      <button type="button" className={cls} style={style} aria-expanded={open} aria-label={`${title}: ${value}`} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus() : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
         <span className="ri">
           <Ico d={d} size={20} />
         </span>
@@ -113,10 +114,10 @@ export function KalipSatir({ id, title, value, d, color, open, changed = false, 
 }
 
 /** Kaynak `.sr2` + `.act2` açık/kapalı anahtar satırı. */
-export function KalipAnahtar({ title, sub, d, color, on, changed = false, locked = false, onToggle, aria, testId }: { title: string; sub?: string; d: string; color: string; on: boolean; changed?: boolean; locked?: boolean; onToggle: () => void; aria: string; testId?: string }) {
+export function KalipAnahtar({ title, sub, d, color, on, changed = false, locked = false, lockedReason, onToggle, aria, testId }: { title: string; sub?: string; d: string; color: string; on: boolean; changed?: boolean; locked?: boolean; /** Kilitliyken balondaki özel gerekçe (yoksa ortak "yetkin yok" cümlesi). */ lockedReason?: string | undefined; onToggle: () => void; aria: string; testId?: string }) {
   const t = useTranslations("kalip");
   return (
-    <button type="button" className={`sr2${changed ? " chg" : ""}${locked ? " lock" : ""}`} style={{ "--c": c(color) } as CSSProperties} aria-pressed={on} aria-label={aria} onClick={onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
+    <button type="button" className={`sr2${changed ? " chg" : ""}${locked ? " lock" : ""}`} style={{ "--c": c(color) } as CSSProperties} aria-pressed={on} aria-label={aria} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus(lockedReason) : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
       <span className="ri">
         <Ico d={d} size={20} />
       </span>

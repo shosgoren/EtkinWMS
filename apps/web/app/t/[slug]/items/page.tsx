@@ -10,7 +10,7 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { CARD_TYPES, ItemsView } from "./items-view.tsx";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
@@ -30,7 +30,7 @@ function first(v: string | string[] | undefined): string | undefined {
 
 async function LockedItems(slug: string) {
   const t = await getTranslations("items");
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <KalipKilitliEkran title={t("title")} icon={{ d: LICON.box, color: "2F5DA8" }} text={t("locked")} hint={t("lockedAction")} dark={dark} home={`/t/${encodeURIComponent(slug)}`} />
@@ -62,6 +62,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   let rows: ItemListView[];
   let units: Awaited<ReturnType<typeof listUnits>>;
   let nextCursor: string | null;
+  let total: number | undefined;
   let canManage: boolean;
   let canImport: boolean;
   let stock: Record<string, ItemStockView> = {};
@@ -73,6 +74,8 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     canImport = hasPermission(current.roles, "data.import", current.grants);
     const page = await searchItems(call, {
       limit: PAGE_SIZE,
+      // T-436: toplam yalnız ilk sayfada (sayfa başına tam COUNT yükü olmasın; güvenlik incelemesi MINOR).
+      withTotal: after === undefined || after === "",
       ...(q.trim() === "" ? {} : { q }),
       ...(status === "" ? {} : { status }),
       ...(cardType === "" ? {} : { cardType }),
@@ -87,6 +90,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
       return { id: it.id, code: it.code, name: it.name, status: it.status, baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
     });
     nextCursor = page.nextCursor;
+    total = page.total;
     // T-968: kart rozeti (kapsamdaki depoların eldeki toplamı + minimum); okunamazsa rozet çizilmez, liste yine açılır.
     stock = Object.fromEntries(
       (await sumItemsStock(call, rows.map((r) => r.id)).catch(() => [])).map((x) => [x.itemId, { have: x.have, min: x.min }] as const),
@@ -108,7 +112,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     throw e;
   }
 
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <ItemsView
@@ -120,6 +124,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
         stock={stock}
         units={units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }))}
         nextCursor={nextCursor}
+        {...(total === undefined ? {} : { total })}
         firstPage={after === undefined || after === ""}
         query={{ q: q.trim() === "" ? "" : q, status, type: cardType }}
       />

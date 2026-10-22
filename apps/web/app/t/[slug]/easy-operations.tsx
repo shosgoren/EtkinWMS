@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { buyukHarf } from "@wms/ui";
 import type { WorkSectionKey, WorkSummary } from "@wms/domain/operations";
 import { DzRoot } from "../../design/dz-root.tsx";
 import { C, dz } from "../../design/bakis-tokens.ts";
@@ -41,6 +42,7 @@ function Ico({ d, size, sw, className = "ico", style }: { d: string; size: numbe
 export async function EasyOperations({ slug, allowed, summary, firstName, dark = false, canReport = false }: EasyHomeProps) {
   const t = await getTranslations("home");
   const tg = await getTranslations("home.gv");
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const name = firstName ?? "";
   const sections = summary?.sections ?? [];
@@ -62,7 +64,7 @@ export async function EasyOperations({ slug, allowed, summary, firstName, dark =
   const manual = summary?.manualToday ?? 0;
   const hour = summary?.localHour ?? 12;
   const hello = tot.leftO === 0 && tot.allO > 0 ? tg("dayDone", { name }) : tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name });
-  const where = (summary?.warehouseName ?? tg("allWarehouses")).toLocaleUpperCase("tr");
+  const where = buyukHarf(summary?.warehouseName ?? tg("allWarehouses"), locale);
   const whos = summary === null || summary === undefined ? where : tg("shift", { start: summary.shift.start, end: summary.shift.end, where });
   const active = allowed.stockPost === true;
 

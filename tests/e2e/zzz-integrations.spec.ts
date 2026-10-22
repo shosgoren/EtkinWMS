@@ -45,7 +45,9 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     for (const secret of [F.clientSecret, F.password]) expect(html).not.toContain(secret);
 
     // Sipariş akışı Paraşüt'te yok: anahtar kilitli, dokununca nedenini söyler.
-    await page.getByTestId("flow-SALES_ORDERS-toggle").click();
+    // T-436 (ALTIN-KURAL 17): kilitli anahtar `aria-disabled` (gerçek `disabled` değil; dokununca nedenini söyler). Playwright etkinlik
+    // denetimi bunu "etkin değil" sayar; dokunuş zorlanır (z-join-share ile aynı).
+    await page.getByTestId("flow-SALES_ORDERS-toggle").click({ force: true });
     await expect(page.getByTestId("kalip-toast")).toContainText("karşılığı yok");
     await expect(page.getByTestId("flow-SALES_ORDERS")).toHaveAttribute("data-enabled", "false");
 

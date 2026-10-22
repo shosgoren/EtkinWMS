@@ -6,12 +6,12 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../../field/receive/receive-flow.tsx";
 import { KalipAdimlar } from "../../kalip/adimlar.tsx";
 import { ErrorNotice, type ErrorInfo, type ActionResult } from "../receipt-form.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipAlan, KalipAnahtar, KalipGrup, KalipSecenek } from "../../kalip/form.tsx";
 import { KalipSecim } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
@@ -240,8 +240,8 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
   const pressPrimary = () => {
     const primary = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="package-flow"] button.flow-primary'));
     const target = primary.find(b => !b.disabled);
-    if (target === undefined) { tone("err"); primary[0]?.scrollIntoView({ block: "center" }); return; }
-    tone("tap"); target.click();
+    if (target === undefined) { feedback.error(); primary[0]?.scrollIntoView({ block: "center" }); return; }
+    feedback.minor(); target.click();
   };
   const main = posted && receipt
     ? { label: t("k.labelsShort"), aria: t("k.labelsAria"), d: LICON.printer, href: packageLabelHref(slug, receipt.documentId), testId: "package-main" }
@@ -277,7 +277,8 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
                 <KalipSecim name="warehouseId" label={t("warehouse")} placeholder={t("choose")} color="30475A" icon={{ d: LICON.depo, color: "30475A" }} value={warehouseId} options={warehouses.map(w => ({ id: w.id, label: `${w.code} · ${w.name}`, d: LICON.depo }))} onPick={id => { if (id === warehouseId) return; setWarehouseId(id); lock.current = true; setBusy(true); void loadLocations(id).catch(fail).finally(() => { lock.current = false; setBusy(false); }); }} testId="package-warehouse" />
                 <KalipSecim name="locationId" label={t("location")} placeholder={t("choose")} color="2F7D5B" icon={{ d: LICON.moveIn, color: "2F7D5B" }} value={locationId} options={locations.map(l => ({ id: l.id, label: `${l.code} · ${l.name}`, d: LICON.moveIn }))} onPick={setLocationId} testId="package-location" />
               </div>
-              {warehouses.length === 0 ? <Banner kind="warning">⚠ {t("noWarehouse")}</Banner> : warehouseId && locations.length === 0 ? <Banner kind="warning">⚠ {t("noLocation")}</Banner> : null}
+              {/* ALTIN-KURAL 8: boş seçimde çıkmaz yok — sıradaki adım bağlantısı (depolar / deponun lokasyon ağacı). */}
+              {warehouses.length === 0 ? <Banner kind="warning">⚠ {t("noWarehouse")} <a href={`/t/${encodeURIComponent(slug)}/warehouses`} data-testid="package-empty-action" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 700 }}><Ico d={LICON.arrow} size={16} />{t("toWarehouses")}</a></Banner> : warehouseId && locations.length === 0 ? <Banner kind="warning">⚠ {t("noLocation")} <a href={`/t/${encodeURIComponent(slug)}/warehouses/${encodeURIComponent(warehouseId)}`} data-testid="package-empty-action" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 700 }}><Ico d={LICON.plus} size={16} />{t("toLocations")}</a></Banner> : null}
               <div className="pk-body pk-tight"><span className="pk-lab">{t("kind")}</span>
                 <KalipSecenek label={t("kind")} color="0E7C7B" value={kind} onPick={id => setKind(id as "VARIL" | "KOLI")} options={[{ id: "VARIL", label: t("barrel"), d: LICON.koli }, { id: "KOLI", label: t("box"), d: LICON.box }]} />
               </div>

@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
 import { KabukBar, type KabukMain, type KabukNav } from "../kabuk/kabuk-bar.tsx";
+import { feedback } from "@wms/ui";
 
 const DarkCtx = createContext(false);
 /** Tasarım teması (çerez `dz-theme`; field/layout.tsx sunucuda okur). */
@@ -35,39 +36,6 @@ export function MicIco({ size }: { size: number }) {
       <path d={SICON.micB} />
     </svg>
   );
-}
-
-/** Kaynak tone(): dokunuş / onay / hata sesi + titreşim (ses yoksa sessiz; titreşim yoksa atlanır). */
-export function tone(kind: "tap" | "ok" | "err"): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const t0 = ac.currentTime;
-    const seq = kind === "ok" ? [660, 990] : kind === "err" ? [330, 220] : [560];
-    seq.forEach((f, i) => {
-      const o = ac.createOscillator();
-      const g = ac.createGain();
-      const t = t0 + i * 0.13;
-      o.type = "sine";
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      o.connect(g);
-      g.connect(ac.destination);
-      o.start(t);
-      o.stop(t + 0.13);
-    });
-    window.setTimeout(() => void ac.close(), 600);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-  try {
-    if (typeof navigator.vibrate === "function") navigator.vibrate(kind === "err" ? [60, 40, 60] : 30);
-  } catch {
-    /* titreşim yok */
-  }
 }
 
 /** Sayfa ikonu rengi (kaynak `.pgic` / `.uic`): kabul yeşil, yerleştirme camgöbeği, ürün kahve. */
@@ -218,7 +186,7 @@ export function SahaShell({ hue, iconD, step, total, phase, title, instruction, 
 export function SahaKeypad({ value, onChange, all, fresh, onUsed }: { value: number; onChange: (n: number) => void; all: number | null; fresh: boolean; onUsed: () => void }) {
   const t = useTranslations("saha");
   const press = (k: string): void => {
-    tone("tap");
+    feedback.minor();
     onUsed();
     if (k === "all") {
       if (all !== null) onChange(all);

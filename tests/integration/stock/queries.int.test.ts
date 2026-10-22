@@ -65,6 +65,20 @@ describe("stock overview", () => {
     expect(items.filter((r) => r.itemId === kgItem)).toHaveLength(2);
   });
 
+  it("ALTIN-KURAL 15: total only on request; same filters/search/scope as the page, cursor ignored", async () => {
+    const all = await listStockOverview(owner(A), { withTotal: true });
+    expect((await listStockOverview(owner(A))).total).toBeUndefined();
+    expect(all.next).toBeNull();
+    expect(all.total).toBe(all.items.length);
+    const paged = await listStockOverview(owner(A), { limit: 1, withTotal: true });
+    expect(paged.items).toHaveLength(1);
+    expect(paged.total).toBe(all.items.length);
+    if (paged.next !== null) expect((await listStockOverview(owner(A), { limit: 1, after: paged.next, withTotal: true })).total).toBe(all.items.length);
+    expect((await listStockOverview(owner(A), { warehouseId: secondWarehouse, withTotal: true })).total).toBe(all.items.filter((r) => r.warehouseId === secondWarehouse).length);
+    expect((await listStockOverview(owner(A), { warehouseId: B.warehouseId, withTotal: true })).total).toBe(0);
+    expect((await listStockOverview(owner(A), { q: "zz-no-such-stock-zz", withTotal: true })).total).toBe(0);
+  });
+
   it("tenant membership, authentication and MFA cannot be bypassed", async () => {
     await expect(listStockOverview({ ...owner(A), principal: null })).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
     await expect(listStockOverview({ ...owner(A), principal: { userId: B.ownerUserId, mfaVerified: true } })).rejects.toBeInstanceOf(AppError);

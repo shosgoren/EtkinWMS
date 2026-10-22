@@ -10,7 +10,8 @@ import { create as createQr } from "qrcode";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { SHICON } from "../../../design/paylas-icons.ts";
 import { dz } from "../../../design/paylas-tokens.ts";
-import { Ico, tone, type ToastKind } from "../kalip/ekran.tsx";
+import { Ico, type ToastKind } from "../kalip/ekran.tsx";
+import { feedback } from "@wms/ui";
 
 export type JoinSay = (kind: ToastKind, text: string) => void;
 
@@ -72,30 +73,28 @@ export function useJoinShare({ url, tenantName, isDemo, say }: JoinShareInput): 
   }, []);
   const share = useCallback(() => {
     if (isDemo) {
-      tone("err");
       say("warn", t("locked"));
       return;
     }
     if (url === null) {
-      tone("err");
+      feedback.error();
       say("info", t("needQr"));
       return;
     }
     if (typeof navigator.share !== "function") {
-      tone("tap");
+      feedback.minor();
       focusRow();
       say("info", t("pickBelow"));
       return;
     }
-    tone("tap");
+    feedback.minor();
     navigator.share({ title: t("title"), text: t("text", { tenant: tenantName, url }) }).then(
       () => {
-        tone("ok");
         say("ok", t("shared"));
       },
       (e: unknown) => {
         if (e instanceof DOMException && e.name === "AbortError") return; // kullanıcı vazgeçti
-        tone("err");
+        feedback.error();
         focusRow();
         say("warn", t("shareFailed"));
       },
@@ -114,7 +113,7 @@ export function JoinShareRow({ url, tenantName, isDemo, say, dark, rowRef }: Joi
   const ready = url !== null && !isDemo;
   const text = url === null ? "" : t("text", { tenant: tenantName, url });
   const blocked = (): void => {
-    tone("err");
+    feedback.error();
     if (isDemo) say("warn", t("locked"));
     else say("info", t("needQr"));
   };
@@ -130,7 +129,6 @@ export function JoinShareRow({ url, tenantName, isDemo, say, dark, rowRef }: Joi
     try {
       await navigator.clipboard.writeText(url);
     } catch {
-      tone("err");
       say("err", t("copyFailed"));
       return;
     }
@@ -148,7 +146,6 @@ export function JoinShareRow({ url, tenantName, isDemo, say, dark, rowRef }: Joi
     } catch {
       ok = false;
     }
-    tone(ok ? "ok" : "err");
     say(ok ? "ok" : "err", ok ? t("pngDone") : t("pngFailed"));
   }
 
@@ -156,7 +153,7 @@ export function JoinShareRow({ url, tenantName, isDemo, say, dark, rowRef }: Joi
     <div className={`dzsh${dark ? " dz-dark" : ""}`} style={{ width: "100%" }}>
       <div ref={rowRef} className="shr" role="group" aria-label={t("rowLabel")} data-testid="join-share">
         {ready ? (
-          <a className={cls("wa")} href={whatsappHref(text)} target="_blank" rel="noopener noreferrer" onClick={() => tone("tap")} data-testid="share-whatsapp">
+          <a className={cls("wa")} href={whatsappHref(text)} target="_blank" rel="noopener noreferrer" onClick={() => feedback.minor()} data-testid="share-whatsapp">
             <i>
               <Ico d={[SHICON.waA, SHICON.waB]} size={22} />
             </i>
@@ -191,7 +188,7 @@ export function JoinShareRow({ url, tenantName, isDemo, say, dark, rowRef }: Joi
           aria-disabled={ready ? undefined : "true"}
           onClick={() => {
             if (!ready) return blocked();
-            tone("tap");
+            feedback.minor();
             window.print();
           }}
           data-testid="share-print"

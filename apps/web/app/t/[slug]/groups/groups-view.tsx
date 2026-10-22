@@ -4,12 +4,14 @@
 // Model (güvenlik): "HAZIR" gruplar rollerin kendisidir (salt okunur; rol Ekip ekranında değişir). Özel grup role EK yetki ve ekran verir;
 // yazma yalnız hesap sahibine açıktır (domain denetler; `canEdit` yalnız gösterim). Ekip yönetimi grupla verilmez (kart kilitli).
 // Bilinçli farklar (DESIGN-PARITY): Etkin (sesle) T-424; özel grup için "Arşivle" düğmesi (kaynakta yok; grup silinmez); kişi aramasında yazı kutusu.
-import { useTranslations } from "next-intl";
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useMemo, useState, type CSSProperties } from "react";
 import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
+import { kilitliDokunus } from "../kalip/kilitli.tsx";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { UstDugmeler } from "../ust-dugmeler.tsx";
 
@@ -83,34 +85,15 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
   );
 }
 
-function beep(ok: boolean): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.value = ok ? 880 : 300;
-    o.type = "sine";
-    g.gain.setValueAtTime(0.12, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
-    o.connect(g);
-    g.connect(ac.destination);
-    o.start();
-    o.stop(ac.currentTime + 0.2);
-    window.setTimeout(() => void ac.close(), 400);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
-
 const hexKey = (c: string): string => c.replace("#", "").toUpperCase();
-const initial = (name: string): string => (name.trim()[0] ?? "?").toLocaleUpperCase("tr-TR");
+const initial = (name: string, locale: string): string => buyukHarf(name.trim()[0] ?? "?", locale);
 const powersOf = (grants: readonly string[]): string[] => POWERS.filter(([, , , g]) => g.length > 0 && g.every((x) => grants.includes(x))).map((p) => p[0]);
 const grantsOf = (powers: readonly string[]): string[] => POWERS.filter((p) => powers.includes(p[0])).flatMap((p) => [...p[3]]);
 
 export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const t = useTranslations("gruplar");
+  const tr = useTranslations("kural");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const [groups, setGroups] = useState(data.groups);
   const [members, setMembers] = useState(data.members);
@@ -121,19 +104,14 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [toast, setToast] = useState("");
-  const toastTimer = useRef<number | null>(null);
-  const flash = (msg: string): void => {
-    setToast(msg);
-    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(""), 1600);
-  };
+  // T-436 (ALTIN-KURAL 5, 17): yetkisiz dokunuş — ortak sarı balon + hata sesi.
+  const flash = (msg: string): void => kilitliDokunus(msg);
 
   const active = useMemo(() => groups.filter((g) => !g.archived), [groups]);
   const roleOf = (m: (typeof members)[number]): string => m.roles[0] ?? "READ_ONLY";
   const groupName = (id: string | null): string | null => (id === null ? null : (groups.find((g) => g.id === id)?.name ?? null));
   const nowLabel = (m: (typeof members)[number]): string =>
-    m.isOwner ? t("owner") : (groupName(m.groupId) ?? t(`role.${roleOf(m)}`)).toLocaleUpperCase("tr-TR");
+    m.isOwner ? t("owner") : buyukHarf(groupName(m.groupId) ?? t(`role.${roleOf(m)}`), locale);
   const nowColor = (m: (typeof members)[number]): string => {
     const g = m.groupId === null ? undefined : groups.find((x) => x.id === m.groupId);
     if (g !== undefined) return hexKey(g.color);
@@ -161,7 +139,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const readOnly = draft === null || draft.template !== null || !data.canEdit;
 
   function open(tile: (typeof tiles)[number]): void {
-    beep(true);
+    feedback.ok();
     setIssue(null);
     let d: Draft;
     if (tile.template !== null) {
@@ -183,7 +161,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       flash(t("ownerOnly"));
       return;
     }
-    beep(true);
+    feedback.ok();
     const d: Draft = { id: null, version: null, template: null, name: t("newName"), color: withHash(COLORS[0]), screens: [], powers: [], picked: [] };
     setDraft(d);
     setSaved({ ...d, name: "" });
@@ -195,7 +173,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const upd = (patch: Partial<Draft>): void => setDraft((d) => (d === null ? d : { ...d, ...patch }));
   const toggle = (key: "screens" | "powers" | "picked", id: string): void => {
     if (readOnly || draft === null) return;
-    beep(true);
+    feedback.ok();
     const list = draft[key];
     upd({ [key]: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] } as Partial<Draft>);
   };
@@ -223,12 +201,12 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
         grants: grantsOf(draft.powers),
       });
       if (!r.ok) {
-        beep(false);
+        feedback.error();
         setIssue(errorText(r.error.code, r.error.detail));
         return false;
       }
       if (!r.data.ok) {
-        beep(false);
+        feedback.error();
         setIssue(t(`issue.${r.data.issue}`));
         return false;
       }
@@ -250,7 +228,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       setDraft(done);
       setSaved(done);
       if (skipped.length > 0) setIssue(t("skipped", { names: skipped.join(", ") }));
-      beep(true);
+      feedback.ok();
       return true;
     } finally {
       setBusy(false);
@@ -268,7 +246,16 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       }
       const id = draft.id;
       setGroups((list) => list.map((x) => (x.id === id ? { ...x, archived: true } : x)));
-      flash(t("archived", { name: draft.name }));
+      // T-436 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay yok; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
+      const version = r.data.ok ? r.data.version : draft.version;
+      feedback.undo(t("archived", { name: draft.name }), tr("undo"), async () => {
+        const u = await archiveGroupAction({ slug, id, expectedVersion: version, archived: false });
+        if (u.ok && u.data.ok) {
+          const v = u.data.version;
+          setGroups((list) => list.map((x) => (x.id === id ? { ...x, archived: false, version: v } : x)));
+          feedback.ok(tr("undone"));
+        } else feedback.error(tr("undoFailed"));
+      });
       setDraft(null);
       setSaved(null);
       setView("list");
@@ -301,7 +288,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       RICON.next,
       () => {
         if (draft !== null && draft.template === null && draft.name.trim() === "") {
-          beep(false);
+          feedback.error();
           setIssue(t("issue.NAME_MISSING"));
           return;
         }
@@ -343,7 +330,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
           data-card={id}
           onClick={() => {
             if (key === "powers" && LOCKED.includes(id) && !readOnly) {
-              beep(false);
+              feedback.error();
               flash(t("teamLocked"));
               return;
             }
@@ -362,7 +349,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       );
     });
 
-  const shown = members.filter((m) => q.trim() === "" || m.name.toLocaleLowerCase("tr-TR").includes(q.trim().toLocaleLowerCase("tr-TR")));
+  const shown = members.filter((m) => q.trim() === "" || kucukHarf(m.name, locale).includes(kucukHarf(q.trim(), locale)));
   const peopleList = readOnly && draft !== null ? shown.filter((m) => draft.picked.includes(m.membershipId)) : shown;
   const [mainLabel, mainIcon, main] = MAIN[view];
 
@@ -419,7 +406,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                         <span className="faces">
                           {g.who.slice(0, 3).map((m) => (
                             <span key={m.membershipId} style={{ background: dz(g.color) }}>
-                              {initial(m.name)}
+                              {initial(m.name, locale)}
                             </span>
                           ))}
                         </span>
@@ -516,7 +503,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                         type="button"
                         className="allb"
                         onClick={() => {
-                          beep(true);
+                          feedback.ok();
                           upd({ picked: members.filter((m) => !m.isOwner).map((m) => m.membershipId) });
                         }}
                       >
@@ -539,7 +526,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                           data-person={m.name}
                           onClick={() => {
                             if (m.isOwner && !readOnly) {
-                              beep(false);
+                              feedback.error();
                               flash(t("ownerNoGroup"));
                               return;
                             }
@@ -547,7 +534,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                           }}
                         >
                           <span className="av" style={{ background: dz(nowColor(m)) }}>
-                            {initial(m.name)}
+                            {initial(m.name, locale)}
                           </span>
                           <span style={{ minWidth: 0 }}>
                             <b>{m.name}</b>
@@ -581,7 +568,6 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
             </main>
 
 
-            {toast !== "" ? <div className="toast">{toast}</div> : null}
           </div>
         </div>
       </div>

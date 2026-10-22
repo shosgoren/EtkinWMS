@@ -11,7 +11,8 @@
 import { useTranslations } from "next-intl";
 import { useRef, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
+import { feedback } from "@wms/ui";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipSecimSayfasi } from "../kalip/secim.tsx";
 
@@ -71,6 +72,7 @@ export function AuditView({
   banner: ReactNode;
 }) {
   const t = useTranslations("auditLog");
+  const tk = useTranslations("kural");
   const { say, node: toast } = useKalipToast("liste");
   const [action, setAction] = useState(filters.action ?? "");
   const [pick, setPick] = useState(false);
@@ -146,7 +148,7 @@ export function AuditView({
             aria-expanded={pick}
             aria-label={`${t("action")}: ${actionLabel}`}
             onClick={() => {
-              tone("tap");
+              feedback.minor();
               setPick(true);
             }}
             data-testid="audit-action"
@@ -164,7 +166,10 @@ export function AuditView({
       </form>
       {banner}
       {rows === null ? null : rows.length === 0 ? (
-        <KalipBos title={t("empty")} {...(filtered ? { action: { label: t("clear"), href: here } } : {})} />
+        <KalipBos
+          title={filtered ? tk("notFoundSearch") : t("empty")}
+          action={filtered ? { label: t("clear"), href: here, kind: "clear" } : { label: tk("home"), href: home, kind: "go" }}
+        />
       ) : (
         <>
           <KalipBaslik title={t("listTitle")} hint={t("intro")} />
@@ -183,7 +188,7 @@ export function AuditView({
                   color={v.color}
                   aria={`${r.actionLabel} · ${r.actor} · ${r.when}${meta === "" ? "" : ` · ${meta}`}`}
                   onClick={() => {
-                    tone("tap");
+                    feedback.minor();
                     say("info", [r.actionLabel, r.actor, r.when, r.record, r.reason].filter((x): x is string => x !== null && x !== "").join(" · "));
                   }}
                   testId="audit-row"

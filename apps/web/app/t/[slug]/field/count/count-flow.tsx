@@ -13,8 +13,9 @@ import { resolveItemScanAction } from "../../receipts/actions.ts";
 import { ErrorNotice, errorKeyOf, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { recordCountAction, submitCountAction } from "../../counts/actions.ts";
 import { DroppedNotice, PrimaryButton, PrimaryLink, ScanAlert, ScanPanel, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, SahaVerdict, tone } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaShell, SahaVerdict } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
+import { feedback } from "@wms/ui";
 
 export interface CountFlowLine {
   readonly lineId: string;
@@ -109,7 +110,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
           return;
         }
         setLastName(work.locationName || work.locationCode);
-        tone("ok");
+        feedback.ok();
         setStage("list");
         return;
       }
@@ -142,7 +143,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
         }
         const line = mine[0];
         setLastName(res.data.itemName);
-        tone("ok");
+        feedback.ok();
         begin({
           itemId: res.data.itemId,
           itemName: res.data.itemName,
@@ -189,7 +190,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
     const decimal = tgt !== null && tgt.scale > 0;
     const value = decimal ? qtyText.trim().replace(",", ".") : String(qty);
     if (busyRef.current || tgt === null || qty < 0 || (decimal && !/^\d{1,12}(?:\.\d{1,6})?$/.test(value))) {
-      tone("err");
+      feedback.error();
       return;
     }
     busyRef.current = true;
@@ -201,14 +202,14 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
     busyRef.current = false;
     setBusy(false);
     if (!out.ok) {
-      tone("err");
+      feedback.error();
       setError(out.error);
       return;
     }
     const n = Number(value);
     const ref = tgt.reference === null ? null : Number(tgt.reference);
     const diff = tgt.finding ? n : ref === null ? null : Math.round((n - ref) * 1e6) / 1e6;
-    tone(diff !== null && diff !== 0 ? "err" : "ok");
+    (diff !== null && diff !== 0 ? feedback.warn : feedback.ok)();
     setSaved({ item: tgt.itemName, n, diff });
     setVeil(true);
     setTarget(null);
@@ -225,11 +226,11 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
     busyRef.current = false;
     setBusy(false);
     if (!out.ok) {
-      tone("err");
+      feedback.error();
       setError(out.error);
       return;
     }
-    tone("ok");
+    feedback.ok();
     setSubmitted(true);
     router.refresh();
   }
@@ -406,7 +407,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
                   data-counted={l.counted === null ? "false" : "true"}
                   disabled={submitted || busy}
                   onClick={() => {
-                    tone("tap");
+                    feedback.minor();
                     begin({ itemId: l.itemId, itemName: l.itemName, unitCode: l.unitCode, stockStatus: l.stockStatus, reference: l.reference, finding: false, barcode: null, step: 1, scale: l.scale, counted: l.counted });
                   }}
                 >

@@ -7,6 +7,8 @@
 // ekran görüntüsü alınmaz); KULLANICI · ROL sütununda rol yok (talepte rol tutulmaz) — yerine mesaj sayısı; "Panel rozeti" salt durum.
 import { useActionState, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+import { kucukHarf } from "@wms/ui";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { dz as dzd } from "../../design/yonet-destek-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
@@ -162,10 +164,11 @@ export type InboxFilter = "ALL" | SupportStatusKey;
 /** E · Destek gelen kutusu. */
 export function SupportInbox({ rows, filter, q: q0, labels: t, settings }: { rows: readonly SupportRowItem[]; filter: InboxFilter; q: string; labels: SupportLabels; settings: ReactNode }) {
   const router = useRouter();
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [q, setQ] = useState(q0);
   const cnt = (s: SupportStatusKey): number => rows.filter((r) => r.status === s).length;
-  const ql = q.toLocaleLowerCase("tr").trim();
-  const shown = rows.filter((r) => (filter === "ALL" || r.status === filter) && (ql === "" || `${r.cust} ${r.user} ${r.no} ${r.msg}`.toLocaleLowerCase("tr").includes(ql)));
+  const ql = kucukHarf(q, locale).trim();
+  const shown = rows.filter((r) => (filter === "ALL" || r.status === filter) && (ql === "" || kucukHarf(`${r.cust} ${r.user} ${r.no} ${r.msg}`, locale).includes(ql)));
   const filters: ReadonlyArray<[InboxFilter, string]> = [
     ["ALL", `${t.fAll} · ${rows.length}`],
     ["OPEN", `${t.fOpen} · ${cnt("OPEN")}`],

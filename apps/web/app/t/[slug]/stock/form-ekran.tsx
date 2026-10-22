@@ -15,7 +15,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { degisti } from "../kalip/dogrula.ts";
-import { KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
+import { feedback } from "@wms/ui";
 
 const FORM_SEL = ".kalip form.workflow-form";
 type Alan = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
@@ -129,7 +130,7 @@ export function FormEkran({ kind = "form", heading, dark, title, icon, back, mai
       const parts: string[] = [];
       if (eksik.length > 0) parts.push(tr("vMissing", { n: eksik.length, list: ad(eksik) }));
       if (hatali.length > 0) parts.push(tr("vInvalid", { n: hatali.length, list: ad(hatali) }));
-      tone("err");
+      feedback.error();
       sayRef.current("err", parts.join(" · "));
       const first = list[0];
       if (first === undefined) return;
@@ -177,19 +178,17 @@ export function FormEkran({ kind = "form", heading, dark, title, icon, back, mai
             const form = document.querySelector<HTMLFormElement>(FORM_SEL);
             const primary = form?.querySelector<HTMLButtonElement>(".workflow-primary") ?? form?.querySelector<HTMLButtonElement>('button[type="submit"]');
             if (form === null || form === undefined) {
-              tone("err");
               say("err", t("mainOff"));
               return;
             }
             // Alan denetimi geçmezse `invalid` olayları ortak geri bildirimi verir (checkValidity tarayıcı balonu açmaz).
             if (!form.checkValidity()) return;
             if (primary?.disabled === true) {
-              tone("err");
               say("err", t("formFirst"));
               primary.scrollIntoView({ block: "center" });
               return;
             }
-            tone("tap");
+            feedback.minor();
             form.requestSubmit(primary ?? undefined);
           },
         },

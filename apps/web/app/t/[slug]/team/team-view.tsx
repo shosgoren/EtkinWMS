@@ -5,10 +5,11 @@
 // Bilinçli farklar (DESIGN-PARITY): onay kartında kod GÖSTERİLMEZ, yönetici personelin ekranındaki kodu YAZAR (uygulama rolü kodu okuyamaz);
 // aktif/pasif anahtarı ve "son görülme" yok (pasif üyelik ayrı iş) — filtre Hepsi / Saha / Ofis; davette ad alanı yok (kişi kabulde yazar);
 // Etkin (sesle) T-424; QR adresi yalnız üretildiği anda gösterilir (güvenlik: eskisi yeniden gösterilmez, yenile → yeni QR).
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { create as createQr } from "qrcode";
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/ekip-tokens.ts";
 import { EICON } from "../../../design/ekip-icons.ts";
 import { SHICON } from "../../../design/paylas-icons.ts";
@@ -19,6 +20,7 @@ import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { JoinShareRow, useJoinShare } from "../members/join-share.tsx";
 import { UstDugmeler } from "../ust-dugmeler.tsx";
 import type { ToastKind } from "../kalip/ekran.tsx";
+import { balonGoster, buyukHarf, feedback } from "@wms/ui";
 
 type Role = "TENANT_ADMIN" | "WAREHOUSE_MANAGER" | "PICKER" | "COUNTER" | "READ_ONLY";
 export interface TeamPerson {
@@ -77,26 +79,6 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
   );
 }
 
-function beep(ok: boolean): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.value = ok ? 880 : 300;
-    g.gain.setValueAtTime(0.12, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
-    o.connect(g);
-    g.connect(ac.destination);
-    o.start();
-    o.stop(ac.currentTime + 0.2);
-    window.setTimeout(() => void ac.close(), 400);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
-
 function QrSvg({ value, label }: { value: string; label: string }) {
   const qr = useMemo(() => {
     try {
@@ -119,6 +101,7 @@ function QrSvg({ value, label }: { value: string; label: string }) {
 
 export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pending, hasLink }: TeamViewProps) {
   const t = useTranslations("ekip");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const tk = useTranslations("kalip");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
@@ -132,33 +115,24 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   const [invRole, setInvRole] = useState<Role | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const addRef = useRef<HTMLElement>(null);
+  useModalFocus(add, addRef, { onClose: () => setAdd(false), initial: "first" });
   const [busy, setBusy] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   // T-990 (ALTIN-KURAL "Form doğrulama"): davet alanlarının hatası alanın altında; kırmızı çerçeve + sarsılma + balon + ses.
   const [fieldErr, setFieldErr] = useState<{ email?: string; role?: string }>({});
   const [shake, setShake] = useState(0);
-  const [toast, setToast] = useState("");
-  const [toastKind, setToastKind] = useState<ToastKind>("info");
   const tenantName = useKabuk()?.tenantName ?? slug;
 
   useEffect(() => {
     const timer = setInterval(() => router.refresh(), 5000);
     return () => clearInterval(timer);
   }, [router]);
-  useEffect(() => {
-    if (toast === "") return;
-    const timer = setTimeout(() => setToast(""), 2600);
-    return () => clearTimeout(timer);
-  }, [toast]);
-  const flash = (m: string): void => {
-    setToastKind("info");
-    setToast(m);
-  };
+  // T-436 (ALTIN-KURAL 5): ortak balon (kendi sesini çalar; bilgi balonu sessiz).
+  const flash = (m: string, tur: ToastKind = "ok"): void => balonGoster({ tur, metin: m });
   // T-986b: paylaşma satırı ve PAYLAŞ ana işleminin balonu (sarı = kilit/uyarı, kırmızı = hata).
-  const say = useCallback((kind: ToastKind, m: string): void => {
-    setToastKind(kind);
-    setToast(m);
-  }, []);
+  const say = useCallback((kind: ToastKind, m: string): void => balonGoster({ tur: kind, metin: m }), []);
   const { share, rowRef } = useJoinShare({ url: qrUrl, tenantName, isDemo, say });
 
   const groupOf = (id: string | null): TeamGroup | undefined => (id === null ? undefined : groups.find((g) => g.id === id));
@@ -192,12 +166,12 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
   async function approve(): Promise<boolean> {
     if (req === undefined) return false;
     if (chosen === undefined) {
-      beep(false);
-      flash(t("pickGroupFirst"));
+      feedback.error();
+      flash(t("pickGroupFirst"), "warn");
       return false;
     }
     if (!/^\d{6}$/.test(code)) {
-      beep(false);
+      feedback.error();
       setIssue(t("codeMissing"));
       return false;
     }
@@ -206,12 +180,12 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     try {
       const r = await approveJoinAction({ slug, requestId: req.id, code, roleKey: chosen.role });
       if (!r.ok) {
-        beep(false);
+        feedback.error();
         setIssue(errText(r.error.code, r.error.detail));
         return false;
       }
       if (!r.data.ok) {
-        beep(false);
+        feedback.error();
         setCode("");
         setIssue(r.data.issue === "CODE_WRONG" ? t("codeWrong", { n: Math.max(0, 2 - req.wrongTries) }) : t("err.gone"));
         router.refresh();
@@ -219,9 +193,9 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
       }
       if (chosen.groupId !== null) {
         const g = await setMemberGroupAction({ slug, memberId: r.data.membershipId, groupId: chosen.groupId });
-        if (!g.ok || !g.data.ok) flash(t("groupNotSet", { group: chosen.label }));
+        if (!g.ok || !g.data.ok) flash(t("groupNotSet", { group: chosen.label }), "warn");
       }
-      beep(true);
+      feedback.ok();
       flash(t("approved", { name: req.name, group: chosen.label }));
       setCode("");
       router.refresh();
@@ -240,7 +214,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
       setIssue(errText(r.error.code, r.error.detail));
       return;
     }
-    beep(false);
+    feedback.error();
     flash(t("rejected", { name: req.name }));
     setCode("");
     router.refresh();
@@ -252,12 +226,11 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) fe.email = tk("vEmail");
     if (invRole === null) fe.role = tk("vRequired");
     if (fe.email !== undefined || fe.role !== undefined) {
-      beep(false);
       setFieldErr(fe);
       setShake((n) => n + 1);
       const missing = [fe.email === tk("vRequired") ? t("emailLabel") : null, fe.role !== undefined ? t("whichGroup") : null].filter((x): x is string => x !== null);
       const invalid = fe.email === tk("vEmail") ? [t("emailLabel")] : [];
-      flash([missing.length > 0 ? tk("vMissing", { n: missing.length, list: missing.join(", ") }) : null, invalid.length > 0 ? tk("vInvalid", { n: invalid.length, list: invalid.join(", ") }) : null].filter((x) => x !== null).join(" · "));
+      flash([missing.length > 0 ? tk("vMissing", { n: missing.length, list: missing.join(", ") }) : null, invalid.length > 0 ? tk("vInvalid", { n: invalid.length, list: invalid.join(", ") }) : null].filter((x) => x !== null).join(" · "), "err");
       window.requestAnimationFrame(() => {
         const el = document.querySelector<HTMLElement>(fe.email !== undefined ? '[data-testid="team-email"]' : '[data-alan="role"] button');
         el?.scrollIntoView({ block: "center" });
@@ -271,11 +244,11 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     try {
       const r = await inviteMemberAction({ slug, email: email.trim(), roleKey: invRole });
       if (!r.ok) {
-        beep(false);
+        feedback.error();
         setIssue(errText(r.error.code, r.error.detail));
         return false;
       }
-      beep(true);
+      feedback.ok();
       if (r.data.inviteLink !== undefined) {
         setInviteLink(r.data.inviteLink);
         return false;
@@ -296,11 +269,11 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
     const r = await createJoinLinkAction({ slug });
     setBusy(false);
     if (!r.ok) {
-      beep(false);
+      feedback.error();
       setIssue(errText(r.error.code, r.error.detail));
       return;
     }
-    beep(true);
+    feedback.ok();
     setQrUrl(r.data.url);
     flash(t("qrReady"));
   }
@@ -331,7 +304,6 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
       // Ana işlem sessiz kapanmaz (ALTIN-KURAL): demoda pasif görünür, dokununca neden + hata sesi.
       mainCls = "dk big scan wait";
       main = () => {
-        beep(false);
         say("warn", t("err.demo"));
       };
     }
@@ -456,14 +428,14 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                           return (
                             <div key={p.id} className="pr2" role="listitem">
                               <span className="av" style={{ background: dz(l.color) }}>
-                                {(p.name.trim()[0] ?? "?").toLocaleUpperCase("tr-TR")}
+                                {buyukHarf(p.name.trim()[0] ?? "?", locale)}
                               </span>
                               <span className="pt">
                                 <b>{p.name}</b>
-                                <small>{`${l.text.toLocaleUpperCase("tr-TR")} · ${p.isOwner ? t("owner") : p.isField ? t("field") : t("office")}`}</small>
+                                <small>{`${buyukHarf(l.text, locale)} · ${p.isOwner ? t("owner") : p.isField ? t("field") : t("office")}`}</small>
                               </span>
                               <span className="gch" style={{ background: dz(l.color) }}>
-                                {l.text.toLocaleUpperCase("tr-TR")}
+                                {buyukHarf(l.text, locale)}
                               </span>
                             </div>
                           );
@@ -479,7 +451,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                     <div className="req" data-testid="team-req">
                       <div className="rqh">
                         <span className="av" style={{ background: dz("6A7F91"), width: 52, height: 52, fontSize: 18 }}>
-                          {(req.name.trim()[0] ?? "?").toLocaleUpperCase("tr-TR")}
+                          {buyukHarf(req.name.trim()[0] ?? "?", locale)}
                         </span>
                         <span className="pt" style={{ flex: 1 }}>
                           <b style={{ fontSize: 20 }}>{req.name}</b>
@@ -529,7 +501,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                               className={`gp${on ? " on" : ""}`}
                               style={on ? { background: dz(c.color) } : undefined}
                               onClick={() => {
-                                beep(true);
+                                feedback.ok();
                                 setPick({ ...pick, [req.id]: c.key });
                               }}
                               data-chip={c.key}
@@ -681,7 +653,7 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
 
             {add ? (
               <div className="scrim" onClick={() => setAdd(false)}>
-                <section className="sheet" role="dialog" aria-label={t("addTitle")} onClick={(e) => e.stopPropagation()}>
+                <section ref={addRef} className="sheet" role="dialog" aria-label={t("addTitle")} onClick={(e) => e.stopPropagation()}>
                   <div className="sh">
                     <span>
                       <b>{t("addTitle")}</b>
@@ -710,17 +682,6 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
               </div>
             ) : null}
 
-            {toast !== "" ? (
-              <div
-                className="toast"
-                role="status"
-                aria-live="polite"
-                style={toastKind === "warn" ? { background: dz("F4C542"), color: dz("1A1300") } : toastKind === "err" ? { background: dz("C62828"), color: dz("FFFFFF") } : undefined}
-                data-testid="team-toast"
-              >
-                {toast}
-              </div>
-            ) : null}
           </div>
         </div>
       </div>

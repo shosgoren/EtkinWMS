@@ -10,6 +10,8 @@ import "./globals.css";
 import { designFontVars } from "./fonts.ts";
 import { FirstUseGuide, GuideTrigger } from "./first-use-guide.tsx";
 import { appSurface } from "../lib/surface.ts";
+import { temaKoyu } from "./design/theme.ts";
+import { KuralKatmani } from "./t/[slug]/kalip/kural-katmani.tsx";
 
 // Uygulama kabuğu (T-109): üst bar, Akış/Kokpit görünüm anahtarı, kullanıcı çipi yer tutucusu,
 // "Yardım çağır". Görünür metin yalnızca messages/*.json'dan gelir (ADR-002). Oturum T-118'de bağlanır.
@@ -51,7 +53,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const panel = appSurface() === "panel";
 
   return (
-    <html lang={locale} data-view={view}>
+    <html lang={locale} data-view={view} data-tema={temaKoyu(cookieStore) ? "koyu" : "acik"}>
       <body className={`min-h-dvh bg-bg text-ink antialiased ${designFontVars}`}>
         <NextIntlClientProvider>
           <a
@@ -111,6 +113,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <div id="main" tabIndex={-1}>
             {children}
           </div>
+          {/* T-436: ALTIN-KURAL 5–17 ortak katman (balon, çevrimdışı, hareket azaltma, otomatik tema) — her yüzeyde bir kez. */}
+          <KuralKatmani />
         </NextIntlClientProvider>
       </body>
     </html>

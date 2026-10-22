@@ -290,6 +290,12 @@ describe("görev sorguları", () => {
     expect(seen.sort()).toEqual(made.slice(0, 5).sort());
     const counts = await listTasks(admin(w), { kind: "COUNT" });
     expect(counts.items.map((t) => t.id)).toEqual([made[5]]);
+    // ALTIN-KURAL 15: toplam yalnız istenince; aynı süzgeç, imleçten bağımsız.
+    expect(counts.total).toBeUndefined();
+    const firstPage = await listTasks(admin(w), { kind: "PICK", status: "OPEN", limit: 2, withTotal: true });
+    expect(firstPage.total).toBe(5);
+    if (firstPage.next !== null) expect((await listTasks(admin(w), { kind: "PICK", status: "OPEN", limit: 2, after: firstPage.next, withTotal: true })).total).toBe(5);
+    expect((await listTasks(admin(w), { kind: "COUNT", withTotal: true })).total).toBe(1);
     expect((await failure(listTasks(admin(w), { limit: 0 }))).code).toBe("VALIDATION_FAILED");
     expect((await failure(listTasks(admin(w), { after: { createdKey: "bozuk", id: randomUUID() } }))).code).toBe("VALIDATION_FAILED");
     // MINOR-2: biçim doğru ama takvimde olmayan zaman 500 değil VALIDATION_FAILED.
@@ -347,6 +353,10 @@ describe("görev sorguları", () => {
     expect(await my({ q: "_" })).toEqual([]);
     expect((await my({ q: "   " })).length).toBeGreaterThanOrEqual(3);
     expect(await my({ q: "yok-boyle-bir-sey" })).toEqual([]);
+    // ALTIN-KURAL 15: listMyTasks toplamı aynı izin/durum/arama süzgecini kullanır.
+    expect((await listMyTasks(picker(w), { status: "ASSIGNED", withTotal: true })).total).toBe(1);
+    expect((await listMyTasks(picker(w), { q: "u2", withTotal: true })).total).toBe(1);
+    expect((await listMyTasks(picker(w), { q: "yok-boyle-bir-sey", withTotal: true })).total).toBe(0);
     // Geçersiz tür/durum VALIDATION_FAILED.
     expect((await failure(listMyTasks(picker(w), { kind: "XX" as TaskKind }))).code).toBe("VALIDATION_FAILED");
     expect((await failure(listMyTasks(picker(w), { status: "NOPE" as ops.TaskStatus }))).code).toBe("VALIDATION_FAILED");
@@ -362,5 +372,6 @@ describe("görev sorguları", () => {
     expect(byItem).not.toContain(foreign);
     expect((await listTasks(admin(w), { q: "U2", kind: "PUTAWAY" })).items).toEqual([]);
     expect((await listTasks(admin(other), { q: "U2" })).items.map((t) => t.id)).toEqual([foreign]);
+    expect((await listTasks(admin(w), { q: "U2", withTotal: true })).total).toBe(1);
   });
 });

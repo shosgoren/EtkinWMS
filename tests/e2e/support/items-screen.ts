@@ -104,11 +104,11 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
     await page.getByRole("group", { name: "Süzgeç" }).getByRole("link", { name: /Arşivli/ }).click();
     await expect(page).toHaveURL(/status=ARCHIVED/);
     const cards = page.getByTestId("item-card");
-    await expect(cards.first().or(page.getByText("Bu süzgece uyan ürün yok"))).toBeVisible();
+    await expect(cards.first().or(page.getByText("Bulunamadı · ara ya da söyle", { exact: true }))).toBeVisible();
     const n = await cards.count();
     for (let i = 0; i < n; i++) await expect(cards.nth(i).locator("[data-status]"), `${where}: arşivli süzgeçte kart`).toHaveAttribute("data-status", "ARCHIVED");
     await page.goto(`${base}/items?status=ARCHIVED&q=zzyok${Date.now().toString(36)}`);
-    await expect(page.getByText("Aramana uyan ürün yok")).toBeVisible();
+    await expect(page.getByText("Bulunamadı · ara ya da söyle", { exact: true })).toBeVisible(); // ALTIN-KURAL 8: ortak cümle
     await expect(page.getByRole("link", { name: "Aramayı temizle" })).toHaveAttribute("href", `${base}/items`);
     await page.screenshot({ path: path.join(OUT_T274, `final-${tag}-items-${size.width}-arsivli.png`) });
   }

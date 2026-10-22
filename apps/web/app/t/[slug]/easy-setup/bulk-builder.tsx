@@ -8,13 +8,13 @@
 // değil sunucu önizlemesidir (varsayılan aralık dokunmadan oluşturulabilir). Varsayılandan farklı aralık yarım iş sayılır (cam kutu).
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { createBulkLocationsAction, previewBulkLocationsAction, searchLocationsAction } from "../warehouses/actions.ts";
 import type { ServerError } from "../warehouses/warehouses-view.tsx";
 import { ServerErrorBanner } from "../warehouses/warehouses-view.tsx";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
-import { KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
 import { Typeahead } from "./typeahead.tsx";
@@ -127,7 +127,7 @@ export function BulkBuilder({
 
   const create = useCallback(async (): Promise<boolean> => {
     if (!canSubmit) {
-      tone("err");
+      feedback.error();
       return false;
     }
     if (keyRef.current === null || keyRef.current.sig !== sig) keyRef.current = { sig, key: crypto.randomUUID() };
@@ -148,18 +148,18 @@ export function BulkBuilder({
       });
     } catch (e) {
       setBusy(false);
-      tone("err");
+      feedback.error();
       if (eskiSurumMu(e)) eskiSurumBildir();
       else say("err", tkal("saveFailed"));
       return false;
     }
     setBusy(false);
     if (!res.ok) {
-      tone("err");
+      feedback.error();
       setError({ code: res.error.code, detail: res.error.detail, requestId: res.error.requestId });
       return false;
     }
-    tone("ok");
+    feedback.ok();
     onDone(res.data);
     return true;
   }, [canSubmit, sig, slug, warehouseId, parent, zone, rackFrom, rackTo, levelFrom, levelTo, onDone, say, tkal]);
@@ -303,7 +303,7 @@ export function BulkBuilder({
                 }}
                 toSuggestion={(l) => ({ key: l.id, primary: l.code, secondary: l.name })}
                 onSelect={(l) => {
-                  tone("ok");
+                  feedback.ok();
                   setParent(l);
                 }}
                 scan={{

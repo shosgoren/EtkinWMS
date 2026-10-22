@@ -10,7 +10,7 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { temaKoyu } from "../../../../design/theme.ts";
 import { KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { ItemDetail } from "./item-detail.tsx";
 
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function LockedItem(slug: string) {
   const t = await getTranslations("items");
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <KalipKilitliEkran title={t("detail.title")} icon={{ d: LICON.box, color: "2F5DA8" }} text={t("locked")} hint={t("lockedAction")} dark={dark} home={`/t/${encodeURIComponent(slug)}`} />
@@ -60,7 +60,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
     const baseUnit = units.find((u) => u.id === item.baseUnitId);
     // T-968: stok özeti (Nerede? + son hareketler) — okunamazsa bölümler çizilmez, kart yine açılır.
     const stockCard = await getItemStockCard(call, item.id).catch(() => null);
-    const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+    const dark = temaKoyu(await cookies());
     const can = (p: Parameters<typeof hasPermission>[1]): boolean => hasPermission(current.roles, p, current.grants);
     return (
       <main className="flex w-full min-w-0 flex-col">

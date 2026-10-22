@@ -6,14 +6,16 @@
 //    okuyucusu arama kutusuna yazar) ve mikrofon (Etkin, B-62 gelene dek "yakında"); liste rolü listbox/option. Alanı `KalipSecimListe`.
 //  - `KalipSecim` seçenek sayısına göre ikisinden birini seçer (ekran ayrıca karar vermez).
 // Alan adı (`name`) ortak doğrulamanın (`KalipFormEkran`) hata/odak bağlantısıdır (`data-alan`). Renkler `.dzf` belirteçlerinden.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
-import { Ico, MicIco, tone } from "./ekran.tsx";
+import { Ico, MicIco } from "./ekran.tsx";
+import { useModalFocus } from "./odak.ts";
 import { useAlanHata, useZorunlu } from "./form-baglam.tsx";
 import { KalipPerdeKatman } from "./perde.tsx";
 import { kdzOrtak } from "./tokens.ts";
+import { feedback, kucukHarf } from "@wms/ui";
 
 const c = (hex: string): string => kdzOrtak(hex);
 
@@ -88,7 +90,7 @@ export function KalipSecimGrubu({
     if (o === undefined) return;
     refs.current[j]?.focus();
     if (!disabled) {
-      tone("tap");
+      feedback.minor();
       onPick(o.id);
     }
   };
@@ -115,7 +117,7 @@ export function KalipSecimGrubu({
               style={on ? { background: bg } : ({ "--c": bg } as CSSProperties)}
               disabled={disabled || o.disabled === true}
               onClick={() => {
-                tone("tap");
+                feedback.minor();
                 onPick(o.id);
               }}
               onKeyDown={(e) => move(e, i)}
@@ -140,9 +142,9 @@ export function KalipSecimGrubu({
   );
 }
 
-/** Aramada Türkçe küçük harf + boşluk sadeleştirme. */
-function norm(s: string): string {
-  return s.toLocaleLowerCase("tr").replace(/\s+/g, " ").trim();
+/** Aramada kullanıcının dilinde küçük harf + boşluk sadeleştirme (ALTIN-KURAL 16). */
+function norm(s: string, locale: string): string {
+  return kucukHarf(s, locale).replace(/\s+/g, " ").trim();
 }
 
 /** Çok seçenek: alttan açılan aramalı seçim sayfası (rol dialog; liste rolü listbox). */
@@ -169,17 +171,21 @@ export function KalipSecimSayfasi({
   testId?: string;
 }) {
   const t = useTranslations("kalip");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const [cam, setCam] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [koyu, setKoyu] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const sheet = useRef<HTMLElement>(null);
+  // T-436 (ALTIN-KURAL 11): ortak seçim sayfası — Esc kapatır, odak sayfada kalır, kapanınca açan öğeye döner.
+  useModalFocus(open, sheet, { onClose, initial: "none", trap: !cam });
   const lid = useId();
   const list = useMemo(() => {
-    const k = norm(q);
+    const k = norm(q, locale);
     if (k === "") return options;
-    return options.filter((o) => norm([o.label, o.sub ?? "", o.id, ...(o.keys ?? [])].join(" ")).includes(k));
+    return options.filter((o) => norm([o.label, o.sub ?? "", o.id, ...(o.keys ?? [])].join(" "), locale).includes(k));
   }, [q, options]);
 
   useEffect(() => {
@@ -189,27 +195,19 @@ export function KalipSecimSayfasi({
     setKoyu(document.querySelector(".dz-dark") !== null);
     const i = options.findIndex((o) => o.id === value);
     setActive(i < 0 ? 0 : i);
-    const onKey = (e: globalThis.KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
     // Telefonda klavye kendiliğinden açılmasın: odak sayfaya; masaüstünde arama kutusuna.
     if (window.matchMedia("(min-width: 700px)").matches) input.current?.focus();
-    return () => window.removeEventListener("keydown", onKey);
     // Açılışta bir kez.
   }, [open]);
 
   const pick = (id: string): void => {
-    tone("ok");
+    feedback.ok();
     onPick(id);
     onClose();
   };
   const exact = (code: string): KalipSecimSecenek | undefined => {
-    const k = norm(code);
-    return options.find((o) => o.disabled !== true && [o.id, o.label, ...(o.keys ?? [])].some((x) => norm(x) === k));
+    const k = norm(code, locale);
+    return options.find((o) => o.disabled !== true && [o.id, o.label, ...(o.keys ?? [])].some((x) => norm(x, locale) === k));
   };
   const onKey = (e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "ArrowDown") {
@@ -223,7 +221,7 @@ export function KalipSecimSayfasi({
       const hit = exact(q) ?? list[active] ?? (list.length === 1 ? list[0] : undefined);
       if (hit !== undefined && hit.disabled !== true) pick(hit.id);
       else {
-        tone("err");
+        feedback.error();
         setNote(t("secNone"));
       }
     }
@@ -234,7 +232,7 @@ export function KalipSecimSayfasi({
   return (
     <div className={`dzf ksecp${koyu ? " dz-dark" : ""}`} data-testid={testId ?? "kalip-secim"}>
       <KalipPerdeKatman onClose={onClose} label={t("close")} />
-      <section className="ksheet" role="dialog" aria-modal="true" aria-label={title}>
+      <section ref={sheet} className="ksheet" role="dialog" aria-modal="true" aria-label={title}>
         <div className="sxh">
           <span className="ri" style={{ background: c(ic.color), color: c("FFFFFF") }}>
             <Ico d={ic.d} size={20} />
@@ -272,7 +270,7 @@ export function KalipSecimSayfasi({
               className="ksbtn"
               aria-label={t("secScan")}
               onClick={() => {
-                tone("tap");
+                feedback.minor();
                 setCam(true);
               }}
               data-testid="kalip-secim-scan"
@@ -286,7 +284,7 @@ export function KalipSecimSayfasi({
             aria-label={t("secMic")}
             aria-disabled="true"
             onClick={() => {
-              tone("tap");
+              feedback.minor();
               setNote(t("voiceSoon"));
             }}
             data-testid="kalip-secim-mic"
@@ -342,7 +340,7 @@ export function KalipSecimSayfasi({
             const hit = exact(code);
             setCam(false);
             if (hit === undefined) {
-              tone("err");
+              feedback.error();
               setQ(code);
               setNote(t("secScanNone", { code }));
               return true;
@@ -404,7 +402,7 @@ export function KalipSecimListe({
         aria-invalid={hata === undefined ? undefined : true}
         disabled={disabled}
         onClick={() => {
-          tone("tap");
+          feedback.minor();
           setOpen(true);
         }}
         data-testid={testId}
@@ -473,7 +471,7 @@ export function KalipSekme({ items, current, color, label, onGo }: { items: read
                 if (!on) onGo(o.href);
                 return;
               }
-              tone("tap");
+              feedback.minor();
             }}
             data-tab={o.id}
           >
@@ -514,11 +512,11 @@ export function KalipSecimKutulari({ items, value, onPick, onLocked, label, test
             aria-disabled={o.locked === true || undefined}
             onClick={() => {
               if (o.locked === true) {
-                tone("err");
+                feedback.error();
                 onLocked?.(o.id);
                 return;
               }
-              tone("tap");
+              feedback.minor();
               onPick(o.id);
             }}
             data-option={o.id}

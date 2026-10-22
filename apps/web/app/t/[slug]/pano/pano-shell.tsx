@@ -14,13 +14,14 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { temaYaz } from "../../../design/theme.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
 import { HesapDugme, HesapMenu } from "./hesap-menu.tsx";
-import { KabukBar, tone } from "../kabuk/kabuk-bar.tsx";
+import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import { DICON } from "../../../design/destek-icons.ts";
 import { HelpIco, IssueIco, SupportList, SupportSheet, useSupport } from "./support-layer.tsx";
+import { feedback } from "@wms/ui";
 
 export interface PanoLink {
   readonly k: string;
@@ -140,7 +141,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
   const toggleTheme = useCallback(() => {
     setDark((d) => {
       const n = !d;
-      document.cookie = `${THEME_COOKIE}=${n ? "koyu" : "acik"}; path=/; max-age=31536000; samesite=lax`;
+      temaYaz(n ? "koyu" : "acik");
       return n;
     });
   }, []);
@@ -198,7 +199,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
     setSentCode(null);
   }, []);
   const openForm = useCallback(() => {
-    tone("tap");
+    feedback.minor();
     setSentCode(null);
     setHelp("form");
   }, []);
@@ -273,7 +274,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                       aria-haspopup="dialog"
                       aria-expanded={problem}
                       onClick={() => {
-                        tone("tap");
+                        feedback.minor();
                         setMenu(false);
                         setHaloOpen(false);
                         setProblem(true);
@@ -291,7 +292,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                     aria-haspopup="dialog"
                     aria-expanded={help !== null}
                     onClick={() => {
-                      tone("tap");
+                      feedback.minor();
                       setMenu(false);
                       setHaloOpen(false);
                       setSentCode(null);
@@ -453,7 +454,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
           canReport={canReport}
           team={team}
           onIssue={() => {
-            tone("tap");
+            feedback.minor();
             setProblem(true);
           }}
           onNew={openForm}

@@ -84,7 +84,7 @@ export async function expectModulesSheet(page: Page, mustSee: readonly string[],
   await expect(sheet).toBeHidden();
   await mods.click();
   await page.getByTestId("kabuk-search").fill("zzqx");
-  await expect(sheet.getByText("Bulunamadı · başka bir ad söyle")).toBeVisible();
+  await expect(sheet.getByText("Bulunamadı · ara ya da söyle")).toBeVisible();
   await page.getByTestId("kabuk-mods-close").click();
   await expect(sheet).toBeHidden();
   await mods.click();

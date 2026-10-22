@@ -9,12 +9,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditForm } from "../code-edit-dialog.tsx";
 import type { AlanKurali } from "../kalip/dogrula.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { KalipAra, KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
@@ -327,6 +327,7 @@ export function WarehousesView({
   nextAfter,
   firstPage,
   q = "",
+  total,
 }: {
   slug: string;
   dark: boolean;
@@ -337,8 +338,11 @@ export function WarehousesView({
   firstPage: boolean;
   /** T-978: sunucu araması (kod/ad); boş = tümü. */
   q?: string;
+  /** Sunucudan aramaya uyan toplam depo sayısı (ALTIN-KURAL 15). */
+  total?: number;
 }) {
   const t = useTranslations("warehouses");
+  const tr = useTranslations("kural");
   const tk = useTranslations("warehouses.k");
   const te = useTranslations("easySetup");
   const locale = useLocale();
@@ -357,11 +361,10 @@ export function WarehousesView({
   const { say, node: toast } = useKalipToast("liste");
   const errText = useErrorText();
   const ok = (text: string): void => {
-    tone("ok");
     say("ok", text);
   };
   const fail = (e: ServerError): void => {
-    tone("err");
+    feedback.error();
     setError(e);
   };
 
@@ -416,7 +419,7 @@ export function WarehousesView({
   }
 
   const openCreate = (): void => {
-    tone("tap");
+    feedback.minor();
     router.push(withParam("new", "1"));
   };
 
@@ -429,7 +432,6 @@ export function WarehousesView({
     items: [tk("stepItems"), tk("stepItemsSub"), tk("stepItemsCta"), "2F5DA8", LICON.box],
   };
   const blocked = (): void => {
-    tone("err");
     say("warn", nextStep === undefined ? "" : stepText[nextStep.key][0]);
   };
   const adimlar: KalipAdim[] = steps.map((s) => {
@@ -441,7 +443,7 @@ export function WarehousesView({
   const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
   const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
   const showSetup = guide && warehouses.length === 0 && firstPage && q === "";
-  const countLbl = nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
+  const countLbl = total !== undefined ? tk("count", { n: total }) : nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
   const lockedId = "warehouse-locked";
 
   if (creating) {
@@ -492,7 +494,7 @@ export function WarehousesView({
         onDone={(r) => {
           setError(null);
           if (r.changed) {
-            tone("ok");
+            feedback.ok();
             setCodeChanged({ id: editing.id, from: r.from, to: r.to });
           } else ok(t("done.codeSame"));
           toList();
@@ -538,9 +540,14 @@ export function WarehousesView({
         {showSetup ? (
           <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} testId="setup-guide" />
         ) : warehouses.length === 0 && q !== "" ? (
-          <KalipBos title={t("noMatch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: base }} />
+          <KalipBos title={tr("notFoundSearch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: base, kind: "clear" }} />
         ) : warehouses.length === 0 ? (
-          <KalipBos title={t("empty")} hint={canManage ? t("emptyAction") : t("emptyReadOnly")} iconD={LICON.depo} />
+          <KalipBos
+            title={t("empty")}
+            hint={canManage ? t("emptyAction") : t("emptyReadOnly")}
+            iconD={LICON.depo}
+            action={canManage ? { label: tk("stepWarehouseCta"), onClick: openCreate, kind: "add" } : { label: tr("home"), href: home, kind: "go" }}
+          />
         ) : (
           <>
             <KalipBaslik title={countLbl} hint={tk("hint")} />
@@ -578,7 +585,7 @@ export function WarehousesView({
                           aria-describedby={canManage ? undefined : lockedId}
                           aria-label={t("codeEdit.for", { name: w.name })}
                           onClick={() => {
-                            tone("tap");
+                            feedback.minor();
                             router.push(withParam("kod", w.id));
                           }}
                         >
@@ -592,7 +599,7 @@ export function WarehousesView({
                           disabled={!canManage}
                           aria-describedby={canManage ? undefined : lockedId}
                           onClick={() => {
-                            tone("tap");
+                            feedback.minor();
                             setArchiving(w);
                           }}
                         >

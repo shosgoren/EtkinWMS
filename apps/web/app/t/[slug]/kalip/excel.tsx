@@ -6,12 +6,13 @@
 // yalnız kaynakta var olan sınıf, ikon ve renkler kullanılır; yeni stil yok.
 // Yetki gösterimdir: düğme yalnız `data.import` olana çizilir; depo/raf içe aktarma ayrıca `settings.manage` ister. Asıl karar sunucuda
 // (`/api/t/<alan>/export/<tür>` ve aktarım eylemleri). Her işlemde görsel (balon, renk) + sesli (`tone`) geri bildirim.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { dz } from "../../../design/pano-tokens.ts";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Ico, tone, useKalipToast, type KalipKind } from "./ekran.tsx";
+import { Ico, useKalipToast, type KalipKind } from "./ekran.tsx";
 import { kdz, type KalipScope } from "./tokens.ts";
+import { feedback, intlDil } from "@wms/ui";
 
 export type KalipExcelTur = "items" | "parties" | "warehouses" | "locations";
 
@@ -108,6 +109,7 @@ export interface KalipExcelKatman {
  */
 export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, excel: KalipExcelProps | undefined, can: { readonly data: boolean; readonly master: boolean } | undefined, dark: boolean, onOpen: () => void): KalipExcelKatman {
   const t = useTranslations("kalip.excel");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const { say, node: toast } = useKalipToast(scopeKind);
@@ -127,7 +129,7 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
   const aktar = `${base}/import?tur=${AKTAR[excel.kind]}`;
   const download = async (): Promise<void> => {
     if (busy) return;
-    tone("tap");
+    feedback.minor();
     setBusy(true);
     const f = currentFilter(excel.kind);
     if (excel.kind === "locations" && excel.warehouseId !== undefined) f.set("warehouse", excel.warehouseId);
@@ -136,13 +138,13 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
     setBusy(false);
     setOpen(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       say(r.detail === "RECENT_AUTH_REQUIRED" ? "warn" : "err", t(`err.${excelHata(r.code, r.detail)}`));
       excelYenidenGiris(r);
       return;
     }
-    tone("ok");
-    const n = (r.rows ?? 0).toLocaleString("tr-TR");
+    feedback.ok();
+    const n = (r.rows ?? 0).toLocaleString(intlDil(locale));
     if (r.truncated === true) say("warn", t("doneTruncated", { n }));
     else if (r.personalOmitted === true) say("info", t("donePersonal", { n }));
     else say("ok", t("done", { n }));
@@ -167,7 +169,7 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
       aria-haspopup="menu"
       aria-expanded={open}
       onClick={() => {
-        tone("tap");
+        feedback.minor();
         onOpen();
         setOpen((o) => !o);
       }}
@@ -194,7 +196,7 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
             </div>
             {items.map((m, i) =>
               m.href !== undefined ? (
-                <a key={m.k} href={m.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={() => tone("tap")} data-testid={`kalip-excel-${m.k}`} autoFocus={i === 0}>
+                <a key={m.k} href={m.href} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={() => feedback.minor()} data-testid={`kalip-excel-${m.k}`} autoFocus={i === 0}>
                   <i style={{ background: dz(m.color) }}>
                     <Ico d={m.d} size={20} />
                   </i>

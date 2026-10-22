@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { MfaNotice, MfaSetupForm } from "../auth-forms.tsx";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { MfaVerify } from "../login/flow.tsx";
 import { safeNext } from "../../lib/safe-redirect.ts";
 import { appSurface } from "../../lib/surface.ts";
@@ -29,11 +29,11 @@ export default async function MfaPage({ searchParams }: { searchParams: Promise<
     if (!pending) redirect(`/login?next=${encodeURIComponent(next)}`);
     // T-999b: Giris.dc.html `v.mfa` birebir (login/flow.tsx).
     // T-923 (inceleme M3): panel yüzeyinde "Bu cihazı 30 gün hatırla" yok (sunucu da reddeder).
-    return <MfaVerify dark={jar.get(THEME_COOKIE)?.value === "koyu"} next={next} trustOption={appSurface() !== "panel"} />;
+    return <MfaVerify dark={temaKoyu(jar)} next={next} trustOption={appSurface() !== "panel"} />;
   }
   // Karar sunucuda, `principal` alanlarıyla (tek kaynak: @wms/auth `isDemoEmail`).
   // T-974: kurulum ve bildirim de giriş tasarım dilinde (tema çerezi sunucudan).
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   if (principal.isDemo) return <MfaNotice kind="demo" next={next} dark={dark} />; // M9
   if (principal.mfaVerified || principal.twoFactorEnabled) return <MfaNotice kind="enabled" next={next} dark={dark} />;
   return <MfaSetupForm next={next} dark={dark} />;

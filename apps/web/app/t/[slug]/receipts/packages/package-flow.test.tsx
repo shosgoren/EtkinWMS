@@ -16,7 +16,7 @@ vi.mock("../../field/receive/receive-flow.tsx", () => ({ PrimaryButton: ({ child
 vi.mock("../../kalip/adimlar.tsx", () => ({ KalipAdimlar: () => null }));
 vi.mock("../receipt-form.tsx", () => ({ ErrorNotice: () => null }));
 // T-973: kalıp kabı (üst çubuk, alt cam çubuk) burada sınanmaz; yalnız adım içeriği.
-vi.mock("../../kalip/ekran.tsx", () => ({ KalipEkran: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children), tone: () => undefined, Ico: () => null }));
+vi.mock("../../kalip/ekran.tsx", () => ({ KalipEkran: ({ children }: { children: React.ReactNode }) => createElement("div", {}, children), Ico: () => null }));
 vi.mock("../../kalip/liste.tsx", () => ({ KalipKilitliEkran: ({ text }: { text: string }) => createElement("p", { role: "alert" }, text), KalipHataEkran: ({ text }: { text: string }) => createElement("p", { role: "alert" }, text) }));
 import { createPackageSubmission, displayQuantity, PackageFlow, packageLabelHref, packagePreview, type PrepareInput } from "./package-flow.tsx";
 import Page from "./page.tsx";

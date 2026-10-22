@@ -12,9 +12,9 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipDaha, KalipKartListe } from "../kalip/liste.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecimSayfasi } from "../kalip/secim.tsx";
@@ -123,6 +123,7 @@ export function MembersView({
 }) {
   const t = useTranslations("members");
   const tr = useTranslations("roles");
+  const tku = useTranslations("kural");
   const format = useFormatter();
   const router = useRouter();
   const params = useSearchParams();
@@ -154,12 +155,11 @@ export function MembersView({
   const roleName = (keys: readonly string[]) => keys.map((k) => tr(k)).join(", ");
   const when = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" });
   const notify = (text: string): void => {
-    tone("ok");
     say("ok", text);
   };
 
   function fail(res: { error: { code: string; detail?: string | undefined; requestId: string } }, kind?: Kind) {
-    tone("err");
+    feedback.error();
     // Sıfırlama reddi: neden ayrıştırılmaz, nötr metin (2. tur m6); kimlik/oturum/MFA yönlendirmeleri korunur.
     if (kind === "reset" && res.error.code === "FORBIDDEN" && res.error.detail === undefined) {
       setResetUnavailable(true);
@@ -276,7 +276,7 @@ export function MembersView({
             disabled: !canManage || !hydrated,
             disabledReason: canManage ? t("k.wait") : t("lockedReason"),
             onClick: () => {
-              tone("tap");
+              feedback.minor();
               router.push(`${listHref}${listHref.includes("?") ? "&" : "?"}invite=1`);
             },
             testId: "members-invite",
@@ -312,9 +312,25 @@ export function MembersView({
         <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={`/t/${slug}/members`} defaultValue={q} />
         <KalipBaslik title={t("k.count", { n: members.length })} hint={t("intro")} />
         {members.length === 0 && q !== "" ? (
-          <KalipBos title={t("noMatch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: `/t/${slug}/members` }} />
+          <KalipBos title={tku("notFoundSearch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: `/t/${slug}/members`, kind: "clear" }} />
         ) : members.length === 0 ? (
-          <KalipBos title={t("empty")} hint={t("emptyAction")} iconD={LICON.people} />
+          <KalipBos
+            title={t("empty")}
+            hint={t("emptyAction")}
+            iconD={LICON.people}
+            action={
+              canManage
+                ? {
+                    label: t("inviteFirst"),
+                    kind: "add",
+                    onClick: () => {
+                      feedback.minor();
+                      router.push(`${listHref}${listHref.includes("?") ? "&" : "?"}invite=1`);
+                    },
+                  }
+                : { label: tku("home"), href: home, kind: "go" }
+            }
+          />
         ) : (
           <KalipKartListe label={t("membersList")}>
             {members.map((m, i) => {
@@ -380,7 +396,7 @@ export function MembersView({
                           disabled={lockText !== null}
                           aria-describedby={desc}
                           onClick={() => {
-                            tone("tap");
+                            feedback.minor();
                             setRolePick(m);
                           }}
                           data-testid="member-role"

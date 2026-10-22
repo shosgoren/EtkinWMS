@@ -2,7 +2,8 @@
 // yolları kaynaktan; sayılar `getBoard` + `getWorkSummary` (uydurma yok, G-07). Tanımlar board.ts başlığında. Karşılığı olmayan kaynak düğmeleri
 // (Hepsini listeye ekle, Depo yöneticisine öne al, Listeyi gör) ilgili ekranlara bağlantıdır; satın alma listesi özelliği yoktur.
 import type { CSSProperties, ReactNode } from "react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { buyukHarf } from "@wms/ui";
 import type { Board, WorkSummary } from "@wms/domain/operations";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
@@ -49,6 +50,7 @@ const P = ({ d }: { d: string }) => <path d={d} />;
 export async function PanoBoard(p: PanoBoardProps) {
   const t = await getTranslations("pano");
   const tg = await getTranslations("home.gv");
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(p.slug)}`;
   const b = p.board;
   const firstName = p.userName.trim().split(/\s+/)[0] ?? p.userName;
@@ -56,9 +58,9 @@ export async function PanoBoard(p: PanoBoardProps) {
   const greet = tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name: firstName });
   const owner = p.role === "owner";
   const roleTitle = owner ? t("ownerTitle") : t("managerTitle");
-  const where = (b?.warehouseName ?? tg("allWarehouses")).toLocaleUpperCase("tr");
-  const brandSub = `${p.tenantName.toLocaleUpperCase("tr")} · ${roleTitle.toLocaleUpperCase("tr")}`;
-  const ini = (firstName.trim()[0] ?? "?").toLocaleUpperCase("tr");
+  const where = buyukHarf(b?.warehouseName ?? tg("allWarehouses"), locale);
+  const brandSub = `${buyukHarf(p.tenantName, locale)} · ${buyukHarf(roleTitle, locale)}`;
+  const ini = buyukHarf(firstName.trim()[0] ?? "?", locale);
   const onField = b?.team.filter((x) => x.state !== "AWAY").length ?? 0;
 
   const tasks = b?.tasks ?? { done: 0, assigned: 0, unassigned: 0 };
@@ -109,7 +111,7 @@ export async function PanoBoard(p: PanoBoardProps) {
       dark={p.dark}
       brandSub={brandSub}
       team
-      me={{ ini, name: p.userName, group: roleTitle.toLocaleUpperCase("tr") + (owner ? "" : ` · ${where}`), color: owner ? "172E42" : "0E7C7B" }}
+      me={{ ini, name: p.userName, group: buyukHarf(roleTitle, locale) + (owner ? "" : ` · ${where}`), color: owner ? "172E42" : "0E7C7B" }}
       halo={halo}
       teamLinks={teamLinks}
       settingsHref={p.settingsManage ? `${base}/settings` : undefined}
@@ -315,7 +317,7 @@ export async function PanoBoard(p: PanoBoardProps) {
                 const who: AssignCandidate[] = p.assignees
                   .filter((a) => a.kinds.includes(x.kind))
                   .slice(0, 3)
-                  .map((a) => ({ membershipId: a.membershipId, name: a.name, ini: (a.name.trim()[0] ?? "?").toLocaleUpperCase("tr"), color: AV[p.assignees.indexOf(a) % AV.length] ?? "172E42" }));
+                  .map((a) => ({ membershipId: a.membershipId, name: a.name, ini: buyukHarf(a.name.trim()[0] ?? "?", locale), color: AV[p.assignees.indexOf(a) % AV.length] ?? "172E42" }));
                 return (
                   <div className="row" key={x.id}>
                     <span className="nm">{t(`kind.${x.kind}`)}{x.itemName === null ? "" : ` · ${x.itemName}`}</span>
@@ -335,7 +337,7 @@ export async function PanoBoard(p: PanoBoardProps) {
                 const group = x.state === "ASSIGNED" || x.state === "SCANNING" ? t("tasksN", { n: x.assigned }) : x.state === "IDLE" ? t("idleMin", { n: x.idleMinutes ?? 0 }) : t("notToday");
                 return (
                   <div className="person" key={x.membershipId}>
-                    <span className="av" style={{ background: dz(AV[i % AV.length] ?? "172E42") }}>{(x.name.trim()[0] ?? "?").toLocaleUpperCase("tr")}</span>
+                    <span className="av" style={{ background: dz(AV[i % AV.length] ?? "172E42") }}>{buyukHarf(x.name.trim()[0] ?? "?", locale)}</span>
                     <span style={{ minWidth: 0 }}><b>{x.name}</b><small>{x.roles.map((r) => t(`role.${r}`)).join(", ")} · {group}</small></span>
                     <span className="st" style={{ background: dz(st[0]), color: dz(st[1]) }}>{t(`state.${x.state}`)}</span>
                   </div>

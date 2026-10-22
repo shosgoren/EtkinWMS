@@ -5,11 +5,11 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
-import { getLocationTree, getWarehouse } from "@wms/domain/warehouse";
+import { countLocationsByWarehouse, getLocationTree, getWarehouse } from "@wms/domain/warehouse";
 import type { WarehouseRow } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { temaKoyu } from "../../../../design/theme.ts";
 import { KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { LocationTree } from "./location-tree.tsx";
 
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 async function isDark(): Promise<boolean> {
-  return (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  return temaKoyu(await cookies());
 }
 
 /** Okuma izni olmayan üye: hata sayfası değil, neden + sonraki eylemle kilitli ekran (ürünler deseni). */
@@ -53,6 +53,7 @@ export default async function LocationTreePage({ params }: { params: Promise<{ s
   let warehouse: WarehouseRow;
   let tree: Awaited<ReturnType<typeof getLocationTree>>;
   let canManage: boolean;
+  let activeTotal: number | undefined;
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
@@ -60,6 +61,8 @@ export default async function LocationTreePage({ params }: { params: Promise<{ s
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
     warehouse = await getWarehouse(call, { warehouseId });
     tree = await getLocationTree(call, { warehouseId: warehouse.id, includeArchived: true, limit: TREE_PAGE });
+    // ALTIN-KURAL 15: toplam aktif lokasyon (aynı izin `stock.view`, aynı kapsam); ağaç sayfalı kalır.
+    activeTotal = (await countLocationsByWarehouse(call, { warehouseIds: [warehouse.id] })).get(warehouse.id);
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND") notFound();
@@ -82,6 +85,7 @@ export default async function LocationTreePage({ params }: { params: Promise<{ s
         canManage={canManage}
         initialItems={tree.items.map((i) => ({ id: i.id, parentId: i.parentId, code: i.code, name: i.name, depth: i.depth, kind: i.kind, status: i.status }))}
         initialNext={tree.next}
+        {...(activeTotal === undefined ? {} : { activeTotal })}
       />
     </main>
   );

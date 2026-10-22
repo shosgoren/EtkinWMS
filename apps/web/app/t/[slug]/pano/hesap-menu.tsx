@@ -4,7 +4,7 @@
 // kabında çizer (yeni stil yok). Menü: kişi başlığı, (ekip bağlantıları), Kullanıcı değiştir, Çalışma alanı değiştir (birden fazla alan; T-979c),
 // tema, Çıkış yap. Görünüm geçişi (Genel bakış) ve ekranlar ortak alt çubuğun Modüller sayfasındadır. Çıkış mevcut `/sign-out` uç noktasıyla (Pano'daki ile aynı).
 // T-990: bağlantılar istemci içi geçiş; bağlantı, Kullanıcı değiştir, Çalışma alanı ve Çıkış yarım işte önce ortak çıkış kutusuna sorar (`cikisSor`).
-import { useEffect, useState, type CSSProperties, type MouseEvent } from "react";
+import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { cikisSor } from "../kalip/cikis.tsx";
@@ -12,6 +12,9 @@ import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { ICON } from "../../../design/bakis-icons.ts";
 import { authPost } from "../../../../lib/auth-client.ts";
+import { DICON } from "../../../design/destek-icons.ts";
+import { useSessiz } from "../kalip/sessiz.ts";
+import { useModalFocus } from "../kalip/odak.ts";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
 
 function Ico({ d, size }: { d: string; size: number }) {
@@ -64,13 +67,12 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
   const t = useTranslations("pano");
   const kabuk = useKabuk();
   const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const tk = useTranslations("kural");
+  // T-436 (ALTIN-KURAL 5): "Sessiz" tercihi cihazda saklanır.
+  const [silent, setSilent] = useSessiz();
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak menüde kalır, kapanınca Hesap düğmesine döner.
+  const box = useRef<HTMLDivElement>(null);
+  useModalFocus(true, box, { onClose, initial: "first" });
   const signOut = async (next: string): Promise<void> => {
     setFailed(false);
     const res = await authPost<unknown>("/sign-out", {});
@@ -84,6 +86,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
     // Birden fazla çalışma alanı varsa seçim ekranı.
     ...(team || (kabuk?.workspaces ?? 1) < 2 ? [] : [{ k: "workspace", label: t("workspace"), color: "0E7C7B", d: PICON.list, go: () => cikisSor(() => window.location.assign("/workspaces")) }]),
     { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: onToggleTheme },
+    { k: "sound", label: silent ? tk("soundOn") : tk("silent"), color: "6A7F91", d: DICON.speaker, go: () => setSilent(!silent) },
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => cikisSor(() => void signOut("/login")) },
   ];
   // T-990: menü bağlantıları Next `Link` (istemci içi geçiş); yarım işte ortak çıkış koruması tıklamayı yakalar (tarayıcı penceresi çıkmaz).
@@ -94,7 +97,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
   return (
     <>
       <div className="hback" onClick={onClose} />
-      <div className="halo tmenu" role="menu" aria-label={label}>
+      <div ref={box} className="halo tmenu" role="menu" aria-label={label}>
         <div className="tmh">
           <span className="av" style={{ background: dz(me.color) }}>
             {me.ini}

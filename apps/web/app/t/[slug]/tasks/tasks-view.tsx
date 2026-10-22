@@ -12,10 +12,10 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { fmtQty } from "../kalip/format.ts";
@@ -85,6 +85,8 @@ export interface TasksViewProps {
   readonly firstPage: boolean;
   /** T-978: sunucu araması; boş = tümü. */
   readonly search?: string;
+  /** Sunucudan süzgece uyan toplam görev sayısı (ALTIN-KURAL 15); yoksa sayfadaki satır sayısı. */
+  readonly total?: number;
 }
 
 /** Sunucu reddi → tek satırlık neden (formun altında + balon). */
@@ -207,8 +209,9 @@ function TaskCancelForm({ slug, dark, task, onClose }: { slug: string; dark: boo
   );
 }
 
-export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage, search = "" }: TasksViewProps) {
+export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage, search = "", total }: TasksViewProps) {
   const t = useTranslations("tasks");
+  const tk = useTranslations("kural");
   const router = useRouter();
   const params = useSearchParams();
   const locale = useLocale();
@@ -225,7 +228,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
   })();
   const listHref = listQs === "" ? base : `${base}?${listQs}`;
   const go = (param: "assign" | "cancel", task: TaskView): void => {
-    tone("tap");
+    feedback.minor();
     const p = new URLSearchParams(listQs);
     p.set(param, task.id);
     router.push(`${base}?${p.toString()}`);
@@ -233,7 +236,6 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
   const close = (msg?: string): void => {
     router.push(listHref);
     if (msg !== undefined) {
-      tone("ok");
       say("ok", msg);
     }
   };
@@ -298,10 +300,15 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
         )}
         {canManage && (assignId ?? cancelId) !== null ? <Banner kind="info">{t("k.notFound")}</Banner> : null}
         {tasks.length === 0 ? (
-          <KalipBos title={t("empty.title")} hint={t("empty.action")} iconD={LICON.clip} {...(filtered ? { action: { label: t("clear"), href: base } } : {})} />
+          <KalipBos
+            title={filtered ? tk("notFoundSearch") : t("empty.title")}
+            hint={t("empty.action")}
+            iconD={LICON.clip}
+            action={filtered ? { label: t("clear"), href: base, kind: "clear" } : { label: tk("home"), href: home, kind: "go" }}
+          />
         ) : (
           <>
-            <KalipBaslik title={t("count", { n: tasks.length })} hint={t("hint")} />
+            <KalipBaslik title={t("count", { n: total ?? tasks.length })} hint={t("hint")} />
             <KalipKartListe label={t("listLabel")}>
               {tasks.map((task, i) => {
                 const open = task.status === "OPEN" || task.status === "ASSIGNED";
@@ -323,7 +330,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
                       onClick={() => {
                         if (open && canManage) openAssign(task);
                         else {
-                          tone("tap");
+                          feedback.minor();
                           say("info", `${t(`kind.${task.kind}`)} · ${t(`status.${task.status}`)} · ${who}`);
                         }
                       }}

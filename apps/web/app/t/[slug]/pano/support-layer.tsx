@@ -11,8 +11,9 @@ import { dz } from "../../../design/destek-tokens.ts";
 import { DICON, DTOPIC, type SupportSubjectKind } from "../../../design/destek-icons.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { newSupportCode, ticketNo, whenOf } from "../../../support-format.ts";
-import { tone } from "../kabuk/kabuk-bar.tsx";
+import {  } from "../kabuk/kabuk-bar.tsx";
 import { listMySupportTicketsAction, markSupportSeenAction, replySupportTicketAction, submitSupportTicketAction, type SupportTicketView } from "../support-actions.ts";
+import { balonGoster, feedback } from "@wms/ui";
 
 const SUBJECTS: readonly SupportSubjectKind[] = ["BUG", "HOWTO", "IDEA", "OTHER"];
 const BODY_MAX = 2000;
@@ -103,28 +104,10 @@ export interface SupportToast {
   readonly text: string;
 }
 
-function Toast({ toast }: { toast: SupportToast | null }) {
-  if (toast === null) return null;
-  return (
-    <div className="toast" role="status">
-      <i style={{ background: dz(toast.kind === "ok" ? "2F7D5B" : "C62828") }}>
-        <Ico d={toast.kind === "ok" ? DICON.check : DICON.close} size={16} />
-      </i>
-      {toast.text}
-    </div>
-  );
-}
-
-function useToast(): [SupportToast | null, (t: SupportToast) => void] {
-  const [toast, setToast] = useState<SupportToast | null>(null);
-  const timer = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-  const say = useCallback((t: SupportToast) => {
-    window.clearTimeout(timer.current);
-    setToast(t);
-    timer.current = window.setTimeout(() => setToast(null), 2600);
-  }, []);
-  return [toast, say];
+/** T-436 (ALTIN-KURAL 5): ortak balon (kök düzendeki tek katman; kendi sesini çalar). */
+function useToast(): [null, (t: SupportToast) => void] {
+  const say = useCallback((t: SupportToast) => balonGoster({ tur: t.kind, metin: t.text }), []);
+  return [null, say];
 }
 
 /** Odak tuzağı: Tab pencere içinde döner. */
@@ -152,7 +135,7 @@ export function SupportSheet({ slug, dark, appVersion, onClose, onSent }: { slug
   const [error, setError] = useState<string | null>(null);
   const [code] = useState(() => newSupportCode(slug));
   const [route, setRoute] = useState<string | null>(null);
-  const [toast, say] = useToast();
+  const [, say] = useToast();
   const sheet = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -177,14 +160,14 @@ export function SupportSheet({ slug, dark, appVersion, onClose, onSent }: { slug
     try {
       const r = await submitSupportTicketAction({ slug, subjectKind: topic, body, context: { route, appVersion, supportCode: code } });
       if (r.ok) {
-        tone("ok");
+        feedback.ok();
         onSent(code);
         return;
       }
-      tone("err");
+      feedback.error();
       setError(r.error.code === "RATE_LIMITED" ? t("rateLimited") : t("failed"));
     } catch {
-      tone("err");
+      feedback.error();
       setError(t("failed"));
     }
     setBusy(false);
@@ -220,7 +203,7 @@ export function SupportSheet({ slug, dark, appVersion, onClose, onSent }: { slug
                     aria-checked={on}
                     style={{ animationDelay: `${i * 18}ms` }}
                     onClick={() => {
-                      tone("tap");
+                      feedback.minor();
                       setTopic(k);
                     }}
                     data-topic={k}
@@ -246,7 +229,7 @@ export function SupportSheet({ slug, dark, appVersion, onClose, onSent }: { slug
                 aria-label={t("sayNote")}
                 aria-disabled="true"
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   say({ kind: "err", text: t("voiceSoon") });
                 }}
               >
@@ -258,7 +241,7 @@ export function SupportSheet({ slug, dark, appVersion, onClose, onSent }: { slug
                 type="button"
                 className="vchip"
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   onClose();
                   window.dispatchEvent(new Event(GUIDE_EVENT));
                 }}
@@ -294,7 +277,6 @@ export function SupportSheet({ slug, dark, appVersion, onClose, onSent }: { slug
               {t("send")}
             </button>
           </section>
-          <Toast toast={toast} />
         </div>
       </div>
     </div>
@@ -333,7 +315,7 @@ export function SupportList({
   const [writing, setWriting] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
-  const [toast, say] = useToast();
+  const [, say] = useToast();
   const [now, setNow] = useState(() => new Date());
   const { markSeen, unread } = state;
 
@@ -357,7 +339,7 @@ export function SupportList({
     return w.kind === "now" ? t("now") : w.kind === "today" ? t("today", { time: w.time }) : w.kind === "yesterday" ? t("yesterday", { time: w.time }) : w.date;
   };
   const toggle = (id: string): void => {
-    tone("tap");
+    feedback.minor();
     setOpen((o) => (o === id ? null : id));
     setWriting(null);
     setReply("");
@@ -369,17 +351,17 @@ export function SupportList({
     try {
       const r = await replySupportTicketAction({ slug, ticketId: id, body });
       if (r.ok) {
-        tone("ok");
+        feedback.ok();
         say({ kind: "ok", text: t("replySent") });
         setWriting(null);
         setReply("");
         await state.reload();
       } else {
-        tone("err");
+        feedback.error();
         say({ kind: "err", text: r.error.code === "VERSION_CONFLICT" ? t("closedNote") : r.error.code === "RATE_LIMITED" ? t("rateLimited") : t("failed") });
       }
     } catch {
-      tone("err");
+      feedback.error();
       say({ kind: "err", text: t("failed") });
     }
     setBusy(false);
@@ -492,7 +474,7 @@ export function SupportList({
                               type="button"
                               className="btn fix"
                               onClick={() => {
-                                tone("tap");
+                                feedback.minor();
                                 setWriting(k.id);
                               }}
                               data-testid="support-reply"
@@ -515,7 +497,6 @@ export function SupportList({
               })}
             </div>
           </main>
-          <Toast toast={toast} />
         </div>
       </div>
     </div>

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { sayi, tarih, tarihBicimi } from "@wms/ui";
 import { getAppDb, getHealthProbe, type HealthSnapshot } from "@wms/db";
 import { listCharges } from "@wms/domain/platform/charges";
 import { listCustomers, type CustomerRow } from "@wms/domain/platform/customers";
 import { listDemoRequests } from "@wms/domain/platform/demo-requests";
 import { AppError } from "@wms/shared/errors";
 import { loadMailConfig } from "@wms/shared/mailer";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { C, dz } from "../design/yonet-tokens.ts";
 import { YICON } from "../design/yonet-icons.ts";
 import { panelOperatorOrExit } from "./gate.ts";
@@ -84,22 +85,22 @@ function day(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 
-function trialTodos(customers: readonly CustomerRow[], now: Date, t: Msgs): OzetTodo[] {
-  const fmt = new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" });
+function trialTodos(customers: readonly CustomerRow[], now: Date, t: Msgs, locale: string): OzetTodo[] {
+  const fmt = tarihBicimi(locale, { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" });
   return customers
     .filter((c) => c.state === "TRIAL" && c.trialEndsAt !== null && c.trialEndsAt.getTime() >= now.getTime() && c.trialEndsAt.getTime() - now.getTime() <= 30 * DAY)
     .sort((a, b) => (a.trialEndsAt?.getTime() ?? 0) - (b.trialEndsAt?.getTime() ?? 0))
     .map((c) => ({ when: t.w30, tag: t.tagTrial, bg: dz("FFE7A8"), fg: dz("4A3500"), text: fill(t.tTrial, { company: c.name, date: fmt.format(c.trialEndsAt as Date) }) }));
 }
 
-function limitTodos(customers: readonly CustomerRow[], t: Msgs): OzetTodo[] {
+function limitTodos(customers: readonly CustomerRow[], t: Msgs, locale: string): OzetTodo[] {
   const out: OzetTodo[] = [];
   for (const c of customers) {
     if (c.plan === null || c.state === "SUSPENDED") continue;
     for (const k of ["admins", "field", "warehouses", "items"] as const) {
       const left = nearLimit(c.plan.limits[k], c.counts[k]);
       if (left === null) continue;
-      out.push({ when: t.wNow, tag: t.tagLimit, bg: C.chip, fg: C.fg, text: fill(t.tLimit, { company: c.name, unit: t.units[k], n: left.toLocaleString("tr-TR"), noun: t.nouns[k] }) });
+      out.push({ when: t.wNow, tag: t.tagLimit, bg: C.chip, fg: C.fg, text: fill(t.tLimit, { company: c.name, unit: t.units[k], n: sayi(left, locale), noun: t.nouns[k] }) });
     }
   }
   return out;
@@ -142,12 +143,13 @@ export default async function PanelHome() {
     mailOn = false;
   }
   const t = ((await getMessages()).panel as unknown as { ozet: Msgs }).ozet;
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const now = new Date();
   const today = day(now);
   const pending = requests.filter((r) => r.status === "PENDING").length;
   const overdue = charges.filter((c) => c.status === "OVERDUE");
   const count = (s: CustomerRow["state"]): number => customers.filter((c) => c.state === s).length;
-  const trialSoon = trialTodos(customers, now, t);
+  const trialSoon = trialTodos(customers, now, t, locale);
   const kpis: OzetKpi[] = [
     { label: t.kActive, value: count("ACTIVE"), sub: t.kActiveSub, accent: dz("17804F"), icon: YICON.check },
     { label: t.kTrial, value: count("TRIAL"), sub: fill(t.kTrialSub, { n: trialSoon.length }), accent: dz("B07D00"), icon: YICON.clock },
@@ -168,10 +170,10 @@ export default async function PanelHome() {
       }),
     })),
     ...trialSoon,
-    ...limitTodos(customers, t),
+    ...limitTodos(customers, t, locale),
   ];
-  const time = new Intl.DateTimeFormat("tr-TR", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const time = tarih(now, locale, { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false });
+  const dark = temaKoyu(await cookies());
   return (
     <PanelShell
       dark={dark}

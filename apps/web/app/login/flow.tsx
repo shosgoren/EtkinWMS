@@ -7,7 +7,8 @@
 // e-posta başına sayaçtan gelir (`x-attempts-left`; kayıtlı/kayıtsız aynı). Parola yalnız form alanında yaşar; e-posta yalnız kullanıcı
 // "hatırla" derse bu tarayıcıda saklanır.
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { tarih } from "@wms/ui";
 import { authPost, type AuthCallError } from "../../lib/auth-client.ts";
 import { DzRoot } from "../design/dz-root.tsx";
 import { C, dz } from "../design/giris-tokens.ts";
@@ -42,10 +43,10 @@ function writeRemembered(email: string | null): void {
 }
 
 /** Bekleme süresi ve bitiş saati (kullanıcının saatiyle). */
-function waitParts(seconds: number | undefined): { readonly minutes: number; readonly time: string } | null {
+function waitParts(seconds: number | undefined, locale: string): { readonly minutes: number; readonly time: string } | null {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) return null;
   const until = new Date(Date.now() + seconds * 1000);
-  const time = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit", hour12: false }).format(until);
+  const time = tarih(until, locale, { hour: "2-digit", minute: "2-digit", hour12: false });
   return { minutes: Math.max(1, Math.ceil(seconds / 60)), time };
 }
 
@@ -89,6 +90,7 @@ function Tabs() {
 
 function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; socialEnabled: boolean; demo: boolean; fieldTab: boolean; reauth: boolean }) {
   const t = useTranslations("auth.signin");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [email, setEmail] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -112,7 +114,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
   function explain(e: AuthCallError): Shown {
     if (e.status === 0 || e.status >= 500) return { h: t("netH"), t: t("netT"), code: e.code ?? "INTERNAL" };
     if (e.status === 429 || e.code === "RATE_LIMITED") {
-      const w = waitParts(e.retryAfterSec);
+      const w = waitParts(e.retryAfterSec, locale);
       return { h: t("waitH"), t: w === null ? t("waitTSome") : t("waitT", { minutes: w.minutes, time: w.time }), reset: true };
     }
     // Güvenlik incelemesi m1: `EMAIL_NOT_VERIFIED` yalnız parola DOĞRUYSA döner; ayrı mesaj "hesap var ve parola doğru" bilgisini sızdırırdı.
@@ -283,6 +285,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
 
 function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
   const t = useTranslations("auth.verify");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -293,7 +296,7 @@ function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
   function explain(e: AuthCallError): Shown & { readonly kind: "bad" | "locked" | "expired" | "net" } {
     if (e.status === 0 || e.status >= 500) return { kind: "net", h: t("netH"), t: t("netT"), code: e.code ?? "INTERNAL" };
     if (e.status === 429 || e.code === "RATE_LIMITED" || (e.code ?? "").startsWith("TOO_MANY")) {
-      const w = waitParts(e.retryAfterSec);
+      const w = waitParts(e.retryAfterSec, locale);
       return { kind: "locked", h: t("lockedH", { minutes: w?.minutes ?? 15 }), t: w === null ? t("lockedTSome") : t("lockedT", { time: w.time }) };
     }
     if (/COOKIE|SESSION/.test(e.code ?? "")) return { kind: "expired", h: t("expiredH"), t: t("expiredT") };

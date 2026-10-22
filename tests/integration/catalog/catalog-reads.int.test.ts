@@ -107,6 +107,10 @@ describe("searchItems", () => {
     const second = await searchItems(admin(A), { q: p, limit: 100, after: first.nextCursor as string });
     expect(second).toEqual({ items: second.items, nextCursor: null });
     expect(second.items.map((i) => i.code)).toEqual([`${p}-025`, `${p}-03`, `${p}-04`, `${p}-05`]);
+    // ALTIN-KURAL 15: toplam yalnız istenince; aramayla aynı süzgeç, imleçten bağımsız (7 kayıt: 5 + önce + arada).
+    expect((await searchItems(admin(A), { q: p, limit: 2, withTotal: true })).total).toBe(7);
+    expect((await searchItems(admin(A), { q: p, limit: 2, after: first.nextCursor as string, withTotal: true })).total).toBe(7);
+    expect((await searchItems(admin(B), { q: p, withTotal: true })).total).toBe(0);
   });
 
   it("q: kod/ad önekli (büyük-küçük harf duyarsız), % ve _ joker değil, barkod tam eşleşme; durum filtresi", async () => {
@@ -125,6 +129,8 @@ describe("searchItems", () => {
     expect((await searchItems(admin(A), { q: p, status: "ARCHIVED" })).items.map((i) => i.id)).toEqual([i1]);
     expect((await searchItems(admin(A), { q: p, status: "ACTIVE" })).items.map((i) => i.id)).toEqual([i2]);
     expect((await searchItems(admin(A), { q: p })).items.map((i) => i.id)).toEqual([i1, i2]);
+    expect((await searchItems(admin(A), { q: p, status: "ACTIVE", withTotal: true })).total).toBe(1);
+    expect((await searchItems(admin(A), { q: bc, withTotal: true })).total).toBe(1);
   });
 
   it("tenant sızıntısı yok: B'nin araması A'nın ürünlerini görmez; A'nın imleci B'de A verisi döndürmez", async () => {

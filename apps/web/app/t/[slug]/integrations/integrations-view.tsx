@@ -5,16 +5,17 @@
 // EŞİTLE) hiçbir durumda sessiz değil (yapılacak bir şey yoksa nedenini söyler).
 // Bilinçli farklar (DESIGN-PARITY): Bağlan penceresi ve Kes onayı kaynağın `.sx` / `.cfbox`'ının kalıp penceresi uyarlamasıdır (T-974
 // KalipPencere / KalipOnay); sesle komut (B-62 Etkin) henüz yok, ipucu satırı kaynaktaki gibi.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { NICON } from "../../../design/entegrasyon-icons.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAnahtar, KalipGrup, KalipIzgara, KalipSecenek } from "../kalip/form.tsx";
 import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, runIntegrationAction, setIntegrationFlowAction } from "./actions.ts";
+import { feedback, intlDil } from "@wms/ui";
 
 type Provider = "PARASUT" | "LOGO";
 type Flow = "PRODUCTS" | "CONTACTS" | "WAREHOUSES" | "SALES_ORDERS" | "SHIPMENTS" | "STOCK";
@@ -60,6 +61,7 @@ const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: ""
 
 export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boolean; data: OverviewData }) {
   const t = useTranslations("integrations");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ts = useTranslations("serverErrors");
   const router = useRouter();
   const formId = useId();
@@ -86,12 +88,12 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     if (iso === null) return "";
     const d = new Date(iso);
     const today = new Date().toDateString() === d.toDateString();
-    return today ? d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    return today ? d.toLocaleTimeString(intlDil(locale), { hour: "2-digit", minute: "2-digit" }) : d.toLocaleString(intlDil(locale), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   };
 
   /** Sunucu eylemi sonucu: hata kodu → balon + ses; yeniden giriş gerekiyorsa bant. */
   const failed = (r: { ok: false; error: { code: string; detail?: string } }): void => {
-    tone("err");
+    feedback.error();
     if (r.error.code === "UNAUTHENTICATED" && r.error.detail === "RECENT_AUTH_REQUIRED") {
       setReauth(true);
       say("warn", t("reauth"));
@@ -116,11 +118,10 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     }
     if (!r.data.ok) {
       setLocal((cur) => ({ ...cur, [f.flow]: undefined }));
-      tone("err");
       say("err", reasonText(r.data.reason));
       return;
     }
-    tone(enabled ? "ok" : "tap");
+    feedback.minor();
     if (direction !== f.direction && enabled && f.enabled) say("ok", t("dirSet", { name, dir: t(`dirs.${direction}`, { provider: pn }) }));
     else if (enabled) say("ok", r.data.queued ? t("flowOn", { name }) : t("flowOnNoQueue", { name }));
     else say("info", t("flowOff", { name }));
@@ -129,7 +130,6 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
 
   const toggle = (f: FlowData) => (): void => {
     if (f.directions.length === 0) {
-      tone("err");
       say("warn", t("flowNa", { provider: pn }));
       return;
     }
@@ -145,27 +145,24 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     setBusy(null);
     if (!r.ok) return failed(r);
     if (!r.data.ok) {
-      tone("err");
       say("warn", reasonText(r.data.reason));
       return;
     }
-    tone("ok");
+    feedback.ok();
     say(r.data.queued ? "ok" : "info", !r.data.queued ? t("runBusy") : flow === undefined ? t("runAllQueued") : t("runQueued", { name: t(`flows.${flow}.name`) }));
     router.refresh();
   };
 
   const check = async (): Promise<void> => {
     if (busy !== null) return;
-    tone("tap");
+    feedback.minor();
     setBusy("check");
     const r = await checkIntegrationAction({ slug, provider: "PARASUT" });
     setBusy(null);
     if (!r.ok) return failed(r);
     if (r.data.ok) {
-      tone("ok");
       say("ok", t("testOk", { label: r.data.label ?? conn?.label ?? pn }));
     } else {
-      tone("err");
       say("err", reasonText(r.data.reason));
     }
     router.refresh();
@@ -175,7 +172,6 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     e.preventDefault();
     if (busy !== null) return;
     if (Object.values(form).some((v) => v.trim() === "")) {
-      tone("err");
       say("warn", t("form.missing"));
       return;
     }
@@ -184,13 +180,11 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     setBusy(null);
     if (!r.ok) return failed(r);
     if (!r.data.ok) {
-      tone("err");
       say("err", reasonText(r.data.reason));
       return;
     }
     setForm(EMPTY_FORM); // girilen sır bellekte tutulmaz
     setFormOpen(false);
-    tone("ok");
     say("ok", t("form.connected", { label: r.data.label }));
     router.refresh();
   };
@@ -201,18 +195,16 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
     setBusy(null);
     setCutOpen(false);
     if (!r.ok) return failed(r);
-    tone("ok");
     say("ok", t("cutDone"));
     router.refresh();
   };
 
   const openForm = (): void => {
     if (data.demo) {
-      tone("err");
       say("warn", t("demo"));
       return;
     }
-    tone("tap");
+    feedback.minor();
     setFormOpen(true);
   };
 
@@ -225,7 +217,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
         d: NICON.sync,
         onClick: (): void => {
           if (!anyOn) {
-            tone("err");
+            feedback.error();
             say("info", t("mainSyncNone"));
             return;
           }
@@ -292,7 +284,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                   data-testid={`provider-${p.provider}`}
                   onClick={() => {
                     if (soon) {
-                      tone("err");
+                      feedback.error();
                       say("info", t("soonToast"));
                       return;
                     }
@@ -321,10 +313,10 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                 <b>{err ? t("connErrTitle", { provider: pn }) : t("connTitle", { label: conn.label ?? pn })}</b>
                 <small>
                   {err
-                    ? `${reasonText(conn.lastErrorCode).toLocaleUpperCase("tr")} · ${t("connErrSub")}`
+                    ? `${reasonText(conn.lastErrorCode).toLocaleUpperCase(intlDil(locale))} · ${t("connErrSub")}`
                     : conn.lastCheckedAt === null
-                      ? t("connSubNever", { provider: pn.toLocaleUpperCase("tr") })
-                      : t("connSub", { provider: pn.toLocaleUpperCase("tr"), at: when(conn.lastCheckedAt) })}
+                      ? t("connSubNever", { provider: pn.toLocaleUpperCase(intlDil(locale)) })
+                      : t("connSub", { provider: pn.toLocaleUpperCase(intlDil(locale)), at: when(conn.lastCheckedAt) })}
                 </small>
               </span>
               <span className="cact">
@@ -343,7 +335,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                   type="button"
                   className="rej sm"
                   onClick={() => {
-                    tone("err");
+                    feedback.error();
                     setCutOpen(true);
                   }}
                   data-testid="integrations-cut"
@@ -360,7 +352,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                 </i>
                 <span style={{ minWidth: 0 }}>
                   <b>{data.outbox.check > 0 ? t("outboxCheck", { n: data.outbox.check }) : t("outboxFailed", { n: data.outbox.failed })}</b>
-                  <small>{data.outbox.check > 0 ? t("outboxCheckSub") : reasonText("ROWS_FAILED").toLocaleUpperCase("tr")}</small>
+                  <small>{data.outbox.check > 0 ? t("outboxCheckSub") : reasonText("ROWS_FAILED").toLocaleUpperCase(intlDil(locale))}</small>
                 </span>
               </div>
             ) : null}
@@ -372,17 +364,18 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                     const s = flowState(f);
                     const na = f.directions.length === 0;
                     const name = t(`flows.${f.flow}.name`);
-                    const sub = t(`flows.${f.flow}.sub`, { provider: pn.toLocaleUpperCase("tr") });
+                    const sub = t(`flows.${f.flow}.sub`, { provider: pn.toLocaleUpperCase(intlDil(locale)) });
                     const bad = f.lastStatus === "FAILED" || f.lastStatus === "PARTIAL";
                     return (
                       <div key={f.flow} className={`flw${s.enabled ? " on" : ""}`} data-testid={`flow-${f.flow}`} data-enabled={s.enabled ? "true" : "false"}>
                         <KalipAnahtar
                           title={name}
-                          sub={s.enabled && !na ? `${t(`dirs.${s.direction}`, { provider: pn }).toLocaleUpperCase("tr")} · ${sub}` : sub}
+                          sub={s.enabled && !na ? `${t(`dirs.${s.direction}`, { provider: pn }).toLocaleUpperCase(intlDil(locale))} · ${sub}` : sub}
                           d={ui.d}
                           color={ui.color}
                           on={s.enabled}
                           locked={na}
+                          lockedReason={na ? t("flowNa", { provider: pn }) : undefined}
                           aria={na ? t("flowNaAria", { name, provider: pn }) : s.enabled ? t("flowOnAria", { name }) : t("flowOffAria", { name })}
                           onToggle={toggle(f)}
                           testId={`flow-${f.flow}-toggle`}
@@ -396,10 +389,10 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                                 color={ui.color}
                                 onPick={(id) => {
                                   if (busy !== null || id === s.direction) {
-                                    tone("tap");
+                                    feedback.minor();
                                     return;
                                   }
-                                  tone("tap");
+                                  feedback.minor();
                                   void setFlow(f, true, id as Direction);
                                 }}
                                 options={f.directions.map((d) => ({ id: d, label: t(`dirs.${d}`, { provider: pn }), d: DIR_D[d] }))}
@@ -407,7 +400,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                             </div>
                             <div className="fmeta">
                               <span className={bad ? "" : "ok"}>
-                                {f.lastRunAt === null ? t("never") : bad ? t("lastErr", { at: when(f.lastRunAt), reason: reasonText(f.lastErrorCode).toLocaleUpperCase("tr") }) : t("lastOk", { at: when(f.lastRunAt) })}
+                                {f.lastRunAt === null ? t("never") : bad ? t("lastErr", { at: when(f.lastRunAt), reason: reasonText(f.lastErrorCode).toLocaleUpperCase(intlDil(locale)) }) : t("lastOk", { at: when(f.lastRunAt) })}
                               </span>
                               {f.errorCount > 0 ? (
                                 <span className="ebad" data-testid={`flow-${f.flow}-errors`}>
@@ -444,7 +437,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
                       data.runs.map((r) => {
                         const bad = r.status === "FAILED" || r.status === "PARTIAL";
                         const summary = r.errorCode !== null
-                          ? reasonText(r.errorCode).toLocaleUpperCase("tr")
+                          ? reasonText(r.errorCode).toLocaleUpperCase(intlDil(locale))
                           : r.created + r.updated + r.linked === 0 && r.failed === 0
                             ? t("runNoChange")
                             : `${t("runCounts", { created: r.created, updated: r.updated, linked: r.linked })}${r.failed > 0 ? ` · ${t("runFailedRows", { n: r.failed })}` : ""}`;
@@ -484,7 +477,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
               <KalipPencereDugme
                 kind="cancel"
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   setFormOpen(false);
                   setForm(EMPTY_FORM);
                 }}
@@ -520,7 +513,7 @@ export function IntegrationsView({ slug, dark, data }: { slug: string; dark: boo
           loading={busy === "cut"}
           onConfirm={() => void cut()}
           onCancel={() => {
-            tone("tap");
+            feedback.minor();
             setCutOpen(false);
           }}
         />

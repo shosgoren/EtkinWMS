@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { THEME_COOKIE } from "../design/theme.ts";
+import { temaKoyu } from "../design/theme.ts";
 import { appSurface } from "../../lib/surface.ts";
 import { WorkspacePicker } from "./view.tsx";
 
@@ -26,7 +26,7 @@ export default async function WorkspacesPage() {
   const summary = await getMembershipSummary({ db: getAppDb(), principal });
   if (summary.memberships.length === 0) redirect("/onboarding");
   const t = await getTranslations("roles");
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   // Gösterilen adres yapılandırılmış uygulama kökünden (istek Host başlığına güvenilmez); tanımsız/biçimsizse ürün adresi.
   let host = "wms.etkinyazilim.com";
   try {

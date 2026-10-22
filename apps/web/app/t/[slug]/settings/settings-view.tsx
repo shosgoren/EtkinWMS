@@ -7,17 +7,18 @@
 // Bilinçli farklar (DESIGN-PARITY, T-968): tema seçeneğinde "Otomatik" yok (uygulamada sistem teması izleme yok); saat diliminde kaynaktaki
 // üç seçenek + mevcut değer düğme, tam liste "Diğer" seçicisinde; iki adımlı doğrulama satırı oturumun gerçek durumunu gösterir;
 // "Bağlantı gönder" parola sıfırlama sayfasını açar (bağlantıyı o sayfa e-postayla gönderir); örnek veri yoksa satır çizilmez.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
-import { Ico, KalipBaslik, KalipEkran, MicIco, tone, useKalipToast } from "../kalip/ekran.tsx";
+import { sistemKoyu, temaYaz, type TemaTercihi } from "../../../design/theme.ts";
+import { Ico, KalipBaslik, KalipEkran, MicIco, useKalipToast } from "../kalip/ekran.tsx";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { KalipAlan, KalipAnahtar, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek } from "../kalip/form.tsx";
 import { KalipSecimListe, KalipSekme } from "../kalip/secim.tsx";
 import { saveSettingsFormAction } from "./form-actions.ts";
 import { clearSampleDataAction } from "./sample-actions.ts";
+import { buyukHarf, feedback } from "@wms/ui";
 
 export interface SettingsValues {
   readonly name: string;
@@ -29,6 +30,8 @@ export interface SettingsValues {
 export interface SettingsViewProps {
   readonly slug: string;
   readonly dark: boolean;
+  /** T-436 (ALTIN-KURAL 14): cihazdaki tema tercihi (açık / koyu / otomatik). */
+  readonly theme?: TemaTercihi;
   readonly locked: boolean;
   /** Ayar yoksa (yetkisiz) boş değerler gösterilir; satırlar kilitli. */
   readonly values: SettingsValues;
@@ -48,15 +51,18 @@ export interface SettingsViewProps {
 type RowId = "name" | "loc" | "tz" | "smp" | "theme" | "pass";
 const POPULAR_TZ = ["Europe/Istanbul", "Europe/Berlin", "Europe/London"] as const;
 
-export function SettingsView({ slug, dark: initialDark, locked, values, addressSlug, timeZones, sample, mfaOn, canImport, notices, reauth, error }: SettingsViewProps) {
+export function SettingsView({ slug, dark: initialDark, theme: initialTheme, locked, values, addressSlug, timeZones, sample, mfaOn, canImport, notices, reauth, error }: SettingsViewProps) {
   const t = useTranslations("settings.k");
   const ts = useTranslations("settings");
   const tk = useTranslations("kalip");
+  const tr = useTranslations("kural");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const tb = useTranslations("baglantilar");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
-  const [savedDark, setSavedDark] = useState(initialDark);
-  const [v, setV] = useState<SettingsValues & { readonly dark: boolean }>({ ...values, dark: initialDark });
+  const firstTheme: TemaTercihi = initialTheme ?? (initialDark ? "koyu" : "acik");
+  const [savedTheme, setSavedTheme] = useState<TemaTercihi>(firstTheme);
+  const [v, setV] = useState<SettingsValues & { readonly dark: boolean; readonly tema: TemaTercihi }>({ ...values, dark: initialDark, tema: firstTheme });
   const [open, setOpen] = useState<RowId | null>(null);
   const [busy, setBusy] = useState(false);
   const { say, node: toast } = useKalipToast("form");
@@ -69,7 +75,7 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
     shown.current = true;
     const n = notices[0];
     if (n === undefined) return;
-    tone(n.kind === "err" ? "err" : "ok");
+    (n.kind === "err" ? feedback.error : feedback.ok)();
     say(n.kind, n.text);
   }, [notices, say]);
 
@@ -78,11 +84,10 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
   if (v.locale !== values.locale) chg.push("loc");
   if (v.timeZone !== values.timeZone) chg.push("tz");
   if (v.sod !== values.sod) chg.push("sod");
-  if (v.dark !== savedDark) chg.push("theme");
+  if (v.tema !== savedTheme) chg.push("theme");
   const dirty = chg.length > 0 && !locked && v.name.trim() !== "";
 
   const denied = (): void => {
-    tone("err");
     say("warn", t("lockToast"));
   };
   const toggle = (id: RowId) => (): void => {
@@ -90,27 +95,26 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
       denied();
       return;
     }
-    tone("tap");
+    feedback.minor();
     setOpen((o) => (o === id ? null : id));
   };
   const close = useCallback(() => setOpen(null), []);
   const set = <K extends keyof typeof v>(k: K, val: (typeof v)[K]): void => {
-    if (locked && k !== "dark") return;
-    tone("tap");
+    if (locked && k !== "dark" && k !== "tema") return;
+    feedback.minor();
     setV((cur) => ({ ...cur, [k]: val }));
   };
 
   /** Kaydet: tema cihazda (çerez); çalışma alanı alanları ve görev ayrılığı sunucuya tek form. */
   const save = (): void => {
     if (!dirty || busy) return;
-    if (v.dark !== savedDark) {
-      document.cookie = `${THEME_COOKIE}=${v.dark ? "koyu" : "acik"}; path=/; max-age=31536000; samesite=lax`;
-      setSavedDark(v.dark);
+    if (v.tema !== savedTheme) {
+      temaYaz(v.tema);
+      setSavedTheme(v.tema);
     }
     const server = chg.some((k) => k !== "theme");
     setOpen(null);
     if (!server) {
-      tone("ok");
       say("ok", t("themeSaved"));
       return;
     }
@@ -132,7 +136,7 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
       : {}),
   });
   const go = (href: string) => (): void => {
-    tone("tap");
+    feedback.minor();
     korunan.sor(() => router.push(href));
   };
 
@@ -257,7 +261,7 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
                 ]}
               />
             </KalipSatir>
-            <KalipSatir id="tz" title={t("tz")} value={tzLabel(v.timeZone).toLocaleUpperCase("tr")} d={LICON.clock} color="6C4BD8" open={open === "tz"} changed={chg.includes("tz")} locked={locked} onToggle={toggle("tz")} onClose={close} testId="settings-tz">
+            <KalipSatir id="tz" title={t("tz")} value={buyukHarf(tzLabel(v.timeZone), locale)} d={LICON.clock} color="6C4BD8" open={open === "tz"} changed={chg.includes("tz")} locked={locked} onToggle={toggle("tz")} onClose={close} testId="settings-tz">
               <KalipSecenek label={t("tz")} value={v.timeZone} color="6C4BD8" onPick={(id) => set("timeZone", id)} options={tzOptions} />
               <KalipSecimListe label={t("tzOther")} value={v.timeZone} onPick={(id) => set("timeZone", id)} options={timeZones.map((z) => ({ id: z, label: tzLabel(z) === z ? z : `${tzLabel(z)}`, sub: tzLabel(z) === z ? undefined : z }))} icon={{ d: LICON.clock, color: "6C4BD8" }} scan={false} testId="settings-tz-other" />
             </KalipSatir>
@@ -297,15 +301,20 @@ export function SettingsView({ slug, dark: initialDark, locked, values, addressS
               />
             </KalipGrup>
             <KalipGrup title={t("look")} sub={t("lookSub")} d={LICON.sun} color="B07D0B">
-              <KalipSatir id="theme" title={t("theme")} value={v.dark ? t("themeDarkV") : t("themeLightV")} d={LICON.moon} color="B07D0B" open={open === "theme"} changed={chg.includes("theme")} onToggle={toggle("theme")} onClose={close} testId="settings-theme">
+              <KalipSatir id="theme" title={t("theme")} value={v.tema === "oto" ? tr("themeAuto") : v.dark ? t("themeDarkV") : t("themeLightV")} d={LICON.moon} color="B07D0B" open={open === "theme"} changed={chg.includes("theme")} onToggle={toggle("theme")} onClose={close} testId="settings-theme">
                 <KalipSecenek
                   label={t("theme")}
-                  value={v.dark ? "dark" : "light"}
+                  value={v.tema === "oto" ? "auto" : v.dark ? "dark" : "light"}
                   color="B07D0B"
-                  onPick={(id) => set("dark", id === "dark")}
+                  onPick={(id) => {
+                    const tema: TemaTercihi = id === "auto" ? "oto" : id === "dark" ? "koyu" : "acik";
+                    feedback.minor();
+                    setV((cur) => ({ ...cur, tema, dark: tema === "oto" ? sistemKoyu() : tema === "koyu" }));
+                  }}
                   options={[
                     { id: "light", label: t("themeLight"), d: LICON.sun },
                     { id: "dark", label: t("themeDark"), d: LICON.moon },
+                    { id: "auto", label: tr("themeAuto"), d: LICON.globe },
                   ]}
                 />
               </KalipSatir>

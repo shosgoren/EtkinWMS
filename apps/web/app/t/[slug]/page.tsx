@@ -12,7 +12,7 @@ import { Kokpit, type MyTasksSummary, type NowSummary, type TodayList } from "./
 import { EasyOperations } from "./easy-operations.tsx";
 import { PanoHome, type PanoRole } from "./pano/pano-home.tsx";
 import { PanoBoard, type Assignee, type BoardRole } from "./pano/pano-board.tsx";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +84,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
           summary={work}
           userName={summary.userName}
           tenantName={current.tenantName}
-          dark={jar.get(THEME_COOKIE)?.value === "koyu"}
+          dark={temaKoyu(jar)}
           canAssign={canAssign}
           canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)}
           stockPost={hasPermission(current.roles, "stock.post", current.grants)}
@@ -117,7 +117,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
           summary={work}
           userName={summary.userName}
           tenantName={current.tenantName}
-          dark={jar.get(THEME_COOKIE)?.value === "koyu"}
+          dark={temaKoyu(jar)}
           stockPost={hasPermission(current.roles, "stock.post", current.grants)}
           canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)}
           settingsManage={hasPermission(current.roles, "settings.manage", current.grants)}
@@ -150,7 +150,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     }
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={jar.get(THEME_COOKIE)?.value === "koyu"} canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)} />
+        <EasyOperations slug={slug} allowed={allowed} summary={work} firstName={firstName} dark={temaKoyu(jar)} canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)} />
       </main>
     );
   }
@@ -257,7 +257,7 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     <main className="flex w-full min-w-0 flex-col">
       <Kokpit
         slug={slug}
-        dark={jar.get(THEME_COOKIE)?.value === "koyu"}
+        dark={temaKoyu(jar)}
         firstName={firstName}
         allowed={allowed}
         today={todayList}

@@ -4,6 +4,7 @@
 // bu dosya yalnızca girdi toplar, sunucu hatasını (kod + sonraki eylem) gösterir. Bu dosyadaki ortak saha parçaları `putaway-flow.tsx` ile paylaşılır.
 import Link from "next/link";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useModalFocus } from "../../kalip/odak.ts";
 import { useTranslations } from "next-intl";
 import { ChevronDown, CircleAlert, CircleCheck, ScanField, ScanLine } from "@wms/ui";
 import { ScannerService, gateScan, type ScanSource, type ScannerSource } from "../../../../../lib/scanner/scanner-core.ts";
@@ -13,6 +14,7 @@ import type { CameraFailure, CameraSession, FrameDecoder, RejectReason, ScanStat
 import { intOf } from "../../receipts/receipt-form.tsx";
 import { compoundQuantityAction } from "../../receipts/actions.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
+import { feedback } from "@wms/ui";
 
 const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 /** Saha alt gezinme çubuğunun yüksekliği (field/layout.tsx: min-h-14 + py-2 + border-t-2 = 74 px); sabit birincil çubuk hemen üstünde durur. */
@@ -141,13 +143,16 @@ export function FlowShell({ hue, icon, step, total, title, instruction, backHref
 export function ScanAlert({ title, reason, action, code, onClose }: { title: string; reason: string; action: string; code?: string; onClose: () => void }) {
   const t = useTranslations("receiving");
   const btn = useRef<HTMLButtonElement>(null);
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const alertRef = useRef<HTMLDivElement>(null);
+  useModalFocus(true, alertRef, { onClose, initial: "none" });
   useEffect(() => {
     btn.current?.focus();
-    // Yalnızca titreşim (iOS Safari desteklemeyebilir; yoksa görsel uyarı yeterlidir, N-13).
-    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") navigator.vibrate([200, 80, 200]);
+    // Kötü okutma sesi + titreşim (T-436: tek kaynak; iOS titreşimi desteklemeyebilir, görsel uyarı yeterlidir, N-13).
+    feedback.scan(false);
   }, []);
   return (
-    <div role="alertdialog" aria-modal="true" aria-labelledby="scan-alert-title" aria-describedby="scan-alert-body" data-testid="scan-alert" className="fixed inset-0 z-50 flex flex-col justify-between gap-4 bg-danger-bg px-6 pb-6 pt-10 text-danger-ink">
+    <div ref={alertRef} role="alertdialog" aria-modal="true" aria-labelledby="scan-alert-title" aria-describedby="scan-alert-body" data-testid="scan-alert" className="fixed inset-0 z-50 flex flex-col justify-between gap-4 bg-danger-bg px-6 pb-6 pt-10 text-danger-ink">
       <div className="flex min-w-0 flex-col items-center gap-4 text-center">
         <CircleAlert aria-hidden="true" className="size-20 text-danger" strokeWidth={2} />
         <h2 id="scan-alert-title" className="break-words text-3xl font-extrabold">
@@ -313,6 +318,9 @@ const ACCEPT_AFTER_RESOLVE_MS = 700;
 export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onCode: (code: string) => boolean; onClose: () => void; onManual: () => void; resolvedName?: string | undefined }) {
   const t = useTranslations("receiving");
   const video = useRef<HTMLVideoElement>(null);
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const overlayRef = useRef<HTMLDivElement>(null);
+  useModalFocus(true, overlayRef, { onClose, initial: "none" });
   const onCodeRef = useRef(onCode);
   useLayoutEffect(() => {
     onCodeRef.current = onCode;
@@ -466,6 +474,7 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
   const primaryBtn = `flex min-h-12 min-w-12 basis-full items-center justify-center whitespace-nowrap rounded-control border-2 border-on-accent bg-on-accent px-3 text-base font-bold text-ink landscape:basis-auto ${FOCUS}`;
   return (
     <div
+      ref={overlayRef}
       role="dialog"
       aria-modal="true"
       aria-label={t("camera.title")}
@@ -719,7 +728,8 @@ export function useScanPrimary(camera: (code: string) => boolean, outcome: ScanO
     if (cameraPossible()) setCam(true);
     else {
       setReady(true);
-      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") navigator.vibrate(30);
+      // Küçük işlem (okuyucu hazır): sessiz (T-436, kullanıcı kararı 21 Ekim).
+      feedback.minor();
     }
   };
   return { ready, press, overlay: cam ? <CameraOverlay onCode={onCode} onClose={close} onManual={onManual} resolvedName={ownName} /> : null };

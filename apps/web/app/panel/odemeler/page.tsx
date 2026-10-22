@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { listCharges, type ChargeRow } from "@wms/domain/platform/charges";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../design/theme.ts";
+import { temaKoyu } from "../../design/theme.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import { panelOperatorOrExit } from "../gate.ts";
 import { panelLabels, panelNav } from "../nav.ts";
@@ -66,6 +66,7 @@ export default async function OdemelerPage({ searchParams }: { searchParams: Pro
     throw e;
   });
   const query = await searchParams;
+  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const t = ((await getMessages()).panel as unknown as { odemeler: Msgs }).odemeler;
   const now = new Date();
   const td = todayParts(now);
@@ -99,13 +100,13 @@ export default async function OdemelerPage({ searchParams }: { searchParams: Pro
     ref: r.ref,
     period: periodLabel(r.period, t.months),
     plan: r.plan,
-    amount: priceLabel(r.amount),
+    amount: priceLabel(r.amount, locale),
     status: r.status,
     invoice: r.invoiceNo ?? (r.status === "PAID" ? t.invoicePending : "—"),
   }));
   const tabParam = first(query.d);
   const tab: "all" | ChargeStatusKey = tabParam === "PAID" || tabParam === "OVERDUE" || tabParam === "PENDING" ? tabParam : "all";
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <PanelShell
       dark={dark}

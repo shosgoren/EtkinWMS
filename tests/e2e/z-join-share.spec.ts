@@ -23,10 +23,10 @@ test("demo: katılma QR'ı paylaşma kilitli; dokununca yetkisiz balonu; üst ç
   // Kilitli çip `aria-disabled` (gerçek `disabled` değil): kullanıcı dokunabilir ve nedeni duyar; Playwright etkinlik denetimi bunu "etkin değil"
   // sayar, bu yüzden dokunuş zorlanır.
   await page.getByTestId("share-copy").click({ force: true });
-  await expect(page.getByTestId("team-toast")).toContainText("Paylaşma yetkin yok");
+  await expect(page.getByTestId("kalip-toast")).toContainText("Paylaşma yetkin yok");
   await expect(page.getByTestId("share-copy")).not.toContainText("Kopyalandı");
   // Ana işlem PAYLAŞ demoda pasif görünür ama sessiz değildir.
   await expect(page.getByTestId("team-main")).toContainText("PAYLAŞ");
   await page.getByTestId("team-main").click();
-  await expect(page.getByTestId("team-toast")).toContainText("Paylaşma yetkin yok");
+  await expect(page.getByTestId("kalip-toast")).toContainText("Paylaşma yetkin yok");
 });

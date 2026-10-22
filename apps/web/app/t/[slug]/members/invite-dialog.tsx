@@ -61,7 +61,9 @@ export function LinkBox({ title, link, warning, onDismiss }: { title: string; li
   async function copy() {
     try {
       await navigator.clipboard.writeText(link);
+      // T-436 (ALTIN-KURAL 5): küçük işlem — sessiz; düğmede 2 sn "Kopyalandı".
       setState("copied");
+      window.setTimeout(() => setState((s) => (s === "copied" ? "idle" : s)), 2000);
     } catch {
       setState("failed");
     }

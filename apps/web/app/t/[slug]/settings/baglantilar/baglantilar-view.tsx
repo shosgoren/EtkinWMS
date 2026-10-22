@@ -4,16 +4,17 @@
 // yer tutucusu; B-112: Paraşüt satırı `/t/<alan>/integrations` ekranını açar, Logo YAKINDA kalır). Ana işlem alt cam çubukta: seçime göre
 // AKTAR'A GEÇ / GÜNCELLE / İNDİR (seçim tamamlanmadan pasif). İçeri al ve Güncelle mevcut Aktar akışını açar (`/import?tur=&kip=`),
 // Dışarı aktar ortak `excelIndir` ile .xlsx indirir. Her dokunuşta ses; sonuç balonu renk + ses.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type CSSProperties } from "react";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { Ico, KalipBaslik, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { excelHata, excelIndir, excelYenidenGiris } from "../../kalip/excel.tsx";
 import { KalipGrup, KalipIzgara, KalipKilit, KalipSabit } from "../../kalip/form.tsx";
 import { KalipSecimKutulari, KalipSekme } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
+import { feedback, intlDil } from "@wms/ui";
 
 type Alan = "items" | "parties" | "warehouses" | "locations" | "stock";
 type Islem = "import" | "update" | "export";
@@ -34,6 +35,7 @@ const ISLEM: Readonly<Record<Islem, { readonly d: string; readonly color: string
 
 export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: string; dark: boolean; canData: boolean; canMaster: boolean }) {
   const t = useTranslations("baglantilar");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
   const [alan, setAlan] = useState<Alan | null>(null);
@@ -52,32 +54,30 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
     const r = await excelIndir(href);
     setBusy(false);
     if (!r.ok) {
-      tone("err");
+      feedback.error();
       say(r.detail === "RECENT_AUTH_REQUIRED" ? "warn" : "err", t(`err.${excelHata(r.code, r.detail)}`));
       excelYenidenGiris(r);
       return;
     }
-    tone("ok");
+    feedback.ok();
     if (template) say("ok", t("templateDone"));
-    else if (r.truncated === true) say("warn", t("doneTruncated", { n: (r.rows ?? 0).toLocaleString("tr-TR") }));
-    else if (r.personalOmitted === true) say("info", t("donePersonal", { n: (r.rows ?? 0).toLocaleString("tr-TR") }));
-    else say("ok", t("done", { n: (r.rows ?? 0).toLocaleString("tr-TR") }));
+    else if (r.truncated === true) say("warn", t("doneTruncated", { n: (r.rows ?? 0).toLocaleString(intlDil(locale)) }));
+    else if (r.personalOmitted === true) say("info", t("donePersonal", { n: (r.rows ?? 0).toLocaleString(intlDil(locale)) }));
+    else say("ok", t("done", { n: (r.rows ?? 0).toLocaleString(intlDil(locale)) }));
   };
 
   const ready = alan !== null && islem !== null && !islemLocked(islem, alan);
   const run = (): void => {
     // Ana düğme sessiz kalmaz: seçim eksik ya da kilitliyse hata sesi + ne yapılacağını söyleyen balon.
     if (alan === null || islem === null) {
-      tone("err");
       say("warn", alan === null ? t("pickArea") : t("pickOp"));
       return;
     }
     if (islemLocked(islem, alan)) {
-      tone("err");
       say("warn", lockReason(islem));
       return;
     }
-    tone("tap");
+    feedback.minor();
     if (islem === "export") {
       void download(`/api/t/${encodeURIComponent(slug)}/export/${alan}`, false);
       return;
@@ -148,11 +148,10 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
                 aria-disabled={alan === null || !canData || undefined}
                 onClick={() => {
                   if (alan === null || !canData) {
-                    tone("err");
                     say("warn", alan === null ? t("pickArea") : t("lockData"));
                     return;
                   }
-                  tone("tap");
+                  feedback.minor();
                   void download(`/api/t/${encodeURIComponent(slug)}/export/${alan}?template=1`, true);
                 }}
                 data-testid="baglantilar-template"
@@ -166,7 +165,7 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
       <KalipBaslik title={t("integrations")} hint={t("integrationsHint")} />
       <KalipGrup title={t("integrations")} sub={t("integrationsSub")} d={LICON.transfer} color="6C4BD8" testId="baglantilar-entegrasyon">
         {/* B-112: Paraşüt `/t/<alan>/integrations` ekranına gider (yetki kararı orada: settings.manage, değilse kilitli ekran). Logo hâlâ YAKINDA yer tutucusu. */}
-        <Link href={`${base}/integrations`} className="sr2" style={{ "--c": kdz("dzf", "0F6E8C") } as CSSProperties} aria-label={t("openAria", { name: t("parasut") })} onClick={() => tone("tap")} data-testid="entegrasyon-parasut">
+        <Link href={`${base}/integrations`} className="sr2" style={{ "--c": kdz("dzf", "0F6E8C") } as CSSProperties} aria-label={t("openAria", { name: t("parasut") })} onClick={() => feedback.minor()} data-testid="entegrasyon-parasut">
           <span className="ri">
             <Ico d={LICON.workspace} size={20} />
           </span>

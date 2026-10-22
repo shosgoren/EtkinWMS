@@ -8,6 +8,7 @@ import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import { planLines, priceLabel } from "../plan-format.ts";
 import type { SiteActionState } from "./actions.ts";
+import { useLocale } from "next-intl";
 
 /** Paket (istemci dosyası sunucu paketini içe aktarmaz — T-127b). */
 export interface SitePlanItem {
@@ -71,6 +72,7 @@ export function SatisView({
   action: (prev: SiteActionState, form: FormData) => Promise<SiteActionState>;
 }) {
   const { dark } = useDz();
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [state, formAction, pending] = useActionState(action, {});
   const [h, setH] = useState(initial.title1);
   const [h2, setH2] = useState(initial.title2);
@@ -81,7 +83,9 @@ export function SatisView({
   async function copy(link: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(link);
+      // T-436 (ALTIN-KURAL 5): küçük işlem — sessiz; düğmede 2 sn "Kopyalandı".
       setCopied(link);
+      window.setTimeout(() => setCopied((c) => (c === link ? null : c)), 2000);
     } catch {
       setCopied(null);
     }
@@ -174,8 +178,8 @@ export function SatisView({
             {cards.map((p) => (
               <div key={p.id} className={`lpk-c${p.recommended ? " rec" : ""}`}>
                 <b>{p.name}</b>
-                <span>{`₺${priceLabel(p.price)} ${t.perMonth}`}</span>
-                <small>{planLines(p, t).join(" · ")}</small>
+                <span>{`₺${priceLabel(p.price, locale)} ${t.perMonth}`}</span>
+                <small>{planLines(p, t, locale).join(" · ")}</small>
               </div>
             ))}
           </div>

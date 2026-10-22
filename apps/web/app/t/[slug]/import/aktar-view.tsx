@@ -5,8 +5,9 @@
 // doğrulama, yetki ve idempotans sunucudadır (previewImportAction / applyImportChunkAction). Dosya içeriği yalnız bellekte tutulur (G-09).
 // Bilinçli farklar (DESIGN-PARITY): Cari kartlar T-428 ile açılır (o zamana dek kart kapalı); eski ikili .xls okunmaz (".xlsx olarak kaydet");
 // Etkin (sesle eşleme) T-424; eşleştirme hafızası tarayıcıda (alan + başlık imzası); "Kritik stok (en az)" alanı minimum stok aktarımıyla gelir.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useModalFocus } from "../kalip/odak.ts";
 import { dz } from "../../../design/aktar-tokens.ts";
 import { AICON } from "../../../design/aktar-icons.ts";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -16,6 +17,8 @@ import { applyImportChunkAction, previewImportAction } from "./actions.ts";
 import { importPartiesAction } from "../parties/actions.ts";
 import { importLocationsAction, importWarehousesAction } from "./master-actions.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
+import { buyukHarf, feedback, sayi } from "@wms/ui";
+
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { KalipSecimSayfasi } from "../kalip/secim.tsx";
 import { UstDugmeler } from "../ust-dugmeler.tsx";
@@ -83,27 +86,6 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
   );
 }
 
-function beep(ok: boolean): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.frequency.value = ok ? 880 : 300;
-    o.type = "sine";
-    g.gain.setValueAtTime(0.12, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
-    o.connect(g);
-    g.connect(ac.destination);
-    o.start();
-    o.stop(ac.currentTime + 0.2);
-    window.setTimeout(() => void ac.close(), 400);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
-
 function store<T>(key: string, value?: T): T | null {
   try {
     if (value !== undefined) {
@@ -120,6 +102,7 @@ function store<T>(key: string, value?: T): T | null {
 export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initialUpdate = false, canMaster = false }: AktarViewProps) {
   const t = useTranslations("aktar");
   const ti = useTranslations("import");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const [step, setStep] = useState(initialKind === undefined ? 1 : 2);
   const [kind, setKind] = useState<ImportKindKey>(initialKind ?? "stok");
@@ -137,21 +120,19 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
   const [partyReports, setPartyReports] = useState<readonly PartyReport[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState("");
   const [sheetPick, setSheetPick] = useState(false);
+  // T-436 (ALTIN-KURAL 11): Esc kapatır, odak perdede kalır, kapanınca açan düğmeye döner.
+  const pickRef = useRef<HTMLElement>(null);
+  useModalFocus(pick !== null, pickRef, { onClose: () => setPick(null), initial: "first" });
   const [recent, setRecent] = useState<{ name: string; rows: number; cols: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
     setRecent(store<{ name: string; rows: number; cols: number }>(RECENT(slug, kind)));
   }, [slug, kind]);
 
-  const flash = (msg: string): void => {
-    setToast(msg);
-    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(""), 1600);
-  };
+  // T-436 (ALTIN-KURAL 5): ortak balon.
+  const flash = (msg: string): void => feedback.info(msg);
 
   const sheet = loaded === null ? null : (loaded.wb.sheets[loaded.sheet] ?? null);
   const rows = useMemo(() => sheet?.rows ?? [], [sheet]);
@@ -159,7 +140,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
   const dataRows = loaded === null ? 0 : Math.max(0, rows.length - loaded.header - 1);
   const fields = FIELDS[kind];
   const kindTitle = t(`kind.${kind}.title`);
-  const fmt = (n: number): string => n.toLocaleString("tr-TR");
+  const fmt = (n: number): string => sayi(n, locale);
 
   async function onFile(file: File | undefined): Promise<void> {
     if (file === undefined) return;
@@ -184,10 +165,10 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
       setPartyReports([]);
       setProgress(null);
       store(RECENT(slug, kind), { name: file.name, rows: Math.max(0, first.rows.length - header - 1), cols: (first.rows[header] ?? []).length });
-      beep(true);
+      feedback.ok();
       setStep(3);
     } catch (e) {
-      beep(false);
+      feedback.error();
       setError(t(`fileError.${e instanceof SheetError ? e.code : "UNREADABLE"}`));
     } finally {
       setBusy(false);
@@ -220,7 +201,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
         const r = await recordCall(kind, true, records.slice(i, i + PARTY_CHUNK));
         if (!r.ok) {
           setBusy(false);
-          beep(false);
+          feedback.error();
           setError(t("serverError", { code: r.error.code }));
           return;
         }
@@ -246,7 +227,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
         blocked,
       });
       setBusy(false);
-      beep(!blocked);
+      (!blocked ? feedback.ok : feedback.error)();
       setStep(4);
       return;
     }
@@ -255,7 +236,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
     const r = await previewImportAction({ slug, text: first.text, mode });
     if (!r.ok) {
       setBusy(false);
-      beep(false);
+      feedback.error();
       setError(t("serverError", { code: r.error.code }));
       return;
     }
@@ -278,7 +259,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
     const nSkip = !clean ? 0 : "products" in fp && fp.products !== undefined ? fp.products.skipped : 0;
     setCheck({ preview: fp, text: final.text, rowMap: final.rowMap, nNew, nUpd, nSkip, bad: issues.slice(0, 20), badRows: headerLevel ? 0 : p.summary?.errorRows ?? badFileRows.size, blocked: !clean });
     setBusy(false);
-    beep(clean);
+    (clean ? feedback.ok : feedback.error)();
     setStep(4);
   }
 
@@ -302,7 +283,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
       }
       remember();
       setBusy(false);
-      beep(true);
+      feedback.ok();
       setStep(5);
       return;
     }
@@ -324,16 +305,16 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
     }
     remember();
     setBusy(false);
-    beep(true);
+    feedback.ok();
     setStep(5);
   }
 
   // ---- görünüm değerleri (kaynak renderVals) ----
   const STEPS = [t("steps.1"), t("steps.2"), t("steps.3"), t("steps.4"), t("steps.5")];
   const title = step === 1 ? t("title") : `${kindTitle} · ${update ? t("mode.update") : t("title")}`;
-  const stepLine = t("stepLine", { n: Math.min(step, 4), name: (STEPS[step - 1] ?? "").toLocaleUpperCase("tr-TR") });
+  const stepLine = t("stepLine", { n: Math.min(step, 4), name: buyukHarf(STEPS[step - 1] ?? "", locale) });
   const colSample = (i: number): string => (loaded === null ? "" : samples(rows, loaded.header, i).join(" · "));
-  const colName = (i: number): string => `${colLetter(i)} · ${(head[i] ?? "").toLocaleUpperCase("tr-TR")}`;
+  const colName = (i: number): string => `${colLetter(i)} · ${buyukHarf(head[i] ?? "", locale)}`;
   const fieldOf = (i: number) => fields.find((f) => map?.col[f.id] === i);
   const missIds = map === null ? [] : fields.filter((f) => f.required && (map.col[f.id] ?? null) === null).map((f) => f.id);
   const wait = map === null ? [] : waiting(map, kind);
@@ -378,7 +359,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
       mainCls = "dk big scan wait";
       mainIcon = AICON.qmark;
       main = () => {
-        beep(false);
+        feedback.error();
         setPick(wait[0] ?? null);
       };
     } else {
@@ -492,7 +473,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                         data-kind={k}
                         onClick={() => {
                           if (!on) return;
-                          beep(true);
+                          feedback.ok();
                           setKind(k as ImportKindKey);
                           if (k === "acilis") setUpdate(false);
                           setError(null);
@@ -565,7 +546,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                         aria-pressed={update}
                         data-testid="aktar-mode-update"
                         onClick={() => {
-                          beep(true);
+                          feedback.ok();
                           setUpdate(!update);
                           setCheck(null);
                           flash(update ? t("mode.insertOn") : t("mode.updateOn"));
@@ -583,7 +564,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                           aria-pressed={addMissing}
                           data-testid="aktar-mode-add"
                           onClick={() => {
-                            beep(true);
+                            feedback.ok();
                             setAddMissing(!addMissing);
                             setCheck(null);
                           }}
@@ -710,7 +691,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                                 className="mok"
                                 aria-label={t("s3.yes")}
                                 onClick={() => {
-                                  beep(true);
+                                  feedback.ok();
                                   setMap({ col: map.col, state: { ...map.state, [f.id]: "user" } });
                                 }}
                               >
@@ -731,7 +712,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                         <div className="pvr pvh">
                           {shown.map((f) => (
                             <span key={f.id} className={(map.col[f.id] ?? null) !== null ? "" : "need"}>
-                              {t(`field.${kind}.${f.id}`).toLocaleUpperCase("tr-TR")}
+                              {buyukHarf(t(`field.${kind}.${f.id}`), locale)}
                             </span>
                           ))}
                         </div>
@@ -800,7 +781,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                       className={`opt${skip ? " on" : ""}`}
                       aria-pressed={skip}
                       onClick={() => {
-                        beep(true);
+                        feedback.ok();
                         setSkip(!skip);
                         setCheck(null);
                         setStep(3);
@@ -862,7 +843,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
 
             {pickF !== null && map !== null && loaded !== null ? (
               <div className="scrim" onClick={() => setPick(null)}>
-                <section className="sheet" role="dialog" aria-label={t("pick.aria")} onClick={(e) => e.stopPropagation()}>
+                <section ref={pickRef} className="sheet" role="dialog" aria-label={t("pick.aria")} onClick={(e) => e.stopPropagation()}>
                   <div className="sh">
                     <span>
                       <b>
@@ -886,7 +867,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                           className={`colb${cur ? " cur" : owner !== undefined ? " taken" : ""}`}
                           data-col={colLetter(i)}
                           onClick={() => {
-                            beep(true);
+                            feedback.ok();
                             setMap(setColumn(map, pickF.id, i));
                             setPick(null);
                           }}
@@ -896,7 +877,7 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
                             <b>{h === "" ? t("pick.noHeader") : h}</b>
                             <small>{colSample(i) || t("pick.empty")}</small>
                           </span>
-                          <span className="cu">{cur ? t("pick.current") : owner !== undefined ? `→ ${t(`field.${kind}.${owner.id}`).toLocaleUpperCase("tr-TR")}` : ""}</span>
+                          <span className="cu">{cur ? t("pick.current") : owner !== undefined ? `→ ${buyukHarf(t(`field.${kind}.${owner.id}`), locale)}` : ""}</span>
                         </button>
                       );
                     })}
@@ -922,7 +903,6 @@ export function AktarView({ slug, dark, maxRows, chunkSize, initialKind, initial
               </div>
             ) : null}
 
-            {toast !== "" ? <div className="toast">{toast}</div> : null}
           </div>
         </div>
       </div>

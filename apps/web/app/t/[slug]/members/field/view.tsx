@@ -8,16 +8,17 @@
 // T-990 (ALTIN-KURAL): kapalı PERSONELİ EKLE sessiz kalmaz (`disabledReason`: hangi alan eksik); yazılıp eklenmemiş personel varken Geri /
 // Ana ekran / bağlantılar ortak cam çıkış kutusunu açar ("Ekle ve çık"). Eklenen personelin değerleri ekranda kalır, koruma kalkar.
 import { useState, type CSSProperties } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../../kalip/cikis.tsx";
 import { degisti } from "../../kalip/dogrula.ts";
-import { Ico, KalipEkran, tone, useKalipToast } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipAlan, KalipGrup, KalipIzgara, KalipSecenek } from "../../kalip/form.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { createFieldUserAction, resetFieldCodeAction } from "../actions.ts";
 import { Btn, ErrLine, Note, QrCode, type ErrState } from "../parts.tsx";
+import { buyukHarf, feedback } from "@wms/ui";
 
 interface Warehouse {
   readonly id: string;
@@ -59,6 +60,7 @@ export function FieldStaffView({
   staff: readonly StaffRow[];
 }) {
   const t = useTranslations("fieldStaff");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -88,18 +90,18 @@ export function FieldStaffView({
     const res = await resetFieldCodeAction({ slug, memberId: row.membershipId });
     setBusy(false);
     if (res.ok) {
-      tone("ok");
+      feedback.ok();
       setIssued({ username: row.username, code: res.data.code });
       router.refresh();
       return;
     }
-    tone("err");
+    feedback.error();
     setErr(failText(res.error.code, res.error.detail));
   }
 
   async function add(): Promise<boolean> {
     if (wh === undefined) {
-      tone("err");
+      feedback.error();
       setErr({ text: t("errWarehouse"), reauth: false });
       return false;
     }
@@ -109,14 +111,14 @@ export function FieldStaffView({
     setBusy(false);
     if (res.ok) {
       // Form değerleri kartla birlikte görünür kalır (kart hangi personele ait, ekranda okunur).
-      tone("ok");
+      feedback.ok();
       setIssued({ username: res.data.username, code: res.data.code });
       say("ok", t("cardKick", { username: res.data.username }));
       setKayitli({ name, username, role, wh });
       router.refresh();
       return true;
     }
-    tone("err");
+    feedback.error();
     setErr(failText(res.error.code, res.error.detail));
     router.refresh();
     return false;
@@ -130,7 +132,6 @@ export function FieldStaffView({
     saveLabel: t("leaveSave"),
     onSave: () => {
       if (canAdd) return add();
-      tone("err");
       say("err", offReason);
       return false;
     },
@@ -142,7 +143,7 @@ export function FieldStaffView({
       kind="form"
       dark={dark}
       title={t("title")}
-      subtitle={t("bandS", { tenant: tenantName.toLocaleUpperCase("tr-TR") })}
+      subtitle={t("bandS", { tenant: buyukHarf(tenantName, locale) })}
       icon={{ d: LICON.people, color: "0E7C7B" }}
       testId="field-staff"
       bar={{
@@ -235,7 +236,7 @@ export function FieldStaffView({
                     </span>
                     <span className="rt">
                       <b>{p.name}</b>
-                      <small>{`${p.username} · ${roleText.toLocaleUpperCase("tr-TR")}`}</small>
+                      <small>{`${p.username} · ${buyukHarf(roleText, locale)}`}</small>
                     </span>
                     <span className={`pill ${p.active && !p.locked ? "ok" : "warn"}`}>{st}</span>
                     <Btn kind="soft" scope="dzf" d={LICON.key} onClick={() => void newCode(p)} aria-label={t("newCodeAria", { name: p.name })} disabled={busy} style={{ minHeight: 44 }}>

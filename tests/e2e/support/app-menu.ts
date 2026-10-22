@@ -43,6 +43,9 @@ export async function selectView(page: Page, view: "flow" | "cockpit"): Promise<
   const html = page.locator("html");
   if ((await html.getAttribute("data-view")) === view) return;
   const mods = page.getByTestId("kabuk-mods").filter({ visible: true });
+  // T-436: kiracı `loading.tsx` (iskelet) ile içerik akışla gelir; React çözülmüş içeriği kısa süre gizli kopyada tutar. Önce ekranın
+  // görünür hâli (hesap düğmesi) beklenir, sonra alt çubuk olup olmadığına bakılır.
+  await expect(actions(page).first()).toBeVisible();
   if (await mods.first().isVisible()) {
     await mods.first().click();
     const tile = page.getByRole("dialog", { name: "Modüller" }).locator(`[data-module="${view === "cockpit" ? "kokpit" : "akis"}"]`);

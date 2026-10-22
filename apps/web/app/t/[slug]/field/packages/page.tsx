@@ -9,7 +9,7 @@ import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { packageReceivingEnabled } from "../../../../../lib/package-receiving-config.ts";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { temaKoyu } from "../../../../design/theme.ts";
 import { KalipHataEkran, KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { PackageMovementFlow } from "./package-flow.tsx";
 
@@ -33,7 +33,7 @@ export default async function PackageMovementPage({ params, searchParams }: {
   if (!member) notFound();
   const t = await getTranslations("packageMovement");
   // T-973: kilitli / yükleme hatası ekranları liste kalıbında (tema çerezi; Geri: Saha).
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   const icon = { d: LICON.koli, color: "0E7C7B" };
   const field = `/t/${encodeURIComponent(slug)}/field`;
   if (!hasPermission(member.roles, "stock.view", member.grants)) return <KalipKilitliEkran title={t("title")} icon={icon} text={t("locked")} hint={t("lockedHint")} dark={dark} home={field} />;

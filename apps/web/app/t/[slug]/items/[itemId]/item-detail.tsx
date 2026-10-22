@@ -15,13 +15,13 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { Banner } from "@wms/ui";
+import { Banner, feedback } from "@wms/ui";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { CodeChangedNotice, CodeEditForm } from "../../code-edit-dialog.tsx";
 import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, KalipMinimum, KalipNerede, KalipTumu, KalipUyari, KalipZaman, type KalipHizliIslem, type KalipOlay, type KalipYer } from "../../kalip/detay.tsx";
 import type { AlanKurali } from "../../kalip/dogrula.ts";
-import { Ico, KalipEkran, tone } from "../../kalip/ekran.tsx";
+import { Ico, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipSabit } from "../../kalip/form.tsx";
 import { approx, fmtQty, stockTone, sumDecimal } from "../../kalip/format.ts";
@@ -369,14 +369,14 @@ export function ItemDetail({
   // Açık tam ekran form adresten okunur (yalnız yazma yetkisi ve aktif ürün; yoksa kart görünür).
   const form = writable ? (FORMS.find((f) => params.get(f) === "1") ?? null) : null;
   const open = (f: ItemForm): void => {
-    tone("tap");
+    feedback.minor();
     setError(null);
     router.push(`${returnTo}?${f}=1`);
   };
   /** Formdan karta dönüş: başarıda bildirim + sunucu verisini yenile. */
   const back = (doneText?: string): void => {
     if (doneText !== undefined) {
-      tone("ok");
+      feedback.ok();
       setError(null);
       setNotice(doneText);
     }
@@ -392,11 +392,11 @@ export function ItemDetail({
     const res = await call();
     setBusy(null);
     if (!res.ok) {
-      tone("err");
+      feedback.error();
       setError(toServerError(res.error));
       return false;
     }
-    tone("ok");
+    feedback.ok();
     setNotice(td(doneKey));
     router.refresh();
     return true;
@@ -518,7 +518,7 @@ export function ItemDetail({
         onDone={(r) => {
           setError(null);
           if (r.changed) {
-            tone("ok");
+            feedback.ok();
             setNotice(null);
             setCodeChanged({ from: r.from, to: r.to });
             back();
@@ -642,7 +642,7 @@ export function ItemDetail({
                       aria-describedby={otherUnits.length === 0 ? "conv-none" : undefined}
                       onClick={() => {
                         if (otherUnits.length === 0) {
-                          tone("err");
+                          feedback.error();
                           setNotice(tk("convNoUnit"));
                           return;
                         }
@@ -681,7 +681,7 @@ export function ItemDetail({
                               style={actBtn("C62828")}
                               disabled={busy === "remove"}
                               onClick={() => {
-                                tone("tap");
+                                feedback.minor();
                                 setRemoving(b);
                               }}
                               aria-label={td("barcodeRemoveFor", { barcode: b.barcode })}
@@ -716,7 +716,7 @@ export function ItemDetail({
                       disabled={busy === "archive"}
                       aria-busy={busy === "archive" || undefined}
                       onClick={() => {
-                        tone("tap");
+                        feedback.minor();
                         setArchiveOpen(true);
                       }}
                     >

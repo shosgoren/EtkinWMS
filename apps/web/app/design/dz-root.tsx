@@ -4,7 +4,7 @@
 // tutulur (sunucu ilk çizimde doğru temayı verir; kaynak localStorage kullanır, SSR'de yanıp sönmesin diye çerez).
 // Açılır kutu ve pencereler (`overlay`) kaynaktaki gibi `.app` içinde çizilir.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { THEME_COOKIE } from "./theme.ts";
+import { temaYaz } from "./theme.ts";
 
 interface DzCtx {
   readonly dark: boolean;
@@ -27,7 +27,7 @@ export function DzRoot({ dark: initial, testId, children, overlays, scope = "dz"
   const toggleTheme = useCallback(() => {
     setDark((d) => {
       const n = !d;
-      document.cookie = `${THEME_COOKIE}=${n ? "koyu" : "acik"}; path=/; max-age=31536000; samesite=lax`;
+      temaYaz(n ? "koyu" : "acik");
       return n;
     });
   }, []);

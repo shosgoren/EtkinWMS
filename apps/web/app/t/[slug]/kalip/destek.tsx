@@ -11,7 +11,8 @@ import { createPortal } from "react-dom";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
 import { SupportList, SupportSheet, useSupport } from "../pano/support-layer.tsx";
-import { Ico, tone } from "./ekran.tsx";
+import { Ico } from "./ekran.tsx";
+import { feedback } from "@wms/ui";
 
 export function KalipDestek({ slug, dark, canReport }: { slug: string; dark: boolean; canReport: boolean }) {
   const td = useTranslations("destek");
@@ -27,7 +28,7 @@ export function KalipDestek({ slug, dark, canReport }: { slug: string; dark: boo
     setSentCode(null);
   }, []);
   const openForm = useCallback(() => {
-    tone("tap");
+    feedback.minor();
     setSentCode(null);
     setHelp("form");
   }, []);
@@ -42,7 +43,7 @@ export function KalipDestek({ slug, dark, canReport }: { slug: string; dark: boo
           aria-haspopup="dialog"
           aria-expanded={problem}
           onClick={() => {
-            tone("tap");
+            feedback.minor();
             setHelp(null);
             setProblem(true);
           }}
@@ -59,7 +60,7 @@ export function KalipDestek({ slug, dark, canReport }: { slug: string; dark: boo
         aria-haspopup="dialog"
         aria-expanded={help !== null}
         onClick={() => {
-          tone("tap");
+          feedback.minor();
           setProblem(false);
           setSentCode(null);
           // Talepler açılışta yüklenmez (hız sınırı bütçesi); dokununca bir kez yüklenir, talep varsa Taleplerim.
@@ -79,7 +80,7 @@ export function KalipDestek({ slug, dark, canReport }: { slug: string; dark: boo
           canReport={canReport}
           team={false}
           onIssue={() => {
-            tone("tap");
+            feedback.minor();
             closeHelp();
             setProblem(true);
           }}

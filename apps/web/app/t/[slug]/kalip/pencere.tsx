@@ -7,10 +7,11 @@
 // (arşivle, iptal et…); ekleme/düzenleme tam ekran formdur (form-ekran.tsx). Yarım işte (`dirty`) kapatma ortak çıkış kutusuna sorar.
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { THEME_COOKIE } from "../../../design/theme.ts";
+import { belgeCerezleri, temaKoyu } from "../../../design/theme.ts";
 import { KalipCikisUyarisi } from "./cikis.tsx";
 import { Ico } from "./ekran.tsx";
 import { kdzOrtak } from "./tokens.ts";
+import { useModalFocus } from "./odak.ts";
 
 // T-990: form kabının kaynağında olmayan ama başka kalıp kaynağında geçen renk (ör. Hammadde kahvesi) de kullanılabilir.
 const c = (hex: string): string => kdzOrtak(hex);
@@ -21,7 +22,7 @@ function useKalipDark(open: boolean): boolean {
   useLayoutEffect(() => {
     if (!open) return;
     const root = document.querySelector(".kalip");
-    setDark(root === null ? document.cookie.split(";").some((x) => x.trim() === `${THEME_COOKIE}=koyu`) : root.classList.contains("dz-dark"));
+    setDark(root === null ? temaKoyu(belgeCerezleri()) : root.classList.contains("dz-dark"));
   }, [open]);
   return dark;
 }
@@ -62,6 +63,8 @@ export function KalipPencere({ open, title, titleId, describedBy, icon, onClose:
   const dark = useKalipDark(open);
   const busyRef = useRef(busy);
   busyRef.current = busy;
+  // T-436 (ALTIN-KURAL 11): Esc ve odak tuzağı yerel `<dialog>`dan; kapanınca odak AÇAN düğmeye döner (kanca önce açanı kaydeder).
+  useModalFocus(open, ref, { trap: false, initial: "none" });
   useEffect(() => {
     const el = ref.current;
     if (el === null) return;

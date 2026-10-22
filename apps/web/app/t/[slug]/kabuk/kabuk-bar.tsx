@@ -13,11 +13,12 @@
 // (2) Ana işlem hiçbir zaman sessizce kapalı kalmaz: pasif görünür (`aria-disabled`), dokununca hata sesi + nedenini söyleyen balon
 // (`disabledReason`, ör. "Değişiklik yok"). Ortak davranış burada; ekranlar yalnız nedeni verir.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
+import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 
 export interface KabukContextValue {
   /** `/t/<slug>` */
@@ -86,6 +87,8 @@ export interface KabukMain {
   readonly testId?: string;
   /** Bekleyen karar (Ekip/Aktar kaynağındaki sarı `.dk.big.wait`). */
   readonly wait?: boolean;
+  /** T-436 (ALTIN-KURAL 6): işlem sürüyor — ikinci dokunuş gönderilmez; 1 sn'den uzun sürerse dönen gösterge. */
+  readonly busy?: boolean;
   /** Pasifken dokununca balonda söylenen neden (verilmezse genel metin). */
   readonly disabledReason?: string;
   /** Kaydedilmemiş değişiklik sayısı (ALTIN-KURAL: değişiklik varsa ana işlemde sayı rozeti). */
@@ -123,35 +126,6 @@ function detect(): Dev {
 }
 /** Kaynak: telefonda 12, tablette 16, masaüstünde 20 kutu (4 satır); sığmayan "+N daha". */
 const CAP: Record<Dev, number> = { mobile: 12, tablet: 16, desktop: 20 };
-
-/** Kaynak tone(): dokunuş / onay / hata sesi + titreşim. */
-export function tone(kind: "tap" | "ok" | "err"): void {
-  try {
-    const A = window.AudioContext;
-    if (A === undefined) return;
-    const ac = new A();
-    const t0 = ac.currentTime;
-    const seq = kind === "ok" ? [660, 990] : kind === "err" ? [330, 220] : [560];
-    seq.forEach((f, i) => {
-      const o = ac.createOscillator();
-      const g = ac.createGain();
-      const t = t0 + i * 0.13;
-      o.type = "sine";
-      o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-      o.connect(g);
-      g.connect(ac.destination);
-      o.start(t);
-      o.stop(t + 0.13);
-    });
-    window.setTimeout(() => void ac.close(), 600);
-    if (typeof navigator.vibrate === "function") navigator.vibrate(kind === "err" ? [60, 40, 60] : 30);
-  } catch {
-    /* ses yoksa sessiz */
-  }
-}
 
 function Ico({ d, size, className = "ico" }: { d: string | readonly string[]; size: number; className?: string }) {
   return (
@@ -205,7 +179,7 @@ function Slot({ nav, className, aria, testId, k, current, children }: { nav: Kab
   const common = { className, "aria-label": nav.aria ?? aria, "data-testid": nav.testId ?? testId, "data-k": k, "aria-current": current === true ? ("page" as const) : undefined };
   const href = nav.href;
   return href !== undefined && nav.onClick === undefined ? (
-    <Link href={href} prefetch={false} {...common} style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && tone("tap")}>
+    <Link href={href} prefetch={false} {...common} style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && feedback.minor()}>
       {children}
     </Link>
   ) : (
@@ -215,10 +189,10 @@ function Slot({ nav, className, aria, testId, k, current, children }: { nav: Kab
   );
 }
 
-const TOASTS = { ok: ["2F7D5B", KICON.check], err: ["C62828", KICON.close], info: ["E0A100", KICON.info] } as const;
 
 export function KabukBar({ dark, home = false, back, homeNav, main, spot = null, etkin }: KabukBarProps) {
   const t = useTranslations("kabuk");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useContext(KabukContext);
   const base = ctx?.base ?? "/";
   const modules = ctx?.modules ?? [];
@@ -226,18 +200,10 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const [dev, setDev] = useState<Dev>("mobile");
-  const [toast, setToast] = useState<{ kind: keyof typeof TOASTS; text: string } | null>(null);
-  const toastTimer = useRef<number | undefined>(undefined);
   const modsBtn = useRef<HTMLButtonElement>(null);
   const sheet = useRef<HTMLElement>(null);
   const search = useRef<HTMLInputElement>(null);
 
-  const say = useCallback((kind: keyof typeof TOASTS, text: string) => {
-    window.clearTimeout(toastTimer.current);
-    setToast({ kind, text });
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
-  }, []);
-  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -278,14 +244,14 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   };
 
   const soon = (name: string): void => {
-    tone("tap");
-    say("info", t("soonToast", { name }));
+    feedback.minor();
+    feedback.info(t("soonToast", { name }));
   };
 
-  // Kaynak renderVals: arama (ad + alt yazı, Türkçe küçük harf), sayfa sınırı ve "+N daha" / "İlk sayfa" kutusu.
+  // Kaynak renderVals: arama (ad + alt yazı, kullanıcının dilinde küçük harf), sayfa sınırı ve "+N daha" / "İlk sayfa" kutusu.
   const named = modules.map((m) => ({ ...m, name: t(`mod.${m.id}.name`), sub: t(`mod.${m.id}.sub`) }));
-  const ql = q.toLocaleLowerCase("tr").trim();
-  const list = ql === "" ? named : named.filter((m) => `${m.name} ${m.sub}`.toLocaleLowerCase("tr").includes(ql));
+  const ql = kucukHarf(q, locale).trim();
+  const list = ql === "" ? named : named.filter((m) => kucukHarf(`${m.name} ${m.sub}`, locale).includes(ql));
   const cap = CAP[dev];
   let shown = list;
   let plus: { first: true; n: number } | { first: false } | null = null;
@@ -298,7 +264,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
       plus = { first: false };
     }
   }
-  const roleLabel = (ctx?.roleLabel ?? "").toLocaleUpperCase("tr");
+  const roleLabel = buyukHarf(ctx?.roleLabel ?? "", locale);
   const modsSub = t("sub", { role: roleLabel, n: modules.length }) + (plus !== null && !plus.first ? t("page2") : "");
 
   const sp = (k: KabukSlot): string => (spot === k ? " spot" : "");
@@ -306,7 +272,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
   const centerCls = `dk big${center.wait === true ? " wait" : ""}${sp("center")}`;
   const centerInner = (
     <>
-      <Ico d={center.d} size={30} />
+      {center.busy === true ? <span className="kyuk" aria-hidden="true" /> : <Ico d={center.d} size={30} />}
       <span className="cap" aria-hidden={capOf(center.label) === center.label ? undefined : true}>
         {capOf(center.label)}
       </span>
@@ -317,7 +283,6 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
       ) : null}
     </>
   );
-  const tk = toast === null ? TOASTS.info : TOASTS[toast.kind];
 
   return (
     <div className={`dzk dzdx${dark ? " dz-dark" : ""}`} data-testid="kabuk">
@@ -341,8 +306,8 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 <Ico d={[KICON.homeA, KICON.homeB, KICON.homeC]} size={26} />
                 <span>{t("homeShort")}</span>
               </Slot>
-              {center.href !== undefined && center.onClick === undefined && center.disabled !== true ? (
-                <Link href={center.href} prefetch={false} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && tone("tap")}>
+              {center.href !== undefined && center.onClick === undefined && center.disabled !== true && center.busy !== true ? (
+                <Link href={center.href} prefetch={false} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && feedback.minor()}>
                   {centerInner}
                 </Link>
               ) : (
@@ -351,11 +316,12 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                   className={centerCls}
                   aria-label={center.aria ?? center.label}
                   aria-disabled={center.disabled === true ? true : undefined}
+                  aria-busy={center.busy === true || undefined}
                   onClick={() => {
+                    if (center.busy === true) return;
                     if (center.disabled === true) {
                       // Sessiz kapalı düğme yok: hata sesi + neden balonu.
-                      tone("err");
-                      say("err", center.disabledReason ?? t("mainOff"));
+                      feedback.error(center.disabledReason ?? t("mainOff"));
                       return;
                     }
                     center.onClick?.();
@@ -374,7 +340,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                 aria-haspopup="dialog"
                 aria-expanded={open}
                 onClick={() => {
-                  tone("tap");
+                  feedback.minor();
                   if (open) close();
                   else setOpen(true);
                 }}
@@ -478,7 +444,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                         aria-label={t("tileAria", { name: m.name, sub: m.sub })}
                         onClick={(e) => {
                           if (!plainClick(e)) return;
-                          tone("tap");
+                          feedback.minor();
                           if (m.view !== undefined) {
                             // T-979c görünüm geçişi (Akış / Genel bakış). Yarım işte ortak çıkış kutusu bağlantıyı yakalama evresinde durdurur (T-990).
                             e.preventDefault();
@@ -502,7 +468,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
                       className="mt plus"
                       aria-label={plus.first ? t("moreAria", { n: plus.n }) : t("firstAria")}
                       onClick={() => {
-                        tone("tap");
+                        feedback.minor();
                         setPage(plus.first ? 1 : 0);
                       }}
                       data-testid="kabuk-more"
@@ -527,14 +493,6 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot = null,
             </>
           ) : null}
 
-          {toast !== null ? (
-            <div className="toast" role="status">
-              <i style={{ background: dz(tk[0]) }}>
-                <Ico d={tk[1]} size={16} />
-              </i>
-              {toast.text}
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

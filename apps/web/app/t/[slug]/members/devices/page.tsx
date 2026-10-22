@@ -6,7 +6,7 @@ import { getAppDb } from "@wms/db";
 import { listDevices, listSuspendedDevices } from "@wms/domain/identity/devices";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { AppError } from "@wms/shared/errors";
-import { THEME_COOKIE } from "../../../../design/theme.ts";
+import { temaKoyu } from "../../../../design/theme.ts";
 import { DevicesView } from "./view.tsx";
 
 // Saha cihazları (T-998, ADR-026 §7.5; T-971 liste kalıbı, view.tsx). Yalnız `users.manage`.
@@ -37,7 +37,7 @@ export default async function DevicesPage({ params }: { params: Promise<{ slug: 
   }
   const [summary, suspended] = await Promise.all([getMembershipSummary({ db, principal }), listSuspendedDevices({ db, principal, tenantSlug: slug })]);
   const tenantName = summary.memberships.find((m) => m.slug === slug)?.tenantName ?? slug;
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
+  const dark = temaKoyu(await cookies());
   return (
     <main className="flex w-full min-w-0 flex-col">
       <DevicesView

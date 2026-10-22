@@ -37,7 +37,8 @@ async function expectFocusRing(page: Page, locator: ReturnType<Page["locator"]>,
     "(() => { const s = getComputedStyle(document.activeElement); return { style: s.outlineStyle, color: s.outlineColor }; })()",
   );
   expect(style.style, `${where}: outline-style`).toBe("solid");
-  expect(style.color, `${where}: outline-color = --color-focus`).toBe(expected ?? (await tokenColor(page, "focus")));
+  // T-436 (ALTIN-KURAL 11): her yüzeyde odak çerçevesi 4 px sarı (kaynak `.app :focus-visible` ile aynı).
+  expect(style.color, `${where}: outline-color = sarı`).toBe(expected ?? "rgb(244, 197, 66)");
 }
 
 for (const size of SIZES) {

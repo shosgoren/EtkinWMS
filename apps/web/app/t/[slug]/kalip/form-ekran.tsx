@@ -13,11 +13,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { LICON } from "../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "./cikis.tsx";
 import { degisti, dogrula, ilkHatali, ozet, type AlanKurali, type Hatalar } from "./dogrula.ts";
-import { Ico, KalipEkran, tone, useKalipToast, type ToastKind } from "./ekran.tsx";
+import { Ico, KalipEkran, useKalipToast, type ToastKind } from "./ekran.tsx";
 import { FormBaglamCtx } from "./form-baglam.tsx";
 import { KalipKilit } from "./form.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "./surum.tsx";
 import { kdzOrtak } from "./tokens.ts";
+import { feedback } from "@wms/ui";
 
 const c = (hex: string): string => kdzOrtak(hex);
 
@@ -126,7 +127,6 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
       hataDeger.current = { ...values };
       setHatalar(h);
       setSalla((n) => n + 1);
-      tone("err");
       say("err", ozet(h, ruleList, msg.required, { missing: (n, list) => t("vMissing", { n, list }), invalid: (n, list) => t("vInvalid", { n, list }) }));
       const first = ilkHatali(h, ruleList);
       if (first === null) return;
@@ -156,7 +156,7 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
       r = await onSave();
     } catch (e) {
       setBusy(false);
-      tone("err");
+      feedback.error();
       if (eskiSurumMu(e)) eskiSurumBildir();
       else say("err", t("saveFailed"));
       return false;
@@ -170,14 +170,13 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
         goster(r.alan, [...rules, ...extra]);
         if (r.mesaj !== undefined) setGenel(r.mesaj);
       } else {
-        tone("err");
+        feedback.error();
         const m = r.mesaj ?? t("saveFailed");
         setGenel(m);
         say("err", m);
       }
       return false;
     }
-    tone("ok");
     say("ok", savedText ?? t("saved"));
     setHatalar({});
     return r.kal === true ? "kal" : "git";
@@ -198,7 +197,7 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
     e?.preventDefault();
     if (!canEdit) return;
     if (!dirty) {
-      tone("err");
+      feedback.error();
       say("info", t("noChange"));
       return;
     }

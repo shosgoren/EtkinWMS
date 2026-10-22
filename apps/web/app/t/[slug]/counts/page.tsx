@@ -164,7 +164,7 @@ export default async function CountsPage({ params, searchParams }: { params: Pro
     return (
       <main className="flex w-full min-w-0 flex-col">
         <FormEkran dark={dark} title={t("new")} icon={ICON} back={path} mainLabel={t("startShort")} mainAria={t("start")} testId="count-new">
-          {warehouses.length === 0 ? <KalipBos title={t("noWarehouse")} iconD={LICON.depo} /> : <NewCountForm slug={slug} warehouses={warehouses} />}
+          {warehouses.length === 0 ? <KalipBos title={t("noWarehouse")} iconD={LICON.depo} action={{ label: t("toWarehouses"), href: `${home}/warehouses`, kind: "go" }} /> : <NewCountForm slug={slug} warehouses={warehouses} />}
         </FormEkran>
       </main>
     );
@@ -181,7 +181,7 @@ export default async function CountsPage({ params, searchParams }: { params: Pro
     <main className="flex w-full min-w-0 flex-col">
       <KalipEkran kind="liste" dark={dark} title={t("title")} icon={ICON} testId="counts" bar={{ back: { href: `${home}/tasks?kind=COUNT` }, main: newMain }}>
         {sessions.length === 0 ? (
-          <KalipBos title={t("empty")} hint={t("emptyHint")} action={{ label: t("new"), href: `${path}?new=1` }} iconD={ICON.d} />
+          <KalipBos title={t("empty")} hint={t("emptyHint")} action={{ label: t("firstCount"), href: `${path}?new=1`, kind: "add" }} iconD={ICON.d} />
         ) : (
           <>
             <KalipBaslik title={t("count", { n: sessions.length })} hint={t("hint")} />

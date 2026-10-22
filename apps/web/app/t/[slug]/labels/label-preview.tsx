@@ -11,10 +11,11 @@ import { useRouter } from "next/navigation";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { degisti } from "../kalip/dogrula.ts";
-import { KalipBaslik, KalipEkran, tone } from "../kalip/ekran.tsx";
+import { KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
 import { KalipBos, KalipCipler, KalipDaha } from "../kalip/liste.tsx";
 import { printCss, validPrintSettings, type PaperMode } from "./print-settings.ts";
 import "./print.css";
+import { feedback } from "@wms/ui";
 
 export interface LabelPreviewProps {
   readonly dark: boolean;
@@ -41,9 +42,9 @@ export function LabelShell({ dark, back, title, children }: { dark: boolean; bac
   );
 }
 
-/** Önizleme dışı durum kutusu (kaynak `.nomatch`). */
-export function LabelNotice({ title, hint }: { title: string; hint?: string }) {
-  return <KalipBos title={title} {...(hint === undefined ? {} : { hint })} iconD={LICON.tag} testId="labels-notice" />;
+/** Önizleme dışı durum kutusu (kaynak `.nomatch`); ALTIN-KURAL 8: her zaman sıradaki adım düğmesiyle (çıkmaz yok). */
+export function LabelNotice({ title, hint, action }: { title: string; hint?: string; action: { readonly label: string; readonly href: string } }) {
+  return <KalipBos title={title} {...(hint === undefined ? {} : { hint })} iconD={LICON.tag} testId="labels-notice" action={{ ...action, kind: "go" }} />;
 }
 
 export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion, bridgeEnabled }: LabelPreviewProps) {
@@ -61,7 +62,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
   const korunan = useCikisKorumasi(degisti(settings, ilk), { dark });
 
   function downloadZpl(): void {
-    tone("tap");
+    feedback.minor();
     const url = URL.createObjectURL(new Blob([zpl], { type: "application/octet-stream" }));
     const a = document.createElement("a");
     a.href = url;
@@ -89,7 +90,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
           disabled: !valid,
           disabledReason: t("invalid"),
           onClick: () => {
-            tone("tap");
+            feedback.minor();
             setIlk(settings);
             window.print();
           },

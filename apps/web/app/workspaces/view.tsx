@@ -2,7 +2,8 @@
 // I-18 (DESIGN-PARITY): Giris.dc.html `v.auth` kabuğu + `v.pick` (BİRDEN ÇOK ÜYELİK · Çalışma alanı seçin) BİREBİR. Sınıf adları, öğe sırası,
 // ikon yolu ve metinler kaynaktan; CSS `app/design/giris.css`. Satır seçimi alanı açar (bağlantı); "SON" çipi ve seçili çerçeve sunucudaki
 // son kullanılan alandır (T-999, 0048). Kabuk saha girişiyle ortaktır (`field/flow.tsx` `Shell`).
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { buyukHarf } from "@wms/ui";
 import { DzRoot } from "../design/dz-root.tsx";
 import { C, dz } from "../design/giris-tokens.ts";
 import { Ico, Shell } from "../field/flow.tsx";
@@ -23,13 +24,15 @@ const TONE: readonly (readonly [string, string])[] = [
 const CHEVRON = "M9 6l6 6-6 6";
 
 /** Kaynaktaki `ini`: kelimelerin baş harfleri (harf/rakam olmayan karakterler atlanır), en çok iki, büyük harf. */
-export function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((x) => Array.from(x).find((ch) => /[\p{L}\p{N}]/u.test(ch)) ?? "")
-    .join("")
-    .slice(0, 2)
-    .toLocaleUpperCase("tr-TR");
+export function initials(name: string, locale: string): string {
+  return buyukHarf(
+    name
+      .split(" ")
+      .map((x) => Array.from(x).find((ch) => /[\p{L}\p{N}]/u.test(ch)) ?? "")
+      .join("")
+      .slice(0, 2),
+    locale,
+  );
 }
 
 export function WorkspacePicker({ dark, host, rows }: { dark: boolean; host: string; rows: readonly PickRow[] }) {
@@ -42,6 +45,7 @@ export function WorkspacePicker({ dark, host, rows }: { dark: boolean; host: str
 
 function Picker({ host, rows }: { host: string; rows: readonly PickRow[] }) {
   const t = useTranslations("workspaces");
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   return (
     <Shell fact={false}>
       <span className="kick">{t("kick")}</span>
@@ -58,11 +62,11 @@ function Picker({ host, rows }: { host: string; rows: readonly PickRow[] }) {
               aria-current={w.last ? "true" : undefined}
             >
               <span className="av" style={{ background: dz(tone[0]), color: dz(tone[1]) }}>
-                {initials(w.name)}
+                {initials(w.name, locale)}
               </span>
               <span className="rt">
                 <b>{w.name}</b>
-                <span>{`${host}/${w.slug} · ${w.roles.toLocaleUpperCase("tr-TR")}`}</span>
+                <span>{`${host}/${w.slug} · ${buyukHarf(w.roles, locale)}`}</span>
               </span>
               {w.last ? (
                 <span className="chip" style={{ background: dz("F4C542"), color: dz("1A1300") }}>

@@ -3,8 +3,11 @@
 // (`.dhead` başlık, eylem düğmeleri, KULLANIM ölçerleri, ABONELİK `.kv`, GEÇMİŞ `.tl`, "Askıya al" ve "Paketi değiştir" pencereleri)
 // BİREBİR. Değerler gerçek veridir (yalnız sayılar; tenant içeriği yok). Ödeme alanları ödeme bağlantısı gelene dek dürüst metin taşır
 // (I-18 §4: değer uydurulmaz). Yazma işlemleri actions.ts'te (operatör + yakın zamanda doğrulama, veritabanı işlevi).
-import { useActionState, useState, type CSSProperties } from "react";
+import { useActionState, useRef, useState, type CSSProperties } from "react";
+import { useModalFocus } from "../../t/[slug]/kalip/odak.ts";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+import { kucukHarf } from "@wms/ui";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
 import type { CustomerActionState } from "./actions.ts";
@@ -134,9 +137,10 @@ export function MusterilerList({
   labels: MusterilerLabels;
 }) {
   const router = useRouter();
+  const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [query, setQuery] = useState(q);
-  const ql = query.trim().toLocaleLowerCase("tr");
-  const shown = rows.filter((r) => (tab === "all" || r.state === tab) && (ql === "" || `${r.name} ${r.slug}`.toLocaleLowerCase("tr").includes(ql)));
+  const ql = kucukHarf(query.trim(), locale);
+  const shown = rows.filter((r) => (tab === "all" || r.state === tab) && (ql === "" || kucukHarf(`${r.name} ${r.slug}`, locale).includes(ql)));
   const tabs = (["all", "ACTIVE", "TRIAL", "OVERDUE", "SUSPENDED"] as const).map((k) => [k, `${t.tabs[k]} · ${counts[k]}`] as const);
   const go = (k: "all" | CustomerStateKey): void => {
     const p = new URLSearchParams();
@@ -245,6 +249,7 @@ export function MusteriDetail({
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, {});
   const [sheet, setSheet] = useState<"suspend" | "plan" | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const [why, setWhy] = useState("");
   const [pick, setPick] = useState<string | null>(cu.planId);
   const picked = plans.find((p) => p.id === pick);
@@ -254,6 +259,8 @@ export function MusteriDetail({
     setWhy("");
     setPick(cu.planId);
   };
+  // T-436 (ALTIN-KURAL 11): perde Esc ile kapanır, odak içinde kalır ve açan düğmeye döner.
+  useModalFocus(sheet !== null, sheetRef, { onClose: close, initial: "first" });
   return (
     <>
       {state.error !== undefined ? (
@@ -402,7 +409,7 @@ export function MusteriDetail({
       ) : null}
 
       {sheet === "suspend" ? (
-        <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-sh">
+        <div ref={sheetRef} className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-sh">
           <form className="sheet" style={{ background: C.surface, color: C.fg }} action={formAction} onSubmit={() => setSheet(null)}>
             <input type="hidden" name="id" value={cu.id} />
             <h2 id="y-sh">{t.suspendTitle.replace("{name}", () => cu.name)}</h2>
@@ -424,7 +431,7 @@ export function MusteriDetail({
       ) : null}
 
       {sheet === "plan" ? (
-        <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-pl">
+        <div ref={sheetRef} className="scrim" role="dialog" aria-modal="true" aria-labelledby="y-pl">
           <form className="sheet" style={{ background: C.surface, color: C.fg }} action={formAction} onSubmit={() => setSheet(null)}>
             <input type="hidden" name="id" value={cu.id} />
             <input type="hidden" name="plan" value={pick ?? ""} />
