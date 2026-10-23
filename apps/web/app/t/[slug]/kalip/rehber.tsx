@@ -1,6 +1,6 @@
 "use client";
 // T-1026: kaynak Yolculuk.dc.html; ortak, engellemeyen çalışma kartı. Eylem/izin/stok komutu çağırmaz.
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { intlDil } from '@wms/ui';
@@ -50,8 +50,8 @@ export function KalipRehberKart({ title, text, progress, target, onClose, onPrev
         document.addEventListener('focusin', outside, true);
         return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('focusin', outside, true); window.speechSynthesis?.cancel(); };
     }, []);
-    useEffect(() => {
-        const key = (e: KeyboardEvent): void => { if (e.defaultPrevented || document.querySelector('[aria-modal="true"]') !== null)
+    useLayoutEffect(() => {
+        const key = (e: KeyboardEvent): void => { const modal = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].some(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'); if (e.defaultPrevented || modal)
             return; if (e.key === 'Escape') {
             e.preventDefault();
             onClose();

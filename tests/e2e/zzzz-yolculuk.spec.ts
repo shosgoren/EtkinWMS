@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { loginEmptyTenant, localClient, scrubSecretInputs } from './support/empty-tenant.ts';
 import { KABUK_SIZES, settle } from './support/kabuk-checks.ts';
+import { expectTouchTargets } from './support/dokunma.ts';
 const OUT = path.resolve('tests/.artifacts/t-1026');
 async function close(page: Page): Promise<void> {
     const x = page.getByTestId('yol-close');
@@ -148,11 +149,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
             await page.getByTestId('operation-guide-trigger').click();
             await expect(page.getByTestId('working-guide')).toHaveCount(1);
             await expect(page.getByTestId('working-guide')).toContainText('Adım 1/5');
-            for (const button of await page.getByTestId('working-guide').getByRole('button').all()) {
-                const box = await button.boundingBox();
-                expect(box?.width).toBeGreaterThanOrEqual(48);
-                expect(box?.height).toBeGreaterThanOrEqual(48);
-            }
+            await settle(page);
+            await expectTouchTargets(page, 48, route, '[data-testid="working-guide"]');
             await page.getByTestId('guide-next').click();
             await expect(page.getByTestId('working-guide')).toContainText('Adım 2/5');
             await page.getByTestId('working-guide').getByRole('button', { name: 'Geri', exact: true }).click();
