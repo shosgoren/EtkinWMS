@@ -766,7 +766,7 @@ stateDiagram-v2
     [*] --> PENDING: Satış sitesinde form gönderildi
     PENDING --> APPROVED: Operatör panelde onayladı (aktivasyon bağlantısı)
     PENDING --> REJECTED: Operatör reddetti
-    APPROVED --> Aktif: Müşteri bağlantıyı açtı, firma + 14 günlük deneme kuruldu
+    APPROVED --> Aktif: Müşteri bağlantıyı açtı, firma + 3 aylık deneme kuruldu
     note right of Aktif: activated_at dolar, subscriptions satırı oluşur
 ```
 
@@ -806,7 +806,7 @@ Müşteri firmanın aboneliği (deneme veya ücretli paket).
 | `tenant_id` | uuid | PK, FK | Firma (firma başına tek abonelik) | `tenants.id` |
 | `number` | integer | NOT NULL, UNIQUE, sırayla artan | Panelde görünen müşteri numarası | — |
 | `plan` | text | NOT NULL, CHECK | `TRIAL` Deneme · `ACTIVE` Ücretli (paket zorunlu) | — |
-| `trial_ends_at` | timestamptz | Denemede zorunlu ve başlangıçtan sonra | Deneme bitişi | — |
+| `trial_ends_at` | timestamptz | Denemede zorunlu ve başlangıçtan sonra | Deneme bitişi (aktivasyonda başlangıç + 3 ay) | — |
 | `started_at` | timestamptz | NOT NULL | Abonelik başlangıcı | — |
 | `demo_request_id` | uuid | NULL olabilir, UNIQUE, FK | Hangi demo talebinden açıldı | `demo_requests.id` |
 | `plan_id` / `plan_version` | uuid / integer | Birlikte dolar; FK | Bağlı paket ve fiyat sürümü | `plan_versions` |
