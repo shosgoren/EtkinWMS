@@ -458,7 +458,7 @@
 }
 .dzj .yhole {
   position:fixed;
-  z-index:44;
+  z-index:35;
   pointer-events:none;
   border-radius:20px;
   outline:3px solid var(--color-dz-x-pamcel);
