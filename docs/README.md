@@ -12,6 +12,7 @@
 | Kullanıcı akışı ve görsel referans | design/, ux/: erişilebilirlik ve tasarım ölçütleri |
 | İşletim ve hesap kurtarma | [Operasyon](continuity/OPERATIONS.md), [ops rolü](RUNBOOK-ops.md), [ilk hesap](operations/INITIAL_OWNER_ENROLLMENT.md) |
 | Pilot ve varsayım kayıtları | [PILOT](PILOT.md), [PHASES](PHASES.md), [OPEN_QUESTIONS](OPEN_QUESTIONS.md): bazı alanlar bekçilerce okunur; canlı durum için STATE |
+| Ürün sahibi için modül modül işlevsel mimari, ekran→veri eşleme, veri sözlüğü, gap analizi | [fonksiyonel-mimari/](fonksiyonel-mimari/README.md): T-1028 anlık görüntüsü; canlı durum için STATE |
 | Açık işlerin tek listesi | [BACKLOG](BACKLOG.md): öncelikli yapılacaklar; iş başlarken T- kartı açılır |
 | Görev ve teslim disiplini | [tasks/](tasks/README.md), [protokol](agents/PROTOCOL.md), agents/REPORT_TEMPLATE.md |
 | Terimler / kısa geçmiş | [GLOSSARY](GLOSSARY.md), [JOURNAL](JOURNAL.md): hedefli başvuru; başlangıçta okunmaz |
