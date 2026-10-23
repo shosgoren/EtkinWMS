@@ -1,17 +1,5 @@
 "use client";
-// T-1006 (I-18): İlk kurulum yolculuğu — Yolculuk.dc.html "YENİ" bölümü BİREBİR (kap `.dzj`; CSS `design/yolculuk.css` üretilmiş, ikonlar
-// `design/yolculuk-icons.ts`, renkler `yolculuk-tokens.ts`). Kullanıcı kararı 22 Ekim: asıl deneyim SPOTLIGHT TUR.
-//  1. Tur: ekranın geri kalanı ortak buzlu perdeyle (`KalipPerdeKatman`, `.kperde`: karartma + 8px bulanıklık) kaplanır; yalnız `[data-tour]` hedefi
-//     delikte net ve parlak, çevresinde nabız halkası (`.yhole`). Hedef alt çubuğun ana işlemiyse (`data-tour="main"`) perde bütündür ve çubuk
-//     perdenin üstüne çıkar (KabukBar mevcut `spot` kancası, Kabuk `.touring`). Yanında ipucu balonu (`.ycoach`): ADIM n/N, tek cümle, Sesli
-//     anlat, "Söyle: …", Geri / Atla / İleri, Turu kapat. Balon hedefin üstünde ya da altında, ekran dışına taşmadan konumlanır; boyut, kaydırma ve
-//     hedef görünürlüğü değişince yeniden ölçülür.
-//  2. Adım GERÇEK VERİDEN tamam olur (domain `onboarding/journey.ts`; tıklama saymaz): tamam sesi + balon, tur sıradaki adımın ekranına geçer.
-//     Tur ekranlar arası sürer (durum sunucuda `tour_state`; seçilen adım oturumda). Yeni kiracıda (hiç adım tamam değil) ilk girişte kendiliğinden
-//     başlar; eski 3 adımlı rehber açıksa o kapanınca.
-//  3. İkincil: Pano'da küçük halka (`YolculukKart`) → adım listesi (turu kaldığı yerden ya da istenen adımdan başlat); Destek › Rehberi aç turu açar.
-// ALTIN-KURAL: Esc turu kapatır; ←/→ Geri/İleri; balon `role="dialog"` + `aria-live` (ekran okuyucu ipucunu okur); odak tuzağı YOK (hedef perdenin
-// deliğinde, klavyeyle de ulaşılmalı); hareket azaltmada nabız durur (üretilmiş CSS); dokunma ≥ 44 px; karanlık tema `.dz-dark`; metinler TR/EN.
+// T-1026: kısa başlangıç + tekrar açılabilir kurulum adımları. Çalışma kartı ortak KalipRehberKart; perde yalnız adım seçicisinde.
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -24,25 +12,29 @@ import { KalipPerdeKatman, type PerdeDelik } from "../kalip/perde.tsx";
 import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
 import { setYolSpot } from "./spot.ts";
-import { JOURNEY_OPEN_EVENT, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, type JourneyData, type StepKey } from "./steps.ts";
+import { JOURNEY_OPEN_EVENT, STEP_KEYS, filterJourney, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, type JourneyData, type StepKey } from "./steps.ts";
+
+import { cikisSor } from "../kalip/cikis.tsx";
+import { useKabuk } from "../kabuk/kabuk-bar.tsx";
+import { KalipRehberKart } from "../kalip/rehber.tsx";
 
 const ACTIVE_KEY = "etkinwms.yol.active";
 const POLL_MS = 6000;
 const GAP = 14;
 const EDGE = 12;
 
-function readActive(): StepKey | null {
+function readActive(key: string): StepKey | null {
   try {
-    const v = sessionStorage.getItem(ACTIVE_KEY);
+    const v = sessionStorage.getItem(key);
     return isStepKey(v) ? v : null;
   } catch {
     return null;
   }
 }
-function writeActive(v: StepKey | null): void {
+function writeActive(v: StepKey | null, key: string): void {
   try {
-    if (v === null) sessionStorage.removeItem(ACTIVE_KEY);
-    else sessionStorage.setItem(ACTIVE_KEY, v);
+    if (v === null) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, v);
   } catch {
     /* depolama yoksa yalnız sunucudaki sıra */
   }
@@ -65,7 +57,9 @@ export function YolHalka({ done, total, aria }: { done: number; total: number; a
 }
 
 /** Pano küçük halkası (kaynak `.ymini`, ikincil): dokununca adım listesi. Kutlama kapatıldıysa çizilmez. */
-export function YolculukKart({ data, dark }: { data: JourneyData; dark: boolean }) {
+export function YolculukKart({ data: original, dark }: { data: JourneyData; dark: boolean }) {
+  const ctx = useKabuk();
+  const data = filterJourney(original, ctx?.guides?.setup ?? STEP_KEYS);
   const t = useTranslations("yolculuk");
   const locale = useLocale();
   if (data.dismissed) return null;
@@ -113,25 +107,42 @@ function tipPosition(hole: PerdeDelik | null, vw: number, vh: number): TipPos {
 }
 
 /** Kiracı düzeninde (yalnız hesap sahibi / depo yöneticisi): spotlight tur, adım listesi ve kutlama. */
-export function YolculukKatman({ slug, dark: initialDark, initial = null }: { slug: string; dark: boolean; initial?: JourneyData | null }) {
+export function YolculukKatman({ slug, userId, dark: initialDark, initial = null }: { slug: string; userId: string; dark: boolean; initial?: JourneyData | null }) {
   const t = useTranslations("yolculuk");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const base = `/t/${encodeURIComponent(slug)}`;
+  const sessionKey = `${ACTIVE_KEY}:${userId}:${slug}`;
 
-  const [data, setData] = useState<JourneyData | null>(initial);
+  const ctx = useKabuk();
+  const allowed = ctx?.guides?.setup ?? STEP_KEYS;
+  const operationOpen = ctx?.guideOwner === "operation";
+  const setGuideOwner = ctx?.setGuideOwner;
+  const [rawData, setData] = useState<JourneyData | null>(initial);
+  const data = useMemo(() => rawData === null ? null : filterJourney(rawData, allowed), [rawData, allowed]);
+  const [replay, setReplay] = useState(false);
+  const [shortTour, setShortTour] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const rememberPaused = useCallback((next: boolean): void => {
+    setPaused(next);
+    try { sessionStorage.setItem(`${sessionKey}.paused`, String(next)); } catch { /* isteğe bağlı */ }
+  }, [sessionKey]);
   const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dark, setDark] = useState(initialDark);
+  const [surface, setSurface] = useState<string | null>(null);
+  useEffect(() => {
+    const check = (): void => { const selectors = ["warehouse-form", "bulk-form", "team-add-qr", "team-qr-new", "aktar-new", "document-state"]; setSurface(selectors.find(k => { const e=document.querySelector(`[data-testid="${k}"]`);return e!==null&&e.getBoundingClientRect().width>0; })??null); };
+    check();const id=window.setInterval(check,300);return()=>window.clearInterval(id);
+  }, [pathname]);
   const [hole, setHole] = useState<PerdeDelik | null>(null);
   const [vp, setVp] = useState({ w: 1280, h: 800 });
-  const [speaking, setSpeaking] = useState(false);
   const [override, setOverride] = useState<StepKey | null>(null);
   const [okStep, setOkStep] = useState<StepKey | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const sheetRef = useRef<HTMLElement>(null);
-  const coachRef = useRef<HTMLElement>(null);
   const prevDone = useRef<Partial<Record<StepKey, boolean>>>({});
   const autoStarted = useRef(false);
   const celebrated = useRef(false);
@@ -140,8 +151,8 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
     const r = await getJourneyAction({ slug });
     if (!r.ok) return null;
     setData(r.data);
-    return r.data;
-  }, [slug]);
+    return filterJourney(r.data, allowed);
+  }, [slug, allowed]);
 
   const syncDark = useCallback(() => {
     const root = document.querySelector(".kalip, .dzp, .dzk");
@@ -158,9 +169,9 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
         return null;
       }
       setData(r.data);
-      return r.data;
+      return filterJourney(r.data, allowed);
     },
-    [slug, t],
+    [slug, t, allowed],
   );
 
   // İlk durum düzenden (sunucu). Ekran değişince yalnız tur sürerken (ya da ilk durum okunamadıysa) yeniden okunur: eylem hız sınırı
@@ -168,10 +179,26 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
   const needRead = useRef(true);
   needRead.current = data === null || data.tour === "ACTIVE";
   useEffect(() => {
-    setOverride(readActive());
+    setOverride(readActive(sessionKey));
     syncDark();
     if (needRead.current) void load();
-  }, [pathname, load, syncDark]);
+  }, [pathname, load, syncDark, sessionKey]);
+  useEffect(() => {
+    try {
+      setShortTour(sessionStorage.getItem(`${sessionKey}.short`) === "true");
+      setReplay(sessionStorage.getItem(`${sessionKey}.replay`) === "true");
+      setPaused(sessionStorage.getItem(`${sessionKey}.paused`) === "true");
+    } catch { /* isteğe bağlı */ }
+    setSessionLoaded(true);
+  }, [sessionKey]);
+  useEffect(() => {
+    if (!sessionLoaded) return;
+    try {
+      sessionStorage.setItem(`${sessionKey}.short`, String(shortTour));
+      sessionStorage.setItem(`${sessionKey}.replay`, String(replay));
+      sessionStorage.setItem(`${sessionKey}.paused`, String(paused));
+    } catch { /* isteğe bağlı */ }
+  }, [shortTour, replay, paused, sessionLoaded, sessionKey]);
   // Görünüm alanı (balon konumu hedefsiz de ekran içinde kalsın).
   useEffect(() => {
     const size = (): void => setVp((c) => (c.w === window.innerWidth && c.h === window.innerHeight ? c : { w: window.innerWidth, h: window.innerHeight }));
@@ -186,19 +213,20 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
     return () => window.clearInterval(id);
   }, []);
 
-  const tourOn = data !== null && data.tour === "ACTIVE" && !data.complete && !sheet && !guideOpen;
+  const tourOn = data !== null && data.tour === "ACTIVE" && (!data.complete || replay) && !sheet && !guideOpen && !paused && sessionLoaded && !operationOpen;
 
   // Yeni kiracı: hiç adım tamam değilken tur ilk girişte kendiliğinden başlar (verisi olan kiracıda başlamaz).
   useEffect(() => {
-    if (data === null || autoStarted.current || guideOpen) return;
+    if (data === null || autoStarted.current || guideOpen || paused || !sessionLoaded || operationOpen) return;
     if (data.tour === null && data.done === 0 && !data.dismissed && !data.complete) {
       autoStarted.current = true;
+      setShortTour(true);
       void choose({ tour: "start" });
     }
-  }, [data, guideOpen, choose]);
+  }, [data, guideOpen, choose, paused, sessionLoaded, operationOpen]);
 
   // Tur ya da liste açıkken yolculuk düzenli okunur (görünür sekmede): adım verisi oluşunca kendiliğinden tamam.
-  const tourActive = data?.tour === "ACTIVE";
+  const tourActive = data?.tour === "ACTIVE" && !paused;
   useEffect(() => {
     if (!tourActive && !sheet) return;
     const id = window.setInterval(() => {
@@ -208,13 +236,13 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
   }, [tourActive, sheet, load]);
 
   const steps = useMemo(() => data?.steps ?? [], [data]);
-  const visible = useMemo(() => steps.filter((s) => !s.skipped), [steps]);
+  const visible = useMemo(() => steps.filter((s) => !s.skipped && (!shortTour || ["cards", "shelves", "stock"].includes(s.key))), [steps, shortTour]);
   const cur: StepKey | null = useMemo(() => {
     if (data === null) return null;
     const o = override === null ? undefined : steps.find((s) => s.key === override);
-    if (o !== undefined && !o.done && !o.skipped) return o.key;
-    return data.next;
-  }, [data, override, steps]);
+    if (o !== undefined && (replay || !o.done) && !o.skipped) return o.key;
+    return visible.find(s => !s.done)?.key ?? null;
+  }, [data, override, steps, replay, visible]);
   const plan = useMemo(() => (cur === null || data === null ? null : stepPlan(base, cur, data)), [cur, data, base]);
   const stop = plan === null ? null : stopFor(plan, pathname);
   const targetSel = tourOn && stop !== null && stop.target !== null ? `[data-tour="${stop.target}"]` : null;
@@ -225,40 +253,41 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
 
   const go = useCallback(
     (k: StepKey, d: JourneyData): void => {
-      writeActive(k);
+      cikisSor(() => { writeActive(k, sessionKey);
       setOverride(k);
-      router.push(stepPlan(base, k, d).href);
+      router.push(stepPlan(base, k, d).href); });
     },
-    [base, router],
+    [base, router, sessionKey],
   );
 
   // Tamam geçişi: tur sürerken adım verisi oluştu → ses + balon; kısa süre sonra sıradaki adımın ekranı.
   useEffect(() => {
-    if (data === null) return undefined;
+    if (data === null || paused || !sessionLoaded || operationOpen) return undefined;
     let finished: StepKey | null = null;
     for (const s of data.steps) {
       if (prevDone.current[s.key] === false && s.done) finished = s.key;
       prevDone.current[s.key] = s.done;
     }
-    if (finished !== null && data.tour === "ACTIVE" && !data.complete) {
+    if (finished !== null && data.tour === "ACTIVE" && !data.complete && !replay) {
+      if (shortTour && finished === "stock") { void choose({ tour: "close" }); setShortTour(false); return; }
       feedback.ok(t("toast.stepDone", { title: titleOf(finished) }));
-      writeActive(null);
+      writeActive(null, sessionKey);
       setOverride(null);
       setOkStep(finished);
       const nx = data.next;
       const id = window.setTimeout(() => {
         setOkStep(null);
-        if (nx !== null) router.push(stepPlan(base, nx, data).href);
+        if (nx !== null) cikisSor(() => router.push(stepPlan(base, nx, data).href));
       }, 1500);
       return () => window.clearTimeout(id);
     }
-    if (data.complete && !data.dismissed && !celebrated.current && data.tour === "ACTIVE") {
+    if (data.complete && !replay && !data.dismissed && !celebrated.current && data.tour === "ACTIVE") {
       celebrated.current = true;
       feedback.ok(t("cele.toast"));
       setSheet(true);
     }
     return undefined;
-  }, [data, base, router, t, titleOf]);
+  }, [data, base, router, t, titleOf, replay, shortTour, choose, sessionKey, paused, sessionLoaded, operationOpen]);
 
   // Hedefi ölç: `[data-tour]` öğesi; boyut, kaydırma ve görünürlük değişince yeniden. Görünmezse delik yok, balon ortada.
   useEffect(() => {
@@ -267,7 +296,8 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
       setHole(null);
       return undefined;
     }
-    if (barTarget) setYolSpot("center");
+    // Çalışma kartı hiçbir alt çubuk yuvasını bulanıklaştırmaz.
+    setYolSpot(null);
     const measure = (): void => {
       setVp((c) => (c.w === window.innerWidth && c.h === window.innerHeight ? c : { w: window.innerWidth, h: window.innerHeight }));
       const el = document.querySelector(targetSel);
@@ -313,29 +343,47 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
     } catch {
       /* ses yok */
     }
-    setSpeaking(false);
-    writeActive(null);
+    writeActive(null, sessionKey);
     setOverride(null);
+    rememberPaused(true);
+    setOkStep(null);
+    setReplay(false);
+    setShortTour(false);
+    setData(d=>d===null?null:{...d,tour:"CLOSED"});
     void choose({ tour: "close" });
-  }, [choose]);
+  }, [choose, sessionKey, rememberPaused]);
+
+  useEffect(() => {
+    const pause = (): void => { setSheet(false); rememberPaused(true); if (data?.tour === "ACTIVE") closeTour(); };
+    window.addEventListener("etkinwms:journey-pause", pause);
+    return () => window.removeEventListener("etkinwms:journey-pause", pause);
+  }, [data?.tour, closeTour, rememberPaused]);
 
   const startTour = useCallback(
     async (k: StepKey | null): Promise<void> => {
-      const d = data !== null && data.tour === "ACTIVE" ? data : await choose({ tour: "start" });
+      const d = await choose({ tour: "start" });
       if (d === null) return;
       setSheet(false);
+      setShortTour(false);
+      setGuideOwner?.("setup");
+      rememberPaused(false);
+      setReplay(k !== null && d.steps.some(s => s.key === k && s.done));
       const step = k ?? d.next;
       if (step !== null) go(step, d);
     },
-    [data, choose, go],
+    [choose, go, rememberPaused, setGuideOwner],
   );
 
   // Pano halkası → adım listesi; Destek › Rehberi aç → tur (olay iptal edilir: eski rehber açılmaz).
   useEffect(() => {
     const onOpen = (e: Event): void => {
+      if (e.defaultPrevented) return;
+      // Destek'in genel açma olayını işlem motoru alır; kurulum yalnız açık liste isteği veya işlem rehberi olmayan rolde açılır.
+      if (!(e instanceof CustomEvent && e.detail === "list") && (ctx?.guides?.operations.length ?? 0) > 0) return;
       e.preventDefault();
       syncDark();
       const list = e instanceof CustomEvent && e.detail === "list";
+      setGuideOwner?.("setup");
       void load().then((d) => {
         if (d === null) return;
         if (list) setSheet(true);
@@ -344,7 +392,7 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
     };
     window.addEventListener(JOURNEY_OPEN_EVENT, onOpen);
     return () => window.removeEventListener(JOURNEY_OPEN_EVENT, onOpen);
-  }, [load, syncDark, startTour]);
+  }, [load, syncDark, startTour, setGuideOwner, ctx?.guides?.operations.length]);
 
   const closeSheet = useCallback((): void => {
     feedback.minor();
@@ -357,50 +405,35 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
       const i = visible.findIndex((s) => s.key === cur);
       const n = visible[i + dir];
       if (n === undefined) {
+        if (dir === 1 && shortTour) { closeTour(); return; }
         feedback.warn(dir === 1 ? t("coach.noNext") : t("coach.noPrev"));
         return;
       }
       feedback.minor();
       go(n.key, data);
     },
-    [data, cur, visible, go, t],
+    [data, cur, visible, go, t, shortTour, closeTour],
   );
 
   const skip = useCallback(
     async (k: StepKey): Promise<void> => {
       if (busy) return;
+      cikisSor(() => { void (async () => {
       const d = await choose({ skip: k });
       if (d === null) return;
       feedback.undo(t("toast.skipped", { title: titleOf(k) }), t("unskip"), async () => {
         await choose({ unskip: k });
       });
-      writeActive(null);
+      writeActive(null, sessionKey);
       setOverride(null);
       if (d.tour === "ACTIVE" && d.next !== null && !sheet) router.push(stepPlan(base, d.next, d).href);
+      })(); });
     },
-    [busy, choose, t, titleOf, router, base, sheet],
+    [busy, choose, t, titleOf, router, base, sheet, sessionKey],
   );
 
   const coachOpen = tourOn && cur !== null && plan !== null;
-  // Klavye: ←/→ Geri/İleri (yazı alanında değilken); Esc turu kapatır (useModalFocus).
-  useEffect(() => {
-    if (!coachOpen) return undefined;
-    const onKey = (e: KeyboardEvent): void => {
-      const a = document.activeElement;
-      if (a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement || (a instanceof HTMLElement && a.isContentEditable)) return;
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        move(1);
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        move(-1);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [coachOpen, move]);
-  useModalFocus(sheet, sheetRef, { onClose: closeSheet, busy, initial: "container" });
-  useModalFocus(coachOpen, coachRef, { onClose: closeTour, initial: "none", trap: false });
+  useModalFocus(sheet && !operationOpen, sheetRef, { onClose: closeSheet, busy, initial: "container" });
 
   const answerStock = async (want: boolean): Promise<void> => {
     if (data === null) return;
@@ -415,30 +448,13 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
   };
   const switchSource = async (): Promise<void> => {
     if (data === null) return;
+    cikisSor(() => { void (async () => {
     const next = data.cardSource === "PARASUT" ? "EXCEL" : "PARASUT";
     const d = await choose({ cardSource: next });
     if (d === null) return;
     feedback.minor();
     router.push(stepPlan(base, "cards", d, next).href);
-  };
-
-  const speak = (title: string, text: string): void => {
-    try {
-      const synth = window.speechSynthesis;
-      if (synth === undefined) throw new Error("no speech");
-      synth.cancel();
-      if (speaking) {
-        setSpeaking(false);
-        return;
-      }
-      const u = new SpeechSynthesisUtterance(`${title}. ${text}`);
-      u.lang = intlDil(locale);
-      u.onend = () => setSpeaking(false);
-      setSpeaking(true);
-      synth.speak(u);
-    } catch {
-      feedback.warn(t("coach.noSpeech"));
-    }
+    })(); });
   };
 
   const upper = (v: string): string => v.toLocaleUpperCase(intlDil(locale));
@@ -448,136 +464,33 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
   const shownStep = okStep ?? cur;
   const nextKey = data?.next ?? null;
   const tipTitle = okStep !== null ? t("coach.doneTitle", { title: titleOf(okStep) }) : stop === null ? (cur === null ? "" : titleOf(cur)) : t(`hint.${stop.hint}.title`);
-  const tipText = okStep !== null ? (nextKey === null ? t("coach.allDone") : t("coach.nextLine", { title: titleOf(nextKey) })) : stop === null ? t("coach.goText") : t(`hint.${stop.hint}.text`);
+  const contextText = surface === "warehouse-form" ? "warehouseForm" : surface === "bulk-form" ? "bulkForm" : surface === "team-add-qr" ? "teamMenu" : surface === "team-qr-new" ? "teamQr" : surface === "aktar-new" ? "importCheck" : surface === "document-state" && cur === "stock" ? "postStock" : null;
+  const workTarget = surface === "warehouse-form" ? '[data-testid="warehouse-form"] input[name="name"]' : surface === "bulk-form" ? '[data-testid="bulk-form"]' : surface === "team-add-qr" ? '[data-testid="team-add-qr"]' : surface === "team-qr-new" ? '[data-testid="team-qr-new"]' : targetSel;
+  const tipText = contextText !== null ? t(`work.${contextText}`) : okStep !== null ? (nextKey === null ? t("coach.allDone") : t("coach.nextLine", { title: titleOf(nextKey) })) : stop === null ? t("coach.goText") : t(`hint.${stop.hint}.text`);
   // E2E/erişilebilirlik: tur kararı verilene dek "loading" (yeni kiracıda kendiliğinden başlatma sunucu yanıtını bekler).
-  const pendingStart = data !== null && data.tour === null && data.done === 0 && !data.dismissed && !data.complete;
-  const layerState = data === null || pendingStart ? "loading" : guideOpen ? "wait" : coachOpen ? "on" : "off";
+  const pendingStart = !paused && data !== null && data.tour === null && data.done === 0 && !data.dismissed && !data.complete;
+  const layerState = !sessionLoaded || data === null || pendingStart ? "loading" : guideOpen ? "wait" : coachOpen ? "on" : "off";
 
   return (
     <div className={`dzj${dark ? " dz-dark" : ""}`} style={{ display: "contents" }} data-testid="yol-layer" data-state={layerState}>
       {coachOpen && shownStep !== null && plan !== null && data !== null ? (
         <>
-          <KalipPerdeKatman onClose={closeTour} label={t("coach.close")} delik={barTarget || targetSel === null ? null : hole} />
-          {hole !== null && targetSel !== null ? <span className="yhole" aria-hidden="true" style={{ left: hole.x, top: hole.y, width: hole.w, height: hole.h }} data-testid="yol-hole" /> : null}
-          <section
-            ref={coachRef}
-            className={`ycoach${pos.cls === "" ? "" : ` ${pos.cls}`}${okStep !== null ? " ok" : ""}`}
-            style={pos.style}
-            role="dialog"
-            aria-label={t("coach.aria")}
-            aria-live="polite"
-            data-testid="yol-coach"
-            data-step={shownStep}
-            data-state={okStep !== null ? "done" : stop === null ? "go" : "open"}
-          >
-            <div className="cth">
-              <span className="cstep" data-testid="yol-step-no">
-                {okStep !== null ? upper(t("coach.stepDone", { n: idx + 1, total: visible.length })) : upper(t("coach.step", { n: Math.max(idx, 0) + 1, total: visible.length, title: titleOf(shownStep) }))}
-              </span>
-              <button type="button" className={`cbtn${speaking ? " on" : ""}`} aria-label={t("coach.speak")} aria-pressed={speaking} onClick={() => speak(tipTitle, tipText)}>
-                <Ico d={[JICON.speak, JICON.speakWave]} size={18} />
-              </button>
-              <button type="button" className="cbtn" aria-label={t("coach.close")} onClick={closeTour} data-testid="yol-close">
-                <Ico d={JICON.close} size={18} />
-              </button>
-            </div>
-            <b className="ctt">{tipTitle}</b>
-            <p className="ctx">{tipText}</p>
-            {okStep === null && cur === "cards" && data.openingStockWanted === null ? (
-              <div className="yq" role="group" aria-label={t("cards.stockQ")} data-testid="yol-stockq">
-                <b>{t("cards.stockQ")}</b>
-                <button type="button" className="ych" aria-pressed={false} onClick={() => void answerStock(true)} data-testid="yol-stock-yes">
-                  {t("yes")}
-                </button>
-                <button type="button" className="ych" aria-pressed={false} onClick={() => void answerStock(false)} data-testid="yol-stock-no">
-                  {t("no")}
-                </button>
-              </div>
-            ) : null}
-            {okStep === null ? (
-              <span className="ysay" data-testid="yol-say">
-                <i>
-                  <Ico d={JICON.mic} size={16} />
-                </i>
-                {t("coach.say", { phrase: t(`voice.${shownStep}`) })}
-              </span>
-            ) : null}
-            {okStep === null && cur === "cards" ? (
-              <button type="button" className="yalt" onClick={() => void switchSource()} data-testid="yol-source">
-                {data.cardSource === "PARASUT" ? t("coach.useExcel") : t("coach.useParasut")}
-              </button>
-            ) : null}
-            {okStep === null ? (
-              <div className="ynav">
-                <button type="button" className="ynb" aria-label={t("coach.prev")} aria-disabled={idx <= 0} onClick={() => move(-1)} data-testid="yol-prev">
-                  <Ico d={JICON.back} size={20} />
-                </button>
-                <button type="button" className="yskip" onClick={() => cur !== null && void skip(cur)} data-testid="yol-skip">
-                  {t("coach.skip")}
-                </button>
-                {stop === null ? (
-                  <button
-                    type="button"
-                    className="ynb go"
-                    onClick={() => {
-                      feedback.minor();
-                      router.push(plan.href);
-                    }}
-                    data-testid="yol-open"
-                  >
-                    {t("coach.open")}
-                    <Ico d={JICON.next} size={18} />
-                  </button>
-                ) : (
-                  <button type="button" className="ynb go" onClick={() => move(1)} data-testid="yol-next">
-                    {t("coach.forward")}
-                    <Ico d={JICON.next} size={18} />
-                  </button>
-                )}
-              </div>
-            ) : null}
-            {pos.arrow !== null ? <span className="yarr" aria-hidden="true" style={{ left: pos.arrow }} /> : null}
+          <section data-testid="yol-coach" data-step={shownStep} data-state={okStep !== null ? "done" : stop === null ? "go" : "open"} style={{display:"contents"}}>
+          <KalipRehberKart title={tipTitle} text={tipText} progress={upper(t("coach.step", { n: Math.max(idx,0)+1, total: visible.length, title:titleOf(shownStep) }))} target={workTarget} style={pos.style}
+            onClose={closeTour} onPrev={()=>move(-1)} onNext={()=>stop===null ? cikisSor(()=>router.push(plan.href)) : move(1)} onSkip={()=>cur!==null&&void skip(cur)} closeTestId="yol-close">
+            {cur === "cards" && data.openingStockWanted === null ? <div className="yq" data-testid="yol-stockq"><b>{t("cards.stockQ")}</b><button type="button" className="ych" onClick={()=>void answerStock(true)} data-testid="yol-stock-yes">{t("yes")}</button><button type="button" className="ych" onClick={()=>void answerStock(false)} data-testid="yol-stock-no">{t("no")}</button></div>:null}
+            {cur === "cards" ? <button type="button" className="yalt" onClick={()=>void switchSource()} data-testid="yol-source">{data.cardSource === "PARASUT" ? t("coach.useExcel") : t("coach.useParasut")}</button>:null}
+            {stop===null?<button type="button" className="yalt" onClick={()=>cikisSor(()=>router.push(plan.href))} data-testid="yol-open">{t("coach.open")}</button>:null}
+          </KalipRehberKart>
           </section>
         </>
       ) : null}
 
-      {sheet && data !== null ? (
+      {sheet && !operationOpen && data !== null ? (
         <>
           <KalipPerdeKatman onClose={closeSheet} label={t("close")} />
           <section ref={sheetRef} className="ysheet" role="dialog" aria-modal="true" aria-label={t("title")} data-testid="yol-sheet" data-view={data.complete ? "done" : "list"}>
-            {data.complete ? (
-              <div className="ycele" data-testid="yol-cele">
-                <span className="ycf" aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                </span>
-                <span className="yburst">
-                  <Ico d={JICON.flag} size={42} />
-                </span>
-                <b>{t("cele.title")}</b>
-                <p>{t("cele.text")}</p>
-                <button
-                  type="button"
-                  className="ygo"
-                  data-testid="yol-cele-done"
-                  onClick={() => {
-                    void choose({ dismiss: true }).then((d) => {
-                      if (d === null) return;
-                      setSheet(false);
-                      writeActive(null);
-                      router.push(base);
-                    });
-                  }}
-                >
-                  {t("cele.button")}
-                </button>
-              </div>
-            ) : (
-              <>
+            {(              <>
                 <div className="ysh">
                   <YolHalka done={data.done} total={data.total} aria={t("ringAria", { done: data.done, total: data.total })} />
                   <span className="yt">
@@ -618,9 +531,7 @@ export function YolculukKatman({ slug, dark: initialDark, initial = null }: { sl
                           ) : null}
                         </span>
                         {s.done ? (
-                          <span className="ybadge" role="img" aria-label={t("doneAria")}>
-                            <Ico d={JICON.check} size={16} />
-                          </span>
+                          <button type="button" className="yact" onClick={()=>void startTour(s.key)} data-testid={`yol-start-${s.key}`}>{t("replay")} <Ico d={JICON.check} size={16} /></button>
                         ) : s.skipped ? (
                           <button type="button" className="yskip" onClick={() => void choose({ unskip: s.key })} data-testid={`yol-unskip-${s.key}`}>
                             {t("unskip")}

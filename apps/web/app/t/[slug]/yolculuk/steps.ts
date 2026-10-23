@@ -105,3 +105,11 @@ export function ringDash(done: number, total: number): string {
 
 /** Turu / adım listesini açan pencere olayı (Pano halkası, Destek › Rehberi aç). İptal edilirse (dinleyen var) eski rehber açılmaz. */
 export const JOURNEY_OPEN_EVENT = "etkinwms:yolculuk-open";
+
+/** Sunucudan verilen görünür adımlar; hesap ilerlemesi yetki veren bir karar değildir. */
+export function filterJourney(data: JourneyData, allowed: readonly StepKey[]): JourneyData {
+  const steps = data.steps.filter(s => allowed.includes(s.key));
+  const active = steps.filter(s => !s.skipped);
+  const done = active.filter(s => s.done).length;
+  return {...data, steps, done, total:active.length, complete:active.length > 0 && done === active.length, next:active.find(s => !s.done)?.key ?? null};
+}
