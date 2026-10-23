@@ -18,6 +18,9 @@ import { toJourneyData } from "./yolculuk/serialize.ts";
 import type { JourneyData } from "./yolculuk/steps.ts";
 import { YolculukKatman } from "./yolculuk/yolculuk.tsx";
 
+import { guideAccess } from "./kalip/rehber-access.ts";
+import { KalipIslemRehberleri } from "./kalip/rehber.tsx";
+
 export const dynamic = "force-dynamic";
 
 
@@ -80,6 +83,7 @@ export default async function TenantLayout({ children, params }: { children: Rea
   const base = `/t/${encodeURIComponent(slug)}`;
   // T-958: ortak alt çubuğun Modüller sayfası — yalnız üyenin rol/yetki/grup ekranlarının açtığı modüller (sunucuda; hedef sayfa ayrıca denetler).
   const kabuk = {
+    guides: guideAccess(current),
     base,
     // T-979c: görünüm geçişi (Genel bakış ↔ İşlemler) Modüller'de; eski "Tüm ekranlar" penceresi yok.
     modules: kabukModules(base, { roles: current.roles, grants: current.grants, screens: current.screens }, view),
@@ -118,7 +122,8 @@ export default async function TenantLayout({ children, params }: { children: Rea
       {/* T-965: Suspense yok. Bu yerleşim `force-dynamic` olduğundan `useSearchParams` sunucuda hazırdır (askıya almaz). */}
       <div className="tenant-body flex min-w-0 flex-col">{children}</div>
       {/* T-1006: ilk kurulum yolculuğu (adım listesi, spot + ipucu kartı) yalnız hesap sahibi ve depo yöneticisinde; eylemler rolü yeniden denetler. */}
-      {canSeeJourney(current.roles) ? <YolculukKatman slug={slug} dark={temaKoyu(await cookies())} initial={journey} /> : null}
+      <KalipIslemRehberleri userId={principal.userId} slug={slug} dark={temaKoyu(await cookies())} />
+      {canSeeJourney(current.roles) ? <YolculukKatman userId={principal.userId} slug={slug} dark={temaKoyu(await cookies())} initial={journey} /> : null}
     </div>
     </KabukProvider>
   );

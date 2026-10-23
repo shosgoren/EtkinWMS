@@ -23,6 +23,10 @@ import { useYolSpot } from "../yolculuk/spot.ts";
 import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 
 export interface KabukContextValue {
+  /** T-1026: iki rehber motoru aynı anda çizilmez; sunucudan gelen izin değildir. */
+  readonly guideOwner?: "setup" | "operation" | null;
+  readonly setGuideOwner?: (owner: "setup" | "operation" | null) => void;
+  readonly guides?: { readonly setup: readonly import("../yolculuk/steps.ts").StepKey[]; readonly operations: readonly import("../kalip/rehber-plan.ts").OpGuide[] };
   /** `/t/<slug>` */
   readonly base: string;
   readonly modules: readonly KabukModule[];
@@ -57,7 +61,8 @@ export function useKabuk(): KabukContextValue | null {
 }
 
 export function KabukProvider({ value, children }: { value: KabukContextValue; children: ReactNode }) {
-  return <KabukContext.Provider value={value}>{children}</KabukContext.Provider>;
+  const [guideOwner, setGuideOwner] = useState<"setup" | "operation" | null>(null);
+  return <KabukContext.Provider value={{ ...value, guideOwner, setGuideOwner }}>{children}</KabukContext.Provider>;
 }
 
 /** Kaynaktaki çubuk yuvaları (ilk kullanım rehberi `spot` anahtarları, kaynak COL). T-967: Sorun yuvası üst çubuğa taşındı. */

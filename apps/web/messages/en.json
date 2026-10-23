@@ -5656,6 +5656,64 @@
       "openingNotSet": "Turn on opening stock on the Integration screen"
     },
     "mini": "Setup",
-    "miniSub": "{done}/{total} done"
+    "miniSub": "{done}/{total} done",
+    "replay": "Show again",
+    "work": {
+      "warehouseForm": "Enter the warehouse name, check the suggested code and SAVE. Define the shelf layout in the builder that opens next.",
+      "bulkForm": "Choose the shelf code pattern and quantities. Review the preview, fix code conflicts, then CREATE.",
+      "teamMenu": "Choose Add via QR. Create a QR on the next screen and share it only with the intended person.",
+      "teamQr": "CREATE QR to generate the join link. SHARE it with the person, then review Pending approvals after they join.",
+      "importCheck": "Check column mappings and new, updated and invalid row counts. Fix errors, then IMPORT on the confirmation screen.",
+      "postStock": "If the document is a draft, APPROVE then POST when permitted. Only Posted completes opening stock."
+    }
+  },
+  "operationGuide": {
+    "title": "Operation guides",
+    "show": "Show this operation step by step",
+    "resume": "Resume guide",
+    "close": "Close guide",
+    "speak": "Read aloud",
+    "apply": "Apply · work on screen",
+    "prev": "Back",
+    "skip": "Close for now",
+    "next": "Next",
+    "open": "Open operation screen",
+    "setup": "Setup steps",
+    "fiveSteps": "5 short steps · replay anytime",
+    "step": "Step {n}/{total}",
+    "learningOnly": "Next advances the guide only; confirm the operation on its screen to save.",
+    "names": {
+      "receive": "Receiving",
+      "putaway": "Putaway",
+      "issue": "Stock issue",
+      "transfer": "Transfer",
+      "count": "Counting"
+    },
+    "instructions": {
+      "receive0": "Select the receipt first. If empty, ask your manager to create one. Use SCAN to scan the incoming item or search for it.",
+      "receive1": "Compare the item code and name with the delivered item. Go back if wrong; do not continue past a mismatch warning.",
+      "receive2": "Check the warehouse and shelf. Select the destination if offered, or SCAN the requested shelf barcode.",
+      "receive3": "Enter the quantity actually received and its unit. Check any excess warning, then confirm the correct item and quantity.",
+      "receive4": "CONFIRM to save. Wait for the success summary showing the item and quantity; correct errors without creating a new record.",
+      "putaway0": "Select a putaway receipt or your assigned task. If none exists, receive goods first or ask your manager for a task.",
+      "putaway1": "SCAN the item, then the destination shelf. Read the screen prompt to check which barcode is required.",
+      "putaway2": "Compare the item, source and destination shelf. Do not confirm a wrong shelf; go back and scan the correct shelf.",
+      "putaway3": "Check the actual quantity and unit put away. Keep a fixed package quantity unchanged; read shortage or excess warnings.",
+      "putaway4": "CONFIRM putaway. Check the item, quantity and destination in the success summary. Retry errors on the same screen.",
+      "source": "Search and select the source warehouse, then its source shelf. If empty, ask for a warehouse and shelf to be created first.",
+      "item": "Search by item name or code and select a result. Fill any lot or serial fields; typing alone does not select an item.",
+      "quantity": "Enter the actual base-unit quantity and a reason. Use a positive quantity; issue and transfer need enough source stock.",
+      "issueSummary": "Check the item, source shelf, negative quantity and unit in the summary. CREATE saves a draft; stock has not been deducted yet.",
+      "issuePost": "On the document, APPROVE then POST if permitted. Otherwise ask your supervisor. Only Posted means the stock movement is complete.",
+      "target": "Select the destination warehouse and its shelf. Compare source and destination; this screen rejects transfers to the same warehouse.",
+      "transferPost": "Check the negative source and positive destination quantities, then POST TRANSFER. Wait for success; do not create a second operation after an error.",
+      "count0": "Open your assigned count in My tasks. If none exists, ask your manager to start a count. Do not enter another task’s measurements.",
+      "count1": "SCAN the shelf and item in the requested order. Correct any wrong item or shelf warning first.",
+      "count2": "Count the actual quantity and enter it. Blind counts hide expected stock; do not fill in a guess.",
+      "count3": "Check the item, shelf, quantity and unit, then SAVE the count line. Recheck your physical count if a difference is flagged.",
+      "count4": "Count the remaining items. Check all lines and submit; approving differences is a separate authorized manager action."
+    },
+    "skipStep": "Skip step",
+    "restart": "Restart guide"
   }
 }

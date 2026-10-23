@@ -55,17 +55,17 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
   }}>
     <p className="text-ink-muted">{t(kind === "TRANSFER"?"transferHelp":"draftHelp")}</p>
     <fieldset disabled={pending || uncertain} className="flex min-w-0 flex-col gap-4">
-      <KalipGrup title={`1. ${screen("source")}`} sub={warehouse ? `${warehouse.name}${selected.location ? ` / ${selected.location.code}` : ""}` : undefined} d={LICON.depo} color="30475A"><div className="flex min-w-0 flex-col gap-3 p-3">{picker("warehouse")}{warehouse && picker("location")}</div></KalipGrup>
-      {kind === "TRANSFER" && <KalipGrup title={`2. ${screen("target")}`} sub={selected.targetWarehouse ? `${selected.targetWarehouse.name}${selected.targetLocation ? ` / ${selected.targetLocation.code}` : ""}` : undefined} d={LICON.transfer} color="0E7C7B"><div className="flex min-w-0 flex-col gap-3 p-3">{picker("targetWarehouse")}{selected.targetWarehouse && picker("targetLocation")}</div></KalipGrup>}
-      <KalipGrup title={`${kind === "TRANSFER" ? 3 : 2}. ${screen("itemsStep")}`} sub={item ? `${item.code} — ${item.name}` : undefined} d={LICON.box} color="2F5DA8"><div className="flex min-w-0 flex-col gap-3 p-3">{picker("item")}
+      <KalipGrup title={`1. ${screen("source")}`} sub={warehouse ? `${warehouse.name}${selected.location ? ` / ${selected.location.code}` : ""}` : undefined} d={LICON.depo} color="30475A"><div data-guide="source" className="flex min-w-0 flex-col gap-3 p-3">{picker("warehouse")}{warehouse && picker("location")}</div></KalipGrup>
+      {kind === "TRANSFER" && <KalipGrup title={`2. ${screen("target")}`} sub={selected.targetWarehouse ? `${selected.targetWarehouse.name}${selected.targetLocation ? ` / ${selected.targetLocation.code}` : ""}` : undefined} d={LICON.transfer} color="0E7C7B"><div data-guide="target" className="flex min-w-0 flex-col gap-3 p-3">{picker("targetWarehouse")}{selected.targetWarehouse && picker("targetLocation")}</div></KalipGrup>}
+      <KalipGrup title={`${kind === "TRANSFER" ? 3 : 2}. ${screen("itemsStep")}`} sub={item ? `${item.code} — ${item.name}` : undefined} d={LICON.box} color="2F5DA8"><div data-guide="item" className="flex min-w-0 flex-col gap-3 p-3">{picker("item")}
       {lotRequired && picker("lot")}{serialRequired && picker("serial")}
       <label className="flex flex-col gap-1 font-bold">{t("quantity")} {item?.unitCode}
-        <input required inputMode="decimal" pattern="[0-9]+([.][0-9]{1,6})?" maxLength={32} className={control} value={quantity} onChange={e=>{key.contentChanged();setQuantity(e.target.value);}} />
+        <input data-guide="quantity" required inputMode="decimal" pattern="[0-9]+([.][0-9]{1,6})?" maxLength={32} className={control} value={quantity} onChange={e=>{key.contentChanged();setQuantity(e.target.value);}} />
       </label>
       <label className="flex flex-col gap-1 font-bold">{t("reason")}<input required maxLength={500} className={control} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} /></label>
       </div></KalipGrup>
     </fieldset>
-    {item && warehouse && selected.location && <section className="rounded-card border-2 border-border bg-surface p-4" aria-label={t("summary")}>
+    {item && warehouse && selected.location && <section data-guide="summary" className="rounded-card border-2 border-border bg-surface p-4" aria-label={t("summary")}>
       <h2 className="font-bold">{t("summary")}</h2><p>{warehouse.name} / {selected.location.code}</p><p>{item.code} — {item.name}</p>
       <p>{kind === "STOCK_IN" ? "+" : "−"}{quantity || "0"} {item.unitCode}</p>
       {kind === "TRANSFER" && <p>→ {selected.targetWarehouse?.name} / {selected.targetLocation?.code}: +{quantity || "0"} {item.unitCode}</p>}
@@ -73,7 +73,7 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
     </section>}
     {error && <Failure error={error} />}
     {uncertain && <p role="status">{t("uncertain")}</p>}
-    <button type="submit" className={`workflow-primary ${control} bg-accent text-on-accent`} disabled={pending || !warehouse || !item || !selected.location || (kind === "TRANSFER" && (!selected.targetLocation || selected.targetWarehouse?.id === warehouse?.id)) || (lotRequired && !selected.lot) || (serialRequired && !selected.serial)}>{pending?t("busy"):uncertain?t("retry"):t(kind === "TRANSFER"?"transferPost":"create")}</button>
+    <button data-guide="submit" type="submit" className={`workflow-primary ${control} bg-accent text-on-accent`} disabled={pending || !warehouse || !item || !selected.location || (kind === "TRANSFER" && (!selected.targetLocation || selected.targetWarehouse?.id === warehouse?.id)) || (lotRequired && !selected.lot) || (serialRequired && !selected.serial)}>{pending?t("busy"):uncertain?t("retry"):t(kind === "TRANSFER"?"transferPost":"create")}</button>
   </form>;
 }
 export function DocumentControls({slug,document,permissions}:{slug:string;document:{id:string;version:number;status:string;processing:boolean};permissions:{create:boolean;approve:boolean;post:boolean}}) {

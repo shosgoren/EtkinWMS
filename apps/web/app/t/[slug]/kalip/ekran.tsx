@@ -13,6 +13,7 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { temaYaz } from "../../../design/theme.ts";
+import { KalipIslemRehberiAc } from "./rehber.tsx";
 import { KalipDestek } from "./destek.tsx";
 import { useKalipExcel, type KalipExcelProps } from "./excel.tsx";
 import { KalipSurumBekcisi } from "./surum.tsx";
@@ -118,7 +119,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, 
     );
   const slot =
     actions === undefined && ctx?.slug !== undefined ? (
-      <KalipDestek slug={ctx.slug} dark={dark} canReport={ctx.canReport === true} />
+      <><KalipIslemRehberiAc /><KalipDestek slug={ctx.slug} dark={dark} canReport={ctx.canReport === true} /></>
     ) : actions === undefined ? (
       <Link className="helpb sup" href="/help" aria-label={t("help")} title={t("help")} data-testid="kalip-help">
         <Ico d={LICON.info} size={22} />

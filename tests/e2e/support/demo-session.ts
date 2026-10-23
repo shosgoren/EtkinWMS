@@ -2,13 +2,13 @@
 //
 // Sorun: demo girişi istemci IP'si başına 10 giriş / 10 dk ile sınırlıdır (packages/auth RATE_LIMIT_RULES.signIn; pencere her kabul edilen
 // istekle kayar). GitHub runner'ında tek IP vardır ve uzak koşuda yerel TLS vekili (T-278 başlığı) yoktur. Çözüm (sınır DEĞİŞMEZ, G-11):
-//   1. global-setup yönetici için BİR KEZ gerçek ekrandan girer; oturum `storageState` olarak `.artifacts/session/` altına yazılır.
+//   1. global-setup yönetici için BİR KEZ gerçek ekrandan girer; oturum `storageState` olarak yalnız süreç belleğinde aktarılır (T-1026).
 //      Bu dizin iş akışının yüklediği `.artifacts/e2e/` DIŞINDADIR (G-09: oturum çerezi artifact'a girmez); trace uzakta kapalıdır.
 //   2. Çıkış yapmayan spec'ler `enterDemoShared` ile bu oturumu çerez olarak benimser (giriş yapmaz).
 //   3. Çıkış yapan / girişi sınayan spec'ler `enterDemoReal` ile gerçek giriş yapar; her giriş bir deftere yazılır ve sınıra
 //      dayanılmışsa pencerenin dolması beklenir (istemci tarafı uyum; sunucu kuralı gevşetilmez).
 // Yerelde de çıkış yapmayan testler aynı gerçek yönetici oturumunu kullanır; giriş/çıkış testleri enterDemoReal yolunda kalır.
-import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { type Browser, type Page, expect, test } from "@playwright/test";
 import { completeFirstUseGuide } from "./first-use-guide.ts";
@@ -17,7 +17,7 @@ const ROOT = path.resolve(import.meta.dirname, "../../..");
 /** Artifact'a YÜKLENMEYEN dizin (iş akışı yalnızca `.artifacts/e2e/` yükler). */
 export const SESSION_DIR = path.join(ROOT, ".artifacts/session");
 const LEDGER = path.join(SESSION_DIR, "logins.log");
-const STATE_FILE = path.join(SESSION_DIR, "admin.json");
+const STATE_ENV = "E2E_SHARED_DEMO_SESSION";
 
 /** Ayna: packages/auth/src/index.ts `RATE_LIMIT_RULES.signIn` (window 10 dk, max 10). Sunucu kuralı bu dosyadan DEĞİŞMEZ. */
 const SIGN_IN_MAX = 10;
@@ -92,10 +92,10 @@ export async function enterDemoReal(page: Page, label: DemoRoleLabel): Promise<v
 export async function enterDemoShared(page: Page, label: "Yönetici"): Promise<void> {
   await completeFirstUseGuide(page);
   if (label !== "Yönetici") throw new Error("e2e: paylaşılan oturum yalnız yönetici içindir");
-  if (!existsSync(STATE_FILE)) throw new Error("e2e: paylaşılan demo oturumu yok (global-setup yönetici girişini yapmadı)");
+  if (!process.env[STATE_ENV]) throw new Error("e2e: paylaşılan demo oturumu yok (global-setup yönetici girişini yapmadı)");
   let state: { cookies: Parameters<ReturnType<Page["context"]>["addCookies"]>[0] };
   try {
-    state = JSON.parse(readFileSync(STATE_FILE, "utf8")) as typeof state;
+    state = JSON.parse(process.env[STATE_ENV] ?? "") as typeof state;
   } catch {
     // G-09: ayrıştırma hatasının mesajı dosya içeriğinden (çerez) parça taşıyabilir; sabit metinle sarılır.
     throw new Error("e2e: paylaşılan demo oturumu okunamadı (dosya bozuk)");
@@ -104,24 +104,23 @@ export async function enterDemoShared(page: Page, label: "Yönetici"): Promise<v
   await page.goto("/t/demo");
 }
 
-/** global-setup: yönetici için bir kez gerçek ekrandan giriş; oturumu `.artifacts/session/admin.json` (0600) dosyasına yazar. */
+/** global-setup: yönetici için bir kez gerçek ekrandan giriş; oturum yalnız ortam belleğinde, worker süreçlerine miras kalır (T-1026). */
 export async function mintSharedSession(browser: Browser, baseURL: string): Promise<void> {
   mkdirSync(SESSION_DIR, { recursive: true, mode: 0o700 });
-  rmSync(STATE_FILE, { force: true });
+  delete process.env[STATE_ENV];
   const context = await browser.newContext({ baseURL, locale: "tr-TR", ignoreHTTPSErrors: !isRemote() });
   try {
     const page = await context.newPage();
     await page.goto("/");
     await enterDemoReal(page, "Yönetici");
     await expect(page).toHaveURL(/\/t\/demo$/, { timeout: 30_000 });
-    await context.storageState({ path: STATE_FILE });
-    chmodSync(STATE_FILE, 0o600);
+    process.env[STATE_ENV] = JSON.stringify(await context.storageState());
   } finally {
     await context.close();
   }
 }
 
-/** Test oturumunu artifact dışında tutar ve koşu sonunda kaldırır. */
+/** Test oturumu dosyaya yazılmaz; koşu sonunda ortam belleğinden kaldırılır. */
 export function clearSharedSession(): void {
-  rmSync(STATE_FILE, { force: true });
+  delete process.env[STATE_ENV];
 }

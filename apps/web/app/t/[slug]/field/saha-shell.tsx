@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
 import { KabukBar, type KabukMain, type KabukNav } from "../kabuk/kabuk-bar.tsx";
+import { KalipIslemRehberiAc } from "../kalip/rehber.tsx";
 import { feedback } from "@wms/ui";
 
 const DarkCtx = createContext(false);
@@ -107,6 +108,7 @@ export function SahaFrame({ hue, iconD, title, sub, back, main, homeNav, testId,
                   {sub === undefined || sub === "" ? null : <small>{sub}</small>}
                 </span>
               </div>
+            <KalipIslemRehberiAc />
             </header>
             {children}
             {overlay}
