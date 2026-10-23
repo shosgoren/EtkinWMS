@@ -2,12 +2,13 @@
 // I-18 (DESIGN-PARITY): Yonet.dc.html kabuğu BİREBİR — sol menü (`.side`), üst başlık (`.top`), mobil sekmeler (`.mtabs`), içerik
 // (`.scroll > .inner`). Sınıf adları, öğe sırası, ikon yolları ve metinler kaynaktan; CSS `app/design/yonet.css` (üretilmiş).
 // Menüde yalnız yapılmış sayfalar vardır (kademeli aktarım, DESIGN-PARITY §8); sayaç gerçek veridir.
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { authPost } from "../../lib/auth-client.ts";
 import { DzRoot, useDz } from "../design/dz-root.tsx";
 import { C, dz } from "../design/yonet-tokens.ts";
 import { YICON } from "../design/yonet-icons.ts";
+import { watchPanelUpdates } from "./auto-refresh.ts";
 
 export interface PanelNavItem {
   readonly key: string;
@@ -64,6 +65,18 @@ function ThemeButton({ label }: { label: string }) {
 
 function Inner({ current, nav, title, sub, labels, backHref, action, badge, children }: Omit<Props, "dark">) {
   const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
+  useEffect(() => {
+    if (refreshing) return;
+    return watchPanelUpdates({
+      visibility: document,
+      connection: window,
+      available: () => document.visibilityState === "visible" && navigator.onLine,
+      // RSC birleşimi form/useActionState ve tek kullanımlık bağlantıyı korur; tam sayfa yüklemesi yok.
+      // Mevcut sunucu sayfası operatör + MFA kapısını her istekte yeniden uygular.
+      refresh: () => startRefresh(() => router.refresh()),
+    });
+  }, [router, refreshing]);
   const [failed, setFailed] = useState(false);
   async function signOut(): Promise<void> {
     setFailed(false);

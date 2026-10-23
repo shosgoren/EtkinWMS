@@ -78,6 +78,18 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     // Önizleme kartı yazarken güncellenir.
     await expect(page.getByLabel("Satış sayfası önizlemesi")).toContainText(title1);
 
+    // T-1027: başka ziyaretçinin talebi açık panelin sayacına gelir; yazılan taslak korunur.
+    // Yalnız loopback DB'de sentetik kayıt; canlı satış formuna müşteri talebi gönderilmez.
+    const badge = page.locator('.side button[aria-label="Demo talepleri"] .cnt');
+    const before = Number((await badge.count()) ? await badge.textContent() : "0");
+    const requestName = `T1027 ${randomBytes(4).toString("hex")}`;
+    psql("INSERT INTO wms_platform.demo_requests (id, received_at, name, company, email) VALUES ($1::uuid, now(), $2, 'E2E Otomatik', $3)",
+      [randomUUID(), requestName, `${randomUUID()}@example.test`]);
+    await expect(badge).toHaveText(String(before + 1));
+    await expect(page.locator("#y-h1")).toHaveValue(title1);
+    await expect(page.locator("#y-h2")).toHaveValue("tek ekranda.");
+    await expect(page.locator("#y-sub")).toHaveValue("Uçtan uca denenmiş alt metin.");
+
     await page.getByRole("button", { name: "Yayınla" }).click();
     await expect(page.locator(".kpi-s", { hasText: "SON YAYIN" })).toContainText(/SÜRÜM \d+/);
 
@@ -111,5 +123,14 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await visitor.goto(`${site}/`);
     await expect(visitor.locator("h1.htitle")).toContainText(title1);
     await visitor.close();
+
+    await page.goto(`${panel}/talepler`);
+    await expect(page.locator("tr", { hasText: requestName })).toBeVisible();
+    const incoming = `T1027 yeni ${randomBytes(4).toString("hex")}`;
+    psql("INSERT INTO wms_platform.demo_requests (id, received_at, name, company, email) VALUES ($1::uuid, now(), $2, 'E2E Otomatik', $3)",
+      [randomUUID(), incoming, `${randomUUID()}@example.test`]);
+    // goto/reload yok: açık listenin kendiliğinden değişmesi kabul ölçütüdür.
+    await expect(page.locator("tr", { hasText: incoming })).toBeVisible();
+    await expect(page).toHaveURL(`${panel}/talepler`);
   });
 }
