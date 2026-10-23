@@ -464,7 +464,7 @@ sequenceDiagram
     W->>DB: support_tickets INSERT (OPEN) + support.notify işi (aynı işlem)
     DB-->>W: Talep #numara
     W-->>U: Yeşil balon + ses
-    K-->>O: WhatsApp kısa bildirim (yalnız numara + panel bağlantısı; ayar yoksa atlanır)
+    K-->>O: WhatsApp kısa bildirim (yalnız numara + panel bağlantısı, ayar yoksa atlanır)
     O->>DB: platform_support_reply (ANSWERED)
     U->>W: Pencereyi açar, rozet görür, okur
     W->>DB: customer_seen_at

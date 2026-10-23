@@ -144,7 +144,7 @@ sequenceDiagram
     D->>DB: tasks: her onaylanan miktar için PUTAWAY görevi (OPEN)
     D->>DB: audit_logs, outbox
     DB-->>E: Başarılı
-    E-->>Y: Yeşil bildirim; mal artık "Yerleştir" görevinde
+    E-->>Y: Yeşil bildirim, mal artık "Yerleştir" görevinde
 ```
 
 ---
@@ -191,7 +191,7 @@ sequenceDiagram
         D->>DB: PUTAWAY görevi (kalite kapalıysa)
         D->>DB: audit_logs
         D-->>E: Başarılı
-        E-->>S: Yeşil + ses; sıradaki satır
+        E-->>S: Yeşil + ses, sıradaki satır
     end
 ```
 
