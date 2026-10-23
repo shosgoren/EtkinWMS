@@ -3,9 +3,9 @@
 # farklı komutla başlatır (fly.staging.toml). ENTRYPOINT yok: süreç komutu doğrudan çalışır.
 #
 # Taban imaj etiket + digest ile sabit (çok mimarili indeks digest'i). Kaynak: Docker Hub
-# `library/node:24.21.0-trixie-slim`; mirror.gcr.io aynı digest'i sunar (2026-10-05 doğrulandı) ve
+# `library/node:24.22.1-trixie-slim` (21 Ekim 2026 güvenlik sürümü, T-1029); mirror.gcr.io aynı digest'i sunar (2026-10-23 doğrulandı) ve
 # Docker Hub 429 sınırına takılmaz. Node sürümü package.json `engines` (>=24 <25) ile uyumlu.
-ARG NODE_IMAGE=mirror.gcr.io/library/node:24.21.0-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe
+ARG NODE_IMAGE=mirror.gcr.io/library/node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea
 
 # ---------------------------------------------------------------------------------------------
 FROM ${NODE_IMAGE} AS build
