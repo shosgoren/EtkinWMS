@@ -133,7 +133,7 @@ Sistemde **iki tür kullanıcı girişi** vardır:
 - E-postası olmayan saha çalışanı içindir (ADR-026 §7). PIN yalnız **kayıtlı bir cihazda** çalışır. Cihaz, yöneticinin onayıyla kaydedilir ve kaydı 180 gün geçerlidir.
 - Oturum en çok 12 saat sürer. 2 saat hareketsiz kalırsa kapanır (`FIELD_SESSION_MAX_SEC`, `FIELD_SESSION_IDLE_SEC`).
 - Yanlış PIN denemeleri kilitlenir. Kilidi yönetici açar.
-- Ayrıntılı ekran akışı: [02a — Saha girişi](02a-kimlik-ekip-yetki.md#modül-wmsetkinyazilimcom--saha-girişi-field-field-enroll-field-join).
+- Ayrıntılı ekran akışı: [02a — Kimlik, ekip ve yetki › Saha girişi](02a-kimlik-ekip-yetki.md).
 - Kaynak: `packages/auth/src/field.ts`, migration `0044_field_logins`, `0045_shared_devices`, `0052_team_join`.
 
 ### c) Kullanıcı nasıl sisteme katılır? (4 yol)
