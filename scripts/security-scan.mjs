@@ -4,7 +4,7 @@
 // 1) Node.js: Dockerfile `NODE_IMAGE` sürümünden yeni, aynı ana sürümde `security: true` işaretli bir
 //    nodejs.org yayını varsa FAIL (T-1029'daki 24.21.0 → 24.22.1 gibi).
 // 2) PostgreSQL: deploy/vps/database/compose.yml imajından yeni bir ara sürüm (aynı ana sürüm) Docker Hub'da
-//    varsa FAIL. PostgreSQL ara sürümleri güvenlik düzeltmesi taşır; ayrımı yapılmaz.
+//    varsa FAIL. Etiketler son güncellenen önce istenir; en yeni ara sürüm ilk 100 etikettedir. PostgreSQL ara sürümleri güvenlik düzeltmesi taşır; ayrımı yapılmaz.
 // 3) Sürümü sabitlenmemiş imaj (ör. `caddy:2`) yalnız UYARI (B-32).
 // Herhangi bir FAIL → çıkış kodu 1 (iş kırmızı → GitHub zamanlanmış iş hatası e-postası).
 // Sır görmez; ağdan yalnız iki herkese açık JSON okur.
@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 export const SOURCES = Object.freeze({
   nodeIndex: "https://nodejs.org/dist/index.json",
   postgresTags: (/** @type {number} */ major) =>
-    `https://hub.docker.com/v2/repositories/library/postgres/tags?page_size=100&name=${major}.`,
+    `https://hub.docker.com/v2/repositories/library/postgres/tags?page_size=100&ordering=last_updated&name=${major}.`,
 });
 
 /** @param {string} v */
