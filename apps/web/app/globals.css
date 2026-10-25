@@ -183,6 +183,10 @@ body {
   --color-kr-ok: #2f7d5b;
   --color-kr-err: #c62828;
   --color-kr-warn: #f4c542;
+  /* T-1033: odak işareti (kural.css 11) — açık tema lacivert. */
+  --color-kr-focus: #172e42;
+  --color-kr-focus-soft: rgba(23, 46, 66, .16);
+  --color-kr-focus-gap: #ffffff;
   --color-kr-warn-ink: #1a1300;
   --color-kr-info: #2f5da8;
   --color-kr-bg-a: #eef1f4;
@@ -198,6 +202,14 @@ body {
 }
 
 /* T-436 (ALTIN-KURAL 14): eski (Tailwind belirteçli) yüzeylerin koyu teması; kök düzen `html[data-tema]` verir. */
+/* T-1033: odak işareti koyu temada sarı (kural.css 11); kaynak kaplarında `.dz-dark` de koyu zemindir. */
+html[data-tema="koyu"],
+.dz-dark {
+  --color-kr-focus: #f4c542;
+  --color-kr-focus-soft: rgba(244, 197, 66, .28);
+  --color-kr-focus-gap: #121b24;
+}
+
 html[data-tema="koyu"] {
   color-scheme: dark;
   --color-ink: #e6ebef;

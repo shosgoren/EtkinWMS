@@ -3,6 +3,7 @@ import { localClient, scrubSecretInputs } from "./support/empty-tenant.ts";
 
 import { randomUUID } from "node:crypto";
 import { assertStock, cleanupPackages, db, documentId, fillPackage, identities, posted, seedPackage, type PackageFixture } from "./support/package-receiving.ts";
+import { expectOdakHalkasi } from "./support/odak.ts";
 
 export interface PackageMovementFixture {
   tenantId: string; slug: string; itemId: string; warehouseId: string;
@@ -160,7 +161,7 @@ test("wrong product barcode cannot select a package; touch targets and home/back
     await input.scrollIntoViewIfNeeded(); await input.focus();
     await expect(input).toBeFocused(); await expect(input).toBeInViewport();
     expect(await input.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(48);
-    expect(await input.evaluate(e => parseFloat(e.ownerDocument.defaultView!.getComputedStyle(e).outlineWidth))).toBeGreaterThanOrEqual(3);
+    await expectOdakHalkasi(input, "odak");
   }
   await page.getByRole("button", { name: "Vazgeç", exact: true }).click();
   await assertPackageMovement(f, { qc: 1, putaway: 0, locationId: f.receivingLocationId, status: "AVAILABLE", quantity: "200.000000" });

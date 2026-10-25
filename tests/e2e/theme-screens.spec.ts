@@ -7,6 +7,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
 import { selectView } from "./support/app-menu.ts";
+import { expectOdakHalkasi } from "./support/odak.ts";
 
 const OUT = path.resolve(import.meta.dirname, "../../.artifacts/t-246b");
 const SIZES = [
@@ -30,15 +31,11 @@ async function tokenColor(page: Page, token: string): Promise<string> {
   );
 }
 
-async function expectFocusRing(page: Page, locator: ReturnType<Page["locator"]>, where: string, expected?: string): Promise<void> {
+async function expectFocusRing(page: Page, locator: ReturnType<Page["locator"]>, where: string): Promise<void> {
   await page.keyboard.press("Tab"); // klavye etkileşimi: :focus-visible tetiklenir
   await locator.focus();
-  const style = await page.evaluate<{ style: string; color: string }>(
-    "(() => { const s = getComputedStyle(document.activeElement); return { style: s.outlineStyle, color: s.outlineColor }; })()",
-  );
-  expect(style.style, `${where}: outline-style`).toBe("solid");
-  // T-436 (ALTIN-KURAL 11): her yüzeyde odak çerçevesi 4 px sarı (kaynak `.app :focus-visible` ile aynı).
-  expect(style.color, `${where}: outline-color = sarı`).toBe(expected ?? "rgb(244, 197, 66)");
+  // T-1033 (ALTIN-KURAL 11): tek odak halkası (`box-shadow`, `--color-kr-focus`); eski 4 px sarı outline yok.
+  await expectOdakHalkasi(locator, where);
 }
 
 for (const size of SIZES) {
@@ -97,7 +94,7 @@ for (const size of SIZES) {
         await expect(page.getByTestId("app-bar")).toHaveCount(0);
         await expect(page.locator("#main").getByTestId("home-actions")).toBeVisible();
         // I-18: Pano ve Kokpit (liste kalıbı) odak halkası tasarım kaynağındaki gibi 4 px sarı (#F4C542).
-        await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`, "rgb(244, 197, 66)");
+        await expectFocusRing(page, tasks.getByRole("link").first(), `${view.key} ana ekran`);
         await expectNoHorizontalOverflow(page, `${view.key} ${size.width} ana ekran`);
         await page.screenshot({ path: path.join(OUT, `${view.key}-${size.width}-ana-ekran.png`), fullPage: true });
       }

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { localClient, scrubSecretInputs } from "./support/empty-tenant.ts";
 import { assertStock, cleanupPackages, db, documentId, fillPackage, identities, posted, seedPackage } from "./support/package-receiving.ts";
+import { expectOdakHalkasi } from "./support/odak.ts";
 
 test.use({ ...localClient("198.51.100.141"), trace: "off" });
 test.afterEach(async ({ page }) => {
@@ -55,7 +56,7 @@ test("GR → KG, different LOT quantities/dates, post fault then URL resume keep
     const last = page.getByLabel("2 Son kullanma tarihi", { exact: true });
     await last.scrollIntoViewIfNeeded(); await last.focus(); await expect(last).toBeFocused(); await expect(last).toBeInViewport();
     expect(await last.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(48);
-    expect(await last.evaluate(e => parseFloat(e.ownerDocument.defaultView!.getComputedStyle(e).outlineWidth))).toBeGreaterThanOrEqual(3);
+    await expectOdakHalkasi(last, "odak");
     const primary = page.getByRole("button", { name: "Kontrol", exact: true });
     expect(await primary.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(56);
     for (const target of [last, primary]) {
