@@ -104,7 +104,7 @@ sequenceDiagram
 | FİRMA ADI | Input | Yazılır | — | — | Boş olamaz, kontrol karakteri içeremez | [TAMAMLANDI] |
 | ÇALIŞMA ALANI ADI | Input | Yazılır | `checkWorkspaceNameAction` → `wms_probe.platform_workspace_name_taken` | Okur: `tenants.slug` | En az 3 karakter; küçük harf, rakam, tire. Ayrılmış adlar alınamaz. Sonradan değişmez. "Uygun · adresiniz …" ya da "Bu ad kullanılamaz" yazar. | [TAMAMLANDI] |
 | "Örnek verilerle" / "Boş başla" | Seçim kartı | Seçilir | — | — | Örnek veri: örnek depo, raf ve ürünler eklenir | [TAMAMLANDI] |
-| Parola + "PAROLAYI KAYDET" | Input + Buton | Tıklanır | `activateTrialAction` → `activateTrial` | (1) `wms_probe.platform_activation_claim`: belirteç 10 dk rezerve edilir. (2) `users`, `accounts` (Argon2id parola). (3) `tenants` (yeni satır: `slug`, `name`, `status='ACTIVE'`), `tenant_memberships` (`is_owner=true`), `membership_roles` (`TENANT_ADMIN`), `tenant_settings` (`locale`, `time_zone`, `onboarding_status`). (4) İsteğe bağlı örnek veri: `warehouses`, `locations`, `items`… (5) `wms_probe.platform_activation_consume` → `wms_platform.subscriptions.activated_at`, `trial_ends_at`. (6) Kuyruk: hoş geldiniz e-postası. | Hepsi **tek veritabanı işleminde** yapılır: biri başarısız olursa hiçbiri yazılmaz ve belirteç rezervasyonu geri bırakılır. Aynı bağlantı ikinci kez kullanılamaz. Parola 12–128 karakter. | [TAMAMLANDI] |
+| Parola + "PAROLAYI KAYDET" | Input + Buton | Tıklanır | `activateTrialAction` → `activateTrial` | (1) `wms_probe.platform_activation_claim`: belirteç 10 dk rezerve edilir. (2) `users`, `accounts` (Argon2id parola). (3) `tenants` (yeni satır: `slug`, `name`, `status='ACTIVE'`), `tenant_memberships` (`is_owner=true`), `membership_roles` (`TENANT_ADMIN`), `tenant_settings` (`locale`, `time_zone`, `onboarding_status`). (4) İsteğe bağlı örnek veri: `warehouses`, `locations`, `items`… (5) `wms_probe.platform_activation_consume` → `wms_platform.subscriptions.activated_at`, `trial_ends_at`. (6) Kuyruk: hoş geldiniz e-postası. | **Üç ayrı adım:** (1) belirteç rezervasyonu, (2) kullanıcı hesabı (`users`, `accounts`) ayrı bağlantıda oluşur, (3) kiracı + sahip + ayarlar + örnek veri + `consume` **tek veritabanı işleminde** (`withNewTenant`). (3) başarısız olursa o işlemdeki her şey geri alınır ve rezervasyon bırakılır, ama (2)'deki **hesap korunur**: aynı bağlantıyla yeniden deneme aynı hesabı kullanır (`reused`). Kullanılmış bağlantı ikinci kez kullanılamaz. Parola 12–128 karakter. | [TAMAMLANDI] |
 | 2FA adımı + "DOĞRULA" | Form | Kod girilir | `/api/auth/two-factor/enable` + `verify-totp` | `two_factors`, `users.two_factor_enabled` | Yönetici olduğu için zorunlu | [TAMAMLANDI] |
 | "ÇALIŞMA ALANINI AÇ" | Buton | Tıklanır | `/t/<alan>`'a gider | — | — | [TAMAMLANDI] |
 
@@ -114,8 +114,9 @@ stateDiagram-v2
   TalepAlindi --> Onaylandi: Panel / Talepler - Onayla
   Onaylandi --> BaglantiGonderildi: worker e-posta gönderir
   BaglantiGonderildi --> Rezerve: Müşteri bağlantıyla parolayı kaydeder (claim)
-  Rezerve --> Aktif: Tek işlemde kullanıcı + kiracı + sahip + ayarlar (consume)
-  Rezerve --> BaglantiGonderildi: Hata olursa rezervasyon bırakılır
+  Rezerve --> HesapVar: Kullanıcı hesabı oluşur (ayrı adım)
+  HesapVar --> Aktif: Tek işlemde kiracı + sahip + ayarlar (consume)
+  HesapVar --> BaglantiGonderildi: Kiracı adımı hata verirse rezervasyon bırakılır, hesap korunur
   BaglantiGonderildi --> SuresiDoldu: Süre geçti
   Aktif --> Deneme3Ay: trial_ends_at
   Deneme3Ay --> [*]
