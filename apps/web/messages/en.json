@@ -2657,7 +2657,12 @@
       "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
       "saveAria": "Save",
       "firstIn": "Make the first stock entry",
-      "toStock": "Go to the stock list"
+      "toStock": "Go to the stock list",
+      "pickTitle": "New stock operation",
+      "pickLabel": "What will you do?",
+      "pickIn": "Goods came in",
+      "pickOut": "Goods went out",
+      "pickTransfer": "From one warehouse to another"
     }
   },
   "production": {
@@ -4175,7 +4180,8 @@
     "chipArchived": "Archived",
     "clear": "Clear filter",
     "count": "{n} accounts",
-    "firstParty": "Add the first party"
+    "firstParty": "Add the first party",
+    "archivedEmpty": "No archived accounts"
   },
   "gruplar": {
     "title": "Permission groups",

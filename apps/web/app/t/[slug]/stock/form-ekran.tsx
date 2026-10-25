@@ -200,7 +200,12 @@ export function FormEkran({ kind = "form", heading, dark, title, icon, back, mai
         </>
       }
     >
-      {children}
+      {/* T-1037 (ALTIN-KURAL "tek ana işlem"): formun kendi gönder düğmesi (`.workflow-primary`) gizlenir; alt çubuğun ana işlemi onu çağırır
+          (kapalılık / meşgul durumu aynı düğmeden okunur). Ekranda iki "Kaydet" görünmez. Yalnız tek formlu yeni kayıt ekranında (`kind="form"`);
+          birden çok formlu ayrıntı ekranında düğmeler kalır. */}
+      <div className={kind === "form" ? "kform-tek" : undefined} style={{ display: "contents" }}>
+        {children}
+      </div>
     </KalipEkran>
   );
 }

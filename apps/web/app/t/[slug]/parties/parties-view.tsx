@@ -257,13 +257,16 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
               iconD={ICON.d}
               action={canEdit ? { label: t("firstParty"), kind: "add", onClick: () => open(null) } : { label: tr("home"), href: base, kind: "go" }}
             />
+          ) : q === "" && kind === "" && archived ? (
+            // T-1037: boş arşiv bir arama sonucu değildir — "Arşivde cari yok" + etkin carilere dön.
+            <KalipBos title={t("archivedEmpty")} iconD={LICON.lock} action={{ label: t("chipActive"), href: list, kind: "go" }} />
           ) : (
             <KalipBos
               title={tr("notFoundSearch")}
               action={{ label: t("clear"), kind: "clear", ...(kind !== "" && q === "" && !archived ? { onClick: () => setKind("") } : { href: list }) }}
             />
           )}
-          {canEdit ? (
+          {canEdit && !archived ? (
             <KalipDaha href={`${base}/import`} iconD={LICON.excel} iconColor="1E7B45">
               {t("importLink")}
             </KalipDaha>

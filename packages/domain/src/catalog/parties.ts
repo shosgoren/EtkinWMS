@@ -171,7 +171,8 @@ export async function listParties(params: QueryParams, opts: { readonly q?: stri
       SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version, count(*) OVER ()::text AS total
         FROM public.parties
        WHERE tenant_id = ${m.tenantId}::uuid
-         AND (${opts.archived === true}::boolean OR archived_at IS NULL)
+         -- T-1037: arşiv görünümü YALNIZ arşivdekiler (ekran "Arşivdeki cariler" der; eskiden etkinler de geliyordu).
+         AND (CASE WHEN ${opts.archived === true}::boolean THEN archived_at IS NOT NULL ELSE archived_at IS NULL END)
          AND (${like}::text IS NULL OR name ILIKE ${like} OR code ILIKE ${like} OR tax_no ILIKE ${like} OR phone ILIKE ${like} OR city ILIKE ${like})
        ORDER BY archived_at IS NOT NULL, name, code, id
        LIMIT ${limit}`);

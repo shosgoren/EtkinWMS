@@ -12,6 +12,15 @@ export function fmtQty(raw: string, locale: string = "tr"): string {
   return `${neg ? "−" : ""}${grouped}${f === "" ? "" : `${dec}${f}`}`;
 }
 
+/** T-1037: iş günü "YYYY-AA-GG" → kullanıcının dilinde gösterim (tr "26.10.2026", en "10/26/2026"). Saat dilimi kaydırması yok (tarih
+ * dizgisi doğrudan bölünür); biçim dışı değer olduğu gibi döner. */
+export function fmtGun(raw: string, locale: string = "tr"): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw.trim());
+  if (m === null) return raw;
+  const [, y, mo, d] = m;
+  return locale === "en" ? `${mo}/${d}/${y}` : `${d}.${mo}.${y}`;
+}
+
 /** Eşik karşılaştırması için yaklaşık sayı (yalnız trafik ışığı rengi; otorite değildir). */
 export function approx(raw: string | null | undefined): number {
   if (raw === null || raw === undefined) return Number.NaN;
