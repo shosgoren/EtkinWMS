@@ -59,6 +59,8 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-39b | CI hızlandırma: int/e2e paralel parçalar, yalnız belge PR'da ağır testler atlanır, yayın tek tetikleme. T-925 (KODDA VAR) |
 | B-39 | Dependabot/Renovate; `pnpm audit` CI işi; DB TLS sertifika yenileme otomasyonu |
 | B-124 | Sürüm kayması kalıcı çözümü: imaj derlemesinde sabit `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (sır, GitHub + VPS) ve/veya `deploymentId = <git sha>` (korunan Dockerfile/CI; ayrı PR + onay). Bugün T-990 eski sayfayı tanıyıp "Uygulama güncellendi — Yenile" diyor; kimlikler yine her yayında değişiyor |
+| B-154 | Canlıda PgBouncer yok (süreç başına 10 bağlantı, DB sınırı 100); yük testi yok, kapasite ölçülmeli (T-1028 G-71, G-72) |
+| B-155 | Caddy imajını sürüm + digest ile sabitle (haftalık tarama `caddy:2` için uyarı veriyor; B-32 ile) |
 
 ## P2 — satılabilir SaaS
 | ID | İş | Bağlı |
@@ -70,6 +72,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-44 | Destek erişimi (audit'li, süreli) | T-409 |
 | B-45 | e-Arşiv/e-Fatura | ADR-008 Faz 4S |
 | B-46 | Kesintisiz yayın: expand/contract migration kuralı; yazıcıları durdurmadan migration | — |
+| B-153 | Paket özellik bayrakları (QR/sevkiyat/üretim/API) uygulamada hiçbir şeyi kapatmıyor; `charges.invoice_no` yazan yol yok (T-1028 G-29, G-30) | B-40 |
 
 ## P2 — ürün akışları
 | ID | İş | Bağlı |
@@ -85,6 +88,12 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-58 | **Canlı hata:** tablette (768–1199 px) eski "Geri / Ana ekran" çubuğu yeni tasarım ekranlarının (Ekip, Gruplar, Aktar, Cari, Pano alt ekranları) cam çubuğunun üstüne biniyor; orta ana işlem tıklanamıyor. T-921 | kullanıcı bildirimi 20 Ekim |
 | B-59 | Ekip: "Rol, depo ve şifre işlemleri · Kullanıcılar ekranı" bağlantı metni kesik çerçevenin üst çizgisine biniyor. T-921 | kullanıcı bildirimi 20 Ekim |
 | B-58b | **Canlı hata:** saha girişi (kayıtlı cihaz) iPhone'da sığmıyor, tuş takımı kesik. T-924 canlıda (`4f7d907`) son satır hâlâ yarım → T-959: kayıtlı cihazda çalışma alanı kaldırıldı, bant tek satır (KODDA VAR) | kullanıcı bildirimi 20 Ekim |
+| B-148 | Açık panelde demo listesi ve sayacını otomatik güncelleme T-1027 kodda; yerel doğrulama geçti, yayın bekleniyor | — |
+| B-149 | Hazır komutlara ekran: ters kayıt, teslim iptal/kapatma, taslak fiş düzenleme, ACİL öncelik, vardiya, sorun çözme, sipariş düzenleme/satır iptali, yeniden yerleştirme "Başla" (T-1028 G-01…G-11) | B-63 |
+| B-150 | Min/maks stok girişi, raf toplamaya kapalı, kalite onayı ve yarım sayım süresi ayarları ekranda yok; `stock_alerts` tablosu kullanılmıyor (T-1028 G-20…G-28) | B-83 |
+| B-151 | Cariler belgelere bağlı değil (tedarikçi/müşteri serbest metin), siparişte teslim tarihi ve depo yok; paketsiz transferde fiş bağı yazılmıyor (T-1028 G-40…G-42) | — |
+| B-152 | Lot/seri takipli ürün saha kabul/toplama/sevk/sayımda reddediliyor; seri için kabul yolu yok (T-1028 G-50) | B-50 |
+| B-157 | Aynı e-postadan gelen yeni demo talebi panelde hiç görünmüyor (tasarım gereği sessiz tekilleştirme); "tekrar talep etti" + son tarih + bildirim istenip istenmediği kullanıcı kararı (T-1032) | B-101 |
 
 ## P3 — Altın Kural / tasarım ve kod kalitesi
 | ID | İş |
@@ -105,7 +114,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-66 | Panel hata kodlarını kullanıcı diline çevir |
 | B-69 | Üyeler ekranı ve davet penceresi: sahip olmayan yöneticide yönetici hedefli rol/çıkarma/sıfırlama düğmeleri ve TENANT_ADMIN davet seçeneği kilitli + nedeni görünür (sunucu zaten reddediyor; T-922 inceleme MINOR-2) |
 | B-67 | Cari kişisel alanlarının görünürlüğünü daralt; `settings.manage`'i böl; kullanılmayan `takeout.request` 🔒 |
-| B-75 | İlk kullanım rehberi (Kabuk.dc.html onaylı): her ekran ilk açılışta ≤ 5 adım, yaparak ilerleme, sesli anlatım, görüldü bilgisi sunucuda kullanıcıya bağlı, üst çubuk "?" ile tekrar; adım metinleri tek kaynakta + rehberi olmayan ekran bekçisi |
+| B-75 | **Beş işlem rehberi + tekrar/kurulum düzeltmeleri #174 (T-1026); diğer ekranların otomatik ilk kullanımı, sunucu görüldü kaydı ve kapsama bekçisi kalan** — İlk kullanım rehberi (Kabuk.dc.html onaylı): her ekran ilk açılışta ≤ 5 adım, yaparak ilerleme, sesli anlatım, görüldü bilgisi sunucuda kullanıcıya bağlı, üst çubuk "?" ile tekrar; adım metinleri tek kaynakta + rehberi olmayan ekran bekçisi |
 | B-64b | E2E rastgele düşme ("strict mode violation: 2 elements") → **T-965 (KODDA VAR)**: kök neden — kiracı yerleşimindeki `Suspense` sınırı her SSR'da askıya düşüyordu (Flight akışı); `fallback={children}` sayfayı görünür yedek + gizli `S:` kopyası olarak İKİ KEZ veriyordu (`$RC` değişimine kadar). Yerleşim `force-dynamic` olduğundan Suspense gereksizdi, kaldırıldı; `fallback={null}` denemesindeki theme-admin düşmesi içerik geç açılırken beklemeyen `appMenuReachable` yarışıydı |
 | B-64c | main `6c3c877` e2e-shard (desktop) paket testleri "Ürün ara" sonucu gelmiyor → **BİTTİ T-970**: kök neden — `completeFirstUseGuide` içindeki `waitForFunction("() => {...}")` dizesi fonksiyon nesnesi döndürdüğü için hiç beklemiyordu; yavaş CI'da rehber tamamlanmadan dönülüyor, paket ekranında rehber kipli açılıp arka planı `inert` yapıyor, `fill()` metni kayboluyordu (CI snapshot: rehber açık, arama kutusu boş). `expect.poll(page.evaluate(...))` ile düzeltildi; uygulama kodu değişmedi | T-970 |
 | B-68 | Defter–bakiye denetiminin ölçeği (her yazımda tüm geçmiş toplamı) — checkpoint tasarımı |
@@ -117,6 +126,11 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-126 | **BİTTİ #150 (T-436)** — ALTIN-KURAL 5–17 ortak katman: tek ses + "Sessiz", yükleniyor/iskelet, hata/bulunamadı ekranı, boş durum + toplam, çevrimdışı şeridi, "Geri al", Esc/odak, dokunma boyutu, hareketi azalt, "Otomatik" tema, dile göre biçim (ESLint `wms/no-fixed-locale`, T-436b), yetkisiz dokunuş |
 | B-127 | T-436 kalanları: (1) denetim (audit) listesi toplam sayısı — kapsam süzgeçli COUNT performans kararı; (2) sayımlar listesi gerçek sayfalama + toplam; (3) detay iç kartlarının boş metinleri (sevk "görev yok", sayım "satır yok") ikon + düğmeye; (4) `lib/sheet/read.ts` sabit `SAYFA n` yedeği çeviriye; (5) kalan özel perdeler (Aktar sütun seçimi, Ekip ekleme sayfası, DzRoot overlay) `KalipPerdeKatman`'a; (6) ürün/depo/lokasyon "arşivden çıkar" eylemi gelince Geri al'a geçer; (7) yeni ortak katmanların tasarım/uygulama ekran görüntüsü karşılaştırması (I-18) UNKNOWN |
 | B-128 | T-436b ESLint `wms/no-fixed-locale` kapsam açıkları (security-reviewer MINOR ×2, 22 Ekim): hesaplanmış üye çağrısı (`o["toLocaleString"]("tr")`) ve `localeCompare(x, "tr")` / sonraki argümandaki sabit dil yakalanmıyor; korunan dosya → ayrı PR + security-reviewer |
+| B-156 | testcontainers undici'yi ≥8.12.2'ye yükseltince kök `undici` devDependency sabitlemesini kaldır (T-1031) |
+| B-158 | Claude Design tuvalindeki kaynaklarda `.app :focus-visible{outline:4px sarı}` hâlâ duruyor; tuval yenilenirken T-1033 odak halkası işlenmeli |
+| B-159 | T-1034 sihirbazı Claude Design tuvaline (Giris · v.act 4. adım, v.mfa) işlenmeli; Face ID / parmak izi (B-80) gelince sihirbaza ilk seçenek olarak eklenmeli |
+| B-161 | Yolculuk.dc.html adım şeridi (T-1036) Claude Design tuvaline işlenmeli |
+| B-162 | T-1037: stok işlemi tür seçimi, form kabında tek Kaydet ve ad satır sarma Claude Design tuvaline (KalipForm / KalipListe / KalipDetay) işlenmeli; sevk/üretim/sayım formlarının iç alanları da `KalipAlan`'a geçmeli (stok formu geçti) |
 
 ## Eklemeler (kullanıcı onayı 20 Ekim)
 | ID | İş |
@@ -144,7 +158,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-96 | T-977 sonrası saha eksikleri: (1) toplamada "ürün hiç yok" barkodsuz bildirilemez (`confirmPick` ürün barkodu ister; rafta ürün yoksa okutulacak barkod da yok) → domain'de görev kimliğiyle "bulunamadı" yolu; (2) toplama eksiğinden doğan oturumsuz COUNT görevi sahada açılmaz (önce yönetici `/counts`'ta o rafa sayım başlatır) → görevden tek dokunuşla sayım başlatma; (3) OKUT'ta sipariş numarası okutup sevke gitme yok; aynı raf kodu birden çok depoda varsa OKUT "belirsiz" der; (4) saha toplama/sevk sayı tuşları tam sayı: ondalık miktarlı görev masaüstü Sevkiyat ekranına yönlendirilir (sayımda ondalık alan var); (5) toplama/sayım/sevk ve `/counts` için onaylı tasarım kaynağı (`.dc.html`) yok — Saha/Liste/Detay kalıbıyla yapıldı, görüntü karşılaştırması kullanıcı kararıyla yapılmadı; (6) `/counts` sayım başlatmada raf kodları tek tek çözülür (en çok 200 ayrı sorgu; güvenlik incelemesi MINOR-2) → domain'de toplu `findLocationsByCodes` |
 | B-99 | **BİTTİ (T-979b, PR açılacak)** — Kalıp üst çubuğu düğmeleri (Sorun bildir, Destek, Hesap) telefonda 40–42 px (tasarım kaynağı `KalipListe/Form/Detay.dc.html` boyutu); ALTIN-KURAL ≥ 48 px dokunma hedefi ister → kaynakta düzeltilip port.mjs ile yeniden üretilmeli (T-979 CI ölçümünde görüldü) | — |
 | B-100 | **BİTTİ (T-979b, PR açılacak)** — Uygulama menüsü penceresi (`t/[slug]/app-menu.tsx`: Akış/Genel bakış, çalışma alanı, yönetim sayfaları, Yardım, Çıkış) hâlâ eski Tailwind görünümünde (koyu tema yok); kalıp penceresi (`kalip/pencere.tsx`) diline geçmeli (T-979'da işlev korunarak bırakıldı) | — |
-| B-101 | **Satış sitesi demo formu geri bildirimi (kullanıcı kararı 21 Ekim):** başarıda alanlar yumuşakça kaybolur, aynı kutuda yeşil daire içinde çizilen √, "Talebiniz başarıyla gönderildi", 1 iş günü satırı, kısa talep no (sunucu kimliği), "Ana sayfaya dön"; odak başlığa + aria-live; gönderirken dönen gösterge + çift gönderim engeli; hatada bilgiler kalır, yumuşak kırmızı "Gönderilemedi · tekrar dene"; alan altı doğrulama; ses; TR+EN — **BİTTİ #144 (T-431; birleşmedi, canlı değil)** |
+| B-101 | **T-1025 uygulandı; yerel tam kapılar ve nihai inceleme geçti, yayınlanmadı.** — **Satış sitesi demo formu geri bildirimi (kullanıcı kararı 21 Ekim):** başarıda alanlar yumuşakça kaybolur, aynı kutuda yeşil daire içinde çizilen √, "Talebiniz başarıyla gönderildi", 1 iş günü satırı, kısa talep no (sunucu kimliği), "Ana sayfaya dön"; odak başlığa + aria-live; gönderirken dönen gösterge + çift gönderim engeli; hatada bilgiler kalır, yumuşak kırmızı "Gönderilemedi · tekrar dene"; alan altı doğrulama; ses; TR+EN — **BİTTİ #144 (T-431; birleşmedi, canlı değil)** |
 | B-102 | Demo başarı kutusunda "Hemen konuşalım" (WhatsApp `wa.me`) bağlantısı yok: sitede/ayarda herkese açık WhatsApp numarası yok (`CALLMEBOT_PHONE` operatör bildirim sırrıdır, kullanılmaz). Kullanıcı numarayı verince (tercihen panel Satış sayfası içeriğine alan) bağlantı eklenir |
 | B-103 | **BİTTİ #148 (T-445)** — Kart numaraları T-915…T-999 doldu; bekçi `scripts/guards/lib/cards.mjs` (`WORK_BRANCH`, `MERGED_BRANCH`) ve `quarantine.mjs` (korunan yol `scripts/guards/**`, kullanıcı onayı gerekir) yalnız 3 haneli `T-\d{3}` kabul ediyor → T-1000+ dalı CI'da `CARD_NOT_FOUND`. T-431 boş 3 haneli numarayla açıldı. Karar: regex `\d{3,4}` (ayrı PR + bekçi testi) ya da numara aralığı kuralı (BACKLOG başı "T-915+") güncellensin |
 | B-104 | **BİTTİ PR #143 (T-999c; birleşmedi, canlı değil)** — Canlı hata (kullanıcı 21 Ekim): Ayarlar > Dil English yapılınca arayüz İngilizce olmuyordu. Kök neden: dil `tenant_settings.locale`'e kaydediliyordu ama `i18n/request.ts` yalnız `locale` çerezi (yazan kod yok) + tarayıcı diline bakıyordu. Düzeltme: tenant sayfalarında çalışma alanının dili (çerez → alan dili → tarayıcı → tr), kayıtta yeniden çizim; paket etiketi önizlemesindeki sabit Türkçe metinler mesaj dosyasında; tr/en anahtar bekçisi + e2e `zz-locale` |
@@ -178,6 +192,11 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-140 | Yolculuk ipucu kartı başka ekrana geçince perdesiz kalır (oturumda arka planda izlenir, tamam olunca "Sıradaki" balonu); hedef ekranlarda `data-yol` hedefleri artırılabilir (T-1006) |
 | B-142 | Kiracı hata sınırı (`error.tsx`) için gerçek sunucu hatası e2e'si: üretim yapısında güvenli tetikleyici yok (RSC yanıtı bozulunca Next tam sayfa yüklemesine döner); şimdilik birim bekçisi + ortak `HataEkrani` bulunamadı e2e'si (T-1012) |
 | B-143 | CI: ortak `kalip/secim.tsx` rota modülünü (`field/receive/receive-flow.tsx` → `receipts/receipt-form.tsx`) içe aktarıyor; `globals.css` bütün tasarım CSS'ini içeriyor. Bu yüzden web PR'larının çoğu e2e'de tam takıma düşüyor (T-1022). `CameraOverlay` gibi ortak parçalar `kalip/`a taşınırsa seçim daralır. |
+| B-144 | CI tek e2e derlemesi (sıra 2): ölçümle ertelendi. Parça başına migration + worker + web derlemesi ~20–28 sn (Next önbelleği isabetli, koşu 39783883380). Ayrı derleme işi + artifact, e2e'nin önüne ≥1–1,5 dk ekler; ancak kurulumla örtüşen (artifact'ı bekleyen) tasarımla değerlendirilmeli. |
+| B-145 | CI Docker katman önbelleği (sıra 4): yayın derlemesi 3,8 dk (koşu 39787110228). Dağılım: uygulama imajı 65 sn (install 10 sn, web/worker 41 sn), ses imajı 30 sn (pip 14 + model 6), iki `docker save` + gzip 17 + 43 sn, artifact yükleme 28 sn. Katman önbelleğinin kazancı ≤ ~30 sn; buildx docker-container sürücüsü + `--load` + gha önbellek yükleme/indirme maliyeti bunu yiyebilir. Daha büyük ve düşük riskli kazanç: iki arşivi paralel ya da tek `save` ile üretmek (~20–40 sn). Önbellek yazımı yalnız main kapsamında olmalı. |
+| B-146 | CI süreye göre dağıtım (sıra 5): e2e test süresi masaüstü 442 sn, mobil 565 sn; parça başına sabit kurulum ~70 sn (main koşusu 39785708934). Mobil 2/2 (~370–395 sn) kritik yol. Grup içinde süreye göre bitişik bölme (Playwright `--shard` yerine açık dosya listesi) ~35–40 sn kazandırır. int kritik yolda değil (~20 sn). Zaman tablosu `scripts/ci/` altında korunan dosya olmalı; tabloda olmayan dosya medyan ağırlık alır. |
+| B-147 | prepush: korunan dosya değişikliğinde PR gövdesi taslağı (`--pr-body <dosya>`) `scripts/guards/lib/approval.mjs` `evaluateApproval` ile HEAD SHA'ya karşı denetlensin (security-reviewer + APPROVED-BY satırları). Böylece guards ilk koşuda yeşil geçer (koordinatör isteği, 22 Ekim). |
+| B-160 | Excel içe aktarma: açılış stoku dosyasında SKT/parti sütunu (tarih artık okunuyor) ve 5.000 satır / 384 KB üst sınırını aşan büyük katalog için parçalı yükleme (T-1035 bulgusu) |
 
 ## Belge düzeltmeleri
 | ID | İş |
