@@ -2,7 +2,7 @@
 // T-1034 (kullanıcı kararı 25 Ekim, ALTIN-KURAL "eğitim gerektirmeyen"): iki adımlı doğrulama kurulumu adım adım sihirbaz. Aktivasyonun
 // 4. adımı ve `/mfa` aynı bileşeni kullanır. Sıra: (1) uygulamayı kur → (2) hesabı ekle (telefonda tek dokunuş `otpauth://`, bilgisayarda
 // QR + üç adım; QR okunmazsa anahtar KOPYALA ile) → (3) 6 haneli kod (altıncı rakamda kendiliğinden doğrular) → (4) yedek kodlar
-// (İNDİR / KOPYALA / YAZDIR, "Kaydettim" işaretlenmeden bitmez). Sunucu çağrıları çağıranda (`verify`); bileşen yalnız akışı yürütür.
+// (İNDİR / KOPYALA / YAZDIR, "Kaydettim" işaretlenmeden bitmez; işaretlenmeden sayfadan çıkışta ortak çıkış kutusu sorar). Sunucu çağrıları çağıranda (`verify`); bileşen yalnız akışı yürütür.
 // Giris.dc.html sınıfları (`.card`, `.fll`, `.ls`, `.hint`, `.inp`, `.addr`, `.kv`, `.chk`, `.ban`, `.act > .big`); yeni CSS yok.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -11,6 +11,7 @@ import { useDz } from "./design/dz-root.tsx";
 import { C, dz } from "./design/giris-tokens.ts";
 import { GICON } from "./design/giris-icons.ts";
 import { Ico } from "./field/flow.tsx";
+import { useCikisKorumasi } from "./t/[slug]/kalip/cikis.tsx";
 import { QrCode } from "./qr-code.tsx";
 
 type Adim = 1 | 2 | 3 | 4;
@@ -89,6 +90,8 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
   const [hataMetni, setHataMetni] = useState<string | null>(null);
   const [kaydetti, setKaydetti] = useState(false);
   const [kaydetUyari, setKaydetUyari] = useState(false);
+  // Doğrulama sunucuda bitti: yedek kodlar yalnız bu ekranda görünür; kaydedilmeden çıkılırsa bir daha gösterilmez.
+  const cikis = useCikisKorumasi(adim === 4 && !kaydetti, { title: t("leaveH"), text: t("leaveS"), dark });
   const kodRef = useRef<HTMLInputElement>(null);
   const anahtar = totpAnahtari(totpURI);
 
@@ -377,6 +380,7 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
           <Ico d={GICON.check} size={24} sw={3} />
         </Dugme>
       </div>
+      {cikis.kutu}
     </div>
   );
 }

@@ -5740,6 +5740,8 @@
     "print": "PRINT",
     "saved": "I saved the codes",
     "savedNeed": "Tick that you saved the codes to continue.",
+    "leaveH": "You have not saved your backup codes",
+    "leaveS": "Verification is on. If you lose your phone, these codes are the only way in; they are not shown again after you leave. DOWNLOAD or COPY them first.",
     "finish": "FINISH",
     "fileName": "etkin-wms-backup-codes.txt",
     "fileHead": "Etkin WMS · two-step verification backup codes. Each code works once.",

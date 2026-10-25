@@ -5740,6 +5740,8 @@
     "print": "YAZDIR",
     "saved": "Kodları kaydettim",
     "savedNeed": "Devam etmek için kodları kaydettiğinizi işaretleyin.",
+    "leaveH": "Yedek kodları kaydetmediniz",
+    "leaveS": "Doğrulama açıldı. Telefonunuzu kaybederseniz hesabınıza yalnız bu kodlarla girersiniz; bu ekrandan çıkınca kodlar bir daha gösterilmez. Önce İNDİR ya da KOPYALA.",
     "finish": "TAMAMLA",
     "fileName": "etkin-wms-yedek-kodlar.txt",
     "fileHead": "Etkin WMS · iki adımlı doğrulama yedek kodları. Her kod bir kez çalışır.",
