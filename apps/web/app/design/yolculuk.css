@@ -674,6 +674,51 @@
   background:var(--color-dz-x-bhcoec);
   color:var(--color-dz-x-pppppp);
 }
+.dzj .ycoach .ysteps {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.dzj .ycoach .ysteps li {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:none;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:var(--color-dz-x-oopbpe);
+  color:var(--color-dz-x-eogehg);
+  font:800 12px/1 var(--font-bricolage),sans-serif;
+}
+.dzj .ycoach .ysteps li.done {
+  background:var(--color-dz-x-cphnfl);
+  color:var(--color-dz-x-pppppp);
+}
+.dzj .ycoach .ysteps li.now {
+  background:var(--color-dz-x-pppdnb);
+  color:var(--color-dz-x-glekaa);
+  box-shadow:0 0 0 3px var(--color-dz-x-pamcel);
+}
+.dzj .ycoach .ysteps li.skip {
+  background:transparent;
+  border:2px dashed var(--color-dz-x-mdmnng);
+  color:var(--color-dz-x-ikjlkk);
+}
+.dzj.dz-dark .ycoach .ysteps li {
+  background:var(--color-dz-x-nmodok);
+}
+.dzj.dz-dark .ycoach .ysteps li.done {
+  background:var(--color-dz-x-cphnfl);
+  color:var(--color-dz-x-pppppp);
+}
+.dzj.dz-dark .ycoach .ysteps li.now {
+  background:var(--color-dz-x-pppdnb);
+  color:var(--color-dz-x-glekaa);
+}
 .dzj .yask {
   display:flex;
   flex-direction:column;

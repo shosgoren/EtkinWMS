@@ -38,6 +38,7 @@ const T: Readonly<Record<string, string>> = {
   "9FD3B8": "var(--color-dz-x-jpndli)",
   "B23A3A": "var(--color-dz-x-lcdkdk)",
   "C25A00": "var(--color-dz-x-mcfkaa)",
+  "C3CDD6": "var(--color-dz-x-mdmnng)",
   "C9D2DA": "var(--color-dz-x-mjncnk)",
   "C9D6E0": "var(--color-dz-x-mjngoa)",
   "DCE3EA": "var(--color-dz-x-nmodok)",
