@@ -46,7 +46,10 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         const { slug } = await loginEmptyTenant(page, 'tour', { keepTour: true });
         await expect.poll(() => page.getByTestId('yol-layer').getAttribute('data-state')).toMatch(/^(on|off)$/);
         if (await page.getByTestId('yol-coach').isVisible()) {
-            await expect(page.getByTestId('working-guide')).toContainText('/3');
+            // T-1036: kartta bütün adımlar (kısa turda da) ve adım şeridi: şimdiki adım sarı, kalanlar numaralı.
+            await expect(page.getByTestId('working-guide')).toContainText('ADIM 1/');
+            await expect(page.getByTestId('yol-strip').locator('li[data-step="cards"]')).toHaveAttribute('data-state', 'now');
+            await expect(page.getByTestId('yol-strip').locator('li[data-state="todo"]').first()).toBeVisible();
             await page.keyboard.press('Escape');
         }
         await openSetup(page, slug, 'cards');

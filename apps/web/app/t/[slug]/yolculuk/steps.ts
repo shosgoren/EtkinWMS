@@ -113,3 +113,19 @@ export function filterJourney(data: JourneyData, allowed: readonly StepKey[]): J
   const done = active.filter(s => s.done).length;
   return {...data, steps, done, total:active.length, complete:active.length > 0 && done === active.length, next:active.find(s => !s.done)?.key ?? null};
 }
+
+/**
+ * T-1036: sıradaki açık adım — verilen sırada tamamlanmamış ve atlanmamış İLK adım (kullanıcı İleri ile atladıysa geride kalan adım önce
+ * gelir: "Kartlarını getir" yapılmadan depoya geçildiyse depo bitince kartlara dönülür). `only` verilirse yalnız o adımlar (kısa tur).
+ */
+export function firstOpen(steps: JourneyData["steps"], only?: readonly StepKey[]): StepKey | null {
+  return steps.find((s) => !s.done && !s.skipped && (only === undefined || only.includes(s.key)))?.key ?? null;
+}
+
+/** Adım şeridi durumu (kartta yeşil tik / şimdi / bekliyor / atlandı). */
+export type StripState = "done" | "now" | "todo" | "skip";
+export function stripState(s: JourneyData["steps"][number], cur: StepKey | null): StripState {
+  if (s.done) return "done";
+  if (s.skipped) return "skip";
+  return s.key === cur ? "now" : "todo";
+}
