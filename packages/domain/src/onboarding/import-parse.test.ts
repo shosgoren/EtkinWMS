@@ -1,4 +1,5 @@
 // T-289: CSV ayrıştırıcı, Türkçe ondalık, başlık eşleme ve ürün/stok doğrulama kuralları (saf; veritabanı yok).
+import { standardUnitCode } from "../catalog/unit-alias.ts";
 import { describe, expect, it } from "vitest";
 import {
   IMPORT_MAX_BYTES,
@@ -141,6 +142,10 @@ describe("validateProducts", () => {
     expect(r.issues).toEqual([]);
     expect(r.plans.map((p) => p.baseUnitCode)).toEqual(["ADET", "ADET", "ADET"]);
     expect(codes(products(["B4;X;Düzine;;;"]))).toEqual(["2:temel birim:UNIT_UNKNOWN"]);
+    // m² / m³ alan ve hacimdir: doğrusal metreye (MT) gitmez; kiracıda M2/M3 yoksa reddedilir.
+    expect(standardUnitCode("m²")).toBe("M2");
+    expect(standardUnitCode("M³")).toBe("M3");
+    expect(codes(products(["B5;Y;m²;;;"]))).toEqual(["2:temel birim:UNIT_UNKNOWN"]);
   });
   it("K-3: kesirli koli reddedilir; K-1: koli barkodu adedi katsayıdan gelir (adet gerekir)", () => {
     expect(codes(products(["A1;V;;12,5;;"]))).toEqual(["2:koli içi adet:PACK_QTY_FRACTIONAL"]);

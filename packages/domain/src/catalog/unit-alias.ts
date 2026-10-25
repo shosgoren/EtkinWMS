@@ -6,6 +6,9 @@
  */
 export function standardUnitCode(raw: string | null): string | null {
   const k = (raw ?? "")
+    // Üst simge üs ("m²", "m³") rakama çevrilir; yoksa harf dışı ayıklamada düşer ve alan/hacim "MT" (doğrusal metre) sanılırdı.
+    .replace(/²/g, "2")
+    .replace(/³/g, "3")
     .toLocaleUpperCase("tr")
     .replace(/[ÇĞİÖŞÜ]/g, (ch) => ({ Ç: "C", Ğ: "G", İ: "I", Ö: "O", Ş: "S", Ü: "U" })[ch] ?? ch)
     .replace(/[^A-Z0-9]/g, "");
