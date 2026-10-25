@@ -26,7 +26,7 @@
 Kaynak kırılımı: <768px veya coarse-pointer/max-height500px telefon varyantı. Yeni breakpoint, bütün cihaz matrisiyle test edilir; sadece eski telefon resmiyle kabul yok. Eski “her şey kaydırmasız sığmalı” kabulü ile büyük hedef çatışıyorsa mevcut tasarım/spec ve kullanıcı kararı birlikte çözülür; küçük düğmeyle sessiz bypass yok.
 
 ## Etkileşim / erişilebilirlik
-- Dokunma alanı ≥48px; ana eylem ≥56px. Yakınlaştırma engellenmez; klavye odak ve ekran okuyucu etiketleri korunur.
+- Dokunma alanı ≥48px; ana eylem ≥56px. Yakınlaştırma engellenmez; klavye odak ve ekran okuyucu etiketleri korunur. Odak işareti tek ortak kuraldır (`design/kural.css` madde 11, T-1033): öğenin köşesini izleyen lacivert/koyu temada sarı halka, yazı alanında alan kutusunda; ekran CSS'inde ayrı odak çerçevesi yazılmaz.
 - Normal metin kontrastı ≥4.5:1, büyük metin/anlamlı ikon/girdi sınırı ≥3:1; kaynak kontrast testleri otorite.
 - Native veya ortak `SelectField`: touch/klavye yerel seçici, fare tasarım listesi; label/hint bağlı, Escape/Enter/ok tuşları çalışır.
 - Küçük ekranda form/panel kullanılabilir yüksekliği aşmaz; kaydet/iptal ulaşılır. Klavye açılınca alan ve hata görünür.

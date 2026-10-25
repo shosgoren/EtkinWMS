@@ -2,11 +2,22 @@
    Renkler kaynak tasarımların paletinden (Kabuk/KalipListe `.toast`, `.dock`); belirteçler globals.css'te (`--color-kr-*`).
    Kaynak kaplarının (`.dzk`, `.dzl`…) DIŞINDA çizilen ortak katmanlar: balon, çevrimdışı şeridi, iskelet, hata ekranı. */
 
-/* ---- 11: odak çerçevesi 4 px sarı (kaynak `.app :focus-visible` ile aynı). İçte koyu halka: açık zeminde de 3:1 karşıtlık. ---- */
+/* ---- 11: odak işareti (kullanıcı kararı 25 Ekim, T-1033; eski "4 px sarı + iç koyu halka" yerine tek, şık işaret) ----
+   Halka `outline` değil `box-shadow`: öğenin kendi köşe yarıçapını izler (köşeli çerçeve yok). Açık temada lacivert, koyu temada
+   sarı (`--color-kr-focus`); öğeyle halka arasında zemin renginde 2 px boşluk (lacivert düğmede de seçilir), ince çizgi +
+   yumuşak ışıma, zemine 3:1 karşıtlık. Düğme/bağlantıda yalnız klavyeyle gezinirken çıkar
+   (`:focus-visible`); fare ve dokunmada görünmez. */
 :focus-visible {
-  outline: 4px solid var(--color-kr-warn) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 2px var(--color-kr-ink);
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--color-kr-focus-gap), 0 0 0 4px var(--color-kr-focus), 0 0 0 8px var(--color-kr-focus-soft) !important;
+}
+/* Yazı alanı kendi kutusu olmayan (kenarlıksız, saydam) bir alan kutusunun içindeyse halka iç kutuda değil, alan kutusunun
+   kendisinde yanar; iç yazı alanında ayrıca işaret çizilmez. Kutu sınıfları kaynak tasarımlardaki alan kalıplarıdır. */
+:is(.inp, .fld, .srch, .lsearch, .ksrch, .search, .qdisp, .q2, .gnm, .code) :is(input, textarea, select):focus-visible {
+  box-shadow: none !important;
+}
+:is(.inp, .fld, .srch, .lsearch, .ksrch, .search, .qdisp, .q2, .gnm, .code):has(:is(input, textarea, select):focus-visible) {
+  box-shadow: 0 0 0 2px var(--color-kr-focus-gap), 0 0 0 4px var(--color-kr-focus), 0 0 0 8px var(--color-kr-focus-soft) !important;
 }
 
 /* ---- 13: "Hareketi azalt": CSS animasyonları ve geçişler durur (SVG `animateMotion` JS ile durur: hareket-azalt.tsx). ---- */
