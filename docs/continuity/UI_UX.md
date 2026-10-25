@@ -111,3 +111,6 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 
 ### Panel güncelliği (T-1027)
 PanelShell görünür ve çevrimiçi sekmede 5 saniyede bir sunucu bileşenlerini yeniden okur; odak/bağlantı dönüşünde hemen okur. Form durumu korunur; liste ve menü sayaçları birlikte güncellenir. Yeni endpoint veya yetki değişikliği yoktur. Tam sayfa yenilemesi veya SSE değildir.
+
+## İki adımlı doğrulama kurulumu (T-1034)
+Aktivasyon 4. adımı ve `/mfa` tek bileşen kullanır: `apps/web/app/totp-sihirbaz.tsx` (uygulamayı kur → hesabı ekle → kod → yedek kodlar). Yeni kurulum yüzeyi eklenirse bu bileşen kullanılır; QR/anahtar/yedek kod ayrı ekranda yeniden yazılmaz.

@@ -76,13 +76,22 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await page.locator("#g-np").fill(password);
     await save.click();
 
-    await expect(page.getByRole("heading", { level: 1, name: "İki adımlı doğrulama" })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("img", { name: "Authenticator kurulum QR kodu" })).toBeVisible();
-    await expect(page.locator(".kv dd")).toHaveCount(10);
-    const key = ((await page.getByLabel("Elle girilecek anahtar").textContent()) ?? "").replace(/\s+/g, "");
+    // T-1034: iki adımlı doğrulama sihirbazı — 1 uygulama → 2 hesabı ekle → 3 kod (altıncı rakamda doğrular) → 4 yedek kodlar.
+    await expect(page.getByRole("heading", { level: 1, name: "Telefonunuza doğrulama uygulaması kurun" })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: /UYGULAMA KURULU, DEVAM/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Hesabınızı uygulamaya ekleyin" })).toBeVisible();
+    await page.getByRole("button", { name: "QR okutamıyorum" }).click();
+    const key = ((await page.getByTestId("totp-anahtar").locator("code").textContent()) ?? "").replace(/\s+/g, "");
     expect(key).toMatch(/^[A-Z2-7]{16,}$/);
-    await page.getByLabel("Doğrulama kodu").fill(totpNow(key));
-    await page.getByRole("button", { name: /DOĞRULA/ }).click();
+    await page.getByRole("button", { name: /EKLEDİM, DEVAM/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Uygulamadaki kodu yazın" })).toBeVisible();
+    await page.getByLabel("6 haneli kod").fill(totpNow(key));
+    await expect(page.getByRole("heading", { level: 1, name: "Yedek kodlarınızı saklayın" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("totp-yedek").locator("dd")).toHaveCount(10);
+    await page.getByRole("button", { name: /TAMAMLA/ }).click();
+    await expect(page.getByText("Devam etmek için kodları kaydettiğinizi işaretleyin.")).toBeVisible();
+    await page.getByRole("checkbox", { name: "Kodları kaydettim" }).click();
+    await page.getByRole("button", { name: /TAMAMLA/ }).click();
 
     await expect(page.getByText("Çalışma alanınız hazır")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/DENEME · 3 AY · \d{2}\.\d{2}\.\d{4}/)).toBeVisible();

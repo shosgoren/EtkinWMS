@@ -3,15 +3,15 @@
 // geçersiz bağlantı durumu). Sınıf adları, öğe sırası, ikon yolları ve metinler kaynaktan; CSS `app/design/giris.css` (üretilmiş).
 // Akış (ADR-026 §3.4): 1 firma + çalışma alanı adı (canlı uygunluk) → 2 örnek veri / boş → 3 parola (hesap + alan + deneme sunucuda tek
 // adımda açılır, ardından bu tarayıcıda giriş) → 4 zorunlu MFA (TOTP + yedek kodlar) → hazır. Parola yalnız bu bileşenin belleğinde yaşar.
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { create as createQr } from "qrcode";
 import { authPost } from "../../../lib/auth-client.ts";
 import { DzRoot, useDz } from "../../design/dz-root.tsx";
 import { C, dz } from "../../design/giris-tokens.ts";
 import { GICON } from "../../design/giris-icons.ts";
 import { activateTrialAction, checkWorkspaceNameAction } from "./actions.ts";
-import { slugOf, totpKeyOf, trialDateLabel } from "./helpers.ts";
+import { slugOf, trialDateLabel } from "./helpers.ts";
+import { TotpSihirbaz } from "../../totp-sihirbaz.tsx";
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
 type SlugState = "short" | "taken" | "fix" | "ok";
@@ -48,30 +48,6 @@ function ThemeButton({ label }: { label: string }) {
     <button type="button" className="icb mode" style={{ background: C.surface }} onClick={toggleTheme} aria-label={label}>
       <Ico d={GICON.theme} size={22} />
     </button>
-  );
-}
-
-/** Kaynaktaki `.qr` (21×21 örnek yerine gerçek otpauth QR modülleri; aynı çizim: `rect` + crispEdges). */
-function TotpQr({ value, label }: { value: string; label: string }) {
-  const qr = useMemo(() => {
-    try {
-      const m = createQr(value, { errorCorrectionLevel: "M" }).modules;
-      const cells: { x: number; y: number }[] = [];
-      for (let y = 0; y < m.size; y++) for (let x = 0; x < m.size; x++) if (m.get(y, x)) cells.push({ x, y });
-      return { size: m.size, cells };
-    } catch {
-      return null;
-    }
-  }, [value]);
-  if (qr === null) return null;
-  return (
-    <div className="qr" role="img" aria-label={label}>
-      <svg viewBox={`0 0 ${qr.size} ${qr.size}`} aria-hidden="true" shapeRendering="crispEdges">
-        {qr.cells.map((q) => (
-          <rect key={`${q.x}-${q.y}`} x={q.x} y={q.y} width="1" height="1" fill={dz("172E42")} />
-        ))}
-      </svg>
-    </div>
   );
 }
 
@@ -152,7 +128,6 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
   const [seed, setSeed] = useState<"ornek" | "bos">("ornek");
   const [np, setNp] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [linkBad, setLinkBad] = useState(false);
@@ -190,8 +165,7 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
   const dis =
     busy ||
     (aS === 1 && (slugState === "short" || slugState === "taken" || !slugOk || company.trim() === "")) ||
-    (aS === 3 && !npOk) ||
-    (aS === 4 && (enable === null || otp.replace(/\s+/g, "").length !== 6));
+    (aS === 3 && !npOk);
 
   const failText = useCallback(
     (code: string, detail?: string): string | null => {
@@ -244,17 +218,10 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
     setStep(4);
   }
 
-  async function verifyOtp(): Promise<void> {
-    setBusy(true);
-    setErr(null);
-    const r = await authPost<unknown>("/two-factor/verify-totp", { code: otp.replace(/\s+/g, "") });
-    setBusy(false);
-    if (!r.ok) {
-      setErr(t("errTotp"));
-      return;
-    }
-    setEnable(null);
-    setStep(5);
+  // T-1034: kurulum sihirbazı kodu doğrular; sonuç yalnız evet/hayır (hata metni sihirbazda).
+  async function verifyCode(code: string): Promise<boolean> {
+    const r = await authPost<unknown>("/two-factor/verify-totp", { code });
+    return r.ok;
   }
 
   function next(): void {
@@ -265,7 +232,6 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
     }
     if (aS === 1 || aS === 2) setStep((aS + 1) as Step);
     else if (aS === 3) void submitPassword();
-    else if (aS === 4) void verifyOtp();
     else if (aS === 5) window.location.assign(done === null ? "/login" : `/t/${done.slug}`);
   }
 
@@ -277,14 +243,18 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
 
   return (
     <Shell bad={aS === 0}>
-      <span className="kick">{kick}</span>
-      <div className="steps" aria-hidden="true">
-        {bars.map((bg, i) => (
-          <i key={i} style={{ background: bg }} />
-        ))}
-      </div>
-      <h1 className="lh">{t(`h${aS}` as "h0")}</h1>
-      <p className="ls">{aS === 5 ? "" : t(`s${aS}` as "s0")}</p>
+      {aS === 4 ? null : (
+        <>
+          <span className="kick">{kick}</span>
+          <div className="steps" aria-hidden="true">
+            {bars.map((bg, i) => (
+              <i key={i} style={{ background: bg }} />
+            ))}
+          </div>
+          <h1 className="lh">{t(`h${aS}` as "h0")}</h1>
+          <p className="ls">{aS === 5 ? "" : t(`s${aS}` as "s0")}</p>
+        </>
+      )}
 
       {aS === 1 ? (
         <div className="card" style={{ background: C.surface }}>
@@ -402,43 +372,15 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
       ) : null}
 
       {aS === 4 && enable !== null ? (
-        <>
-          <div className="card" style={{ background: C.surface, alignItems: "center", textAlign: "center" }}>
-            <TotpQr value={enable.totpURI} label={t("qrLabel")} />
-            <p className="ls" style={{ margin: 0 }}>
-              {t("qrHint")}
-            </p>
-            <span className="addr" style={{ background: C.chip, maxWidth: "100%", overflowWrap: "anywhere", minHeight: "40px", fontSize: "13px" }} aria-label={t("keyLabel")}>
-              {totpKeyOf(enable.totpURI)}
-            </span>
-            <span className="hint" style={{ justifyContent: "center" }}>
-              {t("keyHint")}
-            </span>
-            <div className="inp" style={{ background: C.chip, width: "100%" }}>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="000000"
-                aria-label={t("otpLabel")}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-                style={{ textAlign: "center", fontFamily: "var(--font-plex-mono), monospace", fontSize: "26px", letterSpacing: ".3em" }}
-              />
-            </div>
-          </div>
-          <div className="card" style={{ background: C.surface }}>
-            <span className="fll">{t("backupTitle")}</span>
-            {/* Kaynakta `dl` tarayıcı varsayılan dış boşluğuyla (1em) çizilir; uygulamanın sıfırlaması yüzünden açıkça verilir (birebir). */}
-            <dl className="kv" style={{ background: C.chip, margin: "1em 0" }}>
-              {enable.backupCodes.map((code, i) => (
-                <BackupRow key={code} i={i + 1} code={code} />
-              ))}
-            </dl>
-            <span className="hint">{t("backupHint")}</span>
-          </div>
-        </>
+        <TotpSihirbaz
+          totpURI={enable.totpURI}
+          backupCodes={enable.backupCodes}
+          verify={verifyCode}
+          onDone={() => {
+            setEnable(null);
+            setStep(5);
+          }}
+        />
       ) : null}
 
       {aS === 5 ? (
@@ -469,6 +411,7 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
           {err}
         </span>
       ) : null}
+      {aS === 4 ? null : (
       <div className="act" style={{ background: C.bg }}>
         {aS > 1 && aS < 4 ? (
           <button type="button" className="big ghost" style={{ background: C.chip, color: C.fg, flex: "0 0 auto", minWidth: "64px" }} onClick={() => setStep((aS - 1) as Step)} aria-label={t("back")} disabled={busy}>
@@ -480,16 +423,8 @@ function Flow({ host, token, preview }: { host: string; token: string | null; pr
           <Ico d={GICON.next} size={24} sw={3} />
         </button>
       </div>
+      )}
     </Shell>
-  );
-}
-
-function BackupRow({ i, code }: { i: number; code: string }) {
-  return (
-    <>
-      <dt>{`${i < 10 ? "0" : ""}${i}`}</dt>
-      <dd>{code}</dd>
-    </>
   );
 }
 
