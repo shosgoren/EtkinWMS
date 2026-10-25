@@ -230,15 +230,20 @@ export async function provisionEmptyTenant(input: ProvisionInput): Promise<{ slu
     await expect(page).toHaveURL(/\/mfa\?next=/);
     const slug = /^\/t\/([^/]+)\//.exec(new URL(new URL(page.url()).searchParams.get("next") ?? "", page.url()).pathname)?.[1] ?? "";
     expect(slug !== "", "çalışma alanı adresi").toBe(true);
-    // 3) MFA kurulumu: parola onayı → anahtarı ekrandan oku → yedek kod onayı → ilk kod.
+    // 3) MFA kurulumu (T-1034 sihirbazı): parola onayı → uygulama kurulu → "QR okutamıyorum" ile anahtarı oku → ilk kod
+    //    (altıncı rakamda kendiliğinden doğrular) → yedek kodları kaydettim → tamamla.
     await fillSecret(page, 'input[name="password"]', "password");
     await page.getByRole("button", { name: "Kuruluma başla" }).click();
-    const secret = ((await page.locator("code").first().textContent()) ?? "").trim();
+    await page.getByTestId("totp-app-ok").click();
+    await page.getByTestId("totp-qr-yok").click();
+    const secret = ((await page.getByTestId("totp-anahtar").locator("code").textContent()) ?? "").replace(/\s+/g, "");
     expect(/^[A-Z2-7]{16,}$/.test(secret), "TOTP anahtarı ekranda").toBe(true); // ileti sırrı içermez
     src.totpSecret = secret;
-    await page.getByRole("checkbox").check();
+    await page.getByTestId("totp-eklendi").click();
     await fillSecret(page, 'input[name="code"]', "totp");
-    await page.getByRole("button", { name: "Kurulumu tamamla" }).click();
+    await expect(page.getByTestId("totp-adim-4")).toBeVisible();
+    await page.getByTestId("totp-kaydettim").click();
+    await page.getByTestId("totp-bitir").click();
     await expect(page.getByText("İki adımlı doğrulama etkinleştirildi.")).toBeVisible();
     return { slug, totpSecret: secret };
   } finally {

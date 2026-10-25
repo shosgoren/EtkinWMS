@@ -283,6 +283,7 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
           <div className={hata ? "inp bad" : "inp"} style={{ background: C.chip, width: "100%" }}>
             <input
               ref={kodRef}
+              name="code"
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
