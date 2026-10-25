@@ -78,6 +78,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 ## Excel / fiş / ERP deneyimi — ek hedef
 - Önizleme ikon+renk+1–3 kelimeyle: Hazır / Tamamlandı / Düzelt. Hücre hatası bir dokunuşla açılır; çözülemeyen satır sessiz atlanmaz. Kullanıcıya uzun teknik rapor okutulmaz.
 - İçe aktarma sonucu ürün sayısı, otomatik eklenen barkodlar ve etiket hazır paketler ayrı özetlenir. “Basılmaya hazır” fiziksel baskı başarı bildirimi değildir.
+- Excel okuma (`lib/sheet/read.ts`, T-1035): öğeler ad alanı önekinden bağımsız okunur (ERP/.NET çıktıları `<x:row>`), tarih biçimli hücre "GG.AA.YYYY" olur. Sütun eşleştirme (`lib/sheet/mapping.ts`): benzer başlık yalnız tam kelimeyle ya da eş anlamlının ilk kelimesiyle ("Miktar" koli içi adet DEĞİLDİR); isteğe bağlı tam sayı alanı içerikten tahmin edilmez. Birim eş adları (Ad., adt, PCS, Kilo, Mt) `domain/catalog/unit-alias.ts`. Yeni ERP başlığı eklemek: `FIELDS` eş anlamlıları + `mapping.test.ts` örneği.
 - Masaüstü fiş başlık/satır düzenleme; telefon/tablet aynı yetki ve sürüm denetimiyle kısa görsel akış. Ana eylem rol/durum bağımlıdır; renk tek güvenlik kontrolü değildir.
 - Taslak gri/kalem, kesinleşmiş yeşil/onay, geri alınmış kırmızı/geri ok, ERP durum mavi/aktarım; renk+ikon+kısa ad beraber. Riskli geri almada paket adedi ve miktar görünür; mükerrer dokunma tek etkidir.
 - Yanlış QR, başka depo, SKT/kalite uyarısı, eşzamanlı değişiklik, yazıcı iptali ve ERP hatasında “Şimdi ne yapmalı?” tek kısa eylem gösterilir.

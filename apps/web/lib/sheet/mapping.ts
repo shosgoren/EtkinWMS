@@ -21,11 +21,11 @@ export interface FieldDef {
 
 export const FIELDS: Readonly<Record<ImportKindKey, readonly FieldDef[]>> = {
   stok: [
-    { id: "kod", header: "kod", required: true, synonyms: ["kod", "kodu", "stok kodu", "stokkod", "urun kodu", "malzeme kodu", "mal kodu", "stok no", "urun no", "sku", "item code", "code", "stok kod"] },
-    { id: "ad", header: "ad", required: true, synonyms: ["ad", "adi", "stok adi", "urun adi", "malzeme adi", "mal adi", "aciklama", "malzeme aciklamasi", "stok aciklamasi", "urun aciklamasi", "tanim", "name", "description", "urun"] },
+    { id: "kod", header: "kod", required: true, synonyms: ["kod", "kodu", "stok kodu", "stokkod", "urun kodu", "malzeme kodu", "mal kodu", "stok no", "urun no", "sku", "item code", "code", "stok kod", "urun hizmet kodu", "malzeme no", "parca no", "parca kodu"] },
+    { id: "ad", header: "ad", required: true, synonyms: ["ad", "adi", "stok adi", "urun adi", "malzeme adi", "mal adi", "aciklama", "malzeme aciklamasi", "stok aciklamasi", "urun aciklamasi", "tanim", "name", "description", "urun", "stok ismi", "urun ismi", "malzeme ismi", "isim", "urun hizmet adi", "hizmet adi", "urun tanimi", "stok tanimi"] },
     { id: "birim", header: "temel birim", required: false, synonyms: ["birim", "birimi", "temel birim", "olcu birimi", "olcu", "unit", "br", "stok birimi"] },
     { id: "koli", header: "koli içi adet", required: false, synonyms: ["koli ici adet", "koli ici", "koli mik", "koli miktari", "koli adedi", "kolideki adet", "paket ici adet", "koli icerigi", "koli"], content: "int" },
-    { id: "barkod", header: "adet barkodu", required: false, synonyms: ["barkod", "adet barkodu", "barcode", "ean", "gtin", "urun barkodu", "barkodu", "barkod no"], content: "gtin" },
+    { id: "barkod", header: "adet barkodu", required: false, synonyms: ["barkod", "adet barkodu", "barcode", "ean", "gtin", "urun barkodu", "barkodu", "barkod no", "barkod numarasi", "barkod kodu"], content: "gtin" },
     { id: "kbarkod", header: "koli barkodu", required: false, synonyms: ["koli barkodu", "koli barkod", "koli ean", "paket barkodu", "koli gtin"], content: "gtin14" },
   ],
   // T-428: cari kartlar (sunucuya alan adlarıyla kayıt gider; `header` yalnız etiket anahtarıdır).
@@ -115,7 +115,11 @@ function headerMatch(f: FieldDef, h: string): "auto" | "sug" | null {
   if (k === "") return null;
   const flat = k.replace(/ /g, "");
   if (f.synonyms.some((s) => s === k || s.replace(/ /g, "") === flat)) return "auto";
-  if (f.synonyms.some((s) => s.length >= 4 && (k.includes(s) || (k.length >= 4 && s.includes(k))))) return "sug";
+  // Benzer başlık: başlık eş anlamlıyı tam kelime olarak içeriyor ("Barkod Numarası" ⊃ "barkod") ya da başlık eş anlamlının İLK kelimesi
+  // ("Koli" → "koli içi adet"). Başlık eş anlamlının sonraki bir kelimesiyse eşleşmez: "Miktar" (stok miktarı) "koli miktarı" DEĞİLDİR
+  // (T-1035 — miktar sütunu koli içi adete gidiyor, küsuratlı satırlar atlanıyordu).
+  const words = ` ${k} `;
+  if (f.synonyms.some((s) => s.length >= 4 && (words.includes(` ${s} `) || (k.length >= 4 && s.startsWith(`${k} `))))) return "sug";
   return null;
 }
 
@@ -172,7 +176,8 @@ export function autoMap(rows: readonly (readonly string[])[], headerRow: number,
   for (const f of fields) {
     if (col[f.id] !== undefined && col[f.id] !== null) continue;
     const kindC = f.content;
-    if (kindC !== undefined) {
+    // Yalnız içerikten tam sayı tahmini isteğe bağlı alanda yapılmaz: miktar, fiyat, tarih sütunları da tam sayıdır (T-1035).
+    if (kindC !== undefined && !(kindC === "int" && !f.required)) {
       const tail = rows.slice(headerRow + 1, headerRow + 41);
       const i = head.findIndex((_, j) => !used.has(j) && contentScore(kindC, tail.map((r) => r[j] ?? "")));
       if (i >= 0) {

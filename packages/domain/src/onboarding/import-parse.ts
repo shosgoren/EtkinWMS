@@ -6,6 +6,7 @@
 // Koli kuralları (T-287 K-1…K-3): koli adedi katsayıdır (tam sayı ≥ 2; kesirli koli reddedilir, K-3); koli barkodunun adedi
 // yalnız bu katsayıdan gelir (barkoda ayrı adet yazılmaz, K-1). Miktarlar tam sayı (A-33; ürün ölçeği 0), kesir yalnız ürün ölçeği izin verirse.
 import { parseGs1 } from "../catalog/gs1.ts";
+import { standardUnitCode } from "../catalog/unit-alias.ts";
 
 /**
  * A-289-1: dosya üst sınırları. Sınır GERÇEK bayttır (UTF-8). Next sunucu eylemi gövde sınırı 1 MB (ayarlanmaz); metin JSON içinde gider ve satır sonları/tırnaklar
@@ -497,7 +498,9 @@ export function validateProducts(records: Records, ctx: ProductContext): Preview
 
     // Temel birim: boşsa ADET (N-04 akıllı varsayılan); verilmişse sistemde ETKİN olmalı.
     const unitRaw = cell(r, cols, "temel birim");
-    const unit = unitByKey.get(unitKey(unitRaw === "" ? DEFAULT_BASE_UNIT_CODE : unitRaw));
+    // T-1035: önce kod / ad birebir; bulunmazsa yaygın yazılış ("Ad.", "Kilo", "Mt") standart koda çevrilip kiracının biriminde aranır.
+    const alias = standardUnitCode(unitRaw);
+    const unit = unitByKey.get(unitKey(unitRaw === "" ? DEFAULT_BASE_UNIT_CODE : unitRaw)) ?? (alias === null ? undefined : unitByKey.get(alias));
     if (unit === undefined || unit.status !== "ACTIVE") issues.push(issue(row, "temel birim", "UNIT_UNKNOWN", { unit: clip(unitRaw === "" ? DEFAULT_BASE_UNIT_CODE : unitRaw) }));
 
     const existing = code === "" ? undefined : ctx.items.get(code);

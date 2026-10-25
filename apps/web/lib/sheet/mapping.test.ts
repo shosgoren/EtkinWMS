@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { autoMap, buildCsv, colLetter, detectHeader, fold, headerSignature, isGtin, setColumn, waiting } from "./mapping.ts";
-import { colIndex, excelNumber, parseCsv, trimRows } from "./read.ts";
+import { colIndex, excelDate, excelNumber, isDateFormat, parseCsv, trimRows } from "./read.ts";
 
 const stok = [
   ["ÖRNEK FİRMA A.Ş. MALZEME LİSTESİ"],
@@ -49,6 +49,42 @@ describe("T-427 şablonsuz eşleştirme", () => {
     expect(m.col.miktar).toBe(2);
     expect(m.state.miktar).toBe("sug");
     expect(waiting(m, "acilis")).toEqual(["miktar"]);
+  });
+
+  it("T-1035: stok miktarı sütunu koli içi adete eşlenmez; ürün adı ve kodu bulunur", () => {
+    const rows = [["Stok Kodu", "Ürün Adı", "Birim", "Barkod", "Miktar", "Son Kullanma"], ["URN-001", "Kırmızı Conta", "ADET", "8690000000011", "120", "46508"], ["URN-002", "Şeffaf Hortum", "METRE", "8690000000028", "45,5", "46539"]];
+    const m = autoMap(rows, 0, "stok");
+    expect(m.col).toMatchObject({ kod: 0, ad: 1, birim: 2, barkod: 3, koli: null });
+    expect(m.state.koli).toBe("none");
+    expect(waiting(m, "stok")).toEqual([]);
+    const lines = buildCsv(rows, 0, m, "stok").text.replace(/^\uFEFF/, "").trim().split("\r\n");
+    expect(lines[0]).toBe("kod;ad;temel birim;adet barkodu");
+  });
+
+  it("T-1035: yaygın muhasebe programı başlıkları (Logo, Mikro, Paraşüt)", () => {
+    const cases: [string[], Record<string, number | null>][] = [
+      [["Malzeme Kodu", "Malzeme Açıklaması", "Birim Seti", "Barkodu"], { kod: 0, ad: 1, barkod: 3 }],
+      [["Stok Kodu", "Stok İsmi", "Birimi", "Stok Miktarı"], { kod: 0, ad: 1, birim: 2, koli: null }],
+      [["Ürün/Hizmet Kodu", "Ürün/Hizmet Adı", "Barkod Numarası", "Birim", "Stok Miktarı", "Satış Fiyatı"], { kod: 0, ad: 1, barkod: 2, birim: 3, koli: null }],
+      [["Kod", "Ad", "Koli", "Koli Barkodu"], { kod: 0, ad: 1, koli: 2, kbarkod: 3 }],
+    ];
+    for (const [head, want] of cases) {
+      const m = autoMap([head, head.map(() => "")], 0, "stok");
+      expect(m.col, head.join(" | ")).toMatchObject(want);
+    }
+  });
+
+  it("T-1035: Excel tarih hücreleri tarih olarak okunur", () => {
+    expect(excelDate(46508)).toBe("01.05.2027");
+    expect(excelDate(45658)).toBe("01.01.2025");
+    expect(excelDate(61)).toBe("01.03.1900");
+    expect(excelDate(45658.5)).toBe("01.01.2025 12:00");
+    expect(excelDate(44197, true)).toBe("02.01.2025");
+    expect(isDateFormat(14, undefined)).toBe(true);
+    expect(isDateFormat(0, undefined)).toBe(false);
+    expect(isDateFormat(164, "dd/mm/yyyy")).toBe(true);
+    expect(isDateFormat(165, '#,##0.00 "TL"')).toBe(false);
+    expect(isDateFormat(166, "[Red]0.00")).toBe(false);
   });
 
   it("sunucu biçiminde CSV üretir; boş satırı ve atlananları çıkarır, satır eşlemesini tutar", () => {
