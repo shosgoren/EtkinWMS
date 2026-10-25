@@ -75,6 +75,8 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Transfer/tüketim paket okutmayla yönlendirilir; kalan miktar görünür. Eski kimliksiz stok kendiliğinden varillere bölünmez.
 - T-931 hedefi henüz canlı özellik değildir; gerçek durum STATE'dedir.
 
+- T-1037 ekran standardı (bekçi `design/kural-standart.test.ts`): form kabında TEK ana işlem (formun `.workflow-primary` düğmesi gizli, alt çubuk çağırır; yeni form ekranı `FormEkran` + `.workflow-form` + bir `.workflow-primary` yeter); form alanları `KalipAlan` / `Typeahead variant="kalip"`; uzun adlar kesilmez; tarih gösterimi `kalip/format.ts` `fmtGun`; liste üstüne "yeni X" kesik düğmesi konmaz — YENİ ana işlemi gerekirse tür seçimine (`KalipSecimKutulari`) gider.
+
 ## Excel / fiş / ERP deneyimi — ek hedef
 - Önizleme ikon+renk+1–3 kelimeyle: Hazır / Tamamlandı / Düzelt. Hücre hatası bir dokunuşla açılır; çözülemeyen satır sessiz atlanmaz. Kullanıcıya uzun teknik rapor okutulmaz.
 - İçe aktarma sonucu ürün sayısı, otomatik eklenen barkodlar ve etiket hazır paketler ayrı özetlenir. “Basılmaya hazır” fiziksel baskı başarı bildirimi değildir.

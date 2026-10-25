@@ -2657,7 +2657,12 @@
       "cardAria": "{number} · {kind} · {warehouse} · {date} · {state}",
       "saveAria": "Kaydet",
       "firstIn": "İlk stok girişini yap",
-      "toStock": "Stok listesine git"
+      "toStock": "Stok listesine git",
+      "pickTitle": "Yeni stok işlemi",
+      "pickLabel": "Ne yapacaksın?",
+      "pickIn": "Depoya mal girdi",
+      "pickOut": "Depodan mal çıktı",
+      "pickTransfer": "Bir depodan ötekine"
     }
   },
   "production": {
@@ -4175,7 +4180,8 @@
     "chipArchived": "Arşivli",
     "clear": "Süzgeci temizle",
     "count": "{n} cari",
-    "firstParty": "İlk cariyi ekle"
+    "firstParty": "İlk cariyi ekle",
+    "archivedEmpty": "Arşivde cari yok"
   },
   "gruplar": {
     "title": "Yetki grupları",

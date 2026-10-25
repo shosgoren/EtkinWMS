@@ -3,7 +3,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { KalipGrup } from "../../kalip/form.tsx";
+import { KalipAlan, KalipGrup } from "../../kalip/form.tsx";
 import { Banner } from "@wms/ui";
 import { Typeahead } from "../../easy-setup/typeahead.tsx";
 import { errorKeyOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
@@ -31,7 +31,7 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
     setSelected(old=>({...old,[kind]:value,...(kind === "warehouse" ? {location:undefined}:{}),...(kind === "item" ? {lot:undefined,serial:undefined}:{}),...(kind === "targetWarehouse" ? {targetLocation:undefined}:{})}));
   }
   function picker(kind:Kind) {
-    return <Typeahead<Choice> key={`${kind}:${kind === "targetLocation" ? selected.targetWarehouse?.id ?? "" : kind === "location" ? warehouse?.id ?? "" : kind === "lot" || kind === "serial" ? item?.id ?? "" : ""}`} label={t(kind)} listLabel={t(kind)}
+    return <Typeahead<Choice> variant="kalip" key={`${kind}:${kind === "targetLocation" ? selected.targetWarehouse?.id ?? "" : kind === "location" ? warehouse?.id ?? "" : kind === "lot" || kind === "serial" ? item?.id ?? "" : ""}`} label={t(kind)} listLabel={t(kind)}
       defaultValue={selected[kind]?.code ?? ""} onQueryChange={()=>{
         key.contentChanged();setSelected(old=>{const next={...old};delete next[kind];
           if(kind === "warehouse")delete next.location;
@@ -53,24 +53,23 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
       else{setError(result.error);setUncertain(["NETWORK","INTERNAL"].includes(result.error.code));}
     }finally{inFlight.current=false;}});
   }}>
-    <p className="text-ink-muted">{t(kind === "TRANSFER"?"transferHelp":"draftHelp")}</p>
+    <small className="khint">{t(kind === "TRANSFER"?"transferHelp":"draftHelp")}</small>
     <fieldset disabled={pending || uncertain} className="flex min-w-0 flex-col gap-4">
       <KalipGrup title={`1. ${screen("source")}`} sub={warehouse ? `${warehouse.name}${selected.location ? ` / ${selected.location.code}` : ""}` : undefined} d={LICON.depo} color="30475A"><div data-guide="source" className="flex min-w-0 flex-col gap-3 p-3">{picker("warehouse")}{warehouse && picker("location")}</div></KalipGrup>
       {kind === "TRANSFER" && <KalipGrup title={`2. ${screen("target")}`} sub={selected.targetWarehouse ? `${selected.targetWarehouse.name}${selected.targetLocation ? ` / ${selected.targetLocation.code}` : ""}` : undefined} d={LICON.transfer} color="0E7C7B"><div data-guide="target" className="flex min-w-0 flex-col gap-3 p-3">{picker("targetWarehouse")}{selected.targetWarehouse && picker("targetLocation")}</div></KalipGrup>}
       <KalipGrup title={`${kind === "TRANSFER" ? 3 : 2}. ${screen("itemsStep")}`} sub={item ? `${item.code} — ${item.name}` : undefined} d={LICON.box} color="2F5DA8"><div data-guide="item" className="flex min-w-0 flex-col gap-3 p-3">{picker("item")}
       {lotRequired && picker("lot")}{serialRequired && picker("serial")}
-      <label className="flex flex-col gap-1 font-bold">{t("quantity")} {item?.unitCode}
-        <input data-guide="quantity" required inputMode="decimal" pattern="[0-9]+([.][0-9]{1,6})?" maxLength={32} className={control} value={quantity} onChange={e=>{key.contentChanged();setQuantity(e.target.value);}} />
-      </label>
-      <label className="flex flex-col gap-1 font-bold">{t("reason")}<input required maxLength={500} className={control} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} /></label>
+      {/* T-1037: ortak kalıp alanı (.fld) — eski düz kutu (control) yerine; ad/kurallar aynı. */}
+      <KalipAlan label={item?.unitCode ? `${t("quantity")} · ${item.unitCode}` : t("quantity")} data-guide="quantity" name="quantity" required inputMode="decimal" pattern="[0-9]+([.][0-9]{1,6})?" maxLength={32} value={quantity} onChange={e=>{key.contentChanged();setQuantity(e.target.value);}} />
+      <KalipAlan label={t("reason")} name="reason" required maxLength={500} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} />
       </div></KalipGrup>
     </fieldset>
-    {item && warehouse && selected.location && <section data-guide="summary" className="rounded-card border-2 border-border bg-surface p-4" aria-label={t("summary")}>
-      <h2 className="font-bold">{t("summary")}</h2><p>{warehouse.name} / {selected.location.code}</p><p>{item.code} — {item.name}</p>
+    {item && warehouse && selected.location && <div data-guide="summary"><KalipGrup title={t("summary")} d={LICON.check} color="2F7D5B"><div className="flex min-w-0 flex-col gap-1 p-3 font-bold">
+      <p>{warehouse.name} / {selected.location.code}</p><p>{item.code} — {item.name}</p>
       <p>{kind === "STOCK_IN" ? "+" : "−"}{quantity || "0"} {item.unitCode}</p>
       {kind === "TRANSFER" && <p>→ {selected.targetWarehouse?.name} / {selected.targetLocation?.code}: +{quantity || "0"} {item.unitCode}</p>}
       {selected.lot && <p>{t("lot")}: {selected.lot.code}</p>}{selected.serial && <p>{t("serial")}: {selected.serial.code}</p>}
-    </section>}
+    </div></KalipGrup></div>}
     {error && <Failure error={error} />}
     {uncertain && <p role="status">{t("uncertain")}</p>}
     <button data-guide="submit" type="submit" className={`workflow-primary ${control} bg-accent text-on-accent`} disabled={pending || !warehouse || !item || !selected.location || (kind === "TRANSFER" && (!selected.targetLocation || selected.targetWarehouse?.id === warehouse?.id)) || (lotRequired && !selected.lot) || (serialRequired && !selected.serial)}>{pending?t("busy"):uncertain?t("retry"):t(kind === "TRANSFER"?"transferPost":"create")}</button>

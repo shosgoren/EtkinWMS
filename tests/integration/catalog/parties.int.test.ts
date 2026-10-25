@@ -85,8 +85,15 @@ describe("T-428 cari kartlar", () => {
     const arch = await setPartyArchived(call(A.ownerUserId, A), { id: created.id, expectedVersion: v, archived: true });
     expect((await listParties(call(A.ownerUserId, A), { q: code })).total).toBe(0);
     expect((await listParties(call(A.ownerUserId, A), { q: code, archived: true })).items[0]?.archived).toBe(true);
+    // T-1037: arşiv görünümü yalnız arşivdekileri getirir; etkin cari orada görünmez.
+    const live = await saveParty(call(A.ownerUserId, A), { code: `${code}-E`, name: "Etkin Cari" });
+    expect(live.ok).toBe(true);
+    const arsiv = await listParties(call(A.ownerUserId, A), { q: code, archived: true });
+    expect(arsiv.items.every((x) => x.archived)).toBe(true);
+    expect(arsiv.total).toBe(1);
     await setPartyArchived(call(A.ownerUserId, A), { id: created.id, expectedVersion: arch.version, archived: false });
-    expect((await listParties(call(A.ownerUserId, A), { q: code })).total).toBe(1);
+    expect((await listParties(call(A.ownerUserId, A), { q: code })).total).toBe(2);
+    expect((await listParties(call(A.ownerUserId, A), { q: code, archived: true })).total).toBe(0);
   });
 
   it("veritabanı: silme yetkisi yok, kimlik alanı değiştirilemez", async () => {

@@ -6,7 +6,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { Ico, MicIco } from "./ekran.tsx";
+import { Ico } from "./ekran.tsx";
 import { kdz } from "./tokens.ts";
 
 const c = (hex: string): string => kdz("dzd", hex);
@@ -223,8 +223,9 @@ export function KalipZaman({ items }: { items: readonly KalipOlay[] }) {
 export function KalipTumu({ children, href }: { children: ReactNode; href: string }) {
   return (
     <Link className="more tmore" href={href}>
+      {/* T-1037: bağlantı ekran açar; kaynaktaki mikrofon ("söyle") burada yanıltıcıydı → git oku (DESIGN-PARITY §6). */}
       <i>
-        <MicIco size={18} />
+        <Ico d={LICON.arrow} size={18} />
       </i>
       {children}
     </Link>

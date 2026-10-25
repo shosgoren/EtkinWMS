@@ -238,3 +238,46 @@
 @media (max-width: 699.98px) {
   .dzl.dzl .fch { min-height: 44px; }
 }
+
+/* T-1037 (ALTIN-KURAL "tek ana işlem"): Form kabı (FormEkran) ekranlarında formun kendi gönder düğmesi görünmez; alt cam çubuğun ana işlemi
+   (`kalip-form-save`) aynı düğmeyi `requestSubmit` ile çağırır. Stok girişi/çıkışı/transfer, sevk, üretim, mal kabul formlarında iki "Kaydet" yoktu. */
+.kform-tek form.workflow-form .workflow-primary {
+  display: none !important;
+}
+/* Kutu içinde kutu yok: eski T-929 form çerçevesi (beyaz zemin + kenar + iç boşluk) kalıp form kabında kaldırılır; bölüm kartları tam genişlik. */
+.kform-tek form.workflow-form {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+.kform-tek form.workflow-form > fieldset > * {
+  width: 100%;
+  min-width: 0;
+}
+
+/* T-1037 (kullanıcı isteği 25 Ekim, "hiç bilmeyen kullanıcı"): ürün / cari / ekran adı "…" ile kesilmez. Kaynakta tek satır + üç nokta;
+   adın tamamını görmek için kart açmak gerekiyordu. Ayrıntı başlığı en çok 3, liste kartı adı 2, telefonda üst çubuk adı 2 satıra sarar. */
+.dzd .hx b {
+  white-space: normal !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow-wrap: anywhere;
+}
+.dzl .ut b {
+  white-space: normal !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 699.98px) {
+  :is(.dzl, .dzd, .dzf) .brand b {
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.1 !important;
+  }
+}
+

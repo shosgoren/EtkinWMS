@@ -24,6 +24,10 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await page.getByTestId("item-form-save").click();await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
  const urunUrl=page.url();
  const path=`/t/${slug}/stock/documents`;
+ // T-1037: listenin üstünde ayrı "Stok çıkışı / Transfer" düğmesi yok; YENİ → tür seçimi (giriş · çıkış · transfer).
+ await page.goto(path);await expect(page.getByTestId("documents-new-out")).toHaveCount(0);
+ await page.getByTestId("documents-new").click();await expect(page).toHaveURL(/new=SEC/);
+ await page.getByTestId("documents-new-pick").locator('[data-option="STOCK_OUT"]').click();await expect(page).toHaveURL(/new=STOCK_OUT/);
  // T-972 (liste kalıbı): stok kartı rozeti kullanılabilir miktarı kayan noktasız biçimler ("10.000000" → "10").
  async function stockHas(item:string,qty:string){
   await page.goto(`/t/${slug}/stock?q=${encodeURIComponent(item)}`);
@@ -36,12 +40,12 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
   await page.getByRole("searchbox",{name:"Konum",exact:true}).fill("A-01-01");await page.getByRole("option").first().click();
   await page.getByRole("searchbox",{name:"Ürün",exact:true}).fill(`Pilot ürün ${suffix}`);await page.getByRole("option").first().click();
   await page.getByRole("searchbox",{name:"Ürün",exact:true}).fill("missing item");
-  await expect(page.getByRole("button",{name:"Taslağı kaydet"})).toBeDisabled();
+  await expect(page.locator(".workflow-primary")).toBeDisabled(); // T-1037: formun düğmesi gizli, alt çubuk ana işlemi onu çağırır
   await page.getByRole("searchbox",{name:"Ürün",exact:true}).fill(`Pilot ürün ${suffix}`);await page.getByRole("option").first().click();
   await page.getByLabel(/Miktar/).fill(quantity);await page.getByLabel("İşlem açıklaması").fill(`Pilot test ${suffix}`);
   const summary=page.getByRole("region",{name:"İşlem özeti"});await expect(summary).toContainText(`${quantity} ADET`);await expect(summary).toContainText("A-01-01");
   const dimensions=await page.evaluate<{width:number;viewport:number}>("({width:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth})");expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
-  await page.getByRole("button",{name:"Taslağı kaydet"}).click();await expect(page).toHaveURL(/documents\?id=/);
+  await page.getByTestId("kalip-form-save").click();await expect(page).toHaveURL(/documents\?id=/);
   await expect(page.getByRole("status").filter({hasText:"Taslak"})).toBeVisible();
   await page.getByRole("button",{name:"Özeti onayla"}).click();await expect(page.getByRole("status").filter({hasText:"Onaylı"})).toBeVisible();
  }
@@ -65,7 +69,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
   await page.getByRole("searchbox",{name,exact:true}).fill(query!);await page.getByRole("option").first().click();
  }
  await page.getByLabel(/Miktar/).fill("3");await page.getByLabel("İşlem açıklaması").fill("Transfer test");
- await page.getByRole("button",{name:"Transferi onayla ve işle"}).click();await expect(page).toHaveURL(/documents\?id=/);
+ await page.getByTestId("kalip-form-save").click();await expect(page).toHaveURL(/documents\?id=/);
  await expect(page.getByRole("status").filter({hasText:"Stoka işlendi"})).toBeVisible();
  await expect(page.getByRole("link",{name:/Bağlı stok belgesi/})).toContainText("GRS-");
  await stockHas(`Pilot ürün ${suffix}`,"7");await stockHas(`Pilot ürün ${suffix}`,"3");
@@ -78,7 +82,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  await page.getByRole("searchbox",{name:"Mamul",exact:true}).fill(`Pilot mamul ${suffix}`);await page.getByRole("option").first().click();
  await page.getByLabel(/Üretilecek miktar/).fill("1");
  await page.getByRole("searchbox",{name:"Malzeme 1",exact:true}).fill(`Pilot ürün ${suffix}`);await page.getByRole("option").first().click();
- await page.getByLabel(/Reçete miktarı/).fill("2");await page.getByRole("button",{name:"Reçeteyi kaydet"}).click();await expect(page).toHaveURL(/production\?id=/);
+ await page.getByLabel(/Reçete miktarı/).fill("2");await page.getByTestId("kalip-form-save").click();await expect(page).toHaveURL(/production\?id=/);
  const recipeUrl=page.url();
  await page.getByLabel(/Üretilecek miktar/).fill("2");
  for(const [name,query] of [[`Pilot ürün ${suffix}: Depo`,`Pilot ${suffix}`],[`Pilot ürün ${suffix}: Konum`,"A-01-01"],[`Mamul: Pilot mamul ${suffix}: Depo`,`Target ${suffix}`],[`Mamul: Pilot mamul ${suffix}: Konum`,"A-01-01"]]){
@@ -122,7 +126,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
   await page.getByRole("link",{name:"Yeni sipariş",exact:true}).click();await page.getByLabel("Müşteri / sipariş açıklaması").fill(reference);
   await page.getByRole("searchbox",{name:"Ürün 1",exact:true}).fill(`Pilot mamul ${suffix}`);await page.getByRole("option").first().click();
   await page.getByLabel(/Sipariş miktarı/).fill(quantity);await expect(page.getByRole("region",{name:"İşlemi kontrol et"})).toContainText(`${quantity} ADET`);
-  await page.getByRole("button",{name:"Siparişi oluştur",exact:true}).click();await expect(page).toHaveURL(/shipping\?id=/);
+  await page.getByTestId("kalip-form-save").click();await expect(page).toHaveURL(/shipping\?id=/);
  }
  await newOrder("2",`Pilot müşteri ${suffix}`);
  await page.getByRole("button",{name:"Stok ayır",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"İşlem tamamlandı"})).toBeVisible();
@@ -167,7 +171,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
   // T-990: depo seçimi ortak aramalı seçim sayfası (yerel açılır liste yok).
   await page.getByTestId("count-new-form").getByTestId("count-warehouse").click();
   await page.getByRole("listbox").getByRole("option").filter({has:page.locator("b",{hasText:new RegExp(`^Pilot ${suffix}$`)})}).click();await page.getByTestId("count-racks").fill("A-01-01");
-  await page.getByLabel(/Kör sayım/).uncheck();await page.getByTestId("count-new-form").getByRole("button",{name:"Sayımı başlat",exact:true}).click();
+  await page.getByLabel(/Kör sayım/).uncheck();await page.getByTestId("kalip-form-save").click();
   await expect(page).toHaveURL(/counts\?id=/);const countUrl=page.url();
   const countStatus=page.getByTestId("count-hero").getByRole("status");await expect(countStatus).toHaveText("Sayılıyor");
   await page.goto(`/t/${slug}/field/tasks`);
@@ -198,7 +202,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
   await page.goto(urunUrl);await addBarcode(page,`PILOT-URUN-${suffix}`);
   await page.goto(`/t/${slug}/shipping?new=1`);await page.getByLabel("Müşteri / sipariş açıklaması").fill(`Saha müşteri ${suffix}`);
   await page.getByRole("searchbox",{name:"Ürün 1",exact:true}).fill(`Pilot ürün ${suffix}`);await page.getByRole("option").first().click();
-  await page.getByLabel(/Sipariş miktarı/).fill("2");await page.getByRole("button",{name:"Siparişi oluştur",exact:true}).click();await expect(page).toHaveURL(/shipping\?id=/);
+  await page.getByLabel(/Sipariş miktarı/).fill("2");await page.getByTestId("kalip-form-save").click();await expect(page).toHaveURL(/shipping\?id=/);
   const orderUrl=page.url();
   await page.getByRole("button",{name:"Stok ayır",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"İşlem tamamlandı"})).toBeVisible();
   await page.getByRole("button",{name:"Toplama görevlerini oluştur",exact:true}).click();

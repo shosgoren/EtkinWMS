@@ -8,11 +8,12 @@ import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { KalipDetayIzgara, KalipHero, KalipKartBolum, KalipZaman, type KalipOlay } from "../../kalip/detay.tsx";
 import { KalipBaslik, KalipEkran } from "../../kalip/ekran.tsx";
-import { fmtQty } from "../../kalip/format.ts";
+import { fmtGun, fmtQty } from "../../kalip/format.ts";
 import { KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { BOLUM_ICON, bolumCipleri, kalipDark } from "../belge-kalip.ts";
 import { FormEkran } from "../form-ekran.tsx";
 import { DocumentControls, DocumentForm } from "./document-form.tsx";
+import { YeniIslemSecim } from "./yeni-secim.tsx";
 
 // Stok işlemleri (T-972, B-63 grup 2): liste (KalipListe), belge ayrıntısı (KalipDetay), yeni giriş/çıkış/transfer (KalipForm).
 // Veri, yetki ve eylemler değişmedi (stock.view okuma; document.create / document.approve / stock.post yalnız gösterim kararı, eylem
@@ -58,7 +59,8 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
   const kindLabel = (k: string) => t(k === "STOCK_IN" ? "in" : "out");
   const kindIcon = (k: string) => (k === "STOCK_IN" ? KIND_ICON.in : KIND_ICON.out);
   const fq = (v: string) => fmtQty(v, locale);
-  const newMain = { label: t("k.newShort"), aria: t("in"), d: LICON.plus, href: `${path}?new=STOCK_IN`, disabled: !list.permissions.create, testId: "documents-new" };
+  // T-1037: YENİ → tür seçimi (giriş / çıkış / transfer); listenin üstünde ayrı düğme yok.
+  const newMain = { label: t("k.newShort"), aria: t("k.pickLabel"), d: LICON.plus, href: `${path}?new=SEC`, disabled: !list.permissions.create && !list.permissions.post, testId: "documents-new" };
 
   if (doc) {
     const sign = doc.kind === "STOCK_IN" ? "+" : "−";
@@ -80,7 +82,7 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
                 <KalipHero
                   label={t("k.hero")}
                   name={`${doc.number ?? t("draft")} · ${kindLabel(doc.kind)}`}
-                  code={`${doc.warehouseName} · ${doc.businessDate}`}
+                  code={`${doc.warehouseName} · ${fmtGun(doc.businessDate, locale)}`}
                   tags={doc.reason ? [doc.reason] : []}
                   d={kindIcon(doc.kind).d}
                   color={kindIcon(doc.kind).color}
@@ -139,21 +141,27 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
     );
   }
 
+  if (kind === "SEC") {
+    const items = [
+      { id: "STOCK_IN", label: t("in"), sub: t("k.pickIn"), d: LICON.moveIn, color: "2F7D5B", href: `${path}?new=STOCK_IN`, locked: !list.permissions.create },
+      { id: "STOCK_OUT", label: t("out"), sub: t("k.pickOut"), d: LICON.moveOut, color: "B85A14", href: `${path}?new=STOCK_OUT`, locked: !list.permissions.create },
+      { id: "TRANSFER", label: t("transfer"), sub: t("k.pickTransfer"), d: LICON.transfer, color: "0E7C7B", href: `${path}?new=TRANSFER`, locked: !list.permissions.post },
+    ];
+    return (
+      <main className="flex w-full min-w-0 flex-col">
+        <KalipEkran kind="form" dark={dark} title={t("k.pickTitle")} icon={BOLUM_ICON.documents} testId="documents-pick" bar={{ back: { href: path } }}>
+          <KalipBaslik title={t("k.pickLabel")} />
+          <YeniIslemSecim items={items} />
+        </KalipEkran>
+      </main>
+    );
+  }
+
   const chips = bolumCipleri(home, "documents", { stock: so("k.chipStock"), documents: so("k.chipDocs"), shipping: so("k.chipShipping"), production: so("k.chipProduction") });
   return (
     <main className="flex w-full min-w-0 flex-col">
       <KalipEkran kind="liste" dark={dark} title={t("title")} icon={BOLUM_ICON.documents} testId="documents" bar={{ back: { href: `${home}/stock` }, main: newMain }}>
         <KalipCipler label={so("k.chips")} chips={chips} />
-        {list.permissions.create ? (
-          <KalipDaha href={`${path}?new=STOCK_OUT`} iconD={LICON.moveOut} iconColor="B85A14" testId="documents-new-out">
-            {t("out")}
-          </KalipDaha>
-        ) : null}
-        {list.permissions.post ? (
-          <KalipDaha href={`${path}?new=TRANSFER`} iconD={LICON.transfer} iconColor="0E7C7B" testId="documents-new-transfer">
-            {t("transfer")}
-          </KalipDaha>
-        ) : null}
         {list.items.length === 0 ? (
           <KalipBos
             title={t("empty")}
@@ -173,12 +181,12 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
                     key={row.id}
                     index={i}
                     name={`${number} · ${kindLabel(row.kind)}`}
-                    code={`${row.warehouseName} · ${row.businessDate} · ${state}`}
+                    code={`${row.warehouseName} · ${fmtGun(row.businessDate, locale)} · ${state}`}
                     {...(row.reason ? { meta: row.reason } : {})}
                     d={kindIcon(row.kind).d}
                     color={kindIcon(row.kind).color}
                     href={`${path}?id=${row.id}`}
-                    aria={t("k.cardAria", { number, kind: kindLabel(row.kind), warehouse: row.warehouseName, date: row.businessDate, state })}
+                    aria={t("k.cardAria", { number, kind: kindLabel(row.kind), warehouse: row.warehouseName, date: fmtGun(row.businessDate, locale), state })}
                     testId="document-card"
                   />
                 );
