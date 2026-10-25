@@ -5,10 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Button, CircleAlert, buyukHarf } from "@wms/ui";
-import { C } from "./design/giris-tokens.ts";
-import { Ico as GirisIco } from "./field/flow.tsx";
 import { GICON, GirisAlan, GirisBaglanti, GirisBant, GirisBaslik, GirisEylem, GirisKabuk, GirisKart } from "./giris-ui.tsx";
-import { QrCode } from "./qr-code.tsx";
+import { TotpSihirbaz } from "./totp-sihirbaz.tsx";
 import { acceptInvitationAction } from "./invite/[token]/actions.ts";
 import { authPost } from "../lib/auth-client.ts";
 import type { AuthCallError } from "../lib/auth-client.ts";
@@ -217,14 +215,6 @@ interface EnableData {
   readonly backupCodes: readonly string[];
 }
 
-function secretOf(uri: string): string {
-  try {
-    return new URL(uri).searchParams.get("secret") ?? "";
-  } catch {
-    return "";
-  }
-}
-
 /** Kurulum formu yerine durum bildirimi (sunucu karar verir: demo kullanıcı M9, 2FA zaten etkin). T-974: giriş tasarım dili. */
 export function MfaNotice({ kind, next, dark = false }: { kind: "demo" | "enabled"; next: string; dark?: boolean }) {
   const t = useTranslations("auth");
@@ -245,7 +235,6 @@ export function MfaSetupForm({ next, dark = false }: { next: string; dark?: bool
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ShownError | null>(null);
   const [enable, setEnable] = useState<EnableData | null>(null);
-  const [saved, setSaved] = useState(false);
   const [finished, setFinished] = useState(false);
 
   if (finished) {
@@ -272,18 +261,12 @@ export function MfaSetupForm({ next, dark = false }: { next: string; dark?: bool
     setError(setupError(t, res.error));
   }
 
-  async function onVerify(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    setBusy(true);
-    setError(null);
-    const res = await authPost<unknown>("/two-factor/verify-totp", { code: fieldValue(form, "code").replace(/\s+/g, "") });
-    setBusy(false);
-    if (res.ok) {
-      setFinished(true);
-      return;
-    }
-    setError(mfaError(t, res.error));
+  // T-1034: kurulum sihirbazı (`totp-sihirbaz.tsx`) kodu doğrular; kilit/çok deneme metni sunucu hatasından.
+  async function verifyCode(code: string): Promise<true | string> {
+    const res = await authPost<unknown>("/two-factor/verify-totp", { code });
+    if (res.ok) return true;
+    const e = mfaError(t, res.error);
+    return `${e.reason} ${e.action}`;
   }
 
   if (enable === null) {
@@ -310,61 +293,10 @@ export function MfaSetupForm({ next, dark = false }: { next: string; dark?: bool
     );
   }
 
-  const secret = secretOf(enable.totpURI);
   return (
     <GirisKabuk dark={dark} testId="mfa-setup">
-      <GirisBaslik kick={buyukHarf(t("mfa.verifyTitle"), locale)} title={t("mfa.setupTitle")} />
-      <section className="card" style={{ background: C.surface, alignItems: "center", textAlign: "center" }} aria-labelledby="mfa-key-title">
-        <h2 id="mfa-key-title" style={{ margin: 0, font: "800 18px/1.15 var(--font-bricolage), sans-serif" }}>
-          {t("mfa.keyTitle")}
-        </h2>
-        <p className="ls" style={{ margin: 0 }}>
-          {t("mfa.keyIntro")}
-        </p>
-        <QrCode value={enable.totpURI} label={t("mfa.qrLabel")} />
-        <span className="hint" style={{ justifyContent: "center" }}>
-          {t("mfa.qrHint")}
-        </span>
-        <span className="fll">{t("mfa.keyManual")}</span>
-        <code className="addr" style={{ background: C.chip, maxWidth: "100%", overflowWrap: "anywhere", minHeight: "40px", fontSize: "13px", userSelect: "all" }}>
-          {secret}
-        </code>
-        <GirisBaglanti href={enable.totpURI}>{t("mfa.openApp")}</GirisBaglanti>
-      </section>
-      <section className="card" style={{ background: C.surface }} aria-labelledby="mfa-backup-title">
-        <h2 id="mfa-backup-title" className="fll" style={{ margin: 0 }}>
-          {t("mfa.backupTitle")}
-        </h2>
-        <GirisBant kind="warn">{t("mfa.backupWarning")}</GirisBant>
-        <dl className="kv" style={{ background: C.chip, margin: "1em 0", userSelect: "all" }}>
-          {enable.backupCodes.map((c, i) => (
-            <BackupCodeRow key={c} i={i + 1} code={c} />
-          ))}
-        </dl>
-        <button type="button" role="checkbox" className={saved ? "chk on" : "chk"} aria-checked={saved} onClick={() => setSaved((v) => !v)}>
-          <i>
-            <GirisIco d={GICON.check} size={16} sw={3.2} />
-          </i>
-          {t("mfa.backupSaved")}
-        </button>
-      </section>
-      <form onSubmit={onVerify} style={{ display: "contents" }} aria-describedby="mfa-setup-error" aria-busy={busy}>
-        <GirisKart>
-          <GirisAlan id="mfa-code" label={t("mfa.code")} hint={t("mfa.codeHint")} name="code" type="text" inputMode="numeric" autoComplete="one-time-code" required />
-        </GirisKart>
-        <GirisHata id="mfa-setup-error" error={error} />
-        <GirisEylem label={t("mfa.setupFinish")} busy={busy} disabled={!saved} />
-      </form>
+      <TotpSihirbaz totpURI={enable.totpURI} backupCodes={enable.backupCodes} verify={verifyCode} onDone={() => setFinished(true)} />
     </GirisKabuk>
-  );
-}
-
-function BackupCodeRow({ i, code }: { i: number; code: string }) {
-  return (
-    <>
-      <dt>{`${i < 10 ? "0" : ""}${i}`}</dt>
-      <dd>{code}</dd>
-    </>
   );
 }
 
