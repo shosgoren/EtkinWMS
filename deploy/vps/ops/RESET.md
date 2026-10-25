@@ -5,7 +5,8 @@ Kullanıcı kararı 22 Ekim: canlıda gerçek müşteri verisi yok; test için b
 
 **Silinir:** bütün müşteri alanları (tenant) ve kiracı kolonlu her tablodaki satırlar (üyelik, davet, saha kullanıcısı/cihazı/
 oturumu, katılma talebi, stok/defter/bakiye, belge, görev, sayım, destek, entegrasyon, kiracı audit'i, abonelik, tahakkuk/ödeme),
-demo talepleri (DB + satış sitesinin `demo-requests.jsonl` dosyası), operatör dışı bütün kullanıcılar (parola, MFA, oturum,
+demo talepleri (DB + satış sitesinin `demo-requests.jsonl` dosyası) ve tekilleştirme kayıtları (e-posta rezervasyonu, talep
+anahtarı, durum e-postası kuyruğu; T-1032), operatör dışı bütün kullanıcılar (parola, MFA, oturum,
 güvenilir cihaz, güvenlik olayları), hız sınırı sayaçları, kuyruk işleri.
 **Kalır:** `wms_platform.operators` e-postasına sahip kullanıcı(lar) — parola, MFA, oturum, güvenilir cihaz; paketler; satış
 sayfası; operatörün panel işlem kaydı (`security_events` `platform.*`); tenant'sız genel tanımlar; şema, migration defteri,
@@ -32,7 +33,7 @@ SHA=<birleşme-commit-sha>
 TS=$(date +%Y%m%d-%H%M%S)
 P=$(python3 -c 'import json;print(json.load(open("/opt/etkinwms/automation/state.json")).get("project","etkinwms-motive"))'); echo "proje: $P"
 curl -fsSL "https://raw.githubusercontent.com/shosgoren/EtkinWMS/$SHA/deploy/vps/ops/reset-tenants.sql" -o /root/reset-tenants.sql
-echo "854ddf45ff282c9c86def7779cfb1bc4863138dce21e0a14b29b8fab5892983f  /root/reset-tenants.sql" | sha256sum -c -
+echo "469a390e5691fc21a6ee51fef34c1d19b810ca2b484492d264fa26fea2db47ff  /root/reset-tenants.sql" | sha256sum -c -
 
 # a) web, worker ve satış sitesini (demo talebi yazar) durdur; panel açık kalır
 IDS=$(for s in web worker marketing; do docker ps -q --filter "label=com.docker.compose.project=$P" --filter "label=com.docker.compose.service=$s"; done); echo $IDS

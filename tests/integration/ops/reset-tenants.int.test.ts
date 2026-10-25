@@ -119,6 +119,9 @@ async function seedExtras(w: TenantWorld, i: number): Promise<void> {
   // Panel tarafı müşteri kaydı: demo talebi → abonelik → tahakkuk.
   const demo = randomUUID();
   await c.query("INSERT INTO wms_platform.demo_requests (id, received_at, name, company, email) VALUES ($1, now(), 'Ad', 'Firma', $2)", [demo, `t1004-${hex(4)}@example.test`]);
+  // 0057 tekilleştirme kayıtları (rezervasyonu tetikleyici yazar); sıfırlama bunları da silmeli (T-1032).
+  await c.query("INSERT INTO wms_platform.demo_request_keys (id, digest) VALUES ($1, '\\x00')", [demo]);
+  await c.query("INSERT INTO wms_platform.demo_status_deliveries (id, email, token_hash, sealed) VALUES ($1, $2, $3, '{}'::jsonb)", [demo, `t1004-${hex(4)}@example.test`, hex(32)]);
   await c.query("INSERT INTO wms_platform.subscriptions (tenant_id, plan, trial_ends_at, demo_request_id, number) VALUES ($1, 'TRIAL', now() + interval '14 days', $2, $3)", [t, demo, 900 + i]);
   const plan = (await c.query<{ id: string }>("SELECT id FROM wms_platform.plans LIMIT 1")).rows[0]!.id;
   await c.query("INSERT INTO wms_platform.charges (tenant_id, period, plan_id, plan_version, amount, due_on) VALUES ($1, date_trunc('month', now())::date, $2, 1, 990, now()::date)", [t, plan]);
@@ -207,6 +210,7 @@ if (env.target === "compose") {
       expect(await n("SELECT count(*) AS n FROM public.tenants")).toBe(2);
       expect(await n("SELECT count(*) AS n FROM public.stock_ledger")).toBeGreaterThan(0);
       expect(await n("SELECT count(*) AS n FROM wms_platform.demo_requests")).toBe(2);
+      expect(await n("SELECT count(*) AS n FROM wms_platform.demo_email_reservations")).toBe(2);
     });
 
     it("gerçek koşu: kiracı ve yetim satır 0, müşteri kullanıcıları gitti; operatör, paket, şema ve tetikleyiciler aynen", async () => {
@@ -222,7 +226,7 @@ if (env.target === "compose") {
       );
       expect(cols.rows.length).toBeGreaterThan(60);
       for (const r of cols.rows) expect(await n(`SELECT count(*) AS n FROM "${r.s}"."${r.t}" WHERE "${r.col}" IS NOT NULL`), `${r.s}.${r.t}`).toBe(0);
-      for (const t of ["wms_platform.demo_requests", "public.field_sessions", "public.field_device_lockouts", "pgboss.job"]) {
+      for (const t of ["wms_platform.demo_requests", "wms_platform.demo_email_reservations", "wms_platform.demo_request_keys", "wms_platform.demo_status_deliveries", "public.field_sessions", "public.field_device_lockouts", "pgboss.job"]) {
         expect(await n(`SELECT count(*) AS n FROM ${t}`), t).toBe(0);
       }
       expect(await n("SELECT count(*) AS n FROM public.users")).toBe(1);
