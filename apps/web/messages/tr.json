@@ -5555,7 +5555,13 @@
       "prev": "Geri",
       "skip": "Atla",
       "open": "Ekranı aç",
-      "forward": "İleri"
+      "forward": "İleri",
+      "strip": {
+        "done": "tamam",
+        "now": "şimdi",
+        "todo": "bekliyor",
+        "skip": "atlandı"
+      }
     },
     "hint": {
       "cardsExcel": {

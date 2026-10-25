@@ -5555,7 +5555,13 @@
       "prev": "Back",
       "skip": "Skip",
       "open": "Open screen",
-      "forward": "Next"
+      "forward": "Next",
+      "strip": {
+        "done": "done",
+        "now": "now",
+        "todo": "to do",
+        "skip": "skipped"
+      }
     },
     "hint": {
       "cardsExcel": {

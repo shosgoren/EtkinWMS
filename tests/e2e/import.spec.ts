@@ -9,6 +9,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 import { localClient } from "./support/empty-tenant.ts";
 import { DESKTOP_SIZES, OUT, PHONE_SIZES, csv, loginAdmin } from "./support/import-screen.ts";
+import { erpXlsx } from "./support/erp-xlsx.ts";
 
 // Demo girişi IP başına 10/10 dk sınırlıdır: bu dosya kendi istemci adresini kullanır (yalnız yerel vekil okur).
 test.use({ ...localClient("198.51.100.40") });
@@ -128,6 +129,34 @@ test.describe("Excel'den aktar (T-427)", () => {
     // Ürünler listesinde içe aktarılan ürün görünür.
     await page.goto(`/t/demo/items?q=${p}-1`);
     await expect(page.getByText(`${p}-1`).first()).toBeVisible();
+  });
+
+  test("T-1035: ERP Excel'i (önekli .xlsx, tarih ve stok miktarı sütunu) okunur; miktar koli içi adete gitmez, satır atlanmaz", async ({ page }, testInfo) => {
+    const p = `T1035-${Date.now()}${testInfo.project.name === "desktop" ? "D" : "M"}`;
+    // Her koşuda benzersiz, denetim haneli GTIN-13 (barkod kiracıda tekildir).
+    const base = `869${String(Date.now()).slice(-8)}${testInfo.project.name === "desktop" ? "1" : "2"}`;
+    const sum = [...base].reduce((a, d, i) => a + Number(d) * (i % 2 === 0 ? 1 : 3), 0);
+    const gtin = `${base}${(10 - (sum % 10)) % 10}`;
+    await loginAdmin(page);
+    await page.goto("/t/demo/import?tur=stok");
+    const aktar = page.getByTestId("aktar");
+    await page.getByTestId("aktar-file").setInputFiles(
+      erpXlsx([
+        ["Stok Kodu", "Stok İsmi", "Birimi", "Barkod Numarası", "Stok Miktarı", "Son Kullanma"],
+        [`${p}-1`, "Kırmızı Conta", "ADET", gtin, { n: 120 }, { date: 46508 }],
+        [`${p}-2`, "Şeffaf Hortum", "Ad.", "", { n: 45.5 }, { date: 46539 }],
+      ]),
+    );
+    await expect(aktar.locator('[data-field="kod"]')).toHaveAttribute("data-state", "auto");
+    await expect(aktar.locator('[data-field="ad"]')).toHaveAttribute("data-state", "auto");
+    await expect(aktar.locator('[data-field="koli"]')).toHaveAttribute("data-state", "skip");
+    await main(page).click(); // KONTROL ET
+    await expect(page.getByTestId("aktar-bad")).toHaveText("0");
+    await expect(page.getByTestId("aktar-new")).toHaveText("2");
+    await main(page).click(); // AKTAR
+    await expect(page.getByTestId("aktar-done")).toBeVisible();
+    await page.goto(`/t/demo/items?q=${p}-2`);
+    await expect(page.getByText(`${p}-2`).first()).toBeVisible();
   });
 
   test("kaydedilmemiş iş: ana ekran düğmesi cam kutuyla sorar; vazgeçince ekranda kalır", async ({ page }) => {

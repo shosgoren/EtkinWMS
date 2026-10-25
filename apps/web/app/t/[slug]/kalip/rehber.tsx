@@ -15,7 +15,7 @@ function RehberIkon({ d }: {
     d: string | readonly string[];
 }) { return <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{(typeof d === 'string' ? [d] : d).map(p => <path key={p} d={p}/>)}</svg>; }
 export const OP_GUIDE_EVENT = 'etkinwms:operation-guide';
-export function KalipRehberKart({ title, text, progress, target, onClose, onPrev, onNext, onSkip, style, children, closeTestId = "guide-close" }: {
+export function KalipRehberKart({ title, text, progress, target, onClose, onPrev, onNext, onSkip, style, head, children, closeTestId = "guide-close" }: {
     title: string;
     text: string;
     progress: string;
@@ -25,6 +25,8 @@ export function KalipRehberKart({ title, text, progress, target, onClose, onPrev
     onNext: () => void;
     onSkip?: () => void;
     style?: CSSProperties;
+    /** Başlık satırının altında (ör. kurulum adım şeridi, T-1036). */
+    head?: ReactNode;
     children?: ReactNode;
     closeTestId?: string;
 }) {
@@ -80,7 +82,7 @@ export function KalipRehberKart({ title, text, progress, target, onClose, onPrev
         return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(`${title}. ${text}`); u.lang = intlDil(locale); window.speechSynthesis.speak(u); }
     return <>{!folded && spot !== null ? <span className="yhole" style={spot} aria-hidden="true"/> : null}<section ref={ref} className={`ycoach working${folded ? ' folded' : ''}`} style={style ?? { left: 12, bottom: 136 }} role="region" aria-label={t('title')} data-testid="working-guide" data-folded={folded}>
     {folded ? <><button className="ynb" type="button" onClick={() => setFolded(false)} data-testid="guide-expand">{t('resume')} · {progress.match(/\d+\/\d+/)?.[0] ?? progress}</button><button type="button" className="cbtn" onClick={onClose} aria-label={t('close')} data-testid={closeTestId}><RehberIkon d={JICON.close}/></button></> : <>
-      <div className="cth"><span className="cstep" aria-live="polite">{progress}</span><button type="button" className="cbtn" onClick={speak} aria-label={t('speak')}><RehberIkon d={[JICON.speak, JICON.speakWave]}/></button><button type="button" className="cbtn" onClick={onClose} aria-label={t('close')} data-testid={closeTestId}><RehberIkon d={JICON.close}/></button></div>
+      <div className="cth"><span className="cstep" aria-live="polite">{progress}</span><button type="button" className="cbtn" onClick={speak} aria-label={t('speak')}><RehberIkon d={[JICON.speak, JICON.speakWave]}/></button><button type="button" className="cbtn" onClick={onClose} aria-label={t('close')} data-testid={closeTestId}><RehberIkon d={JICON.close}/></button></div>{head}
       <b className="ctt">{title}</b><p className="ctx">{text}</p>{children}
       <button type="button" className="ynb yapply" onClick={apply} data-testid="guide-apply">{t('apply')}</button>
       <div className="ynav"><button type="button" className="ynb" onClick={onPrev} aria-label={t('prev')}><RehberIkon d={JICON.back}/></button><button type="button" className="yskip" onClick={onSkip ?? onClose}>{t(onSkip ? 'skipStep' : 'skip')}</button><button type="button" className="ynb go" onClick={onNext} data-testid="guide-next">{t('next')}<RehberIkon d={JICON.next}/></button></div>
