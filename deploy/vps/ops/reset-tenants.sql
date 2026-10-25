@@ -94,6 +94,9 @@ BEGIN
   RAISE NOTICE 'silinecek kiracı (tenant): %', (SELECT count(*) FROM public.tenants);
   RAISE NOTICE 'silinecek müşteri kullanıcısı: % (operatör dışı bütün kullanıcılar)', (SELECT count(*) FROM reset_deleted_users);
   RAISE NOTICE 'silinecek demo talebi: %', (SELECT count(*) FROM wms_platform.demo_requests);
+  RAISE NOTICE 'silinecek demo e-posta rezervasyonu: % · talep anahtarı: % · durum e-postası: %',
+    (SELECT count(*) FROM wms_platform.demo_email_reservations), (SELECT count(*) FROM wms_platform.demo_request_keys),
+    (SELECT count(*) FROM wms_platform.demo_status_deliveries);
   FOR r IN SELECT * FROM reset_tenant_tables ORDER BY sch, tbl, col LOOP
     EXECUTE format('SELECT count(*) FROM %I.%I WHERE %I IS NOT NULL', r.sch, r.tbl, r.col) INTO v_n;
     IF v_n > 0 THEN
@@ -174,8 +177,12 @@ BEGIN
 END
 $tenant$;
 
--- 2c. Panel tarafındaki müşteri kaydı: demo talepleri (abonelik/tahakkuk kiracı kolonuyla 2b'de silindi).
+-- 2c. Panel tarafındaki müşteri kaydı: demo talepleri (abonelik/tahakkuk kiracı kolonuyla 2b'de silindi) ve 0057 (T-1025)
+--     tekilleştirme kayıtları. Rezervasyon kalırsa aynı e-postadan gelen yeni talep sessizce düşer (T-1032).
 DELETE FROM wms_platform.demo_requests;
+DELETE FROM wms_platform.demo_status_deliveries;
+DELETE FROM wms_platform.demo_request_keys;
+DELETE FROM wms_platform.demo_email_reservations;
 
 -- 2d. Müşteri kullanıcıları: güvenlik olayları (önceden silinmiş kullanıcılarınkiler dahil; operatörün ve kullanıcısız
 --     platform olayları kalır), güvenilir cihaz/sıfırlama kayıtları, sonra kullanıcı
@@ -259,7 +266,8 @@ BEGIN
      OR EXISTS (SELECT 1 FROM public.security_events e WHERE e.user_id IS NOT NULL
                    AND NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = e.user_id))
      OR EXISTS (SELECT 1 FROM public.field_sessions) OR EXISTS (SELECT 1 FROM public.field_device_lockouts)
-     OR EXISTS (SELECT 1 FROM wms_platform.demo_requests) THEN
+     OR EXISTS (SELECT 1 FROM wms_platform.demo_requests) OR EXISTS (SELECT 1 FROM wms_platform.demo_email_reservations)
+     OR EXISTS (SELECT 1 FROM wms_platform.demo_request_keys) OR EXISTS (SELECT 1 FROM wms_platform.demo_status_deliveries) THEN
     RAISE EXCEPTION 'RESET_VERIFY: kullanıcıya/cihaza/talebe bağlı yetim satır kaldı';
   END IF;
 
