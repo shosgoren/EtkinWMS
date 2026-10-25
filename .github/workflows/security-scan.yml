@@ -1,0 +1,75 @@
+# Etkin WMS — haftalık güvenlik taraması (T-1030). KORUNAN DOSYA (.github/**): değişiklik ayrı küçük PR +
+# security-reviewer + `APPROVED-BY: supervisor (ADR-012 rev.) @ <PR head SHA>` ister.
+#
+# Neden: ci.yml `deps` yalnız kod değiştiğinde koşar; yeni açık kod değişmeden de yayımlanır (T-1029: Node
+# 24.21.0 ve zod 4.6.5 elle bulundu). Bu iş her hafta main üzerinde, kod değişmese de denetler. Kırmızı iş =
+# GitHub'ın zamanlanmış iş hatası e-postası (zamanlamayı son değiştiren kullanıcıya).
+#   npm-audit    : pnpm audit, high/critical → kırmızı. ci.yml `deps` A-36 istisnasını burada uygulamaz;
+#                  istisnalı advisory yeniden raporlanırsa burada kırmızı olur ve görünür kalır.
+#   pip-audit    : services/voice/requirements.txt (hash'li sabit liste) bilinen açık → kırmızı.
+#   base-images  : scripts/security-scan.mjs — Node güvenlik yayını, PostgreSQL ara sürümü; sabitlenmemiş imaj UYARI.
+# Repo sırrı kullanmaz; yalnız okuma izni. Üçüncü taraf action'lar ci.yml ile aynı tam commit SHA'larıyla.
+name: security-scan
+
+on:
+  schedule:
+    # Pazartesi 05:17 UTC (İstanbul 08:17), mesai başlamadan.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-scan
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  npm_config_ignore_pnpmfile: "true"
+
+jobs:
+  npm-audit:
+    name: npm-audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: pnpm audit (high, critical)
+        run: pnpm audit --audit-level high
+
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: pip-audit (ses servisi)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/pa"
+          "$RUNNER_TEMP/pa/bin/pip" install --disable-pip-version-check --quiet "pip-audit==2.10.1"
+          "$RUNNER_TEMP/pa/bin/pip-audit" --requirement services/voice/requirements.txt --no-deps --disable-pip --progress-spinner off
+
+  base-images:
+    name: base-images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+      - name: Node / PostgreSQL güvenlik sürümü
+        run: node scripts/security-scan.mjs
