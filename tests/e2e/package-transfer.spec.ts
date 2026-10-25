@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { localClient, scrubSecretInputs } from "./support/empty-tenant.ts";
 import { assertStock, cleanupPackages, db, documentId, fillPackage, identities, posted, seedPackage, type PackageFixture } from "./support/package-receiving.ts";
+import { expectOdakHalkasi } from "./support/odak.ts";
 export interface PackageMovementFixture {
   tenantId: string; slug: string; itemId: string; warehouseId: string;
   receivingLocationId: string; storageId: string; storageCode: string;
@@ -156,7 +157,7 @@ test("transfer targets, scanning and confirmation remain touch accessible on fou
   await page.getByRole("button", { name: "Elle gir", exact: true }).click();
   for (const viewport of [{ width: 1280, height: 800 }, { width: 1024, height: 740 }, { width: 390, height: 740 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport); const input = page.getByRole("textbox", { name: "Barkod", exact: true }); await input.scrollIntoViewIfNeeded(); await input.focus(); await expect(input).toBeFocused(); await expect(input).toBeInViewport();
-    expect(await input.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(48); expect(await input.evaluate(e => parseFloat(e.ownerDocument.defaultView!.getComputedStyle(e).outlineWidth))).toBeGreaterThanOrEqual(3);
+    expect(await input.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(48); await expectOdakHalkasi(input, "odak");
   }
   await page.getByRole("textbox", { name: "Barkod", exact: true }).fill(f.storageCode); await page.getByRole("button", { name: "Onayla", exact: true }).click(); await expect(page.getByTestId("error-reason")).toBeVisible(); await expect(page.getByTestId("package-destination")).toHaveCount(0);
   await scan(page, f.targetCode); await page.getByRole("button", { name: "Kontrol et", exact: true }).click();

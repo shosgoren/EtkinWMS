@@ -19,6 +19,13 @@
 :is(.inp, .fld, .srch, .lsearch, .ksrch, .search, .qdisp, .q2, .gnm, .code):has(:is(input, textarea, select):focus-visible) {
   box-shadow: 0 0 0 2px var(--color-kr-focus-gap), 0 0 0 4px var(--color-kr-focus), 0 0 0 8px var(--color-kr-focus-soft) !important;
 }
+/* Hatalı alan odaktayken de kırmızı kalır (form doğrulama: ilk hatalı alana kendiliğinden odaklanılır; kalip-frame.css `.bad`
+   halkası lacivert odak halkasının altında kaybolmasın). Halka yine köşeyi izler; renk kaynağın hata rengi. */
+:is(.inp, .fld, .srch, .lsearch, .ksrch, .search, .qdisp, .q2, .gnm, .code).bad:has(:is(input, textarea, select):focus-visible),
+:is(.fld, .gpick, .ksecb).bad:focus-visible,
+:is(.ksecg, .ksecw).bad :is(.gpick, .ksecb):focus-visible {
+  box-shadow: 0 0 0 2px var(--color-kr-focus-gap), 0 0 0 4.5px var(--color-dz-x-mgcici, var(--color-kr-err)) !important;
+}
 
 /* ---- 13: "Hareketi azalt": CSS animasyonları ve geçişler durur (SVG `animateMotion` JS ile durur: hareket-azalt.tsx). ---- */
 @media (prefers-reduced-motion: reduce) {

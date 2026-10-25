@@ -26,6 +26,10 @@ describe("odak işareti (ALTIN-KURAL 11)", () => {
     expect(kural).toMatch(/:is\(\.inp,[^)]*\) :is\(input, textarea, select\):focus-visible \{\n\s*box-shadow: none !important/);
   });
 
+  it("hatalı alan odaktayken hata renginde kalır (form doğrulama)", () => {
+    expect(kural).toMatch(/\.code\)\.bad:has\(:is\(input, textarea, select\):focus-visible\),[\s\S]*?var\(--color-dz-x-mgcici, var\(--color-kr-err\)\) !important/);
+  });
+
   it("açık temada lacivert, koyu temada sarı belirteç", () => {
     expect(globals).toMatch(/--color-kr-focus: #172e42;/);
     expect(globals).toMatch(/html\[data-tema="koyu"\],\n\.dz-dark \{\n\s*--color-kr-focus: #f4c542;/);
