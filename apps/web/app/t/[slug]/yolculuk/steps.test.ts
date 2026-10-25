@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { JOURNEY_STEPS } from "@wms/domain/onboarding/journey";
 import { delikKirp } from "../kalip/perde.tsx";
-import { STEP_KEYS, isStepKey, ringDash, stepPlan, stopFor, type JourneyData } from "./steps.ts";
+import { STEP_KEYS, firstOpen, isStepKey, ringDash, stepPlan, stopFor, stripState, type JourneyData } from "./steps.ts";
 
 const base = "/t/acme";
 const j = (over: Partial<JourneyData> = {}): JourneyData => ({
@@ -64,5 +64,22 @@ describe("yolculuk adımları", () => {
 
   it("delikli perde: çift-tek kırpma, hedef koordinatı", () => {
     expect(delikKirp({ x: 10.4, y: -3, w: 50, h: 40 })).toBe("polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 10px 0px, 60px 0px, 60px 37px, 10px 37px, 10px 0px)");
+  });
+});
+
+describe("T-1036 sıra ve adım şeridi", () => {
+  const st = (key: JourneyData["steps"][number]["key"], done = false, skipped = false) => ({ key, done, skipped, count: done ? 1 : 0 });
+  const steps = [st("cards"), st("shelves", true), st("stock"), st("labels", false, true), st("people")];
+  it("geride kalan açık adım önce: depo bitti, kartlar yapılmadı → kartlar", () => {
+    expect(firstOpen(steps)).toBe("cards");
+    expect(firstOpen([st("cards", true), st("shelves", true), st("stock")])).toBe("stock");
+  });
+  it("kısa tur yalnız üç adımda arar; üçü de bitince null (tur kapanır), atlanan sayılmaz", () => {
+    expect(firstOpen(steps, ["cards", "shelves", "stock"])).toBe("cards");
+    expect(firstOpen([st("cards", true), st("shelves", true), st("stock", true), st("people")], ["cards", "shelves", "stock"])).toBeNull();
+    expect(firstOpen([st("labels", false, true)])).toBeNull();
+  });
+  it("şerit: biten tamam, atlanan atlandı, şu anki şimdi, kalan bekliyor", () => {
+    expect(steps.map((s) => stripState(s, "stock"))).toEqual(["todo", "done", "now", "skip", "todo"]);
   });
 });

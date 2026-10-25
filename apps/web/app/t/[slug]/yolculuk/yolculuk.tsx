@@ -12,13 +12,15 @@ import { KalipPerdeKatman, type PerdeDelik } from "../kalip/perde.tsx";
 import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
 import { setYolSpot } from "./spot.ts";
-import { JOURNEY_OPEN_EVENT, STEP_KEYS, filterJourney, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, type JourneyData, type StepKey } from "./steps.ts";
+import { JOURNEY_OPEN_EVENT, STEP_KEYS, filterJourney, firstOpen, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, stripState, type JourneyData, type StepKey } from "./steps.ts";
 
 import { cikisSor } from "../kalip/cikis.tsx";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
 import { KalipRehberKart } from "../kalip/rehber.tsx";
 
 const ACTIVE_KEY = "etkinwms.yol.active";
+/** Kısa başlangıç turunun adımları (yeni kiracıda ilk girişte). */
+const SHORT_STEPS: readonly StepKey[] = ["cards", "shelves", "stock"];
 const POLL_MS = 6000;
 const GAP = 14;
 const EDGE = 12;
@@ -236,7 +238,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   }, [tourActive, sheet, load]);
 
   const steps = useMemo(() => data?.steps ?? [], [data]);
-  const visible = useMemo(() => steps.filter((s) => !s.skipped && (!shortTour || ["cards", "shelves", "stock"].includes(s.key))), [steps, shortTour]);
+  const visible = useMemo(() => steps.filter((s) => !s.skipped && (!shortTour || SHORT_STEPS.includes(s.key))), [steps, shortTour]);
   const cur: StepKey | null = useMemo(() => {
     if (data === null) return null;
     const o = override === null ? undefined : steps.find((s) => s.key === override);
@@ -269,12 +271,14 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
       prevDone.current[s.key] = s.done;
     }
     if (finished !== null && data.tour === "ACTIVE" && !data.complete && !replay) {
-      if (shortTour && finished === "stock") { void choose({ tour: "close" }); setShortTour(false); return; }
+      // T-1036: sıradaki = geride kalan ilk açık adım (İleri ile atlanan "Kartlarını getir" önce gelir). Kısa tur yalnız üç adımı da
+      // bitince kapanır (eskiden stok bitince, kartlar yapılmamış olsa bile kapanıyordu).
+      const nx = shortTour ? firstOpen(data.steps, SHORT_STEPS) : firstOpen(data.steps);
+      if (shortTour && nx === null) { void choose({ tour: "close" }); setShortTour(false); return; }
       feedback.ok(t("toast.stepDone", { title: titleOf(finished) }));
       writeActive(null, sessionKey);
       setOverride(null);
       setOkStep(finished);
-      const nx = data.next;
       const id = window.setTimeout(() => {
         setOkStep(null);
         if (nx !== null) cikisSor(() => router.push(stepPlan(base, nx, data).href));
@@ -405,6 +409,9 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
       const i = visible.findIndex((s) => s.key === cur);
       const n = visible[i + dir];
       if (n === undefined) {
+        // T-1036: sonda geride açık adım kaldıysa ona dön (ör. ürün kartları getirilmeden sona gelindi).
+        const open = dir === 1 ? firstOpen(visible) : null;
+        if (open !== null && open !== cur) { feedback.minor(); go(open, data); return; }
         if (dir === 1 && shortTour) { closeTour(); return; }
         feedback.warn(dir === 1 ? t("coach.noNext") : t("coach.noPrev"));
         return;
@@ -459,7 +466,9 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
 
   const upper = (v: string): string => v.toLocaleUpperCase(intlDil(locale));
   const countSub = (k: StepKey, n: number): string => (n > 0 && t.has(`steps.${k}.count`) ? t(`steps.${k}.count`, { n }) : t(`steps.${k}.sub`));
-  const idx = cur === null ? -1 : visible.findIndex((s) => s.key === cur);
+  // T-1036: kartta bütün adımlar görünür (kısa turda da): sayı ve şerit aynı listeden — atlananlar paydada yok.
+  const active = steps.filter((s) => !s.skipped);
+  const activeIdx = cur === null ? -1 : active.findIndex((s) => s.key === cur);
   const pos = tipPosition(targetSel === null ? null : hole, vp.w, vp.h);
   const shownStep = okStep ?? cur;
   const nextKey = data?.next ?? null;
@@ -476,7 +485,8 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
       {coachOpen && shownStep !== null && plan !== null && data !== null ? (
         <>
           <section data-testid="yol-coach" data-step={shownStep} data-state={okStep !== null ? "done" : stop === null ? "go" : "open"} style={{display:"contents"}}>
-          <KalipRehberKart title={tipTitle} text={tipText} progress={upper(t("coach.step", { n: Math.max(idx,0)+1, total: visible.length, title:titleOf(shownStep) }))} target={workTarget} style={pos.style}
+          <KalipRehberKart title={tipTitle} text={tipText} progress={upper(t("coach.step", { n: Math.max(activeIdx,0)+1, total: active.length, title:titleOf(shownStep) }))} target={workTarget} style={pos.style}
+            head={<ol className="ysteps" aria-label={t("coach.steps")} data-testid="yol-strip">{steps.map((s, i) => { const st = stripState(s, cur); const label = `${titleOf(s.key)}: ${t(`coach.strip.${st}`)}`; return <li key={s.key} className={st === "todo" ? undefined : st} title={label} aria-label={label} data-step={s.key} data-state={st}>{st === "done" ? <Ico d={JICON.check} size={16} /> : i + 1}</li>; })}</ol>}
             onClose={closeTour} onPrev={()=>move(-1)} onNext={()=>stop===null ? cikisSor(()=>router.push(plan.href)) : move(1)} onSkip={()=>cur!==null&&void skip(cur)} closeTestId="yol-close">
             {cur === "cards" && data.openingStockWanted === null ? <div className="yq" data-testid="yol-stockq"><b>{t("cards.stockQ")}</b><button type="button" className="ych" onClick={()=>void answerStock(true)} data-testid="yol-stock-yes">{t("yes")}</button><button type="button" className="ych" onClick={()=>void answerStock(false)} data-testid="yol-stock-no">{t("no")}</button></div>:null}
             {cur === "cards" ? <button type="button" className="yalt" onClick={()=>void switchSource()} data-testid="yol-source">{data.cardSource === "PARASUT" ? t("coach.useExcel") : t("coach.useParasut")}</button>:null}
