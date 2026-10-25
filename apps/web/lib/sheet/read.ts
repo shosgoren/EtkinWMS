@@ -189,6 +189,32 @@ async function inflate(b: Uint8Array, e: ZipEntry): Promise<string> {
   return new TextDecoder("utf-8").decode(all);
 }
 
+/** Ad alanı önekinden bağımsız öğe listesi: bazı dışa aktarıcılar (.NET OpenXML, ERP çıktıları) `<x:row>` gibi önek yazar (T-1035). */
+function tags(root: Document | Element, name: string): Element[] {
+  return Array.from(root.getElementsByTagNameNS("*", name));
+}
+
+/** Yerleşik tarih biçimleri (ECMA-376 numFmtId 14–22, 27–36, 45–47, 50–58) ya da d/m/y içeren özel biçim (tırnak/köşeli parantez dışı). */
+export function isDateFormat(id: number, code: string | undefined): boolean {
+  if ((id >= 14 && id <= 22) || (id >= 27 && id <= 36) || (id >= 45 && id <= 47) || (id >= 50 && id <= 58)) return true;
+  if (code === undefined) return false;
+  const bare = code.replace(/"[^"]*"/g, "").replace(/\[[^\]]*\]/g, "").replace(/\\./g, "");
+  return /[dmy]/i.test(bare) && !/^[#0.,% ]*$/.test(bare);
+}
+
+/** Excel tarih seri sayısı → "GG.AA.YYYY" (saat varsa " SS:DD"). 1900 sisteminde Excel'in 29 Şubat 1900 hatası hesaba katılır. */
+export function excelDate(serial: number, date1904 = false): string {
+  if (!Number.isFinite(serial) || serial < 0 || serial > 2_958_465) return String(serial);
+  const days = Math.floor(serial);
+  const base = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, days >= 60 ? 30 : 31);
+  const ms = base + days * 86_400_000 + Math.round((serial - days) * 86_400) * 1000;
+  const d = new Date(ms);
+  const p = (n: number): string => String(n).padStart(2, "0");
+  const date = `${p(d.getUTCDate())}.${p(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`;
+  const time = `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  return serial === days ? date : days === 0 ? time : `${date} ${time}`;
+}
+
 function xml(text: string): Document {
   const doc = new DOMParser().parseFromString(text, "application/xml");
   if (doc.getElementsByTagName("parsererror").length > 0) throw new SheetError("UNREADABLE");
@@ -224,29 +250,46 @@ async function readXlsx(b: Uint8Array, maxRows: number): Promise<Workbook> {
   const wbText = await get("xl/workbook.xml");
   if (wbText === null) throw new SheetError("UNREADABLE");
   const wb = xml(wbText);
+  const pr = tags(wb, "workbookPr")[0]?.getAttribute("date1904");
+  const date1904 = pr === "1" || pr === "true";
   const relsText = await get("xl/_rels/workbook.xml.rels");
   const rels = new Map<string, string>();
   if (relsText !== null) {
-    for (const r of Array.from(xml(relsText).getElementsByTagName("Relationship"))) {
+    for (const r of tags(xml(relsText), "Relationship")) {
       const target = r.getAttribute("Target") ?? "";
       rels.set(r.getAttribute("Id") ?? "", target.startsWith("/") ? target.slice(1) : `xl/${target.replace(/^\.\//, "")}`);
+    }
+  }
+  // Tarih biçimli hücreler (T-1035): stil dizini → tarih mi. Excel tarihi sayı olarak saklar; okunmazsa "46508" gibi görünür.
+  const stylesText = await get("xl/styles.xml");
+  const dateStyle: boolean[] = [];
+  if (stylesText !== null) {
+    const st = xml(stylesText);
+    const custom = new Map<number, string>();
+    for (const n of tags(st, "numFmt")) custom.set(Number(n.getAttribute("numFmtId")), n.getAttribute("formatCode") ?? "");
+    const xfs = tags(st, "cellXfs")[0];
+    if (xfs !== undefined) {
+      for (const xf of Array.from(xfs.children).filter((e) => e.localName === "xf")) {
+        const id = Number(xf.getAttribute("numFmtId") ?? "0");
+        dateStyle.push(isDateFormat(id, custom.get(id)));
+      }
     }
   }
   const sstText = await get("xl/sharedStrings.xml");
   const shared: string[] = [];
   if (sstText !== null) {
-    for (const si of Array.from(xml(sstText).getElementsByTagName("si"))) {
+    for (const si of tags(xml(sstText), "si")) {
       // Zengin metin: tüm <t> parçaları birleşir; fonetik (<rPh>) okunuş eklenmez.
       shared.push(
-        Array.from(si.getElementsByTagName("t"))
-          .filter((t) => t.parentElement?.nodeName !== "rPh")
+        tags(si, "t")
+          .filter((t) => t.parentElement?.localName !== "rPh")
           .map((t) => t.textContent ?? "")
           .join(""),
       );
     }
   }
   const sheets: Sheet[] = [];
-  const list = Array.from(wb.getElementsByTagName("sheet"));
+  const list = tags(wb, "sheet");
   for (const [i, s] of list.entries()) {
     const rid = s.getAttribute("r:id") ?? s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") ?? "";
     const path = rels.get(rid) ?? `xl/worksheets/sheet${i + 1}.xml`;
@@ -254,22 +297,23 @@ async function readXlsx(b: Uint8Array, maxRows: number): Promise<Workbook> {
     if (text === null) continue;
     const doc = xml(text);
     const rows: string[][] = [];
-    for (const r of Array.from(doc.getElementsByTagName("row"))) {
+    for (const r of tags(doc, "row")) {
       const ri = Number(r.getAttribute("r") ?? rows.length + 1) - 1;
       if (ri >= maxRows + 50) throw new SheetError("TOO_MANY_ROWS");
       const cells: string[] = [];
-      for (const c of Array.from(r.getElementsByTagName("c"))) {
+      for (const c of tags(r, "c")) {
         const ref = c.getAttribute("r");
         const ci = ref === null ? cells.length : colIndex(ref);
         if (ci >= SHEET_MAX_COLS) continue;
         const type = c.getAttribute("t");
-        const v = c.getElementsByTagName("v")[0]?.textContent ?? "";
+        const v = tags(c, "v")[0]?.textContent ?? "";
         let value = "";
         if (type === "s") value = shared[Number(v)] ?? "";
-        else if (type === "inlineStr") value = Array.from(c.getElementsByTagName("t")).map((t) => t.textContent ?? "").join("");
+        else if (type === "inlineStr") value = tags(c, "t").map((t) => t.textContent ?? "").join("");
         else if (type === "b") value = v === "1" ? "DOĞRU" : "YANLIŞ";
         else if (type === "e") value = "";
         else if (type === "str") value = v;
+        else if (v !== "" && dateStyle[Number(c.getAttribute("s") ?? "0")] === true && /^-?\d+(\.\d+)?$/.test(v)) value = excelDate(Number(v), date1904);
         else value = excelNumber(v);
         while (cells.length < ci) cells.push("");
         cells[ci] = value;
