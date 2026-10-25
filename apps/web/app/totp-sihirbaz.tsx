@@ -98,9 +98,10 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
   useEffect(() => {
     setTelefon(telefonMu(navigator.userAgent, window.matchMedia("(pointer: coarse)").matches));
   }, []);
+  // Kod adımına gelince ve yanlış koddan sonra alan yeniden açılınca (doğrulama sürerken `disabled`; odak ancak açıldıktan sonra verilebilir).
   useEffect(() => {
-    if (adim === 3) kodRef.current?.focus();
-  }, [adim]);
+    if (adim === 3 && !busy) kodRef.current?.focus();
+  }, [adim, busy]);
 
   async function kopyala(metin: string, ne: string): Promise<void> {
     try {
@@ -128,7 +129,6 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
     setHata(true);
     setHataMetni(typeof ok === "string" ? ok : null);
     setKod("");
-    kodRef.current?.focus();
   }
 
   function indir(): void {
