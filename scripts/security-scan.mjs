@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 export const SOURCES = Object.freeze({
   nodeIndex: "https://nodejs.org/dist/index.json",
-  postgresTags: (major) =>
+  postgresTags: (/** @type {number} */ major) =>
     `https://hub.docker.com/v2/repositories/library/postgres/tags?page_size=100&name=${major}.`,
 });
 
@@ -45,7 +45,7 @@ export function compareVersions(a, b) {
  */
 export function parseNodeImage(dockerfile) {
   const m = /^ARG NODE_IMAGE=\S*\/node:(\d+\.\d+\.\d+)-/m.exec(dockerfile);
-  return m ? m[1] : null;
+  return m?.[1] ?? null;
 }
 
 /**
@@ -55,7 +55,7 @@ export function parseNodeImage(dockerfile) {
  */
 export function parsePostgresImage(compose) {
   const m = /^\s*image:\s*postgres:(\d+\.\d+)[-@\s]/m.exec(compose);
-  return m ? m[1] : null;
+  return m?.[1] ?? null;
 }
 
 /**
@@ -67,6 +67,7 @@ export function findUnpinnedImages(compose) {
   const out = [];
   for (const m of compose.matchAll(/^\s*image:\s*(\S+)\s*$/gm)) {
     const ref = m[1];
+    if (ref === undefined) continue;
     if (ref.startsWith("etkinwms") || ref.includes("@sha256:")) continue;
     const tag = ref.split(":")[1];
     if (tag === undefined || /^\d+$/.test(tag) || tag === "latest") out.push(ref);
@@ -134,7 +135,7 @@ export async function run({ root, fetchJson, log }) {
     log("FAIL postgres: deploy/vps/database/compose.yml imaj sürümü okunamadı");
     fail = 1;
   } else {
-    const body = await fetchJson(SOURCES.postgresTags(parts(pg)[0]));
+    const body = await fetchJson(SOURCES.postgresTags(parts(pg)[0] ?? 0));
     const newer = postgresGap(body.results ?? [], pg);
     if (newer) {
       log(`FAIL postgres: ${pg} kullanılıyor, ${newer} çıktı (ara sürümler güvenlik düzeltmesi taşır)`);
