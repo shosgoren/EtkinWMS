@@ -127,3 +127,6 @@ Yeni iç servis `voice` (ayrı imaj, iç ağ, port yok). Canlıya çıkması iç
 `/usr/local/sbin/etkinwms-release`'e ve `update-config.sh` ile yeni `compose.yml`. Ayrıntı: `deploy/vps/automation/README.md` §Etkin ses
 servisi. Bu adım yapılmadan yayınlar iki imajlı sürer; Etkin "şu an kullanılamıyor" der. VPS'te `/stt` süresi: UNKNOWN (ölçülmedi).
 
+
+## 25 Ekim — Haftalık güvenlik taraması (T-1030)
+`.github/workflows/security-scan.yml` her pazartesi 05:17 UTC (elle: Actions → security-scan → Run workflow) main üzerinde koşar: `pnpm audit` (high/critical), ses servisi `pip-audit`, `scripts/security-scan.mjs` (Dockerfile Node sürümü ↔ nodejs.org güvenlik yayını; PostgreSQL imajı ↔ yeni ara sürüm; sabitlenmemiş imaj uyarısı). Kırmızı iş GitHub e-postasıyla bildirilir; düzeltme normal PR akışıyla (T-1029/T-1031 örnek).
