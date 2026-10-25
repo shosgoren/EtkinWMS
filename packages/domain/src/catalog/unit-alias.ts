@@ -1,4 +1,4 @@
-// T-1035: saf (DB yok) birim eş adı tablosu — Excel içe aktarma ve sağlayıcı (Paraşüt) eşitlemesi ortak kullanır.
+// T-1035: saf (DB yok) birim eş adı tablosu — Excel içe aktarma kullanır. Paraşüt eşitlemesinin kendi tablosu (`integrations/apply.ts`) ayrıdır.
 
 /**
  * Serbest birim metni (Excel, ERP) → standart birim kodu; tanınmazsa `null` (T-1035). "Ad.", "adt", "PCS" → ADET; "Kilo" → KG; "Mt", "M" → MT …

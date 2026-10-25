@@ -9,7 +9,6 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import type { AccessTx } from "../identity/access.ts";
-import { standardUnitCode } from "../catalog/unit-alias.ts";
 
 export type ApplyOutcome = "CREATED" | "UPDATED" | "LINKED" | "UNCHANGED" | "SKIPPED";
 export type EntityKind = "ITEM" | "PARTY" | "WAREHOUSE" | "DOCUMENT";
@@ -75,7 +74,16 @@ export interface ProviderProduct {
 
 /** Sağlayıcı birim metni → Etkin birim kodu (0031 standart birimleri). Tanınmazsa ADET. */
 export function unitCodeFor(raw: string | null): string {
-  return standardUnitCode(raw) ?? "ADET";
+  const k = (raw ?? "")
+    .toLocaleUpperCase("tr")
+    .replace(/[ÇĞİÖŞÜ]/g, (ch) => ({ Ç: "C", Ğ: "G", İ: "I", Ö: "O", Ş: "S", Ü: "U" })[ch] ?? ch)
+    .replace(/[^A-Z0-9]/g, "");
+  const map: Record<string, string> = {
+    ADET: "ADET", AD: "ADET", ADT: "ADET", PCS: "ADET", PIECE: "ADET", KG: "KG", KILOGRAM: "KG", KILO: "KG", GR: "GR", GRAM: "GR", G: "GR",
+    MT: "MT", M: "MT", METRE: "MT", CM: "CM", SANTIMETRE: "CM", LT: "LT", L: "LT", LITRE: "LT", M2: "M2", METREKARE: "M2", M3: "M3", METREKUP: "M3",
+    KOLI: "KOLI", PALET: "PALET",
+  };
+  return map[k] ?? "ADET";
 }
 
 export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderProduct): Promise<ApplyOutcome> {
