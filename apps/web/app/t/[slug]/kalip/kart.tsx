@@ -36,7 +36,10 @@ export interface KalipKartIslem {
   readonly etiket: string;
   readonly d: string;
   readonly ton: StTon;
-  readonly href: string;
+  /** Bağlantı (`href`) ya da aynı ekranda işlem (`onClick`; ör. raf yeri oluşturucu). */
+  readonly href?: string;
+  readonly onClick?: () => void;
+  readonly testId?: string;
 }
 
 /** Kaynak üst şerit. `ad` sayfanın birinci düzey başlığıdır (üst çubukta ekran adı yazar). */
@@ -94,12 +97,19 @@ export function KalipKartSerit({
       )}
       {islemler.length === 0 ? null : (
         <span className="stkislem" role="group" aria-label={islemEtiket}>
-          {islemler.map((i) => (
-            <Link key={i.key} href={i.href} prefetch={false} className={`stkqb ${ton(i.ton)}`}>
-              <Ico d={i.d} size={20} />
-              {i.etiket}
-            </Link>
-          ))}
+          {islemler.map((i) =>
+            i.href === undefined ? (
+              <button key={i.key} type="button" onClick={i.onClick} className={`stkqb ${ton(i.ton)}`} data-testid={i.testId}>
+                <Ico d={i.d} size={20} />
+                {i.etiket}
+              </button>
+            ) : (
+              <Link key={i.key} href={i.href} prefetch={false} className={`stkqb ${ton(i.ton)}`} data-testid={i.testId}>
+                <Ico d={i.d} size={20} />
+                {i.etiket}
+              </Link>
+            ),
+          )}
         </span>
       )}
     </section>
@@ -130,7 +140,7 @@ export function KalipKartSekmeler({ etiket, sekmeler, secili, href }: { etiket: 
 }
 
 /** Kayıt kartı paneli: şerit + sekmeler + gövde (`ana` sol 2/3, `yan` sağ 1/3; telefonda alt alta). */
-export function KalipKayitKart({ serit, sekmeler, ana, yan, testId }: { serit: ReactNode; sekmeler: ReactNode; ana: ReactNode; yan?: ReactNode; testId?: string }) {
+export function KalipKayitKart({ serit, sekmeler = null, ana, yan, testId }: { serit: ReactNode; sekmeler?: ReactNode; ana: ReactNode; yan?: ReactNode; testId?: string }) {
   return (
     <section className="stkart" data-testid={testId}>
       {serit}
