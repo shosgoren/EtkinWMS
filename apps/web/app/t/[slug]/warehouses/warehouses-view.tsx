@@ -472,8 +472,47 @@ export function WarehousesView({
       { id: "name", baslik: t("colName"), sabit: true, deger: (w) => <span className="ktad" title={w.name}>{w.name}</span>, sirala: (w) => w.name },
       { id: "locs", baslik: t("colLocations"), sayi: true, deger: (w) => (w.locationCountCapped ? `${w.locationCount}+` : String(w.locationCount)), sirala: (w) => w.locationCount },
       { id: "state", baslik: t("colState"), deger: (w) => <span className={`ktpill ${w.status === "ACTIVE" ? "ok" : ""}`}>{t(`status.${w.status}`)}</span>, sirala: (w) => w.status },
+      // Codex P2 (PR 197): Liste görünümü kartın yönetim işlemlerini (kodu değiştir, arşivle) kaybetmez; yalnız yetkili ve aktif depoda.
+      ...(canManage
+        ? [
+            {
+              id: "actions",
+              baslik: t("colActions"),
+              sabit: true,
+              deger: (w: WarehouseView) =>
+                w.status !== "ACTIVE" ? null : (
+                  <span className="ktacts" role="group" aria-label={t("actionsFor", { name: w.name })}>
+                    <button
+                      type="button"
+                      className="ktact"
+                      aria-label={t("codeEdit.for", { name: w.name })}
+                      title={t("codeEdit.button")}
+                      onClick={() => {
+                        feedback.minor();
+                        router.push(`${listHref}${listHref.includes("?") ? "&" : "?"}kod=${encodeURIComponent(w.id)}`);
+                      }}
+                    >
+                      <Ico d={LICON.pencil} size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      className="ktact del"
+                      aria-label={`${t("archive")} · ${w.name}`}
+                      title={t("archive")}
+                      onClick={() => {
+                        feedback.minor();
+                        setArchiving(w);
+                      }}
+                    >
+                      <Ico d={LICON.trash} size={18} />
+                    </button>
+                  </span>
+                ),
+            },
+          ]
+        : []),
     ],
-    [t],
+    [t, canManage, router, listHref],
   );
   const sutunSecim = useKalipSutunlar<WarehouseView>("warehouses", sutunlar);
 

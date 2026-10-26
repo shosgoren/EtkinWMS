@@ -1689,7 +1689,8 @@
     "colCode": "Code",
     "colName": "Warehouse",
     "colLocations": "Locations",
-    "colState": "Status"
+    "colState": "Status",
+    "colActions": "Actions"
   },
   "field": {
     "title": "Field",
