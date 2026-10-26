@@ -5772,6 +5772,9 @@
     "finish": "TAMAMLA",
     "fileName": "etkin-wms-yedek-kodlar.txt",
     "fileHead": "Etkin WMS · iki adımlı doğrulama yedek kodları. Her kod bir kez çalışır.",
-    "back": "Geri"
+    "back": "Geri",
+    "appQrLabel": "{app} indirme QR kodu",
+    "appTipQr": "Telefonunuzun kamerasıyla QR'ı okutun; telefonunuza uygun mağaza (App Store ya da Google Play) açılır.",
+    "addCameraTip": "Uygulamayı açmadan telefonun kamerasıyla da okutabilirsiniz: çıkan “… ile aç / Ekle” önerisine dokunun, hesap eklenir."
   }
 }
