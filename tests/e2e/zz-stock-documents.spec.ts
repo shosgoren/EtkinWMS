@@ -1,5 +1,9 @@
 import { expect,test,type Page } from "@playwright/test";
 import { localClient,loginEmptyTenant,scrubSecretInputs } from "./support/empty-tenant.ts";
+import { db } from "./support/package-receiving.ts";
+// Hız sınırı kovası (T-286 emsali, T-1055): tek uzun test aynı kullanıcıyla bir dakikada 120'den çok işlem çağırabiliyor (CI teşhisi: "Çok fazla işlem
+// yapıldı"); her adım kendi "web.user" kovasıyla başlar. Üretim eşiği/kuralı değişmez; giriş sayaçlarına dokunulmaz.
+const yeniKova=async():Promise<void>=>{if(!process.env.E2E_BASE_URL?.trim())await db("DELETE FROM public.request_rate_limits WHERE scope = 'web.user'");};
 test.use({...localClient("198.51.100.12"),trace:"off"});
 test.afterEach(async({page})=>scrubSecretInputs(page));
 test("stock receipt, draft review, approval, posting and insufficient issue",async({page,browser},info)=>{
@@ -166,7 +170,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
 
  // T-977 (B-51): saha sayım — yönetici sayımı başlatır, sahada raf okutulup sayılır (fark uyarısı), onaya gönderilir; yönetici farkı onaylar ve fişi işler.
  async function scanManual(code:string){await page.getByRole("button",{name:"Elle gir"}).click();await page.getByRole("textbox",{name:"Barkod"}).fill(code);await page.getByRole("button",{name:"Onayla",exact:true}).click();}
- await test.step("saha sayım",async()=>{
+ await test.step("saha sayım",async()=>{await yeniKova();
   await page.goto(`/t/${slug}/counts?new=1`);
   // T-990: depo seçimi ortak aramalı seçim sayfası (yerel açılır liste yok).
   await page.getByTestId("count-new-form").getByTestId("count-warehouse").click();
@@ -194,7 +198,7 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
  });
 
  // T-977 (B-52/B-63): saha toplama (raf okut → ürün okut → miktar → onay) ve saha sevk (satır → miktar → yükleme onayı).
- await test.step("saha toplama ve sevk",async()=>{
+ await test.step("saha toplama ve sevk",async()=>{await yeniKova();
   await page.goto(href!);await expect(page.locator('[data-location-tree-ready="true"]')).toHaveCount(1);
   await page.getByRole("button",{name:"Lokasyon ekle",exact:true}).click();const locForm2=page.getByTestId("location-form");await expect(locForm2).toBeVisible();
   await locForm2.locator('input[name="name"]').fill(`Sevk 2 ${suffix}`);await expect(locForm2.locator('input[name="code"]')).not.toHaveAttribute("readonly","");await locForm2.locator('input[name="code"]').fill("SHIP");
