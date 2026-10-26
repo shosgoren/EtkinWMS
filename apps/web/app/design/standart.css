@@ -3,7 +3,7 @@
    (`.dzp`) üst çubuğu ile ortak alt cam çubuk (`.dzk`, KabukBar) bütün ekranlarda aynı görünür. Renk belirteçleri globals.css
    `--color-st-*`; ekranın modül rengi KalipEkran'ın `--st-mod` değişkeni (ekran ikonu rengi). Perde/bulanıklık yazılmaz (perde.css). */
 
-/* ---- Zemin: modül renginden sol üstte başlayan yumuşak geçiş → #EEF1F4 → #DCE3EA (açık tema) ---- */
+/* ---- Zemin: modül renginden sol üstte başlayan yumuşak geçiş → açık gri → gri-mavi (açık tema; belirteçler kr-bg-a, st-bg-end) ---- */
 .kalip:not(.dz-dark) .wrap {
   background: linear-gradient(150deg, color-mix(in srgb, var(--st-mod, var(--color-kr-info)) 14%, var(--color-kr-bg-a)) 0%, var(--color-kr-bg-a) 45%, var(--color-st-bg-end) 100%);
 }
