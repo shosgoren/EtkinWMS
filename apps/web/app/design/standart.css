@@ -202,6 +202,20 @@
   .sttema { display: none; }
   /* Kalıp ekranında Ayarlar telefonda Hesap menüsünde (T-1039); Pano'da (ekip kipinde menüde yok) simge olarak kalır. */
   .kalip .stbtn { display: none; }
+  /* T-1050 (kullanıcı 26 Ekim, telefon görüntüsü "Etki…" kesiliyor): Pano üst çubuğunda yalnız logo; selam içerikte başlık. */
+  .dzp .top .stselam { display: none; }
+}
+/* T-1050 (STANDART §1, tuval): masaüstü / tablette selam üst çubukta ("Merhaba Evren" + firma · rol); içerikteki h1 yalnız ekran okuyucuya
+   (sayfanın tek birinci düzey başlığı kalır, görsel tekrar olmaz). */
+@media (min-width: 700px) {
+  .dzp .hello h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
 /* ---- Genişlik (T-1044, kullanıcı 26 Ekim "alan geniş kullanılmıyor"): masaüstünde içerik ekranın tamamını kullanır, iki yanda eşit
