@@ -26,19 +26,42 @@
 }
 .kalip .helpb,
 .kalip .tb,
-.dzp .tb:not(.tb-bell) {
+.dzp .top .tb {
   background: transparent !important;
+}
+/* Gölge yalnız odak dışında kalkar: klavye odak halkası (kural.css 11, `box-shadow`) silinmez. */
+.kalip :is(.helpb, .tb):not(:focus-visible),
+.dzp .top .tb:not(:focus-visible) {
   box-shadow: none !important;
+}
+/* T-1044 (kullanıcı 26 Ekim): üst çubuk düğmeleri YALNIZ SİMGE, hepsi aynı 48 px kare ve aynı hizada (yazı altta kayma yapıyordu);
+   ad erişilebilir adda (aria-label) ve üstüne gelince ipucunda. Bildirim turuncu simge + sayı rozeti. */
+.kalip .top :is(.helpb, .tb, .stbtn),
+.dzp .top :is(.tb, .stbtn) {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 14px;
+  justify-content: center;
+}
+.kalip .top :is(.tb, .stbtn) > span,
+.dzp .top :is(.tb, .stbtn) > span {
+  display: none;
+}
+.dzp .top .tb.tb-bell .ico {
+  color: var(--color-st-bell);
 }
 .kalip .helpb:hover,
 .kalip .tb:hover,
-.dzp .tb:not(.tb-bell):hover,
+.dzp .top .tb:hover,
 .stbtn:hover,
 .sttema button:hover {
   background: var(--color-st-hover) !important;
   transform: none;
 }
-:is(.kalip, .dzp).dz-dark :is(.helpb, .tb:not(.tb-bell), .stbtn, .sttema button):hover {
+:is(.kalip, .dzp).dz-dark :is(.helpb, .top .tb, .stbtn, .sttema button):hover {
   background: var(--color-st-dark-hover) !important;
 }
 
@@ -117,6 +140,10 @@
 .dz-dark .sttema button.on { color: var(--color-st-dark-cur); }
 
 /* Ayarlar düğmesi (dişli + yazı), Hesap'ın hemen önünde. */
+/* Ayarlar her üst çubukta yalnız simge (yazı ad olarak aria-label'da). */
+.stbtn > span {
+  display: none;
+}
 .stbtn {
   appearance: none;
   display: flex;
@@ -125,20 +152,14 @@
   justify-content: center;
   gap: 4px;
   flex: none;
-  min-width: 56px;
+  min-width: 48px;
   min-height: 48px;
-  padding: 4px 8px;
+  padding: 0;
   border-radius: 14px;
   color: var(--color-kr-ink);
   text-decoration: none;
 }
 .stbtn .ico { color: var(--color-st-cur); }
-.stbtn span {
-  font: 800 10.5px/1 var(--font-bricolage), sans-serif;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
 .dz-dark .stbtn { color: var(--color-kr-text-dark); }
 .dz-dark .stbtn .ico { color: var(--color-st-dark-cur); }
 
@@ -181,20 +202,32 @@
   .sttema { display: none; }
   /* Kalıp ekranında Ayarlar telefonda Hesap menüsünde (T-1039); Pano'da (ekip kipinde menüde yok) simge olarak kalır. */
   .kalip .stbtn { display: none; }
-  .stbtn span { display: none; }
-  .stbtn { min-width: 48px; min-height: 48px; padding: 0; }
 }
 
-/* ---- Genişlik: masaüstünde içerik en çok 1320 px, iki yanda eşit boşluk (alt çubuk tuvaldeki gibi 720 px, kabuk.css) ---- */
+/* ---- Genişlik (T-1044, kullanıcı 26 Ekim "alan geniş kullanılmıyor"): masaüstünde içerik ekranın tamamını kullanır, iki yanda eşit
+   40 px boşluk (alt çubuk tuvaldeki gibi 720 px, kabuk.css) ---- */
 @media (min-width: 1100px) {
-  .kalip .top,
-  .kalip .inner,
-  .dzp .top,
-  .dzp .inner {
+  /* Üretilmiş kalıp kuralı (`.dzl.dzl .inner` 1100 px) ezilir: aynı özgüllük, sonra yüklenir. */
+  .kalip.kalip .top,
+  .kalip.kalip .inner,
+  .dzp.dzp .top,
+  .dzp.dzp .inner {
     width: 100%;
-    max-width: 1320px;
-    margin-inline: auto;
+    max-width: none;
+    margin-inline: 0;
+    padding-inline: 40px;
   }
+}
+
+/* ---- Hesap menüsü (T-1044): Tema ve Ayarlar üst çubukta; menüde yalnız telefonda (üst çubukta yer yok). Menü açıkken perde alt cam
+   çubuğu da örter (alt çubuk menünün altında bulanık kalır, tıklanmaz): kabuk katmanı perdenin altına iner. ---- */
+@media (min-width: 700px) {
+  .tmenu .st-mob {
+    display: none !important;
+  }
+}
+html:has(.halo.tmenu) .dzk .wrap {
+  z-index: 19;
 }
 
 /* ---- Alt cam çubuk: buzlu beyaz cam, ince parlak kenar, yumuşak gölge; simge + yazı gri-mavi. Ölçüler (yükseklik, ana işlem

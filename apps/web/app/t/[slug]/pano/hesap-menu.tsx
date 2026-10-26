@@ -87,12 +87,13 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
     else setFailed(true);
   };
   const label = team ? t("team") : t("account");
-  const items: Array<{ k: string; label: string; color: string; d: string; out?: boolean; go: () => void }> = [
-    ...(team ? [] : [{ k: "switch", label: t("switchUser"), color: "6C4BD8", d: PICON.switchUser, go: () => cikisSor(() => void signOut("/login")) }]),
+  // T-1044: Tema ve Ayarlar üst çubukta (STANDART §1); menüde yalnız telefonda görünür (`st-mob`, design/standart.css).
+  const items: Array<{ k: string; label: string; color: string; d: string; out?: boolean; mob?: boolean; go: () => void }> = [
+    // T-1044 (kullanıcı 26 Ekim): "Kullanıcı değiştir" kaldırıldı — Çıkış yap ile aynı işti (oturumu kapatıp girişe götürür).
     // T-979c: eski "Tüm ekranlar" penceresi kaldırıldı (görünüm geçişi ve ekranlar Modüller'de, yardım üst çubuktaki Destek'te).
     // Birden fazla çalışma alanı varsa seçim ekranı.
     ...(team || (kabuk?.workspaces ?? 1) < 2 ? [] : [{ k: "workspace", label: t("workspace"), color: "0E7C7B", d: PICON.list, go: () => cikisSor(() => window.location.assign("/workspaces")) }]),
-    { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, go: onToggleTheme },
+    { k: "theme", label: dark ? t("themeLight") : t("themeDark"), color: "0E7C7B", d: ICON.theme, mob: true, go: onToggleTheme },
     { k: "sound", label: silent ? tk("soundOn") : tk("silent"), color: "6A7F91", d: DICON.speaker, go: () => setSilent(!silent) },
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => cikisSor(() => void signOut("/login")) },
   ];
@@ -119,7 +120,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
           </span>
         </div>
         {allLinks.map((l) => (
-          <Link key={l.k} href={l.href ?? "#"} prefetch={false} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={follow} data-testid={`pano-menu-${l.k}`}>
+          <Link key={l.k} href={l.href ?? "#"} prefetch={false} className={l.k === "settings" ? "hb st-mob" : "hb"} role="menuitem" style={{ textDecoration: "none" }} onClick={follow} data-testid={`pano-menu-${l.k}`}>
             <i style={{ background: dz(l.color) }}>
               <Ico d={l.d} size={20} />
             </i>
@@ -128,7 +129,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
           </Link>
         ))}
         {items.map((m) => (
-          <button key={m.k} type="button" className={`hb${m.out === true ? " out" : ""}`} role="menuitem" onClick={m.go} data-testid={`pano-menu-${m.k}`}>
+          <button key={m.k} type="button" className={`hb${m.out === true ? " out" : ""}${m.mob === true ? " st-mob" : ""}`} role="menuitem" onClick={m.go} data-testid={`pano-menu-${m.k}`}>
             <i style={{ background: dz(m.color) }}>
               <Ico d={m.d} size={20} />
             </i>
