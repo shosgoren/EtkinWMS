@@ -314,6 +314,8 @@ test("T-1055 Liste: yalnız liste kayar, üst bölüm yerinde", async ({ page })
   // Kaynaktaki "telefonda ilk 5 kart" kısıtı yok: altıncı kart da çizilir.
   await expect(kartlar.nth(5)).toBeAttached();
   expect(await kartlar.nth(5).evaluate("(e) => getComputedStyle(e).display")).not.toBe("none");
+  // Yüksekliği sınırlı listede kartlar sıkışmaz: içerik kartı taşmaz, kartlar üst üste binmez (uzun kabul kartı CI'da bindi).
+  expect(await page.evaluate<boolean>("(() => { const k = [...document.querySelectorAll('#kalip-main > .ulist > .uc')]; return k.length > 5 && k.every((e, i) => e.scrollHeight <= e.clientHeight + 1 && (i === 0 || e.getBoundingClientRect().top >= k[i - 1].getBoundingClientRect().bottom - 1)); })()")).toBe(true);
   // Liste kendi içinde en alta kayar; sayfa gövdesi kaymaz, arama yerinde kalır.
   expect(await page.evaluate<boolean>("(() => { const l = document.querySelector('#kalip-main > .ulist'); if (!l) return false; l.scrollTop = l.scrollHeight; return l.scrollTop > 0; })()")).toBe(true);
   await expect(ara).toBeInViewport();

@@ -1157,11 +1157,12 @@ html:has(.halo.tmenu) .dzk .wrap {
   overflow-y: auto;
   overscroll-behavior: contain;
   align-content: start;
+  /* Yüksekliği sınırlı ızgarada satırlar sıkışıp içerik bir alttaki kartın üstüne taşmasın (uzun kabul kartları): her satır içeriği kadar. */
+  grid-auto-rows: max-content;
   /* Kart gölgeleri kırpılmasın. */
   padding: 2px 4px 12px;
   margin: -2px -4px 0;
 }
-.dzl .inner > .ulist > * { flex-shrink: 0; }
 /* Kaynak telefonda yalnız ilk 5 kartı ve ilk 4 çipi gösteriyordu (örnek veri sığsın diye): gerçek listede hepsi görünür. */
 @media (max-width: 699.98px) {
   .dzl.dzl.dzl .ulist .uc:nth-child(n+6) { display: grid; }
