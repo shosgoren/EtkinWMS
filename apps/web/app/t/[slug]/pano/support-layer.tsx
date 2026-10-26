@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { dz } from "../../../design/destek-tokens.ts";
 import { DICON, DTOPIC, type SupportSubjectKind } from "../../../design/destek-icons.ts";
 import { PICON } from "../../../design/pano-icons.ts";
+import { SICON } from "../../../design/standart-icons.ts";
 import { newSupportCode, ticketNo, whenOf } from "../../../support-format.ts";
 import {  } from "../kabuk/kabuk-bar.tsx";
 import { listMySupportTicketsAction, markSupportSeenAction, replySupportTicketAction, submitSupportTicketAction, type SupportTicketView } from "../support-actions.ts";
@@ -49,8 +50,8 @@ export function HelpIco({ size, cup = false, mic = true }: { size: number; cup?:
 export function IssueIco({ size }: { size: number }) {
   return (
     <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path className="tri" d={DICON.issueTri} />
-      <path d={DICON.issueMark} />
+      {/* T-1042 (STANDART.md §1): Sorun bildir her üst çubukta bayrak. */}
+      <path d={SICON.flag} />
     </svg>
   );
 }

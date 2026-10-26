@@ -4725,6 +4725,15 @@
         "generic": "İndirilemedi · yeniden dene",
         "reauth": "Güvenlik için yeniden giriş yap · seni giriş ekranına götürüyorum"
       }
+    },
+    "st": {
+      "clock": "Saat",
+      "clockAria": "Saat {time}, {date}",
+      "theme": "Tema",
+      "light": "Açık tema",
+      "dark": "Koyu tema",
+      "settings": "Ayarlar",
+      "settingsShort": "Ayarlar"
     }
   },
   "saha": {

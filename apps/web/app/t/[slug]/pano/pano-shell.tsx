@@ -18,6 +18,7 @@ import { PICON } from "../../../design/pano-icons.ts";
 import { temaYaz } from "../../../design/theme.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
 import { HesapDugme, HesapMenu } from "./hesap-menu.tsx";
+import { StAyarlar, StSaat, StTema } from "../kalip/ust-standart.tsx";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import { DICON } from "../../../design/destek-icons.ts";
@@ -251,7 +252,10 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                     <small>{brandSub}</small>
                   </span>
                 </div>
+                {/* T-1042 (STANDART.md §1): kalıp ekranlarıyla aynı üst çubuk — ortada saat, sağda tema → … → Ayarlar → Hesap. */}
+                <StSaat />
                 <nav className="tools" aria-label={t("tools")}>
+                  <StTema dark={dark} onToggle={toggleTheme} />
                   {bell !== undefined ? (
                     <Link href={bell.href} className="tb tb-bell" style={{ background: dz("E56A00"), textDecoration: "none" }} aria-label={t("bellAria", { n: bell.n })} data-testid="pano-bell">
                       <svg className="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -308,20 +312,16 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                       </em>
                     ) : null}
                   </button>
+                  <StAyarlar href={settingsHref} />
                   <HesapDugme
                     team={team}
+                    ini={me.ini}
                     open={menu}
                     onClick={() => {
                       setMenu((m) => !m);
                       setHaloOpen(false);
                     }}
                   />
-                  {settingsHref === undefined ? null : (
-                    <Link href={settingsHref} className="tb tb-gear" style={{ textDecoration: "none", "--i": dz("0E7C7B") } as CSSProperties} aria-label={t("settings")}>
-                      <Ico d={PICON.gear} size={24} />
-                      <span>{t("settingsShort")}</span>
-                    </Link>
-                  )}
                 </nav>
               </header>
 

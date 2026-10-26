@@ -1,0 +1,252 @@
+/* T-1042 — masaüstü ekran standardı ORTAK KABUK (kullanıcı onayı 26 Ekim; docs/design/STANDART.md §1; kaynak
+   `docs/design/source/StandartAnaEkran.dc.html` vd.). Elle yazılır, en son yüklenir: kalıp kabı (`.kalip` = KalipEkran) ve Pano
+   (`.dzp`) üst çubuğu ile ortak alt cam çubuk (`.dzk`, KabukBar) bütün ekranlarda aynı görünür. Renk belirteçleri globals.css
+   `--color-st-*`; ekranın modül rengi KalipEkran'ın `--st-mod` değişkeni (ekran ikonu rengi). Perde/bulanıklık yazılmaz (perde.css). */
+
+/* ---- Zemin: modül renginden sol üstte başlayan yumuşak geçiş → açık gri → gri-mavi (açık tema; belirteçler kr-bg-a, st-bg-end) ---- */
+/* Görünen yüzey tam ekran `.app` (kalip-frame.css / pano-frame.css ve üretilmiş koyu tema kuralları onu boyar): geçiş oraya. */
+.kalip:not(.dz-dark) .app {
+  background: linear-gradient(150deg, color-mix(in srgb, var(--st-mod, var(--color-kr-info)) 14%, var(--color-kr-bg-a)) 0%, var(--color-kr-bg-a) 45%, var(--color-st-bg-end) 100%);
+}
+.dzp:not(.dz-dark) .app {
+  background: linear-gradient(150deg, var(--color-st-home) 0%, var(--color-kr-bg-a) 45%, var(--color-st-bg-end) 100%);
+}
+.kalip.dz-dark .app,
+.dzp.dz-dark .app {
+  background: linear-gradient(150deg, color-mix(in srgb, var(--st-mod, var(--color-kr-info)) 12%, var(--color-st-dark-bg-a)) 0%, var(--color-kr-bg-dark-a) 50%, var(--color-kr-bg-dark-b) 100%);
+}
+
+/* ---- Üst çubuk: zeminsiz, çizgisiz; düğmeler zeminsiz ve gölgesiz, üstüne gelince çok hafif gri ---- */
+.kalip .top,
+.dzp .top,
+.kalip.dz-dark .top,
+.dzp.dz-dark .top {
+  background: transparent;
+  border-bottom: 0;
+}
+.kalip .helpb,
+.kalip .tb,
+.dzp .tb:not(.tb-bell) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.kalip .helpb:hover,
+.kalip .tb:hover,
+.dzp .tb:not(.tb-bell):hover,
+.stbtn:hover,
+.sttema button:hover {
+  background: var(--color-st-hover) !important;
+  transform: none;
+}
+:is(.kalip, .dzp).dz-dark :is(.helpb, .tb:not(.tb-bell), .stbtn, .sttema button):hover {
+  background: var(--color-st-dark-hover) !important;
+}
+
+/* Canlı saat ve tarih (ortada; yeşil noktalı saat simgesi, zeminsiz). */
+.stsaat {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-kr-ink);
+  white-space: nowrap;
+}
+.stsaat b {
+  font: 800 20px/1 var(--font-bricolage), sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.stsaat small {
+  font: 600 13px/1 var(--font-instrument), sans-serif;
+  color: var(--color-st-icon);
+}
+.stsi {
+  position: relative;
+  display: flex;
+  color: var(--color-st-icon);
+}
+.stsi em {
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-st-ok);
+  box-shadow: 0 0 0 2px var(--color-kr-bg-a);
+}
+.dz-dark .stsaat { color: var(--color-kr-text-dark); }
+.dz-dark .stsaat small,
+.dz-dark .stsi { color: var(--color-kr-muted); }
+.dz-dark .stsi em { box-shadow: 0 0 0 2px var(--color-kr-bg-dark-a); }
+/* Saat ortada kalsın: marka sol yarıyı, araçlar sağ yarıyı doldurur. */
+.kalip .top > .brand,
+.dzp .top > .brand {
+  flex: 1 1 0;
+}
+.kalip .top > .tph,
+.dzp .top > .tools {
+  flex: none;
+}
+
+/* Tema seçici (güneş / ay). */
+.sttema {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.sttema button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-st-icon);
+  cursor: pointer;
+}
+.sttema button.on {
+  color: var(--color-st-cur);
+}
+.dz-dark .sttema button { color: var(--color-kr-muted); }
+.dz-dark .sttema button.on { color: var(--color-st-dark-cur); }
+
+/* Ayarlar düğmesi (dişli + yazı), Hesap'ın hemen önünde. */
+.stbtn {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: none;
+  min-width: 56px;
+  min-height: 48px;
+  padding: 4px 8px;
+  border-radius: 14px;
+  color: var(--color-kr-ink);
+  text-decoration: none;
+}
+.stbtn .ico { color: var(--color-st-cur); }
+.stbtn span {
+  font: 800 10.5px/1 var(--font-bricolage), sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dz-dark .stbtn { color: var(--color-kr-text-dark); }
+.dz-dark .stbtn .ico { color: var(--color-st-dark-cur); }
+
+/* Hesap: kullanıcının baş harfi yuvarlak görselde, çevrimiçi noktalı. */
+.stav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, var(--color-st-etkin-a), var(--color-st-av));
+  color: var(--color-kr-on);
+  font: 800 14px/1 var(--font-bricolage), sans-serif;
+  font-style: normal;
+}
+.stav::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-st-ok);
+  box-shadow: 0 0 0 2px var(--color-kr-bg-a);
+}
+.dz-dark .stav::after { box-shadow: 0 0 0 2px var(--color-kr-bg-dark-a); }
+
+/* Telefon / dar ekran: tema seçici Hesap menüsünde (orada zaten var), saat yalnız saate kısalır. */
+@media (max-width: 899.98px) {
+  .stsaat small,
+  .stsi { display: none; }
+  .stsaat b { font-size: 16px; }
+}
+@media (max-width: 699.98px) {
+  /* Telefonda üst çubukta yer yok (ekran adı kaybolmasın); saat telefonun kendi durum çubuğunda. */
+  .stsaat { display: none; }
+  .sttema { display: none; }
+  /* Kalıp ekranında Ayarlar telefonda Hesap menüsünde (T-1039); Pano'da (ekip kipinde menüde yok) simge olarak kalır. */
+  .kalip .stbtn { display: none; }
+  .stbtn span { display: none; }
+  .stbtn { min-width: 48px; min-height: 48px; padding: 0; }
+}
+
+/* ---- Genişlik: masaüstünde içerik en çok 1320 px, iki yanda eşit boşluk (alt çubuk tuvaldeki gibi 720 px, kabuk.css) ---- */
+@media (min-width: 1100px) {
+  .kalip .top,
+  .kalip .inner,
+  .dzp .top,
+  .dzp .inner {
+    width: 100%;
+    max-width: 1320px;
+    margin-inline: auto;
+  }
+}
+
+/* ---- Alt cam çubuk: buzlu beyaz cam, ince parlak kenar, yumuşak gölge; simge + yazı gri-mavi. Ölçüler (yükseklik, ana işlem
+   boyu/konumu) kabuk.css'te kalır: etiket hizası ve "son alan çubuğun altında kalmaz" yerleşim taramaları onlara bağlı. ---- */
+.dzk:not(.dz-dark) .dockin {
+  border-radius: 28px;
+  background: linear-gradient(180deg, var(--color-st-glass-a), var(--color-st-glass-b));
+  border: 1px solid var(--color-st-glass-edge);
+  box-shadow: 0 18px 40px -22px var(--color-st-glass-shadow), inset 0 1px 0 var(--color-st-glass-edge);
+}
+.dzk.dz-dark .dockin {
+  border-radius: 28px;
+  background: var(--color-st-dark-glass);
+}
+.dzk:not(.dz-dark) .dk {
+  color: var(--color-st-icon);
+}
+.dzk .dk {
+  border-radius: 18px;
+}
+/* Bulunduğun yer: açık mavi hapta mavi (alt çizgi yok). */
+.dzk .dk.cur::after,
+.dzk.dz-dark .dk.cur::after {
+  display: none;
+}
+.dzk:not(.dz-dark) .dk.cur {
+  background: var(--color-st-cur-bg);
+  color: var(--color-st-cur);
+}
+.dzk.dz-dark .dk.cur {
+  background: var(--color-st-dark-cur-bg);
+  color: var(--color-st-dark-cur);
+}
+/* Ortada ekranın ana işlemi: yeşil geçişli yuvarlatılmış kare, beyaz halka. */
+.dzk .dk.big,
+.dzk.dz-dark .dk.big {
+  border-radius: 20px;
+  background: linear-gradient(150deg, var(--color-st-ok), var(--color-st-ok-deep));
+  color: var(--color-kr-on);
+  box-shadow: 0 12px 24px -10px var(--color-st-ok-deep), 0 0 0 4px var(--color-kr-on);
+}
+.dzk.dz-dark .dk.big {
+  box-shadow: 0 12px 24px -10px var(--color-st-ok-deep), 0 0 0 4px var(--color-kr-card-dark);
+}
+.dzk:not(.dz-dark) .dk.big .cap {
+  color: var(--color-kr-ink);
+}
+/* Etkin: aynı boyda mor öğe (dönen halka korunur, iç mor geçiş). */
+.dzk .orb::after,
+.dzk.dz-dark .orb::after {
+  background: linear-gradient(150deg, var(--color-st-etkin-a), var(--color-st-etkin-b));
+}
+.dzk .dk-etkin.live .orb .ico {
+  color: var(--color-kr-on);
+}

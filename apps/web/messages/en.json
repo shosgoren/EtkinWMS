@@ -4725,6 +4725,15 @@
         "generic": "Download failed · try again",
         "reauth": "Sign in again for security · taking you to sign-in"
       }
+    },
+    "st": {
+      "clock": "Clock",
+      "clockAria": "Time {time}, {date}",
+      "theme": "Theme",
+      "light": "Light theme",
+      "dark": "Dark theme",
+      "settings": "Settings",
+      "settingsShort": "Settings"
     }
   },
   "saha": {

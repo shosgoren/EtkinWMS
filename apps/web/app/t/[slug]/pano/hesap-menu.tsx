@@ -43,7 +43,8 @@ export interface HesapBaglanti {
 }
 
 /** Kaynak `.tb.tb-team` (Ekip / Hesap). */
-export function HesapDugme({ team, open, onClick }: { team: boolean; open: boolean; onClick: () => void }) {
+/** T-1042 (STANDART.md §1): `ini` verilirse ikon yerine kullanıcının baş harfi yuvarlak görselde (çevrimiçi noktalı). */
+export function HesapDugme({ team, ini, open, onClick }: { team: boolean; ini?: string; open: boolean; onClick: () => void }) {
   const t = useTranslations("pano");
   return (
     <button
@@ -56,7 +57,13 @@ export function HesapDugme({ team, open, onClick }: { team: boolean; open: boole
       onClick={onClick}
       data-testid="home-actions"
     >
-      <Ico d={PICON.team} size={24} />
+      {!team && ini !== undefined ? (
+        <i className="stav" aria-hidden="true">
+          {ini}
+        </i>
+      ) : (
+        <Ico d={PICON.team} size={24} />
+      )}
       <span>{team ? t("team") : t("account")}</span>
     </button>
   );
