@@ -181,3 +181,32 @@ test("T-1048 Cariler ve Depolar: Kart/Liste tablosu", async ({ page }) => {
     await expect(page.getByTestId(tablo)).toHaveCount(0);
   }
 });
+
+// T-1049 (STANDART §3): ürün kartı kayıt kartı kalıbında — üst şerit (ad + etiketler), sekmeler (adres `?sekme=`), Genel'de bilgi
+// kutucukları; Barkodlar sekmesi ekleme düğmesini taşır; içerik dokunma hedefleri ≥ 44 px; telefonda yatay taşma yok.
+test("T-1049 Ürün kartı: şerit, sekmeler, bilgi kutucukları", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/items");
+  await page.getByTestId("item-card").first().click();
+  await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
+  const kart = page.getByTestId("item-kart");
+  await expect(kart).toBeVisible();
+  await expect(kart.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("kalip-code")).toBeVisible();
+  await expect(page.getByTestId("kart-sekme-genel")).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("kart-bilgi-unit")).toBeVisible();
+  // Genel: 3 sütun (bilgi kutucukları aynı satırda).
+  const y = async (k: string): Promise<number> => (await page.getByTestId(`kart-bilgi-${k}`).boundingBox())?.y ?? -1;
+  expect(await y("name")).toBe(await y("type"));
+  expect(await smallTouchTargets(page, 44, "#kalip-main")).toEqual([]);
+  await page.getByTestId("kart-sekme-barkod").click();
+  await expect(page).toHaveURL(/\?sekme=barkod$/);
+  await expect(page.getByTestId("barcode-add")).toBeVisible();
+  await expect(page.getByTestId("kart-bilgi-unit")).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId("kart-sekme-barkod")).toBeVisible();
+  const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
+  expect(tasma).toBeLessThanOrEqual(0);
+});

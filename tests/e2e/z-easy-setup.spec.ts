@@ -201,7 +201,8 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     await shot("item-form");
     await page.getByTestId("item-form-save").click();
     await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
-    // T-990: barkod ekleme ürün kartından açılan tam ekran formdur (`?barcode=1`).
+    // T-990: barkod ekleme ürün kartından açılan tam ekran formdur (`?barcode=1`); T-1049: kartın "Barkodlar" sekmesinde.
+    await page.getByTestId("kart-sekme-barkod").click();
     await page.getByTestId("barcode-add").click();
     await page.getByTestId("barcode-form").locator('input[name="barcode"]').fill(BARCODE);
     await page.getByRole("button", { name: "Barkodu ekle" }).click();
