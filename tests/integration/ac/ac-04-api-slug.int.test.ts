@@ -880,6 +880,7 @@ const ITEM_ACTIONS: Record<string, Call> = {
   createUnitAction: (slug) => itemActions.createUnitAction!({ slug, code: `U${rnd()}`, name: "Ele geçirme birimi" }),
   suggestItemCodeAction: (slug) => itemActions.suggestItemCodeAction!({ slug }),
   searchItemsAction: (slug) => itemActions.searchItemsAction!({ slug, q: "a" }),
+  loadMoreItemsAction: (slug) => itemActions.loadMoreItemsAction!({ slug, q: "", status: "", cardType: "", after: Buffer.from(JSON.stringify(["A", randomUUID()]), "utf8").toString("base64url") }),
 };
 
 /** T-304: görev eylemleri; hepsi B'nin görev/üyelik kimliğiyle çağrılır (A veya B slug'ında). */

@@ -5,17 +5,15 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
-import { countLocationsByWarehouse, listWarehouses } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { WarehousesView } from "./warehouses-view.tsx";
 import type { WarehouseView } from "./warehouses-view.tsx";
+import { loadWarehousesPage } from "./list-page.ts";
 
 export const dynamic = "force-dynamic";
-
-const PAGE_SIZE = 50;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("warehouses");
@@ -65,12 +63,10 @@ export default async function WarehousesPage({ params, searchParams }: { params:
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
-    const page = await listWarehouses(call, { onlyArchived: archived, limit: PAGE_SIZE, q, withTotal: after === undefined || after === "", ...(after === undefined || after === "" ? {} : { afterCode: after }) });
-    nextAfter = page.nextAfterCode;
+    const page = await loadWarehousesPage(call, { q, archived, after });
+    rows = page.rows;
+    nextAfter = page.nextAfter;
     total = page.total;
-    // Sayfa en çok PAGE_SIZE (50) depo döndürür → toplu sayım sınırı (100) içinde; boş sayfada sorgu yapılmaz.
-    const counts = page.items.length === 0 ? new Map<string, number>() : await countLocationsByWarehouse(call, { warehouseIds: page.items.map((w) => w.id) });
-    rows = page.items.map((w) => ({ id: w.id, code: w.code, name: w.name, status: w.status, locationCount: counts.get(w.id) ?? 0, locationCountCapped: false }));
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND") notFound();

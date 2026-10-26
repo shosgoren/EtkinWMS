@@ -21,6 +21,7 @@ import {
 } from "@wms/domain/warehouse";
 import type { LocationKindValue } from "@wms/domain/warehouse";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
+import { loadWarehousesPage } from "./list-page.ts";
 
 const guardedAction = createProductionGuard(() => headers());
 
@@ -129,6 +130,19 @@ export async function archiveLocationAction(raw: unknown) {
     const params = await writeContext(input.slug, ctx);
     const r = await archiveLocation(params, { locationId: input.locationId, requestId: ctx.requestId });
     return { archived: r.archived };
+  })(raw);
+}
+
+// T-1055: depo listesinin sonraki sayfası (kaydırınca kendiliğinden); süzgeçler sayfa adresindekilerle aynı, imleç domain'de doğrulanır.
+const moreWarehousesSchema = z.object({ slug: z.string().min(1).max(63), q: z.string().max(100), archived: z.boolean(), after: z.string().min(1).max(256) }).strict();
+
+/** T-1055: liste sonuna yaklaşınca sonraki 50 depo (+ raf yeri sayısı). Okuma yetkisi domain okuyucusunda. */
+export async function loadMoreWarehousesAction(raw: unknown) {
+  return guardedAction({ schema: moreWarehousesSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const page = await loadWarehousesPage({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, archived: input.archived, after: input.after });
+    return { rows: page.rows, nextAfter: page.nextAfter };
   })(raw);
 }
 

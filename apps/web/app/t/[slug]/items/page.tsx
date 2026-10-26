@@ -3,9 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { searchItems } from "@wms/domain/catalog";
-import { sumItemsStock } from "@wms/domain/stock";
-import { listUnits } from "@wms/domain/catalog/units";
+import type { listUnits } from "@wms/domain/catalog/units";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
@@ -14,10 +12,9 @@ import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { CARD_TYPES, ItemsView } from "./items-view.tsx";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
+import { loadItemsPage } from "./list-page.ts";
 
 export const dynamic = "force-dynamic";
-
-const PAGE_SIZE = 50;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("items");
@@ -72,30 +69,12 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
     canImport = hasPermission(current.roles, "data.import", current.grants);
-    const page = await searchItems(call, {
-      limit: PAGE_SIZE,
-      // T-436: toplam yalnız ilk sayfada (sayfa başına tam COUNT yükü olmasın; güvenlik incelemesi MINOR).
-      withTotal: after === undefined || after === "",
-      ...(q.trim() === "" ? {} : { q }),
-      // T-1040 (kullanıcı 26 Ekim): arşivli ürün normal listede yok; yalnız "Arşivli" süzgecinde.
-      status: status === "" ? "ACTIVE" : status,
-      ...(cardType === "" ? {} : { cardType }),
-      ...(after === undefined || after === "" ? {} : { after }),
-    });
-    units = await listUnits(call);
-    const unitCode = new Map(units.map((u) => [u.id, u.code] as const));
-    // T-257: arama ESKİ kodla eşleştiyse sonuç kartında "bu kod X olarak değişti" bilgisi (sunucu `renamedFrom` verir; kural istemcide yok).
-    const old = new Map((page.renamedFrom ?? []).map((r) => [r.itemId, r.oldCode] as const));
-    rows = page.items.map((it) => {
-      const oldCode = old.get(it.id);
-      return { id: it.id, code: it.code, name: it.name, status: it.status, baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
-    });
+    const page = await loadItemsPage(call, { q, status, cardType, after });
+    rows = page.rows;
+    units = page.units;
     nextCursor = page.nextCursor;
     total = page.total;
-    // T-968: kart rozeti (kapsamdaki depoların eldeki toplamı + minimum); okunamazsa rozet çizilmez, liste yine açılır.
-    stock = Object.fromEntries(
-      (await sumItemsStock(call, rows.map((r) => r.id)).catch(() => [])).map((x) => [x.itemId, { have: x.have, min: x.min }] as const),
-    );
+    stock = page.stock;
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND") notFound();

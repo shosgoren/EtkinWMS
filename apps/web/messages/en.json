@@ -4797,7 +4797,10 @@
       "reset": "Reset to default",
       "pages": "Pages",
       "first": "First page",
-      "next": "Next page"
+      "next": "Next page",
+      "loading": "Loading…",
+      "retry": "Couldn't load · try again",
+      "top": "Back to top"
     }
   },
   "saha": {

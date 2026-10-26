@@ -3,7 +3,7 @@
    ekranların (Pano, Ekip, Gruplar, Aktar, Cariler) kendi kaynak kaplarının DIŞINDA çizilir (aynı sınıf adları — `.dock`, `.dk`, `.hback` —
    o kaynakların kurallarıyla çakışmasın). Bu yüzden: `.wrap > .app` görüntü alanını kaplayan, tıklamayı geçiren sabit katmandır; çubuk
    altta, ekranlar çubuğun yüksekliği kadar yer ayırır. Renk sabiti yok: üretilmiş belirteçler. */
-:root { --kabuk-h: calc(108px + env(safe-area-inset-bottom)); }
+:root { --kabuk-h: calc(96px + env(safe-area-inset-bottom)); }
 .dzk .wrap, .dzk.dz-dark .wrap {
   position: fixed;
   inset: 0;
@@ -24,8 +24,9 @@
   height: 100%;
   background: none;
 }
-/* Telefonun ev çubuğu: kaynaktaki 22 px alt boşluğa güvenli alan eklenir. */
-.dzk .wrap .dock { padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+/* Telefonun ev çubuğu: güvenli alan + küçük boşluk. T-1055 (kullanıcı 26 Ekim, iPhone 13 Safari: "alt menü biraz daha aşağıda olabilir"):
+   kaynaktaki 22 px boşluk 10 px'e iner; ana ekrana eklenmiş uygulamada ev çubuğu payı (`safe-area-inset-bottom`) yine korunur. */
+.dzk .wrap .dock { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
 .dzk .dockin, .dzk .hback, .dzk .msheet { pointer-events: auto; }
 .dzk .toast { pointer-events: none; }
 .dzk .msheet { bottom: var(--kabuk-h); }

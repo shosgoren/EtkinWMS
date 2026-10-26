@@ -192,7 +192,7 @@ export function KalipSutunSec<T>({ sutunlar, secim }: { sutunlar: readonly Kalip
 }
 
 /** Sıralanabilir tablo (başlığa dokun: artan / azalan). Satır bir bağlantıdır (kartla aynı hedef). */
-export function KalipTablo<T>({ label, sutunlar, satirlar, anahtar, href, satirAria, testId }: { label: string; sutunlar: readonly KalipSutun<T>[]; satirlar: readonly T[]; anahtar: (r: T) => string; href: (r: T) => string; satirAria: (r: T) => string; testId?: string }) {
+export function KalipTablo<T>({ label, sutunlar, satirlar, anahtar, href, satirAria, testId, sonu }: { label: string; sutunlar: readonly KalipSutun<T>[]; satirlar: readonly T[]; anahtar: (r: T) => string; href: (r: T) => string; satirAria: (r: T) => string; testId?: string; /** T-1055: tablonun altında, kayan bölgenin içinde (ör. `KalipSonsuz`). */ sonu?: ReactNode }) {
   const [sira, setSira] = useState<{ id: string; yon: 1 | -1 } | null>(null);
   const sirali = useMemo(() => {
     const s = sira === null ? undefined : sutunlar.find((x) => x.id === sira.id);
@@ -244,6 +244,7 @@ export function KalipTablo<T>({ label, sutunlar, satirlar, anahtar, href, satirA
           ))}
         </tbody>
       </table>
+      {sonu}
     </div>
   );
 }
@@ -276,4 +277,144 @@ export function KalipSayfa({ metin, ilk, sonraki, testId }: { metin: string; ilk
       </span>
     </nav>
   );
+}
+
+/**
+ * T-1055 (kullanıcı kararı 26 Ekim: "sayfa yerine kaydırma"): liste sonu. Kayan listenin içinde en altta durur; görünür olmaya yaklaşınca
+ * (`rootMargin` 400 px) sonraki sayfayı ister — sayfa satırı / "Sonraki" düğmesi yok. Yükleme sürerken gösterge, hata olursa "Tekrar dene";
+ * liste bitince yalnız sayı yazar. Tek seferde tek istek; yükleme sonrası hâlâ görünürse (kısa liste) sıradaki sayfayı da ister.
+ */
+export function KalipSonsuz({ devam, yukle, metin, testId }: { devam: boolean; yukle: () => Promise<boolean>; metin: string; testId?: string }) {
+  const t = useTranslations("kalip.tablo");
+  const ref = useRef<HTMLDivElement>(null);
+  const mesgul = useRef(false);
+  const [durum, setDurum] = useState<"bekle" | "yukleniyor" | "hata">("bekle");
+  const [tur, setTur] = useState(0);
+  const [yukari, setYukari] = useState(false);
+  // Kayan bölge = listenin kendisi (`.ulist` / `.kttab`); başa dön oku ve konum hafızası onu izler.
+  useEffect(() => {
+    const kap = ref.current?.parentElement;
+    if (kap === null || kap === undefined) return undefined;
+    const anahtar = `kalip-kaydir:${window.location.pathname}${window.location.search}`;
+    // Bir kayda girip geri dönünce kaldığın yer (eklenen sayfalar `useKalipDerinlik` ile sunucudan yeniden gelir; gelince yerleşir).
+    const bas = Date.now();
+    let hedef = 0;
+    try {
+      hedef = Number(window.sessionStorage.getItem(anahtar) ?? "0") || 0;
+    } catch {
+      hedef = 0;
+    }
+    let raf = 0;
+    const yerlestir = (): void => {
+      // Eklenen sayfalar sunucudan yeniden gelirken birkaç saniye bekler.
+      if (hedef <= 0 || Date.now() - bas > 4000) return;
+      if (kap.scrollHeight - kap.clientHeight >= hedef) kap.scrollTop = hedef;
+      else raf = window.requestAnimationFrame(yerlestir);
+    };
+    raf = window.requestAnimationFrame(yerlestir);
+    const kaydir = (): void => {
+      setYukari(kap.scrollTop > 600);
+      try {
+        window.sessionStorage.setItem(anahtar, String(Math.round(kap.scrollTop)));
+      } catch {
+        /* depolama yoksa yalnız bu açılış */
+      }
+    };
+    kap.addEventListener("scroll", kaydir, { passive: true });
+    return () => {
+      window.cancelAnimationFrame(raf);
+      kap.removeEventListener("scroll", kaydir);
+    };
+  }, []);
+  const iste = useCallback((): void => {
+    if (mesgul.current) return;
+    mesgul.current = true;
+    setDurum("yukleniyor");
+    void yukle()
+      .then((ok) => setDurum(ok ? "bekle" : "hata"))
+      .catch(() => setDurum("hata"))
+      .finally(() => {
+        mesgul.current = false;
+        setTur((n) => n + 1);
+      });
+  }, [yukle]);
+  useEffect(() => {
+    const el = ref.current;
+    if (el === null || !devam || durum === "hata" || typeof IntersectionObserver === "undefined") return undefined;
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) iste();
+    }, { rootMargin: "400px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [devam, durum, iste, tur]);
+  return (
+    <div ref={ref} className="ktson" role="status" aria-live="polite" data-testid={testId} data-devam={devam ? "1" : "0"}>
+      {yukari ? (
+        <button
+          type="button"
+          className="ktust"
+          aria-label={t("top")}
+          title={t("top")}
+          data-testid="kalip-basa-don"
+          onClick={() => {
+            feedback.minor();
+            ref.current?.parentElement?.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <Ico d={SICON.chevUp} size={22} />
+        </button>
+      ) : null}
+      {!devam ? (
+        <span>{metin}</span>
+      ) : durum === "hata" ? (
+        <button type="button" className="ktsonb" onClick={iste}>
+          {t("retry")}
+        </button>
+      ) : (
+        <span>{durum === "yukleniyor" ? t("loading") : metin}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * T-1055: kaydırma derinliği hafızası (oturum içi, adres başına). Bir kayda girip geri dönülünce liste aynı uzunluğa kadar sunucudan
+ * YENİDEN yüklenir (`yukle` sırayla çağrılır) ve `KalipSonsuz` kaldığın yere kaydırır. Yalnız SAYI saklanır — satır / stok verisi
+ * saklanmaz (Codex P1/P2, PR 204): başka kullanıcının kapsamı ya da değişmiş kayıt eski veriden gösterilmez; her satır o anki üyenin
+ * yetkisiyle taze gelir. Kayıt 10 dakika sonra geçersiz.
+ */
+const DERIN_OMUR_MS = 10 * 60_000;
+const derinAnahtar = (): string => `kalip-derin:${window.location.pathname}${window.location.search}`;
+
+export function useKalipDerinlik(yuklenen: number, devam: boolean, yukle: () => Promise<boolean>): void {
+  const [hedef, setHedef] = useState(0);
+  const mesgul = useRef(false);
+  useEffect(() => {
+    try {
+      const ham = window.sessionStorage.getItem(derinAnahtar());
+      const k = ham === null ? null : (JSON.parse(ham) as { readonly t?: number; readonly n?: number });
+      if (k !== null && typeof k.t === "number" && typeof k.n === "number" && Date.now() - k.t < DERIN_OMUR_MS) setHedef(Math.min(k.n, 1000));
+    } catch {
+      /* bozuk ya da erişilemeyen kayıt: ilk sayfayla devam */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(derinAnahtar(), JSON.stringify({ t: Date.now(), n: yuklenen }));
+    } catch {
+      /* dolu / engelli depolama */
+    }
+  }, [yuklenen]);
+  useEffect(() => {
+    if (yuklenen >= hedef || !devam || mesgul.current) return;
+    mesgul.current = true;
+    void yukle()
+      .then((ok) => {
+        if (!ok) setHedef(0);
+      })
+      .catch(() => setHedef(0))
+      .finally(() => {
+        mesgul.current = false;
+      });
+  }, [yuklenen, hedef, devam, yukle]);
 }
