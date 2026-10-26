@@ -29,6 +29,7 @@
 - Arka planda test koşarken aynı çalışma ağacında dal değiştirilmez / dosya düzenlenmez (sonuç geçersiz olur); paralel iş için ayrı `git worktree`.
 
 ## Tasarım
+- **Masaüstü ekran standardı (kullanıcı kararı 26 Ekim):** her ekran `docs/design/STANDART.md` kalıplarından birine girer (liste, kayıt kartı, form, ayar, pencere; kaynak `docs/design/source/Standart*.dc.html`, tuval https://claude.ai/artifact/TUJMoHAKDAH3j3xARjVjXL). Tuvalde olmayan ekran en yakın kalıptan türetilir; ekran başına tuval onayı istenmez. Kalıba sığmayan ihtiyaç önce ortak kalıba eklenir.
 - Ekran işi onaylı tuvalden başlar: https://claude.ai/artifact/4nmGwfnN4BfL6bkfWbLJC3 → kaynak `docs/design/source/*.dc.html` (sha256 `SOURCE.md`) → birebir aktarım (I-18, `DESIGN-PARITY.md`, `ALTIN-KURAL.md`). Tuvalde olmayan ekran kodlanmaz; önce tuvale eklenir, kullanıcı onaylar.
 - Parite görüntüsü 390×844 gerçek telefonun görünür yüksekliğini temsil etmez (Safari çubukları ~660–690 pt); telefonda "kaydırma yok" kısa yükseklikte de denetlenir.
 
