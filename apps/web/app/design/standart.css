@@ -810,7 +810,10 @@ html:has(.halo.tmenu) .dzk .wrap {
 .stkyanbas a {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
+  min-width: 44px;
+  padding: 0 8px;
   font: 700 14px/1 var(--font-instrument), sans-serif;
   color: var(--color-st-k-mavi);
 }
