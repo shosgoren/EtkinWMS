@@ -273,3 +273,23 @@ test("T-1052 Form: üst şerit ve yan yana gruplar", async ({ page }) => {
   const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
   expect(tasma).toBeLessThanOrEqual(0);
 });
+
+// T-1053 (STANDART §1): üst çubukta Son işlemler — pencere bugün yaptıklarını gösterir, Esc kapatır ve odak düğmeye döner; telefonda gizli.
+test("T-1053 Son işlemler: pencere açılır, Esc kapatır", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/items");
+  const dugme = page.getByTestId("st-son-islemler");
+  await expect(dugme).toBeVisible();
+  await dugme.click();
+  const pencere = page.getByTestId("st-son-islemler-pencere");
+  await expect(pencere).toBeVisible();
+  await expect(pencere.getByText("Bugün yaptıkların")).toBeVisible();
+  await expect(pencere.getByText("Yükleniyor…")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(pencere).toHaveCount(0);
+  await expect(dugme).toBeFocused();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dugme).toBeHidden();
+});

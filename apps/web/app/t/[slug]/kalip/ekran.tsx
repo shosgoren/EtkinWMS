@@ -20,7 +20,7 @@ import { KalipSurumBekcisi } from "./surum.tsx";
 import { kdz, kdzOrtak, type KalipScope } from "./tokens.ts";
 import { balonGoster, buyukHarf, type BalonTur } from "@wms/ui";
 import { useCevrimici } from "./cevrimdisi.ts";
-import { StAyarlar, StSaat, StTema } from "./ust-standart.tsx";
+import { StAyarlar, StSaat, StSonIslemler, StTema } from "./ust-standart.tsx";
 
 export type KalipKind = "liste" | "form" | "detay";
 const SCOPE: Record<KalipKind, KalipScope> = { liste: "dzl", form: "dzf", detay: "dzd" };
@@ -170,6 +170,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, 
               </div>
               {/* T-1042 (STANDART.md §1): ortada canlı saat; sağda tema → Excel/Sorun/Destek → Ayarlar → Hesap (en sağda). */}
               <StSaat />
+              <StSonIslemler />
               <StTema dark={dark} />
               {slot === null && xls.button === null ? null : (
                 <div className="tph" role="group" aria-label={t("topActions")}>

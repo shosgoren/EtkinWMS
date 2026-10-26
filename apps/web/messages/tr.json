@@ -4776,7 +4776,14 @@
       "light": "Açık tema",
       "dark": "Koyu tema",
       "settings": "Ayarlar",
-      "settingsShort": "Ayarlar"
+      "settingsShort": "Ayarlar",
+      "recent": "Son işlemler",
+      "recentNew": "Son işlemler ({n} yeni)",
+      "recentTitle": "Bugün yaptıkların",
+      "recentEmpty": "Bugün henüz işlem yok",
+      "recentLoading": "Yükleniyor…",
+      "recentFailed": "İşlemler şu an okunamadı; biraz sonra yeniden dene.",
+      "recentOther": "İşlem"
     },
     "tablo": {
       "view": "Görünüm",

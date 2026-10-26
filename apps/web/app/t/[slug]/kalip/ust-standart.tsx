@@ -5,11 +5,12 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { intlDil } from "@wms/ui";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { feedback, intlDil } from "@wms/ui";
 import { SICON } from "../../../design/standart-icons.ts";
 import { temaYaz } from "../../../design/theme.ts";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
+import { myTodayActionsAction } from "../son-islemler-actions.ts";
 
 function Ico({ d, size }: { d: string; size: number }) {
   return (
@@ -79,5 +80,143 @@ export function StAyarlar({ href }: { href?: string | undefined }) {
       <Ico d={SICON.gear} size={22} />
       <span>{t("settingsShort")}</span>
     </Link>
+  );
+}
+
+interface SonIslem {
+  readonly at: string;
+  readonly key: string;
+}
+
+const gorulduAnahtar = (slug: string): string => `son-islem-goruldu:${slug}`;
+
+/**
+ * T-1053 (STANDART §1, tuval `StandartAnaEkran` "Son işlemler (3 yeni)"): saat simgeli düğme; açılınca BUGÜN kendi yaptıkların
+ * (en yeni üstte, saatiyle). Rozet: son açılıştan beri yeni işlem sayısı (cihazda hatırlanır). Esc ve dışarı dokunuş kapatır,
+ * odak düğmeye döner. Veri okunamazsa pencere nedeni söyler; ekran düşmez.
+ */
+export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined }) {
+  const t = useTranslations("kalip.st");
+  const tAll = useTranslations();
+  const locale = intlDil(useLocale());
+  const ctx = useKabuk();
+  const slug = slugProp ?? ctx?.slug;
+  const [items, setItems] = useState<readonly SonIslem[] | null>(null);
+  const [timeZone, setTimeZone] = useState<string | undefined>(undefined);
+  const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState<string | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+
+  const load = useCallback(async (): Promise<void> => {
+    if (slug === undefined) return;
+    try {
+      const r = await myTodayActionsAction({ slug });
+      if (r.ok) {
+        setItems(r.data.items);
+        setTimeZone(r.data.timeZone);
+        setFailed(false);
+      } else setFailed(true);
+    } catch {
+      setFailed(true);
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    if (slug === undefined) return;
+    try {
+      setSeen(window.localStorage.getItem(gorulduAnahtar(slug)));
+    } catch {
+      /* cihazda saklanamıyor: rozet her işi yeni sayar */
+    }
+    void load();
+  }, [slug, load]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        btn.current?.focus();
+      }
+    };
+    const onDown = (e: PointerEvent): void => {
+      const n = e.target as Node;
+      if (box.current?.contains(n) === true || btn.current?.contains(n) === true) return;
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown);
+    box.current?.focus();
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [open]);
+
+  if (slug === undefined) return null;
+  const yeni = items === null ? 0 : items.filter((i) => seen === null || i.at > seen).length;
+  const saat = (iso: string): string => new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", ...(timeZone === undefined ? {} : { timeZone }) }).format(new Date(iso));
+  const metin = (key: string): string => (tAll.has(key) ? tAll(key) : t("recentOther"));
+  const ac = (): void => {
+    feedback.minor();
+    const sonraki = !open;
+    setOpen(sonraki);
+    if (sonraki) {
+      void load();
+      const now = new Date().toISOString();
+      setSeen(now);
+      try {
+        window.localStorage.setItem(gorulduAnahtar(slug), now);
+      } catch {
+        /* yok say */
+      }
+    }
+  };
+  return (
+    <span className="stson">
+      <button
+        ref={btn}
+        type="button"
+        className="stbtn stsonb"
+        aria-label={yeni > 0 ? t("recentNew", { n: yeni }) : t("recent")}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={ac}
+        data-testid="st-son-islemler"
+      >
+        <Ico d={SICON.clock} size={22} />
+        {yeni > 0 ? (
+          <em className="stsonn" aria-hidden="true">
+            {yeni > 9 ? "9+" : yeni}
+          </em>
+        ) : null}
+      </button>
+      {open ? (
+        <div ref={box} className="stsonp" role="dialog" aria-label={t("recent")} tabIndex={-1} data-testid="st-son-islemler-pencere">
+          <b className="stsonh">{t("recentTitle")}</b>
+          {failed && items === null ? (
+            <p className="stsonbos">{t("recentFailed")}</p>
+          ) : items === null ? (
+            <p className="stsonbos">{t("recentLoading")}</p>
+          ) : items.length === 0 ? (
+            <p className="stsonbos">{t("recentEmpty")}</p>
+          ) : (
+            <ol className="stsonl">
+              {items.map((i, n) => (
+                <li key={`${i.at}-${n}`}>
+                  <i aria-hidden="true">
+                    <Ico d={SICON.onay} size={16} />
+                  </i>
+                  <span>{metin(i.key)}</span>
+                  <time dateTime={i.at}>{saat(i.at)}</time>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      ) : null}
+    </span>
   );
 }

@@ -11,7 +11,7 @@ import { THEME_COOKIE } from "../../design/theme.ts";
 import { KalipDestek } from "./kalip/destek.tsx";
 import { useKabuk } from "./kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "./pano/hesap-menu.tsx";
-import { StAyarlar, StTema } from "./kalip/ust-standart.tsx";
+import { StAyarlar, StSonIslemler, StTema } from "./kalip/ust-standart.tsx";
 
 /** Üst çubuğun sağ ucu: Sorun bildir · Destek · Hesap. `.top` içinde, marka bloğundan sonra çizilir. */
 export function UstDugmeler({ dark }: { dark: boolean }) {
@@ -32,6 +32,7 @@ export function UstDugmeler({ dark }: { dark: boolean }) {
   return (
     <>
       {/* T-1044 (STANDART §1): tema ve Ayarlar üst çubukta (Hesap menüsünde masaüstünde yoklar); KalipEkran ile aynı sıra. */}
+      <StSonIslemler />
       <StTema dark={dark} />
       {ctx?.slug !== undefined ? (
         <span className={`dzl ust-dz${d}`}>
