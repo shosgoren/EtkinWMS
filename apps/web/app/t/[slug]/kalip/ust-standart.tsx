@@ -137,16 +137,20 @@ export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined })
     } catch {
       /* cihazda saklanamıyor: rozet her işi yeni sayar */
     }
-    void load();
     // Codex P2 (PR 202): aynı ekranda yapılan yeni işler de rozete yansısın — sekme görünürken dakikada bir ve sekmeye dönüşte yenilenir.
+    // Düğme yalnız masaüstünde görünür (standart.css `.stson`, 1100 px altı gizli): telefon/tablette sunucu çağrısı yapılmaz.
+    const genis = window.matchMedia("(min-width: 1100px)");
     const yenile = (): void => {
-      if (document.visibilityState === "visible") void load();
+      if (genis.matches && document.visibilityState === "visible") void load();
     };
+    yenile();
     const id = window.setInterval(yenile, 60_000);
     document.addEventListener("visibilitychange", yenile);
+    genis.addEventListener("change", yenile);
     return () => {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", yenile);
+      genis.removeEventListener("change", yenile);
     };
   }, [slug, load]);
 
