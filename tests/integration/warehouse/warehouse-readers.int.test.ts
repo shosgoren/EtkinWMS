@@ -105,6 +105,11 @@ describe("getWarehouse", () => {
     const archived = (await listWarehouses(picker(A), { includeArchived: true })).items.find((w) => w.id === id);
     expect(archived?.status).toBe("ARCHIVED");
     expect(await getWarehouse(picker(A), { warehouseId: id })).toEqual(archived);
+    // T-1040: varsayılan liste arşivliyi göstermez; "Arşivli" süzgeci yalnız arşivlileri gösterir.
+    expect((await listWarehouses(picker(A), { limit: 1000 })).items.some((w) => w.id === id)).toBe(false);
+    const only = (await listWarehouses(picker(A), { onlyArchived: true, limit: 1000 })).items;
+    expect(only.some((w) => w.id === id)).toBe(true);
+    expect(only.every((w) => w.status === "ARCHIVED")).toBe(true);
   });
 
   it("flag off: scope rows are ignored (same as listWarehouses)", async () => {

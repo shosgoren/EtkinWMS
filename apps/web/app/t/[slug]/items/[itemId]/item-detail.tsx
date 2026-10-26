@@ -490,7 +490,8 @@ export function ItemDetail({
       qColor: v.q,
     };
   });
-  const quickItems: KalipHizliIslem[] = [
+  // T-1040: arşivli ürünle işlem yapılmaz (kullanıcı 26 Ekim) — etiket / sayım / transfer kısa yolları çizilmez.
+  const quickItems: KalipHizliIslem[] = !active ? [] : [
     ...(quick.label ? [{ key: "label", label: tk("qLabel"), d: LICON.printer, color: "172E42", href: `/t/${encodeURIComponent(slug)}/labels?item=${encodeURIComponent(item.id)}` }] : []),
     ...(quick.count ? [{ key: "count", label: tk("qCount"), d: LICON.clip, color: "2F5DA8", href: `/t/${encodeURIComponent(slug)}/field/tasks` }] : []),
     ...(quick.transfer ? [{ key: "transfer", label: tk("qTransfer"), d: LICON.transfer, color: "6C4BD8", href: `/t/${encodeURIComponent(slug)}/stock/documents?new=TRANSFER` }] : []),
@@ -560,7 +561,7 @@ export function ItemDetail({
                   {tc(item.cardType)}
                 </span>
               </KalipHero>
-              <KalipHizli label={tk("quick")} items={quickItems} />
+              {quickItems.length === 0 ? null : <KalipHizli label={tk("quick")} items={quickItems} />}
               {writable ? (
                 <button type="button" className="more" onClick={() => open("kod")} aria-label={td("codeEdit.for", { name: item.name })}>
                   <i>

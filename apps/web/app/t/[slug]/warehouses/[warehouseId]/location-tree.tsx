@@ -139,15 +139,19 @@ export function LocationTree({
     setNext(initialNext);
   }, [initialItems, initialNext]);
 
+  // T-1040 (kullanıcı 26 Ekim): arşivli raf ağaçta görünmez; yalnız "Arşivli rafları göster" açıkken (işlem düğmesi yine yok).
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = items.filter((i) => i.status !== "ACTIVE").length;
   const children = useMemo(() => {
     const m = new Map<string | null, LocationItem[]>();
     for (const it of items) {
+      if (!showArchived && it.status !== "ACTIVE") continue;
       const list = m.get(it.parentId) ?? [];
       list.push(it);
       m.set(it.parentId, list);
     }
     return m;
-  }, [items]);
+  }, [items, showArchived]);
 
   const visible = useMemo(() => {
     const out: LocationItem[] = [];
@@ -380,6 +384,22 @@ export function LocationTree({
             }
             right={
               <KalipKartBolum label={t("label")} title={t("title")} sub={tw("k.treeSub", { n: countText })} d={LICON.raf} color="0E7C7B" testId="location-tree-card">
+                {archivedCount === 0 ? null : (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ ...actBtn("4E6476", false), alignSelf: "flex-start" }}
+                    aria-pressed={showArchived}
+                    onClick={() => {
+                      feedback.minor();
+                      setShowArchived((v) => !v);
+                    }}
+                    data-testid="location-archived-toggle"
+                  >
+                    <Ico d={LICON.lock} size={18} />
+                    {showArchived ? t("hideArchived") : t("showArchived", { n: archivedCount })}
+                  </button>
+                )}
                 {visible.length === 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }} data-testid="location-empty">
                     <p style={{ margin: 0 }}>

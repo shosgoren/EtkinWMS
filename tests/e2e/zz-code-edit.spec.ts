@@ -209,6 +209,8 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
       await page.getByRole("button", { name: "Ürünü arşivle" }).or(page.getByRole("button", { name: "Arşivle" })).first().click();
       await page.getByRole("dialog").getByRole("button", { name: "Arşivle" }).click();
       await expect(page.getByText("Ürün arşivlendi.")).toBeVisible();
+      // T-1040: arşivli ürün kartında işlem kısa yolu (Etiket / Sayım / Transfer) yok.
+      await expect(page.getByTestId("item-detail").getByRole("link", { name: "Transfer" })).toHaveCount(0);
     }
     if (whUrl !== null) {
       await page.goto(whUrl);
@@ -227,6 +229,12 @@ test("kod değiştir: depo, lokasyon, ürün; eski kodla arama yeni karta yönle
       await card.getByRole("button", { name: "Arşivle" }).click();
       await page.getByRole("dialog").getByRole("button", { name: "Arşivle" }).click();
       await expect(page.getByText("Depo arşivlendi.")).toBeVisible();
+      // T-1040: arşivli depo normal listeden kalkar, "Arşivli" süzgecinde görünür.
+      await page.goto(warehousesAt(whCode));
+      await expect(page.getByTestId("warehouse-card").filter({ hasText: whCode })).toHaveCount(0);
+      await expect(page.getByRole("group", { name: "Süzgeç" }).getByRole("link", { name: "Arşivli", exact: true })).toHaveAttribute("href", /arsiv=1/);
+      await page.goto(`/t/demo/warehouses?arsiv=1&q=${encodeURIComponent(whCode)}`);
+      await expect(page.getByTestId("warehouse-card").filter({ hasText: whCode })).toHaveCount(1);
     }
   }
 });

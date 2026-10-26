@@ -18,7 +18,7 @@ import type { AlanKurali } from "../kalip/dogrula.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
-import { KalipAra, KalipBos, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
@@ -328,6 +328,7 @@ export function WarehousesView({
   nextAfter,
   firstPage,
   q = "",
+  archived = false,
   total,
 }: {
   slug: string;
@@ -339,6 +340,8 @@ export function WarehousesView({
   firstPage: boolean;
   /** T-978: sunucu araması (kod/ad); boş = tümü. */
   q?: string;
+  /** T-1040: "Arşivli" süzgeci (`?arsiv=1`): yalnız arşivdeki depolar. */
+  archived?: boolean;
   /** Sunucudan aramaya uyan toplam depo sayısı (ALTIN-KURAL 15). */
   total?: number;
 }) {
@@ -350,6 +353,19 @@ export function WarehousesView({
   const router = useRouter();
   const home = `/t/${encodeURIComponent(slug)}`;
   const base = `${home}/warehouses`;
+  // T-1040: liste adresi (arama + Arşivli süzgeci + sayfa imleci birlikte taşınır).
+  const pageHref = ({ arsiv = archived, after }: { arsiv?: boolean; after?: string }): string => {
+    const p = new URLSearchParams();
+    if (q !== "") p.set("q", q);
+    if (arsiv) p.set("arsiv", "1");
+    if (after !== undefined) p.set("after", after);
+    const qs = p.toString();
+    return qs === "" ? base : `${base}?${qs}`;
+  };
+  const chips: KalipCip[] = [
+    { id: "active", label: t("chipActive"), d: LICON.grid, color: "172E42", on: !archived, href: pageHref({ arsiv: false }) },
+    { id: "archived", label: t("chipArchived"), d: LICON.lock, color: "4E6476", on: archived, href: pageHref({ arsiv: true }) },
+  ];
   const [archiving, setArchiving] = useState<WarehouseView | null>(null);
   const [codeChanged, setCodeChanged] = useState<{ readonly id: string; readonly from: string; readonly to: string } | null>(null);
   const [undoing, setUndoing] = useState(false);
@@ -537,9 +553,12 @@ export function WarehousesView({
           </KalipDaha>
         ) : null}
 
-        {showSetup ? null : <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={base} defaultValue={q} />}
+        {showSetup ? null : <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={base} defaultValue={q} below={archived ? <input type="hidden" name="arsiv" value="1" /> : null} />}
+        {showSetup ? null : <KalipCipler label={t("filter")} chips={chips} />}
         {showSetup ? (
           <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} testId="setup-guide" />
+        ) : warehouses.length === 0 && archived && q === "" ? (
+          <KalipBos title={t("archivedEmpty")} iconD={LICON.lock} action={{ label: t("chipActive"), href: base, kind: "go" }} />
         ) : warehouses.length === 0 && q !== "" ? (
           <KalipBos title={tr("notFoundSearch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: base, kind: "clear" }} />
         ) : warehouses.length === 0 ? (
@@ -618,12 +637,12 @@ export function WarehousesView({
         {firstPage && nextAfter === null ? null : (
           <nav aria-label={t("paging")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {firstPage ? null : (
-              <KalipDaha href={q === "" ? base : `${base}?q=${encodeURIComponent(q)}`} iconD={LICON.chev}>
+              <KalipDaha href={pageHref({})} iconD={LICON.chev}>
                 {t("firstPage")}
               </KalipDaha>
             )}
             {nextAfter === null ? null : (
-              <KalipDaha href={`${base}?${q === "" ? "" : `q=${encodeURIComponent(q)}&`}after=${encodeURIComponent(nextAfter)}`} iconD={LICON.plus}>
+              <KalipDaha href={pageHref({ after: nextAfter })} iconD={LICON.plus}>
                 {t("more")}
               </KalipDaha>
             )}

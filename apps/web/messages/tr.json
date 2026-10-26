@@ -1561,7 +1561,9 @@
         "button": "Arşivle"
       },
       "addFirst": "İlk lokasyonu ekle",
-      "addWait": "Ekran hazırlanıyor; bir saniye sonra yeniden dokun."
+      "addWait": "Ekran hazırlanıyor; bir saniye sonra yeniden dokun.",
+      "showArchived": "Arşivli rafları göster ({n})",
+      "hideArchived": "Arşivli rafları gizle"
     },
     "errors": {
       "code": "Hata kodu: {code}",
@@ -1649,7 +1651,11 @@
     "searchPlaceholder": "Depo kodu ya da adı",
     "noMatch": "Aramaya uyan depo yok",
     "noMatchHint": "Başka bir kod ya da ad deneyin.",
-    "clearSearch": "Aramayı temizle"
+    "clearSearch": "Aramayı temizle",
+    "filter": "Süzgeç",
+    "chipActive": "Etkin",
+    "chipArchived": "Arşivli",
+    "archivedEmpty": "Arşivde depo yok"
   },
   "field": {
     "title": "Saha",
