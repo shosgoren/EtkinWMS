@@ -29,6 +29,8 @@
 @import "./design/paylas.css";
 @import "./design/yolculuk.css";
 @import "./design/ust-frame.css";
+/* T-1042 (STANDART.md §1): masaüstü standardı ortak kabuk — üst çubuk, alt cam çubuk, zemin, genişlik (en sonda; elle yazılır). */
+@import "./design/standart.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
 @source not inline("ring");
 /* T-1006: ortak buzlu perdenin karartması (design/perde.css; Kabuk kaynağındaki `.veil` değeri). Kök düzeyde tanımlıdır: perde her kapta aynı. */
@@ -199,6 +201,28 @@ body {
   --color-kr-card-dark: #1c2833;
   --color-kr-shadow: rgba(23, 46, 66, .6);
   --color-kr-shadow-soft: rgba(23, 46, 66, .45);
+  /* T-1042 (STANDART.md §1): masaüstü standardı ortak kabuk (design/standart.css). Renkler onaylı tuval kaynağından
+     (`docs/design/source/Standart*.dc.html`). */
+  --color-st-bg-end: #dce3ea;
+  --color-st-home: #e3e9f4;
+  --color-st-hover: rgba(23, 46, 66, .06);
+  --color-st-icon: #4e6476;
+  --color-st-ok: #2f9e6b;
+  --color-st-ok-deep: #1f7a50;
+  --color-st-cur-bg: #e3edfb;
+  --color-st-cur: #2f5da8;
+  --color-st-glass-a: rgba(255, 255, 255, .82);
+  --color-st-glass-b: rgba(244, 247, 251, .72);
+  --color-st-glass-edge: rgba(255, 255, 255, .95);
+  --color-st-glass-shadow: rgba(23, 46, 66, .28);
+  --color-st-etkin-a: #8b6cf0;
+  --color-st-etkin-b: #6c4bd8;
+  --color-st-av: #6c4bd8;
+  --color-st-dark-bg-a: #182430;
+  --color-st-dark-glass: rgba(28, 40, 51, .86);
+  --color-st-dark-hover: rgba(255, 255, 255, .08);
+  --color-st-dark-cur-bg: rgba(47, 93, 168, .32);
+  --color-st-dark-cur: #9ec0f2;
 }
 
 /* T-436 (ALTIN-KURAL 14): eski (Tailwind belirteçli) yüzeylerin koyu teması; kök düzen `html[data-tema]` verir. */

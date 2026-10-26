@@ -1,14 +1,15 @@
 "use client";
 // Toplu yayın (21 Ekim, T-967 × T-968): kalıp üst çubuğunun sağ üst `.tph` yuvasının VARSAYILANI — kaynak KalipListe/Form/Detay
-// `.helpb` (Sorun bildir, sarı üçgen) + `.helpb.sup` (Destek, kulaklık) düğmeleri; tuvaldeki `.ph` yer tutucu çizgisi asıl düğmede yok.
+// `.helpb` (Sorun bildir; T-1042 STANDART §1: bayrak) + `.helpb.sup` (Destek, kulaklık) düğmeleri; tuvaldeki `.ph` yer tutucu çizgisi asıl düğmede yok.
 // Davranış Pano üst çubuğuyla aynı (T-967): Sorun bildir → mevcut Sorun penceresi (ProblemSheet, yöneticiye; yalnız bildirme yetkisi
 // olana), Destek → Destek penceresi ya da talep varsa Taleplerim (Etkin ekibine); talepler açılışta değil Destek'e dokununca yüklenir (her ekran açılışında sunucu eylemi = işlem hız sınırı bütçesi).
-// İkon yolları kaynaktan (LICON.warn / LICON.support), pencereler T-967 support-layer bileşenleri; kalıp kabının (`.dzl/.dzf/.dzd`)
+// İkon yolları kaynaktan (SICON.flag / LICON.support), pencereler T-967 support-layer bileşenleri; kalıp kabının (`.dzl/.dzf/.dzd`)
 // `.app`/`.top` kuralları pencerelere sızmasın diye pencereler `body`ye taşınır (portal).
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { LICON } from "../../../design/kalip-icons.ts";
+import { SICON } from "../../../design/standart-icons.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
 import { SupportList, SupportSheet, useSupport } from "../pano/support-layer.tsx";
 import { Ico } from "./ekran.tsx";
@@ -49,7 +50,7 @@ export function KalipDestek({ slug, dark, canReport }: { slug: string; dark: boo
           }}
           data-testid="kalip-problem"
         >
-          <Ico d={LICON.warn} size={22} />
+          <Ico d={SICON.flag} size={22} />
         </button>
       ) : null}
       <button
