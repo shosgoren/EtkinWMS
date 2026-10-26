@@ -140,6 +140,10 @@
 .dz-dark .sttema button.on { color: var(--color-st-dark-cur); }
 
 /* Ayarlar düğmesi (dişli + yazı), Hesap'ın hemen önünde. */
+/* Ayarlar her üst çubukta yalnız simge (yazı ad olarak aria-label'da). */
+.stbtn > span {
+  display: none;
+}
 .stbtn {
   appearance: none;
   display: flex;
@@ -148,9 +152,9 @@
   justify-content: center;
   gap: 4px;
   flex: none;
-  min-width: 56px;
+  min-width: 48px;
   min-height: 48px;
-  padding: 4px 8px;
+  padding: 0;
   border-radius: 14px;
   color: var(--color-kr-ink);
   text-decoration: none;
