@@ -93,6 +93,21 @@ interface SonIslem {
 
 const gorulduAnahtar = (slug: string): string => `son-islem-goruldu:${slug}`;
 
+/** Sekme içi ortak önbellek: üst çubuk her ekran geçişinde yeniden kurulur; sunucu (ve kullanıcı/firma hız sınırı) dakikada en çok bir kez sorulur. */
+const TAZE_MS = 55_000;
+type SonIslemSonuc = { readonly items: readonly SonIslem[]; readonly timeZone: string } | null;
+const onbellek = new Map<string, { readonly at: number; readonly p: Promise<SonIslemSonuc> }>();
+function sonIslemler(slug: string, zorla: boolean): Promise<SonIslemSonuc> {
+  const c = onbellek.get(slug);
+  if (!zorla && c !== undefined && Date.now() - c.at < TAZE_MS) return c.p;
+  const p = myTodayActionsAction({ slug }).then(
+    (r) => (r.ok ? { items: r.data.items, timeZone: r.data.timeZone } : null),
+    () => null,
+  );
+  onbellek.set(slug, { at: Date.now(), p });
+  return p;
+}
+
 /**
  * T-1053 (STANDART §1, tuval `StandartAnaEkran` "Son işlemler (3 yeni)"): saat simgeli düğme; açılınca BUGÜN kendi yaptıkların
  * (en yeni üstte, saatiyle). Rozet: son açılıştan beri yeni işlem sayısı (cihazda hatırlanır). Esc ve dışarı dokunuş kapatır,
@@ -116,19 +131,20 @@ export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined })
   // ALTIN-KURAL 11 / Katman standardı: ortak perde + odak kancası (Esc kapatır, odak pencerede kalır, kapanınca düğmeye döner).
   useModalFocus(open, box, { onClose: kapat });
 
-  const load = useCallback(async (): Promise<void> => {
-    if (slug === undefined) return;
-    try {
-      const r = await myTodayActionsAction({ slug });
-      if (r.ok) {
-        setItems(r.data.items);
-        setTimeZone(r.data.timeZone);
-        setFailed(false);
-      } else setFailed(true);
-    } catch {
-      setFailed(true);
-    }
-  }, [slug]);
+  const load = useCallback(
+    async (zorla = false): Promise<void> => {
+      if (slug === undefined) return;
+      const r = await sonIslemler(slug, zorla);
+      if (r === null) {
+        setFailed(true);
+        return;
+      }
+      setItems(r.items);
+      setTimeZone(r.timeZone);
+      setFailed(false);
+    },
+    [slug],
+  );
 
   useEffect(() => {
     if (slug === undefined) return;
@@ -170,7 +186,8 @@ export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined })
       setYer({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right), koyu: b.closest(".dz-dark") !== null });
     }
     setOpen(true);
-    void load();
+    // Açılış kullanıcı eylemi: önbelleği atlar (az önce yapılan iş de görünsün).
+    void load(true);
     const now = new Date().toISOString();
     setSeen(now);
     try {
