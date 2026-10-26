@@ -113,3 +113,23 @@ test("T-436 dokunma hedefi: kalıp ekranlarında içerik ve alt çubuk ≥ 44 px
     await expectTouchTargets(page, 48, path, '.dzs main, [data-testid="kabuk-dock"]');
   }
 });
+
+// T-1046 (Codex P1): Ayarlar sekmeleri tek taslağın bölümleridir — sekme geçişi "kaydetmeden çık" sormaz, taslağı silmez ya da gizli
+// bırakmaz; değişiklik Firma'ya dönünce de işaretli, Kaydet etkin. Entegrasyonlar ayrı ekrandır (koruma orada sorar).
+test("T-1046 Ayarlar sekmeleri arası geçiş taslağı korur", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/settings");
+  await page.getByTestId("settings-locale").click();
+  await page.getByTestId("settings-locale-editor").getByText("English", { exact: true }).click();
+  await expect(page.getByTestId("settings-locale")).toHaveAttribute("data-changed", "true");
+  await page.keyboard.press("Escape");
+  await page.getByTestId("kalip-sekme").locator('[data-tab="gorunum"]').click();
+  await expect(page).toHaveURL(/sekme=gorunum/);
+  await expect(page.getByTestId("kalip-unsaved")).toHaveCount(0);
+  await expect(page.getByTestId("settings-save")).toBeEnabled();
+  await page.getByTestId("kalip-sekme").locator('[data-tab="firma"]').click();
+  await expect(page.getByTestId("settings-locale")).toHaveAttribute("data-changed", "true");
+  await page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]').click();
+  await expect(page.getByTestId("kalip-unsaved")).toBeVisible();
+});

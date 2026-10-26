@@ -12,10 +12,10 @@ export function ayarSekmesi(raw: string | null | undefined): Exclude<AyarSekmesi
 
 export function ayarSekmeleri(base: string, t: (key: "tabFirma" | "tabUsers" | "tabInteg" | "tabLook") => string): KalipSekmeItem[] {
   return [
-    { id: "firma", label: t("tabFirma"), d: LICON.workspace, color: "0F6E8C", href: `${base}/settings` },
-    { id: "kullanici", label: t("tabUsers"), d: LICON.people, color: "6C4BD8", href: `${base}/settings?sekme=kullanici` },
+    { id: "firma", label: t("tabFirma"), d: LICON.workspace, color: "0F6E8C", href: `${base}/settings`, taslak: true },
+    { id: "kullanici", label: t("tabUsers"), d: LICON.people, color: "6C4BD8", href: `${base}/settings?sekme=kullanici`, taslak: true },
     { id: "entegrasyon", label: t("tabInteg"), d: LICON.transfer, color: "E56A00", href: `${base}/settings/baglantilar` },
-    { id: "gorunum", label: t("tabLook"), d: LICON.sun, color: "B07D0B", href: `${base}/settings?sekme=gorunum` },
+    { id: "gorunum", label: t("tabLook"), d: LICON.sun, color: "B07D0B", href: `${base}/settings?sekme=gorunum`, taslak: true },
   ];
 }
 

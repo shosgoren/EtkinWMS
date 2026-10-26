@@ -450,6 +450,8 @@ export interface KalipSekmeItem {
   readonly href: string;
   /** T-1046 (STANDART §5): sekme simgesinin rengi (her sekmede renkli simge). */
   readonly color?: string;
+  /** T-1046: sekme aynı taslağın bölümüdür (tek Kaydet); ortak çıkış koruması bu geçişte sormaz (`data-ayni-taslak`). */
+  readonly taslak?: boolean;
 }
 
 /**
@@ -478,6 +480,7 @@ export function KalipSekme({ items, current, color, label, onGo }: { items: read
               feedback.minor();
             }}
             data-tab={o.id}
+            data-ayni-taslak={o.taslak === true ? "" : undefined}
           >
             <Ico d={o.d} size={20} />
             {o.label}
