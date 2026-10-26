@@ -238,7 +238,7 @@ test("T-1052 Form: üst şerit ve yan yana gruplar", async ({ page }) => {
   await page.goto("/t/demo/parties?new=1");
   const serit = page.getByTestId("kalip-preview");
   await expect(serit).toBeVisible();
-  const gruplar = page.locator(".dzf .kfc > .sg");
+  const gruplar = page.locator(".dzf .kfc .sg");
   await expect(gruplar.nth(1)).toBeVisible();
   const kutu = async (i: number) => (await gruplar.nth(i).boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
   const s = (await serit.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };

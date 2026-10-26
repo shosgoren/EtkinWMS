@@ -1044,13 +1044,14 @@ html:has(.halo.tmenu) .dzk .wrap {
     max-width: none;
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Grup sayısına göre: 3+ grup → 3 sütun (taşan alt satıra), 2 → 2, 1 → tam genişlik. */
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     align-items: start;
   }
-  .dzf .kfc > :not(.sg) { grid-column: 1 / -1; }
-  .dzf .kfc:not(:has(> .sg ~ .sg ~ .sg)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dzf .kfc:not(:has(> .sg ~ .sg)) { grid-template-columns: minmax(0, 1fr); }
-  .dzf:not(.dz-dark) .kfc > .sg {
+  /* İki sütunlu yerleşim kabı (`KalipIzgara`) masaüstünde ızgaraya karışır: gruplar doğrudan sütun olur. */
+  .dzf .kfc :is(.sgrid, .scol) { display: contents; }
+  .dzf .kfc > :not(.sg, .sgrid) { grid-column: 1 / -1; }
+  .dzf:not(.dz-dark) .kfc .sg {
     background: linear-gradient(180deg, color-mix(in srgb, var(--gc, var(--color-kr-card)) 10%, var(--color-kr-card)) 0%, var(--color-kr-card) 120px);
   }
 }
