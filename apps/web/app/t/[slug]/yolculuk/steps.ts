@@ -1,8 +1,9 @@
 // T-1006: spotlight turun adım planı (istemci; domain kodu yok). Anahtar listesi domain `JOURNEY_STEPS` ile aynıdır (birim testi).
 // Her adım GERÇEK ekranı açar; ekranda ortak buzlu perde + delikte parlayan `[data-tour]` hedefi + ipucu balonu çizilir (`yolculuk.tsx`).
 import { JICON } from "../../../design/yolculuk-icons.ts";
+import { KICON } from "../../../design/kabuk-icons.ts";
 
-export const STEP_KEYS = ["cards", "shelves", "stock", "labels", "bom", "order", "people", "task"] as const;
+export const STEP_KEYS = ["cards", "shelves", "parties", "stock", "labels", "bom", "order", "people", "task"] as const;
 export type StepKey = (typeof STEP_KEYS)[number];
 
 export interface JourneyData {
@@ -27,6 +28,8 @@ export interface JourneyData {
 export const STEP_UI: Readonly<Record<StepKey, { readonly d: string; readonly color: string }>> = {
   cards: { d: JICON.cards, color: "2F5DA8" },
   shelves: { d: JICON.shelves, color: "30475A" },
+  // T-1054: kaynakta yolculuk adımı yok; simge Modüller'deki Cariler (kabuk kaynağı), renk yolculuk paletinden (kaynakta olan renk).
+  parties: { d: KICON.mCari, color: "4A2FA8" },
   stock: { d: JICON.stock, color: "2F7D5B" },
   labels: { d: JICON.labels, color: "B23A3A" },
   bom: { d: JICON.bom, color: "8A5A12" },
@@ -57,6 +60,7 @@ export interface StepPlan {
 /**
  * Adımın planı. Kaynak seçimi (adım 1) ve açılış stoku yolu (adım 3) seçimlere göre değişir:
  * - Kartlar: Excel → Ürünler (Excel düğmesi) → Excel'den aktar (Dosya seç); Paraşüt → Entegrasyon (BAĞLAN / EŞİTLE).
+ * - Cariler (T-1054): Paraşüt → Entegrasyon (cari akışı eşitlenir); aksi Excel'den aktar (cari türü seçili) ya da Cariler ekranı.
  * - Stok: Paraşüt açılış stoku açık ve alınmadıysa Entegrasyon "Şimdi al"; Excel'de açılış stoku istendiyse açılış stoku şablonu; aksi elle giriş.
  */
 export function stepPlan(base: string, key: StepKey, j: JourneyData, source: "EXCEL" | "PARASUT" | null = j.cardSource): StepPlan {
@@ -68,6 +72,10 @@ export function stepPlan(base: string, key: StepKey, j: JourneyData, source: "EX
         : { href: `${base}/items`, stops: [m("/items", "cardsItems", { target: "excel" }), m("/import", "cardsExcel")] };
     case "shelves":
       return { href: j.hints.warehouseId === null ? `${base}/warehouses` : `${base}/warehouses/${encodeURIComponent(j.hints.warehouseId)}`, stops: [m("/warehouses", "warehouse"), m("/warehouses/", "shelves", { prefix: true })] };
+    case "parties":
+      return source === "PARASUT"
+        ? { href: `${base}/integrations`, stops: [m("/integrations", "partiesParasut")] }
+        : { href: `${base}/import?tur=cari`, stops: [m("/import", "partiesExcel"), m("/parties", "parties")] };
     case "stock":
       if (j.hints.parasut.openingEnabled && j.hints.parasut.openingTakenAt === null) return { href: `${base}/integrations`, stops: [m("/integrations", "stockParasut", { target: "opening-pull" })] };
       if (j.openingStockWanted === true && j.cardSource === "EXCEL") return { href: `${base}/import?tur=acilis`, stops: [m("/import", "stockExcel")] };

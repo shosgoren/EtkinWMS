@@ -12,13 +12,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
+import { useSetupProgress } from "../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditForm } from "../code-edit-dialog.tsx";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
-import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipCipler, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
 import { KalipGorunumSec, KalipSayfa, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
@@ -310,17 +311,6 @@ const c = (hex: string): string => kdz("dzl", hex);
 /** Kart eylem satırı düğmesi (kaynak `.btn`, küçük); kilitliyken soluk. */
 const actBtn = (bg: string, disabled: boolean): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48, opacity: disabled ? 0.5 : 1 });
 
-type StepKey = "warehouse" | "locations" | "items";
-
-function setupSteps(slug: string, p: SetupProgressView): { key: StepKey; done: boolean; href: string | null }[] {
-  const base = `/t/${encodeURIComponent(slug)}`;
-  return [
-    { key: "warehouse", done: p.hasWarehouse, href: null },
-    { key: "locations", done: p.hasLocation, href: p.nextWarehouseId === null ? null : `${base}/warehouses/${encodeURIComponent(p.nextWarehouseId)}?bulk=1` },
-    { key: "items", done: p.hasItem, href: `${base}/items?new=1` },
-  ];
-}
-
 export function WarehousesView({
   slug,
   dark,
@@ -374,7 +364,6 @@ export function WarehousesView({
   const [error, setError] = useState<ServerError | null>(null);
   const [version, setVersion] = useState(0);
   const progress = useSetupProgress(slug, canManage, version);
-  const guide = canManage && progress !== null && !isSetupComplete(progress);
   const params = useSearchParams();
   const { say, node: toast } = useKalipToast("liste");
   const errText = useErrorText();
@@ -441,27 +430,6 @@ export function WarehousesView({
     router.push(withParam("new", "1"));
   };
 
-  // Kurulum rehberi (KalipKurulum): şimdiki adım dolu renk; depo adımı bu ekranın formunu açar.
-  const steps = guide && progress !== null ? setupSteps(slug, progress) : [];
-  const nextStep = steps.find((s) => !s.done);
-  const stepText: Record<StepKey, [string, string, string, string, string]> = {
-    warehouse: [tk("stepWarehouse"), tk("stepWarehouseSub"), tk("stepWarehouseCta"), "30475A", LICON.depo],
-    locations: [tk("stepLocations"), tk("stepLocationsSub"), tk("stepLocationsCta"), "0E7C7B", LICON.raf],
-    items: [tk("stepItems"), tk("stepItemsSub"), tk("stepItemsCta"), "2F5DA8", LICON.box],
-  };
-  const blocked = (): void => {
-    say("warn", nextStep === undefined ? "" : stepText[nextStep.key][0]);
-  };
-  const adimlar: KalipAdim[] = steps.map((s) => {
-    const [title, sub, cta, color, d] = stepText[s.key];
-    const state = s.done ? "done" : s === nextStep ? "now" : "locked";
-    const act = state === "locked" || (s.key !== "warehouse" && s.href === null) ? { onClick: blocked } : s.href === null ? { onClick: openCreate } : { href: s.href };
-    return { key: s.key, title, sub, cta, color, d, state, ...act };
-  });
-  const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
-  const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
-  // T-1040: boş "Arşivli" görünümü kurulmamış kiracı sayılmaz (kurulum rehberi değil, arşiv boş durumu).
-  const showSetup = guide && warehouses.length === 0 && firstPage && q === "" && !archived;
   const countLbl = total !== undefined ? tk("count", { n: total }) : nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
   const lockedId = "warehouse-locked";
   // T-1048 (STANDART §2): ortak liste kalıbı — Kart / Liste, Sütunlar, sıralanan tablo, sayfa satırı.
@@ -596,30 +564,18 @@ export function WarehousesView({
         ) : null}
         {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
         {error ? <ServerErrorBanner error={error} returnTo={base} /> : null}
-        {guide && nextStep !== undefined && !showSetup ? (
-          <KalipDaha
-            {...(nextStep.key === "warehouse" ? { onClick: openCreate } : nextStep.href === null ? { onClick: blocked } : { href: nextStep.href })}
-            iconD={LICON.clip}
-            testId="setup-row"
-          >
-            {setupSub}
-          </KalipDaha>
-        ) : null}
+        {/* T-1054: eski "depo → raf → ürün" kutusu yerine asıl kurulum yolculuğunun girişi; bitince çıkmaz. */}
+        <YolculukGiris dark={dark} />
 
-        {showSetup ? null : <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={base} defaultValue={q} below={archived ? <input type="hidden" name="arsiv" value="1" /> : null} />}
-        {/* T-1040: süzgeç kurulum rehberi açıkken de görünür — son etkin depo arşivlenince arşivliye yol kalır. */}
+        <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={base} defaultValue={q} below={archived ? <input type="hidden" name="arsiv" value="1" /> : null} />
         <div className="ktbar">
           <KalipCipler label={t("filter")} chips={chips} />
-          {showSetup ? null : (
-            <span className="kttools">
-              {gorunum === "liste" ? <KalipSutunSec sutunlar={sutunlar} secim={sutunSecim} /> : null}
-              <KalipGorunumSec value={gorunum} onChange={setGorunum} />
-            </span>
-          )}
+          <span className="kttools">
+            {gorunum === "liste" ? <KalipSutunSec sutunlar={sutunlar} secim={sutunSecim} /> : null}
+            <KalipGorunumSec value={gorunum} onChange={setGorunum} />
+          </span>
         </div>
-        {showSetup ? (
-          <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} testId="setup-guide" />
-        ) : warehouses.length === 0 && archived && q === "" ? (
+        {warehouses.length === 0 && archived && q === "" ? (
           <KalipBos title={t("archivedEmpty")} iconD={LICON.lock} action={{ label: t("chipActive"), href: base, kind: "go" }} />
         ) : warehouses.length === 0 && q !== "" ? (
           <KalipBos title={tr("notFoundSearch")} hint={t("noMatchHint")} action={{ label: t("clearSearch"), href: base, kind: "clear" }} />

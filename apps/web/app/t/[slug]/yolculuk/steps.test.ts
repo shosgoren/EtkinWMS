@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { JOURNEY_STEPS } from "@wms/domain/onboarding/journey";
 import { delikKirp } from "../kalip/perde.tsx";
-import { STEP_KEYS, firstOpen, isStepKey, ringDash, stepPlan, stopFor, stripState, type JourneyData } from "./steps.ts";
+import { dz } from "../../../design/yolculuk-tokens.ts";
+import { STEP_KEYS, STEP_UI, firstOpen, isStepKey, ringDash, stepPlan, stopFor, stripState, type JourneyData } from "./steps.ts";
 
 const base = "/t/acme";
 const j = (over: Partial<JourneyData> = {}): JourneyData => ({
@@ -35,6 +36,20 @@ describe("yolculuk adımları", () => {
     expect(stopFor(p, "/t/acme/import")).toMatchObject({ target: "main", hint: "cardsExcel" });
     expect(stopFor(p, "/t/acme")).toBeNull();
     expect(stepPlan(base, "cards", j(), "PARASUT")).toEqual({ href: "/t/acme/integrations", stops: [{ path: "/t/acme/integrations", target: "main", hint: "cardsParasut" }] });
+  });
+
+  it("her adım rengi yolculuk paletinde (kaynakta olmayan renk ekranı düşürür; T-1054)", () => {
+    for (const k of STEP_KEYS) expect(() => dz(STEP_UI[k].color), k).not.toThrow();
+  });
+
+  it("cariler (T-1054): depo ve raflardan sonra; Paraşüt → Entegrasyon, aksi Excel'den cari aktarımı (ya da Cariler ekranı)", () => {
+    expect(STEP_KEYS.indexOf("parties")).toBe(STEP_KEYS.indexOf("shelves") + 1);
+    expect(stepPlan(base, "parties", j(), "PARASUT")).toEqual({ href: "/t/acme/integrations", stops: [{ path: "/t/acme/integrations", target: "main", hint: "partiesParasut" }] });
+    const p = stepPlan(base, "parties", j(), "EXCEL");
+    expect(p.href).toBe("/t/acme/import?tur=cari");
+    expect(stopFor(p, "/t/acme/import")).toMatchObject({ hint: "partiesExcel" });
+    expect(stopFor(p, "/t/acme/parties")).toMatchObject({ hint: "parties" });
+    expect(stepPlan(base, "parties", j(), null).href).toBe("/t/acme/import?tur=cari");
   });
 
   it("stok: Paraşüt açılış stoku açık ve alınmadıysa Şimdi al düğmesi hedeflenir", () => {

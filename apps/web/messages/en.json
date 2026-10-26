@@ -5554,14 +5554,19 @@
     "no": "No",
     "steps": {
       "cards": {
-        "title": "Bring your cards",
-        "sub": "Excel or Paraşüt",
+        "title": "Item cards",
+        "sub": "Paraşüt or Excel",
         "count": "{n} items"
       },
       "shelves": {
         "title": "Warehouse and shelves",
         "sub": "Bulk shelf builder",
         "count": "{n} shelves"
+      },
+      "parties": {
+        "title": "Customers and suppliers",
+        "sub": "Party cards",
+        "count": "{n} parties"
       },
       "stock": {
         "title": "Stock entry",
@@ -5596,12 +5601,12 @@
     },
     "cards": {
       "step": "Step {n}/{total}",
-      "srcQ": "Where should the cards come from?",
+      "srcQ": "Do you use accounting software (Paraşüt)?",
       "src": {
-        "EXCEL": "From Excel",
+        "EXCEL": "No, from Excel",
         "EXCELSub": "Fill the template · upload",
-        "PARASUT": "From Paraşüt",
-        "PARASUTSub": "Connect · they arrive automatically"
+        "PARASUT": "I use Paraşüt",
+        "PARASUTSub": "Connect · items, parties, warehouses arrive automatically"
       },
       "stockQ": "Shall we also take current stock quantities?",
       "stockQSub": "Taken once · afterwards stock only flows from Etkin to Paraşüt",
@@ -5653,7 +5658,7 @@
       },
       "cardsParasut": {
         "title": "Connect to Paraşüt",
-        "text": "Tap the glowing CONNECT button; your item cards arrive automatically."
+        "text": "Tap the glowing CONNECT button; your item, party and warehouse cards arrive automatically."
       },
       "cardsSync": {
         "title": "Pull cards from Paraşüt",
@@ -5666,6 +5671,18 @@
       "shelves": {
         "title": "Create shelves",
         "text": "Tap the glowing button; the bulk shelf builder opens all shelves at once."
+      },
+      "partiesExcel": {
+        "title": "Import parties from Excel",
+        "text": "Tap the glowing button and upload your party list; customers and suppliers arrive automatically."
+      },
+      "partiesParasut": {
+        "title": "Pull parties from Paraşüt",
+        "text": "Turn on the party cards flow, then tap the glowing SYNC button."
+      },
+      "parties": {
+        "title": "Party cards",
+        "text": "Tap the glowing button and add your first customer or supplier."
       },
       "stockParasut": {
         "title": "Take opening stock from Paraşüt",
@@ -5715,6 +5732,7 @@
     "voice": {
       "cards": "Open Excel",
       "shelves": "Open warehouse",
+      "parties": "Open parties",
       "stock": "Receive 10 boxes of seal",
       "labels": "Open labels",
       "bom": "Open production",

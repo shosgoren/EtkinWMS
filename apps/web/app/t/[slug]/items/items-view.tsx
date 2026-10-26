@@ -11,11 +11,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { isSetupComplete, useSetupProgress, type SetupProgressView } from "../easy-setup/setup-guide.tsx";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
-import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
 import { KalipGorunumSec, KalipSayfa, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
@@ -380,16 +380,6 @@ function ItemForm({ slug, dark, units, onBack, onDone }: { slug: string; dark: b
   );
 }
 
-type StepKey = "warehouse" | "locations" | "items";
-
-function setupSteps(slug: string, p: SetupProgressView): { key: StepKey; done: boolean; href: string | null }[] {
-  const base = `/t/${encodeURIComponent(slug)}`;
-  return [
-    { key: "warehouse", done: p.hasWarehouse, href: `${base}/warehouses?new=1` },
-    { key: "locations", done: p.hasLocation, href: p.nextWarehouseId === null ? null : `${base}/warehouses/${encodeURIComponent(p.nextWarehouseId)}?bulk=1` },
-    { key: "items", done: p.hasItem, href: null },
-  ];
-}
 
 /** Liste kartının stok rozeti verisi (sunucu: kapsamdaki depoların eldeki toplamı + minimum). */
 /** T-1047: liste görünümü satırı (kartla aynı hesap). */
@@ -447,8 +437,6 @@ export function ItemsView({
   const base = `${home}/items`;
 
   const [cam, setCam] = useState(false);
-  const progress = useSetupProgress(slug, canManage, 0);
-  const guide = canManage && progress !== null && !isSetupComplete(progress);
   const { say, node: toast } = useKalipToast("liste");
   const inputRef = useRef<HTMLInputElement>(null);
   const [gorunum, setGorunum] = useKalipGorunum("items");
@@ -560,25 +548,6 @@ export function ItemsView({
     return { it, st, tn, archived, state, qty: st === undefined ? "" : fmtQty(st.have, locale) };
   });
 
-  const steps = guide && progress !== null ? setupSteps(slug, progress) : [];
-  const nextStep = steps.find((s) => !s.done);
-  const stepTitle: Record<StepKey, [string, string, string, string, string]> = {
-    warehouse: [tk("stepWarehouse"), tk("stepWarehouseSub"), tk("stepWarehouseCta"), "30475A", LICON.depo],
-    locations: [tk("stepLocations"), tk("stepLocationsSub"), tk("stepLocationsCta"), "0E7C7B", LICON.raf],
-    items: [tk("stepItems"), tk("stepItemsSub"), tk("stepItemsCta"), "2F5DA8", LICON.box],
-  };
-  const blocked = (): void => {
-    say("warn", nextStep === undefined ? "" : stepTitle[nextStep.key][0]);
-  };
-  const adimlar: KalipAdim[] = steps.map((s) => {
-    const [title, sub, cta, color, d] = stepTitle[s.key];
-    const state = s.done ? "done" : s === nextStep ? "now" : "locked";
-    const act = state === "locked" ? { onClick: blocked } : s.href === null ? { onClick: openCreate } : { href: s.href };
-    return { key: s.key, title, sub, cta, color, d, state, ...act };
-  });
-  const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
-  const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
-  const noWarehouse = guide && progress !== null && !progress.hasWarehouse;
 
   if (creating) {
     return (
@@ -593,7 +562,6 @@ export function ItemsView({
   }
 
   const listRows = live ?? null;
-  const showSetup = guide && items.length === 0 && !filtered && live === null;
 
   return (
     <>
@@ -606,17 +574,15 @@ export function ItemsView({
         testId="items"
         bar={{
           back: { href: home },
-          main: noWarehouse
-            ? { label: tk("addWarehouse"), aria: tk("stepWarehouse"), d: LICON.plus, href: `${home}/warehouses?new=1`, testId: "items-add" }
-            : {
-                label: tk("add"),
-                aria: tk("addAria"),
-                d: LICON.plus,
-                disabled: !canManage,
-                disabledReason: t("lockedReason"),
-                onClick: openCreate,
-                testId: "items-add",
-              },
+          main: {
+            label: tk("add"),
+            aria: tk("addAria"),
+            d: LICON.plus,
+            disabled: !canManage,
+            disabledReason: t("lockedReason"),
+            onClick: openCreate,
+            testId: "items-add",
+          },
         }}
         overlays={toast}
       >
@@ -650,11 +616,8 @@ export function ItemsView({
           </span>
         </div>
         {!canManage ? <p className="sr">{t("lockedReason")}</p> : null}
-        {guide && nextStep !== undefined && items.length > 0 ? (
-          <KalipDaha href={nextStep.href ?? undefined} onClick={nextStep.href === null ? openCreate : undefined} iconD={LICON.clip} testId="setup-row">
-            {setupSub}
-          </KalipDaha>
-        ) : null}
+        {/* T-1054: eski "depo → raf → ürün" kutusu yerine asıl kurulum yolculuğu (entegrasyon → ürün → depo/raf → cari …); bitince çıkmaz. */}
+        <YolculukGiris dark={dark} />
 
         {listRows !== null ? (
           listRows.length === 0 ? (
@@ -691,15 +654,6 @@ export function ItemsView({
               ))}
             </KalipKartListe>
           )
-        ) : showSetup ? (
-          <>
-            <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} />
-            {canImport ? (
-              <KalipDaha href={`${home}/import`} iconD={LICON.excel} iconColor="1E7B45" testId="items-import">
-                {tk("import")}
-              </KalipDaha>
-            ) : null}
-          </>
         ) : items.length === 0 ? (
           filtered ? (
             <KalipBos
@@ -708,20 +662,27 @@ export function ItemsView({
               action={{ label: tk("clear"), href: base, kind: "clear" }}
             />
           ) : (
-            <KalipBos
-              title={t("empty")}
-              hint={canManage ? t("emptyAction") : t("emptyReadOnly")}
-              iconD={LICON.box}
-              action={
-                canManage
-                  ? {
-                      label: tk("stepItemsCta"),
-                      kind: "add",
-                      onClick: openCreate,
-                    }
-                  : { label: tr("home"), href: home, kind: "go" }
-              }
-            />
+            <>
+              <KalipBos
+                title={t("empty")}
+                hint={canManage ? t("emptyAction") : t("emptyReadOnly")}
+                iconD={LICON.box}
+                action={
+                  canManage
+                    ? {
+                        label: tk("stepItemsCta"),
+                        kind: "add",
+                        onClick: openCreate,
+                      }
+                    : { label: tr("home"), href: home, kind: "go" }
+                }
+              />
+              {canImport ? (
+                <KalipDaha href={`${home}/import`} iconD={LICON.excel} iconColor="1E7B45" testId="items-import">
+                  {tk("import")}
+                </KalipDaha>
+              ) : null}
+            </>
           )
         ) : (
           <>

@@ -75,9 +75,9 @@ async function asApp(tenant: string, sql: string, params: unknown[] = []): Promi
 }
 
 describe("tamamlanma gerçek veriden", () => {
-  it("boş kiracı: 0/8, sıradaki kartlar; seçim satırı yokken de okunur", async () => {
+  it("boş kiracı: 0/9, sıradaki kartlar; seçim satırı yokken de okunur", async () => {
     const v = await getSetupJourney(owner());
-    expect({ done: v.done, total: v.total, next: v.next, complete: v.complete, dismissed: v.dismissed }).toEqual({ done: 0, total: 8, next: "cards", complete: false, dismissed: false });
+    expect({ done: v.done, total: v.total, next: v.next, complete: v.complete, dismissed: v.dismissed }).toEqual({ done: 0, total: 9, next: "cards", complete: false, dismissed: false });
     expect(v.steps.every((s) => !s.done && !s.skipped && s.count === 0)).toBe(true);
     expect(v.hints).toEqual({ warehouseId: null, recipeId: null, parasut: { connected: false, openingEnabled: false, openingTakenAt: null } });
   });
@@ -96,13 +96,23 @@ describe("tamamlanma gerçek veriden", () => {
     v = await getSetupJourney(owner());
     expect(state(v, "cards")).toMatchObject({ done: true, count: 2 });
     expect(state(v, "shelves")).toMatchObject({ done: true, count: 1 });
-    expect({ done: v.done, next: v.next }).toEqual({ done: 2, next: "stock" });
+    expect({ done: v.done, next: v.next }).toEqual({ done: 2, next: "parties" });
+    // T-1054: arşivlenmemiş cari kart "Cariler" adımını tamamlar; arşivli sayılmaz.
+    await adm.query(
+      `INSERT INTO public.parties (tenant_id, code, code_key, name, created_by, archived_at)
+       SELECT $1, c, upper(c), 'Cari ' || c, m.id, CASE WHEN c = 'C2' THEN now() END
+       FROM (SELECT id FROM public.tenant_memberships WHERE tenant_id = $1 ORDER BY id LIMIT 1) m, unnest(ARRAY['C1', 'C2']) c`,
+      [bare.tenantId],
+    );
+    v = await getSetupJourney(owner());
+    expect(state(v, "parties")).toMatchObject({ done: true, count: 1 });
+    expect({ done: v.done, next: v.next }).toEqual({ done: 3, next: "stock" });
   });
 
   it("dolu dünya: stok hareketi, saha personeli ve sayım görevi tamam; reçete / üretim / etiket değil", async () => {
     const v = await getSetupJourney(as(W.ownerUserId, W.slug));
     for (const k of ["cards", "shelves", "stock", "people", "task"]) expect(state(v, k)?.done, k).toBe(true);
-    for (const k of ["labels", "bom", "order"]) expect(state(v, k)?.done, k).toBe(false);
+    for (const k of ["parties", "labels", "bom", "order"]) expect(state(v, k)?.done, k).toBe(false);
     expect(v.done).toBe(5);
   });
 
@@ -122,22 +132,22 @@ describe("atlama ve seçimler", () => {
   it("Bunu kullanmıyorum: adım atlanır, paydadan düşer; geri alınır; audit yazılır", async () => {
     let v = await setJourneyChoice(owner(), { skip: "labels" });
     expect(state(v, "labels")).toMatchObject({ skipped: true, done: false });
-    expect(v.total).toBe(7);
+    expect(v.total).toBe(8);
     v = await setJourneyChoice(owner(), { skip: "labels" }); // tekrar: değişmez
-    expect(v.total).toBe(7);
+    expect(v.total).toBe(8);
     v = await setJourneyChoice(owner(), { unskip: "labels" });
     expect(state(v, "labels")?.skipped).toBe(false);
-    expect(v.total).toBe(8);
+    expect(v.total).toBe(9);
     const audit = await adm.query<{ n: number }>("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'setup_journey.updated'", [bare.tenantId]);
     expect(audit.rows[0]?.n).toBe(3);
   });
 
   it("üretim yapmayan firmada 5 ve 6 hiç görünmez; cevap değişince geri gelir", async () => {
     let v = await setJourneyChoice(owner(), { makesProduction: false });
-    expect(v.steps.map((s) => s.key)).toEqual(["cards", "shelves", "stock", "labels", "people", "task"]);
-    expect(v.total).toBe(6);
+    expect(v.steps.map((s) => s.key)).toEqual(["cards", "shelves", "parties", "stock", "labels", "people", "task"]);
+    expect(v.total).toBe(7);
     v = await setJourneyChoice(as(bare.manager, bare.slug), { makesProduction: true });
-    expect(v.steps).toHaveLength(8);
+    expect(v.steps).toHaveLength(9);
     expect(v.makesProduction).toBe(true);
   });
 
