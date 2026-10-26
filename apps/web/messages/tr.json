@@ -841,7 +841,8 @@
       },
       "overview": "Genel bakış",
       "signOut": "Çıkış yap"
-    }
+    },
+    "hello": "Merhaba {name}"
   },
   "audit": {
     "production_recipe": {
