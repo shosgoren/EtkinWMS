@@ -1675,7 +1675,9 @@
       "hero": "Warehouse details",
       "quick": "Quick actions",
       "treeSub": "{n} ACTIVE LOCATIONS",
-      "next": "Next step: {step}"
+      "next": "Next step: {step}",
+      "boxLocs": "Locations",
+      "boxArchived": "Archived"
     },
     "search": "Search warehouses",
     "searchPlaceholder": "Warehouse code or name",
