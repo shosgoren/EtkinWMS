@@ -234,7 +234,11 @@ export async function provisionEmptyTenant(input: ProvisionInput): Promise<{ slu
     //    (altıncı rakamda kendiliğinden doğrular) → yedek kodları kaydettim → tamamla.
     await fillSecret(page, 'input[name="password"]', "password");
     await page.getByRole("button", { name: "Kuruluma başla" }).click();
+    // T-1043: bilgisayarda (dokunmatik olmayan kurulum tarayıcısı) her uygulama için telefonla okutulacak mağaza QR'ı çizilir.
+    await expect(page.getByTestId("totp-magaza-qr-google").getByTestId("qr-code")).toBeVisible();
+    await expect(page.getByTestId("totp-magaza-qr-microsoft").getByTestId("qr-code")).toBeVisible();
     await page.getByTestId("totp-app-ok").click();
+    await expect(page.getByTestId("totp-kamera-ipucu")).toBeVisible();
     await page.getByTestId("totp-qr-yok").click();
     const secret = ((await page.getByTestId("totp-anahtar").locator("code").textContent()) ?? "").replace(/\s+/g, "");
     expect(/^[A-Z2-7]{16,}$/.test(secret), "TOTP anahtarı ekranda").toBe(true); // ileti sırrı içermez

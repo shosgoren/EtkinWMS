@@ -13,20 +13,11 @@ import { GICON } from "./design/giris-icons.ts";
 import { Ico } from "./field/flow.tsx";
 import { useCikisKorumasi } from "./t/[slug]/kalip/cikis.tsx";
 import { QrCode } from "./qr-code.tsx";
+import { MAGAZA } from "./dogrulama-magaza.ts";
 
 type Adim = 1 | 2 | 3 | 4;
 
-/** Resmî mağaza sayfaları (uygulama kimlikleri yayıncının kendi sayfalarından). */
-export const MAGAZA = {
-  google: {
-    ios: "https://apps.apple.com/app/google-authenticator/id388497605",
-    android: "https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2",
-  },
-  microsoft: {
-    ios: "https://apps.apple.com/app/microsoft-authenticator/id983156458",
-    android: "https://play.google.com/store/apps/details?id=com.azure.authenticator",
-  },
-} as const;
+export { MAGAZA } from "./dogrulama-magaza.ts";
 
 /** `otpauth://totp/...?secret=` adresindeki anahtar, dörtlü gruplar hâlinde (okunur; kopyalamada boşluksuz gider). */
 export function totpAnahtari(uri: string): string {
@@ -95,8 +86,11 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
   const kodRef = useRef<HTMLInputElement>(null);
   const anahtar = totpAnahtari(totpURI);
 
+  // T-1043: bilgisayarda mağaza QR'ı bu sitenin `/help/indir/<uygulama>` adresine gider (telefon kendi mağazasına yönlenir).
+  const [koken, setKoken] = useState<string | null>(null);
   useEffect(() => {
     setTelefon(telefonMu(navigator.userAgent, window.matchMedia("(pointer: coarse)").matches));
+    setKoken(window.location.origin);
   }, []);
   // Kod adımına gelince ve yanlış koddan sonra alan yeniden açılınca (doğrulama sürerken `disabled`; odak ancak açıldıktan sonra verilebilir).
   useEffect(() => {
@@ -192,7 +186,14 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
         <p className="ls">{t("appS")}</p>
         <div className="card" style={{ background: C.surface }}>
           {(["google", "microsoft"] as const).map((app) => (
-            <div key={app} style={{ display: "grid", gap: "8px" }}>
+            <div key={app} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              {/* T-1043: bilgisayarda telefon kamerasıyla okutulacak tek QR (telefon kendi mağazasını açar); telefonda düğmeler yeter. */}
+              {!telefon && koken !== null ? (
+                <span style={{ display: "grid", justifyItems: "center", gap: "4px", flex: "none" }} data-testid={`totp-magaza-qr-${app}`}>
+                  <QrCode value={`${koken}/help/indir/${app}`} label={t("appQrLabel", { app: app === "google" ? t("appGoogle") : t("appMicrosoft") })} size={104} />
+                </span>
+              ) : null}
+              <div style={{ display: "grid", gap: "8px", flex: 1, minWidth: 0 }}>
               <span className="fll">{app === "google" ? t("appGoogle") : t("appMicrosoft")}</span>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <a className="big ghost" href={MAGAZA[app].ios} target="_blank" rel="noopener noreferrer" style={{ background: C.chip, color: C.fg, minHeight: "48px", fontSize: "14px", flex: "1 1 140px", textDecoration: "none" }}>
@@ -202,11 +203,12 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
                   {t("playStore")}
                 </a>
               </div>
+              </div>
             </div>
           ))}
           <span className="hint">
             <Ico d={GICON.phone} size={16} />
-            {t("appTip")}
+            {telefon ? t("appTip") : t("appTipQr")}
           </span>
         </div>
         <div className="act" style={{ background: C.bg }}>
@@ -235,6 +237,13 @@ export function TotpSihirbaz({ totpURI, backupCodes, verify, onDone }: { totpURI
                 <li>{t("addStep2")}</li>
                 <li>{t("addStep3")}</li>
               </ol>
+              {/* T-1043: uygulamaya girmeden telefonun kamerasıyla okutmak da çoğu telefonda hesabı ekler (kamera "… ile aç" önerir). */}
+              {telefon ? null : (
+                <span className="hint" data-testid="totp-kamera-ipucu">
+                  <Ico d={GICON.phone} size={16} />
+                  {t("addCameraTip")}
+                </span>
+              )}
             </>
           ) : (
             <Dugme href={totpURI} testId="totp-ekle">
