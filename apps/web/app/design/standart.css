@@ -28,6 +28,10 @@
 .kalip .tb,
 .dzp .top .tb {
   background: transparent !important;
+}
+/* Gölge yalnız odak dışında kalkar: klavye odak halkası (kural.css 11, `box-shadow`) silinmez. */
+.kalip :is(.helpb, .tb):not(:focus-visible),
+.dzp .top .tb:not(:focus-visible) {
   box-shadow: none !important;
 }
 /* T-1044 (kullanıcı 26 Ekim): üst çubuk düğmeleri YALNIZ SİMGE, hepsi aynı 48 px kare ve aynı hizada (yazı altta kayma yapıyordu);

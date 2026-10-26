@@ -37,7 +37,9 @@ describe("T-1042 ortak kabuk (STANDART §1)", () => {
   });
   it("üst çubuk düğmeleri zeminsiz; alt çubukta seçili yer hapta (alt çizgi yok); koyu dolgu yok", () => {
     expect(css).toMatch(/\.kalip \.top,\s*\.dzp \.top,\s*\.kalip\.dz-dark \.top,\s*\.dzp\.dz-dark \.top \{\s*background: transparent;/);
-    expect(css).toMatch(/background: transparent !important;\s*box-shadow: none !important;/);
+    expect(css).toMatch(/\.dzp \.top \.tb \{\s*background: transparent !important;\s*\}/);
+    // Odak halkası korunur: gölge kaldırma yalnız :not(:focus-visible).
+    expect(css).toMatch(/\.dzp \.top \.tb:not\(:focus-visible\) \{\s*box-shadow: none !important;/);
     expect(css).toMatch(/\.dzk \.dk\.cur::after,\s*\.dzk\.dz-dark \.dk\.cur::after \{\s*display: none;/);
     expect(css).toMatch(/max-width: none;\s*margin-inline: 0;\s*padding-inline: 40px;/);
   });
