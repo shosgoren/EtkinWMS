@@ -60,18 +60,14 @@ export async function panoChecks(page: Page): Promise<void> {
       await page.getByTestId("kabuk-mods").click();
       await expect(page.getByRole("dialog", { name: "Modüller" }).locator('[data-module="kokpit"]')).toBeVisible();
       await page.keyboard.press("Escape");
-      // Tema: menüden karanlık.
-      await pano.getByTestId("home-actions").click();
-      await pano.getByTestId("pano-menu-theme").click();
+      // Tema: üst çubuktaki seçiciden karanlık (T-1044: masaüstünde menüde değil, üst çubukta).
+      await pano.getByTestId("st-tema").getByRole("radio", { name: "Koyu tema" }).click();
       await expect(pano).toHaveClass(/dz-dark/);
-      await page.keyboard.press("Escape");
     }
   }
   // Tema çerezde kalıcı; sonra açığa geri alınır (sonraki adımlar açık temayla sürer).
   await page.goto("/t/demo");
   await expect(pano).toHaveClass(/dz-dark/);
-  await pano.getByTestId("home-actions").click();
-  await pano.getByTestId("pano-menu-theme").click();
+  await pano.getByTestId("st-tema").getByRole("radio", { name: "Açık tema" }).click();
   await expect(pano).not.toHaveClass(/dz-dark/);
-  await page.keyboard.press("Escape");
 }

@@ -37,9 +37,17 @@ describe("T-1042 ortak kabuk (STANDART §1)", () => {
   });
   it("üst çubuk düğmeleri zeminsiz; alt çubukta seçili yer hapta (alt çizgi yok); koyu dolgu yok", () => {
     expect(css).toMatch(/\.kalip \.top,\s*\.dzp \.top,\s*\.kalip\.dz-dark \.top,\s*\.dzp\.dz-dark \.top \{\s*background: transparent;/);
-    expect(css).toMatch(/background: transparent !important;\s*box-shadow: none !important;/);
+    expect(css).toMatch(/\.dzp \.top \.tb \{\s*background: transparent !important;\s*\}/);
+    // Odak halkası korunur: gölge kaldırma yalnız :not(:focus-visible).
+    expect(css).toMatch(/\.dzp \.top \.tb:not\(:focus-visible\) \{\s*box-shadow: none !important;/);
     expect(css).toMatch(/\.dzk \.dk\.cur::after,\s*\.dzk\.dz-dark \.dk\.cur::after \{\s*display: none;/);
-    expect(css).toMatch(/max-width: 1320px;/);
+    expect(css).toMatch(/max-width: none;\s*margin-inline: 0;\s*padding-inline: 40px;/);
+  });
+  it("T-1044: üst çubuk yalnız simge (yazı yok), 48 px; menüde Tema/Ayarlar yalnız telefonda; menü perdesi alt çubuğu da örter", () => {
+    expect(css).toMatch(/\.kalip \.top :is\(\.tb, \.stbtn\) > span,\s*\.dzp \.top :is\(\.tb, \.stbtn\) > span \{\s*display: none;/);
+    expect(css).toMatch(/\.tmenu \.st-mob \{\s*display: none !important;/);
+    expect(css).toMatch(/html:has\(\.halo\.tmenu\) \.dzk \.wrap \{\s*z-index: 19;/);
+    expect(read("../t/[slug]/pano/hesap-menu.tsx")).not.toMatch(/k: "switch"/);
   });
   it("modül zemin geçişi görünen tam ekran yüzeyde (.app), açık ve koyu temada", () => {
     expect(css).toMatch(/\.kalip:not\(\.dz-dark\) \.app \{\s*background: linear-gradient\(150deg, color-mix/);
