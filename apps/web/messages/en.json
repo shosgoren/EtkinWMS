@@ -1481,7 +1481,13 @@
       "cardAria": "Open details: {name}, {code}, {qty} {unit}, {state}",
       "scanNone": "No item with this barcode · {code}",
       "scanMany": "Several items · pick from the list",
-      "dikkat": " · {n} NEED ATTENTION"
+      "dikkat": " · {n} NEED ATTENTION",
+      "colCode": "Code",
+      "colName": "Item name",
+      "colType": "Type",
+      "colUnit": "Unit",
+      "colHave": "On hand",
+      "colState": "Status"
     }
   },
   "warehouses": {
@@ -4740,6 +4746,19 @@
       "dark": "Dark theme",
       "settings": "Settings",
       "settingsShort": "Settings"
+    },
+    "tablo": {
+      "view": "View",
+      "kart": "Cards",
+      "liste": "List",
+      "columns": "Columns",
+      "always": "always",
+      "up": "{col} up",
+      "down": "{col} down",
+      "reset": "Reset to default",
+      "pages": "Pages",
+      "first": "First page",
+      "next": "Next page"
     }
   },
   "saha": {

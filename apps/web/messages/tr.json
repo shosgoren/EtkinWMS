@@ -1481,7 +1481,13 @@
       "cardAria": "Ayrıntıyı aç: {name}, {code}, {qty} {unit}, {state}",
       "scanNone": "Bu barkodla ürün yok · {code}",
       "scanMany": "Birden çok ürün · listede seç",
-      "dikkat": " · {n} DİKKAT"
+      "dikkat": " · {n} DİKKAT",
+      "colCode": "Kod",
+      "colName": "Ürün adı",
+      "colType": "Tür",
+      "colUnit": "Birim",
+      "colHave": "Eldeki",
+      "colState": "Durum"
     }
   },
   "warehouses": {
@@ -4740,6 +4746,19 @@
       "dark": "Koyu tema",
       "settings": "Ayarlar",
       "settingsShort": "Ayarlar"
+    },
+    "tablo": {
+      "view": "Görünüm",
+      "kart": "Kart",
+      "liste": "Liste",
+      "columns": "Sütunlar",
+      "always": "her zaman",
+      "up": "{col} yukarı",
+      "down": "{col} aşağı",
+      "reset": "Varsayılana dön",
+      "pages": "Sayfalar",
+      "first": "İlk sayfa",
+      "next": "Sonraki sayfa"
     }
   },
   "saha": {

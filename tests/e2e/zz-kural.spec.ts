@@ -133,3 +133,34 @@ test("T-1046 Ayarlar sekmeleri arası geçiş taslağı korur", async ({ page })
   await page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]').click();
   await expect(page.getByTestId("kalip-unsaved")).toBeVisible();
 });
+
+// T-1047 (STANDART §2): liste kalıbı — Kart/Liste geçişi, sıralanan tablo, Sütunlar seçimi; seçim cihazda kalır (yeniden açılışta).
+test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
+  // Telefonda her zaman kart (tablo sığmaz); liste görünümü geniş ekranda sınanır.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/items");
+  await expect(page.getByTestId("item-card").first()).toBeVisible();
+  await page.getByTestId("kalip-gorunum").locator('[data-gorunum="liste"]').click();
+  const tablo = page.getByTestId("items-table");
+  await expect(tablo).toBeVisible();
+  await expect(page.getByTestId("item-card")).toHaveCount(0);
+  const ilk = async (): Promise<string> => (await tablo.locator("tbody tr").first().locator("td").first().innerText()).trim();
+  await tablo.getByRole("button", { name: "Kod" }).click();
+  const artan = await ilk();
+  await tablo.getByRole("button", { name: "Kod" }).click();
+  await expect(tablo.locator("th").first()).toHaveAttribute("aria-sort", "descending");
+  expect(await ilk()).not.toBe(artan);
+  await page.getByTestId("kalip-sutunlar").click();
+  await page.getByTestId("kalip-sutunlar-pencere").getByLabel("Birim", { exact: true }).uncheck();
+  await expect(tablo.locator("th", { hasText: "Birim" })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("items-table")).toBeVisible();
+  await expect(page.getByTestId("items-table").locator("th", { hasText: "Birim" })).toHaveCount(0);
+  // Temizlik: varsayılan görünüm (diğer testler kart bekler).
+  await page.getByTestId("kalip-sutunlar").click();
+  await page.getByTestId("kalip-sutunlar-pencere").getByRole("button", { name: "Varsayılana dön" }).click();
+  await page.getByTestId("kalip-gorunum").locator('[data-gorunum="kart"]').click();
+  await expect(page.getByTestId("item-card").first()).toBeVisible();
+});

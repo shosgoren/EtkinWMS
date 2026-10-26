@@ -7,7 +7,7 @@
 // kart rozeti kapsamdaki depoların eldeki toplamı, trafik ışığı minimum politikasından (yoksa sakin); sesle arama Etkin (B-62) ile.
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -16,6 +16,7 @@ import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
+import { KalipGorunumSec, KalipSayfa, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
@@ -391,6 +392,16 @@ function setupSteps(slug: string, p: SetupProgressView): { key: StepKey; done: b
 }
 
 /** Liste kartının stok rozeti verisi (sunucu: kapsamdaki depoların eldeki toplamı + minimum). */
+/** T-1047: liste görünümü satırı (kartla aynı hesap). */
+interface ItemsSatir {
+  readonly it: ItemListView;
+  readonly st: ItemStockView | undefined;
+  readonly tn: "ok" | "crit" | "low";
+  readonly archived: boolean;
+  readonly state: string;
+  readonly qty: string;
+}
+
 export interface ItemStockView {
   readonly have: string;
   readonly min: string | null;
@@ -440,6 +451,19 @@ export function ItemsView({
   const guide = canManage && progress !== null && !isSetupComplete(progress);
   const { say, node: toast } = useKalipToast("liste");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [gorunum, setGorunum] = useKalipGorunum("items");
+  const sutunlar = useMemo<readonly KalipSutun<ItemsSatir>[]>(
+    () => [
+      { id: "code", baslik: tk("colCode"), sabit: true, deger: (r) => r.it.code, sirala: (r) => r.it.code },
+      { id: "name", baslik: tk("colName"), sabit: true, deger: (r) => <span className="ktad" title={r.it.name}>{r.it.name}</span>, sirala: (r) => r.it.name },
+      { id: "type", baslik: tk("colType"), deger: (r) => tc(r.it.cardType), sirala: (r) => r.it.cardType },
+      { id: "unit", baslik: tk("colUnit"), deger: (r) => r.it.baseUnitCode, sirala: (r) => r.it.baseUnitCode },
+      { id: "have", baslik: tk("colHave"), sayi: true, deger: (r) => r.qty, sirala: (r) => Number(r.st?.have ?? 0) },
+      { id: "state", baslik: tk("colState"), deger: (r) => (r.state === "" ? null : <span className={`ktpill ${r.archived ? "" : r.tn}`}>{r.state}</span>), sirala: (r) => r.state },
+    ],
+    [tk, tc],
+  );
+  const sutunSecim = useKalipSutunlar<ItemsSatir>("items", sutunlar);
 
   // T-990: ekleme tam ekran formdur; adres `?new=1` (rehberin büyük düğmesi de buraya gelir). Geri listeye döner.
   const creating = params.get("new") === "1" && canManage;
@@ -527,6 +551,14 @@ export function ItemsView({
   });
   const attention = tones.filter((x) => x !== "ok").length;
   const countLbl = (total !== undefined ? tk("count", { n: total }) : nextCursor === null ? tk("count", { n: items.length }) : tk("countMore", { n: items.length })) + (attention > 0 && !filtered ? tk("dikkat", { n: attention }) : "");
+  // T-1047 (STANDART §2): liste görünümü ortak tablo (`kalip/tablo.tsx`); satır = kartla aynı bilgi ve hedef.
+  const satirlar = items.map((it, i): ItemsSatir => {
+    const st = stock[it.id];
+    const tn = tones[i] ?? "ok";
+    const archived = it.status === "ARCHIVED";
+    const state = archived ? tk("archivedTag") : st === undefined ? "" : tn === "crit" ? tk("stockCrit") : tn === "low" ? tk("stockLow") : st.have.replace(/[0.]/g, "") === "" ? tk("stockNone") : tk("stockIn");
+    return { it, st, tn, archived, state, qty: st === undefined ? "" : fmtQty(st.have, locale) };
+  });
 
   const steps = guide && progress !== null ? setupSteps(slug, progress) : [];
   const nextStep = steps.find((s) => !s.done);
@@ -609,7 +641,14 @@ export function ItemsView({
           micLabel={tk("mic")}
           micSoon
         />
-        <KalipCipler label={tk("filter")} chips={chips} />
+        {/* T-1047 (STANDART §2): süzgeç çipleri + Sütunlar + Kart/Liste aynı satırda. */}
+        <div className="ktbar">
+          <KalipCipler label={tk("filter")} chips={chips} />
+          <span className="kttools">
+            {gorunum === "liste" ? <KalipSutunSec sutunlar={sutunlar} secim={sutunSecim} /> : null}
+            <KalipGorunumSec value={gorunum} onChange={setGorunum} />
+          </span>
+        </div>
         {!canManage ? <p className="sr">{t("lockedReason")}</p> : null}
         {guide && nextStep !== undefined && items.length > 0 ? (
           <KalipDaha href={nextStep.href ?? undefined} onClick={nextStep.href === null ? openCreate : undefined} iconD={LICON.clip} testId="setup-row">
@@ -686,7 +725,19 @@ export function ItemsView({
           )
         ) : (
           <>
-            <KalipBaslik title={countLbl} hint={tk("hint")} />
+            <KalipBaslik title={countLbl} />
+            {gorunum === "liste" ? (
+              <KalipTablo<ItemsSatir>
+                label={t("listLabel")}
+                sutunlar={sutunSecim.gorunur}
+                satirlar={satirlar}
+                anahtar={(r) => r.it.id}
+                href={(r) => `${base}/${encodeURIComponent(r.it.id)}`}
+                satirAria={(r) => tk("cardAria", { name: r.it.name, code: r.it.code, qty: r.qty, unit: r.it.baseUnitCode, state: r.state })}
+                testId="items-table"
+              />
+            ) : (
+              <>
             <KalipKartListe label={t("listLabel")}>
               {items.map((it, i) => {
                 const v = visual(it.cardType);
@@ -716,19 +767,10 @@ export function ItemsView({
                 );
               })}
             </KalipKartListe>
+              </>
+            )}
             {firstPage && nextCursor === null ? null : (
-              <nav aria-label={t("paging")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {firstPage ? null : (
-                  <KalipDaha href={href({})} iconD={LICON.chev}>
-                    {t("firstPage")}
-                  </KalipDaha>
-                )}
-                {nextCursor === null ? null : (
-                  <KalipDaha href={href({ after: nextCursor })} iconD={LICON.plus}>
-                    {t("more")}
-                  </KalipDaha>
-                )}
-              </nav>
+              <KalipSayfa metin={countLbl} ilk={firstPage ? undefined : href({})} sonraki={nextCursor === null ? undefined : href({ after: nextCursor })} testId="items-paging" />
             )}
           </>
         )}
