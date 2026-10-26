@@ -380,6 +380,8 @@ export function KalipSonsuz({ devam, yukle, metin, testId }: { devam: boolean; y
  * T-1055: kaydırınca eklenen sayfaların hafızası (oturum içi, adres başına). Bir kayda girip geri dönülünce liste aynı uzunlukta açılır ve
  * `KalipSonsuz` kaldığın yere kaydırır. Yalnız görünüm verisi (kart satırları, imleç); sunucu her açılışta ilk sayfayı yine taze verir.
  */
+const EK_OMUR_MS = 10 * 60_000;
+
 export function useKalipEkHafiza<T>(veri: T, geri: (v: T) => void): void {
   const geriRef = useRef(geri);
   geriRef.current = geri;
@@ -387,7 +389,9 @@ export function useKalipEkHafiza<T>(veri: T, geri: (v: T) => void): void {
   useEffect(() => {
     try {
       const ham = window.sessionStorage.getItem(`kalip-ek:${window.location.pathname}${window.location.search}`);
-      if (ham !== null) geriRef.current(JSON.parse(ham) as T);
+      // Güvenlik incelemesi (MINOR): eski kayıt (ör. çıkış yapıp başka kullanıcıyla aynı sekmede) geri yüklenmez — 10 dakika sınırı.
+      const kayit = ham === null ? null : (JSON.parse(ham) as { readonly t?: number; readonly v?: T });
+      if (kayit !== null && typeof kayit.t === "number" && Date.now() - kayit.t < EK_OMUR_MS && kayit.v !== undefined) geriRef.current(kayit.v);
     } catch {
       /* bozuk ya da erişilemeyen kayıt: ilk sayfayla devam */
     }
@@ -396,7 +400,7 @@ export function useKalipEkHafiza<T>(veri: T, geri: (v: T) => void): void {
   useEffect(() => {
     if (!hazir.current) return;
     try {
-      window.sessionStorage.setItem(`kalip-ek:${window.location.pathname}${window.location.search}`, JSON.stringify(veri));
+      window.sessionStorage.setItem(`kalip-ek:${window.location.pathname}${window.location.search}`, JSON.stringify({ t: Date.now(), v: veri }));
     } catch {
       /* dolu / engelli depolama: hafıza yalnız bu açılışta */
     }

@@ -226,6 +226,8 @@ const ACTIONS: Record<string, Call> = {
     actions.createBulkLocationsAction!({ slug, warehouseId: B.warehouseId, parentId: null, zone: "Z", rackFrom: 1, rackTo: 1, levelFrom: 1, levelTo: 1, idempotencyKey: `k-${rnd()}` }),
   searchLocationsAction: (slug) => actions.searchLocationsAction!({ slug, warehouseId: B.warehouseId, q: "A" }),
   getSetupProgressAction: (slug) => actions.getSetupProgressAction!({ slug }),
+  // T-1055: kaydırınca sonraki depo sayfası.
+  loadMoreWarehousesAction: (slug) => actions.loadMoreWarehousesAction!({ slug, q: "", archived: false, after: "A" }),
 };
 
 describe("depo Server Action'ları", () => {

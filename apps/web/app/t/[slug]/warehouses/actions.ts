@@ -133,7 +133,6 @@ export async function archiveLocationAction(raw: unknown) {
   })(raw);
 }
 
-/** "Daha fazla" (keyset, OFFSET yok): okuma `stock.view`; domain izin ve kapsamı denetler. */
 // T-1055: depo listesinin sonraki sayfası (kaydırınca kendiliğinden); süzgeçler sayfa adresindekilerle aynı, imleç domain'de doğrulanır.
 const moreWarehousesSchema = z.object({ slug: z.string().min(1).max(63), q: z.string().max(100), archived: z.boolean(), after: z.string().min(1).max(256) }).strict();
 
@@ -147,6 +146,7 @@ export async function loadMoreWarehousesAction(raw: unknown) {
   })(raw);
 }
 
+/** "Daha fazla" (keyset, OFFSET yok): okuma `stock.view`; domain izin ve kapsamı denetler. */
 export async function loadMoreLocationsAction(raw: unknown) {
   return guardedAction({ schema: moreLocationsSchema }, async (input, ctx) => {
     const principal = ctx.principal;
