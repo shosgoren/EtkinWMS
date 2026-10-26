@@ -209,6 +209,7 @@ test("T-1049 Ürün kartı: şerit, sekmeler, bilgi kutucukları", async ({ page
   await expect(page.getByTestId("kart-sekme-barkod")).toBeVisible();
   const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
   expect(tasma).toBeLessThanOrEqual(0);
+});
 
 // T-1050 (kullanıcı 26 Ekim, iPhone görüntüsü): Pano üst çubuğu — masaüstünde "Merhaba <ad>" (tuval), telefonda yalnız logo (firma adı
 // kesilmez); sabit "DOKUN → RAPOR AÇILIR" ipucu yok; Hesap düğmesinde baş harf.
