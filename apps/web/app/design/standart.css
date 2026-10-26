@@ -479,6 +479,26 @@ html:has(.halo.tmenu) .dzk .wrap {
   font-weight: 700;
   text-decoration: none;
 }
+/* Satır işlemleri (ör. kodu değiştir, arşivle): 44px simge düğmeleri. */
+.ktacts {
+  display: inline-flex;
+  gap: 6px;
+}
+.ktact {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-kr-bg-a);
+  color: var(--color-kr-ink);
+  cursor: pointer;
+}
+.ktact.del { color: var(--color-kr-err); }
+.dz-dark .ktact { background: var(--color-kr-bg-dark-a); color: var(--color-kr-text-dark); }
 /* Uzun ad en çok 2 satır, fazlası "…" (tam ad üstüne gelince `title`). */
 .ktad {
   display: -webkit-box;

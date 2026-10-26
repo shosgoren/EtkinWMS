@@ -175,6 +175,8 @@ test("T-1048 Cariler ve Depolar: Kart/Liste tablosu", async ({ page }) => {
     await page.getByTestId("kalip-gorunum").locator('[data-gorunum="liste"]').click();
     await expect(page.getByTestId(tablo)).toBeVisible();
     await expect(page.getByTestId(tablo).locator("tbody tr").first()).toBeVisible();
+    // Codex P2 (PR 197): depo tablosunda kartın yönetim işlemleri (kodu değiştir, arşivle) satırda.
+    if (tablo === "warehouses-table") await expect(page.getByTestId(tablo).getByRole("button", { name: /için kodu değiştir$/ }).first()).toBeVisible();
     await page.getByTestId("kalip-gorunum").locator('[data-gorunum="kart"]').click();
     await expect(page.getByTestId(tablo)).toHaveCount(0);
   }

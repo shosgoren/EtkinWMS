@@ -1671,7 +1671,8 @@
     "colCode": "Kod",
     "colName": "Depo adı",
     "colLocations": "Raf yeri",
-    "colState": "Durum"
+    "colState": "Durum",
+    "colActions": "İşlemler"
   },
   "field": {
     "title": "Saha",
