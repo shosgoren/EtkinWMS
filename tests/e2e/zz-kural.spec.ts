@@ -207,6 +207,6 @@ test("T-1049 Ürün kartı: şerit, sekmeler, bilgi kutucukları", async ({ page
   await expect(page.getByTestId("kart-bilgi-unit")).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId("kart-sekme-barkod")).toBeVisible();
-  const tasma = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
   expect(tasma).toBeLessThanOrEqual(0);
 });
