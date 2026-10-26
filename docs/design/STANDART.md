@@ -20,7 +20,7 @@ Bu belgenin sonucu:
 - Üstte arama + **Kart / Liste geçişi** + **Sütunlar** (göster/gizle, sürükleyerek sırala, "Varsayılana dön"; kişiye özel kaydedilir; kod ve ad her zaman görünür).
 - Süzgeç çipleri: Tümü · türler · Pasif · Arşivli (arşivli yalnız burada).
 - Liste görünümü: görsel küçük resmi (birden çok görselde nokta göstergesi, görselsiz satırda aynı hizada "+"), sütunlu sıralanabilir tablo, durum hapları, uzun ad en çok 2 satır (fazlası "…" + üstüne gelince tam ad).
-- Alt çubuğun altında kalmaz: **sayfa geçişi** (‹ 1 2 3 … ›) + "Sayfada N" (kişiye özel).
+- **Kaydırma (kullanıcı kararı 26 Ekim, T-1055 — sayfa geçişinin yerine):** bütün listelerde, masaüstü / tablet / telefonda üst çubuk, arama, süzgeç çipleri ve sayı başlığı **yerinde kalır**, alt çubuk sabittir; **yalnız liste aşağı-yukarı kayar**. Sona yaklaşınca sonraki 50 kayıt kendiliğinden gelir (sayfa numarası / "Sonraki" yok; yüklenirken gösterge, hata olursa "Tekrar dene"). Tabloda sütun başlığı sabit. Kayda girip geri dönünce kaldığın yerden. Epey aşağıda "Başa dön" oku. Telefonda süzgeç çipleri tek satırda sağa kayar (sağ kenarda solan gölge).
 
 ## 3. Kayıt kartı kalıbı (ör. Ürün kartı; cari, depo, raf yeri, belge kartları aynı)
 - Tek büyük panel, ekranı doldurur, kaydırma yok.
@@ -54,7 +54,7 @@ Bu belgenin sonucu:
 1. Belge + kaynak (bu iş).
 2. Ortak kabuk: üst çubuk, alt çubuk, zemin geçişi, perde (KalipEkran + Pano) → bütün ekranlar birlikte değişir.
 3. Ana ekran.
-4. Liste kalıbı (kart/liste, sütunlar, sayfalama) → ürün, cari, depo, belge listeleri.
+4. Liste kalıbı (kart/liste, sütunlar, kaydırmayla yükleme) → ürün, cari, depo, belge listeleri.
 5. Kayıt kartı kalıbı + Stok ve yer pivotu → ürün, cari, depo kartları.
 6. Form kalıbı → bütün yeni/düzenle ekranları.
 7. Ayar kalıbı → Ayarlar sekmeleri, İş akışı, Entegrasyonlar.

@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -20,12 +20,12 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-e
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
-import { KalipGorunumSec, KalipSayfa, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
+import { KalipGorunumSec, KalipSonsuz, useKalipEkHafiza, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
 import { kdz } from "../kalip/tokens.ts";
-import { archiveWarehouseAction, createWarehouseAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
+import { archiveWarehouseAction, createWarehouseAction, loadMoreWarehousesAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği kullanılır. */
 export interface ServerError {
@@ -315,9 +315,8 @@ export function WarehousesView({
   slug,
   dark,
   canManage,
-  warehouses,
+  warehouses: ilkDepolar,
   nextAfter,
-  firstPage,
   q = "",
   archived = false,
   total,
@@ -328,7 +327,8 @@ export function WarehousesView({
   warehouses: readonly WarehouseView[];
   /** Sonraki sayfa imleci (son görülen kod); yoksa `null`. */
   nextAfter: string | null;
-  firstPage: boolean;
+  /** T-1055'ten beri yalnız eski `?after=` adresleri için (kaydırmalı listede kullanılmaz). */
+  firstPage?: boolean;
   /** T-978: sunucu araması (kod/ad); boş = tümü. */
   q?: string;
   /** T-1040: "Arşivli" süzgeci (`?arsiv=1`): yalnız arşivdeki depolar. */
@@ -337,6 +337,26 @@ export function WarehousesView({
   total?: number;
 }) {
   const t = useTranslations("warehouses");
+  // T-1055: kaydırınca eklenen sayfalar (sunucunun ilk sayfasının devamı); süzgeç / arama değişince (yeni ilk sayfa) sıfırlanır.
+  const [ek, setEk] = useState<{ readonly bas: readonly WarehouseView[]; readonly rows: readonly WarehouseView[]; readonly after: string | null }>({ bas: ilkDepolar, rows: [], after: nextAfter });
+  const guncel = ek.bas === ilkDepolar ? ek : { bas: ilkDepolar, rows: [], after: nextAfter };
+  if (guncel !== ek) setEk(guncel);
+  // Hafızadan gelen satırlar arada kaymış olabilir: aynı depo iki kez çizilmez.
+  const warehouses = useMemo(() => {
+    const ilk = new Set(ilkDepolar.map((w) => w.id));
+    return [...ilkDepolar, ...guncel.rows.filter((r) => !ilk.has(r.id))];
+  }, [ilkDepolar, guncel.rows]);
+  const sonrakiAfter = guncel.after;
+  useKalipEkHafiza({ rows: guncel.rows, after: guncel.after }, (v) => {
+    if (v.rows.length > 0) setEk({ bas: ilkDepolar, rows: v.rows, after: v.after });
+  });
+  const dahaYukle = useCallback(async (): Promise<boolean> => {
+    if (sonrakiAfter === null) return true;
+    const r = await loadMoreWarehousesAction({ slug, q, archived, after: sonrakiAfter });
+    if (!r.ok) return false;
+    setEk((o) => (o.bas !== ilkDepolar ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], after: r.data.nextAfter }));
+    return true;
+  }, [sonrakiAfter, slug, q, archived, ilkDepolar]);
   const tr = useTranslations("kural");
   const tk = useTranslations("warehouses.k");
   const te = useTranslations("easySetup");
@@ -430,7 +450,9 @@ export function WarehousesView({
     router.push(withParam("new", "1"));
   };
 
-  const countLbl = total !== undefined ? tk("count", { n: total }) : nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
+  const countLbl = total !== undefined ? tk("count", { n: total }) : sonrakiAfter === null ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
+  // T-1055: sayfa satırı yok; listenin içinde en altta, görünür olmaya yaklaşınca sonraki 50 depo.
+  const sonsuz = <KalipSonsuz devam={sonrakiAfter !== null} yukle={dahaYukle} metin={countLbl} testId="warehouses-sonsuz" />;
   const lockedId = "warehouse-locked";
   // T-1048 (STANDART §2): ortak liste kalıbı — Kart / Liste, Sütunlar, sıralanan tablo, sayfa satırı.
   const [gorunum, setGorunum] = useKalipGorunum("warehouses");
@@ -598,6 +620,7 @@ export function WarehousesView({
                 href={(w) => `${base}/${encodeURIComponent(w.id)}`}
                 satirAria={(w) => `${w.name} · ${w.code}`}
                 testId="warehouses-table"
+                sonu={sonsuz}
               />
             ) : (
             <KalipKartListe label={t("listLabel")}>
@@ -660,12 +683,10 @@ export function WarehousesView({
                   </div>
                 );
               })}
+              {sonsuz}
             </KalipKartListe>
             )}
           </>
-        )}
-        {firstPage && nextAfter === null ? null : (
-          <KalipSayfa metin={countLbl} ilk={firstPage ? undefined : pageHref({})} sonraki={nextAfter === null ? undefined : pageHref({ after: nextAfter })} testId="warehouses-paging" />
         )}
       </KalipEkran>
 

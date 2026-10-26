@@ -4797,7 +4797,10 @@
       "reset": "Varsayılana dön",
       "pages": "Sayfalar",
       "first": "İlk sayfa",
-      "next": "Sonraki sayfa"
+      "next": "Sonraki sayfa",
+      "loading": "Yükleniyor…",
+      "retry": "Yüklenemedi · tekrar dene",
+      "top": "Başa dön"
     }
   },
   "saha": {

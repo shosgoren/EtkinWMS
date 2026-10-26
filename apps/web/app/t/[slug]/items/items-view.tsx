@@ -7,7 +7,7 @@
 // kart rozeti kapsamdaki depoların eldeki toplamı, trafik ışığı minimum politikasından (yoksa sakin); sesle arama Etkin (B-62) ile.
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -16,14 +16,14 @@ import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx"
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
-import { KalipGorunumSec, KalipSayfa, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
+import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipEkHafiza, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
 import { KalipSecim, KalipSecimGrubu } from "../kalip/secim.tsx";
 import { eskiSurumBildir, eskiSurumMu, eylem } from "../kalip/surum.tsx";
 import { CARD_VISUAL } from "./card-visual.ts";
-import { createItemAction, createUnitAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
+import { createItemAction, createUnitAction, loadMoreItemsAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği kullanılır. */
 export interface ServerError {
@@ -402,12 +402,11 @@ export function ItemsView({
   dark,
   canManage,
   canImport,
-  items,
-  stock,
+  items: ilkItems,
+  stock: ilkStock,
   units,
   nextCursor,
   total,
-  firstPage,
   query,
 }: {
   slug: string;
@@ -421,7 +420,8 @@ export function ItemsView({
   nextCursor: string | null;
   /** Sunucudan süzgece uyan toplam ürün sayısı (ALTIN-KURAL 15). */
   total?: number;
-  firstPage: boolean;
+  /** T-1055'ten beri yalnız eski `?after=` adresleri için (kaydırmalı listede kullanılmaz). */
+  firstPage?: boolean;
   query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED"; readonly type: "" | CardType };
 }) {
   const t = useTranslations("items");
@@ -440,6 +440,27 @@ export function ItemsView({
   const { say, node: toast } = useKalipToast("liste");
   const inputRef = useRef<HTMLInputElement>(null);
   const [gorunum, setGorunum] = useKalipGorunum("items");
+  // T-1055: kaydırınca eklenen sayfalar (sunucunun ilk sayfasının devamı). Süzgeç / arama değişince (yeni ilk sayfa) sıfırlanır.
+  const [ek, setEk] = useState<{ readonly bas: readonly ItemListView[]; readonly rows: readonly ItemListView[]; readonly stock: Readonly<Record<string, ItemStockView>>; readonly cursor: string | null }>({ bas: ilkItems, rows: [], stock: {}, cursor: nextCursor });
+  const guncel = ek.bas === ilkItems ? ek : { bas: ilkItems, rows: [], stock: {}, cursor: nextCursor };
+  if (guncel !== ek) setEk(guncel);
+  // Hafızadan gelen satırlar arada kaymış olabilir (ör. bir ürün arşivlendi): aynı ürün iki kez çizilmez.
+  const items = useMemo(() => {
+    const ilk = new Set(ilkItems.map((i) => i.id));
+    return [...ilkItems, ...guncel.rows.filter((r) => !ilk.has(r.id))];
+  }, [ilkItems, guncel.rows]);
+  const stock = useMemo(() => ({ ...ilkStock, ...guncel.stock }), [ilkStock, guncel.stock]);
+  const sonrakiImlec = guncel.cursor;
+  useKalipEkHafiza({ rows: guncel.rows, stock: guncel.stock, cursor: guncel.cursor }, (v) => {
+    if (v.rows.length > 0) setEk({ bas: ilkItems, rows: v.rows, stock: v.stock, cursor: v.cursor });
+  });
+  const dahaYukle = useCallback(async (): Promise<boolean> => {
+    if (sonrakiImlec === null) return true;
+    const r = await loadMoreItemsAction({ slug, q: query.q, status: query.status, cardType: query.type, after: sonrakiImlec });
+    if (!r.ok) return false;
+    setEk((o) => (o.bas !== ilkItems ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], stock: { ...o.stock, ...r.data.stock }, cursor: r.data.nextCursor }));
+    return true;
+  }, [sonrakiImlec, slug, query.q, query.status, query.type, ilkItems]);
   const sutunlar = useMemo<readonly KalipSutun<ItemsSatir>[]>(
     () => [
       { id: "code", baslik: tk("colCode"), sabit: true, deger: (r) => (r.it.oldCode === undefined ? r.it.code : t("renamedNote", { code: r.it.code, old: r.it.oldCode })), sirala: (r) => r.it.code },
@@ -538,7 +559,7 @@ export function ItemsView({
     return it.status === "ARCHIVED" || st === undefined ? "ok" : stockTone(st.have, st.min);
   });
   const attention = tones.filter((x) => x !== "ok").length;
-  const countLbl = (total !== undefined ? tk("count", { n: total }) : nextCursor === null ? tk("count", { n: items.length }) : tk("countMore", { n: items.length })) + (attention > 0 && !filtered ? tk("dikkat", { n: attention }) : "");
+  const countLbl = (total !== undefined ? tk("count", { n: total }) : sonrakiImlec === null ? tk("count", { n: items.length }) : tk("countMore", { n: items.length })) + (attention > 0 && !filtered ? tk("dikkat", { n: attention }) : "");
   // T-1047 (STANDART §2): liste görünümü ortak tablo (`kalip/tablo.tsx`); satır = kartla aynı bilgi ve hedef.
   const satirlar = items.map((it, i): ItemsSatir => {
     const st = stock[it.id];
@@ -561,6 +582,8 @@ export function ItemsView({
     );
   }
 
+  // T-1055: sayfa satırı yok; listenin içinde en altta, görünür olmaya yaklaşınca sonraki 50 ürün.
+  const sonsuz = <KalipSonsuz devam={sonrakiImlec !== null} yukle={dahaYukle} metin={countLbl} testId="items-sonsuz" />;
   const listRows = live ?? null;
 
   return (
@@ -696,6 +719,7 @@ export function ItemsView({
                 href={(r) => `${base}/${encodeURIComponent(r.it.id)}`}
                 satirAria={(r) => tk("cardAria", { name: r.it.name, code: r.it.code, qty: r.qty, unit: r.it.baseUnitCode, state: r.state })}
                 testId="items-table"
+                sonu={sonsuz}
               />
             ) : (
               <>
@@ -727,11 +751,9 @@ export function ItemsView({
                   </KalipKart>
                 );
               })}
+              {sonsuz}
             </KalipKartListe>
               </>
-            )}
-            {firstPage && nextCursor === null ? null : (
-              <KalipSayfa metin={countLbl} ilk={firstPage ? undefined : href({})} sonraki={nextCursor === null ? undefined : href({ after: nextCursor })} testId="items-paging" />
             )}
           </>
         )}

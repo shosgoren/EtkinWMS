@@ -299,3 +299,37 @@ test("T-1053 Son işlemler: pencere açılır, Esc kapatır", async ({ page }) =
   await expect(dugme).toBeHidden();
   await expect(page.getByRole("heading", { name: "Ürünler", exact: true }).filter({ visible: true }).first()).toBeVisible();
 });
+// T-1055 (kullanıcı kararı 26 Ekim): sayfa yerine kaydırma — arama ve süzgeç yerinde kalır, yalnız liste kayar; telefonda bütün kartlar ve
+// bütün çipler (çip şeridi sağa kayar); liste sonunda sayı; tabloda sütun başlığı sabit.
+test("T-1055 Liste: yalnız liste kayar, üst bölüm yerinde", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 660 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/items");
+  const ara = page.getByRole("searchbox", { name: "Ürün ara" });
+  await expect(ara).toBeVisible();
+  const once = await ara.boundingBox();
+  const kartlar = page.getByTestId("item-card");
+  expect(await kartlar.count()).toBeGreaterThan(5);
+  // Kaynaktaki "telefonda ilk 5 kart" kısıtı yok: altıncı kart da çizilir.
+  await expect(kartlar.nth(5)).toBeAttached();
+  expect(await kartlar.nth(5).evaluate("(e) => getComputedStyle(e).display")).not.toBe("none");
+  // Liste kendi içinde en alta kayar; sayfa gövdesi kaymaz, arama yerinde kalır.
+  expect(await page.evaluate<boolean>("(() => { const l = document.querySelector('#kalip-main > .ulist'); if (!l) return false; l.scrollTop = l.scrollHeight; return l.scrollTop > 0; })()")).toBe(true);
+  await expect(ara).toBeInViewport();
+  const sonra = await ara.boundingBox();
+  expect(Math.abs((sonra?.y ?? 0) - (once?.y ?? 0))).toBeLessThan(2);
+  expect(await page.evaluate<boolean>("document.scrollingElement.scrollHeight <= window.innerHeight + 1")).toBe(true);
+  await expect(page.getByTestId("items-sonsuz")).toBeInViewport();
+  await expect(page.getByTestId("items-sonsuz")).toHaveAttribute("data-devam", "0");
+  // Çipler: hepsi var, şerit yatay kayar.
+  const cipler = page.getByRole("group", { name: "Süzgeç" }).locator(".fch");
+  expect(await cipler.count()).toBeGreaterThanOrEqual(6);
+  expect(await page.evaluate<boolean>("(() => { const s = document.querySelector('.fchips'); return !!s && getComputedStyle(s).overflowX === 'auto' && s.scrollWidth > s.clientWidth; })()")).toBe(true);
+  // Masaüstü tablo: başlık sabit (sticky), tablo kendi içinde kayar.
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.getByTestId("kalip-gorunum").getByRole("radio", { name: "Liste" }).click();
+  await expect(page.getByTestId("items-table")).toBeVisible();
+  expect(await page.evaluate<string>("getComputedStyle(document.querySelector('[data-testid=\"items-table\"] th')).position")).toBe("sticky");
+  await page.getByTestId("kalip-gorunum").getByRole("radio", { name: "Kart" }).click();
+});
