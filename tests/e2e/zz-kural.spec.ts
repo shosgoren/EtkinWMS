@@ -210,3 +210,24 @@ test("T-1049 Ürün kartı: şerit, sekmeler, bilgi kutucukları", async ({ page
   const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
   expect(tasma).toBeLessThanOrEqual(0);
 });
+
+// T-1051 (STANDART §3): depo kartı kayıt kartı kalıbında — şerit (ad h1, kod, durum, Raf yeri kutusu) + raf yeri ağacı; ≥ 44 px; telefonda taşma yok.
+test("T-1051 Depo kartı: şerit ve raf yeri ağacı", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/warehouses");
+  await page.getByTestId("warehouse-card").first().locator("a").first().click();
+  await expect(page).toHaveURL(/\/warehouses\/[0-9a-f-]{36}$/);
+  const kart = page.getByTestId("warehouse-kart");
+  await expect(kart).toBeVisible();
+  await expect(kart.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("kalip-code")).toBeVisible();
+  await expect(page.getByTestId("kalip-total")).toBeVisible();
+  await expect(page.getByTestId("location-tree-card")).toBeVisible();
+  expect(await smallTouchTargets(page, 44, "#kalip-main")).toEqual([]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(kart).toBeVisible();
+  const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
+  expect(tasma).toBeLessThanOrEqual(0);
+});

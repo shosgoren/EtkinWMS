@@ -14,7 +14,8 @@ import { LICON } from "../../../../design/kalip-icons.ts";
 import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
 import { isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditForm } from "../../code-edit-dialog.tsx";
-import { KalipDetayIzgara, KalipHero, KalipHizli, KalipKartBolum, type KalipHizliIslem } from "../../kalip/detay.tsx";
+import type { KalipHizliIslem } from "../../kalip/detay.tsx";
+import { KalipKartSerit, KalipKayitKart } from "../../kalip/kart.tsx";
 import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { kdz } from "../../kalip/tokens.ts";
@@ -344,25 +345,35 @@ export function LocationTree({
           }}
           overlays={toast}
         >
-          <KalipDetayIzgara
-            left={
+          {/* T-1051 (STANDART §3): depo kartı kayıt kartı kalıbında — şerit (ad, kod, durum, raf yeri sayısı, hızlı işlem) + raf yeri ağacı. */}
+          <KalipKayitKart
+            testId="warehouse-kart"
+            serit={
+              <KalipKartSerit
+                etiket={tw("k.hero")}
+                ad={warehouseName}
+                d={LICON.depo}
+                tur={warehouseActive ? "lacivert" : "gri"}
+                etiketler={[
+                  { metin: warehouseCode, mono: true, testId: "kalip-code" },
+                  warehouseActive ? { metin: tw("status.ACTIVE"), ton: "ok" } : { metin: tw("status.ARCHIVED"), ton: "kirmizi" },
+                ]}
+                kutular={[
+                  { key: "locs", etiket: tw("k.boxLocs"), deger: countText, d: LICON.raf, ton: "camgobegi", testId: "kalip-total" },
+                  ...(archivedCount === 0 ? [] : [{ key: "archived", etiket: tw("k.boxArchived"), deger: String(archivedCount), d: LICON.lock, ton: "gri" as const }]),
+                ]}
+                islemler={quick.map((q) => ({ key: q.key, etiket: q.label, d: q.d, ton: "camgobegi" as const, ...(q.onClick === undefined ? {} : { onClick: q.onClick }), testId: `kart-islem-${q.key}` }))}
+                islemEtiket={tw("k.quick")}
+              >
+                {lockText === null ? null : (
+                  <small id="tree-locked" className="stkbos">
+                    {lockText}
+                  </small>
+                )}
+              </KalipKartSerit>
+            }
+            ana={
               <>
-                <KalipHero
-                  label={tw("k.hero")}
-                  name={warehouseName}
-                  code={warehouseCode}
-                  tags={[warehouseActive ? tw("status.ACTIVE") : tw("status.ARCHIVED")]}
-                  d={LICON.depo}
-                  color={warehouseActive ? "30475A" : "4E6476"}
-                  total={{ value: countText, sub: tw("k.locSub"), crit: false }}
-                >
-                  {lockText === null ? null : (
-                    <small id="tree-locked" style={{ display: "block", marginTop: 6 }}>
-                      {lockText}
-                    </small>
-                  )}
-                </KalipHero>
-                <KalipHizli label={tw("k.quick")} items={quick} />
                 {guideNext === null ? null : guideNext === "locations" ? (
                   <button type="button" className="more" data-testid="setup-row" onClick={() => (canOpenDialogs ? openBulk() : undefined)} disabled={!canOpenDialogs}>
                     <i>
@@ -380,10 +391,8 @@ export function LocationTree({
                 )}
                 {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
                 {error ? <ServerErrorBanner error={error.error} returnTo={returnTo} scope={error.scope} /> : null}
-              </>
-            }
-            right={
-              <KalipKartBolum label={t("label")} title={t("title")} sub={tw("k.treeSub", { n: countText })} d={LICON.raf} color="0E7C7B" testId="location-tree-card">
+                <div data-testid="location-tree-card" className="flex min-w-0 flex-col gap-3">
+                  <b className="stkbas">{t("title")}</b>
                 {archivedCount === 0 ? null : (
                   <button
                     type="button"
@@ -511,7 +520,8 @@ export function LocationTree({
                     {t("more")}
                   </button>
                 )}
-              </KalipKartBolum>
+                </div>
+              </>
             }
           />
         </KalipEkran>

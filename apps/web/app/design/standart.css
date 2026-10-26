@@ -693,6 +693,8 @@ html:has(.halo.tmenu) .dzk .wrap {
   color: var(--color-kr-card);
   font: 700 14.5px/1 var(--font-instrument), sans-serif;
   text-decoration: none;
+  border: 0;
+  cursor: pointer;
 }
 .stksekme {
   display: flex;

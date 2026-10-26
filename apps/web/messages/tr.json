@@ -1675,7 +1675,9 @@
       "hero": "Depo bilgisi",
       "quick": "Hızlı işlemler",
       "treeSub": "{n} AKTİF LOKASYON",
-      "next": "Sıradaki adım: {step}"
+      "next": "Sıradaki adım: {step}",
+      "boxLocs": "Raf yeri",
+      "boxArchived": "Arşivli"
     },
     "search": "Depo ara",
     "searchPlaceholder": "Depo kodu ya da adı",
