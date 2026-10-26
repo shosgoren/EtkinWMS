@@ -448,6 +448,8 @@ export interface KalipSekmeItem {
   readonly label: string;
   readonly d: string;
   readonly href: string;
+  /** T-1046 (STANDART §5): sekme simgesinin rengi (her sekmede renkli simge). */
+  readonly color?: string;
 }
 
 /**
@@ -464,7 +466,8 @@ export function KalipSekme({ items, current, color, label, onGo }: { items: read
             key={o.id}
             href={o.href}
             className={`gp${on ? " on" : ""}`}
-            style={on ? { background: c(color) } : undefined}
+            // T-1046 (STANDART §7): seçili sekme koyu dolgu değil, açık mavi zemin + mavi yazı (design/standart.css); simge kendi renginde.
+            style={{ "--tc": c(o.color ?? color) } as CSSProperties}
             aria-current={on ? "page" : undefined}
             onClick={(e) => {
               if (onGo !== undefined) {

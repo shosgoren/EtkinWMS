@@ -29,10 +29,11 @@ test.describe("Excel'den aktar (T-427)", () => {
     const p = `T427-${Date.now()}${project === "desktop" ? "D" : "M"}`;
     await loginAdmin(page);
 
-    // Ayarlar sayfasındaki bağlantıyla gelinir; ekran Aktar tasarımıdır.
+    // T-1046: Excel aktarımı Ayarlar › Entegrasyonlar sekmesindedir (Firma sekmesindeki ayrı satır kalktı); ekran Aktar tasarımıdır.
     await page.goto("/t/demo/settings");
-    await page.getByTestId("settings-import").click(); // T-968: Ayarlar form kalıbındaki "Excel’den toplu aktar" satırı
-    await expect(page).toHaveURL(/\/t\/demo\/import$/);
+    await page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]').click();
+    await expect(page).toHaveURL(/\/t\/demo\/settings\/baglantilar$/);
+    await page.goto("/t/demo/import");
     const aktar = page.getByTestId("aktar");
     await expect(aktar).toBeVisible();
     await expect(aktar.locator('[data-kind="cari"]')).toBeEnabled(); // T-428: cari kartlar açık

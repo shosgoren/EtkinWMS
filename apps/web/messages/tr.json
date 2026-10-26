@@ -1208,7 +1208,12 @@
       "noChange": "Değişiklik yok; ayarlar zaten böyle",
       "unsavedText": "{n} ayar değişti; kaydetmeden çıkarsan kaybolur.",
       "import": "Excel’den toplu aktar · depo, ürün, cari",
-      "errorTitle": "Kaydedilemedi"
+      "errorTitle": "Kaydedilemedi",
+      "people": "Kişiler ve yetki",
+      "members": "Kişiler",
+      "membersV": "Ekle, yetki ver",
+      "groups": "Yetki grupları",
+      "groupsV": "Kim ne yapabilir"
     }
   },
   "items": {
@@ -5080,7 +5085,7 @@
     "themeAuto": "Otomatik (sistem)"
   },
   "baglantilar": {
-    "title": "Bağlantılar",
+    "title": "Entegrasyonlar",
     "back": "Ayarlara dön",
     "tabs": "Ayarlar sekmeleri",
     "tabGeneral": "Genel",
@@ -5159,7 +5164,11 @@
     "soon": "YAKINDA",
     "soonAria": "{name} bağlantısı yakında",
     "open": "Aç",
-    "openAria": "{name} bağlantısını aç"
+    "openAria": "{name} bağlantısını aç",
+    "tabFirma": "Firma",
+    "tabUsers": "Kullanıcılar ve yetki",
+    "tabInteg": "Entegrasyonlar",
+    "tabLook": "Görünüm"
   },
   "integrations": {
     "title": "Entegrasyon",

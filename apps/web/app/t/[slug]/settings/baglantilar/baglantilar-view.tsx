@@ -14,6 +14,7 @@ import { excelHata, excelIndir, excelYenidenGiris } from "../../kalip/excel.tsx"
 import { KalipGrup, KalipIzgara, KalipKilit, KalipSabit } from "../../kalip/form.tsx";
 import { KalipSecimKutulari, KalipSekme } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
+import { ayarSekmeleri } from "../sekmeler.ts";
 import { feedback, intlDil } from "@wms/ui";
 
 type Alan = "items" | "parties" | "warehouses" | "locations" | "stock";
@@ -102,17 +103,10 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
       }}
       overlays={toast}
     >
-      <KalipSekme
-        label={t("tabs")}
-        color="0E7C7B"
-        current="baglantilar"
-        items={[
-          { id: "genel", label: t("tabGeneral"), d: LICON.gear, href: `${base}/settings` },
-          { id: "baglantilar", label: t("tabLinks"), d: LICON.excel, href: `${base}/settings/baglantilar` },
-        ]}
-      />
+      {/* T-1046: ortak ayar sekmeleri; bu ekran "Entegrasyonlar" sekmesidir. */}
+      <KalipSekme label={t("tabs")} color="0E7C7B" current="entegrasyon" items={ayarSekmeleri(base, t)} />
       {canData ? null : <KalipKilit title={t("lockTitle")} sub={t("lockSub")} />}
-      <KalipBaslik title={t("head")} hint={t("headHint")} />
+      <KalipBaslik title={t("head")} />
       <KalipIzgara
         left={
           <KalipGrup title={t("step1")} sub={t("step1Sub")} d={LICON.grid} color="2F5DA8" testId="baglantilar-alan">
@@ -162,7 +156,7 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
           </>
         }
       />
-      <KalipBaslik title={t("integrations")} hint={t("integrationsHint")} />
+      <KalipBaslik title={t("integrations")} />
       <KalipGrup title={t("integrations")} sub={t("integrationsSub")} d={LICON.transfer} color="6C4BD8" testId="baglantilar-entegrasyon">
         {/* B-112: Paraşüt `/t/<alan>/integrations` ekranına gider (yetki kararı orada: settings.manage, değilse kilitli ekran). Logo hâlâ YAKINDA yer tutucusu. */}
         <Link href={`${base}/integrations`} className="sr2" style={{ "--c": kdz("dzf", "0F6E8C") } as CSSProperties} aria-label={t("openAria", { name: t("parasut") })} onClick={() => feedback.minor()} data-testid="entegrasyon-parasut">
