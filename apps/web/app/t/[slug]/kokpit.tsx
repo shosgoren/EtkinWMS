@@ -1,7 +1,7 @@
 // T-979 (B-94, I-18): Kokpit ("Genel bakış") ana ekranı LİSTE kalıbında (KalipListe.dc.html). Eski döşeme ızgarası (`task-menu.tsx`,
 // `more-sheet.tsx`) kaldırıldı; içerik ve sözleşme aynı: "Şimdi" (gerçek bekleyen işler, `now-*` test kimlikleri), "Görevlerim" özeti
 // (`my-tasks-card` / `my-tasks-empty`), işler listesi ("İşler"; durum `data-state`: active | locked | soon — kilitli/yakında işler kart
-// olarak görünür, gerekçeleriyle), "Bugün yaptıklarım". Sunucu bileşeni: izin kararı çağıran sayfadan (`allowed`) gelir ve yalnız
+// olarak görünür, gerekçeleriyle), (T-1045: "Bugün yaptıklarım" kaldırıldı, tuvalde yok). Sunucu bileşeni: izin kararı çağıran sayfadan (`allowed`) gelir ve yalnız
 // gösterimdir; asıl yetki hedef sayfa/eylemde sunucuda denetlenir. Sahte veri yok (G-07). Renkler liste kalıbı kaynağından (`kdz`).
 import Link from "next/link";
 import type { CSSProperties } from "react";
@@ -32,10 +32,6 @@ export type NowSummary =
   | { readonly kind: "empty" }
   | { readonly kind: "error"; readonly message: string; readonly code: string };
 
-export type TodayList =
-  | { readonly kind: "rows"; readonly rows: ReadonlyArray<{ readonly id: string; readonly time: string; readonly dateTime: string; readonly text: string }> }
-  | { readonly kind: "error"; readonly message: string; readonly code: string };
-
 export type TaskKey = "members" | "settings" | "audit" | "items" | "warehouses" | "receive" | "count" | "lookup" | "undo";
 
 /** İşler — sıra kaynağı: saha işleri önce, yönetim işleri sonra. `href` yoksa iş henüz yoktur ("Yakında"). */
@@ -58,13 +54,12 @@ export interface KokpitProps {
   readonly allowed: { readonly usersManage: boolean; readonly settingsManage: boolean; readonly auditView: boolean; readonly stockView: boolean; readonly stockPost: boolean };
   readonly myTasks?: MyTasksSummary;
   readonly now?: NowSummary;
-  readonly today: TodayList;
 }
 
 const c = (hex: string): string => kdz("dzl", hex);
 const ROW: CSSProperties = { textDecoration: "none" };
 
-export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, today }: KokpitProps) {
+export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now }: KokpitProps) {
   const t = await getTranslations("home");
   const base = `/t/${encodeURIComponent(slug)}` as const;
   const hrefs: Partial<Record<TaskKey, { readonly ok: boolean; readonly href: `/${string}` }>> = {
@@ -92,8 +87,8 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
   );
 
   return (
-    <KalipEkran kind="liste" dark={dark} title={t("title")} icon={{ d: LICON.grid, color: "172E42" }} testId="kokpit" bar={{ home: true }}>
-      <KalipBaslik title={t("greeting", { name: firstName })} hint={t("intro")} />
+    // T-1045 (STANDART §1, tuval StandartAnaEkran): ana ekran adı üst çubukta "Merhaba <ad>"; sabit açıklama ve "Bugün yaptıkların" yok.
+    <KalipEkran kind="liste" dark={dark} title={t("hello", { name: firstName })} icon={{ d: LICON.grid, color: "172E42" }} testId="kokpit" bar={{ home: true }}>
 
       {now === undefined || !showNow ? null : (
         <section aria-label={t("now.title")} className="now-card" data-testid="now-card" data-state={now.kind} style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
@@ -227,33 +222,6 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now, tod
         ))}
       </KalipKartListe>
 
-      <section aria-label={t("today.title")} data-testid="today" style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-        <KalipBaslik title={t("today.title")} />
-        {today.kind === "error" ? (
-          <Banner kind="warning">
-            <p>{today.message}</p>
-            <p>{today.code}</p>
-          </Banner>
-        ) : today.rows.length === 0 ? (
-          <p className="kknote">{t("today.empty")}</p>
-        ) : (
-          <KalipKartListe label={t("today.title")}>
-            {today.rows.map((r) => (
-              <div key={r.id} role="listitem" className="uc">
-                {icon(LICON.check, "2F7D5B")}
-                <span className="ut">
-                  <b>{r.text}</b>
-                </span>
-                <span className="qb">
-                  <b>
-                    <time dateTime={r.dateTime}>{r.time}</time>
-                  </b>
-                </span>
-              </div>
-            ))}
-          </KalipKartListe>
-        )}
-      </section>
     </KalipEkran>
   );
 }
