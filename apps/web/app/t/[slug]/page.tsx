@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { AppError } from "@wms/shared/errors";
-import { listMyActionsToday } from "@wms/domain/audit/today";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary, listMembers } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { TASK_KIND_PERMISSION, TASK_LIST_LIMIT_MAX, getBoard, getWorkSummary, type Board, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
-import { Kokpit, type MyTasksSummary, type NowSummary, type TodayList } from "./kokpit.tsx";
+import { Kokpit, type MyTasksSummary, type NowSummary } from "./kokpit.tsx";
 import { EasyOperations } from "./easy-operations.tsx";
 import { PanoHome, type PanoRole } from "./pano/pano-home.tsx";
 import { PanoBoard, type Assignee, type BoardRole } from "./pano/pano-board.tsx";
@@ -165,25 +164,6 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       </main>
     );
   }
-  const t = await getTranslations();
-  const format = await getFormatter();
-  // `now` ASLA verilmez (sunucu saati); yalnızca çağıranın kendi satırları, en çok 5. Bölüm düzeyinde yakalanır: bu liste
-  // hata verirse ana ekran (görev kartları) düşmez; yalnızca kod anahtarlı nötr satır gösterilir.
-  let today: Awaited<ReturnType<typeof listMyActionsToday>> | null = null;
-  let todayError: string | null = null;
-  try {
-    today = await listMyActionsToday({ db: getAppDb(), principal, tenantSlug: slug }, { limit: 5 });
-  } catch (e) {
-    if (e instanceof AppError) {
-      if (e.code === "NOT_FOUND") notFound();
-      if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(`/t/${slug}`)}`);
-      if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(`/t/${slug}`)}`);
-    }
-    // Maskeli günlük: yalnızca sınıf adı ve kod (mesaj/SQL/parametre yok, G-09).
-    console.error(JSON.stringify({ level: "error", msg: "home today list failed", error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
-    todayError = e instanceof AppError ? e.code : "INTERNAL";
-  }
-  const errKey = ["FORBIDDEN", "RATE_LIMITED", "TENANT_SUSPENDED", "TENANT_CLOSING", "VALIDATION_FAILED"].includes(todayError ?? "") ? (todayError as string).toLowerCase() : "internal";
   const ts = await getTranslations("serverErrors");
   // Saha rolleri (yönetim yetkisi olmayanlar) için "Görevlerim" özeti: mevcut domain sorgusu (`listMyTasks`: tenant bağlamı, `stock.view`,
   // depo kapsamı domain'de). Sayım yalnız BANA ATANMIŞ (ASSIGNED) görevlerdir; liste tek sayfaya sığmazsa "n+" gösterilir. Hata bu bölümle
@@ -252,18 +232,6 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     }
   }
 
-  const todayList: TodayList =
-    today === null
-      ? { kind: "error", message: `${ts(errKey)} ${ts(`${errKey}Action`)}`, code: ts("code", { code: todayError ?? "INTERNAL" }) }
-      : {
-          kind: "rows",
-          rows: today.items.map((it, i) => ({
-            id: `${it.occurredAt.toISOString()}-${i}`,
-            time: format.dateTime(it.occurredAt, { hour: "2-digit", minute: "2-digit", timeZone: today.timeZone }),
-            dateTime: it.occurredAt.toISOString(),
-            text: t(it.summaryKey),
-          })),
-        };
   return (
     <main className="flex w-full min-w-0 flex-col">
       <Kokpit
@@ -271,7 +239,6 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
         dark={temaKoyu(jar)}
         firstName={firstName}
         allowed={allowed}
-        today={todayList}
         {...(myTasks === undefined ? {} : { myTasks })}
         {...(now === undefined ? {} : { now })}
       />
