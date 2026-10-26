@@ -40,7 +40,7 @@ async function expectNewShell(page: Page, where: string): Promise<void> {
 async function expectCockpit(page: Page, where: string, counts: { active: number; locked: number; soon: number }): Promise<void> {
   const screen = page.getByTestId("kokpit");
   await expect(screen, `${where}: Kokpit liste kalıbında`).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Merhaba / })).toBeVisible();
   const tasks = page.getByRole("list", { name: "İşler" });
   await expect(tasks.locator('a[data-state="active"]')).toHaveCount(counts.active);
   await expect(tasks.locator('[data-state="locked"]')).toHaveCount(counts.locked);
@@ -115,7 +115,8 @@ test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüs
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/t/demo");
   await expectCockpit(page, "masaüstü", { active: 7, locked: 0, soon: 2 });
-  await expect(page.getByText("Yapmak istediğin işe dokun.")).toBeVisible();
+  // T-1045 (STANDART §1): sabit açıklama yazısı yok; ad üst çubukta "Merhaba <ad>".
+  await expect(page.getByText("Yapmak istediğin işe dokun.")).toHaveCount(0);
   await page.screenshot({ path: path.join(OUT, `${tag}-masaustu-kokpit.png`) });
 
   // T-292: aynı oturumla yatay telefon (dokunmatik) ve karşılaştırma boyutları.
@@ -199,7 +200,7 @@ async function landscapePhoneChecks(browser: Browser, source: Page, tag: string)
       await page.setViewportSize({ width: c.width, height: c.height });
       await page.goto("/t/demo");
       await expect(page.getByTestId("kokpit")).toBeVisible();
-      await expect(page.getByRole("heading", { level: 1, name: "Ne yapmak istiyorsun?" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: /^Merhaba / })).toBeVisible();
       const m = await metrics(page);
       expect(m.scrollWidth, `${c.name}: yatay taşma yok`).toBeLessThanOrEqual(m.clientWidth);
       await expectNewShell(page, c.name);

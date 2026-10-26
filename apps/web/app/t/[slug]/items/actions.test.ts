@@ -181,7 +181,7 @@ describe('"Ürünler" kartı izne bağlı (stock.view)', () => {
   }
   /** T-979: Kokpit (liste kalıbı) işler listesindeki `items` kartının özellikleri (`data-task` ile bulunur). */
   async function itemsCard(stockView: boolean): Promise<NonNullable<El["props"]>> {
-    const root = (await Kokpit({ slug: "acme", dark: false, firstName: "A", today: { kind: "rows", rows: [] }, allowed: { usersManage: true, settingsManage: true, auditView: true, stockView, stockPost: false } })) as El;
+    const root = (await Kokpit({ slug: "acme", dark: false, firstName: "A", allowed: { usersManage: true, settingsManage: true, auditView: true, stockView, stockPost: false } })) as El;
     function findItem(node: unknown): El | undefined {
       if (Array.isArray(node)) {
         for (const child of node) { const found = findItem(child); if (found) return found; }

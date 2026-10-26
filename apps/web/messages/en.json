@@ -841,7 +841,8 @@
       },
       "overview": "Overview",
       "signOut": "Sign out"
-    }
+    },
+    "hello": "Hello {name}"
   },
   "audit": {
     "production_recipe": {
