@@ -459,7 +459,8 @@ export function WarehousesView({
   });
   const stepNo = nextStep === undefined ? 3 : steps.indexOf(nextStep) + 1;
   const setupSub = tk("setupSub", { step: nextStep?.key === "warehouse" ? tk("setupWarehouse") : nextStep?.key === "locations" ? tk("setupLocations") : tk("setupItems"), n: stepNo });
-  const showSetup = guide && warehouses.length === 0 && firstPage && q === "";
+  // T-1040: boş "Arşivli" görünümü kurulmamış kiracı sayılmaz (kurulum rehberi değil, arşiv boş durumu).
+  const showSetup = guide && warehouses.length === 0 && firstPage && q === "" && !archived;
   const countLbl = total !== undefined ? tk("count", { n: total }) : nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
   const lockedId = "warehouse-locked";
 
@@ -554,7 +555,8 @@ export function WarehousesView({
         ) : null}
 
         {showSetup ? null : <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={base} defaultValue={q} below={archived ? <input type="hidden" name="arsiv" value="1" /> : null} />}
-        {showSetup ? null : <KalipCipler label={t("filter")} chips={chips} />}
+        {/* T-1040: süzgeç kurulum rehberi açıkken de görünür — son etkin depo arşivlenince arşivliye yol kalır. */}
+        <KalipCipler label={t("filter")} chips={chips} />
         {showSetup ? (
           <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} testId="setup-guide" />
         ) : warehouses.length === 0 && archived && q === "" ? (
