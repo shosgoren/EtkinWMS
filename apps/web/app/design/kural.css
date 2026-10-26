@@ -257,9 +257,11 @@
 
 /* T-1039 (kullanıcı ekran görüntüsü 26 Ekim, Yeni cari): masaüstünde alan kutusu beyaz kartın üstünde beyazdı — "Vergi / TC no", "Telefon"…
    yalnız başlık olarak görünüyor, yazılacak yer seçilmiyordu. Kaynakta telefonda gri zemin var; masaüstünde de aynı gri zemin + ince
-   kenar: kutu her zaman görünür. Koyu tema kaynağın kendi kuralıyla (`.dzf.dz-dark .fld`, daha özgül) kalır. */
+   kenar: kutu her zaman görünür (hatalı alanın kırmızı çerçevesi `.bad` korunur). Koyu tema kaynağın kendi kuralıyla (`.dzf.dz-dark .fld`, daha özgül) kalır. */
 .dzf:not(.dz-dark) .fld {
   background: var(--color-kr-bg-a);
+}
+.dzf:not(.dz-dark) .fld:not(.bad) {
   box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-b);
 }
 
