@@ -22,6 +22,9 @@ her seferinde hatırlatması beklenmez.
   ekle; 50 kullanıcıda bile birkaç dokunuş. Bugünkü roller hazır şablon olarak kalır.
 - **Üst çubuk:** sağ üstte ayarlara kolay erişen anlamlı, hareketli ikonlar ve Etkin AI düğmesi.
 
+## Masaüstü ekran standardı (26 Ekim, tuval onayı; her ekran buna uyar)
+- **Kullanıcı kararı 26 Ekim:** liste, kayıt kartı, form, ayar ve pencere kalıpları `docs/design/STANDART.md`'de; tuvalde olmayan ekran da en yakın kalıptan türetilir, ekran başına ayrı tuval onayı istenmez. Kalıbın dışında ekran yapılmaz; yeni ihtiyaç önce ortak kalıba eklenir. Aşağıdaki 19–21 Ekim maddeleriyle çelişen yerde (üst/alt çubuk görünümü, zemin, form önizleme sütunu) STANDART.md geçerlidir.
+
 ## Ekran standardı (19 Ekim, tuvalde onaylandı; her yeni ekran buna uyar)
 - **Alt cam çubuk (tek el; 20 Ekim kullanıcı onayı, kaynak `Kabuk.dc.html`):** saydam buzlu oval; içerik altında kalmaz. Solda **Geri + Ana ekran** (20 Ekim kullanıcı kararı: sol düğme **her ekranda Geri**; ana ekranda gidecek yer yoksa pasif) · ortada yükseltilmiş ana işlem (ana ekranda OKUT, yumuşak yeşil #5FAF8A; alt ekranlarda ekranın ana işlemi, etiket altında: EKLE, ONAYLA…) · sağda **Modüller** (2×2 ızgara; yetkiye göre açılan modül sayfası) ve **Etkin** (bas-konuş; iki kez dokununca uzun dinleme, "bitti" ile biter). Masaüstünde çubuk ortalı hap (≤ 720 px). Üstte geri ya da ana ekran düğmesi yok.
 - **Modüller sayfası:** buzlu perde + cam panel; yalnız rolün/yetkinin açtığı modüller (renkli ikon kutusu, ad, kısa alt yazı); henüz yapılmamış modülde "YAKINDA"; telefon 3, tablet 4, masaüstü 5 sütun; sığmayan "+N daha · ara ya da söyle"; üstte "Modül ara ya da söyle".
