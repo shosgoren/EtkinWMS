@@ -979,3 +979,81 @@ html:has(.halo.tmenu) .dzk .wrap {
   .stkana, .stkyan { padding: 16px; }
   .stkdl { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---- T-1052 Form kalıbı (STANDART §4; kaynak `StandartYeniCari.dc.html`): masaüstünde tek panel — üstte şerit (tür tonunda zemin,
+   büyük simge, canlı ad + otomatik kod; eski sağ önizleme sütunu şeride dönüşür), altında gruplar en çok 3 sütun, her grubun başı kendi
+   renginde hafif tonlu. Grup altı sabit açıklamalar yazılmaz (kullanıcı 26 Ekim). Telefonda ve tablette tek sütun (değişmez). ---- */
+.dzf .sgh small { display: none; }
+@media (min-width: 1100px) {
+  .dzf.dzf .kfl {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: none;
+    gap: 14px;
+  }
+  .dzf.dzf .konz {
+    order: -1;
+    display: block;
+    flex: none;
+    position: static;
+    width: 100%;
+  }
+  .dzf.dzf .konc {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 22px;
+    border-radius: 22px;
+  }
+  .dzf:not(.dz-dark) .konc {
+    background: linear-gradient(100deg, color-mix(in srgb, var(--kc) 12%, var(--color-kr-card)) 0%, var(--color-kr-card) 70%);
+  }
+  .dzf .konh { display: none; }
+  .dzf.dzf .konic {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    flex: none;
+  }
+  .dzf .konx {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .dzf.dzf .konn { font-size: 26px; }
+  .dzf.dzf .konr {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .dzf.dzf .konr div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: var(--color-kr-bg-a);
+  }
+  .dzf.dz-dark .konr div { background: var(--color-kr-bg-dark-a); }
+  .dzf.dzf .konr dd { text-align: left; }
+  .dzf.dzf .kfc {
+    max-width: none;
+    width: 100%;
+    display: grid;
+    /* Grup sayısına göre: 3+ grup → 3 sütun (taşan alt satıra), 2 → 2, 1 → tam genişlik. */
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    align-items: start;
+  }
+  /* İki sütunlu yerleşim kabı (`KalipIzgara`) masaüstünde ızgaraya karışır: gruplar doğrudan sütun olur. */
+  .dzf .kfc :is(.sgrid, .scol) { display: contents; }
+  .dzf .kfc > :not(.sg, .sgrid) { grid-column: 1 / -1; }
+  .dzf:not(.dz-dark) .kfc .sg {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--gc, var(--color-kr-card)) 10%, var(--color-kr-card)) 0%, var(--color-kr-card) 120px);
+  }
+}

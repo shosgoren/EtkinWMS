@@ -44,7 +44,8 @@ export function KalipIzgara({ left, right }: { left: ReactNode; right: ReactNode
 /** Kaynak `.sg` ikonlu grup. */
 export function KalipGrup({ title, sub, d, color, children, testId }: { title: string; sub?: string; d: string; color: string; children: ReactNode; testId?: string }) {
   return (
-    <section className="sg" aria-label={title} data-testid={testId}>
+    // T-1052: `--gc` grubun rengi (masaüstünde başlık bölgesi bu tonda).
+    <section className="sg" aria-label={title} data-testid={testId} style={{ "--gc": c(color) } as CSSProperties}>
       <div className="sgh">
         <i style={{ background: c(color) }}>
           <Ico d={d} size={24} />

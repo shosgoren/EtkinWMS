@@ -9,7 +9,7 @@
 //  - Görünüm: telefonda tam ekran; masaüstünde en çok ~720px sütun + sağda canlı önizleme kartı (detay kalıbının hero kartı gibi: ad, kod,
 //    tür ikonu); yer yoksa önizleme gizlenir. Adres örneği `?new=1` / `?edit=<id>` (ekran yönetir).
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "./cikis.tsx";
 import { degisti, dogrula, ilkHatali, ozet, type AlanKurali, type Hatalar } from "./dogrula.ts";
@@ -273,14 +273,17 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
 export function KalipOnizleme({ name, code, d, color, kind, rows = [] }: { name: string; code: string; d: string; color: string; kind?: string; rows?: readonly { readonly k: string; readonly v: string }[] }) {
   const t = useTranslations("kalip");
   return (
-    <div className="konc" data-testid="kalip-preview">
+    // T-1052 (STANDART §4): masaüstünde üst şerit (tür tonunda zemin, büyük simge, canlı ad + kod); `--kc` şeridin tonu.
+    <div className="konc" data-testid="kalip-preview" style={{ "--kc": c(color) } as CSSProperties}>
       <span className="konh">{t("preview")}</span>
       <span className="konic" style={{ background: c(color) }}>
         <Ico d={d} size={30} />
       </span>
-      {kind === undefined ? null : <span className="konk">{kind}</span>}
-      <b className="konn">{name.trim() === "" ? t("previewName") : name}</b>
-      <span className="konco">{code.trim() === "" ? "—" : code}</span>
+      <span className="konx">
+        {kind === undefined ? null : <span className="konk">{kind}</span>}
+        <b className="konn">{name.trim() === "" ? t("previewName") : name}</b>
+        <span className="konco">{code.trim() === "" ? "—" : code}</span>
+      </span>
       {rows.length === 0 ? null : (
         <dl className="konr">
           {rows.map((r) => (

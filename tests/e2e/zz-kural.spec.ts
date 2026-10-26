@@ -249,3 +249,27 @@ test("T-1051 Depo kartı: şerit ve raf yeri ağacı", async ({ page }) => {
   const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
   expect(tasma).toBeLessThanOrEqual(0);
 });
+
+// T-1052 (STANDART §4): form kalıbı masaüstünde — canlı ad şeridi formun üstünde (sağ sütun değil), gruplar yan yana; telefonda taşma yok.
+test("T-1052 Form: üst şerit ve yan yana gruplar", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/parties?new=1");
+  const serit = page.getByTestId("kalip-preview");
+  await expect(serit).toBeVisible();
+  const gruplar = page.locator(".dzf .kfc .sg");
+  await expect(gruplar.nth(1)).toBeVisible();
+  const kutu = async (i: number) => (await gruplar.nth(i).boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
+  const s = (await serit.boundingBox()) ?? { x: 0, y: 0, width: 0, height: 0 };
+  const g0 = await kutu(0);
+  const g1 = await kutu(1);
+  expect(s.y + s.height).toBeLessThanOrEqual(g0.y);
+  expect(Math.abs(g0.y - g1.y)).toBeLessThan(2);
+  expect(g1.x).toBeGreaterThan(g0.x);
+  await page.getByLabel("Ünvan", { exact: false }).first().fill("Şerit Deneme");
+  await expect(serit).toContainText("Şerit Deneme");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
+  expect(tasma).toBeLessThanOrEqual(0);
+});
