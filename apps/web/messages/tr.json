@@ -1391,7 +1391,25 @@
         "convAdd": "Dönüşüm ekle",
         "convNoUnit": "Dönüşüm için başka birim yok; önce yeni birim ekle.",
         "bcAdd": "Barkod ekle",
-        "unitTag": "BİRİM · {unit}"
+        "unitTag": "BİRİM · {unit}",
+        "whenToday": "Bugün {time}",
+        "whenYesterday": "Dün {time}",
+        "whenDays": "{n} gün önce",
+        "moveOpen": "{kind} {no} işlemini aç",
+        "qLabelShort": "Etiket",
+        "boxHave": "Eldeki",
+        "boxMin": "Minimum",
+        "boxPlaces": "Raf yeri",
+        "infoCode": "Kod",
+        "none": "Yok",
+        "tabGeneral": "Genel",
+        "tabStock": "Stok ve yer",
+        "tabUnits": "Birimler",
+        "tabBarcodes": "Barkodlar",
+        "tabs": "Kart sekmeleri",
+        "movesAll": "Tümü",
+        "movesNone": "Henüz hareket yok",
+        "actor": "İşlemi yapan"
       }
     },
     "errors": {
