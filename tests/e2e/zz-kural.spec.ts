@@ -294,6 +294,8 @@ test("T-1053 Son işlemler: pencere açılır, Esc kapatır", async ({ page }) =
   await page.keyboard.press("Escape");
   await expect(pencere).toHaveCount(0);
   await expect(dugme).toBeFocused();
-  await page.setViewportSize({ width: 390, height: 844 });
+  // Tablet (900 px) ve telefonda gizli: üst çubukta ekran adına yer kalır (eski-cubuk tablet).
+  await page.setViewportSize({ width: 900, height: 1180 });
   await expect(dugme).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Ürünler", exact: true }).filter({ visible: true }).first()).toBeVisible();
 });

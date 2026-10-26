@@ -1141,7 +1141,7 @@ html:has(.halo.tmenu) .dzk .wrap {
 .dz-dark .stsonp { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); }
 .dz-dark .stsonl li { background: var(--color-kr-bg-dark-a); }
 .dz-dark :is(.stsonbos, .stsonl time) { color: var(--color-kr-muted); }
-/* Telefonda üst çubukta yer yok (saat gibi): düğme gizli. */
-@media (max-width: 699.98px) {
+/* Telefon ve tablette üst çubukta yer yok (ekran adı kaybolmasın; 900 px'te başlık sıkışıp siliniyordu): düğme yalnız masaüstünde. */
+@media (max-width: 1099.98px) {
   .stson { display: none; }
 }
