@@ -57,7 +57,8 @@ export function HesapDugme({ team, ini, open, onClick }: { team: boolean; ini?: 
       onClick={onClick}
       data-testid="home-actions"
     >
-      {!team && ini !== undefined ? (
+      {/* T-1050: Ekip menüsünde de kullanıcının baş harfi (menü onun hesabıdır); kişiler simgesi yalnız baş harf yoksa. */}
+      {ini !== undefined ? (
         <i className="stav" aria-hidden="true">
           {ini}
         </i>
