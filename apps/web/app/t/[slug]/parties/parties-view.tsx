@@ -8,7 +8,7 @@
 // Bilinçli farklar (DESIGN-PARITY, T-971): çip sayıları yok (sunucu tür sayımı vermez); tür süzgeci yalnız yüklenen ≤100 kartı süzer.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
@@ -16,6 +16,7 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-e
 import { KalipAlan, KalipGrup, KalipIzgara } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { KalipGorunumSec, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { archivePartyAction, savePartyAction } from "./actions.ts";
 import { feedback } from "@wms/ui";
 
@@ -216,6 +217,21 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
     const sep = listHref.includes("?") ? "&" : "?";
     router.push(p === null ? `${listHref}${sep}new=1` : `${listHref}${sep}edit=${encodeURIComponent(p.id)}`);
   };
+  // T-1048 (STANDART §2): ortak liste kalıbı — Kart / Liste, Sütunlar, sıralanan tablo.
+  const [gorunum, setGorunum] = useKalipGorunum("parties");
+  const sutunlar = useMemo<readonly KalipSutun<PartyView>[]>(
+    () => [
+      { id: "code", baslik: t("colCode"), sabit: true, deger: (p) => p.code, sirala: (p) => p.code },
+      { id: "name", baslik: t("colName"), sabit: true, deger: (p) => <span className="ktad" title={p.name}>{p.name}</span>, sirala: (p) => p.name },
+      { id: "kind", baslik: t("colKind"), deger: (p) => t(`kind.${p.kind}`), sirala: (p) => p.kind },
+      { id: "city", baslik: t("colCity"), deger: (p) => p.city ?? "", sirala: (p) => p.city ?? "" },
+      { id: "phone", baslik: t("colPhone"), deger: (p) => p.phone ?? "", sirala: (p) => p.phone ?? "" },
+      { id: "email", baslik: t("colEmail"), varsayilan: false, deger: (p) => p.email ?? "", sirala: (p) => p.email ?? "" },
+      { id: "tax", baslik: t("colTax"), varsayilan: false, deger: (p) => p.taxNo ?? "", sirala: (p) => p.taxNo ?? "" },
+    ],
+    [t],
+  );
+  const sutunSecim = useKalipSutunlar<PartyView>("parties", sutunlar);
   const close = (msg?: string): void => {
     router.push(listHref);
     if (msg !== undefined) say("ok", msg);
@@ -248,7 +264,13 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
       overlays={toast}
     >
       <KalipAra label={t("searchLabel")} placeholder={t("search")} action={list} defaultValue={q} below={archived ? <input type="hidden" name="arsiv" value="1" /> : null} inputProps={{ enterKeyHint: "search" }} />
-      <KalipCipler label={t("filter")} chips={chips} />
+      <div className="ktbar">
+        <KalipCipler label={t("filter")} chips={chips} />
+        <span className="kttools">
+          {gorunum === "liste" ? <KalipSutunSec sutunlar={sutunlar} secim={sutunSecim} /> : null}
+          <KalipGorunumSec value={gorunum} onChange={setGorunum} />
+        </span>
+      </div>
       {shown.length === 0 ? (
         <>
           {q === "" && kind === "" && !archived ? (
@@ -275,6 +297,17 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
       ) : (
         <>
           <KalipBaslik title={archived ? t("archivedList") : t("activeList")} hint={t("count", { n: total })} />
+          {gorunum === "liste" ? (
+            <KalipTablo<PartyView>
+              label={t("title")}
+              sutunlar={sutunSecim.gorunur}
+              satirlar={shown}
+              anahtar={(p) => p.id}
+              href={(p) => `${listHref}${listHref.includes("?") ? "&" : "?"}edit=${encodeURIComponent(p.id)}`}
+              satirAria={(p) => `${p.name} · ${p.code} · ${t(`kind.${p.kind}`)}`}
+              testId="parties-table"
+            />
+          ) : (
           <KalipKartListe label={t("title")}>
             {shown.map((p, i) => {
               const v = KIND_VISUAL[p.kind];
@@ -286,6 +319,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
               );
             })}
           </KalipKartListe>
+          )}
         </>
       )}
     </KalipEkran>
