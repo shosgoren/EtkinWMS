@@ -785,12 +785,12 @@ html:has(.halo.tmenu) .dzk .wrap {
   display: inline-flex;
   color: var(--color-st-k-ok-ink);
 }
-/* Kutucuk içi işlem (ör. kodu değiştir): sağda 44px simge düğmesi. */
+/* Kutucuk içi işlem (ör. kodu değiştir): sağda 48px simge düğmesi (telefon kalıbı 48 ister). */
 .stkdl b > button {
   appearance: none;
   margin-left: auto;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex: none;
   border: 0;
   border-radius: 12px;
