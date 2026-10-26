@@ -7,6 +7,12 @@ import type { JourneyData } from "./steps.ts";
 let current: JourneyData | null = null;
 const subs = new Set<() => void>();
 
+/**
+ * Codex P2 (PR 203): tur kapalıyken katman ekran değişiminde sunucuyu yeniden okumaz (hız sınırı). Giriş kartı göründüğünde bu olayla
+ * taze ilerleme ister — elle tamamlanan adım kartta eski kalmasın. İlk sayfa yüklemesinde katmanın sunucu verisi zaten tazedir.
+ */
+export const YOL_TAZELE_EVENT = "etkinwms:yolculuk-tazele";
+
 export function setYolDurum(data: JourneyData | null): void {
   if (current === data) return;
   current = data;

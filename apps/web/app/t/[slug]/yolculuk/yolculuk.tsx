@@ -11,7 +11,7 @@ import { useModalFocus } from "../kalip/odak.ts";
 import { KalipPerdeKatman, type PerdeDelik } from "../kalip/perde.tsx";
 import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
-import { setYolDurum, useYolDurum } from "./durum.ts";
+import { YOL_TAZELE_EVENT, setYolDurum, useYolDurum } from "./durum.ts";
 import { setYolSpot } from "./spot.ts";
 import { JOURNEY_OPEN_EVENT, STEP_KEYS, filterJourney, firstOpen, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, stripState, type JourneyData, type StepKey } from "./steps.ts";
 
@@ -98,6 +98,9 @@ export function YolculukKart({ data: original, dark }: { data: JourneyData; dark
 export function YolculukGiris({ dark }: { dark: boolean }) {
   const data = useYolDurum();
   const ctx = useKabuk();
+  useEffect(() => {
+    window.dispatchEvent(new Event(YOL_TAZELE_EVENT));
+  }, []);
   if (data === null || data.dismissed) return null;
   // Üyenin görebildiği adımlarla (Pano kartıyla aynı süzgeç; kabuk bağlamı yoksa hiçbiri — kapalı kalır): hepsi tamamsa ya da hiç adım yoksa kart yok.
   const mine = filterJourney(data, ctx?.guides?.setup ?? []);
@@ -206,6 +209,12 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     syncDark();
     if (needRead.current) void load();
   }, [pathname, load, syncDark, sessionKey]);
+  // Ürünler / Depolar giriş kartı açılınca (tur kapalı da olsa) ilerleme tazelenir.
+  useEffect(() => {
+    const tazele = (): void => void load();
+    window.addEventListener(YOL_TAZELE_EVENT, tazele);
+    return () => window.removeEventListener(YOL_TAZELE_EVENT, tazele);
+  }, [load]);
   useEffect(() => {
     try {
       setShortTour(sessionStorage.getItem(`${sessionKey}.short`) === "true");
