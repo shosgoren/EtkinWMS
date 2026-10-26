@@ -47,6 +47,8 @@ export default async function WarehousesPage({ params, searchParams }: { params:
   const sp = await searchParams;
   const after = first(sp.after);
   const q = (first(sp.q) ?? "").trim().slice(0, 100);
+  // T-1040 (kullanıcı 26 Ekim): arşivli depo normal listede yok; yalnız "Arşivli" süzgecinde (`?arsiv=1`).
+  const archived = first(sp.arsiv) === "1";
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   const returnTo = `/t/${encodeURIComponent(slug)}/warehouses`;
@@ -63,7 +65,7 @@ export default async function WarehousesPage({ params, searchParams }: { params:
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
-    const page = await listWarehouses(call, { includeArchived: true, limit: PAGE_SIZE, q, withTotal: after === undefined || after === "", ...(after === undefined || after === "" ? {} : { afterCode: after }) });
+    const page = await listWarehouses(call, { onlyArchived: archived, limit: PAGE_SIZE, q, withTotal: after === undefined || after === "", ...(after === undefined || after === "" ? {} : { afterCode: after }) });
     nextAfter = page.nextAfterCode;
     total = page.total;
     // Sayfa en çok PAGE_SIZE (50) depo döndürür → toplu sayım sınırı (100) içinde; boş sayfada sorgu yapılmaz.
@@ -83,7 +85,7 @@ export default async function WarehousesPage({ params, searchParams }: { params:
 
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} {...(total === undefined ? {} : { total })} />
+      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} archived={archived} {...(total === undefined ? {} : { total })} />
     </main>
   );
 }

@@ -1561,7 +1561,9 @@
         "button": "Archive"
       },
       "addFirst": "Add the first location",
-      "addWait": "The screen is getting ready; tap again in a second."
+      "addWait": "The screen is getting ready; tap again in a second.",
+      "showArchived": "Show archived locations ({n})",
+      "hideArchived": "Hide archived locations"
     },
     "errors": {
       "code": "Error code: {code}",
@@ -1649,7 +1651,11 @@
     "searchPlaceholder": "Warehouse code or name",
     "noMatch": "No warehouse matches",
     "noMatchHint": "Try another code or name.",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "filter": "Filter",
+    "chipActive": "Active",
+    "chipArchived": "Archived",
+    "archivedEmpty": "No archived warehouses"
   },
   "field": {
     "title": "Field",

@@ -239,6 +239,8 @@ export async function archiveWarehouse(params: WarehouseCallParams, input: Archi
 
 export interface ListWarehousesInput {
   readonly includeArchived?: boolean;
+  /** T-1040: yalnız arşivli depolar (liste "Arşivli" süzgeci; `includeArchived`'ı geçersiz kılar). */
+  readonly onlyArchived?: boolean;
   /** Keyset imleci: son görülen `code` (tam eşleşme sırası, `COLLATE "C"`); OFFSET yok (I-14). */
   readonly afterCode?: string;
   readonly limit?: number;
@@ -269,13 +271,14 @@ export async function listWarehouses(params: WarehouseCallParams, input: ListWar
   const limit = parseLimit(input.limit);
   const after = input.afterCode === undefined ? null : normalizeCode(input.afterCode);
   const includeArchived = input.includeArchived === true;
+  const onlyArchived = input.onlyArchived === true;
   if (input.q !== undefined && typeof input.q !== "string") throw new AppError("VALIDATION_FAILED");
   const q = (input.q ?? "").replace(/\p{C}/gu, " ").trim().slice(0, 100);
   const like = q === "" ? null : `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
     const where = sql`tenant_id = ${m.tenantId}::uuid
-             AND (${includeArchived} OR status = 'ACTIVE')
+             AND (CASE WHEN ${onlyArchived}::boolean THEN status = 'ARCHIVED' ELSE (${includeArchived} OR status = 'ACTIVE') END)
              AND (${like}::text IS NULL OR code ILIKE ${like} OR name ILIKE ${like})
              AND (${scope === null}::boolean OR id = ANY(${pgUuidArray(scope ?? [])}::uuid[]))`;
     const rows = await tx.execute<WarehouseDbRow>(

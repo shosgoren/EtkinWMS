@@ -77,7 +77,8 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
       // T-436: toplam yalnız ilk sayfada (sayfa başına tam COUNT yükü olmasın; güvenlik incelemesi MINOR).
       withTotal: after === undefined || after === "",
       ...(q.trim() === "" ? {} : { q }),
-      ...(status === "" ? {} : { status }),
+      // T-1040 (kullanıcı 26 Ekim): arşivli ürün normal listede yok; yalnız "Arşivli" süzgecinde.
+      status: status === "" ? "ACTIVE" : status,
       ...(cardType === "" ? {} : { cardType }),
       ...(after === undefined || after === "" ? {} : { after }),
     });
