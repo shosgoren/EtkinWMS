@@ -273,3 +273,29 @@ test("T-1052 Form: üst şerit ve yan yana gruplar", async ({ page }) => {
   const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
   expect(tasma).toBeLessThanOrEqual(0);
 });
+
+// T-1053 (STANDART §1): üst çubukta Son işlemler — pencere bugün yaptıklarını gösterir, Esc kapatır ve odak düğmeye döner; telefonda gizli.
+test("T-1053 Son işlemler: pencere açılır, Esc kapatır", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/items");
+  const dugme = page.getByTestId("st-son-islemler");
+  await expect(dugme).toBeVisible();
+  await dugme.click();
+  const pencere = page.getByTestId("st-son-islemler-pencere");
+  await expect(pencere).toBeVisible();
+  await expect(pencere.getByText("Bugün yaptıkların")).toBeVisible();
+  await expect(pencere.getByText("Yükleniyor…")).toHaveCount(0);
+  // Codex P1 (PR 202): ortak perde arkayı örter; Tab odağı pencerede tutar.
+  await expect(page.getByTestId("kalip-perde")).toBeVisible();
+  await page.keyboard.press("Tab");
+  expect(await page.evaluate<boolean>("document.activeElement !== null && document.activeElement.closest('[data-testid=\"st-son-islemler-pencere\"]') !== null")).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(pencere).toHaveCount(0);
+  await expect(dugme).toBeFocused();
+  // Tablet (900 px) ve telefonda gizli: üst çubukta ekran adına yer kalır (eski-cubuk tablet).
+  await page.setViewportSize({ width: 900, height: 1180 });
+  await expect(dugme).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Ürünler", exact: true }).filter({ visible: true }).first()).toBeVisible();
+});

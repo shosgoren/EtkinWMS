@@ -18,7 +18,7 @@ import { PICON } from "../../../design/pano-icons.ts";
 import { temaYaz } from "../../../design/theme.ts";
 import { ProblemSheet } from "../problem-sheet.tsx";
 import { HesapDugme, HesapMenu } from "./hesap-menu.tsx";
-import { StAyarlar, StSaat, StTema } from "../kalip/ust-standart.tsx";
+import { StAyarlar, StSaat, StSonIslemler, StTema } from "../kalip/ust-standart.tsx";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import { DICON } from "../../../design/destek-icons.ts";
@@ -258,6 +258,7 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
                 {/* T-1042 (STANDART.md §1): kalıp ekranlarıyla aynı üst çubuk — ortada saat, sağda tema → … → Ayarlar → Hesap. */}
                 <StSaat />
                 <nav className="tools" aria-label={t("tools")}>
+                  <StSonIslemler slug={slug} />
                   <StTema dark={dark} onToggle={toggleTheme} />
                   {bell !== undefined ? (
                     <Link href={bell.href} className="tb tb-bell" style={{ background: dz("E56A00"), textDecoration: "none" }} aria-label={t("bellAria", { n: bell.n })} data-testid="pano-bell">

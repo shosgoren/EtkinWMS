@@ -4776,7 +4776,15 @@
       "light": "Light theme",
       "dark": "Dark theme",
       "settings": "Settings",
-      "settingsShort": "Settings"
+      "settingsShort": "Settings",
+      "recent": "Recent activity",
+      "recentNew": "Recent activity ({n} new)",
+      "recentTitle": "What you did today",
+      "recentEmpty": "Nothing yet today",
+      "recentLoading": "Loading…",
+      "recentFailed": "Activity can't be read right now; try again shortly.",
+      "recentOther": "Action",
+      "close": "Close"
     },
     "tablo": {
       "view": "View",
