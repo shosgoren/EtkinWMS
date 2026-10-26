@@ -1667,7 +1667,11 @@
     "filter": "Filter",
     "chipActive": "Active",
     "chipArchived": "Archived",
-    "archivedEmpty": "No archived warehouses"
+    "archivedEmpty": "No archived warehouses",
+    "colCode": "Code",
+    "colName": "Warehouse",
+    "colLocations": "Locations",
+    "colState": "Status"
   },
   "field": {
     "title": "Field",
@@ -4199,7 +4203,14 @@
     "clear": "Clear filter",
     "count": "{n} accounts",
     "firstParty": "Add the first party",
-    "archivedEmpty": "No archived accounts"
+    "archivedEmpty": "No archived accounts",
+    "colCode": "Code",
+    "colName": "Name",
+    "colKind": "Type",
+    "colCity": "City",
+    "colPhone": "Phone",
+    "colEmail": "E-mail",
+    "colTax": "Tax no"
   },
   "gruplar": {
     "title": "Permission groups",

@@ -164,3 +164,18 @@ test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
   await page.getByTestId("kalip-gorunum").locator('[data-gorunum="kart"]').click();
   await expect(page.getByTestId("item-card").first()).toBeVisible();
 });
+
+// T-1048: aynı liste kalıbı Cariler ve Depolar'da (ortak parçalar).
+test("T-1048 Cariler ve Depolar: Kart/Liste tablosu", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  for (const [yol, tablo] of [["/t/demo/parties", "parties-table"], ["/t/demo/warehouses", "warehouses-table"]] as const) {
+    await page.goto(yol);
+    await page.getByTestId("kalip-gorunum").locator('[data-gorunum="liste"]').click();
+    await expect(page.getByTestId(tablo)).toBeVisible();
+    await expect(page.getByTestId(tablo).locator("tbody tr").first()).toBeVisible();
+    await page.getByTestId("kalip-gorunum").locator('[data-gorunum="kart"]').click();
+    await expect(page.getByTestId(tablo)).toHaveCount(0);
+  }
+});

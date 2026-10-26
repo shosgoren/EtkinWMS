@@ -1667,7 +1667,11 @@
     "filter": "Süzgeç",
     "chipActive": "Etkin",
     "chipArchived": "Arşivli",
-    "archivedEmpty": "Arşivde depo yok"
+    "archivedEmpty": "Arşivde depo yok",
+    "colCode": "Kod",
+    "colName": "Depo adı",
+    "colLocations": "Raf yeri",
+    "colState": "Durum"
   },
   "field": {
     "title": "Saha",
@@ -4199,7 +4203,14 @@
     "clear": "Süzgeci temizle",
     "count": "{n} cari",
     "firstParty": "İlk cariyi ekle",
-    "archivedEmpty": "Arşivde cari yok"
+    "archivedEmpty": "Arşivde cari yok",
+    "colCode": "Kod",
+    "colName": "Ünvan",
+    "colKind": "Tür",
+    "colCity": "İl",
+    "colPhone": "Telefon",
+    "colEmail": "E-posta",
+    "colTax": "Vergi no"
   },
   "gruplar": {
     "title": "Yetki grupları",

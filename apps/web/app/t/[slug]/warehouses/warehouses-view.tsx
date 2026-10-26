@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -19,6 +19,7 @@ import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx"
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKartListe, KalipKurulum, type KalipAdim, type KalipCip } from "../kalip/liste.tsx";
+import { KalipGorunumSec, KalipSayfa, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
@@ -463,6 +464,18 @@ export function WarehousesView({
   const showSetup = guide && warehouses.length === 0 && firstPage && q === "" && !archived;
   const countLbl = total !== undefined ? tk("count", { n: total }) : nextAfter === null && firstPage ? tk("count", { n: warehouses.length }) : tk("countMore", { n: warehouses.length });
   const lockedId = "warehouse-locked";
+  // T-1048 (STANDART §2): ortak liste kalıbı — Kart / Liste, Sütunlar, sıralanan tablo, sayfa satırı.
+  const [gorunum, setGorunum] = useKalipGorunum("warehouses");
+  const sutunlar = useMemo<readonly KalipSutun<WarehouseView>[]>(
+    () => [
+      { id: "code", baslik: t("colCode"), sabit: true, deger: (w) => w.code, sirala: (w) => w.code },
+      { id: "name", baslik: t("colName"), sabit: true, deger: (w) => <span className="ktad" title={w.name}>{w.name}</span>, sirala: (w) => w.name },
+      { id: "locs", baslik: t("colLocations"), sayi: true, deger: (w) => (w.locationCountCapped ? `${w.locationCount}+` : String(w.locationCount)), sirala: (w) => w.locationCount },
+      { id: "state", baslik: t("colState"), deger: (w) => <span className={`ktpill ${w.status === "ACTIVE" ? "ok" : ""}`}>{t(`status.${w.status}`)}</span>, sirala: (w) => w.status },
+    ],
+    [t],
+  );
+  const sutunSecim = useKalipSutunlar<WarehouseView>("warehouses", sutunlar);
 
   if (creating) {
     return (
@@ -556,7 +569,15 @@ export function WarehousesView({
 
         {showSetup ? null : <KalipAra label={t("search")} placeholder={t("searchPlaceholder")} action={base} defaultValue={q} below={archived ? <input type="hidden" name="arsiv" value="1" /> : null} />}
         {/* T-1040: süzgeç kurulum rehberi açıkken de görünür — son etkin depo arşivlenince arşivliye yol kalır. */}
-        <KalipCipler label={t("filter")} chips={chips} />
+        <div className="ktbar">
+          <KalipCipler label={t("filter")} chips={chips} />
+          {showSetup ? null : (
+            <span className="kttools">
+              {gorunum === "liste" ? <KalipSutunSec sutunlar={sutunlar} secim={sutunSecim} /> : null}
+              <KalipGorunumSec value={gorunum} onChange={setGorunum} />
+            </span>
+          )}
+        </div>
         {showSetup ? (
           <KalipKurulum title={tk("setupTitle")} sub={setupSub} steps={adimlar} testId="setup-guide" />
         ) : warehouses.length === 0 && archived && q === "" ? (
@@ -572,7 +593,18 @@ export function WarehousesView({
           />
         ) : (
           <>
-            <KalipBaslik title={countLbl} hint={tk("hint")} />
+            <KalipBaslik title={countLbl} />
+            {gorunum === "liste" ? (
+              <KalipTablo<WarehouseView>
+                label={t("listLabel")}
+                sutunlar={sutunSecim.gorunur}
+                satirlar={warehouses}
+                anahtar={(w) => w.id}
+                href={(w) => `${base}/${encodeURIComponent(w.id)}`}
+                satirAria={(w) => `${w.name} · ${w.code}`}
+                testId="warehouses-table"
+              />
+            ) : (
             <KalipKartListe label={t("listLabel")}>
               {warehouses.map((w, i) => {
                 const active = w.status === "ACTIVE";
@@ -634,21 +666,11 @@ export function WarehousesView({
                 );
               })}
             </KalipKartListe>
+            )}
           </>
         )}
         {firstPage && nextAfter === null ? null : (
-          <nav aria-label={t("paging")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {firstPage ? null : (
-              <KalipDaha href={pageHref({})} iconD={LICON.chev}>
-                {t("firstPage")}
-              </KalipDaha>
-            )}
-            {nextAfter === null ? null : (
-              <KalipDaha href={pageHref({ after: nextAfter })} iconD={LICON.plus}>
-                {t("more")}
-              </KalipDaha>
-            )}
-          </nav>
+          <KalipSayfa metin={countLbl} ilk={firstPage ? undefined : pageHref({})} sonraki={nextAfter === null ? undefined : pageHref({ after: nextAfter })} testId="warehouses-paging" />
         )}
       </KalipEkran>
 
