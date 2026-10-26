@@ -20,7 +20,7 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-e
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
-import { KalipGorunumSec, KalipSonsuz, useKalipEkHafiza, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
+import { KalipGorunumSec, KalipSonsuz, useKalipDerinlik, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
@@ -341,15 +341,12 @@ export function WarehousesView({
   const [ek, setEk] = useState<{ readonly bas: readonly WarehouseView[]; readonly rows: readonly WarehouseView[]; readonly after: string | null }>({ bas: ilkDepolar, rows: [], after: nextAfter });
   const guncel = ek.bas === ilkDepolar ? ek : { bas: ilkDepolar, rows: [], after: nextAfter };
   if (guncel !== ek) setEk(guncel);
-  // Hafızadan gelen satırlar arada kaymış olabilir: aynı depo iki kez çizilmez.
+  // Sonraki sayfalar arada kaymış olabilir: aynı depo iki kez çizilmez.
   const warehouses = useMemo(() => {
     const ilk = new Set(ilkDepolar.map((w) => w.id));
     return [...ilkDepolar, ...guncel.rows.filter((r) => !ilk.has(r.id))];
   }, [ilkDepolar, guncel.rows]);
   const sonrakiAfter = guncel.after;
-  useKalipEkHafiza({ rows: guncel.rows, after: guncel.after }, (v) => {
-    if (v.rows.length > 0) setEk({ bas: ilkDepolar, rows: v.rows, after: v.after });
-  });
   const dahaYukle = useCallback(async (): Promise<boolean> => {
     if (sonrakiAfter === null) return true;
     const r = await loadMoreWarehousesAction({ slug, q, archived, after: sonrakiAfter });
@@ -357,6 +354,8 @@ export function WarehousesView({
     setEk((o) => (o.bas !== ilkDepolar ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], after: r.data.nextAfter }));
     return true;
   }, [sonrakiAfter, slug, q, archived, ilkDepolar]);
+  // Kayda girip geri dönünce aynı uzunluk (sunucudan taze; yalnız sayı hatırlanır).
+  useKalipDerinlik(warehouses.length, sonrakiAfter !== null, dahaYukle);
   const tr = useTranslations("kural");
   const tk = useTranslations("warehouses.k");
   const te = useTranslations("easySetup");

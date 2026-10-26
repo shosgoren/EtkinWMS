@@ -296,8 +296,8 @@ export function KalipSonsuz({ devam, yukle, metin, testId }: { devam: boolean; y
     const kap = ref.current?.parentElement;
     if (kap === null || kap === undefined) return undefined;
     const anahtar = `kalip-kaydir:${window.location.pathname}${window.location.search}`;
-    // Bir kayda girip geri dönünce kaldığın yer (eklenen sayfalar ekranın kendi hafızasından gelir; birkaç kare içinde yerleşir).
-    let kare = 0;
+    // Bir kayda girip geri dönünce kaldığın yer (eklenen sayfalar `useKalipDerinlik` ile sunucudan yeniden gelir; gelince yerleşir).
+    const bas = Date.now();
     let hedef = 0;
     try {
       hedef = Number(window.sessionStorage.getItem(anahtar) ?? "0") || 0;
@@ -306,7 +306,8 @@ export function KalipSonsuz({ devam, yukle, metin, testId }: { devam: boolean; y
     }
     let raf = 0;
     const yerlestir = (): void => {
-      if (hedef <= 0 || kare++ > 20) return;
+      // Eklenen sayfalar sunucudan yeniden gelirken birkaç saniye bekler.
+      if (hedef <= 0 || Date.now() - bas > 4000) return;
       if (kap.scrollHeight - kap.clientHeight >= hedef) kap.scrollTop = hedef;
       else raf = window.requestAnimationFrame(yerlestir);
     };
@@ -377,32 +378,43 @@ export function KalipSonsuz({ devam, yukle, metin, testId }: { devam: boolean; y
 }
 
 /**
- * T-1055: kaydırınca eklenen sayfaların hafızası (oturum içi, adres başına). Bir kayda girip geri dönülünce liste aynı uzunlukta açılır ve
- * `KalipSonsuz` kaldığın yere kaydırır. Yalnız görünüm verisi (kart satırları, imleç); sunucu her açılışta ilk sayfayı yine taze verir.
+ * T-1055: kaydırma derinliği hafızası (oturum içi, adres başına). Bir kayda girip geri dönülünce liste aynı uzunluğa kadar sunucudan
+ * YENİDEN yüklenir (`yukle` sırayla çağrılır) ve `KalipSonsuz` kaldığın yere kaydırır. Yalnız SAYI saklanır — satır / stok verisi
+ * saklanmaz (Codex P1/P2, PR 204): başka kullanıcının kapsamı ya da değişmiş kayıt eski veriden gösterilmez; her satır o anki üyenin
+ * yetkisiyle taze gelir. Kayıt 10 dakika sonra geçersiz.
  */
-const EK_OMUR_MS = 10 * 60_000;
+const DERIN_OMUR_MS = 10 * 60_000;
+const derinAnahtar = (): string => `kalip-derin:${window.location.pathname}${window.location.search}`;
 
-export function useKalipEkHafiza<T>(veri: T, geri: (v: T) => void): void {
-  const geriRef = useRef(geri);
-  geriRef.current = geri;
-  const hazir = useRef(false);
+export function useKalipDerinlik(yuklenen: number, devam: boolean, yukle: () => Promise<boolean>): void {
+  const [hedef, setHedef] = useState(0);
+  const mesgul = useRef(false);
   useEffect(() => {
     try {
-      const ham = window.sessionStorage.getItem(`kalip-ek:${window.location.pathname}${window.location.search}`);
-      // Güvenlik incelemesi (MINOR): eski kayıt (ör. çıkış yapıp başka kullanıcıyla aynı sekmede) geri yüklenmez — 10 dakika sınırı.
-      const kayit = ham === null ? null : (JSON.parse(ham) as { readonly t?: number; readonly v?: T });
-      if (kayit !== null && typeof kayit.t === "number" && Date.now() - kayit.t < EK_OMUR_MS && kayit.v !== undefined) geriRef.current(kayit.v);
+      const ham = window.sessionStorage.getItem(derinAnahtar());
+      const k = ham === null ? null : (JSON.parse(ham) as { readonly t?: number; readonly n?: number });
+      if (k !== null && typeof k.t === "number" && typeof k.n === "number" && Date.now() - k.t < DERIN_OMUR_MS) setHedef(Math.min(k.n, 1000));
     } catch {
       /* bozuk ya da erişilemeyen kayıt: ilk sayfayla devam */
     }
-    hazir.current = true;
   }, []);
   useEffect(() => {
-    if (!hazir.current) return;
     try {
-      window.sessionStorage.setItem(`kalip-ek:${window.location.pathname}${window.location.search}`, JSON.stringify({ t: Date.now(), v: veri }));
+      window.sessionStorage.setItem(derinAnahtar(), JSON.stringify({ t: Date.now(), n: yuklenen }));
     } catch {
-      /* dolu / engelli depolama: hafıza yalnız bu açılışta */
+      /* dolu / engelli depolama */
     }
-  }, [veri]);
+  }, [yuklenen]);
+  useEffect(() => {
+    if (yuklenen >= hedef || !devam || mesgul.current) return;
+    mesgul.current = true;
+    void yukle()
+      .then((ok) => {
+        if (!ok) setHedef(0);
+      })
+      .catch(() => setHedef(0))
+      .finally(() => {
+        mesgul.current = false;
+      });
+  }, [yuklenen, hedef, devam, yukle]);
 }

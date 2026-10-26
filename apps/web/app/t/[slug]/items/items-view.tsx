@@ -16,7 +16,7 @@ import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx"
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
-import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipEkHafiza, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
+import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
@@ -444,16 +444,13 @@ export function ItemsView({
   const [ek, setEk] = useState<{ readonly bas: readonly ItemListView[]; readonly rows: readonly ItemListView[]; readonly stock: Readonly<Record<string, ItemStockView>>; readonly cursor: string | null }>({ bas: ilkItems, rows: [], stock: {}, cursor: nextCursor });
   const guncel = ek.bas === ilkItems ? ek : { bas: ilkItems, rows: [], stock: {}, cursor: nextCursor };
   if (guncel !== ek) setEk(guncel);
-  // Hafızadan gelen satırlar arada kaymış olabilir (ör. bir ürün arşivlendi): aynı ürün iki kez çizilmez.
+  // Sonraki sayfalar arada kaymış olabilir (ör. bir ürün arşivlendi): aynı ürün iki kez çizilmez.
   const items = useMemo(() => {
     const ilk = new Set(ilkItems.map((i) => i.id));
     return [...ilkItems, ...guncel.rows.filter((r) => !ilk.has(r.id))];
   }, [ilkItems, guncel.rows]);
   const stock = useMemo(() => ({ ...ilkStock, ...guncel.stock }), [ilkStock, guncel.stock]);
   const sonrakiImlec = guncel.cursor;
-  useKalipEkHafiza({ rows: guncel.rows, stock: guncel.stock, cursor: guncel.cursor }, (v) => {
-    if (v.rows.length > 0) setEk({ bas: ilkItems, rows: v.rows, stock: v.stock, cursor: v.cursor });
-  });
   const dahaYukle = useCallback(async (): Promise<boolean> => {
     if (sonrakiImlec === null) return true;
     const r = await loadMoreItemsAction({ slug, q: query.q, status: query.status, cardType: query.type, after: sonrakiImlec });
@@ -461,6 +458,8 @@ export function ItemsView({
     setEk((o) => (o.bas !== ilkItems ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], stock: { ...o.stock, ...r.data.stock }, cursor: r.data.nextCursor }));
     return true;
   }, [sonrakiImlec, slug, query.q, query.status, query.type, ilkItems]);
+  // Kayda girip geri dönünce aynı uzunluk (sunucudan taze; yalnız sayı hatırlanır).
+  useKalipDerinlik(items.length, sonrakiImlec !== null, dahaYukle);
   const sutunlar = useMemo<readonly KalipSutun<ItemsSatir>[]>(
     () => [
       { id: "code", baslik: tk("colCode"), sabit: true, deger: (r) => (r.it.oldCode === undefined ? r.it.code : t("renamedNote", { code: r.it.code, old: r.it.oldCode })), sirala: (r) => r.it.code },
