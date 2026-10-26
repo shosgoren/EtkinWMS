@@ -22,6 +22,9 @@ describe("T-1037 ortak ekran standardı", () => {
     expect(kural).toMatch(/\.dzd \.hx b \{[^}]*white-space: normal !important;[^}]*-webkit-line-clamp: 3;/);
     expect(kural).toMatch(/\.dzl \.ut b \{[^}]*white-space: normal !important;[^}]*-webkit-line-clamp: 2;/);
   });
+  it("T-1039: masaüstünde form alanının kutusu görünür (beyaz kart üstünde beyaz alan yok)", () => {
+    expect(kural).toMatch(/\.dzf:not\(\.dz-dark\) \.fld \{[^}]*background: var\(--color-kr-bg-a\);[^}]*box-shadow: inset/);
+  });
   it("ekran açan 'Tümü' bağlantısında mikrofon simgesi yok", () => {
     expect(detay).not.toMatch(/MicIco/);
   });

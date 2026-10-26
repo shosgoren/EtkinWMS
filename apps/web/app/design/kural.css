@@ -255,6 +255,14 @@
   min-width: 0;
 }
 
+/* T-1039 (kullanıcı ekran görüntüsü 26 Ekim, Yeni cari): masaüstünde alan kutusu beyaz kartın üstünde beyazdı — "Vergi / TC no", "Telefon"…
+   yalnız başlık olarak görünüyor, yazılacak yer seçilmiyordu. Kaynakta telefonda gri zemin var; masaüstünde de aynı gri zemin + ince
+   kenar: kutu her zaman görünür. Koyu tema kaynağın kendi kuralıyla (`.dzf.dz-dark .fld`, daha özgül) kalır. */
+.dzf:not(.dz-dark) .fld {
+  background: var(--color-kr-bg-a);
+  box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-b);
+}
+
 /* T-1037 (kullanıcı isteği 25 Ekim, "hiç bilmeyen kullanıcı"): ürün / cari / ekran adı "…" ile kesilmez. Kaynakta tek satır + üç nokta;
    adın tamamını görmek için kart açmak gerekiyordu. Ayrıntı başlığı en çok 3, liste kartı adı 2, telefonda üst çubuk adı 2 satıra sarar. */
 .dzd .hx b {

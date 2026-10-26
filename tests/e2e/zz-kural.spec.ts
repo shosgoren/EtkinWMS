@@ -26,6 +26,8 @@ test("T-436 Esc: Modüller ve Hesap menüsü kapanır, odak açan düğmeye dön
   await expect(menu).toBeVisible();
   // Sessiz tercihi menüde (cihazda saklanır).
   await expect(menu.getByTestId("pano-menu-sound")).toBeVisible();
+  // T-1039: Ayarlar her ekranın Hesap menüsünde (yönetici).
+  await expect(menu.getByTestId("pano-menu-settings")).toHaveAttribute("href", "/t/demo/settings");
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
   await expect(account).toBeFocused();
