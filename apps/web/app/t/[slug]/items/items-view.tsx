@@ -454,14 +454,14 @@ export function ItemsView({
   const [gorunum, setGorunum] = useKalipGorunum("items");
   const sutunlar = useMemo<readonly KalipSutun<ItemsSatir>[]>(
     () => [
-      { id: "code", baslik: tk("colCode"), sabit: true, deger: (r) => r.it.code, sirala: (r) => r.it.code },
+      { id: "code", baslik: tk("colCode"), sabit: true, deger: (r) => (r.it.oldCode === undefined ? r.it.code : t("renamedNote", { code: r.it.code, old: r.it.oldCode })), sirala: (r) => r.it.code },
       { id: "name", baslik: tk("colName"), sabit: true, deger: (r) => <span className="ktad" title={r.it.name}>{r.it.name}</span>, sirala: (r) => r.it.name },
       { id: "type", baslik: tk("colType"), deger: (r) => tc(r.it.cardType), sirala: (r) => r.it.cardType },
       { id: "unit", baslik: tk("colUnit"), deger: (r) => r.it.baseUnitCode, sirala: (r) => r.it.baseUnitCode },
       { id: "have", baslik: tk("colHave"), sayi: true, deger: (r) => r.qty, sirala: (r) => Number(r.st?.have ?? 0) },
       { id: "state", baslik: tk("colState"), deger: (r) => (r.state === "" ? null : <span className={`ktpill ${r.archived ? "" : r.tn}`}>{r.state}</span>), sirala: (r) => r.state },
     ],
-    [tk, tc],
+    [t, tk, tc],
   );
   const sutunSecim = useKalipSutunlar<ItemsSatir>("items", sutunlar);
 

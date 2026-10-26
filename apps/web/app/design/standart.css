@@ -401,7 +401,7 @@ html:has(.halo.tmenu) .dzk .wrap {
 }
 .ktmv {
   display: flex;
-  gap: 2px;
+  gap: 8px;
 }
 .ktmv button,
 .ktreset {
@@ -410,8 +410,8 @@ html:has(.halo.tmenu) .dzk .wrap {
   background: var(--color-kr-bg-a);
   color: var(--color-kr-ink);
   border-radius: 10px;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   cursor: pointer;
 }
 .ktreset {
@@ -437,13 +437,12 @@ html:has(.halo.tmenu) .dzk .wrap {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--color-kr-bg-a);
+  background: var(--color-kr-card);
   text-align: left;
-  font: 800 12px/1 var(--font-bricolage), sans-serif;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  font: 700 12.5px/1 var(--font-instrument), sans-serif;
   color: var(--color-st-icon);
-  padding: 12px 14px;
+  padding: 0 14px;
+  border-bottom: 1.5px solid var(--color-st-bg-end);
   white-space: nowrap;
 }
 .kttab th button {
@@ -455,15 +454,15 @@ html:has(.halo.tmenu) .dzk .wrap {
   background: transparent;
   font: inherit;
   color: inherit;
-  text-transform: inherit;
-  letter-spacing: inherit;
   cursor: pointer;
-  min-height: 32px;
+  min-height: 44px;
+  padding: 0;
 }
 .kttab td {
-  padding: 10px 14px;
-  border-top: 1px solid var(--color-kr-bg-a);
+  padding: 8px 14px;
+  border-bottom: 1.5px solid var(--color-kr-bg-a);
   vertical-align: middle;
+  font-size: 15px;
 }
 .kttab .num {
   text-align: right;
@@ -475,7 +474,7 @@ html:has(.halo.tmenu) .dzk .wrap {
 .ktlink {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
+  min-height: 44px;
   color: inherit;
   font-weight: 700;
   text-decoration: none;
@@ -496,7 +495,7 @@ html:has(.halo.tmenu) .dzk .wrap {
   border-radius: 999px;
   background: var(--color-st-cur-bg);
   color: var(--color-st-cur);
-  font: 700 12px/1 var(--font-instrument), sans-serif;
+  font: 700 12.5px/1 var(--font-instrument), sans-serif;
   white-space: nowrap;
 }
 .ktpill.ok { background: var(--color-kr-bg-a); color: var(--color-kr-ok); }
@@ -533,8 +532,8 @@ html:has(.halo.tmenu) .dzk .wrap {
 .dz-dark .ktgor button.on { background: var(--color-st-dark-cur-bg); color: var(--color-st-dark-cur); }
 .dz-dark :is(.kttab, .ktpop) { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); }
 .dz-dark .kttab table, .dz-dark .ktrow label { color: var(--color-kr-text-dark); }
-.dz-dark .kttab th { background: var(--color-kr-bg-dark-a); }
-.dz-dark .kttab td { border-top-color: var(--color-kr-bg-dark-a); }
+.dz-dark .kttab th { background: var(--color-kr-card-dark); border-bottom-color: var(--color-kr-bg-dark-a); }
+.dz-dark .kttab td { border-bottom-color: var(--color-kr-bg-dark-a); }
 @media (max-width: 699.98px) {
   /* Telefonda tablo yerine her zaman kart (dar ekran); görünüm geçişi gizli. */
   .ktgor { display: none; }
