@@ -18,3 +18,9 @@ export function ayarSekmeleri(base: string, t: (key: "tabFirma" | "tabUsers" | "
     { id: "gorunum", label: t("tabLook"), d: LICON.sun, color: "B07D0B", href: `${base}/settings?sekme=gorunum` },
   ];
 }
+
+/** Aynı Ayarlar ekranının sekmesi mi (tek taslak, tek Kaydet)? Öyleyse sekme geçişi kaydedilmemiş işi sormaz ve silmez; taslak sekmeler
+ *  arasında korunur. Entegrasyonlar ayrı ekrandır: oraya geçişte ortak çıkış koruması sorar. */
+export function ayniTaslakSekmesi(href: string, base: string): boolean {
+  return href === `${base}/settings` || href.startsWith(`${base}/settings?`);
+}

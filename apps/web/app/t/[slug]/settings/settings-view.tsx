@@ -17,7 +17,7 @@ import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { KalipAlan, KalipAnahtar, KalipBaglanti, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek } from "../kalip/form.tsx";
 import { KalipSecimListe, KalipSekme } from "../kalip/secim.tsx";
 import { saveSettingsFormAction } from "./form-actions.ts";
-import { ayarSekmeleri, ayarSekmesi } from "./sekmeler.ts";
+import { ayarSekmeleri, ayarSekmesi, ayniTaslakSekmesi } from "./sekmeler.ts";
 import { clearSampleDataAction } from "./sample-actions.ts";
 import { buyukHarf, feedback } from "@wms/ui";
 
@@ -176,7 +176,20 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
       }
     >
       {/* T-1046 (STANDART §5): ayar sekmeleri (Firma · Kullanıcılar ve yetki · Entegrasyonlar · Görünüm); aynı anda tek konu. */}
-      <KalipSekme label={tb("tabs")} color="0E7C7B" current={sekme} onGo={(href) => go(href)()} items={ayarSekmeleri(base, tb)} />
+      <KalipSekme
+        label={tb("tabs")}
+        color="0E7C7B"
+        current={sekme}
+        onGo={(href) => {
+          // Firma / Kullanıcılar / Görünüm aynı taslağın sekmeleridir (tek Kaydet): geçiş taslağı korur, "kaydetmeden çık" sorulmaz
+          // (sorulsaydı taslak silinmeden kalır ve sonraki Kaydet gizli değişikliği gönderirdi). Entegrasyonlar ayrı ekran: koruma sorar.
+          if (ayniTaslakSekmesi(href, base)) {
+            feedback.minor();
+            router.replace(href, { scroll: false });
+          } else go(href)();
+        }}
+        items={ayarSekmeleri(base, tb)}
+      />
       {locked ? <KalipKilit title={t("lockTitle")} sub={t("lockSub")} /> : null}
       {reauth === null ? null : (
         <div className="lockb" role="alert">
