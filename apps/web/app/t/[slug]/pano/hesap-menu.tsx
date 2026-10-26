@@ -89,6 +89,10 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
     { k: "sound", label: silent ? tk("soundOn") : tk("silent"), color: "6A7F91", d: DICON.speaker, go: () => setSilent(!silent) },
     { k: "out", label: t("signOut"), color: "C62828", d: PICON.signOut, out: true, go: () => cikisSor(() => void signOut("/login")) },
   ];
+  // T-1039: Ayarlar her ekranın Hesap menüsünde (yalnız `settings.manage`; kabuk bağlamı sunucuda verir). Pano ana ekranının dişli düğmesi ayrıca kalır.
+  const settingsHref = team ? undefined : kabuk?.settingsHref;
+  const allLinks: readonly HesapBaglanti[] =
+    settingsHref === undefined || links.some((l) => l.href === settingsHref) ? links : [...links, { k: "settings", label: t("settings"), color: "0E7C7B", d: PICON.gear, href: settingsHref }];
   // T-990: menü bağlantıları Next `Link` (istemci içi geçiş); yarım işte ortak çıkış koruması tıklamayı yakalar (tarayıcı penceresi çıkmaz).
   const follow = (e: MouseEvent<HTMLAnchorElement>): void => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -107,7 +111,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
             <small>{me.group}</small>
           </span>
         </div>
-        {links.map((l) => (
+        {allLinks.map((l) => (
           <Link key={l.k} href={l.href ?? "#"} prefetch={false} className="hb" role="menuitem" style={{ textDecoration: "none" }} onClick={follow} data-testid={`pano-menu-${l.k}`}>
             <i style={{ background: dz(l.color) }}>
               <Ico d={l.d} size={20} />
