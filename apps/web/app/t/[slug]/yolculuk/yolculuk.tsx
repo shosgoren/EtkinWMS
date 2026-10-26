@@ -99,8 +99,8 @@ export function YolculukGiris({ dark }: { dark: boolean }) {
   const data = useYolDurum();
   const ctx = useKabuk();
   if (data === null || data.dismissed) return null;
-  // Üyenin görebildiği adımlarla (Pano kartıyla aynı süzgeç): hepsi tamamsa ya da hiç adım yoksa kart yok.
-  const mine = filterJourney(data, ctx?.guides?.setup ?? STEP_KEYS);
+  // Üyenin görebildiği adımlarla (Pano kartıyla aynı süzgeç; kabuk bağlamı yoksa hiçbiri — kapalı kalır): hepsi tamamsa ya da hiç adım yoksa kart yok.
+  const mine = filterJourney(data, ctx?.guides?.setup ?? []);
   if (mine.total === 0 || mine.complete) return null;
   return <YolculukKart data={data} dark={dark} />;
 }
