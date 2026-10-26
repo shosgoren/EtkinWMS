@@ -43,7 +43,7 @@ export async function smallTargets(page: Page, scope: string): Promise<string[]>
 
 // T-968 (B-63): Ürünler ekranı LİSTE kalıbında (KalipListe.dc.html). Eski T-274 ölçümleri (Gelişmiş altında Durum, sabit "Yeni ürün" çubuğu,
 // kurulum satırı metni) kalıbın yapısıyla değişti; aynı niyet korunur: tek arama alanı, kiracı kabuğunun eski süslemeleri yok, ana işlem alt
-// cam çubukta (ÜRÜN EKLE / DEPO EKLE), ürün yokken öğreten kurulum rehberi (3 adım, şimdiki adım doğru ekrana götürür), kart ≥ 48 px,
+// cam çubukta (ÜRÜN EKLE), ürün yokken kurulum yolculuğunun girişi (T-1054; eski 3 adımlı kutu kaldırıldı), kart ≥ 48 px,
 // sayfa gövdesi kaymaz, yatay taşma yok, "Arşivli" süzgeci adresi değiştirir.
 // T-279: demo tenant dolu açılır (T-223); iki kiracı durumu ayrı denetlenir (`empty: true` = depo/ürün yok).
 export interface ItemsTenant {
@@ -78,12 +78,11 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
     const main = page.getByTestId("items-add");
     await expect(main, `${where}: ana işlem alt çubukta`).toBeVisible();
     if (tenant.empty) {
-      // Kurulum rehberi: 3 adım; şimdiki adım (depo) depo formuna götürür; ana işlem DEPO EKLE.
-      const steps = page.getByTestId("setup-steps");
-      await expect(steps, `${where}: kurulum rehberi`).toBeVisible();
-      await expect(steps.locator("[data-step]")).toHaveCount(3);
-      await expect(steps.locator('[data-step="warehouse"]')).toHaveAttribute("href", `${base}/warehouses?new=1`);
-      await expect(main).toHaveAccessibleName("Depo ekle");
+      // T-1054: eski 3 adımlı kutu yok; asıl kurulum yolculuğunun girişi (halka kartı) ve Excel'den aktar; ana işlem YENİ ÜRÜN.
+      await expect(page.getByTestId("setup-steps"), `${where}: eski kurulum kutusu yok`).toHaveCount(0);
+      await expect(page.getByTestId("yol-card").filter({ visible: true }), `${where}: kurulum yolculuğu girişi`).toHaveCount(1);
+      await expect(page.getByTestId("items-import")).toHaveAttribute("href", `${base}/import`);
+      await expect(main).toHaveAccessibleName("Yeni ürün");
     } else {
       await expect(page.getByTestId("setup-steps"), `${where}: kurulum tamam, rehber yok`).toHaveCount(0);
       // Kart bir bağlantıdır ama rolü kaynaktaki gibi listitem (`.ulist > .uc`); ad "Ayrıntıyı aç: …".
@@ -112,20 +111,17 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
     await expect(page.getByRole("link", { name: "Aramayı temizle" })).toHaveAttribute("href", `${base}/items`);
     await page.screenshot({ path: path.join(OUT_T274, `final-${tag}-items-${size.width}-arsivli.png`) });
   }
-  // Kurulum: şimdiki adıma dokunmak doğrudan depo eklemeye götürür.
+  // T-1054: kurulum girişine dokunmak asıl yolculuğun adım listesini açar; ilk adım "Ürün kartları", ardından depo/raf ve cariler.
   if (tenant.empty) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${base}/items`);
-    await page.getByTestId("setup-steps").locator('[data-step="warehouse"]').click();
-    await expect(page).toHaveURL(new RegExp(`/t/${tenant.slug}/warehouses`));
-    // T-990: depo ekleme pencere değil tam ekran formdur (`?new=1`); önerili ilk depo adı yarım iş sayılır → Geri, cam kutuda "Kaydetmeden çık".
-    const form = page.getByTestId("warehouse-form");
-    await expect(form).toBeVisible();
-    await page.getByTestId("kabuk-back").click();
-    const leave = page.getByTestId("kalip-unsaved-leave");
-    await expect.poll(async () => (await leave.isVisible()) || !(await form.isVisible())).toBe(true);
-    if (await leave.isVisible()) await leave.click();
-    await expect(form).toBeHidden();
+    await page.getByTestId("yol-card").filter({ visible: true }).click();
+    const sheet = page.getByTestId("yol-sheet");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByTestId("yol-start-cards")).toBeVisible();
+    await expect(sheet.getByTestId("yol-start-parties")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
   }
   await page.goto(base); // depo formu açık kalmasın (çıkış menüsü önde)
 }

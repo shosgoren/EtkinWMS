@@ -1,7 +1,8 @@
 // İlk kurulum yolculuğu (T-1006, kullanıcı onayı 22 Ekim): sıfırdan üye olan müşteri belge okumadan kurulumu YAPARAK öğrenir.
 //
 // - Adımın "tamam"ı TIKLAMAYLA değil GERÇEK VERİDEN hesaplanır (ürün, raf, stok defteri, etiket basıldı işareti, reçete, üretim kaydı,
-//   saha üyesi, atanmış görev / sayım). Örnek veri (`is_sample`) sayılmaz. Tabloda (0056 `setup_journeys`) yalnız seçimler durur.
+//   saha üyesi, atanmış görev / sayım). Örnek veri (`is_sample`) sayılmaz. T-1054: depo ve raflardan sonra "Cariler" (arşivlenmemiş cari kart;
+//   Paraşüt bağlıysa eşitlemeyle kendiliğinden gelir). Tabloda (0056 `setup_journeys`) yalnız seçimler durur.
 // - Yalnız hesap sahibi (TENANT_ADMIN) ve depo yöneticisi (WAREHOUSE_MANAGER) görür ve değiştirir; saha/sayım/salt okuma rolleri `FORBIDDEN`.
 //   Okuma `stock.view` üyeliğiyle açılır, rol kararı burada verilir (yetki grubu ek izni yolculuğu açmaz).
 // - "Üretim yapmıyorum" denince 5 (reçete) ve 6 (üretim emri) hiç görünmez; "Bunu kullanmıyorum" adımı atlar (geri alınabilir).
@@ -11,7 +12,7 @@ import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx, type Membership, type TenantAccessParams } from "../identity/access.ts";
 
-export const JOURNEY_STEPS = ["cards", "shelves", "stock", "labels", "bom", "order", "people", "task"] as const;
+export const JOURNEY_STEPS = ["cards", "shelves", "parties", "stock", "labels", "bom", "order", "people", "task"] as const;
 export type JourneyStep = (typeof JOURNEY_STEPS)[number];
 /** Yalnız üretim yapan firmada görünen adımlar. */
 export const PRODUCTION_STEPS: readonly JourneyStep[] = Object.freeze(["bom", "order"]);
@@ -99,10 +100,11 @@ export function computeJourney(input: {
 }
 
 async function readCounts(tx: AccessTx, tenantId: string, labelsPrinted: boolean): Promise<Record<JourneyStep, number>> {
-  const r = await tx.execute<{ items: number; shelves: number; moves: number; recipes: number; batches: number; field: number; tasks: number }>(sql`
+  const r = await tx.execute<{ items: number; shelves: number; parties: number; moves: number; recipes: number; batches: number; field: number; tasks: number }>(sql`
     SELECT
       (SELECT count(*)::int FROM public.items i WHERE i.tenant_id = ${tenantId}::uuid AND i.status = 'ACTIVE' AND NOT i.is_sample) AS items,
       (SELECT count(*)::int FROM public.locations l WHERE l.tenant_id = ${tenantId}::uuid AND l.status = 'ACTIVE' AND NOT l.is_sample) AS shelves,
+      (SELECT count(*)::int FROM public.parties pa WHERE pa.tenant_id = ${tenantId}::uuid AND pa.archived_at IS NULL) AS parties,
       (SELECT count(*)::int FROM (SELECT 1 FROM public.stock_ledger s JOIN public.items i ON i.tenant_id = s.tenant_id AND i.id = s.item_id
                                    WHERE s.tenant_id = ${tenantId}::uuid AND NOT i.is_sample LIMIT 1000) x) AS moves,
       (SELECT count(*)::int FROM public.production_recipes p WHERE p.tenant_id = ${tenantId}::uuid) AS recipes,
@@ -115,6 +117,7 @@ async function readCounts(tx: AccessTx, tenantId: string, labelsPrinted: boolean
   return {
     cards: Number(c?.items ?? 0),
     shelves: Number(c?.shelves ?? 0),
+    parties: Number(c?.parties ?? 0),
     stock: Number(c?.moves ?? 0),
     labels: labelsPrinted ? 1 : 0,
     bom: Number(c?.recipes ?? 0),

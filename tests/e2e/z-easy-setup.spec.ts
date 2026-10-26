@@ -117,22 +117,22 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
 
   await page.goto(`/t/${slug}/warehouses`);
   await expect(page.getByRole("heading", { level: 1, name: "Depo ve raflar" })).toBeVisible();
+  // T-1054: eski 3 adımlı kurulum kutusu kaldırıldı; yerinde asıl kurulum yolculuğunun girişi (halka kartı) durur, depo alt çubuktan eklenir.
   const guide = page.getByTestId("setup-guide");
-  const fresh = await page
-    .locator('li[data-done="false"] > [data-step="warehouse"]')
-    .waitFor({ state: "visible", timeout: 8_000 })
-    .then(() => true)
-    .catch(() => false);
+  const journey = page.getByTestId("yol-card").filter({ visible: true });
+  const add = page.getByTestId("warehouses-add");
+  await expect(add).toBeVisible();
+  const fresh = (await page.getByTestId("warehouse-card").count()) === 0;
 
   // Fikstür tenant'ı yalnızca SON proje (mobile) yazar: masaüstü koşusu boş tenant'ta rehberi ölçer, hiçbir şey kaydetmez.
   const writes = tag === "mobile";
   if (fresh && !writes) {
-    // Yazmayan koşu: rehber boş tenant'ta doğru görünür, büyük düğme formu hazır kodla açar; hiçbir şey kaydedilmez.
-    await expect(guide).toBeVisible();
+    // Yazmayan koşu: boş tenant'ta eski kutu yok, yolculuk girişi var; DEPO EKLE formu hazır kodla açar; hiçbir şey kaydedilmez.
+    await expect(guide).toHaveCount(0);
+    await expect(journey).toHaveCount(1);
     await noHorizontalOverflow(page, "rehber (boş)");
-    const next = guide.locator('[data-step="warehouse"]'); // T-971: liste kalıbı kurulum rehberi; şimdiki adım formu açar
-    await touchTarget(next, "rehber: büyük düğme");
-    await next.click();
+    await touchTarget(add, "alt çubuk: Depo ekle");
+    await add.click();
     const dialog = page.getByTestId("warehouse-form"); // T-990: tam ekran form
     await expect(dialog.locator('input[name="code"]')).toHaveValue("DEPO-01");
     await expect(dialog.locator('input[name="name"]')).toHaveValue("Ana depo");
@@ -142,15 +142,13 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     return;
   }
   if (fresh) {
-    // --- Adım 1: Depo ekle (rehberin tek büyük düğmesi) ---
-    await expect(guide).toBeVisible();
-    await expect(page.locator('li[data-done="false"] > [data-step="locations"]')).toBeVisible();
-    await expect(page.locator('li[data-done="false"] > [data-step="items"]')).toBeVisible();
+    // --- Adım 1: Depo ekle (alt çubuğun DEPO EKLE'si; kurulum yolculuğu girişi görünür) ---
+    await expect(guide).toHaveCount(0);
+    await expect(journey).toHaveCount(1);
     await noHorizontalOverflow(page, "rehber (boş)"); // liste sayfası dikey kayabilir; yatay taşma yok
     await shot("guide-empty");
-    const next = guide.locator('[data-step="warehouse"]'); // T-971: liste kalıbı kurulum rehberi; şimdiki adım formu açar
-    await touchTarget(next, "rehber: büyük düğme");
-    await next.click();
+    await touchTarget(add, "alt çubuk: Depo ekle");
+    await add.click();
 
     const dialog = page.getByTestId("warehouse-form"); // T-990: tam ekran form
     const whSave = page.getByTestId("warehouse-form-save");
@@ -189,12 +187,10 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
     await expect(page.locator('[data-testid="item-base-unit"][data-value]:not([data-value=""]), [data-testid="item-base-unit"] [role="radio"][aria-checked="true"]')).toHaveCount(1);
     // T-990: gelişmiş ayarlar ayrı açılır bölüm değil, akıllı varsayılanlarla dolu grup: takip modu "Takip yok" seçili gelir.
     await expect(page.getByTestId("item-tracking").getByRole("radio", { checked: true })).toHaveAttribute("data-option", "NONE");
-    // T-968 (liste kalıbı): ürün adımında kurulum rehberinin şimdiki adımı "İlk ürünü ekle" ve alt çubuğun ÜRÜN EKLE'siyle AYNI formu açar.
+    // Formdan çıkılınca alt çubuğun ÜRÜN EKLE'si AYNI formu (aynı önerilen kodla) yeniden açar.
     await leaveForm(page, item);
     await expect(item).toBeHidden();
-    const stepItems = page.getByTestId("setup-steps").locator('[data-step="items"]');
-    await expect(stepItems).toContainText("İlk ürünü ekle");
-    await stepItems.click();
+    await page.getByTestId("items-add").click();
     await expect(page.getByTestId("item-form").locator('input[name="code"]')).toHaveValue("HM-000001");
     await item.locator('input[name="name"]').fill(ITEM_NAME);
     await noPageScroll(page, "ürün formu");

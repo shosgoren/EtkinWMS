@@ -11,6 +11,7 @@ import { useModalFocus } from "../kalip/odak.ts";
 import { KalipPerdeKatman, type PerdeDelik } from "../kalip/perde.tsx";
 import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
+import { setYolDurum, useYolDurum } from "./durum.ts";
 import { setYolSpot } from "./spot.ts";
 import { JOURNEY_OPEN_EVENT, STEP_KEYS, filterJourney, firstOpen, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, stripState, type JourneyData, type StepKey } from "./steps.ts";
 
@@ -20,7 +21,7 @@ import { KalipRehberKart } from "../kalip/rehber.tsx";
 
 const ACTIVE_KEY = "etkinwms.yol.active";
 /** Kısa başlangıç turunun adımları (yeni kiracıda ilk girişte). */
-const SHORT_STEPS: readonly StepKey[] = ["cards", "shelves", "stock"];
+const SHORT_STEPS: readonly StepKey[] = ["cards", "shelves", "parties", "stock"];
 const POLL_MS = 6000;
 const GAP = 14;
 const EDGE = 12;
@@ -89,6 +90,21 @@ export function YolculukKart({ data: original, dark }: { data: JourneyData; dark
   );
 }
 
+/**
+ * T-1054 (kullanıcı 26 Ekim): Ürünler / Depolar ekranında eski 3 adımlı "depo → raf → ürün" kutusunun yerine asıl kurulum yolculuğunun
+ * girişi (Pano'daki küçük halka kartı). Dokununca adım listesi açılır ve kaldığın adımdan devam edilir. Kurulum bitti, kutlama kapatıldı ya da
+ * rol yolculuğu görmüyorsa çizilmez.
+ */
+export function YolculukGiris({ dark }: { dark: boolean }) {
+  const data = useYolDurum();
+  const ctx = useKabuk();
+  if (data === null || data.dismissed) return null;
+  // Üyenin görebildiği adımlarla (Pano kartıyla aynı süzgeç): hepsi tamamsa ya da hiç adım yoksa kart yok.
+  const mine = filterJourney(data, ctx?.guides?.setup ?? STEP_KEYS);
+  if (mine.total === 0 || mine.complete) return null;
+  return <YolculukKart data={data} dark={dark} />;
+}
+
 interface TipPos {
   readonly style: CSSProperties;
   readonly cls: "above" | "below" | "";
@@ -123,6 +139,11 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   const setGuideOwner = ctx?.setGuideOwner;
   const [rawData, setData] = useState<JourneyData | null>(initial);
   const data = useMemo(() => rawData === null ? null : filterJourney(rawData, allowed), [rawData, allowed]);
+  // T-1054: ekranlardaki giriş kartı aynı veriyi okur (ayrı sunucu çağrısı yok).
+  useEffect(() => {
+    setYolDurum(rawData);
+  }, [rawData]);
+  useEffect(() => () => setYolDurum(null), []);
   const [replay, setReplay] = useState(false);
   const [shortTour, setShortTour] = useState(false);
   const [paused, setPaused] = useState(false);

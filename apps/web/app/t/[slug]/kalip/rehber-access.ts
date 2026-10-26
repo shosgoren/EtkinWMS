@@ -17,7 +17,7 @@ export function guideAccess(m: GuideMember): {
     if (can('data.import'))
         setup.push('cards');
     if (can('settings.manage'))
-        setup.push('shelves');
+        setup.push('shelves', 'parties');
     if (can('document.create') && screen('receive'))
         setup.push('stock');
     if (can('stock.view') && screen('labels'))

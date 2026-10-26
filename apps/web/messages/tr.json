@@ -5554,14 +5554,19 @@
     "no": "Hayır",
     "steps": {
       "cards": {
-        "title": "Kartlarını getir",
-        "sub": "Excel ya da Paraşüt",
+        "title": "Ürün kartları",
+        "sub": "Paraşüt ya da Excel",
         "count": "{n} ürün"
       },
       "shelves": {
         "title": "Depo ve raflar",
         "sub": "Toplu raf oluşturucu",
         "count": "{n} raf"
+      },
+      "parties": {
+        "title": "Cari kartlar",
+        "sub": "Müşteri ve tedarikçi",
+        "count": "{n} cari"
       },
       "stock": {
         "title": "Stok girişi",
@@ -5596,12 +5601,12 @@
     },
     "cards": {
       "step": "Adım {n}/{total}",
-      "srcQ": "Kartlar nereden gelsin?",
+      "srcQ": "Muhasebe programın (Paraşüt) var mı?",
       "src": {
-        "EXCEL": "Excel'den",
+        "EXCEL": "Yok, Excel'den",
         "EXCELSub": "Şablonu doldur · yükle",
-        "PARASUT": "Paraşüt'ten",
-        "PARASUTSub": "Bağlan · kendiliğinden gelsin"
+        "PARASUT": "Paraşüt var",
+        "PARASUTSub": "Bağlan · ürün, cari, depo kendiliğinden gelsin"
       },
       "stockQ": "Mevcut stok miktarlarını da alalım mı?",
       "stockQSub": "Bir kez alınır · sonra stok yalnız Etkin'den Paraşüt'e gider",
@@ -5653,7 +5658,7 @@
       },
       "cardsParasut": {
         "title": "Paraşüt'e bağlan",
-        "text": "Parlayan BAĞLAN düğmesine dokun; ürün kartların kendiliğinden gelir."
+        "text": "Parlayan BAĞLAN düğmesine dokun; ürün, cari ve depo kartların kendiliğinden gelir."
       },
       "cardsSync": {
         "title": "Kartları Paraşüt'ten çek",
@@ -5666,6 +5671,18 @@
       "shelves": {
         "title": "Rafları oluştur",
         "text": "Parlayan düğmeye dokun; toplu raf oluşturucuyla bütün rafları tek seferde aç."
+      },
+      "partiesExcel": {
+        "title": "Carileri Excel'den aktar",
+        "text": "Parlayan düğmeye dokun, cari listeni yükle; müşteri ve tedarikçilerin kendiliğinden gelir."
+      },
+      "partiesParasut": {
+        "title": "Carileri Paraşüt'ten çek",
+        "text": "Cari kartlar akışını aç, sonra parlayan EŞİTLE düğmesine dokun."
+      },
+      "parties": {
+        "title": "Cari kartlar",
+        "text": "Parlayan düğmeye dokun, ilk müşteri ya da tedarikçini ekle."
       },
       "stockParasut": {
         "title": "Açılış stokunu Paraşüt'ten al",
@@ -5715,6 +5732,7 @@
     "voice": {
       "cards": "Excel aç",
       "shelves": "Depo aç",
+      "parties": "Cari aç",
       "stock": "10 koli conta mal kabul et",
       "labels": "Etiket aç",
       "bom": "Üretim aç",
