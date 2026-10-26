@@ -5772,6 +5772,9 @@
     "finish": "FINISH",
     "fileName": "etkin-wms-backup-codes.txt",
     "fileHead": "Etkin WMS · two-step verification backup codes. Each code works once.",
-    "back": "Back"
+    "back": "Back",
+    "appQrLabel": "{app} download QR code",
+    "appTipQr": "Scan the QR with your phone camera; the right store (App Store or Google Play) opens for your phone.",
+    "addCameraTip": "You can also scan with the phone camera without opening the app: tap the “Open in … / Add” suggestion and the account is added."
   }
 }
