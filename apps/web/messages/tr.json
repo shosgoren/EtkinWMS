@@ -4783,7 +4783,8 @@
       "recentEmpty": "Bugün henüz işlem yok",
       "recentLoading": "Yükleniyor…",
       "recentFailed": "İşlemler şu an okunamadı; biraz sonra yeniden dene.",
-      "recentOther": "İşlem"
+      "recentOther": "İşlem",
+      "close": "Kapat"
     },
     "tablo": {
       "view": "Görünüm",

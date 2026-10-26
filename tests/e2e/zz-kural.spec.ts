@@ -287,6 +287,10 @@ test("T-1053 Son işlemler: pencere açılır, Esc kapatır", async ({ page }) =
   await expect(pencere).toBeVisible();
   await expect(pencere.getByText("Bugün yaptıkların")).toBeVisible();
   await expect(pencere.getByText("Yükleniyor…")).toHaveCount(0);
+  // Codex P1 (PR 202): ortak perde arkayı örter; Tab odağı pencerede tutar.
+  await expect(page.getByTestId("kalip-perde")).toBeVisible();
+  await page.keyboard.press("Tab");
+  expect(await page.evaluate<boolean>("document.activeElement !== null && document.activeElement.closest('[data-testid=\"st-son-islemler-pencere\"]') !== null")).toBe(true);
   await page.keyboard.press("Escape");
   await expect(pencere).toHaveCount(0);
   await expect(dugme).toBeFocused();

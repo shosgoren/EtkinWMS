@@ -6,11 +6,14 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { feedback, intlDil } from "@wms/ui";
 import { SICON } from "../../../design/standart-icons.ts";
 import { temaYaz } from "../../../design/theme.ts";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
 import { myTodayActionsAction } from "../son-islemler-actions.ts";
+import { useModalFocus } from "./odak.ts";
+import { KalipPerdeKatman } from "./perde.tsx";
 
 function Ico({ d, size }: { d: string; size: number }) {
   return (
@@ -106,8 +109,12 @@ export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined })
   const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<string | null>(null);
+  const [yer, setYer] = useState<{ readonly top: number; readonly right: number; readonly koyu: boolean }>({ top: 0, right: 0, koyu: false });
   const btn = useRef<HTMLButtonElement>(null);
   const box = useRef<HTMLDivElement>(null);
+  const kapat = useCallback((): void => setOpen(false), []);
+  // ALTIN-KURAL 11 / Katman standardı: ortak perde + odak kancası (Esc kapatır, odak pencerede kalır, kapanınca düğmeye döner).
+  useModalFocus(open, box, { onClose: kapat });
 
   const load = useCallback(async (): Promise<void> => {
     if (slug === undefined) return;
@@ -131,29 +138,17 @@ export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined })
       /* cihazda saklanamıyor: rozet her işi yeni sayar */
     }
     void load();
-  }, [slug, load]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        btn.current?.focus();
-      }
+    // Codex P2 (PR 202): aynı ekranda yapılan yeni işler de rozete yansısın — sekme görünürken dakikada bir ve sekmeye dönüşte yenilenir.
+    const yenile = (): void => {
+      if (document.visibilityState === "visible") void load();
     };
-    const onDown = (e: PointerEvent): void => {
-      const n = e.target as Node;
-      if (box.current?.contains(n) === true || btn.current?.contains(n) === true) return;
-      setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("pointerdown", onDown);
-    box.current?.focus();
+    const id = window.setInterval(yenile, 60_000);
+    document.addEventListener("visibilitychange", yenile);
     return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("pointerdown", onDown);
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", yenile);
     };
-  }, [open]);
+  }, [slug, load]);
 
   if (slug === undefined) return null;
   const yeni = items === null ? 0 : items.filter((i) => seen === null || i.at > seen).length;
@@ -161,17 +156,23 @@ export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined })
   const metin = (key: string): string => (tAll.has(key) ? tAll(key) : t("recentOther"));
   const ac = (): void => {
     feedback.minor();
-    const sonraki = !open;
-    setOpen(sonraki);
-    if (sonraki) {
-      void load();
-      const now = new Date().toISOString();
-      setSeen(now);
-      try {
-        window.localStorage.setItem(gorulduAnahtar(slug), now);
-      } catch {
-        /* yok say */
-      }
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const b = btn.current;
+    if (b !== null) {
+      const r = b.getBoundingClientRect();
+      setYer({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right), koyu: b.closest(".dz-dark") !== null });
+    }
+    setOpen(true);
+    void load();
+    const now = new Date().toISOString();
+    setSeen(now);
+    try {
+      window.localStorage.setItem(gorulduAnahtar(slug), now);
+    } catch {
+      /* yok say */
     }
   };
   return (
@@ -193,30 +194,45 @@ export function StSonIslemler({ slug: slugProp }: { slug?: string | undefined })
           </em>
         ) : null}
       </button>
-      {open ? (
-        <div ref={box} className="stsonp" role="dialog" aria-label={t("recent")} tabIndex={-1} data-testid="st-son-islemler-pencere">
-          <b className="stsonh">{t("recentTitle")}</b>
-          {failed && items === null ? (
-            <p className="stsonbos">{t("recentFailed")}</p>
-          ) : items === null ? (
-            <p className="stsonbos">{t("recentLoading")}</p>
-          ) : items.length === 0 ? (
-            <p className="stsonbos">{t("recentEmpty")}</p>
-          ) : (
-            <ol className="stsonl">
-              {items.map((i, n) => (
-                <li key={`${i.at}-${n}`}>
-                  <i aria-hidden="true">
-                    <Ico d={SICON.onay} size={16} />
-                  </i>
-                  <span>{metin(i.key)}</span>
-                  <time dateTime={i.at}>{saat(i.at)}</time>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
-      ) : null}
+      {open
+        ? createPortal(
+            <div className={yer.koyu ? "stsonk dz-dark" : "stsonk"}>
+              <KalipPerdeKatman onClose={kapat} label={t("close")} />
+              <div
+                ref={box}
+                className="stsonp"
+                role="dialog"
+                aria-modal="true"
+                aria-label={t("recent")}
+                tabIndex={-1}
+                style={{ top: yer.top, right: yer.right }}
+                data-testid="st-son-islemler-pencere"
+              >
+                <b className="stsonh">{t("recentTitle")}</b>
+                {failed && items === null ? (
+                  <p className="stsonbos">{t("recentFailed")}</p>
+                ) : items === null ? (
+                  <p className="stsonbos">{t("recentLoading")}</p>
+                ) : items.length === 0 ? (
+                  <p className="stsonbos">{t("recentEmpty")}</p>
+                ) : (
+                  <ol className="stsonl">
+                    {items.map((i, n) => (
+                      <li key={`${i.at}-${n}`}>
+                        <i aria-hidden="true">
+                          <Ico d={SICON.onay} size={16} />
+                        </i>
+                        <span>{metin(i.key)}</span>
+                        <time dateTime={i.at}>{saat(i.at)}</time>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </span>
   );
 }

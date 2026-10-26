@@ -4783,7 +4783,8 @@
       "recentEmpty": "Nothing yet today",
       "recentLoading": "Loading…",
       "recentFailed": "Activity can't be read right now; try again shortly.",
-      "recentOther": "Action"
+      "recentOther": "Action",
+      "close": "Close"
     },
     "tablo": {
       "view": "View",

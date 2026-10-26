@@ -1080,11 +1080,10 @@ html:has(.halo.tmenu) .dzk .wrap {
   font-style: normal;
   text-align: center;
 }
+/* Ortak perdenin (`.kperde`, z 40) üstünde; belgenin kökünde (portal), konum düğmeden hesaplanır. */
 .stsonp {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 40;
+  position: fixed;
+  z-index: 41;
   width: min(360px, calc(100vw - 32px));
   max-height: 60vh;
   overflow: auto;
