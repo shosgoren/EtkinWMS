@@ -181,3 +181,22 @@ test("T-1048 Cariler ve Depolar: Kart/Liste tablosu", async ({ page }) => {
     await expect(page.getByTestId(tablo)).toHaveCount(0);
   }
 });
+
+// T-1050 (kullanıcı 26 Ekim, iPhone görüntüsü): Pano üst çubuğu — masaüstünde "Merhaba <ad>" (tuval), telefonda yalnız logo (firma adı
+// kesilmez); sabit "DOKUN → RAPOR AÇILIR" ipucu yok; Hesap düğmesinde baş harf.
+test("T-1050 Pano: selam üst çubukta, telefonda yalnız logo, ipucu yok", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo");
+  await expect(page.getByTestId("pano")).toBeVisible();
+  const selam = page.getByTestId("pano").locator(".top .stselam");
+  await expect(selam).toBeVisible();
+  await expect(selam).toContainText(/^Merhaba /);
+  await expect(page.getByRole("heading", { level: 1, name: /^Merhaba / })).toHaveCount(1);
+  await expect(page.getByText("DOKUN → RAPOR AÇILIR")).toHaveCount(0);
+  await expect(page.getByTestId("home-actions").locator(".stav")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(selam).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1, name: /^Merhaba / })).toBeVisible();
+});

@@ -55,12 +55,13 @@ const P = ({ d }: { d: string }) => <path d={d} />;
 export async function PanoBoard(p: PanoBoardProps) {
   const t = await getTranslations("pano");
   const tg = await getTranslations("home.gv");
+  const th = await getTranslations("home");
   const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(p.slug)}`;
   const b = p.board;
   const firstName = p.userName.trim().split(/\s+/)[0] ?? p.userName;
-  const hour = b?.localHour ?? p.summary?.localHour ?? 12;
-  const greet = tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name: firstName });
+  // T-1050 (STANDART §1, tuval "Merhaba Evren"): her ana ekranda aynı selam (kokpit ile aynı).
+  const greet = th("hello", { name: firstName });
   const owner = p.role === "owner";
   const roleTitle = owner ? t("ownerTitle") : t("managerTitle");
   const where = buyukHarf(b?.warehouseName ?? tg("allWarehouses"), locale);
@@ -115,6 +116,7 @@ export async function PanoBoard(p: PanoBoardProps) {
       slug={p.slug}
       dark={p.dark}
       brandSub={brandSub}
+      greet={greet}
       team
       me={{ ini, name: p.userName, group: buyukHarf(roleTitle, locale) + (owner ? "" : ` · ${where}`), color: owner ? "172E42" : "0E7C7B" }}
       halo={halo}
@@ -150,7 +152,8 @@ export async function PanoBoard(p: PanoBoardProps) {
 
       {b === null ? null : owner ? (
         <>
-          {shd(t("reports"), t("reportsHint"))}
+          {/* T-1050: sabit "DOKUN → RAPOR AÇILIR" ipucu yok (kartın kendisi dokunulur; STANDART: gereksiz açıklama yazılmaz). */}
+          {shd(t("reports"), null)}
           <div className="rep" role="list" aria-label={t("reportsAria")} data-testid="pano-reports">
             <Link href={`${base}/stock`} className="rp" role="listitem" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }} data-report="critical">
               <span className="n">{b.criticalCount}</span>

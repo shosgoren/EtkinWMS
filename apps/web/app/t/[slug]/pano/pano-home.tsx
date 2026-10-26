@@ -61,6 +61,7 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
   const canReport = canReportRole && (screens === null || screens.includes("problem"));
   const t = await getTranslations("pano");
   const tg = await getTranslations("home.gv");
+  const th = await getTranslations("home");
   const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstName = userName.trim().split(/\s+/)[0] ?? userName;
@@ -79,8 +80,8 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
     probO += s.problems;
   }
   const allO = leftO + doneO + (probO - (summary?.generalProblems ?? 0));
-  const hour = summary?.localHour ?? 12;
-  const greet = tg(hour < 12 ? "morning" : hour < 18 ? "day" : "evening", { name: firstName });
+  // T-1050 (STANDART §1, tuval "Merhaba Evren"): her ana ekranda aynı selam (kokpit ile aynı).
+  const greet = th("hello", { name: firstName });
   const where = buyukHarf(summary?.warehouseName ?? tg("allWarehouses"), locale);
   const subline = role === "counter" ? t("counterSub") : summary === null ? where : tg("shift", { start: summary.shift.start, end: summary.shift.end, where });
   const roleTitle = role === "counter" ? t("counterTitle") : t("fieldTitle");
@@ -113,6 +114,7 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
       slug={slug}
       dark={dark}
       brandSub={brandSub}
+      greet={greet}
       team={false}
       me={{ ini, name: userName, group: buyukHarf(roleTitle, locale), color: role === "counter" ? "2F5DA8" : "2F7D5B" }}
       halo={halo}

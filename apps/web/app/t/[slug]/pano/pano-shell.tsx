@@ -42,6 +42,8 @@ export interface PanoShellProps {
   readonly slug: string;
   readonly dark: boolean;
   readonly brandSub: string;
+  /** T-1050 (STANDART §1): üst çubukta "Merhaba <ad>" (tuval); telefonda yer yok → yalnız logo, selam içerikte başlık. */
+  readonly greet: string;
   readonly team: boolean;
   readonly me: { readonly ini: string; readonly name: string; readonly group: string; readonly color: string };
   readonly halo: readonly PanoLink[];
@@ -69,7 +71,7 @@ function Ico({ d, size, className = "ico", style }: { d: string; size: number; c
   );
 }
 
-export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, bell, appVersion = null, children }: PanoShellProps) {
+export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, bell, appVersion = null, children }: PanoShellProps) {
   const t = useTranslations("pano");
   const td = useTranslations("destek");
   // T-967: Destek penceresi (C) ve Taleplerim (D); okunmamış ekip yanıtı rozeti açılışta bir kez okunur.
@@ -247,8 +249,9 @@ export function PanoShell({ slug, dark: initialDark, brandSub, team, me, halo, t
                       </circle>
                     </svg>
                   </span>
-                  <span style={{ minWidth: 0 }}>
-                    <b>Etkin WMS</b>
+                  {/* Selamın erişilebilir adı sayfanın h1'i (`.hello`); burası görsel tekrar. */}
+                  <span className="stselam" style={{ minWidth: 0 }} aria-hidden="true">
+                    <b>{greet}</b>
                     <small>{brandSub}</small>
                   </span>
                 </div>
