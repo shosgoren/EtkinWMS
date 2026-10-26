@@ -1391,7 +1391,25 @@
         "convAdd": "Add conversion",
         "convNoUnit": "There is no other unit for a conversion; add a new unit first.",
         "bcAdd": "Add barcode",
-        "unitTag": "UNIT · {unit}"
+        "unitTag": "UNIT · {unit}",
+        "whenToday": "Today {time}",
+        "whenYesterday": "Yesterday {time}",
+        "whenDays": "{n} days ago",
+        "moveOpen": "Open {kind} {no}",
+        "qLabelShort": "Label",
+        "boxHave": "On hand",
+        "boxMin": "Minimum",
+        "boxPlaces": "Locations",
+        "infoCode": "Code",
+        "none": "None",
+        "tabGeneral": "General",
+        "tabStock": "Stock and location",
+        "tabUnits": "Units",
+        "tabBarcodes": "Barcodes",
+        "tabs": "Card tabs",
+        "movesAll": "All",
+        "movesNone": "No movements yet",
+        "actor": "Done by"
       }
     },
     "errors": {

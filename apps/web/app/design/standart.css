@@ -581,3 +581,399 @@ html:has(.halo.tmenu) .dzk .wrap {
   background: var(--color-st-dark-cur-bg);
   color: var(--color-st-dark-cur);
 }
+
+/* ---- T-1049 Kayıt kartı kalıbı (STANDART §3; kaynak `StandartUrunKarti.dc.html`): tek büyük panel, üst şerit (tür tonu), sayı
+   kutuları, hızlı işlemler, alt çizgili renkli simgeli sekmeler, gövde 2/3 bilgi + 1/3 son hareketler. Ton sınıfı `--k` verir. ---- */
+.stt-mavi { --k: var(--color-st-k-mavi); }
+.stt-stok { --k: var(--color-st-k-stok); }
+.stt-yesil { --k: var(--color-st-k-yesil); }
+.stt-ok { --k: var(--color-st-k-ok); }
+.stt-amber { --k: var(--color-st-k-amber); }
+.stt-lacivert { --k: var(--color-st-k-lacivert); }
+.stt-mor { --k: var(--color-st-k-mor); }
+.stt-camgobegi { --k: var(--color-st-k-camgobegi); }
+.stt-gri { --k: var(--color-st-k-gri); }
+.stt-kahve { --k: var(--color-st-k-kahve); }
+.stt-turuncu { --k: var(--color-st-k-turuncu); }
+.stt-kirmizi { --k: var(--color-st-k-kirmizi); }
+.stkart {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 22px;
+  background: var(--color-kr-card);
+  color: var(--color-kr-ink);
+  box-shadow: 0 10px 30px -22px var(--color-kr-shadow-soft);
+  overflow: hidden;
+  font-family: var(--font-instrument), sans-serif;
+}
+.stkserit {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 14px 22px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--k) 12%, var(--color-kr-card)) 0%, var(--color-kr-card) 70%);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--k) 14%, var(--color-kr-card));
+}
+.stkgorsel {
+  width: 132px;
+  height: 96px;
+  flex: none;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--k) 24%, var(--color-kr-card));
+  color: var(--k);
+}
+.stkad {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stkad > b {
+  font: 800 26px/1.15 var(--font-bricolage), sans-serif;
+  letter-spacing: -.01em;
+  overflow-wrap: anywhere;
+}
+.stketk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.stktag {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--color-kr-bg-a);
+  font: 700 12.5px/1 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-lacivert);
+}
+.stktag.mono { font-family: var(--font-plex-mono), monospace; }
+.stktag.ok { background: var(--color-st-k-ok-bg); color: var(--color-st-k-ok); }
+.stktag.kirmizi { background: var(--color-st-k-kirmizi-bg); color: var(--color-st-k-kirmizi-ink); }
+.stktag.amber { background: var(--color-st-k-kirmizi-bg); color: var(--color-st-k-amber); }
+.stkkutular {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+/* Codex P2 (PR 198): ondalıklı / büyük miktar sığsın — tuvaldeki 132 px en az genişliktir, kutu değere göre büyür. */
+.stkkutu {
+  min-width: 132px;
+  max-width: 100%;
+  min-height: 80px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--color-kr-card);
+  box-shadow: inset 0 0 0 1.5px var(--color-st-k-cizgi), inset 0 4px 0 var(--k);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.stkkutu small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 12.5px/1 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-gri);
+}
+.stkkutu b {
+  font: 800 26px/1.1 var(--font-bricolage), sans-serif;
+  overflow-wrap: anywhere;
+  color: var(--k);
+  font-variant-numeric: tabular-nums;
+}
+.stkislem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stkqb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--k);
+  color: var(--color-kr-card);
+  font: 700 14.5px/1 var(--font-instrument), sans-serif;
+  text-decoration: none;
+}
+.stksekme {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  background: var(--color-st-k-kutu);
+  border-bottom: 1.5px solid var(--color-st-k-cizgi);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.stksekme a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 14px;
+  flex: none;
+  font: 700 15px/1 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-gri);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1.5px;
+}
+.stksekme a.on {
+  color: var(--color-kr-ink);
+  border-bottom-color: var(--color-kr-ink);
+}
+.stksekme a > span {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k);
+  color: var(--color-kr-card);
+}
+.stkgovde {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.stkana {
+  grid-column: span 2;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  overflow: auto;
+}
+.stkgovde.tek .stkana { grid-column: 1 / -1; }
+.stkyan {
+  padding: 20px 22px;
+  background: var(--color-st-k-yan);
+  border-left: 1.5px solid var(--color-st-k-cizgi);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: auto;
+}
+.stkbas {
+  font: 800 17px/1.2 var(--font-bricolage), sans-serif;
+  letter-spacing: -.01em;
+}
+.stkdl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.stkdl > span {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--color-st-k-kutu);
+  min-width: 0;
+}
+.stkdl small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 13px/1.2 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-gri);
+}
+.stkdl small > i {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k);
+  color: var(--color-kr-card);
+}
+.stkdl b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 16.5px/1.3 var(--font-instrument), sans-serif;
+  min-width: 0;
+}
+.stkdl b > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.stkkilit {
+  display: inline-flex;
+  color: var(--color-st-k-ok-ink);
+}
+/* Kutucuk içi işlem (ör. kodu değiştir): sağda 48px simge düğmesi (telefon kalıbı 48 ister). */
+.stkdl b > button {
+  appearance: none;
+  margin-left: auto;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-kr-card);
+  color: var(--color-st-k-mavi);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.stkyanbas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+}
+.stkyanbas a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 8px;
+  font: 700 14px/1 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-mavi);
+}
+.stkbos {
+  font: 600 14px/1.4 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-gri);
+}
+.stkzaman {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+.stkzaman::before {
+  content: "";
+  position: absolute;
+  left: 21px;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  background: var(--color-st-bg-end);
+}
+.stkzaman a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 12px 10px 4px;
+  border-radius: 16px;
+  background: var(--color-kr-card);
+  color: var(--color-kr-ink);
+  text-decoration: none;
+  box-shadow: 0 4px 14px -10px var(--color-kr-shadow-soft);
+}
+.stkev {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k);
+  color: var(--color-kr-card);
+  box-shadow: 0 0 0 4px var(--color-st-k-yan);
+}
+.stkevx {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.stkevx b { font: 700 14.5px/1.2 var(--font-instrument), sans-serif; }
+.stkevx small {
+  font: 500 12.5px/1.3 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-gri);
+  overflow-wrap: anywhere;
+}
+.stkevx .mono { font-family: var(--font-plex-mono), monospace; }
+.stkq {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font: 700 14px/1 var(--font-plex-mono), monospace;
+  white-space: nowrap;
+}
+.stkq.giris { background: var(--color-st-k-ok-bg); color: var(--color-st-k-ok); }
+.stkq.cikis { background: var(--color-st-k-kirmizi-bg); color: var(--color-st-k-kirmizi-ink); }
+.stkq.yer { background: var(--color-st-k-mor-bg); color: var(--color-st-k-mor-ink); }
+.stkkisi {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-st-bg-end);
+  color: var(--color-st-k-lacivert);
+  font: 800 12px/26px var(--font-bricolage), sans-serif;
+  text-align: center;
+}
+.dz-dark .stkart { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); }
+.dz-dark .stkserit {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--k) 22%, var(--color-kr-card-dark)) 0%, var(--color-kr-card-dark) 70%);
+  border-bottom-color: var(--color-kr-bg-dark-a);
+}
+.dz-dark :is(.stkkutu, .stkzaman a, .stkdl b > button) { background: var(--color-kr-bg-dark-a); color: var(--color-kr-text-dark); }
+.dz-dark .stkkutu { box-shadow: inset 0 4px 0 var(--k); }
+.dz-dark .stkkutu b { color: var(--color-kr-text-dark); }
+.dz-dark :is(.stksekme, .stkdl > span) { background: var(--color-kr-bg-dark-a); border-color: var(--color-kr-bg-dark-a); }
+.dz-dark .stkyan { background: var(--color-st-dark-bg-a); border-left-color: var(--color-kr-bg-dark-a); }
+.dz-dark .stksekme a.on { color: var(--color-kr-text-dark); border-bottom-color: var(--color-kr-text-dark); }
+.dz-dark :is(.stkdl small, .stkkutu small, .stkevx small, .stksekme a, .stkbos) { color: var(--color-kr-muted); }
+.dz-dark .stktag { background: var(--color-kr-bg-dark-a); color: var(--color-kr-text-dark); }
+.dz-dark .stkev { box-shadow: 0 0 0 4px var(--color-st-dark-bg-a); }
+/* Masaüstü: kart üst çubuk ile alt çubuk arasını doldurur (kaydırma kartın içinde, sekme gövdesinde). */
+@media (min-width: 1100px) {
+  .kalip[data-kalip="detay"] .inner:has(> .stkart) {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 210px);
+    min-height: 520px;
+  }
+  .kalip[data-kalip="detay"] .inner > .stkart { flex: 1 1 auto; }
+}
+/* Tablet / telefon: şerit alt alta, gövde tek sütun, bilgi kutucukları 2 sütun (telefon 1). */
+@media (max-width: 1099.98px) {
+  .stkgovde { grid-template-columns: minmax(0, 1fr); }
+  .stkana { grid-column: auto; overflow: visible; }
+  .stkyan { border-left: 0; border-top: 1.5px solid var(--color-st-k-cizgi); overflow: visible; }
+  .stkdl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 699.98px) {
+  .stkserit { gap: 14px; padding: 14px 16px; }
+  .stkgorsel { width: 72px; height: 72px; border-radius: 16px; }
+  .stkad > b { font-size: 22px; }
+  .stkkutular { width: 100%; }
+  .stkkutu { flex: 1 1 96px; min-width: 96px; }
+  .stkkutu b { font-size: 22px; }
+  .stkislem { width: 100%; }
+  .stkqb { flex: 1 1 0; justify-content: center; }
+  .stkana, .stkyan { padding: 16px; }
+  .stkdl { grid-template-columns: minmax(0, 1fr); }
+}

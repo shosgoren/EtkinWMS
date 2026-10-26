@@ -224,6 +224,28 @@ body {
   --color-st-dark-hover: rgba(255, 255, 255, .08);
   --color-st-dark-cur-bg: rgba(47, 93, 168, .32);
   --color-st-dark-cur: #9ec0f2;
+  /* T-1049 kayıt kartı tonları (kaynak `StandartUrunKarti.dc.html`). */
+  --color-st-k-mavi: #2f5da8;
+  --color-st-k-stok: #3b6a9e;
+  --color-st-k-yesil: #2f7d5b;
+  --color-st-k-ok: #1f6b47;
+  --color-st-k-ok-bg: #e3f3ea;
+  --color-st-k-amber: #b26a00;
+  --color-st-k-lacivert: #30475a;
+  --color-st-k-mor: #6c4bd8;
+  --color-st-k-mor-bg: #ece7fb;
+  --color-st-k-mor-ink: #4f35a8;
+  --color-st-k-camgobegi: #0e7c7b;
+  --color-st-k-gri: #4e6476;
+  --color-st-k-kahve: #9a5b1e;
+  --color-st-k-turuncu: #c2702a;
+  --color-st-k-kirmizi: #c62828;
+  --color-st-k-kirmizi-bg: #fdebe3;
+  --color-st-k-kirmizi-ink: #a4401a;
+  --color-st-k-cizgi: #e3e8ed;
+  --color-st-k-kutu: #f4f6f8;
+  --color-st-k-yan: #f7f9fb;
+  --color-st-k-ok-ink: #8a9aa8;
 }
 
 /* T-436 (ALTIN-KURAL 14): eski (Tailwind belirteçli) yüzeylerin koyu teması; kök düzen `html[data-tema]` verir. */

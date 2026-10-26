@@ -231,5 +231,5 @@ test("stock receipt, draft review, approval, posting and insufficient issue",asy
 
 /** T-990: lokasyon türü seçim kutusu (radiogroup; yerel select yok). */
 async function pickKind(page:Page,kind:string):Promise<void>{const box=page.locator(`[data-alan="kind"] [data-option="${kind}"]`);await box.click();await expect(box).toHaveAttribute("aria-checked","true");}
-/** T-990: barkod ekleme ürün kartından tam ekran forma (`barcode-add` → `barcode-form`). */
-async function addBarcode(page:Page,code:string):Promise<void>{await page.getByTestId("barcode-add").click();const f=page.getByTestId("barcode-form");await expect(f).toBeVisible();await f.locator('input[name="barcode"]').fill(code);await page.getByTestId("barcode-form-save").click();await expect(page.getByText("Barkod eklendi.").first()).toBeVisible();}
+/** T-990: barkod ekleme ürün kartından tam ekran forma (`barcode-add` → `barcode-form`); T-1049: kartın "Barkodlar" sekmesinde. */
+async function addBarcode(page:Page,code:string):Promise<void>{await page.getByTestId("kart-sekme-barkod").click();await page.getByTestId("barcode-add").click();const f=page.getByTestId("barcode-form");await expect(f).toBeVisible();await f.locator('input[name="barcode"]').fill(code);await page.getByTestId("barcode-form-save").click();await expect(page.getByText("Barkod eklendi.").first()).toBeVisible();}
