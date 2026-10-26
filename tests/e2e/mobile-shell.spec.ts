@@ -83,7 +83,9 @@ test("telefon kabuğu: Kokpit liste kalıbında, eski kabuk yok, uygulama menüs
   await page.goto("/t/demo");
   await openAccountMenu(page);
   const account = page.getByRole("menu", { name: "HESAP" });
-  await expect(account.getByRole("menuitem", { name: "Kullanıcı değiştir" })).toBeVisible();
+  // T-1044: "Kullanıcı değiştir" kaldırıldı (Çıkış yap ile aynı işti); Çıkış yap her zaman menüde.
+  await expect(account.getByRole("menuitem", { name: "Kullanıcı değiştir" })).toHaveCount(0);
+  await expect(account.getByRole("menuitem", { name: "Çıkış yap" })).toBeVisible();
   await expect(account.getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
   await expect(account.getByRole("menuitem", { name: "Çalışma alanı değiştir" })).toHaveCount(0);
   expect(await smallTargets(page, '[role="menu"]'), "hesap menüsü: 48 px altı dokunma hedefi").toEqual([]);
