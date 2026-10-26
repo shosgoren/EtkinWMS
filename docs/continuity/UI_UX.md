@@ -77,6 +77,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 
 - T-1040: arşivli kayıt normal listede görünmez (yalnız "Arşivli" süzgecinde: ürün `?status=ARCHIVED`, cari ve depo `?arsiv=1`, raf ağacında "Arşivli rafları göster"); arşivli kaydın ekranında işlem kısa yolu çizilmez.
 - T-1037 ekran standardı (bekçi `design/kural-standart.test.ts`): form kabında TEK ana işlem (formun `.workflow-primary` düğmesi gizli, alt çubuk çağırır; yeni form ekranı `FormEkran` + `.workflow-form` + bir `.workflow-primary` yeter); form alanları `KalipAlan` / `Typeahead variant="kalip"`; uzun adlar kesilmez; tarih gösterimi `kalip/format.ts` `fmtGun`; liste üstüne "yeni X" kesik düğmesi konmaz — YENİ ana işlemi gerekirse tür seçimine (`KalipSecimKutulari`) gider.
+- T-1039: Ayarlar bağlantısı tek yerde — kabuk bağlamı `settingsHref` (yalnız `settings.manage`) → ortak `HesapMenu` ilk satır; yeni üst çubuk/ekran bunu kendi eklemez. Masaüstü form alanı `.fld` açık temada gri zemin + ince kenar (`kural.css`); beyaz kart üstünde beyaz alan bırakılmaz.
 
 ## Excel / fiş / ERP deneyimi — ek hedef
 - Önizleme ikon+renk+1–3 kelimeyle: Hazır / Tamamlandı / Düzelt. Hücre hatası bir dokunuşla açılır; çözülemeyen satır sessiz atlanmaz. Kullanıcıya uzun teknik rapor okutulmaz.

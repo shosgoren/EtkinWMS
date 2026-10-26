@@ -96,6 +96,8 @@ export default async function TenantLayout({ children, params }: { children: Rea
     canReport:
       (hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)) &&
       (current.screens === null || current.screens.includes("problem")),
+    // T-1039: Ayarlar her ekranın Hesap menüsünde (yalnız ayar yönetimi yetkisi).
+    ...(hasPermission(current.roles, "settings.manage", current.grants) ? { settingsHref: `${base}/settings` } : {}),
     // T-1002 (B-62): Etkin sesli komut — okuma yetkisi olan her üye; yazma komutları onayda mevcut eylemlerin izinlerini ister.
     etkin: hasPermission(current.roles, "stock.view", current.grants),
     // T-981b: kalıp üst çubuğu Excel düğmesi (gösterim; dışa aktarma ve aktarım sunucuda yine denetlenir).
