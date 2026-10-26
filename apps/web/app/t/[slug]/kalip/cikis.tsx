@@ -78,6 +78,8 @@ function hedefBaglanti(e: MouseEvent): HTMLAnchorElement | null {
   if (!(a instanceof HTMLAnchorElement)) return null;
   if (a.target !== "" && a.target !== "_self") return null;
   if (a.hasAttribute("download")) return null;
+  // T-1046: aynı taslağın başka bölümüne geçiş (ör. Ayarlar sekmeleri, tek Kaydet) gezinme sayılmaz; taslak korunur, sorulmaz.
+  if (a.hasAttribute("data-ayni-taslak")) return null;
   let url: URL;
   try {
     url = new URL(a.href, window.location.href);

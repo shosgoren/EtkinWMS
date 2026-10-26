@@ -4,6 +4,7 @@
 // sayfa + `.sxback` perde), açık/kapalı anahtar satırı (`.sr2 > .act2`), salt okunur satır (`.sr2.lock` + `.pill`), seçenek düğmeleri
 // (`.gpick > .gp`), metin alanı (`.fld`), değişiklik rozeti (`.sr2.chg`). Kaydedilmemiş iş uyarısı tek ortak bileşen `cikis.tsx` (T-990).
 // "Yalnız değişince etkin Kaydet" ana işlemi ortak KabukBar'dadır (ekran `main.disabled` verir). Renkler `.dzf` belirteçlerinden.
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, type CSSProperties, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -109,6 +110,24 @@ export function KalipSatir({ id, title, value, d, color, open, changed = false, 
           {children}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** T-1046 (STANDART §5): başka ekrana götüren ayar satırı (simge + ad + kısa değer + ok); satır görünümü `KalipSatir` ile aynı. */
+export function KalipBaglanti({ title, value, d, color, href, testId }: { title: string; value: string; d: string; color: string; href: string; testId?: string }) {
+  return (
+    <div className="srw">
+      <Link className="sr2" href={href} prefetch={false} style={{ "--c": c(color), textDecoration: "none" } as CSSProperties} aria-label={`${title}: ${value}`} data-testid={testId}>
+        <span className="ri">
+          <Ico d={d} size={20} />
+        </span>
+        <span className="rt">
+          <b>{title}</b>
+        </span>
+        <span className="rv">{value}</span>
+        <Ico d={LICON.chev} size={20} className="ico chev" />
+      </Link>
     </div>
   );
 }

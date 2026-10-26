@@ -7,17 +7,17 @@
 // Bilinçli farklar (DESIGN-PARITY, T-968): tema seçeneğinde "Otomatik" yok (uygulamada sistem teması izleme yok); saat diliminde kaynaktaki
 // üç seçenek + mevcut değer düğme, tam liste "Diğer" seçicisinde; iki adımlı doğrulama satırı oturumun gerçek durumunu gösterir;
 // "Bağlantı gönder" parola sıfırlama sayfasını açar (bağlantıyı o sayfa e-postayla gönderir); örnek veri yoksa satır çizilmez.
-import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { sistemKoyu, temaYaz, type TemaTercihi } from "../../../design/theme.ts";
-import { Ico, KalipBaslik, KalipEkran, MicIco, useKalipToast } from "../kalip/ekran.tsx";
+import { Ico, KalipEkran, MicIco, useKalipToast } from "../kalip/ekran.tsx";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
-import { KalipAlan, KalipAnahtar, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek } from "../kalip/form.tsx";
+import { KalipAlan, KalipAnahtar, KalipBaglanti, KalipGrup, KalipIzgara, KalipKilit, KalipPerde, KalipSabit, KalipSatir, KalipSecenek } from "../kalip/form.tsx";
 import { KalipSecimListe, KalipSekme } from "../kalip/secim.tsx";
 import { saveSettingsFormAction } from "./form-actions.ts";
+import { ayarSekmeleri, ayarSekmesi, ayniTaslakSekmesi } from "./sekmeler.ts";
 import { clearSampleDataAction } from "./sample-actions.ts";
 import { buyukHarf, feedback } from "@wms/ui";
 
@@ -52,7 +52,7 @@ export interface SettingsViewProps {
 type RowId = "name" | "loc" | "tz" | "smp" | "theme" | "pass";
 const POPULAR_TZ = ["Europe/Istanbul", "Europe/Berlin", "Europe/London"] as const;
 
-export function SettingsView({ slug, dark: initialDark, theme: initialTheme, locked, values, addressSlug, timeZones, sample, mfaOn, canImport, notices, reauth, error }: SettingsViewProps) {
+export function SettingsView({ slug, dark: initialDark, theme: initialTheme, locked, values, addressSlug, timeZones, sample, mfaOn, notices, reauth, error }: SettingsViewProps) {
   const t = useTranslations("settings.k");
   const ts = useTranslations("settings");
   const tk = useTranslations("kalip");
@@ -60,6 +60,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const tb = useTranslations("baglantilar");
   const router = useRouter();
+  const sekme = ayarSekmesi(useSearchParams().get("sekme"));
   const base = `/t/${encodeURIComponent(slug)}`;
   const firstTheme: TemaTercihi = initialTheme ?? (initialDark ? "koyu" : "acik");
   const [savedTheme, setSavedTheme] = useState<TemaTercihi>(firstTheme);
@@ -174,16 +175,20 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
         </>
       }
     >
-      {/* T-981b: sekme şeridi (Genel · Bağlantılar); Bağlantılar toplu Excel işlemleri ve entegrasyonlar. */}
+      {/* T-1046 (STANDART §5): ayar sekmeleri (Firma · Kullanıcılar ve yetki · Entegrasyonlar · Görünüm); aynı anda tek konu. */}
       <KalipSekme
         label={tb("tabs")}
         color="0E7C7B"
-        current="genel"
-        onGo={(href) => go(href)()}
-        items={[
-          { id: "genel", label: tb("tabGeneral"), d: LICON.gear, href: `${base}/settings` },
-          { id: "baglantilar", label: tb("tabLinks"), d: LICON.excel, href: `${base}/settings/baglantilar` },
-        ]}
+        current={sekme}
+        onGo={(href) => {
+          // Firma / Kullanıcılar / Görünüm aynı taslağın sekmeleridir (tek Kaydet): geçiş taslağı korur, "kaydetmeden çık" sorulmaz
+          // (sorulsaydı taslak silinmeden kalır ve sonraki Kaydet gizli değişikliği gönderirdi). Entegrasyonlar ayrı ekran: koruma sorar.
+          if (ayniTaslakSekmesi(href, base)) {
+            feedback.minor();
+            router.replace(href, { scroll: false });
+          } else go(href)();
+        }}
+        items={ayarSekmeleri(base, tb)}
       />
       {locked ? <KalipKilit title={t("lockTitle")} sub={t("lockSub")} /> : null}
       {reauth === null ? null : (
@@ -212,7 +217,6 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
           </span>
         </div>
       )}
-      <KalipBaslik title={t("head")} hint={t("headHint")} />
       {/* Sunucu formu: değerler kalıbın durumundan (gizli alanlar). */}
       <form ref={formRef} action={saveSettingsFormAction} hidden>
         <input type="hidden" name="slug" value={slug} />
@@ -222,9 +226,10 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
         <input type="hidden" name="timeZone" value={v.timeZone} />
         <input type="hidden" name="sod" value={chg.includes("sod") ? (v.sod ? "1" : "0") : ""} />
       </form>
-      <KalipIzgara
-        left={
-          <KalipGrup title={t("ws")} sub={t("wsSub")} d={LICON.workspace} color="0F6E8C" testId="settings-ws">
+      {sekme === "firma" ? (
+        <KalipIzgara
+          left={
+          <KalipGrup title={t("ws")} d={LICON.workspace} color="0F6E8C" testId="settings-ws">
             <KalipSatir id="name" title={t("name")} value={v.name} d={LICON.pencil} color="0F6E8C" open={open === "name"} changed={chg.includes("name")} locked={locked} onToggle={toggle("name")} onClose={close} editorTitle={t("nameEditor")} testId="settings-name">
               <div className="sxr">
                 <KalipAlan
@@ -284,13 +289,11 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
               </KalipSatir>
             ) : null}
           </KalipGrup>
-        }
-        right={
-          <>
-            <KalipGrup title={t("sod")} sub={t("sodSub")} d={LICON.people} color="6C4BD8" testId="sod">
+          }
+          right={
+            <KalipGrup title={t("sod")} d={LICON.people} color="6C4BD8" testId="sod">
               <KalipAnahtar
                 title={t("sodRow")}
-                sub={t("sodRowSub")}
                 d={LICON.shield}
                 color="6C4BD8"
                 on={v.sod}
@@ -301,7 +304,33 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
                 testId="settings-sod"
               />
             </KalipGrup>
-            <KalipGrup title={t("look")} sub={t("lookSub")} d={LICON.sun} color="B07D0B">
+          }
+        />
+      ) : sekme === "kullanici" ? (
+        <KalipIzgara
+          left={
+            <KalipGrup title={t("people")} d={LICON.people} color="6C4BD8" testId="settings-people">
+              <KalipBaglanti title={t("members")} value={t("membersV")} d={LICON.people} color="2F5DA8" href={`${base}/members`} testId="settings-members" />
+              <KalipBaglanti title={t("groups")} value={t("groupsV")} d={LICON.shield} color="6C4BD8" href={`${base}/groups`} testId="settings-groups" />
+            </KalipGrup>
+          }
+          right={
+            <KalipGrup title={t("sec")} d={LICON.lock} color="2F7D5B">
+              <KalipSabit title={t("mfa")} d={LICON.shield} color="2F7D5B" pill={{ label: mfaOn ? tk("on") : tk("off"), ok: mfaOn }} aria={mfaOn ? t("mfaAriaOn") : t("mfaAriaOff")} testId="settings-mfa" />
+              <KalipSatir id="pass" title={t("pass")} value={t("passV")} d={LICON.key} color="2F7D5B" open={open === "pass"} onToggle={toggle("pass")} onClose={close} editorTitle={t("passEditor")} testId="settings-pass">
+                <small className="sxn">{t("passNote")}</small>
+                <a className="btn n" href="/reset-password" style={{ textDecoration: "none" }}>
+                  <Ico d={LICON.arrow} size={20} />
+                  {t("passSend")}
+                </a>
+              </KalipSatir>
+            </KalipGrup>
+          }
+        />
+      ) : (
+        <KalipIzgara
+          left={
+            <KalipGrup title={t("look")} d={LICON.sun} color="B07D0B">
               <KalipSatir id="theme" title={t("theme")} value={v.tema === "oto" ? tr("themeAuto") : v.dark ? t("themeDarkV") : t("themeLightV")} d={LICON.moon} color="B07D0B" open={open === "theme"} changed={chg.includes("theme")} onToggle={toggle("theme")} onClose={close} testId="settings-theme">
                 <KalipSecenek
                   label={t("theme")}
@@ -320,27 +349,10 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
                 />
               </KalipSatir>
             </KalipGrup>
-            <KalipGrup title={t("sec")} sub={t("secSub")} d={LICON.lock} color="2F7D5B">
-              <KalipSabit title={t("mfa")} d={LICON.shield} color="2F7D5B" pill={{ label: mfaOn ? tk("on") : tk("off"), ok: mfaOn }} aria={mfaOn ? t("mfaAriaOn") : t("mfaAriaOff")} testId="settings-mfa" />
-              <KalipSatir id="pass" title={t("pass")} value={t("passV")} d={LICON.key} color="2F7D5B" open={open === "pass"} onToggle={toggle("pass")} onClose={close} editorTitle={t("passEditor")} testId="settings-pass">
-                <small className="sxn">{t("passNote")}</small>
-                <a className="btn n" href="/reset-password" style={{ textDecoration: "none" }}>
-                  <Ico d={LICON.arrow} size={20} />
-                  {t("passSend")}
-                </a>
-              </KalipSatir>
-            </KalipGrup>
-          </>
-        }
-      />
-      {canImport ? (
-        <Link className="more" href={`${base}/import`} data-testid="settings-import">
-          <i>
-            <Ico d={LICON.excel} size={20} />
-          </i>
-          {t("import")}
-        </Link>
-      ) : null}
+          }
+          right={null}
+        />
+      )}
     </KalipEkran>
   );
 }

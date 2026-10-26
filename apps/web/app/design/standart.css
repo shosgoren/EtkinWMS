@@ -283,3 +283,29 @@ html:has(.halo.tmenu) .dzk .wrap {
 .dzk .dk-etkin.live .orb .ico {
   color: var(--color-kr-on);
 }
+
+/* ---- T-1046 (STANDART §5, §7): ekran içi sekmeler — seçili sekme açık mavi zemin + mavi yazı (koyu dolgu yok); her sekmede kendi
+   renginde simge; sekmeler zemin üstünde hafif beyaz. ---- */
+.kalip .gpick.tabs .gp {
+  background: var(--color-st-glass-a);
+  color: var(--color-kr-ink);
+  border-color: transparent;
+  box-shadow: none;
+}
+.kalip .gpick.tabs .gp .ico {
+  color: var(--tc, currentColor);
+}
+.kalip .gpick.tabs .gp.on {
+  background: var(--color-st-cur-bg);
+  color: var(--color-st-cur);
+  border-color: transparent;
+  box-shadow: none;
+}
+.kalip.dz-dark .gpick.tabs .gp {
+  background: var(--color-st-dark-glass);
+  color: var(--color-kr-text-dark);
+}
+.kalip.dz-dark .gpick.tabs .gp.on {
+  background: var(--color-st-dark-cur-bg);
+  color: var(--color-st-dark-cur);
+}

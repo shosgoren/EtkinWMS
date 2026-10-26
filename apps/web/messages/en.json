@@ -1209,7 +1209,12 @@
       "noChange": "No changes; settings are already like this",
       "unsavedText": "{n} settings changed; they will be lost if you leave without saving.",
       "import": "Bulk import from Excel · warehouses, items, parties",
-      "errorTitle": "Could not save"
+      "errorTitle": "Could not save",
+      "people": "People and permissions",
+      "members": "People",
+      "membersV": "Add, grant access",
+      "groups": "Permission groups",
+      "groupsV": "Who can do what"
     }
   },
   "items": {
@@ -5081,7 +5086,7 @@
     "themeAuto": "Automatic (system)"
   },
   "baglantilar": {
-    "title": "Connections",
+    "title": "Integrations",
     "back": "Back to settings",
     "tabs": "Settings tabs",
     "tabGeneral": "General",
@@ -5160,7 +5165,11 @@
     "soon": "SOON",
     "soonAria": "{name} connection coming soon",
     "open": "Open",
-    "openAria": "Open {name} connection"
+    "openAria": "Open {name} connection",
+    "tabFirma": "Company",
+    "tabUsers": "Users and permissions",
+    "tabInteg": "Integrations",
+    "tabLook": "Appearance"
   },
   "integrations": {
     "title": "Integration",
