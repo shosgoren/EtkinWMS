@@ -36,9 +36,14 @@ describe("T-1042 ortak kabuk (STANDART §1)", () => {
     expect(issue).toMatch(/export function IssueIco[\s\S]*?SICON\.flag/);
   });
   it("üst çubuk düğmeleri zeminsiz; alt çubukta seçili yer hapta (alt çizgi yok); koyu dolgu yok", () => {
-    expect(css).toMatch(/\.kalip \.top,\s*\.dzp \.top \{\s*background: transparent;/);
+    expect(css).toMatch(/\.kalip \.top,\s*\.dzp \.top,\s*\.kalip\.dz-dark \.top,\s*\.dzp\.dz-dark \.top \{\s*background: transparent;/);
     expect(css).toMatch(/background: transparent !important;\s*box-shadow: none !important;/);
     expect(css).toMatch(/\.dzk \.dk\.cur::after,\s*\.dzk\.dz-dark \.dk\.cur::after \{\s*display: none;/);
     expect(css).toMatch(/max-width: 1320px;/);
+  });
+  it("modül zemin geçişi görünen tam ekran yüzeyde (.app), açık ve koyu temada", () => {
+    expect(css).toMatch(/\.kalip:not\(\.dz-dark\) \.app \{\s*background: linear-gradient\(150deg, color-mix/);
+    expect(css).toMatch(/\.kalip\.dz-dark \.app,\s*\.dzp\.dz-dark \.app \{\s*background: linear-gradient/);
+    expect(css).toMatch(/\.dzp:not\(\.dz-dark\) \.app \{\s*background: linear-gradient/);
   });
 });

@@ -4,20 +4,23 @@
    `--color-st-*`; ekranın modül rengi KalipEkran'ın `--st-mod` değişkeni (ekran ikonu rengi). Perde/bulanıklık yazılmaz (perde.css). */
 
 /* ---- Zemin: modül renginden sol üstte başlayan yumuşak geçiş → açık gri → gri-mavi (açık tema; belirteçler kr-bg-a, st-bg-end) ---- */
-.kalip:not(.dz-dark) .wrap {
+/* Görünen yüzey tam ekran `.app` (kalip-frame.css / pano-frame.css ve üretilmiş koyu tema kuralları onu boyar): geçiş oraya. */
+.kalip:not(.dz-dark) .app {
   background: linear-gradient(150deg, color-mix(in srgb, var(--st-mod, var(--color-kr-info)) 14%, var(--color-kr-bg-a)) 0%, var(--color-kr-bg-a) 45%, var(--color-st-bg-end) 100%);
 }
-.dzp:not(.dz-dark) .wrap {
+.dzp:not(.dz-dark) .app {
   background: linear-gradient(150deg, var(--color-st-home) 0%, var(--color-kr-bg-a) 45%, var(--color-st-bg-end) 100%);
 }
-.kalip.dz-dark .wrap,
-.dzp.dz-dark .wrap {
+.kalip.dz-dark .app,
+.dzp.dz-dark .app {
   background: linear-gradient(150deg, color-mix(in srgb, var(--st-mod, var(--color-kr-info)) 12%, var(--color-st-dark-bg-a)) 0%, var(--color-kr-bg-dark-a) 50%, var(--color-kr-bg-dark-b) 100%);
 }
 
 /* ---- Üst çubuk: zeminsiz, çizgisiz; düğmeler zeminsiz ve gölgesiz, üstüne gelince çok hafif gri ---- */
 .kalip .top,
-.dzp .top {
+.dzp .top,
+.kalip.dz-dark .top,
+.dzp.dz-dark .top {
   background: transparent;
   border-bottom: 0;
 }
@@ -182,17 +185,13 @@
   .stbtn { min-width: 44px; min-height: 44px; padding: 0; }
 }
 
-/* ---- Genişlik: masaüstünde içerik en çok 1320 px, iki yanda eşit boşluk ---- */
+/* ---- Genişlik: masaüstünde içerik en çok 1320 px, iki yanda eşit boşluk (alt çubuk tuvaldeki gibi 720 px, kabuk.css) ---- */
 @media (min-width: 1100px) {
   .kalip .top,
   .kalip .inner,
   .dzp .top,
   .dzp .inner {
     width: 100%;
-    max-width: 1320px;
-    margin-inline: auto;
-  }
-  .dzk .dockin {
     max-width: 1320px;
     margin-inline: auto;
   }
