@@ -808,6 +808,14 @@ describe("ürün ayrıntı sayfası (/t/<slug>/items/<itemId>) — T-216", () =>
     expect(own.outcome).toBe("render");
     expect(JSON.stringify(own.value)).toContain(pA.name);
     expect(JSON.stringify(own.value)).not.toContain(pB.name);
+    // Güvenlik incelemesi MINOR-2: liste sayfasında `?edit=<B carisi>` formu B verisiyle açmaz; bozuk kimlik çökertmez.
+    for (const edit of [pB.id, "------------------------------------", "not-a-uuid"]) {
+      as(A.admin);
+      const list = await runLoader("parties/page.tsx", A.slug, undefined, undefined, { edit });
+      expect(list.outcome).toBe("render");
+      expect(JSON.stringify(list.value)).not.toContain(pB.name);
+      expect(JSON.stringify(list.value)).toContain('"editParty":null');
+    }
   });
 
   it("@AC-04 sayfa items/[itemId]: B'nin slug'ı + B'nin ürünü ile var olmayan slug + var olmayan ürün -> 404 ve birebir aynı yanıt; B verisi yok", async () => {

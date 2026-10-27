@@ -14,6 +14,12 @@ const KIND_VIS: Readonly<Record<PartyView["kind"], { d: string; ton: StTon }>> =
   BOTH: { d: LICON.transfer, ton: "camgobegi" },
 };
 
+/** Güvenlik incelemesi MINOR-1: kayıtlı e-postadaki `?`, `&`, `#` gibi karakterler `mailto:` adresine ek başlık (bcc, body) taşımasın. */
+function mailtoHref(email: string): string {
+  const at = email.lastIndexOf("@");
+  return at <= 0 ? `mailto:${encodeURIComponent(email)}` : `mailto:${encodeURIComponent(email.slice(0, at))}@${encodeURIComponent(email.slice(at + 1))}`;
+}
+
 export function PartyCard({ slug, dark, canEdit, party }: { slug: string; dark: boolean; canEdit: boolean; party: PartyView }) {
   const t = useTranslations("parties");
   const tk = useTranslations("parties.kart");
@@ -35,7 +41,7 @@ export function PartyCard({ slug, dark, canEdit, party }: { slug: string; dark: 
       : [{ key: "phone", etiket: t("f.phone"), deger: <a href={`tel:${party.phone.replace(/[^\d+]/g, "")}`} style={linkStil} aria-label={tk("call", { name: party.name })}>{party.phone}</a>, d: LICON.support, ton: "yesil" as const }]),
     ...(party.email === null
       ? []
-      : [{ key: "email", etiket: t("f.email"), deger: <a href={`mailto:${party.email}`} style={linkStil} aria-label={tk("mail", { name: party.name })}>{party.email}</a>, d: LICON.globe, ton: "mavi" as const }]),
+      : [{ key: "email", etiket: t("f.email"), deger: <a href={mailtoHref(party.email)} style={linkStil} aria-label={tk("mail", { name: party.name })}>{party.email}</a>, d: LICON.globe, ton: "mavi" as const }]),
     ...(party.city === null ? [] : [{ key: "city", etiket: t("f.city"), deger: party.city, d: LICON.depo, ton: "camgobegi" as const }]),
     ...(party.address === null ? [] : [{ key: "address", etiket: t("f.address"), deger: party.address, d: LICON.depo, ton: "gri" as const }]),
   ];

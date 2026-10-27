@@ -133,7 +133,7 @@ describe("T-428 cari kartlar", () => {
     expect(await getParty(call(A.ownerUserId, A), made.id)).toMatchObject({ id: made.id, code, name: "Kart Cari", phone: "0212 555 00 22", city: "İstanbul", archived: false });
     expect(await getParty(call(PICKER, A), made.id)).toMatchObject({ id: made.id });
     await expect(getParty(call(B.ownerUserId, B), made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
-    await expect(getParty(call(B.ownerUserId, A), made.id)).rejects.toBeTruthy();
+    await expect(getParty(call(B.ownerUserId, A), made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(getParty(call(A.ownerUserId, A), randomUUID())).rejects.toMatchObject({ code: "NOT_FOUND" });
     for (const bad of ["", "bozuk", "' OR 1=1 --"]) await expect(getParty(call(A.ownerUserId, A), bad)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
     await setPartyArchived(call(A.ownerUserId, A), { id: made.id, expectedVersion: made.version, archived: true });
