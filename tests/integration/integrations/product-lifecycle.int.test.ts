@@ -116,3 +116,21 @@ it("source archival serializes against a concurrent new receipt without stock wr
  await archive;expect(await incoming).toEqual({ok:false});
  expect((await adm.query('SELECT count(*)::int n FROM stock_dimensions WHERE tenant_id=$1 AND item_id=$2',[A.tenantId,id])).rows[0]?.n).toBe(0);
 });
+
+it("token selection cannot bind an old response to a new OAuth configuration generation",async()=>{
+ for(const phase of ['token','after-token'] as const){
+  const code=phase==='token'?'993':'994',id=await fresh(code,B),sealer=createSealer(randomBytes(32).toString('hex'));
+  const box=sealSecrets(sealer,B.tenantId,'PARASUT',{clientId:'synthetic',clientSecret:'synthetic',accessToken:'synthetic',refreshToken:'synthetic',accessExpiresAt:String(Date.now()+7200000)});
+  await adm.query('UPDATE integrations SET credentials=$2::jsonb WHERE tenant_id=$1',[B.tenantId,JSON.stringify(box)]);
+  let changed=false;
+  const inTenant=async<T>(fn:Parameters<typeof withSystemTenant<T>>[3]):Promise<T>=>{
+    const value=await withSystemTenant(app,B.tenantId,'test.lifecycle',fn);
+    if(!changed&&((phase==='token'&&typeof value==='object'&&value!==null&&'credentials' in value)||(phase==='after-token'&&value===true))){
+      changed=true;await adm.query('UPDATE integration_oauth_apps SET version=gen_random_uuid() WHERE tenant_id=$1',[B.tenantId]);
+    }return value;
+  };
+  const client=new ParasutClient({fetch:async url=>response(new URL(String(url)).pathname==='/v4/me'?companyBody:{data:[{id:code,type:'products',attributes:{name:code,unit:'adet',archived:true}}],meta:{total_pages:1}})});
+  await runIntegrationSync({inTenant,client,sealer},{integrationId:ids.get(B.tenantId)!,flow:'PRODUCTS',trigger:'SCHEDULE'},null);
+  expect(changed).toBe(true);expect((await row(id,B)).status).toBe('ACTIVE');expect((await row(id,B)).source_state).toBe('ACTIVE');
+ }
+});
