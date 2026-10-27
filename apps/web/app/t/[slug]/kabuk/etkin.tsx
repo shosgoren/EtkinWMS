@@ -312,7 +312,10 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
       void finish();
       return;
     }
-    if (st.s === "think") return;
+    if (st.s === "think") {
+      downAt.current = 0;
+      return;
+    }
     downAt.current = Date.now();
     begin("listen");
   };
@@ -344,6 +347,19 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
         if (lastTap.current === now && rec.current === null) feedback.info(t("err.tooShort"));
       }, 460);
     }
+  };
+  // T-1103: sistem iptali (iOS kenar hareketi, gelen arama, kaydırma) bırakma DEĞİLDİR: kayıt gönderilmez, çift dokunuş sayılmaz.
+  const onPointerCancel = (): void => {
+    if (!opts.enabled || downAt.current === 0) return;
+    downAt.current = 0;
+    if (rec.current !== null) {
+      rec.current.cancel();
+      rec.current = null;
+    } else cancelWanted.current = true;
+    releaseWanted.current = false;
+    lastTap.current = 0;
+    window.clearTimeout(tapTimer.current);
+    setSt(card.current ?? { s: "idle" });
   };
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>): void => {
     if (!opts.enabled || (e.key !== "Enter" && e.key !== " ")) return;
@@ -675,7 +691,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
       </div>
     );
   }
-  return { live, handlers: { onPointerDown, onPointerUp, onPointerCancel: onPointerUp, onKeyDown }, overlay };
+  return { live, handlers: { onPointerDown, onPointerUp, onPointerCancel, onKeyDown }, overlay };
 }
 
 /** Onaylanan plan → MEVCUT sunucu eylemi (idempotency anahtarı kart başına sabit: çift dokunuş tek kayıt). */

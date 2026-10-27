@@ -370,7 +370,8 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
       icon={{ d: NICON.plug, color: "2F5DA8" }}
       testId="integrations"
       bar={{
-        back: { href: `${base}/settings`, testId: "kabuk-back" },
+        // T-1104: Entegrasyon, Ayarlar › Entegrasyonlar sekmesinin alt ekranıdır; geri oraya döner.
+        back: { href: `${base}/settings/baglantilar`, testId: "kabuk-back" },
         main,
       }}
       overlays={toast}
@@ -402,10 +403,6 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
             </span>
           </div>
         ) : null}
-        <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8">
-          <button type="button" className="btn n" data-testid="oauth-settings-open" onClick={()=>{if(data.demo){say("warn",t("demo"));return;}setConfigOpen(true);}}><Ico d={LICON.key} size={20}/>{t(oauth.configured?"oauth.configured":"oauth.setup")}</button>
-          {oauth.configured?<button type="button" className="btn n" onClick={openForm} aria-busy={busy==="oauth"} data-testid="oauth-connect"> <Ico d={NICON.plug} size={20}/>{t("oauth.connect")}</button>:null}
-        </KalipGrup>
         <KalipBaslik title={t("head")} hint={connected ? t("hintOn") : t("hintNone")} />
         {!connected ? (
           <div className="provs" role="list" aria-label={t("providerList")} data-testid="integrations-providers">
@@ -658,6 +655,12 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
             />
           </>
         )}
+        {/* T-1104 (kullanıcı 27 Ekim: "derle topla, pratik olsun"): uygulama bilgileri sık kullanılmaz — sayfanın en altında tek grup.
+            Bağlı değilken ayrı "Paraşüt ile bağlan" yok (ana BAĞLAN aynı işi yapar); bağlıyken OAuth ile yeniden bağlanma burada kalır. */}
+        <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8" testId="integrations-advanced">
+          <button type="button" className="btn n" data-testid="oauth-settings-open" onClick={()=>{if(data.demo){say("warn",t("demo"));return;}setConfigOpen(true);}}><Ico d={LICON.key} size={20}/>{t(oauth.configured?"oauth.configured":"oauth.setup")}</button>
+          {oauth.configured&&connected?<button type="button" className="btn n" onClick={openForm} aria-busy={busy==="oauth"} data-testid="oauth-connect"> <Ico d={NICON.plug} size={20}/>{t("oauth.connect")}</button>:null}
+        </KalipGrup>
         <KalipPencere
           open={formOpen}
           title={t("form.title", { provider: pn })}
