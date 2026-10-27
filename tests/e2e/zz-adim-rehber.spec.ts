@@ -17,7 +17,7 @@ test("T-1095 Ürünleri Excel ile aktar: odaklanır, işi yapınca ilerler, serb
   await expect(rehber).not.toContainText("İleri");
   // Perde bütün ekranı örter ama hedefin çevresi açıktır (delik).
   await expect(perde).toBeVisible();
-  await expect.poll(() => perde.evaluate((e) => (e as HTMLElement).style.clipPath)).toContain("polygon(evenodd");
+  await expect(perde).toHaveAttribute("style", /polygon\(evenodd/);
 
   // Kullanıcı işi yapar → rehber kendiliğinden ilerler.
   await page.getByTestId("baglantilar-alan").locator('[data-option="items"]').click();
