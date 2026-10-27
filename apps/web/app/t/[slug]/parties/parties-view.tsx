@@ -98,9 +98,10 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       feedback.error(r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }));
       return;
     }
+    // Listeye geçiş (`onClose` → router.push) sunucudan taze okur; ayrıca `router.refresh()` çağrılmaz: geçişle yarışıp eski `?edit=`
+    // adresini yeniden çizebiliyordu (T-1090: kart ekranından gelen `?edit=` arşivlenen cariyi `getParty` ile bulur, form açık kalırdı).
     if (party.archived) {
       onClose(t("restoredDone"));
-      router.refresh();
       return;
     }
     // T-436 (ALTIN-KURAL 10): arşivleme geri dönüşlüdür — onay sorulmaz; birkaç saniye "Geri al" (sunucuda arşivden çıkarır).
@@ -113,7 +114,6 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       else feedback.error(tr("undoFailed"));
       router.refresh();
     });
-    router.refresh();
   }
 
   const field = (k: Exclude<keyof Form, "kind">, extra: { required?: boolean; maxLength?: number; inputMode?: "tel" | "email" } = {}) => (
@@ -145,10 +145,7 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       lockedTitle={t("readOnly")}
       lockedSub={t("readOnlySub")}
       onSave={save}
-      onDone={() => {
-        onClose(t("saved"));
-        router.refresh();
-      }}
+      onDone={() => onClose(t("saved"))}
       onBack={() => onClose()}
       homeHref={base}
       saveShort={t("saveShort")}
