@@ -79,6 +79,8 @@ describe("yolculuk adımları", () => {
 
   it("delikli perde: çift-tek kırpma, hedef koordinatı", () => {
     expect(delikKirp({ x: 10.4, y: -3, w: 50, h: 40 })).toBe("polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 10px 0px, 60px 0px, 60px 37px, 10px 37px, 10px 0px)");
+    // T-1100: birden çok delik (iş formu + KAYDET) — her halka köşeden ayrı açılır.
+    expect(delikKirp([{ x: 10, y: 10, w: 10, h: 10 }, { x: 50, y: 60, w: 5, h: 5 }])).toBe("polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 10px 10px, 20px 10px, 20px 20px, 10px 20px, 10px 10px, 0 0, 50px 60px, 55px 60px, 55px 65px, 50px 65px, 50px 60px)");
   });
 });
 
