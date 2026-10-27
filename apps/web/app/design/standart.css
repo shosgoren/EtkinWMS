@@ -1247,6 +1247,8 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
 .dzk .dk-etkin {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
+}
+
 /* T-1100: Pano'da rehber girişi yalnız halka simgesi ("Merhaba" satırının sağında, satır kırılmaz). */
 .dzp .hello:has(.yikon) {
   flex-wrap: nowrap;
