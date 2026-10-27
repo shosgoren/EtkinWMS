@@ -232,27 +232,51 @@ describe("senkron", () => {
     const r1 = await sync(W, id);
     expect(r1.kind).toBe("ran");
     const counts = (r: typeof r1) => (r.kind === "ran" ? Object.fromEntries(r.flows.map((f) => [f.flow, [f.status, f.counts.created, f.counts.linked, f.counts.failed]])) : r);
-    expect(counts(r1)).toEqual({ WAREHOUSES: ["SUCCESS", 1, 0, 0], PRODUCTS: ["SUCCESS", 31, 0, 0], CONTACTS: ["SUCCESS", 2, 0, 0] });
-    // Tanınmayan birim ADET'e düşer (ERP birim adı serbest metin); stok miktarı yine yazılmaz.
+    expect(counts(r1)).toEqual({ WAREHOUSES: ["SUCCESS", 1, 0, 0], PRODUCTS: ["PARTIAL", 30, 0, 1], CONTACTS: ["SUCCESS", 2, 0, 0] });
+    // Tanınmayan birim reddedilir; stok miktarı yine yazılmaz.
     expect((await q<{ code: string }>("SELECT u.code FROM public.items i JOIN public.units u ON u.tenant_id = i.tenant_id AND u.id = i.base_unit_id WHERE i.tenant_id = $1 AND i.code = 'PRS-K2'", [W.tenantId]))[0]?.code).toBe("KG");
     const r2 = await sync(W, id);
-    expect(counts(r2)).toEqual({ WAREHOUSES: ["SUCCESS", 0, 0, 0], PRODUCTS: ["SUCCESS", 0, 0, 0], CONTACTS: ["SUCCESS", 0, 0, 0] });
+    expect(counts(r2)).toEqual({ WAREHOUSES: ["SUCCESS", 0, 0, 0], PRODUCTS: ["PARTIAL", 0, 0, 1], CONTACTS: ["SUCCESS", 0, 0, 0] });
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.items WHERE tenant_id = $1 AND code LIKE 'PRS-K%'", [W.tenantId]))[0]?.n).toBe(30);
-    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.items WHERE tenant_id = $1 AND code = 'PRS-BIRIMSIZ'", [W.tenantId]))[0]?.n).toBe(1);
-    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.external_refs WHERE tenant_id = $1 AND system = 'PARASUT' AND entity_type = 'ITEM'", [W.tenantId]))[0]?.n).toBe(31);
+    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.items WHERE tenant_id = $1 AND code = 'PRS-BIRIMSIZ'", [W.tenantId]))[0]?.n).toBe(0);
+    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.external_refs WHERE tenant_id = $1 AND system = 'PARASUT' AND entity_type = 'ITEM'", [W.tenantId]))[0]?.n).toBe(30);
     expect((await q("SELECT kind, tax_no FROM public.parties WHERE tenant_id = $1 AND code LIKE 'PRS-%' ORDER BY code", [W.tenantId]))).toEqual([{ kind: "CUSTOMER", tax_no: "1234567890" }, { kind: "SUPPLIER", tax_no: null }]);
     // I-04: ERP'den gelen stok_count / initial_stock_count hiçbir stok satırı yazmadı.
     expect(await stockFingerprint(W)).toEqual(before);
     // Ad değişimi güncellenir, kod/eşleme aynı kalır.
-    (fake.products[0] as { attributes: Record<string, unknown> }).attributes.name = "Yeni ad";
+    (fake.products[1] as { attributes: Record<string, unknown> }).attributes.name = "Yeni ad";
     const r3 = await sync(W, id, { flow: "PRODUCTS" });
     expect(r3.kind === "ran" && r3.flows[0]?.counts.updated).toBe(1);
     // Koşu günlüğü + her koşu audit'te.
-    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_runs WHERE tenant_id = $1 AND status = 'SUCCESS'", [W.tenantId]))[0]?.n).toBe(7);
+    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_runs WHERE tenant_id = $1 AND status = 'SUCCESS'", [W.tenantId]))[0]?.n).toBe(4);
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.synced'", [W.tenantId]))[0]?.n).toBe(7);
     // Biten koşu kaydı değişmez.
     const done = await asApp(W.tenantId, "UPDATE public.integration_runs SET status = 'RUNNING' WHERE tenant_id = $1", [W.tenantId]);
     expect(done).toMatchObject({ ok: false, code: "55000" });
+  });
+
+  it("ürün aktarımı KG hassasiyetini korur; kod veya bağlı kart birim uyuşmazlığında hiçbir kartı değiştirmez", async () => {
+    const W = await seedWorld(adm, reg, "ERPU");
+    const id = await connect(W);
+    await adm.query("INSERT INTO public.units (tenant_id, code, name) VALUES ($1, 'KG', 'Kilogram')", [W.tenantId]);
+    fake.products.push({ id: "901", attributes: { code: "UNIT-SAFE", name: "Granül", unit: "KG", stock_count: "125.50" } });
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    const before = await stockFingerprint(W);
+    const first = await sync(W, id);
+    expect(first.kind === "ran" && first.flows[0]?.counts.created).toBe(1);
+    expect(await q("SELECT quantity_scale, name FROM public.items WHERE tenant_id=$1 AND code='UNIT-SAFE'", [W.tenantId])).toEqual([{ quantity_scale: 6, name: "Granül" }]);
+    fake.products[0] = { id: "901", attributes: { code: "UNIT-SAFE", name: "Yanlış değişim", unit: "Adet" } };
+    const changed = await sync(W, id);
+    expect(changed.kind === "ran" && changed.flows[0]?.status).toBe("PARTIAL");
+    expect(changed.kind === "ran" && changed.flows[0]?.counts.failed).toBe(1);
+    expect(await q("SELECT quantity_scale, name FROM public.items WHERE tenant_id=$1 AND code='UNIT-SAFE'", [W.tenantId])).toEqual([{ quantity_scale: 6, name: "Granül" }]);
+    // Aynı kodlu ama henüz bağlanmamış kartta da birim kontrolü gerekir.
+    await adm.query("INSERT INTO public.items (tenant_id, code, name, base_unit_id) SELECT $1, 'UNLINKED-UNIT', 'Mevcut', id FROM public.units WHERE tenant_id=$1 AND code='ADET'", [W.tenantId]);
+    fake.products.splice(0, 1, { id: "902", attributes: { code: "UNLINKED-UNIT", name: "Farklı birim", unit: "KG" } });
+    const linked = await sync(W, id);
+    expect(linked.kind === "ran" && linked.flows[0]?.counts.failed).toBe(1);
+    expect(await q("SELECT external_id FROM public.external_refs WHERE tenant_id=$1 AND system='PARASUT' AND external_id='902'", [W.tenantId])).toEqual([]);
+    expect(await stockFingerprint(W)).toEqual(before);
   });
 
   it("Etkin -> ERP ürün (BOTH): aynı koddaki ERP ürününe bağlanır, yenisi bir kez yaratılır", async () => {
