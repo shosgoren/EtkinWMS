@@ -63,6 +63,7 @@ export const items = pgTable(
     sourceState: text("source_state").notNull().default("ACTIVE"),
     sourceDisposition: text("source_disposition").notNull().default("NONE"),
     sourceManagedArchive: boolean("source_managed_archive").notNull().default(false),
+    sourceChangedAt: timestamptz("source_changed_at"),
     sourceCheckedAt: timestamptz("source_checked_at"),
     sourceMissingSince: timestamptz("source_missing_since"),
     sourceMissingContext: text("source_missing_context"),

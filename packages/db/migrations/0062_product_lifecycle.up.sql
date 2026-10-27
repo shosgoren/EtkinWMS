@@ -3,6 +3,7 @@ ALTER TABLE public.items
  ADD COLUMN source_state text NOT NULL DEFAULT 'ACTIVE',
  ADD COLUMN source_disposition text NOT NULL DEFAULT 'NONE',
  ADD COLUMN source_managed_archive boolean NOT NULL DEFAULT false,
+ ADD COLUMN source_changed_at timestamptz,
  ADD COLUMN source_checked_at timestamptz,
  ADD COLUMN source_missing_since timestamptz,
  ADD COLUMN source_missing_context text;
@@ -13,8 +14,9 @@ ALTER TABLE public.items ADD CONSTRAINT items_source_lifecycle_chk CHECK (
  AND source_disposition IN ('NONE','PENDING','ARCHIVED','REMOVED')
  AND (source_state <> 'ACTIVE' OR (source_disposition='NONE' AND NOT source_managed_archive))
  AND (source_disposition NOT IN ('ARCHIVED','REMOVED') OR status='ARCHIVED')
+ AND (source_disposition<>'PENDING' OR source_changed_at IS NOT NULL)
  AND (source_disposition<>'REMOVED' OR source_state='DELETED')
  AND (NOT source_managed_archive OR (status='ARCHIVED' AND source_state<>'ACTIVE'))
 );
 CREATE INDEX items_source_check_idx ON public.items(tenant_id,source_checked_at,id);
-GRANT UPDATE(source_state,source_disposition,source_managed_archive,source_checked_at,source_missing_since,source_missing_context) ON public.items TO wms_app;
+GRANT UPDATE(source_state,source_disposition,source_managed_archive,source_changed_at,source_checked_at,source_missing_since,source_missing_context) ON public.items TO wms_app;

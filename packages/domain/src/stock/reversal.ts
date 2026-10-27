@@ -315,7 +315,7 @@ export async function reverseDocument(params: StockDocCallParams, input: Reverse
       // Stok doğan (artan) boyutlar: lokasyon ve ürün ACTIVE kalmalı (arşivli lokasyonda pozitif stok oluşamaz; T-243). Kilitten SONRA, FOR SHARE.
       const receiving = plan.entries.filter((e) => e.delta > 0n).map((e) => e.key);
       await assertLocationsActiveInWarehouse(tx, ctx.tenantId, [...new Set(receiving.map((k) => k.locationId))].sort(), header.warehouseId);
-      await assertItemsActive(tx, ctx.tenantId, [...new Set(receiving.map((k) => k.itemId))].sort(), { archivedDetail: "IN_USE" });
+      await assertItemsActive(tx, ctx.tenantId, [...new Set(receiving.map((k) => k.itemId))].sort(), { archivedDetail: "IN_USE", existingDocumentId: documentId });
 
       const dimIdByIdentity = new Map(locked.dimensions.map((d) => [dimensionIdentity(d.key), d.id]));
       const balanceByDim = new Map(locked.balances.map((b) => [b.stockDimensionId, b]));
