@@ -1719,7 +1719,28 @@
     "colName": "Warehouse",
     "colLocations": "Locations",
     "colState": "Status",
-    "colActions": "Actions"
+    "colActions": "Actions",
+    "loc": {
+      "title": "Location",
+      "back": "Back to locations",
+      "hero": "Location details",
+      "info": "Details",
+      "boxItems": "Items",
+      "boxReserved": "Reserved",
+      "pickBlocked": "Picking blocked",
+      "warehouse": "Warehouse",
+      "path": "Belongs to",
+      "pathRoot": "Warehouse root",
+      "kind": "Type",
+      "contents": "On this location",
+      "contentsEmpty": "This location is empty.",
+      "contentsMore": "Showing the first {n} items.",
+      "reservedShort": "{q} reserved",
+      "itemOpen": "Open item card of {name}",
+      "movesNone": "No movements on this location yet.",
+      "open": "Open location card of {name}",
+      "itemsN": "{n} items"
+    }
   },
   "field": {
     "title": "Field",

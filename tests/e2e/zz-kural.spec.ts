@@ -279,6 +279,36 @@ test("T-1090 Cari kartı: listeden açılır, bilgiler ve Düzenle", async ({ pa
   await expect(page.getByTestId("party-form")).toBeVisible();
 });
 
+// T-1082: raf yeri kartı — ağaçtaki satır kartı açar; şerit (ad h1, kod, Ürün çeşidi kutusu), bilgiler, raftakiler, son hareketler;
+// ≥ 44 px; üç boyutta taşma yok; geri ağaca döner.
+test("T-1082 Raf yeri kartı: ağaçtan açılır, şerit + raftakiler + son hareketler", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/warehouses");
+  await page.getByTestId("warehouse-card").first().locator("a").first().click();
+  await expect(page).toHaveURL(/\/warehouses\/[0-9a-f-]{36}$/);
+  const treeUrl = page.url();
+  await page.getByTestId("location-open").first().click();
+  await expect(page).toHaveURL(/\/warehouses\/[0-9a-f-]{36}\/locations\/[0-9a-f-]{36}$/);
+  const kart = page.getByTestId("location-kart");
+  await expect(kart).toBeVisible();
+  await expect(kart.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("kalip-code")).toBeVisible();
+  await expect(page.getByTestId("kalip-total")).toBeVisible();
+  await expect(page.getByTestId("location-contents")).toBeVisible();
+  await expect(page.getByTestId("location-moves")).toBeAttached();
+  expect(await smallTouchTargets(page, 44, "#kalip-main")).toEqual([]);
+  for (const [w, h] of [[820, 1180], [390, 844]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await expect(kart).toBeVisible();
+    const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
+    expect(tasma, `${w}px yatay taşma`).toBeLessThanOrEqual(0);
+  }
+  await page.getByTestId("location-back-tree").click();
+  await expect(page).toHaveURL(treeUrl);
+});
+
 // T-1052 (STANDART §4): form kalıbı masaüstünde — canlı ad şeridi formun üstünde (sağ sütun değil), gruplar yan yana; telefonda taşma yok.
 test("T-1052 Form: üst şerit ve yan yana gruplar", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });

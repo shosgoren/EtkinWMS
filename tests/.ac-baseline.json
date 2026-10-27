@@ -29,7 +29,7 @@
     "tests/integration/ac/ac-02-03-idempotency.int.test.ts": 76,
     "tests/integration/ac/ac-02-worker-event.int.test.ts": 35,
     "tests/integration/ac/ac-04-api-slug-catalog.int.test.ts": 21,
-    "tests/integration/ac/ac-04-api-slug-warehouse.int.test.ts": 44,
+    "tests/integration/ac/ac-04-api-slug-warehouse.int.test.ts": 51,
     "tests/integration/ac/ac-04-api-slug.int.test.ts": 200,
     "tests/integration/ac/ac-04-db-isolation.int.test.ts": 100,
     "tests/integration/ac/ac-04-export-route.int.test.ts": 50,
