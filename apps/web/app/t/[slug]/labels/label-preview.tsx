@@ -29,6 +29,10 @@ export interface LabelPreviewProps {
   readonly fileName: string;
   readonly templateVersion: string;
   readonly bridgeEnabled: boolean;
+  readonly batchSummary?: string;
+  readonly nextHref?: string;
+  readonly minWidth?: number;
+  readonly minHeight?: number;
 }
 
 const FIELD_CLS =
@@ -49,14 +53,16 @@ export function LabelNotice({ title, hint, action }: { title: string; hint?: str
   return <KalipBos title={title} {...(hint === undefined ? {} : { hint })} iconD={LICON.tag} testId="labels-notice" action={{ ...action, kind: "go" }} />;
 }
 
-export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion, bridgeEnabled }: LabelPreviewProps) {
+export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion, bridgeEnabled, batchSummary, nextHref, minWidth = 20, minHeight = 15 }: LabelPreviewProps) {
   const t = useTranslations("labels");
+  const tp = useTranslations("items.productLabels");
   const [width, setWidth] = useState(100);
   const [height, setHeight] = useState(50);
   const [mode, setMode] = useState<PaperMode>("a4");
   const settings = { width, height, mode, gap: 3 };
-  const valid = validPrintSettings(settings);
+  const valid = validPrintSettings(settings) && width >= minWidth && height >= minHeight;
   const custom = width !== 100 || height !== 50;
+  const invalidText = width < minWidth || height < minHeight ? tp("qrTooSmall", { width: minWidth, height: minHeight }) : t("invalid");
   // T-990 (ALTIN-KURAL "Kaydedilmemiş iş uyarısı"): ayarlanmış ama yazdırılmamış kâğıt/ölçü yarım iştir; Geri / Ana ekran / bağlantılar
   // uygulamanın cam kutusunu açar. Yazdırınca o ayarlar başlangıç sayılır.
   const router = useRouter();
@@ -91,7 +97,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
           aria: t("print"),
           d: LICON.printer,
           disabled: !valid,
-          disabledReason: t("invalid"),
+          disabledReason: invalidText,
           onClick: () => {
             feedback.minor();
             setIlk(settings);
@@ -104,7 +110,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
       }}
     >
       <section className="label-controls" aria-label={t("settingsTitle")} style={{ display: "flex", flexDirection: "column", gap: 10, flex: "none" }}>
-        <KalipBaslik title={t("settingsTitle")} hint={t("summary", { count: pages.length, version: templateVersion })} />
+        <KalipBaslik title={t("settingsTitle")} hint={batchSummary ?? t("summary", { count: pages.length, version: templateVersion })} />
         <KalipCipler
           label={t("paper")}
           chips={[
@@ -115,22 +121,23 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
         <div className="grid min-w-0 grid-cols-2 gap-3">
           <label className="flex min-w-0 flex-col gap-1 text-sm font-semibold">
             {t("width")}
-            <input className={FIELD_CLS} type="number" min="20" max="200" value={width} onChange={(e) => setWidth(Number(e.target.value))} />
+            <input className={FIELD_CLS} type="number" min={minWidth} max="200" value={width} onChange={(e) => setWidth(Number(e.target.value))} />
           </label>
           <label className="flex min-w-0 flex-col gap-1 text-sm font-semibold">
             {t("height")}
-            <input className={FIELD_CLS} type="number" min="15" max="280" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
+            <input className={FIELD_CLS} type="number" min={minHeight} max="280" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
           </label>
         </div>
         <p style={{ margin: 0, fontSize: 13 }}>{t("paperHint")}</p>
         {!valid ? (
           <p role="alert" className="pill warn" style={{ margin: 0, alignSelf: "flex-start", whiteSpace: "normal" }}>
-            {t("invalid")}
+            {invalidText}
           </p>
         ) : null}
+        {nextHref === undefined ? null : <KalipDaha href={nextHref} iconD={LICON.arrow} testId="labels-next">{tp("next")}</KalipDaha>}
         {custom ? <p style={{ margin: 0, fontSize: 13 }}>{t("customHint")}</p> : null}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {custom ? null : (
+          {custom || zpl === "" ? null : (
             <KalipDaha onClick={downloadZpl} iconD={LICON.moveIn} testId="labels-zpl">
               {t("downloadZpl")}
             </KalipDaha>
@@ -143,7 +150,7 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
         </div>
       </section>
       {valid ? <style>{printCss(settings)}</style> : null}
-      <section aria-label={t("preview")} className="label-sheet" data-testid="label-sheet">
+      <section aria-label={t("preview")} className="ulist label-sheet" data-testid="label-sheet">
         {pages.map((svg, i) => (
           // SVG: sunucuda kaçışlanmış, yalnızca svg/rect/text/g öğeleri (templates.test.ts XSS testi).
           <div key={i} className="label-page" style={{ width: `${width}mm`, height: `${height}mm` }} dangerouslySetInnerHTML={{ __html: svg }} />

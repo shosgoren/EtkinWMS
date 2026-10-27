@@ -22,6 +22,8 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-e
 import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
 import { KalipSecim, KalipSecimGrubu } from "../kalip/secim.tsx";
 import { eskiSurumBildir, eskiSurumMu, eylem } from "../kalip/surum.tsx";
+import { ItemFiltersView } from "./filters-view.tsx";
+import { extraFilterParams, type ItemExtraFilters } from "./filters.ts";
 import { CARD_VISUAL } from "./card-visual.ts";
 import { createItemAction, createUnitAction, loadMoreItemsAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
@@ -422,10 +424,11 @@ export function ItemsView({
   total?: number;
   /** T-1055'ten beri yalnız eski `?after=` adresleri için (kaydırmalı listede kullanılmaz). */
   firstPage?: boolean;
-  query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED"; readonly type: "" | CardType };
+  query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED"; readonly type: "" | CardType } & ItemExtraFilters;
 }) {
   const t = useTranslations("items");
   const tk = useTranslations("items.k");
+  const tp = useTranslations("items.productLabels");
   const tx = useTranslations("kalip");
   const tc = useTranslations("items.cardType");
   const te = useTranslations("easySetup.items");
@@ -453,11 +456,11 @@ export function ItemsView({
   const sonrakiImlec = guncel.cursor;
   const dahaYukle = useCallback(async (): Promise<boolean> => {
     if (sonrakiImlec === null) return true;
-    const r = await loadMoreItemsAction({ slug, q: query.q, status: query.status, cardType: query.type, after: sonrakiImlec });
+    const r = await loadMoreItemsAction({ slug, q: query.q, status: query.status, cardType: query.type, category: query.category, tracking: query.tracking, barcode: query.barcode, after: sonrakiImlec });
     if (!r.ok) return false;
     setEk((o) => (o.bas !== ilkItems ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], stock: { ...o.stock, ...r.data.stock }, cursor: r.data.nextCursor }));
     return true;
-  }, [sonrakiImlec, slug, query.q, query.status, query.type, ilkItems]);
+  }, [sonrakiImlec, slug, query.q, query.status, query.type, query.category, query.tracking, query.barcode, ilkItems]);
   // Kayda girip geri dönünce aynı uzunluk (sunucudan taze; yalnız sayı hatırlanır).
   useKalipDerinlik(items.length, sonrakiImlec !== null, dahaYukle);
   const sutunlar = useMemo<readonly KalipSutun<ItemsSatir>[]>(
@@ -479,9 +482,9 @@ export function ItemsView({
     feedback.minor();
     router.push(`${base}?new=1`);
   };
-  const filtered = query.q !== "" || query.status !== "" || query.type !== "";
+  const filtered = query.q !== "" || query.status !== "" || query.type !== "" || query.category !== "" || query.tracking !== "" || query.barcode !== "";
   const href = (next: { q?: string; status?: string; type?: string; after?: string }): string => {
-    const p = new URLSearchParams();
+    const p = extraFilterParams(query);
     const q = next.q ?? query.q;
     const status = next.status ?? query.status;
     const type = next.type ?? query.type;
@@ -510,7 +513,7 @@ export function ItemsView({
     }
     timer.current = window.setTimeout(() => {
       const mine = ++seq.current;
-      void searchItemsAction({ slug, q, limit: 8 }).then((r) => {
+      void searchItemsAction({ slug, q, limit: 8, category: query.category, tracking: query.tracking, barcode: query.barcode, ...(query.type === "" ? {} : { cardType: query.type }), status: query.status || "ACTIVE" }).then((r) => {
         if (mine === seq.current) setLive(r.ok ? withRenamed(r.data) : []);
       });
     }, 200);
@@ -525,7 +528,7 @@ export function ItemsView({
       return;
     }
     setSubmitting(true);
-    const r = await searchItemsAction({ slug, q, limit: 2 });
+    const r = await searchItemsAction({ slug, q, limit: 2, category: query.category, tracking: query.tracking, barcode: query.barcode, ...(query.type === "" ? {} : { cardType: query.type }), status: query.status || "ACTIVE" });
     setSubmitting(false);
     const hits = r.ok ? withRenamed(r.data) : [];
     if (hits.length === 1 && hits[0] !== undefined) {
@@ -546,7 +549,12 @@ export function ItemsView({
   }
 
   const visual = (type: CardType) => CARD_VISUAL[type];
+  const filteredHref = href({});
+  const labelsParams = new URLSearchParams(filteredHref.split("?")[1] ?? "");
+  labelsParams.set("products", "1");
   const chips: KalipCip[] = [
+    { id: "filters", label: tp("filter"), d: LICON.search, color: "2F5DA8", on: query.category !== "" || query.tracking !== "" || query.barcode !== "", href: `${filteredHref}${filteredHref.includes("?") ? "&" : "?"}filters=1` },
+    { id: "qr-labels", label: tp("print"), d: LICON.printer, color: "3B6A9E", on: false, href: `${home}/labels?${labelsParams.toString()}` },
     { id: "all", label: tk("all"), d: LICON.grid, color: "172E42", on: query.type === "" && query.status === "", href: href({ type: "", status: "" }) },
     // Kaynaktaki 2. çip (Kritik) yerinde Arşivli: telefonda ilk 4 çip görünür (kaynak `.fch:nth-child(n+5)` gizli); tür sırası kaynaktaki gibi HM · MM · YM.
     { id: "archived", label: tk("archived"), d: LICON.lock, color: "4E6476", on: query.status === "ARCHIVED", href: href({ status: query.status === "ARCHIVED" ? "" : "ARCHIVED" }) },
@@ -568,6 +576,8 @@ export function ItemsView({
     return { it, st, tn, archived, state, qty: st === undefined ? "" : fmtQty(st.have, locale) };
   });
 
+
+  if (params.get("filters") === "1") return <ItemFiltersView dark={dark} initial={{ category: query.category, tracking: query.tracking, barcode: query.barcode }} back={filteredHref} onDone={(target) => router.push(target)} onBack={() => router.push(filteredHref)} />;
 
   if (creating) {
     return (

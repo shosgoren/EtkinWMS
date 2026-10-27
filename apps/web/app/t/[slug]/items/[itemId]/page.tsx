@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getItem, itemInUse, listItemBarcodes, listItemConversions } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
+import { getProductSourceInfo } from "@wms/domain/integrations";
 import { getItemStockCard } from "@wms/domain/stock";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
@@ -59,6 +60,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
     const activeUnits = units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }));
     const baseUnit = units.find((u) => u.id === item.baseUnitId);
     // T-968: stok özeti (Nerede? + son hareketler) — okunamazsa bölümler çizilmez, kart yine açılır.
+    const sourceInfo = await getProductSourceInfo(call, item.id);
     const stockCard = await getItemStockCard(call, item.id).catch(() => null);
     const dark = temaKoyu(await cookies());
     const can = (p: Parameters<typeof hasPermission>[1]): boolean => hasPermission(current.roles, p, current.grants);
@@ -70,6 +72,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
           canManage={canManage}
           quick={{ label: can("stock.view"), count: can("document.create"), transfer: can("stock.post") }}
           stockCard={stockCard}
+          sourceInfo={sourceInfo}
           inUse={inUse}
           units={activeUnits}
           item={{

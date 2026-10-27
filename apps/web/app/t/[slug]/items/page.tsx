@@ -14,6 +14,7 @@ import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { ItemsView } from "./items-view.tsx";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
 import { loadItemsPage } from "./list-page.ts";
+import { parseExtraFilters } from "./filters.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,8 @@ async function LockedItems(slug: string) {
 export default async function ItemsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
   const sp = await searchParams;
+  const extra = parseExtraFilters(sp);
+  if (extra === null) notFound();
   const after = first(sp.after);
   const q = (first(sp.q) ?? "").slice(0, 128);
   const statusRaw = first(sp.status) ?? "";
@@ -72,7 +75,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
     canImport = hasPermission(current.roles, "data.import", current.grants);
-    const page = await loadItemsPage(call, { q, status, cardType, after });
+    const page = await loadItemsPage(call, { q, status, cardType, after, ...extra });
     rows = page.rows;
     units = page.units;
     nextCursor = page.nextCursor;
@@ -109,7 +112,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
         nextCursor={nextCursor}
         {...(total === undefined ? {} : { total })}
         firstPage={after === undefined || after === ""}
-        query={{ q: q.trim() === "" ? "" : q, status, type: cardType }}
+        query={{ q: q.trim() === "" ? "" : q, status, type: cardType, ...extra }}
       />
     </main>
   );

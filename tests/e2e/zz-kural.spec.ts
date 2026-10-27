@@ -359,9 +359,24 @@ test("T-1055 Liste: yalnız liste kayar, üst bölüm yerinde", async ({ page })
   expect(await cipler.count()).toBeGreaterThanOrEqual(6);
   expect(await page.evaluate<boolean>("(() => { const s = document.querySelector('.fchips'); return !!s && getComputedStyle(s).overflowX === 'auto' && s.scrollWidth > s.clientWidth; })()")).toBe(true);
   // T-1057: her süzgeç çipi sayfayı açar (kart türü çipi sunucuda çöküyordu; hiçbir test çipe basmıyordu).
-  for (const ad of await cipler.allInnerTexts()) {
-    await cipler.filter({ hasText: ad }).first().click();
+  const hedefler = await cipler.evaluateAll((elements) => elements.map((element) => ({ id: element.getAttribute("data-chip"), href: element.getAttribute("href") })));
+  for (const hedef of hedefler) {
+    expect(hedef.id).not.toBeNull();
+    expect(hedef.href).not.toBeNull();
+    // T-1064: Süz ve QR ayrı ekran açar; her bağlantı aynı başlangıç listesinden denenir.
+    await page.goto("/t/demo/items");
     await expect(ara).toBeVisible();
+    await page.getByRole("group", { name: "Süzgeç" }).locator(`[data-chip="${hedef.id}"]`).click();
+    await expect(page).toHaveURL(new URL(hedef.href!, page.url()).href);
+    if (hedef.id === "filters") {
+      await expect(page.getByTestId("item-filters")).toBeVisible();
+      await expect(page.getByLabel("Kategori adı", { exact: true })).toBeVisible();
+    } else if (hedef.id === "qr-labels") {
+      await expect(page.getByTestId("labels")).toBeVisible();
+      await expect(page.getByTestId("label-sheet").or(page.getByTestId("labels-notice"))).toBeVisible();
+    } else {
+      await expect(ara).toBeVisible();
+    }
     await expect(page.getByText("Bir şeyler ters gitti")).toHaveCount(0);
   }
   await page.goto("/t/demo/items");
