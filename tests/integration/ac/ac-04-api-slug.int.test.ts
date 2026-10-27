@@ -895,6 +895,8 @@ const TASK_ACTIONS: Record<string, Call> = {
   saveTaskAction: (slug) => taskActions.saveTaskAction!({ slug, taskId: bTask }),
   resetTaskProgressAction: (slug) => taskActions.resetTaskProgressAction!({ slug, taskId: bTask }),
   nextTaskAction: (slug) => taskActions.nextTaskAction!({ slug, afterTaskId: bTask }),
+  // T-1059: liste devamı (okuma); imleç B'nin görev kimliğini taşır — konum yalnız, tenant sınırı sorguda.
+  loadMoreTasksAction: (slug) => taskActions.loadMoreTasksAction!({ slug, q: "", after: `2026-01-01T00:00:00.000000Z~${bTask}` }),
 };
 
 /**
@@ -914,7 +916,14 @@ const RECEIPT_ACTIONS: Record<string, Call> = {
   availableAtLocationAction: (slug) => receiptActions.availableAtLocationAction!({ slug, locationId: bRcpt.kabul, itemId: fx.B.item }),
   itemUnitsAction: (slug) => receiptActions.itemUnitsAction!({ slug, itemId: fx.B.item }),
   compoundQuantityAction: (slug) => receiptActions.compoundQuantityAction!({ slug, itemId: fx.B.item, baseQuantity: "5" }),
+  // T-1059: liste devamı (okuma); B'nin kabul kimliğini imleçte taşır.
+  loadMoreReceiptsAction: (slug) => receiptActions.loadMoreReceiptsAction!({ slug, after: `2026-01-01T00:00:00.000000Z~${bRcpt.receipt}` }),
 };
+/**
+ * Liste devamı eylemleri kayıt KİMLİĞİ almaz (imleç yalnız konumdur): kendi slug'ında çağrı kendi kayıtlarını döndürür, B'ninkileri değil.
+ * Bu yüzden "kendi slug'ında B kimlikleri → NOT_FOUND" sınamasına girmez; çapraz slug ve yetkisiz üye sınamaları yine kapsar.
+ */
+const LIST_READS = new Set(["loadMoreReceiptsAction"]);
 
 /** T-977: sayım eylemleri; rastgele kimliklerle çağrılır — üyelik `limitVerifiedTenant`'ta çözülür, B'nin slug'ı ile var olmayan slug ayırt edilemez. */
 const COUNT_ACTIONS: Record<string, Call> = {
@@ -994,7 +1003,7 @@ describe("Server Action'lar", () => {
     });
   }
 
-  for (const [name, call] of Object.entries(RECEIPT_ACTIONS)) {
+  for (const [name, call] of Object.entries(RECEIPT_ACTIONS).filter(([n]) => !LIST_READS.has(n))) {
     it(`@AC-04 ${name}: A yöneticisi KENDİ slug'ında B'nin GERÇEK kimlikleriyle -> NOT_FOUND (var olmayan kimlikle aynı yanıt); A ve B'de etki yok`, async () => {
       const victim = { membership: B.managerMembership, invitation: bInvite.invitationId };
       const beforeA = await snapshot(A);
