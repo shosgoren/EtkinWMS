@@ -48,9 +48,9 @@ export async function panoChecks(page: Page): Promise<void> {
       await expect(menu.getByRole("menuitem", { name: "Çıkış yap" })).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(menu).toBeHidden();
-      // Yüzen kısayol: dokununca halka açılır.
-      await pano.getByTestId("pano-fab").click();
-      const halo = pano.getByRole("menu", { name: "Kısayollar" });
+      // Yüzen kısayol: dokununca halka açılır (T-1102: her ekranda, sayfa kökünde — portal).
+      await page.getByTestId("pano-fab").click();
+      const halo = page.getByRole("menu", { name: "Kısayollar" });
       await expect(halo).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(halo).toBeHidden();
