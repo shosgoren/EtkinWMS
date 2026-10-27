@@ -20,6 +20,7 @@ import { KICON } from "../../../design/kabuk-icons.ts";
 import type { KabukModule } from "./types.ts";
 import { useEtkin } from "./etkin.tsx";
 import { useYolSpot } from "../yolculuk/spot.ts";
+import { KabukKisayol } from "./kisayol.tsx";
 import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 
 export interface KabukContextValue {
@@ -514,6 +515,8 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotPr
           {etk.overlay}
         </div>
       </div>
+      {/* T-1102: yüzen kısayol her ekranda (alt çubukla birlikte). */}
+      <KabukKisayol dark={dark} />
     </div>
   );
 }

@@ -55,6 +55,8 @@ Her iş bu listeyle başlar ve PR açmadan önce tek tek kontrol edilir. Yeni de
 - PR birleştirme **yalnız `merge`** (merge commit). Squash, G-08 bekçisini (`MAIN_DIRECT_PUSH`) kırar ve deploy-vps durur (27 Ekim, PR 204).
 - Kart numarası iş başında alınır ve **hemen** uzak dala push edilerek sahiplenilir. Paralel oturumlar sırayla numara alır (27 Ekim'de T-1060 ve T-1063 iki kez çakıştı, PR iki kez yeniden açıldı). PR'dan önce `git ls-remote --heads origin`, açık PR başlıkları ve `docs/tasks/` yeniden taranır; çakışırsa boş, uzak bir numaraya geçilir.
 - Birleştirmeden önce PR tabanı güncel mi (`mergeable_state`) bakılır; çakışma varsa main dala birleştirilir, prepush yeniden koşar.
+- CSS çakışması çözülünce iki tarafın blokları da kalır ve her `{` kapanır: 27 Ekim'de (T-1103) düşen tek bir `}` web derlemesini kırdı. `design/css-butunluk.test.ts` (verify) parantez dengesini, kapanmamış yorum/dizeyi ve unutulmuş `<<<<<<<` işaretini yakalar; yine de web derlemesi (`pnpm --filter @wms/web build`) koşulur (T-1107).
+- Yerel e2e DB'si başka dalın yeni migration'ını almışsa (ör. main'den 0062) eski dalda `db:migrate` "bilinmeyen sürüm" ile durur: e2e'den önce `origin/main` dala birleştirilir (T-1107).
 
 **Ekran metni ve test**
 - Görünen bir yazıyı, etiketi ya da öğeyi kaldırmadan/taşımadan önce **bütün** `tests/` altında o metni ve seçiciyi ara (`grep -rn "<metin>" tests apps/web --include=*.ts`). prepush yalnız değişen e2e spec'lerini koşar; dokunulmayan spec'teki eski beklenti CI'da kırılır (27 Ekim: `demo-flow` kilit açıklaması). Metin `aria-label`'a taşındıysa test `toHaveAttribute("aria-label", …)` ile güncellenir.
@@ -70,6 +72,7 @@ Her iş bu listeyle başlar ve PR açmadan önce tek tek kontrol edilir. Yeni de
 - Docker sık düşer: `(nohup dockerd --registry-mirror=https://mirror.gcr.io >/tmp/dockerd.log 2>&1 &)` sonra `docker compose up -d --wait`. e2e "db:migrate ECONNREFUSED" = compose kapalı.
 - Boş kiracı hazırlığı (`global-setup` → MFA mağaza QR'ı) bu konteynerde düz main'de de kırılır; o spec'ler (empty-tenant, groups, excel-export, z-join-share…) yerelde koşmaz, CI'da koşar. Bu durum PR'da açıkça yazılır.
 - Arka planda test koşarken aynı çalışma ağacında dosya düzenlenmez; düzenlendiyse prepush yeniden koşar.
+- İki prepush/e2e aynı anda koşmaz (ortak Docker DB ve port; birim testleri zaman aşımına düşer, yeniden tohumlama yarışır). Sıraya alınır: `until grep -q PREPUSH_EXIT <önceki.log>; do sleep 20; done`. Art arda tur/demo spec'leri giriş hız sınırına takılabilir (IP başına); koşular arasında birkaç dakika beklenir (T-1107).
 
 **CI ve yayın**
 - main CI'da ilgisiz bir spec kırılırsa: aynı spec önceki main SHA'da geçmiş mi bak, bir kez yeniden koştur; ikinci kırmızı gerçektir. Kırılgan test BACKLOG'a yazılır (ör. `zz-stock-documents` sayım depo seçimi).

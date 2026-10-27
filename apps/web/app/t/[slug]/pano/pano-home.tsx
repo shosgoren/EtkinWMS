@@ -11,7 +11,7 @@ import type { WorkSectionKey, WorkSummary } from "@wms/domain/operations";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { appVersionOf } from "./app-version.ts";
-import { PanoShell, type PanoLink } from "./pano-shell.tsx";
+import { PanoShell } from "./pano-shell.tsx";
 
 /** Kaynak kart renkleri: Giriş ve Çıkış kaynaktaki kartın aynısı; diğerleri kaynağın paletinden (Transfer mor, Üretim kiremit, Sayım mavi). */
 const TILE: Record<WorkSectionKey, { bg: string; ink: string; ic: string }> = {
@@ -88,17 +88,6 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
   const brandSub = `${buyukHarf(tenantName, locale)} · ${buyukHarf(roleTitle, locale)}`;
   const ini = buyukHarf(firstName.trim()[0] ?? "?", locale);
 
-  const halo: PanoLink[] =
-    role === "counter"
-      ? [
-          { k: "next", label: t("nextCount"), color: "2F5DA8", d: PICON.sayim, href: `${base}/field/tasks` },
-          ...(canReport ? [{ k: "problem", label: tg("reportProblem"), color: "C62828", d: PICON.problem, action: "problem" as const }] : []),
-        ]
-      : [
-          { k: "scan", label: t("scanLabel"), color: "172E42", d: PICON.scan, href: `${base}/field` },
-          ...(stockPost ? [{ k: "in", label: t("manualIn"), color: "2F7D5B", d: PICON.giris, href: `${base}/stock/documents?new=STOCK_IN` }] : []),
-          ...(canReport ? [{ k: "problem", label: tg("reportProblem"), color: "C62828", d: PICON.problem, action: "problem" as const }] : []),
-        ];
 
   // Kaynak toplam iş halkası (yalnız saha): biten / tüm, atanmış yay = tüm (saha için tüm işler kendisine görünen işlerdir).
   const C = 94.25;
@@ -117,7 +106,6 @@ export async function PanoHome({ slug, role, summary, userName, tenantName, dark
       greet={greet}
       team={false}
       me={{ ini, name: userName, group: buyukHarf(roleTitle, locale), color: role === "counter" ? "2F5DA8" : "2F7D5B" }}
-      halo={halo}
       settingsHref={settingsManage ? `${base}/settings` : undefined}
       scanHref={`${base}/field`}
       canReport={canReport}

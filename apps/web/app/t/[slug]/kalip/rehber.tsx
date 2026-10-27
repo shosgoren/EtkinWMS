@@ -3,12 +3,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { intlDil } from '@wms/ui';
+import { feedback, intlDil } from '@wms/ui';
 import { JICON } from '../../../design/yolculuk-icons.ts';
 import { useKabuk } from '../kabuk/kabuk-bar.tsx';
 import { JOURNEY_OPEN_EVENT } from '../yolculuk/steps.ts';
 import { GUIDE_INSTRUCTIONS, currentGuide, guideHref, type OpGuide } from './rehber-plan.ts';
-import { KalipPerdeKatman } from './perde.tsx';
+import { KalipPerdeKatman, type PerdeDelik } from './perde.tsx';
 import { cikisSor } from './cikis.tsx';
 import { useModalFocus } from './odak.ts';
 import { ADIM_REHBER_EVENT, useAdimRehberleri } from './adim-rehber.tsx';
@@ -17,17 +17,26 @@ function RehberIkon({ d }: {
     d: string | readonly string[];
 }) { return <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{(typeof d === 'string' ? [d] : d).map(p => <path key={p} d={p}/>)}</svg>; }
 export const OP_GUIDE_EVENT = 'etkinwms:operation-guide';
-export function KalipRehberKart({ title, text, progress, target, onClose, onPrev, onNext, onSkip, style, head, children, closeTestId = "guide-close" }: {
+/**
+ * T-1105 (kullanıcı 27 Ekim: "yazı ve tarif değil, işi yaptırsın"): işlem rehberi kartı T-1095/T-1100 odaklı rehberle aynı — ortak buzlu
+ * perde yapılacak yerin çevresini delik bırakıp bütün ekranı örter, kart tek satır (adım · sesli · kapat); "Uygula" ve "Şimdilik kapat"
+ * yok. Kullanıcı delikteki gerçek işi yapınca (hedefe dokunup ekran bir sonraki adımın hedefine geçince ya da hedef kaybolunca) adım
+ * kendiliğinden ilerler; algılanamayan adımlar için küçük geri / ileri ok düğmeleri kalır. Perdeye dokunmak serbest bırakır (yüzen
+ * "Rehbere devam"). Eylem/izin/stok komutu çağırmaz.
+ */
+export function KalipRehberKart({ title, text, progress, target, nextTarget = null, onClose, onPrev, onNext, style, head, children, closeTestId = "guide-close" }: {
     title: string;
     text: string;
     progress: string;
     target: string | null;
+    /** Sonraki adımın hedefi (kendiliğinden ilerleme için); son adımda `null`. */
+    nextTarget?: string | null;
     onClose: () => void;
     onPrev: () => void;
     onNext: () => void;
     onSkip?: () => void;
     style?: CSSProperties;
-    /** Başlık satırının altında (ör. kurulum adım şeridi, T-1036). */
+    /** Başlık satırının altında. */
     head?: ReactNode;
     children?: ReactNode;
     closeTestId?: string;
@@ -35,59 +44,59 @@ export function KalipRehberKart({ title, text, progress, target, onClose, onPrev
     const t = useTranslations('operationGuide'), locale = useLocale();
     const ref = useRef<HTMLElement>(null);
     const [folded, setFolded] = useState(false);
-    const [spot, setSpot] = useState<CSSProperties | null>(null);
+    const [delik, setDelik] = useState<PerdeDelik | null>(null);
+    const dokundu = useRef(false);
+    const ilk = useRef<Element | null>(null);
+    useEffect(() => { setFolded(false); dokundu.current = false; ilk.current = null; }, [progress]);
     useEffect(() => {
-        const measure = (): void => { const e = target === null ? null : [...document.querySelectorAll<HTMLElement>(target)].find(el => el.getBoundingClientRect().width > 0); if (!e) {
-            setSpot(null);
-            return;
-        } const r = e.getBoundingClientRect(); setSpot({ left: r.x, top: r.y, width: r.width, height: r.height }); };
-        measure();
-        const id = window.setInterval(measure, 400);
-        return () => window.clearInterval(id);
-    }, [target]);
-    useEffect(() => { setFolded(false); }, [progress]);
-    useEffect(() => {
-        const outside = (e: Event): void => { if (e.type === 'focusin' && (!(e.target instanceof Element) || !e.target.matches('input,textarea,button,[role="combobox"],[role="option"]')))
-            return; if (e.target instanceof Node && !ref.current?.contains(e.target))
-            setFolded(true); };
-        document.addEventListener('pointerdown', outside, true);
-        document.addEventListener('focusin', outside, true);
-        return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('focusin', outside, true); window.speechSynthesis?.cancel(); };
-    }, []);
+        const gorunur = (sel: string | null): HTMLElement | null => sel === null ? null : [...document.querySelectorAll<HTMLElement>(sel)].find(el => el.getBoundingClientRect().width > 0) ?? null;
+        const olc = (): void => {
+            const e = gorunur(target);
+            if (e !== null && ilk.current === null) ilk.current = e;
+            // Kullanıcı hedefteki işi yaptı: sonraki adımın hedefi (başka bir öğe) göründü ya da (son adımda) hedef kayboldu → ilerle.
+            if (dokundu.current) {
+                const n = gorunur(nextTarget);
+                if ((n !== null && n !== ilk.current && (e === null || !n.contains(e))) || (nextTarget === null && e === null)) {
+                    dokundu.current = false;
+                    feedback.ok();
+                    onNext();
+                    return;
+                }
+            }
+            if (e === null) { setDelik(o => o === null ? o : null); return; }
+            const r = e.getBoundingClientRect();
+            const d = { x: Math.round(r.x - 6), y: Math.round(r.y - 6), w: Math.round(r.width + 12), h: Math.round(r.height + 12) };
+            setDelik(o => o !== null && o.x === d.x && o.y === d.y && o.w === d.w && o.h === d.h ? o : d);
+        };
+        olc();
+        const id = window.setInterval(olc, 300);
+        // İş yapıldı sayılan olaylar: hedefte bir alan değişti (seçildi/yazılıp bırakıldı), form gönderildi ya da düğme/bağlantıya dokunuldu.
+        // Alana yalnız dokunmak ya da harf yazmak ilerletmez.
+        const dokun = (ev: Event): void => {
+            if (!(ev.target instanceof Element) || target === null || ev.target.closest(target) === null) return;
+            if (ev.type === 'click' && ev.target.closest('button, a, [role="option"], [role="button"]') === null) return;
+            dokundu.current = true;
+        };
+        for (const k of ['change', 'submit', 'click'] as const) document.addEventListener(k, dokun, true);
+        return () => { window.clearInterval(id); for (const k of ['change', 'submit', 'click'] as const) document.removeEventListener(k, dokun, true); };
+    }, [target, nextTarget, onNext]);
+    useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
     useLayoutEffect(() => {
         const key = (e: KeyboardEvent): void => { const modal = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].some(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'); if (e.defaultPrevented || modal)
             return; if (e.key === 'Escape') {
             e.preventDefault();
             onClose();
-        }
-        else if (ref.current?.contains(document.activeElement) && !(document.activeElement instanceof HTMLInputElement) && !(document.activeElement instanceof HTMLTextAreaElement)) {
-            if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                onNext();
-            }
-            else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                onPrev();
-            }
         } };
         window.addEventListener('keydown', key);
         return () => window.removeEventListener('keydown', key);
-    }, [onClose, onNext, onPrev]);
-    function apply(): void {
-        setFolded(true);
-        const el = target === null ? null : document.querySelector<HTMLElement>(target);
-        el?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-        const focus = el?.matches('input,button,a,select,textarea') ? el : el?.querySelector<HTMLElement>('input,button,a,textarea');
-        focus?.focus({ preventScroll: true });
-    }
+    }, [onClose]);
     function speak(): void { if (!window.speechSynthesis)
-        return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(`${title}. ${text}`); u.lang = intlDil(locale); window.speechSynthesis.speak(u); }
-    return <>{!folded && spot !== null ? <span className="yhole" style={spot} aria-hidden="true"/> : null}<section ref={ref} className={`ycoach working${folded ? ' folded' : ''}`} style={style ?? { left: 12, bottom: 136 }} role="region" aria-label={t('title')} data-testid="working-guide" data-folded={folded}>
+        return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = intlDil(locale); window.speechSynthesis.speak(u); }
+    return <>{!folded && delik !== null ? <KalipPerdeKatman onClose={() => { feedback.minor(); setFolded(true); }} label={t('adim.free')} delik={delik}/> : null}<section ref={ref} className={`ycoach working${folded ? ' folded' : ''}`} style={{ ...(style ?? { left: 12, bottom: 136 }), zIndex: 42 }} role="region" aria-label={`${t('title')}: ${title}`} data-testid="working-guide" data-folded={folded}>
     {folded ? <><button className="ynb" type="button" onClick={() => setFolded(false)} data-testid="guide-expand">{t('resume')} · {progress.match(/\d+\/\d+/)?.[0] ?? progress}</button><button type="button" className="cbtn" onClick={onClose} aria-label={t('close')} data-testid={closeTestId}><RehberIkon d={JICON.close}/></button></> : <>
       <div className="cth"><span className="cstep" aria-live="polite">{progress}</span><button type="button" className="cbtn" onClick={speak} aria-label={t('speak')}><RehberIkon d={[JICON.speak, JICON.speakWave]}/></button><button type="button" className="cbtn" onClick={onClose} aria-label={t('close')} data-testid={closeTestId}><RehberIkon d={JICON.close}/></button></div>{head}
-      <b className="ctt">{title}</b><p className="ctx">{text}</p>{children}
-      <button type="button" className="ynb yapply" onClick={apply} data-testid="guide-apply">{t('apply')}</button>
-      <div className="ynav"><button type="button" className="ynb" onClick={onPrev} aria-label={t('prev')}><RehberIkon d={JICON.back}/></button><button type="button" className="yskip" onClick={onSkip ?? onClose}>{t(onSkip ? 'skipStep' : 'skip')}</button><button type="button" className="ynb go" onClick={onNext} data-testid="guide-next">{t('next')}<RehberIkon d={JICON.next}/></button></div>
+      <p className="ctx" data-testid="guide-text">{text}</p>{children}
+      <div className="ynav"><button type="button" className="ynb" onClick={onPrev} aria-label={t('prev')}><RehberIkon d={JICON.back}/></button><span/><button type="button" className="ynb" onClick={onNext} aria-label={t('next')} data-testid="guide-next"><RehberIkon d={JICON.next}/></button></div>
     </>}
   </section></>;
 }
@@ -188,9 +197,9 @@ export function KalipIslemRehberleri({ userId, slug, dark }: {
     const instruction = current === null ? null : GUIDE_INSTRUCTIONS[current.guide][current.step];
     return <div className={`dzj${dark ? ' dz-dark' : ''}`}>
     {picker ? <><KalipPerdeKatman onClose={() => setPicker(false)} label={t('close')}/><section className="ysheet" role="dialog" aria-modal="true" aria-label={t('title')} ref={pickerRef} data-testid="guide-picker"><div className="ysh"><b>{t('title')}</b><button type="button" className="ycls" onClick={() => setPicker(false)} aria-label={t('close')}>×</button></div><ol className="ylist">{aktar.map(r => <li className="yst yadim" key={`adim-${r}`} data-testid={`adim-sec-${r}`}><span className="yt"><b>{t(`adim.names.${r}`)}</b></span>{ADIM_KAYNAKLARI.map(k => <button key={k} type="button" className="yact" onClick={() => { setPicker(false); if (active !== null) save({ ...active, closed: true }); window.dispatchEvent(new CustomEvent(ADIM_REHBER_EVENT, { detail: { rehber: r, kaynak: k } })); }} data-testid={`adim-basla-${r}-${k}`}>{t(`adim.kaynak.${k}`)} ›</button>)}</li>)}{allowed.map(g => <li className="yst" key={g}><span className="yt"><b>{t(`names.${g}`)}</b><small>{t('fiveSteps')}</small></span><button type="button" className="yact" onClick={() => start(g)} data-testid={`guide-start-${g}`}>{t('show')} ›</button></li>)}</ol>{ctx?.guides?.setup.length ? <button type="button" className="ygo" onClick={() => { setPicker(false); window.dispatchEvent(new CustomEvent(JOURNEY_OPEN_EVENT, { cancelable: true, detail: 'list' })); }}>{t('setup')}</button> : null}</section></> : null}
-    {current !== null && instruction != null ? <KalipRehberKart title={t(`names.${current.guide}`)} text={t(`instructions.${instruction.key}`)} progress={t('step', { n: current.step + 1, total: 5 })} target={instruction.target} onClose={() => save({ ...current, closed: true })} onPrev={() => save({ ...current, step: Math.max(0, current.step - 1) })} onNext={() => current.step === 4 ? save({ ...current, closed: true, step: 0 }) : save({ ...current, step: current.step + 1 })}>
+    {current !== null && instruction != null ? <KalipRehberKart title={t(`names.${current.guide}`)} text={t(`instructions.${instruction.key}`)} progress={t('step', { n: current.step + 1, total: 5 })} target={instruction.target} nextTarget={GUIDE_INSTRUCTIONS[current.guide][current.step + 1]?.target ?? null} onClose={() => save({ ...current, closed: true })} onPrev={() => save({ ...current, step: Math.max(0, current.step - 1) })} onNext={() => current.step === 4 ? save({ ...current, closed: true, step: 0 }) : save({ ...current, step: current.step + 1 })}>
       {path !== current.path && !path.includes('/field/') && !path.endsWith('/stock/documents') ? <button type="button" className="yalt" onClick={() => cikisSor(() => router.push(`${current.path}${current.query ? '?' + current.query : ''}`))}>{t('open')}</button> : null}
-      <button type="button" className="yalt" onClick={() => save({ ...current, step: 0 })} data-testid="guide-restart">{t('restart')}</button><small>{t('learningOnly')}</small>
+      <button type="button" className="yalt" onClick={() => save({ ...current, step: 0 })} data-testid="guide-restart">{t('restart')}</button>
     </KalipRehberKart> : null}
   </div>;
 }

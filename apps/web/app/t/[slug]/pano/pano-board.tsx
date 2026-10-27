@@ -75,19 +75,6 @@ export async function PanoBoard(p: PanoBoardProps) {
   const C = 94.25;
   const arc = (x: number): string => `${Math.max(0.01, total === 0 ? 0 : (x / total) * C).toFixed(2)} ${C}`;
 
-  const halo: PanoLink[] = [
-    owner
-      ? { k: "reports", label: t("h.reports"), color: "0E7C7B", d: PICON.reports, href: `${base}/stock` }
-      : { k: "plan", label: t("h.plan"), color: "2F7D5B", d: PICON.plan, href: `${base}/tasks?status=OPEN` },
-    { k: "label", label: t("h.label"), color: "172E42", d: PICON.label, href: `${base}/labels` },
-    ...(p.stockPost
-      ? [
-          { k: "in", label: t("manualIn"), color: "2F7D5B", d: PICON.giris, href: `${base}/stock/documents?new=STOCK_IN` },
-          { k: "out", label: t("h.manualOut"), color: "B5552B", d: PICON.manualOut, href: `${base}/stock/documents?new=STOCK_OUT` },
-        ]
-      : []),
-    { k: "team", label: t("h.team"), color: "6C4BD8", d: PICON.teamH, href: p.usersManage ? `${base}/team` : `${base}/members` },
-  ];
   const teamLinks: PanoLink[] = [
     { k: "users", label: t("m.users"), color: "6C4BD8", d: PICON.team, href: p.usersManage ? `${base}/team` : `${base}/members` },
     ...(p.usersManage ? [{ k: "pending", label: t("m.pending"), color: "E56A00", d: PICON.clock, href: `${base}/members/devices` }] : []),
@@ -119,7 +106,6 @@ export async function PanoBoard(p: PanoBoardProps) {
       greet={greet}
       team
       me={{ ini, name: p.userName, group: buyukHarf(roleTitle, locale) + (owner ? "" : ` · ${where}`), color: owner ? "172E42" : "0E7C7B" }}
-      halo={halo}
       teamLinks={teamLinks}
       settingsHref={p.settingsManage ? `${base}/settings` : undefined}
       scanHref={`${base}/field`}

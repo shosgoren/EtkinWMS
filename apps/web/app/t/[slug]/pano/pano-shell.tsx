@@ -1,6 +1,6 @@
 "use client";
 // T-423 (I-18): Pano.dc.html uygulama kabuğu BİREBİR — `.wrap > .appzone > .app`, üst çubuk (`.top`: marka, `.tools`), alt cam çubuk
-// (T-958'den beri ortak `KabukBar`: Kabuk.dc.html Geri · Ana ekran · OKUT · Modüller · Etkin), sürüklenebilir yüzen kısayol (`.fab` + `.hback` + `.halo`), Ekip/Hesap menüsü (`.halo.tmenu`).
+// (T-958'den beri ortak `KabukBar`: Kabuk.dc.html Geri · Ana ekran · OKUT · Modüller · Etkin), Ekip/Hesap menüsü (`.halo.tmenu`). T-1102: yüzen kısayol (`.fab` + `.halo`, Düzenle seçici) ortak `KabukKisayol`a taşındı (her ekranda).
 // T-967 (Destek.dc.html, B-84/85/87): üst çubukta kişi ikonunun solunda yazısız Sorun bildir (`.tb-issue`, mevcut Sorun penceresi) ve Destek
 // (`.tb-help`: Destek penceresi / Taleplerim, okunmamış ekip yanıtında rozet + tek seferlik hareket); yüzen kısayol şimşek (`.fabb.zap`).
 // Ek sınıflar `design/destek-ek.css` (kap `.dzdx`).
@@ -11,7 +11,7 @@
 // uygulama içi tema düğmesi olmadığından tema Hesap menüsünde bir öğedir. "Düzenle" kısayol seçicisi (`.page > .pk > .pp`): yalnız yetkili
 // ekranlar listelenir, en çok 6; seçim kişisel kolaylık olarak tarayıcıda hatırlanır (kaynaktaki her öğede liste ikonu yerine öğenin ikonu).
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { dz } from "../../../design/pano-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
@@ -46,7 +46,6 @@ export interface PanoShellProps {
   readonly greet: string;
   readonly team: boolean;
   readonly me: { readonly ini: string; readonly name: string; readonly group: string; readonly color: string };
-  readonly halo: readonly PanoLink[];
   /** Ekip menüsü bağlantıları (yalnız yönetici rolleri; kaynak menuItems team). */
   readonly teamLinks?: readonly PanoLink[];
   readonly settingsHref?: string;
@@ -59,19 +58,8 @@ export interface PanoShellProps {
   readonly children: ReactNode;
 }
 
-const FAB_KEY = "etkin-pano-fab";
-const MINE_KEY = (slug: string): string => `etkin-pano-kisayol:${slug}`;
-const MAX_SHORTCUTS = 6;
 
-function Ico({ d, size, className = "ico", style }: { d: string; size: number; className?: string; style?: CSSProperties }) {
-  return (
-    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={style}>
-      <path d={d} />
-    </svg>
-  );
-}
-
-export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, halo, teamLinks = [], settingsHref, scanHref, canReport, bell, appVersion = null, children }: PanoShellProps) {
+export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, teamLinks = [], settingsHref, scanHref, canReport, bell, appVersion = null, children }: PanoShellProps) {
   const t = useTranslations("pano");
   const td = useTranslations("destek");
   // T-967: Destek penceresi (C) ve Taleplerim (D); okunmamış ekip yanıtı rozeti açılışta bir kez okunur.
@@ -82,38 +70,9 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
   const hasTickets = (support.tickets?.length ?? 0) > 0;
   const [dark, setDark] = useState(initialDark);
   const [menu, setMenu] = useState(false);
-  const [haloOpen, setHaloOpen] = useState(false);
-  // "Düzenle": kişinin seçtiği kısayollar (null = varsayılan: yetkili ilk 6) ve seçici sayfası taslağı.
-  const [mine, setMine] = useState<readonly string[] | null>(null);
-  const [picker, setPicker] = useState<readonly string[] | null>(null);
   const [problem, setProblem] = useState(false);
   const [online, setOnline] = useState(true);
-  // Kaynak başlangıç konumu (fx .86, fy .66); kişisel kolaylık olarak tarayıcıda hatırlanır.
-  const [pos, setPos] = useState<{ fx: number; fy: number }>({ fx: 0.86, fy: 0.66 });
-  const drag = useRef<{ r: DOMRect; moved: boolean; x: number; y: number } | null>(null);
-
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(MINE_KEY(slug));
-      if (saved !== null) {
-        const v = JSON.parse(saved) as unknown;
-        if (Array.isArray(v) && v.every((x) => typeof x === "string")) setMine(v as string[]);
-      }
-    } catch {
-      /* tarayıcı depolaması yoksa varsayılan kısayollar */
-    }
-  }, [slug]);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(FAB_KEY);
-      if (raw !== null) {
-        const v = JSON.parse(raw) as { fx?: unknown; fy?: unknown };
-        if (typeof v.fx === "number" && typeof v.fy === "number") setPos({ fx: Math.min(0.94, Math.max(0.06, v.fx)), fy: Math.min(0.9, Math.max(0.08, v.fy)) });
-      }
-    } catch {
-      /* tarayıcı depolaması yoksa varsayılan konum */
-    }
     // Kaynak: telefonda 24 px, tablet/masaüstü üst çubuğunda 26 px ikon (Destek.dc.html).
     try {
       setIconPx(window.matchMedia("(max-width: 699.98px)").matches ? 24 : 26);
@@ -131,16 +90,13 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
   }, []);
 
   useEffect(() => {
-    if (!menu && !haloOpen) return;
+    if (!menu) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        setMenu(false);
-        setHaloOpen(false);
-      }
+      if (e.key === "Escape") setMenu(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [menu, haloOpen]);
+  }, [menu]);
 
   const toggleTheme = useCallback(() => {
     setDark((d) => {
@@ -153,51 +109,6 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
   const closeMenu = useCallback(() => setMenu(false), []);
 
 
-  // Kaynak fabDown / fabMove / fabUp: 8 px'ten az oynarsa dokunuş (halka aç/kapa), fazlası sürükleme.
-  const fabDown = (e: PointerEvent<HTMLDivElement>): void => {
-    const app = e.currentTarget.closest(".app");
-    if (app === null) return;
-    drag.current = { r: app.getBoundingClientRect(), moved: false, x: e.clientX, y: e.clientY };
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      /* yakalama desteklenmiyor */
-    }
-  };
-  const fabMove = (e: PointerEvent<HTMLDivElement>): void => {
-    const d = drag.current;
-    if (d === null) return;
-    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 8) d.moved = true;
-    if (!d.moved) return;
-    const fx = Math.min(0.94, Math.max(0.06, (e.clientX - d.r.left) / d.r.width));
-    const fy = Math.min(0.9, Math.max(0.08, (e.clientY - d.r.top) / d.r.height));
-    setPos({ fx, fy });
-    setHaloOpen(false);
-  };
-  const fabUp = (): void => {
-    const d = drag.current;
-    drag.current = null;
-    if (d === null) return;
-    if (!d.moved) {
-      setHaloOpen((o) => !o);
-      setMenu(false);
-      return;
-    }
-    try {
-      window.localStorage.setItem(FAB_KEY, JSON.stringify(pos));
-    } catch {
-      /* hatırlanamaz; konum bu oturumda kalır */
-    }
-  };
-
-  const { fx, fy } = pos;
-  const fabStyle: CSSProperties = { left: `${(fx * 100).toFixed(1)}%`, top: `${(fy * 100).toFixed(1)}%` };
-  const haloStyle: CSSProperties = {
-    ...(fx > 0.5 ? { right: `calc(${(100 - fx * 100).toFixed(1)}% + 34px)` } : { left: `calc(${(fx * 100).toFixed(1)}% + 34px)` }),
-    ...(fy > 0.5 ? { bottom: `calc(${(100 - fy * 100).toFixed(1)}% - 24px)` } : { top: `calc(${(fy * 100).toFixed(1)}% - 24px)` }),
-  };
-
-
   const closeHelp = useCallback(() => {
     setHelp(null);
     setSentCode(null);
@@ -207,28 +118,6 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
     setSentCode(null);
     setHelp("form");
   }, []);
-
-  const pick = (h: PanoLink): void => {
-    setHaloOpen(false);
-    if (h.action === "problem") setProblem(true);
-  };
-  const shown = (mine === null ? halo : halo.filter((h) => mine.includes(h.k))).slice(0, MAX_SHORTCUTS);
-  const openPicker = (): void => {
-    setHaloOpen(false);
-    setPicker(shown.map((h) => h.k));
-  };
-  const togglePick = (k: string): void =>
-    setPicker((p) => (p === null ? p : p.includes(k) ? p.filter((x) => x !== k) : p.length >= MAX_SHORTCUTS ? p : [...p, k]));
-  const savePicker = (): void => {
-    if (picker === null) return;
-    setMine(picker);
-    try {
-      window.localStorage.setItem(MINE_KEY(slug), JSON.stringify(picker));
-    } catch {
-      /* hatırlanamaz; seçim bu oturumda kalır */
-    }
-    setPicker(null);
-  };
 
   return (
     <>
@@ -285,7 +174,6 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
                       onClick={() => {
                         feedback.minor();
                         setMenu(false);
-                        setHaloOpen(false);
                         setProblem(true);
                       }}
                       data-testid="pano-problem"
@@ -303,7 +191,6 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
                     onClick={() => {
                       feedback.minor();
                       setMenu(false);
-                      setHaloOpen(false);
                       setSentCode(null);
                       setHelp(hasTickets ? "list" : "form");
                     }}
@@ -323,114 +210,12 @@ export function PanoShell({ slug, dark: initialDark, brandSub, greet, team, me, 
                     open={menu}
                     onClick={() => {
                       setMenu((m) => !m);
-                      setHaloOpen(false);
                     }}
                   />
                 </nav>
               </header>
 
               <main className="inner">{children}</main>
-
-              {halo.length > 0 ? (
-                <div className="fab" style={fabStyle} onPointerDown={fabDown} onPointerMove={fabMove} onPointerUp={fabUp} onPointerCancel={fabUp}>
-                  {/* T-967 (B-87, Destek.dc.html öneri 1): Modüller ızgarasıyla karışmasın diye şimşek + mor cam. */}
-                  <button type="button" className={`fabb zap${haloOpen ? " on" : ""}`} aria-label={t("shortcuts")} aria-expanded={haloOpen} data-testid="pano-fab">
-                    <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d={DICON.zap} />
-                    </svg>
-                  </button>
-                </div>
-              ) : null}
-              {haloOpen ? (
-                <>
-                  <div className="hback" onClick={() => setHaloOpen(false)} />
-                  <div className="halo" style={haloStyle} role="menu" aria-label={t("shortcuts")}>
-                    {shown.map((h, i) => {
-                      const inner = (
-                        <>
-                          <i style={{ background: dz(h.color) }}>
-                            <Ico d={h.d} size={20} />
-                          </i>
-                          <span>{h.label}</span>
-                        </>
-                      );
-                      const style: CSSProperties = { animationDelay: `${i * 35}ms`, textDecoration: "none" };
-                      return h.href === undefined ? (
-                        <button key={h.k} type="button" className="hb" role="menuitem" style={style} onClick={() => pick(h)}>
-                          {inner}
-                        </button>
-                      ) : (
-                        <Link key={h.k} href={h.href} className="hb" role="menuitem" style={style}>
-                          {inner}
-                        </Link>
-                      );
-                    })}
-                    <button type="button" className="hb" role="menuitem" style={{ animationDelay: `${shown.length * 35}ms` }} onClick={openPicker} data-testid="pano-edit">
-                      <i style={{ background: dz("6A7F91") }}>
-                        <Ico d={PICON.plus} size={20} />
-                      </i>
-                      <span>{t("edit")}</span>
-                    </button>
-                  </div>
-                </>
-              ) : null}
-
-              {picker !== null ? (
-                <div className="page" style={{ zIndex: 22 }} role="dialog" aria-label={t("pickerTitle")} data-testid="pano-picker">
-                  <header className="top">
-                    <span className="brand">
-                      <span className="alic" style={{ background: dz("172E42"), width: 44, height: 44, borderRadius: 14 }}>
-                        <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                          <rect x="4" y="4" width="6.5" height="6.5" rx="1.8" />
-                          <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" />
-                          <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" />
-                          <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8" />
-                        </svg>
-                      </span>
-                      <span style={{ minWidth: 0 }}>
-                        <b>{t("pickerTitle")}</b>
-                        <small>{t("pickerSub", { n: MAX_SHORTCUTS })}</small>
-                      </span>
-                    </span>
-                  </header>
-                  <div className="inner" style={{ gap: 10 }}>
-                    <div className="pk">
-                      {halo.map((h) => {
-                        const on = picker.includes(h.k);
-                        return (
-                          <button key={h.k} type="button" className={`pp${on ? " on" : ""}`} aria-pressed={on} onClick={() => togglePick(h.k)} data-shortcut={h.k}>
-                            <span className="av" style={{ background: dz(h.color), borderRadius: 12 }}>
-                              <Ico d={h.d} size={20} />
-                            </span>
-                            <span style={{ minWidth: 0 }}>
-                              <b>{h.label}</b>
-                            </span>
-                            <span className="chk">
-                              <Ico d={PICON.check} size={16} />
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="mono" style={{ margin: 0, fontSize: 11, color: dz("4E6476") }}>
-                      {t("pickerNote")}
-                    </p>
-                  </div>
-                  <nav className="dock subdock" aria-label={t("dock")}>
-                    <div className="dockin">
-                      <button type="button" className="dk" aria-label={t("back")} onClick={() => setPicker(null)}>
-                        <Ico d={PICON.back} size={26} />
-                        <span>{t("backShort")}</span>
-                      </button>
-                      <button type="button" className="dk big scan" aria-label={t("save")} onClick={savePicker} data-testid="pano-picker-save">
-                        <Ico d={PICON.check} size={26} />
-                        <span>{t("saveShort")}</span>
-                      </button>
-                      <span />
-                    </div>
-                  </nav>
-                </div>
-              ) : null}
 
               {menu ? <HesapMenu team={team} me={me} links={teamLinks} dark={dark} onToggleTheme={toggleTheme} onClose={closeMenu} /> : null}
             </div>
