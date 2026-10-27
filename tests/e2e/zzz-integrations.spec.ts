@@ -29,6 +29,14 @@ if (!process.env.E2E_BASE_URL?.trim()) {
 
     const rejected=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state=invalid');
     expect(rejected.status()).toBe(400);expect(rejected.headers()['cache-control']).toBe('no-store');expect(rejected.headers()['referrer-policy']).toBe('no-referrer');expect(await rejected.text()).not.toContain('synthetic');
+    // A fabricated browser binding cannot authorize a callback; mismatches do not consume it, replay fails closed.
+    const binding={slug,id:'00000000-0000-4000-8000-000000000001',state:'a'.repeat(64),nonce:'b'.repeat(64)};
+    const origin=new URL(page.url()).origin;
+    const cookieName=origin.startsWith('https:')?'__Host-etkin-parasut-oauth':'etkin-parasut-oauth';
+    await page.context().addCookies([{name:cookieName,value:Buffer.from(JSON.stringify(binding)).toString('base64url'),url:origin,httpOnly:true,secure:origin.startsWith('https:'),sameSite:'Lax'}]);
+    const wrong=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+ 'c'.repeat(64),{maxRedirects:0});expect(wrong.status()).toBe(400);
+    const invalid=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+binding.state,{maxRedirects:0});expect(invalid.status()).toBe(303);expect(invalid.headers()['location']).not.toContain('synthetic');expect(invalid.headers()['location']).toContain('oauth_result=failed');
+    const replay=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+binding.state,{maxRedirects:0});expect(replay.status()).toBe(400);
     await page.getByTestId("oauth-settings-open").click();
     await expect(page.getByTestId("oauth-settings")).toBeVisible();
     await expect(page.getByTestId("oauth-callback")).toHaveValue("urn:ietf:wg:oauth:2.0:oob");
