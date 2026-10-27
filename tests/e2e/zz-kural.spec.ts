@@ -318,7 +318,9 @@ test("T-1092 karanlık mod: form alanı zemini ve çerçevesi grup kartından ay
   await page.goto("/t/demo/parties?new=1");
   const alan = page.locator(".dzf.dz-dark .sg .fld").first();
   await expect(alan).toBeVisible();
-  const r = await alan.evaluate((f) => ({ fld: getComputedStyle(f).backgroundColor, sg: getComputedStyle(f.closest(".sg") as Element).backgroundColor, outline: getComputedStyle(f).outlineStyle }));
+  const r = await page.evaluate<{ fld: string; sg: string; outline: string }>(
+    `(() => { const f = document.querySelector(".dzf.dz-dark .sg .fld"); const s = getComputedStyle(f); return { fld: s.backgroundColor, sg: getComputedStyle(f.closest(".sg")).backgroundColor, outline: s.outlineStyle }; })()`,
+  );
   expect(r.fld, "alan zemini grup kartından farklı").not.toBe(r.sg);
   expect(r.outline).toBe("solid");
 });
