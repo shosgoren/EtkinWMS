@@ -19,7 +19,7 @@
   overflow: hidden;
 }
 
-.label-page svg {
+.label-page > svg {
   display: block;
   width: 100%;
   height: 100%;

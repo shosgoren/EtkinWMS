@@ -157,8 +157,10 @@ button,input{font:inherit;color:inherit}
 .fch{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 14px 0 6px;border:0;border-radius:999px;background:rgba(255,255,255,.6);color:#30475A;cursor:pointer;font:800 13px/1 'Bricolage Grotesque',sans-serif;white-space:nowrap;transition:transform .15s}
 .fr-mobile .fch{min-height:40px;padding:0 10px 0 5px;gap:6px;font-size:12px}
 .fch:active{transform:scale(.95)}
+.qr-print i{background:#3B6A9E}
 .fch i{display:flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;border-radius:50%;color:#FFFFFF}
-.fr-mobile .fch i{width:30px;height:30px}
+.fr-mobile .qr-print i{background:#3B6A9E}
+.fch i{width:30px;height:30px}
 .fch em{font:600 11px/1 'IBM Plex Mono',monospace;font-style:normal;opacity:.75}
 .fch.on{background:#172E42;color:#FFFFFF}
 .ulist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
@@ -286,7 +288,7 @@ button,input{font:inherit;color:inherit}
             <div class="fchips" role="group" aria-label="Süzgeç">
               <!-- T-1064: ürün süzgeci ve seçili süzgeçteki standart QR etiketleri; ortak fch kalıbı. -->
               <button type="button" class="fch" aria-label="Süz"><i style="background: #2F5DA8"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M16 16l4.5 4.5"></path></svg></i>Süz</button>
-              <button type="button" class="fch" aria-label="QR etiket"><i style="background: #3B6A9E"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i>QR etiket</button>
+              <button type="button" class="fch qr-print" aria-label="QR etiket"><i style="background: #3B6A9E"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i>QR etiket</button>
               <sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
                 <button type="button" class="{{c.cls}}" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><i style="{{c.icStyle}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="{{c.d}}"></path></svg></i>{{c.label}}<em>{{c.n}}</em></button>
               </sc-for>
@@ -395,7 +397,7 @@ button,input{font:inherit;color:inherit}
             <div class="fchips" role="group" aria-label="Süzgeç">
               <!-- T-1064: ürün süzgeci ve seçili süzgeçteki standart QR etiketleri; ortak fch kalıbı. -->
               <button type="button" class="fch" aria-label="Süz"><i style="background: #2F5DA8"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M16 16l4.5 4.5"></path></svg></i>Süz</button>
-              <button type="button" class="fch" aria-label="QR etiket"><i style="background: #3B6A9E"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i>QR etiket</button>
+              <button type="button" class="fch qr-print" aria-label="QR etiket"><i style="background: #3B6A9E"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i>QR etiket</button>
               <sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
                 <button type="button" class="{{c.cls}}" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><i style="{{c.icStyle}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="{{c.d}}"></path></svg></i>{{c.label}}<em>{{c.n}}</em></button>
               </sc-for>

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, it, expect } from "vitest";
+import { toProductQrSvg } from "@wms/domain/labels";
 import { productQrDocument } from "./product-qr.ts";
 import { parseExtraFilters, domainExtraFilters, extraFilterParams } from "../items/filters.ts";
 
@@ -11,7 +12,7 @@ describe("ürün QR etiketi", () => {
     const svg = doc.pages[0]!;
     expect(doc.minWidth).toBeGreaterThan(20);
 
-    const qr = /viewBox="0 0 (\d+) (\d+)"><path d="([^"]+)"/.exec(svg)!;
+    const qr = /viewBox="0 0 (\d+) (\d+)"[^>]*><path d="([^"]+)"/.exec(svg)!;
     expect(doc.minWidth * 0.33 / Number(qr[1])).toBeGreaterThanOrEqual(0.25);
     expect(doc.minHeight * 0.66 / Number(qr[1])).toBeGreaterThanOrEqual(0.25);
     const scale = 5;
@@ -36,6 +37,7 @@ describe("ürün QR etiketi", () => {
     expect(first[0]).toContain("&lt;script&gt;");
     expect(() => productQrDocument([data], 1001)).toThrow();
     expect(() => productQrDocument([data], 0)).toThrow();
+    expect(() => toProductQrSvg(data, { size: 29, path: '<path onload="alert(1)"/>' })).toThrow();
     expect(() => productQrDocument([{ ...data, barcode: null }], 1)).toThrow();
     expect(() => productQrDocument([data, { ...data, barcode: "EWMS:PKG:1:other" }], 1)).toThrow();
     expect(() => productQrDocument([{ ...data, barcode: "x".repeat(257) }], 1)).toThrow();

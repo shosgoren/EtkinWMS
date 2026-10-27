@@ -715,6 +715,9 @@ from{width:0}
 .dzl .fch:active {
   transform:scale(.95);
 }
+.dzl .qr-print i {
+  background:var(--color-dz-x-dlgkjo);
+}
 .dzl .fch i {
   display:flex;
   align-items:center;
@@ -726,10 +729,13 @@ from{width:0}
   color:var(--color-dz-x-pppppp);
 }
 @media (max-width: 699.98px) {
-  .dzl.dzl .fch i {
-    width:30px;
-    height:30px;
+  .dzl.dzl .qr-print i {
+    background:var(--color-dz-x-dlgkjo);
   }
+}
+.dzl .fch i {
+  width:30px;
+  height:30px;
 }
 .dzl .fch em {
   font:600 11px/1 var(--font-plex-mono),monospace;

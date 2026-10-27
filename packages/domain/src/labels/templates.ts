@@ -212,6 +212,17 @@ export function toSvg(template: LabelTemplate, data: LabelData): string {
   return parts.join("");
 }
 
+/** T-1064: fiziksel ürün QR etiketi. Baskı renkleri diğer SVG şablonları gibi sabit; UI temasından bağımsızdır.
+ * QR üreticisi yalnız modül geometrisini sağlar; serbest SVG/HTML kabul edilmez.
+ */
+export function toProductQrSvg(data: ProductLabelData, qr: { readonly size: number; readonly path: string }): string {
+  if (!Number.isSafeInteger(qr.size) || qr.size < 29 || qr.size > 185 || qr.path.length > 700_000 || !/^(?:M\d+ \d+h1v1h-1z)+$/.test(qr.path)) throw new AppError("VALIDATION_FAILED");
+  for (const point of qr.path.matchAll(/M(\d+) (\d+)/g)) if (Number(point[1]) >= qr.size || Number(point[2]) >= qr.size) throw new AppError("VALIDATION_FAILED");
+  const short = (s: string, max: number): string => Array.from(s).length > max ? `${Array.from(s).slice(0, max - 1).join("")}…` : s;
+  const value = data.barcode ?? "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="50mm" viewBox="0 0 1000 500"><rect width="1000" height="500" fill="#fff"/><defs><clipPath id="productTextClip"><rect width="610" height="360"/></clipPath></defs><g fill="#000" font-family="Arial,sans-serif"><g clip-path="url(#productTextClip)"><text x="30" y="65" font-size="34" font-weight="bold">${escapeXml(short(data.code, 27))}</text><text x="30" y="135" font-size="30">${escapeXml(short(data.name, 30))}</text><text x="30" y="180" font-size="30">${escapeXml(short(Array.from(data.name).slice(29).join(""), 30))}</text><text x="30" y="265" font-size="28">${escapeXml(short(data.unit, 27))}</text></g><svg x="650" y="20" width="330" height="330" viewBox="0 0 ${qr.size} ${qr.size}" role="img" aria-label="${escapeXml(data.code)}" data-testid="product-label-qr"><path d="${qr.path}"/></svg><text x="30" y="440" font-size="22">${escapeXml(short(value, 72))}</text></g></svg>`;
+}
+
 // ---- Toplu belge ----
 function expand(datas: readonly LabelData[], copies: number): LabelData[] {
   if (!Number.isInteger(copies) || copies < 1) throw new AppError("VALIDATION_FAILED");

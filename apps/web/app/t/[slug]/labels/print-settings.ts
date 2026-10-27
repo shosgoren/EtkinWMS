@@ -7,6 +7,6 @@ export function validPrintSettings(s: PrintSettings): boolean {
 export function printCss(s: PrintSettings): string {
   if (!validPrintSettings(s)) throw new RangeError("Etiket ölçüsü kağıda sığmıyor veya geçersiz.");
   const size = s.mode === "a4" ? "A4 portrait" : `${s.width}mm ${s.height}mm`;
-  const flow = s.mode === "a4" ? "display:flex;flex-wrap:wrap;align-content:flex-start;" : "display:block;";
+  const flow = s.mode === "a4" ? "display:flex!important;flex-wrap:wrap;align-content:flex-start;" : "display:block!important;";
   return `@media print{@page{size:${size};margin:${s.mode === "a4" ? "10mm" : "0"}}.label-sheet{${flow}gap:${s.gap}mm}.label-page{width:${s.width}mm;height:${s.height}mm;break-inside:avoid;${s.mode === "label" ? "break-after:page;" : "break-after:auto;border:0.2mm dashed var(--color-ink-muted);"}}.label-page:last-child{break-after:auto;}}`;
 }
