@@ -142,7 +142,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     try {
       await db("INSERT INTO public.items(tenant_id,id,code,name,base_unit_id) SELECT t.id,$2,$3,$3,u.id FROM tenants t JOIN units u ON u.tenant_id=t.id AND u.code='ADET' WHERE t.slug=$1", [slug,importedId,importedName]);
       await expect(page.getByText(importedName,{exact:true})).toHaveCount(0);
-      await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+      await page.evaluate("window.dispatchEvent(new Event('focus'))");
       await expect(page.getByText(importedName,{exact:true}).first()).toBeVisible();
     } finally { await db("DELETE FROM public.items WHERE id=$1",[importedId]); }
 
