@@ -192,7 +192,7 @@ export function KalipSutunSec<T>({ sutunlar, secim }: { sutunlar: readonly Kalip
 }
 
 /** Sıralanabilir tablo (başlığa dokun: artan / azalan). Satır bir bağlantıdır (kartla aynı hedef). */
-export function KalipTablo<T>({ label, sutunlar, satirlar, anahtar, href, satirAria, testId, sonu }: { label: string; sutunlar: readonly KalipSutun<T>[]; satirlar: readonly T[]; anahtar: (r: T) => string; href: (r: T) => string; satirAria: (r: T) => string; testId?: string; /** T-1055: tablonun altında, kayan bölgenin içinde (ör. `KalipSonsuz`). */ sonu?: ReactNode }) {
+export function KalipTablo<T>({ label, sutunlar, satirlar, anahtar, href, satirAria, testId, sonu, onAc }: { label: string; sutunlar: readonly KalipSutun<T>[]; satirlar: readonly T[]; anahtar: (r: T) => string; href: (r: T) => string; satirAria: (r: T) => string; testId?: string; /** T-1055: tablonun altında, kayan bölgenin içinde (ör. `KalipSonsuz`). */ sonu?: ReactNode; /** T-1058: satır açılırken (gezinmeden önce) çağrılır; ör. aynı adreste açılan düzenleme için satırı tutmak. */ onAc?: (r: T) => void }) {
   const [sira, setSira] = useState<{ id: string; yon: 1 | -1 } | null>(null);
   const sirali = useMemo(() => {
     const s = sira === null ? undefined : sutunlar.find((x) => x.id === sira.id);
@@ -232,7 +232,7 @@ export function KalipTablo<T>({ label, sutunlar, satirlar, anahtar, href, satirA
               {sutunlar.map((s, i) => (
                 <td key={s.id} className={s.sayi === true ? "num" : undefined}>
                   {i === 0 ? (
-                    <Link href={href(r)} className="ktlink" aria-label={satirAria(r)}>
+                    <Link href={href(r)} className="ktlink" aria-label={satirAria(r)} {...(onAc === undefined ? {} : { onClick: () => onAc(r) })}>
                       {s.deger(r)}
                     </Link>
                   ) : (

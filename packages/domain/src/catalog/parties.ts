@@ -197,7 +197,9 @@ export async function listParties(
   const after = opts.after === undefined || opts.after === "" ? undefined : decodePartyCursor(opts.after);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const rows = await tx.execute<DbParty & { total: string }>(sql`
-      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version, count(*) OVER ()::text AS total
+      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version,
+             -- Toplam yalnız ilk sayfada sayılır (sonraki sayfalarda süzülen kümenin tamamını yeniden saymasın).
+             CASE WHEN ${after === undefined}::boolean THEN count(*) OVER () END::text AS total
         FROM public.parties
        WHERE tenant_id = ${m.tenantId}::uuid
          -- T-1037: arşiv görünümü YALNIZ arşivdekiler (ekran "Arşivdeki cariler" der; eskiden etkinler de geliyordu).

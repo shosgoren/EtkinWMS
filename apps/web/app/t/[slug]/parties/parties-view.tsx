@@ -351,6 +351,7 @@ export function PartiesView({
               satirAria={(p) => `${p.name} · ${p.code} · ${t(`kind.${p.kind}`)}`}
               testId="parties-table"
               sonu={sonsuz}
+              onAc={setAcilan}
             />
           ) : (
           <KalipKartListe label={t("title")}>
