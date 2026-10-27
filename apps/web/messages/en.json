@@ -4222,6 +4222,7 @@
     "chipArchived": "Archived",
     "clear": "Clear filter",
     "count": "{n} accounts",
+    "countMore": "{n}+ accounts",
     "firstParty": "Add the first party",
     "archivedEmpty": "No archived accounts",
     "colCode": "Code",

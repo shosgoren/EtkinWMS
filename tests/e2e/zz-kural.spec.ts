@@ -335,6 +335,10 @@ test("T-1055 Liste: yalnız liste kayar, üst bölüm yerinde", async ({ page })
     await expect(page.getByText("Bir şeyler ters gitti")).toHaveCount(0);
   }
   await page.goto("/t/demo/items");
+  // T-1058: Cariler aynı kalıpta — liste sonunda otomatik yükleme ögesi (demo verisi tek sayfa: devamı yok).
+  await page.goto("/t/demo/parties");
+  await expect(page.getByTestId("parties-sonsuz")).toHaveAttribute("data-devam", "0");
+  await page.goto("/t/demo/items");
   // Masaüstü tablo: başlık sabit (sticky), tablo kendi içinde kayar.
   await page.setViewportSize({ width: 1280, height: 700 });
   await page.getByTestId("kalip-gorunum").getByRole("radio", { name: "Liste" }).click();

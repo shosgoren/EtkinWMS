@@ -8,6 +8,7 @@ import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { temaKoyu } from "../../../design/theme.ts";
+import { PARTIES_PAGE_SIZE } from "./list-page.ts";
 import { PartiesView } from "./parties-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canEdit = hasPermission(current.roles, "settings.manage", current.grants);
-    data = await listParties({ db: getAppDb(), principal, tenantSlug: slug }, { q, archived, limit: 100 });
+    data = await listParties({ db: getAppDb(), principal, tenantSlug: slug }, { q, archived, limit: PARTIES_PAGE_SIZE });
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
@@ -46,7 +47,7 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   const jar = await cookies();
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <PartiesView slug={slug} dark={temaKoyu(jar)} canEdit={canEdit} q={q} archived={archived} items={data.items} total={data.total} />
+      <PartiesView slug={slug} dark={temaKoyu(jar)} canEdit={canEdit} q={q} archived={archived} items={data.items} total={data.total} nextCursor={data.nextCursor} />
     </main>
   );
 }
