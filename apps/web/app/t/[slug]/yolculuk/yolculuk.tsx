@@ -27,6 +27,8 @@ const SHORT_STEPS: readonly StepKey[] = ["cards", "shelves", "parties", "stock"]
 const POLL_MS = 6000;
 /** Açılınca deliği tamamen kaplayan iş yüzeyleri (form / menü). */
 const FOCUS_SURFACES: readonly string[] = ["warehouse-form", "bulk-form", "team-add-qr", "team-qr-new"];
+/** Ekranda açık iş formları (deliğe ayrıca eklenir). */
+const FORM_SEL = 'form.workflow-form, [data-testid$="-form"]';
 const GAP = 14;
 const EDGE = 12;
 
@@ -126,9 +128,12 @@ interface TipPos {
 }
 
 /** Balon konumu: hedefin altında (üst yarıda) ya da üstünde; yatayda ekran içinde; hedef yoksa alt çubuğun üstünde ortada. */
-function tipPosition(hole: PerdeDelik | null, vw: number, vh: number): TipPos {
+function tipPosition(holes: readonly PerdeDelik[] | null, vw: number, vh: number): TipPos {
   const w = Math.min(360, vw - EDGE * 2);
-  if (hole === null) return { style: { left: (vw - w) / 2, bottom: 136, width: w }, cls: "", arrow: null };
+  if (holes === null || holes.length === 0) return { style: { left: (vw - w) / 2, bottom: 136, width: w }, cls: "", arrow: null };
+  // Birden çok delik (form + kaydet): kart üstte, formun alanlarını örtmesin diye ekranın üst kenarında.
+  if (holes.length > 1) return { style: { left: (vw - w) / 2, top: EDGE, width: w }, cls: "", arrow: null };
+  const hole = holes[0]!;
   const cx = hole.x + hole.w / 2;
   const left = Math.min(Math.max(cx - w / 2, EDGE), vw - w - EDGE);
   const arrow = Math.min(Math.max(cx - left, 22), w - 22);
@@ -174,7 +179,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     const check = (): void => { const selectors = ["warehouse-form", "bulk-form", "team-add-qr", "team-qr-new", "aktar-new", "document-state"]; setSurface(selectors.find(k => { const e=document.querySelector(`[data-testid="${k}"]`);return e!==null&&e.getBoundingClientRect().width>0; })??null); };
     check();const id=window.setInterval(check,300);return()=>window.clearInterval(id);
   }, [pathname]);
-  const [hole, setHole] = useState<PerdeDelik | null>(null);
+  const [hole, setHole] = useState<readonly PerdeDelik[] | null>(null);
   const [vp, setVp] = useState({ w: 1280, h: 800 });
   const [override, setOverride] = useState<StepKey | null>(null);
   const [okStep, setOkStep] = useState<StepKey | null>(null);
@@ -349,29 +354,36 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     setYolSpot(null);
     const measure = (): void => {
       setVp((c) => (c.w === window.innerWidth && c.h === window.innerHeight ? c : { w: window.innerWidth, h: window.innerHeight }));
-      const el = [...document.querySelectorAll(focusSel)].find((x) => x.getBoundingClientRect().width > 0) ?? null;
-      if (el === null) {
-        setHole(null);
-        return;
-      }
-      // Hedefin açtığı menü (`data-tour-follow`) de delikte kalır: kullanıcı menüden seçebilsin (ör. Excel › İçeri al).
-      const follow = stopTarget === null || focusSel !== targetSel ? [] : [...document.querySelectorAll(`[data-tour-follow="${stopTarget}"]`)];
-      const rects = [el.getBoundingClientRect(), ...follow.map((f) => f.getBoundingClientRect()).filter((x) => x.width > 0 && x.height > 0)];
-      const r = rects.reduce((a, x) => {
-        const left = Math.min(a.left, x.left);
-        const top = Math.min(a.top, x.top);
-        const right = Math.max(a.right, x.right);
-        const bottom = Math.max(a.bottom, x.bottom);
-        return { left, top, right, bottom, width: right - left, height: bottom - top };
-      }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity, width: 0, height: 0 });
-      const shown = r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth && getComputedStyle(el).visibility !== "hidden";
-      if (!shown) {
-        setHole(null);
-        return;
-      }
       const pad = 8;
-      const next = { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 };
-      setHole((c) => (c !== null && Math.abs(c.x - next.x) < 1 && Math.abs(c.y - next.y) < 1 && Math.abs(c.w - next.w) < 1 && Math.abs(c.h - next.h) < 1 ? c : next));
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const delik = (r: { left: number; top: number; width: number; height: number }): PerdeDelik | null =>
+        r.width > 0 && r.height > 0 && r.top + r.height > 0 && r.top < vh && r.left + r.width > 0 && r.left < vw ? { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 } : null;
+      const next: PerdeDelik[] = [];
+      const el = [...document.querySelectorAll(focusSel)].find((x) => x.getBoundingClientRect().width > 0 && getComputedStyle(x).visibility !== "hidden") ?? null;
+      if (el !== null) {
+        // Hedefin açtığı menü (`data-tour-follow`) de delikte kalır: kullanıcı menüden seçebilsin (ör. Excel › İçeri al).
+        const follow = stopTarget === null || focusSel !== targetSel ? [] : [...document.querySelectorAll(`[data-tour-follow="${stopTarget}"]`)];
+        const rects = [el.getBoundingClientRect(), ...follow.map((f) => f.getBoundingClientRect()).filter((x) => x.width > 0 && x.height > 0)];
+        const r = rects.reduce((acc, x) => {
+          const left = Math.min(acc.left, x.left);
+          const top = Math.min(acc.top, x.top);
+          const right = Math.max(acc.right, x.right);
+          const bottom = Math.max(acc.bottom, x.bottom);
+          return { left, top, right, bottom, width: right - left, height: bottom - top };
+        }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity, width: 0, height: 0 });
+        const d = delik(r);
+        if (d !== null) next.push(d);
+      }
+      // Ekranda açık iş formu (ör. stok girişi, reçete) da açık kalır: alanlar doldurulabilsin, KAYDET delikte (ayrı delik).
+      const forms = [...document.querySelectorAll(FORM_SEL)].filter((f) => f.getBoundingClientRect().width > 0 && (el === null || (!el.contains(f) && !f.contains(el))));
+      for (const f of forms) {
+        if (forms.some((o) => o !== f && o.contains(f))) continue;
+        const d = delik(f.getBoundingClientRect());
+        if (d !== null) next.push(d);
+      }
+      const ayni = (c: readonly PerdeDelik[] | null): boolean => c !== null && c.length === next.length && c.every((x, i) => Math.abs(x.x - next[i]!.x) < 1 && Math.abs(x.y - next[i]!.y) < 1 && Math.abs(x.w - next[i]!.w) < 1 && Math.abs(x.h - next[i]!.h) < 1);
+      setHole((c) => (next.length === 0 ? null : ayni(c) ? c : next));
     };
     measure();
     const id = window.setInterval(measure, 300);
