@@ -41,8 +41,6 @@ export interface KabukContextValue {
   readonly canReport?: boolean;
   /** T-1039: Hesap menüsündeki Ayarlar bağlantısı — yalnız `settings.manage` sahibine (hedef sayfa ayrıca denetler). */
   readonly settingsHref?: string;
-  /** T-981b: kalıp üst çubuğu Excel düğmesi gösterimi — `data`: `data.import` (düğme + dışarı aktar), `master`: ayrıca `settings.manage` (depo/raf içe aktarma). */
-  readonly excel?: { readonly data: boolean; readonly master: boolean };
   /** T-979c: üyenin çalışma alanı sayısı (Hesap menüsünde "Çalışma alanı değiştir" yalnız birden fazlaysa). */
   readonly workspaces?: number;
   /** T-1002 (B-62): Etkin sesli komut açık mı (üyelik + `stock.view`; yazma eylemleri kendi izinlerini ayrıca ister). */
