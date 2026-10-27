@@ -5597,13 +5597,13 @@
     "reason": "Etkin sesli komut"
   },
   "yolculuk": {
-    "title": "Kurulum yolculuğu",
-    "titleDone": "Kurulum tamam",
+    "title": "Rehber",
+    "titleDone": "Rehber tamam",
     "sub": "{done}/{total} tamam · Sıradaki: {next}",
     "subDone": "{done}/{total} tamam · Depon hazır",
     "go": "Devam et",
     "finish": "Bitir",
-    "cardAria": "İlk kurulum yolculuğu: {done}/{total} tamam",
+    "cardAria": "Rehber: {done}/{total} tamam",
     "ringAria": "{done}/{total} tamam",
     "sheetSub": "Yaparak öğren · veri oluşunca kendiliğinden tamam",
     "close": "Kapat",
@@ -5815,7 +5815,7 @@
       "prodNo": "Üretim adımları gizlendi",
       "openingNotSet": "Açılış stoku ayarı Entegrasyon ekranında açılır"
     },
-    "mini": "Kurulum",
+    "mini": "Rehber",
     "miniSub": "{done}/{total} tamam",
     "replay": "Tekrar göster",
     "work": {

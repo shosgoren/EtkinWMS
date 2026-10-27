@@ -52,6 +52,10 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         mkdirSync(OUT, { recursive: true });
         const { slug } = await loginEmptyTenant(page, 'tour', { keepTour: true });
         await expect.poll(() => page.getByTestId('yol-layer').getAttribute('data-state')).toMatch(/^(on|off)$/);
+        // T-1100: Pano'da rehber girişi yalnız simge, "Merhaba" satırının sağında (yazı yok); kurulum bitmediği için görünür.
+        const giris = page.locator('.hello [data-testid="yol-card"]');
+        await expect(giris).toHaveAttribute('title', 'Rehber');
+        await expect(giris).not.toContainText('Kurulum');
         if (await page.getByTestId('yol-coach').isVisible()) {
             // T-1036: kartta bütün adımlar (kısa turda da) ve adım şeridi: şimdiki adım sarı, kalanlar numaralı.
             await expect(page.getByTestId('yol-kart')).toContainText('ADIM 1/');

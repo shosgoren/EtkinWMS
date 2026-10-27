@@ -63,18 +63,23 @@ export function YolHalka({ done, total, aria }: { done: number; total: number; a
   );
 }
 
-/** Pano küçük halkası (kaynak `.ymini`, ikincil): dokununca adım listesi. Kutlama kapatıldıysa çizilmez. */
-export function YolculukKart({ data: original, dark }: { data: JourneyData; dark: boolean }) {
+/**
+ * Pano küçük halkası (kaynak `.ymini`, ikincil): dokununca adım listesi (bitmiş adım da "Tekrar göster" ile yeniden yapılır). Kutlama
+ * kapatıldıysa çizilmez. T-1100 (kullanıcı 27 Ekim): adı "Rehber"; `ikon` ile yalnız halka (Pano'da "Merhaba" satırının sağında) ve
+ * yalnız bitmemişken.
+ */
+export function YolculukKart({ data: original, dark, ikon = false }: { data: JourneyData; dark: boolean; ikon?: boolean }) {
   const ctx = useKabuk();
   const data = filterJourney(original, ctx?.guides?.setup ?? STEP_KEYS);
   const t = useTranslations("yolculuk");
   const locale = useLocale();
-  if (data.dismissed) return null;
+  if (data.dismissed || (ikon && (data.complete || data.total === 0))) return null;
   return (
     <div className={`dzj${dark ? " dz-dark" : ""}`} style={{ display: "contents" }}>
       <button
         type="button"
-        className="ymini"
+        className={`ymini${ikon ? " yikon" : ""}`}
+        title={ikon ? t("mini") : undefined}
         aria-label={t("cardAria", { done: data.done, total: data.total })}
         data-testid="yol-card"
         data-done={data.done}
@@ -85,10 +90,12 @@ export function YolculukKart({ data: original, dark }: { data: JourneyData; dark
         }}
       >
         <YolHalka done={data.done} total={data.total} aria={t("ringAria", { done: data.done, total: data.total })} />
-        <span>
-          <b>{data.complete ? t("titleDone") : t("mini")}</b>
-          <small>{t("miniSub", { done: data.done, total: data.total }).toLocaleUpperCase(intlDil(locale))}</small>
-        </span>
+        {ikon ? null : (
+          <span>
+            <b>{data.complete ? t("titleDone") : t("mini")}</b>
+            <small>{t("miniSub", { done: data.done, total: data.total }).toLocaleUpperCase(intlDil(locale))}</small>
+          </span>
+        )}
       </button>
     </div>
   );

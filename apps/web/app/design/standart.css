@@ -1242,3 +1242,14 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
   column-gap: 8px;
   padding: 8px 10px 8px 14px;
 }
+
+/* T-1100: Pano'da rehber girişi yalnız halka simgesi ("Merhaba" satırının sağında, satır kırılmaz). */
+.dzp .hello:has(.yikon) {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.dzj .ymini.yikon {
+  align-self: center;
+  flex: none;
+  padding: 4px;
+}
