@@ -68,7 +68,6 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
     throw e;
   }
 
-  const nextHref = page.next === null ? null : `${returnTo}?${new URLSearchParams({ after: `${page.next.createdKey}~${page.next.id}` }).toString()}`;
   const dark = await kalipDark();
   const canCreate = hasPermission(roles, "document.create", grants);
   const activeWarehouses = warehouses.items.filter((w) => w.status === "ACTIVE").map((w) => ({ id: w.id, code: w.code, name: w.name }));
@@ -88,7 +87,7 @@ export default async function ReceiptsPage({ params, searchParams }: { params: P
         slug={slug}
         dark={dark}
         receipts={page.items}
-        nextHref={nextHref}
+        nextCursor={page.next === null ? null : `${page.next.createdKey}~${page.next.id}`}
         {...(page.total === undefined ? {} : { total: page.total })}
         canCreate={canCreate}
         canApprove={hasPermission(roles, "document.approve", grants)}

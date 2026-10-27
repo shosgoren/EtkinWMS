@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
-import { Banner, tarih } from "@wms/ui";
+import { getTranslations } from "next-intl/server";
+import { Banner } from "@wms/ui";
 import { AUDIT_ACTIONS, getAppDb } from "@wms/db";
 import { listAudit, type AuditFilters, type AuditPage } from "@wms/domain/audit/audit-query";
 import { AppError } from "@wms/shared/errors";
@@ -10,6 +10,7 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { AuditView } from "./audit-view.tsx";
+import { denetimSatirlari } from "./satirlar.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,6 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   if (principal === null) redirect(`/login?next=${encodeURIComponent(here)}`);
   const t = await getTranslations("auditLog");
   const ts = await getTranslations("serverErrors");
-  const locale = await getLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
 
   const filters: { from?: string; to?: string; action?: string; q?: string } = {};
   for (const k of ["from", "to", "action", "q"] as const) {
@@ -76,8 +76,6 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
     );
   }
   const timeZone = page?.timeZone ?? "UTC";
-  const fmt = (d: Date): string => tarih(d, locale, { dateStyle: "medium", timeStyle: "medium", timeZone });
-  const actionName = (a: string, known: boolean): string => (known ? t(`actions.${a}`) : t("actions.other"));
   // Hızlı çipler: bugünün tarihi kiracı saat diliminde (YYYY-AA-GG); süzgeç sunucuda aynı `from`/`to` alanlarıdır.
   const day = (d: Date): string => new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
   const now = new Date();
@@ -118,24 +116,13 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
         dark={dark}
         home={home}
         here={here}
-        rows={
-          page === null
-            ? null
-            : page.items.map((r) => ({
-                id: r.id,
-                when: fmt(r.occurredAt),
-                actor: r.actorName ?? t("system"),
-                action: r.action,
-                actionLabel: actionName(r.action, r.actionKnown),
-                record: r.entityType === null ? null : `${r.entityType}${r.entityId === null ? "" : ` · ${r.entityId}`}`,
-                reason: r.reason,
-              }))
-        }
+        rows={page === null ? null : await denetimSatirlari(page)}
+        slug={slug}
         filters={filters}
         actions={AUDIT_ACTIONS.map((a) => ({ id: a, label: t(`actions.${a}`) }))}
         quick={quick}
         exportHref={exportHref}
-        moreHref={page === null || page.nextCursor === null ? null : `${here}${qs({ cursor: page.nextCursor })}`}
+        nextCursor={page === null ? null : page.nextCursor}
         banner={banner}
       />
     </main>

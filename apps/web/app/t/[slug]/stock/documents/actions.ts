@@ -4,13 +4,15 @@ import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import { transferBetweenWarehouses } from "@wms/domain/operations";
 import { getItem } from "@wms/domain/catalog";
-import { approveDocument, cancelDocument, createStockDocument, postDocument, searchStockChoices } from "@wms/domain/stock";
+import { approveDocument, cancelDocument, createStockDocument, listStockDocuments, postDocument, searchStockChoices } from "@wms/domain/stock";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../../lib/action-guard.ts";
+import { belgeKartlari } from "./kartlar.ts";
 const guard=createProductionGuard(()=>headers());
 const slug=z.string().min(1).max(63), uuid=z.string().uuid();
 const create=z.object({slug,clientKey:uuid,kind:z.enum(["STOCK_IN","STOCK_OUT"]),warehouseId:uuid,itemId:uuid,locationId:uuid,
   quantity:z.string().min(1).max(32),lotId:uuid.optional(),serialId:uuid.optional(),reason:z.string().min(1).max(500)}).strict();
 const transition=z.object({slug,clientKey:uuid,documentId:uuid,expectedVersion:z.number().int().positive(),operation:z.enum(["approve","post","cancel"])}).strict();
+const more=z.object({slug,after:z.string().min(1).max(64)}).strict();
 const search=z.object({slug,kind:z.enum(["warehouse","item","location","lot","serial"]),q:z.string().max(128),warehouseId:uuid.optional(),itemId:uuid.optional()}).strict();
 function context(slug: string,ctx: ActionContext) {
   if(!ctx.principal) throw new Error("principal required");
@@ -46,4 +48,12 @@ export async function transferStockAction(raw:unknown) {
   const params=context(input.slug,ctx);await limitVerifiedTenant({...params,permission:"stock.post"},ctx);
   return transferBetweenWarehouses({...params,clientKey:input.clientKey},{...input,requestId:ctx.requestId});
  })(raw);
+}
+
+/** T-1059: liste sonuna yaklaşınca sonraki 50 belge (kart verisi sunucuda). Okuma yetkisi ve depo kapsamı domain okuyucusunda. */
+export async function loadMoreDocumentsAction(raw: unknown) {
+  return guard({schema:more},async(input,ctx)=>{
+    const list=await listStockDocuments(context(input.slug,ctx),{after:input.after});
+    return {kartlar:await belgeKartlari(list.items,`/t/${encodeURIComponent(input.slug)}/stock/documents`),devam:list.next};
+  })(raw);
 }

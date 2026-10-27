@@ -338,6 +338,17 @@ test("T-1055 Liste: yalnız liste kayar, üst bölüm yerinde", async ({ page })
   // T-1058: Cariler aynı kalıpta — liste sonunda otomatik yükleme ögesi (demo verisi tek sayfa: devamı yok).
   await page.goto("/t/demo/parties");
   await expect(page.getByTestId("parties-sonsuz")).toHaveAttribute("data-devam", "0");
+  // T-1059: belgeler, görevler, beklenen teslimler, denetim kaydı — sayfa düğmesi yok; liste doluysa sonunda otomatik yükleme ögesi.
+  for (const [adres, kart, sonsuz] of [
+    ["/t/demo/stock/documents", "document-card", "documents-sonsuz"],
+    ["/t/demo/tasks", "task-row", "tasks-sonsuz"],
+    ["/t/demo/receipts", "receipt-row", "receipts-sonsuz"],
+    ["/t/demo/audit", "audit-row", "audit-sonsuz"],
+  ] as const) {
+    await page.goto(adres);
+    await expect(page.getByText("Bir şeyler ters gitti")).toHaveCount(0);
+    if ((await page.getByTestId(kart).count()) > 0) await expect(page.getByTestId(sonsuz)).toBeAttached();
+  }
   await page.goto("/t/demo/items");
   // Masaüstü tablo: başlık sabit (sticky), tablo kendi içinde kayar.
   await page.setViewportSize({ width: 1280, height: 700 });

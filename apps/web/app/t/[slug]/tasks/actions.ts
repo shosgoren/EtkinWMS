@@ -4,9 +4,10 @@
 // Sayaç doğrulanmış tenant kimliğiyle tüketilir. Bu dosyada DB bağlantısı açılmaz (`getAppDb` yalnızca domain'e verilir).
 import { headers } from "next/headers";
 import { z } from "zod";
+import { AppError } from "@wms/shared/errors";
 import { getAppDb } from "@wms/db";
 import type { Permission } from "@wms/domain/identity/permissions";
-import { assignTask, beginSave, cancelTask, claimTask, getTaskProgress, nextTaskFor, recordTaskStep, resetTaskProgress, savePutawayTask } from "@wms/domain/operations";
+import { TASK_KINDS, TASK_STATUSES, assignTask, beginSave, cancelTask, claimTask, getTaskProgress, listTasks, nextTaskFor, recordTaskStep, resetTaskProgress, savePutawayTask } from "@wms/domain/operations";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 
 const guardedAction = createProductionGuard(() => headers());
@@ -32,6 +33,11 @@ const recordStepSchema = z.discriminatedUnion("step", [
 ]);
 const saveProgressSchema = z.object({ slug: slugSchema, taskId: idSchema, expectedVersion: versionSchema.optional() }).strict();
 const nextTaskSchema = z.object({ slug: slugSchema, afterTaskId: idSchema.optional() }).strict();
+const moreTasksSchema = z
+  .object({ slug: slugSchema, kind: z.enum(TASK_KINDS).optional(), status: z.enum(TASK_STATUSES).optional(), q: z.string().max(100), after: z.string().min(3).max(200) })
+  .strict();
+/** Yönetici listesinin sayfa boyu (T-1059): sayfa bileşeni ile aynı. */
+const TASKS_PAGE_SIZE = 30;
 
 async function writeContext(slug: string, permission: Permission, ctx: ActionContext) {
   const principal = ctx.principal;
@@ -125,5 +131,28 @@ export async function nextTaskAction(raw: unknown) {
     const params = await writeContext(input.slug, "stock.post", ctx);
     const task = await nextTaskFor(params, input.afterTaskId === undefined ? {} : { afterTaskId: input.afterTaskId });
     return { task };
+  })(raw);
+}
+
+/**
+ * T-1059: görev listesinin sonuna yaklaşınca sonraki sayfa (okuma, `stock.view`; imleç ve kapsam domain'de doğrulanır).
+ * Atanan kişinin adı istemcide, ekranın zaten aldığı üye listesinden eşlenir (burada üye listesi yeniden okunmaz).
+ */
+export async function loadMoreTasksAction(raw: unknown) {
+  return guardedAction({ schema: moreTasksSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const i = input.after.indexOf("~");
+    if (i <= 0) throw new AppError("VALIDATION_FAILED");
+    const after = { createdKey: input.after.slice(0, i), id: input.after.slice(i + 1) };
+    const q = input.q.trim();
+    const page = await listTasks(
+      { db: getAppDb(), principal, tenantSlug: input.slug },
+      { ...(input.kind === undefined ? {} : { kind: input.kind }), ...(input.status === undefined ? {} : { status: input.status }), ...(q === "" ? {} : { q }), after, limit: TASKS_PAGE_SIZE, withTotal: false },
+    );
+    return {
+      items: page.items.map((x) => ({ id: x.id, kind: x.kind, status: x.status, version: x.version, quantity: x.quantity, assignedMembershipId: x.assignedMembershipId })),
+      next: page.next === null ? null : `${page.next.createdKey}~${page.next.id}`,
+    };
   })(raw);
 }

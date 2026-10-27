@@ -3,7 +3,7 @@
 // sunucuda `document.approve` ister (A-132). Atanabilir kişiler sunucuda hesaplanır (`kinds`: kişinin yapabildiği görev türleri).
 // Sunucu reddi neden + sonraki eylemle gösterilir.
 // T-971 (B-63, I-18): LİSTE kalıbı (KalipListe.dc.html): tür ve durum süzgeç çipleri (adresi değiştirir: `?kind=` / `?status=`), görev kartları,
-// kartın altında Ata / İptal et eylem satırı (kart içine düğme gömülmez), sayfalama `KalipDaha`.
+// kartın altında Ata / İptal et eylem satırı (kart içine düğme gömülmez), sayfalama liste sonunda kendiliğinden (T-1059, `KalipSonsuz`).
 // T-990 (B-97): Ata ve İptal et pencere değil TAM EKRAN FORMDUR (`KalipFormEkran`; adres `?assign=<id>` / `?cancel=<id>`, liste süzgeci ve
 // sayfa imleci korunur). Kişi seçimi ortak `KalipSecim` (çok kişide aramalı seçim sayfası); iptal gerekçesi zorunlu alan kuralıdır.
 // T-978: arama (`.lsearch`, GET `q`: ürün kodu/adı, raf, atanan kişi — sunucuda listTasks; çiplerle birlikte çalışır).
@@ -11,7 +11,7 @@
 // kendi oluşturma işlemi yok — görevler mal kabul / sipariş / sayımdan doğar).
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
@@ -21,8 +21,9 @@ import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { fmtQty } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
+import { KalipSonsuz, useKalipDerinlik } from "../kalip/tablo.tsx";
 import { kdz } from "../kalip/tokens.ts";
-import { assignTaskAction, cancelTaskAction } from "./actions.ts";
+import { assignTaskAction, cancelTaskAction, loadMoreTasksAction } from "./actions.ts";
 
 export type TaskKindValue = "PUTAWAY" | "PICK" | "REPUTAWAY" | "COUNT";
 export type TaskStatusValue = "OPEN" | "ASSIGNED" | "DONE" | "CANCELLED";
@@ -80,9 +81,8 @@ export interface TasksViewProps {
   readonly members: readonly TaskMemberView[];
   readonly kindFilter: TaskKindValue | "";
   readonly statusFilter: TaskStatusValue | "";
-  /** Sonraki sayfa bağlantısı (keyset imleci sorgu dizesinde); yoksa `null`. */
-  readonly nextHref: string | null;
-  readonly firstPage: boolean;
+  /** T-1059: sonraki sayfanın imleci (`createdKey~id`); yoksa `null`. Sonraki sayfalar liste sonunda kendiliğinden gelir. */
+  readonly nextCursor: string | null;
   /** T-978: sunucu araması; boş = tümü. */
   readonly search?: string;
   /** Sunucudan süzgece uyan toplam görev sayısı (ALTIN-KURAL 15); yoksa sayfadaki satır sayısı. */
@@ -209,7 +209,7 @@ function TaskCancelForm({ slug, dark, task, onClose }: { slug: string; dark: boo
   );
 }
 
-export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, statusFilter, nextHref, firstPage, search = "", total }: TasksViewProps) {
+export function TasksView({ slug, dark, canManage, tasks: ilkGorevler, members, kindFilter, statusFilter, nextCursor, search = "", total }: TasksViewProps) {
   const t = useTranslations("tasks");
   const tk = useTranslations("kural");
   const router = useRouter();
@@ -229,6 +229,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
   const listHref = listQs === "" ? base : `${base}?${listQs}`;
   const go = (param: "assign" | "cancel", task: TaskView): void => {
     feedback.minor();
+    setAcilan(task);
     const p = new URLSearchParams(listQs);
     p.set(param, task.id);
     router.push(`${base}?${p.toString()}`);
@@ -239,11 +240,37 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
       say("ok", msg);
     }
   };
+  // T-1059: kaydırınca eklenen sayfalar; süzgeç / arama değişince (yeni ilk sayfa) sıfırlanır.
+  const [ek, setEk] = useState<{ readonly bas: readonly TaskView[]; readonly rows: readonly TaskView[]; readonly next: string | null }>({ bas: ilkGorevler, rows: [], next: nextCursor });
+  const guncel = ek.bas === ilkGorevler ? ek : { bas: ilkGorevler, rows: [], next: nextCursor };
+  if (guncel !== ek) setEk(guncel);
+  const tasks = useMemo(() => {
+    const ilk = new Set(ilkGorevler.map((x) => x.id));
+    return [...ilkGorevler, ...guncel.rows.filter((r) => !ilk.has(r.id))];
+  }, [ilkGorevler, guncel.rows]);
+  const sonraki = guncel.next;
+  const dahaYukle = useCallback(async (): Promise<boolean> => {
+    if (sonraki === null) return true;
+    const r = await loadMoreTasksAction({ slug, ...(kindFilter === "" ? {} : { kind: kindFilter }), ...(statusFilter === "" ? {} : { status: statusFilter }), q: search, after: sonraki });
+    if (!r.ok) return false;
+    // Atanan adı ekranın zaten aldığı üye listesinden (sunucu ilk sayfada da aynı listeyi kullanır).
+    const ad = new Map(members.map((m) => [m.membershipId, m.displayName]));
+    const rows = r.data.items.map((x): TaskView => ({ ...x, assignedName: x.assignedMembershipId === null ? null : (ad.get(x.assignedMembershipId) ?? null) }));
+    setEk((o) => (o.bas !== ilkGorevler ? o : { bas: o.bas, rows: [...o.rows, ...rows], next: r.data.next }));
+    return true;
+  }, [sonraki, slug, kindFilter, statusFilter, search, members, ilkGorevler]);
+  useKalipDerinlik(tasks.length, sonraki !== null, dahaYukle);
+  // Ata / İptal aynı adreste (`?assign=` / `?cancel=`) açılır; sunucu yeniden çizince eklenen sayfalar sıfırlanır. Sonraki sayfadan açılan
+  // görev kaybolmasın diye açılan satır tutulur (ekranın zaten gördüğü veri; eylem sunucuda sürüm denetimli).
+  const [acilan, setAcilan] = useState<TaskView | null>(null);
   const assignId = params.get("assign");
   const cancelId = params.get("cancel");
   const isOpen = (x: TaskView): boolean => x.status === "OPEN" || x.status === "ASSIGNED";
-  const assigning = canManage && assignId !== null ? tasks.find((x) => x.id === assignId && isOpen(x)) : undefined;
-  const cancelling = canManage && cancelId !== null ? tasks.find((x) => x.id === cancelId && isOpen(x)) : undefined;
+  const bul = (id: string): TaskView | undefined => tasks.find((x) => x.id === id) ?? (acilan?.id === id ? acilan : undefined);
+  const assigningRow = canManage && assignId !== null ? bul(assignId) : undefined;
+  const cancellingRow = canManage && cancelId !== null ? bul(cancelId) : undefined;
+  const assigning = assigningRow !== undefined && isOpen(assigningRow) ? assigningRow : undefined;
+  const cancelling = cancellingRow !== undefined && isOpen(cancellingRow) ? cancellingRow : undefined;
   if (assigning !== undefined) return <TaskAssignForm key={assigning.id} slug={slug} dark={dark} task={assigning} members={members} onClose={close} />;
   if (cancelling !== undefined) return <TaskCancelForm key={cancelling.id} slug={slug} dark={dark} task={cancelling} onClose={close} />;
 
@@ -299,7 +326,7 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
           </div>
         )}
         {canManage && (assignId ?? cancelId) !== null ? <Banner kind="info">{t("k.notFound")}</Banner> : null}
-        {tasks.length === 0 ? (
+        {tasks.length === 0 && sonraki === null ? (
           <KalipBos
             title={filtered ? tk("notFoundSearch") : t("empty.title")}
             hint={t("empty.action")}
@@ -350,22 +377,9 @@ export function TasksView({ slug, dark, canManage, tasks, members, kindFilter, s
                   </div>
                 );
               })}
+              <KalipSonsuz devam={sonraki !== null} yukle={dahaYukle} metin={t("count", { n: total ?? tasks.length })} testId="tasks-sonsuz" />
             </KalipKartListe>
           </>
-        )}
-        {firstPage && nextHref === null ? null : (
-          <nav aria-label={t("paging")} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {firstPage ? null : (
-              <KalipDaha href={href({})} iconD={LICON.chev}>
-                {t("firstPage")}
-              </KalipDaha>
-            )}
-            {nextHref === null ? null : (
-              <KalipDaha href={nextHref} iconD={LICON.plus}>
-                {t("nextPage")}
-              </KalipDaha>
-            )}
-          </nav>
         )}
       </KalipEkran>
 

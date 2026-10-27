@@ -10,7 +10,7 @@ import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import type { Permission } from "@wms/domain/identity/permissions";
 import { formatCompound, getItem, listItemConversions, listUnits, resolveBarcodeQuery } from "@wms/domain/catalog";
-import { approveQuality, createInboundReceipt, getAvailableAtLocation, openInboundReceipt, putaway, receiveGoods } from "@wms/domain/operations";
+import { approveQuality, createInboundReceipt, getAvailableAtLocation, listInboundReceipts, openInboundReceipt, putaway, receiveGoods } from "@wms/domain/operations";
 import { findLocationByCode } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
@@ -54,6 +54,9 @@ const putawaySchema = z
   })
   .strict();
 const scanItemSchema = z.object({ slug: slugSchema, code: codeSchema }).strict();
+const moreReceiptsSchema = z.object({ slug: slugSchema, after: z.string().min(3).max(200) }).strict();
+/** Beklenen teslimler listesinin sayfa boyu (T-1059): sayfa bileşeni ile aynı. */
+const RECEIPTS_PAGE_SIZE = 30;
 const scanLocationSchema = z.object({ slug: slugSchema, warehouseId: idSchema, code: codeSchema }).strict();
 const availableSchema = z.object({ slug: slugSchema, locationId: idSchema, itemId: idSchema }).strict();
 const unitsSchema = z.object({ slug: slugSchema, itemId: idSchema }).strict();
@@ -192,5 +195,20 @@ export async function itemUnitsAction(raw: unknown) {
     const base = (await listUnits(params)).find((u) => u.id === item.baseUnitId);
     const units = [{ unitId: item.baseUnitId, unitCode: base?.code ?? "", unitName: base?.name ?? "" }, ...conv.map((c) => ({ unitId: c.unitId, unitCode: c.unitCode, unitName: c.unitName }))];
     return { itemName: item.name, itemCode: item.code, units };
+  })(raw);
+}
+
+/** T-1059: beklenen teslimler listesinin sonuna yaklaşınca sonraki sayfa (okuma, `stock.view`; imleç ve depo kapsamı domain'de). */
+export async function loadMoreReceiptsAction(raw: unknown) {
+  return guardedAction({ schema: moreReceiptsSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const i = input.after.indexOf("~");
+    if (i <= 0) throw new AppError("VALIDATION_FAILED");
+    const page = await listInboundReceipts(
+      { db: getAppDb(), principal, tenantSlug: input.slug },
+      { limit: RECEIPTS_PAGE_SIZE, withTotal: false, after: { createdKey: input.after.slice(0, i), id: input.after.slice(i + 1) } },
+    );
+    return { items: page.items, next: page.next === null ? null : `${page.next.createdKey}~${page.next.id}` };
   })(raw);
 }

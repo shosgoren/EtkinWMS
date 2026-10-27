@@ -2,19 +2,21 @@
 // Denetim kaydı ekranı (T-126; T-971 B-63 liste kalıbı, KalipListe.dc.html). Veri, süzgeç ve yetki kararı SUNUCUDADIR (page.tsx → listAudit);
 // bu bileşen yalnız sunumdur. Süzgeç: hızlı çipler (Tümü / Bugün / Son 7 gün / seçili işlem — adresi değiştirir) + tarih aralığı ve işlem
 // seçimi GET formu (`#from`, `#to`, `#action`; JS yokken de çalışır). Kayıtlar kart: işlem adı, kişi · zaman, kayıt türü/kimliği, gerekçe;
-// karta dokununca tam kayıt bilgisi balonda. Sayfalama imleçle (`KalipDaha`); ana işlem alt çubukta CSV İNDİR.
+// karta dokununca tam kayıt bilgisi balonda. Sayfalama liste sonunda kendiliğinden (T-1059, `KalipSonsuz`); ana işlem alt çubukta CSV İNDİR.
 // T-978: arama (`.lsearch`, GET `q`: kişi adı / gerekçe / kayıt kimliği; sunucuda listAudit) — tarih ve işlem süzgeci korunur.
 // Bilinçli fark (DESIGN-PARITY, T-971): çip sayıları yok.
 // T-990 (B-97): işlem süzgeci yerel açılır liste değil: `#action` güçlü kenarlıklı tetik düğmesi ortak aramalı seçim sayfasını
 // (`KalipSecimSayfasi`) açar; seçim gizli `action` alanına yazılır ve GET formu hemen gönderilir (adres değişir). JS yokken "Süz" düğmesi
 // tarih süzgecini yine gönderir.
 import { useTranslations } from "next-intl";
-import { useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { feedback } from "@wms/ui";
-import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipSecimSayfasi } from "../kalip/secim.tsx";
+import { KalipSonsuz, useKalipDerinlik } from "../kalip/tablo.tsx";
+import { loadMoreAuditAction } from "./actions.ts";
 
 export interface AuditRowView {
   readonly id: string;
@@ -50,12 +52,13 @@ export function AuditView({
   dark,
   home,
   here,
-  rows,
+  rows: ilkSatirlar,
   filters,
   actions,
   quick,
   exportHref,
-  moreHref,
+  nextCursor,
+  slug,
   banner,
 }: {
   dark: boolean;
@@ -68,12 +71,32 @@ export function AuditView({
   /** Hızlı çipler (sunucu hesaplar: bugünün tarihi kiracı saat diliminde). */
   quick: readonly { readonly id: string; readonly label: string; readonly href: string; readonly on: boolean }[];
   exportHref: string;
-  moreHref: string | null;
+  /** T-1059: sonraki sayfanın imleci; sonraki kayıtlar liste sonunda kendiliğinden gelir. */
+  nextCursor: string | null;
+  slug: string;
   banner: ReactNode;
 }) {
   const t = useTranslations("auditLog");
   const tk = useTranslations("kural");
   const { say, node: toast } = useKalipToast("liste");
+  // T-1059: kaydırınca eklenen sayfalar; süzgeç değişince (sunucu yeni ilk sayfa çizer) sıfırlanır.
+  const [ek, setEk] = useState<{ readonly bas: readonly AuditRowView[] | null; readonly rows: readonly AuditRowView[]; readonly next: string | null }>({ bas: ilkSatirlar, rows: [], next: nextCursor });
+  const guncel = ek.bas === ilkSatirlar ? ek : { bas: ilkSatirlar, rows: [], next: nextCursor };
+  if (guncel !== ek) setEk(guncel);
+  const rows = useMemo(() => {
+    if (ilkSatirlar === null) return null;
+    const ilk = new Set(ilkSatirlar.map((r) => r.id));
+    return [...ilkSatirlar, ...guncel.rows.filter((r) => !ilk.has(r.id))];
+  }, [ilkSatirlar, guncel.rows]);
+  const sonraki = guncel.next;
+  const dahaYukle = useCallback(async (): Promise<boolean> => {
+    if (sonraki === null) return true;
+    const r = await loadMoreAuditAction({ slug, filters, cursor: sonraki });
+    if (!r.ok) return false;
+    setEk((o) => (o.bas !== ilkSatirlar ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], next: r.data.next }));
+    return true;
+  }, [sonraki, slug, filters, ilkSatirlar]);
+  useKalipDerinlik(rows?.length ?? 0, sonraki !== null, dahaYukle);
   const [action, setAction] = useState(filters.action ?? "");
   const [pick, setPick] = useState(false);
   const form = useRef<HTMLFormElement>(null);
@@ -195,12 +218,8 @@ export function AuditView({
                 />
               );
             })}
+            <KalipSonsuz devam={sonraki !== null} yukle={dahaYukle} metin={t("listTitle")} testId="audit-sonsuz" />
           </KalipKartListe>
-          {moreHref === null ? null : (
-            <KalipDaha href={moreHref} iconD={LICON.plus} testId="audit-more">
-              {t("more")}
-            </KalipDaha>
-          )}
         </>
       )}
       <p style={{ margin: 0, fontSize: 13 }}>

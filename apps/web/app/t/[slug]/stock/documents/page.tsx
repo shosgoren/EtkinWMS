@@ -9,10 +9,13 @@ import { LICON } from "../../../../design/kalip-icons.ts";
 import { KalipDetayIzgara, KalipHero, KalipKartBolum, KalipZaman, type KalipOlay } from "../../kalip/detay.tsx";
 import { KalipBaslik, KalipEkran } from "../../kalip/ekran.tsx";
 import { fmtGun, fmtQty } from "../../kalip/format.ts";
-import { KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, KalipKilitliEkran } from "../../kalip/liste.tsx";
+import { KalipBos, KalipCipler, KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { BOLUM_ICON, bolumCipleri, kalipDark } from "../belge-kalip.ts";
 import { FormEkran } from "../form-ekran.tsx";
+import { KalipKartAkisi } from "../../kalip/akis.tsx";
+import { loadMoreDocumentsAction } from "./actions.ts";
 import { DocumentControls, DocumentForm } from "./document-form.tsx";
+import { belgeKartlari } from "./kartlar.ts";
 import { YeniIslemSecim } from "./yeni-secim.tsx";
 
 // Stok işlemleri (T-972, B-63 grup 2): liste (KalipListe), belge ayrıntısı (KalipDetay), yeni giriş/çıkış/transfer (KalipForm).
@@ -172,38 +175,19 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
         ) : (
           <>
             <KalipBaslik title={list.total !== undefined ? t("k.count", { n: list.total }) : list.next === null && after === undefined ? t("k.count", { n: list.items.length }) : t("k.countMore", { n: list.items.length })} hint={t("k.hint")} />
-            <KalipKartListe label={t("title")}>
-              {list.items.map((row, i) => {
-                const state = t(`states.${row.status}`);
-                const number = row.number ?? t("draft");
-                return (
-                  <KalipKart
-                    key={row.id}
-                    index={i}
-                    name={`${number} · ${kindLabel(row.kind)}`}
-                    code={`${row.warehouseName} · ${fmtGun(row.businessDate, locale)} · ${state}`}
-                    {...(row.reason ? { meta: row.reason } : {})}
-                    d={kindIcon(row.kind).d}
-                    color={kindIcon(row.kind).color}
-                    href={`${path}?id=${row.id}`}
-                    aria={t("k.cardAria", { number, kind: kindLabel(row.kind), warehouse: row.warehouseName, date: fmtGun(row.businessDate, locale), state })}
-                    testId="document-card"
-                  />
-                );
-              })}
-            </KalipKartListe>
+            <KalipKartAkisi
+              label={t("title")}
+              slug={slug}
+              ilk={{ kartlar: await belgeKartlari(list.items, path), devam: list.next }}
+              toplam={list.total}
+              sayiMetni={t("k.count", { n: "{n}" })}
+              sayiFazla={t("k.countMore", { n: "{n}" })}
+              yukle={loadMoreDocumentsAction}
+              kartTestId="document-card"
+              testId="documents-sonsuz"
+            />
           </>
         )}
-        {list.next ? (
-          <KalipDaha href={`${path}?after=${encodeURIComponent(list.next)}`} iconD={LICON.plus}>
-            {t("next")}
-          </KalipDaha>
-        ) : null}
-        {after ? (
-          <KalipDaha href={path} iconD={LICON.chev}>
-            {so("first")}
-          </KalipDaha>
-        ) : null}
       </KalipEkran>
     </main>
   );
