@@ -349,7 +349,7 @@ export async function createStockDocument(
       apply: async (tx, _locked, ctx) => {
         await assertWarehouseActive(tx, ctx.tenantId, warehouseId);
         const date = await assertBusinessDateNotFuture(tx, ctx.tenantId, businessDate);
-        await assertItemsActive(tx, ctx.tenantId, lines.map((l) => l.item_id));
+        await assertItemsActive(tx, ctx.tenantId, lines.map((l) => l.item_id), {allowSourcePending: kind === "STOCK_OUT" || kind === "STOCK_MOVE"});
         await assertLocationsInWarehouse(tx, ctx.tenantId, lineLocationIds(lines), warehouseId); // A-145
         const typeVersionId = await systemTypeVersionId(tx, kind);
         const documentId = randomUUID();
@@ -417,7 +417,7 @@ export async function updateDraft(
         if (lines !== undefined) assertTargetStatusAllowed(header.kind, lines);
         if (warehouseId !== undefined && warehouseId !== header.warehouseId) await assertWarehouseActive(tx, ctx.tenantId, warehouseId);
         const date = await assertBusinessDateNotFuture(tx, ctx.tenantId, businessDate ?? header.businessDate);
-        if (lines !== undefined) await assertItemsActive(tx, ctx.tenantId, lines.map((l) => l.item_id));
+        if (lines !== undefined) await assertItemsActive(tx, ctx.tenantId, lines.map((l) => l.item_id), {allowSourcePending: header.kind === "STOCK_OUT" || header.kind === "STOCK_MOVE", existingDocumentId: documentId, pendingQuantities: lines.map(l=>({itemId:l.item_id,baseQuantity:l.base_quantity}))});
         // A-145: yeni satırların (verilmediyse mevcut satırların) lokasyonları etkin belge deposunda olmalı (depo değişince de).
         await assertLocationsInWarehouse(
           tx,
