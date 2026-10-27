@@ -2753,7 +2753,12 @@
       "pickLabel": "Ne yapacaksın?",
       "pickIn": "Depoya mal girdi",
       "pickOut": "Depodan mal çıktı",
-      "pickTransfer": "Bir depodan ötekine"
+      "pickTransfer": "Bir depodan ötekine",
+      "kindL": "Tür",
+      "date": "Tarih",
+      "boxLines": "Satır",
+      "info": "Belge bilgileri",
+      "back": "Belgelere dön"
     }
   },
   "production": {

@@ -2753,7 +2753,12 @@
       "pickLabel": "What will you do?",
       "pickIn": "Goods came in",
       "pickOut": "Goods went out",
-      "pickTransfer": "From one warehouse to another"
+      "pickTransfer": "From one warehouse to another",
+      "kindL": "Type",
+      "date": "Date",
+      "boxLines": "Lines",
+      "info": "Document details",
+      "back": "Back to documents"
     }
   },
   "production": {

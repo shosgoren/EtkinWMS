@@ -1,20 +1,18 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getStockDocument, listStockDocuments } from "@wms/domain/stock";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../../design/kalip-icons.ts";
-import { KalipDetayIzgara, KalipHero, KalipKartBolum, KalipZaman, type KalipOlay } from "../../kalip/detay.tsx";
 import { KalipBaslik, KalipEkran } from "../../kalip/ekran.tsx";
-import { fmtGun, fmtQty } from "../../kalip/format.ts";
 import { KalipBos, KalipCipler, KalipKilitliEkran } from "../../kalip/liste.tsx";
 import { BOLUM_ICON, bolumCipleri, kalipDark } from "../belge-kalip.ts";
 import { FormEkran } from "../form-ekran.tsx";
 import { KalipKartAkisi } from "../../kalip/akis.tsx";
 import { loadMoreDocumentsAction } from "./actions.ts";
-import { DocumentControls, DocumentForm } from "./document-form.tsx";
+import { DocumentCard } from "./document-card.tsx";
+import { DocumentForm } from "./document-form.tsx";
 import { belgeKartlari } from "./kartlar.ts";
 import { YeniIslemSecim } from "./yeni-secim.tsx";
 
@@ -29,8 +27,7 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
   const { slug } = await params,
     sp = await searchParams,
     t = await getTranslations("stockDocuments"),
-    so = await getTranslations("stockOverview"),
-    locale = await getLocale();
+    so = await getTranslations("stockOverview");
   const home = `/t/${encodeURIComponent(slug)}`,
     path = `${home}/stock/documents`,
     id = first(sp.id),
@@ -59,67 +56,15 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
     }
     throw e;
   }
-  const kindLabel = (k: string) => t(k === "STOCK_IN" ? "in" : "out");
-  const kindIcon = (k: string) => (k === "STOCK_IN" ? KIND_ICON.in : KIND_ICON.out);
-  const fq = (v: string) => fmtQty(v, locale);
   // T-1037: YENİ → tür seçimi (giriş / çıkış / transfer); listenin üstünde ayrı düğme yok.
   const newMain = { label: t("k.newShort"), aria: t("k.pickLabel"), d: LICON.plus, href: `${path}?new=SEC`, disabled: !list.permissions.create && !list.permissions.post, testId: "documents-new" };
 
   if (doc) {
-    const sign = doc.kind === "STOCK_IN" ? "+" : "−";
-    const events: KalipOlay[] = doc.lines.map((line) => ({
-      key: line.id,
-      title: `${line.itemCode} — ${line.itemName}`,
-      meta: [line.sourceCode ?? line.targetCode ?? "", line.lotCode ? `${t("lot")}: ${line.lotCode}` : "", line.serialNo ? `${t("serial")}: ${line.serialNo}` : ""].filter((x) => x !== "").join(" · "),
-      q: `${sign}${fq(line.quantity)} ${line.unitCode}`,
-      d: kindIcon(doc.kind).d,
-      color: kindIcon(doc.kind).color,
-      qColor: doc.kind === "STOCK_IN" ? "2F7D5B" : "C62828",
-    }));
+    // T-1091: belge kartı (STANDART §3) — ortak `kalip/kart.tsx` parçaları; eylemler (`DocumentControls`) değişmedi.
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <KalipEkran kind="detay" dark={dark} title={t("title")} icon={BOLUM_ICON.documents} heading={false} testId="document-detail" bar={{ back: { href: path }, main: newMain }}>
-          <KalipDetayIzgara
-            left={
-              <>
-                <KalipHero
-                  label={t("k.hero")}
-                  name={`${doc.number ?? t("draft")} · ${kindLabel(doc.kind)}`}
-                  code={`${doc.warehouseName} · ${fmtGun(doc.businessDate, locale)}`}
-                  tags={doc.reason ? [doc.reason] : []}
-                  d={kindIcon(doc.kind).d}
-                  color={kindIcon(doc.kind).color}
-                  total={{ value: String(doc.lines.length), sub: t("k.lineUnit"), crit: false }}
-                  testId="document-hero"
-                >
-                  <span className="tags">
-                    <span className="tag" role="status" data-status={doc.status}>
-                      {t(`states.${doc.status}`)}
-                    </span>
-                  </span>
-                </KalipHero>
-                <KalipKartBolum title={t("k.lines")} sub={t("k.linesSub", { n: doc.lines.length })} d={LICON.box} color="2F5DA8" testId="document-lines">
-                  <KalipZaman items={events} />
-                </KalipKartBolum>
-              </>
-            }
-            right={
-              <>
-                <KalipKartBolum title={t("k.state")} sub={doc.status === "POSTED" ? t("postedHelp") : t("notPosted")} d={LICON.clip} color="6C4BD8" testId="document-state">
-                  <DocumentControls key={`${doc.id}:${doc.version}`} slug={slug} document={doc} permissions={list.permissions} />
-                </KalipKartBolum>
-                {doc.related.length === 0 ? null : (
-                  <KalipKartBolum title={t("k.related")} d={LICON.transfer} color="0E7C7B" testId="document-related">
-                    {doc.related.map((other) => (
-                      <Link key={other.id} className="more" href={`${path}?id=${other.id}`}>
-                        {t("related")}: {other.number} · {other.warehouseName}
-                      </Link>
-                    ))}
-                  </KalipKartBolum>
-                )}
-              </>
-            }
-          />
+        <KalipEkran kind="detay" dark={dark} title={t("title")} icon={BOLUM_ICON.documents} heading={false} testId="document-detail" bar={{ back: { href: path, aria: t("k.back") }, main: newMain }}>
+          <DocumentCard slug={slug} document={doc} permissions={list.permissions} />
         </KalipEkran>
       </main>
     );

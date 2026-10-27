@@ -323,6 +323,30 @@ test("T-1092 karanlık mod: form alanı zemini ve çerçevesi grup kartından ay
   );
   expect(r.fld, "alan zemini grup kartından farklı").not.toBe(r.sg);
   expect(r.outline).toBe("solid");
+// T-1091: belge kartı — listeden açılır; şerit (belge no h1, tür, durum, Satır kutusu), bilgiler, satırlar; sağda durum ve işlemler;
+// ≥ 44 px; üç boyutta taşma yok.
+test("T-1091 Belge kartı: listeden açılır, şerit + bilgiler + satırlar + durum", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/stock/documents");
+  await page.getByTestId("document-card").first().click();
+  await expect(page).toHaveURL(/\/stock\/documents\?id=[0-9a-f-]{36}$/);
+  const kart = page.getByTestId("document-kart");
+  await expect(kart).toBeVisible();
+  await expect(kart.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("document-status")).toBeVisible();
+  await expect(page.getByTestId("kalip-total")).toBeVisible();
+  await expect(page.getByTestId("kart-bilgi-warehouse")).toBeVisible();
+  await expect(page.getByTestId("document-line").first()).toBeVisible();
+  await expect(page.getByTestId("document-state")).toBeVisible();
+  expect(await smallTouchTargets(page, 44, "#kalip-main")).toEqual([]);
+  for (const [w, h] of [[820, 1180], [390, 844]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await expect(kart).toBeVisible();
+    const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
+    expect(tasma, `${w}px yatay taşma`).toBeLessThanOrEqual(0);
+  }
 });
 
 // T-1052 (STANDART §4): form kalıbı masaüstünde — canlı ad şeridi formun üstünde (sağ sütun değil), gruplar yan yana; telefonda taşma yok.

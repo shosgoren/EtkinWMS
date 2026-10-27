@@ -20,6 +20,8 @@ export interface KalipEtiket {
   readonly ton?: "ok" | "kirmizi" | "amber";
   readonly mono?: boolean;
   readonly testId?: string;
+  /** Kaydın canlı durumu (ör. belge Taslak → Onaylı): ekran okuyucuya değişince bildirilir (`role="status"`). */
+  readonly durum?: boolean;
 }
 
 export interface KalipSayiKutusu {
@@ -75,7 +77,7 @@ export function KalipKartSerit({
         </b>
         <span className="stketk">
           {etiketler.map((e) => (
-            <span key={e.metin} className={`stktag${e.mono === true ? " mono" : ""}${e.ton === undefined ? "" : ` ${e.ton}`}`} data-testid={e.testId}>
+            <span key={e.metin} className={`stktag${e.mono === true ? " mono" : ""}${e.ton === undefined ? "" : ` ${e.ton}`}`} data-testid={e.testId} role={e.durum === true ? "status" : undefined}>
               {e.metin}
             </span>
           ))}
