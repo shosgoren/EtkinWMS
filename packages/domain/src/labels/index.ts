@@ -2,6 +2,9 @@
 // `loadLabelSource` yalnızca mevcut tenant kapsamlı okumaları (`stock.view`, RLS) kullanır: başka tenant'ın ya da olmayan kaynak
 // `NOT_FOUND` (aynı yanıt); `stock.view` yoksa `FORBIDDEN`.
 import { getItem, listItemBarcodes } from "../catalog/index.ts";
+import { searchItems, type SearchItemsInput } from "../catalog/reads.ts";
+import { runTenantQuery } from "../identity/access.ts";
+import { sql } from "drizzle-orm";
 import { listUnits } from "../catalog/units.ts";
 import { getLocationTree, type LocationRow } from "../warehouse/index.ts";
 import { AppError } from "@wms/shared/errors";
@@ -41,8 +44,8 @@ export async function loadLabelSource(params: Params, q: LabelSourceQuery): Prom
     const item = await getItem(params, { itemId });
     const [barcodes, units] = await Promise.all([listItemBarcodes(params, item.id), listUnits(params)]);
     const base = units.find((u) => u.id === item.baseUnitId);
-    // Birincil barkod (A-T312-6): temel birimde, okutma başına 1 olan ilk barkod; yoksa ilk barkod; hiç yoksa ürün kodu basılır.
-    const primary = barcodes.find((b) => b.unitId === item.baseUnitId && b.quantity === "1") ?? barcodes[0];
+    // Ürün etiketi tek temel birimi tanımlar: koli/çevrim veya belirsiz barkod seçilmez.
+    const primary = barcodes.find((b) => b.unitId === item.baseUnitId && b.quantity === "1" && !b.ambiguous);
     return { template: "product", name: `urun-${item.code}`, datas: [{ code: item.code, name: item.name, unit: base?.code ?? "", barcode: primary?.barcode ?? null }] };
   }
   if (warehouseId === undefined) return null;
@@ -74,4 +77,43 @@ export async function loadLabelSource(params: Params, q: LabelSourceQuery): Prom
   }
   if (chosen.length === 0) throw new AppError("NOT_FOUND");
   return { template: "location", name: `lokasyon-${chosen[0]?.code ?? "etiket"}`, datas: chosen.map((l) => ({ code: l.code, name: l.name })) };
+}
+
+export interface ProductLabelBatch extends LabelSource {
+  readonly template: "product";
+  readonly total: number;
+  readonly nextCursor: string | null;
+}
+
+/** Filtrelenen ürünler için sınırlı baskı grubu. Liste ve baskı aynı searchItems keyset sözleşmesini kullanır.
+ * Sorgu başına en çok 100 ürün; kullanıcı sonraki gruba nextCursor ile geçer. Stok veya barkod yazmaz.
+ */
+export async function loadProductLabelBatch(params: Params, input: SearchItemsInput = {}): Promise<ProductLabelBatch> {
+  const page = await searchItems(params, { ...input, status: input.status ?? "ACTIVE", withTotal: true });
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
+    if (page.items.length === 0) return { template: "product", name: "urunler", datas: [], total: page.total ?? 0, nextCursor: page.nextCursor };
+    const ids = page.items.map((item) => sql`${item.id}::uuid`);
+    const rows = await tx.execute<{ id: string; code: string; name: string; unit: string; barcode: string | null }>(sql`
+      SELECT i.id, i.code, i.name, u.code AS unit, b.barcode
+        FROM public.items i
+        JOIN public.units u ON u.tenant_id = i.tenant_id AND u.id = i.base_unit_id
+        LEFT JOIN LATERAL (
+          SELECT ib.barcode FROM public.item_barcodes ib
+           WHERE ib.tenant_id = i.tenant_id AND ib.item_id = i.id
+             AND COALESCE(ib.unit_id, i.base_unit_id) = i.base_unit_id AND COALESCE(ib.quantity, 1) = 1
+             AND NOT EXISTS (
+               SELECT 1 FROM public.item_barcodes other_barcode
+                 JOIN public.items other_item ON other_item.tenant_id = other_barcode.tenant_id AND other_item.id = other_barcode.item_id
+                WHERE other_barcode.tenant_id = i.tenant_id AND other_barcode.barcode = ib.barcode
+                  AND other_item.status = 'ACTIVE'
+                  AND (other_barcode.item_id <> i.id
+                    OR COALESCE(other_barcode.unit_id, other_item.base_unit_id) <> i.base_unit_id
+                    OR COALESCE(other_barcode.quantity, 1) <> 1)
+             )
+           ORDER BY ib.barcode, ib.id LIMIT 1
+        ) b ON true
+       WHERE i.tenant_id = ${actor.tenantId}::uuid AND i.id IN (${sql.join(ids, sql`, `)})
+       ORDER BY i.code, i.id`);
+    return { template: "product", name: "urunler", datas: rows.map(({ code, name, unit, barcode }) => ({ code, name, unit, barcode })), total: page.total ?? 0, nextCursor: page.nextCursor };
+  });
 }

@@ -29,6 +29,11 @@ export interface SearchItemsInput {
   readonly status?: ItemStatusFilter;
   /** T-968: kart türü süzgeci (HM / YM / MM / TM); yok: hepsi. */
   readonly cardType?: ItemCardType;
+  /** T-1063: mevcut WMS takip politikası. Kaynak ERP bayrakları bu kararı değiştirmez. */
+  readonly trackingMode?: TrackingMode;
+  /** Kaynak kategori adı (tam eşleşme, harf duyarsız); kullanıcıya gösterilen adla süzülür. */
+  readonly category?: string;
+  readonly barcode?: "PRESENT" | "MISSING";
   /** Önceki sayfanın `nextCursor` değeri (opak). */
   readonly after?: string;
   /** 1..100; varsayılan 50. */
@@ -113,6 +118,10 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
   const q = qTrim === "" ? undefined : parseText(qTrim, SEARCH_Q_MAX);
   const status = parseStatus(input.status);
   const cardType = input.cardType === undefined ? undefined : parseCardType(input.cardType);
+  const trackingMode = input.trackingMode;
+  if (trackingMode !== undefined && !["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"].includes(trackingMode)) throw new AppError("VALIDATION_FAILED");
+  const category = input.category === undefined ? undefined : parseText(input.category, 200);
+  if (input.barcode !== undefined && input.barcode !== "PRESENT" && input.barcode !== "MISSING") throw new AppError("VALIDATION_FAILED");
   const after = input.after === undefined ? undefined : decodeCursor(input.after);
   const limit = parseLimit(input.limit);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
@@ -120,6 +129,15 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
     const filters = [sql`i.tenant_id = ${tenant}::uuid`];
     if (status !== undefined) filters.push(sql`i.status = ${status}`);
     if (cardType !== undefined) filters.push(sql`i.card_type = ${cardType}`);
+    if (trackingMode !== undefined) filters.push(sql`i.tracking_mode = ${trackingMode}`);
+    if (category !== undefined) filters.push(sql`EXISTS (
+      SELECT 1 FROM jsonb_each(i.source_product_info) AS source(provider, info)
+       WHERE lower(source.info->>'categoryName') = lower(${category})
+    )`);
+    if (input.barcode !== undefined) {
+      const exists = sql`EXISTS (SELECT 1 FROM public.item_barcodes b WHERE b.tenant_id = i.tenant_id AND b.item_id = i.id)`;
+      filters.push(input.barcode === "PRESENT" ? exists : sql`NOT ${exists}`);
+    }
     if (q !== undefined) {
       filters.push(
         sql`(starts_with(lower(i.code), lower(${q})) OR starts_with(lower(i.name), lower(${q}))
@@ -175,7 +193,7 @@ export interface ItemBarcodeRow {
   readonly unitCode: string;
   /** Okutma başına miktar (kanonik); barkodda yoksa `"1"`. */
   readonly quantity: string;
-  /** Aynı barkod tenant içinde başka bir ACTIVE üründe de kayıtlı (A-69). */
+  /** Aynı barkod başka ACTIVE ürüne veya aynı ürünün farklı etkin birim/miktarına da çözülüyor (A-69). */
   readonly ambiguous: boolean;
 }
 
@@ -211,7 +229,9 @@ export async function listItemBarcodes(params: CatalogReadParams, itemIdRaw: str
       sql`SELECT b.id, b.barcode, COALESCE(b.unit_id, i.base_unit_id) AS unit_id, u.code AS unit_code, b.quantity::text AS quantity,
                  EXISTS (SELECT 1 FROM public.item_barcodes o
                            JOIN public.items oi ON oi.tenant_id = o.tenant_id AND oi.id = o.item_id
-                          WHERE o.tenant_id = b.tenant_id AND o.barcode = b.barcode AND o.item_id <> b.item_id AND oi.status = 'ACTIVE') AS ambiguous
+                          WHERE o.tenant_id = b.tenant_id AND o.barcode = b.barcode AND oi.status = 'ACTIVE'
+                            AND (o.item_id <> b.item_id OR COALESCE(o.unit_id, oi.base_unit_id) <> COALESCE(b.unit_id, i.base_unit_id)
+                                 OR COALESCE(o.quantity, 1) <> COALESCE(b.quantity, 1))) AS ambiguous
             FROM public.item_barcodes b
             JOIN public.items i ON i.tenant_id = b.tenant_id AND i.id = b.item_id
             JOIN public.units u ON u.tenant_id = i.tenant_id AND u.id = COALESCE(b.unit_id, i.base_unit_id)
