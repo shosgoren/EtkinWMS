@@ -24,3 +24,5 @@ Bu dosya bu akışın tek devam kaydıdır. API bilgileri bekleniyor; sırlar do
 7. **BEKLİYOR:** gerçek API ile kontrollü miktarsız deneme; cihaz okutma ve Epson baskı doğrulaması.
 
 Her iş yeni boş T numarasıyla ayrı dalda; task + changes parçası + bu dosyanın ilgili satırı aynı PR'da. STATE/BACKLOG doğrudan düzenlenmez. Stok ve entegrasyon riskine göre bağımsız inceleme, prepush/gitleaks/CI/yayın kapıları korunur. Çalıştırılmayan test UNKNOWN; her aşama için gerçek sonuç kaydedilir.
+
+T-1064 son kontrol: PR #216 ilk CI'da mevcut ortak testin yeni tam ekran çiplerini liste içi sayması nedeniyle iki shard kırıldı; üretim kodu değiştirilmeden her bağlantının URL ve hedef ekranı doğrulanarak düzeltildi. Kontrol kaldırılmadı; bağımsız inceleme `1e50d51e6ed839da5f7a95d68bb7f3f9ad199ffa` 0B/0MA/0MI. Son tam prepush yeşil: 4998 birim, AC-04 371 ve değişen iki spec toplam 30/30 e2e. Yeni CI/yayın bekliyor.
