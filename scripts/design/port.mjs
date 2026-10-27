@@ -42,7 +42,7 @@ export const SOURCES = [
   { name: "kabuk", file: "docs/design/source/Kabuk.dc.html", sha256: "dc4ce9aec20bb6b3a4649795318ced59acf18a67a168573efa613fa81befb73f", scope: "dzk", palette: "none", device: "fr" },
   // T-968 (B-63): 4 ekran kalıbı (Liste / Form / Detay / Saha; aynı 19 Ekim kaynak biçimi). Ortak üst çubuk (`.top`, `.brand`, `.pgic`,
   // `.tph`) her kaynakta aynıdır; her kalıp kendi kabında. Tuvalin yan yana çerçeveleri (`.stage`, `.frm`, `.frl`) atlanır (SKIP).
-  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "cef70a7ed7edd8ccbb6034e75cc19460049d60847cfd519ad1a3a481f75b792b", scope: "dzl", palette: "none", device: "fr" },
+  { name: "kalip-liste", file: "docs/design/source/KalipListe.dc.html", sha256: "228e46eac43d82fe10f931e0e44d7f625b094c957bfb213b3d6be32c14c8ab49", scope: "dzl", palette: "none", device: "fr" },
   { name: "kalip-form", file: "docs/design/source/KalipForm.dc.html", sha256: "d42cde1cd5a7650cfe473a0a4d3961ea7177c1a7dc688b52ca76c49ccff4f371", scope: "dzf", palette: "none", device: "fr" },
   { name: "kalip-detay", file: "docs/design/source/KalipDetay.dc.html", sha256: "1241ab0453ab8ce825c0e3a0a633d03cd74a33a73461c28f59715488e674ca5e", scope: "dzd", palette: "none", device: "fr" },
   { name: "kalip-saha", file: "docs/design/source/KalipSaha.dc.html", sha256: "3cf889101686f39f580fef473aba6645e503bd49f05940f518a5f9c1db86038d", scope: "dzs", palette: "none", device: "fr" },

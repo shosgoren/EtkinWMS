@@ -9,6 +9,7 @@ import { getAppDb } from "@wms/db";
 import { addBarcode, archiveItem, createItem, createItemWithDefaultUnit, createUnit, createWithSuggestedCode, removeBarcode, searchItems, setUnitConversion, suggestCode, updateItem } from "@wms/domain/catalog";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { loadItemsPage } from "./list-page.ts";
+import { extraFilterShape, domainExtraFilters } from "./filters.ts";
 
 const guardedAction = createProductionGuard(() => headers());
 
@@ -40,10 +41,10 @@ const createItemSchema = z
   })
   .strict();
 const suggestItemCodeSchema = z.object({ slug: slugSchema, prefix: z.string().max(16).optional() }).strict();
-const searchItemsSchema = z.object({ slug: slugSchema, q: z.string().max(128), limit: z.number().int().min(1).max(10).optional() }).strict();
+const searchItemsSchema = z.object({ slug: slugSchema, q: z.string().max(128), limit: z.number().int().min(1).max(10).optional(), ...extraFilterShape, cardType: cardTypeSchema.optional(), status: z.enum(["ACTIVE", "ARCHIVED"]).optional() }).strict();
 // T-1055: listenin sonraki sayfası (kaydırınca kendiliğinden). Süzgeçler sayfa adresindekilerle aynı; imleç domain'de doğrulanır.
 const loadMoreItemsSchema = z
-  .object({ slug: slugSchema, q: z.string().max(128), status: z.enum(["", "ACTIVE", "ARCHIVED"]), cardType: z.union([z.literal(""), cardTypeSchema]), after: z.string().min(1).max(512) })
+  .object({ slug: slugSchema, q: z.string().max(128), status: z.enum(["", "ACTIVE", "ARCHIVED"]), cardType: z.union([z.literal(""), cardTypeSchema]), after: z.string().min(1).max(512), ...extraFilterShape })
   .strict();
 const updateItemSchema = z
   .object({ slug: slugSchema, itemId: idSchema, code: textSchema.optional(), name: textSchema.optional(), pickPolicy: pickSchema.optional(), cardType: cardTypeSchema.optional() })
@@ -98,7 +99,7 @@ export async function searchItemsAction(raw: unknown) {
   return guardedAction({ schema: searchItemsSchema }, async (input, ctx) => {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
-    const page = await searchItems({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, status: "ACTIVE", limit: input.limit ?? 8 });
+    const page = await searchItems({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, status: input.status ?? "ACTIVE", limit: input.limit ?? 8, ...(input.cardType === undefined ? {} : { cardType: input.cardType }), ...domainExtraFilters(input) });
     // T-257: eski kodla eşleşen kartlar için "bu kod X olarak değişti" bilgisi (eski kod → güncel kod).
     return { items: page.items.map((i) => ({ id: i.id, code: i.code, name: i.name })), renamedFrom: (page.renamedFrom ?? []).map((r) => ({ itemId: r.itemId, oldCode: r.oldCode, currentCode: r.currentCode })) };
   })(raw);
@@ -109,7 +110,7 @@ export async function loadMoreItemsAction(raw: unknown) {
   return guardedAction({ schema: loadMoreItemsSchema }, async (input, ctx) => {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
-    const page = await loadItemsPage({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, status: input.status, cardType: input.cardType, after: input.after });
+    const page = await loadItemsPage({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, status: input.status, cardType: input.cardType, after: input.after, category: input.category, tracking: input.tracking, barcode: input.barcode });
     return { rows: page.rows, stock: page.stock, nextCursor: page.nextCursor };
   })(raw);
 }

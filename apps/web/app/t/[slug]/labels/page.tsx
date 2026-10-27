@@ -10,9 +10,13 @@ import {
   LabelTooLongError,
   MAX_LABELS_PER_DOCUMENT,
   loadLabelSource,
+  loadProductLabelBatch,
   toSvgPages,
   toZplDocument,
 } from "@wms/domain/labels";
+import { ITEM_CARD_TYPES } from "@wms/domain/catalog";
+import { parseExtraFilters, domainExtraFilters } from "../items/filters.ts";
+import { productQrDocument } from "./product-qr.ts";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { temaKoyu } from "../../../design/theme.ts";
@@ -34,6 +38,7 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
   const { slug } = await params;
   const sp = await searchParams;
   const t = await getTranslations("labels");
+  const tp = await getTranslations("items.productLabels");
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   const qs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" ? [[k, v] as [string, string]] : [])));
@@ -48,7 +53,10 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
   const home = `/t/${encodeURIComponent(slug)}`;
   const itemId = one(sp.item);
   const warehouseId = one(sp.warehouse);
-  const back = itemId !== undefined ? `${home}/items/${encodeURIComponent(itemId)}` : warehouseId !== undefined ? `${home}/warehouses/${encodeURIComponent(warehouseId)}` : home;
+  const batchMode = one(sp.products) === "1";
+  const filterParams = new URLSearchParams(qs);
+  for (const key of ["products", "after", "copies"]) filterParams.delete(key);
+  const back = batchMode ? `${home}/items?${filterParams.toString()}` : itemId !== undefined ? `${home}/items/${encodeURIComponent(itemId)}` : warehouseId !== undefined ? `${home}/warehouses/${encodeURIComponent(warehouseId)}` : home;
   const main = (children: React.ReactNode) => <main className="flex w-full min-w-0 flex-col">{children}</main>;
   const backAction = { label: t("goBack"), href: back };
   const shell = (children: React.ReactNode) =>
@@ -60,6 +68,22 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
 
   try {
     if (copies < 1) return shell(<LabelNotice title={t("errors.copies", { max: MAX_LABELS_PER_DOCUMENT })} action={backAction} />);
+    if (batchMode) {
+      if (itemId !== undefined || warehouseId !== undefined || ["q", "type", "status", "after", "copies"].some((key) => Array.isArray(sp[key]))) notFound();
+      const extra = parseExtraFilters(sp);
+      const type = one(sp.type);
+      const status = one(sp.status) ?? "ACTIVE";
+      if (extra === null || (type !== undefined && !(ITEM_CARD_TYPES as readonly string[]).includes(type)) || (status !== "ACTIVE" && status !== "ARCHIVED")) notFound();
+      const source = await loadProductLabelBatch(call, { ...domainExtraFilters(extra), status, ...(type === undefined ? {} : { cardType: type as "HM" | "YM" | "MM" | "TM" }), ...(one(sp.q) === undefined ? {} : { q: one(sp.q)! }), ...(one(sp.after) === undefined ? {} : { after: one(sp.after)! }), limit: 100 });
+      if (source.datas.length === 0) return shell(<LabelNotice title={tp("empty")} action={backAction} />);
+      if (source.datas.length * copies > MAX_LABELS_PER_DOCUMENT) return shell(<LabelNotice title={t("errors.copies", { max: MAX_LABELS_PER_DOCUMENT })} action={backAction} />);
+      let document: ReturnType<typeof productQrDocument>;
+      try { document = productQrDocument(source.datas, copies); }
+      catch (e) { if (e instanceof AppError && e.code === "VALIDATION_FAILED") return shell(<LabelNotice title={tp("invalidBarcode")} hint={tp("invalidBarcodeHint")} action={backAction} />); throw e; }
+      const next = new URLSearchParams(qs);
+      if (source.nextCursor !== null) next.set("after", source.nextCursor);
+      return main(<LabelPreview dark={dark} back={back} pages={document.pages} minWidth={document.minWidth} minHeight={document.minHeight} zpl="" fileName="urun-qr.zpl" templateVersion="product-qr-v1" bridgeEnabled={false} batchSummary={tp("batch", { count: source.datas.length, total: source.total })} {...(source.nextCursor === null ? {} : { nextHref: `${home}/labels?${next.toString()}` })} />);
+    }
     const source = await loadLabelSource(call, { itemId, warehouseId, locationId: one(sp.location), subtree: one(sp.subtree) === "1" });
     if (source === null) {
       return shell(<LabelNotice title={t("noSource")} hint={t("noSourceAction")} action={{ label: t("toItems"), href: `${home}/items` }} />);
@@ -88,7 +112,7 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
     );
   } catch (e) {
     if (e instanceof AppError) {
-      if (e.code === "NOT_FOUND") notFound();
+      if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "FORBIDDEN") {
