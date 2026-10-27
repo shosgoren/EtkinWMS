@@ -41,10 +41,10 @@ const createItemSchema = z
   })
   .strict();
 const suggestItemCodeSchema = z.object({ slug: slugSchema, prefix: z.string().max(16).optional() }).strict();
-const searchItemsSchema = z.object({ slug: slugSchema, q: z.string().max(128), limit: z.number().int().min(1).max(10).optional(), ...extraFilterShape, cardType: cardTypeSchema.optional(), status: z.enum(["ACTIVE", "ARCHIVED"]).optional() }).strict();
+const searchItemsSchema = z.object({ slug: slugSchema, q: z.string().max(128), limit: z.number().int().min(1).max(10).optional(), ...extraFilterShape, cardType: cardTypeSchema.optional(), status: z.enum(["ACTIVE", "ARCHIVED", "REMOVED"]).optional() }).strict();
 // T-1055: listenin sonraki sayfası (kaydırınca kendiliğinden). Süzgeçler sayfa adresindekilerle aynı; imleç domain'de doğrulanır.
 const loadMoreItemsSchema = z
-  .object({ slug: slugSchema, q: z.string().max(128), status: z.enum(["", "ACTIVE", "ARCHIVED"]), cardType: z.union([z.literal(""), cardTypeSchema]), after: z.string().min(1).max(512), ...extraFilterShape })
+  .object({ slug: slugSchema, q: z.string().max(128), status: z.enum(["", "ACTIVE", "ARCHIVED", "REMOVED"]), cardType: z.union([z.literal(""), cardTypeSchema]), after: z.string().min(1).max(512), ...extraFilterShape })
   .strict();
 const updateItemSchema = z
   .object({ slug: slugSchema, itemId: idSchema, code: textSchema.optional(), name: textSchema.optional(), pickPolicy: pickSchema.optional(), cardType: cardTypeSchema.optional() })

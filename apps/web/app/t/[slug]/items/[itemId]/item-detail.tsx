@@ -332,7 +332,7 @@ export function ItemDetail({
   canManage: boolean;
   quick: ItemQuickAccess;
   stockCard: ItemStockCardView | null;
-  sourceInfo?: Readonly<Record<string, { readonly categoryName?: string | null; readonly gtip?: string | null; readonly unit?: string | null; readonly archived?: boolean | null; readonly inventoryTracking?: boolean | null }>>;
+  sourceInfo?: Readonly<Record<string, { readonly categoryName?: string | null; readonly gtip?: string | null; readonly unit?: string | null; readonly archived?: boolean | null; readonly lifecycle?: "NONE"|"PENDING"|"ARCHIVED"|"REMOVED"; readonly sourceState?: "ACTIVE"|"ARCHIVED"|"DELETED"; readonly inventoryTracking?: boolean | null }>>;
   inUse: boolean;
   units: readonly UnitOption[];
   item: ItemDetailItem;
@@ -546,7 +546,7 @@ export function ItemDetail({
     const name = provider === "PARASUT" ? "Paraşüt" : provider === "LOGO" ? "Logo" : provider;
     const field = (key: string, label: string, value: ReactNode, d: string): KalipBilgi => ({ key: `${provider}-${key}`, etiket: `${name} · ${label}`, deger: value, d, ton: "turuncu", kilit: tsrc("sourceLocked") });
     const flag = (v: boolean | null): string => v === null ? "—" : tsrc(v ? "yes" : "no");
-    return [field("category", tsrc("category"), info.categoryName ?? "—", SICON.kutu), field("gtip", tsrc("sourceGtip"), info.gtip ?? "—", SICON.list), field("unit", tsrc("sourceUnit"), info.unit ?? "—", SICON.birim), ...(info.archived === undefined ? [] : [field("archived", tsrc("sourceArchived"), flag(info.archived), SICON.bilgi)]), ...(info.inventoryTracking === undefined ? [] : [field("inventory", tsrc("sourceInventory"), flag(info.inventoryTracking), SICON.bilgi)])];
+    return [...(info.lifecycle && info.lifecycle!=="NONE"?[field("lifecycle",tsrc("sourceStatus"),tsrc(info.lifecycle==="PENDING"?"pending":info.lifecycle==="REMOVED"?"removed":"archived"),SICON.bilgi)]:[]),field("category", tsrc("category"), info.categoryName ?? "—", SICON.kutu), field("gtip", tsrc("sourceGtip"), info.gtip ?? "—", SICON.list), field("unit", tsrc("sourceUnit"), info.unit ?? "—", SICON.birim), ...(info.archived === undefined ? [] : [field("archived", tsrc("sourceArchived"), flag(info.archived), SICON.bilgi)]), ...(info.inventoryTracking === undefined ? [] : [field("inventory", tsrc("sourceInventory"), flag(info.inventoryTracking), SICON.bilgi)])];
   });
   const sekmeler: KalipKartSekmesi[] = [
     { id: "genel", etiket: tk("tabGeneral"), d: SICON.bilgi, ton: "stok" },

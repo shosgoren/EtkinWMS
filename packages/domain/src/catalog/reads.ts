@@ -21,7 +21,7 @@ const SEARCH_Q_MAX = 128;
 const CODE_MAX = 64; // parseCode ile aynı üst sınır
 const CHILD_LIST_MAX = 200;
 
-export type ItemStatusFilter = "ACTIVE" | "ARCHIVED";
+export type ItemStatusFilter = "ACTIVE" | "ARCHIVED" | "REMOVED";
 
 export interface SearchItemsInput {
   /** Kod/ad öneki (büyük-küçük harf duyarsız) ya da barkod TAM eşleşmesi. Boş/yok: filtre yok. */
@@ -84,11 +84,11 @@ function parseLimit(raw: unknown): number {
 
 function parseStatus(raw: unknown): ItemStatusFilter | undefined {
   if (raw === undefined) return undefined;
-  if (raw !== "ACTIVE" && raw !== "ARCHIVED") throw new AppError("VALIDATION_FAILED");
+  if (raw !== "ACTIVE" && raw !== "ARCHIVED" && raw !== "REMOVED") throw new AppError("VALIDATION_FAILED");
   return raw;
 }
 
-function toItemRow(r: ItemHeader): ItemRow {
+function toItemRow(r: ItemHeader & {source_disposition?:ItemRow["sourceDisposition"]}): ItemRow {
   return {
     id: r.id,
     code: r.code,
@@ -99,6 +99,7 @@ function toItemRow(r: ItemHeader): ItemRow {
     pickPolicy: r.pick_policy as PickPolicy,
     status: r.status,
     cardType: r.card_type as ItemCardType,
+    ...(r.source_disposition===undefined?{}:{sourceDisposition:r.source_disposition}),
   };
 }
 
@@ -127,7 +128,8 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
     const tenant = actor.tenantId;
     const filters = [sql`i.tenant_id = ${tenant}::uuid`];
-    if (status !== undefined) filters.push(sql`i.status = ${status}`);
+    if (status === "REMOVED") filters.push(sql`i.source_disposition='REMOVED'`);
+    else { filters.push(sql`i.source_disposition<>'REMOVED'`); if(status!==undefined)filters.push(sql`i.status=${status}`); }
     if (cardType !== undefined) filters.push(sql`i.card_type = ${cardType}`);
     if (trackingMode !== undefined) filters.push(sql`i.tracking_mode = ${trackingMode}`);
     if (category !== undefined) filters.push(sql`EXISTS (
@@ -151,8 +153,8 @@ export async function searchItems(params: CatalogReadParams, input: SearchItemsI
         ? Number((await tx.execute<{ n: number | string }>(sql`SELECT count(*)::int AS n FROM public.items i WHERE ${sql.join(filters, sql` AND `)}`))[0]?.n ?? 0)
         : undefined;
     if (after !== undefined) filters.push(sql`(i.code, i.id) > (${after.code}, ${after.id}::uuid)`);
-    const rows = await tx.execute<ItemHeader>(
-      sql`SELECT i.id, i.code, i.name, i.base_unit_id, i.tracking_mode, i.quantity_scale, i.pick_policy, i.status, i.card_type
+    const rows = await tx.execute<ItemHeader & {source_disposition:NonNullable<ItemRow["sourceDisposition"]>}>(
+      sql`SELECT i.id, i.code, i.name, i.base_unit_id, i.tracking_mode, i.quantity_scale, i.pick_policy, i.status, i.card_type, i.source_disposition
             FROM public.items i
            WHERE ${sql.join(filters, sql` AND `)}
            ORDER BY i.code, i.id
