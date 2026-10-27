@@ -14,7 +14,7 @@ Bu dosya bu akışın tek devam kaydıdır. API bilgileri bekleniyor; sırlar do
 - Devir tamamlanmadan ve ayrıca etkinleştirilmeden WMS → Paraşüt stok gönderimi açılmaz. Mevcut canlı müşterinin stok/yön ayarları kendiliğinden değiştirilmez.
 
 ## Seri uygulama sırası
-1. **T-1060 — DEVAM:** miktarsız aktarımın birim/hassasiyet ve eşleme güvenliği; bilinmeyen birimi ADET sayma kaldırılır, mevcut kart birimi korunur.
+1. **T-1060 — KOD/TEST TAMAM, YAYIN BEKLİYOR:** miktarsız aktarımın birim/hassasiyet ve eşleme güvenliği; bilinmeyen birimi ADET sayma kaldırılır, mevcut kart birimi korunur.
 2. **BEKLİYOR:** barkod alma parametresi + kalıcı dahili barkod/alternatifler; alan sahipliği ve aktarım sonuçları, desteklenen ürün alanları. Şema ve API karşılığı doğrulanarak.
 3. **BEKLİYOR:** toplu ürün etiketi ve filtreler; standart okutma korunur.
 4. **BEKLİYOR:** belirlenmemiş takip durumu + yetkili ilk seçim; mevcut kayıtları koruyan migration.
