@@ -34,9 +34,9 @@ const top = async (adm: pg.Client): Promise<string | undefined> =>
 
 it("0055 boşken geri alınır ve yeniden uygulanır; dolu veride down reddedilir, veri ve defter korunur", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0059", "0058", "0057", "0056", "0055"]);
+    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0060", "0059", "0058", "0057", "0056", "0055"]);
     expect((await adm.query("SELECT to_regclass('public.integrations') AS i, to_regclass('public.integration_outbox') AS o, to_regclass('public.external_refs') AS r")).rows[0]).toEqual({ i: null, o: null, r: "external_refs" });
-    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060"]);
 
     const w = await seedWorld(adm, newRegistry(), "M991");
     await adm.query("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED')", [w.tenantId]);
@@ -45,5 +45,16 @@ it("0055 boşken geri alınır ve yeniden uygulanır; dolu veride down reddedili
     expect((await adm.query("SELECT count(*)::int AS n FROM public.integrations")).rows[0]?.n).toBe(1);
     const forced = await adm.query<{ f: boolean }>("SELECT relforcerowsecurity AS f FROM pg_class WHERE oid = 'public.integrations'::regclass");
     expect(forced.rows[0]?.f).toBe(true);
+  });
+}, 120_000);
+
+it("0060 kaynak kart bilgisi varken geri alma veri kaybetmeden reddedilir", async () => {
+  await scratch(async (url, adm) => {
+    const w = await seedWorld(adm, newRegistry(), "M1062");
+    await adm.query("UPDATE public.items SET source_product_info='{\"PARASUT\":{\"gtip\":\"400821\"}}'::jsonb WHERE tenant_id=$1 AND id=$2", [w.tenantId, w.itemNoneId]);
+    await expect(migrateDown({ url, to: "0059", wmsEnv: "staging" })).rejects.toThrow(/0060 down: product source information is in use/);
+    expect(await top(adm)).toBe("0060");
+    expect((await adm.query("SELECT source_product_info FROM public.items WHERE tenant_id=$1 AND id=$2", [w.tenantId, w.itemNoneId])).rows[0]?.source_product_info).toEqual({ PARASUT: { gtip: "400821" } });
+    expect((await adm.query("SELECT relforcerowsecurity AS f FROM pg_class WHERE oid='public.items'::regclass")).rows[0]?.f).toBe(true);
   });
 }, 120_000);

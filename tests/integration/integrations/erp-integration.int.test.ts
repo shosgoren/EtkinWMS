@@ -18,6 +18,7 @@ import {
   requestIntegrationRun,
   runIntegrationSync,
   setIntegrationFlow,
+  getProductSourceInfo,
   getProductBarcodeSetting,
   setProductBarcodeSetting,
 } from "../../../packages/domain/src/integrations/index.ts";
@@ -343,6 +344,36 @@ describe("senkron", () => {
     expect(rejected.kind === "ran" && rejected.flows[0]?.counts).toMatchObject({ created: 0, failed: 1 });
     expect(await q("SELECT id FROM public.items WHERE tenant_id=$1 AND code='GTIN-SECOND'", [W.tenantId])).toEqual([]);
     expect(await q("SELECT barcode FROM public.item_barcodes WHERE tenant_id=$1 AND barcode=ANY($2::text[])", [W.tenantId, [first, second]])).toEqual([{ barcode: first }]);
+  });
+
+  it("kaynak kategori/GTİP miktar ve fiyat olmadan alınır; WMS kuralları, tenant sınırı ve tekrar güvenliği korunur", async () => {
+    const W = await seedWorld(adm, reg, "ERPINFO");
+    const id = await connect(W);
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    fake.categories.push({ id: "42", attributes: { name: "Hammaddeler", category_type: "Product" } });
+    fake.products.push({ id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", gtip: "4008.21", archived: false, inventory_tracking: true, list_price: 120, buying_price: 100, currency: "TRY", stock_count: 999 }, relationships: { category: { data: { id: "42", type: "item_categories" } } } });
+    const before = await stockFingerprint(W);
+    await sync(W, id);
+    const itemId = (await q<{ id: string }>("SELECT id FROM public.items WHERE tenant_id=$1 AND code='INFO-SAFE'", [W.tenantId]))[0]?.id as string;
+    const expected = { PARASUT: { unit: "Adet", gtip: "4008.21", archived: false, inventoryTracking: true, categoryId: "42", categoryName: "Hammaddeler" } };
+    expect(await getProductSourceInfo(admin(W), itemId)).toEqual(expected);
+    expect((await fail(getProductSourceInfo(admin(A), itemId))).code).toBe("NOT_FOUND");
+    const otherTenant = await asApp(A.tenantId, "UPDATE public.items SET source_product_info='{}'::jsonb WHERE id=$1", [itemId]);
+    expect(otherTenant).toMatchObject({ ok: true, rowCount: 0 });
+    const unchanged = await sync(W, id);
+    expect(unchanged.kind === "ran" && unchanged.flows[0]?.counts.updated).toBe(0);
+    // Kaynakta arşivlenmesi/bir bayrak değişmesi WMS kartını pasife veya takipsiz hale getirmez.
+    await adm.query("UPDATE public.items SET tracking_mode='LOT', card_type='HM' WHERE tenant_id=$1 AND id=$2", [W.tenantId, itemId]);
+    fake.products[0] = { id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", archived: true, inventory_tracking: false } };
+    await sync(W, id);
+    expect(await getProductSourceInfo(admin(W), itemId)).toEqual({ PARASUT: { ...expected.PARASUT, archived: true, inventoryTracking: false } });
+    expect(await q("SELECT status,tracking_mode,card_type FROM public.items WHERE tenant_id=$1 AND id=$2", [W.tenantId, itemId])).toEqual([{ status: "ACTIVE", tracking_mode: "LOT", card_type: "HM" }]);
+    fake.products[0] = { id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", gtip: null }, relationships: { category: { data: null } } };
+    await sync(W, id);
+    expect(await getProductSourceInfo(admin(W), itemId)).toEqual({ PARASUT: { ...expected.PARASUT, archived: true, inventoryTracking: false, gtip: null, categoryId: null, categoryName: null } });
+    const forbiddenField = await asApp(W.tenantId, "UPDATE public.items SET source_product_info=source_product_info || '{\"PARASUT\":{\"list_price\":100}}'::jsonb WHERE id=$1", [itemId]);
+    expect(forbiddenField).toMatchObject({ ok: false, code: "23514" });
+    expect(await stockFingerprint(W)).toEqual(before);
   });
 
   it("Etkin -> ERP ürün (BOTH): aynı koddaki ERP ürününe bağlanır, yenisi bir kez yaratılır", async () => {

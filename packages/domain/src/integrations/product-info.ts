@@ -1,0 +1,79 @@
+// T-1062: kaynak yanıtını saklamak yerine yalnız izinli miktarsal kart alanlarını seçer.
+import { sql } from "drizzle-orm";
+import { appendAudit } from "@wms/db";
+import { AppError } from "@wms/shared/errors";
+import { runTenantQuery, type AccessTx } from "../identity/access.ts";
+import { parseUuid, type CatalogCommandParams } from "../catalog/units.ts";
+import type { ApplyContext } from "./apply.ts";
+import type { JsonApiResource } from "./parasut.ts";
+
+export interface ProductSourceInfo {
+  readonly unit?: string | null;
+  readonly gtip?: string | null;
+  readonly categoryId?: string | null;
+  readonly categoryName?: string | null;
+  readonly archived?: boolean | null;
+  readonly inventoryTracking?: boolean | null;
+}
+
+function text(raw: unknown, max: number): string | null {
+  if (raw === null) return null;
+  if (typeof raw !== "string" || raw.length > max || /\p{C}/u.test(raw)) throw new AppError("VALIDATION_FAILED");
+  return raw.normalize("NFC").trim() || null;
+}
+function flag(raw: unknown): boolean | null {
+  if (raw === null || typeof raw === "boolean") return raw;
+  throw new AppError("VALIDATION_FAILED");
+}
+
+/** Eksik alan patch'e girmez; açık null temizler. Fiyat/vergi/döviz/miktar asla seçilmez. */
+export function productSourceInfo(r: JsonApiResource, included: readonly JsonApiResource[] = []): ProductSourceInfo {
+  const a = r.attributes;
+  const result: { -readonly [K in keyof ProductSourceInfo]: ProductSourceInfo[K] } = {};
+  if ("unit" in a) result.unit = text(a.unit, 64);
+  if ("gtip" in a) result.gtip = text(a.gtip, 64);
+  if ("archived" in a) result.archived = flag(a.archived);
+  if ("inventory_tracking" in a) result.inventoryTracking = flag(a.inventory_tracking);
+  const relationship = r.relationships.category;
+  if (relationship !== undefined) {
+    if (relationship === null || typeof relationship !== "object" || !("data" in relationship)) throw new AppError("VALIDATION_FAILED");
+    const data: unknown = relationship.data;
+    if (data === null) {
+      result.categoryId = null;
+      result.categoryName = null;
+    } else {
+      if (typeof data !== "object" || !("type" in data) || data.type !== "item_categories" || !("id" in data)) throw new AppError("VALIDATION_FAILED");
+      const id = text(data.id, 255);
+      if (id === null) throw new AppError("VALIDATION_FAILED");
+      result.categoryId = id;
+      const category = included.find((c) => c.type === "item_categories" && c.id === id);
+      // Yeni kategori adına erişilemiyorsa önceki kategorinin adı tutulmaz.
+      if (category === undefined || category.attributes.category_type !== "Product") throw new AppError("VALIDATION_FAILED");
+      result.categoryName = text(category.attributes.name, 200);
+    }
+  }
+  return result;
+}
+
+export async function saveProductSourceInfo(tx: AccessTx, c: ApplyContext, itemId: string, patch: ProductSourceInfo | undefined): Promise<boolean> {
+  if (patch === undefined || Object.keys(patch).length === 0) return false;
+  const rows = await tx.execute<{ id: string }>(sql`UPDATE public.items
+    SET source_product_info = jsonb_set(source_product_info, ARRAY[${c.system}]::text[], COALESCE(source_product_info->${c.system}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb)
+    WHERE tenant_id=${c.tenantId}::uuid AND id=${itemId}::uuid
+      AND COALESCE(source_product_info->${c.system}, '{}'::jsonb) IS DISTINCT FROM (COALESCE(source_product_info->${c.system}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb)
+    RETURNING id`);
+  if (rows.length === 0) return false;
+  await appendAudit(tx, { action: "item.updated", actorUserId: c.actorUserId, entityType: "item", entityId: itemId,
+    changeSummary: { via: "integration", system: c.system, sourceFields: Object.keys(patch) } });
+  return true;
+}
+
+/** WMS stok/takip kurallarından ayrı, bilgilendirme amaçlı kaynak kart alanları. */
+export async function getProductSourceInfo(params: CatalogCommandParams, rawItemId: string): Promise<Readonly<Record<string, ProductSourceInfo>>> {
+  const itemId = parseUuid(rawItemId);
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
+    const r = await tx.execute<{ info: Record<string, ProductSourceInfo> }>(sql`SELECT source_product_info AS info FROM public.items WHERE tenant_id=${actor.tenantId}::uuid AND id=${itemId}::uuid`);
+    if (r[0] === undefined) throw new AppError("NOT_FOUND");
+    return r[0].info;
+  });
+}

@@ -6,6 +6,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 export interface FakeRecord {
+  relationships?: Record<string, unknown>;
   id: string;
   attributes: Record<string, unknown>;
 }
@@ -34,6 +35,7 @@ export interface FakeParasut {
   readonly url: string;
   readonly opts: Required<Omit<FakeParasutOptions, "port">>;
   readonly products: FakeRecord[];
+  readonly categories: FakeRecord[];
   readonly contacts: FakeRecord[];
   readonly warehouses: FakeRecord[];
   readonly shipments: { body: unknown }[];
@@ -89,7 +91,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
   const state: FakeParasut = {
     url: "",
     opts,
-    products: [],
+    products: [], categories: [],
     contacts: [],
     warehouses: [],
     shipments: [],
@@ -152,7 +154,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       const size = Math.min(25, Number(url.searchParams.get("page[size]") ?? "15"));
       const page = Number(url.searchParams.get("page[number]") ?? "1");
       const slice = rows.slice((page - 1) * size, page * size);
-      return send(200, { data: slice.map((r) => ({ id: r.id, type: kind, attributes: r.attributes, relationships: {} })), meta: { current_page: page, total_pages: Math.max(1, Math.ceil(rows.length / size)), total_count: rows.length } });
+      return send(200, { data: slice.map((r) => ({ id: r.id, type: kind, attributes: r.attributes, relationships: r.relationships ?? {} })), included: kind === "products" && url.searchParams.get("include") === "category" ? state.categories.map((r) => ({ id: r.id, type: "item_categories", attributes: r.attributes })) : [], meta: { current_page: page, total_pages: Math.max(1, Math.ceil(rows.length / size)), total_count: rows.length } });
     }
     let parsed: { data?: { attributes?: Record<string, unknown> } } = {};
     try {

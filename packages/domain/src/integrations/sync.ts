@@ -19,6 +19,7 @@ import type { AccessTx } from "../identity/access.ts";
 import { applyContact, applyProduct, applyWarehouse, link, refExternal, type ApplyContext, type ApplyOutcome } from "./apply.ts";
 import { FLOWS, PROVIDER_INFO, flowSupported, pulls, pushes, type Direction, type Flow } from "./catalog.ts";
 import { ProviderError, type JsonApiResource, type ParasutClient } from "./parasut.ts";
+import { productSourceInfo } from "./product-info.ts";
 import { selectChangedStockLevels } from "./stock-reads.ts";
 import { IntegrationStateError, accessToken, loadIntegration, markIntegrationError, type RunTx } from "./store.ts";
 
@@ -106,7 +107,7 @@ async function connectorAllowed(tx: AccessTx, tenantId: string, membershipId: st
 
 // --- eşleme dönüştürücüleri (sağlayıcı kaynağı → apply girdisi) --------------------------------------------------------------------
 const s = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
-const toProduct = (r: JsonApiResource) => ({ externalId: r.id, code: s(r.attributes.code), name: s(r.attributes.name), unit: s(r.attributes.unit), barcode: s(r.attributes.barcode) });
+const toProduct = (r: JsonApiResource, included: readonly JsonApiResource[] = []) => ({ externalId: r.id, code: s(r.attributes.code), name: s(r.attributes.name), unit: s(r.attributes.unit), barcode: s(r.attributes.barcode), sourceInfo: productSourceInfo(r, included) });
 const toContact = (r: JsonApiResource) => ({
   externalId: r.id,
   name: s(r.attributes.name),
@@ -133,7 +134,7 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
         try {
           // Satır başına kayıt noktası: bir kartın reddi sayfanın kalanını düşürmez.
           const o = await tx.transaction((sp) =>
-            kind === "products" ? applyProduct(sp, ac, toProduct(item)) : kind === "contacts" ? applyContact(sp, rc.ac, toContact(item)) : applyWarehouse(sp, rc.ac, toWarehouse(item)),
+            kind === "products" ? applyProduct(sp, ac, toProduct(item, p.included)) : kind === "contacts" ? applyContact(sp, rc.ac, toContact(item)) : applyWarehouse(sp, rc.ac, toWarehouse(item)),
           );
           count(rc.c, o);
         } catch {

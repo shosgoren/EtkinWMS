@@ -22,3 +22,5 @@ export {
 } from "./opening-stock.ts";
 
 export { getProductBarcodeSetting, setProductBarcodeSetting } from "./product-settings.ts";
+
+export { getProductSourceInfo, type ProductSourceInfo } from "./product-info.ts";
