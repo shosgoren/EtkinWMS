@@ -111,6 +111,7 @@ export interface ItemListView {
   readonly code: string;
   readonly name: string;
   readonly status: "ACTIVE" | "ARCHIVED";
+  readonly sourceDisposition?: "NONE"|"PENDING"|"ARCHIVED"|"REMOVED";
   readonly baseUnitCode: string;
   readonly cardType: CardType;
   /** Arama eski kodla eşleştiyse o eski kod (T-257). */
@@ -423,7 +424,7 @@ export function ItemsView({
   total?: number;
   /** T-1055'ten beri yalnız eski `?after=` adresleri için (kaydırmalı listede kullanılmaz). */
   firstPage?: boolean;
-  query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED"; readonly type: "" | CardType } & ItemExtraFilters;
+  query: { readonly q: string; readonly status: "" | "ACTIVE" | "ARCHIVED" | "REMOVED"; readonly type: "" | CardType } & ItemExtraFilters;
 }) {
   const t = useTranslations("items");
   const tk = useTranslations("items.k");
@@ -569,12 +570,13 @@ export function ItemsView({
     { id: "all", label: tk("all"), d: LICON.grid, color: "172E42", on: query.type === "" && query.status === "", href: href({ type: "", status: "" }) },
     // Kaynaktaki 2. çip (Kritik) yerinde Arşivli: telefonda ilk 4 çip görünür (kaynak `.fch:nth-child(n+5)` gizli); tür sırası kaynaktaki gibi HM · MM · YM.
     { id: "archived", label: tk("archived"), d: LICON.lock, color: "4E6476", on: query.status === "ARCHIVED", href: href({ status: query.status === "ARCHIVED" ? "" : "ARCHIVED" }) },
+    {id:"removed",label:tk("removed"),d:LICON.lock,color:"4E6476",on:query.status==="REMOVED",href:href({status:query.status==="REMOVED"?"":"REMOVED"})},
     ...(["HM", "MM", "YM", "TM"] as const).map((k) => ({ id: k, label: tc(k), d: visual(k).d, color: visual(k).color, on: query.type === k, href: href({ type: query.type === k ? "" : k }) })),
   ];
 
   const tones = items.map((it) => {
     const st = stock[it.id];
-    return it.status === "ARCHIVED" || st === undefined ? "ok" : stockTone(st.have, st.min);
+    return it.sourceDisposition==="PENDING"?"low":it.status === "ARCHIVED" || st === undefined ? "ok" : stockTone(st.have, st.min);
   });
   const attention = tones.filter((x) => x !== "ok").length;
   const countLbl = (total !== undefined ? tk("count", { n: total }) : sonrakiImlec === null ? tk("count", { n: items.length }) : tk("countMore", { n: items.length })) + (attention > 0 && !filtered ? tk("dikkat", { n: attention }) : "");
@@ -583,7 +585,7 @@ export function ItemsView({
     const st = stock[it.id];
     const tn = tones[i] ?? "ok";
     const archived = it.status === "ARCHIVED";
-    const state = archived ? tk("archivedTag") : st === undefined ? "" : tn === "crit" ? tk("stockCrit") : tn === "low" ? tk("stockLow") : st.have.replace(/[0.]/g, "") === "" ? tk("stockNone") : tk("stockIn");
+    const state = it.sourceDisposition==="REMOVED"?tk("removedTag"):it.sourceDisposition==="PENDING"?tk("pendingTag"):archived ? tk("archivedTag") : st === undefined ? "" : tn === "crit" ? tk("stockCrit") : tn === "low" ? tk("stockLow") : st.have.replace(/[0.]/g, "") === "" ? tk("stockNone") : tk("stockIn");
     return { it, st, tn, archived, state, qty: st === undefined ? "" : fmtQty(st.have, locale) };
   });
 
@@ -743,9 +745,9 @@ export function ItemsView({
                 const st = stock[it.id];
                 const tn = tones[i] ?? "ok";
                 const archived = it.status === "ARCHIVED";
-                const state = archived ? tk("archivedTag") : st === undefined ? "" : tn === "crit" ? tk("stockCrit") : tn === "low" ? tk("stockLow") : st.have.replace(/[0.]/g, "") === "" ? tk("stockNone") : tk("stockIn");
+                const state = it.sourceDisposition==="REMOVED"?tk("removedTag"):it.sourceDisposition==="PENDING"?tk("pendingTag"):archived ? tk("archivedTag") : st === undefined ? "" : tn === "crit" ? tk("stockCrit") : tn === "low" ? tk("stockLow") : st.have.replace(/[0.]/g, "") === "" ? tk("stockNone") : tk("stockIn");
                 const qty = st === undefined ? "" : fmtQty(st.have, locale);
-                const meta = [tc(it.cardType).toLocaleUpperCase(locale === "en" ? "en" : "tr"), tk("unitTag", { unit: it.baseUnitCode })].join(" · ");
+                const meta = [...(it.sourceDisposition==="PENDING"&&st===undefined?[tk("pendingTag")]:[]),tc(it.cardType).toLocaleUpperCase(locale === "en" ? "en" : "tr"), tk("unitTag", { unit: it.baseUnitCode })].join(" · ");
                 return (
                   <KalipKart
                     key={it.id}

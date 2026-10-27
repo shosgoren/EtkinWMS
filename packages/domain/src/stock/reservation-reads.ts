@@ -322,18 +322,44 @@ export async function assertItemsActive(
   tx: AccessTx,
   tenantId: string,
   itemIds: readonly string[],
-  opts: { readonly archivedDetail?: "IN_USE" } = {},
+  opts: { readonly archivedDetail?: "IN_USE"; readonly allowSourcePending?: boolean; readonly existingDocumentId?: string; readonly pendingQuantities?: readonly { readonly itemId: string; readonly baseQuantity: string }[] } = {},
 ): Promise<void> {
   const ids = [...new Set(itemIds.map((i) => i.toLowerCase()))].sort();
   if (ids.length === 0) return;
-  const rows = await tx.execute<{ id: string; status: string }>(
-    sql`SELECT id, status FROM public.items
+  const rows = await tx.execute<{ id: string; status: string; source_disposition: string }>(
+    sql`SELECT id, status, source_disposition FROM public.items
          WHERE tenant_id = ${tenantId}::uuid AND id = ANY(${pgUuidArray(ids)}::uuid[])
          ORDER BY id FOR SHARE`,
   );
   if (rows.length !== ids.length) throw new AppError("NOT_FOUND");
   if (rows.some((r) => r.status !== "ACTIVE")) {
     throw new AppError("VALIDATION_FAILED", opts.archivedDetail === undefined ? {} : { detail: opts.archivedDetail });
+  }
+  if (opts.allowSourcePending === true) return; // Explicit stock depletion / internal transfer only; native archive still blocks above.
+  const pending = rows.filter(r => r.source_disposition === "PENDING");
+  if (pending.length === 0) return;
+  const allowed = opts.existingDocumentId === undefined ? [] : await tx.execute<{ id: string }>(sql`
+    SELECT i.id FROM public.items i
+    JOIN public.document_lines l ON l.tenant_id=i.tenant_id AND l.item_id=i.id
+    JOIN public.documents d ON d.tenant_id=l.tenant_id AND d.id=l.document_id
+    WHERE i.tenant_id=${tenantId}::uuid AND d.id=${uuid(opts.existingDocumentId)}::uuid
+      AND i.id=ANY(${pgUuidArray(pending.map(r=>r.id))}::uuid[])
+      AND (d.created_at < i.source_changed_at OR (
+        d.source_kind='INBOUND_RECEIPT' AND EXISTS (
+          SELECT 1 FROM public.inbound_receipts r JOIN public.inbound_receipt_lines rl ON rl.tenant_id=r.tenant_id AND rl.receipt_id=r.id
+          WHERE r.tenant_id=i.tenant_id AND r.id=d.source_id AND rl.item_id=i.id AND r.created_at<i.source_changed_at AND rl.created_at<i.source_changed_at
+        )
+      ))`);
+  if (pending.some(r => !allowed.some(a => a.id === r.id))) throw new AppError("VALIDATION_FAILED", {detail:"IN_USE"});
+  if (opts.pendingQuantities !== undefined && opts.existingDocumentId !== undefined) {
+    const excess = await tx.execute(sql`
+      SELECT 1 FROM jsonb_to_recordset(${JSON.stringify(opts.pendingQuantities)}::jsonb) AS q("itemId" uuid,"baseQuantity" numeric)
+      WHERE q."itemId"=ANY(${pgUuidArray(pending.map(r=>r.id))}::uuid[])
+      GROUP BY q."itemId" HAVING sum(q."baseQuantity") > coalesce((
+        SELECT sum(l.base_quantity) FROM public.document_lines l
+        WHERE l.tenant_id=${tenantId}::uuid AND l.document_id=${uuid(opts.existingDocumentId)}::uuid AND l.item_id=q."itemId"
+      ),0) LIMIT 1`);
+    if (excess.length > 0) throw new AppError("VALIDATION_FAILED", {detail:"IN_USE"});
   }
 }
 

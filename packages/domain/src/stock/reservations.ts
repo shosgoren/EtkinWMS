@@ -567,7 +567,7 @@ export async function allocateInTx(
   if (allKeys.length === 0) return { reservationIds: [], allocated: requests.map(() => 0n) };
   await assertLocationsActiveInWarehouse(tx, tenantId, allKeys.map((d) => d.locationId), opts.warehouseId);
   const itemIds = [...new Set(requests.map((r) => r.itemId.toLowerCase()))].sort(cmp);
-  await assertItemsActive(tx, tenantId, itemIds, { archivedDetail: "IN_USE" });
+  await assertItemsActive(tx, tenantId, itemIds, { archivedDetail: "IN_USE", allowSourcePending: true });
   const scales = await tx.execute<{ id: string; quantity_scale: number }>(
     sql`SELECT id, quantity_scale FROM public.items WHERE tenant_id = ${tenantId}::uuid AND id = ANY(${pgUuidArray(itemIds)}::uuid[])`,
   );

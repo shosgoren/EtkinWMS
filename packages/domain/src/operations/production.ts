@@ -98,6 +98,8 @@ export async function produceFromRecipe(params:StockDocCallParams,input:ProduceI
  const outcome=await executeStockCommand({...params,commandType:"stock.production.post",permission:"stock.post",input:normalized,
  plan:async(tx,_i,m)=>{const specs=await productionSpecs(tx,m.tenantId,normalized),plans=[];for(const spec of specs)plans.push(await planFieldPosting(tx,m.tenantId,spec));return mergeFieldPlans(plans);},
  apply:async(tx,locked,ctx)=>{
+  const recipe=await readRecipe(tx,ctx.tenantId,normalized.recipeId);
+  await assertItemsActive(tx,ctx.tenantId,[recipe.outputItemId,...recipe.lines.map(l=>l.itemId)]);
   const specs=await productionSpecs(tx,ctx.tenantId,normalized),applied=[];
   for(const spec of specs)applied.push(await postFieldDocument(tx,locked,ctx,spec,input.requestId??null));
   const into=applied.pop();if(!into?.numbering)throw new AppError("INTERNAL");
@@ -249,6 +251,7 @@ export async function preparePackageProduction(params:StockDocCallParams,input:P
   },
   apply:async(tx,_locked,ctx)=>{
    const c=await packageProductionContext(tx,ctx.tenantId,value),batchId=randomUUID();
+   await assertItemsActive(tx,ctx.tenantId,[c.recipe.outputItemId,...c.recipe.lines.map(l=>l.itemId)]);
    const outputs=c.outputItem.tracking_mode==="LOT"?await materializeProductionLots(tx,ctx.tenantId,c.recipe.outputItemId,c.outputs):c.outputs;
    const allocated=outputs.map(row=>({...row,id:randomUUID()}));
    for(const row of allocated)await tx.execute(sql`INSERT INTO public.handling_units(tenant_id,id,kind,code,package_production_id) VALUES(${ctx.tenantId}::uuid,${row.id}::uuid,${value.outputs.kind},${row.id},${batchId}::uuid)`);
