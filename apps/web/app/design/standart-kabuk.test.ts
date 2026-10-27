@@ -46,7 +46,10 @@ describe("T-1042 ortak kabuk (STANDART §1)", () => {
   it("T-1044: üst çubuk yalnız simge (yazı yok), 48 px; menüde Tema/Ayarlar yalnız telefonda; menü perdesi alt çubuğu da örter", () => {
     expect(css).toMatch(/\.kalip \.top :is\(\.tb, \.stbtn\) > span,\s*\.dzp \.top :is\(\.tb, \.stbtn\) > span \{\s*display: none;/);
     expect(css).toMatch(/\.tmenu \.st-mob \{\s*display: none !important;/);
-    expect(css).toMatch(/html:has\(\.halo\.tmenu\) \.dzk \.wrap \{\s*z-index: 19;/);
+    // T-1060: perde ve menü sayfa kökünde; perde alt cam çubuğun (z 25) üstünde, menü perdenin üstünde.
+    expect(css).toMatch(/\.dzp\.hmenu-kok \.hback \{ position: fixed; inset: 0; z-index: 40; \}/);
+    expect(css).toMatch(/\.dzp\.hmenu-kok \.halo\.tmenu \{ position: fixed; z-index: 41; \}/);
+    expect(read("../t/[slug]/pano/hesap-menu.tsx")).toMatch(/createPortal\(/);
     expect(read("../t/[slug]/pano/hesap-menu.tsx")).not.toMatch(/k: "switch"/);
   });
   it("modül zemin geçişi görünen tam ekran yüzeyde (.app), açık ve koyu temada", () => {

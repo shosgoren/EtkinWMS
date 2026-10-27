@@ -243,7 +243,8 @@ test("Pano hesap sahibi: rapor kartları, kaydırmasız telefon/tablet, ekip men
     if (m.ov === "hidden") expect(m.ish, `${width}: içerik alanı taşmaz`).toBeLessThanOrEqual(m.ich + 1);
     // Ekip menüsü: Kullanıcılar bağlantısı; eski "Tüm ekranlar" yok (T-979c).
     await pano.getByTestId("home-actions").click();
-    const team = pano.getByRole("menu", { name: "EKİP" });
+    // T-1060: menü ve perdesi sayfa kökünde (portal) — ekran kabının içinde değil.
+    const team = page.getByRole("menu", { name: "EKİP" });
     await expect(team.getByRole("menuitem", { name: "Kullanıcılar" })).toHaveAttribute("href", "/t/demo/team");
     await expect(team.getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
     await page.keyboard.press("Escape");

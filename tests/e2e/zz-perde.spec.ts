@@ -14,33 +14,28 @@ const EKRANLAR = ["", "/groups", "/items", "/parties", "/team", "/settings"] as 
 
 /** `perde` seçicisindeki öğe görüntü alanını kaplıyor ve verilen noktalarda en üstte (ya da `panel` içinde) mi? */
 async function perdeOrtuyor(page: Page, perde: string, panel: string): Promise<string[]> {
-  return page.evaluate(
-    ({ perde, panel }) => {
-      const hatalar: string[] = [];
-      const p = document.querySelector(perde);
-      if (p === null) return ["perde yok"];
-      const r = p.getBoundingClientRect();
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      if (r.left > 1 || r.top > 1 || r.right < vw - 1 || r.bottom < vh - 1) hatalar.push(`perde alanı ${Math.round(r.width)}x${Math.round(r.height)} (görüntü ${vw}x${vh})`);
-      const dock = document.querySelector('[data-testid="kabuk-dock"]');
-      const noktalar: Array<[string, number, number]> = [
-        ["üst köşe", 6, 6],
-        ["sol orta", 6, Math.round(vh / 2)],
-      ];
-      if (dock !== null) {
-        const d = dock.getBoundingClientRect();
-        if (d.width === 0 || d.height === 0 || getComputedStyle(dock).visibility === "hidden") hatalar.push("alt çubuk görünmüyor");
-        else noktalar.push(["alt çubuk", Math.round(d.left + 12), Math.round(d.top + d.height / 2)]);
-      }
-      for (const [ad, x, y] of noktalar) {
-        const el = document.elementFromPoint(x, y);
-        if (el === null || !(el === p || p.contains(el) || el.closest(panel) !== null)) hatalar.push(`${ad}: en üstte perde değil (${el?.tagName ?? "yok"}.${(el as HTMLElement | null)?.className ?? ""})`);
-      }
-      return hatalar;
-    },
-    { perde, panel },
-  );
+  // Tarayıcıda çalışan denetim (dizge: test derlemesi DOM türlerini içermez).
+  return page.evaluate<string[]>(`(() => {
+    const perde = ${JSON.stringify(perde)}, panel = ${JSON.stringify(panel)};
+    const hatalar = [];
+    const p = document.querySelector(perde);
+    if (p === null) return ["perde yok"];
+    const r = p.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    if (r.left > 1 || r.top > 1 || r.right < vw - 1 || r.bottom < vh - 1) hatalar.push("perde alanı " + Math.round(r.width) + "x" + Math.round(r.height) + " (görüntü " + vw + "x" + vh + ")");
+    const dock = document.querySelector('[data-testid="kabuk-dock"]');
+    const noktalar = [["üst köşe", 6, 6], ["sol orta", 6, Math.round(vh / 2)]];
+    if (dock !== null) {
+      const d = dock.getBoundingClientRect();
+      if (d.width === 0 || d.height === 0 || getComputedStyle(dock).visibility === "hidden") hatalar.push("alt çubuk görünmüyor");
+      else noktalar.push(["alt çubuk", Math.round(d.left + 12), Math.round(d.top + d.height / 2)]);
+    }
+    for (const [ad, x, y] of noktalar) {
+      const el = document.elementFromPoint(x, y);
+      if (el === null || !(el === p || p.contains(el) || el.closest(panel) !== null)) hatalar.push(ad + ": en üstte perde değil (" + (el ? el.tagName + "." + el.className : "yok") + ")");
+    }
+    return hatalar;
+  })()`);
 }
 
 for (const b of BOYUTLAR) {
