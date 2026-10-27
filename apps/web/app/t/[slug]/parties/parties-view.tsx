@@ -74,14 +74,17 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
   // (silip boş bırakmak dahil) öneri uygulanmaz; gecikmeli yanıt bayat değeri görmesin diye ref. Öneri başlangıç değerine de yazılır:
   // yalnız önerilen kodla çıkmak "kaydedilmemiş değişiklik" sayılmaz.
   const touchedRef = useRef(false);
-  const [suggested, setSuggested] = useState<string | null>(null);
+  // Codex P2: önerinin hangi tür için alındığı tutulur; tür değişince eski öneri hemen silinir (yeni gelene dek kod boş, kaydet zorunlu
+  // alan uyarısı verir). Böylece tedarikçi eski müşteri önekiyle (`MUS-…`) "otomatik" kaydedilemez.
+  const [suggested, setSuggested] = useState<{ readonly code: string; readonly kind: Kind } | null>(null);
   const yeni = party === null && canEdit;
   useEffect(() => {
     if (!yeni || touchedRef.current) return;
     let stale = false;
-    void suggestPartyCodeAction({ slug, kind: f.kind }).then((r) => {
+    const kind = f.kind;
+    void suggestPartyCodeAction({ slug, kind }).then((r) => {
       if (stale || touchedRef.current || !r.ok) return;
-      setSuggested(r.data.code);
+      setSuggested({ code: r.data.code, kind });
       setF((cur) => ({ ...cur, code: r.data.code }));
       setInitial((cur) => ({ ...cur, code: r.data.code }));
     });
@@ -97,7 +100,7 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
   ];
 
   async function save(): Promise<KaydetSonuc> {
-    const auto = party === null && !touchedRef.current && suggested !== null && f.code === suggested;
+    const auto = party === null && !touchedRef.current && suggested !== null && suggested.kind === f.kind && f.code === suggested.code;
     const body = { slug, ...f, ...(party === null ? (auto ? { autoCode: true } : {}) : { id: party.id, expectedVersion: party.version }) };
     const r = await savePartyAction(body);
     if (!r.ok) return { ok: false, mesaj: r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }) };
@@ -198,7 +201,15 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
               value={f.kind}
               color={v.color}
               disabled={!canEdit}
-              onPick={(id) => set("kind", id)}
+              onPick={(id) => {
+                if (yeni && !touchedRef.current && id !== f.kind) {
+                  setSuggested(null);
+                  setF((cur) => ({ ...cur, kind: id as Kind, code: "" }));
+                  setInitial((cur) => ({ ...cur, code: "" }));
+                  return;
+                }
+                set("kind", id);
+              }}
               options={KINDS.map((k) => ({ id: k, label: t(`kind.${k}`), d: KIND_VISUAL[k].d, color: KIND_VISUAL[k].color }))}
             />
           </KalipGrup>

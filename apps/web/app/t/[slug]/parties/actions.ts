@@ -53,7 +53,10 @@ export async function savePartyAction(raw: unknown) {
     const { slug, autoCode, ...body } = input;
     const params = await writeContext(slug, ctx);
     const call = { ...params, requestId: ctx.requestId };
-    const prefix = autoCode === true && body.id === undefined ? suggestedCodePrefix("party", body.code ?? "") : null;
+    // Codex P2: önek seçilen türün öneki olmalı (eski türün önerisiyle "otomatik" kayıt ve o önekle yeniden deneme yok).
+    const kindPrefix = body.kind === "CUSTOMER" || body.kind === "SUPPLIER" || body.kind === "BOTH" ? PARTY_CODE_PREFIX[body.kind] : PARTY_CODE_PREFIX.CUSTOMER;
+    const shape = autoCode === true && body.id === undefined ? suggestedCodePrefix("party", body.code ?? "") : null;
+    const prefix = shape === kindPrefix ? shape : null;
     let r: SavePartyResult = await saveParty(call, body);
     for (let attempt = 0; prefix !== null && !r.ok && r.issue === "CODE_TAKEN" && attempt < SUGGEST_RETRY_MAX; attempt++) {
       r = await saveParty(call, { ...body, code: (await suggestCode(params, { kind: "party", prefix })).code });

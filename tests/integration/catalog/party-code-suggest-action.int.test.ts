@@ -107,7 +107,12 @@ describe("cari kodu önerisi ve otomatik kod (T-1093)", () => {
     as(A.ownerUserId);
     const odd = await actions.savePartyAction!({ slug: A.slug, code: "ted-0001", name: "Biçim dışı", kind: "SUPPLIER", autoCode: true });
     expect(odd).toEqual({ ok: true, data: { ok: false, issue: "CODE_TAKEN" } });
-    const n = await adm.query("SELECT 1 FROM public.parties WHERE tenant_id = $1 AND name IN ('Elle yazılan', 'Biçim dışı')", [A.tenantId]);
+    // Codex P2: başka türün önekiyle "otomatik" kod (tedarikçiye MUS-…) yeniden denenmez.
+    await party(A, "MUS-0100");
+    as(A.ownerUserId);
+    const stale = await actions.savePartyAction!({ slug: A.slug, code: "MUS-0100", name: "Eski önek", kind: "SUPPLIER", autoCode: true });
+    expect(stale).toEqual({ ok: true, data: { ok: false, issue: "CODE_TAKEN" } });
+    const n = await adm.query("SELECT 1 FROM public.parties WHERE tenant_id = $1 AND name IN ('Elle yazılan', 'Biçim dışı', 'Eski önek')", [A.tenantId]);
     expect(n.rowCount).toBe(0);
   });
 
