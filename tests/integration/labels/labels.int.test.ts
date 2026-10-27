@@ -7,6 +7,7 @@ import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/clie
 import { AppError } from "../../../packages/shared/src/errors.ts";
 import { addBarcode } from "../../../packages/domain/src/catalog/barcodes.ts";
 import { createItem } from "../../../packages/domain/src/catalog/items.ts";
+import { createUnit, setUnitConversion } from "../../../packages/domain/src/catalog/units.ts";
 import { createLocation } from "../../../packages/domain/src/warehouse/locations.ts";
 import { loadLabelSource, loadProductLabelBatch, toSvgPages, toZplDocument } from "../../../packages/domain/src/labels/index.ts";
 import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
@@ -101,6 +102,20 @@ describe("loadLabelSource yetki", () => {
 });
 
 describe("loadLabelSource olumlu yol", () => {
+  it("T-1063: aynı üründe adet/koli için ortak barkod basılmaz; güvenli alternatif seçilir", async () => {
+    const prefix = `AMB${rnd()}`;
+    const item = await createItem(admin(A), { code: prefix, name: "Birimleri farklı", baseUnitId: A.unitId });
+    const unit = await createUnit(admin(A), { code: `K${rnd()}`, name: "Koli" });
+    await setUnitConversion(admin(A), { itemId: item.itemId, unitId: unit.unitId, factor: "12" });
+    await addBarcode(admin(A), { itemId: item.itemId, barcode: `${prefix}-0ORTAK`, unitId: A.unitId });
+    await addBarcode(admin(A), { itemId: item.itemId, barcode: `${prefix}-0ORTAK`, unitId: unit.unitId });
+    expect((await loadProductLabelBatch(admin(A), { q: prefix })).datas).toEqual([expect.objectContaining({ barcode: null })]);
+    expect((await loadLabelSource(admin(A), { itemId: item.itemId }))?.datas).toEqual([expect.objectContaining({ barcode: null })]);
+    await addBarcode(admin(A), { itemId: item.itemId, barcode: `${prefix}-1GUVENLI` });
+    expect((await loadProductLabelBatch(admin(A), { q: prefix })).datas).toEqual([expect.objectContaining({ barcode: `${prefix}-1GUVENLI` })]);
+    expect((await loadLabelSource(admin(A), { itemId: item.itemId }))?.datas).toEqual([expect.objectContaining({ barcode: `${prefix}-1GUVENLI` })]);
+  });
+
   it("T-1063: toplu etiket sınırlı/imleçli, tekrar kararlı; miktarlı koli barkodu ürün etiketi olmaz", async () => {
     const prefix = `BATCH${rnd()}`;
     const first = await createItem(admin(A), { code: `${prefix}-01`, name: "Bir", baseUnitId: A.unitId });

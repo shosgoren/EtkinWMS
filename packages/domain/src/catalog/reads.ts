@@ -193,7 +193,7 @@ export interface ItemBarcodeRow {
   readonly unitCode: string;
   /** Okutma başına miktar (kanonik); barkodda yoksa `"1"`. */
   readonly quantity: string;
-  /** Aynı barkod tenant içinde başka bir ACTIVE üründe de kayıtlı (A-69). */
+  /** Aynı barkod başka ACTIVE ürüne veya aynı ürünün farklı etkin birim/miktarına da çözülüyor (A-69). */
   readonly ambiguous: boolean;
 }
 
@@ -229,7 +229,9 @@ export async function listItemBarcodes(params: CatalogReadParams, itemIdRaw: str
       sql`SELECT b.id, b.barcode, COALESCE(b.unit_id, i.base_unit_id) AS unit_id, u.code AS unit_code, b.quantity::text AS quantity,
                  EXISTS (SELECT 1 FROM public.item_barcodes o
                            JOIN public.items oi ON oi.tenant_id = o.tenant_id AND oi.id = o.item_id
-                          WHERE o.tenant_id = b.tenant_id AND o.barcode = b.barcode AND o.item_id <> b.item_id AND oi.status = 'ACTIVE') AS ambiguous
+                          WHERE o.tenant_id = b.tenant_id AND o.barcode = b.barcode AND oi.status = 'ACTIVE'
+                            AND (o.item_id <> b.item_id OR COALESCE(o.unit_id, oi.base_unit_id) <> COALESCE(b.unit_id, i.base_unit_id)
+                                 OR COALESCE(o.quantity, 1) <> COALESCE(b.quantity, 1))) AS ambiguous
             FROM public.item_barcodes b
             JOIN public.items i ON i.tenant_id = b.tenant_id AND i.id = b.item_id
             JOIN public.units u ON u.tenant_id = i.tenant_id AND u.id = COALESCE(b.unit_id, i.base_unit_id)

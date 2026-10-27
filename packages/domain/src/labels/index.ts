@@ -105,7 +105,10 @@ export async function loadProductLabelBatch(params: Params, input: SearchItemsIn
                SELECT 1 FROM public.item_barcodes other_barcode
                  JOIN public.items other_item ON other_item.tenant_id = other_barcode.tenant_id AND other_item.id = other_barcode.item_id
                 WHERE other_barcode.tenant_id = i.tenant_id AND other_barcode.barcode = ib.barcode
-                  AND other_barcode.item_id <> i.id AND other_item.status = 'ACTIVE'
+                  AND other_item.status = 'ACTIVE'
+                  AND (other_barcode.item_id <> i.id
+                    OR COALESCE(other_barcode.unit_id, other_item.base_unit_id) <> i.base_unit_id
+                    OR COALESCE(other_barcode.quantity, 1) <> 1)
              )
            ORDER BY ib.barcode, ib.id LIMIT 1
         ) b ON true
