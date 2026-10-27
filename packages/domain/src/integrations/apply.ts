@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { parseGs1, gtinLookupForms, isValidGtin } from "../catalog/gs1.ts";
+import { saveProductSourceInfo, type ProductSourceInfo } from "./product-info.ts";
 import { standardUnitCode } from "../catalog/unit-alias.ts";
 import type { AccessTx } from "../identity/access.ts";
 
@@ -75,6 +76,7 @@ export interface ProviderProduct {
   readonly name: string | null;
   readonly unit: string | null;
   readonly barcode?: string | null;
+  readonly sourceInfo?: ProductSourceInfo;
 }
 
 /** Tanınmayan birim sessizce ADET yapılmaz; satır kontrol için başarısız olur. */
@@ -133,7 +135,8 @@ export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderPro
       sql`UPDATE public.items SET name = ${name} WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid AND status = 'ACTIVE' AND name IS DISTINCT FROM ${name} RETURNING id`,
     );
     const barcodeAdded = await ensureProductBarcode(tx, c, existing, p.barcode);
-    if (r[0] === undefined) return barcodeAdded ? "UPDATED" : "UNCHANGED";
+    const infoChanged = await saveProductSourceInfo(tx, c, existing, p.sourceInfo);
+    if (r[0] === undefined) return barcodeAdded || infoChanged ? "UPDATED" : "UNCHANGED";
     await appendAudit(tx, { action: "item.updated", actorUserId: c.actorUserId, entityType: "item", entityId: existing, changeSummary: { name, via: "integration", system: c.system } });
     return "UPDATED";
   }
@@ -148,6 +151,7 @@ export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderPro
     if (hit.linked || hit.status !== "ACTIVE") return "SKIPPED";
     if (!(await link(tx, c, "ITEM", hit.id, p.externalId, code))) return "SKIPPED";
     await ensureProductBarcode(tx, c, hit.id, p.barcode);
+    await saveProductSourceInfo(tx, c, hit.id, p.sourceInfo);
     return "LINKED";
   }
   const ins = await tx.execute<{ id: string }>(
@@ -159,6 +163,7 @@ export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderPro
   await appendAudit(tx, { action: "item.created", actorUserId: c.actorUserId, entityType: "item", entityId: itemId, changeSummary: { code, name, base_unit_id: unitId, via: "integration", system: c.system } });
   await link(tx, c, "ITEM", itemId, p.externalId, code);
   await ensureProductBarcode(tx, c, itemId, p.barcode);
+  await saveProductSourceInfo(tx, c, itemId, p.sourceInfo);
   return "CREATED";
 }
 

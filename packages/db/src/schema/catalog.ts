@@ -9,7 +9,7 @@
 //   indeksi bilerek benzersiz değildir (A-69).
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { boolean, check, date, index, integer, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, integer, jsonb, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -58,6 +58,8 @@ export const items = pgTable(
     status: text("status").$type<CatalogStatus>().notNull().default("ACTIVE"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     archivedAt: timestamptz("archived_at"),
+    /** 0060: izinli kaynak kart alanları; fiyat ve miktar içermez. */
+    sourceProductInfo: jsonb("source_product_info").notNull().default(sql`'{}'::jsonb`),
     /** Kart türü (0031, T-911): HM hammadde, YM yarı mamul, MM mamul, TM ticari mal. */
     cardType: text("card_type").$type<ItemCardType>().notNull().default("TM"),
     /** Örnek veri işareti (0040, T-996). */

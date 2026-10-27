@@ -110,6 +110,7 @@ export interface JsonApiResource {
 }
 
 export interface Page {
+  readonly included?: readonly JsonApiResource[];
   readonly items: readonly JsonApiResource[];
   readonly page: number;
   readonly totalPages: number;
@@ -273,12 +274,12 @@ export class ParasutClient {
   async list(token: string, companyId: string, kind: "products" | "contacts" | "warehouses", page: number): Promise<Page> {
     const cid = parseCompanyId(companyId);
     if (!Number.isInteger(page) || page < 1 || page > 100_000) throw new AppError("VALIDATION_FAILED");
-    const r = await this.request("GET", `/v4/${cid}/${kind}?sort=id&page%5Bnumber%5D=${page}&page%5Bsize%5D=${PARASUT_PAGE_SIZE}`, { token });
+    const r = await this.request("GET", `/v4/${cid}/${kind}?sort=id&page%5Bnumber%5D=${page}&page%5Bsize%5D=${PARASUT_PAGE_SIZE}${kind === "products" ? "&include=category" : ""}`, { token });
     if (r.status !== 200) throw ParasutClient.fail(r.status);
-    const b = (r.body ?? {}) as { data?: unknown; meta?: { total_pages?: unknown } };
+    const b = (r.body ?? {}) as { data?: unknown; included?: unknown; meta?: { total_pages?: unknown } };
     if (!Array.isArray(b.data)) throw new ProviderError("BAD_RESPONSE", r.status);
     const total = typeof b.meta?.total_pages === "number" && Number.isInteger(b.meta.total_pages) && b.meta.total_pages >= 0 ? b.meta.total_pages : page;
-    return { items: b.data.map(resource), page, totalPages: total };
+    return { items: b.data.map(resource), included: Array.isArray(b.included) ? b.included.map(resource) : [], page, totalPages: total };
   }
 
   /** Ürün koduna göre ara (`filter[code]`): Etkin -> Paraşüt gönderiminde çift kayıt açmamak için. */
