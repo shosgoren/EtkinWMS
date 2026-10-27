@@ -112,7 +112,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         // Stok girişi: açık iş formu da delikte (alanlar doldurulabilir), KAYDET ayrı delikte; dokunmak rehberi kapatmaz.
         await openSetup(page, slug, 'stock');
         await expectFocused(page);
-        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /px, 0 0, \d+px/);
+        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /px, 0(px)? 0(px)?, \d+px [^,]+, \d+px/);
         await page.locator('form.workflow-form input:visible').first().click();
         await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-folded', 'false');
         // Kullanılmayan adım listeden atlanır ("Bunu kullanmıyorum"); geri alınabilir.
