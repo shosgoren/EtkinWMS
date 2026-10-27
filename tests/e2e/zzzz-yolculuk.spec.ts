@@ -286,7 +286,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
             await expect(page).toHaveURL(/new=TRANSFER/);
             await expect(page.getByTestId('yol-sheet')).toHaveCount(0);
             await expect(page.getByTestId('yol-coach')).toHaveCount(0);
-            await expect(page.getByTestId('working-guide')).toContainText('Transfer');
+            await expect(page.getByTestId('working-guide')).toContainText('Kaynak depoyu');
         } finally { release(); releaseClose(); await page.unrouteAll({ behavior: 'wait' }); }
     });
 
