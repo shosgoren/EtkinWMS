@@ -1524,7 +1524,15 @@
       "empty": "Bu süzgeçte ürün yok",
       "invalidBarcode": "Bir ürünün barkodu okutmaya uygun değil",
       "invalidBarcodeHint": "Ürün kartındaki barkodları kontrol edin.",
-      "qrTooSmall": "QR için en az {width} × {height} mm seçin."
+      "qrTooSmall": "QR için en az {width} × {height} mm seçin.",
+      "sourceTitle": "Kaynak sistem",
+      "sourceGtip": "GTİP",
+      "sourceUnit": "Kaynak birim",
+      "sourceArchived": "Kaynakta arşivli",
+      "sourceInventory": "Kaynakta stok takibi",
+      "sourceLocked": "Kaynak sistemden gelir",
+      "yes": "Evet",
+      "no": "Hayır"
     }
   },
   "warehouses": {

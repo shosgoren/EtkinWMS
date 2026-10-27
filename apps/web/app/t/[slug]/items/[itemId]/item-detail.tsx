@@ -320,6 +320,7 @@ export function ItemDetail({
   canManage,
   quick,
   stockCard,
+  sourceInfo = {},
   inUse,
   units,
   item,
@@ -331,6 +332,7 @@ export function ItemDetail({
   canManage: boolean;
   quick: ItemQuickAccess;
   stockCard: ItemStockCardView | null;
+  sourceInfo?: Readonly<Record<string, { readonly categoryName?: string | null; readonly gtip?: string | null; readonly unit?: string | null; readonly archived?: boolean | null; readonly inventoryTracking?: boolean | null }>>;
   inUse: boolean;
   units: readonly UnitOption[];
   item: ItemDetailItem;
@@ -339,6 +341,7 @@ export function ItemDetail({
 }) {
   const t = useTranslations("items");
   const td = useTranslations("items.detail");
+  const tsrc = useTranslations("items.productLabels");
   const tt = useTranslations("items.tracking");
   const tp = useTranslations("items.pick");
   const tc = useTranslations("items.cardType");
@@ -539,11 +542,18 @@ export function ItemDetail({
     { key: "scale", etiket: t("form.scale"), deger: item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale }), d: SICON.birim, ton: "gri", kilit: fixedLock },
     ...(stockCard?.min === null || stockCard?.min === undefined ? [] : [{ key: "min", etiket: tk("boxMin"), deger: `${fq(stockCard.min)} ${unit}`, d: SICON.uyari, ton: "turuncu" as const }]),
   ];
+  const sourceRows: KalipBilgi[] = Object.entries(sourceInfo).sort(([a], [b]) => a.localeCompare(b)).flatMap(([provider, info]) => {
+    const name = provider === "PARASUT" ? "Paraşüt" : provider === "LOGO" ? "Logo" : provider;
+    const field = (key: string, label: string, value: ReactNode, d: string): KalipBilgi => ({ key: `${provider}-${key}`, etiket: `${name} · ${label}`, deger: value, d, ton: "turuncu", kilit: tsrc("sourceLocked") });
+    const flag = (v: boolean | null): string => v === null ? "—" : tsrc(v ? "yes" : "no");
+    return [field("category", tsrc("category"), info.categoryName ?? "—", SICON.kutu), field("gtip", tsrc("sourceGtip"), info.gtip ?? "—", SICON.list), field("unit", tsrc("sourceUnit"), info.unit ?? "—", SICON.birim), ...(info.archived === undefined ? [] : [field("archived", tsrc("sourceArchived"), flag(info.archived), SICON.bilgi)]), ...(info.inventoryTracking === undefined ? [] : [field("inventory", tsrc("sourceInventory"), flag(info.inventoryTracking), SICON.bilgi)])];
+  });
   const sekmeler: KalipKartSekmesi[] = [
     { id: "genel", etiket: tk("tabGeneral"), d: SICON.bilgi, ton: "stok" },
     ...(stockCard === null ? [] : [{ id: "stok", etiket: tk("tabStock"), d: SICON.raf, ton: "lacivert" as const }]),
     { id: "birim", etiket: tk("tabUnits"), d: SICON.cevrim, ton: "mor" },
     { id: "barkod", etiket: tk("tabBarcodes"), d: SICON.barkod, ton: "mavi" },
+    ...(sourceRows.length === 0 ? [] : [{ id: "erp", etiket: tsrc("sourceTitle"), d: SICON.cevrim, ton: "turuncu" as const }]),
   ];
   const secili = sekmeler.some((s) => s.id === sekme) ? sekme : "genel";
   const sekmeHref = (id: string): string => (id === "genel" ? itemPath : `${itemPath}?sekme=${id}`);
@@ -591,7 +601,9 @@ export function ItemDetail({
     </>
   );
   let ana: ReactNode;
-  if (secili === "stok" && stockCard !== null) {
+  if (secili === "erp") {
+    ana = <KalipBilgiIzgara baslik={tsrc("sourceTitle")} bilgiler={sourceRows} kilitD={SICON.kilit} />;
+  } else if (secili === "stok" && stockCard !== null) {
     ana = (
       <div data-testid="item-where" className="flex min-w-0 flex-col gap-3">
         <b className="stkbas">{tk("where")}</b>

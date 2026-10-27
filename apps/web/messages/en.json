@@ -1524,7 +1524,15 @@
       "empty": "No products match this filter",
       "invalidBarcode": "A product barcode cannot be scanned",
       "invalidBarcodeHint": "Check barcodes on the product card.",
-      "qrTooSmall": "Choose at least {width} × {height} mm for this QR code."
+      "qrTooSmall": "Choose at least {width} × {height} mm for this QR code.",
+      "sourceTitle": "Source system",
+      "sourceGtip": "Customs code",
+      "sourceUnit": "Source unit",
+      "sourceArchived": "Archived in source",
+      "sourceInventory": "Inventory tracked in source",
+      "sourceLocked": "Managed by the source system",
+      "yes": "Yes",
+      "no": "No"
     }
   },
   "warehouses": {

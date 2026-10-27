@@ -14,12 +14,14 @@ test("T-1064: ürün süzgeci, QR baskı ve üç cihaz genişliği", async ({ pa
   reader.prepareZXingModule({ overrides: { wasmBinary: readFileSync(requireWeb.resolve("zxing-wasm/reader/zxing_reader.wasm")) } });
   const f = await seedPackage(page, info.project.name.includes("mobile"));
   await db("INSERT INTO public.item_barcodes(tenant_id,item_id,barcode) VALUES($1,$2,$3)", [f.tenantId, f.itemId, `EWMS-ITEM-${f.itemId}`]);
+  await db("UPDATE public.items SET source_product_info=$3::jsonb WHERE tenant_id=$1 AND id=$2", [f.tenantId, f.itemId, JSON.stringify({ PARASUT: { categoryName: "Granül test", gtip: "400510000000", unit: "KG" } })]);
   for (const width of [390, 1180, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto(`/t/${f.slug}/items?q=${f.itemId}`);
     await page.locator('[data-chip="filters"]').click();
     await expect(page.getByTestId("item-filters")).toBeVisible();
-    await page.locator('[data-chip="tracking"]').click();
+    await page.getByRole("textbox", { name: "Kategori adı", exact: true }).fill("Granül test");
+    await page.locator('[data-tab="tracking"]').click();
     await page.getByRole("radio", { name: "Takip yok", exact: true }).click();
     await page.screenshot({ path: info.outputPath(`filters-${width}.png`) });
     await page.getByRole("button", { name: "UYGULA", exact: true }).click();
@@ -38,5 +40,9 @@ test("T-1064: ürün süzgeci, QR baskı ve üç cihaz genişliği", async ({ pa
     await page.emulateMedia({ media: "screen" });
     const overflow = await page.evaluate("document.documentElement.scrollWidth > document.documentElement.clientWidth");
     expect(overflow).toBe(false);
+    await page.goto(`/t/${f.slug}/items/${f.itemId}?sekme=erp`);
+    await expect(page.getByText("Granül test", { exact: true })).toBeVisible();
+    await expect(page.getByText("400510000000", { exact: true })).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`source-${width}.png`) });
   }
 });
