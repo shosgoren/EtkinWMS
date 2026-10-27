@@ -5872,7 +5872,40 @@
       "count4": "Kalan ürünleri say. Tüm satırları kontrol edip sayımı gönder; fark onayı yetkili yöneticinin ayrı işlemidir."
     },
     "skipStep": "Atla",
-    "restart": "Rehberi baştan göster"
+    "restart": "Rehberi baştan göster",
+    "adim": {
+      "names": {
+        "urun": "Ürünleri aktar",
+        "depo": "Depoları aktar",
+        "cari": "Cari kartları aktar"
+      },
+      "kaynak": {
+        "EXCEL": "Excel ile",
+        "PARASUT": "Paraşüt ile"
+      },
+      "steps": {
+        "alan_urun": "Ürünler kutusuna dokun.",
+        "alan_depo": "Depolar kutusuna dokun.",
+        "alan_cari": "Cariler kutusuna dokun.",
+        "iceri": "İçeri al kutusuna dokun.",
+        "ana": "Alttaki AKTAR'A GEÇ düğmesine bas.",
+        "dosya": "Excel dosyanı seç ya da buraya bırak.",
+        "kontrol": "Sütunlar eşleşti. Alttaki düğmeyle kontrol et.",
+        "uygula": "Sorun yoksa alttaki düğmeyle aktar.",
+        "baglan": "Paraşüt'ü bağla: alttaki BAĞLAN düğmesine bas.",
+        "akis_urun": "Ürün kartları akışını aç.",
+        "akis_depo": "Depolar akışını aç.",
+        "akis_cari": "Cari kartlar akışını aç.",
+        "esitle": "Şimdi çalıştır düğmesine bas."
+      },
+      "open": "Ekranı aç",
+      "resume": "Kaldığın yerden",
+      "restart": "Baştan",
+      "close": "Rehberi kapat",
+      "free": "Rehberi küçült, serbest çalış",
+      "speak": "Sesli anlat",
+      "done": "Tamamlandı"
+    }
   },
   "totp": {
     "kick": "ADIM {n} / 4",

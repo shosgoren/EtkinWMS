@@ -5872,7 +5872,40 @@
       "count4": "Count the remaining items. Check all lines and submit; approving differences is a separate authorized manager action."
     },
     "skipStep": "Skip step",
-    "restart": "Restart guide"
+    "restart": "Restart guide",
+    "adim": {
+      "names": {
+        "urun": "Import products",
+        "depo": "Import warehouses",
+        "cari": "Import accounts"
+      },
+      "kaynak": {
+        "EXCEL": "With Excel",
+        "PARASUT": "With Paraşüt"
+      },
+      "steps": {
+        "alan_urun": "Tap Products.",
+        "alan_depo": "Tap Warehouses.",
+        "alan_cari": "Tap Accounts.",
+        "iceri": "Tap Import.",
+        "ana": "Press the big button below.",
+        "dosya": "Choose your Excel file or drop it here.",
+        "kontrol": "Columns matched. Check with the button below.",
+        "uygula": "If all is fine, import with the button below.",
+        "baglan": "Connect Paraşüt: press CONNECT below.",
+        "akis_urun": "Turn on the products flow.",
+        "akis_depo": "Turn on the warehouses flow.",
+        "akis_cari": "Turn on the accounts flow.",
+        "esitle": "Press Sync now."
+      },
+      "open": "Open the screen",
+      "resume": "Continue",
+      "restart": "From start",
+      "close": "Close guide",
+      "free": "Minimize guide, work freely",
+      "speak": "Read aloud",
+      "done": "Done"
+    }
   },
   "totp": {
     "kick": "STEP {n} / 4",

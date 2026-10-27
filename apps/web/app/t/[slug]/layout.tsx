@@ -20,6 +20,7 @@ import { YolculukKatman } from "./yolculuk/yolculuk.tsx";
 
 import { guideAccess } from "./kalip/rehber-access.ts";
 import { KalipIslemRehberleri } from "./kalip/rehber.tsx";
+import { KalipAdimRehberi } from "./kalip/adim-rehber.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +121,7 @@ export default async function TenantLayout({ children, params }: { children: Rea
       <div className="tenant-body flex min-w-0 flex-col">{children}</div>
       {/* T-1006: ilk kurulum yolculuğu (adım listesi, spot + ipucu kartı) yalnız hesap sahibi ve depo yöneticisinde; eylemler rolü yeniden denetler. */}
       <KalipIslemRehberleri userId={principal.userId} slug={slug} dark={temaKoyu(await cookies())} />
+      <KalipAdimRehberi userId={principal.userId} slug={slug} dark={temaKoyu(await cookies())} />
       {canSeeJourney(current.roles) ? <YolculukKatman userId={principal.userId} slug={slug} dark={temaKoyu(await cookies())} initial={journey} /> : null}
     </div>
     </KabukProvider>

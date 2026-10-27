@@ -11,6 +11,8 @@ import { GUIDE_INSTRUCTIONS, currentGuide, guideHref, type OpGuide } from './reh
 import { KalipPerdeKatman } from './perde.tsx';
 import { cikisSor } from './cikis.tsx';
 import { useModalFocus } from './odak.ts';
+import { ADIM_REHBER_EVENT, useAdimRehberleri } from './adim-rehber.tsx';
+import { ADIM_KAYNAKLARI } from './adim-rehber-plan.ts';
 function RehberIkon({ d }: {
     d: string | readonly string[];
 }) { return <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{(typeof d === 'string' ? [d] : d).map(p => <path key={p} d={p}/>)}</svg>; }
@@ -92,6 +94,10 @@ export function KalipRehberKart({ title, text, progress, target, onClose, onPrev
 export function KalipIslemRehberiAc() {
     const t = useTranslations('operationGuide'), ctx = useKabuk(), path = usePathname(), query = useSearchParams();
     const guide = currentGuide(path, query.toString());
+    const aktar = useAdimRehberleri();
+    // T-1095: aktarma ekranlarında (Bağlantılar, Excel'den aktar, Entegrasyon) "?" adım adım rehber seçimini açar.
+    if (guide === null && aktar.length > 0 && /\/(settings\/baglantilar|import|integrations)$/.test(path))
+        return <span className="dzj"><button type="button" className="yguide-open" aria-label={t('show')} title={t('show')} data-testid="operation-guide-trigger" onClick={() => window.dispatchEvent(new CustomEvent(OP_GUIDE_EVENT, { detail: 'pick' }))}>?</button></span>;
     if (guide === null || !ctx?.guides?.operations.includes(guide))
         return null;
     return <span className="dzj"><button type="button" className="yguide-open" aria-label={t('show')} title={t('show')} data-testid="operation-guide-trigger" onClick={() => window.dispatchEvent(new CustomEvent(OP_GUIDE_EVENT, { detail: guide }))}>?</button></span>;
@@ -110,6 +116,7 @@ export function KalipIslemRehberleri({ userId, slug, dark }: {
 }) {
     const t = useTranslations('operationGuide'), ctx = useKabuk(), path = usePathname(), query = useSearchParams(), router = useRouter();
     const allowed = ctx?.guides?.operations ?? [];
+    const aktar = useAdimRehberleri();
     const key = `etkinwms.instructions.v1:${userId}:${slug}`;
     function safeQuery(raw: string): string { const q = new URLSearchParams(raw), out = new URLSearchParams(); for (const k of ['task', 'receipt', 'id']) {
         const v = q.get(k);
@@ -161,13 +168,13 @@ export function KalipIslemRehberleri({ userId, slug, dark }: {
                     save({ ...active, closed: true });
                 return;
             }
-            if (allowed.length === 0)
+            if (allowed.length === 0 && aktar.length === 0)
                 return;
             e.preventDefault();
             e.stopImmediatePropagation();
             ctx?.setGuideOwner?.('operation');
             window.dispatchEvent(new Event('etkinwms:journey-pause'));
-            const g = e instanceof CustomEvent && allowed.includes(e.detail as OpGuide) ? e.detail as OpGuide : currentGuide(path, query.toString());
+            const g = e instanceof CustomEvent && e.detail === 'pick' ? null : e instanceof CustomEvent && allowed.includes(e.detail as OpGuide) ? e.detail as OpGuide : currentGuide(path, query.toString());
             if (g !== null && allowed.includes(g))
                 start(g);
             else
@@ -180,7 +187,7 @@ export function KalipIslemRehberleri({ userId, slug, dark }: {
     const current = active !== null && !active.closed && allowed.includes(active.guide) ? active : null;
     const instruction = current === null ? null : GUIDE_INSTRUCTIONS[current.guide][current.step];
     return <div className={`dzj${dark ? ' dz-dark' : ''}`}>
-    {picker ? <><KalipPerdeKatman onClose={() => setPicker(false)} label={t('close')}/><section className="ysheet" role="dialog" aria-modal="true" aria-label={t('title')} ref={pickerRef} data-testid="guide-picker"><div className="ysh"><b>{t('title')}</b><button type="button" className="ycls" onClick={() => setPicker(false)} aria-label={t('close')}>×</button></div><ol className="ylist">{allowed.map(g => <li className="yst" key={g}><span className="yt"><b>{t(`names.${g}`)}</b><small>{t('fiveSteps')}</small></span><button type="button" className="yact" onClick={() => start(g)} data-testid={`guide-start-${g}`}>{t('show')} ›</button></li>)}</ol>{ctx?.guides?.setup.length ? <button type="button" className="ygo" onClick={() => { setPicker(false); window.dispatchEvent(new CustomEvent(JOURNEY_OPEN_EVENT, { cancelable: true, detail: 'list' })); }}>{t('setup')}</button> : null}</section></> : null}
+    {picker ? <><KalipPerdeKatman onClose={() => setPicker(false)} label={t('close')}/><section className="ysheet" role="dialog" aria-modal="true" aria-label={t('title')} ref={pickerRef} data-testid="guide-picker"><div className="ysh"><b>{t('title')}</b><button type="button" className="ycls" onClick={() => setPicker(false)} aria-label={t('close')}>×</button></div><ol className="ylist">{aktar.map(r => <li className="yst yadim" key={`adim-${r}`} data-testid={`adim-sec-${r}`}><span className="yt"><b>{t(`adim.names.${r}`)}</b></span>{ADIM_KAYNAKLARI.map(k => <button key={k} type="button" className="yact" onClick={() => { setPicker(false); if (active !== null) save({ ...active, closed: true }); window.dispatchEvent(new CustomEvent(ADIM_REHBER_EVENT, { detail: { rehber: r, kaynak: k } })); }} data-testid={`adim-basla-${r}-${k}`}>{t(`adim.kaynak.${k}`)} ›</button>)}</li>)}{allowed.map(g => <li className="yst" key={g}><span className="yt"><b>{t(`names.${g}`)}</b><small>{t('fiveSteps')}</small></span><button type="button" className="yact" onClick={() => start(g)} data-testid={`guide-start-${g}`}>{t('show')} ›</button></li>)}</ol>{ctx?.guides?.setup.length ? <button type="button" className="ygo" onClick={() => { setPicker(false); window.dispatchEvent(new CustomEvent(JOURNEY_OPEN_EVENT, { cancelable: true, detail: 'list' })); }}>{t('setup')}</button> : null}</section></> : null}
     {current !== null && instruction != null ? <KalipRehberKart title={t(`names.${current.guide}`)} text={t(`instructions.${instruction.key}`)} progress={t('step', { n: current.step + 1, total: 5 })} target={instruction.target} onClose={() => save({ ...current, closed: true })} onPrev={() => save({ ...current, step: Math.max(0, current.step - 1) })} onNext={() => current.step === 4 ? save({ ...current, closed: true, step: 0 }) : save({ ...current, step: current.step + 1 })}>
       {path !== current.path && !path.includes('/field/') && !path.endsWith('/stock/documents') ? <button type="button" className="yalt" onClick={() => cikisSor(() => router.push(`${current.path}${current.query ? '?' + current.query : ''}`))}>{t('open')}</button> : null}
       <button type="button" className="yalt" onClick={() => save({ ...current, step: 0 })} data-testid="guide-restart">{t('restart')}</button><small>{t('learningOnly')}</small>
