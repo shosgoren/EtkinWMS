@@ -16,7 +16,7 @@ Bu dosya bu akışın tek devam kaydıdır. API bilgileri bekleniyor; sırlar do
 
 ## Seri uygulama sırası
 1. **T-1060 — #209 CANLIDA:** miktarsız aktarımın birim/hassasiyet ve eşleme güvenliği; bilinmeyen birimi ADET sayma kaldırılır, mevcut kart birimi korunur. Main/CI ve deploy `40477830376` başarılı; VPS `health:ok`, release `5c7c00695b1ab4113bcb30ad06a739aab291ccbb` doğrulandı.
-2. **T-1061 — #210 BİRLEŞTİ, YAYIN BEKLİYOR:** barkod alma parametresi + kalıcı dahili barkod/alternatifler; prepush ve 20 DB testi geçti, bağımsız inceleme temiz. **T-1062 — DEVAM:** alan sahipliği ve kaynak kategori/GTİP/durum bilgisi; fiyat, döviz, vergi ve stok miktarı saklanmaz. Resmî API şeması doğrulandı. Kartta gösterim ve kategori süzgeci toplu etiket adımında.
+2. **T-1061 — #210 BİRLEŞTİ, YAYIN BEKLİYOR:** barkod alma parametresi + kalıcı dahili barkod/alternatifler; prepush ve 20 DB testi geçti, bağımsız inceleme temiz. **T-1062 — YEREL TESTLER TAMAM, YAYIN BEKLİYOR:** alan sahipliği ve kaynak kategori/GTİP/durum bilgisi; fiyat, döviz, vergi ve stok miktarı saklanmaz. Resmî API şeması doğrulandı. Prepush ve DB 47/47 geçti; inceleme 0B/0MA/0MI. Kartta gösterim ve kategori süzgeci toplu etiket adımında.
 3. **BEKLİYOR:** toplu ürün etiketi ve filtreler; standart okutma korunur.
 4. **BEKLİYOR:** belirlenmemiş takip durumu + yetkili ilk seçim; mevcut kayıtları koruyan migration.
 5. **BEKLİYOR:** ayrı Devir fişi ve okutmalı taslak; lot/tarih/ambalaj, palet, tekil QR, baskı.
