@@ -353,7 +353,11 @@ const SHELL_LOADERS = ["field/layout.tsx", "field/page.tsx"] as const;
 const LABELS = "labels/page.tsx" as const;
 /** T-216: ürün ayrıntısı ek bir dinamik segment (`itemId`) ister; ortak döngüde değil, aşağıdaki özel bloktadır. */
 const ITEM_DETAIL = "items/[itemId]/page.tsx" as const;
+/** T-1090: cari kartı (`partyId` parametresi `itemId` argümanıyla verilir). */
+const PARTY_CARD = "parties/[partyId]/page.tsx" as const;
 const PACKAGE_MOVEMENT_LOADER = "field/packages/page.tsx" as const;
+/** T-1082: raf yeri kartı; tenant/depo/lokasyon sınırları `ac-04-api-slug-warehouse.int.test.ts` içinde sınanır (lokasyon fikstürleri orada). */
+const LOCATION_CARD = "warehouses/[warehouseId]/locations/[locationId]/page.tsx" as const;
 const PACKAGE_LOADERS = ["receipts/packages/page.tsx", "receipts/packages/labels/page.tsx"] as const;
 type Loader = (props: {
   params: Promise<{ slug: string; warehouseId?: string; itemId?: string }>;
@@ -363,7 +367,7 @@ type Loader = (props: {
 
 /** `[warehouseId]` yükleyicisi için kimlik: verilmezse slug A'nınsa A'nın, değilse B'nin deposu (çapraz tenant denemesi). */
 async function runLoader(
-  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | (typeof SHELL_LOADERS)[number] | typeof LABELS | (typeof PACKAGE_LOADERS)[number] | typeof PACKAGE_MOVEMENT_LOADER,
+  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | typeof PARTY_CARD | (typeof SHELL_LOADERS)[number] | typeof LABELS | (typeof PACKAGE_LOADERS)[number] | typeof PACKAGE_MOVEMENT_LOADER,
   slug: string,
   warehouseId?: string,
   itemId?: string,
@@ -372,7 +376,7 @@ async function runLoader(
   const mod = (await import(/* @vite-ignore */ path.join(SLUG_DIR, rel))) as { default: Loader };
   const wid = warehouseId ?? (slug === A.slug ? A.warehouse : B.warehouse);
   try {
-    const params = itemId === undefined ? { slug, warehouseId: wid } : { slug, warehouseId: wid, itemId };
+    const params = itemId === undefined ? { slug, warehouseId: wid } : { slug, warehouseId: wid, itemId, partyId: itemId };
     const value = await mod.default({ params: Promise.resolve(params), searchParams: Promise.resolve(search), children: null });
     return { outcome: "render", value };
   } catch (e) {
@@ -433,7 +437,7 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
 
 describe("sayfa yükleyicileri (/t/<slug>)", () => {
   it("@AC-04 kapsam: apps/web/app/t/[slug] altındaki her page/layout bu tabloda (yeni yükleyici testsiz kalamaz)", () => {
-    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER].sort());
+    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, PARTY_CARD, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER, LOCATION_CARD].sort());
   });
 
   for (const rel of LOADERS) {
@@ -771,6 +775,50 @@ describe("ürün ayrıntı sayfası (/t/<slug>/items/<itemId>) — T-216", () =>
     itemA = await mkItem(A);
     itemB = await mkItem(B);
   }, 60_000);
+
+  it("@AC-04 sayfa parties/[partyId] (T-1090): B'nin carisi A slug'ında ve B slug'ında -> 404, var olmayan kimlikle aynı; bozuk kimlik 404; üye olmayan 404; oturumsuz /login; A kendi carisini çizer", async () => {
+    const mkParty = async (f: typeof A): Promise<{ id: string; name: string }> => {
+      const name = `AC04 Cari ${f.label} ${rnd()}`;
+      const id = (await adm.query<{ id: string }>("INSERT INTO public.parties (tenant_id, code, code_key, name, created_by) VALUES ($1, $2, $2, $3, $4) RETURNING id", [f.tenant, `P${rnd()}`.toUpperCase(), name, f.adminMembership])).rows[0]!.id;
+      return { id, name };
+    };
+    const pA = await mkParty(A);
+    const pB = await mkParty(B);
+    as(A.admin);
+    const missing = await runLoader(PARTY_CARD, A.slug, undefined, randomUUID());
+    expect(missing).toEqual({ outcome: "notFound" });
+    for (const slug of [A.slug, B.slug]) {
+      as(A.admin);
+      const cross = await runLoader(PARTY_CARD, slug, undefined, pB.id);
+      expect(cross).toEqual(missing);
+      expect(JSON.stringify(cross)).not.toContain(pB.name);
+    }
+    as(A.admin);
+    expect(await runLoader(PARTY_CARD, A.slug, undefined, "not-a-uuid")).toEqual({ outcome: "notFound" });
+    as(outsider.id);
+    expect(await runLoader(PARTY_CARD, B.slug, undefined, pB.id)).toEqual({ outcome: "notFound" });
+    for (const user of [B.admin, B.manager, B.picker]) {
+      as(user);
+      expect(await runLoader(PARTY_CARD, A.slug, undefined, pB.id)).toEqual({ outcome: "notFound" });
+    }
+    as(null);
+    const anon = await runLoader(PARTY_CARD, B.slug, undefined, pB.id);
+    expect(anon.outcome).toBe("redirect");
+    expect(anon.to).toMatch(/^\/login\?next=/);
+    as(A.admin);
+    const own = await runLoader(PARTY_CARD, A.slug, undefined, pA.id);
+    expect(own.outcome).toBe("render");
+    expect(JSON.stringify(own.value)).toContain(pA.name);
+    expect(JSON.stringify(own.value)).not.toContain(pB.name);
+    // Güvenlik incelemesi MINOR-2: liste sayfasında `?edit=<B carisi>` formu B verisiyle açmaz; bozuk kimlik çökertmez.
+    for (const edit of [pB.id, "------------------------------------", "not-a-uuid"]) {
+      as(A.admin);
+      const list = await runLoader("parties/page.tsx", A.slug, undefined, undefined, { edit });
+      expect(list.outcome).toBe("render");
+      expect(JSON.stringify(list.value)).not.toContain(pB.name);
+      expect(JSON.stringify(list.value)).toContain('"editParty":null');
+    }
+  });
 
   it("@AC-04 sayfa items/[itemId]: B'nin slug'ı + B'nin ürünü ile var olmayan slug + var olmayan ürün -> 404 ve birebir aynı yanıt; B verisi yok", async () => {
     as(A.admin);

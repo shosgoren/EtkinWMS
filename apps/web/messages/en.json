@@ -1723,7 +1723,28 @@
     "colName": "Warehouse",
     "colLocations": "Locations",
     "colState": "Status",
-    "colActions": "Actions"
+    "colActions": "Actions",
+    "loc": {
+      "title": "Location",
+      "back": "Back to locations",
+      "hero": "Location details",
+      "info": "Details",
+      "boxItems": "Items",
+      "boxReserved": "Reserved",
+      "pickBlocked": "Picking blocked",
+      "warehouse": "Warehouse",
+      "path": "Belongs to",
+      "pathRoot": "Warehouse root",
+      "kind": "Type",
+      "contents": "On this location",
+      "contentsEmpty": "This location is empty.",
+      "contentsMore": "Showing the first {n} items.",
+      "reservedShort": "{q} reserved",
+      "itemOpen": "Open item card of {name}",
+      "movesNone": "No movements on this location yet.",
+      "open": "Open location card of {name}",
+      "itemsN": "{n} items"
+    }
   },
   "field": {
     "title": "Field",
@@ -2736,7 +2757,12 @@
       "pickLabel": "What will you do?",
       "pickIn": "Goods came in",
       "pickOut": "Goods went out",
-      "pickTransfer": "From one warehouse to another"
+      "pickTransfer": "From one warehouse to another",
+      "kindL": "Type",
+      "date": "Date",
+      "boxLines": "Lines",
+      "info": "Document details",
+      "back": "Back to documents"
     }
   },
   "production": {
@@ -4255,7 +4281,19 @@
     "colCity": "City",
     "colPhone": "Phone",
     "colEmail": "E-mail",
-    "colTax": "Tax no"
+    "colTax": "Tax no",
+    "kart": {
+      "title": "Account card",
+      "back": "Back to accounts",
+      "hero": "Account details",
+      "info": "Details",
+      "quick": "Quick actions",
+      "edit": "Edit",
+      "editAria": "Edit {name}",
+      "call": "Call {name}",
+      "mail": "Email {name}",
+      "open": "Open card of {name}"
+    }
   },
   "gruplar": {
     "title": "Permission groups",

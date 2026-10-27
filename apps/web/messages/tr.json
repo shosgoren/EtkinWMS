@@ -1723,7 +1723,28 @@
     "colName": "Depo adı",
     "colLocations": "Raf yeri",
     "colState": "Durum",
-    "colActions": "İşlemler"
+    "colActions": "İşlemler",
+    "loc": {
+      "title": "Raf yeri",
+      "back": "Raf yerlerine dön",
+      "hero": "Raf yeri bilgisi",
+      "info": "Bilgiler",
+      "boxItems": "Ürün çeşidi",
+      "boxReserved": "Ayrılmış",
+      "pickBlocked": "Toplama kapalı",
+      "warehouse": "Depo",
+      "path": "Bağlı olduğu yer",
+      "pathRoot": "Depo kökü",
+      "kind": "Tür",
+      "contents": "Raftakiler",
+      "contentsEmpty": "Bu raf boş.",
+      "contentsMore": "İlk {n} ürün gösteriliyor.",
+      "reservedShort": "{q} ayrılmış",
+      "itemOpen": "{name} ürün kartını aç",
+      "movesNone": "Bu rafta henüz hareket yok.",
+      "open": "{name} raf yeri kartını aç",
+      "itemsN": "{n} ürün"
+    }
   },
   "field": {
     "title": "Saha",
@@ -2736,7 +2757,12 @@
       "pickLabel": "Ne yapacaksın?",
       "pickIn": "Depoya mal girdi",
       "pickOut": "Depodan mal çıktı",
-      "pickTransfer": "Bir depodan ötekine"
+      "pickTransfer": "Bir depodan ötekine",
+      "kindL": "Tür",
+      "date": "Tarih",
+      "boxLines": "Satır",
+      "info": "Belge bilgileri",
+      "back": "Belgelere dön"
     }
   },
   "production": {
@@ -4255,7 +4281,19 @@
     "colCity": "İl",
     "colPhone": "Telefon",
     "colEmail": "E-posta",
-    "colTax": "Vergi no"
+    "colTax": "Vergi no",
+    "kart": {
+      "title": "Cari kart",
+      "back": "Carilere dön",
+      "hero": "Cari bilgisi",
+      "info": "Bilgiler",
+      "quick": "Hızlı işlemler",
+      "edit": "Düzenle",
+      "editAria": "{name} kartını düzenle",
+      "call": "{name} — ara",
+      "mail": "{name} — e-posta yaz",
+      "open": "{name} kartını aç"
+    }
   },
   "gruplar": {
     "title": "Yetki grupları",
