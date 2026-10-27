@@ -1,6 +1,8 @@
 // T-991: ERP entegrasyonu uçtan uca — hesap sahibi Entegrasyon ekranında sahte Paraşüt'e (global-setup, 127.0.0.1) bağlanır, bağlı şeridi
 // (yalnız şirket adı, sır yok) görür, bir akışı açar (balon + açık durum) ve bağlantıyı sınar. Ayrı fikstür alanı (`E2E_ERP`); sahte bilgiler
 // sentetiktir. Masaüstü ve mobil projeler aynı alanı kullanır: bağlıysa test önce bağlantıyı keser (kes penceresi de sınanır).
+import { randomUUID } from "node:crypto";
+import { db } from "./support/package-receiving.ts";
 import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { FAKE_PARASUT_DEFAULTS as F } from "../integration/fixtures/fake-parasut.ts";
@@ -132,6 +134,17 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       await expect(page.getByTestId('integrations-conn')).toHaveAttribute('data-status','CONNECTED');
       expect(await page.content()).not.toContain(F.authorizationCode);
     }
+
+    // Imported products appear on an already open list after returning to the tab; no reload button.
+    await page.goto(`/t/${slug}/items`);
+    await expect(page.getByTestId("items")).toBeVisible();
+    const importedId = randomUUID(), importedName = `Canli aktarim ${importedId.slice(0,8)}`;
+    try {
+      await db("INSERT INTO public.items(tenant_id,id,code,name,base_unit_id) SELECT t.id,$2,$3,$3,u.id FROM tenants t JOIN units u ON u.tenant_id=t.id AND u.code='ADET' WHERE t.slug=$1", [slug,importedId,importedName]);
+      await expect(page.getByText(importedName,{exact:true})).toHaveCount(0);
+      await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+      await expect(page.getByText(importedName,{exact:true}).first()).toBeVisible();
+    } finally { await db("DELETE FROM public.items WHERE id=$1",[importedId]); }
 
     // Reproduce the live report: an old authenticated session must show a useful reason + a working reauth link.
     await page.goto(`/t/${slug}/integrations`);
