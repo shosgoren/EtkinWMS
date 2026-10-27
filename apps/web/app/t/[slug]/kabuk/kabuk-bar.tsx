@@ -443,9 +443,9 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotPr
                         <span className="mi" style={{ background: dz(m.color) }}>
                           <Ico d={m.d} size={22} />
                         </span>
+                        {/* Kullanıcı kararı (27 Ekim): düğme altında açıklama yazısı yok; açıklama yalnız ekran okuyucuya (aria-label). */}
                         <span className="mtx">
                           <b>{m.name}</b>
-                          <small>{m.sub}</small>
                         </span>
                         {isSoon ? <span className="soon">{t("soon")}</span> : null}
                       </>
@@ -500,7 +500,6 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotPr
                       </span>
                       <span className="mtx">
                         <b>{plus.first ? t("more", { n: plus.n }) : t("first")}</b>
-                        <small>{t("moreSub")}</small>
                       </span>
                     </button>
                   ) : null}

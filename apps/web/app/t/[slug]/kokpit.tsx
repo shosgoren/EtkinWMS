@@ -183,11 +183,11 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now }: K
       <KalipKartListe label={t("tasksLabel")}>
         {active.map((d) => (
           <div key={d.key} role="listitem" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <Link className="uc" style={{ ...ROW, animationDelay: `${i++ * 30}ms` }} href={hrefs[d.key]?.href ?? base} data-state="active" data-task={d.key}>
+          {/* Kullanıcı kararı (27 Ekim): düğmelerin altında açıklama yazısı yok; açıklama yalnız ekran okuyucuya (aria-label). */}
+          <Link className="uc" style={{ ...ROW, animationDelay: `${i++ * 30}ms` }} href={hrefs[d.key]?.href ?? base} data-state="active" data-task={d.key} aria-label={`${t(`tasks.${d.key}.title`)} · ${t(`tasks.${d.key}.description`)}`}>
             {icon(d.d, d.color)}
             <span className="ut">
               <b>{t(`tasks.${d.key}.title`)}</b>
-              <small className="um">{t(`tasks.${d.key}.description`)}</small>
             </span>
             <span className="qb">
               <b>
@@ -202,20 +202,14 @@ export async function Kokpit({ slug, dark, firstName, allowed, myTasks, now }: K
             {icon(LICON.lock, "6A7F91")}
             <span className="ut">
               <b>{t(`tasks.${d.key}.title`)}</b>
-              <small className="um" style={{ display: "block" }}>
-                {t("lockedReason")}
-              </small>
             </span>
           </div>
         ))}
         {soon.map((d) => (
-          <div key={d.key} role="listitem" className="uc" aria-disabled="true" aria-label={`${t(`tasks.${d.key}.title`)} · ${t("soonLabel")}`} data-state="soon" data-task={d.key} style={{ opacity: 0.72 }}>
+          <div key={d.key} role="listitem" className="uc" aria-disabled="true" aria-label={`${t(`tasks.${d.key}.title`)} · ${t("soonLabel")} · ${t("soonWarehouse")}`} data-state="soon" data-task={d.key} style={{ opacity: 0.72 }}>
             {icon(d.d, "6A7F91")}
             <span className="ut">
               <b>{t(`tasks.${d.key}.title`)}</b>
-              <small className="um" style={{ display: "block" }}>
-                {t("soonWarehouse")}
-              </small>
             </span>
             <span className="pill warn">{t("soonLabel")}</span>
           </div>
