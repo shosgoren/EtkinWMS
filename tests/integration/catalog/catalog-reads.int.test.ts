@@ -91,6 +91,33 @@ async function walk(w: ReturnType<typeof admin>, q: string, limit: number, statu
 }
 
 describe("searchItems", () => {
+  it("T-1063: kategori/takip/barkod/kart türü aynı toplam ve keyset ile; tenant kapsamı korunur", async () => {
+    const p = `F${rnd()}`;
+    const lot = await createItem(admin(A), { code: `${p}-01`, name: "Granül", baseUnitId: A.unitId, trackingMode: "LOT", cardType: "HM" });
+    const other = await createItem(admin(A), { code: `${p}-02`, name: "Takipsiz", baseUnitId: A.unitId, cardType: "MM" });
+    await addBarcode(admin(A), { itemId: lot.itemId, barcode: `${p}-BAR` });
+    await adm.query("UPDATE public.items SET source_product_info=$1::jsonb WHERE tenant_id=$2 AND id=ANY($3::uuid[])", [JSON.stringify({ PARASUT: { categoryName: "Granül" } }), A.tenantId, [lot.itemId, other.itemId]]);
+    const input = { q: p, category: "granül", withTotal: true, limit: 1 } as const;
+    const first = await searchItems(admin(A), input);
+    expect(first.total).toBe(2);
+    expect(first.items.map((r) => r.id)).toEqual([lot.itemId]);
+    const second = await searchItems(admin(A), { ...input, after: first.nextCursor! });
+    expect(second.total).toBe(2);
+    expect(second.items.map((r) => r.id)).toEqual([other.itemId]);
+    expect(second.nextCursor).toBeNull();
+    expect((await searchItems(admin(A), { ...input, trackingMode: "LOT", barcode: "PRESENT", cardType: "HM" })).items.map((r) => r.id)).toEqual([lot.itemId]);
+    expect((await searchItems(admin(A), { ...input, barcode: "MISSING" })).items.map((r) => r.id)).toEqual([other.itemId]);
+    expect((await searchItems(admin(A), { ...input, category: "Gran%" })).total).toBe(0);
+    expect((await searchItems(admin(B), input)).total).toBe(0);
+    await expectFail(searchItems(as(A, noRoleUserId), input), "FORBIDDEN");
+  });
+
+  it("T-1063: geçersiz süzgeçler reddedilir", async () => {
+    await expectFail(searchItems(admin(A), { trackingMode: "FREE" as never }), "VALIDATION_FAILED");
+    await expectFail(searchItems(admin(A), { barcode: "YES" as never }), "VALIDATION_FAILED");
+    await expectFail(searchItems(admin(A), { category: "x".repeat(201) }), "VALIDATION_FAILED");
+  });
+
   it("keyset: sayfa sınırı, sıra ve tam kapsama; limit=toplam ise nextCursor null; sayfalar arasında eklenen kayıt yinelenme yaratmaz", async () => {
     const p = `K${rnd()}`;
     await mkItems(A, p, 5);

@@ -8,7 +8,7 @@ import { AppError } from "../../../packages/shared/src/errors.ts";
 import { addBarcode } from "../../../packages/domain/src/catalog/barcodes.ts";
 import { createItem } from "../../../packages/domain/src/catalog/items.ts";
 import { createLocation } from "../../../packages/domain/src/warehouse/locations.ts";
-import { loadLabelSource, toSvgPages, toZplDocument } from "../../../packages/domain/src/labels/index.ts";
+import { loadLabelSource, loadProductLabelBatch, toSvgPages, toZplDocument } from "../../../packages/domain/src/labels/index.ts";
 import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
@@ -101,6 +101,28 @@ describe("loadLabelSource yetki", () => {
 });
 
 describe("loadLabelSource olumlu yol", () => {
+  it("T-1063: toplu etiket sınırlı/imleçli, tekrar kararlı; miktarlı koli barkodu ürün etiketi olmaz", async () => {
+    const prefix = `BATCH${rnd()}`;
+    const first = await createItem(admin(A), { code: `${prefix}-01`, name: "Bir", baseUnitId: A.unitId });
+    const second = await createItem(admin(A), { code: `${prefix}-02`, name: "İki", baseUnitId: A.unitId });
+    await addBarcode(admin(A), { itemId: first.itemId, barcode: `${prefix}-0KOLI`, quantity: "12" });
+    await addBarcode(admin(A), { itemId: first.itemId, barcode: `${prefix}-1URUN` });
+    await addBarcode(admin(A), { itemId: second.itemId, barcode: `${prefix}-2KOLI`, quantity: "24" });
+    const input = { q: prefix, limit: 1 } as const;
+    const batch = await loadProductLabelBatch(admin(A), input);
+    expect(batch.total).toBe(2);
+    expect(batch.datas).toEqual([expect.objectContaining({ code: `${prefix}-01`, barcode: `${prefix}-1URUN` })]);
+    expect(await loadProductLabelBatch(admin(A), input)).toEqual(batch);
+    const next = await loadProductLabelBatch(admin(A), { ...input, after: batch.nextCursor! });
+    expect(next.datas).toEqual([expect.objectContaining({ code: `${prefix}-02`, barcode: null })]);
+    expect(next.nextCursor).toBeNull();
+    expect((await loadLabelSource(admin(A), { itemId: first.itemId }))?.datas).toEqual(batch.datas);
+    expect((await loadLabelSource(admin(A), { itemId: second.itemId }))?.datas).toEqual(next.datas);
+    expect((await loadProductLabelBatch(admin(B), input)).datas).toEqual([]);
+    expect((await fail(loadProductLabelBatch(as(A, noRoleUserId), input))).code).toBe("FORBIDDEN");
+    expect((await fail(loadProductLabelBatch(admin(A), { limit: 101 }))).code).toBe("VALIDATION_FAILED");
+  });
+
   it("ürün: kod, ad, birim ve birincil barkod gelir; ad kaçışlanmış SVG ve ZPL üretir", async () => {
     const s = await loadLabelSource(admin(A), { itemId: itemA.id });
     expect(s?.template).toBe("product");
