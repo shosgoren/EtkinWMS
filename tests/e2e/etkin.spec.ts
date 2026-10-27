@@ -56,3 +56,27 @@ test("Etkin: bas-konuş → Anladım kartı → Onayla (dokunuş ve sesli)", asy
   await expect(page).toHaveURL(/\/t\/demo\/stock\/documents\?id=[0-9a-f-]{36}$/, { timeout: 15_000 });
   expect(await page.evaluate<boolean>("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true);
 });
+
+// T-1103: sistem iptali (iOS kenar hareketi, gelen arama) bırakma değildir — kayıt gönderilmez, "Anladım" kartı açılmaz, dinleme kapanır.
+test("Etkin: basılıyken sistem iptali kaydı göndermez", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await expect(page).toHaveURL(/\/t\/demo$/);
+  const btn = page.getByTestId("kabuk-etkin").filter({ visible: true });
+  const box = await btn.boundingBox();
+  if (box === null) throw new Error("Etkin düğmesi görünmüyor");
+  let sent = 0;
+  page.on("request", (r) => {
+    if (r.method() === "POST" && r.headers()["next-action"] !== undefined && (r.postData() ?? "").includes('"audio"')) sent++;
+  });
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(page.getByTestId("etkin-veil")).toHaveAttribute("data-state", "listen");
+  await page.waitForTimeout(900);
+  await btn.dispatchEvent("pointercancel", { pointerId: 1, isPrimary: true, pointerType: "touch" });
+  await page.mouse.up();
+  await expect(btn).toHaveAttribute("aria-pressed", "false");
+  await page.waitForTimeout(1500);
+  await expect(page.getByTestId("etkin-confirm")).toHaveCount(0);
+  expect(sent).toBe(0);
+});

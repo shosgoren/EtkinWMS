@@ -1243,6 +1243,12 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
   padding: 8px 10px 8px 14px;
 }
 
+/* T-1103: Etkin bas-konuş — iPhone'da uzun basışta büyüteç / bağlam menüsü açılmasın (dokunuş kaydı bozmasın). */
+.dzk .dk-etkin {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
 /* T-1100: Pano'da rehber girişi yalnız halka simgesi ("Merhaba" satırının sağında, satır kırılmaz). */
 .dzp .hello:has(.yikon) {
   flex-wrap: nowrap;

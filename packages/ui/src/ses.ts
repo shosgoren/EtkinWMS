@@ -214,9 +214,20 @@ export function base64(bytes: Uint8Array): string {
  * Mikrofonu açar ve kaydı başlatır. `onAuto`: süre dolunca ya da (uzun dinlemede) sessizlikte çağrılır. İzin yoksa hata fırlatır.
  */
 export async function kayitBaslat(opts: { readonly long: boolean; readonly onAuto: () => void }): Promise<Kayit> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  // T-1103: ses bağlamı dokunuşun İÇİNDE (ilk `await`ten önce) açılır ve sürdürülür. iOS Safari, dokunuştan sonra (izin/mikrofon beklendikten
+  // sonra) açılan bağlamı askıda bırakabiliyor: kayıt boş kalıyor, "çok kısa" uyarısı çıkıyordu.
   const AC: KayitCtx = window.AudioContext ?? (window as unknown as { webkitAudioContext: KayitCtx }).webkitAudioContext;
   const ctx = new AC();
+  void ctx.resume().catch(() => undefined);
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    void ctx.close().catch(() => undefined);
+    throw e;
+  }
+  // Sürdürme askıda kalabilir (söz hiç sonuçlanmaz): bekleme sınırlı — kayıt tutamağı her durumda döner, iptal/zaman aşımı mikrofonu kapatabilir.
+  if (ctx.state === "suspended") await Promise.race([ctx.resume().catch(() => undefined), new Promise<void>((r) => window.setTimeout(r, 300))]);
   const src = ctx.createMediaStreamSource(stream);
   const proc = ctx.createScriptProcessor(4096, 1, 1);
   const chunks: Float32Array[] = [];
