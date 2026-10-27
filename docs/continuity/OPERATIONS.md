@@ -134,7 +134,7 @@ servisi. Bu adım yapılmadan yayınlar iki imajlı sürer; Etkin "şu an kullan
 ## Son doğrulanmış Paraşüt yayını (T-1066, 27 Ekim)
 - [PR227](https://github.com/shosgoren/EtkinWMS/pull/227): boş OAuth alanları, formda recentAuth yönlendirmesi, 30 sn ERP zamanlayıcı ve açık ürün listesi yenilemesi. Son birleşik main T1095 rehberini de içerir.
 - Çalışan release: `48755d227dc3dd25188f1f8492ce4111c57dd129`. [Ana CI40572609077](https://github.com/shosgoren/EtkinWMS/actions/runs/40572609077), [guards40572609041](https://github.com/shosgoren/EtkinWMS/actions/runs/40572609041), [deploy40574232524](https://github.com/shosgoren/EtkinWMS/actions/runs/40574232524) başarılı.
-- Doğrudan VPS: health `ok`, auto_migrate `true`; gerçek DB defteri `0061/61`; schema `24a0e643da9b3a89e3df69396eac4edacd54d108c099225c2dd7a8bacf01babe`. Müşteri verisi veya sır okunmadı; yalnız durum/sayı metadata.
+- Doğrudan VPS: health `ok`, auto_migrate `true`; gerçek DB defteri `0061/61`; schema `24a0e643da9b3a89e3df69396eac4edacd54d108c099225c2dd7a8bacf01babe`. Sır veya ürün içeriği okunmadı; yalnız durum/sayı metadata kontrol edildi.
 - Motive ilk bağlantı ve 2 kart aktarımı başarılı. Yeni sürümde PRODUCTS/SCHEDULE koşuları UTC20:06:02 ve20:06:30 SUCCESS; yeni/değişen kart yoksa sayılar0 normaldir. Büyük katalog/kuyruk/sağlayıcı sorunu hedef30–60sn süreyi uzatabilir.
 - Sentetik kod taşıyan cookiesiz callback:400/INVALID_OAUTH_CALLBACK,Cache-Control:no-store,Referrer-Policy:no-referrer. Boş/kodsuz istek ile karıştırılmaz.
 - Canlı Chrome gözlem izni reddedildi: tarayıcı oturumu/görsel kontrol yapılmadı. Yerel telefon/masaüstü testleri ve390/1180/1440 kontrolleri geçti; fiziksel cihaz UNKNOWN. Gerçek Secret, token, kod, DB bağlantısı loga/belgeye yazılmaz.
