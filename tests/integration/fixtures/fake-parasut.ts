@@ -152,6 +152,12 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     if (req.method === "GET" && url.pathname === "/v4/me") {
       return send(200, { data: { id: "9", type: "users", attributes: { name: "Muhasebe", email: opts.username } }, included: state.companies.map(c=>({id:c.id,type:"companies",attributes:{name:c.name}})) });
     }
+    const product = /^\/v4\/([0-9]+)\/products\/([0-9]+)$/.exec(url.pathname);
+    if (req.method === "GET" && product !== null) {
+      if (product[1] !== opts.companyId) return send(404, {errors:[{title:"Not found"}]});
+      const row = state.products.find(r => r.id === product[2]);
+      return row === undefined ? send(404,{errors:[{title:"Not found"}]}) : send(200,{data:{...row,type:"products",relationships:row.relationships??{}}});
+    }
     const m = /^\/v4\/([0-9]+)\/([a-z_]+)$/.exec(url.pathname);
     if (m === null || m[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });
     const kind = m[2] as string;

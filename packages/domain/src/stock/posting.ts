@@ -456,7 +456,7 @@ async function postCore(
   // Sıra: lokasyon (FOR SHARE, ACTIVE, depo eşitliği A-145) → ürün (FOR SHARE, ACTIVE); ikisi de documents.ts yardımcıları.
   await assertLocationsActiveInWarehouse(tx, ctx.tenantId, built.locationIds, header.warehouseId);
   const itemIds = [...new Set(lines.map((l) => l.itemId.toLowerCase()))].sort();
-  await assertItemsActive(tx, ctx.tenantId, itemIds, { archivedDetail: "IN_USE" });
+  await assertItemsActive(tx, ctx.tenantId, itemIds, { archivedDetail: "IN_USE", allowSourcePending: kind === "STOCK_OUT" || kind === "STOCK_MOVE" || kind === "COUNT_ADJUSTMENT", existingDocumentId: documentId });
   const items = await readItemInfo(tx, ctx.tenantId, itemIds);
   const serials = new Map<string, SerialInfo>(locked.serials.map((s) => [s.id.toLowerCase(), { id: s.id, itemId: s.itemId, lotId: s.lotId }]));
   assertLineRules(lines, items, serials);

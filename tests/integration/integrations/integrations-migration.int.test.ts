@@ -34,9 +34,9 @@ const top = async (adm: pg.Client): Promise<string | undefined> =>
 
 it("0055 boşken geri alınır ve yeniden uygulanır; dolu veride down reddedilir, veri ve defter korunur", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0061", "0060", "0059", "0058", "0057", "0056", "0055"]);
+    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055"]);
     expect((await adm.query("SELECT to_regclass('public.integrations') AS i, to_regclass('public.integration_outbox') AS o, to_regclass('public.external_refs') AS r")).rows[0]).toEqual({ i: null, o: null, r: "external_refs" });
-    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060", "0061"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060", "0061", "0062"]);
 
     const w = await seedWorld(adm, newRegistry(), "M991");
     await adm.query("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED')", [w.tenantId]);
@@ -65,5 +65,25 @@ it("0061 refuses rollback with encrypted customer configuration and retains FORC
  await adm.query(`INSERT INTO integration_oauth_apps(tenant_id,credentials) VALUES($1,'{"v":2,"kid":"synthetic","iv":"synthetic","tag":"synthetic","ct":"synthetic"}')`,[w.tenantId]);
  await expect(migrateDown({url,to:"0060",wmsEnv:"staging"})).rejects.toThrow(/0061 down/);
  expect(await top(adm)).toBe("0061");expect((await adm.query("SELECT relforcerowsecurity AS f FROM pg_class WHERE oid='public.integration_oauth_apps'::regclass")).rows[0]?.f).toBe(true);
+ });
+},120_000);
+
+
+it("0062 retains lifecycle data on rollback and preserves the real-card delete guard",async()=>{
+ await scratch(async(url,adm)=>{
+  const w=await seedWorld(adm,newRegistry(),"M1067");
+  expect((await adm.query("SELECT has_column_privilege('wms_app','public.items','source_state','UPDATE') AS u, EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.items'::regclass AND tgname='items_sample_delete_guard' AND tgenabled='A') AS guarded")).rows[0]).toEqual({u:true,guarded:true});
+  await adm.query("BEGIN");
+  try {
+    await adm.query("SET LOCAL ROLE wms_app");
+    await adm.query("SELECT set_config('app.current_tenant_id',$1,true)",[w.tenantId]);
+    expect((await adm.query("SELECT id FROM items WHERE tenant_id=$1 AND id=$2",[w.tenantId,w.itemId])).rowCount).toBe(1);
+    expect((await adm.query("DELETE FROM items WHERE tenant_id=$1 AND id=$2",[w.tenantId,w.itemId])).rowCount).toBe(0);
+  } finally { await adm.query("ROLLBACK"); }
+
+  await adm.query("UPDATE items SET source_state='ARCHIVED',source_disposition='ARCHIVED',source_managed_archive=true,status='ARCHIVED',archived_at=now(),source_checked_at=now() WHERE tenant_id=$1 AND id=$2",[w.tenantId,w.itemId]);
+  await expect(migrateDown({url,to:"0061",wmsEnv:"staging"})).rejects.toThrow("product lifecycle data exists; rollback refused");
+  expect(await top(adm)).toBe("0062");
+  expect((await adm.query("SELECT source_state,status FROM items WHERE tenant_id=$1 AND id=$2",[w.tenantId,w.itemId])).rows[0]).toEqual({source_state:"ARCHIVED",status:"ARCHIVED"});
  });
 },120_000);

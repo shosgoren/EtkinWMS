@@ -1,13 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { enterDemoReal } from "./support/demo-session.ts";
+import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 
 test("stok: ana menü, gerçek veriler, arama, yardım ve mobil taşma", async ({ page }) => {
   await page.goto("/");
-  await enterDemoReal(page, "Yönetici");
+  // T-1101: "Nasıl kullanırım?" yalnız karşılama sayfasındadır (T-1012: çalışma alanında üst çubuk yok). Önceden demo girişine dokunduktan
+  // SONRA aranıyordu: gezinme o an bittiyse düğme yoktu (ara sıra takılma). Rehber girişten önce karşılama sayfasında denetlenir.
+  await completeFirstUseGuide(page);
   await page.getByRole("button", { name: "Nasıl kullanırım?" }).click();
   await expect(page.getByRole("dialog", { name: "Birlikte, adım adım." })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Birlikte, adım adım." })).not.toBeVisible();
+  await enterDemoReal(page, "Yönetici");
   // T-979c: Stok durumu ortak alt çubuğun Modüller sayfasında (eski "Tüm ekranlar" penceresi yok).
   await expect(page).toHaveURL(/\/t\/demo$/);
   await page.getByTestId("kabuk-mods").click();

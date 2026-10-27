@@ -292,6 +292,17 @@ export class ParasutClient {
     return { items: b.data.map(resource), included: Array.isArray(b.included) ? b.included.map(resource) : [], page, totalPages: total };
   }
 
+  /** 404 means absent only; the caller must separately prove company/catalog access before reconciling deletion. */
+  async product(token: string, companyId: string, productId: string): Promise<JsonApiResource | null> {
+    const cid = parseCompanyId(companyId), pid = id(productId);
+    const r = await this.request("GET", `/v4/${cid}/products/${pid}?include=category`, { token });
+    if (r.status === 404) return null;
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const item = resource((r.body as { data?: unknown } | null)?.data);
+    if (item.id !== pid || item.type !== "products") throw new ProviderError("BAD_RESPONSE", r.status);
+    return item;
+  }
+
   /** Ürün koduna göre ara (`filter[code]`): Etkin -> Paraşüt gönderiminde çift kayıt açmamak için. */
   async findProductByCode(token: string, companyId: string, code: string): Promise<JsonApiResource | null> {
     const cid = parseCompanyId(companyId);
