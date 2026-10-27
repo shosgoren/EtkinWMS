@@ -19,6 +19,7 @@ import type { AccessTx } from "../identity/access.ts";
 import { applyContact, applyProduct, applyWarehouse, link, refExternal, type ApplyContext, type ApplyOutcome } from "./apply.ts";
 import { FLOWS, PROVIDER_INFO, flowSupported, pulls, pushes, type Direction, type Flow } from "./catalog.ts";
 import { ProviderError, type JsonApiResource, type ParasutClient } from "./parasut.ts";
+import { assertLifecycleBinding, lifecycleBinding, lifecycleCandidates, observeProduct, type LifecycleBinding } from "./product-lifecycle.ts";
 import { productSourceInfo } from "./product-info.ts";
 import { selectChangedStockLevels } from "./stock-reads.ts";
 import { IntegrationStateError, accessToken, loadIntegration, markIntegrationError, type RunTx } from "./store.ts";
@@ -79,6 +80,7 @@ interface RunCtx {
   readonly ac: ApplyContext;
   readonly flow: FlowRow;
   readonly c: Counters;
+  readonly productBinding: LifecycleBinding|null;
 }
 
 const errCode = (e: unknown): string => {
@@ -123,14 +125,19 @@ const toWarehouse = (r: JsonApiResource) => ({ externalId: r.id, name: s(r.attri
 
 // --- ERP -> Etkin -------------------------------------------------------------------------------------------------------------------
 async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): Promise<void> {
+  const started=(rc.deps.now??Date.now)();
+  const binding=kind==='products'?rc.productBinding:null;
+  if(binding&&(binding.companyId!==rc.companyId||binding.userId!==rc.ac.actorUserId||binding.membershipId!==rc.ac.membershipId))throw new IntegrationStateError("NOT_CONNECTED");
   let page = rc.flow.cursor === null ? 1 : Math.max(1, Number(rc.flow.cursor));
   for (let n = 0; n < SYNC_LIMITS.pagesPerRun; n++) {
     const p = await rc.deps.client.list(rc.token, rc.companyId, kind, page);
     const next = p.items.length === 0 || page >= p.totalPages ? null : page + 1;
     await rc.deps.inTenant(async (tx) => {
+      if(binding&&!(await assertLifecycleBinding(tx,binding)))throw new IntegrationStateError("NOT_CONNECTED");
       const barcodeSetting = kind === "products" ? await tx.execute<{ enabled: boolean }>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id=${rc.tenantId}::uuid AND id=${rc.integrationId}::uuid`) : [];
       const ac = { ...rc.ac, pullProductBarcodes: barcodeSetting[0]?.enabled === true };
       for (const item of p.items) {
+        if(kind==="products"&&item.type!=="products"){rc.c.failed++;continue;}
         try {
           // Satır başına kayıt noktası: bir kartın reddi sayfanın kalanını düşürmez.
           const o = await tx.transaction((sp) =>
@@ -140,11 +147,26 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
         } catch {
           rc.c.failed++;
         }
+        // Safety state is independent of optional name/unit/barcode parsing failures.
+        if(binding)await tx.transaction(sp=>observeProduct(sp,binding,rc.ac,item.id,{exists:true,archived:item.attributes.archived},(rc.deps.now??Date.now)()));
       }
       await tx.execute(sql`UPDATE public.integration_flows SET cursor = ${next === null ? null : String(next)} WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = ${rc.flow.flow}`);
     });
-    if (next === null) return;
+    if (next === null) break;
     page = next;
+  }
+  if(binding){
+    // A successful product page alone cannot prove deletion. Verify current company access, then exact identities twice over time.
+    const companies=await rc.deps.client.companies(rc.token);
+    if(!companies.some(c=>c.id===binding.companyId))throw new IntegrationStateError("NOT_CONNECTED");
+    const candidates=await rc.deps.inTenant(tx=>lifecycleCandidates(tx,binding,started));
+    for(const candidate of candidates){
+      const product=await rc.deps.client.product(rc.token,rc.companyId,candidate.external_id);
+      await rc.deps.inTenant(async tx=>{
+        if(!(await assertLifecycleBinding(tx,binding)))throw new IntegrationStateError("NOT_CONNECTED");
+        if(await observeProduct(tx,binding,rc.ac,candidate.external_id,product===null?{exists:false}:{exists:true,archived:product.attributes.archived},(rc.deps.now??Date.now)()))rc.c.updated++;
+      });
+    }
   }
 }
 
@@ -419,6 +441,9 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
   if (head.kind === "skip") return { kind: "skipped", reason: head.reason };
   if (head.flows.length === 0) return { kind: "skipped", reason: "NO_ENABLED_FLOW" };
   const { tenantId, row } = head;
+  // Freeze the connection generation BEFORE selecting/refreshing its token. Never rebind old responses to a new OAuth generation.
+  const productBinding=head.flows.some(f=>f.flow==='PRODUCTS'&&pulls(f.direction))
+    ?await deps.inTenant(tx=>lifecycleBinding(tx,tenantId,row.id)):null;
   let token: { token: string; accountRef: string };
   try {
     // Belirteç koşunun en uzun süresi boyunca geçerli olmalı (iş süresi 30 dk): koşu ortasında 401 ile kalıcı hata / sahte yeniden giriş olmasın.
@@ -431,6 +456,7 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
     }
     throw e;
   }
+  if(productBinding&&!(await deps.inTenant(tx=>assertLifecycleBinding(tx,productBinding))))return {kind:"skipped",reason:"NOT_CONNECTED"};
   const ac: ApplyContext = { tenantId, system: PROVIDER_INFO[row.provider].system, actorUserId: row.connectedBy as string, membershipId: row.connectedMembershipId as string };
   const results: FlowResult[] = [];
   const ordered = [...head.flows].sort((a, b) => ORDER.indexOf(a.flow) - ORDER.indexOf(b.flow));
@@ -451,7 +477,7 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
     let errorCode: string | null = null;
     let fatal: unknown = null;
     try {
-      await runFlow({ deps, tenantId, integrationId: row.id, companyId: token.accountRef, token: token.token, ac, flow, c });
+      await runFlow({ deps, tenantId, integrationId: row.id, companyId: token.accountRef, token: token.token, ac, flow, c, productBinding });
     } catch (e) {
       errorCode = errCode(e);
       fatal = e;

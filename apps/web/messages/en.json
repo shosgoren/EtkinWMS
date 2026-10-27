@@ -1509,7 +1509,10 @@
       "colType": "Type",
       "colUnit": "Unit",
       "colHave": "On hand",
-      "colState": "Status"
+      "colState": "Status",
+      "removed": "Removed",
+      "removedTag": "REMOVED",
+      "pendingTag": "ARCHIVE PENDING"
     },
     "productLabels": {
       "filter": "Filter",
@@ -1536,7 +1539,11 @@
       "sourceInventory": "Inventory tracked in source",
       "sourceLocked": "Managed by the source system",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "sourceStatus": "Source status",
+      "pending": "Archive pending · finish existing work",
+      "removed": "Removed",
+      "archived": "Archived"
     }
   },
   "warehouses": {

@@ -14,6 +14,9 @@ export interface ProductSourceInfo {
   readonly categoryName?: string | null;
   readonly archived?: boolean | null;
   readonly inventoryTracking?: boolean | null;
+  /** Read-only derived lifecycle; never written into provider JSON. */
+  readonly lifecycle?: "NONE"|"PENDING"|"ARCHIVED"|"REMOVED";
+  readonly sourceState?: "ACTIVE"|"ARCHIVED"|"DELETED";
 }
 
 function text(raw: unknown, max: number): string | null {
@@ -72,8 +75,8 @@ export async function saveProductSourceInfo(tx: AccessTx, c: ApplyContext, itemI
 export async function getProductSourceInfo(params: CatalogCommandParams, rawItemId: string): Promise<Readonly<Record<string, ProductSourceInfo>>> {
   const itemId = parseUuid(rawItemId);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
-    const r = await tx.execute<{ info: Record<string, ProductSourceInfo> }>(sql`SELECT source_product_info AS info FROM public.items WHERE tenant_id=${actor.tenantId}::uuid AND id=${itemId}::uuid`);
+    const r = await tx.execute<{ info: Record<string, ProductSourceInfo>; source_disposition:NonNullable<ProductSourceInfo["lifecycle"]>;source_state:NonNullable<ProductSourceInfo["sourceState"]> }>(sql`SELECT source_product_info AS info,source_disposition,source_state FROM public.items WHERE tenant_id=${actor.tenantId}::uuid AND id=${itemId}::uuid`);
     if (r[0] === undefined) throw new AppError("NOT_FOUND");
-    return r[0].info;
+    const row=r[0];return {...row.info,...(row.info.PARASUT&&row.source_disposition!=="NONE"?{PARASUT:{...row.info.PARASUT,lifecycle:row.source_disposition,sourceState:row.source_state}}:{})};
   });
 }

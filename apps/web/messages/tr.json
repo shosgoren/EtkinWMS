@@ -1509,7 +1509,10 @@
       "colType": "Tür",
       "colUnit": "Birim",
       "colHave": "Eldeki",
-      "colState": "Durum"
+      "colState": "Durum",
+      "removed": "Kaldırıldı",
+      "removedTag": "KALDIRILDI",
+      "pendingTag": "ARŞİV BEKLİYOR"
     },
     "productLabels": {
       "filter": "Süz",
@@ -1536,7 +1539,11 @@
       "sourceInventory": "Kaynakta stok takibi",
       "sourceLocked": "Kaynak sistemden gelir",
       "yes": "Evet",
-      "no": "Hayır"
+      "no": "Hayır",
+      "sourceStatus": "Kaynak durumu",
+      "pending": "Arşiv bekliyor · mevcut işleri tamamla",
+      "removed": "Kaldırıldı",
+      "archived": "Arşivli"
     }
   },
   "warehouses": {
