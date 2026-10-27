@@ -4714,10 +4714,6 @@
         "name": "Stock documents",
         "sub": "Opening · In · Out"
       },
-      "excel": {
-        "name": "Import from Excel",
-        "sub": "Product · Party"
-      },
       "etiket": {
         "name": "Label design",
         "sub": "Template · Print"
@@ -4801,32 +4797,6 @@
     "mainOff": "This action is not available right now.",
     "discarded": "Changes discarded",
     "formFirst": "Fill in the required fields and make the selections first.",
-    "excel": {
-      "aria": "Excel · {kind}: import, update or download",
-      "menu": "Excel · {kind}",
-      "title": "Excel · {kind}",
-      "import": "Import",
-      "update": "Update (by code)",
-      "export": "Export",
-      "exporting": "Preparing…",
-      "done": "{n} rows downloaded to Excel",
-      "doneTruncated": "First {n} rows downloaded · narrow the list with search",
-      "donePersonal": "{n} rows downloaded · personal fields left empty (no permission)",
-      "kind": {
-        "items": "Items",
-        "parties": "Customers",
-        "warehouses": "Warehouses",
-        "locations": "Shelves"
-      },
-      "err": {
-        "rate": "Too many downloads · try again in a minute",
-        "forbidden": "You don't have permission · ask your manager",
-        "network": "No connection · try again when online",
-        "notFound": "Not found",
-        "generic": "Download failed · try again",
-        "reauth": "Sign in again for security · taking you to sign-in"
-      }
-    },
     "st": {
       "clock": "Clock",
       "clockAria": "Time {time}, {date}",

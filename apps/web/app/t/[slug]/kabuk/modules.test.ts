@@ -17,20 +17,21 @@ describe("Kabuk modülleri (T-958)", () => {
     expect(kabukModules(base, { roles: ["PICKER"], grants: [], screens: null }).some((m) => m.view !== undefined)).toBe(false);
   });
 
-  it("kaynak listesinin sırası (20 modül) + T-979c eski menüden taşınan 3 yönetim ekranı", () => {
-    expect(MODULE_DEFS.map((m) => m.id)).toEqual(["home", "urun", "depo", "satin", "satis", "topla", "trans", "uret", "qr", "koli", "tara", "sayim", "ayin", "ses", "abone", "fis", "excel", "etiket", "cari", "ekip", "stok", "ayar", "kayit"]);
+  it("kaynak listesinin sırası (19 modül; T-1094 Excel çıktı) + T-979c eski menüden taşınan 3 yönetim ekranı", () => {
+    expect(MODULE_DEFS.map((m) => m.id)).toEqual(["home", "urun", "depo", "satin", "satis", "topla", "trans", "uret", "qr", "koli", "tara", "sayim", "ayin", "ses", "abone", "fis", "etiket", "cari", "ekip", "stok", "ayar", "kayit"]);
   });
 
   it("hesap sahibi hepsini görür; gerçek ekranlar bağlantı, ekranı olmayanlar YAKINDA", () => {
     const all = kabukModules(base, { roles: ["TENANT_ADMIN"], grants: [], screens: null });
-    expect(all).toHaveLength(23);
+    expect(all).toHaveLength(22);
     expect(all.find((m) => m.id === "stok")?.href).toBe("/t/demo/stock");
     expect(all.find((m) => m.id === "ayar")?.href).toBe("/t/demo/settings");
     expect(all.find((m) => m.id === "kayit")?.href).toBe("/t/demo/audit");
     const soon = all.filter((m) => m.href === null).map((m) => m.id);
     expect(soon).toEqual(["satin", "ayin", "ses", "abone", "etiket"]);
     expect(all.find((m) => m.id === "ekip")?.href).toBe("/t/demo/team");
-    expect(all.find((m) => m.id === "excel")?.href).toBe("/t/demo/import");
+    // T-1094: Excel'den aktar Modüller'de yok (yalnız Ayarlar › Entegrasyonlar).
+    expect(all.some((m) => m.id === "excel")).toBe(false);
     expect(all.find((m) => m.id === "home")?.href).toBe("/t/demo");
     expect(all.find((m) => m.id === "trans")?.href).toBe("/t/demo/stock/documents?new=TRANSFER");
   });
@@ -60,8 +61,8 @@ describe("Kabuk modülleri (T-958)", () => {
     expect(ids(["PICKER", "COUNTER"])).toEqual(["home", "topla", "koli", "tara", "sayim", "ses"]);
   });
 
-  it("özel grup yetkisi modülü açar (data.import → Excel'den aktar); saha kişisinde yönetici modülü yine yok", () => {
-    expect(ids(["READ_ONLY"], ["data.import"])).toContain("excel");
+  it("özel grup yetkisi Excel modülü açmaz (T-1094: Excel yalnız Ayarlar › Entegrasyonlar); saha kişisinde yönetici modülü yine yok", () => {
+    expect(ids(["READ_ONLY"], ["data.import"])).not.toContain("excel");
     expect(ids(["PICKER"], ["data.import"])).not.toContain("excel");
     // Kapalı listede olmayan yetki grubu yoluyla verilemez (users.manage).
     expect(ids(["READ_ONLY"], ["users.manage"])).not.toContain("ekip");
