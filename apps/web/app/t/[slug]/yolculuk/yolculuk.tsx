@@ -5,7 +5,7 @@
 // ilerler. Perdeye dokununca serbest bırakır, küçük yüzen simge kalır ("Kaldığın yerden").
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { feedback, intlDil } from "@wms/ui";
 import { JICON } from "../../../design/yolculuk-icons.ts";
 import { dz } from "../../../design/yolculuk-tokens.ts";
@@ -489,8 +489,9 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     document.addEventListener("pointerdown", outside, true);
     return () => document.removeEventListener("pointerdown", outside, true);
   }, [coachOpen, katli, hole]);
-  // Esc turu kapatır (açık bir pencere yoksa; pencere kendi Esc'ini işler).
-  useEffect(() => {
+  // Esc turu kapatır (açık bir pencere yoksa; pencere kendi Esc'ini işler). Dinleyici kart çizilmeden bağlanır (useLayoutEffect): kart
+  // görünür görünmez basılan Esc kaçmasın (eski ortak kartla aynı).
+  useLayoutEffect(() => {
     if (!coachOpen) return undefined;
     const key = (e: KeyboardEvent): void => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
