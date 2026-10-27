@@ -313,6 +313,38 @@ describe("senkron", () => {
     expect(await stockFingerprint(W)).toEqual(before);
   });
 
+  it("ürün aktarımı ayrılmış WMS paket QR alanını reddeder ve satırı bütünüyle geri alır", async () => {
+    const W = await seedWorld(adm, reg, "ERPRQR");
+    const id = await connect(W);
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    await setProductBarcodeSetting(admin(W), { enabled: true });
+    const before = await stockFingerprint(W);
+    fake.products.push({ id: "941", attributes: { code: "RESERVED-QR", name: "Paketle karışmamalı", unit: "Adet", barcode: `EWMS:PKG:1:${randomUUID()}` } });
+    const result = await sync(W, id);
+    expect(result.kind === "ran" && result.flows[0]?.counts).toMatchObject({ created: 0, failed: 1 });
+    expect(await q("SELECT id FROM public.items WHERE tenant_id=$1 AND code='RESERVED-QR'", [W.tenantId])).toEqual([]);
+    expect(await q("SELECT external_id FROM public.external_refs WHERE tenant_id=$1 AND system='PARASUT' AND external_id='941'", [W.tenantId])).toEqual([]);
+    expect(await stockFingerprint(W)).toEqual(before);
+  });
+
+  it.each([
+    ["96385074", "00000096385074"],
+    ["00000096385074", "96385074"],
+  ])("GTIN-8 eşdeğerliği aktarım sırasından bağımsızdır: %s → %s", async (first, second) => {
+    const W = await seedWorld(adm, reg, "ERPGTIN");
+    const id = await connect(W);
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    await setProductBarcodeSetting(admin(W), { enabled: true });
+    fake.products.push({ id: "951", attributes: { code: "GTIN-FIRST", name: "İlk ürün", unit: "Adet", barcode: first } });
+    const accepted = await sync(W, id);
+    expect(accepted.kind === "ran" && accepted.flows[0]?.counts.created).toBe(1);
+    fake.products.push({ id: "952", attributes: { code: "GTIN-SECOND", name: "İkinci ürün", unit: "Adet", barcode: second } });
+    const rejected = await sync(W, id);
+    expect(rejected.kind === "ran" && rejected.flows[0]?.counts).toMatchObject({ created: 0, failed: 1 });
+    expect(await q("SELECT id FROM public.items WHERE tenant_id=$1 AND code='GTIN-SECOND'", [W.tenantId])).toEqual([]);
+    expect(await q("SELECT barcode FROM public.item_barcodes WHERE tenant_id=$1 AND barcode=ANY($2::text[])", [W.tenantId, [first, second]])).toEqual([{ barcode: first }]);
+  });
+
   it("Etkin -> ERP ürün (BOTH): aynı koddaki ERP ürününe bağlanır, yenisi bir kez yaratılır", async () => {
     const W = await seedWorld(adm, reg, "ERPQ");
     const id = await connect(W);

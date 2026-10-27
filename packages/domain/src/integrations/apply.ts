@@ -92,12 +92,13 @@ async function ensureProductBarcode(tx: AccessTx, c: ApplyContext, itemId: strin
   if (c.pullProductBarcodes && raw !== null && raw !== undefined && raw.trim() !== "") {
     barcode = raw.trim();
     const parsed = parseGs1(barcode);
-    if (barcode.length > 128 || CTRL.test(barcode) || (parsed.ok && parsed.gtin !== undefined)) throw new AppError("VALIDATION_FAILED");
+    // WMS komut/paket QR alanı ürün etiketi olamaz: saha okuyucusu bu alanı önce yönlendirir.
+    if (barcode.startsWith("EWMS:") || barcode.length > 128 || CTRL.test(barcode) || (parsed.ok && parsed.gtin !== undefined)) throw new AppError("VALIDATION_FAILED");
   } else {
     if (existing.length > 0) return false;
     barcode = `EWMS-ITEM-${itemId}`;
   }
-  const variants = isValidGtin(barcode) ? gtinLookupForms(barcode.padStart(14, "0")) : [];
+  const variants = isValidGtin(barcode) ? gtinLookupForms(barcode.padStart(14, "0"), true) : [];
   const forms = [...new Set([barcode, ...variants])];
   const other = await tx.execute<{ id: string }>(sql`SELECT id FROM public.item_barcodes WHERE tenant_id=${c.tenantId}::uuid AND item_id<>${itemId}::uuid AND barcode IN (${sql.join(forms.map((f) => sql`${f}`), sql`, `)}) LIMIT 1`);
   if (other.length > 0) throw new AppError("VALIDATION_FAILED", { detail: "BARCODE_AMBIGUOUS" });
