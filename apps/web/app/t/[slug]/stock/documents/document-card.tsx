@@ -33,7 +33,7 @@ export interface DocumentCardView {
   readonly related: readonly { readonly id: string; readonly number: string | null; readonly warehouseName: string }[];
 }
 
-const STATUS_TON: Readonly<Record<string, StTon>> = { DRAFT: "gri", APPROVED: "amber", POSTED: "ok", CANCELLED: "kirmizi" };
+const STATUS_TON: Readonly<Record<string, KalipEtiket["ton"]>> = { APPROVED: "amber", POSTED: "ok", CANCELLED: "kirmizi" };
 
 export function DocumentCard({ slug, document: doc, permissions }: { slug: string; document: DocumentCardView; permissions: { create: boolean; approve: boolean; post: boolean } }) {
   const t = useTranslations("stockDocuments");
@@ -45,8 +45,8 @@ export function DocumentCard({ slug, document: doc, permissions }: { slug: strin
   const tur: StTon = giris ? "yesil" : "turuncu";
   const sign = giris ? "+" : "−";
   const etiketler: KalipEtiket[] = [
-    { metin: kindLabel, ton: tur },
-    { metin: t(`states.${doc.status}`), ton: STATUS_TON[doc.status] ?? "gri", testId: "document-status" },
+    { metin: kindLabel },
+    { metin: t(`states.${doc.status}`), ...(STATUS_TON[doc.status] === undefined ? {} : { ton: STATUS_TON[doc.status] }), testId: "document-status" },
   ];
   const bilgiler: KalipBilgi[] = [
     { key: "kind", etiket: t("k.kindL"), deger: kindLabel, d, ton: tur },
