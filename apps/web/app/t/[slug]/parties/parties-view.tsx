@@ -8,7 +8,7 @@
 // Bilinçli farklar (DESIGN-PARITY, T-971): çip sayıları yok (sunucu tür sayımı vermez); tür süzgeci yalnız yüklenen ≤100 kartı süzer.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
@@ -17,7 +17,7 @@ import { KalipAlan, KalipGrup, KalipIzgara } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
-import { archivePartyAction, loadMorePartiesAction, savePartyAction } from "./actions.ts";
+import { archivePartyAction, loadMorePartiesAction, savePartyAction, suggestPartyCodeAction } from "./actions.ts";
 import { feedback } from "@wms/ui";
 
 export interface PartyView {
@@ -66,10 +66,29 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
   const tr = useTranslations("kural");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
-  const [initial] = useState<Form>(() => (party === null ? empty : fromParty(party)));
+  const [initial, setInitial] = useState<Form>(() => (party === null ? empty : fromParty(party)));
   const [f, setF] = useState<Form>(initial);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof Form, v: string): void => setF((cur) => ({ ...cur, [k]: v }) as Form);
+  // T-1093: yeni caride kod sunucudan önerilir (türe göre MUS / TED / CAR-0001) ve tür değişince yenilenir. Kullanıcı kodu değiştirdiyse
+  // (silip boş bırakmak dahil) öneri uygulanmaz; gecikmeli yanıt bayat değeri görmesin diye ref. Öneri başlangıç değerine de yazılır:
+  // yalnız önerilen kodla çıkmak "kaydedilmemiş değişiklik" sayılmaz.
+  const touchedRef = useRef(false);
+  const [suggested, setSuggested] = useState<string | null>(null);
+  const yeni = party === null && canEdit;
+  useEffect(() => {
+    if (!yeni || touchedRef.current) return;
+    let stale = false;
+    void suggestPartyCodeAction({ slug, kind: f.kind }).then((r) => {
+      if (stale || touchedRef.current || !r.ok) return;
+      setSuggested(r.data.code);
+      setF((cur) => ({ ...cur, code: r.data.code }));
+      setInitial((cur) => ({ ...cur, code: r.data.code }));
+    });
+    return () => {
+      stale = true;
+    };
+  }, [yeni, slug, f.kind]);
   const rules: AlanKurali[] = [
     { name: "code", label: t("f.code"), required: true, maxLength: 64 },
     { name: "name", label: t("f.name"), required: true, maxLength: 200 },
@@ -78,7 +97,8 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
   ];
 
   async function save(): Promise<KaydetSonuc> {
-    const body = { slug, ...f, ...(party === null ? {} : { id: party.id, expectedVersion: party.version }) };
+    const auto = party === null && !touchedRef.current && suggested !== null && f.code === suggested;
+    const body = { slug, ...f, ...(party === null ? (auto ? { autoCode: true } : {}) : { id: party.id, expectedVersion: party.version }) };
     const r = await savePartyAction(body);
     if (!r.ok) return { ok: false, mesaj: r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }) };
     if (!r.data.ok) {
@@ -122,7 +142,10 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       label={`${t(`f.${k}`)}${extra.required === true ? " *" : ""}`}
       name={k}
       value={f[k]}
-      onChange={(e) => set(k, e.target.value)}
+      onChange={(e) => {
+        if (k === "code") touchedRef.current = true;
+        set(k, e.target.value);
+      }}
       readOnly={!canEdit}
       maxLength={extra.maxLength}
       inputMode={extra.inputMode}

@@ -4,7 +4,8 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
-import { PARTY_IMPORT_MAX_ROWS, importParties, listParties, saveParty, setPartyArchived } from "@wms/domain/catalog/parties";
+import { PARTY_CODE_PREFIX, SUGGEST_RETRY_MAX, suggestCode, suggestedCodePrefix } from "@wms/domain/catalog";
+import { PARTY_IMPORT_MAX_ROWS, importParties, listParties, saveParty, setPartyArchived, type SavePartyResult } from "@wms/domain/catalog/parties";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { PARTIES_PAGE_SIZE } from "./list-page.ts";
 
@@ -24,7 +25,10 @@ const fields = {
   city: text(200),
   address: text(1000),
 };
-const saveSchema = z.object({ slug: slugSchema, id: z.string().uuid().optional(), expectedVersion: z.number().int().min(1).max(2_147_483_647).optional(), ...fields }).strict();
+const saveSchema = z
+  .object({ slug: slugSchema, id: z.string().uuid().optional(), expectedVersion: z.number().int().min(1).max(2_147_483_647).optional(), autoCode: z.boolean().optional(), ...fields })
+  .strict();
+const suggestSchema = z.object({ slug: slugSchema, kind: z.enum(["CUSTOMER", "SUPPLIER", "BOTH"]) }).strict();
 const archiveSchema = z.object({ slug: slugSchema, id: z.string().uuid(), expectedVersion: z.number().int().min(1).max(2_147_483_647), archived: z.boolean() }).strict();
 const importSchema = z
   .object({ slug: slugSchema, dryRun: z.boolean(), addMissing: z.boolean().optional(), rows: z.array(z.object({ row: z.number().int().min(1).max(100_000), ...fields }).strict()).min(1).max(PARTY_IMPORT_MAX_ROWS) })
@@ -39,12 +43,30 @@ async function writeContext(slug: string, ctx: ActionContext, permission: "setti
   return { db: getAppDb(), principal, tenantSlug: slug };
 }
 
-/** Tek cari ekle/düzenle; alan sorunu hata değil sonuçtur (`ok: false, issue`). */
+/**
+ * Tek cari ekle/düzenle; alan sorunu hata değil sonuçtur (`ok: false, issue`). T-1093: yeni caride `autoCode` (kod kullanıcı tarafından
+ * değiştirilmedi beyanı) ve kod sunucu önerisi biçimindeyse (`MUS-0001`) çakışmada aynı önekle sıradaki kod denenir; elle yazılan kod
+ * asla sessizce değişmez (ürün/depo ile aynı kural, T-259).
+ */
 export async function savePartyAction(raw: unknown) {
   return guardedAction({ schema: saveSchema }, async (input, ctx) => {
-    const { slug, ...body } = input;
+    const { slug, autoCode, ...body } = input;
     const params = await writeContext(slug, ctx);
-    return saveParty({ ...params, requestId: ctx.requestId }, body);
+    const call = { ...params, requestId: ctx.requestId };
+    const prefix = autoCode === true && body.id === undefined ? suggestedCodePrefix("party", body.code ?? "") : null;
+    let r: SavePartyResult = await saveParty(call, body);
+    for (let attempt = 0; prefix !== null && !r.ok && r.issue === "CODE_TAKEN" && attempt < SUGGEST_RETRY_MAX; attempt++) {
+      r = await saveParty(call, { ...body, code: (await suggestCode(params, { kind: "party", prefix })).code });
+    }
+    return r;
+  })(raw);
+}
+
+/** T-1093: yeni cari formunda sıradaki kod (türe göre önek). Salt okuma; yetki `settings.manage` (domain). */
+export async function suggestPartyCodeAction(raw: unknown) {
+  return guardedAction({ schema: suggestSchema }, async (input, ctx) => {
+    const params = await writeContext(input.slug, ctx);
+    return suggestCode(params, { kind: "party", prefix: PARTY_CODE_PREFIX[input.kind] });
   })(raw);
 }
 

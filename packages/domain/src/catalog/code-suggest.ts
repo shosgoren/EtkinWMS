@@ -1,4 +1,4 @@
-// Otomatik kod önerisi (T-250; A-250-1). Yeni ürün / depo / lokasyon formunda "sıradaki kod" sunucuda hesaplanır: `<ÖNEK>-<sıra>`.
+// Otomatik kod önerisi (T-250; A-250-1; cari T-1093). Yeni ürün / depo / lokasyon / cari formunda "sıradaki kod" sunucuda hesaplanır: `<ÖNEK>-<sıra>`.
 //
 // - Öneri SALT OKUMADIR (kilit ve rezervasyon yok): iki istek aynı öneriyi görebilir. Çakışmasızlık yazımda sağlanır: benzersizlik
 //   kısıtı son sözü söyler (`createItem`/`createWarehouse`/`createLocation` → `CODE_TAKEN`); `createWithSuggestedCode` yalnızca
@@ -14,7 +14,7 @@ import { assertWarehouseVisible } from "../warehouse/scope.ts";
 import { DEFAULT_CARD_TYPE, createItem, parseCardType } from "./items.ts";
 import { parseCode, parseName, parseUuid, type CatalogCommandParams } from "./units.ts";
 
-export const CODE_SUGGEST_KINDS = ["item", "warehouse", "location"] as const;
+export const CODE_SUGGEST_KINDS = ["item", "warehouse", "location", "party"] as const;
 export type CodeSuggestKind = (typeof CODE_SUGGEST_KINDS)[number];
 
 /** A-250-1: varsayılan önek ve sıra basamak sayısı. Kullanıcı öneki değiştirebilir (`A-Z`, `0-9`, `_`; en çok 16 karakter). */
@@ -23,7 +23,13 @@ export const CODE_SUGGEST_DEFAULTS: Readonly<Record<CodeSuggestKind, { readonly 
   item: { prefix: "TM", width: 6 },
   warehouse: { prefix: "DEPO", width: 2 },
   location: { prefix: "LOK", width: 4 },
+  // T-1093 (kullanıcı kararı 27 Ekim): cari kodu türe göre önekli — müşteri `MUS-0001`, tedarikçi `TED-0001`, ikisi `CAR-0001`;
+  // istemci öneki türden seçer, varsayılan müşteri. Benzersizlik cari `code_key` (büyük harf) üzerindedir; sıra da onunla okunur.
+  party: { prefix: "MUS", width: 4 },
 };
+
+/** T-1093: cari türü → kod öneki (istemci ve sunucu aynı tabloyu kullanır). */
+export const PARTY_CODE_PREFIX: Readonly<Record<"CUSTOMER" | "SUPPLIER" | "BOTH", string>> = { CUSTOMER: "MUS", SUPPLIER: "TED", BOTH: "CAR" };
 
 const PREFIX_RE = /^[A-Z0-9_]{1,16}$/;
 /** Sıra üst sınırı: `bigint` ve JS güvenli tamsayı içinde kalır. */
@@ -82,6 +88,13 @@ export async function suggestCode(params: SuggestCodeParams, input: SuggestCodeI
               FROM public.locations
              WHERE tenant_id = ${m.tenantId}::uuid AND warehouse_id = ${warehouseId}::uuid
                AND left(code, ${lead.length}::int) = ${lead} AND substring(code FROM ${lead.length + 1}::int) ~ ${suffixRe}`,
+      );
+    } else if (kind === "party") {
+      rows = await tx.execute<{ n: string | number | null }>(
+        sql`SELECT max(substring(code_key FROM ${lead.length + 1}::int)::bigint) AS n
+              FROM public.parties
+             WHERE tenant_id = ${m.tenantId}::uuid
+               AND left(code_key, ${lead.length}::int) = ${lead} AND substring(code_key FROM ${lead.length + 1}::int) ~ ${suffixRe}`,
       );
     } else {
       const table = kind === "item" ? sql`public.items` : sql`public.warehouses`;

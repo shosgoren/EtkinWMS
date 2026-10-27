@@ -335,6 +335,21 @@ test("T-1091 Belge kartı: listeden açılır, şerit + bilgiler + satırlar + d
   }
 });
 
+// T-1093: yeni caride kod kendiliğinden gelir (türe göre MUS / TED / CAR-0001) ve tür değişince yenilenir; kullanıcı değiştirebilir.
+test("T-1093 Yeni cari: kod türe göre otomatik önerilir, elle değiştirilebilir", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/parties?new=1");
+  const kod = page.getByLabel("Cari kodu *");
+  await expect(kod).toHaveValue(/^MUS-\d{4}$/);
+  await page.getByTestId("party-form").getByRole("radio", { name: /Tedarikçi/ }).first().click();
+  await expect(kod).toHaveValue(/^TED-\d{4}$/);
+  await kod.fill("ELLE-1");
+  await page.getByTestId("party-form").getByRole("radio", { name: /Müşteri ve tedarikçi/ }).first().click();
+  await expect(kod).toHaveValue("ELLE-1");
+});
+
 // T-1052 (STANDART §4): form kalıbı masaüstünde — canlı ad şeridi formun üstünde (sağ sütun değil), gruplar yan yana; telefonda taşma yok.
 test("T-1052 Form: üst şerit ve yan yana gruplar", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
