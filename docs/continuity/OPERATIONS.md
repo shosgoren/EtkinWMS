@@ -66,7 +66,7 @@ URL/secret/env içeriğini veya kişisel kullanıcı satırlarını yazdırma. D
 5. Başarılı deep health sonrası current/state atomik; aynı SHA sağlıklıysa no-op. Hata varsa sadece schema-compatible önceki imaj/Compose rollback.
 6. Gerçek run URL, image digest, current SHA/tag ve migration defteri STATE'e kaydedilir. check mode ürün yayımlamaz.
 
-Mevcut tetikleyici hem ci hem guards tamamlanmasını dinler; aynı SHA için iki workflow callback'i oluşabilir. Aynı PR başlığı altında ci ve guards farklı kontrollerdir; deploy tekrarını azaltmak ayrı korunan workflow değişikliğidir, belge temizliği kapsamında kapatılmaz.
+Mevcut deploy tetikleyicisi main push `ci` tamamlanmasını dinler; deploy kapısı ayrıca guards sonucunu bekler (T-925). Aynı PR başlığı altında ci ve guards farklı kontrollerdir; biri test, diğeri bekçidir.
 
 ```sh
 gh workflow run deploy-vps.yml --repo shosgoren/EtkinWMS --ref main -f mode=check
@@ -130,3 +130,6 @@ servisi. Bu adım yapılmadan yayınlar iki imajlı sürer; Etkin "şu an kullan
 
 ## 25 Ekim — Haftalık güvenlik taraması (T-1030)
 `.github/workflows/security-scan.yml` her pazartesi 05:17 UTC (elle: Actions → security-scan → Run workflow) main üzerinde koşar: `pnpm audit` (high/critical), ses servisi `pip-audit`, `scripts/security-scan.mjs` (Dockerfile Node sürümü ↔ nodejs.org güvenlik yayını; PostgreSQL imajı ↔ yeni ara sürüm; sabitlenmemiş imaj uyarısı). Kırmızı iş GitHub e-postasıyla bildirilir; düzeltme normal PR akışıyla (T-1029/T-1031 örnek).
+
+## Paraşüt bağlantısı (T-1066)
+Müşteri üç uygulama bilgisini WMS ayarına girer; ortak/global Paraşüt Secret env kurulumu gerekmez. Şifreleme mevcut QUEUE_SEAL_KEY ile tenant AAD kullanır; anahtar/sırlar dokümana veya loga yazılmaz. Callback `/api/integrations/parasut/callback`; gerçek kod taşıyan istekte no-store + no-referrer doğrulanır (kodsuz boş istekte genel Referrer-Policy uygulanabilir). Caddy access logging kapalı olduğu canlı adapt metadata ile doğrulandı. Yetkili mevcut Chrome oturumuna erişim izni yoksa alternatif araçla oturum okunmaz; sunucu sağlığı/API kontrolü ile canlı görsel kontrol ayrı raporlanır.

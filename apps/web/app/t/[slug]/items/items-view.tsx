@@ -7,7 +7,7 @@
 // kart rozeti kapsamdaki depoların eldeki toplamı, trafik ışığı minimum politikasından (yoksa sakin); sesle arama Etkin (B-62) ile.
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { FormEvent } from "react";
 import { Banner, feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -24,6 +24,7 @@ import { KalipSecim, KalipSecimGrubu } from "../kalip/secim.tsx";
 import { eskiSurumBildir, eskiSurumMu, eylem } from "../kalip/surum.tsx";
 import { ItemFiltersView } from "./filters-view.tsx";
 import { extraFilterParams, type ItemExtraFilters } from "./filters.ts";
+import { watchListUpdates } from "../kalip/canli-liste.ts";
 import { CARD_VISUAL } from "./card-visual.ts";
 import { createItemAction, createUnitAction, loadMoreItemsAction, searchItemsAction, suggestItemCodeAction } from "./actions.ts";
 
@@ -518,6 +519,18 @@ export function ItemsView({
   };
 
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
+  const filtersOpen = params.get("filters") === "1";
+  useEffect(() => {
+    if (creating || filtersOpen || cam || submitting || refreshing || typed !== query.q || guncel.rows.length > 0) return;
+    return watchListUpdates({
+      visibility: document, connection: window,
+      available: () => document.visibilityState === "visible" && navigator.onLine
+        && !document.querySelector('[role="dialog"],input:focus,textarea:focus,[contenteditable="true"]:focus'),
+      refresh: () => startRefresh(() => router.refresh()),
+    });
+  }, [creating, filtersOpen, cam, submitting, refreshing, typed, query.q, guncel.rows.length, router]);
+
   /** Enter / okutma: tek eşleşme varsa doğrudan ürünü aç, yoksa/çoksa sonuç listesine git. */
   async function resolve(raw: string, fromScan: boolean): Promise<void> {
     const q = raw.trim();

@@ -1,4 +1,4 @@
-// T-991: `integration.sync` işi ve saatlik zamanlayıcı — bağlama, günlük (sır/adres yok) ve zamanlama sayıları. İş kuralı domain testlerinde
+// T-991: `integration.sync` işi ve 30 saniyelik zamanlayıcı — bağlama, günlük (sır/adres yok) ve zamanlama sayıları. İş kuralı domain testlerinde
 // (tests/integration/integrations/erp-integration.int.test.ts).
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
@@ -91,7 +91,7 @@ describe("zamanlayıcı", () => {
       },
       enqueueFor: async () => 0,
       logger,
-      setTimer: () => "h",
+      setTimer: (_tick, ms) => { expect(ms).toBe(30_000); return "h"; },
       clearTimer: (t) => {
         cleared = t === "h";
       },
@@ -101,4 +101,27 @@ describe("zamanlayıcı", () => {
     s.stop();
     expect(cleared).toBe(true);
   });
+  it("slow scheduling does not overlap ticks and stopped timers cannot enqueue", async () => {
+    let tick: (() => void) | undefined;
+    let release: (() => void) | undefined;
+    let calls = 0;
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    const schedule = startIntegrationSchedule({
+      listActiveTenantIds: async () => { calls += 1; await pending; return []; },
+      enqueueFor: async () => 0,
+      logger: memLogger(),
+      setTimer: fn => { tick = fn; return "timer"; },
+      clearTimer: () => undefined,
+    });
+    tick?.(); tick?.();
+    expect(calls).toBe(1);
+    release?.();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    tick?.();
+    expect(calls).toBe(2);
+    schedule.stop();
+    tick?.();
+    expect(calls).toBe(2);
+  });
+
 });

@@ -213,7 +213,7 @@ const countAbandonSchedule = startCountAbandonSchedule({
   logger,
 });
 
-// ERP senkron zamanlayıcısı (T-991): açılışta bir kez + saatte bir; açık akışlı bağlı entegrasyon başına tek iş (singletonKey).
+// ERP senkron zamanlayıcısı (T-1066): açılışta bir kez + 30 saniyede bir; açık akışlı bağlı entegrasyon başına tek iş (singletonKey).
 const integrationSchedule = startIntegrationSchedule({
   listActiveTenantIds: (after, limit) => queue.listActiveTenantIds(after, limit),
   enqueueFor: (tenantId) =>

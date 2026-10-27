@@ -78,7 +78,7 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
   const { say, node: toast } = useKalipToast("form");
   const [busy, setBusy] = useState<string | null>(null);
   const [configOpen,setConfigOpen]=useState(false);
-  const [appForm,setAppForm]=useState({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});
+  const [appForm,setAppForm]=useState({clientId:"",clientSecret:"",callbackUrl:""});
   const [codeFlow,setCodeFlow]=useState<string|null>(null);
   const [authCode,setAuthCode]=useState("");
   const [company,setCompany]=useState("");
@@ -126,6 +126,17 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
     const k = r.error.code.toLowerCase();
     say("err", ts.has(k) ? `${ts(k)} ${ts.has(`${k}Action`) ? ts(`${k}Action`) : ""}`.trim() : `${ts("unknown")} ${ts("unknownAction")}`);
   };
+
+  // Full-screen forms do not render the main screen's toast/banner. Keep the reason and next action visible here too.
+  const formFailure = (r: { ok: false; error: { code: string; detail?: string; requestId?: string } }) => {
+    failed(r);
+    const key = r.error.code.toLowerCase();
+    const message = r.error.code === "UNAUTHENTICATED" && r.error.detail === "RECENT_AUTH_REQUIRED"
+      ? t("reauth")
+      : ts.has(key) ? `${ts(key)} ${ts.has(`${key}Action`) ? ts(`${key}Action`) : ""}`.trim() : ts("unknown");
+    return { ok: false as const, mesaj: message };
+  };
+  const reauthAction = reauth ? <a className="btn n" data-testid="oauth-reauth" href={`/login?reauth=1&next=${encodeURIComponent(`${base}/integrations`)}`}><Ico d={LICON.key} size={20}/>{t("reauthLink")}</a> : null;
 
   const flowState = (f: FlowData): { enabled: boolean; direction: Direction } => local[f.flow] ?? { enabled: f.enabled, direction: f.direction };
 
@@ -322,12 +333,12 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
     : { label: t("mainConnect"), aria: t("mainConnectAria", { provider: pn }), d: NICON.plug, onClick: openForm, testId: "integrations-connect" };
 
   if(configOpen)return <KalipFormEkran dark={dark} title={t("oauth.settings")} icon={{d:NICON.plug,color:"2F5DA8"}}
-    testId="oauth-settings" values={appForm} initial={{clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"}}
+    testId="oauth-settings" values={appForm} initial={{clientId:"",clientSecret:"",callbackUrl:""}}
     rules={[{name:"clientId",label:t("oauth.id"),required:true,maxLength:200},{name:"clientSecret",label:t("oauth.secret"),required:true,maxLength:200},{name:"callbackUrl",label:t("oauth.callback"),required:true,maxLength:300}]}
-    onSave={async()=>{const r=await saveParasutOAuthSettingsAction({slug,...appForm});if(!r.ok){failed(r);return {ok:false,mesaj:t("oauth.failed")};}return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
-    onDone={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);router.refresh();}}
-    onBack={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
-    footer={appForm.clientId!==""||appForm.clientSecret!==""||appForm.callbackUrl!=="urn:ietf:wg:oauth:2.0:oob"?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>}>
+    onSave={async()=>{const r=await saveParasutOAuthSettingsAction({slug,...appForm});if(!r.ok)return formFailure(r);return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
+    onDone={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);router.refresh();}}
+    onBack={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
+    footer={reauthAction??(appForm.clientId!==""||appForm.clientSecret!==""||appForm.callbackUrl!==""?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>)}>
     <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8">
       <KalipAlan label={t("oauth.id")} name="clientId" value={appForm.clientId} autoComplete="off" maxLength={200} onChange={e=>setAppForm({...appForm,clientId:e.target.value})} data-testid="oauth-app-id" />
       <KalipAlan label={t("oauth.secret")} hint={t("oauth.secretHint")} name="clientSecret" type="password" autoComplete="new-password" maxLength={200} value={appForm.clientSecret} onChange={e=>setAppForm({...appForm,clientSecret:e.target.value})} data-testid="oauth-app-secret" />
@@ -337,8 +348,8 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
   </KalipFormEkran>;
   if(codeFlow!==null)return <KalipFormEkran dark={dark} title={t("oauth.enterCode")} icon={{d:LICON.key,color:"2F5DA8"}} testId="oauth-code-form"
     values={{code:authCode}} initial={{code:""}} rules={[{name:"code",label:t("oauth.code"),required:true,maxLength:4096}]} saveShort={t("mainConnect")}
-    onSave={async()=>{const r=await completeParasutOAuthCodeAction({slug,code:authCode.trim()});setAuthCode("");if(!r.ok){failed(r);return {ok:false,mesaj:t("oauth.failed")};}if(!r.data.ok)return {ok:false,mesaj:t("oauth.failed")};if(r.data.status==="SELECT"){router.replace(`${base}/integrations?oauth_select=${encodeURIComponent(r.data.id)}`);}return {ok:true};}}
-    onDone={()=>{setCodeFlow(null);router.refresh();}} onBack={()=>{setAuthCode("");setCodeFlow(null);}} homeHref={base} savedText={t("oauth.codeAccepted")}>
+    onSave={async()=>{const r=await completeParasutOAuthCodeAction({slug,code:authCode.trim()});setAuthCode("");if(!r.ok)return formFailure(r);if(!r.data.ok)return {ok:false,mesaj:t("oauth.failed")};if(r.data.status==="SELECT"){router.replace(`${base}/integrations?oauth_select=${encodeURIComponent(r.data.id)}`);}return {ok:true};}}
+    onDone={()=>{setCodeFlow(null);router.refresh();}} onBack={()=>{setAuthCode("");setCodeFlow(null);}} homeHref={base} savedText={t("oauth.codeAccepted")} footer={reauthAction}>
     <KalipGrup title={t("oauth.enterCode")} d={LICON.key} color="2F5DA8">
       <a className="btn n" href={codeFlow} target="_blank" rel="noopener noreferrer" data-testid="oauth-provider-open"><Ico d={NICON.plug} size={20}/>{t("oauth.openProvider")}</a>
       <KalipAlan label={t("oauth.code")} name="code" value={authCode} type="password" autoComplete="off" maxLength={4096} onChange={e=>setAuthCode(e.target.value)} data-testid="oauth-code" />
@@ -346,8 +357,8 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
   </KalipFormEkran>;
   if(selectOpen&&oauthSelection!==null)return <KalipFormEkran dark={dark} title={t("oauth.choose")} icon={{d:NICON.plug,color:"2F5DA8"}} testId="oauth-companies"
     values={{companyId:company}} initial={{companyId:""}} rules={[{name:"companyId",label:t("oauth.choose"),required:true}]}
-    saveShort={t("mainConnect")} onSave={async()=>{const r=await selectParasutOAuthCompanyAction({slug,companyId:company});if(!r.ok){failed(r);return {ok:false,mesaj:t("oauth.failed")};}return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
-    onDone={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);router.refresh();}} onBack={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);}} savedText={t("oauth.connected")} homeHref={base}>
+    saveShort={t("mainConnect")} onSave={async()=>{const r=await selectParasutOAuthCompanyAction({slug,companyId:company});if(!r.ok)return formFailure(r);return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
+    onDone={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);router.refresh();}} onBack={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);}} savedText={t("oauth.connected")} homeHref={base} footer={reauthAction}>
     <KalipSecim label={t("oauth.choose")} color="2F5DA8" value={company} options={oauthSelection.map(c=>({id:c.id,label:c.name,d:LICON.depo}))} onPick={setCompany} testId="oauth-company" />
   </KalipFormEkran>;
   const err = conn?.status === "ERROR";

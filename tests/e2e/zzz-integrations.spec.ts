@@ -1,9 +1,26 @@
 // T-991: ERP entegrasyonu uçtan uca — hesap sahibi Entegrasyon ekranında sahte Paraşüt'e (global-setup, 127.0.0.1) bağlanır, bağlı şeridi
 // (yalnız şirket adı, sır yok) görür, bir akışı açar (balon + açık durum) ve bağlantıyı sınar. Ayrı fikstür alanı (`E2E_ERP`); sahte bilgiler
 // sentetiktir. Masaüstü ve mobil projeler aynı alanı kullanır: bağlıysa test önce bağlantıyı keser (kes penceresi de sınanır).
+import { randomUUID } from "node:crypto";
+import { db } from "./support/package-receiving.ts";
+import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { FAKE_PARASUT_DEFAULTS as F } from "../integration/fixtures/fake-parasut.ts";
 import { localClient, loginEmptyTenant, scrubSecretInputs } from "./support/empty-tenant.ts";
+
+// Only the current synthetic local session is aged; never executes against a remote DB and never logs cookie/URL.
+function expireRecentAuth(token: string): void {
+  const raw = process.env.DATABASE_URL_DIRECT;
+  if (!raw || process.env.E2E_BASE_URL?.trim()) throw new Error("e2e: local database required");
+  const u = new URL(raw);
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(u.hostname)) throw new Error("e2e: local database required");
+  const env = { PATH: process.env.PATH, PGHOST: u.hostname.replace(/^\[|\]$/g,""), PGPORT: u.port || "5432", PGUSER: decodeURIComponent(u.username), PGPASSWORD: decodeURIComponent(u.password), PGDATABASE: decodeURIComponent(u.pathname.slice(1)) };
+  const literal = token.replaceAll("'", "''");
+  try {
+    const count = execFileSync("psql", ["-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1"], {env, input: `WITH aged AS (UPDATE public.sessions SET created_at=now()-interval '11 minutes' WHERE token='${literal}' RETURNING 1) SELECT count(*) FROM aged;`, encoding:"utf8", stdio:["pipe","pipe","pipe"]});
+    if (count.trim() !== "1") throw new Error("missing fixture session");
+  } catch { throw new Error("e2e: local session aging failed"); }
+}
 
 if (!process.env.E2E_BASE_URL?.trim()) {
   test.use({ ...localClient("198.51.100.27"), trace: "off" });
@@ -39,7 +56,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     const replay=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+binding.state,{maxRedirects:0});expect(replay.status()).toBe(400);
     await page.getByTestId("oauth-settings-open").click();
     await expect(page.getByTestId("oauth-settings")).toBeVisible();
-    await expect(page.getByTestId("oauth-callback")).toHaveValue("urn:ietf:wg:oauth:2.0:oob");
+    await expect(page.getByTestId("oauth-callback")).toHaveValue("");
     if(testInfo.project.name==="desktop")for(const width of [390,1180,1440]) {
       await page.setViewportSize({width,height:844});
       for(const id of ['oauth-app-id','oauth-app-secret','oauth-callback']) {const field=page.getByTestId(id).locator('..');const bounds=await field.boundingBox();await field.click({position:{x:5,y:5}});await expect(page.getByTestId(id)).toBeFocused();expect(bounds?.height).toBeGreaterThanOrEqual(44);expect((bounds?.x??-1)>=0&&(bounds?.x??0)+(bounds?.width??0)<=width).toBe(true);}
@@ -118,5 +135,32 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       expect(await page.content()).not.toContain(F.authorizationCode);
     }
 
+    // Imported products appear on an already open list after returning to the tab; no reload button.
+    await page.goto(`/t/${slug}/items`);
+    await expect(page.getByTestId("items")).toBeVisible();
+    const importedId = randomUUID(), importedName = `Canli aktarim ${importedId.slice(0,8)}`;
+    try {
+      await db("INSERT INTO public.items(tenant_id,id,code,name,base_unit_id) SELECT t.id,$2,$3,$3,u.id FROM tenants t JOIN units u ON u.tenant_id=t.id AND u.code='ADET' WHERE t.slug=$1", [slug,importedId,importedName]);
+      await expect(page.getByText(importedName,{exact:true})).toHaveCount(0);
+      await page.evaluate("window.dispatchEvent(new Event('focus'))");
+      await expect(page.getByText(importedName,{exact:true}).first()).toBeVisible();
+    } finally { await db("DELETE FROM public.items WHERE id=$1",[importedId]); }
+
+    // Reproduce the live report: an old authenticated session must show a useful reason + a working reauth link.
+    await page.goto(`/t/${slug}/integrations`);
+    await page.getByTestId("oauth-settings-open").click();
+    await page.getByTestId("oauth-app-id").fill(F.clientId);
+    await page.getByTestId("oauth-app-secret").fill(F.clientSecret);
+    await page.getByTestId("oauth-callback").fill(F.redirectUri);
+    const cookie = (await page.context().cookies()).find(c => c.name.endsWith("session_token"));
+    if (!cookie) throw new Error("e2e: fixture session missing");
+    expireRecentAuth(decodeURIComponent(cookie.value).split(".")[0]!);
+    await page.getByTestId("oauth-settings-save").click();
+    await expect(page.getByTestId("kalip-form-issue")).toContainText("yeniden giriş gerekiyor");
+    const reauth = page.getByTestId("oauth-reauth");
+    await expect(reauth).toBeVisible();
+    await expect(reauth).toHaveAttribute("href", `/login?reauth=1&next=${encodeURIComponent(`/t/${slug}/integrations`)}`);
+    await expect(page.getByTestId("oauth-app-secret")).toHaveValue(F.clientSecret);
+    expect(await reauth.getAttribute("href")).not.toContain(F.clientSecret);
   });
 }

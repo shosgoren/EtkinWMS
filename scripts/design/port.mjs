@@ -56,7 +56,7 @@ export const SOURCES = [
   { name: "yonet-destek", file: "docs/design/source/YonetDestek.dc.html", sha256: "a2155d8f675436bab7d1d45f4f7cdabd6ac942a9d84a4e57f065c00beaa9a4f0", scope: "dzyd", palette: "none", section: "YENİ" },
   // T-991: ERP entegrasyonu (Paraşüt). Kaynak Kalıp · Form birebir kopyası + "YENİ" bölümü (sağlayıcı kartı, bağlantı şeridi, akış satırı,
   // son çalışmalar, bağlan notu); yalnız ek bölüm `.dzen` kabında (ekran `.dzf` form kalıbının içinde).
-  { name: "entegrasyon", file: "docs/design/source/Entegrasyon.dc.html", sha256: "50f044f34ee35195d32c4cafbce9265480bee33e03b23f5e6daaac795ff5d6ce", scope: "dzen", palette: "none", device: "fr", section: "YENİ" },
+  { name: "entegrasyon", file: "docs/design/source/Entegrasyon.dc.html", sha256: "d419f3491c7a983a6e4c5676752c97df96dcce757d2227236c1c92d9f6a798ae", scope: "dzen", palette: "none", device: "fr", section: "YENİ" },
   // T-1006: ilk kurulum yolculuğu (Pano kartı, adım listesi, spot + ipucu kartı, stok sorusu, kutlama); yalnız "YENİ" bölümü `.dzj`
   // (perde ortak `.kperde`; kaynaktaki `.pv-*` yalnız tuval önizlemesi).
   { name: "yolculuk", file: "docs/design/source/Yolculuk.dc.html", sha256: "073ab2d47dfcc51f6663ead9ad3278a5530c09596c195899d03620f8ebe09b0a", scope: "dzj", palette: "none", device: "fr", section: "YENİ" },
