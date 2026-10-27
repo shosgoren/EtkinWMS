@@ -47,3 +47,29 @@ Yasak: `skip/only/todo`, assertion/taban azaltma, boş yeşil adım, genel secre
 Korunan dosyalarda ayrı küçük PR, gerçek güvenlik raporu ve SHA'ya bağlı onay kaydı; `docs/agents/PROTOCOL.md` otoritedir. İnceleme bağımsızlığı veya kapı eksikse merge yapılmaz. CI fail/skipped/unknown, başarı değildir; korumayı geçirene kadar gevşetme.
 
 Rapor: incelenen SHA, test adı/komut/sonuç/gerçek sayı, atlanan/karantina, eksik cihaz/çevre, bulgu ve kanıt URL'si. “Bütün testler geçti” ifadesi kapsamı belirtmeden kullanılmaz.
+
+## Sık hatalar — tekrarlanmasın (T-1083, kullanıcı 27 Ekim: "sorunsuz geçen bir iş görmedim")
+Her iş bu listeyle başlar ve PR açmadan önce tek tek kontrol edilir. Yeni ders çıkarsa aynı PR'da buraya eklenir.
+
+**Birleştirme ve numara**
+- PR birleştirme **yalnız `merge`** (merge commit). Squash, G-08 bekçisini (`MAIN_DIRECT_PUSH`) kırar ve deploy-vps durur (27 Ekim, PR 204).
+- Kart numarası iş başında alınır ve **hemen** uzak dala push edilerek sahiplenilir. Paralel oturumlar sırayla numara alır (27 Ekim'de T-1060 ve T-1063 iki kez çakıştı, PR iki kez yeniden açıldı). PR'dan önce `git ls-remote --heads origin`, açık PR başlıkları ve `docs/tasks/` yeniden taranır; çakışırsa boş, uzak bir numaraya geçilir.
+- Birleştirmeden önce PR tabanı güncel mi (`mergeable_state`) bakılır; çakışma varsa main dala birleştirilir, prepush yeniden koşar.
+
+**Ekran metni ve test**
+- Görünen bir yazıyı, etiketi ya da öğeyi kaldırmadan/taşımadan önce **bütün** `tests/` altında o metni ve seçiciyi ara (`grep -rn "<metin>" tests apps/web --include=*.ts`). prepush yalnız değişen e2e spec'lerini koşar; dokunulmayan spec'teki eski beklenti CI'da kırılır (27 Ekim: `demo-flow` kilit açıklaması). Metin `aria-label`'a taşındıysa test `toHaveAttribute("aria-label", …)` ile güncellenir.
+- Yeni bağlantı/düğme ≥ 44 px dokunma hedefi (`smallTouchTargets` bekçisi): satır içi `Link`'e `minHeight: 44` + blok düzen.
+- Portal'a taşınan katman (perde, menü) `body` altına gider: testlerde ekran kabı içinden aranan seçiciler (`page.getByTestId(...)` kapsamı) güncellenir; kaydedilmemiş iş kutusu menü katmanının üstünde kalmalı (`.dzp.hmenu-kok` kuralı).
+- `"use client"` modülünden sunucu bileşenine DEĞER (sabit, dizi) aktarılmaz; istemci referansı vekili gelir ve ekran çöker (T-1057). Ortak sabit `@wms/domain/...` ya da ayrı `*.ts` dosyasında.
+- `"use server"` dosyası yalnız async fonksiyon dışa aktarır; sabitler `list-page.ts` gibi ayrı dosyada.
+- Yeni eylem (server action) `ac-04-api-slug.int.test.ts` tablolarına eklenir; yoksa AC-04 kırmızı.
+
+**Yerel ortam (bu konteyner)**
+- Docker sık düşer: `(nohup dockerd --registry-mirror=https://mirror.gcr.io >/tmp/dockerd.log 2>&1 &)` sonra `docker compose up -d --wait`. e2e "db:migrate ECONNREFUSED" = compose kapalı.
+- Boş kiracı hazırlığı (`global-setup` → MFA mağaza QR'ı) bu konteynerde düz main'de de kırılır; o spec'ler (empty-tenant, groups, excel-export, z-join-share…) yerelde koşmaz, CI'da koşar. Bu durum PR'da açıkça yazılır.
+- Arka planda test koşarken aynı çalışma ağacında dosya düzenlenmez; düzenlendiyse prepush yeniden koşar.
+
+**CI ve yayın**
+- main CI'da ilgisiz bir spec kırılırsa: aynı spec önceki main SHA'da geçmiş mi bak, bir kez yeniden koştur; ikinci kırmızı gerçektir. Kırılgan test BACKLOG'a yazılır (ör. `zz-stock-documents` sayım depo seçimi).
+- deploy-vps "ssh: connect … Connection timed out": kod değil sunucu erişimi; başarısız işi bir kez yeniden koştur. Yine olursa kullanıcıya VPS panelini sor.
+- Yayın main CI bittikten sonra başlar (~10 dk CI + ~5 dk yayın); kullanıcıya süre bu toplamla verilir, birleşme anı "canlı" denmez.
