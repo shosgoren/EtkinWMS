@@ -18,6 +18,8 @@ import {
   requestIntegrationRun,
   runIntegrationSync,
   setIntegrationFlow,
+  getProductBarcodeSetting,
+  setProductBarcodeSetting,
 } from "../../../packages/domain/src/integrations/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
@@ -277,6 +279,70 @@ describe("senkron", () => {
     expect(linked.kind === "ran" && linked.flows[0]?.counts.failed).toBe(1);
     expect(await q("SELECT external_id FROM public.external_refs WHERE tenant_id=$1 AND system='PARASUT' AND external_id='902'", [W.tenantId])).toEqual([]);
     expect(await stockFingerprint(W)).toEqual(before);
+  });
+
+  it("barkod tercihi tenant/yetki korumalıdır; kapalıyken dahili, açıkken alternatif, tekrarında aynı etiket", async () => {
+    const W = await seedWorld(adm, reg, "ERPBAR");
+    const id = await connect(W);
+    expect(await getProductBarcodeSetting(admin(W))).toBe(false);
+    expect((await fail(setProductBarcodeSetting(picker(W), { enabled: true }))).code).toBe("FORBIDDEN");
+    fake.products.push({ id: "931", attributes: { code: "BAR-SAFE", name: "Etiketli ürün", unit: "Adet", barcode: "EXT-BAR-931" } });
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    const before = await stockFingerprint(W);
+    await sync(W, id);
+    const barcodes = () => q<{ barcode: string }>("SELECT b.barcode FROM public.item_barcodes b JOIN public.items i ON i.tenant_id=b.tenant_id AND i.id=b.item_id WHERE i.tenant_id=$1 AND i.code='BAR-SAFE' ORDER BY b.barcode", [W.tenantId]);
+    const internal = await barcodes();
+    expect(internal).toHaveLength(1);
+    expect(internal[0]?.barcode).toMatch(/^EWMS-ITEM-[0-9a-f-]{36}$/);
+    await sync(W, id);
+    expect(await barcodes()).toEqual(internal);
+    expect(await setProductBarcodeSetting(admin(W), { enabled: true })).toEqual({ changed: true });
+    expect(await getProductBarcodeSetting(admin(W))).toBe(true);
+    expect(await getProductBarcodeSetting(admin(A))).toBe(false);
+    await sync(W, id);
+    expect(await barcodes()).toEqual([...internal, { barcode: "EXT-BAR-931" }]);
+    await setProductBarcodeSetting(admin(W), { enabled: false });
+    fake.products[0] = { id: "931", attributes: { code: "BAR-SAFE", name: "Etiketli ürün", unit: "Adet", barcode: "EXT-NEW-931" } };
+    await sync(W, id);
+    expect(await barcodes()).toEqual([...internal, { barcode: "EXT-BAR-931" }]);
+    await setProductBarcodeSetting(admin(W), { enabled: true });
+    fake.products.push({ id: "932", attributes: { code: "BAR-CONFLICT", name: "Çakışan", unit: "Adet", barcode: "EXT-BAR-931" } });
+    const conflict = await sync(W, id);
+    expect(conflict.kind === "ran" && conflict.flows[0]?.counts.failed).toBe(1);
+    expect(await q("SELECT id FROM public.items WHERE tenant_id=$1 AND code='BAR-CONFLICT'", [W.tenantId])).toEqual([]);
+    expect(await stockFingerprint(W)).toEqual(before);
+  });
+
+  it("ürün aktarımı ayrılmış WMS paket QR alanını reddeder ve satırı bütünüyle geri alır", async () => {
+    const W = await seedWorld(adm, reg, "ERPRQR");
+    const id = await connect(W);
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    await setProductBarcodeSetting(admin(W), { enabled: true });
+    const before = await stockFingerprint(W);
+    fake.products.push({ id: "941", attributes: { code: "RESERVED-QR", name: "Paketle karışmamalı", unit: "Adet", barcode: `EWMS:PKG:1:${randomUUID()}` } });
+    const result = await sync(W, id);
+    expect(result.kind === "ran" && result.flows[0]?.counts).toMatchObject({ created: 0, failed: 1 });
+    expect(await q("SELECT id FROM public.items WHERE tenant_id=$1 AND code='RESERVED-QR'", [W.tenantId])).toEqual([]);
+    expect(await q("SELECT external_id FROM public.external_refs WHERE tenant_id=$1 AND system='PARASUT' AND external_id='941'", [W.tenantId])).toEqual([]);
+    expect(await stockFingerprint(W)).toEqual(before);
+  });
+
+  it.each([
+    ["96385074", "00000096385074"],
+    ["00000096385074", "96385074"],
+  ])("GTIN-8 eşdeğerliği aktarım sırasından bağımsızdır: %s → %s", async (first, second) => {
+    const W = await seedWorld(adm, reg, "ERPGTIN");
+    const id = await connect(W);
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    await setProductBarcodeSetting(admin(W), { enabled: true });
+    fake.products.push({ id: "951", attributes: { code: "GTIN-FIRST", name: "İlk ürün", unit: "Adet", barcode: first } });
+    const accepted = await sync(W, id);
+    expect(accepted.kind === "ran" && accepted.flows[0]?.counts.created).toBe(1);
+    fake.products.push({ id: "952", attributes: { code: "GTIN-SECOND", name: "İkinci ürün", unit: "Adet", barcode: second } });
+    const rejected = await sync(W, id);
+    expect(rejected.kind === "ran" && rejected.flows[0]?.counts).toMatchObject({ created: 0, failed: 1 });
+    expect(await q("SELECT id FROM public.items WHERE tenant_id=$1 AND code='GTIN-SECOND'", [W.tenantId])).toEqual([]);
+    expect(await q("SELECT barcode FROM public.item_barcodes WHERE tenant_id=$1 AND barcode=ANY($2::text[])", [W.tenantId, [first, second]])).toEqual([{ barcode: first }]);
   });
 
   it("Etkin -> ERP ürün (BOTH): aynı koddaki ERP ürününe bağlanır, yenisi bir kez yaratılır", async () => {

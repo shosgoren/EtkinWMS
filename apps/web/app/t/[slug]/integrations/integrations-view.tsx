@@ -15,7 +15,7 @@ import { KalipAnahtar, KalipGrup, KalipIzgara, KalipSecenek } from "../kalip/for
 import { KalipSecim } from "../kalip/secim.tsx";
 import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
-import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction } from "./actions.ts";
+import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction } from "./actions.ts";
 import { feedback, intlDil } from "@wms/ui";
 
 type Provider = "PARASUT" | "LOGO";
@@ -67,7 +67,7 @@ const c = (hex: string): string => kdz("dzf", hex);
 
 const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: "", password: "" };
 
-export function IntegrationsView({ slug, dark, data, opening = null, journeyWish = null }: { slug: string; dark: boolean; data: OverviewData; opening?: OpeningData | null; journeyWish?: boolean | null }) {
+export function IntegrationsView({ slug, dark, data, opening = null, journeyWish = null, pullBarcodes = false }: { slug: string; dark: boolean; data: OverviewData; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean }) {
   const t = useTranslations("integrations");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ts = useTranslations("serverErrors");
@@ -84,6 +84,8 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
   const [local, setLocal] = useState<Partial<Record<Flow, { enabled: boolean; direction: Direction }>>>({});
   useEffect(() => setLocal({}), [data]);
   // T-1006: açılış stoku ayarının iyimser durumu ve hedef raf.
+  const [barcodeOn, setBarcodeOn] = useState(pullBarcodes);
+  useEffect(() => setBarcodeOn(pullBarcodes), [pullBarcodes]);
   const [openingOn, setOpeningOn] = useState<boolean | null>(null);
   useEffect(() => setOpeningOn(null), [opening]);
   const [openingLoc, setOpeningLoc] = useState<string>(opening?.locations[0]?.id ?? "");
@@ -249,6 +251,18 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
     say(next ? "ok" : "info", next ? t("opening.on") : t("opening.off"));
     router.refresh();
   };
+  const toggleBarcodes = async (): Promise<void> => {
+    if (busy !== null) return;
+    setBusy("barcode");
+    const next = !barcodeOn;
+    const result = await setProductBarcodeAction({ slug, enabled: next });
+    setBusy(null);
+    if (!result.ok) return failed(result);
+    setBarcodeOn(next);
+    say("ok", t("barcode.saved"));
+    router.refresh();
+  };
+
   const pullOpening = async (): Promise<void> => {
     if (busy !== null) return;
     if (openingLoc === "") {
@@ -422,6 +436,8 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
               left={
                 <>
                 <KalipGrup title={t("flowsTitle")} sub={t("flowsSub")} d={NICON.sync} color="2F5DA8" testId="integrations-flows">
+                  <KalipAnahtar title={t("barcode.pull")} sub={t("barcode.keep")} d={NICON.pull} color="2F5DA8"
+                    on={barcodeOn} aria={t("barcode.pull")} onToggle={() => void toggleBarcodes()} testId="product-barcode-toggle" />
                   {flows.map((f) => {
                     const ui = FLOW_UI[f.flow];
                     const s = flowState(f);

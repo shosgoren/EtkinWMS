@@ -5431,6 +5431,12 @@
         "NOT_CONNECTED": "Bağlantı yok · önce bağlan",
         "DEMO": "Deneme alanında kullanılamaz"
       }
+    },
+    "barcode": {
+      "title": "Ürün barkodları",
+      "pull": "Paraşüt barkodlarını al",
+      "keep": "Mevcut etiketler korunur",
+      "saved": "Barkod tercihi kaydedildi"
     }
   },
   "etkin": {

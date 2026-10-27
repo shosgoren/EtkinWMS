@@ -5,7 +5,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
-import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, FLOWS, DIRECTIONS } from "@wms/domain/integrations";
+import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, FLOWS, DIRECTIONS } from "@wms/domain/integrations";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { getSenderQueue } from "../../../../lib/queue.ts";
 
@@ -86,4 +86,10 @@ export async function pullOpeningStockAction(raw: unknown) {
     const r = await pullOpeningStock(await access(i.slug, ctx), { provider: i.provider, locationId: i.locationId, requestId: ctx.requestId });
     return r.ok ? { ...r, takenAt: r.takenAt.toISOString() } : r;
   })(raw);
+}
+
+export async function setProductBarcodeAction(raw: unknown) {
+  return guardedAction({ schema: z.object({ slug, enabled: z.boolean() }).strict() }, async (i, ctx) =>
+    setProductBarcodeSetting(await access(i.slug, ctx), { enabled: i.enabled, requestId: ctx.requestId }),
+  )(raw);
 }

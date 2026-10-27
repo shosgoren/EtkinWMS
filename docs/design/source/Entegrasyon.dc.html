@@ -369,6 +369,7 @@ button,input{font:inherit;color:inherit}
               <div class="scol">
                 <section class="sg" aria-label="Akışlar">
                   <div class="sgh"><i style="background: #2F5DA8"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.6-4.6L3 9M3 4v5h5M4 13a8 8 0 0 0 14.6 4.6L21 15M21 20v-5h-5"></path></svg></i><span><b>Ne aktarılsın?</b><small>AÇ · YÖNÜ SEÇ · GERİSİ KENDİLİĞİNDEN</small></span></div>
+                  <button type="button" class="sr2" style="--c: #2F5DA8" aria-pressed="{{barcodeOn}}" onClick="{{toggleBarcode}}"><span class="ri"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H8M12 8l-4 4 4 4M4 4v16"></path></svg></span><span class="rt"><b>Paraşüt barkodlarını al</b><small>Mevcut etiketler korunur</small></span><span class="{{barcodeCls}}"><span class="tg"><i></i></span><em>{{barcodeText}}</em></span></button>
                   <sc-for list="{{flows}}" as="f" hint-placeholder-count="6">
                     <div class="{{f.wrapCls}}">
                       <button type="button" class="{{f.cls}}" style="{{f.style}}" aria-pressed="{{f.on}}" aria-label="{{f.aria}}" onClick="{{f.tap}}">
@@ -504,6 +505,7 @@ button,input{font:inherit;color:inherit}
               <div class="scol">
                 <section class="sg" aria-label="Akışlar">
                   <div class="sgh"><i style="background: #2F5DA8"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.6-4.6L3 9M3 4v5h5M4 13a8 8 0 0 0 14.6 4.6L21 15M21 20v-5h-5"></path></svg></i><span><b>Ne aktarılsın?</b><small>AÇ · YÖNÜ SEÇ · GERİSİ KENDİLİĞİNDEN</small></span></div>
+                  <button type="button" class="sr2" style="--c: #2F5DA8" aria-pressed="{{barcodeOn}}" onClick="{{toggleBarcode}}"><span class="ri"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H8M12 8l-4 4 4 4M4 4v16"></path></svg></span><span class="rt"><b>Paraşüt barkodlarını al</b><small>Mevcut etiketler korunur</small></span><span class="{{barcodeCls}}"><span class="tg"><i></i></span><em>{{barcodeText}}</em></span></button>
                   <sc-for list="{{flows}}" as="f" hint-placeholder-count="6">
                     <div class="{{f.wrapCls}}">
                       <button type="button" class="{{f.cls}}" style="{{f.style}}" aria-pressed="{{f.on}}" aria-label="{{f.aria}}" onClick="{{f.tap}}">
@@ -603,7 +605,7 @@ button,input{font:inherit;color:inherit}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { dark: false, mode: 'none', form: false, cut: false, locked: false, flows: { PRODUCTS: ['on', 'PULL'], CONTACTS: ['on', 'PULL'], WAREHOUSES: ['off', 'PULL'], SALES_ORDERS: ['na', 'PULL'], SHIPMENTS: ['on', 'PUSH'], STOCK: ['off', 'PUSH'] }, toast: null };
+    this.state = { barcodeOn: false, dark: false, mode: 'none', form: false, cut: false, locked: false, flows: { PRODUCTS: ['on', 'PULL'], CONTACTS: ['on', 'PULL'], WAREHOUSES: ['off', 'PULL'], SALES_ORDERS: ['na', 'PULL'], SHIPMENTS: ['on', 'PUSH'], STOCK: ['off', 'PUSH'] }, toast: null };
   }
   componentWillUnmount() { clearTimeout(this._tt); }
 
@@ -712,6 +714,7 @@ class Component extends DCLogic {
       connected, connCls: 'conn' + (s.mode === 'err' ? ' err' : ''), connD: s.mode === 'err' ? D.warn : D.check,
       connTitle: s.mode === 'err' ? 'Paraşüt yeniden giriş istiyor' : 'Bağlı · Demo A.Ş Muhasebe',
       connSub: s.mode === 'err' ? 'BAĞLANTIYI SINA YA DA YENİDEN BAĞLAN' : 'PARAŞÜT · SON SINAMA BUGÜN 10:40',
+      barcodeCls: "act2" + (s.barcodeOn ? " on" : ""), barcodeText: s.barcodeOn ? "Açık" : "Kapalı", barcodeOn: s.barcodeOn ? "true" : "false", toggleBarcode: () => this.setState({ barcodeOn: !s.barcodeOn }),
       flows, runs,
       testIt: () => { if (s.mode === 'err') { this.tone('err'); this.toast('err', 'Paraşüt girişi reddetti · yeniden bağlan'); return; } this.tone('ok'); this.toast('ok', 'Bağlantı sağlam · Demo A.Ş Muhasebe'); },
       askCut: () => { this.tone('err'); this.setState({ cut: true }); },

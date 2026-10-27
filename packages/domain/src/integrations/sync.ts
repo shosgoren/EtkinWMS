@@ -106,7 +106,7 @@ async function connectorAllowed(tx: AccessTx, tenantId: string, membershipId: st
 
 // --- eşleme dönüştürücüleri (sağlayıcı kaynağı → apply girdisi) --------------------------------------------------------------------
 const s = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
-const toProduct = (r: JsonApiResource) => ({ externalId: r.id, code: s(r.attributes.code), name: s(r.attributes.name), unit: s(r.attributes.unit) });
+const toProduct = (r: JsonApiResource) => ({ externalId: r.id, code: s(r.attributes.code), name: s(r.attributes.name), unit: s(r.attributes.unit), barcode: s(r.attributes.barcode) });
 const toContact = (r: JsonApiResource) => ({
   externalId: r.id,
   name: s(r.attributes.name),
@@ -127,11 +127,13 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
     const p = await rc.deps.client.list(rc.token, rc.companyId, kind, page);
     const next = p.items.length === 0 || page >= p.totalPages ? null : page + 1;
     await rc.deps.inTenant(async (tx) => {
+      const barcodeSetting = kind === "products" ? await tx.execute<{ enabled: boolean }>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id=${rc.tenantId}::uuid AND id=${rc.integrationId}::uuid`) : [];
+      const ac = { ...rc.ac, pullProductBarcodes: barcodeSetting[0]?.enabled === true };
       for (const item of p.items) {
         try {
           // Satır başına kayıt noktası: bir kartın reddi sayfanın kalanını düşürmez.
           const o = await tx.transaction((sp) =>
-            kind === "products" ? applyProduct(sp, rc.ac, toProduct(item)) : kind === "contacts" ? applyContact(sp, rc.ac, toContact(item)) : applyWarehouse(sp, rc.ac, toWarehouse(item)),
+            kind === "products" ? applyProduct(sp, ac, toProduct(item)) : kind === "contacts" ? applyContact(sp, rc.ac, toContact(item)) : applyWarehouse(sp, rc.ac, toWarehouse(item)),
           );
           count(rc.c, o);
         } catch {

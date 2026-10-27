@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
+import { parseGs1, gtinLookupForms, isValidGtin } from "../catalog/gs1.ts";
 import { standardUnitCode } from "../catalog/unit-alias.ts";
 import type { AccessTx } from "../identity/access.ts";
 
@@ -23,6 +24,7 @@ export interface ApplyContext {
   readonly actorUserId: string;
   /** Aynı kişinin üyeliği (`parties.created_by`). */
   readonly membershipId: string;
+  readonly pullProductBarcodes?: boolean;
 }
 
 const CTRL = /\p{C}/u;
@@ -72,6 +74,7 @@ export interface ProviderProduct {
   readonly code: string | null;
   readonly name: string | null;
   readonly unit: string | null;
+  readonly barcode?: string | null;
 }
 
 /** Tanınmayan birim sessizce ADET yapılmaz; satır kontrol için başarısız olur. */
@@ -80,6 +83,33 @@ export const unitCodeFor = standardUnitCode;
 /** Sayılabilir ambalajlar tam sayı; ağırlık/uzunluk/hacim 6 ondalığı kayıpsız taşır. */
 export function productQuantityScale(unitCode: string): number {
   return ["KG", "GR", "MT", "CM", "LT", "M2", "M3"].includes(unitCode) ? 6 : 0;
+}
+
+/** Mevcut etiketleri silmez. Yeni dış barkod yalnız aynı ürüne alternatif olarak eklenir. */
+async function ensureProductBarcode(tx: AccessTx, c: ApplyContext, itemId: string, raw: string | null | undefined): Promise<boolean> {
+  const existing = await tx.execute<{ barcode: string }>(sql`SELECT barcode FROM public.item_barcodes WHERE tenant_id=${c.tenantId}::uuid AND item_id=${itemId}::uuid`);
+  let barcode: string;
+  if (c.pullProductBarcodes && raw !== null && raw !== undefined && raw.trim() !== "") {
+    barcode = raw.trim();
+    const parsed = parseGs1(barcode);
+    // WMS komut/paket QR alanı ürün etiketi olamaz: saha okuyucusu bu alanı önce yönlendirir.
+    if (barcode.startsWith("EWMS:") || barcode.length > 128 || CTRL.test(barcode) || (parsed.ok && parsed.gtin !== undefined)) throw new AppError("VALIDATION_FAILED");
+  } else {
+    if (existing.length > 0) return false;
+    barcode = `EWMS-ITEM-${itemId}`;
+  }
+  const variants = isValidGtin(barcode) ? gtinLookupForms(barcode.padStart(14, "0"), true) : [];
+  const forms = [...new Set([barcode, ...variants])];
+  const other = await tx.execute<{ id: string }>(sql`SELECT id FROM public.item_barcodes WHERE tenant_id=${c.tenantId}::uuid AND item_id<>${itemId}::uuid AND barcode IN (${sql.join(forms.map((f) => sql`${f}`), sql`, `)}) LIMIT 1`);
+  if (other.length > 0) throw new AppError("VALIDATION_FAILED", { detail: "BARCODE_AMBIGUOUS" });
+  if (existing.some((b) => b.barcode === barcode)) return false;
+  const rows = await tx.execute<{ id: string }>(sql`INSERT INTO public.item_barcodes(tenant_id,id,item_id,unit_id,barcode,quantity)
+    VALUES(${c.tenantId}::uuid,gen_random_uuid(),${itemId}::uuid,NULL,${barcode},NULL)
+    ON CONFLICT ON CONSTRAINT item_barcodes_tenant_item_unit_barcode_key DO NOTHING RETURNING id`);
+  if (rows[0] === undefined) return false;
+  await appendAudit(tx, { action: "item_barcode.added", actorUserId: c.actorUserId, entityType: "item_barcode", entityId: rows[0].id,
+    changeSummary: { item_id: itemId, via: "integration", system: c.system, source: barcode.startsWith("EWMS-ITEM-") ? "internal" : "provider" } });
+  return true;
 }
 
 export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderProduct): Promise<ApplyOutcome> {
@@ -94,27 +124,31 @@ export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderPro
   if (unitId === undefined) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
   const existing = await refEntity(tx, c, "ITEM", p.externalId);
   if (existing !== null) {
-    const current = await tx.execute<{ base_unit_id: string }>(
-      sql`SELECT base_unit_id FROM public.items WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid`,
+    const current = await tx.execute<{ base_unit_id: string; status: string }>(
+      sql`SELECT base_unit_id, status FROM public.items WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid`,
     );
     if (current[0]?.base_unit_id !== unitId) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
+    if (current[0]?.status !== "ACTIVE") return "UNCHANGED";
     const r = await tx.execute<{ id: string }>(
       sql`UPDATE public.items SET name = ${name} WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid AND status = 'ACTIVE' AND name IS DISTINCT FROM ${name} RETURNING id`,
     );
-    if (r[0] === undefined) return "UNCHANGED";
+    const barcodeAdded = await ensureProductBarcode(tx, c, existing, p.barcode);
+    if (r[0] === undefined) return barcodeAdded ? "UPDATED" : "UNCHANGED";
     await appendAudit(tx, { action: "item.updated", actorUserId: c.actorUserId, entityType: "item", entityId: existing, changeSummary: { name, via: "integration", system: c.system } });
     return "UPDATED";
   }
   const code = clean(p.code, 64) ?? `PRS-${p.externalId}`;
-  const byCode = await tx.execute<{ id: string; base_unit_id: string; linked: boolean }>(
-    sql`SELECT i.id, i.base_unit_id, EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.system = ${c.system} AND r.entity_type = 'ITEM' AND r.entity_id = i.id) AS linked
+  const byCode = await tx.execute<{ id: string; base_unit_id: string; status: string; linked: boolean }>(
+    sql`SELECT i.id, i.base_unit_id, i.status, EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.system = ${c.system} AND r.entity_type = 'ITEM' AND r.entity_id = i.id) AS linked
           FROM public.items i WHERE i.tenant_id = ${c.tenantId}::uuid AND i.code = ${code}`,
   );
   const hit = byCode[0];
   if (hit !== undefined) {
     if (hit.base_unit_id !== unitId) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
-    if (hit.linked) return "SKIPPED";
-    return (await link(tx, c, "ITEM", hit.id, p.externalId, code)) ? "LINKED" : "SKIPPED";
+    if (hit.linked || hit.status !== "ACTIVE") return "SKIPPED";
+    if (!(await link(tx, c, "ITEM", hit.id, p.externalId, code))) return "SKIPPED";
+    await ensureProductBarcode(tx, c, hit.id, p.barcode);
+    return "LINKED";
   }
   const ins = await tx.execute<{ id: string }>(
     sql`INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, quantity_scale) VALUES (${c.tenantId}::uuid, gen_random_uuid(), ${code}, ${name}, ${unitId}::uuid, ${productQuantityScale(unitCode)})
@@ -124,6 +158,7 @@ export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderPro
   if (itemId === undefined) return "SKIPPED";
   await appendAudit(tx, { action: "item.created", actorUserId: c.actorUserId, entityType: "item", entityId: itemId, changeSummary: { code, name, base_unit_id: unitId, via: "integration", system: c.system } });
   await link(tx, c, "ITEM", itemId, p.externalId, code);
+  await ensureProductBarcode(tx, c, itemId, p.barcode);
   return "CREATED";
 }
 
