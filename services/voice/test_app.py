@@ -96,8 +96,10 @@ class ServiceTests(unittest.TestCase):
 
 
 class FakeVoice:
-    def __init__(self, delay=0.0):
+    def __init__(self, delay=0.0, seconds=0.5, too_long=False):
         self.delay = delay
+        self.seconds = seconds
+        self.too_long = too_long
         self.calls = 0
 
     def synthesize(self, text):
@@ -107,7 +109,9 @@ class FakeVoice:
 
         self.calls += 1
         time.sleep(self.delay)
-        return np.zeros(voice.TTS_RATE // 2, dtype=np.float32)
+        if self.too_long:
+            raise voice.TextTooLong
+        return np.zeros(int(voice.TTS_RATE * self.seconds), dtype=np.float32)
 
 
 class SpeakableTests(unittest.TestCase):
@@ -153,6 +157,20 @@ class TtsServiceTests(unittest.TestCase):
             asyncio.run(svc.tts(f"cümle {i} tamam"))
         self.assertEqual(len(svc._cache), voice.TTS_CACHE_MAX)
 
+    def test_too_long_text_or_audio_is_rejected_and_not_cached(self):
+        svc = voice.Service(FakeEngine(), FakeVoice(too_long=True))
+        self.assertEqual(asyncio.run(svc.tts("999999999999 lira")), (400, {"error": "TEXT_TOO_LONG"}))
+        svc.voice = FakeVoice(seconds=voice.TTS_MAX_SECONDS + 1)
+        self.assertEqual(asyncio.run(svc.tts("çok uzun okuma")), (400, {"error": "TEXT_TOO_LONG"}))
+        self.assertEqual(len(svc._cache), 0)
+
+    def test_cache_bytes_are_bounded(self):
+        svc = voice.Service(FakeEngine(), FakeVoice(seconds=30))
+        for i in range(12):
+            asyncio.run(svc.tts(f"uzun cümle {i} tamam"))
+        self.assertLessEqual(sum(len(v) for v in svc._cache.values()), voice.TTS_CACHE_BYTES)
+        self.assertGreater(len(svc._cache), 0)
+
     def test_single_worker_and_bounded_queue(self):
         fake = FakeVoice(delay=0.3)
 
@@ -193,7 +211,10 @@ class TtsModelTests(unittest.TestCase):
     def test_turkish_speech_round_trips_through_stt_within_memory(self):
         import numpy as np
 
-        tts = voice.EmaEngine(voice.TTS_DIR, voice.THREADS)
+        tts = voice.EmaEngine(voice.TTS_DIR, 1)
+        # Normalleştirici sayıları sözcüğe açar: 400 karakterlik rakam dizisi okunmadan reddedilir (güvenlik incelemesi).
+        with self.assertRaises(voice.TextTooLong):
+            tts.synthesize(voice.speakable("999999999999 " * 30))
         audio = tts.synthesize(voice.speakable("Bugün hava çok güzel."))
         self.assertGreater(len(audio) / voice.TTS_RATE, 0.6)
         self.assertLess(float(np.abs(audio).max()), 1.01)

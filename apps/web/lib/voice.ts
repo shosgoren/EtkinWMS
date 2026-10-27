@@ -72,6 +72,14 @@ export const TTS_MAX_BYTES = 2 * 1024 * 1024;
 
 export type TtsResult = { readonly status: "ok"; readonly wav: Uint8Array } | { readonly status: "unavailable" | "busy" };
 
+/** Servisin ürettiği biçim: RIFF/WAVE, PCM, mono, 24 kHz, 16 bit; boyut sınırı içinde. */
+export function isTtsWav(b: Uint8Array): boolean {
+  if (b.length < 46 || b.length > TTS_MAX_BYTES) return false;
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const tag = (o: number): string => String.fromCharCode(b[o]!, b[o + 1]!, b[o + 2]!, b[o + 3]!);
+  return tag(0) === "RIFF" && tag(8) === "WAVE" && tag(12) === "fmt " && v.getUint16(20, true) === 1 && v.getUint16(22, true) === 1 && v.getUint32(24, true) === 24000 && v.getUint16(34, true) === 16;
+}
+
 export async function synthesize(text: string, fetchImpl: typeof fetch = fetch): Promise<TtsResult> {
   const base = voiceBaseUrl();
   if (base === null) return { status: "unavailable" };
@@ -91,7 +99,7 @@ export async function synthesize(text: string, fetchImpl: typeof fetch = fetch):
     const declared = Number(res.headers.get("content-length") ?? "0");
     if (!res.ok || res.headers.get("content-type") !== "audio/wav" || declared > TTS_MAX_BYTES) return { status: "unavailable" };
     const wav = new Uint8Array(await res.arrayBuffer());
-    if (wav.length < 46 || wav.length > TTS_MAX_BYTES || String.fromCharCode(wav[0]!, wav[1]!, wav[2]!, wav[3]!) !== "RIFF") return { status: "unavailable" };
+    if (!isTtsWav(wav)) return { status: "unavailable" };
     return { status: "ok", wav };
   } catch {
     return { status: "unavailable" };

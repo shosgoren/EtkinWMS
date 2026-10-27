@@ -61,9 +61,10 @@ describe("voice client", () => {
   });
 
   // T-1106: yazı → ses yanıtı yalnız audio/wav + RIFF + boyut sınırı; meşgul/yok/hata durum olarak döner, metin 400 karakterle kesilir.
-  it("tts: WAV yanıtı, BUSY, yanlış tür, aşırı boyut, ağ hatası", async () => {
+  it("tts: WAV yanıtı, BUSY, yanlış tür, yanlış biçim, aşırı boyut, ağ hatası", async () => {
     const f = vi.fn();
     const ok = wav();
+    new DataView(ok.buffer).setUint32(24, 24000, true);
     f.mockResolvedValueOnce(new Response(ok, { status: 200, headers: { "content-type": "audio/wav" } }));
     expect(await synthesize("a".repeat(500), f)).toEqual({ status: "ok", wav: ok });
     const [url, init] = f.mock.calls[0]! as [URL, RequestInit];
@@ -75,6 +76,8 @@ describe("voice client", () => {
     f.mockResolvedValueOnce(new Response(JSON.stringify({ error: "TTS_UNAVAILABLE" }), { status: 503 }));
     expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
     f.mockResolvedValueOnce(new Response("<html>", { status: 200, headers: { "content-type": "text/html" } }));
+    expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
+    f.mockResolvedValueOnce(new Response(wav(), { status: 200, headers: { "content-type": "audio/wav" } }));
     expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
     f.mockResolvedValueOnce(new Response(new Uint8Array(TTS_MAX_BYTES + 1), { status: 200, headers: { "content-type": "audio/wav" } }));
     expect(await synthesize("x", f)).toEqual({ status: "unavailable" });

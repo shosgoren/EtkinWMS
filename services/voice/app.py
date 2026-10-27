@@ -35,6 +35,11 @@ TTS_RATE = 24000
 TTS_MAX_CHARS = 400
 TTS_BODY_MAX = 4096
 TTS_CACHE_MAX = 48
+TTS_CACHE_BYTES = 16 * 1024 * 1024
+# Güvenlik incelemesi (T-1106): 400 karakter, normalleştirici sayıları/tarihleri sözcüğe açınca çok uzayabilir. Okunacak metin (harf) ve
+# üretilen ses süresi ayrıca sınırlanır; aşan istek CPU'yu uzun tutmadan reddedilir, önbelleğe girmez.
+TTS_MAX_SPOKEN = 600
+TTS_MAX_SECONDS = 40
 TTS_QUEUE_MAX = int(os.environ.get("VOICE_TTS_QUEUE_MAX", "4"))
 # Kısa alan ipucu: Whisper'ı depo sözcüklerine yaklaştırır (kiracı verisi içermez).
 PROMPT = (
@@ -49,6 +54,10 @@ class AudioRejected(Exception):
 
 class Engine(Protocol):
     def transcribe(self, audio: np.ndarray) -> tuple[str, float]: ...
+
+
+class TextTooLong(Exception):
+    """Okunacak hâli (normalleştirme sonrası) sınırı aşıyor."""
 
 
 class Voice(Protocol):
@@ -146,6 +155,8 @@ class EmaEngine:
         self._tts._batch_size = 1  # ölçüm turu (ve önbellek dosyası yazımı) olmasın; tek eşzamanlı istek
 
     def synthesize(self, text: str) -> np.ndarray:
+        if len(self._tts._frontend(text)) > TTS_MAX_SPOKEN:
+            raise TextTooLong
         return self._tts.say(text, seed=0, sample_rate=TTS_RATE).audio
 
 
@@ -208,13 +219,17 @@ class Service:
             self._tts_waiting -= 1
         try:
             audio = await asyncio.to_thread(voice.synthesize, text)
+        except TextTooLong:
+            return 400, {"error": "TEXT_TOO_LONG"}
         finally:
             self._tts_slot.release()
         if audio.size == 0:
             return 400, {"error": "TEXT_REJECTED"}
+        if audio.size > TTS_MAX_SECONDS * TTS_RATE:
+            return 400, {"error": "TEXT_TOO_LONG"}
         data = encode_wav(audio)
         self._cache[text] = data
-        while len(self._cache) > TTS_CACHE_MAX:
+        while len(self._cache) > TTS_CACHE_MAX or sum(len(v) for v in self._cache.values()) > TTS_CACHE_BYTES:
             self._cache.popitem(last=False)
         return 200, data
 
@@ -230,7 +245,8 @@ def create_app(engine_factory=None, voice_factory=None):
         factory = engine_factory or (lambda: WhisperEngine(MODEL_DIR, THREADS))
         service.engine = await asyncio.to_thread(factory)
         try:
-            service.voice = await asyncio.to_thread(voice_factory or (lambda: EmaEngine(TTS_DIR, THREADS)))
+            # Tek iş parçacığı: STT ile aynı 1,5 CPU'yu paylaşır, okuma konuşma tanımayı yavaşlatmasın (güvenlik incelemesi).
+            service.voice = await asyncio.to_thread(voice_factory or (lambda: EmaEngine(TTS_DIR, 1)))
         except Exception as error:  # ses modeli yoksa/bozuksa yalnız /tts kapalı; STT sürer
             print(f"tts kapalı: {type(error).__name__}", flush=True)
         yield
