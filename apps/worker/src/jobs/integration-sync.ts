@@ -1,15 +1,15 @@
-// `integration.sync` işi + saatlik zamanlayıcı (T-991). İş kuralı `@wms/domain/integrations` `runIntegrationSync`'tedir; burada yalnız bağlama,
+// `integration.sync` işi + 30 saniyelik zamanlayıcı (T-991). İş kuralı `@wms/domain/integrations` `runIntegrationSync`'tedir; burada yalnız bağlama,
 // sağlayıcı istemcisi ve günlük vardır. Tenant bağlamı işin zarfından (`ctx.inTenant` = `withSystemTenant`, tenant ACTIVE denetimli).
 // Günlüğe sır/adres/şirket/kayıt adı yazılmaz: yalnız iş kimliği, sayılar ve sabit kodlar (G-09).
 //
-// Zamanlayıcı: açılışta bir kez + saatte bir; ACTIVE tenant'lar keyset sayfalarla (`listActiveTenantIds`), her tenant'ta açık akışı olan bağlı
+// Zamanlayıcı: açılışta bir kez + 30 saniyede bir; ACTIVE tenant'lar keyset sayfalarla (`listActiveTenantIds`), her tenant'ta açık akışı olan bağlı
 // entegrasyon başına bir iş (`singletonKey` = bağlantı: kuyrukta/çalışırken ikinci iş açılmaz; elle "Şimdi çalıştır" ile aynı anahtar).
 import { ParasutClient, integrationSealer, resolveParasutBaseUrl, runIntegrationSync, type FetchLike } from "@wms/domain/integrations";
 import type { AccessTx } from "@wms/domain/identity/access";
 import type { Logger } from "@wms/shared/log";
 import type { JobHandler } from "@wms/shared/queue";
 
-export const INTEGRATION_SCHEDULE_INTERVAL_MS = 3_600_000;
+export const INTEGRATION_SCHEDULE_INTERVAL_MS = 30_000;
 const FIRST_PAGE = "00000000-0000-0000-0000-000000000000";
 const PAGE_SIZE = 500;
 const errName = (e: unknown): string => (e instanceof Error ? e.name : "unknown");
