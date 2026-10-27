@@ -151,7 +151,8 @@ servisi. Bu adım yapılmadan yayınlar iki imajlı sürer; Etkin "şu an kullan
 | Doğrudan VPS | health `ok`, aynı release; auto_migrate `true` |
 | Gerçek DB defteri | `0062/62`; şema `0a9c0dcf5dee544dd1d164920810ccb1f26cbdb2e4f7a6d633d5f1d544d9410e` |
 | Motive | CONNECTED; PRODUCTS/PULL açık; tenant OAuth ayarı mevcut; 4 kartta source_checked_at dolu |
-| Otomatik koşular | UTC2026-10-27 22:09:41 ve22:10:11: SCHEDULE/SUCCESS, hata0 |
+| Otomatik koşular | UTC2026-10-27 22:09:41,22:10:11,22:10:41: SCHEDULE/SUCCESS, hata0 |
+| Gerçek yaşam döngüsü | İkinci yokluk kontrolünden sonra1kart DELETED/REMOVED;4kart ACTIVE/NONE. Yalnız durum/sayı metadata, manuel test değişikliği yok |
 
 0062 metadata varsa DOWN reddedilir; geçmiş silinmez. Temel paket önce93e6878/CI40588654469/guards40588654499/deploy40590083217 ile doğrulandı; güncel release yukarıdadır. Belge commit'i bu kaynak ağacını değiştirmez; main SHA ile çalışan uygulamayı kör eşitleme.
 
