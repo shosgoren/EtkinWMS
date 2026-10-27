@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { dz } from "../../../design/pano-tokens.ts";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, useKalipToast, type KalipKind } from "./ekran.tsx";
@@ -183,8 +184,9 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
   const panoScope = `dzp${dark ? " dz-dark" : ""}`;
   const layer = (
     <>
-      {open ? (
-        <div className={panoScope} style={{ display: "contents" }}>
+      {/* T-1081: Hesap menüsüyle aynı katman (`.hmenu-kok`, sayfa kökünde): perde alt çubuk dahil bütün ekranı örter. */}
+      {open && typeof document !== "undefined" ? createPortal(
+        <div className={`${panoScope} hmenu-kok`}>
           <div className="hback" onClick={close} />
           <div className="halo tmenu" role="menu" aria-label={t("menu", { kind: label })} data-testid="kalip-excel-menu" data-tour-follow="excel">
             <div className="tmh">
@@ -193,7 +195,6 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
               </span>
               <span style={{ minWidth: 0 }}>
                 <b>{t("title", { kind: label })}</b>
-                <small>{canImport ? t("sub") : t("subExport")}</small>
               </span>
             </div>
             {items.map((m, i) =>
@@ -214,7 +215,8 @@ export function useKalipExcel(scopeKind: KalipKind, slug: string | undefined, ex
               ),
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
       {toast}
     </>

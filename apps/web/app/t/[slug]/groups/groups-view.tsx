@@ -417,7 +417,6 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
                         <Ico d={RICON.plus} size={24} />
                       </span>
                       <b>{t("newTile")}</b>
-                      <small>{t("newTileHint")}</small>
                     </button>
                   </div>
                   <div className="memo">

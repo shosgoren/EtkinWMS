@@ -152,6 +152,7 @@ export async function PanoBoard(p: PanoBoardProps) {
 
       {b === null ? null : owner ? (
         <>
+          {/* T-1081 (kullanıcı 27 Ekim): kart ve kısayollarda sabit açıklama alt satırı yok; yalnız canlı veri satırı kalır. */}
           {/* T-1050: sabit "DOKUN → RAPOR AÇILIR" ipucu yok (kartın kendisi dokunulur; STANDART: gereksiz açıklama yazılmaz). */}
           {shd(t("reports"), null)}
           <div className="rep" role="list" aria-label={t("reportsAria")} data-testid="pano-reports">
@@ -159,36 +160,31 @@ export async function PanoBoard(p: PanoBoardProps) {
               <span className="n">{b.criticalCount}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.box} /></Svg></span>
               <b>{t("r.critical")}</b>
-              <small>{b.criticalCount > 0 ? t("r.criticalSub") : t("r.none")}</small>
             </Link>
             <Link href={`${base}/shipping`} className="rp" role="listitem" style={{ background: dz("E56A00"), animationDelay: ".05s", textDecoration: "none" }} data-report="orders">
               <span className="n">{b.orderCount}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.truck} /></Svg></span>
               <b>{t("r.orders")}</b>
-              <small>{b.orderCount > 0 ? t("r.ordersSub", { d: b.oldestOrderDays }) : t("r.none")}</small>
+              {b.orderCount > 0 ? <small>{t("r.ordersSub", { d: b.oldestOrderDays })}</small> : null}
             </Link>
             <Link href={`${base}/stock`} className="rp calm" role="listitem" style={{ "--c": dz("0E7C7B"), "--t": dz("0E7C7B"), animationDelay: ".1s", textDecoration: "none" } as CSSProperties} data-report="turn">
               <span className="n">{b.fast[0]?.times ?? 0}×</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.turn} /></Svg></span>
               <b>{t("r.turn")}</b>
-              <small>{t("r.turnSub")}</small>
             </Link>
             <Link href={`${base}/stock`} className="rp calm" role="listitem" style={{ "--c": dz("172E42"), "--t": dz("172E42"), animationDelay: ".15s", textDecoration: "none" } as CSSProperties} data-report="buy">
               <span className="n">{b.buyCount}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.cikis} /></Svg></span>
               <b>{t("r.buy")}</b>
-              <small>{t("r.buySub")}</small>
             </Link>
             <Link href={`${base}/tasks?kind=COUNT`} className="rp calm" role="listitem" style={{ "--c": dz("2F5DA8"), "--t": dz("2F5DA8"), animationDelay: ".2s", textDecoration: "none" } as CSSProperties} data-report="count">
               <span className="n">{b.countReview}</span>
               <span className="alic rich"><Svg size={26}><P d={PICON.clip} /></Svg></span>
               <b>{t("r.count")}</b>
-              <small>{t("r.countSub")}</small>
             </Link>
             <Link href={`${base}/stock`} className="rp all" role="listitem" style={{ textDecoration: "none" }}>
               <span className="alic" style={{ background: dz("EEF1F4"), color: dz("172E42") }}><Svg size={22}><P d={PICON.reports} /></Svg></span>
               <b>{t("r.all")}</b>
-              <small style={{ color: dz("4E6476") }}>{t("r.allSub")}</small>
             </Link>
           </div>
 
@@ -197,16 +193,16 @@ export async function PanoBoard(p: PanoBoardProps) {
             <Link href={`${base}/stock`} className="al" style={{ background: dz("C62828"), animationDelay: "0s", textDecoration: "none" }}>
               {b.criticalCount > 0 ? <span className="pulse" /> : null}
               <span className="alic"><Svg size={28}><P d={PICON.boxA} /><P d={PICON.boxB} /><P d={PICON.boxC} /></Svg></span>
-              <span className="txt"><span className="n">{b.criticalCount}</span><span className="t">{t("a.critical")}</span><span className="s">{t("r.criticalSub")}</span></span>
+              <span className="txt"><span className="n">{b.criticalCount}</span><span className="t">{t("a.critical")}</span></span>
             </Link>
             <Link href={`${base}/shipping`} className="al" style={{ background: dz("E56A00"), animationDelay: ".06s", textDecoration: "none" }}>
               {b.orderCount > 0 ? <span className="pulse" /> : null}
               <span className="alic"><Svg size={28}><P d={PICON.truckA} /><circle cx="6.5" cy="17.5" r="2" /><circle cx="16.5" cy="17.5" r="2" /><P d={PICON.truckB} /></Svg></span>
-              <span className="txt"><span className="n">{b.orderCount}</span><span className="t">{t("a.orders")}</span><span className="s">{b.orderCount > 0 ? t("r.ordersSub", { d: b.oldestOrderDays }) : t("r.none")}</span></span>
+              <span className="txt"><span className="n">{b.orderCount}</span><span className="t">{t("a.orders")}</span>{b.orderCount > 0 ? <span className="s">{t("r.ordersSub", { d: b.oldestOrderDays })}</span> : null}</span>
             </Link>
             <Link href={`${base}/tasks?kind=COUNT`} className="al" style={{ background: dz("2F5DA8"), animationDelay: ".12s", textDecoration: "none" }}>
               <span className="alic"><Svg size={28}><rect x="6" y="4" width="12" height="17" rx="2" /><P d={PICON.clipA} /><P d={PICON.clipB} /></Svg></span>
-              <span className="txt"><span className="n">{b.countReview}</span><span className="t">{t("a.count")}</span><span className="s">{t("r.countSub")}</span></span>
+              <span className="txt"><span className="n">{b.countReview}</span><span className="t">{t("a.count")}</span></span>
             </Link>
             <Link href={`${base}/tasks`} className="al" style={{ background: dz("6C4BD8"), animationDelay: ".18s", textDecoration: "none" }}>
               <span className="alic"><Svg size={28}><P d={PICON.warnA} /><P d={PICON.warnB} /></Svg></span>
@@ -302,12 +298,11 @@ export async function PanoBoard(p: PanoBoardProps) {
             <Link href={`${base}/tasks?status=OPEN`} className={`qt${tasks.unassigned > 0 ? " hot" : ""}`} style={{ "--q": dz("2F7D5B"), textDecoration: "none" } as CSSProperties} data-quick="plan">
               <span className="alic"><Svg size={26}><rect x="3" y="4" width="18" height="16" rx="2" /><P d={PICON.calA} /><P d={PICON.calB} /></Svg></span>
               <b>{t("q.plan")}</b>
-              <small>{tasks.unassigned > 0 ? t("q.planSub", { n: tasks.unassigned }) : t("q.planNone")}</small>
+              {tasks.unassigned > 0 ? <small>{t("q.planSub", { n: tasks.unassigned })}</small> : null}
             </Link>
             <Link href={`${base}/labels`} className="qt" style={{ "--q": dz("172E42"), textDecoration: "none" } as CSSProperties} data-quick="label">
               <span className="alic"><Svg size={26}><P d={PICON.printA} /><rect x="3" y="9" width="18" height="8" rx="2" /><P d={PICON.printB} /></Svg></span>
               <b>{t("q.label")}</b>
-              <small>{t("q.labelSub")}</small>
             </Link>
             <Link href={`${base}/stock`} className="qt" style={{ "--q": dz("0E7C7B"), textDecoration: "none" } as CSSProperties} data-quick="reports">
               <span className="alic"><Svg size={26}><P d={PICON.reports} /></Svg></span>

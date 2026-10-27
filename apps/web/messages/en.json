@@ -3825,18 +3825,13 @@
     "reportsAria": "Reports",
     "r": {
       "critical": "Critical stock",
-      "criticalSub": "FAR BELOW MINIMUM",
       "none": "NONE NOW",
       "orders": "Waiting orders",
       "ordersSub": "OLDEST {d} DAYS",
       "turn": "Turnover",
-      "turnSub": "90 DAYS · FASTEST ITEM",
       "buy": "Purchasing",
-      "buySub": "ITEMS BELOW MINIMUM",
       "count": "Count variance",
-      "countSub": "AWAITING APPROVAL",
-      "all": "All reports",
-      "allSub": "STOCK, MOVES, OCCUPANCY…"
+      "all": "All reports"
     },
     "alerts": "NEEDS ATTENTION",
     "liveNow": "LIVE",
@@ -3871,9 +3866,7 @@
     "q": {
       "plan": "Plan today",
       "planSub": "{n} TASKS WAITING FOR ASSIGNMENT",
-      "planNone": "NO TASKS WAITING",
       "label": "Reprint label",
-      "labelSub": "RECEIVING AND SHIPPING LABELS",
       "reports": "My warehouse reports"
     },
     "todoTitle": "Tasks waiting for assignment",
@@ -4353,7 +4346,6 @@
     "ready": "READY",
     "tileMeta": "{screens} SCREENS · {n} PEOPLE",
     "newTile": "New group",
-    "newTileHint": "NAME · SCREENS · PEOPLE",
     "memo": "“READY” groups come from roles; everyone is in their role's group. A new group adds permissions on top of the role. Tap to change.",
     "memoReadOnly": "Only the account owner can change groups; you can view them.",
     "nameAria": "Group name",
@@ -4544,9 +4536,7 @@
     "addTitle": "Add a person",
     "addSub": "WHO IS JOINING?",
     "addField": "Field staff",
-    "addFieldSub": "PRINT QR · JOIN WITH OWN DEVICE",
     "addOffice": "Office user",
-    "addOfficeSub": "SEND AN EMAIL INVITATION",
     "cf": {
       "inviteTitle": "Invitation not sent",
       "pendTitle": "Approval not finished",
@@ -4746,8 +4736,6 @@
       "aria": "Excel · {kind}: import, update or download",
       "menu": "Excel · {kind}",
       "title": "Excel · {kind}",
-      "sub": "Import, update or download",
-      "subExport": "Download this list to Excel",
       "import": "Import",
       "update": "Update (by code)",
       "export": "Export",

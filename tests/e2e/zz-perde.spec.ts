@@ -98,3 +98,44 @@ test("T-1080 perde: yarım işte Hesap menüsünden Çıkış yap — ortak çı
   expect(ust).toBe("kutu");
   await expect(page.locator(".hmenu-kok .hback")).toBeHidden();
 });
+
+// T-1081: aynı kural diğer engelleyen katmanlarda — Destek penceresi, Sorun bildir ve Excel menüsü. Perde bütün görüntü alanını
+// (alt çubuk dahil) örter; alt çubuk kaybolmaz. Taleplerim tam sayfadır (katman değil); Destek penceresi oradan "yeni talep" ile açılır.
+type Katman = { ad: string; yol: string; ac: (page: Page) => Promise<void>; perde: string; panel: string };
+const KATMANLAR: Katman[] = [
+  {
+    ad: "Destek",
+    yol: "/items",
+    ac: async (page) => {
+      await page.getByTestId("kalip-support").first().click();
+      const liste = page.getByTestId("support-list");
+      const pencere = page.getByTestId("support-sheet");
+      await expect(liste.or(pencere)).toBeVisible();
+      if (await liste.isVisible()) await liste.locator(".tb-help").click();
+    },
+    perde: '[data-testid="support-layer"] .hback',
+    panel: '[data-testid="support-sheet"]',
+  },
+  { ad: "Sorun bildir (Ürünler)", yol: "/items", ac: (page) => page.getByTestId("kalip-problem").first().click(), perde: '.ovl:has([data-testid="problem-sheet"])', panel: '[data-testid="problem-sheet"]' },
+  { ad: "Sorun bildir (Cariler)", yol: "/parties", ac: (page) => page.getByTestId("kalip-problem").first().click(), perde: '.ovl:has([data-testid="problem-sheet"])', panel: '[data-testid="problem-sheet"]' },
+  { ad: "Excel", yol: "/items", ac: (page) => page.getByTestId("kalip-excel").first().click(), perde: 'div:has(> [data-testid="kalip-excel-menu"]) > .hback', panel: '[data-testid="kalip-excel-menu"]' },
+];
+
+for (const b of BOYUTLAR) {
+  test(`T-1081 perde: Destek, Sorun bildir ve Excel bütün ekranı örter, alt çubuk kaybolmaz (${b.ad})`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: b.w, height: b.h });
+    await page.goto("/");
+    await enterDemoShared(page, "Yönetici");
+    const hatalar: string[] = [];
+    for (const k of KATMANLAR) {
+      await page.goto(`/t/demo${k.yol}`);
+      const dockVardi = (await page.getByTestId("kabuk-dock").count()) > 0;
+      await k.ac(page);
+      await expect(page.locator(k.panel).first(), k.ad).toBeVisible();
+      for (const h of await perdeOrtuyor(page, k.perde, k.panel)) hatalar.push(`${k.ad}: ${h}`);
+      if (dockVardi) await expect(page.getByTestId("kabuk-dock"), `${k.ad}: alt çubuk`).toBeVisible();
+    }
+    expect(hatalar, hatalar.join("\n")).toEqual([]);
+  });
+}

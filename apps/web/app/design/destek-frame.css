@@ -4,6 +4,9 @@
    uyarlamasıyla aynı `--kabuk-h`), Taleplerim sayfası çubuğa yer ayırır. Renk sabiti yok: üretilmiş belirteçler ve globals.css'teki
    karanlık tema belirteçleri. */
 .dzt { position: fixed; inset: 0; z-index: 24; }
+/* T-1081 (kullanıcı kararı: perde alt çubuk dahil bütün ekranı örter): Destek penceresi açıkken katman alt çubuğun (25) üstüne çıkar;
+   Taleplerim tam sayfadır, çubuğun altında kalır. */
+.dzt:has(.msheet) { z-index: 40; }
 .dzt .wrap, .dzt.dz-dark .wrap {
   min-height: 0;
   height: 100%;
