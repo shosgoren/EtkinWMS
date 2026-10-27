@@ -11,7 +11,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await scrubSecretInputs(page);
   });
 
-  test("T-991: Paraşüt'e bağlan, akış aç, bağlantıyı sına", async ({ page }) => {
+  test("T-991: Paraşüt'e bağlan, akış aç, bağlantıyı sına", async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     const { slug } = await loginEmptyTenant(page, "erp");
     await page.goto(`/t/${slug}/integrations`);
@@ -57,6 +57,28 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları açıldı");
     await expect(page.getByTestId("flow-PRODUCTS").getByRole("radio", { name: "Paraşüt → Etkin" })).toHaveAttribute("aria-checked", "true");
 
+    const barcodeToggle = page.getByTestId("product-barcode-toggle");
+    await expect(barcodeToggle).toBeVisible();
+    const initialBarcode = await barcodeToggle.getAttribute("aria-pressed");
+    await barcodeToggle.click();
+    await expect(barcodeToggle).toHaveAttribute("aria-pressed", initialBarcode === "true" ? "false" : "true");
+    await expect(page.getByTestId("kalip-toast")).toContainText("Barkod tercihi kaydedildi");
+    await page.reload();
+    await expect(barcodeToggle).toHaveAttribute("aria-pressed", initialBarcode === "true" ? "false" : "true");
+    await barcodeToggle.click();
+    await expect(barcodeToggle).toHaveAttribute("aria-pressed", initialBarcode ?? "false");
+
+    if (testInfo.project.name === "desktop") {
+      for (const width of [390, 1180, 1440]) {
+        await page.setViewportSize({ width, height: 844 });
+        await barcodeToggle.scrollIntoViewIfNeeded();
+        await expect(barcodeToggle).toBeVisible();
+        const bounds = await barcodeToggle.boundingBox();
+        expect(bounds?.height).toBeGreaterThanOrEqual(44);
+        expect((bounds?.x ?? -1) >= 0 && (bounds?.x ?? 0) + (bounds?.width ?? 0) <= width).toBe(true);
+        await page.screenshot({ path: testInfo.outputPath(`barcode-${width}.png`) });
+      }
+    }
     await page.getByTestId("integrations-test").click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Bağlantı sağlam");
   });

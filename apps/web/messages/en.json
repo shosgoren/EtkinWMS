@@ -5431,6 +5431,12 @@
         "NOT_CONNECTED": "Not connected · connect first",
         "DEMO": "Not available in the trial workspace"
       }
+    },
+    "barcode": {
+      "title": "Product barcodes",
+      "pull": "Import Paraşüt barcodes",
+      "keep": "Existing labels remain valid",
+      "saved": "Barcode preference saved"
     }
   },
   "etkin": {

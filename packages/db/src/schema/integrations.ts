@@ -93,6 +93,7 @@ export const integrations = pgTable(
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     version: integer("version").notNull().default(1),
     // T-1006 (0056): ERP'den BİR KEZLİK açılış stoku — ayar (varsayılan kapalı) + kilit (alındı zamanı + belge; bir kez dolar, değişmez).
+    pullProductBarcodes: boolean("pull_product_barcodes").notNull().default(false),
     openingStockEnabled: boolean("opening_stock_enabled").notNull().default(false),
     openingStockTakenAt: timestamptz("opening_stock_taken_at"),
     openingStockDocumentId: uuid("opening_stock_document_id"),

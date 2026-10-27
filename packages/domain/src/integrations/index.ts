@@ -20,3 +20,5 @@ export {
   type OpeningPullReason,
   type OpeningSkipCounts,
 } from "./opening-stock.ts";
+
+export { getProductBarcodeSetting, setProductBarcodeSetting } from "./product-settings.ts";

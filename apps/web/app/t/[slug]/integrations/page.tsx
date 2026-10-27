@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getIntegrationOverview, getOpeningStockState, type IntegrationOverview } from "@wms/domain/integrations";
+import { getIntegrationOverview, getOpeningStockState, getProductBarcodeSetting, type IntegrationOverview } from "@wms/domain/integrations";
 import { getSetupJourney } from "@wms/domain/onboarding/journey";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../design/theme.ts";
@@ -73,5 +73,6 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ s
   } catch {
     journeyWish = null; // yolculuğu göremeyen rol: bilgi yok
   }
-  return <IntegrationsView slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} />;
+  const pullBarcodes = await getProductBarcodeSetting(call);
+  return <IntegrationsView pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} />;
 }

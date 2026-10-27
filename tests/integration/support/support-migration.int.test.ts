@@ -34,10 +34,10 @@ const top = async (adm: pg.Client): Promise<string | undefined> =>
 
 it("0054 boşken geri alınır ve yeniden uygulanır; dolu veride down reddedilir, veri ve defter korunur", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0053", wmsEnv: "staging" })).reverted).toEqual(["0058", "0057", "0056", "0055", "0054"]);
+    expect((await migrateDown({ url, to: "0053", wmsEnv: "staging" })).reverted).toEqual(["0059", "0058", "0057", "0056", "0055", "0054"]);
     expect((await adm.query("SELECT to_regclass('public.support_tickets') AS t, to_regclass('public.support_ticket_messages') AS m")).rows[0]).toEqual({ t: null, m: null });
     expect((await adm.query("SELECT count(*)::int AS n FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'wms_probe' AND p.proname LIKE 'platform_support_%'")).rows[0]?.n).toBe(0);
-    expect((await migrateUp({ url })).applied).toEqual(["0054", "0055", "0056", "0057","0058"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0054", "0055", "0056", "0057","0058", "0059"]);
 
     const w = await seedWorld(adm, newRegistry(), "M967");
     await adm.query("BEGIN");

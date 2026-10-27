@@ -18,6 +18,8 @@ import {
   requestIntegrationRun,
   runIntegrationSync,
   setIntegrationFlow,
+  getProductBarcodeSetting,
+  setProductBarcodeSetting,
 } from "../../../packages/domain/src/integrations/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
@@ -276,6 +278,38 @@ describe("senkron", () => {
     const linked = await sync(W, id);
     expect(linked.kind === "ran" && linked.flows[0]?.counts.failed).toBe(1);
     expect(await q("SELECT external_id FROM public.external_refs WHERE tenant_id=$1 AND system='PARASUT' AND external_id='902'", [W.tenantId])).toEqual([]);
+    expect(await stockFingerprint(W)).toEqual(before);
+  });
+
+  it("barkod tercihi tenant/yetki korumalıdır; kapalıyken dahili, açıkken alternatif, tekrarında aynı etiket", async () => {
+    const W = await seedWorld(adm, reg, "ERPBAR");
+    const id = await connect(W);
+    expect(await getProductBarcodeSetting(admin(W))).toBe(false);
+    expect((await fail(setProductBarcodeSetting(picker(W), { enabled: true }))).code).toBe("FORBIDDEN");
+    fake.products.push({ id: "931", attributes: { code: "BAR-SAFE", name: "Etiketli ürün", unit: "Adet", barcode: "EXT-BAR-931" } });
+    await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    const before = await stockFingerprint(W);
+    await sync(W, id);
+    const barcodes = () => q<{ barcode: string }>("SELECT b.barcode FROM public.item_barcodes b JOIN public.items i ON i.tenant_id=b.tenant_id AND i.id=b.item_id WHERE i.tenant_id=$1 AND i.code='BAR-SAFE' ORDER BY b.barcode", [W.tenantId]);
+    const internal = await barcodes();
+    expect(internal).toHaveLength(1);
+    expect(internal[0]?.barcode).toMatch(/^EWMS-ITEM-[0-9a-f-]{36}$/);
+    await sync(W, id);
+    expect(await barcodes()).toEqual(internal);
+    expect(await setProductBarcodeSetting(admin(W), { enabled: true })).toEqual({ changed: true });
+    expect(await getProductBarcodeSetting(admin(W))).toBe(true);
+    expect(await getProductBarcodeSetting(admin(A))).toBe(false);
+    await sync(W, id);
+    expect(await barcodes()).toEqual([...internal, { barcode: "EXT-BAR-931" }]);
+    await setProductBarcodeSetting(admin(W), { enabled: false });
+    fake.products[0] = { id: "931", attributes: { code: "BAR-SAFE", name: "Etiketli ürün", unit: "Adet", barcode: "EXT-NEW-931" } };
+    await sync(W, id);
+    expect(await barcodes()).toEqual([...internal, { barcode: "EXT-BAR-931" }]);
+    await setProductBarcodeSetting(admin(W), { enabled: true });
+    fake.products.push({ id: "932", attributes: { code: "BAR-CONFLICT", name: "Çakışan", unit: "Adet", barcode: "EXT-BAR-931" } });
+    const conflict = await sync(W, id);
+    expect(conflict.kind === "ran" && conflict.flows[0]?.counts.failed).toBe(1);
+    expect(await q("SELECT id FROM public.items WHERE tenant_id=$1 AND code='BAR-CONFLICT'", [W.tenantId])).toEqual([]);
     expect(await stockFingerprint(W)).toEqual(before);
   });
 
