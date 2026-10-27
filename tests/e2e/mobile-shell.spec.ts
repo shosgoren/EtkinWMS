@@ -47,7 +47,7 @@ async function expectCockpit(page: Page, where: string, counts: { active: number
   await expect(tasks.locator('[data-state="soon"]')).toHaveCount(counts.soon);
   await expect(tasks.locator('a[data-state="soon"], a[data-state="locked"]')).toHaveCount(0);
   for (const key of ["count", "undo"] as const) await expect(tasks.locator('[data-state="soon"]').filter({ hasText: tr.home.tasks[key].title })).toContainText("Yakında");
-  if (counts.locked > 0) await expect(tasks.locator('[data-state="locked"]').first()).toContainText(tr.home.lockedReason);
+  if (counts.locked > 0) await expect(tasks.locator('[data-state="locked"]').first()).toHaveAttribute("aria-label", new RegExp(tr.home.lockedReason.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   for (const card of await tasks.locator("[data-state]").all()) expect((await card.boundingBox())?.height ?? 0, `${where}: kart yüksekliği`).toBeGreaterThanOrEqual(48);
   // T-979b (B-99): bütün ekran (üst çubuk Sorun / Destek / Hesap ve alt cam çubuk dahil).
   expect(await smallTargets(page, "body"), `${where}: 48 px altı dokunma hedefi`).toEqual([]);
@@ -243,7 +243,8 @@ test("Pano hesap sahibi: rapor kartları, kaydırmasız telefon/tablet, ekip men
     if (m.ov === "hidden") expect(m.ish, `${width}: içerik alanı taşmaz`).toBeLessThanOrEqual(m.ich + 1);
     // Ekip menüsü: Kullanıcılar bağlantısı; eski "Tüm ekranlar" yok (T-979c).
     await pano.getByTestId("home-actions").click();
-    const team = pano.getByRole("menu", { name: "EKİP" });
+    // T-1080: menü ve perdesi sayfa kökünde (portal) — ekran kabının içinde değil.
+    const team = page.getByRole("menu", { name: "EKİP" });
     await expect(team.getByRole("menuitem", { name: "Kullanıcılar" })).toHaveAttribute("href", "/t/demo/team");
     await expect(team.getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
     await page.keyboard.press("Escape");
