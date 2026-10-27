@@ -42,14 +42,17 @@ test("ortak form standardı: çıkış kutusu, zorunlu alan uyarısı, ortak per
   await expect(page.getByTestId("kalip-unsaved")).toHaveCount(0);
   await expect(page.getByTestId("party-new")).toBeVisible();
 
-  // (3) zorunlu alanlar boş, isteğe bağlı alan dolu → Kaydet sessiz kalmaz.
+  // (3) zorunlu alanlar boş, isteğe bağlı alan dolu → Kaydet sessiz kalmaz. T-1093: cari kodu kendiliğinden gelir (MUS-0001);
+  // zorunlu alan uyarısı için kullanıcı kodu siler.
   await page.getByTestId("party-new").click();
+  const code = form.locator('input[name="code"]');
+  await expect(code).toHaveValue(/^MUS-\d{4}$/);
+  await code.fill("");
   await form.getByLabel("Vergi dairesi", { exact: true }).fill("Kadıköy");
   await page.getByTestId("party-form-save").click();
   await expect(page.getByTestId("err-code")).toHaveText(/Zorunlu/);
   await expect(page.getByTestId("err-name")).toHaveText(/Zorunlu/);
   await expect(page.getByTestId("kalip-toast")).toContainText("2 alan eksik: Cari kodu, Ünvan");
-  const code = form.locator('input[name="code"]');
   await expect(code).toBeFocused();
   await expect(code).toHaveAttribute("aria-invalid", "true");
   await expect(form.locator('label.fld.bad[data-alan="code"]')).toBeVisible();
