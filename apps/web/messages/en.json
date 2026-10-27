@@ -4251,7 +4251,19 @@
     "colCity": "City",
     "colPhone": "Phone",
     "colEmail": "E-mail",
-    "colTax": "Tax no"
+    "colTax": "Tax no",
+    "kart": {
+      "title": "Account card",
+      "back": "Back to accounts",
+      "hero": "Account details",
+      "info": "Details",
+      "quick": "Quick actions",
+      "edit": "Edit",
+      "editAria": "Edit {name}",
+      "call": "Call {name}",
+      "mail": "Email {name}",
+      "open": "Open card of {name}"
+    }
   },
   "gruplar": {
     "title": "Permission groups",

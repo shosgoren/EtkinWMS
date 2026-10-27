@@ -207,6 +207,7 @@ export function PartiesView({
   items: ilkCariler,
   total,
   nextCursor = null,
+  editParty = null,
 }: {
   slug: string;
   dark: boolean;
@@ -216,6 +217,8 @@ export function PartiesView({
   items: readonly PartyView[];
   total: number | undefined;
   nextCursor?: string | null;
+  /** T-1090: `?edit=` ile doğrudan açılan cari (kart ekranından Düzenle); sunucuda `getParty` ile okunur. */
+  editParty?: PartyView | null;
 }) {
   const t = useTranslations("parties");
   const tr = useTranslations("kural");
@@ -250,7 +253,7 @@ export function PartiesView({
   // Düzenleme aynı adreste (`?edit=`) açılır; sunucu yeniden çizince eklenen sayfalar sıfırlanır. Sonraki sayfadan açılan cari kaybolmasın diye
   // açılan satır burada tutulur (yalnız bu oturumun ekranda zaten gördüğü veri; kaydetme yine sunucuda sürüm denetimli).
   const [acilan, setAcilan] = useState<PartyView | null>(null);
-  const editing = editId === null ? undefined : (items.find((p) => p.id === editId) ?? (acilan?.id === editId ? acilan : undefined));
+  const editing = editId === null ? undefined : (items.find((p) => p.id === editId) ?? (acilan?.id === editId ? acilan : editParty?.id === editId ? editParty : undefined));
 
   const open = (p: PartyView | null): void => {
     feedback.minor();
@@ -347,11 +350,10 @@ export function PartiesView({
               sutunlar={sutunSecim.gorunur}
               satirlar={shown}
               anahtar={(p) => p.id}
-              href={(p) => `${listHref}${listHref.includes("?") ? "&" : "?"}edit=${encodeURIComponent(p.id)}`}
+              href={(p) => `${list}/${encodeURIComponent(p.id)}`}
               satirAria={(p) => `${p.name} · ${p.code} · ${t(`kind.${p.kind}`)}`}
               testId="parties-table"
               sonu={sonsuz}
-              onAc={setAcilan}
             />
           ) : (
           <KalipKartListe label={t("title")}>
@@ -359,7 +361,7 @@ export function PartiesView({
               const v = KIND_VISUAL[p.kind];
               const meta = [t(`kind.${p.kind}`), p.city, p.phone, p.archived ? t("archived") : null].filter((x): x is string => x !== null && x !== "").join(" · ");
               return (
-                <KalipKart key={p.id} index={i} name={p.name} code={p.code} meta={meta} d={v.d} color={v.color} onClick={() => open(p)} aria={`${p.name} · ${p.code} · ${meta}`} testId="party-card">
+                <KalipKart key={p.id} index={i} name={p.name} code={p.code} meta={meta} d={v.d} color={v.color} href={`${list}/${encodeURIComponent(p.id)}`} aria={`${p.name} · ${p.code} · ${meta}`} testId="party-card">
                   <span hidden data-party={p.code} />
                 </KalipKart>
               );

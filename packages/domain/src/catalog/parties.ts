@@ -215,6 +215,24 @@ export async function listParties(
   });
 }
 
+/**
+ * T-1090: tek cari (`stock.view`) — cari kartı ve doğrudan adresle düzenleme için. Başka tenant ya da bilinmeyen kimlik `NOT_FOUND`
+ * (varlık sızmaz); bozuk kimlik `VALIDATION_FAILED`.
+ */
+export async function getParty(params: QueryParams, partyId: string): Promise<PartyRow> {
+  if (typeof partyId !== "string" || !PARTY_UUID_RE.test(partyId)) throw new AppError("VALIDATION_FAILED");
+  const id = partyId.toLowerCase();
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
+    const rows = await tx.execute<DbParty>(sql`
+      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version
+        FROM public.parties
+       WHERE tenant_id = ${m.tenantId}::uuid AND id = ${id}::uuid`);
+    const row = rows[0];
+    if (row === undefined) throw new AppError("NOT_FOUND");
+    return toRow(row);
+  });
+}
+
 /** Tek cari kaydet (`settings.manage`): `id` yoksa yeni (ad zorunlu), varsa sürüm denetimli güncelleme (boş alan temizlenir). */
 export type SavePartyResult = { readonly ok: true; readonly id: string; readonly version: number } | { readonly ok: false; readonly issue: PartyIssue | "CODE_TAKEN" };
 
