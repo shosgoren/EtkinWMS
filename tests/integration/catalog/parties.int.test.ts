@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
-import { importParties, listParties, saveParty, setPartyArchived } from "../../../packages/domain/src/catalog/parties.ts";
+import { getParty, importParties, listParties, saveParty, setPartyArchived } from "../../../packages/domain/src/catalog/parties.ts";
 import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv } from "../harness/env.ts";
 
@@ -123,6 +123,21 @@ describe("T-428 cari kartlar", () => {
     const first = await listParties(call(A.ownerUserId, A), { q: p, limit: 3 });
     const inB = await listParties(call(B.ownerUserId, B), { q: p, ...(first.nextCursor === null ? {} : { after: first.nextCursor }) });
     expect(inB.items).toHaveLength(0);
+  });
+
+  it("T-1090 tek cari okuma: kendi tenant'ında okunur; başka tenant / bilinmeyen kimlik NOT_FOUND, bozuk kimlik VALIDATION_FAILED; arşivli de okunur", async () => {
+    const code = `G${Date.now()}`;
+    const made = await saveParty(call(A.ownerUserId, A), { code, name: "Kart Cari", phone: "0212 555 00 22", city: "İstanbul" });
+    expect(made.ok).toBe(true);
+    if (!made.ok) return;
+    expect(await getParty(call(A.ownerUserId, A), made.id)).toMatchObject({ id: made.id, code, name: "Kart Cari", phone: "0212 555 00 22", city: "İstanbul", archived: false });
+    expect(await getParty(call(PICKER, A), made.id)).toMatchObject({ id: made.id });
+    await expect(getParty(call(B.ownerUserId, B), made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(getParty(call(B.ownerUserId, A), made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(getParty(call(A.ownerUserId, A), randomUUID())).rejects.toMatchObject({ code: "NOT_FOUND" });
+    for (const bad of ["", "bozuk", "' OR 1=1 --"]) await expect(getParty(call(A.ownerUserId, A), bad)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    await setPartyArchived(call(A.ownerUserId, A), { id: made.id, expectedVersion: made.version, archived: true });
+    expect((await getParty(call(A.ownerUserId, A), made.id)).archived).toBe(true);
   });
 
   it("veritabanı: silme yetkisi yok, kimlik alanı değiştirilemez", async () => {

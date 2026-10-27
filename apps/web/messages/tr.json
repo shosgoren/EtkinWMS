@@ -4272,7 +4272,19 @@
     "colCity": "İl",
     "colPhone": "Telefon",
     "colEmail": "E-posta",
-    "colTax": "Vergi no"
+    "colTax": "Vergi no",
+    "kart": {
+      "title": "Cari kart",
+      "back": "Carilere dön",
+      "hero": "Cari bilgisi",
+      "info": "Bilgiler",
+      "quick": "Hızlı işlemler",
+      "edit": "Düzenle",
+      "editAria": "{name} kartını düzenle",
+      "call": "{name} — ara",
+      "mail": "{name} — e-posta yaz",
+      "open": "{name} kartını aç"
+    }
   },
   "gruplar": {
     "title": "Yetki grupları",

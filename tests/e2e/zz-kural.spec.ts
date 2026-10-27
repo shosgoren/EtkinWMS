@@ -48,7 +48,10 @@ test("T-436 Geri al: arşive alınan cari kart balondaki Geri al ile listeye dö
   const card = page.getByTestId("party-card").filter({ hasText: name });
   await expect(card).toBeVisible();
 
+  // T-1090: satır cari kartını açar; düzenleme ve arşiv kartın Düzenle formunda.
   await card.click();
+  await expect(page.getByTestId("party-kart")).toBeVisible();
+  await page.getByTestId("party-edit").click();
   await page.getByTestId("party-archive").click();
   // Onay penceresi yok: doğrudan arşivlenir, "Geri al" balonu çıkar.
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -248,6 +251,32 @@ test("T-1051 Depo kartı: şerit ve raf yeri ağacı", async ({ page }) => {
   await expect(kart).toBeVisible();
   const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
   expect(tasma).toBeLessThanOrEqual(0);
+});
+
+// T-1090: cari kartı — listeden açılır; şerit (ad h1, kod, tür), bilgiler; Düzenle formu açar; ≥ 44 px; üç boyutta taşma yok.
+test("T-1090 Cari kartı: listeden açılır, bilgiler ve Düzenle", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/parties");
+  await page.getByTestId("party-card").first().click();
+  await expect(page).toHaveURL(/\/parties\/[0-9a-f-]{36}$/);
+  const kart = page.getByTestId("party-kart");
+  await expect(kart).toBeVisible();
+  await expect(kart.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("kalip-code")).toBeVisible();
+  await expect(page.getByTestId("kart-bilgi-kind")).toBeVisible();
+  expect(await smallTouchTargets(page, 44, "#kalip-main")).toEqual([]);
+  for (const [w, h] of [[820, 1180], [390, 844]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await expect(kart).toBeVisible();
+    const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
+    expect(tasma, `${w}px yatay taşma`).toBeLessThanOrEqual(0);
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByTestId("party-edit").click();
+  await expect(page).toHaveURL(/\/parties\?edit=[0-9a-f-]{36}$/);
+  await expect(page.getByTestId("party-form")).toBeVisible();
 });
 
 // T-1082: raf yeri kartı — ağaçtaki satır kartı açar; şerit (ad h1, kod, Ürün çeşidi kutusu), bilgiler, raftakiler, son hareketler;
