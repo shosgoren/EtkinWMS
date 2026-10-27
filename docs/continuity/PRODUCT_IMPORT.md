@@ -38,3 +38,5 @@ Her iş yeni boş T numarasıyla ayrı dalda; task + changes parçası + bu dosy
 
 ## T-1067 — #229 çalışma kaydı
 `feat/T-1067-parasut-lifecycle` yerel checkpoint: ürün kimliği/türü doğrulayan tekil GET,0062kaynak yaşam döngüsü metadata taslağı;21birim ve4DB testi geçti. VPS0061’de; yeni migration canlıya uygulanmadı. Domain/UI entegrasyonu henüz yok. Bakiye veya açık işi olan kartta mevcut arşiv kuralı stok çıkışını da durdurduğu için kullanıcıya politika seçimi soruldu; yanıt bekleniyor. Kart: docs/tasks/T-1067.md.
+
+**Son checkpoint doğrulaması:** Sağlayıcı istemcisi21birim; migration/geri dönüş/kullanılmış fiş ve reçete korumaları5dosyada166DB testi geçti. İlk tam ön kontrolde lint/typecheck5020birim ve bekçiler geçti; kabul testi geçici test DB bağlantı zaman aşımı nedeniyle başlayamadı. Temiz test ortamında yeniden kontrol edilecek; yeşil olmadan push/PR yok. Stok/açık iş politikası hâlâ yanıt bekliyor; domain/UI/yayın henüz yok.
