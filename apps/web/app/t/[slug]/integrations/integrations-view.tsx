@@ -11,11 +11,12 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { NICON } from "../../../design/entegrasyon-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
-import { KalipAnahtar, KalipGrup, KalipIzgara, KalipSecenek } from "../kalip/form.tsx";
+import { KalipAlan, KalipAnahtar, KalipGrup, KalipIzgara, KalipSecenek } from "../kalip/form.tsx";
+import { KalipFormEkran } from "../kalip/form-ekran.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
 import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
-import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction } from "./actions.ts";
+import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
 import { feedback, intlDil } from "@wms/ui";
 
 type Provider = "PARASUT" | "LOGO";
@@ -67,7 +68,7 @@ const c = (hex: string): string => kdz("dzf", hex);
 
 const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: "", password: "" };
 
-export function IntegrationsView({ slug, dark, data, opening = null, journeyWish = null, pullBarcodes = false }: { slug: string; dark: boolean; data: OverviewData; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean }) {
+export function IntegrationsView({ slug, dark, data, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult }: { oauth:{configured:boolean;callbackUrl:string|null}; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; slug: string; dark: boolean; data: OverviewData; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean }) {
   const t = useTranslations("integrations");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ts = useTranslations("serverErrors");
@@ -76,6 +77,15 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
   const base = `/t/${encodeURIComponent(slug)}`;
   const { say, node: toast } = useKalipToast("form");
   const [busy, setBusy] = useState<string | null>(null);
+  const [configOpen,setConfigOpen]=useState(false);
+  const [appForm,setAppForm]=useState({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});
+  const [codeFlow,setCodeFlow]=useState<string|null>(null);
+  const [authCode,setAuthCode]=useState("");
+  const [company,setCompany]=useState("");
+  const [copied,setCopied]=useState(false);
+  const [selectOpen,setSelectOpen]=useState(oauthSelection!==null);
+  useEffect(()=>setSelectOpen(oauthSelection!==null),[oauthSelection]);
+  useEffect(()=>{if(oauthResult!==null){say(oauthResult==="connected"?"ok":"warn",t(`oauth.${oauthResult}`));router.replace(`${base}/integrations`);}},[oauthResult,router,base,say,t]);
   const [formOpen, setFormOpen] = useState(false);
   const [cutOpen, setCutOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -221,7 +231,15 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
       return;
     }
     feedback.minor();
-    setFormOpen(true);
+    if(!oauth.configured){setConfigOpen(true);return;}
+    if(busy!==null)return;
+    setBusy("oauth");
+    void beginParasutOAuthAction({slug}).then(r=>{
+      if(!r.ok){setBusy(null);failed(r);return;}
+      if(!r.data.ok){setBusy(null);say("err",t("oauth.failed"));return;}
+      if(r.data.manual){setBusy(null);setCodeFlow(r.data.authorizationUrl);return;}
+      window.location.assign(r.data.authorizationUrl);
+    }).catch(()=>{setBusy(null);say("err",t("oauth.failed"));});
   };
 
   const openingEnabled = openingOn ?? opening?.enabled === true;
@@ -303,6 +321,35 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
       }
     : { label: t("mainConnect"), aria: t("mainConnectAria", { provider: pn }), d: NICON.plug, onClick: openForm, testId: "integrations-connect" };
 
+  if(configOpen)return <KalipFormEkran dark={dark} title={t("oauth.settings")} icon={{d:NICON.plug,color:"2F5DA8"}}
+    testId="oauth-settings" values={appForm} initial={{clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"}}
+    rules={[{name:"clientId",label:t("oauth.id"),required:true,maxLength:200},{name:"clientSecret",label:t("oauth.secret"),required:true,maxLength:200},{name:"callbackUrl",label:t("oauth.callback"),required:true,maxLength:300}]}
+    onSave={async()=>{const r=await saveParasutOAuthSettingsAction({slug,...appForm});if(!r.ok){failed(r);return {ok:false,mesaj:t("oauth.failed")};}return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
+    onDone={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);router.refresh();}}
+    onBack={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
+    footer={appForm.clientId!==""||appForm.clientSecret!==""||appForm.callbackUrl!=="urn:ietf:wg:oauth:2.0:oob"?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>}>
+    <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8">
+      <KalipAlan label={t("oauth.id")} name="clientId" value={appForm.clientId} autoComplete="off" maxLength={200} onChange={e=>setAppForm({...appForm,clientId:e.target.value})} data-testid="oauth-app-id" />
+      <KalipAlan label={t("oauth.secret")} hint={t("oauth.secretHint")} name="clientSecret" type="password" autoComplete="new-password" maxLength={200} value={appForm.clientSecret} onChange={e=>setAppForm({...appForm,clientSecret:e.target.value})} data-testid="oauth-app-secret" />
+      <KalipAlan label={t("oauth.callback")} name="callbackUrl" value={appForm.callbackUrl} autoComplete="off" maxLength={300} onChange={e=>setAppForm({...appForm,callbackUrl:e.target.value})} data-testid="oauth-callback" />
+      <button type="button" className="btn n" data-testid="oauth-copy" onClick={()=>{if(oauth.callbackUrl===null)return;void navigator.clipboard.writeText(appForm.callbackUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}).catch(()=>say("warn",t("oauth.originMissing")));}}><Ico d={LICON.clip} size={20}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
+    </KalipGrup>
+  </KalipFormEkran>;
+  if(codeFlow!==null)return <KalipFormEkran dark={dark} title={t("oauth.enterCode")} icon={{d:LICON.key,color:"2F5DA8"}} testId="oauth-code-form"
+    values={{code:authCode}} initial={{code:""}} rules={[{name:"code",label:t("oauth.code"),required:true,maxLength:4096}]} saveShort={t("mainConnect")}
+    onSave={async()=>{const r=await completeParasutOAuthCodeAction({slug,code:authCode.trim()});setAuthCode("");if(!r.ok){failed(r);return {ok:false,mesaj:t("oauth.failed")};}if(!r.data.ok)return {ok:false,mesaj:t("oauth.failed")};if(r.data.status==="SELECT"){router.replace(`${base}/integrations?oauth_select=${encodeURIComponent(r.data.id)}`);}return {ok:true};}}
+    onDone={()=>{setCodeFlow(null);router.refresh();}} onBack={()=>{setAuthCode("");setCodeFlow(null);}} homeHref={base} savedText={t("oauth.codeAccepted")}>
+    <KalipGrup title={t("oauth.enterCode")} d={LICON.key} color="2F5DA8">
+      <a className="btn n" href={codeFlow} target="_blank" rel="noopener noreferrer" data-testid="oauth-provider-open"><Ico d={NICON.plug} size={20}/>{t("oauth.openProvider")}</a>
+      <KalipAlan label={t("oauth.code")} name="code" value={authCode} type="password" autoComplete="off" maxLength={4096} onChange={e=>setAuthCode(e.target.value)} data-testid="oauth-code" />
+    </KalipGrup>
+  </KalipFormEkran>;
+  if(selectOpen&&oauthSelection!==null)return <KalipFormEkran dark={dark} title={t("oauth.choose")} icon={{d:NICON.plug,color:"2F5DA8"}} testId="oauth-companies"
+    values={{companyId:company}} initial={{companyId:""}} rules={[{name:"companyId",label:t("oauth.choose"),required:true}]}
+    saveShort={t("mainConnect")} onSave={async()=>{const r=await selectParasutOAuthCompanyAction({slug,companyId:company});if(!r.ok){failed(r);return {ok:false,mesaj:t("oauth.failed")};}return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
+    onDone={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);router.refresh();}} onBack={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);}} savedText={t("oauth.connected")} homeHref={base}>
+    <KalipSecim label={t("oauth.choose")} color="2F5DA8" value={company} options={oauthSelection.map(c=>({id:c.id,label:c.name,d:LICON.depo}))} onPick={setCompany} testId="oauth-company" />
+  </KalipFormEkran>;
   const err = conn?.status === "ERROR";
   return (
     <KalipEkran
@@ -344,6 +391,10 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
             </span>
           </div>
         ) : null}
+        <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8">
+          <button type="button" className="btn n" data-testid="oauth-settings-open" onClick={()=>{if(data.demo){say("warn",t("demo"));return;}setConfigOpen(true);}}><Ico d={LICON.key} size={20}/>{t(oauth.configured?"oauth.configured":"oauth.setup")}</button>
+          {oauth.configured?<button type="button" className="btn n" onClick={openForm} aria-busy={busy==="oauth"} data-testid="oauth-connect"> <Ico d={NICON.plug} size={20}/>{t("oauth.connect")}</button>:null}
+        </KalipGrup>
         <KalipBaslik title={t("head")} hint={connected ? t("hintOn") : t("hintNone")} />
         {!connected ? (
           <div className="provs" role="list" aria-label={t("providerList")} data-testid="integrations-providers">

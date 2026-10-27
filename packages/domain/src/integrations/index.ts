@@ -24,3 +24,5 @@ export {
 export { getProductBarcodeSetting, setProductBarcodeSetting } from "./product-settings.ts";
 
 export { getProductSourceInfo, type ProductSourceInfo } from "./product-info.ts";
+
+export * from "./oauth.ts";

@@ -342,6 +342,8 @@ beforeAll(async () => {
     const st = await admin.query<{ id: string }>("INSERT INTO public.support_tickets (tenant_id, created_by, membership_id, subject_kind, body) VALUES ($1, $2, $3, 'OTHER', 'AC04 destek') RETURNING id", [w.tenantId, w.ownerUserId, w.ownerMembershipId]);
     await admin.query("INSERT INTO public.support_ticket_messages (tenant_id, ticket_id, author_kind, author_user_id, body) VALUES ($1, $2, 'CUSTOMER', $3, 'AC04 yanıt')", [w.tenantId, st.rows[0]?.id, w.ownerUserId]);
     await admin.query("COMMIT");
+    await admin.query("INSERT INTO public.integration_oauth_apps(tenant_id,credentials) VALUES ($1,'{\"v\":2,\"kid\":\"synthetic\",\"iv\":\"synthetic\",\"tag\":\"synthetic\",\"ct\":\"synthetic\"}')",[w.tenantId]);
+    await admin.query("INSERT INTO public.integration_oauth_attempts(tenant_id,user_id,membership_id,state_hash,nonce_hash,client_id,config_version) VALUES($1,$2,$3,md5(random()::text)||md5(random()::text),md5(random()::text)||md5(random()::text),'synthetic',gen_random_uuid())",[w.tenantId,w.ownerUserId,w.ownerMembershipId]);
     // T-991: ERP bağlantısı (kesilmiş: mühürlü kutu yok), akış, ÇALIŞAN koşu (biten koşu değişmez), bekleyen gönderim, stok işareti.
     const ig = await admin.query<{ id: string }>("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED') RETURNING id", [w.tenantId]);
     const igId = ig.rows[0]?.id;

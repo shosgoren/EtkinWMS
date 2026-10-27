@@ -178,3 +178,25 @@ export const integrationStockMarks = pgTable(
   },
   (t) => [primaryKey({ name: "integration_stock_marks_pkey", columns: [t.tenantId, t.integrationId, t.itemId, t.warehouseId] })],
 );
+
+/** 0061: ephemeral authorization state; tokens are sealed and never selected by overview. */
+export const integrationOauthAttempts = pgTable("integration_oauth_attempts", {
+  tenantId: uuid("tenant_id").notNull(),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull(),
+  membershipId: uuid("membership_id").notNull(),
+  stateHash: text("state_hash").notNull(),
+  nonceHash: text("nonce_hash").notNull(),
+  configVersion: uuid("config_version").notNull(),
+  clientId: text("client_id").notNull(),
+  phase: text("phase").notNull().default("PENDING"),
+  tokenBox: jsonb("token_box"),
+  companies: jsonb("companies").notNull().default(sql`'[]'::jsonb`),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  expiresAt: timestamptz("expires_at").notNull().default(sql`now()+interval '10 minutes'`),
+}, (t) => [unique("integration_oauth_tenant_id_id_key").on(t.tenantId,t.id)]);
+
+export const integrationOAuthApps = pgTable("integration_oauth_apps", {
+ tenantId: uuid("tenant_id").primaryKey(), version:uuid("version").notNull().default(sql`gen_random_uuid()`),
+ credentials:jsonb("credentials").notNull(), updatedAt:timestamptz("updated_at").notNull().defaultNow(),
+});

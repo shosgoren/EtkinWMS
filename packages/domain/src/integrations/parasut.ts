@@ -243,6 +243,16 @@ export class ParasutClient {
     return this.tokens(r.body);
   }
 
+  /** Authorization code is single-use; no automatic token-request retry. */
+  async authorizationCodeGrant(input: { readonly clientId: string; readonly clientSecret: string; readonly code: string; readonly redirectUri: string }): Promise<TokenSet> {
+    const r = await this.request("POST", "/oauth/token", {
+      form: { grant_type: "authorization_code", client_id: input.clientId, client_secret: input.clientSecret, code: input.code, redirect_uri: input.redirectUri },
+      lockSafe: true,
+    });
+    if (r.status !== 200) throw ParasutClient.fail(r.status, true);
+    return this.tokens(r.body);
+  }
+
   /** Yenileme akışı: yeni erişim + YENİ yenileme belirteci (eskisi bir daha kullanılmaz). */
   async refreshGrant(input: { readonly clientId: string; readonly clientSecret: string; readonly refreshToken: string }): Promise<TokenSet> {
     const r = await this.request("POST", "/oauth/token", {

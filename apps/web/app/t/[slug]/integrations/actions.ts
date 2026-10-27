@@ -2,10 +2,11 @@
 // T-991: ERP entegrasyonu — ince giriş katmanı. Kural (settings.manage, demo reddi, yakın zamanda doğrulama, audit, sır mühürü) domain'dedir
 // (`@wms/domain/integrations`); burada Origin + hız sınırı + hata maskeleme (`createProductionGuard`), tenant sayacı ve kuyruk istemcisi vardır.
 // Kullanıcının girdiği Paraşüt bilgisi yalnız bu isteğin belleğinde yaşar: loga, dönüşe, hata gövdesine girmez; dönüşte yalnız şirket adı.
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
-import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, FLOWS, DIRECTIONS } from "@wms/domain/integrations";
+import { AppError } from "@wms/shared/errors";
+import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, FLOWS, DIRECTIONS, beginParasutOAuth, selectParasutOAuthCompany, encodeOAuthBinding, parseOAuthBinding, oauthCookieName, OAUTH_TTL_SECONDS, saveParasutOAuthSettings, completeParasutOAuth } from "@wms/domain/integrations";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { getSenderQueue } from "../../../../lib/queue.ts";
 
@@ -92,4 +93,47 @@ export async function setProductBarcodeAction(raw: unknown) {
   return guardedAction({ schema: z.object({ slug, enabled: z.boolean() }).strict() }, async (i, ctx) =>
     setProductBarcodeSetting(await access(i.slug, ctx), { enabled: i.enabled, requestId: ctx.requestId }),
   )(raw);
+}
+
+/** T-1066: browser nonce is returned only in an HttpOnly host cookie, never in the action payload. */
+export async function beginParasutOAuthAction(raw: unknown) {
+  const requestHeaders = await headers();
+  const { ensureRecentAuth } = await import("../../../../lib/auth-service.ts");
+  return guardedAction({ schema: z.object({ slug }).strict() }, async (i, ctx) => {
+    const result = await beginParasutOAuth({ ...await access(i.slug, ctx), recentAuth: () => ensureRecentAuth(requestHeaders) });
+    if (!result.ok) return result;
+    (await cookies()).set(oauthCookieName(ctx.origin),encodeOAuthBinding(result.binding),{httpOnly:true,secure:ctx.origin.startsWith("https:"),sameSite:"lax",path:"/",maxAge:OAUTH_TTL_SECONDS});
+    return {ok:true,authorizationUrl:result.authorizationUrl,manual:result.manual} as const;
+  })(raw);
+}
+export async function selectParasutOAuthCompanyAction(raw: unknown) {
+  const requestHeaders = await headers();
+  const { ensureRecentAuth } = await import("../../../../lib/auth-service.ts");
+  return guardedAction({ schema: z.object({ slug, companyId:z.string().regex(/^[0-9]{1,12}$/) }).strict() }, async (i,ctx) => {
+    const a = await access(i.slug,ctx);const jar=await cookies();const name=oauthCookieName(ctx.origin);
+    const binding=parseOAuthBinding(jar.get(name)?.value);
+    if(binding===null||binding.slug!==i.slug)throw new AppError("VALIDATION_FAILED");
+    const result=await selectParasutOAuthCompany({...a,recentAuth:()=>ensureRecentAuth(requestHeaders)},{binding,companyId:i.companyId},{queue:await getSenderQueue()});
+    jar.set(name,"",{httpOnly:true,secure:ctx.origin.startsWith("https:"),sameSite:"lax",path:"/",maxAge:0});
+    return result;
+  })(raw);
+}
+
+export async function saveParasutOAuthSettingsAction(raw:unknown) {
+ const requestHeaders=await headers();
+ const {ensureRecentAuth}=await import("../../../../lib/auth-service.ts");
+ return guardedAction({schema:z.object({slug,clientId:z.string().min(1).max(200),clientSecret:z.string().min(1).max(200),callbackUrl:z.string().min(1).max(300)}).strict()},async(i,ctx)=>
+ saveParasutOAuthSettings({...await access(i.slug,ctx),recentAuth:()=>ensureRecentAuth(requestHeaders)},{clientId:i.clientId,clientSecret:i.clientSecret,callbackUrl:i.callbackUrl}))(raw);
+}
+
+/** OOB: explicit user-entered authorization code, bound to the same HttpOnly browser attempt. */
+export async function completeParasutOAuthCodeAction(raw:unknown) {
+ const requestHeaders=await headers();const {ensureRecentAuth}=await import("../../../../lib/auth-service.ts");
+ return guardedAction({schema:z.object({slug,code:z.string().min(1).max(4096)}).strict()},async(i,ctx)=>{
+ const a=await access(i.slug,ctx);const jar=await cookies();const name=oauthCookieName(ctx.origin);
+ const binding=parseOAuthBinding(jar.get(name)?.value);if(binding===null||binding.slug!==i.slug)throw new AppError("VALIDATION_FAILED");
+ const r=await completeParasutOAuth({...a,recentAuth:()=>ensureRecentAuth(requestHeaders)},{binding,code:i.code},{queue:await getSenderQueue()});
+ if(!r.ok||r.status==="CONNECTED")jar.set(name,"",{httpOnly:true,secure:ctx.origin.startsWith("https:"),sameSite:"lax",path:"/",maxAge:0});
+ return r;
+ })(raw);
 }

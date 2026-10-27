@@ -34,9 +34,9 @@ const top = async (adm: pg.Client): Promise<string | undefined> =>
 
 it("0055 boşken geri alınır ve yeniden uygulanır; dolu veride down reddedilir, veri ve defter korunur", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0060", "0059", "0058", "0057", "0056", "0055"]);
+    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0061", "0060", "0059", "0058", "0057", "0056", "0055"]);
     expect((await adm.query("SELECT to_regclass('public.integrations') AS i, to_regclass('public.integration_outbox') AS o, to_regclass('public.external_refs') AS r")).rows[0]).toEqual({ i: null, o: null, r: "external_refs" });
-    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060", "0061"]);
 
     const w = await seedWorld(adm, newRegistry(), "M991");
     await adm.query("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED')", [w.tenantId]);
@@ -58,3 +58,12 @@ it("0060 kaynak kart bilgisi varken geri alma veri kaybetmeden reddedilir", asyn
     expect((await adm.query("SELECT relforcerowsecurity AS f FROM pg_class WHERE oid='public.items'::regclass")).rows[0]?.f).toBe(true);
   });
 }, 120_000);
+
+it("0061 refuses rollback with encrypted customer configuration and retains FORCE RLS",async()=>{
+ await scratch(async(url,adm)=>{
+ const w=await seedWorld(adm,newRegistry(),"M1066");
+ await adm.query(`INSERT INTO integration_oauth_apps(tenant_id,credentials) VALUES($1,'{"v":2,"kid":"synthetic","iv":"synthetic","tag":"synthetic","ct":"synthetic"}')`,[w.tenantId]);
+ await expect(migrateDown({url,to:"0060",wmsEnv:"staging"})).rejects.toThrow(/0061 down/);
+ expect(await top(adm)).toBe("0061");expect((await adm.query("SELECT relforcerowsecurity AS f FROM pg_class WHERE oid='public.integration_oauth_apps'::regclass")).rows[0]?.f).toBe(true);
+ });
+},120_000);

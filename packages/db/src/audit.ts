@@ -125,6 +125,10 @@ export const AUDIT_ACTIONS = [
   "data.imported",
   // T-991 (0055): ERP entegrasyonu (bağlan / sına / kes, akış aç-kapa-yön, elle çalıştırma, senkron özeti). Sır/parola/belirteç yazılmaz.
   "integration.connected",
+  "integration.oauth_configured",
+  "integration.oauth_started",
+  "integration.oauth_failed",
+  "integration.oauth_cancelled",
   "integration.checked",
   "integration.disconnected",
   "integration.flow_changed",
