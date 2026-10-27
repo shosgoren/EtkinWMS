@@ -187,12 +187,16 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         await page.getByTestId('guide-start-transfer').click();
         await expect(page).toHaveURL(/new=TRANSFER/);
         await expect(page.getByTestId('working-guide')).toContainText('Kaynak depoyu');
-        await page.getByTestId('guide-apply').click();
+        // T-1105: işlem rehberi de odaklı — yapılacak yer delikte, kalan ekran buzlu; "Uygula" / "Şimdilik kapat" yok; delikteki alan
+        // doldurulabilir ve yazmak rehberi kapatmaz ya da ilerletmez.
+        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /polygon\(evenodd/);
+        for (const name of ['Uygula · ekranda çalış', 'Şimdilik kapat'])
+            await expect(page.getByTestId('working-guide').getByRole('button', { name, exact: true })).toHaveCount(0);
         const input = page.locator('[data-guide="source"] input').first();
         await input.fill('QA');
         await expect(input).toHaveValue('QA');
-        await expect(page.getByTestId('kalip-perde')).toHaveCount(0);
-        await page.getByTestId('guide-expand').click();
+        await expect(page.getByTestId('working-guide')).toHaveAttribute('data-folded', 'false');
+        await expect(page.getByTestId('working-guide')).toContainText('Kaynak depoyu');
         await page.getByTestId('guide-next').click();
         await expect(page.getByTestId('working-guide')).toContainText('Hedef depoyu');
         await page.reload();
@@ -219,7 +223,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         await page.setViewportSize({ width: 390, height: 690 });
         await settle(page);
         await page.screenshot({ path: path.join(OUT, `${info.project.name}-en-390.png`), animations: 'disabled' });
-        await page.getByTestId('guide-apply').click();
+        // Bulanık alana dokunmak serbest bırakır (yüzen "Rehbere devam").
+        await page.getByTestId('kalip-perde').click({ position: { x: 4, y: 4 } });
         await expect(page.getByTestId('working-guide')).toHaveAttribute('data-folded', 'true');
         await page.keyboard.press('Escape');
         await expect(page.getByTestId('working-guide')).toBeHidden();
@@ -281,7 +286,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
             await expect(page).toHaveURL(/new=TRANSFER/);
             await expect(page.getByTestId('yol-sheet')).toHaveCount(0);
             await expect(page.getByTestId('yol-coach')).toHaveCount(0);
-            await expect(page.getByTestId('working-guide')).toContainText('Transfer');
+            await expect(page.getByTestId('working-guide')).toContainText('Kaynak depoyu');
         } finally { release(); releaseClose(); await page.unrouteAll({ behavior: 'wait' }); }
     });
 
