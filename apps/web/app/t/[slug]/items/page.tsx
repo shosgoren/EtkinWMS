@@ -67,14 +67,12 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   let nextCursor: string | null;
   let total: number | undefined;
   let canManage: boolean;
-  let canImport: boolean;
   let stock: Record<string, ItemStockView> = {};
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     canManage = hasPermission(current.roles, "settings.manage", current.grants);
-    canImport = hasPermission(current.roles, "data.import", current.grants);
     const page = await loadItemsPage(call, { q, status, cardType, after, ...extra });
     rows = page.rows;
     units = page.units;
@@ -105,7 +103,6 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
         slug={slug}
         dark={dark}
         canManage={canManage}
-        canImport={canImport}
         items={rows}
         stock={stock}
         units={units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }))}

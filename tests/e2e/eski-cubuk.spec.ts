@@ -69,7 +69,7 @@ for (const size of SIZES) {
     await expect(page).toHaveURL(/\/t\/demo\/items$/);
     await expect(page.getByRole("heading", { name: "Ürünler", exact: true }).filter({ visible: true }).first()).toBeVisible();
     await expectClean(page, "Ürünler");
-    await openModule(page, "depo", "Depolar");
+    await openModule(page, "depo", "Depo ve raflar");
     await expect(page).toHaveURL(/\/t\/demo\/warehouses$/);
     await expect(page.locator(".kalip").filter({ visible: true }).first()).toBeVisible();
     await expectClean(page, "Depolar");
@@ -86,7 +86,7 @@ for (const size of SIZES) {
 
     // Yükleme: gezinme yanıtı gecikirken kiracı iskeleti görünür; eski çubuk yine yok.
     const restore = await slowNavigation(page, 2_500);
-    await openModule(page, "depo", "Depolar");
+    await openModule(page, "depo", "Depo ve raflar");
     await expect(page.getByTestId("iskelet")).toBeVisible();
     await expectClean(page, "yükleme iskeleti");
     await expect(page).toHaveURL(/\/t\/demo\/warehouses$/);

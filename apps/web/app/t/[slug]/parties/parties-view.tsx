@@ -15,7 +15,7 @@ import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipIzgara } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
-import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { archivePartyAction, loadMorePartiesAction, savePartyAction } from "./actions.ts";
 import { feedback } from "@wms/ui";
@@ -297,7 +297,6 @@ export function PartiesView({
       dark={dark}
       title={t("title")}
       icon={ICON}
-      excel={{ kind: "parties" }}
       testId="parties"
       bar={{
         back: { href: base, aria: t("back") },
@@ -332,11 +331,6 @@ export function PartiesView({
               action={{ label: t("clear"), kind: "clear", ...(kind !== "" && q === "" && !archived ? { onClick: () => setKind("") } : { href: list }) }}
             />
           )}
-          {canEdit && !archived ? (
-            <KalipDaha href={`${base}/import`} iconD={LICON.excel} iconColor="1E7B45">
-              {t("importLink")}
-            </KalipDaha>
-          ) : null}
         </>
       ) : (
         <>

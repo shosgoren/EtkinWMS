@@ -39,7 +39,7 @@ export const STEP_UI: Readonly<Record<StepKey, { readonly d: string; readonly co
 };
 
 /** Turun hedefi: `[data-tour="<hedef>"]` öğesi (`main` = KabukBar ana işlemi, mevcut `spot` kancası) ya da yalnız balon (`null`). */
-export type TourTarget = "main" | "excel" | "opening-pull" | null;
+export type TourTarget = "main" | "opening-pull" | null;
 
 export interface TourStop {
   /** Ekran yolu (`/t/<alan>/…`, sorgu yok); `prefix`: alt yollar da (ör. depo ayrıntısı). */
@@ -59,7 +59,7 @@ export interface StepPlan {
 
 /**
  * Adımın planı. Kaynak seçimi (adım 1) ve açılış stoku yolu (adım 3) seçimlere göre değişir:
- * - Kartlar: Excel → Ürünler (Excel düğmesi) → Excel'den aktar (Dosya seç); Paraşüt → Entegrasyon (BAĞLAN / EŞİTLE).
+ * - Kartlar: Excel → Excel'den aktar (ürün türü seçili, Dosya seç); Paraşüt → Entegrasyon (BAĞLAN / EŞİTLE).
  * - Cariler (T-1054): Paraşüt → Entegrasyon (cari akışı eşitlenir); aksi Excel'den aktar (cari türü seçili) ya da Cariler ekranı.
  * - Stok: Paraşüt açılış stoku açık ve alınmadıysa Entegrasyon "Şimdi al"; Excel'de açılış stoku istendiyse açılış stoku şablonu; aksi elle giriş.
  */
@@ -69,7 +69,8 @@ export function stepPlan(base: string, key: StepKey, j: JourneyData, source: "EX
     case "cards":
       return source === "PARASUT"
         ? { href: `${base}/integrations`, stops: [m("/integrations", j.hints.parasut.connected ? "cardsSync" : "cardsParasut")] }
-        : { href: `${base}/items`, stops: [m("/items", "cardsItems", { target: "excel" }), m("/import", "cardsExcel")] };
+        : // T-1092: listelerde Excel düğmesi yok (aktarma yalnız Ayarlar › Entegrasyonlar ve Aktar ekranında) → doğrudan ürün aktarımı.
+          { href: `${base}/import?tur=urun`, stops: [m("/import", "cardsExcel")] };
     case "shelves":
       return { href: j.hints.warehouseId === null ? `${base}/warehouses` : `${base}/warehouses/${encodeURIComponent(j.hints.warehouseId)}`, stops: [m("/warehouses", "warehouse"), m("/warehouses/", "shelves", { prefix: true })] };
     case "parties":
