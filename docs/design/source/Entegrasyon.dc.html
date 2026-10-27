@@ -752,7 +752,9 @@ class Component extends DCLogic {
  <section class="sg"><div class="sgh"><b>Paraşüt uygulama ayarları</b></div>
  <label class="fld"><span>Application Id</span><input name="clientId" autocomplete="off" /></label>
  <label class="fld"><span>Secret</span><input name="clientSecret" type="password" autocomplete="new-password" /></label>
- <label class="fld"><span>Callback URL</span><input name="callbackUrl" value="urn:ietf:wg:oauth:2.0:oob" /></label>
+ <label class="fld"><span>Callback URL</span><input name="callbackUrl" value="" /></label>
  <button class="btn" type="button">Kopyala</button>
  </section>
 </template>
+
+<!-- T-1066 kullanıcı düzeltmesi: Application Id, Secret, Callback URL boş açılır; üç bilgiyi müşteri girer, varsayılan callback atanmaz. -->

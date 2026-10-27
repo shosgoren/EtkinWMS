@@ -39,7 +39,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     const replay=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+binding.state,{maxRedirects:0});expect(replay.status()).toBe(400);
     await page.getByTestId("oauth-settings-open").click();
     await expect(page.getByTestId("oauth-settings")).toBeVisible();
-    await expect(page.getByTestId("oauth-callback")).toHaveValue("urn:ietf:wg:oauth:2.0:oob");
+    await expect(page.getByTestId("oauth-callback")).toHaveValue("");
     if(testInfo.project.name==="desktop")for(const width of [390,1180,1440]) {
       await page.setViewportSize({width,height:844});
       for(const id of ['oauth-app-id','oauth-app-secret','oauth-callback']) {const field=page.getByTestId(id).locator('..');const bounds=await field.boundingBox();await field.click({position:{x:5,y:5}});await expect(page.getByTestId(id)).toBeFocused();expect(bounds?.height).toBeGreaterThanOrEqual(44);expect((bounds?.x??-1)>=0&&(bounds?.x??0)+(bounds?.width??0)<=width).toBe(true);}

@@ -78,7 +78,7 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
   const { say, node: toast } = useKalipToast("form");
   const [busy, setBusy] = useState<string | null>(null);
   const [configOpen,setConfigOpen]=useState(false);
-  const [appForm,setAppForm]=useState({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});
+  const [appForm,setAppForm]=useState({clientId:"",clientSecret:"",callbackUrl:""});
   const [codeFlow,setCodeFlow]=useState<string|null>(null);
   const [authCode,setAuthCode]=useState("");
   const [company,setCompany]=useState("");
@@ -322,12 +322,12 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
     : { label: t("mainConnect"), aria: t("mainConnectAria", { provider: pn }), d: NICON.plug, onClick: openForm, testId: "integrations-connect" };
 
   if(configOpen)return <KalipFormEkran dark={dark} title={t("oauth.settings")} icon={{d:NICON.plug,color:"2F5DA8"}}
-    testId="oauth-settings" values={appForm} initial={{clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"}}
+    testId="oauth-settings" values={appForm} initial={{clientId:"",clientSecret:"",callbackUrl:""}}
     rules={[{name:"clientId",label:t("oauth.id"),required:true,maxLength:200},{name:"clientSecret",label:t("oauth.secret"),required:true,maxLength:200},{name:"callbackUrl",label:t("oauth.callback"),required:true,maxLength:300}]}
     onSave={async()=>{const r=await saveParasutOAuthSettingsAction({slug,...appForm});if(!r.ok){failed(r);return {ok:false,mesaj:t("oauth.failed")};}return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
-    onDone={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);router.refresh();}}
-    onBack={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
-    footer={appForm.clientId!==""||appForm.clientSecret!==""||appForm.callbackUrl!=="urn:ietf:wg:oauth:2.0:oob"?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:"urn:ietf:wg:oauth:2.0:oob"});setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>}>
+    onDone={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);router.refresh();}}
+    onBack={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
+    footer={appForm.clientId!==""||appForm.clientSecret!==""||appForm.callbackUrl!==""?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>}>
     <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8">
       <KalipAlan label={t("oauth.id")} name="clientId" value={appForm.clientId} autoComplete="off" maxLength={200} onChange={e=>setAppForm({...appForm,clientId:e.target.value})} data-testid="oauth-app-id" />
       <KalipAlan label={t("oauth.secret")} hint={t("oauth.secretHint")} name="clientSecret" type="password" autoComplete="new-password" maxLength={200} value={appForm.clientSecret} onChange={e=>setAppForm({...appForm,clientSecret:e.target.value})} data-testid="oauth-app-secret" />
