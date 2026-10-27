@@ -13,7 +13,7 @@ type Call = Parameters<typeof searchItems>[0];
 
 export interface ItemsPageInput extends ItemExtraFilters {
   readonly q: string;
-  readonly status: "" | "ACTIVE" | "ARCHIVED";
+  readonly status: "" | "ACTIVE" | "ARCHIVED" | "REMOVED";
   readonly cardType: "" | CardType;
   readonly after?: string | undefined;
 }
@@ -45,7 +45,7 @@ export async function loadItemsPage(call: Call, input: ItemsPageInput): Promise<
   const old = new Map((page.renamedFrom ?? []).map((r) => [r.itemId, r.oldCode] as const));
   const rows = page.items.map((it): ItemListView => {
     const oldCode = old.get(it.id);
-    return { id: it.id, code: it.code, name: it.name, status: it.status, baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
+    return { id: it.id, code: it.code, name: it.name, status: it.status, sourceDisposition: it.sourceDisposition ?? "NONE", baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
   });
   // T-968: kart rozeti (kapsamdaki depoların eldeki toplamı + minimum); okunamazsa rozet çizilmez, liste yine açılır.
   const stock = Object.fromEntries(

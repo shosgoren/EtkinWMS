@@ -78,6 +78,7 @@ export interface ItemRow {
   readonly pickPolicy: PickPolicy;
   readonly status: "ACTIVE" | "ARCHIVED";
   readonly cardType: ItemCardType;
+  readonly sourceDisposition?: "NONE"|"PENDING"|"ARCHIVED"|"REMOVED";
 }
 
 function toRow(r: ItemHeader): ItemRow {
@@ -218,7 +219,11 @@ export async function archiveItem(params: CatalogCommandParams, input: { readonl
   return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
     if (cur === undefined) throw new AppError("NOT_FOUND");
-    if (cur.status === "ARCHIVED") return { itemId, changed: false };
+    if (cur.status === "ARCHIVED") {
+      const rows=await tx.execute(sql`UPDATE public.items SET source_managed_archive=false WHERE tenant_id=${actor.tenantId}::uuid AND id=${itemId}::uuid AND source_managed_archive RETURNING id`);
+      if(rows.length)await appendAudit(tx,{action:"item.archived",actorUserId:actor.userId,entityType:"item",entityId:itemId,requestId:requestId??null,changeSummary:{code:cur.code,ownership:"local"}});
+      return {itemId,changed:rows.length>0};
+    }
     const positive = await tx.execute<{ x: number }>(
       sql`SELECT 1 AS x FROM public.stock_balances b
             JOIN public.stock_dimensions d ON d.tenant_id = b.tenant_id AND d.id = b.stock_dimension_id
@@ -232,7 +237,7 @@ export async function archiveItem(params: CatalogCommandParams, input: { readonl
     );
     if (open[0] !== undefined) throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
     await tx.execute(
-      sql`UPDATE public.items SET status = 'ARCHIVED', archived_at = now()
+      sql`UPDATE public.items SET status = 'ARCHIVED', archived_at = now(), source_managed_archive=false, source_disposition=CASE WHEN source_state='ACTIVE' THEN 'NONE' ELSE 'ARCHIVED' END
            WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${itemId}::uuid`,
     );
     await appendAudit(tx, {

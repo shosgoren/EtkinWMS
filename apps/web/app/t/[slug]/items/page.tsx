@@ -53,8 +53,8 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   const returnTo = `/t/${encodeURIComponent(slug)}/items`;
   if (principal === null) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
   // Bilinmeyen durum değeri kullanıcı hatasıdır: DB'ye gitmeden 404.
-  if (statusRaw !== "" && statusRaw !== "ACTIVE" && statusRaw !== "ARCHIVED") notFound();
-  const status = statusRaw as "" | "ACTIVE" | "ARCHIVED";
+  if (statusRaw !== "" && statusRaw !== "ACTIVE" && statusRaw !== "ARCHIVED" && statusRaw !== "REMOVED") notFound();
+  const status = statusRaw as "" | "ACTIVE" | "ARCHIVED" | "REMOVED";
   // T-1057: liste domain'den (sunucu modülü). "use client" dosyasından gelen değer sunucuda istemci referansıdır, dizi değildir
   // (`.includes` yoktu → kart türü süzgecinde sayfa çöküyordu).
   if (typeRaw !== "" && !(ITEM_CARD_TYPES as readonly string[]).includes(typeRaw)) notFound();

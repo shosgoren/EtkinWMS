@@ -144,6 +144,24 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       await expect(page.getByText(importedName,{exact:true})).toHaveCount(0);
       await page.evaluate("window.dispatchEvent(new Event('focus'))");
       await expect(page.getByText(importedName,{exact:true}).first()).toBeVisible();
+      const cardView=page.locator('[data-gorunum=kart]');if(await cardView.isVisible())await cardView.click();
+      // Lifecycle state appears through the same live list refresh in all device layouts.
+      await db("UPDATE public.items SET source_state='ARCHIVED',source_disposition='PENDING',source_changed_at=clock_timestamp() WHERE id=$1",[importedId]);
+      await page.evaluate("window.dispatchEvent(new Event('focus'))");
+      await expect(page.getByTestId('item-card').filter({hasText:importedName})).toContainText('ARŞİV BEKLİYOR');
+      if(testInfo.project.name==='desktop')for(const width of [390,1180,1440]){
+        await page.setViewportSize({width,height:844});
+        const card=page.getByTestId('item-card').filter({hasText:importedName});
+        await expect(card).toBeVisible();const rect=await card.boundingBox();
+        expect((rect?.x??-1)>=0&&(rect?.x??0)+(rect?.width??0)<=width).toBe(true);
+        await page.screenshot({path:testInfo.outputPath(`source-pending-${width}.png`)});
+      }
+      await db("UPDATE public.items SET source_state='DELETED',source_disposition='REMOVED',source_managed_archive=true,status='ARCHIVED',archived_at=clock_timestamp() WHERE id=$1",[importedId]);
+      await page.evaluate("window.dispatchEvent(new Event('focus'))");
+      await expect(page.getByText(importedName,{exact:true})).toHaveCount(0);
+      const removed=page.locator('[data-chip=removed]');await removed.scrollIntoViewIfNeeded();await removed.click();
+      await expect(page.getByTestId('item-card').filter({hasText:importedName})).toContainText('KALDIRILDI');
+
     } finally { await db("DELETE FROM public.items WHERE id=$1",[importedId]); }
 
     // Reproduce the live report: an old authenticated session must show a useful reason + a working reauth link.
