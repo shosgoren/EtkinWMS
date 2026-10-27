@@ -25,8 +25,15 @@ async function openSetup(page: Page, slug: string, key: string): Promise<void> {
     await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-step', key);
     if (key === 'stock')
         await expect(page.locator('form.workflow-form')).toBeVisible();
-    await expect.poll(async () => { const expand = page.getByTestId('guide-expand'); if (await expand.isVisible())
-        await expand.click(); return page.getByTestId('working-guide').getAttribute('data-folded'); }).toBe('false');
+    await expect.poll(async () => { const devam = page.getByTestId('yol-devam'); if (await devam.isVisible())
+        await devam.click(); return page.getByTestId('yol-coach').getAttribute('data-folded'); }).toBe('false');
+}
+/** T-1100: kurulum kartı odaklı rehberdir — İleri / Atla / Uygula yok; yapılacak yer delikte, ekranın kalanı buzlu perdenin altında. */
+async function expectFocused(page: Page): Promise<void> {
+    await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /polygon\(evenodd/);
+    const kart = page.getByTestId('yol-kart');
+    for (const name of ['İleri', 'Atla', 'Uygula · ekranda çalış'])
+        await expect(kart.getByRole('button', { name, exact: true })).toHaveCount(0);
 }
 if (!process.env.E2E_BASE_URL?.trim()) {
     test.use({ ...localClient('198.51.100.29'), trace: 'off', actionTimeout: 15000 });
@@ -45,23 +52,27 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         mkdirSync(OUT, { recursive: true });
         const { slug } = await loginEmptyTenant(page, 'tour', { keepTour: true });
         await expect.poll(() => page.getByTestId('yol-layer').getAttribute('data-state')).toMatch(/^(on|off)$/);
+        // T-1100: Pano'da rehber girişi yalnız simge, "Merhaba" satırının sağında (yazı yok); kurulum bitmediği için görünür.
+        const giris = page.locator('.hello [data-testid="yol-card"]');
+        await expect(giris).toHaveAttribute('title', 'Rehber');
+        await expect(giris).not.toContainText('Kurulum');
         if (await page.getByTestId('yol-coach').isVisible()) {
             // T-1036: kartta bütün adımlar (kısa turda da) ve adım şeridi: şimdiki adım sarı, kalanlar numaralı.
-            await expect(page.getByTestId('working-guide')).toContainText('ADIM 1/');
-            await expect(page.getByTestId('yol-strip').locator('li[data-step="cards"]')).toHaveAttribute('data-state', 'now');
-            await expect(page.getByTestId('yol-strip').locator('li[data-state="todo"]').first()).toBeVisible();
+            await expect(page.getByTestId('yol-kart')).toContainText('ADIM 1/');
+            await expect(page.getByTestId('yol-kart').getByRole('button', { name: 'İleri', exact: true })).toHaveCount(0);
             await page.keyboard.press('Escape');
         }
         await openSetup(page, slug, 'cards');
         // T-1092: listelerde Excel düğmesi yok; kart adımı doğrudan Excel'den aktar (ürün türü) ekranını açar.
         await expect(page).toHaveURL(/\/import\?tur=urun/);
-        await expect(page.getByTestId('kalip-perde')).toHaveCount(0);
+        // Yapılacak yer (Dosya seç) delikte, kalan ekran buzlu; kart tek satır.
+        await expectFocused(page);
         for (const { w, h } of KABUK_SIZES) {
             await page.setViewportSize({ width: w, height: h });
             await settle(page);
-            if (await page.getByTestId('guide-expand').isVisible())
-                await page.getByTestId('guide-expand').click();
-            const card = page.getByTestId('working-guide');
+            if (await page.getByTestId('yol-devam').isVisible())
+                await page.getByTestId('yol-devam').click();
+            const card = page.getByTestId('yol-kart');
             // setViewportSize resize olayını kuyruklar; ölçüm aynı sınırlarla yerleşimin güncellenmesini bekler.
             await expect.poll(async () => {
                 const box = await card.boundingBox();
@@ -74,48 +85,55 @@ if (!process.env.E2E_BASE_URL?.trim()) {
             expect(r!.y + r!.height).toBeLessThanOrEqual(h);
             await page.screenshot({ path: path.join(OUT, `${info.project.name}-guide-${w}.png`), animations: 'disabled' });
         }
-        await page.getByTestId('guide-apply').click();
-        await expect(page.getByTestId('working-guide')).toHaveAttribute('data-folded', 'true');
+        // Bulanık alana dokunmak serbest bırakır: perde kalkar, küçük yüzen simge "Kaldığın yerden" kalır.
+        await page.getByTestId('kalip-perde').click({ position: { x: 4, y: 4 } });
+        await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-folded', 'true');
+        await expect(page.getByTestId('kalip-perde')).toHaveCount(0);
+        await expect(page.getByTestId('yol-devam')).toContainText('Kaldığın yerden');
         await expect(page).toHaveURL(/\/import/);
         await page.getByTestId('aktar-file').setInputFiles({ name: 'guide-local.csv', mimeType: 'text/csv', buffer: Buffer.from('Kod,Ad,Birim\nQA-GUIDE,Yerel rehber,ADET\n') });
         await expect(page.getByText('guide-local.csv', { exact: true })).toBeVisible();
         const dirtyUrl = page.url();
-        for (const action of ['skip', 'source']) {
-            if (await page.getByTestId('guide-expand').isVisible()) await page.getByTestId('guide-expand').click();
-            const sourceLabel = await page.getByTestId('yol-source').textContent();
-            if (action === 'skip') await page.getByTestId('working-guide').getByRole('button', { name: 'Atla', exact: true }).click();
-            else await page.getByTestId('yol-source').click();
-            await expect(page.getByTestId('kalip-unsaved-stay')).toBeVisible();
-            await page.getByTestId('kalip-unsaved-stay').click();
-            await expect(page).toHaveURL(dirtyUrl);
-            await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-step', 'cards');
-            if (await page.getByTestId('guide-expand').isVisible()) await page.getByTestId('guide-expand').click();
-            await expect(page.getByTestId('yol-source')).toHaveText(sourceLabel!);
-            await expect(page.getByText('guide-local.csv', { exact: true })).toBeVisible();
-            await expect(page.getByTestId('kalip-toast').filter({ hasText: 'atlandı' })).toHaveCount(0);
-        }
+        // Kaldığın yerden: kart geri gelir, yapılacak yer (dosya yüklendi → Kontrol et) yine delikte.
+        await page.getByTestId('yol-devam').click();
+        await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-folded', 'false');
+        await expectFocused(page);
+        const sourceLabel = await page.getByTestId('yol-source').textContent();
+        await page.getByTestId('yol-source').click();
+        await expect(page.getByTestId('kalip-unsaved-stay')).toBeVisible();
+        await page.getByTestId('kalip-unsaved-stay').click();
+        await expect(page).toHaveURL(dirtyUrl);
+        await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-step', 'cards');
+        await expect(page.getByTestId('yol-source')).toHaveText(sourceLabel!);
+        await expect(page.getByText('guide-local.csv', { exact: true })).toBeVisible();
         await close(page);
         await page.getByRole('link', { name: 'Ana ekran', exact: true }).click();
         await page.getByTestId('kalip-unsaved-leave').click();
+        // Stok girişi: açık iş formu da delikte (alanlar doldurulabilir), KAYDET ayrı delikte; dokunmak rehberi kapatmaz.
         await openSetup(page, slug, 'stock');
-        await page.getByTestId('working-guide').getByRole('button', { name: 'Atla', exact: true }).click();
+        await expectFocused(page);
+        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /px, 0(px)? 0(px)?, \d+px [^,]+, \d+px/);
+        await page.locator('form.workflow-form input:visible').first().click();
+        await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-folded', 'false');
+        // Kullanılmayan adım listeden atlanır ("Bunu kullanmıyorum"); geri alınabilir.
+        await close(page);
+        await page.goto(`/t/${slug}`);
+        await page.getByTestId('yol-card').click();
+        await page.getByTestId('yol-skip-stock').click();
         await expect(page.getByTestId('kalip-toast')).toContainText('atlandı');
         await page.getByTestId('balon-eylem').click();
-        await close(page);
+        await expect(page.getByTestId('yol-step-stock')).not.toHaveAttribute('data-state', 'skipped');
+        await page.getByTestId('yol-sheet-close').click();
         await openSetup(page, slug, 'shelves');
+        // Delikteki gerçek DEPO EKLE düğmesi formu açar; delik formun tamamına geçer (yazılıp kaydedilebilir), kalan ekran buzlu.
+        await expectFocused(page);
         await page.locator('[data-tour="main"]').click();
         const form = page.getByTestId('warehouse-form');
         await expect(form).toBeVisible();
         await form.locator('input[name="name"]').fill(`QA rehber ${info.project.name}`);
         await expect(form.locator('input[name="name"]')).toHaveValue(`QA rehber ${info.project.name}`);
-        await expect(page.getByTestId('kalip-perde')).toHaveCount(0);
-        await page.getByTestId('guide-expand').click();
-        await expect(page.getByTestId('working-guide')).toContainText('önerilen kodu');
-        // Formu doldurmak gerçek iş; rehber İleri'si işlemi kaydetmez. Yarım işte gezinme ortak korumayı korur.
-        await page.getByTestId('guide-next').click();
-        await expect(page.getByTestId('kalip-unsaved-stay')).toBeVisible();
-        await page.getByTestId('kalip-unsaved-stay').click();
-        await expect(form).toBeVisible();
+        await expectFocused(page);
+        await expect(page.getByTestId('yol-metin')).toContainText('KAYDET');
         await close(page);
         await page.getByTestId('kabuk-back').click();
         if (await page.getByTestId('kalip-unsaved-leave').isVisible())
@@ -134,7 +152,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         await page.getByTestId('item-form-save').click();
         await expect(page).toHaveURL(/\/items\/[0-9a-f-]+$/);
         await openSetup(page, slug, 'cards');
-        await expect(page.getByTestId('working-guide')).toBeVisible();
+        await expect(page.getByTestId('yol-kart')).toBeVisible();
         await page.reload();
         await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-step', 'cards');
         await page.keyboard.press('Escape');

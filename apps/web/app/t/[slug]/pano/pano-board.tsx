@@ -147,8 +147,9 @@ export async function PanoBoard(p: PanoBoardProps) {
             <p>{subline}</p>
           </div>
         </div>
+        {/* T-1100: rehber girişi yalnız simge, "Merhaba" satırının sağında; kurulum bitince görünmez. */}
+        {p.journey != null && !p.journey.dismissed ? <YolculukKart data={p.journey} dark={p.dark} ikon /> : null}
       </div>
-      {p.journey != null && !p.journey.dismissed ? <YolculukKart data={p.journey} dark={p.dark} /> : null}
 
       {b === null ? null : owner ? (
         <>
