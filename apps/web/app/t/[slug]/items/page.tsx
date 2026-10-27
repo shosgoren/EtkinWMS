@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
+import { ITEM_CARD_TYPES } from "@wms/domain/catalog";
 import type { listUnits } from "@wms/domain/catalog/units";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
@@ -10,7 +11,7 @@ import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
-import { CARD_TYPES, ItemsView } from "./items-view.tsx";
+import { ItemsView } from "./items-view.tsx";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
 import { loadItemsPage } from "./list-page.ts";
 
@@ -51,7 +52,9 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   // Bilinmeyen durum değeri kullanıcı hatasıdır: DB'ye gitmeden 404.
   if (statusRaw !== "" && statusRaw !== "ACTIVE" && statusRaw !== "ARCHIVED") notFound();
   const status = statusRaw as "" | "ACTIVE" | "ARCHIVED";
-  if (typeRaw !== "" && !(CARD_TYPES as readonly string[]).includes(typeRaw)) notFound();
+  // T-1057: liste domain'den (sunucu modülü). "use client" dosyasından gelen değer sunucuda istemci referansıdır, dizi değildir
+  // (`.includes` yoktu → kart türü süzgecinde sayfa çöküyordu).
+  if (typeRaw !== "" && !(ITEM_CARD_TYPES as readonly string[]).includes(typeRaw)) notFound();
   const cardType = typeRaw as "" | CardType;
   const db = getAppDb();
   const call = { db, principal, tenantSlug: slug };

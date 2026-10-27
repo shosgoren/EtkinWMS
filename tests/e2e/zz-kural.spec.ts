@@ -328,6 +328,13 @@ test("T-1055 Liste: yalnız liste kayar, üst bölüm yerinde", async ({ page })
   const cipler = page.getByRole("group", { name: "Süzgeç" }).locator(".fch");
   expect(await cipler.count()).toBeGreaterThanOrEqual(6);
   expect(await page.evaluate<boolean>("(() => { const s = document.querySelector('.fchips'); return !!s && getComputedStyle(s).overflowX === 'auto' && s.scrollWidth > s.clientWidth; })()")).toBe(true);
+  // T-1057: her süzgeç çipi sayfayı açar (kart türü çipi sunucuda çöküyordu; hiçbir test çipe basmıyordu).
+  for (const ad of await cipler.allInnerTexts()) {
+    await cipler.filter({ hasText: ad }).first().click();
+    await expect(ara).toBeVisible();
+    await expect(page.getByText("Bir şeyler ters gitti")).toHaveCount(0);
+  }
+  await page.goto("/t/demo/items");
   // Masaüstü tablo: başlık sabit (sticky), tablo kendi içinde kayar.
   await page.setViewportSize({ width: 1280, height: 700 });
   await page.getByTestId("kalip-gorunum").getByRole("radio", { name: "Liste" }).click();
