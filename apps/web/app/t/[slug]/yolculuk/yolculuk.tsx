@@ -466,6 +466,17 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   );
 
   const coachOpen = tourOn && cur !== null && plan !== null;
+  // Delik yokken (hedef bu ekranda değil) perde de yoktur: kartın dışına dokunmak rehberi serbest bırakır (yüzen simge), alttaki gerçek
+  // düğme (ör. Destek menüsü) kartın altında kalmaz.
+  const kartRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!coachOpen || katli || hole !== null) return undefined;
+    const outside = (e: Event): void => {
+      if (e.target instanceof Node && !kartRef.current?.contains(e.target)) setKatli(true);
+    };
+    document.addEventListener("pointerdown", outside, true);
+    return () => document.removeEventListener("pointerdown", outside, true);
+  }, [coachOpen, katli, hole]);
   // Esc turu kapatır (açık bir pencere yoksa; pencere kendi Esc'ini işler).
   useEffect(() => {
     if (!coachOpen) return undefined;
@@ -544,7 +555,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
           ) : (
             <>
               {hole !== null && okStep === null ? <KalipPerdeKatman onClose={() => { feedback.minor(); setKatli(true); }} label={t("coach.free")} delik={hole} /> : null}
-              <section className="ycoach working" style={{ ...pos.style, zIndex: 42 }} role="region" aria-label={t("coach.aria")} data-testid="yol-kart">
+              <section ref={kartRef} className="ycoach working" style={{ ...pos.style, zIndex: 42 }} role="region" aria-label={t("coach.aria")} data-testid="yol-kart">
                 <div className="cth">
                   <span className="cstep" aria-live="polite">{upper(t("coach.step", { n: Math.max(activeIdx, 0) + 1, total: active.length, title: titleOf(shownStep) }))}</span>
                   <button type="button" className="cbtn" onClick={speak} aria-label={t("coach.speak")}>
