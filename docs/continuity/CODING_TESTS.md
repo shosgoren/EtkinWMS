@@ -63,6 +63,7 @@ Her iş bu listeyle başlar ve PR açmadan önce tek tek kontrol edilir. Yeni de
 - `"use client"` modülünden sunucu bileşenine DEĞER (sabit, dizi) aktarılmaz; istemci referansı vekili gelir ve ekran çöker (T-1057). Ortak sabit `@wms/domain/...` ya da ayrı `*.ts` dosyasında.
 - `"use server"` dosyası yalnız async fonksiyon dışa aktarır; sabitler `list-page.ts` gibi ayrı dosyada.
 - Yeni eylem (server action) `ac-04-api-slug.int.test.ts` tablolarına eklenir; yoksa AC-04 kırmızı.
+- Yeni **sayfa** (`page.tsx`) de AC-04 sayfa yükleyici tablosuna girer (`ac-04-api-slug.int.test.ts` kapsam listesi; depo altındaysa `ac-04-api-slug-warehouse.int.test.ts`), çapraz tenant/kimlik 404 testiyle. AC testi eklenince `pnpm check:ac-ratchet --update` ile taban yükseltilir (düşürmek yasak) ve `tests/.ac-baseline.json` karta yazılır (T-1082).
 
 **Yerel ortam (bu konteyner)**
 - Docker sık düşer: `(nohup dockerd --registry-mirror=https://mirror.gcr.io >/tmp/dockerd.log 2>&1 &)` sonra `docker compose up -d --wait`. e2e "db:migrate ECONNREFUSED" = compose kapalı.
