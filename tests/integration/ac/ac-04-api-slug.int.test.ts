@@ -354,6 +354,8 @@ const LABELS = "labels/page.tsx" as const;
 /** T-216: ürün ayrıntısı ek bir dinamik segment (`itemId`) ister; ortak döngüde değil, aşağıdaki özel bloktadır. */
 const ITEM_DETAIL = "items/[itemId]/page.tsx" as const;
 const PACKAGE_MOVEMENT_LOADER = "field/packages/page.tsx" as const;
+/** T-1082: raf yeri kartı; tenant/depo/lokasyon sınırları `ac-04-api-slug-warehouse.int.test.ts` içinde sınanır (lokasyon fikstürleri orada). */
+const LOCATION_CARD = "warehouses/[warehouseId]/locations/[locationId]/page.tsx" as const;
 const PACKAGE_LOADERS = ["receipts/packages/page.tsx", "receipts/packages/labels/page.tsx"] as const;
 type Loader = (props: {
   params: Promise<{ slug: string; warehouseId?: string; itemId?: string }>;
@@ -433,7 +435,7 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
 
 describe("sayfa yükleyicileri (/t/<slug>)", () => {
   it("@AC-04 kapsam: apps/web/app/t/[slug] altındaki her page/layout bu tabloda (yeni yükleyici testsiz kalamaz)", () => {
-    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER].sort());
+    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER, LOCATION_CARD].sort());
   });
 
   for (const rel of LOADERS) {

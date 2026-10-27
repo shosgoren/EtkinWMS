@@ -126,11 +126,13 @@ afterAll(async () => {
 // Sayfa yükleyicileri
 // ---------------------------------------------------------------------------------------------
 
-type Loader = (props: { params: Promise<{ slug: string; warehouseId?: string }>; searchParams?: Promise<Record<string, string>> }) => Promise<unknown>;
-async function runLoader(rel: string, slug: string, warehouseId: string): Promise<{ outcome: "render" | "notFound" | "redirect"; to?: string; value?: unknown }> {
+type Loader = (props: { params: Promise<{ slug: string; warehouseId?: string; locationId?: string }>; searchParams?: Promise<Record<string, string>> }) => Promise<unknown>;
+/** T-1082: raf yeri kartı için `locationId` verilmezse deponun kendi tenant'ındaki alt lokasyonu kullanılır. */
+async function runLoader(rel: string, slug: string, warehouseId: string, locationId?: string): Promise<{ outcome: "render" | "notFound" | "redirect"; to?: string; value?: unknown }> {
   const mod = (await import(/* @vite-ignore */ path.join(SLUG_DIR, rel))) as { default: Loader };
+  const lid = locationId ?? (warehouseId === B.warehouseId ? B.childLocationId : A.childLocationId);
   try {
-    const value = await mod.default({ params: Promise.resolve({ slug, warehouseId }), searchParams: Promise.resolve({}) });
+    const value = await mod.default({ params: Promise.resolve({ slug, warehouseId, locationId: lid }), searchParams: Promise.resolve({}) });
     return { outcome: "render", value };
   } catch (e) {
     const k = (e as { kind?: string }).kind;
@@ -150,7 +152,8 @@ function pagesUnder(dir: string): string[] {
   return out.sort();
 }
 
-const WAREHOUSE_LOADERS = ["warehouses/page.tsx", "warehouses/[warehouseId]/page.tsx"] as const;
+const LOCATION_CARD = "warehouses/[warehouseId]/locations/[locationId]/page.tsx" as const;
+const WAREHOUSE_LOADERS = ["warehouses/page.tsx", "warehouses/[warehouseId]/page.tsx", LOCATION_CARD] as const;
 
 describe("depo sayfa yükleyicileri (/t/<slug>/warehouses)", () => {
   it("@AC-04 kapsam: warehouses altındaki her page/layout bu tabloda", () => {
@@ -200,6 +203,27 @@ describe("depo sayfa yükleyicileri (/t/<slug>/warehouses)", () => {
     const tree = await runLoader("warehouses/[warehouseId]/page.tsx", A.slug, A.warehouseId);
     expect(tree.outcome).toBe("render");
     expect(JSON.stringify(tree.value)).not.toContain(B.childLocationId);
+  });
+});
+
+describe("raf yeri kartı (/t/<slug>/warehouses/<depo>/locations/<lokasyon>, T-1082)", () => {
+  it("@AC-04 A kendi slug'ında B'nin lokasyonunu açamaz (kendi deposu altında ya da B deposuyla) -> 404, var olmayan kimlikle aynı; B verisi çizilmez", async () => {
+    as(A.ownerUserId);
+    const missing = await runLoader(LOCATION_CARD, A.slug, A.warehouseId, randomUUID());
+    expect(missing).toEqual({ outcome: "notFound" });
+    for (const [w, l] of [[A.warehouseId, B.childLocationId], [B.warehouseId, B.childLocationId], [B.warehouseId, A.childLocationId]] as const) {
+      as(A.ownerUserId);
+      expect(await runLoader(LOCATION_CARD, A.slug, w, l)).toEqual(missing);
+    }
+    as(A.ownerUserId);
+    expect(await runLoader(LOCATION_CARD, A.slug, A.warehouseId, "not-a-uuid")).toEqual(missing);
+    as(A.ownerUserId);
+    const own = await runLoader(LOCATION_CARD, A.slug, A.warehouseId, A.childLocationId);
+    expect(own.outcome).toBe("render");
+    const dump = JSON.stringify(own.value);
+    expect(dump).toContain(A.childLocationId);
+    expect(dump).not.toContain(B.childLocationId);
+    expect(dump).not.toContain(B.warehouseId);
   });
 });
 

@@ -90,6 +90,7 @@ export function LocationTree({
   const t = useTranslations("warehouses.tree");
   const tk = useTranslations("warehouses.kind");
   const tw = useTranslations("warehouses");
+  const tl = useTranslations("warehouses.loc");
   const tb = useTranslations("easySetup.bulk");
   const te = useTranslations("easySetup");
   const router = useRouter();
@@ -453,12 +454,19 @@ export function LocationTree({
                           ) : (
                             <span className="dot" style={{ background: c(KIND_COLOR[it.kind] ?? "4E6476") }} />
                           )}
-                          <span style={{ minWidth: 0 }}>
+                          {/* T-1082: satır raf yeri kartını açar (raftakiler, son hareketler). */}
+                          <Link
+                            href={`/t/${encodeURIComponent(slug)}/warehouses/${encodeURIComponent(warehouseId)}/locations/${encodeURIComponent(it.id)}`}
+                            prefetch={false}
+                            style={{ minWidth: 0, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center", textDecoration: "none", color: "inherit" }}
+                            aria-label={tl("open", { name: it.name })}
+                            data-testid="location-open"
+                          >
                             <b>{it.name}</b>
                             <small>
                               {it.code} · {tk(it.kind)} · {t(`level.${levelKey(it.depth)}`)}
                             </small>
-                          </span>
+                          </Link>
                           <span className={`pill ${active ? "ok" : "warn"}`}>{active ? tw("status.ACTIVE") : tw("status.ARCHIVED")}</span>
                           {active ? (
                             <span role="group" aria-label={tw("actionsFor", { name: it.name })} style={{ gridColumn: "1 / -1", display: "flex", flexWrap: "wrap", gap: 6 }}>
