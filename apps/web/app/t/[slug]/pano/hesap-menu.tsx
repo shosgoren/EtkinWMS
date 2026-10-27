@@ -5,6 +5,7 @@
 // tema, Çıkış yap. Görünüm geçişi (Genel bakış) ve ekranlar ortak alt çubuğun Modüller sayfasındadır. Çıkış mevcut `/sign-out` uç noktasıyla (Pano'daki ile aynı).
 // T-990: bağlantılar istemci içi geçiş; bağlantı, Kullanıcı değiştir, Çalışma alanı ve Çıkış yarım işte önce ortak çıkış kutusuna sorar (`cikisSor`).
 import { useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { cikisSor } from "../kalip/cikis.tsx";
@@ -107,8 +108,11 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     onClose();
   };
-  return (
-    <>
+  // T-1080 (kullanıcı 27 Ekim: "alt çubuk bulanmıyor, kayboluyor"; Yetki gruplarında yalnız üst çubuk bulanıyordu): perde ve menü
+  // sayfanın KÖKÜNE çizilir. Ekranın kendi kabı (`.dzp` z yükseltmesi alt çubuğu örtüyordu) ya da cam efektli üst çubuk (sabit konumlu
+  // perdeyi kendi içine hapsediyordu) artık perdeyi sınırlamaz: perde bütün görüntü alanını — alt çubuk dahil — bulanıklaştırır.
+  return createPortal(
+    <div className={`dzp hmenu-kok${dark ? " dz-dark" : ""}`}>
       <div className="hback" onClick={onClose} />
       <div ref={box} className="halo tmenu" role="menu" aria-label={label}>
         <div className="tmh">
@@ -143,6 +147,7 @@ export function HesapMenu({ team, me, links = [], dark, onToggleTheme, onClose }
           </p>
         ) : null}
       </div>
-    </>
+    </div>,
+    document.body,
   );
 }

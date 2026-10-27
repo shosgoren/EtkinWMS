@@ -238,7 +238,7 @@ test.describe("demo akışı", () => {
     await expect(tasks.locator('a[data-state="active"]').filter({ hasText: "Ürünlerim" })).toHaveAttribute("href", "/t/demo/items");
     await expect(tasks.locator('a[data-state="active"]').filter({ hasText: "Depo ve raflar" })).toHaveAttribute("href", "/t/demo/warehouses");
     await expect(tasks.locator('[data-state="soon"]')).toHaveCount(2);
-    await expect(tasks.locator('[data-state="locked"]').first()).toContainText("Bu iş için yetkin yok. Sorumluna sorabilirsin.");
+    await expect(tasks.locator('[data-state="locked"]').first()).toHaveAttribute("aria-label", /Bu iş için yetkin yok\. Sorumluna sorabilirsin\./);
     await expectNoHorizontalOverflow(page, "salt okunur ana ekran");
 
     // Üyeler sayfası doğrudan adresle: liste görünür, davet ve işlemler kilitli + açıklama.

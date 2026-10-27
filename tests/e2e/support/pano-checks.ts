@@ -42,7 +42,8 @@ export async function panoChecks(page: Page): Promise<void> {
     if (!dark) {
       // Hesap menüsü: cam kutu + perde; Esc kapatır.
       await pano.getByTestId("home-actions").click();
-      const menu = pano.getByRole("menu", { name: "HESAP" });
+      // T-1080: Hesap menüsü sayfa kökünde (portal).
+      const menu = page.getByRole("menu", { name: "HESAP" });
       await expect(menu).toBeVisible();
       await expect(menu.getByRole("menuitem", { name: "Çıkış yap" })).toBeVisible();
       await page.keyboard.press("Escape");
@@ -55,7 +56,7 @@ export async function panoChecks(page: Page): Promise<void> {
       await expect(halo).toBeHidden();
       // T-979c: eski "Tüm ekranlar" maddesi yok; görünüm geçişi Modüller'de (her üye).
       await pano.getByTestId("home-actions").click();
-      await expect(pano.getByRole("menu", { name: "HESAP" }).getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
+      await expect(page.getByRole("menu", { name: "HESAP" }).getByRole("menuitem", { name: "Tüm ekranlar" })).toHaveCount(0);
       await page.keyboard.press("Escape");
       await page.getByTestId("kabuk-mods").click();
       await expect(page.getByRole("dialog", { name: "Modüller" }).locator('[data-module="kokpit"]')).toBeVisible();
