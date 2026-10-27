@@ -1242,3 +1242,12 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
   column-gap: 8px;
   padding: 8px 10px 8px 14px;
 }
+
+/* T-1102: yüzen kısayol (Pano kaynağı `.fab` / `.hback` / `.halo` / Düzenle `.page`) her ekranda: sayfa kökünde, görüntü alanına göre.
+   Şimşek alt çubuğun (z 25) üstünde; açılınca perde bütün ekranı (alt çubuk dahil) örter, halka ve seçici perdenin üstünde. */
+.dzp.kisayol-kok { display: contents; }
+.dzp.kisayol-kok .fab { position: fixed; z-index: 30; }
+.dzp.kisayol-kok .hback { position: fixed; inset: 0; z-index: 38; }
+.dzp.kisayol-kok .halo { position: fixed; z-index: 39; }
+.dzp.kisayol-kok .page { position: fixed; inset: 0; z-index: 41; }
+body:has([data-testid="kalip-unsaved-layer"]) .dzp.kisayol-kok { display: none; }
