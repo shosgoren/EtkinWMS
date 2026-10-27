@@ -139,3 +139,21 @@ servisi. Bu adım yapılmadan yayınlar iki imajlı sürer; Etkin "şu an kullan
 - Sentetik kod taşıyan cookiesiz callback:400/INVALID_OAUTH_CALLBACK,Cache-Control:no-store,Referrer-Policy:no-referrer. Boş/kodsuz istek ile karıştırılmaz.
 - Canlı Chrome gözlem izni reddedildi: tarayıcı oturumu/görsel kontrol yapılmadı. Yerel telefon/masaüstü testleri ve390/1180/1440 kontrolleri geçti; fiziksel cihaz UNKNOWN. Gerçek Secret, token, kod, DB bağlantısı loga/belgeye yazılmaz.
 - [Ürün yaşam döngüsü229](https://github.com/shosgoren/EtkinWMS/issues/229) henüz uygulanmadı; [PRODUCT_IMPORT](PRODUCT_IMPORT.md) kararları otoritedir. Sonraki belge-only commit uygulama ağacını değiştirmez; çalışan release ile main SHA’sını kör eşitleme.
+
+## 28 Ekim — Paraşüt ürün yaşam döngüsü (CANLIDA)
+
+| Kanıt | Doğrulanan değer |
+|---|---|
+| Kod | Temel [PR233](https://github.com/shosgoren/EtkinWMS/pull/233), aktivasyon [PR234](https://github.com/shosgoren/EtkinWMS/pull/234); ikisinde de 18 kontrol yeşil |
+| Çalışan release | `6b2f81dc3c7e2864bcfe21514a6e19e079350147` |
+| Main kontrolleri | [CI40590857610](https://github.com/shosgoren/EtkinWMS/actions/runs/40590857610), [guards40590857597](https://github.com/shosgoren/EtkinWMS/actions/runs/40590857597): SUCCESS |
+| Yayın | [deploy40591974518](https://github.com/shosgoren/EtkinWMS/actions/runs/40591974518): SUCCESS |
+| Doğrudan VPS | health `ok`, aynı release; auto_migrate `true` |
+| Gerçek DB defteri | `0062/62`; şema `0a9c0dcf5dee544dd1d164920810ccb1f26cbdb2e4f7a6d633d5f1d544d9410e` |
+| Motive | CONNECTED; PRODUCTS/PULL açık; tenant OAuth ayarı mevcut; 4 kartta source_checked_at dolu |
+| Otomatik koşular | UTC2026-10-27 22:09:41,22:10:11,22:10:41: SCHEDULE/SUCCESS, hata0 |
+| Gerçek yaşam döngüsü | İkinci yokluk kontrolünden sonra1kart DELETED/REMOVED;4kart ACTIVE/NONE. Yalnız durum/sayı metadata, manuel test değişikliği yok |
+
+0062 metadata varsa DOWN reddedilir; geçmiş silinmez. Temel paket önce93e6878/CI40588654469/guards40588654499/deploy40590083217 ile doğrulandı; güncel release yukarıdadır. Belge commit'i bu kaynak ağacını değiştirmez; main SHA ile çalışan uygulamayı kör eşitleme.
+
+Yerel: lifecycle10DB+ERP20+ürün61DB; prepush5020birim/AC04375/E2E2/2; güvenlik0B0MA0MI/Gitleaks0. Canlı müşteri tarayıcı izni reddedildi; gerçek cihaz/canlı görsel UNKNOWN. Yalnız SSH sağlık ve durum/sayı metadata okundu; Secret/token/kod/DBURI okunmaz veya loglanmaz. Gerçek müşteri ürünü test amacıyla silinmedi/arşivlenmedi. Arşiv/silinme karar sınırları PRODUCT_IMPORT ve T-1068 kartında.
