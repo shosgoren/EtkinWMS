@@ -1223,3 +1223,11 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
   cursor: pointer;
 }
 .dz-dark .ktust { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); }
+
+/* ---- T-1092 karanlık modda form alanı: kaynakta grup kartı (`.sg`) ile alan (`.fld`) aynı belirteçte, alan görünmüyordu (iPhone).
+   Alan bir ton açık zemin + ince çerçeve alır; odak ve hata gölgesi (kalip-frame.css) bozulmasın diye çerçeve `outline` ile. ---- */
+.dzf.dz-dark .sg .fld {
+  background: var(--color-dz-x-ccdaea);
+  outline: 1px solid var(--color-dz-x-dkekfk);
+  outline-offset: -1px;
+}
