@@ -34,3 +34,5 @@ Kanıt: PR #225, son PR CI40558717637/guards40558718166; main CI40560324768/guar
 Yerel regresyon211/211, ek drift25/25; son prepush5004 birim+AC04 375+tarayıcı2/2 yeşil; bağımsız inceleme0B/0MA/0MI,Gitleaks0. T-1065 bu iş için yerel checkpointte bırakıldı; tekil QR/okutmalı Devir henüz bitmedi.
 
 **Canlı ekran sonrası düzeltme:** Üç alan boş açılmalı; önceden otomatik yazılan OOB varsayılanı kaldırılıyor. Callback URL müşterinin girdiği değerdir. Bu küçük ekran düzeltmesinin yayını henüz bekliyor; yukarıdaki kanıt ilk çalışan bağlantı sürümüne aittir.
+
+**21:50 canlı hata düzeltmesi:** Motive ayarı henüz kaydedilmemiş; sunucuda mühürleme anahtarı mevcut. Aktif oturumların tamamı10dk hassas işlem penceresi dışında. Tam ekran OAuth formlarında ana ekrana ait yeniden giriş bandı görünmüyordu; güvenli hata nedeni ve Giriş yap eylemi artık formda gösterilir. Süre/MFA kontrolleri gevşetilmez, Secret yönlendirme adresine veya kalıcı tarayıcı deposuna konmaz. Yerel tarayıcı regresyonu yalnız mevcut sentetik oturumun zamanını yaşlandırarak gerçek recentAuth reddini sınar. Düzeltme yayın kanıtı henüz yok.
