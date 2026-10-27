@@ -40,6 +40,11 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       await expect(page.getByTestId("integrations-providers")).toBeVisible();
     }
 
+    // T-1104: bağlı değilken tek bağlanma yolu (ana BAĞLAN / Paraşüt kutusu); ayrı "Paraşüt ile bağlan" yok, uygulama bilgileri en altta.
+    // Geri, Ayarlar › Entegrasyonlar sekmesine döner.
+    await expect(page.getByTestId("oauth-connect")).toHaveCount(0);
+    await expect(page.getByTestId("integrations-advanced").getByTestId("oauth-settings-open")).toBeVisible();
+    await expect(page.getByTestId("kabuk-back").filter({ visible: true })).toHaveAttribute("href", `/t/${slug}/settings/baglantilar`);
     // Logo yakında: dokununca balon, pencere açılmaz.
     await page.getByTestId("provider-LOGO").click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Logo yakında");
