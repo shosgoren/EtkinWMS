@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getIntegrationOverview, getOpeningStockState, getProductBarcodeSetting, type IntegrationOverview } from "@wms/domain/integrations";
+import { getIntegrationOverview, getOpeningStockState, getProductBarcodeSetting, type IntegrationOverview, getParasutOAuthSettings, getParasutOAuthSelection, oauthApplicationOrigin, oauthCookieName, parseOAuthBinding } from "@wms/domain/integrations";
 import { getSetupJourney } from "@wms/domain/onboarding/journey";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../design/theme.ts";
@@ -37,7 +37,7 @@ function serialize(o: IntegrationOverview): OverviewData {
 
 // T-991: ERP entegrasyonu (Paraşüt; Logo yakında). Yalnız hesap sahibi (`settings.manage`); diğer rollerde kilitli tam ekran. Ayarlar >
 // Bağlantılar'daki Paraşüt / Logo kartları (T-981) bu adrese bağlanır.
-export default async function IntegrationsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function IntegrationsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams:Promise<Record<string,string|string[]|undefined>> }) {
   const { slug } = await params;
   const self = `/t/${encodeURIComponent(slug)}/integrations`;
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
@@ -74,5 +74,11 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ s
     journeyWish = null; // yolculuğu göremeyen rol: bilgi yok
   }
   const pullBarcodes = await getProductBarcodeSetting(call);
-  return <IntegrationsView pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} />;
+  const oauth=await getParasutOAuthSettings(call);
+  const query=await searchParams;
+  const origin=oauthApplicationOrigin();
+  const binding=origin===null?null:parseOAuthBinding((await cookies()).get(oauthCookieName(origin))?.value);
+  const selection=binding!==null&&binding.slug===slug&&query.oauth_select===binding.id?await getParasutOAuthSelection(call,binding):null;
+  const result=["connected","failed","retry"].includes(String(query.oauth_result))?String(query.oauth_result):query.oauth_select!==undefined&&selection===null?"retry":null;
+  return <IntegrationsView oauth={oauth} oauthSelection={selection} oauthResult={result} pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} />;
 }

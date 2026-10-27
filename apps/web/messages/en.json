@@ -1027,7 +1027,11 @@
       "run_requested": "ERP transfer started manually",
       "synced": "ERP transfer ran",
       "opening_stock_setting": "Opening stock setting changed",
-      "opening_stock_taken": "Opening stock taken from ERP"
+      "opening_stock_taken": "Opening stock taken from ERP",
+      "oauth_configured": "Paraşüt application configured",
+      "oauth_started": "Paraşüt authorization started",
+      "oauth_failed": "Paraşüt authorization failed",
+      "oauth_cancelled": "Paraşüt authorization cancelled"
     },
     "setup_journey": {
       "updated": "Setup journey choice changed",
@@ -5452,6 +5456,32 @@
       "pull": "Import Paraşüt barcodes",
       "keep": "Existing labels remain valid",
       "saved": "Barcode preference saved"
+    },
+    "oauth": {
+      "settings": "Paraşüt application settings",
+      "connect": "Connect with Paraşüt",
+      "id": "Application Id",
+      "secret": "Secret",
+      "callback": "Callback URL",
+      "copy": "Copy",
+      "copied": "Copied",
+      "legacy": "Legacy connection",
+      "saved": "Application credentials saved",
+      "failed": "Connection failed. Connect again.",
+      "retry": "Connection expired. Connect again.",
+      "connected": "Paraşüt connected",
+      "choose": "Choose your company",
+      "secretHint": "Not displayed again after saving",
+      "configured": "Application configured",
+      "setup": "Enter application credentials",
+      "originMissing": "Callback unavailable. Contact support.",
+      "method": "Connection method",
+      "oob": "Authorization code (OOB)",
+      "https": "Automatic return (HTTPS)",
+      "enterCode": "Paraşüt authorization code",
+      "code": "Paste authorization code",
+      "openProvider": "Authorize in Paraşüt",
+      "codeAccepted": "Authorization code accepted"
     }
   },
   "etkin": {

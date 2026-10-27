@@ -28,12 +28,15 @@ export interface FakeParasutOptions {
   readonly companyName?: string;
   /** Erişim belirteci ömrü (sn); varsayılan 7200 (belge). */
   readonly expiresIn?: number;
+  readonly authorizationCode?:string;
+  readonly redirectUri?:string;
   readonly port?: number;
 }
 
 export interface FakeParasut {
   readonly url: string;
   readonly opts: Required<Omit<FakeParasutOptions, "port">>;
+  readonly companies: {id:string;name:string}[];
   readonly products: FakeRecord[];
   readonly categories: FakeRecord[];
   readonly contacts: FakeRecord[];
@@ -75,6 +78,8 @@ export const FAKE_PARASUT_DEFAULTS = Object.freeze({
   companyId: "115",
   companyName: "Örnek Muhasebe A.Ş",
   expiresIn: 7200,
+  authorizationCode:"fake-authorization-code",
+  redirectUri:"https://wms.example.test/api/integrations/parasut/callback",
 });
 
 export async function startFakeParasut(options: FakeParasutOptions = {}): Promise<FakeParasut> {
@@ -82,6 +87,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
   void _port;
   const opts = { ...FAKE_PARASUT_DEFAULTS, ...given };
   let tokenSeq = 0;
+  let codeUsed=false;
   const issue = (): { access_token: string; refresh_token: string } => {
     tokenSeq += 1;
     state.accessToken = `acc-${tokenSeq}-${Math.random().toString(36).slice(2)}`;
@@ -91,6 +97,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
   const state: FakeParasut = {
     url: "",
     opts,
+    companies:[{id:opts.companyId,name:opts.companyName}],
     products: [], categories: [],
     contacts: [],
     warehouses: [],
@@ -127,6 +134,10 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     if (req.method === "POST" && url.pathname === "/oauth/token") {
       const f = new URLSearchParams(body);
       if (f.get("client_id") !== opts.clientId || f.get("client_secret") !== opts.clientSecret) return send(401, { error: "invalid_client" });
+      if(f.get("grant_type")==="authorization_code") {
+        if(codeUsed||f.get("code")!==opts.authorizationCode||f.get("redirect_uri")!==opts.redirectUri)return send(400,{error:"invalid_grant"});
+        codeUsed=true;return send(200,{...issue(),token_type:"bearer",expires_in:opts.expiresIn});
+      }
       if (f.get("grant_type") === "password") {
         if (f.get("username") !== opts.username || f.get("password") !== opts.password || f.get("redirect_uri") !== "urn:ietf:wg:oauth:2.0:oob") return send(400, { error: "invalid_grant" });
         return send(200, { ...issue(), token_type: "bearer", expires_in: opts.expiresIn });
@@ -139,7 +150,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     }
     if (req.headers.authorization !== `Bearer ${state.accessToken}` || state.accessToken === "") return send(401, { errors: [{ title: "Unauthorized" }] });
     if (req.method === "GET" && url.pathname === "/v4/me") {
-      return send(200, { data: { id: "9", type: "users", attributes: { name: "Muhasebe", email: opts.username } }, included: [{ id: opts.companyId, type: "companies", attributes: { name: opts.companyName } }] });
+      return send(200, { data: { id: "9", type: "users", attributes: { name: "Muhasebe", email: opts.username } }, included: state.companies.map(c=>({id:c.id,type:"companies",attributes:{name:c.name}})) });
     }
     const m = /^\/v4\/([0-9]+)\/([a-z_]+)$/.exec(url.pathname);
     if (m === null || m[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });

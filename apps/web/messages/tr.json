@@ -1027,7 +1027,11 @@
       "run_requested": "ERP aktarımı elle başlatıldı",
       "synced": "ERP aktarımı çalıştı",
       "opening_stock_setting": "Açılış stoku ayarı değişti",
-      "opening_stock_taken": "Açılış stoku ERP'den alındı"
+      "opening_stock_taken": "Açılış stoku ERP'den alındı",
+      "oauth_configured": "Paraşüt uygulama bilgileri kaydedildi",
+      "oauth_started": "Paraşüt izni başlatıldı",
+      "oauth_failed": "Paraşüt izni tamamlanamadı",
+      "oauth_cancelled": "Paraşüt izni iptal edildi"
     },
     "setup_journey": {
       "updated": "Kurulum yolculuğu seçimi değişti",
@@ -5452,6 +5456,32 @@
       "pull": "Paraşüt barkodlarını al",
       "keep": "Mevcut etiketler korunur",
       "saved": "Barkod tercihi kaydedildi"
+    },
+    "oauth": {
+      "settings": "Paraşüt uygulama ayarları",
+      "connect": "Paraşüt ile bağlan",
+      "id": "Application Id",
+      "secret": "Secret",
+      "callback": "Callback URL",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "legacy": "Eski bağlantı yöntemi",
+      "saved": "Uygulama bilgileri kaydedildi",
+      "failed": "Bağlantı tamamlanamadı. Yeniden bağlan.",
+      "retry": "Bağlantının süresi doldu. Yeniden bağlan.",
+      "connected": "Paraşüt bağlantısı kuruldu",
+      "choose": "Şirketini seç",
+      "secretHint": "Kayıttan sonra tekrar gösterilmez",
+      "configured": "Uygulama bilgileri kayıtlı",
+      "setup": "Uygulama bilgilerini gir",
+      "originMissing": "Callback adresi hazırlanamıyor. Destek ekibine haber ver.",
+      "method": "Bağlantı yöntemi",
+      "oob": "Yetki kodu (OOB)",
+      "https": "Otomatik dönüş (HTTPS)",
+      "enterCode": "Paraşüt yetki kodu",
+      "code": "Yetki kodunu yapıştır",
+      "openProvider": "Paraşüt’te izin ver",
+      "codeAccepted": "Yetki kodu alındı"
     }
   },
   "etkin": {

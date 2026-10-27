@@ -12,7 +12,7 @@ import type { JobQueue } from "@wms/shared/queue";
 import { SealConfigError, type Sealer } from "@wms/shared/seal";
 import { runTenantCommand, runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
 import { FLOWS, PROVIDERS, PROVIDER_INFO, defaultDirection, parseDirection, parseFlow, parseProvider, supportedDirections, type Direction, type Flow, type Provider } from "./catalog.ts";
-import { ParasutClient, ProviderError, parseCompanyId, type ProviderErrorCode } from "./parasut.ts";
+import { ParasutClient, ProviderError, parseCompanyId, type ProviderErrorCode, type TokenSet } from "./parasut.ts";
 import { integrationSealer, sealSecrets } from "./secrets.ts";
 import { IntegrationStateError, accessToken, loadIntegration, type IntegrationStatus } from "./store.ts";
 
@@ -192,11 +192,23 @@ function sealerOf(deps: IntegrationDeps): Sealer | null {
  * saklanmaz. Farklı şirkete yeniden bağlanma reddedilir (`COMPANY_CHANGED`): eski eşlemeler başka şirketin kimlikleridir.
  */
 export async function connectParasut(params: ConnectionCallParams, input: ConnectParasutInput, deps: IntegrationDeps = {}): Promise<ConnectResult> {
+  const username = email(input.username);
+  const pass = password(input.password);
+  return connectParasutAuthorized(params, input, (client) => client.passwordGrant({ clientId: token(input.clientId, 200), clientSecret: token(input.clientSecret, 200), username, password: pass }), deps);
+}
+
+/** Internal OAuth adapter: provider tokens originate only from the claimed, sealed attempt. Permissions and company verification are repeated. */
+export async function connectParasutAuthorized(
+  params: ConnectionCallParams,
+  input: Pick<ConnectParasutInput, "companyId" | "clientId" | "clientSecret" | "requestId">,
+  grant: (client: ParasutClient) => Promise<TokenSet>,
+  deps: IntegrationDeps = {},
+  beforeWrite?: (tx: AccessTx, tenantId: string, userId: string, membershipId: string) => Promise<void>,
+  autoProducts = false,
+): Promise<ConnectResult> {
   const companyId = parseCompanyId(input.companyId);
   const clientId = token(input.clientId, 200);
   const clientSecret = token(input.clientSecret, 200);
-  const username = email(input.username);
-  const pass = password(input.password);
   // Yakın zamanda giriş domain'de zorunlu (inceleme MINOR-3): çağıran bağlamazsa ret.
   if (params.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
   const pre = await runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
@@ -212,7 +224,7 @@ export async function connectParasut(params: ConnectionCallParams, input: Connec
   let box: ReturnType<typeof sealSecrets>;
   try {
     const client = deps.client ?? new ParasutClient();
-    const t = await client.passwordGrant({ clientId, clientSecret, username, password: pass });
+    const t = await grant(client);
     const company = (await client.companies(t.accessToken)).find((c) => c.id === companyId);
     if (company === undefined) return { ok: false, reason: "COMPANY_NOT_FOUND" };
     label = company.name;
@@ -229,6 +241,7 @@ export async function connectParasut(params: ConnectionCallParams, input: Connec
       const links = await tx.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM public.external_refs WHERE tenant_id = ${m.tenantId}::uuid AND system = 'PARASUT'`);
       if (Number(links[0]?.n ?? 0) > 0) return { ok: false, reason: "COMPANY_CHANGED" } as const;
     }
+    await beforeWrite?.(tx, m.tenantId, m.userId, m.membershipId);
     const ins = await tx.execute<{ id: string }>(sql`
       INSERT INTO public.integrations (tenant_id, id, provider, status, account_label, account_ref, credentials, connected_by, connected_membership_id, connected_at, last_checked_at)
       VALUES (${m.tenantId}::uuid, ${randomUUID()}::uuid, 'PARASUT', 'CONNECTED', ${label}, ${companyId}, ${JSON.stringify(box)}::jsonb, ${m.userId}::uuid, ${m.membershipId}::uuid, now(), now())
@@ -242,6 +255,12 @@ export async function connectParasut(params: ConnectionCallParams, input: Connec
         INSERT INTO public.integration_flows (tenant_id, id, integration_id, flow, enabled, direction)
         VALUES (${m.tenantId}::uuid, ${randomUUID()}::uuid, ${integrationId}::uuid, ${flow}, false, ${defaultDirection("PARASUT", flow)})
         ON CONFLICT ON CONSTRAINT integration_flows_flow_key DO NOTHING`);
+    }
+    // First OAuth connection only. Reauthorization preserves the customer's existing flow preferences.
+    if(autoProducts && cur?.connectedAt == null) {
+      await tx.execute(sql`UPDATE public.integration_flows SET enabled=true,direction='PULL' WHERE tenant_id=${m.tenantId}::uuid AND integration_id=${integrationId}::uuid AND flow='PRODUCTS'`);
+      await appendAudit(tx,{action:"integration.flow_changed",actorUserId:m.userId,entityType:"integration",entityId:integrationId,changeSummary:{provider:"PARASUT",flow:"PRODUCTS",enabled:true,direction:"PULL",via:"first_oauth"}});
+      await enqueueRun(tx,deps,m.userId,integrationId,"PRODUCTS");
     }
     await appendAudit(tx, {
       action: "integration.connected",
@@ -311,6 +330,8 @@ export async function disconnectIntegration(params: ConnectionCallParams, input:
       UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL, last_error_code = NULL
        WHERE tenant_id = ${m.tenantId}::uuid AND provider = ${provider} AND status <> 'DISCONNECTED' RETURNING id`);
     const id = r[0]?.id;
+    const cancelled = await tx.execute<{id:string}>(sql`UPDATE public.integration_oauth_attempts SET phase='FAILED',token_box=NULL,companies='[]'::jsonb WHERE tenant_id=${m.tenantId}::uuid AND phase NOT IN ('COMPLETE','FAILED') RETURNING id`);
+    if (cancelled[0] !== undefined) await appendAudit(tx,{action:"integration.oauth_cancelled",actorUserId:m.userId,entityType:"integration_oauth",entityId:cancelled[0].id,changeSummary:{provider,count:cancelled.length}});
     if (id === undefined) return { changed: false };
     await tx.execute(sql`UPDATE public.integration_flows SET enabled = false WHERE tenant_id = ${m.tenantId}::uuid AND integration_id = ${id}::uuid AND enabled`);
     await appendAudit(tx, { action: "integration.disconnected", actorUserId: m.userId, entityType: "integration", entityId: id, requestId: input.requestId ?? null, changeSummary: { provider } });

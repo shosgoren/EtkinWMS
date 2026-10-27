@@ -740,3 +740,19 @@ class Component extends DCLogic {
 </script>
 </body>
 </html>
+
+<!-- T-1066: StandartForm/KalipForm ortak kalıbından türetilen OAuth uygulama ayarı.
+ Ekran: Paraşüt uygulama ayarları; alanlar Application Id, Secret; Secret geri okunmaz.
+ Müşterinin Callback URL değeri girilebilir (OOB veya HTTPS); Kopyala düğmesinde 2 sn Kopyalandı (sessiz).
+ Alt ana işlem KAYDET; çıkış ortak korunur. Ardından Paraşüt ile bağlan.
+ Birden çok şirket: ortak KalipSecim, şirket adı, alt işlem BAĞLAN.
+ Eski bağlantı bağımsız ikincil erişimdir; mevcut token/akış ayarları değişmez.
+-->
+<template id="parasut-oauth-form">
+ <section class="sg"><div class="sgh"><b>Paraşüt uygulama ayarları</b></div>
+ <label class="fld"><span>Application Id</span><input name="clientId" autocomplete="off" /></label>
+ <label class="fld"><span>Secret</span><input name="clientSecret" type="password" autocomplete="new-password" /></label>
+ <label class="fld"><span>Callback URL</span><input name="callbackUrl" value="urn:ietf:wg:oauth:2.0:oob" /></label>
+ <button class="btn" type="button">Kopyala</button>
+ </section>
+</template>
