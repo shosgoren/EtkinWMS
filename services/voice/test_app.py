@@ -1,4 +1,4 @@
-"""Etkin ses servisi birim testleri (T-1002). Model gerektiren tek test, model dizini yoksa atlanır (CI'da imaj içinde koşar).
+"""Etkin ses servisi birim testleri (T-1002, T-1106). Model gerektiren testler, model dizini yoksa atlanır (CI'da imaj içinde koşar).
 
 Çalıştırma: `VOICE_NO_APP=1 python -m unittest -v test_app` (imajda: `docker run --rm --network none <imaj> python -m unittest -v test_app`).
 """
@@ -95,6 +95,82 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(engine.calls, 1)
 
 
+class FakeVoice:
+    def __init__(self, delay=0.0):
+        self.delay = delay
+        self.calls = 0
+
+    def synthesize(self, text):
+        import time
+
+        import numpy as np
+
+        self.calls += 1
+        time.sleep(self.delay)
+        return np.zeros(voice.TTS_RATE // 2, dtype=np.float32)
+
+
+class SpeakableTests(unittest.TestCase):
+    def test_shelf_codes_halves_and_control_chars(self):
+        self.assertEqual(voice.speakable("A-3 rafına koy"), "A 3 rafına koy")
+        self.assertEqual(voice.speakable("7,5 kilo"), "7 buçuk kilo")
+        self.assertEqual(voice.speakable("3,25 m"), "3,25 m")
+        self.assertEqual(voice.speakable("C-12\x07 rafı\u202e  boş"), "C 12 rafı boş")
+
+    def test_length_is_bounded(self):
+        self.assertEqual(len(voice.speakable("a" * 5000)), voice.TTS_MAX_CHARS)
+
+    def test_wav_is_mono_16bit_24k(self):
+        import numpy as np
+
+        data = voice.encode_wav(np.array([0.0, 2.0, -2.0], dtype=np.float32))
+        with wave.open(io.BytesIO(data), "rb") as w:
+            self.assertEqual((w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getnframes()), (1, 2, 24000, 3))
+            self.assertEqual(struct.unpack("<3h", w.readframes(3)), (0, 32767, -32767))
+
+
+class TtsServiceTests(unittest.TestCase):
+    def test_unavailable_until_loaded_and_rejects_bad_text(self):
+        svc = voice.Service(FakeEngine())
+        self.assertEqual(asyncio.run(svc.tts("merhaba"))[0], 503)
+        svc.voice = FakeVoice()
+        for bad in (None, 5, ["x"], "", "  123 - ,"):
+            self.assertEqual(asyncio.run(svc.tts(bad))[0], 400)
+        self.assertEqual(svc.voice.calls, 0)
+
+    def test_same_text_is_cached(self):
+        svc = voice.Service(FakeEngine(), FakeVoice())
+        first = asyncio.run(svc.tts("Raf A-3 boş"))
+        second = asyncio.run(svc.tts("Raf  A-3 boş"))
+        self.assertEqual(first[0], 200)
+        self.assertTrue(first[1].startswith(b"RIFF"))
+        self.assertEqual(first, second)
+        self.assertEqual(svc.voice.calls, 1)
+
+    def test_cache_is_bounded(self):
+        svc = voice.Service(FakeEngine(), FakeVoice())
+        for i in range(voice.TTS_CACHE_MAX + 5):
+            asyncio.run(svc.tts(f"cümle {i} tamam"))
+        self.assertEqual(len(svc._cache), voice.TTS_CACHE_MAX)
+
+    def test_single_worker_and_bounded_queue(self):
+        fake = FakeVoice(delay=0.3)
+
+        async def run():
+            svc = voice.Service(FakeEngine(), fake)
+            old = (voice.TTS_QUEUE_MAX, voice.QUEUE_WAIT)
+            voice.TTS_QUEUE_MAX, voice.QUEUE_WAIT = 1, 0.1
+            try:
+                return await asyncio.gather(*(svc.tts(f"metin {i} oku") for i in range(4)))
+            finally:
+                voice.TTS_QUEUE_MAX, voice.QUEUE_WAIT = old
+
+        codes = sorted(r[0] for r in asyncio.run(run()))
+        self.assertEqual(codes.count(200), 1)
+        self.assertEqual(codes.count(503), 3)
+        self.assertEqual(fake.calls, 1)
+
+
 @unittest.skipUnless(Path(voice.MODEL_DIR, "model.bin").is_file(), "model dizini yok (yalnız imaj içinde koşar)")
 class ModelTests(unittest.TestCase):
     def test_sample_wav_to_text(self):
@@ -103,6 +179,34 @@ class ModelTests(unittest.TestCase):
         norm = text.lower().replace("ı", "i")
         self.assertIn("kabul", norm)
         self.assertGreater(conf, 0.0)
+
+
+def rss_mib():
+    for line in Path("/proc/self/status").read_text().splitlines():
+        if line.startswith("VmRSS:"):
+            return int(line.split()[1]) / 1024
+    return 0.0
+
+
+@unittest.skipUnless(Path(voice.TTS_DIR, "ema.pt").is_file() and Path(voice.MODEL_DIR, "model.bin").is_file(), "model dizini yok (yalnız imaj içinde koşar)")
+class TtsModelTests(unittest.TestCase):
+    def test_turkish_speech_round_trips_through_stt_within_memory(self):
+        import numpy as np
+
+        tts = voice.EmaEngine(voice.TTS_DIR, voice.THREADS)
+        audio = tts.synthesize(voice.speakable("Bugün hava çok güzel."))
+        self.assertGreater(len(audio) / voice.TTS_RATE, 0.6)
+        self.assertLess(float(np.abs(audio).max()), 1.01)
+        data = voice.encode_wav(audio)
+        self.assertTrue(data.startswith(b"RIFF"))
+        # Yazı → ses → yazı: üretilen ses Türkçe anlaşılır mı (aynı imajdaki Whisper ile; "hava" alan ipucunda yok)?
+        n = int(len(audio) * voice.RATE / voice.TTS_RATE)
+        heard = np.interp(np.linspace(0, len(audio) - 1, n), np.arange(len(audio)), audio).astype(np.float32)
+        stt = voice.WhisperEngine(voice.MODEL_DIR, voice.THREADS)
+        text, _conf = stt.transcribe(heard)
+        self.assertIn("hava", text.lower())
+        # Kapsayıcı sınırı 1280 MiB (deploy/vps/compose.yml): iki model birlikte payla sığmalı.
+        self.assertLess(rss_mib(), 1100)
 
 
 if __name__ == "__main__":

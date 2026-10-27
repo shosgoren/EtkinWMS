@@ -2,12 +2,17 @@
 # Etkin ses servisi (T-1002, B-62): yerel konuşma → yazı. Ayrı imaj `etkinwms-voice:<SHA>`; yayın arşivine uygulama imajlarıyla birlikte
 # girer (deploy-vps.yml), aynı revision/schema etiketlerini taşır ve `node` (uid 1000) kullanıcısıyla çalışır (release.py denetimi).
 # Taban imaj etiket + digest ile sabit (mirror.gcr.io, Docker Hub 429 sınırı yok). Python paketleri sürüm + SHA-256 ile sabit
-# (`--require-hashes`, yalnız tekerlek). Model derlemede sabit revizyondan indirilir ve SHA-256 ile doğrulanır; çalışırken ağ yok.
+# (`--require-hashes`, yalnız tekerlek). Modeller derlemede sabit revizyondan indirilir ve SHA-256 ile doğrulanır; çalışırken ağ yok.
+# T-1106: yazı → ses için EMA Lightning + PyTorch'un yalnız CPU yapısı (`+cpu`, download.pytorch.org; CUDA paketleri gelmez).
 ARG PY_IMAGE=mirror.gcr.io/library/python:3.12-slim-trixie@sha256:cb33f7f771ecec2ef1225cf39b159591a040391bd73e4c01f00fdfc4c47611d2
 
 FROM ${PY_IMAGE} AS model
 COPY fetch_model.py /fetch_model.py
-RUN python -I /fetch_model.py /models/whisper-small
+RUN python -c "import urllib.request,json;d=json.load(urllib.request.urlopen('https://huggingface.co/api/models/canberkkkkkk/ema-lightning/revision/main?blobs=true'));print('PROBE-REV',d['sha']);[print('PROBE-FILE',x['rfilename'],x.get('size'),(x.get('lfs') or {}).get('sha256')) for x in d['siblings']]" \
+    && pip download --no-deps --only-binary=:all: --index-url https://download.pytorch.org/whl/cpu -d /tmp/t torch==2.14.1+cpu \
+    && sha256sum /tmp/t/* && ls -l /tmp/t && false
+RUN python -I /fetch_model.py whisper /models/whisper-small \
+    && python -I /fetch_model.py ema /models/ema-lightning
 
 FROM ${PY_IMAGE} AS build
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -15,9 +20,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HF_HUB_OFFLINE=1 \
     HF_HUB_DISABLE_TELEMETRY=1 \
     VOICE_MODEL_DIR=/models/whisper-small \
+    VOICE_TTS_DIR=/models/ema-lightning \
     VOICE_THREADS=2
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --disable-pip-version-check --require-hashes --only-binary=:all: -r /tmp/requirements.txt \
+RUN pip install --no-cache-dir --disable-pip-version-check --require-hashes --only-binary=:all: \
+        --extra-index-url https://download.pytorch.org/whl/cpu -r /tmp/requirements.txt \
     && rm /tmp/requirements.txt \
     && useradd --uid 1000 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin node
 COPY --from=model /models /models
@@ -37,6 +44,7 @@ ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
     HF_HUB_OFFLINE=1 \
     HF_HUB_DISABLE_TELEMETRY=1 \
     VOICE_MODEL_DIR=/models/whisper-small \
+    VOICE_TTS_DIR=/models/ema-lightning \
     VOICE_THREADS=2
 WORKDIR /srv
 USER node
