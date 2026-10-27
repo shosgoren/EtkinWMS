@@ -46,7 +46,7 @@ export function DocumentCard({ slug, document: doc, permissions }: { slug: strin
   const sign = giris ? "+" : "−";
   const etiketler: KalipEtiket[] = [
     { metin: kindLabel },
-    { metin: t(`states.${doc.status}`), ...(STATUS_TON[doc.status] === undefined ? {} : { ton: STATUS_TON[doc.status] }), testId: "document-status" },
+    { metin: t(`states.${doc.status}`), ...(STATUS_TON[doc.status] === undefined ? {} : { ton: STATUS_TON[doc.status] }), testId: "document-status", durum: true },
   ];
   const bilgiler: KalipBilgi[] = [
     { key: "kind", etiket: t("k.kindL"), deger: kindLabel, d, ton: tur },
