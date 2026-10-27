@@ -96,6 +96,35 @@ describe("T-428 cari kartlar", () => {
     expect((await listParties(call(A.ownerUserId, A), { q: code, archived: true })).total).toBe(0);
   });
 
+  it("T-1058 sayfalama: keyset imleçle tekrarsız ve eksiksiz; toplam yalnız ilk sayfada; bozuk imleç reddedilir; başka alan imleci veri sızdırmaz", async () => {
+    const p = `S${Date.now()}`;
+    // Aynı adlı iki cari: sıra (ad, kod, kimlik) olduğundan ikisi de kaybolmadan gelir.
+    const rows = Array.from({ length: 7 }, (_, i) => ({ row: i + 2, code: `${p}-${i}`, name: i < 2 ? "Aynı Ad" : `Cari ${String(i).padStart(2, "0")}` }));
+    expect(await importParties(call(A.ownerUserId, A), { rows, dryRun: false })).toMatchObject({ created: 7 });
+    const seen: string[] = [];
+    let after: string | undefined;
+    let pages = 0;
+    for (;;) {
+      const page = await listParties(call(A.ownerUserId, A), { q: p, limit: 3, ...(after === undefined ? {} : { after }) });
+      if (pages === 0) expect(page.total).toBe(7);
+      else expect(page.total).toBeUndefined();
+      seen.push(...page.items.map((x) => x.code));
+      pages += 1;
+      if (page.nextCursor === null) break;
+      after = page.nextCursor;
+    }
+    expect(pages).toBe(3);
+    expect(new Set(seen).size).toBe(7);
+    expect([...seen].sort()).toEqual(rows.map((r) => r.code).sort());
+    // Bozuk / sahte imleç: doğrulama hatası (sorguya gitmez).
+    await expect(listParties(call(A.ownerUserId, A), { after: "!!" })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    await expect(listParties(call(A.ownerUserId, A), { after: Buffer.from(JSON.stringify(["a", "b"])).toString("base64url") })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    // A'nın imleci B'de yalnız B'nin satırlarını sürdürür (imleç kimlik değil konumdur; tenant sınırı sorguda).
+    const first = await listParties(call(A.ownerUserId, A), { q: p, limit: 3 });
+    const inB = await listParties(call(B.ownerUserId, B), { q: p, ...(first.nextCursor === null ? {} : { after: first.nextCursor }) });
+    expect(inB.items).toHaveLength(0);
+  });
+
   it("veritabanı: silme yetkisi yok, kimlik alanı değiştirilemez", async () => {
     const r = await adm.query<{ del: boolean }>("SELECT has_table_privilege('wms_app', 'public.parties', 'DELETE') AS del");
     expect(r.rows[0]?.del).toBe(false);

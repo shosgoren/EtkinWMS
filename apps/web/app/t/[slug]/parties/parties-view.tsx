@@ -8,7 +8,7 @@
 // Bilinçli farklar (DESIGN-PARITY, T-971): çip sayıları yok (sunucu tür sayımı vermez); tür süzgeci yalnız yüklenen ≤100 kartı süzer.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
@@ -16,8 +16,8 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-e
 import { KalipAlan, KalipGrup, KalipIzgara } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
-import { KalipGorunumSec, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
-import { archivePartyAction, savePartyAction } from "./actions.ts";
+import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
+import { archivePartyAction, loadMorePartiesAction, savePartyAction } from "./actions.ts";
 import { feedback } from "@wms/ui";
 
 export interface PartyView {
@@ -198,7 +198,25 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
   );
 }
 
-export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: { slug: string; dark: boolean; canEdit: boolean; q: string; archived: boolean; items: readonly PartyView[]; total: number }) {
+export function PartiesView({
+  slug,
+  dark,
+  canEdit,
+  q,
+  archived,
+  items: ilkCariler,
+  total,
+  nextCursor = null,
+}: {
+  slug: string;
+  dark: boolean;
+  canEdit: boolean;
+  q: string;
+  archived: boolean;
+  items: readonly PartyView[];
+  total: number | undefined;
+  nextCursor?: string | null;
+}) {
   const t = useTranslations("parties");
   const tr = useTranslations("kural");
   const router = useRouter();
@@ -210,10 +228,33 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
   const { say, node: toast } = useKalipToast("liste");
   const editId = params.get("edit");
   const isNew = params.get("new") === "1" && canEdit;
-  const editing = editId === null ? undefined : items.find((p) => p.id === editId);
+  // T-1058: kaydırınca eklenen sayfalar (sunucunun ilk sayfasının devamı); arama / arşiv değişince (yeni ilk sayfa) sıfırlanır.
+  const [ek, setEk] = useState<{ readonly bas: readonly PartyView[]; readonly rows: readonly PartyView[]; readonly cursor: string | null }>({ bas: ilkCariler, rows: [], cursor: nextCursor });
+  const guncel = ek.bas === ilkCariler ? ek : { bas: ilkCariler, rows: [], cursor: nextCursor };
+  if (guncel !== ek) setEk(guncel);
+  // Sonraki sayfalar arada kaymış olabilir: aynı cari iki kez çizilmez.
+  const items = useMemo(() => {
+    const ilk = new Set(ilkCariler.map((p) => p.id));
+    return [...ilkCariler, ...guncel.rows.filter((r) => !ilk.has(r.id))];
+  }, [ilkCariler, guncel.rows]);
+  const sonrakiImlec = guncel.cursor;
+  const dahaYukle = useCallback(async (): Promise<boolean> => {
+    if (sonrakiImlec === null) return true;
+    const r = await loadMorePartiesAction({ slug, q, archived, after: sonrakiImlec });
+    if (!r.ok) return false;
+    setEk((o) => (o.bas !== ilkCariler ? o : { bas: o.bas, rows: [...o.rows, ...r.data.items], cursor: r.data.nextCursor }));
+    return true;
+  }, [sonrakiImlec, slug, q, archived, ilkCariler]);
+  // Kayda girip geri dönünce aynı uzunluk (sunucudan taze; yalnız sayı hatırlanır).
+  useKalipDerinlik(items.length, sonrakiImlec !== null, dahaYukle);
+  // Düzenleme aynı adreste (`?edit=`) açılır; sunucu yeniden çizince eklenen sayfalar sıfırlanır. Sonraki sayfadan açılan cari kaybolmasın diye
+  // açılan satır burada tutulur (yalnız bu oturumun ekranda zaten gördüğü veri; kaydetme yine sunucuda sürüm denetimli).
+  const [acilan, setAcilan] = useState<PartyView | null>(null);
+  const editing = editId === null ? undefined : (items.find((p) => p.id === editId) ?? (acilan?.id === editId ? acilan : undefined));
 
   const open = (p: PartyView | null): void => {
     feedback.minor();
+    setAcilan(p);
     const sep = listHref.includes("?") ? "&" : "?";
     router.push(p === null ? `${listHref}${sep}new=1` : `${listHref}${sep}edit=${encodeURIComponent(p.id)}`);
   };
@@ -242,6 +283,8 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
   }
 
   const shown = kind === "" ? items : items.filter((p) => p.kind === kind);
+  const sayi = total !== undefined ? t("count", { n: total }) : sonrakiImlec === null ? t("count", { n: items.length }) : t("countMore", { n: items.length });
+  const sonsuz = <KalipSonsuz devam={sonrakiImlec !== null} yukle={dahaYukle} metin={sayi} testId="parties-sonsuz" />;
   const chips: KalipCip[] = [
     { id: "active", label: t("chipActive"), d: LICON.grid, color: "172E42", on: !archived, href: q === "" ? list : `${list}?q=${encodeURIComponent(q)}` },
     { id: "archived", label: t("chipArchived"), d: LICON.lock, color: "4E6476", on: archived, href: `${list}?${q === "" ? "" : `q=${encodeURIComponent(q)}&`}arsiv=1` },
@@ -271,7 +314,8 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
           <KalipGorunumSec value={gorunum} onChange={setGorunum} />
         </span>
       </div>
-      {shown.length === 0 ? (
+      {/* Tür çipi yüklenmiş satırları süzer; bulunamadıysa ve devamı varsa liste (ve sonundaki otomatik yükleme) açık kalır. */}
+      {shown.length === 0 && sonrakiImlec === null ? (
         <>
           {q === "" && kind === "" && !archived ? (
             <KalipBos
@@ -296,7 +340,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
         </>
       ) : (
         <>
-          <KalipBaslik title={archived ? t("archivedList") : t("activeList")} hint={t("count", { n: total })} />
+          <KalipBaslik title={archived ? t("archivedList") : t("activeList")} hint={sayi} />
           {gorunum === "liste" ? (
             <KalipTablo<PartyView>
               label={t("title")}
@@ -306,6 +350,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
               href={(p) => `${listHref}${listHref.includes("?") ? "&" : "?"}edit=${encodeURIComponent(p.id)}`}
               satirAria={(p) => `${p.name} · ${p.code} · ${t(`kind.${p.kind}`)}`}
               testId="parties-table"
+              sonu={sonsuz}
             />
           ) : (
           <KalipKartListe label={t("title")}>
@@ -318,6 +363,7 @@ export function PartiesView({ slug, dark, canEdit, q, archived, items, total }: 
                 </KalipKart>
               );
             })}
+            {sonsuz}
           </KalipKartListe>
           )}
         </>

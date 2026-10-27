@@ -162,10 +162,39 @@ const toRow = (r: DbParty): PartyRow => ({
 });
 
 /** Cari listesi (`stock.view`): ad / kod / vergi no / telefon içinde arama; arşivliler yalnız istenirse. */
-export async function listParties(params: QueryParams, opts: { readonly q?: string; readonly archived?: boolean; readonly limit?: number } = {}): Promise<{ readonly items: readonly PartyRow[]; readonly total: number }> {
+// T-1058: liste keyset ile sayfalanır (OFFSET yok, I-14). Sıra `(name, code, id)`; imleç opaktır (base64url JSON) ve sunucuda sıkı doğrulanır.
+const PARTY_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const encodePartyCursor = (r: { readonly name: string; readonly code: string; readonly id: string }): string =>
+  Buffer.from(JSON.stringify([r.name, r.code, r.id]), "utf8").toString("base64url");
+
+function decodePartyCursor(raw: string): { readonly name: string; readonly code: string; readonly id: string } {
+  if (raw.length > 2048 || !/^[A-Za-z0-9_-]+$/.test(raw)) throw new AppError("VALIDATION_FAILED");
+  let v: unknown;
+  try {
+    v = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+  } catch {
+    throw new AppError("VALIDATION_FAILED");
+  }
+  if (!Array.isArray(v) || v.length !== 3) throw new AppError("VALIDATION_FAILED");
+  const [name, code, id] = v as unknown[];
+  if (typeof name !== "string" || name === "" || name.length > 200 || CTRL.test(name)) throw new AppError("VALIDATION_FAILED");
+  if (typeof code !== "string" || code === "" || code.length > 64 || CTRL.test(code)) throw new AppError("VALIDATION_FAILED");
+  if (typeof id !== "string" || !PARTY_UUID_RE.test(id)) throw new AppError("VALIDATION_FAILED");
+  return { name, code, id };
+}
+
+/**
+ * Cari listesi (`stock.view`). `limit + 1` satır okunur, fazlası `nextCursor` üretir. Toplam yalnız ilk sayfada (`after` yokken) sayılır;
+ * sonraki sayfalarda `total` yoktur (kalan satır sayısı yanıltıcı olurdu).
+ */
+export async function listParties(
+  params: QueryParams,
+  opts: { readonly q?: string; readonly archived?: boolean; readonly limit?: number; readonly after?: string } = {},
+): Promise<{ readonly items: readonly PartyRow[]; readonly total: number | undefined; readonly nextCursor: string | null }> {
   const q = t(opts.q).slice(0, 100);
   const limit = Math.min(PARTY_LIST_MAX, Math.max(1, Math.trunc(opts.limit ?? 50)));
   const like = q === "" ? null : `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  const after = opts.after === undefined || opts.after === "" ? undefined : decodePartyCursor(opts.after);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const rows = await tx.execute<DbParty & { total: string }>(sql`
       SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version, count(*) OVER ()::text AS total
@@ -174,9 +203,13 @@ export async function listParties(params: QueryParams, opts: { readonly q?: stri
          -- T-1037: arşiv görünümü YALNIZ arşivdekiler (ekran "Arşivdeki cariler" der; eskiden etkinler de geliyordu).
          AND (CASE WHEN ${opts.archived === true}::boolean THEN archived_at IS NOT NULL ELSE archived_at IS NULL END)
          AND (${like}::text IS NULL OR name ILIKE ${like} OR code ILIKE ${like} OR tax_no ILIKE ${like} OR phone ILIKE ${like} OR city ILIKE ${like})
-       ORDER BY archived_at IS NOT NULL, name, code, id
-       LIMIT ${limit}`);
-    return { items: rows.map(toRow), total: Number(rows[0]?.total ?? 0) };
+         AND (${after === undefined}::boolean OR (name, code, id) > (${after?.name ?? ""}::text, ${after?.code ?? ""}::text, ${after?.id ?? "00000000-0000-0000-0000-000000000000"}::uuid))
+       ORDER BY name, code, id
+       LIMIT ${limit + 1}`);
+    const page = rows.slice(0, limit);
+    const last = page[page.length - 1];
+    const nextCursor = rows.length > limit && last !== undefined ? encodePartyCursor(last) : null;
+    return { items: page.map(toRow), total: after === undefined ? Number(rows[0]?.total ?? 0) : undefined, nextCursor };
   });
 }
 
