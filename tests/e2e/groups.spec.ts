@@ -125,9 +125,9 @@ test.describe("Ortak alt çubuk ve Modüller (T-958)", () => {
     const sheet = page.getByRole("dialog", { name: "Modüller" });
     await expect(sheet.locator('[data-module="satin"]')).toHaveAttribute("data-soon", "true");
     await expect(sheet.locator('a[data-module="satin"]')).toHaveCount(0);
-    // Telefonda 12 kutu: yöneticinin 24 kutusunun (20 modül + T-979c Stok / Ayarlar / Kim ne yaptı? + Genel bakış geçişi) 11'i + "+13 daha";
-    // arama sığmayanı bulur.
-    await expect(page.getByTestId("kabuk-more")).toContainText("+13 daha");
+    // Telefonda 12 kutu: yöneticinin 23 kutusunun (19 modül — T-1094 Excel'den aktar Modüller'de yok — + T-979c Stok / Ayarlar / Kim ne
+    // yaptı? + Genel bakış geçişi) 11'i + "+12 daha"; arama sığmayanı bulur.
+    await expect(page.getByTestId("kabuk-more")).toContainText("+12 daha");
     await page.getByTestId("kabuk-search").fill("ekip");
     await sheet.locator('[data-module="ekip"]').click();
     await expect(page).toHaveURL(/\/t\/demo\/team$/);
