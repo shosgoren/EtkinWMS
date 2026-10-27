@@ -14,8 +14,8 @@ Bu dosya bu akışın tek devam kaydıdır. API bilgileri bekleniyor; sırlar do
 - Devir tamamlanmadan ve ayrıca etkinleştirilmeden WMS → Paraşüt stok gönderimi açılmaz. Mevcut canlı müşterinin stok/yön ayarları kendiliğinden değiştirilmez.
 
 ## Seri uygulama sırası
-1. **T-1060 — #209 BİRLEŞTİ, YAYIN DOĞRULAMASI BEKLİYOR:** miktarsız aktarımın birim/hassasiyet ve eşleme güvenliği; bilinmeyen birimi ADET sayma kaldırılır, mevcut kart birimi korunur.
-2. **T-1061 — DEVAM:** barkod alma parametresi + kalıcı dahili barkod/alternatifler; alan sahipliği ve aktarım sonuçları, desteklenen ürün alanları. Şema ve API karşılığı doğrulanarak.
+1. **T-1060 — #209 CANLIDA:** miktarsız aktarımın birim/hassasiyet ve eşleme güvenliği; bilinmeyen birimi ADET sayma kaldırılır, mevcut kart birimi korunur. Main/CI ve deploy `40477830376` başarılı; VPS `health:ok`, release `5c7c00695b1ab4113bcb30ad06a739aab291ccbb` doğrulandı.
+2. **T-1061 — YEREL TESTLER TAMAM, YAYIN BEKLİYOR:** barkod alma parametresi + kalıcı dahili barkod/alternatifler; prepush ve 20 DB testi geçti, bağımsız inceleme temiz. **Bu adımın devamında bekleyen:** alan sahipliği, aktarım sonuçları ve desteklenen ek ürün alanları (resmî API şemasına göre).
 3. **BEKLİYOR:** toplu ürün etiketi ve filtreler; standart okutma korunur.
 4. **BEKLİYOR:** belirlenmemiş takip durumu + yetkili ilk seçim; mevcut kayıtları koruyan migration.
 5. **BEKLİYOR:** ayrı Devir fişi ve okutmalı taslak; lot/tarih/ambalaj, palet, tekil QR, baskı.
