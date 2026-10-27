@@ -4714,10 +4714,6 @@
         "name": "Stok fişleri",
         "sub": "Devir · Giriş · Çıkış"
       },
-      "excel": {
-        "name": "Excel’den aktar",
-        "sub": "Ürün · Cari"
-      },
       "etiket": {
         "name": "Etiket tasarımı",
         "sub": "Şablon · Yazdır"
@@ -4801,32 +4797,6 @@
     "mainOff": "Bu işlem şu an yapılamaz.",
     "discarded": "Değişiklikler bırakıldı",
     "formFirst": "Önce zorunlu alanları doldur, seçimleri tamamla.",
-    "excel": {
-      "aria": "Excel · {kind}: içeri al, güncelle ya da indir",
-      "menu": "Excel · {kind}",
-      "title": "Excel · {kind}",
-      "import": "İçeri al",
-      "update": "Güncelle (koda göre)",
-      "export": "Dışarı aktar",
-      "exporting": "Hazırlanıyor…",
-      "done": "{n} satır Excel'e indirildi",
-      "doneTruncated": "İlk {n} satır indirildi · liste daha uzun, aramayla daralt",
-      "donePersonal": "{n} satır indirildi · kişisel alanlar yetkin olmadığı için boş",
-      "kind": {
-        "items": "Ürünler",
-        "parties": "Cariler",
-        "warehouses": "Depolar",
-        "locations": "Raflar"
-      },
-      "err": {
-        "rate": "Çok sık indirdin · 1 dakika sonra yeniden dene",
-        "forbidden": "Bu işlem için yetkin yok · yöneticine sor",
-        "network": "Bağlantı yok · internet gelince yeniden dene",
-        "notFound": "Kayıt bulunamadı",
-        "generic": "İndirilemedi · yeniden dene",
-        "reauth": "Güvenlik için yeniden giriş yap · seni giriş ekranına götürüyorum"
-      }
-    },
     "st": {
       "clock": "Saat",
       "clockAria": "Saat {time}, {date}",
