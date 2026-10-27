@@ -5712,7 +5712,9 @@
         "now": "şimdi",
         "todo": "bekliyor",
         "skip": "atlandı"
-      }
+      },
+      "resume": "Kaldığın yerden",
+      "free": "Serbest bırak"
     },
     "hint": {
       "cardsExcel": {
@@ -5817,12 +5819,12 @@
     "miniSub": "{done}/{total} tamam",
     "replay": "Tekrar göster",
     "work": {
-      "warehouseForm": "Depo adını yaz, önerilen kodu kontrol et ve KAYDET. Ardından açılan raf oluşturucuda raf düzenini tanımla.",
-      "bulkForm": "Raf kodu düzenini ve adetleri seç. Önizlemeyi kontrol et, çakışan kodları düzelt, sonra OLUŞTUR.",
-      "teamMenu": "QR ile ekle seçeneğine dokun. Açılan ekranda QR oluştur; yalnız yetkili kişiye paylaş.",
-      "teamQr": "QR OLUŞTUR ile katılma bağlantısını üret. PAYLAŞ ile kişiye gönder; kişi katılınca ekibin onay bekleyenler bölümünü kontrol et.",
-      "importCheck": "Eşleşen sütunları, yeni/güncel/sorunlu satır sayılarını kontrol et. Hataları düzelt; onay ekranındaki AKTAR ile kaydet.",
-      "postStock": "Belge taslaksa yetkinle ONAYLA, sonra İŞLE. Yalnız İşlendi durumundan sonra açılış stoku tamam olur."
+      "warehouseForm": "Depo adını yaz, KAYDET'e dokun.",
+      "bulkForm": "Raf düzenini seç, OLUŞTUR'a dokun.",
+      "teamMenu": "QR ile ekle'ye dokun.",
+      "teamQr": "QR OLUŞTUR'a dokun, kişiyle paylaş.",
+      "importCheck": "Sayılara bak, AKTAR'a dokun.",
+      "postStock": "ONAYLA, sonra İŞLE'ye dokun."
     }
   },
   "operationGuide": {

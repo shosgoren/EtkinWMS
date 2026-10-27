@@ -1,5 +1,8 @@
 "use client";
-// T-1026: kısa başlangıç + tekrar açılabilir kurulum adımları. Çalışma kartı ortak KalipRehberKart; perde yalnız adım seçicisinde.
+// T-1026: kısa başlangıç + tekrar açılabilir kurulum adımları.
+// T-1100 (kullanıcı 27 Ekim: "yazı çıkıyor, işlemi yaptırmıyor"): çalışma kartı T-1095 odaklı rehberle aynı — ortak buzlu perde yapılacak
+// yerin çevresini delik bırakıp bütün ekranı örter, kart tek satırdır, İleri/Atla yoktur; iş yapılınca (sunucu verisi) adım kendiliğinden
+// ilerler. Perdeye dokununca serbest bırakır, küçük yüzen simge kalır ("Kaldığın yerden").
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -13,16 +16,17 @@ import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
 import { YOL_TAZELE_EVENT, setYolDurum, useYolDurum } from "./durum.ts";
 import { setYolSpot } from "./spot.ts";
-import { JOURNEY_OPEN_EVENT, STEP_KEYS, filterJourney, firstOpen, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, stripState, type JourneyData, type StepKey } from "./steps.ts";
+import { JOURNEY_OPEN_EVENT, STEP_KEYS, filterJourney, firstOpen, STEP_UI, isStepKey, ringDash, stepPlan, stopFor, type JourneyData, type StepKey } from "./steps.ts";
 
 import { cikisSor } from "../kalip/cikis.tsx";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
-import { KalipRehberKart } from "../kalip/rehber.tsx";
 
 const ACTIVE_KEY = "etkinwms.yol.active";
 /** Kısa başlangıç turunun adımları (yeni kiracıda ilk girişte). */
 const SHORT_STEPS: readonly StepKey[] = ["cards", "shelves", "parties", "stock"];
 const POLL_MS = 6000;
+/** Açılınca deliği tamamen kaplayan iş yüzeyleri (form / menü). */
+const FOCUS_SURFACES: readonly string[] = ["warehouse-form", "bulk-form", "team-add-qr", "team-qr-new"];
 const GAP = 14;
 const EDGE = 12;
 
@@ -278,6 +282,10 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   const plan = useMemo(() => (cur === null || data === null ? null : stepPlan(base, cur, data)), [cur, data, base]);
   const stop = plan === null ? null : stopFor(plan, pathname);
   const targetSel = tourOn && stop !== null && stop.target !== null ? `[data-tour="${stop.target}"]` : null;
+  // Ekranda bir iş yüzeyi (form, menü) açıldıysa delik o yüzeyin tamamıdır: kullanıcı formu doldurup KAYDET'e dokunabilsin.
+  const focusSel = tourOn && surface !== null && FOCUS_SURFACES.includes(surface) ? `[data-testid="${surface}"]` : targetSel;
+  const [katli, setKatli] = useState(false);
+  useEffect(() => setKatli(false), [cur]);
   const barTarget = stop?.target === "main";
   const stopTarget = stop?.target ?? null;
 
@@ -325,7 +333,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
 
   // Hedefi ölç: `[data-tour]` öğesi; boyut, kaydırma ve görünürlük değişince yeniden. Görünmezse delik yok, balon ortada.
   useEffect(() => {
-    if (targetSel === null) {
+    if (focusSel === null) {
       setYolSpot(null);
       setHole(null);
       return undefined;
@@ -334,13 +342,13 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     setYolSpot(null);
     const measure = (): void => {
       setVp((c) => (c.w === window.innerWidth && c.h === window.innerHeight ? c : { w: window.innerWidth, h: window.innerHeight }));
-      const el = document.querySelector(targetSel);
+      const el = [...document.querySelectorAll(focusSel)].find((x) => x.getBoundingClientRect().width > 0) ?? null;
       if (el === null) {
         setHole(null);
         return;
       }
       // Hedefin açtığı menü (`data-tour-follow`) de delikte kalır: kullanıcı menüden seçebilsin (ör. Excel › İçeri al).
-      const follow = stopTarget === null ? [] : [...document.querySelectorAll(`[data-tour-follow="${stopTarget}"]`)];
+      const follow = stopTarget === null || focusSel !== targetSel ? [] : [...document.querySelectorAll(`[data-tour-follow="${stopTarget}"]`)];
       const rects = [el.getBoundingClientRect(), ...follow.map((f) => f.getBoundingClientRect()).filter((x) => x.width > 0 && x.height > 0)];
       const r = rects.reduce((a, x) => {
         const left = Math.min(a.left, x.left);
@@ -368,7 +376,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
       window.removeEventListener("scroll", measure, true);
       setYolSpot(null);
     };
-  }, [targetSel, barTarget, stopTarget]);
+  }, [focusSel, targetSel, barTarget, stopTarget]);
 
   const closeTour = useCallback((): void => {
     feedback.minor();
@@ -433,25 +441,6 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     setSheet(false);
   }, []);
 
-  const move = useCallback(
-    (dir: 1 | -1): void => {
-      if (data === null || cur === null) return;
-      const i = visible.findIndex((s) => s.key === cur);
-      const n = visible[i + dir];
-      if (n === undefined) {
-        // T-1036: sonda geride açık adım kaldıysa ona dön (ör. ürün kartları getirilmeden sona gelindi).
-        const open = dir === 1 ? firstOpen(visible) : null;
-        if (open !== null && open !== cur) { feedback.minor(); go(open, data); return; }
-        if (dir === 1 && shortTour) { closeTour(); return; }
-        feedback.warn(dir === 1 ? t("coach.noNext") : t("coach.noPrev"));
-        return;
-      }
-      feedback.minor();
-      go(n.key, data);
-    },
-    [data, cur, visible, go, t, shortTour, closeTour],
-  );
-
   const skip = useCallback(
     async (k: StepKey): Promise<void> => {
       if (busy) return;
@@ -470,6 +459,19 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   );
 
   const coachOpen = tourOn && cur !== null && plan !== null;
+  // Esc turu kapatır (açık bir pencere yoksa; pencere kendi Esc'ini işler).
+  useEffect(() => {
+    if (!coachOpen) return undefined;
+    const key = (e: KeyboardEvent): void => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const modal = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].some((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden");
+      if (modal) return;
+      e.preventDefault();
+      closeTour();
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [coachOpen, closeTour]);
   useModalFocus(sheet && !operationOpen, sheetRef, { onClose: closeSheet, busy, initial: "container" });
 
   const answerStock = async (want: boolean): Promise<void> => {
@@ -499,13 +501,22 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   // T-1036: kartta bütün adımlar görünür (kısa turda da): sayı ve şerit aynı listeden — atlananlar paydada yok.
   const active = steps.filter((s) => !s.skipped);
   const activeIdx = cur === null ? -1 : active.findIndex((s) => s.key === cur);
-  const pos = tipPosition(targetSel === null ? null : hole, vp.w, vp.h);
+  const pos = tipPosition(focusSel === null || katli ? null : hole, vp.w, vp.h);
   const shownStep = okStep ?? cur;
   const nextKey = data?.next ?? null;
-  const tipTitle = okStep !== null ? t("coach.doneTitle", { title: titleOf(okStep) }) : stop === null ? (cur === null ? "" : titleOf(cur)) : t(`hint.${stop.hint}.title`);
   const contextText = surface === "warehouse-form" ? "warehouseForm" : surface === "bulk-form" ? "bulkForm" : surface === "team-add-qr" ? "teamMenu" : surface === "team-qr-new" ? "teamQr" : surface === "aktar-new" ? "importCheck" : surface === "document-state" && cur === "stock" ? "postStock" : null;
-  const workTarget = surface === "warehouse-form" ? '[data-testid="warehouse-form"] input[name="name"]' : surface === "bulk-form" ? '[data-testid="bulk-form"]' : surface === "team-add-qr" ? '[data-testid="team-add-qr"]' : surface === "team-qr-new" ? '[data-testid="team-qr-new"]' : targetSel;
   const tipText = contextText !== null ? t(`work.${contextText}`) : okStep !== null ? (nextKey === null ? t("coach.allDone") : t("coach.nextLine", { title: titleOf(nextKey) })) : stop === null ? t("coach.goText") : t(`hint.${stop.hint}.text`);
+  const speak = (): void => {
+    if (!window.speechSynthesis) {
+      feedback.warn(t("coach.noSpeech"));
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(tipText);
+    u.lang = intlDil(locale);
+    window.speechSynthesis.speak(u);
+  };
+  const ilerleme = `${Math.max(activeIdx, 0) + 1}/${active.length}`;
   // E2E/erişilebilirlik: tur kararı verilene dek "loading" (yeni kiracıda kendiliğinden başlatma sunucu yanıtını bekler).
   const pendingStart = !paused && data !== null && data.tour === null && data.done === 0 && !data.dismissed && !data.complete;
   const layerState = !sessionLoaded || data === null || pendingStart ? "loading" : guideOpen ? "wait" : coachOpen ? "on" : "off";
@@ -513,17 +524,37 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   return (
     <div className={`dzj${dark ? " dz-dark" : ""}`} style={{ display: "contents" }} data-testid="yol-layer" data-state={layerState}>
       {coachOpen && shownStep !== null && plan !== null && data !== null ? (
-        <>
-          <section data-testid="yol-coach" data-step={shownStep} data-state={okStep !== null ? "done" : stop === null ? "go" : "open"} style={{display:"contents"}}>
-          <KalipRehberKart title={tipTitle} text={tipText} progress={upper(t("coach.step", { n: Math.max(activeIdx,0)+1, total: active.length, title:titleOf(shownStep) }))} target={workTarget} style={pos.style}
-            head={<ol className="ysteps" aria-label={t("coach.steps")} data-testid="yol-strip">{steps.map((s, i) => { const st = stripState(s, cur); const label = `${titleOf(s.key)}: ${t(`coach.strip.${st}`)}`; return <li key={s.key} className={st === "todo" ? undefined : st} title={label} aria-label={label} data-step={s.key} data-state={st}>{st === "done" ? <Ico d={JICON.check} size={16} /> : i + 1}</li>; })}</ol>}
-            onClose={closeTour} onPrev={()=>move(-1)} onNext={()=>stop===null ? cikisSor(()=>router.push(plan.href)) : move(1)} onSkip={()=>cur!==null&&void skip(cur)} closeTestId="yol-close">
-            {cur === "cards" && data.openingStockWanted === null ? <div className="yq" data-testid="yol-stockq"><b>{t("cards.stockQ")}</b><button type="button" className="ych" onClick={()=>void answerStock(true)} data-testid="yol-stock-yes">{t("yes")}</button><button type="button" className="ych" onClick={()=>void answerStock(false)} data-testid="yol-stock-no">{t("no")}</button></div>:null}
-            {cur === "cards" ? <button type="button" className="yalt" onClick={()=>void switchSource()} data-testid="yol-source">{data.cardSource === "PARASUT" ? t("coach.useExcel") : t("coach.useParasut")}</button>:null}
-            {stop===null?<button type="button" className="yalt" onClick={()=>cikisSor(()=>router.push(plan.href))} data-testid="yol-open">{t("coach.open")}</button>:null}
-          </KalipRehberKart>
-          </section>
-        </>
+        <section data-testid="yol-coach" data-step={shownStep} data-state={okStep !== null ? "done" : stop === null ? "go" : "open"} data-folded={katli} style={{ display: "contents" }}>
+          {katli ? (
+            <section className="ycoach working folded" style={{ zIndex: 42 }} role="region" aria-label={t("coach.aria")} data-testid="yol-kart">
+              <button type="button" className="ynb" onClick={() => { feedback.minor(); setKatli(false); }} data-testid="yol-devam">
+                {t("coach.resume")} · {ilerleme}
+              </button>
+              <button type="button" className="cbtn" onClick={closeTour} aria-label={t("coach.close")} data-testid="yol-close">
+                <Ico d={JICON.close} size={20} />
+              </button>
+            </section>
+          ) : (
+            <>
+              {hole !== null && okStep === null ? <KalipPerdeKatman onClose={() => { feedback.minor(); setKatli(true); }} label={t("coach.free")} delik={hole} /> : null}
+              <section className="ycoach working" style={{ ...pos.style, zIndex: 42 }} role="region" aria-label={t("coach.aria")} data-testid="yol-kart">
+                <div className="cth">
+                  <span className="cstep" aria-live="polite">{upper(t("coach.step", { n: Math.max(activeIdx, 0) + 1, total: active.length, title: titleOf(shownStep) }))}</span>
+                  <button type="button" className="cbtn" onClick={speak} aria-label={t("coach.speak")}>
+                    <Ico d={[JICON.speak, JICON.speakWave]} size={20} />
+                  </button>
+                  <button type="button" className="cbtn" onClick={closeTour} aria-label={t("coach.close")} data-testid="yol-close">
+                    <Ico d={JICON.close} size={20} />
+                  </button>
+                </div>
+                <p className="ctx" data-testid="yol-metin">{tipText}</p>
+                {cur === "cards" && data.openingStockWanted === null ? <div className="yq" data-testid="yol-stockq"><b>{t("cards.stockQ")}</b><button type="button" className="ych" onClick={()=>void answerStock(true)} data-testid="yol-stock-yes">{t("yes")}</button><button type="button" className="ych" onClick={()=>void answerStock(false)} data-testid="yol-stock-no">{t("no")}</button></div>:null}
+                {cur === "cards" ? <button type="button" className="yalt" onClick={()=>void switchSource()} data-testid="yol-source">{data.cardSource === "PARASUT" ? t("coach.useExcel") : t("coach.useParasut")}</button>:null}
+                {stop === null ? <button type="button" className="ynb go" onClick={()=>cikisSor(()=>router.push(plan.href))} data-testid="yol-open">{t("coach.open")}</button> : null}
+              </section>
+            </>
+          )}
+        </section>
       ) : null}
 
       {sheet && !operationOpen && data !== null ? (

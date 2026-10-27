@@ -5712,7 +5712,9 @@
         "now": "now",
         "todo": "to do",
         "skip": "skipped"
-      }
+      },
+      "resume": "Continue",
+      "free": "Let me work"
     },
     "hint": {
       "cardsExcel": {
@@ -5817,12 +5819,12 @@
     "miniSub": "{done}/{total} done",
     "replay": "Show again",
     "work": {
-      "warehouseForm": "Enter the warehouse name, check the suggested code and SAVE. Define the shelf layout in the builder that opens next.",
-      "bulkForm": "Choose the shelf code pattern and quantities. Review the preview, fix code conflicts, then CREATE.",
-      "teamMenu": "Choose Add via QR. Create a QR on the next screen and share it only with the intended person.",
-      "teamQr": "CREATE QR to generate the join link. SHARE it with the person, then review Pending approvals after they join.",
-      "importCheck": "Check column mappings and new, updated and invalid row counts. Fix errors, then IMPORT on the confirmation screen.",
-      "postStock": "If the document is a draft, APPROVE then POST when permitted. Only Posted completes opening stock."
+      "warehouseForm": "Type the warehouse name, tap SAVE.",
+      "bulkForm": "Pick the shelf layout, tap CREATE.",
+      "teamMenu": "Tap Add with QR.",
+      "teamQr": "Tap CREATE QR, share it with the person.",
+      "importCheck": "Check the counts, tap IMPORT.",
+      "postStock": "APPROVE, then tap POST."
     }
   },
   "operationGuide": {
