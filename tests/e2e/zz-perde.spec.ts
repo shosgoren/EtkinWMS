@@ -81,3 +81,20 @@ for (const b of BOYUTLAR) {
     expect(hatalar, hatalar.join("\n")).toEqual([]);
   });
 }
+
+test("T-1060 perde: yarım işte Hesap menüsünden Çıkış yap — ortak çıkış kutusu menünün üstünde ve tıklanır", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/parties?new=1");
+  await page.locator('input[name="name"]').fill("Yarım iş");
+  await page.getByTestId("home-actions").first().click();
+  await page.getByTestId("pano-menu-out").click();
+  const kutu = page.getByTestId("kalip-unsaved");
+  await expect(kutu).toBeVisible();
+  const kal = page.getByTestId("kalip-unsaved-leave");
+  const b = await kal.boundingBox();
+  const ust = await page.evaluate<string>(`(() => { const el = document.elementFromPoint(${Math.round((b?.x ?? 0) + (b?.width ?? 0) / 2)}, ${Math.round((b?.y ?? 0) + (b?.height ?? 0) / 2)}); return el ? (el.closest('[data-testid="kalip-unsaved"]') ? "kutu" : el.className) : "yok"; })()`);
+  expect(ust).toBe("kutu");
+  await expect(page.locator(".hmenu-kok .hback")).toBeHidden();
+});

@@ -245,6 +245,9 @@
 .dzp.hmenu-kok { display: contents; }
 .dzp.hmenu-kok .hback { position: fixed; inset: 0; z-index: 40; }
 .dzp.hmenu-kok .halo.tmenu { position: fixed; z-index: 41; }
+/* Codex P2 (PR 211): menüden "Çıkış yap" ya da başka yere gidilirken yarım iş için ortak çıkış kutusu açılırsa kutu ekranın kendi
+   katmanındadır (z 26 bağlamı); menü katmanı (40) onu örtmesin diye kutu açıkken menü ve perdesi gizlenir — kutunun kendi perdesi örter. */
+body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
 
 /* ---- Alt cam çubuk: buzlu beyaz cam, ince parlak kenar, yumuşak gölge; simge + yazı gri-mavi. Ölçüler (yükseklik, ana işlem
    boyu/konumu) kabuk.css'te kalır: etiket hizası ve "son alan çubuğun altında kalmaz" yerleşim taramaları onlara bağlı. ---- */
