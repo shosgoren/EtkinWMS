@@ -224,6 +224,8 @@ export function TasksView({ slug, dark, canManage, tasks: ilkGorevler, members, 
     const p = new URLSearchParams(params.toString());
     p.delete("assign");
     p.delete("cancel");
+    // Formdan dönüş listenin başına (sonraki sayfanın imleci yalnız formu açarken taşınır; aşağıya bkz.).
+    p.delete("after");
     return p.toString();
   })();
   const listHref = listQs === "" ? base : `${base}?${listQs}`;
@@ -231,6 +233,10 @@ export function TasksView({ slug, dark, canManage, tasks: ilkGorevler, members, 
     feedback.minor();
     setAcilan(task);
     const p = new URLSearchParams(listQs);
+    // Codex P2 (PR 208): sonraki sayfadan açılan görevde o sayfanın imleci adrese yazılır; sayfa yenilenince sunucu o sayfayı çizer ve
+    // form yine açılır (istemci belleğine bağlı kalmaz).
+    const imlec = ek.from[task.id];
+    if (imlec !== undefined) p.set("after", imlec);
     p.set(param, task.id);
     router.push(`${base}?${p.toString()}`);
   };
@@ -241,8 +247,14 @@ export function TasksView({ slug, dark, canManage, tasks: ilkGorevler, members, 
     }
   };
   // T-1059: kaydırınca eklenen sayfalar; süzgeç / arama değişince (yeni ilk sayfa) sıfırlanır.
-  const [ek, setEk] = useState<{ readonly bas: readonly TaskView[]; readonly rows: readonly TaskView[]; readonly next: string | null }>({ bas: ilkGorevler, rows: [], next: nextCursor });
-  const guncel = ek.bas === ilkGorevler ? ek : { bas: ilkGorevler, rows: [], next: nextCursor };
+  const [ek, setEk] = useState<{
+    readonly bas: readonly TaskView[];
+    readonly rows: readonly TaskView[];
+    readonly next: string | null;
+    /** Eklenen satırın yüklendiği sayfanın imleci (görev kimliği → imleç). */
+    readonly from: Readonly<Record<string, string>>;
+  }>({ bas: ilkGorevler, rows: [], next: nextCursor, from: {} });
+  const guncel = ek.bas === ilkGorevler ? ek : { bas: ilkGorevler, rows: [], next: nextCursor, from: {} };
   if (guncel !== ek) setEk(guncel);
   const tasks = useMemo(() => {
     const ilk = new Set(ilkGorevler.map((x) => x.id));
@@ -256,7 +268,7 @@ export function TasksView({ slug, dark, canManage, tasks: ilkGorevler, members, 
     // Atanan adı ekranın zaten aldığı üye listesinden (sunucu ilk sayfada da aynı listeyi kullanır).
     const ad = new Map(members.map((m) => [m.membershipId, m.displayName]));
     const rows = r.data.items.map((x): TaskView => ({ ...x, assignedName: x.assignedMembershipId === null ? null : (ad.get(x.assignedMembershipId) ?? null) }));
-    setEk((o) => (o.bas !== ilkGorevler ? o : { bas: o.bas, rows: [...o.rows, ...rows], next: r.data.next }));
+    setEk((o) => (o.bas !== ilkGorevler ? o : { bas: o.bas, rows: [...o.rows, ...rows], next: r.data.next, from: { ...o.from, ...Object.fromEntries(rows.map((x) => [x.id, sonraki])) } }));
     return true;
   }, [sonraki, slug, kindFilter, statusFilter, search, members, ilkGorevler]);
   useKalipDerinlik(tasks.length, sonraki !== null, dahaYukle);
