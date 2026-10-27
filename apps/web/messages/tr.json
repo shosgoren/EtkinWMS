@@ -1506,6 +1506,25 @@
       "colUnit": "Birim",
       "colHave": "Eldeki",
       "colState": "Durum"
+    },
+    "productLabels": {
+      "filter": "Süz",
+      "print": "QR etiket",
+      "apply": "UYGULA",
+      "applied": "Süzgeç uygulandı",
+      "clear": "Süzgeçleri temizle",
+      "category": "Kategori adı",
+      "tracking": "Takip",
+      "barcode": "Barkod",
+      "all": "Hepsi",
+      "barcodePresent": "Barkod var",
+      "barcodeMissing": "Barkod yok",
+      "batch": "Bu grupta {count} / toplam {total} ürün",
+      "next": "Sonraki etiket grubu",
+      "empty": "Bu süzgeçte ürün yok",
+      "invalidBarcode": "Bir ürünün barkodu okutmaya uygun değil",
+      "invalidBarcodeHint": "Ürün kartındaki barkodları kontrol edin.",
+      "qrTooSmall": "QR için en az {width} × {height} mm seçin."
     }
   },
   "warehouses": {

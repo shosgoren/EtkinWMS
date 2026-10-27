@@ -5,11 +5,13 @@ import { listUnits } from "@wms/domain/catalog/units";
 import { sumItemsStock } from "@wms/domain/stock";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
 
+import { domainExtraFilters, type ItemExtraFilters } from "./filters.ts";
+
 export const ITEMS_PAGE_SIZE = 50;
 
 type Call = Parameters<typeof searchItems>[0];
 
-export interface ItemsPageInput {
+export interface ItemsPageInput extends ItemExtraFilters {
   readonly q: string;
   readonly status: "" | "ACTIVE" | "ARCHIVED";
   readonly cardType: "" | CardType;
@@ -28,6 +30,7 @@ export async function loadItemsPage(call: Call, input: ItemsPageInput): Promise<
   const first = input.after === undefined || input.after === "";
   const page = await searchItems(call, {
     limit: ITEMS_PAGE_SIZE,
+    ...domainExtraFilters(input),
     // T-436: toplam yalnız ilk sayfada (sayfa başına tam COUNT yükü olmasın; güvenlik incelemesi MINOR).
     withTotal: first,
     ...(input.q.trim() === "" ? {} : { q: input.q }),

@@ -48,6 +48,9 @@
     top: 0;
     left: 0;
     display: block;
+    overflow: visible !important;
+    max-height: none !important;
+    flex: none !important;
     margin: 0;
     padding: 0;
   }

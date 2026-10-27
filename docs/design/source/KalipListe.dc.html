@@ -284,6 +284,9 @@ button,input{font:inherit;color:inherit}
               <button type="button" class="sbtn mic" aria-label="Ürünü söyle" onClick="{{tapMic}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></button>
             </label>
             <div class="fchips" role="group" aria-label="Süzgeç">
+              <!-- T-1064: ürün süzgeci ve seçili süzgeçteki standart QR etiketleri; ortak fch kalıbı. -->
+              <button type="button" class="fch" aria-label="Süz"><i style="background: #2F5DA8"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M16 16l4.5 4.5"></path></svg></i>Süz</button>
+              <button type="button" class="fch" aria-label="QR etiket"><i style="background: #3B6A9E"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i>QR etiket</button>
               <sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
                 <button type="button" class="{{c.cls}}" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><i style="{{c.icStyle}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="{{c.d}}"></path></svg></i>{{c.label}}<em>{{c.n}}</em></button>
               </sc-for>
@@ -390,6 +393,9 @@ button,input{font:inherit;color:inherit}
               <button type="button" class="sbtn mic" aria-label="Ürünü söyle" onClick="{{tapMic}}"><svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg></button>
             </label>
             <div class="fchips" role="group" aria-label="Süzgeç">
+              <!-- T-1064: ürün süzgeci ve seçili süzgeçteki standart QR etiketleri; ortak fch kalıbı. -->
+              <button type="button" class="fch" aria-label="Süz"><i style="background: #2F5DA8"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M16 16l4.5 4.5"></path></svg></i>Süz</button>
+              <button type="button" class="fch" aria-label="QR etiket"><i style="background: #3B6A9E"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M3 9h18v8H3zM7 14h10v7H7z"></path></svg></i>QR etiket</button>
               <sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
                 <button type="button" class="{{c.cls}}" aria-pressed="{{c.on}}" onClick="{{c.pick}}"><i style="{{c.icStyle}}"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="{{c.d}}"></path></svg></i>{{c.label}}<em>{{c.n}}</em></button>
               </sc-for>
