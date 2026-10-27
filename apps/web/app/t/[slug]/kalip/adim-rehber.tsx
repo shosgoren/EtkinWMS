@@ -57,6 +57,8 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
   const [d, setD] = useState<Durum | null>(null);
   const [delik, setDelik] = useState<PerdeDelik | null>(null);
   const [biten, setBiten] = useState(false);
+  // Doğru ekrandayken hedef bulunamıyor (ör. aktarma tür seçiminde): "Ekranı aç" adımın ekranını sorgusuyla yeniden açar.
+  const [yok, setYok] = useState(false);
 
   const kaydet = useCallback(
     (n: Durum | null): void => {
@@ -93,11 +95,11 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
   const acik = d !== null && !d.katli && izinli.includes(d.rehber);
 
   const git = useCallback(
-    (r: AdimRehber, k: AdimKaynak, n: number): void => {
+    (r: AdimRehber, k: AdimKaynak, n: number, zorla = false): void => {
       const a = adimPlani(r, k)[n];
       if (a === undefined) return;
       const hedef = `${base}${a.path}`;
-      if (path !== hedef) cikisSor(() => router.push(`${hedef}${a.query ? `?${a.query}` : ""}`));
+      if (zorla || path !== hedef) cikisSor(() => router.push(`${hedef}${a.query ? `?${a.query}` : ""}`));
     },
     [base, path, router],
   );
@@ -134,7 +136,12 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
     const olc = (): void => {
       if ("path" in done && path === `${base}${done.path}`) return ilerle();
       if ("sel" in done && burada && gorunur(done.sel) !== null) return ilerle();
+      if (burada && adim.geri !== undefined && gorunur(adim.geri.sel) !== null) {
+        const n = plan.findIndex((p) => p.key === adim.geri?.key);
+        if (n >= 0 && n < d.adim) return kaydet({ ...d, adim: n });
+      }
       const el = burada ? gorunur(adim.target) : null;
+      setYok(burada && el === null);
       if (el === null) return setDelik((o) => (o === null ? o : null));
       const r = el.getBoundingClientRect();
       const n = { x: Math.round(r.x - 6), y: Math.round(r.y - 6), w: Math.round(r.width + 12), h: Math.round(r.height + 12) };
@@ -151,7 +158,7 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
       window.clearInterval(id);
       document.removeEventListener("click", tikla, true);
     };
-  }, [d, adim, plan.length, path, base, burada, kaydet]);
+  }, [d, adim, plan, path, base, burada, kaydet]);
 
   if (biten) {
     return (
@@ -219,8 +226,8 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
         <p className="ctx" data-testid="adim-metin">
           {metin}
         </p>
-        {burada ? null : (
-          <button type="button" className="ynb go" onClick={() => git(d.rehber, d.kaynak, d.adim)} data-testid="adim-ekran">
+        {burada && !yok ? null : (
+          <button type="button" className="ynb go" onClick={() => git(d.rehber, d.kaynak, d.adim, burada)} data-testid="adim-ekran">
             {t("open")}
           </button>
         )}

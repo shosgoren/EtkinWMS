@@ -20,6 +20,8 @@ export interface AdimRehberAdimi {
   readonly query?: string;
   readonly target: string;
   readonly done: AdimBitti;
+  /** Ekran durumu kaybolduysa (ör. sayfa yenilendi, aktarma başa döndü) `sel` görünürken `key` adımına dönülür. */
+  readonly geri?: { readonly sel: string; readonly key: string };
 }
 
 /** Bağlantılar alan seçimi ve Paraşüt akışı (rehber → ekran kimliği). */
@@ -39,13 +41,17 @@ export function adimPlani(rehber: AdimRehber, kaynak: AdimKaynak): readonly Adim
     ];
   }
   const a = ALAN[rehber];
+  // `tur` aktarmayı rehberin türüyle açar (dönüşte tür seçimi yerine dosya adımı); dosya yüklenince eşleme satırları görünür (tek
+  // sayfalı dosyada sayfa seçici yoktur).
+  const query = `tur=${rehber}`;
+  const basa = { sel: '[data-testid="aktar-drop"]', key: "dosya" };
   return [
     { key: `alan_${rehber}`, path: "/settings/baglantilar", target: `[data-testid="baglantilar-alan"] [data-option="${a}"]`, done: { sel: `[data-testid="baglantilar-alan"] [data-option="${a}"][aria-checked="true"]` } },
     { key: "iceri", path: "/settings/baglantilar", target: '[data-testid="baglantilar-islem"] [data-option="import"]', done: { sel: '[data-testid="baglantilar-islem"] [data-option="import"][aria-checked="true"]' } },
     { key: "ana", path: "/settings/baglantilar", target: '[data-testid="baglantilar-main"]', done: { path: "/import" } },
-    { key: "dosya", path: "/import", target: '[data-testid="aktar-drop"]', done: { sel: '[data-testid="aktar-sheet"]' } },
-    { key: "kontrol", path: "/import", target: '[data-testid="aktar-main"]', done: { sel: '[data-testid="aktar-new"], [data-testid="aktar-upd"], [data-testid="aktar-bad"]' } },
-    { key: "uygula", path: "/import", target: '[data-testid="aktar-main"]', done: { sel: '[data-testid="aktar-done"]' } },
+    { key: "dosya", path: "/import", query, target: '[data-testid="aktar-drop"]', done: { sel: ".maps .mrow[data-field]" } },
+    { key: "kontrol", path: "/import", query, target: '[data-testid="aktar-main"]', done: { sel: '[data-testid="aktar-new"], [data-testid="aktar-upd"], [data-testid="aktar-bad"]' }, geri: basa },
+    { key: "uygula", path: "/import", query, target: '[data-testid="aktar-main"]', done: { sel: '[data-testid="aktar-done"]' }, geri: basa },
   ];
 }
 

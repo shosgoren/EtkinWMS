@@ -2,6 +2,7 @@
 // yapınca kendiliğinden ilerler ("İleri" yok). Bulanık alana dokununca serbest bırakır, küçük yüzen simge kalır: kaldığın yerden / baştan.
 import { expect, test } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
+import { csv } from "./support/import-screen.ts";
 
 test("T-1095 Ürünleri Excel ile aktar: odaklanır, işi yapınca ilerler, serbest bırakır ve baştan / kaldığı yerden devam eder", async ({ page }) => {
   await page.goto("/");
@@ -9,6 +10,10 @@ test("T-1095 Ürünleri Excel ile aktar: odaklanır, işi yapınca ilerler, serb
   await page.goto("/t/demo/settings/baglantilar");
   await page.getByTestId("operation-guide-trigger").first().click();
   await expect(page.getByTestId("guide-picker")).toBeVisible();
+  // Uzun seçim listesinde satırlar ezilip üst üste binmez (liste kayar).
+  const satirlar = await page.locator('[data-testid="guide-picker"] .yst').evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return [r.top, r.bottom]; }));
+  expect(satirlar.length).toBeGreaterThan(3);
+  for (let i = 1; i < satirlar.length; i++) expect(satirlar[i]![0]).toBeGreaterThanOrEqual(satirlar[i - 1]![1] - 0.5);
   await page.getByTestId("adim-basla-urun-EXCEL").click();
 
   const rehber = page.getByTestId("adim-rehber");
@@ -36,6 +41,18 @@ test("T-1095 Ürünleri Excel ile aktar: odaklanır, işi yapınca ilerler, serb
   // Ana düğme → Aktar ekranı; rehber dosya adımına geçer.
   await page.getByTestId("baglantilar-main").filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/\/t\/demo\/import\?tur=urun/);
+  await expect(rehber).toHaveAttribute("data-step", "dosya");
+
+  // Tek sayfalı dosya (sayfa seçici yok) yüklenince de kontrol adımına geçer.
+  await page.getByTestId("aktar-file").setInputFiles(csv(["Stok Kodu;Stok İsmi;Birimi", "T1095-1;Rehber Conta;ADET"]));
+  await expect(rehber).toHaveAttribute("data-step", "kontrol");
+  await expect(perde).toHaveAttribute("style", /polygon\(evenodd/);
+
+  // Sayfa yenilenince aktarma başa döner (türü korunur): rehber de dosya adımına döner, hedef yine açık.
+  page.on("dialog", (dg) => void dg.accept());
+  await page.reload();
+  await expect(page).toHaveURL(/\/t\/demo\/import\?tur=urun/);
+  await expect(page.getByTestId("aktar-drop")).toBeVisible();
   await expect(rehber).toHaveAttribute("data-step", "dosya");
 
   // Baştan: ilk adımın ekranına döner.
