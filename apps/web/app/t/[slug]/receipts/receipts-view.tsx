@@ -6,7 +6,7 @@
 // görünümlü liste öğesidir; durum süzgeci sunucuda yok → çip yok.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Banner, Button, TextField } from "@wms/ui";
 import { KalipOnay } from "../kalip/pencere.tsx";
@@ -17,8 +17,9 @@ import { fmtQty, sumDecimal } from "../kalip/format.ts";
 import { KalipGrup } from "../kalip/form.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
 import { KalipBos, KalipDaha } from "../kalip/liste.tsx";
+import { KalipSonsuz, useKalipDerinlik } from "../kalip/tablo.tsx";
 import { searchItemsAction } from "../items/actions.ts";
-import { approveQualityAction, createReceiptAction, itemUnitsAction } from "./actions.ts";
+import { approveQualityAction, createReceiptAction, itemUnitsAction, loadMoreReceiptsAction } from "./actions.ts";
 import { ErrorNotice, LineStatus, submitWithKey, useKeyHolder, type ErrorContext, type ErrorInfo, type ReceiptView } from "./receipt-form.tsx";
 import { useSonucSesi } from "../kalip/sonuc-sesi.ts";
 
@@ -42,7 +43,8 @@ export interface ReceiptsListProps {
   readonly slug: string;
   readonly dark: boolean;
   readonly receipts: readonly ReceiptView[];
-  readonly nextHref: string | null;
+  /** T-1059: sonraki sayfanın imleci (`createdKey~id`); sonraki sayfalar liste sonunda kendiliğinden gelir. */
+  readonly nextCursor: string | null;
   /** Sunucudan toplam teslim sayısı (ALTIN-KURAL 15); yoksa sayfadaki satır sayısı gösterilir. */
   readonly total?: number;
   readonly canCreate: boolean;
@@ -53,13 +55,30 @@ export interface ReceiptsListProps {
   readonly created: string | null;
 }
 
-export function ReceiptsList({ slug, dark, receipts, nextHref, total, canCreate, canApprove, packageHref, created }: ReceiptsListProps) {
+export function ReceiptsList({ slug, dark, receipts: ilkKabuller, nextCursor, total, canCreate, canApprove, packageHref, created }: ReceiptsListProps) {
   const t = useTranslations("receiving");
   const tk = useTranslations("kural");
   const locale = useLocale();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const approveKey = useKeyHolder();
+  // T-1059: kaydırınca eklenen sayfalar; sunucu yeni ilk sayfa çizince (onay sonrası yenileme dahil) sıfırlanır.
+  const [ek, setEk] = useState<{ readonly bas: readonly ReceiptView[]; readonly rows: readonly ReceiptView[]; readonly next: string | null }>({ bas: ilkKabuller, rows: [], next: nextCursor });
+  const guncel = ek.bas === ilkKabuller ? ek : { bas: ilkKabuller, rows: [], next: nextCursor };
+  if (guncel !== ek) setEk(guncel);
+  const receipts = useMemo(() => {
+    const ilk = new Set(ilkKabuller.map((r) => r.id));
+    return [...ilkKabuller, ...guncel.rows.filter((r) => !ilk.has(r.id))];
+  }, [ilkKabuller, guncel.rows]);
+  const sonraki = guncel.next;
+  const dahaYukle = useCallback(async (): Promise<boolean> => {
+    if (sonraki === null) return true;
+    const r = await loadMoreReceiptsAction({ slug, after: sonraki });
+    if (!r.ok) return false;
+    setEk((o) => (o.bas !== ilkKabuller ? o : { bas: o.bas, rows: [...o.rows, ...r.data.items], next: r.data.next }));
+    return true;
+  }, [sonraki, slug, ilkKabuller]);
+  useKalipDerinlik(receipts.length, sonraki !== null, dahaYukle);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ErrorInfo | null>(null);
   const [confirm, setConfirm] = useState<ReceiptView | null>(null);
@@ -109,7 +128,7 @@ export function ReceiptsList({ slug, dark, receipts, nextHref, total, canCreate,
             {t("form.locked")}
           </p>
         )}
-        {receipts.length === 0 ? (
+        {receipts.length === 0 && sonraki === null ? (
           <KalipBos
             title={t("list.empty")}
             hint={canCreate ? t("k.emptyHint") : t("form.locked")}
@@ -166,13 +185,9 @@ export function ReceiptsList({ slug, dark, receipts, nextHref, total, canCreate,
                   </div>
                 );
               })}
+              <KalipSonsuz devam={sonraki !== null} yukle={dahaYukle} metin={tk("total", { n: total ?? receipts.length })} testId="receipts-sonsuz" />
             </div>
           </>
-        )}
-        {nextHref === null ? null : (
-          <KalipDaha href={nextHref} iconD={LICON.plus}>
-            {t("list.more")}
-          </KalipDaha>
         )}
       </KalipEkran>
       <KalipOnay

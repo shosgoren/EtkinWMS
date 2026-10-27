@@ -70,11 +70,6 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
   }
 
   const names = new Map(members.map((m) => [m.membershipId, m.displayName]));
-  const filterQuery = new URLSearchParams({ ...(kind === undefined ? {} : { kind }), ...(status === undefined ? {} : { status }), ...(search === "" ? {} : { q: search }) });
-  const nextHref =
-    result.next === null
-      ? null
-      : `${returnTo}?${new URLSearchParams({ ...Object.fromEntries(filterQuery), after: `${result.next.createdKey}~${result.next.id}` }).toString()}`;
 
   const dark = temaKoyu(await cookies());
   return (
@@ -99,8 +94,7 @@ export default async function TasksPage({ params, searchParams }: { params: Prom
         }))}
         kindFilter={kind ?? ""}
         statusFilter={status ?? ""}
-        nextHref={nextHref}
-        firstPage={afterRaw === undefined || afterRaw === ""}
+        nextCursor={result.next === null ? null : `${result.next.createdKey}~${result.next.id}`}
         search={search}
         {...(result.total === undefined ? {} : { total: result.total })}
       />
