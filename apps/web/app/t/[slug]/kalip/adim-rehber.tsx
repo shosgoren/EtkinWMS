@@ -5,14 +5,15 @@
 // serbest bırakır ve küçük yüzen simgeye döner: "Kaldığın yerden" ya da "Baştan" (kullanıcı kararı). Durum yalnız bu cihazda tutulur.
 // Eylem çağırmaz; hedefe dokunmak gerçek ekrandaki işlemi yapar (yetki ekranda/sunucuda).
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
-import { feedback, intlDil } from "@wms/ui";
+import { feedback } from "@wms/ui";
 import { JICON } from "../../../design/yolculuk-icons.ts";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
 import { ADIM_YETKI, adimPlani, isAdimKaynak, isAdimRehber, type AdimKaynak, type AdimRehber } from "./adim-rehber-plan.ts";
 import { cikisSor } from "./cikis.tsx";
 import { KalipPerdeKatman, type PerdeDelik } from "./perde.tsx";
+import { useSesliOku } from "./sesli-oku.ts";
 
 export const ADIM_REHBER_EVENT = "etkinwms:adim-rehber";
 
@@ -47,7 +48,7 @@ export function useAdimRehberleri(): readonly AdimRehber[] {
 
 export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug: string; dark: boolean }) {
   const t = useTranslations("operationGuide.adim");
-  const locale = useLocale();
+  const sesliOku = useSesliOku();
   const ctx = useKabuk();
   const path = usePathname();
   const router = useRouter();
@@ -195,11 +196,7 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
   }
 
   const sesli = (): void => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(metin);
-    u.lang = intlDil(locale);
-    window.speechSynthesis.speak(u);
+    sesliOku(metin);
   };
   return (
     <div className={`dzj${dark ? " dz-dark" : ""}`}>

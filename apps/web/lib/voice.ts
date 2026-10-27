@@ -64,3 +64,36 @@ export async function transcribe(wav: Uint8Array<ArrayBuffer>, fetchImpl: typeof
     return { status: "unavailable" };
   }
 }
+
+// T-1106 (Q-129, B-129): yazı → doğal Türkçe ses (iç servis `/tts`, EMA Lightning). Metin en çok TTS_MAX_CHARS; yanıt yalnız 24 kHz mono
+// 16 bit WAV ve en çok TTS_MAX_BYTES kabul edilir. Metin/ses loglanmaz. Servis yoksa "unavailable" (tarayıcı sesi kullanılır).
+export const TTS_MAX_CHARS = 400;
+export const TTS_MAX_BYTES = 2 * 1024 * 1024;
+
+export type TtsResult = { readonly status: "ok"; readonly wav: Uint8Array } | { readonly status: "unavailable" | "busy" };
+
+export async function synthesize(text: string, fetchImpl: typeof fetch = fetch): Promise<TtsResult> {
+  const base = voiceBaseUrl();
+  if (base === null) return { status: "unavailable" };
+  try {
+    const res = await fetchImpl(new URL("/tts", base), {
+      method: "POST",
+      body: JSON.stringify({ text: text.slice(0, TTS_MAX_CHARS) }),
+      headers: { "content-type": "application/json" },
+      redirect: "error",
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (res.status === 503) {
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+      return { status: body?.error === "BUSY" ? "busy" : "unavailable" };
+    }
+    const declared = Number(res.headers.get("content-length") ?? "0");
+    if (!res.ok || res.headers.get("content-type") !== "audio/wav" || declared > TTS_MAX_BYTES) return { status: "unavailable" };
+    const wav = new Uint8Array(await res.arrayBuffer());
+    if (wav.length < 46 || wav.length > TTS_MAX_BYTES || String.fromCharCode(wav[0]!, wav[1]!, wav[2]!, wav[3]!) !== "RIFF") return { status: "unavailable" };
+    return { status: "ok", wav };
+  } catch {
+    return { status: "unavailable" };
+  }
+}

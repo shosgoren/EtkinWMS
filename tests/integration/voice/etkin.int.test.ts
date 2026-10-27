@@ -68,3 +68,16 @@ describe("Etkin hız sınırı (kullanıcı başına, paylaşılan DB sayacı)",
     await expect(limiter.check("voice", `voice-${randomUUID()}`)).resolves.toBeUndefined();
   });
 });
+
+// T-1106: doğal sesle okuma kendi kovasında — dakikada 30 cümle; konuşma (voice) kovasını tüketmez.
+describe("Etkin sesli okuma hız sınırı (tts kovası)", () => {
+  it("dakikada 30 okuma; 31. RATE_LIMITED; voice kovası ayrı", async () => {
+    const now = new Date();
+    const limiter = createRateLimiter({ store: createDbRateLimitStore(app), secret: randomBytes(32).toString("hex"), now: () => now });
+    const user = `tts-${randomUUID()}`;
+    expect(RATE_LIMITS.tts.limit).toBe(30);
+    for (let i = 0; i < 30; i++) await limiter.check("tts", user);
+    await expect(limiter.check("tts", user)).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    await expect(limiter.check("voice", user)).resolves.toBeUndefined();
+  });
+});
