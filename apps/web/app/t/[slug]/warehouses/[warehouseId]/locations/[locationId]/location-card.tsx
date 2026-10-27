@@ -33,6 +33,7 @@ export interface LocationMoveView {
   readonly occurredAt: string;
   readonly actorName: string | null;
   readonly net: string;
+  readonly itemCount: number;
   readonly items: string;
 }
 
@@ -113,13 +114,15 @@ export function LocationCard({
     const known = Object.hasOwn(MOVE_VIS, m.kind);
     const v = known ? (MOVE_VIS[m.kind] ?? MOVE_FALLBACK) : MOVE_FALLBACK;
     const kindName = known ? tm(`kind_${m.kind}`) : tm("kind_OTHER");
-    const n = approx(m.net);
+    // Codex P2: birden çok ürün dokunan belgede miktarlar toplanmaz (farklı ürün/birim); ürün sayısı gösterilir.
+    const tek = m.itemCount === 1;
+    const n = tek ? approx(m.net) : 0;
     return {
       key: m.documentId,
       baslik: kindName,
       no: m.number,
       meta: [when(m.occurredAt), m.items].filter((x) => x !== "").join(" · "),
-      miktar: n > 0 ? `+${fq(m.net)}` : fq(m.net),
+      miktar: !tek ? t("itemsN", { n: m.itemCount }) : n > 0 ? `+${fq(m.net)}` : fq(m.net),
       yon: n > 0 ? "giris" : n < 0 ? "cikis" : "yer",
       d: v.d,
       ton: v.ton,

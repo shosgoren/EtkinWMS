@@ -1738,7 +1738,8 @@
       "reservedShort": "{q} reserved",
       "itemOpen": "Open item card of {name}",
       "movesNone": "No movements on this location yet.",
-      "open": "Open location card of {name}"
+      "open": "Open location card of {name}",
+      "itemsN": "{n} items"
     }
   },
   "field": {

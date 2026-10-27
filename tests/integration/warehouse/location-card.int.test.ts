@@ -64,12 +64,32 @@ describe("location card", () => {
     expect(card.contents.find((c) => c.itemId === kgItem)).toEqual({ itemId: kgItem, itemCode: "K-1082", itemName: "Kauçuk", unitCode: "KG", physical: "2.500001", reserved: "0.000000" });
     expect(card.contentsMore).toBe(false);
     const move = card.moves.find((mv) => mv.documentId === inDoc);
-    expect(move).toMatchObject({ kind: "STOCK_IN", net: "2.500001", items: "K-1082" });
+    expect(move).toMatchObject({ kind: "STOCK_IN", net: "2.500001", itemCount: 1, items: "K-1082" });
     // Başka raftaki stok ve hareket bu karta girmez.
     expect(card.contents.every((c) => c.physical !== "7.000000")).toBe(true);
     const root = await getLocationCard(owner(A), { warehouseId: A.warehouseId, locationId: A.rootLocationId });
     expect(root.path).toEqual([]);
     expect(root.moves.some((mv) => mv.documentId === inDoc)).toBe(false);
+  });
+
+  it("Codex P2: a document touching several products reports the product count; quantities of different products are not summed into one number", async () => {
+    const other = (await adm.query<{ base_unit_id: string }>("SELECT base_unit_id FROM public.items WHERE tenant_id=$1 AND id=$2", [A.tenantId, A.itemNoneId])).rows[0]?.base_unit_id as string;
+    const loc = randomUUID();
+    await adm.query("INSERT INTO public.locations (tenant_id,id,warehouse_id,code,name,depth,kind) VALUES ($1,$2,$3,'MIX1','Karışık',0,'STORAGE')", [A.tenantId, loc, A.warehouseId]);
+    const r = await createStockDocument(cmd(), {
+      kind: "STOCK_IN",
+      warehouseId: A.warehouseId,
+      lines: [
+        { itemId: kgItem, unitId: kgUnit, targetLocationId: loc, quantity: "2", baseQuantity: "2", conversionFactor: "1", stockStatus: "AVAILABLE" },
+        { itemId: A.itemNoneId, unitId: other, targetLocationId: loc, quantity: "3", baseQuantity: "3", conversionFactor: "1", stockStatus: "AVAILABLE" },
+      ],
+    });
+    const documentId = r.documentId as string;
+    await approveDocument(cmd(), { documentId, expectedVersion: 1 });
+    await postDocument(cmd(), { documentId, expectedVersion: 2 });
+    const card = await getLocationCard(owner(A), { warehouseId: A.warehouseId, locationId: loc });
+    expect(card.moves.find((mv) => mv.documentId === documentId)?.itemCount).toBe(2);
+    expect(card.contents.map((c) => c.physical).sort()).toEqual(["2.000000", "3.000000"]);
   });
 
   it("I-01/I-02: another tenant, a location of another warehouse and unknown ids are all NOT_FOUND", async () => {

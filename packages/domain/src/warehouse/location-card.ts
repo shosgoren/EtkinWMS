@@ -40,8 +40,10 @@ export type LocationMoveRow = {
   readonly number: string | null;
   readonly occurredAt: string;
   readonly actorName: string | null;
-  /** Bu raftaki net değişim (transferde rafa giren − çıkan). */
+  /** Bu raftaki net değişim (transferde rafa giren − çıkan). Yalnız `itemCount === 1` iken anlamlıdır (farklı ürün/birim toplanmaz). */
   readonly net: string;
+  /** Belgenin bu rafta dokunduğu farklı ürün sayısı. */
+  readonly itemCount: number;
   readonly items: string;
 };
 
@@ -92,7 +94,7 @@ export async function getLocationCard(params: WarehouseCallParams, input: { read
        LIMIT ${LOCATION_CARD_CONTENTS_MAX + 1}`);
     const moves = await tx.execute<LocationMoveRow>(sql`
       SELECT g.document_id AS "documentId", doc.kind, doc.number, to_json(max(g.occurred_at)) #>> '{}' AS "occurredAt", u.name AS "actorName",
-             sum(g.quantity)::text AS net, string_agg(DISTINCT i.code, ', ') AS items
+             sum(g.quantity)::text AS net, count(DISTINCT g.item_id)::int AS "itemCount", string_agg(DISTINCT i.code, ', ') AS items
         FROM public.stock_ledger g
         JOIN public.documents doc ON doc.tenant_id = g.tenant_id AND doc.id = g.document_id
         JOIN public.stock_dimensions d ON d.tenant_id = g.tenant_id AND d.id = g.stock_dimension_id
