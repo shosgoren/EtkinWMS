@@ -3825,18 +3825,13 @@
     "reportsAria": "Raporlar",
     "r": {
       "critical": "Kritik stok",
-      "criticalSub": "MİNİMUMUN ÇOK ALTINDA",
       "none": "ŞU AN YOK",
       "orders": "Bekleyen sipariş",
       "ordersSub": "EN ESKİSİ {d} GÜN",
       "turn": "Devir hızı",
-      "turnSub": "90 GÜN · EN HIZLI ÜRÜN",
       "buy": "Satın alma",
-      "buySub": "MİNİMUM ALTI ÜRÜN",
       "count": "Sayım farkı",
-      "countSub": "ONAY BEKLİYOR",
-      "all": "Tüm raporlar",
-      "allSub": "STOK, HAREKET, DOLULUK…"
+      "all": "Tüm raporlar"
     },
     "alerts": "DİKKAT İSTEYENLER",
     "liveNow": "CANLI",
@@ -3871,9 +3866,7 @@
     "q": {
       "plan": "Bugünü planla",
       "planSub": "{n} İŞ ATANMAYI BEKLİYOR",
-      "planNone": "ATANMAYI BEKLEYEN İŞ YOK",
       "label": "Etiketi yeniden bas",
-      "labelSub": "GİRİŞ VE SEVK ETİKETLERİ",
       "reports": "Depo raporlarım"
     },
     "todoTitle": "Atanmayı bekleyen işler",
@@ -4353,7 +4346,6 @@
     "ready": "HAZIR",
     "tileMeta": "{screens} EKRAN · {n} KİŞİ",
     "newTile": "Yeni grup",
-    "newTileHint": "AD · EKRAN · KİŞİ",
     "memo": "“HAZIR” gruplar rollerden gelir; herkes rolünün grubunda. Yeni grup role ek yetki verir. Dokun, değiştir.",
     "memoReadOnly": "Grupları yalnız hesap sahibi değiştirebilir; sen görebilirsin.",
     "nameAria": "Grup adı",
@@ -4544,9 +4536,7 @@
     "addTitle": "Kişi ekle",
     "addSub": "KİM KATILACAK?",
     "addField": "Saha personeli",
-    "addFieldSub": "QR YAZDIR · KENDİ CİHAZIYLA KATILSIN",
     "addOffice": "Ofis kullanıcısı",
-    "addOfficeSub": "E-POSTA İLE DAVET GÖNDER",
     "cf": {
       "inviteTitle": "Davet gönderilmedi",
       "pendTitle": "Onay yarıda kaldı",
@@ -4746,8 +4736,6 @@
       "aria": "Excel · {kind}: içeri al, güncelle ya da indir",
       "menu": "Excel · {kind}",
       "title": "Excel · {kind}",
-      "sub": "İçeri al, güncelle ya da indir",
-      "subExport": "Bu listeyi Excel'e indir",
       "import": "İçeri al",
       "update": "Güncelle (koda göre)",
       "export": "Dışarı aktar",

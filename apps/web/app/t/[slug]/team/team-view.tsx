@@ -667,7 +667,6 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                     </span>
                     <span className="kt">
                       <b>{t("addField")}</b>
-                      <small>{t("addFieldSub")}</small>
                     </span>
                   </button>
                   <button type="button" className="addb" onClick={() => go("invite")} data-testid="team-add-invite">
@@ -676,7 +675,6 @@ export function TeamView({ slug, dark, canEditGroups, isDemo, groups, people, pe
                     </span>
                     <span className="kt">
                       <b>{t("addOffice")}</b>
-                      <small>{t("addOfficeSub")}</small>
                     </span>
                   </button>
                 </section>
