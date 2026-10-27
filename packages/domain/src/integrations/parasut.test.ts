@@ -154,3 +154,22 @@ describe("akış kataloğu (sağlayıcıdan bağımsız)", () => {
     }
   });
 });
+
+
+describe("single product lifecycle evidence", () => {
+  it("reads the exact company-scoped product and preserves archive evidence", async () => {
+    const grant=await new ParasutClient({baseUrl:fake.url}).passwordGrant(creds());
+    fake.products.push({id:"9876",attributes:{name:"Lifecycle",unit:"adet",archived:true}});
+    const c=new ParasutClient({baseUrl:fake.url});
+    expect(await c.product(grant.accessToken,fake.opts.companyId,"9876")).toMatchObject({id:"9876",type:"products",attributes:{archived:true}});
+    expect(await c.product(grant.accessToken,fake.opts.companyId,"9877")).toBeNull();
+  });
+  it.each([401,403,422,500])("status %s is an error, never deletion evidence", async status => {
+    const c=new ParasutClient({fetch:async()=>new Response("{}",{status})});
+    await expect(c.product("synthetic", "123", "9876")).rejects.toBeInstanceOf(ProviderError);
+  });
+  it.each([{id:"9877",type:"products"},{id:"9876",type:"contacts"}])("mismatched resource cannot authorize lifecycle changes",async data=>{
+    const c=new ParasutClient({fetch:async()=>new Response(JSON.stringify({data:{...data,attributes:{},relationships:{}}}),{status:200})});
+    await expect(c.product("synthetic","123","9876")).rejects.toBeInstanceOf(ProviderError);
+  });
+});

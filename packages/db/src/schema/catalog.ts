@@ -60,6 +60,12 @@ export const items = pgTable(
     archivedAt: timestamptz("archived_at"),
     /** 0060: izinli kaynak kart alanları; fiyat ve miktar içermez. */
     sourceProductInfo: jsonb("source_product_info").notNull().default(sql`'{}'::jsonb`),
+    sourceState: text("source_state").notNull().default("ACTIVE"),
+    sourceDisposition: text("source_disposition").notNull().default("NONE"),
+    sourceManagedArchive: boolean("source_managed_archive").notNull().default(false),
+    sourceCheckedAt: timestamptz("source_checked_at"),
+    sourceMissingSince: timestamptz("source_missing_since"),
+    sourceMissingContext: text("source_missing_context"),
     /** Kart türü (0031, T-911): HM hammadde, YM yarı mamul, MM mamul, TM ticari mal. */
     cardType: text("card_type").$type<ItemCardType>().notNull().default("TM"),
     /** Örnek veri işareti (0040, T-996). */
@@ -70,6 +76,7 @@ export const items = pgTable(
     unique("items_tenant_code_key").on(t.tenantId, t.code),
     index("items_tenant_base_unit_idx").on(t.tenantId, t.baseUnitId),
     index("items_tenant_card_type_idx").on(t.tenantId, t.cardType),
+    index("items_source_check_idx").on(t.tenantId, t.sourceCheckedAt, t.id),
     check("items_quantity_scale_chk", sql`${t.quantityScale} BETWEEN 0 AND 6`),
     check("items_card_type_chk", sql`${t.cardType} IN ('HM', 'YM', 'MM', 'TM')`),
   ],

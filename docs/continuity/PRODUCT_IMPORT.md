@@ -35,3 +35,6 @@ Her iş yeni boş T numarasıyla ayrı dalda; task + changes parçası + bu dosy
 
 ## Sıradaki açık — ürün yaşam döngüsü (#229)
 [GitHub229](https://github.com/shosgoren/EtkinWMS/issues/229), henüz uygulanmadı. Paraşüt arşivi WMS arşivine yansır. Kesin kaynak silinmesinde kullanılan kart arşivlenir; hiç kullanılmayan kart arşivden ayrı Kaldırıldı durumuyla normal listeden çıkarılır. Fiş/hareket, lot/tekil QR/paket, rezervasyon/reçete/üretim ve diğer referanslar kullanım sayılır; geçmiş, dış eşleme/audit, mevcut bakiye ve açık işlerin tamamlanması korunur. Eksik sayfa veya ağ/403/429/5xx silinme kanıtı değildir; kayıt bazlı kesin doğrulama gerekir. WMS bağımsız kartları etkilenmez. Kaynak geri yükleme ve yerel arşiv sahipliği uygulamadan önce netleştirilir. Bu iş hızlı aktarım paketine dahil değildir.
+
+## T-1067 — #229 çalışma kaydı
+`feat/T-1067-parasut-lifecycle` yerel checkpoint: ürün kimliği/türü doğrulayan tekil GET,0062kaynak yaşam döngüsü metadata taslağı;21birim ve4DB testi geçti. VPS0061’de; yeni migration canlıya uygulanmadı. Domain/UI entegrasyonu henüz yok. Bakiye veya açık işi olan kartta mevcut arşiv kuralı stok çıkışını da durdurduğu için kullanıcıya politika seçimi soruldu; yanıt bekleniyor. Kart: docs/tasks/T-1067.md.
