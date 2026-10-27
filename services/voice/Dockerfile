@@ -8,9 +8,6 @@ ARG PY_IMAGE=mirror.gcr.io/library/python:3.12-slim-trixie@sha256:cb33f7f771ecec
 
 FROM ${PY_IMAGE} AS model
 COPY fetch_model.py /fetch_model.py
-RUN python -c "import urllib.request,json;d=json.load(urllib.request.urlopen('https://huggingface.co/api/models/canberkkkkkk/ema-lightning/revision/main?blobs=true'));print('PROBE-REV',d['sha']);[print('PROBE-FILE',x['rfilename'],x.get('size'),(x.get('lfs') or {}).get('sha256')) for x in d['siblings']]" \
-    && pip download --no-deps --only-binary=:all: --index-url https://download.pytorch.org/whl/cpu -d /tmp/t torch==2.14.1+cpu \
-    && sha256sum /tmp/t/* && ls -l /tmp/t && false
 RUN python -I /fetch_model.py whisper /models/whisper-small \
     && python -I /fetch_model.py ema /models/ema-lightning
 

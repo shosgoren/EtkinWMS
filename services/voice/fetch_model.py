@@ -24,10 +24,10 @@ MODELS = {
     ),
     "ema": (
         "canberkkkkkk/ema-lightning",
-        "main",
+        "e7c96f2fc0ba843cd0f86e02786655bb56f50df8",
         {
-            "ema.pt": ("0" * 64, 64 * 1024 * 1024),
-            "decoder.pt": ("0" * 64, 64 * 1024 * 1024),
+            "ema.pt": ("95aec03dafbe0e1d69bca774ab597c779464729a14bc99bfcb52480090c7dfe6", 22285878),
+            "decoder.pt": ("9595819b173f411340f63d11332695121a97f8bf1f6d8b6fef0b21cf99c7ad67", 12103269),
         },
     ),
 }
