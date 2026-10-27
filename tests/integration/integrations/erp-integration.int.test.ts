@@ -350,6 +350,7 @@ describe("senkron", () => {
     const W = await seedWorld(adm, reg, "ERPINFO");
     const id = await connect(W);
     await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
+    await adm.query("INSERT INTO public.items (tenant_id,code,name,base_unit_id,tracking_mode,card_type) SELECT $1, 'INFO-SAFE', 'Kaynak ürünü', id, 'LOT', 'HM' FROM public.units WHERE tenant_id=$1 AND code='ADET'", [W.tenantId]);
     fake.categories.push({ id: "42", attributes: { name: "Hammaddeler", category_type: "Product" } });
     fake.products.push({ id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", gtip: "4008.21", archived: false, inventory_tracking: true, list_price: 120, buying_price: 100, currency: "TRY", stock_count: 999 }, relationships: { category: { data: { id: "42", type: "item_categories" } } } });
     const before = await stockFingerprint(W);
@@ -363,7 +364,6 @@ describe("senkron", () => {
     const unchanged = await sync(W, id);
     expect(unchanged.kind === "ran" && unchanged.flows[0]?.counts.updated).toBe(0);
     // Kaynakta arşivlenmesi/bir bayrak değişmesi WMS kartını pasife veya takipsiz hale getirmez.
-    await adm.query("UPDATE public.items SET tracking_mode='LOT', card_type='HM' WHERE tenant_id=$1 AND id=$2", [W.tenantId, itemId]);
     fake.products[0] = { id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", archived: true, inventory_tracking: false } };
     await sync(W, id);
     expect(await getProductSourceInfo(admin(W), itemId)).toEqual({ PARASUT: { ...expected.PARASUT, archived: true, inventoryTracking: false } });
