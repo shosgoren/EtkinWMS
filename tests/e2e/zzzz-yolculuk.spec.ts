@@ -53,7 +53,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
             await page.keyboard.press('Escape');
         }
         await openSetup(page, slug, 'cards');
-        await expect(page.locator('[data-tour="excel"]')).toBeVisible();
+        // T-1092: listelerde Excel düğmesi yok; kart adımı doğrudan Excel'den aktar (ürün türü) ekranını açar.
+        await expect(page).toHaveURL(/\/import\?tur=urun/);
         await expect(page.getByTestId('kalip-perde')).toHaveCount(0);
         for (const { w, h } of KABUK_SIZES) {
             await page.setViewportSize({ width: w, height: h });
@@ -75,8 +76,6 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         }
         await page.getByTestId('guide-apply').click();
         await expect(page.getByTestId('working-guide')).toHaveAttribute('data-folded', 'true');
-        await page.locator('[data-tour="excel"]').click();
-        await page.getByTestId('kalip-excel-import').click();
         await expect(page).toHaveURL(/\/import/);
         await page.getByTestId('aktar-file').setInputFiles({ name: 'guide-local.csv', mimeType: 'text/csv', buffer: Buffer.from('Kod,Ad,Birim\nQA-GUIDE,Yerel rehber,ADET\n') });
         await expect(page.getByText('guide-local.csv', { exact: true })).toBeVisible();

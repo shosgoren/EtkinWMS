@@ -29,10 +29,10 @@ describe("yolculuk adımları", () => {
     expect(isStepKey(null)).toBe(false);
   });
 
-  it("kartlar: Excel → Ürünler (Excel düğmesi) → Excel'den aktar (Dosya seç); Paraşüt → Entegrasyon", () => {
+  it("kartlar: Excel → Excel'den aktar (ürün türü seçili, Dosya seç; T-1092 listelerde Excel düğmesi yok); Paraşüt → Entegrasyon", () => {
     const p = stepPlan(base, "cards", j(), "EXCEL");
-    expect(p.href).toBe("/t/acme/items");
-    expect(stopFor(p, "/t/acme/items")).toMatchObject({ target: "excel", hint: "cardsItems" });
+    expect(p.href).toBe("/t/acme/import?tur=urun");
+    expect(stopFor(p, "/t/acme/items")).toBeNull();
     expect(stopFor(p, "/t/acme/import")).toMatchObject({ target: "main", hint: "cardsExcel" });
     expect(stopFor(p, "/t/acme")).toBeNull();
     expect(stepPlan(base, "cards", j(), "PARASUT")).toEqual({ href: "/t/acme/integrations", stops: [{ path: "/t/acme/integrations", target: "main", hint: "cardsParasut" }] });

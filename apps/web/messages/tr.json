@@ -4659,7 +4659,7 @@
         "sub": "Kartlar · SKT · Lot"
       },
       "depo": {
-        "name": "Depolar",
+        "name": "Depo ve raflar",
         "sub": "Raf · Doluluk"
       },
       "satin": {
@@ -5816,10 +5816,6 @@
       "task": {
         "title": "İlk görevi ata",
         "text": "Bir toplama ya da sayım görevini seç ve bir kişiye ata."
-      },
-      "cardsItems": {
-        "title": "Ürünlerini Excel'den getir",
-        "text": "Ürünlerini Excel'den getirmek için buraya dokun, sonra İçeri al."
       }
     },
     "voice": {

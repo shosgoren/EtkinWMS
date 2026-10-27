@@ -14,7 +14,7 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
-import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
+import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
 import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import type { AlanKurali } from "../kalip/dogrula.ts";
@@ -403,7 +403,6 @@ export function ItemsView({
   slug,
   dark,
   canManage,
-  canImport,
   items: ilkItems,
   stock: ilkStock,
   units,
@@ -414,7 +413,6 @@ export function ItemsView({
   slug: string;
   dark: boolean;
   canManage: boolean;
-  canImport: boolean;
   items: readonly ItemListView[];
   stock: Readonly<Record<string, ItemStockView>>;
   units: readonly UnitOption[];
@@ -602,7 +600,6 @@ export function ItemsView({
         dark={dark}
         title={t("title")}
         icon={{ d: LICON.box, color: "2F5DA8" }}
-        excel={{ kind: "items" }}
         testId="items"
         bar={{
           back: { href: home },
@@ -709,11 +706,6 @@ export function ItemsView({
                     : { label: tr("home"), href: home, kind: "go" }
                 }
               />
-              {canImport ? (
-                <KalipDaha href={`${home}/import`} iconD={LICON.excel} iconColor="1E7B45" testId="items-import">
-                  {tk("import")}
-                </KalipDaha>
-              ) : null}
             </>
           )
         ) : (

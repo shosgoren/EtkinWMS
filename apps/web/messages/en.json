@@ -4659,7 +4659,7 @@
         "sub": "Cards · Expiry · Lot"
       },
       "depo": {
-        "name": "Warehouses",
+        "name": "Warehouses & shelves",
         "sub": "Shelf · Occupancy"
       },
       "satin": {
@@ -5816,10 +5816,6 @@
       "task": {
         "title": "Assign the first task",
         "text": "Pick a picking or counting task and assign it to someone."
-      },
-      "cardsItems": {
-        "title": "Bring your items from Excel",
-        "text": "Tap here to bring your items from Excel, then choose Import."
       }
     },
     "voice": {

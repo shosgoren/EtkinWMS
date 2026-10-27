@@ -309,6 +309,22 @@ test("T-1082 Raf yeri kartı: ağaçtan açılır, şerit + raftakiler + son har
   await expect(page).toHaveURL(treeUrl);
 });
 
+// T-1092: karanlık modda form alanı grup kartından ayırt edilir (iPhone'da alanlar görünmüyordu: ikisi aynı zemindeydi).
+test("T-1092 karanlık mod: form alanı zemini ve çerçevesi grup kartından ayrışır", async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await context.addCookies([{ name: "dz-theme", value: "koyu", domain: new URL(page.url()).hostname, path: "/" }]);
+  await page.goto("/t/demo/parties?new=1");
+  const alan = page.locator(".dzf.dz-dark .sg .fld").first();
+  await expect(alan).toBeVisible();
+  const r = await page.evaluate<{ fld: string; sg: string; outline: string }>(
+    `(() => { const f = document.querySelector(".dzf.dz-dark .sg .fld"); const s = getComputedStyle(f); return { fld: s.backgroundColor, sg: getComputedStyle(f.closest(".sg")).backgroundColor, outline: s.outlineStyle }; })()`,
+  );
+  expect(r.fld, "alan zemini grup kartından farklı").not.toBe(r.sg);
+  expect(r.outline).toBe("solid");
+});
+
 // T-1091: belge kartı — listeden açılır; şerit (belge no h1, tür, durum, Satır kutusu), bilgiler, satırlar; sağda durum ve işlemler;
 // ≥ 44 px; üç boyutta taşma yok.
 test("T-1091 Belge kartı: listeden açılır, şerit + bilgiler + satırlar + durum", async ({ page }) => {

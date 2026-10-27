@@ -78,10 +78,11 @@ export async function itemsScreenChecks(page: Page, tenant: ItemsTenant): Promis
     const main = page.getByTestId("items-add");
     await expect(main, `${where}: ana işlem alt çubukta`).toBeVisible();
     if (tenant.empty) {
-      // T-1054: eski 3 adımlı kutu yok; asıl kurulum yolculuğunun girişi (halka kartı) ve Excel'den aktar; ana işlem YENİ ÜRÜN.
+      // T-1054: eski 3 adımlı kutu yok; asıl kurulum yolculuğunun girişi (halka kartı); ana işlem YENİ ÜRÜN.
+      // T-1092: Excel'den aktar yalnız Ayarlar › Bağlantılar'da (listede kutu yok).
       await expect(page.getByTestId("setup-steps"), `${where}: eski kurulum kutusu yok`).toHaveCount(0);
       await expect(page.getByTestId("yol-card").filter({ visible: true }), `${where}: kurulum yolculuğu girişi`).toHaveCount(1);
-      await expect(page.getByTestId("items-import")).toHaveAttribute("href", `${base}/import`);
+      await expect(page.getByTestId("items-import")).toHaveCount(0);
       await expect(main).toHaveAccessibleName("Yeni ürün");
     } else {
       await expect(page.getByTestId("setup-steps"), `${where}: kurulum tamam, rehber yok`).toHaveCount(0);

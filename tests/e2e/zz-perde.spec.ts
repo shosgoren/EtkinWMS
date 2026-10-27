@@ -118,11 +118,10 @@ const KATMANLAR: Katman[] = [
   },
   { ad: "Sorun bildir (Ürünler)", yol: "/items", ac: (page) => page.getByTestId("kalip-problem").first().click(), perde: '.ovl:has([data-testid="problem-sheet"])', panel: '[data-testid="problem-sheet"]' },
   { ad: "Sorun bildir (Cariler)", yol: "/parties", ac: (page) => page.getByTestId("kalip-problem").first().click(), perde: '.ovl:has([data-testid="problem-sheet"])', panel: '[data-testid="problem-sheet"]' },
-  { ad: "Excel", yol: "/items", ac: (page) => page.getByTestId("kalip-excel").first().click(), perde: 'div:has(> [data-testid="kalip-excel-menu"]) > .hback', panel: '[data-testid="kalip-excel-menu"]' },
 ];
 
 for (const b of BOYUTLAR) {
-  test(`T-1081 perde: Destek, Sorun bildir ve Excel bütün ekranı örter, alt çubuk kaybolmaz (${b.ad})`, async ({ page }) => {
+  test(`T-1081 perde: Destek ve Sorun bildir bütün ekranı örter, alt çubuk kaybolmaz (${b.ad})`, async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: b.w, height: b.h });
     await page.goto("/");
