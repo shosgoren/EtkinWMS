@@ -100,11 +100,6 @@ export default async function TenantLayout({ children, params }: { children: Rea
     ...(hasPermission(current.roles, "settings.manage", current.grants) ? { settingsHref: `${base}/settings` } : {}),
     // T-1002 (B-62): Etkin sesli komut — okuma yetkisi olan her üye; yazma komutları onayda mevcut eylemlerin izinlerini ister.
     etkin: hasPermission(current.roles, "stock.view", current.grants),
-    // T-981b: kalıp üst çubuğu Excel düğmesi (gösterim; dışa aktarma ve aktarım sunucuda yine denetlenir).
-    excel: {
-      data: hasPermission(current.roles, "data.import", current.grants),
-      master: hasPermission(current.roles, "data.import", current.grants) && hasPermission(current.roles, "settings.manage", current.grants),
-    },
   };
 
   // T-1006: kurulum turu ilk durumu sunucudan (istemci her ekranda eylem çağırmaz; hız sınırı kovası korunur). Okunamazsa katman kendisi okur.

@@ -15,7 +15,6 @@ import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
 import { temaYaz } from "../../../design/theme.ts";
 import { KalipIslemRehberiAc } from "./rehber.tsx";
 import { KalipDestek } from "./destek.tsx";
-import { useKalipExcel, type KalipExcelProps } from "./excel.tsx";
 import { KalipSurumBekcisi } from "./surum.tsx";
 import { kdz, kdzOrtak, type KalipScope } from "./tokens.ts";
 import { balonGoster, buyukHarf, type BalonTur } from "@wms/ui";
@@ -72,8 +71,6 @@ export interface KalipEkranProps {
   readonly subtitle?: string;
   /** Sağ üst `.tph` yuvası. Verilmezse Sorun bildir + Destek (T-967, kiracı bağlamı varsa; yoksa Yardım bağlantısı). `null` = boş. */
   readonly actions?: ReactNode | null;
-  /** T-981b: üst çubukta Excel düğmesi (İçeri al / Güncelle / Dışarı aktar); yalnız aktarım yetkisi olana çizilir (kiracı bağlamı). */
-  readonly excel?: KalipExcelProps;
   /** Alt cam çubuk (ortak KabukBar): ekranın ana işlemi, Geri, Ana ekran. `dark` kabdan gelir. */
   readonly bar: Omit<KabukBarProps, "dark">;
   /** Kabın içinde, `.inner` dışında çizilen katmanlar (kaynak `.sxback`, `.cfback/.cfbox`, `.toast`). */
@@ -84,7 +81,7 @@ export interface KalipEkranProps {
   readonly children: ReactNode;
 }
 
-export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
+export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, overlays, testId, heading = true, children }: KalipEkranProps) {
   const t = useTranslations("kalip");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ctx = useKabuk();
@@ -92,7 +89,6 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, 
   const router = useRouter();
   const [hesap, setHesap] = useState(false);
   const closeHesap = useCallback(() => setHesap(false), []);
-  const xls = useKalipExcel(kind, ctx?.slug, excel, ctx?.excel, dark, closeHesap);
   // Tema cihaz tercihidir (çerez, Pano ve Ayarlar ile aynı); sayfa sunucuda çerezi okuyarak yeniden çizilir.
   const toggleTheme = useCallback(() => {
     temaYaz(dark ? "acik" : "koyu");
@@ -172,9 +168,8 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, 
               <StSaat />
               <StSonIslemler />
               <StTema dark={dark} />
-              {slot === null && xls.button === null ? null : (
+              {slot === null ? null : (
                 <div className="tph" role="group" aria-label={t("topActions")}>
-                  {xls.button}
                   {slot}
                 </div>
               )}
@@ -185,10 +180,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, 
                   team={false}
                   ini={me.ini}
                   open={hesap}
-                  onClick={() => {
-                    xls.close();
-                    setHesap((o) => !o);
-                  }}
+                  onClick={() => setHesap((o) => !o)}
                 />
               </span>
             </header>
@@ -198,7 +190,6 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, excel, 
             {overlays}
             {/* T-990: yayından sonra açık kalan sayfa eski eylem kimliğiyle çağırırsa "Uygulama güncellendi — Yenile". */}
             <KalipSurumBekcisi />
-            {xls.layer}
             {hesap ? (
               <div className={panoScope} style={{ display: "contents" }}>
                 <HesapMenu team={false} me={me} dark={dark} onToggleTheme={toggleTheme} onClose={closeHesap} />
