@@ -226,7 +226,8 @@ export async function kayitBaslat(opts: { readonly long: boolean; readonly onAut
     void ctx.close().catch(() => undefined);
     throw e;
   }
-  if (ctx.state === "suspended") await ctx.resume().catch(() => undefined);
+  // Sürdürme askıda kalabilir (söz hiç sonuçlanmaz): bekleme sınırlı — kayıt tutamağı her durumda döner, iptal/zaman aşımı mikrofonu kapatabilir.
+  if (ctx.state === "suspended") await Promise.race([ctx.resume().catch(() => undefined), new Promise<void>((r) => window.setTimeout(r, 300))]);
   const src = ctx.createMediaStreamSource(stream);
   const proc = ctx.createScriptProcessor(4096, 1, 1);
   const chunks: Float32Array[] = [];
