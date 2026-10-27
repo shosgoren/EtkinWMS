@@ -8,6 +8,8 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
+import { AppError } from "@wms/shared/errors";
+import { standardUnitCode } from "../catalog/unit-alias.ts";
 import type { AccessTx } from "../identity/access.ts";
 
 export type ApplyOutcome = "CREATED" | "UPDATED" | "LINKED" | "UNCHANGED" | "SKIPPED";
@@ -72,25 +74,30 @@ export interface ProviderProduct {
   readonly unit: string | null;
 }
 
-/** Sağlayıcı birim metni → Etkin birim kodu (0031 standart birimleri). Tanınmazsa ADET. */
-export function unitCodeFor(raw: string | null): string {
-  const k = (raw ?? "")
-    .toLocaleUpperCase("tr")
-    .replace(/[ÇĞİÖŞÜ]/g, (ch) => ({ Ç: "C", Ğ: "G", İ: "I", Ö: "O", Ş: "S", Ü: "U" })[ch] ?? ch)
-    .replace(/[^A-Z0-9]/g, "");
-  const map: Record<string, string> = {
-    ADET: "ADET", AD: "ADET", ADT: "ADET", PCS: "ADET", PIECE: "ADET", KG: "KG", KILOGRAM: "KG", KILO: "KG", GR: "GR", GRAM: "GR", G: "GR",
-    MT: "MT", M: "MT", METRE: "MT", CM: "CM", SANTIMETRE: "CM", LT: "LT", L: "LT", LITRE: "LT", M2: "M2", METREKARE: "M2", M3: "M3", METREKUP: "M3",
-    KOLI: "KOLI", PALET: "PALET",
-  };
-  return map[k] ?? "ADET";
+/** Tanınmayan birim sessizce ADET yapılmaz; satır kontrol için başarısız olur. */
+export const unitCodeFor = standardUnitCode;
+
+/** Sayılabilir ambalajlar tam sayı; ağırlık/uzunluk/hacim 6 ondalığı kayıpsız taşır. */
+export function productQuantityScale(unitCode: string): number {
+  return ["KG", "GR", "MT", "CM", "LT", "M2", "M3"].includes(unitCode) ? 6 : 0;
 }
 
 export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderProduct): Promise<ApplyOutcome> {
   const name = clean(p.name, 200);
   if (name === null) return "SKIPPED";
+  const unitCode = unitCodeFor(p.unit);
+  if (unitCode === null) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
+  const units = await tx.execute<{ id: string }>(
+    sql`SELECT id FROM public.units WHERE tenant_id = ${c.tenantId}::uuid AND code = ${unitCode} AND status = 'ACTIVE'`,
+  );
+  const unitId = units[0]?.id;
+  if (unitId === undefined) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
   const existing = await refEntity(tx, c, "ITEM", p.externalId);
   if (existing !== null) {
+    const current = await tx.execute<{ base_unit_id: string }>(
+      sql`SELECT base_unit_id FROM public.items WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid`,
+    );
+    if (current[0]?.base_unit_id !== unitId) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
     const r = await tx.execute<{ id: string }>(
       sql`UPDATE public.items SET name = ${name} WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid AND status = 'ACTIVE' AND name IS DISTINCT FROM ${name} RETURNING id`,
     );
@@ -99,22 +106,18 @@ export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderPro
     return "UPDATED";
   }
   const code = clean(p.code, 64) ?? `PRS-${p.externalId}`;
-  const byCode = await tx.execute<{ id: string; linked: boolean }>(
-    sql`SELECT i.id, EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.system = ${c.system} AND r.entity_type = 'ITEM' AND r.entity_id = i.id) AS linked
+  const byCode = await tx.execute<{ id: string; base_unit_id: string; linked: boolean }>(
+    sql`SELECT i.id, i.base_unit_id, EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.system = ${c.system} AND r.entity_type = 'ITEM' AND r.entity_id = i.id) AS linked
           FROM public.items i WHERE i.tenant_id = ${c.tenantId}::uuid AND i.code = ${code}`,
   );
   const hit = byCode[0];
   if (hit !== undefined) {
+    if (hit.base_unit_id !== unitId) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
     if (hit.linked) return "SKIPPED";
     return (await link(tx, c, "ITEM", hit.id, p.externalId, code)) ? "LINKED" : "SKIPPED";
   }
-  const unit = await tx.execute<{ id: string }>(
-    sql`SELECT id FROM public.units WHERE tenant_id = ${c.tenantId}::uuid AND code = ${unitCodeFor(p.unit)} AND status = 'ACTIVE'`,
-  );
-  const unitId = unit[0]?.id;
-  if (unitId === undefined) return "SKIPPED";
   const ins = await tx.execute<{ id: string }>(
-    sql`INSERT INTO public.items (tenant_id, id, code, name, base_unit_id) VALUES (${c.tenantId}::uuid, gen_random_uuid(), ${code}, ${name}, ${unitId}::uuid)
+    sql`INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, quantity_scale) VALUES (${c.tenantId}::uuid, gen_random_uuid(), ${code}, ${name}, ${unitId}::uuid, ${productQuantityScale(unitCode)})
         ON CONFLICT ON CONSTRAINT items_tenant_code_key DO NOTHING RETURNING id`,
   );
   const itemId = ins[0]?.id;
