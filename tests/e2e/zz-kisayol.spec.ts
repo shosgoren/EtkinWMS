@@ -23,7 +23,8 @@ test("T-1102 yüzen kısayol her ekranda; Düzenle bütün modülleri listeler, 
   for (const id of ["cari", "ayar", "stok", "urun", "depo"]) await expect(secici.locator(`[data-shortcut="${id}"]`), id).toHaveCount(1);
   expect(await secici.locator("[data-shortcut]").count()).toBeGreaterThanOrEqual(10);
   // Seçimi baştan kur: yalnız Cariler.
-  for (const b of await secici.locator('[data-shortcut][aria-pressed="true"]').all()) await b.click();
+  const secili = secici.locator('[data-shortcut][aria-pressed="true"]');
+  while ((await secili.count()) > 0) await secili.first().click();
   await secici.locator('[data-shortcut="cari"]').click();
   await page.getByTestId("pano-picker-save").click();
   await expect(secici).toBeHidden();
