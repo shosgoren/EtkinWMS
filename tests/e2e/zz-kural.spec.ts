@@ -323,6 +323,8 @@ test("T-1092 karanlık mod: form alanı zemini ve çerçevesi grup kartından ay
   );
   expect(r.fld, "alan zemini grup kartından farklı").not.toBe(r.sg);
   expect(r.outline).toBe("solid");
+});
+
 // T-1091: belge kartı — listeden açılır; şerit (belge no h1, tür, durum, Satır kutusu), bilgiler, satırlar; sağda durum ve işlemler;
 // ≥ 44 px; üç boyutta taşma yok.
 test("T-1091 Belge kartı: listeden açılır, şerit + bilgiler + satırlar + durum", async ({ page }) => {
