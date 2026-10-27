@@ -42,7 +42,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("oauth-callback")).toHaveValue("urn:ietf:wg:oauth:2.0:oob");
     if(testInfo.project.name==="desktop")for(const width of [390,1180,1440]) {
       await page.setViewportSize({width,height:844});
-      for(const id of ['oauth-app-id','oauth-app-secret','oauth-callback']) {const bounds=await page.getByTestId(id).boundingBox();expect(bounds?.height).toBeGreaterThanOrEqual(44);expect((bounds?.x??-1)>=0&&(bounds?.x??0)+(bounds?.width??0)<=width).toBe(true);}
+      for(const id of ['oauth-app-id','oauth-app-secret','oauth-callback']) {const field=page.getByTestId(id).locator('..');const bounds=await field.boundingBox();await field.click({position:{x:5,y:5}});await expect(page.getByTestId(id)).toBeFocused();expect(bounds?.height).toBeGreaterThanOrEqual(44);expect((bounds?.x??-1)>=0&&(bounds?.x??0)+(bounds?.width??0)<=width).toBe(true);}
       await page.screenshot({path:testInfo.outputPath(`oauth-settings-${width}.png`)});
     }
     await page.getByTestId("oauth-legacy").click();
