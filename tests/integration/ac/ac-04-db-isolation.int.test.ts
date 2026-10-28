@@ -935,6 +935,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.platform_tenant_plan_limit", // T-404 migration 0041: bağlam tenant'ının paket sınırı (başka tenant → NULL), yalnızca wms_app
     "wms_probe.platform_tenant_subscription", // T-995 migration 0039: bağlam tenant'ının deneme kaydı (salt okunur), yalnızca wms_app
     "wms_probe.platform_workspace_name_taken", // T-995 migration 0039: yalnız geçerli bağlantıyla ad yoklaması (salt okunur), yalnızca wms_app
+    "wms_probe.replace_deleted_product_identity", // T-1071: same-tenant proven-deleted product identity, wms_app only
   ];
 
   it("@AC-04 prosecdef=true işlevler tam olarak izinli liste; wms_meta'da hiç yok", () => {
@@ -967,6 +968,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
   it("@AC-04 EXECUTE alıcıları (sahip hariç): yoklama işlevleri yalnızca beklenen uygulama rolü; migration rolü girdisi yok; tetikleyici işlevi yalnızca migration rolü", () => {
     const expected: Record<string, string[]> = {
       "wms_probe.active_tenant_ids": [WORKER_ROLE],
+      "wms_probe.replace_deleted_product_identity": [APP_ROLE],
       "wms_probe.identity_exclusive_to_tenant": [APP_ROLE],
       "wms_probe.consume_admin_reset_grant": [AUTH_ROLE],
       "wms_probe.invitation_for_account_creation": [AUTH_ROLE],

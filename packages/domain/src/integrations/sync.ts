@@ -20,6 +20,7 @@ import { applyContact, applyProduct, applyWarehouse, link, refExternal, type App
 import { FLOWS, PROVIDER_INFO, flowSupported, pulls, pushes, type Direction, type Flow } from "./catalog.ts";
 import { ProviderError, type JsonApiResource, type ParasutClient } from "./parasut.ts";
 import { assertLifecycleBinding, lifecycleBinding, lifecycleCandidates, observeProduct, type LifecycleBinding } from "./product-lifecycle.ts";
+import {reconnectRecreatedProduct} from "./product-recreate.ts";
 import { productSourceInfo } from "./product-info.ts";
 import { selectChangedStockLevels } from "./stock-reads.ts";
 import { IntegrationStateError, accessToken, loadIntegration, markIntegrationError, type RunTx } from "./store.ts";
@@ -128,6 +129,7 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
   const started=(rc.deps.now??Date.now)();
   const binding=kind==='products'?rc.productBinding:null;
   if(binding&&(binding.companyId!==rc.companyId||binding.userId!==rc.ac.actorUserId||binding.membershipId!==rc.ac.membershipId))throw new IntegrationStateError("NOT_CONNECTED");
+  const recreated: ReturnType<typeof toProduct>[]=[];
   let page = rc.flow.cursor === null ? 1 : Math.max(1, Number(rc.flow.cursor));
   for (let n = 0; n < SYNC_LIMITS.pagesPerRun; n++) {
     const p = await rc.deps.client.list(rc.token, rc.companyId, kind, page);
@@ -144,6 +146,7 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
             kind === "products" ? applyProduct(sp, ac, toProduct(item, p.included)) : kind === "contacts" ? applyContact(sp, rc.ac, toContact(item)) : applyWarehouse(sp, rc.ac, toWarehouse(item)),
           );
           count(rc.c, o);
+          if(binding&&kind==="products"&&o==="SKIPPED"&&recreated.length<10)recreated.push(toProduct(item,p.included));
         } catch {
           rc.c.failed++;
         }
@@ -159,6 +162,11 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
     // A successful product page alone cannot prove deletion. Verify current company access, then exact identities twice over time.
     const companies=await rc.deps.client.companies(rc.token);
     if(!companies.some(c=>c.id===binding.companyId))throw new IntegrationStateError("NOT_CONNECTED");
+    for(const product of recreated){
+      try{
+        if(await reconnectRecreatedProduct(rc.deps.inTenant,rc.deps.client,rc.token,binding,rc.ac,product,(rc.deps.now??Date.now)())){rc.c.skipped--;rc.c.updated++;}
+      }catch{rc.c.failed++;} // No partial card/mapping commits on validation, provider or connection errors.
+    }
     const candidates=await rc.deps.inTenant(tx=>lifecycleCandidates(tx,binding,started));
     for(const candidate of candidates){
       const product=await rc.deps.client.product(rc.token,rc.companyId,candidate.external_id);

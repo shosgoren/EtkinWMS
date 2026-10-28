@@ -42,3 +42,9 @@ Her iş yeni boş T numarasıyla ayrı dalda; task + changes parçası + bu dosy
 - **Doğrulama:** lifecycle10DB, ERP20DB, ürün regresyon61DB; prepush5020birim+AC04375+telefon/masaüstüE2E2/2; güvenlik0B0MA0MI, Gitleaks0. Kaynak/uygulama390/1180/1440 kontrol edildi. Canlı müşteri tarayıcı izni reddedildi; canlı görsel/gerçek cihaz UNKNOWN.
 
 Güncel yayın/DB kanıtı [OPERATIONS](OPERATIONS.md). Bu iş ilk takip kararı/Devir/tekil ambalaj girişini tamamlamaz; yukarıdaki T-1065 ve bekleyen sıra korunur.
+
+## T-1071 — kaynakta silinip aynı kodla tekrar açılan kart (kod hazır, canlı bekliyor)
+- Eski Paraşüt kimliği kesin DELETED iken aynı kodla açılan yeni aktif kimlik mevcut WMS/ref UUID'ye bağlanır. EskiID hâlâ404, şirket erişimi ve tek aktif tam kod doğrulanır; yazımda OAuth/bağlantı/eşlemeversiyonu ve aralıklı yokluk bağlamı yeniden kontrol edilir. İlk404yeni nesilde eskiDELETEDdurumundan yararlanamaz.
+- `external_refs.retired_external_ids` salt eklenir; eski kimlik başka karta bağlanamaz. Dar `wms_probe.replace_deleted_product_identity`, standart `wms_identity_probe` rolü, mevcut RLS, namespace→ürün→eşleme sırası. App doğrudan kimlik/tarihçe UPDATE yapamaz. Dolutarihte0064DOWN reddedilir.
+- Aynı QR/fiş/geçmiş/miktarlar korunur; yerelarşiv otomatik açılmaz. Birim veya barkod uyuşmazlığında tüm eşleme/kart yazımı geri alınır. Fiyat/stok yazımı yok. Ençok10atlanan aday/koşu, sağlayıcıhızlimiti korunur; büyük/çokçakışmalı katalog gecikebilir. Takeout B-67 altyapısı henüzyok; yeni ayrıtenanttablosu değil mevcut eşlemetablosuna metadata sütunu eklendi.
+- Sonrol/DDL sürümünde DB55/55 (13yenidenbağlama+37AC04DB+5migration/nonsuper), prepushYEŞİL5094birim/AC04375. Önceki242genişDBregresyonu ara rolsürümüne aittir. Bağımsız inceleme0184a29:0B0MA0MI, Gitleaks0. CI/yeniimaj/DB0064 ve canlı0001 metadata doğrulaması ayrı bekliyor. Kart[T-1071](../tasks/T-1071.md); STATE/BACKLOG parçası aynıPR'da.

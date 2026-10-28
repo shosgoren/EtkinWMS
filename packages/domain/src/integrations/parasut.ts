@@ -314,6 +314,18 @@ export class ParasutClient {
     return exact.length === 1 ? (exact[0] as JsonApiResource) : null;
   }
 
+  /** Rebinding needs an unambiguous active exact code, not the first hit of a partial page. */
+  async uniqueActiveProductByCode(token:string,companyId:string,code:string):Promise<JsonApiResource|null> {
+    const cid=parseCompanyId(companyId);
+    const r=await this.request("GET",`/v4/${cid}/products?filter%5Bcode%5D=${encodeURIComponent(code)}&page%5Bsize%5D=2`,{token});
+    if(r.status!==200)throw ParasutClient.fail(r.status);
+    const b=(r.body??{}) as {data?:unknown;meta?:{total_pages?:unknown;total_count?:unknown}};
+    if(!Array.isArray(b.data))throw new ProviderError("BAD_RESPONSE",r.status);
+    if(b.meta?.total_pages!==1||b.data.length!==1||(typeof b.meta.total_count==='number'&&b.meta.total_count!==1))return null;
+    const p=resource(b.data[0]);
+    return p.type==='products'&&/^[0-9]{1,18}$/.test(p.id)&&p.attributes.code===code&&p.attributes.archived===false?p:null;
+  }
+
   /** Cari: vergi numarasına (yoksa ada) göre ara (`filter[tax_number]` / `filter[name]`). */
   async findContact(token: string, companyId: string, by: { readonly taxNumber?: string | null; readonly name: string }): Promise<JsonApiResource | null> {
     const cid = parseCompanyId(companyId);

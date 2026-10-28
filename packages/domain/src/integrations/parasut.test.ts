@@ -173,3 +173,15 @@ describe("single product lifecycle evidence", () => {
     await expect(c.product("synthetic","123","9876")).rejects.toBeInstanceOf(ProviderError);
   });
 });
+
+it("recreated product lookup refuses ambiguous, archived or partial code results",async()=>{
+ const c=new ParasutClient({baseUrl:fake.url}),token=(await c.passwordGrant(creds())).accessToken;
+ fake.products.push({id:'901',attributes:{code:'0001',name:'Recreated',unit:'adet',archived:false}});
+ expect((await c.uniqueActiveProductByCode(token,'115','0001'))?.id).toBe('901');
+ fake.products.push({id:'902',attributes:{code:'0001',archived:false}});
+ expect(await c.uniqueActiveProductByCode(token,'115','0001')).toBeNull();
+ fake.products.pop();fake.products[0]!.attributes.archived=true;
+ expect(await c.uniqueActiveProductByCode(token,'115','0001')).toBeNull();
+ const partial=new ParasutClient({fetch:async()=>new Response(JSON.stringify({data:[{id:'901',type:'products',attributes:{code:'0001',archived:false}}],meta:{total_pages:2}}),{headers:{'content-type':'application/json'}})});
+ expect(await partial.uniqueActiveProductByCode('synthetic','115','0001')).toBeNull();
+});

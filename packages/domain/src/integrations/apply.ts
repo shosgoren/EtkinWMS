@@ -114,7 +114,13 @@ async function ensureProductBarcode(tx: AccessTx, c: ApplyContext, itemId: strin
   return true;
 }
 
+/** Metadata namespace before any item lock, including multi-row catalog transactions. */
+export async function lockProductIdentityNamespace(tx:AccessTx,c:ApplyContext):Promise<void> {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${'external-ref:'+c.tenantId+':'+c.system+':ITEM'},0))`);
+}
+
 export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderProduct): Promise<ApplyOutcome> {
+  await lockProductIdentityNamespace(tx,c);
   const name = clean(p.name, 200);
   if (name === null) return "SKIPPED";
   const unitCode = unitCodeFor(p.unit);
@@ -124,11 +130,15 @@ export async function applyProduct(tx: AccessTx, c: ApplyContext, p: ProviderPro
   );
   const unitId = units[0]?.id;
   if (unitId === undefined) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
+  // A retired identity must never create/steal another WMS card, even if its source code changes.
+  const retired = await tx.execute(sql`SELECT 1 FROM public.external_refs WHERE tenant_id=${c.tenantId}::uuid AND system=${c.system} AND entity_type='ITEM' AND ${p.externalId}=ANY(retired_external_ids) LIMIT 1`);
+  if (retired.length) return "SKIPPED";
   const existing = await refEntity(tx, c, "ITEM", p.externalId);
   if (existing !== null) {
     const current = await tx.execute<{ base_unit_id: string; status: string }>(
-      sql`SELECT base_unit_id, status FROM public.items WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid`,
+      sql`SELECT base_unit_id, status FROM public.items WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid FOR UPDATE`,
     );
+    if(await refEntity(tx,c,"ITEM",p.externalId)!==existing)return "SKIPPED";
     if (current[0]?.base_unit_id !== unitId) throw new AppError("VALIDATION_FAILED", { detail: "UNIT_CONVERSION_INVALID" });
     if (current[0]?.status !== "ACTIVE") return "UNCHANGED";
     const r = await tx.execute<{ id: string }>(
