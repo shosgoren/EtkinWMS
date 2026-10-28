@@ -1682,6 +1682,10 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
 .dz-dark .kdurum-a.acik { color: var(--color-kr-warn); }
 /* Belge formunun kendisi ve alan kümesi (eski Tailwind düzeni yerine); kayıt kartı bölümü. */
 form.kform-ic { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+/* T-1119: aramalı seçim sayfası (`.ksecp`) ekranın içinde çizilir; ekran kabı (`.dzf`, z 20) kendi katmanıdır, sayfanın z 60'ı kabın dışına
+   taşmaz. Sayfa açıkken ekran ortak alt çubuğun (z 25; turda 42) ve işlem rehberi kartının (z 42) üstüne çıkar: telefonda alttan açılan
+   sayfanın seçenekleri ve Kapat düğmesi çubuğun / rehber kartının altında kalmaz. */
+.kalip:has(.ksecp) { z-index: 46; }
 fieldset.kform-alan { display: flex; flex-direction: column; gap: 14px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .kbolum { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 

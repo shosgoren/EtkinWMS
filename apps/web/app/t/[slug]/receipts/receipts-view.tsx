@@ -244,7 +244,7 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
 
   // T-1119: ürün arama sunucuda (ortak seçim sayfası `KalipSecimAra`); hata listeyi boş bırakır.
   async function search(q: string): Promise<readonly Found[]> {
-    const r = await searchItemsAction({ slug, q, limit: 20 });
+    const r = await searchItemsAction({ slug, q, limit: 10 });
     return r.ok ? r.data.items : [];
   }
   async function pick(f: Found) {

@@ -10,7 +10,7 @@
 // Alan adı (`name`) ortak doğrulamanın (`KalipFormEkran`) hata/odak bağlantısıdır (`data-alan`). Renkler `.dzf` belirteçlerinden.
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, MicIco } from "./ekran.tsx";
@@ -227,7 +227,8 @@ export function KalipSecimSayfasi({
     return options.filter((o) => norm([o.label, o.sub ?? "", o.id, ...(o.keys ?? [])].join(" "), locale).includes(k));
   }, [q, options, ara, bulunan]);
 
-  useEffect(() => {
+  // Açılışta sıfırlama boyamadan önce (useLayoutEffect): sayfa görünür olur olmaz yazılan ya da okutulan kod sonradan silinmez.
+  useLayoutEffect(() => {
     if (!open) return;
     setQ("");
     setNote(null);
