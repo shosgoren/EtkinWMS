@@ -11,22 +11,31 @@
 // (`KalipFormEkran`; adres `?edit=1` / `?kod=1` / `?conv=1` / `?barcode=1`); yerel açılır liste yok (renkli seçim kutuları / aramalı
 // seçim sayfası). Kaydet yalnız değişiklikte etkin, doğrulama ve yarım işte çıkış kutusu ortak kalıptadır. Geri ürün kartına döner.
 // Tek soruluk onaylar (arşivle, barkodu kaldır) pencere kalır.
+// T-1116 (B-176; tuval "5 · Ürün kartı" + "5b · Stok ve yer"): şeritte Eldeki · Kullanılabilir · Ayrılmış kutuları (sunucu toplamı);
+// sekmeler Genel · Stok ve yer (katlanır pivot `KalipPivot`: Depo › Raf yeri › Lot › Palet › Koli, SKT, durum, toplam şeridi) ·
+// Hareketler (son 50 belge + toplam) · Birimler · Barkodlar · Takip (lotlar, seriler) · Paraşüt · Değişiklik geçmişi (`audit.view`).
+// Sekme verisi yalnız o sekme açıkken sunucuda okunur (`tabData`). Eski `Banner` ve elle biçimli satırlar kalıp parçalarına geçti
+// (`KalipKartNot`, `KalipKartSatirlar`).
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { Banner, feedback } from "@wms/ui";
+import { feedback } from "@wms/ui";
+import type { AuditRowView } from "../../audit/audit-view.tsx";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { CodeChangedNotice, CodeEditForm } from "../../code-edit-dialog.tsx";
-import { KalipMinimum, KalipNerede, KalipUyari, type KalipYer } from "../../kalip/detay.tsx";
-import { KalipBilgiIzgara, KalipKartSekmeler, KalipKartSerit, KalipKayitKart, KalipSonHareketler, type KalipBilgi, type KalipEtiket, type KalipHareket, type KalipKartIslem, type KalipKartSekmesi, type KalipSayiKutusu, type StTon } from "../../kalip/kart.tsx";
+import { KalipUyari } from "../../kalip/detay.tsx";
+import { KalipBilgiIzgara, KalipKartNot, KalipKartSatirlar, KalipKartSekmeler, KalipKartSerit, KalipKayitKart, KalipSonHareketler, type KalipBilgi, type KalipEtiket, type KalipHareket, type KalipKartIslem, type KalipKartSatiri, type KalipKartSekmesi, type KalipSayiKutusu, type StTon } from "../../kalip/kart.tsx";
+import { pivotAgaci, pivotSayilari, type PivotAdim, type PivotDugum, type PivotGirdi } from "../../kalip/pivot.ts";
+import { KalipPivot, type KalipPivotDurum } from "../../kalip/pivot.tsx";
 import { SICON } from "../../../../design/standart-icons.ts";
 import type { AlanKurali } from "../../kalip/dogrula.ts";
 import { Ico, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipSabit } from "../../kalip/form.tsx";
-import { approx, fmtQty, stockTone, sumDecimal } from "../../kalip/format.ts";
+import { approx, fmtGun, fmtQty, stockTone } from "../../kalip/format.ts";
 import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { addBarcodeAction, archiveItemAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
@@ -72,8 +81,66 @@ const actBtn = (bg: string): CSSProperties => ({ background: c(bg), color: c("FF
 export interface ItemStockCardView {
   readonly places: readonly { readonly warehouseId: string; readonly warehouseName: string; readonly locationCode: string; readonly quantity: string }[];
   readonly min: string | null;
-  readonly moves: readonly { readonly documentId: string; readonly kind: string; readonly number: string | null; readonly occurredAt: string; readonly actorName: string | null; readonly net: string; readonly moved: string; readonly locations: string }[];
+  readonly moves: readonly ItemMoveView[];
+  /** T-1116: kapsamdaki eldeki / ayrılmış / kullanılabilir toplam (decimal dizgi). */
+  readonly have: string;
+  readonly reserved: string;
+  readonly available: string;
 }
+type ItemMoveView = { readonly documentId: string; readonly kind: string; readonly number: string | null; readonly occurredAt: string; readonly actorName: string | null; readonly net: string; readonly moved: string; readonly locations: string };
+
+/** T-1116: sekme verilerinin görünüm biçimi (`@wms/domain/stock` dönüşleriyle aynı yapı; istemci modülü sunucu paketini içe aktarmaz). */
+export interface ItemStockPivot {
+  readonly rows: readonly {
+    readonly warehouseId: string;
+    readonly warehouseName: string;
+    readonly locationId: string;
+    readonly locationCode: string;
+    readonly lotId: string | null;
+    readonly lotCode: string | null;
+    readonly productionDate: string | null;
+    readonly expiryDate: string | null;
+    readonly unitId: string | null;
+    readonly unitCode: string | null;
+    readonly unitKind: "PALET" | "KOLI" | null;
+    readonly parentId: string | null;
+    readonly parentCode: string | null;
+    readonly parentKind: "PALET" | "KOLI" | null;
+    readonly status: string;
+    readonly quantity: string;
+    readonly reserved: string;
+  }[];
+  readonly truncated: boolean;
+}
+export interface ItemMovesPage {
+  readonly moves: readonly ItemMoveView[];
+  readonly total: number;
+}
+export interface ItemTracking {
+  readonly lots: readonly { readonly id: string; readonly lotCode: string; readonly productionDate: string | null; readonly expiryDate: string | null; readonly supplierLot: string | null; readonly quantity: string }[];
+  readonly serials: readonly { readonly id: string; readonly serialNo: string; readonly lotCode: string | null; readonly locationCode: string | null; readonly warehouseName: string | null }[];
+  readonly lotTotal: number;
+  readonly serialTotal: number;
+}
+
+/** T-1116: açık sekmenin sunucu verisi (`page.tsx`); okunamadıysa ilgili alan `null` → sekmede "okunamadı" satırı. */
+export type ItemTabData =
+  | { readonly kind: "none" }
+  | { readonly kind: "stok"; readonly pivot: ItemStockPivot | null }
+  | { readonly kind: "hareketler"; readonly page: ItemMovesPage | null }
+  | { readonly kind: "takip"; readonly tracking: ItemTracking | null }
+  | { readonly kind: "gecmis"; readonly rows: readonly AuditRowView[] | null; readonly more: boolean };
+
+// T-1116 pivot seviyeleri (STANDART §7: depo koyu gri bina, raf yeri gri raf, lot mavi etiket, palet kahve, koli turuncu kutu).
+const PIVOT_TUR = {
+  depo: { d: SICON.depo, ton: "lacivert" },
+  raf: { d: SICON.raf, ton: "gri" },
+  lot: { d: SICON.ad, ton: "mavi" },
+  palet: { d: SICON.palet, ton: "kahve" },
+  koli: { d: SICON.kutu, ton: "turuncu" },
+  gevsek: { d: SICON.kutu, ton: "gri" },
+} as const satisfies Record<string, { d: string; ton: StTon }>;
+const DURUM_TON: Readonly<Record<string, KalipPivotDurum["ton"]>> = { AVAILABLE: "ok", QUARANTINE: "amber", DAMAGED: "kirmizi", BLOCKED: "kirmizi" };
 
 export interface ItemQuickAccess {
   readonly label: boolean;
@@ -94,7 +161,6 @@ const MOVE_FALLBACK = { d: LICON.clip, ton: "gri" } as const;
 /** T-1049: kart türü → şerit tonu (CARD_VISUAL renkleriyle aynı aile). */
 const TUR_TON: Readonly<Record<CardType, StTon>> = { HM: "kahve", YM: "mor", MM: "yesil", TM: "camgobegi" };
 const KNOWN_KINDS: readonly string[] = Object.keys(MOVE_VIS);
-const PLACE_COLORS = ["2F5DA8", "0E7C7B", "6C4BD8", "B07D0B", "2F7D5B"] as const;
 
 /** Sunucu reddi → formda gösterim: alanla ilgili ret o alanın altında, diğerleri genel neden. */
 function itemErr(e: ServerError, tr: (k: string) => string, field: (key: string) => string | null): KaydetSonuc {
@@ -314,12 +380,74 @@ function BarcodeForm({ slug, dark, item, units, onBack, onDone }: { slug: string
   );
 }
 
+/** T-1116 "Stok ve yer" (kaynak `StandartUrunKartiStok.dc.html`): sunucu satırları → Depo › Raf yeri › Lot › Palet › Koli pivotu. */
+function StokPivot({ pivot, have, unit }: { pivot: ItemStockPivot; have: string; unit: string }) {
+  const tk = useTranslations("items.detail.k");
+  const locale = useLocale();
+  const fq = (v: string): string => fmtQty(v, locale);
+  const paket = (kind: "PALET" | "KOLI" | null): string => (kind === "PALET" ? "palet" : "koli");
+  const girdiler: PivotGirdi[] = pivot.rows.map((r) => {
+    const yol: PivotAdim[] = [
+      { tur: "depo", id: r.warehouseId, etiket: r.warehouseName },
+      { tur: "raf", id: r.locationId, etiket: r.locationCode },
+    ];
+    if (r.lotId !== null) yol.push({ tur: "lot", id: r.lotId, etiket: r.lotCode ?? "", skt: r.expiryDate, ...(r.productionDate === null ? {} : { meta: tk("produced", { date: fmtGun(r.productionDate, locale) }) }) });
+    if (r.parentId !== null) yol.push({ tur: paket(r.parentKind), id: r.parentId, etiket: r.parentCode ?? "" });
+    if (r.unitId !== null) yol.push({ tur: paket(r.unitKind), id: r.unitId, etiket: r.unitCode ?? "" });
+    return { yol, miktar: r.quantity, ayrilmis: r.reserved, durum: r.status };
+  });
+  const kokler = pivotAgaci(girdiler, (ust) => ({ tur: "gevsek", id: `${ust.tur}:${ust.id}`, etiket: tk("loose") }));
+  const say = (m: ReadonlyMap<string, number>, tur: "depo" | "raf" | "lot" | "palet" | "koli"): string | null => {
+    const n = m.get(tur) ?? 0;
+    if (n === 0) return null;
+    const k = { depo: "cntDepo", raf: "cntRaf", lot: "cntLot", palet: "cntPalet", koli: "cntKoli" } as const;
+    return tk(k[tur], { n });
+  };
+  const birlestir = (xs: readonly (string | null)[]): string | null => {
+    const v = xs.filter((x): x is string => x !== null);
+    return v.length === 0 ? null : v.join(" · ");
+  };
+  const meta = (d: PivotDugum, alt: ReadonlyMap<string, number>): string | null => {
+    if (d.meta !== null) return d.meta;
+    if (d.tur === "depo") return birlestir([say(alt, "raf"), say(alt, "lot")]);
+    if (d.tur === "raf") return birlestir([say(alt, "palet"), say(alt, "koli")]) ?? (alt.has("lot") ? say(alt, "lot") : tk("loose"));
+    if (d.tur === "lot" || d.tur === "palet") return birlestir(d.tur === "lot" ? [say(alt, "palet"), say(alt, "koli")] : [say(alt, "koli")]);
+    return null;
+  };
+  const sayilar = pivotSayilari(kokler);
+  return (
+    <>
+      {pivot.truncated ? <KalipKartNot metin={tk("pivotTruncated", { n: pivot.rows.length })} d={SICON.bilgi} renk="amber" /> : null}
+      <KalipPivot
+        key={pivot.rows.length}
+        testId="item-pivot"
+        etiket={tk("pivotTitle")}
+        baslik={tk("pivotHead")}
+        sutunlar={{ skt: tk("pivotSkt"), durum: tk("pivotStatus"), miktar: tk("pivotQty", { unit }) }}
+        kokler={kokler}
+        turler={PIVOT_TUR}
+        meta={meta}
+        durum={(kod) => ({ metin: tk(`st_${kod}`), ton: DURUM_TON[kod] ?? "amber" })}
+        ayrilmis={(q) => tk("reservedPill", { q: fq(q) })}
+        miktar={fq}
+        skt={(g) => fmtGun(g, locale)}
+        grupla={{ etiket: tk("pivotGroup"), seviyeler: [{ tur: "depo", etiket: tk("lvlDepo") }, { tur: "raf", etiket: tk("lvlRaf") }, { tur: "lot", etiket: tk("lvlLot") }, { tur: "paket", etiket: tk("lvlPaket") }] }}
+        ac={tk("pivotOpen")}
+        kapat={tk("pivotClose")}
+        toplam={{ etiket: tk("pivotTotal"), ozet: birlestir([say(sayilar, "depo"), say(sayilar, "raf"), say(sayilar, "lot"), say(sayilar, "palet"), say(sayilar, "koli")]) ?? "", miktar: `${fq(have)} ${unit}` }}
+      />
+    </>
+  );
+}
+
 export function ItemDetail({
   slug,
   dark,
   canManage,
   quick,
   stockCard,
+  tabData = { kind: "none" },
+  canHistory = false,
   sourceInfo = {},
   inUse,
   units,
@@ -332,6 +460,8 @@ export function ItemDetail({
   canManage: boolean;
   quick: ItemQuickAccess;
   stockCard: ItemStockCardView | null;
+  tabData?: ItemTabData;
+  canHistory?: boolean;
   sourceInfo?: Readonly<Record<string, { readonly categoryName?: string | null; readonly gtip?: string | null; readonly unit?: string | null; readonly archived?: boolean | null; readonly lifecycle?: "NONE"|"PENDING"|"ARCHIVED"|"REMOVED"; readonly sourceState?: "ACTIVE"|"ARCHIVED"|"DELETED"; readonly inventoryTracking?: boolean | null }>>;
   inUse: boolean;
   units: readonly UnitOption[];
@@ -443,28 +573,9 @@ export function ItemDetail({
   const tur = TUR_TON[item.cardType];
   const unit = item.baseUnitCode;
   const fq = (v: string): string => fmtQty(v, locale);
-  const totalRaw = stockCard === null ? null : sumDecimal(stockCard.places.map((p) => p.quantity));
+  // T-1116: toplam sunucunun kapsam toplamıdır (eski: ilk 60 raf yerinin toplamı).
+  const totalRaw = stockCard === null ? null : stockCard.have;
   const tn = stockCard === null || totalRaw === null ? "ok" : stockTone(totalRaw, stockCard.min);
-  const byWh = new Map<string, { name: string; rows: { code: string; q: string }[] }>();
-  for (const p of stockCard?.places ?? []) {
-    const w = byWh.get(p.warehouseId) ?? { name: p.warehouseName, rows: [] };
-    w.rows.push({ code: p.locationCode, q: p.quantity });
-    byWh.set(p.warehouseId, w);
-  }
-  const totalN = Math.max(approx(totalRaw), approx(stockCard?.min), 0);
-  const places: KalipYer[] = [...byWh.entries()].map(([id, w], i) => {
-    const sum = sumDecimal(w.rows.map((r) => r.q));
-    const share = (q: string): number => (totalN > 0 ? Math.max(0, approx(q)) / totalN : 0);
-    return {
-      key: id,
-      name: w.name,
-      meta: tk("racks", { n: w.rows.length, codes: w.rows.map((r) => r.code).join(", ") }),
-      qty: `${fq(sum)} ${unit}`,
-      share: share(sum),
-      color: PLACE_COLORS[i % PLACE_COLORS.length] ?? "2F5DA8",
-      racks: w.rows.map((r) => ({ code: r.code, qty: `${fq(r.q)} ${unit}`, share: share(r.q) })),
-    };
-  });
   const when = (iso: string): string => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "";
@@ -475,7 +586,7 @@ export function ItemDetail({
     return diff <= 0 ? tk("whenToday", { time }) : diff === 1 ? tk("whenYesterday", { time }) : tk("whenDays", { n: diff });
   };
   const docs = `/t/${encodeURIComponent(slug)}/stock/documents`;
-  const hareketler: KalipHareket[] = (stockCard?.moves ?? []).map((m) => {
+  const hareket = (m: ItemMoveView): KalipHareket => {
     // Belge türü listesi dışındaki tür (ileride eklenecek) çökme yerine genel "Hareket" olarak gösterilir.
     const known = KNOWN_KINDS.includes(m.kind);
     const v = known ? MOVE_VIS[m.kind as keyof typeof MOVE_VIS] : MOVE_FALLBACK;
@@ -495,7 +606,8 @@ export function ItemDetail({
       href: `${docs}?id=${encodeURIComponent(m.documentId)}`,
       aria: tk("moveOpen", { kind: kindName, no: m.number ?? "" }).trim(),
     };
-  });
+  };
+  const hareketler: KalipHareket[] = (stockCard?.moves ?? []).map(hareket);
   // T-1040: arşivli ürünle işlem yapılmaz (kullanıcı 26 Ekim) — etiket / sayım / transfer kısa yolları çizilmez.
   const islemler: KalipKartIslem[] = !active ? [] : [
     ...(quick.label ? [{ key: "label", etiket: tk("qLabelShort"), d: SICON.yazici, ton: "stok" as const, href: `/t/${encodeURIComponent(slug)}/labels?item=${encodeURIComponent(item.id)}` }] : []),
@@ -512,8 +624,9 @@ export function ItemDetail({
   ];
   const kutular: KalipSayiKutusu[] = stockCard === null || totalRaw === null ? [] : [
     { key: "have", etiket: tk("boxHave"), deger: fq(totalRaw), d: SICON.kutu, ton: tn === "crit" ? "kirmizi" : "stok", testId: "kalip-total" },
+    { key: "available", etiket: tk("boxAvailable"), deger: fq(stockCard.available), d: SICON.onay, ton: "ok", testId: "kalip-available" },
+    { key: "reserved", etiket: tk("boxReserved"), deger: fq(stockCard.reserved), d: SICON.kilit, ton: "amber", testId: "kalip-reserved" },
     ...(stockCard.min === null ? [] : [{ key: "min", etiket: tk("boxMin"), deger: fq(stockCard.min), d: SICON.uyari, ton: tn === "ok" ? ("ok" as const) : ("amber" as const) }]),
-    { key: "places", etiket: tk("boxPlaces"), deger: String(stockCard.places.length), d: SICON.raf, ton: "lacivert" },
   ];
   const fixedLock = inUse ? td("lockedInUse") : td("lockedFixed");
   const bilgiler: KalipBilgi[] = [
@@ -548,12 +661,16 @@ export function ItemDetail({
     const flag = (v: boolean | null): string => v === null ? "—" : tsrc(v ? "yes" : "no");
     return [...(info.lifecycle && info.lifecycle!=="NONE"?[field("lifecycle",tsrc("sourceStatus"),tsrc(info.lifecycle==="PENDING"?"pending":info.lifecycle==="REMOVED"?"removed":"archived"),SICON.bilgi)]:[]),field("category", tsrc("category"), info.categoryName ?? "—", SICON.kutu), field("gtip", tsrc("sourceGtip"), info.gtip ?? "—", SICON.list), field("unit", tsrc("sourceUnit"), info.unit ?? "—", SICON.birim), ...(info.archived === undefined ? [] : [field("archived", tsrc("sourceArchived"), flag(info.archived), SICON.bilgi)]), ...(info.inventoryTracking === undefined ? [] : [field("inventory", tsrc("sourceInventory"), flag(info.inventoryTracking), SICON.bilgi)])];
   });
+  // T-1116: tuval sırası (Genel · Stok ve yer · Hareketler · Barkodlar · Takip · Paraşüt · Değişiklik geçmişi); Birimler tuvalde yok, eski
+  // sekme korunur. Takip yalnız lot/seri izlenen üründe, geçmiş yalnız `audit.view` yetkisinde.
   const sekmeler: KalipKartSekmesi[] = [
     { id: "genel", etiket: tk("tabGeneral"), d: SICON.bilgi, ton: "stok" },
-    ...(stockCard === null ? [] : [{ id: "stok", etiket: tk("tabStock"), d: SICON.raf, ton: "lacivert" as const }]),
-    { id: "birim", etiket: tk("tabUnits"), d: SICON.cevrim, ton: "mor" },
+    ...(stockCard === null ? [] : [{ id: "stok", etiket: tk("tabStock"), d: SICON.raf, ton: "lacivert" as const }, { id: "hareketler", etiket: tk("tabMoves"), d: SICON.cevrim, ton: "mor" as const }]),
+    { id: "birim", etiket: tk("tabUnits"), d: SICON.birim, ton: "mor" },
     { id: "barkod", etiket: tk("tabBarcodes"), d: SICON.barkod, ton: "mavi" },
-    ...(sourceRows.length === 0 ? [] : [{ id: "erp", etiket: tsrc("sourceTitle"), d: SICON.cevrim, ton: "turuncu" as const }]),
+    ...(item.trackingMode === "NONE" ? [] : [{ id: "takip", etiket: tk("tabTracking"), d: SICON.takip, ton: "camgobegi" as const }]),
+    ...(sourceRows.length === 0 ? [] : [{ id: "erp", etiket: tsrc("sourceTitle"), d: SICON.baglanti, ton: "parasut" as const }]),
+    ...(canHistory ? [{ id: "gecmis", etiket: tk("tabHistory"), d: SICON.gecmis, ton: "gri" as const }] : []),
   ];
   const secili = sekmeler.some((s) => s.id === sekme) ? sekme : "genel";
   const sekmeHref = (id: string): string => (id === "genel" ? itemPath : `${itemPath}?sekme=${id}`);
@@ -594,40 +711,107 @@ export function ItemDetail({
   const bildirimler = (
     <>
       {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={item.code === codeChanged.from ? codeChanged.to : item.code} busy={undoing} onUndo={() => void undoCode()} /> : null}
-      {notice ? <Banner kind="info">{notice}</Banner> : null}
+      {notice ? <KalipKartNot metin={notice} d={SICON.onay} renk="ok" testId="item-notice" /> : null}
       {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
       {canManage ? null : <p className="sr">{t("lockedReason")}</p>}
-      {active ? null : <Banner kind="info">{td("archivedNote")}</Banner>}
+      {active ? null : <KalipKartNot metin={td("archivedNote")} d={SICON.arsiv} renk="gri" testId="item-archived-note" />}
     </>
   );
   let ana: ReactNode;
   if (secili === "erp") {
     ana = <KalipBilgiIzgara baslik={tsrc("sourceTitle")} bilgiler={sourceRows} kilitD={SICON.kilit} />;
   } else if (secili === "stok" && stockCard !== null) {
+    const pivot = tabData.kind === "stok" ? tabData.pivot : null;
     ana = (
-      <div data-testid="item-where" className="flex min-w-0 flex-col gap-3">
-        <b className="stkbas">{tk("where")}</b>
+      <div data-testid="item-where" className="stkpvkap">
         {tn !== "ok" && stockCard.min !== null && totalRaw !== null ? <KalipUyari title={tk("belowMin")} sub={tk("belowMinSub", { have: fq(totalRaw), min: fq(stockCard.min), unit })} /> : null}
-        {places.length === 0 ? <small className="stkbos">{tk("whereEmpty")}</small> : <KalipNerede places={places} />}
-        {stockCard.min === null ? null : <KalipMinimum label={tk("min", { min: fq(stockCard.min), unit })} state={tn === "ok" ? tk("minOk") : tk("minLow")} ok={tn === "ok"} />}
+        {pivot === null ? (
+          <KalipKartNot metin={tk("pivotUnread")} d={SICON.uyari} renk="amber" />
+        ) : pivot.rows.length === 0 ? (
+          <small className="stkbos">{tk("whereEmpty")}</small>
+        ) : (
+          <StokPivot pivot={pivot} have={stockCard.have} unit={unit} />
+        )}
       </div>
     );
+  } else if (secili === "hareketler" && stockCard !== null) {
+    const page = tabData.kind === "hareketler" ? tabData.page : null;
+    ana =
+      page === null ? (
+        <KalipKartNot metin={tk("movesUnread")} d={SICON.uyari} renk="amber" />
+      ) : (
+        <div data-testid="item-moves-tab" className="stkyigin">
+          <KalipSonHareketler baslik={tk("tabMoves")} tumu={{ href: docs, etiket: tk("movesAll") }} bos={tk("movesNone")} hareketler={page.moves.map(hareket)} kisiEtiket={tk("actor")} />
+          {page.total > page.moves.length ? <small className="stkbos">{tk("movesShown", { shown: page.moves.length, total: page.total })}</small> : null}
+        </div>
+      );
+  } else if (secili === "takip") {
+    const tr = tabData.kind === "takip" ? tabData.tracking : null;
+    if (tr === null) {
+      ana = <KalipKartNot metin={tk("trackingUnread")} d={SICON.uyari} renk="amber" />;
+    } else {
+      const lotlar: KalipKartSatiri[] = tr.lots.map((l) => ({
+        key: l.id,
+        baslik: <span className="mono">{l.lotCode}</span>,
+        meta: [l.expiryDate === null ? tk("lotNoExpiry") : tk("lotMeta", { expiry: fmtGun(l.expiryDate, locale) }), l.productionDate === null ? null : tk("produced", { date: fmtGun(l.productionDate, locale) }), l.supplierLot === null ? null : tk("lotSupplier", { lot: l.supplierLot })].filter((x) => x !== null).join(" · "),
+        deger: `${fq(l.quantity)} ${unit}`,
+        d: SICON.ad,
+        ton: "mavi",
+        testId: "tracking-lot",
+      }));
+      const seriler: KalipKartSatiri[] = tr.serials.map((x) => ({
+        key: x.id,
+        baslik: <span className="mono">{x.serialNo}</span>,
+        meta: [x.lotCode, x.locationCode === null ? tk("serialNotInStock") : `${x.warehouseName ?? ""} · ${x.locationCode}`].filter((v) => v !== null).join(" · "),
+        d: SICON.qr,
+        ton: "camgobegi",
+        testId: "tracking-serial",
+      }));
+      ana = (
+        <div data-testid="item-tracking" className="stkyigin">
+          <b className="stkbas">{tk("lots")}</b>
+          <KalipKartSatirlar etiket={tk("lots")} satirlar={lotlar} bos={tk("lotsEmpty")} />
+          {tr.lotTotal > tr.lots.length ? <small className="stkbos">{tk("shownOf", { shown: tr.lots.length, total: tr.lotTotal })}</small> : null}
+          {item.trackingMode === "LOT" && tr.serialTotal === 0 ? null : (
+            <>
+              <b className="stkbas">{tk("serials")}</b>
+              <KalipKartSatirlar etiket={tk("serials")} satirlar={seriler} bos={tk("serialsEmpty")} />
+              {tr.serialTotal > tr.serials.length ? <small className="stkbos">{tk("shownOf", { shown: tr.serials.length, total: tr.serialTotal })}</small> : null}
+            </>
+          )}
+        </div>
+      );
+    }
+  } else if (secili === "gecmis") {
+    const rows = tabData.kind === "gecmis" ? tabData.rows : null;
+    ana =
+      rows === null ? (
+        <KalipKartNot metin={tk("historyUnread")} d={SICON.uyari} renk="amber" />
+      ) : (
+        <div data-testid="item-history" className="stkyigin">
+          <b className="stkbas">{tk("history")}</b>
+          <KalipKartSatirlar
+            etiket={tk("history")}
+            bos={tk("historyEmpty")}
+            satirlar={rows.map((r) => ({ key: r.id, baslik: r.actionLabel, meta: [r.when, r.actor, r.reason].filter((x) => x !== null && x !== "").join(" · "), d: SICON.gecmis, ton: "gri", testId: "history-row" }))}
+          />
+          {tabData.kind === "gecmis" && tabData.more ? (
+            <Link className="stkdaha" href={`/t/${encodeURIComponent(slug)}/audit?q=${encodeURIComponent(item.id)}`} prefetch={false}>
+              {tk("historyAll")}
+            </Link>
+          ) : null}
+        </div>
+      );
   } else if (secili === "birim") {
     ana = (
-      <div id="sec-conv" className="flex min-w-0 flex-col gap-3">
+      <div id="sec-conv" className="stkyigin">
         <b className="stkbas">{td("conversionsTitle")}</b>
-        <p className="break-words text-sm text-ink-muted">{td("conversionsHint", { unit })}</p>
-        {conversions.length === 0 ? (
-          <p className="break-words text-base text-ink-muted">{td("conversionsEmpty")}</p>
-        ) : (
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0">
-            {conversions.map((cv) => (
-              <li key={cv.unitId} data-testid="conversion-row" className="min-w-0 break-words rounded-card border-2 border-border p-3 text-base text-ink">
-                {td("conversionLine", { unit: cv.unitCode, factor: cv.factor, base: unit })}
-              </li>
-            ))}
-          </ul>
-        )}
+        <small className="stkbos">{td("conversionsHint", { unit })}</small>
+        <KalipKartSatirlar
+          etiket={td("conversionsTitle")}
+          bos={td("conversionsEmpty")}
+          satirlar={conversions.map((cv) => ({ key: cv.unitId, baslik: td("conversionLine", { unit: cv.unitCode, factor: cv.factor, base: unit }), d: SICON.cevrim, ton: "mor", testId: "conversion-row" }))}
+        />
         {writable ? (
           <div>
             <button
@@ -660,40 +844,45 @@ export function ItemDetail({
     );
   } else if (secili === "barkod") {
     ana = (
-      <div id="sec-bc" className="flex min-w-0 flex-col gap-3">
+      <div id="sec-bc" className="stkyigin">
         <b className="stkbas">{td("barcodesTitle")}</b>
-        <p className="break-words text-sm text-ink-muted">{td("barcodesHint")}</p>
-        {barcodes.length === 0 ? (
-          <p className="break-words text-base text-ink-muted">{td("barcodesEmpty")}</p>
-        ) : (
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0">
-            {barcodes.map((b) => (
-              <li key={b.id} data-testid="barcode-row" className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-border p-3">
-                <span className="min-w-0 break-all text-base font-semibold text-ink">{b.barcode}</span>
-                <span className="min-w-0 break-words text-sm text-ink-muted">{td("barcodeMeta", { unit: b.unitCode, quantity: b.quantity })}</span>
+        <small className="stkbos">{td("barcodesHint")}</small>
+        <KalipKartSatirlar
+          etiket={td("barcodesTitle")}
+          bos={td("barcodesEmpty")}
+          satirlar={barcodes.map((b) => {
+            const alt = (
+              <>
                 {b.ambiguous ? <KalipUyari title={td("barcodeAmbiguous")} sub={b.barcode} /> : null}
                 {writable ? (
-                  <div>
-                    <button
-                      type="button"
-                      className="btn"
-                      style={actBtn("C62828")}
-                      disabled={busy === "remove"}
-                      onClick={() => {
-                        feedback.minor();
-                        setRemoving(b);
-                      }}
-                      aria-label={td("barcodeRemoveFor", { barcode: b.barcode })}
-                    >
-                      <Ico d={LICON.trash} size={18} />
-                      {td("barcodeRemove")}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={actBtn("C62828")}
+                    disabled={busy === "remove"}
+                    onClick={() => {
+                      feedback.minor();
+                      setRemoving(b);
+                    }}
+                    aria-label={td("barcodeRemoveFor", { barcode: b.barcode })}
+                  >
+                    <Ico d={LICON.trash} size={18} />
+                    {td("barcodeRemove")}
+                  </button>
                 ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
+              </>
+            );
+            return {
+              key: b.id,
+              baslik: <span className="mono">{b.barcode}</span>,
+              meta: td("barcodeMeta", { unit: b.unitCode, quantity: b.quantity }),
+              d: SICON.barkod,
+              ton: "mavi" as const,
+              testId: "barcode-row",
+              ...(b.ambiguous || writable ? { altta: alt } : {}),
+            };
+          })}
+        />
         {writable ? (
           <div>
             <button type="button" className="btn" style={actBtn("0E7C7B")} onClick={() => open("barcode")} data-testid="barcode-add">
@@ -709,7 +898,7 @@ export function ItemDetail({
       <>
         <KalipBilgiIzgara baslik={td("cardTitle")} bilgiler={bilgiler} kilitD={SICON.kilit} />
         {writable ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="stkdugmeler">
             <button type="button" className="btn" style={actBtn("2F5DA8")} onClick={() => open("edit")} data-testid="item-edit-open">
               <Ico d={LICON.pencil} size={18} />
               {tk("editAria")}
