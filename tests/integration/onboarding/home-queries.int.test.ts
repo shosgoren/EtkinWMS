@@ -78,7 +78,7 @@ const inMs = (ms: number): Date => new Date(Date.now() + ms);
 describe("getTenantSettings", () => {
   it("settings.manage sahibi ad/dil/saat dilimi/slug okur", async () => {
     const fx = await mkTenant({ name: "Ayar Ltd", tz: "Europe/Istanbul" });
-    expect(await getTenantSettings(acc(fx, fx.owner))).toEqual({ name: "Ayar Ltd", locale: "tr", timeZone: "Europe/Istanbul", slug: fx.slug, separationOfDuties: false });
+    expect(await getTenantSettings(acc(fx, fx.owner))).toEqual({ name: "Ayar Ltd", locale: "tr", timeZone: "Europe/Istanbul", slug: fx.slug, separationOfDuties: false, voiceReply: false });
   });
   it("izinsiz rol → FORBIDDEN", async () => {
     const fx = await mkTenant();
