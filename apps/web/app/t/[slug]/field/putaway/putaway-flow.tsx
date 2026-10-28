@@ -7,10 +7,10 @@ import { useTranslations } from "next-intl";
 import { KICON } from "../../../../design/kabuk-icons.ts";
 import { dz } from "../../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
-import { ErrorNotice, errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
+import { errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { availableAtLocationAction, putawayAction, resolveItemScanAction, resolveLocationScanAction } from "../../receipts/actions.ts";
 import { CompoundLine, DroppedNotice, PrimaryButton, PrimaryLink, ScanAlert, ScanPanel, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaHata, SahaShell } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
 import { feedback } from "@wms/ui";
 
@@ -382,7 +382,7 @@ export function PutawayFlow({ slug, warehouseId, task, initialCode }: { slug: st
               }
             />
           )}
-          {error === null ? null : <ErrorNotice error={error} context="putaway" />}
+          {error === null ? null : <SahaHata error={error} context="putaway" />}
         </SahaShell>
         {alertView}
       </>

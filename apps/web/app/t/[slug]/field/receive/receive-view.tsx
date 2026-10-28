@@ -9,10 +9,10 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { SICON } from "../../../../design/saha-icons.ts";
 import { dz } from "../../../../design/kalip-saha-tokens.ts";
-import { ErrorNotice, LineStatus, errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo, type ReceiptDetail, type ReceiptLineView } from "../../receipts/receipt-form.tsx";
+import { errorKeyOf, intOf, scanMismatch, submitWithKey, useKeyHolder, type ErrorInfo, type ReceiptDetail, type ReceiptLineView } from "../../receipts/receipt-form.tsx";
 import { receiveGoodsAction, resolveItemScanAction } from "../../receipts/actions.ts";
 import { CompoundLine, DroppedNotice, PrimaryButton, PrimaryLink, ScanAlert, ScanPanel, isBaseUnit, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "./receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaHata, SahaShell } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
 import { feedback } from "@wms/ui";
 
@@ -272,7 +272,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
     const over = max !== null && picked.received > max;
     const rack =
       receipt.receivingLocations.length > 1 ? (
-        <fieldset className="rack m-0 border-0 p-0" data-testid="rack-choice">
+        <fieldset className="rack" data-testid="rack-choice">
           <legend className="sr">{t("flow.rackLabel")}</legend>
           <p>{t("flow.rackLabel")}</p>
           <div className="chips" data-testid="rack-chips">
@@ -365,7 +365,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
             between={rack}
             hint={ts("qty.hint")}
           />
-          {error === null ? null : <ErrorNotice error={error} context="receive" remaining={String(max ?? picked.line.open)} />}
+          {error === null ? null : <SahaHata error={error} context="receive" remaining={String(max ?? picked.line.open)} />}
         </SahaShell>
         {alertView}
       </>
@@ -394,8 +394,8 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
         main={{ label: ts("okut.scanMain"), aria: t("flow.scanNow"), d: SICON.scan, onClick: scanPrimary.press, testId: "flow-primary" }}
       >
         <ScanPanel variant="kalip" service={scanner} prompt={busy ? t("flow.checking") : t("flow.scanPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="green" />
-        <section aria-label={t("flow.expectedItems")} className="flex min-w-0 flex-col gap-2">
-          <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="expected-lines">
+        <section aria-label={t("flow.expectedItems")}>
+          <ul className="slist" data-testid="expected-lines">
             {receipt.lines.map((l) => (
               <li key={l.id} className="job">
                 <span className="uic" style={{ background: dz("8A5A12") }}>
@@ -403,7 +403,7 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
                 </span>
                 <span style={{ minWidth: 0 }}>
                   <b>{l.itemName}</b>
-                  <LineStatus expected={l.expected} received={l.received} damaged={l.damaged} open={l.open} />
+                  <SahaSatirDurumu expected={l.expected} received={l.received} damaged={l.damaged} open={l.open} />
                 </span>
               </li>
             ))}
@@ -412,5 +412,31 @@ export function ReceiveFlow({ slug, receipt, initialCode }: { slug: string; rece
       </SahaShell>
       {alertView}
     </>
+  );
+}
+
+/**
+ * T-1122: kabul satırı durumu (eski `LineStatus`: kütüphane simgeleri + Tailwind yerine kaynak `.pill`): kalan / tamam hapı (simgeli),
+ * beklenen · kabul sayıları, hasar varsa uyarı hapı. Yalnız gösterim; miktarlar sunucudan.
+ */
+function SahaSatirDurumu({ expected, received, damaged, open }: { expected: string; received: string; damaged: string; open: string }) {
+  const t = useTranslations("receiving");
+  const done = intOf(open) === 0;
+  const hasDamage = (intOf(damaged) ?? 0) > 0;
+  return (
+    <small className="sline2">
+      <span className={`pill${done ? " ok" : ""}`}>
+        <Ico d={done ? SICON.check : SICON.kabul} size={12} />
+        {done ? t("line.complete") : t("line.open", { open: String(intOf(open) ?? open) })}
+      </span>
+      <span>{t("line.expected", { n: String(intOf(expected) ?? expected) })}</span>
+      <span>{t("line.received", { n: String(intOf(received) ?? received) })}</span>
+      {hasDamage ? (
+        <span className="pill warn">
+          <Ico d={SICON.warn} size={12} />
+          {t("line.damaged", { n: String(intOf(damaged) ?? damaged) })}
+        </span>
+      ) : null}
+    </small>
   );
 }

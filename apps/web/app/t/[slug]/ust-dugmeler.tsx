@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { THEME_COOKIE } from "../../design/theme.ts";
 import { KalipDestek } from "./kalip/destek.tsx";
+import { KalipIslemRehberiAc } from "./kalip/rehber.tsx";
 import { useKabuk } from "./kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "./pano/hesap-menu.tsx";
 import { StAyarlar, StSonIslemler, StTema } from "./kalip/ust-standart.tsx";
@@ -37,6 +38,8 @@ export function UstDugmeler({ dark }: { dark: boolean }) {
       {ctx?.slug !== undefined ? (
         <span className={`dzl ust-dz${d}`}>
           <span className="tph" role="group" aria-label={t("topActions")} data-testid="ust-actions">
+            {/* T-1120: KalipEkran ile aynı — ekranın rehberi varsa "?" (Excel'den aktar'da adım adım aktarma rehberi). */}
+            <KalipIslemRehberiAc />
             <KalipDestek slug={ctx.slug} dark={dark} canReport={ctx.canReport === true} />
           </span>
         </span>

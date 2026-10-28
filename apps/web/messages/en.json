@@ -4234,7 +4234,8 @@
           "alt": "Activity history"
         }
       }
-    }
+    },
+    "guideOpen": "Guide"
   },
   "aktar": {
     "title": "Import from Excel",
