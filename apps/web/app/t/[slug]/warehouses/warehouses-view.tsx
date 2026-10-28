@@ -10,7 +10,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Banner, feedback } from "@wms/ui";
+import { feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { useSetupProgress } from "../easy-setup/setup-guide.tsx";
 import { CodeChangedNotice, CodeEditForm } from "../code-edit-dialog.tsx";
@@ -23,6 +23,7 @@ import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
 import { KalipGorunumSec, KalipSonsuz, useKalipDerinlik, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
+import { KalipUyari } from "../kalip/uyari.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { archiveWarehouseAction, createWarehouseAction, loadMoreWarehousesAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
@@ -68,32 +69,22 @@ export function errorKey(error: Pick<ServerError, "code" | "detail">, scope: "wa
 
 /** Kod önerisi yanıt süresi sınırı; aşılırsa kod alanı açılır (T-259). */
 const SUGGEST_TIMEOUT_MS = 5000;
-const LINK_CLS =
-  "inline-flex min-h-12 min-w-12 items-center justify-center rounded-control px-2 text-base font-semibold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-
+/** Sunucu reddi: neden + sonraki eylem, gerekirse MFA / yeniden giriş bağlantısı, destek kodu. T-1121: kalıp uyarı bandı (eski Banner yerine). */
 export function ServerErrorBanner({ error, returnTo, scope = "warehouse" }: { error: ServerError; returnTo: string; scope?: "warehouse" | "location" | "bulk" }) {
   const t = useTranslations("warehouses.errors");
   const key = errorKey(error, scope);
   return (
-    <Banner kind="error">
+    <KalipUyari tone="hata">
       <p>
         {t(key)} {t(`${key}Action`)}
       </p>
-      {error.detail === "MFA_REQUIRED" ? (
-        <a className={LINK_CLS} href={`/mfa?next=${encodeURIComponent(returnTo)}`}>
-          {t("mfaLink")}
-        </a>
-      ) : null}
-      {error.detail === "RECENT_AUTH_REQUIRED" ? (
-        <a className={LINK_CLS} href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`}>
-          {t("loginLink")}
-        </a>
-      ) : null}
-      <p className="mt-1 break-all text-sm">
+      {error.detail === "MFA_REQUIRED" ? <a href={`/mfa?next=${encodeURIComponent(returnTo)}`}>{t("mfaLink")}</a> : null}
+      {error.detail === "RECENT_AUTH_REQUIRED" ? <a href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`}>{t("loginLink")}</a> : null}
+      <small>
         {t("code", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}
         {error.requestId ? ` · ${error.requestId}` : ""}
-      </p>
-    </Banner>
+      </small>
+    </KalipUyari>
   );
 }
 

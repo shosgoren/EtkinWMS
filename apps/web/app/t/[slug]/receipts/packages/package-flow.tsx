@@ -3,10 +3,12 @@
 // idempotency anahtarı ve içerik dondurulur); yetki ve kurallar sunucuda.
 // T-973 (B-63, I-18): FORM kalıbı kabı (KalipEkran `form`): kalıp üst çubuğu + ortak alt cam çubuk (Geri: Beklenen teslimler, Ana ekran,
 // ana işlem İLERİ = adımın kendi birincil düğmesine basar; kabul sonrası ETİKET). Adım içerikleri, alan adları ve düğme adları aynı.
+// T-1121: uyarılar (okutma düştü, seri takipli ürün, depo / raf yeri yok) kalıp uyarı bandında (`KalipUyari`; eski Banner ve "⚠" metni
+// yerine ikonlu); ekran düzeninin Tailwind sınıfları satır içi düzen + aşağıdaki yerleşim stiline taşındı.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Banner, feedback } from "@wms/ui";
+import { feedback } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../../field/receive/receive-flow.tsx";
 import { KalipAdimlar } from "../../kalip/adimlar.tsx";
 import { ErrorNotice, type ErrorInfo, type ActionResult } from "../receipt-form.tsx";
@@ -15,6 +17,7 @@ import { Ico, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipAlan, KalipAnahtar, KalipGrup, KalipSecenek } from "../../kalip/form.tsx";
 import { KalipSecim } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
+import { KalipUyari } from "../../kalip/uyari.tsx";
 import { getPackageReceiptAction, packageItemOptionsAction, packageReceivingLocationsAction, packageWarehousesAction, postPackageReceiptAction, preparePackageReceiptAction, resolvePackageItemScanAction, searchPackageItemsAction, type PackageCommandDto, type PackageItemDto, type PackageItemOptionsDto, type PackageReceiptDto } from "./actions.ts";
 
 type Place = { readonly id: string; readonly code: string; readonly name: string };
@@ -248,13 +251,13 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
     : { label: t("k.nextShort"), aria: t("k.nextAria"), d: LICON.arrow, onClick: pressPrimary, disabled: busy || (!canWrite && stage >= 3), testId: "package-main" };
   return <KalipEkran kind="form" dark={dark} title={t("title")} icon={{ d: LICON.koli, color: "2F7D5B" }} testId="package-receiving"
     bar={{ back: { href: `${home}/receipts`, testId: "screen-back" }, homeNav: { href: home, testId: "screen-home" }, main }}>
-  <div className="package-flow mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 py-2" data-testid="package-flow" data-stage={posted ? 4 : stage}>
+  <div className="package-flow" style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%", maxWidth: "72rem", minWidth: 0, margin: "0 auto", padding: "8px 0" }} data-testid="package-flow" data-stage={posted ? 4 : stage}>
     <p className="sr">{t("k.intro")}</p>
     <KalipAdimlar labels={[t("product"), t("packages"), t("review"), t("labels")]} />
     {error ? <ErrorNotice error={error} context="create" /> : null}
-    {scanner.dropped ? <Banner kind="warning">⚠ {t("scanDropped")}</Banner> : null}
-    <div className="package-layout grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-      <section className="flex min-w-0 flex-col gap-4">
+    {scanner.dropped ? <KalipUyari tone="uyari"><p>{t("scanDropped")}</p></KalipUyari> : null}
+    <div className="package-layout">
+      <section style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
         {stage === 1 && !receipt ? <fieldset disabled={busy || frozen} className="pk-fs">
           <legend className="sr">{t("product")}</legend>
           <KalipGrup title={t("product")} sub={t("chooseProduct")} d={LICON.search} color="2F7D5B" testId="package-product">
@@ -264,7 +267,7 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
               <ScanPanel variant="kalip" service={scanner.service} prompt={t("scan")} last={last} ready={camera.ready} hue="green" />
               <SecondaryButton onClick={camera.press} disabled={busy}>{t("scan")}</SecondaryButton>
               {options ? <p className="pk-card pk-chosen"><Ico d={LICON.check} size={20} />{options.item.code} · {options.item.name}</p> : null}
-              {unsupported ? <Banner kind="warning">⚠ {t("serial")}</Banner> : null}
+              {unsupported ? <KalipUyari tone="uyari"><p>{t("serial")}</p></KalipUyari> : null}
               <PrimaryButton disabled={!options || !!unsupported || busy} onClick={() => setStage(2)}>{t("next")}</PrimaryButton>
             </div>
           </KalipGrup>
@@ -278,7 +281,7 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
                 <KalipSecim name="locationId" label={t("location")} placeholder={t("choose")} color="2F7D5B" icon={{ d: LICON.moveIn, color: "2F7D5B" }} value={locationId} options={locations.map(l => ({ id: l.id, label: `${l.code} · ${l.name}`, d: LICON.moveIn }))} onPick={setLocationId} testId="package-location" />
               </div>
               {/* ALTIN-KURAL 8: boş seçimde çıkmaz yok — sıradaki adım bağlantısı (depolar / deponun lokasyon ağacı). */}
-              {warehouses.length === 0 ? <Banner kind="warning">⚠ {t("noWarehouse")} <Link href={`/t/${encodeURIComponent(slug)}/warehouses`} data-testid="package-empty-action" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 700 }}><Ico d={LICON.arrow} size={16} />{t("toWarehouses")}</Link></Banner> : warehouseId && locations.length === 0 ? <Banner kind="warning">⚠ {t("noLocation")} <a href={`/t/${encodeURIComponent(slug)}/warehouses/${encodeURIComponent(warehouseId)}`} data-testid="package-empty-action" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 700 }}><Ico d={LICON.plus} size={16} />{t("toLocations")}</a></Banner> : null}
+              {warehouses.length === 0 ? <KalipUyari tone="uyari"><p>{t("noWarehouse")}</p><Link href={`/t/${encodeURIComponent(slug)}/warehouses`} data-testid="package-empty-action"><Ico d={LICON.arrow} size={16} />{t("toWarehouses")}</Link></KalipUyari> : warehouseId && locations.length === 0 ? <KalipUyari tone="uyari"><p>{t("noLocation")}</p><a href={`/t/${encodeURIComponent(slug)}/warehouses/${encodeURIComponent(warehouseId)}`} data-testid="package-empty-action"><Ico d={LICON.plus} size={16} />{t("toLocations")}</a></KalipUyari> : null}
               <div className="pk-body pk-tight"><span className="pk-lab">{t("kind")}</span>
                 <KalipSecenek label={t("kind")} color="0E7C7B" value={kind} onPick={id => setKind(id as "VARIL" | "KOLI")} options={[{ id: "VARIL", label: t("barrel"), d: LICON.koli }, { id: "KOLI", label: t("box"), d: LICON.box }]} />
               </div>
@@ -290,7 +293,7 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
               {options?.item.trackingMode === "NONE" ? <KalipAnahtar title={t("optionalMetadata")} d={LICON.tag} color="B85A14" on={optionalMetadata} aria={t("optionalMetadata")} onToggle={() => setOptionalMetadata(!optionalMetadata)} /> : null}
               {equal ? <div className="pk-card"><h2 className="pk-h">{t("each")}</h2>{entryFields(entry, setEntry, t("each"))}</div> : rows.map((row, i) => <section className="pk-card" key={i}><h2 className="pk-h">{t("packageNo", { n: i + 1 })}</h2>{entryFields(row, value => setRows(old => old.map((r, j) => i === j ? value : r)), `${i + 1}`)}</section>)}
               {!preview ? <p role="status" className="pill warn pk-note">⚠ {t("invalid")}</p> : null}
-              <div className="package-actions flex gap-3"><SecondaryButton onClick={() => setStage(1)}>{t("back")}</SecondaryButton><PrimaryButton disabled={!input} onClick={() => setStage(3)}>{t("review")}</PrimaryButton></div>
+              <div className="package-actions"><SecondaryButton onClick={() => setStage(1)}>{t("back")}</SecondaryButton><PrimaryButton disabled={!input} onClick={() => setStage(3)}>{t("review")}</PrimaryButton></div>
             </div>
           </KalipGrup>
         </fieldset> : null}
@@ -300,18 +303,18 @@ export function PackageFlow({ slug, initial, canWrite, dark = false }: { slug: s
           {frozen && !posted ? <p className="pill warn pk-note">🔒 {t("draftLocked")}</p> : null}
           {receipt ? <><p className="pk-meta">{receipt.receiptNumber}</p><p className="pk-strong">{t("countSummary", { n: receipt.packages.length })}</p><p className="pk-meta">{t("initialQuantity")}</p><ul className="pk-list">{receipt.packages.map(p => <li key={p.id} className="pk-card">{t("packageNo", { n: p.packageNo })} · {p.itemName} · {displayQuantity(p.quantity)} {p.unitCode}<p>{p.lotCode} {p.producedOn} {p.expiresOn}</p><p>{p.stockStatus === "QUARANTINE" ? `⚠ ${t("quarantine")}` : p.stockStatus}</p></li>)}</ul></> : <><p className="pk-strong">{options?.item.name}</p><p className="pk-meta">{warehouses.find(w => w.id === warehouseId)?.name} · {locations.find(l => l.id === locationId)?.name}</p><p className="pk-meta">{t(kind === "VARIL" ? "barrel" : "box")}</p><ul className="pk-list">{(equal ? Array.from({ length: preview?.count ?? 0 }, () => entry) : rows).map((r, i) => <li key={i} className="pk-card">{t("packageNo", { n: i + 1 })} · {r.quantity} {options?.units.find(u => u.unitId === unitId)?.unitCode}<p>{r.lotCode} {r.producedOn} {r.expiresOn}</p></li>)}</ul></>}
           {!canWrite && !posted ? <p role="alert" className="pill warn pk-note">🔒 {t("locked")}</p> : null}
-          {posted && receipt ? <Link href={packageLabelHref(slug, receipt.documentId)} className="btn n pk-wide">{t("labels")}</Link> : canWrite ? <div className="package-actions flex gap-3">{!frozen ? <SecondaryButton disabled={busy} onClick={() => setStage(2)}>{t("edit")}</SecondaryButton> : null}<PrimaryButton loading={busy} disabled={!clientReady || (!input && !frozen)} onClick={() => void accept()}>{error || initial ? t("retry") : t("accept")}</PrimaryButton></div> : null}
+          {posted && receipt ? <Link href={packageLabelHref(slug, receipt.documentId)} className="btn n pk-wide">{t("labels")}</Link> : canWrite ? <div className="package-actions">{!frozen ? <SecondaryButton disabled={busy} onClick={() => setStage(2)}>{t("edit")}</SecondaryButton> : null}<PrimaryButton loading={busy} disabled={!clientReady || (!input && !frozen)} onClick={() => void accept()}>{error || initial ? t("retry") : t("accept")}</PrimaryButton></div> : null}
           </div>
         </section> : null}
       </section>
-      <aside className="pk-card package-summary flex flex-col gap-2 self-start" aria-live="polite">
-        <h2 className="pk-h">{t("summary")}</h2><p className="break-words">{options?.item.name ?? receipt?.packages[0]?.itemName ?? t("chooseProduct")}</p>
+      <aside className="pk-card package-summary" aria-live="polite">
+        <h2 className="pk-h">{t("summary")}</h2><p style={{ overflowWrap: "anywhere" }}>{options?.item.name ?? receipt?.packages[0]?.itemName ?? t("chooseProduct")}</p>
         {preview && options ? <p className="pk-total" data-testid="package-total">{t("countSummary", { n: preview.count })} / {displayQuantity(preview.baseTotal)} {options.baseUnit.code}</p> : null}
         <p className="pk-meta">{t("initialQuantity")}</p>
       </aside>
     </div>
     {camera.overlay}
-    <style>{`@media (min-width:768px) and (max-width:1199px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}} @media (max-width:767px),(pointer:coarse) and (max-height:500px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}.package-actions{position:sticky;bottom:0;z-index:5;padding-block:.5rem}}`}</style>
+    <style>{`.package-layout{display:grid;gap:16px;min-width:0}@media (min-width:1280px){.package-layout{grid-template-columns:minmax(0,1fr) minmax(0,22rem)}}.package-actions{display:flex;gap:12px}.package-summary{display:flex;flex-direction:column;gap:8px;align-self:start} @media (min-width:768px) and (max-width:1199px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}} @media (max-width:767px),(pointer:coarse) and (max-height:500px){.package-layout{grid-template-columns:minmax(0,1fr)}.package-summary{order:-1}.package-actions{position:sticky;bottom:0;z-index:5;padding-block:.5rem}}`}</style>
   </div>
   </KalipEkran>;
 }

@@ -1560,6 +1560,175 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
   }
 }
 
+/* ---- T-1121 (kullanıcı 28 Ekim: "eski tasarım öğesi kalmasın"): eski `@wms/ui` Banner / Button / Tailwind girişlerinin kalıp karşılıkları.
+   (1) `.kuy` ekran içi uyarı bandı (kalip/uyari.tsx `KalipUyari`): kaynak `.lockb` / `.warnb` dili — renkli ikon kutusu + kalın başlık +
+   kısa metin; ton trafik ışığı (hata / uyarı / bilgi). Her kalıp kabında (liste, form, detay, pencere) aynı; koyu temada kısık zemin.
+   (2) `.kkodlar` kod listesi (toplu raf önizlemesi, çakışan kodlar): iki sütun, kendi içinde kayar.
+   (3) Liste kabında (`.dzl`) kalıp alanı `.fld` (KalipAlan) ve aramalı seçim tetiği `.fld.ksecb`: form kabındaki (`.dzf`) görünümün
+   aynısı — süzgeç tarihleri, etiket ölçüleri, tek seferlik bağlantı, rol seçimi. Renk yalnız belirteç. ---- */
+.kuy {
+  --kuy-c: var(--color-kr-err);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: none;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--kuy-c) 9%, var(--color-kr-card));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--kuy-c) 32%, transparent);
+  color: var(--color-kr-ink);
+}
+.kuy.uyari { --kuy-c: var(--color-kr-warn); }
+.kuy.bilgi { --kuy-c: var(--color-kr-info); }
+.kuy > i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--kuy-c);
+  color: var(--color-kr-on);
+}
+.kuy.uyari > i { color: var(--color-kr-warn-ink); }
+.kuy > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font: 600 14px/1.35 var(--font-instrument), sans-serif;
+  overflow-wrap: anywhere;
+}
+.kuy > div > b { font: 800 15px/1.2 var(--font-bricolage), sans-serif; }
+.kuy p { margin: 0; }
+.kuy small { font: 600 11px/1.3 var(--font-plex-mono), monospace; opacity: .85; }
+.kuy :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-kr-card);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--kuy-c) 40%, transparent);
+  color: var(--color-kr-ink);
+  font: 800 14px/1.1 var(--font-bricolage), sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+.kuy :is(a, button)[disabled],
+.kuy :is(a, button)[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.kuy .ico { flex: none; }
+.dz-dark .kuy {
+  background: color-mix(in srgb, var(--kuy-c) 16%, var(--color-kr-card-dark));
+  color: var(--color-kr-text-dark);
+}
+.dz-dark .kuy :is(a, button) {
+  background: var(--color-kr-card-dark);
+  color: var(--color-kr-text-dark);
+}
+@media (max-width: 699.98px) {
+  .kuy { padding: 10px; gap: 10px; }
+  .kuy > i { width: 34px; height: 34px; }
+}
+
+.kkodlar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+  max-height: 160px;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--color-kr-bg-a);
+  color: var(--color-kr-ink);
+  font: 700 13px/1.3 var(--font-plex-mono), monospace;
+}
+.kkodlar li { min-width: 0; padding: 4px 0; overflow-wrap: anywhere; }
+.dz-dark .kkodlar { background: var(--color-kr-bg-dark-a); color: var(--color-kr-text-dark); }
+
+.dzl .fld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--color-kr-card);
+}
+.dzl .fld:not(.bad) { box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-b); }
+.dzl .fld > span {
+  font: 800 10.5px/1 var(--font-bricolage), sans-serif;
+  letter-spacing: .1em;
+  color: var(--color-dz-x-eogehg);
+}
+.dzl .fld :is(input, textarea) {
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  font: 700 17px/1 var(--font-instrument), sans-serif;
+  color: var(--color-dz-x-bhcoec);
+  outline: none;
+}
+.dzl .fld.ksecb {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 6px;
+  align-items: center;
+  width: 100%;
+  min-height: 64px;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.dzl .fld.ksecb > span { grid-column: 1; grid-row: 1; }
+.dzl .fld.ksecb > em {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  font: 700 17px/1.2 var(--font-instrument), sans-serif;
+  font-style: normal;
+  color: var(--color-dz-x-bhcoec);
+  overflow-wrap: anywhere;
+}
+.dzl .fld.ksecb > .chev { grid-column: 2; grid-row: 1 / span 2; transform: rotate(90deg); color: var(--color-dz-x-mfnank); }
+.dzl .fld.ksecb[disabled] { opacity: .5; cursor: not-allowed; }
+.dzl .khint { display: block; margin: -2px 6px 0; font: 600 12.5px/1.35 var(--font-instrument), sans-serif; color: var(--color-dz-x-eogehg); overflow-wrap: anywhere; }
+.dzl.dz-dark .fld { background: var(--color-dz-x-bmcidd); box-shadow: none; }
+.dzl.dz-dark .fld > span { color: var(--color-dz-x-jplcmc); }
+.dzl.dz-dark .fld :is(input, textarea),
+.dzl.dz-dark .fld.ksecb > em { color: var(--color-dz-x-ogolop); }
+.dzl.dz-dark .fld input { color-scheme: dark; }
+.dzl.dz-dark .khint { color: var(--color-dz-x-mfnank); }
+/* Liste kabında alanlar yan yana (süzgeç satırı, ölçüler): telefonda tek sütun. */
+.kalanlar {
+  display: grid;
+  grid-template-columns: repeat(var(--kal-n, 2), minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+  min-width: 0;
+  flex: none;
+}
+@media (max-width: 699.98px) {
+  .kalanlar.tek { grid-template-columns: minmax(0, 1fr); }
+}
+/* T-1121: kalıp düğmesi (`.btn`) kapalıyken soluk ve "yasak" imleç (eski `@wms/ui` Button'un kapalı görünümünün karşılığı). */
+:is(.dzl, .dzf, .dzd) .btn:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ---- T-1116 Kayıt kartı: bildirim bandı, simgeli satır listesi ve "Stok ve yer" pivotu (STANDART §3; kaynak
    `StandartUrunKartiStok.dc.html`). Pivot kendi içinde kayar (sütun başlığı ve toplam şeridi sabit); telefonda SKT/Durum sütunları satır
    altına iner, girinti daralır. ---- */

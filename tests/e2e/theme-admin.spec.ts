@@ -96,7 +96,8 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           await page.goto("/t/demo/members");
           await expect(page.getByRole("heading", { level: 1, name: "Üyeler" })).toBeVisible();
           await expect(page.getByTestId("member-card").getByText("Sahip", { exact: true }).first()).toBeVisible();
-          await expectBorderStrong(page, page.getByTestId("member-role").first(), "üyeler: rol seçimi"); // T-990: tetik düğmesi (yerel liste yok)
+          // T-1121: rol tetiği kalıp aramalı seçim alanı (`.fld.ksecb`; eski güçlü kenarlıklı Tailwind düğmesi kalktı).
+          await expect(page.getByTestId("member-role").first(), "üyeler: rol seçimi kalıp alanı").toHaveClass(/\bfld\b.*\bksecb\b/);
           await expectNoHorizontalOverflow(page, "üyeler");
           await shot("members");
           const invite = page.getByRole("button", { name: "Üye davet et" });
@@ -115,8 +116,9 @@ test("yönetim ekranları: Akış/Kokpit x 375/1280 px", async ({ page }) => {
           // Denetim kaydı.
           await page.goto("/t/demo/audit");
           await expect(page.getByRole("heading", { level: 1, name: "Kim ne yaptı?" })).toBeVisible();
-          await expectBorderStrong(page, page.locator("#from"), "denetim: başlangıç tarihi");
-          await expectBorderStrong(page, page.locator("#action"), "denetim: eylem süzgeci");
+          // T-1121: süzgeç alanları kalıp alanı (`.fld`, KalipAlan) ve kalıp seçim tetiği (`.fld.ksecb`).
+          await expectKalipField(page, page.locator("#from"), "denetim: başlangıç tarihi", false);
+          await expect(page.locator("#action"), "denetim: eylem süzgeci kalıp alanı").toHaveClass(/\bfld\b.*\bksecb\b/);
           // T-971 / T-1033: denetim kaydı liste kalıbında (KalipEkran); odak işareti ortak tek halka (ALTIN-KURAL 11).
           {
             const action = page.locator("#action");

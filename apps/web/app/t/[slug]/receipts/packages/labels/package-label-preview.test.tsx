@@ -15,7 +15,7 @@ describe("package label preview", () => {
     const html = renderToStaticMarkup(<PackageLabelPreview packages={[p]} />);
     expect(html).toContain("disabled"); expect(html).toContain("QR kodları hazırlanıyor");
     expect(html).not.toContain("package-label-sheet");
-    expect(html).toContain("min-height:56px"); expect(html).toContain("min-h-[48px]");
+    expect(html).toContain("min-height:56px"); expect(html).toContain("min-height:48px"); // T-1121: yardım satırı 48 px (Tailwind yerine satır içi)
     expect(html).toContain("<summary"); expect(html).toContain("Yazdırma yardımı");
   });
   it("renders escaped names/lot, accepted quantity, dates, separate numbering, and quarantine", async () => {
