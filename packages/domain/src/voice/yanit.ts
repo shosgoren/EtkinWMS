@@ -2,7 +2,7 @@
 // (RLS + tenant süzgeci + depo kapsamı). Yazma niyetinde yalnız taslak döner; kayıt istemcinin Onayla'sıyla mevcut eylemlerden yapılır.
 import { listMyTasks, listTasks, type TaskKind, type TaskRow } from "../operations/tasks.ts";
 import { sumItemsStock } from "../stock/item-card.ts";
-import { decide, decideLocation, fold, parseCommand, resolveWrite, type ReadRow, type TaskKindHint, type VoiceAnswer } from "@wms/shared/voice";
+import { decide, decideLocation, fold, openTarget, parseCommand, resolveWrite, type ReadRow, type TaskKindHint, type VoiceAnswer } from "@wms/shared/voice";
 import { describeTaskRefs, loadVoiceCatalog, locationContents, type VoiceParams } from "./sorgu.ts";
 
 const enc = encodeURIComponent;
@@ -148,6 +148,8 @@ export async function answerVoiceCommand(params: VoiceParams, text: string): Pro
         return { type: "nav", href: "/shipping", what: "orders" };
       }
       if (/kritik|eksik|azalan/.test(t)) return { type: "nav", href: "/stock", what: "stock" };
+      // T-1110: bilinen ekran adı ("ürünleri", "kullanıcı ayarlarına") ürün/cari adıyla karışmaz; istemci yetkili modülü açar.
+      if (openTarget(intent.target) !== null) return { type: "open", target: intent.target };
       const cat = await loadVoiceCatalog(params, { parties: true, items: true });
       const party = decide(intent.target, cat.parties);
       if (party.kind === "one") return { type: "nav", href: `/parties?q=${enc(party.c.name)}`, what: "party" };

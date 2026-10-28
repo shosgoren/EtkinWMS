@@ -80,3 +80,15 @@ test("Etkin: basılıyken sistem iptali kaydı göndermez", async ({ page }) => 
   await expect(page.getByTestId("etkin-confirm")).toHaveCount(0);
   expect(sent).toBe(0);
 });
+
+// T-1110 (kullanıcı 28 Ekim): doğal söyleyişler — ekli ekran adı ekranı açar, "bekleyen iş" kişinin görevlerini okur.
+test("Etkin: 'Ürünleri aç' ekranı açar, 'Bekleyen işim var mı?' görevleri gösterir", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await expect(page).toHaveURL(/\/t\/demo$/);
+  await hold(page, 4200);
+  await expect(page).toHaveURL(/\/t\/demo\/items$/, { timeout: 20_000 });
+  await hold(page, 5700);
+  await expect(page.getByTestId("etkin-read")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("etkin-read")).toContainText("Görevlerim");
+});
