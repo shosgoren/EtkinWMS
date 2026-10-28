@@ -8,11 +8,14 @@
 // T-990 (B-97): işlem süzgeci yerel açılır liste değil: `#action` güçlü kenarlıklı tetik düğmesi ortak aramalı seçim sayfasını
 // (`KalipSecimSayfasi`) açar; seçim gizli `action` alanına yazılır ve GET formu hemen gönderilir (adres değişir). JS yokken "Süz" düğmesi
 // tarih süzgecini yine gönderir.
+// T-1121: tarih alanları kalıp alanı (`KalipAlan`, `.fld`), işlem tetiği kalıp aramalı seçim alanı görünümü (`.fld.ksecb`); eski yerel
+// Tailwind giriş sınıfı (FIELD_CLS) kalktı. Kimlikler (`#from`, `#to`, `#action`) ve GET formu aynı.
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { feedback } from "@wms/ui";
+import { KalipAlan } from "../kalip/form.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipSecimSayfasi } from "../kalip/secim.tsx";
 import { KalipSonsuz, useKalipDerinlik } from "../kalip/tablo.tsx";
@@ -28,9 +31,6 @@ export interface AuditRowView {
   readonly record: string | null;
   readonly reason: string | null;
 }
-
-const FIELD_CLS =
-  "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 /** İşlem önekine göre kart ikonu ve rengi (yalnız görsel; veri sunucudan). */
 function visual(action: string): { d: string; color: string } {
@@ -152,27 +152,14 @@ export function AuditView({
         below={(["from", "to", "action"] as const).map((k) => (filters[k] === undefined ? null : <input key={k} type="hidden" name={k} value={filters[k]} />))}
       />
       <KalipCipler label={t("quick")} chips={chips} />
-      <form ref={form} method="get" action={here} aria-label={t("filterLabel")} className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-4 sm:items-end" style={{ flex: "none" }}>
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="from" className="text-sm font-semibold">
-            {t("from")}
-          </label>
-          <input id="from" name="from" type="date" defaultValue={filters.from ?? ""} className={FIELD_CLS} />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="to" className="text-sm font-semibold">
-            {t("to")}
-          </label>
-          <input id="to" name="to" type="date" defaultValue={filters.to ?? ""} className={FIELD_CLS} />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="action" className="text-sm font-semibold">
-            {t("action")}
-          </label>
+      <form ref={form} method="get" action={here} aria-label={t("filterLabel")} className="kalanlar tek" style={{ "--kal-n": 4 } as CSSProperties}>
+        <KalipAlan label={t("from")} id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
+        <KalipAlan label={t("to")} id="to" name="to" type="date" defaultValue={filters.to ?? ""} />
+        <div style={{ minWidth: 0 }}>
           <button
             type="button"
             id="action"
-            className={`${FIELD_CLS} flex items-center justify-between gap-2 text-left`}
+            className={`fld ksecb${action === "" ? " ph" : ""}`}
             aria-haspopup="listbox"
             aria-expanded={pick}
             aria-label={`${t("action")}: ${actionLabel}`}
@@ -183,13 +170,15 @@ export function AuditView({
             data-testid="audit-action"
             data-value={action}
           >
-            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{actionLabel}</span>
-            <Ico d={LICON.chev} size={18} />
+            <span>{t("action")}</span>
+            <em>{actionLabel}</em>
+            <Ico d={LICON.chev} size={20} className="ico chev" />
           </button>
           {action === "" ? null : <input type="hidden" name="action" value={action} />}
         </div>
         {filters.q === undefined ? null : <input type="hidden" name="q" value={filters.q} />}
-        <button type="submit" className="btn n">
+        <button type="submit" className="btn n" style={{ minHeight: 64 }}>
+          <Ico d={LICON.search} size={18} />
           {t("filter")}
         </button>
       </form>

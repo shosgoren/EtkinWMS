@@ -255,10 +255,11 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
   await expect(dlg.getByText(/50 kod zaten var; oluşturulmaz/)).toBeVisible();
   await expect(page.getByRole("button", { name: /lokasyonu oluştur/ })).toBeDisabled();
   await shot("bulk-conflict");
-  // Üst lokasyon seçici (gelişmiş): yazarken öneri.
+  // Üst lokasyon seçici (gelişmiş): T-1121 ortak aramalı seçim alanı — dokununca seçim sayfası, yazdıkça sunucu araması.
   await dlg.getByText("Gelişmiş ayarlar").scrollIntoViewIfNeeded(); // T-990: tam ekran formda bölüm hep açık (katlanır değil)
-  await dlg.getByRole("searchbox", { name: /Üst lokasyon/ }).fill("A-02");
-  const loc = dlg.getByRole("option").first();
+  await dlg.getByTestId("bulk-parent").click();
+  await page.getByTestId("kalip-secim-search").fill("A-02");
+  const loc = page.getByRole("listbox", { name: /Üst lokasyon/ }).getByRole("option").first();
   await expect(loc).toContainText("A-02-01");
   await touchTarget(loc, "lokasyon önerisi");
   await loc.click();
