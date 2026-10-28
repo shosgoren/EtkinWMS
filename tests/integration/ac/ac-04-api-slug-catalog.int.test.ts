@@ -137,10 +137,13 @@ const calls = (): Record<string, Call> => ({
   searchItemsAction: (slug) => act.searchItemsAction!({ slug, q: "a" }),
   // T-1055: kaydırınca sonraki sayfa (geçerli biçimde imleç; çapraz tenant yine NOT_FOUND).
   loadMoreItemsAction: (slug) => act.loadMoreItemsAction!({ slug, q: "", status: "", cardType: "", after: Buffer.from(JSON.stringify(["A", randomUUID()]), "utf8").toString("base64url") }),
+  // T-1116: ürün kartı lot/seri sonraki sayfası (geçerli imleç; B'nin ürünü A'da boş sayfa, çapraz tenant NOT_FOUND).
+  loadMoreItemTrackingAction: (slug) =>
+    act.loadMoreItemTrackingAction!({ slug, itemId: B.itemId, part: "lots", after: Buffer.from(JSON.stringify({ e: null, c: "A", i: randomUUID() }), "utf8").toString("base64url") }),
 });
 
 /** `stock.view` ile çalışan salt okuma eylemleri (T-250): tenant üyesi her rol okuyabilir; çapraz tenant yine NOT_FOUND. */
-const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set(["searchItemsAction", "loadMoreItemsAction"]);
+const READ_ONLY_ACTIONS: ReadonlySet<string> = new Set(["searchItemsAction", "loadMoreItemsAction", "loadMoreItemTrackingAction"]);
 
 describe("katalog eylemleri (API: Server Action)", () => {
   it("@AC-04 kapsam: items/actions.ts dışa aktarımlarının tamamı bu tabloda (yeni eylem testsiz kalamaz)", () => {
