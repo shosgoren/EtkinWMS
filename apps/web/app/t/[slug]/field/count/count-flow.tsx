@@ -10,10 +10,10 @@ import { KICON } from "../../../../design/kabuk-icons.ts";
 import { dz } from "../../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
 import { resolveItemScanAction } from "../../receipts/actions.ts";
-import { ErrorNotice, errorKeyOf, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
+import { errorKeyOf, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { recordCountAction, submitCountAction } from "../../counts/actions.ts";
 import { DroppedNotice, PrimaryButton, PrimaryLink, ScanAlert, ScanPanel, scanStepOf, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, SahaVerdict } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaHata, SahaShell, SahaVerdict } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
 import { feedback } from "@wms/ui";
 
@@ -342,7 +342,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
               </span>
             </div>
           ) : null}
-          {error === null ? null : <ErrorNotice error={error} context="approve" />}
+          {error === null ? null : <SahaHata error={error} context="approve" />}
         </SahaShell>
         {alertView}
       </>,
@@ -397,12 +397,12 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
           ) : lines.length > 0 ? (
             <SahaVerdict ok title={t("count.rackDone")} sound={t("count.progress", { c: work.progress.counted, n: work.progress.total })} />
           ) : null}
-          <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0" aria-label={t("count.listLabel")}>
+          <ul className="slist" aria-label={t("count.listLabel")}>
             {lines.map((l) => (
-              <li key={l.lineId} className="flex min-w-0">
+              <li key={l.lineId}>
                 <button
                   type="button"
-                  className="job w-full"
+                  className="job"
                   data-testid="count-line"
                   data-counted={l.counted === null ? "false" : "true"}
                   disabled={submitted || busy}
@@ -427,9 +427,9 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
             ))}
           </ul>
           {submitted ? null : (
-            <ScanPanel service={scanner} prompt={busy ? tr("flow.checking") : t("count.itemPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="teal" />
+            <ScanPanel variant="kalip" service={scanner} prompt={busy ? tr("flow.checking") : t("count.itemPrompt")} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="teal" />
           )}
-          {error === null ? null : <ErrorNotice error={error} context="approve" />}
+          {error === null ? null : <SahaHata error={error} context="approve" />}
         </SahaShell>
         {alertView}
       </>,
@@ -457,7 +457,7 @@ export function CountFlow({ slug, work, initialCode }: { slug: string; work: Cou
           </span>
           {work.blind ? <span className="autosel">{t("count.blind")}</span> : null}
         </div>
-        <ScanPanel service={scanner} prompt={busy ? tr("flow.checking") : t("count.locationPrompt", { code: work.locationCode })} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="teal" />
+        <ScanPanel variant="kalip" service={scanner} prompt={busy ? tr("flow.checking") : t("count.locationPrompt", { code: work.locationCode })} last={last} {...(lastName === undefined ? {} : { lastName })} ready={scanPrimary.ready && last === ""} hue="teal" />
       </SahaShell>
       {alertView}
     </>,

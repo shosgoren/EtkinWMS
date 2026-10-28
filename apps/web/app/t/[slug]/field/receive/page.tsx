@@ -10,7 +10,8 @@ import { getInboundReceipt, listInboundReceipts, type ReceiptCursor, type Receip
 import { AppError } from "@wms/shared/errors";
 import { SICON } from "../../../../design/saha-icons.ts";
 import { dz } from "../../../../design/kalip-saha-tokens.ts";
-import { Ico, SahaShell } from "../saha-shell.tsx";
+import { LICON } from "../../../../design/kalip-icons.ts";
+import { Ico, SahaMesaj, SahaShell } from "../saha-shell.tsx";
 import { PrimaryLink } from "./receive-flow.tsx";
 import { ReceiveFlow } from "./receive-view.tsx";
 
@@ -54,13 +55,12 @@ export default async function FieldReceivePage({ params, searchParams }: { param
   if (!hasPermission(roles, "stock.post", current.grants)) {
     return (
       <SahaShell hue="green" iconD={SICON.kabul} title={t("flow.lockedTitle")} backHref={fieldHome} footer={<PrimaryLink href={fieldHome}>{t("flow.toField")}</PrimaryLink>}>
-        <p className="break-words text-lg text-ink" data-testid="receive-locked">
-          {t("flow.lockedReason")}
-        </p>
-          <Link href="/help" data-testid="help-link" className="flex min-h-12 w-fit items-center rounded-control border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus">
-            {t("flow.helpCall")}
-          </Link>
-
+        {/* T-1122: kilit gerekçesi saha mesaj kartında; Yardım çağır kaynak `.more` bağlantısı. */}
+        <SahaMesaj tone="lock" text={t("flow.lockedReason")} testId="receive-locked" />
+        <Link href="/help" data-testid="help-link" className="more">
+          <Ico d={SICON.info} size={20} />
+          {t("flow.helpCall")}
+        </Link>
       </SahaShell>
     );
   }
@@ -85,7 +85,7 @@ export default async function FieldReceivePage({ params, searchParams }: { param
     if (receipt === null || (receipt.status !== "OPEN" && receipt.status !== "CLOSED")) {
       return (
         <SahaShell hue="green" iconD={SICON.kabul} title={t("flow.notOpenTitle")} backHref={base} footer={<PrimaryLink href={base}>{t("flow.otherReceipt")}</PrimaryLink>}>
-          <p className="break-words text-lg text-ink">{t("flow.notOpen")}</p>
+          <SahaMesaj text={t("flow.notOpen")} />
         </SahaShell>
       );
     }
@@ -102,7 +102,6 @@ export default async function FieldReceivePage({ params, searchParams }: { param
   }
   const canCreate = hasPermission(roles, "document.create", current.grants);
   const firstReceipt = page.items[0];
-  const rowCls = "job pickrow";
   return (
     <SahaShell
       hue="green"
@@ -123,17 +122,14 @@ export default async function FieldReceivePage({ params, searchParams }: { param
       }
     >
       {page.items.length === 0 ? (
-        <section className="flex min-w-0 flex-col gap-1 rounded-card border-2 border-border bg-surface p-4" data-testid="receive-empty">
-          <h2 className="break-words text-xl font-bold text-ink">{t("flow.emptyTitle")}</h2>
-          <p className="break-words text-base text-ink-muted">{canCreate ? t("flow.emptyCanCreate") : t("flow.emptyAction")}</p>
-        </section>
+        <SahaMesaj tone="empty" iconD={SICON.kabul} title={t("flow.emptyTitle")} text={canCreate ? t("flow.emptyCanCreate") : t("flow.emptyAction")} testId="receive-empty" />
       ) : (
-        <ul aria-label={t("flow.pickTitle")} className="m-0 flex min-w-0 list-none flex-col gap-2 p-0" data-testid="receive-picker">
+        <ul aria-label={t("flow.pickTitle")} className="slist" data-testid="receive-picker">
           {page.items.map((r, i) => {
             const openCount = r.lines.filter((l) => /[1-9]/.test(l.open)).length;
             return (
-              <li key={r.id} className="flex min-w-0">
-                <Link href={`${base}?receipt=${encodeURIComponent(r.id)}`} className={`${rowCls} w-full`} data-testid="receive-pick" data-receipt-id={r.id}>
+              <li key={r.id}>
+                <Link href={`${base}?receipt=${encodeURIComponent(r.id)}`} className="job" data-testid="receive-pick" data-receipt-id={r.id}>
                   <span className="uic" style={{ background: dz("2F7D5B") }}>
                     <Ico d={SICON.kabul} size={22} />
                   </span>
@@ -152,12 +148,13 @@ export default async function FieldReceivePage({ params, searchParams }: { param
         </ul>
       )}
       {page.next === null ? null : (
-        <Link href={`${base}?after=${encodeURIComponent(`${page.next.createdKey}~${page.next.id}`)}`} className={`${rowCls} items-center text-base font-bold text-ink`}>
+        <Link href={`${base}?after=${encodeURIComponent(`${page.next.createdKey}~${page.next.id}`)}`} className="more">
           {t("list.more")}
         </Link>
       )}
       {canCreate && page.items.length > 0 ? (
-        <Link href={`/t/${encodeURIComponent(slug)}/receipts`} className="flex min-h-12 items-center text-base font-bold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus">
+        <Link href={`/t/${encodeURIComponent(slug)}/receipts`} className="more">
+          <Ico d={LICON.plus} size={20} />
           {t("flow.addReceipt")}
         </Link>
       ) : null}

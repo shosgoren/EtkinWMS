@@ -4174,7 +4174,8 @@
     "saveShort": "SAVE",
     "bell": "ALERTS",
     "bellAria": "Alerts, {n} open",
-    "workspace": "Switch workspace"
+    "workspace": "Switch workspace",
+    "guideOpen": "Guide"
   },
   "aktar": {
     "title": "Import from Excel",

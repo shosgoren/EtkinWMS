@@ -4174,7 +4174,8 @@
     "saveShort": "KAYDET",
     "bell": "BİLDİRİM",
     "bellAria": "Bildirimler, {n} açık uyarı",
-    "workspace": "Çalışma alanı değiştir"
+    "workspace": "Çalışma alanı değiştir",
+    "guideOpen": "Rehber"
   },
   "aktar": {
     "title": "Excel’den aktar",

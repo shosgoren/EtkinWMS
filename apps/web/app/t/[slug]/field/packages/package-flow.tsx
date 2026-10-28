@@ -4,21 +4,21 @@
 // T-973 (B-63, I-18): Saha kalıbı (KalipSaha.dc.html; `SahaShell`): üst çubuk + 3 adım (OKUT · DOĞRULA · MİKTAR karşılığı: paket okut,
 // paketi gör, işlemi onayla) + ortak alt cam çubuk. Okutma adımlarında çubuğun ana işlemi OKUT; diğer adımlarda adımın tek işlemi çubuğun
 // hemen üstündeki sabit düğmededir (eski düğme adları ve test kimlikleri korunur).
+// T-1122: eski görünüm (kütüphane simgeleri, Tailwind kartları, Banner hatası) kaldırıldı: paket kartı kaynak `.pcard`, depo/yer seçimi
+// `.job` satırları, kayıt `.vres.ok`, hata `SahaHata` (`.vres.bad`), kilit `SahaMesaj`; simgeler kaynaktan (`LICON`, `SICON`).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowLeftRight, CircleCheck, Lock, Package, ScanLine, TriangleAlert, Warehouse } from "@wms/ui";
 import { PrimaryButton, SecondaryButton, ScanPanel, useScanner, useScanPrimary } from "../receive/receive-flow.tsx";
-import { ErrorNotice, type ErrorInfo } from "../../receipts/receipt-form.tsx";
+import { type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
-import { SahaShell } from "../saha-shell.tsx";
+import { dz } from "../../../../design/kalip-saha-tokens.ts";
+import { Ico, SahaAyrinti, SahaHata, SahaMesaj, SahaShell } from "../saha-shell.tsx";
 import { getCurrentPackageAction, resolveCurrentPackageQrAction, qualityReleasePackageAction, putawayPackageAction, packageStorageLocationsAction, resolvePackageDestinationAction, transferPackageAction, packageTransferWarehousesAction, packageTransferLocationsAction, resolvePackageTransferDestinationAction, type CurrentPackageDto, type PackageDestinationCursor } from "./actions.ts";
 import { useSonucSesi } from "../../kalip/sonuc-sesi.ts";
 
 type Place = { readonly id: string; readonly code: string; readonly name: string };
 type FrozenCommand = { slug: string; clientKey: string; packageId: string; predecessorVersion: number; currentBalanceVersion: string; targetLocationId?: string };
-const card = "min-w-0 rounded-card border-2 border-border bg-surface p-4";
-const focus = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 // Display strings only: the server is the quantity and permission authority.
 const quantity = (q: string): string => q.replace(/\.0+$/, "").replace(".", ",");
 
@@ -170,13 +170,13 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
   const footer = retry ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => { const f = frozen.current; if (f) void execute(f.action); }}>{t("retry")}</PrimaryButton>
     : needsReload ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void refresh()}>{t("reload")}</PrimaryButton>
     : stage === "transferWarehouse" ? <PrimaryButton disabled>{t("chooseWarehouse")}</PrimaryButton>
-    : stage === "transferConfirm" ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void execute("TRANSFER")}><ArrowLeftRight className="mr-2 size-6" aria-hidden="true" />{t("confirmTransfer")}</PrimaryButton>
+    : stage === "transferConfirm" ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void execute("TRANSFER")}><Ico d={LICON.transfer} size={24} />{t("confirmTransfer")}</PrimaryButton>
     : stage === "transferDestination" && place ? <PrimaryButton disabled={!ready || busy} onClick={() => setStage("transferConfirm")}>{t("reviewTransfer")}</PrimaryButton>
-    : stage === "destination" && place ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void execute("PUTAWAY")}><Warehouse className="mr-2 size-6" aria-hidden="true" />{t("putHere")}</PrimaryButton>
-    : scanMode ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={scanner.press}><ScanLine className="mr-2 size-6" aria-hidden="true" />{t(isDestination ? "scanLocation" : "scanPackage")}</PrimaryButton>
-    : canQc ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void execute("QC_RELEASE")}><CircleCheck className="mr-2 size-6" aria-hidden="true" />{t("release")}</PrimaryButton>
-    : canPut ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void destination()}><Warehouse className="mr-2 size-6" aria-hidden="true" />{t("chooseLocation")}</PrimaryButton>
-    : canTransfer ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void transferWarehouses()}><ArrowLeftRight className="mr-2 size-6" aria-hidden="true" />{t("transfer")}</PrimaryButton>
+    : stage === "destination" && place ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void execute("PUTAWAY")}><Ico d={LICON.depo} size={24} />{t("putHere")}</PrimaryButton>
+    : scanMode ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={scanner.press}><Ico d={SICON.scan} size={24} />{t(isDestination ? "scanLocation" : "scanPackage")}</PrimaryButton>
+    : canQc ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void execute("QC_RELEASE")}><Ico d={SICON.check} size={24} />{t("release")}</PrimaryButton>
+    : canPut ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void destination()}><Ico d={LICON.depo} size={24} />{t("chooseLocation")}</PrimaryButton>
+    : canTransfer ? <PrimaryButton disabled={!ready || busy} loading={busy} onClick={() => void transferWarehouses()}><Ico d={LICON.transfer} size={24} />{t("transfer")}</PrimaryButton>
     : <PrimaryButton disabled={!ready || busy} onClick={nextPackage}>{t("nextPackage")}</PrimaryButton>;
 
   const backStage = stage === "transferConfirm" ? "transferDestination" : stage === "transferDestination" ? "transferWarehouse" : "current";
@@ -187,51 +187,51 @@ export function PackageMovementFlow({ slug, initial }: { slug: string; initial: 
     navTestIds={{ back: "screen-back", home: "screen-home", homeHref: `/t/${encodeURIComponent(slug)}` }}
     {...(scanMode && !retry && !needsReload ? { main: { label: ts("okut.scanMain"), aria: ts("okut.title"), d: SICON.scan, onClick: scanner.press, disabled: !ready || busy, testId: "package-main" } } : {})}
     footer={footer} scanProxy={scanMode}>
-    <div className="grid min-w-0 gap-3" data-testid="package-movement">
-      {current && <section className={card} data-testid="package-current">
-        <div className="flex items-center gap-2"><Package className="size-7 shrink-0 text-cat-teal-ink" aria-hidden="true" /><h2 className="break-words text-xl font-extrabold">{current.itemName}</h2></div>
-        <p className="my-3 text-3xl font-extrabold" data-testid="package-current-quantity">{quantity(current.currentBaseQuantity)} <span className="text-lg">{current.baseUnitCode}</span></p>
-        <dl className="grid min-w-0 grid-cols-2 gap-2 text-sm">
-          <dt>{t("package")}</dt><dd className="break-words font-bold">{current.kind} · {current.packageNo}</dd>
-          <dt>{t("warehouse")}</dt><dd className="break-words font-bold" data-testid="package-current-warehouse">{current.warehouseName}</dd>
-          <dt>{t("location")}</dt><dd className="break-words font-bold" data-testid="package-current-location">{current.currentLocation?.code ?? "—"}</dd>
-          <dt>{t("status")}</dt><dd className="break-words font-bold">{t(current.currentStockStatus === "AVAILABLE" ? "available" : current.currentStockStatus === "QUARANTINE" ? "quarantine" : "unavailable")}</dd>
-          {current.lotCode && <><dt>{t("lot")}</dt><dd className="break-words font-bold">{current.lotCode}</dd></>}
+    <div className="spkgw" data-testid="package-movement">
+      {current && <section className="pcard spkg" data-testid="package-current">
+        <div className="spkgh"><span className="uic" style={{ background: dz("0E7C7B") }}><Ico d={LICON.koli} size={22} /></span><h2>{current.itemName}</h2></div>
+        <p className="spkgq" data-testid="package-current-quantity">{quantity(current.currentBaseQuantity)} <span>{current.baseUnitCode}</span></p>
+        <dl className="spkgd">
+          <dt>{t("package")}</dt><dd>{current.kind} · {current.packageNo}</dd>
+          <dt>{t("warehouse")}</dt><dd data-testid="package-current-warehouse">{current.warehouseName}</dd>
+          <dt>{t("location")}</dt><dd data-testid="package-current-location">{current.currentLocation?.code ?? "—"}</dd>
+          <dt>{t("status")}</dt><dd>{t(current.currentStockStatus === "AVAILABLE" ? "available" : current.currentStockStatus === "QUARANTINE" ? "quarantine" : "unavailable")}</dd>
+          {current.lotCode && <><dt>{t("lot")}</dt><dd>{current.lotCode}</dd></>}
           {current.producedOn && <><dt>{t("produced")}</dt><dd>{current.producedOn}</dd></>}
-          {current.expiresOn && <><dt>{t("expiry")}</dt><dd className="font-bold">{current.expiresOn}</dd></>}
+          {current.expiresOn && <><dt>{t("expiry")}</dt><dd>{current.expiresOn}</dd></>}
         </dl>
-        {ready && current.expiresOn && current.expiresOn < new Date().toISOString().slice(0, 10) && <p className="mt-3 flex items-center gap-2 rounded-control bg-warning-bg p-3 font-bold text-warning-ink"><TriangleAlert className="size-6 shrink-0" aria-hidden="true" />{t("expired")}</p>}
-        <details className="mt-2"><summary className={`flex min-h-12 cursor-pointer items-center font-bold ${focus}`}>{t("qr")}</summary><p className="break-all text-sm" data-testid="package-qr">{current.qr}</p></details>
+        {ready && current.expiresOn && current.expiresOn < new Date().toISOString().slice(0, 10) && <p className="pill warn spkgx"><Ico d={SICON.warn} size={14} />{t("expired")}</p>}
+        <SahaAyrinti label={t("qr")}><p data-testid="package-qr">{current.qr}</p></SahaAyrinti>
       </section>}
-      <section className="flex min-w-0 flex-col gap-3">
-        {saved && <div role="status" className="flex items-center gap-2 rounded-card border-2 border-cat-green-ink bg-cat-green-bg p-3 font-bold text-cat-green-ink" data-testid="package-saved"><CircleCheck className="size-6 shrink-0" aria-hidden="true" />{t("saved")}</div>}
-        {error && <ErrorNotice error={error} context="putaway" />}
-        {stage === "transferWarehouse" && <div className={`${card} flex flex-col gap-2`}>
-          <h2 className="font-extrabold">{t("targetWarehouse")}</h2>
-          {warehouses.map(w => <button key={w.id} type="button" disabled={!ready || busy || retry} onClick={() => void transferLocations(w)} className={`flex min-h-12 items-center gap-2 rounded-control border-2 border-border-strong bg-surface px-3 py-2 text-left font-bold text-ink ${focus}`}><Warehouse className="size-6 shrink-0 text-cat-sky-ink" aria-hidden="true" />{w.code} · {w.name}</button>)}
+      <section className="spkgw">
+        {saved && <div role="status" className="vres ok spkgok" data-testid="package-saved"><span className="vic"><Ico d={SICON.check} size={30} /></span><b>{t("saved")}</b></div>}
+        {error && <SahaHata error={error} context="putaway" />}
+        {stage === "transferWarehouse" && <div className="spkgw">
+          <div className="shd"><b>{t("targetWarehouse")}</b></div>
+          {warehouses.map(w => <button key={w.id} type="button" disabled={!ready || busy || retry} onClick={() => void transferLocations(w)} className="job"><span className="uic" style={{ background: dz("30475A") }}><Ico d={LICON.depo} size={22} /></span><b>{w.code} · {w.name}</b></button>)}
           {warehouseAfter && <SecondaryButton disabled={!ready || busy || retry} onClick={() => void transferWarehouses(true)}>{t("moreWarehouses")}</SecondaryButton>}
           {error && warehouses.length === 0 && <SecondaryButton disabled={!ready || busy || retry} onClick={() => void transferWarehouses()}>{t("reloadWarehouses")}</SecondaryButton>}
-          {!busy && !error && warehouses.length === 0 && !warehouseAfter && <p>{t("noWarehouse")}</p>}
+          {!busy && !error && warehouses.length === 0 && !warehouseAfter && <SahaMesaj tone="empty" iconD={LICON.depo} text={t("noWarehouse")} />}
         </div>}
-        {scanMode && <fieldset disabled={!ready || busy || retry} className="min-w-0"><ScanPanel variant="kalip" service={ready && !busy && !retry ? service : null} prompt={t(isDestination ? "scanLocation" : "scanPackage")} last={last} ready={ready && scanner.ready && !busy} hue="teal" /></fieldset>}
-        {isDestination && <div className={`${card} flex flex-col gap-2`}>
-          {stage === "transferDestination" && targetWarehouse && <p className="flex items-center gap-2 rounded-control bg-cat-sky-bg p-3 font-bold text-cat-sky-ink" data-testid="transfer-target-warehouse"><Warehouse className="size-6 shrink-0" aria-hidden="true" />{targetWarehouse.code} · {targetWarehouse.name}</p>}
-          <h2 className="font-extrabold">{t("location")}</h2>
-          {place && <p className="break-words rounded-control bg-cat-teal-bg p-3 font-bold text-cat-teal-ink" data-testid="package-destination">✓ {place.code} · {place.name}</p>}
-          {places.map(p => <button key={p.id} type="button" disabled={!ready || busy || retry} aria-pressed={place?.id === p.id} onClick={() => { setPlace(p); setError(null); }} className={`min-h-12 rounded-control border-2 border-border-strong bg-surface px-3 py-2 text-left font-bold text-ink aria-pressed:border-cat-teal-ink aria-pressed:bg-cat-teal-bg ${focus}`}>{p.code} · {p.name}</button>)}
+        {scanMode && <fieldset disabled={!ready || busy || retry} className="spkgfs"><ScanPanel variant="kalip" service={ready && !busy && !retry ? service : null} prompt={t(isDestination ? "scanLocation" : "scanPackage")} last={last} ready={ready && scanner.ready && !busy} hue="teal" /></fieldset>}
+        {isDestination && <div className="spkgw">
+          {stage === "transferDestination" && targetWarehouse && <div className="job" data-testid="transfer-target-warehouse"><span className="uic" style={{ background: dz("30475A") }}><Ico d={LICON.depo} size={22} /></span><b>{targetWarehouse.code} · {targetWarehouse.name}</b></div>}
+          <div className="shd"><b>{t("location")}</b></div>
+          {place && <div className="job spkgsel" data-testid="package-destination"><span className="uic" style={{ background: dz("2F7D5B") }}><Ico d={SICON.check} size={22} /></span><b>{place.code} · {place.name}</b></div>}
+          {places.map(p => <button key={p.id} type="button" disabled={!ready || busy || retry} aria-pressed={place?.id === p.id} onClick={() => { setPlace(p); setError(null); }} className="job"><span className="uic" style={{ background: dz("0E7C7B") }}><Ico d={LICON.raf} size={22} /></span><b>{p.code} · {p.name}</b></button>)}
           {stage === "transferDestination" && targetWarehouse && locationAfter && <SecondaryButton disabled={!ready || busy || retry} onClick={() => void transferLocations(targetWarehouse, true)}>{t("moreLocations")}</SecondaryButton>}
           {stage === "transferDestination" && targetWarehouse && error && places.length === 0 && <SecondaryButton disabled={!ready || busy || retry} onClick={() => void transferLocations(targetWarehouse)}>{t("reloadLocations")}</SecondaryButton>}
         </div>}
-        {stage === "transferConfirm" && current && targetWarehouse && place && <div className={`${card} flex flex-col gap-3`} data-testid="package-transfer-confirm">
-          <ArrowLeftRight className="size-10 text-cat-sky-ink" aria-hidden="true" />
-          <p className="text-2xl font-extrabold">{quantity(current.currentBaseQuantity)} {current.baseUnitCode}</p>
-          <p className="break-words font-bold">{current.warehouseName} · {current.currentLocation?.code}</p>
-          <p aria-hidden="true" className="text-2xl text-cat-sky-ink">↓</p>
-          <p className="break-words rounded-control bg-cat-sky-bg p-3 font-bold text-cat-sky-ink">{targetWarehouse.name} · {place.code}</p>
+        {stage === "transferConfirm" && current && targetWarehouse && place && <div className="pcard spkg spkgtr" data-testid="package-transfer-confirm">
+          <span className="uic" style={{ background: dz("6C4BD8") }}><Ico d={LICON.transfer} size={26} /></span>
+          <p className="spkgq">{quantity(current.currentBaseQuantity)} {current.baseUnitCode}</p>
+          <p className="spkgfrom">{current.warehouseName} · {current.currentLocation?.code}</p>
+          <Ico d={LICON.moveIn} size={26} className="ico spkgarr" />
+          <p className="spkgto">{targetWarehouse.name} · {place.code}</p>
         </div>}
-        {stage === "current" && !needsReload && !retry && current?.blockedReason && !canTransfer && <p className="flex items-center gap-2 rounded-card bg-warning-bg p-3 font-bold text-warning-ink"><Lock className="size-6 shrink-0" aria-hidden="true" />{t(current.blockedReason === "DRAFT" ? "draft" : current.blockedReason === "NO_PERMISSION" ? "locked" : "unsupported")}</p>}
-        {stage === "current" && !retry && !needsReload && canTransfer && (canQc || canPut) && <SecondaryButton disabled={!ready || busy} onClick={() => void transferWarehouses()}><ArrowLeftRight className="mr-2 size-6 text-cat-sky-ink" aria-hidden="true" />{t("transfer")}</SecondaryButton>}
-        {stage === "current" && !retry && !needsReload && <SecondaryButton disabled={!ready || busy} onClick={nextPackage}>{t("nextPackage")}</SecondaryButton>}
+        {stage === "current" && !needsReload && !retry && current?.blockedReason && !canTransfer && <SahaMesaj tone="lock" text={t(current.blockedReason === "DRAFT" ? "draft" : current.blockedReason === "NO_PERMISSION" ? "locked" : "unsupported")} />}
+        {stage === "current" && !retry && !needsReload && canTransfer && (canQc || canPut) && <SecondaryButton disabled={!ready || busy} onClick={() => void transferWarehouses()}><Ico d={LICON.transfer} size={22} />{t("transfer")}</SecondaryButton>}
+        {stage === "current" && !retry && !needsReload && <SecondaryButton disabled={!ready || busy} onClick={nextPackage}><Ico d={LICON.koli} size={22} />{t("nextPackage")}</SecondaryButton>}
       </section>
     </div>
     {scanner.overlay}
