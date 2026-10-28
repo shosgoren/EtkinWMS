@@ -6,7 +6,7 @@
 // "Yalnız değişince etkin Kaydet" ana işlemi ortak KabukBar'dadır (ekran `main.disabled` verir). Renkler `.dzf` belirteçlerinden.
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useEffect, useId, type CSSProperties, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { Children, isValidElement, useEffect, useId, type CSSProperties, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico } from "./ekran.tsx";
 import { useAlanHata, useSalla, useZorunlu } from "./form-baglam.tsx";
@@ -37,6 +37,22 @@ export function KalipIzgara({ left, right }: { left: ReactNode; right: ReactNode
     <div className="sgrid">
       <div className="scol">{left}</div>
       <div className="scol">{right}</div>
+    </div>
+  );
+}
+
+/**
+ * T-1117 (STANDART §4, kaynak `StandartYeniCari.dc.html`): grup içinde yan yana iki alan (ör. Vergi no · Vergi dairesi). Her alan kendi
+ * kutusunda: alanın hata satırı altında kalır. Dar ekranda da iki sütun (kaynak gibi); tek çocukta tam genişlik.
+ */
+export function KalipAlanSira({ children }: { children: ReactNode }) {
+  return (
+    <div className="kfsira">
+      {Children.toArray(children).map((ch, i) => (
+        <div key={isValidElement(ch) && ch.key !== null ? ch.key : i} className="kfsirah">
+          {ch}
+        </div>
+      ))}
     </div>
   );
 }
@@ -201,7 +217,7 @@ export function KalipSecenek({ options, value, color, onPick, label }: { options
  * Kaynak `.fld` (etiketli metin alanı). T-990: ortak form bağlamında (`KalipFormEkran`) `name` ile alan hatası taşır — kırmızı çerçeve,
  * kısa sarsılma, altında tek satır neden (`aria-invalid` + `aria-describedby`); `hint` alanın altında kısa açıklama.
  */
-export function KalipAlan({ label, hint, error, multiline = false, ...input }: { label: string; hint?: string | undefined; error?: string | undefined; multiline?: boolean } & InputHTMLAttributes<HTMLInputElement>) {
+export function KalipAlan({ label, hint, error, multiline = false, ikon, ...input }: { label: string; hint?: string | undefined; error?: string | undefined; multiline?: boolean; /** T-1117 (STANDART §4): etiketin başında küçük renkli simge. */ ikon?: { readonly d: string; readonly color: string } | undefined } & InputHTMLAttributes<HTMLInputElement>) {
   const id = useId();
   const ctxErr = useAlanHata(typeof input.name === "string" ? input.name : undefined);
   const salla = useSalla();
@@ -214,7 +230,16 @@ export function KalipAlan({ label, hint, error, multiline = false, ...input }: {
   return (
     <>
       <label key={err === undefined ? "ok" : `bad-${salla}`} className={`fld${err === undefined ? "" : " bad"}`} data-alan={input.name}>
-        <span>{shown}</span>
+        {ikon === undefined ? (
+          <span>{shown}</span>
+        ) : (
+          <span className="kflds">
+            <i className="kfldi" style={{ background: c(ikon.color) }}>
+              <Ico d={ikon.d} size={12} />
+            </i>
+            {shown}
+          </span>
+        )}
         {multiline ? (
           <textarea {...(input as unknown as TextareaHTMLAttributes<HTMLTextAreaElement>)} aria-invalid={err === undefined ? undefined : true} aria-describedby={desc} />
         ) : (

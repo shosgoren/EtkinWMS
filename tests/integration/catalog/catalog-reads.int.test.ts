@@ -8,7 +8,8 @@ import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/clie
 import { AppError } from "../../../packages/shared/src/errors.ts";
 import { addBarcode } from "../../../packages/domain/src/catalog/barcodes.ts";
 import { archiveItem, createItem } from "../../../packages/domain/src/catalog/items.ts";
-import { itemInUse, listItemBarcodes, listItemConversions, searchItems } from "../../../packages/domain/src/catalog/reads.ts";
+import { itemInUse, listItemBarcodes, listItemConversions, listPrimaryBarcodes, searchItems } from "../../../packages/domain/src/catalog/reads.ts";
+import { sumItemsStock } from "../../../packages/domain/src/stock/item-card.ts";
 import { setUnitConversion } from "../../../packages/domain/src/catalog/units.ts";
 import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
@@ -230,6 +231,54 @@ describe("listItemConversions / listItemBarcodes", () => {
   });
 });
 
+// T-1117: ürün listesi "Kullanılabilir" ve "Barkod" sütunları. Fikstür: U3 (itemNoneId) Z1'de (STORAGE, AVAILABLE) 10 eldeki, 4 ayrılmış;
+// U1 (itemId) Z1-R1'de 1 eldeki (seri). Miktarlar decimal metin; karşılaştırma kanonik biçimde (sondaki sıfırlar atılır).
+describe("T-1117 liste sütunları: sumItemsStock (ayrılmış + kullanılabilir) / listPrimaryBarcodes", () => {
+  const canon = (q: string): string => (q.includes(".") ? q.replace(/0+$/, "").replace(/\.$/, "") : q);
+  const pick = (rows: readonly { itemId: string; have: string; reserved: string; available: string }[], id: string) => {
+    const r = rows.find((x) => x.itemId === id);
+    return r === undefined ? undefined : { have: canon(r.have), reserved: canon(r.reserved), available: canon(r.available) };
+  };
+
+  it("eldeki − ayrılmış = kullanılabilir (decimal metin); stoksuz ürün 0; başka tenant'ın ürün kimliği B'de veri sızdırmaz", async () => {
+    const [fresh] = await mkItems(A, `K${rnd()}`, 1);
+    const rows = await sumItemsStock(readOnly(), [A.itemNoneId, A.itemId, fresh as string]);
+    expect(rows.every((r) => typeof r.have === "string" && typeof r.reserved === "string" && typeof r.available === "string")).toBe(true);
+    expect(pick(rows, A.itemNoneId)).toEqual({ have: "10", reserved: "4", available: "6" });
+    expect(pick(rows, A.itemId)).toEqual({ have: "1", reserved: "0", available: "1" });
+    expect(pick(rows, fresh as string)).toEqual({ have: "0", reserved: "0", available: "0" });
+    // Negatif (I-01): B, A'nın ürün kimlikleriyle sorsa da A'nın stoğunu görmez.
+    const cross = await sumItemsStock(admin(B), [A.itemNoneId, A.itemId]);
+    expect(cross.map((r) => pick(cross, r.itemId))).toEqual([
+      { have: "0", reserved: "0", available: "0" },
+      { have: "0", reserved: "0", available: "0" },
+    ]);
+    await expectFail(sumItemsStock(as(A, noRoleUserId), [A.itemNoneId]), "FORBIDDEN");
+    await expectFail(sumItemsStock(as(A, strangerUserId), [A.itemNoneId]), "NOT_FOUND");
+    await expectFail(sumItemsStock(admin(A), ["nope"]), "VALIDATION_FAILED");
+  });
+
+  it("ilk barkod: temel birimdeki önce, sonra en eski; barkodsuz ürün yok; başka tenant'ın ürünü sonuçta yok; izin ve girdi denetimi", async () => {
+    const [x, y] = await mkItems(A, `P${rnd()}`, 2);
+    const [bItem] = await mkItems(B, `P${rnd()}`, 1);
+    const box = `8${rnd()}${rnd()}`;
+    const base = `6${rnd()}${rnd()}`;
+    await setUnitConversion(admin(A), { itemId: x as string, unitId: A.boxUnitId, factor: "12" });
+    await addBarcode(admin(A), { itemId: x as string, barcode: box, unitId: A.boxUnitId }); // önce koli barkodu
+    await addBarcode(admin(A), { itemId: x as string, barcode: base }); // sonra temel birim barkodu → ilk sayılır
+    await addBarcode(admin(B), { itemId: bItem as string, barcode: `5${rnd()}${rnd()}` });
+    expect(await listPrimaryBarcodes(readOnly(), [x as string, y as string])).toEqual([{ itemId: x, barcode: base }]);
+    // Negatif (I-01): A, B'nin ürün kimliğini verse de B'nin barkodu dönmez; B de A'nınkini görmez.
+    expect(await listPrimaryBarcodes(admin(A), [bItem as string])).toEqual([]);
+    expect(await listPrimaryBarcodes(admin(B), [x as string])).toEqual([]);
+    expect(await listPrimaryBarcodes(admin(A), [])).toEqual([]);
+    await expectFail(listPrimaryBarcodes(as(A, noRoleUserId), [x as string]), "FORBIDDEN");
+    await expectFail(listPrimaryBarcodes(as(A, strangerUserId), [x as string]), "NOT_FOUND");
+    await expectFail(listPrimaryBarcodes(admin(A), ["nope"]), "VALIDATION_FAILED");
+    await expectFail(listPrimaryBarcodes(admin(A), Array.from({ length: 101 }, () => randomUUID())), "VALIDATION_FAILED");
+  });
+});
+
 describe("itemInUse", () => {
   it("archiveItem ile aynı sonuç: stoklu/rezervasyonlu ürün true ve IN_USE; boş ürün false ve arşivlenir", async () => {
     for (const itemId of [A.itemNoneId, A.itemId]) {
@@ -259,6 +308,8 @@ describe("okumalar yazmaz", () => {
     await searchItems(admin(A), { limit: 100 });
     await listItemConversions(admin(A), A.itemNoneId);
     await listItemBarcodes(admin(A), A.itemNoneId);
+    await listPrimaryBarcodes(admin(A), [A.itemId, A.itemNoneId]);
+    await sumItemsStock(admin(A), [A.itemId, A.itemNoneId]);
     await itemInUse(admin(A), A.itemNoneId);
     expect(await snap()).toEqual(before);
   });

@@ -245,6 +245,27 @@ export async function listItemBarcodes(params: CatalogReadParams, itemIdRaw: str
   });
 }
 
+/**
+ * T-1117: ürün listesinin "Barkod" sütunu — ürün başına İLK barkod (en çok 100 ürün). Birincil işareti yoktur (şemada yok); sıra:
+ * temel birimdeki barkod önce (birimsiz ya da temel birim), sonra en eski kayıt. Yalnız bağlamdaki tenant'ın satırları; başka tenant'ın
+ * ürün kimliği verilirse o ürün sonuçta yer almaz (I-01). Barkodu olmayan ürün sonuçta yoktur.
+ */
+export async function listPrimaryBarcodes(params: CatalogReadParams, itemIdsRaw: readonly string[]): Promise<readonly { readonly itemId: string; readonly barcode: string }[]> {
+  if (!Array.isArray(itemIdsRaw) || itemIdsRaw.length > 100) throw new AppError("VALIDATION_FAILED");
+  const ids = itemIdsRaw.map((x) => parseUuid(x));
+  if (ids.length === 0) return [];
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
+    const rows = await tx.execute<{ item_id: string; barcode: string }>(
+      sql`SELECT DISTINCT ON (b.item_id) b.item_id, b.barcode
+            FROM public.item_barcodes b
+            JOIN public.items i ON i.tenant_id = b.tenant_id AND i.id = b.item_id
+           WHERE b.tenant_id = ${actor.tenantId}::uuid AND b.item_id IN (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})
+           ORDER BY b.item_id, (b.unit_id IS NULL OR b.unit_id = i.base_unit_id) DESC, b.created_at, b.id`,
+    );
+    return rows.map((r) => ({ itemId: r.item_id, barcode: r.barcode }));
+  });
+}
+
 /** `archiveItem` ile aynı tanım: pozitif bakiye/rezerve miktar ya da ACTIVE rezervasyon varsa `true`. */
 export async function itemInUse(params: CatalogReadParams, itemIdRaw: string): Promise<boolean> {
   const itemId = parseUuid(itemIdRaw);

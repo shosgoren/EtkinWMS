@@ -42,4 +42,10 @@ export const SICON = {
   grafik: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   kamyon: "M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01",
   belge: "M6 3h9l4 4v14H6zM14 3v5h5",
+  /** T-1117 form kalıbı (kaynak `StandartYeniCari.dc.html`): cari şerit simgesi ve alan başı simgeleri. */
+  kisiler: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.7",
+  bina: "M4 21V5l8-3 8 3v16M9 21v-5h6v5",
+  telefon: "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2",
+  eposta: "M3 6h18v12H3zM3 6l9 7 9-7",
+  konum: "M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12zM12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
 } as const;
