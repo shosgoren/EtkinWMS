@@ -39,6 +39,10 @@ export const FIELDS: Readonly<Record<ImportKindKey, readonly FieldDef[]>> = {
     { id: "il", header: "city", required: false, synonyms: ["il", "sehir", "city", "il adi"] },
     { id: "adres", header: "address", required: false, synonyms: ["adres", "acik adres", "adresi", "address", "fatura adresi"] },
     { id: "tur", header: "kind", required: false, synonyms: ["tur", "cari turu", "cari tipi", "tip", "hesap turu", "type", "musteri tedarikci"] },
+    // T-1117 (`0064_party_details`): kısa ad, ilçe, varsayılan teslimat (isteğe bağlı; dışa aktarma başlıkları "Kısa ad", "İlçe", "Teslimat").
+    { id: "kisa", header: "shortName", required: false, synonyms: ["kisa ad", "kisa adi", "kisa unvan", "kisaltma", "short name", "nickname"] },
+    { id: "ilce", header: "district", required: false, synonyms: ["ilce", "ilce adi", "semt", "district"] },
+    { id: "teslimat", header: "deliveryMode", required: false, synonyms: ["teslimat", "teslimat sekli", "teslimat turu", "varsayilan teslimat", "sevk sekli", "delivery", "delivery mode"] },
   ],
   acilis: [
     { id: "urun", header: "ürün kodu", required: true, synonyms: ["urun kodu", "stok kodu", "kod", "kodu", "malzeme kodu", "mal kodu", "sku", "item code"] },

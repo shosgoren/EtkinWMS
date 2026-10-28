@@ -227,7 +227,7 @@ describe("senkron", () => {
     await adm.query("INSERT INTO public.units (tenant_id, code, name) VALUES ($1, 'KG', 'Kilogram')", [W.tenantId]);
     fake.products.push({ id: "499", attributes: { code: "PRS-BIRIMSIZ", name: "Bilinmeyen birim", unit: "Varil" } });
     for (let i = 1; i <= 30; i++) fake.products.push({ id: String(500 + i), attributes: { code: `PRS-K${i}`, name: `Paraşüt ürünü ${i}`, unit: i % 2 ? "Adet" : "Kg", stock_count: 99, initial_stock_count: 50 } });
-    fake.contacts.push({ id: "701", attributes: { name: "Müşteri A.Ş", account_type: "customer", tax_number: "1234567890", email: "a@example.test" } });
+    fake.contacts.push({ id: "701", attributes: { name: "Müşteri A.Ş", account_type: "customer", tax_number: "1234567890", email: "a@example.test", short_name: "Müşteri", district: "Kadıköy" } });
     fake.contacts.push({ id: "702", attributes: { name: "Tedarikçi Ltd", account_type: "supplier" } });
     fake.warehouses.push({ id: "801", attributes: { name: "Merkez Depo" } });
     for (const flow of ["PRODUCTS", "CONTACTS", "WAREHOUSES"]) await setIntegrationFlow(admin(W), { provider: "PARASUT", flow, enabled: true, direction: "PULL" });
@@ -243,7 +243,11 @@ describe("senkron", () => {
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.items WHERE tenant_id = $1 AND code LIKE 'PRS-K%'", [W.tenantId]))[0]?.n).toBe(30);
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.items WHERE tenant_id = $1 AND code = 'PRS-BIRIMSIZ'", [W.tenantId]))[0]?.n).toBe(0);
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.external_refs WHERE tenant_id = $1 AND system = 'PARASUT' AND entity_type = 'ITEM'", [W.tenantId]))[0]?.n).toBe(30);
-    expect((await q("SELECT kind, tax_no FROM public.parties WHERE tenant_id = $1 AND code LIKE 'PRS-%' ORDER BY code", [W.tenantId]))).toEqual([{ kind: "CUSTOMER", tax_no: "1234567890" }, { kind: "SUPPLIER", tax_no: null }]);
+    // T-1117: Paraşüt kısa ad / ilçe cari kartına gelir; teslimat varsayılan (kendi personelim).
+    expect((await q("SELECT kind, tax_no, short_name, district, delivery_mode FROM public.parties WHERE tenant_id = $1 AND code LIKE 'PRS-%' ORDER BY code", [W.tenantId]))).toEqual([
+      { kind: "CUSTOMER", tax_no: "1234567890", short_name: "Müşteri", district: "Kadıköy", delivery_mode: "OWN" },
+      { kind: "SUPPLIER", tax_no: null, short_name: null, district: null, delivery_mode: "OWN" },
+    ]);
     // I-04: ERP'den gelen stok_count / initial_stock_count hiçbir stok satırı yazmadı.
     expect(await stockFingerprint(W)).toEqual(before);
     // Ad değişimi güncellenir, kod/eşleme aynı kalır.

@@ -1560,6 +1560,102 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
   }
 }
 
+/* ---- T-1117 Form kalıbı: Yeni cari (STANDART §4, kaynak `StandartYeniCari.dc.html` "6 · Yeni cari"). Ortak parçalar:
+   (1) alan etiketinin başında küçük renkli simge (`KalipAlan ikon` → `.kflds > .kfldi`, kaynak 22px kare, 7px köşe, beyaz simge);
+   (2) grup içinde yan yana iki alan (`KalipAlanSira` → `.kfsira`; her alan kendi kutusunda, hata satırı altında);
+   (3) üst şeritte tür seçimi (`KalipOnizleme secim` → `.konc-sec > .konsec`): masaüstünde şeridin sağında büyük simgeli düğmeler
+       (kaynak `.opt`: 56px, 0 18px iç boşluk, 8px aralık; etiket yalnız ekran okuyucuda); telefon/tablette şerit gizli kalır, yalnız
+       seçim formun üstünde görünür (etiketiyle). Ad boşken büyük satır soluk yer tutucu (kaynaktaki soluk gri, `--color-st-k-ok-ink`). ---- */
+.dzf .kflds {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dzf .kfldi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  color: var(--color-dz-x-pppppp);
+  font-style: normal;
+}
+.dzf .kfsira {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.dzf .kfsirah {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.dzf .kfsira > .kfsirah:only-child { grid-column: 1 / -1; }
+.dzf:not(.dz-dark) .konbos { color: var(--color-st-k-ok-ink); }
+.dzf.dz-dark .konbos { opacity: .55; }
+@media (min-width: 1100px) {
+  .dzf.dzf .konc-sec { flex-wrap: wrap; }
+  .dzf .konsec {
+    flex: none;
+    margin-left: auto;
+  }
+  .dzf .konsec .ksecl {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .dzf .konsec .gpick {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .dzf .konsec .ksecg .gp {
+    flex: none;
+    min-height: 56px;
+    padding: 0 18px;
+  }
+}
+@media (max-width: 1099.98px) {
+  .dzf .kfl:has(> .konz > .konc-sec) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dzf .konz:has(> .konc-sec) {
+    display: block;
+    order: -1;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .dzf.dzf .konc-sec {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .dzf.dzf .konc-sec > :not(.konsec) { display: none; }
+  .dzf .konc-sec .konsec { width: 100%; }
+}
+
+/* T-1117: kalıp uyarı bandı (`KalipUyari`; eski `@wms/ui` Banner'ın yerine) form/liste kalıbında da (ör. ürün kodu değiştirme formunun sunucu hatası) — kayıt kartı kalıbındaki
+   `.dzd .warnb` ile aynı ölçü ve belirteçler; `.kuyl` bandın içindeki sonraki adım bağlantıları (≥ 44 px). */
+:is(.dzf, .dzl) .warnb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--color-dz-x-mgcici);
+  color: var(--color-dz-x-pppppp);
+}
+:is(.dzf, .dzl) .warnb i {
+
 /* ---- T-1121 (kullanıcı 28 Ekim: "eski tasarım öğesi kalmasın"): eski `@wms/ui` Banner / Button / Tailwind girişlerinin kalıp karşılıkları.
    (1) `.kuy` ekran içi uyarı bandı (kalip/uyari.tsx `KalipUyari`): kaynak `.lockb` / `.warnb` dili — renkli ikon kutusu + kalın başlık +
    kısa metin; ton trafik ışığı (hata / uyarı / bilgi). Her kalıp kabında (liste, form, detay, pencere) aynı; koyu temada kısık zemin.
@@ -1589,6 +1685,35 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
   width: 40px;
   height: 40px;
   border-radius: 12px;
+  background: color-mix(in srgb, var(--color-dz-x-pppppp) 22%, var(--color-dz-x-mgcici));
+}
+:is(.dzf, .dzl) .warnb b {
+  display: block;
+  font: 800 16px/1.15 var(--font-bricolage), sans-serif;
+}
+:is(.dzf, .dzl) .warnb small {
+  display: block;
+  margin-top: 3px;
+  font: 600 10.5px/1.2 var(--font-plex-mono), monospace;
+  opacity: .9;
+  overflow-wrap: anywhere;
+}
+:is(.dzd, .dzf, .dzl) .warnb .kuyl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+:is(.dzd, .dzf, .dzl) .warnb .kuyl a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+
   background: var(--kuy-c);
   color: var(--color-kr-on);
 }

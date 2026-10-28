@@ -269,20 +269,29 @@ export function KalipFormEkran<V extends Readonly<Record<string, unknown>>>({
   );
 }
 
-/** Sağdaki canlı önizleme: detay kalıbının hero kartı gibi (renkli tür ikonu, ad, kod, alt satırlar). */
-export function KalipOnizleme({ name, code, d, color, kind, rows = [] }: { name: string; code: string; d: string; color: string; kind?: string; rows?: readonly { readonly k: string; readonly v: string }[] }) {
+/**
+ * Sağdaki canlı önizleme: detay kalıbının hero kartı gibi (renkli tür ikonu, ad, kod, alt satırlar).
+ * T-1117 (STANDART §4 "tür seçimi büyük simgeli düğmeler", kaynak `StandartYeniCari.dc.html`): `secim` şeridin sağındaki tür seçimi
+ * yuvasıdır (ör. `KalipSecimGrubu`); masaüstünde şeritte, telefon/tablette formun üstünde yalnız bu seçim görünür (şeridin geri kalanı
+ * gizli kalır). `bos` ad boşken büyük satırın yer tutucusu, `kodNot` kodun yanındaki kısa not ("otomatik kod").
+ */
+export function KalipOnizleme({ name, code, d, color, kind, rows = [], secim, bos, kodNot }: { name: string; code: string; d: string; color: string; kind?: string; rows?: readonly { readonly k: string; readonly v: string }[]; secim?: ReactNode; bos?: string; kodNot?: string | undefined }) {
   const t = useTranslations("kalip");
+  const adBos = name.trim() === "";
   return (
     // T-1052 (STANDART §4): masaüstünde üst şerit (tür tonunda zemin, büyük simge, canlı ad + kod); `--kc` şeridin tonu.
-    <div className="konc" data-testid="kalip-preview" style={{ "--kc": c(color) } as CSSProperties}>
+    <div className={secim === undefined ? "konc" : "konc konc-sec"} data-testid="kalip-preview" style={{ "--kc": c(color) } as CSSProperties}>
       <span className="konh">{t("preview")}</span>
       <span className="konic" style={{ background: c(color) }}>
         <Ico d={d} size={30} />
       </span>
       <span className="konx">
         {kind === undefined ? null : <span className="konk">{kind}</span>}
-        <b className="konn">{name.trim() === "" ? t("previewName") : name}</b>
-        <span className="konco">{code.trim() === "" ? "—" : code}</span>
+        <b className={adBos && bos !== undefined ? "konn konbos" : "konn"}>{adBos ? (bos ?? t("previewName")) : name}</b>
+        <span className="konco">
+          {code.trim() === "" ? "—" : code}
+          {kodNot === undefined || code.trim() === "" ? null : ` · ${kodNot}`}
+        </span>
       </span>
       {rows.length === 0 ? null : (
         <dl className="konr">
@@ -294,6 +303,7 @@ export function KalipOnizleme({ name, code, d, color, kind, rows = [] }: { name:
           ))}
         </dl>
       )}
+      {secim === undefined ? null : <div className="konsec">{secim}</div>}
     </div>
   );
 }

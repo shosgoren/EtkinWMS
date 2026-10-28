@@ -1760,6 +1760,8 @@
       "colType": "Type",
       "colUnit": "Unit",
       "colHave": "On hand",
+      "colAvailable": "Available",
+      "colBarcode": "Barcode",
       "colState": "Status",
       "removed": "Removed",
       "removedTag": "REMOVED",
@@ -4328,7 +4330,10 @@
         "tel": "Phone",
         "mail": "Email",
         "il": "City",
+        "ilce": "District",
         "adres": "Address",
+        "kisa": "Short name",
+        "teslimat": "Default delivery (own staff / carrier)",
         "tur": "Type (customer / supplier)"
       },
       "depo": {
@@ -4414,6 +4419,7 @@
       "PHONE_INVALID": "Phone is invalid",
       "EMAIL_INVALID": "Email is invalid",
       "TEXT_TOO_LONG": "A cell is too long",
+      "DELIVERY_UNKNOWN": "Delivery not understood (own staff / carrier)",
       "CODE_DUPLICATE_FILE": "This code appears earlier in the file",
       "UNKNOWN": "Row could not be read"
     },
@@ -4489,12 +4495,19 @@
       "phone": "Phone",
       "email": "Email",
       "city": "City",
-      "address": "Address"
+      "address": "Address",
+      "shortName": "Short name",
+      "district": "District",
+      "deliveryMode": "Default delivery"
     },
     "kind": {
       "CUSTOMER": "Customer",
       "SUPPLIER": "Supplier",
       "BOTH": "Customer and supplier"
+    },
+    "delivery": {
+      "OWN": "Own staff",
+      "CARRIER": "Carrier"
     },
     "issue": {
       "CODE_MISSING": "Enter the code.",
@@ -4506,6 +4519,7 @@
       "PHONE_INVALID": "Enter the phone with digits.",
       "EMAIL_INVALID": "Check the email address.",
       "TEXT_TOO_LONG": "A field is too long.",
+      "DELIVERY_UNKNOWN": "Delivery can only be \"Own staff\" or \"Carrier\".",
       "CODE_DUPLICATE_FILE": "This code repeats.",
       "CODE_TAKEN": "This code is used by another card."
     },
@@ -4524,6 +4538,12 @@
     "gIdentity": "Identity",
     "gIdentitySub": "Code, title and type",
     "gContact": "Tax and contact",
+    "gAddress": "Address and delivery",
+    "stripNew": "New party",
+    "stripEdit": "Party card",
+    "stripEmpty": "The name appears here as you type",
+    "autoCode": "automatic code",
+    "ph": { "shortName": "Name shown in lists", "name": "Company name", "phone": "05xx xxx xx xx", "email": "name@company.com", "address": "Street, number, district" },
     "gContactSub": "Optional",
     "searchLabel": "Search accounts",
     "filter": "Filter",

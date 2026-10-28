@@ -10,10 +10,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
+import { SICON } from "../../../design/standart-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
-import { KalipAlan, KalipGrup, KalipIzgara } from "../kalip/form.tsx";
+import { KalipAlan, KalipAlanSira, KalipGrup } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
@@ -31,20 +32,49 @@ export interface PartyView {
   readonly email: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  /** T-1117 (`0064_party_details`): listede görünen kısa ad, ilçe, varsayılan teslimat. */
+  readonly shortName: string | null;
+  readonly district: string | null;
+  readonly deliveryMode: "OWN" | "CARRIER";
   readonly archived: boolean;
   readonly version: number;
 }
 
 type Kind = PartyView["kind"];
-type Form = Record<"code" | "name" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "address", string> & { kind: Kind };
-const empty: Form = { code: "", name: "", kind: "CUSTOMER", taxNo: "", taxOffice: "", phone: "", email: "", city: "", address: "" };
-const fromParty = (p: PartyView): Form => ({ code: p.code, name: p.name, kind: p.kind, taxNo: p.taxNo ?? "", taxOffice: p.taxOffice ?? "", phone: p.phone ?? "", email: p.email ?? "", city: p.city ?? "", address: p.address ?? "" });
+type Delivery = PartyView["deliveryMode"];
+type Form = Record<"code" | "name" | "shortName" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "district" | "address", string> & { kind: Kind; deliveryMode: Delivery };
+const empty: Form = { code: "", name: "", shortName: "", kind: "CUSTOMER", taxNo: "", taxOffice: "", phone: "", email: "", city: "", district: "", address: "", deliveryMode: "OWN" };
+const fromParty = (p: PartyView): Form => ({
+  code: p.code,
+  name: p.name,
+  shortName: p.shortName ?? "",
+  kind: p.kind,
+  taxNo: p.taxNo ?? "",
+  taxOffice: p.taxOffice ?? "",
+  phone: p.phone ?? "",
+  email: p.email ?? "",
+  city: p.city ?? "",
+  district: p.district ?? "",
+  address: p.address ?? "",
+  deliveryMode: p.deliveryMode,
+});
 const KINDS = ["CUSTOMER", "SUPPLIER", "BOTH"] as const;
+/** T-1117: tuvaldeki "Varsayılan teslimat" seçenekleri (varsayılan Kendi personelim). */
+const DELIVERIES = ["OWN", "CARRIER"] as const;
+// T-1117: tür simgeleri tuvaldeki tür seçimiyle aynı (`StandartYeniCari.dc.html`: Müşteri kişi, Tedarikçi kutu, İkisi de çift ok).
 const KIND_VISUAL: Record<Kind, { readonly d: string; readonly color: string }> = {
-  CUSTOMER: { d: LICON.people, color: "2F7D5B" },
-  SUPPLIER: { d: LICON.koli, color: "6C4BD8" },
-  BOTH: { d: LICON.transfer, color: "0E7C7B" },
+  CUSTOMER: { d: SICON.kisi, color: "2F7D5B" },
+  SUPPLIER: { d: SICON.kutu, color: "6C4BD8" },
+  BOTH: { d: SICON.cevrim, color: "0E7C7B" },
 };
+/** T-1117 (STANDART §4): cari formunun şerit simgesi ve sütun renkleri (Kimlik yeşil, Vergi ve iletişim mavi, Adres ve teslimat turuncu). */
+const FORM_ICON = { d: SICON.kisiler, color: "2F7D5B" } as const;
+const G_KIMLIK = "2F7D5B";
+const G_VERGI = "2F5DA8";
+const G_ADRES = "C2702A";
+/** T-1117: tuvalde Kısa ad simgesi gri; teslimat seçimi tuvalin `.opt.on` yeşili. */
+const G_GRI = "4E6476";
+const G_SECIM = "2F7D5B";
 const ICON = { d: LICON.people, color: "6C4BD8" } as const;
 
 /** Sunucu alan sorunu → alan adı (formda ilgili alanın altında gösterilir). */
@@ -57,6 +87,7 @@ const ISSUE_FIELD: Record<string, keyof Form> = {
   NAME_INVALID: "name",
   KIND_UNKNOWN: "kind",
   TAX_NO_INVALID: "taxNo",
+  DELIVERY_UNKNOWN: "deliveryMode",
   PHONE_INVALID: "phone",
   EMAIL_INVALID: "email",
 };
@@ -92,9 +123,10 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       stale = true;
     };
   }, [yeni, slug, f.kind]);
+  // T-1117: sıra ekrandaki sıradır (tuval: önce Ünvan, sonra Cari kodu) — ilk hatalı alan buna göre odaklanır.
   const rules: AlanKurali[] = [
-    { name: "code", label: t("f.code"), required: true, maxLength: 64 },
     { name: "name", label: t("f.name"), required: true, maxLength: 200 },
+    { name: "code", label: t("f.code"), required: true, maxLength: 64 },
     { name: "kind", label: t("f.kind"), required: true },
     { name: "email", label: t("f.email"), kind: "email" },
   ];
@@ -139,10 +171,12 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
     });
   }
 
-  const field = (k: Exclude<keyof Form, "kind">, extra: { required?: boolean; maxLength?: number; inputMode?: "tel" | "email" } = {}) => (
+  const field = (k: Exclude<keyof Form, "kind" | "deliveryMode">, ikon: { readonly d: string; readonly color: string }, extra: { required?: boolean; maxLength?: number; inputMode?: "tel" | "email"; placeholder?: string } = {}) => (
     <KalipAlan
       key={k}
       label={`${t(`f.${k}`)}${extra.required === true ? " *" : ""}`}
+      ikon={ikon}
+      placeholder={extra.placeholder}
       name={k}
       value={f[k]}
       onChange={(e) => {
@@ -156,12 +190,32 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
     />
   );
   const title = party === null ? t("new") : party.name;
-  const v = KIND_VISUAL[f.kind];
+  // T-1117: yeni caride önerilen kod değişmeden duruyorsa şeritte "· otomatik kod".
+  const autoNote = party === null && suggested !== null && suggested.kind === f.kind && f.code === suggested.code ? t("autoCode") : undefined;
+  const kindPick = (
+    <KalipSecimGrubu
+      name="kind"
+      label={t("f.kind")}
+      value={f.kind}
+      color={KIND_VISUAL[f.kind].color}
+      disabled={!canEdit}
+      onPick={(id) => {
+        if (yeni && !touchedRef.current && id !== f.kind) {
+          setSuggested(null);
+          setF((cur) => ({ ...cur, kind: id as Kind, code: "" }));
+          setInitial((cur) => ({ ...cur, code: "" }));
+          return;
+        }
+        set("kind", id);
+      }}
+      options={KINDS.map((k) => ({ id: k, label: t(`kind.${k}`), d: KIND_VISUAL[k].d, color: KIND_VISUAL[k].color }))}
+    />
+  );
   return (
     <KalipFormEkran
       dark={dark}
       title={title}
-      icon={{ d: v.d, color: v.color }}
+      icon={FORM_ICON}
       subtitle={canEdit ? t("formHint") : t("readOnly")}
       testId="party-form"
       values={f}
@@ -179,7 +233,9 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       savedText={t("saved")}
       leaveText={t("cf.text")}
       leaveSaveLabel={t("cf.save")}
-      preview={<KalipOnizleme name={f.name} code={f.code} d={v.d} color={v.color} kind={t(`kind.${f.kind}`)} rows={[f.city, f.phone].filter((x) => x.trim() !== "").map((x, i) => ({ k: i === 0 && f.city.trim() !== "" ? t("f.city") : t("f.phone"), v: x }))} />}
+      // T-1117 (STANDART §4, tuval "6 · Yeni cari"): üst şerit — büyük cari simgesi, "YENİ CARİ", canlı ünvan, kod (+ otomatik kod notu),
+      // sağda büyük simgeli tür seçimi.
+      preview={<KalipOnizleme name={f.name} code={f.code} d={FORM_ICON.d} color={FORM_ICON.color} kind={party === null ? t("stripNew") : t("stripEdit")} bos={t("stripEmpty")} kodNot={autoNote} secim={kindPick} />}
       footer={
         canEdit && party !== null ? (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -190,41 +246,38 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
         ) : undefined
       }
     >
-      <KalipIzgara
-        left={
-          <KalipGrup title={t("gIdentity")} sub={t("gIdentitySub")} d={LICON.tag} color={v.color}>
-            {field("code", { required: true, maxLength: 64 })}
-            {field("name", { required: true, maxLength: 200 })}
-            <KalipSecimGrubu
-              name="kind"
-              label={t("f.kind")}
-              value={f.kind}
-              color={v.color}
-              disabled={!canEdit}
-              onPick={(id) => {
-                if (yeni && !touchedRef.current && id !== f.kind) {
-                  setSuggested(null);
-                  setF((cur) => ({ ...cur, kind: id as Kind, code: "" }));
-                  setInitial((cur) => ({ ...cur, code: "" }));
-                  return;
-                }
-                set("kind", id);
-              }}
-              options={KINDS.map((k) => ({ id: k, label: t(`kind.${k}`), d: KIND_VISUAL[k].d, color: KIND_VISUAL[k].color }))}
-            />
-          </KalipGrup>
-        }
-        right={
-          <KalipGrup title={t("gContact")} sub={t("gContactSub")} d={LICON.info} color="2F5DA8">
-            {field("taxNo", { inputMode: "tel" })}
-            {field("taxOffice")}
-            {field("phone", { inputMode: "tel" })}
-            {field("email", { inputMode: "email" })}
-            {field("city")}
-            {field("address", { maxLength: 500 })}
-          </KalipGrup>
-        }
-      />
+      {/* T-1117: üç sütun (masaüstü) — Kimlik · Vergi ve iletişim · Adres ve teslimat; telefonda alt alta. Kısa ad, İlçe ve Varsayılan
+          teslimat `0064_party_details` sütunlarıdır (tuvaldeki yerlerinde). */}
+      <KalipGrup title={t("gIdentity")} sub={t("gIdentitySub")} d={SICON.ad} color={G_KIMLIK} testId="party-g-identity">
+        {field("name", { d: SICON.bina, color: G_KIMLIK }, { required: true, maxLength: 200, placeholder: t("ph.name") })}
+        {field("code", { d: SICON.ad, color: G_KIMLIK }, { required: true, maxLength: 64 })}
+        {field("shortName", { d: SICON.ad, color: G_GRI }, { maxLength: 100, placeholder: t("ph.shortName") })}
+      </KalipGrup>
+      <KalipGrup title={t("gContact")} sub={t("gContactSub")} d={SICON.bilgi} color={G_VERGI} testId="party-g-contact">
+        <KalipAlanSira>
+          {field("taxNo", { d: SICON.belge, color: G_VERGI }, { inputMode: "tel" })}
+          {field("taxOffice", { d: SICON.bina, color: G_VERGI })}
+        </KalipAlanSira>
+        {field("phone", { d: SICON.telefon, color: G_VERGI }, { inputMode: "tel", placeholder: t("ph.phone") })}
+        {field("email", { d: SICON.eposta, color: G_VERGI }, { inputMode: "email", placeholder: t("ph.email") })}
+      </KalipGrup>
+      <KalipGrup title={t("gAddress")} d={SICON.kamyon} color={G_ADRES} testId="party-g-address">
+        <KalipAlanSira>
+          {field("city", { d: SICON.konum, color: G_ADRES }, { maxLength: 100 })}
+          {field("district", { d: SICON.konum, color: G_ADRES }, { maxLength: 100 })}
+        </KalipAlanSira>
+        {field("address", { d: SICON.konum, color: G_ADRES }, { maxLength: 500, placeholder: t("ph.address") })}
+        <KalipSecimGrubu
+          name="deliveryMode"
+          label={t("f.deliveryMode")}
+          value={f.deliveryMode}
+          color={G_SECIM}
+          disabled={!canEdit}
+          onPick={(id) => set("deliveryMode", id)}
+          options={DELIVERIES.map((k) => ({ id: k, label: t(`delivery.${k}`) }))}
+          testId="party-delivery"
+        />
+      </KalipGrup>
     </KalipFormEkran>
   );
 }

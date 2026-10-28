@@ -24,6 +24,10 @@ const fields = {
   email: text(300),
   city: text(200),
   address: text(1000),
+  // T-1117 (`0064_party_details`): kısa ad, ilçe, varsayılan teslimat (OWN / CARRIER ya da Excel metni; domain `parseDeliveryMode`).
+  shortName: text(200),
+  district: text(200),
+  deliveryMode: text(60),
 };
 const saveSchema = z
   .object({ slug: slugSchema, id: z.string().uuid().optional(), expectedVersion: z.number().int().min(1).max(2_147_483_647).optional(), autoCode: z.boolean().optional(), ...fields })

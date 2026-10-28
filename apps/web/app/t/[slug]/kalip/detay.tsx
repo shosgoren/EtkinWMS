@@ -116,16 +116,20 @@ export function KalipKartBolum({ label, title, sub, d, color, action, children, 
   );
 }
 
-/** Kaynak `.warnb` (kırmızı uyarı bandı). */
-export function KalipUyari({ title, sub }: { title: string; sub: string }) {
+/**
+ * Kaynak `.warnb` (kırmızı uyarı bandı). T-1117: sunucu hatası bandı da budur (eski `@wms/ui` Banner yerine) — `alert` ekran okuyucuya
+ * hemen duyurur, `children` bandın içinde sonraki adım bağlantıları (`.kuyl`).
+ */
+export function KalipUyari({ title, sub, alert = false, children }: { title: string; sub: string; alert?: boolean; children?: ReactNode }) {
   return (
-    <div className="warnb" role="status" data-testid="kalip-warn">
+    <div className="warnb" role={alert ? "alert" : "status"} data-testid="kalip-warn">
       <i>
         <Ico d={LICON.warn} size={22} />
       </i>
       <span>
         <b>{title}</b>
         <small>{sub}</small>
+        {children === undefined ? null : <span className="kuyl">{children}</span>}
       </span>
     </div>
   );
