@@ -4,18 +4,20 @@
 // yeniden denetler. Anahtar yaşam döngüsü ve hata eşlemesi `receipt-form.tsx` ortak takımından (değişmedi).
 // Bilinçli farklar (DESIGN-PARITY): teslim kartında iç düğmeler (kalite onayı, sahada kabul) bulunduğundan kart bağlantı değil, `.uc`
 // görünümlü liste öğesidir; durum süzgeci sunucuda yok → çip yok.
+// T-1119 (B-123): eski @wms/ui Banner / Button / TextField ve Tailwind kutuları kaldırıldı — bildirimler `KalipBildirim`, düğmeler `KalipDugme`,
+// alanlar `KalipAlan`, ürün arama `KalipSecimAra` (sunucuda arar); formun kendi "Teslimi kaydet" düğmesi `workflow-primary` (alt çubuk çağırır).
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Banner, Button, TextField } from "@wms/ui";
 import { KalipOnay } from "../kalip/pencere.tsx";
+import { KalipBildirim, KalipDugme, KalipSatirKart } from "../kalip/belge.tsx";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { kdz } from "../kalip/tokens.ts";
 import { Ico, KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
 import { fmtQty, sumDecimal } from "../kalip/format.ts";
-import { KalipGrup } from "../kalip/form.tsx";
-import { KalipSecim } from "../kalip/secim.tsx";
+import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
+import { KalipSecim, KalipSecimAra } from "../kalip/secim.tsx";
 import { KalipBos, KalipDaha } from "../kalip/liste.tsx";
 import { KalipSonsuz, useKalipDerinlik } from "../kalip/tablo.tsx";
 import { searchItemsAction } from "../items/actions.ts";
@@ -23,8 +25,6 @@ import { approveQualityAction, createReceiptAction, itemUnitsAction, loadMoreRec
 import { ErrorNotice, LineStatus, submitWithKey, useKeyHolder, type ErrorContext, type ErrorInfo, type ReceiptView } from "./receipt-form.tsx";
 import { useSonucSesi } from "../kalip/sonuc-sesi.ts";
 
-const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-const LINK_BTN = `inline-flex min-h-12 min-w-12 items-center justify-center rounded-control border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink ${FOCUS}`;
 const ICON = { d: LICON.moveIn, color: "2F7D5B" } as const;
 const STATUS_ICON: Record<ReceiptView["status"], { readonly d: string; readonly color: string }> = {
   DRAFT: { d: LICON.pencil, color: "B07D0B" },
@@ -115,8 +115,8 @@ export function ReceiptsList({ slug, dark, receipts: ilkKabuller, nextCursor, to
         bar={{ back: { href: home }, main: { label: t("k.newShort"), aria: t("form.title"), d: LICON.plus, href: `${base}?new=1`, disabled: !canCreate, testId: "receipts-new" } }}
       >
         <p className="sr">{t("intro")}</p>
-        {created === null ? null : <Banner kind="success">{t("form.created", { number: created })}</Banner>}
-        {approved === null ? null : <Banner kind="success">{t("quality.done", { number: approved })}</Banner>}
+        {created === null ? null : <KalipBildirim tur="tamam" title={t("form.created", { number: created })} />}
+        {approved === null ? null : <KalipBildirim tur="tamam" title={t("quality.done", { number: approved })} />}
         {error === null ? null : <ErrorNotice error={error} context="approve" />}
         {packageHref === null ? null : (
           <KalipDaha href={packageHref} iconD={LICON.koli} iconColor="9A5B2E" testId="receipts-packages">
@@ -150,26 +150,27 @@ export function ReceiptsList({ slug, dark, receipts: ilkKabuller, nextCursor, to
                     <span className="ut" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       <b>{r.number}</b>
                       {r.supplierRef === null ? null : <small className="mono">{t("list.supplier", { ref: r.supplierRef })}</small>}
-                      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                      <ul className="ksatirlar">
                         {r.lines.map((l) => (
-                          <li key={l.id} className="flex min-w-0 flex-col gap-1 border-t border-border pt-2">
-                            <span className="break-words text-base font-semibold">
-                              {l.itemName} <span className="font-normal text-ink-muted">· {l.unitName}</span>
-                            </span>
+                          <li key={l.id}>
+                            <b>
+                              {l.itemName} <small>· {l.unitName}</small>
+                            </b>
                             <LineStatus expected={l.expected} received={l.received} damaged={l.damaged} open={l.open} />
                           </li>
                         ))}
                       </ul>
-                      <span className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="kdugler">
                         {r.status === "OPEN" ? (
-                          <Link href={`${field}?receipt=${encodeURIComponent(r.id)}`} className={LINK_BTN}>
-                            {t("list.receiveInField")}
+                          <Link href={`${field}?receipt=${encodeURIComponent(r.id)}`} className="kdug ana">
+                            <Ico d={LICON.moveIn} size={20} />
+                            <span>{t("list.receiveInField")}</span>
                           </Link>
                         ) : null}
                         {canApprove ? (
-                          <Button variant="secondary" disabled={busy} onClick={() => setConfirm(r)}>
+                          <KalipDugme d={LICON.check} disabled={busy} onClick={() => setConfirm(r)}>
                             {t("quality.approve")}
-                          </Button>
+                          </KalipDugme>
                         ) : (
                           <small className="um" style={{ display: "flex", alignItems: "center", gap: 6 }} data-testid="quality-locked">
                             <Ico d={LICON.lock} size={14} />
@@ -231,8 +232,6 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const [supplierRef, setSupplierRef] = useState("");
   const [lines, setLines] = useState<readonly DraftLine[]>([]);
-  const [query, setQuery] = useState("");
-  const [found, setFound] = useState<readonly Found[]>([]);
   const [picked, setPicked] = useState<(Found & { units: readonly UnitOption[] }) | null>(null);
   const [unitId, setUnitId] = useState("");
   const [qty, setQty] = useState("");
@@ -243,22 +242,12 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
   // T-990: React durumundaki seçim/satırlar çıkış korumasına `data-dirty` ile bildirilir (FormEkran alan olaylarını ayrıca karşılaştırır).
   const dirty = lines.length > 0 || picked !== null || warehouseId !== (warehouses[0]?.id ?? "");
 
-  async function search(q: string) {
-    setQuery(q);
-    if (q.trim().length < 1) {
-      setFound([]);
-      return;
-    }
-    try {
-      const r = await searchItemsAction({ slug, q: q.trim(), limit: 5 });
-      if (r.ok) setFound(r.data.items);
-    } catch {
-      setFound([]);
-    }
+  // T-1119: ürün arama sunucuda (ortak seçim sayfası `KalipSecimAra`); hata listeyi boş bırakır.
+  async function search(q: string): Promise<readonly Found[]> {
+    const r = await searchItemsAction({ slug, q, limit: 20 });
+    return r.ok ? r.data.items : [];
   }
   async function pick(f: Found) {
-    setFound([]);
-    setQuery(f.name);
     try {
       const r = await itemUnitsAction({ slug, itemId: f.id });
       if (!r.ok) {
@@ -278,7 +267,6 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
     changed();
     setLines((l) => [...l, { itemId: picked.id, itemName: picked.name, unitId: unit.unitId, unitName: unit.unitName || unit.unitCode, quantity: qty }]);
     setPicked(null);
-    setQuery("");
     setQty("");
   }
   async function submit() {
@@ -306,104 +294,99 @@ export function ReceiptNewForm({ slug, warehouses }: { slug: string; warehouses:
   const wh = warehouses.find((w) => w.id === warehouseId);
   return (
     <form
-      className="workflow-form flex min-w-0 flex-col gap-4"
+      className="workflow-form kform-ic"
       data-dirty={dirty ? "true" : "false"}
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
       }}
     >
-      <p className="text-ink-muted">{t("intro")}</p>
+      <small className="khint">{t("intro")}</small>
       {error === null ? null : <ErrorNotice error={error.info} context={error.ctx} />}
       <KalipGrup title={`1. ${t("k.groupSource")}`} sub={wh === undefined ? undefined : `${wh.code} · ${wh.name}`} d={LICON.depo} color="30475A">
-        <div className="flex min-w-0 flex-col gap-3 p-3">
-          {warehouses.length > 1 ? (
-            <KalipSecim
-              name="warehouseId"
-              label={t("form.warehouse")}
-              color="30475A"
-              icon={{ d: LICON.depo, color: "30475A" }}
-              value={warehouseId}
-              options={warehouses.map((w) => ({ id: w.id, label: `${w.code} · ${w.name}`, d: LICON.depo }))}
-              onPick={(id) => {
-                changed();
-                setWarehouseId(id);
-              }}
-            />
-          ) : null}
-          <TextField
-            label={t("form.supplierRef")}
-            hint={t("form.supplierRefHint")}
-            value={supplierRef}
-            maxLength={100}
-            autoComplete="off"
-            onChange={(e) => {
+        {warehouses.length > 1 ? (
+          <KalipSecim
+            name="warehouseId"
+            label={t("form.warehouse")}
+            color="30475A"
+            icon={{ d: LICON.depo, color: "30475A" }}
+            value={warehouseId}
+            options={warehouses.map((w) => ({ id: w.id, label: `${w.code} · ${w.name}`, d: LICON.depo }))}
+            onPick={(id) => {
               changed();
-              setSupplierRef(e.target.value);
+              setWarehouseId(id);
             }}
           />
-        </div>
+        ) : null}
+        <KalipAlan
+          label={t("form.supplierRef")}
+          hint={t("form.supplierRefHint")}
+          name="supplierRef"
+          value={supplierRef}
+          maxLength={100}
+          autoComplete="off"
+          onChange={(e) => {
+            changed();
+            setSupplierRef(e.target.value);
+          }}
+        />
       </KalipGrup>
       <KalipGrup title={`2. ${t("form.lines")}`} sub={String(lines.length)} d={LICON.box} color="2F5DA8">
-        <div className="flex min-w-0 flex-col gap-3 p-3">
-          {lines.length === 0 ? null : (
-            <ul aria-label={t("form.lines")} className="m-0 flex list-none flex-col gap-2 p-0" data-testid="draft-lines">
-              {lines.map((l, i) => (
-                <li key={`${l.itemId}-${i}`} className="flex min-w-0 items-center justify-between gap-2 rounded-card bg-bg px-3 py-2">
-                  <span className="min-w-0 break-words text-base text-ink">
-                    {l.itemName} · {l.quantity} {l.unitName}
-                  </span>
-                  <Button
-                    variant="secondary"
-                    aria-label={t("form.removeLine", { name: l.itemName })}
-                    onClick={() => {
-                      changed();
-                      setLines((x) => x.filter((_, j) => j !== i));
-                    }}
-                  >
-                    {t("form.remove")}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+        {lines.length === 0 ? null : (
+          <ul aria-label={t("form.lines")} className="ksatirlar" data-testid="draft-lines">
+            {lines.map((l, i) => (
+              <li key={`${l.itemId}-${i}`} className="ksatir">
+                <b>
+                  {l.itemName} · {l.quantity} {l.unitName}
+                </b>
+                <button
+                  type="button"
+                  className="ksatk-x"
+                  aria-label={t("form.removeLine", { name: l.itemName })}
+                  title={t("form.remove")}
+                  onClick={() => {
+                    changed();
+                    setLines((x) => x.filter((_, j) => j !== i));
+                  }}
+                >
+                  <Ico d={LICON.trash} size={20} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <KalipSatirKart title={t("form.addLine")}>
+          <KalipSecimAra<Found>
+            label={t("form.item")}
+            hint={t("form.itemHint")}
+            value={picked}
+            icon={{ d: LICON.box, color: "2F5DA8" }}
+            toOption={(f) => ({ id: f.id, label: f.name, sub: f.code, keys: [f.code], d: LICON.box, color: "2F5DA8" })}
+            search={search}
+            onPick={(f) => void pick(f)}
+            testId="receipt-item"
+          />
+          {picked === null ? null : (
+            <>
+              <KalipSecim
+                name="unitId"
+                label={t("form.unit")}
+                color="2F5DA8"
+                value={unitId}
+                options={picked.units.map((u) => ({ id: u.unitId, label: u.unitName || u.unitCode }))}
+                onPick={setUnitId}
+              />
+              <KalipAlan label={t("form.expected")} inputMode="numeric" pattern="[0-9]*" value={qty} onChange={(e) => setQty(e.target.value.replace(/\D/g, "").slice(0, 9))} />
+              <KalipDugme d={LICON.plus} onClick={addLine} disabled={!/^[1-9][0-9]{0,8}$/.test(qty)}>
+                {t("form.addLine")}
+              </KalipDugme>
+            </>
           )}
-          <div className="flex min-w-0 flex-col gap-2 rounded-card border-2 border-dashed border-border p-3">
-            <TextField label={t("form.item")} hint={t("form.itemHint")} value={query} autoComplete="off" onChange={(e) => void search(e.target.value)} />
-            {found.length === 0 ? null : (
-              <ul className="m-0 flex list-none flex-col gap-1 p-0" aria-label={t("form.item")}>
-                {found.map((f) => (
-                  <li key={f.id}>
-                    <button type="button" onClick={() => void pick(f)} className={`flex min-h-12 w-full items-center rounded-control border-2 border-border bg-surface px-3 text-left text-base text-ink ${FOCUS}`}>
-                      <span className="min-w-0 break-words">
-                        {f.name} <span className="text-ink-muted">({f.code})</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {picked === null ? null : (
-              <>
-                <KalipSecim
-                  name="unitId"
-                  label={t("form.unit")}
-                  color="2F5DA8"
-                  value={unitId}
-                  options={picked.units.map((u) => ({ id: u.unitId, label: u.unitName || u.unitCode }))}
-                  onPick={setUnitId}
-                />
-                <TextField label={t("form.expected")} inputMode="numeric" pattern="[0-9]*" value={qty} onChange={(e) => setQty(e.target.value.replace(/\D/g, "").slice(0, 9))} />
-                <Button variant="secondary" onClick={addLine} disabled={!/^[1-9][0-9]{0,8}$/.test(qty)}>
-                  {t("form.addLine")}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+        </KalipSatirKart>
       </KalipGrup>
-      <Button type="submit" variant="primary" loading={busy} disabled={lines.length === 0 || warehouseId === ""}>
+      <KalipDugme tur="ana" type="submit" className="workflow-primary" d={LICON.check} busy={busy} disabled={busy || lines.length === 0 || warehouseId === ""}>
         {t("form.save")}
-      </Button>
+      </KalipDugme>
     </form>
   );
 }

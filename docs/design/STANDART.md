@@ -35,6 +35,7 @@ Bu belgenin sonucu:
 - Üst şerit: modül renginde tonlu zemin, büyük simge, girilen ad canlı, otomatik kod; tür seçimi büyük simgeli düğmeler.
 - Her sütun bir konu: simgeli başlık, üstü kendi renginde hafif tonlu; yazı kutuları beyaz, ince çerçeve, başında küçük renkli simge. Önizleme sütunu yok.
 - Kaydet alt çubuğun ortasında; düzenlemede yalnız değişiklik varsa etkin. Görsel/ek gibi anlık işlemler otomatik kaydedilir ("Kaydedildi" + Geri al).
+- **Belge formlarının içi (T-1119):** `kalip/belge.tsx` — `KalipBildirim` (hata / uyarı dolu kırmızı / sarı; tamam / bilgi beyaz kart + renkli simge), `KalipDugme` (ana · ikincil · tehlike, ≥ 48 px), `KalipSatirKart` (tekrarlanan satır + simgeli çıkar), `KalipFormKap` (ayrıntı ekranında form parçaları için `.dzf` kapsamı); sunucuda aranan seçim `KalipSecimAra` (`kalip/secim.tsx`, aynı aramalı seçim sayfası). Eski `@wms/ui` Banner / Button / TextField, Typeahead ve Tailwind giriş kutusu belge formlarında kullanılmaz.
 
 ## 5. Ayar kalıbı (parametrik ayarlar; ör. İş akışı, Entegrasyonlar)
 - Üstte ayar sekmeleri (renkli simgeli): Firma · Kullanıcılar ve yetki · İş akışı · Entegrasyonlar · Etiket ve yazıcı · Görünüm.

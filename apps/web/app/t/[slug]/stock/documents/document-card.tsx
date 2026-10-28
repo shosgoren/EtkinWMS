@@ -1,6 +1,7 @@
 "use client";
 // T-1091: belge kartı — STANDART §3 kayıt kartı kalıbı (ürün / depo / raf yeri / cari kartıyla aynı parçalar: şerit, bilgi kutucukları,
 // satırlar; sağ sütunda durum ve işlemler). Veri sunucuda okunur (`getStockDocument`); onay / stoka işle / iptal eylemleri değişmedi.
+// T-1119 (B-123): bölüm düzeni Tailwind yerine ortak `.kbolum` (standart.css).
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { LICON } from "../../../../design/kalip-icons.ts";
@@ -73,7 +74,7 @@ export function DocumentCard({ slug, document: doc, permissions }: { slug: strin
       ana={
         <>
           <KalipBilgiIzgara baslik={t("k.info")} bilgiler={bilgiler} kilitD={SICON.kilit} />
-          <div data-testid="document-lines" className="flex min-w-0 flex-col gap-3">
+          <div data-testid="document-lines" className="kbolum">
             <b className="stkbas">{t("k.lines")}</b>
             <ul className="whl" style={{ margin: 0, padding: 0, listStyle: "none" }}>
               {doc.lines.map((line) => (
@@ -96,12 +97,12 @@ export function DocumentCard({ slug, document: doc, permissions }: { slug: strin
       }
       yan={
         <>
-          <div data-testid="document-state" className="flex min-w-0 flex-col gap-3">
+          <div data-testid="document-state" className="kbolum">
             <b className="stkbas">{t("k.state")}</b>
             <DocumentControls key={`${doc.id}:${doc.version}`} slug={slug} document={doc} permissions={permissions} />
           </div>
           {doc.related.length === 0 ? null : (
-            <div data-testid="document-related" className="flex min-w-0 flex-col gap-3">
+            <div data-testid="document-related" className="kbolum">
               <b className="stkbas">{t("k.related")}</b>
               {doc.related.map((other) => (
                 <Link key={other.id} className="more" href={`${path}?id=${encodeURIComponent(other.id)}`}>

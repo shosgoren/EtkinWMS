@@ -1555,3 +1555,128 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
     min-width: 0;
   }
 }
+
+/* ---- T-1119 (B-123, kullanıcı 28 Ekim "eksik eski tasarım öğesi kalmasın"): belge formlarının iç parçaları (kalip/belge.tsx).
+   Kök belirteçler (`--color-kr-*`, `--color-st-k-*`): form, ayrıntı, liste ve saha kaplarında aynı görünür. Renk sabiti yok.
+   Trafik ışığı: yalnız hata (kırmızı) ve uyarı (sarı) dolu; tamam ve bilgi beyaz kart + renkli simge kutusu. ---- */
+.kbelge { display: contents; }
+.kbil {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--color-kr-card);
+  color: var(--color-kr-ink);
+  box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-b);
+  font: 600 14px/1.4 var(--font-instrument), sans-serif;
+  overflow-wrap: anywhere;
+  animation: kbil-gir .25s cubic-bezier(.2, .9, .2, 1);
+}
+@keyframes kbil-gir { from { opacity: 0; transform: translateY(6px); } }
+.kbil > i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--color-kr-info);
+  color: var(--color-kr-on);
+}
+.kbil .ico, .kdug .ico, .ksatk .ico, .kdurum .ico { display: block; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.kbil-t { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; padding-top: 2px; }
+.kbil-t > b { font: 800 15.5px/1.25 var(--font-bricolage), sans-serif; }
+.kbil-t p { margin: 0; }
+.kbil.tamam > i { background: var(--color-kr-ok); }
+.kbil.hata { background: var(--color-kr-err); color: var(--color-kr-on); box-shadow: none; }
+.kbil.hata > i { background: var(--color-kr-focus-soft); color: var(--color-kr-on); }
+.kbil.uyari { background: var(--color-kr-warn); color: var(--color-kr-warn-ink); box-shadow: none; }
+.kbil.uyari > i { background: var(--color-kr-warn-ink); color: var(--color-kr-warn); }
+.kbil-ay > summary { display: flex; align-items: center; min-height: 48px; cursor: pointer; font: 700 13px/1.2 var(--font-instrument), sans-serif; text-decoration: underline; }
+.kbil-ay small { display: block; font: 600 12px/1.35 var(--font-plex-mono), monospace; overflow-wrap: anywhere; }
+.dz-dark .kbil:not(.hata, .uyari) { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); box-shadow: inset 0 0 0 1.5px var(--color-kr-ink-dark); }
+@media (prefers-reduced-motion: reduce) { .kbil { animation: none; } }
+
+.kdug {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  min-width: 48px;
+  max-width: 100%;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font: 800 14px/1.15 var(--font-bricolage), sans-serif;
+  text-align: center;
+  text-decoration: none;
+}
+.kdug > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.kdug.ana { background: var(--color-kr-ink); color: var(--color-kr-on); }
+.kdug.ikincil { background: var(--color-kr-card); color: var(--color-kr-ink); box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-b); }
+.kdug.tehlike { background: var(--color-kr-card); color: var(--color-kr-err); box-shadow: inset 0 0 0 2px var(--color-kr-err); }
+.kdug:disabled { opacity: .45; cursor: not-allowed; }
+.kdug[aria-busy="true"] { cursor: progress; }
+.dz-dark .kdug.ana { background: var(--color-kr-text-dark); color: var(--color-kr-card-dark); }
+.dz-dark .kdug:is(.ikincil, .tehlike) { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); box-shadow: inset 0 0 0 1.5px var(--color-kr-ink-dark); }
+.dz-dark .kdug.tehlike { box-shadow: inset 0 0 0 2px var(--color-kr-err); }
+.kdugler { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.kdugler > .kdug { flex: 1 1 160px; }
+
+/* Grup gövdesi (rehber hedefi `data-guide` taşır; `.sg` ile aynı aralık) ve tekrarlanan satır alt kartı. */
+.kgovde { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ksatk {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 18px;
+  background: var(--color-kr-bg-a);
+}
+.ksatk-h { display: flex; align-items: center; gap: 8px; min-height: 48px; padding-left: 6px; }
+.ksatk-h > b, .ksatk-h > h3 { flex: 1; min-width: 0; margin: 0; font: 800 15px/1.2 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.ksatk-x {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  background: var(--color-kr-card);
+  color: var(--color-kr-err);
+}
+.ksatk-x:disabled { opacity: .4; cursor: not-allowed; }
+.dz-dark .ksatk { background: var(--color-kr-bg-dark-a); }
+.dz-dark .ksatk-x { background: var(--color-kr-card-dark); }
+
+/* Özet / kontrol satırları (stok fişi özeti, üretim ve sevk kontrolü) ve teslim satırları. */
+.kozet { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0 6px; list-style: none; font: 700 15px/1.35 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.ksatirlar { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.ksatirlar > li { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-top: 8px; border-top: 1.5px solid var(--color-st-k-cizgi); }
+.ksatirlar > li > b { font: 700 15px/1.25 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.ksatirlar > li > b small { font-weight: 600; color: var(--color-kr-muted); }
+.ksatirlar > li.ksatir { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 6px 6px 12px; border-top: 0; border-radius: 16px; background: var(--color-kr-bg-a); }
+.dz-dark .ksatirlar > li { border-top-color: var(--color-kr-ink-dark); }
+.dz-dark .ksatirlar > li.ksatir { background: var(--color-kr-bg-dark-a); }
+
+/* Teslim satırı durumu (ikon + metin + renk; masaüstü liste ve saha kabul). */
+.kdurum { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; font: 600 13.5px/1.3 var(--font-instrument), sans-serif; color: var(--color-kr-muted); }
+.kdurum-a { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; }
+.kdurum-a.ok { color: var(--color-st-k-ok); }
+.kdurum-a.acik { color: var(--color-st-k-amber); }
+.kdurum-a.hasar { color: var(--color-kr-err); }
+.dz-dark .kdurum-a.ok { color: var(--color-kr-ok); }
+.dz-dark .kdurum-a.acik { color: var(--color-kr-warn); }
+/* Belge formunun kendisi ve alan kümesi (eski Tailwind düzeni yerine); kayıt kartı bölümü. */
+form.kform-ic { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+fieldset.kform-alan { display: flex; flex-direction: column; gap: 14px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.kbolum { display: flex; flex-direction: column; gap: 12px; min-width: 0; }

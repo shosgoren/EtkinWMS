@@ -4,9 +4,12 @@
 //   geçici sunucu hatasında AYNI anahtar kullanılır; iş kuralı reddinden sonra içerik değişirse yeni anahtar; başarıdan sonra yenilenir.
 // - Hata eşlemesi: sunucu hata kodu (+ayrıntı) → `receiving.errors.<anahtar>` (+ `Action`); kural yeniden yazılmaz, yalnızca ileti seçilir.
 // - Masaüstü liste + yeni teslim formu (T-972 kalıp): `receipts-view.tsx`. Saha ekranları `receive-flow.tsx` / `putaway-flow.tsx`.
+// - T-1119 (B-123): `ErrorNotice` ve `LineStatus` kalıp görünümünde (`KalipBildirim`, kalıp simgeleri); dışa aktarımlar ve davranış aynı.
 import { useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Banner, CircleCheck, Clock, TriangleAlert } from "@wms/ui";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { KalipBildirim } from "../kalip/belge.tsx";
+import { Ico } from "../kalip/ico.tsx";
 
 // İstemci dosyaları sunucu paketlerini (tip olarak bile) içe aktaramaz (AC-28 / T-127b): sunucudan gelen veri biçimleri burada yapısal olarak
 // tanımlanır; domain tipleriyle birebir uyumludur (sunucu bileşeni `ReceiptView`'ı bu şekle atar, derleyici uyumsuzluğu yakalar).
@@ -176,17 +179,14 @@ export function ErrorNotice({ error, context, remaining }: { error: ErrorInfo; c
   const t = useTranslations("receiving");
   const key = errorKeyOf(error, context);
   return (
-    <Banner kind="error">
-      <p className="font-semibold" data-testid="error-reason">
-        {t(`errors.${key}`, { remaining: remaining ?? "-" })}
-      </p>
+    <KalipBildirim tur="hata" title={<span data-testid="error-reason">{t(`errors.${key}`, { remaining: remaining ?? "-" })}</span>}>
       <p>{t(`errors.${key}Action`)}</p>
-      <details className="mt-1 text-sm">
-        <summary className="flex min-h-12 cursor-pointer items-center">{t("detail")}</summary>
-        <p data-testid="error-code">{t("errorCode", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}</p>
-        {error.requestId === undefined ? null : <p className="break-all">{error.requestId}</p>}
+      <details className="kbil-ay">
+        <summary>{t("detail")}</summary>
+        <small data-testid="error-code">{t("errorCode", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}</small>
+        {error.requestId === undefined ? null : <small>{error.requestId}</small>}
       </details>
-    </Banner>
+    </KalipBildirim>
   );
 }
 
@@ -198,16 +198,16 @@ export function LineStatus({ expected, received, damaged, open }: { expected: st
   const done = intOf(open) === 0;
   const hasDamage = (intOf(damaged) ?? 0) > 0;
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-      <span className="inline-flex items-center gap-1 font-semibold text-ink">
-        {done ? <CircleCheck aria-hidden="true" className="size-4 text-success" /> : <Clock aria-hidden="true" className="size-4 text-warning" />}
+    <div className="kdurum">
+      <span className={`kdurum-a ${done ? "ok" : "acik"}`}>
+        <Ico d={done ? LICON.check : LICON.clock} size={16} />
         {done ? t("line.complete") : t("line.open", { open: String(intOf(open) ?? open) })}
       </span>
-      <span className="text-ink-muted">{t("line.expected", { n: String(intOf(expected) ?? expected) })}</span>
-      <span className="text-ink-muted">{t("line.received", { n: String(intOf(received) ?? received) })}</span>
+      <span>{t("line.expected", { n: String(intOf(expected) ?? expected) })}</span>
+      <span>{t("line.received", { n: String(intOf(received) ?? received) })}</span>
       {hasDamage ? (
-        <span className="inline-flex items-center gap-1 font-semibold text-danger-ink">
-          <TriangleAlert aria-hidden="true" className="size-4 text-danger" />
+        <span className="kdurum-a hasar">
+          <Ico d={LICON.warn} size={16} />
           {t("line.damaged", { n: String(intOf(damaged) ?? damaged) })}
         </span>
       ) : null}

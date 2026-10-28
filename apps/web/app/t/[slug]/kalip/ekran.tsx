@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { KabukBar, useKabuk, type KabukBarProps } from "../kabuk/kabuk-bar.tsx";
 import { HesapDugme, HesapMenu } from "../pano/hesap-menu.tsx";
@@ -19,31 +19,15 @@ import { KalipSurumBekcisi } from "./surum.tsx";
 import { kdz, kdzOrtak, type KalipScope } from "./tokens.ts";
 import { balonGoster, buyukHarf, type BalonTur } from "@wms/ui";
 import { useCevrimici } from "./cevrimdisi.ts";
+import { Ico } from "./ico.tsx";
+import { KalipKapCtx, type KalipKind } from "./kap.ts";
 import { StAyarlar, StSaat, StSonIslemler, StTema } from "./ust-standart.tsx";
 
-export type KalipKind = "liste" | "form" | "detay";
+export type { KalipKind } from "./kap.ts";
 const SCOPE: Record<KalipKind, KalipScope> = { liste: "dzl", form: "dzf", detay: "dzd" };
 
-/** Kaynak `.ico` SVG (tek ya da çok yol). */
-export function Ico({ d, size, className = "ico" }: { d: string | readonly string[]; size: number; className?: string }) {
-  return (
-    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      {(typeof d === "string" ? [d] : d).map((p) => (
-        <path key={p} d={p} />
-      ))}
-    </svg>
-  );
-}
-
-/** Kaynak mikrofon ikonu (`rect` + yol). */
-export function MicIco({ size }: { size: number }) {
-  return (
-    <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="9" y="3" width="6" height="11" rx="3" />
-      <path d={LICON.micB} />
-    </svg>
-  );
-}
+// T-1119: `Ico` / `MicIco` hafif modülde (`ico.tsx`; kabuk bağımlılığı olmayan ortak parçalar da kullanır); buradan da dışa verilir.
+export { Ico, MicIco } from "./ico.tsx";
 
 export type ToastKind = BalonTur;
 
@@ -88,6 +72,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
   const online = useCevrimici();
   const router = useRouter();
   const [hesap, setHesap] = useState(false);
+  const kap = useMemo(() => ({ kind, dark }), [kind, dark]);
   const closeHesap = useCallback(() => setHesap(false), []);
   // Tema cihaz tercihidir (çerez, Pano ve Ayarlar ile aynı); sayfa sunucuda çerezi okuyarak yeniden çizilir.
   const toggleTheme = useCallback(() => {
@@ -185,7 +170,7 @@ export function KalipEkran({ kind, dark, title, icon, subtitle, actions, bar, ov
               </span>
             </header>
             <main className="inner" id="kalip-main">
-              {children}
+              <KalipKapCtx.Provider value={kap}>{children}</KalipKapCtx.Provider>
             </main>
             {overlays}
             {/* T-990: yayından sonra açık kalan sayfa eski eylem kimliğiyle çağırırsa "Uygulama güncellendi — Yenile". */}

@@ -4995,6 +4995,8 @@
     "secScan": "Okut",
     "secMic": "Sesle söyle (yakında)",
     "secNone": "Eşleşen yok",
+    "secType": "Aramak için yaz ya da okut",
+    "secBusy": "Aranıyor…",
     "secScanNone": "{code} listede yok",
     "secPick": "Seç",
     "updatedTitle": "Uygulama güncellendi",

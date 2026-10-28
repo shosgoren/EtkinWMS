@@ -75,6 +75,10 @@ export function KalipRehberKart({ title, text, progress, target, nextTarget = nu
         // Alana yalnız dokunmak ya da harf yazmak ilerletmez.
         const dokun = (ev: Event): void => {
             if (!(ev.target instanceof Element) || target === null || ev.target.closest(target) === null) return;
+            // T-1119: hedefteki seçim alanını açmak (`aria-haspopup`) ve açılan seçim sayfasında aramak / kapatmak iş sayılmaz; yalnız seçenek seçmek sayılır.
+            const secenek = ev.type === 'click' && ev.target.closest('[role="option"]') !== null;
+            if (ev.target.closest('[aria-modal="true"]') !== null && !secenek) return;
+            if (ev.type === 'click' && ev.target.closest('[aria-haspopup]') !== null) return;
             if (ev.type === 'click' && ev.target.closest('button, a, [role="option"], [role="button"]') === null) return;
             dokundu.current = true;
         };

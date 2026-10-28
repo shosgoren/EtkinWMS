@@ -5,10 +5,12 @@
 //  - Çok seçenek: alttan açılan aramalı seçim sayfası (`KalipSecimSayfasi`, ortak buzlu perde + cam kutu) — arama kutusu, Okut (kamera; el
 //    okuyucusu arama kutusuna yazar) ve mikrofon (Etkin, B-62 gelene dek "yakında"); liste rolü listbox/option. Alanı `KalipSecimListe`.
 //  - `KalipSecim` seçenek sayısına göre ikisinden birini seçer (ekran ayrıca karar vermez).
+//  - T-1119 (B-123): seçenekleri sunucuda aranan alan (depo, raf yeri, ürün, lot, seri) `KalipSecimAra` — aynı alan ve aynı seçim sayfası;
+//    sayfa yazdıkça sunucuda arar (200 ms bekleme, eski yanıt yok sayılır, yeni sorguda eski sonuçlar hemen silinir). Eski Typeahead yerine.
 // Alan adı (`name`) ortak doğrulamanın (`KalipFormEkran`) hata/odak bağlantısıdır (`data-alan`). Renkler `.dzf` belirteçlerinden.
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
 import { Ico, MicIco } from "./ekran.tsx";
@@ -158,6 +160,7 @@ export function KalipSecimSayfasi({
   onClose,
   icon,
   scan = true,
+  ara,
   testId,
 }: {
   open: boolean;
@@ -169,6 +172,8 @@ export function KalipSecimSayfasi({
   icon?: { readonly d: string; readonly color: string };
   /** Okut düğmesi (kamera). Okutulan kod seçeneğin kimliği, etiketi ya da `keys` değeriyle birebir eşleşirse doğrudan seçilir. */
   scan?: boolean;
+  /** T-1119: verilirse seçenekler sunucuda aranır (`options` kullanılmaz); boş sorguda "yaz ya da okut". */
+  ara?: (q: string) => Promise<readonly KalipSecimSecenek[]>;
   testId?: string;
 }) {
   const t = useTranslations("kalip");
@@ -183,16 +188,53 @@ export function KalipSecimSayfasi({
   // T-436 (ALTIN-KURAL 11): ortak seçim sayfası — Esc kapatır, odak sayfada kalır, kapanınca açan öğeye döner.
   useModalFocus(open, sheet, { onClose, initial: "none", trap: !cam });
   const lid = useId();
+  // T-1119: sunucu araması (yalnız `ara` verilince).
+  const [bulunan, setBulunan] = useState<readonly KalipSecimSecenek[]>([]);
+  const [ariyor, setAriyor] = useState(false);
+  const sira = useRef(0);
+  const zaman = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(zaman.current), []);
+  const aramaBaslat = (v: string): void => {
+    if (ara === undefined) return;
+    clearTimeout(zaman.current);
+    const mine = ++sira.current;
+    setBulunan([]);
+    if (v.trim() === "") {
+      setAriyor(false);
+      return;
+    }
+    setAriyor(true);
+    zaman.current = setTimeout(() => {
+      ara(v.trim())
+        .then((r) => {
+          if (mine !== sira.current) return;
+          setBulunan(r);
+          setActive(0);
+        })
+        .catch(() => {
+          if (mine === sira.current) setBulunan([]);
+        })
+        .finally(() => {
+          if (mine === sira.current) setAriyor(false);
+        });
+    }, 200);
+  };
+  const havuz = ara === undefined ? options : bulunan;
   const list = useMemo(() => {
+    if (ara !== undefined) return bulunan;
     const k = norm(q, locale);
     if (k === "") return options;
     return options.filter((o) => norm([o.label, o.sub ?? "", o.id, ...(o.keys ?? [])].join(" "), locale).includes(k));
-  }, [q, options]);
+  }, [q, options, ara, bulunan]);
 
   useEffect(() => {
     if (!open) return;
     setQ("");
     setNote(null);
+    sira.current++;
+    clearTimeout(zaman.current);
+    setBulunan([]);
+    setAriyor(false);
     setKoyu(document.querySelector(".dz-dark") !== null);
     const i = options.findIndex((o) => o.id === value);
     setActive(i < 0 ? 0 : i);
@@ -206,10 +248,11 @@ export function KalipSecimSayfasi({
     onPick(id);
     onClose();
   };
-  const exact = (code: string): KalipSecimSecenek | undefined => {
+  const esit = (o: KalipSecimSecenek, code: string): boolean => {
     const k = norm(code, locale);
-    return options.find((o) => o.disabled !== true && [o.id, o.label, ...(o.keys ?? [])].some((x) => norm(x, locale) === k));
+    return o.disabled !== true && [o.id, o.label, ...(o.keys ?? [])].some((x) => norm(x, locale) === k);
   };
+  const exact = (code: string): KalipSecimSecenek | undefined => havuz.find((o) => esit(o, code));
   const onKey = (e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -253,6 +296,7 @@ export function KalipSecimSayfasi({
               setQ(e.target.value);
               setActive(0);
               setNote(null);
+              aramaBaslat(e.target.value);
             }}
             onKeyDown={onKey}
             placeholder={t("secSearch")}
@@ -298,7 +342,7 @@ export function KalipSecimSayfasi({
             {note}
           </p>
         )}
-        <ul className="kslist" role="listbox" id={`${lid}-list`} aria-label={title}>
+        <ul className="kslist" role="listbox" id={`${lid}-list`} aria-label={title} aria-busy={ariyor || undefined}>
           {list.map((o, i) => {
             const on = o.id === value;
             return (
@@ -330,7 +374,7 @@ export function KalipSecimSayfasi({
           })}
           {list.length === 0 ? (
             <li className="ksnone" role="presentation">
-              {t("secNone")}
+              {ara !== undefined && q.trim() === "" ? t("secType") : ariyor ? t("secBusy") : t("secNone")}
             </li>
           ) : null}
         </ul>
@@ -338,6 +382,35 @@ export function KalipSecimSayfasi({
       {cam ? (
         <CameraOverlay
           onCode={(code) => {
+            if (ara !== undefined) {
+              // T-1119: sunucuda ara; birebir eşleşen ya da tek sonuç doğrudan seçilir.
+              setCam(false);
+              setQ(code);
+              const mine = ++sira.current;
+              clearTimeout(zaman.current);
+              setAriyor(true);
+              ara(code.trim())
+                .then((r) => {
+                  if (mine !== sira.current) return;
+                  const hit = r.find((o) => esit(o, code)) ?? (r.length === 1 && r[0]?.disabled !== true ? r[0] : undefined);
+                  if (hit !== undefined) {
+                    pick(hit.id);
+                    return;
+                  }
+                  feedback.error();
+                  setBulunan(r);
+                  setNote(t("secScanNone", { code }));
+                })
+                .catch(() => {
+                  if (mine !== sira.current) return;
+                  feedback.error();
+                  setNote(t("secScanNone", { code }));
+                })
+                .finally(() => {
+                  if (mine === sira.current) setAriyor(false);
+                });
+              return true;
+            }
             const hit = exact(code);
             setCam(false);
             if (hit === undefined) {
@@ -386,11 +459,20 @@ export function KalipSecimListe({
   scan?: boolean;
   testId?: string;
 }) {
-  const t = useTranslations("kalip");
   const [open, setOpen] = useState(false);
+  const sel = options.find((o) => o.id === value);
+  return (
+    <SecimAlani name={name} label={label} hint={hint} sel={sel} value={value} placeholder={placeholder} disabled={disabled} open={open} onOpen={() => setOpen(true)} testId={testId}>
+      <KalipSecimSayfasi open={open} title={label} options={options} value={value} onPick={onPick} onClose={() => setOpen(false)} icon={icon} scan={scan} />
+    </SecimAlani>
+  );
+}
+
+/** Seçim alanı (`.fld` görünümünde düğme): `KalipSecimListe` ve `KalipSecimAra` ortak. */
+function SecimAlani({ name, label, hint, sel, value, placeholder, disabled, open, onOpen, testId, children }: { name: string | undefined; label: string; hint: string | undefined; sel: KalipSecimSecenek | undefined; value: string; placeholder: string | undefined; disabled: boolean; open: boolean; onOpen: () => void; testId: string | undefined; children: ReactNode }) {
+  const t = useTranslations("kalip");
   const hata = useAlanHata(name);
   const req = useZorunlu(name);
-  const sel = options.find((o) => o.id === value);
   const shown = sel === undefined ? (placeholder ?? t("secPick")) : sel.sub === undefined ? sel.label : `${sel.label} · ${sel.sub}`;
   return (
     <div className={`ksecw${hata === undefined ? "" : " bad"}`} data-alan={name}>
@@ -404,7 +486,7 @@ export function KalipSecimListe({
         disabled={disabled}
         onClick={() => {
           feedback.minor();
-          setOpen(true);
+          onOpen();
         }}
         data-testid={testId}
         data-value={value}
@@ -415,8 +497,73 @@ export function KalipSecimListe({
       </button>
       {hint === undefined ? null : <small className="khint">{hint}</small>}
       <Hata name={name} />
-      <KalipSecimSayfasi open={open} title={label} options={options} value={value} onPick={onPick} onClose={() => setOpen(false)} icon={icon} scan={scan} />
+      {children}
     </div>
+  );
+}
+
+/**
+ * T-1119 (B-123): seçenekleri sunucuda aranan alan (eski Typeahead yerine). Alan ve sayfa `KalipSecimListe` ile aynı; `value` seçili kayıttır
+ * (yoksa `null`), `toOption` kaydı seçenek satırına çevirir. Arama hatası çağıranın `search` işlevinde ele alınır (fırlatırsa liste boş kalır).
+ */
+export function KalipSecimAra<T>({
+  name,
+  label,
+  hint,
+  value,
+  toOption,
+  search,
+  onPick,
+  placeholder,
+  disabled = false,
+  icon,
+  scan = true,
+  testId,
+}: {
+  name?: string;
+  label: string;
+  hint?: string;
+  value: T | null;
+  toOption: (x: T) => KalipSecimSecenek;
+  search: (q: string) => Promise<readonly T[]>;
+  onPick: (x: T) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  icon?: { readonly d: string; readonly color: string };
+  scan?: boolean;
+  testId?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const son = useRef(new Map<string, T>());
+  const sel = value === null ? undefined : toOption(value);
+  const ara = async (q: string): Promise<readonly KalipSecimSecenek[]> => {
+    const r = await search(q);
+    const m = new Map<string, T>();
+    const out = r.map((x) => {
+      const o = toOption(x);
+      m.set(o.id, x);
+      return o;
+    });
+    son.current = m;
+    return out;
+  };
+  return (
+    <SecimAlani name={name} label={label} hint={hint} sel={sel} value={sel?.id ?? ""} placeholder={placeholder} disabled={disabled} open={open} onOpen={() => setOpen(true)} testId={testId}>
+      <KalipSecimSayfasi
+        open={open}
+        title={label}
+        options={[]}
+        value={sel?.id ?? ""}
+        onPick={(id) => {
+          const x = son.current.get(id);
+          if (x !== undefined) onPick(x);
+        }}
+        onClose={() => setOpen(false)}
+        icon={icon}
+        scan={scan}
+        ara={ara}
+      />
+    </SecimAlani>
   );
 }
 

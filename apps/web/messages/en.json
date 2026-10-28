@@ -4995,6 +4995,8 @@
     "secScan": "Scan",
     "secMic": "Say it (coming soon)",
     "secNone": "No match",
+    "secType": "Type or scan to search",
+    "secBusy": "Searching…",
     "secScanNone": "{code} is not in the list",
     "secPick": "Choose",
     "updatedTitle": "App updated",

@@ -192,9 +192,16 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /path\(evenodd/);
         for (const name of ['Uygula · ekranda çalış', 'Şimdilik kapat'])
             await expect(page.getByTestId('working-guide').getByRole('button', { name, exact: true })).toHaveCount(0);
-        const input = page.locator('[data-guide="source"] input').first();
+        // T-1119: kaynak depo alanı ortak aramalı seçim sayfasıdır — delikteki alana dokununca sayfa açılır; açmak, aramak ve kapatmak
+        // rehberi kapatmaz ya da ilerletmez (yalnız seçenek seçmek ilerletir).
+        await page.locator('[data-guide="source"] button.ksecb').first().click();
+        const input = page.getByTestId('kalip-secim-search');
         await input.fill('QA');
         await expect(input).toHaveValue('QA');
+        await expect(page.getByTestId('working-guide')).toHaveAttribute('data-folded', 'false');
+        await expect(page.getByTestId('working-guide')).toContainText('Kaynak depoyu');
+        await page.getByTestId('kalip-secim-close').click();
+        await expect(page.getByTestId('kalip-secim')).toHaveCount(0);
         await expect(page.getByTestId('working-guide')).toHaveAttribute('data-folded', 'false');
         await expect(page.getByTestId('working-guide')).toContainText('Kaynak depoyu');
         await page.getByTestId('guide-next').click();
