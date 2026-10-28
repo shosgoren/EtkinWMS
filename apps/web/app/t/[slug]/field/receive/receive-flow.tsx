@@ -2,11 +2,15 @@
 // Saha kabulü (T-313): tara → doğrula → miktar onayla → bitti. Ekran başına tek soru ve tek sabit birincil düğme (N-01); yanlış tarama tam ekran
 // uyarıyla durdurulur (N-13); miktar 48 px adım tuşlarıyla (N-02). Yetki, fazla kabul ve durum kuralları domain'dedir (`receiveGoods`);
 // bu dosya yalnızca girdi toplar, sunucu hatasını (kod + sonraki eylem) gösterir. Bu dosyadaki ortak saha parçaları `putaway-flow.tsx` ile paylaşılır.
+// T-1122 (B-63, I-18): eski görünüm (Tailwind düzeni, kütüphane simgeleri, eski FlowShell/QtyStepper) kaldırıldı. Birincil/ikincil düğme,
+// tam ekran uyarı, kamera katmanı, düşen okuma bildirimi ve okutma paneli Saha kalıbı (KalipSaha.dc.html) dilinde: simgeler kaynaktan
+// (`SICON`, şevron `LICON.chev`), görünüm `design/standart.css` (T-1122 bölümü; `.kpri/.ksec/.kalert/.kcam/.kdrop`, ortak `--color-kr-*`
+// belirteçleri — katman kalıp kabı dışında da açılır: ürün listesi, seçim sayfası, sevk formu). Davranış, roller ve test kimlikleri aynı.
 import Link from "next/link";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useModalFocus } from "../../kalip/odak.ts";
 import { useTranslations } from "next-intl";
-import { ChevronDown, CircleAlert, CircleCheck, ScanField, ScanLine } from "@wms/ui";
+import { ScanField } from "@wms/ui";
 import { ScannerService, gateScan, type ScanSource, type ScannerSource } from "../../../../../lib/scanner/scanner-core.ts";
 import { createKeystrokeSource } from "../../../../../lib/scanner/keystroke-source.ts";
 import { cameraFeedback, classifyCameraError, createFrameDecoder, iosShareLocation, openCamera, platformOf, startScanLoop } from "../../../../../lib/scanner/camera-source.ts";
@@ -14,132 +18,48 @@ import type { CameraFailure, CameraSession, FrameDecoder, RejectReason, ScanStat
 import { intOf } from "../../receipts/receipt-form.tsx";
 import { compoundQuantityAction } from "../../receipts/actions.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
+import { LICON } from "../../../../design/kalip-icons.ts";
 import { feedback } from "@wms/ui";
 
-const FOCUS = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-/** Saha alt gezinme çubuğunun yüksekliği (field/layout.tsx: min-h-14 + py-2 + border-t-2 = 74 px); sabit birincil çubuk hemen üstünde durur. */
-const NAV_H = "bottom-[74px]";
-
 export type FlowHue = "green" | "teal";
-const SCAN_ICON: Record<FlowHue, string> = { green: "text-cat-green-ink", teal: "text-cat-teal-ink" };
-const SCAN_READY_BORDER: Record<FlowHue, string> = { green: "border-cat-green-ink", teal: "border-cat-teal-ink" };
-const SCAN_LINK: Record<FlowHue, string> = { green: "text-cat-green-ink", teal: "text-cat-teal-ink" };
-/** T-985: Görevlerim tasarımı — adım üst bandı kategori koyu tonunda, yazı yüzey renginde (ikon + metin de taşır). */
-const BAND: Record<FlowHue, string> = { green: "bg-cat-green-ink", teal: "bg-cat-teal-ink" };
-const SCAN_READY_BG: Record<FlowHue, string> = { green: "bg-cat-green-bg", teal: "bg-cat-teal-bg" };
+
+/** Kaynak simgesi (24'lük çizgi; renk `currentColor`). */
+function Svg({ d, size, className = "ico" }: { d: string; size: number; className?: string }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Ortak saha parçaları
 // ---------------------------------------------------------------------------------------------------------------------
-export function PrimaryButton({ children, onClick, disabled, loading, type = "button" }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean; type?: "button" | "submit" }) {
+/** Birincil düğme (kaynak `.btn.n`, en az 56 px; saha kabında `.dzs .flow-primary`). `data-variant="primary"` tek birincil sözleşmesidir. */
+export function PrimaryButton({ children, onClick, disabled, loading, type = "button" }: { children: ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean; type?: "button" | "submit" }) {
   return (
-    <button
-      type={type}
-      data-variant="primary"
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
-      onClick={onClick}
-      className={`flow-primary flex min-h-14 w-full min-w-0 items-center justify-center rounded-2xl bg-accent px-4 text-lg font-extrabold tracking-wide text-on-accent disabled:opacity-60 ${FOCUS}`}
-    >
+    <button type={type} data-variant="primary" disabled={disabled || loading} aria-busy={loading || undefined} onClick={onClick} className="flow-primary kpri">
       {children}
     </button>
   );
 }
-export function PrimaryLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function PrimaryLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} data-variant="primary" className={`flow-primary flex min-h-14 w-full min-w-0 items-center justify-center rounded-2xl bg-accent px-4 text-center text-lg font-extrabold tracking-wide text-on-accent ${FOCUS}`}>
+    <Link href={href} data-variant="primary" className="flow-primary kpri">
       {children}
     </Link>
   );
 }
-const PRESSED: Record<FlowHue, string> = {
-  green: "aria-pressed:border-cat-green-ink aria-pressed:bg-cat-green-bg aria-pressed:text-cat-green-ink",
-  teal: "aria-pressed:border-cat-teal-ink aria-pressed:bg-cat-teal-bg aria-pressed:text-cat-teal-ink",
-};
-export function SecondaryButton({ children, onClick, disabled, pressed, tone }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; pressed?: boolean; tone?: FlowHue }) {
+/** İkincil düğme (kaynak `.more`: kesik çerçeveli, 48 px); `pressed` seçili hâl (`aria-pressed`), `tone` akış rengi. */
+export function SecondaryButton({ children, onClick, disabled, pressed, tone }: { children: ReactNode; onClick: () => void; disabled?: boolean; pressed?: boolean; tone?: FlowHue }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={pressed}
-      className={`flex min-h-12 min-w-12 items-center justify-center rounded-control border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink ${tone === undefined ? "aria-pressed:bg-accent-soft" : PRESSED[tone]} ${FOCUS}`}
-    >
+    <button type="button" onClick={onClick} disabled={disabled} aria-pressed={pressed} className={`more ksec${tone === undefined ? "" : ` ${tone}`}`}>
       {children}
     </button>
   );
 }
 
-const ArrowLeft = () => (
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M19 12H5m6-6-6 6 6 6" />
-  </svg>
-);
-
-export interface FlowShellProps {
-  hue: FlowHue;
-  icon: React.ReactNode;
-  /** Adım numarası/sayısı; hata, kilit ve boş durum ekranlarında verilmez (yanlış sayı gösterilmez). */
-  step?: number;
-  total?: number;
-  title: string;
-  instruction?: string;
-  /** Geri: ya bağlantı ya işlev; yoksa gösterilmez. */
-  backHref?: string;
-  onBack?: () => void;
-  footer: React.ReactNode;
-  /** Sabit çubukta birincil düğmenin hemen ÜSTÜNDE görünen seçim (örn. seçili kabul rafı); içerik kaydırmasına bağlı değildir. */
-  footerExtra?: React.ReactNode;
-  /** Tarama adımı: ScanField yalnızca "Elle gir" ile açılır (tek yol); elle girişte birincil düğme gizlenir. */
-  scanProxy?: boolean;
-  children: React.ReactNode;
-}
-
-/** Adım çerçevesi: tek satır üst bilgi (geri + kategori ikonu + adım + başlık), altta tek sabit birincil eylem (alt gezinme çubuğunun hemen üstünde). */
-export function FlowShell({ hue, icon, step, total, title, instruction, backHref, onBack, footer, footerExtra, scanProxy, children }: FlowShellProps) {
-  const t = useTranslations("receiving");
-  const back = "flow-band-back flex size-12 shrink-0 items-center justify-center rounded-2xl text-surface " + FOCUS;
-  return (
-    <main
-      className={`group flex min-h-[calc(100dvh-8.25rem)] w-full min-w-0 flex-col gap-3 px-4 pt-3 ${footerExtra === undefined ? "pb-24" : "pb-44"} ${scanProxy === true ? "[&_[data-mode=scan]]:hidden" : ""}`}
-      data-testid="flow-step"
-      data-step={step ?? 0}
-    >
-      <header className={`flow-band -mx-4 -mt-3 flex min-w-0 items-center gap-3 rounded-b-3xl px-4 py-1.5 text-surface ${BAND[hue]}`}>
-        {backHref !== undefined ? (
-          <Link href={backHref} aria-label={t("back")} className={back}>
-            <ArrowLeft />
-          </Link>
-        ) : onBack !== undefined ? (
-          <button type="button" aria-label={t("back")} onClick={onBack} className={back}>
-            <ArrowLeft />
-          </button>
-        ) : null}
-        <span aria-hidden="true" className="flow-band-icon flex size-10 shrink-0 items-center justify-center rounded-xl">
-          {icon}
-        </span>
-        <div className="flex min-w-0 flex-col">
-          {step === undefined || total === undefined ? null : (
-            <p className="text-xs font-extrabold uppercase tracking-wider" data-testid="step-label">
-              {t("stepOf", { n: step, total })}
-            </p>
-          )}
-          <h1 className="break-words text-xl font-extrabold leading-tight">{title}</h1>
-        </div>
-      </header>
-      {instruction === undefined ? null : <p className="break-words text-base text-ink [@media(max-height:700px)]:hidden">{instruction}</p>}
-      {children}
-      <div role="group" aria-label={t("primaryBar")} className={`fixed inset-x-0 ${NAV_H} z-10 border-t border-border bg-surface px-4 py-2 group-has-[[data-mode=manual]]:hidden`}>
-        <div className="mx-auto flex w-full max-w-md flex-col gap-2">
-          {footerExtra}
-          {footer}
-        </div>
-      </div>
-    </main>
-  );
-}
-
-/** Yanlış tarama / engelleyici hata: tam ekran, sebep + sonraki eylem, tek "tekrar okut" düğmesi (N-13). */
+/** Yanlış tarama / engelleyici hata: tam ekran, sebep + sonraki eylem, tek "tekrar okut" düğmesi (N-13). Kaynak (b) `.vres.bad` dili: kırmızı dolu. */
 export function ScanAlert({ title, reason, action, code, onClose }: { title: string; reason: string; action: string; code?: string; onClose: () => void }) {
   const t = useTranslations("receiving");
   const btn = useRef<HTMLButtonElement>(null);
@@ -152,67 +72,31 @@ export function ScanAlert({ title, reason, action, code, onClose }: { title: str
     feedback.scan(false);
   }, []);
   return (
-    <div ref={alertRef} role="alertdialog" aria-modal="true" aria-labelledby="scan-alert-title" aria-describedby="scan-alert-body" data-testid="scan-alert" className="fixed inset-0 z-50 flex flex-col justify-between gap-4 bg-danger-bg px-6 pb-6 pt-10 text-danger-ink">
-      <div className="flex min-w-0 flex-col items-center gap-4 text-center">
-        <CircleAlert aria-hidden="true" className="size-20 text-danger" strokeWidth={2} />
-        <h2 id="scan-alert-title" className="break-words text-3xl font-extrabold">
+    <div ref={alertRef} role="alertdialog" aria-modal="true" aria-labelledby="scan-alert-title" aria-describedby="scan-alert-body" data-testid="scan-alert" className="kalert">
+      <div className="kalertin">
+        <span className="kalertic">
+          <Svg d={SICON.warn} size={56} />
+        </span>
+        <h2 id="scan-alert-title" className="kalertt">
           {title}
         </h2>
-        <p id="scan-alert-body" className="break-words text-xl font-semibold">
+        <p id="scan-alert-body" className="kalertb">
           {reason} {action}
         </p>
         {code === undefined ? null : (
-          <details className="group/d text-base">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-center gap-2 font-bold">
+          <details className="sdet">
+            <summary>
               {t("detail")}
-              <ChevronDown aria-hidden="true" className="size-5 shrink-0 transition-transform group-open/d:rotate-180" />
+              <Svg d={LICON.chev} size={18} className="ico sdetc" />
             </summary>
             <p data-testid="error-code">{t("errorCode", { code })}</p>
           </details>
         )}
       </div>
-      <button ref={btn} type="button" onClick={onClose} className={`flex min-h-14 w-full items-center justify-center rounded-control bg-danger px-4 text-lg font-bold text-on-accent ${FOCUS}`}>
+      <button ref={btn} type="button" onClick={onClose} className="kalertbtn">
+        <Svg d={SICON.scan} size={22} />
         {t("scanAgain")}
       </button>
-    </div>
-  );
-}
-
-/** Miktar: 48 px (burada 56 px) eksi/artı + sayı alanı; `inputmode="numeric"` yalnızca bu alanda; tam sayı; sınır sunucudan gelen kalan miktardır. */
-export function QtyStepper({ label, value, min, max, onChange, scan }: { label: string; value: number; min: number; max: number | null; onChange: (n: number) => void; scan?: { label: string; onClick: () => void } }) {
-  const inputId = useId();
-  const clamp = (n: number): number => Math.min(max ?? 999_999_999, Math.max(min, n));
-  const btn = `flex size-12 shrink-0 items-center justify-center rounded-control border-2 border-border-strong bg-surface text-3xl font-bold text-ink disabled:opacity-40 ${FOCUS}`;
-  return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label className="text-base font-semibold text-ink" htmlFor={inputId}>
-        {label}
-      </label>
-      <div className="flex min-w-0 items-center gap-2">
-        <button type="button" aria-label={`${label} −`} disabled={value <= min} onClick={() => onChange(clamp(value - 1))} className={btn}>
-          <span aria-hidden="true">−</span>
-        </button>
-        <input
-          id={inputId}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoComplete="off"
-          value={String(value)}
-          onChange={(e) => {
-            const d = e.target.value.replace(/\D/g, "").slice(0, 9);
-            onChange(clamp(d === "" ? min : Number(d)));
-          }}
-          className={`min-h-12 w-full min-w-0 flex-1 rounded-card border-2 border-border-strong bg-surface px-2 text-center text-2xl font-extrabold text-ink ${FOCUS}`}
-        />
-        <button type="button" aria-label={`${label} +`} disabled={max !== null && value >= max} onClick={() => onChange(clamp(value + 1))} className={btn}>
-          <span aria-hidden="true">+</span>
-        </button>
-        {scan === undefined ? null : (
-          <button type="button" aria-label={scan.label} title={scan.label} data-testid="scan-more" onClick={scan.onClick} className={`flex size-12 shrink-0 items-center justify-center rounded-control border-2 border-border-strong bg-surface text-ink ${FOCUS}`}>
-            <ScanLine aria-hidden="true" className="size-6" strokeWidth={2} />
-          </button>
-        )}
-      </div>
     </div>
   );
 }
@@ -454,24 +338,21 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
         return { key: `camera.error.${failureKey}`, role: "alert", tone: "bad" };
     }
   })();
-  const TONE = { plain: "text-on-accent", bad: "rounded-card bg-danger-bg px-3 py-2 text-danger-ink", good: "rounded-card bg-success-bg px-3 py-2 text-success-ink" } as const;
   const text = (
-    <p role={message.role} data-testid="camera-status" data-tone={message.tone} className={`flex min-w-0 items-start gap-2 break-words text-lg font-bold ${TONE[message.tone]}`}>
-      {message.tone === "bad" ? <CircleAlert aria-hidden="true" className="mt-0.5 size-6 shrink-0" strokeWidth={2.25} /> : null}
-      {message.tone === "good" ? <CircleCheck aria-hidden="true" className="mt-0.5 size-6 shrink-0" strokeWidth={2.25} /> : null}
-      <span className="min-w-0 flex-1">
+    <p role={message.role} data-testid="camera-status" data-tone={message.tone} className={`kcams ${message.tone}`}>
+      {message.tone === "bad" ? <Svg d={SICON.warn} size={24} /> : null}
+      {message.tone === "good" ? <Svg d={SICON.check} size={24} /> : null}
+      <span className="kcamst">
         {t(message.key)}
         {state.phase === "accepted" ? (
-          <span data-testid="camera-accepted-value" className="block truncate">
+          <span data-testid="camera-accepted-value" className="kcamv">
             {resolvedName ?? state.value}
           </span>
         ) : null}
       </span>
     </p>
   );
-  const btn = `flex min-h-12 min-w-12 flex-1 items-center justify-center whitespace-nowrap rounded-control border-2 border-on-accent bg-transparent px-3 text-base font-bold text-on-accent ${FOCUS}`;
   // İzin/kamera yokken "Elle gir" birincil (dolu), "Tekrar dene" ikincil (çerçeveli).
-  const primaryBtn = `flex min-h-12 min-w-12 basis-full items-center justify-center whitespace-nowrap rounded-control border-2 border-on-accent bg-on-accent px-3 text-base font-bold text-ink landscape:basis-auto ${FOCUS}`;
   return (
     <div
       ref={overlayRef}
@@ -485,58 +366,57 @@ export function CameraOverlay({ onCode, onClose, onManual, resolvedName }: { onC
       data-decode-avg-ms={stats?.decodeAvgMs}
       data-decode-max-ms={stats?.decodeMaxMs}
       data-scan-frames={stats?.frames}
-      className="fixed inset-0 z-40 grid grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden bg-ink p-3 text-on-accent landscape:grid-cols-[minmax(0,1fr)_20rem] landscape:grid-rows-[minmax(0,1fr)_auto]"
+      className="kcam"
     >
-      <div className="row-start-1 landscape:col-start-2 landscape:self-center">{text}</div>
-      <div data-testid="camera-viewport" className="relative row-start-2 min-h-0 min-w-0 overflow-hidden rounded-card bg-ink landscape:col-start-1 landscape:row-span-2 landscape:row-start-1">
-        <video ref={video} muted playsInline data-testid="camera-video" onPointerUp={focusTap} className={`size-full object-cover ${failed ? "invisible" : ""}`} />
-        {live ? <div ref={reticle} aria-hidden="true" data-testid="camera-reticle" className="pointer-events-none absolute inset-x-[10%] inset-y-[25%] rounded-card border-4 border-success" /> : null}
+      <div className="kcamh">{text}</div>
+      <div data-testid="camera-viewport" className="kcamvp">
+        <video ref={video} muted playsInline data-testid="camera-video" onPointerUp={focusTap} className={failed ? "off" : undefined} />
+        {live ? <div ref={reticle} aria-hidden="true" data-testid="camera-reticle" className="kcamret" /> : null}
         {state.phase === "starting" ? (
-          <p role="status" data-testid="camera-opening" className="absolute inset-x-0 top-1/2 mx-auto w-fit max-w-[90%] -translate-y-1/2 rounded-control bg-ink px-4 py-2 text-center text-lg font-bold text-on-accent">
+          <p role="status" data-testid="camera-opening" className="kcamop">
             {t("camera.starting")}
           </p>
         ) : null}
         {failed ? (
-          <div data-testid="camera-off" className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-2 text-center text-on-accent">
-            <ScanLine aria-hidden="true" className="size-14 text-border-strong" strokeWidth={1.75} />
-            <p className="text-lg font-bold">{t("camera.off")}</p>
+          <div data-testid="camera-off" className="kcamoff">
+            <Svg d={SICON.scan} size={56} />
+            <p>{t("camera.off")}</p>
           </div>
         ) : null}
       </div>
-      <div className="row-start-3 flex min-w-0 flex-wrap gap-2 landscape:col-start-2 landscape:row-start-2 landscape:flex-col landscape:flex-nowrap">
+      <div className="kcamb">
         {failed ? (
-          <button type="button" onClick={onManual} className={primaryBtn}>
+          <button type="button" onClick={onManual} className="kcbtn pri">
             {t("flow.manual")}
           </button>
         ) : null}
         {failed && state.failure !== "none" && state.failure !== "insecure" ? (
-          <button type="button" onClick={() => setAttempt((n) => n + 1)} className={btn}>
+          <button type="button" onClick={() => setAttempt((n) => n + 1)} className="kcbtn">
             {t("camera.retry")}
           </button>
         ) : null}
         {state.phase === "dropped" ? (
-          <button type="button" onClick={() => beginRef.current?.()} className={primaryBtn}>
+          <button type="button" onClick={() => beginRef.current?.()} className="kcbtn pri">
             {t("camera.rescan")}
           </button>
         ) : null}
         {torch.supported && !failed && state.phase !== "accepted" ? (
-          <button type="button" aria-pressed={torch.on} onClick={toggleTorch} className={btn}>
+          <button type="button" aria-pressed={torch.on} onClick={toggleTorch} className="kcbtn">
             {torch.on ? t("camera.torchOff") : t("camera.torchOn")}
           </button>
         ) : null}
         {failed ? null : (
-          <button type="button" onClick={onManual} className={btn}>
+          <button type="button" onClick={onManual} className="kcbtn">
             {t("flow.manual")}
           </button>
         )}
-        <button type="button" onClick={onClose} className={btn}>
+        <button type="button" onClick={onClose} className="kcbtn">
           {t("cancel")}
         </button>
       </div>
     </div>
   );
 }
-
 
 const INSTALL_HINT_KEY = "wms.installHint.dismissed";
 
@@ -573,77 +453,32 @@ function useInstallHint(): { show: boolean; where: "bottom" | "address"; dismiss
 /**
  * Tarama paneli (tek yol): büyük okut ikonu + tek cümle; alt birincil düğme "Barkodu okut". ScanField (T-303) yalnızca "Elle gir" bağlantısıyla açılır
  * (ikincil); okuma hazır olduğunda `ready` vurgusu görünür.
- * T-978: `variant="kalip"` — ekran kalıbı görünümü (`.kscanp`, design/kalip-frame.css; Saha/Form kabının belirteçleri, koyu tema kabın
- * `dz-dark` sınıfından; ikonlar saha kaynağından). Test kimlikleri, roller, metinler ve "Elle gir" davranışı varsayılanla aynıdır.
+ * T-978: ekran kalıbı görünümü (`.kscanp`, design/kalip-frame.css; Saha/Form kabının belirteçleri, koyu tema kabın `dz-dark` sınıfından;
+ * ikonlar saha kaynağından). T-1122: eski (Tailwind) görünüm kaldırıldı; `variant` yalnız eski çağıranlar için kabul edilir, görünüm her zaman kalıp.
  */
-export function ScanPanel({ service, prompt, last, lastName, ready, hue, variant = "default" }: { service: ScannerService | null; prompt: string; last: string; lastName?: string; ready: boolean; hue: FlowHue; variant?: "default" | "kalip" }) {
+export function ScanPanel({ service, prompt, last, lastName, ready, hue }: { service: ScannerService | null; prompt: string; last: string; lastName?: string; ready: boolean; hue: FlowHue; variant?: "default" | "kalip" }) {
   const t = useTranslations("receiving");
   const wrap = useRef<HTMLDivElement>(null);
   const install = useInstallHint();
   const openManual = (): void => wrap.current?.querySelector<HTMLButtonElement>('[data-mode="scan"] > button')?.click();
-  if (variant === "kalip") {
-    const svg = (d: string, size: number) => (
-      <svg className="ico" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-        <path d={d} />
-      </svg>
-    );
-    return (
-      <section data-testid="scan-panel" data-ready={ready ? "true" : "false"} aria-live="polite" className={`kscanp ${hue}${ready ? " on" : ""}`}>
-        <span className="kscanic">{svg(SICON.scan, 40)}</span>
-        <p className="kscant">{ready ? t("flow.readerReady") : prompt}</p>
-        {last === "" ? null : (
-          <p className="kscanlast" data-testid="last-scan">
-            {lastName === undefined ? null : <b>{t("flow.lastScan", { name: lastName })} </b>}
-            <span className="mono" data-testid="last-scan-code">
-              {t("flow.lastCode", { code: last })}
-            </span>
-          </p>
-        )}
-        <div ref={wrap} className="kscanw">
-          <ScanField
-            variant="kalip"
-            manualIcon={svg(SICON.kbd, 20)}
-            label={t("flow.scanLabel")}
-            value={last}
-            manualLabel={t("flow.manual")}
-            confirmLabel={t("flow.manualConfirm")}
-            cancelLabel={t("cancel")}
-            placeholder={t("flow.scanPlaceholder")}
-            onManualSubmit={(v) => service?.submitManual(v)}
-          />
-        </div>
-        <button type="button" onClick={openManual} className="kscanlink group-has-[[data-mode=manual]]:hidden">
-          {svg(SICON.kbd, 18)}
-          {t("flow.manual")}
-        </button>
-        {install.show ? (
-          <div data-testid="install-hint" className="kscanhint">
-            <p>{t(install.where === "address" ? "camera.installHintChrome" : "camera.installHintSafari")}</p>
-            <button type="button" onClick={install.dismiss} className="btn kscan2">
-              {t("camera.ok")}
-            </button>
-          </div>
-        ) : null}
-      </section>
-    );
-  }
   return (
-    <section
-      data-testid="scan-panel"
-      data-ready={ready ? "true" : "false"}
-      aria-live="polite"
-      className={`flex min-w-0 flex-none flex-col items-center gap-2 rounded-3xl border-2 p-4 text-center ${ready ? `${SCAN_READY_BORDER[hue]} ${SCAN_READY_BG[hue]}` : "border-dashed border-border-strong bg-surface"}`}
-    >
-      <ScanLine aria-hidden="true" className={`size-16 ${SCAN_ICON[hue]}`} strokeWidth={1.75} />
-      <p className="break-words text-lg font-bold text-ink">{ready ? t("flow.readerReady") : prompt}</p>
+    <section data-testid="scan-panel" data-ready={ready ? "true" : "false"} aria-live="polite" className={`kscanp ${hue}${ready ? " on" : ""}`}>
+      <span className="kscanic">
+        <Svg d={SICON.scan} size={40} />
+      </span>
+      <p className="kscant">{ready ? t("flow.readerReady") : prompt}</p>
       {last === "" ? null : (
-        <p className="break-words text-sm text-ink-muted" data-testid="last-scan">
-          {lastName === undefined ? null : <span className="font-bold text-ink">{t("flow.lastScan", { name: lastName })} </span>}
-          <span className="break-all text-xs" data-testid="last-scan-code">{t("flow.lastCode", { code: last })}</span>
+        <p className="kscanlast" data-testid="last-scan">
+          {lastName === undefined ? null : <b>{t("flow.lastScan", { name: lastName })} </b>}
+          <span className="mono" data-testid="last-scan-code">
+            {t("flow.lastCode", { code: last })}
+          </span>
         </p>
       )}
-      <div ref={wrap} className="w-full min-w-0">
+      <div ref={wrap} className="kscanw">
         <ScanField
+          variant="kalip"
+          manualIcon={<Svg d={SICON.kbd} size={20} />}
           label={t("flow.scanLabel")}
           value={last}
           manualLabel={t("flow.manual")}
@@ -653,17 +488,14 @@ export function ScanPanel({ service, prompt, last, lastName, ready, hue, variant
           onManualSubmit={(v) => service?.submitManual(v)}
         />
       </div>
-      <button
-        type="button"
-        onClick={openManual}
-        className={`flex min-h-12 min-w-12 items-center justify-center rounded-control px-4 text-base font-bold ${SCAN_LINK[hue]} underline group-has-[[data-mode=manual]]:hidden ${FOCUS}`}
-      >
+      <button type="button" onClick={openManual} className="kscanlink">
+        <Svg d={SICON.kbd} size={18} />
         {t("flow.manual")}
       </button>
       {install.show ? (
-        <div data-testid="install-hint" className="flex w-full min-w-0 items-center gap-2 border-t-2 border-border pt-2 text-left">
-          <p className="min-w-0 flex-1 break-words text-base font-semibold text-ink">{t(install.where === "address" ? "camera.installHintChrome" : "camera.installHintSafari")}</p>
-          <button type="button" onClick={install.dismiss} className={`flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-control border-2 border-border-strong px-3 text-base font-bold text-ink ${FOCUS}`}>
+        <div data-testid="install-hint" className="kscanhint">
+          <p>{t(install.where === "address" ? "camera.installHintChrome" : "camera.installHintSafari")}</p>
+          <button type="button" onClick={install.dismiss} className="btn kscan2">
             {t("camera.ok")}
           </button>
         </div>
@@ -735,17 +567,18 @@ export function useScanPrimary(camera: (code: string) => boolean, outcome: ScanO
   return { ready, press, overlay: cam ? <CameraOverlay onCode={onCode} onClose={close} onManual={onManual} resolvedName={ownName} /> : null };
 }
 
-/** Okuma kapalıyken gelen kod bildirimi (kaynaktan bağımsız: kamera ya da klavye kaması). Uyarı açıkken de görünür: altta (`bottom-40`, `z-[60]`); dikey ekranda tam ekran uyarının başlığını ve Geri düğmesini örtmez (yatay: T-292b). */
+/** Okuma kapalıyken gelen kod bildirimi (kaynaktan bağımsız: kamera ya da klavye kaması). Uyarı açıkken de görünür: altta, en üst katmanda; dikey ekranda tam ekran uyarının başlığını ve Geri düğmesini örtmez (yatay: T-292b). */
 export function DroppedNotice({ show, alerting, onClose }: { show: boolean; alerting: boolean; onClose: () => void }) {
   const t = useTranslations("receiving");
   if (!show) return null;
-  // Alta yakın (`bottom-40`: birincil çubuğun üstü; üstteki başlığı ve Geri düğmesini örtmez); tam ekran uyarı açıkken ikinci onay düğmesi YOKTUR: uyarı kapanınca bildirim kendiliğinden kalkar.
+  // Alta yakın (birincil çubuğun üstü; üstteki başlığı ve Geri düğmesini örtmez); tam ekran uyarı açıkken ikinci onay düğmesi YOKTUR: uyarı kapanınca bildirim kendiliğinden kalkar.
   // Metin davranışla tutarlıdır: düşen kod işlenmez ve adet eklenmez; yeni okutma yalnız kullanıcının açık eylemiyle olur.
   return (
-    <div role="alert" data-testid="camera-dropped" className="fixed inset-x-4 bottom-40 z-[60] mx-auto flex max-w-md items-center gap-3 rounded-card border-2 border-warning bg-warning-bg px-4 py-3 text-warning-ink shadow-card">
-      <p className="min-w-0 flex-1 break-words text-base font-bold">{t("camera.dropped")}</p>
+    <div role="alert" data-testid="camera-dropped" className="kdrop">
+      <Svg d={SICON.warn} size={24} />
+      <p>{t("camera.dropped")}</p>
       {alerting ? null : (
-        <button type="button" onClick={onClose} className={`flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-control border-2 border-warning-ink px-3 text-base font-bold ${FOCUS}`}>
+        <button type="button" onClick={onClose} className="kdropb">
           {t("camera.ok")}
         </button>
       )}
@@ -813,13 +646,13 @@ export function CompoundLine({ slug, itemId, baseQty }: { slug: string; itemId: 
   if (view === null || view.key !== key) return null;
   if ("failed" in view) {
     return (
-      <p role="status" data-testid="compound-qty" data-state="failed" className="break-words text-base font-semibold text-ink-muted">
+      <p role="status" data-testid="compound-qty" data-state="failed" className="kcomp off">
         {t("flow.compoundFailed")}
       </p>
     );
   }
   return (
-    <p data-testid="compound-qty" data-state="ok" className="break-words text-base font-bold text-ink [@media(max-height:700px)]:text-sm">
+    <p data-testid="compound-qty" data-state="ok" className="kcomp">
       {t("flow.compound", { text: view.text, total: view.total, unit: view.unit })}
     </p>
   );
