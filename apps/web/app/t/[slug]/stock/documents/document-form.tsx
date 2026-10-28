@@ -42,7 +42,10 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
         if(!result.ok){setError(result.error);throw new Error("search failed");} return result.data;
       }} toSuggestion={c=>({key:c.id,primary:c.code,secondary:c.name})} onSelect={value=>choose(kind,value)} />;
   }
-  return <form className="workflow-form flex min-w-0 flex-col gap-4" onSubmit={event=>{
+  // T-1124: işlem rehberinin "bitti" işaretleri (adım ancak iş gerçekten yapılınca ilerler; yalnız yazmak seçim sayılmaz).
+  const guideDone=[warehouse && selected.location ? "source" : "",kind === "TRANSFER" && selected.targetLocation && selected.targetWarehouse?.id !== warehouse?.id ? "target" : "",
+    item && (!lotRequired || selected.lot) && (!serialRequired || selected.serial) ? "item" : "",/^[0-9]+([.][0-9]{1,6})?$/.test(quantity) && Number(quantity) > 0 && reason.trim() !== "" ? "quantity" : ""].filter(Boolean).join(" ");
+  return <form className="workflow-form flex min-w-0 flex-col gap-4" data-guide-done={guideDone} onSubmit={event=>{
     event.preventDefault(); if(inFlight.current || !warehouse || !item || !selected.location) return;
     inFlight.current=true;
     const payload={slug,kind,warehouseId:warehouse.id,itemId:item.id,locationId:selected.location.id,quantity,reason,
@@ -61,7 +64,7 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
       {lotRequired && picker("lot")}{serialRequired && picker("serial")}
       {/* T-1037: ortak kalıp alanı (.fld) — eski düz kutu (control) yerine; ad/kurallar aynı. */}
       <KalipAlan label={item?.unitCode ? `${t("quantity")} · ${item.unitCode}` : t("quantity")} data-guide="quantity" name="quantity" required inputMode="decimal" pattern="[0-9]+([.][0-9]{1,6})?" maxLength={32} value={quantity} onChange={e=>{key.contentChanged();setQuantity(e.target.value);}} />
-      <KalipAlan label={t("reason")} name="reason" required maxLength={500} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} />
+      <KalipAlan label={t("reason")} data-guide="reason" name="reason" required maxLength={500} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} />
       </div></KalipGrup>
     </fieldset>
     {item && warehouse && selected.location && <div data-guide="summary"><KalipGrup title={t("summary")} d={LICON.check} color="2F7D5B"><div className="flex min-w-0 flex-col gap-1 p-3 font-bold">

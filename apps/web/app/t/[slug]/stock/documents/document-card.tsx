@@ -96,7 +96,7 @@ export function DocumentCard({ slug, document: doc, permissions }: { slug: strin
       }
       yan={
         <>
-          <div data-testid="document-state" className="flex min-w-0 flex-col gap-3">
+          <div data-testid="document-state" data-status={doc.status} className="flex min-w-0 flex-col gap-3">
             <b className="stkbas">{t("k.state")}</b>
             <DocumentControls key={`${doc.id}:${doc.version}`} slug={slug} document={doc} permissions={permissions} />
           </div>
