@@ -4,9 +4,12 @@
 > ekibinin müşteri yönetim paneli) ve **wms.etkinyazilim.com** içindeki firma ayarları, ERP bağlantısı, destek talebi, kurulum
 > rehberi. En sonda arka planda kendi kendine çalışan işler (worker) listelenir.
 >
-> Kaynak: 23 Ekim 2026 itibarıyla `main` dalındaki kod ve migration dosyaları (0038–0057). Tahmin yoktur; her satırın yanında dosya yolu
-> verilmiştir. **Canlı (VPS) durumu ayrıdır:** "Canlı notu" satırları `docs/STATE.md` ve `docs/changes/` kayıtlarından alınmıştır;
-> kodda olması canlıda olduğu anlamına gelmez.
+> Kaynak: main 8e2710d · 28 Ekim 2026 dalındaki kod ve migration dosyaları (0038–0063; ilk sürüm 23 Ekim, main 36f3a13). Tahmin yoktur;
+> her satırın yanında dosya yolu verilmiştir. **Canlı (VPS) durumu ayrıdır:** "Canlı notu" satırları `docs/STATE.md` ve `docs/changes/`
+> kayıtlarından alınmıştır; kodda olması canlıda olduğu anlamına gelmez.
+>
+> **28 Ekim canlı tabanı (STATE, T-1067/T-1068 satırları):** VPS'te doğrulanan son yayın `6b2f81d`, veritabanı migration defteri 0062/62.
+> Bu yayından sonra `main`'e giren işler (T-1100, T-1102–T-1106, T-1109 ve 0063) için STATE'te canlı kaydı yoktur → canlı UNKNOWN.
 
 **Etiketler:** [TAMAMLANDI] = kodda ekrandan veritabanına kadar bağlı · [GELİŞTİRİLİYOR] = bir kısmı var, bir kısmı eksik ya da
 yayın bekliyor · [PLANLANDI] = yalnız yapılacaklar listesinde (BACKLOG) veya tasarımda.
@@ -30,8 +33,8 @@ Kapı kodu: `apps/web/app/panel/gate.ts`. Operatör değilseniz panel "sayfa yok
 8. [Panel · Demo talepleri](#modül-yonetetkinyazilimcom--demo-talepleri)
 9. [Panel · Satış sayfası içeriği](#modül-yonetetkinyazilimcom--satış-sayfası)
 10. [Panel · İşlem kaydı](#modül-yonetetkinyazilimcom--işlem-kaydı)
-11. [Firma ayarları (Genel)](#modül-wmsetkinyazilimcom--ayarlar-genel)
-12. [Ayarlar › Bağlantılar (Excel)](#modül-wmsetkinyazilimcom--ayarlar--bağlantılar)
+11. [Ayarlar (Firma · Kullanıcılar ve yetki · Görünüm)](#modül-wmsetkinyazilimcom--ayarlar-sekmeli)
+12. [Ayarlar › Entegrasyonlar (Excel toplu işlem, eski adı Bağlantılar)](#modül-wmsetkinyazilimcom--ayarlar--entegrasyonlar-bağlantılar)
 13. [ERP entegrasyonu (Paraşüt)](#modül-wmsetkinyazilimcom--erp-entegrasyonu-paraşüt)
 14. [Destek talebi (müşteri tarafı)](#modül-wmsetkinyazilimcom--destek-talebi-müşteri-tarafı)
 15. [İlk kurulum yolculuğu ve örnek veri](#modül-wmsetkinyazilimcom--ilk-kurulum-yolculuğu-ve-örnek-veri)
@@ -43,10 +46,12 @@ Kapı kodu: `apps/web/app/panel/gate.ts`. Operatör değilseniz panel "sayfa yok
 
 ## Modül: etkinyazilim.com / Satış sitesi ve demo formu
 
-- **Modül Durumu:** [TAMAMLANDI] (site + panelden yönetilen içerik) · Demo formunun yeni "kalıcı kayıt + sahiplik bağlantısı" sürümü
-  [GELİŞTİRİLİYOR]
-- **Canlı notu:** Site canlıda. T-1025 (yeni demo formu, migration 0057) PR #172 ve #173 ile `main`'e birleşti; ilk yayın denemesi
-  migration aşamasında reddedildi, düzeltme birleşti. 0057'nin canlı veritabanına uygulandığı bu belgede doğrulanmadı (UNKNOWN).
+- **Modül Durumu:** [TAMAMLANDI] (site + panelden yönetilen içerik + "kalıcı kayıt + sahiplik bağlantısı" demo formu, T-1025)
+- **Canlı notu:** Site canlıda. T-1025 (yeni demo formu, migration 0057) PR #172/#173 ile `main`'de; STATE'e göre canlı veritabanı
+  defteri 0062/62 olduğundan 0057 uygulanmıştır ve doğrulanan yayın `6b2f81d` bu kodu içerir. Gerçek ziyaretçiyle uçtan uca deneme
+  STATE'te ayrıca yazılı değil (UNKNOWN). 23 Ekim'den beri `marketing/` ve `packages/domain/src/platform/` kodu değişmedi.
+- **Not (T-1032):** müşteri sıfırlama betiği artık 0057 tekilleştirme tablolarını da temizler; aynı e-postayla gelen yeni talebin panelde
+  hiç görünmemesi (sessiz tekilleştirme) tasarım gereğidir, "tekrar talep etti" bilgisi kullanıcı kararını bekliyor (B-157).
 - **Ekranın Amacı:** Ürünü tanıtır, fiyat kartlarını gösterir, ilgilenen firmanın "Demo istiyorum" formunu toplar.
 - **Teknik yapı (sade):** Ayrı, küçük bir Node sunucusu (`marketing/server.mjs`). Sayfa tasarım dosyasından üretilir
   (`marketing/src/landing.dc.html` → `marketing/build.mjs` → `marketing/public/*`). Başlık/alt metin/fiyat kartları panelden yayınlanan
@@ -58,10 +63,10 @@ Kapı kodu: `apps/web/app/panel/gate.ts`. Operatör değilseniz panel "sayfa yok
 | Ana başlık, vurgulu satır, alt metin | Metin | Sayfa açılır | `marketing/server.mjs` → iç `GET /api/public/site` (`apps/web/app/api/public/site/route.ts`) → `getPublicSite` (`packages/domain/src/platform/site-content.ts`) → `wms_probe.platform_site_public` | `wms_platform.site_content` (yalnız yayınlanmış sürüm: `title1`, `title2`, `subtitle`) | İçerik yoksa/uç cevap vermezse tasarımdaki sabit metin kalır | [TAMAMLANDI] |
 | Fiyat kartları (Kiralama bölümü) | Kart listesi | Görüntülenir | Aynı uç | `site_content.plan_ids` + `wms_platform.plans`/`plan_versions` (`price_monthly`, sınırlar, özellikler) | Yalnız **yayında** olan paketler; içerik yoksa fiyat bölümü hiç görünmez | [TAMAMLANDI] |
 | Önizleme bağlantısı `/?onizleme=…` | Bağlantı | Operatör panelden ürettiği bağlantıyı açar | `x-site-preview` başlığıyla aynı uç | `wms_platform.site_previews` (`token_hash`, `expires_at`) | 30 dk geçerli; arama motoruna kapalı; süresi geçmişse yayındaki içerik gösterilir | [TAMAMLANDI] |
-| Demo formu: Ad, Firma, E-posta, Sektör (ikonlu seçim), Mesaj, iletişim onayı | Form | "Gönder" | `POST /api/demo` (`marketing/server.mjs`) → iç köprü `POST /api/public/demo` (`apps/web/app/api/public/demo/route.ts`) → `submitDemo` (`packages/domain/src/platform/demo-submit.ts`) → `wms_probe.demo_submit` | `wms_platform.demo_requests` (yeni satır, `status=PENDING`), `wms_platform.demo_email_reservations` (e-posta tekilliği), `wms_platform.demo_request_keys`, `wms_platform.demo_status_deliveries` (sahiplik postası) | Zorunlu alanlar; gövde ≤ 8 KB; IP başına saatte 5 deneme; aynı e-posta ikinci kez kayıt açmaz; yanıt herkese aynıdır (`{ok:true}`) — "bu adres zaten var" bilgisi sızdırılmaz; veritabanı yoksa 503 ve aynı anahtarla tekrar denenir | [GELİŞTİRİLİYOR] (T-1025; kod `main`'de, canlı UNKNOWN) |
+| Demo formu: Ad, Firma, E-posta, Sektör (ikonlu seçim), Mesaj, iletişim onayı | Form | "Gönder" | `POST /api/demo` (`marketing/server.mjs`) → iç köprü `POST /api/public/demo` (`apps/web/app/api/public/demo/route.ts`) → `submitDemo` (`packages/domain/src/platform/demo-submit.ts`) → `wms_probe.demo_submit` | `wms_platform.demo_requests` (yeni satır, `status=PENDING`), `wms_platform.demo_email_reservations` (e-posta tekilliği), `wms_platform.demo_request_keys`, `wms_platform.demo_status_deliveries` (sahiplik postası) | Zorunlu alanlar; gövde ≤ 8 KB; IP başına saatte 5 deneme; aynı e-posta ikinci kez kayıt açmaz; yanıt herkese aynıdır (`{ok:true}`) — "bu adres zaten var" bilgisi sızdırılmaz; veritabanı yoksa 503 ve aynı anahtarla tekrar denenir | [TAMAMLANDI] (T-1025) |
 | Başarı kutusu (yeşil onay) | Bilgi | Gönderim başarılı | — | — | Talep numarası/durumu gösterilmez | [TAMAMLANDI] |
 | "Hemen konuşalım" (WhatsApp) | Bağlantı | — | — | — | Herkese açık WhatsApp numarası yok | [PLANLANDI] (B-102) |
-| Sahiplik e-postasındaki bağlantı → `/demo-status` | Sayfa + düğme | E-postadaki bağlantıya tıklar, sayfadaki düğmeye basar | `POST /api/demo-status` → `consumeDemoStatus` → `wms_probe.demo_status_consume` | `demo_status_deliveries.consumed_at`; onaylıysa `demo_requests.activation_token_hash`, `activation_expires_at` (+15 dk), `owner_link_issued_at`; `security_events` (`platform.demo_owner.verified`) | Bağlantı 15 dk, tek kullanımlık; sonuç: `pending` (onay bekliyor) / `setup` (kurulum bağlantısı hazır) / `in_progress` / `ready` (zaten açılmış → giriş) / `invalid` | [GELİŞTİRİLİYOR] (T-1025) |
+| Sahiplik e-postasındaki bağlantı → `/demo-status` | Sayfa + düğme | E-postadaki bağlantıya tıklar, sayfadaki düğmeye basar | `POST /api/demo-status` → `consumeDemoStatus` → `wms_probe.demo_status_consume` | `demo_status_deliveries.consumed_at`; onaylıysa `demo_requests.activation_token_hash`, `activation_expires_at` (+15 dk), `owner_link_issued_at`; `security_events` (`platform.demo_owner.verified`) | Bağlantı 15 dk, tek kullanımlık; sonuç: `pending` (onay bekliyor) / `setup` (kurulum bağlantısı hazır) / `in_progress` / `ready` (zaten açılmış → giriş) / `invalid` | [TAMAMLANDI] (T-1025) |
 | Yöneticiye "yeni talep" e-postası | Arka plan | Yeni kayıtta | `marketing/notify.mjs` (Resend) | — | Saatte en çok 20; ayar yoksa gönderilmez; en iyi çaba | [TAMAMLANDI] |
 | Gizlilik metni | Katman | "Gizlilik" bağlantısı | `marketing/src/form-ui.js` | — | Form verisi kaybolmadan aynı sayfada açılır | [TAMAMLANDI] |
 
@@ -96,7 +101,8 @@ sequenceDiagram
 - **Ekranın Amacı:** Onaylanan demo talebinin sahibi, kendisine gelen tek kullanımlık bağlantıyla kendi çalışma alanını (firma
   hesabını) açar: firma adı, adres adı (ör. `motive`), örnek veri isteyip istemediği ve parola. Sonunda giriş + zorunlu iki adımlı
   doğrulama (MFA) kurulumu gelir. Deneme süresi 3 aydır.
-- **Kod:** `apps/web/app/activate/[token]/{page,flow,actions}.tsx|ts`, `packages/domain/src/platform/activation.ts`.
+- **Kod:** `apps/web/app/activate/[token]/{page,flow,actions}.tsx|ts`, `packages/domain/src/platform/activation.ts`; iki adımlı doğrulama
+  sihirbazı `apps/web/app/totp-sihirbaz.tsx` (T-1034), mağaza yönlendirmesi `apps/web/app/help/indir/[app]/route.ts` (T-1043).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -105,6 +111,7 @@ sequenceDiagram
 | Örnek veri: "Örnek verilerle / Boş" | Seçim | Seçer | (aktivasyonla birlikte) | `demo_requests.activation_sample` | "Örnek verilerle" seçilirse ayrı "Örnek depo" + örnek ürünler `is_sample=true` yazılır, stok hareketi yazılmaz | [TAMAMLANDI] |
 | Parola (+ tekrar) | Input | Yazar | — | — | Parola politikası (`packages/auth`) | [TAMAMLANDI] |
 | "Çalışma alanımı aç" | Buton | Tıklar | `activateTrialAction` → `activateTrial`: (1) `platform_activation_claim` (10 dk talep), (2) hesap açılır (`wms_auth`), (3) tek transaction'da tenant + ayarlar + `platform_activation_consume` | `demo_requests.activation_claim_id/…_expires_at`, `activated_at`; `tenants` (yeni satır), `tenant_memberships` (sahip), `tenant_settings`, `wms_platform.subscriptions` (`plan=TRIAL`, `trial_ends_at`=+3 ay, `demo_request_id`); varsayılan paket atanır (`platform_assign_default_plan`); `security_events` | Bağlantı tek kullanımlık; 3. adım başarısızsa talep serbest bırakılır, aynı bağlantıyla tekrar denenince aynı hesap kullanılır; e-posta/ad formdan değil talepten okunur | [TAMAMLANDI] |
+| İki adımlı doğrulama kurulumu (aktivasyonun son adımı ve `/mfa` ortak) | 4 adımlı sihirbaz | Uygulamayı kur → hesabı ekle (telefonda tek dokunuş, bilgisayarda QR, anahtarı KOPYALA) → 6 haneli kod (kendiliğinden doğrular) → yedek kodlar (İNDİR / KOPYALA / YAZDIR, "Kaydettim" zorunlu) | Mevcut MFA sunucu eylemleri (sözleşme değişmedi) | (kimlik tabloları) | Bilgisayardaki QR `/help/indir/<uygulama>` adresine gider; telefon kamerasıyla okutulunca iPhone'da App Store'a, Android'de Google Play'e yönlenir (sabit tablo, açık yönlendirme yok, oturum gerekmez) | [TAMAMLANDI] (T-1034, T-1043) |
 | Hoş geldin e-postası | Arka plan | Aktivasyon sonrası | Kuyruk işi `trial.welcome` (`apps/worker/src/jobs/trial-activation.ts`) | (okuma) | E-posta sır taşımaz | [TAMAMLANDI] |
 
 ```mermaid
@@ -152,7 +159,8 @@ stateDiagram-v2
 
 ## Modül: yonet.etkinyazilim.com / Özet (ana sayfa)
 
-- **Modül Durumu:** [TAMAMLANDI] · **Canlı notu:** 17 Ekim'de canlı (T-408).
+- **Modül Durumu:** [TAMAMLANDI] · **Canlı notu:** 17 Ekim'de canlı (T-408). Açık panelin kendiliğinden tazelenmesi (T-1027, B-148)
+  doğrulanan `6b2f81d` yayınının içindedir. Panel kodu (`apps/web/app/panel/`) 23 Ekim'den beri değişmedi.
 - **Ekranın Amacı:** Operatörün sabah bakacağı tek ekran: kaç müşteri var, kimin denemesi bitiyor, kim paket sınırına yaklaştı, geciken
   ödeme, bekleyen demo talebi, açık destek talebi.
 - **Kod:** `apps/web/app/panel/page.tsx`, `ozet-view.tsx`, `ozet-rules.ts`, menü `nav.ts`.
@@ -200,8 +208,8 @@ stateDiagram-v2
 ## Modül: yonet.etkinyazilim.com / Destek gelen kutusu
 
 - **Modül Durumu:** [TAMAMLANDI] (metin yazışma) · Ekran görüntüsü eki ve "erişim iste" [PLANLANDI] (B-88, B-89)
-- **Canlı notu:** 0054, `int/21ekim-ekranlar` (PR #134) ile `main`'e girdi; 0055 canlıda olduğuna göre 0054 de uygulanmış olmalı —
-  ayrıca doğrulanmadı.
+- **Canlı notu:** 0054, `int/21ekim-ekranlar` (PR #134) ile `main`'e girdi; STATE'e göre canlı migration defteri 0062/62 olduğundan
+  0054 uygulanmıştır.
 - **Ekranın Amacı:** Müşterilerin uygulama içindeki "Destek" ikonundan yazdığı talepleri görmek, yanıtlamak, kapatmak.
 - **Kod:** `apps/web/app/panel/support/{page,view,actions,format}.ts|tsx`, `packages/domain/src/platform/support.ts`.
 
@@ -241,7 +249,7 @@ stateDiagram-v2
 | "Önerilen" | Anahtar | İşaretler | — | `plans.recommended` | Yalnız yayındaki paket önerilen olabilir | [TAMAMLANDI] |
 | "Taslak kaydet" / "Yayınla" | Buton | Tıklar | `savePlanAction` (intent `DRAFT`/`PUBLISH`) → `savePlan` → `platform_save_plan` | `plans.published`, `current_version`; değişiklikte **yeni** `plan_versions` satırı | Fiyat/sınır/özellik değişince yeni sürüm açılır; mevcut müşteriler eski sürümde kalır; yakın zamanda doğrulama | [TAMAMLANDI] |
 | Sınırın uygulanması | (Arka) | Müşteri yeni depo/ürün/kullanıcı ekler | Veritabanı tetikleyicisi (0041) | `warehouses`, `items`, `tenant_memberships` INSERT öncesi sayım | Aşımda `PLAN_LIMIT` hatası; paketsiz firma sınırsız | [TAMAMLANDI] |
-| Özellik anahtarlarının (QR/Sevkiyat/Üretim/API) uygulamada ekranı kapatması | — | — | — | — | Kodda bu bayrakların ekran/komut kapattığına dair bağlantı bulunmadı | [PLANLANDI] (doğrulanmadı) |
+| Özellik anahtarlarının (QR/Sevkiyat/Üretim/API) uygulamada ekranı kapatması | — | — | — | — | Kodda bu bayrakların ekran/komut kapattığına dair bağlantı yok (T-1028 incelemesi) | [PLANLANDI] (B-153) |
 
 ---
 
@@ -317,78 +325,156 @@ stateDiagram-v2
 
 ---
 
-## Modül: wms.etkinyazilim.com / Ayarlar (Genel)
+## Modül: wms.etkinyazilim.com / Ayarlar (sekmeli)
 
-- **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın Amacı:** Firma yöneticisinin çalışma alanı adını, dilini, saat dilimini, görev ayrılığı kuralını, temayı ayarlaması; örnek
-  verileri temizlemesi; parola sıfırlamaya gitmesi.
-- **Kod:** `apps/web/app/t/[slug]/settings/{page,settings-view,form-actions,sample-actions,sod-actions,actions}.tsx|ts`;
-  domain `packages/domain/src/onboarding/workspace.ts` (`updateTenantSettings`), `identity/separation.ts`, `onboarding/sample-data.ts`.
+- **Modül Durumu:** [TAMAMLANDI] (Firma · Kullanıcılar ve yetki · Entegrasyonlar · Görünüm) · Tuvaldeki "İş akışı" ve "Etiket ve yazıcı"
+  sekmeleri [PLANLANDI] (ayar verisi yok; B-171, B-166)
+- **Canlı notu:** Sekmeli düzen T-1046 (PR #195) doğrulanan `6b2f81d` yayınının içindedir. "Etkin sesli yanıt" anahtarı (T-1109,
+  migration 0063) `main`'de; STATE'te canlı kaydı yok (UNKNOWN).
+- **Ekranın Amacı:** Firma yöneticisinin çalışma alanı adını, dilini, saat dilimini, görev ayrılığı kuralını, Etkin'in sesli yanıtını,
+  temayı ayarlaması; örnek verileri temizlemesi; kişilere/yetki gruplarına ve parola sıfırlamaya gitmesi. Ayarlar her kalıp ekranının
+  Hesap menüsünden açılır (yalnız `settings.manage`, T-1039).
+- **Düzen (STANDART §5 ayar kalıbı, T-1046):** üstte ortak sekme şeridi `ayarSekmeleri` (`settings/sekmeler.ts`): **Firma**
+  (`/settings`), **Kullanıcılar ve yetki** (`?sekme=kullanici`), **Entegrasyonlar** (`/settings/baglantilar`, ayrı ekran), **Görünüm**
+  (`?sekme=gorunum`). Firma / Kullanıcılar / Görünüm aynı taslağın sekmeleridir: geçişte taslak korunur, tek alt "KAYDET" hepsini birlikte
+  gönderir; Entegrasyonlar'a geçişte kaydedilmemiş iş varsa ortak çıkış koruması sorar (`useCikisKorumasi`). Boş sekme gösterilmez.
+- **Kod:** `apps/web/app/t/[slug]/settings/{page,settings-view,sekmeler,form-actions,sample-actions,sod-actions,actions}.tsx|ts`;
+  domain `packages/domain/src/onboarding/{workspace,settings-queries,sample-data}.ts`, `identity/separation.ts`, `voice/ayar.ts`.
 - **Yetki:** `settings.manage` (yalnız hesap sahibi / TENANT_ADMIN). Diğer rollerde satırlar kilitli görünür (tema ve parola hariç).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Çalışma alanı adı | Input | Değiştirir | Tek "Kaydet" → `saveSettingsFormAction` → `updateTenantSettings` | `tenants.name`; `audit_log` | ≤ 500 karakter; değişmediyse "değişiklik yok" | [TAMAMLANDI] |
-| Dil (Türkçe/English) | Seçim | Seçer | Aynı | `tenant_settings.locale` | Kayıttan sonra tüm ekran yeni dille yeniden çizilir | [TAMAMLANDI] (kullanıcı başına dil yok: B-105) |
-| Saat dilimi | Seçim | Seçer | Aynı | `tenant_settings.time_zone` | Yalnız izinli liste (İstanbul, Berlin, Londra …) | [TAMAMLANDI] (arayüzde gösterim sabit İstanbul: B-105) |
-| Görev ayrılığı (aynı kişi hem yapıp hem onaylayamaz) | Anahtar | Açar/kapar | Aynı form → `setSeparationOfDuties` | `tenant_settings.separation_of_duties`; audit `tenant.settings_changed` | Yakın zamanda doğrulama ister; kural onay/sayım onayı/ters kayıt komutlarında uygulanır | [TAMAMLANDI] |
-| Tema (açık/koyu/otomatik) | Seçim | Seçer | Tarayıcı çerezi (`design/theme.ts`) | — (sunucuya gitmez) | Cihaz tercihidir | [TAMAMLANDI] |
-| "Örnek verileri temizle" + onay kutusu | Buton | Tıklar | `clearSampleDataAction` → `clearSampleData` | `items`, `warehouses`, `locations` (`is_sample=true`) silinir **ya da** bağlıysa `status=ARCHIVED`; audit `sample_data.cleared` | Onay kutusu zorunlu; yakın zamanda doğrulama; stoğu/rezervasyonu olan örnek kayıt pasife alınamaz (`IN_USE`); sonuç ekranda "silindi / pasife alındı / yok" | [TAMAMLANDI] |
-| İki adımlı doğrulama (MFA) | Bilgi rozeti | — | — | — | Açık/kapalı gösterir (değiştirme ayrı akış) | [TAMAMLANDI] |
-| "Parola sıfırlama bağlantısı gönder" | Bağlantı | Tıklar | `/reset-password` sayfası | (kimlik tabloları) | — | [TAMAMLANDI] |
-| "Excel ile içeri al" | Bağlantı | Tıklar | `/t/<alan>/import` | — | Yalnız içe aktarma izni olana görünür | [TAMAMLANDI] |
+| Sekme şeridi (Firma · Kullanıcılar ve yetki · Entegrasyonlar · Görünüm) | Sekme | Tıklar | `router.replace` (aynı taslak) / sayfa geçişi (Entegrasyonlar) | — | Seçili sekme açık mavi; taslak sekmeler arasında korunur (T-1046 düzeltmesi: gizli değişiklik Kaydet'le gitmez) | [TAMAMLANDI] |
+| **Firma ›** Çalışma alanı adı | Satır + Input | Değiştirir | Tek "Kaydet" → `saveSettingsFormAction` → `updateTenantSettings` | `tenants.name`; `audit_log` | Boş ad kaydedilmez; ≤ 500 karakter (sunucu), giriş kutusu 120; değişmediyse "değişiklik yok" | [TAMAMLANDI] |
+| **Firma ›** Dil (Türkçe/English) | Seçim | Seçer | Aynı | `tenant_settings.locale` | Kayıttan sonra bütün düzen yeni dille yeniden çizilir | [TAMAMLANDI] (kullanıcı başına dil yok: B-105) |
+| **Firma ›** Saat dilimi | Seçim (3 hazır + "Diğer" aramalı liste) | Seçer | Aynı | `tenant_settings.time_zone` | Yalnız izinli liste (`lib/timezones.ts`) | [TAMAMLANDI] (arayüzde gösterim sabit İstanbul: B-105) |
+| **Firma ›** "Örnek verileri temizle" + onay kutusu | Satır + Buton | Tıklar | `clearSampleDataAction` → `clearSampleData` | `items`, `warehouses`, `locations` (`is_sample=true`) silinir **ya da** bağlıysa `status=ARCHIVED`; audit `sample_data.cleared` | Yalnız etkin örnek kayıt varsa çizilir; onay kutusu zorunlu; yakın zamanda doğrulama; stoğu/rezervasyonu olan örnek kayıt `IN_USE`; sonuç balonda "silindi / pasife alındı / yok" | [TAMAMLANDI] |
+| **Firma ›** Görev ayrılığı (aynı kişi hem yapıp hem onaylayamaz) | Anahtar | Açar/kapar | Aynı Kaydet → `setSeparationOfDuties` | `tenant_settings.separation_of_duties`; audit `tenant.settings_changed` | Yakın zamanda doğrulama ister (`sod=reauth` bandı); kural onay/sayım onayı/ters kayıt komutlarında uygulanır | [TAMAMLANDI] |
+| **Firma ›** Etkin sesli yanıt | Anahtar | Açar/kapar | Aynı Kaydet → `setVoiceReply` (`packages/domain/src/voice/ayar.ts`) | `tenant_settings.voice_reply` (0063, varsayılan KAPALI); audit `tenant.settings_changed` | `settings.manage`; yeniden giriş istemez; açıkken Etkin'in cevabı doğal Türkçe sesle okunur, kullanıcının cihazdaki "Sessiz" tercihi ayrıca kapatır | [TAMAMLANDI] (T-1109; canlı UNKNOWN, gerçek iPhone UNKNOWN) |
+| **Firma ›** Ad satırındaki mikrofon | Düğme (pasif) | Tıklar | — | — | "Sesle yakında" balonu | [PLANLANDI] |
+| **Kullanıcılar ve yetki ›** Kişiler, Yetki grupları | Bağlantı satırı | Tıklar | `/t/<alan>/members`, `/t/<alan>/groups` | — | Bu ekranlar ayrı modüldür | [TAMAMLANDI] |
+| **Kullanıcılar ve yetki ›** İki adımlı doğrulama | Bilgi rozeti | — | — | — | Oturumun gerçek durumu (açık/kapalı) | [TAMAMLANDI] |
+| **Kullanıcılar ve yetki ›** Parola | Satır + bağlantı | Tıklar | `/reset-password` sayfası | (kimlik tabloları) | Bağlantıyı o sayfa e-postayla gönderir | [TAMAMLANDI] |
+| **Görünüm ›** Tema (Açık / Koyu / Otomatik) | Seçim | Seçer | Tarayıcı çerezi (`design/theme.ts` `temaYaz`) | — (sunucuya gitmez) | Cihaz tercihidir; "Otomatik" sistem temasını izler | [TAMAMLANDI] |
+| **Entegrasyonlar** | Sekme | Tıklar | `/settings/baglantilar` | — | Aşağıdaki modül | [TAMAMLANDI] |
+| İş akışı sekmesi (teslimat yolu, iş adımları, teslim teyidi) | — | — | — | Ayar verisi yok | Tuvalde var (StandartAyarlar); mevcut iş akışı ayarları (kabul QC, sayım bırakma, vardiya, görev ayrılığı) bu sekmeye taşınabilir | [PLANLANDI] (B-171) |
+| Etiket ve yazıcı sekmesi | — | — | — | Ayar verisi yok | Etiket tasarımı + yazıcı tanımı ayrı iş | [PLANLANDI] (B-166) |
+
+*Not:* Eski "Excel ile içeri al" bağlantısı Ayarlar'dan kalktı; Excel toplu işlem yalnız **Ayarlar › Entegrasyonlar** ekranındadır
+(listelerdeki Excel menüsü T-1092, Modüller'deki "Excel'den aktar" kutusu T-1094 ile kaldırıldı).
 
 ---
 
-## Modül: wms.etkinyazilim.com / Ayarlar › Bağlantılar
+## Modül: wms.etkinyazilim.com / Ayarlar › Entegrasyonlar (Bağlantılar)
 
-- **Modül Durumu:** [TAMAMLANDI] (Excel) · Logo [PLANLANDI] (B-111)
-- **Canlı notu:** T-981b PR #146 `main`'e birleşti.
-- **Ekranın Amacı:** Excel ile toplu içeri al / güncelle / dışarı aktar için tek giriş noktası; ERP bağlantılarına kısayol.
-- **Kod:** `apps/web/app/t/[slug]/settings/baglantilar/*`; dışa aktarma `packages/domain/src/onboarding/data-export.ts`,
-  `apps/web/app/api/t/[slug]/export/[kind]/route.ts`.
+- **Modül Durumu:** [TAMAMLANDI] (Excel toplu işlem + Paraşüt kısayolu) · Logo [PLANLANDI] (B-111) · Tuvaldeki tek ekran düzeni
+  [PLANLANDI] (B-196, aşağıdaki tuval farkı)
+- **Canlı notu:** T-981b PR #146; ekran başlığı T-1046 ile "Entegrasyonlar" oldu ve ortak ayar sekmelerini çizer (doğrulanan `6b2f81d`
+  yayınında).
+- **Ekranın Amacı:** Excel ile toplu içeri al / güncelle / dışarı aktar için tek giriş noktası; ERP bağlantısına geçiş.
+- **Kod:** `apps/web/app/t/[slug]/settings/baglantilar/{page,baglantilar-view}.tsx`; dışa aktarma
+  `packages/domain/src/onboarding/data-export.ts`, `apps/web/app/api/t/[slug]/export/[kind]/route.ts`.
+- **Yetki (gösterim):** aktarım `data.import`; depo/raf **içe** aktarma ayrıca `settings.manage`; asıl karar Aktar eylemlerinde ve dışa
+  aktarma ucundadır.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Sekme: Genel · Bağlantılar | Sekme | Tıklar | Sayfa geçişi | — | — | [TAMAMLANDI] |
-| 1 · Alan (Ürünler, Cariler, Depolar, Raflar, Açılış stoku) | Büyük ikonlu seçim | Seçer | — | — | — | [TAMAMLANDI] |
-| 2 · İşlem (İçeri al / Güncelle / Dışarı aktar) | Büyük ikonlu seçim | Seçer | — | — | Seçim tamamlanmadan alt düğme pasif | [TAMAMLANDI] |
-| Alt düğme: AKTAR'A GEÇ / GÜNCELLE | Buton | Tıklar | `/import?tur=&kip=` ekranı açılır (bkz. içe aktarma modülü) | — | — | [TAMAMLANDI] |
-| Alt düğme: İNDİR | Buton | Tıklar | `GET /api/t/<alan>/export/<tür>` → `exportData` | Okuma + `audit_log` (`data.exported`) | `data.import` izni; depo kapsamı dışındaki depolar görünmez; cari kişisel alanları yalnız `settings.manage` | [TAMAMLANDI] |
-| Boş şablon indir | Bağlantı | Tıklar | Şablon dosyası | — | — | [TAMAMLANDI] |
-| Paraşüt satırı | Bağlantı | Tıklar | `/t/<alan>/integrations` açılır | — | — | [TAMAMLANDI] |
-| Logo satırı | Etiket "YAKINDA" | — | — | — | Bağlantı kurulamaz (`available: false`) | [PLANLANDI] (B-111) |
+| Ortak ayar sekme şeridi (bu ekran "Entegrasyonlar") | Sekme | Tıklar | `ayarSekmeleri` | — | — | [TAMAMLANDI] |
+| TOPLU İŞLEM · 1 Alan (Ürünler, Cariler, Depolar, Raflar, Açılış stoku) | Büyük ikonlu seçim | Seçer | — | — | — | [TAMAMLANDI] |
+| TOPLU İŞLEM · 2 İşlem (İçeri al / Güncelle / Dışarı aktar) | Büyük ikonlu seçim | Seçer | — | — | Kilitli seçenek nedenini balonda söyler; Açılış stoku güncellenemez (I-04) | [TAMAMLANDI] |
+| Alt düğme: AKTAR'A GEÇ / GÜNCELLE | Buton | Tıklar | `/import?tur=&kip=` ekranı açılır (içe aktarma modülü) | — | Seçim eksikse uyarı sesi + balon (sessiz kalmaz) | [TAMAMLANDI] |
+| Alt düğme: İNDİR | Buton | Tıklar | `GET /api/t/<alan>/export/<tür>` → `exportData` | Okuma + `audit_log` (`data.exported`) | `data.import` izni; depo kapsamı dışındaki depolar görünmez; cari kişisel alanları yalnız `settings.manage`; kesilmiş/kişisel alansız sonuç balonda söylenir | [TAMAMLANDI] |
+| Boş şablon indir | Buton | Tıklar | Aynı uç `?template=1` | — | Önce alan seçilmeli | [TAMAMLANDI] |
+| Entegrasyonlar › Paraşüt satırı | Bağlantı | Tıklar | `/t/<alan>/integrations` açılır | — | Bağlantı durumu satırda gösterilmez (B-196) | [TAMAMLANDI] |
+| Entegrasyonlar › Logo satırı | Etiket "YAKINDA" | — | — | — | Bağlantı kurulamaz (`available: false`) | [PLANLANDI] (B-111) |
 
 ---
 
 ## Modül: wms.etkinyazilim.com / ERP entegrasyonu (Paraşüt)
 
-- **Modül Durumu:** [TAMAMLANDI] (kod) · Canlı Paraşüt hesabıyla ilk gerçek bağlantı doğrulaması [GELİŞTİRİLİYOR] (B-110) · Logo
-  [PLANLANDI] (B-111)
-- **Canlı notu:** T-991 (0055) 21 Ekim'de canlı. "Açılış stokunu Paraşüt'ten al" (T-1006, 0056) PR #165 ile `main`'de; canlı durumu
-  STATE'te ayrıca yazılmamış (UNKNOWN).
+- **Modül Durumu:** [TAMAMLANDI] (OAuth bağlantısı, ürün kartı alma, barkod tercihi, kaynak bilgisi, ürün yaşam döngüsü, açılış stoku) ·
+  Cari/depo/stok/irsaliye akışlarının gerçek Paraşüt hesabıyla doğrulanması [GELİŞTİRİLİYOR] (B-110) · Logo [PLANLANDI] (B-111) ·
+  Tuvaldeki tek ekran düzeni ve veri durumu bölümleri [PLANLANDI] (B-196, B-170)
+- **Canlı notu (STATE):** T-1066 (0061, müşteri bazlı OAuth + 30 sn zamanlayıcı) CANLIDA; gerçek Motive bağlantısı ve ilk kartlar
+  doğrulandı. T-1067/T-1068 (0062 ürün yaşam döngüsü) CANLIDA: release `6b2f81d`, DB 0062/62; Motive `CONNECTED`, `PRODUCTS/PULL`
+  ardışık otomatik koşular `SUCCESS`. Bu yayın 0059 (barkod tercihi, T-1061) ve 0060 (kaynak bilgisi, T-1062) kodunu da içerir. T-1104
+  (ekran sadeleştirme) yayından sonra birleşti → canlı UNKNOWN. Canlı tarayıcı / gerçek cihaz kontrolü UNKNOWN.
 - **Ekranın Amacı:** Paraşüt muhasebe programıyla bağlantı: ürün/cari/depo kartlarını almak-göndermek, sevk irsaliyesini ve stok
-  toplamını Etkin'den Paraşüt'e göndermek. **Altın kural:** ERP'den gelen kart Etkin'deki stok miktarını asla değiştirmez; stok ve
-  irsaliye yalnız Etkin → ERP yönündedir. Tek istisna: bir kezlik "açılış stoku".
-- **Kod:** `apps/web/app/t/[slug]/integrations/{page,integrations-view,actions}.tsx|ts`; domain
-  `packages/domain/src/integrations/{connections,catalog,apply,sync,store,parasut,opening-stock,external-refs}.ts`; worker
-  `apps/worker/src/jobs/integration-sync.ts`.
-- **Yetki:** `settings.manage` (yalnız hesap sahibi). Demo alanında bağlantı kurulamaz.
+  toplamını Etkin'den Paraşüt'e göndermek. **Altın kural (I-04):** ERP'den gelen kart Etkin'deki stok miktarını asla değiştirmez; stok ve
+  irsaliye yalnız Etkin → ERP yönündedir. Ürün aktarımı **miktarsız ve fiyatsızdır** (B-182). Tek istisna: bir kezlik "açılış stoku".
+- **Kod:** `apps/web/app/t/[slug]/integrations/{page,integrations-view,actions}.tsx|ts`, OAuth dönüşü
+  `apps/web/app/api/integrations/parasut/callback/route.ts`; domain `packages/domain/src/integrations/{connections,oauth,catalog,apply,sync,
+  store,parasut,secrets,opening-stock,external-refs,product-settings,product-info,product-lifecycle,product-lifecycle-reads,stock-reads}.ts`;
+  worker `apps/worker/src/jobs/integration-sync.ts`.
+- **Yetki:** `settings.manage` (yalnız hesap sahibi); diğer rollerde kilitli tam ekran (`KalipKilitliEkran`). Demo alanında bağlantı
+  kurulamaz. Bağlama, uygulama bilgisi kaydetme, şirket seçme ve kesme yakın zamanda doğrulama ister (yoksa ekranda "yeniden giriş"
+  düğmesi).
+- **Ekran düzeni (bugün):** form kalıbı; üstte sağlayıcı kartları (Paraşüt, Logo) ve bağlantı şeridi; sonra alt alta gruplar —
+  "Ne aktarılsın" (barkod anahtarı + akış satırları), Açılış stoku, Son koşular; en altta "Paraşüt uygulama ayarları" (T-1104). Geri
+  düğmesi Ayarlar › Entegrasyonlar'a döner. Alt cam çubuğun ana düğmesi bağlı değilken **BAĞLAN**, bağlıyken **EŞİTLE** (açık akış yoksa
+  nedenini söyler).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Sağlayıcı kartları (Paraşüt, Logo) | Kart | Görüntülenir | `getIntegrationOverview` | `integrations` (`provider`, `status`, `account_label`, `last_error_code`) — `credentials` **hiç okunmaz** | Ekrana yalnız "bağlı · şirket adı" gider | [TAMAMLANDI] |
-| Bağlantı formu: Şirket no, İstemci kimliği, İstemci sırrı, E-posta, Parola | Input | Doldurur, "Bağlan" | `connectParasutAction` → `connectParasut` (önce yetki, sonra Paraşüt'e giriş denemesi — ağ çağrısı transaction dışında — sonra kısa yazma) | `integrations` (yeni/güncel satır: `status=CONNECTED`, `credentials` = şifreli kutu, `connected_by`, `connected_at`); `integration_flows` (varsayılan akışlar); `audit_log` | Yakın zamanda doğrulama; **parola saklanmaz** (yalnız şifreli erişim belirteçleri); şirket no yalnız rakam | [TAMAMLANDI] |
+| Sağlayıcı kartları (Paraşüt, Logo) + bağlantı şeridi | Kart + durum | Görüntülenir | `getIntegrationOverview` | `integrations` (`provider`, `status`, `account_label`, `last_checked_at`, `last_error_code`) — `credentials` **hiç okunmaz** | Ekrana yalnız "bağlı · şirket adı" gider | [TAMAMLANDI] |
+| Paraşüt uygulama ayarları: Application Id, Secret, Callback URL (+ Kopyala) | Tam ekran form | Doldurur, Kaydet | `saveParasutOAuthSettingsAction` → `saveParasutOAuthSettings` | `integration_oauth_apps` (0061; firma başına, mühürlü; arayüzden geri okunmaz); audit `integration.oauth_configured` | Üç alan zorunlu (T-1066); Secret kayıttan sonra gösterilmez; Callback URL uygulamanın kendi dönüş adresi ise otomatik dönüş (HTTPS), değilse yetki kodu (OOB) yolu | [TAMAMLANDI] |
+| BAĞLAN / "Paraşüt ile bağlan" | Buton | Tıklar | `beginParasutOAuthAction` → `beginParasutOAuth` → Paraşüt izin sayfası; dönüş `GET /api/integrations/parasut/callback` → `completeParasutOAuth` | `integration_oauth_attempts` (0061; kısa ömürlü, tek kullanımlık deneme, parola/düz belirteç yok); audit `integration.oauth_started` / `oauth_failed` | Uygulama bilgisi yoksa önce ayar formu açılır; deneme tarayıcıya HttpOnly çerezle bağlıdır, 10 dk geçerli | [TAMAMLANDI] |
+| Yetki kodu (OOB) formu | Tam ekran form | "Paraşüt'te izin ver" → kodu yapıştırır | `completeParasutOAuthCodeAction` | Aynı | Aynı tarayıcı denemesine bağlı | [TAMAMLANDI] |
+| Şirket seçimi | Seçim listesi | Seçer, BAĞLAN | `selectParasutOAuthCompanyAction` → `selectParasutOAuthCompany` → `connectParasutAuthorized` | `integrations` (`status=CONNECTED`, `account_label`, `account_ref`, `credentials` = şifreli kutu, `connected_by`, `connected_membership_id`); `integration_flows` (6 satır, kapalı); audit `integration.connected` | Tek şirket varsa seçim atlanır; bağlı eşlemesi olan hesapta şirket değiştirme reddedilir (`COMPANY_CHANGED`). **İlk** OAuth bağlantısında Ürün kartları akışı `PULL` olarak açılır ve hemen bir koşu kuyruğa girer; yeniden bağlanma mevcut akış tercihlerini korur | [TAMAMLANDI] |
+| Eski bağlantı yöntemi (şirket no, istemci kimliği/sırrı, e-posta, parola) | Pencere | Uygulama ayarı formundan "Eski bağlantı yöntemi" | `connectParasutAction` → `connectParasut` | `integrations` (aynı kolonlar) | Parola saklanmaz; şirket no yalnız rakam. Bu yolla kurulan bağlantıda firma başına uygulama ayarı olmadığı için ürün yaşam döngüsü çıkarımı yapılmaz | [TAMAMLANDI] (geriye uyum) |
 | "Bağlantıyı sına" | Buton | Tıklar | `checkIntegrationAction` → `checkIntegration` | `integrations.last_checked_at`, `last_error_code`, `status` (CONNECTED/ERROR) | Belirteç süresi dolduysa tek yazarlı yenileme | [TAMAMLANDI] |
-| "Bağlantıyı kes" | Buton | Tıklar | `disconnectIntegrationAction` → `disconnectIntegration` | `integrations.status=DISCONNECTED`, `credentials=NULL` | Yakın zamanda doğrulama; eşlemeler (`external_refs`) korunur | [TAMAMLANDI] |
-| "Yeniden bağlan" | Buton | Tıklar | Bağlantı formunu açar | — | Belirteç kaybında (`REAUTH_REQUIRED`) | [TAMAMLANDI] |
-| Akış satırları: Ürünler, Cariler, Depolar, Satış siparişleri, İrsaliye, Stok — aç/kapa + yön | Anahtar + seçim | Açar, yön seçer | `setIntegrationFlowAction` → `setIntegrationFlow` (açılınca hemen bir `integration.sync` işi kuyruğa) | `integration_flows.enabled`, `direction` (PULL/PUSH/BOTH), `enabled_at` | Stok ve İrsaliye **yalnız PUSH** (DB kuralı); Satış siparişleri yalnız PULL ve Paraşüt'te karşılığı yok → kilitli | [TAMAMLANDI] |
-| "Şimdi çalıştır" | Buton | Tıklar | `runIntegrationAction` → `requestIntegrationRun` → kuyruk `integration.sync` (`trigger=MANUAL`) | `integration_runs` (yeni koşu) | Aynı bağlantı için kuyrukta/çalışan ikinci iş açılmaz | [TAMAMLANDI] |
-| Son koşular / sayılar | Liste | Görüntülenir | Okuma | `integration_runs` (`status`, `created_count`, `updated_count`, `linked_count`, `skipped_count`, `failed_count`) | Biten koşu değiştirilemez | [TAMAMLANDI] |
-| İrsaliye gönderim kuyruğu | Liste | Görüntülenir | Okuma | `integration_outbox` (`status`, `attempts`, `last_error_code`, `external_id`) | CHECK durumundakiler elle kontrol ister | [TAMAMLANDI] |
-| "Açılış stokunu Paraşüt'ten al" | Anahtar | Açar/kapar | `setOpeningStockAction` → `setOpeningStockSetting` | `integrations.opening_stock_enabled` | Varsayılan KAPALI | [TAMAMLANDI] (canlı UNKNOWN) |
-| Raf seçimi + "Açılış stokunu al" | Seçim + Buton | Seçer, tıklar | `pullOpeningStockAction` → `pullOpeningStock` → stok komutu (`postFieldDocument`, STOCK_IN) | `stock_documents`, `stock_ledger`, `stock_balances` (stok motoru üzerinden); `integrations.opening_stock_taken_at`, `opening_stock_document_id` | **Bir kez**: tekrar alınamaz (DB tetikleyicisi); tek belge ≤ 200 satır; kilit sırası stok motorunda; raf yoksa uyarı | [TAMAMLANDI] (canlı UNKNOWN) |
-| Logo bağlantısı | — | — | — | `integrations.provider='LOGO'` izinli ama kullanılamaz | Ürün bilgisi bekleniyor | [PLANLANDI] (B-111) |
+| "Yeniden bağlan" | Buton | Tıklar | OAuth akışını yeniden başlatır | — | Belirteç kaybında (`REAUTH_REQUIRED`) | [TAMAMLANDI] |
+| "Bağlantıyı kes" | Buton + onay | Tıklar | `disconnectIntegrationAction` → `disconnectIntegration` | `integrations.status=DISCONNECTED`, `credentials=NULL` | Yakın zamanda doğrulama; eşlemeler (`external_refs`) korunur | [TAMAMLANDI] |
+| Ürün barkodları: "Paraşüt barkodlarını al" | Anahtar | Açar/kapar | `setProductBarcodeAction` → `setProductBarcodeSetting` | `integrations.pull_product_barcodes` (0059, varsayılan KAPALI); audit | Mevcut etiketler korunur; barkodu olmayan ürüne kalıcı dahili barkod, dış barkod alternatif olarak eklenir; ayrılmış QR biçimi ve eşdeğer GTIN çakışması reddedilir | [TAMAMLANDI] (T-1061) |
+| Akış satırları: Ürün kartları, Cari kartlar, Depolar, Siparişler, İrsaliye, Stok miktarı — aç/kapa | Anahtar | Açar/kapar | `setIntegrationFlowAction` → `setIntegrationFlow` (açılınca hemen bir `integration.sync` işi kuyruğa) | `integration_flows.enabled`, `direction`, `enabled_at` | Siparişler Paraşüt'te karşılığı olmadığı için kilitli (nedeni balonda) | [TAMAMLANDI] |
+| Yön seçici (açık akışta) | Seçenek kutuları | Seçer | Aynı eylem | `integration_flows.direction` (PULL/PUSH/BOTH) | Yalnız akış **açıkken** ve yalnız desteklenen yönler çizilir: kartlarda "Paraşüt → Etkin / Etkin → Paraşüt / İki yönlü", Stok ve İrsaliye yalnız "Etkin → Paraşüt" (DB kuralı). "Yalnız Etkin WMS" seçeneği yok (= akış kapalı) | [TAMAMLANDI] (tuval farkı aşağıda) |
+| Akış altı bilgi: son koşu zamanı / son hata, hata rozeti, "Şimdi çalıştır" | Metin + Buton | Tıklar | `runIntegrationAction` → `requestIntegrationRun` → kuyruk `integration.sync` (`trigger=MANUAL`) | `integration_runs` (yeni koşu) | Aynı bağlantı için kuyrukta/çalışan ikinci iş açılmaz | [TAMAMLANDI] |
+| Ürün kaynak bilgisi (kategori, GTİP, birim, kaynakta arşivli mi) | Arka plan | Ürün alma koşusunda | `productSourceInfo` (`product-info.ts`) | `items.source_product_info` (0060, jsonb; fiyat/stok alanı kabul edilmez) | Bilinmeyen/uyuşmayan birim reddedilir, yeni kart 6 ondalıkla açılır; mevcut kartın birimi değişmez (T-1060) | [TAMAMLANDI] (T-1062) |
+| Ürün yaşam döngüsü (kaynakta arşiv / silinme) | Arka plan + ürün listesi süzgeci | Ürün alma koşusunda | `observeProduct` (`product-lifecycle.ts`) | `items.source_state` (ACTIVE/ARCHIVED/DELETED), `source_disposition` (NONE/PENDING/ARCHIVED/REMOVED), `source_managed_archive`, `source_missing_since`, `source_checked_at` (0062); audit | Yalnız firma başına OAuth uygulaması + açık `PRODUCTS` PULL/BOTH akışı + bağlayan kişi hâlâ hesap sahibi iken çalışır. Bir kez görünmemek silme sayılmaz: aynı bağlamda ≥ 30 sn arayla ikinci yokluk gerekir; ağ hatası/eksik tarama silme sayılmaz. Stoğu ya da açık işi olan kart `PENDING` (yeni kullanım kapanır, iş bitince arşiv); kullanılmış kart `ARCHIVED`; hiç kullanılmamış silinen kart `REMOVED` ("Kaldırıldı" süzgeci). Kaynakta yeniden etkinleşince yalnız sistemin arşivlediği kart açılır. Geçmiş, QR, eşleme ve miktar korunur | [TAMAMLANDI] (T-1067/T-1068, B-183) |
+| İrsaliye kuyruğu uyarısı | Bant | Görüntülenir | Okuma | `integration_outbox` (`status` sayıları: PENDING/CHECK/FAILED) | Yalnız CHECK ya da FAILED varsa kırmızı bant; kayıt bazlı liste ve CHECK'i çözme düğmesi yok (B-113) | [TAMAMLANDI] (sayı) |
+| Son koşular | Liste | Görüntülenir | Okuma | `integration_runs` (`status`, `trigger`, `created/updated/linked/skipped/failed_count`, `error_code`) | Biten koşu değiştirilemez | [TAMAMLANDI] |
+| "Açılış stokunu Paraşüt'ten al" | Anahtar | Açar/kapar | `setOpeningStockAction` → `setOpeningStockSetting` | `integrations.opening_stock_enabled` | Varsayılan KAPALI; kurulum yolculuğundaki "mevcut stoğu da alalım mı?" cevabı bağlanınca buraya işlenir; alındıktan sonra değişmez | [TAMAMLANDI] |
+| Raf seçimi + "Açılış stokunu al" | Seçim + Buton | Seçer, tıklar | `pullOpeningStockAction` → `pullOpeningStock` → stok komutu (`postFieldDocument`, STOCK_IN) | `stock_documents`, `stock_ledger`, `stock_balances` (stok motoru üzerinden); `integrations.opening_stock_taken_at`, `opening_stock_document_id` | **Bir kez** (DB tetikleyicisi); tek belge ≤ 200 satır; tek rafa yazılır (depo bazlı miktar B-139); raf yoksa uyarı | [TAMAMLANDI] |
+| Logo bağlantısı | Kart "YAKINDA" | — | — | `integrations.provider='LOGO'` izinli ama kullanılamaz | Ürün bilgisi bekleniyor | [PLANLANDI] (B-111) |
+
+**Onaylı tuvale göre fark (Ayarlar › Entegrasyonlar, 28 Ekim incelemesi; kaynak tuval `Standart*.dc.html`, 26 Ekim onaylı):**
+
+| Tuvalde | Kodda bugün | Gereken | Durum |
+| :--- | :--- | :--- | :--- |
+| Solda alt bölüm listesi (Bağlantı, Ne aktarılsın, Açılış stoku, Excel toplu işlem, Hatalar), sağda tek konu | İki ayrı ekran: `settings/baglantilar` (Excel) + `integrations` (alt alta gruplar) | Ayar kalıbına sol alt bölüm bileşeni (ortak bileşen yok) + Bağlantı ve Excel tek bölüm | [PLANLANDI] (B-196; yalnız arayüz) |
+| Akış başına **her zaman görünen 4 seçenekli yön seçici** (… → Etkin / Etkin → … / İki yönlü / Yalnız Etkin WMS) | Yön seçici yalnız akış açıkken, yalnız desteklenen yönlerle; kapatma ayrı anahtar | "Yalnız Etkin WMS" = `enabled=false` olarak tek seçiciye bağlanır (veri değişmez) | [PLANLANDI] (yalnız arayüz) |
+| Depolar satırında "iki yönlü" gizli | Katalog Depolar için PULL/PUSH/BOTH sunar | Ürün kararı gerekir | Karar bekliyor |
+| Satış faturasından iş akışı | Yok (Paraşüt'te sipariş kaynağı yok; Siparişler kilitli) | Yeni akış + veri modeli | [PLANLANDI] (veri; B-116) |
+| **Alan sahipliği** (alan başına Paraşüt / depo; Paraşüt alanı kartta kilitli) | Veri yok; eşitleme ürün adını sessizce geri yazar | Migration + domain | [PLANLANDI] (veri; B-170) |
+| **Pasif ve arşiv** (iki yönlü yansıma politikası, varsayılan "hiçbir şey yapma"; PASİF durumu) | 0062 `source_disposition` var → sayılar yeni okuma işleviyle gösterilebilir; politika ayarı ve PASİF durumu yok | Sayılar: arayüz + okuma; politika: migration | [PLANLANDI] (B-170) |
+| **Bekleyenler ve hatalar** | Kuyruk sayıları ve koşular var (yalnız CHECK/FAILED bandı) | Sayılar: arayüz; kayıt bazlı eşitleme hatası/durumu: migration | [PLANLANDI] (B-113, B-170) |
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Y as Hesap sahibi
+    participant E as Entegrasyon ekranı
+    participant DB as PostgreSQL
+    participant P as Paraşüt
+    participant K as Worker (integration.sync, 30 sn)
+    Y->>E: Uygulama bilgileri (Application Id, Secret, Callback URL)
+    E->>DB: integration_oauth_apps (mühürlü)
+    Y->>E: BAĞLAN
+    E->>DB: integration_oauth_attempts (tek kullanımlık, 10 dk)
+    E-->>Y: Paraşüt izin sayfası
+    alt Otomatik dönüş (HTTPS)
+        P-->>E: /api/integrations/parasut/callback (kod)
+    else Yetki kodu (OOB)
+        Y->>E: Kodu yapıştırır
+    end
+    E->>P: Kod → erişim belirteci, şirket listesi
+    opt Birden çok şirket
+        Y->>E: Şirketini seç
+    end
+    E->>DB: integrations CONNECTED + 6 akış (ilk bağlantıda Ürün kartları PULL açık) + koşu işi
+    K->>P: Ürün kartlarını oku (miktarsız, fiyatsız)
+    K->>DB: Kart/eşleme/kaynak bilgisi/yaşam döngüsü
+```
 
 ```mermaid
 sequenceDiagram
@@ -396,7 +482,7 @@ sequenceDiagram
     actor U as Depo kullanıcısı
     participant WMS as Etkin (sevkiyat)
     participant DB as PostgreSQL
-    participant K as Worker (integration.sync, saatlik)
+    participant K as Worker (integration.sync, 30 sn)
     participant P as Paraşüt API
     U->>WMS: Sevk belgesini kesinleştirir (POSTED)
     WMS->>DB: stock_documents POSTED + stok defteri
@@ -428,21 +514,39 @@ stateDiagram-v2
     SENT --> [*]
 ```
 
-*Bağlantı durumu (`integrations.status`):* CONNECTED → ERROR (sınama/senkron hatası) → CONNECTED (başarılı sınama) ; her durumdan
-DISCONNECTED (bağlantıyı kes; şifreli bilgiler silinir). Koşu durumu (`integration_runs.status`): RUNNING → SUCCESS / PARTIAL / FAILED.
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Etkin: Kaynakta etkin (source_state ACTIVE, disposition NONE)
+    Etkin --> Bekliyor: Kaynakta arşiv/silindi ama stok ya da açık iş var (PENDING)
+    Etkin --> Arsiv: Kaynakta arşiv veya silindi, kullanılmış (ARCHIVED, status ARCHIVED)
+    Etkin --> Kaldirildi: Kaynakta silindi, hiç kullanılmamış (REMOVED)
+    Bekliyor --> Arsiv: Stok ve açık işler bitti
+    Arsiv --> Etkin: Kaynakta yeniden etkin (yalnız sistemin arşivlediği kart)
+    note right of Kaldirildi
+      Silinme için ≥30 sn arayla iki yokluk gözlemi gerekir.
+      Geçmiş, QR, eşleme ve miktar her durumda korunur.
+    end note
+```
+
+*Bağlantı durumu (`integrations.status`):* CONNECTED → ERROR (sınama/senkron hatası; bağlayan kişi hesap sahibi değilse `CONNECTOR_REVOKED`)
+→ CONNECTED (başarılı sınama) ; her durumdan DISCONNECTED (bağlantıyı kes; şifreli bilgiler silinir). Koşu durumu
+(`integration_runs.status`): RUNNING → SUCCESS / PARTIAL / FAILED.
 
 ---
 
 ## Modül: wms.etkinyazilim.com / Destek talebi (müşteri tarafı)
 
 - **Modül Durumu:** [TAMAMLANDI] (metin) · Ekran görüntüsü eki [PLANLANDI] (B-88)
-- **Ekranın Amacı:** Her kullanıcı üst çubuktaki **Destek** ikonundan Etkin ekibine yazar; cevabı aynı pencereden okur.
-- **Kod:** `apps/web/app/t/[slug]/support-actions.ts`, `apps/web/app/t/[slug]/pano/support-layer.tsx`,
-  `packages/domain/src/support/tickets.ts`; operatör tarafı yukarıda.
+- **Ekranın Amacı:** Her kullanıcı üst çubuktaki **Destek** (kulaklık) düğmesinden Etkin ekibine yazar; cevabı aynı pencereden okur.
+  Yanındaki **Sorun bildir** (bayrak) düğmesi ayrıdır: firmanın kendi yöneticisine iç sorun kaydı açar.
+- **Kod:** `apps/web/app/t/[slug]/support-actions.ts`, pencereler `apps/web/app/t/[slug]/pano/support-layer.tsx`, her kalıp ekranının üst
+  çubuğundaki düğmeler `apps/web/app/t/[slug]/kalip/destek.tsx` (`KalipDestek`); domain `packages/domain/src/support/tickets.ts`;
+  operatör tarafı yukarıda.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Destek ikonu (üst çubuk) | İkon | Tıklar | Destek penceresi açılır | — | Okunmamış yanıt varsa rozet (`countUnreadSupportReplies`) | [TAMAMLANDI] |
+| Destek düğmesi (her kalıp ekranının üst çubuğu ve Pano) | İkon | Tıklar | Destek penceresi; talep varsa Taleplerim | — | Talepler açılışta değil dokununca yüklenir (hız sınırı bütçesi); okunmamış yanıt rozeti (`countUnreadSupportReplies`); pencere açıkken perde alt çubuk dahil bütün ekranı örter (T-1081) | [TAMAMLANDI] |
 | Konu (Hata / Nasıl yapılır / Öneri / Diğer) | Seçim | Seçer | — | `support_tickets.subject_kind` (BUG/HOWTO/IDEA/OTHER) | — | [TAMAMLANDI] |
 | Kısa not | Textarea | Yazar | — | `support_tickets.body` | Uzunluk sınırı; loga yazılmaz | [TAMAMLANDI] |
 | Otomatik bağlam (ekran, sürüm, tarayıcı) | Gizli | — | Sunucu istek başlığından alır | `support_tickets.context` | Tarayıcı bilgisi istemciden değil başlıktan | [TAMAMLANDI] |
@@ -474,32 +578,46 @@ sequenceDiagram
 
 ## Modül: wms.etkinyazilim.com / İlk kurulum yolculuğu ve örnek veri
 
-- **Modül Durumu:** [TAMAMLANDI] (kurulum turu + 5 işlem rehberi) · Ekran başına otomatik ilk kullanım rehberi ve "görüldü" bilgisinin
-  sunucuda tutulması [GELİŞTİRİLİYOR] (B-75 kalanı)
-- **Canlı notu:** T-1006 (0056) PR #165, T-1026 PR #174 `main`'de; canlı durumu ayrıca doğrulanmadı.
-- **Ekranın Amacı:** Sıfırdan açılan firmanın kurulumu belge okumadan **yaparak** öğrenmesi: Ürünler (Excel) → depo/raf → stok →
-  etiket → reçete → üretim → ekip QR → görev. Bir adımın "tamam" olması tıklamayla değil **gerçek veriden** hesaplanır (ör. ürün var mı,
-  raf var mı). Örnek veri sayılmaz.
-- **Kod:** `apps/web/app/t/[slug]/yolculuk/{actions,yolculuk}.ts|tsx`, `packages/domain/src/onboarding/journey.ts`,
-  `onboarding/sample-data.ts`.
+- **Modül Durumu:** [TAMAMLANDI] (9 adımlı kurulum yolculuğu, odaklı "Rehber", Pano halkası) · Diğer ekranlar için otomatik ilk kullanım
+  rehberi ve "görüldü" bilgisinin sunucuda tutulması [GELİŞTİRİLİYOR] (B-75)
+- **Canlı notu:** 0056 (T-1006) ve 0058 (T-1054, Cariler adımı) canlı defterde (0062/62); T-1054 doğrulanan `6b2f81d` yayınında. Odaklı
+  rehber T-1100 (PR #231) ve işlem rehberleri T-1105 (PR #239) bu yayından sonra birleşti → canlı UNKNOWN; gerçek iPhone kontrolü
+  kullanıcıdan bekleniyor (B-197).
+- **Ekranın Amacı:** Sıfırdan açılan firmanın kurulumu belge okumadan **yaparak** öğrenmesi. Yolculuk "Paraşüt var mı?" sorusuyla başlar
+  (kart kaynağı) ve sırası: Ürün kartları (Excel ya da Paraşüt) → depo ve raflar → **Cariler** (Paraşüt bağlıysa eşitlemeyle kendiliğinden,
+  değilse Excel) → stok → etiket → reçete → üretim → ekip QR → görev. Bir adımın "tamam" olması tıklamayla değil **gerçek veriden**
+  hesaplanır (ör. ürün var mı, raf var mı, arşivlenmemiş cari var mı). Örnek veri sayılmaz.
+- **Görünüm (T-1100):** "Başla" yazılı kart açmaz: ortak buzlu perde (`KalipPerdeKatman`) ekranı bulanıklaştırır, yalnız yapılacak yer
+  (ör. DEPO EKLE, açılan form) delikte açık kalır, tek satır ipucu + "Söyle" (sesli okuma); iş yapılınca adım kendiliğinden ilerler
+  (sunucu verisi, ~6 sn yoklama). Kartta İleri/Atla yok (atlama listede). Bulanık alana dokununca rehber serbest bırakır, yüzen
+  "Kaldığın yerden" simgesi kalır. Adı **Rehber**; Pano'da giriş yalnız "Merhaba" satırının sağındaki halka simgesi (bitmemişken). Eski
+  Ürünler/Depolar "3 adımlı kurulum kutusu" kalktı (T-1054).
+- **Kod:** `apps/web/app/t/[slug]/yolculuk/{actions,yolculuk,steps,durum,spot,serialize}.ts|tsx`, `packages/domain/src/onboarding/journey.ts`,
+  `onboarding/sample-data.ts`; işlem rehberleri `apps/web/app/t/[slug]/kalip/{rehber,rehber-plan,adim-rehber,adim-rehber-plan}.ts|tsx`.
 - **Kim görür:** yalnız hesap sahibi (TENANT_ADMIN) ve depo yöneticisi (WAREHOUSE_MANAGER).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Spot ışıklı tur (karartılmış ekran, yalnız basılacak öğe açık) | Katman | İleri / Geri / Atla / Turu kapat / Söyle | `getJourneyAction`, `setJourneyChoiceAction` | `setup_journeys.tour_state` (ACTIVE/CLOSED) | Yeni firmada ilk girişte başlar; perde gerçek formu engellemez | [TAMAMLANDI] |
-| "Üretim yapıyor musunuz?" | Evet/Hayır | Seçer | `setJourneyChoiceAction` → `setJourneyChoice` | `setup_journeys.makes_production` | "Hayır" → reçete ve üretim adımları hiç görünmez | [TAMAMLANDI] |
-| Kart kaynağı (Excel / Paraşüt) | Seçim | Seçer | Aynı | `setup_journeys.card_source` (EXCEL/PARASUT) | — | [TAMAMLANDI] |
-| "Mevcut stok miktarlarını da alalım mı?" | Evet/Hayır | Seçer | Aynı (+ Paraşüt açılış stoku ayarı) | `setup_journeys.opening_stock_wanted`; `integrations.opening_stock_enabled` | — | [TAMAMLANDI] |
-| "Bunu kullanmıyorum" (adımı atla) | Bağlantı | Tıklar | Aynı | `setup_journeys.skipped` (izinli adım listesi) | Geri alınabilir; atlanan adım "3/8 tamam" sayacından düşer | [TAMAMLANDI] |
+| Odaklı rehber (buzlu perde, delikte yapılacak yer, tek satır) | Katman | İşi yapar / perdeye dokunur / Söyle | `getJourneyAction`, `setJourneyChoiceAction` | `setup_journeys.tour_state` (ACTIVE/CLOSED) | Yeni firmada kısa başlangıç adımları (kartlar, raflar, cariler, stok); perde gerçek formu engellemez (form ayrı delikle açık kalır) | [TAMAMLANDI] (T-1100) |
+| "Paraşüt var mı?" / kart kaynağı (Excel / Paraşüt) | Seçim | Seçer | `setJourneyChoiceAction` → `setJourneyChoice` | `setup_journeys.card_source` (EXCEL/PARASUT) | Paraşüt seçilince kart adımı Entegrasyon ekranını açar (bağlı değilse BAĞLAN, bağlıysa eşitleme) | [TAMAMLANDI] (T-1054) |
+| "Üretim yapıyor musunuz?" | Evet/Hayır | Seçer | Aynı | `setup_journeys.makes_production` | "Hayır" → reçete ve üretim adımları hiç görünmez | [TAMAMLANDI] |
+| "Mevcut stok miktarlarını da alalım mı?" | Evet/Hayır | Seçer | Aynı (+ bağlanınca Paraşüt açılış stoku ayarı) | `setup_journeys.opening_stock_wanted`; `integrations.opening_stock_enabled` | Açılış stoku açık ve alınmamışsa stok adımı "Açılış stokunu al" düğmesini gösterir | [TAMAMLANDI] |
+| Cariler adımı | Adım | — | `getSetupJourney` | `parties` (arşivlenmemiş sayım); 0058 atlanabilir adım listesine `parties` | Paraşüt bağlıysa eşitlemeyle kendiliğinden tamamlanır | [TAMAMLANDI] (T-1054) |
+| "Bunu kullanmıyorum" (adımı atla) | Bağlantı | Tıklar | Aynı | `setup_journeys.skipped` (izinli adım listesi, en çok 9) | Geri alınabilir; atlanan adım sayaçtan düşer | [TAMAMLANDI] |
 | Etiket basıldı işareti | Otomatik | İlk etiket baskısında | `markLabelsPrintedAction` → `markLabelsPrinted` | `setup_journeys.labels_printed_at` | Bir kez yazılır | [TAMAMLANDI] |
-| Pano'daki halka (adım listesi) | Halka | Tıklar | `getSetupJourney` | Okuma: ürün, raf, stok defteri, reçete, üretim, saha üyesi, görev/sayım tabloları | Örnek veri (`is_sample`) sayılmaz | [TAMAMLANDI] |
+| Pano'daki halka (adım listesi, yeşil tikli şerit, geride kalan adıma dönüş) | Halka | Tıklar | `getSetupJourney` | Okuma: ürün, raf, cari, stok defteri, reçete, üretim, saha üyesi, görev/sayım tabloları | Örnek veri (`is_sample`) sayılmaz | [TAMAMLANDI] (T-1036, T-1100) |
 | Kutlamayı kapat | Buton | Tıklar | Aynı | `setup_journeys.dismissed_at` | — | [TAMAMLANDI] |
-| İşlem rehberleri (Mal kabul, Yerleştirme, Çıkış, Transfer, Sayım; beşer adım) ve "?" ile tekrar | Katman | "?" veya Destek › Rehber | `apps/web/app/t/[slug]/` rehber bileşenleri (T-1026) | — (ilerleme yalnız bu tarayıcıda) | Görüldü bilgisi sunucuda değil | [GELİŞTİRİLİYOR] (B-75) |
+| "Nasıl kullanırım?" adım adım rehber (ürün / depo / cari aktarma; Excel ya da Paraşüt) | Katman | Seçer, işi yapar | `kalip/adim-rehber.tsx` | — (durum yalnız bu cihazda) | Aynı odaklı motor; yüzen simge "Kaldığın yerden / Baştan" | [TAMAMLANDI] (T-1095) |
+| İşlem rehberleri (Mal kabul, Yerleştirme, Çıkış, Transfer, Sayım) ve "?" ile tekrar | Katman | "?" veya Destek › Rehber | `kalip/rehber.tsx` | — (ilerleme yalnız bu tarayıcıda) | Odaklı: yalnız yapılacak yer açık, iş yapılınca ilerler (algılanamazsa küçük ok); görüldü bilgisi sunucuda değil | [GELİŞTİRİLİYOR] (T-1105; B-75) |
 
 ```mermaid
 flowchart LR
-    A[Ürün kartları<br/>Excel veya Paraşüt] --> B[Depo ve raf]
-    B --> C[Stok girişi]
+    S{Paraşüt var mı?} -- Evet --> A1[Ürün kartları<br/>Paraşüt eşitlemesi]
+    S -- Hayır --> A2[Ürün kartları<br/>Excel]
+    A1 --> B[Depo ve raf]
+    A2 --> B
+    B --> C2[Cariler]
+    C2 --> C[Stok girişi<br/>veya açılış stoku]
     C --> D[Etiket bas]
     D --> E{Üretim yapıyor mu?}
     E -- Evet --> F[Reçete]
@@ -515,11 +633,12 @@ flowchart LR
 ## Modül: wms.etkinyazilim.com / Yardım sayfası ve elle çalışma alanı açma
 
 - **Yardım (`/help`) — [TAMAMLANDI]:** Oturum gerektirmeyen kısa, statik sayfa; "takılınca ne yapmalı". Sohbet, telefon, form içermez
-  (`apps/web/app/help/page.tsx`). Uygulama içi destek talebi ayrı modüldür (yukarıda).
+  (`apps/web/app/help/page.tsx`). Uygulama içi destek talebi ayrı modüldür (yukarıda). Alt adres `/help/indir/<uygulama>` doğrulama
+  uygulaması mağaza yönlendirmesidir (T-1043, yukarıda aktivasyon).
 - **Elle çalışma alanı açma (`/onboarding`) — [TAMAMLANDI] ama yalnız yerel/test ortamında:** `createWorkspace` sihirbazı (firma adı →
   adres adı → kurulum adımları). Üretimde kapalıdır: yalnız `WMS_ENV=local|ci` ve `SIGNUP_ENABLED=true` iken açılır
   (`packages/domain/src/onboarding/workspace.ts` `workspaceCreationAllowed`). Canlıda müşteri yalnız **demo talebi → onay → aktivasyon**
-  yoluyla açılır. Herkese açık "Kayıt ol" self-servis yolu [PLANLANDI] değildir (karar yok).
+  yoluyla açılır. Herkese açık "Kayıt ol" self-servis yolu için karar yok.
 - **Demo firması ve günlük yeniden tohumlama — [TAMAMLANDI] (yalnız yerel/test):** `demo.reseed` işi her gün 03:00 UTC'de demo firmasının
   kullanıcı/üyelik/ayar/örnek stokunu onarır (`packages/domain/src/demo/seed.ts`). `DEMO_MODE=1` olmayan ortamda çalışmaz.
 
@@ -529,6 +648,7 @@ flowchart LR
 
 Worker, web sitesinden ayrı çalışan kalıcı bir süreçtir (`apps/worker/src/main.ts`). İş kuyruğu PostgreSQL içindedir (pg-boss); ayrı bir
 Redis vb. yoktur. Bir iş yazıldığı veritabanı işlemiyle birlikte kaydolur — işlem geri alınırsa iş de kaybolur, "hayalet iş" oluşmaz.
+Doğal Türkçe ses (`/tts`, T-1106) worker değil, ayrı ses servisidir.
 
 | İş / Zamanlayıcı | Ne zaman çalışır | Ne yapar | Dokunduğu tablo | Kod | Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -539,12 +659,12 @@ Redis vb. yoktur. Bir iş yazıldığı veritabanı işlemiyle birlikte kaydolur
 | `support.notify` | Yeni destek talebinde | Operatöre WhatsApp kısa mesajı (CallMeBot; ayar yoksa atlanır) | (bir kez gönderildi kaydı) | `jobs/support-notify.ts` | [TAMAMLANDI] |
 | `stock.document.post` | Büyük (eşik üstü) stok belgesi kesinleştirilince | Belgeyi istek sahibi adına tek işlemde işler | `stock_documents`, `stock_ledger`, `stock_balances` | `jobs/post-stock-document.ts` | [TAMAMLANDI] |
 | `stock.consistency.check` + zamanlayıcı | Açılışta bir + saatte bir, her aktif firma için | Stok defteri ile bakiye tutarlı mı denetler; sorun varsa alarm logu | (okuma) | `jobs/stock-consistency.ts` | [TAMAMLANDI] |
-| `integration.sync` + zamanlayıcı | Açılışta bir + saatte bir; akış açılınca veya "Şimdi çalıştır" | ERP kart/stok/irsaliye eşitlemesi | `integration_*`, `external_refs`, katalog tabloları | `jobs/integration-sync.ts` | [TAMAMLANDI] |
+| `integration.sync` + zamanlayıcı | Açılışta bir + **30 saniyede bir** (T-1066; önce saatlikti); akış açılınca, ilk OAuth bağlantısında veya "Şimdi çalıştır" | ERP kart/stok/irsaliye eşitlemesi, ürün kaynak bilgisi ve yaşam döngüsü; bağlantı başına tek iş (`singletonKey`), koşu başına sayfa/gönderim üst sınırları | `integration_*`, `external_refs`, `items.source_*`, katalog tabloları | `jobs/integration-sync.ts` | [TAMAMLANDI] |
 | Terk edilmiş sayım alarmı | Açılışta bir + saatte bir | Süresi (varsayılan 8 saat) aşan açık sayımları alarm olarak loglar; sayımı kapatmaz | (okuma) | `jobs/count-abandon.ts` | [TAMAMLANDI] |
 | Kuyruk bakımı | Periyodik | Çöken işte asılı kalan işleri yeniden dener veya başarısız sayar; başarısız stok belgesini serbest bırakır | pg-boss tabloları | `jobs/queue-maintenance.ts` | [TAMAMLANDI] |
 | Worker nabzı | Periyodik | Sağlık satırını günceller; `/api/health` buna bakar | `wms_health.worker_heartbeats` | `jobs/worker-heartbeat.ts` | [TAMAMLANDI] |
 | Demo talebi içe alma (eski dosya yolu) | Sürekli | Satış sitesinin eski JSONL dosyasındaki talepleri DB'ye aktarır | `demo_requests` | `jobs/demo-leads.ts` | [TAMAMLANDI] (yeni yol T-1025 ile doğrudan DB) |
-| Demo sahiplik postası | Periyodik | Bekleyen "talebini takip et" e-postalarını gönderir | `demo_status_deliveries` | `jobs/demo-status.ts` | [GELİŞTİRİLİYOR] (T-1025) |
+| Demo sahiplik postası | Periyodik | Bekleyen "talebini takip et" e-postalarını gönderir | `demo_status_deliveries` | `jobs/demo-status.ts` | [TAMAMLANDI] (T-1025) |
 | `demo.reseed` | Açılışta + her gün 03:00 UTC (yalnız demo modu) | Demo firmasını onarır | demo tenant | `jobs/demo-reseed.ts` | [TAMAMLANDI] |
 
 ```mermaid
@@ -554,7 +674,7 @@ flowchart TB
       A2 --> TX[(Tek veritabanı işlemi:<br/>veri + kuyruk işi)]
     end
     subgraph Worker[Worker süreci]
-      Z[Zamanlayıcılar<br/>saatlik / günlük] --> Q
+      Z[Zamanlayıcılar<br/>30 sn / saatlik / günlük] --> Q
       Q[pg-boss kuyruğu] --> J[İş işleyici]
       J --> D[Aynı domain komutları]
     end
@@ -569,32 +689,50 @@ flowchart TB
 
 ## Bu bölümün eksik ve bekleyen işleri (Gap)
 
+**Onaylı tuvalle fark (28 Ekim incelemesi, `Standart*.dc.html`)**
+- Ayarlar › Entegrasyonlar iki ayrı ekran (Excel `settings/baglantilar` + Paraşüt `integrations`); tuvaldeki sol alt bölüm listesi (Bağlantı,
+  Ne aktarılsın, Açılış stoku, Excel toplu işlem, Hatalar) ve sağda tek konu yok; ayar kalıbında ortak sol alt bölüm bileşeni yok (B-196).
+- Akış başına her zaman görünen 4 seçenekli yön seçici yok (bugün yön yalnız açık akışta; "Yalnız Etkin WMS" = akış kapalı ayrı anahtar).
+  Depolar için tuval "iki yönlü"yü gizliyor, katalog destekliyor → ürün kararı gerekiyor.
+- "Alan sahipliği", "Pasif ve arşiv" (politika + PASİF durumu) ve "Bekleyenler ve hatalar" (kayıt bazlı eşitleme durumu) bölümlerinin verisi
+  yok; 0062 kaynak durumu ve kuyruk sayıları yalnız sayı göstermeye yeter (B-170, B-113).
+- Ayarlar'da "İş akışı" (teslimat yolu, iş adımları, teslim teyidi) ve "Etiket ve yazıcı" sekmeleri yok — ayar verisi yok (B-171, B-166).
+  Mevcut iş akışı ayarları (kabul QC, sayım bırakma, vardiya, görev ayrılığı) İş akışı sekmesine taşınabilir (yalnız arayüz).
+- Satış faturasından iş akışı yok (Paraşüt'te sipariş kaynağı yok; B-116).
+
 **Arayüzde var, arkası bağlı değil**
 - Destek penceresinde "Ekran görüntüsü ekle" düğmesi gizli; panelde "Erişim iste" düğmesi pasif (B-88, B-89).
-- Ayarlar › Bağlantılar'da Logo satırı yalnız "YAKINDA" yer tutucusu (B-111).
+- Ayarlar › Entegrasyonlar'da ve Entegrasyon ekranında Logo yalnız "YAKINDA" yer tutucusu (B-111).
+- Ayarlar › Firma'da ad satırındaki mikrofon pasif ("sesle yakında").
 - Satış sitesi başarı kutusunda "Hemen konuşalım" (WhatsApp) yok; herkese açık numara tanımlı değil (B-102).
 
 **Veritabanında var, ekranda gösterilmiyor / kullanılmıyor**
-- Paket özellik anahtarları (`plan_versions.feat_qr/feat_ship/feat_prod/feat_api`) kaydediliyor ve satış sitesinde gösteriliyor; ancak
-  müşteri uygulamasında bu anahtarlara göre ekran/komut kapatan bir bağlantı kodda bulunmadı. Şu an yalnız sayı sınırları (depo, ürün,
-  kullanıcı) gerçekten uygulanıyor.
+- Paket özellik anahtarları (`plan_versions.feat_qr/feat_ship/feat_prod/feat_api`) kaydediliyor ve satış sitesinde gösteriliyor; müşteri
+  uygulamasında bu anahtarlara göre ekran/komut kapatan bağlantı yok. Yalnız sayı sınırları (depo, ürün, kullanıcı) uygulanıyor (B-153).
 - `tenants.status = CLOSING` değeri var; panelde müşteriyi kapatma/silme düğmesi yok (yalnız operatörün elle çalıştırdığı sıfırlama
-  betiği, T-1005).
-- `charges.invoice_no` kolonu var; fatura kesme akışı yok (B-45 e-Fatura/e-Arşiv).
+  betiği, T-1005; canlıda çalıştırılması kullanıcı adımı, B-137).
+- `charges.invoice_no` kolonu var; fatura kesme akışı yok (B-45, B-153).
 - `integrations.provider = 'LOGO'` izinli, ama bağlanamıyor.
+- `items.source_disposition` (0062) ürün listesinde "Kaldırıldı" süzgeci ve bekliyor etiketi olarak kullanılıyor; Entegrasyon ekranında
+  sayısı gösterilmiyor.
 
 **Eksik iş akışları**
 - Online tahsilat yok: tahakkuk elle açılıyor, ödeme elle işaretleniyor; otomatik aylık tahakkuk, kartla abonelik ve "Hatırlat" yok
   (B-40).
-- Deneme süresi bitince ne olacağı (otomatik askıya alma / uyarı e-postası) kodda bulunmadı; deneme bitişi panelde görünür ve elle
-  uzatılır.
-- Paraşüt ile canlı, gerçek hesapla ilk bağlantı doğrulaması (token gövdesi, irsaliye deposu/cari türü, 429 hız sınırı) bekliyor (B-110).
-- İrsaliye kuyruğunda "CHECK" (sonucu belirsiz) duruma düşen kayıt için ekranda "Paraşüt'te kontrol ettim, gönderildi / gönderilmedi"
-  diye elle karar düğmesi kodda bulunmadı; satır yalnız listelenir.
+- Deneme süresi bitince ne olacağı (otomatik askıya alma / uyarı e-postası) kodda yok; deneme bitişi panelde görünür ve elle uzatılır.
+- Paraşüt: canlıda doğrulanan yalnız OAuth bağlantısı + miktarsız ürün kartı alma ve yaşam döngüsü. Cari/depo/stok/irsaliye akışlarının
+  gerçek hesapla doğrulanması (irsaliye deposu/cari türü, 429 hız sınırı) bekliyor (B-110); okutmalı Devir ve kalan ürün aktarım adımları
+  B-182 planında.
+- Eşitleme ürün adını sessizce geri yazar; alan sahipliği ayarı yok. Ürün kartında Paraşüt sekmesi (bağlı ürün, son eşitleme, Tekrar dene,
+  elle eşleştir) yok (B-170).
+- İrsaliye kuyruğunda "CHECK" (sonucu belirsiz) duruma düşen kayıt için ekranda elle karar düğmesi yok; yalnız sayı bandı (B-113).
+- Paraşüt açılış stoku tek rafa toplam yazar; depo bazlı miktar ve 200 satırdan büyük açılış yok (B-139).
 - Panel hata kodları kullanıcı diline çevrilmemiş (ör. `FORBIDDEN/MFA_REQUIRED` gibi teknik kod görünebilir) (B-66).
 - Kullanıcı başına dil tercihi yok; saat dilimi arayüzde sabit İstanbul gösteriliyor (B-105).
-- İlk kullanım rehberinin "görüldü" bilgisi sunucuda değil tarayıcıda; diğer ekranlar için otomatik ilk kullanım rehberi eksik (B-75).
-- Demo formu yeni sürümü (T-1025, 0057) `main`'de; canlı veritabanına uygulandığı doğrulanmadı.
+- İşlem rehberlerinin "görüldü" bilgisi sunucuda değil tarayıcıda; diğer ekranlar için otomatik ilk kullanım rehberi eksik (B-75).
+- Aynı e-postadan gelen yeni demo talebi panelde görünmüyor (sessiz tekilleştirme); "tekrar talep etti" kullanıcı kararı bekliyor (B-157).
+- `main`'de olup STATE'te canlı kaydı olmayanlar: odaklı Rehber (T-1100), işlem rehberleri (T-1105), Entegrasyon ekranı sadeleştirme
+  (T-1104), Etkin sesli yanıt ayarı (T-1109, 0063). Gerçek iPhone Safari kontrolü kullanıcıdan bekleniyor (B-197).
 
 **Yetki / güvenlik**
 - Panel ve entegrasyon için ayrıntılı güvenlik bulguları bu herkese açık belgede yazılmaz; genel başlıklar BACKLOG'daki 🔒 satırlarındadır
