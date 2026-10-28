@@ -252,6 +252,9 @@ class TtsModelTests(unittest.TestCase):
         text, _conf = stt.transcribe(heard)
         self.assertIn("hava", text.lower())
         # Kapsayıcı sınırı 1280 MiB (deploy/vps/compose.yml): iki model birlikte payla sığmalı.
+        # T-1125: THP bu süreçte kapalı (yerleşik bellek makinenin THP ayarına bağlı kalmasın).
+        self.assertTrue(voice.THP_KAPALI)
+        self.assertIn("THP_enabled:\t0", Path("/proc/self/status").read_text())
         rss = rss_mib()
         print(f"\nses bellek: rss={rss:.0f}MiB {bellek_tanisi()}")
         self.assertLess(rss, 1100, f"çekirdek={os.cpu_count()} OMP={os.environ.get('OMP_NUM_THREADS')} arena={os.environ.get('MALLOC_ARENA_MAX')} {bellek_tanisi()}")
