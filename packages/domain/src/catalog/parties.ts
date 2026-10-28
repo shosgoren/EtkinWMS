@@ -3,6 +3,7 @@
 // Kod alan içinde benzersizdir (büyük/küçük harf ve boşluktan bağımsız: `code_key`). Vergi no 10/11 hane denetimi uyarıdır, engel değildir.
 // Aktarım (`importParties`): aynı kod varsa güncellenir (boş hücre mevcut değeri silmez), dosyada tekrarlayan kod → ilki alınır, sonrakiler sorunlu.
 // `dryRun`: hiçbir şey yazılmaz; aynı kurallarla satır başına sonuç döner (kontrol adımı).
+// T-1117 (`0064_party_details`): Kısa ad (listede görünen ad), İlçe ve Varsayılan teslimat (`OWN` kendi personelim / `CARRIER` kargo firması).
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
@@ -11,6 +12,8 @@ import { hasPermission } from "../identity/permissions.ts";
 
 export type PartyKind = "CUSTOMER" | "SUPPLIER" | "BOTH";
 export const PARTY_KINDS: readonly PartyKind[] = ["CUSTOMER", "SUPPLIER", "BOTH"];
+export type PartyDeliveryMode = "OWN" | "CARRIER";
+export const PARTY_DELIVERY_MODES: readonly PartyDeliveryMode[] = ["OWN", "CARRIER"];
 export const PARTY_IMPORT_MAX_ROWS = 500;
 export const PARTY_LIST_MAX = 200;
 
@@ -28,6 +31,9 @@ export interface PartyRow {
   readonly email: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  readonly shortName: string | null;
+  readonly district: string | null;
+  readonly deliveryMode: PartyDeliveryMode;
   readonly archived: boolean;
   readonly version: number;
 }
@@ -43,6 +49,10 @@ export interface PartyInput {
   readonly email?: string;
   readonly city?: string;
   readonly address?: string;
+  readonly shortName?: string;
+  readonly district?: string;
+  /** `OWN` / `CARRIER` ya da Excel'deki "kendi personelim", "kargo"… (boş = verilmedi). */
+  readonly deliveryMode?: string;
 }
 
 export type PartyIssue =
@@ -55,6 +65,7 @@ export type PartyIssue =
   | "PHONE_INVALID"
   | "EMAIL_INVALID"
   | "TEXT_TOO_LONG"
+  | "DELIVERY_UNKNOWN"
   | "CODE_DUPLICATE_FILE";
 /** Uyarı: kayıt yazılır, kullanıcıya gösterilir. */
 export type PartyWarning = "TAX_NO_LENGTH";
@@ -70,6 +81,9 @@ interface Clean {
   readonly email: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  readonly shortName: string | null;
+  readonly district: string | null;
+  readonly deliveryMode: PartyDeliveryMode | null;
 }
 
 const CTRL = /[\u0000-\u001f\u007f]/;
@@ -88,6 +102,20 @@ export function parseKind(raw: string): PartyKind | null | "UNKNOWN" {
   if (/\b(ikisi|her ikisi|both|ikiside)\b/.test(k) || (cust && supp)) return "BOTH";
   if (cust) return "CUSTOMER";
   if (supp) return "SUPPLIER";
+  return "UNKNOWN";
+}
+
+/** T-1117: "OWN", "kendi personelim", "Kargo firması", "carrier"… → teslimat; boş → null; tanınmayan → hata. */
+export function parseDeliveryMode(raw: string): PartyDeliveryMode | null | "UNKNOWN" {
+  if (raw === "OWN" || raw === "CARRIER") return raw;
+  const k = raw
+    .toLocaleLowerCase("tr")
+    .replace(/[ışğüöç]/g, (c) => ({ ı: "i", ş: "s", ğ: "g", ü: "u", ö: "o", ç: "c" })[c] ?? c)
+    .replace(/[^a-z]+/g, " ")
+    .trim();
+  if (k === "") return null;
+  if (/\b(kargo|kargoyla|cargo|carrier|courier|nakliye|nakliyeci)\b/.test(k)) return "CARRIER";
+  if (/\b(kendi|kendimiz|personel|personelim|own|self|bizim)\b/.test(k)) return "OWN";
   return "UNKNOWN";
 }
 
@@ -111,7 +139,19 @@ export function cleanParty(input: PartyInput): { readonly ok: true; readonly val
   const taxOffice = t(input.taxOffice);
   const city = t(input.city);
   const address = t(input.address);
-  if (taxOffice.length > 100 || city.length > 100 || address.length > 500 || [taxOffice, city, address].some((v) => CTRL.test(v))) return { ok: false, issue: "TEXT_TOO_LONG" };
+  const shortName = t(input.shortName);
+  const district = t(input.district);
+  if (
+    taxOffice.length > 100 ||
+    city.length > 100 ||
+    address.length > 500 ||
+    shortName.length > 100 ||
+    district.length > 100 ||
+    [taxOffice, city, address, shortName, district].some((v) => CTRL.test(v))
+  )
+    return { ok: false, issue: "TEXT_TOO_LONG" };
+  const deliveryMode = parseDeliveryMode(t(input.deliveryMode));
+  if (deliveryMode === "UNKNOWN") return { ok: false, issue: "DELIVERY_UNKNOWN" };
   const opt = (v: string): string | null => (v === "" ? null : v);
   return {
     ok: true,
@@ -127,6 +167,9 @@ export function cleanParty(input: PartyInput): { readonly ok: true; readonly val
       email: opt(email),
       city: opt(city),
       address: opt(address),
+      shortName: opt(shortName),
+      district: opt(district),
+      deliveryMode,
     },
   };
 }
@@ -143,6 +186,9 @@ type DbParty = {
   email: string | null;
   city: string | null;
   address: string | null;
+  short_name: string | null;
+  district: string | null;
+  delivery_mode: PartyDeliveryMode;
   archived_at: string | null;
   version: number;
 };
@@ -157,6 +203,9 @@ const toRow = (r: DbParty): PartyRow => ({
   email: r.email,
   city: r.city,
   address: r.address,
+  shortName: r.short_name,
+  district: r.district,
+  deliveryMode: r.delivery_mode,
   archived: r.archived_at !== null,
   version: Number(r.version),
 });
@@ -197,14 +246,16 @@ export async function listParties(
   const after = opts.after === undefined || opts.after === "" ? undefined : decodePartyCursor(opts.after);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const rows = await tx.execute<DbParty & { total: string }>(sql`
-      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version,
+      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, archived_at::text, version,
              -- Toplam yalnız ilk sayfada sayılır (sonraki sayfalarda süzülen kümenin tamamını yeniden saymasın).
              CASE WHEN ${after === undefined}::boolean THEN count(*) OVER () END::text AS total
         FROM public.parties
        WHERE tenant_id = ${m.tenantId}::uuid
          -- T-1037: arşiv görünümü YALNIZ arşivdekiler (ekran "Arşivdeki cariler" der; eskiden etkinler de geliyordu).
          AND (CASE WHEN ${opts.archived === true}::boolean THEN archived_at IS NOT NULL ELSE archived_at IS NULL END)
-         AND (${like}::text IS NULL OR name ILIKE ${like} OR code ILIKE ${like} OR tax_no ILIKE ${like} OR phone ILIKE ${like} OR city ILIKE ${like})
+         AND (${like}::text IS NULL OR name ILIKE ${like} OR code ILIKE ${like} OR tax_no ILIKE ${like} OR phone ILIKE ${like} OR city ILIKE ${like}
+              -- T-1117: kısa ad ve ilçe de aranır.
+              OR short_name ILIKE ${like} OR district ILIKE ${like})
          AND (${after === undefined}::boolean OR (name, code, id) > (${after?.name ?? ""}::text, ${after?.code ?? ""}::text, ${after?.id ?? "00000000-0000-0000-0000-000000000000"}::uuid))
        ORDER BY name, code, id
        LIMIT ${limit + 1}`);
@@ -224,7 +275,7 @@ export async function getParty(params: QueryParams, partyId: string): Promise<Pa
   const id = partyId.toLowerCase();
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, m) => {
     const rows = await tx.execute<DbParty>(sql`
-      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version
+      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, archived_at::text, version
         FROM public.parties
        WHERE tenant_id = ${m.tenantId}::uuid AND id = ${id}::uuid`);
     const row = rows[0];
@@ -232,6 +283,12 @@ export async function getParty(params: QueryParams, partyId: string): Promise<Pa
     return toRow(row);
   });
 }
+
+/**
+ * Audit özeti (I-12): kod, ünvan ve T-1117 alanlarından kısa ad + teslimat. Kişisel/iletişim alanları (vergi no, telefon, e-posta, adres; il ve
+ * ilçe dahil) eskisi gibi özete yazılmaz.
+ */
+const auditSummary = (v: Clean, deliveryMode: PartyDeliveryMode): Record<string, unknown> => ({ ref: v.code, name: v.name, short_name: v.shortName, delivery_mode: deliveryMode });
 
 /** Tek cari kaydet (`settings.manage`): `id` yoksa yeni (ad zorunlu), varsa sürüm denetimli güncelleme (boş alan temizlenir). */
 export type SavePartyResult = { readonly ok: true; readonly id: string; readonly version: number } | { readonly ok: false; readonly issue: PartyIssue | "CODE_TAKEN" };
@@ -245,22 +302,25 @@ export async function saveParty(params: PartyCommandParams, input: PartyInput & 
   return runTenantCommand<SavePartyResult>({ ...access, permission: "settings.manage" }, async (tx, m) => {
     if (input.id === undefined) {
       const rows = await tx.execute<{ id: string; version: number }>(sql`
-        INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, created_by)
-        VALUES (${m.tenantId}::uuid, gen_random_uuid(), ${v.code}, ${v.codeKey}, ${v.name}, ${v.kind ?? "CUSTOMER"}, ${v.taxNo}, ${v.taxOffice}, ${v.phone}, ${v.email}, ${v.city}, ${v.address}, ${m.membershipId}::uuid)
+        INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, created_by)
+        VALUES (${m.tenantId}::uuid, gen_random_uuid(), ${v.code}, ${v.codeKey}, ${v.name}, ${v.kind ?? "CUSTOMER"}, ${v.taxNo}, ${v.taxOffice}, ${v.phone}, ${v.email}, ${v.city}, ${v.address},
+                ${v.shortName}, ${v.district}, ${v.deliveryMode ?? "OWN"}, ${m.membershipId}::uuid)
         ON CONFLICT ON CONSTRAINT parties_tenant_code_key DO NOTHING
         RETURNING id, version`);
       const row = rows[0];
       if (row === undefined) return { ok: false, issue: "CODE_TAKEN" } as const;
-      await appendAudit(tx, { action: "party.created", actorUserId: m.userId, entityType: "party", entityId: row.id, requestId: requestId ?? null, changeSummary: { ref: v.code, name: v.name } });
+      await appendAudit(tx, { action: "party.created", actorUserId: m.userId, entityType: "party", entityId: row.id, requestId: requestId ?? null, changeSummary: auditSummary(v, v.deliveryMode ?? "OWN") });
       return { ok: true, id: row.id, version: Number(row.version) } as const;
     }
     if (!/^[0-9a-f-]{36}$/i.test(input.id) || input.expectedVersion === undefined) throw new AppError("VALIDATION_FAILED");
-    const rows = await tx.execute<{ id: string; version: number }>(sql`
+    const rows = await tx.execute<{ id: string; version: number; delivery_mode: PartyDeliveryMode }>(sql`
       UPDATE public.parties SET code = ${v.code}, code_key = ${v.codeKey}, name = ${v.name}, kind = ${v.kind ?? "CUSTOMER"}, tax_no = ${v.taxNo},
-             tax_office = ${v.taxOffice}, phone = ${v.phone}, email = ${v.email}, city = ${v.city}, address = ${v.address}
+             tax_office = ${v.taxOffice}, phone = ${v.phone}, email = ${v.email}, city = ${v.city}, address = ${v.address},
+             -- T-1117: teslimat verilmediyse (eski istemci) mevcut seçim korunur; kısa ad / ilçe diğer alanlar gibi boşsa temizlenir.
+             short_name = ${v.shortName}, district = ${v.district}, delivery_mode = COALESCE(${v.deliveryMode}::text, delivery_mode)
        WHERE tenant_id = ${m.tenantId}::uuid AND id = ${input.id}::uuid AND version = ${input.expectedVersion}
          AND NOT EXISTS (SELECT 1 FROM public.parties o WHERE o.tenant_id = ${m.tenantId}::uuid AND o.code_key = ${v.codeKey} AND o.id <> ${input.id}::uuid)
-      RETURNING id, version`);
+      RETURNING id, version, delivery_mode`);
     const row = rows[0];
     if (row === undefined) {
       const exists = await tx.execute<{ taken: boolean; found: boolean }>(sql`
@@ -270,7 +330,7 @@ export async function saveParty(params: PartyCommandParams, input: PartyInput & 
       if (exists[0]?.taken === true) return { ok: false, issue: "CODE_TAKEN" } as const;
       throw new AppError("VERSION_CONFLICT");
     }
-    await appendAudit(tx, { action: "party.updated", actorUserId: m.userId, entityType: "party", entityId: row.id, requestId: requestId ?? null, changeSummary: { ref: v.code, name: v.name } });
+    await appendAudit(tx, { action: "party.updated", actorUserId: m.userId, entityType: "party", entityId: row.id, requestId: requestId ?? null, changeSummary: auditSummary(v, row.delivery_mode) });
     return { ok: true, id: row.id, version: Number(row.version) } as const;
   });
 }
@@ -336,7 +396,7 @@ export async function importParties(
     const existing = new Map<string, DbParty>();
     if (keys.length > 0) {
       const rows = await tx.execute<DbParty>(sql`
-        SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, archived_at::text, version
+        SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, archived_at::text, version
           FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND code_key = ANY(${`{${keys.map((k) => `"${k.replace(/["\\]/g, (c) => `\\${c}`)}"`).join(",")}}`}::text[])`);
       for (const r of rows) existing.set(r.code_key, r);
     }
@@ -355,8 +415,9 @@ export async function importParties(
         }
         if (!input.dryRun) {
           await tx.execute(sql`
-            INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, created_by)
-            VALUES (${m.tenantId}::uuid, gen_random_uuid(), ${v.code}, ${v.codeKey}, ${v.name}, ${v.kind ?? "CUSTOMER"}, ${v.taxNo}, ${v.taxOffice}, ${v.phone}, ${v.email}, ${v.city}, ${v.address}, ${m.membershipId}::uuid)`);
+            INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, created_by)
+            VALUES (${m.tenantId}::uuid, gen_random_uuid(), ${v.code}, ${v.codeKey}, ${v.name}, ${v.kind ?? "CUSTOMER"}, ${v.taxNo}, ${v.taxOffice}, ${v.phone}, ${v.email}, ${v.city}, ${v.address},
+                    ${v.shortName}, ${v.district}, ${v.deliveryMode ?? "OWN"}, ${m.membershipId}::uuid)`);
         }
         out.push({ row: x.row, status: "CREATED", ...w });
         continue;
@@ -374,6 +435,10 @@ export async function importParties(
         email: p ? (v.email ?? cur.email) : cur.email,
         city: v.city ?? cur.city,
         address: p ? (v.address ?? cur.address) : cur.address,
+        // T-1117: kısa ad, ilçe ve teslimat kişisel veri değildir (il gibi); boş hücre mevcut değeri silmez.
+        short_name: v.shortName ?? cur.short_name,
+        district: v.district ?? cur.district,
+        delivery_mode: v.deliveryMode ?? cur.delivery_mode,
       };
       const changed = (Object.keys(next) as (keyof typeof next)[]).some((k) => next[k] !== cur[k]);
       if (!changed) {
@@ -383,7 +448,8 @@ export async function importParties(
       if (!input.dryRun) {
         await tx.execute(sql`
           UPDATE public.parties SET name = ${next.name}, kind = ${next.kind}, tax_no = ${next.tax_no}, tax_office = ${next.tax_office}, phone = ${next.phone},
-                 email = ${next.email}, city = ${next.city}, address = ${next.address}
+                 email = ${next.email}, city = ${next.city}, address = ${next.address}, short_name = ${next.short_name}, district = ${next.district},
+                 delivery_mode = ${next.delivery_mode}
            WHERE tenant_id = ${m.tenantId}::uuid AND id = ${cur.id}::uuid`);
       }
       out.push({ row: x.row, status: "UPDATED", ...w });

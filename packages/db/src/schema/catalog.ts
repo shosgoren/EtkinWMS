@@ -244,6 +244,9 @@ export const codeHistory = pgTable(
 // T-428 (`0050_parties`): cari kartlar (müşteri / tedarikçi). Fiziksel silme yok (arşiv); `updated_at`/`version` tetikleyicide.
 export const PARTY_KINDS = ["CUSTOMER", "SUPPLIER", "BOTH"] as const;
 export type PartyKind = (typeof PARTY_KINDS)[number];
+// T-1117 (`0064_party_details`): varsayılan teslimat — kendi personelim / kargo firması.
+export const PARTY_DELIVERY_MODES = ["OWN", "CARRIER"] as const;
+export type PartyDeliveryMode = (typeof PARTY_DELIVERY_MODES)[number];
 export const parties = pgTable(
   "parties",
   {
@@ -264,6 +267,9 @@ export const parties = pgTable(
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
     version: integer("version").notNull().default(1),
+    shortName: text("short_name"),
+    district: text("district"),
+    deliveryMode: text("delivery_mode").$type<PartyDeliveryMode>().notNull().default("OWN"),
   },
   (t) => [unique("parties_tenant_code_key").on(t.tenantId, t.codeKey), index("parties_tenant_name_idx").on(t.tenantId, t.name)],
 );

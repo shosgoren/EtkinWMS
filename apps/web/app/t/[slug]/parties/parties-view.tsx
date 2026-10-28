@@ -32,15 +32,35 @@ export interface PartyView {
   readonly email: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  /** T-1117 (`0064_party_details`): listede görünen kısa ad, ilçe, varsayılan teslimat. */
+  readonly shortName: string | null;
+  readonly district: string | null;
+  readonly deliveryMode: "OWN" | "CARRIER";
   readonly archived: boolean;
   readonly version: number;
 }
 
 type Kind = PartyView["kind"];
-type Form = Record<"code" | "name" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "address", string> & { kind: Kind };
-const empty: Form = { code: "", name: "", kind: "CUSTOMER", taxNo: "", taxOffice: "", phone: "", email: "", city: "", address: "" };
-const fromParty = (p: PartyView): Form => ({ code: p.code, name: p.name, kind: p.kind, taxNo: p.taxNo ?? "", taxOffice: p.taxOffice ?? "", phone: p.phone ?? "", email: p.email ?? "", city: p.city ?? "", address: p.address ?? "" });
+type Delivery = PartyView["deliveryMode"];
+type Form = Record<"code" | "name" | "shortName" | "taxNo" | "taxOffice" | "phone" | "email" | "city" | "district" | "address", string> & { kind: Kind; deliveryMode: Delivery };
+const empty: Form = { code: "", name: "", shortName: "", kind: "CUSTOMER", taxNo: "", taxOffice: "", phone: "", email: "", city: "", district: "", address: "", deliveryMode: "OWN" };
+const fromParty = (p: PartyView): Form => ({
+  code: p.code,
+  name: p.name,
+  shortName: p.shortName ?? "",
+  kind: p.kind,
+  taxNo: p.taxNo ?? "",
+  taxOffice: p.taxOffice ?? "",
+  phone: p.phone ?? "",
+  email: p.email ?? "",
+  city: p.city ?? "",
+  district: p.district ?? "",
+  address: p.address ?? "",
+  deliveryMode: p.deliveryMode,
+});
 const KINDS = ["CUSTOMER", "SUPPLIER", "BOTH"] as const;
+/** T-1117: tuvaldeki "Varsayılan teslimat" seçenekleri (varsayılan Kendi personelim). */
+const DELIVERIES = ["OWN", "CARRIER"] as const;
 // T-1117: tür simgeleri tuvaldeki tür seçimiyle aynı (`StandartYeniCari.dc.html`: Müşteri kişi, Tedarikçi kutu, İkisi de çift ok).
 const KIND_VISUAL: Record<Kind, { readonly d: string; readonly color: string }> = {
   CUSTOMER: { d: SICON.kisi, color: "2F7D5B" },
@@ -52,6 +72,9 @@ const FORM_ICON = { d: SICON.kisiler, color: "2F7D5B" } as const;
 const G_KIMLIK = "2F7D5B";
 const G_VERGI = "2F5DA8";
 const G_ADRES = "C2702A";
+/** T-1117: tuvalde Kısa ad simgesi gri; teslimat seçimi tuvalin `.opt.on` yeşili. */
+const G_GRI = "4E6476";
+const G_SECIM = "2F7D5B";
 const ICON = { d: LICON.people, color: "6C4BD8" } as const;
 
 /** Sunucu alan sorunu → alan adı (formda ilgili alanın altında gösterilir). */
@@ -64,6 +87,7 @@ const ISSUE_FIELD: Record<string, keyof Form> = {
   NAME_INVALID: "name",
   KIND_UNKNOWN: "kind",
   TAX_NO_INVALID: "taxNo",
+  DELIVERY_UNKNOWN: "deliveryMode",
   PHONE_INVALID: "phone",
   EMAIL_INVALID: "email",
 };
@@ -147,7 +171,7 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
     });
   }
 
-  const field = (k: Exclude<keyof Form, "kind">, ikon: { readonly d: string; readonly color: string }, extra: { required?: boolean; maxLength?: number; inputMode?: "tel" | "email"; placeholder?: string } = {}) => (
+  const field = (k: Exclude<keyof Form, "kind" | "deliveryMode">, ikon: { readonly d: string; readonly color: string }, extra: { required?: boolean; maxLength?: number; inputMode?: "tel" | "email"; placeholder?: string } = {}) => (
     <KalipAlan
       key={k}
       label={`${t(`f.${k}`)}${extra.required === true ? " *" : ""}`}
@@ -222,11 +246,12 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
         ) : undefined
       }
     >
-      {/* T-1117: üç sütun (masaüstü) — Kimlik · Vergi ve iletişim · Adres ve teslimat; telefonda alt alta. Tuvaldeki Kısa ad, İlçe ve
-          Varsayılan teslimat alanlarının veri karşılığı yok (sütun yok) → çizilmez (T-1117 kartı). */}
+      {/* T-1117: üç sütun (masaüstü) — Kimlik · Vergi ve iletişim · Adres ve teslimat; telefonda alt alta. Kısa ad, İlçe ve Varsayılan
+          teslimat `0064_party_details` sütunlarıdır (tuvaldeki yerlerinde). */}
       <KalipGrup title={t("gIdentity")} sub={t("gIdentitySub")} d={SICON.ad} color={G_KIMLIK} testId="party-g-identity">
         {field("name", { d: SICON.bina, color: G_KIMLIK }, { required: true, maxLength: 200, placeholder: t("ph.name") })}
         {field("code", { d: SICON.ad, color: G_KIMLIK }, { required: true, maxLength: 64 })}
+        {field("shortName", { d: SICON.ad, color: G_GRI }, { maxLength: 100, placeholder: t("ph.shortName") })}
       </KalipGrup>
       <KalipGrup title={t("gContact")} sub={t("gContactSub")} d={SICON.bilgi} color={G_VERGI} testId="party-g-contact">
         <KalipAlanSira>
@@ -237,8 +262,21 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
         {field("email", { d: SICON.eposta, color: G_VERGI }, { inputMode: "email", placeholder: t("ph.email") })}
       </KalipGrup>
       <KalipGrup title={t("gAddress")} d={SICON.kamyon} color={G_ADRES} testId="party-g-address">
-        {field("city", { d: SICON.konum, color: G_ADRES })}
+        <KalipAlanSira>
+          {field("city", { d: SICON.konum, color: G_ADRES }, { maxLength: 100 })}
+          {field("district", { d: SICON.konum, color: G_ADRES }, { maxLength: 100 })}
+        </KalipAlanSira>
         {field("address", { d: SICON.konum, color: G_ADRES }, { maxLength: 500, placeholder: t("ph.address") })}
+        <KalipSecimGrubu
+          name="deliveryMode"
+          label={t("f.deliveryMode")}
+          value={f.deliveryMode}
+          color={G_SECIM}
+          disabled={!canEdit}
+          onPick={(id) => set("deliveryMode", id)}
+          options={DELIVERIES.map((k) => ({ id: k, label: t(`delivery.${k}`) }))}
+          testId="party-delivery"
+        />
       </KalipGrup>
     </KalipFormEkran>
   );

@@ -1,5 +1,5 @@
 // T-428: cari kartlar — kaydet / arşivle / Excel'den aktar (dryRun ve yazma), tekrar yüklemede 0 yeni, boş hücre mevcut değeri silmez,
-// başka alanın carisi görünmez (RLS + uygulama), yetkisiz rol yazamaz. GERÇEK roller (wms_app, pooler); fikstür yalnızca DATABASE_URL_DIRECT ile.
+// başka alanın carisi görünmez (RLS + uygulama), yetkisiz rol yazamaz. T-1117: kısa ad / ilçe / varsayılan teslimat (`0064_party_details`). GERÇEK roller (wms_app, pooler); fikstür yalnızca DATABASE_URL_DIRECT ile.
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -138,6 +138,88 @@ describe("T-428 cari kartlar", () => {
     for (const bad of ["", "bozuk", "' OR 1=1 --"]) await expect(getParty(call(A.ownerUserId, A), bad)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
     await setPartyArchived(call(A.ownerUserId, A), { id: made.id, expectedVersion: made.version, archived: true });
     expect((await getParty(call(A.ownerUserId, A), made.id)).archived).toBe(true);
+  });
+
+  it("T-1117 kısa ad, ilçe, teslimat: kaydet → oku gidiş-dönüş, varsayılan OWN, teslimat verilmezse korunur, audit, kısa adla arama", async () => {
+    const code = `K${Date.now()}`;
+    const made = await saveParty(call(A.ownerUserId, A), { code, name: "Kaya Otomotiv San. Tic. A.Ş.", shortName: "  Kaya  Oto ", city: "İstanbul", district: "Kadıköy", deliveryMode: "CARRIER" });
+    expect(made.ok).toBe(true);
+    if (!made.ok) return;
+    expect(await getParty(call(A.ownerUserId, A), made.id)).toMatchObject({ shortName: "Kaya Oto", city: "İstanbul", district: "Kadıköy", deliveryMode: "CARRIER" });
+    const audit = await adm.query<{ s: Record<string, unknown> }>("SELECT change_summary AS s FROM public.audit_logs WHERE tenant_id = $1 AND action = 'party.created' AND entity_id = $2", [A.tenantId, made.id]);
+    expect(audit.rows[0]?.s).toMatchObject({ ref: code, short_name: "Kaya Oto", delivery_mode: "CARRIER" });
+    // Kısa ad ve ilçeyle aranır.
+    expect((await listParties(call(A.ownerUserId, A), { q: "Kaya Oto" })).items.map((x) => x.id)).toContain(made.id);
+    expect((await listParties(call(A.ownerUserId, A), { q: code })).items[0]).toMatchObject({ shortName: "Kaya Oto", district: "Kadıköy", deliveryMode: "CARRIER" });
+    // Güncelleme: teslimat verilmezse (eski istemci) korunur; boş kısa ad temizlenir.
+    const u1 = await saveParty(call(A.ownerUserId, A), { id: made.id, expectedVersion: made.version, code, name: "Kaya Otomotiv", shortName: "", district: "Üsküdar" });
+    expect(u1).toMatchObject({ ok: true, version: made.version + 1 });
+    expect(await getParty(call(A.ownerUserId, A), made.id)).toMatchObject({ shortName: null, district: "Üsküdar", deliveryMode: "CARRIER" });
+    if (!u1.ok) return;
+    const u2 = await saveParty(call(A.ownerUserId, A), { id: made.id, expectedVersion: u1.version, code, name: "Kaya Otomotiv", shortName: "Kaya", deliveryMode: "OWN" });
+    expect(u2.ok).toBe(true);
+    expect(await getParty(call(A.ownerUserId, A), made.id)).toMatchObject({ shortName: "Kaya", district: null, deliveryMode: "OWN" });
+    const upd = await adm.query<{ s: Record<string, unknown> }>("SELECT change_summary AS s FROM public.audit_logs WHERE tenant_id = $1 AND action = 'party.updated' AND entity_id = $2 ORDER BY occurred_at DESC LIMIT 1", [A.tenantId, made.id]);
+    expect(upd.rows[0]?.s).toMatchObject({ short_name: "Kaya", delivery_mode: "OWN" });
+    // Varsayılan: teslimat seçilmeden eklenen cari "Kendi personelim".
+    const plain = await saveParty(call(A.ownerUserId, A), { code: `${code}-D`, name: "Varsayılan Cari" });
+    expect(plain.ok && (await getParty(call(A.ownerUserId, A), plain.id)).deliveryMode).toBe("OWN");
+    // Doğrulama: uzun kısa ad / ilçe ve tanınmayan teslimat sonuç olarak döner, yazılmaz.
+    expect(await saveParty(call(A.ownerUserId, A), { code: `${code}-X`, name: "X", shortName: "k".repeat(101) })).toEqual({ ok: false, issue: "TEXT_TOO_LONG" });
+    expect(await saveParty(call(A.ownerUserId, A), { code: `${code}-X`, name: "X", district: "i".repeat(101) })).toEqual({ ok: false, issue: "TEXT_TOO_LONG" });
+    expect(await saveParty(call(A.ownerUserId, A), { code: `${code}-X`, name: "X", deliveryMode: "uçak" })).toEqual({ ok: false, issue: "DELIVERY_UNKNOWN" });
+    expect((await listParties(call(A.ownerUserId, A), { q: `${code}-X` })).total).toBe(0);
+  });
+
+  it("T-1117 çapraz tenant: B, A carisinin yeni alanlarını ne okur ne arar ne yazar; toplayıcı yazamaz", async () => {
+    const code = `T${Date.now()}`;
+    const made = await saveParty(call(A.ownerUserId, A), { code, name: "Gizli Cari", shortName: `KISA${code}`, district: "Çankaya", deliveryMode: "CARRIER" });
+    expect(made.ok).toBe(true);
+    if (!made.ok) return;
+    expect((await listParties(call(B.ownerUserId, B), { q: `KISA${code}` })).total).toBe(0);
+    expect((await listParties(call(B.ownerUserId, B), { q: "Çankaya" })).items.every((x) => x.id !== made.id)).toBe(true);
+    await expect(getParty(call(B.ownerUserId, B), made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    // B'nin sahibi A'nın kimliğiyle güncelleyemez (kendi tenant'ında yok → NOT_FOUND); A'daki değerler değişmez.
+    await expect(saveParty(call(B.ownerUserId, B), { id: made.id, expectedVersion: made.version, code, name: "Ele geçir", shortName: "B", deliveryMode: "OWN" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(saveParty(call(PICKER, A), { id: made.id, expectedVersion: made.version, code, name: "Toplayıcı", deliveryMode: "OWN" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(await getParty(call(A.ownerUserId, A), made.id)).toMatchObject({ name: "Gizli Cari", shortName: `KISA${code}`, district: "Çankaya", deliveryMode: "CARRIER", version: made.version });
+  });
+
+  it("T-1117 Excel aktarımı: kısa ad / ilçe / teslimat metni okunur; boş hücre silmez; tanınmayan teslimat sorunlu", async () => {
+    const p = `X${Date.now()}`;
+    const rows = [
+      { row: 2, code: `${p}-1`, name: "Demir Lastik", shortName: "Demir", district: "Bornova", deliveryMode: "Kargo firması" },
+      { row: 3, code: `${p}-2`, name: "Yıldız", deliveryMode: "at arabası" },
+    ];
+    const r = await importParties(call(A.ownerUserId, A), { rows, dryRun: false });
+    expect(r).toMatchObject({ created: 1, invalid: 1 });
+    expect(r.rows.find((x) => x.row === 3)?.issue).toBe("DELIVERY_UNKNOWN");
+    expect((await listParties(call(A.ownerUserId, A), { q: p })).items[0]).toMatchObject({ shortName: "Demir", district: "Bornova", deliveryMode: "CARRIER" });
+    expect(await importParties(call(A.ownerUserId, A), { rows: [{ row: 2, code: `${p}-1`, deliveryMode: "kendi personelim" }], dryRun: false })).toMatchObject({ updated: 1 });
+    expect((await listParties(call(A.ownerUserId, A), { q: p })).items[0]).toMatchObject({ shortName: "Demir", district: "Bornova", deliveryMode: "OWN" });
+  });
+
+  it("T-1117 veritabanı (0064): CHECK'ler geçersiz değeri reddeder; yeni sütunları yalnız wms_app yazar", async () => {
+    const ins = (cols: string, vals: unknown[]) =>
+      adm.query(`INSERT INTO public.parties (tenant_id, code, code_key, name, created_by, ${cols}) VALUES ($1, $2, $2, 'C', $3, ${vals.map((_, i) => `$${i + 4}`).join(", ")})`, [A.tenantId, `Q${Date.now()}${Math.random().toString(36).slice(2, 6)}`.toUpperCase(), A.ownerMembershipId, ...vals]);
+    for (const [cols, vals] of [
+      ["delivery_mode", ["TRUCK"]],
+      ["short_name", [""]],
+      ["short_name", ["a\u0007b"]],
+      ["short_name", ["k".repeat(101)]],
+      ["district", [""]],
+      ["district", ["i".repeat(101)]],
+    ] as const) {
+      await expect(ins(cols, [...vals])).rejects.toMatchObject({ code: "23514" });
+    }
+    await expect(adm.query("INSERT INTO public.parties (tenant_id, code, code_key, name, created_by, delivery_mode) VALUES ($1, $2, $2, 'C', $3, NULL)", [A.tenantId, `N${Date.now()}`, A.ownerMembershipId])).rejects.toMatchObject({ code: "23502" });
+    const priv = await adm.query<{ role: string; col: string; ins: boolean; upd: boolean }>(
+      `SELECT r AS role, c AS col, has_column_privilege(r, 'public.parties', c, 'INSERT') AS ins, has_column_privilege(r, 'public.parties', c, 'UPDATE') AS upd
+         FROM unnest(ARRAY['wms_app', 'wms_worker', 'wms_auth']) r CROSS JOIN unnest(ARRAY['short_name', 'district', 'delivery_mode']) c
+        WHERE to_regrole(r) IS NOT NULL ORDER BY r, c`,
+    );
+    for (const x of priv.rows) expect({ ...x, ok: x.role === "wms_app" ? x.ins && x.upd : !x.ins && !x.upd }).toMatchObject({ ok: true });
+    expect(priv.rows.filter((x) => x.role === "wms_app")).toHaveLength(3);
   });
 
   it("veritabanı: silme yetkisi yok, kimlik alanı değiştirilemez", async () => {

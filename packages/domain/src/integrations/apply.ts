@@ -178,6 +178,9 @@ export interface ProviderContact {
   readonly phone: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  /** T-1117 (`0064_party_details`): Paraşüt `short_name` / `district` (isteğe bağlı). */
+  readonly shortName?: string | null;
+  readonly district?: string | null;
 }
 
 interface PartyFields {
@@ -189,9 +192,11 @@ interface PartyFields {
   readonly phone: string | null;
   readonly city: string | null;
   readonly address: string | null;
+  readonly shortName: string | null;
+  readonly district: string | null;
 }
 
-/** 0050 CHECK'lerine uymayan alan atılır (kayıt düşmez). */
+/** 0050 / 0064 CHECK'lerine uymayan alan atılır (kayıt düşmez). */
 function partyFields(p: ProviderContact): PartyFields | null {
   const name = clean(p.name, 200);
   if (name === null) return null;
@@ -207,6 +212,8 @@ function partyFields(p: ProviderContact): PartyFields | null {
     phone: phone !== null && /^[0-9+() ./-]+$/.test(phone) ? phone : null,
     city: clean(p.city, 100),
     address: clean(p.address, 500),
+    shortName: clean(p.shortName, 100),
+    district: clean(p.district, 100),
   };
 }
 
@@ -219,12 +226,14 @@ export async function applyContact(tx: AccessTx, c: ApplyContext, p: ProviderCon
     const r = await tx.execute<{ id: string }>(
       sql`UPDATE public.parties SET name = ${f.name}, kind = CASE WHEN kind = ${f.kind} OR kind = 'BOTH' THEN kind ELSE 'BOTH' END,
                  tax_no = COALESCE(${f.taxNo}, tax_no), tax_office = COALESCE(${f.taxOffice}, tax_office), email = COALESCE(${f.email}, email),
-                 phone = COALESCE(${f.phone}, phone), city = COALESCE(${f.city}, city), address = COALESCE(${f.address}, address)
+                 phone = COALESCE(${f.phone}, phone), city = COALESCE(${f.city}, city), address = COALESCE(${f.address}, address),
+                 short_name = COALESCE(${f.shortName}, short_name), district = COALESCE(${f.district}, district)
            WHERE tenant_id = ${c.tenantId}::uuid AND id = ${existing}::uuid AND archived_at IS NULL
              AND (name IS DISTINCT FROM ${f.name} OR (kind <> ${f.kind} AND kind <> 'BOTH')
                   OR (${f.taxNo}::text IS NOT NULL AND tax_no IS DISTINCT FROM ${f.taxNo}) OR (${f.taxOffice}::text IS NOT NULL AND tax_office IS DISTINCT FROM ${f.taxOffice})
                   OR (${f.email}::text IS NOT NULL AND email IS DISTINCT FROM ${f.email}) OR (${f.phone}::text IS NOT NULL AND phone IS DISTINCT FROM ${f.phone})
-                  OR (${f.city}::text IS NOT NULL AND city IS DISTINCT FROM ${f.city}) OR (${f.address}::text IS NOT NULL AND address IS DISTINCT FROM ${f.address}))
+                  OR (${f.city}::text IS NOT NULL AND city IS DISTINCT FROM ${f.city}) OR (${f.address}::text IS NOT NULL AND address IS DISTINCT FROM ${f.address})
+                  OR (${f.shortName}::text IS NOT NULL AND short_name IS DISTINCT FROM ${f.shortName}) OR (${f.district}::text IS NOT NULL AND district IS DISTINCT FROM ${f.district}))
           RETURNING id`,
     );
     if (r[0] === undefined) return "UNCHANGED";
@@ -244,8 +253,9 @@ export async function applyContact(tx: AccessTx, c: ApplyContext, p: ProviderCon
   }
   const code = `PRS-${p.externalId}`;
   const ins = await tx.execute<{ id: string }>(
-    sql`INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, created_by)
-        VALUES (${c.tenantId}::uuid, gen_random_uuid(), ${code}, ${code.toLocaleUpperCase("tr")}, ${f.name}, ${f.kind}, ${f.taxNo}, ${f.taxOffice}, ${f.phone}, ${f.email}, ${f.city}, ${f.address}, ${c.membershipId}::uuid)
+    sql`INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, created_by)
+        VALUES (${c.tenantId}::uuid, gen_random_uuid(), ${code}, ${code.toLocaleUpperCase("tr")}, ${f.name}, ${f.kind}, ${f.taxNo}, ${f.taxOffice}, ${f.phone}, ${f.email}, ${f.city}, ${f.address},
+                ${f.shortName}, ${f.district}, ${c.membershipId}::uuid)
         ON CONFLICT ON CONSTRAINT parties_tenant_code_key DO NOTHING RETURNING id`,
   );
   const partyId = ins[0]?.id;

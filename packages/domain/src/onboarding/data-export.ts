@@ -27,7 +27,7 @@ export type ExportKind = (typeof EXPORT_KINDS)[number];
 /** Dosya başına en çok satır (içe aktarma sınırıyla aynı). */
 export const EXPORT_MAX_ROWS = IMPORT_MAX_ROWS;
 
-export const PARTY_EXPORT_HEADERS = ["Cari kodu", "Unvan", "VKN/TCKN", "Vergi dairesi", "Telefon", "E-posta", "İl", "Adres", "Tür"] as const;
+export const PARTY_EXPORT_HEADERS = ["Cari kodu", "Unvan", "VKN/TCKN", "Vergi dairesi", "Telefon", "E-posta", "İl", "Adres", "Tür", "Kısa ad", "İlçe", "Teslimat"] as const;
 export const WAREHOUSE_EXPORT_HEADERS = ["depo kodu", "depo adı"] as const;
 export const LOCATION_EXPORT_HEADERS = ["depo kodu", "raf kodu", "raf adı", "üst raf kodu", "tür"] as const;
 
@@ -41,6 +41,8 @@ export const EXPORT_HEADERS: Readonly<Record<ExportKind, readonly string[]>> = {
 };
 
 const PARTY_KIND_LABEL: Readonly<Record<string, string>> = { CUSTOMER: "Müşteri", SUPPLIER: "Tedarikçi", BOTH: "İkisi de" };
+// T-1117: teslimat etiketi Aktar'da geri okunur (`parseDeliveryMode`: "kendi…" → OWN, "kargo…" → CARRIER).
+const PARTY_DELIVERY_LABEL: Readonly<Record<string, string>> = { OWN: "Kendi personelim", CARRIER: "Kargo firması" };
 /** Raf türü etiketi (içe aktarma `parseLocationKind` bu etiketleri ve teknik kodları tanır). */
 export const LOCATION_KIND_LABEL: Readonly<Record<string, string>> = { RECEIVING: "Kabul", STORAGE: "Depolama", STAGING: "Sevk", TRANSIT: "Yolda" };
 
@@ -122,8 +124,8 @@ export async function exportData(params: ExportParams, input: ExportInput): Prom
     } else if (kind === "parties") {
       const personal = hasPermission(m.roles, "settings.manage", m.grants);
       personalOmitted = !personal;
-      const r = await tx.execute<{ code: string; name: string; kind: string; tax_no: string | null; tax_office: string | null; phone: string | null; email: string | null; city: string | null; address: string | null }>(sql`
-        SELECT code, name, kind, tax_no, tax_office, phone, email, city, address
+      const r = await tx.execute<{ code: string; name: string; kind: string; tax_no: string | null; tax_office: string | null; phone: string | null; email: string | null; city: string | null; address: string | null; short_name: string | null; district: string | null; delivery_mode: string }>(sql`
+        SELECT code, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode
           FROM public.parties
          WHERE tenant_id = ${m.tenantId}::uuid
            AND (${input.archived === true}::boolean OR archived_at IS NULL)
@@ -132,7 +134,7 @@ export async function exportData(params: ExportParams, input: ExportInput): Prom
          ORDER BY code_key COLLATE "C", id
          LIMIT ${limit + 1}`);
       const p = (v: string | null): string => (personal ? (v ?? "") : "");
-      rows = r.map((x) => [x.code, x.name, p(x.tax_no), p(x.tax_office), p(x.phone), p(x.email), x.city ?? "", p(x.address), PARTY_KIND_LABEL[x.kind] ?? ""]);
+      rows = r.map((x) => [x.code, x.name, p(x.tax_no), p(x.tax_office), p(x.phone), p(x.email), x.city ?? "", p(x.address), PARTY_KIND_LABEL[x.kind] ?? "", x.short_name ?? "", x.district ?? "", PARTY_DELIVERY_LABEL[x.delivery_mode] ?? ""]);
     } else if (kind === "warehouses") {
       const r = await tx.execute<{ code: string; name: string }>(sql`
         SELECT w.code, w.name FROM public.warehouses w

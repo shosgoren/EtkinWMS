@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanParty, parseKind } from "./parties.ts";
+import { cleanParty, parseDeliveryMode, parseKind } from "./parties.ts";
 
 describe("T-428 cari kart doğrulama", () => {
   it("tür metni: Türkçe ve kısaltmalar", () => {
@@ -26,5 +26,26 @@ describe("T-428 cari kart doğrulama", () => {
     expect(cleanParty({ code: "A", kind: "bayi" })).toEqual({ ok: false, issue: "KIND_UNKNOWN" });
     const w = cleanParty({ code: "A", name: "B", taxNo: "12345" });
     expect(w.ok && w.warnings).toEqual(["TAX_NO_LENGTH"]);
+  });
+
+  it("T-1117: teslimat metni (Türkçe, İngilizce, sabit değer); boş verilmedi, tanınmayan hata", () => {
+    expect(parseDeliveryMode("OWN")).toBe("OWN");
+    expect(parseDeliveryMode("CARRIER")).toBe("CARRIER");
+    expect(parseDeliveryMode("Kendi personelim")).toBe("OWN");
+    expect(parseDeliveryMode("KARGO FİRMASI")).toBe("CARRIER");
+    expect(parseDeliveryMode("carrier")).toBe("CARRIER");
+    expect(parseDeliveryMode("")).toBeNull();
+    expect(parseDeliveryMode("uçak")).toBe("UNKNOWN");
+  });
+
+  it("T-1117: kısa ad ve ilçe normalize edilir, sınır ve kontrol karakteri reddedilir; teslimat verilmezse null", () => {
+    const r = cleanParty({ code: "A", name: "B", shortName: "  Kaya  Oto ", district: " Kadıköy ", deliveryMode: "kargo" });
+    expect(r.ok && r.value).toMatchObject({ shortName: "Kaya Oto", district: "Kadıköy", deliveryMode: "CARRIER" });
+    const bos = cleanParty({ code: "A", name: "B", shortName: " ", district: "" });
+    expect(bos.ok && bos.value).toMatchObject({ shortName: null, district: null, deliveryMode: null });
+    expect(cleanParty({ code: "A", shortName: "x".repeat(101) })).toEqual({ ok: false, issue: "TEXT_TOO_LONG" });
+    expect(cleanParty({ code: "A", district: "y".repeat(101) })).toEqual({ ok: false, issue: "TEXT_TOO_LONG" });
+    expect(cleanParty({ code: "A", shortName: "a\u0007b" })).toEqual({ ok: false, issue: "TEXT_TOO_LONG" });
+    expect(cleanParty({ code: "A", deliveryMode: "uçak" })).toEqual({ ok: false, issue: "DELIVERY_UNKNOWN" });
   });
 });
