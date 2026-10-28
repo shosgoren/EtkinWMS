@@ -12,7 +12,7 @@ import { kalipDark } from "../../stock/belge-kalip.ts";
 import { Ico, KalipBaslik, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKartListe, type KalipCip } from "../../kalip/liste.tsx";
 import { KalipGorevKarti } from "../../kalip/gorev-karti.tsx";
-import { KalipBildirim } from "../../kalip/bildirim.tsx";
+import { KalipBildirim } from "../../kalip/belge.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -135,8 +135,8 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
     <KalipEkran kind="liste" dark={dark} title={t("field.title")} icon={{ d: LICON.clip, color: "6C4BD8" }} testId="field-tasks" bar={{ back: { href: fieldHome } }}>
       <p className="sr">{t("field.intro")}</p>
       {/* T-1122: eski Banner yerine ortak sonuç bildirimi (simgeli, sesli). */}
-      {first(sp.claimed) === "1" ? <KalipBildirim tur="ok" title={t("field.claimed")} testId="field-claimed" /> : null}
-      {errorKey === null ? null : <KalipBildirim tur="err" title={te(errorKey)} sub={te(`${errorKey}Action`)} testId="field-claim-error" />}
+      {first(sp.claimed) === "1" ? <KalipBildirim tur="tamam" ses title={t("field.claimed")} testId="field-claimed" /> : null}
+      {errorKey === null ? null : <KalipBildirim tur="hata" ses title={te(errorKey)} sub={te(`${errorKey}Action`)} testId="field-claim-error" />}
       <KalipAra
         label={t("search")}
         placeholder={t("searchPlaceholder")}

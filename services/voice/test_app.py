@@ -199,6 +199,31 @@ class ModelTests(unittest.TestCase):
         self.assertGreater(conf, 0.0)
 
 
+def bellek_tanisi():
+    """Bellek sınırı aşılınca nedenini ayırmak için (T-1125): işlemci, THP ayarı, anonim/dosya/büyük sayfa payı."""
+    out = []
+    try:
+        model = next((l.split(":", 1)[1].strip() for l in Path("/proc/cpuinfo").read_text().splitlines() if l.startswith("model name")), "?")
+        out.append(f"cpu={model}")
+    except OSError:
+        pass
+    for f in ("/sys/kernel/mm/transparent_hugepage/enabled", "/sys/kernel/mm/transparent_hugepage/defrag"):
+        try:
+            out.append(f"{Path(f).name}={Path(f).read_text().strip()}")
+        except OSError:
+            pass
+    try:
+        for l in Path("/proc/self/status").read_text().splitlines():
+            if l.startswith(("RssAnon:", "RssFile:", "RssShmem:", "VmHWM:")):
+                out.append(l.replace(" ", "").replace("\t", ""))
+        for l in Path("/proc/self/smaps_rollup").read_text().splitlines():
+            if l.startswith(("AnonHugePages:", "Private_Dirty:")):
+                out.append(l.replace(" ", ""))
+    except OSError:
+        pass
+    return " ".join(out)
+
+
 def rss_mib():
     for line in Path("/proc/self/status").read_text().splitlines():
         if line.startswith("VmRSS:"):
@@ -227,7 +252,12 @@ class TtsModelTests(unittest.TestCase):
         text, _conf = stt.transcribe(heard)
         self.assertIn("hava", text.lower())
         # Kapsayıcı sınırı 1280 MiB (deploy/vps/compose.yml): iki model birlikte payla sığmalı.
-        self.assertLess(rss_mib(), 1100, f"çekirdek={os.cpu_count()} OMP={os.environ.get('OMP_NUM_THREADS')} arena={os.environ.get('MALLOC_ARENA_MAX')}")
+        # T-1125: THP bu süreçte kapalı (yerleşik bellek makinenin THP ayarına bağlı kalmasın).
+        self.assertTrue(voice.THP_KAPALI)
+        self.assertIn("THP_enabled:\t0", Path("/proc/self/status").read_text())
+        rss = rss_mib()
+        print(f"\nses bellek: rss={rss:.0f}MiB {bellek_tanisi()}")
+        self.assertLess(rss, 1100, f"çekirdek={os.cpu_count()} OMP={os.environ.get('OMP_NUM_THREADS')} arena={os.environ.get('MALLOC_ARENA_MAX')} {bellek_tanisi()}")
 
 
 if __name__ == "__main__":

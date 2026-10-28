@@ -120,6 +120,9 @@ const toContact = (r: JsonApiResource) => ({
   phone: s(r.attributes.phone),
   city: s(r.attributes.city),
   address: s(r.attributes.address),
+  // T-1117 (`0064_party_details`): Paraşüt kısa ad ve ilçe.
+  shortName: s(r.attributes.short_name),
+  district: s(r.attributes.district),
 });
 const toWarehouse = (r: JsonApiResource) => ({ externalId: r.id, name: s(r.attributes.name), archived: r.attributes.archived === true });
 
@@ -171,7 +174,7 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
 }
 
 // --- Etkin -> ERP (kartlar) ---------------------------------------------------------------------------------------------------------
-type PushRow = { id: string; code: string; name: string; extra: string | null; tax_no: string | null; tax_office: string | null; email: string | null; phone: string | null; city: string | null; address: string | null; kind: string | null };
+type PushRow = { id: string; code: string; name: string; extra: string | null; tax_no: string | null; tax_office: string | null; email: string | null; phone: string | null; city: string | null; address: string | null; kind: string | null; short_name: string | null; district: string | null };
 
 async function unlinked(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Promise<PushRow[]> {
   const sys = rc.ac.system;
@@ -179,7 +182,7 @@ async function unlinked(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pro
   return rc.deps.inTenant((tx) => {
     if (entity === "ITEM") {
       return tx.execute<PushRow>(sql`
-        SELECT i.id, i.code, i.name, u.name AS extra, NULL AS tax_no, NULL AS tax_office, NULL AS email, NULL AS phone, NULL AS city, NULL AS address, NULL AS kind
+        SELECT i.id, i.code, i.name, u.name AS extra, NULL AS tax_no, NULL AS tax_office, NULL AS email, NULL AS phone, NULL AS city, NULL AS address, NULL AS kind, NULL AS short_name, NULL AS district
           FROM public.items i JOIN public.units u ON u.tenant_id = i.tenant_id AND u.id = i.base_unit_id
          WHERE i.tenant_id = ${rc.tenantId}::uuid AND i.status = 'ACTIVE'
            AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.system = ${sys} AND r.entity_type = 'ITEM' AND r.entity_id = i.id)
@@ -187,14 +190,14 @@ async function unlinked(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pro
     }
     if (entity === "PARTY") {
       return tx.execute<PushRow>(sql`
-        SELECT p.id, p.code, p.name, NULL AS extra, p.tax_no, p.tax_office, p.email, p.phone, p.city, p.address, p.kind
+        SELECT p.id, p.code, p.name, NULL AS extra, p.tax_no, p.tax_office, p.email, p.phone, p.city, p.address, p.kind, p.short_name, p.district
           FROM public.parties p
          WHERE p.tenant_id = ${rc.tenantId}::uuid AND p.archived_at IS NULL
            AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = p.tenant_id AND r.system = ${sys} AND r.entity_type = 'PARTY' AND r.entity_id = p.id)
          ORDER BY p.code_key LIMIT ${lim}`);
     }
     return tx.execute<PushRow>(sql`
-      SELECT w.id, w.code, w.name, NULL AS extra, NULL AS tax_no, NULL AS tax_office, NULL AS email, NULL AS phone, NULL AS city, NULL AS address, NULL AS kind
+      SELECT w.id, w.code, w.name, NULL AS extra, NULL AS tax_no, NULL AS tax_office, NULL AS email, NULL AS phone, NULL AS city, NULL AS address, NULL AS kind, NULL AS short_name, NULL AS district
         FROM public.warehouses w
        WHERE w.tenant_id = ${rc.tenantId}::uuid AND w.status = 'ACTIVE'
          AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = w.tenant_id AND r.system = ${sys} AND r.entity_type = 'WAREHOUSE' AND r.entity_id = w.id)
@@ -224,6 +227,8 @@ async function pushCards(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pr
             phone: row.phone,
             city: row.city,
             address: row.address,
+            shortName: row.short_name,
+            district: row.district,
           }));
       } else {
         found = await client.findWarehouse(rc.token, rc.companyId, row.name);

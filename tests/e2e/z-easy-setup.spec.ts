@@ -255,14 +255,24 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
   await expect(dlg.getByText(/50 kod zaten var; oluşturulmaz/)).toBeVisible();
   await expect(page.getByRole("button", { name: /lokasyonu oluştur/ })).toBeDisabled();
   await shot("bulk-conflict");
-  // Üst lokasyon seçici (gelişmiş): yazarken öneri.
+  // Üst lokasyon seçici (gelişmiş): T-1121 ortak aramalı seçim alanı — dokununca seçim sayfası, yazdıkça sunucu araması.
   await dlg.getByText("Gelişmiş ayarlar").scrollIntoViewIfNeeded(); // T-990: tam ekran formda bölüm hep açık (katlanır değil)
-  await dlg.getByRole("searchbox", { name: /Üst lokasyon/ }).fill("A-02");
-  const loc = dlg.getByRole("option").first();
+  await dlg.getByTestId("bulk-parent").click();
+  await page.getByTestId("kalip-secim-search").fill("A-02");
+  const loc = page.getByRole("listbox", { name: /Üst lokasyon/ }).getByRole("option").first();
   await expect(loc).toContainText("A-02-01");
   await touchTarget(loc, "lokasyon önerisi");
   await loc.click();
   await expect(dlg.getByText(/Seçildi: A-02-01/)).toBeVisible();
+  // T-1121 (inceleme): kod değişip hemen Enter'a basılınca önceki aramanın sonucu seçilmez; yeni koda göre seçilir.
+  await dlg.getByTestId("bulk-parent").click();
+  // Sayfa açılışta aramayı sıfırlar; ilk liste gelince yazılır (sıfırlama yazılanı silmesin).
+  await expect(page.getByRole("listbox", { name: /Üst lokasyon/ }).getByRole("option").first()).toBeVisible();
+  await page.getByTestId("kalip-secim-search").fill("A-02");
+  await expect(page.getByRole("listbox", { name: /Üst lokasyon/ }).getByRole("option").first()).toContainText("A-02-01");
+  await page.getByTestId("kalip-secim-search").fill("A-03-02");
+  await page.getByTestId("kalip-secim-search").press("Enter");
+  await expect(dlg.getByText(/Seçildi: A-03-02/)).toBeVisible();
   await leaveForm(page, dlg); // yarım iş (üst lokasyon seçildi): cam kutudan kaydetmeden çık
 
   await measureForms(page, tag, treeHref, slug);

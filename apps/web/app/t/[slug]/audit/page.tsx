@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Banner } from "@wms/ui";
 import { AUDIT_ACTIONS, getAppDb } from "@wms/db";
 import { listAudit, type AuditFilters, type AuditPage } from "@wms/domain/audit/audit-query";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
+import { KalipUyari } from "../kalip/uyari.tsx";
 import { AuditView } from "./audit-view.tsx";
 import { denetimSatirlari } from "./satirlar.ts";
 
@@ -97,17 +97,14 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   ];
   const banner =
     errorCode === undefined ? null : (
-      <Banner kind="error">
+      // T-1121: sunucu reddi kalıp uyarı bandında (eski Banner yerine); yeniden giriş bağlantısı bandın kalıp düğmesi.
+      <KalipUyari tone="hata">
         <p>
           {errorCode === "recent_auth_required" ? t("recentAuth") : ts(errorCode)} {errorCode === "recent_auth_required" ? t("recentAuthAction") : ts(`${errorCode}Action`)}
         </p>
-        {errorCode === "recent_auth_required" ? (
-          <a className="btn n" style={{ marginTop: 8 }} href={`/login?reauth=1&next=${encodeURIComponent(here)}`}>
-            {t("loginLink")}
-          </a>
-        ) : null}
-        <p className="mt-1 text-sm">{ts("code", { code: errorCode.toUpperCase() })}</p>
-      </Banner>
+        {errorCode === "recent_auth_required" ? <a href={`/login?reauth=1&next=${encodeURIComponent(here)}`}>{t("loginLink")}</a> : null}
+        <small>{ts("code", { code: errorCode.toUpperCase() })}</small>
+      </KalipUyari>
     );
 
   return (

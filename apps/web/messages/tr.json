@@ -1760,6 +1760,8 @@
       "colType": "Tür",
       "colUnit": "Birim",
       "colHave": "Eldeki",
+      "colAvailable": "Kullanılabilir",
+      "colBarcode": "Barkod",
       "colState": "Durum",
       "removed": "Kaldırıldı",
       "removedTag": "KALDIRILDI",
@@ -4226,6 +4228,66 @@
     "bell": "BİLDİRİM",
     "bellAria": "Bildirimler, {n} açık uyarı",
     "workspace": "Çalışma alanı değiştir",
+    "ana": {
+      "bekleyen": "Bekleyen işler",
+      "isler": "İşler",
+      "duzenle": "Düzenle · sürükle bırak",
+      "bitti": "Bitti",
+      "one": "{ad}: öne al",
+      "sona": "{ad}: sona al",
+      "b": {
+        "orders": {
+          "ad": "Sevkiyat bekliyor",
+          "alt": "Sevk edilmemiş sipariş",
+          "eski": "En eskisi {d} gün",
+          "aria": "Sevkiyat bekliyor: {n}"
+        },
+        "count": {
+          "ad": "Sayım onay bekliyor",
+          "alt": "Farkları incele",
+          "aria": "Sayım onay bekliyor: {n}"
+        },
+        "critical": {
+          "ad": "Ürün kritik stokta",
+          "alt": "Minimumun altında",
+          "aria": "Ürün kritik stokta: {n}"
+        }
+      },
+      "is": {
+        "giris": {
+          "ad": "Depoya mal geldi",
+          "alt": "Say, kaydet"
+        },
+        "satis": {
+          "ad": "Sevkiyat",
+          "alt": "Topla, gönder"
+        },
+        "stok": {
+          "ad": "Stok durumu",
+          "alt": "Depoya göre gör"
+        },
+        "urun": {
+          "ad": "Ürünler",
+          "alt": "Kart, birim, barkod"
+        },
+        "cari": {
+          "ad": "Cariler",
+          "alt": "Müşteri, tedarikçi"
+        },
+        "depo": {
+          "ad": "Depolar ve raflar",
+          "alt": "A-1-1-1 adresleri"
+        },
+        "excel": {
+          "ad": "Excel'den aktar",
+          "alt": "Seçili veri kaynağı"
+        },
+        "kayit": {
+          "ad": "Kim ne yaptı?",
+          "alt": "İşlem geçmişi"
+        }
+      }
+    },
     "guideOpen": "Rehber"
   },
   "aktar": {
@@ -4328,7 +4390,10 @@
         "tel": "Telefon",
         "mail": "E-posta",
         "il": "İl",
+        "ilce": "İlçe",
         "adres": "Adres",
+        "kisa": "Kısa ad",
+        "teslimat": "Varsayılan teslimat (kendi personelim / kargo)",
         "tur": "Tür (müşteri / tedarikçi)"
       },
       "depo": {
@@ -4414,6 +4479,7 @@
       "PHONE_INVALID": "Telefon geçersiz",
       "EMAIL_INVALID": "E-posta geçersiz",
       "TEXT_TOO_LONG": "Bir hücre çok uzun",
+      "DELIVERY_UNKNOWN": "Teslimat anlaşılamadı (kendi personelim / kargo firması)",
       "CODE_DUPLICATE_FILE": "Bu kod dosyada daha önce var",
       "UNKNOWN": "Satır okunamadı"
     },
@@ -4489,12 +4555,19 @@
       "phone": "Telefon",
       "email": "E-posta",
       "city": "İl",
-      "address": "Adres"
+      "address": "Adres",
+      "shortName": "Kısa ad",
+      "district": "İlçe",
+      "deliveryMode": "Varsayılan teslimat"
     },
     "kind": {
       "CUSTOMER": "Müşteri",
       "SUPPLIER": "Tedarikçi",
       "BOTH": "Müşteri ve tedarikçi"
+    },
+    "delivery": {
+      "OWN": "Kendi personelim",
+      "CARRIER": "Kargo firması"
     },
     "issue": {
       "CODE_MISSING": "Cari kodunu yaz.",
@@ -4506,6 +4579,7 @@
       "PHONE_INVALID": "Telefonu rakamlarla yaz.",
       "EMAIL_INVALID": "E-posta adresini kontrol et.",
       "TEXT_TOO_LONG": "Bir alan çok uzun.",
+      "DELIVERY_UNKNOWN": "Teslimat yalnız \"Kendi personelim\" ya da \"Kargo firması\" olabilir.",
       "CODE_DUPLICATE_FILE": "Bu kod tekrar ediyor.",
       "CODE_TAKEN": "Bu cari kodu başka bir kartta kullanılıyor."
     },
@@ -4524,6 +4598,12 @@
     "gIdentity": "Kimlik",
     "gIdentitySub": "Kod, ünvan ve tür",
     "gContact": "Vergi ve iletişim",
+    "gAddress": "Adres ve teslimat",
+    "stripNew": "Yeni cari",
+    "stripEdit": "Cari kartı",
+    "stripEmpty": "Ünvan yazınca burada görünür",
+    "autoCode": "otomatik kod",
+    "ph": { "shortName": "Listede görünen ad", "name": "Firma adı", "phone": "05xx xxx xx xx", "email": "ornek@firma.com", "address": "Mahalle, cadde, no" },
     "gContactSub": "İsteğe bağlı",
     "searchLabel": "Cari ara",
     "filter": "Süzgeç",

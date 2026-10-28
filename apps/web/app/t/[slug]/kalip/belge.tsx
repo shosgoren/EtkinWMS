@@ -3,7 +3,8 @@
 // (mal kabul, sevk, üretim, stok fişi, sayım) iç parçaları — eski @wms/ui Banner / Button ve Tailwind kutuları yerine tek kalıp görünümü.
 //  - `KalipBildirim`: hata / uyarı / tamam / bilgi bandı. Trafik ışığı (ALTIN-KURAL): yalnız hata (kırmızı) ve uyarı (sarı) dolu; tamam ve
 //    bilgi beyaz kart + renkli simge. Rol eski Banner ile aynı: hata `alert`, diğerleri `status`. Görünüm kök belirteçlerden (`--color-kr-*`,
-//    standart.css): form, ayrıntı ve saha kaplarında aynıdır.
+//    standart.css): form, ayrıntı ve saha kaplarında aynıdır. Tek ortak bildirim bandıdır (T-1122'nin `kalip/bildirim.tsx` bandı buraya
+//    birleşti): `sub` kısa açıklama metni (sunucu bileşeninden de verilebilir), `ses` verilince hata / uyarı / tamam sesi bir kez çalar.
 //  - `KalipDugme`: formun iç düğmeleri (satır ekle, kontrol et, onayla, yeniden dene). `ana` lacivert, `ikincil` beyaz kart + ince çerçeve,
 //    `tehlike` kırmızı çerçeve; ≥ 48 px; `busy` dönen gösterge (`.kyuk`, ALTIN-KURAL 6) + `aria-busy`.
 //  - `KalipSatirKart`: tekrarlanan satırın (malzeme / sipariş ürünü) alt kartı — başlık + sağda simgeli "çıkar".
@@ -13,12 +14,15 @@ import { useContext, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico } from "./ico.tsx";
 import { KalipKapCtx } from "./kap.ts";
+import { useSonucSesi } from "./sonuc-sesi.ts";
 
 export type KalipBildirimTur = "hata" | "uyari" | "tamam" | "bilgi";
 const BILDIRIM_IKON: Record<KalipBildirimTur, string> = { hata: LICON.warn, uyari: LICON.warn, tamam: LICON.check, bilgi: LICON.info };
 
-/** Bildirim bandı: simge kutusu + kalın başlık + kısa açıklama (çocuklar). */
-export function KalipBildirim({ tur, title, children, testId }: { tur: KalipBildirimTur; title?: ReactNode; children?: ReactNode; testId?: string }) {
+/** Bildirim bandı: simge kutusu + kalın başlık + kısa açıklama (`sub` ya da çocuklar). */
+export function KalipBildirim({ tur, title, sub, children, ses = false, testId }: { tur: KalipBildirimTur; title?: ReactNode; sub?: string; children?: ReactNode; ses?: boolean; testId?: string }) {
+  const sinyal = title ?? sub ?? tur;
+  useSonucSesi(!ses ? {} : tur === "hata" ? { hata: sinyal } : tur === "uyari" ? { uyari: sinyal } : tur === "tamam" ? { tamam: sinyal } : {});
   return (
     <div className={`kbil ${tur}`} role={tur === "hata" ? "alert" : "status"} data-tur={tur} data-testid={testId}>
       <i aria-hidden="true">
@@ -26,6 +30,7 @@ export function KalipBildirim({ tur, title, children, testId }: { tur: KalipBild
       </i>
       <div className="kbil-t">
         {title === undefined ? null : <b>{title}</b>}
+        {sub === undefined || sub === "" ? null : <p>{sub}</p>}
         {children}
       </div>
     </div>

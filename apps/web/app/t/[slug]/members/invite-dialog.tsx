@@ -1,15 +1,17 @@
 "use client";
 // Davet formu (T-990: tam ekran) + tek seferlik bağlantı kutusu + sunucu hatası gösterimi (T-119). Düz bağlantı YALNIZCA bileşen
 // durumunda tutulur (URL, depolama, log yok); kapatılınca ya da sayfa yenilenince kaybolur (A-42).
+// T-1121: hata / bilgi / bağlantı kutusu kalıp uyarı bandında (`KalipUyari`), bağlantı alanı kalıp alanı (`KalipAlan`, salt okunur);
+// eski `@wms/ui` Banner / Button / kütüphane simgesi ve Tailwind sınıfları kalktı.
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
-import { Banner, Button, TriangleAlert } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
-import { KalipEkran } from "../kalip/ekran.tsx";
+import { Ico, KalipEkran } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup } from "../kalip/form.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
+import { KalipUyari } from "../kalip/uyari.tsx";
 import { inviteMemberAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`); yalnızca kod + ayrıntı + istek kimliği kullanılır. */
@@ -18,9 +20,6 @@ export interface ServerError {
   readonly detail?: string | undefined;
   readonly requestId?: string | undefined;
 }
-
-const LINK_CLS =
-  "inline-flex min-h-12 min-w-12 items-center justify-center rounded-control px-2 text-base font-semibold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 /** Hata: neden + sonraki eylem (`members.errors.*`); kod ve istek kimliği destek içindir. İç neden ayrıştırılmaz. */
 export function ServerErrorBanner({ error, returnTo }: { error: ServerError; returnTo: string }) {
@@ -32,29 +31,21 @@ export function ServerErrorBanner({ error, returnTo }: { error: ServerError; ret
   const hasDetailed = detailed !== null && t.has(detailed);
   const prefix = hasDetailed ? detailed : key;
   return (
-    <Banner kind="error">
+    <KalipUyari tone="hata">
       <p>
         {t(prefix)} {t(`${prefix}Action`)}
       </p>
-      {error.detail === "MFA_REQUIRED" ? (
-        <a className={LINK_CLS} href={`/mfa?next=${encodeURIComponent(returnTo)}`}>
-          {t("mfaLink")}
-        </a>
-      ) : null}
-      {error.detail === "RECENT_AUTH_REQUIRED" ? (
-        <a className={LINK_CLS} href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`}>
-          {t("loginLink")}
-        </a>
-      ) : null}
-      <p className="mt-1 break-all text-sm">
+      {error.detail === "MFA_REQUIRED" ? <a href={`/mfa?next=${encodeURIComponent(returnTo)}`}>{t("mfaLink")}</a> : null}
+      {error.detail === "RECENT_AUTH_REQUIRED" ? <a href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`}>{t("loginLink")}</a> : null}
+      <small>
         {t("code", { code: error.code })}
         {error.requestId ? ` · ${error.requestId}` : ""}
-      </p>
-    </Banner>
+      </small>
+    </KalipUyari>
   );
 }
 
-/** Tek seferlik bağlantı: salt okunur alan + "Kopyala" + uyarı. */
+/** Tek seferlik bağlantı: uyarı bandında salt okunur kalıp alanı + "Kopyala" + "Kapat". */
 export function LinkBox({ title, link, warning, onDismiss }: { title: string; link: string; warning: string; onDismiss: () => void }) {
   const t = useTranslations("members.linkBox");
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
@@ -69,28 +60,22 @@ export function LinkBox({ title, link, warning, onDismiss }: { title: string; li
     }
   }
   return (
-    <section aria-label={title} className="flex min-w-0 flex-col gap-3 rounded-card border-2 border-warning bg-surface p-4 shadow-card" data-testid="link-box">
-      <div className="flex min-w-0 items-center gap-2">
-        <TriangleAlert aria-hidden="true" className="size-5 shrink-0 text-warning" />
-        <h3 className="min-w-0 break-words text-lg font-bold text-ink">{title}</h3>
-      </div>
-      <Banner kind="warning">{warning}</Banner>
-      <input
-        readOnly
-        value={link}
-        aria-label={title}
-        onFocus={(e) => e.currentTarget.select()}
-        className="min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-      />
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <Button onClick={() => void copy()}>{t("copy")}</Button>
-        <Button variant="secondary" onClick={onDismiss}>
-          {t("dismiss")}
-        </Button>
-      </div>
-      <p role="status" className="break-words text-sm text-ink-muted">
-        {state === "copied" ? t("copied") : state === "failed" ? `${t("copyFailed")} ${t("copyFailedAction")}` : ""}
-      </p>
+    <section aria-label={title} data-testid="link-box" style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: "none" }}>
+      <KalipUyari tone="uyari" title={title}>
+        <p>{warning}</p>
+        <KalipAlan label={title} aria-label={title} readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <button type="button" onClick={() => void copy()}>
+            <Ico d={state === "copied" ? LICON.check : LICON.clip} size={18} />
+            {t("copy")}
+          </button>
+          <button type="button" onClick={onDismiss}>
+            <Ico d={LICON.close} size={18} />
+            {t("dismiss")}
+          </button>
+        </div>
+        <p role="status">{state === "copied" ? t("copied") : state === "failed" ? `${t("copyFailed")} ${t("copyFailedAction")}` : ""}</p>
+      </KalipUyari>
     </section>
   );
 }
@@ -186,10 +171,14 @@ export function InviteForm({
         <div className="kfl">
           <div className="kfc">
             {result.delivery === "EMAIL" || result.inviteLink === undefined ? (
-              <Banner kind="info">{t("sentEmail")}</Banner>
+              <KalipUyari tone="bilgi">
+                <p>{t("sentEmail")}</p>
+              </KalipUyari>
             ) : (
               <>
-                <Banner kind="warning">{t("sentScreen")}</Banner>
+                <KalipUyari tone="uyari">
+                  <p>{t("sentScreen")}</p>
+                </KalipUyari>
                 <LinkBox title={t("linkLabel")} link={result.inviteLink} warning={tl("warning")} onDismiss={close} />
               </>
             )}

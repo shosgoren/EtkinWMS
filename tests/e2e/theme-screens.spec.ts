@@ -76,7 +76,8 @@ for (const size of SIZES) {
         // T-422: Akış görünümünde hesap sahibinin ana ekranı Pano (rapor kartları).
         const tasks = view.key === "flow" ? page.locator("#main").getByTestId("pano") : page.getByRole("list", { name: "İşler" });
         await expect(tasks).toBeVisible();
-        if (view.key === "flow") await expect(tasks.locator("[data-report]")).toHaveCount(5);
+        // T-1115: StandartAnaEkran — üç bekleyen iş kutusu.
+        if (view.key === "flow") await expect(tasks.locator("[data-report]")).toHaveCount(3);
 
         // Kart ikonları dekoratif; iki görünümde de (I-18; T-979 Kokpit liste kalıbında) tasarım kaynağının kendi SVG yolları (svg.ico).
         const icons = tasks.locator("svg.ico");
