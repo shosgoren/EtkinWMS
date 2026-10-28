@@ -42,4 +42,10 @@ export const SICON = {
   grafik: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   kamyon: "M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01",
   belge: "M6 3h9l4 4v14H6zM14 3v5h5",
+  /** T-1115 ana ekran (kaynak `StandartAnaEkran.dc.html` "İşler"): mal girişi, cariler, Excel aktarımı, işlem geçmişi, sürükle tutamacı. */
+  indir: "M12 3v12M7 10l5 5 5-5M4 21h16",
+  kisiler: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.7",
+  belgeOnay: "M6 3h9l4 4v14H6zM14 3v5h5M9 13l2 2 4-4",
+  kalkan: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z",
+  tutamac: "M9 4h.01M15 4h.01M9 10h.01M15 10h.01M9 16h.01M15 16h.01M9 22h.01M15 22h.01",
 } as const;

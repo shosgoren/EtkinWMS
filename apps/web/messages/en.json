@@ -4174,7 +4174,67 @@
     "saveShort": "SAVE",
     "bell": "ALERTS",
     "bellAria": "Alerts, {n} open",
-    "workspace": "Switch workspace"
+    "workspace": "Switch workspace",
+    "ana": {
+      "bekleyen": "Waiting work",
+      "isler": "Jobs",
+      "duzenle": "Edit · drag and drop",
+      "bitti": "Done",
+      "one": "{ad}: move earlier",
+      "sona": "{ad}: move later",
+      "b": {
+        "orders": {
+          "ad": "Shipments waiting",
+          "alt": "Orders not shipped",
+          "eski": "Oldest {d} days",
+          "aria": "Shipments waiting: {n}"
+        },
+        "count": {
+          "ad": "Count awaiting approval",
+          "alt": "Review differences",
+          "aria": "Count awaiting approval: {n}"
+        },
+        "critical": {
+          "ad": "Items at critical stock",
+          "alt": "Below minimum",
+          "aria": "Items at critical stock: {n}"
+        }
+      },
+      "is": {
+        "giris": {
+          "ad": "Goods arrived",
+          "alt": "Count, save"
+        },
+        "satis": {
+          "ad": "Shipping",
+          "alt": "Pick, send"
+        },
+        "stok": {
+          "ad": "Stock status",
+          "alt": "See by warehouse"
+        },
+        "urun": {
+          "ad": "Items",
+          "alt": "Card, unit, barcode"
+        },
+        "cari": {
+          "ad": "Parties",
+          "alt": "Customer, supplier"
+        },
+        "depo": {
+          "ad": "Warehouses and shelves",
+          "alt": "A-1-1-1 addresses"
+        },
+        "excel": {
+          "ad": "Import from Excel",
+          "alt": "Selected data source"
+        },
+        "kayit": {
+          "ad": "Who did what?",
+          "alt": "Activity history"
+        }
+      }
+    }
   },
   "aktar": {
     "title": "Import from Excel",
