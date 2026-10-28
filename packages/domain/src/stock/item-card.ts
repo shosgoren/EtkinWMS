@@ -5,7 +5,7 @@
 // - `sumItemsStock`: liste kartlarının rozeti için ürün başına eldeki toplam ve minimum (en çok 100 ürün).
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
-import { runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
+import { runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
 import { pgUuidArray, resolveWarehouseScope } from "../warehouse/scope.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -256,6 +256,7 @@ export type ItemSerialRow = {
   readonly locationCode: string | null;
   readonly warehouseName: string | null;
 };
+export const ITEM_TRACKING_DEFAULT_LIMIT = 100;
 export const ITEM_TRACKING_MAX_ROWS = 100;
 
 export interface ItemTracking {
@@ -263,19 +264,61 @@ export interface ItemTracking {
   readonly serials: readonly ItemSerialRow[];
   readonly lotTotal: number;
   readonly serialTotal: number;
+  /** Opak keyset imleçleri (sonraki sayfa yoksa `null`); `listItemLots` / `listItemSerials` `after` olarak alır. */
+  readonly lotNext: string | null;
+  readonly serialNext: string | null;
+}
+export interface ItemTrackingPage<T> {
+  readonly rows: readonly T[];
+  readonly next: string | null;
+}
+export interface ItemTrackingPageOptions {
+  readonly after?: string;
+  readonly limit?: number;
 }
 
-/**
- * Ürünün lotları (SKT'si en yakın önce) ve serileri, en çok 100'er satır + toplam sayı. Lot/seri kartı katalog verisidir (depodan
- * bağımsız); miktar ve yer yalnız kapsamdaki depolardan gelir (kapsam dışı deponun stoğu görünmez).
- */
-export async function listItemTracking(params: Params, itemId: string): Promise<ItemTracking> {
-  const item = uuid(itemId);
-  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, member) => {
-    const allowed = await resolveWarehouseScope(tx, member);
-    const scope = allowed === null ? null : pgUuidArray(allowed);
-    const t = member.tenantId;
-    const lots = await tx.execute<ItemLotRow>(sql`
+// T-1116 (Codex P2): lot ve seri listeleri ayrı ayrı keyset sayfalanır (OFFSET yok, I-14). Lot sırası SKT (boşlar sonda) › kod › kimlik;
+// seri sırası numara › kimlik. İmleç opak base64url JSON; biçim dışı imleç `VALIDATION_FAILED`.
+type LotCursor = { readonly e: string | null; readonly c: string; readonly i: string };
+type SerialCursor = { readonly c: string; readonly i: string };
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const enc = (v: object): string => Buffer.from(JSON.stringify(v), "utf8").toString("base64url");
+function dec(raw: string): Record<string, unknown> {
+  if (typeof raw !== "string" || raw.length === 0 || raw.length > 1024 || !/^[A-Za-z0-9_-]+$/.test(raw)) throw new AppError("VALIDATION_FAILED");
+  try {
+    const o: unknown = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+    if (typeof o !== "object" || o === null) throw new AppError("VALIDATION_FAILED");
+    return o as Record<string, unknown>;
+  } catch {
+    throw new AppError("VALIDATION_FAILED");
+  }
+}
+const okText = (v: unknown): v is string => typeof v === "string" && v.length > 0 && v.length <= 512;
+function lotCursor(raw: string): LotCursor {
+  const o = dec(raw);
+  if (!(o.e === null || (typeof o.e === "string" && DAY_RE.test(o.e))) || !okText(o.c) || typeof o.i !== "string" || !UUID.test(o.i)) throw new AppError("VALIDATION_FAILED");
+  return { e: o.e as string | null, c: o.c, i: o.i.toLowerCase() };
+}
+function serialCursor(raw: string): SerialCursor {
+  const o = dec(raw);
+  if (!okText(o.c) || typeof o.i !== "string" || !UUID.test(o.i)) throw new AppError("VALIDATION_FAILED");
+  return { c: o.c, i: o.i.toLowerCase() };
+}
+function pageLimit(limit: number | undefined): number {
+  const n = limit ?? ITEM_TRACKING_DEFAULT_LIMIT;
+  if (!Number.isInteger(n) || n < 1 || n > ITEM_TRACKING_MAX_ROWS) throw new AppError("VALIDATION_FAILED");
+  return n;
+}
+
+async function lotsPage(tx: AccessTx, t: string, item: string, scope: string | null, after: LotCursor | null, limit: number): Promise<ItemTrackingPage<ItemLotRow>> {
+  const cond =
+    after === null
+      ? sql``
+      : after.e === null
+        ? sql`AND lo.expiry_date IS NULL AND (lo.lot_code, lo.id) > (${after.c}, ${after.i}::uuid)`
+        : sql`AND (lo.expiry_date IS NULL OR lo.expiry_date > ${after.e}::date
+                   OR (lo.expiry_date = ${after.e}::date AND (lo.lot_code, lo.id) > (${after.c}, ${after.i}::uuid)))`;
+  const rows = await tx.execute<ItemLotRow>(sql`
       SELECT lo.id, lo.lot_code AS "lotCode", lo.production_date::text AS "productionDate", lo.expiry_date::text AS "expiryDate",
              lo.supplier_lot AS "supplierLot",
              coalesce((SELECT sum(b.quantity)
@@ -285,10 +328,17 @@ export async function listItemTracking(params: Params, itemId: string): Promise<
                         WHERE d.tenant_id = lo.tenant_id AND d.item_id = lo.item_id AND d.lot_id = lo.id
                           AND (${scope}::uuid[] IS NULL OR l.warehouse_id = ANY(${scope}::uuid[]))), 0)::text AS quantity
         FROM public.lots lo
-       WHERE lo.tenant_id = ${t}::uuid AND lo.item_id = ${item}::uuid
+       WHERE lo.tenant_id = ${t}::uuid AND lo.item_id = ${item}::uuid ${cond}
        ORDER BY lo.expiry_date NULLS LAST, lo.lot_code, lo.id
-       LIMIT ${ITEM_TRACKING_MAX_ROWS}`);
-    const serials = await tx.execute<ItemSerialRow>(sql`
+       LIMIT ${limit + 1}`);
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return { rows: page, next: rows.length > limit && last !== undefined ? enc({ e: last.expiryDate, c: last.lotCode, i: last.id }) : null };
+}
+
+async function serialsPage(tx: AccessTx, t: string, item: string, scope: string | null, after: SerialCursor | null, limit: number): Promise<ItemTrackingPage<ItemSerialRow>> {
+  const cond = after === null ? sql`` : sql`AND (s.serial_no, s.id) > (${after.c}, ${after.i}::uuid)`;
+  const rows = await tx.execute<ItemSerialRow>(sql`
       SELECT s.id, s.serial_no AS "serialNo", lo.lot_code AS "lotCode", pos.code AS "locationCode", pos.wname AS "warehouseName"
         FROM public.serials s
         LEFT JOIN public.lots lo ON lo.tenant_id = s.tenant_id AND lo.id = s.lot_id
@@ -302,12 +352,59 @@ export async function listItemTracking(params: Params, itemId: string): Promise<
              AND (${scope}::uuid[] IS NULL OR w.id = ANY(${scope}::uuid[]))
            ORDER BY l.code
            LIMIT 1) pos ON true
-       WHERE s.tenant_id = ${t}::uuid AND s.item_id = ${item}::uuid
+       WHERE s.tenant_id = ${t}::uuid AND s.item_id = ${item}::uuid ${cond}
        ORDER BY s.serial_no, s.id
-       LIMIT ${ITEM_TRACKING_MAX_ROWS}`);
+       LIMIT ${limit + 1}`);
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return { rows: page, next: rows.length > limit && last !== undefined ? enc({ c: last.serialNo, i: last.id }) : null };
+}
+
+/**
+ * Ürünün lotları ve serileri — ilk sayfalar + toplam sayılar. Lot/seri kartı katalog verisidir (depodan bağımsız); miktar ve yer yalnız
+ * kapsamdaki depolardan gelir (kapsam dışı deponun stoğu görünmez). Sonraki sayfalar `listItemLots` / `listItemSerials` ile.
+ */
+export async function listItemTracking(params: Params, itemId: string, options: { readonly limit?: number } = {}): Promise<ItemTracking> {
+  const item = uuid(itemId);
+  const limit = pageLimit(options.limit);
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, member) => {
+    const allowed = await resolveWarehouseScope(tx, member);
+    const scope = allowed === null ? null : pgUuidArray(allowed);
+    const t = member.tenantId;
+    const lots = await lotsPage(tx, t, item, scope, null, limit);
+    const serials = await serialsPage(tx, t, item, scope, null, limit);
     const totals = await tx.execute<{ lots: number; serials: number }>(sql`
       SELECT (SELECT count(*)::int FROM public.lots WHERE tenant_id = ${t}::uuid AND item_id = ${item}::uuid) AS lots,
              (SELECT count(*)::int FROM public.serials WHERE tenant_id = ${t}::uuid AND item_id = ${item}::uuid) AS serials`);
-    return { lots, serials, lotTotal: Number(totals[0]?.lots ?? 0), serialTotal: Number(totals[0]?.serials ?? 0) };
+    return {
+      lots: lots.rows,
+      serials: serials.rows,
+      lotTotal: Number(totals[0]?.lots ?? 0),
+      serialTotal: Number(totals[0]?.serials ?? 0),
+      lotNext: lots.next,
+      serialNext: serials.next,
+    };
+  });
+}
+
+/** Lotların sonraki sayfası (`after` = önceki sayfanın `lotNext`'i). */
+export async function listItemLots(params: Params, itemId: string, options: ItemTrackingPageOptions = {}): Promise<ItemTrackingPage<ItemLotRow>> {
+  const item = uuid(itemId);
+  const limit = pageLimit(options.limit);
+  const after = options.after === undefined ? null : lotCursor(options.after);
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, member) => {
+    const allowed = await resolveWarehouseScope(tx, member);
+    return lotsPage(tx, member.tenantId, item, allowed === null ? null : pgUuidArray(allowed), after, limit);
+  });
+}
+
+/** Serilerin sonraki sayfası (`after` = önceki sayfanın `serialNext`'i). */
+export async function listItemSerials(params: Params, itemId: string, options: ItemTrackingPageOptions = {}): Promise<ItemTrackingPage<ItemSerialRow>> {
+  const item = uuid(itemId);
+  const limit = pageLimit(options.limit);
+  const after = options.after === undefined ? null : serialCursor(options.after);
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, member) => {
+    const allowed = await resolveWarehouseScope(tx, member);
+    return serialsPage(tx, member.tenantId, item, allowed === null ? null : pgUuidArray(allowed), after, limit);
   });
 }

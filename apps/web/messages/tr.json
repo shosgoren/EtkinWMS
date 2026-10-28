@@ -1662,7 +1662,9 @@
         "history": "Değişiklik geçmişi",
         "historyEmpty": "Bu ürün için kayıt yok",
         "historyAll": "Tümü · işlem kaydı",
-        "historyUnread": "Geçmiş okunamadı · sayfayı yenile"
+        "historyUnread": "Geçmiş okunamadı · sayfayı yenile",
+        "more": "Daha fazla",
+        "moreFailed": "Devamı okunamadı · tekrar dene"
       }
     },
     "errors": {

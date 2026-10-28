@@ -1804,7 +1804,8 @@ button.stpv-satir { cursor: pointer; }
 }
 @media (max-width: 699.98px) {
   .stpv-tablo .stpv-genis { display: none; }
-  .stpv-ad > small.stpv-dar { display: block; flex-basis: 100%; }
+  .stpv-ad > small.stpv-dar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; flex-basis: 100%; margin-top: 2px; }
+  .stpv-ad > small.stpv-dar .stpv-hap { height: 22px; margin-right: 0; }
   .stpv-satir { padding-left: calc(var(--d, 0) * 12px); }
   .stpv-tablo td { padding: 2px 8px; }
 }

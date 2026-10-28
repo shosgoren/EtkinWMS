@@ -15,7 +15,9 @@ import {
   createStockDocument,
   getItemStockCard,
   getItemStockPivot,
+  listItemLots,
   listItemMoves,
+  listItemSerials,
   listItemTracking,
   postDocument,
   type DocumentLineInput,
@@ -173,7 +175,7 @@ describe("T-1116 Hareketler ve Takip", () => {
 
   it("B tenant'ı A ürününün hareket ve lotlarını görmez", async () => {
     expect(await listItemMoves(owner(B), lotItem)).toEqual({ moves: [], total: 0 });
-    expect(await listItemTracking(owner(B), lotItem)).toEqual({ lots: [], serials: [], lotTotal: 0, serialTotal: 0 });
+    expect(await listItemTracking(owner(B), lotItem)).toEqual({ lots: [], serials: [], lotTotal: 0, serialTotal: 0, lotNext: null, serialNext: null });
     await expect(listItemTracking({ ...owner(A), principal: null }, lotItem)).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
   });
 
@@ -187,6 +189,65 @@ describe("T-1116 Hareketler ve Takip", () => {
     const sn = await listItemTracking(owner(A), A.itemId);
     expect(sn.serialTotal).toBe(1);
     expect(sn.serials[0]).toMatchObject({ serialNo: "SN1", lotCode: "L1", locationCode: "Z1-R1" });
+  });
+});
+
+describe("T-1116 Takip sayfalama (keyset)", () => {
+  it("lotlar SKT sırasıyla sayfa sayfa gelir (boş SKT sonda), tekrar ve atlama yok", async () => {
+    // Ek lotlar: SKT'li ve SKT'siz karışık; toplam 2 + 4 = 6 lot.
+    for (const [code, expiry] of [["LA-3", "2027-03-04"], ["LA-0", "2026-12-01"], ["LA-4", null], ["LA-5", null]] as const) {
+      await createLot(owner(A), { itemId: lotItem, lotCode: code, ...(expiry === null ? {} : { expiryDate: expiry }) });
+    }
+    const first = await listItemTracking(owner(A), lotItem, { limit: 2 });
+    expect(first.lotTotal).toBe(6);
+    expect(first.lots.map((l) => l.lotCode)).toEqual(["LA-0", "LA-1"]);
+    expect(first.lotNext).not.toBeNull();
+    const seen = first.lots.map((l) => l.lotCode);
+    let after = first.lotNext;
+    for (let n = 0; n < 10 && after !== null; n++) {
+      const page = await listItemLots(owner(A), lotItem, { after, limit: 2 });
+      seen.push(...page.rows.map((l) => l.lotCode));
+      after = page.next;
+    }
+    expect(seen).toEqual(["LA-0", "LA-1", "LA-3", "LA-2", "LA-4", "LA-5"]);
+    // Sonraki sayfada da miktar kapsamdan gelir.
+    const second = await listItemLots(owner(A), lotItem, { after: first.lotNext as string, limit: 2 });
+    expect(second.rows.map((l) => l.lotCode)).toEqual(["LA-3", "LA-2"]);
+    expect(second.rows[1]?.quantity).toBe("4.250000");
+  });
+
+  it("seriler numara sırasıyla sayfalanır", async () => {
+    // Fikstür seri ürünü (LOT_AND_SERIAL): SN1 + iki yeni seri (stoksuz).
+    await adm.query("INSERT INTO public.serials (tenant_id, item_id, serial_no, lot_id) VALUES ($1, $2, 'SN0', $3), ($1, $2, 'SN2', $3)", [A.tenantId, A.itemId, A.lotId]);
+    const first = await listItemTracking(owner(A), A.itemId, { limit: 2 });
+    expect(first.serials.map((x) => x.serialNo)).toEqual(["SN0", "SN1"]);
+    const second = await listItemSerials(owner(A), A.itemId, { after: first.serialNext as string, limit: 2 });
+    expect(second).toMatchObject({ next: null });
+    expect(second.rows.map((x) => [x.serialNo, x.locationCode])).toEqual([["SN2", null]]);
+  });
+
+  it("sonraki sayfa da tenant, kimlik ve kapsam sınırında; bozuk imleç ve sınır reddedilir", async () => {
+    const first = await listItemTracking(owner(A), lotItem, { limit: 2 });
+    const after = first.lotNext as string;
+    expect(await listItemLots(owner(B), lotItem, { after })).toEqual({ rows: [], next: null });
+    expect(await listItemSerials(owner(B), A.itemId)).toEqual({ rows: [], next: null });
+    await expect(listItemLots({ ...owner(A), principal: null }, lotItem, { after })).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+    await expect(listItemLots({ ...owner(A), principal: { userId: A.ownerUserId, mfaVerified: false } }, lotItem, { after })).rejects.toMatchObject({ code: "FORBIDDEN", detail: "MFA_REQUIRED" });
+    const prior = process.env.WAREHOUSE_SCOPE_ENABLED;
+    try {
+      process.env.WAREHOUSE_SCOPE_ENABLED = "true";
+      const scoped = await listItemLots(picker(), lotItem, { after, limit: 2 });
+      expect(scoped.rows.find((l) => l.id === lot2)?.quantity).toBe("1.250000");
+    } finally {
+      if (prior === undefined) delete process.env.WAREHOUSE_SCOPE_ENABLED;
+      else process.env.WAREHOUSE_SCOPE_ENABLED = prior;
+    }
+    const bad = (o: unknown): string => Buffer.from(JSON.stringify(o), "utf8").toString("base64url");
+    for (const cur of ["bad!", bad({ e: "x", c: "A", i: lotItem }), bad({ e: null, c: "", i: lotItem }), bad({ e: null, c: "A", i: "nope" }), bad([1])]) {
+      await expect(listItemLots(owner(A), lotItem, { after: cur })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    }
+    await expect(listItemSerials(owner(A), A.itemId, { after: bad({ c: 1, i: lotItem }) })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    for (const limit of [0, 101]) await expect(listItemTracking(owner(A), lotItem, { limit })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
   });
 });
 

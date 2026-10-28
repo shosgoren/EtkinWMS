@@ -929,6 +929,8 @@ const ITEM_ACTIONS: Record<string, Call> = {
   suggestItemCodeAction: (slug) => itemActions.suggestItemCodeAction!({ slug }),
   searchItemsAction: (slug) => itemActions.searchItemsAction!({ slug, q: "a" }),
   loadMoreItemsAction: (slug) => itemActions.loadMoreItemsAction!({ slug, q: "", status: "", cardType: "", after: Buffer.from(JSON.stringify(["A", randomUUID()]), "utf8").toString("base64url") }),
+  // T-1116: ürün kartı › Takip sonraki sayfa (okuma); B'nin slug'ı + B'nin ürünü.
+  loadMoreItemTrackingAction: (slug) => itemActions.loadMoreItemTrackingAction!({ slug, itemId: fx.B.item, part: "lots", after: Buffer.from(JSON.stringify({ e: null, c: "A", i: randomUUID() }), "utf8").toString("base64url") }),
 };
 
 /** T-304: görev eylemleri; hepsi B'nin görev/üyelik kimliğiyle çağrılır (A veya B slug'ında). */
@@ -1143,6 +1145,9 @@ describe("Server Action'lar", () => {
   });
 
   it("@AC-04 doğrudan B'nin membershipId'siyle A slug'ında komut: changeRole/removeMember/transferOwnership/sıfırlama -> ret, A ve B'de etki yok", async () => {
+    // T-1116: dosyanın önceki eylem testleri A yöneticisinin dakikalık kullanıcı kotasını (120) doldurabiliyor; bu test kotayı değil
+    // kimlik reddini sınar → yalnız kullanıcı kapsamlı sayaçlar sıfırlanır (iddialar değişmez; kota ayrı testte sınanır).
+    await adm.query("DELETE FROM public.request_rate_limits WHERE scope = 'web.user'");
     const beforeA = await snapshot(A);
     const beforeB = await snapshot(B);
     const target = B.managerMembership;

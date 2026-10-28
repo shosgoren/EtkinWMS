@@ -100,6 +100,7 @@ export function KalipPivot(p: KalipPivotProps) {
               const acikMi = acik.has(d.anahtar);
               const durumlar = d.durumlar.map(p.durum);
               const ayr = sifirMi(d.ayrilmis) ? null : p.ayrilmis(d.ayrilmis);
+              const ayrYaprak = cocuklu ? null : ayr;
               const ad = (
                 <>
                   <span className="stpv-ok" aria-hidden="true">
@@ -111,9 +112,16 @@ export function KalipPivot(p: KalipPivotProps) {
                   <span className="stpv-ad">
                     <b>{d.etiket}</b>
                     {meta === null ? null : <small>{meta}</small>}
-                    {d.skt === null && durumlar.length === 0 ? null : (
+                    {/* Telefonda SKT / Durum sütunları gizlidir: SKT, durum ve ayrılmış hapı satır altına iner (Codex P2). */}
+                    {d.skt === null && durumlar.length === 0 && ayrYaprak === null ? null : (
                       <small className="stpv-dar">
-                        {[d.skt === null ? null : `${p.sutunlar.skt} ${p.skt(d.skt)}`, ...durumlar.map((x) => x.metin)].filter((x) => x !== null).join(" · ")}
+                        {d.skt === null ? null : <span>{`${p.sutunlar.skt} ${p.skt(d.skt)}`}</span>}
+                        {durumlar.map((x) => (
+                          <span key={x.metin} className={`stpv-hap ${x.ton}`}>
+                            {x.metin}
+                          </span>
+                        ))}
+                        {ayrYaprak === null ? null : <span className="stpv-hap amber">{ayrYaprak}</span>}
                       </small>
                     )}
                   </span>
@@ -137,7 +145,7 @@ export function KalipPivot(p: KalipPivotProps) {
                         {x.metin}
                       </span>
                     ))}
-                    {ayr === null || cocuklu ? null : <span className="stpv-hap amber">{ayr}</span>}
+                    {ayrYaprak === null ? null : <span className="stpv-hap amber">{ayrYaprak}</span>}
                   </td>
                   <td className="stpv-sag">
                     <b className="mono">{p.miktar(d.miktar)}</b>

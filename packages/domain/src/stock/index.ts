@@ -123,11 +123,14 @@ export {
   getItemStockCard,
   getItemStockPivot,
   listItemMoves,
+  listItemLots,
+  listItemSerials,
   listItemTracking,
   sumItemsStock,
   ITEM_MOVES_DEFAULT_LIMIT,
   ITEM_MOVES_MAX_LIMIT,
   ITEM_PIVOT_MAX_ROWS,
+  ITEM_TRACKING_DEFAULT_LIMIT,
   ITEM_TRACKING_MAX_ROWS,
   type ItemLotRow,
   type ItemMoveRow,
@@ -139,6 +142,8 @@ export {
   type ItemStockPivot,
   type ItemStockSum,
   type ItemTracking,
+  type ItemTrackingPage,
+  type ItemTrackingPageOptions,
 } from "./item-card.ts";
 // T-224: ters kayıt (I-08, AC-06): kalan ters çevrilmemiş miktar sınırı, bağımlı işlem denetimi, `REVERSAL_BLOCKED`. Yazım reversal.ts'tedir (eslint STOCK_WRITE_FILES).
 export {

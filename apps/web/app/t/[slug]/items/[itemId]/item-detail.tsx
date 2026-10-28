@@ -38,7 +38,7 @@ import { KalipAlan, KalipGrup, KalipSabit } from "../../kalip/form.tsx";
 import { approx, fmtGun, fmtQty, stockTone } from "../../kalip/format.ts";
 import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
-import { addBarcodeAction, archiveItemAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
+import { addBarcodeAction, archiveItemAction, loadMoreItemTrackingAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
 import { CARD_VISUAL } from "../card-visual.ts";
 import { CARD_TYPES, errorKey, ServerErrorBanner, toServerError } from "../items-view.tsx";
 import type { CardType, ServerError, UnitOption } from "../items-view.tsx";
@@ -121,6 +121,8 @@ export interface ItemTracking {
   readonly serials: readonly { readonly id: string; readonly serialNo: string; readonly lotCode: string | null; readonly locationCode: string | null; readonly warehouseName: string | null }[];
   readonly lotTotal: number;
   readonly serialTotal: number;
+  readonly lotNext: string | null;
+  readonly serialNext: string | null;
 }
 
 /** T-1116: açık sekmenin sunucu verisi (`page.tsx`); okunamadıysa ilgili alan `null` → sekmede "okunamadı" satırı. */
@@ -440,6 +442,76 @@ function StokPivot({ pivot, have, unit }: { pivot: ItemStockPivot; have: string;
   );
 }
 
+/** T-1116 Takip: lotlar ve seriler; her liste kendi "Daha fazla" düğmesiyle sunucudan sonraki sayfayı (keyset) ekler (Codex P2). */
+function TakipListesi({ slug, itemId, unit, lotOnly, tracking }: { slug: string; itemId: string; unit: string; lotOnly: boolean; tracking: ItemTracking }) {
+  const tk = useTranslations("items.detail.k");
+  const locale = useLocale();
+  const fq = (v: string): string => fmtQty(v, locale);
+  const [lots, setLots] = useState(tracking.lots);
+  const [serials, setSerials] = useState(tracking.serials);
+  const [next, setNext] = useState<{ readonly lots: string | null; readonly serials: string | null }>({ lots: tracking.lotNext, serials: tracking.serialNext });
+  const [busy, setBusy] = useState<"lots" | "serials" | null>(null);
+  const [failed, setFailed] = useState(false);
+  async function more(part: "lots" | "serials"): Promise<void> {
+    const after = next[part];
+    if (after === null || busy !== null) return;
+    setBusy(part);
+    setFailed(false);
+    const r = await loadMoreItemTrackingAction({ slug, itemId, part, after });
+    setBusy(null);
+    if (!r.ok) {
+      feedback.error();
+      setFailed(true);
+      return;
+    }
+    feedback.minor();
+    if (part === "lots") setLots((cur) => [...cur, ...r.data.lots]);
+    else setSerials((cur) => [...cur, ...r.data.serials]);
+    setNext((cur) => ({ ...cur, [part]: r.data.next }));
+  }
+  const lotlar: KalipKartSatiri[] = lots.map((l) => ({
+    key: l.id,
+    baslik: <span className="mono">{l.lotCode}</span>,
+    meta: [l.expiryDate === null ? tk("lotNoExpiry") : tk("lotMeta", { expiry: fmtGun(l.expiryDate, locale) }), l.productionDate === null ? null : tk("produced", { date: fmtGun(l.productionDate, locale) }), l.supplierLot === null ? null : tk("lotSupplier", { lot: l.supplierLot })].filter((x) => x !== null).join(" · "),
+    deger: `${fq(l.quantity)} ${unit}`,
+    d: SICON.ad,
+    ton: "mavi",
+    testId: "tracking-lot",
+  }));
+  const seriler: KalipKartSatiri[] = serials.map((x) => ({
+    key: x.id,
+    baslik: <span className="mono">{x.serialNo}</span>,
+    meta: [x.lotCode, x.locationCode === null ? tk("serialNotInStock") : `${x.warehouseName ?? ""} · ${x.locationCode}`].filter((v) => v !== null).join(" · "),
+    d: SICON.qr,
+    ton: "camgobegi",
+    testId: "tracking-serial",
+  }));
+  const daha = (part: "lots" | "serials", shown: number, total: number) =>
+    next[part] === null ? null : (
+      <span className="stkdugmeler">
+        <small className="stkbos">{tk("shownOf", { shown, total })}</small>
+        <button type="button" className="stpv-dugme" onClick={() => void more(part)} disabled={busy !== null} aria-busy={busy === part || undefined} data-testid={`tracking-more-${part}`}>
+          {tk("more")}
+        </button>
+      </span>
+    );
+  return (
+    <div data-testid="item-tracking" className="stkyigin">
+      {failed ? <KalipKartNot metin={tk("moreFailed")} d={SICON.uyari} renk="amber" /> : null}
+      <b className="stkbas">{tk("lots")}</b>
+      <KalipKartSatirlar etiket={tk("lots")} satirlar={lotlar} bos={tk("lotsEmpty")} />
+      {daha("lots", lots.length, tracking.lotTotal)}
+      {lotOnly && tracking.serialTotal === 0 ? null : (
+        <>
+          <b className="stkbas">{tk("serials")}</b>
+          <KalipKartSatirlar etiket={tk("serials")} satirlar={seriler} bos={tk("serialsEmpty")} />
+          {daha("serials", serials.length, tracking.serialTotal)}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function ItemDetail({
   slug,
   dark,
@@ -747,41 +819,7 @@ export function ItemDetail({
       );
   } else if (secili === "takip") {
     const tr = tabData.kind === "takip" ? tabData.tracking : null;
-    if (tr === null) {
-      ana = <KalipKartNot metin={tk("trackingUnread")} d={SICON.uyari} renk="amber" />;
-    } else {
-      const lotlar: KalipKartSatiri[] = tr.lots.map((l) => ({
-        key: l.id,
-        baslik: <span className="mono">{l.lotCode}</span>,
-        meta: [l.expiryDate === null ? tk("lotNoExpiry") : tk("lotMeta", { expiry: fmtGun(l.expiryDate, locale) }), l.productionDate === null ? null : tk("produced", { date: fmtGun(l.productionDate, locale) }), l.supplierLot === null ? null : tk("lotSupplier", { lot: l.supplierLot })].filter((x) => x !== null).join(" · "),
-        deger: `${fq(l.quantity)} ${unit}`,
-        d: SICON.ad,
-        ton: "mavi",
-        testId: "tracking-lot",
-      }));
-      const seriler: KalipKartSatiri[] = tr.serials.map((x) => ({
-        key: x.id,
-        baslik: <span className="mono">{x.serialNo}</span>,
-        meta: [x.lotCode, x.locationCode === null ? tk("serialNotInStock") : `${x.warehouseName ?? ""} · ${x.locationCode}`].filter((v) => v !== null).join(" · "),
-        d: SICON.qr,
-        ton: "camgobegi",
-        testId: "tracking-serial",
-      }));
-      ana = (
-        <div data-testid="item-tracking" className="stkyigin">
-          <b className="stkbas">{tk("lots")}</b>
-          <KalipKartSatirlar etiket={tk("lots")} satirlar={lotlar} bos={tk("lotsEmpty")} />
-          {tr.lotTotal > tr.lots.length ? <small className="stkbos">{tk("shownOf", { shown: tr.lots.length, total: tr.lotTotal })}</small> : null}
-          {item.trackingMode === "LOT" && tr.serialTotal === 0 ? null : (
-            <>
-              <b className="stkbas">{tk("serials")}</b>
-              <KalipKartSatirlar etiket={tk("serials")} satirlar={seriler} bos={tk("serialsEmpty")} />
-              {tr.serialTotal > tr.serials.length ? <small className="stkbos">{tk("shownOf", { shown: tr.serials.length, total: tr.serialTotal })}</small> : null}
-            </>
-          )}
-        </div>
-      );
-    }
+    ana = tr === null ? <KalipKartNot metin={tk("trackingUnread")} d={SICON.uyari} renk="amber" /> : <TakipListesi key={item.id} slug={slug} itemId={item.id} unit={unit} lotOnly={item.trackingMode === "LOT"} tracking={tr} />;
   } else if (secili === "gecmis") {
     const rows = tabData.kind === "gecmis" ? tabData.rows : null;
     ana =

@@ -1662,7 +1662,9 @@
         "history": "Change history",
         "historyEmpty": "No records for this item",
         "historyAll": "All · audit log",
-        "historyUnread": "History could not be read · refresh the page"
+        "historyUnread": "History could not be read · refresh the page",
+        "more": "Show more",
+        "moreFailed": "Could not load more · try again"
       }
     },
     "errors": {
