@@ -8,12 +8,18 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { usePathname, useSearchParams } from "next/navigation";
 import { feedback } from "@wms/ui";
 import { dz } from "../../../design/pano-tokens.ts";
 import { dz as kdz } from "../../../design/kabuk-tokens.ts";
 import { PICON } from "../../../design/pano-icons.ts";
 import { DICON } from "../../../design/destek-icons.ts";
 import { useKabuk } from "./kabuk-bar.tsx";
+import { OP_GUIDE_EVENT, currentGuide } from "../kalip/rehber-plan.ts";
+import { JOURNEY_OPEN_EVENT } from "../yolculuk/steps.ts";
+
+/** Eski genel rehber (Destek › Rehberi aç ile aynı olay). */
+const GUIDE_EVENT = "etkinwms:guide-open";
 
 const FAB_KEY = "etkin-pano-fab";
 const MINE_KEY = (slug: string): string => `etkin-kisayol:${slug}`;
@@ -31,6 +37,8 @@ export function KabukKisayol({ dark }: { dark: boolean }) {
   const t = useTranslations("pano");
   const tk = useTranslations("kabuk");
   const ctx = useKabuk();
+  const path = usePathname();
+  const query = useSearchParams();
   const slug = ctx?.slug ?? ctx?.base ?? "";
   const mods = (ctx?.modules ?? []).filter((m) => m.href !== null && m.id !== "home" && m.view === undefined);
   const [mounted, setMounted] = useState(false);
@@ -148,11 +156,39 @@ export function KabukKisayol({ dark }: { dark: boolean }) {
                 <span>{tk(`mod.${m.id}.name`)}</span>
               </Link>
             ))}
+            {/* T-1120 (kullanıcı 28 Ekim: "rehber her yerde gözükmeli, yüzen şimşek gibi"): şimşek her ekranda; halkadaki "Rehber" bu ekranın
+                rehberini başlatır, ekranın rehberi yoksa seçiciyi açar; işlem rehberi yetkisi yoksa kurulum yolculuğu ya da eski rehber
+                (Destek › Rehberi aç ile aynı sıra). */}
             <button
               type="button"
               className="hb"
               role="menuitem"
               style={{ animationDelay: `${shown.length * 35}ms` }}
+              onClick={() => {
+                feedback.minor();
+                setOpen(false);
+                const ekran = currentGuide(path, query.toString());
+                const islem = !window.dispatchEvent(new CustomEvent(OP_GUIDE_EVENT, { detail: ekran ?? "pick", cancelable: true }));
+                if (islem) return;
+                const yolculuk = !window.dispatchEvent(new Event(JOURNEY_OPEN_EVENT, { cancelable: true }));
+                if (!yolculuk) window.dispatchEvent(new Event(GUIDE_EVENT));
+              }}
+              data-testid="pano-guide"
+            >
+              <i style={{ background: dz("0E7C7B") }}>
+                <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9.5" />
+                  <path d={DICON.guideQ} />
+                  <path d={DICON.guideDot} />
+                </svg>
+              </i>
+              <span>{t("guideOpen")}</span>
+            </button>
+            <button
+              type="button"
+              className="hb"
+              role="menuitem"
+              style={{ animationDelay: `${(shown.length + 1) * 35}ms` }}
               onClick={() => {
                 setOpen(false);
                 setPicker(shown.map((m) => m.id));

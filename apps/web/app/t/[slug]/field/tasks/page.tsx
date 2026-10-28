@@ -6,13 +6,13 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { TASK_KINDS, listMyTasks, type TaskCursor, type TaskKind, type TaskStatus } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
-import { Banner } from "@wms/ui";
 import { claimTaskAction } from "../../tasks/actions.ts";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { kalipDark } from "../../stock/belge-kalip.ts";
 import { Ico, KalipBaslik, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKartListe, type KalipCip } from "../../kalip/liste.tsx";
 import { KalipGorevKarti } from "../../kalip/gorev-karti.tsx";
+import { KalipBildirim } from "../../kalip/bildirim.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -134,14 +134,9 @@ export default async function FieldTasksPage({ params, searchParams }: { params:
   return (
     <KalipEkran kind="liste" dark={dark} title={t("field.title")} icon={{ d: LICON.clip, color: "6C4BD8" }} testId="field-tasks" bar={{ back: { href: fieldHome } }}>
       <p className="sr">{t("field.intro")}</p>
-      {first(sp.claimed) === "1" ? (
-        <Banner kind="success">{t("field.claimed")}</Banner>
-      ) : null}
-      {errorKey === null ? null : (
-        <Banner kind="error">
-          {te(errorKey)} {te(`${errorKey}Action`)}
-        </Banner>
-      )}
+      {/* T-1122: eski Banner yerine ortak sonuç bildirimi (simgeli, sesli). */}
+      {first(sp.claimed) === "1" ? <KalipBildirim tur="ok" title={t("field.claimed")} testId="field-claimed" /> : null}
+      {errorKey === null ? null : <KalipBildirim tur="err" title={te(errorKey)} sub={te(`${errorKey}Action`)} testId="field-claim-error" />}
       <KalipAra
         label={t("search")}
         placeholder={t("searchPlaceholder")}

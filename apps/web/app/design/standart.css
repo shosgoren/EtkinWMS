@@ -1723,3 +1723,182 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
 }
 /* T-1121: kalıp düğmesi (`.btn`) kapalıyken soluk ve "yasak" imleç (eski `@wms/ui` Button'un kapalı görünümünün karşılığı). */
 :is(.dzl, .dzf, .dzd) .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ==== T-1122 (B-63, I-18): saha ekranlarının eski görünümü (Tailwind, kütüphane simgeleri) Saha kalıbı diline taşındı ====
+   Kaynak KalipSaha.dc.html: birincil `.btn.n`, ikincil `.more`, iş kartı `.job`, kötü sonuç `.vres.bad` (kırmızı dolu). Saha kabında
+   (`.dzs`) üretilmiş kaynak kuralları geçerlidir; buradaki genel kurallar aynı parçaların kalıp kabı DIŞINDA da (ürün listesi, seçim
+   sayfası, sevk formu kamera katmanı; paket kabul formu düğmeleri) aynı görünmesi içindir ve yalnız ortak `--color-kr-*` belirteçlerini
+   kullanır. Hareket azaltmada animasyon durur. */
+
+/* Birincil (kaynak `.btn.n`): saha kabında `.dzs .flow-primary` (saha-frame.css); burada diğer kalıp kapları (ör. paket kabul formu). */
+:is(.dzf, .dzl, .dzd) .kpri {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px; padding: 0 16px;
+  border: 0; border-radius: 16px; background: var(--color-kr-ink); color: var(--color-kr-on);
+  font: 800 16px/1 var(--font-bricolage), sans-serif; text-decoration: none; cursor: pointer;
+}
+:is(.dzf, .dzl, .dzd).dz-dark .kpri { background: var(--color-kr-text-dark); color: var(--color-kr-bg-dark-a); }
+.kpri:disabled { opacity: .6; cursor: default; }
+.kpri .ico { width: 24px; height: 24px; }
+/* İkincil (kaynak `.more`): saha kabında `.dzs .more` (üretilmiş); burada diğer kalıp kapları. Seçili hâl akış renginde. */
+:is(.dzf, .dzl, .dzd) .ksec {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 14px;
+  border: 2px dashed color-mix(in srgb, var(--color-kr-ink) 30%, transparent); border-radius: 18px; background: transparent;
+  font: 700 14px/1.2 var(--font-instrument), sans-serif; color: var(--color-kr-ink); cursor: pointer;
+}
+:is(.dzf, .dzl, .dzd).dz-dark .ksec { color: var(--color-kr-text-dark); border-color: color-mix(in srgb, var(--color-kr-text-dark) 30%, transparent); }
+.ksec:disabled { opacity: .55; cursor: default; }
+.ksec[aria-pressed="true"] { border-style: solid; border-color: var(--color-kr-ok); background: color-mix(in srgb, var(--color-kr-ok) 12%, transparent); }
+.ksec.teal[aria-pressed="true"] { border-color: var(--color-kr-info); background: color-mix(in srgb, var(--color-kr-info) 12%, transparent); }
+
+/* Mesaj / kilit / boş durum kartı (`SahaMesaj`, kaynak `.job`): metin satır kaydırır. */
+.dzs .job.smsg { align-items: flex-start; }
+.dzs .job.smsg b,
+.dzs .job.smsg small { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.dzs .job.smsg .smsgt { font: 700 16px/1.35 var(--font-instrument), sans-serif; }
+.dzs .job.smsg small { font: 600 13px/1.35 var(--font-instrument), sans-serif; }
+/* Liste (teslim seç, depo seç, sayım/sevk satırları): `ul > li > .job` tam genişlik. */
+.dzs .slist { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.dzs .slist > li { display: flex; min-width: 0; }
+.dzs .slist > li > .job { flex: 1; width: 100%; min-width: 0; }
+.dzs button.job { appearance: none; border: 0; text-align: left; cursor: pointer; }
+.dzs button.job:disabled { cursor: default; opacity: .6; }
+.dzs a.more { color: inherit; text-decoration: none; }
+/* Kabul satırı durumu (eski LineStatus): kalan / tamam hapı + beklenen · kabul · hasarlı. */
+.dzs .job .sline2 { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; white-space: normal; }
+.dzs .job .sline2 .pill { padding: 4px 8px; font-size: 10.5px; }
+
+/* Ayrıntı açılır satırı (hata kodu): şevron aşağı bakar, açıkken yukarı. */
+.sdet { min-width: 0; }
+.sdet > summary { display: flex; align-items: center; gap: 6px; min-height: 48px; cursor: pointer; list-style: none; font: 800 14px/1 var(--font-bricolage), sans-serif; }
+.sdet > summary::-webkit-details-marker { display: none; }
+.sdet .sdetc { transform: rotate(90deg); transition: transform .2s; }
+.sdet[open] .sdetc { transform: rotate(-90deg); }
+.sdet p, .sdet .mono { display: block; margin: 0; font: 600 12px/1.4 var(--font-plex-mono), monospace; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .sdet .sdetc { transition: none; } }
+
+/* Sunucu hatası kartı (`SahaHata`, kaynak `.vres.bad`): metin kaydırır, ayrıntı beyaz yazı. */
+.dzs .vres.shata { align-items: flex-start; }
+.dzs .vres.shata .vic { width: 52px; height: 52px; }
+.dzs .shatx { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dzs .shatx b { font-size: 19px; line-height: 1.15; overflow-wrap: anywhere; }
+.dzs .shataa { font: 600 14px/1.35 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+
+/* Bileşik miktar satırı ("2 koli + 3 adet"): saha kabında `.qdisp [data-testid=compound-qty]` (saha-frame.css). */
+.kcomp { margin: 0; font: 700 14px/1.3 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.kcomp.off { font-weight: 600; opacity: .75; }
+
+/* Tam ekran yanlış okutma uyarısı (`ScanAlert`, kaynak `.vres.bad` dili): kırmızı dolu zemin, beyaz yazı, tek "tekrar okut". */
+.kalert {
+  position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;
+  padding: 40px 24px 24px; background: var(--color-kr-err); color: var(--color-kr-on); font-family: var(--font-instrument), sans-serif;
+  overflow-y: auto; animation: kalert-in .3s cubic-bezier(.2,.9,.2,1);
+}
+.kalertin { display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: 0; text-align: center; }
+.kalertic {
+  display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%;
+  background: color-mix(in srgb, var(--color-kr-on) 22%, transparent); animation: kalert-shake .4s .3s;
+}
+.kalertic .ico { stroke-width: 2.6; }
+.kalertt { margin: 0; font: 800 30px/1.1 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.kalertb { margin: 0; font: 600 20px/1.35 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.kalert .sdet > summary { justify-content: center; }
+.kalert .kalertbtn {
+  appearance: none; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px; padding: 0 16px;
+  border: 0; border-radius: 16px; background: var(--color-kr-on); color: var(--color-kr-err); cursor: pointer;
+  font: 800 17px/1.1 var(--font-bricolage), sans-serif;
+}
+@keyframes kalert-in { from { opacity: 0; transform: translateY(12px); } }
+@keyframes kalert-shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+@media (prefers-reduced-motion: reduce) { .kalert, .kalertic { animation: none; } }
+
+/* Kamera katmanı (`CameraOverlay`, kaynak (a) koyu kamera alanı): üstte durum satırı, ortada görüntü + yeşil vizör, altta düğmeler.
+   Yatay ekranda görüntü solda, durum ve düğmeler sağ sütunda. Durum yazısı ≥ 18 px, düğmeler ≥ 48 px, tek satır. */
+.kcam {
+  position: fixed; inset: 0; z-index: 40; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px; overflow: hidden;
+  padding: 12px; background: var(--color-kr-ink); color: var(--color-kr-on); font-family: var(--font-instrument), sans-serif;
+}
+.kcamh { grid-row: 1; min-width: 0; }
+.kcams { display: flex; align-items: flex-start; gap: 8px; min-width: 0; margin: 0; font: 700 18px/1.35 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.kcams .ico { flex: none; margin-top: 1px; }
+.kcams.bad { padding: 8px 12px; border-radius: 16px; background: var(--color-kr-err); }
+.kcams.good { padding: 8px 12px; border-radius: 16px; background: var(--color-kr-ok); }
+.kcamst { flex: 1; min-width: 0; }
+.kcamv { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kcamvp { position: relative; grid-row: 2; min-width: 0; min-height: 0; overflow: hidden; border-radius: 18px; background: var(--color-kr-ink); }
+.kcamvp video { width: 100%; height: 100%; object-fit: cover; }
+.kcamvp video.off { visibility: hidden; }
+.kcamret { position: absolute; inset: 25% 10%; pointer-events: none; border: 4px solid var(--color-kr-ok); border-radius: 18px; }
+.kcamop {
+  position: absolute; top: 50%; left: 0; right: 0; width: fit-content; max-width: 90%; margin: 0 auto; transform: translateY(-50%);
+  padding: 8px 16px; border-radius: 14px; background: var(--color-kr-ink); text-align: center; font: 700 18px/1.3 var(--font-instrument), sans-serif;
+}
+.kcamoff { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; text-align: center; }
+.kcamoff .ico { opacity: .6; }
+.kcamoff p { margin: 0; font: 700 18px/1.3 var(--font-instrument), sans-serif; }
+.kcamb { grid-row: 3; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.kcam .kcbtn {
+  appearance: none; display: flex; flex: 1 1 0%; align-items: center; justify-content: center; min-width: 48px; min-height: 48px; padding: 0 12px;
+  white-space: nowrap; border: 2px solid var(--color-kr-on); border-radius: 14px; background: transparent; color: var(--color-kr-on); cursor: pointer;
+  font: 700 16px/1 var(--font-bricolage), sans-serif;
+}
+.kcam .kcbtn.pri { flex-basis: 100%; background: var(--color-kr-on); color: var(--color-kr-ink); }
+.kcam .kcbtn[aria-pressed="true"] { background: color-mix(in srgb, var(--color-kr-on) 20%, transparent); }
+@media (orientation: landscape) {
+  .kcam { grid-template-columns: minmax(0, 1fr) 20rem; grid-template-rows: minmax(0, 1fr) auto; }
+  .kcamh { grid-column: 2; grid-row: 1; align-self: center; }
+  .kcamvp { grid-column: 1; grid-row: 1 / span 2; }
+  .kcamb { grid-column: 2; grid-row: 2; flex-direction: column; flex-wrap: nowrap; }
+  .kcam .kcbtn.pri { flex-basis: auto; }
+}
+
+/* Okuma kapalıyken gelen kod bildirimi (`DroppedNotice`): sarı uyarı şeridi, çubuğun üstünde, en üst katmanda. */
+.kdrop {
+  position: fixed; left: 16px; right: 16px; bottom: 160px; z-index: 60; display: flex; align-items: center; gap: 10px; max-width: 28rem; margin: 0 auto;
+  padding: 12px 16px; border-radius: 18px; background: var(--color-kr-warn); color: var(--color-kr-warn-ink);
+  box-shadow: 0 14px 30px -16px var(--color-kr-shadow); font-family: var(--font-instrument), sans-serif;
+}
+.kdrop .ico { flex: none; }
+.kdrop p { flex: 1; min-width: 0; margin: 0; font: 700 16px/1.3 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.kdrop .kdropb {
+  appearance: none; flex: none; min-width: 48px; min-height: 48px; padding: 0 12px; border: 2px solid var(--color-kr-warn-ink); border-radius: 14px;
+  background: transparent; color: inherit; cursor: pointer; font: 800 15px/1 var(--font-bricolage), sans-serif;
+}
+
+/* Kiracı liste ekranı bildirimi (`KalipBildirim`, kalip/bildirim.tsx): başarı sakin beyaz kart + yeşil simge; hata kırmızı dolu kart. */
+.kbld {
+  display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border-radius: 18px;
+  background: var(--color-kr-card); color: var(--color-kr-ink); box-shadow: 0 10px 22px -18px var(--color-kr-shadow-soft);
+  font-family: var(--font-instrument), sans-serif; animation: kalert-in .3s cubic-bezier(.2,.9,.2,1);
+}
+.dz-dark .kbld { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); }
+.kbld > i { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--color-kr-ok); color: var(--color-kr-on); }
+.kbld b { display: block; font: 800 15.5px/1.2 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.kbld small { display: block; margin-top: 3px; font: 600 13px/1.3 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.kbld.err, .dz-dark .kbld.err { background: var(--color-kr-err); color: var(--color-kr-on); }
+.kbld.err > i { background: color-mix(in srgb, var(--color-kr-on) 22%, transparent); }
+@media (prefers-reduced-motion: reduce) { .kbld { animation: none; } }
+.kbld .ico, .kcam .ico, .kalert .ico, .kdrop .ico { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.dzs fieldset.rack, .dzs fieldset.spkgfs { min-width: 0; margin: 0; padding: 0; border: 0; }
+.dzs .job .sline2 .pill:not(.ok):not(.warn) { background: color-mix(in srgb, var(--color-kr-ink) 8%, transparent); color: inherit; }
+.dzs.dz-dark .job .sline2 .pill:not(.ok):not(.warn) { background: color-mix(in srgb, var(--color-kr-text-dark) 12%, transparent); }
+.dzs button.job[aria-pressed="true"], .dzs .job.spkgsel { box-shadow: inset 0 0 0 3px var(--color-kr-ok); }
+.dzs button.job b, .dzs .job.spkgsel b { white-space: normal; overflow-wrap: anywhere; }
+/* Paket işlemi (field/packages): paket kartı (kaynak `.pcard`), adet büyük, bilgiler iki sütun; taşıma onayı nereden → nereye. */
+.dzs .spkgw { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.dzs .spkgh { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dzs .spkg .uic { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 14px; color: var(--color-kr-on); }
+.dzs .spkgh h2 { margin: 0; min-width: 0; font: 800 19px/1.15 var(--font-bricolage), sans-serif; overflow-wrap: anywhere; }
+.dzs .spkgq { margin: 0; font: 800 34px/1 var(--font-bricolage), sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.dzs .spkgq span { font-size: 18px; }
+.dzs .spkgd { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 0; font: 600 13px/1.3 var(--font-instrument), sans-serif; }
+.dzs .spkgd dt { color: var(--color-kr-muted); }
+.dzs .spkgd dd { margin: 0; min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
+.dzs .spkgx { align-self: flex-start; margin: 0; }
+.dzs .vres.spkgok b { font-size: 22px; }
+.dzs .spkgtr { align-items: center; text-align: center; }
+.dzs .spkgfrom, .dzs .spkgto { margin: 0; font: 700 15px/1.3 var(--font-instrument), sans-serif; overflow-wrap: anywhere; }
+.dzs .spkgto { padding: 8px 12px; border-radius: 14px; background: color-mix(in srgb, var(--color-kr-info) 12%, transparent); }
+.dzs .spkgarr { color: var(--color-kr-info); }
+/* SahaShell (T-1122): tarama adımında okutma alanı yalnız "Elle gir" ile açılır; elle girişte çubuğun üstündeki bağlantı düğmesi gizlenir. */
+.dzs .sproxy [data-mode="scan"] { display: none; }
+.dzs .group:has([data-mode="manual"]) .sfoot { display: none; }

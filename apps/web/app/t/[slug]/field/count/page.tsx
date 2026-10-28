@@ -9,7 +9,7 @@ import { getCountWork, type CountWork } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
 import { KICON } from "../../../../design/kabuk-icons.ts";
 import { PrimaryLink } from "../receive/receive-flow.tsx";
-import { SahaShell } from "../saha-shell.tsx";
+import { SahaMesaj, SahaShell } from "../saha-shell.tsx";
 import { CountFlow } from "./count-flow.tsx";
 
 export const dynamic = "force-dynamic";
@@ -35,17 +35,16 @@ export default async function FieldCountPage({ params, searchParams }: { params:
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect(`/login?next=${encodeURIComponent(self)}`);
   const db = getAppDb();
-  const message = (title: string, body: string, href = tasksHref, label = t("toTasks")) => (
+  // T-1122: mesaj / kilit gerekçesi saha mesaj kartında (eski düz paragraf yerine).
+  const message = (title: string, body: string, href = tasksHref, label = t("toTasks"), lock = false) => (
     <SahaShell hue="purple" iconD={KICON.mSayim} title={title} backHref={href} footer={<PrimaryLink href={href}>{label}</PrimaryLink>}>
-      <p className="break-words text-lg text-ink" data-testid="count-message">
-        {body}
-      </p>
+      <SahaMesaj tone={lock ? "lock" : "info"} text={body} testId="count-message" />
     </SahaShell>
   );
   const summary = await getMembershipSummary({ db, principal });
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) notFound();
-  if (!hasPermission(current.roles, "document.create", current.grants)) return message(t("count.lockedTitle"), t("count.lockedReason"), fieldHome, t("toField"));
+  if (!hasPermission(current.roles, "document.create", current.grants)) return message(t("count.lockedTitle"), t("count.lockedReason"), fieldHome, t("toField"), true);
   const taskId = first(sp.task) ?? "";
   if (taskId === "") return message(t("count.goneTitle"), t("count.gone"));
   let work: CountWork;

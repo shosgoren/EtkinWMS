@@ -13,7 +13,8 @@ import { AppError } from "@wms/shared/errors";
 import { KICON } from "../../../../design/kabuk-icons.ts";
 import { dz } from "../../../../design/kalip-saha-tokens.ts";
 import { PrimaryLink } from "../receive/receive-flow.tsx";
-import { Ico, SahaShell } from "../saha-shell.tsx";
+import { Ico, SahaMesaj, SahaShell } from "../saha-shell.tsx";
+import { SICON } from "../../../../design/saha-icons.ts";
 import { PutawayFlow, type PutawayTask } from "./putaway-flow.tsx";
 
 export const dynamic = "force-dynamic";
@@ -41,15 +42,15 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
   if (principal === null) redirect(`/login?next=${encodeURIComponent(base)}`);
   const db = getAppDb();
   const call = { db, principal, tenantSlug: slug };
+  // T-1122: mesaj / kilit gerekçesi saha mesaj kartında (eski düz paragraf yerine); Yardım çağır kaynak `.more` bağlantısı.
   const message = (title: string, body: string, href: string, label: string, help = false) => (
     <SahaShell hue="teal" iconD={KICON.mDepo} title={title} backHref={href} footer={<PrimaryLink href={href}>{label}</PrimaryLink>}>
-      <p className="break-words text-lg text-ink" data-testid="putaway-message">
-        {body}
-      </p>
+      <SahaMesaj tone={help ? "lock" : "info"} text={body} testId="putaway-message" />
       {help ? (
-        <Link href="/help" data-testid="help-link" className="flex min-h-12 w-fit items-center rounded-control border-2 border-border-strong bg-surface px-4 text-base font-bold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus">
-            {t("flow.helpCall")}
-          </Link>
+        <Link href="/help" data-testid="help-link" className="more">
+          <Ico d={SICON.info} size={20} />
+          {t("flow.helpCall")}
+        </Link>
       ) : null}
     </SahaShell>
   );
@@ -111,10 +112,10 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
   if (warehouses.length === 0) return message(t("putaway.noWarehouseTitle"), t("putaway.noWarehouse"), fieldHome, t("flow.toField"));
   return (
     <SahaShell hue="teal" iconD={KICON.mDepo} step={1} total={5} title={t("putaway.warehouseTitle")} instruction={t("putaway.warehouseInstruction")} backHref={fieldHome} footer={<PrimaryLink href={tasksHref}>{t("putaway.toTasks")}</PrimaryLink>}>
-      <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0" aria-label={t("putaway.warehouseTitle")}>
+      <ul className="slist" aria-label={t("putaway.warehouseTitle")}>
         {warehouses.map((w) => (
-          <li key={w.id} className="flex min-w-0">
-            <Link href={`${base}?${new URLSearchParams({ wh: w.id, ...(code === undefined || code === "" ? {} : { code: code.slice(0, 256) }) })}`} className="job w-full">
+          <li key={w.id}>
+            <Link href={`${base}?${new URLSearchParams({ wh: w.id, ...(code === undefined || code === "" ? {} : { code: code.slice(0, 256) }) })}`} className="job">
               <span className="uic" style={{ background: dz("0E7C7B") }}>
                 <Ico d={KICON.mDepo} size={22} />
               </span>
