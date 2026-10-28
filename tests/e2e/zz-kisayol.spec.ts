@@ -34,3 +34,17 @@ test("T-1102 yüzen kısayol her ekranda; Düzenle bütün modülleri listeler, 
   await halka.locator('[data-shortcut="cari"]').click();
   await expect(page).toHaveURL(/\/t\/demo\/parties$/);
 });
+
+test("T-1120 şimşek halkasında Rehber her ekranda: ekranın rehberi varsa başlar, yoksa rehber seçici açılır", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  for (const yol of ["/t/demo/stock/documents?new=TRANSFER", "/t/demo/audit"]) {
+    await page.goto(yol);
+    await page.getByTestId("pano-fab").click();
+    await page.getByTestId("pano-guide").click();
+    // Rehber kartı (ekranın işlem rehberi) ya da rehber/yolculuk seçicisi açılır; şimşek perdenin altında kalır.
+    await expect(page.locator('[data-testid="working-guide"], [data-testid="guide-picker"], .ysheet').first(), yol).toBeVisible();
+    await expect(page.getByTestId("pano-fab"), `${yol}: şimşek rehberin üstünde değil`).toBeHidden();
+  }
+});
+
