@@ -108,6 +108,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
   // doğal sesle okunur (ortak okuyucu; ses servisi yoksa cihaz sesi).
   const sesliOku = useSesliOku();
   const konus = useRef(false);
+  const sonOkunan = useRef("");
 
   const go = useCallback(
     (href: string) => {
@@ -397,6 +398,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
 
   // T-1109: yeni durum yazısı (sonuç, onay sorusu, okuma özeti) sesli yanıt açıksa okunur; ilk iki satırın adı ve miktarı da söylenir.
   useEffect(() => {
+    if (st.s === "idle") sonOkunan.current = "";
     if (!konus.current || sessizMi()) return;
     let metin = "";
     if (st.s === "fb") metin = st.title;
@@ -419,7 +421,10 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
       });
       metin = a.rows.length === 0 ? `${baslik}. ${t(`empty.${a.empty ?? "items"}`)}` : [baslik, ...satirlar].join(". ");
     }
-    if (metin !== "") sesliOku(okunacak(metin));
+    // Aynı durumun ara değişiklikleri (onay kartında seçim, meşgul) aynı cümleyi yeniden okutmaz.
+    if (metin === "" || metin === sonOkunan.current) return;
+    sonOkunan.current = metin;
+    sesliOku(okunacak(metin));
   }, [st, locale, sesliOku, t]);
 
   const open = st.s === "write" || st.s === "read";
