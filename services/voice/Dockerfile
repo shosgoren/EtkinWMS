@@ -4,6 +4,8 @@
 # Taban imaj etiket + digest ile sabit (mirror.gcr.io, Docker Hub 429 sınırı yok). Python paketleri sürüm + SHA-256 ile sabit
 # (`--require-hashes`, yalnız tekerlek). Modeller derlemede sabit revizyondan indirilir ve SHA-256 ile doğrulanır; çalışırken ağ yok.
 # T-1106: yazı → ses için EMA Lightning + PyTorch'un yalnız CPU yapısı (`+cpu`, download.pytorch.org; CUDA paketleri gelmez).
+# T-1114: bellek makinenin çekirdek sayısına bağlı kalmasın — OpenMP/BLAS iş parçacığı havuzu ve glibc bellek arenası sayısı sabit
+# (çok çekirdekli CI makinesinde aynı imaj 1100 MiB sınırını 1600 MiB'a aşıyordu; kapsayıcı sınırı 1280 MiB).
 ARG PY_IMAGE=mirror.gcr.io/library/python:3.12-slim-trixie@sha256:cb33f7f771ecec2ef1225cf39b159591a040391bd73e4c01f00fdfc4c47611d2
 
 FROM ${PY_IMAGE} AS model
@@ -18,7 +20,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HF_HUB_DISABLE_TELEMETRY=1 \
     VOICE_MODEL_DIR=/models/whisper-small \
     VOICE_TTS_DIR=/models/ema-lightning \
-    VOICE_THREADS=2
+    VOICE_THREADS=2 \
+    OMP_NUM_THREADS=2 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    MALLOC_ARENA_MAX=2
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --disable-pip-version-check --require-hashes --only-binary=:all: \
         --extra-index-url https://download.pytorch.org/whl/cpu -r /tmp/requirements.txt \
@@ -42,7 +48,11 @@ ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
     HF_HUB_DISABLE_TELEMETRY=1 \
     VOICE_MODEL_DIR=/models/whisper-small \
     VOICE_TTS_DIR=/models/ema-lightning \
-    VOICE_THREADS=2
+    VOICE_THREADS=2 \
+    OMP_NUM_THREADS=2 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    MALLOC_ARENA_MAX=2
 WORKDIR /srv
 USER node
 EXPOSE 8000
