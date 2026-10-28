@@ -37,7 +37,8 @@ export function PackageLabelEkran({ dark, back, children }: { dark: boolean; bac
         },
       }}
     >
-      <div className="flex min-w-0 flex-col gap-4">{children}</div>
+      {/* T-1121: Tailwind düzen sınıfı yerine satır içi düzen. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>{children}</div>
     </KalipEkran>
   );
 }

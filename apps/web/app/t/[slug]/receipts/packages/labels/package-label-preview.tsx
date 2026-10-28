@@ -1,13 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@wms/ui";
 import { printCss, type PaperMode } from "../../../labels/print-settings.ts";
 import { generatePackageQrs, validPackagePrintSettings, type PackageQr, type PackageLabelMetadata } from "./package-labels.ts";
 import "../../../labels/print.css";
 import { LICON } from "../../../../../design/kalip-icons.ts";
 import { kdz } from "../../../kalip/tokens.ts";
+import { Ico } from "../../../kalip/ekran.tsx";
+import { KalipAlan } from "../../../kalip/form.tsx";
+import { KalipUyari } from "../../../kalip/uyari.tsx";
 
+// T-1121: ölçü alanları kalıp alanı (`KalipAlan`), durum / hata satırları kalıp uyarı bandı (`KalipUyari`), Yeniden dene ve Yazdır kalıp
+// düğmeleri (`.btn`); eski `@wms/ui` Button ve Tailwind sınıfları kalktı. Ana işlem alt çubuktadır; buradaki Yazdır onun hedefidir.
 // T-973: kâğıt seçimi liste kalıbı süzgeç çipleri (`.fchips > .fch`, `labels` ekranındaki A4 / Rulo ile aynı); seçili çip `aria-pressed`.
 function PaperChips({ mode, onPick }: { mode: PaperMode; onPick: (m: PaperMode) => void }) {
   const t = useTranslations("packageReceiving.labelPreview");
@@ -70,20 +74,20 @@ export function PackageLabelPreview({ packages }: { readonly packages: readonly 
   }, [qrs, width, height, valid, packages.length]);
   const measured = fit?.qrs === qrs && fit?.width === width && fit?.height === height;
   const ready = valid && qrs != null && measured && fit.fits;
-  return <section className="flex flex-col gap-4" aria-label={t("previewAria")}>
-    <div className="label-controls pk-card">
+  return <section style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }} aria-label={t("previewAria")}>
+    <div className="label-controls pk-card" style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
       <PaperChips mode={mode} onPick={setMode} />
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <label>{t("width")}<input className="mt-1 min-h-[48px] w-full rounded-lg border border-border-strong p-3" type="number" min="20" max="200" value={width} onChange={e => setWidth(Number(e.target.value))} /></label>
-        <label>{t("height")}<input className="mt-1 min-h-[48px] w-full rounded-lg border border-border-strong p-3" type="number" min="15" max="280" value={height} onChange={e => setHeight(Number(e.target.value))} /></label>
+      <div className="kalanlar">
+        <KalipAlan label={t("width")} type="number" inputMode="numeric" min="20" max="200" value={width} onChange={e => setWidth(Number(e.target.value))} />
+        <KalipAlan label={t("height")} type="number" inputMode="numeric" min="15" max="280" value={height} onChange={e => setHeight(Number(e.target.value))} />
       </div>
-      <p className="my-3 text-sm">{t("summary", { count: packages.length })}</p>
-      <details className="mb-3 text-sm"><summary className="flex min-h-[48px] cursor-pointer items-center">{t("helpTitle")}</summary><p>{t("helpBody")}</p></details>
-      {!valid ? <p role="alert">{t("invalid")}</p> : null}
-      {current === null ? <p role="status">{t("preparing")}</p> : null}
-      {current?.qrs === null ? <div role="alert">{t("qrFailed")} <Button style={{ minHeight: 48 }} type="button" variant="secondary" onClick={() => setAttempt(v => v + 1)}>{t("retry")}</Button></div> : null}
-      {measured && !fit.fits ? <p role="alert">{t("noFit")}</p> : null}
-      <Button style={{ minHeight: 56, width: "100%" }} type="button" data-testid="package-label-print" disabled={!ready} onClick={() => { if (ready) window.print(); }}>{t("print")}</Button>
+      <p className="khint">{t("summary", { count: packages.length })}</p>
+      <details><summary style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 48, cursor: "pointer", fontWeight: 700 }}><Ico d={LICON.info} size={20} />{t("helpTitle")}</summary><p className="khint">{t("helpBody")}</p></details>
+      {!valid ? <KalipUyari tone="hata"><p>{t("invalid")}</p></KalipUyari> : null}
+      {current === null ? <KalipUyari tone="bilgi"><p>{t("preparing")}</p></KalipUyari> : null}
+      {current?.qrs === null ? <KalipUyari tone="hata"><p>{t("qrFailed")}</p><button type="button" onClick={() => setAttempt(v => v + 1)}><Ico d={LICON.transfer} size={18} />{t("retry")}</button></KalipUyari> : null}
+      {measured && !fit.fits ? <KalipUyari tone="hata"><p>{t("noFit")}</p></KalipUyari> : null}
+      <button className="btn n" style={{ minHeight: 56, width: "100%" }} type="button" data-testid="package-label-print" disabled={!ready} onClick={() => { if (ready) window.print(); }}><Ico d={LICON.printer} size={20} />{t("print")}</button>
     </div>
     {ready ? <style>{printCss(settings)}</style> : <style>{"@media print{.label-sheet{display:none!important}}"}</style>}
     {valid && qrs != null ? <PackageLabelPages packages={packages} qrs={qrs} width={width} height={height} sheetRef={sheetRef} /> : null}
