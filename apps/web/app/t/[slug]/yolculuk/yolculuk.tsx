@@ -328,12 +328,14 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
 
   // Tamam geçişi: tur sürerken adım verisi oluştu → ses + balon; kısa süre sonra sıradaki adımın ekranı.
   useEffect(() => {
-    if (data === null || paused || !sessionLoaded || operationOpen) return undefined;
+    if (data === null || !sessionLoaded) return undefined;
     let finished: StepKey | null = null;
     for (const s of data.steps) {
       if (prevDone.current[s.key] === false && s.done) finished = s.key;
       prevDone.current[s.key] = s.done;
     }
+    // T-1124: yolculuk duraklatılmış ya da işlem rehberi öndeyken biten adım "görüldü" sayılır; rehber geri gelince eski geçiş çalışmaz.
+    if (paused || operationOpen) return undefined;
     if (finished !== null && data.tour === "ACTIVE" && !data.complete && !replay) {
       // T-1036: sıradaki = geride kalan ilk açık adım (İleri ile atlanan "Kartlarını getir" önce gelir). Kısa tur yalnız üç adımı da
       // bitince kapanır (eskiden stok bitince, kartlar yapılmamış olsa bile kapanıyordu).
@@ -426,14 +428,18 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     setReplay(false);
     setShortTour(false);
     setData(d=>d===null?null:{...d,tour:"CLOSED"});
+    // T-1124: yolculuk kapandı; katlı işlem rehberi simgesi geri gelir.
+    setGuideOwner?.(null);
     void choose({ tour: "close" });
-  }, [choose, sessionKey, rememberPaused]);
+  }, [choose, sessionKey, rememberPaused, setGuideOwner]);
 
+  // T-1124 (kullanıcı 28 Ekim: "rehber tamamen kapanıyor"): işlem/aktarma rehberi açılınca kurulum yolculuğu KAPATILMAZ (eskiden sunucuda
+  // "close" yazılıyordu, kurulum turu kayboluyordu); liste kapanır, kart katlanır. Rehber kapanınca yolculuk katlı simgeden sürer.
   useEffect(() => {
-    const pause = (): void => { setSheet(false); rememberPaused(true); if (data?.tour === "ACTIVE") closeTour(); };
+    const pause = (): void => { setSheet(false); setKatli(true); };
     window.addEventListener("etkinwms:journey-pause", pause);
     return () => window.removeEventListener("etkinwms:journey-pause", pause);
-  }, [data?.tour, closeTour, rememberPaused]);
+  }, []);
 
   const startTour = useCallback(
     async (k: StepKey | null): Promise<void> => {
@@ -473,7 +479,9 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   const closeSheet = useCallback((): void => {
     feedback.minor();
     setSheet(false);
-  }, []);
+    // T-1124: liste kapandı; katlı işlem rehberi simgesi geri gelir (yolculuk turu sürüyorsa o da görünür kalır).
+    setGuideOwner?.(null);
+  }, [setGuideOwner]);
 
   const skip = useCallback(
     async (k: StepKey): Promise<void> => {

@@ -38,7 +38,10 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
   }
   // T-1119: seçimler React durumunda — çıkış korumasına `data-dirty` ile bildirilir.
   const dirty=Object.keys(selected).length>0;
-  return <form className="workflow-form kform-ic" data-dirty={dirty?"true":"false"} onSubmit={event=>{
+  // T-1124: işlem rehberinin "bitti" işaretleri (adım ancak iş gerçekten yapılınca ilerler; yalnız yazmak seçim sayılmaz).
+  const guideDone=[warehouse && selected.location ? "source" : "",kind === "TRANSFER" && selected.targetLocation && selected.targetWarehouse?.id !== warehouse?.id ? "target" : "",
+    item && (!lotRequired || selected.lot) && (!serialRequired || selected.serial) ? "item" : "",/^[0-9]+([.][0-9]{1,6})?$/.test(quantity) && Number(quantity) > 0 && reason.trim() !== "" ? "quantity" : ""].filter(Boolean).join(" ");
+  return <form className="workflow-form kform-ic" data-dirty={dirty?"true":"false"} data-guide-done={guideDone} onSubmit={event=>{
     event.preventDefault(); if(inFlight.current || !warehouse || !item || !selected.location) return;
     inFlight.current=true;
     const payload={slug,kind,warehouseId:warehouse.id,itemId:item.id,locationId:selected.location.id,quantity,reason,
@@ -57,7 +60,7 @@ export function DocumentForm({slug,kind}:{slug:string;kind:"STOCK_IN"|"STOCK_OUT
       {lotRequired && picker("lot")}{serialRequired && picker("serial")}
       {/* T-1037: ortak kalıp alanı (.fld) — eski düz kutu (control) yerine; ad/kurallar aynı. */}
       <KalipAlan label={item?.unitCode ? `${t("quantity")} · ${item.unitCode}` : t("quantity")} data-guide="quantity" name="quantity" required inputMode="decimal" pattern="[0-9]+([.][0-9]{1,6})?" maxLength={32} value={quantity} onChange={e=>{key.contentChanged();setQuantity(e.target.value);}} />
-      <KalipAlan label={t("reason")} name="reason" required maxLength={500} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} />
+      <KalipAlan label={t("reason")} data-guide="reason" name="reason" required maxLength={500} value={reason} onChange={e=>{key.contentChanged();setReason(e.target.value);}} />
       </div></KalipGrup>
     </fieldset>
     {item && warehouse && selected.location && <div data-guide="summary" className="kgovde"><KalipGrup title={t("summary")} d={LICON.check} color="2F7D5B"><ul className="kozet">

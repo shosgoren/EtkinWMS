@@ -112,7 +112,7 @@ export default async function FieldPutawayPage({ params, searchParams }: { param
   if (warehouses.length === 0) return message(t("putaway.noWarehouseTitle"), t("putaway.noWarehouse"), fieldHome, t("flow.toField"));
   return (
     <SahaShell hue="teal" iconD={KICON.mDepo} step={1} total={5} title={t("putaway.warehouseTitle")} instruction={t("putaway.warehouseInstruction")} backHref={fieldHome} footer={<PrimaryLink href={tasksHref}>{t("putaway.toTasks")}</PrimaryLink>}>
-      <ul className="slist" aria-label={t("putaway.warehouseTitle")}>
+      <ul className="slist" aria-label={t("putaway.warehouseTitle")} data-guide="putaway-pick">
         {warehouses.map((w) => (
           <li key={w.id}>
             <Link href={`${base}?${new URLSearchParams({ wh: w.id, ...(code === undefined || code === "" ? {} : { code: code.slice(0, 256) }) })}`} className="job">

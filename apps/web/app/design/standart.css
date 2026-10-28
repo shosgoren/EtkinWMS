@@ -1248,6 +1248,23 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
   padding: 8px 10px 8px 14px;
 }
 
+/* T-1124: katlı rehber simgesi (kaldığın yerden · baştan · başka bölüm · kapat) sol altta — sağ alttaki yüzen kısayolu (şimşek: halkadaki
+   "Rehber") örtmesin. Üretilmiş `yolculuk.css` sağa `!important` ile sabitlediği için aynı güçle ve daha belirgin seçiciyle. */
+.dzj.dzj .ycoach.working.folded {
+  left: 12px !important;
+  right: auto !important;
+}
+/* Telefonda şimşeğin (varsayılan sağda, ekranın %86'sı) yanında yer kalsın: "Kaldığın yerden devam" üst satırda, simgeler alt satırda. */
+@media (max-width: 699.98px) {
+  .dzj.dzj .ycoach.working.folded {
+    max-width: calc(100% - 92px);
+    flex-wrap: wrap;
+  }
+  .dzj.dzj .ycoach.working.folded > .ynb {
+    flex: 1 1 100%;
+  }
+}
+
 /* T-1102: yüzen kısayol (Pano kaynağı `.fab` / `.hback` / `.halo` / Düzenle `.page`) her ekranda: sayfa kökünde, görüntü alanına göre.
    Şimşek alt çubuğun (z 25) üstünde; açılınca perde bütün ekranı (alt çubuk dahil) örter, halka ve seçici perdenin üstünde. */
 .dzp.kisayol-kok { display: contents; }
