@@ -1059,9 +1059,13 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
   /* İki sütunlu yerleşim kabı (`KalipIzgara`) masaüstünde ızgaraya karışır: gruplar doğrudan sütun olur. */
   .dzf .kfc :is(.sgrid, .scol) { display: contents; }
   .dzf .kfc > :not(.sg, .sgrid) { grid-column: 1 / -1; }
-  .dzf:not(.dz-dark) .kfc .sg {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--gc, var(--color-kr-card)) 10%, var(--color-kr-card)) 0%, var(--color-kr-card) 120px);
-  }
+}
+
+/* T-1111 (kullanıcı 28 Ekim: "her yerde uygulayacağın soft renk … tamamlanmamış"): bölüm kartının üstü kendi renginde hafif tonlu
+   (STANDART §5) yalnız masaüstü form kalıbında değil, her ekranda ve her genişlikte — stok fişi, mal kabul, sevk, sayım formlarındaki
+   `KalipGrup` de aynı tonu alır. */
+.dzf:not(.dz-dark) .sg[style*="--gc"] {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gc) 10%, var(--color-kr-card)) 0%, var(--color-kr-card) 120px);
 }
 
 /* ---- T-1053 Son işlemler (STANDART §1, tuval üst çubuk saat simgeli düğme + rozet): bugün kendi yaptıkların penceresi. ---- */
@@ -1252,6 +1256,29 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
 .dzp.kisayol-kok .halo { position: fixed; z-index: 39; }
 .dzp.kisayol-kok .page { position: fixed; inset: 0; z-index: 41; }
 body:has([data-testid="kalip-unsaved-layer"]) .dzp.kisayol-kok { display: none; }
+/* T-1111: şimşek açık bir pencerenin, Modüller sayfasının ya da rehber perdesinin üstünde görünmez (Modüller alt çubuk katmanında z 25,
+   şimşek 30'du; rehber perdesi hafif bulanık olduğundan koyu yuvarlak düğme yine seçiliyordu). Kendi Düzenle sayfası hariç. */
+body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picker"])) .dzp.kisayol-kok .fab {
+  visibility: hidden;
+  pointer-events: none;
+}
+/* T-1111: Düzenle (Kısayollarım) sayfasının alt çubuğu ortak cam çubukla aynı (Pano kaynağının tam genişlik koyu camı değil). */
+.dzp.kisayol-kok .page .dockin {
+  max-width: 720px;
+  margin: 0 auto;
+  border-radius: 28px;
+  background: linear-gradient(180deg, var(--color-st-glass-a), var(--color-st-glass-b));
+  border: 1px solid var(--color-st-glass-edge);
+  box-shadow: 0 18px 40px -22px var(--color-st-glass-shadow), inset 0 1px 0 var(--color-st-glass-edge);
+}
+.dzp.kisayol-kok.dz-dark .page .dockin { background: var(--color-st-dark-glass); }
+.dzp.kisayol-kok:not(.dz-dark) .page .dk { color: var(--color-st-icon); }
+.dzp.kisayol-kok .page .dk.big {
+  border-radius: 20px;
+  background: linear-gradient(150deg, var(--color-st-ok), var(--color-st-ok-deep));
+  color: var(--color-kr-on);
+  box-shadow: 0 12px 24px -10px var(--color-st-ok-deep), 0 0 0 4px var(--color-kr-on);
+}
 
 /* T-1103: Etkin bas-konuş — iPhone'da uzun basışta büyüteç / bağlam menüsü açılmasın (dokunuş kaydı bozmasın). */
 .dzk .dk-etkin {

@@ -1,11 +1,11 @@
 # 2B. Mal Kabul, Stok ve Katalog Modülleri (wms.etkinyazilim.com)
 
-> **Bu bölüm neyi anlatır?** Depoya mal girişinden (mal kabul) başlayıp, stok listesi, stok fişleri (giriş/çıkış/transfer), ürün kartları, cariler (müşteri/tedarikçi), depolar ve raflar, etiket basımı ve Excel'den veri aktarma ekranlarını anlatır.
+> **Bu bölüm neyi anlatır?** Depoya mal girişinden (mal kabul) başlayıp, stok listesi, stok fişleri (giriş/çıkış/transfer), ürün kartları, cariler (müşteri/tedarikçi), depolar ve raf yerleri, etiket basımı ve Excel'den veri aktarma ekranlarını anlatır.
 > Her ekran için: ne işe yaradığı, hangi düğmeye basınca ne olduğu, veri tabanında (DB) hangi tablonun değiştiği ve hangi kuralın işlediği yazılıdır.
 >
-> **Kaynak:** Bu belge main dalındaki kod okunarak yazıldı (`apps/web/app/t/[slug]/…`, `packages/domain/src/…`, `packages/db/migrations/…`). Kod okuması canlı (yayındaki) sürümün kanıtı değildir; canlı durum `docs/STATE.md` dosyasındadır.
+> **Kaynak:** main `8e2710d` · 28 Ekim 2026 (ilk sürüm main `36f3a13` · 23 Ekim; aradaki T-1029…T-1110 değişiklikleri işlendi). Belge kod okunarak yazıldı (`apps/web/app/t/[slug]/…`, `packages/domain/src/…`, `packages/db/migrations/…`). Kod okuması canlı (yayındaki) sürümün kanıtı değildir; canlı durum `docs/STATE.md` dosyasındadır. Bu belgede "canlıda" yalnız STATE öyle diyorsa yazılır.
 >
-> **Etiketler:** **[TAMAMLANDI]** ekran → sunucu → veri tabanı uçtan uca bağlı · **[GELİŞTİRİLİYOR]** kodu kısmen var / kapalı anahtarla duruyor / yarım · **[PLANLANDI]** yalnız iş listesinde (BACKLOG) veya tasarımda.
+> **Etiketler:** **[TAMAMLANDI]** ekran → sunucu → veri tabanı uçtan uca bağlı (main'de) · **[GELİŞTİRİLİYOR]** kodu kısmen var / kapalı anahtarla duruyor / yarım · **[PLANLANDI]** yalnız iş listesinde (BACKLOG) veya tasarımda.
 
 ## Sözlük (bu bölümde sık geçen terimler)
 
@@ -23,6 +23,21 @@
 | Ondalık (I-09) | Miktarlar yazı (metin) olarak taşınır ve 6 haneli ondalıkla saklanır; bilgisayar yuvarlama hatası olmaz. |
 | Audit (I-12) | "Kim, ne zaman, ne yaptı" kaydı (`audit_logs`). İşlemle aynı anda yazılır. |
 | Tenant | Müşteri firma (çalışma alanı). Adres çubuğundaki `/t/<firma-kısa-adı>/` kısmı. Her firma yalnız kendi verisini görür (RLS). |
+| Kaynak durumu (0062) | Ürün Paraşüt'ten geliyorsa, kaynaktaki arşiv/silinme bilgisi (`items.source_state`, `.source_disposition`). WMS kartı silinmez; yalnız yeni kullanım kapanır ve uygun olunca arşive geçer (bkz. 2B.8). |
+
+## Ortak masaüstü kalıpları (ekran standardı, 26 Ekim kararı)
+
+Bu bölümdeki ekranlar `docs/design/STANDART.md` kalıplarıyla yazılır; ortak parçalar `apps/web/app/t/[slug]/kalip/` altındadır. Modüllerde tekrar anlatılmaz:
+
+| Kalıp | Ortak parça | Bu bölümde kullanan ekranlar |
+|---|---|---|
+| **Liste** — Kart / Liste geçişi, "Sütunlar" seçimi, başlığa tıklayınca sıralanan tablo (T-1047/T-1048) | `kalip/tablo.tsx` (`KalipTablo`, `KalipGorunumSec`, `KalipSutunSec`, `useKalipGorunum`, `useKalipSutunlar`); seçim bu cihazda hatırlanır | Ürünler, Cariler, Depolar |
+| **Kaydırınca otomatik yükleme** — "Daha fazla" düğmesi yerine liste sonuna gelince sonraki sayfa; karttan geri dönünce aynı uzunluk (T-1055/T-1058/T-1059) | `KalipSonsuz`, `useKalipDerinlik` + ekranın `loadMore…Action` eylemi (keyset imleç, OFFSET yok) | Ürünler, Cariler, Depolar, Beklenen teslimler, Stok işlemleri |
+| **Kayıt kartı** — üst şerit (ad, etiketler, sayı kutuları, hızlı işlemler), sekmeler, bilgi ızgarası, son hareketler (T-1049 vd.) | `kalip/kart.tsx` (`KalipKayitKart`, `KalipKartSerit`, `KalipKartSekmeler`, `KalipBilgiIzgara`, `KalipSonHareketler`) | Ürün kartı, Depo kartı, Raf yeri kartı, Cari kartı, Stok belgesi kartı |
+| **Form** — tam ekran, tek Kaydet üst/alt çubukta, yalnız değişiklikte etkin; yarım işte çıkış sorusu (T-990, T-1037) | `KalipFormEkran`, `KalipGrup`, `KalipSecim`, `useCikisKorumasi` | Yeni teslim, yeni ürün / ürün düzenleme, cari formu, yeni depo / raf yeri, stok fişi |
+| **Adım adım rehber** — "Nasıl kullanırım?": ekran bulanıklaşır, yalnız dokunulacak yer açık, iş yapılınca kendiliğinden ilerler (T-1095, T-1100, T-1105) | `kalip/adim-rehber.tsx`, `adim-rehber-plan.ts`, `kalip/rehber.tsx` | Ürün / depo / cari aktarma, mal kabul, yerleştirme, çıkış, transfer |
+
+Rehberler yalnız sunumdur; sunucu eylemi çağırmaz, durum yalnız cihazda tutulur. Liste ekranlarında **Excel simgesi yoktur** (T-1092/T-1094): Excel yalnız Ayarlar › Entegrasyonlar'dan açılır (bkz. 2B.12).
 
 ## Modül dizini
 
@@ -34,12 +49,12 @@
 | 2B.4 | Saha Paket İşlemleri (kalite serbest bırak, yerleştir, depolar arası taşı) | `/t/<firma>/field/packages` | [GELİŞTİRİLİYOR] |
 | 2B.5 | Yerleştirme (kabul sonrası rafa koyma) — kısa | `/t/<firma>/field/putaway` | [TAMAMLANDI] (ayrıntı 02c) |
 | 2B.6 | Stok Durumu (Stok Listesi) | `/t/<firma>/stock` | [TAMAMLANDI] |
-| 2B.7 | Stok İşlemleri / Fişler (giriş, çıkış, depolar arası transfer, onay, işle, iptal) | `/t/<firma>/stock/documents` | [TAMAMLANDI] (ters kayıt ekranı [PLANLANDI]) |
-| 2B.8 | Ürün Kartları (liste + ürün ayrıntısı) | `/t/<firma>/items`, `/t/<firma>/items/<ürün>` | [TAMAMLANDI] |
-| 2B.9 | Cariler (müşteri / tedarikçi) | `/t/<firma>/parties` | [TAMAMLANDI] |
-| 2B.10 | Depolar ve Raflar (lokasyon ağacı) | `/t/<firma>/warehouses`, `/t/<firma>/warehouses/<depo>` | [TAMAMLANDI] |
-| 2B.11 | Etiket Basma (ürün / raf etiketi) | `/t/<firma>/labels` | [TAMAMLANDI] |
-| 2B.12 | Excel/CSV İçe Aktarma (Aktar) + Excel'e dışa aktarma | `/t/<firma>/import`, `/api/t/<firma>/export/<tür>` | [TAMAMLANDI] |
+| 2B.7 | Stok İşlemleri / Fişler (giriş, çıkış, depolar arası transfer, onay, işle, iptal) + belge kartı | `/t/<firma>/stock/documents` | [TAMAMLANDI] (ters kayıt ekranı [PLANLANDI]) |
+| 2B.8 | Ürün Kartları (liste + kayıt kartı, sekmeler) | `/t/<firma>/items`, `/t/<firma>/items/<ürün>?sekme=…` | [TAMAMLANDI] |
+| 2B.9 | Cariler (müşteri / tedarikçi) + cari kartı | `/t/<firma>/parties`, `/t/<firma>/parties/<cari>` | [TAMAMLANDI] |
+| 2B.10 | Depolar, depo kartı ve raf yeri kartı | `/t/<firma>/warehouses`, `/t/<firma>/warehouses/<depo>`, `…/<depo>/locations/<raf>` | [TAMAMLANDI] |
+| 2B.11 | Etiket Basma (ürün / raf etiketi, toplu ürün QR etiketi) | `/t/<firma>/labels` | [TAMAMLANDI] |
+| 2B.12 | Excel/CSV İçe Aktarma (Aktar) + Excel'e dışa aktarma | `/t/<firma>/settings/baglantilar` → `/t/<firma>/import`, `/api/t/<firma>/export/<tür>` | [TAMAMLANDI] |
 
 ---
 
@@ -69,7 +84,7 @@ sequenceDiagram
         D-->>E: Aynı sonuç (replayed) — ikinci kez yazılmaz
     else Yeni işlem
         D->>DB: acquireStockLocks — belge, raf, bakiye, seri kilitleri (I-15)
-        D->>DB: Kuralları kilitli veride denetler (negatif stok I-05, durum, kapsam)
+        D->>DB: Kuralları kilitli veride denetler (negatif stok I-05, durum, kapsam, ürün kaynak durumu)
         D->>DB: documents + document_lines yazılır, POSTED olur
         D->>DB: stock_ledger satırı eklenir (I-04) + stock_balances güncellenir
         D->>DB: audit_logs + outbox olayı (aynı işlem içinde, I-12/I-07)
@@ -81,30 +96,33 @@ sequenceDiagram
 
 **Önemli:** Hata olursa hiçbir satır yazılmaz (tek veritabanı işlemi = transaction). Bağlantı koparsa ekran "sonuç belirsiz, tekrar dene" der; tekrar deneme aynı anahtarla gittiği için çift kayıt oluşmaz.
 
+**Ürün kaynak durumu kapısı (T-1067, `stock/reservation-reads.ts → assertItemsActive`):** Arşivli ürüne hiçbir yeni hareket yazılmaz. Paraşüt'te arşivlenmiş/silinmiş ve WMS'de "arşiv bekliyor" (`source_disposition = PENDING`) olan ürüne **yeni giriş, yeni teslim, sipariş, üretim planı** açılamaz; ama **çıkış, raf/durum taşıma, sayım düzeltmesi, rezervasyon tüketimi** ve kaynak değişmeden önce açılmış belgeler tamamlanabilir. STATE: T-1067/T-1068 canlıda.
+
 ---
 
 ## 2B.1 Mal Kabul — Beklenen Teslimler (masa ekranı)
 
-- **Adres:** `/t/<firma>/receipts` (liste), `/t/<firma>/receipts?new=1` (yeni teslim formu)
+- **Adres:** `/t/<firma>/receipts` (liste), `/t/<firma>/receipts?new=1` (yeni teslim formu, tam ekran)
 - **Modül Durumu:** [TAMAMLANDI]
 - **Ekranın Amacı:** Ofisteki kişi, tedarikçiden gelecek malı önceden "beklenen teslim" olarak girer (hangi depoya, hangi ürün, ne kadar). Sahadaki depocu mal gelince bu kaydı açıp sayarak teslim alır. Kalite kontrol açıksa gelen mal önce **karantina**ya düşer; yetkili kişi bu ekrandan "kalite onayı" verir.
-- **Kod:** `apps/web/app/t/[slug]/receipts/page.tsx`, `receipts-view.tsx`, `receipt-form.tsx`, `receipts/actions.ts`; domain `packages/domain/src/operations/receiving.ts`, `receiving-queries.ts`.
+- **Kod:** `apps/web/app/t/[slug]/receipts/page.tsx`, `receipts-view.tsx`, `receipt-form.tsx`, `receipts/actions.ts`; ortak `stock/form-ekran.tsx` (form kabı); domain `packages/domain/src/operations/receiving.ts`, `receiving-queries.ts`.
 
 ### Arayüz Elemanları ve Aksiyon Tablosu
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
-| Teslim listesi (kartlar) | Liste (30'lu sayfa) | Sayfa açılır | `listInboundReceipts` (`receiving-queries.ts`), sayfa sunucu bileşeni | Okuma: `inbound_receipts`, `inbound_receipt_lines` | `stock.view` izni; kullanıcının depo kapsamı; üye değilse 404, MFA gerekiyorsa kurulum sayfası | [TAMAMLANDI] |
-| "Daha fazla" | Bağlantı | Tıklanır | Aynı sorgu, sonraki sayfa (keyset imleci `after`) | Okuma | — | [TAMAMLANDI] |
-| "Yeni teslim" (+) | Buton | Tıklanır | `?new=1` → form açılır | — | Yalnız `document.create` izni olana görünür | [TAMAMLANDI] |
-| Depo seçimi | Seçim (yalnız ACTIVE depolar) | Seçilir | `listWarehouses` | Okuma: `warehouses` | Arşivli depo listelenmez | [TAMAMLANDI] |
-| Tedarikçi referansı | Metin (≤100) | Yazılır | — | `inbound_receipts.supplier_ref` | Boşsa saklanmaz; kontrol karakteri reddi | [TAMAMLANDI] |
-| Ürün ara / okut | Arama + kamera | Yazılır / okutulur | `searchItemsAction`, `itemUnitsAction` | Okuma: `items`, `unit_conversions`, `units` | Ürünün temel birimi + tanımlı çevrim birimleri listelenir | [TAMAMLANDI] |
+| Teslim listesi (kartlar) | Liste (30'lu sayfa) | Sayfa açılır | `listInboundReceipts` (`receiving-queries.ts`), sayfa sunucu bileşeni | Okuma: `inbound_receipts`, `inbound_receipt_lines` | `stock.view` izni; kullanıcının depo kapsamı; üye değilse 404, MFA gerekiyorsa kurulum sayfası; toplam yalnız ilk sayfada sayılır | [TAMAMLANDI] |
+| Kaydırınca sonraki sayfa | Otomatik yükleme (`KalipSonsuz`) | Liste sonuna gelinir | `loadMoreReceiptsAction` → `listInboundReceipts` (keyset imleç `after`) | Okuma | T-1059; eski "Daha fazla" bağlantısı kalktı | [TAMAMLANDI] |
+| "Yeni teslim" (+) | Buton | Tıklanır | `?new=1` → tam ekran form (`FormEkran`) | — | Yalnız `document.create` izni olana açılır | [TAMAMLANDI] |
+| Depo seçimi | Seçim kutuları (`KalipSecim`, yalnız ACTIVE depolar) | Seçilir | `listWarehouses` | Okuma: `warehouses` | Arşivli depo listelenmez | [TAMAMLANDI] |
+| Tedarikçi referansı | Metin (≤100) | Yazılır | — | `inbound_receipts.supplier_ref` | Boşsa saklanmaz; kontrol karakteri reddi; cari kartına **bağlı değil** (serbest metin) | [TAMAMLANDI] |
+| Ürün ara / okut | Arama + kamera | Yazılır / okutulur | `searchItemsAction` (≤5 sonuç), `itemUnitsAction` | Okuma: `items`, `unit_conversions`, `units` | Ürünün temel birimi + tanımlı çevrim birimleri listelenir | [TAMAMLANDI] |
 | Satır: birim + beklenen miktar | Seçim + sayı | Girilir | — | `inbound_receipt_lines.unit_id`, `.expected_quantity`, `.conversion_factor` | Miktar metin olarak, ondalık kuralı domain'de (I-09); en çok 200 satır | [TAMAMLANDI] |
-| "Kaydet" | Buton | Tıklanır | `createReceiptAction` → `createInboundReceipt` + `openInboundReceipt` | `inbound_receipts` (DRAFT → OPEN, `number` = KBL-… sayaç), `inbound_receipt_lines`, `audit_logs`, `idempotency_records` | `document.create` izni; numara sunucudan (tür/yıl/firma sayacı); açma başarısızsa DRAFT kalır, aynı anahtarla tekrar gönderim yalnız açmayı tamamlar (I-06) | [TAMAMLANDI] |
+| "Kaydet" (form çubuğunda) | Buton | Tıklanır | `createReceiptAction` → `createInboundReceipt` + `openInboundReceipt` | `inbound_receipts` (DRAFT → OPEN, `number` = KBL-… sayaç), `inbound_receipt_lines`, `audit_logs`, `idempotency_records` | `document.create` izni; numara sunucudan (tür/yıl/firma sayacı); arşivli ya da "arşiv bekliyor" ürün reddedilir; açma başarısızsa DRAFT kalır, aynı anahtarla tekrar gönderim yalnız açmayı tamamlar (I-06) | [TAMAMLANDI] |
 | Kart üstü "Teslim al" | Bağlantı | Tıklanır | Saha ekranına gider: `/field/receive?receipt=<id>` | — | — | [TAMAMLANDI] |
-| "Kalite onayı" | Buton | Tıklanır | `approveQualityAction` → `approveQuality` | Yeni `documents` (STOCK_MOVE, QUARANTINE → AVAILABLE), `stock_ledger`, `stock_balances`, `tasks` (PUTAWAY görevi, OPEN), `audit_logs` | `document.approve` izni; görev ayrılığı açıksa kabul eden kişi onaylayamaz; **hasarlı (DAMAGED) stok hiçbir yolla kullanılabilir olmaz** (DB tetikleyicisi 0020 + plan kuralı) | [TAMAMLANDI] |
-| "Paketli kabul" kısayolu | Bağlantı | Tıklanır | `/receipts/packages` | — | Yalnız sunucuda `PACKAGE_RECEIVING_ENABLED=true` ise görünür (canlıda kapalı) | [GELİŞTİRİLİYOR] |
+| "Kalite onayı" | Buton + onay penceresi (`KalipOnay`) | Tıklanır, onaylanır | `approveQualityAction` → `approveQuality` | Yeni `documents` (STOCK_MOVE, QUARANTINE → AVAILABLE), `stock_ledger`, `stock_balances`, `tasks` (PUTAWAY görevi, OPEN), `audit_logs` | `document.approve` izni; görev ayrılığı açıksa kabul eden kişi onaylayamaz; **hasarlı (DAMAGED) stok hiçbir yolla kullanılabilir olmaz** (DB tetikleyicisi 0020 + plan kuralı) | [TAMAMLANDI] |
+| "Paketli kabul" kısayolu | Bağlantı (`KalipDaha`) | Tıklanır | `/receipts/packages` | — | Yalnız sunucuda `PACKAGE_RECEIVING_ENABLED=true` ve `stock.view` + `document.create` + `stock.post` varsa görünür; anahtar henüz açılmadı (B-50) | [GELİŞTİRİLİYOR] |
+| "Nasıl kullanırım?" — mal kabul rehberi | Odaklı adım rehberi | Açılır | `kalip/rehber.tsx` (T-1105) | — | Yalnız sunum | [TAMAMLANDI] |
 | Teslimi iptal et | — | — | Domain'de `cancelInboundReceipt` var, **ekranda düğmesi yok** | (`inbound_receipts.status` → CANCELLED olurdu) | — | [PLANLANDI] |
 | Eksik kalan teslimi kapat | — | — | Komut yok; kısmi kabul sonrası teslim OPEN kalır (kod notu A-305-5) | — | — | [PLANLANDI] |
 
@@ -134,7 +152,7 @@ sequenceDiagram
     participant A as approveQualityAction
     participant D as approveQuality (receiving.ts)
     participant DB as Veritabanı
-    Y->>E: "Kalite onayı" düğmesi
+    Y->>E: "Kalite onayı" düğmesi → onay penceresi
     E->>A: receiptId + clientKey
     A->>D: izin document.approve
     D->>DB: Stok kilitleri (acquireStockLocks)
@@ -144,7 +162,7 @@ sequenceDiagram
     D->>DB: tasks: her onaylanan miktar için PUTAWAY görevi (OPEN)
     D->>DB: audit_logs, outbox
     DB-->>E: Başarılı
-    E-->>Y: Yeşil bildirim, mal artık "Yerleştir" görevinde
+    E-->>Y: Yeşil bildirim + ses, mal artık "Yerleştir" görevinde
 ```
 
 ---
@@ -152,7 +170,7 @@ sequenceDiagram
 ## 2B.2 Mal Kabul — Saha (telefon / el terminali)
 
 - **Adres:** `/t/<firma>/field/receive` (açık teslimler) ve `?receipt=<id>` (seçili teslimin sayımı)
-- **Modül Durumu:** [TAMAMLANDI]
+- **Modül Durumu:** [TAMAMLANDI] — 23 Ekim'den bu yana ekran kodu değişmedi; yalnız odaklı rehber eklendi (T-1105).
 - **Ekranın Amacı:** Depocu kamyondan inen malı telefonla okutur, adedini girer, hasarlı varsa ayırır ve malın bırakıldığı **kabul rafını** seçer. Kayıt anında stok artar (kalite kontrol açıksa karantina olarak).
 - **Kod:** `field/receive/page.tsx`, `receive-view.tsx`, `receive-flow.tsx`; eylemler `receipts/actions.ts` içinden; domain `receiving.ts → receiveGoods`, `field-posting.ts`.
 
@@ -163,7 +181,7 @@ sequenceDiagram
 | "2 koli + 3 adet" gösterimi | Bilgi | — | `compoundQuantityAction` → `formatCompound` | Okuma: `unit_conversions` | Yalnız görüntü; saklama temel birimde | [TAMAMLANDI] |
 | Alınan miktar / hasarlı miktar | Sayı | Girilir | — | `inbound_receipt_lines.received_quantity`, `.damaged_quantity` | Fazla kabul reddedilir (`VALIDATION_FAILED`); ondalık ölçeği ürünün `quantity_scale` değerine uymalı | [TAMAMLANDI] |
 | Kabul rafı | Okut / seç | Raf okutulur | `resolveLocationScanAction` → `findLocationByCode` | Okuma: `locations` | Raf o teslimin deposunda olmalı; sayımda kilitli raf reddedilir | [TAMAMLANDI] |
-| "Teslim al / Kaydet" | Buton | Tıklanır | `receiveGoodsAction` → `receiveGoods` | `documents` (STOCK_IN, POSTED), `document_lines` (`stock_status` = QUARANTINE / DAMAGED / AVAILABLE), `stock_dimensions`, `stock_ledger` (neden RECEIPT), `stock_balances.quantity`, `inbound_receipt_lines.received_quantity`, `inbound_receipts.status` (→ CLOSED tamamlanınca), `tasks` (PUTAWAY, kalite kapalıysa), `audit_logs`, `idempotency_records` | `stock.post` izni; **lot/seri takipli ürün bu ekranda kabul edilmez** (`TRACKING_VIOLATION`; paketli kabul gerekir); kalite açık (`tenant_settings.receiving_qc_enabled`) → sağlam kısım karantina, hasarlı kısım DAMAGED; tek işlem içinde (I-04, I-06, I-12, I-15) | [TAMAMLANDI] |
+| "Teslim al / Kaydet" | Buton | Tıklanır | `receiveGoodsAction` → `receiveGoods` | `documents` (STOCK_IN, POSTED), `document_lines` (`stock_status` = QUARANTINE / DAMAGED / AVAILABLE), `stock_dimensions`, `stock_ledger` (neden RECEIPT), `stock_balances.quantity`, `inbound_receipt_lines.received_quantity`, `inbound_receipts.status` (→ CLOSED tamamlanınca), `tasks` (PUTAWAY, kalite kapalıysa), `audit_logs`, `idempotency_records` | `stock.post` izni; **lot/seri takipli ürün bu ekranda kabul edilmez** (`TRACKING_VIOLATION`; B-152); kalite açık (`tenant_settings.receiving_qc_enabled`) → sağlam kısım karantina, hasarlı kısım DAMAGED; tek işlem içinde (I-04, I-06, I-12, I-15) | [TAMAMLANDI] |
 
 ```mermaid
 sequenceDiagram
@@ -200,15 +218,15 @@ sequenceDiagram
 ## 2B.3 Paketli (QR'lı) Mal Kabul + Paket Etiketleri
 
 - **Adres:** `/t/<firma>/receipts/packages` (sihirbaz), `/t/<firma>/receipts/packages/labels?receipt=<id>` (etiket önizleme/baskı)
-- **Modül Durumu:** [GELİŞTİRİLİYOR] — kod main'de ve testli; ancak sunucu anahtarı `PACKAGE_RECEIVING_ENABLED` canlıda **kapalı** (STATE: "bütün QR hattı tamamlanmadan normal kullanıcı akışı açılmaz"; iş listesi B-50 / T-975).
+- **Modül Durumu:** [GELİŞTİRİLİYOR] — kod main'de ve testli; sunucu anahtarı `PACKAGE_RECEIVING_ENABLED` açılmadı (BACKLOG B-50 / T-975: "Paketli/QR akışı normal girişe bağla, anahtarı aç" açık iş). 23 Ekim'den bu yana bu ekranların kodu değişmedi.
 - **Ekranın Amacı:** Her fiziksel kabı (koli, palet, varil) ayrı kimlikle kabul eder. Her paket için lot kodu, üretim ve son kullanma tarihi girilir; sistem her pakete benzersiz bir **QR kodu** verir ve etiketini basar. Böylece sonradan "bu varil nerede, hangi lottan, ne kadar kaldı" izlenebilir.
-- **Kod:** `receipts/packages/page.tsx`, `package-flow.tsx`, `receipts/packages/actions.ts`, `labels/page.tsx`, `package-label-preview.tsx`; domain `operations/package-receiving.ts`, `package-receiving-queries.ts`, `package-receipt-input.ts`; DB `0032_receipt_packages`, `0033`, `0034`.
+- **Kod:** `receipts/packages/page.tsx`, `package-flow.tsx`, `receipts/packages/actions.ts`, `labels/page.tsx`, `package-label-ekran.tsx`, `package-label-preview.tsx`, `package-labels.ts`; domain `operations/package-receiving.ts`, `package-receiving-queries.ts`, `package-receipt-input.ts`; DB `0032_receipt_packages`, `0033`, `0034`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
 | Depo seçimi | Seçim (sayfalı) | Seçilir | `packageWarehousesAction` → `listWarehouses` | Okuma: `warehouses` | Depo kapsamı | [GELİŞTİRİLİYOR] |
 | Kabul rafı | Seçim (ağaç, sayfalı) | Seçilir | `packageReceivingLocationsAction` → `getLocationTree` | Okuma: `locations` (kind = RECEIVING) | Yalnız RECEIVING türü raf | [GELİŞTİRİLİYOR] |
-| Ürün ara / okut | Arama + kamera | Yazılır / okutulur | `searchPackageItemsAction`, `resolvePackageItemScanAction`, `packageItemOptionsAction` | Okuma: `items`, `item_barcodes`, `unit_conversions` | Seri takipli ürün (SERIAL / LOT_AND_SERIAL) reddedilir | [GELİŞTİRİLİYOR] |
+| Ürün ara / okut | Arama + kamera | Yazılır / okutulur | `searchPackageItemsAction`, `resolvePackageItemScanAction`, `packageItemOptionsAction` | Okuma: `items`, `item_barcodes`, `unit_conversions` | Seri takipli ürün (SERIAL / LOT_AND_SERIAL) reddedilir; arşivli / "arşiv bekliyor" ürün reddedilir | [GELİŞTİRİLİYOR] |
 | Paket sayısı, paket başı miktar, birim | Sayı + seçim | Girilir | — | `inbound_receipt_lines`, `document_lines.quantity/base_quantity/conversion_factor` | Paket 1–200; eşit dağıtım ya da tek tek miktar; çevrim katsayısı sunucuda hesaplanır, istemciden alınmaz | [GELİŞTİRİLİYOR] |
 | Lot kodu, üretim tarihi, SKT | Metin + tarih | Girilir | — | `receipt_packages.lot_code`, `.produced_on`, `.expires_on`, `.catalog_lot_id`; `lots` | SKT ≥ üretim tarihi; aynı lot kodu farklı tarihle gelirse ret (mevcut lot tarihi sessiz değişmez) | [GELİŞTİRİLİYOR] |
 | "Hazırla" | Buton | Tıklanır | `preparePackageReceiptAction` → `preparePackageReceipt` | `inbound_receipts` (+`package_document_id`), `inbound_receipt_lines`, `documents` (DRAFT, STOCK_IN), `document_lines`, `handling_units` (KOLI / PALET / VARIL, `package_receipt_id`), `receipt_packages`, `audit_logs` | `document.create` izni; henüz **stok yazılmaz**; bağlantı koparsa aynı anahtar aynı taslağı ve aynı QR kimliklerini döndürür (I-06) | [GELİŞTİRİLİYOR] |
@@ -224,14 +242,14 @@ stateDiagram-v2
     Islendi --> [*]
 ```
 
-> Not: Taslak paket kabulünü düzenleme/iptal etme ve paketi bölme/birleştirme henüz yok (bkz. Gap listesi).
+> Not: Taslak paket kabulünü düzenleme/iptal etme ve paketi bölme/birleştirme henüz yok (bkz. Gap listesi). Kullanıcının 26 Ekim "tekil QR takibi" kararı (kart üzerinde takip seçimi, girişte paket başı QR) B-165'te bekliyor.
 
 ---
 
 ## 2B.4 Saha Paket İşlemleri
 
 - **Adres:** `/t/<firma>/field/packages`
-- **Modül Durumu:** [GELİŞTİRİLİYOR] — 2B.3 ile aynı anahtara (`PACKAGE_RECEIVING_ENABLED`) bağlı, canlıda kapalı.
+- **Modül Durumu:** [GELİŞTİRİLİYOR] — 2B.3 ile aynı anahtara (`PACKAGE_RECEIVING_ENABLED`) bağlı, anahtar kapalı (B-50).
 - **Ekranın Amacı:** Depocu paket QR'ını okutur; ekran paketin şu an nerede ve hangi durumda olduğunu gösterir ve üç işten birini yaptırır: **kalite serbest bırak** (karantina → kullanılabilir), **yerleştir** (kabul rafından depolama rafına), **depolar arası taşı**.
 - **Kod:** `field/packages/page.tsx`, `package-flow.tsx`, `field/packages/actions.ts`; domain `operations/package-movement.ts`, `package-transfer.ts`, `package-movement-queries.ts`; DB `0034_package_movement_steps`, `0035_package_transfers`.
 
@@ -248,51 +266,52 @@ stateDiagram-v2
 
 ## 2B.5 Yerleştirme (kabul sonrası adım — kısa)
 
-- **Adres:** `/t/<firma>/field/putaway` · **Durum:** [TAMAMLANDI] · Ayrıntı ve görev akışı için bkz. **02c — Saha Operasyonları**.
-- Kalite onayından (ya da kalite kapalıyken kabulden) sonra açılan **PUTAWAY görevi** bu ekranda kapanır: kaynak raf (kabul alanı) → hedef **STORAGE** raf. Düğme `putawayAction` → `putaway` (`operations/putaway.ts`); yazılan tablolar `documents` (STOCK_MOVE), `stock_ledger`, `stock_balances`, `tasks.status`. Sayımda kilitli raf `LOCATION_LOCKED` ile reddedilir. Varsayılan miktar `availableAtLocationAction` ile gelir.
+- **Adres:** `/t/<firma>/field/putaway` · **Durum:** [TAMAMLANDI] · Ayrıntı ve görev akışı için bkz. **02c — Depo Operasyonları**.
+- Kalite onayından (ya da kalite kapalıyken kabulden) sonra açılan **PUTAWAY görevi** bu ekranda kapanır: kaynak raf (kabul alanı) → hedef **STORAGE** raf. Düğme `putawayAction` → `putaway` (`operations/putaway.ts`; eylem `receipts/actions.ts` içinde); yazılan tablolar `documents` (STOCK_MOVE), `stock_ledger`, `stock_balances`, `tasks.status`. Sayımda kilitli raf `LOCATION_LOCKED` ile reddedilir. Varsayılan miktar `availableAtLocationAction` ile gelir. Odaklı "Nasıl kullanırım?" rehberi T-1105 ile eklendi (yalnız sunum).
 
 ---
 
 ## 2B.6 Stok Durumu (Stok Listesi)
 
-- **Adres:** `/t/<firma>/stock` (`?q=` arama, `?warehouse=` depo süzgeci)
-- **Modül Durumu:** [TAMAMLANDI]
+- **Adres:** `/t/<firma>/stock` (`?q=` arama, `?warehouse=` depo süzgeci, `?after=` sonraki sayfa)
+- **Modül Durumu:** [TAMAMLANDI] — 23 Ekim'den bu yana davranış değişmedi; ortak liste tablosu (Kart/Liste, Sütunlar) ve kaydırınca yükleme **bu ekrana henüz uygulanmadı**.
 - **Ekranın Amacı:** "Hangi üründen hangi depoda ne kadar var?" sorusunun cevabı. Her kartta ürün, depo, **kullanılabilir** miktar (büyük rozet), fiziksel ve **ayrılmış** (siparişe rezerve) miktar görünür.
-- **Kod:** `stock/page.tsx`; domain `stock/queries.ts → listStockOverview`.
+- **Kod:** `stock/page.tsx`, `stock/belge-kalip.ts` (bölüm çipleri); domain `stock/queries.ts → listStockOverview`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
 | Arama kutusu | Metin | Yazılıp aranır | `listStockOverview(q)` | Okuma: `stock_balances.quantity`, `.reserved_quantity`, `stock_dimensions`, `items`, `warehouses`, `units` | `stock.view` izni; yoksa "kilitli ekran"; depo kapsamı | [TAMAMLANDI] |
-| Bölüm çipleri (Stok / Fişler / Sevkiyat / Üretim) | Çip | Tıklanır | Sayfa geçişi | — | — | [TAMAMLANDI] |
-| Stok kartı | Kart | Dokunulur | Ürün ayrıntısına gider (`/items/<ürün>`) | — | Kullanılabilir = fiziksel − ayrılmış | [TAMAMLANDI] |
+| Bölüm çipleri (Stok / Fişler / Sevkiyat / Üretim) | Çip | Tıklanır | Sayfa geçişi (`bolumCipleri`) | — | — | [TAMAMLANDI] |
+| Stok kartı | Kart | Dokunulur | Ürün kartına gider (`/items/<ürün>`) | — | Kullanılabilir = fiziksel − ayrılmış | [TAMAMLANDI] |
 | "Yeni" (+) / "İlk girişi yap" | Buton | Tıklanır | `/stock/documents?new=STOCK_IN` | — | — | [TAMAMLANDI] |
-| "İlk sayfa" / "Sonraki" | Bağlantı | Tıklanır | Keyset sayfalama | Okuma | — | [TAMAMLANDI] |
-| Minimum stok trafik ışığı | — | — | Sorguda minimum politikası yok (kod notu) | — | — | [PLANLANDI] |
+| "İlk sayfa" / "Sonraki" | Bağlantı (`KalipDaha`) | Tıklanır | Keyset sayfalama | Okuma | — | [TAMAMLANDI] |
+| Minimum stok trafik ışığı | — | — | Bu sorguda minimum politikası yok (kod notu); ürün listesinde ve ürün kartında var (bkz. 2B.8) | — | — | [PLANLANDI] |
 | Sesle arama | — | — | Etkin sesli asistan (B-62) ile | — | — | [GELİŞTİRİLİYOR] |
 
 ---
 
 ## 2B.7 Stok İşlemleri / Fişler
 
-- **Adres:** `/t/<firma>/stock/documents` (liste), `?id=<fiş>` (ayrıntı), `?new=STOCK_IN | STOCK_OUT | TRANSFER` (yeni)
+- **Adres:** `/t/<firma>/stock/documents` (liste), `?id=<fiş>` (belge kartı), `?new=SEC` (tür seçimi), `?new=STOCK_IN | STOCK_OUT | TRANSFER` (yeni)
 - **Modül Durumu:** [TAMAMLANDI] — Ters kayıt ekranı [PLANLANDI] (komut domain'de hazır, düğme yok).
 - **Ekranın Amacı:** Elle stok girişi (ör. sayım dışı bulunan mal), elle stok çıkışı (ör. fire, numune) ve depolar arası transfer. Fiş önce **taslak**, sonra **onaylı**, sonra **işlenmiş** olur; ancak işlenince stok değişir.
-- **Kod:** `stock/documents/page.tsx`, `document-form.tsx`, `stock/documents/actions.ts`; domain `stock/documents.ts`, `stock/posting.ts`, `stock/document-queries.ts`, `operations/warehouse-transfer.ts`, `stock/reversal.ts`.
+- **Kod:** `stock/documents/page.tsx`, `yeni-secim.tsx` (tür seçimi, T-1037), `document-card.tsx` (belge kartı, T-1091), `kartlar.ts`, `document-form.tsx`, `stock/documents/actions.ts`; domain `stock/documents.ts`, `stock/posting.ts`, `stock/document-queries.ts`, `operations/warehouse-transfer.ts`, `stock/reversal.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
-| Fiş listesi | Liste | Açılır | `listStockDocuments` | Okuma: `documents`, `warehouses` | `stock.view`; izin bayrakları (create / approve / post) ekrana döner | [TAMAMLANDI] |
-| Fiş ayrıntısı (satırlar, durum, ilgili fiş) | Detay | Kart tıklanır | `getStockDocument` | Okuma: `documents`, `document_lines`, `stock_document_links` | Transferde karşı fişe bağlantı gösterilir | [TAMAMLANDI] |
-| "Yeni giriş" / "Yeni çıkış" / "Transfer" | Buton | Tıklanır | `?new=…` formu | — | Giriş/çıkış `document.create`, transfer `stock.post` izni ister; yoksa kilitli ekran | [TAMAMLANDI] |
+| Fiş listesi | Liste (kaydırınca yükleme) | Açılır / kaydırılır | `listStockDocuments`; sonraki sayfalar `loadMoreDocumentsAction` (T-1059) | Okuma: `documents`, `warehouses` | `stock.view`; izin bayrakları (create / approve / post) ekrana döner; depo kapsamı | [TAMAMLANDI] |
+| Belge kartı (şerit, belge bilgileri, satırlar; sağda durum ve işlemler, ilgili fiş) | Kayıt kartı (T-1091) | Kart tıklanır | `getStockDocument` | Okuma: `documents`, `document_lines`, `stock_document_links` | Transferde karşı fişe bağlantı gösterilir; durum etiketi ekran okuyucuya bildirilir | [TAMAMLANDI] |
+| "Yeni" → tür seçimi (Giriş · Çıkış · Transfer) | Ana işlem + büyük ikonlu seçim kutuları (`KalipSecimKutulari`) | Tıklanır | `?new=SEC` → `?new=…` formu | — | Giriş/çıkış `document.create`, transfer `stock.post` ister; yetkisi olmayan seçenek kilitli (dokununca ses + gerekçe balonu). Eski iki kesik çizgili düğme kalktı (T-1037) | [TAMAMLANDI] |
 | Depo / ürün / raf / lot / seri seçimi | Arama seçimi | Yazılır, seçilir | `stockChoicesAction` → `searchStockChoices` | Okuma: `warehouses`, `items`, `locations`, `lots`, `serials` | Raf seçilen depoda olmalı | [TAMAMLANDI] |
 | Miktar + gerekçe (zorunlu, ≤500) | Sayı + metin | Girilir | — | `document_lines.quantity`, `documents.reason` | Ondalık metin (I-09); elle fişte birim = temel birim, katsayı 1 | [TAMAMLANDI] |
-| "Kaydet" (giriş/çıkış) | Buton | Tıklanır | `createManualStockAction` → `createStockDocument` | `documents` (DRAFT, version 1), `document_lines`, `document_status_history`, `audit_logs`, `idempotency_records` | `document.create`; **henüz stok değişmez** | [TAMAMLANDI] |
+| "Kaydet" (giriş/çıkış) | Buton | Tıklanır | `createManualStockAction` → `createStockDocument` | `documents` (DRAFT, version 1), `document_lines`, `document_status_history`, `audit_logs`, `idempotency_records` | `document.create`; **henüz stok değişmez**; "arşiv bekliyor" üründe giriş reddedilir, çıkış serbest | [TAMAMLANDI] |
 | "Kaydet" (transfer) | Buton | Tıklanır | `transferStockAction` → `transferBetweenWarehouses` | İki fiş (STOCK_OUT kaynak, STOCK_IN hedef) POSTED, `stock_document_links` (TRANSFER), `stock_ledger`, `stock_balances`, `audit_logs` | `stock.post`; iki bacak aynı işlemde; yetersiz stok → ret (I-05) | [TAMAMLANDI] |
 | "Onayla" | Buton (yalnız DRAFT'ta) | Tıklanır | `transitionManualStockAction(approve)` → `approveDocument` | `documents.status` → APPROVED, `version`+1, `document_status_history` | `document.approve`; görev ayrılığı açıksa fişi yazan onaylayamaz; sürüm uyuşmazsa `VERSION_CONFLICT` | [TAMAMLANDI] |
 | "İşle" | Buton (yalnız APPROVED'da) | Tıklanır | `transitionManualStockAction(post)` → `postDocument` | `documents.status` → POSTED + `number`, `stock_ledger` (yeni satırlar), `stock_balances`, `reservations` (çıkışta kendi rezervasyonu tüketilir), `audit_logs`, outbox | `stock.post`; kilitler (I-15); **negatif stok reddi** (I-05, `INSUFFICIENT_STOCK`); arşivli raf/ürüne stok yazılmaz; 200 satırı aşan fiş arka planda (worker) işlenir, o sırada "işleniyor" | [TAMAMLANDI] |
 | "İptal" | Buton (DRAFT veya APPROVED'da) | Tıklanır | `transitionManualStockAction(cancel)` → `cancelDocument` | `documents.status` → CANCELLED, `document_status_history` | `document.create`; işlenmiş fiş iptal edilemez | [TAMAMLANDI] |
 | "Tekrar dene" (belirsiz sonuç) | Buton | Tıklanır | Aynı eylem, aynı anahtar | — | Ağ hatasında çift kayıt olmaz (I-06) | [TAMAMLANDI] |
 | "Yenile" | Buton | Tıklanır | Sayfa yenilenir | Okuma | — | [TAMAMLANDI] |
+| "Nasıl kullanırım?" — çıkış / transfer rehberi | Odaklı adım rehberi | Açılır | `kalip/rehber.tsx` (T-1105) | — | Yalnız sunum | [TAMAMLANDI] |
 | Ters kayıt ("Geri al") | — | — | Domain'de `reverseDocument` (`reversal.create` izni) hazır; **ekranda düğme yok** | (Olsaydı: yeni REVERSAL fişi, `document_lines.reversed_quantity`, `.reversal_status`) | Kalan miktarı aşamaz, tüketilmiş/rezerve stok geri alınamaz | [PLANLANDI] |
 | Taslağı düzenle | — | — | Domain'de `updateDraft` var, ekranda yok | — | Satırları sil-yeniden-yaz yapıyor; kalıcı satır kimliğiyle düzenleme ayrı iş | [PLANLANDI] |
 
@@ -316,7 +335,7 @@ DB değerleri (`0012_stock_documents`): `documents.status` ∈ `DRAFT, APPROVED,
 sequenceDiagram
     autonumber
     actor K as Kullanıcı
-    participant E as Fiş ayrıntısı
+    participant E as Belge kartı
     participant A as transitionManualStockAction
     participant P as postDocument (posting.ts)
     participant DB as Veritabanı
@@ -324,7 +343,7 @@ sequenceDiagram
     E->>A: documentId + expectedVersion + clientKey
     A->>P: izin stock.post
     P->>DB: Plan (salt okuma) → acquireStockLocks
-    P->>DB: Kilitli veride: raf ACTIVE, ürün ACTIVE, yeterli stok
+    P->>DB: Kilitli veride: raf ACTIVE, ürün ACTIVE (+ kaynak durumu kapısı), yeterli stok
     alt Stok yetersiz
         P-->>E: INSUFFICIENT_STOCK
         E-->>K: Kırmızı: "Rafta yeterli stok yok"
@@ -344,112 +363,155 @@ sequenceDiagram
 
 ## 2B.8 Ürün Kartları
 
-- **Adres:** `/t/<firma>/items` (liste + yeni ürün), `/t/<firma>/items/<ürün>` (ayrıntı)
+- **Adres:** `/t/<firma>/items` (liste; `?q=`, `?type=HM|YM|MM|TM`, `?status=ARCHIVED|REMOVED`, `?category=`, `?tracking=`, `?barcode=PRESENT|MISSING`, `?filters=1` süzgeç ekranı, `?new=1` yeni ürün), `/t/<firma>/items/<ürün>` (kayıt kartı; `?sekme=stok|birim|barkod|erp`, formlar `?edit=1`, `?kod=1`, `?conv=1`, `?barcode=1`)
 - **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın Amacı:** Depoda tutulan her ürünün kimlik kartı: kod, ad, **kart türü** (HM hammadde, YM yarı mamul, MM mamul, TM ticari mal), temel birim, takip şekli (lot/seri), toplama politikası (FIFO ilk giren ilk çıkar / FEFO son kullanma tarihi en yakın ilk çıkar), birim çevrimleri (1 koli = 12 adet gibi) ve barkodlar. Ayrıntı sayfası ürünün stok kartını (depo/raf bazında miktar) gösterir.
-- **Kod:** `items/page.tsx`, `items-view.tsx`, `items/[itemId]/page.tsx`, `item-detail.tsx`, `items/actions.ts`; domain `catalog/items.ts`, `units.ts`, `barcodes.ts`, `code-suggest.ts`, `stock/item-card.ts`.
+- **Ekranın Amacı:** Depoda tutulan her ürünün kimlik kartı: kod, ad, **kart türü** (HM hammadde, YM yarı mamul, MM mamul, TM ticari mal), temel birim, takip şekli (lot/seri), toplama politikası (FIFO ilk giren ilk çıkar / FEFO son kullanma tarihi en yakın ilk çıkar), birim çevrimleri (1 koli = 12 adet gibi) ve barkodlar. Kart, ürünün nerede ne kadar olduğunu, minimumu ve son hareketleri gösterir; ürün Paraşüt'ten geliyorsa kaynak bilgisi salt okunur ayrı sekmededir.
+- **Kod:** `items/page.tsx`, `items-view.tsx` (liste + yeni ürün formu), `list-page.ts` (sayfa okuyucu, 50'lik), `filters.ts`, `filters-view.tsx` (T-1063), `card-visual.ts`, `items/[itemId]/page.tsx`, `item-detail.tsx` (kayıt kartı, T-1049), `items/actions.ts`, ortak `code-edit-dialog.tsx`; domain `catalog/items.ts`, `catalog/reads.ts`, `units.ts`, `barcodes.ts`, `code-suggest.ts`, `stock/item-card.ts`, `integrations/product-info.ts`, `integrations/product-lifecycle.ts`; DB `0060_product_source_info` (`items.source_product_info`), `0062_product_lifecycle` (kaynak durumu kolonları).
+
+### Ürün listesi
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
-| Ürün listesi + toplam stok | Liste | Açılır / aranır | `searchItems`, `sumItemsStock` | Okuma: `items`, `stock_balances` | `stock.view` | [TAMAMLANDI] |
-| Hızlı arama | Metin | Yazılır | `searchItemsAction` (≤10 sonuç) | Okuma: `items` | — | [TAMAMLANDI] |
-| Kart türü (HM/YM/MM/TM) | Seçim | Seçilir | `suggestItemCodeAction` → `suggestCode` (türe göre kod önerisi) | Okuma: `items.code` | Kod çakışmasız önerilir | [TAMAMLANDI] |
-| Kod, ad, temel birim, takip modu, ölçek, toplama politikası | Form alanları | Girilir | — | `items.code`, `.name`, `.base_unit_id`, `.tracking_mode`, `.quantity_scale`, `.pick_policy`, `.card_type` | Takip ∈ NONE / LOT / SERIAL / LOT_AND_SERIAL; ölçek 0–6; politika FIFO/FEFO | [TAMAMLANDI] |
-| "Yeni birim" | Mini form | Kaydedilir | `createUnitAction` → `createUnit` | `units` | `settings.manage` | [TAMAMLANDI] |
-| "Kaydet" (yeni ürün) | Buton | Tıklanır | `createItemAction` → `createItem` / `createWithSuggestedCode` | `items`, `audit_logs` | `settings.manage`; kod firma içinde benzersiz (`CODE_TAKEN`); kod boşsa sunucu üretir; paket sınırı (plan limiti) aşılırsa ret | [TAMAMLANDI] |
-| Ad / kart türü / toplama politikası düzenle | Form | Kaydedilir | `updateItemAction` → `updateItem` | `items.name`, `.card_type`, `.pick_policy`, `audit_logs` | `settings.manage` | [TAMAMLANDI] |
-| Kod değiştir | Form | Kaydedilir | `updateItemAction(code)` | `items.code`, `code_history` | Eski kod tarihçede saklanır | [TAMAMLANDI] |
-| Birim çevrimi ekle/değiştir | Form | Kaydedilir | `setConversionAction` → `setUnitConversion` | `unit_conversions.to_base_factor` | Katsayı > 0, ondalık metin (I-09) | [TAMAMLANDI] |
-| Barkod ekle | Form | Kaydedilir | `addBarcodeAction` → `addBarcode` | `item_barcodes.barcode`, `.unit_id`, `.quantity` | Barkod firma içinde tekil; GS1 denetimi (`gs1.ts`) | [TAMAMLANDI] |
-| Barkod sil | Buton + onay | Tıklanır | `removeBarcodeAction` → `removeBarcode` | `item_barcodes` (satır silinir) | `settings.manage` | [TAMAMLANDI] |
-| Ürünü arşivle | Buton + onay | Tıklanır | `archiveItemAction` → `archiveItem` | `items.status` → ARCHIVED, `.archived_at` | Fiziksel silme yok; stoklu ürünün takip modu değiştirilemez (DB tetikleyicisi) | [TAMAMLANDI] |
-| Stok kartı (depo/raf/lot dağılımı) | Bilgi | — | `getItemStockCard` | Okuma: `stock_balances`, `stock_dimensions`, `locations`, `lots` | — | [TAMAMLANDI] |
-| "Etiket bas" | Bağlantı | Tıklanır | `/labels?item=<ürün>` | — | — | [TAMAMLANDI] |
+| Ürün listesi — Kart / Liste görünümü | Kart listesi ya da tablo (`KalipTablo`) | Açılır, görünüm değiştirilir | `loadItemsPage` → `searchItems` + `sumItemsStock` | Okuma: `items`, `units`, `stock_balances`, `stock_dimensions`, `item_stock_policies.min_quantity` | `stock.view` (yoksa kilitli ekran); 50'lik keyset sayfa, toplam yalnız ilk sayfada; normal listede arşivli ve "Kaldırıldı" ürün yok (T-1040) | [TAMAMLANDI] |
+| Tablo sütunları | Sütun seçimi (`KalipSutunSec`) | Seçilir, başlıkla sıralanır | — | — | Sütunlar: **Kod, Ad** (sabit), Tür, Birim, Eldeki, Durum. Durum: Stokta / Az / Kritik / Yok / Arşivli / ARŞİV BEKLİYOR / KALDIRILDI | [TAMAMLANDI] |
+| Stok rozeti + trafik ışığı | Rozet | — | `sumItemsStock` | Okuma | Kapsamdaki depoların eldeki toplamı; minimum tanımlıysa renk (kritik/az), yoksa sakin. Minimumu **giren ekran yok** (bkz. Gap) | [TAMAMLANDI] |
+| Kaydırınca sonraki 50 ürün | Otomatik yükleme | Liste sonuna gelinir | `loadMoreItemsAction` → `loadItemsPage` (T-1055) | Okuma | Aynı ürün iki kez çizilmez; geri dönünce aynı uzunluk | [TAMAMLANDI] |
+| Boşta liste yenilenmesi | Arka plan | Sayfa görünür ve boştayken | `watchListUpdates` → sayfa yenileme (T-1066) | Okuma | Arka planda Paraşüt aktarımı olunca liste kendiliğinden tazelenir; form/pencere açıkken yenilemez | [TAMAMLANDI] |
+| Arama / okut | Metin + kamera | Yazılır, okutulur | Canlı sonuç `searchItemsAction` (≤10); Enter / okutma tek eşleşmede kartı açar | Okuma: `items`, `item_barcodes`, `code_history` | Eski kodla eşleşirse "bu kod X olarak değişti" notu | [TAMAMLANDI] |
+| Süzgeç çipleri | Çip | Tıklanır | Adres değişir | Okuma | Süzgeç (kategori/takip/barkod var-yok, ayrı ekran), **Etiket bas** (aynı süzgeçle toplu QR, bkz. 2B.11), Tümü, Arşivli, **Kaldırıldı** (kaynakta silinmiş, kullanılmamış kart), HM · MM · YM · TM | [TAMAMLANDI] |
+| Kart türü (HM/YM/MM/TM) | Seçim kutuları | Seçilir | `suggestItemCodeAction` → `suggestCode` (türe göre kod önerisi) | Okuma: `items.code` | Kod çakışmasız önerilir | [TAMAMLANDI] |
+| Kod, ad, temel birim, takip modu, ölçek, toplama politikası | Tam ekran form (`KalipFormEkran`, `?new=1`) | Girilir | — | `items.code`, `.name`, `.base_unit_id`, `.tracking_mode`, `.quantity_scale`, `.pick_policy`, `.card_type` | Takip ∈ NONE / LOT / SERIAL / LOT_AND_SERIAL; ölçek 0–6; politika FIFO/FEFO; yerel açılır liste yok | [TAMAMLANDI] |
+| "Yeni birim" | Satır içi mini form | Kaydedilir | `createUnitAction` → `createUnit` | `units` | `settings.manage`; kod tekil (`CODE_TAKEN`) | [TAMAMLANDI] |
+| "Kaydet" (yeni ürün) | Buton | Tıklanır | `createItemAction` → `createItem` / `createItemWithDefaultUnit` / `createWithSuggestedCode` | `items`, (gerekirse `units`), `audit_logs` | `settings.manage`; kod firma içinde benzersiz (`CODE_TAKEN`); kod boşsa sunucu üretir; birim seçilmezse varsayılan birim ve ürün tek işlemde; paket sınırı (plan limiti) aşılırsa ret | [TAMAMLANDI] |
+
+### Ürün kartı (kayıt kartı, T-1049)
+
+Üst şerit: ad, etiketler (kod, kart türü, birim, FIFO/FEFO, takip, Aktif/Arşivli), sayı kutuları **Eldeki · Minimum · Raf yeri**, hızlı işlemler **Etiket · Sayım · Transfer** (yalnız aktif kartta ve yetkiye göre; arşivli kartta kısa yol yok, T-1040). Ana işlem **Düzenle**. Sekmeler: **Genel · Stok ve yer · Birimler · Barkodlar · Kaynak sistem** (son ikisi koşullu: stok okunamazsa "Stok ve yer", kaynak bilgisi yoksa "Kaynak sistem" çizilmez). Açık sekme adreste (`?sekme=`), formdan dönüş aynı sekmeye.
+
+| UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
+|---|---|---|---|---|---|---|
+| Genel — bilgi ızgarası (3 sütun) + son hareketler | Bilgi + zaman çizgisi | — | `getItem`, `listItemConversions`, `itemInUse`, `getItemStockCard` | Okuma: `items`, `unit_conversions`, `stock_ledger`/`documents` (son 5 hareket) | Temel birim, takip, ölçek kilitli satır ("kullanımda" ya da "sonradan değişmez", A-87) | [TAMAMLANDI] |
+| Stok ve yer — "Nerede?" (depo → raf) + minimum | Bilgi | Sekme açılır | `getItemStockCard` | Okuma: `stock_balances`, `stock_dimensions`, `locations`, `item_stock_policies` | Minimumun altındaysa uyarı kutusu; okunamazsa sekme çizilmez (uydurma yok) | [TAMAMLANDI] |
+| Ad / kart türü / toplama politikası düzenle | Tam ekran form (`?edit=1`) | Kaydedilir | `updateItemAction` → `updateItem` | `items.name`, `.card_type`, `.pick_policy`, `audit_logs` | `settings.manage`; arşivli kart düzenlenmez | [TAMAMLANDI] |
+| Kod değiştir | Tam ekran form (`?kod=1`) + "Geri al" bildirimi | Kaydedilir | `updateItemAction(code)` | `items.code`, `code_history` | Eski kod tarihçede saklanır; aynı kod → "değişmedi" | [TAMAMLANDI] |
+| Birimler — çevrim ekle/değiştir | Tam ekran form (`?conv=1`) | Kaydedilir | `setConversionAction` → `setUnitConversion` | `unit_conversions.to_base_factor` | Katsayı > 0, ondalık metin (I-09) | [TAMAMLANDI] |
+| Barkodlar — barkod ekle | Tam ekran form (`?barcode=1`) | Kaydedilir | `addBarcodeAction` → `addBarcode` | `item_barcodes.barcode`, `.unit_id`, `.quantity` | Barkod firma içinde tekil; GS1 denetimi (`gs1.ts`) | [TAMAMLANDI] |
+| Barkod sil | Onay penceresi | Tıklanır | `removeBarcodeAction` → `removeBarcode` | `item_barcodes` (satır silinir) | `settings.manage` | [TAMAMLANDI] |
+| Kaynak sistem (Paraşüt) | Salt okunur bilgi ızgarası | Sekme açılır | `getProductSourceInfo` (T-1064) | Okuma: `items.source_product_info`, `.source_disposition`, `.source_state` | Kategori, GTİP, kaynak birimi, kaynakta arşivli mi, envanter takibi, kaynak durumu (Arşiv bekliyor / Arşivlendi / Kaldırıldı); her satır kilitli ("kaynaktan gelir"); fiyat ve miktar alınmaz | [TAMAMLANDI] |
+| Ürünü arşivle | Onay penceresi | Tıklanır | `archiveItemAction` → `archiveItem` | `items.status` → ARCHIVED, `.archived_at`, `.source_managed_archive`, `.source_disposition` | Fiziksel silme yok; eldeki/ayrılmış stok ya da açık rezervasyon varsa ret (`IN_USE`); stoklu ürünün takip modu değiştirilemez (DB tetikleyicisi). Arşivden geri alma ekranı yok | [TAMAMLANDI] |
+| Kaynakta arşiv / silinme yansıması | Arka plan (Paraşüt eşitlemesi) | — | `integrations/product-lifecycle.ts` (T-1067/T-1068) | `items.source_state`, `.source_disposition` (NONE → PENDING → ARCHIVED / REMOVED), `.source_managed_archive`, `.source_missing_since`, `audit_logs` | Yeni kullanım kapanır (bkz. "Ürün kaynak durumu kapısı"); stok ve açık işler bitince otomatik arşiv; hiç kullanılmamış ve kaynakta silinmiş kart **Kaldırıldı** görünümüne geçer; geçmiş/QR/eşleme korunur. STATE: canlıda | [TAMAMLANDI] |
+| "Etiket" hızlı işlemi | Bağlantı | Tıklanır | `/labels?item=<ürün>` | — | — | [TAMAMLANDI] |
 | Lot / seri kartı yönetimi (ayrı ekran) | — | — | Lotlar kabulde otomatik oluşur; elle lot/seri ekranı yok | `lots`, `serials` | — | [PLANLANDI] |
+
+**Tuval farkı (onaylı masaüstü tuval, 28 Ekim incelemesi):**
+- **Ürünler listesi:** tuvalde **Kullanılabilir** ve **Barkod** sütunları var, kodda yok (mevcut veriyle + yeni okuma işleviyle eklenebilir, küçük iş). **Paraşüt durumu** sütunu, **ana raf**, **Pasif** çipi ve **Görsel** veri gerektirir (migration + yeni domain).
+- **Ürün kartı:** **Kullanılabilir / Ayrılmış** sayı kutuları yok (yeni okuma, küçük); **Hareketler, Takip, Değişiklik geçmişi** sekmeleri yok (yeni okuma, orta); ana raf, montaj, görsel veri gerektirir.
+- **Ürün kartı › Stok ve yer:** tuvaldeki **Depo › Raf › Lot › Paket** katlanır pivot ve toplam şeridi yok; kodda düz "Nerede?" listesi var (veri mevcut, orta–büyük iş).
+- **Ürün görseli büyük görünüm:** görsel saklama altyapısı yok (büyük veri işi).
 
 ---
 
 ## 2B.9 Cariler (Müşteri / Tedarikçi)
 
-- **Adres:** `/t/<firma>/parties`
+- **Adres:** `/t/<firma>/parties` (liste; `?q=`, `?arsiv=1`, `?new=1`, `?edit=<id>`), `/t/<firma>/parties/<cari>` (cari kartı)
 - **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın Amacı:** Müşteri ve tedarikçi kartlarını tutar (kod, unvan, tür, vergi no/dairesi, telefon, e-posta, şehir, adres). Excel'den toplu aktarılabilir.
-- **Kod:** `parties/page.tsx`, `parties-view.tsx`, `parties/actions.ts`; domain `catalog/parties.ts`; DB `0050_parties`.
+- **Ekranın Amacı:** Müşteri ve tedarikçi kartlarını tutar (kod, unvan, tür, vergi no/dairesi, telefon, e-posta, şehir, adres). Excel'den toplu aktarılabilir (Ayarlar › Entegrasyonlar üzerinden).
+- **Kod:** `parties/page.tsx`, `parties-view.tsx` (liste + form), `list-page.ts` (50'lik), `parties/[partyId]/page.tsx`, `party-card.tsx` (T-1090), `parties/actions.ts`; domain `catalog/parties.ts`, `catalog/code-suggest.ts`; DB `0050_parties`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
-| Cari listesi | Liste | Açılır / aranır | Sayfa sorgusu (`catalog/parties.ts`) | Okuma: `parties` | `stock.view` | [TAMAMLANDI] |
-| Yeni / düzenle formu | Form | "Kaydet" | `savePartyAction` → `saveParty` | `parties.code`, `.code_key`, `.name`, `.kind` (CUSTOMER / SUPPLIER / BOTH), `.tax_no`, `.tax_office`, `.phone`, `.email`, `.city`, `.address`, `.version`, `audit_logs` | `settings.manage`; kod büyük/küçük harf ve boşluktan bağımsız tekil; vergi no 10/11 hane yalnız **uyarı** | [TAMAMLANDI] |
-| Arşivle / geri al | Buton | Tıklanır | `archivePartyAction` → `setPartyArchived` | `parties.archived_at` | Fiziksel silme yok | [TAMAMLANDI] |
-| Excel'den aktar (kontrol + uygula) | Dosya + buton | Yüklenir | `importPartiesAction` → `importParties` (`dryRun` ile önce kontrol) | `parties`, `audit_logs` | `data.import`; aynı kod varsa günceller, boş hücre mevcut değeri silmez | [TAMAMLANDI] |
-| Cariyi mal kabul / sevkiyat fişine bağlama | — | — | **Bağ yok:** teslimde yalnız serbest metin `supplier_ref`; hiçbir tabloda `party_id` yok | — | — | [PLANLANDI] |
+| Cari listesi — Kart / Liste görünümü | Kart listesi ya da tablo | Açılır / aranır | `listParties` | Okuma: `parties` | `stock.view`; tablo sütunları **Kod, Ünvan** (sabit), Tür, Şehir, Telefon; isteğe bağlı E-posta, Vergi no; Etkin / Arşivli çipleri adresi değiştirir; tür çipleri yüklenen listeyi süzer | [TAMAMLANDI] |
+| Kaydırınca sonraki 50 cari | Otomatik yükleme | Liste sonuna gelinir | `loadMorePartiesAction` → `listParties` (T-1058) | Okuma | Toplam yalnız ilk sayfada sayılır | [TAMAMLANDI] |
+| Cari kartı | Kayıt kartı (şerit + bilgi ızgarası) | Liste satırına dokunulur | `getParty` (salt okuma, T-1090) | Okuma: `parties` | Kimlik, vergi ve iletişim bilgileri; telefon / e-posta tek dokunuşla arar / yazar; **Düzenle** forma (`?edit=<id>`) götürür; başka firmanın carisi 404 (negatif testli) | [TAMAMLANDI] |
+| Yeni / düzenle formu | Tam ekran form (kimlik grubu: kod, ünvan, tür kutuları; vergi/iletişim grubu; sağda canlı önizleme) | "Kaydet" | `savePartyAction` → `saveParty` | `parties.code`, `.code_key`, `.name`, `.kind` (CUSTOMER / SUPPLIER / BOTH), `.tax_no`, `.tax_office`, `.phone`, `.email`, `.city`, `.address`, `.version`, `audit_logs` | `settings.manage`; kod büyük/küçük harf ve boşluktan bağımsız tekil; vergi no 10/11 hane yalnız **uyarı**; e-posta biçimi; sürüm çakışması denetimi | [TAMAMLANDI] |
+| Otomatik cari kodu | Form alanı (değiştirilebilir) | Tür seçilir | `suggestPartyCodeAction` → `suggestCode` (`party`, T-1093) | Okuma: `parties.code_key` | Müşteri `MUS-0001`, tedarikçi `TED-0001`, ikisi `CAR-0001`; tür değişince eski öneri otomatik sayılmaz; kaydetmede yalnız önerilen biçimde çakışma yeniden denenir | [TAMAMLANDI] |
+| Arşivle / geri al | Buton (formun altında) + "Geri al" balonu | Tıklanır | `archivePartyAction` → `setPartyArchived` | `parties.archived_at`, `.version` | Fiziksel silme yok | [TAMAMLANDI] |
+| Excel'den aktar (kontrol + uygula) | Aktar akışı (`/import?tur=cari`) | Yüklenir | `importPartiesAction` → `importParties` (`dryRun` ile önce kontrol) | `parties`, `audit_logs` | `data.import`; aynı kod varsa günceller, boş hücre mevcut değeri silmez; Güncelle kipinde yeni kod eklenip eklenmeyeceği seçilir; liste ekranında Excel düğmesi yok | [TAMAMLANDI] |
+| Cariyi mal kabul / sevkiyat fişine bağlama | — | — | **Bağ yok:** teslimde yalnız serbest metin `supplier_ref`; hiçbir belge tablosunda `party_id` yok | — | — | [PLANLANDI] |
+
+**Tuval farkı (Yeni cari):** tuvalde tür seçimi üst şeritte büyük düğmeler ve form 3 sütun; kodda tür kutuları kimlik grubunda, 2 grup (küçük sunum işi). Tuvaldeki **kısa ad** ve **ilçe** alanları DB'de yok (küçük veri işi); **varsayılan teslimat** iş akışı ayarına bağlı (orta veri işi).
 
 ---
 
-## 2B.10 Depolar ve Raflar
+## 2B.10 Depolar, Depo Kartı ve Raf Yeri Kartı
 
-- **Adres:** `/t/<firma>/warehouses` (depo listesi), `/t/<firma>/warehouses/<depo>` (raf ağacı)
+- **Adres:** `/t/<firma>/warehouses` (depo listesi; `?q=`, arşivli görünümü), `/t/<firma>/warehouses/<depo>` (depo kartı + raf yeri ağacı; formlar `?new=1`, `?new=1&parent=<id>`, `?kod=<id>`, `?bulk=1`), `/t/<firma>/warehouses/<depo>/locations/<raf>` (raf yeri kartı)
 - **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın Amacı:** Depoları ve içindeki rafları (lokasyonları) ağaç şeklinde tanımlar. Raf türü: **RECEIVING** (kabul alanı), **STORAGE** (depolama), **STAGING** (sevk hazırlık), **TRANSIT** (yolda). "A bölgesi, raf 1–10, göz 1–5" gibi toplu raf üretimi yapılabilir.
-- **Kod:** `warehouses/page.tsx`, `warehouses-view.tsx`, `[warehouseId]/page.tsx`, `location-tree.tsx`, `warehouses/actions.ts`; domain `warehouse/warehouses.ts`, `locations.ts`, `bulk-locations.ts`, `setup-queries.ts`.
+- **Ekranın Amacı:** Depoları ve içindeki raf yerlerini (lokasyonları) ağaç şeklinde tanımlar. Raf türü: **RECEIVING** (kabul alanı), **STORAGE** (depolama), **STAGING** (sevk hazırlık), **TRANSIT** (yolda). "A bölgesi, raf 1–10, göz 1–5" gibi toplu raf üretimi yapılabilir. Her raf yerinin kendi kartı vardır: rafta ne var, bağlı olduğu yer, son hareketler.
+- **Kod:** `warehouses/page.tsx`, `warehouses-view.tsx`, `list-page.ts` (50'lik), `[warehouseId]/page.tsx`, `location-tree.tsx` (depo kartı, T-1051), `[warehouseId]/locations/[locationId]/page.tsx`, `location-card.tsx` (T-1082), `warehouses/actions.ts`, `easy-setup/bulk-builder.tsx`; domain `warehouse/warehouses.ts`, `locations.ts`, `bulk-locations.ts`, `location-card.ts`, `setup-queries.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
-| Depo listesi + kurulum ilerlemesi | Liste | Açılır | `listWarehouses`, `getSetupProgressAction` | Okuma: `warehouses`, `locations` | Depo kapsamı | [TAMAMLANDI] |
-| "Yeni depo" | Form | Kaydedilir | `createWarehouseAction` → `createWarehouse` (+ `suggestCodeAction`) | `warehouses.code`, `.name`, `.status`, `audit_logs` | `settings.manage`; kod tekil; plan limiti | [TAMAMLANDI] |
-| Depo adını değiştir | Form | Kaydedilir | `renameWarehouseAction` | `warehouses.name` | — | [TAMAMLANDI] |
-| Depoyu arşivle | Buton + onay | Tıklanır | `archiveWarehouseAction` | `warehouses.status` → ARCHIVED, `.archived_at` | Stoklu depo arşivlenemez (`stock-usage.ts`) | [TAMAMLANDI] |
-| Raf ağacı (daha fazla yükle) | Ağaç | Açılır | `getLocationTree`, `loadMoreLocationsAction` | Okuma: `locations` | — | [TAMAMLANDI] |
-| "Yeni raf" | Form | Kaydedilir | `createLocationAction` → `createLocation` | `locations.code`, `.name`, `.kind`, `.parent_id`, `.depth` | Ebeveyn aynı depoda; depo başına raf üst sınırı | [TAMAMLANDI] |
-| Raf adını değiştir / arşivle | Form / buton | Kaydedilir | `renameLocationAction`, `archiveLocationAction` | `locations.name`, `.status`, `.archived_at` | Stoklu raf arşivlenemez | [TAMAMLANDI] |
-| Toplu raf: önizle → oluştur | Form + 2 buton | Tıklanır | `previewBulkLocationsAction` → `createBulkLocationsAction` | `locations` (çok satır, tek işlem) | Kod biçimi `<BÖLGE>-<raf>-<göz>`; mevcut kodla çakışma varsa hiçbiri oluşmaz | [TAMAMLANDI] |
+| Depo listesi — Kart / Liste görünümü | Kart listesi ya da tablo | Açılır / aranır | `listWarehouses` (+ raf yeri sayımı) | Okuma: `warehouses`, `locations` | Depo kapsamı; tablo sütunları **Kod, Ad** (sabit), Raf yeri sayısı, Durum, İşlemler; arşivli depo yalnız arşiv görünümünde (T-1040) | [TAMAMLANDI] |
+| Kaydırınca sonraki 50 depo | Otomatik yükleme | Liste sonuna gelinir | `loadMoreWarehousesAction` | Okuma | — | [TAMAMLANDI] |
+| "Yeni depo" | Tam ekran form | Kaydedilir | `createWarehouseAction` → `createWarehouse` (+ `suggestCodeAction`) | `warehouses.code`, `.name`, `.status`, `audit_logs` | `settings.manage`; kod tekil; plan limiti | [TAMAMLANDI] |
+| Depo kodunu değiştir (kart ve tablo satırı) | Form | Kaydedilir | `renameWarehouseAction` → `renameWarehouse` | `warehouses.code`, `code_history`, `audit_logs` | Kod normalleştirme ve benzersizlik domain'de; eski kod tarihçede (ad değil, **kod** değişir) | [TAMAMLANDI] |
+| Depoyu arşivle (kart ve tablo satırı) | Onay penceresi | Tıklanır | `archiveWarehouseAction` | `warehouses.status` → ARCHIVED, `.archived_at` | Stoklu depo arşivlenemez (`stock-usage.ts`) | [TAMAMLANDI] |
+| Depo kartı — şerit (ad, kod, durum, raf yeri sayısı, hızlı işlem) | Kayıt kartı (T-1051) | Açılır | `getWarehouse`, `countLocationsByWarehouse` | Okuma | — | [TAMAMLANDI] |
+| Raf yeri ağacı (daha fazla yükle) | Ağaç | Açılır | `getLocationTree`, `loadMoreLocationsAction` | Okuma: `locations` | Ağaç tarayıcıda `parentId` ile kurulur; arşivli raf yerleri gizli, "Arşivlileri göster (n)" düğmesiyle açılır; şeritte arşivli sayısı kutusu | [TAMAMLANDI] |
+| "Yeni raf yeri" (kök / alt) | Tam ekran form | Kaydedilir | `createLocationAction` → `createLocation` | `locations.code`, `.name`, `.kind`, `.parent_id`, `.depth` | Ebeveyn aynı depoda; TRANSIT yalnız kök; depo başına raf üst sınırı | [TAMAMLANDI] |
+| Raf yeri kodunu değiştir / arşivle | Form / onay penceresi | Kaydedilir | `renameLocationAction`, `archiveLocationAction` | `locations.code` + `code_history`, `.status`, `.archived_at` | Depo içi tekil kod; stoklu raf arşivlenemez | [TAMAMLANDI] |
+| Raf yeri kartı | Kayıt kartı (T-1082) | Ağaçta raf yerine dokunulur | `getLocationCard` (salt okuma) | Okuma: `locations`, `stock_balances`, `stock_dimensions`, `items`, `stock_ledger` | Kimlik, tür, "toplamaya kapalı" etiketi, bağlı olduğu yer, raftaki ürünler (eldeki/ayrılmış; her ürün kendi kartını açar), son 5 hareket; tenant + depo kapsamı (negatif testli) | [TAMAMLANDI] |
+| Toplu raf: önizle → oluştur | Tam ekran form (`?bulk=1`) + 2 buton | Tıklanır | `previewBulkLocationsAction` → `createBulkLocationsAction` | `locations` (çok satır, tek işlem) | Kod biçimi `<BÖLGE>-<raf>-<göz>`; mevcut kodla çakışma varsa hiçbiri oluşmaz | [TAMAMLANDI] |
 | Raf ara | Metin | Yazılır | `searchLocationsAction` | Okuma | — | [TAMAMLANDI] |
+| Kurulum ilerlemesi | Bilgi | — | `getSetupProgressAction` | Okuma | Kurulum rehberi bunu kullanır | [TAMAMLANDI] |
 | "Raf etiketi bas" | Bağlantı | Tıklanır | `/labels?warehouse=…&location=…&subtree=1` | — | — | [TAMAMLANDI] |
-| Raf "toplamaya kapalı" işareti | — | — | Kolon var (`locations.pick_blocked`), ekranda düzenleme yok | `locations.pick_blocked` | — | [PLANLANDI] |
+| Raf "toplamaya kapalı" işaretini değiştirme | — | — | Kolon kartta **gösterilir** (`locations.pick_blocked`), değiştiren ekran/komut yok | `locations.pick_blocked` | — | [PLANLANDI] |
+| Raf adresi sadeleştirme (Koridor-Sütun-Kat-Göz, otomatik depo kodu) | — | — | Kullanıcı kararı 26 Ekim, B-164 | — | — | [PLANLANDI] |
 
 ---
 
-## 2B.11 Etiket Basma (ürün / raf etiketi)
+## 2B.11 Etiket Basma (ürün / raf etiketi, toplu ürün QR etiketi)
 
-- **Adres:** `/t/<firma>/labels?item=…` veya `?warehouse=…&location=…&subtree=1`, `&copies=N`
-- **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın Amacı:** 100×50 mm barkodlu etiket üretir; ekranda önizleme (SVG) ve endüstriyel yazıcı için ZPL çıktısı. Ürün etiketi ürünü, raf etiketi rafı tanımlar (paket etiketi ayrıdır, bkz. 2B.3).
-- **Kod:** `labels/page.tsx`, `label-preview.tsx`, `print.css`; domain `labels/templates.ts`, `code128.ts`.
+- **Adres:** `/t/<firma>/labels?item=…` veya `?warehouse=…&location=…&subtree=1`, `&copies=N`; toplu ürün QR etiketi `?products=1` + ürün listesinin süzgeçleri (`q`, `type`, `status`, `category`, `tracking`, `barcode`, `after`)
+- **Modül Durumu:** [TAMAMLANDI] — toplu ürün QR etiketi T-1063/T-1064 ile main'de; STATE'e göre fiziksel baskı UNKNOWN.
+- **Ekranın Amacı:** 100×50 mm barkodlu etiket üretir; ekranda önizleme (SVG), endüstriyel yazıcı için ZPL çıktısı. Ürün etiketi ürünü, raf etiketi rafı tanımlar (paket etiketi ayrıdır, bkz. 2B.3). Ürün listesindeki **Etiket bas** çipi, listede görünen süzgeçle 100'erlik gruplar halinde **ürün QR etiketi** önizler (QR standart ürün barkodunu taşır; fiziksel paket kimliği üretmez).
+- **Kod:** `labels/page.tsx`, `label-preview.tsx`, `product-qr.ts`, `print-settings.ts`, `print.css`; domain `labels/templates.ts`, `code128.ts`, `loadProductLabelBatch` (T-1063).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
-| Önizleme | Görsel | Sayfa açılır | `loadLabelSource`, `toSvgPages` | Okuma: `items`, `item_barcodes`, `locations` | Belge başına en çok 1000 etiket; ASCII dışı karakter / çok uzun metin uyarısı | [TAMAMLANDI] |
-| Kopya sayısı | Sayı | Girilir | Adres parametresi `copies` | — | 1–1000 | [TAMAMLANDI] |
-| "Yazdır" / ZPL | Buton | Tıklanır | Tarayıcı baskısı / ZPL metni | — (veri yazılmaz) | Gerçek yazıcıda denenmedi (kod varsayımı Q-77) | [TAMAMLANDI] |
+| Önizleme (tek kaynak) | Görsel | Sayfa açılır | `loadLabelSource`, `toSvgPages`, `toZplDocument` | Okuma: `items`, `item_barcodes`, `locations` | Belge başına en çok 1000 etiket; ASCII dışı karakter / çok uzun metin uyarısı | [TAMAMLANDI] |
+| Toplu ürün QR önizlemesi | Görsel + "sonraki grup" bağlantısı | Ürün listesinden açılır | `loadProductLabelBatch` → `productQrDocument` | Okuma: `items`, `item_barcodes` | `stock.view`; 100'erlik keyset grup; temel birim etiketi koli miktarlı ya da anlamı çakışan barkodu seçmez; geçersiz barkod → uyarı; QR en küçük modül boyu korunur | [TAMAMLANDI] |
+| Kâğıt seçimi (A4 / Rulo) + ölçüler | Çip + sayı | Seçilir | `printCss` (`print-settings.ts`) | — | Geçersiz ölçü reddi | [TAMAMLANDI] |
+| Kopya sayısı | Sayı | Girilir | Adres parametresi `copies` | — | 1–1000 (toplamda) | [TAMAMLANDI] |
+| "Yazdır" / "ZPL indir" | Buton | Tıklanır | Tarayıcı baskısı / ZPL dosyası | — (veri yazılmaz) | Yazdırırken kalıp çubukları basılmaz; gerçek yazıcıda denenmedi (Q-77, B-56); yerel yazıcı köprüsü kapalı anahtar arkasında, çalışmıyor | [TAMAMLANDI] |
+| Etiket tasarımı ve yazıcı ayarları (tür başına birden çok tasarım) | — | — | Kullanıcı kararı 26 Ekim, B-166; Ayarlar'da "Etiket ve yazıcı" sekmesi yok | — | — | [PLANLANDI] |
 
 ---
 
 ## 2B.12 Excel/CSV İçe Aktarma ("Aktar") ve Dışa Aktarma
 
-- **Adres:** `/t/<firma>/import`; dışa aktarma `GET /api/t/<firma>/export/<tür>`
+- **Adres:** giriş **Ayarlar › Entegrasyonlar** (`/t/<firma>/settings/baglantilar`; 1 · Alan, 2 · İşlem seçilir) → içe alma/güncelleme `/t/<firma>/import?tur=urun|cari|acilis|depo|raf[&kip=guncelle]`; dışa aktarma `GET /api/t/<firma>/export/<tür>`
 - **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın Amacı:** Başlangıçta ürünleri, birimleri, barkodları, **açılış stokunu**, depoları ve rafları Excel'den toplu yüklemek. Önce önizleme (hiçbir şey yazılmaz, bütün hatalar bir arada gösterilir), sonra 200'er satırlık parçalarla uygulama. Ürün/cari/depo listelerindeki Excel düğmesiyle de açılır; "koda göre güncelle" kipi vardır.
-- **Kod:** `import/page.tsx`, `aktar-view.tsx`, `import/actions.ts`, `master-actions.ts`; domain `onboarding/import-parse.ts`, `import-apply.ts`, `master-import.ts`, `data-export.ts`.
+- **Ekranın Amacı:** Başlangıçta ürünleri, birimleri, barkodları, **açılış stokunu**, carileri, depoları ve rafları Excel'den toplu yüklemek. Önce önizleme (hiçbir şey yazılmaz, bütün hatalar bir arada gösterilir), sonra 200'er satırlık parçalarla uygulama. "Güncelle" kipi koda göre günceller. **Liste ekranlarındaki Excel menüsü/simgesi kaldırıldı** (T-1092, T-1094): giriş yalnız Ayarlar › Entegrasyonlar ve kurulum yolculuğu adımlarıdır (`yolculuk/steps.ts` doğrudan `/import?tur=…` açar).
+- **Kod:** `settings/baglantilar/page.tsx`, `baglantilar-view.tsx`, `import/page.tsx`, `aktar-view.tsx` (1 Tür → 2 Dosya → 3 Eşleştir → 4 Kontrol → 5 Bitti), `import/actions.ts`, `master-actions.ts`, `parties/actions.ts` (cari), `kalip/excel.tsx` (indirme); tarayıcı tarafı `apps/web/lib/sheet/read.ts`, `mapping.ts`; domain `onboarding/import-parse.ts`, `import-apply.ts`, `master-import.ts`, `data-export.ts`, `catalog/unit-alias.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 |---|---|---|---|---|---|---|
-| Dosya seç (.xlsx / .csv) + sayfa seçimi | Dosya | Yüklenir | — | — | Dosya boyutu üst sınırı (`IMPORT_MAX_BYTES`); dosya diske/loga yazılmaz | [TAMAMLANDI] |
-| "Kontrol et / Önizle" | Buton | Tıklanır | `previewImportAction` → `previewImport` | Okuma (yazma yok) | `data.import`; birim bilinmiyorsa sessizce ADET atanmaz; stoklu kartın temel birimi değiştirilmez | [TAMAMLANDI] |
-| "Uygula" (parça parça) | Buton | Tıklanır | `applyImportChunkAction` → `applyImportChunk` | `units`, `items`, `unit_conversions`, `item_barcodes`, açılış stoku için `documents` (STOCK_IN, neden `import.opening_stock`) + `stock_ledger` + `stock_balances`, `audit_logs` | Sunucu dosyayı **yeniden** ayrıştırır; sorun varsa hiçbir şey yazılmaz; ilk hatalı satırda durur ve hangi satırların uygulandığını söyler; aynı dosyayı tekrar yüklemek çift stok yazmaz; açılış stokunda güncelleme reddedilir (I-04) | [TAMAMLANDI] |
-| Depo / raf aktarımı | Buton | Tıklanır | `importWarehousesAction`, `importLocationsAction` → `master-import.ts` | `warehouses`, `locations`, `audit_logs` | `data.import`; satır üst sınırı | [TAMAMLANDI] |
-| "Dışarı aktar (.xlsx)" | Menü | Tıklanır | `GET /api/t/<firma>/export/<tür>` → `data-export.ts` | Okuma; `audit_logs` (`data.exported`) | `data.import`; depo kapsamı; en çok 5.000 satır; dakikada 6 istek; cari kişisel alanları ek yetki + yeniden doğrulama ister | [TAMAMLANDI] |
-| Excel menüsü ve Bağlantılar ekranının tasarım tuvaline işlenmesi | — | — | B-120 | — | — | [GELİŞTİRİLİYOR] |
+| Ayarlar › Entegrasyonlar: Alan (Ürünler, Cariler, Depolar, Raf yerleri, Stok) + İşlem (İçeri al, Güncelle, Dışarı aktar) | Büyük ikonlu seçim kutuları + ana işlem | Seçilir | İçeri al / Güncelle → `/import?tur=…`; Dışarı aktar → `excelIndir` | — | Seçim tamamlanmadan ana işlem pasif; yetkiye göre kilit (`canData`, `canMaster`) | [TAMAMLANDI] |
+| Dosya seç (.xlsx / .csv) + sayfa seçimi | Dosya | Yüklenir | Tarayıcıda okunur (`lib/sheet/read.ts`) | — | Dosya boyutu üst sınırı (`IMPORT_MAX_BYTES`); dosya diske/loga yazılmaz; ERP'lerin ürettiği .xlsx okunur, eski ikili .xls okunmaz (T-1035) | [TAMAMLANDI] |
+| Sütun eşleştirme (BULDUM / DOĞRU MU? / SEÇMEN GEREK) | Otomatik + tek dokunuş | Seçilir | `autoMap`, eşleştirme hafızası tarayıcıda | — | Miktar sütunu koli içi adete gitmez; tarih ve birim eş adları (m², m³ doğrusal metreye gitmez; T-1035) | [TAMAMLANDI] |
+| "Kontrol et / Önizle" | Buton | Tıklanır | `previewImportAction` → `previewImport` (kayıt türlerinde `dryRun`) | Okuma (yazma yok) | `data.import`; birim bilinmiyorsa sessizce ADET atanmaz; stoklu kartın temel birimi değiştirilmez; Güncelle kipinde yeni/değişen/atlanan sayıları | [TAMAMLANDI] |
+| "Uygula" (parça parça) | Buton | Tıklanır | `applyImportChunkAction` → `applyImportChunk` | `units`, `items`, `unit_conversions`, `item_barcodes`, açılış stoku için `documents` (STOCK_IN, neden `import.opening_stock`) + `stock_ledger` + `stock_balances`, `audit_logs` | Sunucu dosyayı **yeniden** ayrıştırır; sorun varsa hiçbir şey yazılmaz; ilk hatalı satırda durur ve hangi satırların uygulandığını söyler; aynı dosyayı tekrar yüklemek çift stok yazmaz; açılış stokunda Güncelle kipi yok (I-04) | [TAMAMLANDI] |
+| Cari / depo / raf aktarımı | Buton | Tıklanır | `importPartiesAction`, `importWarehousesAction`, `importLocationsAction` → `master-import.ts` / `importParties` | `parties`, `warehouses`, `locations`, `audit_logs` | `data.import`; satır üst sınırı; Güncelle kipinde eksik kodu ekleme seçimi | [TAMAMLANDI] |
+| "Dışarı aktar (.xlsx)" | Ana işlem | Tıklanır | `GET /api/t/<firma>/export/<tür>` → `data-export.ts` | Okuma; `audit_logs` (`data.exported`) | `data.import`; depo kapsamı; en çok 5.000 satır; dakikada 6 istek; cari kişisel alanları ek yetki + yeniden doğrulama ister | [TAMAMLANDI] |
+| "Nasıl kullanırım?" — ürün / depo / cari aktarma rehberi | Odaklı adım rehberi | Açılır | `kalip/adim-rehber.tsx` (T-1095) | — | Entegrasyonlar → İçeri al → dosya → kontrol → uygula adımlarını iş yapıldıkça ilerletir; yalnız sunum | [TAMAMLANDI] |
+| Paraşüt'ten ürün / barkod / kaynak bilgisi çekme | — | — | Ayrı entegrasyon ekranı (bkz. **02d**); bu bölümde yalnız ürün kartındaki etkisi anlatıldı | `items.source_product_info`, `integrations.pull_product_barcodes` (0059) | Fiyat ve miktar alınmaz | [TAMAMLANDI] |
+| Entegrasyonlar ekranının tuvaldeki sol alt-bölüm düzeni | — | — | Tuval farkı (sol alt-bölüm listesi, akış başına yön seçici, Bağlantı + Excel tek bölüm); B-120 ve T-1112 sırada | — | — | [PLANLANDI] |
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor K as Kullanıcı
+    participant B as Ayarlar › Entegrasyonlar
     participant E as Aktar ekranı
     participant P as previewImport
     participant U as applyImportChunk
     participant DB as Veritabanı
-    K->>E: Dosyayı seçer
-    E->>P: Dosya içeriği (bellekte)
+    K->>B: Alan + "İçeri al" seçer
+    B->>E: /import?tur=…
+    K->>E: Dosyayı seçer, sütunları eşler
+    E->>P: Düz CSV (bellekte)
     P->>DB: Yalnız okuma (mevcut kod/birim/stok)
     P-->>E: Satır satır sorun listesi
     alt Sorun var
@@ -477,8 +539,10 @@ erDiagram
     items }o--|| units : "temel birim"
     items ||--o{ unit_conversions : "çevrim"
     items ||--o{ item_barcodes : "barkod"
+    items ||--o{ item_stock_policies : "minimum (depo başına)"
     items ||--o{ lots : "lot"
     items ||--o{ serials : "seri"
+    items ||--o{ code_history : "eski kod"
     inbound_receipts ||--|{ inbound_receipt_lines : "satır"
     inbound_receipts }o--|| warehouses : "depo"
     inbound_receipts ||--o{ receipt_packages : "paket (QR)"
@@ -496,6 +560,8 @@ erDiagram
     handling_units ||--o{ package_movement_steps : "hareket adımı"
 ```
 
+`parties` tablosu bu şemada hiçbir belge tablosuna bağlı değildir (bkz. Gap 6).
+
 **Bölümdeki ana durum kodları**
 
 | Tablo.kolon | Değerler (anlamı) |
@@ -507,6 +573,8 @@ erDiagram
 | `items.tracking_mode` | NONE, LOT, SERIAL, LOT_AND_SERIAL |
 | `items.card_type` | HM (hammadde), YM (yarı mamul), MM (mamul), TM (ticari mal; varsayılan) |
 | `items.pick_policy` | FIFO, FEFO |
+| `items.source_state` (0062) | ACTIVE, ARCHIVED, DELETED (ürünün Paraşüt'teki durumu) |
+| `items.source_disposition` (0062) | NONE, PENDING (arşiv bekliyor: yeni kullanım kapalı), ARCHIVED (kaynak nedeniyle arşivlendi), REMOVED (kaynakta silinmiş, hiç kullanılmamış; "Kaldırıldı" görünümü) |
 | `locations.kind` | RECEIVING, STORAGE, STAGING, TRANSIT |
 | `warehouses/locations/items/units.status` | ACTIVE, ARCHIVED |
 | `handling_units.kind` / `.status` | KOLI, PALET, VARIL / OPEN, CLOSED, EMPTIED |
@@ -519,17 +587,26 @@ erDiagram
 
 ## Bu bölümün eksik / bekleyen işleri (Gap özeti)
 
-1. **Ters kayıt (geri al) ekranı yok** — `reverseDocument` komutu ve testleri hazır; fiş ayrıntısında düğme yok. [PLANLANDI]
+1. **Ters kayıt (geri al) ekranı yok** — `reverseDocument` komutu ve testleri hazır; belge kartında düğme yok. [PLANLANDI]
 2. **Teslim iptali ve eksik kalan teslimi kapatma** — `cancelInboundReceipt` domain'de var, ekranda yok; kısmi kabul sonrası "kapat" komutu hiç yok (teslim OPEN kalıyor). [PLANLANDI]
 3. **Taslak fiş düzenleme** — `updateDraft` ekranda kullanılmıyor; ayrıca satırları sil-yeniden-yaz yöntemiyle çalışıyor, paketli akış için kalıcı satır kimliğiyle düzenleme gerekir. [PLANLANDI]
-4. **Paketli/QR kabul ve saha paket ekranı canlıda kapalı** (`PACKAGE_RECEIVING_ENABLED`, B-50/T-975); taslak paket düzenleme/iptal, paket bölme/birleştirme, kısmi tüketim soy ağacı henüz yok. [GELİŞTİRİLİYOR]
-5. **Lot/seri takipli ürün normal saha kabulünde kabul edilmiyor** (`TRACKING_VIOLATION`); yalnız paketli kabulde lot var, seri takipli ürün hiçbir kabul yolunda yok. [PLANLANDI]
+4. **Paketli/QR kabul ve saha paket ekranı kapalı anahtar arkasında** (`PACKAGE_RECEIVING_ENABLED`, B-50/T-975); taslak paket düzenleme/iptal, paket bölme/birleştirme, kısmi tüketim soy ağacı henüz yok; tekil QR takibi kararı B-165'te. [GELİŞTİRİLİYOR]
+5. **Lot/seri takipli ürün normal saha kabulünde kabul edilmiyor** (`TRACKING_VIOLATION`, B-152); yalnız paketli kabulde lot var, seri takipli ürün hiçbir kabul yolunda yok. [PLANLANDI]
 6. **Cariler fişlere bağlı değil** — teslimde tedarikçi yalnız serbest metin (`supplier_ref`); veri tabanında hiçbir belge tablosunda `party_id` yok. [PLANLANDI]
-7. **DB'de var, ekranda yok:** `locations.pick_blocked` (raf toplamaya kapalı), `lots.supplier_lot` (tedarikçi lot no), `stock_dimensions.inventory_owner_id` / `inventory_owners` (emanet stok sahibi), `stock_status = BLOCKED` (bloke stok için ekran yok), `handling_units.parent_id` (palet içi koli hiyerarşisi). 
-8. **Minimum stok / kritik seviye uyarısı** stok listesinde yok (sorguda politika yok). [PLANLANDI]
+7. **DB'de var, ekranda yönetilemiyor:** `locations.pick_blocked` (raf yeri kartında yalnız gösteriliyor, değiştiren komut yok), `lots.supplier_lot` (tedarikçi lot no), `stock_dimensions.inventory_owner_id` / `inventory_owners` (emanet stok sahibi), `stock_status = BLOCKED` (bloke stok için ekran yok), `handling_units.parent_id` (palet içi koli hiyerarşisi), `item_stock_policies` (minimum/maksimum yalnız okunuyor; giren ekran ya da aktarım yok).
+8. **Minimum stok trafik ışığı stok listesinde yok** — ürün listesinde ve ürün kartında var (politika tanımlıysa), stok durumu sorgusunda yok. [PLANLANDI]
 9. **Elle lot/seri kartı yönetimi** ekranı yok. [PLANLANDI]
 10. **Fazla kabul hatası ayrıntısız** dönüyor (`VALIDATION_FAILED`; kod notu A-305-3) — kullanıcıya "ne kadar fazla" söylenmiyor.
-11. **Etiket şablonu gerçek yazıcıda doğrulanmadı** (Q-77; donanım denemesi B-56).
+11. **Etiket şablonu ve ürün QR etiketi gerçek yazıcıda doğrulanmadı** (Q-77; donanım denemesi B-56); etiket tasarımı/yazıcı ayarları B-166'da. [PLANLANDI]
 12. **Ters kayıtta kapalı dönem denetimi yok** (kod notu A-71) — dönem kilidi henüz tasarlanmadı.
-13. **Excel menüsü ve Bağlantılar ekranı tasarım tuvalinde yok** (B-120). 
-14. Güvenlik: bu modüllerle ilgili açık yetki/kapsam maddeleri yalnız genel başlıkla izlenir — 🔒 B-21 (depo kapsamının veri tabanı düzeyine taşınması), 🔒 B-20. Ayrıntı açık depoya yazılmaz.
+13. **Stok durumu ekranı ortak liste kalıbına geçmedi** — Kart/Liste tablosu, Sütunlar ve kaydırınca yükleme yok; "İlk sayfa / Sonraki" bağlantılarıyla sayfalanıyor. [PLANLANDI]
+14. **Arşivli ürünü geri alma** ekranı/komutu yok (cari için var). [PLANLANDI]
+15. **Onaylı masaüstü tuvaline göre eksikler** (28 Ekim incelemesi; ayrıntı 2B.8 ve 2B.9 altında):
+    - Ürünler listesi: Kullanılabilir ve Barkod sütunu (yeni okuma, küçük); Paraşüt durumu sütunu, ana raf, Pasif çipi, Görsel (veri işi).
+    - Ürün kartı: Kullanılabilir/Ayrılmış kutuları (küçük); Hareketler, Takip, Değişiklik geçmişi sekmeleri (orta); ana raf, montaj, görsel (veri işi).
+    - Ürün kartı › Stok ve yer: Depo › Raf › Lot › Paket katlanır pivot + toplam şeridi (veri var; orta–büyük).
+    - Ürün görseli büyük görünüm: görsel saklama altyapısı yok (büyük veri işi).
+    - Yeni cari: üst şeritte büyük tür düğmeleri + 3 sütun (küçük); kısa ad, ilçe (küçük veri işi); varsayılan teslimat (iş akışı ayarına bağlı).
+    - Ayarlar › Entegrasyonlar sol alt-bölüm düzeni ve akış yön seçici (B-120, T-1112).
+16. **Raf adresi sadeleştirme** (Koridor-Sütun-Kat-Göz, otomatik depo kodu, seviye sayısı) — kullanıcı kararı 26 Ekim, B-164. [PLANLANDI]
+17. Güvenlik: bu modüllerle ilgili açık yetki/kapsam maddeleri yalnız genel başlıkla izlenir — 🔒 B-21 (depo kapsamının veri tabanı düzeyine taşınması), 🔒 B-20. Ayrıntı açık depoya yazılmaz.

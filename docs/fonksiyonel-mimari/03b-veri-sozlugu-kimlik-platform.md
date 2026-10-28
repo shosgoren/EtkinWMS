@@ -1,6 +1,7 @@
 # 3b. Veri Sözlüğü — Kimlik, Kiracı, Denetim ve Platform Tabloları
 
-> Kaynak: `packages/db/migrations/0001…0057_*.up.sql` (her tablonun **son** hali; sonradan eklenen sütunlar dahil), migration defteri için `packages/db/src/migrate.ts`, kuyruk şeması için `packages/queue-adapter/src/index.ts`. Tahmin yoktur; burada olmayan bir alan veritabanında da yoktur.
+> Durum: main 8e2710d · 28 Ekim 2026. Bu dosyada **47 tablo** anlatılır (`public` 34, `wms_platform` 11, `wms_health` 1, `wms_meta` 1).
+> Kaynak: `packages/db/migrations/0001…0063_*.up.sql` (her tablonun **son** hali; sonradan eklenen sütunlar dahil), migration defteri için `packages/db/src/migrate.ts`, kuyruk şeması için `packages/queue-adapter/src/index.ts`. Tahmin yoktur; burada olmayan bir alan veritabanında da yoktur.
 > Stok, depo, katalog, belge, görev, sayım, üretim ve paket tabloları **3a** dosyasındadır. `0014` güvenilirlik tabloları (`processed_events`, `stock_consistency_*`) ve `0037` iş sinyalleri (`work_priorities`, `problem_reports`) de oradadır.
 
 ## Bu bölümü okumak için kısa sözlük
@@ -128,6 +129,9 @@ erDiagram
     integrations ||--o{ integration_runs : "koşular"
     integrations ||--o{ integration_outbox : "gönderim kuyruğu"
     integrations ||--o{ integration_stock_marks : "son gönderilen stok"
+    tenants ||--o| integration_oauth_apps : "OAuth uygulama bilgisi"
+    tenants ||--o{ integration_oauth_attempts : "OAuth bağlanma denemesi"
+    tenant_memberships ||--o{ integration_oauth_attempts : "başlatan üye"
 ```
 
 ---
@@ -329,8 +333,9 @@ Firma başına tek satır ayarlar.
 | `count_abandon_hours` | smallint | NOT NULL, varsayılan 8, CHECK 1–168 (0017) | Kaç saat dokunulmayan sayım "terk edilmiş" sayılır | — |
 | `shift_start` / `shift_end` | time | NOT NULL, varsayılan 08:00 / 17:00, CHECK farklı olmalı (0037) | Çalışma vardiyası (Görevlerim ekranındaki vardiya satırı) | — |
 | `separation_of_duties` | boolean | NOT NULL, varsayılan false (0049) | Görev ayrılığı: belgeyi hazırlayan kişi kendi belgesini onaylayamasın / ters kaydedemesin | — |
+| `voice_reply` | boolean | NOT NULL, varsayılan false (0063) | Etkin sesli yanıt: açıksa sesli asistanın cevabı doğal sesle okunur. Yönetici Ayarlar'dan açar (`settings.manage`, `tenant.settings_changed` kaydı); her üye yalnız bu bayrağı okuyabilir. Kişinin cihazdaki "Sessiz" tercihi ayrıca kapatır. | — |
 
-- **RLS / koruma:** ENABLE + FORCE. Uygulama yalnız belirli sütunları güncelleyebilir (ör. vardiya, görev ayrılığı).
+- **RLS / koruma:** ENABLE + FORCE. Uygulama yalnız belirli sütunları güncelleyebilir (ör. vardiya, görev ayrılığı, sesli yanıt). `voice_reply` sütununu `wms_auth` ve `wms_worker` yazamaz (0063 kendi içinde doğrular).
 
 ### public.admin_reset_grants
 Yöneticinin bir ekip üyesi için başlattığı parola sıfırlama izni (kısa ömürlü).
@@ -622,7 +627,7 @@ Talep içindeki yazışma satırları. **Yalnız ekleme** (düzeltme/silme yok).
 
 ---
 
-## 3b.7 ERP entegrasyonu (Paraşüt) — `0055`, `0056`
+## 3b.7 ERP entegrasyonu (Paraşüt) — `0055`, `0056`, `0058`, `0059`, `0061`
 
 ### public.integrations
 Firma başına, sağlayıcı başına tek ERP bağlantısı.
@@ -640,6 +645,7 @@ Firma başına, sağlayıcı başına tek ERP bağlantısı.
 | `last_checked_at` | timestamptz | NULL olabilir | Son bağlantı denetimi | — |
 | `last_error_code` | text | NULL olabilir, CHECK biçim | Son hata kodu | — |
 | `created_at` / `updated_at` / `version` | — | `version` her güncellemede +1 | — | — |
+| `pull_product_barcodes` | boolean | NOT NULL, varsayılan false (0059) | Ürün çekerken ERP'deki barkodu da al ayarı (Bağlantılar ekranından; kapalıyken eski davranış sürer). Değişince denetim kaydı yazılır. | — |
 | `opening_stock_enabled` | boolean | NOT NULL, varsayılan false (0056) | "ERP'den açılış stoku al" ayarı | — |
 | `opening_stock_taken_at` / `opening_stock_document_id` | timestamptz / uuid | Birlikte dolar, **bir kez**; FK; firma başına tekil | Açılış stoku alındı mı, hangi stok giriş belgesiyle | `documents.id` |
 
@@ -704,7 +710,53 @@ ERP'ye en son gönderilen stok toplamı (ürün + depo başına). Stok kaynağı
 | `quantity` | numeric(20,6) | NOT NULL | Son gönderilen miktar | — |
 | `sent_at` | timestamptz | NOT NULL | Gönderim anı | — |
 
-- **RLS / koruma (0055 tabloları):** Hepsi ENABLE + FORCE RLS; uygulama sütun bazlı ekler/günceller, silme yok. ERP tarafındaki kayıt eşlemesi `external_refs` (`system = PARASUT`) tablosundadır (3a).
+- **RLS / koruma (0055 tabloları):** Hepsi ENABLE + FORCE RLS; uygulama sütun bazlı ekler/günceller, silme yok. ERP tarafındaki kayıt eşlemesi `external_refs` (`system = PARASUT`) tablosundadır (3a). Ürün kartındaki ERP kaynak bilgisi ve kaynak yaşam döngüsü alanları (`items.source_*`, 0060/0062) da 3a'dadır.
+
+### public.integration_oauth_apps
+Firmanın kendi Paraşüt OAuth uygulama bilgisi (istemci kimliği ve gizli değeri), firma başına tek satır (0061). Yönetici Bağlantılar ekranından girer; ekrana **geri okunmaz**.
+
+| Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
+| :--- | :--- | :--- | :--- | :--- |
+| `tenant_id` | uuid | PK, FK | Firma | `tenants.id` |
+| `version` | uuid | NOT NULL, varsayılan rastgele | Ayar her kaydedildiğinde yenilenen sürüm; açık bağlanma denemesi eski sürüme bağlıysa geçersiz olur | `integration_oauth_attempts.config_version` |
+| `credentials` | jsonb | NOT NULL; yalnız şifreli kutu biçimi (`v`=2, `kid`, `iv`, `tag`, `ct`) | Uygulama bilgisi, **şifreli** | — |
+| `updated_at` | timestamptz | NOT NULL | Son kaydetme | — |
+
+- **RLS / koruma:** ENABLE + FORCE. `wms_app` okur, ekler, yalnız `version`/`credentials`/`updated_at` günceller; silme yok. Kaydetme `integration.oauth_configured` denetim kaydı yazar.
+
+### public.integration_oauth_attempts
+Paraşüt'e "izin ver" ile bağlanma denemesi: kısa ömürlü (en çok **10 dakika**) ve tek kullanımlık (0061). Parola istenmez; sağlayıcıdan gelen belirteç yalnız şifreli kutuda ve yalnız firma seçimi beklenirken durur.
+
+| Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
+| :--- | :--- | :--- | :--- | :--- |
+| `tenant_id` | uuid | NOT NULL, FK; (firma, id) UNIQUE | Firma | `tenants.id` |
+| `id` | uuid | PK | Deneme kimliği | — |
+| `user_id` | uuid | NOT NULL, FK (aynı firmanın üyesi olmalı) | Başlatan kişi | `users.id`, `tenant_memberships.user_id` |
+| `membership_id` | uuid | NOT NULL, FK (aynı firma) | Başlatan üyelik | `tenant_memberships.id` |
+| `state_hash` / `nonce_hash` | text | NOT NULL, 64 haneli özet; `state_hash` UNIQUE | Dönüş bağlantısını ve tarayıcıyı denemeye bağlayan değerlerin özeti (kendileri saklanmaz) | — |
+| `config_version` | uuid | NOT NULL | Denemenin başladığı uygulama bilgisi sürümü | `integration_oauth_apps.version` |
+| `client_id` | text | NOT NULL, 1–200 karakter | Kullanılan istemci kimliği | — |
+| `phase` | text | NOT NULL, varsayılan `PENDING`, CHECK | Aşama (aşağıda) | — |
+| `token_box` | jsonb | Yalnız `SELECT` aşamasında dolu (CHECK); şifreli kutu biçimi | Sağlayıcı belirteci, **şifreli** | — |
+| `companies` | jsonb | NOT NULL, varsayılan `[]`, dizi, en çok 100 | Kullanıcının seçebileceği ERP firmaları | — |
+| `created_at` / `expires_at` | timestamptz | NOT NULL; süre en çok 10 dakika (CHECK) | Başlangıç / son geçerlilik | — |
+
+- **Aşama kodları:** `PENDING` İzin bekleniyor → `EXCHANGING` Dönüş alındı, belirteç alınıyor → `SELECT` Firma seçimi bekleniyor (tek firma varsa kendiliğinden geçer) → `CONNECTING` Bağlantı kuruluyor → `COMPLETE` Bağlandı · `FAILED` Başarısız / iptal / süresi doldu (belirteç ve firma listesi silinir).
+- **RLS / koruma:** ENABLE + FORCE. Kişi başına aynı anda tek açık deneme (kısmi UNIQUE indeks). `wms_app` okur, belirli sütunları ekler, yalnız `phase`/`token_box`/`companies` günceller; silme yok. Denetim kayıtları: `integration.oauth_started`, `integration.oauth_failed`, `integration.oauth_cancelled`, başarıda `integration.connected`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: Yönetici Paraşüt'e bağlan der
+    PENDING --> EXCHANGING: Paraşüt'ten izinle dönüldü
+    EXCHANGING --> SELECT: Belirteç alındı, firma listesi geldi
+    SELECT --> CONNECTING: Firma seçildi
+    CONNECTING --> COMPLETE: Bağlantı kaydedildi
+    PENDING --> FAILED: İptal / süre doldu / hata
+    EXCHANGING --> FAILED: Hata
+    SELECT --> FAILED: İptal / süre doldu
+    COMPLETE --> [*]
+    FAILED --> [*]
+```
 
 ### public.setup_journeys
 İlk kullanım rehberinin ("kurulum yolculuğu") firma başına ilerlemesi.
@@ -715,7 +767,7 @@ ERP'ye en son gönderilen stok toplamı (ürün + depo başına). Stok kaynağı
 | `makes_production` | boolean | NULL olabilir | "Üretim yapıyor musunuz?" cevabı (boş = sorulmadı) | — |
 | `card_source` | text | NULL olabilir, CHECK | Ürün kartları nereden: `EXCEL` · `PARASUT` | — |
 | `opening_stock_wanted` | boolean | NULL olabilir | Excel'den açılış stoku istendi mi | — |
-| `skipped` | text[] | NOT NULL; izinli liste, tekrarsız, en çok 8 | Atlanan adımlar: `cards` kartlar · `shelves` raflar · `stock` stok · `labels` etiket · `bom` reçete · `order` sipariş · `people` ekip · `task` görev | — |
+| `skipped` | text[] | NOT NULL; izinli liste, tekrarsız, en çok 9 (0058) | Atlanan adımlar: `cards` kartlar · `shelves` raflar · `parties` cariler (0058) · `stock` stok · `labels` etiket · `bom` reçete · `order` sipariş · `people` ekip · `task` görev | — |
 | `labels_printed_at` | timestamptz | NULL olabilir; bir kez yazılır, sonra değişmez | İlk etiket basıldı | — |
 | `dismissed_at` | timestamptz | NULL olabilir | Kutlama/rehber kapatıldı | — |
 | `tour_state` | text | NULL olabilir, CHECK | Ekran turu: `ACTIVE` açık · `CLOSED` kapalı | — |
@@ -908,12 +960,14 @@ Taslak içeriğin yayından önce görülmesi için kısa ömürlü önizleme ba
 | `integration_flows.last_status`, `integration_runs.status` | `RUNNING` sürüyor (yalnız koşu) · `SUCCESS` başarılı · `PARTIAL` kısmen · `FAILED` başarısız |
 | `integration_runs.trigger` | `SCHEDULE` zamanlanmış · `MANUAL` elle |
 | `integration_outbox.status` | `PENDING` bekliyor · `SENDING` gönderiliyor · `SENT` gönderildi · `FAILED` başarısız · `CHECK` elle kontrol gerekli |
+| `integration_oauth_attempts.phase` | `PENDING` izin bekleniyor · `EXCHANGING` belirteç alınıyor · `SELECT` firma seçimi · `CONNECTING` bağlanıyor · `COMPLETE` bağlandı · `FAILED` başarısız/iptal |
 | `setup_journeys.card_source` | `EXCEL` · `PARASUT` |
+| `setup_journeys.skipped` | `cards` · `shelves` · `parties` · `stock` · `labels` · `bom` · `order` · `people` · `task` |
 | `setup_journeys.tour_state` | `ACTIVE` · `CLOSED` |
 | `demo_requests.status` | `PENDING` bekliyor · `APPROVED` onaylandı · `REJECTED` reddedildi |
 | `subscriptions.plan` | `TRIAL` deneme · `ACTIVE` ücretli |
 | `charges.paid_method` | `HAVALE` · `KART` · `NAKIT` |
-| `audit_logs.action`, `security_events.event_type` | Serbest kod, biçim zorunlu (`alan.eylem`); ör. `platform.support.*` panel destek işlemleri |
+| `audit_logs.action`, `security_events.event_type` | Veritabanında biçim zorunlu (`alan.eylem`); uygulamanın yazabileceği denetim kodları `packages/db/src/audit.ts` `AUDIT_ACTIONS` listesindedir (ör. `integration.oauth_configured` · `integration.oauth_started` · `integration.oauth_failed` · `integration.oauth_cancelled`, T-1066). Güvenlik olaylarında ör. `platform.support.*` panel destek işlemleri |
 
 ## 3b.10 Veritabanında olup arayüzde kullanılmayan / eksik bağlı alanlar (adaylar)
 
@@ -927,7 +981,7 @@ Kanıt: `apps/web` ve `packages/domain` içinde `grep` (test dosyaları hariç).
 | `tenant_settings.count_abandon_hours` | Sayım "terk edildi" hesabında okunuyor; arayüzden değiştirilemiyor (varsayılan 8 saat). | `packages/domain/src/operations/counting.ts:858`; web'de eşleşme yok |
 | `tenant_settings.sector_template_key/version`, `onboarding_steps` | Kurulum sihirbazı ve demo tohumu yazıyor; kurulumdan sonra hiçbir ekranda gösterilmiyor. | `packages/domain/src/onboarding/*.ts`; web'de eşleşme yok |
 | `plan_versions.feat_api` | Panel paket düzenleyicide "API" özelliği seçilebiliyor; müşteri tarafında API özelliği yok, bu bayrağı okuyan bir kural da bulunmadı. | `apps/web/app/panel/paketler/view.tsx:99` |
-| `integrations.provider = 'LOGO'` | Veritabanı kodu kabul ediyor; bağlantı akışı yalnız Paraşüt için yazılmış. | `packages/domain/src/integrations/parasut.ts` |
+| `integrations.provider = 'LOGO'` | Veritabanı kodu kabul ediyor (0060 ürün kaynak bilgisinde de `LOGO` anahtarı izinli); bağlantı ve OAuth akışı yalnız Paraşüt için yazılmış. | `packages/domain/src/integrations/parasut.ts`, `oauth.ts` |
 | `tenants.status = SUSPENDED / CLOSING` | Kodda okunuyor; panelde bir müşteriyi askıya alma/kapatma ekranı ayrıca doğrulanmalı (bu turda doğrulanmadı = UNKNOWN). | `grep SUSPENDED`: domain 5, web 15 dosya |
 | `users.image` | Kimlik kütüphanesinin alanı; profil resmi özelliği yok. | `grep`: 0 eşleşme |
 | `integration_runs.linked_count` | Domain yazıyor; Bağlantılar ekranında ayrı gösterim bulunmadı. | `packages/domain/src/integrations/*`; web 0 |

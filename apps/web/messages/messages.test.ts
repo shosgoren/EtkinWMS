@@ -1,6 +1,8 @@
 // T-999c bekçisi: tr.json ve en.json aynı anahtar kümesini taşır (eksik anahtar Türkçe'ye ya da anahtar adına düşmesin), bir dilde boş kalan metin yoktur ve
 // her metin aynı `{yer tutucu}` adlarını kullanır (çeviride değişken kaybolmaz).
 import { describe, expect, it } from "vitest";
+import { AUDIT_ACTIONS } from "@wms/db";
+import { KAYIT_TURLERI } from "../app/t/[slug]/audit/satirlar.ts";
 import en from "./en.json";
 import tr from "./tr.json";
 
@@ -36,5 +38,15 @@ describe("messages tr/en", () => {
   it("yer tutucular aynı", () => {
     const diff = [...trLeaves].filter(([k, v]) => enLeaves.has(k) && placeholders(v).join(",") !== placeholders(enLeaves.get(k)!).join(",")).map(([k]) => k);
     expect(diff).toEqual([]);
+  });
+});
+
+// T-1111: "Kim ne yaptı?" ekranında anahtar adı ("auditLog.actions.integration.synced") görünmesin — her audit eyleminin adı var.
+describe("audit eylem adları", () => {
+  it("her AUDIT_ACTIONS eyleminin tr/en adı var", () => {
+    expect(AUDIT_ACTIONS.filter((a) => !trLeaves.has(["auditLog", "actions", ...a.split(".")].join(" > ")))).toEqual([]);
+  });
+  it("her kayıt türünün adı var", () => {
+    expect([...KAYIT_TURLERI].filter((k) => !trLeaves.has(`auditLog > entities > ${k}`))).toEqual([]);
   });
 });

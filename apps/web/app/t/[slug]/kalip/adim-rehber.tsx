@@ -12,7 +12,7 @@ import { JICON } from "../../../design/yolculuk-icons.ts";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
 import { ADIM_YETKI, adimPlani, isAdimKaynak, isAdimRehber, type AdimKaynak, type AdimRehber } from "./adim-rehber-plan.ts";
 import { cikisSor } from "./cikis.tsx";
-import { KalipPerdeKatman, type PerdeDelik } from "./perde.tsx";
+import { KalipPerdeKatman, hedefKutusu, type PerdeDelik } from "./perde.tsx";
 import { useSesliOku } from "./sesli-oku.ts";
 
 export const ADIM_REHBER_EVENT = "etkinwms:adim-rehber";
@@ -144,8 +144,8 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
       const el = burada ? gorunur(adim.target) : null;
       setYok(burada && el === null);
       if (el === null) return setDelik((o) => (o === null ? o : null));
-      const r = el.getBoundingClientRect();
-      const n = { x: Math.round(r.x - 6), y: Math.round(r.y - 6), w: Math.round(r.width + 12), h: Math.round(r.height + 12) };
+      const r = hedefKutusu(el);
+      const n = { x: Math.round(r.left - 6), y: Math.round(r.top - 6), w: Math.round(r.width + 12), h: Math.round(r.height + 12) };
       setDelik((o) => (o !== null && o.x === n.x && o.y === n.y && o.w === n.w && o.h === n.h ? o : n));
     };
     olc();

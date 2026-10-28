@@ -11,7 +11,7 @@ import { JICON } from "../../../design/yolculuk-icons.ts";
 import { dz } from "../../../design/yolculuk-tokens.ts";
 import { Ico } from "../kalip/ekran.tsx";
 import { useModalFocus } from "../kalip/odak.ts";
-import { KalipPerdeKatman, type PerdeDelik } from "../kalip/perde.tsx";
+import { KalipPerdeKatman, hedefKutusu, type PerdeDelik } from "../kalip/perde.tsx";
 import { sesiDurdur, useSesliOku } from "../kalip/sesli-oku.ts";
 import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
@@ -132,8 +132,20 @@ interface TipPos {
 function tipPosition(holes: readonly PerdeDelik[] | null, vw: number, vh: number): TipPos {
   const w = Math.min(360, vw - EDGE * 2);
   if (holes === null || holes.length === 0) return { style: { left: (vw - w) / 2, bottom: 136, width: w }, cls: "", arrow: null };
-  // Birden çok delik (form + kaydet): kart üstte, formun alanlarını örtmesin diye ekranın üst kenarında.
-  if (holes.length > 1) return { style: { left: (vw - w) / 2, top: EDGE, width: w }, cls: "", arrow: null };
+  // Birden çok delik (form + kaydet): kart deliklerin hiçbirini örtmeyen yere — yanda yer varsa yanda, yoksa deliklerin üstünde/altında
+  // daha geniş boşlukta (T-1111: eskiden hep üst kenardaydı, sayfanın başlığını ve formu örtüyordu).
+  if (holes.length > 1) {
+    const l = Math.min(...holes.map((h) => h.x));
+    const t = Math.min(...holes.map((h) => h.y));
+    const r = Math.max(...holes.map((h) => h.x + h.w));
+    const b = Math.max(...holes.map((h) => h.y + h.h));
+    const ust = Math.max(EDGE, Math.min(t, vh - 200));
+    if (vw - r >= w + EDGE * 2) return { style: { left: vw - w - EDGE, top: ust, width: w }, cls: "", arrow: null };
+    if (l >= w + EDGE * 2) return { style: { left: EDGE, top: ust, width: w }, cls: "", arrow: null };
+    return t > vh - b
+      ? { style: { left: (vw - w) / 2, bottom: Math.min(vh - t + GAP, vh - 160), width: w }, cls: "", arrow: null }
+      : { style: { left: (vw - w) / 2, top: Math.min(b + GAP, vh - 160), width: w }, cls: "", arrow: null };
+  }
   const hole = holes[0]!;
   const cx = hole.x + hole.w / 2;
   const left = Math.min(Math.max(cx - w / 2, EDGE), vw - w - EDGE);
@@ -359,14 +371,19 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
       const pad = 8;
       const vh = window.innerHeight;
       const vw = window.innerWidth;
-      const delik = (r: { left: number; top: number; width: number; height: number }): PerdeDelik | null =>
-        r.width > 0 && r.height > 0 && r.top + r.height > 0 && r.top < vh && r.left + r.width > 0 && r.left < vw ? { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 } : null;
+      // T-1111: delik görünüm alanına kırpılır (uzun form ekranın dışına taşınca soluk dikdörtgen kesik bitiyordu).
+      const delik = (r: { left: number; top: number; width: number; height: number }): PerdeDelik | null => {
+        if (!(r.width > 0 && r.height > 0 && r.top + r.height > 0 && r.top < vh && r.left + r.width > 0 && r.left < vw)) return null;
+        const x = Math.max(0, r.left - pad);
+        const y = Math.max(0, r.top - pad);
+        return { x, y, w: Math.min(vw, r.left + r.width + pad) - x, h: Math.min(vh, r.top + r.height + pad) - y };
+      };
       const next: PerdeDelik[] = [];
       const el = [...document.querySelectorAll(focusSel)].find((x) => x.getBoundingClientRect().width > 0 && getComputedStyle(x).visibility !== "hidden") ?? null;
       if (el !== null) {
         // Hedefin açtığı menü (`data-tour-follow`) de delikte kalır: kullanıcı menüden seçebilsin (ör. Excel › İçeri al).
         const follow = stopTarget === null || focusSel !== targetSel ? [] : [...document.querySelectorAll(`[data-tour-follow="${stopTarget}"]`)];
-        const rects = [el.getBoundingClientRect(), ...follow.map((f) => f.getBoundingClientRect()).filter((x) => x.width > 0 && x.height > 0)];
+        const rects = [hedefKutusu(el), ...follow.map((f) => f.getBoundingClientRect()).filter((x) => x.width > 0 && x.height > 0)];
         const r = rects.reduce((acc, x) => {
           const left = Math.min(acc.left, x.left);
           const top = Math.min(acc.top, x.top);

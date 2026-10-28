@@ -68,10 +68,10 @@ const admin = (w: TenantWorld) => ({ db: app, principal: { userId: w.ownerUserId
 const picker = (w: TenantWorld) => ({ db: app, principal: { userId: w.memberUserId, mfaVerified: true }, tenantSlug: w.slug });
 const deps = () => ({ client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer });
 const input = () => ({ companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password });
-const sync = (w: TenantWorld, integrationId: string, opts: { flow?: string; now?: () => number } = {}) =>
+const sync = (w: TenantWorld, integrationId: string, opts: { flow?: string; now?: () => number; trigger?: "MANUAL" | "SCHEDULE" } = {}) =>
   runIntegrationSync(
     { inTenant: (fn) => withSystemTenant(app, w.tenantId, "test.integration", fn), client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer, ...(opts.now === undefined ? {} : { now: opts.now }) },
-    { integrationId, flow: opts.flow as never, trigger: "MANUAL" },
+    { integrationId, flow: opts.flow as never, trigger: opts.trigger ?? "MANUAL" },
     w.ownerUserId,
   );
 async function q<T extends pg.QueryResultRow = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
@@ -253,6 +253,11 @@ describe("senkron", () => {
     // Koşu günlüğü + her koşu audit'te.
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_runs WHERE tenant_id = $1 AND status = 'SUCCESS'", [W.tenantId]))[0]?.n).toBe(4);
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.synced'", [W.tenantId]))[0]?.n).toBe(7);
+    // T-1111: değişiklik getirmeyen başarılı zamanlı koşu audit'e yazılmaz (koşu günlüğünde var); satır hatası olan (PARTIAL) yazılır.
+    const r4 = await sync(W, id, { trigger: "SCHEDULE" });
+    expect(counts(r4)).toEqual({ WAREHOUSES: ["SUCCESS", 0, 0, 0], PRODUCTS: ["PARTIAL", 0, 0, 1], CONTACTS: ["SUCCESS", 0, 0, 0] });
+    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_runs WHERE tenant_id = $1 AND status = 'SUCCESS'", [W.tenantId]))[0]?.n).toBe(6);
+    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.synced'", [W.tenantId]))[0]?.n).toBe(8);
     // Biten koşu kaydı değişmez.
     const done = await asApp(W.tenantId, "UPDATE public.integration_runs SET status = 'RUNNING' WHERE tenant_id = $1", [W.tenantId]);
     expect(done).toMatchObject({ ok: false, code: "55000" });

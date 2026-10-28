@@ -1,5 +1,7 @@
 # 2A. Kimlik, ekip ve yetki modülleri
 
+> **Kaynak:** main 8e2710d · 28 Ekim 2026 (ilk sürüm main 36f3a13 · 23 Ekim 2026). Her satır bu koddan yeniden doğrulandı.
+>
 > **Bu dosya neyi anlatır?** Kullanıcının sisteme nasıl girdiğini, çalışma alanının nasıl kurulduğunu, ekibe kişinin nasıl eklendiğini ve kimin neyi yapabildiğini ekran ekran anlatır. Her ekranda "bu butona basılınca hangi sunucu işlemi çalışır, veritabanında hangi tabloya ne yazılır, hangi kural kontrol edilir" sorularının cevabı vardır.
 >
 > **Tablo sütunları nasıl okunur?**
@@ -8,47 +10,54 @@
 > - **Her yazma işlemi** aynı veritabanı işleminde `audit_logs` tablosuna "kim, ne zaman, ne yaptı" kaydı da atar. Tabloda tekrar edilmedi.
 >
 > **Ortak kurallar (her ekranda geçerli, tekrar yazılmadı):**
-> - Ekip yönetimi ekranlarının hepsi `users.manage` iznini ister. Bu izin yalnız **Yönetici** rolünde vardır.
-> - Hassas yönetici işlemleri (rol değiştirme, çıkarma, cihaz onayı, kod yenileme, grup değiştirme) için son 10 dakika içinde kimlik doğrulanmış olmalıdır. Değilse ekranda "kimliğini yeniden doğrula" yazar (`RECENT_AUTH_REQUIRED`).
-> - **Demo alanında** üye ekleme, çıkarma ve grup değiştirme kapalıdır (herkese açık demo hesabı yetki yükseltemesin diye).
+> - Ekip yönetimi ekranlarının ve bütün yazma işlemlerinin hepsi `users.manage` iznini ister. Bu izin yalnız **Yönetici** rolünde vardır. Tek istisna **Üyeler** listesidir: her üye (`stock.view`) listeyi görür, ama e-postalar maskeli gelir (`a***@alanadi`) ve düğmeler kilitlidir.
+> - Hassas yönetici işlemleri (rol değiştirme, çıkarma, cihaz onayı, kod yenileme, grup değiştirme, görev ayrılığı ayarı) için son 10 dakika içinde kimlik doğrulanmış olmalıdır (`REAUTH_WINDOW_SEC`). Değilse ekranda "kimliğini yeniden doğrula" yazar (`RECENT_AUTH_REQUIRED`) ve `/login?reauth=1&next=…` bağlantısı verilir. Bu girişte "30 gün hatırla" çerezi yok sayılır, 6 haneli kod yeniden sorulur.
+> - **Demo alanında** üye ekleme, çıkarma, QR paylaşma ve grup değiştirme kapalıdır (herkese açık demo hesabı yetki yükseltemesin diye). Demo alanında 2FA zorunluluğu da yoktur.
 >
-> **Canlı durumu:** Bu dosyadaki ekranların kodu main dalındadır. main'e birleşen kod otomatik yayına çıkar. Saha girişi (0044/0045), yetki grupları ve ekibe katılma (0051/0052, 19 Ekim) canlıdadır (`docs/STATE.md`). Ekran bazında ayrıca canlı tıklama testi bu belgede yapılmadı.
+> **Canlı durumu:** Bu dosyadaki ekranların kodu main dalındadır. main'e birleşen kod otomatik yayına çıkar. Saha girişi (0044/0045), yetki grupları ve ekibe katılma (0051/0052, 19 Ekim) canlıdadır (`docs/STATE.md`). 23 Ekim sonrası gelenler (2FA kurulum sihirbazı T-1034, mağaza QR'ı T-1043, Ayarlar sekmeleri T-1046) STATE'te PR olarak kayıtlıdır; ayrı canlı doğrulama kaydı yoktur (UNKNOWN). Ekran bazında canlı tıklama testi bu belgede yapılmadı.
 
 ## Modül dizini
 
 | # | Modül | Adres | Durum |
 | :--- | :--- | :--- | :--- |
-| 1 | Giriş, iki adımlı doğrulama, parola sıfırlama | `/login`, `/mfa`, `/reset-password` | [TAMAMLANDI] |
+| 1 | Giriş, iki adımlı doğrulama (4 adımlı kurulum sihirbazı), parola sıfırlama | `/login`, `/mfa`, `/reset-password`, `/help/indir/<uygulama>` | [TAMAMLANDI] |
 | 2 | Açılış ve çalışma alanı seçimi | `/`, `/workspaces` | [TAMAMLANDI] |
 | 3 | Deneme aktivasyonu (yeni müşterinin kuruluşu) | `/activate/<belirteç>` | [TAMAMLANDI] |
 | 4 | Kendi kendine kuruluş sihirbazı | `/onboarding` | [TAMAMLANDI] (canlıda bilerek kapalı) |
 | 5 | Davet kabulü | `/invite/<belirteç>` | [TAMAMLANDI] |
 | 6 | Saha girişi (PIN, cihaz kaydı, QR ile katılma) | `/field`, `/field/enroll`, `/field/join` | [TAMAMLANDI] |
 | 7 | Ekip (yeni tasarım) | `/t/<alan>/team` | [TAMAMLANDI] |
-| 8 | Kullanıcılar (ayrıntılı kişi yönetimi) | `/t/<alan>/members` | [TAMAMLANDI] (eski tasarım; yeni kalıba geçişi B-63 kapsamında) |
+| 8 | Üyeler (ayrıntılı kişi yönetimi; Ekip ekranında "Kullanıcılar ekranı" diye anılır) | `/t/<alan>/members` | [TAMAMLANDI] (liste kalıbı T-971, tam ekran davet formu T-990) |
 | 9 | Saha hesapları | `/t/<alan>/members/field` | [TAMAMLANDI] |
 | 10 | Cihazlar (ortak/kişisel cihaz kaydı) | `/t/<alan>/members/devices` | [TAMAMLANDI] |
 | 11 | Ekibe katılma QR'ı ve onaylar | `/t/<alan>/members/join` | [TAMAMLANDI] |
 | 12 | Yetki grupları | `/t/<alan>/groups` | [TAMAMLANDI] |
-| 13 | Rol / izin matrisi (kural tablosu, ekran değil) | `packages/domain/src/identity/permissions.ts` | [TAMAMLANDI] |
+| 13 | Ayarlar › Kullanıcılar ve yetki sekmesi | `/t/<alan>/settings?sekme=kullanici` | [TAMAMLANDI] (T-1046) |
+| 14 | Rol / izin matrisi (kural tablosu, ekran değil) | `packages/domain/src/identity/permissions.ts` | [TAMAMLANDI] |
 
 ---
 
 ## Modül: wms. ve yonet. / Giriş, iki adımlı doğrulama, parola sıfırlama
 - **Modül Durumu:** [TAMAMLANDI]
 - **Ekranın amacı:** Ofis kullanıcısı ve işletmeci e-posta + parola ile girer. Rolü gerektiriyorsa telefonundaki 6 haneli kodu da girer. Parolasını unutan kişi kendi e-postasına sıfırlama bağlantısı ister. Aynı ekran hem wms. hem yonet. adresinde çalışır, ama iki adresin oturumları birbirinden ayrıdır.
-- **Dosyalar:** `apps/web/app/login/flow.tsx`, `apps/web/app/mfa/page.tsx`, `apps/web/app/auth-forms.tsx`, `apps/web/app/reset-password/page.tsx`, `packages/auth/src/index.ts`.
+- **Dosyalar:** `apps/web/app/login/page.tsx`, `apps/web/app/login/flow.tsx`, `apps/web/app/mfa/page.tsx`, `apps/web/app/auth-forms.tsx` (`MfaSetupForm`), `apps/web/app/totp-sihirbaz.tsx` (ortak 2FA kurulum sihirbazı, T-1034), `apps/web/app/dogrulama-magaza.ts` + `apps/web/app/help/indir/[app]/route.ts` (mağaza yönlendirmesi, T-1043), `apps/web/app/reset-password/page.tsx`, `packages/auth/src/index.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | E-posta, Parola | Input | Yazılır | — | — | Parola 12–128 karakter | [TAMAMLANDI] |
+| "SAHA GİRİŞİ" sekmesi | Sekme | Tıklanır | `/field`'e gider | — | Yalnız wms. adresinde görünür (yonet. panelinde yok) | [TAMAMLANDI] |
 | "Giriş" | Buton | Tıklanır | `POST /api/auth/sign-in/email` (Better Auth) | Okur: `users.email`, `accounts.password` (Argon2id özeti). Yazar: `sessions` (yeni satır: `token`, `expires_at`, `ip_address`, `user_agent`), `security_events` (giriş olayı), `auth_rate_limits` | IP başına 10 dk'da 10 deneme. Hesap var/yok bilgisini sızdırmayan tek tip hata ("e-posta veya parola hatalı"). Kalan deneme ve bekleme süresi gösterilir. 2FA açıksa oturum yerine geçici `two_factor` çerezi verilir ve kod ekranına geçilir. | [TAMAMLANDI] |
+| Yeniden doğrulama girişi (`/login?reauth=1`) | Sayfa | Hassas işlemden gelinir | `POST /api/auth/sign-in/email` + `x-wms-reauth: 1` başlığı | `sessions` (yeni oturum), `sessions.mfa_verified_at` | Açık oturum varken de form gösterilir. Güvenilen cihaz çerezi yok sayılır, 6 haneli kod yeniden istenir; böylece 10 dakikalık hassas işlem penceresi açılır. | [TAMAMLANDI] |
 | "Google / Microsoft ile gir" | Buton | Tıklanır | `POST /api/auth/sign-in/social` | `accounts` (sağlayıcı bağlantısı), `sessions` | Yalnız ortam ayarı açıksa görünür. Bu yolla yeni hesap açılamaz. | [GELİŞTİRİLİYOR] (kodda var; canlıda açık mı UNKNOWN) |
 | 6 haneli kod | Input | Yazılır | — | — | Yalnız rakam | [TAMAMLANDI] |
-| "Bu cihazı 30 gün hatırla" | Onay kutusu | İşaretlenir | Kod doğrulamasıyla birlikte gider (`trustDevice`) | Güvenilen cihaz çerezi (30 gün mutlak süre) | Panelde ve işletmeci hesabında gösterilmez (her girişte kod istenir) | [TAMAMLANDI] |
+| "Bu cihazı 30 gün hatırla" | Onay kutusu | İşaretlenir | Kod doğrulamasıyla birlikte gider (`trustDevice`) | Güvenilen cihaz çerezi + `verifications` kaydı (30 gün **mutlak** süre; her girişte uzamaz) | Panelde ve işletmeci hesabında gösterilmez (sunucu da reddeder). Parola/2FA değişince kayıtlar silinir. Güvenilen girişte 2FA zorunluluğu geçer ama hassas işlem yeniden doğrulaması geçmez. | [TAMAMLANDI] |
 | "Doğrula" | Buton | Tıklanır | `POST /api/auth/two-factor/verify-totp` ya da `/verify-backup-code` | `two_factors.failed_verification_count`, `two_factors.locked_until`; `sessions.mfa_verified_at` (bu oturumda 2FA yapıldı damgası) | 5 hatalı kod → 15 dk kilit. 10 dk'da 10 deneme sınırı. | [TAMAMLANDI] |
-| 2FA kurulumu (parola → QR → ilk kod) | Form | Doldurulur | `POST /api/auth/two-factor/enable` → `POST /api/auth/two-factor/verify-totp` | `two_factors.secret`, `two_factors.backup_codes`, `users.two_factor_enabled` | Yönetici ve Depo yöneticisi için zorunlu. Kurulmadan iş ekranları açılmaz (`MFA_REQUIRED` → `/mfa`). | [TAMAMLANDI] |
-| "Parolamı unuttum" → e-posta | Form | Gönderilir | `POST /api/auth/request-password-reset` | `verifications` (tek kullanımlık belirteç); kuyruk: e-posta işi (`pgboss` şeması) | Saatte 5 istek. Hesap yoksa da aynı "gönderildi" cevabı verilir (hesap varlığı sızmaz). E-posta ayarı kapalıysa "gönderilemiyor" (503) denir; sahte başarı gösterilmez. | [TAMAMLANDI] |
+| 2FA kurulumu: parola | Form | Gönderilir | `POST /api/auth/two-factor/enable` | `two_factors.secret`, `two_factors.backup_codes` | Yönetici ve Depo yöneticisi için zorunlu; gruptan onay/ters kayıt/aktarım yetkisi alan için de. Kurulmadan iş ekranları açılmaz (`MFA_REQUIRED` → `/mfa`). Zaten açıksa "etkin" bildirimi, demo hesabında "demo" bildirimi gösterilir. | [TAMAMLANDI] |
+| Sihirbaz 1. adım "Uygulamayı kur" (Google / Microsoft Authenticator; App Store / Google Play düğmeleri) | Bağlantı + QR | Tıklanır / telefonla okutulur | Bilgisayarda her uygulama için QR → `GET /help/indir/<google\|microsoft>` | — | Yönlendirme oturum istemez; telefonun türüne göre App Store ya da Google Play'e 302 verir. Hedefler sabit tablodan gelir (dışarıdan adres alınmaz); bilinmeyen uygulama 404. Telefonda QR yerine yalnız mağaza düğmeleri görünür. | [TAMAMLANDI] (T-1043) |
+| Sihirbaz 2. adım "Hesabı ekle" | QR / bağlantı / KOPYALA | Okutulur ya da dokunulur | — (istemcide; `otpauth://` adresi) | — | Telefonda tek dokunuşla doğrulama uygulamasını açar; bilgisayarda QR + üç adım. QR okunmazsa "QR okutamıyorum" ile anahtar dörtlü gruplar hâlinde gösterilir ve kopyalanır. | [TAMAMLANDI] (T-1034; gerçek telefonda `otpauth://` UNKNOWN) |
+| Sihirbaz 3. adım: 6 haneli kod | Input | Yazılır | `POST /api/auth/two-factor/verify-totp` | `users.two_factor_enabled=true`, `two_factors`, `sessions.mfa_verified_at` | Altıncı rakamda kendiliğinden doğrular; yapıştırılan "123 456" da kabul edilir. Hata sesli + görsel bildirilir. | [TAMAMLANDI] |
+| Sihirbaz 4. adım: yedek kodlar (İNDİR / KOPYALA / YAZDIR + "Kaydettim") | Buton + onay kutusu | İşaretlenir | — (istemcide) | — | "Kaydettim" işaretlenmeden bitmez; işaretlenmeden sayfadan çıkılırsa ortak çıkış kutusu sorar (`useCikisKorumasi`). | [TAMAMLANDI] |
+| "Parolamı unuttum" → e-posta (Ayarlar › Kullanıcılar ve yetki › Parola "Bağlantı gönder" de buraya gelir) | Form | Gönderilir | `POST /api/auth/request-password-reset` | `verifications` (tek kullanımlık belirteç); kuyruk: e-posta işi (`pgboss` şeması) | Saatte 5 istek. Hesap yoksa da aynı "gönderildi" cevabı verilir (hesap varlığı sızmaz). E-posta ayarı kapalıysa "gönderilemiyor" (503) denir; sahte başarı gösterilmez. | [TAMAMLANDI] |
 | Yeni parola + "Kaydet" | Form | Gönderilir | `POST /api/auth/reset-password` | `accounts.password` güncellenir; `verifications` satırı tüketilir; eski oturumlar kapanır | Parola 12–128. Yönetici kaynaklı bağlantı 30 dk, tek kullanımlık. | [TAMAMLANDI] |
 | "Çıkış" | Buton | Tıklanır | `POST /api/auth/sign-out` | `sessions` satırı silinir | — | [TAMAMLANDI] |
 
@@ -96,7 +105,7 @@ sequenceDiagram
 ## Modül: wms. / Deneme aktivasyonu (yeni müşterinin kuruluşu)
 - **Modül Durumu:** [TAMAMLANDI]
 - **Ekranın amacı:** İşletmeci demo talebini onaylayınca müşteriye bir bağlantı gider. Müşteri bu bağlantıyla 4 adımda kendi çalışma alanını açar: (1) firma adı + alan adı, (2) örnek veriyle mi boş mu başlanacak, (3) parola, (4) iki adımlı doğrulama. Sonunda 3 aylık deneme başlar.
-- **Dosyalar:** `apps/web/app/activate/[token]/flow.tsx`, `apps/web/app/activate/[token]/actions.ts`, `packages/domain/src/platform/activation.ts`, `packages/domain/src/onboarding/workspace.ts` (`initializeNewTenant`), `packages/domain/src/onboarding/sample-data.ts`.
+- **Dosyalar:** `apps/web/app/activate/[token]/flow.tsx`, `apps/web/app/activate/[token]/actions.ts`, `apps/web/app/totp-sihirbaz.tsx`, `packages/domain/src/platform/activation.ts`, `packages/domain/src/onboarding/workspace.ts` (`initializeNewTenant`), `packages/domain/src/onboarding/sample-data.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -105,7 +114,7 @@ sequenceDiagram
 | ÇALIŞMA ALANI ADI | Input | Yazılır | `checkWorkspaceNameAction` → `wms_probe.platform_workspace_name_taken` | Okur: `tenants.slug` | En az 3 karakter; küçük harf, rakam, tire. Ayrılmış adlar alınamaz. Sonradan değişmez. "Uygun · adresiniz …" ya da "Bu ad kullanılamaz" yazar. | [TAMAMLANDI] |
 | "Örnek verilerle" / "Boş başla" | Seçim kartı | Seçilir | — | — | Örnek veri: örnek depo, raf ve ürünler eklenir | [TAMAMLANDI] |
 | Parola + "PAROLAYI KAYDET" | Input + Buton | Tıklanır | `activateTrialAction` → `activateTrial` | (1) `wms_probe.platform_activation_claim`: belirteç 10 dk rezerve edilir. (2) `users`, `accounts` (Argon2id parola). (3) `tenants` (yeni satır: `slug`, `name`, `status='ACTIVE'`), `tenant_memberships` (`is_owner=true`), `membership_roles` (`TENANT_ADMIN`), `tenant_settings` (`locale`, `time_zone`, `onboarding_status`). (4) İsteğe bağlı örnek veri: `warehouses`, `locations`, `items`… (5) `wms_probe.platform_activation_consume` → `wms_platform.subscriptions.activated_at`, `trial_ends_at`. (6) Kuyruk: hoş geldiniz e-postası. | **Üç ayrı adım:** (1) belirteç rezervasyonu, (2) kullanıcı hesabı (`users`, `accounts`) ayrı bağlantıda oluşur, (3) kiracı + sahip + ayarlar + örnek veri + `consume` **tek veritabanı işleminde** (`withNewTenant`). (3) başarısız olursa o işlemdeki her şey geri alınır ve rezervasyon bırakılır, ama (2)'deki **hesap korunur**: aynı bağlantıyla yeniden deneme aynı hesabı kullanır (`reused`). Kullanılmış bağlantı ikinci kez kullanılamaz. Parola 12–128 karakter. | [TAMAMLANDI] |
-| 2FA adımı + "DOĞRULA" | Form | Kod girilir | `/api/auth/two-factor/enable` + `verify-totp` | `two_factors`, `users.two_factor_enabled` | Yönetici olduğu için zorunlu | [TAMAMLANDI] |
+| 4. adım: 2FA kurulum sihirbazı | Sihirbaz | Adım adım | Önce bu tarayıcıda `POST /api/auth/sign-in/email`, sonra `/two-factor/enable` + `/verify-totp` | `sessions`, `two_factors`, `users.two_factor_enabled` | Yönetici olduğu için zorunlu. `/mfa` ile aynı 4 adımlı sihirbaz (`TotpSihirbaz`: uygulama kur → hesabı ekle → kod → yedek kodlar). Parola yalnız bileşenin belleğinde tutulur. | [TAMAMLANDI] (T-1034) |
 | "ÇALIŞMA ALANINI AÇ" | Buton | Tıklanır | `/t/<alan>`'a gider | — | — | [TAMAMLANDI] |
 
 ```mermaid
@@ -162,7 +171,7 @@ stateDiagram-v2
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Sayfa açılışı (cihaz durumu) | Otomatik | Açılır | `GET /api/auth/field/device` → `wms_probe.field_device_status` | Okur: `field_devices` (cihaz çerezi özeti `token_hash`, `kind`, `revoked_at`, `expires_at`) | Kayıtlı ortak cihazda personel listesi gelir. Kayıtsız cihazda etkinleştirme formu çıkar. | [TAMAMLANDI] |
 | Personel listesi (ortak cihaz) | Seçim kartları | Ad seçilir | `GET /api/auth/field/staff` → `wms_probe.field_device_staff` | Okur: `field_logins.username`, kişi adları | Yalnız bu cihazın alanındaki aktif saha hesapları | [TAMAMLANDI] |
-| 6 haneli PIN + "Gir" | PIN tuş takımı | Girilir | `POST /api/auth/field/sign-in` → `wms_probe.field_signin_begin` / `field_signin_finish` | `field_logins.failed_count`, `locked_until`, `lock_count`; `field_devices.token_hash` (her girişte cihaz anahtarı **yenilenir**), `last_used_at`; `sessions` + `field_sessions` (oturum ↔ cihaz) | Cihaz çerezi yoksa/başka alana aitse genel ret. 5 yanlış PIN → 15 dk kilit; 3. kilitte kalıcı kilit (yönetici açar). Aynı ortak cihazdan 60 dk'da 3 farklı hesap kilitlenirse cihaz otomatik iptal olur (`revoke_reason='LOCK_SPREE'`). Cihaz başına 15 dk'da 20, alan başına 15 dk'da 300 deneme. Oturum 12 saat, 2 saat hareketsizlikte kapanır. | [TAMAMLANDI] |
+| 6 haneli PIN + "Gir" | PIN tuş takımı | Girilir | `POST /api/auth/field/sign-in` → `wms_probe.field_signin_begin` / `field_signin_finish` | `field_logins.failed_count`, `locked_until`, `lock_count`; `field_devices.token_hash` (her girişte cihaz anahtarı **yenilenir**), `last_used_at`; `sessions` + `field_sessions` (oturum ↔ cihaz) | Cihaz çerezi yoksa/başka alana aitse genel ret. 5 yanlış PIN → 15 dk kilit; 3. kilitte kalıcı kilit (yönetici açar). Aynı ortak cihazdan 60 dk'da 3 farklı hesap kilitlenirse cihaz otomatik iptal olur (`revoke_reason='LOCK_SPREE'`). IP başına 10 dk'da 30, cihaz başına 15 dk'da 20, alan başına 15 dk'da 300 deneme. Oturum 12 saat, 2 saat hareketsizlikte kapanır. | [TAMAMLANDI] |
 | Alan adı + kullanıcı adı + kod + yeni PIN, "Etkinleştir" | Form | Gönderilir | `POST /api/auth/field/activate` → `wms_probe.field_activate` | `field_logins.pin_hash`, `pin_set_at`, `activation_hash` (silinir), `activation_failed_count`; `field_devices` (yeni `kind='PERSONAL'`); `sessions` | Kod 24 saat geçerli. Kullanıcı başına saatte 10 deneme. PIN kolay tahmin edilen dizi olamaz (`pinAcceptable`). | [TAMAMLANDI] |
 | Ortak cihaz kaydı `/field/enroll` (cihaz adı + "Kaydet") | Form | Gönderilir | `POST /api/auth/field/enroll` → `wms_probe.field_enroll_claim` | `field_enrollments.claim_token_hash`, `claimed_at`, `device_name`, `confirm_code` | Yöneticinin ekranındaki kayıt QR'ı 5 dk geçerli. Cihaz ekranında 6 haneli onay kodu çıkar; yönetici bu kodu kendi ekranına girer. | [TAMAMLANDI] |
 | QR ile katılma `/field/join` (ad, kullanıcı adı + "Gönder") | Form | Gönderilir | `POST /api/auth/field/join/link` → `field_join_link`; `POST /api/auth/field/join` → `wms_probe.field_join_request` | `team_join_requests` (yeni: `name`, `username`, `confirm_code`, `status='PENDING'`, `expires_at` +24 saat) | QR bağlantısı 7 gün geçerli. IP başına 10 dk'da 20 talep. | [TAMAMLANDI] |
@@ -195,32 +204,35 @@ sequenceDiagram
 
 ## Modül: wms. / Ekip (`/t/<alan>/team`)
 - **Modül Durumu:** [TAMAMLANDI] (yeni tasarım `Ekip.dc.html`, T-430)
-- **Ekranın amacı:** Yöneticinin "ekibim" ekranıdır. Sekmeler: **KİŞİ** (herkes; saha/ofis filtresi), **ONAY BEKLİYOR** (QR ile katılmak isteyenler), **GRUP**. Ayrıca "EKLE" ile ofis kullanıcısı e-posta daveti ya da saha personeli için katılma QR'ı oluşturulur. Rol, depo ve şifre işlemleri için "Kullanıcılar ekranı ›" bağlantısı vardır.
-- **Dosyalar:** `apps/web/app/t/[slug]/team/page.tsx`, `apps/web/app/t/[slug]/team/team-view.tsx`, `apps/web/app/t/[slug]/members/actions.ts`, `apps/web/app/t/[slug]/groups/actions.ts`.
+- **Ekranın amacı:** Yöneticinin "ekibim" ekranıdır. Modüller menüsündeki "Ekip" kutusu ve Pano'daki kişiler kısayolu (izni olana) buraya açılır. Sekmeler: **KİŞİ** (herkes; saha/ofis filtresi), **ONAY BEKLİYOR** (QR ile katılmak isteyenler), **GRUP ›** (Yetki grupları ekranına gider). Ayrıca "EKLE" ile ofis kullanıcısı e-posta daveti ya da saha personeli için katılma QR'ı oluşturulur. Rol, depo ve şifre işlemleri için "Rol, depo ve şifre işlemleri · Kullanıcılar ekranı ›" bağlantısı Üyeler ekranına gider.
+- **Dosyalar:** `apps/web/app/t/[slug]/team/page.tsx` (`listGroups` + `getJoinOverview`), `apps/web/app/t/[slug]/team/team-view.tsx`, `apps/web/app/t/[slug]/members/join-share.tsx` (paylaşma satırı, T-986b), `apps/web/app/t/[slug]/members/actions.ts`, `apps/web/app/t/[slug]/groups/actions.ts`, `packages/domain/src/identity/team-join.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| KİŞİ listesi (Hepsi / Saha / Ofis) | Liste + filtre | Görüntülenir | `listGroups` (sayfa yüklenirken) | Okur: `tenant_memberships`, `membership_roles`, `member_groups`, `permission_groups`, `users.name` | E-posta adresleri bu ekrana gelmez (kişisel veri) | [TAMAMLANDI] |
+| KİŞİ listesi (Hepsi / Saha / Ofis) | Liste + filtre | Görüntülenir | `listGroups` + `getJoinOverview` (sayfa yüklenirken) | Okur: `tenant_memberships`, `membership_roles`, `member_groups`, `permission_groups`, `users.name` | E-posta adresleri bu ekrana gelmez (kişisel veri) | [TAMAMLANDI] |
 | ONAY BEKLİYOR kartı → "GRUP SEÇ" → 6 haneli kod → "ONAYLA" | Kart + Input + Buton | Tıklanır | `approveJoinAction` → `approveJoinRequest` (+ seçildiyse `setMemberGroup`) | `wms_probe.field_join_verify` (kod doğrulama damgası) → `team_join_requests.status='APPROVED'`, `decided_by`, `decided_at`, `membership_id`; yeni `users`, `tenant_memberships`, `membership_roles`, `field_logins`; `member_groups` | Önce grup seçilmeli. Kod yanlışsa "N hak kaldı"; 3 yanlışta talep düşer. Paket kişi sınırı (`PLAN_LIMIT`) kontrol edilir. Grup atanamazsa kişi açılır ve ekranda "Gruplar ekranından ekle" uyarısı çıkar. | [TAMAMLANDI] |
-| "Reddet" | Buton | Tıklanır | `rejectJoinAction` → `rejectJoinRequest` | `team_join_requests.status='REJECTED'`, `decided_by/at` | Yalnız PENDING talep | [TAMAMLANDI] |
+| "Reddet" | Buton | Tıklanır | `rejectJoinAction` → `rejectJoinRequest` | `team_join_requests.status='REJECTED'`, `decided_by/at` | PENDING talep reddedilir. (Aynı işlem APPROVED talebi `CANCELLED` yapar; bu Katılma ekranında kullanılır.) | [TAMAMLANDI] |
 | EKLE › E-POSTA: e-posta + grup + "DAVET GÖNDER" | Form | Gönderilir | `inviteMemberAction` → `inviteMember` | `invitations` (yeni: `email_normalized`, `role_key`, `token_hash`, `expires_at` +72 saat, `delivered_via`); varsa aynı adrese eski davet `revoked_at`; kuyruk: davet e-postası | Geçerli e-posta. Aktif üyeye davet yok. **Yönetici rolüyle davet yalnız hesap sahibine açık.** Paket yönetici sınırı. Demo alanında kapalı. | [TAMAMLANDI] |
-| EKLE › QR: "QR OLUŞTUR" / "YAZDIR" / "PAYLAŞ" | Buton | Tıklanır | `createJoinLinkAction` → `createJoinLink` | `team_join_links`: eski bağlantı `revoked_at`, yeni satır (`token_hash`, `expires_at` +7 gün) | Yeni QR basılınca eskisi geçersiz olur ("Yeni QR hazır · eskisi geçersiz"). "PAYLAŞ" yalnız telefonun paylaşım penceresini açar. | [TAMAMLANDI] ("PAYLAŞ" geliştirmesi PR #145 açık: [GELİŞTİRİLİYOR]) |
+| EKLE › QR: "QR OLUŞTUR" | Buton | Tıklanır | `createJoinLinkAction` → `createJoinLink` | `team_join_links`: eski bağlantı `revoked_at`, yeni satır (`token_hash`, `expires_at` +7 gün) | Yeni QR basılınca eskisi geçersiz olur ("Yeni QR hazır · eskisi geçersiz"). QR adresi yalnız üretildiği anda bellekte durur; sayfa yenilenince yeniden gösterilmez. | [TAMAMLANDI] |
+| QR hazırken alt çubuk "PAYLAŞ" + paylaşma satırı (WhatsApp, Kopyala, PNG indir, Yazdır) | Buton | Tıklanır | — (istemcide; `useJoinShare`, `JoinShareRow`) | — | Paylaşılan metin yalnız firma adı + katılma bağlantısı + süre. Telefonda sistem paylaşım penceresi, yoksa satırdan seçim. Bağlantı sunucuya/loga gitmez. Demo alanında hepsi kilitli ("yetkin yok" balonu + hata sesi). Kopyalamada balon/ses yok; düğme 2 sn yeşil tik. | [TAMAMLANDI] (T-986b) |
 | Kişi kartında grup değiştirme | Seçim | Seçilir | `setMemberGroupAction` → `setMemberGroup` | `member_groups` (ekle/değiştir/kaldır), `tenant_memberships.roles_version` +1 | Yalnız hesap sahibi. Sahip gruba konamaz. Saha hesabına onay/ters kayıt/aktarım içeren grup verilemez. | [TAMAMLANDI] |
 
 ---
 
-## Modül: wms. / Kullanıcılar (`/t/<alan>/members`)
-- **Modül Durumu:** [TAMAMLANDI] (eski görünüm; yeni kalıba geçişi B-63 kapsamında)
-- **Ekranın amacı:** Ayrıntılı kişi yönetimi: rol değiştirme, depo kısıtı, çıkarma, sahiplik devri, parola sıfırlama bağlantısı, saha kodu yenileme ve kilit açma.
-- **Dosyalar:** `apps/web/app/t/[slug]/members/members-view.tsx`, `parts.tsx`, `invite-dialog.tsx`, `actions.ts`; `packages/domain/src/identity/memberships.ts`, `invitations.ts`, `field-users.ts`; `packages/domain/src/warehouse` (`setMembershipWarehouseScopes`).
+## Modül: wms. / Üyeler (`/t/<alan>/members`)
+- **Modül Durumu:** [TAMAMLANDI] (liste kalıbı `KalipListe`, T-971; arama T-978; tam ekran davet formu T-990)
+- **Ekranın amacı:** Ayrıntılı kişi yönetimi: rol değiştirme, depo kısıtı, çıkarma, sahiplik devri, parola sıfırlama bağlantısı, saha kodu yenileme ve kilit açma. Ayarlar › Kullanıcılar ve yetki › "Kişiler" ve Ekip ekranındaki "Kullanıcılar ekranı ›" buraya açılır. Yönetici olmayan üye listeyi görür, düğmeler kilitlidir ve kilit nedeni yazılır.
+- **Dosyalar:** `apps/web/app/t/[slug]/members/page.tsx`, `members-view.tsx`, `parts.tsx`, `invite-dialog.tsx` (`InviteForm`), `actions.ts`; `packages/domain/src/identity/member-queries.ts` (`listMembers`, `listPendingInvitations`), `memberships.ts`, `invitations.ts`, `field-users.ts`; `packages/domain/src/warehouse` (`setMembershipWarehouseScopes`, `isWarehouseScopeEnabled`).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Üye listesi (Sahip / Sen / Demo rozetleri) | Liste | Görüntülenir | `member-queries.ts` | Okur: `tenant_memberships`, `membership_roles`, `users`, `invitations` (bekleyen davetler) | — | [TAMAMLANDI] |
-| "Üye davet et" | Buton → pencere | Tıklanır | `inviteMemberAction` → `inviteMember` | `invitations` | Ekip ekranındaki davetle aynı kurallar | [TAMAMLANDI] |
+| Üye listesi (Sahip / Sen / Demo / Saha / Kilitli rozetleri) | Liste | Görüntülenir | `listMembers` (`stock.view`), `listPendingInvitations` (`users.manage`) | Okur: `tenant_memberships`, `membership_roles`, `users`, `field_logins`, `membership_warehouse_scopes`, `invitations` (bekleyen davetler) | E-posta yalnız yöneticiye tam, diğerlerine maskeli. Bekleyen davetler yalnız yöneticiye. Saha hesabında kullanıcı adı ve durum (etkin / kod bekliyor / kod yok) yazar. | [TAMAMLANDI] |
+| Arama kutusu | Input | Yazılır (GET `q`) | `listMembers({ q })` | Okur: aynı | Ada göre; yöneticide e-posta ve kullanıcı adıyla da. En çok 100 karakter. | [TAMAMLANDI] (T-978) |
+| "Saha personeli ekle" / "Cihazlar" | Bağlantı | Tıklanır | `/members/field`, `/members/devices` | — | Yalnız yöneticiye görünür | [TAMAMLANDI] |
+| Alt çubuk "Davet et" → tam ekran davet formu (`?invite=1`) | Buton → form | Tıklanır | `inviteMemberAction` → `inviteMember` | `invitations` | Ekip ekranındaki davetle aynı kurallar. Yetki yoksa ya da sayfa hazır değilken düğme kapalıdır ve dokununca neden balonu çıkar. | [TAMAMLANDI] (T-990) |
 | Bekleyen davet → "İptal" | Buton | Tıklanır | `revokeInvitationAction` → `revokeInvitation` | `invitations.revoked_at` | — | [TAMAMLANDI] |
-| Rol seçimi + "Rolü değiştir" | Select + onay penceresi | Onaylanır | `changeRoleAction` → `changeRole` | `membership_roles` (eski rol silinir, yeni rol eklenir), `tenant_memberships.roles_version` +1 | **Kendi rolünü yükseltemezsin.** Sahibin rolü yalnız Yönetici olabilir. Başka bir yöneticiyi değiştirmek ya da birine yöneticilik vermek **yalnız hesap sahibinin** işidir. Son yönetici düşürülemez. Hepsi yeniden doğrulama ister. | [TAMAMLANDI] |
-| "Depoları değiştir" (Tümü / depo listesi) | Çoklu seçim + onay | Kaydedilir | `setWarehouseScopeAction` → `setMembershipWarehouseScopes` | `membership_warehouse_scopes` (satırlar eklenir/silinir) | "Tümü" ya da en az 1 depo. Kişinin açık oturumu yeni kısıtla devam eder. | [TAMAMLANDI] |
+| Rol seçimi (ortak aramalı seçim sayfası `KalipSecimSayfasi`) + "Rolü uygula" | Seçim sayfası + onay penceresi | Onaylanır | `changeRoleAction` → `changeRole` | `membership_roles` (eski rol silinir, yeni rol eklenir), `tenant_memberships.roles_version` +1 | **Kendi rolünü yükseltemezsin.** Sahibin rolü yalnız Yönetici olabilir. Başka bir yöneticiyi değiştirmek ya da birine yöneticilik vermek **yalnız hesap sahibinin** işidir. Son yönetici düşürülemez. Hepsi yeniden doğrulama ister. | [TAMAMLANDI] |
+| "Depoları değiştir" (Tümü / depo listesi) | Çoklu seçim + onay | Kaydedilir | `setWarehouseScopeAction` → `setMembershipWarehouseScopes` | `membership_warehouse_scopes` (satırlar eklenir/silinir) | "Tümü" ya da en az 1 depo. Kişinin açık oturumu yeni kısıtla devam eder. Yalnız `WAREHOUSE_SCOPE_ENABLED` bayrağı açıksa görünür (STATE: canlı imajda açık). Arşivli depolar da listelenir. | [TAMAMLANDI] |
 | "Çıkar" | Buton + onay | Onaylanır | `removeMemberAction` → `removeMember` | `tenant_memberships.status='REMOVED'`, `removed_at` | Kendini çıkaramazsın. Son sahip ve son yönetici çıkarılamaz. Geçmiş kayıtlar silinmez. | [TAMAMLANDI] |
 | "Sahipliği devret" | Buton + onay | Onaylanır | `transferOwnershipAction` → `transferOwnership` | `tenant_memberships.is_owner` (eski false, yeni true), `membership_roles` | Hedef aktif üye olmalı. Yeniden doğrulama gerekir. | [TAMAMLANDI] |
 | "Parola sıfırlama bağlantısı oluştur" | Buton + onay | Onaylanır | `issuePasswordResetLinkAction` → `issuePasswordResetLink` | `verifications` (belirteç), `admin_reset_grants` (kim, hangi alan için, ne zaman) | Bağlantı 30 dk geçerli ve tek kullanımlıktır. **Yalnız bir kez gösterilir**; yönetici kişiye kendisi iletir. Kendi hesabına üretilemez. | [TAMAMLANDI] |
@@ -232,19 +244,20 @@ sequenceDiagram
 
 ## Modül: wms. / Saha hesapları (`/t/<alan>/members/field`)
 - **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın amacı:** E-postasız saha personeli açmak. Ad, kullanıcı adı, rol (Toplayıcı / Sayımcı) ve isteğe bağlı tek depo seçilir. Ekranda bir kez **etkinleştirme kodu** gösterilir.
+- **Modül görünümü:** Form kalıbı (`KalipForm`, T-997/T-971): solda kişi, görev ve depo grupları; sağda etkinleştirme kartı ve saha personeli listesi. Ana işlem alt çubukta "PERSONELİ EKLE".
+- **Ekranın amacı:** E-postasız saha personeli açmak. Ad, kullanıcı adı, rol (Toplayıcı / Sayımcı) ve depo ("Tüm depolar" ya da tek depo; önceden seçili gelmez) seçilir. Ekranda bir kez **etkinleştirme kodu**, saha giriş adresinin QR'ı ve YAZDIR düğmesi gösterilir (kod adrese ya da QR'a girmez, kaydedilmez, e-postayla gitmez).
 - **Dosyalar:** `apps/web/app/t/[slug]/members/field/view.tsx`, `packages/domain/src/identity/field-users.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Ad, Kullanıcı adı, Rol, Depo + "Oluştur" | Form | Gönderilir | `createFieldUserAction` → `createFieldUser` (+ `createFieldAccount`) | `users` (e-posta yerine `@field.invalid` iç adres), `tenant_memberships`, `membership_roles` (`PICKER`/`COUNTER`), `field_logins` (`username`, `activation_hash`, `activation_expires_at` +24 saat), `membership_warehouse_scopes` (depo seçildiyse) | Ad 2–100, kullanıcı adı 3–40 karakter. Alan içinde kullanıcı adı tekil (`CODE_TAKEN`). Paket saha kullanıcısı sınırı (`PLAN_LIMIT`). Saha hesabı yalnız Toplayıcı/Sayımcı olabilir. | [TAMAMLANDI] |
-| Liste → "Yeni kod" | Buton | Tıklanır | `resetFieldCodeAction` | Bkz. Kullanıcılar | — | [TAMAMLANDI] |
+| Liste → "YENİ KOD" | Buton | Tıklanır | `resetFieldCodeAction` | Bkz. Üyeler | — | [TAMAMLANDI] |
 
 ---
 
 ## Modül: wms. / Cihazlar (`/t/<alan>/members/devices`)
 - **Modül Durumu:** [TAMAMLANDI]
-- **Ekranın amacı:** Ortak el terminali/tablet kaydetmek, kayıtlı cihazları görmek ve kaybolan cihazı iptal etmek. Otomatik askıya alınan cihazlar (toplu kilitleme koruması) burada görünür.
+- **Ekranın amacı:** Ortak el terminali/tablet kaydetmek, kayıtlı cihazları görmek ve kaybolan cihazı iptal etmek. Otomatik askıya alınan cihazlar (toplu kilitleme koruması) burada görünür. Görünüm liste kalıbı (`KalipListe`, T-998/T-971).
 - **Dosyalar:** `apps/web/app/t/[slug]/members/devices/view.tsx`, `packages/domain/src/identity/devices.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
@@ -259,14 +272,17 @@ sequenceDiagram
 ---
 
 ## Modül: wms. / Ekibe katılma QR'ı (`/t/<alan>/members/join`)
-- **Modül Durumu:** [TAMAMLANDI] (Ekip ekranındaki QR/onay işlevinin eski görünümlü eşi)
-- **Dosyalar:** `apps/web/app/t/[slug]/members/join/view.tsx`, `packages/domain/src/identity/team-join.ts`.
+- **Modül Durumu:** [TAMAMLANDI] (Ekip ekranındaki QR/onay işlevinin liste kalıbındaki eşi, T-429/T-971; Pano'daki "katıl" kısayolu yöneticiyi buraya getirir)
+- **Ekranın amacı:** Bekleyen katılma talepleri (REDDET / ONAYLA; ONAYLA kişinin telefonundaki 6 haneli kodu ve rolü — Toplayıcı / Sayımcı — ister), PIN belirlemesini bekleyen onaylılar (İPTAL ET), katılma QR'ı kartı (7 gün; KAPAT / YAZDIR + paylaşma satırı). Bekleyen talepler 5 sn'de bir yenilenir.
+- **Dosyalar:** `apps/web/app/t/[slug]/members/join/view.tsx`, `apps/web/app/t/[slug]/members/join-share.tsx`, `packages/domain/src/identity/team-join.ts`.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| "QR oluştur" | Buton | Tıklanır | `createJoinLinkAction` | `team_join_links` | Eski QR geçersiz olur; yeni QR 7 gün geçerli | [TAMAMLANDI] |
+| Alt çubuk "QR OLUŞTUR / YENİLE" | Buton | Tıklanır | `createJoinLinkAction` | `team_join_links` | Eski QR geçersiz olur; yeni QR 7 gün geçerli. Demo alanında kapalı (hata sesi + neden balonu). | [TAMAMLANDI] |
 | "QR'ı kapat" | Buton | Tıklanır | `revokeJoinLinkAction` → `revokeJoinLink` | `team_join_links.revoked_at` | — | [TAMAMLANDI] |
 | Bekleyen talep → Onayla / Reddet | Buton | Tıklanır | `approveJoinAction` / `rejectJoinAction` | Bkz. Ekip ekranı | Onay kodu DB'de doğrulanır (`field_join_verify`). Geçersiz durum geçişlerini veritabanı tetikleyicisi reddeder. | [TAMAMLANDI] |
+| PIN bekleyen onaylı → "İPTAL ET" | Buton | Tıklanır | `rejectJoinAction` → `rejectJoinRequest` | `team_join_requests.status='CANCELLED'` (APPROVED talep) | Kişi henüz PIN belirlemediyse onay geri çekilir | [TAMAMLANDI] |
+| Paylaşma satırı (WhatsApp, Kopyala, PNG, Yazdır) | Buton | Tıklanır | — (istemcide, `JoinShareRow`) | — | Ekip ekranındaki paylaşmayla aynı bileşen ve kurallar | [TAMAMLANDI] (T-986b) |
 
 ```mermaid
 stateDiagram-v2
@@ -274,6 +290,7 @@ stateDiagram-v2
   PENDING --> APPROVED: Yönetici 6 haneli kod + Onayla
   PENDING --> REJECTED: Yönetici Reddet
   PENDING --> CANCELLED: Kod yenilendi / 3 yanlış kod / süre (24 saat)
+  APPROVED --> CANCELLED: Yönetici İPTAL ET (PIN belirlenmeden)
   APPROVED --> CLAIMED: Personel PIN belirler (cihaz kişisel kaydedilir)
   REJECTED --> [*]
   CANCELLED --> [*]
@@ -285,17 +302,35 @@ stateDiagram-v2
 ## Modül: wms. / Yetki grupları (`/t/<alan>/groups`)
 - **Modül Durumu:** [TAMAMLANDI] (`Gruplar.dc.html`, T-421; migration 0051 canlıda)
 - **Ekranın amacı:** Hesap sahibi rolün üstüne **ek yetki** ve **görünen ekranlar** listesi tanımlar. Örnek: "Kabul ekibi" grubu yalnız Giriş görevi ekranını görsün ve stok işleyebilsin. Üç adımda yapılır: (1) ad, renk, ekranlar, yetkiler → (2) kişileri seç → (3) bitti.
-- **Dosyalar:** `apps/web/app/t/[slug]/groups/groups-view.tsx`, `apps/web/app/t/[slug]/groups/actions.ts`, `packages/domain/src/identity/groups.ts`, menü süzgeci `apps/web/app/t/[slug]/kabuk/modules.ts`.
+- **Dosyalar:** `apps/web/app/t/[slug]/groups/page.tsx`, `apps/web/app/t/[slug]/groups/groups-view.tsx`, `apps/web/app/t/[slug]/groups/actions.ts`, `packages/domain/src/identity/groups.ts` (`GROUP_SCREENS`, `GROUP_COLORS`), menü süzgeci `apps/web/app/t/[slug]/kabuk/modules.ts`. Ayarlar › Kullanıcılar ve yetki › "Yetki grupları" ve Ekip ekranındaki "GRUP ›" sekmesi buraya açılır.
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Grup listesi + hazır (rol) grupları | Liste | Görüntülenir | `listGroups` | Okur: `permission_groups`, `member_groups` | Hazır gruplar rolden gelir, değiştirilemez | [TAMAMLANDI] |
+| Grup listesi + hazır (rol) grupları | Liste | Görüntülenir | `listGroups` (`users.manage`) | Okur: `permission_groups`, `member_groups` | Hazır gruplar rolden gelir, değiştirilemez. Düzenleme yalnız hesap sahibine ve demo olmayan alanda açılır (`canEdit`). | [TAMAMLANDI] |
 | "YENİ GRUP" / gruba dokun → Ad, Renk | Input + renk seçimi | Doldurulur | — | — | Ad 1–60 karakter, alan içinde tekil. Renk yalnız 5 tasarım renginden biri. | [TAMAMLANDI] |
 | Ekranlar (Giriş görevi, Çıkış görevi, Transfer, Üretim, Sayım, Etiket, Raporlar, Sorun) | Çoklu seçim | Seçilir | — | `permission_groups.screens` | Kapalı liste: 8 ekran (DB CHECK) | [TAMAMLANDI] |
 | Ek yetkiler (stok işle, belge oluştur, onayla, sayım farkı onayla, ters kayıt, Excel aktarımı) | Çoklu seçim | Seçilir | — | `permission_groups.grants` | Kapalı liste: 6 yetki. **Ekip yönetimi ve ayarlar gruba verilemez.** | [TAMAMLANDI] |
-| "DEVAM: KİŞİLER" → "KAYDET (n)" | Buton | Tıklanır | `saveGroupAction` → `saveGroup`; ardından kişi başına `setMemberGroupAction` | `permission_groups` (yeni ya da güncelleme: `name`, `color`, `screens`, `grants`, `version` +1, `updated_at`); `member_groups`; etkilenen üyelerin `tenant_memberships.roles_version` +1 | **Yalnız hesap sahibi.** Saha hesabına MFA gerektiren yetki (onay/ters kayıt/aktarım) verilemez; atlanan kişiler ekranda listelenir. Grup başkası tarafından değiştirildiyse "Grup bu arada değişti" (sürüm çakışması). | [TAMAMLANDI] |
+| "DEVAM: KİŞİLER" → "KAYDET (n)" | Buton | Tıklanır | `saveGroupAction` → `saveGroup`; ardından kişi başına `setMemberGroupAction` | `permission_groups` (yeni ya da güncelleme: `name`, `color`, `screens`, `grants`, `version` +1, `updated_at`); `member_groups`; etkilenen üyelerin `tenant_memberships.roles_version` +1 | **Yalnız hesap sahibi** ve son 10 dk içinde kimlik doğrulanmış olmalı. Sahip gruba konamaz; arşivli gruba kişi atanamaz. Saha hesabına MFA gerektiren yetki (onay/ters kayıt/aktarım) verilemez; atlanan kişiler ekranda listelenir. Grup başkası tarafından değiştirildiyse "Grup bu arada değişti" (sürüm çakışması). | [TAMAMLANDI] |
 | "Arşivle" / "Geri al" | Buton | Tıklanır | `archiveGroupAction` → `setGroupArchived` | `permission_groups.archived_at` | Silinmez, arşivlenir | [TAMAMLANDI] |
 | Ekran listesinin etkisi | Menü | — | `kabukModules` | — | Listede olmayan ekranın **menü kutusu çizilmez**. Not: bu bir görünüm süzgecidir. Asıl işlem yetkisini rol + ek yetki belirler (gap listesinde). | [TAMAMLANDI] |
+
+---
+
+## Modül: wms. / Ayarlar › Kullanıcılar ve yetki (`/t/<alan>/settings?sekme=kullanici`)
+- **Modül Durumu:** [TAMAMLANDI] (T-1046, ayar kalıbı `docs/design/STANDART.md` §5)
+- **Ekranın amacı:** Ayarlar ekranı sekmelidir: **Firma** · **Kullanıcılar ve yetki** · **Entegrasyonlar** (ayrı ekran `/settings/baglantilar`) · **Görünüm**. Bu sekme kişi ve yetki ekranlarına kapı açar ve kendi güvenlik durumunu gösterir. Kendisi veri yazmaz. Görev ayrılığı anahtarı **Firma** sekmesindedir (aşağıda matris notu).
+- **Dosyalar:** `apps/web/app/t/[slug]/settings/page.tsx`, `apps/web/app/t/[slug]/settings/settings-view.tsx`, `apps/web/app/t/[slug]/settings/sekmeler.ts` (`ayarSekmeleri`, `ayniTaslakSekmesi`), `apps/web/app/t/[slug]/settings/form-actions.ts` (görev ayrılığı kaydı).
+
+| UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Sekme şeridi (Firma / Kullanıcılar ve yetki / Entegrasyonlar / Görünüm) | Sekme | Tıklanır | Adres `?sekme=kullanici` (`router.replace`) | — | Firma, Kullanıcılar ve Görünüm aynı taslağın sekmeleridir: geçişte kaydedilmemiş değişiklik korunur ve "kaydetmeden çık" sorulmaz. Entegrasyonlar'a geçişte ortak çıkış koruması sorar. | [TAMAMLANDI] |
+| Kişiler ve yetki › "Kişiler · Ekle, yetki ver" | Bağlantı satırı | Tıklanır | `/t/<alan>/members` | — | Yetki kararı hedef ekranda verilir | [TAMAMLANDI] |
+| Kişiler ve yetki › "Yetki grupları · Kim ne yapabilir" | Bağlantı satırı | Tıklanır | `/t/<alan>/groups` | — | Hedef ekran `users.manage` ister | [TAMAMLANDI] |
+| Güvenlik › "İki adımlı doğrulama" AÇIK / KAPALI | Bilgi rozeti | — | Sayfa yüklenirken `principal.mfaVerified` | Okur: `sessions.mfa_verified_at` | Yalnız gösterir; buradan kurulum, kapatma ya da yedek kod yenileme yapılmaz | [TAMAMLANDI] |
+| Güvenlik › Parola "DEĞİŞTİR" → "Bağlantı gönder" | Satır + bağlantı | Tıklanır | `/reset-password` sayfasına gider → `POST /api/auth/request-password-reset` | Bkz. Modül 1 ("Parolamı unuttum") | Yeni parola e-postadaki bağlantıyla belirlenir; ekranda doğrudan parola değiştirme yok | [TAMAMLANDI] |
+| Firma › "Görev ayrılığı · Hazırlayan onaylamasın" + alt çubuk KAYDET | Anahtar + Buton | Kaydedilir | `saveSettingsFormAction` → `setSeparationOfDuties` | `tenant_settings.separation_of_duties` | `settings.manage` + son 10 dk kimlik doğrulama; doğrulanmamışsa diğer alanlar kaydedilir, ekranda yeniden giriş bağlantısı çıkar (`sod=reauth`). | [TAMAMLANDI] |
+
+Ayarlar ekranının verisi `settings.manage` ile okunur; izni olmayan kişide ayarlar kilitli gösterilir (`locked`).
 
 ---
 
@@ -322,9 +357,11 @@ stateDiagram-v2
 
 \* Gruptan onay, ters kayıt ya da aktarım yetkisi aldıysa evet.
 
-**Yalnız hesap sahibinin yapabildikleri:** başka bir yöneticiyi yönetmek ya da birine yöneticilik vermek, yönetici rolüyle davet göndermek, yetki gruplarını oluşturmak/değiştirmek/atamak, sahipliği devretmek.
+**Yalnız hesap sahibinin yapabildikleri:** başka bir yöneticiyi yönetmek ya da birine yöneticilik vermek, yönetici rolüyle davet göndermek, yetki gruplarını oluşturmak/değiştirmek/arşivlemek/atamak, sahipliği devretmek.
 
-**Görev ayrılığı (firma ayarı, varsayılan KAPALI):** Açıksa aynı kişi bir işin hem hazırlayanı hem onaylayanı olamaz: belgeyi oluşturan onaylayamaz, sayan kişi sayım farkını onaylayamaz, belgeyi oluşturan ya da işleyen kişi ters kayıt yapamaz. Ayar `tenant_settings.separation_of_duties` sütunundadır ve Ayarlar ekranından değiştirilir.
+**2FA kuralı kaynağı:** `MFA_REQUIRED_ROLES` = Yönetici, Depo yöneticisi; `MFA_GRANTS` = `document.approve`, `count_diff.approve`, `reversal.create`, `data.import` (`packages/domain/src/identity/access.ts`, `permissions.ts`). Demo alanında 2FA istenmez. Matris 23 Ekim'den bu yana değişmedi.
+
+**Görev ayrılığı (firma ayarı, varsayılan KAPALI):** Açıksa aynı kişi bir işin hem hazırlayanı hem onaylayanı olamaz: belgeyi oluşturan onaylayamaz, sayan kişi sayım farkını onaylayamaz, belgeyi oluşturan ya da işleyen kişi ters kayıt yapamaz. Ayar `tenant_settings.separation_of_duties` sütunundadır ve Ayarlar › Firma sekmesinden değiştirilir.
 
 **Depo kapsamı:** Bir üye belirli depolarla sınırlanabilir (`membership_warehouse_scopes`). Sınırlı üye diğer depoların stokunu ve işini görmez.
 
@@ -351,7 +388,10 @@ flowchart TD
 - `leaveTenantAction` (alandan ayrılma) sunucuda var, **hiçbir ekranda butonu yok**.
 - Grup "ekranlar" listesi yalnız menüyü gizler. Doğrudan adresle girilen ekranda işlem yetkisini rol ve ek yetkiler belirler. Ekran kısıtının sunucuda da uygulanıp uygulanmayacağı ürün kararıdır.
 - `takeout.request` izni matriste var, ama kullanan bir ekran yok. Tam veri teslimi (B-67) için ayrılmış.
-- Kullanıcılar (`members`) ile Ekip (`team`) ekranları kısmen aynı işi yapıyor. Eski görünümün yeni kalıba geçişi B-63 kapsamında.
+- Üyeler (`members`) ile Ekip (`team`), Katılma (`members/join`) ile Ekip'in ONAY BEKLİYOR/QR bölümü kısmen aynı işi yapıyor. Üç ekran da yeni kalıpta; birleştirme kararı verilmedi.
+- Ekip ekranında Üyeler'e giden bağlantı "Kullanıcılar ekranı" diyor, ekranın başlığı "Üyeler", Ayarlar'daki satır "Kişiler": aynı ekran üç adla anılıyor.
+- Kendi hesabı için ekranda: 2FA'yı kapatma/yeni telefona taşıma, yedek kodları yenileme, "tüm cihazlardan çık" ve oturum içinden parola değiştirme yok (parola yalnız e-posta bağlantısıyla). Ayarlar'daki 2FA satırı yalnız durum gösterir.
 - Google/Microsoft ile giriş canlıda açık mı: UNKNOWN.
+- 2FA sihirbazında `otpauth://` tek dokunuşla ekleme gerçek telefonda doğrulanmadı (UNKNOWN; STATE T-1034).
 - 🔒 B-17, B-20: kimlik ve üyelik yazmalarında veritabanı düzeyinde ikinci savunma (P1, açık).
 - 🔒 B-12: saha girişi migration'larının geri alınmasına veri bekçisi (P1, açık).

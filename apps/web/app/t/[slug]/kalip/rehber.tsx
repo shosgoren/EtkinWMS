@@ -8,7 +8,7 @@ import { JICON } from '../../../design/yolculuk-icons.ts';
 import { useKabuk } from '../kabuk/kabuk-bar.tsx';
 import { JOURNEY_OPEN_EVENT } from '../yolculuk/steps.ts';
 import { GUIDE_INSTRUCTIONS, currentGuide, guideHref, type OpGuide } from './rehber-plan.ts';
-import { KalipPerdeKatman, type PerdeDelik } from './perde.tsx';
+import { KalipPerdeKatman, hedefKutusu, type PerdeDelik } from './perde.tsx';
 import { cikisSor } from './cikis.tsx';
 import { useModalFocus } from './odak.ts';
 import { sesiDurdur, useSesliOku } from './sesli-oku.ts';
@@ -65,8 +65,8 @@ export function KalipRehberKart({ title, text, progress, target, nextTarget = nu
                 }
             }
             if (e === null) { setDelik(o => o === null ? o : null); return; }
-            const r = e.getBoundingClientRect();
-            const d = { x: Math.round(r.x - 6), y: Math.round(r.y - 6), w: Math.round(r.width + 12), h: Math.round(r.height + 12) };
+            const r = hedefKutusu(e);
+            const d = { x: Math.round(r.left - 6), y: Math.round(r.top - 6), w: Math.round(r.width + 12), h: Math.round(r.height + 12) };
             setDelik(o => o !== null && o.x === d.x && o.y === d.y && o.w === d.w && o.h === d.h ? o : d);
         };
         olc();

@@ -22,7 +22,7 @@ test("T-1095 Ürünleri Excel ile aktar: odaklanır, işi yapınca ilerler, serb
   await expect(rehber).not.toContainText("İleri");
   // Perde bütün ekranı örter ama hedefin çevresi açıktır (delik).
   await expect(perde).toBeVisible();
-  await expect(perde).toHaveAttribute("style", /polygon\(evenodd/);
+  await expect(perde).toHaveAttribute("style", /path\(evenodd/);
 
   // Kullanıcı işi yapar → rehber kendiliğinden ilerler.
   await page.getByTestId("baglantilar-alan").locator('[data-option="items"]').click();
@@ -46,7 +46,7 @@ test("T-1095 Ürünleri Excel ile aktar: odaklanır, işi yapınca ilerler, serb
   // Tek sayfalı dosya (sayfa seçici yok) yüklenince de kontrol adımına geçer.
   await page.getByTestId("aktar-file").setInputFiles(csv(["Stok Kodu;Stok İsmi;Birimi", "T1095-1;Rehber Conta;ADET"]));
   await expect(rehber).toHaveAttribute("data-step", "kontrol");
-  await expect(perde).toHaveAttribute("style", /polygon\(evenodd/);
+  await expect(perde).toHaveAttribute("style", /path\(evenodd/);
 
   // Sayfa yenilenince aktarma başa döner (türü korunur): rehber de dosya adımına döner, hedef yine açık.
   page.on("dialog", (dg) => void dg.accept());
