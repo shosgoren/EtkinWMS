@@ -54,17 +54,20 @@ test("T-1120 şimşek halkasında Rehber her ekranda: ekranın rehberi varsa ba�
 });
 
 
-test("T-1123 telefonda şimşeğe dokununca halka açık kalır; yeniden dokununca kapanır", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "dokunmatik yalnız telefon projesinde");
-  await page.goto("/");
-  await enterDemoShared(page, "Yönetici");
-  await page.goto("/t/demo/items");
-  const halka = page.getByRole("menu", { name: "Kısayollar" });
-  await page.getByTestId("pano-fab").tap();
-  await expect(halka).toBeVisible();
-  // Dokunuşun ardından gelen tıklama perdeye düşüp halkayı kapatmamalı.
-  await page.waitForTimeout(600);
-  await expect(halka).toBeVisible();
-  await page.getByTestId("pano-fab").tap();
-  await expect(halka).toBeHidden();
+test.describe("T-1123 dokunmatik", () => {
+  // Masaüstü projesinde de dokunmatik ekran (dokunuşun ardından gelen tıklama yeniden hedeflenir).
+  test.use({ hasTouch: true });
+  test("T-1123 şimşeğe dokununca halka açık kalır; yeniden dokununca kapanır", async ({ page }) => {
+    await page.goto("/");
+    await enterDemoShared(page, "Yönetici");
+    await page.goto("/t/demo/items");
+    const halka = page.getByRole("menu", { name: "Kısayollar" });
+    await page.getByTestId("pano-fab").tap();
+    await expect(halka).toBeVisible();
+    // Dokunuşun ardından gelen tıklama perdeye düşüp halkayı kapatmamalı.
+    await page.waitForTimeout(600);
+    await expect(halka).toBeVisible();
+    await page.getByTestId("pano-fab").tap();
+    await expect(halka).toBeHidden();
+  });
 });
