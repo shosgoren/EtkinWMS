@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import { addBarcode, archiveItem, createItem, createItemWithDefaultUnit, createUnit, createWithSuggestedCode, removeBarcode, searchItems, setUnitConversion, suggestCode, updateItem } from "@wms/domain/catalog";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
+import { listItemLots, listItemSerials } from "@wms/domain/stock";
 import { loadItemsPage } from "./list-page.ts";
 import { extraFilterShape, domainExtraFilters } from "./filters.ts";
 
@@ -46,6 +47,7 @@ const searchItemsSchema = z.object({ slug: slugSchema, q: z.string().max(128), l
 const loadMoreItemsSchema = z
   .object({ slug: slugSchema, q: z.string().max(128), status: z.enum(["", "ACTIVE", "ARCHIVED", "REMOVED"]), cardType: z.union([z.literal(""), cardTypeSchema]), after: z.string().min(1).max(512), ...extraFilterShape })
   .strict();
+const moreTrackingSchema = z.object({ slug: slugSchema, itemId: idSchema, part: z.enum(["lots", "serials"]), after: z.string().min(1).max(1024) }).strict();
 const updateItemSchema = z
   .object({ slug: slugSchema, itemId: idSchema, code: textSchema.optional(), name: textSchema.optional(), pickPolicy: pickSchema.optional(), cardType: cardTypeSchema.optional() })
   .strict();
@@ -112,6 +114,21 @@ export async function loadMoreItemsAction(raw: unknown) {
     if (principal === null) throw new Error("unreachable: principal required");
     const page = await loadItemsPage({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, status: input.status, cardType: input.cardType, after: input.after, category: input.category, tracking: input.tracking, barcode: input.barcode });
     return { rows: page.rows, stock: page.stock, nextCursor: page.nextCursor };
+  })(raw);
+}
+
+/** T-1116: ürün kartı › Takip — lotların ya da serilerin sonraki sayfası (keyset). Okuma: `stock.view` + depo kapsamı (domain). */
+export async function loadMoreItemTrackingAction(raw: unknown) {
+  return guardedAction({ schema: moreTrackingSchema }, async (input, ctx) => {
+    const principal = ctx.principal;
+    if (principal === null) throw new Error("unreachable: principal required");
+    const params = { db: getAppDb(), principal, tenantSlug: input.slug };
+    if (input.part === "lots") {
+      const page = await listItemLots(params, input.itemId, { after: input.after });
+      return { lots: page.rows, serials: [], next: page.next };
+    }
+    const page = await listItemSerials(params, input.itemId, { after: input.after });
+    return { lots: [], serials: page.rows, next: page.next };
   })(raw);
 }
 

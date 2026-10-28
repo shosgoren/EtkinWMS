@@ -256,3 +256,52 @@ export function KalipSonHareketler({ baslik, tumu, bos, hareketler, kisiEtiket }
     </>
   );
 }
+
+/** T-1116: kart gövdesinde bildirim bandı (eski `Banner` yerine): simge + tek satır; `role="status"` ile duyurulur. */
+export function KalipKartNot({ metin, d, renk = "stok", testId }: { metin: string; d: string; renk?: StTon; testId?: string }) {
+  return (
+    <p className={`stknot ${ton(renk)}`} role="status" data-testid={testId}>
+      <i aria-hidden="true">
+        <Ico d={d} size={18} />
+      </i>
+      <span>{metin}</span>
+    </p>
+  );
+}
+
+export interface KalipKartSatiri {
+  readonly key: string;
+  readonly baslik: ReactNode;
+  readonly meta?: ReactNode;
+  readonly d: string;
+  readonly ton: StTon;
+  /** Sağda miktar hapı ya da kısa değer. */
+  readonly deger?: ReactNode;
+  /** Satır altı ek içerik (ör. uyarı, işlem düğmesi). */
+  readonly altta?: ReactNode;
+  readonly testId?: string;
+}
+
+/** T-1116: kart gövdesinde simgeli satır listesi (birim çevrimleri, barkodlar, lotlar, seriler, değişiklik geçmişi). Boşsa tek cümle. */
+export function KalipKartSatirlar({ etiket, satirlar, bos }: { etiket: string; satirlar: readonly KalipKartSatiri[]; bos: string }) {
+  if (satirlar.length === 0) return <small className="stkbos">{bos}</small>;
+  return (
+    <ul className="stksatir" aria-label={etiket}>
+      {satirlar.map((s) => (
+        <li key={s.key} data-testid={s.testId}>
+          <span className="stksatir-ust">
+            <i className={ton(s.ton)} aria-hidden="true">
+              <Ico d={s.d} size={18} />
+            </i>
+            <span className="stkevx">
+              <b>{s.baslik}</b>
+              {s.meta === undefined ? null : <small>{s.meta}</small>}
+            </span>
+            {s.deger === undefined ? null : <span className="stksatir-deger">{s.deger}</span>}
+          </span>
+          {s.altta === undefined ? null : <span className="stksatir-alt">{s.altta}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
