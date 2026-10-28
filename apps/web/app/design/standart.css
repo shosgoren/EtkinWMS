@@ -1252,6 +1252,10 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
    Şimşek alt çubuğun (z 25) üstünde; açılınca perde bütün ekranı (alt çubuk dahil) örter, halka ve seçici perdenin üstünde. */
 .dzp.kisayol-kok { display: contents; }
 .dzp.kisayol-kok .fab { position: fixed; z-index: 30; }
+/* T-1123: halka açıkken şimşek perdenin (.hback 38) üstünde. Dokunmatikte aynı dokunuşun ardından gelen "click" bulunduğu noktada yeniden
+   hedeflenir; şimşek perdenin altında kalınca tıklama perdeye düşüp halkayı hemen kapatıyordu. Üstteyken düğmeye düşer (işlevi yok);
+   şimşeğe yeniden dokunmak halkayı kapatır. */
+.dzp.kisayol-kok .fab:has(.fabb.on) { z-index: 39; }
 .dzp.kisayol-kok .hback { position: fixed; inset: 0; z-index: 38; }
 .dzp.kisayol-kok .halo { position: fixed; z-index: 39; }
 .dzp.kisayol-kok .page { position: fixed; inset: 0; z-index: 41; }
