@@ -8,10 +8,10 @@ import { useTranslations } from "next-intl";
 import { KICON } from "../../../../design/kabuk-icons.ts";
 import { dz } from "../../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
-import { ErrorNotice, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
+import { intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { postShipmentAction } from "../../shipping/actions.ts";
 import { PrimaryLink } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, SahaVerdict } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaHata, SahaMesaj, SahaShell, SahaVerdict } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
 import { feedback } from "@wms/ui";
 
@@ -91,7 +91,7 @@ export function ShipFlow({ slug, orderId, orderNumber, customerRef, rows, openPi
           </span>
         </div>
         <SahaVerdict ok title={t("ship.loadQuestion", { n: qty, unit: row.unitCode, customer: customerRef ?? orderNumber })} sound={t("ship.loadHint")} />
-        {error === null ? null : <ErrorNotice error={error} context="approve" />}
+        {error === null ? null : <SahaHata error={error} context="approve" />}
       </SahaShell>
     );
   }
@@ -149,18 +149,16 @@ export function ShipFlow({ slug, orderId, orderNumber, customerRef, rows, openPi
         </div>
       ) : null}
       {rows.length === 0 ? (
-        <p className="break-words text-lg text-ink" data-testid="ship-empty">
-          {t("ship.empty")}
-        </p>
+        <SahaMesaj tone="empty" iconD={KICON.mSatis} text={t("ship.empty")} testId="ship-empty" />
       ) : (
-        <ul className="m-0 flex min-w-0 list-none flex-col gap-2 p-0" aria-label={t("ship.listLabel")}>
+        <ul className="slist" aria-label={t("ship.listLabel")}>
           {rows.map((r) => {
             const n = intOf(r.quantity);
             return (
-              <li key={`${r.lineId}:${r.warehouseId}`} className="flex min-w-0">
+              <li key={`${r.lineId}:${r.warehouseId}`}>
                 <button
                   type="button"
-                  className="job w-full"
+                  className="job"
                   data-testid="ship-row"
                   disabled={n === null || n < 1}
                   onClick={() => {

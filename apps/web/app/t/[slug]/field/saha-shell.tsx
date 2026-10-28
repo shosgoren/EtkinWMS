@@ -11,6 +11,8 @@ import { dz } from "../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../design/saha-icons.ts";
 import { KabukBar, type KabukMain, type KabukNav } from "../kabuk/kabuk-bar.tsx";
 import { KalipIslemRehberiAc } from "../kalip/rehber.tsx";
+import { LICON } from "../../../design/kalip-icons.ts";
+import { errorKeyOf, type ErrorContext, type ErrorInfo } from "../receipts/receipt-form.tsx";
 import { feedback } from "@wms/ui";
 
 const DarkCtx = createContext(false);
@@ -146,7 +148,11 @@ export interface SahaShellProps {
   readonly children: ReactNode;
 }
 
-/** Saha adım çerçevesi (eski FlowShell sözleşmesi + kaynak görünümü): `data-testid="flow-step"`, `data-step`. */
+/**
+ * Saha adım çerçevesi (eski FlowShell sözleşmesi + kaynak görünümü): `data-testid="flow-step"`, `data-step`.
+ * T-1122: Tailwind işaret sınıfları yerine `sproxy` (tarama adımında ScanField yalnız "Elle gir" ile) ve `.group:has(manual) .sfoot`
+ * (elle girişte bağlantı düğmesi gizli) — görünüm `design/standart.css`.
+ */
 export function SahaShell({ hue, iconD, step, total, phase, title, instruction, backHref, onBack, footer, footerExtra, scanProxy, main, navTestIds, overlay, children }: SahaShellProps) {
   const t = useTranslations("receiving");
   const stepLabel = step === undefined || total === undefined ? null : t("stepOf", { n: step, total });
@@ -156,7 +162,7 @@ export function SahaShell({ hue, iconD, step, total, phase, title, instruction, 
   return (
     <SahaFrame hue={hue} iconD={iconD} title={title} {...(instruction === undefined ? {} : { sub: instruction })} {...(back === undefined ? {} : { back })} {...(main === undefined ? {} : { main })} {...(homeNav === undefined ? {} : { homeNav })} overlay={overlay}>
       <main
-        className={`inner sflow group ${footer === undefined ? "" : "hasfoot"} ${scanProxy === true ? "[&_[data-mode=scan]]:hidden" : ""}`}
+        className={`inner sflow group${footer === undefined ? "" : " hasfoot"}${scanProxy === true ? " sproxy" : ""}`}
         data-testid="flow-step"
         data-step={step ?? 0}
       >
@@ -169,7 +175,7 @@ export function SahaShell({ hue, iconD, step, total, phase, title, instruction, 
         {children}
         {footer === undefined ? footerExtra : null}
         {footer === undefined ? null : (
-          <div role="group" aria-label={t("primaryBar")} className="sfoot group-has-[[data-mode=manual]]:hidden">
+          <div role="group" aria-label={t("primaryBar")} className="sfoot">
             <div className="sfootin">
               {footerExtra}
               {footer}
@@ -256,6 +262,65 @@ export function SahaVerdict({ ok, title, sound }: { ok: boolean; title: string; 
           <Ico d={ok ? SICON.check : SICON.warn} size={12} />
           {sound}
         </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * T-1122: saha mesaj kartı (kaynak `.job` kartı): kilit gerekçesi (`lock`: turuncu kilit), bilgi (`info`: mavi i) ya da boş durum (`empty`:
+ * ekran ikonu). Eski düz paragraf / Tailwind kutuların yerine; metin satır kaydırır (kart kısalmaz). Başlık ekranın `h1`'indedir.
+ */
+export function SahaMesaj({ tone = "info", title, text, iconD, testId, role }: { tone?: "lock" | "info" | "empty"; title?: string; text: string; iconD?: string | readonly string[]; testId?: string; role?: "alert" | "status" }) {
+  const color = tone === "lock" ? "E56A00" : tone === "empty" ? "30475A" : "2F5DA8";
+  const d = iconD ?? (tone === "lock" ? LICON.lock : SICON.info);
+  return (
+    <div className="job smsg" data-tone={tone} {...(role === undefined ? {} : { role })} {...(testId === undefined ? {} : { "data-testid": testId })}>
+      <span className="uic" style={{ background: dz(color) }}>
+        <Ico d={d} size={22} />
+      </span>
+      <span style={{ minWidth: 0 }}>
+        {title === undefined ? null : <b>{title}</b>}
+        {title === undefined ? <b className="smsgt">{text}</b> : <small>{text}</small>}
+      </span>
+    </div>
+  );
+}
+
+/** T-1122: Ayrıntı açılır satırı (kaynak şevronu `LICON.chev`, aşağı döner); hata kodu ve istek kimliği yalnız burada (ham hata metni yok). */
+export function SahaAyrinti({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <details className="sdet">
+      <summary>
+        {label}
+        <Ico d={LICON.chev} size={18} className="ico sdetc" />
+      </summary>
+      {children}
+    </details>
+  );
+}
+
+/**
+ * T-1122: sunucu hatası kartı (kaynak (b) `.vres.bad`: kırmızı dolu kart, uyarı ikonu, sarsılma). Eski `ErrorNotice` (Banner) sözleşmesi:
+ * `error-reason` (neden), sonraki eylem cümlesi, Ayrıntı içinde `error-code`. İleti seçimi ortak `errorKeyOf`'tadır (kural yeniden yazılmaz).
+ */
+export function SahaHata({ error, context, remaining }: { error: ErrorInfo; context: ErrorContext; remaining?: string }) {
+  const t = useTranslations("receiving");
+  const key = errorKeyOf(error, context);
+  return (
+    <div className="vres bad shata" role="alert" data-testid="saha-error">
+      <span className="vic">
+        <Ico d={SICON.warn} size={30} />
+      </span>
+      <span className="shatx">
+        <b data-testid="error-reason">{t(`errors.${key}`, { remaining: remaining ?? "-" })}</b>
+        <span className="shataa">{t(`errors.${key}Action`)}</span>
+        <SahaAyrinti label={t("detail")}>
+          <span className="mono" data-testid="error-code">
+            {t("errorCode", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}
+          </span>
+          {error.requestId === undefined ? null : <span className="mono">{error.requestId}</span>}
+        </SahaAyrinti>
       </span>
     </div>
   );
