@@ -142,7 +142,9 @@ describe("ekran hedefi (T-1110)", () => {
   it.each([
     ["kullanici ayarlarina", { id: "ayar", suffix: "?sekme=kullanici" }],
     ["tema ayarlari", { id: "ayar", suffix: "?sekme=gorunum" }],
-    ["parasut baglantisi", { id: "ayar", suffix: "/baglantilar" }],
+    ["parasut baglantisi", { id: "ayar", path: "/integrations" }],
+    ["entegrasyonlar", { id: "ayar", path: "/integrations" }],
+    ["excel", { id: "ayar", suffix: "/baglantilar" }],
     ["ayarlar", { id: "ayar" }],
     ["urunleri", { id: "urun" }],
     ["carilere", { id: "cari" }],
