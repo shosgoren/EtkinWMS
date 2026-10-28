@@ -2,14 +2,16 @@
 // T-977 (B-51 yönetici): sayım başlat formu ve oturum komutları (onayla / fişi işle / iptal). Anahtarlı gönderim (`useKeyHolder`): ağ hatasında aynı
 // anahtarla yeniden deneme önceki sonucu döndürür. Yetki, görev ayrılığı ve durum kuralları sunucu komutundadır; düğmeler yalnız görünürlüktür.
 // T-990 (B-97): depo seçimi yerel açılır liste değil, ortak `KalipSecim` (depo sayısı büyüyecek veri: aramalı seçim sayfası, okutma dahil).
+// T-1119 (B-123): raf kodları `KalipAlan` (çok satır), kör sayım `KalipAnahtar`, eksik raf `KalipBildirim`, düğmeler `KalipDugme`; ayrıntıdaki
+// komutlar `KalipFormKap` içinde. Seçimler React durumunda → `data-dirty` (çıkış koruması).
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { KalipGrup } from "../kalip/form.tsx";
+import { KalipAlan, KalipAnahtar, KalipGrup } from "../kalip/form.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
+import { KalipBildirim, KalipDugme, KalipFormKap } from "../kalip/belge.tsx";
 import { OperationError } from "../production/production-form.tsx";
-import { control } from "../stock/documents/document-form.tsx";
 import { submitWithKey, useKeyHolder, type ErrorInfo } from "../receipts/receipt-form.tsx";
 import { approveCountAction, cancelCountAction, postCountAction, startCountAction } from "./actions.ts";
 
@@ -25,6 +27,7 @@ export function NewCountForm({ slug, warehouses }: { slug: string; warehouses: r
   const [codes, setCodes] = useState("");
   const [blind, setBlind] = useState(true);
   const list = [...new Set(codes.split(/[\s,;]+/).map((c) => c.trim()).filter((c) => c !== ""))];
+  const dirty = warehouseId !== (warehouses[0]?.id ?? "") || !blind;
   function changed() {
     key.contentChanged();
     setError(null);
@@ -32,8 +35,9 @@ export function NewCountForm({ slug, warehouses }: { slug: string; warehouses: r
   }
   return (
     <form
-      className="workflow-form flex flex-col gap-4"
+      className="workflow-form kform-ic"
       data-testid="count-new-form"
+      data-dirty={dirty ? "true" : "false"}
       onSubmit={(e) => {
         e.preventDefault();
         if (flight.current || list.length === 0 || warehouseId === "") return;
@@ -58,55 +62,54 @@ export function NewCountForm({ slug, warehouses }: { slug: string; warehouses: r
         });
       }}
     >
-      <p className="text-ink-muted">{t("newHelp")}</p>
-      <fieldset disabled={pending} className="flex min-w-0 flex-col gap-4" onChange={changed}>
+      <small className="khint">{t("newHelp")}</small>
+      <fieldset disabled={pending} className="kform-alan" onChange={changed}>
         <KalipGrup title={`1. ${t("warehouse")}`} d={LICON.depo} color="30475A">
-          <div className="flex min-w-0 flex-col gap-3 p-3">
-            <KalipSecim
-              list
-              name="warehouseId"
-              label={t("warehouse")}
-              value={warehouseId}
-              color="30475A"
-              icon={{ d: LICON.depo, color: "30475A" }}
-              disabled={pending}
-              onPick={(id) => {
-                setWarehouseId(id);
-                changed();
-              }}
-              options={warehouses.map((w) => ({ id: w.id, label: w.name, sub: w.code, keys: [w.code], d: LICON.depo, color: "30475A" }))}
-              testId="count-warehouse"
-            />
-          </div>
+          <KalipSecim
+            list
+            name="warehouseId"
+            label={t("warehouse")}
+            value={warehouseId}
+            color="30475A"
+            icon={{ d: LICON.depo, color: "30475A" }}
+            disabled={pending}
+            onPick={(id) => {
+              setWarehouseId(id);
+              changed();
+            }}
+            options={warehouses.map((w) => ({ id: w.id, label: w.name, sub: w.code, keys: [w.code], d: LICON.depo, color: "30475A" }))}
+            testId="count-warehouse"
+          />
         </KalipGrup>
         <KalipGrup title={`2. ${t("racks")}`} sub={String(list.length)} d={LICON.raf} color="6C4BD8">
-          <div className="flex min-w-0 flex-col gap-3 p-3">
-            <label>
-              {t("racksLabel")}
-              <textarea className={`${control} block min-h-32 w-full`} value={codes} onChange={(e) => setCodes(e.target.value)} required maxLength={4000} data-testid="count-racks" />
-            </label>
-            <small>{t("racksHint")}</small>
-            <label className="flex min-h-12 items-center gap-3">
-              <input type="checkbox" className="size-6" checked={blind} onChange={(e) => setBlind(e.target.checked)} />
-              {t("blind")}
-            </label>
-          </div>
+          <KalipAlan multiline label={t("racksLabel")} hint={t("racksHint")} name="codes" value={codes} onChange={(e) => setCodes(e.target.value)} required maxLength={4000} data-testid="count-racks" />
+          <KalipAnahtar
+            title={t("blind")}
+            d={LICON.lock}
+            color="6C4BD8"
+            on={blind}
+            aria={t("blind")}
+            onToggle={() => {
+              setBlind((b) => !b);
+              changed();
+            }}
+            testId="count-blind"
+          />
         </KalipGrup>
       </fieldset>
       {missing.length > 0 ? (
-        <p role="alert" className="rounded-card bg-danger-bg px-4 py-3 font-semibold text-danger-ink" data-testid="count-missing-racks">
-          {t("missingRacks", { codes: missing.join(", ") })}
-        </p>
+        <KalipBildirim tur="hata" title={t("missingRacks", { codes: missing.join(", ") })} testId="count-missing-racks" />
       ) : null}
       {error ? <OperationError error={error} /> : null}
-      <button className={`workflow-primary ${control} bg-accent text-on-accent`} disabled={pending || list.length === 0 || warehouseId === ""}>
+      <KalipDugme tur="ana" type="submit" className="workflow-primary" d={LICON.check} busy={pending} disabled={pending || list.length === 0 || warehouseId === ""}>
         {t("start")}
-      </button>
+      </KalipDugme>
     </form>
   );
 }
 
 type Op = "approve" | "post" | "cancel";
+const COMMAND_ICON: Record<Op, string> = { approve: LICON.check, post: LICON.box, cancel: LICON.close };
 export function CountCommand({ slug, sessionId, operation }: { slug: string; sessionId: string; operation: Op }) {
   const t = useTranslations("counts");
   const router = useRouter();
@@ -144,13 +147,12 @@ export function CountCommand({ slug, sessionId, operation }: { slug: string; ses
     });
   };
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      {confirming ? <p>{t(`${operation}Help`)}</p> : null}
-      {confirming && operation === "cancel" ? (
-        <label>
-          {t("reason")}
-          <input
-            className={`${control} block w-full`}
+    <KalipFormKap>
+      <div className="kgovde">
+        {confirming ? <KalipBildirim tur={operation === "cancel" ? "uyari" : "bilgi"} title={t(`${operation}Help`)} /> : null}
+        {confirming && operation === "cancel" ? (
+          <KalipAlan
+            label={t("reason")}
             maxLength={500}
             value={reason}
             onChange={(e) => {
@@ -158,12 +160,12 @@ export function CountCommand({ slug, sessionId, operation }: { slug: string; ses
               setReason(e.target.value);
             }}
           />
-        </label>
-      ) : null}
-      {error ? <OperationError error={error} /> : null}
-      <button type="button" className={`${control} ${operation === "cancel" ? "" : "bg-accent text-on-accent"}`} disabled={pending} onClick={run} data-testid={`count-${operation}`}>
-        {t(confirming ? `${operation}Confirm` : operation)}
-      </button>
-    </div>
+        ) : null}
+        {error ? <OperationError error={error} /> : null}
+        <KalipDugme tur={operation === "cancel" ? "tehlike" : "ana"} d={COMMAND_ICON[operation]} busy={pending} disabled={pending} onClick={run} data-testid={`count-${operation}`}>
+          {t(confirming ? `${operation}Confirm` : operation)}
+        </KalipDugme>
+      </div>
+    </KalipFormKap>
   );
 }

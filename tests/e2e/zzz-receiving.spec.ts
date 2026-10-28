@@ -515,12 +515,17 @@ test("kabul → kalite onayı → yerleştirme (görevli ve serbest) + yanlış 
   await expect(page).toHaveURL(/\/receipts\?new=1$/);
   await expect(page.getByText("Kişisel veri girmeyin.")).toBeVisible();
   await page.getByLabel("Tedarikçi referansı").fill(`E2E-IRS-2-${run}`);
-  await page.getByLabel("Ürün", { exact: true }).fill(`E2E-${run}`);
-  await page.getByRole("button", { name: new RegExp(`Somun ${run}`) }).click();
+  // T-1119: ürün ortak aramalı seçim sayfasından (KalipSecimAra); kaydet alt çubuğun ana işlemi (formun kendi düğmesi gizli).
+  await page.getByTestId("receipt-item").click();
+  const sheet = page.getByTestId("kalip-secim");
+  await sheet.getByTestId("kalip-secim-search").fill(`E2E-${run}`);
+  await sheet.getByRole("listbox").getByRole("option").filter({ hasText: `Somun ${run}` }).click();
+  await expect(sheet).toHaveCount(0);
   await page.getByLabel("Beklenen miktar").fill("5");
   await page.getByRole("button", { name: "Satırı ekle" }).click();
   await expect(page.getByTestId("draft-lines")).toContainText(`Somun ${run} · 5`);
-  await page.getByRole("button", { name: "Teslimi kaydet" }).click();
+  await expect(page.locator(".workflow-primary")).toHaveText("Teslimi kaydet");
+  await page.getByTestId("kalip-form-save").click();
   await expect(page.getByText(/KBL-\d{4}-\d{6} kaydedildi\./)).toBeVisible();
   await expect(page.getByTestId("receipt-row").filter({ hasText: `E2E-IRS-2-${run}` })).toHaveCount(1);
   expect(await db("SELECT 1 FROM public.inbound_receipts WHERE tenant_id = $1 AND supplier_ref = $2 AND status = 'OPEN'", [fx.tenantId, `E2E-IRS-2-${run}`])).toHaveLength(1);
