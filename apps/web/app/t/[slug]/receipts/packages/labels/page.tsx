@@ -5,13 +5,13 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getPackageReceipt, getPackageProductionBatch } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
-import { Banner } from "@wms/ui";
 import { getAuthService } from "../../../../../../lib/auth-service.ts";
 import { packageReceivingEnabled } from "../../../../../../lib/package-receiving-config.ts";
 import { postedLabelPackages } from "./package-labels.ts";
 import { PackageLabelPreview } from "./package-label-preview.tsx";
 import { PackageLabelEkran } from "./package-label-ekran.tsx";
 import { temaKoyu } from "../../../../../design/theme.ts";
+import { KalipUyari } from "../../../kalip/uyari.tsx";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Paket etiketleri" };
@@ -55,7 +55,8 @@ export default async function PackageLabelsPage({ params, searchParams }: {
       if (e.code === "NOT_FOUND" || e.code === "VALIDATION_FAILED") notFound();
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
       if (e.code === "FORBIDDEN" && e.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(returnTo)}`);
-      if (e.code === "FORBIDDEN") return shell(<Banner kind="warning">{(await getTranslations("packageReceiving.labelPreview"))("stockViewRequired")}</Banner>);
+      // T-1121: yetki yok durumu kalıp uyarı bandında (eski Banner yerine); belge verisi çizilmez.
+      if (e.code === "FORBIDDEN") return shell(<KalipUyari tone="uyari"><p>{(await getTranslations("packageReceiving.labelPreview"))("stockViewRequired")}</p></KalipUyari>);
     }
     throw e;
   }

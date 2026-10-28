@@ -315,10 +315,13 @@ export function KalipKurulum({ title, sub, steps, testId }: { title: string; sub
   );
 }
 
-/** Yetkisiz (okuma izni yok) tam ekran: liste kalıbının boş durum kutusu kilit ikonuyla; Geri / Ana ekran ortak çubukta. */
-export function KalipKilitliEkran({ title, icon, text, hint, dark, home }: { title: string; icon: { readonly d: string; readonly color: string }; text: string; hint: string; dark: boolean; home: string }) {
+/**
+ * Yetkisiz (okuma izni yok) tam ekran: liste kalıbının boş durum kutusu kilit ikonuyla; Geri / Ana ekran ortak çubukta.
+ * T-1121: `backLabel` verilirse Geri düğmesinin erişilebilir adı (ör. "Ana ekrana dön"); yoksa ortak "Geri".
+ */
+export function KalipKilitliEkran({ title, icon, text, hint, dark, home, backLabel }: { title: string; icon: { readonly d: string; readonly color: string }; text: string; hint: string; dark: boolean; home: string; backLabel?: string }) {
   return (
-    <KalipEkran kind="liste" dark={dark} title={title} icon={icon} bar={{ back: { href: home }, main: { label: "", d: LICON.lock, disabled: true } }} testId="kalip-locked-screen">
+    <KalipEkran kind="liste" dark={dark} title={title} icon={icon} bar={{ back: backLabel === undefined ? { href: home } : { href: home, aria: backLabel }, main: { label: "", d: LICON.lock, disabled: true } }} testId="kalip-locked-screen">
       <KalipBos title={text} hint={hint} iconD={LICON.lock} testId="kalip-locked" />
     </KalipEkran>
   );

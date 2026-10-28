@@ -9,10 +9,11 @@
 // T-978: arama (`.lsearch`, GET `q`: ürün kodu/adı, raf, atanan kişi — sunucuda listTasks; çiplerle birlikte çalışır).
 // Bilinçli farklar (DESIGN-PARITY, T-971): çip sayıları yok; alt çubuk ana işlemi OKUT (ekranın
 // kendi oluşturma işlemi yok — görevler mal kabul / sipariş / sayımdan doğar).
+// T-1121: bilgi durumları (atanabilir kişi yok, yetki yok, görev bulunamadı) kalıp uyarı bandında (`KalipUyari`; eski Banner yerine).
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import { Banner, feedback } from "@wms/ui";
+import { feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { AlanKurali } from "../kalip/dogrula.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
@@ -23,6 +24,7 @@ import { KalipAra, KalipBos, KalipCipler, KalipDaha, KalipKart, KalipKartListe, 
 import { KalipSecim } from "../kalip/secim.tsx";
 import { KalipSonsuz, useKalipDerinlik } from "../kalip/tablo.tsx";
 import { kdz } from "../kalip/tokens.ts";
+import { KalipUyari } from "../kalip/uyari.tsx";
 import { assignTaskAction, cancelTaskAction, loadMoreTasksAction } from "./actions.ts";
 
 export type TaskKindValue = "PUTAWAY" | "PICK" | "REPUTAWAY" | "COUNT";
@@ -144,7 +146,9 @@ function TaskAssignForm({ slug, dark, task, members, onClose }: { slug: string; 
     >
       <KalipGrup title={t(`kind.${task.kind}`)} sub={t(`status.${task.status}`)} d={v.d} color={v.color}>
         {eligible.length === 0 ? (
-          <Banner kind="info">{t("noEligible")}</Banner>
+          <KalipUyari tone="bilgi">
+            <p>{t("noEligible")}</p>
+          </KalipUyari>
         ) : (
           <KalipSecim
             name="member"
@@ -334,10 +338,16 @@ export function TasksView({ slug, dark, canManage, tasks: ilkGorevler, members, 
         ) : null}
         {canManage ? null : (
           <div id="task-locked">
-            <Banner kind="info">{t("lockedReason")}</Banner>
+            <KalipUyari tone="bilgi">
+              <p>{t("lockedReason")}</p>
+            </KalipUyari>
           </div>
         )}
-        {canManage && (assignId ?? cancelId) !== null ? <Banner kind="info">{t("k.notFound")}</Banner> : null}
+        {canManage && (assignId ?? cancelId) !== null ? (
+          <KalipUyari tone="bilgi">
+            <p>{t("k.notFound")}</p>
+          </KalipUyari>
+        ) : null}
         {tasks.length === 0 && sonraki === null ? (
           <KalipBos
             title={filtered ? tk("notFoundSearch") : t("empty.title")}

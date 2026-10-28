@@ -5,6 +5,7 @@
 // T-971 (B-63, I-18): LİSTE kalıbı kabuğu (KalipListe.dc.html): kâğıt seçimi çip (A4 / Rulo), ölçü alanları, ZPL indir satırı, etiket
 // sayfaları; ana işlem alt cam çubukta YAZDIR. Yazdırırken kalıp üst çubuğu ve alt çubuk basılmaz (print.css).
 // Bilinçli farklar (DESIGN-PARITY, T-971): arama / kart listesi yok (ekran tek kaynağın etiketlerini gösterir; kaynak adresle gelir).
+// T-1121: genişlik / yükseklik kalıp alanı (`KalipAlan`, `.fld`; eski yerel Tailwind giriş sınıfı FIELD_CLS kalktı); geçersiz ölçü kalıp uyarı bandı.
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -12,7 +13,9 @@ import { LICON } from "../../../design/kalip-icons.ts";
 import { useCikisKorumasi } from "../kalip/cikis.tsx";
 import { degisti } from "../kalip/dogrula.ts";
 import { KalipBaslik, KalipEkran } from "../kalip/ekran.tsx";
+import { KalipAlan } from "../kalip/form.tsx";
 import { KalipBos, KalipCipler, KalipDaha } from "../kalip/liste.tsx";
+import { KalipUyari } from "../kalip/uyari.tsx";
 import { printCss, validPrintSettings, type PaperMode } from "./print-settings.ts";
 import { useKabuk } from "../kabuk/kabuk-bar.tsx";
 import { markLabelsPrintedAction } from "../yolculuk/actions.ts";
@@ -35,8 +38,6 @@ export interface LabelPreviewProps {
   readonly minHeight?: number;
 }
 
-const FIELD_CLS =
-  "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const ICON = { d: LICON.printer, color: "172E42" } as const;
 
 /** Etiket ekranının kalıp kabı (önizleme yoksa: kaynak yok / hata durumları). Sunucu sayfası da kullanır. */
@@ -118,21 +119,15 @@ export function LabelPreview({ dark, back, pages, zpl, fileName, templateVersion
             { id: "label", label: t("paperLabel"), d: LICON.tag, color: "0E7C7B", on: mode === "label", onClick: () => setMode("label") },
           ]}
         />
-        <div className="grid min-w-0 grid-cols-2 gap-3">
-          <label className="flex min-w-0 flex-col gap-1 text-sm font-semibold">
-            {t("width")}
-            <input className={FIELD_CLS} type="number" min={minWidth} max="200" value={width} onChange={(e) => setWidth(Number(e.target.value))} />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1 text-sm font-semibold">
-            {t("height")}
-            <input className={FIELD_CLS} type="number" min={minHeight} max="280" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
-          </label>
+        <div className="kalanlar">
+          <KalipAlan label={t("width")} type="number" inputMode="numeric" min={minWidth} max="200" value={width} onChange={(e) => setWidth(Number(e.target.value))} />
+          <KalipAlan label={t("height")} type="number" inputMode="numeric" min={minHeight} max="280" value={height} onChange={(e) => setHeight(Number(e.target.value))} />
         </div>
-        <p style={{ margin: 0, fontSize: 13 }}>{t("paperHint")}</p>
+        <p className="khint">{t("paperHint")}</p>
         {!valid ? (
-          <p role="alert" className="pill warn" style={{ margin: 0, alignSelf: "flex-start", whiteSpace: "normal" }}>
-            {invalidText}
-          </p>
+          <KalipUyari tone="hata">
+            <p>{invalidText}</p>
+          </KalipUyari>
         ) : null}
         {nextHref === undefined ? null : <KalipDaha href={nextHref} iconD={LICON.arrow} testId="labels-next">{tp("next")}</KalipDaha>}
         {custom ? <p style={{ margin: 0, fontSize: 13 }}>{t("customHint")}</p> : null}

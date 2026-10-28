@@ -22,6 +22,25 @@ from typing import Protocol
 
 import numpy as np
 
+
+def _thp_kapat() -> bool:
+    """T-1125: şeffaf büyük sayfalar (THP) bu süreç için kapatılır; modeller yüklenmeden önce, içe aktarılırken.
+
+    Makinede THP `always` iken model ağırlıkları ve çalışma tamponları 2 MiB sayfalarla tutulup yerleşik bellek ~1,5 GiB'a çıkıyordu
+    (CI ölçümü: 1,4 GiB anonim belleğin ~1 GiB'ı büyük sayfa); `madvise` ya da `never` makinede ~1 GiB. Kapsayıcı sınırı 1280 MiB olduğundan
+    sınır makinenin THP ayarına bağlı kalmasın. `prctl(PR_SET_THP_DISABLE)` alt süreçlere geçer; desteklenmezse servis yine çalışır.
+    """
+    try:
+        import ctypes
+
+        libc = ctypes.CDLL(None, use_errno=True)
+        return libc.prctl(41, 1, 0, 0, 0) == 0  # PR_SET_THP_DISABLE
+    except (OSError, AttributeError):
+        return False
+
+
+THP_KAPALI = _thp_kapat()
+
 RATE = 16000
 MAX_SECONDS = 8.5
 MAX_BYTES = 44 + int(MAX_SECONDS * RATE) * 2 + 1024
