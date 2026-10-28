@@ -93,6 +93,8 @@ export const tenantSettings = pgTable("tenant_settings", {
   shiftEnd: timeOfDay("shift_end").notNull().default("17:00"),
   // T-416 (A-03): görev ayrılığı (varsayılan kapalı); wms_app yalnızca bu sütunu ek olarak UPDATE eder.
   separationOfDuties: boolean("separation_of_duties").notNull().default(false),
+  // T-1109 (B-134): Etkin sesli yanıt (varsayılan kapalı); wms_app yalnızca bu sütunu ek olarak UPDATE eder.
+  voiceReply: boolean("voice_reply").notNull().default(false),
 });
 
 export const adminResetGrants = pgTable(

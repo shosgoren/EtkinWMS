@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
-import { answerVoiceCommand, type VoiceAnswer } from "@wms/domain/voice";
+import { answerVoiceCommand, getVoiceReply, type VoiceAnswer } from "@wms/domain/voice";
 import { createProductionGuard, limitVerifiedTenant } from "../../../../lib/action-guard.ts";
 import { createProductionLimiter } from "../../../../lib/rate-limit.ts";
 import { isAcceptedWav, synthesize, transcribe, TTS_MAX_CHARS, WAV_MAX_BYTES } from "../../../../lib/voice.ts";
@@ -22,9 +22,11 @@ const schema = z
   })
   .strict();
 
+// T-1109 (B-134): `speak` = firmanın "Etkin sesli yanıt" ayarı (0063, varsayılan kapalı); istemci cevabı yalnız açıksa ve kullanıcı
+// "Sessiz" değilse doğal sesle okur.
 export type EtkinYanit =
-  | { readonly status: "unavailable" | "busy" | "empty" }
-  | { readonly status: "ok"; readonly text: string; readonly confidence: number; readonly answer: VoiceAnswer };
+  | { readonly status: "unavailable" | "busy" | "empty"; readonly speak: boolean }
+  | { readonly status: "ok"; readonly text: string; readonly confidence: number; readonly answer: VoiceAnswer; readonly speak: boolean };
 
 export async function etkinAnlaAction(raw: unknown) {
   return guarded({ schema }, async (input, ctx): Promise<EtkinYanit> => {
@@ -37,11 +39,12 @@ export async function etkinAnlaAction(raw: unknown) {
     if (!isAcceptedWav(wav)) throw new AppError("VALIDATION_FAILED");
     const heard = await transcribe(wav);
     wav.fill(0);
-    if (heard.status !== "ok") return { status: heard.status };
+    const speak = await getVoiceReply(params);
+    if (heard.status !== "ok") return { status: heard.status, speak };
     const text = heard.text.trim();
-    if (text === "") return { status: "empty" };
+    if (text === "") return { status: "empty", speak };
     const answer = await answerVoiceCommand(params, text);
-    return { status: "ok", text, confidence: heard.confidence, answer };
+    return { status: "ok", text, confidence: heard.confidence, answer, speak };
   })(raw);
 }
 

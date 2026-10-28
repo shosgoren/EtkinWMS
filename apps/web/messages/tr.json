@@ -1218,7 +1218,16 @@
       "members": "Kişiler",
       "membersV": "Ekle, yetki ver",
       "groups": "Yetki grupları",
-      "groupsV": "Kim ne yapabilir"
+      "groupsV": "Kim ne yapabilir",
+      "voice": "Etkin sesli yanıt",
+      "voiceRow": "Etkin cevabı sesli okusun",
+      "voiceAriaOn": "Etkin sesli yanıt açık",
+      "voiceAriaOff": "Etkin sesli yanıt kapalı"
+    },
+    "voice": {
+      "on": "Etkin sesli yanıt açıldı.",
+      "off": "Etkin sesli yanıt kapatıldı.",
+      "unchanged": "Ayar zaten bu durumdaydı."
     }
   },
   "items": {

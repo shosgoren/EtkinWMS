@@ -26,6 +26,8 @@ export interface SettingsValues {
   readonly locale: string;
   readonly timeZone: string;
   readonly sod: boolean;
+  /** T-1109 (B-134): Etkin sesli yanıt. */
+  readonly voice: boolean;
 }
 
 export interface SettingsViewProps {
@@ -86,6 +88,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
   if (v.locale !== values.locale) chg.push("loc");
   if (v.timeZone !== values.timeZone) chg.push("tz");
   if (v.sod !== values.sod) chg.push("sod");
+  if (v.voice !== values.voice) chg.push("voice");
   if (v.tema !== savedTheme) chg.push("theme");
   const dirty = chg.length > 0 && !locked && v.name.trim() !== "";
 
@@ -225,6 +228,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
         <input type="hidden" name="locale" value={v.locale} />
         <input type="hidden" name="timeZone" value={v.timeZone} />
         <input type="hidden" name="sod" value={chg.includes("sod") ? (v.sod ? "1" : "0") : ""} />
+        <input type="hidden" name="voice" value={chg.includes("voice") ? (v.voice ? "1" : "0") : ""} />
       </form>
       {sekme === "firma" ? (
         <KalipIzgara
@@ -291,6 +295,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
           </KalipGrup>
           }
           right={
+            <>
             <KalipGrup title={t("sod")} d={LICON.people} color="6C4BD8" testId="sod">
               <KalipAnahtar
                 title={t("sodRow")}
@@ -304,6 +309,21 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
                 testId="settings-sod"
               />
             </KalipGrup>
+            {/* T-1109 (B-134): Etkin sesli yanıt (firma ayarı, varsayılan kapalı); kullanıcının "Sessiz" tercihi ayrıca kapatır. */}
+            <KalipGrup title={t("voice")} d={LICON.micB} color="2F7D5B" testId="settings-voice-group">
+              <KalipAnahtar
+                title={t("voiceRow")}
+                d={LICON.micB}
+                color="2F7D5B"
+                on={v.voice}
+                changed={chg.includes("voice")}
+                locked={locked}
+                aria={v.voice ? t("voiceAriaOn") : t("voiceAriaOff")}
+                onToggle={() => (locked ? denied() : set("voice", !v.voice))}
+                testId="settings-voice"
+              />
+            </KalipGrup>
+            </>
           }
         />
       ) : sekme === "kullanici" ? (

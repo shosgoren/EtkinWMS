@@ -55,6 +55,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const sampleResult = SAMPLE_RESULTS.find((r) => r === first(query.sample));
   const sampleNotice = first(query.sample);
   const sodNotice = first(query.sod);
+  const voiceNotice = first(query.voice);
   const jar = await cookies();
   const dark = temaKoyu(jar);
   const theme = temaTercihi(jar);
@@ -64,6 +65,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   if (first(query.saved) === "1") notices.push({ kind: "ok", text: t("saved") });
   if (first(query.unchanged) === "1") notices.push({ kind: "info", text: t("unchanged") });
   if (sodNotice === "on" || sodNotice === "off" || sodNotice === "unchanged") notices.push({ kind: "ok", text: t(`sod.${sodNotice}`) });
+  if (voiceNotice === "on" || voiceNotice === "off" || voiceNotice === "unchanged") notices.push({ kind: "ok", text: t(`voice.${voiceNotice}`) });
   if (sampleResult !== undefined) notices.push({ kind: "ok", text: t(`sample.${sampleResult}`) });
   if (sampleNotice === "in_use") notices.push({ kind: "err", text: `${t("sample.inUse")} ${t("sample.inUseAction")}` });
   if (sampleNotice === "confirm") notices.push({ kind: "err", text: t("sample.confirmRequired") });
@@ -75,7 +77,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
         ? { text: `${t("sample.reauth")} ${t("sample.reauthAction")}`, href: `/login?next=${encodeURIComponent(`/t/${slug}/settings`)}`, link: t("sample.loginLink") }
         : null;
   const error = errorCode === undefined ? null : { text: `${ts(errorCode)} ${ts(`${errorCode}Action`)}`, code: ts("code", { code: errorCode.toUpperCase() }) };
-  const values = { name: settings?.name ?? "", locale: settings?.locale ?? "tr", timeZone: settings?.timeZone ?? "Europe/Istanbul", sod: settings?.separationOfDuties ?? false };
+  const values = { name: settings?.name ?? "", locale: settings?.locale ?? "tr", timeZone: settings?.timeZone ?? "Europe/Istanbul", sod: settings?.separationOfDuties ?? false, voice: settings?.voiceReply ?? false };
 
   return (
     <SettingsView

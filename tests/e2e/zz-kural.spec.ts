@@ -137,6 +137,25 @@ test("T-1046 Ayarlar sekmeleri arası geçiş taslağı korur", async ({ page })
   await expect(page.getByTestId("kalip-unsaved")).toBeVisible();
 });
 
+// T-1109 (B-134): Ayarlar › Firma'da "Etkin sesli yanıt" anahtarı (varsayılan kapalı); Kaydet ile açılır/kapanır, sonuç balonla söylenir.
+test("T-1109 Ayarlar: Etkin sesli yanıt anahtarı kaydedilir", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/settings");
+  const anahtar = page.getByTestId("settings-voice");
+  await expect(anahtar).toHaveAttribute("aria-pressed", "false");
+  await anahtar.click();
+  await expect(anahtar).toHaveAttribute("data-changed", "true");
+  await page.getByTestId("settings-save").click();
+  await expect(page).toHaveURL(/voice=on/);
+  await expect(page.getByTestId("settings-voice")).toHaveAttribute("aria-pressed", "true");
+  // Paylaşılan demo kiracısı: ayar varsayılana (kapalı) geri alınır.
+  await page.getByTestId("settings-voice").click();
+  await page.getByTestId("settings-save").click();
+  await expect(page).toHaveURL(/voice=off/);
+  await expect(page.getByTestId("settings-voice")).toHaveAttribute("aria-pressed", "false");
+});
+
 // T-1047 (STANDART §2): liste kalıbı — Kart/Liste geçişi, sıralanan tablo, Sütunlar seçimi; seçim cihazda kalır (yeniden açılışta).
 test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
   // Telefonda her zaman kart (tablo sığmaz); liste görünümü geniş ekranda sınanır.

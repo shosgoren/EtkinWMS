@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   limit: vi.fn(),
   transcribe: vi.fn(),
   synthesize: vi.fn(),
+  voiceReply: vi.fn(),
   answer: vi.fn(),
   origin: "https://app.example.test",
 }));
@@ -15,7 +16,7 @@ vi.mock("../../../../lib/auth-service.ts", () => ({ getAuthService: () => ({ get
 vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
 vi.mock("../../../../lib/rate-limit.ts", async (original) => ({ ...(await original<object>()), createProductionLimiter: () => ({ check: mocks.limit }) }));
 vi.mock("@wms/domain/identity/access", () => ({ runTenantQuery: (access: { permission: string }) => mocks.member(access.permission) }));
-vi.mock("@wms/domain/voice", () => ({ answerVoiceCommand: mocks.answer }));
+vi.mock("@wms/domain/voice", () => ({ answerVoiceCommand: mocks.answer, getVoiceReply: mocks.voiceReply }));
 vi.mock("../../../../lib/voice.ts", async (original) => ({ ...(await original<object>()), transcribe: mocks.transcribe, synthesize: mocks.synthesize }));
 import { AppError } from "@wms/shared/errors";
 import { RateLimitedError } from "../../../../lib/rate-limit.ts";
@@ -49,6 +50,7 @@ beforeEach(() => {
   mocks.member.mockResolvedValue("tenant-1");
   mocks.limit.mockResolvedValue(undefined);
   mocks.transcribe.mockResolvedValue({ status: "ok", text: "C bir rafında ne var", confidence: 0.8 });
+  mocks.voiceReply.mockResolvedValue(false);
   mocks.synthesize.mockResolvedValue({ status: "ok", wav: new Uint8Array([82, 73, 70, 70, 1, 2]) });
   mocks.answer.mockResolvedValue({ type: "read", title: "C-01", icon: "loc", rows: [], total: 0, href: "/stock" });
 });
@@ -65,6 +67,13 @@ describe("etkinAnlaAction", () => {
     expect(mocks.member).toHaveBeenCalledWith("stock.view");
     expect(mocks.limit).toHaveBeenCalledWith("voice", "user-1");
     expect(mocks.answer).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: "pilot", principal: { userId: "user-1", mfaVerified: true } }), "C bir rafında ne var");
+  });
+
+  it("T-1109: firma sesli yanıtı açıksa yanıt `speak: true` taşır (üyelikle okunur)", async () => {
+    mocks.voiceReply.mockResolvedValueOnce(true);
+    const res = await etkinAnlaAction({ slug: "pilot", audio: wav() });
+    expect(res).toMatchObject({ ok: true, data: { status: "ok", speak: true } });
+    expect(mocks.voiceReply).toHaveBeenCalledWith(expect.objectContaining({ tenantSlug: "pilot", principal: { userId: "user-1", mfaVerified: true } }));
   });
 
   it("oturum yok / yanlış köken: ses servisine gidilmez", async () => {
@@ -101,10 +110,10 @@ describe("etkinAnlaAction", () => {
   it("ses servisi yok/meşgul/boş: uygulama hata vermez, yalnız durum döner", async () => {
     for (const status of ["unavailable", "busy"] as const) {
       mocks.transcribe.mockResolvedValueOnce({ status });
-      expect(await etkinAnlaAction({ slug: "pilot", audio: wav() })).toEqual({ ok: true, data: { status } });
+      expect(await etkinAnlaAction({ slug: "pilot", audio: wav() })).toEqual({ ok: true, data: { status, speak: false } });
     }
     mocks.transcribe.mockResolvedValueOnce({ status: "ok", text: "  ", confidence: 0 });
-    expect(await etkinAnlaAction({ slug: "pilot", audio: wav() })).toEqual({ ok: true, data: { status: "empty" } });
+    expect(await etkinAnlaAction({ slug: "pilot", audio: wav() })).toEqual({ ok: true, data: { status: "empty", speak: false } });
     expect(mocks.answer).not.toHaveBeenCalled();
   });
 });

@@ -2,3 +2,4 @@
 export * from "@wms/shared/voice";
 export * from "./sorgu.ts";
 export * from "./yanit.ts";
+export * from "./ayar.ts";
