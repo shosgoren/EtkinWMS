@@ -42,3 +42,8 @@ Her iş yeni boş T numarasıyla ayrı dalda; task + changes parçası + bu dosy
 - **Doğrulama:** lifecycle10DB, ERP20DB, ürün regresyon61DB; prepush5020birim+AC04375+telefon/masaüstüE2E2/2; güvenlik0B0MA0MI, Gitleaks0. Kaynak/uygulama390/1180/1440 kontrol edildi. Canlı müşteri tarayıcı izni reddedildi; canlı görsel/gerçek cihaz UNKNOWN.
 
 Güncel yayın/DB kanıtı [OPERATIONS](OPERATIONS.md). Bu iş ilk takip kararı/Devir/tekil ambalaj girişini tamamlamaz; yukarıdaki T-1065 ve bekleyen sıra korunur.
+
+## T-1071 — kaynakta silinip aynı kodla tekrar açılan kart (DEVAM)
+0001kodunun eskiParaşütkimliği DELETED/REMOVED/bağlı, hareketiyok; yenikimliksamecode nedeniyle SKIPPED. Hedef aynıWMS/refUUID,QR/fiş/geçmişkorunarak doğrulanmış yeni kimliğe bağlamak. EskiID'ler `external_refs.retired_external_ids` içinde silinmeden kalır; appdoğrudanUPDATEedemez; kimlik tekrarbaşkakarta kullanılamaz. Ağşirketerişimi+eskiID404+tekaktifaynıkod+güncelOAuth/connection+birim/barkod kontrolü zorunlu. Yerelarşivkorunur. Mevcut takeout B-67 altyapısı henüzyok; mevcuttenanttablosuna sütuneklenir, yeni ayrıdışarıaktarmasıztabloeklenmez. Test/inceleme/CI/yayın henüzbekliyor.
+
+**Yerel kanıt:** Gerçek DB ilk52/52 (12yenidenbağlama dahil), genişletilmiş242/242 (13yenidenbağlama,ERPve6migrationregresyonu; kümelerörtüşür), ayrıca5/5pilotcycle/0064dolugeridönüşret ve yeni0064non-super/non-BYPASSdefineroluşturma/çalıştırma. Çokürünlüterskilit sırası yarış testi ve nesildeilk404/eskisilinmedurumureddi var. VPS mevcut tablo sahibi wms_migrator: superfalse/bypassfalse/FORCERLStrue. Main0c199aa(T1110başkasınınsesiyileştirmesi) temizmergeedildi; oişedeğişiklikyok. Prepush/soninceleme/CI/yayın ayrıbekliyor.

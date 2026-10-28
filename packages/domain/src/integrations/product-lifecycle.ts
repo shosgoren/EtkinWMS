@@ -27,7 +27,7 @@ export async function lifecycleBinding(tx:AccessTx,tenantId:string,integrationId
 export async function assertLifecycleBinding(tx:AccessTx,b:LifecycleBinding):Promise<boolean> {
  const now=await lifecycleBinding(tx,b.tenantId,b.integrationId,true);return now!==null&&JSON.stringify(now)===JSON.stringify(b);
 }
-function context(b:LifecycleBinding,itemId:string,externalId:string):string {
+export function lifecycleContext(b:LifecycleBinding,itemId:string,externalId:string):string {
  return createHash("sha256").update(JSON.stringify([b,itemId,externalId])).digest("hex");
 }
 /** Explicit references, discovered from actual item FKs, conservatively count as use (metadata labels/conversions excluded). */
@@ -49,12 +49,15 @@ async function used(tx:AccessTx,tenantId:string,itemId:string):Promise<boolean> 
 type Row={id:string;status:string;source_state:string;source_disposition:string;source_managed_archive:boolean;source_missing_since:Date|string|null;source_missing_context:string|null};
 /** Called only with a currently locked binding. Positive identity evidence clears missing observations; absent archived flag never means active. */
 export async function observeProduct(tx:AccessTx,b:LifecycleBinding,c:ApplyContext,externalId:string,observation:{exists:true;archived:unknown}|{exists:false},now=Date.now()):Promise<boolean> {
- const refs=await tx.execute<{entity_id:string}>(sql`SELECT entity_id FROM public.external_refs WHERE tenant_id=${b.tenantId}::uuid AND system=${c.system} AND entity_type='ITEM' AND external_id=${externalId} FOR SHARE`);
+ const refs=await tx.execute<{entity_id:string}>(sql`SELECT entity_id FROM public.external_refs WHERE tenant_id=${b.tenantId}::uuid AND system=${c.system} AND entity_type='ITEM' AND external_id=${externalId}`);
  const id=refs[0]?.entity_id;if(!id)return false;
  const rows=await tx.execute<Row>(sql`SELECT id,status,source_state,source_disposition,source_managed_archive,source_missing_since,source_missing_context FROM public.items WHERE tenant_id=${b.tenantId}::uuid AND id=${id}::uuid FOR UPDATE`);
  const row=rows[0];if(!row)return false;
+ // Catalog lock order: item before mapping. Reject an in-flight old identity after rebind.
+ const current=await tx.execute(sql`SELECT 1 FROM public.external_refs WHERE tenant_id=${b.tenantId}::uuid AND system=${c.system} AND entity_type='ITEM' AND external_id=${externalId} AND entity_id=${id}::uuid FOR SHARE`);
+ if(!current.length)return false;
  let state=row.source_state;
- const key=context(b,id,externalId);
+ const key=lifecycleContext(b,id,externalId);
  if(observation.exists){
   if(typeof observation.archived==='boolean'){
    state=observation.archived?'ARCHIVED':'ACTIVE';

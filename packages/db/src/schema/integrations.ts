@@ -21,6 +21,7 @@ export const externalRefs = pgTable(
     entityType: text("entity_type").notNull(),
     entityId: uuid("entity_id").notNull(),
     externalId: text("external_id").notNull(),
+    retiredExternalIds: text("retired_external_ids").array().notNull().default(sql`'{}'::text[]`),
     externalCode: text("external_code"),
     syncedAt: timestamptz("synced_at").notNull().defaultNow(),
     version: integer("version").notNull().default(1),
