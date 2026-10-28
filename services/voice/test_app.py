@@ -252,6 +252,8 @@ class TtsModelTests(unittest.TestCase):
         text, _conf = stt.transcribe(heard)
         self.assertIn("hava", text.lower())
         # Kapsayıcı sınırı 1280 MiB (deploy/vps/compose.yml): iki model birlikte payla sığmalı.
+        # T-1126: CTranslate2 her işlemcide aynı arka uçla (Intel'de MKL'ye kendiliğinden geçmez).
+        self.assertEqual(os.environ.get("CT2_USE_MKL"), "0")
         # T-1125: THP bu süreçte kapalı (yerleşik bellek makinenin THP ayarına bağlı kalmasın).
         self.assertTrue(voice.THP_KAPALI)
         self.assertIn("THP_enabled:\t0", Path("/proc/self/status").read_text())

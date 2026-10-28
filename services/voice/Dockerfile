@@ -6,6 +6,8 @@
 # T-1106: yazı → ses için EMA Lightning + PyTorch'un yalnız CPU yapısı (`+cpu`, download.pytorch.org; CUDA paketleri gelmez).
 # T-1114: bellek makinenin çekirdek sayısına bağlı kalmasın — OpenMP/BLAS iş parçacığı havuzu ve glibc bellek arenası sayısı sabit
 # (çok çekirdekli CI makinesinde aynı imaj 1100 MiB sınırını 1600 MiB'a aşıyordu; kapsayıcı sınırı 1280 MiB).
+# T-1126: CTranslate2 Intel işlemcide kendiliğinden Intel MKL'ye geçiyordu (AMD'de oneDNN); aynı imaj Intel CI makinesinde ~230 MiB fazla
+# bellek tutuyordu (1108 / 880 MiB). `CT2_USE_MKL=0` ile her işlemcide aynı arka uç, bellek işlemci markasından bağımsız.
 ARG PY_IMAGE=mirror.gcr.io/library/python:3.12-slim-trixie@sha256:cb33f7f771ecec2ef1225cf39b159591a040391bd73e4c01f00fdfc4c47611d2
 
 FROM ${PY_IMAGE} AS model
@@ -24,7 +26,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     OMP_NUM_THREADS=2 \
     OPENBLAS_NUM_THREADS=1 \
     MKL_NUM_THREADS=1 \
-    MALLOC_ARENA_MAX=2
+    MALLOC_ARENA_MAX=2 \
+    CT2_USE_MKL=0
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --disable-pip-version-check --require-hashes --only-binary=:all: \
         --extra-index-url https://download.pytorch.org/whl/cpu -r /tmp/requirements.txt \
@@ -52,7 +55,8 @@ ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
     OMP_NUM_THREADS=2 \
     OPENBLAS_NUM_THREADS=1 \
     MKL_NUM_THREADS=1 \
-    MALLOC_ARENA_MAX=2
+    MALLOC_ARENA_MAX=2 \
+    CT2_USE_MKL=0
 WORKDIR /srv
 USER node
 EXPOSE 8000
