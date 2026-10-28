@@ -5274,7 +5274,8 @@
     "tabFirma": "Company",
     "tabUsers": "Users and permissions",
     "tabInteg": "Integrations",
-    "tabLook": "Appearance"
+    "tabLook": "Appearance",
+    "backInteg": "Back to integrations"
   },
   "integrations": {
     "title": "Integration",
@@ -5506,6 +5507,58 @@
       "code": "Paste authorization code",
       "openProvider": "Authorize in Paraşüt",
       "codeAccepted": "Authorization code accepted"
+    },
+    "bolum": {
+      "label": "Integration sections",
+      "baglanti": "Connection and data source",
+      "akis": "What to pull and push",
+      "sahiplik": "Field ownership",
+      "arsiv": "Inactive and archive",
+      "hatalar": "Pending and errors",
+      "badgeAria": "{n} problems"
+    },
+    "yon": {
+      "PULL": "Pull from {provider}",
+      "PUSH": "Send to {provider}",
+      "BOTH": "Both ways",
+      "OFF": "Etkin WMS only"
+    },
+    "akis": {
+      "title": "What to pull, what to push?",
+      "sub": "{provider} connected · last sync {at}",
+      "subNever": "{provider} connected · not synced yet",
+      "none": "Connect to {provider} first",
+      "noneHint": "Once connected, pick the direction of each item here",
+      "go": "Go to connection",
+      "runAll": "Run all now"
+    },
+    "baglanti": {
+      "title": "Connection and data source",
+      "sub": "ERP connection · opening stock · Excel",
+      "excel": "Transfer with Excel",
+      "excelSub": "ITEM · PARTY · WAREHOUSE · SHELF · OPENING STOCK",
+      "excelOpen": "Open"
+    },
+    "sahiplik": {
+      "title": "Field ownership",
+      "sub": "Which system changes which field",
+      "soon": "Soon",
+      "text": "Choosing ownership field by field is coming soon"
+    },
+    "arsiv": {
+      "title": "Inactive and archive",
+      "sub": "Records archived or deleted in {provider}",
+      "text": "An item archived or deleted in {provider} is not deleted in Etkin; it shows under the Archived or Removed filter of the Items list",
+      "archived": "Archived items",
+      "removed": "Removed items"
+    },
+    "hatalar": {
+      "title": "Pending and errors",
+      "sub": "Records waiting to be sent and records with errors",
+      "pending": "{n} waybills waiting to be sent",
+      "pendingSub": "WILL BE SENT SHORTLY",
+      "none": "No problems · all good",
+      "flowErrors": "Flows with errors"
     }
   },
   "etkin": {

@@ -7,7 +7,11 @@ describe("ayar sekmeleri", () => {
   const items = ayarSekmeleri("/t/demo", (k) => k);
   it("Firma · Kullanıcılar ve yetki · Entegrasyonlar · Görünüm", () => {
     expect(items.map((x) => x.id)).toEqual(["firma", "kullanici", "entegrasyon", "gorunum"]);
-    expect(items.map((x) => x.href)).toEqual(["/t/demo/settings", "/t/demo/settings?sekme=kullanici", "/t/demo/settings/baglantilar", "/t/demo/settings?sekme=gorunum"]);
+    expect(items.map((x) => x.href)).toEqual(["/t/demo/settings", "/t/demo/settings?sekme=kullanici", "/t/demo/integrations", "/t/demo/settings?sekme=gorunum"]);
+  });
+  it("T-1112: ERP yetkisi yoksa Entegrasyonlar sekmesi Excel aktarımına gider", () => {
+    expect(ayarSekmeleri("/t/demo", (k) => k, false).find((x) => x.id === "entegrasyon")?.href).toBe("/t/demo/settings/baglantilar");
+    expect(ayarSekmeleri("/t/demo", (k) => k, true).find((x) => x.id === "entegrasyon")?.href).toBe("/t/demo/integrations");
   });
   it("her sekme rengi kalıp paletinde", () => {
     for (const x of items) expect(() => kdzOrtak(x.color ?? "")).not.toThrow();

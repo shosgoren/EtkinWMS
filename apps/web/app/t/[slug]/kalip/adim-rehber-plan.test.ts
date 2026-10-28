@@ -29,6 +29,8 @@ describe("adım adım aktarma rehberi planı (T-1095)", () => {
     expect(adimPlani("urun", "PARASUT")[1]?.target).toContain("flow-PRODUCTS-toggle");
     expect(adimPlani("depo", "PARASUT")[1]?.target).toContain("flow-WAREHOUSES-toggle");
     expect(adimPlani("cari", "PARASUT").at(-1)).toMatchObject({ key: "esitle", done: { click: true } });
+    // T-1112: akış adımları "Ne çekilsin, gönderilsin" bölümünü açar.
+    expect(adimPlani("urun", "PARASUT").slice(1).map((a) => a.query)).toEqual(["bolum=akis", "bolum=akis"]);
   });
 
   it("yetki kurulum adımıyla aynı; bilinmeyen değerler reddedilir", () => {

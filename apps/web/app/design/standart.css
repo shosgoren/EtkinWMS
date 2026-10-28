@@ -601,6 +601,7 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
 .stt-kahve { --k: var(--color-st-k-kahve); }
 .stt-turuncu { --k: var(--color-st-k-turuncu); }
 .stt-kirmizi { --k: var(--color-st-k-kirmizi); }
+.stt-parasut { --k: var(--color-st-k-parasut); }
 .stkart {
   display: flex;
   flex-direction: column;
@@ -1267,4 +1268,263 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.kisayol-kok { display: none; 
   align-self: center;
   flex: none;
   padding: 4px;
+}
+
+/* ---- T-1112 Ayar kalıbı (STANDART §5; kaynak `StandartAyarlarEntegrasyon.dc.html`): solda dikey alt bölüm listesi (290 px, satır 52 px,
+   30 px renkli simge kutusu; seçili satır beyaz + gölge; sorun varsa kırmızı sayı rozeti), sağda yalnız seçili bölümün kartı; ayar satırı
+   (40 px simge kutusu + ad + sağda denetim) ve entegrasyon yönü seçimi (132×52 düğme, simge üstte; seçili kendi renginde dolu, diğerleri
+   beyaz + 1.5 px iç çizgi). Ortak bileşen `kalip/ayar.tsx`. Telefonda alt bölüm listesi kartın üstünde yatay kayan çip satırıdır. ---- */
+.stab {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+.stab-nav {
+  width: 290px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  box-sizing: border-box;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--color-kr-card) 55%, transparent);
+}
+.stab-i {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  color: var(--color-kr-ink);
+  text-decoration: none;
+  font: 700 15px/1.2 var(--font-instrument), sans-serif;
+}
+.stab-i:hover {
+  background: var(--color-st-hover);
+}
+.stab-i.on {
+  background: var(--color-kr-card);
+  box-shadow: 0 6px 18px -12px var(--color-kr-shadow-soft);
+}
+.stab-ic,
+.stak-gi,
+.stay-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: var(--k);
+  color: var(--color-kr-on);
+}
+.stab-ic {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.stab-ad {
+  min-width: 0;
+}
+.stab-say {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 11px;
+  background: var(--color-st-k-kirmizi);
+  color: var(--color-kr-on);
+  font: 700 12px/22px var(--font-instrument), sans-serif;
+  text-align: center;
+}
+.stab-g {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stak {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 24px;
+  border-radius: 22px;
+  background: var(--color-kr-card);
+  color: var(--color-kr-ink);
+  box-shadow: 0 10px 30px -22px var(--color-kr-shadow-soft);
+  font-family: var(--font-instrument), sans-serif;
+}
+.stak-h {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 6px;
+}
+.stak-gi {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+.stak-t {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.stak-t b {
+  font: 800 20px/1.15 var(--font-bricolage), sans-serif;
+  letter-spacing: -.01em;
+}
+.stak-t small {
+  font-size: 13.5px;
+  color: var(--color-st-k-gri);
+}
+.stak-act {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stak-g {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stay {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, var(--color-st-k-yan) 0%, var(--color-kr-card) 100%);
+  box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-a);
+}
+.stay-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+.stay-t {
+  flex: 1 1 160px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stay-t b {
+  font-size: 16px;
+  font-weight: 700;
+}
+.stay-t small {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font: 600 11px/1.3 var(--font-plex-mono), monospace;
+  color: var(--color-st-k-gri);
+}
+.stay-r {
+  margin-left: auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.styon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.styon > button {
+  appearance: none;
+  width: 132px;
+  min-height: 52px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-kr-card);
+  color: var(--color-st-k-gri);
+  box-shadow: inset 0 0 0 1.5px var(--color-st-bg-end);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font: 700 12px/1.15 var(--font-instrument), sans-serif;
+  text-align: center;
+  cursor: pointer;
+}
+.styon > button.on {
+  background: var(--k);
+  color: var(--color-kr-on);
+  box-shadow: none;
+}
+.styon[aria-busy="true"] > button {
+  cursor: progress;
+}
+.styon-e {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--color-kr-ink);
+  box-shadow: 0 0 0 1.5px var(--color-kr-on);
+  color: var(--color-kr-on);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 800 11px/1 var(--font-bricolage), sans-serif;
+}
+.dz-dark .stab-nav { background: var(--color-st-dark-glass); }
+.dz-dark .stab-i { color: var(--color-kr-text-dark); }
+.dz-dark .stab-i:hover { background: var(--color-st-dark-hover); }
+.dz-dark .stab-i.on { background: var(--color-kr-card-dark); }
+.dz-dark .stak { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); }
+.dz-dark :is(.stak-t small, .stay-t small) { color: var(--color-kr-muted); }
+.dz-dark .stay { background: var(--color-kr-bg-dark-a); box-shadow: inset 0 0 0 1.5px var(--color-kr-ink-dark); }
+.dz-dark .styon > button { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); box-shadow: inset 0 0 0 1.5px var(--color-kr-ink-dark); }
+.dz-dark .styon > button.on { background: var(--k); color: var(--color-kr-on); box-shadow: none; }
+@media (max-width: 1099.98px) {
+  .stab-nav { width: 240px; }
+}
+@media (max-width: 699.98px) {
+  .stab {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .stab-nav {
+    width: auto;
+    max-width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 6px;
+    border-radius: 16px;
+    scrollbar-width: none;
+  }
+  .stab-i {
+    flex: none;
+    min-height: 44px;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  .stak { padding: 16px 14px; }
+  .stay { padding: 10px; gap: 10px; }
+  .stay-r,
+  .styon { width: 100%; }
+  .styon > button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
 }

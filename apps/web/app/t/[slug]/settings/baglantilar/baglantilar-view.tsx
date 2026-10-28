@@ -34,7 +34,7 @@ const ISLEM: Readonly<Record<Islem, { readonly d: string; readonly color: string
   export: { d: LICON.moveOut, color: "0E7C7B" },
 };
 
-export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: string; dark: boolean; canData: boolean; canMaster: boolean }) {
+export function BaglantilarView({ slug, dark, canData, canMaster, erp = false }: { slug: string; dark: boolean; canData: boolean; canMaster: boolean; erp?: boolean }) {
   const t = useTranslations("baglantilar");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const router = useRouter();
@@ -98,13 +98,14 @@ export function BaglantilarView({ slug, dark, canData, canMaster }: { slug: stri
       icon={{ d: LICON.excel, color: "2F7D5B" }}
       testId="baglantilar"
       bar={{
-        back: { href: `${base}/settings`, aria: t("back"), testId: "kabuk-back" },
+        // T-1112: ERP yetkilisinde bu ekran Entegrasyonlar › "Bağlantı ve veri kaynağı" bölümünden açılır; Geri oraya döner.
+        back: erp ? { href: `${base}/integrations?bolum=baglanti`, aria: t("backInteg"), testId: "kabuk-back" } : { href: `${base}/settings`, aria: t("back"), testId: "kabuk-back" },
         main: { label: mainLabel, aria: ready ? t("mainAria", { alan: t(`alan.${alan ?? "items"}`), islem: t(`islem.${islem ?? "import"}`) }) : t("pickFirst"), d: islem === "export" ? LICON.moveOut : LICON.check, disabled: busy, wait: !ready, onClick: run, testId: "baglantilar-main" },
       }}
       overlays={toast}
     >
       {/* T-1046: ortak ayar sekmeleri; bu ekran "Entegrasyonlar" sekmesidir. */}
-      <KalipSekme label={t("tabs")} color="0E7C7B" current="entegrasyon" items={ayarSekmeleri(base, t)} />
+      <KalipSekme label={t("tabs")} color="0E7C7B" current="entegrasyon" items={ayarSekmeleri(base, t, erp)} />
       {canData ? null : <KalipKilit title={t("lockTitle")} sub={t("lockSub")} />}
       <KalipBaslik title={t("head")} />
       <KalipIzgara

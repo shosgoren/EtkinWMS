@@ -5274,7 +5274,8 @@
     "tabFirma": "Firma",
     "tabUsers": "Kullanıcılar ve yetki",
     "tabInteg": "Entegrasyonlar",
-    "tabLook": "Görünüm"
+    "tabLook": "Görünüm",
+    "backInteg": "Entegrasyonlara dön"
   },
   "integrations": {
     "title": "Entegrasyon",
@@ -5322,7 +5323,7 @@
         "sub": "KOD · AD · BİRİM · STOK DEĞİŞMEZ"
       },
       "CONTACTS": {
-        "name": "Cari kartlar",
+        "name": "Cariler",
         "sub": "MÜŞTERİ · TEDARİKÇİ"
       },
       "WAREHOUSES": {
@@ -5334,7 +5335,7 @@
         "sub": "{provider}'TE SİPARİŞ YOK"
       },
       "SHIPMENTS": {
-        "name": "İrsaliye",
+        "name": "Sevk irsaliyesi",
         "sub": "SEVK EDİLİNCE {provider}'E"
       },
       "STOCK": {
@@ -5506,6 +5507,58 @@
       "code": "Yetki kodunu yapıştır",
       "openProvider": "Paraşüt’te izin ver",
       "codeAccepted": "Yetki kodu alındı"
+    },
+    "bolum": {
+      "label": "Entegrasyon bölümleri",
+      "baglanti": "Bağlantı ve veri kaynağı",
+      "akis": "Ne çekilsin, gönderilsin",
+      "sahiplik": "Alan sahipliği",
+      "arsiv": "Pasif ve arşiv",
+      "hatalar": "Bekleyenler ve hatalar",
+      "badgeAria": "{n} sorun"
+    },
+    "yon": {
+      "PULL": "{provider}'ten al",
+      "PUSH": "{provider}'e gönder",
+      "BOTH": "İki yönlü",
+      "OFF": "Yalnız Etkin WMS"
+    },
+    "akis": {
+      "title": "Ne çekilsin, ne gönderilsin?",
+      "sub": "{provider} bağlı · son eşitleme {at}",
+      "subNever": "{provider} bağlı · henüz eşitlenmedi",
+      "none": "Önce {provider}'e bağlan",
+      "noneHint": "Bağlanınca her bilginin yönünü buradan seçersin",
+      "go": "Bağlantıya git",
+      "runAll": "Hepsini şimdi çalıştır"
+    },
+    "baglanti": {
+      "title": "Bağlantı ve veri kaynağı",
+      "sub": "ERP bağlantısı · açılış stoku · Excel",
+      "excel": "Excel ile aktar",
+      "excelSub": "ÜRÜN · CARİ · DEPO · RAF · AÇILIŞ STOKU",
+      "excelOpen": "Aç"
+    },
+    "sahiplik": {
+      "title": "Alan sahipliği",
+      "sub": "Hangi alanı hangi sistem değiştirir",
+      "soon": "Yakında",
+      "text": "Alan alan sahiplik seçimi yakında gelecek"
+    },
+    "arsiv": {
+      "title": "Pasif ve arşiv",
+      "sub": "{provider}'te arşivlenen ya da silinen kayıtlar",
+      "text": "{provider}'te arşivlenen ya da silinen ürün Etkin'de silinmez; Ürünler listesinde Arşivli ya da Kaldırıldı süzgecinde görünür",
+      "archived": "Arşivli ürünler",
+      "removed": "Kaldırılan ürünler"
+    },
+    "hatalar": {
+      "title": "Bekleyenler ve hatalar",
+      "sub": "Gönderilmeyi bekleyen ve hata veren kayıtlar",
+      "pending": "{n} irsaliye gönderilmeyi bekliyor",
+      "pendingSub": "BİRAZDAN KENDİLİĞİNDEN GİDER",
+      "none": "Sorun yok · her şey yolunda",
+      "flowErrors": "Hata veren akışlar"
     }
   },
   "etkin": {

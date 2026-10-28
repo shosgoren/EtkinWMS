@@ -239,6 +239,8 @@ body {
   --color-st-k-gri: #4e6476;
   --color-st-k-kahve: #9a5b1e;
   --color-st-k-turuncu: #c2702a;
+  /* T-1112 (STANDART §7): Paraşüt turuncu bağlantı (StandartAyarlarEntegrasyon). */
+  --color-st-k-parasut: #e0582b;
   --color-st-k-kirmizi: #c62828;
   --color-st-k-kirmizi-bg: #fdebe3;
   --color-st-k-kirmizi-ink: #a4401a;

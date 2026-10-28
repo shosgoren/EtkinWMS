@@ -78,7 +78,8 @@ export function stepPlan(base: string, key: StepKey, j: JourneyData, source: "EX
         ? { href: `${base}/integrations`, stops: [m("/integrations", "partiesParasut")] }
         : { href: `${base}/import?tur=cari`, stops: [m("/import", "partiesExcel"), m("/parties", "parties")] };
     case "stock":
-      if (j.hints.parasut.openingEnabled && j.hints.parasut.openingTakenAt === null) return { href: `${base}/integrations`, stops: [m("/integrations", "stockParasut", { target: "opening-pull" })] };
+      // T-1112: açılış stoku "Bağlantı ve veri kaynağı" bölümündedir (bağlıyken varsayılan bölüm akışlardır).
+      if (j.hints.parasut.openingEnabled && j.hints.parasut.openingTakenAt === null) return { href: `${base}/integrations?bolum=baglanti`, stops: [m("/integrations", "stockParasut", { target: "opening-pull" })] };
       if (j.openingStockWanted === true && j.cardSource === "EXCEL") return { href: `${base}/import?tur=acilis`, stops: [m("/import", "stockExcel")] };
       return { href: `${base}/stock/documents?new=STOCK_IN`, stops: [m("/stock/documents", "stockManual")] };
     case "labels":

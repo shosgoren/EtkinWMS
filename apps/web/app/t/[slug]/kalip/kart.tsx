@@ -9,8 +9,8 @@ import { buyukHarf } from "@wms/ui";
 import type { ReactNode } from "react";
 import { Ico } from "./ekran.tsx";
 
-/** Kaynak renkleri (tuvaldeki ton adları); CSS `.stt-<ton>` sınıfı `--k` değişkenini verir. */
-export type StTon = "mavi" | "stok" | "yesil" | "ok" | "amber" | "lacivert" | "mor" | "camgobegi" | "gri" | "kahve" | "turuncu" | "kirmizi";
+/** Kaynak renkleri (tuvaldeki ton adları); CSS `.stt-<ton>` sınıfı `--k` değişkenini verir. T-1112: `parasut` (STANDART §7 Paraşüt turuncusu). */
+export type StTon = "mavi" | "stok" | "yesil" | "ok" | "amber" | "lacivert" | "mor" | "camgobegi" | "gri" | "kahve" | "turuncu" | "kirmizi" | "parasut";
 
 const ton = (t: StTon): string => `stt-${t}`;
 
