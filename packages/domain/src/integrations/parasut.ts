@@ -351,10 +351,11 @@ export class ParasutClient {
   async createContact(
     token: string,
     companyId: string,
-    c: { readonly name: string; readonly accountType: "customer" | "supplier"; readonly taxNumber: string | null; readonly taxOffice: string | null; readonly email: string | null; readonly phone: string | null; readonly city: string | null; readonly address: string | null },
+    c: { readonly name: string; readonly accountType: "customer" | "supplier"; readonly taxNumber: string | null; readonly taxOffice: string | null; readonly email: string | null; readonly phone: string | null; readonly city: string | null; readonly address: string | null; readonly shortName?: string | null; readonly district?: string | null },
   ): Promise<string> {
     const attrs: Record<string, unknown> = { name: c.name, account_type: c.accountType, contact_type: "company" };
-    for (const [k, v] of [["tax_number", c.taxNumber], ["tax_office", c.taxOffice], ["email", c.email], ["phone", c.phone], ["city", c.city], ["address", c.address]] as const) if (v !== null) attrs[k] = v;
+    // T-1117: kısa ad ve ilçe (`0064_party_details`) doluysa gönderilir.
+    for (const [k, v] of [["tax_number", c.taxNumber], ["tax_office", c.taxOffice], ["email", c.email], ["phone", c.phone], ["city", c.city], ["district", c.district ?? null], ["address", c.address], ["short_name", c.shortName ?? null]] as const) if (v !== null) attrs[k] = v;
     return this.create(token, companyId, "contacts", { type: "contacts", attributes: attrs });
   }
 

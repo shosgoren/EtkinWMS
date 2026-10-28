@@ -1,6 +1,6 @@
 // T-1055: ürün listesinin bir sayfası (sunucu). Sayfa bileşeni ilk sayfayı, `loadMoreItemsAction` sonrakileri aynı yoldan okur (aynı domain
 // okuyucuları, aynı yetki: `stock.view`; keyset imleç, OFFSET yok). Kural yok; yalnız görünüm şekline çevirme.
-import { searchItems } from "@wms/domain/catalog";
+import { listPrimaryBarcodes, searchItems } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
 import { sumItemsStock } from "@wms/domain/stock";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
@@ -48,8 +48,16 @@ export async function loadItemsPage(call: Call, input: ItemsPageInput): Promise<
     return { id: it.id, code: it.code, name: it.name, status: it.status, sourceDisposition: it.sourceDisposition ?? "NONE", baseUnitCode: unitCode.get(it.baseUnitId) ?? "", cardType: it.cardType, ...(oldCode === undefined ? {} : { oldCode }) };
   });
   // T-968: kart rozeti (kapsamdaki depoların eldeki toplamı + minimum); okunamazsa rozet çizilmez, liste yine açılır.
-  const stock = Object.fromEntries(
-    (await sumItemsStock(call, rows.map((r) => r.id)).catch(() => [])).map((x) => [x.itemId, { have: x.have, min: x.min }] as const),
-  );
-  return { rows, stock, nextCursor: page.nextCursor, total: page.total, units };
+  // T-1117: ayrılmış + kullanılabilir de (liste "Kullanılabilir" sütunu); "Barkod" sütunu ürün başına ilk barkod. İkisi de okunamazsa
+  // sütun boş kalır, liste yine açılır.
+  const ids = rows.map((r) => r.id);
+  const sums = await sumItemsStock(call, ids).catch(() => []);
+  const barcodes = await listPrimaryBarcodes(call, ids).catch(() => []);
+  const stock = Object.fromEntries(sums.map((x) => [x.itemId, { have: x.have, min: x.min, available: x.available }] as const));
+  const barcodeOf = new Map(barcodes.map((b) => [b.itemId, b.barcode] as const));
+  const withBarcode = rows.map((r): ItemListView => {
+    const barcode = barcodeOf.get(r.id);
+    return barcode === undefined ? r : { ...r, barcode };
+  });
+  return { rows: withBarcode, stock, nextCursor: page.nextCursor, total: page.total, units };
 }

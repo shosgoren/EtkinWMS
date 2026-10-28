@@ -34,6 +34,8 @@ export function PartyCard({ slug, dark, canEdit, party }: { slug: string; dark: 
   const linkStil = { color: "inherit", textDecoration: "underline", overflowWrap: "anywhere", display: "inline-flex", alignItems: "center", minHeight: 44 } as const;
   const bilgiler: KalipBilgi[] = [
     { key: "kind", etiket: t("f.kind"), deger: t(`kind.${party.kind}`), d: vis.d, ton: vis.ton },
+    // T-1117 (`0064_party_details`): kısa ad, ilçe ve varsayılan teslimat.
+    ...(party.shortName === null ? [] : [{ key: "shortName", etiket: t("f.shortName"), deger: party.shortName, d: SICON.ad, ton: "gri" as const }]),
     ...(party.taxNo === null ? [] : [{ key: "taxNo", etiket: t("f.taxNo"), deger: <span className="mono">{party.taxNo}</span>, d: SICON.bilgi, ton: "lacivert" as const }]),
     ...(party.taxOffice === null ? [] : [{ key: "taxOffice", etiket: t("f.taxOffice"), deger: party.taxOffice, d: SICON.bilgi, ton: "lacivert" as const }]),
     ...(party.phone === null
@@ -43,7 +45,9 @@ export function PartyCard({ slug, dark, canEdit, party }: { slug: string; dark: 
       ? []
       : [{ key: "email", etiket: t("f.email"), deger: <a href={mailtoHref(party.email)} style={linkStil} aria-label={tk("mail", { name: party.name })}>{party.email}</a>, d: LICON.globe, ton: "mavi" as const }]),
     ...(party.city === null ? [] : [{ key: "city", etiket: t("f.city"), deger: party.city, d: LICON.depo, ton: "camgobegi" as const }]),
+    ...(party.district === null ? [] : [{ key: "district", etiket: t("f.district"), deger: party.district, d: LICON.depo, ton: "camgobegi" as const }]),
     ...(party.address === null ? [] : [{ key: "address", etiket: t("f.address"), deger: party.address, d: LICON.depo, ton: "gri" as const }]),
+    { key: "deliveryMode", etiket: t("f.deliveryMode"), deger: t(`delivery.${party.deliveryMode}`), d: SICON.kamyon, ton: "turuncu" as const },
   ];
   return (
     <KalipEkran

@@ -9,9 +9,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { FormEvent } from "react";
-import { Banner, feedback } from "@wms/ui";
+import { feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { CameraOverlay } from "../field/receive/receive-flow.tsx";
+import { KalipUyari } from "../kalip/detay.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { fmtQty, stockTone } from "../kalip/format.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
@@ -60,35 +61,22 @@ export function toServerError(e: ServerError): ServerError {
   return { code: e.code, detail: e.detail, requestId: e.requestId };
 }
 
-export const LINK_CLS =
-  "inline-flex min-h-12 min-w-12 items-center justify-center rounded-control px-2 text-base font-semibold text-accent-ink underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-export const BADGE = "inline-flex items-center rounded-full px-2 text-xs font-bold";
-export const SELECT_CLS =
-  "min-h-12 w-full min-w-0 rounded-card border-2 border-border-strong bg-surface px-4 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
-
+// T-1117 (kullanıcı 28 Ekim: eski tasarım öğesi kalmasın): sunucu hatası eski `@wms/ui` Banner değil, kalıbın kırmızı uyarı bandı
+// (`KalipUyari`): başlık = ne oldu + sonraki eylem, alt satır = destek kodu; MFA / yeniden giriş bağlantıları bandın içinde.
 export function ServerErrorBanner({ error, returnTo }: { error: ServerError; returnTo: string }) {
   const t = useTranslations("items.errors");
   const key = errorKey(error);
+  const kod = `${t("code", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}${error.requestId ? ` · ${error.requestId}` : ""}`;
+  const link =
+    error.detail === "MFA_REQUIRED" ? (
+      <a href={`/mfa?next=${encodeURIComponent(returnTo)}`}>{t("mfaLink")}</a>
+    ) : error.detail === "RECENT_AUTH_REQUIRED" ? (
+      <a href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`}>{t("loginLink")}</a>
+    ) : undefined;
   return (
-    <Banner kind="error">
-      <p>
-        {t(key)} {t(`${key}Action`)}
-      </p>
-      {error.detail === "MFA_REQUIRED" ? (
-        <a className={LINK_CLS} href={`/mfa?next=${encodeURIComponent(returnTo)}`}>
-          {t("mfaLink")}
-        </a>
-      ) : null}
-      {error.detail === "RECENT_AUTH_REQUIRED" ? (
-        <a className={LINK_CLS} href={`/login?reauth=1&next=${encodeURIComponent(returnTo)}`}>
-          {t("loginLink")}
-        </a>
-      ) : null}
-      <p className="mt-1 break-all text-sm">
-        {t("code", { code: error.detail === undefined ? error.code : `${error.code}/${error.detail}` })}
-        {error.requestId ? ` · ${error.requestId}` : ""}
-      </p>
-    </Banner>
+    <KalipUyari title={`${t(key)} ${t(`${key}Action`)}`} sub={kod} alert>
+      {link}
+    </KalipUyari>
   );
 }
 
@@ -116,6 +104,8 @@ export interface ItemListView {
   readonly cardType: CardType;
   /** Arama eski kodla eşleştiyse o eski kod (T-257). */
   readonly oldCode?: string;
+  /** T-1117: listenin "Barkod" sütunu — ürünün ilk barkodu (temel birimdeki önce); yoksa alan yok. */
+  readonly barcode?: string;
 }
 
 /** Kod önerisi yanıt süresi sınırı; aşılırsa kod alanı açılır (T-259). */
@@ -394,11 +384,15 @@ interface ItemsSatir {
   readonly archived: boolean;
   readonly state: string;
   readonly qty: string;
+  /** T-1117: kullanılabilir miktar (biçimli). */
+  readonly avail: string;
 }
 
 export interface ItemStockView {
   readonly have: string;
   readonly min: string | null;
+  /** T-1117: kullanılabilir miktar (stok özetiyle aynı tanım; decimal metni). */
+  readonly available: string;
 }
 
 export function ItemsView({
@@ -470,6 +464,9 @@ export function ItemsView({
       { id: "type", baslik: tk("colType"), deger: (r) => tc(r.it.cardType), sirala: (r) => r.it.cardType },
       { id: "unit", baslik: tk("colUnit"), deger: (r) => r.it.baseUnitCode, sirala: (r) => r.it.baseUnitCode },
       { id: "have", baslik: tk("colHave"), sayi: true, deger: (r) => r.qty, sirala: (r) => Number(r.st?.have ?? 0) },
+      // T-1117 (tuval `StandartUrunlerListe.dc.html` Sütunlar: "Eldeki · Kullanılabilir" açık, "Barkod" kapalı).
+      { id: "available", baslik: tk("colAvailable"), sayi: true, deger: (r) => r.avail, sirala: (r) => Number(r.st?.available ?? 0) },
+      { id: "barcode", baslik: tk("colBarcode"), varsayilan: false, deger: (r) => r.it.barcode ?? "", sirala: (r) => r.it.barcode ?? "" },
       { id: "state", baslik: tk("colState"), deger: (r) => (r.state === "" ? null : <span className={`ktpill ${r.archived ? "" : r.tn}`}>{r.state}</span>), sirala: (r) => r.state },
     ],
     [t, tk, tc],
@@ -586,7 +583,7 @@ export function ItemsView({
     const tn = tones[i] ?? "ok";
     const archived = it.status === "ARCHIVED";
     const state = it.sourceDisposition==="REMOVED"?tk("removedTag"):it.sourceDisposition==="PENDING"?tk("pendingTag"):archived ? tk("archivedTag") : st === undefined ? "" : tn === "crit" ? tk("stockCrit") : tn === "low" ? tk("stockLow") : st.have.replace(/[0.]/g, "") === "" ? tk("stockNone") : tk("stockIn");
-    return { it, st, tn, archived, state, qty: st === undefined ? "" : fmtQty(st.have, locale) };
+    return { it, st, tn, archived, state, qty: st === undefined ? "" : fmtQty(st.have, locale), avail: st === undefined ? "" : fmtQty(st.available, locale) };
   });
 
 

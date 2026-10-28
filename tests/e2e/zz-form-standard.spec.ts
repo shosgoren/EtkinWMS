@@ -47,13 +47,19 @@ test("ortak form standardı: çıkış kutusu, zorunlu alan uyarısı, ortak per
   await page.getByTestId("party-new").click();
   const code = form.locator('input[name="code"]');
   await expect(code).toHaveValue(/^MUS-\d{4}$/);
+  // T-1117 (0064): tuvaldeki Kısa ad, İlçe ve Varsayılan teslimat (varsayılan Kendi personelim).
+  await expect(form.getByLabel("Kısa ad", { exact: true })).toHaveAttribute("placeholder", "Listede görünen ad");
+  await expect(form.getByLabel("İlçe", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("party-delivery").getByRole("radio", { name: "Kendi personelim" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("party-delivery").getByRole("radio", { name: "Kargo firması" })).toHaveAttribute("aria-checked", "false");
   await code.fill("");
   await form.getByLabel("Vergi dairesi", { exact: true }).fill("Kadıköy");
   await page.getByTestId("party-form-save").click();
   await expect(page.getByTestId("err-code")).toHaveText(/Zorunlu/);
   await expect(page.getByTestId("err-name")).toHaveText(/Zorunlu/);
-  await expect(page.getByTestId("kalip-toast")).toContainText("2 alan eksik: Cari kodu, Ünvan");
-  await expect(code).toBeFocused();
+  // T-1117: alan sırası tuvaldeki gibi (önce Ünvan, sonra Cari kodu); ilk hatalı alan Ünvan.
+  await expect(page.getByTestId("kalip-toast")).toContainText("2 alan eksik: Ünvan, Cari kodu");
+  await expect(form.locator('input[name="name"]')).toBeFocused();
   await expect(code).toHaveAttribute("aria-invalid", "true");
   await expect(form.locator('label.fld.bad[data-alan="code"]')).toBeVisible();
   // Alanı düzeltince o alanın hatası kalkar.
