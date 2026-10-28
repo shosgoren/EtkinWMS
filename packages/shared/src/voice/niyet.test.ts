@@ -159,6 +159,12 @@ describe("ekran hedefi (T-1110)", () => {
   it("bilinmeyen hedef null", () => {
     expect(openTarget("motive rubber")).toBeNull();
   });
+  it("ekran sözcüğü geçen ürün/cari adı ekran değildir (katalog aramasına düşer)", () => {
+    expect(openTarget("koli bandi 45mm seffaf")).toBeNull();
+    expect(openTarget("stok kalemi vida")).toBeNull();
+    expect(openTarget("urunler sayfasi")).toEqual({ id: "urun" });
+    expect(openTarget("tum cariler")).toEqual({ id: "cari" });
+  });
 });
 
 describe("ekran hedefi ek durumlar (T-1110)", () => {
