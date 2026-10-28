@@ -17,7 +17,7 @@ import { sesiDurdur, useSesliOku } from './sesli-oku.ts';
 import { ADIM_REHBER_EVENT, useAdimRehberleri } from './adim-rehber.tsx';
 import { ADIM_KAYNAKLARI, adimPlani } from './adim-rehber-plan.ts';
 import { adimaGit, adimKimlik, baslat, bitir, kapat, katla, kimlikCoz, opKimlik, useRehberDurum, yerKaydet } from './rehber-durum.ts';
-import { gorunurMu, kartYeri, useRehberHedef, type KartYeri } from './rehber-hedef.ts';
+import { gorunurMu, kartYeri, useRehberHedef, yaziyor, type KartYeri } from './rehber-hedef.ts';
 function RehberIkon({ d }: {
     d: string | readonly string[];
 }) { return <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{(typeof d === 'string' ? [d] : d).map(p => <path key={p} d={p}/>)}</svg>; }
@@ -61,6 +61,8 @@ export function KalipRehberKart({ guide, title, step, folded, here, onStep, onFi
     useEffect(() => {
         if (!here) return undefined;
         const bak = (): void => {
+            // Kullanıcı adımın hedefindeki bir yazı alanında yazıyor: bitti işareti görünse de ilerlenmez, odak çalınmaz (alandan çıkınca ilerler).
+            if (yaziyor(instruction.target)) return;
             const n = guideAdvance(steps, step, gorunurMu);
             if (n === step) return;
             feedback.ok();
@@ -70,7 +72,7 @@ export function KalipRehberKart({ guide, title, step, folded, here, onStep, onFi
         bak();
         const id = window.setInterval(bak, 300);
         return () => window.clearInterval(id);
-    }, [here, steps, step, onStep, onFinish]);
+    }, [here, steps, step, instruction.target, onStep, onFinish]);
     useEffect(() => () => { sesiDurdur(); }, []);
     useLayoutEffect(() => {
         const key = (e: KeyboardEvent): void => { const modal = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].some(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'); if (e.defaultPrevented || modal)
@@ -196,6 +198,14 @@ export function KalipIslemRehberleri({ userId, slug, dark }: {
                 return;
             e.preventDefault();
             e.stopImmediatePropagation();
+            // Açık seçici isteği (katlı simgenin "Başka bölüm"ü, aktarma ekranlarındaki "?"): kendiliğinden sürdürme dallarından önce.
+            if (e instanceof CustomEvent && e.detail === 'pick') {
+                setOwner?.('operation');
+                guncelle(x => katla(x, true));
+                window.dispatchEvent(new Event(JOURNEY_PAUSE_EVENT));
+                setPicker(true);
+                return;
+            }
             const asked = e instanceof CustomEvent && allowed.includes(e.detail as OpGuide) ? e.detail as OpGuide : null;
             const screen = currentGuide(path, query);
             const g = asked ?? (screen !== null && allowed.includes(screen) ? screen : null);

@@ -73,6 +73,18 @@ export function odakAdayi(els: readonly Element[]): HTMLElement | null {
   return null;
 }
 
+/**
+ * T-1124: odak hedefteki serbest yazı alanında mı (miktar, açıklama)? O sırada adım ilerlemez; kullanıcı alandan çıkınca (Tab, dokunma)
+ * ilerler. Arama/seçim alanı (`role="searchbox"`, `aria-autocomplete`) sayılmaz: orada iş seçenek seçmektir, seçilince ilerlenir.
+ */
+export function yaziyor(target: string | null): boolean {
+  if (typeof document === "undefined") return false;
+  const etkin = document.activeElement;
+  if (!(etkin instanceof HTMLInputElement || etkin instanceof HTMLTextAreaElement) || !etkin.matches(YAZI)) return false;
+  if (etkin.getAttribute("role") === "searchbox" || etkin.getAttribute("role") === "combobox" || etkin.hasAttribute("aria-autocomplete")) return false;
+  return gorunenler(target).some((el) => el.contains(etkin));
+}
+
 /** Açık bir pencere (seçim sayfası, onay kutusu) varsa rehber odağı çalmaz. */
 export function pencereAcik(): boolean {
   return [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].some((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden");

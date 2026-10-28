@@ -60,7 +60,18 @@ test("T-1124 stok çıkışı rehberi: her adım doğru alanı odaklar, doldurun
   await miktar.pressSequentially("12", { delay: 40 });
   await expect(miktar).toHaveValue("12");
   await expect(kart).toHaveAttribute("data-step", "quantity");
-  await page.getByLabel(/İşlem açıklaması/).fill("Rehber deneme");
+  // Açıklama harf harf yazılır: yazarken adım ilerlemez, odak alandan çalınmaz, metin kesilmez; alandan çıkınca ilerler.
+  const aciklama = page.getByLabel(/İşlem açıklaması/);
+  await aciklama.click();
+  const metin = "Rehber deneme açıklaması";
+  await aciklama.pressSequentially(metin, { delay: 120 });
+  await expect(aciklama).toBeFocused();
+  await expect(aciklama).toHaveValue(metin);
+  await page.waitForTimeout(700);
+  await expect(aciklama).toBeFocused();
+  await expect(kart).toHaveAttribute("data-step", "quantity");
+  await aciklama.press("Tab");
+  await expect(aciklama).toHaveValue(metin);
   await expect(kart).toHaveAttribute("data-step", "issueSummary");
   await expect(kart).toContainText("Adım 4/5");
 
@@ -165,4 +176,27 @@ test("T-1124 başka bölüme geçince rehber kapanmaz: kaldığın yerden devam,
   await page.getByTestId("operation-guide-trigger").first().click();
   await expect(kart).toHaveAttribute("data-step", "target");
   await page.getByTestId("guide-close").first().click();
+});
+
+test("T-1124 aktarma rehberi kendi ekranında katlıyken Başka bölüm seçiciyi açar", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/settings/baglantilar");
+  await page.getByTestId("operation-guide-trigger").first().click();
+  await expect(page.getByTestId("guide-picker")).toBeVisible();
+  await page.getByTestId("adim-basla-urun-EXCEL").click();
+  const rehber = page.getByTestId("adim-rehber");
+  await expect(rehber).toHaveAttribute("data-step", "alan_urun");
+  // Bulanık alana dokun: katlanır; rehberin kendi ekranlarından birinde (Aktar) "Başka bölüm" seçiciyi açmalı.
+  await page.getByTestId("kalip-perde").click({ position: { x: 4, y: 4 } });
+  await expect(rehber).toHaveAttribute("data-folded", "true");
+  await page.goto("/t/demo/import");
+  await expect(rehber).toHaveAttribute("data-folded", "true");
+  await page.getByTestId("adim-diger").click();
+  await expect(page.getByTestId("guide-picker")).toBeVisible();
+  await expect(page.getByTestId("adim-basla-urun-EXCEL")).toContainText("1/6");
+  await page.locator('[data-testid="guide-picker"] .ycls').click();
+  await expect(rehber).toHaveAttribute("data-folded", "true");
+  await page.getByTestId("adim-kapat").click();
+  await expect(rehber).toHaveCount(0);
 });
