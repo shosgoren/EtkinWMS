@@ -10,10 +10,10 @@ import { useTranslations } from "next-intl";
 import { KICON } from "../../../../design/kabuk-icons.ts";
 import { dz } from "../../../../design/kalip-saha-tokens.ts";
 import { SICON } from "../../../../design/saha-icons.ts";
-import { ErrorNotice, errorKeyOf, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
+import { errorKeyOf, intOf, submitWithKey, useKeyHolder, type ErrorInfo } from "../../receipts/receipt-form.tsx";
 import { confirmShippingPickAction, previewShippingPickAction } from "../../shipping/actions.ts";
 import { DroppedNotice, PrimaryLink, ScanAlert, ScanPanel, useScanPrimary, useScanner, useStateRef, type AlertState } from "../receive/receive-flow.tsx";
-import { Ico, SahaDoneVeil, SahaShell, SahaVerdict } from "../saha-shell.tsx";
+import { Ico, SahaDoneVeil, SahaHata, SahaMesaj, SahaShell, SahaVerdict } from "../saha-shell.tsx";
 import { SahaQty } from "../saha-qty.tsx";
 import { feedback } from "@wms/ui";
 
@@ -176,9 +176,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
   if (expected === null) {
     return (
       <SahaShell {...shell} title={t("pick.decimalTitle")} instruction={work.orderNumber} backHref={`${base}/tasks`} footer={<PrimaryLink href={`/t/${encodeURIComponent(slug)}/shipping?${new URLSearchParams({ id: work.orderId })}`}>{t("pick.toDesk")}</PrimaryLink>}>
-        <p className="break-words text-lg text-ink" data-testid="pick-message">
-          {t("pick.decimal", { qty: work.quantity, unit: work.unitCode })}
-        </p>
+        <SahaMesaj text={t("pick.decimal", { qty: work.quantity, unit: work.unitCode })} testId="pick-message" />
       </SahaShell>
     );
   }
@@ -296,7 +294,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
               </span>
             </div>
           ) : null}
-          {error === null ? null : <ErrorNotice error={error} context="approve" />}
+          {error === null ? null : <SahaHata error={error} context="approve" />}
         </SahaShell>
         {alertView}
       </>,
@@ -317,6 +315,7 @@ export function PickFlow({ slug, work, initialCode }: { slug: string; work: Pick
         {taskCard(false)}
         {stage === "item" ? <SahaVerdict ok title={t("pick.locationOk", { code: work.locationCode })} sound={ts("qty.sound")} /> : null}
         <ScanPanel
+          variant="kalip"
           service={scanner}
           prompt={busy ? tr("flow.checking") : t(stage === "location" ? "pick.locationPrompt" : "pick.itemPrompt", { code: work.locationCode })}
           last={last}
