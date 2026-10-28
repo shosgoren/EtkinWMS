@@ -1,7 +1,8 @@
 # 3A. Veri Sözlüğü — Depo, Katalog, Stok ve Operasyon Tabloları
 
-> Kaynak: `packages/db/migrations/*.up.sql` (0010–0057). Her tablo **son hâliyle** yazıldı; sonradan gelen `ALTER TABLE` eklemeleri tabloya işlendi ve hangi migration'dan geldiği parantezle belirtildi.
-> Bu dosya yalnız SQL'de olanı anlatır; tahmin yoktur. Kimlik, ekip, platform (yönetim paneli), destek ve entegrasyon tabloları ayrı dosyadadır.
+> Kaynak: `packages/db/migrations/*.up.sql` (0010–0063) · main 8e2710d · 28 Ekim 2026. Her tablo **son hâliyle** yazıldı; sonradan gelen `ALTER TABLE` eklemeleri tabloya işlendi ve hangi migration'dan geldiği parantezle belirtildi.
+> Bu dosya yalnız SQL'de olanı anlatır; tahmin yoktur. Kimlik, ekip, platform (yönetim paneli), destek ve entegrasyon tabloları ayrı dosyadadır (`03b-veri-sozlugu-kimlik-platform.md`).
+> 0058–0063 arasında bu dosyanın kapsamına giren tek değişiklik `items` tablosudur (0060 kaynak kart bilgisi, 0062 kaynak yaşam döngüsü); yeni depo/stok tablosu eklenmedi. 0058 (`setup_journeys`), 0059 (`integrations.pull_product_barcodes`), 0061 (`integration_oauth_apps`, `integration_oauth_attempts`) ve 0063 (`tenant_settings.voice_reply`) 3b'dedir.
 
 ## Okumadan önce: ortak kavramlar
 
@@ -46,6 +47,8 @@ erDiagram
     text card_type
     text tracking_mode
     uuid base_unit_id FK
+    text source_state
+    text source_disposition
   }
   warehouses {
     uuid id PK
@@ -227,12 +230,23 @@ Bir kullanıcının **yalnız belirli depoları** görmesi isteniyorsa hangi dep
 | card_type | text | Varsayılan `TM`, CHECK (0031) | Kart türü | — |
 | created_at / archived_at | timestamptz | — | Oluşma / arşiv | — |
 | is_sample | boolean | Varsayılan false (0040) | Örnek veri mi | — |
+| source_product_info | jsonb | NULL olamaz, varsayılan `{}`, CHECK (0060) | Dış sistemden (Paraşüt/Logo) gelen kart bilgisi: birim, GTİP, kategori, kaynakta arşivli mi, stok takibi var mı. **Fiyat ve stok miktarı kabul edilmez**; yalnız `PARASUT` / `LOGO` anahtarları ve izinli alt alanlar yazılabilir | — |
+| source_state | text | NULL olamaz, varsayılan `ACTIVE`, CHECK (0062) | Ürünün dış sistemdeki (kaynak) durumu | — |
+| source_disposition | text | NULL olamaz, varsayılan `NONE`, CHECK (0062) | Kaynaktaki değişikliğe karşı Etkin'de ne yapıldığı | — |
+| source_managed_archive | boolean | Varsayılan false (0062); doluysa ürün arşivde ve kaynak ACTIVE değil | Ürünü kaynak değişikliği yüzünden **sistem** arşivledi (kaynakta tekrar açılırsa sistem geri açar) | — |
+| source_changed_at | timestamptz | NULL olabilir (0062); PENDING ise dolu | Kaynakta ilk değişikliğin görüldüğü an | — |
+| source_checked_at | timestamptz | NULL olabilir (0062) | Kaynağın bu ürün için en son kontrol edildiği an (kontrol sırası bu alana göre) | — |
+| source_missing_since | timestamptz | NULL olabilir (0062); bağlamla birlikte dolu/boş | Ürünün kaynakta bulunamadığı ilk an (tek gözleme güvenilmez; süre dolunca "silindi" sayılır) | — |
+| source_missing_context | text | NULL olabilir (0062), 64 hane onaltılık özet | "Bulunamadı" gözleminin hangi bağlantı/ürün eşlemesiyle yapıldığının özeti; bağlantı değişirse sayım baştan başlar | — |
 
 - **Durum kodları:**
   - `tracking_mode`: `NONE` = Takipsiz · `LOT` = Lot (parti) takipli · `SERIAL` = Her adet seri numaralı · `LOT_AND_SERIAL` = Hem lot hem seri.
   - `pick_policy`: `FIFO` = İlk giren ilk çıkar · `FEFO` = Son kullanma tarihi en yakın olan önce çıkar.
   - `card_type`: `HM` = Hammadde · `YM` = Yarı mamul · `MM` = Mamul · `TM` = Ticari mal (al-sat).
-- **Koruma:** RLS ENABLE + FORCE. Stoğu olan ürünün takip modu tetikleyiciyle sessizce değiştirilemez (`items_guard_tracking_mode`).
+  - `source_state` (0062): `ACTIVE` = Kaynakta kullanımda · `ARCHIVED` = Kaynakta arşivlendi · `DELETED` = Kaynakta artık yok.
+  - `source_disposition` (0062): `NONE` = Bir şey yapılmadı · `PENDING` = Kaynakta kapandı ama üründe bekleyen stok işi var; yeni kullanıma kapalı, iş bitince arşivlenir · `ARCHIVED` = Etkin'de arşivlendi · `REMOVED` = Kaynakta silindi ve hiç kullanılmamış; Etkin'de arşivlendi (satır silinmez, kimlik ve QR'ler korunur).
+  - Kurallar (CHECK `items_source_lifecycle_chk`): kaynak ACTIVE ise sonuç `NONE` olmak zorunda; `ARCHIVED`/`REMOVED` sonucu yalnız `status = ARCHIVED` ile; `REMOVED` yalnız kaynak `DELETED` iken.
+- **Koruma:** RLS ENABLE + FORCE. Kaynak yaşam döngüsü yalnız bilgi alanıdır; stok, defter ve ürün kimliği değişmez. Uygulama rolü kaynak alanlarını yalnız sütun izniyle günceller (0060, 0062). Stoğu olan ürünün takip modu tetikleyiciyle sessizce değiştirilemez (`items_guard_tracking_mode`).
 
 ### unit_conversions
 Ürüne özel birim çevrimi (ör. 1 KOLI = 12 ADET).
@@ -1079,4 +1093,4 @@ Sahadan bildirilen sorun (hasarlı, eksik, yanlış ürün…).
 
 ## Özet: bu dosyadaki tablo sayısı
 
-51 tablo: depo 4 · katalog/cari 10 · belge 7 · stok motoru 4 · güvenilirlik 3 · saha belgeleri 6 · görev/sayım/uyarı 6 · üretim 5 · paket 2 · dış eşleme 2 · iş sinyalleri 2.
+51 tablo (0058–0063 bu kapsamda yeni tablo eklemedi; 0061'in iki OAuth tablosu 3b'dedir): depo 4 · katalog/cari 10 · belge 7 · stok motoru 4 · güvenilirlik 3 · saha belgeleri 6 · görev/sayım/uyarı 6 · üretim 5 · paket 2 · dış eşleme 2 · iş sinyalleri 2.
