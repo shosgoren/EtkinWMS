@@ -119,7 +119,32 @@ export { assertLineRules, assertSerialUnique, assertSufficient, type BalanceView
 export { assertTracking, type TrackedLine, type TrackingMode } from "./tracking.ts";
 export { readAvailability, type AvailabilityFilter, type AvailabilityRow } from "./availability.ts";
 export { listStockOverview, type StockOverviewInput, type StockOverviewRow } from "./queries.ts";
-export { getItemStockCard, sumItemsStock, type ItemMoveRow, type ItemPlaceRow, type ItemStockCard, type ItemStockSum } from "./item-card.ts";
+export {
+  getItemStockCard,
+  getItemStockPivot,
+  listItemMoves,
+  listItemLots,
+  listItemSerials,
+  listItemTracking,
+  sumItemsStock,
+  ITEM_MOVES_DEFAULT_LIMIT,
+  ITEM_MOVES_MAX_LIMIT,
+  ITEM_PIVOT_MAX_ROWS,
+  ITEM_TRACKING_DEFAULT_LIMIT,
+  ITEM_TRACKING_MAX_ROWS,
+  type ItemLotRow,
+  type ItemMoveRow,
+  type ItemMovesPage,
+  type ItemPivotRow,
+  type ItemPlaceRow,
+  type ItemSerialRow,
+  type ItemStockCard,
+  type ItemStockPivot,
+  type ItemStockSum,
+  type ItemTracking,
+  type ItemTrackingPage,
+  type ItemTrackingPageOptions,
+} from "./item-card.ts";
 // T-224: ters kayıt (I-08, AC-06): kalan ters çevrilmemiş miktar sınırı, bağımlı işlem denetimi, `REVERSAL_BLOCKED`. Yazım reversal.ts'tedir (eslint STOCK_WRITE_FILES).
 export {
   REVERSAL_MAX_LINES,

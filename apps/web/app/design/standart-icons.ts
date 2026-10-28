@@ -48,4 +48,10 @@ export const SICON = {
   telefon: "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2",
   eposta: "M3 6h18v12H3zM3 6l9 7 9-7",
   konum: "M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12zM12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+
+  /** T-1116 ürün kartı (kaynak `StandartUrunKarti.dc.html` / `StandartUrunKartiStok.dc.html`): Takip sekmesi, pivot palet ve açık/kapalı oku. */
+  takip: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2",
+  palet: "M3 17h18M5 17v3M12 17v3M19 17v3M5 7h14v10H5z",
+  chevRight: "M9 6l6 6-6 6",
+  chevOpen: "M6 9l6 6 6-6",
 } as const;

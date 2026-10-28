@@ -29,6 +29,7 @@ Bu belgenin sonucu:
 - Genel: bilgiler simgeli kutucuklarda (3 sütun); dış sistemin yönettiği alanda kilit simgesi. Sağda **son hareketler zaman çizgisi**: her satır tıklanınca o işlemi açan kart (renkli simge, belge no, tarih, raf yeri, miktar hapı +yeşil/−kırmızı, yapan kişi).
 - **Stok ve yer:** katlanır pivot (Depo › Raf yeri › Lot › Paket; sıra sürüklenir, "+ Seri"; Hepsini aç/kapat; Tam ekran); her seviyede toplam; altta sabit toplam şeridi.
 - Arşivli kayıtta işlem düğmeleri yok; yetkisiz işlem gizlenir ya da kilitli görünür.
+- **Kod (T-1116):** `kalip/kart.tsx` (`KalipKartSerit`, `KalipKartSekmeler`, `KalipBilgiIzgara`, `KalipSonHareketler`, bildirim bandı `KalipKartNot`, simgeli satır listesi `KalipKartSatirlar`) + pivot `kalip/pivot.tsx` (`KalipPivot`; saf gruplama `kalip/pivot.ts`: yol → düğüm, decimal toplam, "paketsiz" gevşek çocuk, tür sayımı); görünüm `design/standart.css` `.stk*`, `.stpv*`. İlk kullanan: ürün kartı (`?sekme=stok|hareketler|takip|gecmis`). Pivotta sürükleyerek sıra, "+ Seri" ve "Tam ekran" henüz yok.
 
 ## 4. Form kalıbı (yeni / düzenle; ör. Yeni cari)
 - Tek panel, en çok 3 sütun, kaydırma yok (konu çoksa sekmeye bölünür).

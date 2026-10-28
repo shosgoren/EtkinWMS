@@ -1252,6 +1252,10 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
    Şimşek alt çubuğun (z 25) üstünde; açılınca perde bütün ekranı (alt çubuk dahil) örter, halka ve seçici perdenin üstünde. */
 .dzp.kisayol-kok { display: contents; }
 .dzp.kisayol-kok .fab { position: fixed; z-index: 30; }
+/* T-1123: halka açıkken şimşek perdenin (.hback 38) üstünde. Dokunmatikte aynı dokunuşun ardından gelen "click" bulunduğu noktada yeniden
+   hedeflenir; şimşek perdenin altında kalınca tıklama perdeye düşüp halkayı hemen kapatıyordu. Üstteyken düğmeye düşer (işlevi yok);
+   şimşeğe yeniden dokunmak halkayı kapatır. */
+.dzp.kisayol-kok .fab:has(.fabb.on) { z-index: 39; }
 .dzp.kisayol-kok .hback { position: fixed; inset: 0; z-index: 38; }
 .dzp.kisayol-kok .halo { position: fixed; z-index: 39; }
 .dzp.kisayol-kok .page { position: fixed; inset: 0; z-index: 41; }
@@ -1685,6 +1689,265 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
   font-weight: 800;
   text-decoration: underline;
 }
+
+/* ---- T-1116 Kayıt kartı: bildirim bandı, simgeli satır listesi ve "Stok ve yer" pivotu (STANDART §3; kaynak
+   `StandartUrunKartiStok.dc.html`). Pivot kendi içinde kayar (sütun başlığı ve toplam şeridi sabit); telefonda SKT/Durum sütunları satır
+   altına iner, girinti daralır. ---- */
+.stknot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--k) 10%, var(--color-kr-card));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--k) 24%, var(--color-kr-card));
+  font: 700 14.5px/1.35 var(--font-instrument), sans-serif;
+  color: var(--color-kr-ink);
+}
+.stknot > i {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k);
+  color: var(--color-kr-card);
+}
+.stknot > span { min-width: 0; overflow-wrap: anywhere; }
+.stksatir {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stksatir > li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--color-st-k-kutu);
+  min-width: 0;
+}
+.stksatir-ust {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.stksatir-ust > i {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k);
+  color: var(--color-kr-card);
+}
+.stksatir-deger {
+  flex: none;
+  font: 700 14px/1 var(--font-plex-mono), monospace;
+  white-space: nowrap;
+}
+.stksatir-alt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stkdaha {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font: 700 14px/1 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-mavi);
+}
+.stpv {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stpv-arac {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.stpv-grup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.stpv-grup > b {
+  font: 700 14px/1 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-gri);
+}
+.stpv-cip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-st-k-gri);
+}
+.stpv-cip > span {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--color-st-k-mavi) 12%, var(--color-kr-card));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-st-k-mavi) 24%, var(--color-kr-card));
+  color: var(--color-st-k-lacivert);
+  font: 700 13.5px/1 var(--font-instrument), sans-serif;
+}
+.stpv-bosluk { flex: 1; }
+.stpv-dugme {
+  appearance: none;
+  border: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 11px;
+  background: var(--color-st-k-kutu);
+  color: var(--color-kr-ink);
+  font: 700 13.5px/1 var(--font-instrument), sans-serif;
+  cursor: pointer;
+}
+.stpv-tablo {
+  flex: 1 1 auto;
+  min-height: 160px;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1.5px var(--color-st-k-cizgi);
+  overflow: auto;
+}
+.stpv-tablo table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 500 14.5px/1.3 var(--font-instrument), sans-serif;
+}
+.stpv-tablo thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-st-k-kutu);
+}
+.stpv-tablo th {
+  text-align: left;
+  padding: 10px 12px;
+  font: 700 12.5px/1.2 var(--font-instrument), sans-serif;
+  color: var(--color-st-k-gri);
+}
+.stpv-tablo td {
+  padding: 2px 12px;
+  border-top: 1.5px solid var(--color-st-k-yan);
+  font-size: 13.5px;
+  vertical-align: middle;
+}
+.stpv-tablo tr.kok td { background: var(--color-st-k-yan); }
+.stpv-tablo tr.kok .stpv-ad > b { font-weight: 800; }
+.stpv-tablo .stpv-sag { text-align: right; white-space: nowrap; }
+.stpv-tablo .mono { font-family: var(--font-plex-mono), monospace; font-variant-numeric: tabular-nums; }
+.stpv-satir {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 calc(var(--d, 0) * 26px);
+  cursor: default;
+}
+button.stpv-satir { cursor: pointer; }
+.stpv-ok {
+  width: 16px;
+  flex: none;
+  display: flex;
+  color: var(--color-st-k-gri);
+}
+.stpv-satir > i {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k);
+  color: var(--color-kr-card);
+}
+.stpv-ad {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 8px;
+}
+.stpv-ad > b { font-weight: 600; overflow-wrap: anywhere; }
+.stpv-ad > small { font-size: 12.5px; color: var(--color-st-k-gri); }
+.stpv-ad > small.stpv-dar { display: none; }
+.stpv-hap {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  margin-right: 6px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font: 700 12px/1 var(--font-instrument), sans-serif;
+  white-space: nowrap;
+}
+.stpv-hap.ok { background: var(--color-st-k-ok-bg); color: var(--color-st-k-ok); }
+.stpv-hap.amber { background: var(--color-st-k-kirmizi-bg); color: var(--color-st-k-amber); }
+.stpv-hap.kirmizi { background: var(--color-st-k-kirmizi-bg); color: var(--color-st-k-kirmizi-ink); }
+.stpv-toplam {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-st-k-mavi) 12%, var(--color-kr-card)) 0%, color-mix(in srgb, var(--color-st-k-mavi) 6%, var(--color-kr-card)) 100%);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-st-k-mavi) 24%, var(--color-kr-card));
+  color: var(--color-st-k-lacivert);
+  font: 500 14px/1.3 var(--font-instrument), sans-serif;
+}
+.stpv-toplam > span { color: var(--color-st-k-gri); }
+.stpv-toplam > b.mono { font: 700 16px/1 var(--font-plex-mono), monospace; }
+.dz-dark :is(.stksatir > li, .stpv-dugme, .stpv-tablo thead) { background: var(--color-kr-bg-dark-a); color: var(--color-kr-text-dark); }
+.dz-dark .stknot { background: var(--color-kr-bg-dark-a); box-shadow: none; color: var(--color-kr-text-dark); }
+.dz-dark .stpv-tablo tr.kok td { background: var(--color-st-dark-bg-a); }
+.dz-dark .stpv-tablo td { border-top-color: var(--color-kr-bg-dark-a); }
+.dz-dark :is(.stpv-cip > span, .stpv-toplam) { background: var(--color-kr-bg-dark-a); box-shadow: none; color: var(--color-kr-text-dark); }
+.dz-dark :is(.stpv-ad > small, .stpv-tablo th, .stpv-toplam > span, .stpv-grup > b) { color: var(--color-kr-muted); }
+@media (max-width: 1099.98px) {
+  .stpv-tablo { overflow: visible; min-height: 0; }
+  .stpv-tablo thead { position: static; }
+}
+@media (max-width: 699.98px) {
+  .stpv-tablo .stpv-genis { display: none; }
+  .stpv-ad > small.stpv-dar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; flex-basis: 100%; margin-top: 2px; }
+  .stpv-ad > small.stpv-dar .stpv-hap { height: 22px; margin-right: 0; }
+  .stpv-satir { padding-left: calc(var(--d, 0) * 12px); }
+  .stpv-tablo td { padding: 2px 8px; }
+}
+/* T-1116: kart gövdesi dikey yığın, düğme sırası ve pivot kabı (eski Tailwind sınıflarının yerine). */
+.stkyigin { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.stkdugmeler { display: flex; flex-wrap: wrap; gap: 8px; }
+.stkpvkap { flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.stksatir .mono { font-family: var(--font-plex-mono), monospace; overflow-wrap: anywhere; }
 
 /* ==== T-1122 (B-63, I-18): saha ekranlarının eski görünümü (Tailwind, kütüphane simgeleri) Saha kalıbı diline taşındı ====
    Kaynak KalipSaha.dc.html: birincil `.btn.n`, ikincil `.more`, iş kartı `.job`, kötü sonuç `.vres.bad` (kırmızı dolu). Saha kabında
