@@ -17,7 +17,8 @@ import { ADIM_KAYNAKLARI } from './adim-rehber-plan.ts';
 function RehberIkon({ d }: {
     d: string | readonly string[];
 }) { return <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{(typeof d === 'string' ? [d] : d).map(p => <path key={p} d={p}/>)}</svg>; }
-export const OP_GUIDE_EVENT = 'etkinwms:operation-guide';
+export { OP_GUIDE_EVENT } from './rehber-plan.ts';
+import { OP_GUIDE_EVENT } from './rehber-plan.ts';
 /**
  * T-1105 (kullanıcı 27 Ekim: "yazı ve tarif değil, işi yaptırsın"): işlem rehberi kartı T-1095/T-1100 odaklı rehberle aynı — ortak buzlu
  * perde yapılacak yerin çevresini delik bırakıp bütün ekranı örter, kart tek satır (adım · sesli · kapat); "Uygula" ve "Şimdilik kapat"
