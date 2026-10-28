@@ -1,4 +1,6 @@
 // T-1026: istemci için yalnız rehber planı; izin hesabı sunucu modülündedir.
+/** İşlem rehberini açma olayı (detay: rehber anahtarı ya da "pick"); T-1120: yüzen kısayol da yayınlar, döngüsel içe aktarma olmasın diye burada. */
+export const OP_GUIDE_EVENT = "etkinwms:operation-guide";
 export const OP_GUIDES = ['receive', 'putaway', 'issue', 'transfer', 'count'] as const;
 export type OpGuide = typeof OP_GUIDES[number];
 export interface GuideInstruction {
