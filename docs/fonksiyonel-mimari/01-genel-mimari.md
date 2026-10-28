@@ -2,7 +2,7 @@
 
 > **Bu bölüm neyi anlatır?** Üç web adresinin (etkinyazilim.com, yonet.etkinyazilim.com, wms.etkinyazilim.com) her birinin ne işe yaradığını, aralarında verinin nasıl aktığını, kullanıcıların nasıl giriş yaptığını, müşterilerin (kiracıların) verisinin birbirinden nasıl ayrıldığını ve sistemin bugünkü donanımla ne kadar yük taşıyabileceğini anlatır.
 >
-> **Kaynak:** Bu bölümdeki her bilgi koddan okundu. Dayandığı dosyalar her başlığın altında `yol/dosya` biçiminde yazılı. Kapasite rakamları **tahmindir**: ölçülmedi, yük testi henüz yok (`tests/load` planlı).
+> **Kaynak:** main `8e2710d` · 28 Ekim 2026 (ilk sürüm main `36f3a13` · 23 Ekim). Bu bölümdeki her bilgi koddan okundu. Dayandığı dosyalar her başlığın altında `yol/dosya` biçiminde yazılı. Kapasite rakamları **tahmindir**: ölçülmedi, yük testi henüz yok (`tests/load` planlı).
 >
 > **Etiketler:** **[TAMAMLANDI]** kod main dalında uçtan uca bağlı demektir. **[GELİŞTİRİLİYOR]** bir kısmı yapıldı ya da yarım kaldı demektir. **[PLANLANDI]** yalnız yapılacaklar listesinde ya da tasarımda var demektir. Kodda olmak canlıda çalışmak demek değildir. Canlı durumu `docs/STATE.md` tutar ve ayrıca belirtilir.
 
@@ -14,13 +14,13 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **etkinyazilim.com** | Potansiyel müşteri (ziyaretçi) | Tanıtım sayfası, fiyat kartları, **demo talep formu**. `www.` ve `.com.tr` adresleri buraya yönlenir. | `marketing` konteyneri (Node, port 3200) | [TAMAMLANDI] |
 | **yonet.etkinyazilim.com** | Yalnız **Etkin işletmecisi** (siz / platform operatörü) | **Yönetim paneli:** müşteriler (yalnız sayılar), paketler, ödemeler, demo talepleri, satış sayfası içeriği, destek talepleri, işlem kaydı | `panel` konteyneri (WMS ile aynı program, "panel kipi") | [TAMAMLANDI] |
-| **wms.etkinyazilim.com** | Müşterinin çalışanları (ofis + saha) | **Depo uygulamasının kendisi:** mal kabul, stok, toplama, sevk, sayım, üretim, raporlar, ekip yönetimi. Her müşterinin adresi `wms.etkinyazilim.com/t/<alan-adı>` biçimindedir. Kısa yol `wms.etkinyazilim.com/<alan-adı>` de çalışır. | `web` konteyneri (Next.js, port 3000) | [TAMAMLANDI] |
+| **wms.etkinyazilim.com** | Müşterinin çalışanları (ofis + saha) | **Depo uygulamasının kendisi:** mal kabul, stok, toplama, sevk, sayım, üretim, raporlar, ekip yönetimi, Ayarlar (Firma · Kullanıcılar ve yetki · Entegrasyonlar · Görünüm), Etkin sesli komut. Masaüstünde bütün ekranlar ortak kabuk ve beş kalıptan (liste, kayıt kartı, form, ayar, pencere) birine oturur (`docs/design/STANDART.md`, `apps/web/app/t/[slug]/kalip/`). Her müşterinin adresi `wms.etkinyazilim.com/t/<alan-adı>` biçimindedir. Kısa yol `wms.etkinyazilim.com/<alan-adı>` de çalışır. | `web` konteyneri (Next.js, port 3000) | [TAMAMLANDI] |
 
 **Önemli tasarım kararı (ADR-027):** Panel ile WMS **aynı programın iki ayrı çalıştırmasıdır**. Ortam değişkeni `APP_SURFACE=panel` verilirse program yönetim paneli gibi davranır. Verilmezse müşteri uygulaması gibi davranır. Bu yüzden:
 - Panel adresinde müşteri ekranları açılmaz (404). Müşteri adresinde de panel ekranları açılmaz (404).
 - Panelin oturum çerezi ayrıdır. WMS'e giriş yapmış biri panele otomatik giremez.
 
-Kaynak: `apps/web/lib/surface.ts`, `apps/web/proxy.ts`, `deploy/vps/Caddyfile`, `deploy/vps/compose.yml`.
+Kaynak: `apps/web/lib/surface.ts`, `apps/web/proxy.ts`, `deploy/vps/Caddyfile`, `deploy/vps/automation/compose.yml`.
 
 ---
 
@@ -47,7 +47,7 @@ flowchart TB
     W["web<br/>WMS uygulaması (Next.js)<br/>1,5 GB"]
     P["panel<br/>Yönetim paneli<br/>aynı imaj, panel kipi<br/>768 MB"]
     WK["worker<br/>arka plan işleri<br/>512 MB"]
-    V["voice<br/>sesli komut: konuşma → yazı<br/>1,25 GB, 1,5 CPU"]
+    V["voice<br/>Etkin ses servisi<br/>konuşma → yazı + yazı → ses<br/>1,25 GB, 1,5 CPU"]
     DB[("PostgreSQL 18<br/>tek veritabanı, TLS zorunlu<br/>2 GB")]
     L[("demo-leads<br/>dosya birimi")]
   end
@@ -59,20 +59,23 @@ flowchart TB
   MK -->|"demo talebi<br/>iç ağ: /api/public/demo"| W
   MK -.->|eski yol: JSONL dosyası| L
   L -.->|salt okuma| WK
-  W -->|"bas-konuş ses kaydı<br/>yalnız iç 'voice' ağı"| V
+  W -->|"bas-konuş kaydı (/stt) ve<br/>okunacak metin (/tts)<br/>yalnız iç 'voice' ağı"| V
   W --> DB
   P --> DB
   WK --> DB
   DB -->|"outbox + pg-boss kuyruğu<br/>(veritabanının içinde)"| WK
   WK -->|e-posta| R["Resend<br/>e-posta servisi"]
-  WK -->|"saatlik eşitleme<br/>(müşteri açtıysa)"| PR["Paraşüt<br/>muhasebe/ERP"]
+  WK -->|"30 sn'de bir eşitleme<br/>(müşteri açtıysa)"| PR["Paraşüt<br/>muhasebe/ERP"]
+  W -.->|"bağlantı kurulurken<br/>OAuth yetkilendirme"| PR
 ```
 
 **Diyagramı okumak için:**
 - Dışarıdan gelen her istek önce **Caddy**'ye gelir. Caddy HTTPS sertifikasını otomatik alır ve isteği adrese göre doğru konteynere iletir.
 - `/api/public/*` yolları dışarıya kapalıdır: Caddy bunlara 404 döner. Bu uçları yalnız satış sitesi, sunucunun iç ağından çağırır.
 - **Veritabanının dışarıya açık portu yoktur.** Yalnız Docker'ın iç ağından ve TLS (şifreli bağlantı) + parola doğrulamasıyla erişilir (`deploy/vps/database/compose.yml`, `pg_hba.conf`).
-- Ses servisi (`voice`) yalnız `web` ile konuşabildiği kapalı bir ağdadır. İnternete çıkamaz. Sesi diske yazmaz.
+- Ses servisi (`voice`) yalnız `web` ile konuşabildiği kapalı bir ağdadır. İnternete çıkamaz. Sesi diske yazmaz. İki işi vardır: basılı tutulan düğmeyle kaydedilen sesi yazıya çevirmek (`/stt`) ve ekranda okunacak metni doğal Türkçe sesle okumak (`/tts`) (`services/voice/app.py`).
+- Paraşüt bağlantısı ilk kez kurulurken müşteri yöneticisi Paraşüt'ün kendi giriş sayfasına gider. Paraşüt onaydan sonra kullanıcıyı `wms.` adresindeki geri dönüş ucuna (`/api/integrations/parasut/callback`) yollar. `web` bu sırada bir kez Paraşüt'le konuşur ve erişim anahtarını şifreli saklar. Sonraki düzenli eşitlemeyi `worker` yapar (`packages/domain/src/integrations/oauth.ts`).
+- Yayın sırasında bir konteyner yenilenirken Caddy en çok 15 saniye, çeyrek saniye arayla yeniden bağlanmayı dener. Bu, yayın anındaki kısa "502" hatasını örtmek içindir. Karşıya ulaşmış bir istek tekrar gönderilmez (`deploy/vps/Caddyfile` → `deploy_connect_retry`, T-1070). Kodda var; canlıda etkisi STATE'te henüz doğrulanmadı (UNKNOWN).
 
 ---
 
@@ -97,7 +100,7 @@ sequenceDiagram
   Isletmeci->>Panel: Talepler ekranında "Onayla"
   Panel->>DB: Deneme aboneliği ve aktivasyon belirteci (wms_platform.subscriptions)
   Worker-->>Musteri: Aktivasyon bağlantısı e-postası (wms./activate/…)
-  Musteri->>Web: Bağlantıyı açar, alan adı + parola + 2 adımlı doğrulama
+  Musteri->>Web: Bağlantıyı açar, alan adı + parola + 4 adımlı doğrulama sihirbazı
   Web->>DB: Yeni kiracı (tenants), sahip üyelik, ayarlar ve isteğe bağlı örnek veri
   Isletmeci->>Panel: Satış sayfası metni/fiyat kartı yayınla
   Panel->>DB: wms_platform site içeriği sürümü
@@ -111,6 +114,9 @@ sequenceDiagram
 | Deneme aktivasyonu | Panel (onay) | Müşteri (e-posta) → WMS | Tek kullanımlık bağlantı `/activate/<belirteç>` | `packages/domain/src/platform/activation.ts`, `apps/web/app/activate/[token]` |
 | Müşteri sayıları | WMS veritabanı | Panel | Panel yalnız **sayıları** görür (kaç ürün, kaç kullanıcı gibi). Müşterinin içeriğini göremez. | `0042_customers`, `wms_probe.platform_*` işlevleri |
 | Destek talebi | WMS (müşteri) | Panel (işletmeci) | Aynı veritabanı. İşletmeci yalnız denetimli işlevlerle erişir. | `0054_support_tickets`, `apps/web/app/panel/support` |
+| Paraşüt bağlantısı (OAuth) | Müşteri yöneticisi → Paraşüt giriş sayfası | WMS | Paraşüt onaydan sonra `/api/integrations/parasut/callback` adresine döner. Yetki `settings.manage` + son 10 dakikada kimlik doğrulaması. Tek kullanımlık deneme kaydı 10 dakika geçerlidir. Anahtarlar şifreli saklanır, ekranda gösterilmez. | `apps/web/app/api/integrations/parasut/callback/route.ts`, `packages/domain/src/integrations/oauth.ts`, `0061_integration_oauth` |
+| Paraşüt eşitlemesi | Paraşüt ↔ veritabanı | — | `worker` 30 saniyede bir, açık akışı olan her bağlantı için tek iş kuyruğa koyar. İlk bağlantıda yalnız ürün kartları (miktarsız, fiyatsız) Paraşüt'ten çekilir. | `apps/worker/src/jobs/integration-sync.ts`, `packages/domain/src/integrations/sync.ts` |
+| Etkin sesli komut / sesli yanıt | Kullanıcının telefonu | `voice` servisi (iç ağ) | `web`, kaydı `/stt`'ye, okunacak metni `/tts`'ye iletir. Ses ve metin loglanmaz. | `apps/web/lib/voice.ts`, `apps/web/app/t/[slug]/etkin/actions.ts` |
 
 ---
 
@@ -121,7 +127,7 @@ Sistemde **iki tür kullanıcı girişi** vardır:
 ### a) Ofis kullanıcısı: e-posta + parola (+ iki adımlı kod) — [TAMAMLANDI]
 - **Kütüphane:** Better Auth 1.7.7. Parolalar **Argon2id** ile özetlenir, yani düz metin olarak saklanmaz (`packages/auth/src/password.ts`).
 - **Parola kuralı:** en az 12, en çok 128 karakter (`PASSWORD_MIN_LENGTH`).
-- **İki adımlı doğrulama (MFA/TOTP):** telefon uygulamasındaki 6 haneli koddur. **Yönetici** ve **Depo yöneticisi** rollerinde zorunludur. Onay, ters kayıt ya da Excel aktarımı yetkisi taşıyan özel grup üyelerinde de zorunludur (`packages/domain/src/identity/access.ts` → `MFA_REQUIRED_ROLES`, `MFA_GRANTS`). Demo alanında bu zorunluluk kapalıdır.
+- **İki adımlı doğrulama (MFA/TOTP):** telefon uygulamasındaki 6 haneli koddur. **Yönetici** ve **Depo yöneticisi** rollerinde zorunludur. Onay, ters kayıt ya da Excel aktarımı yetkisi taşıyan özel grup üyelerinde de zorunludur (`packages/domain/src/identity/access.ts` → `MFA_REQUIRED_ROLES`, `MFA_GRANTS`). Demo alanında (`tenants.is_demo`) bu zorunluluk kapalıdır. Kurulum, aktivasyon ve `/mfa` ekranında ortak 4 adımlı sihirbazla yapılır: uygulamayı kur → hesabı ekle (telefonda tek dokunuş, bilgisayarda QR) → 6 haneli kod → yedek kodlar (`apps/web/app/totp-sihirbaz.tsx`, T-1034).
 - **5 yanlış kod → 15 dakika kilit** (`TWO_FACTOR_LOCKOUT`).
 - **"Bu cihazı 30 gün hatırla":** bu seçenek işaretlenirse o cihazda 30 gün boyunca kod sorulmaz (`TRUST_DEVICE_MAX_AGE_SEC`). **Panelde (yonet.) ve işletmeci hesabında bu seçenek kapalıdır**: her girişte kod istenir (`apps/web/lib/auth-service.ts` → `webTrustDeviceAllowed`).
 - **Oturum süresi:** kayan 12 saat; oturum 15 dakikada bir yenilenir (`SESSION_EXPIRES_IN_SEC`, `SESSION_UPDATE_AGE_SEC`).
@@ -208,14 +214,16 @@ sequenceDiagram
 
 | Servis | Ne yapar? | Nasıl çalışır? | Durum | Kaynak |
 | :--- | :--- | :--- | :--- | :--- |
-| **Arka plan işçisi (worker)** | E-posta gönderimi, davet teslimi, stok belgesi işleme, gece stok tutarlılık kontrolü, yarım bırakılan sayımın kapatılması, Paraşüt eşitlemesi, destek bildirimi, demo alanının yenilenmesi, kuyruk bakımı, "hayattayım" sinyali | Ayrı Node süreci, `apps/worker/src/jobs/*.ts` | [TAMAMLANDI] | `apps/worker/src/main.ts` |
+| **Arka plan işçisi (worker)** | E-posta gönderimi, davet teslimi, deneme aktivasyonu e-postası, demo talebi durum e-postası, stok belgesi işleme, gece stok tutarlılık kontrolü, yarım bırakılan sayımın kapatılması, Paraşüt eşitlemesi (30 sn'de bir), destek bildirimi, demo alanının yenilenmesi, kuyruk bakımı, "hayattayım" sinyali | Ayrı Node süreci, `apps/worker/src/jobs/*.ts` | [TAMAMLANDI] | `apps/worker/src/main.ts` |
 | **Kuyruk: outbox + pg-boss** | Bir işlem "sonra şunu yap" diyorsa (ör. e-posta at), bu istek **aynı veritabanı işleminin içinde** kuyruğa yazılır. İşlem geri alınırsa kuyruk kaydı da geri alınır. Kuyruk ayrı bir sunucuda değil, **PostgreSQL'in içindedir** (Redis yok). | pg-boss 12.36 | [TAMAMLANDI] | `packages/queue-adapter`, ADR-005, INVARIANTS I-07 |
 | **E-posta** | Davet, parola sıfırlama, aktivasyon, hoş geldiniz, destek bildirimi | `MAIL_MODE`: `resend` (canlı) / `mailpit` (test) / `disabled`. Ayar geçersizse gönderim kapanır; sahte "gönderildi" mesajı gösterilmez. | [TAMAMLANDI] | `packages/shared/src/mailer.ts`, `apps/worker/src/mail/` |
-| **Ses servisi (Etkin bas-konuş)** | Basılı tutulan düğmeyle kaydedilen en çok 8,5 sn sesi yazıya çevirir. Sunucu bu yazıyı komut olarak yorumlar. | faster-whisper `small`, CPU'da çalışır. Model imajın içindedir, internet gerekmez. Aynı anda tek çözümleme yapar, en çok 4 istek bekler. | [GELİŞTİRİLİYOR] (kodda var, PR #158; ses imajının canlıda olup olmadığı UNKNOWN) | `services/voice/app.py`, `apps/web/lib/voice.ts` |
+| **Ses servisi (Etkin bas-konuş)** | Basılı tutulan düğmeyle kaydedilen en çok 8,5 sn sesi yazıya çevirir (`/stt`). Sunucu bu yazıyı komut olarak yorumlar. | faster-whisper `small`, CPU'da çalışır. Model imajın içindedir, internet gerekmez. Aynı anda tek çözümleme yapar, en çok 4 istek bekler. Yetki: üyelik + `stock.view`. | [GELİŞTİRİLİYOR] (kodda var, PR #158/#235; VPS ses servisi kurulumu B-130 açık, canlı UNKNOWN) | `services/voice/app.py`, `apps/web/lib/voice.ts`, `apps/web/app/t/[slug]/etkin/actions.ts` |
+| **Doğal Türkçe ses (yazı → ses)** | Rehber hoparlörleri ve Etkin'in cevapları (sonuç, onay sorusu, okuma özeti) doğal Türkçe sesle okunur. Raf kodu ve "x,5" gibi ifadeler önce okunur biçime çevrilir. | Aynı ses servisinde `/tts` (EMA Lightning, PyTorch'un yalnız CPU yapısı; model imajda, SHA-256 ile sabit). Metin en çok 400 karakter, küçük önbellek, ayrı tek sıra (en çok 4 bekleyen). Servis yoksa cihazın kendi sesi kullanılır. Etkin cevaplarının sesli okunması firma ayarıdır: Ayarlar › Firma › "Etkin sesli yanıt" (varsayılan kapalı, `tenant_settings.voice_reply`); kullanıcının "Sessiz" tercihi ayrıca kapatır. | [GELİŞTİRİLİYOR] (kodda var, PR #241/#243, migration `0063`; canlı UNKNOWN, gerçek iPhone denemesi UNKNOWN) | `services/voice/app.py`, `apps/web/lib/voice.ts`, `apps/web/app/t/[slug]/kalip/sesli-oku.ts`, `0063_voice_reply` |
 | **Dosya deposu (S3/MinIO)** | Ek, görsel, rapor dosyası saklama | `packages/storage` paketi ve testleri var. Uygulama ekranları **henüz bunu kullanmıyor**. Canlı sunucuda nesne deposu konteyneri yok. | [PLANLANDI] | `packages/storage`, ADR-006 |
 | **Sağlık kontrolü** | `/api/health/live` (canlı mı?), `/api/health` (veritabanı/kuyruk/worker) | Docker 15–30 sn'de bir yoklar. Yoklama ayrı tek bağlantı kullanır, uygulama havuzunu tüketmez. | [TAMAMLANDI] | `apps/web/app/api/health`, `packages/db/src/health.ts` |
 | **Denetim kaydı (audit)** | Her önemli işlem kim/ne zaman/ne değişti bilgisiyle `audit_logs` tablosuna yazılır. Kayıt, işlemle aynı veritabanı işleminde atılır. | Sonradan değiştirilemez | [TAMAMLANDI] | `packages/db/src/audit.ts`, `0004_audit` |
-| **Paraşüt entegrasyonu** | Stok ve irsaliyeyi Etkin'den Paraşüt'e gönderir, satış siparişlerini Paraşüt'ten çeker | Saatlik `integration-sync` işi; kimlik bilgileri şifreli saklanır | [TAMAMLANDI] (kod), canlı kullanım UNKNOWN | `packages/domain/src/integrations`, `0055_integrations` |
+| **Paraşüt entegrasyonu** | Akışlar: depolar, ürün kartları, cariler, stok, satış siparişleri, sevkiyat/irsaliye (`INTEGRATION_FLOWS`). Bağlantı müşteri bazlı OAuth ile kurulur. İlk bağlantıda yalnız ürün kartları çekilir: miktar ve fiyat aktarılmaz; barkod, kategori/GTİP ve kaynak durumu gelir. Paraşüt'te arşivlenen/silinen kart Etkin'de yeni kullanıma kapanır, geçmişi ve stoku korunur. | `integration-sync` işi açılışta bir kez + **30 saniyede bir** (`INTEGRATION_SCHEDULE_INTERVAL_MS = 30_000`); bağlantı başına tek iş. Kimlik bilgileri ve anahtarlar şifreli saklanır. | [TAMAMLANDI] (kod). Canlı: STATE'e göre OAuth bağlantısı, otomatik ürün çekme ve kart yaşam döngüsü ilk müşteride canlıda doğrulandı (T-1066/T-1067/T-1068, DB defteri `0062`). Diğer akışların canlı kullanımı UNKNOWN. | `packages/domain/src/integrations`, `apps/worker/src/jobs/integration-sync.ts`, `0055`, `0059`–`0062` |
+| **Haftalık güvenlik taraması** | Bağımlılık açıkları (pnpm audit, ses servisi pip-audit), Node ve PostgreSQL güvenlik sürümü denetimi | GitHub Actions, her pazartesi | [TAMAMLANDI] | `.github/workflows/security-scan.yml`, `scripts/security-scan.mjs` |
 | **Dış izleme / alarm, sunucu dışı yedek** | Sunucu çökerse haber ver, verinin kopyası başka yerde dursun | — | [PLANLANDI] (P0: B-01, B-02, B-03) | `docs/BACKLOG.md` |
 
 ---
@@ -226,7 +234,7 @@ sequenceDiagram
 
 | Katman | Teknoloji | Sürüm | Ne işe yarar (sade) |
 | :--- | :--- | :--- | :--- |
-| Çalışma ortamı | Node.js | 24.x | Sunucu programlarını çalıştırır |
+| Çalışma ortamı | Node.js | 24.22.1 (taban imaj) | Sunucu programlarını çalıştırır |
 | Web çatısı | Next.js (App Router) + React | 16.4.1 / 19.3.0 | Ekranlar ve "server action" denen sunucu işlemleri |
 | Görünüm | Tailwind CSS + tasarım kaynağından üretilen CSS | 4.3.3 | Ekran stilleri (tasarım tuvali ile birebir, I-18) |
 | Dil | next-intl | 4.14.9 | Türkçe / İngilizce arayüz |
@@ -234,28 +242,29 @@ sequenceDiagram
 | Veritabanı erişimi | Drizzle ORM + postgres.js | 0.45.3 / 3.4.9 | Sorgular |
 | Kimlik | Better Auth + Argon2id | 1.7.7 / 2.2.1 | Giriş, 2FA, oturum |
 | Kuyruk | pg-boss | 12.36.0 | Arka plan işleri (veritabanı içinde) |
-| Girdi doğrulama | Zod | 4.6.5 | Formdan gelen her alanın kontrolü |
+| Girdi doğrulama | Zod | 4.6.6 | Formdan gelen her alanın kontrolü |
 | Barkod/QR okuma | zxing-wasm | 3.1.5 | Telefon kamerasıyla okutma (tarayıcı içinde) |
-| Ses → yazı | faster-whisper (Python) | `small` modeli | Etkin sesli komut |
+| Ses → yazı | faster-whisper (Python) | 1.2.1, `small` modeli | Etkin sesli komut |
+| Yazı → ses | EMA Lightning + PyTorch (yalnız CPU) | 1.1.2 / 2.14.1 | Rehber ve Etkin cevaplarını doğal Türkçe sesle okur |
 | HTTPS | Caddy | 2 | Sertifika ve yönlendirme |
-| Kurulum | Docker Compose, GitHub Actions | — | main'e birleşen kod otomatik yayına çıkar: yedek → migration → kuyruk → sağlık kontrolü |
+| Kurulum | Docker Compose, GitHub Actions | — | main'e birleşen kod otomatik yayına çıkar: yedek → migration → kuyruk → sağlık kontrolü. Haftalık güvenlik taraması ayrı iş akışıdır. |
 
 ### 1.8.2 Sunucudaki konteynerler ve bellek sınırları
 
-Kaynak: `deploy/vps/automation/compose.yml` (canlı tanım), `deploy/vps/database/compose.yml`.
+Kaynak: `deploy/vps/automation/compose.yml` (canlı tanım), `deploy/vps/database/compose.yml`. 23 Ekim'den bu yana sınırlar değişmedi.
 
 | Konteyner | Görevi | Bellek tavanı | CPU tavanı |
 | :--- | :--- | ---: | :--- |
 | `web` | WMS uygulaması (wms.) | 1.536 MB | sınırsız |
 | `panel` | Yönetim paneli (yonet.) | 768 MB | sınırsız |
 | `worker` | Arka plan işleri | 512 MB | sınırsız |
-| `voice` | Ses → yazı (yalnız ses imajı kayıtlıysa açılır) | 1.280 MB | 1,5 çekirdek, düşük öncelik |
+| `voice` | Ses → yazı ve yazı → ses (yalnız ses imajı kayıtlıysa açılır) | 1.280 MB | 1,5 çekirdek, düşük öncelik |
 | `marketing` | Satış sitesi | 256 MB | sınırsız |
 | `proxy` (Caddy) | HTTPS kapısı | 256 MB | sınırsız |
 | `etkinwms-postgres` | Veritabanı (`shared_buffers=512MB`, `max_connections=100`) | 2.048 MB | sınırsız |
 | **Toplam tavan** | | **≈ 6,5 GB** | |
 
-**Asgari sunucu önerisi (tahmini):** 4 vCPU, **8 GB RAM**, SSD disk. Bellek tavanlarının toplamı yaklaşık 6,5 GB'tır. İşletim sistemi ve dosya önbelleği için de pay gerekir. Ses servisi kapalıysa 6 GB RAM yeterli olabilir. Bugünkü VPS'in kesin donanımı bu belgede doğrulanmadı (UNKNOWN).
+**Asgari sunucu önerisi (tahmini):** 4 vCPU, **8 GB RAM**, SSD disk. Bellek tavanlarının toplamı yaklaşık 6,5 GB'tır. İşletim sistemi ve dosya önbelleği için de pay gerekir. Ses servisi kapalıysa 6 GB RAM yeterli olabilir. Yazı → ses modeli aynı 1.280 MB tavan içinde çalışır; imaj içi test bu sınırı sınar (T-1106). Gerçek VPS'teki bellek kullanımı ölçülmedi (UNKNOWN). Bugünkü VPS'in kesin donanımı bu belgede doğrulanmadı (UNKNOWN).
 
 **Bağlantı havuzu:** Her uygulama süreci veritabanına en çok **10 bağlantı** açar (`packages/db/src/client.ts` → `poolMax: 10`). Next.js sayfa paketleri ayrı kopyalar halinde yüklendiğinde her kopya kendi havuzunu açabilir. Veritabanının toplam sınırı 100 bağlantıdır. **Canlıda PgBouncer (bağlantı paylaştırıcı) yoktur**: yalnız yerel/test ortamında var (`infra/pgbouncer`). Kullanıcı sayısı büyüdüğünde ilk ayarlanacak noktalardan biri budur.
 
@@ -278,14 +287,15 @@ Her müşterinin paketinde **dört sayı sınırı** vardır: yönetici sayısı
 | **Aynı anda aktif** kullanıcı (ekran gezen, okutan) | **100–300** | Tek `web` süreci (1,5 GB) + veritabanı 100 bağlantı + uygulama havuzu 10 bağlantı |
 | Saniyede stok hareketi (okut-onayla) | **20–50 işlem/sn** (aynı depo/ürüne yoğunlaşırsa daha az) | Her stok işlemi kilitli ve tam doğrulamalı tek bir işlemdir (I-04…I-15). Doğruluk hızdan önce gelir. |
 | Büyük paket kabulü | 200 paket: hazırlama ~1,7 sn, işleme ~6,7 sn (geliştirme ortamı ölçümü, T-939) | `docs/continuity/DATABASE.md` (SLA değildir) |
-| Sesli komut | Aynı anda **1** çözümleme, en çok 4 bekleyen. Yoğun kullanımda "Etkin meşgul" cevabı alınır. | `services/voice/app.py` |
+| Sesli komut / sesli okuma | Konuşma → yazı ve yazı → ses için ayrı birer sıra: her birinde aynı anda **1** iş, en çok 4 bekleyen. Yoğun kullanımda "Etkin meşgul" cevabı alınır; okumada cihaz sesine düşülür. | `services/voice/app.py` |
+| Paraşüt eşitlemesi | 30 saniyede bir, yalnız açık akışı olan bağlı müşteriler için iş açılır; aynı bağlantıya ikinci iş açılmaz. Çok sayıda bağlı müşteride kuyruk ve Paraşüt istek sınırı izlenmelidir (tahmin). | `apps/worker/src/jobs/integration-sync.ts` |
 
 **Darboğaz sırası (ilk nerede tıkanır?):**
 1. **Tek sunucu:** VPS çökerse her şey durur. Henüz sunucu dışı yedek ve alarm yok (B-01…B-03, P0). En büyük risk performans değil **süreklilik**tir.
 2. **Veritabanı bağlantı sayısı:** 100 sınır var, PgBouncer yok. Aynı anda yüzlerce kullanıcı gelirse bağlantılar tükenebilir.
 3. **Tek `web` süreci:** Next.js tek Node sürecinde çalışır ve bir CPU çekirdeğini verimli kullanır. Yoğun saatlerde ekranlar yavaşlar.
 4. **Aynı ürün/rafta yoğun eşzamanlı işlem:** stok kilitleri bilerek sıraya sokar. Doğruluk için bilinçli bir yavaşlamadır.
-5. **Ses servisi:** CPU'da ve tek sırayla çalışır.
+5. **Ses servisi:** CPU'da çalışır; konuşma → yazı ve yazı → ses için tek sıralıdır ve aynı 1,5 çekirdeği paylaşır.
 
 **Büyüme basamakları (sade dille, sırayla):**
 
@@ -311,5 +321,6 @@ flowchart LR
 - Paket özellik bayrakları (QR/sevk/üretim/API) uygulamada hiçbir şeyi kapatmıyor.
 - Dosya deposu (S3) hazır ama hiçbir ekrana bağlı değil.
 - Yük testi yok. Kapasite rakamları tahmin.
+- Ses servisinin VPS kurulumu (B-130) ve sesli yanıtın gerçek cihazda denenmesi bekliyor; canlı UNKNOWN.
 - P0: sunucu dışı şifreli yedek, PITR, dış izleme/alarm, hata izleme yok (B-01…B-04).
 - 🔒 B-21: depo kapsamının veritabanı düzeyine taşınması bekliyor.

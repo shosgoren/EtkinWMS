@@ -3,8 +3,9 @@
 Bu bölüm depoda **her gün yapılan işleri** anlatır: ana ekran, görevler, okutma (OKUT), yerleştirme, paket işlemleri, depolar arası transfer,
 sipariş–toplama–sevkiyat, sayım, üretim, iade, işlem kaydı (Kim ne yaptı?), raporlar ve sesli komut (Etkin).
 
-Kaynak: `main` dalındaki kod (23 Ekim 2026). Tahmin yok; her satırda dosya yolu verildi. Mal kabul, stok listesi, ürün kartı ve stok belgeleri
-(giriş/çıkış formu) **2B** bölümündedir; burada yalnız bağlantı noktası anılır.
+Kaynak: `main` dalındaki kod — **main 8e2710d · 28 Ekim 2026** (ilk sürüm 36f3a13 · 23 Ekim'den yazılmıştı; aradaki T-1029…T-1109
+değişiklikleri işlendi). Tahmin yok; her satırda dosya yolu verildi. Web yolları `apps/web/app/t/[slug]/` altına göredir. Mal kabul, stok listesi,
+ürün kartı ve stok belgeleri (giriş/çıkış formu) **2B** bölümündedir; burada yalnız bağlantı noktası anılır.
 
 ## Etiketlerin anlamı
 
@@ -16,6 +17,8 @@ Kaynak: `main` dalındaki kod (23 Ekim 2026). Tahmin yok; her satırda dosya yol
 
 **Canlı mı?** `main`'e birleşen her iş otomatik yayına çıkar (CLAUDE.md). Bu belgede ekran ekran canlı deneme yapılmadı; canlı durum
 `docs/STATE.md` kayıtlarından ayrıca okunmalıdır. Bir satırda "Canlı: UNKNOWN" yazıyorsa kod `main`'dedir ama canlıda denendiği kayıtlı değildir.
+28 Ekim itibarıyla STATE bu bölümün ekranlarından yalnız T-446 (hızlı OKUT, 21 Ekim) için açık "canlı" kaydı taşır; 26–28 Ekim işleri
+(T-1042…T-1109) STATE'te dal/PR olarak kayıtlıdır, canlı doğrulaması yazılı değildir → UNKNOWN.
 
 ---
 
@@ -98,48 +101,99 @@ Kaynak: `packages/domain/src/identity/permissions.ts`.
 `reversal.create`, `data.import`); onay türü izinler iki adımlı doğrulama (MFA) ister. **Depo kapsamı**: bir kişi yalnız atandığı depoları görebilir (A-46).
 **Görev ayrılığı** (`tenant_settings.separation_of_duties`, varsayılan kapalı): açıksa sayımı yapan kişi kendi sayımını onaylayamaz.
 
+### 0.5 Kaynakta kapanan ürün (T-1067 / T-1068)
+
+Paraşüt gibi dış kaynakta arşivlenen ya da silinen ürünün kartı `items.source_disposition` (0062) ile işaretlenir. **Yeni kullanım kapanır**
+(ör. yeni giriş fişi, reçete/üretim — `production.ts` içinde `assertItemsActive`), ama elde kalan stoğun çıkışı, raf içi taşınması ve sayım
+farkı ile önceden açılmış işler tamamlanabilir (`packages/domain/src/stock/reservation-reads.ts` `assertItemsActive`, `allowSourcePending`).
+Ret kodu `VALIDATION_FAILED` / `IN_USE`. STATE T-1068 kaydına göre bu davranış canlıdadır.
+
+### 0.6 Ortak kabuk — her ekranda aynı olan parçalar (T-1042, T-1053, T-1102)
+
+Bütün kalıp ekranları (`kalip/ekran.tsx`) ve ana ekran panosu (`pano/pano-shell.tsx`) aynı üst çubuğu ve alt cam çubuğu çizer
+(masaüstü standardı `docs/design/STANDART.md` §1).
+
+| UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Üst çubuk: canlı saat + tarih | Metin | Görüntülenir | Tarayıcı (`kalip/ust-standart.tsx` `StSaat`) | — | Sunucu çiziminde boş (saat dilimi farkı hatası olmasın) | [TAMAMLANDI] |
+| Tema seçici (açık/koyu) | Düğme | Dokunulur | Çerez (`design/theme.ts` `temaYaz`) | — | Telefonda Hesap menüsünde | [TAMAMLANDI] |
+| **Son işlemler** (saat simgeli düğme + rozet) | Düğme → pencere | Açılır | `myTodayActionsAction` (`son-islemler-actions.ts`) → `listMyActionsToday` (`packages/domain/src/audit/today-impl.ts`) | Okur: `audit_logs` (yalnız kendi satırları, bugün, firmanın saat dilimi) | `stock.view`; yalnız eylem anahtarı + saat döner; yalnız masaüstünde (≥1100 px); sekme içi önbellek, dakikada en çok bir çağrı | [TAMAMLANDI] (T-1053) |
+| Sorun (bayrak) | Düğme → form | Gönderilir | `reportProblemAction` (`work-actions.ts`) | Bkz. Modül 1 "Sorun bildir" | — | [TAMAMLANDI] |
+| Destek / Taleplerim | Düğme → pencere | Talep yazılır / yanıtlanır | `submitSupportTicketAction`, `listMySupportTicketsAction`, `replySupportTicketAction`, `markSupportSeenAction` (`support-actions.ts`) | Destek talebi tabloları (0054, RLS + tetikleyici) | Not metni loga yazılmaz | [TAMAMLANDI] |
+| Ayarlar, Hesap (baş harf) | Bağlantı / menü | Dokunulur | Yönlendirme | — | Ayarlar yalnız `settings.manage` sahibinde | [TAMAMLANDI] |
+| Alt cam çubuk: Geri · Ana ekran · **OKUT** · Modüller · **Etkin** | Çubuk | Dokunulur | `kabuk/kabuk-bar.tsx`; Modüller listesi `kabuk/modules.ts` (rol/yetki/grup ekranları) | — | İstemci içi geçiş; yarım işte ortak çıkış koruması sorar | [TAMAMLANDI] |
+| Yüzen kısayol (şimşek) + "Düzenle" | Yüzen düğme + seçici | Kısayol seçilir | `kabuk/kisayol.tsx` (`KabukKisayol`) | — (seçim ve konum yalnız bu cihazda) | En çok 6; yalnız üyenin Modüller'deki modülleri (YAKINDA hariç) | [TAMAMLANDI] (T-1102, her ekranda) |
+| İşlem rehberi ("Nasıl kullanırım?") | Buzlu perde + delik + tek satır ipucu | İş yapıldıkça ilerler | `kalip/rehber.tsx` + `rehber-plan.ts` (Mal kabul, Yerleştir, Çıkış, Transfer, Sayım); aktarma rehberi `kalip/adim-rehber.tsx` | — (eylem çağırmaz; durum yalnız cihazda) | Algılanamayan adımda küçük ok; perdeye dokununca yüzen "Kaldığın yerden" | [TAMAMLANDI] (T-1095, T-1100, T-1105) |
+| Rehber hoparlörü | Düğme | Dokunulur | `kalip/sesli-oku.ts` (`useSesliOku`) → `etkinSoyleAction` (`etkin/actions.ts`) → iç ses servisi `/tts` | — (metin saklanmaz) | `stock.view`; kişi başına dakikada 30; ≤ 400 karakter; servis yoksa cihaz sesi; "Sessiz" tercihi kapatır | [TAMAMLANDI] kodda (T-1106); VPS ses servisi kurulumu B-130 |
+
+> Not: rehberin "görüldü" bilgisi henüz sunucuda değil, cihazda tutulur (B-75 kalanı).
+
 ---
 
-## 1. Modül: Ana ekran (Pano / Görevlerim / Kolay işlemler)
+## 1. Modül: Ana ekran (Pano / Görevlerim / Genel bakış)
 
-- **Modül Durumu:** [TAMAMLANDI] — "Tüm raporlar" kartı için bkz. Modül 14 [PLANLANDI]. Canlı: UNKNOWN.
-- **Ekran:** `/t/<firma>` — `apps/web/app/t/[slug]/page.tsx`
-- **Ekranın Amacı ve İşlevi:** Girişten sonra açılan ilk ekran **role göre** değişir:
-  - **Hesap sahibi / depo yöneticisi → Depo panosu** (`pano/pano-board.tsx`, veri `getBoard` — `packages/domain/src/operations/board.ts`):
-    bugünkü iş halkası (biten/atanan/atanmayan görev), "Dikkat isteyenler" (kritik stok, bekleyen sipariş, onay bekleyen sayım, sahadan sorun),
-    rapor kartları, ekip şu an (OKUTUYOR / GÖREVDE / BOŞTA / BUGÜN GİRİŞ YOK).
+- **Modül Durumu:** [TAMAMLANDI] mevcut panolar için; **onaylı masaüstü tuvalindeki yeni yönetici ana ekranı [PLANLANDI]** (aşağıda "Tuvalle fark").
+  "Tüm raporlar" kartı için bkz. Modül 14 [PLANLANDI]. Canlı: UNKNOWN.
+- **Ekran:** `/t/<firma>` — `page.tsx`. Hangi ana ekranın çizileceğine sunucu rol ve `view` çerezine bakarak karar verir.
+- **Ekranın Amacı ve İşlevi:** Girişten sonra açılan ilk ekran **role göre** değişir. Her ana ekranda selam aynıdır: "Merhaba <ad>"
+  (masaüstü/tablette üst çubukta firma · rol ile, telefonda içerikte; T-1045, T-1050). "Bugün yaptıkların" listesi ana ekrandan kalktı;
+  yerini üst çubuktaki **Son işlemler** aldı (Bölüm 0.6, T-1053).
+  - **Hesap sahibi (TENANT_ADMIN) → Depo panosu** (`pano/pano-board.tsx`, veri `getBoard` — `packages/domain/src/operations/board.ts`):
+    Raporlar kartları (Kritik stok, Bekleyen sipariş, Devir hızı, Satın alma, Sayım farkı, Tüm raporlar), "Dikkat isteyenler" (kritik stok,
+    bekleyen sipariş, onay bekleyen sayım, sahadan sorun), "Satın alınması gerekenler", "Bekleyen siparişler", "Stok devir hızı"
+    (hızlı / yavaş / hareketsiz ürün), "Bugün depoda" sayaçları (giriş, çıkış, transfer, sayım).
+  - **Depo yöneticisi (WAREHOUSE_MANAGER) → Depom panosu** (aynı bileşen, yönetici görünümü): bugünkü iş halkası (biten / atanan /
+    atanmayan görev), hızlı kutular (Planla → `/tasks?status=OPEN`, Etiket bas → `/labels`, Raporlar → `/stock`), "Atanmayı bekleyen işler"
+    (kişi seçerek **Ata**), "Ekip şu an" (OKUTUYOR / GÖREVDE / BOŞTA / BUGÜN GİRİŞ YOK), "Bugün depoda" sayaçları.
+  - İki panoda da üst çubukta **zil** (kritik stok + açık sorun sayısı; sahipte uyarılar bölümüne, yöneticide `/tasks`'a götürür) ve kurulum
+    bitmemişse "Merhaba" satırının sağında **Rehber** halka simgesi (kurulum yolculuğu `getSetupJourney`, T-1006/T-1100) vardır.
   - **Toplayıcı / Sayımcı → Görevlerim / Sayımlarım** (`pano/pano-home.tsx`, veri `getWorkSummary` — `operations/work-summary.ts`):
     Giriş, Çıkış, Transfer, Üretim, Sayım bölümlerinde açık iş + kalem sayısı, ACİL rozeti, vardiya satırı, SORUN kartı.
-  - **Diğer roller → Kolay işlemler** (`easy-operations.tsx`) ve "Bugün yaptıkların" (`listMyActionsToday` — `packages/domain/src/audit/today-impl.ts`).
+  - **Diğer roller → Görevlerim (Bakış)** (`easy-operations.tsx`, aynı `getWorkSummary`; bölüm döşemeleri ilgili iş ekranına gider).
+  - **"Genel bakış" görünümü** (`kokpit.tsx`; `view=cockpit` çerezi, karşılama başlığındaki görünüm seçiminden): "Şimdi" (açık teslimler ve
+    yerleştirme görevleri, sıradaki en çok 2 iş doğrudan bağlantı), saha rolünde "Görevlerim" sayısı, yetkiye göre İşler listesi (etkin /
+    kilitli / yakında).
 - **Arayüz Elemanları ve Aksiyon Tablosu:**
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| İş halkası ("Bugün n iş · atandı · atanmadı") | Grafik halka | Görüntülenir | `getBoard` (`operations/board.ts`) | Okur: `warehouse_tasks.status`, `completed_at` | Yalnız `stock.view`; yalnız kişinin depo kapsamı; değerler gerçek tablolardan (uydurma sayı yok) | [TAMAMLANDI] |
-| "Kritik stok" / "Satın alma" kartı | Kart (bağlantı) | Dokunulur → `/stock` | `getBoard` | Okur: `item_stock_policies.min_quantity/max_quantity`, `stock_balances.quantity` | Kritik = eldeki < min × 0,35; öneri = max − eldeki | [TAMAMLANDI] |
-| "Bekleyen sipariş" kartı | Kart | Dokunulur → `/shipping` | `getBoard` | Okur: `sales_orders.status='OPEN'`, `sales_order_lines` | Siparişte teslim tarihi kolonu yok → "bekleme günü" = oluşturulmadan bu yana | [TAMAMLANDI] |
+| İş halkası ("Bugün n iş · atandı · atanmadı") — yalnız Depom | Grafik halka | Görüntülenir | `getBoard` (`operations/board.ts`) | Okur: `warehouse_tasks.status`, `completed_at` | Yalnız `stock.view`; yalnız kişinin depo kapsamı; değerler gerçek tablolardan (uydurma sayı yok) | [TAMAMLANDI] |
+| "Kritik stok" / "Satın alma" kartı + "Satın alınması gerekenler" | Kart (bağlantı) | Dokunulur → `/stock`; satırdaki "+n" → ürün kartı | `getBoard` | Okur: `item_stock_policies.min_quantity/max_quantity`, `stock_balances.quantity` | Kritik = eldeki < min × 0,35; öneri = max − eldeki; satın alma listesi özelliği yok (yalnız bağlantı) | [TAMAMLANDI] |
+| "Bekleyen sipariş" kartı + "Bekleyen siparişler" | Kart | Dokunulur → `/shipping` | `getBoard` | Okur: `sales_orders.status='OPEN'`, `sales_order_lines`, `work_priorities` | Siparişte teslim tarihi kolonu yok → "bekleme günü" = oluşturulmadan bu yana | [TAMAMLANDI] |
 | "Sayım farkı · onay bekliyor" | Kart | Dokunulur → `/tasks?kind=COUNT` | `getBoard` | Okur: `count_sessions.status='SUBMITTED'` | — | [TAMAMLANDI] |
-| "Devir hızı" | Kart | Dokunulur → `/stock` | `getBoard` | Okur: `stock_ledger` (son 90 gün çıkış) | Hareketsiz ürün = stoklu ama 90 gün hareketsiz | [TAMAMLANDI] |
-| "Ekip şu an" satırları | Liste | Görüntülenir | `getBoard` | Okur: `tenant_memberships`, `warehouse_task_progress`, `audit_logs` | Kişisel veri en az (yalnız durum) | [TAMAMLANDI] |
-| Görev "Ata" (panoda kişi seçimi) | Buton + seçim | Kişi seçilir | `assignTaskAction` → `assignTask` (`operations/tasks.ts`) | Yazar: `warehouse_tasks.status='ASSIGNED'`, `assigned_membership_id`, `version` + `audit_logs` | `document.approve`; atanan kişinin o görev türünü yapma izni ve depo kapsamı olmalı; sürüm kontrolü (aynı anda iki atama çakışmaz) | [TAMAMLANDI] |
+| "Devir hızı" / "Stok devir hızı" | Kart | Dokunulur → `/stock` | `getBoard` | Okur: `stock_ledger` (son 90 gün çıkış) | Hareketsiz ürün = stoklu ama 90 gün hareketsiz | [TAMAMLANDI] |
+| "Sahadan sorun" uyarısı | Kart | Dokunulur → `/tasks` | `getBoard` | Okur: `problem_reports` (açık sayısı, son sebep + dakika) | Sorunu kapatma düğmesi yok → bkz. Gap | [TAMAMLANDI] |
+| "Ekip şu an" satırları — yalnız Depom | Liste | Görüntülenir | `getBoard` | Okur: `tenant_memberships`, `warehouse_task_progress`, `audit_logs` | Kişisel veri en az (yalnız durum) | [TAMAMLANDI] |
+| "Atanmayı bekleyen işler" → kişi seçimi ("Ata") — yalnız Depom | Liste + kişi düğmeleri | Kişi seçilir | `assignTaskAction` (`tasks/actions.ts`) → `assignTask` (`operations/tasks.ts`); `pano/assign-who.tsx` | Yazar: `warehouse_tasks.status='ASSIGNED'`, `assigned_membership_id`, `version` + `audit_logs` | `document.approve`; kişi listesi `listMembers` (ACTIVE, o görev türünü yapma izni olan, en çok 3 öneri); sürüm kontrolü | [TAMAMLANDI] |
+| "Bugün depoda" sayaçları | Sayaç | Görüntülenir | `getWorkSummary` | Okur: giriş/çıkış biten kalem, bugünkü transfer, açık sayım | Gün sınırı `tenant_settings.time_zone` | [TAMAMLANDI] |
+| Zil (üst çubuk) | Düğme | Dokunulur | `getBoard` | Okur: kritik stok + açık sorun sayısı | Yalnız yönetici panolarında; ayrı bildirim kutusu yok | [TAMAMLANDI] |
+| Rehber halka simgesi | Simge | Dokunulur → kurulum yolculuğu | `getSetupJourney` (`packages/domain/src/onboarding/journey`) | Okur: kurulum durumu | Kurulum bitince görünmez; okunamazsa çizilmez, pano düşmez | [TAMAMLANDI] (T-1100) |
 | Görevlerim bölüm kartları (Giriş/Çıkış/Transfer/Üretim/Sayım) | Kart | Dokunulur → ilgili saha ekranı | `getWorkSummary` (`operations/work-summary.ts`) | Okur: `inbound_receipts`, `sales_orders`, `documents`, `stock_document_links`, `warehouse_tasks`, `count_session_lines` | Gün sınırı firmanın saat dilimine göre (`tenant_settings.time_zone`) | [TAMAMLANDI] |
 | ACİL rozeti | Rozet | Görüntülenir | `getWorkSummary` | Okur: `work_priorities.urgent` | Yazan ekran yok → bkz. Gap | [GELİŞTİRİLİYOR] |
 | Vardiya satırı | Metin | Görüntülenir | `getWorkSummary` | Okur: `tenant_settings.shift_start/shift_end` (varsayılan 08:00–17:00) | Değiştiren ekran yok → bkz. Gap | [GELİŞTİRİLİYOR] |
-| "SORUN" (alt çubuk) → Sorun bildir | Alt sayfa (form) | Sebep seçilir + not → Gönder | `reportProblemAction` → `reportProblem` (`operations/work-signals.ts`) | Yazar: `problem_reports` (`reason`, `note`, `status='OPEN'`, `reported_by`) + `audit_logs` | `stock.post` veya `document.create` gerekir (salt okur bildiremez); sebep listesi: `DAMAGED`, `MISSING`, `WRONG_ITEM`, `NO_LABEL`, `LOCATION`, `OTHER`; not ≤ 500 karakter | [TAMAMLANDI] |
+| "SORUN" kartı / üst çubuk bayrağı → Sorun bildir | Alt sayfa (form, `problem-sheet.tsx`) | Sebep seçilir + not → Gönder | `reportProblemAction` (`work-actions.ts`) → `reportProblem` (`operations/work-signals.ts`) | Yazar: `problem_reports` (`reason`, `note`, isteğe bağlı konu `subject_kind/subject_id`, `status='OPEN'`, `reported_by`) + `audit_logs` | `stock.post` veya `document.create` gerekir (salt okur bildiremez); sebep listesi: `DAMAGED`, `MISSING`, `WRONG_ITEM`, `NO_LABEL`, `LOCATION`, `OTHER` | [TAMAMLANDI] |
 | Sorunu "Çözüldü" yapma | — | — | `resolveProblemAction` → `resolveProblem` (kodda var) | Yazacağı: `problem_reports.status='RESOLVED'`, `resolved_by/at` | `document.approve` | [GELİŞTİRİLİYOR] (ekranda düğmesi yok) |
-| "Bugün yaptıkların" | Liste (son 5) | Görüntülenir | `listMyActionsToday` | Okur: `audit_logs` (yalnız kendi satırları; ip/açıklama dönmez) | Yalnız kendi kaydı | [TAMAMLANDI] |
+| Genel bakış: "Şimdi" satırları | Liste (bağlantı) | Dokunulur → `/field/receive?receipt=…` ya da `/field/putaway?task=…` | `listInboundReceipts` (OPEN, ≤ 50) + `listMyTasks` (PUTAWAY) | Okur: `inbound_receipts`, `warehouse_tasks` | Yalnız `stock.post` sahibine; hata ana ekranı düşürmez (mesaj + kod) | [TAMAMLANDI] |
+
+- **Tuvalle fark (yönetici ana ekranı; 28 Ekim incelemesi):** onaylı masaüstü standardı tuvali (`docs/design/source/Standart*.dc.html`,
+  26 Ekim) yönetici için **3 bekleyen iş kutusu + 8'li "İşler" ızgarası + sürükle-bırak düzen** gösterir. Kodda hâlâ eski Pano panosu
+  (`pano/pano-board.tsx`) çizilir. Veri yeterli (yeni tablo gerekmez); iş yalnız arayüz, orta boy. STATE T-1045 kaydı da "işleri sürükle-bırak
+  düzenleme, sayılı bekleyen iş kutucukları" maddesini kalan olarak yazar. → [PLANLANDI]
 
 - **İş Akış Şeması:**
 
 ```mermaid
 flowchart TD
-  G[Giriş yapıldı] --> R{Rol}
-  R -- Yönetici veya Depo yöneticisi --> P[Depo panosu: getBoard]
+  G[Giriş yapıldı] --> V{view=cockpit çerezi?}
+  V -- Evet --> K[Genel bakış: Şimdi + İşler]
+  V -- Hayır --> R{Rol}
+  R -- Hesap sahibi --> P[Depo panosu: getBoard + getWorkSummary]
+  R -- Depo yöneticisi --> M[Depom: halka, Atanacak işler, Ekip]
   R -- Toplayıcı --> H[Görevlerim: getWorkSummary]
   R -- Sayımcı --> S[Sayımlarım: getWorkSummary yalnız sayım]
-  R -- Diğer --> K[Kolay işlemler + Bugün yaptıkların]
+  R -- Diğer --> E[Görevlerim Bakış: getWorkSummary]
   P --> A1[Kart dokun: Stok / Sevkiyat / Görevler]
-  P --> A2[Görevi ata: assignTask]
+  M --> A2[Ata: assignTask]
   H --> B1[Bölüme dokun: saha ekranı açılır]
   H --> B2[SORUN: reportProblem]
 ```
@@ -159,6 +213,7 @@ flowchart TD
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Tür çipleri (Yerleştirme/Toplama/Yeniden yerleştirme/Sayım) ve Durum çipleri | Filtre çipi | Seçilir | `listTasks` / `listMyTasks` (`operations/tasks.ts`) | Okur: `warehouse_tasks.kind`, `status` | Sayfa başına en çok 200; depo kapsamı | [TAMAMLANDI] |
+| Liste sonu (yönetici) | Otomatik yükleme | Kaydırılır | `loadMoreTasksAction` (`tasks/actions.ts`) → `listTasks` | Okur: aynı | Aynı süzgeç + imleç; sayfa düğmesi yok (T-1059). Saha listesinde hâlâ "Daha" düğmesi | [TAMAMLANDI] |
 | Arama kutusu | Input | Yazılır | `listTasks` | Okur: ürün/raf adı (ILIKE) | — | [TAMAMLANDI] |
 | "Ata" / "Yeniden ata" | Buton → kişi seçimi → Kaydet | Tıklanır | `assignTaskAction` → `assignTask` | Yazar: `warehouse_tasks.status='ASSIGNED'`, `assigned_membership_id`, `version+1`; `audit_logs` | `document.approve`; seçilen kişi ACTIVE, işi yapma izni var, depo kapsamında; `expectedVersion` uyuşmazsa "başkası değiştirdi" | [TAMAMLANDI] |
 | "İptal et" + gerekçe | Buton + zorunlu metin | Onaylanır | `cancelTaskAction` → `cancelTask` | Yazar: `warehouse_tasks.status='CANCELLED'`; gerekçe `audit_logs.reason` | `document.approve`; gerekçe 1–500 karakter, kontrol karakteri yok; stok etkisi yok | [TAMAMLANDI] |
@@ -238,11 +293,12 @@ flowchart TD
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Görev listesi (Yerleştirme görevlerim) | Liste | Görev seçilir | `listMyTasks` (sayfa sunucuda) | Okur: `warehouse_tasks` (kind=PUTAWAY) | Yalnız bana atanmış veya açık görev | [TAMAMLANDI] |
+| İşlem rehberi "Yerleştir" | Buzlu perde + tek satır | İş yapıldıkça ilerler | `kalip/rehber.tsx` (`putaway` planı) | — | Bkz. Bölüm 0.6 | [TAMAMLANDI] (T-1105) |
 | Ürün okut | Okutma alanı | Barkod okutulur | `resolveItemScanAction` (`receipts/actions.ts`) → `resolveBarcodeQuery` + `getItem` | Okur: `item_barcodes`, `items` | Görevdeki ürünle aynı olmalı | [TAMAMLANDI] |
 | Raf okut | Okutma alanı | Raf etiketi okutulur | `resolveLocationScanAction` → `findLocationByCode` | Okur: `locations` | Hedef raf `STORAGE` türünde ve kaynaktan farklı olmalı | [TAMAMLANDI] |
 | "Rafta n" bilgisi | Metin | Görüntülenir | `availableAtLocationAction` | Okur: `stock_balances` | — | [TAMAMLANDI] |
 | Miktar tuş takımı / "TÜMÜ" | Sayı girişi | Tuşlanır / aynı barkod tekrar okutulur | Ekranda | — | Görevli yerleştirmede miktar görevle **birebir** eşleşmeli (kısmi yerleştirme görevi bitirmez) | [TAMAMLANDI] |
-| "ONAYLA" | Buton | Tıklanır | `putawayAction` → `putaway` (`operations/putaway.ts`) | Yazar: `documents` (kind=`STOCK_MOVE`, `POSTED`), `document_lines`, `stock_ledger` (kaynaktan −, hedefe +), `stock_balances`, `warehouse_tasks.status='DONE'`, `audit_logs` | `stock.post`; tek işlem; raf sayımda kilitliyse `LOCATION_LOCKED`; başkasına atanmış görevi yalnız onay yetkilisi bitirebilir; görevsiz yerleştirme eşleşen açık görevleri sırayla kapatır | [TAMAMLANDI] |
+| "ONAYLA" | Buton | Tıklanır | `putawayAction` (`receipts/actions.ts`) → `putaway` (`operations/putaway.ts`) | Yazar: `documents` (kind=`STOCK_MOVE`, `POSTED`), `document_lines`, `stock_ledger` (kaynaktan −, hedefe +), `stock_balances`, `warehouse_tasks.status='DONE'`, `audit_logs` | `stock.post`; tek işlem; raf sayımda kilitliyse `LOCATION_LOCKED`; başkasına atanmış görevi yalnız onay yetkilisi bitirebilir; görevsiz yerleştirme eşleşen açık görevleri sırayla kapatır | [TAMAMLANDI] |
 
 - **İş Akış Şeması:**
 
@@ -301,7 +357,9 @@ stateDiagram-v2
 ## 6. Modül: Depolar arası transfer (paketsiz)
 
 - **Modül Durumu:** [TAMAMLANDI] — Canlı: UNKNOWN.
-- **Ekran:** Stok işlemleri formundaki "Transfer" (`stock/documents/document-form.tsx`, ayrıntı 2B) ve Etkin sesli komut onay kartı (`kabuk/etkin.tsx`).
+- **Ekran:** Stok işlemleri formundaki "Transfer" (`/stock/documents?new=TRANSFER`, `stock/documents/document-form.tsx`, ayrıntı 2B; belge
+  ayrıntısı T-1091'den beri kayıt kartı kalıbında) ve Etkin sesli komut onay kartı (`kabuk/etkin.tsx`). Formda odaklı "Transfer" işlem rehberi
+  var (`kalip/rehber.tsx`, T-1105).
 - **Ekranın Amacı ve İşlevi:** Bir depodaki raftan başka bir depodaki rafa mal göndermek. Arka planda **iki fiş** oluşur (çıkış + giriş) ve
   ikisi birbirine bağlanır; biri kaydolup diğeri kalamaz.
 - **Arayüz Elemanları ve Aksiyon Tablosu:**
@@ -430,7 +488,7 @@ sequenceDiagram
 
 - **Modül Durumu:** [TAMAMLANDI] — Canlı: UNKNOWN (PR #140 main'de). Kalan: B-96 (toplama eksiğinden doğan oturumsuz sayım görevinin sahadan başlatılması).
 - **Ekranlar:** Yönetici `/t/<firma>/counts` (`counts/page.tsx`, `counts/counts-forms.tsx`, `counts/actions.ts`);
-  saha `/t/<firma>/field/count` (`field/count/count-flow.tsx`, veri `getCountWork`).
+  saha `/t/<firma>/field/count` (`field/count/count-flow.tsx`, veri `getCountWork`). Sayım için odaklı işlem rehberi var (`kalip/rehber.tsx`, T-1105).
 - **Ekranın Amacı ve İşlevi:** Yönetici sayılacak rafları seçip sayımı başlatır; raflar sayım bitene kadar **kilitlenir** (o raflara giriş/çıkış
   yapılamaz) ve her raf için sahada sayım görevi açılır. Sayımcı rafı ve ürünü okutup saydığı miktarı girer. "Kör sayım" seçilirse sayımcı sistemdeki
   miktarı görmez. Bütün satırlar sayılınca yönetici farkları inceler, onaylar ve **fark fişini işler**; stok sayılan miktara eşitlenir.
@@ -505,7 +563,7 @@ sequenceDiagram
 | "Yeni reçete": Reçete kodu, Sürüm, Reçete adı, Mamul, Üretilecek miktar, Malzeme + Reçete miktarı, "Malzeme ekle/kaldır" | Input + Seçim | Doldurulur | `stockChoicesAction` | — | Kod ≤ 64, ad ≤ 200 karakter; 1–100 malzeme; mamul malzeme olamaz; aynı malzeme iki kez olamaz; miktar > 0 | [TAMAMLANDI] |
 | "Reçeteyi kaydet" | Buton | Tıklanır | `createRecipeAction` → `createProductionRecipe` | Yazar: `production_recipes` (`code`, `version`, `output_item_id`, `output_quantity`), `production_recipe_lines`, `audit_logs` (`production_recipe.created`) | `settings.manage`; ürünler aktif olmalı; aynı kod+sürüm ikinci kez kaydedilemez | [TAMAMLANDI] |
 | Üretim kaydı: üretilecek miktar, her malzeme için Depo/Konum/Parti/Seri, mamul Konum, "Üretim açıklaması" | Seçim + Input | Doldurulur | `previewProductionAction` (reçete miktarlarını ölçekler, yazmaz) | — | Açıklama zorunlu | [TAMAMLANDI] |
-| "Tüketimi ve üretimi kontrol et" → "Onayla ve üret" | Buton (iki adım) | Tıklanır | `produceAction` → `produceFromRecipe` | Yazar: her kaynak depo için `documents` (`STOCK_OUT`), mamul için `documents` (`STOCK_IN`), hepsi `POSTED`; `stock_ledger`, `stock_balances`; `stock_document_links` (`kind='PRODUCTION'`, `recipe_id`); `audit_logs` | `stock.post`; malzeme yetersizse ret (eksi stok yok); bütün fişler tek işlem; reçete belgeye sabitlenir (sonradan reçete değişse eski üretim değişmez) | [TAMAMLANDI] |
+| "Tüketimi ve üretimi kontrol et" → "Onayla ve üret" | Buton (iki adım) | Tıklanır | `produceAction` → `produceFromRecipe` | Yazar: her kaynak depo için `documents` (`STOCK_OUT`), mamul için `documents` (`STOCK_IN`), hepsi `POSTED`; `stock_ledger`, `stock_balances`; `stock_document_links` (`kind='PRODUCTION'`, `recipe_id`); `audit_logs` | `stock.post`; malzeme yetersizse ret (eksi stok yok); bütün fişler tek işlem; reçete belgeye sabitlenir (sonradan reçete değişse eski üretim değişmez); reçetedeki mamul ya da malzeme kaynakta kapanmışsa ret (`assertItemsActive`, T-1067; Bölüm 0.5) | [TAMAMLANDI] |
 | Paketli üretim (girdi paketleri, çıktı koli/varil QR'ları) | — | — | `previewPackageProductionAction`, `preparePackageProductionAction`, `postPackageProductionAction`, `getPackageProductionBatchAction` → `preparePackageProduction`, `postPackageProduction` | Yazacağı: `production_batches`, `production_inputs`, `production_packages`, `handling_units.package_production_id` | Kodda ve testte var; **ekranda düğmesi yok** | [GELİŞTİRİLİYOR] |
 
 - **İş Akış Şeması:**
@@ -549,46 +607,59 @@ sequenceDiagram
 ## 13. Modül: Kim ne yaptı? (İşlem kaydı) ve dışa aktarma
 
 - **Modül Durumu:** [TAMAMLANDI] — Canlı: UNKNOWN.
-- **Ekranlar:** `/t/<firma>/audit` (`audit/page.tsx`, `audit/audit-view.tsx`); CSV indirme `GET /api/t/<firma>/audit/export`
-  (`apps/web/app/api/t/[slug]/audit/export/route.ts`); Excel dışa aktarma `GET /api/t/<firma>/export/<tür>` (`apps/web/app/api/t/[slug]/export/[kind]/route.ts`).
+- **Ekranlar:** `/t/<firma>/audit` (`audit/page.tsx`, `audit/audit-view.tsx`, `audit/satirlar.ts`, `audit/actions.ts`); CSV indirme
+  `GET /api/t/<firma>/audit/export` (`apps/web/app/api/t/[slug]/audit/export/route.ts`); Excel dışa aktarma `GET /api/t/<firma>/export/<tür>`
+  (`apps/web/app/api/t/[slug]/export/[kind]/route.ts`), düğmesi yalnız **Ayarlar › Bağlantılar** ekranında (`settings/baglantilar/baglantilar-view.tsx`).
 - **Ekranın Amacı ve İşlevi:** Firmada kimin ne zaman hangi işlemi yaptığını gösterir (stok, üye, ayar, rol değişiklikleri). Kayıtlar silinemez.
-  Yönetici tarih/işlem/arama ile süzer ve CSV indirir.
+  Yönetici tarih/işlem/arama ile süzer ve CSV indirir. Liste kalıbındadır (kart: işlem adı, kişi · zaman, kayıt türü, gerekçe; karta dokununca
+  tam kayıt balonda). Kişinin yalnız **kendi bugünkü** işleri ayrıca üst çubuktaki "Son işlemler" penceresindedir (Bölüm 0.6).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Hızlı çipler: Tümü / Bugün / Bu hafta / İşlem | Filtre çipi | Seçilir | `listAudit` (`packages/domain/src/audit/audit-query.ts`) | Okur: `audit_logs` (`occurred_at`, `action`, `entity_type`, `actor_user_id`, `reason`) | `audit.view`; sayfa başına 50 (en çok 100); "Daha fazla" ile devam | [TAMAMLANDI] |
-| Başlangıç / Bitiş tarihi, İşlem, arama | Tarih + Seçim + Input | "Süz" | `listAudit` | Aynı | Metindeki e-postalar maskelenir | [TAMAMLANDI] |
-| "CSV indir" | Bağlantı (dosya) | Tıklanır | `openAuditExport` | Okur: `audit_logs`; yazar: `audit_logs` (`audit.exported`) | Yeniden kimlik doğrulama isteyebilir; dakikada en çok 2; dosyada ip/tarayıcı/istek kimliği/e-posta yok; indirme sürerken eklenen kayıt dosyaya girmez | [TAMAMLANDI] |
-| Excel dışa aktarma (Ürünler, Cariler, Depolar, Raflar, Açılış stoku) | Menü (ilgili ekranın Excel düğmesi) | "Dışarı aktar" | `exportData` (`packages/domain/src/onboarding/data-export.ts`) | Okur: ilgili tablolar; yazar: `audit_logs` (`data.exported`) | `data.import` (+ MFA); cari kişisel alanları yalnız `settings.manage` sahibine; depo kapsamı | [TAMAMLANDI] |
+| Hızlı çipler: Tümü / Bugün / Son 7 gün / seçili işlem | Filtre çipi (adresi değiştirir) | Seçilir | `listAudit` (`packages/domain/src/audit/audit-query.ts`) | Okur: `audit_logs` (`occurred_at`, `action`, `entity_type`, `actor_user_id`, `reason`) | `audit.view`; çiplerde sayı yok (bilinçli fark) | [TAMAMLANDI] |
+| Başlangıç / Bitiş tarihi, İşlem seçimi (aramalı seçim sayfası), arama | Tarih + Seçim + Input | "Süz" / seçim | `listAudit` (GET formu, JS yokken de çalışır) | Aynı | Arama: kişi adı / gerekçe / kayıt kimliği; metindeki e-postalar maskelenir | [TAMAMLANDI] |
+| Liste sonu | Otomatik yükleme | Kaydırılır | `loadMoreAuditAction` (`audit/actions.ts`) → `listAudit` | Okur: `audit_logs` | Aynı süzgeç + imleç (imleç domain'de doğrulanır); "Daha fazla" düğmesi kalktı (T-1059) | [TAMAMLANDI] |
+| "CSV İNDİR" (alt çubuk ana işlemi) | Düğme (dosya) | Tıklanır | `openAuditExport` | Okur: `audit_logs`; yazar: `audit_logs` (`audit.exported`) | Yeniden kimlik doğrulama isteyebilir; dakikada en çok 2; dosyada ip/tarayıcı/istek kimliği/e-posta yok; indirme sürerken eklenen kayıt dosyaya girmez | [TAMAMLANDI] |
+| Excel dışa aktarma (Ürünler, Cariler, Depolar, Raflar, Açılış stoku) | Ayarlar › Bağlantılar'daki "Dışarı aktar" / şablon | Tıklanır | `exportData` (`packages/domain/src/onboarding/data-export.ts`) | Okur: ilgili tablolar; yazar: `audit_logs` (`data.exported`) | `data.import` (+ MFA); cari kişisel alanları yalnız `settings.manage` sahibine; depo kapsamı. Listelerdeki Excel düğmesi kalktı (T-1092, T-1094) | [TAMAMLANDI] |
 
 ---
 
 ## 14. Modül: Raporlar
 
-- **Modül Durumu:** [PLANLANDI] — ayrı bir rapor ekranı yok. Bugün "rapor" olarak yalnız Depo panosundaki kartlar var (Modül 1); "Tüm raporlar ·
-  STOK, HAREKET, DOLULUK…" kartı **Stok durumu** ekranına (`/stock`) gider. BACKLOG'da ayrı rapor satırı bulunmadı.
+- **Modül Durumu:** [PLANLANDI] — ayrı bir rapor ekranı yok (28 Ekim'de de değişmedi). Bugün "rapor" olarak yalnız Depo panosundaki kartlar var
+  (Modül 1); "Tüm raporlar" kartı ve Depom'daki "Raporlar" hızlı kutusu **Stok durumu** ekranına (`/stock`) gider. Ürün kartının (T-1049) ve raf
+  yeri kartının (T-1082) "son hareketler" bölümleri sınırlı salt okuma görünümleridir, rapor değildir (2B). BACKLOG'da ayrı rapor satırı bulunmadı.
 - **Bugün elde olan veri kaynakları:** `stock_ledger` (hareket geçmişi), `stock_balances` (anlık stok), `audit_logs` (işlem geçmişi), `count_sessions`
   (sayım farkları), `sales_orders` (sipariş). Rapor ekranı istenirse bunlardan üretilebilir; önce tasarım tuvaline eklenmesi gerekir (I-18).
 
 ---
 
-## 15. Modül: Etkin — sesli komut
+## 15. Modül: Etkin — sesli komut ve sesli yanıt
 
-- **Modül Durumu:** [GELİŞTİRİLİYOR] — konuşmayı yazıya çevirme + niyet + "Anladım" onay kartı kodda (PR #158 main'de). Kalan: sesli yanıt
-  (B-129) ve VPS'te ses servisinin kurulumu (B-130). Ses servisi çalışmıyorsa Etkin "şu an kullanılamıyor" der.
-- **Ekran:** Alt çubuktaki **Etkin** düğmesi (`apps/web/app/t/[slug]/kabuk/etkin.tsx`); sunucu `etkinAnlaAction` (`apps/web/app/t/[slug]/etkin/actions.ts`);
-  niyet ve arama `packages/domain/src/voice/yanit.ts`, `sorgu.ts`; ses → yazı servisi `services/voice/app.py` (faster-whisper "small", sunucuda yerel,
-  internete çıkmaz).
-- **Ekranın Amacı ve İşlevi:** Elleri dolu çalışan kişi düğmeye basılı tutup konuşur ("C bir rafında ne var"). Okuma soruları (rafta ne var,
-  kaç tane var, görevlerim) hemen sonuç açar. Stoğu değiştiren isteklerde (giriş, çıkış, transfer, sayım başlat) "Anladım" kartı çıkar;
-  **Onayla** denmeden hiçbir şey kaydedilmez ve kayıt mevcut ekranların komutlarıyla yapılır.
+- **Modül Durumu:** [GELİŞTİRİLİYOR] — `main` kodunda: bas-konuş, konuşmayı yazıya çevirme, kural tabanlı niyet, "Anladım" onay kartı
+  (T-1002, PR #158), iPhone bas-konuş düzeltmeleri (T-1103, PR #235), **doğal Türkçe ses** (EMA Lightning `/tts`, T-1106, PR #241) ve
+  **firma "Etkin sesli yanıt" ayarı** (T-1109, PR #243, migration 0063). Kalan: VPS'te ses servisinin kurulumu (B-130, kullanıcı root adımı),
+  Etkin yetki grubu izni (B-131), canlı yazı / arama mikrofonu (B-132). **Doğal komutlar (T-1110) 28 Ekim'de `main`'e birleşti (PR 245, `0c199aa`; canlı: UNKNOWN)** — bu
+  belgede anlatılmaz. Doğal dil için yerel küçük dil modeli kararı kullanıcıda bekliyor. Ses servisi çalışmıyorsa Etkin "şu an kullanılamıyor"
+  der, rehber hoparlörü cihaz sesine düşer. Canlı: UNKNOWN (gerçek iPhone denemesi kayıtlı değil).
+- **Ekran:** Alt çubuktaki **Etkin** düğmesi (`kabuk/etkin.tsx`, durum yazısını okunur cümleye çeviren `kabuk/okunacak.ts`); sunucu
+  `etkinAnlaAction` ve `etkinSoyleAction` (`etkin/actions.ts`, ses sınırları `apps/web/lib/voice.ts`); niyet ayrıştırma ve eşleştirme
+  `packages/shared/src/voice/niyet.ts`, `cozum.ts`, `eslestir.ts`, `turkce.ts`; kiracı verisiyle arama `packages/domain/src/voice/yanit.ts`,
+  `sorgu.ts`; ayar `packages/domain/src/voice/ayar.ts`; ses servisi `services/voice/app.py` (yazıya çevirme: faster-whisper "small" int8 +
+  Silero VAD; sese çevirme: EMA Lightning; modeller imajda, sunucuda yerel, internete çıkmaz).
+- **Ekranın Amacı ve İşlevi:** Elleri dolu çalışan kişi düğmeye basılı tutup (≥ 0,3 sn) ya da iki kez dokunup (uzun dinleme; sessizlikte ya da
+  "bitti" ile biter) konuşur ("C bir rafında ne var"). Okuma soruları (rafta ne var, kaç tane var, görevlerim, görev no) hemen sonuç açar;
+  "aç/git" ekranı açar. Stoğu değiştiren isteklerde (giriş, çıkış, transfer, sayım başlat) "Anladım" kartı çıkar; **Onayla** denmeden hiçbir
+  şey kaydedilmez ve kayıt mevcut ekranların komutlarıyla yapılır. Firma ayarı açıksa cevap (sonuç, onay sorusu, okuma özeti) doğal Türkçe sesle
+  okunur. Niyet ayrıştırıcı kural tabanlıdır (dil modeli yok).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Etkin düğmesi (basılı tut / iki kez dokun: uzun dinleme, "bitti") | Buton (mikrofon) | Konuşulur | `etkinAnlaAction` → iç ses servisi → `answerVoiceCommand` | Okur: `items`, `locations`, `stock_balances`, `warehouse_tasks` | `stock.view`; kişi başına dakikada 20 konuşma; ses en çok 8 sn, diske yazılmaz, kaydedilmez | [GELİŞTİRİLİYOR] |
-| Okuma sonucu kartı ("Aç", "Tümünü aç") | Kart | Dokunulur | Yönlendirme | — | Yalnız gösterir | [GELİŞTİRİLİYOR] |
-| "Anladım" kartı: İŞLEM / MİKTAR / ÜRÜN / YER, "Onayla" / "Düzelt" / "Vazgeç" | Kart + Buton (ya da sesle "onayla") | Onaylanır | `createManualStockAction`, `transferStockAction`, `startCountAction` (mevcut eylemler) | İlgili modülün tabloları (Modül 6, 10; giriş/çıkış 2B) | O eylemin kendi yetkisi ve kuralları; yeni yazma yolu yok | [GELİŞTİRİLİYOR] |
-| Sesli yanıt (TTS) | — | — | Yok | — | B-129 | [PLANLANDI] |
+| Etkin düğmesi (basılı tut / iki kez dokun, "bitti") | Buton (mikrofon) + buzlu dinleme perdesi | Konuşulur | `etkinAnlaAction` → iç ses servisi `/stt` → `answerVoiceCommand` (`voice/yanit.ts`) | Okur: `items`, `locations`, `stock_balances`, `warehouse_tasks`, `tenant_settings.voice_reply` | `stock.view`; kişi başına dakikada 20 konuşma; ses en çok 8,5 sn 16 kHz WAV, yalnız bellekte (işlem sonrası sıfırlanır), kaydedilmez; ses bağlamı dokunuş içinde açılır (iPhone), sistem iptali kayıt göndermez | [GELİŞTİRİLİYOR] |
+| Okuma sonucu kartı ("Aç", "Tümünü aç") | Kart | Dokunulur | Yönlendirme | — | Yalnız gösterir; belirsiz eşleşmede aday satırları + "Seç" | [GELİŞTİRİLİYOR] |
+| "Anladım" kartı: İŞLEM / MİKTAR / ÜRÜN / YER, "Onayla" / "Düzelt" / "Vazgeç" | Kart + Buton (ya da kart açıkken tam "onayla") | Onaylanır | `createManualStockAction`, `transferStockAction` (`stock/documents/actions.ts`), `startCountAction` (`counts/actions.ts`) — mevcut eylemler | İlgili modülün tabloları (Modül 6, 10; giriş/çıkış 2B) | O eylemin kendi yetkisi, kapsamı, kilidi (I-15) ve tekrar güvenliği (I-06); yeni yazma yolu yok. Eksik bilgide ilgili form açılır | [GELİŞTİRİLİYOR] |
+| Sesli yanıt (cevabın okunması) | Ses | — | `etkinSoyleAction` → ses servisi `/tts` (EMA Lightning) | — (metin saklanmaz/loglanmaz) | Yalnız `tenant_settings.voice_reply` açıksa ve kullanıcı "Sessiz" değilse; ≤ 400 karakter, kişi başına dakikada 30; aynı durum yazısı iki kez okunmaz | [GELİŞTİRİLİYOR] (kodda; B-130 kurulum bekliyor) |
+| Ayarlar › Firma: "Etkin sesli yanıt" anahtarı | Anahtar (Kaydet) | Açılır / kapatılır | Ayarlar formu (`settings/form-actions.ts`) → `setVoiceReply` (`voice/ayar.ts`) | Yazar: `tenant_settings.voice_reply` (0063, varsayılan kapalı) + `audit_logs` (`tenant.settings_changed`) | `settings.manage`; değişiklik yoksa yazmaz; yeniden giriş istemez (sunum tercihi) | [TAMAMLANDI] kodda (T-1109) |
 
 ```mermaid
 sequenceDiagram
@@ -599,15 +670,20 @@ sequenceDiagram
   participant D as Niyet ve arama (voice)
   K->>E: Basılı tut ve konuş
   E->>A: Ses kaydı (yalnız bellekte)
-  A->>V: Sesi yazıya çevir
+  A->>V: /stt sesi yazıya çevir
   V-->>A: Metin
-  A->>D: answerVoiceCommand (yalnız okuma)
+  A->>D: answerVoiceCommand (yalnız okuma) + voice_reply ayarı
   alt Okuma sorusu
     D-->>E: Sonuç kartı
   else Stok değiştiren istek
     D-->>E: Anladım kartı (taslak)
     K->>E: Onayla
     E->>E: Mevcut eylemi çağırır (ör. transferStockAction)
+  end
+  opt Sesli yanıt açık ve Sessiz değil
+    E->>A: etkinSoyleAction (cevap metni)
+    A->>V: /tts doğal Türkçe ses
+    V-->>E: WAV, cihazda çalınır
   end
 ```
 
@@ -628,6 +704,16 @@ sequenceDiagram
 | Sipariş düzenleme, satır iptali, yeniden ayırma | `updateDraftOrder`, `cancelOrderLine`, `reallocateOrderLine` | Ekranda yok (yeniden ayırma yalnız toplama eksiğinde otomatik). |
 | Yeniden yerleştirme görevi | Görev doğuyor (sipariş iptali / tahsis uzlaştırması) | Görevlerim'de "Başla" yok ("ekran henüz açılmadı"). |
 | Paket işlemleri | Tam akış | `PACKAGE_RECEIVING_ENABLED` kapalı (B-50). |
+| Etkin sesli yanıt ve rehber doğal sesi | `etkinSoyleAction`, ses servisi `/tts`, `tenant_settings.voice_reply` | Ekran hazır; VPS'te ses servisi kurulumu (B-130) yapılmadıkça çalışmaz (cihaz sesine düşer). |
+
+> 28 Ekim kontrolü: `resolveProblemAction`, `setWorkPriorityAction`, `updateWorkShiftAction`, görev ilerleme eylemleri, paketli üretim eylemleri,
+> `createCustomerReturn`, `updateDraftOrder`/`cancelOrderLine` için web kodunda hâlâ çağıran ekran yok (23 Ekim'den beri değişmedi).
+
+### 16.1b Onaylı tuvalde olup kodda olmayan (bu bölümün ekranları)
+
+| Konu | Tuval | Kod | Boyut |
+| :--- | :--- | :--- | :--- |
+| Yönetici ana ekranı | `Standart*.dc.html` (26 Ekim onaylı): 3 bekleyen iş kutusu + 8'li İşler ızgarası + sürükle-bırak düzen | Eski Pano panosu (`pano/pano-board.tsx`) | Yalnız arayüz, orta; veri var |
 
 ### 16.2 Veritabanında olup ekranda görünmeyen
 
@@ -637,6 +723,7 @@ sequenceDiagram
 - `stock_alerts` (min/max uyarıları, 0017): tablo var ama web, iş kuralı ve worker kodunda **onu okuyan ya da yazan yer yok**. Pano kartları
   uyarıyı doğrudan `item_stock_policies` + `stock_balances`'tan hesaplıyor. Min/max değerini (`item_stock_policies`) giren ekran 2B'de ayrıca kontrol edilmeli.
 - `tenant_settings.count_abandon_hours` (terk edilmiş sayım süresi): worker kullanıyor; kullanıcıya gösterildiği bu belgede doğrulanmadı.
+- İşlem rehberlerinin "görüldü" bilgisi sunucuda yok; yalnız cihazda tutulur (B-75 kalanı).
 
 ### 16.3 Eksik kural / kısıt
 
@@ -659,11 +746,13 @@ sequenceDiagram
 
 ### 16.6 Önerilen sıra (bu bölüm için)
 
-1. B-50: paket akışını aç (ayar + normal girişe bağlama) — kod hazır, en hızlı kazanç.
-2. Sorun kapatma + ACİL + vardiya ayarı ekranları — arka uç hazır, küçük iş; ana ekrandaki rozetler gerçekten çalışır hâle gelir.
-3. B-96: toplamada "ürün yok" ve eksikten doğan sayımı sahadan başlatma.
-4. İade ekranı (B-52 kalanı) — önce tasarım tuvaline eklenmeli.
-5. Görev adım adım ilerleme ekranı ve Yeniden yerleştirme saha ekranı.
-6. Sipariş ↔ Cari bağlantısı ve sipariş düzenleme (kullanıcı kararı gerekir: şema değişikliği).
-7. Rapor modülü (önce tuval + kullanıcı onayı).
-8. Etkin sesli yanıt (B-129) ve VPS ses servisi kurulumu (B-130, kullanıcı root adımı).
+1. B-130: VPS ses servisi kurulumu (kullanıcı root adımı) — Etkin, doğal ses ve sesli yanıt kodu `main`'de hazır; kurulmadıkça çalışmaz.
+   T-1110 (doğal komutlar) birleşti; yerel dil modeli kararı kullanıcıda.
+2. Yönetici ana ekranını onaylı tuvale getir (3 bekleyen iş kutusu, 8'li İşler, sürükle-bırak) — veri var, yalnız arayüz (28 Ekim önerilen sıranın 2. maddesi).
+3. B-50: paket akışını aç (ayar + normal girişe bağlama) — kod hazır.
+4. Sorun kapatma + ACİL + vardiya ayarı ekranları — arka uç hazır, küçük iş; ana ekrandaki rozetler gerçekten çalışır hâle gelir.
+5. B-96: toplamada "ürün yok" ve eksikten doğan sayımı sahadan başlatma.
+6. İade ekranı (B-52 kalanı) — önce tasarım tuvaline eklenmeli.
+7. Görev adım adım ilerleme ekranı ve Yeniden yerleştirme saha ekranı.
+8. Sipariş ↔ Cari bağlantısı ve sipariş düzenleme (kullanıcı kararı gerekir: şema değişikliği).
+9. Rapor modülü (önce tuval + kullanıcı onayı).
