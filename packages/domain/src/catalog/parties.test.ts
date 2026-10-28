@@ -48,4 +48,8 @@ describe("T-428 cari kart doğrulama", () => {
     expect(cleanParty({ code: "A", shortName: "a\u0007b" })).toEqual({ ok: false, issue: "TEXT_TOO_LONG" });
     expect(cleanParty({ code: "A", deliveryMode: "uçak" })).toEqual({ ok: false, issue: "DELIVERY_UNKNOWN" });
   });
+  it("C1 kontrol karakteri (U+0080–009F) satır sorunu olur, veritabanına gitmez", () => {
+    expect(cleanParty({ code: "A", name: "B", shortName: "Ka\u0086ya" })).toEqual({ ok: false, issue: "TEXT_TOO_LONG" });
+    expect(cleanParty({ code: "A", name: "B\u009fC" })).toEqual({ ok: false, issue: "NAME_INVALID" });
+  });
 });

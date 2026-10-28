@@ -219,7 +219,8 @@ describe("T-428 cari kartlar", () => {
         WHERE to_regrole(r) IS NOT NULL ORDER BY r, c`,
     );
     for (const x of priv.rows) expect({ ...x, ok: x.role === "wms_app" ? x.ins && x.upd : !x.ins && !x.upd }).toMatchObject({ ok: true });
-    expect(priv.rows.filter((x) => x.role === "wms_app")).toHaveLength(3);
+    // Üç rolün de var olduğu kanıtlanır (rol yoksa olumsuz yetki denetimi sessizce atlanmasın).
+    for (const role of ["wms_app", "wms_worker", "wms_auth"]) expect(priv.rows.filter((x) => x.role === role), role).toHaveLength(3);
   });
 
   it("veritabanı: silme yetkisi yok, kimlik alanı değiştirilemez", async () => {

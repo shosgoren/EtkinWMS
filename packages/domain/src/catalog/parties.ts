@@ -86,7 +86,8 @@ interface Clean {
   readonly deliveryMode: PartyDeliveryMode | null;
 }
 
-const CTRL = /[\u0000-\u001f\u007f]/;
+// C0 + DEL + C1 (U+0080–009F): veritabanı `[[:cntrl:]]` ile aynı küme (C1 uygulamada geçip CHECK'te 23514 vermesin).
+const CTRL = /\p{Cc}/u;
 const t = (v: string | undefined): string => (typeof v === "string" ? v.replace(/\s+/g, " ").trim() : "");
 
 /** "müşteri", "Tedarikçi", "ikisi de", "Alıcı/Satıcı", "customer"… → tür; boş → null; tanınmayan → hata. */
