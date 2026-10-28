@@ -78,9 +78,12 @@ describe("yolculuk adımları", () => {
   });
 
   it("delikli perde: çift-tek kırpma, hedef koordinatı", () => {
-    expect(delikKirp({ x: 10.4, y: -3, w: 50, h: 40 })).toBe("polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 10px 0px, 60px 0px, 60px 37px, 10px 37px, 10px 0px)");
+    // T-1111: köşeler yuvarlatılmış (en çok 18 px, kısa kenarın yarısı).
+    expect(delikKirp({ x: 10.4, y: -3, w: 50, h: 40 })).toBe('path(evenodd, "M0 0H100000V100000H0Z M28 0H42A18 18 0 0 1 60 18V19A18 18 0 0 1 42 37H28A18 18 0 0 1 10 19V18A18 18 0 0 1 28 0Z")');
     // T-1100: birden çok delik (iş formu + KAYDET) — her halka köşeden ayrı açılır.
-    expect(delikKirp([{ x: 10, y: 10, w: 10, h: 10 }, { x: 50, y: 60, w: 5, h: 5 }])).toBe("polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 10px 10px, 20px 10px, 20px 20px, 10px 20px, 10px 10px, 0 0, 50px 60px, 55px 60px, 55px 65px, 50px 65px, 50px 60px)");
+    expect(delikKirp([{ x: 10, y: 10, w: 10, h: 10 }, { x: 50, y: 60, w: 5, h: 5 }])).toBe(
+      'path(evenodd, "M0 0H100000V100000H0Z M15 10H15A5 5 0 0 1 20 15V15A5 5 0 0 1 15 20H15A5 5 0 0 1 10 15V15A5 5 0 0 1 15 10Z M52 60H53A2 2 0 0 1 55 62V63A2 2 0 0 1 53 65H52A2 2 0 0 1 50 63V62A2 2 0 0 1 52 60Z")',
+    );
   });
 });
 

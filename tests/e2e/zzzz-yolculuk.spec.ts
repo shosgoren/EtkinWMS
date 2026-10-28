@@ -30,7 +30,7 @@ async function openSetup(page: Page, slug: string, key: string): Promise<void> {
 }
 /** T-1100: kurulum kartı odaklı rehberdir — İleri / Atla / Uygula yok; yapılacak yer delikte, ekranın kalanı buzlu perdenin altında. */
 async function expectFocused(page: Page): Promise<void> {
-    await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /polygon\(evenodd/);
+    await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /path\(evenodd/);
     const kart = page.getByTestId('yol-kart');
     for (const name of ['İleri', 'Atla', 'Uygula · ekranda çalış'])
         await expect(kart.getByRole('button', { name, exact: true })).toHaveCount(0);
@@ -112,7 +112,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         // Stok girişi: açık iş formu da delikte (alanlar doldurulabilir), KAYDET ayrı delikte; dokunmak rehberi kapatmaz.
         await openSetup(page, slug, 'stock');
         await expectFocused(page);
-        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /px, 0(px)? 0(px)?, \d+px [^,]+, \d+px/);
+        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /Z M ?[\d.]+ [\d.]+ ?H[^Z]+Z M ?[\d.]+ [\d.]+ ?H[^Z]+Z/); // T-1111: iki ayrı yuvarlak delik
         await page.locator('form.workflow-form input:visible').first().click();
         await expect(page.getByTestId('yol-coach')).toHaveAttribute('data-folded', 'false');
         // Kullanılmayan adım listeden atlanır ("Bunu kullanmıyorum"); geri alınabilir.
@@ -189,7 +189,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         await expect(page.getByTestId('working-guide')).toContainText('Kaynak depoyu');
         // T-1105: işlem rehberi de odaklı — yapılacak yer delikte, kalan ekran buzlu; "Uygula" / "Şimdilik kapat" yok; delikteki alan
         // doldurulabilir ve yazmak rehberi kapatmaz ya da ilerletmez.
-        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /polygon\(evenodd/);
+        await expect(page.getByTestId('kalip-perde')).toHaveAttribute('style', /path\(evenodd/);
         for (const name of ['Uygula · ekranda çalış', 'Şimdilik kapat'])
             await expect(page.getByTestId('working-guide').getByRole('button', { name, exact: true })).toHaveCount(0);
         const input = page.locator('[data-guide="source"] input').first();
