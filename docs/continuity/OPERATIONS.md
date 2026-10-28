@@ -165,3 +165,5 @@ Resmi davranış: https://caddyserver.com/docs/caddyfile/directives/reverse_prox
 
 ### T-1070 — 28 Ekim07:08UTC canlı proxy ayarı
 PR244headca43626(18kontrolyeşil),merge8e2710d. BaselineCaddy6d0a8ce43f9252558da4ca3b25ea3b772a725084b140244b64da79c4361e88c0; yeni f024e1f414fbd03c12bb8d7da2bdcbfe3c83b0aca6db8073c64eb37c7f90b01f. Release.lock altında mevcutdosya/bağlama doğrulandı, rootyedek alındı, inodekorunarak yazıldı ve `caddy reload` ile gracefuluygulandı. Aktif3reverseproxy imzası kaynaklaaynı; bindhash aynı; anonimlive200; releasecheckhealthok/şema23f413bc…/DB0063. Testiçinservisdurdurulmadı. Uygulamaimajıee6c1d9; mainCI40648144557 ve sonrakiCD ayrı bekleniyor. CIinfra varsayılanNode24backend4testbaşarılı,prepush5062birim/AC04375,bağımsızinceleme0B0MA0MI. Uzunbakımı gizleyen sıfırkesinti garantisi değildir.
+
+T1070 uygulamaimajı mainCI40648144557/guards40648144492 başarılı; CD40649132904 imajı hazırladı fakat sonraki main birleşmesi nedeniyle `NOT_CURRENT_MAIN` ile haklı olarak reddedildi. EskiSHAyayını zorlanmadı. Bu Caddyfile'ın zaten doğrulanmış gracefulcanlıayarını geri almaz. Son uygulamaimajı releasecheckile ayrıca doğrulanır.

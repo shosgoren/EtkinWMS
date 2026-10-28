@@ -39,7 +39,13 @@ REVOKE ALL ON FUNCTION public.external_refs_identity_guard() FROM PUBLIC;
 CREATE TRIGGER external_refs_identity_guard BEFORE INSERT OR UPDATE ON public.external_refs
  FOR EACH ROW EXECUTE FUNCTION public.external_refs_identity_guard();
 -- Runtime still cannot UPDATE external_id directly. A narrow definer command locks the item first.
-CREATE FUNCTION public.replace_deleted_product_identity(p_ref uuid,p_version integer,p_external_id text) RETURNS boolean
+GRANT SELECT(tenant_id,id,system,entity_type,entity_id,external_id,version,retired_external_ids) ON public.external_refs TO wms_identity_probe;
+GRANT UPDATE(external_id) ON public.external_refs TO wms_identity_probe;
+GRANT SELECT(tenant_id,id,status,source_state,source_managed_archive,source_disposition) ON public.items TO wms_identity_probe;
+GRANT UPDATE(id) ON public.items TO wms_identity_probe;
+GRANT CREATE ON SCHEMA wms_probe TO wms_identity_probe;
+SET ROLE wms_identity_probe;
+CREATE FUNCTION wms_probe.replace_deleted_product_identity(p_ref uuid,p_version integer,p_external_id text) RETURNS boolean
  LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $fn$
 DECLARE t uuid; item uuid; affected integer;
 BEGIN
@@ -53,5 +59,8 @@ BEGIN
  GET DIAGNOSTICS affected=ROW_COUNT;
  RETURN affected=1;
 END $fn$;
-REVOKE ALL ON FUNCTION public.replace_deleted_product_identity(uuid,integer,text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.replace_deleted_product_identity(uuid,integer,text) TO wms_app;
+REVOKE ALL ON FUNCTION wms_probe.replace_deleted_product_identity(uuid,integer,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION wms_probe.replace_deleted_product_identity(uuid,integer,text) TO wms_app;
+
+RESET ROLE;
+REVOKE CREATE ON SCHEMA wms_probe FROM wms_identity_probe;

@@ -103,19 +103,21 @@ it('0064 non-super/non-BYPASS owner can create and run the narrow tenant command
    await adm.query("INSERT INTO external_refs(tenant_id,id,system,entity_type,entity_id,external_id) VALUES($1,$2,'PARASUT','ITEM',$3,'721')",[a.tenantId,id,a.itemNoneId]);
    await adm.query("UPDATE items SET source_state='DELETED',source_disposition='REMOVED',source_managed_archive=true,status='ARCHIVED',archived_at=clock_timestamp() WHERE id=$1",[a.itemNoneId]);
    await adm.query(`GRANT USAGE,CREATE ON SCHEMA public TO ${role}`);
-   await adm.query(`GRANT SELECT ON public.items TO ${role}`);await adm.query(`GRANT UPDATE(id) ON public.items TO ${role}`);
+   await adm.query(`GRANT USAGE,CREATE ON SCHEMA wms_probe TO ${role} WITH GRANT OPTION`);
+   await adm.query(`GRANT SELECT ON public.items TO ${role} WITH GRANT OPTION`);await adm.query(`GRANT UPDATE(id) ON public.items TO ${role} WITH GRANT OPTION`);
    await adm.query(`ALTER TABLE public.external_refs OWNER TO ${role}`);
+   await control.query(`GRANT wms_identity_probe TO ${role} WITH INHERIT FALSE, SET TRUE`);
    await adm.query('BEGIN');await adm.query(`SET LOCAL ROLE ${role}`);
    await adm.query(readFileSync(`${MIGRATIONS_DIR}/0064_product_recreate.up.sql`,'utf8'));await adm.query('COMMIT');
-   const owner=(await adm.query(`SELECT r.rolsuper,r.rolbypassrls,c.relforcerowsecurity FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner JOIN pg_class c ON c.oid='external_refs'::regclass WHERE p.oid='replace_deleted_product_identity(uuid,integer,text)'::regprocedure`)).rows[0];
+   const owner=(await adm.query(`SELECT r.rolsuper,r.rolbypassrls,c.relforcerowsecurity FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner JOIN pg_class c ON c.oid='external_refs'::regclass WHERE p.oid='wms_probe.replace_deleted_product_identity(uuid,integer,text)'::regprocedure`)).rows[0];
    expect(owner).toEqual({rolsuper:false,rolbypassrls:false,relforcerowsecurity:true});
    const client=new pg.Client({connectionString:applicationDatabase(name)});await client.connect();
    try{
-    await expect(client.query('SELECT replace_deleted_product_identity($1,1,$2)',[id,'722'])).rejects.toMatchObject({code:'42501'});
+    await expect(client.query('SELECT wms_probe.replace_deleted_product_identity($1,1,$2)',[id,'722'])).rejects.toMatchObject({code:'42501'});
     await client.query('BEGIN');await client.query("SELECT set_config('app.current_tenant_id',$1,true)",[b.tenantId]);
-    expect((await client.query('SELECT replace_deleted_product_identity($1,1,$2) ok',[id,'722'])).rows[0]).toEqual({ok:false});await client.query('COMMIT');
+    expect((await client.query('SELECT wms_probe.replace_deleted_product_identity($1,1,$2) ok',[id,'722'])).rows[0]).toEqual({ok:false});await client.query('COMMIT');
     await client.query('BEGIN');await client.query("SELECT set_config('app.current_tenant_id',$1,true)",[a.tenantId]);
-    expect((await client.query('SELECT replace_deleted_product_identity($1,1,$2) ok',[id,'722'])).rows[0]).toEqual({ok:true});await client.query('COMMIT');
+    expect((await client.query('SELECT wms_probe.replace_deleted_product_identity($1,1,$2) ok',[id,'722'])).rows[0]).toEqual({ok:true});await client.query('COMMIT');
     expect((await adm.query('SELECT external_id,retired_external_ids FROM external_refs WHERE id=$1',[id])).rows[0]).toEqual({external_id:'722',retired_external_ids:['721']});
    }finally{await client.end();}
   });

@@ -38,7 +38,7 @@ export async function reconnectRecreatedProduct(inTenant:RunTx,client:ParasutCli
    AND entity_id=${candidate.item_id}::uuid AND external_id=${candidate.external_id} AND version=${candidate.version} FOR UPDATE`);
   if(!refs.length)return false;
   const setting=await tx.execute<{enabled:boolean}>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id=${b.tenantId}::uuid AND id=${b.integrationId}::uuid`);
-  const replacement=await tx.execute<{ok:boolean}>(sql`SELECT public.replace_deleted_product_identity(${candidate.ref_id}::uuid,${candidate.version}::integer,${fresh.id}) AS ok`);
+  const replacement=await tx.execute<{ok:boolean}>(sql`SELECT wms_probe.replace_deleted_product_identity(${candidate.ref_id}::uuid,${candidate.version}::integer,${fresh.id}) AS ok`);
   if(replacement[0]?.ok!==true)return false;
   await observeProduct(tx,b,c,fresh.id,{exists:true,archived:false},now);
   const outcome=await applyProduct(tx,{...c,pullProductBarcodes:setting[0]?.enabled===true},{externalId:fresh.id,code:p.code,name:typeof fresh.attributes.name==='string'?fresh.attributes.name:null,

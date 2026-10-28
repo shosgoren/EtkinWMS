@@ -89,7 +89,7 @@ it('retired aliases cannot create another card; raw updates/history edits are de
  expect(await inTenant(A,tx=>applyProduct(tx,ac(),{externalId:f.old,code:'OTHER-'+f.old,name:'Old identity',unit:'adet'}))).toBe('SKIPPED');
  await expect(inTenant(A,tx=>tx.execute(sql`UPDATE external_refs SET external_id='999' WHERE id=${f.ref_id}::uuid`))).rejects.toBeDefined();
  await expect(inTenant(A,tx=>tx.execute(sql`UPDATE external_refs SET retired_external_ids='{}'::text[] WHERE id=${f.ref_id}::uuid`))).rejects.toBeDefined();
- expect(await inTenant(B,tx=>tx.execute<{ok:boolean}>(sql`SELECT replace_deleted_product_identity(${f.ref_id}::uuid,2,'999') ok`))).toEqual([{ok:false}]);
+ expect(await inTenant(B,tx=>tx.execute<{ok:boolean}>(sql`SELECT wms_probe.replace_deleted_product_identity(${f.ref_id}::uuid,2,'999') ok`))).toEqual([{ok:false}]);
  await expect(inTenant(A,tx=>tx.execute(sql`INSERT INTO external_refs(tenant_id,system,entity_type,entity_id,external_id) VALUES(${A.tenantId}::uuid,'PARASUT','ITEM',${A.itemTwoId}::uuid,${f.old})`))).rejects.toBeDefined();
 });
 it('concurrent attempts change one mapping once and preserve append-only alias history',async()=>{
@@ -129,15 +129,14 @@ it('multi-row pull and another product rebind share namespace-before-item lock o
  try{await new Promise(r=>setTimeout(r,100));}finally{release();}
  await batch;expect(await replacement).toBe(true);expect((await state(f)).external_id).toBe(f.next);
 });
-it('PUBLIC cannot execute the definer, FORCE RLS stays enabled and function owner is the migration owner',async()=>{
+it('PUBLIC cannot execute the definer, FORCE RLS stays enabled and function owner is the dedicated probe role',async()=>{
  const result=(await adm.query(`SELECT c.relforcerowsecurity force_rls, r.rolsuper, r.rolbypassrls,
- has_function_privilege('wms_ops','public.replace_deleted_product_identity(uuid,integer,text)','EXECUTE') ops,
- has_function_privilege('wms_app','public.replace_deleted_product_identity(uuid,integer,text)','EXECUTE') app,
- p.proowner=c.relowner same_owner FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner
- CROSS JOIN pg_class c WHERE p.oid='public.replace_deleted_product_identity(uuid,integer,text)'::regprocedure AND c.oid='public.external_refs'::regclass`)).rows[0];
- expect(result).toMatchObject({force_rls:true,ops:false,app:true,same_owner:true});
- // Local bootstrap owner may be superuser: then FORCE RLS does NOT constrain this definer; explicit tenant predicates still apply. Target VPS owner is separately verified non-super/non-BYPASS.
- expect(typeof result.rolsuper).toBe('boolean');expect(typeof result.rolbypassrls).toBe('boolean');
+ has_function_privilege('wms_ops','wms_probe.replace_deleted_product_identity(uuid,integer,text)','EXECUTE') ops,
+ has_function_privilege('wms_app','wms_probe.replace_deleted_product_identity(uuid,integer,text)','EXECUTE') app,
+ r.rolname owner FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner
+ CROSS JOIN pg_class c WHERE p.oid='wms_probe.replace_deleted_product_identity(uuid,integer,text)'::regprocedure AND c.oid='public.external_refs'::regclass`)).rows[0];
+ expect(result).toMatchObject({force_rls:true,ops:false,app:true,owner:'wms_identity_probe',rolsuper:false,rolbypassrls:false});
+ // Dedicated NOLOGIN non-super/non-BYPASS definer plus explicit predicates and FORCE RLS.
  expect(await inTenant(B,tx=>tx.execute(sql`SELECT id FROM external_refs WHERE tenant_id=${A.tenantId}::uuid`))).toHaveLength(0);
 });
 
