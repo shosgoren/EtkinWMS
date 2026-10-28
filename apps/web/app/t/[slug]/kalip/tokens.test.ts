@@ -18,6 +18,11 @@ describe("ortak kalıp renkleri", () => {
     expect(kdzOrtak("255,255,255,.14")).toBe("var(--color-dz-a-pppppp-be, rgba(255,255,255,.14))");
   });
 
+  it("T-1117: kalıp kaynaklarında olmayan standart tuval rengi standart belirtecinden gelir", () => {
+    expect(() => kdz("dzf", "C2702A")).toThrow("kaynakta olmayan renk");
+    expect(kdzOrtak("C2702A")).toBe("var(--color-st-k-turuncu)");
+  });
+
   it("kaynakta olmayan veya CSS içeren değerleri kabul etmez", () => {
     expect(() => kdzOrtak("123456")).toThrow("kaynakta olmayan renk");
     expect(() => kdzOrtak("FFFFFF); color: red")).toThrow("kaynakta olmayan renk");

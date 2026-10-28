@@ -248,6 +248,13 @@ body {
   --color-st-k-kutu: #f4f6f8;
   --color-st-k-yan: #f7f9fb;
   --color-st-k-ok-ink: #8a9aa8;
+  /* T-1115 ana ekran (StandartAnaEkran.dc.html "Bekleyen işler" ve "İşler" kutuları). */
+  --color-st-a-sevk: #b35f1c;
+  --color-st-a-sevk-bg: #fbeee2;
+  --color-st-a-sayim-bg: #e6eef9;
+  --color-st-a-kritik: #b23a3a;
+  --color-st-a-kritik-bg: #fbe9e9;
+  --color-st-a-excel: #1f7a4d;
 }
 
 /* T-436 (ALTIN-KURAL 14): eski (Tailwind belirteçli) yüzeylerin koyu teması; kök düzen `html[data-tema]` verir. */

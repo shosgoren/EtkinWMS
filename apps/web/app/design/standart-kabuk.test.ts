@@ -18,6 +18,29 @@ describe("T-1042 ortak kabuk (STANDART §1)", () => {
     const imports = [...globals.matchAll(/@import "\.\/design\/([a-z-]+)\.css";/g)].map((m) => m[1]);
     expect(imports.at(-1)).toBe("standart");
   });
+  // T-1115: birleştirmede yarım kalan bir kural (kapanmayan `{`) sonraki blokları sessizce onun içine iç içe sokar ve o kurallar
+  // hiçbir yerde uygulanmaz (ör. uyarı bandı düğmesi 48 px yerine 42 px, kod listesi kendi içinde kaymaz). Seçici kuralın içinde
+  // yalnız @-kuralı dışında başka kural açılmaz; dosya dengeli kapanır.
+  it("standart.css'te iç içe (yarım kalmış) kural yok", () => {
+    const stack: string[] = [];
+    const nested: string[] = [];
+    let buf = "";
+    for (const ch of css.replace(/\/\*[\s\S]*?\*\//g, "")) {
+      if (ch === "{") {
+        const sel = buf.trim();
+        const parent = stack.at(-1);
+        if (parent !== undefined && !parent.startsWith("@")) nested.push(`${parent} → ${sel}`);
+        stack.push(sel);
+        buf = "";
+      } else if (ch === "}") {
+        stack.pop();
+        buf = "";
+      } else if (ch === ";") buf = "";
+      else buf += ch;
+    }
+    expect(nested).toEqual([]);
+    expect(stack).toEqual([]);
+  });
   it("kalıp kabı: saat → tema → üst düğmeler → Ayarlar → Hesap (en sağda)", () => {
     const order = ["<StSaat />", "<StTema dark={dark} />", 'className="tph"', "<StAyarlar />", "<HesapDugme"].map((s) => ekran.indexOf(s));
     expect(order.every((i) => i > 0)).toBe(true);

@@ -1746,6 +1746,136 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
 /* T-1121: kalıp düğmesi (`.btn`) kapalıyken soluk ve "yasak" imleç (eski `@wms/ui` Button'un kapalı görünümünün karşılığı). */
 :is(.dzl, .dzf, .dzd) .btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* ---- T-1117 Form kalıbı: Yeni cari (STANDART §4, kaynak `StandartYeniCari.dc.html` "6 · Yeni cari"). Ortak parçalar:
+   (1) alan etiketinin başında küçük renkli simge (`KalipAlan ikon` → `.kflds > .kfldi`, kaynak 22px kare, 7px köşe, beyaz simge);
+   (2) grup içinde yan yana iki alan (`KalipAlanSira` → `.kfsira`; her alan kendi kutusunda, hata satırı altında);
+   (3) üst şeritte tür seçimi (`KalipOnizleme secim` → `.konc-sec > .konsec`): masaüstünde şeridin sağında büyük simgeli düğmeler
+       (kaynak `.opt`: 56px, 0 18px iç boşluk, 8px aralık; etiket yalnız ekran okuyucuda); telefon/tablette şerit gizli kalır, yalnız
+       seçim formun üstünde görünür (etiketiyle). Ad boşken büyük satır soluk yer tutucu (kaynaktaki soluk gri, `--color-st-k-ok-ink`). ---- */
+.dzf .kflds {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dzf .kfldi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  color: var(--color-dz-x-pppppp);
+  font-style: normal;
+}
+.dzf .kfsira {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.dzf .kfsirah {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.dzf .kfsira > .kfsirah:only-child { grid-column: 1 / -1; }
+.dzf:not(.dz-dark) .konbos { color: var(--color-st-k-ok-ink); }
+.dzf.dz-dark .konbos { opacity: .55; }
+@media (min-width: 1100px) {
+  .dzf.dzf .konc-sec { flex-wrap: wrap; }
+  .dzf .konsec {
+    flex: none;
+    margin-left: auto;
+  }
+  .dzf .konsec .ksecl {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .dzf .konsec .gpick {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .dzf .konsec .ksecg .gp {
+    flex: none;
+    min-height: 56px;
+    padding: 0 18px;
+  }
+}
+@media (max-width: 1099.98px) {
+  .dzf .kfl:has(> .konz > .konc-sec) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dzf .konz:has(> .konc-sec) {
+    display: block;
+    order: -1;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .dzf.dzf .konc-sec {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .dzf.dzf .konc-sec > :not(.konsec) { display: none; }
+  .dzf .konc-sec .konsec { width: 100%; }
+}
+
+/* T-1117: kalıp uyarı bandı (`KalipUyari`; eski `@wms/ui` Banner'ın yerine) form/liste kalıbında da (ör. ürün kodu değiştirme formunun sunucu hatası) — kayıt kartı kalıbındaki
+   `.dzd .warnb` ile aynı ölçü ve belirteçler; `.kuyl` bandın içindeki sonraki adım bağlantıları (≥ 44 px). */
+:is(.dzf, .dzl) .warnb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--color-dz-x-mgcici);
+  color: var(--color-dz-x-pppppp);
+}
+:is(.dzf, .dzl) .warnb i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-dz-x-pppppp) 22%, var(--color-dz-x-mgcici));
+}
+:is(.dzf, .dzl) .warnb b {
+  display: block;
+  font: 800 16px/1.15 var(--font-bricolage), sans-serif;
+}
+:is(.dzf, .dzl) .warnb small {
+  display: block;
+  margin-top: 3px;
+  font: 600 10.5px/1.2 var(--font-plex-mono), monospace;
+  opacity: .9;
+  overflow-wrap: anywhere;
+}
+:is(.dzd, .dzf, .dzl) .warnb .kuyl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+:is(.dzd, .dzf, .dzl) .warnb .kuyl a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
 /* ---- T-1116 Kayıt kartı: bildirim bandı, simgeli satır listesi ve "Stok ve yer" pivotu (STANDART §3; kaynak
    `StandartUrunKartiStok.dc.html`). Pivot kendi içinde kayar (sütun başlığı ve toplam şeridi sabit); telefonda SKT/Durum sütunları satır
    altına iner, girinti daralır. ---- */
@@ -2183,3 +2313,227 @@ button.stpv-satir { cursor: pointer; }
 /* SahaShell (T-1122): tarama adımında okutma alanı yalnız "Elle gir" ile açılır; elle girişte çubuğun üstündeki bağlantı düğmesi gizlenir. */
 .dzs .sproxy [data-mode="scan"] { display: none; }
 .dzs .group:has([data-mode="manual"]) .sfoot { display: none; }
+
+/* ---- T-1115 Ana ekran (STANDART §8 adım 3; kaynak `StandartAnaEkran.dc.html` "1 · Ana ekran"): hesap sahibi / depo yöneticisi
+   (`PanoBoard`). Üstte "Bekleyen işler" üç kutusu (beyaz, ince çerçeve, renkli ikon kutusu + büyük renkli sayı), altında "İşler" başlığı +
+   "Düzenle · sürükle bırak" ve 4 sütun iş kutusu (renkli 60 px ikon kutusu, ad, alt yazı). Telefon / tablette kaydırma yok: kutular
+   küçülür, telefonda bekleyen kutuları tek satırda üç sütun, iş kutuları iki sütun. ---- */
+.dzp .stana {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.dzp .stana .h {
+  font-family: var(--font-bricolage), sans-serif;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+.dzp .stana-bek {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.dzp .stbk {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  min-height: 88px;
+  padding: 18px 20px;
+  box-sizing: border-box;
+  border-radius: 20px;
+  background: var(--color-kr-card);
+  box-shadow: inset 0 0 0 1.5px var(--color-st-k-cizgi), 0 10px 30px -24px var(--color-kr-shadow-soft);
+  color: var(--color-kr-ink);
+  text-decoration: none;
+}
+.dzp .stbk.bos {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-st-k-gri);
+  font-weight: 600;
+}
+.dzp .stb-orders { --k: var(--color-st-a-sevk); --kb: var(--color-st-a-sevk-bg); }
+.dzp .stb-count { --k: var(--color-st-k-mavi); --kb: var(--color-st-a-sayim-bg); }
+.dzp .stb-critical { --k: var(--color-st-a-kritik); --kb: var(--color-st-a-kritik-bg); }
+.dzp .stbk .bki {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--kb);
+  color: var(--k);
+}
+.dzp .stbk .bkt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.dzp .stbk .bkt b { font-size: 17px; }
+.dzp .stbk .bkt small,
+.dzp .stana .job small {
+  font-size: 14px;
+  color: var(--color-st-k-gri);
+}
+.dzp .stbk .bkn {
+  font-size: 34px;
+  line-height: 1;
+  color: var(--k);
+  font-variant-numeric: tabular-nums;
+}
+.dzp .stana-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dzp .stana-hd > b { font-size: 19px; }
+.dzp .stana-duz {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-kr-card);
+  color: var(--color-kr-ink);
+  font: 700 14px/1 var(--font-instrument), sans-serif;
+  box-shadow: 0 6px 18px -10px var(--color-kr-shadow);
+  cursor: pointer;
+}
+.dzp .stana-duz.on {
+  background: var(--color-st-cur-bg);
+  color: var(--color-st-cur);
+}
+.dzp .stana-is {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.dzp .stana .job {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 22px 20px;
+  box-sizing: border-box;
+  border-radius: 20px;
+  background: var(--color-kr-card);
+  color: var(--color-kr-ink);
+  text-decoration: none;
+  box-shadow: 0 10px 30px -22px var(--color-kr-shadow-soft);
+}
+.dzp .stana .jic {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k);
+  color: var(--color-kr-on);
+}
+.dzp .stana .jt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.dzp .stana .jt b { font-size: 18.5px; }
+.dzp .sta-giris,
+.dzp .sta-cari { --k: var(--color-st-k-yesil); }
+.dzp .sta-satis { --k: var(--color-st-k-turuncu); }
+.dzp .sta-stok { --k: var(--color-st-k-kahve); }
+.dzp .sta-urun { --k: var(--color-st-k-mavi); }
+.dzp .sta-depo { --k: var(--color-st-k-lacivert); }
+.dzp .sta-excel { --k: var(--color-st-a-excel); }
+.dzp .sta-kayit { --k: var(--color-kr-ink); }
+/* Düzenle kipi: kutu sürüklenir (kesik mavi çerçeve), sağ altta öne / sona okları (44 px). */
+.dzp .stana-is.duz .job {
+  cursor: grab;
+  box-shadow: inset 0 0 0 2px var(--color-st-cur), 0 10px 30px -22px var(--color-kr-shadow-soft);
+}
+.dzp .stana-is.duz .job.tut { opacity: .5; }
+.dzp .stana .jok {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 4px;
+}
+.dzp .stana .jok button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-st-cur-bg);
+  color: var(--color-st-cur);
+  cursor: pointer;
+}
+.dzp .stana .jok button:disabled { opacity: .35; cursor: default; }
+/* Koyu tema: kutular koyu kart, renk ikon kutusunda ve sayıda (kısık). */
+.dzp.dz-dark .stbk,
+.dzp.dz-dark .stana .job,
+.dzp.dz-dark .stana-duz {
+  background: var(--color-kr-card-dark);
+  color: var(--color-kr-text-dark);
+}
+.dzp.dz-dark .stbk { box-shadow: inset 0 0 0 1.5px var(--color-st-dark-hover); }
+.dzp.dz-dark .stbk .bkt small,
+.dzp.dz-dark .stana .job small,
+.dzp.dz-dark .stbk.bos { color: var(--color-kr-muted); }
+.dzp.dz-dark .stbk .bki { background: color-mix(in srgb, var(--k) 26%, var(--color-kr-card-dark)); color: color-mix(in srgb, var(--k) 45%, var(--color-kr-text-dark)); }
+.dzp.dz-dark .stbk .bkn { color: color-mix(in srgb, var(--k) 45%, var(--color-kr-text-dark)); }
+.dzp.dz-dark .stana-duz.on,
+.dzp.dz-dark .stana .jok button {
+  background: var(--color-st-dark-cur-bg);
+  color: var(--color-st-dark-cur);
+}
+.dzp.dz-dark .stana-is.duz .job { box-shadow: inset 0 0 0 2px var(--color-st-dark-cur); }
+/* Tablet: kutular küçülür (tek ekrana sığsın). */
+@media (min-width: 700px) and (max-width: 1099.98px), (min-width: 700px) and (pointer: coarse) {
+  .dzp .stana { gap: 14px; }
+  .dzp .stbk { min-height: 76px; padding: 14px 16px; gap: 12px; }
+  .dzp .stbk .bki { width: 44px; height: 44px; border-radius: 14px; }
+  .dzp .stbk .bkn { font-size: 28px; }
+  .dzp .stana .job { min-height: 88px; padding: 16px 14px; gap: 12px; }
+  .dzp .stana .jic { width: 48px; height: 48px; border-radius: 15px; }
+  .dzp .stana .jt b { font-size: 16px; }
+}
+/* Telefon: bekleyenler üç dar sütun (ikon + sayı, ad altta), iş kutuları iki sütun; alt yazılar gizlenir (kaydırma yok). */
+@media (max-width: 699.98px) {
+  .dzp .stana { gap: 10px; }
+  .dzp .stana-bek { gap: 8px; }
+  .dzp .stbk {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    min-height: 0;
+    padding: 10px;
+    border-radius: 16px;
+  }
+  .dzp .stbk .bki { width: 36px; height: 36px; border-radius: 12px; }
+  .dzp .stbk .bkn { font-size: 24px; margin-left: auto; }
+  .dzp .stbk .bkt { order: 3; flex-basis: 100%; }
+  .dzp .stbk .bkt b { font-size: 13px; line-height: 1.2; }
+  .dzp .stbk .bkt small { display: none; }
+  .dzp .stana-hd > b { font-size: 17px; }
+  .dzp .stana-is { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .dzp .stana .job { min-height: 64px; padding: 10px; gap: 10px; border-radius: 16px; }
+  .dzp .stana .jic { width: 42px; height: 42px; border-radius: 13px; }
+  .dzp .stana .jt b { font-size: 14.5px; line-height: 1.2; }
+  .dzp .stana .job small { display: none; }
+  .dzp .stana .jok { right: 4px; bottom: 4px; }
+}

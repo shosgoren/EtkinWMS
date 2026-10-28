@@ -2,7 +2,10 @@
 // `resolveWarehouseScope`; kapsam dışı deponun stoğu ve hareketi görünmez). Miktarlar PostgreSQL decimal dizgisidir (kayan nokta yok).
 // - `getItemStockCard`: "Nerede?" (depo → lokasyon, eldeki miktar ≠ 0), kapsamdaki minimum toplamı (`item_stock_policies`), son 5 hareket
 //   (belge başına: tür, numara, zaman, işleyen, net miktar, lokasyonlar).
-// - `sumItemsStock`: liste kartlarının rozeti için ürün başına eldeki toplam ve minimum (en çok 100 ürün).
+// - `sumItemsStock`: liste kartlarının rozeti için ürün başına eldeki toplam ve minimum (en çok 100 ürün). T-1117: ürün listesinin
+//   "Kullanılabilir" sütunu için ayrılmış toplam ve kullanılabilir miktar da döner; kullanılabilir tanımı stok özetiyle (`queries.ts`
+//   `listStockOverview`) AYNIDIR: AVAILABLE durumdaki, raf/sevk alanında (STORAGE/STAGING) ve toplaması engellenmemiş yerdeki
+//   `quantity − reserved_quantity`. Hesap SQL decimal'dir (kayan nokta yok, I-09).
 import { sql } from "drizzle-orm";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
@@ -104,6 +107,10 @@ export type ItemStockSum = {
   readonly itemId: string;
   readonly have: string;
   readonly min: string | null;
+  /** T-1117: kapsamdaki ayrılmış (rezerve) toplam. */
+  readonly reserved: string;
+  /** T-1117: kullanılabilir miktar (stok özetiyle aynı tanım). */
+  readonly available: string;
 };
 
 export async function sumItemsStock(params: Params, itemIds: readonly string[]): Promise<readonly ItemStockSum[]> {
@@ -115,19 +122,31 @@ export async function sumItemsStock(params: Params, itemIds: readonly string[]):
     const allowed = await resolveWarehouseScope(tx, member);
     const scope = allowed === null ? null : pgUuidArray(allowed);
     const t = member.tenantId;
+    // T-1117: eldeki / ayrılmış / kullanılabilir tek geçişte (ürün başına bir alt sorgu yerine tek GROUP BY).
     return tx.execute<ItemStockSum>(sql`
       SELECT x.id AS "itemId",
-             coalesce((SELECT sum(b.quantity)
-                         FROM public.stock_balances b
-                         JOIN public.stock_dimensions d ON d.tenant_id = b.tenant_id AND d.id = b.stock_dimension_id
-                         JOIN public.locations l ON l.tenant_id = d.tenant_id AND l.id = d.location_id
-                        WHERE b.tenant_id = ${t}::uuid AND d.item_id = x.id
-                          AND (${scope}::uuid[] IS NULL OR l.warehouse_id = ANY(${scope}::uuid[]))), 0)::text AS have,
+             coalesce(s.have, 0)::text AS have,
              (SELECT sum(p.min_quantity)
                 FROM public.item_stock_policies p
                WHERE p.tenant_id = ${t}::uuid AND p.item_id = x.id AND p.min_quantity > 0
-                 AND (${scope}::uuid[] IS NULL OR p.warehouse_id = ANY(${scope}::uuid[])))::text AS min
-        FROM unnest(${list}::uuid[]) AS x(id)`);
+                 AND (${scope}::uuid[] IS NULL OR p.warehouse_id = ANY(${scope}::uuid[])))::text AS min,
+             coalesce(s.reserved, 0)::text AS reserved,
+             coalesce(s.available, 0)::text AS available
+        FROM unnest(${list}::uuid[]) AS x(id)
+        LEFT JOIN (
+          SELECT d.item_id,
+                 sum(b.quantity) AS have,
+                 sum(b.reserved_quantity) AS reserved,
+                 sum(b.quantity - b.reserved_quantity) FILTER (
+                   WHERE d.stock_status = 'AVAILABLE' AND l.kind IN ('STORAGE', 'STAGING') AND l.pick_blocked = false
+                 ) AS available
+            FROM public.stock_balances b
+            JOIN public.stock_dimensions d ON d.tenant_id = b.tenant_id AND d.id = b.stock_dimension_id
+            JOIN public.locations l ON l.tenant_id = d.tenant_id AND l.id = d.location_id
+           WHERE b.tenant_id = ${t}::uuid AND d.item_id = ANY(${list}::uuid[])
+             AND (${scope}::uuid[] IS NULL OR l.warehouse_id = ANY(${scope}::uuid[]))
+           GROUP BY d.item_id
+        ) s ON s.item_id = x.id`);
   });
 }
 

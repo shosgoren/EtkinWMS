@@ -214,19 +214,28 @@ async function landscapePhoneChecks(browser: Browser, source: Page, tag: string)
 }
 
 // T-422 (T-928'in yerine): Akış görünümünde hesap sahibinin ana ekranı Pano (depo panosu); ayrıntılı Kokpit ayrı tercih olarak kalır.
-test("Pano hesap sahibi: rapor kartları, kaydırmasız telefon/tablet, ekip menüsü, Tüm ekranlar ve Kokpit geçişi", async ({ page }) => {
+// T-1115: içerik StandartAnaEkran tuvali — üç "Bekleyen işler" kutusu (`data-report`) + sekiz "İşler" kutusu (`data-is`).
+test("Pano hesap sahibi: bekleyen işler ve İşler kutuları, kaydırmasız telefon/tablet, ekip menüsü, Tüm ekranlar ve Kokpit geçişi", async ({ page }) => {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
-  const reports = { critical: "/stock", orders: "/shipping", turn: "/stock", buy: "/stock", count: "/tasks?kind=COUNT" };
+  const reports = { orders: "/shipping", count: "/counts", critical: "/stock" };
+  const jobs = { giris: "/field/receive", satis: "/shipping", stok: "/stock", urun: "/items", cari: "/parties", depo: "/warehouses", excel: "/import", kayit: "/audit" };
   for (const [width, height] of [[390, 844], [1024, 768], [1280, 800]] as const) {
     await page.setViewportSize({ width, height });
     await page.goto("/t/demo");
     await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
     const pano = page.locator("#main").getByTestId("pano");
     await expect(pano).toBeVisible();
-    await expect(pano.locator("[data-report]")).toHaveCount(5);
+    await expect(pano.locator("[data-report]")).toHaveCount(3);
     await expect(page.locator(".task-grid")).toHaveCount(0);
+    await expect(pano.locator("a[data-is]")).toHaveCount(8);
+    for (const [key, href] of Object.entries(jobs)) {
+      const job = pano.locator(`a[data-is="${key}"]`);
+      await expect(job).toHaveAttribute("href", `/t/demo${href}`);
+      const box = await job.boundingBox();
+      expect(box?.height ?? 0, `${width}: ${key} ≥ 48 px`).toBeGreaterThanOrEqual(48);
+    }
     for (const [key, href] of Object.entries(reports)) {
       const card = pano.locator(`[data-report="${key}"]`);
       await expect(card).toHaveAttribute("href", `/t/demo${href}`);
@@ -250,6 +259,18 @@ test("Pano hesap sahibi: rapor kartları, kaydırmasız telefon/tablet, ekip men
     await page.keyboard.press("Escape");
     await expect(team).toBeHidden();
   }
+  // T-1115: Düzenle — "Depoya mal geldi" bir sona alınır, sıra cihazda hatırlanır; sonra tuval sırasına dönülür.
+  const home = page.locator("#main").getByTestId("pano");
+  await page.evaluate(`window.localStorage.removeItem("etkin-ana-isler:demo")`);
+  await page.reload();
+  await home.getByTestId("ana-duzenle").click();
+  await home.getByRole("button", { name: "Depoya mal geldi: sona al" }).click();
+  await home.getByTestId("ana-duzenle").click();
+  await page.reload();
+  await expect(home.locator("a[data-is]").nth(1)).toHaveAttribute("data-is", "giris");
+  await page.evaluate(`window.localStorage.removeItem("etkin-ana-isler:demo")`);
+  await page.reload();
+  await expect(home.locator("a[data-is]").first()).toHaveAttribute("data-is", "giris");
   await page.locator("#main").getByTestId("pano").locator('[data-report="orders"]').click();
   await expect(page).toHaveURL(/\/t\/demo\/shipping$/);
   await page.goto("/t/demo");

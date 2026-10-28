@@ -3,6 +3,7 @@
 import { dz as dzListe } from "../../../design/kalip-liste-tokens.ts";
 import { dz as dzForm } from "../../../design/kalip-form-tokens.ts";
 import { dz as dzDetay } from "../../../design/kalip-detay-tokens.ts";
+import { ST_TOKENS } from "../../../design/standart-tokens.ts";
 
 export type KalipScope = "dzl" | "dzf" | "dzd";
 const BY: Record<KalipScope, (hex: string) => string> = { dzl: dzListe, dzf: dzForm, dzd: dzDetay };
@@ -26,5 +27,8 @@ export function kdzOrtak(hex: string): string {
       // sonraki kap
     }
   }
+  // T-1117: standart tuvalin kalıp kaynaklarında olmayan rengi (ör. adres/teslimat turuncusu) standart belirtecinden.
+  const st = ST_TOKENS[hex.toUpperCase()];
+  if (st !== undefined) return st;
   return BY.dzf(hex);
 }

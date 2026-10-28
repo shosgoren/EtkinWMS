@@ -123,10 +123,10 @@ describe("T-981b Excel dışa aktarma", () => {
     const own = await exportData({ ...call(A.ownerUserId, A), recentAuth: async () => void reauthCalls++ }, { kind: "parties", q: "C981" });
     expect(reauthCalls).toBe(1);
     expect(own.personalOmitted).toBe(false);
-    expect(own.rows).toEqual([["C981", "Kaya Ltd", "", "", "0532 111 22 33", "a@kaya.com", "İzmir", "", "Tedarikçi"]]);
+    expect(own.rows).toEqual([["C981", "Kaya Ltd", "", "", "0532 111 22 33", "a@kaya.com", "İzmir", "", "Tedarikçi", "", "", "Kendi personelim"]]);
     const grant = await exportData(call(SCOPED, A), { kind: "parties", q: "C981" });
     expect(grant.personalOmitted).toBe(true);
-    expect(grant.rows).toEqual([["C981", "Kaya Ltd", "", "", "", "", "İzmir", "", "Tedarikçi"]]);
+    expect(grant.rows).toEqual([["C981", "Kaya Ltd", "", "", "", "", "İzmir", "", "Tedarikçi", "", "", "Kendi personelim"]]);
     // Kişisel alanla arama da yetkisizde eşleşmez (telefon numarasıyla arayıp varlık sorgulanamaz).
     expect((await exportData(call(SCOPED, A), { kind: "parties", q: "0532 111" })).rows).toHaveLength(0);
     // Diğer türler yeniden doğrulama istemez (hesap sahibi ürün dosyası).

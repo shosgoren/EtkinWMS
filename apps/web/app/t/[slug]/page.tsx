@@ -4,13 +4,13 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AppError } from "@wms/shared/errors";
 import { getAppDb } from "@wms/db";
-import { getMembershipSummary, listMembers } from "@wms/domain/identity/member-queries";
+import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
-import { TASK_KIND_PERMISSION, TASK_LIST_LIMIT_MAX, getBoard, getWorkSummary, type Board, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
+import { TASK_LIST_LIMIT_MAX, getBoard, getWorkSummary, type Board, listInboundReceipts, listMyTasks, type WorkSummary } from "@wms/domain/operations";
 import { Kokpit, type MyTasksSummary, type NowSummary } from "./kokpit.tsx";
 import { EasyOperations } from "./easy-operations.tsx";
 import { PanoHome, type PanoRole } from "./pano/pano-home.tsx";
-import { PanoBoard, type Assignee, type BoardRole } from "./pano/pano-board.tsx";
+import { PanoBoard, type BoardRole } from "./pano/pano-board.tsx";
 import { getSetupJourney } from "@wms/domain/onboarding/journey";
 import { toJourneyData } from "./yolculuk/serialize.ts";
 import type { JourneyData } from "./yolculuk/steps.ts";
@@ -49,17 +49,10 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
       console.error(JSON.stringify({ level: "error", msg: `pano ${what} failed`, error: e instanceof Error ? e.name : typeof e, code: e instanceof AppError ? e.code : undefined }));
     };
     let board: Board | null = null;
-    let work: WorkSummary | null = null;
-    let assignees: Assignee[] = [];
     try {
       board = await getBoard(call);
     } catch (e) {
       guard(e, "board");
-    }
-    try {
-      work = await getWorkSummary(call);
-    } catch (e) {
-      guard(e, "work summary");
     }
     // T-1006: ilk kurulum yolculuğu kartı (hesap sahibi / depo yöneticisi). Okunamazsa kart çizilmez, pano düşmez.
     let journey: JourneyData | null = null;
@@ -68,38 +61,21 @@ export default async function TenantHomePage({ params }: { params: Promise<{ slu
     } catch (e) {
       guard(e, "journey");
     }
-    const canAssign = hasPermission(current.roles, "document.approve", current.grants);
-    if (canAssign) {
-      try {
-        const members = await listMembers(call, { demoEmailDomain: process.env.DEMO_EMAIL_DOMAIN?.trim().toLowerCase() || null });
-        assignees = members
-          .filter((x) => x.status === "ACTIVE")
-          .map((x) => ({
-            membershipId: x.membershipId,
-            name: x.displayName,
-            kinds: (Object.keys(TASK_KIND_PERMISSION) as Array<keyof typeof TASK_KIND_PERMISSION>).filter((k) => hasPermission(x.roles, TASK_KIND_PERMISSION[k])),
-          }))
-          .filter((x) => x.kinds.length > 0);
-      } catch (e) {
-        guard(e, "members");
-      }
-    }
+    // T-1115: ana ekran tuvali (StandartAnaEkran) — İşler kutuları Modüller sayfasıyla aynı üyelik bilgisiyle süzülür.
     return (
       <main className="flex w-full min-w-0 flex-col">
         <PanoBoard
           slug={slug}
           role={boardRole}
           board={board}
-          summary={work}
           userName={summary.userName}
           tenantName={current.tenantName}
           dark={temaKoyu(jar)}
-          canAssign={canAssign}
+          canApprove={hasPermission(current.roles, "document.approve", current.grants)}
           canReport={hasPermission(current.roles, "stock.post", current.grants) || hasPermission(current.roles, "document.create", current.grants)}
-          stockPost={hasPermission(current.roles, "stock.post", current.grants)}
           usersManage={hasPermission(current.roles, "users.manage", current.grants)}
           settingsManage={hasPermission(current.roles, "settings.manage", current.grants)}
-          assignees={assignees}
+          member={{ roles: current.roles, grants: current.grants, screens: current.screens }}
           journey={journey}
         />
       </main>
