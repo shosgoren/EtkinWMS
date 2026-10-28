@@ -8,13 +8,17 @@ export interface OpenTarget {
   readonly id: string;
   /** Modül adresine eklenecek alt yol/sorgu ("?sekme=kullanici", "/baglantilar"). */
   readonly suffix?: string;
+  /** T-1118: modül adresi yerine çalışma alanı köküne göre yol ("/integrations"); yetki yine `id` modülünden (yetkisiz modül açılmaz). */
+  readonly path?: string;
 }
 
 /** [kök önekleri, hedef]. Önce özel (çok sözcüklü/alt sekme) kurallar, sonra genel. Kök en az 3 harf; sözcük kökle başlar. */
 const RULES: readonly (readonly [readonly string[], OpenTarget, (ws: readonly string[]) => boolean])[] = [
   [["ayar"], { id: "ayar", suffix: "?sekme=kullanici" }, (ws) => has(ws, ["kullanici", "uye", "yetki", "personel"])],
   [["ayar"], { id: "ayar", suffix: "?sekme=gorunum" }, (ws) => has(ws, ["gorunum", "tema", "karanlik", "koyu", "acik"])],
-  [["entegrasyon", "baglanti", "parasut"], { id: "ayar", suffix: "/baglantilar" }, () => true],
+  // T-1118: Entegrasyonlar ayrı ekran (T-1112, Ayarlar sekmesi); Excel aktarımı Bağlantılar ekranında kalır.
+  [["entegrasyon", "baglanti", "parasut"], { id: "ayar", path: "/integrations" }, () => true],
+  [["excel"], { id: "ayar", suffix: "/baglantilar" }, () => true],
   [["ayar"], { id: "ayar" }, () => true],
   [["kullanici", "uye", "ekip", "personel", "calisan", "eleman"], { id: "ekip" }, () => true],
   [["urun", "malzeme", "katalog"], { id: "urun" }, () => true],
