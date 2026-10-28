@@ -227,7 +227,7 @@ class TtsModelTests(unittest.TestCase):
         text, _conf = stt.transcribe(heard)
         self.assertIn("hava", text.lower())
         # Kapsayıcı sınırı 1280 MiB (deploy/vps/compose.yml): iki model birlikte payla sığmalı.
-        self.assertLess(rss_mib(), 1100)
+        self.assertLess(rss_mib(), 1100, f"çekirdek={os.cpu_count()} OMP={os.environ.get('OMP_NUM_THREADS')} arena={os.environ.get('MALLOC_ARENA_MAX')}")
 
 
 if __name__ == "__main__":
