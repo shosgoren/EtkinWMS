@@ -2,6 +2,7 @@
 // (miktar, birim, ürün/raf/kişi/cari ifadesi). Parçaların kiracının gerçek verisiyle eşleştirilmesi `sorgu.ts`'dedir.
 // Yazma niyetleri (stok ya da iş değiştiren) `write: true` taşır: istemci önce "Anladım" kartını gösterir; onaydan sonra MEVCUT sunucu
 // eylemleri çağrılır (yeni yazma yolu yok). Sesli onay yalnız kart açıkken ve kapalı gramerde tam "onayla"/"onaylıyorum" ile (A-172).
+import { openTarget } from "./acilis.ts";
 import { digitize, isNumberWord, ordinal, parseNumberAt, words } from "./turkce.ts";
 
 export type TaskKindHint = "PICK" | "PUTAWAY" | "COUNT";
@@ -169,9 +170,17 @@ export function parseCommand(text: string): VoiceIntent {
     const tk = taskKindOf(ws);
     return { kind: "assign", ...(person === "" ? {} : { person }), ...(tk === undefined ? {} : { taskKind: tk }) };
   }
-  if (gi >= 0 && (/\b(goster|listele|ac|neler|ne)\b/.test(f) || /^gorevlerim/.test(ws[gi]!))) {
-    const mine = /^gorevlerim/.test(ws[gi]!) || ws.slice(0, gi).includes("benim");
-    const before = ws.slice(0, gi).filter((w) => w !== "benim" && !w.startsWith("toplama") && !w.startsWith("yerlestirme") && !w.startsWith("sayim") && !isStop(w));
+  // T-1110: "bekleyen işim var mı", "işlerim", "yapılacak iş", "görevim var mı" — kişinin kendi işleri.
+  const isWord = ws.findIndex((w) => /^is(ler|im|imiz|lerim|leri|i|in)?$/.test(w));
+  if (gi < 0 && isWord >= 0 && (/\b(bekleyen|yapilacak|acik|bugun|bugunku|var|neler|ne|goster|listele|ac)\b/.test(f) || /^islerim/.test(ws[isWord]!))) {
+    const tk = taskKindOf(ws);
+    return { kind: "tasks", ...(tk === undefined ? {} : { taskKind: tk }) };
+  }
+  if (gi >= 0 && (/\b(goster|listele|ac|neler|ne|var|bekleyen|yapilacak)\b/.test(f) || /^gorevlerim/.test(ws[gi]!))) {
+    const mine = /^gorev(lerim|im)/.test(ws[gi]!) || ws.slice(0, gi).includes("benim");
+    const before = ws
+      .slice(0, gi)
+      .filter((w) => w !== "benim" && w !== "bekleyen" && w !== "yapilacak" && w !== "acik" && !w.startsWith("toplama") && !w.startsWith("yerlestirme") && !w.startsWith("sayim") && !isStop(w));
     const tk = taskKindOf(ws);
     return { kind: "tasks", ...(mine || before.length === 0 ? {} : { person: before.join(" ") }), ...(tk === undefined ? {} : { taskKind: tk }) };
   }
@@ -226,10 +235,14 @@ export function parseCommand(text: string): VoiceIntent {
     return { kind: "receive", ...base, ...(dst === undefined ? {} : { to: dst.text }) };
   }
 
-  const verb = /^(.+?) (ac|acar misin|git|goster|listele|getir|bul)$/.exec(f);
-  if (verb !== null) {
-    const target = words(verb[1]!)
-      .filter((w) => !/^(ekran|sayfa|modul|liste)\w*$/.test(w) && w !== "bugunku" && w !== "bugun" && w !== "tum" && w !== "butun")
+  // T-1110: ekran açma — fiil sonda ya da başta, kibar ekler ("açar mısın", "açabilir misin"), "-e git/geç/gir", ya da yalnız ekran adı.
+  const VERB = "(ac|acar misin|acabilir misin|acsana|git|gec|gir|goster|gosterir misin|listele|getir|bul|bak|gotur|gotur beni)";
+  const sonda = new RegExp(`^(.+?) ${VERB}( lutfen)?$`).exec(f);
+  const basta = sonda === null ? new RegExp(`^${VERB} (.+)$`).exec(f) : null;
+  const raw = sonda?.[1] ?? basta?.[2] ?? (openTarget(f) !== null && ws.length <= 3 ? f : null);
+  if (raw !== null) {
+    const target = words(raw)
+      .filter((w) => !/^(ekran|sayfa|modul|liste|bolum)\w*$/.test(w) && w !== "bugunku" && w !== "bugun" && w !== "tum" && w !== "butun" && w !== "beni" && w !== "lutfen")
       .join(" ");
     if (target !== "") return { kind: "open", target };
   }

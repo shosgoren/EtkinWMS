@@ -1,5 +1,6 @@
 // T-1002 (B-62): sahte iç ses servisi (yalnız 127.0.0.1; gerçek model yok). `POST /stt` gerçek servisle aynı sözleşme: yalnız 16 kHz mono
-// 16 bit PCM WAV kabul; yanıt kaydın süresine göre sabit metin — kısa (< 2 sn) basış demo komutu, uzun (≥ 2 sn) basış "onayla" (A-172).
+// 16 bit PCM WAV kabul; yanıt kaydın süresine göre sabit metin — kısa (< 2 sn) basış demo komutu, uzun (≥ 2 sn) basış "onayla" (A-172);
+// T-1110: 3,5–5 sn "Ürünleri aç", 5–6,5 sn "Bekleyen işim var mı?" (doğal söyleyişler).
 // Ses saklanmaz; yalnız istek sayısı tutulur.
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -34,7 +35,8 @@ export async function startFakeVoice(): Promise<FakeVoice> {
       if (!ok) return send(400, { error: "AUDIO_REJECTED" });
       calls++;
       const seconds = (b.length - 44) / 32000;
-      send(200, { text: seconds >= 2 ? "Onayla." : FAKE_VOICE_COMMAND, confidence: 0.9, seconds });
+      const text = seconds >= 5 && seconds < 6.5 ? "Bekleyen işim var mı?" : seconds >= 3.5 && seconds < 5 ? "Ürünleri aç." : seconds >= 2 ? "Onayla." : FAKE_VOICE_COMMAND;
+      send(200, { text, confidence: 0.9, seconds });
     });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

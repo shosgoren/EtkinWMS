@@ -4,3 +4,4 @@ export * from "./turkce.ts";
 export * from "./niyet.ts";
 export * from "./eslestir.ts";
 export * from "./cozum.ts";
+export * from "./acilis.ts";

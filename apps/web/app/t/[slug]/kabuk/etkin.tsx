@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState, type HTMLAttributes, type Key
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { feedback, kayitBaslat, konusmaHazirla, sayi, sessizMi, type Kayit } from "@wms/ui";
-import { completePlan, decide, type Draft, type PickOption, type Plan, type ReadRow, type Slot, type VoiceAnswer, type WriteOp } from "@wms/shared/voice";
+import { completePlan, decide, openTarget, type Draft, type PickOption, type Plan, type ReadRow, type Slot, type VoiceAnswer, type WriteOp } from "@wms/shared/voice";
 import { dz } from "../../../design/kabuk-tokens.ts";
 import { KICON } from "../../../design/kabuk-icons.ts";
 import { etkinAnlaAction } from "../etkin/actions.ts";
@@ -218,6 +218,16 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
         return;
       }
       if (a.type === "open") {
+        // T-1110: önce ekran sözlüğü (ekli söyleyiş, eş anlamlı, alt sekme); modül yetkisizse adres yoktur, açılmaz.
+        const hedef = openTarget(a.target);
+        const mod = hedef === null ? undefined : modules.find((x) => x.id === hedef.id && x.href !== null);
+        if (mod !== undefined) {
+          feedback.info(t("opening"));
+          setSt({ s: "idle" });
+          router.push(`${mod.href!}${hedef?.suffix ?? ""}`);
+          return;
+        }
+        if (hedef !== null) return fail(t("err.forbidden"));
         const m = decide(
           a.target,
           modules.filter((x) => x.href !== null).map((x) => ({ id: x.id, code: x.id, name: x.name, href: x.href! })),

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { codeKey, decide, decideLocation, spokenCodeKey } from "./eslestir.ts";
 import { completePlan, resolveWrite, unitMatches } from "./cozum.ts";
 import { parseCommand, WRITE_INTENTS } from "./niyet.ts";
+import { openTarget } from "./acilis.ts";
 import { parseNumberAt, words } from "./turkce.ts";
 
 const PHRASES: readonly [string, Record<string, unknown>][] = [
@@ -113,5 +114,62 @@ describe("eşleştirme", () => {
     expect(unitMatches("kilo", "KG", "Kilogram")).toBe(true);
     expect(unitMatches("tane", "ADET", "Adet")).toBe(true);
     expect(unitMatches("koli", "ADET", "Adet")).toBe(false);
+  });
+});
+
+// T-1110 (kullanıcı 28 Ekim): doğal söyleyişler — bekleyen işler ve ekek ekran adları.
+describe("Etkin doğal komutlar (T-1110)", () => {
+  it.each([
+    ["Bekleyen işi var mı?", { kind: "tasks" }],
+    ["Bekleyen işim var mı", { kind: "tasks" }],
+    ["İşlerim", { kind: "tasks" }],
+    ["Bugün yapılacak iş var mı", { kind: "tasks" }],
+    ["Görevim var mı", { kind: "tasks" }],
+    ["Bekleyen toplama işleri", { kind: "tasks", taskKind: "PICK" }],
+    ["Kullanıcı ayarlarına git", { kind: "open", target: "kullanici ayarlarina" }],
+    ["Ürünleri aç", { kind: "open", target: "urunleri" }],
+    ["Ürünler sayfasını açar mısın", { kind: "open", target: "urunler" }],
+    ["Aç cariler", { kind: "open", target: "cariler" }],
+    ["Ayarlar", { kind: "open", target: "ayarlar" }],
+    ["Stok durumuna bak", { kind: "open", target: "stok durumuna" }],
+    ["Ana ekrana git", { kind: "open", target: "ana" }],
+  ] as const)("%s", (text, expected) => {
+    expect(parseCommand(text)).toMatchObject(expected);
+  });
+});
+
+describe("ekran hedefi (T-1110)", () => {
+  it.each([
+    ["kullanici ayarlarina", { id: "ayar", suffix: "?sekme=kullanici" }],
+    ["tema ayarlari", { id: "ayar", suffix: "?sekme=gorunum" }],
+    ["parasut baglantisi", { id: "ayar", suffix: "/baglantilar" }],
+    ["ayarlar", { id: "ayar" }],
+    ["urunleri", { id: "urun" }],
+    ["carilere", { id: "cari" }],
+    ["musteriler", { id: "cari" }],
+    ["stok durumuna", { id: "stok" }],
+    ["depolar", { id: "depo" }],
+    ["stok fislerini", { id: "fis" }],
+    ["sayimlar", { id: "sayim" }],
+    ["ekip", { id: "ekip" }],
+    ["ana ekran", { id: "home" }],
+  ] as const)("%s", (text, expected) => {
+    expect(openTarget(text)).toEqual(expected);
+  });
+  it("bilinmeyen hedef null", () => {
+    expect(openTarget("motive rubber")).toBeNull();
+  });
+  it("ekran sözcüğü geçen ürün/cari adı ekran değildir (katalog aramasına düşer)", () => {
+    expect(openTarget("koli bandi 45mm seffaf")).toBeNull();
+    expect(openTarget("stok kalemi vida")).toBeNull();
+    expect(openTarget("urunler sayfasi")).toEqual({ id: "urun" });
+    expect(openTarget("tum cariler")).toEqual({ id: "cari" });
+  });
+});
+
+describe("ekran hedefi ek durumlar (T-1110)", () => {
+  it("komuttan 'ekran' atılınca 'ana' ana ekrandır; stok hareketleri fiş ekranıdır", () => {
+    expect(openTarget("ana")).toEqual({ id: "home" });
+    expect(openTarget("stok hareketleri")).toEqual({ id: "fis" });
   });
 });
