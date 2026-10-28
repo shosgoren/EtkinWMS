@@ -29,6 +29,9 @@ export interface AuditFilters {
   readonly action?: string;
   /** T-978: kişi adı, gerekçe ya da kayıt kimliği içinde arama (ILIKE; 1–100 karakter, denetim karakteri yok). */
   readonly q?: string;
+  /** T-1116: tek kaydın geçmişi (ör. ürün kartı › Değişiklik geçmişi): kayıt türü (`item`…) + kimliği; ikisi birlikte verilir. */
+  readonly entityType?: string;
+  readonly entityId?: string;
 }
 
 export interface AuditRow {
@@ -68,6 +71,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SNAPSHOT_RE = /^\d+:\d+:(?:\d+(?:,\d+)*)?$/;
 const KNOWN: ReadonlySet<string> = new Set<string>(AUDIT_ACTIONS);
+const ENTITY_TYPE_RE = /^[a-z][a-z_]{0,63}$/;
 
 export function encodeAuditCursor(c: Cursor): string {
   return Buffer.from(JSON.stringify({ ts: c.ts, id: c.id }), "utf8").toString("base64url");
@@ -109,7 +113,11 @@ function checkFilters(f: AuditFilters | undefined): AuditFilters {
   if (f.action !== undefined && (typeof f.action !== "string" || !KNOWN.has(f.action))) throw new AppError("VALIDATION_FAILED");
   if (f.q !== undefined && (typeof f.q !== "string" || /\p{C}/u.test(f.q) || f.q.length > 100)) throw new AppError("VALIDATION_FAILED");
   const q = f.q?.trim() ?? "";
+  if ((f.entityType === undefined) !== (f.entityId === undefined)) throw new AppError("VALIDATION_FAILED");
+  if (f.entityType !== undefined && (typeof f.entityType !== "string" || !ENTITY_TYPE_RE.test(f.entityType))) throw new AppError("VALIDATION_FAILED");
+  if (f.entityId !== undefined && (typeof f.entityId !== "string" || f.entityId.length === 0 || f.entityId.length > 128 || /\p{C}/u.test(f.entityId))) throw new AppError("VALIDATION_FAILED");
   return {
+    ...(f.entityType === undefined || f.entityId === undefined ? {} : { entityType: f.entityType, entityId: f.entityId }),
     ...(f.from === undefined ? {} : { from: f.from }),
     ...(f.to === undefined ? {} : { to: f.to }),
     ...(f.action === undefined ? {} : { action: f.action }),
@@ -186,6 +194,7 @@ async function selectRows(
   const act = filters.action === undefined ? sql`` : sql`AND a.action = ${filters.action}`;
   const like = filters.q === undefined ? null : `%${filters.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   const text = like === null ? sql`` : sql`AND (u.name ILIKE ${like} OR a.reason ILIKE ${like} OR a.entity_id ILIKE ${like})`;
+  const entity = filters.entityType === undefined || filters.entityId === undefined ? sql`` : sql`AND a.entity_type = ${filters.entityType} AND a.entity_id = ${filters.entityId}`;
   const after =
     cursor === undefined
       ? sql``
@@ -203,7 +212,7 @@ async function selectRows(
                  ${summary} AS summary
             FROM public.audit_logs a
             LEFT JOIN public.users u ON u.id = a.actor_user_id
-           WHERE a.tenant_id = ${tenantId}::uuid ${from} ${to} ${act} ${text} ${after} ${snap} ${own} ${identity} ${scopeFilter(scope)}
+           WHERE a.tenant_id = ${tenantId}::uuid ${from} ${to} ${act} ${text} ${entity} ${after} ${snap} ${own} ${identity} ${scopeFilter(scope)}
            ORDER BY a.occurred_at DESC, a.id ASC
            LIMIT ${limit}`,
     )),
