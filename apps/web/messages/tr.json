@@ -4228,6 +4228,66 @@
     "bell": "BİLDİRİM",
     "bellAria": "Bildirimler, {n} açık uyarı",
     "workspace": "Çalışma alanı değiştir",
+    "ana": {
+      "bekleyen": "Bekleyen işler",
+      "isler": "İşler",
+      "duzenle": "Düzenle · sürükle bırak",
+      "bitti": "Bitti",
+      "one": "{ad}: öne al",
+      "sona": "{ad}: sona al",
+      "b": {
+        "orders": {
+          "ad": "Sevkiyat bekliyor",
+          "alt": "Sevk edilmemiş sipariş",
+          "eski": "En eskisi {d} gün",
+          "aria": "Sevkiyat bekliyor: {n}"
+        },
+        "count": {
+          "ad": "Sayım onay bekliyor",
+          "alt": "Farkları incele",
+          "aria": "Sayım onay bekliyor: {n}"
+        },
+        "critical": {
+          "ad": "Ürün kritik stokta",
+          "alt": "Minimumun altında",
+          "aria": "Ürün kritik stokta: {n}"
+        }
+      },
+      "is": {
+        "giris": {
+          "ad": "Depoya mal geldi",
+          "alt": "Say, kaydet"
+        },
+        "satis": {
+          "ad": "Sevkiyat",
+          "alt": "Topla, gönder"
+        },
+        "stok": {
+          "ad": "Stok durumu",
+          "alt": "Depoya göre gör"
+        },
+        "urun": {
+          "ad": "Ürünler",
+          "alt": "Kart, birim, barkod"
+        },
+        "cari": {
+          "ad": "Cariler",
+          "alt": "Müşteri, tedarikçi"
+        },
+        "depo": {
+          "ad": "Depolar ve raflar",
+          "alt": "A-1-1-1 adresleri"
+        },
+        "excel": {
+          "ad": "Excel'den aktar",
+          "alt": "Seçili veri kaynağı"
+        },
+        "kayit": {
+          "ad": "Kim ne yaptı?",
+          "alt": "İşlem geçmişi"
+        }
+      }
+    },
     "guideOpen": "Rehber"
   },
   "aktar": {
