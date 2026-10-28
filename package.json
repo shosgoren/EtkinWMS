@@ -11,7 +11,7 @@
     "prepush": "node scripts/prepush.mjs",
     "db:migrate": "pnpm --filter @wms/db db:migrate",
     "db:rollback": "pnpm --filter @wms/db db:rollback",
-    "infra:smoke": "node scripts/compose-smoke.mjs",
+    "infra:smoke": "node scripts/compose-smoke.mjs && python3 -m unittest deploy/vps/automation/test_proxy.py",
     "test:int": "vitest run -c vitest.int.config.ts",
     "test:e2e": "playwright test",
     "test:int:neon": "WMS_INT_TARGET=neon vitest run -c vitest.int.config.ts",

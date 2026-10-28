@@ -1,9 +1,22 @@
+# T-1070: cover the short Docker DNS/connect gap while a release replaces an upstream.
+# Once connected, never replay a request: it may already have changed state (including OAuth GET callbacks).
+(deploy_connect_retry) {
+    lb_try_duration 15s
+    lb_try_interval 250ms
+    lb_retry_match expression false
+    # Go may implicitly replay GET on a reused connection; use a fresh upstream connection instead.
+    transport http {
+        keepalive off
+    }
+}
+
 wms.etkinyazilim.com {
     encode zstd gzip
     # T-407 (inceleme m1): satış sitesi içerik ucu yalnız iç ağdan (marketing → web:3000); dışarıya kapalı.
     @sitecontent path /api/public/*
     respond @sitecontent 404
     reverse_proxy web:3000 {
+        import deploy_connect_retry
         header_up Fly-Client-IP {http.request.remote.host}
     }
 }
@@ -12,13 +25,16 @@ wms.etkinyazilim.com {
 yonet.etkinyazilim.com {
     encode zstd gzip
     reverse_proxy panel:3000 {
+        import deploy_connect_retry
         header_up Fly-Client-IP {http.request.remote.host}
     }
 }
 
 etkinyazilim.com {
     encode zstd gzip
-    reverse_proxy marketing:3200
+    reverse_proxy marketing:3200 {
+        import deploy_connect_retry
+    }
 }
 
 www.etkinyazilim.com, etkinyazilim.com.tr, www.etkinyazilim.com.tr {
