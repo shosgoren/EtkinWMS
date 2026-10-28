@@ -42,4 +42,9 @@ export const SICON = {
   grafik: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   kamyon: "M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01",
   belge: "M6 3h9l4 4v14H6zM14 3v5h5",
+  /** T-1116 ürün kartı (kaynak `StandartUrunKarti.dc.html` / `StandartUrunKartiStok.dc.html`): Takip sekmesi, pivot palet ve açık/kapalı oku. */
+  takip: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2",
+  palet: "M3 17h18M5 17v3M12 17v3M19 17v3M5 7h14v10H5z",
+  chevRight: "M9 6l6 6-6 6",
+  chevOpen: "M6 9l6 6 6-6",
 } as const;

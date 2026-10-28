@@ -233,6 +233,45 @@ test("T-1049 Ürün kartı: şerit, sekmeler, bilgi kutucukları", async ({ page
   expect(tasma).toBeLessThanOrEqual(0);
 });
 
+// T-1116 (STANDART §3, tuval "5 · Ürün kartı" + "5b · Stok ve yer"): şeritte Kullanılabilir / Ayrılmış kutuları; Stok ve yer pivotu
+// (satırlar, Hepsini kapat / aç, toplam şeridi), Hareketler ve Değişiklik geçmişi sekmeleri; ≥ 44 px; telefonda yatay taşma yok.
+test("T-1116 Ürün kartı: kutular, Stok ve yer pivotu, Hareketler, Değişiklik geçmişi", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/items");
+  await page.getByTestId("item-card").first().click();
+  await expect(page).toHaveURL(/\/items\/[0-9a-f-]{36}$/);
+  await expect(page.getByTestId("kalip-total")).toBeVisible();
+  await expect(page.getByTestId("kalip-available")).toBeVisible();
+  await expect(page.getByTestId("kalip-reserved")).toBeVisible();
+  await page.getByTestId("kart-sekme-stok").click();
+  await expect(page).toHaveURL(/\?sekme=stok$/);
+  await expect(page.getByTestId("item-where")).toBeVisible();
+  if ((await page.getByTestId("item-pivot").count()) > 0) {
+    const satir = page.getByTestId("pivot-satir");
+    const hepsi = await satir.count();
+    expect(hepsi).toBeGreaterThan(0);
+    await expect(page.getByTestId("pivot-toplam")).toBeVisible();
+    await page.getByTestId("pivot-kapat").click();
+    await expect(satir).toHaveCount(await page.locator('[data-testid="pivot-satir"][data-tur="depo"]').count());
+    await page.getByTestId("pivot-ac").click();
+    await expect(satir).toHaveCount(hepsi);
+  }
+  expect(await smallTouchTargets(page, 44, "#kalip-main")).toEqual([]);
+  await page.getByTestId("kart-sekme-hareketler").click();
+  await expect(page).toHaveURL(/\?sekme=hareketler$/);
+  await expect(page.getByTestId("item-moves-tab")).toBeVisible();
+  await page.getByTestId("kart-sekme-gecmis").click();
+  await expect(page).toHaveURL(/\?sekme=gecmis$/);
+  await expect(page.getByTestId("item-history")).toBeVisible();
+  await page.getByTestId("kart-sekme-stok").click();
+  await expect(page.getByTestId("item-where")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const tasma = await page.evaluate<number>("document.documentElement.scrollWidth - document.documentElement.clientWidth");
+  expect(tasma).toBeLessThanOrEqual(0);
+});
+
 // T-1050 (kullanıcı 26 Ekim, iPhone görüntüsü): Pano üst çubuğu — masaüstünde "Merhaba <ad>" (tuval), telefonda yalnız logo (firma adı
 // kesilmez); sabit "DOKUN → RAPOR AÇILIR" ipucu yok; Hesap düğmesinde baş harf.
 test("T-1050 Pano: selam üst çubukta, telefonda yalnız logo, ipucu yok", async ({ page }) => {
