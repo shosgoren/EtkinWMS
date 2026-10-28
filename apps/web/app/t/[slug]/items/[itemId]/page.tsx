@@ -6,14 +6,16 @@ import { getAppDb } from "@wms/db";
 import { getItem, itemInUse, listItemBarcodes, listItemConversions } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
 import { getProductSourceInfo } from "@wms/domain/integrations";
-import { getItemStockCard } from "@wms/domain/stock";
+import { getItemStockCard, getItemStockPivot, listItemMoves, listItemTracking } from "@wms/domain/stock";
+import { listAudit } from "@wms/domain/audit/audit-query";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../../design/theme.ts";
 import { KalipKilitliEkran } from "../../kalip/liste.tsx";
-import { ItemDetail } from "./item-detail.tsx";
+import { denetimSatirlari } from "../../audit/satirlar.ts";
+import { ItemDetail, type ItemTabData } from "./item-detail.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +38,11 @@ async function LockedItem(slug: string) {
 
 // Ürün ayrıntısı (T-216): sunucu bileşeni. Ürün bulunamaz/başka tenant/geçersiz kimlik → 404 (varlık sızdırılmaz). Her okuma tek ürün
 // için sınırlıdır (T-240); yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda `settings.manage` ister).
-export default async function ItemDetailPage({ params }: { params: Promise<{ slug: string; itemId: string }> }) {
+// T-1116: sekmeye özgü okumalar yalnız o sekme açıkken yapılır (`?sekme=`); okunamazsa sekme "okunamadı" satırı gösterir, kart açılır.
+export default async function ItemDetailPage({ params, searchParams }: { params: Promise<{ slug: string; itemId: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug, itemId } = await params;
+  const query = (await searchParams) ?? {};
+  const sekmeRaw = Array.isArray(query.sekme) ? query.sekme[0] : query.sekme;
   const { getAuthService } = await import("../../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
   const returnTo = `/t/${encodeURIComponent(slug)}/items/${encodeURIComponent(itemId)}`;
@@ -64,6 +69,19 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
     const stockCard = await getItemStockCard(call, item.id).catch(() => null);
     const dark = temaKoyu(await cookies());
     const can = (p: Parameters<typeof hasPermission>[1]): boolean => hasPermission(current.roles, p, current.grants);
+    // Değişiklik geçmişi sekmesi işlem kaydı ekranıyla aynı yetkiyi ister (`audit.view`; karar yine `listAudit` içinde sunucuda).
+    const canHistory = can("audit.view");
+    let tabData: ItemTabData = { kind: "none" };
+    if (sekmeRaw === "stok") {
+      tabData = { kind: "stok", pivot: await getItemStockPivot(call, item.id).catch(() => null) };
+    } else if (sekmeRaw === "hareketler") {
+      tabData = { kind: "hareketler", page: await listItemMoves(call, item.id).catch(() => null) };
+    } else if (sekmeRaw === "takip") {
+      tabData = { kind: "takip", tracking: await listItemTracking(call, item.id).catch(() => null) };
+    } else if (sekmeRaw === "gecmis" && canHistory) {
+      const page = await listAudit(call, { filters: { entityType: "item", entityId: item.id } }).catch(() => null);
+      tabData = { kind: "gecmis", rows: page === null ? null : await denetimSatirlari(page), more: page?.nextCursor != null };
+    }
     return (
       <main className="flex w-full min-w-0 flex-col">
         <ItemDetail
@@ -72,6 +90,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ slu
           canManage={canManage}
           quick={{ label: can("stock.view"), count: can("document.create"), transfer: can("stock.post") }}
           stockCard={stockCard}
+          tabData={tabData}
+          canHistory={canHistory}
           sourceInfo={sourceInfo}
           inUse={inUse}
           units={activeUnits}
