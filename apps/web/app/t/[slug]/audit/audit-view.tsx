@@ -45,6 +45,12 @@ function visual(action: string): { d: string; color: string } {
   if (g === "audit" || g === "password_reset_link") return { d: LICON.shield, color: "172E42" };
   if (g === "problem") return { d: LICON.warn, color: "E56A00" };
   if (g === "party") return { d: LICON.people, color: "6C4BD8" };
+  // T-1111: entegrasyon (Paraşüt turuncu bağlantı, STANDART §7), Excel aktarımı, destek, kurulum rehberi.
+  if (g === "integration") return { d: LICON.transfer, color: "E0582B" };
+  if (g === "data") return { d: LICON.excel, color: "2F7D5B" };
+  if (g === "support") return { d: LICON.support, color: "0E7C7B" };
+  if (g === "setup_journey") return { d: LICON.check, color: "2F7D5B" };
+  if (g === "production_recipe") return { d: LICON.uret, color: "8A5A12" };
   return { d: LICON.clock, color: "6A7F91" };
 }
 

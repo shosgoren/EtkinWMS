@@ -48,6 +48,8 @@ export function KabukKisayol({ dark }: { dark: boolean }) {
         const v = JSON.parse(saved) as unknown;
         if (Array.isArray(v) && v.every((x) => typeof x === "string")) setMine(v as string[]);
       }
+      // T-1111: varsayılan yer sağ altta, alt çubuğun hemen üstü (eski 0,66 yükseklik liste/arama alanının üstüne biniyordu).
+      setPos({ fx: 0.94, fy: Math.min(0.9, Math.max(0.08, (window.innerHeight - 150) / window.innerHeight)) });
       const raw = window.localStorage.getItem(FAB_KEY);
       if (raw !== null) {
         const v = JSON.parse(raw) as { fx?: unknown; fy?: unknown };
@@ -139,7 +141,8 @@ export function KabukKisayol({ dark }: { dark: boolean }) {
           <div className="halo" style={haloStyle} role="menu" aria-label={t("shortcuts")}>
             {shown.map((m, i) => (
               <Link key={m.id} href={m.href ?? "#"} className="hb" role="menuitem" style={{ animationDelay: `${i * 35}ms`, textDecoration: "none" }} onClick={() => setOpen(false)} data-shortcut={m.id}>
-                <i style={{ background: kdz(m.color) }}>
+                {/* T-1111: modül rengi kabuk belirteci (`--color-dz-x-*` yalnız `.dzk` kapsamında tanımlı; Pano kökünde boş kalıyordu → simge görünmüyordu). */}
+                <i className="dzk" style={{ background: kdz(m.color) }}>
                   <Ico d={m.d} size={20} />
                 </i>
                 <span>{tk(`mod.${m.id}.name`)}</span>
@@ -188,7 +191,7 @@ export function KabukKisayol({ dark }: { dark: boolean }) {
                 const on = picker.includes(m.id);
                 return (
                   <button key={m.id} type="button" className={`pp${on ? " on" : ""}`} aria-pressed={on} onClick={() => togglePick(m.id)} data-shortcut={m.id}>
-                    <span className="av" style={{ background: kdz(m.color), borderRadius: 12 }}>
+                    <span className="av dzk" style={{ background: kdz(m.color), borderRadius: 12 }}>
                       <Ico d={m.d} size={20} />
                     </span>
                     <span style={{ minWidth: 0 }}>

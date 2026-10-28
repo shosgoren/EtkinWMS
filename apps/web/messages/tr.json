@@ -1099,6 +1099,161 @@
       "field_device": {
         "enrolled": "Ortak cihaz kaydedildi",
         "revoked": "Saha cihazı iptal edildi"
+      },
+      "warehouse": {
+        "created": "Depo eklendi",
+        "updated": "Depo güncellendi",
+        "archived": "Depo arşivlendi",
+        "code_changed": "Depo kodu değişti"
+      },
+      "location": {
+        "created": "Raf eklendi",
+        "updated": "Raf güncellendi",
+        "archived": "Raf arşivlendi",
+        "code_changed": "Raf kodu değişti"
+      },
+      "warehouse_scope": {
+        "changed": "Depo yetkisi değişti"
+      },
+      "unit": {
+        "created": "Birim eklendi",
+        "updated": "Birim güncellendi"
+      },
+      "item": {
+        "created": "Ürün eklendi",
+        "updated": "Ürün güncellendi",
+        "archived": "Ürün arşivlendi",
+        "code_changed": "Ürün kodu değişti"
+      },
+      "item_barcode": {
+        "added": "Barkod eklendi",
+        "removed": "Barkod kaldırıldı"
+      },
+      "unit_conversion": {
+        "set": "Birim çevrimi ayarlandı"
+      },
+      "lot": {
+        "created": "Lot eklendi"
+      },
+      "serial": {
+        "registered": "Seri no kaydedildi"
+      },
+      "handling_unit": {
+        "created": "Koli/palet oluşturuldu",
+        "changed": "Koli/palet değişti"
+      },
+      "production_recipe": {
+        "created": "Üretim reçetesi eklendi"
+      },
+      "stock_document": {
+        "created": "Stok fişi oluşturuldu",
+        "updated": "Stok fişi güncellendi",
+        "approved": "Stok fişi onaylandı",
+        "posted": "Stok fişi işlendi",
+        "cancelled": "Stok fişi iptal edildi",
+        "reversed": "Stok fişi ters kayıtla geri alındı"
+      },
+      "reservation": {
+        "created": "Rezervasyon yapıldı",
+        "released": "Rezervasyon bırakıldı"
+      },
+      "external_ref": {
+        "linked": "Dış kayıt bağlandı"
+      },
+      "warehouse_task": {
+        "created": "Depo görevi oluşturuldu",
+        "assigned": "Depo görevi atandı",
+        "claimed": "Depo görevi üstlenildi",
+        "cancelled": "Depo görevi iptal edildi",
+        "completed": "Depo görevi tamamlandı"
+      },
+      "inbound_receipt": {
+        "created": "Mal kabul oluşturuldu",
+        "opened": "Mal kabul açıldı",
+        "cancelled": "Mal kabul iptal edildi",
+        "received": "Mal kabul tamamlandı"
+      },
+      "sales_order": {
+        "created": "Satış siparişi oluşturuldu",
+        "updated": "Satış siparişi güncellendi",
+        "cancelled": "Satış siparişi iptal edildi",
+        "line_cancelled": "Sipariş satırı iptal edildi"
+      },
+      "pick_assignment": {
+        "created": "Toplama ataması yapıldı"
+      },
+      "pick": {
+        "not_found": "Toplamada ürün bulunamadı"
+      },
+      "count": {
+        "started": "Sayım başladı",
+        "recorded": "Sayım girildi",
+        "submitted": "Sayım gönderildi",
+        "approved": "Sayım onaylandı",
+        "posted": "Sayım stoka işlendi",
+        "cancelled": "Sayım iptal edildi"
+      },
+      "work_priority": {
+        "set": "İş önceliği ayarlandı"
+      },
+      "problem": {
+        "reported": "Sorun bildirildi",
+        "resolved": "Sorun çözüldü"
+      },
+      "settings": {
+        "shift_updated": "Vardiya ayarı değişti"
+      },
+      "trial": {
+        "started": "Deneme başladı"
+      },
+      "sample_data": {
+        "loaded": "Örnek veri yüklendi",
+        "cleared": "Örnek veri temizlendi"
+      },
+      "party": {
+        "created": "Cari eklendi",
+        "updated": "Cari güncellendi",
+        "archived": "Cari arşivlendi",
+        "restored": "Cari geri alındı",
+        "imported": "Cariler içe aktarıldı"
+      },
+      "group": {
+        "created": "Yetki grubu eklendi",
+        "updated": "Yetki grubu güncellendi",
+        "archived": "Yetki grubu arşivlendi",
+        "restored": "Yetki grubu geri alındı"
+      },
+      "team_join": {
+        "link_created": "Ekip katılım bağlantısı oluşturuldu",
+        "link_revoked": "Ekip katılım bağlantısı iptal edildi",
+        "approved": "Ekip katılımı onaylandı",
+        "rejected": "Ekip katılımı reddedildi"
+      },
+      "support": {
+        "ticket_created": "Destek talebi açıldı",
+        "ticket_replied": "Destek talebine yanıt verildi"
+      },
+      "data": {
+        "exported": "Excel'e aktarıldı",
+        "imported": "Excel'den içe aktarıldı"
+      },
+      "integration": {
+        "connected": "Entegrasyon bağlandı",
+        "oauth_configured": "Entegrasyon girişi ayarlandı",
+        "oauth_started": "Entegrasyon girişi başladı",
+        "oauth_failed": "Entegrasyon girişi başarısız",
+        "oauth_cancelled": "Entegrasyon girişi iptal edildi",
+        "checked": "Entegrasyon sınandı",
+        "disconnected": "Entegrasyon bağlantısı kesildi",
+        "flow_changed": "Entegrasyon akışı değişti",
+        "run_requested": "Eşitleme başlatıldı",
+        "synced": "Entegrasyon eşitlendi",
+        "opening_stock_setting": "Açılış stoku ayarı değişti",
+        "opening_stock_taken": "Açılış stoku alındı"
+      },
+      "setup_journey": {
+        "updated": "Kurulum rehberi güncellendi",
+        "labels_printed": "Etiketler basıldı"
       }
     },
     "quick": "Hızlı süzgeç",
@@ -1110,7 +1265,43 @@
     "listTitle": "KAYITLAR",
     "exportShort": "CSV İNDİR",
     "search": "Kayıtlarda ara",
-    "searchPlaceholder": "Kişi, gerekçe ya da kayıt no"
+    "searchPlaceholder": "Kişi, gerekçe ya da kayıt no",
+    "entities": {
+      "membership": "Üyelik",
+      "tenant": "Çalışma alanı",
+      "warehouse_task": "Depo görevi",
+      "item": "Ürün",
+      "warehouse": "Depo",
+      "stock_document": "Stok fişi",
+      "integration": "Entegrasyon",
+      "count_session": "Sayım",
+      "party": "Cari",
+      "location": "Raf",
+      "invitation": "Davet",
+      "unit": "Birim",
+      "permission_group": "Yetki grubu",
+      "item_barcode": "Barkod",
+      "team_join_link": "Katılım bağlantısı",
+      "support_ticket": "Destek talebi",
+      "problem_report": "Sorun bildirimi",
+      "inbound_receipt": "Mal kabul",
+      "field_device": "Saha cihazı",
+      "external_ref": "Dış kayıt",
+      "work_priority": "İş önceliği",
+      "tenant_settings": "Ayarlar",
+      "team_join_request": "Katılım isteği",
+      "serial": "Seri no",
+      "pick_assignment": "Toplama ataması",
+      "lot": "Lot",
+      "location_batch": "Raf toplu işlemi",
+      "integration_run": "Eşitleme",
+      "handling_unit": "Koli/palet",
+      "audit_log": "Denetim kaydı",
+      "sales_order": "Satış siparişi",
+      "reservation": "Rezervasyon",
+      "user": "Kullanıcı",
+      "other": "Kayıt"
+    }
   },
   "settings": {
     "title": "Çalışma alanı ayarları",

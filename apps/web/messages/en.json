@@ -1099,6 +1099,161 @@
       "field_device": {
         "enrolled": "Shared device registered",
         "revoked": "Field device revoked"
+      },
+      "warehouse": {
+        "created": "Warehouse added",
+        "updated": "Warehouse updated",
+        "archived": "Warehouse archived",
+        "code_changed": "Warehouse code changed"
+      },
+      "location": {
+        "created": "Location added",
+        "updated": "Location updated",
+        "archived": "Location archived",
+        "code_changed": "Location code changed"
+      },
+      "warehouse_scope": {
+        "changed": "Warehouse access changed"
+      },
+      "unit": {
+        "created": "Unit added",
+        "updated": "Unit updated"
+      },
+      "item": {
+        "created": "Item added",
+        "updated": "Item updated",
+        "archived": "Item archived",
+        "code_changed": "Item code changed"
+      },
+      "item_barcode": {
+        "added": "Barcode added",
+        "removed": "Barcode removed"
+      },
+      "unit_conversion": {
+        "set": "Unit conversion set"
+      },
+      "lot": {
+        "created": "Lot added"
+      },
+      "serial": {
+        "registered": "Serial number registered"
+      },
+      "handling_unit": {
+        "created": "Handling unit created",
+        "changed": "Handling unit changed"
+      },
+      "production_recipe": {
+        "created": "Production recipe added"
+      },
+      "stock_document": {
+        "created": "Stock document created",
+        "updated": "Stock document updated",
+        "approved": "Stock document approved",
+        "posted": "Stock document posted",
+        "cancelled": "Stock document cancelled",
+        "reversed": "Stock document reversed"
+      },
+      "reservation": {
+        "created": "Reservation created",
+        "released": "Reservation released"
+      },
+      "external_ref": {
+        "linked": "External record linked"
+      },
+      "warehouse_task": {
+        "created": "Warehouse task created",
+        "assigned": "Warehouse task assigned",
+        "claimed": "Warehouse task claimed",
+        "cancelled": "Warehouse task cancelled",
+        "completed": "Warehouse task completed"
+      },
+      "inbound_receipt": {
+        "created": "Goods receipt created",
+        "opened": "Goods receipt opened",
+        "cancelled": "Goods receipt cancelled",
+        "received": "Goods received"
+      },
+      "sales_order": {
+        "created": "Sales order created",
+        "updated": "Sales order updated",
+        "cancelled": "Sales order cancelled",
+        "line_cancelled": "Order line cancelled"
+      },
+      "pick_assignment": {
+        "created": "Pick assignment created"
+      },
+      "pick": {
+        "not_found": "Pick item not found"
+      },
+      "count": {
+        "started": "Count started",
+        "recorded": "Count recorded",
+        "submitted": "Count submitted",
+        "approved": "Count approved",
+        "posted": "Count posted",
+        "cancelled": "Count cancelled"
+      },
+      "work_priority": {
+        "set": "Work priority set"
+      },
+      "problem": {
+        "reported": "Problem reported",
+        "resolved": "Problem resolved"
+      },
+      "settings": {
+        "shift_updated": "Shift settings changed"
+      },
+      "trial": {
+        "started": "Trial started"
+      },
+      "sample_data": {
+        "loaded": "Sample data loaded",
+        "cleared": "Sample data cleared"
+      },
+      "party": {
+        "created": "Party added",
+        "updated": "Party updated",
+        "archived": "Party archived",
+        "restored": "Party restored",
+        "imported": "Parties imported"
+      },
+      "group": {
+        "created": "Permission group added",
+        "updated": "Permission group updated",
+        "archived": "Permission group archived",
+        "restored": "Permission group restored"
+      },
+      "team_join": {
+        "link_created": "Team join link created",
+        "link_revoked": "Team join link revoked",
+        "approved": "Team join approved",
+        "rejected": "Team join rejected"
+      },
+      "support": {
+        "ticket_created": "Support ticket opened",
+        "ticket_replied": "Support ticket replied"
+      },
+      "data": {
+        "exported": "Exported to Excel",
+        "imported": "Imported from Excel"
+      },
+      "integration": {
+        "connected": "Integration connected",
+        "oauth_configured": "Integration sign-in configured",
+        "oauth_started": "Integration sign-in started",
+        "oauth_failed": "Integration sign-in failed",
+        "oauth_cancelled": "Integration sign-in cancelled",
+        "checked": "Integration checked",
+        "disconnected": "Integration disconnected",
+        "flow_changed": "Integration flow changed",
+        "run_requested": "Sync requested",
+        "synced": "Integration synced",
+        "opening_stock_setting": "Opening stock setting changed",
+        "opening_stock_taken": "Opening stock imported"
+      },
+      "setup_journey": {
+        "updated": "Setup guide updated",
+        "labels_printed": "Labels printed"
       }
     },
     "quick": "Quick filter",
@@ -1110,7 +1265,43 @@
     "listTitle": "RECORDS",
     "exportShort": "CSV",
     "search": "Search records",
-    "searchPlaceholder": "Person, reason or record id"
+    "searchPlaceholder": "Person, reason or record id",
+    "entities": {
+      "membership": "Membership",
+      "tenant": "Workspace",
+      "warehouse_task": "Warehouse task",
+      "item": "Item",
+      "warehouse": "Warehouse",
+      "stock_document": "Stock document",
+      "integration": "Integration",
+      "count_session": "Count",
+      "party": "Party",
+      "location": "Location",
+      "invitation": "Invitation",
+      "unit": "Unit",
+      "permission_group": "Permission group",
+      "item_barcode": "Barcode",
+      "team_join_link": "Join link",
+      "support_ticket": "Support ticket",
+      "problem_report": "Problem report",
+      "inbound_receipt": "Goods receipt",
+      "field_device": "Field device",
+      "external_ref": "External record",
+      "work_priority": "Work priority",
+      "tenant_settings": "Settings",
+      "team_join_request": "Join request",
+      "serial": "Serial number",
+      "pick_assignment": "Pick assignment",
+      "lot": "Lot",
+      "location_batch": "Location batch",
+      "integration_run": "Sync run",
+      "handling_unit": "Handling unit",
+      "audit_log": "Audit log",
+      "sales_order": "Sales order",
+      "reservation": "Reservation",
+      "user": "User",
+      "other": "Record"
+    }
   },
   "settings": {
     "title": "Workspace settings",
