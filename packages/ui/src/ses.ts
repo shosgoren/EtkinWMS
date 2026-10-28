@@ -297,3 +297,49 @@ export async function kayitBaslat(opts: { readonly long: boolean; readonly onAut
     },
   };
 }
+
+// ---------------------------------------------------------------------------------------------
+// T-1106 (Q-129): doğal Türkçe konuşma çalıcı (rehber hoparlörü). Ses servisinin ürettiği WAV aynı ortak bağlamda çözülüp çalınır
+// (ALTIN-KURAL 5: AudioContext yalnız bu dosyada; CSP `media-src` gerekmez). iPhone Safari dokunuştan sonra beklenen bir çalmayı
+// engellediği için `konusmaHazirla()` dokunuş anında bağlamı açar/sürdürür; ses gelince `konusmaCal`. Yeni çalma eskisini durdurur.
+let konusan: AudioBufferSourceNode | null = null;
+
+function ortakBaglam(): AudioContext | null {
+  try {
+    const w = window as unknown as { AudioContext?: AudioCtor; webkitAudioContext?: AudioCtor };
+    const Ctor = w.AudioContext ?? w.webkitAudioContext;
+    if (Ctor === undefined) return null;
+    baglam ??= new Ctor();
+    if (baglam.state === "suspended") void baglam.resume().catch(() => undefined);
+    return baglam;
+  } catch {
+    return null;
+  }
+}
+
+/** Dokunuş işleyicisinde çağrılır; Web Audio yoksa `false`. */
+export function konusmaHazirla(): boolean {
+  return ortakBaglam() !== null;
+}
+
+/** WAV baytlarını çalar; çözülemezse ya da Web Audio yoksa hata fırlatır (çağıran cihaz sesine düşer). */
+export async function konusmaCal(wav: Uint8Array): Promise<void> {
+  const ctx = ortakBaglam();
+  if (ctx === null) throw new Error("NO_AUDIO");
+  const buf = await ctx.decodeAudioData(wav.slice().buffer);
+  konusmaDurdur();
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start();
+  konusan = src;
+}
+
+export function konusmaDurdur(): void {
+  try {
+    konusan?.stop();
+  } catch {
+    /* çalan yok */
+  }
+  konusan = null;
+}

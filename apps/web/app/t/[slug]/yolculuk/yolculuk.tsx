@@ -12,6 +12,7 @@ import { dz } from "../../../design/yolculuk-tokens.ts";
 import { Ico } from "../kalip/ekran.tsx";
 import { useModalFocus } from "../kalip/odak.ts";
 import { KalipPerdeKatman, type PerdeDelik } from "../kalip/perde.tsx";
+import { sesiDurdur, useSesliOku } from "../kalip/sesli-oku.ts";
 import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
 import { YOL_TAZELE_EVENT, setYolDurum, useYolDurum } from "./durum.ts";
@@ -147,6 +148,7 @@ function tipPosition(holes: readonly PerdeDelik[] | null, vw: number, vh: number
 export function YolculukKatman({ slug, userId, dark: initialDark, initial = null }: { slug: string; userId: string; dark: boolean; initial?: JourneyData | null }) {
   const t = useTranslations("yolculuk");
   const locale = useLocale();
+  const sesliOku = useSesliOku();
   const router = useRouter();
   const pathname = usePathname();
   const base = `/t/${encodeURIComponent(slug)}`;
@@ -399,11 +401,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
 
   const closeTour = useCallback((): void => {
     feedback.minor();
-    try {
-      window.speechSynthesis?.cancel();
-    } catch {
-      /* ses yok */
-    }
+    sesiDurdur();
     writeActive(null, sessionKey);
     setOverride(null);
     rememberPaused(true);
@@ -538,14 +536,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   const contextText = surface === "warehouse-form" ? "warehouseForm" : surface === "bulk-form" ? "bulkForm" : surface === "team-add-qr" ? "teamMenu" : surface === "team-qr-new" ? "teamQr" : surface === "aktar-new" ? "importCheck" : surface === "document-state" && cur === "stock" ? "postStock" : null;
   const tipText = contextText !== null ? t(`work.${contextText}`) : okStep !== null ? (nextKey === null ? t("coach.allDone") : t("coach.nextLine", { title: titleOf(nextKey) })) : stop === null ? t("coach.goText") : t(`hint.${stop.hint}.text`);
   const speak = (): void => {
-    if (!window.speechSynthesis) {
-      feedback.warn(t("coach.noSpeech"));
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(tipText);
-    u.lang = intlDil(locale);
-    window.speechSynthesis.speak(u);
+    if (!sesliOku(tipText)) feedback.warn(t("coach.noSpeech"));
   };
   const ilerleme = `${Math.max(activeIdx, 0) + 1}/${active.length}`;
   // E2E/erişilebilirlik: tur kararı verilene dek "loading" (yeni kiracıda kendiliğinden başlatma sunucu yanıtını bekler).

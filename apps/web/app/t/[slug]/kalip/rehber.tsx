@@ -1,9 +1,9 @@
 "use client";
 // T-1026: kaynak Yolculuk.dc.html; ortak, engellemeyen çalışma kartı. Eylem/izin/stok komutu çağırmaz.
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { feedback, intlDil } from '@wms/ui';
+import { feedback } from '@wms/ui';
 import { JICON } from '../../../design/yolculuk-icons.ts';
 import { useKabuk } from '../kabuk/kabuk-bar.tsx';
 import { JOURNEY_OPEN_EVENT } from '../yolculuk/steps.ts';
@@ -11,6 +11,7 @@ import { GUIDE_INSTRUCTIONS, currentGuide, guideHref, type OpGuide } from './reh
 import { KalipPerdeKatman, type PerdeDelik } from './perde.tsx';
 import { cikisSor } from './cikis.tsx';
 import { useModalFocus } from './odak.ts';
+import { sesiDurdur, useSesliOku } from './sesli-oku.ts';
 import { ADIM_REHBER_EVENT, useAdimRehberleri } from './adim-rehber.tsx';
 import { ADIM_KAYNAKLARI } from './adim-rehber-plan.ts';
 function RehberIkon({ d }: {
@@ -41,7 +42,7 @@ export function KalipRehberKart({ title, text, progress, target, nextTarget = nu
     children?: ReactNode;
     closeTestId?: string;
 }) {
-    const t = useTranslations('operationGuide'), locale = useLocale();
+    const t = useTranslations('operationGuide'), sesliOku = useSesliOku();
     const ref = useRef<HTMLElement>(null);
     const [folded, setFolded] = useState(false);
     const [delik, setDelik] = useState<PerdeDelik | null>(null);
@@ -80,7 +81,7 @@ export function KalipRehberKart({ title, text, progress, target, nextTarget = nu
         for (const k of ['change', 'submit', 'click'] as const) document.addEventListener(k, dokun, true);
         return () => { window.clearInterval(id); for (const k of ['change', 'submit', 'click'] as const) document.removeEventListener(k, dokun, true); };
     }, [target, nextTarget, onNext]);
-    useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+    useEffect(() => () => { sesiDurdur(); }, []);
     useLayoutEffect(() => {
         const key = (e: KeyboardEvent): void => { const modal = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].some(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'); if (e.defaultPrevented || modal)
             return; if (e.key === 'Escape') {
@@ -90,8 +91,7 @@ export function KalipRehberKart({ title, text, progress, target, nextTarget = nu
         window.addEventListener('keydown', key);
         return () => window.removeEventListener('keydown', key);
     }, [onClose]);
-    function speak(): void { if (!window.speechSynthesis)
-        return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = intlDil(locale); window.speechSynthesis.speak(u); }
+    function speak(): void { sesliOku(text); }
     return <>{!folded && delik !== null ? <KalipPerdeKatman onClose={() => { feedback.minor(); setFolded(true); }} label={t('adim.free')} delik={delik}/> : null}<section ref={ref} className={`ycoach working${folded ? ' folded' : ''}`} style={{ ...(style ?? { left: 12, bottom: 136 }), zIndex: 42 }} role="region" aria-label={`${t('title')}: ${title}`} data-testid="working-guide" data-folded={folded}>
     {folded ? <><button className="ynb" type="button" onClick={() => setFolded(false)} data-testid="guide-expand">{t('resume')} · {progress.match(/\d+\/\d+/)?.[0] ?? progress}</button><button type="button" className="cbtn" onClick={onClose} aria-label={t('close')} data-testid={closeTestId}><RehberIkon d={JICON.close}/></button></> : <>
       <div className="cth"><span className="cstep" aria-live="polite">{progress}</span><button type="button" className="cbtn" onClick={speak} aria-label={t('speak')}><RehberIkon d={[JICON.speak, JICON.speakWave]}/></button><button type="button" className="cbtn" onClick={onClose} aria-label={t('close')} data-testid={closeTestId}><RehberIkon d={JICON.close}/></button></div>{head}

@@ -64,3 +64,44 @@ export async function transcribe(wav: Uint8Array<ArrayBuffer>, fetchImpl: typeof
     return { status: "unavailable" };
   }
 }
+
+// T-1106 (Q-129, B-129): yazı → doğal Türkçe ses (iç servis `/tts`, EMA Lightning). Metin en çok TTS_MAX_CHARS; yanıt yalnız 24 kHz mono
+// 16 bit WAV ve en çok TTS_MAX_BYTES kabul edilir. Metin/ses loglanmaz. Servis yoksa "unavailable" (tarayıcı sesi kullanılır).
+export const TTS_MAX_CHARS = 400;
+export const TTS_MAX_BYTES = 2 * 1024 * 1024;
+
+export type TtsResult = { readonly status: "ok"; readonly wav: Uint8Array } | { readonly status: "unavailable" | "busy" };
+
+/** Servisin ürettiği biçim: RIFF/WAVE, PCM, mono, 24 kHz, 16 bit; boyut sınırı içinde. */
+export function isTtsWav(b: Uint8Array): boolean {
+  if (b.length < 46 || b.length > TTS_MAX_BYTES) return false;
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const tag = (o: number): string => String.fromCharCode(b[o]!, b[o + 1]!, b[o + 2]!, b[o + 3]!);
+  return tag(0) === "RIFF" && tag(8) === "WAVE" && tag(12) === "fmt " && v.getUint16(20, true) === 1 && v.getUint16(22, true) === 1 && v.getUint32(24, true) === 24000 && v.getUint16(34, true) === 16;
+}
+
+export async function synthesize(text: string, fetchImpl: typeof fetch = fetch): Promise<TtsResult> {
+  const base = voiceBaseUrl();
+  if (base === null) return { status: "unavailable" };
+  try {
+    const res = await fetchImpl(new URL("/tts", base), {
+      method: "POST",
+      body: JSON.stringify({ text: text.slice(0, TTS_MAX_CHARS) }),
+      headers: { "content-type": "application/json" },
+      redirect: "error",
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (res.status === 503) {
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+      return { status: body?.error === "BUSY" ? "busy" : "unavailable" };
+    }
+    const declared = Number(res.headers.get("content-length") ?? "0");
+    if (!res.ok || res.headers.get("content-type") !== "audio/wav" || declared > TTS_MAX_BYTES) return { status: "unavailable" };
+    const wav = new Uint8Array(await res.arrayBuffer());
+    if (!isTtsWav(wav)) return { status: "unavailable" };
+    return { status: "ok", wav };
+  } catch {
+    return { status: "unavailable" };
+  }
+}

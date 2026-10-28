@@ -10,7 +10,7 @@ import { AppError } from "@wms/shared/errors";
 import { answerVoiceCommand, type VoiceAnswer } from "@wms/domain/voice";
 import { createProductionGuard, limitVerifiedTenant } from "../../../../lib/action-guard.ts";
 import { createProductionLimiter } from "../../../../lib/rate-limit.ts";
-import { isAcceptedWav, transcribe, WAV_MAX_BYTES } from "../../../../lib/voice.ts";
+import { isAcceptedWav, synthesize, transcribe, TTS_MAX_CHARS, WAV_MAX_BYTES } from "../../../../lib/voice.ts";
 
 const guarded = createProductionGuard(() => headers());
 const voiceLimiter = createProductionLimiter();
@@ -42,5 +42,29 @@ export async function etkinAnlaAction(raw: unknown) {
     if (text === "") return { status: "empty" };
     const answer = await answerVoiceCommand(params, text);
     return { status: "ok", text, confidence: heard.confidence, answer };
+  })(raw);
+}
+
+// T-1106 (Q-129): ekrandaki yönerge metnini doğal Türkçe sesle okur. Aynı sınır: Origin + oturum, üyelik + `stock.view`, kullanıcı başına
+// dakikada 30 (`tts` kovası). Metin kullanıcının ekranda zaten gördüğü yönergedir; saklanmaz/loglanmaz. Ses servisi yoksa "unavailable"
+// döner, istemci cihaz sesine düşer.
+const soyleSchema = z
+  .object({
+    slug: z.string().min(1).max(63),
+    text: z.string().trim().min(1).max(TTS_MAX_CHARS),
+  })
+  .strict();
+
+export type EtkinSes = { readonly status: "unavailable" | "busy" } | { readonly status: "ok"; readonly audio: string };
+
+export async function etkinSoyleAction(raw: unknown) {
+  return guarded({ schema: soyleSchema }, async (input, ctx): Promise<EtkinSes> => {
+    const principal = ctx.principal;
+    if (principal === null) throw new AppError("UNAUTHENTICATED");
+    await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: input.slug, permission: "stock.view" }, ctx);
+    await voiceLimiter.check("tts", principal.userId);
+    const spoken = await synthesize(input.text);
+    if (spoken.status !== "ok") return { status: spoken.status };
+    return { status: "ok", audio: Buffer.from(spoken.wav).toString("base64") };
   })(raw);
 }

@@ -1,7 +1,7 @@
 // T-1002 (B-62): iç ses servisi istemcisi — adres yalnız ortamdan (SSRF yok), yönlendirme izlenmez, hata/zaman aşımı "unavailable".
 import { describe, expect, it, vi } from "vitest";
 import { wavYaz, yenidenOrnekle } from "@wms/ui";
-import { isAcceptedWav, transcribe, voiceBaseUrl } from "./voice.ts";
+import { isAcceptedWav, synthesize, transcribe, TTS_MAX_BYTES, voiceBaseUrl } from "./voice.ts";
 
 function wav(n = 1600): Uint8Array<ArrayBuffer> {
   const b = Buffer.alloc(44 + n * 2);
@@ -58,5 +58,30 @@ describe("voice client", () => {
     expect(await transcribe(wav(), f)).toEqual({ status: "unavailable" });
     f.mockRejectedValueOnce(new TypeError("fetch failed"));
     expect(await transcribe(wav(), f)).toEqual({ status: "unavailable" });
+  });
+
+  // T-1106: yazı → ses yanıtı yalnız audio/wav + RIFF + boyut sınırı; meşgul/yok/hata durum olarak döner, metin 400 karakterle kesilir.
+  it("tts: WAV yanıtı, BUSY, yanlış tür, yanlış biçim, aşırı boyut, ağ hatası", async () => {
+    const f = vi.fn();
+    const ok = wav();
+    new DataView(ok.buffer).setUint32(24, 24000, true);
+    f.mockResolvedValueOnce(new Response(ok, { status: 200, headers: { "content-type": "audio/wav" } }));
+    expect(await synthesize("a".repeat(500), f)).toEqual({ status: "ok", wav: ok });
+    const [url, init] = f.mock.calls[0]! as [URL, RequestInit];
+    expect(url.pathname).toBe("/tts");
+    expect(init.redirect).toBe("error");
+    expect(JSON.parse(init.body as string)).toEqual({ text: "a".repeat(400) });
+    f.mockResolvedValueOnce(new Response(JSON.stringify({ error: "BUSY" }), { status: 503 }));
+    expect(await synthesize("x", f)).toEqual({ status: "busy" });
+    f.mockResolvedValueOnce(new Response(JSON.stringify({ error: "TTS_UNAVAILABLE" }), { status: 503 }));
+    expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
+    f.mockResolvedValueOnce(new Response("<html>", { status: 200, headers: { "content-type": "text/html" } }));
+    expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
+    f.mockResolvedValueOnce(new Response(wav(), { status: 200, headers: { "content-type": "audio/wav" } }));
+    expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
+    f.mockResolvedValueOnce(new Response(new Uint8Array(TTS_MAX_BYTES + 1), { status: 200, headers: { "content-type": "audio/wav" } }));
+    expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
+    f.mockRejectedValueOnce(new TypeError("fetch failed"));
+    expect(await synthesize("x", f)).toEqual({ status: "unavailable" });
   });
 });

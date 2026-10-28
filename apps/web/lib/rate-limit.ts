@@ -21,6 +21,8 @@ export const RATE_LIMITS = {
   tenant: { scope: "web.tenant", limit: 600 },
   // T-1002 (B-62): Etkin sesli komut — kullanıcı başına dakikada 20 konuşma (ses servisi CPU'su paylaşılır; DoS sınırı).
   voice: { scope: "web.voice", limit: 20 },
+  // T-1106: doğal sesle okuma (rehber hoparlörü) — kullanıcı başına dakikada 30 cümle; aynı cümle servis önbelleğinden gelir.
+  tts: { scope: "web.tts", limit: 30 },
 } as const;
 export type RateLimitKind = keyof typeof RATE_LIMITS;
 

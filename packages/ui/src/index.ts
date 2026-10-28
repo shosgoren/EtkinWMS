@@ -11,7 +11,7 @@ export type { ScanFieldProps } from "./scan-field.tsx";
 export * from "./icons.ts";
 export { sesCal, sessizMi, sessizYap, hareketAzaltMi, SESSIZ_ANAHTAR, SESSIZ_OLAY } from "./ses.ts";
 export type { SesTur, SesSonucu } from "./ses.ts";
-export { kayitBaslat, wavYaz, yenidenOrnekle, KAYIT_HZ, KAYIT_MAX_MS } from "./ses.ts";
+export { kayitBaslat, wavYaz, yenidenOrnekle, KAYIT_HZ, KAYIT_MAX_MS, konusmaHazirla, konusmaCal, konusmaDurdur } from "./ses.ts";
 export type { Kayit, KayitSonucu } from "./ses.ts";
 export { feedback, balonGoster, BALON_OLAY } from "./geri-bildirim.ts";
 export type { BalonTur, BalonIstek, BalonEylem } from "./geri-bildirim.ts";

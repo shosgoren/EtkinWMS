@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   member: vi.fn(),
   limit: vi.fn(),
   transcribe: vi.fn(),
+  synthesize: vi.fn(),
   answer: vi.fn(),
   origin: "https://app.example.test",
 }));
@@ -15,10 +16,10 @@ vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
 vi.mock("../../../../lib/rate-limit.ts", async (original) => ({ ...(await original<object>()), createProductionLimiter: () => ({ check: mocks.limit }) }));
 vi.mock("@wms/domain/identity/access", () => ({ runTenantQuery: (access: { permission: string }) => mocks.member(access.permission) }));
 vi.mock("@wms/domain/voice", () => ({ answerVoiceCommand: mocks.answer }));
-vi.mock("../../../../lib/voice.ts", async (original) => ({ ...(await original<object>()), transcribe: mocks.transcribe }));
+vi.mock("../../../../lib/voice.ts", async (original) => ({ ...(await original<object>()), transcribe: mocks.transcribe, synthesize: mocks.synthesize }));
 import { AppError } from "@wms/shared/errors";
 import { RateLimitedError } from "../../../../lib/rate-limit.ts";
-import { etkinAnlaAction } from "./actions.ts";
+import { etkinAnlaAction, etkinSoyleAction } from "./actions.ts";
 
 function wav(seconds = 1): string {
   const n = Math.floor(seconds * 16000);
@@ -48,6 +49,7 @@ beforeEach(() => {
   mocks.member.mockResolvedValue("tenant-1");
   mocks.limit.mockResolvedValue(undefined);
   mocks.transcribe.mockResolvedValue({ status: "ok", text: "C bir rafında ne var", confidence: 0.8 });
+  mocks.synthesize.mockResolvedValue({ status: "ok", wav: new Uint8Array([82, 73, 70, 70, 1, 2]) });
   mocks.answer.mockResolvedValue({ type: "read", title: "C-01", icon: "loc", rows: [], total: 0, href: "/stock" });
 });
 afterEach(() => {
@@ -104,5 +106,44 @@ describe("etkinAnlaAction", () => {
     mocks.transcribe.mockResolvedValueOnce({ status: "ok", text: "  ", confidence: 0 });
     expect(await etkinAnlaAction({ slug: "pilot", audio: wav() })).toEqual({ ok: true, data: { status: "empty" } });
     expect(mocks.answer).not.toHaveBeenCalled();
+  });
+});
+
+// T-1106: doğal sesle okuma — aynı sınır (köken, oturum, üyelik + stock.view), kullanıcı başına `tts` kovası, metin sınırı, servis yoksa durum.
+describe("etkinSoyleAction", () => {
+  it("üye + stock.view: metin → WAV (base64); kullanıcı kovası sayılır", async () => {
+    const res = await etkinSoyleAction({ slug: "pilot", text: "  Raf A-3 boş.  " });
+    expect(res).toEqual({ ok: true, data: { status: "ok", audio: Buffer.from([82, 73, 70, 70, 1, 2]).toString("base64") } });
+    expect(mocks.member).toHaveBeenCalledWith("stock.view");
+    expect(mocks.limit).toHaveBeenCalledWith("tts", "user-1");
+    expect(mocks.synthesize).toHaveBeenCalledWith("Raf A-3 boş.");
+  });
+
+  it("oturum yok / yanlış köken / üye değil / hız sınırı: ses servisine gidilmez", async () => {
+    mocks.principal.mockResolvedValueOnce(null);
+    expect(await etkinSoyleAction({ slug: "pilot", text: "merhaba" })).toMatchObject({ ok: false, error: { code: "UNAUTHENTICATED" } });
+    mocks.origin = "https://evil.example";
+    expect(await etkinSoyleAction({ slug: "pilot", text: "merhaba" })).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+    mocks.origin = "https://app.example.test";
+    mocks.member.mockRejectedValueOnce(new AppError("FORBIDDEN"));
+    expect(await etkinSoyleAction({ slug: "baska", text: "merhaba" })).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+    expect(mocks.limit).not.toHaveBeenCalledWith("tts", expect.anything());
+    mocks.limit.mockImplementation((kind: string) => (kind === "tts" ? Promise.reject(new RateLimitedError(20)) : Promise.resolve()));
+    expect(await etkinSoyleAction({ slug: "pilot", text: "merhaba" })).toMatchObject({ ok: false, error: { code: "RATE_LIMITED", retryAfterSeconds: 20 } });
+    expect(mocks.synthesize).not.toHaveBeenCalled();
+  });
+
+  it("boş, 400 karakterden uzun ya da fazladan alanlı girdi reddedilir", async () => {
+    for (const raw of [{ slug: "pilot", text: "   " }, { slug: "pilot", text: "a".repeat(401) }, { slug: "pilot", text: "x", tenantId: "t" }]) {
+      expect(await etkinSoyleAction(raw)).toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    }
+    expect(mocks.synthesize).not.toHaveBeenCalled();
+  });
+
+  it("ses servisi yok/meşgul: hata değil, yalnız durum (istemci cihaz sesine düşer)", async () => {
+    for (const status of ["unavailable", "busy"] as const) {
+      mocks.synthesize.mockResolvedValueOnce({ status });
+      expect(await etkinSoyleAction({ slug: "pilot", text: "merhaba" })).toEqual({ ok: true, data: { status } });
+    }
   });
 });
