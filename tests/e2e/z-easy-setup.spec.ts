@@ -264,6 +264,15 @@ test("kolay kurulum: rehberle depo + raf + ürün, öneri, önizleme, arama (mob
   await touchTarget(loc, "lokasyon önerisi");
   await loc.click();
   await expect(dlg.getByText(/Seçildi: A-02-01/)).toBeVisible();
+  // T-1121 (inceleme): kod değişip hemen Enter'a basılınca önceki aramanın sonucu seçilmez; yeni koda göre seçilir.
+  await dlg.getByTestId("bulk-parent").click();
+  // Sayfa açılışta aramayı sıfırlar; ilk liste gelince yazılır (sıfırlama yazılanı silmesin).
+  await expect(page.getByRole("listbox", { name: /Üst lokasyon/ }).getByRole("option").first()).toBeVisible();
+  await page.getByTestId("kalip-secim-search").fill("A-02");
+  await expect(page.getByRole("listbox", { name: /Üst lokasyon/ }).getByRole("option").first()).toContainText("A-02-01");
+  await page.getByTestId("kalip-secim-search").fill("A-03-02");
+  await page.getByTestId("kalip-secim-search").press("Enter");
+  await expect(dlg.getByText(/Seçildi: A-03-02/)).toBeVisible();
   await leaveForm(page, dlg); // yarım iş (üst lokasyon seçildi): cam kutudan kaydetmeden çık
 
   await measureForms(page, tag, treeHref, slug);

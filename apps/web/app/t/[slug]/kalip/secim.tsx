@@ -188,19 +188,21 @@ export function KalipSecimSayfasi({
   // T-436 (ALTIN-KURAL 11): ortak seçim sayfası — Esc kapatır, odak sayfada kalır, kapanınca açan öğeye döner.
   useModalFocus(open, sheet, { onClose, initial: "none", trap: !cam });
   const lid = useId();
-  const [uzak, setUzak] = useState<readonly KalipSecimSecenek[] | null>(null);
-  // T-1121: sunucu araması — yazdıkça 250 ms bekler; kapanınca ya da yeni harfte eski yanıt yok sayılır; hata boş liste.
+  const [uzak, setUzak] = useState<{ readonly q: string; readonly r: readonly KalipSecimSecenek[] } | null>(null);
+  // T-1121: sunucu araması — yazdıkça 250 ms bekler; kapanınca ya da yeni harfte eski yanıt yok sayılır; hata boş liste. Yanıt hangi
+  // sorgunun olduğunu taşır: yazılan metin değişince eski sorgunun sonuçları listede gösterilmez ve Enter ile seçilemez.
   useEffect(() => {
     if (!open || ara === undefined) return;
     let live = true;
     const timer = window.setTimeout(
       () => {
-        ara(q.trim()).then(
+        const sor = q.trim();
+        ara(sor).then(
           (r) => {
-            if (live) setUzak(r);
+            if (live) setUzak({ q: sor, r });
           },
           () => {
-            if (live) setUzak([]);
+            if (live) setUzak({ q: sor, r: [] });
           },
         );
       },
@@ -211,8 +213,10 @@ export function KalipSecimSayfasi({
       window.clearTimeout(timer);
     };
   }, [open, q, ara]);
+  // Sunucu araması yazılan metne henüz yanıt vermediyse liste boş ve "yükleniyor" (eski sonuç gösterilmez).
+  const bekliyor = ara !== undefined && (uzak === null || uzak.q !== q.trim());
   const list = useMemo(() => {
-    if (ara !== undefined) return uzak ?? [];
+    if (ara !== undefined) return uzak !== null && uzak.q === q.trim() ? uzak.r : [];
     const k = norm(q, locale);
     if (k === "") return options;
     return options.filter((o) => norm([o.label, o.sub ?? "", o.id, ...(o.keys ?? [])].join(" "), locale).includes(k));
@@ -230,9 +234,9 @@ export function KalipSecimSayfasi({
     // Açılışta bir kez.
   }, [open]);
 
-  const pick = (id: string): void => {
+  const pick = (id: string, havuz: readonly KalipSecimSecenek[] = list): void => {
     feedback.ok();
-    onPick(id, [...list, ...options].find((o) => o.id === id));
+    onPick(id, [...havuz, ...options].find((o) => o.id === id));
     onClose();
   };
   const exact = (code: string, havuz: readonly KalipSecimSecenek[] = ara === undefined ? options : list): KalipSecimSecenek | undefined => {
@@ -248,6 +252,26 @@ export function KalipSecimSayfasi({
       setActive((a) => Math.max(0, a - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
+      // Sunucu yanıtı henüz yazılan metne ait değilse (bekleme süresi) hemen sorulur; eski sonuçtan seçim yapılmaz.
+      if (ara !== undefined && (uzak === null || uzak.q !== q.trim())) {
+        const sor = q.trim();
+        void ara(sor).then(
+          (r) => {
+            setUzak({ q: sor, r });
+            const hit = exact(sor, r) ?? (r.length === 1 ? r[0] : undefined);
+            if (hit !== undefined && hit.disabled !== true) pick(hit.id, r);
+            else {
+              feedback.error();
+              setNote(t("secNone"));
+            }
+          },
+          () => {
+            feedback.error();
+            setNote(t("secNone"));
+          },
+        );
+        return;
+      }
       const hit = exact(q) ?? list[active] ?? (list.length === 1 ? list[0] : undefined);
       if (hit !== undefined && hit.disabled !== true) pick(hit.id);
       else {
@@ -358,8 +382,8 @@ export function KalipSecimSayfasi({
             );
           })}
           {list.length === 0 ? (
-            <li className="ksnone" role="presentation">
-              {t("secNone")}
+            <li className="ksnone" role="presentation" aria-busy={bekliyor || undefined}>
+              {bekliyor ? <span className="kyuk" aria-hidden="true" /> : t("secNone")}
             </li>
           ) : null}
         </ul>
