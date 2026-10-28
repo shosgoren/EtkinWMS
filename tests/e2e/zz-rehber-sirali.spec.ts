@@ -8,15 +8,23 @@ import { enterDemoShared } from "./support/demo-session.ts";
 
 const TRANSFER = "/t/demo/stock/documents?new=TRANSFER";
 
+/** Seçim alanı düğmesi (T-1119 KalipSecimAra; ad: "Depo: …"). */
+function alan(page: Page, ad: string) {
+  return page.getByRole("button", { name: new RegExp(`^${ad}: `) });
+}
+
 async function sec(page: Page, ad: string): Promise<void> {
-  const kutu = page.getByRole("searchbox", { name: ad, exact: true });
-  await expect(kutu, `${ad}: rehber odağı bu alanda`).toBeFocused();
-  // Arama sonucu seçilir (yalnız yazmak seçim yerine geçmez).
-  await kutu.fill("");
-  await kutu.pressSequentially("a", { delay: 30 });
-  const secenek = page.getByRole("option").first();
+  const dugme = alan(page, ad);
+  await expect(dugme, `${ad}: rehber odağı bu alanda`).toBeFocused();
+  // Seçim sayfasında arama sonucu seçilir (yalnız açmak ya da yazmak seçim yerine geçmez).
+  await dugme.click();
+  const sayfa = page.getByTestId("kalip-secim");
+  await expect(sayfa).toBeVisible();
+  await sayfa.getByTestId("kalip-secim-search").pressSequentially("a", { delay: 30 });
+  const secenek = sayfa.getByRole("listbox").getByRole("option").first();
   await expect(secenek).toBeVisible();
   await secenek.click();
+  await expect(sayfa).toHaveCount(0);
 }
 
 async function hedefDelikte(page: Page, secici: string): Promise<void> {
@@ -134,7 +142,7 @@ test("T-1124 başka bölüme geçince rehber kapanmaz: kaldığın yerden devam,
   await expect(page).toHaveURL(/new=TRANSFER/);
   await expect(kart).toHaveAttribute("data-folded", "false");
   await expect(kart).toHaveAttribute("data-step", "target");
-  await expect(page.getByRole("searchbox", { name: "Hedef depo", exact: true })).toBeFocused();
+  await expect(alan(page, "Hedef depo")).toBeFocused();
 
   // Tam sayfa yüklemesiyle başka bölüm: yine katlı simge (kapanmaz).
   await page.goto("/t/demo/items");

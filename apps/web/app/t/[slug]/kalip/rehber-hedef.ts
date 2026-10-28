@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { hedefKutusu, type PerdeDelik } from "./perde.tsx";
 
 const ODAK = 'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [role="option"], [tabindex]:not([tabindex="-1"])';
+const KONTROL = 'input, textarea, select, button, a[href], [role="option"], [contenteditable="true"]';
 const YAZI = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly])';
 
 function gorunur(el: Element): boolean {
@@ -183,7 +184,9 @@ export function useRehberHedef(target: string | null, acik: boolean, adim: strin
       const yeni = hepsi.find((a) => !bilinen.current.has(a) && bosMu(a));
       for (const a of hepsi) bilinen.current.add(a);
       const etkin = document.activeElement;
-      const bizde = etkin === null || etkin === document.body || els.some((e) => e.contains(etkin));
+      // Odak hedefte, sayfada ya da bir kapta (seçim sayfası kapanınca odak kaba düşebilir): yeni alana geçilir. Kullanıcı başka bir
+      // denetimdeyse (alan, düğme, bağlantı) odak çalınmaz.
+      const bizde = etkin === null || etkin === document.body || els.some((e) => e.contains(etkin)) || !etkin.matches(KONTROL);
       if (yeni !== undefined && bizde) {
         odakla(yeni, yeni);
         odakli.current = yeni;
