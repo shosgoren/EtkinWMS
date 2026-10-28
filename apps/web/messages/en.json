@@ -1218,7 +1218,16 @@
       "members": "People",
       "membersV": "Add, grant access",
       "groups": "Permission groups",
-      "groupsV": "Who can do what"
+      "groupsV": "Who can do what",
+      "voice": "Etkin voice reply",
+      "voiceRow": "Etkin reads replies aloud",
+      "voiceAriaOn": "Etkin voice reply on",
+      "voiceAriaOff": "Etkin voice reply off"
+    },
+    "voice": {
+      "on": "Etkin voice reply turned on.",
+      "off": "Etkin voice reply turned off.",
+      "unchanged": "The setting was already in this state."
     }
   },
   "items": {

@@ -11,19 +11,21 @@ export interface TenantSettingsView {
   readonly slug: string;
   /** T-416 (A-03): görev ayrılığı açık mı. */
   readonly separationOfDuties: boolean;
+  /** T-1109 (B-134): Etkin sesli yanıt açık mı. */
+  readonly voiceReply: boolean;
 }
 
 /** Ayar formu verisi; izin `settings.manage` (yetkisiz → FORBIDDEN). */
 export async function getTenantSettings(params: Omit<TenantAccessParams, "permission" | "recentAuth">): Promise<TenantSettingsView> {
   return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, membership) => {
-    const rows = await tx.execute<{ name: string; slug: string; locale: string; time_zone: string; separation_of_duties: boolean }>(
-      sql`SELECT t.name, t.slug, s.locale, s.time_zone, s.separation_of_duties
+    const rows = await tx.execute<{ name: string; slug: string; locale: string; time_zone: string; separation_of_duties: boolean; voice_reply: boolean }>(
+      sql`SELECT t.name, t.slug, s.locale, s.time_zone, s.separation_of_duties, s.voice_reply
             FROM public.tenants t JOIN public.tenant_settings s ON s.tenant_id = t.id
            WHERE t.id = ${membership.tenantId}::uuid`,
     );
     const r = rows[0];
     if (r === undefined) throw new AppError("NOT_FOUND");
-    return { name: r.name, locale: r.locale, timeZone: r.time_zone, slug: r.slug, separationOfDuties: r.separation_of_duties === true };
+    return { name: r.name, locale: r.locale, timeZone: r.time_zone, slug: r.slug, separationOfDuties: r.separation_of_duties === true, voiceReply: r.voice_reply === true };
   });
 }
 
