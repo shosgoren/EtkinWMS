@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Banner } from "@wms/ui";
 import { getAppDb } from "@wms/db";
 import { listGroups } from "@wms/domain/identity/groups";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
+import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
+import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { GroupsView } from "./groups-view.tsx";
 
 export const dynamic = "force-dynamic";
@@ -43,19 +43,10 @@ export default async function GroupsPage({ params }: { params: Promise<{ slug: s
     throw e;
   }
   if (data === null) {
+    // T-1121: kilitli durum ortak kalıp kilitli ekranıdır (eski Banner + Tailwind bağlantı düğmesi yerine); Geri ana ekrana döner.
     return (
-      <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-4 px-4 py-6">
-        <h1 className="break-words text-2xl font-extrabold text-ink">{t("title")}</h1>
-        <Banner kind="warning">
-          <p>{t("locked")}</p>
-          <p className="mt-1">{t("lockedAction")}</p>
-        </Banner>
-        <Link
-          href={home}
-          className="inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-control border-2 border-border-strong bg-surface px-6 text-base font-bold text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          {t("backHome")}
-        </Link>
+      <main className="flex w-full min-w-0 flex-col">
+        <KalipKilitliEkran title={t("title")} icon={{ d: LICON.shield, color: "6C4BD8" }} text={t("locked")} hint={t("lockedAction")} dark={temaKoyu(await cookies())} home={home} backLabel={t("backHome")} />
       </main>
     );
   }

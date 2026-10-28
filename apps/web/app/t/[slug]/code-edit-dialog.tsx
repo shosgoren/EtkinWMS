@@ -8,10 +8,11 @@
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Banner, Button } from "@wms/ui";
 import { LICON } from "../../design/kalip-icons.ts";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "./kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup } from "./kalip/form.tsx";
+import { Ico } from "./kalip/ekran.tsx";
+import { KalipUyari } from "./kalip/uyari.tsx";
 import type { AlanKurali } from "./kalip/dogrula.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği. */
@@ -125,7 +126,11 @@ export function CodeEditForm({
   );
 }
 
-/** Başarı bildirimi + "Geri al" (N-03): eski koda dönüş aynı sunucu komutudur; sonucu yine sunucu doğrular. */
+/**
+ * Başarı bildirimi + "Geri al" (N-03): eski koda dönüş aynı sunucu komutudur; sonucu yine sunucu doğrular.
+ * T-1121: eski Banner + Button yerine kalıp uyarı bandı (bilgi tonu) + bant içi kalıp düğmesi; sürerken düğmede ortak gösterge (`.kyuk`),
+ * aynı işlem iki kez gönderilmez.
+ */
 export function CodeChangedNotice({
   from,
   to,
@@ -139,13 +144,12 @@ export function CodeChangedNotice({
 }) {
   const t = useTranslations("codeEdit");
   return (
-    <Banner kind="info">
-      <p className="break-all">{t("done", { from, to })}</p>
-      <div className="mt-2">
-        <Button variant="secondary" onClick={onUndo} loading={busy}>
-          {t("undo", { code: from })}
-        </Button>
-      </div>
-    </Banner>
+    <KalipUyari tone="bilgi" testId="code-changed">
+      <p>{t("done", { from, to })}</p>
+      <button type="button" onClick={onUndo} disabled={busy} aria-busy={busy || undefined}>
+        {busy ? <span className="kyuk" aria-hidden="true" /> : <Ico d={LICON.transfer} size={18} />}
+        {t("undo", { code: from })}
+      </button>
+    </KalipUyari>
   );
 }

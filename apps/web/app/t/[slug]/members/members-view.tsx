@@ -12,13 +12,14 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Banner, feedback } from "@wms/ui";
+import { feedback } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipAra, KalipBos, KalipDaha, KalipKartListe } from "../kalip/liste.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecimSayfasi } from "../kalip/secim.tsx";
 import { kdz } from "../kalip/tokens.ts";
+import { KalipUyari } from "../kalip/uyari.tsx";
 import {
   changeRoleAction,
   issuePasswordResetLinkAction,
@@ -82,9 +83,9 @@ interface Confirm {
   readonly scope?: ScopeDraft;
 }
 
-// Rol seçimi tetiği: tema sözleşmesi (güçlü kenarlık + odak halkası, theme-admin e2e) korunur.
-const SELECT =
-  "inline-flex min-h-12 w-full min-w-0 items-center justify-between gap-2 rounded-card border-2 border-border-strong bg-surface px-3 text-left text-base text-ink sm:w-auto focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50";
+// T-1121: rol seçimi tetiği kalıp aramalı seçim alanı görünümünde (`.fld.ksecb`, eski Tailwind kenarlıklı düğme yerine); satırda
+// "Rolü uygula" ile yan yana sığsın diye esnek genişlik.
+const SELECT_STYLE: CSSProperties = { flex: "1 1 220px", width: "auto", minWidth: 0 };
 
 const noopSubscribe = (): (() => void) => () => undefined;
 
@@ -301,7 +302,11 @@ export function MembersView({
         ) : null}
 
         {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
-        {resetUnavailable ? <Banner kind="error">{t("unavailableReason")}</Banner> : null}
+        {resetUnavailable ? (
+          <KalipUyari tone="hata">
+            <p>{t("unavailableReason")}</p>
+          </KalipUyari>
+        ) : null}
         {fieldCode ? (
           <LinkBox title={`${t("linkBox.fieldCodeTitle")} · ${fieldCode.name}`} link={fieldCode.code} warning={t("linkBox.fieldCodeWarning")} onDismiss={() => setFieldCode(null)} />
         ) : null}
@@ -392,7 +397,8 @@ export function MembersView({
                           aria-label={`${t("role")} · ${m.displayName}: ${selected === MULTI ? roleName(m.roles) : tr(selected)}`}
                           aria-haspopup="listbox"
                           aria-expanded={rolePick?.userId === m.userId}
-                          className={SELECT}
+                          className="fld ksecb"
+                          style={SELECT_STYLE}
                           disabled={lockText !== null}
                           aria-describedby={desc}
                           onClick={() => {
@@ -402,11 +408,12 @@ export function MembersView({
                           data-testid="member-role"
                           data-value={selected}
                         >
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                          <span>{t("role")}</span>
+                          <em style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                             <Ico d={(ROLE_VISUAL[selected] ?? { d: LICON.people }).d} size={18} />
                             {selected === MULTI ? roleName(m.roles) : tr(selected)}
-                          </span>
-                          <Ico d={LICON.chev} size={18} />
+                          </em>
+                          <Ico d={LICON.chev} size={20} className="ico chev" />
                         </button>
                         <Btn kind="n" scope="dzl" d={LICON.check} disabled={lockText !== null || selected === current || selected === MULTI} aria-describedby={desc} onClick={() => setConfirm({ kind: "role", member: m, roleKey: selected })}>
                           {t("applyRole")}

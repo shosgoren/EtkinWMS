@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@wms/shared/errors";
 import type { PackageReceiptDto, ReceiptPackageDto } from "../actions.ts";
 const mocks = vi.hoisted(() => ({ receipt: vi.fn(), batch: vi.fn(), principal: vi.fn() }));
-vi.mock("@wms/domain/operations", () => ({ getPackageReceipt: mocks.receipt, getPackageProductionBatch: mocks.batch }));
+// T-1121: önizleme ortak kalıp alanını (kalip/form.tsx → ekran.tsx → kabuk) kullanır; o zincirdeki iş eylemleri modülünün okuduğu sabitler.
+vi.mock("@wms/domain/operations", () => ({ getPackageReceipt: mocks.receipt, getPackageProductionBatch: mocks.batch, WORK_SUBJECT_KINDS: ["TASK"], PROBLEM_REASONS: ["OTHER"] }));
 vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
 // T-973: kalıp kabı burada sınanmaz (yalnız sunucu sınırı ve etiket verisi).
 vi.mock("./package-label-ekran.tsx", () => ({ PackageLabelEkran: ({ children }: { children: unknown }) => children }));
