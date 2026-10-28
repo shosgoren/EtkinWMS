@@ -502,7 +502,10 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
                error_count = CASE WHEN ${status} = 'SUCCESS' THEN 0 ELSE error_count + 1 END,
                last_error_code = ${errorCode ?? (c.failed > 0 ? "ROWS_FAILED" : null)}
          WHERE tenant_id = ${tenantId}::uuid AND integration_id = ${row.id}::uuid AND flow = ${flow.flow}`);
-      await appendAudit(tx, {
+      // T-1111: zamanlayıcı 30 saniyede bir koşar; değişiklik getirmeyen başarılı zamanlı koşu "Kim ne yaptı?"yı doldurmasın diye audit'e
+      // yazılmaz (koşu günlüğü `integration_runs` yine tutulur). Elle başlatılan, değişiklik getiren ya da hata veren her koşu yazılır.
+      const bos = payload.trigger === "SCHEDULE" && status === "SUCCESS" && c.created + c.updated + c.linked + c.skipped + c.failed === 0;
+      if (!bos) await appendAudit(tx, {
         action: "integration.synced",
         actorUserId: requestedBy ?? ac.actorUserId,
         entityType: "integration_run",
