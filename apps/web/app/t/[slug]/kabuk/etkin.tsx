@@ -224,7 +224,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
         if (mod !== undefined) {
           feedback.info(t("opening"));
           setSt({ s: "idle" });
-          router.push(`${mod.href!}${hedef?.suffix ?? ""}`);
+          router.push(hedef?.path !== undefined ? `${base}${hedef.path}` : `${mod.href!}${hedef?.suffix ?? ""}`);
           return;
         }
         if (hedef !== null) return fail(t("err.forbidden"));
@@ -242,7 +242,7 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
       }
       fail(t("err.unknown", { text: d.text }));
     },
-    [approve, fail, go, modules, router, t],
+    [approve, base, fail, go, modules, router, t],
   );
 
   const finish = useCallback(async () => {
