@@ -398,7 +398,8 @@ export function useEtkin(opts: { readonly enabled: boolean; readonly base: strin
 
   // T-1109: yeni durum yazısı (sonuç, onay sorusu, okuma özeti) sesli yanıt açıksa okunur; ilk iki satırın adı ve miktarı da söylenir.
   useEffect(() => {
-    if (st.s === "idle") sonOkunan.current = "";
+    // Yeni kayıt/istek (dinleme, düşünme) tekrar engelini sıfırlar: aynı soruya yeni cevap yine okunur (Codex P2).
+    if (st.s === "idle" || st.s === "listen" || st.s === "long" || st.s === "think") sonOkunan.current = "";
     if (!konus.current || sessizMi()) return;
     let metin = "";
     if (st.s === "fb") metin = st.title;
