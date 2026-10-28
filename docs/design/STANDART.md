@@ -41,6 +41,7 @@ Bu belgenin sonucu:
 - Birden çok konu barındıran sekmede **solda dikey alt bölüm listesi** (simge + ad, sorun varsa kırmızı sayı rozeti), sağda yalnız seçili bölüm; aynı anda tek konu.
 - Ayar satırı: simgeli kutucuk + ad + kısa açıklama + aç/kapa ya da büyük seçim düğmeleri; kart başı kendi renginde tonlu.
 - **Entegrasyon yönü standart dört seçenek:** ← <Sistem>'den al · → <Sistem>'e gönder · ⇄ İki yönlü · [e] Yalnız Etkin WMS (o bilgi için mümkün olmayan yön gösterilmez).
+- **Kod (T-1112):** `kalip/ayar.tsx` — `KalipAltBolumler` (sol alt bölüm listesi, adres `?bolum=`, telefonda kartın üstünde yatay çip satırı), `KalipAyarKart` (seçili bölüm kartı), `KalipAyarSatir` (ayar satırı), `KalipYonSecimi` (yön seçimi); görünüm `design/standart.css` `.stab/.stak/.stay/.styon`. İlk kullanan: Ayarlar › Entegrasyonlar (`/integrations`).
 
 ## 6. Büyük görünüm / pencere kalıbı
 - Açık bulanık cam perde, ortada içerik gölgeli; kapat ve oklar beyaz cam düğme; alt sırada küçük resimler + işlem düğmeleri (aynı boy, simgeli: Ekle · Kapak yap · Sil) + "Kaydedildi".

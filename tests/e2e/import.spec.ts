@@ -31,7 +31,10 @@ test.describe("Excel'den aktar (T-427)", () => {
 
     // T-1046: Excel aktarımı Ayarlar › Entegrasyonlar sekmesindedir (Firma sekmesindeki ayrı satır kalktı); ekran Aktar tasarımıdır.
     await page.goto("/t/demo/settings");
+    // T-1112: Entegrasyonlar sekmesi ERP ekranını açar; Excel aktarımı "Bağlantı ve veri kaynağı" bölümünden (demo bağlı değil: varsayılan).
     await page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]').click();
+    await expect(page).toHaveURL(/\/t\/demo\/integrations$/);
+    await page.getByTestId("integrations-excel").click();
     await expect(page).toHaveURL(/\/t\/demo\/settings\/baglantilar$/);
     await page.goto("/t/demo/import");
     const aktar = page.getByTestId("aktar");

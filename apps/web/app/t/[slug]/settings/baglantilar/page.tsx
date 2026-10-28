@@ -27,16 +27,18 @@ export default async function BaglantilarPage({ params }: { params: Promise<{ sl
   if (principal === null) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
   let data = false;
   let master = false;
+  let erp = false;
   try {
     const summary = await getMembershipSummary({ db: getAppDb(), principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     data = hasPermission(current.roles, "data.import", current.grants);
-    master = data && hasPermission(current.roles, "settings.manage", current.grants);
+    erp = hasPermission(current.roles, "settings.manage", current.grants);
+    master = data && erp;
   } catch (e) {
     if (e instanceof AppError && e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
     throw e;
   }
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "koyu";
-  return <BaglantilarView slug={slug} dark={dark} canData={data} canMaster={master} />;
+  return <BaglantilarView slug={slug} dark={dark} canData={data} canMaster={master} erp={erp} />;
 }

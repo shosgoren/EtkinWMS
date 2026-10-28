@@ -40,6 +40,13 @@ function gorunur(sel: string): HTMLElement | null {
 }
 
 /** Rehber, kullanıcının yetkili olduğu aktarma işleri (kurulum adımı yetkisiyle aynı). */
+/** Adımın sorgusu (`a=b&c=d`) adres çubuğundakinde var mı? Sorgusuz adım her zaman uygun. */
+function sorguUygun(query: string | undefined): boolean {
+  if (query === undefined || query === "" || typeof window === "undefined") return true;
+  const simdi = new URLSearchParams(window.location.search);
+  return [...new URLSearchParams(query)].every(([k, v]) => simdi.get(k) === v);
+}
+
 export function useAdimRehberleri(): readonly AdimRehber[] {
   const ctx = useKabuk();
   const setup = ctx?.guides?.setup ?? [];
@@ -100,10 +107,17 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
       const a = adimPlani(r, k)[n];
       if (a === undefined) return;
       const hedef = `${base}${a.path}`;
-      if (zorla || path !== hedef) cikisSor(() => router.push(`${hedef}${a.query ? `?${a.query}` : ""}`));
+      if (zorla || path !== hedef || !sorguUygun(a.query)) cikisSor(() => router.push(`${hedef}${a.query ? `?${a.query}` : ""}`));
     },
     [base, path, router],
   );
+
+  // T-1112 (Codex P2): adım aynı sayfanın başka bölümündeyse (`?bolum=akis`) ilerlerken ya da kaldığı yerden sürerken sorgu da uygulanır;
+  // yoksa hedef başka bölümde kalır ve rehber "Ekranı aç"a düşerdi.
+  useEffect(() => {
+    if (!acik || adim === null || !burada || sorguUygun(adim.query)) return;
+    router.replace(`${base}${adim.path}?${adim.query}`);
+  }, [acik, adim, burada, base, router]);
 
   // Başlat: "Nasıl kullanırım?" seçim kutusundan `{ rehber, kaynak }`.
   useEffect(() => {

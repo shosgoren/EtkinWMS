@@ -32,4 +32,14 @@ export const SICON = {
   uyari: "M12 3l10 18H2zM12 10v5M12 18h.01",
   kilit: "M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4",
   kalem: "M4 20h4L19 9l-4-4L4 16zM14 6l4 4",
+  /** T-1112 ayar kalıbı (kaynak `StandartAyarlarEntegrasyon.dc.html`): alt bölüm, akış ve yön simgeleri. */
+  baglanti: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+  arsiv: "M4 7h16M6 7v13h12V7M9 4h6",
+  al: "M20 12H4M10 6l-6 6 6 6",
+  gonder: "M4 12h16M14 6l6 6-6 6",
+  kisi: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0",
+  depo: "M3 21V8l9-5 9 5v13M7 21v-8h10v8",
+  grafik: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  kamyon: "M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01",
+  belge: "M6 3h9l4 4v14H6zM14 3v5h5",
 } as const;

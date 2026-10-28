@@ -5,15 +5,25 @@
 // EŞİTLE) hiçbir durumda sessiz değil (yapılacak bir şey yoksa nedenini söyler).
 // Bilinçli farklar (DESIGN-PARITY): Bağlan penceresi ve Kes onayı kaynağın `.sx` / `.cfbox`'ının kalıp penceresi uyarlamasıdır (T-974
 // KalipPencere / KalipOnay); sesle komut (B-62 Etkin) henüz yok, ipucu satırı kaynaktaki gibi.
+// T-1112 (kullanıcı 28 Ekim, tuval StandartAyarlarEntegrasyon — STANDART §5 ayar kalıbı): üstte ayar sekmeleri (Entegrasyonlar), solda alt
+// bölümler (`KalipAltBolumler`, adres `?bolum=`), sağda yalnız seçili bölüm (`KalipAyarKart`). Akışlar artık aç/kapa + yön yerine tek satırda
+// her zaman görünen yön seçimi (`KalipYonSecimi`): <Sistem>'den al · <Sistem>'e gönder · İki yönlü (yalnız katalogun desteklediği yönler) ·
+// Yalnız Etkin WMS (= akış kapalı). Tuvaldeki "Satış faturasından iş" satırı katalogda yok: çizilmez. Alan sahipliğinde veri yok: "Yakında".
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { NICON } from "../../../design/entegrasyon-icons.ts";
+import { SICON } from "../../../design/standart-icons.ts";
+import { KalipAltBolumler, KalipAyarKart, KalipAyarSatir, KalipYonSecimi, type KalipAltBolum, type KalipYon } from "../kalip/ayar.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
-import { KalipAlan, KalipAnahtar, KalipGrup, KalipIzgara, KalipSecenek } from "../kalip/form.tsx";
+import { KalipAlan, KalipAnahtar, KalipBaglanti, KalipGrup } from "../kalip/form.tsx";
 import { KalipFormEkran } from "../kalip/form-ekran.tsx";
-import { KalipSecim } from "../kalip/secim.tsx";
+import type { StTon } from "../kalip/kart.tsx";
+import { KalipBos } from "../kalip/liste.tsx";
+import { KalipSecim, KalipSekme } from "../kalip/secim.tsx";
+import { ayarSekmeleri } from "../settings/sekmeler.ts";
+import { entegrasyonSorunSayisi, sonEsitleme, type EntegrasyonBolumu } from "./bolum.ts";
 import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
@@ -52,24 +62,27 @@ export interface OpeningData {
   readonly locations: readonly { readonly id: string; readonly code: string; readonly name: string; readonly warehouse: string }[];
 }
 
-/** Kaynak FL: akış ikonu ve rengi. */
-const FLOW_UI: Readonly<Record<Flow, { readonly d: string; readonly color: string }>> = {
-  PRODUCTS: { d: LICON.box, color: "9A5B2E" },
-  CONTACTS: { d: LICON.people, color: "6C4BD8" },
-  WAREHOUSES: { d: LICON.depo, color: "0F6E8C" },
-  SALES_ORDERS: { d: LICON.clip, color: "4E6476" },
-  SHIPMENTS: { d: NICON.truck, color: "2F7D5B" },
-  STOCK: { d: NICON.chart, color: "B07D0B" },
+/** T-1112: akış simgesi ve tonu — tuval StandartAyarlarEntegrasyon satırları (Sipariş tuvalde yok: belge simgesi, gri). */
+const FLOW_UI: Readonly<Record<Flow, { readonly d: string; readonly ton: StTon }>> = {
+  PRODUCTS: { d: SICON.kutu, ton: "mavi" },
+  CONTACTS: { d: SICON.kisi, ton: "yesil" },
+  WAREHOUSES: { d: SICON.depo, ton: "lacivert" },
+  SALES_ORDERS: { d: SICON.belge, ton: "gri" },
+  SHIPMENTS: { d: SICON.kamyon, ton: "turuncu" },
+  STOCK: { d: SICON.grafik, ton: "kahve" },
 };
-const DIR_D: Readonly<Record<Direction, string>> = { PULL: NICON.pull, PUSH: NICON.push, BOTH: NICON.both };
+/** Yön seçimi: tuvalde seçili "al" Paraşüt turuncusu, "gönder" mavi; iki yönlü STANDART §7 transfer moru. */
+const YON_D: Readonly<Record<Direction, string>> = { PULL: SICON.al, PUSH: SICON.gonder, BOTH: SICON.cevrim };
+const YON_TON: Readonly<Record<Direction, StTon>> = { PULL: "parasut", PUSH: "mavi", BOTH: "mor" };
 const PROVIDER_COLOR: Readonly<Record<Provider, string>> = { PARASUT: "2F5DA8", LOGO: "30475A" };
 const PROVIDER_NAME: Readonly<Record<Provider, string>> = { PARASUT: "Paraşüt", LOGO: "Logo" };
 const c = (hex: string): string => kdz("dzf", hex);
 
 const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: "", password: "" };
 
-export function IntegrationsView({ slug, dark, data, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult }: { oauth:{configured:boolean;callbackUrl:string|null}; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; slug: string; dark: boolean; data: OverviewData; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean }) {
+export function IntegrationsView({ slug, dark, data, bolum, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult }: { oauth:{configured:boolean;callbackUrl:string|null}; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; slug: string; dark: boolean; data: OverviewData; bolum: EntegrasyonBolumu; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean }) {
   const t = useTranslations("integrations");
+  const tb = useTranslations("baglantilar"); // T-1112: ortak ayar sekmelerinin adları
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ts = useTranslations("serverErrors");
   const router = useRouter();
@@ -142,6 +155,8 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
 
   const setFlow = async (f: FlowData, enabled: boolean, direction: Direction): Promise<void> => {
     const name = t(`flows.${f.flow}.name`);
+    // T-1112: önceki durum ekranda görünen (iyimser) durumdur; sunucu verisi henüz yenilenmemiş olabilir (art arda iki seçim).
+    const prev = flowState(f);
     setLocal((cur) => ({ ...cur, [f.flow]: { enabled, direction } }));
     setBusy(`flow-${f.flow}`);
     const r = await setIntegrationFlowAction({ slug, provider: "PARASUT", flow: f.flow, enabled, direction });
@@ -157,20 +172,34 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
       return;
     }
     feedback.minor();
-    if (direction !== f.direction && enabled && f.enabled) say("ok", t("dirSet", { name, dir: t(`dirs.${direction}`, { provider: pn }) }));
+    if (direction !== prev.direction && enabled && prev.enabled) say("ok", t("dirSet", { name, dir: t(`yon.${direction}`, { provider: pn }) }));
     else if (enabled) say("ok", r.data.queued ? t("flowOn", { name }) : t("flowOnNoQueue", { name }));
     else say("info", t("flowOff", { name }));
     router.refresh();
   };
 
-  const toggle = (f: FlowData) => (): void => {
-    if (f.directions.length === 0) {
+  /** T-1112: yön seçimi — "OFF" (Yalnız Etkin WMS) akışı kapatır, bir yön akışı o yönde açar; aynı seçenek yeniden seçilirse işlem yok. */
+  const pickYon = (f: FlowData, id: string): void => {
+    if (busy !== null) return;
+    const s = flowState(f);
+    if (id === "OFF") {
+      if (!s.enabled) {
+        feedback.minor();
+        return;
+      }
+      void setFlow(f, false, s.direction);
+      return;
+    }
+    const dir = f.directions.find((d) => d === id);
+    if (dir === undefined) {
       say("warn", t("flowNa", { provider: pn }));
       return;
     }
-    if (busy !== null) return;
-    const s = flowState(f);
-    void setFlow(f, !s.enabled, s.direction);
+    if (s.enabled && s.direction === dir) {
+      feedback.minor();
+      return;
+    }
+    void setFlow(f, true, dir);
   };
 
   const runFlow = async (flow?: Flow): Promise<void> => {
@@ -223,6 +252,8 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
     say("ok", t("form.connected", { label: r.data.label }));
     // T-1006: yolculuk adım 1'de "Mevcut stok miktarlarını da alalım mı?" cevaplandıysa bağlanınca ayara işlenir ("Hayır" = kapalı kalır).
     if (journeyWish === true) await setOpeningStockAction({ slug, provider: "PARASUT", enabled: true, via: "journey" });
+    // T-1112: bağlanınca sıradaki iş "ne çekilsin" — bağlıyken varsayılan bölüm (adres sorgusuz).
+    router.replace(`${base}/integrations`);
     router.refresh();
   };
 
@@ -362,6 +393,20 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
     <KalipSecim label={t("oauth.choose")} color="2F5DA8" value={company} options={oauthSelection.map(c=>({id:c.id,label:c.name,d:LICON.depo}))} onPick={setCompany} testId="oauth-company" />
   </KalipFormEkran>;
   const err = conn?.status === "ERROR";
+  // T-1112 (tuval StandartAyarlarEntegrasyon): ayar sekmeleri + solda alt bölümler, sağda yalnız seçili bölüm. Rozet: kontrol bekleyen /
+  // gönderilemeyen kayıt + hatalı akış sayısı (sunucu verisinden; `bolum.ts`).
+  const self = `${base}/integrations`;
+  const sorun = entegrasyonSorunSayisi({ outbox: data.outbox, flows });
+  const son = sonEsitleme(flows, data.runs);
+  const bolumler: KalipAltBolum[] = [
+    { id: "baglanti", label: t("bolum.baglanti"), d: SICON.baglanti, ton: "parasut", href: `${self}?bolum=baglanti` },
+    { id: "akis", label: t("bolum.akis"), d: SICON.cevrim, ton: "mavi", href: `${self}?bolum=akis` },
+    { id: "sahiplik", label: t("bolum.sahiplik"), d: SICON.kilit, ton: "mor", href: `${self}?bolum=sahiplik` },
+    { id: "arsiv", label: t("bolum.arsiv"), d: SICON.arsiv, ton: "gri", href: `${self}?bolum=arsiv` },
+    { id: "hatalar", label: t("bolum.hatalar"), d: SICON.uyari, ton: "turuncu", href: `${self}?bolum=hatalar`, badge: sorun, badgeAria: t("bolum.badgeAria", { n: sorun }) },
+  ];
+  const up = (x: string): string => x.toLocaleUpperCase(intlDil(locale));
+  const hataliAkislar = flows.filter((f) => f.errorCount > 0);
   return (
     <KalipEkran
       kind="form"
@@ -370,13 +415,14 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
       icon={{ d: NICON.plug, color: "2F5DA8" }}
       testId="integrations"
       bar={{
-        // T-1104: Entegrasyon, Ayarlar › Entegrasyonlar sekmesinin alt ekranıdır; geri oraya döner.
-        back: { href: `${base}/settings/baglantilar`, testId: "kabuk-back" },
+        // T-1112: Entegrasyon, Ayarlar › Entegrasyonlar sekmesinin kendisidir; Geri Ayarlar'a döner (T-1104'te Bağlantılar'a dönüyordu).
+        back: { href: `${base}/settings`, testId: "kabuk-back" },
         main,
       }}
       overlays={toast}
     >
       <div className={`dzen${dark ? " dz-dark" : ""}`} style={{ display: "contents" }}>
+        <KalipSekme label={tb("tabs")} color="0E7C7B" current="entegrasyon" items={ayarSekmeleri(base, tb)} />
         {reauth ? (
           <div className="lockb" role="alert">
             <i>
@@ -403,166 +449,94 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
             </span>
           </div>
         ) : null}
-        <KalipBaslik title={t("head")} hint={connected ? t("hintOn") : t("hintNone")} />
-        {!connected ? (
-          <div className="provs" role="list" aria-label={t("providerList")} data-testid="integrations-providers">
-            {data.providers.map((p) => {
-              const soon = !p.available;
-              return (
-                <button
-                  key={p.provider}
-                  type="button"
-                  role="listitem"
-                  className={`prov${soon ? " soon" : ""}`}
-                  aria-label={`${PROVIDER_NAME[p.provider]}: ${soon ? t("pillSoon") : t("pillConnect")}`}
-                  aria-disabled={soon}
-                  data-testid={`provider-${p.provider}`}
-                  onClick={() => {
-                    if (soon) {
-                      feedback.error();
-                      say("info", t("soonToast"));
-                      return;
-                    }
-                    openForm();
-                  }}
-                >
-                  <span className="plogo" style={{ background: c(PROVIDER_COLOR[p.provider]) }}>
-                    {t(`providers.${p.provider}.ini`)}
-                  </span>
-                  <span style={{ minWidth: 0 }}>
-                    <b>{t(`providers.${p.provider}.name`)}</b>
-                    <small>{t(`providers.${p.provider}.sub`)}</small>
-                  </span>
-                  <span className={`pill ${soon ? "soon" : "go"}`}>{soon ? t("pillSoon") : t("pillConnect")}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <>
-            <div className={`conn${err ? " err" : ""}`} role="status" data-testid="integrations-conn" data-status={conn.status}>
-              <i>
-                <Ico d={err ? LICON.warn : LICON.check} size={22} />
-              </i>
-              <span style={{ minWidth: 0 }}>
-                <b>{err ? t("connErrTitle", { provider: pn }) : t("connTitle", { label: conn.label ?? pn })}</b>
-                <small>
-                  {err
-                    ? `${reasonText(conn.lastErrorCode).toLocaleUpperCase(intlDil(locale))} · ${t("connErrSub")}`
-                    : conn.lastCheckedAt === null
-                      ? t("connSubNever", { provider: pn.toLocaleUpperCase(intlDil(locale)) })
-                      : t("connSub", { provider: pn.toLocaleUpperCase(intlDil(locale)), at: when(conn.lastCheckedAt) })}
-                </small>
-              </span>
-              <span className="cact">
-                {err ? (
-                  <button type="button" className="btn n sm" onClick={openForm} data-testid="integrations-reconnect">
-                    <Ico d={NICON.plug} size={20} />
-                    {t("reconnect")}
-                  </button>
-                ) : (
-                  <button type="button" className="btn n sm" onClick={() => void check()} aria-busy={busy === "check"} data-testid="integrations-test">
-                    <Ico d={NICON.pulse} size={20} />
-                    {t("test")}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="rej sm"
-                  onClick={() => {
-                    feedback.error();
-                    setCutOpen(true);
-                  }}
-                  data-testid="integrations-cut"
-                >
-                  <Ico d={NICON.unlink} size={20} />
-                  {t("cut")}
-                </button>
-              </span>
-            </div>
-            {data.outbox.check > 0 || data.outbox.failed > 0 ? (
-              <div className="conn err" role="alert" data-testid="integrations-outbox">
-                <i>
-                  <Ico d={LICON.warn} size={22} />
-                </i>
-                <span style={{ minWidth: 0 }}>
-                  <b>{data.outbox.check > 0 ? t("outboxCheck", { n: data.outbox.check }) : t("outboxFailed", { n: data.outbox.failed })}</b>
-                  <small>{data.outbox.check > 0 ? t("outboxCheckSub") : reasonText("ROWS_FAILED").toLocaleUpperCase(intlDil(locale))}</small>
-                </span>
-              </div>
-            ) : null}
-            <KalipIzgara
-              left={
-                <>
-                <KalipGrup title={t("flowsTitle")} sub={t("flowsSub")} d={NICON.sync} color="2F5DA8" testId="integrations-flows">
-                  <KalipAnahtar title={t("barcode.pull")} sub={t("barcode.keep")} d={NICON.pull} color="2F5DA8"
-                    on={barcodeOn} aria={t("barcode.pull")} onToggle={() => void toggleBarcodes()} testId="product-barcode-toggle" />
-                  {flows.map((f) => {
-                    const ui = FLOW_UI[f.flow];
-                    const s = flowState(f);
-                    const na = f.directions.length === 0;
-                    const name = t(`flows.${f.flow}.name`);
-                    const sub = t(`flows.${f.flow}.sub`, { provider: pn.toLocaleUpperCase(intlDil(locale)) });
-                    const bad = f.lastStatus === "FAILED" || f.lastStatus === "PARTIAL";
+        <KalipAltBolumler label={t("bolum.label")} items={bolumler} current={bolum} testId="integrations-bolumler">
+          {bolum === "baglanti" ? (
+            <KalipAyarKart title={t("baglanti.title")} sub={connected ? (err ? t("connErrTitle", { provider: pn }) : t("connTitle", { label: conn.label ?? pn })) : t("baglanti.sub")} d={SICON.baglanti} ton="parasut" testId="integrations-baglanti">
+              <KalipBaslik title={t("head")} hint={connected ? t("hintOn") : t("hintNone")} />
+              {!connected ? (
+                <div className="provs" role="list" aria-label={t("providerList")} data-testid="integrations-providers">
+                  {data.providers.map((p) => {
+                    const soon = !p.available;
                     return (
-                      <div key={f.flow} className={`flw${s.enabled ? " on" : ""}`} data-testid={`flow-${f.flow}`} data-enabled={s.enabled ? "true" : "false"}>
-                        <KalipAnahtar
-                          title={name}
-                          sub={s.enabled && !na ? `${t(`dirs.${s.direction}`, { provider: pn }).toLocaleUpperCase(intlDil(locale))} · ${sub}` : sub}
-                          d={ui.d}
-                          color={ui.color}
-                          on={s.enabled}
-                          locked={na}
-                          lockedReason={na ? t("flowNa", { provider: pn }) : undefined}
-                          aria={na ? t("flowNaAria", { name, provider: pn }) : s.enabled ? t("flowOnAria", { name }) : t("flowOffAria", { name })}
-                          onToggle={toggle(f)}
-                          testId={`flow-${f.flow}-toggle`}
-                        />
-                        {s.enabled && !na ? (
-                          <>
-                            <div className="fdir">
-                              <KalipSecenek
-                                label={t("dirAria", { name })}
-                                value={s.direction}
-                                color={ui.color}
-                                onPick={(id) => {
-                                  if (busy !== null || id === s.direction) {
-                                    feedback.minor();
-                                    return;
-                                  }
-                                  feedback.minor();
-                                  void setFlow(f, true, id as Direction);
-                                }}
-                                options={f.directions.map((d) => ({ id: d, label: t(`dirs.${d}`, { provider: pn }), d: DIR_D[d] }))}
-                              />
-                            </div>
-                            <div className="fmeta">
-                              <span className={bad ? "" : "ok"}>
-                                {f.lastRunAt === null ? t("never") : bad ? t("lastErr", { at: when(f.lastRunAt), reason: reasonText(f.lastErrorCode).toLocaleUpperCase(intlDil(locale)) }) : t("lastOk", { at: when(f.lastRunAt) })}
-                              </span>
-                              {f.errorCount > 0 ? (
-                                <span className="ebad" data-testid={`flow-${f.flow}-errors`}>
-                                  <Ico d={LICON.warn} size={12} />
-                                  {t("errBadge", { n: f.errorCount })}
-                                </span>
-                              ) : null}
-                              <button type="button" className="frun" onClick={() => void runFlow(f.flow)} aria-busy={busy === `run-${f.flow}`} data-testid={`flow-${f.flow}-run`}>
-                                <Ico d={NICON.sync} size={16} />
-                                {t("runNow")}
-                              </button>
-                            </div>
-                          </>
-                        ) : null}
-                      </div>
+                      <button
+                        key={p.provider}
+                        type="button"
+                        role="listitem"
+                        className={`prov${soon ? " soon" : ""}`}
+                        aria-label={`${PROVIDER_NAME[p.provider]}: ${soon ? t("pillSoon") : t("pillConnect")}`}
+                        aria-disabled={soon}
+                        data-testid={`provider-${p.provider}`}
+                        onClick={() => {
+                          if (soon) {
+                            feedback.error();
+                            say("info", t("soonToast"));
+                            return;
+                          }
+                          openForm();
+                        }}
+                      >
+                        <span className="plogo" style={{ background: c(PROVIDER_COLOR[p.provider]) }}>
+                          {t(`providers.${p.provider}.ini`)}
+                        </span>
+                        <span style={{ minWidth: 0 }}>
+                          <b>{t(`providers.${p.provider}.name`)}</b>
+                          <small>{t(`providers.${p.provider}.sub`)}</small>
+                        </span>
+                        <span className={`pill ${soon ? "soon" : "go"}`}>{soon ? t("pillSoon") : t("pillConnect")}</span>
+                      </button>
                     );
                   })}
-                  </KalipGrup>
+                </div>
+              ) : (
+                <>
+                  <div className={`conn${err ? " err" : ""}`} role="status" data-testid="integrations-conn" data-status={conn.status}>
+                    <i>
+                      <Ico d={err ? LICON.warn : LICON.check} size={22} />
+                    </i>
+                    <span style={{ minWidth: 0 }}>
+                      <b>{err ? t("connErrTitle", { provider: pn }) : t("connTitle", { label: conn.label ?? pn })}</b>
+                      <small>
+                        {err
+                          ? `${up(reasonText(conn.lastErrorCode))} · ${t("connErrSub")}`
+                          : conn.lastCheckedAt === null
+                            ? t("connSubNever", { provider: up(pn) })
+                            : t("connSub", { provider: up(pn), at: when(conn.lastCheckedAt) })}
+                      </small>
+                    </span>
+                    <span className="cact">
+                      {err ? (
+                        <button type="button" className="btn n sm" onClick={openForm} data-testid="integrations-reconnect">
+                          <Ico d={NICON.plug} size={20} />
+                          {t("reconnect")}
+                        </button>
+                      ) : (
+                        <button type="button" className="btn n sm" onClick={() => void check()} aria-busy={busy === "check"} data-testid="integrations-test">
+                          <Ico d={NICON.pulse} size={20} />
+                          {t("test")}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="rej sm"
+                        onClick={() => {
+                          feedback.error();
+                          setCutOpen(true);
+                        }}
+                        data-testid="integrations-cut"
+                      >
+                        <Ico d={NICON.unlink} size={20} />
+                        {t("cut")}
+                      </button>
+                    </span>
+                  </div>
+                  <KalipAnahtar title={t("barcode.pull")} sub={t("barcode.keep")} d={NICON.pull} color="2F5DA8"
+                    on={barcodeOn} aria={t("barcode.pull")} onToggle={() => void toggleBarcodes()} testId="product-barcode-toggle" />
                   {opening !== null ? (
-                    <KalipGrup title={t("opening.title")} sub={t("opening.sub", { provider: pn.toLocaleUpperCase(intlDil(locale)) })} d={NICON.chart} color="B07D0B" testId="integrations-opening">
+                    <div data-testid="integrations-opening">
                       <div className={`flw${openingEnabled ? " on" : ""}`} data-testid="opening-row" data-enabled={openingEnabled ? "true" : "false"} data-taken={openingTaken === null ? "false" : "true"}>
                         <KalipAnahtar
                           title={t("opening.toggle", { provider: pn })}
-                          sub={openingTaken !== null ? t("opening.takenAt", { at: when(openingTaken) }).toLocaleUpperCase(intlDil(locale)) : t("opening.toggleSub", { provider: pn.toLocaleUpperCase(intlDil(locale)) })}
+                          sub={openingTaken !== null ? up(t("opening.takenAt", { at: when(openingTaken) })) : t("opening.toggleSub", { provider: up(pn) })}
                           d={NICON.pull}
                           color="B07D0B"
                           on={openingEnabled}
@@ -610,57 +584,200 @@ export function IntegrationsView({ slug, dark, data, opening = null, journeyWish
                           </>
                         ) : null}
                       </div>
-                    </KalipGrup>
+                    </div>
                   ) : null}
                 </>
-              }
-              right={
-                <KalipGrup title={t("runsTitle")} sub={t("runsSub")} d={LICON.clock} color="30475A" testId="integrations-runs">
-                  <div className="runs" role="list">
-                    {data.runs.length === 0 ? (
-                      <div className="rl" role="listitem">
-                        <i style={{ background: c("30475A") }}>
-                          <Ico d={LICON.info} size={18} />
+              )}
+              {/* T-1112: Excel aktarımı (Ayarlar › Entegrasyonlar sekmesinin eski hedefi) bu bölümden açılır. */}
+              <KalipBaglanti title={t("baglanti.excel")} value={t("baglanti.excelOpen")} d={LICON.excel} color="2F7D5B" href={`${base}/settings/baglantilar`} testId="integrations-excel" />
+              {/* T-1104 (kullanıcı 27 Ekim: "derle topla, pratik olsun"): uygulama bilgileri sık kullanılmaz — bölümün en altında. Bağlı değilken
+                  ayrı "Paraşüt ile bağlan" yok (ana BAĞLAN aynı işi yapar); bağlıyken OAuth ile yeniden bağlanma burada kalır. */}
+              <div className="stak-g" data-testid="integrations-advanced">
+                <KalipBaslik title={t("oauth.settings")} />
+                <button type="button" className="btn n" data-testid="oauth-settings-open" onClick={()=>{if(data.demo){say("warn",t("demo"));return;}setConfigOpen(true);}}><Ico d={LICON.key} size={20}/>{t(oauth.configured?"oauth.configured":"oauth.setup")}</button>
+                {oauth.configured&&connected?<button type="button" className="btn n" onClick={openForm} aria-busy={busy==="oauth"} data-testid="oauth-connect"> <Ico d={NICON.plug} size={20}/>{t("oauth.connect")}</button>:null}
+              </div>
+            </KalipAyarKart>
+          ) : null}
+          {bolum === "akis" ? (
+            <KalipAyarKart
+              title={t("akis.title")}
+              sub={!connected ? t("akis.none", { provider: pn }) : son === null ? t("akis.subNever", { provider: pn }) : t("akis.sub", { provider: pn, at: when(son) })}
+              d={SICON.cevrim}
+              ton="mavi"
+              testId="integrations-flows"
+            >
+              {!connected ? (
+                <KalipBos title={t("akis.none", { provider: pn })} hint={t("akis.noneHint")} iconD={NICON.plug} action={{ label: t("akis.go"), href: `${self}?bolum=baglanti`, kind: "go" }} testId="integrations-flows-empty" />
+              ) : (
+                flows.map((f) => {
+                  const ui = FLOW_UI[f.flow];
+                  const s = flowState(f);
+                  const na = f.directions.length === 0;
+                  const name = t(`flows.${f.flow}.name`);
+                  const bad = f.lastStatus === "FAILED" || f.lastStatus === "PARTIAL";
+                  const options: KalipYon[] = [
+                    ...f.directions.map((d): KalipYon => ({ id: d, label: t(`yon.${d}`, { provider: pn }), d: YON_D[d], ton: YON_TON[d] })),
+                    { id: "OFF", label: t("yon.OFF"), etkin: true, ton: "gri" },
+                  ];
+                  return (
+                    <KalipAyarSatir
+                      key={f.flow}
+                      title={name}
+                      d={ui.d}
+                      ton={ui.ton}
+                      testId={`flow-${f.flow}`}
+                      data={{ "data-enabled": s.enabled ? "true" : "false" }}
+                      sub={
+                        na ? (
+                          t("flowNa", { provider: pn })
+                        ) : !s.enabled ? (
+                          t(`flows.${f.flow}.sub`, { provider: up(pn) })
+                        ) : (
+                          <>
+                            <span className={bad ? "" : "ok"}>
+                              {f.lastRunAt === null ? t("never") : bad ? t("lastErr", { at: when(f.lastRunAt), reason: up(reasonText(f.lastErrorCode)) }) : t("lastOk", { at: when(f.lastRunAt) })}
+                            </span>
+                            {f.errorCount > 0 ? (
+                              <span className="ebad" data-testid={`flow-${f.flow}-errors`}>
+                                <Ico d={LICON.warn} size={12} />
+                                {t("errBadge", { n: f.errorCount })}
+                              </span>
+                            ) : null}
+                            <button type="button" className="frun" onClick={() => void runFlow(f.flow)} aria-busy={busy === `run-${f.flow}`} data-testid={`flow-${f.flow}-run`}>
+                              <Ico d={NICON.sync} size={16} />
+                              {t("runNow")}
+                            </button>
+                          </>
+                        )
+                      }
+                    >
+                      <KalipYonSecimi label={t("dirAria", { name })} options={options} value={s.enabled && !na ? s.direction : "OFF"} busy={busy === `flow-${f.flow}`} onPick={(id) => pickYon(f, id)} testId={`flow-${f.flow}-toggle`} />
+                    </KalipAyarSatir>
+                  );
+                })
+              )}
+            </KalipAyarKart>
+          ) : null}
+          {bolum === "sahiplik" ? (
+            <KalipAyarKart title={t("sahiplik.title")} sub={t("sahiplik.sub")} d={SICON.kilit} ton="mor" testId="integrations-sahiplik">
+              {/* Veri yok (STANDART §8 "Paraşüt alan sahipliği" ayrı iş): sahte denetim çizilmez, yalnız "Yakında". */}
+              <KalipBos title={t("sahiplik.text")} hint={up(t("sahiplik.soon"))} iconD={SICON.kilit} testId="integrations-sahiplik-soon" />
+            </KalipAyarKart>
+          ) : null}
+          {bolum === "arsiv" ? (
+            <KalipAyarKart title={t("arsiv.title")} sub={t("arsiv.sub", { provider: pn })} d={SICON.arsiv} ton="gri" testId="integrations-arsiv">
+              <div className="cnote">
+                <i>
+                  <Ico d={LICON.info} size={20} />
+                </i>
+                <span>{t("arsiv.text", { provider: pn })}</span>
+              </div>
+              <KalipBaglanti title={t("arsiv.archived")} value={t("baglanti.excelOpen")} d={SICON.arsiv} color="4E6476" href={`${base}/items?status=ARCHIVED`} testId="integrations-archived" />
+              <KalipBaglanti title={t("arsiv.removed")} value={t("baglanti.excelOpen")} d={LICON.lock} color="4E6476" href={`${base}/items?status=REMOVED`} testId="integrations-removed" />
+            </KalipAyarKart>
+          ) : null}
+          {bolum === "hatalar" ? (
+            <KalipAyarKart title={t("hatalar.title")} sub={t("hatalar.sub")} d={SICON.uyari} ton="turuncu" testId="integrations-errors">
+              {data.outbox.check > 0 || data.outbox.failed > 0 ? (
+                <div className="conn err" role="alert" data-testid="integrations-outbox">
+                  <i>
+                    <Ico d={LICON.warn} size={22} />
+                  </i>
+                  <span style={{ minWidth: 0 }}>
+                    <b>{data.outbox.check > 0 ? t("outboxCheck", { n: data.outbox.check }) : t("outboxFailed", { n: data.outbox.failed })}</b>
+                    <small>{data.outbox.check > 0 ? t("outboxCheckSub") : up(reasonText("ROWS_FAILED"))}</small>
+                  </span>
+                </div>
+              ) : null}
+              {data.outbox.check > 0 && data.outbox.failed > 0 ? (
+                <div className="conn err" role="status" data-testid="integrations-outbox-failed">
+                  <i>
+                    <Ico d={LICON.warn} size={22} />
+                  </i>
+                  <span style={{ minWidth: 0 }}>
+                    <b>{t("outboxFailed", { n: data.outbox.failed })}</b>
+                    <small>{up(reasonText("ROWS_FAILED"))}</small>
+                  </span>
+                </div>
+              ) : null}
+              {data.outbox.pending > 0 ? (
+                <div className="conn" role="status" data-testid="integrations-outbox-pending">
+                  <i>
+                    <Ico d={LICON.clock} size={22} />
+                  </i>
+                  <span style={{ minWidth: 0 }}>
+                    <b>{t("hatalar.pending", { n: data.outbox.pending })}</b>
+                    <small>{t("hatalar.pendingSub")}</small>
+                  </span>
+                </div>
+              ) : null}
+              {hataliAkislar.map((f) => (
+                <KalipAyarSatir
+                  key={f.flow}
+                  title={t(`flows.${f.flow}.name`)}
+                  d={FLOW_UI[f.flow].d}
+                  ton={FLOW_UI[f.flow].ton}
+                  testId={`hata-${f.flow}`}
+                  sub={
+                    <>
+                      <span>{f.lastRunAt === null ? t("never") : t("lastErr", { at: when(f.lastRunAt), reason: up(reasonText(f.lastErrorCode)) })}</span>
+                      <span className="ebad">
+                        <Ico d={LICON.warn} size={12} />
+                        {t("errBadge", { n: f.errorCount })}
+                      </span>
+                    </>
+                  }
+                />
+              ))}
+              {sorun === 0 && data.outbox.pending === 0 ? (
+                <div className="conn" role="status" data-testid="integrations-errors-none">
+                  <i>
+                    <Ico d={LICON.check} size={22} />
+                  </i>
+                  <span style={{ minWidth: 0 }}>
+                    <b>{t("hatalar.none")}</b>
+                  </span>
+                </div>
+              ) : null}
+              <KalipBaslik title={t("runsTitle")} hint={t("runsSub")} />
+              <div className="runs" role="list" data-testid="integrations-runs">
+                {data.runs.length === 0 ? (
+                  <div className="rl" role="listitem">
+                    <i style={{ background: c("30475A") }}>
+                      <Ico d={LICON.info} size={18} />
+                    </i>
+                    <span style={{ minWidth: 0 }}>
+                      <b>{t("runsEmpty")}</b>
+                    </span>
+                    <em />
+                  </div>
+                ) : (
+                  data.runs.map((r) => {
+                    const bad = r.status === "FAILED" || r.status === "PARTIAL";
+                    const summary = r.errorCode !== null
+                      ? up(reasonText(r.errorCode))
+                      : r.created + r.updated + r.linked === 0 && r.failed === 0
+                        ? t("runNoChange")
+                        : `${t("runCounts", { created: r.created, updated: r.updated, linked: r.linked })}${r.failed > 0 ? ` · ${t("runFailedRows", { n: r.failed })}` : ""}`;
+                    return (
+                      <div key={r.id} className={`rl${bad ? " bad" : ""}`} role="listitem" data-testid="integration-run" data-status={r.status}>
+                        <i style={{ background: c(bad ? "C62828" : "2F9E6B") }}>
+                          <Ico d={bad ? LICON.warn : LICON.check} size={18} />
                         </i>
                         <span style={{ minWidth: 0 }}>
-                          <b>{t("runsEmpty")}</b>
+                          <b>{t(`flows.${r.flow}.name`)}</b>
+                          <small>{`${t(`trigger.${r.trigger}`)} · ${t("runMeta", { at: when(r.startedAt), summary })}`}</small>
                         </span>
-                        <em />
+                        <em>{t(`runStatus.${r.status}`)}</em>
                       </div>
-                    ) : (
-                      data.runs.map((r) => {
-                        const bad = r.status === "FAILED" || r.status === "PARTIAL";
-                        const summary = r.errorCode !== null
-                          ? reasonText(r.errorCode).toLocaleUpperCase(intlDil(locale))
-                          : r.created + r.updated + r.linked === 0 && r.failed === 0
-                            ? t("runNoChange")
-                            : `${t("runCounts", { created: r.created, updated: r.updated, linked: r.linked })}${r.failed > 0 ? ` · ${t("runFailedRows", { n: r.failed })}` : ""}`;
-                        return (
-                          <div key={r.id} className={`rl${bad ? " bad" : ""}`} role="listitem" data-testid="integration-run" data-status={r.status}>
-                            <i style={{ background: c(bad ? "C62828" : "2F9E6B") }}>
-                              <Ico d={bad ? LICON.warn : LICON.check} size={18} />
-                            </i>
-                            <span style={{ minWidth: 0 }}>
-                              <b>{t(`flows.${r.flow}.name`)}</b>
-                              <small>{`${t(`trigger.${r.trigger}`)} · ${t("runMeta", { at: when(r.startedAt), summary })}`}</small>
-                            </span>
-                            <em>{t(`runStatus.${r.status}`)}</em>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </KalipGrup>
-              }
-            />
-          </>
-        )}
-        {/* T-1104 (kullanıcı 27 Ekim: "derle topla, pratik olsun"): uygulama bilgileri sık kullanılmaz — sayfanın en altında tek grup.
-            Bağlı değilken ayrı "Paraşüt ile bağlan" yok (ana BAĞLAN aynı işi yapar); bağlıyken OAuth ile yeniden bağlanma burada kalır. */}
-        <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8" testId="integrations-advanced">
-          <button type="button" className="btn n" data-testid="oauth-settings-open" onClick={()=>{if(data.demo){say("warn",t("demo"));return;}setConfigOpen(true);}}><Ico d={LICON.key} size={20}/>{t(oauth.configured?"oauth.configured":"oauth.setup")}</button>
-          {oauth.configured&&connected?<button type="button" className="btn n" onClick={openForm} aria-busy={busy==="oauth"} data-testid="oauth-connect"> <Ico d={NICON.plug} size={20}/>{t("oauth.connect")}</button>:null}
-        </KalipGrup>
+                    );
+                  })
+                )}
+              </div>
+            </KalipAyarKart>
+          ) : null}
+        </KalipAltBolumler>
         <KalipPencere
           open={formOpen}
           title={t("form.title", { provider: pn })}

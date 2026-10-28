@@ -54,7 +54,7 @@ describe("yolculuk adımları", () => {
 
   it("stok: Paraşüt açılış stoku açık ve alınmadıysa Şimdi al düğmesi hedeflenir", () => {
     const d = j({ hints: { warehouseId: "w", recipeId: null, parasut: { connected: true, openingEnabled: true, openingTakenAt: null } } });
-    expect(stepPlan(base, "stock", d)).toEqual({ href: "/t/acme/integrations", stops: [{ path: "/t/acme/integrations", target: "opening-pull", hint: "stockParasut" }] });
+    expect(stepPlan(base, "stock", d)).toEqual({ href: "/t/acme/integrations?bolum=baglanti", stops: [{ path: "/t/acme/integrations", target: "opening-pull", hint: "stockParasut" }] });
     const taken = j({ hints: { warehouseId: "w", recipeId: null, parasut: { connected: true, openingEnabled: true, openingTakenAt: "2026-10-22T10:00:00.000Z" } } });
     expect(stepPlan(base, "stock", taken).href).toBe("/t/acme/stock/documents?new=STOCK_IN");
     expect(stepPlan(base, "stock", j({ cardSource: "EXCEL", openingStockWanted: true })).href).toBe("/t/acme/import?tur=acilis");

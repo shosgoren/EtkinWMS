@@ -31,7 +31,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
   test("T-991: Paraşüt'e bağlan, akış aç, bağlantıyı sına", async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     const { slug } = await loginEmptyTenant(page, "erp");
-    await page.goto(`/t/${slug}/integrations`);
+    // T-1112: bağlantı kartı "Bağlantı ve veri kaynağı" bölümünde (bağlıyken varsayılan bölüm akışlardır).
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     await expect(page.getByTestId("integrations")).toBeVisible();
 
     if (await page.getByTestId("integrations-conn").isVisible()) {
@@ -41,10 +42,25 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     }
 
     // T-1104: bağlı değilken tek bağlanma yolu (ana BAĞLAN / Paraşüt kutusu); ayrı "Paraşüt ile bağlan" yok, uygulama bilgileri en altta.
-    // Geri, Ayarlar › Entegrasyonlar sekmesine döner.
+    // T-1112: ekran Ayarlar › Entegrasyonlar sekmesinin kendisidir (üstte ayar sekmeleri); Geri Ayarlar'a döner. Excel aktarımı bu bölümden.
     await expect(page.getByTestId("oauth-connect")).toHaveCount(0);
     await expect(page.getByTestId("integrations-advanced").getByTestId("oauth-settings-open")).toBeVisible();
-    await expect(page.getByTestId("kabuk-back").filter({ visible: true })).toHaveAttribute("href", `/t/${slug}/settings/baglantilar`);
+    await expect(page.getByTestId("kabuk-back").filter({ visible: true })).toHaveAttribute("href", `/t/${slug}/settings`);
+    await expect(page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]')).toHaveAttribute("aria-current", "page");
+    await expect(page.getByTestId("integrations-excel")).toHaveAttribute("href", `/t/${slug}/settings/baglantilar`);
+    // Bağlı değilken akış bölümü boş durum + bağlantıya götüren düğme; alan sahipliği yalnız "Yakında" (sahte denetim yok).
+    const bolumler = page.getByTestId("integrations-bolumler");
+    await bolumler.locator('[data-bolum="akis"]').click();
+    await expect(page).toHaveURL(/bolum=akis/);
+    await expect(page.getByTestId("integrations-flows-empty")).toBeVisible();
+    await bolumler.locator('[data-bolum="sahiplik"]').click();
+    await expect(page.getByTestId("integrations-sahiplik-soon")).toBeVisible();
+    await expect(page.getByTestId("integrations-sahiplik").getByRole("radio")).toHaveCount(0);
+    await bolumler.locator('[data-bolum="arsiv"]').click();
+    await expect(page.getByTestId("integrations-archived")).toHaveAttribute("href", `/t/${slug}/items?status=ARCHIVED`);
+    await expect(page.getByTestId("integrations-removed")).toHaveAttribute("href", `/t/${slug}/items?status=REMOVED`);
+    await bolumler.locator('[data-bolum="baglanti"]').click();
+    await expect(page.getByTestId("integrations-providers")).toBeVisible();
     // Logo yakında: dokununca balon, pencere açılmaz.
     await page.getByTestId("provider-LOGO").click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Logo yakında");
@@ -77,6 +93,67 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await page.getByTestId("integrations-password").fill(F.password);
     await page.getByTestId("integrations-form-submit").click();
 
+    // T-1112: bağlanınca "Ne çekilsin, gönderilsin" bölümü açılır: her akış tek satır, her zaman görünen yön seçimi; yalnız katalogun
+    // desteklediği yönler + "Yalnız Etkin WMS" (= kapalı).
+    await expect(page.getByTestId("integrations-flows")).toBeVisible();
+    await expect(page.getByTestId("integrations-flows")).toContainText("Paraşüt bağlı");
+    await expect(bolumler.locator('[data-bolum="akis"]')).toHaveAttribute("aria-current", "page");
+    await expect(page.getByTestId("flow-WAREHOUSES").getByRole("radio")).toHaveCount(4);
+    await expect(page.getByTestId("flow-STOCK").getByRole("radio")).toHaveCount(2);
+    await expect(page.getByTestId("flow-STOCK").getByRole("radio", { name: "Paraşüt'e gönder" })).toBeVisible();
+
+    // Sipariş akışı Paraşüt'te yok: yalnız "Yalnız Etkin WMS" seçeneği (seçili) ve nedeni satırda yazar.
+    const siparis = page.getByTestId("flow-SALES_ORDERS");
+    await expect(siparis).toHaveAttribute("data-enabled", "false");
+    await expect(siparis).toContainText("karşılığı yok");
+    await expect(siparis.getByRole("radio")).toHaveCount(1);
+    await expect(siparis.getByRole("radio", { name: "Yalnız Etkin WMS" })).toHaveAttribute("aria-checked", "true");
+
+    // Ürün kartları: "Paraşüt'ten al" açar (balon), "İki yönlü" yönü değiştirir (kalıcı), "Yalnız Etkin WMS" kapatır.
+    const urun = page.getByTestId("flow-PRODUCTS");
+    await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
+    await expect(urun).toHaveAttribute("data-enabled", "true");
+    await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları açıldı");
+    await expect(urun.getByRole("radio", { name: "Paraşüt'ten al" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("flow-PRODUCTS-run")).toBeVisible();
+    await urun.getByRole("radio", { name: "İki yönlü" }).click();
+    await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları: İki yönlü");
+    await page.reload();
+    await expect(urun.getByRole("radio", { name: "İki yönlü" })).toHaveAttribute("aria-checked", "true");
+    await expect(urun).toHaveAttribute("data-enabled", "true");
+    await urun.getByRole("radio", { name: "Yalnız Etkin WMS" }).click();
+    await expect(urun).toHaveAttribute("data-enabled", "false");
+    await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları kapandı");
+    await expect(urun.getByRole("radio", { name: "Yalnız Etkin WMS" })).toHaveAttribute("aria-checked", "true");
+    await page.reload();
+    await expect(urun).toHaveAttribute("data-enabled", "false");
+    // Telefon genişliğinde alt bölüm listesi kartın üstünde yatay çip satırı; sayfa yatay kaymaz.
+    if (testInfo.project.name === "desktop") {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(bolumler.locator("nav")).toBeVisible();
+      await expect(page.getByTestId("integrations-flows")).toBeVisible();
+      const nav = await bolumler.locator("nav").boundingBox();
+      const card = await page.getByTestId("integrations-flows").boundingBox();
+      if (nav === null || card === null) throw new Error("e2e: bölüm listesi ya da kart ölçülemedi");
+      expect(nav.y + nav.height).toBeLessThanOrEqual(card.y + 1);
+      expect(nav.width).toBeLessThanOrEqual(390);
+      const w = await page.evaluate<{ sw: number; cw: number }>("({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth })");
+      expect(w.sw).toBeLessThanOrEqual(w.cw);
+      await page.screenshot({ path: testInfo.outputPath("akis-390.png") });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      // Masaüstünde liste solda, kart sağda (tuval: 290 px sol sütun).
+      const navD = await bolumler.locator("nav").boundingBox();
+      const cardD = await page.getByTestId("integrations-flows").boundingBox();
+      if (navD === null || cardD === null) throw new Error("e2e: bölüm listesi ya da kart ölçülemedi");
+      expect(navD.x + navD.width).toBeLessThanOrEqual(cardD.x);
+      await page.screenshot({ path: testInfo.outputPath("akis-1440.png") });
+    }
+    // Bekleyenler ve hatalar: son koşular listesi bu bölümde.
+    await bolumler.locator('[data-bolum="hatalar"]').click();
+    await expect(page.getByTestId("integrations-runs")).toBeVisible();
+
+    await bolumler.locator('[data-bolum="baglanti"]').click();
+    await expect(page).toHaveURL(/bolum=baglanti/);
     const conn = page.getByTestId("integrations-conn");
     await expect(conn).toBeVisible();
     await expect(conn).toContainText(F.companyName);
@@ -84,18 +161,6 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     const html = await page.content();
     for (const secret of [F.clientSecret, F.password]) expect(html).not.toContain(secret);
 
-    // Sipariş akışı Paraşüt'te yok: anahtar kilitli, dokununca nedenini söyler.
-    // T-436 (ALTIN-KURAL 17): kilitli anahtar `aria-disabled` (gerçek `disabled` değil; dokununca nedenini söyler). Playwright etkinlik
-    // denetimi bunu "etkin değil" sayar; dokunuş zorlanır (z-join-share ile aynı).
-    await page.getByTestId("flow-SALES_ORDERS-toggle").click({ force: true });
-    await expect(page.getByTestId("kalip-toast")).toContainText("karşılığı yok");
-    await expect(page.getByTestId("flow-SALES_ORDERS")).toHaveAttribute("data-enabled", "false");
-
-    // Ürün kartları akışını aç: açık durum + yön seçimi + balon.
-    await page.getByTestId("flow-PRODUCTS-toggle").click();
-    await expect(page.getByTestId("flow-PRODUCTS")).toHaveAttribute("data-enabled", "true");
-    await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları açıldı");
-    await expect(page.getByTestId("flow-PRODUCTS").getByRole("radio", { name: "Paraşüt → Etkin" })).toHaveAttribute("aria-checked", "true");
 
     const barcodeToggle = page.getByTestId("product-barcode-toggle");
     await expect(barcodeToggle).toBeVisible();
@@ -170,7 +235,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     } finally { await db("DELETE FROM public.items WHERE id=$1",[importedId]); }
 
     // Reproduce the live report: an old authenticated session must show a useful reason + a working reauth link.
-    await page.goto(`/t/${slug}/integrations`);
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     await page.getByTestId("oauth-settings-open").click();
     await page.getByTestId("oauth-app-id").fill(F.clientId);
     await page.getByTestId("oauth-app-secret").fill(F.clientSecret);

@@ -191,7 +191,8 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
             router.replace(href, { scroll: false });
           } else go(href)();
         }}
-        items={ayarSekmeleri(base, tb)}
+        // T-1112: ayar yetkisi (settings.manage) yoksa ERP ekranı kilitlidir; Entegrasyonlar sekmesi Excel aktarımını açar.
+        items={ayarSekmeleri(base, tb, !locked)}
       />
       {locked ? <KalipKilit title={t("lockTitle")} sub={t("lockSub")} /> : null}
       {reauth === null ? null : (
