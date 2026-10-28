@@ -9,7 +9,7 @@ import { getPickWork, type PickWork } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
 import { KICON } from "../../../../design/kabuk-icons.ts";
 import { PrimaryLink } from "../receive/receive-flow.tsx";
-import { SahaShell } from "../saha-shell.tsx";
+import { SahaMesaj, SahaShell } from "../saha-shell.tsx";
 import { PickFlow } from "./pick-flow.tsx";
 
 export const dynamic = "force-dynamic";
@@ -34,17 +34,16 @@ export default async function FieldPickPage({ params, searchParams }: { params: 
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect(`/login?next=${encodeURIComponent(self)}`);
   const db = getAppDb();
-  const message = (title: string, body: string, href: string, label: string) => (
+  // T-1122: mesaj / kilit gerekçesi saha mesaj kartında (eski düz paragraf yerine).
+  const message = (title: string, body: string, href: string, label: string, lock = false) => (
     <SahaShell hue="orange" iconD={KICON.mTopla} title={title} backHref={href} footer={<PrimaryLink href={href}>{label}</PrimaryLink>}>
-      <p className="break-words text-lg text-ink" data-testid="pick-message">
-        {body}
-      </p>
+      <SahaMesaj tone={lock ? "lock" : "info"} text={body} testId="pick-message" />
     </SahaShell>
   );
   const summary = await getMembershipSummary({ db, principal });
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) notFound();
-  if (!hasPermission(current.roles, "stock.post", current.grants)) return message(t("pick.lockedTitle"), t("pick.lockedReason"), fieldHome, t("toField"));
+  if (!hasPermission(current.roles, "stock.post", current.grants)) return message(t("pick.lockedTitle"), t("pick.lockedReason"), fieldHome, t("toField"), true);
   const taskId = first(sp.task) ?? "";
   if (taskId === "") return message(t("pick.goneTitle"), t("pick.pickFromTasks"), tasksHref, t("toTasks"));
   let work: PickWork;

@@ -9,7 +9,7 @@ import { getShippingOrder } from "@wms/domain/operations";
 import { AppError } from "@wms/shared/errors";
 import { KICON } from "../../../../design/kabuk-icons.ts";
 import { PrimaryLink } from "../receive/receive-flow.tsx";
-import { SahaShell } from "../saha-shell.tsx";
+import { SahaMesaj, SahaShell } from "../saha-shell.tsx";
 import { ShipFlow } from "./ship-flow.tsx";
 
 export const dynamic = "force-dynamic";
@@ -33,17 +33,16 @@ export default async function FieldShipPage({ params, searchParams }: { params: 
   const principal = await getAuthService().getPrincipal(await headers());
   if (principal === null) redirect(`/login?next=${encodeURIComponent(self)}`);
   const db = getAppDb();
-  const message = (title: string, body: string) => (
+  // T-1122: mesaj / kilit gerekçesi saha mesaj kartında (eski düz paragraf yerine).
+  const message = (title: string, body: string, lock = false) => (
     <SahaShell hue="blue" iconD={KICON.mSatis} title={title} backHref={tasksHref} footer={<PrimaryLink href={tasksHref}>{t("toTasks")}</PrimaryLink>}>
-      <p className="break-words text-lg text-ink" data-testid="ship-message">
-        {body}
-      </p>
+      <SahaMesaj tone={lock ? "lock" : "info"} text={body} testId="ship-message" />
     </SahaShell>
   );
   const summary = await getMembershipSummary({ db, principal });
   const current = summary.memberships.find((m) => m.slug === slug);
   if (current === undefined) notFound();
-  if (!hasPermission(current.roles, "stock.post", current.grants)) return message(t("ship.lockedTitle"), t("ship.lockedReason"));
+  if (!hasPermission(current.roles, "stock.post", current.grants)) return message(t("ship.lockedTitle"), t("ship.lockedReason"), true);
   const orderId = first(sp.order) ?? "";
   let order: Awaited<ReturnType<typeof getShippingOrder>>;
   try {
