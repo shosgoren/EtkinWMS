@@ -33,6 +33,11 @@ export interface KalipSecimSecenek {
   readonly d?: string;
   /** Seçiliyken kutunun rengi (onaltılık, `#` yok; `.dzf` kaynağında geçen renk). */
   readonly color?: string;
+  /**
+   * T-1128: rengi başka kaptan gelen ikon kutusu (seçim sayfası satırı) — `sinif` kutuya eklenir (ör. kabuk belirteç kapsamı `dzk`, ana
+   * ekran kutu rengi `sta-*`), `arka` hazır CSS rengidir (yoksa renk sınıftan gelir). Verilince `color` kutuya uygulanmaz.
+   */
+  readonly ikonKutu?: { readonly sinif?: string; readonly arka?: string };
   /** Okutma eşleşmesi ve arama için ek metin (barkod, eski kod…). */
   readonly keys?: readonly string[];
   readonly disabled?: boolean;
@@ -380,7 +385,10 @@ export function KalipSecimSayfasi({
                 data-option={o.id}
               >
                 {o.d === undefined ? null : (
-                  <span className="ksoic" style={{ background: c(o.color ?? ic.color) }}>
+                  <span
+                    className={o.ikonKutu?.sinif === undefined ? "ksoic" : `ksoic ${o.ikonKutu.sinif}`}
+                    style={o.ikonKutu === undefined ? { background: c(o.color ?? ic.color) } : o.ikonKutu.arka === undefined ? undefined : { background: o.ikonKutu.arka }}
+                  >
                     <Ico d={o.d} size={18} />
                   </span>
                 )}

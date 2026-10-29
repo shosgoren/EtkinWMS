@@ -279,6 +279,95 @@ test("Pano hesap sahibi: bekleyen işler ve İşler kutuları, kaydırmasız tel
   await expect(page.getByRole("list", { name: "İşler" })).toBeVisible();
 });
 
+/**
+ * T-1128 (kullanıcı 29 Ekim: "Düzenle'de yetkisi olan modülü getiremiyor"; telefonda oklar adı örtüyordu): telefon ve masaüstünde Düzenle —
+ * denetimler adın altında (örtüşme yok, ≥ 44 px), bir kutu kaldırılır, "İş ekle" seçim sayfasından Modüller'deki bir modül (Transfer)
+ * eklenir, "Bitti" seçimi cihazda saklar (yenilemede kalır, kaldırılan geri gelmez); eski kayıt biçimi (yalnız sıra) okunur.
+ */
+async function anaIslerEkleCikar(page: Page): Promise<void> {
+  const home = page.locator("#main").getByTestId("pano");
+  const ana = tr.pano.ana;
+  const excelKaldir = ana.cikar.replace("{ad}", ana.is.excel.ad);
+  for (const [width, height] of [[390, 844], [1280, 800]] as const) {
+    const where = `${width}px`;
+    await page.setViewportSize({ width, height });
+    await page.evaluate(`window.localStorage.removeItem("etkin-ana-isler:demo")`);
+    await page.reload();
+    await expect(home.locator("a[data-is]")).toHaveCount(8);
+    await expect(home.getByTestId("ana-ekle"), `${where}: Düzenle dışında ekle kutusu yok`).toHaveCount(0);
+    await home.getByTestId("ana-duzenle").click();
+    const tiles = home.locator("div[data-is]");
+    await expect(tiles).toHaveCount(8);
+    await page.screenshot({ path: path.join(OUT, `t1128-${width}-duzenle.png`) });
+    for (const tile of await tiles.all()) {
+      const key = await tile.getAttribute("data-is");
+      const name = await tile.locator(".jt b").boundingBox();
+      const ctl = await tile.locator(".jok").boundingBox();
+      expect(name !== null && ctl !== null, `${where}: ${key} ad ve denetim görünür`).toBe(true);
+      if (name === null || ctl === null) continue;
+      expect(ctl.y, `${where}: ${key} denetimler adın altında (adı örtmez)`).toBeGreaterThanOrEqual(name.y + name.height - 1);
+      const nameFits = await tile.locator(".jt b").evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
+      expect(nameFits, `${where}: ${key} adı kesilmez`).toBe(true);
+      const tb = await tile.boundingBox();
+      for (const b of await tile.locator(".jok button").all()) {
+        const box = await b.boundingBox();
+        expect(Math.min(box?.width ?? 0, box?.height ?? 0), `${where}: ${key} denetim ≥ 44 px`).toBeGreaterThanOrEqual(44);
+        expect((box?.x ?? 0) + (box?.width ?? 0), `${where}: ${key} denetim kutunun içinde (yatay)`).toBeLessThanOrEqual((tb?.x ?? 0) + (tb?.width ?? 0) + 1);
+        expect((box?.y ?? 0) + (box?.height ?? 0), `${where}: ${key} denetim kutunun içinde (dikey)`).toBeLessThanOrEqual((tb?.y ?? 0) + (tb?.height ?? 0) + 1);
+      }
+    }
+    // Kaldır: Excel'den aktar ızgaradan çıkar.
+    await home.getByRole("button", { name: excelKaldir }).click();
+    await expect(home.locator('div[data-is="excel"]')).toHaveCount(0);
+    // İş ekle: seçim sayfasında ızgarada olmayan izinli işler (kaldırılan Excel + Modüller'deki Transfer), ızgaradakiler yok.
+    await home.getByTestId("ana-ekle").click();
+    const sheet = page.getByTestId("ana-ekle-secim");
+    await expect(sheet.getByRole("dialog", { name: ana.ekle })).toBeVisible();
+    await expect(sheet.locator('[data-option="excel"]')).toBeVisible();
+    await page.screenshot({ path: path.join(OUT, `t1128-${width}-ekle.png`) });
+    await expect(sheet.locator('[data-option="giris"]')).toHaveCount(0);
+    await expect(sheet.locator('[data-option="home"], [data-option="etiket"]'), `${where}: Ana ekran ve YAKINDA modül listede yok`).toHaveCount(0);
+    const trans = sheet.locator('[data-option="trans"]');
+    await expect(trans).toContainText(tr.kabuk.mod.trans.name);
+    await trans.click();
+    await expect(sheet).toHaveCount(0);
+    await expect(home.locator("div[data-is]").last()).toHaveAttribute("data-is", "trans");
+    await home.getByTestId("ana-duzenle").click();
+    await page.reload();
+    await expect
+      .poll(() => home.locator("a[data-is]").evaluateAll((els) => els.map((e) => e.getAttribute("data-is"))), { message: `${where}: seçim yenilemede kalır` })
+      .toEqual(["giris", "satis", "stok", "urun", "cari", "depo", "kayit", "trans"]);
+    const t = home.locator('a[data-is="trans"]');
+    await expect(t).toHaveAttribute("href", "/t/demo/stock/documents?new=TRANSFER");
+    await expect(t).toContainText(tr.kabuk.mod.trans.name);
+    const bg = await t.locator(".jic").evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(bg, `${where}: modül rengi`).not.toBe("rgba(0, 0, 0, 0)");
+    const m = await page.evaluate<{ sw: number; cw: number; ish: number; ich: number; ov: string }>(`(() => {
+      const d = document.documentElement; const inner = document.querySelector('[data-testid="pano"] .inner');
+      return { sw: d.scrollWidth, cw: d.clientWidth, ish: inner.scrollHeight, ich: inner.clientHeight, ov: getComputedStyle(inner).overflowY };
+    })()`);
+    expect(m.sw, `${where}: yatay taşma yok`).toBeLessThanOrEqual(m.cw);
+    if (m.ov === "hidden") expect(m.ish, `${where}: içerik alanı taşmaz`).toBeLessThanOrEqual(m.ich + 1);
+  }
+  // Eski kayıt (T-1115 biçimi: varsayılanların sırası) okunur.
+  await page.evaluate(`window.localStorage.setItem("etkin-ana-isler:demo", JSON.stringify(["satis", "giris"]))`);
+  await page.reload();
+  await expect
+    .poll(() => home.locator("a[data-is]").evaluateAll((els) => els.map((e) => e.getAttribute("data-is"))), { message: "eski kayıt biçimi okunur" })
+    .toEqual(["satis", "giris", "stok", "urun", "cari", "depo", "excel", "kayit"]);
+  await page.evaluate(`window.localStorage.removeItem("etkin-ana-isler:demo")`);
+  await page.reload();
+}
+
+test("Ana ekran İşler Düzenle (T-1128): telefon ve masaüstünde iş kaldır / ekle, seçim cihazda kalır", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.context().addCookies([{ name: "view", value: "flow", url: new URL(page.url()).origin }]);
+  await page.goto("/t/demo");
+  await expect(page.locator("html")).toHaveAttribute("data-view", "flow");
+  await anaIslerEkleCikar(page);
+});
+
 test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok okuma açık", async ({ page }) => {
   await page.goto("/");
   await enterDemoReal(page, "Salt okunur");

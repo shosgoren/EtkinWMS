@@ -4,12 +4,14 @@
 //   (`countReview`), kritik stok (`criticalCount`).
 // - "İşler" sekiz kutusu tuval sırasıyla; modülü olan kutu Modüller sayfasının yetki süzgecinden geçer (`kabukModules`: rol, özel grup
 //   yetkisi, grubun görünür ekranları). Modülü olmayan iki kutu (Depoya mal geldi, Excel'den aktar) aynı kuralla kendi izniyle süzülür.
+// - T-1128: "Düzenle"de eklenebilir kutular = izinli sekiz tuval kutusu + Modüller sayfasında açılabilen diğer bütün modüller (ekranı olan;
+//   YAKINDA, Ana ekran ve görünüm geçişi hariç). Aynı süzgeç; yalnız görünürlük.
 import { hasPermission, type Permission } from "@wms/domain/identity/permissions";
 import type { Board } from "@wms/domain/operations";
 import { kabukModules, type KabukMember, type KabukModuleId } from "../kabuk/modules.ts";
-import type { AnaIs, AnaIsKey } from "./ana-sira.ts";
+import type { AnaAday, AnaIs, AnaIsKey } from "./ana-sira.ts";
 
-export type { AnaIs, AnaIsKey } from "./ana-sira.ts";
+export type { AnaAday, AnaIs, AnaIsKey } from "./ana-sira.ts";
 
 interface AnaIsDef {
   readonly key: AnaIsKey;
@@ -48,6 +50,20 @@ export function anaIsler(base: string, member: KabukMember): AnaIs[] {
     if (d.need !== undefined && !hasPermission(member.roles, d.need, member.grants)) continue;
     if (d.screen !== undefined && member.screens !== null && !member.screens.includes(d.screen)) continue;
     out.push({ key: d.key, href: `${base}${d.path ?? ""}` });
+  }
+  return out;
+}
+
+/**
+ * T-1128: üyenin "Düzenle"de ekleyebileceği bütün kutular — önce izinli tuval kutuları (tuval sırası; `anaIsler` ile aynı), sonra tuval
+ * kutusu olmayan izinli modüller (Modüller sayfası sırası, renk + ikon). Tuval kutusunun modülü (ör. Sevkiyat) ikinci kez gelmez.
+ */
+export function anaIsAdaylari(base: string, member: KabukMember): AnaAday[] {
+  const tuvalMod = new Set<string>(ANA_ISLER.flatMap((d) => (d.mod === undefined ? [] : [d.mod])));
+  const out: AnaAday[] = [...anaIsler(base, member)];
+  for (const m of kabukModules(base, member)) {
+    if (m.href === null || m.id === "home" || m.view !== undefined || tuvalMod.has(m.id)) continue;
+    out.push({ key: m.id, href: m.href, mod: { color: m.color, d: m.d } });
   }
   return out;
 }

@@ -4286,7 +4286,10 @@
           "ad": "Kim ne yaptı?",
           "alt": "İşlem geçmişi"
         }
-      }
+      },
+      "cikar": "{ad}: kaldır",
+      "ekle": "İş ekle",
+      "ekleAlt": "{n} iş eklenebilir"
     },
     "guideOpen": "Rehber"
   },

@@ -16,7 +16,7 @@ import { PanoShell, type PanoLink } from "./pano-shell.tsx";
 import { YolculukKart } from "../yolculuk/yolculuk.tsx";
 import type { JourneyData } from "../yolculuk/steps.ts";
 import type { KabukMember } from "../kabuk/modules.ts";
-import { anaIsler, bekleyenler, type BekleyenKey } from "./ana-ekran.ts";
+import { anaIsAdaylari, anaIsler, bekleyenler, type BekleyenKey } from "./ana-ekran.ts";
 import { AnaIsler } from "./ana-isler.tsx";
 
 export type BoardRole = "owner" | "manager";
@@ -65,6 +65,8 @@ export async function PanoBoard(p: PanoBoardProps) {
     ...(p.usersManage ? [{ k: "groups", label: t("m.groups"), color: "0E7C7B", d: PICON.shieldCheck, href: `${base}/groups` }] : []),
   ];
   const isler = anaIsler(base, p.member);
+  // T-1128: Düzenle'de eklenebilir bütün işler (aynı yetki süzgeci; yalnız görünürlük).
+  const adaylar = anaIsAdaylari(base, p.member);
   const bek = b === null ? null : bekleyenler(base, b, p.canApprove);
 
   return (
@@ -113,7 +115,7 @@ export async function PanoBoard(p: PanoBoardProps) {
             ))
           )}
         </section>
-        <AnaIsler slug={p.slug} items={isler} />
+        <AnaIsler slug={p.slug} items={isler} adaylar={adaylar} />
       </div>
     </PanoShell>
   );
