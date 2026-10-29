@@ -340,7 +340,7 @@ async function anaIslerEkleCikar(page: Page): Promise<void> {
     const t = home.locator('a[data-is="trans"]');
     await expect(t).toHaveAttribute("href", "/t/demo/stock/documents?new=TRANSFER");
     await expect(t).toContainText(tr.kabuk.mod.trans.name);
-    const bg = await t.locator(".jic").evaluate((el) => getComputedStyle(el).backgroundColor);
+    const bg = await t.locator(".jic").evaluate<string>("(el) => getComputedStyle(el).backgroundColor");
     expect(bg, `${where}: modül rengi`).not.toBe("rgba(0, 0, 0, 0)");
     const m = await page.evaluate<{ sw: number; cw: number; ish: number; ich: number; ov: string }>(`(() => {
       const d = document.documentElement; const inner = document.querySelector('[data-testid="pano"] .inner');
