@@ -142,6 +142,7 @@ const USES: readonly { name: string; code: string; tracking?: "LOT" | "SERIAL"; 
     seed: (q, w, item) =>
       q("INSERT INTO public.production_recipes (tenant_id, id, code, version, name, output_item_id, output_quantity, created_by) VALUES ($1, gen_random_uuid(), $2, 1, 'Reçete', $3, 1, $4)", [w.tenantId, `R${rnd()}`, item, w.ownerUserId]),
   },
+  { name: "stok uyarısı", code: "POLICY", seed: (q, w, item) => q("INSERT INTO public.stock_alerts (tenant_id, kind, warehouse_id, item_id, observed_quantity, threshold) VALUES ($1, $2, $3, $4, 0, 1)", [w.tenantId, "MIN_MAX", w.warehouseId, item]) },
   { name: "stok politikası", code: "POLICY", seed: (q, w, item) => q("INSERT INTO public.item_stock_policies (tenant_id, warehouse_id, item_id, min_quantity, max_quantity) VALUES ($1, $2, $3, 1, 5)", [w.tenantId, w.warehouseId, item]) },
 ];
 
@@ -213,6 +214,16 @@ describe("T-1129 kullanılmış ürün: her kullanım türü kilitler (domain IN
 });
 
 describe("T-1129 veritabanı bekçisi (0065): yetki, tenant, replica", () => {
+  it("kapsam bekçisi: ürüne FK veren her tablo `item_fixed_usage` içinde sayılır (yeni tablo eklenince unutulmasın)", async () => {
+    const fks = await adm.query<{ t: string }>("SELECT DISTINCT conrelid::regclass::text AS t FROM pg_constraint WHERE contype = 'f' AND confrelid = 'public.items'::regclass ORDER BY 1");
+    const def = (await adm.query<{ d: string }>("SELECT pg_get_functiondef('public.item_fixed_usage(uuid, uuid)'::regprocedure) AS d")).rows[0]?.d ?? "";
+    expect(fks.rows.length).toBeGreaterThanOrEqual(16);
+    for (const { t } of fks.rows) {
+      const name = t.replace(/^public\./, "");
+      expect(def, `${name} ürüne FK veriyor ama item_fixed_usage saymıyor`).toContain(`public.${name} `);
+    }
+  });
+
   it("wms_app yalnız üç sabit sütunda UPDATE alır; tenant_id/id/created_at hâlâ yetkisiz", async () => {
     const r = await adm.query<Record<string, boolean>>(
       `SELECT has_column_privilege('wms_app', 'public.items', 'base_unit_id', 'UPDATE') AS b, has_column_privilege('wms_app', 'public.items', 'tracking_mode', 'UPDATE') AS t,

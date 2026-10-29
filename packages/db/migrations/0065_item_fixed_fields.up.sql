@@ -81,7 +81,8 @@ BEGIN
     IF EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = OLD.tenant_id AND r.entity_type = 'ITEM' AND r.entity_id = OLD.id) THEN
       RAISE EXCEPTION 'ITEM_FIXED_SOURCE_LINKED: bağlı sistemden gelen ürünün temel birimi değiştirilemez' USING ERRCODE = '23514';
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM public.units u WHERE u.tenant_id = NEW.tenant_id AND u.id = NEW.base_unit_id AND u.status = 'ACTIVE') THEN
+    -- FOR SHARE: eşzamanlı birim arşivlemesiyle (NO KEY UPDATE) sıralanır; arşivli birime bağlanılmaz.
+    IF NOT EXISTS (SELECT 1 FROM public.units u WHERE u.tenant_id = NEW.tenant_id AND u.id = NEW.base_unit_id AND u.status = 'ACTIVE' FOR SHARE) THEN
       RAISE EXCEPTION 'ITEM_FIXED_UNIT_INVALID: yeni temel birim bu tenant''ın etkin birimi olmalı' USING ERRCODE = '23514';
     END IF;
   END IF;
