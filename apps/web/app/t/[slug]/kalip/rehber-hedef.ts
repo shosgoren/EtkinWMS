@@ -1,7 +1,9 @@
 // T-1124: rehber hedefinin ekrandaki karşılığı — görünen eşleşmeler (delikler), klavye odağı alacak alan ve kartın delikleri örtmeyen yeri.
-// İşlem rehberi ile adım adım aktarma rehberi aynı yardımcıları kullanır. `kartYeri` saftır (birim testli); diğerleri DOM okur.
-import { useEffect, useRef, useState } from "react";
+// İşlem rehberi ile adım adım aktarma rehberi aynı yardımcıları kullanır; DOM okur.
+// T-1130: kartın yeri üç rehberde (kurulum yolculuğu dahil) tek ortak kancadan: `useKartYeri` (hesap `kart-yeri.ts`, saf).
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { hedefKutusu, type PerdeDelik } from "./perde.tsx";
+import { kartYeriHesapla, kayanAtaSirasi, sabitZincir, type KartHedef } from "./kart-yeri.ts";
 
 const ODAK = 'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [role="option"], [tabindex]:not([tabindex="-1"])';
 const KONTROL = 'input, textarea, select, button, a[href], [role="option"], [contenteditable="true"]';
@@ -99,42 +101,6 @@ export function odakla(el: HTMLElement, kaydir: Element | null): void {
   el.focus({ preventScroll: true });
 }
 
-export interface KartYeri {
-  readonly left?: number;
-  readonly right?: number;
-  readonly top?: number;
-  readonly bottom?: number;
-}
-
-/**
- * Kart delikleri örtmesin (saf): sırayla sol alt (varsayılan; alt çubuğun üstü), sağ alt, sol üst, sağ üst; hiçbiri boş değilse en az
- * örtüşen yer. `w`/`h` kartın ölçüsü.
- */
-export function kartYeri(holes: readonly PerdeDelik[], vw: number, vh: number, w: number, h: number): KartYeri {
-  const kenar = 12;
-  const alt = 136;
-  const ust = 12;
-  const adaylar: { yer: KartYeri; x: number; y: number }[] = [
-    { yer: { left: kenar, bottom: alt }, x: kenar, y: vh - alt - h },
-    { yer: { right: kenar, bottom: alt }, x: vw - kenar - w, y: vh - alt - h },
-    { yer: { left: kenar, top: ust }, x: kenar, y: ust },
-    { yer: { right: kenar, top: ust }, x: vw - kenar - w, y: ust },
-  ];
-  const ortusme = (x: number, y: number): number =>
-    holes.reduce((t, d) => t + Math.max(0, Math.min(x + w, d.x + d.w) - Math.max(x, d.x)) * Math.max(0, Math.min(y + h, d.y + d.h) - Math.max(y, d.y)), 0);
-  let iyi = adaylar[0]!;
-  let enAz = Infinity;
-  for (const a of adaylar) {
-    const o = ortusme(a.x, a.y);
-    if (o === 0) return a.yer;
-    if (o < enAz) {
-      enAz = o;
-      iyi = a;
-    }
-  }
-  return iyi.yer;
-}
-
 /** Hedef bu kadar yoklamada (300 ms) bulunamazsa "Ekranı aç" gösterilir (gezinme sonrası geç çizilen ekran beklenir). */
 const BEKLE = 5;
 
@@ -204,4 +170,136 @@ export function useRehberHedef(target: string | null, acik: boolean, adim: strin
     };
   }, [target, acik, adim]);
   return { delik, yok };
+}
+
+/** Öğeden köke ata zinciri (konum + dikey taşma); `sabitZincir`/`kaydirici` için. */
+function zincir(el: Element): { el: Element; konum: string; tasma: string }[] {
+  const out: { el: Element; konum: string; tasma: string }[] = [];
+  for (let e: Element | null = el; e !== null; e = e.parentElement) {
+    const s = getComputedStyle(e);
+    out.push({ el: e, konum: s.position, tasma: s.overflowY });
+  }
+  return out;
+}
+
+/**
+ * Öğe kaydırmayla yer değiştirmez mi (alt çubuk, üst çubuk)? T-1130 (Codex P2): sabit (`position: fixed`) bir ataya ulaşmadan önce kendi
+ * içinde kayan bir kap varsa öğe SABİT DEĞİLDİR — kalıp form ekranında dış kabuk `.dzf` sabittir ama alanlar kayan `.inner` içindedir.
+ */
+function sabitMi(el: Element): boolean {
+  return sabitZincir(zincir(el));
+}
+
+function kartHedefi(el: Element): KartHedef {
+  const r = hedefKutusu(el);
+  return { x: r.left, y: r.top, w: r.width, h: r.height, sabit: sabitMi(el) };
+}
+
+/** Kaydırılacak kap: hedefin en yakın kayan atası (ör. kalıp ekranının `.inner`'ı), yoksa sayfa. */
+function kaydirici(el: Element | null): Element {
+  if (el === null) return document.scrollingElement ?? document.documentElement;
+  const z = zincir(el).slice(1).filter((a) => a.el !== document.body && a.el !== document.documentElement);
+  const i = kayanAtaSirasi(z.map((a) => ({ ...a, tasabilir: a.el.scrollHeight > a.el.clientHeight + 1 })));
+  return i === null ? (document.scrollingElement ?? document.documentElement) : z[i]!.el;
+}
+
+/** Dar küme (bütün hedef sığmıyorsa): hedefteki odaklı alan (yoksa ilk alan) etiketiyle + sabit hedefler (alt çubuğun ana işlemi). */
+function darKume(els: readonly Element[]): Element[] {
+  const etkin = document.activeElement;
+  const odakli = etkin instanceof HTMLElement && etkin !== document.body && els.some((e) => e.contains(etkin)) ? etkin : null;
+  const alan = odakli ?? alanlar(els)[0] ?? null;
+  return [...(alan === null ? [] : [alan.closest("label") ?? alan]), ...els.filter(sabitMi)];
+}
+
+/** Görünen alan (telefon klavyesi açıkken küçülür) ve alt çubuğun bu alandan aldığı pay. */
+function gorunurAlan(): { ust: number; yukseklik: number; altCubuk: number } {
+  const vv = window.visualViewport;
+  const ust = vv?.offsetTop ?? 0;
+  const yukseklik = vv?.height ?? window.innerHeight;
+  const dock = document.querySelector('[data-testid="kabuk-dock"]');
+  let altCubuk = 0;
+  if (dock !== null && dock.getClientRects().length > 0) {
+    const d = hedefKutusu(dock);
+    altCubuk = Math.max(0, Math.min(yukseklik / 2, ust + yukseklik - d.top));
+  }
+  return { ust, yukseklik, altCubuk };
+}
+
+/**
+ * T-1130: rehber kartının yeri (üç rehberin ortak kancası). `hedefler` kartın örtmeyeceği öğeleri verir (yapılacak alan/düğme; kurulum
+ * yolculuğunda açık form ve ana işlem). Kart ölçülür, `kartYeriHesapla` en uygun yeri seçer; hedef kartla birlikte sığmıyorsa adım başında,
+ * görünen alan değişince (klavye açıldı, döndürme) ya da odak hedefteki başka alana geçince sayfa gereken kadar kaydırılır (en çok iki kez;
+ * kullanıcının kendi kaydırması geri alınmaz — o sırada kart yalnız yer değiştirir). Kaydırma, boyut, `visualViewport` ve kartın kendi ölçüsü
+ * izlenir.
+ */
+export function useKartYeri(kart: RefObject<HTMLElement | null>, acik: boolean, anahtar: string, hedefler: () => readonly Element[]): CSSProperties {
+  const [yer, setYer] = useState<{ readonly left: number; readonly top: number; readonly width: number | null } | null>(null);
+  const oku = useRef(hedefler);
+  useLayoutEffect(() => {
+    oku.current = hedefler;
+  });
+  useLayoutEffect(() => {
+    if (!acik) {
+      setYer(null);
+      return undefined;
+    }
+    let sonAnahtar = "";
+    let sonOdak: Element | null = null;
+    let deneme = 0;
+    const olc = (): void => {
+      const el = kart.current;
+      if (el === null) return;
+      const els = oku.current().filter((e) => e.isConnected && e.getClientRects().length > 0);
+      const g = gorunurAlan();
+      const vw = window.innerWidth;
+      const etkin = document.activeElement;
+      const yeniAnahtar = `${anahtar}|${vw}x${Math.round(g.yukseklik)}|${els.length}`;
+      const yeniOdak = etkin !== sonOdak && etkin !== null && els.some((e) => e.contains(etkin));
+      if (yeniAnahtar !== sonAnahtar || yeniOdak) deneme = 0;
+      sonAnahtar = yeniAnahtar;
+      sonOdak = etkin;
+      const izinli = deneme < 2 && els.length > 0;
+      const kap = kaydirici(els.find((e) => !sabitMi(e)) ?? null);
+      const kaydirma = izinli ? { min: -kap.scrollTop, max: Math.max(0, kap.scrollHeight - kap.clientHeight - kap.scrollTop) } : { min: 0, max: 0 };
+      const r = el.getBoundingClientRect();
+      const kapKutu = kap === document.scrollingElement || kap === document.documentElement ? null : kap.getBoundingClientRect();
+      const s = kartYeriHesapla({
+        vw,
+        gorunur: { ust: g.ust, yukseklik: g.yukseklik },
+        altCubuk: g.altCubuk,
+        hedefler: els.map(kartHedefi),
+        dar: darKume(els).map(kartHedefi),
+        kart: { w: r.width, h: r.height },
+        telefon: vw < 700,
+        kaydirma,
+        ...(kapKutu === null ? {} : { kap: { ust: kapKutu.top, alt: kapKutu.bottom } }),
+      });
+      if (izinli) {
+        if (s.kaydir !== 0) {
+          deneme++;
+          kap.scrollBy({ top: s.kaydir, behavior: "instant" });
+        } else deneme = 2;
+      }
+      setYer((o) => (o !== null && o.left === s.left && o.top === s.top && o.width === s.width ? o : { left: s.left, top: s.top, width: s.width }));
+    };
+    olc();
+    const id = window.setInterval(olc, 300);
+    const vv = window.visualViewport;
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => olc());
+    if (kart.current !== null) ro?.observe(kart.current);
+    window.addEventListener("resize", olc);
+    window.addEventListener("scroll", olc, true);
+    vv?.addEventListener("resize", olc);
+    vv?.addEventListener("scroll", olc);
+    return () => {
+      window.clearInterval(id);
+      ro?.disconnect();
+      window.removeEventListener("resize", olc);
+      window.removeEventListener("scroll", olc, true);
+      vv?.removeEventListener("resize", olc);
+      vv?.removeEventListener("scroll", olc);
+    };
+  }, [kart, acik, anahtar]);
+  if (yer === null) return { left: 12, bottom: 136 };
+  return { left: yer.left, top: yer.top, right: "auto", bottom: "auto", ...(yer.width === null ? {} : { width: yer.width }) };
 }

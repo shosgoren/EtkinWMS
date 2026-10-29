@@ -5,13 +5,14 @@
 // ilerler. Perdeye dokununca serbest bırakır, küçük yüzen simge kalır ("Kaldığın yerden").
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { feedback, intlDil } from "@wms/ui";
 import { JICON } from "../../../design/yolculuk-icons.ts";
 import { dz } from "../../../design/yolculuk-tokens.ts";
 import { Ico } from "../kalip/ekran.tsx";
 import { useModalFocus } from "../kalip/odak.ts";
 import { KalipPerdeKatman, hedefKutusu, type PerdeDelik } from "../kalip/perde.tsx";
+import { gorunenler, useKartYeri } from "../kalip/rehber-hedef.ts";
 import { sesiDurdur, useSesliOku } from "../kalip/sesli-oku.ts";
 import { setOpeningStockAction } from "../integrations/actions.ts";
 import { getJourneyAction, setJourneyChoiceAction } from "./actions.ts";
@@ -30,8 +31,6 @@ const POLL_MS = 6000;
 const FOCUS_SURFACES: readonly string[] = ["warehouse-form", "bulk-form", "team-add-qr", "team-qr-new"];
 /** Ekranda açık iş formları (deliğe ayrıca eklenir). */
 const FORM_SEL = 'form.workflow-form, [data-testid$="-form"]';
-const GAP = 14;
-const EDGE = 12;
 
 function readActive(key: string): StepKey | null {
   try {
@@ -122,40 +121,6 @@ export function YolculukGiris({ dark }: { dark: boolean }) {
   return <YolculukKart data={data} dark={dark} />;
 }
 
-interface TipPos {
-  readonly style: CSSProperties;
-  readonly cls: "above" | "below" | "";
-  readonly arrow: number | null;
-}
-
-/** Balon konumu: hedefin altında (üst yarıda) ya da üstünde; yatayda ekran içinde; hedef yoksa alt çubuğun üstünde ortada. */
-function tipPosition(holes: readonly PerdeDelik[] | null, vw: number, vh: number): TipPos {
-  const w = Math.min(360, vw - EDGE * 2);
-  if (holes === null || holes.length === 0) return { style: { left: (vw - w) / 2, bottom: 136, width: w }, cls: "", arrow: null };
-  // Birden çok delik (form + kaydet): kart deliklerin hiçbirini örtmeyen yere — yanda yer varsa yanda, yoksa deliklerin üstünde/altında
-  // daha geniş boşlukta (T-1111: eskiden hep üst kenardaydı, sayfanın başlığını ve formu örtüyordu).
-  if (holes.length > 1) {
-    const l = Math.min(...holes.map((h) => h.x));
-    const t = Math.min(...holes.map((h) => h.y));
-    const r = Math.max(...holes.map((h) => h.x + h.w));
-    const b = Math.max(...holes.map((h) => h.y + h.h));
-    const ust = Math.max(EDGE, Math.min(t, vh - 200));
-    if (vw - r >= w + EDGE * 2) return { style: { left: vw - w - EDGE, top: ust, width: w }, cls: "", arrow: null };
-    if (l >= w + EDGE * 2) return { style: { left: EDGE, top: ust, width: w }, cls: "", arrow: null };
-    return t > vh - b
-      ? { style: { left: (vw - w) / 2, bottom: Math.min(vh - t + GAP, vh - 160), width: w }, cls: "", arrow: null }
-      : { style: { left: (vw - w) / 2, top: Math.min(b + GAP, vh - 160), width: w }, cls: "", arrow: null };
-  }
-  const hole = holes[0]!;
-  const cx = hole.x + hole.w / 2;
-  const left = Math.min(Math.max(cx - w / 2, EDGE), vw - w - EDGE);
-  const arrow = Math.min(Math.max(cx - left, 22), w - 22);
-  const below = hole.y + hole.h / 2 < vh / 2;
-  return below
-    ? { style: { left, top: Math.min(hole.y + hole.h + GAP, vh - 160), width: w }, cls: "below", arrow }
-    : { style: { left, bottom: Math.min(vh - hole.y + GAP, vh - 160), width: w }, cls: "above", arrow };
-}
-
 /** Kiracı düzeninde (yalnız hesap sahibi / depo yöneticisi): spotlight tur, adım listesi ve kutlama. */
 export function YolculukKatman({ slug, userId, dark: initialDark, initial = null }: { slug: string; userId: string; dark: boolean; initial?: JourneyData | null }) {
   const t = useTranslations("yolculuk");
@@ -194,7 +159,6 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     check();const id=window.setInterval(check,300);return()=>window.clearInterval(id);
   }, [pathname]);
   const [hole, setHole] = useState<readonly PerdeDelik[] | null>(null);
-  const [vp, setVp] = useState({ w: 1280, h: 800 });
   const [override, setOverride] = useState<StepKey | null>(null);
   const [okStep, setOkStep] = useState<StepKey | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -261,13 +225,6 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
       sessionStorage.setItem(`${sessionKey}.paused`, String(paused));
     } catch { /* isteğe bağlı */ }
   }, [shortTour, replay, paused, sessionLoaded, sessionKey]);
-  // Görünüm alanı (balon konumu hedefsiz de ekran içinde kalsın).
-  useEffect(() => {
-    const size = (): void => setVp((c) => (c.w === window.innerWidth && c.h === window.innerHeight ? c : { w: window.innerWidth, h: window.innerHeight }));
-    size();
-    window.addEventListener("resize", size);
-    return () => window.removeEventListener("resize", size);
-  }, []);
   useEffect(() => {
     const check = (): void => setGuideOpen(document.querySelector(".guide-dialog[open]") !== null);
     check();
@@ -369,7 +326,6 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
     // Çalışma kartı hiçbir alt çubuk yuvasını bulanıklaştırmaz.
     setYolSpot(null);
     const measure = (): void => {
-      setVp((c) => (c.w === window.innerWidth && c.h === window.innerHeight ? c : { w: window.innerWidth, h: window.innerHeight }));
       const pad = 8;
       const vh = window.innerHeight;
       const vw = window.innerWidth;
@@ -504,6 +460,19 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   // Delik yokken (hedef bu ekranda değil) perde de yoktur: kartın dışına dokunmak rehberi serbest bırakır (yüzen simge), alttaki gerçek
   // düğme (ör. Destek menüsü) kartın altında kalmaz.
   const kartRef = useRef<HTMLElement>(null);
+  // T-1130 (kullanıcı 29 Ekim: "rehber ilgili alanın üstünde kalmış"): kart yapılacak yeri örtmez — işlem rehberleriyle ortak yer kancası.
+  // Örtülmeyecekler: hedef (ve açtığı menü) ya da açık iş yüzeyi (form) + ekrandaki iş formları; açık yüzeyde alt çubuğun ana işlemi
+  // (KAYDET) de. Hepsi sığmazsa (telefonda uzun form) odaktaki alan (yoksa ilk alan, ör. "Depo adı") ve ana işlem.
+  const yerHedefleri = (): Element[] => {
+    if (focusSel === null) return [];
+    const el = gorunenler(focusSel, 1)[0];
+    if (el === undefined) return [];
+    const follow = stopTarget === null || focusSel !== targetSel ? [] : gorunenler(`[data-tour-follow="${stopTarget}"]`);
+    const forms = gorunenler(FORM_SEL).filter((f) => !el.contains(f) && !f.contains(el));
+    const ana = focusSel !== targetSel ? gorunenler('[data-tour="main"]', 1) : [];
+    return [el, ...follow, ...forms, ...ana];
+  };
+  const yer = useKartYeri(kartRef, coachOpen && !katli, `${cur ?? ""}:${stopTarget ?? ""}:${surface ?? ""}`, yerHedefleri);
   useEffect(() => {
     if (!coachOpen || katli || hole !== null) return undefined;
     const outside = (e: Event): void => {
@@ -555,7 +524,6 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
   // T-1036: kartta bütün adımlar görünür (kısa turda da): sayı ve şerit aynı listeden — atlananlar paydada yok.
   const active = steps.filter((s) => !s.skipped);
   const activeIdx = cur === null ? -1 : active.findIndex((s) => s.key === cur);
-  const pos = tipPosition(focusSel === null || katli ? null : hole, vp.w, vp.h);
   const shownStep = okStep ?? cur;
   const nextKey = data?.next ?? null;
   const contextText = surface === "warehouse-form" ? "warehouseForm" : surface === "bulk-form" ? "bulkForm" : surface === "team-add-qr" ? "teamMenu" : surface === "team-qr-new" ? "teamQr" : surface === "aktar-new" ? "importCheck" : surface === "document-state" && cur === "stock" ? "postStock" : null;
@@ -584,7 +552,7 @@ export function YolculukKatman({ slug, userId, dark: initialDark, initial = null
           ) : (
             <>
               {hole !== null && okStep === null ? <KalipPerdeKatman onClose={() => { feedback.minor(); setKatli(true); }} label={t("coach.free")} delik={hole} /> : null}
-              <section ref={kartRef} className="ycoach working" style={{ ...pos.style, zIndex: 42 }} role="region" aria-label={t("coach.aria")} data-testid="yol-kart">
+              <section ref={kartRef} className="ycoach working" style={{ ...yer, zIndex: 42 }} role="region" aria-label={t("coach.aria")} data-testid="yol-kart">
                 <div className="cth">
                   <span className="cstep" aria-live="polite">{upper(t("coach.step", { n: Math.max(activeIdx, 0) + 1, total: active.length, title: titleOf(shownStep) }))}</span>
                   <button type="button" className="cbtn" onClick={speak} aria-label={t("coach.speak")}>
