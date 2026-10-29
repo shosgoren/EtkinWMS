@@ -1,8 +1,9 @@
 # 3A. Veri Sözlüğü — Depo, Katalog, Stok ve Operasyon Tabloları
 
-> Kaynak: `packages/db/migrations/*.up.sql` (0010–0063) · main 8e2710d · 28 Ekim 2026. Her tablo **son hâliyle** yazıldı; sonradan gelen `ALTER TABLE` eklemeleri tabloya işlendi ve hangi migration'dan geldiği parantezle belirtildi.
+> Kaynak: `packages/db/migrations/*.up.sql` (0010–0065) · main 2022915 · 29 Ekim 2026 (önceki sürüm: main 8e2710d, 28 Ekim). Her tablo **son hâliyle** yazıldı; sonradan gelen `ALTER TABLE` eklemeleri tabloya işlendi ve hangi migration'dan geldiği parantezle belirtildi.
 > Bu dosya yalnız SQL'de olanı anlatır; tahmin yoktur. Kimlik, ekip, platform (yönetim paneli), destek ve entegrasyon tabloları ayrı dosyadadır (`03b-veri-sozlugu-kimlik-platform.md`).
 > 0058–0063 arasında bu dosyanın kapsamına giren tek değişiklik `items` tablosudur (0060 kaynak kart bilgisi, 0062 kaynak yaşam döngüsü); yeni depo/stok tablosu eklenmedi. 0058 (`setup_journeys`), 0059 (`integrations.pull_product_barcodes`), 0061 (`integration_oauth_apps`, `integration_oauth_attempts`) ve 0063 (`tenant_settings.voice_reply`) 3b'dedir.
+> 29 Ekim eki: **0064** (`parties`: kısa ad, ilçe, varsayılan teslimat yöntemi; T-1117) ve **0065** (`items` sabit alanları — temel birim, miktar hassasiyeti, takip modu — ürün hiç kullanılmadıysa değişebilir; tek "kullanılmış" tanımı `item_fixed_usage` işlevi + `items_guard_unused_fixed` tetikleyicisi; T-1129) bu dosyadadır. Yeni tablo eklenmedi.
 
 ## Okumadan önce: ortak kavramlar
 
@@ -247,6 +248,11 @@ Bir kullanıcının **yalnız belirli depoları** görmesi isteniyorsa hangi dep
   - `source_disposition` (0062): `NONE` = Bir şey yapılmadı · `PENDING` = Kaynakta kapandı ama üründe bekleyen stok işi var; yeni kullanıma kapalı, iş bitince arşivlenir · `ARCHIVED` = Etkin'de arşivlendi · `REMOVED` = Kaynakta silindi ve hiç kullanılmamış; Etkin'de arşivlendi (satır silinmez, kimlik ve QR'ler korunur).
   - Kurallar (CHECK `items_source_lifecycle_chk`): kaynak ACTIVE ise sonuç `NONE` olmak zorunda; `ARCHIVED`/`REMOVED` sonucu yalnız `status = ARCHIVED` ile; `REMOVED` yalnız kaynak `DELETED` iken.
 - **Koruma:** RLS ENABLE + FORCE. Kaynak yaşam döngüsü yalnız bilgi alanıdır; stok, defter ve ürün kimliği değişmez. Uygulama rolü kaynak alanlarını yalnız sütun izniyle günceller (0060, 0062). Stoğu olan ürünün takip modu tetikleyiciyle sessizce değiştirilemez (`items_guard_tracking_mode`).
+- **Sabit alanlar ilk kullanıma kadar değişir (0065, T-1129; A-87/A-107 güncellendi):** `base_unit_id`, `quantity_scale`, `tracking_mode` yalnız ürün **hiç kullanılmamışsa** değişir; uygulama rolüne bu üç sütunda UPDATE izni verildi. Karar veritabanındadır:
+  - `item_fixed_usage(tenant, ürün)` işlevi tek "kullanılmış" tanımıdır ve ilk bulduğu kullanım nedenini döndürür (boşsa kullanılmamış). Temkinli sayılır: stok boyutu (defter, bakiye, rezervasyon), belge satırı, mal kabul / iade / sipariş satırı, lot, seri, birim dönüşümü, birimli ya da miktarlı barkod (yalın barkod sayılmaz), depo görevi ve ilerlemesi, sayım satırı, reçete çıktısı/satırı, stok politikası, stok uyarısı, entegrasyon stok işareti. Bağlı sistemden (`external_refs` ITEM) gelen üründe temel birim her zaman kilitlidir (eşitleme birimi karşılaştırır).
+  - `items_guard_unused_fixed` tetikleyicisi (BEFORE UPDATE OF bu üç sütun, ENABLE ALWAYS) firma bağlamını zorunlu tutar, ürün satırını kilitler ve kullanılmış üründe değişikliği reddeder (uygulamada `IN_USE`). 0013'teki takip modu bekçisinin tablo geneli kilidi ürün satırı kilidiyle değişti.
+  - Değişiklik `item.updated` denetim kaydına eski → yeni değerle yazılır (I-12).
+  - Bilinen sınır: belge ve mal kabul satırının birimi/katsayısı katalogla veritabanında ayrıca doğrulanmıyor (B-209).
 
 ### unit_conversions
 Ürüne özel birim çevrimi (ör. 1 KOLI = 12 ADET).
@@ -370,15 +376,18 @@ Cari kartlar: müşteri ve tedarikçiler (0050).
 | tax_office | text | NULL olabilir, ≤100 | Vergi dairesi | — |
 | phone | text | NULL olabilir, ≤40, telefon karakterleri | Telefon | — |
 | email | text | NULL olabilir, e-posta biçimi | E-posta | — |
-| city | text | NULL olabilir, ≤100 | Şehir | — |
+| city | text | NULL olabilir, ≤100 | Şehir (il) | — |
+| district | text | NULL olabilir, 1–100, kontrol karakteri yok (0064) | İlçe | — |
 | address | text | NULL olabilir, ≤500 | Adres | — |
+| short_name | text | NULL olabilir, 1–100, kontrol karakteri yok (0064) | Kısa ad (listede ve aramada) | — |
+| delivery_mode | text | NULL olamaz, varsayılan `OWN`, CHECK (0064) | Bu cariye varsayılan teslimat yolu | — |
 | archived_at | timestamptz | NULL olabilir | Arşiv anı | — |
 | created_by | uuid | NULL olamaz, FK | Oluşturan | tenant_memberships.id |
 | created_at / updated_at | timestamptz | `updated_at` tetikleyiciyle güncellenir | Oluşma / son değişiklik | — |
 | version | integer | ≥1 | Eşzamanlı düzenleme sayacı | — |
 
-- **Durum kodları:** `CUSTOMER` = Müşteri · `SUPPLIER` = Tedarikçi · `BOTH` = İkisi de.
-- **Koruma:** RLS ENABLE + FORCE.
+- **Durum kodları:** `CUSTOMER` = Müşteri · `SUPPLIER` = Tedarikçi · `BOTH` = Müşteri ve tedarikçi (tuvalde "İkisi de"; hangi etiketin kalacağı karar bekliyor). `delivery_mode` (0064): `OWN` = Kendi personelim · `CARRIER` = Kargo firması.
+- **Koruma:** RLS ENABLE + FORCE. 0064 sütunlarına INSERT/UPDATE yalnız uygulama rolüne verildi (0050 kalıbı). Kısa ad, ilçe ve teslimat Excel içe/dışa aktarımı ve Paraşüt eşitlemesinde de taşınır (boş hücre mevcut değeri silmez); denetim özetine kısa ad ve teslimat yazılır.
 
 ---
 

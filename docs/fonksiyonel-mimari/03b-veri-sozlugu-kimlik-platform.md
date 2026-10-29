@@ -1,7 +1,7 @@
 # 3b. Veri Sözlüğü — Kimlik, Kiracı, Denetim ve Platform Tabloları
 
-> Durum: main 8e2710d · 28 Ekim 2026. Bu dosyada **47 tablo** anlatılır (`public` 34, `wms_platform` 11, `wms_health` 1, `wms_meta` 1).
-> Kaynak: `packages/db/migrations/0001…0063_*.up.sql` (her tablonun **son** hali; sonradan eklenen sütunlar dahil), migration defteri için `packages/db/src/migrate.ts`, kuyruk şeması için `packages/queue-adapter/src/index.ts`. Tahmin yoktur; burada olmayan bir alan veritabanında da yoktur.
+> Durum: main 2022915 · 29 Ekim 2026 (önceki sürüm main 8e2710d, 28 Ekim). 0064 ve 0065 bu dosyanın tablolarına dokunmaz (ikisi de 3a'dadır: `parties`, `items`). Bu dosyada **47 tablo** anlatılır (`public` 34, `wms_platform` 11, `wms_health` 1, `wms_meta` 1).
+> Kaynak: `packages/db/migrations/0001…0065_*.up.sql` (her tablonun **son** hali; sonradan eklenen sütunlar dahil), migration defteri için `packages/db/src/migrate.ts`, kuyruk şeması için `packages/queue-adapter/src/index.ts`. Tahmin yoktur; burada olmayan bir alan veritabanında da yoktur.
 > Stok, depo, katalog, belge, görev, sayım, üretim ve paket tabloları **3a** dosyasındadır. `0014` güvenilirlik tabloları (`processed_events`, `stock_consistency_*`) ve `0037` iş sinyalleri (`work_priorities`, `problem_reports`) de oradadır.
 
 ## Bu bölümü okumak için kısa sözlük

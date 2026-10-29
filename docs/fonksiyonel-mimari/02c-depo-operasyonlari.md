@@ -3,8 +3,8 @@
 Bu bölüm depoda **her gün yapılan işleri** anlatır: ana ekran, görevler, okutma (OKUT), yerleştirme, paket işlemleri, depolar arası transfer,
 sipariş–toplama–sevkiyat, sayım, üretim, iade, işlem kaydı (Kim ne yaptı?), raporlar ve sesli komut (Etkin).
 
-Kaynak: `main` dalındaki kod — **main 8e2710d · 28 Ekim 2026** (ilk sürüm 36f3a13 · 23 Ekim'den yazılmıştı; aradaki T-1029…T-1109
-değişiklikleri işlendi). Tahmin yok; her satırda dosya yolu verildi. Web yolları `apps/web/app/t/[slug]/` altına göredir. Mal kabul, stok listesi,
+Kaynak: `main` dalındaki kod — **main 2022915 · 29 Ekim 2026** (ilk sürüm 36f3a13 · 23 Ekim'den yazılmıştı; T-1029…T-1110 28 Ekim'de,
+T-1111…T-1131 29 Ekim'de işlendi). Tahmin yok; her satırda dosya yolu verildi. Web yolları `apps/web/app/t/[slug]/` altına göredir. Mal kabul, stok listesi,
 ürün kartı ve stok belgeleri (giriş/çıkış formu) **2B** bölümündedir; burada yalnız bağlantı noktası anılır.
 
 ## Etiketlerin anlamı
@@ -108,7 +108,7 @@ Paraşüt gibi dış kaynakta arşivlenen ya da silinen ürünün kartı `items.
 farkı ile önceden açılmış işler tamamlanabilir (`packages/domain/src/stock/reservation-reads.ts` `assertItemsActive`, `allowSourcePending`).
 Ret kodu `VALIDATION_FAILED` / `IN_USE`. STATE T-1068 kaydına göre bu davranış canlıdadır.
 
-### 0.6 Ortak kabuk — her ekranda aynı olan parçalar (T-1042, T-1053, T-1102)
+### 0.6 Ortak kabuk — her ekranda aynı olan parçalar (T-1042, T-1053, T-1102, T-1120…T-1131)
 
 Bütün kalıp ekranları (`kalip/ekran.tsx`) ve ana ekran panosu (`pano/pano-shell.tsx`) aynı üst çubuğu ve alt cam çubuğu çizer
 (masaüstü standardı `docs/design/STANDART.md` §1).
@@ -122,31 +122,41 @@ Bütün kalıp ekranları (`kalip/ekran.tsx`) ve ana ekran panosu (`pano/pano-sh
 | Destek / Taleplerim | Düğme → pencere | Talep yazılır / yanıtlanır | `submitSupportTicketAction`, `listMySupportTicketsAction`, `replySupportTicketAction`, `markSupportSeenAction` (`support-actions.ts`) | Destek talebi tabloları (0054, RLS + tetikleyici) | Not metni loga yazılmaz | [TAMAMLANDI] |
 | Ayarlar, Hesap (baş harf) | Bağlantı / menü | Dokunulur | Yönlendirme | — | Ayarlar yalnız `settings.manage` sahibinde | [TAMAMLANDI] |
 | Alt cam çubuk: Geri · Ana ekran · **OKUT** · Modüller · **Etkin** | Çubuk | Dokunulur | `kabuk/kabuk-bar.tsx`; Modüller listesi `kabuk/modules.ts` (rol/yetki/grup ekranları) | — | İstemci içi geçiş; yarım işte ortak çıkış koruması sorar | [TAMAMLANDI] |
-| Yüzen kısayol (şimşek) + "Düzenle" | Yüzen düğme + seçici | Kısayol seçilir | `kabuk/kisayol.tsx` (`KabukKisayol`) | — (seçim ve konum yalnız bu cihazda) | En çok 6; yalnız üyenin Modüller'deki modülleri (YAKINDA hariç) | [TAMAMLANDI] (T-1102, her ekranda) |
-| İşlem rehberi ("Nasıl kullanırım?") | Buzlu perde + delik + tek satır ipucu | İş yapıldıkça ilerler | `kalip/rehber.tsx` + `rehber-plan.ts` (Mal kabul, Yerleştir, Çıkış, Transfer, Sayım); aktarma rehberi `kalip/adim-rehber.tsx` | — (eylem çağırmaz; durum yalnız cihazda) | Algılanamayan adımda küçük ok; perdeye dokununca yüzen "Kaldığın yerden" | [TAMAMLANDI] (T-1095, T-1100, T-1105) |
+| Yüzen kısayol (şimşek) halkası: kısayollar + **Rehber** + **Düzenle** | Yüzen düğme + halka | Kısayol seçilir; Rehber ekranın rehberini başlatır | `kabuk/kisayol.tsx` (`KabukKisayol`), yerleşim `kabuk/kisayol-yer.ts` (`halkaYeri`, `halkaOlculeri`) | — (seçim ve konum yalnız bu cihazda) | En çok 6; yalnız üyenin Modüller'deki modülleri (YAKINDA hariç). **Rehber** her ekranda: ekranın işlem rehberi varsa başlar, yoksa rehber seçici (T-1120). Telefonda dokunuşla açılıp hemen kapanmaz — halka açıkken şimşek perdenin üstünde (T-1123). Halka görünür alana (`visualViewport`, güvenli kenarlar) sığar: yer çok olan yana açılır, dar ekranda iki sütun, kısayollar halkada kayar, Rehber + Düzenle alt şeritte hep görünür; klavyeyle açılır, Esc odağı şimşeğe döndürür (T-1131). Pencere/perde açıkken şimşek gizli (T-1111) | [TAMAMLANDI] (T-1102, T-1120, T-1123, T-1131) |
+| İşlem rehberi ("Nasıl kullanırım?") | Buzlu perde + delik + tek satır ipucu | İş yapıldıkça ilerler | `kalip/rehber.tsx` + `rehber-plan.ts` (Mal kabul, Yerleştir, Çıkış, Transfer, Sayım); aktarma rehberi `kalip/adim-rehber.tsx`; ortak durum `kalip/rehber-durum.ts`; odak `kalip/rehber-hedef.ts`; kart yeri `kalip/kart-yeri.ts` + `useKartYeri` | — (eylem çağırmaz; durum yalnız cihazda, `etkinwms.rehber.v2:<kişi>:<alan>`) | **Sırayla odak** (T-1124): adım başında hedef görünür alana gelir, ilk boş alan (yoksa düğme) klavye odağını alır; iş bitince (ekranın "bitti" işareti) kendiliğinden ilerler; kullanıcı serbest yazı alanında yazarken ilerlemez; hedef 1,5 sn çıkmazsa "Ekranı aç". Başka bölüme geçince kapanmaz, **katlı simge** olur: Kaldığın yerden devam · Baştan · Başka bölüm ("Kaldığın yer: n/N") · Kapat; rehberler birbirinin adımını silmez; kurulum yolculuğu kapatılmaz, katlanır. **Kart yapılacak yeri örtmez** (T-1130): üç rehber (kurulum, işlem, aktarma) tek ortak yer hesabını kullanır — telefonda üst/alt, masaüstünde dört köşe; görünen alan (`visualViewport`, Safari çubukları, klavye) ve alt çubuk hesapta; gerekirse sayfa en çok iki kez kaydırılır | [TAMAMLANDI] (T-1095, T-1100, T-1105, T-1124, T-1130) |
 | Rehber hoparlörü | Düğme | Dokunulur | `kalip/sesli-oku.ts` (`useSesliOku`) → `etkinSoyleAction` (`etkin/actions.ts`) → iç ses servisi `/tts` | — (metin saklanmaz) | `stock.view`; kişi başına dakikada 30; ≤ 400 karakter; servis yoksa cihaz sesi; "Sessiz" tercihi kapatır | [TAMAMLANDI] kodda (T-1106); VPS ses servisi kurulumu B-130 |
 
-> Not: rehberin "görüldü" bilgisi henüz sunucuda değil, cihazda tutulur (B-75 kalanı).
+> Not: rehberin "görüldü" ve "kaldığın yer" bilgisi henüz sunucuda değil, cihazda tutulur (B-75 kalanı). Saha akışlarında (kabul,
+> yerleştirme, sayım) kendiliğinden ilerleme uçtan uca e2e ile sınanmadı (B-208); kart yeri ve halka yalnız Chromium'da sınandı, gerçek
+> iPhone Safari (klavye açıkken) kullanıcıdan bekleniyor (B-197, B-210).
 
 ---
 
 ## 1. Modül: Ana ekran (Pano / Görevlerim / Genel bakış)
 
-- **Modül Durumu:** [TAMAMLANDI] mevcut panolar için; **onaylı masaüstü tuvalindeki yeni yönetici ana ekranı [PLANLANDI]** (aşağıda "Tuvalle fark").
-  "Tüm raporlar" kartı için bkz. Modül 14 [PLANLANDI]. Canlı: UNKNOWN.
+- **Modül Durumu:** [TAMAMLANDI] — hesap sahibi ve depo yöneticisinin ana ekranı 28 Ekim'de onaylı tuvale geçti (T-1115), 29 Ekim'de
+  "Düzenle"de iş ekleme / kaldırma geldi (T-1128). "Tüm raporlar" için bkz. Modül 14 [PLANLANDI]. Canlı: UNKNOWN.
 - **Ekran:** `/t/<firma>` — `page.tsx`. Hangi ana ekranın çizileceğine sunucu rol ve `view` çerezine bakarak karar verir.
 - **Ekranın Amacı ve İşlevi:** Girişten sonra açılan ilk ekran **role göre** değişir. Her ana ekranda selam aynıdır: "Merhaba <ad>"
   (masaüstü/tablette üst çubukta firma · rol ile, telefonda içerikte; T-1045, T-1050). "Bugün yaptıkların" listesi ana ekrandan kalktı;
   yerini üst çubuktaki **Son işlemler** aldı (Bölüm 0.6, T-1053).
-  - **Hesap sahibi (TENANT_ADMIN) → Depo panosu** (`pano/pano-board.tsx`, veri `getBoard` — `packages/domain/src/operations/board.ts`):
-    Raporlar kartları (Kritik stok, Bekleyen sipariş, Devir hızı, Satın alma, Sayım farkı, Tüm raporlar), "Dikkat isteyenler" (kritik stok,
-    bekleyen sipariş, onay bekleyen sayım, sahadan sorun), "Satın alınması gerekenler", "Bekleyen siparişler", "Stok devir hızı"
-    (hızlı / yavaş / hareketsiz ürün), "Bugün depoda" sayaçları (giriş, çıkış, transfer, sayım).
-  - **Depo yöneticisi (WAREHOUSE_MANAGER) → Depom panosu** (aynı bileşen, yönetici görünümü): bugünkü iş halkası (biten / atanan /
-    atanmayan görev), hızlı kutular (Planla → `/tasks?status=OPEN`, Etiket bas → `/labels`, Raporlar → `/stock`), "Atanmayı bekleyen işler"
-    (kişi seçerek **Ata**), "Ekip şu an" (OKUTUYOR / GÖREVDE / BOŞTA / BUGÜN GİRİŞ YOK), "Bugün depoda" sayaçları.
-  - İki panoda da üst çubukta **zil** (kritik stok + açık sorun sayısı; sahipte uyarılar bölümüne, yöneticide `/tasks`'a götürür) ve kurulum
-    bitmemişse "Merhaba" satırının sağında **Rehber** halka simgesi (kurulum yolculuğu `getSetupJourney`, T-1006/T-1100) vardır.
+  - **Hesap sahibi (TENANT_ADMIN) ve depo yöneticisi (WAREHOUSE_MANAGER) → Yönetici ana ekranı** (`pano/pano-board.tsx`, onaylı tuval
+    `docs/design/source/StandartAnaEkran.dc.html` "1 · Ana ekran", "1b/1c Düzenle"; veri `getBoard` — `packages/domain/src/operations/board.ts`):
+    - **Bekleyen işler** üç kutusu: Sevkiyat bekliyor (açık sipariş sayısı; alt yazı en eski siparişin günü — siparişte sevk tarihi
+      olmadığından "bugün çıkacak" gösterilemiyor) → Sevkiyat; Sayım onay bekliyor → Sayımlar (`document.approve`) ya da sayım görevleri;
+      Ürün kritik stokta → Stok. Okunamazsa "Veri okunamadı" (uydurma sayı yok).
+    - **İşler** ızgarası: varsayılan sekiz kutu (Depoya mal geldi, Sevkiyat, Stok durumu, Ürünler, Cariler, Depolar ve raflar, Excel'den
+      aktar, Kim ne yaptı?). Kutular Modüller sayfasının yetki süzgecinden geçer (rol, özel grup yetkisi, grubun görünür ekranları);
+      yetkisiz kutu gizli.
+    - **Düzenle**: kutu sürüklenir ya da öne / sona oklarıyla taşınır, ✕ ile kaldırılır; sondaki **İş ekle** kutusu ortak aramalı seçim
+      sayfasını açar ve üyenin açabildiği **her iş** eklenebilir (tuval kutuları + Modüller'deki ekranı olan modüller; modül kutusu
+      Modüller'deki renk, ikon ve adla). Telefonda denetimler adın altında ayrı satırdadır (44 px), çok işte yalnız ızgara kayar.
+      "Bitti" seçimi ve sırayı **bu cihazda** saklar (`etkin-ana-isler:<firma>`, `{ secim: [...] }`; eski sıra kaydı okunur, izni kalmayan
+      kutu sessizce düşer). Seçimin sunucuda kişi ayarı olarak tutulması ayrı iştir (B-205, STANDART §8 adım 8).
+    - Kurulum bitmemişse "Merhaba" satırının sağında **Rehber** halka simgesi (kurulum yolculuğu `getSetupJourney`, T-1006/T-1100).
+    - Eski Pano bölümleri **kalktı** (tuval kararı, T-1115): raporlar şeridi, dikkat isteyenler, satın alınması gerekenler, bekleyen
+      siparişler, devir hızı, planla/etiket/raporlar kutuları, atanmayı bekleyen işler (atama Görevler ekranında sürer), ekip şu an, bugün
+      depoda, iş halkası, bildirim zili. Ayrıntılar hedef ekranlardadır (Stok, Sevkiyat, Sayım, Görevler).
   - **Toplayıcı / Sayımcı → Görevlerim / Sayımlarım** (`pano/pano-home.tsx`, veri `getWorkSummary` — `operations/work-summary.ts`):
     Giriş, Çıkış, Transfer, Üretim, Sayım bölümlerinde açık iş + kalem sayısı, ACİL rozeti, vardiya satırı, SORUN kartı.
   - **Diğer roller → Görevlerim (Bakış)** (`easy-operations.tsx`, aynı `getWorkSummary`; bölüm döşemeleri ilgili iş ekranına gider).
@@ -157,28 +167,23 @@ Bütün kalıp ekranları (`kalip/ekran.tsx`) ve ana ekran panosu (`pano/pano-sh
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| İş halkası ("Bugün n iş · atandı · atanmadı") — yalnız Depom | Grafik halka | Görüntülenir | `getBoard` (`operations/board.ts`) | Okur: `warehouse_tasks.status`, `completed_at` | Yalnız `stock.view`; yalnız kişinin depo kapsamı; değerler gerçek tablolardan (uydurma sayı yok) | [TAMAMLANDI] |
-| "Kritik stok" / "Satın alma" kartı + "Satın alınması gerekenler" | Kart (bağlantı) | Dokunulur → `/stock`; satırdaki "+n" → ürün kartı | `getBoard` | Okur: `item_stock_policies.min_quantity/max_quantity`, `stock_balances.quantity` | Kritik = eldeki < min × 0,35; öneri = max − eldeki; satın alma listesi özelliği yok (yalnız bağlantı) | [TAMAMLANDI] |
-| "Bekleyen sipariş" kartı + "Bekleyen siparişler" | Kart | Dokunulur → `/shipping` | `getBoard` | Okur: `sales_orders.status='OPEN'`, `sales_order_lines`, `work_priorities` | Siparişte teslim tarihi kolonu yok → "bekleme günü" = oluşturulmadan bu yana | [TAMAMLANDI] |
-| "Sayım farkı · onay bekliyor" | Kart | Dokunulur → `/tasks?kind=COUNT` | `getBoard` | Okur: `count_sessions.status='SUBMITTED'` | — | [TAMAMLANDI] |
-| "Devir hızı" / "Stok devir hızı" | Kart | Dokunulur → `/stock` | `getBoard` | Okur: `stock_ledger` (son 90 gün çıkış) | Hareketsiz ürün = stoklu ama 90 gün hareketsiz | [TAMAMLANDI] |
-| "Sahadan sorun" uyarısı | Kart | Dokunulur → `/tasks` | `getBoard` | Okur: `problem_reports` (açık sayısı, son sebep + dakika) | Sorunu kapatma düğmesi yok → bkz. Gap | [TAMAMLANDI] |
-| "Ekip şu an" satırları — yalnız Depom | Liste | Görüntülenir | `getBoard` | Okur: `tenant_memberships`, `warehouse_task_progress`, `audit_logs` | Kişisel veri en az (yalnız durum) | [TAMAMLANDI] |
-| "Atanmayı bekleyen işler" → kişi seçimi ("Ata") — yalnız Depom | Liste + kişi düğmeleri | Kişi seçilir | `assignTaskAction` (`tasks/actions.ts`) → `assignTask` (`operations/tasks.ts`); `pano/assign-who.tsx` | Yazar: `warehouse_tasks.status='ASSIGNED'`, `assigned_membership_id`, `version` + `audit_logs` | `document.approve`; kişi listesi `listMembers` (ACTIVE, o görev türünü yapma izni olan, en çok 3 öneri); sürüm kontrolü | [TAMAMLANDI] |
-| "Bugün depoda" sayaçları | Sayaç | Görüntülenir | `getWorkSummary` | Okur: giriş/çıkış biten kalem, bugünkü transfer, açık sayım | Gün sınırı `tenant_settings.time_zone` | [TAMAMLANDI] |
-| Zil (üst çubuk) | Düğme | Dokunulur | `getBoard` | Okur: kritik stok + açık sorun sayısı | Yalnız yönetici panolarında; ayrı bildirim kutusu yok | [TAMAMLANDI] |
-| Rehber halka simgesi | Simge | Dokunulur → kurulum yolculuğu | `getSetupJourney` (`packages/domain/src/onboarding/journey`) | Okur: kurulum durumu | Kurulum bitince görünmez; okunamazsa çizilmez, pano düşmez | [TAMAMLANDI] (T-1100) |
+| Bekleyen işler: "Sevkiyat bekliyor" | Sayı kutusu (bağlantı) | Dokunulur → `/shipping` | `getBoard` → `bekleyenler` (`pano/ana-ekran.ts`) | Okur: `sales_orders.status='OPEN'`, `sales_order_lines` | Alt yazı en eski siparişin günü; siparişte sevk tarihi kolonu yok (B-205, G-41) | [TAMAMLANDI] (T-1115) |
+| Bekleyen işler: "Sayım onay bekliyor" | Sayı kutusu | Dokunulur → Sayımlar ya da `/tasks?kind=COUNT` | `getBoard` | Okur: `count_sessions.status='SUBMITTED'` | Hedef `document.approve` iznine göre; kutuda raf/koridor bilgisi yok (B-205) | [TAMAMLANDI] (T-1115) |
+| Bekleyen işler: "Ürün kritik stokta" | Sayı kutusu | Dokunulur → `/stock` | `getBoard` | Okur: `item_stock_policies.min_quantity`, `stock_balances.quantity` | Kritik = eldeki < min × 0,35; minimum giren ekran yok (G-20) | [TAMAMLANDI] (T-1115) |
+| İşler ızgarası (varsayılan 8 kutu) | Kutu ızgarası | Dokunulur → ilgili ekran | `anaIsler` (`pano/ana-ekran.ts`) + `kabukModules` (`kabuk/modules.ts`) | — | Modüller süzgeci; Depoya mal geldi `stock.post` + ekran `receive`, Excel'den aktar `data.import`; yetkisiz kutu gizli | [TAMAMLANDI] (T-1115) |
+| Düzenle: sırala (sürükle / oklar), kaldır (✕) | Düzenleme kipi | Sürüklenir / dokunulur, "Bitti" | `pano/ana-isler.tsx` + saf işlevler `pano/ana-sira.ts` | — (yalnız bu cihaz, `localStorage`; depolama yoksa oturumda) | Yalnız görünürlük; hedef sayfa erişimi ayrıca denetlenir; tamam sesi | [TAMAMLANDI] (T-1115, T-1128) |
+| Düzenle: **İş ekle** | Ortak aramalı seçim sayfası (`KalipSecimSayfasi`) | İş seçilir → sona eklenir | `anaIsAdaylari` (sunucuda yetkiyle süzülmüş adaylar) | — | Izgarada olmayan izinli işler (ikon + ad + alt yazı); YAKINDA, Ana ekran ve görünüm geçişi hariç; ızgara boşsa Düzenle dışında da görünür | [TAMAMLANDI] (T-1128) |
+| Rehber halka simgesi | Simge | Dokunulur → kurulum yolculuğu | `getSetupJourney` (`packages/domain/src/onboarding/journey`) | Okur: kurulum durumu | Kurulum bitince görünmez; okunamazsa çizilmez, ana ekran düşmez | [TAMAMLANDI] (T-1100) |
 | Görevlerim bölüm kartları (Giriş/Çıkış/Transfer/Üretim/Sayım) | Kart | Dokunulur → ilgili saha ekranı | `getWorkSummary` (`operations/work-summary.ts`) | Okur: `inbound_receipts`, `sales_orders`, `documents`, `stock_document_links`, `warehouse_tasks`, `count_session_lines` | Gün sınırı firmanın saat dilimine göre (`tenant_settings.time_zone`) | [TAMAMLANDI] |
 | ACİL rozeti | Rozet | Görüntülenir | `getWorkSummary` | Okur: `work_priorities.urgent` | Yazan ekran yok → bkz. Gap | [GELİŞTİRİLİYOR] |
 | Vardiya satırı | Metin | Görüntülenir | `getWorkSummary` | Okur: `tenant_settings.shift_start/shift_end` (varsayılan 08:00–17:00) | Değiştiren ekran yok → bkz. Gap | [GELİŞTİRİLİYOR] |
 | "SORUN" kartı / üst çubuk bayrağı → Sorun bildir | Alt sayfa (form, `problem-sheet.tsx`) | Sebep seçilir + not → Gönder | `reportProblemAction` (`work-actions.ts`) → `reportProblem` (`operations/work-signals.ts`) | Yazar: `problem_reports` (`reason`, `note`, isteğe bağlı konu `subject_kind/subject_id`, `status='OPEN'`, `reported_by`) + `audit_logs` | `stock.post` veya `document.create` gerekir (salt okur bildiremez); sebep listesi: `DAMAGED`, `MISSING`, `WRONG_ITEM`, `NO_LABEL`, `LOCATION`, `OTHER` | [TAMAMLANDI] |
-| Sorunu "Çözüldü" yapma | — | — | `resolveProblemAction` → `resolveProblem` (kodda var) | Yazacağı: `problem_reports.status='RESOLVED'`, `resolved_by/at` | `document.approve` | [GELİŞTİRİLİYOR] (ekranda düğmesi yok) |
+| Sorunu "Çözüldü" yapma | — | — | `resolveProblemAction` → `resolveProblem` (kodda var) | Yazacağı: `problem_reports.status='RESOLVED'`, `resolved_by/at` | `document.approve`; yönetici ana ekranında sorun kutusu artık yok, sorunlar Görevler'de | [GELİŞTİRİLİYOR] (ekranda düğmesi yok) |
 | Genel bakış: "Şimdi" satırları | Liste (bağlantı) | Dokunulur → `/field/receive?receipt=…` ya da `/field/putaway?task=…` | `listInboundReceipts` (OPEN, ≤ 50) + `listMyTasks` (PUTAWAY) | Okur: `inbound_receipts`, `warehouse_tasks` | Yalnız `stock.post` sahibine; hata ana ekranı düşürmez (mesaj + kod) | [TAMAMLANDI] |
 
-- **Tuvalle fark (yönetici ana ekranı; 28 Ekim incelemesi):** onaylı masaüstü standardı tuvali (`docs/design/source/Standart*.dc.html`,
-  26 Ekim) yönetici için **3 bekleyen iş kutusu + 8'li "İşler" ızgarası + sürükle-bırak düzen** gösterir. Kodda hâlâ eski Pano panosu
-  (`pano/pano-board.tsx`) çizilir. Veri yeterli (yeni tablo gerekmez); iş yalnız arayüz, orta boy. STATE T-1045 kaydı da "işleri sürükle-bırak
-  düzenleme, sayılı bekleyen iş kutucukları" maddesini kalan olarak yazar. → [PLANLANDI]
+- **Tuvalle fark (29 Ekim):** 28 Ekim'de [PLANLANDI] yazan yönetici ana ekranı T-1115 + T-1128 ile kodda. Kalan veri eksikleri (B-205):
+  siparişte sevk tarihi (kutu "bugün çıkacak" yerine en eski sipariş gününü söyler), sayım onayı kutusunda raf/koridor bilgisi, İşler
+  seçiminin sunucuda kişi ayarı olarak saklanması (bugün yalnız cihaz). Ayrıntı `docs/design/DESIGN-PARITY.md` §8.
 
 - **İş Akış Şeması:**
 
@@ -187,13 +192,12 @@ flowchart TD
   G[Giriş yapıldı] --> V{view=cockpit çerezi?}
   V -- Evet --> K[Genel bakış: Şimdi + İşler]
   V -- Hayır --> R{Rol}
-  R -- Hesap sahibi --> P[Depo panosu: getBoard + getWorkSummary]
-  R -- Depo yöneticisi --> M[Depom: halka, Atanacak işler, Ekip]
+  R -- "Hesap sahibi / Depo yöneticisi" --> P["Yönetici ana ekranı: getBoard<br/>Bekleyen işler + İşler"]
   R -- Toplayıcı --> H[Görevlerim: getWorkSummary]
   R -- Sayımcı --> S[Sayımlarım: getWorkSummary yalnız sayım]
   R -- Diğer --> E[Görevlerim Bakış: getWorkSummary]
-  P --> A1[Kart dokun: Stok / Sevkiyat / Görevler]
-  M --> A2[Ata: assignTask]
+  P --> A1[Bekleyen kutusu: Sevkiyat / Sayım / Stok]
+  P --> A2["Düzenle: sırala, kaldır, İş ekle<br/>(seçim bu cihazda)"]
   H --> B1[Bölüme dokun: saha ekranı açılır]
   H --> B2[SORUN: reportProblem]
 ```
@@ -245,6 +249,11 @@ Görevin kaynağı (`source_kind`): `INBOUND_RECEIPT` mal kabul, `SALES_ORDER` s
 
 - **Modül Durumu:** [TAMAMLANDI] — Canlı: STATE 21 Ekim kaydına göre T-446 (hızlı OKUT) canlıda; gerçek iPhone kamerası kullanıcı denemesi bekler.
 - **Ekran:** `/t/<firma>/field` — `field/page.tsx`, `field/okut-view.tsx`, `field/saha-shell.tsx`; alt çubuktaki **OKUT** düğmesi buraya açar.
+- **Görünüm (28 Ekim, T-1122):** bütün saha ekranları (kabul, yerleştirme, sayım, toplama, sevk, paket, Görevlerim) Saha kalıbındadır
+  (`docs/design/source/KalipSaha.dc.html`, üretilmiş `design/kalip-saha.css`): eski Tailwind düzeni, kütüphane simgeleri ve Banner kalktı;
+  ortak parçalar `SahaMesaj` (kilit / bilgi / boş durum), `SahaHata` (tam ekran kırmızı uyarı dili), `SahaAyrinti`, kalıp `ScanPanel`,
+  kamera katmanı; Görevlerim bildirimi tek ortak `KalipBildirim` bandı (T-1119). Davranış, sesler, tekrar güvenliği ve test kimlikleri aynı;
+  dokunma hedefi ≥ 48 px (birincil 56 px).
 - **Ekranın Amacı ve İşlevi:** Sahada çalışan kişi hiçbir menüye girmeden **kodu okutur** (kamera, NFC, el terminali ya da elle yazma);
   sistem kodun ne olduğunu bulur ve **doğru işe kendiliğinden geçer**. Okuttuğu şey ürünse bekleyen kabule, raf ise yerleştirmeye veya o raftaki
   sayım/toplama görevine, paket QR'ı ise paket ekranına gider.
@@ -639,8 +648,13 @@ sequenceDiagram
 - **Modül Durumu:** [GELİŞTİRİLİYOR] — `main` kodunda: bas-konuş, konuşmayı yazıya çevirme, kural tabanlı niyet, "Anladım" onay kartı
   (T-1002, PR #158), iPhone bas-konuş düzeltmeleri (T-1103, PR #235), **doğal Türkçe ses** (EMA Lightning `/tts`, T-1106, PR #241) ve
   **firma "Etkin sesli yanıt" ayarı** (T-1109, PR #243, migration 0063). Kalan: VPS'te ses servisinin kurulumu (B-130, kullanıcı root adımı),
-  Etkin yetki grubu izni (B-131), canlı yazı / arama mikrofonu (B-132). **Doğal komutlar (T-1110) 28 Ekim'de `main`'e birleşti (PR 245, `0c199aa`; canlı: UNKNOWN)** — bu
-  belgede anlatılmaz. Doğal dil için yerel küçük dil modeli kararı kullanıcıda bekliyor. Ses servisi çalışmıyorsa Etkin "şu an kullanılamıyor"
+  Etkin yetki grubu izni (B-131), canlı yazı / arama mikrofonu (B-132). **Doğal komutlar (T-1110, PR 245)**: "bekleyen işim var mı / işlerim /
+  görevim var mı" kişinin görevlerini söyler; ekli ekran adları ("ürünleri aç", "kullanıcı ayarlarına git", "Ayarlar") ekran sözlüğüyle
+  (kök öneki + eş anlamlı + alt sekme, fiil başta/sonda) anlaşılır. **Yönlendirme (T-1118):** "entegrasyon / bağlantı / Paraşüt" yeni
+  Entegrasyonlar ekranını (`/integrations`), "excel" Ayarlar › Bağlantılar (Excel aktarımı) ekranını açar; yetki yine Ayarlar modülünden.
+  **Ses servisi belleği** (T-1114, T-1125, T-1126): imajda iş parçacığı ve bellek arenası sabit, şeffaf büyük sayfalar süreçte kapalı
+  (THP), CTranslate2 arka ucu her işlemcide aynı (`CT2_USE_MKL=0`); CI bellek sınırı 1100 MiB değişmedi, canlı kapsayıcı sınırı 1280 MiB.
+  Canlıda bellek izlemesi ve gerçek Intel sunucuda ölçüm yok. Serbest doğal dil için sunucuda yerel küçük dil modeli kararı kullanıcıda (B-204). Ses servisi çalışmıyorsa Etkin "şu an kullanılamıyor"
   der, rehber hoparlörü cihaz sesine düşer. Canlı: UNKNOWN (gerçek iPhone denemesi kayıtlı değil).
 - **Ekran:** Alt çubuktaki **Etkin** düğmesi (`kabuk/etkin.tsx`, durum yazısını okunur cümleye çeviren `kabuk/okunacak.ts`); sunucu
   `etkinAnlaAction` ve `etkinSoyleAction` (`etkin/actions.ts`, ses sınırları `apps/web/lib/voice.ts`); niyet ayrıştırma ve eşleştirme
@@ -713,7 +727,7 @@ sequenceDiagram
 
 | Konu | Tuval | Kod | Boyut |
 | :--- | :--- | :--- | :--- |
-| Yönetici ana ekranı | `Standart*.dc.html` (26 Ekim onaylı): 3 bekleyen iş kutusu + 8'li İşler ızgarası + sürükle-bırak düzen | Eski Pano panosu (`pano/pano-board.tsx`) | Yalnız arayüz, orta; veri var |
+| Yönetici ana ekranı | `StandartAnaEkran.dc.html` | **29 Ekim: kodda** (T-1115, T-1128) | Kalan veri işi: siparişte sevk tarihi, sayım kutusunda raf/koridor, İşler seçimi sunucuda (B-205) |
 
 ### 16.2 Veritabanında olup ekranda görünmeyen
 
@@ -724,6 +738,7 @@ sequenceDiagram
   uyarıyı doğrudan `item_stock_policies` + `stock_balances`'tan hesaplıyor. Min/max değerini (`item_stock_policies`) giren ekran 2B'de ayrıca kontrol edilmeli.
 - `tenant_settings.count_abandon_hours` (terk edilmiş sayım süresi): worker kullanıyor; kullanıcıya gösterildiği bu belgede doğrulanmadı.
 - İşlem rehberlerinin "görüldü" bilgisi sunucuda yok; yalnız cihazda tutulur (B-75 kalanı).
+- Ana ekran İşler seçimi ve yüzen kısayol seçimi yalnız cihazda (`localStorage`); başka cihazda varsayılan görünür (B-205, B-174).
 
 ### 16.3 Eksik kural / kısıt
 
@@ -748,7 +763,7 @@ sequenceDiagram
 
 1. B-130: VPS ses servisi kurulumu (kullanıcı root adımı) — Etkin, doğal ses ve sesli yanıt kodu `main`'de hazır; kurulmadıkça çalışmaz.
    T-1110 (doğal komutlar) birleşti; yerel dil modeli kararı kullanıcıda.
-2. Yönetici ana ekranını onaylı tuvale getir (3 bekleyen iş kutusu, 8'li İşler, sürükle-bırak) — veri var, yalnız arayüz (28 Ekim önerilen sıranın 2. maddesi).
+2. ~~Yönetici ana ekranını onaylı tuvale getir~~ — 29 Ekim'de kodda (T-1115, T-1128). Sırada: siparişe sevk tarihi ve kişi tercihlerinin sunucuya taşınması (B-205).
 3. B-50: paket akışını aç (ayar + normal girişe bağlama) — kod hazır.
 4. Sorun kapatma + ACİL + vardiya ayarı ekranları — arka uç hazır, küçük iş; ana ekrandaki rozetler gerçekten çalışır hâle gelir.
 5. B-96: toplamada "ürün yok" ve eksikten doğan sayımı sahadan başlatma.
