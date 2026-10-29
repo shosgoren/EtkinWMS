@@ -3,7 +3,7 @@
 // T-1130: kartın yeri üç rehberde (kurulum yolculuğu dahil) tek ortak kancadan: `useKartYeri` (hesap `kart-yeri.ts`, saf).
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { hedefKutusu, type PerdeDelik } from "./perde.tsx";
-import { kartYeriHesapla, type KartHedef } from "./kart-yeri.ts";
+import { kartYeriHesapla, kayanAtaSirasi, sabitZincir, type KartHedef } from "./kart-yeri.ts";
 
 const ODAK = 'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [role="option"], [tabindex]:not([tabindex="-1"])';
 const KONTROL = 'input, textarea, select, button, a[href], [role="option"], [contenteditable="true"]';
@@ -172,10 +172,22 @@ export function useRehberHedef(target: string | null, acik: boolean, adim: strin
   return { delik, yok };
 }
 
-/** Öğe ya da bir atası `position: fixed` mı (alt çubuk, üst çubuk): sayfa kaydırılınca yer değiştirmez. */
+/** Öğeden köke ata zinciri (konum + dikey taşma); `sabitZincir`/`kaydirici` için. */
+function zincir(el: Element): { el: Element; konum: string; tasma: string }[] {
+  const out: { el: Element; konum: string; tasma: string }[] = [];
+  for (let e: Element | null = el; e !== null; e = e.parentElement) {
+    const s = getComputedStyle(e);
+    out.push({ el: e, konum: s.position, tasma: s.overflowY });
+  }
+  return out;
+}
+
+/**
+ * Öğe kaydırmayla yer değiştirmez mi (alt çubuk, üst çubuk)? T-1130 (Codex P2): sabit (`position: fixed`) bir ataya ulaşmadan önce kendi
+ * içinde kayan bir kap varsa öğe SABİT DEĞİLDİR — kalıp form ekranında dış kabuk `.dzf` sabittir ama alanlar kayan `.inner` içindedir.
+ */
 function sabitMi(el: Element): boolean {
-  for (let e: Element | null = el; e !== null; e = e.parentElement) if (getComputedStyle(e).position === "fixed") return true;
-  return false;
+  return sabitZincir(zincir(el));
 }
 
 function kartHedefi(el: Element): KartHedef {
@@ -183,13 +195,12 @@ function kartHedefi(el: Element): KartHedef {
   return { x: r.left, y: r.top, w: r.width, h: r.height, sabit: sabitMi(el) };
 }
 
-/** Kaydırılacak kap: hedefin en yakın kaydırılabilir atası, yoksa sayfa. */
+/** Kaydırılacak kap: hedefin en yakın kayan atası (ör. kalıp ekranının `.inner`'ı), yoksa sayfa. */
 function kaydirici(el: Element | null): Element {
-  for (let e = el?.parentElement ?? null; e !== null && e !== document.body && e !== document.documentElement; e = e.parentElement) {
-    const s = getComputedStyle(e);
-    if (/(auto|scroll|overlay)/.test(s.overflowY) && e.scrollHeight > e.clientHeight + 1) return e;
-  }
-  return document.scrollingElement ?? document.documentElement;
+  if (el === null) return document.scrollingElement ?? document.documentElement;
+  const z = zincir(el).slice(1).filter((a) => a.el !== document.body && a.el !== document.documentElement);
+  const i = kayanAtaSirasi(z.map((a) => ({ ...a, tasabilir: a.el.scrollHeight > a.el.clientHeight + 1 })));
+  return i === null ? (document.scrollingElement ?? document.documentElement) : z[i]!.el;
 }
 
 /** Dar küme (bütün hedef sığmıyorsa): hedefteki odaklı alan (yoksa ilk alan) etiketiyle + sabit hedefler (alt çubuğun ana işlemi). */
@@ -251,6 +262,7 @@ export function useKartYeri(kart: RefObject<HTMLElement | null>, acik: boolean, 
       const kap = kaydirici(els.find((e) => !sabitMi(e)) ?? null);
       const kaydirma = izinli ? { min: -kap.scrollTop, max: Math.max(0, kap.scrollHeight - kap.clientHeight - kap.scrollTop) } : { min: 0, max: 0 };
       const r = el.getBoundingClientRect();
+      const kapKutu = kap === document.scrollingElement || kap === document.documentElement ? null : kap.getBoundingClientRect();
       const s = kartYeriHesapla({
         vw,
         gorunur: { ust: g.ust, yukseklik: g.yukseklik },
@@ -260,6 +272,7 @@ export function useKartYeri(kart: RefObject<HTMLElement | null>, acik: boolean, 
         kart: { w: r.width, h: r.height },
         telefon: vw < 700,
         kaydirma,
+        ...(kapKutu === null ? {} : { kap: { ust: kapKutu.top, alt: kapKutu.bottom } }),
       });
       if (izinli) {
         if (s.kaydir !== 0) {

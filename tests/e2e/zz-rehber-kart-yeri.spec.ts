@@ -99,7 +99,8 @@ async function yeniDepoAdimi(page: Page, proje: string, slug: string): Promise<v
   await expect(page.getByTestId("yol-coach")).toBeHidden();
 }
 
-async function islemRehberi(page: Page): Promise<void> {
+/** `odak`: hedef görünen alana kartla birlikte sığmayacak kadar uzunsa (klavye açık) yalnız odaktaki alan denetlenir (rehber onu odaklar). */
+async function islemRehberi(page: Page, odak = false): Promise<void> {
   await page.goto("/");
   await enterDemoShared(page, "Yönetici");
   await page.goto("/t/demo/stock/documents?new=STOCK_OUT");
@@ -114,7 +115,8 @@ async function islemRehberi(page: Page): Promise<void> {
   ];
   for (const [i, [adim, hedefler]] of adimlar.entries()) {
     await expect(kart).toHaveAttribute("data-step", adim);
-    for (const sel of hedefler) await ortmez(page, kart, page.locator(sel).filter({ visible: true }).first(), `${adim}: ${sel}`);
+    if (odak) await ortmez(page, kart, page.locator(":focus"), `${adim}: odaktaki alan`);
+    else for (const sel of hedefler) await ortmez(page, kart, page.locator(sel).filter({ visible: true }).first(), `${adim}: ${sel}`);
     if (i < adimlar.length - 1) await page.getByTestId("guide-next").click();
   }
   await page.getByTestId("guide-close").first().click();
@@ -129,8 +131,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
 
   test.describe("projenin görünümü", () => {
     test.use({ extraHTTPHeaders: { "x-e2e-client-ip": "198.51.100.234" } });
-    test("kurulum yolculuğu Yeni depo (proje görünümü, 390×844, 390×660): kart Depo adı alanını ve KAYDET'i örtmez", async ({ page }, info) => {
-      await kurulumYeniDepo(page, info.project.name, [null, { width: 390, height: 844 }, { width: 390, height: 660 }]);
+    test("kurulum yolculuğu Yeni depo (proje görünümü, 390×844, 390×660, 390×420): kart Depo adı alanını ve KAYDET'i örtmez", async ({ page }, info) => {
+      await kurulumYeniDepo(page, info.project.name, [null, { width: 390, height: 844 }, { width: 390, height: 660 }, { width: 390, height: 420 }]);
     });
     test("işlem rehberi stok çıkışı: kart hiçbir adımın hedefini örtmez", async ({ page }) => {
       await islemRehberi(page);
@@ -148,6 +150,15 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     test.use({ viewport: { width: 390, height: 660 }, extraHTTPHeaders: { "x-e2e-client-ip": "198.51.100.236" } });
     test("işlem rehberi stok çıkışı: kart hiçbir adımın hedefini örtmez", async ({ page }) => {
       await islemRehberi(page);
+    });
+  });
+
+  // T-1130 (Codex P2): telefon klavyesi açıkken görünen alan ~420 px; kalıp formunun alanları sabit kabuğun (.dzf) içindeki kayan .inner'da
+  // olduğundan kart için .inner kaydırılır (alanlar "sabit" sayılırsa kaydırma hesaplanmaz, aşağıdaki alan kartın altında ya da dışarıda kalır).
+  test.describe("klavye açık telefon 390×420", () => {
+    test.use({ viewport: { width: 390, height: 420 }, extraHTTPHeaders: { "x-e2e-client-ip": "198.51.100.237" } });
+    test("işlem rehberi stok çıkışı: kart odaktaki alanı örtmez, alan görünür (kayan .inner kaydırılır)", async ({ page }) => {
+      await islemRehberi(page, true);
     });
   });
 }

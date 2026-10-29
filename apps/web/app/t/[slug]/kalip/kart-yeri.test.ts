@@ -1,6 +1,6 @@
 // T-1124 + T-1130: rehber kartı yapılacak yeri (deliği / alanı) örtmez — yer hesabı saf işlevdir (üç rehberin ortak işlevi).
 import { describe, expect, it } from "vitest";
-import { KART_ARA, kartYeriHesapla, type KartHedef, type KartYeriGirdi, type Kutu } from "./kart-yeri.ts";
+import { KART_ARA, kartYeriHesapla, kayanAtaSirasi, sabitZincir, type KartHedef, type KartYeriGirdi, type Kutu } from "./kart-yeri.ts";
 
 const YOK = { min: 0, max: 0 };
 
@@ -38,9 +38,10 @@ describe("rehber kartının yeri — masaüstü (T-1124 köşe sırası)", () =>
   });
 });
 
+const tel = (p: Partial<KartYeriGirdi> & { readonly hedefler: readonly KartHedef[] }): KartYeriGirdi =>
+  girdi({ vw: 390, gorunur: { ust: 0, yukseklik: 844 }, altCubuk: 100, kart: { w: 366, h: 120 }, telefon: true, ...p });
+
 describe("rehber kartının yeri — telefon (T-1130)", () => {
-  const tel = (p: Partial<KartYeriGirdi> & { readonly hedefler: readonly KartHedef[] }): KartYeriGirdi =>
-    girdi({ vw: 390, gorunur: { ust: 0, yukseklik: 844 }, altCubuk: 100, kart: { w: 366, h: 120 }, telefon: true, ...p });
 
   it("kart tam genişlik; üstteki alan (\"Depo adı\") için kart altta, alt çubuğun üstünde", () => {
     const alan = { x: 16, y: 150, w: 358, h: 72 };
@@ -105,5 +106,58 @@ describe("rehber kartının yeri — telefon (T-1130)", () => {
     const sonra = alan.y - s.kaydir;
     const ara = s.top >= sonra + alan.h ? s.top - (sonra + alan.h) : sonra - (s.top + 120);
     expect(ara).toBeGreaterThanOrEqual(KART_ARA);
+  });
+});
+
+describe("kalıp form ekranı: sabit kabuk içinde kayan içerik (T-1130, Codex P2)", () => {
+  // Zincir öğeden köke: alan → label → form → .inner (overflow-y auto) → .app → .dzf (fixed) → body → html.
+  const formAlani = [
+    { konum: "static", tasma: "visible" },
+    { konum: "relative", tasma: "visible" },
+    { konum: "static", tasma: "visible" },
+    { konum: "static", tasma: "auto" },
+    { konum: "relative", tasma: "hidden" },
+    { konum: "fixed", tasma: "visible" },
+    { konum: "static", tasma: "visible" },
+    { konum: "static", tasma: "visible" },
+  ];
+  const anaIslem = [
+    { konum: "relative", tasma: "visible" },
+    { konum: "static", tasma: "visible" },
+    { konum: "fixed", tasma: "visible" },
+    { konum: "static", tasma: "visible" },
+  ];
+
+  it("kayan .inner içindeki alan sabit değildir; alt çubuğun ana işlemi sabittir", () => {
+    expect(sabitZincir(formAlani)).toBe(false);
+    expect(sabitZincir(anaIslem)).toBe(true);
+    expect(sabitZincir([{ konum: "static", tasma: "visible" }])).toBe(false);
+    // Öğenin kendi taşması (kendi içinde kayan liste) onu sabit kabuktan ayırmaz.
+    expect(sabitZincir([{ konum: "static", tasma: "auto" }, { konum: "fixed", tasma: "visible" }])).toBe(true);
+  });
+
+  it("kaydırılacak kap en yakın gerçekten taşan atadır (.inner); taşmayan kap atlanır", () => {
+    const atalar = formAlani.slice(1).map((h, i) => ({ ...h, tasabilir: i === 2 }));
+    expect(kayanAtaSirasi(atalar)).toBe(2);
+    expect(kayanAtaSirasi(atalar.map((h) => ({ ...h, tasabilir: false })))).toBeNull();
+  });
+
+  it("klavye açık (görünen 390×380), form görünenden uzun, alan .inner'ın altında: kap kaydırılır, kart alanı örtmez", () => {
+    const g = { ust: 0, yukseklik: 380 };
+    const kap = { ust: 70, alt: 380 };
+    const form = { x: 16, y: 80, w: 358, h: 900 };
+    const alan = { x: 16, y: 600, w: 358, h: 74 };
+    const girdiK = tel({ gorunur: g, altCubuk: 0, kap, hedefler: [form], dar: [alan], kaydirma: { min: 0, max: 500 } });
+    const s = kartYeriHesapla(girdiK);
+    expect(s.ortusme).toBe(0);
+    expect(s.kaydir).toBeGreaterThan(0);
+    const sonra = { ...alan, y: alan.y - s.kaydir };
+    expect(kesisir({ x: s.left, y: s.top, w: 366, h: 120 }, sonra)).toBe(false);
+    expect(sonra.y).toBeGreaterThanOrEqual(kap.ust);
+    expect(sonra.y + sonra.h).toBeLessThanOrEqual(kap.alt);
+    // Eski sınıflandırma (alan sabit kabuğun içinde diye sabit sayılırdı): kaydırma hesaplanmaz, alan klavyenin altında kalır.
+    const eski = kartYeriHesapla({ ...girdiK, hedefler: [{ ...form, sabit: true }], dar: [{ ...alan, sabit: true }, { ...form, sabit: true }] });
+    expect(eski.kaydir).toBe(0);
+    expect(alan.y + alan.h).toBeGreaterThan(g.yukseklik);
   });
 });

@@ -32,6 +32,8 @@ export interface KartYeriGirdi {
   readonly telefon: boolean;
   /** İzin verilen kaydırma aralığı (px, artı = sayfa aşağı kayar, içerik yukarı çıkar). Kaydırma istenmiyorsa { min: 0, max: 0 }. */
   readonly kaydirma: { readonly min: number; readonly max: number };
+  /** Hedefin kaydığı kabın görünen dikey aralığı (ör. kalıp ekranının `.inner`'ı üst çubuğun altında başlar); yoksa görünen alan. */
+  readonly kap?: { readonly ust: number; readonly alt: number };
 }
 
 export interface KartYeriSonuc {
@@ -103,8 +105,8 @@ function puanla(aday: Aday, hedefler: readonly KartHedef[], g: KartYeriGirdi): P
   const sabitOrtusme = sabit.reduce((t, h) => t + ortusmeAlani(c, h), 0);
   const u = birlesim(kayan);
   if (u === null) return { aday, kat: 0, sabitOrtusme, ortusme: 0, kaydir: 0, pay: Infinity };
-  const vTop = g.gorunur.ust;
-  const vBot = g.gorunur.ust + g.gorunur.yukseklik - g.altCubuk;
+  const vTop = Math.max(g.gorunur.ust, g.kap?.ust ?? -Infinity);
+  const vBot = Math.min(g.gorunur.ust + g.gorunur.yukseklik - g.altCubuk, g.kap?.alt ?? Infinity);
   const izin: Aralik = { a: Math.min(0, g.kaydirma.min), b: Math.max(0, g.kaydirma.max) };
   // Kart ile yatayda kesişiyorsa hedef kartın altında ya da üstünde kalmalı.
   const yatay = Math.min(c.x + c.w, u.x + u.w) - Math.max(c.x, u.x) > 0;
@@ -170,4 +172,31 @@ export function kartYeriHesapla(g: KartYeriGirdi): KartYeriSonuc {
     if (d.kat < p.kat || (d.kat === p.kat && d.ortusme + d.sabitOrtusme < p.ortusme + p.sabitOrtusme)) p = d;
   }
   return { left: p.aday.kutu.x, top: p.aday.kutu.y, width, kaydir: Math.round(p.kaydir), ortusme: p.ortusme + p.sabitOrtusme };
+}
+
+/** Ata zincirinin bir halkası (öğenin kendisinden köke): CSS `position` ve `overflow-y`. */
+export interface AtaHalka {
+  readonly konum: string;
+  readonly tasma: string;
+}
+
+const KAYAN = /^(auto|scroll|overlay)$/;
+
+/**
+ * T-1130 (Codex P2): öğe kaydırmayla yer değiştirmez mi? Zincirde sabit (`fixed`) bir halkaya, arada kendi içinde kayabilen
+ * (`overflow-y: auto|scroll|overlay`) bir kap OLMADAN ulaşılırsa sabittir (alt çubuğun ana işlemi). Kalıp form ekranında dış kabuk `.dzf`
+ * sabittir ama alanlar kayan `.inner` içindedir: alan sabit sayılmaz, kart için kaydırma hesaplanır ve dar küme odaktaki alana iner.
+ */
+export function sabitZincir(z: readonly AtaHalka[]): boolean {
+  for (const [i, h] of z.entries()) {
+    if (i > 0 && KAYAN.test(h.tasma)) return false;
+    if (h.konum === "fixed") return true;
+  }
+  return false;
+}
+
+/** En yakın gerçekten kayan atanın sırası (zincir öğenin ATALARIDIR, öğe hariç); yoksa null (sayfa kaydırılır). */
+export function kayanAtaSirasi(z: readonly (AtaHalka & { readonly tasabilir: boolean })[]): number | null {
+  for (const [i, h] of z.entries()) if (KAYAN.test(h.tasma) && h.tasabilir) return i;
+  return null;
 }
