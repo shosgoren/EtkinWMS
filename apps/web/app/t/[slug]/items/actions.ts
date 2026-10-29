@@ -49,7 +49,18 @@ const loadMoreItemsSchema = z
   .strict();
 const moreTrackingSchema = z.object({ slug: slugSchema, itemId: idSchema, part: z.enum(["lots", "serials"]), after: z.string().min(1).max(1024) }).strict();
 const updateItemSchema = z
-  .object({ slug: slugSchema, itemId: idSchema, code: textSchema.optional(), name: textSchema.optional(), pickPolicy: pickSchema.optional(), cardType: cardTypeSchema.optional() })
+  .object({
+    slug: slugSchema,
+    itemId: idSchema,
+    code: textSchema.optional(),
+    name: textSchema.optional(),
+    pickPolicy: pickSchema.optional(),
+    cardType: cardTypeSchema.optional(),
+    // T-1129: sabit alanlar yalnız hiç kullanılmamış üründe değişir; karar domain + 0065 tetikleyicisinde (istemciye güvenilmez).
+    baseUnitId: idSchema.optional(),
+    quantityScale: z.number().int().min(0).max(6).optional(),
+    trackingMode: trackingSchema.optional(),
+  })
   .strict();
 const createUnitSchema = z.object({ slug: slugSchema, code: z.string().min(1).max(64), name: z.string().min(1).max(200) }).strict();
 const archiveItemSchema = z.object({ slug: slugSchema, itemId: idSchema }).strict();
@@ -143,6 +154,9 @@ export async function updateItemAction(raw: unknown) {
         ...(input.name === undefined ? {} : { name: input.name }),
         ...(input.pickPolicy === undefined ? {} : { pickPolicy: input.pickPolicy }),
         ...(input.cardType === undefined ? {} : { cardType: input.cardType }),
+        ...(input.baseUnitId === undefined ? {} : { baseUnitId: input.baseUnitId }),
+        ...(input.quantityScale === undefined ? {} : { quantityScale: input.quantityScale }),
+        ...(input.trackingMode === undefined ? {} : { trackingMode: input.trackingMode }),
       },
     );
     return { changed: r.changed };

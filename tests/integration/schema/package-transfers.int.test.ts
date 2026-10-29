@@ -73,7 +73,11 @@ beforeAll(async()=>{try{
  await admin.connect();await admin.query(`CREATE DATABASE ${name}`);direct=urlFor(env.databaseUrlDirect);migration=new pg.Client({connectionString:direct});await migration.connect();await migrateUp({url:direct});
  world=await seedWorld(migration,newRegistry(),"TRANSFER");other=await seedWorld(migration,newRegistry(),"TRANSFEROTHER");
  kg=randomUUID();await migration.query("INSERT INTO public.units(tenant_id,id,code,name) VALUES($1,$2,'KG-PROOF','Kilogram')",[world.tenantId,kg]);
+ // T-1129: seedWorld ürünü zaten kullanılmış (boyut + belge satırı); KG temel birimi yalnız bu ayrı scratch DB kurulumunda, bekçi tek ifade için
+ // kapatılarak verilir (0065 bekçisinin kendisi item-fixed-fields.int.test.ts'te sınanır).
+ await migration.query("BEGIN");await migration.query("ALTER TABLE public.items DISABLE TRIGGER items_guard_unused_fixed");
  await migration.query("UPDATE public.items SET base_unit_id=$3 WHERE tenant_id=$1 AND id=$2",[world.tenantId,world.itemNoneId,kg]);
+ await migration.query("ALTER TABLE public.items ENABLE ALWAYS TRIGGER items_guard_unused_fixed");await migration.query("COMMIT");
  targetWarehouse=randomUUID();targetLocation=randomUUID();targetShelf=randomUUID();
  await migration.query("INSERT INTO public.warehouses(tenant_id,id,code,name) VALUES($1,$2,'TARGET','Target')",[world.tenantId,targetWarehouse]);
  await migration.query("INSERT INTO public.locations(tenant_id,id,warehouse_id,code,name,depth,kind) VALUES($1,$2,$3,'TARGET-ROOT','Target',0,'STORAGE'),($1,$4,$3,'TARGET-SHELF','Shelf',0,'STORAGE')",[world.tenantId,targetLocation,targetWarehouse,targetShelf]);

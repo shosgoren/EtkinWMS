@@ -57,7 +57,11 @@ describe("doğrulama hataları (domain çağrılmaz)", () => {
     ["ürün: geçersiz takip modu", () => createItemAction({ slug: "acme", code: "A", name: "n", baseUnitId: UID, trackingMode: "BAD" })],
     ["ürün: bilinmeyen alan", () => createItemAction({ slug: "acme", code: "A", name: "n", baseUnitId: UID, extra: 1 })],
     ["güncelle: uuid değil", () => updateItemAction({ slug: "acme", itemId: "x", name: "n" })],
-    ["güncelle: temel birim değişimi alanı kabul edilmez", () => updateItemAction({ slug: "acme", itemId: IID, baseUnitId: UID })],
+    // T-1129: sabit alanlar şemada var (kullanım kararı domain'de); biçim hataları yine domain'e gitmez.
+    ["güncelle: temel birim uuid değil", () => updateItemAction({ slug: "acme", itemId: IID, baseUnitId: "x" })],
+    ["güncelle: ölçek 7", () => updateItemAction({ slug: "acme", itemId: IID, quantityScale: 7 })],
+    ["güncelle: ölçek kesirli", () => updateItemAction({ slug: "acme", itemId: IID, quantityScale: 0.5 })],
+    ["güncelle: geçersiz takip modu", () => updateItemAction({ slug: "acme", itemId: IID, trackingMode: "BAD" })],
     ["arşiv: uuid değil", () => archiveItemAction({ slug: "acme", itemId: "x" })],
     ["dönüşüm: katsayı sayı tipinde (float yasak)", () => setConversionAction({ slug: "acme", itemId: IID, unitId: UID, factor: 12 })],
     ["dönüşüm: katsayı boş", () => setConversionAction({ slug: "acme", itemId: IID, unitId: UID, factor: "" })],
@@ -213,6 +217,12 @@ describe("T-257: kod değiştirme (updateItemAction) ve eski kod bilgisi (search
     const res = await updateItemAction({ slug: "acme", itemId: IID, code: " yeni-01 " });
     expect(res).toMatchObject({ ok: true, data: { changed: true } });
     expect(updateItem.mock.calls[0]?.[1]).toEqual({ itemId: IID, code: " yeni-01 " });
+  });
+  it("T-1129: temel birim, ölçek ve takip modu domain'e iletilir (kullanılmamış ürün kararı sunucuda)", async () => {
+    updateItem.mockResolvedValue({ itemId: IID, changed: true });
+    const res = await updateItemAction({ slug: "acme", itemId: IID, baseUnitId: UID, quantityScale: 2, trackingMode: "LOT" });
+    expect(res).toMatchObject({ ok: true, data: { changed: true } });
+    expect(updateItem.mock.calls[0]?.[1]).toEqual({ itemId: IID, baseUnitId: UID, quantityScale: 2, trackingMode: "LOT" });
   });
   it("code boş olamaz ve şema strict kalır (bilinmeyen alan reddedilir)", async () => {
     for (const raw of [{ slug: "acme", itemId: IID, code: "" }, { slug: "acme", itemId: IID, code: "A", extra: 1 }]) {

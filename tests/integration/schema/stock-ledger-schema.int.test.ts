@@ -790,8 +790,8 @@ describe("T-232 sahip yolu: takip modu / seri lotu değişmezliği (MINOR-1)", (
     expectOk(await asAdmin(A.tenantId, (q) => q("UPDATE public.items SET tracking_mode = tracking_mode WHERE id = $1", [A.itemNoneId])), "no-op");
     // Bağlam yok/başka tenant: RLS satırları gizleyebileceğinden denetim fail-closed reddeder.
     expectFail(await asAdmin(B.tenantId, (q) => q("UPDATE public.items SET tracking_mode = 'LOT' WHERE id = $1", [A.itemNoneId])), CHECK_VIOLATION, "yanlış bağlam", CTX_MISMATCH);
-    // wms_app zaten yetkisiz.
-    expectFail(await asApp(A.tenantId, (q) => q("UPDATE public.items SET tracking_mode = 'LOT' WHERE id = $1", [A.itemNoneId])), INSUFFICIENT_PRIVILEGE, "wms_app");
+    // T-1129: wms_app sütun yetkisi alır ama boyutlu üründe aynı bekçiye takılır.
+    expectFail(await asApp(A.tenantId, (q) => q("UPDATE public.items SET tracking_mode = 'LOT' WHERE id = $1", [A.itemNoneId])), CHECK_VIOLATION, "wms_app", "TRACKING_VIOLATION");
     // Replica modu da atlatmaz (ENABLE ALWAYS).
     expectFail(
       await asAdmin(A.tenantId, async (q) => {
@@ -835,11 +835,11 @@ describe("T-232 sahip yolu ile eşzamanlı boyut ekleme yarışı (LOCK TABLE SH
   };
   const dimSql = "INSERT INTO public.stock_dimensions (tenant_id, id, item_id, location_id, lot_id, serial_id) VALUES ($1, $2, $3, $4, $5, $6)";
 
-  it("wms_app bu yola giremez: items.tracking_mode ve serials.lot_id UPDATE yetkisi yok", async () => {
+  it("wms_app: serials.lot_id UPDATE yetkisi yok; items.tracking_mode yetkisi var (T-1129) ama bekçi kullanılmış üründe reddeder", async () => {
     const r = await admin.query<{ i: boolean; s: boolean }>(
       "SELECT has_column_privilege('wms_app', 'public.items', 'tracking_mode', 'UPDATE') AS i, has_column_privilege('wms_app', 'public.serials', 'lot_id', 'UPDATE') AS s",
     );
-    expect(r.rows[0]).toEqual({ i: false, s: false });
+    expect(r.rows[0]).toEqual({ i: true, s: false });
   });
 
   it("T1 (sahip) tracking_mode'u değiştirip commit etmeden: T2 (wms_app) aynı ürüne boyut eklerken bekler; T1 commit → T2 TRACKING_VIOLATION", async () => {

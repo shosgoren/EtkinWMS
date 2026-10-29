@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getItem, itemInUse, listItemBarcodes, listItemConversions } from "@wms/domain/catalog";
+import { getItem, getItemFixedState, listItemBarcodes, listItemConversions } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
 import { getProductSourceInfo } from "@wms/domain/integrations";
 import { getItemStockCard, getItemStockPivot, listItemMoves, listItemTracking } from "@wms/domain/stock";
@@ -60,7 +60,8 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
     const item = await getItem(call, { itemId });
     const conversions = await listItemConversions(call, item.id);
     const barcodes = await listItemBarcodes(call, item.id);
-    const inUse = await itemInUse(call, item.id);
+    // T-1129: sabit alanların (temel birim, hassasiyet, takip modu) kullanım durumu — yalnız gösterim; karar sunucuda.
+    const fixed = await getItemFixedState(call, { itemId: item.id });
     const units = await listUnits(call);
     const activeUnits = units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }));
     const baseUnit = units.find((u) => u.id === item.baseUnitId);
@@ -93,7 +94,7 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
           tabData={tabData}
           canHistory={canHistory}
           sourceInfo={sourceInfo}
-          inUse={inUse}
+          fixed={fixed}
           units={activeUnits}
           item={{
             id: item.id,

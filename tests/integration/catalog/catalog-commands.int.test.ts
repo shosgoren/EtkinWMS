@@ -105,12 +105,13 @@ describe("ürün", () => {
     expect((await listItems(picker(B))).some((i) => i.id === itemId)).toBe(false);
   });
 
-  it("updateItem: ad/politika değişir; stoklu ürünün takip modu/birim/ölçek değişimi IN_USE; stoksuzda da ret (A-87)", async () => {
+  it("updateItem: ad/politika değişir; kullanılmış ürünün takip modu/birim/ölçek değişimi IN_USE; hiç kullanılmamışta değişir (A-87, T-1129)", async () => {
     const { itemId } = await createItem(admin(A), { code: `I${rnd()}`, name: "Eski", baseUnitId: A.unitId, quantityScale: 2 });
     expect(await updateItem(admin(A), { itemId, name: "Yeni", pickPolicy: "FEFO" })).toEqual({ itemId, changed: true });
     expect(await getItem(admin(A), { itemId })).toMatchObject({ name: "Yeni", pickPolicy: "FEFO" });
     expect(await updateItem(admin(A), { itemId, name: "Yeni", trackingMode: "NONE", quantityScale: 2 })).toEqual({ itemId, changed: false });
-    await expectFail(updateItem(admin(A), { itemId, trackingMode: "LOT" }), "VALIDATION_FAILED"); // stoksuz: A-87
+    // T-1129: hiç kullanılmamış ürünün takip modu değişir (ayrıntılı kapsam item-fixed-fields.int.test.ts).
+    expect(await updateItem(admin(A), { itemId, trackingMode: "LOT" })).toEqual({ itemId, changed: true });
     // A.itemNoneId stoklu (boyut + bakiye + açık rezervasyon).
     await expectFail(updateItem(admin(A), { itemId: A.itemNoneId, trackingMode: "LOT" }), "VALIDATION_FAILED", "IN_USE");
     await expectFail(updateItem(admin(A), { itemId: A.itemNoneId, quantityScale: 3 }), "VALIDATION_FAILED", "IN_USE");
