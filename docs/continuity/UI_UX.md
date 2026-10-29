@@ -52,6 +52,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Geri tarayıcı geçmişine güvenmez: `id/new` detay veya formdan aynı bölümün listesine, derin sayfadan ebeveyne, bölüm kökünden ana ekrana gider. Dış siteye geri dönüş yok.
 - Ortak görsel kabuk tüm iç tenant sayfalarını kapsar; ana ekran sözleşmesi korunur. Renk ve ikon işlemin yönünü destekler, metin/alan etiketi kaybolmaz.
 - Saha işlem çubuğu ve form ana eylemi ortak alt alan yüksekliğini paylaşır. Safe-area boşluğu, içerik kaydırma sonu ve hata/son alan erişimi cihaz testinin parçasıdır. Birden çok sabit gezinme çubuğu üst üste çizilmez.
+- Yüzen şimşek halkası (T-1131): yer ve en büyük yükseklik görünür alandan (`visualViewport`, güvenli kenarlar) saf `kabuk/kisayol-yer.ts` ile; önce şimşeğin yanına, yer yoksa altına/üstüne; sığmazsa iki sütunlu sıkı düzen, o da yetmezse kısayollar halkada kayar. Rehber + Düzenle alt şeritte hep görünür. Halkaya yeni öğe eklenirse `halkaOlculeri` ve e2e `zz-kisayol` (390×660) birlikte güncellenir.
 - Bu görev UI yerleşimidir; iş kuralı, kayıt idempotency, rol, miktar veya QR v3 değişikliği anlamına gelmez. Canlı sürüm doğrulaması PR ve receiver kanıtıyla yapılır.
 
 ## Ekran kalıpları (T-968, B-63)
