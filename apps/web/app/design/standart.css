@@ -1275,6 +1275,33 @@ body:has([data-testid="kalip-unsaved-layer"]) .dzp.hmenu-kok { display: none; }
 .dzp.kisayol-kok .fab:has(.fabb.on) { z-index: 39; }
 .dzp.kisayol-kok .hback { position: fixed; inset: 0; z-index: 38; }
 .dzp.kisayol-kok .halo { position: fixed; z-index: 39; }
+/* T-1131 (kullanıcı 29 Ekim: "yüzen simge tıklandığında ekrana sığmayan yerler var, düzenle kısmı sığmıyor"): halkanın yeri ve en büyük
+   yüksekliği görünür alandan hesaplanır (kabuk/kisayol-yer.ts, satır içi left/top/max-height). Kısayollar `.kys-liste` içinde kayar;
+   Rehber + Düzenle `.kys-alt` şeridinde hep görünür. Perdenin iç boşluğu güvenli kenarları (çentik, ev çubuğu) ölçmek içindir. */
+.dzp.kisayol-kok .hback { box-sizing: border-box; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.dzp.kisayol-kok .halo { box-sizing: border-box; overflow: hidden; }
+.dzp.kisayol-kok .halo .kys-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: 16px;
+}
+.dzp.kisayol-kok .halo .kys-liste.tasar {
+  -webkit-mask-image: linear-gradient(180deg, black calc(100% - 30px), transparent);
+  mask-image: linear-gradient(180deg, black calc(100% - 30px), transparent);
+}
+.dzp.kisayol-kok .halo .kys-alt { display: flex; flex-direction: column; gap: 8px; flex: none; padding-top: 8px; border-top: 1px solid var(--color-dz-a-pppppp-bg); }
+.dzp.kisayol-kok .halo .hb { flex: none; }
+/* T-1131: sıkı düzen (dar telefonun ortasındaki şimşek, yatay telefon): kısayollar ve alt şerit ikişer yan yana, ad gerekirse iki satır. */
+.dzp.kisayol-kok .halo.kompakt .kys-liste { display: grid; grid-template-columns: 1fr 1fr; align-content: start; }
+.dzp.kisayol-kok .halo.kompakt .kys-alt { display: grid; grid-template-columns: 1fr 1fr; }
+.dzp.kisayol-kok .halo.kompakt .hb { gap: 10px; min-width: 0; padding: 0 10px; }
+.dzp.kisayol-kok .halo.kompakt .hb span { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
 .dzp.kisayol-kok .page { position: fixed; inset: 0; z-index: 41; }
 body:has([data-testid="kalip-unsaved-layer"]) .dzp.kisayol-kok { display: none; }
 /* T-1111: şimşek açık bir pencerenin, Modüller sayfasının ya da rehber perdesinin üstünde görünmez (Modüller alt çubuk katmanında z 25,
