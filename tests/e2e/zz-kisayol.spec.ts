@@ -1,6 +1,6 @@
 // T-1102 (kullanıcı 27 Ekim): yüzen kısayol (şimşek) her ekranda; Düzenle seçicisinde üyenin bütün modülleri (Modüller sayfasındaki
 // bağlantılı kutular, yetkiyle süzülmüş). Seçilen kısayol halkada görünür ve ekranı açar.
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { enterDemoShared } from "./support/demo-session.ts";
 
 test("T-1102 yüzen kısayol her ekranda; Düzenle bütün modülleri listeler, seçilen kısayol açılır", async ({ page }) => {
@@ -65,6 +65,100 @@ test.describe("T-1123 dokunmatik", () => {
     await page.getByTestId("pano-fab").tap();
     await expect(halka).toBeVisible();
     // Dokunuşun ardından gelen tıklama perdeye düşüp halkayı kapatmamalı.
+    await page.waitForTimeout(600);
+    await expect(halka).toBeVisible();
+    await page.getByTestId("pano-fab").tap();
+    await expect(halka).toBeHidden();
+  });
+});
+
+// T-1131 (kullanıcı 29 Ekim: "yüzen simge tıklandığında ekrana sığmayan yerler var, düzenle kısmı sığmıyor"): şimşek hangi konumda olursa
+// olsun halka görünür alanın içinde; kısayollar ya görünür ya da halkanın içinde kaydırılarak erişilir; Rehber ve Düzenle kaydırmadan görünür.
+const KONUMLAR = [
+  { ad: "ust", fx: 0.94, fy: 0.08 },
+  { ad: "orta", fx: 0.94, fy: 0.5 },
+  { ad: "alt", fx: 0.94, fy: 0.9 },
+  { ad: "orta-yatay", fx: 0.5, fy: 0.5 },
+] as const;
+
+type Kutu = { x: number; y: number; width: number; height: number };
+const icinde = (k: Kutu, d: Kutu): boolean => k.x >= d.x - 0.5 && k.y >= d.y - 0.5 && k.x + k.width <= d.x + d.width + 0.5 && k.y + k.height <= d.y + d.height + 0.5;
+
+async function halkaSigar(page: Page, konum: (typeof KONUMLAR)[number], resim?: string): Promise<void> {
+  await page.evaluate(`window.localStorage.setItem("etkin-pano-fab", ${JSON.stringify(JSON.stringify({ fx: konum.fx, fy: konum.fy }))})`);
+  await page.reload();
+  const vp = page.viewportSize();
+  if (vp === null) throw new Error("görüntü alanı yok");
+  const ekran: Kutu = { x: 0, y: 0, width: vp.width, height: vp.height };
+  await page.getByTestId("pano-fab").click();
+  const halka = page.getByRole("menu", { name: "Kısayollar" });
+  await expect(halka, konum.ad).toHaveAttribute("data-yan", /.+/);
+  await page.evaluate(`Promise.all(document.querySelector('.kisayol-kok .halo').getAnimations({ subtree: true }).map((a) => a.finished)).then(() => true)`);
+  const hk = await halka.boundingBox();
+  expect(hk, konum.ad).not.toBeNull();
+  expect(icinde(hk!, ekran), `${konum.ad}: halka ekranın içinde ${JSON.stringify(hk)}`).toBe(true);
+  // Rehber ve Düzenle kaydırmadan görünür ve üstleri örtülü değil.
+  for (const id of ["pano-guide", "pano-edit"]) {
+    const oge = page.getByTestId(id);
+    const k = await oge.boundingBox();
+    expect(k, `${konum.ad}: ${id}`).not.toBeNull();
+    expect(k!.height, `${konum.ad}: ${id} dokunma hedefi`).toBeGreaterThanOrEqual(48);
+    expect(icinde(k!, ekran) && icinde(k!, hk!), `${konum.ad}: ${id} görünür ${JSON.stringify(k)}`).toBe(true);
+    const ust = await page.evaluate<boolean>(
+      `(() => { const el = document.querySelector('[data-testid="${id}"]'); if (el === null) return false;
+        const r = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); })()`,
+    );
+    expect(ust, `${konum.ad}: ${id} örtülü değil`).toBe(true);
+  }
+  // Her kısayol görünür ya da halkanın listesinde kaydırılarak görünür olur (sayfa kaymaz).
+  const liste = page.getByTestId("pano-fab-list");
+  const ogeler = liste.locator('[role="menuitem"]');
+  await expect(ogeler).toHaveCount(6);
+  // Bu ekran ölçülerinde (en kısası 390×660) 6 kısayol kaydırmasız sığar: yanda tek sütun, dar ekranın ortasında iki sütunlu sıkı düzen.
+  expect(await liste.evaluate((el) => el.scrollHeight <= el.clientHeight + 1), `${konum.ad}: liste kaydırmasız`).toBe(true);
+  // Her şey göründüğünde alt kenar solmaz (solma yalnız aşağıda gizli kısayol varken).
+  await expect(liste, `${konum.ad}: solma yok`).not.toHaveClass(/tasar/);
+  if (resim !== undefined) await page.screenshot({ path: resim, animations: "disabled" });
+  for (let i = 0; i < 6; i++) {
+    const oge = ogeler.nth(i);
+    await oge.scrollIntoViewIfNeeded();
+    const k = await oge.boundingBox();
+    const lk = await liste.boundingBox();
+    expect(k !== null && lk !== null && icinde(k, ekran) && icinde(k, lk), `${konum.ad}: kısayol ${i + 1} erişilir`).toBe(true);
+  }
+  expect(await page.evaluate<number>("document.scrollingElement ? document.scrollingElement.scrollTop : 0"), `${konum.ad}: sayfa kaymadı`).toBe(0);
+  await page.keyboard.press("Escape");
+  await expect(halka).toBeHidden();
+}
+
+test("T-1131 şimşek halkası her konumda ekrana sığar; Rehber ve Düzenle hep görünür; klavyeyle açılır, Esc odağı şimşeğe döndürür", async ({ page }) => {
+  await page.goto("/");
+  await enterDemoShared(page, "Yönetici");
+  await page.goto("/t/demo/items");
+  for (const konum of KONUMLAR) await halkaSigar(page, konum);
+  // Klavye: Enter halkayı açar ve ilk kısayola odaklanır; ok tuşu gezinir; Esc kapatır ve odak şimşeğe döner.
+  await page.getByTestId("pano-fab").focus();
+  await page.keyboard.press("Enter");
+  const halka = page.getByRole("menu", { name: "Kısayollar" });
+  await expect(halka).toBeVisible();
+  await expect(halka.locator('[role="menuitem"]').first()).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(page.getByTestId("pano-edit")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(halka).toBeHidden();
+  await expect(page.getByTestId("pano-fab")).toBeFocused();
+});
+
+test.describe("T-1131 kısa telefon (Safari çubukları açık)", () => {
+  test.use({ viewport: { width: 390, height: 660 }, hasTouch: true });
+  test("T-1131 390×660: şimşek üstte, ortada, altta — halka sığar, kısayollar kayar, Rehber ve Düzenle görünür", async ({ page }, info) => {
+    await page.goto("/");
+    await enterDemoShared(page, "Yönetici");
+    await page.goto("/t/demo/items");
+    for (const konum of KONUMLAR) await halkaSigar(page, konum, `tests/.artifacts/t-1131/${info.project.name}-390x660-${konum.ad}.png`);
+    // Dokunuşla açılır ve açık kalır (T-1123 korunur).
+    await page.getByTestId("pano-fab").tap();
+    const halka = page.getByRole("menu", { name: "Kısayollar" });
     await page.waitForTimeout(600);
     await expect(halka).toBeVisible();
     await page.getByTestId("pano-fab").tap();
