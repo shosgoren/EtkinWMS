@@ -1,6 +1,6 @@
 # 2A. Kimlik, ekip ve yetki modülleri
 
-> **Kaynak:** main 8e2710d · 28 Ekim 2026 (ilk sürüm main 36f3a13 · 23 Ekim 2026). Her satır bu koddan yeniden doğrulandı.
+> **Kaynak:** main 8e2710d · 28 Ekim 2026 (ilk sürüm main 36f3a13 · 23 Ekim 2026). Her satır bu koddan yeniden doğrulandı. **29 Ekim kontrolü (main 2022915):** T-1111…T-1131 bu dosyanın ekranlarına, yetki kurallarına ve tablolarına dokunmadı; yalnız Ayarlar › Entegrasyonlar sekmesinin hedefi değişti (aşağıda) ve ana ekran "İşler" ile yüzen kısayol aynı yetki süzgecini (rol + özel grup yetkisi + grubun görünür ekranları) kullanıyor (02c Modül 1).
 >
 > **Bu dosya neyi anlatır?** Kullanıcının sisteme nasıl girdiğini, çalışma alanının nasıl kurulduğunu, ekibe kişinin nasıl eklendiğini ve kimin neyi yapabildiğini ekran ekran anlatır. Her ekranda "bu butona basılınca hangi sunucu işlemi çalışır, veritabanında hangi tabloya ne yazılır, hangi kural kontrol edilir" sorularının cevabı vardır.
 >
@@ -318,7 +318,7 @@ stateDiagram-v2
 
 ## Modül: wms. / Ayarlar › Kullanıcılar ve yetki (`/t/<alan>/settings?sekme=kullanici`)
 - **Modül Durumu:** [TAMAMLANDI] (T-1046, ayar kalıbı `docs/design/STANDART.md` §5)
-- **Ekranın amacı:** Ayarlar ekranı sekmelidir: **Firma** · **Kullanıcılar ve yetki** · **Entegrasyonlar** (ayrı ekran `/settings/baglantilar`) · **Görünüm**. Bu sekme kişi ve yetki ekranlarına kapı açar ve kendi güvenlik durumunu gösterir. Kendisi veri yazmaz. Görev ayrılığı anahtarı **Firma** sekmesindedir (aşağıda matris notu).
+- **Ekranın amacı:** Ayarlar ekranı sekmelidir: **Firma** · **Kullanıcılar ve yetki** · **Entegrasyonlar** (ayrı ekran: yetkilide alt bölümlü `/integrations`, yalnız Excel aktarımcısında `/settings/baglantilar`; T-1112) · **Görünüm**. Bu sekme kişi ve yetki ekranlarına kapı açar ve kendi güvenlik durumunu gösterir. Kendisi veri yazmaz. Görev ayrılığı anahtarı **Firma** sekmesindedir (aşağıda matris notu).
 - **Dosyalar:** `apps/web/app/t/[slug]/settings/page.tsx`, `apps/web/app/t/[slug]/settings/settings-view.tsx`, `apps/web/app/t/[slug]/settings/sekmeler.ts` (`ayarSekmeleri`, `ayniTaslakSekmesi`), `apps/web/app/t/[slug]/settings/form-actions.ts` (görev ayrılığı kaydı).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |

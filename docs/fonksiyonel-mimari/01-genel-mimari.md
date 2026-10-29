@@ -2,7 +2,7 @@
 
 > **Bu bölüm neyi anlatır?** Üç web adresinin (etkinyazilim.com, yonet.etkinyazilim.com, wms.etkinyazilim.com) her birinin ne işe yaradığını, aralarında verinin nasıl aktığını, kullanıcıların nasıl giriş yaptığını, müşterilerin (kiracıların) verisinin birbirinden nasıl ayrıldığını ve sistemin bugünkü donanımla ne kadar yük taşıyabileceğini anlatır.
 >
-> **Kaynak:** main `8e2710d` · 28 Ekim 2026 (ilk sürüm main `36f3a13` · 23 Ekim). Bu bölümdeki her bilgi koddan okundu. Dayandığı dosyalar her başlığın altında `yol/dosya` biçiminde yazılı. Kapasite rakamları **tahmindir**: ölçülmedi, yük testi henüz yok (`tests/load` planlı).
+> **Kaynak:** main `2022915` · 29 Ekim 2026 (ilk sürüm main `36f3a13` · 23 Ekim; 28 Ekim sürümü main `8e2710d`). Bu bölümdeki her bilgi koddan okundu. Dayandığı dosyalar her başlığın altında `yol/dosya` biçiminde yazılı. Kapasite rakamları **tahmindir**: ölçülmedi, yük testi henüz yok (`tests/load` planlı).
 >
 > **Etiketler:** **[TAMAMLANDI]** kod main dalında uçtan uca bağlı demektir. **[GELİŞTİRİLİYOR]** bir kısmı yapıldı ya da yarım kaldı demektir. **[PLANLANDI]** yalnız yapılacaklar listesinde ya da tasarımda var demektir. Kodda olmak canlıda çalışmak demek değildir. Canlı durumu `docs/STATE.md` tutar ve ayrıca belirtilir.
 
@@ -217,7 +217,7 @@ sequenceDiagram
 | **Arka plan işçisi (worker)** | E-posta gönderimi, davet teslimi, deneme aktivasyonu e-postası, demo talebi durum e-postası, stok belgesi işleme, gece stok tutarlılık kontrolü, yarım bırakılan sayımın kapatılması, Paraşüt eşitlemesi (30 sn'de bir), destek bildirimi, demo alanının yenilenmesi, kuyruk bakımı, "hayattayım" sinyali | Ayrı Node süreci, `apps/worker/src/jobs/*.ts` | [TAMAMLANDI] | `apps/worker/src/main.ts` |
 | **Kuyruk: outbox + pg-boss** | Bir işlem "sonra şunu yap" diyorsa (ör. e-posta at), bu istek **aynı veritabanı işleminin içinde** kuyruğa yazılır. İşlem geri alınırsa kuyruk kaydı da geri alınır. Kuyruk ayrı bir sunucuda değil, **PostgreSQL'in içindedir** (Redis yok). | pg-boss 12.36 | [TAMAMLANDI] | `packages/queue-adapter`, ADR-005, INVARIANTS I-07 |
 | **E-posta** | Davet, parola sıfırlama, aktivasyon, hoş geldiniz, destek bildirimi | `MAIL_MODE`: `resend` (canlı) / `mailpit` (test) / `disabled`. Ayar geçersizse gönderim kapanır; sahte "gönderildi" mesajı gösterilmez. | [TAMAMLANDI] | `packages/shared/src/mailer.ts`, `apps/worker/src/mail/` |
-| **Ses servisi (Etkin bas-konuş)** | Basılı tutulan düğmeyle kaydedilen en çok 8,5 sn sesi yazıya çevirir (`/stt`). Sunucu bu yazıyı komut olarak yorumlar. | faster-whisper `small`, CPU'da çalışır. Model imajın içindedir, internet gerekmez. Aynı anda tek çözümleme yapar, en çok 4 istek bekler. Yetki: üyelik + `stock.view`. | [GELİŞTİRİLİYOR] (kodda var, PR #158/#235; VPS ses servisi kurulumu B-130 açık, canlı UNKNOWN) | `services/voice/app.py`, `apps/web/lib/voice.ts`, `apps/web/app/t/[slug]/etkin/actions.ts` |
+| **Ses servisi (Etkin bas-konuş)** | Basılı tutulan düğmeyle kaydedilen en çok 8,5 sn sesi yazıya çevirir (`/stt`). Sunucu bu yazıyı komut olarak yorumlar. | faster-whisper `small`, CPU'da çalışır. Model imajın içindedir, internet gerekmez. Aynı anda tek çözümleme yapar, en çok 4 istek bekler. Yetki: üyelik + `stock.view`. **Bellek her makinede aynı kalsın diye** (T-1114, T-1125, T-1126): iş parçacığı havuzu ve bellek arenası sabit, şeffaf büyük sayfalar (THP) süreçte kapalı, CTranslate2 matematik arka ucu her işlemcide aynı (`CT2_USE_MKL=0`). CI bellek testi sınırı 1100 MiB (kapsayıcı tavanı 1.280 MB) değişmedi; canlıda bellek izlemesi yok. | [GELİŞTİRİLİYOR] (kodda var, PR #158/#235; VPS ses servisi kurulumu B-130 açık, canlı UNKNOWN) | `services/voice/app.py`, `apps/web/lib/voice.ts`, `apps/web/app/t/[slug]/etkin/actions.ts` |
 | **Doğal Türkçe ses (yazı → ses)** | Rehber hoparlörleri ve Etkin'in cevapları (sonuç, onay sorusu, okuma özeti) doğal Türkçe sesle okunur. Raf kodu ve "x,5" gibi ifadeler önce okunur biçime çevrilir. | Aynı ses servisinde `/tts` (EMA Lightning, PyTorch'un yalnız CPU yapısı; model imajda, SHA-256 ile sabit). Metin en çok 400 karakter, küçük önbellek, ayrı tek sıra (en çok 4 bekleyen). Servis yoksa cihazın kendi sesi kullanılır. Etkin cevaplarının sesli okunması firma ayarıdır: Ayarlar › Firma › "Etkin sesli yanıt" (varsayılan kapalı, `tenant_settings.voice_reply`); kullanıcının "Sessiz" tercihi ayrıca kapatır. | [GELİŞTİRİLİYOR] (kodda var, PR #241/#243, migration `0063`; canlı UNKNOWN, gerçek iPhone denemesi UNKNOWN) | `services/voice/app.py`, `apps/web/lib/voice.ts`, `apps/web/app/t/[slug]/kalip/sesli-oku.ts`, `0063_voice_reply` |
 | **Dosya deposu (S3/MinIO)** | Ek, görsel, rapor dosyası saklama | `packages/storage` paketi ve testleri var. Uygulama ekranları **henüz bunu kullanmıyor**. Canlı sunucuda nesne deposu konteyneri yok. | [PLANLANDI] | `packages/storage`, ADR-006 |
 | **Sağlık kontrolü** | `/api/health/live` (canlı mı?), `/api/health` (veritabanı/kuyruk/worker) | Docker 15–30 sn'de bir yoklar. Yoklama ayrı tek bağlantı kullanır, uygulama havuzunu tüketmez. | [TAMAMLANDI] | `apps/web/app/api/health`, `packages/db/src/health.ts` |
@@ -225,6 +225,24 @@ sequenceDiagram
 | **Paraşüt entegrasyonu** | Akışlar: depolar, ürün kartları, cariler, stok, satış siparişleri, sevkiyat/irsaliye (`INTEGRATION_FLOWS`). Bağlantı müşteri bazlı OAuth ile kurulur. İlk bağlantıda yalnız ürün kartları çekilir: miktar ve fiyat aktarılmaz; barkod, kategori/GTİP ve kaynak durumu gelir. Paraşüt'te arşivlenen/silinen kart Etkin'de yeni kullanıma kapanır, geçmişi ve stoku korunur. | `integration-sync` işi açılışta bir kez + **30 saniyede bir** (`INTEGRATION_SCHEDULE_INTERVAL_MS = 30_000`); bağlantı başına tek iş. Kimlik bilgileri ve anahtarlar şifreli saklanır. | [TAMAMLANDI] (kod). Canlı: STATE'e göre OAuth bağlantısı, otomatik ürün çekme ve kart yaşam döngüsü ilk müşteride canlıda doğrulandı (T-1066/T-1067/T-1068, DB defteri `0062`). Diğer akışların canlı kullanımı UNKNOWN. | `packages/domain/src/integrations`, `apps/worker/src/jobs/integration-sync.ts`, `0055`, `0059`–`0062` |
 | **Haftalık güvenlik taraması** | Bağımlılık açıkları (pnpm audit, ses servisi pip-audit), Node ve PostgreSQL güvenlik sürümü denetimi | GitHub Actions, her pazartesi | [TAMAMLANDI] | `.github/workflows/security-scan.yml`, `scripts/security-scan.mjs` |
 | **Dış izleme / alarm, sunucu dışı yedek** | Sunucu çökerse haber ver, verinin kopyası başka yerde dursun | — | [PLANLANDI] (P0: B-01, B-02, B-03) | `docs/BACKLOG.md` |
+
+### 1.7b Ortak arayüz katmanı (kalıp) — 29 Ekim durumu
+
+Kiracı ekranlarının hepsi ortak **kalıp** bileşenleriyle çizilir (`apps/web/app/t/[slug]/kalip/`; masaüstü standardı `docs/design/STANDART.md`, saha için `KalipSaha.dc.html`). 28 Ekim denetiminden sonra eski tasarım öğeleri (`@wms/ui` Banner / Button / TextField / Typeahead, kütüphane simgeleri, Tailwind düzen kutuları) belge formlarından (T-1119), pencere/uyarı/kilitli durumlardan (T-1121) ve saha ekranlarından (T-1122) kaldırıldı. Tek ortak parçalar:
+
+| İhtiyaç | Ortak parça |
+| :--- | :--- |
+| Bildirim bandı (hata / uyarı / tamam / bilgi, sesli) | `KalipBildirim` (`kalip/belge.tsx`), uyarı bandı `KalipUyari` (`kalip/uyari.tsx`) |
+| Düğme (ana / ikincil / tehlike, yükleniyor) | `KalipDugme` |
+| Seçim (yerel `<select>` yok) | `KalipSecim`, sunucuda aranan seçim `KalipSecimAra` + ortak seçim sayfası (`ara`: 250 ms bekleme, eski sorgunun sonucu seçilmez, okutma sunucuda çözülür) |
+| Ayar ekranı alt bölümleri ve yön seçimi | `kalip/ayar.tsx` (`KalipAltBolumler`, `KalipAyarKart`, `KalipAyarSatir`, `KalipYonSecimi`; T-1112) |
+| Katlanır stok ağacı | `KalipPivot` (`kalip/pivot.tsx`; T-1116) |
+| Rehber (odak, katlı simge, kart yeri) | `kalip/rehber*.ts(x)`, `kalip/kart-yeri.ts` (T-1124, T-1130) |
+| Yüzen kısayol halkası (Rehber + Düzenle dahil) | `kabuk/kisayol.tsx`, yerleşim `kabuk/kisayol-yer.ts` (T-1120, T-1123, T-1131) |
+
+Kalan küçük eski parçalar BACKLOG B-207'dedir (lokasyon ağacında Tailwind sınıfları, paketli kabulde iki saha düğmesi, aynı adlı iki `KalipUyari`'nin birleşmesi). Mekanik bekçi: `apps/web/app/ui-standards.test.ts`. Masaüstü CSS'i (`standart.css`) henüz tuval kaynağından üretilmiyor, elle aktarılıyor (B-177).
+
+**Kiracı dışı ekranlar hâlâ eski bileşenlerle:** giriş (`login`, `auth-forms.tsx`), iki adımlı doğrulama sihirbazı (`totp-sihirbaz.tsx`), parola sıfırlama, deneme aktivasyonu, çalışma alanı seçimi (`workspaces`), saha katılımı (`field/join`) ve yönetim paneli (`panel/*`) `@wms/ui` bileşenlerini kullanır (29 Ekim araması). Giriş ailesinin tuvali `Giris.dc.html`'dir; geçiş ayrı iştir (bkz. 04 "Geliştirme önerileri").
 
 ---
 
@@ -321,6 +339,6 @@ flowchart LR
 - Paket özellik bayrakları (QR/sevk/üretim/API) uygulamada hiçbir şeyi kapatmıyor.
 - Dosya deposu (S3) hazır ama hiçbir ekrana bağlı değil.
 - Yük testi yok. Kapasite rakamları tahmin.
-- Ses servisinin VPS kurulumu (B-130) ve sesli yanıtın gerçek cihazda denenmesi bekliyor; canlı UNKNOWN.
+- Ses servisinin VPS kurulumu (B-130) ve sesli yanıtın gerçek cihazda denenmesi bekliyor; canlı UNKNOWN. Ses servisi belleği canlıda izlenmiyor; Intel işlemcili sunucuda ölçüm yalnız CI'da yapıldı.
 - P0: sunucu dışı şifreli yedek, PITR, dış izleme/alarm, hata izleme yok (B-01…B-04).
 - 🔒 B-21: depo kapsamının veritabanı düzeyine taşınması bekliyor.
