@@ -17,7 +17,7 @@ import { sesiDurdur, useSesliOku } from './sesli-oku.ts';
 import { ADIM_REHBER_EVENT, useAdimRehberleri } from './adim-rehber.tsx';
 import { ADIM_KAYNAKLARI, adimPlani } from './adim-rehber-plan.ts';
 import { adimaGit, adimKimlik, baslat, bitir, kapat, katla, kimlikCoz, opKimlik, useRehberDurum, yerKaydet } from './rehber-durum.ts';
-import { gorunurMu, kartYeri, useRehberHedef, yaziyor, type KartYeri } from './rehber-hedef.ts';
+import { gorunenler, gorunurMu, useKartYeri, useRehberHedef, yaziyor } from './rehber-hedef.ts';
 function RehberIkon({ d }: {
     d: string | readonly string[];
 }) { return <svg className="ico" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">{(typeof d === 'string' ? [d] : d).map(p => <path key={p} d={p}/>)}</svg>; }
@@ -83,17 +83,11 @@ export function KalipRehberKart({ guide, title, step, folded, here, onStep, onFi
         window.addEventListener('keydown', key);
         return () => window.removeEventListener('keydown', key);
     }, [onClose]);
-    // Kart delikleri örtmesin: ölçüsüne göre köşe seçilir.
+    // T-1130: kart yapılacak yeri (delikteki alan/düğme) hiçbir görünümde örtmez — üç rehberin ortak yer kancası.
     const ref = useRef<HTMLElement>(null);
-    const [yer, setYer] = useState<KartYeri>({ left: 12, bottom: 136 });
-    useLayoutEffect(() => {
-        const el = ref.current;
-        if (el === null || !acik) return;
-        const r = el.getBoundingClientRect();
-        const y = kartYeri(delik ?? [], window.innerWidth, window.innerHeight, r.width, r.height);
-        setYer(o => o.left === y.left && o.right === y.right && o.top === y.top && o.bottom === y.bottom ? o : y);
-    }, [delik, acik, text, yok]);
-    const style: CSSProperties = { left: yer.left ?? 'auto', right: yer.right ?? 'auto', top: yer.top ?? 'auto', bottom: yer.bottom ?? 'auto', zIndex: 42 };
+    const hedefSec = instruction.target;
+    const yer = useKartYeri(ref, acik, `${guide}:${step}`, () => gorunenler(hedefSec));
+    const style: CSSProperties = { ...yer, zIndex: 42 };
     const common = { role: 'region' as const, 'aria-label': `${t('title')}: ${title}`, 'data-testid': 'working-guide', 'data-step': instruction.key, 'data-guide-id': guide };
     if (!acik) {
         // Yüzen simge: kaldığın yerden devam (rehberin ekranına döner) · baştan · başka bölüm · kapat.

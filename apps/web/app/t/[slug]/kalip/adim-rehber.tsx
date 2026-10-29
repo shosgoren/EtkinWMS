@@ -6,7 +6,7 @@
 // Eylem çağırmaz; hedefe dokunmak gerçek ekrandaki işlemi yapar (yetki ekranda/sunucuda).
 // T-1124: durum işlem rehberleriyle ortak (`rehber-durum.ts`): başka bölüme geçince kapanmaz, katlanır; başka rehber başlayınca adımı
 // hatırlanır ve seçiciden kaldığı yerden sürer. Adım başında hedef görünür alana gelir ve odak alır (`useRehberHedef`).
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { feedback } from "@wms/ui";
@@ -16,7 +16,7 @@ import { ADIM_YETKI, adimPlani, isAdimKaynak, isAdimRehber, type AdimKaynak, typ
 import { cikisSor } from "./cikis.tsx";
 import { KalipPerdeKatman } from "./perde.tsx";
 import { adimaGit, adimKimlik, baslat, bitir, kapat, katla, kimlikCoz, useRehberDurum } from "./rehber-durum.ts";
-import { kartYeri, useRehberHedef, type KartYeri } from "./rehber-hedef.ts";
+import { gorunenler, useKartYeri, useRehberHedef } from "./rehber-hedef.ts";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { ICON as BICON } from "../../../design/bakis-icons.ts";
 import { OP_GUIDE_EVENT } from "./rehber-plan.ts";
@@ -161,16 +161,10 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
     };
   }, [dAdim, id, adim, plan, path, base, burada, guncelle, owner]);
 
-  // Kart delikleri örtmesin (işlem rehberiyle aynı köşe seçimi).
+  // T-1130: kart yapılacak yeri örtmez (işlem rehberi ve kurulum yolculuğuyla aynı ortak yer kancası).
   const kart = useRef<HTMLElement>(null);
-  const [yer, setYer] = useState<KartYeri>({ left: 12, bottom: 136 });
-  useLayoutEffect(() => {
-    const el = kart.current;
-    if (el === null || !acik) return;
-    const r = el.getBoundingClientRect();
-    const y = kartYeri(delik ?? [], window.innerWidth, window.innerHeight, r.width, r.height);
-    setYer((o) => (o.left === y.left && o.right === y.right && o.top === y.top && o.bottom === y.bottom ? o : y));
-  }, [delik, acik, d?.adim]);
+  const hedefSec = adim?.target ?? null;
+  const yer = useKartYeri(kart, acik && burada, `${id ?? ""}:${d?.adim ?? 0}`, () => gorunenler(hedefSec));
 
   if (biten) {
     return (
@@ -212,7 +206,7 @@ export function KalipAdimRehberi({ userId, slug, dark }: { userId: string; slug:
   const sesli = (): void => {
     sesliOku(metin);
   };
-  const style: CSSProperties = { left: yer.left ?? "auto", right: yer.right ?? "auto", top: yer.top ?? "auto", bottom: yer.bottom ?? "auto", zIndex: 42 };
+  const style: CSSProperties = { ...yer, zIndex: 42 };
   return (
     <div className={`dzj${dark ? " dz-dark" : ""}`}>
       {delik !== null ? (

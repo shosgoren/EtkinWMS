@@ -176,7 +176,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
     clearSharedSession();
     await fakeParasut.close().catch(() => undefined);
     await fakeVoice.close().catch(() => undefined);
-    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", "E2E_ERP", "E2E_TOUR", "E2E_TOUR_SETUP_DESKTOP", "E2E_TOUR_SETUP_MOBILE", "E2E_TOUR_OP_DESKTOP", "E2E_TOUR_OP_MOBILE", "E2E_TOUR_RACE_DESKTOP", "E2E_TOUR_RACE_MOBILE", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
+    for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", "E2E_ERP", "E2E_TOUR", "E2E_TOUR_SETUP_DESKTOP", "E2E_TOUR_SETUP_MOBILE", "E2E_TOUR_OP_DESKTOP", "E2E_TOUR_OP_MOBILE", "E2E_TOUR_RACE_DESKTOP", "E2E_TOUR_RACE_MOBILE", "E2E_TOUR_YER_DESKTOP", "E2E_TOUR_YER_MOBILE", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];
     }
     proxy?.close();
@@ -407,7 +407,8 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
       process.env.E2E_ERP_TOTP_SECRET = erpMade.totpSecret;
       // T-1006: kurulum turu (yeni kiracı, hiç adım tamam değil → tur ilk girişte başlar; kendi alanı ve e-postası: giriş sınırı paylaşılmaz).
       // T-1026: cihaz ve senaryo arasında rehber seçimi/tamamlanma paylaşılmaz. Kayıt açık örnek yine testlerden ÖNCE kapanır.
-      for (const [index, guideCase] of ["SETUP_DESKTOP", "SETUP_MOBILE", "OP_DESKTOP", "OP_MOBILE", "RACE_DESKTOP", "RACE_MOBILE"].entries()) {
+      // T-1130: YER_* — rehber kartının yeri (zz-rehber-kart-yeri; kart yapılacak alanı örtmez), kendi kiracısı.
+      for (const [index, guideCase] of ["SETUP_DESKTOP", "SETUP_MOBILE", "OP_DESKTOP", "OP_MOBILE", "RACE_DESKTOP", "RACE_MOBILE", "YER_DESKTOP", "YER_MOBILE"].entries()) {
         const tourEmail = `tour-${guideCase.toLowerCase()}-${suffix}@example.test`;
         const tourPassword = randomBytes(18).toString("hex");
         const tourMade = await provisionEmptyTenant({
