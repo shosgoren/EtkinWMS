@@ -34,9 +34,9 @@ const top = async (adm: pg.Client): Promise<string | undefined> =>
 
 it("0055 boşken geri alınır ve yeniden uygulanır; dolu veride down reddedilir, veri ve defter korunur", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055"]);
+    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0065", "0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055"]);
     expect((await adm.query("SELECT to_regclass('public.integrations') AS i, to_regclass('public.integration_outbox') AS o, to_regclass('public.external_refs') AS r")).rows[0]).toEqual({ i: null, o: null, r: "external_refs" });
-    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065"]);
 
     const w = await seedWorld(adm, newRegistry(), "M991");
     await adm.query("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED')", [w.tenantId]);

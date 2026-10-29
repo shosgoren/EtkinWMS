@@ -1,8 +1,9 @@
 // T-911: kart türü ve tür önekli ürün kodu (saf kurallar; DB'siz).
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { AppError } from "@wms/shared/errors";
 import { CODE_SUGGEST_DEFAULTS, formatSuggestedCode, parsePrefix, suggestedCodePrefix } from "./code-suggest.ts";
-import { DEFAULT_CARD_TYPE, ITEM_CARD_TYPES, parseCardType } from "./items.ts";
+import { DEFAULT_CARD_TYPE, ITEM_CARD_TYPES, ITEM_FIXED_USAGES, parseCardType } from "./items.ts";
 import { STANDARD_UNITS } from "./units.ts";
 
 describe("kart türü (T-911)", () => {
@@ -43,5 +44,15 @@ describe("standart birimler (T-911)", () => {
       expect(u.code).toBe(u.code.toUpperCase());
       expect(u.name.trim()).not.toBe("");
     }
+  });
+});
+
+describe("sabit alan kullanım kodları (T-1129)", () => {
+  it("domain listesi 0065 `item_fixed_usage` fonksiyonunun döndürdüğü kodlarla birebir (kayma yok)", () => {
+    const up = readFileSync(new URL("../../../db/migrations/0065_item_fixed_fields.up.sql", import.meta.url), "utf8");
+    const fn = up.slice(up.indexOf("CREATE FUNCTION public.item_fixed_usage"), up.indexOf("REVOKE ALL ON FUNCTION public.item_fixed_usage"));
+    const codes = [...fn.matchAll(/RETURN '([A-Z]+)'/g)].map((m) => m[1]);
+    expect(codes.length).toBeGreaterThan(0);
+    expect([...new Set(codes)].sort()).toEqual([...ITEM_FIXED_USAGES].sort());
   });
 });

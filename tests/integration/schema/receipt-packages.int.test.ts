@@ -65,9 +65,9 @@ afterAll(async () => {
 });
 describe("T-932 immutable package origins (isolated scratch, runtime role)",()=> {
   it("empty36→31→36 keeps old tables and schema ledger",async()=> {
-    expect((await migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).reverted).toEqual(["0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055", "0054", "0053", "0052", "0051", "0050", "0049", "0048", "0047", "0046", "0045", "0044", "0043", "0042", "0041", "0040", "0039", "0038","0037","0036","0035","0034","0033","0032"]);
+    expect((await migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).reverted).toEqual(["0065", "0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055", "0054", "0053", "0052", "0051", "0050", "0049", "0048", "0047", "0046", "0045", "0044", "0043", "0042", "0041", "0040", "0039", "0038","0037","0036","0035","0034","0033","0032"]);
     expect((await migration.query("SELECT to_regclass('public.receipt_packages') AS table")).rows[0]?.table).toBeNull();
-    expect((await migrateUp({url:direct})).applied).toEqual(["0032","0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064"]);
+    expect((await migrateUp({url:direct})).applied).toEqual(["0032","0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065"]);
   });
   for (const [label, options] of [
     ["same tenant wrong receipt", () => ({receiptId: legacyReceipt})],
@@ -236,7 +236,7 @@ describe("T-932 immutable package origins (isolated scratch, runtime role)",()=>
     await expect(migrateDown({url:direct,to:"0031",wmsEnv:"staging"})).rejects.toThrow(/receipt package data exists/);
     expect((await migration.query("SELECT count(*)::int AS n FROM public.receipt_packages")).rows[0]?.n).toBe(3);
     expect((await migration.query("SELECT version FROM wms_meta.schema_migrations ORDER BY version DESC LIMIT 1")).rows[0]?.version).toBe("0032");
-    expect((await migrateUp({url:direct})).applied).toEqual(["0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064"]);
+    expect((await migrateUp({url:direct})).applied).toEqual(["0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065"]);
   });
   for(const order of ["package first","lot update first"] as const) it(`RR concurrent ${order} cannot commit contradictory dates`,async()=> {
     const racer=new pg.Client({connectionString:appUrl}); await racer.connect();
@@ -405,7 +405,11 @@ beforeAll(async()=>{try{
  await admin.connect();await admin.query(`CREATE DATABASE ${name}`);direct=urlFor(env.databaseUrlDirect);migration=new pg.Client({connectionString:direct});await migration.connect();await migrateUp({url:direct});
  world=await seedWorld(migration,newRegistry(),"MOVEMENT");other=await seedWorld(migration,newRegistry(),"MOVEMENTOTHER");
  kg=randomUUID();await migration.query("INSERT INTO public.units(tenant_id,id,code,name) VALUES($1,$2,'KG-PROOF','Kilogram')",[world.tenantId,kg]);
+ // T-1129: seedWorld ürünü zaten kullanılmış (boyut + belge satırı); KG temel birimi yalnız bu ayrı scratch DB kurulumunda, bekçi tek ifade için
+ // kapatılarak verilir (0065 bekçisinin kendisi item-fixed-fields.int.test.ts'te sınanır).
+ await migration.query("BEGIN");await migration.query("ALTER TABLE public.items DISABLE TRIGGER items_guard_unused_fixed");
  await migration.query("UPDATE public.items SET base_unit_id=$3 WHERE tenant_id=$1 AND id=$2",[world.tenantId,world.itemNoneId,kg]);
+ await migration.query("ALTER TABLE public.items ENABLE ALWAYS TRIGGER items_guard_unused_fixed");await migration.query("COMMIT");
  const u=new URL(urlFor(env.databaseUrl)),endpoint=new URL(direct);u.hostname=endpoint.hostname;u.port=endpoint.port;appUrl=u.toString();app=new pg.Client({connectionString:appUrl});await app.connect();
  expect((await app.query("SELECT current_user AS role")).rows[0]?.role).toBe("wms_app");
 }catch(e){throw new Error(redactErrorChain(e,secretUrls(env)));}},120000);
@@ -615,7 +619,11 @@ beforeAll(async()=>{try{
  await admin.connect();await admin.query(`CREATE DATABASE ${name}`);direct=urlFor(env.databaseUrlDirect);migration=new pg.Client({connectionString:direct});await migration.connect();await migrateUp({url:direct});
  world=await seedWorld(migration,newRegistry(),"MOVEMENT");other=await seedWorld(migration,newRegistry(),"MOVEMENTOTHER");
  kg=randomUUID();await migration.query("INSERT INTO public.units(tenant_id,id,code,name) VALUES($1,$2,'KG-PROOF','Kilogram')",[world.tenantId,kg]);
+ // T-1129: seedWorld ürünü zaten kullanılmış (boyut + belge satırı); KG temel birimi yalnız bu ayrı scratch DB kurulumunda, bekçi tek ifade için
+ // kapatılarak verilir (0065 bekçisinin kendisi item-fixed-fields.int.test.ts'te sınanır).
+ await migration.query("BEGIN");await migration.query("ALTER TABLE public.items DISABLE TRIGGER items_guard_unused_fixed");
  await migration.query("UPDATE public.items SET base_unit_id=$3 WHERE tenant_id=$1 AND id=$2",[world.tenantId,world.itemNoneId,kg]);
+ await migration.query("ALTER TABLE public.items ENABLE ALWAYS TRIGGER items_guard_unused_fixed");await migration.query("COMMIT");
  outputItem=randomUUID();secondOutputItem=randomUUID();recipe=randomUUID();secondRecipe=randomUUID();targetWarehouse=randomUUID();targetLocation=randomUUID();targetShelf=randomUUID();
  await migration.query("INSERT INTO public.items(tenant_id,id,code,name,base_unit_id,tracking_mode) VALUES($1,$2,'OUTPUT-C','Output',$4,'NONE'),($1,$3,'OUTPUT-C2','Output2',$4,'NONE')",[world.tenantId,outputItem,secondOutputItem,kg]);
  await migration.query("BEGIN");

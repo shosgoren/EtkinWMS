@@ -392,11 +392,12 @@ describe("T-204 silme yasağı, yetkiler ve RLS", () => {
     expect(del.ok, JSON.stringify(del)).toBe(true);
   });
 
-  it("değişmez alanlar: items.base_unit_id/tracking_mode/quantity_scale, lot/seri kimliği, taşıma birimi kodu UPDATE yetkisi yok", async () => {
+  it("değişmez alanlar: lot/seri kimliği, taşıma birimi kodu UPDATE yetkisi yok; kullanılmış ürünün sabit alanları bekçide (T-1129)", async () => {
+    // T-1129: items.base_unit_id/tracking_mode/quantity_scale artık sütun yetkisinde; A.itemId stoklu/lotlu → 0065/0013 bekçisi reddeder.
+    for (const set of [`base_unit_id = '${A.boxUnitId}'`, "tracking_mode = 'NONE'", "quantity_scale = 3"]) {
+      expectFail(await one(A.tenantId, `UPDATE public.items SET ${set} WHERE id = '${A.itemId}'`), CHECK_VIOLATION, `items.${set}`);
+    }
     for (const [t, set, where] of [
-      ["items", "base_unit_id = base_unit_id", `id = '${A.itemId}'`],
-      ["items", "tracking_mode = 'NONE'", `id = '${A.itemId}'`],
-      ["items", "quantity_scale = 3", `id = '${A.itemId}'`],
       ["lots", "lot_code = 'ZZ'", `id = '${A.lotId}'`],
       ["serials", "serial_no = 'ZZ'", `id = '${A.serialId}'`],
       ["handling_units", "code = 'ZZ'", `id = '${A.handlingUnitId}'`],

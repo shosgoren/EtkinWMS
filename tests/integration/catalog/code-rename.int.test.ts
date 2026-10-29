@@ -342,19 +342,24 @@ describe("code_history: RLS, izolasyon ve ekle-yalnız yetki (wms_app)", () => {
     expect(await asApp(A.tenantId, (q) => q("INSERT INTO public.code_history (tenant_id, entity_type, entity_id, old_code, new_code, changed_by) VALUES ($1, 'item', $2, 'SAME', 'SAME', $3)", [A.tenantId, A.itemId, A.ownerUserId]))).toMatchObject({ ok: false, code: "23514" });
   });
 
-  it("kod UPDATE yetkisi yalnızca code sütunu: items/warehouses/locations.code güncellenebilir; kilitli sütunlar (base_unit_id, tracking_mode, quantity_scale, parent_id, warehouse_id) hâlâ 42501", async () => {
+  it("kod UPDATE yetkisi yalnızca code sütunu: items/warehouses/locations.code güncellenebilir; kilitli sütunlar (parent_id, warehouse_id) hâlâ 42501; ürün sabit alanları T-1129 bekçisinde", async () => {
     const ok1 = await asApp(A.tenantId, (q) => q("UPDATE public.items SET code = code WHERE tenant_id = $1 AND id = $2", [A.tenantId, A.itemId]));
     expect(ok1.ok).toBe(true);
     expect((await asApp(A.tenantId, (q) => q("UPDATE public.warehouses SET code = code WHERE tenant_id = $1 AND id = $2", [A.tenantId, A.warehouseId]))).ok).toBe(true);
     expect((await asApp(A.tenantId, (q) => q("UPDATE public.locations SET code = code WHERE tenant_id = $1 AND id = $2", [A.tenantId, A.rootLocationId]))).ok).toBe(true);
     for (const stmt of [
-      "UPDATE public.items SET base_unit_id = base_unit_id WHERE tenant_id = $1",
-      "UPDATE public.items SET tracking_mode = tracking_mode WHERE tenant_id = $1",
-      "UPDATE public.items SET quantity_scale = quantity_scale WHERE tenant_id = $1",
       "UPDATE public.locations SET warehouse_id = warehouse_id WHERE tenant_id = $1",
       "UPDATE public.locations SET parent_id = parent_id WHERE tenant_id = $1",
     ]) {
       expect(await asApp(A.tenantId, (q) => q(stmt, [A.tenantId])), stmt).toMatchObject({ ok: false, code: "42501" });
+    }
+    // T-1129: ürün sabit alanları artık sütun yetkisinde; aynı değere yazmak değişiklik değildir (bekçi yalnız gerçek farkta çalışır).
+    for (const stmt of [
+      "UPDATE public.items SET base_unit_id = base_unit_id WHERE tenant_id = $1",
+      "UPDATE public.items SET tracking_mode = tracking_mode WHERE tenant_id = $1",
+      "UPDATE public.items SET quantity_scale = quantity_scale WHERE tenant_id = $1",
+    ]) {
+      expect(await asApp(A.tenantId, (q) => q(stmt, [A.tenantId])), stmt).toMatchObject({ ok: true });
     }
     // tenant bağlamı olmadan veya B bağlamında A satırının kodu değişmez (RLS: 0 satır)
     const cross = await asApp(B.tenantId, (q) => q("UPDATE public.items SET code = 'HACK' WHERE tenant_id = $1", [A.tenantId]));

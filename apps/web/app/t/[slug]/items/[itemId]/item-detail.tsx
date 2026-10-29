@@ -11,6 +11,8 @@
 // (`KalipFormEkran`; adres `?edit=1` / `?kod=1` / `?conv=1` / `?barcode=1`); yerel açılır liste yok (renkli seçim kutuları / aramalı
 // seçim sayfası). Kaydet yalnız değişiklikte etkin, doğrulama ve yarım işte çıkış kutusu ortak kalıptadır. Geri ürün kartına döner.
 // Tek soruluk onaylar (arşivle, barkodu kaldır) pencere kalır.
+// T-1129 (B-188): hiç kullanılmamış üründe düzenleme formunda temel birim, miktar hassasiyeti ve takip modu seçilebilir (yeni ürün
+// formuyla aynı kalıp seçimleri); kullanılmışsa "Değişmeyen bilgiler" kilitli kutusu nedeniyle kalır. Karar sunucuda (domain + 0065).
 // T-1116 (B-176; tuval "5 · Ürün kartı" + "5b · Stok ve yer"): şeritte Eldeki · Kullanılabilir · Ayrılmış kutuları (sunucu toplamı);
 // sekmeler Genel · Stok ve yer (katlanır pivot `KalipPivot`: Depo › Raf yeri › Lot › Palet › Koli, SKT, durum, toplam şeridi) ·
 // Hareketler (son 50 belge + toplam) · Birimler · Barkodlar · Takip (lotlar, seriler) · Paraşüt · Değişiklik geçmişi (`audit.view`).
@@ -34,7 +36,7 @@ import { SICON } from "../../../../design/standart-icons.ts";
 import type { AlanKurali } from "../../kalip/dogrula.ts";
 import { Ico, KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../../kalip/form-ekran.tsx";
-import { KalipAlan, KalipGrup, KalipSabit } from "../../kalip/form.tsx";
+import { KalipAlan, KalipGrup, KalipKilit, KalipSabit } from "../../kalip/form.tsx";
 import { approx, fmtGun, fmtQty, stockTone } from "../../kalip/format.ts";
 import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
 import { kdz } from "../../kalip/tokens.ts";
@@ -55,6 +57,11 @@ export interface ItemDetailItem {
   readonly pickPolicy: string;
   readonly cardType: CardType;
 }
+/** T-1129: sabit alan durumu (`getItemFixedState`); `usage` null = hiç kullanılmamış. */
+export interface ItemFixedView {
+  readonly usage: string | null;
+  readonly sourceLinked: boolean;
+}
 export interface ConversionView {
   readonly unitId: string;
   readonly unitCode: string;
@@ -71,6 +78,8 @@ export interface BarcodeView {
 }
 
 const PICK = ["FIFO", "FEFO"] as const;
+const TRACKING = ["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"] as const;
+const SCALES = [0, 1, 2, 3, 4, 5, 6] as const;
 type ItemForm = "edit" | "kod" | "conv" | "barcode";
 const FORMS: readonly ItemForm[] = ["edit", "kod", "conv", "barcode"];
 const c = (hex: string): string => kdz("dzd", hex);
@@ -173,8 +182,9 @@ function itemErr(e: ServerError, tr: (k: string) => string, field: (key: string)
   return { ok: false, mesaj: e.requestId === undefined ? text : `${text} · ${e.requestId}` };
 }
 
-/** Ürün kartı düzenleme — TAM EKRAN FORM (`?edit=1`): ad, kart türü ve çıkış kuralı; değişmeyen bilgiler kilitli satırlar. */
-function ItemEditForm({ slug, dark, item, inUse, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; inUse: boolean; onBack: () => void; onDone: () => void }) {
+/** Ürün kartı düzenleme — TAM EKRAN FORM (`?edit=1`): ad, kart türü ve çıkış kuralı; sabit alanlar (temel birim, hassasiyet, takip)
+ * yalnız hiç kullanılmamış üründe seçilebilir (T-1129), aksi kilitli satırlar + neden. */
+function ItemEditForm({ slug, dark, item, fixed, units, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; fixed: ItemFixedView; units: readonly UnitOption[]; onBack: () => void; onDone: () => void }) {
   const t = useTranslations("items");
   const td = useTranslations("items.detail");
   const tk = useTranslations("items.detail.k");
@@ -182,21 +192,40 @@ function ItemEditForm({ slug, dark, item, inUse, onBack, onDone }: { slug: strin
   const tc = useTranslations("items.cardType");
   const tp = useTranslations("items.pick");
   const tt = useTranslations("items.tracking");
-  const [initial] = useState(() => ({ name: item.name, cardType: item.cardType as string, pick: item.pickPolicy }));
+  const editable = fixed.usage === null;
+  const unitEditable = editable && !fixed.sourceLinked;
+  const [initial] = useState(() => ({ name: item.name, cardType: item.cardType as string, pick: item.pickPolicy, unitId: item.baseUnitId, scale: String(item.quantityScale), tracking: item.trackingMode }));
   const [v, setV] = useState(initial);
   const set = (k: keyof typeof v, val: string): void => setV((cur) => ({ ...cur, [k]: val }));
-  const rules: AlanKurali[] = [{ name: "name", label: t("form.name"), required: true, maxLength: 512 }];
+  const rules: AlanKurali[] = [{ name: "name", label: t("form.name"), required: true, maxLength: 512 }, ...(unitEditable ? [{ name: "unitId", label: t("form.baseUnit"), required: true }] : [])];
   const vis = CARD_VISUAL[(CARD_TYPES as readonly string[]).includes(v.cardType) ? (v.cardType as CardType) : item.cardType];
+  const unitOf = (id: string): UnitOption | undefined => units.find((u) => u.id === id);
+  const unitCode = v.unitId === item.baseUnitId ? item.baseUnitCode : (unitOf(v.unitId)?.code ?? item.baseUnitCode);
 
   async function save(): Promise<KaydetSonuc> {
-    const r = await updateItemAction({ slug, itemId: item.id, name: v.name, pickPolicy: v.pick, cardType: v.cardType });
-    if (!r.ok) return itemErr(toServerError(r.error), (k) => terr(k), (key) => (key === "validation_failed" ? "name" : null));
+    const r = await updateItemAction({
+      slug,
+      itemId: item.id,
+      name: v.name,
+      pickPolicy: v.pick,
+      cardType: v.cardType,
+      // T-1129: yalnız değişen sabit alan gönderilir (değişmeyen alan sunucuda kullanım denetimine girmez).
+      ...(editable && v.unitId !== initial.unitId ? { baseUnitId: v.unitId } : {}),
+      ...(editable && v.scale !== initial.scale ? { quantityScale: Number(v.scale) } : {}),
+      ...(editable && v.tracking !== initial.tracking ? { trackingMode: v.tracking } : {}),
+    });
+    if (!r.ok) {
+      const e = toServerError(r.error);
+      if (errorKey(e) === "validation_failed_in_use") return { ok: false, mesaj: td("fixedNowLocked") };
+      return itemErr(e, (k) => terr(k), (key) => (key === "validation_failed" ? "name" : null));
+    }
     return { ok: true };
   }
-  const scale = item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale });
-  const fixed = [
+  const scaleLabel = (n: number): string => (n === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: n }));
+  const lockReason = fixed.usage === null ? td("lockedFixed") : td("lockedInUse", { reason: td(`fixedUsage.${fixed.usage}`) });
+  const fixedRows = [
     { k: t("form.baseUnit"), v: item.baseUnitCode, d: LICON.tag },
-    { k: t("form.scale"), v: scale, d: LICON.gear },
+    { k: t("form.scale"), v: scaleLabel(item.quantityScale), d: LICON.gear },
     { k: t("form.tracking"), v: tt(item.trackingMode), d: LICON.lock },
   ];
   return (
@@ -214,7 +243,7 @@ function ItemEditForm({ slug, dark, item, inUse, onBack, onDone }: { slug: strin
       onBack={onBack}
       saveAria={td("save")}
       savedText={td("done.saved")}
-      preview={<KalipOnizleme name={v.name} code={item.code} d={vis.d} color={vis.color} kind={tc(v.cardType)} rows={[{ k: t("form.baseUnit"), v: item.baseUnitCode }, { k: t("form.pick"), v: tp(v.pick) }]} />}
+      preview={<KalipOnizleme name={v.name} code={item.code} d={vis.d} color={vis.color} kind={tc(v.cardType)} rows={[{ k: t("form.baseUnit"), v: unitCode }, { k: t("form.pick"), v: tp(v.pick) }]} />}
     >
       <KalipGrup title={tk("editSection")} sub={tk("editSub")} d={vis.d} color={vis.color}>
         <KalipAlan label={`${t("form.name")} *`} name="name" value={v.name} onChange={(e) => set("name", e.target.value)} autoComplete="off" maxLength={512} />
@@ -238,11 +267,47 @@ function ItemEditForm({ slug, dark, item, inUse, onBack, onDone }: { slug: strin
           testId="item-pick"
         />
       </KalipGrup>
-      <KalipGrup title={tk("fixedTitle")} sub={inUse ? td("lockedInUse") : td("lockedFixed")} d={LICON.lock} color="4E6476">
-        {fixed.map((f) => (
-          <KalipSabit key={f.k} title={f.k} d={f.d} color="4E6476" pill={{ label: f.v, ok: true }} aria={`${f.k}: ${f.v}`} />
-        ))}
-      </KalipGrup>
+      {editable ? (
+        <KalipGrup title={tk("fixedEditTitle")} sub={lockReason} d={LICON.tag} color="2F5DA8" testId="item-fixed-edit">
+          {unitEditable ? (
+            <KalipSecim
+              name="unitId"
+              label={t("form.baseUnit")}
+              hint={t("form.baseUnitHint")}
+              value={v.unitId}
+              color="2F5DA8"
+              list
+              placeholder={t("form.baseUnitPlaceholder")}
+              icon={{ d: LICON.tag, color: "2F5DA8" }}
+              onPick={(id) => set("unitId", id)}
+              options={units.map((u) => ({ id: u.id, label: u.code, sub: u.name, keys: [u.name] }))}
+              testId="item-base-unit"
+            />
+          ) : (
+            <KalipSabit title={t("form.baseUnit")} d={LICON.tag} color="4E6476" pill={{ label: item.baseUnitCode, ok: true }} aria={`${t("form.baseUnit")}: ${item.baseUnitCode} · ${td("sourceUnitLocked")}`} testId="item-base-unit-locked" />
+          )}
+          <KalipSecim
+            name="scale"
+            label={t("form.scale")}
+            hint={t("form.scaleHint")}
+            value={v.scale}
+            color="4E6476"
+            list
+            icon={{ d: LICON.gear, color: "4E6476" }}
+            onPick={(id) => set("scale", id)}
+            options={SCALES.map((n) => ({ id: String(n), label: scaleLabel(n) }))}
+            testId="item-scale"
+          />
+          <KalipSecimGrubu name="tracking" label={t("form.tracking")} value={v.tracking} color="6C4BD8" onPick={(id) => set("tracking", id)} options={TRACKING.map((k) => ({ id: k, label: tt(k), d: k === "NONE" ? LICON.close : LICON.tag }))} testId="item-tracking" />
+        </KalipGrup>
+      ) : (
+        <KalipGrup title={tk("fixedTitle")} sub={lockReason} d={LICON.lock} color="4E6476" testId="item-fixed-locked">
+          <KalipKilit title={lockReason} sub={td("fixedLockedSub")} />
+          {fixedRows.map((f) => (
+            <KalipSabit key={f.k} title={f.k} d={f.d} color="4E6476" pill={{ label: f.v, ok: true }} aria={`${f.k}: ${f.v}`} />
+          ))}
+        </KalipGrup>
+      )}
     </KalipFormEkran>
   );
 }
@@ -521,7 +586,7 @@ export function ItemDetail({
   tabData = { kind: "none" },
   canHistory = false,
   sourceInfo = {},
-  inUse,
+  fixed,
   units,
   item,
   conversions,
@@ -535,7 +600,7 @@ export function ItemDetail({
   tabData?: ItemTabData;
   canHistory?: boolean;
   sourceInfo?: Readonly<Record<string, { readonly categoryName?: string | null; readonly gtip?: string | null; readonly unit?: string | null; readonly archived?: boolean | null; readonly lifecycle?: "NONE"|"PENDING"|"ARCHIVED"|"REMOVED"; readonly sourceState?: "ACTIVE"|"ARCHIVED"|"DELETED"; readonly inventoryTracking?: boolean | null }>>;
-  inUse: boolean;
+  fixed: ItemFixedView;
   units: readonly UnitOption[];
   item: ItemDetailItem;
   conversions: readonly ConversionView[];
@@ -700,7 +765,9 @@ export function ItemDetail({
     { key: "reserved", etiket: tk("boxReserved"), deger: fq(stockCard.reserved), d: SICON.kilit, ton: "amber", testId: "kalip-reserved" },
     ...(stockCard.min === null ? [] : [{ key: "min", etiket: tk("boxMin"), deger: fq(stockCard.min), d: SICON.uyari, ton: tn === "ok" ? ("ok" as const) : ("amber" as const) }]),
   ];
-  const fixedLock = inUse ? td("lockedInUse") : td("lockedFixed");
+  // T-1129: kilit yalnız kullanılmış üründe (neden metniyle); bağlı sistemden gelen ürünün birimi ayrıca kilitli.
+  const fixedLock = fixed.usage === null ? undefined : td("lockedInUse", { reason: td(`fixedUsage.${fixed.usage}`) });
+  const unitLock = fixedLock ?? (fixed.sourceLinked ? td("sourceUnitLocked") : undefined);
   const bilgiler: KalipBilgi[] = [
     { key: "name", etiket: t("form.name"), deger: item.name, d: SICON.ad, ton: "mavi" },
     {
@@ -720,11 +787,11 @@ export function ItemDetail({
         : {}),
     },
     { key: "type", etiket: t("form.cardType"), deger: tc(item.cardType), d: SICON.kutu, ton: tur },
-    { key: "unit", etiket: t("form.baseUnit"), deger: unit, d: SICON.birim, ton: "lacivert", kilit: fixedLock },
+    { key: "unit", etiket: t("form.baseUnit"), deger: unit, d: SICON.birim, ton: "lacivert", ...(unitLock === undefined ? {} : { kilit: unitLock }) },
     { key: "conv", etiket: td("conversionsTitle"), deger: conversions.length === 0 ? tk("none") : conversions.map((cv) => td("conversionLine", { unit: cv.unitCode, factor: cv.factor, base: unit })).join(" · "), d: SICON.cevrim, ton: "mor" },
     { key: "pick", etiket: t("form.pick"), deger: tp(item.pickPolicy), d: SICON.list, ton: "camgobegi" },
-    { key: "tracking", etiket: t("form.tracking"), deger: tt(item.trackingMode), d: SICON.qr, ton: "camgobegi", kilit: fixedLock },
-    { key: "scale", etiket: t("form.scale"), deger: item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale }), d: SICON.birim, ton: "gri", kilit: fixedLock },
+    { key: "tracking", etiket: t("form.tracking"), deger: tt(item.trackingMode), d: SICON.qr, ton: "camgobegi", ...(fixedLock === undefined ? {} : { kilit: fixedLock }) },
+    { key: "scale", etiket: t("form.scale"), deger: item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale }), d: SICON.birim, ton: "gri", ...(fixedLock === undefined ? {} : { kilit: fixedLock }) },
     ...(stockCard?.min === null || stockCard?.min === undefined ? [] : [{ key: "min", etiket: tk("boxMin"), deger: `${fq(stockCard.min)} ${unit}`, d: SICON.uyari, ton: "turuncu" as const }]),
   ];
   const sourceRows: KalipBilgi[] = Object.entries(sourceInfo).sort(([a], [b]) => a.localeCompare(b)).flatMap(([provider, info]) => {
@@ -747,7 +814,7 @@ export function ItemDetail({
   const secili = sekmeler.some((s) => s.id === sekme) ? sekme : "genel";
   const sekmeHref = (id: string): string => (id === "genel" ? itemPath : `${itemPath}?sekme=${id}`);
 
-  if (form === "edit") return <ItemEditForm key="edit" slug={slug} dark={dark} item={item} inUse={inUse} onBack={() => back()} onDone={() => back(td("done.saved"))} />;
+  if (form === "edit") return <ItemEditForm key="edit" slug={slug} dark={dark} item={item} fixed={fixed} units={units} onBack={() => back()} onDone={() => back(td("done.saved"))} />;
   if (form === "conv") return <ConversionForm key="conv" slug={slug} dark={dark} item={item} units={otherUnits} conversions={conversions} onBack={() => back()} onDone={() => back(td("done.conversion"))} />;
   if (form === "barcode") return <BarcodeForm key="barcode" slug={slug} dark={dark} item={item} units={otherUnits} onBack={() => back()} onDone={() => back(td("done.barcodeAdded"))} />;
   if (form === "kod") {

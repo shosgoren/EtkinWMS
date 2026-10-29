@@ -2,10 +2,12 @@
 //
 // - Stok DEĞİŞTİRMEZ (G-01); yalnızca katalog satırı yazar ve stok tablolarını OKUR. Bu yüzden `acquireStockLocks`
 //   kullanılmaz; arşiv/stok-denetimi için yalnızca ürün KATALOG satırı `FOR UPDATE` ile kilitlenir (stok kilidi değil).
-// - `base_unit_id`, `tracking_mode`, `quantity_scale` oluşturulduktan sonra değişmez (A-87; wms_app UPDATE yetkisi yok).
-//   `updateItem` bu alanlar için fark isteği gelirse: stoklu üründe `IN_USE`, stoksuzda `VALIDATION_FAILED` (A-107).
-// - "Stoklu" = ürünün herhangi bir stok boyutu (dolayısıyla defter/bakiye) var. `archiveItem`: pozitif bakiye ya da açık
-//   (ACTIVE) rezervasyon varsa `IN_USE`. Kullanılmış kart silinmez; DELETE yoktur (05 §Geri alma).
+// - T-1129 (B-188; A-87/A-107 güncellemesi, kullanıcı kararı 27 Ekim): `base_unit_id`, `tracking_mode`, `quantity_scale` yalnız HİÇ
+//   KULLANILMAMIŞ üründe değişir; ilk kullanımla kilitlenir. "Kullanılmış" tek tanımdır: 0065 `item_fixed_usage` (stok boyutu,
+//   belge/kabul/iade/sipariş satırı, lot/seri, birim dönüşümü, birimli ya da miktarlı barkod, görev/sayım, reçete, stok politikası,
+//   entegrasyon işareti). Bağlı sistemden gelen (external_refs ITEM) üründe temel birim ayrıca kilitli. Kullanılmışsa `IN_USE`.
+//   Karar ürün satırı `FOR UPDATE` kilitliyken DB'de verilir; 0065 tetikleyicisi aynı tanımla doğrudan SQL'i de reddeder.
+// - `archiveItem`: pozitif bakiye ya da açık (ACTIVE) rezervasyon varsa `IN_USE`. Kullanılmış kart silinmez; DELETE yoktur (05 §Geri alma).
 import { sql } from "drizzle-orm";
 import type { ItemCardType, PickPolicy, TrackingMode } from "@wms/db";
 import { appendAudit } from "@wms/db";
@@ -62,7 +64,7 @@ export interface UpdateItemInput {
   readonly pickPolicy?: PickPolicy;
   /** Kart türü değiştirilebilir (T-911): sınıflandırmadır, stok/defter etkisi yoktur; değişim `item.updated` audit'ine yazılır. */
   readonly cardType?: ItemCardType;
-  // Değişmez alanlar (A-87): farklı değer istenirse ret (bkz. dosya başlığı).
+  // Sabit alanlar (A-87, T-1129): yalnız kullanılmamış üründe değişir (bkz. dosya başlığı).
   readonly trackingMode?: TrackingMode;
   readonly baseUnitId?: string;
   readonly quantityScale?: number;
@@ -131,11 +133,43 @@ export async function createItem(params: CatalogCommandParams, input: CreateItem
   });
 }
 
-async function hasStockDimension(tx: AccessTx, tenantId: string, itemId: string): Promise<boolean> {
-  const r = await tx.execute<{ x: number }>(
-    sql`SELECT 1 AS x FROM public.stock_dimensions WHERE tenant_id = ${tenantId}::uuid AND item_id = ${itemId}::uuid LIMIT 1`,
+/** T-1129: ürünün sabit alanlarını kilitleyen ilk kullanım türü (0065 `item_fixed_usage` kodları); `null` = hiç kullanılmamış. */
+export const ITEM_FIXED_USAGES = ["STOCK", "DOCUMENT", "ORDER", "TRACKING", "UNIT", "TASK", "RECIPE", "POLICY"] as const;
+export type ItemFixedUsage = (typeof ITEM_FIXED_USAGES)[number];
+export interface ItemFixedState {
+  readonly usage: ItemFixedUsage | null;
+  /** Bağlı sistemden (ör. Paraşüt) gelen ürün: temel birim eşitlemede karşılaştırılır, değiştirilemez. */
+  readonly sourceLinked: boolean;
+}
+
+async function readFixedState(tx: AccessTx, tenantId: string, itemId: string): Promise<ItemFixedState> {
+  const r = await tx.execute<{ usage: string | null; linked: boolean }>(
+    sql`SELECT public.item_fixed_usage(${tenantId}::uuid, ${itemId}::uuid) AS usage,
+               EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = ${tenantId}::uuid AND r.entity_type = 'ITEM' AND r.entity_id = ${itemId}::uuid) AS linked`,
   );
-  return r[0] !== undefined;
+  const usage = r[0]?.usage ?? null;
+  // Bilinmeyen kod (fonksiyon genişlerse) kullanılmış sayılır: kapalı başarısız.
+  return { usage: usage === null ? null : ((ITEM_FIXED_USAGES as readonly string[]).includes(usage) ? (usage as ItemFixedUsage) : "STOCK"), sourceLinked: r[0]?.linked === true };
+}
+
+/** 0065 tetikleyicisinin reddi (23514, `ITEM_FIXED_*`): domain denetimini atlatan yarış/yol → `IN_USE`. */
+function isFixedGuard(e: unknown): boolean {
+  let cur: unknown = e;
+  for (let i = 0; i < 6 && cur !== undefined && cur !== null; i++) {
+    const o = cur as { code?: unknown; message?: unknown };
+    if (o.code === "23514" && typeof o.message === "string" && (o.message.startsWith("ITEM_FIXED_") || o.message.startsWith("TRACKING_VIOLATION"))) return true;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+/** T-1129: ürün kartı düzenleme ekranı için sabit alan durumu (yalnız gösterim; karar yine `updateItem` + tetikleyicide). */
+export async function getItemFixedState(params: Omit<CatalogCommandParams, "requestId">, input: { readonly itemId: string }): Promise<ItemFixedState> {
+  const itemId = parseUuid(input.itemId);
+  return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
+    if ((await loadItem(tx, actor.tenantId, itemId)) === undefined) throw new AppError("NOT_FOUND");
+    return readFixedState(tx, actor.tenantId, itemId);
+  });
 }
 
 function isUniqueViolation(e: unknown): boolean {
@@ -161,29 +195,48 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
   return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
     if (cur === undefined) throw new AppError("NOT_FOUND");
-    const immutableChange =
-      (trackingMode !== undefined && trackingMode !== cur.tracking_mode) ||
-      (baseUnitId !== undefined && baseUnitId !== cur.base_unit_id) ||
-      (quantityScale !== undefined && quantityScale !== cur.quantity_scale);
-    if (immutableChange) {
-      if (await hasStockDimension(tx, actor.tenantId, itemId)) throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
-      throw new AppError("VALIDATION_FAILED"); // stoksuz olsa da A-87: bu alanlar oluşturulduktan sonra değişmez
+    const newTracking = trackingMode ?? (cur.tracking_mode as TrackingMode);
+    const newBase = baseUnitId ?? cur.base_unit_id;
+    const newScale = quantityScale ?? cur.quantity_scale;
+    const baseChanged = newBase !== cur.base_unit_id;
+    const fixedChanged = baseChanged || newTracking !== cur.tracking_mode || newScale !== cur.quantity_scale;
+    if (fixedChanged) {
+      // T-1129: karar ürün satırı FOR UPDATE kilitliyken; ürüne satır ekleyen açık işlemler (FK KEY SHARE) bu kilidi bekletmişti.
+      const state = await readFixedState(tx, actor.tenantId, itemId);
+      if (state.usage !== null || (baseChanged && state.sourceLinked)) throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
     }
     if (cur.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
+    if (baseChanged) {
+      const unit = await tx.execute<{ status: string }>(
+        sql`SELECT status FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${newBase}::uuid FOR SHARE`,
+      );
+      if (unit[0] === undefined) throw new AppError("NOT_FOUND");
+      if (unit[0].status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
+    }
     const newName = name ?? cur.name;
     const newPick = pickPolicy ?? (cur.pick_policy as PickPolicy);
     const newCode = code ?? cur.code;
     const newCard = cardType ?? (cur.card_type as ItemCardType);
     const codeChanged = newCode !== cur.code;
-    if (newName === cur.name && newPick === cur.pick_policy && newCard === cur.card_type && !codeChanged) return { itemId, changed: false };
+    const infoChanged = newName !== cur.name || newPick !== cur.pick_policy || newCard !== cur.card_type;
+    if (!infoChanged && !codeChanged && !fixedChanged) return { itemId, changed: false };
     try {
-      await tx.execute(
-        sql`UPDATE public.items SET name = ${newName}, pick_policy = ${newPick}, code = ${newCode}, card_type = ${newCard}
-             WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${itemId}::uuid`,
-      );
+      if (infoChanged || codeChanged) {
+        await tx.execute(
+          sql`UPDATE public.items SET name = ${newName}, pick_policy = ${newPick}, code = ${newCode}, card_type = ${newCard}
+               WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${itemId}::uuid`,
+        );
+      }
+      if (fixedChanged) {
+        await tx.execute(
+          sql`UPDATE public.items SET base_unit_id = ${newBase}::uuid, tracking_mode = ${newTracking}, quantity_scale = ${newScale}::smallint
+               WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${itemId}::uuid`,
+        );
+      }
     } catch (e) {
       // Eşzamanlı aynı koda iki değişim: kaybeden `items_tenant_code_key` 23505 alır (tx zaten geri alınır).
       if (codeChanged && isUniqueViolation(e)) throw new AppError("VALIDATION_FAILED", { detail: "CODE_TAKEN" });
+      if (fixedChanged && isFixedGuard(e)) throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
       throw e;
     }
     if (codeChanged) {
@@ -200,14 +253,20 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
         changeSummary: { from_code: cur.code, to_code: newCode },
       });
     }
-    if (newName === cur.name && newPick === cur.pick_policy && newCard === cur.card_type) return { itemId, changed: true };
+    if (!infoChanged && !fixedChanged) return { itemId, changed: true };
     await appendAudit(tx, {
       action: "item.updated",
       actorUserId: actor.userId,
       entityType: "item",
       entityId: itemId,
       requestId: requestId ?? null,
-      changeSummary: { from_name: cur.name, to_name: newName, from_pick_policy: cur.pick_policy, to_pick_policy: newPick, from_card_type: cur.card_type, to_card_type: newCard },
+      changeSummary: {
+        from_name: cur.name, to_name: newName, from_pick_policy: cur.pick_policy, to_pick_policy: newPick, from_card_type: cur.card_type, to_card_type: newCard,
+        // T-1129 (I-12): sabit alan değişimi eski → yeni.
+        ...(fixedChanged
+          ? { from_base_unit_id: cur.base_unit_id, to_base_unit_id: newBase, from_tracking_mode: cur.tracking_mode, to_tracking_mode: newTracking, from_quantity_scale: cur.quantity_scale, to_quantity_scale: newScale }
+          : {}),
+      },
     });
     return { itemId, changed: true };
   });
