@@ -1,8 +1,8 @@
 // T-1115: ana ekran (StandartAnaEkran.dc.html) saf seçimleri — İşler kutularının yetki süzgeci (Modüller sayfasıyla aynı), bekleyen işler
-// kutuları ve "Düzenle" sırası.
+// kutuları ve "Düzenle" sırası. T-1128: Düzenle'de eklenebilir işler (Modüller sayfasıyla aynı süzgeç) ve seçim kaydı (ekle / çıkar).
 import { describe, expect, it } from "vitest";
-import { ANA_ISLER, anaIsler, bekleyenler } from "./ana-ekran.ts";
-import { kaydir, siraUygula, tasi } from "./ana-sira.ts";
+import { ANA_ISLER, anaIsAdaylari, anaIsler, bekleyenler } from "./ana-ekran.ts";
+import { cikar, ekle, eklenebilir, kaydir, secimKaydi, secimUygula, siraUygula, tasi } from "./ana-sira.ts";
 
 const base = "/t/demo";
 const keys = (roles: string[], grants: string[] = [], screens: string[] | null = null) => anaIsler(base, { roles, grants, screens }).map((x) => x.key);
@@ -77,5 +77,75 @@ describe("Düzenle sırası (T-1115)", () => {
     expect(tasi(k, "yok", 1)).toEqual(k);
     expect(kaydir(k, "satis", -1)).toEqual(["satis", "giris", "stok", "urun"]);
     expect(kaydir(k, "urun", 1)).toEqual(k);
+  });
+});
+
+describe("Düzenle: eklenebilir işler (T-1128)", () => {
+  const adaylar = (roles: string[], grants: string[] = [], screens: string[] | null = null) => anaIsAdaylari(base, { roles, grants, screens });
+
+  it("hesap sahibi: önce sekiz tuval kutusu, sonra ekranı olan diğer modüller (YAKINDA, Ana ekran, tuvaldeki modül yok)", () => {
+    const a = adaylar(["TENANT_ADMIN"]);
+    const k = a.map((x) => x.key);
+    expect(k.slice(0, 8)).toEqual(["giris", "satis", "stok", "urun", "cari", "depo", "excel", "kayit"]);
+    expect(k.slice(8)).toEqual(["topla", "trans", "uret", "qr", "koli", "tara", "sayim", "fis", "ekip", "ayar"]);
+    expect(new Set(k).size).toBe(k.length);
+    for (const yok of ["home", "satin", "ayin", "ses", "abone", "etiket"]) expect(k).not.toContain(yok);
+    // Tuval kutusu modül rengi taşımaz; modül kutusu Modüller sayfasının bağlantısı, rengi ve ikonuyla.
+    expect(a[0]).toEqual({ key: "giris", href: "/t/demo/field/receive" });
+    expect(a.find((x) => x.key === "trans")).toMatchObject({ href: "/t/demo/stock/documents?new=TRANSFER", mod: { color: "6C4BD8" } });
+    expect(a.find((x) => x.key === "ekip")?.mod?.d.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it("varsayılan kutular eklenebilirlerin başıdır (anaIsler ile aynı süzgeç)", () => {
+    for (const roles of [["TENANT_ADMIN"], ["WAREHOUSE_MANAGER"], ["READ_ONLY"]]) {
+      const v = anaIsler(base, { roles, grants: [], screens: null });
+      expect(adaylar(roles).slice(0, v.length)).toEqual(v);
+    }
+  });
+
+  it("yetki süzgeci: salt okunur yazma / yönetim modülü göremez; özel grup ekranı listede yoksa modül yok", () => {
+    const r = adaylar(["READ_ONLY"]).map((x) => x.key);
+    for (const yok of ["giris", "excel", "kayit", "topla", "trans", "sayim", "ekip", "ayar"]) expect(r).not.toContain(yok);
+    expect(r).toEqual(expect.arrayContaining(["fis", "koli", "tara", "qr", "uret"]));
+    const g = adaylar(["WAREHOUSE_MANAGER"], [], ["count"]).map((x) => x.key);
+    expect(g).toContain("sayim");
+    for (const yok of ["trans", "uret", "qr", "topla", "satis"]) expect(g).not.toContain(yok);
+  });
+
+  it("saha personeli: mal girişi (kendi izni) + yalnız saha modülleri", () => {
+    expect(adaylar(["PICKER"]).map((x) => x.key)).toEqual(["giris", "topla", "koli", "tara"]);
+  });
+});
+
+describe("Düzenle: seçim kaydı (T-1128)", () => {
+  const v = ["giris", "satis", "stok"];
+  const izin = ["giris", "satis", "stok", "trans", "fis"];
+
+  it("kayıt yoksa ya da bozuksa varsayılan", () => {
+    expect(secimUygula(v, izin, null)).toEqual(v);
+    expect(secimUygula(v, izin, "x")).toEqual(v);
+    expect(secimUygula(v, izin, { secim: "trans" })).toEqual(v);
+    expect(secimUygula(v, izin, { baska: [] })).toEqual(v);
+  });
+
+  it("eski kayıt (dizi) varsayılanların sırasıdır: eksik varsayılan sona, izinli olsa da varsayılan dışı eklenmez", () => {
+    expect(secimUygula(v, izin, ["stok", "giris"])).toEqual(["stok", "giris", "satis"]);
+    expect(secimUygula(v, izin, ["trans", "stok"])).toEqual(["stok", "giris", "satis"]);
+  });
+
+  it("yeni kayıt olduğu gibi: çıkarılan varsayılan geri gelmez; izni kalmayan / bilinmeyen / tekrar eden / metin olmayan düşer", () => {
+    expect(secimUygula(v, izin, { secim: ["trans", "giris"] })).toEqual(["trans", "giris"]);
+    expect(secimUygula(v, izin, { secim: ["ayar", "fis", "fis", 3, "satis"] })).toEqual(["fis", "satis"]);
+    expect(secimUygula(v, izin, { secim: [] })).toEqual([]);
+  });
+
+  it("kayıt gidiş-dönüş, ekle / çıkar / eklenebilir", () => {
+    const o = ekle(cikar(v, "satis"), "trans");
+    expect(o).toEqual(["giris", "stok", "trans"]);
+    expect(ekle(o, "trans")).toEqual(o);
+    expect(cikar(o, "yok")).toEqual(o);
+    expect(eklenebilir(izin, o)).toEqual(["satis", "fis"]);
+    expect(eklenebilir(izin, izin)).toEqual([]);
+    expect(secimUygula(v, izin, JSON.parse(JSON.stringify(secimKaydi(o))) as unknown)).toEqual(o);
   });
 });

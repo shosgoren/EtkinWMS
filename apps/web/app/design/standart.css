@@ -2601,19 +2601,41 @@ button.stpv-satir { cursor: pointer; }
 .dzp .sta-depo { --k: var(--color-st-k-lacivert); }
 .dzp .sta-excel { --k: var(--color-st-a-excel); }
 .dzp .sta-kayit { --k: var(--color-kr-ink); }
-/* Düzenle kipi: kutu sürüklenir (kesik mavi çerçeve), sağ altta öne / sona okları (44 px). */
+/* Düzenle kipi: kutu sürüklenir (mavi çerçeve). T-1128: denetimler (kaldır ✕ solda, öne / sona okları sağda; 44 px) adın ALTINDA ayrı
+   satırda — kutunun üstüne binmez, telefonda ad okunur kalır. */
 .dzp .stana-is.duz .job {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  row-gap: 10px;
   cursor: grab;
   box-shadow: inset 0 0 0 2px var(--color-st-cur), 0 10px 30px -22px var(--color-kr-shadow-soft);
 }
+.dzp .stana-is.duz .job .jt { flex: 1 1 0; }
 .dzp .stana-is.duz .job.tut { opacity: .5; }
 .dzp .stana .jok {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
   display: flex;
+  flex: 1 0 100%;
+  justify-content: flex-end;
   gap: 4px;
 }
+.dzp .stana .jok .jx {
+  margin-right: auto;
+  background: var(--color-st-a-kritik-bg);
+  color: var(--color-st-a-kritik);
+}
+/* T-1128: "İş ekle" kutusu (Düzenle'de ızgaranın sonunda; ızgara boşsa her zaman): kesik çerçeve, mavi artı. */
+.dzp .stana .job.jek {
+  --k: var(--color-st-cur);
+  appearance: none;
+  width: 100%;
+  border: 2px dashed var(--color-st-cur);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+/* Seçim sayfasındaki tuval kutusu rengi (`sta-*` → `--k`). */
+.dzp .ksoic.stak { background: var(--k); }
 .dzp .stana .jok button {
   width: 44px;
   height: 44px;
@@ -2646,6 +2668,25 @@ button.stpv-satir { cursor: pointer; }
   color: var(--color-st-dark-cur);
 }
 .dzp.dz-dark .stana-is.duz .job { box-shadow: inset 0 0 0 2px var(--color-st-dark-cur); }
+.dzp.dz-dark .stana .jok .jx { background: color-mix(in srgb, var(--color-st-a-kritik) 26%, var(--color-kr-card-dark)); color: var(--color-kr-text-dark); }
+.dzp.dz-dark .stana .job.jek { border-color: var(--color-st-dark-cur); box-shadow: none; }
+/* T-1128: telefon / tablette sayfa kaymaz (`.inner` taşmayı gizler); kullanıcı çok iş eklerse yalnız İşler ızgarası kendi içinde kayar
+   (STANDART §1), bekleyenler ve başlık yerinde kalır. */
+@media (max-width: 1099.98px), (pointer: coarse) {
+  .dzp .stana { min-height: 0; }
+  .dzp .stana-bek,
+  .dzp .stana-hd { flex: none; }
+  .dzp .stana-is {
+    min-height: 0;
+    margin: -4px;
+    padding: 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-content: start;
+    /* Daralan ızgarada satırlar kutunun en küçük boyuna (64 px) ezilmesin: satır içerik boyunda, fazlası ızgarada kayar. */
+    grid-auto-rows: max-content;
+  }
+}
 /* Tablet: kutular küçülür (tek ekrana sığsın). */
 @media (min-width: 700px) and (max-width: 1099.98px), (min-width: 700px) and (pointer: coarse) {
   .dzp .stana { gap: 14px; }
@@ -2678,5 +2719,5 @@ button.stpv-satir { cursor: pointer; }
   .dzp .stana .jic { width: 42px; height: 42px; border-radius: 13px; }
   .dzp .stana .jt b { font-size: 14.5px; line-height: 1.2; }
   .dzp .stana .job small { display: none; }
-  .dzp .stana .jok { right: 4px; bottom: 4px; }
+  .dzp .stana-is.duz .job { row-gap: 8px; }
 }

@@ -4286,7 +4286,10 @@
           "ad": "Who did what?",
           "alt": "Activity history"
         }
-      }
+      },
+      "cikar": "{ad}: remove",
+      "ekle": "Add a job",
+      "ekleAlt": "{n, plural, one {# job can be added} other {# jobs can be added}}"
     },
     "guideOpen": "Guide"
   },
