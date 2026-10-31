@@ -131,6 +131,7 @@ describe("Etkin doğal komutlar (T-1110)", () => {
     ["Ürünler sayfasını açar mısın", { kind: "open", target: "urunler" }],
     ["Aç cariler", { kind: "open", target: "cariler" }],
     ["Ayarlar", { kind: "open", target: "ayarlar" }],
+    ["Yetkileri aç", { kind: "open", target: "yetkileri" }],
     ["Stok durumuna bak", { kind: "open", target: "stok durumuna" }],
     ["Ana ekrana git", { kind: "open", target: "ana" }],
   ] as const)("%s", (text, expected) => {
@@ -141,6 +142,10 @@ describe("Etkin doğal komutlar (T-1110)", () => {
 describe("ekran hedefi (T-1110)", () => {
   it.each([
     ["kullanici ayarlarina", { id: "ayar", suffix: "?sekme=kullanici" }],
+    ["yetkiler", { id: "ekip", path: "/yetkiler" }],
+    ["kullanici yetkileri", { id: "ekip", path: "/yetkiler" }],
+    ["yetki ayarlari", { id: "ekip", path: "/yetkiler" }],
+    ["yetkili kullanici", { id: "ekip" }],
     ["tema ayarlari", { id: "ayar", suffix: "?sekme=gorunum" }],
     ["parasut baglantisi", { id: "ayar", path: "/integrations" }],
     ["entegrasyonlar", { id: "ayar", path: "/integrations" }],

@@ -45,6 +45,7 @@ Bu belgenin sonucu:
 - Ayar satırı: simgeli kutucuk + ad + kısa açıklama + aç/kapa ya da büyük seçim düğmeleri; kart başı kendi renginde tonlu.
 - **Entegrasyon yönü standart dört seçenek:** ← <Sistem>'den al · → <Sistem>'e gönder · ⇄ İki yönlü · [e] Yalnız Etkin WMS (o bilgi için mümkün olmayan yön gösterilmez).
 - **Kod (T-1112):** `kalip/ayar.tsx` — `KalipAltBolumler` (sol alt bölüm listesi, adres `?bolum=`, telefonda kartın üstünde yatay çip satırı), `KalipAyarKart` (seçili bölüm kartı), `KalipAyarSatir` (ayar satırı), `KalipYonSecimi` (yön seçimi); görünüm `design/standart.css` `.stab/.stak/.stay/.styon`. İlk kullanan: Ayarlar › Entegrasyonlar (`/integrations`).
+- **Aç/kapa kümesi (T-1142):** bir konunun aç/kapa satırları `KalipAnahtarKumesi` (`kalip/ayar.tsx`): başlık ayar satırı (simge + ad + "2/3 açık") + sağda "Hepsini aç / kapat" (kilitliyken gerekçe balonu), altında `KalipAnahtar` satırları; masaüstünde iki sütun, telefonda tek sütun (`.stykm*`). İlk kullanan: Yetkiler (`/yetkiler`).
 
 ## 6. Büyük görünüm / pencere kalıbı
 - Açık bulanık cam perde, ortada içerik gölgeli; kapat ve oklar beyaz cam düğme; alt sırada küçük resimler + işlem düğmeleri (aynı boy, simgeli: Ekle · Kapak yap · Sil) + "Kaydedildi".

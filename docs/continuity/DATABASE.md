@@ -138,3 +138,8 @@ Fresh82/82PASS; 200prepare1730.1/post6739.9ms, tamsemantic/replay10092ms. Seeded
 - ENABLE + FORCE RLS (tenant politikası), `wms_app` SELECT + sütun düzeyi INSERT/UPDATE, DELETE yok; `wms_auth`/`wms_worker` yazamaz (migration doğrulama bloğu). Tetikleyici kimlik alanlarını değiştirtmez, `updated_at` yazar.
 - Down: tabloda satır varsa reddeder (eşitleme tabanı ve "sistem arşivledi" bilgisi kaybolmasın; bayrak `wms_meta.allow_destructive_down`), boşsa tablo + işlev düşer. Test: `integrations-migration.int.test.ts` (T-1140 0069).
 - Stok toplamı (domain `stock-reads.ts`, şema değişikliği yok): `locations.status = 'ARCHIVED'` raf Paraşüt toplamına girmez (kullanıcı kararı 31 Ekim).
+
+## T-1142 — kart anahtarları gruba verilebilir (0070)
+- `permission_groups_grants_chk`: kapalı liste = domain `GRANTABLE` (6 eski + 12 kart anahtarı `items|parties|warehouses|locations` × `create|edit|archive`), `cardinality(grants) <= 18`. Tablo, RLS, GRANT ve tetikleyiciler değişmedi; veri değişmedi.
+- Down: kart anahtarı taşıyan grup varsa `allow_destructive_down` olmadan REDDEDER; izinli ortamda yalnız kart anahtarlarını gruptan siler, eski kısıtı geri koyar (FORCE RLS korunur). Test `tests/integration/identity/group-card-grants-migration.int.test.ts`.
+- Yazma yolu `identity/groups.ts` `changeGroupGrants` (yalnız hesap sahibi, ekle/çıkar küme işlemi, değişiklik yoksa yazım/audit yok, `group.updated` `via: permission_screen`, üye `roles_version` artar). `parties.*`, `items.*`, `warehouses.*` `MFA_GRANTS`'te (taşıyan üye MFA; saha hesabına verilemez; `locations.*` hariç). Grup kilidinden sonra saha hesabı kilitsiz yeniden okunur (eşzamanlı `setMemberGroup`). `renameUnit` `settings.manage` (birim çalışma alanı geneli).

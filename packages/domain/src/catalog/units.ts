@@ -86,7 +86,10 @@ export async function renameUnit(
   const unitId = parseUuid(input.unitId);
   const name = parseName(input.name);
   const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "items.edit" }, async (tx, actor) => {
+  // T-1142 (bilinçli karar): birim çalışma alanı genelidir — adını değiştirmek o birimi kullanan BÜTÜN ürünleri etkiler. Bu yüzden tek ürün
+  // anahtarı (`items.edit`, artık gruba verilebilir) yetmez; yalnız Yönetici (`settings.manage`). Yeni birim eklemek (`createUnit`) var olanı
+  // değiştirmez, `items.create` ile kalır.
+  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
     const cur = await tx.execute<{ name: string }>(
       sql`SELECT name FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${unitId}::uuid FOR UPDATE`,
     );

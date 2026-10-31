@@ -4,7 +4,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
-import { GROUP_SCREENS, saveGroup, setGroupArchived, setMemberGroup } from "@wms/domain/identity/groups";
+import { GROUP_SCREENS, changeGroupGrants, saveGroup, setGroupArchived, setMemberGroup } from "@wms/domain/identity/groups";
 import { GRANTABLE } from "@wms/domain/identity/permissions";
 import { ensureRecentAuth } from "../../../../lib/auth-service.ts";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
@@ -12,13 +12,16 @@ import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "
 const guardedAction = createProductionGuard(() => headers());
 const slugSchema = z.string().min(1).max(63);
 const version = z.number().int().min(1).max(2_147_483_647);
-const grants = z.array(z.enum(GRANTABLE as unknown as [string, ...string[]])).max(16);
+// T-1142: kart anahtarlarıyla kapalı liste 18 öğe; üst sınır listenin kendisidir (DB CHECK `cardinality <= 18`).
+const grantKey = z.enum(GRANTABLE as unknown as [string, ...string[]]);
+const grants = z.array(grantKey).max(GRANTABLE.length);
 const screens = z.array(z.enum(GROUP_SCREENS as unknown as [string, ...string[]])).max(16);
 
 const saveSchema = z
   .object({ slug: slugSchema, id: z.string().uuid().optional(), expectedVersion: version.optional(), name: z.string().max(200), color: z.string().max(16), screens, grants })
   .strict();
 const archiveSchema = z.object({ slug: slugSchema, id: z.string().uuid(), expectedVersion: version, archived: z.boolean() }).strict();
+const grantsChangeSchema = z.object({ slug: slugSchema, id: z.string().uuid(), add: grants, remove: grants }).strict();
 const memberSchema = z.object({ slug: slugSchema, memberId: z.string().uuid(), groupId: z.string().uuid().nullable() }).strict();
 
 async function ownerContext(slug: string, ctx: ActionContext) {
@@ -45,5 +48,12 @@ export async function archiveGroupAction(raw: unknown) {
 export async function setMemberGroupAction(raw: unknown) {
   return guardedAction({ schema: memberSchema }, async (input, ctx) =>
     setMemberGroup({ ...(await ownerContext(input.slug, ctx)), memberId: input.memberId, groupId: input.groupId }),
+  )(raw);
+}
+
+/** T-1142: yetki ekranı aç/kapa (tek satır, bölümün hepsi, hazır şablon). Küme işlemi; tekrar aynı sonucu verir (idempotent). */
+export async function changeGroupGrantsAction(raw: unknown) {
+  return guardedAction({ schema: grantsChangeSchema }, async (input, ctx) =>
+    changeGroupGrants({ ...(await ownerContext(input.slug, ctx)), id: input.id, add: input.add, remove: input.remove }),
   )(raw);
 }

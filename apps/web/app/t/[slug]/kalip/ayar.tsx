@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { feedback } from "@wms/ui";
 import { Ico } from "./ekran.tsx";
+import { KalipKilitliDugme } from "./kilitli.tsx";
 import type { StTon } from "./kart.tsx";
 
 export interface KalipAltBolum {
@@ -165,5 +166,62 @@ export function KalipYonSecimi({ label, options, value, onPick, busy = false, te
         );
       })}
     </span>
+  );
+}
+
+/**
+ * T-1142 (yetki ekranı; STANDART §5 ayar satırından türetildi): bir konunun aç/kapa satırları kümesi — başlık satırı (simge + ad + "2/3 açık")
+ * ve sağda "Hepsini aç / Hepsini kapat" tek dokunuş; altında satırlar (`KalipAnahtar`) masaüstünde iki sütun, telefonda tek sütun.
+ * Kilitliyken (`allLocked`) toplu düğme dokununca gerekçe balonu + hata sesi verir (ALTIN-KURAL 17); toplu düğme yoksa (`onAll` yok) çizilmez.
+ */
+export function KalipAnahtarKumesi({
+  title,
+  sub,
+  d,
+  ton,
+  allOn,
+  allLabel,
+  onAll,
+  allLocked = false,
+  allLockedReason,
+  allIcon,
+  children,
+  testId,
+}: {
+  title: string;
+  sub?: string;
+  d: string;
+  ton: StTon;
+  /** Kümedeki verilebilir satırların hepsi açık mı (düğme "Hepsini kapat" olur). */
+  allOn?: boolean;
+  allLabel?: string;
+  onAll?: () => void;
+  allLocked?: boolean;
+  allLockedReason?: string;
+  allIcon?: string;
+  children: ReactNode;
+  testId?: string;
+}) {
+  return (
+    <section className="stykm" aria-label={title} data-testid={testId}>
+      <KalipAyarSatir title={title} {...(sub === undefined ? {} : { sub })} d={d} ton={ton}>
+        {onAll === undefined || allLabel === undefined ? undefined : (
+          <KalipKilitliDugme
+            className="kdug ikincil stykm-all"
+            kilitli={allLocked}
+            {...(allLockedReason === undefined ? {} : { gerekce: allLockedReason })}
+            onClick={onAll}
+            aria-pressed={allOn === true}
+            data-testid={testId === undefined ? undefined : `${testId}-all`}
+          >
+            {allIcon === undefined ? null : <Ico d={allIcon} size={18} />}
+            <span>{allLabel}</span>
+          </KalipKilitliDugme>
+        )}
+      </KalipAyarSatir>
+      <div className="stykm-g" role="group" aria-label={title}>
+        {children}
+      </div>
+    </section>
   );
 }

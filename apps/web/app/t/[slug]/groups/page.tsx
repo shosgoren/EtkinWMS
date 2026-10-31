@@ -20,8 +20,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // T-421: yetki grupları (Gruplar.dc.html). Okuma `users.manage`; yazma yalnız hesap sahibi (domain + eylem; `canEdit` yalnız gösterim).
-export default async function GroupsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GroupsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
+  // T-1142: Yetkiler ekranının ana işlemi (GRUP EKLE) `?new=1` ile yeni grup adımını doğrudan açar.
+  const yeni = (await searchParams)?.new === "1";
   const returnTo = `/t/${encodeURIComponent(slug)}/groups`;
   const { getAuthService } = await import("../../../../lib/auth-service.ts");
   const principal = await getAuthService().getPrincipal(await headers());
@@ -54,7 +56,7 @@ export default async function GroupsPage({ params }: { params: Promise<{ slug: s
   return (
     <main className="flex w-full min-w-0 flex-col">
       <h1 className="sr-only">{t("title")}</h1>
-      <GroupsView slug={slug} dark={temaKoyu(jar)} data={data} />
+      <GroupsView slug={slug} dark={temaKoyu(jar)} data={data} openNew={yeni} />
     </main>
   );
 }

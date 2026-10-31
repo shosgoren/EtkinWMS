@@ -1,6 +1,7 @@
 // T-1141 (kullanıcı kararı 31 Ekim): ürün / cari / depo / raf yeri kartlarında her yazma işlemi kart bölümü × işlem anahtarını ister
 // (`items.create|edit|archive`, `parties.*`, `warehouses.*`, `locations.*`; rollerde yalnız TENANT_ADMIN). Yetkisiz üye — geniş rol
-// (WAREHOUSE_MANAGER) + gruba verilebilen BÜTÜN ek yetkiler (T-421) taşısa bile — FORBIDDEN alır; hiçbir satır ve audit yazılmaz.
+// (WAREHOUSE_MANAGER) + gruba verilebilen bütün KART DIŞI ek yetkiler (T-421) taşısa bile — FORBIDDEN alır; hiçbir satır ve audit yazılmaz.
+// T-1142: kart anahtarları artık gruba verilebilir (0070); kısmi küme ve gruba verme kuralları tests/integration/identity/permission-screen.
 // Hesap sahibi aynı işlemleri yapabilir (erişim kaybı yok). Çapraz tenant: A'nın yöneticisi B'nin kartına yazamaz (NOT_FOUND, I-01/I-02).
 // Gerçek wms_app bağlantısı + RLS; fikstürler sentetik (G-09).
 import pg from "pg";
@@ -33,7 +34,7 @@ import {
   renameWarehouse,
   setLocationKind,
 } from "../../../packages/domain/src/warehouse/index.ts";
-import { GRANTABLE } from "../../../packages/domain/src/identity/permissions.ts";
+import { CARD_SECTIONS, GRANTABLE, cardPermission } from "../../../packages/domain/src/identity/permissions.ts";
 import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv } from "../harness/env.ts";
 
@@ -43,7 +44,9 @@ let app: DbClient;
 let adm: pg.Client;
 let A: TenantWorld;
 let B: TenantWorld;
-/** WAREHOUSE_MANAGER + gruba verilebilen bütün ek yetkiler (onay, ters kayıt, Excel aktarımı…): kart yazma anahtarı YOK. */
+/** WAREHOUSE_MANAGER + gruba verilebilen bütün kart dışı ek yetkiler (onay, ters kayıt, Excel aktarımı…): kart yazma anahtarı YOK. */
+const CARD_KEYS: readonly string[] = CARD_SECTIONS.flatMap((g) => (["create", "edit", "archive"] as const).map((a) => cardPermission(g, a)));
+const NON_CARD_GRANTS: readonly string[] = GRANTABLE.filter((g) => !CARD_KEYS.includes(g));
 let managerUserId: string;
 let partyA: { id: string; version: number };
 let partyB: { id: string; version: number };
@@ -94,7 +97,7 @@ beforeAll(async () => {
   const managerMembershipId = await mkMembership(adm, A.tenantId, managerUserId, { roles: ["WAREHOUSE_MANAGER"] });
   const g = await adm.query<{ id: string }>("INSERT INTO public.permission_groups (tenant_id, name, grants, created_by) VALUES ($1, 'Tam ek yetki', $2::text[], $3) RETURNING id", [
     A.tenantId,
-    [...GRANTABLE],
+    [...NON_CARD_GRANTS],
     A.ownerMembershipId,
   ]);
   await adm.query("INSERT INTO public.member_groups (tenant_id, membership_id, group_id, assigned_by) VALUES ($1, $2, $3, $4)", [A.tenantId, managerMembershipId, g.rows[0]?.id, A.ownerMembershipId]);
@@ -127,7 +130,8 @@ const forbiddenCalls = (who: () => ReturnType<typeof manager>): readonly (readon
   ["items.edit addBarcode", () => addBarcode(who(), { itemId: A.itemId, unitId: null, barcode: `X${Date.now()}`, quantity: null })],
   ["items.edit removeBarcode", () => removeBarcode(who(), { barcodeId: barcodeA })],
   ["items.edit setUnitConversion", () => setUnitConversion(who(), { itemId: A.itemId, unitId: A.boxUnitId, factor: "12" })],
-  ["items.edit renameUnit", () => renameUnit(who(), { unitId: A.unitId, name: "değişti" })],
+  // T-1142: paylaşılan birimin adı yalnız Yönetici (`settings.manage`); `items.edit` yetmez.
+  ["settings.manage renameUnit", () => renameUnit(who(), { unitId: A.unitId, name: "değişti" })],
   ["items.archive archiveItem", () => archiveItem(who(), { itemId: A.itemTwoId })],
   // Cariler
   ["parties.create saveParty (yeni)", () => saveParty(who(), { code: uniq("C-"), name: "x", kind: "CUSTOMER" })],
@@ -168,9 +172,14 @@ describe("T-1141 kart yazma yetkileri", () => {
     expect(await snapshot(A.tenantId)).toBe(before);
   });
 
-  it("veritabanı gruba kart anahtarı verdirmez (0051 kapalı liste; T-1142 yetki ekranı işine kadar)", async () => {
+  it("fikstür: yetkisiz yöneticinin grubunda kart anahtarı yok, kart dışı bütün ek yetkiler var (T-1142 sonrası da sınama gücü aynı)", () => {
+    expect(NON_CARD_GRANTS.length).toBe(GRANTABLE.length - CARD_KEYS.length);
+    expect(NON_CARD_GRANTS).toEqual(["stock.post", "document.create", "document.approve", "count_diff.approve", "reversal.create", "data.import"]);
+  });
+
+  it("veritabanı gruba yönetici anahtarı verdirmez (0070 kapalı liste)", async () => {
     await expect(
-      adm.query("INSERT INTO public.permission_groups (tenant_id, name, grants, created_by) VALUES ($1, 'Kaçak kart', ARRAY['items.create'], $2)", [A.tenantId, A.ownerMembershipId]),
+      adm.query("INSERT INTO public.permission_groups (tenant_id, name, grants, created_by) VALUES ($1, 'Kaçak ayar', ARRAY['settings.manage'], $2)", [A.tenantId, A.ownerMembershipId]),
     ).rejects.toThrow(/permission_groups_grants_chk/);
   });
 

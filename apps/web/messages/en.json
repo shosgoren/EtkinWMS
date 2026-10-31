@@ -6547,5 +6547,162 @@
         "archive": "You can't archive locations · Request access: ask your admin"
       }
     }
+  },
+  "yetkiler": {
+    "title": "Permissions",
+    "locked": "You need team management permission to see permissions.",
+    "lockedAction": "Ask the account owner.",
+    "backHome": "Back to home",
+    "back": "Back to settings",
+    "tabs": "Settings tabs",
+    "bolumLabel": "For whom",
+    "people": "People",
+    "peopleSub": "From role and group",
+    "newGroup": "New group",
+    "main": "ADD GROUP",
+    "mainAria": "Create a new permission group",
+    "groupSub": "{people} people · {on} extra permissions on",
+    "search": "Search permissions",
+    "searchPh": "Search: item, approve, Excel…",
+    "noMatch": "Not found · search or say it",
+    "clear": "Clear search",
+    "presets": "Ready template",
+    "presetsSub": "Apply with one tap · added on top of the role",
+    "preset": {
+      "warehouseLead": "Warehouse lead",
+      "picker": "Picker",
+      "counter": "Counter",
+      "cardKeeper": "Card keeper",
+      "readOnly": "Read only"
+    },
+    "presetSame": "This template is already applied",
+    "presetDone": "{group}: {preset} template applied",
+    "sections": {
+      "items": "Items",
+      "parties": "Parties",
+      "warehouses": "Warehouses",
+      "locations": "Locations",
+      "stock": "Stock operations",
+      "documents": "Documents",
+      "excel": "Excel",
+      "reports": "Reports",
+      "settings": "Settings",
+      "integrations": "Integrations"
+    },
+    "sectionSub": "{on}/{n} on",
+    "sectionFixed": "Comes with the role · not grantable to groups",
+    "allOn": "Turn all on",
+    "allOff": "Turn all off",
+    "rows": {
+      "items": {
+        "create": "Add item",
+        "edit": "Change item · code, barcode, conversion",
+        "archive": "Archive item"
+      },
+      "parties": {
+        "create": "Add party",
+        "edit": "Change party · code, contact",
+        "archive": "Archive / restore party"
+      },
+      "warehouses": {
+        "create": "Add warehouse",
+        "edit": "Change warehouse · code, name",
+        "archive": "Archive warehouse"
+      },
+      "locations": {
+        "create": "Add location · bulk included",
+        "edit": "Change location · code, kind",
+        "archive": "Archive location"
+      },
+      "stock": {
+        "post": "Scan and post stock",
+        "countApprove": "Approve count difference",
+        "reverse": "Create reversal"
+      },
+      "documents": {
+        "create": "Create document",
+        "approve": "Approve document"
+      },
+      "excel": {
+        "import": "Import from and export to Excel"
+      },
+      "reports": {
+        "stock": "See stock and reports",
+        "audit": "Who did what?",
+        "takeout": "Download all data"
+      },
+      "settings": {
+        "manage": "Company settings",
+        "users": "Team and permission management"
+      },
+      "integrations": {
+        "manage": "Paraşüt and integrations"
+      }
+    },
+    "mfaNote": "Requires two-step verification",
+    "lock": {
+      "owner": "Only the account owner changes permissions · ask your manager",
+      "everyone": "On for everyone · cannot be turned off",
+      "admin": "Only in the Administrator role · not grantable to groups",
+      "mfaField": "The group has a field account · this permission requires two-step verification",
+      "busy": "Saving the previous change · wait a moment"
+    },
+    "saved": {
+      "on": "{group}: {name} turned on",
+      "off": "{group}: {name} turned off",
+      "allOn": "{group}: all of {section} turned on",
+      "allOff": "{group}: all of {section} turned off"
+    },
+    "err": {
+      "reauth": "For security, sign in again and retry.",
+      "mfa": "This action requires two-step verification.",
+      "forbidden": "This change is not allowed (account owner or last administrator rule).",
+      "field": "The group has a field account: a permission requiring two-step verification cannot be turned on.",
+      "archived": "This group is archived; restore it first.",
+      "failed": "Could not save ({code}). Try again."
+    },
+    "person": {
+      "pick": "Person",
+      "pickHint": "Whose permissions are you looking at?",
+      "none": "No people yet",
+      "role": "Role",
+      "group": "Permission group",
+      "noGroup": "No group · role only",
+      "reset": "Back to role default",
+      "resetDone": "{name}: back to role default",
+      "resetSame": "Already at role default",
+      "summary": "{role} · {group}",
+      "fromRole": "From role",
+      "fromGroup": "From group {group}",
+      "off": "Off",
+      "diff": "{n} permissions beyond the role",
+      "sameAsRole": "At role default",
+      "lockRole": "Comes from the role · change the role",
+      "lockGroup": "Comes from group {group} · open the group",
+      "lockOff": "To turn on, put the person in a group or turn it on in their group",
+      "ownerRole": "The account owner's role and group do not change · full access",
+      "fieldRole": "A field account can only be Picker or Counter",
+      "fieldGroup": "This group has a permission requiring two-step verification · not for field accounts",
+      "archivedGroup": "This group is archived",
+      "roleDone": "{name}: role is now {role}",
+      "groupDone": "{name}: group is now {group}",
+      "openGroup": "Open group",
+      "owner": "Account owner",
+      "field": "Field account"
+    },
+    "role": {
+      "TENANT_ADMIN": "Administrator",
+      "WAREHOUSE_MANAGER": "Warehouse manager",
+      "PICKER": "Picker",
+      "COUNTER": "Counter",
+      "READ_ONLY": "Viewer"
+    },
+    "empty": {
+      "title": "No custom permission groups yet",
+      "hint": "Create a group; turn its permissions on and off here.",
+      "action": "Add group"
+    },
+    "settingsLink": "Permissions",
+    "settingsLinkV": "With on / off"
   }
 }

@@ -8,6 +8,8 @@
 // - Demo tenant'ta yazma kapalıdır (herkese açık demo hesapları yetki yükseltemez); okuma açıktır.
 // - Grup ve üye değişikliğinde etkilenen üyeliklerin `roles_version` değeri artar (beklemedeki `withMembership` okumasıyla sıralanır, M4).
 // - Audit aynı transaction'da: group.created / group.updated / group.archived / group.restored / member.group_changed.
+// - T-1142 (yetki ekranı): tek dokunuşla yetki aç/kapa `changeGroupGrants` — küme işlemi (ekle/çıkar), sürüm istemez; aynı istek tekrarı
+//   değişiklik üretmez (yazım ve audit yok, idempotent). Değişince `group.updated` (önceki/sonraki yetkiler) audit'i yazar.
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
@@ -60,6 +62,22 @@ export function cleanGroup(input: { name?: unknown; color?: unknown; screens?: u
 
 export const needsMfa = (grants: readonly string[]): boolean => grants.some((g) => (MFA_GRANTS as readonly string[]).includes(g));
 
+/**
+ * T-1142: yetki aç/kapa kümesi (saf, birim testli). `add` ve `remove` yalnız kapalı listeden (GRANTABLE), aynı anahtar ikisinde birden olamaz;
+ * aksi `VALIDATION_FAILED`. Sonuç kanonik sırada: (önceki ∪ add) \ remove.
+ */
+export function nextGrants(before: readonly string[], add: unknown, remove: unknown): readonly Permission[] {
+  const parse = (raw: unknown): Permission[] => {
+    if (!Array.isArray(raw) || raw.length > GRANTABLE.length) throw new AppError("VALIDATION_FAILED");
+    for (const v of raw) if (typeof v !== "string" || !(GRANTABLE as readonly string[]).includes(v)) throw new AppError("VALIDATION_FAILED");
+    return raw as Permission[];
+  };
+  const a = parse(add);
+  const r = parse(remove);
+  if (a.length + r.length === 0 || a.some((x) => r.includes(x))) throw new AppError("VALIDATION_FAILED");
+  return GRANTABLE.filter((g) => (before.includes(g) || a.includes(g)) && !r.includes(g));
+}
+
 // ---------------------------------------------------------------------------------------------
 
 type Access = Omit<TenantAccessParams, "permission">;
@@ -93,6 +111,23 @@ async function ownerWrite<T>(params: CommandParams, fn: (tx: AccessTx, actor: { 
   } catch (e) {
     throw mapAccessError(e);
   }
+}
+
+/**
+ * T-1142 (güvenlik incelemesi MINOR-2): grup satırı kilitlendikten SONRA gruptaki saha hesabı var mı (kilitsiz, taze okuma).
+ * Kilit sırası `withMembership` ile aynı kalır (üyelik satırları → grup); ilk üye listesi grup kilidinden ÖNCE okunduğundan, o arada
+ * eşzamanlı `setMemberGroup` gruba yeni bir saha hesabı koymuş olabilir. `setMemberGroup` grubu FOR SHARE okur → bizim FOR UPDATE kilidimiz
+ * onun commit'ini bekler; READ COMMITTED'da sonraki deyim onun eklediği satırı görür. Bu yeniden okuma kilit almaz (ters sıra kilit = deadlock).
+ */
+async function hasFieldMemberNow(tx: AccessTx, tenantId: string, groupId: string): Promise<boolean> {
+  const rows = await tx.execute<{ email: string }>(
+    sql`SELECT u.email
+          FROM public.member_groups mg
+          JOIN public.tenant_memberships m ON m.tenant_id = mg.tenant_id AND m.id = mg.membership_id AND m.status = 'ACTIVE'
+          JOIN public.users u ON u.id = m.user_id
+         WHERE mg.tenant_id = ${tenantId}::uuid AND mg.group_id = ${groupId}::uuid`,
+  );
+  return rows.some((r) => isFieldEmail(r.email));
 }
 
 async function bumpMembers(tx: AccessTx, tenantId: string, membershipIds: readonly string[]): Promise<void> {
@@ -267,7 +302,7 @@ export async function saveGroup(
       const before = await lockGroup(tx, actor.tenantId, id);
       if (before.version !== expectedVersion) throw new AppError("VERSION_CONFLICT");
       if (before.archived_at !== null) throw new AppError("VALIDATION_FAILED");
-      if (needsMfa(g.grants) && members.some((m) => isFieldEmail(m.email))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
+      if (needsMfa(g.grants) && (members.some((m) => isFieldEmail(m.email)) || (await hasFieldMemberNow(tx, actor.tenantId, id)))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
       const rows = await tx.execute<{ version: number }>(
         sql`UPDATE public.permission_groups
                SET name = ${g.name}, color = ${g.color},
@@ -315,7 +350,7 @@ export async function setGroupArchived(
       const before = await lockGroup(tx, actor.tenantId, id);
       if (before.version !== expectedVersion) throw new AppError("VERSION_CONFLICT");
       if ((before.archived_at !== null) === archived) return { ok: true, id, version: before.version } as const;
-      if (!archived && needsMfa(before.grants) && members.some((m) => isFieldEmail(m.email))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
+      if (!archived && needsMfa(before.grants) && (members.some((m) => isFieldEmail(m.email)) || (await hasFieldMemberNow(tx, actor.tenantId, id)))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
       const rows = await tx.execute<{ version: number }>(
         sql`UPDATE public.permission_groups SET archived_at = ${archived ? sql`now()` : sql`NULL`}
              WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${id}::uuid RETURNING version`,
@@ -335,6 +370,45 @@ export async function setGroupArchived(
     if (sqlstateOf(e) === "23505") return { ok: false, issue: "NAME_TAKEN" };
     throw e;
   }
+}
+
+export type ChangeGrantsResult = { ok: true; changed: boolean; version: number; grants: readonly Permission[] } | { ok: false; issue: "FIELD_MEMBER_MFA" };
+
+/**
+ * T-1142: grubun yetkilerini aç/kapa (bölüm "hepsi", hazır şablon ve tek satır aynı komut). Yalnız hesap sahibi + yakın zamanda kimlik
+ * doğrulama (`ownerWrite`); arşivdeki grup değiştirilemez; MFA isteyen yetki saha hesabı olan gruba açılamaz. Değişiklik yoksa yazım/audit yok.
+ */
+export async function changeGroupGrants(params: CommandParams & { readonly id: string; readonly add: unknown; readonly remove: unknown }): Promise<ChangeGrantsResult> {
+  const { id: rawId, add, remove, ...rest } = params;
+  const id = parseUuid(rawId);
+  // Girdi biçimi transaction'dan önce (geçersiz istek DB'ye gitmez).
+  nextGrants([], add, remove);
+  return ownerWrite(rest, async (tx, actor) => {
+    const members = await lockGroupMembers(tx, actor.tenantId, id); // kilit sırası: üyelik → grup
+    const before = await lockGroup(tx, actor.tenantId, id);
+    if (before.archived_at !== null) throw new AppError("VALIDATION_FAILED");
+    const grants = nextGrants(before.grants, add, remove);
+    const same = grants.length === before.grants.length && grants.every((g) => before.grants.includes(g));
+    if (same) return { ok: true, changed: false, version: before.version, grants } as const;
+    // Yalnız EKLENEN MFA yetkisi engellenir (kapatma her zaman serbest).
+    if (needsMfa(grants.filter((g) => !before.grants.includes(g))) && (members.some((m) => isFieldEmail(m.email)) || (await hasFieldMemberNow(tx, actor.tenantId, id)))) {
+      return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
+    }
+    const arr = grants.length === 0 ? sql`'{}'::text[]` : sql`ARRAY[${sql.join(grants.map((g) => sql`${g}`), sql`, `)}]::text[]`;
+    const rows = await tx.execute<{ version: number }>(
+      sql`UPDATE public.permission_groups SET grants = ${arr} WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${id}::uuid RETURNING version`,
+    );
+    await bumpMembers(tx, actor.tenantId, members.map((m) => m.id));
+    await appendAudit(tx, {
+      action: "group.updated",
+      actorUserId: actor.userId,
+      entityType: "permission_group",
+      entityId: id,
+      requestId: params.requestId ?? null,
+      changeSummary: { name: before.name, from_grants: [...before.grants], grants: [...grants], via: "permission_screen" },
+    });
+    return { ok: true, changed: true, version: rows[0]?.version ?? before.version + 1, grants } as const;
+  });
 }
 
 export type AssignGroupResult = { ok: true; changed: boolean } | { ok: false; issue: "OWNER" | "FIELD_MEMBER_MFA" | "GROUP_ARCHIVED" };

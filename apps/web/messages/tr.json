@@ -6547,5 +6547,162 @@
         "archive": "Raf yeri arşivleme yetkin yok · Yetki iste: yöneticine sor"
       }
     }
+  },
+  "yetkiler": {
+    "title": "Yetkiler",
+    "locked": "Yetkileri görmek için ekip yönetimi yetkin yok.",
+    "lockedAction": "Hesap sahibine sor.",
+    "backHome": "Ana ekrana dön",
+    "back": "Ayarlara dön",
+    "tabs": "Ayar sekmeleri",
+    "bolumLabel": "Kim için",
+    "people": "Kişiler",
+    "peopleSub": "Rolden ve gruptan gelen",
+    "newGroup": "Yeni grup",
+    "main": "GRUP EKLE",
+    "mainAria": "Yeni yetki grubu oluştur",
+    "groupSub": "{people} kişi · {on} ek yetki açık",
+    "search": "Yetki ara",
+    "searchPh": "Ara: ürün, onay, Excel…",
+    "noMatch": "Bulunamadı · ara ya da söyle",
+    "clear": "Aramayı temizle",
+    "presets": "Hazır şablon",
+    "presetsSub": "Tek dokunuşla uygula · rolün üstüne eklenir",
+    "preset": {
+      "warehouseLead": "Depo sorumlusu",
+      "picker": "Toplayıcı",
+      "counter": "Sayımcı",
+      "cardKeeper": "Kart sorumlusu",
+      "readOnly": "Salt okunur"
+    },
+    "presetSame": "Bu şablon zaten uygulanmış",
+    "presetDone": "{group}: {preset} şablonu uygulandı",
+    "sections": {
+      "items": "Ürünler",
+      "parties": "Cariler",
+      "warehouses": "Depolar",
+      "locations": "Raf yerleri",
+      "stock": "Stok işlemleri",
+      "documents": "Belgeler",
+      "excel": "Excel",
+      "reports": "Raporlar",
+      "settings": "Ayarlar",
+      "integrations": "Entegrasyon"
+    },
+    "sectionSub": "{on}/{n} açık",
+    "sectionFixed": "Rol ile gelir · gruba verilmez",
+    "allOn": "Hepsini aç",
+    "allOff": "Hepsini kapat",
+    "rows": {
+      "items": {
+        "create": "Ürün ekle",
+        "edit": "Ürün değiştir · kod, barkod, dönüşüm",
+        "archive": "Ürün arşivle"
+      },
+      "parties": {
+        "create": "Cari ekle",
+        "edit": "Cari değiştir · kod, iletişim",
+        "archive": "Cari arşivle / geri al"
+      },
+      "warehouses": {
+        "create": "Depo ekle",
+        "edit": "Depo değiştir · kod, ad",
+        "archive": "Depo arşivle"
+      },
+      "locations": {
+        "create": "Raf yeri ekle · toplu dahil",
+        "edit": "Raf yeri değiştir · kod, tür",
+        "archive": "Raf yeri arşivle"
+      },
+      "stock": {
+        "post": "Okut ve stok işle",
+        "countApprove": "Sayım farkını onayla",
+        "reverse": "Ters kayıt yap"
+      },
+      "documents": {
+        "create": "Belge oluştur",
+        "approve": "Belge onayla"
+      },
+      "excel": {
+        "import": "Excel'den aktar ve indir"
+      },
+      "reports": {
+        "stock": "Stok ve raporları gör",
+        "audit": "Kim ne yaptı?",
+        "takeout": "Bütün veriyi indir"
+      },
+      "settings": {
+        "manage": "Firma ayarları",
+        "users": "Ekip ve yetki yönetimi"
+      },
+      "integrations": {
+        "manage": "Paraşüt ve entegrasyonlar"
+      }
+    },
+    "mfaNote": "İki adımlı doğrulama ister",
+    "lock": {
+      "owner": "Yetkileri yalnız hesap sahibi değiştirir · sorumluna sor",
+      "everyone": "Herkeste açık · kapatılamaz",
+      "admin": "Yalnız Yönetici rolünde · gruba verilemez",
+      "mfaField": "Grupta saha hesabı var · bu yetki iki adımlı doğrulama ister",
+      "busy": "Önceki değişiklik kaydediliyor · bir an bekle"
+    },
+    "saved": {
+      "on": "{group}: {name} açıldı",
+      "off": "{group}: {name} kapatıldı",
+      "allOn": "{group}: {section} hepsi açıldı",
+      "allOff": "{group}: {section} hepsi kapatıldı"
+    },
+    "err": {
+      "reauth": "Güvenlik için yeniden giriş yap, sonra tekrar dene.",
+      "mfa": "Bu işlem için iki adımlı doğrulama gerekiyor.",
+      "forbidden": "Bu değişiklik yapılamaz (hesap sahibi ya da son yönetici kuralı).",
+      "field": "Grupta saha hesabı var: iki adımlı doğrulama isteyen yetki açılamaz.",
+      "archived": "Bu grup arşivde; önce arşivden çıkar.",
+      "failed": "Kaydedilemedi ({code}). Tekrar dene."
+    },
+    "person": {
+      "pick": "Kişi",
+      "pickHint": "Kimin yetkilerine bakıyorsun?",
+      "none": "Henüz kişi yok",
+      "role": "Rol",
+      "group": "Yetki grubu",
+      "noGroup": "Grupsuz · yalnız rol",
+      "reset": "Rol varsayılanına dön",
+      "resetDone": "{name}: rol varsayılanına döndü",
+      "resetSame": "Zaten rol varsayılanında",
+      "summary": "{role} · {group}",
+      "fromRole": "Rolünden",
+      "fromGroup": "{group} grubundan",
+      "off": "Kapalı",
+      "diff": "{n} yetki rolünden fazla",
+      "sameAsRole": "Rol varsayılanında",
+      "lockRole": "Rolünden gelir · rolü değiştir",
+      "lockGroup": "{group} grubundan gelir · grubu aç",
+      "lockOff": "Açmak için kişiyi bir gruba koy ya da grubunda aç",
+      "ownerRole": "Hesap sahibinin rolü ve grubu değişmez · tam yetkili",
+      "fieldRole": "Saha hesabı yalnız Toplayıcı ya da Sayımcı olabilir",
+      "fieldGroup": "Bu grupta iki adımlı doğrulama isteyen yetki var · saha hesabına verilemez",
+      "archivedGroup": "Bu grup arşivde",
+      "roleDone": "{name}: rolü {role} oldu",
+      "groupDone": "{name}: grubu {group} oldu",
+      "openGroup": "Grubu aç",
+      "owner": "Hesap sahibi",
+      "field": "Saha hesabı"
+    },
+    "role": {
+      "TENANT_ADMIN": "Yönetici",
+      "WAREHOUSE_MANAGER": "Depo yöneticisi",
+      "PICKER": "Toplayıcı",
+      "COUNTER": "Sayımcı",
+      "READ_ONLY": "İzleyici"
+    },
+    "empty": {
+      "title": "Henüz özel yetki grubu yok",
+      "hint": "Bir grup oluştur; yetkilerini burada aç/kapa.",
+      "action": "Grup ekle"
+    },
+    "settingsLink": "Yetkiler",
+    "settingsLinkV": "Aç / kapa ile"
   }
 }
