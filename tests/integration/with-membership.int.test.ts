@@ -1487,6 +1487,8 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
           WHERE schemaname = 'public' AND 'wms_identity_probe' = ANY(roles::text[])`,
       );
       expect(pol.rows.map((p) => `${p.tablename}.${p.policyname}.${p.cmd}`).sort()).toEqual([
+        "integration_webhooks.integration_webhooks_probe_select.SELECT", // T-1138 migration 0067: webhook araması yalnız durum + mühürlü kutu sütunları
+        "integrations.integrations_probe_select.SELECT", // T-1138 migration 0067: webhook araması (şirket → tenant), sütun düzeyi SELECT
         "invitations.probe_select.SELECT",
         "membership_roles.probe_select.SELECT",
         "tenant_memberships.probe_select.SELECT",
@@ -1574,7 +1576,9 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       "field_activate", "field_admin_reset", "field_device_revoke", "field_device_staff", "field_device_status", "field_enroll_approve",
       "field_enroll_claim", "field_join_activate", "field_join_link", "field_join_request", "field_join_status", "field_join_verify", // T-429 0052: katılma
       "field_lock_spree_check", "field_signin_begin", "field_signin_finish", // T-997 0044: saha girişi; T-998 0045: ortak cihaz
-      "identity_exclusive_to_tenant", "invitation_for_account_creation",
+      "identity_exclusive_to_tenant",
+      "integration_webhook_lookup", // T-1138 migration 0067: Paraşüt teslimi için şirket → bağlı tenant + mühürlü anahtar kutuları, yalnızca wms_app
+      "invitation_for_account_creation",
       "invitation_preview_for_token", // T-117d migration 0008 (salt okunur; ad+rol+süre; ilke değişmedi)
       "invitation_tenant_for_token", // T-117 migration 0006 (salt okunur; ilke değişmedi)
       "ops_session_audited", // T-105c migration 0009 (salt okunur denetim kanıtı; ilke değişmedi)

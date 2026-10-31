@@ -200,6 +200,8 @@ export const ALLOWED_MSGS = new Set([
   "support.notify sent", "support.notify failed", "support.notify skipped",
   "integration.sync done", "integration.sync failed", "integration.sync skipped", "integration.scheduled", "integration.schedule_failed",
   "integration.schedule_list_failed", "integration.schedule_enqueue_failed",
+  // T-1138: Paraşüt anlık bildirim işi (yalnız iş kimliği, tür ve sabit kod).
+  "integration.webhook register", "integration.webhook event", "integration.webhook skipped", "integration.webhook failed",
   "shutdown completed with errors", "shutdown hook failed", "shutdown timed out", "forced exit", "uncaught exception", "unhandled rejection",
   // Sabit iletiler (parantez/büyük harf içerir; tam eşleşme):
   "BETTER_AUTH_URL not set (warning); invitation.deliver jobs will fail until configured",

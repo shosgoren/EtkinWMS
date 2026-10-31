@@ -99,8 +99,31 @@ export const integrations = pgTable(
     openingStockEnabled: boolean("opening_stock_enabled").notNull().default(false),
     openingStockTakenAt: timestamptz("opening_stock_taken_at"),
     openingStockDocumentId: uuid("opening_stock_document_id"),
+    // T-1138 (0067): Paraşüt anlık bildirim durumu (OFF/ACTIVE/FAILED), son kayıt denetimi, son gelen bildirim, son hata kodu.
+    webhookStatus: text("webhook_status").notNull().default("OFF"),
+    webhookCheckedAt: timestamptz("webhook_checked_at"),
+    webhookLastEventAt: timestamptz("webhook_last_event_at"),
+    webhookLastErrorCode: text("webhook_last_error_code"),
   },
   (t) => [unique("integrations_tenant_id_id_key").on(t.tenantId, t.id), unique("integrations_tenant_provider_key").on(t.tenantId, t.provider)],
+);
+
+// T-1138 (0067): Paraşüt webhook kayıtları (model × eylem başına bir satır); `key_box` yalnız mühürlü imza anahtarı.
+export const integrationWebhooks = pgTable(
+  "integration_webhooks",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    integrationId: uuid("integration_id").notNull(),
+    model: text("model").notNull(),
+    action: text("action").notNull(),
+    externalId: text("external_id").notNull(),
+    keyBox: jsonb("key_box"),
+    status: text("status").notNull().default("ACTIVE"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [unique("integration_webhooks_tenant_id_id_key").on(t.tenantId, t.id), unique("integration_webhooks_model_action_key").on(t.tenantId, t.integrationId, t.model, t.action)],
 );
 
 export const integrationFlows = pgTable(

@@ -15,6 +15,7 @@ import { FLOWS, PROVIDERS, PROVIDER_INFO, defaultDirection, parseDirection, pars
 import { ParasutClient, ProviderError, parseCompanyId, type ProviderErrorCode, type TokenSet } from "./parasut.ts";
 import { integrationSealer, sealSecrets } from "./secrets.ts";
 import { IntegrationStateError, accessToken, loadIntegration, type IntegrationStatus } from "./store.ts";
+import { clearWebhooksInTx, enqueueWebhookRegister, removeParasutWebhooks } from "./webhook-register.ts";
 
 export type ConnectionCallParams = Omit<TenantAccessParams, "permission">;
 
@@ -263,6 +264,8 @@ export async function connectParasutAuthorized(
       await appendAudit(tx,{action:"integration.flow_changed",actorUserId:m.userId,entityType:"integration",entityId:integrationId,changeSummary:{provider:"PARASUT",flow:"PRODUCTS",enabled:true,direction:"PULL",via:"first_oauth"}});
       await enqueueRun(tx,deps,m.userId,integrationId,"PRODUCTS");
     }
+    // T-1138: anlık bildirim (webhook) kaydı ayrı işte; kurulamazsa 30 sn tarama sürer.
+    await enqueueWebhookRegister(tx, deps.queue, integrationId, m.userId);
     await appendAudit(tx, {
       action: "integration.connected",
       actorUserId: m.userId,
@@ -323,9 +326,11 @@ export async function checkIntegration(params: ConnectionCallParams, input: { re
 }
 
 /** Bağlantıyı kes: mühürlü kutu silinir (NULL), bütün akışlar kapanır; eşlemeler yeniden bağlanma için kalır. */
-export async function disconnectIntegration(params: ConnectionCallParams, input: { readonly provider: string; readonly requestId?: string | null }): Promise<{ readonly changed: boolean }> {
+export async function disconnectIntegration(params: ConnectionCallParams, input: { readonly provider: string; readonly requestId?: string | null }, deps: IntegrationDeps = {}): Promise<{ readonly changed: boolean }> {
   const provider = parseProvider(input.provider);
   if (params.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
+  // T-1138: Paraşüt'teki webhook kayıtları belirteç silinmeden önce silinir (en iyi çaba; yetki aynı `settings.manage`).
+  if (provider === "PARASUT") await removeParasutWebhooks(params, deps);
   return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
     const r = await tx.execute<{ id: string }>(sql`
       UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL, last_error_code = NULL
@@ -334,6 +339,7 @@ export async function disconnectIntegration(params: ConnectionCallParams, input:
     const cancelled = await tx.execute<{id:string}>(sql`UPDATE public.integration_oauth_attempts SET phase='FAILED',token_box=NULL,companies='[]'::jsonb WHERE tenant_id=${m.tenantId}::uuid AND phase NOT IN ('COMPLETE','FAILED') RETURNING id`);
     if (cancelled[0] !== undefined) await appendAudit(tx,{action:"integration.oauth_cancelled",actorUserId:m.userId,entityType:"integration_oauth",entityId:cancelled[0].id,changeSummary:{provider,count:cancelled.length}});
     if (id === undefined) return { changed: false };
+    await clearWebhooksInTx(tx, m.tenantId, id);
     await tx.execute(sql`UPDATE public.integration_flows SET enabled = false WHERE tenant_id = ${m.tenantId}::uuid AND integration_id = ${id}::uuid AND enabled`);
     await appendAudit(tx, { action: "integration.disconnected", actorUserId: m.userId, entityType: "integration", entityId: id, requestId: input.requestId ?? null, changeSummary: { provider } });
     return { changed: true };
