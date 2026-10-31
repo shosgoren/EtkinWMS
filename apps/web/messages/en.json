@@ -879,7 +879,8 @@
       "created": "You created a warehouse.",
       "updated": "You updated a warehouse.",
       "archived": "You archived a warehouse.",
-      "code_changed": "You changed a warehouse code."
+      "code_changed": "You changed a warehouse code.",
+      "restored": "A warehouse was reopened."
     },
     "location": {
       "created": "You created a location.",
@@ -1034,6 +1035,7 @@
       "oauth_cancelled": "Paraşüt authorization cancelled",
       "webhook_registered": "Paraşüt instant update registration",
       "webhook_received": "Paraşüt instant update processed",
+      "conflict_resolved": "Conflict with Paraşüt resolved (latest edit won)",
       "outbox_retried": "ERP queue record retried",
       "outbox_resolved": "ERP queue shipment resolved by hand"
     },

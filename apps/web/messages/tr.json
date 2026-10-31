@@ -879,7 +879,8 @@
       "created": "Bir depo oluşturdun.",
       "updated": "Bir depoyu güncelledin.",
       "archived": "Bir depoyu arşivledin.",
-      "code_changed": "Bir deponun kodunu değiştirdin."
+      "code_changed": "Bir deponun kodunu değiştirdin.",
+      "restored": "Bir depo geri açıldı."
     },
     "location": {
       "created": "Bir lokasyon oluşturdun.",
@@ -1034,6 +1035,7 @@
       "oauth_cancelled": "Paraşüt izni iptal edildi",
       "webhook_registered": "Paraşüt anlık bildirim kaydı",
       "webhook_received": "Paraşüt anlık bildirimi işlendi",
+      "conflict_resolved": "Paraşüt ile çakışma çözüldü (son değişen kazandı)",
       "outbox_retried": "ERP kuyruğunda kayıt yeniden denendi",
       "outbox_resolved": "ERP kuyruğunda irsaliye elle çözüldü"
     },
