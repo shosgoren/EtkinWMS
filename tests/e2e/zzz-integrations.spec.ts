@@ -209,7 +209,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("flow-STOCK-sonuc")).toHaveCount(0);
     await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
     await expect(onayAl).toBeVisible();
-    await expect(onayAl).toContainText(/Sende [\d.]+ ürün var\. Paraşüt'teki ürünler stok koduna göre bunlarla eşleşir; eşleşmeyenler yeni kart olarak eklenir\./);
+    await expect(onayAl).toContainText(/Sende [\d.]+ ürün var\. Paraşüt'teki ürünler stok koduna göre bunlarla eşleşir, eşleşmeyenler yeni kart olur; bağlı kartların adı Paraşüt'tekiyle güncellenir, Paraşüt'te silinen ya da arşivlenen ürünler burada arşive alınır\./);
     await expect(onayAl.getByRole("button", { name: "Evet, Paraşüt'ten al" })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("yon-onay.png") });
     await onayAl.getByRole("button", { name: "Vazgeç" }).click();
@@ -222,7 +222,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(urun).toHaveAttribute("data-enabled", "true");
     await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları açıldı");
     await expect(urun.getByRole("radio", { name: "Paraşüt'ten al" })).toHaveAttribute("aria-checked", "true");
-    await expect(sonucMetin).toHaveText("Paraşüt'ten gelir; buradaki değişiklik gitmez.");
+    await expect(sonucMetin).toHaveText("Paraşüt'ten gelir, ona uyar; buradan gitmez.");
     await expect(page.getByTestId("flow-PRODUCTS-run")).toBeVisible();
     await expect(page.getByTestId("flow-PRODUCTS-toggle")).not.toHaveAttribute("aria-busy", "true");
     // Al → iki yönlü: eşlenmemiş yerel ürün (yukarıdaki) Paraşüt'e gidecek → onay.

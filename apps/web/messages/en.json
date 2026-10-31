@@ -5699,26 +5699,26 @@
     "flowOnNoQueue": "{name} on · transfers automatically shortly",
     "flowOff": "{name} off",
     "sonuc": {
-      "PULL": "Comes from {provider}; changes here are not sent.",
+      "PULL": "Comes from {provider} and follows it; nothing is sent.",
       "PUSH": "What {provider} lacks is added there; nothing comes back.",
       "BOTH": "Missing records are added; on conflict {provider} wins.",
       "OFF": "No sync."
     },
     "onay": {
       "PRODUCTS": {
-        "PULL": "You have {n, number} items. {provider} items are matched to them by stock code; unmatched ones are added as new cards.",
+        "PULL": "You have {n, number} items. {provider} items are matched to them by stock code and unmatched ones become new cards; linked cards take the {provider} name, and items deleted or archived in {provider} are archived here.",
         "PUSH": "You have {n, number} items; the {m, number} not linked to {provider} are sent there (linked to an item with the same stock code if one exists).",
-        "BOTH": "You have {n, number} items. {provider} items are matched by stock code and unmatched ones are added here{m, plural, =0 {} one {; # unlinked item is also sent to {provider}} other {; # unlinked items are also sent to {provider}}}."
+        "BOTH": "You have {n, number} items. {provider} items are matched by stock code and unmatched ones are added here; linked cards take the {provider} name, and items deleted or archived in {provider} are archived here{m, plural, =0 {} one {; # unlinked item is also sent to {provider}} other {; # unlinked items are also sent to {provider}}}."
       },
       "CONTACTS": {
-        "PULL": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city); unmatched ones are added as new parties.",
+        "PULL": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city) and unmatched ones become new parties; linked parties take the {provider} name and details (a party deleted in {provider} stays here).",
         "PUSH": "You have {n, number} parties; the {m, number} not linked to {provider} are sent there (linked to a party with the same tax number, otherwise name, if one exists).",
-        "BOTH": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city) and unmatched ones are added here{m, plural, =0 {} one {; # unlinked party is also sent to {provider}} other {; # unlinked parties are also sent to {provider}}}."
+        "BOTH": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city) and unmatched ones are added here; linked parties take the {provider} name and details{m, plural, =0 {} one {; # unlinked party is also sent to {provider}} other {; # unlinked parties are also sent to {provider}}}."
       },
       "WAREHOUSES": {
-        "PULL": "You have {n, number} warehouses. {provider} warehouses are matched by name; unmatched ones are added as new warehouses.",
+        "PULL": "You have {n, number} warehouses. {provider} warehouses are matched by name and unmatched ones become new warehouses; linked warehouses take the {provider} name (a warehouse deleted in {provider} stays here).",
         "PUSH": "You have {n, number} warehouses; the {m, number} not linked to {provider} are sent there (linked to a warehouse with the same name if one exists).",
-        "BOTH": "You have {n, number} warehouses. {provider} warehouses are matched by name and unmatched ones are added here{m, plural, =0 {} one {; # unlinked warehouse is also sent to {provider}} other {; # unlinked warehouses are also sent to {provider}}}."
+        "BOTH": "You have {n, number} warehouses. {provider} warehouses are matched by name and unmatched ones are added here; linked warehouses take the {provider} name{m, plural, =0 {} one {; # unlinked warehouse is also sent to {provider}} other {; # unlinked warehouses are also sent to {provider}}}."
       }
     },
     "onayBaslik": "{name}: {dir}?",

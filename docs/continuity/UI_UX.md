@@ -114,7 +114,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
   durum + yönlendirme (çıkmaz yok); satır içi işlem `.frun` 44 px; kapalı ilk kullanım penceresi `inert` (klavye sırasına girmez); metinde
   "ERP" yerine "Muhasebe programı".
   T-1136: kart akışlarında (ürün, cari, depo) seçili yönün sonucu satırın altında tek cümle (`KalipAyarSatir note`, `.stay-n`; anahtar
-  `integrations.sonuc.*`, seçim `integrations/yon-sonuc.ts`). Metinler koddaki kurala bağlı: al = gönderim yok, gönder = yalnız eşlenmemiş
+  `integrations.sonuc.*`, seçim `integrations/yon-sonuc.ts`). Metinler koddaki kurala bağlı: al = gönderim yok, bağlı kart Paraşüt'tekiyle güncellenir, Paraşüt'te silinen/arşivlenen ürün burada arşive alınır (cari/depo değil), gönder = yalnız eşlenmemiş
   yerel kart gider, iki yönlü = önce al sonra gönder, çakışmada Paraşüt kazanır ("son değişen kazanır" yok). Yeni "al" (yerel kayıt varken)
   ya da yeni "gönder" (eşlenmemiş yerel kayıt varken) önce `KalipOnay` (birincil) sorar: sayı sunucudan (`countFlowRecordsAction`,
   `settings.manage` + RLS), eşleşme kuralı tek cümlede (ürün stok kodu, cari vergi no / ad + şehir, depo ad); Vazgeç eski yönü korur.

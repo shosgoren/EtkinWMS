@@ -38,6 +38,7 @@ describe("sonuç cümlesi", () => {
   it("Türkçe metin koddaki gerçek kuralı söyler: al = gönderim yok, gönder = karşı taraftan gelmez, iki yönlü = çakışmada sağlayıcı kazanır", () => {
     const s = (tr as unknown as { integrations: { sonuc: Record<string, string> } }).integrations.sonuc;
     expect(s.PULL).toContain("gitmez");
+    expect(s.PULL).toContain("ona uyar"); // bağlı kart sağlayıcıdan güncellenir (apply.ts), ürün arşivi izler (product-lifecycle.ts)
     expect(s.PUSH).toContain("olmayanlar eklenir");
     expect(s.PUSH).toContain("gelmez");
     expect(s.BOTH).toContain("çakışmada {provider} kazanır");
@@ -86,6 +87,20 @@ describe("onay kararı", () => {
   });
   it("kapalı akışın kayıtlı yönü önemsizdir (kapalıyken hiçbir yön çalışmaz)", () => {
     for (const d of DIRS) expect(yonDegisimi("PRODUCTS", { enabled: false, direction: d }, "PULL")).toEqual({ yeniAl: true, yeniGonder: false });
+  });
+  it("alma içeren onay metni gerçek etkileri söyler: bağlı kart sağlayıcıdan güncellenir; yalnız üründe silinen/arşivlenen burada arşive alınır", () => {
+    const o = (tr as unknown as { integrations: { onay: Record<string, Record<string, string>> } }).integrations.onay;
+    for (const d of ["PULL", "BOTH"] as const) {
+      expect(o.PRODUCTS?.[d]).toContain("bağlı kartların adı {provider}'tekiyle güncellenir");
+      expect(o.PRODUCTS?.[d]).toContain("silinen ya da arşivlenen ürünler burada arşive alınır");
+      expect(o.CONTACTS?.[d]).toContain("bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir");
+      expect(o.WAREHOUSES?.[d]).toContain("bağlı depoların adı {provider}'tekiyle güncellenir");
+      expect(o.CONTACTS?.[d]).not.toContain("arşiv");
+      expect(o.WAREHOUSES?.[d]).not.toContain("arşiv");
+    }
+    expect(o.CONTACTS?.PULL).toContain("silinen cari burada kalır");
+    expect(o.WAREHOUSES?.PULL).toContain("silinen depo burada kalır");
+    for (const f of KART_AKISLARI) expect(o[f]?.PUSH).not.toContain("güncellenir");
   });
   it("onay metni her akış ve yön için iki dilde var; sayılar yer tutucuyla", () => {
     for (const msgs of [tr, en]) {
