@@ -42,6 +42,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     await expect(page.getByTestId("integrations")).toBeVisible();
     if (!(await page.getByTestId("integrations-conn").isVisible())) {
+      // T-1133: eski (parola) yolu Gelişmiş altında, uygulama bilgileri formunun içinden açılır.
+      await page.getByTestId("oauth-advanced").click();
       await page.getByTestId("oauth-settings-open").click();
       await page.getByTestId("oauth-legacy").click();
       await expect(page.getByTestId("integrations-form")).toBeVisible();
