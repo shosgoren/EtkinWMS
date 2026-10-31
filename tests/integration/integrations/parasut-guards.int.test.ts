@@ -331,6 +331,26 @@ describe("(D) stok toplamına girmiş belge çift başına ayıklanır (Codex P1
   });
 });
 
+describe("(D) 0066 öncesi (görüntüsüz) işaret: çift başına eski zaman kuralı (reviewer n-1)", () => {
+  it("görüntüsü olmayan işarette sent_at'ten önce işlenen belge gitmez, sonra işlenen gider", async () => {
+    const W = await seedWorld(adm, reg, "G1135N1");
+    const id = await connect(W);
+    const party = (await q<{ id: string }>("INSERT INTO public.parties (tenant_id, code, code_key, name, created_by) VALUES ($1, 'C-N1', 'C-N1', 'Sevk carisi', $2) RETURNING id", [W.tenantId, W.ownerMembershipId]))[0]?.id as string;
+    await linkRefs(W, [["PARTY", party, "777"], ["ITEM", W.itemNoneId, "555"], ["WAREHOUSE", W.warehouseId, "801"]]);
+    const order = async (n: string) => (await q<{ id: string }>("INSERT INTO public.sales_orders (tenant_id, number, customer_ref, created_by) VALUES ($1, $2, 'c-n1', $3) RETURNING id", [W.tenantId, `SIP-N1-${n}`, W.ownerUserId]))[0]?.id as string;
+    await flow(W, "SHIPMENTS", true);
+    await flow(W, "SHIPMENTS", false);
+    await postedDoc(W, "STOCK_OUT", { orderId: await order("1"), number: "SVK-ONCE-ISARET" });
+    // 0066 öncesi gibi: miktar + sent_at dolu, görüntü yok (ekleme tetikleyicisi sent_at = now()).
+    await adm.query("INSERT INTO public.integration_stock_marks (tenant_id, integration_id, item_id, warehouse_id, quantity) VALUES ($1, $2, $3, $4, 7)", [W.tenantId, id, W.itemNoneId, W.warehouseId]);
+    expect(await q("SELECT as_of_snapshot IS NULL AS n, sent_at IS NOT NULL AS s FROM public.integration_stock_marks WHERE integration_id = $1", [id])).toEqual([{ n: true, s: true }]);
+    await postedDoc(W, "STOCK_OUT", { orderId: await order("2"), number: "SVK-SONRA-ISARET" });
+    expect(await flow(W, "SHIPMENTS", true)).toMatchObject({ ok: true });
+    await sync(W, id);
+    expect(fake.shipments.map((s2) => (s2.body as { data: { attributes: { procurement_number: string } } }).data.attributes.procurement_number)).toEqual(["SVK-SONRA-ISARET"]);
+  });
+});
+
 describe("(E) stok gönderiminde kesin red", () => {
   it("422: işaret FAILED, aynı toplam 30 sn'de bir yeniden gönderilmez; 401 işareti bozmaz ve koşu FAILED", async () => {
     const W = await seedWorld(adm, reg, "G1135E");

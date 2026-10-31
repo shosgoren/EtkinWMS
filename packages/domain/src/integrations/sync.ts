@@ -456,7 +456,8 @@ async function pushShipments(rc: RunCtx): Promise<void> {
     // Fark sorgusu (T-1135): akışın ilk açılışından sonra İŞLENMİŞ sevk belgeleri — işlenme anı durum geçmişinden (tetikleyici yazar, sunucu
     // saati). Oluşturma anı ölçüt değildir. Stok toplamına girmiş belge irsaliye olarak gönderilmez (çift düşüm yok): belge yalnız BÜTÜN
     // (ürün, belge deposu) çiftlerinin son BAŞARILI stok işaretinin okuma görüntüsünde işlenmişse (POSTED xid görünür) atlanır. Görünürlük
-    // zamana değil işlem kimliğine dayanır (I-16); reddedilen ya da sınır yüzünden gönderilmeyen çiftin belgesi gider. Her koşu bütün farkı tarar.
+    // zamana değil işlem kimliğine dayanır (I-16); reddedilen ya da sınır yüzünden gönderilmeyen çiftin belgesi gider. Görüntüsü olmayan 0066
+    // öncesi işarette o çiftin `sent_at`'i ölçüttür (reviewer n-1: çift düşüm olmasın). Her koşu bütün farkı tarar.
     await tx.execute(sql`
       INSERT INTO public.integration_outbox (tenant_id, id, integration_id, flow, entity_type, entity_id)
       SELECT d.tenant_id, gen_random_uuid(), ${rc.integrationId}::uuid, 'SHIPMENTS', 'DOCUMENT', d.id
@@ -471,7 +472,9 @@ async function pushShipments(rc: RunCtx): Promise<void> {
                LEFT JOIN public.integration_stock_marks m
                       ON m.tenant_id = l.tenant_id AND m.integration_id = ${rc.integrationId}::uuid AND m.item_id = l.item_id AND m.warehouse_id = d.warehouse_id
               WHERE l.tenant_id = d.tenant_id AND l.document_id = d.id
-                AND (m.as_of_snapshot IS NULL OR NOT pg_visible_in_snapshot(h.created_xid, m.as_of_snapshot))))
+                AND CASE WHEN m.as_of_snapshot IS NOT NULL THEN NOT pg_visible_in_snapshot(h.created_xid, m.as_of_snapshot)
+                         -- 0066 öncesi işaret (görüntü yok): eski zaman kuralı çift başına — gönderimden (sent_at) önce işlenen belge toplama girmiştir.
+                         ELSE (m.sent_at IS NULL OR h.occurred_at > m.sent_at) END))
          AND NOT EXISTS (SELECT 1 FROM public.integration_outbox o WHERE o.tenant_id = d.tenant_id AND o.integration_id = ${rc.integrationId}::uuid AND o.flow = 'SHIPMENTS' AND o.entity_id = d.id)
        ORDER BY d.created_at, d.id
        LIMIT 500

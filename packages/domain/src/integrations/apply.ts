@@ -217,12 +217,12 @@ function partyFields(p: ProviderContact): PartyFields | null {
   };
 }
 
-/** Ad/şehir eşleme anahtarı (T-1135): iki taraf da PG'de normalleşir (boşluk sadeleşir, kırpılır, küçük harf); boş metin NULL. */
 /** Telefonun yalnız rakamları; 7 haneden kısaysa eşleme anahtarı değildir. */
 const phoneDigits = (phone: string | null): string | null => {
   const d = phone === null ? "" : phone.replace(/[^0-9]/g, "");
   return d.length >= 7 ? d : null;
 };
+/** Ad/şehir eşleme anahtarı (T-1135): iki taraf da PG'de normalleşir (boşluk sadeleşir, kırpılır, küçük harf); boş metin NULL. */
 const partyNameKey = (expr: ReturnType<typeof sql>) => sql`NULLIF(lower(btrim(regexp_replace(${expr}, '[[:space:]]+', ' ', 'g'))), '')`;
 
 export async function applyContact(tx: AccessTx, c: ApplyContext, p: ProviderContact): Promise<ApplyOutcome> {
