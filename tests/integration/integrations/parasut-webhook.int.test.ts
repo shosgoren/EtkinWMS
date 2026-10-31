@@ -480,6 +480,14 @@ describe("kademe ve kesme", () => {
     expect(await q("SELECT DISTINCT status, key_box FROM public.integration_webhooks WHERE integration_id = $1", [id])).toEqual([{ status: "DELETED", key_box: null }]);
     expect((await q("SELECT webhook_status FROM public.integrations WHERE id = $1", [id]))[0]).toEqual({ webhook_status: "OFF" });
     expect(await receiveParasutWebhook({ db: app, sealer, queue: memQueue() as never }, delivery({ model: "product", action: "update", id: "1", key }))).toEqual({ status: 401, outcome: "REJECTED" });
+    expect((await q("SELECT webhook_status, webhook_checked_at FROM public.integrations WHERE id = $1", [id]))[0]).toEqual({ webhook_status: "OFF", webhook_checked_at: null });
+    // Hemen yeniden bağlanınca (kayıt işini kuyruğa vermeyen eski yol) zamanlayıcı kaydı ilk tikte kurar — bir saat beklemez (CI e2e bulgusu).
+    await connectParasut(admin(w), { companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password }, { client: client(), sealer });
+    const queue = memQueue();
+    await withSystemTenant(app, w.tenantId, "test.schedule", (tx) => enqueueScheduledIntegrations(tx as never, w.tenantId, queue as never));
+    expect(queue.jobs.map((j) => j.job.type)).toContain("integration.webhook");
+    expect(await register(w, id)).toEqual({ kind: "ok", created: 6, kept: 0 });
+    expect((await getWebhookStatus(admin(w)))?.status).toBe("ACTIVE");
   });
 });
 

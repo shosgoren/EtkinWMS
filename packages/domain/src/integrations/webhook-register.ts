@@ -183,10 +183,10 @@ export async function removeParasutWebhooks(params: ConnectionCallParams, deps: 
   }
 }
 
-/** Kesme transaction'ında: anahtarlar silinir (NULL), satırlar DELETED, anlık bildirim OFF. */
+/** Kesme transaction'ında: anahtarlar silinir (NULL), satırlar DELETED, anlık bildirim OFF ve kayıt denetimi sıfır (yeniden bağlanınca hemen kurulur). */
 export async function clearWebhooksInTx(tx: AccessTx, tenantId: string, integrationId: string): Promise<void> {
   await tx.execute(sql`UPDATE public.integration_webhooks SET status = 'DELETED', key_box = NULL WHERE tenant_id = ${tenantId}::uuid AND integration_id = ${integrationId}::uuid AND status = 'ACTIVE'`);
-  await tx.execute(sql`UPDATE public.integrations SET webhook_status = 'OFF', webhook_last_error_code = NULL WHERE tenant_id = ${tenantId}::uuid AND id = ${integrationId}::uuid`);
+  await tx.execute(sql`UPDATE public.integrations SET webhook_status = 'OFF', webhook_checked_at = NULL, webhook_last_error_code = NULL WHERE tenant_id = ${tenantId}::uuid AND id = ${integrationId}::uuid`);
 }
 
 // --- ekran okuması ------------------------------------------------------------------------------------------------------------------
@@ -229,9 +229,13 @@ export function dueFlows(flows: readonly CadenceFlow[], webhookActive: boolean, 
     .map((f) => f.flow);
 }
 
-/** Kayıt işi bu tikte gerekli mi (OFF/FAILED saatte bir, ACTIVE günde bir). */
+/**
+ * Kayıt işi bu tikte gerekli mi: OFF (hiç kurulmadı ya da bağlantı kesilip yeniden kuruldu) her tik — iş singletonKey ile tekil;
+ * FAILED saatte bir; ACTIVE günde bir (uzlaştırma). CI e2e bulgusu (PR 273): kes → yeniden bağlan sonrası eski `webhook_checked_at`
+ * OFF kaydı bir saat bekletiyordu.
+ */
 export function registerDue(status: WebhookStatus, checkedAt: Date | null, now: number): boolean {
-  if (checkedAt === null) return true;
+  if (status === "OFF" || checkedAt === null) return true;
   const age = now - checkedAt.getTime();
   return status === "ACTIVE" ? age >= CADENCE.registerReconcileMs : age >= CADENCE.registerRetryMs;
 }

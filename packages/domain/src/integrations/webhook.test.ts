@@ -125,8 +125,9 @@ describe("kademe", () => {
   it("anlık bildirim kapalı/kurulamadı: bütün akışlar 30 sn kademesinde", () => {
     expect(dueFlows(flows, false, now)).toEqual(["PRODUCTS", "CONTACTS", "WAREHOUSES", "STOCK"]);
   });
-  it("kayıt: hiç denenmemiş hemen; FAILED/OFF saatte bir; ACTIVE günde bir", () => {
+  it("kayıt: OFF (hiç kurulmamış / kesilip yeniden bağlanmış) her tik; FAILED saatte bir; ACTIVE günde bir", () => {
     expect(registerDue("OFF", null, now)).toBe(true);
+    expect(registerDue("OFF", ago(1_000), now)).toBe(true);
     expect(registerDue("FAILED", ago(CADENCE.registerRetryMs - 1), now)).toBe(false);
     expect(registerDue("FAILED", ago(CADENCE.registerRetryMs), now)).toBe(true);
     expect(registerDue("ACTIVE", ago(CADENCE.registerRetryMs), now)).toBe(false);
