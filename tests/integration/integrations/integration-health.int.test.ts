@@ -1,8 +1,9 @@
-// T-1137: ERP bağlantı sağlığı + kuyrukta karar bekleyen satırların çözümü + eski parola bağlantısının reddi — gerçek wms_app (RLS) ve
+// T-1137: ERP bağlantı sağlığı + kuyrukta karar bekleyen satırların çözümü — gerçek wms_app (RLS) ve
 // sahte Paraşüt (gerçek ağ yok). Kanıtlar: sağlık sunucuda tenant kapsamında (başka kiracı görmez), webhook ACTIVE eşiği; yeni okuma ve
 // komutlar yalnız `settings.manage` + kendi tenant'ı (başka kiracının satır kimliği NOT_FOUND, satır değişmez); her durum değişikliği audit
 // (I-12) ve idempotent (ikinci çağrı audit yazmaz); kart bekletmesi "Yeniden dene" ile kalkar ve çakışma sürerse yeniden bekletilir;
-// `connectParasutAction` yeni parola bağlantısını UNSUPPORTED ile reddeder ve hiçbir satır yazmaz. Fikstürler sentetiktir (G-09).
+// T-1139: bağlantı yalnız OAuth ile kurulur (parola eylemi sunucu eylemlerinden kalktı); 0068'in kestiği eski yöntem bağlantısı AUTH +
+// "Yeniden bağlan" olarak görünür. Fikstürler sentetiktir (G-09).
 import { randomBytes, randomUUID } from "node:crypto";
 import path from "node:path";
 import pg from "pg";
@@ -31,8 +32,8 @@ import { AppError } from "../../../packages/shared/src/errors.ts";
 import { createSealer } from "../../../packages/shared/src/seal.ts";
 import {
   HEALTH_STALE_MS,
+  LEGACY_METHOD_REMOVED,
   ParasutClient,
-  connectParasut,
   getIntegrationOutboxIssues,
   getIntegrationOverview,
   resolveIntegrationOutbox,
@@ -41,6 +42,7 @@ import {
   setIntegrationFlow,
 } from "../../../packages/domain/src/integrations/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
+import { connectParasutOAuth } from "../fixtures/parasut-oauth.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
@@ -97,7 +99,6 @@ beforeEach(async () => {
 const admin = (w: TenantWorld) => ({ db: app, principal: { userId: w.ownerUserId, mfaVerified: true }, tenantSlug: w.slug, recentAuth: async () => undefined });
 const picker = (w: TenantWorld) => ({ db: app, principal: { userId: w.memberUserId, mfaVerified: true }, tenantSlug: w.slug });
 const deps = () => ({ client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer });
-const input = () => ({ companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password });
 async function q<T extends pg.QueryResultRow = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
   return (await adm.query<T>(text, params)).rows;
 }
@@ -115,7 +116,7 @@ async function inTenant<T extends pg.QueryResultRow = Record<string, unknown>>(w
   }
 }
 async function connect(w: TenantWorld): Promise<string> {
-  expect(await connectParasut(admin(w), input(), deps())).toEqual({ ok: true, label: fake.opts.companyName });
+  expect(await connectParasutOAuth(admin(w), deps(), fake, { productsOff: true })).toEqual({ ok: true, label: fake.opts.companyName });
   return (await q<{ id: string }>("SELECT id FROM public.integrations WHERE tenant_id = $1 AND provider = 'PARASUT'", [w.tenantId]))[0]?.id as string;
 }
 async function outboxRow(w: TenantWorld, integrationId: string, o: { flow?: string; entity?: string; entityId?: string; status: string; code?: string | null; external?: string }): Promise<string> {
@@ -142,22 +143,12 @@ function as(user: string | null): void {
 }
 
 describe("bağlantı sağlığı (sunucuda, tenant kapsamında)", () => {
-  it("parola bağlantısı legacy; OAuth izni eşleşince değil; eski eşitleme STALE, webhook ACTIVE eşiği ürün çekmede 25 dk; ERROR → AUTH; başka kiracı görmez", async () => {
+  it("OAuth bağlantısı ok; eski eşitleme STALE, webhook ACTIVE eşiği ürün çekmede 25 dk; ERROR → AUTH; 0068'in kestiği bağlantı AUTH; başka kiracı görmez", async () => {
     const W = await seedWorld(adm, reg, "H1137H");
     const id = await connect(W);
-    let o = await getIntegrationOverview(admin(W));
-    expect(o.health).toMatchObject({ level: "ok", cause: null, legacy: true });
-    // Bağlanma anına denk gelen tamamlanmış OAuth izni → yeni yöntem.
-    await inTenant(
-      W,
-      `INSERT INTO public.integration_oauth_attempts (tenant_id, id, user_id, membership_id, state_hash, nonce_hash, client_id, config_version)
-       VALUES ($1, $2, $3, $4, $5, $6, 'cid', gen_random_uuid())`,
-      [W.tenantId, randomUUID(), W.ownerUserId, W.ownerMembershipId, randomBytes(32).toString("hex"), randomBytes(32).toString("hex")],
-    );
-    await inTenant(W, "UPDATE public.integration_oauth_attempts SET phase = 'COMPLETE' WHERE tenant_id = $1", [W.tenantId]);
-    await inTenant(W, "UPDATE public.integrations SET connected_at = now() + interval '1 minute' WHERE tenant_id = $1 AND id = $2", [W.tenantId, id]);
-    o = await getIntegrationOverview(admin(W));
-    expect(o.health).toMatchObject({ level: "ok", legacy: false });
+    const o0 = await getIntegrationOverview(admin(W));
+    expect(o0.health).toEqual({ level: "ok", cause: null, next: null, flow: null, since: null, code: null });
+    let o = o0;
 
     expect(await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" })).toMatchObject({ ok: true });
     await inTenant(W, "UPDATE public.integration_flows SET last_success_at = now() - interval '20 minutes', last_status = 'SUCCESS' WHERE tenant_id = $1 AND flow = 'PRODUCTS'", [W.tenantId]);
@@ -180,6 +171,15 @@ describe("bağlantı sağlığı (sunucuda, tenant kapsamında)", () => {
 
     await inTenant(W, "UPDATE public.integrations SET status = 'ERROR', last_error_code = 'REAUTH_REQUIRED' WHERE tenant_id = $1 AND id = $2", [W.tenantId, id]);
     expect((await getIntegrationOverview(admin(W))).health).toMatchObject({ level: "error", cause: "AUTH", next: "RECONNECT", code: "REAUTH_REQUIRED" });
+
+    // T-1139: migration 0068'in kestiği eski yöntem bağlantısı (DISCONNECTED + LEGACY_METHOD_REMOVED): bağlı değil, tek AUTH bandı.
+    await inTenant(W, "UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL, last_error_code = $3 WHERE tenant_id = $1 AND id = $2", [W.tenantId, id, LEGACY_METHOD_REMOVED]);
+    o = await getIntegrationOverview(admin(W));
+    expect(o.providers.find((p) => p.provider === "PARASUT")?.connection).toBeNull();
+    expect(o.health).toEqual({ level: "error", cause: "AUTH", next: "RECONNECT", flow: null, since: null, code: "LEGACY_METHOD_REMOVED" });
+    // Sıradan kesme (kod yok) sağlık üretmez.
+    await inTenant(W, "UPDATE public.integrations SET last_error_code = NULL WHERE tenant_id = $1 AND id = $2", [W.tenantId, id]);
+    expect((await getIntegrationOverview(admin(W))).health).toBeNull();
 
     // Negatif: başka kiracının görünümü bu bağlantıyı içermez; üye (settings.manage yok) okuyamaz.
     expect((await getIntegrationOverview(admin(B))).health).toBeNull();
@@ -295,19 +295,11 @@ describe("kart bekletmesi (EXTERNAL_ALREADY_LINKED): Yeniden dene bekletmeyi kal
 });
 
 describe("sunucu eylemleri (gerçek sorgu yolu)", () => {
-  it("connectParasutAction: yeni parola bağlantısı UNSUPPORTED, satır/audit yok; üye ve başka kiracı FORBIDDEN", async () => {
-    const W = await seedWorld(adm, reg, "H1137L");
-    const body = { slug: W.slug, companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password };
-    as(W.ownerUserId);
-    expect(await actions.connectParasutAction!(body)).toEqual({ ok: true, data: { ok: false, reason: "UNSUPPORTED" } });
-    expect(await inTenant(W, "SELECT id FROM public.integrations WHERE tenant_id = $1", [W.tenantId])).toEqual([]);
-    expect(await inTenant(W, "SELECT action FROM public.audit_logs WHERE tenant_id = $1 AND action LIKE 'integration.%'", [W.tenantId])).toEqual([]);
+  it("T-1139: e-posta + parola ile bağlanma eylemi yok (yalnız OAuth eylemleri); hiçbir satır/istek yazılmaz", async () => {
+    expect(actions.connectParasutAction).toBeUndefined();
+    expect(Object.keys(actions).filter((k) => /password|parola|legacy/i.test(k))).toEqual([]);
+    for (const k of ["beginParasutOAuthAction", "completeParasutOAuthCodeAction", "selectParasutOAuthCompanyAction"]) expect(Object.keys(actions)).toContain(k);
     expect(fake.requests.filter((r) => r.path.includes("oauth/token"))).toEqual([]);
-    as(W.memberUserId);
-    expect(await actions.connectParasutAction!(body)).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
-    as(B.ownerUserId);
-    const cross = await actions.connectParasutAction!(body);
-    expect(cross.ok).toBe(false);
   });
 
   it("yeniden dene / elle çöz eylemleri: kendi satırı olur; başka kiracının satırı NOT_FOUND; üye FORBIDDEN", async () => {

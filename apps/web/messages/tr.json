@@ -5790,6 +5790,7 @@
       "COMPANY_CHANGED": "Başka şirkete geçmek için Etkin ekibiyle görüş",
       "UNAVAILABLE_PROVIDER": "Bu ERP henüz yok",
       "REAUTH_REQUIRED": "Paraşüt yeniden giriş istiyor · yeniden bağlan",
+      "LEGACY_METHOD_REMOVED": "Paraşüt bağlantısı yenilendi · yeniden bağlan",
       "SECRET_UNREADABLE": "Bağlantı anahtarı okunamadı · yeniden bağlan",
       "NOT_CONNECTED": "Bağlı değil",
       "CONNECTOR_REVOKED": "Bağlayan kişinin yetkisi kalktı · yeniden bağlan",
@@ -5874,7 +5875,7 @@
       "change": "Anahtarları değiştir",
       "originMissing": "Dönüş adresi hazırlanamıyor. Destek ekibine haber ver.",
       "method": "Bağlantı yöntemi",
-      "oob": "Yetki kodu (eski yöntem)",
+      "oob": "Yetki kodu (elle)",
       "https": "Otomatik dönüş",
       "enterCode": "Paraşüt yetki kodu",
       "code": "Yetki kodu",
@@ -5890,7 +5891,7 @@
       "noneOn": "Henüz hazır değil",
       "step1": "1 · Dönüş adresini Paraşüt'e kaydet",
       "step1Hint": "Paraşüt → Ayarlar → Entegrasyonlar → Yeni uygulama → bu adresi yapıştır",
-      "step1Oob": "Eski yöntem açık: Paraşüt uygulamasında dönüş adresi olarak bu metni yaz",
+      "step1Oob": "Elle yetki kodu açık: Paraşüt uygulamasında dönüş adresi olarak bu metni yaz",
       "oobUrn": "urn:ietf:wg:oauth:2.0:oob",
       "step2": "2 · Anahtarları gir",
       "step2Hint": "Paraşüt'teki uygulamanın kimliği ve gizli anahtarı · şifreli saklanır",
@@ -5899,7 +5900,7 @@
       "step3": "3 · BAĞLAN",
       "step3Hint": "Paraşüt'te giriş yap, izin ver, şirketini seç",
       "stepsFirst": "Önce anahtarları kaydet (2. adım)",
-      "oobToggle": "Eski yöntem: dönüş adresi yerine yetki kodu",
+      "oobToggle": "Elle: dönüş adresi yerine yetki kodu",
       "oobToggleSub": "Paraşüt uygulamasında dönüş adresi yazamadıysan aç; Paraşüt kodu gösterir, sen yapıştırırsın"
     },
     "bolum": {
@@ -5992,10 +5993,9 @@
         "RUN": "Şimdi çalıştır",
         "DETAIL": "Ayrıntı"
       },
-      "legacy": {
-        "title": "Eski bağlantı yöntemi (e-posta + parola)",
-        "sub": "Bağlantın çalışıyor. Yeni yöntemde parolan Etkin'e hiç gelmez; bir kez yeniden bağlanman yeter.",
-        "next": "Yeni yönteme geç"
+      "renewed": {
+        "title": "{provider} bağlantısı yenilendi; devam etmek için yeniden bağlan.",
+        "sub": "Ürünlerin, carilerin, depoların, stoğun ve belgelerin yerinde. Yalnız bağlantı yenilenecek."
       }
     },
     "issues": {

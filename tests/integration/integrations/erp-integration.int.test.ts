@@ -11,8 +11,9 @@ import { AppError } from "../../../packages/shared/src/errors.ts";
 import { createSealer } from "../../../packages/shared/src/seal.ts";
 import {
   ParasutClient,
+  beginParasutOAuth,
   checkIntegration,
-  connectParasut,
+  completeParasutOAuth,
   disconnectIntegration,
   getIntegrationOverview,
   requestIntegrationRun,
@@ -20,9 +21,11 @@ import {
   setIntegrationFlow,
   getProductSourceInfo,
   getProductBarcodeSetting,
+  selectParasutOAuthCompany,
   setProductBarcodeSetting,
 } from "../../../packages/domain/src/integrations/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
+import { connectParasutOAuth, fakeSharedOAuth } from "../fixtures/parasut-oauth.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
@@ -67,7 +70,6 @@ beforeEach(async () => {
 const admin = (w: TenantWorld) => ({ db: app, principal: { userId: w.ownerUserId, mfaVerified: true }, tenantSlug: w.slug, recentAuth: async () => undefined });
 const picker = (w: TenantWorld) => ({ db: app, principal: { userId: w.memberUserId, mfaVerified: true }, tenantSlug: w.slug });
 const deps = () => ({ client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer });
-const input = () => ({ companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password });
 const sync = (w: TenantWorld, integrationId: string, opts: { flow?: string; now?: () => number; trigger?: "MANUAL" | "SCHEDULE" } = {}) =>
   runIntegrationSync(
     { inTenant: (fn) => withSystemTenant(app, w.tenantId, "test.integration", fn), client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer, ...(opts.now === undefined ? {} : { now: opts.now }) },
@@ -81,8 +83,9 @@ async function integrationId(w: TenantWorld): Promise<string> {
   const r = await q<{ id: string }>("SELECT id FROM public.integrations WHERE tenant_id = $1 AND provider = 'PARASUT'", [w.tenantId]);
   return r[0]?.id as string;
 }
+// T-1139: bağlantı yalnız OAuth ile; bu dosyanın testleri bütün akışlar kapalı başlangıçtan çalışır (ilk OAuth'un ürün çekmesi kapatılır).
 async function connect(w: TenantWorld): Promise<string> {
-  const r = await connectParasut(admin(w), input(), deps());
+  const r = await connectParasutOAuth(admin(w), deps(), fake, { productsOff: true });
   expect(r).toEqual({ ok: true, label: fake.opts.companyName });
   return integrationId(w);
 }
@@ -148,12 +151,12 @@ describe("katalog: RLS ve yetkiler (0055)", () => {
 describe("yetki ve demo", () => {
   it("yetkisiz (PICKER) okuyamaz, bağlanamaz, akış açamaz, kesemez", async () => {
     expect((await fail(getIntegrationOverview(picker(A)))).code).toBe("FORBIDDEN");
-    expect((await fail(connectParasut({ ...picker(A), recentAuth: async () => undefined }, input(), deps()))).code).toBe("FORBIDDEN");
+    expect((await fail(beginParasutOAuth({ ...picker(A), recentAuth: async () => undefined }, { ...deps(), oauth: fakeSharedOAuth(fake) }))).code).toBe("FORBIDDEN");
     expect((await fail(setIntegrationFlow(picker(A), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" }))).code).toBe("FORBIDDEN");
     expect((await fail(disconnectIntegration({ ...picker(A), recentAuth: async () => undefined }, { provider: "PARASUT" }))).code).toBe("FORBIDDEN");
     // Yakın zamanda giriş bağlanmadan bağlan / kes çağrılamaz.
     const noRecent = { db: app, principal: { userId: A.ownerUserId, mfaVerified: true }, tenantSlug: A.slug };
-    expect((await fail(connectParasut(noRecent, input(), deps()))).detail).toBe("RECENT_AUTH_REQUIRED");
+    expect((await fail(beginParasutOAuth(noRecent, { ...deps(), oauth: fakeSharedOAuth(fake) }))).detail).toBe("RECENT_AUTH_REQUIRED");
     expect((await fail(disconnectIntegration(noRecent, { provider: "PARASUT" }))).detail).toBe("RECENT_AUTH_REQUIRED");
     expect((await fail(requestIntegrationRun(picker(A), { provider: "PARASUT" }, { queue: { enqueue: async () => ({ jobId: "x" }) } }))).code).toBe("FORBIDDEN");
     // Sahte sağlayıcıya hiç istek gitmedi (yetki ağdan önce).
@@ -163,15 +166,17 @@ describe("yetki ve demo", () => {
   it("demo alanında bağlantı kurulmaz (sağlayıcıya istek gitmez)", async () => {
     const D = await seedWorld(adm, reg, "ERPD");
     await adm.query("UPDATE public.tenants SET is_demo = true WHERE id = $1", [D.tenantId]);
-    expect(await connectParasut(admin(D), input(), deps())).toEqual({ ok: false, reason: "DEMO" });
+    expect(await connectParasutOAuth(admin(D), deps(), fake)).toEqual({ ok: false, reason: "DEMO" });
     expect(fake.requests).toHaveLength(0);
   });
 });
 
 describe("bağlan / sına / kes ve sır", () => {
-  it("sır DB'de mühürlü; parola hiç yazılmaz; audit ve okuma dönüşü sır taşımaz", async () => {
+  it("sır DB'de mühürlü; audit ve okuma dönüşü sır taşımaz; ilk OAuth yalnız ürün çekmeyi açar; parola hiçbir istekte yok", async () => {
     const W = await seedWorld(adm, reg, "ERPS");
-    const id = await connect(W);
+    const r = await connectParasutOAuth(admin(W), deps(), fake);
+    expect(r).toEqual({ ok: true, label: fake.opts.companyName });
+    const id = await integrationId(W);
     const row = (await q<{ status: string; account_label: string; account_ref: string; c: Record<string, unknown>; t: string }>("SELECT status, account_label, account_ref, credentials AS c, i::text AS t FROM public.integrations i WHERE id = $1", [id]))[0];
     expect(row?.status).toBe("CONNECTED");
     expect(row?.account_ref).toBe("115");
@@ -181,30 +186,41 @@ describe("bağlan / sına / kes ve sır", () => {
       JSON.stringify(await q("SELECT change_summary FROM public.audit_logs WHERE tenant_id = $1", [W.tenantId])),
       JSON.stringify(await getIntegrationOverview(admin(W))),
     ].join("\n");
-    for (const secret of [fake.opts.password, fake.opts.clientSecret, fake.opts.clientId, fake.accessToken, fake.refreshToken, fake.opts.username]) expect(everything).not.toContain(secret);
-    expect(await q("SELECT action FROM public.audit_logs WHERE tenant_id = $1 AND action LIKE 'integration.%'", [W.tenantId])).toEqual([{ action: "integration.connected" }]);
-    // Parola yalnız token ucuna gitti.
-    expect(fake.requests.filter((r) => r.body.includes(encodeURIComponent(fake.opts.password)) || r.body.includes(fake.opts.password)).map((r) => r.path)).toEqual(["/oauth/token"]);
-    // Varsayılan akışlar: hepsi kapalı; kullanıcı kararındaki yönler.
+    for (const secret of [fake.opts.clientSecret, fake.opts.clientId, fake.accessToken, fake.refreshToken, fake.opts.username]) expect(everything).not.toContain(secret);
+    expect((await q<{ action: string }>("SELECT action FROM public.audit_logs WHERE tenant_id = $1 AND action LIKE 'integration.%'", [W.tenantId])).map((a) => a.action).sort()).toEqual(["integration.connected", "integration.flow_changed", "integration.oauth_started"]);
+    // T-1139: hiçbir istek parola akışı ya da kullanıcı adı/parola taşımaz; istemci sırrı yalnız token ucuna gider.
+    expect(fake.requests.some((x) => /grant_type=password|(^|&)password=|(^|&)username=/.test(x.body))).toBe(false);
+    expect([...new Set(fake.requests.filter((x) => x.body.includes(fake.opts.clientSecret)).map((x) => x.path))]).toEqual(["/oauth/token"]);
+    // İlk OAuth bağlantısı: yalnız ürün çekme açık; diğerleri kapalı, kullanıcı kararındaki yönler.
     const flows = await q<{ flow: string; enabled: boolean; direction: string }>("SELECT flow, enabled, direction FROM public.integration_flows WHERE integration_id = $1 ORDER BY flow", [id]);
-    expect(Object.fromEntries(flows.map((f) => [f.flow, `${f.enabled}/${f.direction}`]))).toEqual({ CONTACTS: "false/PULL", PRODUCTS: "false/PULL", SALES_ORDERS: "false/PULL", SHIPMENTS: "false/PUSH", STOCK: "false/PUSH", WAREHOUSES: "false/PULL" });
+    expect(Object.fromEntries(flows.map((f) => [f.flow, `${f.enabled}/${f.direction}`]))).toEqual({ CONTACTS: "false/PULL", PRODUCTS: "true/PULL", SALES_ORDERS: "false/PULL", SHIPMENTS: "false/PUSH", STOCK: "false/PUSH", WAREHOUSES: "false/PULL" });
     expect(await checkIntegration(admin(W), { provider: "PARASUT" }, deps())).toEqual({ ok: true, label: fake.opts.companyName });
     expect(await disconnectIntegration(admin(W), { provider: "PARASUT" })).toEqual({ changed: true });
     expect((await q("SELECT status, credentials FROM public.integrations WHERE id = $1", [id]))[0]).toEqual({ status: "DISCONNECTED", credentials: null });
     expect((await getIntegrationOverview(admin(W))).providers.find((p) => p.provider === "PARASUT")?.connection).toBeNull();
   });
 
-  it("hatalı bilgi / yanlış şirket: kayıt açılmaz, nedeni döner", async () => {
+  it("hatalı yetki kodu / seçimden önce kaybolan şirket / bozuk şirket no: kayıt açılmaz, nedeni döner", async () => {
     const W = await seedWorld(adm, reg, "ERPF");
-    expect(await connectParasut(admin(W), { ...input(), password: "yanlis" }, deps())).toEqual({ ok: false, reason: "AUTH_FAILED" });
-    expect(await connectParasut(admin(W), { ...input(), companyId: "999" }, deps())).toEqual({ ok: false, reason: "COMPANY_NOT_FOUND" });
+    expect(await connectParasutOAuth(admin(W), deps(), fake, { code: "yanlis-yetki-kodu" })).toEqual({ ok: false, reason: "AUTH_FAILED" });
+    // İki şirket → seçim; seçilen şirket Paraşüt'te artık yoksa bağlantı açılmaz (yazma anında yeniden doğrulanır).
+    fake.companies.push({ id: "116", name: "Öteki şirket" });
+    const d = { ...deps(), oauth: fakeSharedOAuth(fake) };
+    const b = await beginParasutOAuth(admin(W), d);
+    if (!b.ok) throw new Error("begin failed");
+    const sel = await completeParasutOAuth(admin(W), { binding: b.binding, code: fake.mintAuthorizationCode() }, d);
+    expect(sel.ok && sel.status).toBe("SELECT");
+    fake.companies.splice(0, 1);
+    expect(await selectParasutOAuthCompany(admin(W), { binding: b.binding, companyId: fake.opts.companyId }, d)).toEqual({ ok: false, reason: "COMPANY_NOT_FOUND" });
     expect(await q("SELECT 1 FROM public.integrations WHERE tenant_id = $1", [W.tenantId])).toEqual([]);
-    expect((await fail(connectParasut(admin(W), { ...input(), companyId: "11/../5" }, deps()))).code).toBe("VALIDATION_FAILED");
+    expect((await fail(selectParasutOAuthCompany(admin(W), { binding: b.binding, companyId: "11/../5" }, d))).code).toBe("VALIDATION_FAILED");
   });
 
   it("akış: Paraşüt'te olmayan akış ve yön reddedilir; açılınca ilk koşu kuyruğa girer; audit", async () => {
     const W = await seedWorld(adm, reg, "ERPL");
     await connect(W);
+    // T-1139: bağlantı kurulumunun (OAuth ilk bağlantı ürün çekmeyi açar, kurulum kapatır) audit satırları bu testin konusu değil.
+    const setup = (await q<{ id: string }>("SELECT id::text AS id FROM public.audit_logs WHERE tenant_id = $1", [W.tenantId])).map((r) => r.id);
     const jobs: unknown[] = [];
     const queue = { enqueue: async (_tx: unknown, job: unknown) => (jobs.push(job), { jobId: randomUUID() }) };
     expect(await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "SALES_ORDERS", enabled: true, direction: "PULL" }, { queue })).toEqual({ ok: false, reason: "UNSUPPORTED" });
@@ -216,7 +232,7 @@ describe("bağlan / sına / kes ve sır", () => {
     expect(await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "BOTH" }, { queue })).toMatchObject({ ok: true, changed: false, queued: false });
     const f = (await q<{ enabled_at: Date | null }>("SELECT enabled_at FROM public.integration_flows WHERE tenant_id = $1 AND flow = 'PRODUCTS'", [W.tenantId]))[0];
     expect(f?.enabled_at).not.toBeNull();
-    expect((await q("SELECT change_summary->>'flow' AS f FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.flow_changed'", [W.tenantId]))).toEqual([{ f: "PRODUCTS" }]);
+    expect((await q("SELECT change_summary->>'flow' AS f FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.flow_changed' AND NOT (id::text = ANY($2::text[]))", [W.tenantId, setup]))).toEqual([{ f: "PRODUCTS" }]);
   });
 });
 
@@ -374,14 +390,17 @@ describe("senkron", () => {
     expect(otherTenant).toMatchObject({ ok: true, rowCount: 0 });
     const unchanged = await sync(W, id);
     expect(unchanged.kind === "ran" && unchanged.flows[0]?.counts.updated).toBe(0);
-    // Kaynakta arşivlenmesi/bir bayrak değişmesi WMS kartını pasife veya takipsiz hale getirmez.
-    fake.products[0] = { id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", archived: true, inventory_tracking: false } };
+    // Kaynak bayrağı (takip) WMS kartını takipsiz yapmaz; boşalan kaynak alanı boşalır.
+    fake.products[0] = { id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", archived: false, inventory_tracking: false, gtip: null }, relationships: { category: { data: null } } };
     await sync(W, id);
-    expect(await getProductSourceInfo(admin(W), itemId)).toEqual({ PARASUT: { ...expected.PARASUT, archived: true, inventoryTracking: false } });
+    expect(await getProductSourceInfo(admin(W), itemId)).toEqual({ PARASUT: { ...expected.PARASUT, inventoryTracking: false, gtip: null, categoryId: null, categoryName: null } });
     expect(await q("SELECT status,tracking_mode,card_type FROM public.items WHERE tenant_id=$1 AND id=$2", [W.tenantId, itemId])).toEqual([{ status: "ACTIVE", tracking_mode: "LOT", card_type: "HM" }]);
-    fake.products[0] = { id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", gtip: null }, relationships: { category: { data: null } } };
+    // T-1139: bağlantı OAuth olduğundan ürün yaşam döngüsü (T-1067) açıktır: kaynakta arşiv yalnız yaşam döngüsü kuralıyla işlenir — stoksuz ve
+    // açık işi olmayan kart arşivlenir (kullanıcı kararı 28 Ekim); takip modu ve kart türü aynı kalır, stok değişmez.
+    fake.products[0] = { id: "961", attributes: { code: "INFO-SAFE", name: "Kaynak ürünü", unit: "Adet", archived: true, inventory_tracking: false, gtip: null }, relationships: { category: { data: null } } };
     await sync(W, id);
-    expect(await getProductSourceInfo(admin(W), itemId)).toEqual({ PARASUT: { ...expected.PARASUT, archived: true, inventoryTracking: false, gtip: null, categoryId: null, categoryName: null } });
+    expect(await getProductSourceInfo(admin(W), itemId)).toEqual({ PARASUT: { ...expected.PARASUT, archived: true, inventoryTracking: false, gtip: null, categoryId: null, categoryName: null, sourceState: "ARCHIVED", lifecycle: "ARCHIVED" } });
+    expect(await q("SELECT status,tracking_mode,card_type FROM public.items WHERE tenant_id=$1 AND id=$2", [W.tenantId, itemId])).toEqual([{ status: "ARCHIVED", tracking_mode: "LOT", card_type: "HM" }]);
     const forbiddenField = await asApp(W.tenantId, "UPDATE public.items SET source_product_info=source_product_info || '{\"PARASUT\":{\"list_price\":100}}'::jsonb WHERE id=$1", [itemId]);
     expect(forbiddenField).toMatchObject({ ok: false, code: "23514" });
     expect(await stockFingerprint(W)).toEqual(before);

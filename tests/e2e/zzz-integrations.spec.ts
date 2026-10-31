@@ -3,8 +3,9 @@
 // sentetiktir. Masaüstü ve mobil projeler aynı alanı kullanır: bağlıysa test önce bağlantıyı keser (kes penceresi de sınanır).
 // T-1133: Etkin'in ortak Paraşüt uygulaması (global-setup sentetik ortam değişkenleri): BAĞLAN → Paraşüt izin ekranı (sahte: yönlendirme
 // yakalanır, gerçek ağ yok) → callback → tek şirket → bağlı. Müşteri anahtar alanı görmez; kendi uygulaması "Gelişmiş" satırının içinde.
-// T-1137: eski "e-posta + parola ile bağlan" kalktı — ikinci bağlanma da ortak uygulamanın sahte OAuth akışıyla (`connectOAuth`); parola
-// eylemi UNSUPPORTED döner. Excel bağlı değilken kaynak listesinde kart; bağlantı sağlığı bandı ve karar bekleyen irsaliye satırı sınanır.
+// T-1137: eski "e-posta + parola ile bağlan" kalktı — ikinci bağlanma da ortak uygulamanın sahte OAuth akışıyla (`connectOAuth`).
+// Excel bağlı değilken kaynak listesinde kart; bağlantı sağlığı bandı ve karar bekleyen irsaliye satırı sınanır.
+// T-1139: parola yöntemi koddan kalktı; migration 0068'in kestiği bağlantının ekranı (tek bant + tek "Yeniden bağlan" → OAuth) sınanır.
 import { randomUUID } from "node:crypto";
 import { db } from "./support/package-receiving.ts";
 import { execFileSync } from "node:child_process";
@@ -27,7 +28,7 @@ function expireRecentAuth(token: string): void {
 }
 
 /** T-1133 ortak uygulama ile bağlan: BAĞLAN → Paraşüt izin ekranı (sahte: yönlendirme yakalanır) → callback → tek şirket → bağlı. */
-async function connectOAuth(page: Page): Promise<URL> {
+async function connectOAuth(page: Page, trigger = "integrations-connect"): Promise<URL> {
   let authorize: URL | null = null;
   await page.route("https://api.parasut.com/**", async (route) => {
     authorize = new URL(route.request().url());
@@ -35,7 +36,7 @@ async function connectOAuth(page: Page): Promise<URL> {
     back.search = new URLSearchParams({ code: F.authorizationCode, state: authorize.searchParams.get("state") ?? "" }).toString();
     await route.fulfill({ status: 302, headers: { location: back.href } });
   });
-  await page.getByTestId("integrations-connect").filter({ visible: true }).click();
+  await page.getByTestId(trigger).filter({ visible: true }).click();
   await expect(page.getByTestId("kalip-toast")).toContainText("Paraşüt bağlantısı kuruldu");
   await page.unroute("https://api.parasut.com/**");
   const auth = authorize as URL | null;
@@ -186,7 +187,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       for(const id of ['oauth-app-id','oauth-app-secret','oauth-callback']) {const field=page.getByTestId(id).locator('..');const bounds=await field.boundingBox();await field.click({position:{x:5,y:5}});await expect(page.getByTestId(id)).toBeFocused();expect(bounds?.height).toBeGreaterThanOrEqual(44);expect((bounds?.x??-1)>=0&&(bounds?.x??0)+(bounds?.width??0)<=width).toBe(true);}
       await page.screenshot({path:testInfo.outputPath(`oauth-settings-${width}.png`)});
     }
-    // T-1137: eski parola yöntemine giriş yok (ne bu formda ne ekranda); sunucu eylemi de yeni parola bağlantısını reddeder (int test).
+    // T-1137/T-1139: parola yöntemine giriş yok (ne bu formda ne ekranda); sunucu eylemi de yok (int test).
     await expect(page.getByTestId("oauth-legacy")).toHaveCount(0);
     await expect(page.getByTestId("integrations-form")).toHaveCount(0);
     await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
@@ -369,10 +370,10 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         await page.screenshot({ path: testInfo.outputPath(`barcode-${width}.png`) });
       }
     }
-    // T-1137: bağlantı sağlığı bandı — OAuth ile bağlı: "eski yöntem" uyarısı yok. Bağlantı koparsa (401 / yeniden giriş) bant kırmızı,
+    // T-1137: bağlantı sağlığı bandı — OAuth ile bağlı: ok bandı. Bağlantı koparsa (401 / yeniden giriş) bant kırmızı,
     // tek cümle + tek sonraki adım "Yeniden bağlan" (≥ 44 px); "Bağlantı ve veri kaynağı" rozet alır. Durum sentetik olarak kurulur, geri alınır.
     await expect(page.getByTestId("integrations-health")).toBeVisible();
-    await expect(page.getByTestId("integrations-health-legacy")).toHaveCount(0);
+    await expect(page.getByTestId("integrations-health")).toHaveAttribute("data-level", "ok");
     const tenantIntegration = "(SELECT i.id FROM public.integrations i JOIN public.tenants t ON t.id = i.tenant_id WHERE t.slug = $1 AND i.provider = 'PARASUT')";
     try {
       await db(`UPDATE public.integrations SET status = 'ERROR', last_error_code = 'REAUTH_REQUIRED' WHERE id = ${tenantIntegration}`, [slug]);
@@ -437,6 +438,31 @@ if (!process.env.E2E_BASE_URL?.trim()) {
 
     await page.getByTestId("integrations-test").click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Bağlantı sağlam");
+
+    // T-1139: migration 0068'in eski yöntem bağlantısına yaptığı durum sentetik kurulur (DISCONNECTED + kimlik yok + LEGACY_METHOD_REMOVED,
+    // webhook anahtarları silinmiş). Ekran: bağlı değil; Paraşüt kartının yerinde tek kırmızı bant ve tek "Yeniden bağlan"; Excel kartı durur;
+    // Bağlantı bölümünde rozet. Düğme OAuth'u başlatır; yeniden bağlanınca bağlı şerit döner.
+    await db(`UPDATE public.integration_webhooks SET status = 'DELETED', key_box = NULL WHERE integration_id = ${tenantIntegration} AND status = 'ACTIVE'`, [slug]);
+    await db(`UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL, last_error_code = 'LEGACY_METHOD_REMOVED', webhook_status = 'OFF', webhook_checked_at = NULL WHERE id = ${tenantIntegration}`, [slug]);
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
+    const renew = page.getByTestId("integrations-health");
+    await expect(renew).toHaveAttribute("data-cause", "AUTH");
+    await expect(renew).toHaveAttribute("data-code", "LEGACY_METHOD_REMOVED");
+    await expect(renew).toContainText("Paraşüt bağlantısı yenilendi; devam etmek için yeniden bağlan.");
+    await expect(page.getByTestId("integrations-conn")).toHaveCount(0);
+    await expect(page.getByTestId("provider-PARASUT")).toHaveCount(0);
+    await expect(page.getByTestId("integrations-excel")).toBeVisible();
+    await expect(page.getByTestId("integrations-baglanti").getByRole("button", { name: "Yeniden bağlan" })).toHaveCount(1);
+    await expect(page.getByTestId("integrations-bolumler").getByTestId("alt-bolum-baglanti-badge")).toHaveText("1");
+    const renewNext = page.getByTestId("integrations-health-next");
+    await expect(renewNext).toHaveAttribute("data-next", "RECONNECT");
+    await expect.poll(async () => (await renewNext.boundingBox())?.height ?? 0, { message: "Yeniden bağlan ≥ 44 px" }).toBeGreaterThanOrEqual(44);
+    if (testInfo.project.name === "desktop") await page.screenshot({ path: testInfo.outputPath("legacy-renew-1280.png") });
+    await expect(renew).not.toContainText(/parola/i);
+    await expect(page.getByText("Yeni yönteme geç")).toHaveCount(0);
+    await connectOAuth(page, "integrations-health-next");
+    await expect(page.getByTestId("integrations-conn")).toHaveAttribute("data-status", "CONNECTED");
+    expect((await db<{ code: string | null }>(`SELECT last_error_code AS code FROM public.integrations WHERE id = ${tenantIntegration}`, [slug]))[0]?.code).toBeNull();
     // Kendi uygulaması, eski yetki kodu yöntemiyle (OOB): anahtarlar kaydedilir, bağlan → kod formu.
     await page.getByTestId("oauth-advanced").click();
     await page.getByTestId("oauth-settings-open").click();

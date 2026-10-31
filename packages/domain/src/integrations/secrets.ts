@@ -3,8 +3,8 @@
 // {v, kid, iv, tag, ct} biçiminde durur (0055 CHECK). Anahtar döndürülürse eski kutu açılmaz (`SealOpenError`) → bağlantı "yeniden bağlan"
 // durumuna düşer; düz değer hiçbir yerde tutulmaz.
 //
-// Saklanan: istemci kimliği/sırrı, yenileme belirteci, erişim belirteci + bitişi. SAKLANMAYAN: kullanıcı e-postası/parolası (yalnız bağlanırken
-// belleğe girer). Değerler loga, audit'e, hata iletisine ve istemciye (ekran) asla gitmez.
+// Saklanan: istemci kimliği/sırrı, yenileme belirteci, erişim belirteci + bitişi. Kullanıcının Paraşüt e-postası/parolası hiçbir aşamada
+// alınmaz (T-1139: yalnız OAuth yetki kodu). Değerler loga, audit'e, hata iletisine ve istemciye (ekran) asla gitmez.
 import { createSealer, type SealedBox, type Sealer } from "@wms/shared/seal";
 import type { Provider } from "./catalog.ts";
 

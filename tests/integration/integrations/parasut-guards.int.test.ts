@@ -9,8 +9,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createDbClient, withSystemTenant } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { createSealer } from "../../../packages/shared/src/seal.ts";
-import { ParasutClient, connectParasut, getIntegrationOverview, retryIntegrationOutbox, runIntegrationSync, setIntegrationFlow, STOCK_TOTAL_LOCATION_KINDS, STOCK_TOTAL_STATUSES } from "../../../packages/domain/src/integrations/index.ts";
+import { ParasutClient, getIntegrationOverview, retryIntegrationOutbox, runIntegrationSync, setIntegrationFlow, STOCK_TOTAL_LOCATION_KINDS, STOCK_TOTAL_STATUSES } from "../../../packages/domain/src/integrations/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
+import { connectParasutOAuth } from "../fixtures/parasut-oauth.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
@@ -51,7 +52,6 @@ beforeEach(async () => {
 
 const admin = (w: TenantWorld) => ({ db: app, principal: { userId: w.ownerUserId, mfaVerified: true }, tenantSlug: w.slug, recentAuth: async () => undefined });
 const deps = () => ({ client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer });
-const input = () => ({ companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password });
 const sync = (w: TenantWorld, integrationId: string, opts: { flow?: string; trigger?: "MANUAL" | "SCHEDULE" } = {}) =>
   runIntegrationSync(
     { inTenant: (fn) => withSystemTenant(app, w.tenantId, "test.integration", fn), client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer },
@@ -63,7 +63,7 @@ async function q<T extends pg.QueryResultRow = Record<string, unknown>>(text: st
   return (await adm.query<T>(text, params)).rows;
 }
 async function connect(w: TenantWorld): Promise<string> {
-  expect(await connectParasut(admin(w), input(), deps())).toEqual({ ok: true, label: fake.opts.companyName });
+  expect(await connectParasutOAuth(admin(w), deps(), fake, { productsOff: true })).toEqual({ ok: true, label: fake.opts.companyName });
   return (await q<{ id: string }>("SELECT id FROM public.integrations WHERE tenant_id = $1 AND provider = 'PARASUT'", [w.tenantId]))[0]?.id as string;
 }
 async function asApp(tenant: string, sql: string, params: unknown[] = []): Promise<{ ok: true; rowCount: number } | { ok: false; code?: string; message?: string }> {
@@ -135,8 +135,8 @@ describe("(A) stok toplamı ⟂ irsaliye", () => {
     expect(await flow(W, "SHIPMENTS", true)).toEqual({ ok: false, reason: "INTEGRATION_FLOW_EXCLUSIVE" });
     const flows = await q<{ flow: string; enabled: boolean }>("SELECT flow, enabled FROM public.integration_flows WHERE integration_id = $1 AND flow IN ('STOCK','SHIPMENTS') ORDER BY flow", [id]);
     expect(flows).toEqual([{ flow: "SHIPMENTS", enabled: false }, { flow: "STOCK", enabled: true }]);
-    // Reddedilen deneme audit'e "değişti" diye yazılmaz.
-    expect((await q("SELECT change_summary->>'flow' AS f, change_summary->>'enabled' AS e FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.flow_changed' ORDER BY occurred_at", [W.tenantId]))).toEqual([
+    // Reddedilen deneme audit'e "değişti" diye yazılmaz. (T-1139: OAuth bağlantı kurulumunun ürün akışı satırları bu testin konusu değil.)
+    expect((await q("SELECT change_summary->>'flow' AS f, change_summary->>'enabled' AS e FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.flow_changed' AND change_summary->>'flow' IN ('STOCK','SHIPMENTS') ORDER BY occurred_at", [W.tenantId]))).toEqual([
       { f: "SHIPMENTS", e: "true" }, { f: "SHIPMENTS", e: "false" }, { f: "STOCK", e: "true" },
     ]);
   });

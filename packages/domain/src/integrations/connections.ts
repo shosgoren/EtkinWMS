@@ -1,8 +1,11 @@
 // ERP bağlantısı — ekran komutları ve okuması (T-991). Yetki: `settings.manage` (yalnız TENANT_ADMIN; permissions.ts "ayarlar ... entegrasyonları
 // taşır"). Bağlan / bağlantıyı kes ayrıca yakın zamanda kimlik doğrulama ister (`recentAuth`). Demo alanında bağlantı kurulmaz (ortak hesap: gerçek
-// ERP bilgisi girilmesin). Her yazma aynı transaction'da audit (I-12); sır/parola/belirteç audit'e, loga, dönüşe girmez (G-09).
+// ERP bilgisi girilmesin). Her yazma aynı transaction'da audit (I-12); sır/belirteç audit'e, loga, dönüşe girmez (G-09).
+// Bağlantı YALNIZ OAuth yetki kodu akışıyla kurulur (oauth.ts → `connectParasutAuthorized`). T-1139 (kullanıcı kararı 31 Ekim, "eski yöntem
+// olmasın"): e-posta + parola yöntemi koddan kalktı; o yöntemle kurulmuş bağlantılar migration 0068 ile kesildi (DISCONNECTED +
+// `LEGACY_METHOD_REMOVED`, veri yerinde) ve ekranda "Yeniden bağlan" olarak görünür.
 //
-// Ağ çağrısı (sağlayıcıya giriş, şirket doğrulama) transaction DIŞINDADIR: önce yetki + demo denetimi (okuma), sonra ağ, sonra kısa yazma
+// Ağ çağrısı (şirket doğrulama) transaction DIŞINDADIR: önce yetki + demo denetimi (okuma), sonra ağ, sonra kısa yazma
 // transaction'ı. Okuma yolu `credentials` sütununu HİÇ seçmez; ekrana yalnız "bağlı · şirket adı" gider.
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
@@ -91,13 +94,8 @@ async function isDemo(tx: AccessTx, tenantId: string): Promise<boolean> {
 /** Ekran okuması (`settings.manage`). Sır sütunu seçilmez. */
 export async function getIntegrationOverview(params: ConnectionCallParams): Promise<IntegrationOverview> {
   return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
-    // T-1137: `legacy` = bağlantı OAuth izni olmadan (eski e-posta + parola) kuruldu: bağlanma anına denk gelen tamamlanmış izin denemesi yok.
-    const conns = await tx.execute<{ id: string; provider: Provider; status: IntegrationStatus; account_label: string | null; connected_at: Date | string | null; last_checked_at: Date | string | null; last_error_code: string | null; legacy: boolean; db_now: Date | string; webhook_status: "OFF" | "ACTIVE" | "FAILED" | null }>(
-      sql`SELECT i.id, i.provider, i.status, i.account_label, i.connected_at, i.last_checked_at, i.last_error_code, i.webhook_status, now() AS db_now,
-                 (i.connected_at IS NOT NULL AND NOT EXISTS (
-                    SELECT 1 FROM public.integration_oauth_attempts a
-                     WHERE a.tenant_id = i.tenant_id AND a.phase = 'COMPLETE'
-                       AND a.created_at <= i.connected_at AND a.created_at >= i.connected_at - interval '1 hour')) AS legacy
+    const conns = await tx.execute<{ id: string; provider: Provider; status: IntegrationStatus; account_label: string | null; connected_at: Date | string | null; last_checked_at: Date | string | null; last_error_code: string | null; db_now: Date | string; webhook_status: "OFF" | "ACTIVE" | "FAILED" | null }>(
+      sql`SELECT i.id, i.provider, i.status, i.account_label, i.connected_at, i.last_checked_at, i.last_error_code, i.webhook_status, now() AS db_now
             FROM public.integrations i WHERE i.tenant_id = ${m.tenantId}::uuid`,
     );
     const flows = await tx.execute<{ integration_id: string; flow: Flow; enabled: boolean; direction: Direction; last_run_at: Date | string | null; last_status: FlowView["lastStatus"]; error_count: number; last_error_code: string | null; last_success_at: Date | string | null; enabled_at: Date | string | null }>(
@@ -145,13 +143,13 @@ export async function getIntegrationOverview(params: ConnectionCallParams): Prom
     });
     const pc = conns.find((x) => x.provider === "PARASUT");
     const pv = providers.find((p) => p.provider === "PARASUT");
+    // T-1139: kesilmiş bağlantı sağlık üretmez; yalnız 0068'in kestiği (eski yöntem) bağlantı AUTH + "Yeniden bağlan" bandıyla görünür.
     const health =
-      pc === undefined || pv === undefined || pv.connection === null
+      pc === undefined || pv === undefined
         ? null
         : classifyIntegrationHealth({
             now: new Date(pc.db_now),
-            connection: { status: pv.connection.status, lastErrorCode: pv.connection.lastErrorCode },
-            legacy: pc.legacy === true,
+            connection: { status: pc.status, lastErrorCode: pc.last_error_code },
             webhook: pc.webhook_status ?? "OFF",
             flows: pv.flows.map((f) => {
               const raw = flows.find((x) => x.integration_id === pc.id && x.flow === f.flow);
@@ -186,12 +184,11 @@ export async function getIntegrationOverview(params: ConnectionCallParams): Prom
 export type ConnectReason = ProviderErrorCode | "DEMO" | "COMPANY_CHANGED" | "UNAVAILABLE_PROVIDER";
 export type ConnectResult = { readonly ok: true; readonly label: string } | { readonly ok: false; readonly reason: ConnectReason };
 
-export interface ConnectParasutInput {
+/** OAuth denemesinden gelen bağlantı girdisi (uygulama kimliği/sırrı: kiracının kendi uygulaması ya da ortak uygulama). */
+export interface ConnectAuthorizedInput {
   readonly companyId: string;
   readonly clientId: string;
   readonly clientSecret: string;
-  readonly username: string;
-  readonly password: string;
   readonly requestId?: string | null;
 }
 
@@ -201,16 +198,6 @@ function token(raw: unknown, max: number): string {
   const v = raw.trim();
   if (v === "" || v.length > max || CTRL.test(v)) throw new AppError("VALIDATION_FAILED");
   return v;
-}
-function email(raw: unknown): string {
-  if (typeof raw !== "string") throw new AppError("VALIDATION_FAILED");
-  const v = raw.trim();
-  if (v.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) throw new AppError("VALIDATION_FAILED");
-  return v;
-}
-function password(raw: unknown): string {
-  if (typeof raw !== "string" || raw === "" || raw.length > 200 || /\p{Cc}/u.test(raw)) throw new AppError("VALIDATION_FAILED");
-  return raw;
 }
 
 function sealerOf(deps: IntegrationDeps): Sealer | null {
@@ -223,22 +210,13 @@ function sealerOf(deps: IntegrationDeps): Sealer | null {
 }
 
 /**
- * T-1137 (kullanıcı kararı 30 Ekim): ekran ve sunucu eylemi bu yolu ARTIK ÇAĞIRMAZ — `connectParasutAction` yeni parola bağlantısını
- * `UNSUPPORTED` ile reddeder. İşlev yalnız entegrasyon testlerinin bağlantı kurulumu için durur; mevcut parola bağlantıları belirteç yenilemeyle
- * çalışmaya devam eder (store.ts), bağlantı OAuth ile yenilenince eski yöntem kendiliğinden biter.
- * Paraşüt'e bağlan: parola akışı → şirket listesinde istenen şirket → mühürlü kutu + akış satırları (hepsi kapalı, varsayılan yön). Parola
- * saklanmaz. Farklı şirkete yeniden bağlanma reddedilir (`COMPANY_CHANGED`): eski eşlemeler başka şirketin kimlikleridir.
+ * Tek bağlanma yolu (OAuth adaptörü): sağlayıcı belirteci yalnız sahiplenilmiş, mühürlü OAuth denemesinden gelir; yetki ve şirket doğrulaması
+ * yinelenir. Mühürlü kutu + akış satırları; farklı şirkete yeniden bağlanma eşleme varken reddedilir (`COMPANY_CHANGED`). Yeniden bağlanmada
+ * (0068'in kestiği eski yöntem bağlantısı dahil) akış tercihleri korunur ve `last_error_code` temizlenir.
  */
-export async function connectParasut(params: ConnectionCallParams, input: ConnectParasutInput, deps: IntegrationDeps = {}): Promise<ConnectResult> {
-  const username = email(input.username);
-  const pass = password(input.password);
-  return connectParasutAuthorized(params, input, (client) => client.passwordGrant({ clientId: token(input.clientId, 200), clientSecret: token(input.clientSecret, 200), username, password: pass }), deps);
-}
-
-/** Internal OAuth adapter: provider tokens originate only from the claimed, sealed attempt. Permissions and company verification are repeated. */
 export async function connectParasutAuthorized(
   params: ConnectionCallParams,
-  input: Pick<ConnectParasutInput, "companyId" | "clientId" | "clientSecret" | "requestId">,
+  input: ConnectAuthorizedInput,
   grant: (client: ParasutClient) => Promise<TokenSet>,
   deps: IntegrationDeps = {},
   beforeWrite?: (tx: AccessTx, tenantId: string, userId: string, membershipId: string) => Promise<void>,

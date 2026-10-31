@@ -144,8 +144,11 @@ export async function registerParasutWebhooks(deps: RegisterDeps, integrationId:
           }
         }
         // Eski (artık bize dönmeyen) kayıt Paraşüt'te kaldıysa temizlenir; başka tenant'ın kaydına dokunulmaz (yalnız bizim kimliğimiz).
-        if (mine !== undefined && mine.external_id !== rec.id && remote.some((w) => w.id === mine.external_id)) {
-          await deps.client.deleteWebhook(token.token, token.accountRef, mine.external_id).catch(() => undefined);
+        // T-1139: satır DELETED olsa da (kesmede Paraşüt'te silinemedi ya da migration 0068 belirteçsiz kesti) kimlik bizimdir → yeniden
+        // bağlanınca Paraşüt'te kalan eski kayıt burada silinir (en iyi çaba).
+        const prev = head.rows.find((r) => r.model === model && r.action === action);
+        if (prev !== undefined && prev.external_id !== rec.id && remote.some((w) => w.id === prev.external_id)) {
+          await deps.client.deleteWebhook(token.token, token.accountRef, prev.external_id).catch(() => undefined);
         }
         const entry = { id: rec.id, persisted: false };
         opened.push(entry);

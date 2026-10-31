@@ -13,8 +13,9 @@
 // giriş yap ve izin ver → şirketini seç (tek şirket kendiliğinden). Kendi uygulamasını kullanmak isteyen için "Gelişmiş" açılır satırı
 // (`KalipSatir`): 3 adımlı rehberli kart (1 gerçek dönüş adresi + Kopyala, 2 iki anahtar, 3 BAĞLAN). Eski yetki kodu (OOB) yolu yalnız kendi
 // uygulamasında OOB adresini kaydeden müşteri için kalır; sağlayıcı hata kodu `reasons.*` ile gösterilir (genel "tamamlanamadı" değil).
-// T-1137 (kullanıcı 30 Ekim): eski "e-posta + parola ile bağlan" penceresi ve girişi kalktı (sunucu eylemi UNSUPPORTED döner); eski yöntemle
-// bağlı müşteriye sağlık bandında nazik "Yeni yönteme geç". Bağlantı sağlığı (sunucuda hesaplanır) tek bant: simge + renk + tek cümle + tek
+// T-1139 (kullanıcı 31 Ekim, "eski yöntem olmasın"): bağlanmanın tek yolu OAuth. Eski e-posta + parola yöntemiyle kurulmuş bağlantı migration
+// 0068 ile kesildi; ekranda bağlı değil görünür, Paraşüt kartının yerinde tek kırmızı bant ("Paraşüt bağlantısı yenilendi; devam etmek için
+// yeniden bağlan.") ve tek "Yeniden bağlan" düğmesi (OAuth başlatır). Bağlantı sağlığı (sunucuda hesaplanır) tek bant: simge + renk + tek cümle + tek
 // sonraki adım (`KalipBildirim` + `KalipDugme`). "Bekleyenler ve hatalar"da karar bekleyen kuyruk satırları satır başına çözüm düğmeleriyle;
 // geri dönüşü olmayan kararlar (`KalipOnay`) onay ister. Excel, bağlı değilken kaynak listesinde Paraşüt'ün yanında bir veri kaynağı kartıdır.
 import { useLocale, useTranslations } from "next-intl";
@@ -75,8 +76,9 @@ export interface HealthData {
   readonly flow: Flow | null;
   readonly since: string | null;
   readonly code: string | null;
-  readonly legacy: boolean;
 }
+/** T-1139: migration 0068'in eski yöntem bağlantısını kestiğini söyleyen sabit kod (domain `LEGACY_METHOD_REMOVED`; istemci paketi domain'i almaz). */
+const LEGACY_METHOD_REMOVED = "LEGACY_METHOD_REMOVED";
 /** T-1137: kuyrukta karar bekleyen satır (kod/ad yalnız gösterim için). */
 export interface IssueData {
   readonly id: string;
@@ -467,6 +469,8 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   const son = sonEsitleme(flows, data.runs);
   // T-1137: sağlık sorunu varsa "Bağlantı ve veri kaynağı" da rozet alır (sorun bandı orada ve akış bölümünde).
   const hp = data.health;
+  // T-1139: eski yöntem bağlantısı 0068 ile kesildi → bağlı değil, ama Paraşüt kartı yerine tek "Yeniden bağlan" bandı.
+  const renewNeeded = !connected && hp !== null && hp.cause === "AUTH" && hp.code === LEGACY_METHOD_REMOVED;
   const saglikRozet = hp !== null && hp.level !== "ok" ? { badge: 1, badgeAria: t("bolum.badgeAria", { n: 1 }) } : {};
   const bolumler: KalipAltBolum[] = [
     { id: "baglanti", label: t("bolum.baglanti"), d: SICON.baglanti, ton: "parasut", href: `${self}?bolum=baglanti`, ...saglikRozet },
@@ -489,7 +493,9 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
     const out: ReactNode[] = [];
     if (hp.level !== "ok" && hp.cause !== null && !(inConn && hp.cause === "AUTH")) {
       const name = hp.flow === null ? pn : t(`flows.${hp.flow}.name`);
-      const sub = hp.cause === "AUTH" || hp.cause === "FAILING" ? reasonText(hp.code) : t(`health.${hp.cause}.sub`, { at: hp.since === null ? "" : when(hp.since) });
+      const renewed = hp.cause === "AUTH" && hp.code === LEGACY_METHOD_REMOVED;
+      const title = renewed ? t("health.renewed.title", { provider: pn }) : t(`health.${hp.cause}.title`, { name, provider: pn });
+      const sub = renewed ? t("health.renewed.sub") : hp.cause === "AUTH" || hp.cause === "FAILING" ? reasonText(hp.code) : t(`health.${hp.cause}.sub`, { at: hp.since === null ? "" : when(hp.since) });
       const next =
         hp.next === "RECONNECT" ? (
           <KalipDugme tur="ana" d={NICON.plug} onClick={openForm} busy={busy === "oauth"} data-testid={`${testId}-next`} data-next="RECONNECT">{t("health.next.RECONNECT")}</KalipDugme>
@@ -499,8 +505,8 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
           <KalipDugme d={LICON.info} onClick={goDetail} data-testid={`${testId}-next`} data-next="DETAIL">{t("health.next.DETAIL")}</KalipDugme>
         );
       out.push(
-        <div key="h" data-testid={testId} data-level={hp.level} data-cause={hp.cause}>
-          <KalipBildirim tur={hp.level === "error" ? "hata" : "uyari"} title={t(`health.${hp.cause}.title`, { name, provider: pn })} sub={sub}>
+        <div key="h" data-testid={testId} data-level={hp.level} data-cause={hp.cause} data-code={hp.code ?? undefined}>
+          <KalipBildirim tur={hp.level === "error" ? "hata" : "uyari"} title={title} sub={sub}>
             <span>{next}</span>
           </KalipBildirim>
         </div>,
@@ -509,15 +515,6 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
       out.push(
         <div key="h" data-testid={testId} data-level="ok">
           <KalipBildirim tur="tamam" title={t("health.ok")} />
-        </div>,
-      );
-    }
-    if (hp.legacy && hp.cause !== "AUTH") {
-      out.push(
-        <div key="l" data-testid={`${testId}-legacy`}>
-          <KalipBildirim tur="bilgi" title={t("health.legacy.title")} sub={t("health.legacy.sub")}>
-            <span><KalipDugme d={NICON.plug} onClick={openForm} busy={busy === "oauth"} data-testid={`${testId}-legacy-next`}>{t("health.legacy.next")}</KalipDugme></span>
-          </KalipBildirim>
         </div>,
       );
     }
@@ -602,8 +599,10 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                   ayarlıysa bağlanma ipucu OAuth'a göre. */}
               <KalipBaslik title={t("head")} hint={connected ? undefined : oauth.configured ? t("oauth.hintNone") : t("hintNone")} />
               {!connected ? (
+                <>
+                {renewNeeded ? saglikBandi("integrations-health", false) : null}
                 <div className="provs" role="list" aria-label={t("providerList")} data-testid="integrations-providers">
-                  {data.providers.map((p) => {
+                  {data.providers.filter((p) => !(renewNeeded && p.provider === "PARASUT")).map((p) => {
                     const soon = !p.available;
                     return (
                       <button
@@ -657,6 +656,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                     <span className="pill go">{t("excelSource.pill")}</span>
                   </button>
                 </div>
+                </>
               ) : (
                 <>
                   <div className={`conn${err ? " err" : ""}`} role="status" data-testid="integrations-conn" data-status={conn.status}>

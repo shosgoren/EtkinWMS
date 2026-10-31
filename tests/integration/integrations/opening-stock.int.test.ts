@@ -11,7 +11,6 @@ import { AppError } from "../../../packages/shared/src/errors.ts";
 import { createSealer } from "../../../packages/shared/src/seal.ts";
 import {
   ParasutClient,
-  connectParasut,
   getOpeningStockState,
   pullOpeningStock,
   runIntegrationSync,
@@ -21,6 +20,7 @@ import {
 import { getSetupJourney } from "../../../packages/domain/src/onboarding/journey.ts";
 import { approveDocument, createStockDocument } from "../../../packages/domain/src/stock/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
+import { connectParasutOAuth } from "../fixtures/parasut-oauth.ts";
 import { mkMembership, mkUser, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
@@ -68,7 +68,6 @@ beforeEach(async () => {
 const admin = (w: TenantWorld) => ({ db: app, principal: { userId: w.ownerUserId, mfaVerified: true }, tenantSlug: w.slug, recentAuth: async () => undefined });
 const as = (userId: string, w: TenantWorld) => ({ db: app, principal: { userId, mfaVerified: true }, tenantSlug: w.slug });
 const deps = () => ({ client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer });
-const input = () => ({ companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password });
 async function q<T extends pg.QueryResultRow = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
   return (await adm.query<T>(text, params)).rows;
 }
@@ -93,7 +92,7 @@ async function asApp(tenant: string, sql: string, params: unknown[] = []): Promi
 /** Bağlı + ürün kartları çekilmiş kiracı (eşlemeler hazır, stok yok). */
 async function ready(label: string): Promise<{ w: TenantWorld; id: string }> {
   const w = await seedWorld(adm, reg, label);
-  expect(await connectParasut(admin(w), input(), deps())).toEqual({ ok: true, label: fake.opts.companyName });
+  expect(await connectParasutOAuth(admin(w), deps(), fake, { productsOff: true })).toEqual({ ok: true, label: fake.opts.companyName });
   const id = (await q<{ id: string }>("SELECT id FROM public.integrations WHERE tenant_id = $1 AND provider = 'PARASUT'", [w.tenantId]))[0]?.id as string;
   await setIntegrationFlow(admin(w), { provider: "PARASUT", flow: "PRODUCTS", enabled: true, direction: "PULL" });
   const r = await runIntegrationSync({ inTenant: (fn) => withSystemTenant(app, w.tenantId, "test.integration", fn), client: new ParasutClient({ baseUrl: fake.url, sleep: async () => undefined }), sealer }, { integrationId: id, flow: "PRODUCTS", trigger: "MANUAL" }, w.ownerUserId);
