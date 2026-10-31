@@ -23,7 +23,8 @@ import { consistencySingletonKey, createStockConsistencyHandler, startConsistenc
 import { createMailer, createSendEmailHandler } from "./jobs/send-email.js";
 import { createSupportNotifyHandler } from "./jobs/support-notify.js";
 import { createIntegrationSyncHandler, startIntegrationSchedule } from "./jobs/integration-sync.js";
-import { integrationSyncSingletonKey, scheduledIntegrations } from "@wms/domain/integrations";
+import { enqueueScheduledIntegrations } from "@wms/domain/integrations";
+import { createIntegrationWebhookHandler } from "./jobs/integration-webhook.js";
 import { createJsonLogger, createLifecycle, EXIT_FAILURE, parseShutdownTimeoutMs } from "./lifecycle.js";
 
 const logger = createJsonLogger();
@@ -125,6 +126,8 @@ HANDLERS["support.notify"] = createSupportNotifyHandler({ env: process.env, logg
 
 // T-991: ERP senkronu (Paraşüt). Sır DB'de mühürlü (QUEUE_SEAL_KEY); sağlayıcı adresi sabit (PARASUT_BASE_URL yalnız geri döngü sahte sunucu).
 HANDLERS["integration.sync"] = createIntegrationSyncHandler({ env: process.env, logger });
+// T-1138: Paraşüt anlık bildirim (webhook kaydı + tek kart olayı); etki processed_events ile tek kez (I-07).
+HANDLERS["integration.webhook"] = createIntegrationWebhookHandler({ env: process.env, logger, consumeOnce: consumeOnce as unknown as ConsumeOnceFn });
 
 const undecided = JOB_TYPES.filter((t) => HANDLERS[t] === undefined && !DEFERRED_JOB_TYPES.includes(t));
 if (undecided.length > 0) {
@@ -213,18 +216,11 @@ const countAbandonSchedule = startCountAbandonSchedule({
   logger,
 });
 
-// ERP senkron zamanlayıcısı (T-1066): açılışta bir kez + 30 saniyede bir; açık akışlı bağlı entegrasyon başına tek iş (singletonKey).
+// ERP senkron zamanlayıcısı (T-1066): açılışta bir kez + 30 saniyede bir; bağlantı başına tek iş (singletonKey). T-1138: kademe bağlantı
+// başına (anlık bildirim açıkken kart 15 dk, depo 3 dk uzlaştırma; değilse 30 sn) + webhook kayıt/uzlaştırma işi.
 const integrationSchedule = startIntegrationSchedule({
   listActiveTenantIds: (after, limit) => queue.listActiveTenantIds(after, limit),
-  enqueueFor: (tenantId) =>
-    withSystemTenant(db, tenantId, "integration.schedule", async (tx) => {
-      let n = 0;
-      for (const integrationId of await scheduledIntegrations(tx, tenantId)) {
-        const r = await queue.enqueue(tx, { type: "integration.sync", payload: { integrationId, trigger: "SCHEDULE" }, singletonKey: integrationSyncSingletonKey(integrationId) });
-        if (r.jobId !== null) n += 1;
-      }
-      return n;
-    }),
+  enqueueFor: (tenantId) => withSystemTenant(db, tenantId, "integration.schedule", (tx) => enqueueScheduledIntegrations(tx as never, tenantId, queue as never)),
   logger,
 });
 

@@ -33,7 +33,7 @@ export function createIntegrationSyncHandler(deps: IntegrationSyncDeps): JobHand
       const client = new ParasutClient({ baseUrl: resolveParasutBaseUrl(deps.env), ...(deps.fetch === undefined ? {} : { fetch: deps.fetch }) });
       result = await runIntegrationSync(
         { inTenant: (fn) => ctx.inTenant((tx) => fn(tx as AccessTx)), client, sealer },
-        { integrationId: ctx.payload.integrationId, flow: ctx.payload.flow, trigger: ctx.payload.trigger },
+        { integrationId: ctx.payload.integrationId, flow: ctx.payload.flow, trigger: ctx.payload.trigger, flows: ctx.payload.flows },
         ctx.actorUserId,
       );
     } catch (e) {

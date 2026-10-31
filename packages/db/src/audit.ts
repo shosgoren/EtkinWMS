@@ -143,6 +143,10 @@ export const AUDIT_ACTIONS = [
   // T-1137: gönderim kuyruğunda karar bekleyen satır — yeniden dene (bekletmeyi kaldır) / elle çözüldü say (Paraşüt'te var · gönderme).
   "integration.outbox_retried",
   "integration.outbox_resolved",
+  // T-1138 (0067): Paraşüt anlık bildirim — webhook kaydı kuruldu/kurulamadı (sayı + sabit kod) ve işlenen tek kart olayı (kaynak, eylem,
+  // sonuç). Anahtar/imza/yük yazılmaz.
+  "integration.webhook_registered",
+  "integration.webhook_received",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

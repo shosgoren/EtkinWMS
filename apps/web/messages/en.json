@@ -1031,7 +1031,9 @@
       "oauth_configured": "Paraşüt application configured",
       "oauth_started": "Paraşüt authorization started",
       "oauth_failed": "Paraşüt authorization failed",
-      "oauth_cancelled": "Paraşüt authorization cancelled"
+      "oauth_cancelled": "Paraşüt authorization cancelled",
+      "webhook_registered": "Paraşüt instant update registration",
+      "webhook_received": "Paraşüt instant update processed"
     },
     "setup_journey": {
       "updated": "Setup journey choice changed",
@@ -1249,7 +1251,9 @@
         "run_requested": "Sync requested",
         "synced": "Integration synced",
         "opening_stock_setting": "Opening stock setting changed",
-        "opening_stock_taken": "Opening stock imported"
+        "opening_stock_taken": "Opening stock imported",
+        "webhook_registered": "Instant update registration",
+        "webhook_received": "Instant update processed"
       },
       "setup_journey": {
         "updated": "Setup guide updated",
@@ -5931,6 +5935,12 @@
       "pendingSub": "WILL BE SENT SHORTLY",
       "none": "No problems · all good",
       "flowErrors": "Flows with errors"
+    },
+    "webhook": {
+      "on": "Instant updates on · last update {at}",
+      "onNever": "Instant updates on · no update yet",
+      "failed": "Instant updates could not be set up · checking every 30 s",
+      "pending": "Setting up instant updates · checking every 30 s"
     }
   },
   "etkin": {

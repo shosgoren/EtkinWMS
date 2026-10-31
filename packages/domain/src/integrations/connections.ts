@@ -16,6 +16,7 @@ import { ParasutClient, ProviderError, parseCompanyId, type ProviderErrorCode, t
 import { integrationSealer, sealSecrets } from "./secrets.ts";
 import { IntegrationStateError, accessToken, loadIntegration, type IntegrationStatus } from "./store.ts";
 import { classifyIntegrationHealth, type IntegrationHealth } from "./health.ts";
+import { clearWebhooksInTx, enqueueWebhookRegister, removeParasutWebhooks } from "./webhook-register.ts";
 
 export type ConnectionCallParams = Omit<TenantAccessParams, "permission">;
 
@@ -91,8 +92,8 @@ async function isDemo(tx: AccessTx, tenantId: string): Promise<boolean> {
 export async function getIntegrationOverview(params: ConnectionCallParams): Promise<IntegrationOverview> {
   return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
     // T-1137: `legacy` = bağlantı OAuth izni olmadan (eski e-posta + parola) kuruldu: bağlanma anına denk gelen tamamlanmış izin denemesi yok.
-    const conns = await tx.execute<{ id: string; provider: Provider; status: IntegrationStatus; account_label: string | null; connected_at: Date | string | null; last_checked_at: Date | string | null; last_error_code: string | null; legacy: boolean; db_now: Date | string }>(
-      sql`SELECT i.id, i.provider, i.status, i.account_label, i.connected_at, i.last_checked_at, i.last_error_code, now() AS db_now,
+    const conns = await tx.execute<{ id: string; provider: Provider; status: IntegrationStatus; account_label: string | null; connected_at: Date | string | null; last_checked_at: Date | string | null; last_error_code: string | null; legacy: boolean; db_now: Date | string; webhook_status: "OFF" | "ACTIVE" | "FAILED" | null }>(
+      sql`SELECT i.id, i.provider, i.status, i.account_label, i.connected_at, i.last_checked_at, i.last_error_code, i.webhook_status, now() AS db_now,
                  (i.connected_at IS NOT NULL AND NOT EXISTS (
                     SELECT 1 FROM public.integration_oauth_attempts a
                      WHERE a.tenant_id = i.tenant_id AND a.phase = 'COMPLETE'
@@ -151,9 +152,10 @@ export async function getIntegrationOverview(params: ConnectionCallParams): Prom
             now: new Date(pc.db_now),
             connection: { status: pv.connection.status, lastErrorCode: pv.connection.lastErrorCode },
             legacy: pc.legacy === true,
+            webhook: pc.webhook_status ?? "OFF",
             flows: pv.flows.map((f) => {
               const raw = flows.find((x) => x.integration_id === pc.id && x.flow === f.flow);
-              return { flow: f.flow, enabled: f.enabled, lastStatus: f.lastStatus, errorCount: f.errorCount, lastErrorCode: f.lastErrorCode, lastSuccessAt: d(raw?.last_success_at ?? null), enabledAt: d(raw?.enabled_at ?? null) };
+              return { flow: f.flow, direction: f.direction, enabled: f.enabled, lastStatus: f.lastStatus, errorCount: f.errorCount, lastErrorCode: f.lastErrorCode, lastSuccessAt: d(raw?.last_success_at ?? null), enabledAt: d(raw?.enabled_at ?? null) };
             }),
             runs: runs.filter((r) => r.provider === "PARASUT").map((r) => ({ flow: r.flow, status: r.status, startedAt: new Date(r.started_at), errorCode: r.error_code })),
           });
@@ -298,6 +300,8 @@ export async function connectParasutAuthorized(
       await appendAudit(tx,{action:"integration.flow_changed",actorUserId:m.userId,entityType:"integration",entityId:integrationId,changeSummary:{provider:"PARASUT",flow:"PRODUCTS",enabled:true,direction:"PULL",via:"first_oauth"}});
       await enqueueRun(tx,deps,m.userId,integrationId,"PRODUCTS");
     }
+    // T-1138: anlık bildirim (webhook) kaydı ayrı işte; kurulamazsa 30 sn tarama sürer.
+    await enqueueWebhookRegister(tx, deps.queue, integrationId, m.userId);
     await appendAudit(tx, {
       action: "integration.connected",
       actorUserId: m.userId,
@@ -358,9 +362,11 @@ export async function checkIntegration(params: ConnectionCallParams, input: { re
 }
 
 /** Bağlantıyı kes: mühürlü kutu silinir (NULL), bütün akışlar kapanır; eşlemeler yeniden bağlanma için kalır. */
-export async function disconnectIntegration(params: ConnectionCallParams, input: { readonly provider: string; readonly requestId?: string | null }): Promise<{ readonly changed: boolean }> {
+export async function disconnectIntegration(params: ConnectionCallParams, input: { readonly provider: string; readonly requestId?: string | null }, deps: IntegrationDeps = {}): Promise<{ readonly changed: boolean }> {
   const provider = parseProvider(input.provider);
   if (params.recentAuth === undefined) throw new AppError("UNAUTHENTICATED", { detail: "RECENT_AUTH_REQUIRED" });
+  // T-1138: Paraşüt'teki webhook kayıtları belirteç silinmeden önce silinir (en iyi çaba; yetki aynı `settings.manage`).
+  if (provider === "PARASUT") await removeParasutWebhooks(params, deps);
   return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
     const r = await tx.execute<{ id: string }>(sql`
       UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL, last_error_code = NULL
@@ -369,6 +375,7 @@ export async function disconnectIntegration(params: ConnectionCallParams, input:
     const cancelled = await tx.execute<{id:string}>(sql`UPDATE public.integration_oauth_attempts SET phase='FAILED',token_box=NULL,companies='[]'::jsonb WHERE tenant_id=${m.tenantId}::uuid AND phase NOT IN ('COMPLETE','FAILED') RETURNING id`);
     if (cancelled[0] !== undefined) await appendAudit(tx,{action:"integration.oauth_cancelled",actorUserId:m.userId,entityType:"integration_oauth",entityId:cancelled[0].id,changeSummary:{provider,count:cancelled.length}});
     if (id === undefined) return { changed: false };
+    await clearWebhooksInTx(tx, m.tenantId, id);
     await tx.execute(sql`UPDATE public.integration_flows SET enabled = false WHERE tenant_id = ${m.tenantId}::uuid AND integration_id = ${id}::uuid AND enabled`);
     await appendAudit(tx, { action: "integration.disconnected", actorUserId: m.userId, entityType: "integration", entityId: id, requestId: input.requestId ?? null, changeSummary: { provider } });
     return { changed: true };

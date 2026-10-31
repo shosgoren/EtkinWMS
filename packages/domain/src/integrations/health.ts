@@ -9,11 +9,15 @@
 //  4. FAILING  — açık akış art arda `HEALTH_FAIL_STREAK` kez hata verdi (son durum FAILED) → Ayrıntı.
 //  5. STALE    — açık akışın son BAŞARILI eşitlemesi eşikten eski (hiç başarı yoksa açılış anından beri) → Şimdi çalıştır.
 // Sorun yoksa ve bağlantı eski e-posta + parola yöntemiyle kurulmuşsa yalnız `legacy` işareti (nazik "Yeni yönteme geç").
-// Eşik: zamanlayıcı 30 sn'de bir koşar; 10 dk = ~20 kaçırılmış koşu. Anlık bildirim (webhook) geldiğinde eşik çağıran tarafından
-// büyütülebilir (`staleAfterMs`).
-import type { Flow } from "./catalog.ts";
+// Eşik (T-1138 kademeli zamanlayıcı ile uyumlu): taramada (webhook OFF / FAILED) her akış 30 sn'de bir koşar → 10 dk (~20 kaçırılmış koşu).
+// Webhook ACTIVE iken ürün/cari ÇEKME akışları 15 dk'lık uzlaştırma taramasıyla koşar (anlık değişiklik bildirimle gelir) → eşik 15 dk + 10 dk
+// pay; öteki akışlar (depo 3 dk, gönderimler 30 sn) 10 dk. Webhook FAILED yalnız eşiği taramaya döndürür (veri akmaya devam eder; durum
+// satırı T-1138'de ayrıca görünür), ayrı uyarı üretmez.
+import type { Direction, Flow } from "./catalog.ts";
 
 export const HEALTH_STALE_MS = 10 * 60_000;
+/** Webhook ACTIVE iken ürün/cari çekme akışının eşiği: 15 dk uzlaştırma (`CADENCE.cardsMs`) + pay. */
+export const HEALTH_STALE_WEBHOOK_CARDS_MS = 15 * 60_000 + HEALTH_STALE_MS;
 export const HEALTH_STUCK_MS = 15 * 60_000;
 export const HEALTH_FAIL_STREAK = 3;
 
@@ -23,6 +27,7 @@ export type HealthLevel = "ok" | "warn" | "error";
 
 export interface HealthFlowInput {
   readonly flow: Flow;
+  readonly direction: Direction;
   readonly enabled: boolean;
   readonly lastStatus: "SUCCESS" | "PARTIAL" | "FAILED" | null;
   readonly errorCount: number;
@@ -43,10 +48,17 @@ export interface HealthInput {
   readonly connection: { readonly status: "CONNECTED" | "ERROR" | "DISCONNECTED"; readonly lastErrorCode: string | null } | null;
   /** Bağlantı OAuth olmadan (eski e-posta + parola) kuruldu. */
   readonly legacy: boolean;
+  /** T-1138 anlık bildirim durumu (bilinmiyorsa OFF: tarama). */
+  readonly webhook: "OFF" | "ACTIVE" | "FAILED";
   readonly flows: readonly HealthFlowInput[];
   /** En yeni önce. */
   readonly runs: readonly HealthRunInput[];
-  readonly staleAfterMs?: number;
+}
+
+/** Akışın "eşitlenmedi" eşiği (yukarıdaki kademe kuralı). */
+export function staleLimitMs(flow: Flow, direction: Direction, webhook: HealthInput["webhook"]): number {
+  const pulls = direction === "PULL" || direction === "BOTH";
+  return webhook === "ACTIVE" && pulls && (flow === "PRODUCTS" || flow === "CONTACTS") ? HEALTH_STALE_WEBHOOK_CARDS_MS : HEALTH_STALE_MS;
 }
 export interface IntegrationHealth {
   readonly level: HealthLevel;
@@ -77,11 +89,10 @@ export function classifyIntegrationHealth(input: HealthInput): IntegrationHealth
   }
   const failing = on.find((f) => f.lastStatus === "FAILED" && f.errorCount >= HEALTH_FAIL_STREAK);
   if (failing !== undefined) return { level: "error", cause: "FAILING", next: "DETAIL", flow: failing.flow, since: null, code: failing.lastErrorCode, legacy };
-  const limit = input.staleAfterMs ?? HEALTH_STALE_MS;
   let oldest: { flow: Flow; at: Date } | null = null;
   for (const f of on) {
     const at = f.lastSuccessAt ?? f.enabledAt;
-    if (at === null || now - at.getTime() <= limit) continue;
+    if (at === null || now - at.getTime() <= staleLimitMs(f.flow, f.direction, input.webhook)) continue;
     if (oldest === null || at.getTime() < oldest.at.getTime()) oldest = { flow: f.flow, at };
   }
   if (oldest !== null) return { level: "warn", cause: "STALE", next: "RUN", flow: oldest.flow, since: oldest.at, code: null, legacy };
