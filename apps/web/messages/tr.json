@@ -5708,25 +5708,25 @@
     "flowOff": "{name} kapandı",
     "sonuc": {
       "PULL": "{provider}'ten gelir, ona uyar; buradan gitmez.",
-      "PUSH": "{provider}'te olmayanlar eklenir; oradan gelmez.",
-      "BOTH": "Eksikler eklenir; çakışmada {provider} kazanır.",
+      "PUSH": "Eksikler ve düzeltmeler {provider}'e gider; oradan gelmez.",
+      "BOTH": "Değişiklik iki yana yansır; çakışmada son değişen kazanır.",
       "OFF": "Eşitleme yapılmaz."
     },
     "onay": {
       "PRODUCTS": {
         "PULL": "Sende {n, number} ürün var. {provider}'teki ürünler stok koduna göre bunlarla eşleşir, eşleşmeyenler yeni kart olur; bağlı kartların adı {provider}'tekiyle güncellenir, {provider}'te silinen ya da arşivlenen ürünler burada arşive alınır.",
-        "PUSH": "Sende {n, number} ürün var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı stok kodlu ürün varsa ona bağlanır).",
-        "BOTH": "Sende {n, number} ürün var. {provider}'teki ürünler stok koduna göre eşleşir, eşleşmeyenler buraya eklenir; bağlı kartların adı {provider}'tekiyle güncellenir, {provider}'te silinen ya da arşivlenen ürünler burada arşive alınır{m, plural, =0 {} other {; bağlı olmayan # ürün de {provider}'e gönderilir}}."
+        "PUSH": "Sende {n, number} ürün var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı stok kodlu ürün varsa ona bağlanır); bağlı ürünlerde burada yaptığın ad düzeltmesi de {provider}'e gider.",
+        "BOTH": "Sende {n, number} ürün var. {provider}'teki ürünler stok koduna göre eşleşir, eşleşmeyenler buraya eklenir; bağlı kartta hangi tarafta değişiklik olduysa öbürüne yansır, iki tarafta da değiştiyse son değişen kazanır (zamanı bilinmiyorsa {provider} kazanır); {provider}'te silinen ya da arşivlenen ürünler burada arşive alınır{m, plural, =0 {} other {; bağlı olmayan # ürün de {provider}'e gönderilir}}."
       },
       "CONTACTS": {
-        "PULL": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir, eşleşmeyenler yeni cari olur; bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir ({provider}'te silinen cari burada kalır).",
-        "PUSH": "Sende {n, number} cari var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı vergi numaralı, yoksa aynı adlı cari varsa ona bağlanır).",
-        "BOTH": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir, eşleşmeyenler buraya eklenir; bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir{m, plural, =0 {} other {; bağlı olmayan # cari de {provider}'e gönderilir}}."
+        "PULL": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir, eşleşmeyenler yeni cari olur; bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir, {provider}'te silinen ya da arşivlenen cariler burada arşive alınır (açık siparişi olan bekler).",
+        "PUSH": "Sende {n, number} cari var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı vergi numaralı, yoksa aynı adlı cari varsa ona bağlanır); bağlı carilerde burada yaptığın düzeltme de {provider}'e gider.",
+        "BOTH": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir, eşleşmeyenler buraya eklenir; bağlı kartta hangi tarafta değişiklik olduysa öbürüne yansır, iki tarafta da değiştiyse son değişen kazanır (zamanı bilinmiyorsa {provider} kazanır); {provider}'te silinen ya da arşivlenen cariler burada arşive alınır (açık siparişi olan bekler){m, plural, =0 {} other {; bağlı olmayan # cari de {provider}'e gönderilir}}."
       },
       "WAREHOUSES": {
-        "PULL": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir, eşleşmeyenler yeni depo olur; bağlı depoların adı {provider}'tekiyle güncellenir ({provider}'te silinen depo burada kalır).",
-        "PUSH": "Sende {n, number} depo var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı adlı depo varsa ona bağlanır).",
-        "BOTH": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir, eşleşmeyenler buraya eklenir; bağlı depoların adı {provider}'tekiyle güncellenir{m, plural, =0 {} other {; bağlı olmayan # depo da {provider}'e gönderilir}}."
+        "PULL": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir, eşleşmeyenler yeni depo olur; bağlı depoların adı {provider}'tekiyle güncellenir, {provider}'te silinen ya da arşivlenen depolar burada arşive alınır (rafı, stoku ya da açık işi olan bekler).",
+        "PUSH": "Sende {n, number} depo var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı adlı depo varsa ona bağlanır); bağlı depolarda burada yaptığın ad düzeltmesi de {provider}'e gider.",
+        "BOTH": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir, eşleşmeyenler buraya eklenir; bağlı kartta hangi tarafta değişiklik olduysa öbürüne yansır, iki tarafta da değiştiyse son değişen kazanır (zamanı bilinmiyorsa {provider} kazanır); {provider}'te silinen ya da arşivlenen depolar burada arşive alınır (rafı, stoku ya da açık işi olan bekler){m, plural, =0 {} other {; bağlı olmayan # depo da {provider}'e gönderilir}}."
       }
     },
     "onayBaslik": "{name}: {dir}?",
@@ -5806,6 +5806,7 @@
       "OPENING_STOCK_INCOMPLETE": "Önce açılış stokunu (Devir) tamamla · sonra stok miktarı gönderilir",
       "TIMEOUT": "Aktarım yarıda kaldı · bir sonraki koşu yeniden dener",
       "EXTERNAL_ALREADY_LINKED": "Paraşüt'teki karşılığı başka bir karta bağlı · kontrol et",
+      "UPDATE_REJECTED": "Paraşüt düzeltmeyi kabul etmedi · kartı kontrol et, sonra yeniden dene",
       "ROWS_FAILED": "Bazı satırlar aktarılamadı",
       "INTERNAL": "Beklenmeyen hata · Etkin ekibine bildir",
       "PROVIDER_AUTH_FAILED": "Paraşüt girişi reddetti",
@@ -5945,7 +5946,7 @@
     "arsiv": {
       "title": "Pasif ve arşiv",
       "sub": "{provider}'te arşivlenen ya da silinen kayıtlar",
-      "text": "{provider}'te arşivlenen ya da silinen ürün Etkin'de silinmez; Ürünler listesinde Arşivli ya da Kaldırıldı süzgecinde görünür",
+      "text": "{provider}'te arşivlenen ya da silinen ürün, cari ve depo Etkin'de silinmez, arşive alınır; ürünler Arşivli ya da Kaldırıldı süzgecinde görünür",
       "archived": "Arşivli ürünler",
       "removed": "Kaldırılan ürünler"
     },

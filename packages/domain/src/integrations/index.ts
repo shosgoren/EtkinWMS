@@ -25,7 +25,10 @@ export { getProductBarcodeSetting, setProductBarcodeSetting } from "./product-se
 
 export { getProductSourceInfo, parseProductSource, type ProductSourceInfo, type ProductSourceWarning } from "./product-info.ts";
 export { canonicalDecimal, jsonDecimal } from "./decimal-json.ts";
-export { STOCK_TOTAL_STATUSES, STOCK_TOTAL_LOCATION_KINDS } from "./stock-reads.ts";
+export { STOCK_TOTAL_STATUSES, STOCK_TOTAL_LOCATION_KINDS, STOCK_TOTAL_EXCLUDED_LOCATION_STATUS } from "./stock-reads.ts";
+// T-1140: iki yönlü kart eşitleme kararı ve cari/depo kaynak yaşam döngüsü.
+export { decideCardSync, resolveConflict, cardHash, partyCanon, nameCanon, remoteCanon, type CardDecision, type CardEntity, type CardMarker, type ConflictBasis } from "./card-sync.ts";
+export { observeCard, cardLifecycleCandidates, type LifecycleCard } from "./card-lifecycle.ts";
 
 export * from "./oauth.ts";
 export { classifyIntegrationHealth, staleLimitMs, HEALTH_STALE_WEBHOOK_CARDS_MS, HEALTH_STALE_MS, HEALTH_STUCK_MS, HEALTH_FAIL_STREAK, LEGACY_METHOD_REMOVED, type IntegrationHealth, type HealthCause, type HealthNext, type HealthLevel } from "./health.ts";

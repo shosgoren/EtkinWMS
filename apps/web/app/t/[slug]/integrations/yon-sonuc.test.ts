@@ -35,14 +35,15 @@ describe("sonuç cümlesi", () => {
         }
     }
   });
-  it("Türkçe metin koddaki gerçek kuralı söyler: al = gönderim yok, gönder = karşı taraftan gelmez, iki yönlü = çakışmada sağlayıcı kazanır", () => {
+  it("Türkçe metin koddaki gerçek kuralı söyler (T-1140): al = gönderim yok, gönder = eksik + düzeltme gider ve karşı taraftan gelmez, iki yönlü = son değişen kazanır", () => {
     const s = (tr as unknown as { integrations: { sonuc: Record<string, string> } }).integrations.sonuc;
     expect(s.PULL).toContain("gitmez");
-    expect(s.PULL).toContain("ona uyar"); // bağlı kart sağlayıcıdan güncellenir (apply.ts), ürün arşivi izler (product-lifecycle.ts)
-    expect(s.PUSH).toContain("olmayanlar eklenir");
+    expect(s.PULL).toContain("ona uyar"); // bağlı kart sağlayıcıdan güncellenir (apply.ts), arşivi izler (product-lifecycle.ts, card-lifecycle.ts)
+    expect(s.PUSH).toContain("Eksikler ve düzeltmeler"); // sync.ts pushCards + pushEdited
     expect(s.PUSH).toContain("gelmez");
-    expect(s.BOTH).toContain("çakışmada {provider} kazanır");
-    expect(s.BOTH).not.toMatch(/son değişen/i);
+    expect(s.BOTH).toContain("iki yana yansır"); // card-sync.ts: yalnız değişen taraf öbürüne
+    expect(s.BOTH).toContain("çakışmada son değişen kazanır"); // resolveConflict
+    expect(s.BOTH).not.toContain("{provider} kazanır");
     expect(s.OFF).toBe("Eşitleme yapılmaz.");
   });
 });
@@ -88,19 +89,25 @@ describe("onay kararı", () => {
   it("kapalı akışın kayıtlı yönü önemsizdir (kapalıyken hiçbir yön çalışmaz)", () => {
     for (const d of DIRS) expect(yonDegisimi("PRODUCTS", { enabled: false, direction: d }, "PULL")).toEqual({ yeniAl: true, yeniGonder: false });
   });
-  it("alma içeren onay metni gerçek etkileri söyler: bağlı kart sağlayıcıdan güncellenir; yalnız üründe silinen/arşivlenen burada arşive alınır", () => {
+  it("onay metni gerçek etkileri söyler (T-1140): almada bağlı kart sağlayıcıdan güncellenir; üç akışta da silinen/arşivlenen burada arşive alınır", () => {
     const o = (tr as unknown as { integrations: { onay: Record<string, Record<string, string>> } }).integrations.onay;
+    expect(o.PRODUCTS?.PULL).toContain("bağlı kartların adı {provider}'tekiyle güncellenir");
+    expect(o.CONTACTS?.PULL).toContain("bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir");
+    expect(o.WAREHOUSES?.PULL).toContain("bağlı depoların adı {provider}'tekiyle güncellenir");
     for (const d of ["PULL", "BOTH"] as const) {
-      expect(o.PRODUCTS?.[d]).toContain("bağlı kartların adı {provider}'tekiyle güncellenir");
       expect(o.PRODUCTS?.[d]).toContain("silinen ya da arşivlenen ürünler burada arşive alınır");
-      expect(o.CONTACTS?.[d]).toContain("bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir");
-      expect(o.WAREHOUSES?.[d]).toContain("bağlı depoların adı {provider}'tekiyle güncellenir");
-      expect(o.CONTACTS?.[d]).not.toContain("arşiv");
-      expect(o.WAREHOUSES?.[d]).not.toContain("arşiv");
+      expect(o.CONTACTS?.[d]).toContain("silinen ya da arşivlenen cariler burada arşive alınır (açık siparişi olan bekler)"); // card-lifecycle.ts PENDING
+      expect(o.WAREHOUSES?.[d]).toContain("silinen ya da arşivlenen depolar burada arşive alınır (rafı, stoku ya da açık işi olan bekler)");
     }
-    expect(o.CONTACTS?.PULL).toContain("silinen cari burada kalır");
-    expect(o.WAREHOUSES?.PULL).toContain("silinen depo burada kalır");
-    for (const f of KART_AKISLARI) expect(o[f]?.PUSH).not.toContain("güncellenir");
+    for (const f of KART_AKISLARI) {
+      expect(o[f]?.PULL).not.toContain("burada kalır");
+      // İki yönlü: bağlı kartta değişen taraf yansır; çakışmada son değişen, zaman bilinmezse sağlayıcı (card-sync.ts resolveConflict).
+      expect(o[f]?.BOTH).toContain("son değişen kazanır (zamanı bilinmiyorsa {provider} kazanır)");
+      expect(o[f]?.BOTH).not.toContain("{provider}'tekiyle güncellenir");
+      // Gönder: bağlı karttaki düzeltme de gider; sağlayıcıdan güncelleme yok.
+      expect(o[f]?.PUSH).toMatch(/düzeltme(si)? de \{provider\}'e gider/);
+      expect(o[f]?.PUSH).not.toContain("güncellenir");
+    }
   });
   it("onay metni her akış ve yön için iki dilde var; sayılar yer tutucuyla", () => {
     for (const msgs of [tr, en]) {

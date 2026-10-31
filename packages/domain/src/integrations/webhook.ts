@@ -7,7 +7,9 @@
 //   anahtarıyla sabit zamanlı karşılaştırılır. Eşleşme yoksa / gövde bozuksa / imza yoksa yanıt aynıdır (401, gövde sabit) — hangi
 //   adımın düştüğü dışarı sızmaz.
 // - Teslim yükü karta YAZILMAZ: iş kaydı Paraşüt'ten kimliğiyle yeniden okur (yetkili belirteçle, aynı şirket). 404 = kaynakta yok →
-//   mevcut ürün yaşam döngüsü kuralları (≥30 sn arayla iki yokluk; fiziksel silme yok). Yük yalnız kaynak türü + kimlik + olay zamanı verir.
+//   mevcut ürün yaşam döngüsü kuralları (≥30 sn arayla iki yokluk; fiziksel silme yok; T-1140'tan beri cari için de card-lifecycle.ts).
+//   Yük yalnız kaynak türü + kimlik + olay zamanı verir. T-1140: iki yönlü akışta kart, eşitleme koşusuyla aynı karar kuralından geçer
+//   (card-sync.ts `syncRemoteCard`; yerel taraf daha yeniyse uygulanmaz — LOCAL_NEWER, gönderim koşunun düzeltme turunda).
 // - Tekrar teslim: olay anahtarı = özet(tenant, kaynak, kimlik, olay zamanı) → kuyruk singletonKey + `processed_events` (I-07).
 // - Gövde en çok 64 KiB; imza adayları sınırlı (tenant başına en çok 6 anahtar × 2 özet × en çok 2 ileti; en çok 5 tenant).
 //
@@ -24,7 +26,9 @@ import type { AccessDbClient, AccessTx } from "../identity/access.ts";
 import { applyContact, applyProduct, type ApplyContext, type ApplyOutcome } from "./apply.ts";
 import { PROVIDER_INFO, pulls, type Direction } from "./catalog.ts";
 import type { JsonApiResource, ParasutClient } from "./parasut.ts";
-import { assertLifecycleBinding, lifecycleBinding, observeProduct } from "./product-lifecycle.ts";
+import { assertLifecycleBinding, lifecycleBinding, observeProduct, type LifecycleBinding } from "./product-lifecycle.ts";
+import { syncRemoteCard } from "./card-sync.ts";
+import { observeCard } from "./card-lifecycle.ts";
 import { connectorAllowed, toContact, toProduct } from "./sync.ts";
 import { IntegrationStateError, accessToken, loadIntegration, type RunTx } from "./store.ts";
 
@@ -291,7 +295,8 @@ export interface WebhookEventPayload {
   readonly eventKey: string;
 }
 
-export type WebhookOutcome = ApplyOutcome | "REMOVED_CHECKED" | "FAILED" | "IGNORED";
+/** T-1140: `LOCAL_NEWER` — iki yönlüde yerel taraf kazandı (uygulanmadı; gönderim eşitleme koşusunun düzeltme turunda). */
+export type WebhookOutcome = ApplyOutcome | "REMOVED_CHECKED" | "FAILED" | "IGNORED" | "LOCAL_NEWER";
 export type WebhookEventResult =
   | { readonly kind: "skipped"; readonly reason: string }
   | { readonly kind: "duplicate" }
@@ -350,13 +355,14 @@ export async function runWebhookEvent(deps: WebhookJobDeps, p: WebhookEventPaylo
     const flow = p.resource === "product" ? "PRODUCTS" : "CONTACTS";
     const f = await tx.execute<{ direction: Direction; enabled: boolean }>(sql`SELECT direction, enabled FROM public.integration_flows WHERE tenant_id = ${tenantId}::uuid AND integration_id = ${row.id}::uuid AND flow = ${flow}`);
     if (f[0] === undefined || !f[0].enabled || !pulls(f[0].direction)) return { kind: "skip" as const, reason: "FLOW_OFF" };
-    const binding = p.resource === "product" ? await lifecycleBinding(tx, tenantId, row.id) : null;
+    // T-1140: cari de ürün gibi yaşam döngüsü bağlamı alır (yalnız OAuth bağlantısında; yoksa null → yokluk yok sayılır).
+    const binding = await lifecycleBinding(tx, tenantId, row.id, false, flow);
     const ac: ApplyContext = { tenantId, system: PROVIDER_INFO.PARASUT.system, actorUserId: row.connectedBy, membershipId: row.connectedMembershipId };
-    return { kind: "go" as const, tenantId, row, binding, ac };
+    return { kind: "go" as const, tenantId, row, binding, ac, direction: f[0].direction };
   });
   if (head.kind === "dup") return { kind: "duplicate" };
   if (head.kind === "skip") return { kind: "skipped", reason: head.reason };
-  const { tenantId, row, binding, ac } = head;
+  const { tenantId, row, binding, ac, direction } = head;
   let token: { token: string; accountRef: string };
   try {
     token = await accessToken({ runTx: deps.inTenant, tenantId, integrationId: row.id, client: deps.client, sealer: deps.sealer, ...(deps.now === undefined ? {} : { now: deps.now }) });
@@ -386,29 +392,50 @@ export async function runWebhookEvent(deps: WebhookJobDeps, p: WebhookEventPaylo
       return r.applied ? ({ kind: "applied", outcome: r.result } as const) : ({ kind: "duplicate" } as const);
     });
 
-  if (p.resource === "contact") {
+  const read = async (): Promise<{ item: JsonApiResource; included: readonly JsonApiResource[] } | null> => {
+    if (p.resource === "product") return deps.client.productDetail(token.token, token.accountRef, p.externalId);
     const c = await deps.client.contact(token.token, token.accountRef, p.externalId);
-    // Cari için kaynak silinme kuralı tanımlı değil (sync.ts de silmez): yokluk yok sayılır, kart korunur.
-    if (c === null) return finish("IGNORED");
-    return finish("SKIPPED", (tx) => tx.transaction((sp) => applyContact(sp, ac, toContact(c))));
-  }
+    return c === null ? null : { item: c, included: [] };
+  };
+  const found = (d: { item: JsonApiResource; included: readonly JsonApiResource[] }) =>
+    p.resource === "product" ? applyFound(finish, ac, binding, tenantId, row.id, d.item, d.included, now, direction) : applyContactFound(finish, ac, binding, d.item, now, direction);
+  const observeMissing = (tx: AccessTx, b: LifecycleBinding) =>
+    p.resource === "product" ? observeProduct(tx, b, ac, p.externalId, { exists: false }, now()) : observeCard(tx, b, ac, "PARTY", p.externalId, { exists: false }, now());
 
-  const detail = await deps.client.productDetail(token.token, token.accountRef, p.externalId);
-  if (detail !== null) return applyFound(finish, ac, binding, tenantId, row.id, detail.item, detail.included, now);
-  // 404: tek gözlem silme değildir. Şirkete erişim kanıtlanır, ilk yokluk yazılır, ≥30 sn sonra kimlik yeniden sorulur (product-lifecycle).
+  const detail = await read();
+  if (detail !== null) return found(detail);
+  // 404: tek gözlem silme değildir. Şirkete erişim kanıtlanır, ilk yokluk yazılır, ≥30 sn sonra kimlik yeniden sorulur (ürün ve T-1140'tan
+  // beri cari için aynı kural; yaşam döngüsü bağlamı yoksa — eski yöntem bağlantısı — yokluk yok sayılır).
   if (binding === null) return finish("IGNORED");
   if (!(await deps.client.companies(token.token)).some((c) => c.id === binding.companyId)) return { kind: "skipped", reason: "NOT_CONNECTED" };
   const first = await deps.inTenant(async (tx) => {
     if (!(await webhookWriteAllowed(tx, guard)) || !(await assertLifecycleBinding(tx, binding))) return false;
-    await observeProduct(tx, binding, ac, p.externalId, { exists: false }, now());
+    await observeMissing(tx, binding);
     return true;
   });
   if (!first) return { kind: "skipped", reason: "NOT_CONNECTED" };
   await (deps.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))))(MISSING_RECHECK_MS);
-  const again = await deps.client.productDetail(token.token, token.accountRef, p.externalId);
-  if (again !== null) return applyFound(finish, ac, binding, tenantId, row.id, again.item, again.included, now);
+  const again = await read();
+  if (again !== null) return found(again);
   return finish("REMOVED_CHECKED", async (tx) => {
-    await observeProduct(tx, binding, ac, p.externalId, { exists: false }, now());
+    await observeMissing(tx, binding);
+  });
+}
+
+/** T-1140: cari kartı — iki yönlü karar kuralı (card-sync.ts) + yaşam döngüsü (arşiv / yeniden etkin). */
+async function applyContactFound(finish: Finish, ac: ApplyContext, binding: LifecycleBinding | null, item: JsonApiResource, now: () => number, direction: Direction): Promise<WebhookEventResult> {
+  if (item.type !== "contacts") return { kind: "skipped", reason: "BAD_RESPONSE" };
+  return finish("SKIPPED", async (tx) => {
+    let outcome: WebhookOutcome = "SKIPPED";
+    try {
+      const r = await tx.transaction((sp) => syncRemoteCard(sp, ac, { entity: "PARTY", direction, flow: "CONTACTS", resource: item, apply: (t) => applyContact(t, ac, toContact(item)) }));
+      outcome = r.outcome === "DEFERRED" ? "LOCAL_NEWER" : r.outcome;
+    } catch (e) {
+      if (isTransientDbError(e)) throw e;
+      outcome = "SKIPPED";
+    }
+    if (binding !== null && (await tx.transaction((sp) => observeCard(sp, binding, ac, "PARTY", item.id, { exists: true, archived: item.attributes.archived }, now()))) && outcome === "UNCHANGED") outcome = "UPDATED";
+    return outcome;
   });
 }
 
@@ -421,6 +448,7 @@ async function applyFound(
   item: JsonApiResource,
   included: readonly JsonApiResource[],
   now: () => number,
+  direction: Direction,
 ): Promise<WebhookEventResult> {
   if (item.type !== "products") return { kind: "skipped", reason: "BAD_RESPONSE" };
   return finish("SKIPPED", async (tx) => {
@@ -428,7 +456,9 @@ async function applyFound(
     const s = await tx.execute<{ enabled: boolean }>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id = ${tenantId}::uuid AND id = ${integrationId}::uuid`);
     const withBarcodes = { ...ac, pullProductBarcodes: s[0]?.enabled === true };
     try {
-      outcome = await tx.transaction((sp) => applyProduct(sp, withBarcodes, toProduct(item, included)));
+      // T-1140: iki yönlüde karar kuralı (yerel taraf kazanırsa uygulanmaz → LOCAL_NEWER); almada her zaman uygulanır.
+      const r = await tx.transaction((sp) => syncRemoteCard(sp, ac, { entity: "ITEM", direction, flow: "PRODUCTS", resource: item, apply: (t) => applyProduct(t, withBarcodes, toProduct(item, included)) }));
+      outcome = r.outcome === "DEFERRED" ? "LOCAL_NEWER" : r.outcome;
     } catch (e) {
       if (isTransientDbError(e)) throw e;
       outcome = "SKIPPED";

@@ -247,7 +247,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(onayIki).toContainText("Paraşüt'e gönderilir");
     await onayIki.getByRole("button", { name: "Evet, iki yönlü yap" }).click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları: İki yönlü");
-    await expect(sonucMetin).toHaveText("Eksikler eklenir; çakışmada Paraşüt kazanır.");
+    await expect(sonucMetin).toHaveText("Değişiklik iki yana yansır; çakışmada son değişen kazanır.");
     await page.reload();
     await expect(urun.getByRole("radio", { name: "İki yönlü" })).toHaveAttribute("aria-checked", "true");
     await expect(urun).toHaveAttribute("data-enabled", "true");
