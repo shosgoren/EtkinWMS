@@ -3,7 +3,7 @@
 // balonu + uyarı/hata sesi. Öğe gerçek `disabled` DEĞİLDİR (dokunuş yakalansın): `aria-disabled="true"` + `data-kilitli`, işlem çağrılmaz.
 // Satırlar (`KalipSatir`, `KalipAnahtar`) `locked` iken aynı işlevi kullanır.
 import { useTranslations } from "next-intl";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useCallback, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { balonGoster, sesCal } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { KartBolum as CardSection } from "./kart-yetki.ts";
@@ -67,5 +67,6 @@ export function KalipKilitliDugme({ kilitli, onClick, gerekce, kilitIkonu = true
  */
 export function useKartKilitGerekce(group: CardSection): (action: "create" | "edit" | "archive") => string {
   const t = useTranslations("yetkiKatalog.locked");
-  return (action) => t(`${group}.${action}`);
+  // Kararlı başvuru: sütun/useMemo bağımlılığı her çizimde değişip döngü kurmasın.
+  return useCallback((action: "create" | "edit" | "archive") => t(`${group}.${action}`), [t, group]);
 }
