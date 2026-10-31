@@ -56,6 +56,8 @@ export interface SyncPayload {
   readonly integrationId: string;
   readonly flow?: Flow | undefined;
   readonly trigger: "SCHEDULE" | "MANUAL";
+  /** T-1138: kademeli zamanlayıcı yalnız bu akışları ister (yoksa bütün açık akışlar). */
+  readonly flows?: readonly Flow[] | undefined;
 }
 
 export interface Counters {
@@ -124,7 +126,7 @@ function count(c: Counters, o: ApplyOutcome): void {
 }
 
 /** Bağlantıyı kuran kişi hâlâ ACTIVE üye ve TENANT_ADMIN mi. */
-async function connectorAllowed(tx: AccessTx, tenantId: string, membershipId: string, userId: string): Promise<boolean> {
+export async function connectorAllowed(tx: AccessTx, tenantId: string, membershipId: string, userId: string): Promise<boolean> {
   const r = await tx.execute<{ ok: boolean }>(
     sql`SELECT EXISTS (
           SELECT 1 FROM public.tenant_memberships m JOIN public.membership_roles r ON r.tenant_id = m.tenant_id AND r.membership_id = m.id
@@ -136,13 +138,13 @@ async function connectorAllowed(tx: AccessTx, tenantId: string, membershipId: st
 
 // --- eşleme dönüştürücüleri (sağlayıcı kaynağı → apply girdisi) --------------------------------------------------------------------
 const s = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
-const toProduct = (r: JsonApiResource, included: readonly JsonApiResource[] = [], warn: (w: ProductSourceWarning) => void = () => undefined) => {
+export const toProduct = (r: JsonApiResource, included: readonly JsonApiResource[] = [], warn: (w: ProductSourceWarning) => void = () => undefined) => {
   // T-1135: kategori çözülemezse ürün kategorisiz alınır, satır düşmez; uyarı sayılır.
   const src = parseProductSource(r, included);
   for (const w of src.warnings) warn(w);
   return { externalId: r.id, code: s(r.attributes.code), name: s(r.attributes.name), unit: s(r.attributes.unit), barcode: s(r.attributes.barcode), sourceInfo: src.info };
 };
-const toContact = (r: JsonApiResource) => ({
+export const toContact = (r: JsonApiResource) => ({
   externalId: r.id,
   name: s(r.attributes.name),
   accountType: r.attributes.account_type === "supplier" ? ("supplier" as const) : r.attributes.account_type === "customer" ? ("customer" as const) : null,
@@ -579,7 +581,7 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
       SELECT flow, direction, enabled_at, first_enabled_at, cursor FROM public.integration_flows
        WHERE tenant_id = ${tenantId}::uuid AND integration_id = ${row.id}::uuid AND enabled
          AND (${payload.flow ?? null}::text IS NULL OR flow = ${payload.flow ?? null})`);
-    return { kind: "go" as const, tenantId, row, flows: flows.filter((f) => (FLOWS as readonly string[]).includes(f.flow) && flowSupported(row.provider, f.flow)) };
+    return { kind: "go" as const, tenantId, row, flows: flows.filter((f) => (FLOWS as readonly string[]).includes(f.flow) && flowSupported(row.provider, f.flow) && (payload.flows === undefined || payload.flows.includes(f.flow))) };
   });
   if (head.kind === "skip") return { kind: "skipped", reason: head.reason };
   if (head.flows.length === 0) return { kind: "skipped", reason: "NO_ENABLED_FLOW" };

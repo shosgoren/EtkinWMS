@@ -351,6 +351,8 @@ beforeAll(async () => {
     await admin.query("INSERT INTO public.integration_runs (tenant_id, integration_id, flow, trigger) VALUES ($1, $2, 'PRODUCTS', 'SCHEDULE')", [w.tenantId, igId]);
     await admin.query("INSERT INTO public.integration_outbox (tenant_id, integration_id, flow, entity_type, entity_id) VALUES ($1, $2, 'SHIPMENTS', 'DOCUMENT', $3)", [w.tenantId, igId, w.documentId]);
     await admin.query("INSERT INTO public.integration_stock_marks (tenant_id, integration_id, item_id, warehouse_id, quantity) VALUES ($1, $2, $3, $4, 1)", [w.tenantId, igId, w.itemNoneId, w.warehouseId]);
+    // T-1138 (0067): silinmiş webhook satırı (anahtar NULL; DISCONNECTED bağlantıya etkin anahtar yazılmaz).
+    await admin.query("INSERT INTO public.integration_webhooks (tenant_id, integration_id, model, action, external_id, status) VALUES ($1, $2, 'product', 'update', '1', 'DELETED')", [w.tenantId, igId]);
     // T-1006 (0056): kurulum yolculuğu seçim satırı (tenant başına tek).
     await admin.query("INSERT INTO public.setup_journeys (tenant_id, skipped) VALUES ($1, '{labels}'::text[])", [w.tenantId]);
   }
@@ -892,6 +894,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.field_signin_begin", // T-997 migration 0044: saha girişi ön denetimi (cihaz, rol, kilit) → PIN özeti, yalnızca wms_auth
     "wms_probe.field_signin_finish", // T-997 migration 0044: saha girişi sonucu (sayaç/kilit, belirteç rotasyonu) + security_events, yalnızca wms_auth
     "wms_probe.identity_exclusive_to_tenant",
+    "wms_probe.integration_webhook_lookup", // T-1138 migration 0067: Paraşüt teslimi için şirket → bağlı tenant + mühürlü anahtar kutuları (salt okunur, en çok 5), yalnızca wms_app
     "wms_probe.invitation_for_account_creation",
     "wms_probe.invitation_preview_for_token", // T-117d migration 0008: salt okunur (ad+rol+süre), yalnızca wms_app EXECUTE
     "wms_probe.invitation_tenant_for_token", // T-117 migration 0006: salt okunur, yalnızca wms_app EXECUTE
@@ -968,6 +971,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     const expected: Record<string, string[]> = {
       "wms_probe.active_tenant_ids": [WORKER_ROLE],
       "wms_probe.identity_exclusive_to_tenant": [APP_ROLE],
+      "wms_probe.integration_webhook_lookup": [APP_ROLE],
       "wms_probe.consume_admin_reset_grant": [AUTH_ROLE],
       "wms_probe.invitation_for_account_creation": [AUTH_ROLE],
       "wms_probe.invitation_preview_for_token": [APP_ROLE],
