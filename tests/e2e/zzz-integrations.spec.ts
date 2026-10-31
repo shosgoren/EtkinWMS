@@ -207,15 +207,44 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(siparis.getByRole("radio")).toHaveCount(1);
     await expect(siparis.getByRole("radio", { name: "Yalnız Etkin WMS" })).toHaveAttribute("aria-checked", "true");
 
-    // Ürün kartları: "Paraşüt'ten al" açar (balon), "İki yönlü" yönü değiştirir (kalıcı), "Yalnız Etkin WMS" kapatır.
+    // T-1136: dolu katalog — her koşuda yeni, Paraşüt'e eşlenmemiş bir ürün (öteki proje / önceki koşu eskilerini eşlemiş olabilir).
+    const yonKodu = `E2E-YON-${randomUUID().slice(0, 8)}`;
+    await db("INSERT INTO public.items (tenant_id, id, code, name, base_unit_id) SELECT t.id, gen_random_uuid(), $2, $2, (SELECT u.id FROM public.units u WHERE u.tenant_id = t.id AND u.status = 'ACTIVE' ORDER BY (u.code = 'ADET') DESC, u.code LIMIT 1) FROM public.tenants t WHERE t.slug = $1", [slug, yonKodu]);
+    // Ürün kartları: "Paraşüt'ten al" açar (balon), "İki yönlü" yönü değiştirir (kalıcı), "Yalnız Etkin WMS" kapatır. T-1136: her seçimin
+    // altında sonucu tek cümle; dolu katalogda yeni "al" / yeni "gönder" önce onay sorar (Vazgeç eski yönü korur, Evet kaydeder).
     const urun = page.getByTestId("flow-PRODUCTS");
+    const sonuc = page.getByTestId("flow-PRODUCTS-sonuc");
+    const sonucMetin = sonuc.locator(":scope > span"); // simge / Etkin "e" işareti hariç, yalnız cümle
+    const onayAl = page.getByRole("dialog", { name: "Ürün kartları: Paraşüt'ten al?" });
+    await expect(urun).toHaveAttribute("data-enabled", "false");
+    await expect(sonucMetin).toHaveText("Eşitleme yapılmaz.");
+    await expect(page.getByTestId("flow-WAREHOUSES-sonuc")).toBeVisible();
+    await expect(page.getByTestId("flow-STOCK-sonuc")).toHaveCount(0);
     await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
+    await expect(onayAl).toBeVisible();
+    await expect(onayAl).toContainText(/Sende [\d.]+ ürün var\. Paraşüt'teki ürünler stok koduna göre bunlarla eşleşir, eşleşmeyenler yeni kart olur; bağlı kartların adı Paraşüt'tekiyle güncellenir, Paraşüt'te silinen ya da arşivlenen ürünler burada arşive alınır\./);
+    await expect(onayAl.getByRole("button", { name: "Evet, Paraşüt'ten al" })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("yon-onay.png") });
+    await onayAl.getByRole("button", { name: "Vazgeç" }).click();
+    await expect(onayAl).toBeHidden();
+    await expect(urun).toHaveAttribute("data-enabled", "false");
+    await expect(urun.getByRole("radio", { name: "Yalnız Etkin WMS" })).toHaveAttribute("aria-checked", "true");
+    await expect(sonucMetin).toHaveText("Eşitleme yapılmaz.");
+    await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
+    await onayAl.getByRole("button", { name: "Evet, Paraşüt'ten al" }).click();
     await expect(urun).toHaveAttribute("data-enabled", "true");
     await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları açıldı");
     await expect(urun.getByRole("radio", { name: "Paraşüt'ten al" })).toHaveAttribute("aria-checked", "true");
+    await expect(sonucMetin).toHaveText("Paraşüt'ten gelir, ona uyar; buradan gitmez.");
     await expect(page.getByTestId("flow-PRODUCTS-run")).toBeVisible();
+    await expect(page.getByTestId("flow-PRODUCTS-toggle")).not.toHaveAttribute("aria-busy", "true");
+    // Al → iki yönlü: eşlenmemiş yerel ürün (yukarıdaki) Paraşüt'e gidecek → onay.
     await urun.getByRole("radio", { name: "İki yönlü" }).click();
+    const onayIki = page.getByRole("dialog", { name: "Ürün kartları: İki yönlü?" });
+    await expect(onayIki).toContainText("Paraşüt'e gönderilir");
+    await onayIki.getByRole("button", { name: "Evet, iki yönlü yap" }).click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları: İki yönlü");
+    await expect(sonucMetin).toHaveText("Eksikler eklenir; çakışmada Paraşüt kazanır.");
     await page.reload();
     await expect(urun.getByRole("radio", { name: "İki yönlü" })).toHaveAttribute("aria-checked", "true");
     await expect(urun).toHaveAttribute("data-enabled", "true");
@@ -240,8 +269,15 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       expect(o.docSw).toBeLessThanOrEqual(o.docCw);
       const run = await page.getByTestId("flow-PRODUCTS-run").boundingBox();
       expect(run?.height ?? 0, `${where}: Şimdi çalıştır ≥ 44 px`).toBeGreaterThanOrEqual(44);
+      // T-1136: sonuç cümlesi satırın içinde kalır ve en çok iki satırdır (390 px'te çoğunlukla tek satır).
+      const not = await sonuc.boundingBox();
+      const satir = await urun.boundingBox();
+      if (not === null || satir === null) throw new Error("e2e: sonuç cümlesi ölçülemedi");
+      expect(not.height, `${where}: sonuç cümlesi en çok iki satır`).toBeLessThanOrEqual(36);
+      expect(not.x + not.width, `${where}: sonuç cümlesi satırdan taşmaz`).toBeLessThanOrEqual(satir.x + satir.width + 1);
     };
     await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
+    await onayAl.getByRole("button", { name: "Evet, Paraşüt'ten al" }).click();
     await expect(urun).toHaveAttribute("data-enabled", "true");
     await expect(page.getByTestId("flow-PRODUCTS-run")).toBeVisible();
     await expect(page.getByTestId("flow-PRODUCTS-toggle")).not.toHaveAttribute("aria-busy", "true");
@@ -284,6 +320,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(perde).toHaveAttribute("style", /path\(evenodd/);
     await expect.poll(async () => page.evaluate<boolean>(`(() => { const r = document.querySelector('[data-testid="flow-PRODUCTS"]').getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return el?.closest('[data-testid="flow-PRODUCTS"]') != null && el?.closest('[data-testid="kalip-perde"]') == null; })()`), "delik Ürün kartları satırını açık bırakır").toBe(true);
     await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
+    await onayAl.getByRole("button", { name: "Evet, Paraşüt'ten al" }).click();
     await expect(rehber).toHaveAttribute("data-step", "esitle");
     await page.getByTestId("adim-kapat").first().click();
     await expect(rehber).toHaveCount(0);

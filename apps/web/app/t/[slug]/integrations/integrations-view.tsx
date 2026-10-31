@@ -33,10 +33,11 @@ import { KalipSecim, KalipSekme } from "../kalip/secim.tsx";
 import { ayarSekmeleri } from "../settings/sekmeler.ts";
 import { entegrasyonSorunSayisi, sonEsitleme, type EntegrasyonBolumu } from "./bolum.ts";
 import { donusAdresi } from "./oauth-adres.ts";
+import { yonDegisimi, yonOnayAnahtari, yonOnayGerekir, yonSonucAnahtari, type KartAkisi, type YonDegisimi } from "./yon-sonuc.ts";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipBildirim, KalipDugme } from "../kalip/belge.tsx";
 import { kdz } from "../kalip/tokens.ts";
-import { checkIntegrationAction, disconnectIntegrationAction, retryIntegrationOutboxAction, resolveIntegrationOutboxAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
+import { countFlowRecordsAction, checkIntegrationAction, disconnectIntegrationAction, retryIntegrationOutboxAction, resolveIntegrationOutboxAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
 import { feedback, intlDil } from "@wms/ui";
 
 type Provider = "PARASUT" | "LOGO";
@@ -146,6 +147,8 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   useEffect(()=>{if(oauthResult==="connected"&&journeyWish===true)void setOpeningStockAction({slug,provider:"PARASUT",enabled:true,via:"journey"});},[oauthResult,journeyWish,slug]);
   const [cutOpen, setCutOpen] = useState(false);
   const [ask, setAsk] = useState<IssueAsk | null>(null);
+  // T-1136: yön değişiminin onay penceresi (yerel kayıt varken yeni "al" ya da yeni "gönder"); metinler açılırken hesaplanır.
+  const [onay, setOnay] = useState<{ readonly flow: Flow; readonly dir: Direction; readonly title: string; readonly text: string; readonly evet: string } | null>(null);
   const [reauth, setReauth] = useState(false);
   // İyimser akış durumu (sunucu yanıtı gelene dek); sunucu verisi değişince sıfırlanır.
   const [local, setLocal] = useState<Partial<Record<Flow, { enabled: boolean; direction: Direction }>>>({});
@@ -243,7 +246,33 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
       feedback.minor();
       return;
     }
-    void setFlow(f, true, dir);
+    const degisim = yonDegisimi(f.flow, s, dir);
+    if (degisim === null) {
+      void setFlow(f, true, dir);
+      return;
+    }
+    void sorVeKaydet(f, dir, degisim);
+  };
+
+  /** T-1136: yerel kayıtları sunucuda sayar; dolu katalogda önce onay penceresi, boşsa doğrudan kaydeder. */
+  const sorVeKaydet = async (f: FlowData, dir: Direction, degisim: YonDegisimi): Promise<void> => {
+    setBusy(`flow-${f.flow}`);
+    const r = await countFlowRecordsAction({ slug, provider: "PARASUT", flow: f.flow });
+    setBusy(null);
+    if (!r.ok) return failed(r);
+    if (!yonOnayGerekir(degisim, r.data)) {
+      void setFlow(f, true, dir);
+      return;
+    }
+    const name = t(`flows.${f.flow}.name`);
+    feedback.warn();
+    setOnay({
+      flow: f.flow,
+      dir,
+      title: t("onayBaslik", { name, dir: t(`yon.${dir}`, { provider: pn }) }),
+      text: t(yonOnayAnahtari(f.flow as KartAkisi, dir), { n: r.data.total, m: r.data.unlinked, provider: pn }),
+      evet: t(`onayEvet.${dir}`, { provider: pn }),
+    });
   };
 
   const runFlow = async (flow?: Flow): Promise<void> => {
@@ -800,6 +829,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                   const na = f.directions.length === 0;
                   const name = t(`flows.${f.flow}.name`);
                   const bad = f.lastStatus === "FAILED" || f.lastStatus === "PARTIAL";
+                  const sonuc = na ? null : yonSonucAnahtari(f.flow, s.enabled ? s.direction : "OFF");
                   const options: KalipYon[] = [
                     ...f.directions.map((d): KalipYon => ({ id: d, label: t(`yon.${d}`, { provider: pn }), d: YON_D[d], ton: YON_TON[d] })),
                     { id: "OFF", label: t("yon.OFF"), etkin: true, ton: "gri" },
@@ -812,6 +842,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                       ton={ui.ton}
                       testId={`flow-${f.flow}`}
                       data={{ "data-enabled": s.enabled ? "true" : "false" }}
+                      note={sonuc === null ? undefined : s.enabled ? { text: t(sonuc, { provider: pn }), ton: YON_TON[s.direction], d: YON_D[s.direction], testId: `flow-${f.flow}-sonuc` } : { text: t(sonuc, { provider: pn }), ton: "gri", etkin: true, testId: `flow-${f.flow}-sonuc` }}
                       sub={
                         na ? (
                           t("flowNa", { provider: pn })
@@ -1028,6 +1059,25 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
           onCancel={() => {
             feedback.minor();
             setCutOpen(false);
+          }}
+        />
+        <KalipOnay
+          open={onay !== null}
+          variant="primary"
+          title={onay?.title ?? ""}
+          description={onay?.text ?? ""}
+          confirmLabel={onay?.evet ?? ""}
+          cancelLabel={t("onayVazgec")}
+          onConfirm={() => {
+            // Pencere açıkken ekran verisi yenilenmiş olabilir: akışın GÜNCEL satırı (önceki durum ondan okunur).
+            const o = onay;
+            setOnay(null);
+            const cur = o === null ? undefined : flows.find((x) => x.flow === o.flow);
+            if (o !== null && cur !== undefined) void setFlow(cur, true, o.dir);
+          }}
+          onCancel={() => {
+            feedback.minor();
+            setOnay(null);
           }}
         />
       </div>

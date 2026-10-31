@@ -94,8 +94,18 @@ export function KalipAyarKart({ title, sub, d, ton, actions, children, testId }:
   );
 }
 
-/** Ayar satırı: renkli simge kutusu + ad (+ kısa satır) solda, denetim sağda (`children`). `data` satırın durum öznitelikleri. */
-export function KalipAyarSatir({ title, sub, d, ton, children, testId, data }: { title: string; sub?: ReactNode; d: string; ton: StTon; children?: ReactNode; testId?: string; data?: Readonly<Record<`data-${string}`, string>> }) {
+/** T-1136: satırın altında tam genişlik tek cümle (ör. seçili yönün sonucu): seçimin renginde simge + düz yazı, değişince duyurulur. */
+export interface KalipAyarNot {
+  readonly text: string;
+  readonly ton: StTon;
+  /** Simge yolu; `etkin` ise Etkin WMS işareti ("e" kutusu). */
+  readonly d?: string;
+  readonly etkin?: boolean;
+  readonly testId?: string;
+}
+
+/** Ayar satırı: renkli simge kutusu + ad (+ kısa satır) solda, denetim sağda (`children`); isteğe bağlı alt not (`note`). `data` satırın durum öznitelikleri. */
+export function KalipAyarSatir({ title, sub, d, ton, children, testId, data, note }: { title: string; sub?: ReactNode; d: string; ton: StTon; children?: ReactNode; testId?: string; data?: Readonly<Record<`data-${string}`, string>>; note?: KalipAyarNot }) {
   return (
     <div className={`stay stt-${ton}`} data-testid={testId} {...data}>
       <span className="stay-ic">
@@ -106,6 +116,18 @@ export function KalipAyarSatir({ title, sub, d, ton, children, testId, data }: {
         {sub === undefined ? null : <small>{sub}</small>}
       </span>
       {children === undefined ? null : <span className="stay-r">{children}</span>}
+      {note === undefined ? null : (
+        <p className={`stay-n stt-${note.ton}`} aria-live="polite" data-testid={note.testId}>
+          {note.etkin === true ? (
+            <b className="styon-e" aria-hidden="true">
+              e
+            </b>
+          ) : note.d === undefined ? null : (
+            <Ico d={note.d} size={16} />
+          )}
+          <span>{note.text}</span>
+        </p>
+      )}
     </div>
   );
 }

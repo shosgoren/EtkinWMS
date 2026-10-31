@@ -5706,6 +5706,36 @@
     "flowOn": "{name} açıldı · ilk aktarım başladı",
     "flowOnNoQueue": "{name} açıldı · birazdan kendiliğinden aktarılır",
     "flowOff": "{name} kapandı",
+    "sonuc": {
+      "PULL": "{provider}'ten gelir, ona uyar; buradan gitmez.",
+      "PUSH": "{provider}'te olmayanlar eklenir; oradan gelmez.",
+      "BOTH": "Eksikler eklenir; çakışmada {provider} kazanır.",
+      "OFF": "Eşitleme yapılmaz."
+    },
+    "onay": {
+      "PRODUCTS": {
+        "PULL": "Sende {n, number} ürün var. {provider}'teki ürünler stok koduna göre bunlarla eşleşir, eşleşmeyenler yeni kart olur; bağlı kartların adı {provider}'tekiyle güncellenir, {provider}'te silinen ya da arşivlenen ürünler burada arşive alınır.",
+        "PUSH": "Sende {n, number} ürün var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı stok kodlu ürün varsa ona bağlanır).",
+        "BOTH": "Sende {n, number} ürün var. {provider}'teki ürünler stok koduna göre eşleşir, eşleşmeyenler buraya eklenir; bağlı kartların adı {provider}'tekiyle güncellenir, {provider}'te silinen ya da arşivlenen ürünler burada arşive alınır{m, plural, =0 {} other {; bağlı olmayan # ürün de {provider}'e gönderilir}}."
+      },
+      "CONTACTS": {
+        "PULL": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir, eşleşmeyenler yeni cari olur; bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir ({provider}'te silinen cari burada kalır).",
+        "PUSH": "Sende {n, number} cari var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı vergi numaralı, yoksa aynı adlı cari varsa ona bağlanır).",
+        "BOTH": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir, eşleşmeyenler buraya eklenir; bağlı carilerin adı ve bilgileri {provider}'tekiyle güncellenir{m, plural, =0 {} other {; bağlı olmayan # cari de {provider}'e gönderilir}}."
+      },
+      "WAREHOUSES": {
+        "PULL": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir, eşleşmeyenler yeni depo olur; bağlı depoların adı {provider}'tekiyle güncellenir ({provider}'te silinen depo burada kalır).",
+        "PUSH": "Sende {n, number} depo var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı adlı depo varsa ona bağlanır).",
+        "BOTH": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir, eşleşmeyenler buraya eklenir; bağlı depoların adı {provider}'tekiyle güncellenir{m, plural, =0 {} other {; bağlı olmayan # depo da {provider}'e gönderilir}}."
+      }
+    },
+    "onayBaslik": "{name}: {dir}?",
+    "onayEvet": {
+      "PULL": "Evet, {provider}'ten al",
+      "PUSH": "Evet, {provider}'e gönder",
+      "BOTH": "Evet, iki yönlü yap"
+    },
+    "onayVazgec": "Vazgeç",
     "dirSet": "{name}: {dir}",
     "never": "HENÜZ ÇALIŞMADI",
     "lastOk": "SON ÇALIŞMA {at}",

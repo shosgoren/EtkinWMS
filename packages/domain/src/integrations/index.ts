@@ -30,6 +30,7 @@ export { STOCK_TOTAL_STATUSES, STOCK_TOTAL_LOCATION_KINDS } from "./stock-reads.
 export * from "./oauth.ts";
 export { classifyIntegrationHealth, staleLimitMs, HEALTH_STALE_WEBHOOK_CARDS_MS, HEALTH_STALE_MS, HEALTH_STUCK_MS, HEALTH_FAIL_STREAK, type IntegrationHealth, type HealthCause, type HealthNext, type HealthLevel } from "./health.ts";
 export { getIntegrationOutboxIssues, retryIntegrationOutbox, resolveIntegrationOutbox, OUTBOX_ISSUE_LIMIT, type OutboxIssue, type OutboxIssues, type OutboxActionResult, type OutboxResolution } from "./outbox.ts";
+export { countFlowRecords, CARD_FLOWS, type CardFlow, type FlowRecordCount } from "./flow-counts.ts";
 
 // T-1138: Paraşüt anlık bildirim (webhook) alıcısı, tek kart olayı, kayıt ve kademeli zamanlayıcı.
 export { receiveParasutWebhook, runWebhookEvent, parseWebhookBody, verifySignature, matchSignature, signedFields, webhookEventKey, WEBHOOK_BODY_MAX, WEBHOOK_CONSUMER, type ReceiveResult, type WebhookEventResult, type ConsumeOnce } from "./webhook.ts";
