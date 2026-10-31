@@ -640,7 +640,8 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                     role="listitem"
                     className="prov"
                     aria-label={`${t("excelSource.name")}: ${t("excelSource.pill")}`}
-                    data-testid="provider-EXCEL"
+                    data-testid="integrations-excel"
+                    data-provider="EXCEL"
                     onClick={() => {
                       feedback.minor();
                       router.push(`${base}/settings/baglantilar`);
@@ -770,7 +771,8 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                 </>
               )}
               {/* T-1112: Excel aktarımı (Ayarlar › Entegrasyonlar sekmesinin eski hedefi) bu bölümden açılır. */}
-              {/* T-1137: bağlı değilken Excel kaynak listesinde (Paraşüt'ün yanında) kart; bağlıyken ek veri kaynağı satırı. */}
+              {/* T-1137: bağlı değilken Excel kaynak listesinde (Paraşüt'ün yanında) kart; bağlıyken ek veri kaynağı satırı. İkisi de aynı giriş
+                  (`integrations-excel` → `/settings/baglantilar`); her durumda tam bir tane çizilir. */}
               {connected ? <KalipBaglanti title={t("baglanti.excel")} value={t("baglanti.excelOpen")} d={LICON.excel} color="2F7D5B" href={`${base}/settings/baglantilar`} testId="integrations-excel" /> : null}
               {/* T-1104 (kullanıcı 27 Ekim: "derle topla, pratik olsun"): uygulama bilgileri sık kullanılmaz — bölümün en altında. Bağlı değilken
                   ayrı "Paraşüt ile bağlan" yok (ana BAĞLAN aynı işi yapar); bağlıyken OAuth ile yeniden bağlanma burada kalır. */}

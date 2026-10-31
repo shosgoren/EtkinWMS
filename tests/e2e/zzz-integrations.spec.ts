@@ -110,8 +110,10 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]')).toHaveAttribute("aria-current", "page");
     // T-1137: bağlı değilken Excel, kaynak listesinde Paraşüt'ün yanında bir veri kaynağı kartı (ayrı satır yok); mevcut Excel aktarım
     // ekranını açar (aktarma mantığı tek yerde).
-    await expect(page.getByTestId("integrations-excel")).toHaveCount(0);
-    const excel = page.getByTestId("integrations-providers").getByTestId("provider-EXCEL");
+    // Tek Excel girişi (aynı test kimliği import.spec'te de kullanılır): bağlı değilken kaynak listesindeki kart.
+    await expect(page.getByTestId("integrations-excel")).toHaveCount(1);
+    const excel = page.getByTestId("integrations-providers").getByTestId("integrations-excel");
+    await expect(excel).toHaveAttribute("data-provider", "EXCEL");
     await expect(excel).toContainText("Excel");
     expect((await excel.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     await excel.click();
