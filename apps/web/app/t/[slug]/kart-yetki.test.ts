@@ -4,6 +4,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { CARD_SECTIONS, type CardRights, type CardSection } from "@wms/domain/identity/permissions";
+import type { KartBolum, KartYetki } from "./kalip/kart-yetki.ts";
+
+// İstemci tipleri (`kalip/kart-yetki.ts`) domain tipleriyle birebir aynı olmalı (derleme zamanı; ayrışırsa typecheck kırılır).
+type Ayni<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+const _bolum: Ayni<KartBolum, CardSection> = true;
+const _yetki: Ayni<KartYetki, CardRights> = true;
+void _bolum;
+void _yetki;
 
 const DIR = path.resolve(import.meta.dirname);
 const read = (p: string): string =>
@@ -16,6 +25,11 @@ const VIEWS = ["items/items-view.tsx", "items/[itemId]/item-detail.tsx", "partie
 const ACTIONS = ["items/actions.ts", "parties/actions.ts", "warehouses/actions.ts"];
 
 describe("kart yetkileri (T-1141)", () => {
+  it("istemci bölüm listesi domain kataloğuyla aynı", () => {
+    const bolumler: readonly KartBolum[] = ["items", "parties", "warehouses", "locations"];
+    expect([...bolumler]).toEqual([...CARD_SECTIONS]);
+  });
+
   it("kart sayfaları gösterim kararını `cardRights` ile verir; `settings.manage` kullanmaz", () => {
     for (const p of PAGES) {
       const src = read(p);

@@ -17,7 +17,7 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-e
 import { KalipAlan, KalipAlanSira, KalipGrup } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
 import { KalipKilitliDugme, useKartKilitGerekce } from "../kalip/kilitli.tsx";
-import type { CardRights } from "@wms/domain/identity/permissions";
+import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { archivePartyAction, loadMorePartiesAction, savePartyAction, suggestPartyCodeAction } from "./actions.ts";

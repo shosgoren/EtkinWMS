@@ -24,7 +24,7 @@ import { KalipGorunumSec, KalipSonsuz, useKalipDerinlik, KalipSutunSec, KalipTab
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
 import { KalipKilitliDugme, useKartKilitGerekce } from "../kalip/kilitli.tsx";
-import type { CardRights } from "@wms/domain/identity/permissions";
+import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
 import { KalipUyari } from "../kalip/uyari.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
 import { kdz } from "../kalip/tokens.ts";

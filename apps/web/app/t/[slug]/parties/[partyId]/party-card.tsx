@@ -8,7 +8,7 @@ import { KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipBilgiIzgara, KalipKartSerit, KalipKayitKart, type KalipBilgi, type KalipEtiket, type StTon } from "../../kalip/kart.tsx";
 import type { PartyView } from "../parties-view.tsx";
 import { useKartKilitGerekce } from "../../kalip/kilitli.tsx";
-import type { CardRights } from "@wms/domain/identity/permissions";
+import type { KartYetki as CardRights } from "../../kalip/kart-yetki.ts";
 
 const KIND_VIS: Readonly<Record<PartyView["kind"], { d: string; ton: StTon }>> = {
   CUSTOMER: { d: LICON.people, ton: "yesil" },

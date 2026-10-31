@@ -23,7 +23,7 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-e
 import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
 import { KalipSecim, KalipSecimGrubu } from "../kalip/secim.tsx";
 import { useKartKilitGerekce } from "../kalip/kilitli.tsx";
-import type { CardRights } from "@wms/domain/identity/permissions";
+import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
 import { eskiSurumBildir, eskiSurumMu, eylem } from "../kalip/surum.tsx";
 import { ItemFiltersView } from "./filters-view.tsx";
 import { extraFilterParams, type ItemExtraFilters } from "./filters.ts";

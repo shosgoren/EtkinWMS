@@ -40,7 +40,7 @@ import { KalipAlan, KalipGrup, KalipKilit, KalipSabit } from "../../kalip/form.t
 import { approx, fmtGun, fmtQty, stockTone } from "../../kalip/format.ts";
 import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
 import { KalipKilitliDugme, useKartKilitGerekce } from "../../kalip/kilitli.tsx";
-import type { CardRights } from "@wms/domain/identity/permissions";
+import type { KartYetki as CardRights } from "../../kalip/kart-yetki.ts";
 import { kdz } from "../../kalip/tokens.ts";
 import { addBarcodeAction, archiveItemAction, loadMoreItemTrackingAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
 import { CARD_VISUAL } from "../card-visual.ts";

@@ -20,7 +20,7 @@ import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { kdz } from "../../kalip/tokens.ts";
 import { KalipKilitliDugme, useKartKilitGerekce } from "../../kalip/kilitli.tsx";
-import type { CardRights } from "@wms/domain/identity/permissions";
+import type { KartYetki as CardRights } from "../../kalip/kart-yetki.ts";
 import { archiveLocationAction, createLocationAction, getSetupProgressAction, loadMoreLocationsAction, renameLocationAction, suggestCodeAction } from "../actions.ts";
 import { CreateForm, ServerErrorBanner, useErrorText } from "../warehouses-view.tsx";
 import type { ServerError } from "../warehouses-view.tsx";

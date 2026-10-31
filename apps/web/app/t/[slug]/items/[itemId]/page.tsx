@@ -9,7 +9,7 @@ import { getProductSourceInfo } from "@wms/domain/integrations";
 import { getItemStockCard, getItemStockPivot, listItemMoves, listItemTracking } from "@wms/domain/stock";
 import { listAudit } from "@wms/domain/audit/audit-query";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { cardRights, hasPermission, type CardRights } from "@wms/domain/identity/permissions";
+import { cardRights, hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../../design/theme.ts";

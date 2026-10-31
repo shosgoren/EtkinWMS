@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { balonGoster, sesCal } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
-import type { CardSection } from "@wms/domain/identity/permissions";
+import type { KartBolum as CardSection } from "./kart-yetki.ts";
 
 let metin = "Değiştirme yetkin yok · sorumluna sor";
 
