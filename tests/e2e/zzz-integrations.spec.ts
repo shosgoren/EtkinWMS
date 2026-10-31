@@ -461,7 +461,11 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(renew).not.toContainText(/parola/i);
     await expect(page.getByText("Yeni yönteme geç")).toHaveCount(0);
     await connectOAuth(page, "integrations-health-next");
+    // Bağlıyken varsayılan bölüm "Ne çekilsin": akışlar olduğu gibi döner; bağlantı şeridi Bağlantı bölümünde.
+    await expect(page.getByTestId("integrations-flows")).toBeVisible();
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     await expect(page.getByTestId("integrations-conn")).toHaveAttribute("data-status", "CONNECTED");
+    await expect(page.getByTestId("integrations-health")).toHaveAttribute("data-level", "ok");
     expect((await db<{ code: string | null }>(`SELECT last_error_code AS code FROM public.integrations WHERE id = ${tenantIntegration}`, [slug]))[0]?.code).toBeNull();
     // Kendi uygulaması, eski yetki kodu yöntemiyle (OOB): anahtarlar kaydedilir, bağlan → kod formu.
     await page.getByTestId("oauth-advanced").click();
