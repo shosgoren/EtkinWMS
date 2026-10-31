@@ -1,6 +1,8 @@
 // T-991: ERP entegrasyonu uçtan uca — hesap sahibi Entegrasyon ekranında sahte Paraşüt'e (global-setup, 127.0.0.1) bağlanır, bağlı şeridi
 // (yalnız şirket adı, sır yok) görür, bir akışı açar (balon + açık durum) ve bağlantıyı sınar. Ayrı fikstür alanı (`E2E_ERP`); sahte bilgiler
 // sentetiktir. Masaüstü ve mobil projeler aynı alanı kullanır: bağlıysa test önce bağlantıyı keser (kes penceresi de sınanır).
+// T-1133: Etkin'in ortak Paraşüt uygulaması (global-setup sentetik ortam değişkenleri): BAĞLAN → Paraşüt izin ekranı (sahte: yönlendirme
+// yakalanır, gerçek ağ yok) → callback → tek şirket → bağlı. Müşteri anahtar alanı görmez; kendi uygulaması "Gelişmiş" satırının içinde.
 import { randomUUID } from "node:crypto";
 import { db } from "./support/package-receiving.ts";
 import { execFileSync } from "node:child_process";
@@ -31,6 +33,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
   test("T-991: Paraşüt'e bağlan, akış aç, bağlantıyı sına", async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     const { slug } = await loginEmptyTenant(page, "erp");
+    // T-1133: önceki koşudan (öteki proje) kalan kendi uygulama kaydı ortak uygulamanın önüne geçer; senaryo ortak uygulamadan başlar.
+    await db("DELETE FROM public.integration_oauth_apps WHERE tenant_id=(SELECT id FROM public.tenants WHERE slug=$1)", [slug]);
     // T-1112: bağlantı kartı "Bağlantı ve veri kaynağı" bölümünde (bağlıyken varsayılan bölüm akışlardır).
     await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     await expect(page.getByTestId("integrations")).toBeVisible();
@@ -41,10 +45,50 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       await expect(page.getByTestId("integrations-providers")).toBeVisible();
     }
 
+    // T-1133: ortak uygulama ile bağlan — anahtar alanı yok; BAĞLAN → Paraşüt (sahte izin: yönlendirme yakalanır) → callback → bağlı.
+    await expect(page.getByTestId("oauth-app-id")).toHaveCount(0);
+    await expect(page.getByTestId("integrations-advanced")).toContainText("Anahtar girmen gerekmez");
+    let authorize: URL | null = null;
+    await page.route("https://api.parasut.com/**", async (route) => {
+      authorize = new URL(route.request().url());
+      const back = new URL(authorize.searchParams.get("redirect_uri") ?? "about:blank");
+      back.search = new URLSearchParams({ code: F.authorizationCode, state: authorize.searchParams.get("state") ?? "" }).toString();
+      await route.fulfill({ status: 302, headers: { location: back.href } });
+    });
+    await page.getByTestId("integrations-connect").filter({ visible: true }).click();
+    await expect(page.getByTestId("kalip-toast")).toContainText("Paraşüt bağlantısı kuruldu");
+    await page.unroute("https://api.parasut.com/**");
+    const auth = authorize as URL | null;
+    if (auth === null) throw new Error("e2e: Paraşüt izin isteği görülmedi");
+    expect(auth.pathname).toBe("/oauth/authorize");
+    expect(auth.searchParams.get("client_id")).toBe(F.clientId);
+    expect(auth.searchParams.get("redirect_uri")).toBe(`${new URL(page.url()).origin}/api/integrations/parasut/callback`);
+    expect(auth.href).not.toContain(F.clientSecret);
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
+    await expect(page.getByTestId("integrations-conn")).toHaveAttribute("data-status", "CONNECTED");
+    await expect(page.getByTestId("integrations-conn")).toContainText(F.companyName);
+    expect(await page.content()).not.toContain(F.clientSecret);
+    await page.getByTestId("integrations-cut").click();
+    await page.getByRole("button", { name: "Bağlantıyı kes" }).click();
+    await expect(page.getByTestId("integrations-providers")).toBeVisible();
+
     // T-1104: bağlı değilken tek bağlanma yolu (ana BAĞLAN / Paraşüt kutusu); ayrı "Paraşüt ile bağlan" yok, uygulama bilgileri en altta.
     // T-1112: ekran Ayarlar › Entegrasyonlar sekmesinin kendisidir (üstte ayar sekmeleri); Geri Ayarlar'a döner. Excel aktarımı bu bölümden.
     await expect(page.getByTestId("oauth-connect")).toHaveCount(0);
+    // T-1133: kendi uygulaması "Gelişmiş" açılır satırında: 3 adım, gerçek dönüş adresi salt okunur.
+    await page.getByTestId("oauth-advanced").click();
+    await expect(page.getByTestId("oauth-callback-url")).toHaveText(`${new URL(page.url()).origin}/api/integrations/parasut/callback`);
+    await expect(page.getByTestId("oauth-steps")).toContainText("Paraşüt → Ayarlar → Entegrasyonlar → Yeni uygulama → bu adresi yapıştır");
     await expect(page.getByTestId("integrations-advanced").getByTestId("oauth-settings-open")).toBeVisible();
+    // Pasif görünür (aria-disabled) ama sessiz değil: dokununca nedeni söyler.
+    await expect(page.getByTestId("oauth-connect")).toHaveAttribute("aria-disabled", "true");
+    await page.getByTestId("oauth-connect").click({ force: true });
+    await expect(page.getByTestId("kalip-toast")).toContainText("Önce anahtarları kaydet");
+    // Telefonda alt sayfa (Kapat), masaüstünde satırın kendisi açar/kapatır (KalipSatir).
+    const closeEditor = page.getByTestId("oauth-advanced-editor").locator("button.x2");
+    if (await closeEditor.isVisible()) await closeEditor.click();
+    else await page.getByTestId("oauth-advanced").click();
+    await expect(page.getByTestId("oauth-advanced-editor")).toHaveCount(0);
     await expect(page.getByTestId("kabuk-back").filter({ visible: true })).toHaveAttribute("href", `/t/${slug}/settings`);
     await expect(page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]')).toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("integrations-excel")).toHaveAttribute("href", `/t/${slug}/settings/baglantilar`);
@@ -75,9 +119,20 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     const wrong=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+ 'c'.repeat(64),{maxRedirects:0});expect(wrong.status()).toBe(400);
     const invalid=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+binding.state,{maxRedirects:0});expect(invalid.status()).toBe(303);expect(invalid.headers()['location']).not.toContain('synthetic');expect(invalid.headers()['location']).toContain('oauth_result=failed');
     const replay=await page.request.get('/api/integrations/parasut/callback?code=synthetic&state='+binding.state,{maxRedirects:0});expect(replay.status()).toBe(400);
+    await page.getByTestId("oauth-advanced").click();
     await page.getByTestId("oauth-settings-open").click();
     await expect(page.getByTestId("oauth-settings")).toBeVisible();
-    await expect(page.getByTestId("oauth-callback")).toHaveValue("");
+    // Adım 1: gerçek dönüş adresi, salt okunur; adım 2 boşken KAYDET sessiz kalmaz (ALTIN-KURAL form kuralı).
+    await expect(page.getByTestId("oauth-callback")).toHaveValue(`${new URL(page.url()).origin}/api/integrations/parasut/callback`);
+    await expect(page.getByTestId("oauth-callback")).toHaveAttribute("readonly", "");
+    await page.getByTestId("oauth-app-id").fill("x");
+    await page.getByTestId("oauth-app-id").fill("");
+    await page.getByTestId("oauth-oob-toggle").click();
+    await page.getByTestId("oauth-settings-save").click();
+    await expect(page.getByTestId("kalip-toast")).toContainText("2 alan eksik");
+    await expect(page.getByTestId("err-clientId")).toBeVisible();
+    await expect(page.getByTestId("err-clientSecret")).toBeVisible();
+    await page.getByTestId("oauth-oob-toggle").click();
     if(testInfo.project.name==="desktop")for(const width of [390,1180,1440]) {
       await page.setViewportSize({width,height:844});
       for(const id of ['oauth-app-id','oauth-app-secret','oauth-callback']) {const field=page.getByTestId(id).locator('..');const bounds=await field.boundingBox();await field.click({position:{x:5,y:5}});await expect(page.getByTestId(id)).toBeFocused();expect(bounds?.height).toBeGreaterThanOrEqual(44);expect((bounds?.x??-1)>=0&&(bounds?.x??0)+(bounds?.width??0)<=width).toBe(true);}
@@ -186,18 +241,22 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     }
     await page.getByTestId("integrations-test").click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Bağlantı sağlam");
+    // Kendi uygulaması, eski yetki kodu yöntemiyle (OOB): anahtarlar kaydedilir, bağlan → kod formu.
+    await page.getByTestId("oauth-advanced").click();
     await page.getByTestId("oauth-settings-open").click();
     await page.getByTestId("oauth-app-id").fill(F.clientId);
     await page.getByTestId("oauth-app-secret").fill(F.clientSecret);
-    await page.getByTestId("oauth-callback").fill(F.redirectUri);
+    await page.getByTestId("oauth-oob-toggle").click();
+    await expect(page.getByTestId("oauth-callback")).toHaveValue("urn:ietf:wg:oauth:2.0:oob");
     await page.getByTestId("oauth-settings-save").click();
     await expect(page.getByTestId("integrations")).toBeVisible();
     await page.reload();
     expect(await page.content()).not.toContain(F.clientSecret);
+    await page.getByTestId("oauth-advanced").click();
     await page.getByTestId("oauth-connect").click();
     await expect(page.getByTestId("oauth-code-form")).toBeVisible();
     const providerUrl=new URL((await page.getByTestId("oauth-provider-open").getAttribute("href"))!);
-    expect(providerUrl.origin).toBe('https://api.parasut.com');expect(providerUrl.searchParams.get('redirect_uri')).toBe(F.redirectUri);expect(providerUrl.searchParams.get('client_id')).toBe(F.clientId);
+    expect(providerUrl.origin).toBe('https://api.parasut.com');expect(providerUrl.searchParams.get('redirect_uri')).toBe('urn:ietf:wg:oauth:2.0:oob');expect(providerUrl.searchParams.get('client_id')).toBe(F.clientId);
     if(testInfo.project.name==='desktop') {
       await page.getByTestId('oauth-code').fill(F.authorizationCode);
       await page.getByTestId('oauth-code-form-save').click();
@@ -236,10 +295,10 @@ if (!process.env.E2E_BASE_URL?.trim()) {
 
     // Reproduce the live report: an old authenticated session must show a useful reason + a working reauth link.
     await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
+    await page.getByTestId("oauth-advanced").click();
     await page.getByTestId("oauth-settings-open").click();
     await page.getByTestId("oauth-app-id").fill(F.clientId);
     await page.getByTestId("oauth-app-secret").fill(F.clientSecret);
-    await page.getByTestId("oauth-callback").fill(F.redirectUri);
     const cookie = (await page.context().cookies()).find(c => c.name.endsWith("session_token"));
     if (!cookie) throw new Error("e2e: fixture session missing");
     expireRecentAuth(decodeURIComponent(cookie.value).split(".")[0]!);

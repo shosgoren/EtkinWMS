@@ -131,6 +131,14 @@ servisi. Bu adım yapılmadan yayınlar iki imajlı sürer; Etkin "şu an kullan
 ## 25 Ekim — Haftalık güvenlik taraması (T-1030)
 `.github/workflows/security-scan.yml` her pazartesi 05:17 UTC (elle: Actions → security-scan → Run workflow) main üzerinde koşar: `pnpm audit` (high/critical), ses servisi `pip-audit`, `scripts/security-scan.mjs` (Dockerfile Node sürümü ↔ nodejs.org güvenlik yayını; PostgreSQL imajı ↔ yeni ara sürüm; sabitlenmemiş imaj uyarısı). Kırmızı iş GitHub e-postasıyla bildirilir; düzeltme normal PR akışıyla (T-1029/T-1031 örnek).
 
+## Paraşüt ortak OAuth uygulaması (T-1133, 30 Ekim kullanıcı kararı)
+Etkin TEK ortak Paraşüt uygulaması kaydeder; müşteri Application Id / Secret / Callback girmez (Bağlan = BAĞLAN → Paraşüt'te giriş + izin → şirket seç). Değerleri yalnız sahip sunucuya girer; repo, belge, log, sohbet ve audit'e yazılmaz, DB'ye de kaydedilmez.
+1. **Bir kez, Paraşüt'te:** Etkin'in Paraşüt hesabında Ayarlar → Entegrasyonlar → Yeni uygulama. Dönüş (callback / redirect) adresi: `https://wms.etkinyazilim.com/api/integrations/parasut/callback` (genel kural: `<BETTER_AUTH_URL>/api/integrations/parasut/callback`; sonda `/` yok, sorgu yok).
+2. **Sunucu:** `/opt/etkinwms/secrets/web.env` (root600) içine iki ad: `PARASUT_OAUTH_CLIENT_ID`, `PARASUT_OAUTH_CLIENT_SECRET`. Worker'a gerekmez (yenileme, bağlantı kutusundaki mühürlü kimlikle yapılır). Değer boşluk/denetim karakteri içeremez, en çok 200; geçersizse ortak uygulama kapalı sayılır (sessiz geri düşüş yok, ekran "henüz hazır değil" der).
+3. **Uygula:** web konteynerini yeniden başlat (normal yayın da okur). Doğrulama: Ayarlar › Entegrasyonlar › Bağlantı bölümünde "Anahtar girmen gerekmez" ve Gelişmiş satırında "Etkin'in ortak uygulaması". Değeri yazdırma; yalnız bu ekran durumu ve sağlık.
+- Çözüm sırası: müşterinin kendi uygulaması (Gelişmiş, `integration_oauth_apps`) → ortak uygulama → yok. Ortak uygulamayla yapılan bağlantıda ürün yaşam döngüsü, tamamlanmış yetki kodu denemesine (sabit ortak sürüm) bağlanır. Anahtar döndürülürse mevcut bağlantılar sürer (yenileme belirteci bağlantı kutusundaki kimlikle); eski kimlik Paraşüt'te iptal edilirse müşteriler yeniden BAĞLAN der.
+- Canlı durum: kod T-1133 dalında; sunucu değerleri sahip tarafından girilecek (UNKNOWN), gerçek Paraşüt ile ortak uygulama bağlantısı doğrulanmadı (B-110).
+
 ## Son doğrulanmış Paraşüt yayını (T-1066, 27 Ekim)
 - [PR227](https://github.com/shosgoren/EtkinWMS/pull/227): boş OAuth alanları, formda recentAuth yönlendirmesi, 30 sn ERP zamanlayıcı ve açık ürün listesi yenilemesi. Son birleşik main T1095 rehberini de içerir.
 - Çalışan release: `48755d227dc3dd25188f1f8492ce4111c57dd129`. [Ana CI40572609077](https://github.com/shosgoren/EtkinWMS/actions/runs/40572609077), [guards40572609041](https://github.com/shosgoren/EtkinWMS/actions/runs/40572609041), [deploy40574232524](https://github.com/shosgoren/EtkinWMS/actions/runs/40574232524) başarılı.

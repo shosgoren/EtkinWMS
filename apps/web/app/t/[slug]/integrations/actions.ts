@@ -6,7 +6,7 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
-import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, FLOWS, DIRECTIONS, beginParasutOAuth, selectParasutOAuthCompany, encodeOAuthBinding, parseOAuthBinding, oauthCookieName, OAUTH_TTL_SECONDS, saveParasutOAuthSettings, completeParasutOAuth } from "@wms/domain/integrations";
+import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, FLOWS, DIRECTIONS, beginParasutOAuth, selectParasutOAuthCompany, encodeOAuthBinding, parseOAuthBinding, oauthCookieName, OAUTH_TTL_SECONDS, saveParasutOAuthSettings, completeParasutOAuth, PARASUT_OOB_REDIRECT_URI } from "@wms/domain/integrations";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { getSenderQueue } from "../../../../lib/queue.ts";
 
@@ -119,11 +119,12 @@ export async function selectParasutOAuthCompanyAction(raw: unknown) {
   })(raw);
 }
 
+/** T-1133 (Gelişmiş: kendi uygulaman): dönüş adresi istemciden alınmaz — sunucunun gerçek callback'i; `oob` yalnız eski yetki kodu yöntemi. */
 export async function saveParasutOAuthSettingsAction(raw:unknown) {
  const requestHeaders=await headers();
  const {ensureRecentAuth}=await import("../../../../lib/auth-service.ts");
- return guardedAction({schema:z.object({slug,clientId:z.string().min(1).max(200),clientSecret:z.string().min(1).max(200),callbackUrl:z.string().min(1).max(300)}).strict()},async(i,ctx)=>
- saveParasutOAuthSettings({...await access(i.slug,ctx),recentAuth:()=>ensureRecentAuth(requestHeaders)},{clientId:i.clientId,clientSecret:i.clientSecret,callbackUrl:i.callbackUrl}))(raw);
+ return guardedAction({schema:z.object({slug,clientId:z.string().min(1).max(200),clientSecret:z.string().min(1).max(200),oob:z.boolean().optional()}).strict()},async(i,ctx)=>
+ saveParasutOAuthSettings({...await access(i.slug,ctx),recentAuth:()=>ensureRecentAuth(requestHeaders)},{clientId:i.clientId,clientSecret:i.clientSecret,...(i.oob===true?{callbackUrl:PARASUT_OOB_REDIRECT_URI}:{})}))(raw);
 }
 
 /** OOB: explicit user-entered authorization code, bound to the same HttpOnly browser attempt. */

@@ -30,12 +30,19 @@ export interface FakeParasutOptions {
   readonly expiresIn?: number;
   readonly authorizationCode?:string;
   readonly redirectUri?:string;
+  /** T-1133 (yalnız e2e): `redirectUri`ye ek kabul edilen dönüş adresleri (ortak uygulama callback'i, OOB). Varsayılan yok. */
+  readonly extraRedirectUris?: readonly string[];
+  /**
+   * T-1133 (yalnız e2e): aynı sentetik kod paylaşılan sahte sunucuda birden çok koşuda (masaüstü + telefon projesi, ortak + kendi uygulama)
+   * kullanılır; tek kullanımlık deneme koruması uygulamanın kendi DB denemesindedir (e2e'de tekrar 400 ayrıca sınanır). Varsayılan tek kullanım.
+   */
+  readonly reusableCode?: boolean;
   readonly port?: number;
 }
 
 export interface FakeParasut {
   readonly url: string;
-  readonly opts: Required<Omit<FakeParasutOptions, "port">>;
+  readonly opts: Required<Omit<FakeParasutOptions, "port" | "extraRedirectUris" | "reusableCode">>;
   readonly companies: {id:string;name:string}[];
   readonly products: FakeRecord[];
   readonly categories: FakeRecord[];
@@ -83,7 +90,7 @@ export const FAKE_PARASUT_DEFAULTS = Object.freeze({
 });
 
 export async function startFakeParasut(options: FakeParasutOptions = {}): Promise<FakeParasut> {
-  const { port: _port, ...given } = options;
+  const { port: _port, extraRedirectUris = [], reusableCode = false, ...given } = options;
   void _port;
   const opts = { ...FAKE_PARASUT_DEFAULTS, ...given };
   let tokenSeq = 0;
@@ -135,7 +142,8 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       const f = new URLSearchParams(body);
       if (f.get("client_id") !== opts.clientId || f.get("client_secret") !== opts.clientSecret) return send(401, { error: "invalid_client" });
       if(f.get("grant_type")==="authorization_code") {
-        if(codeUsed||f.get("code")!==opts.authorizationCode||f.get("redirect_uri")!==opts.redirectUri)return send(400,{error:"invalid_grant"});
+        const redirect=f.get("redirect_uri");
+        if((codeUsed&&!reusableCode)||f.get("code")!==opts.authorizationCode||redirect===null||(redirect!==opts.redirectUri&&!extraRedirectUris.includes(redirect)))return send(400,{error:"invalid_grant"});
         codeUsed=true;return send(200,{...issue(),token_type:"bearer",expires_in:opts.expiresIn});
       }
       if (f.get("grant_type") === "password") {
