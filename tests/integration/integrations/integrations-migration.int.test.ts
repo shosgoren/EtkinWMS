@@ -34,9 +34,9 @@ const top = async (adm: pg.Client): Promise<string | undefined> =>
 
 it("0055 boşken geri alınır ve yeniden uygulanır; dolu veride down reddedilir, veri ve defter korunur", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0069", "0068", "0067", "0066", "0065", "0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055"]);
+    expect((await migrateDown({ url, to: "0054", wmsEnv: "staging" })).reverted).toEqual(["0070", "0069", "0068", "0067", "0066", "0065", "0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055"]);
     expect((await adm.query("SELECT to_regclass('public.integrations') AS i, to_regclass('public.integration_outbox') AS o, to_regclass('public.external_refs') AS r")).rows[0]).toEqual({ i: null, o: null, r: "external_refs" });
-    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069", "0070"]);
 
     const w = await seedWorld(adm, newRegistry(), "M991");
     await adm.query("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED')", [w.tenantId]);
@@ -90,7 +90,7 @@ it("0062 retains lifecycle data on rollback and preserves the real-card delete g
 
 it("T-1135 0066: ikisi de açık bağlantıda STOCK kapanır + audit; ilk açılış anı doldurulur; kart kuyruğu ya da ilk açılış geçmişi varken down reddedilir", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0065", wmsEnv: "staging" })).reverted).toEqual(["0069", "0068", "0067", "0066"]);
+    expect((await migrateDown({ url, to: "0065", wmsEnv: "staging" })).reverted).toEqual(["0070", "0069", "0068", "0067", "0066"]);
     const w = await seedWorld(adm, newRegistry(), "M1135");
     const other = await seedWorld(adm, newRegistry(), "M1135B");
     const mk = async (tenant: string, stock: boolean) => {
@@ -100,7 +100,7 @@ it("T-1135 0066: ikisi de açık bağlantıda STOCK kapanır + audit; ilk açıl
     };
     const both = await mk(w.tenantId, true);
     const onlyShip = await mk(other.tenantId, false);
-    expect((await migrateUp({ url })).applied).toEqual(["0066", "0067", "0068", "0069"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0066", "0067", "0068", "0069", "0070"]);
     const flows = async (id: string) => (await adm.query("SELECT flow, enabled, first_enabled_at IS NOT NULL AS first FROM public.integration_flows WHERE integration_id = $1 ORDER BY flow", [id])).rows;
     expect(await flows(both)).toEqual([{ flow: "SHIPMENTS", enabled: true, first: true }, { flow: "STOCK", enabled: false, first: true }]);
     expect(await flows(onlyShip)).toEqual([{ flow: "SHIPMENTS", enabled: true, first: true }, { flow: "STOCK", enabled: false, first: false }]);
@@ -116,7 +116,7 @@ it("T-1135 0066: ikisi de açık bağlantıda STOCK kapanır + audit; ilk açıl
     expect(await top(adm)).toBe("0066");
     expect((await migrateDown({ url, to: "0065", wmsEnv: "ci" })).reverted).toEqual(["0066"]);
     expect((await adm.query("SELECT has_table_privilege('wms_app', 'public.integration_runs', 'DELETE') AS d")).rows[0]).toEqual({ d: false });
-    expect((await migrateUp({ url })).applied).toEqual(["0066", "0067", "0068", "0069"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0066", "0067", "0068", "0069", "0070"]);
     expect((await adm.query("SELECT has_table_privilege('wms_app', 'public.integration_runs', 'DELETE') AS d")).rows[0]).toEqual({ d: true });
   });
 }, 120_000);
@@ -137,7 +137,7 @@ it("T-1140 0069: işaret tablosu ENABLE + FORCE RLS, wms_app DELETE yok; satır 
     await adm.query("ALTER TABLE public.integration_card_states FORCE ROW LEVEL SECURITY");
     expect((await migrateDown({ url, to: "0068", wmsEnv: "staging" })).reverted).toEqual(["0069"]);
     expect((await adm.query("SELECT to_regclass('public.integration_card_states') AS t")).rows[0]).toEqual({ t: null });
-    expect((await migrateUp({ url })).applied).toEqual(["0069"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0069", "0070"]);
     expect(await flags()).toEqual({ r: true, f: true });
   });
 }, 120_000);
