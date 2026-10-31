@@ -1,6 +1,6 @@
 // T-421: özel yetki grubu — saf doğrulama ve yetki birleşimi (rol ∪ grup; kapalı liste dışı yetki yok sayılır).
 import { describe, expect, it } from "vitest";
-import { cleanGroup, needsMfa } from "./groups.ts";
+import { cleanGroup, needsMfa, nextGrants } from "./groups.ts";
 import { GRANTABLE, MFA_GRANTS, hasPermission } from "./permissions.ts";
 
 describe("cleanGroup", () => {
@@ -37,5 +37,27 @@ describe("hasPermission + grants", () => {
     expect(needsMfa(["stock.post", "document.create"])).toBe(false);
     for (const g of MFA_GRANTS) expect(needsMfa([g])).toBe(true);
     expect(MFA_GRANTS.every((g) => GRANTABLE.includes(g))).toBe(true);
+  });
+});
+
+describe("nextGrants (T-1142 aç/kapa)", () => {
+  it("ekle / çıkar kanonik sırada; tekrar aynı sonucu verir (idempotent)", () => {
+    expect(nextGrants([], ["items.edit", "stock.post"], [])).toEqual(["stock.post", "items.edit"]);
+    expect(nextGrants(["stock.post", "items.edit"], ["items.edit"], [])).toEqual(["stock.post", "items.edit"]);
+    expect(nextGrants(["stock.post", "items.edit"], [], ["items.edit"])).toEqual(["stock.post"]);
+    expect(nextGrants(["stock.post"], [], ["items.edit"])).toEqual(["stock.post"]);
+    expect(nextGrants([], [...GRANTABLE], [])).toEqual([...GRANTABLE]);
+  });
+  it("kapalı liste dışı, boş, çakışan ya da dizi olmayan girdi reddedilir", () => {
+    expect(() => nextGrants([], ["settings.manage"], [])).toThrow();
+    expect(() => nextGrants([], ["users.manage"], [])).toThrow();
+    expect(() => nextGrants([], [], [])).toThrow();
+    expect(() => nextGrants([], ["items.edit"], ["items.edit"])).toThrow();
+    expect(() => nextGrants([], "items.edit", [])).toThrow();
+    expect(() => nextGrants([], [...GRANTABLE, "stock.post"], [])).toThrow();
+  });
+  it("cari anahtarları MFA ister; ürün anahtarları istemez", () => {
+    expect(needsMfa(["parties.edit"])).toBe(true);
+    expect(needsMfa(["items.edit", "warehouses.create", "locations.archive"])).toBe(false);
   });
 });

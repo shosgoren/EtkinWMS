@@ -1641,6 +1641,30 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
     min-width: 0;
   }
 }
+/* ---- T-1142 aç/kapa kümesi (kalip/ayar.tsx `KalipAnahtarKumesi`; yetki ekranı): başlık ayar satırı (`.stay`) + altında satırlar; masaüstünde
+   iki sütun (en dar 280 px), telefonda tek sütun. Toplu düğme kalıp ikincil düğmesi (`.kdug`, 48 px). Renk yalnız belirteç. ---- */
+.stykm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.stykm-g {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+.stykm-all {
+  flex: none;
+}
+.stykm-all[data-kilitli="true"] {
+  opacity: .62;
+}
+@media (max-width: 699.98px) {
+  .stykm-g { grid-template-columns: minmax(0, 1fr); }
+  .stykm-all { width: 100%; }
+}
 /* T-1134 (ALTIN-KURAL 12): ayar satırındaki satır içi işlem ("Şimdi çalıştır", üretilmiş `.dzen .frun` 40 px) kalıp küçük düğmesiyle
    aynı dokunma hedefi (44 px). */
 .dzf .dzen .frun {

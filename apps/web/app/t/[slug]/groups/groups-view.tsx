@@ -5,7 +5,7 @@
 // yazma yalnız hesap sahibine açıktır (domain denetler; `canEdit` yalnız gösterim). Ekip yönetimi grupla verilmez (kart kilitli).
 // Bilinçli farklar (DESIGN-PARITY): Etkin (sesle) T-424; özel grup için "Arşivle" düğmesi (kaynakta yok; grup silinmez); kişi aramasında yazı kutusu.
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
@@ -25,6 +25,8 @@ export interface GroupsViewProps {
   readonly slug: string;
   readonly dark: boolean;
   readonly data: Overview;
+  /** T-1142: açılışta yeni grup adımı (`?new=1`). */
+  readonly openNew?: boolean;
 }
 
 // Kaynaktaki listeler (SCREENS, POWERS, COLORS) — sıra ve renkler aynen.
@@ -72,6 +74,8 @@ interface Draft {
   readonly screens: readonly string[];
   readonly powers: readonly string[];
   readonly picked: readonly string[];
+  /** T-1142: grubun kayıtlı yetkileri (güç kartı dışındaki anahtarlar korunur). */
+  readonly grants: readonly string[];
 }
 
 function Ico({ d, size, style }: { d: readonly string[] | string; size: number; style?: CSSProperties }) {
@@ -89,8 +93,17 @@ const hexKey = (c: string): string => c.replace("#", "").toUpperCase();
 const initial = (name: string, locale: string): string => buyukHarf(name.trim()[0] ?? "?", locale);
 const powersOf = (grants: readonly string[]): string[] => POWERS.filter(([, , , g]) => g.length > 0 && g.every((x) => grants.includes(x))).map((p) => p[0]);
 const grantsOf = (powers: readonly string[]): string[] => POWERS.filter((p) => powers.includes(p[0])).flatMap((p) => [...p[3]]);
+/**
+ * T-1142: kaydederken yalnız bu ekranda DEĞİŞEN güç kartlarının yetkileri eklenir/çıkarılır; Yetkiler ekranında tek tek açılan anahtarlar
+ * (kart yetkileri, tek başına belge onayı…) korunur. Eski davranış güç kartlarından yeniden kurup bu anahtarları siliyordu.
+ */
+const mergedGrants = (original: readonly string[], before: readonly string[], after: readonly string[]): string[] => {
+  const added = grantsOf(after.filter((p) => !before.includes(p)));
+  const removed = grantsOf(before.filter((p) => !after.includes(p)));
+  return [...new Set([...original.filter((g) => !removed.includes(g)), ...added])];
+};
 
-export function GroupsView({ slug, dark, data }: GroupsViewProps) {
+export function GroupsView({ slug, dark, data, openNew = false }: GroupsViewProps) {
   const t = useTranslations("gruplar");
   const tr = useTranslations("kural");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
@@ -108,6 +121,14 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   const flash = (msg: string): void => kilitliDokunus(msg);
 
   const active = useMemo(() => groups.filter((g) => !g.archived), [groups]);
+  // T-1142: Yetkiler › GRUP EKLE — açılışta bir kez yeni grup adımı (yetkisizde kilit balonu).
+  const yeniAcildi = useRef(false);
+  useEffect(() => {
+    if (!openNew || yeniAcildi.current) return;
+    yeniAcildi.current = true;
+    startNew();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- yalnız ilk açılışta
+  }, [openNew]);
   const roleOf = (m: (typeof members)[number]): string => m.roles[0] ?? "READ_ONLY";
   const groupName = (id: string | null): string | null => (id === null ? null : (groups.find((g) => g.id === id)?.name ?? null));
   const nowLabel = (m: (typeof members)[number]): string =>
@@ -144,11 +165,11 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
     let d: Draft;
     if (tile.template !== null) {
       const tpl = TEMPLATES.find((x) => x[0] === tile.template);
-      d = { id: null, version: null, template: tile.template, name: tile.name, color: `#${tile.color}`, screens: [...(tpl?.[2] ?? [])], powers: [...(tpl?.[3] ?? [])], picked: tile.who.map((m) => m.membershipId) };
+      d = { id: null, version: null, template: tile.template, name: tile.name, color: `#${tile.color}`, screens: [...(tpl?.[2] ?? [])], powers: [...(tpl?.[3] ?? [])], picked: tile.who.map((m) => m.membershipId), grants: [] };
     } else {
       const g = groups.find((x) => x.id === tile.id);
       if (g === undefined) return;
-      d = { id: g.id, version: g.version, template: null, name: g.name, color: g.color, screens: [...g.screens], powers: powersOf(g.grants), picked: members.filter((m) => m.groupId === g.id).map((m) => m.membershipId) };
+      d = { id: g.id, version: g.version, template: null, name: g.name, color: g.color, screens: [...g.screens], powers: powersOf(g.grants), picked: members.filter((m) => m.groupId === g.id).map((m) => m.membershipId), grants: [...g.grants] };
     }
     setDraft(d);
     setSaved(d);
@@ -162,7 +183,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
       return;
     }
     feedback.ok();
-    const d: Draft = { id: null, version: null, template: null, name: t("newName"), color: withHash(COLORS[0]), screens: [], powers: [], picked: [] };
+    const d: Draft = { id: null, version: null, template: null, name: t("newName"), color: withHash(COLORS[0]), screens: [], powers: [], picked: [], grants: [] };
     setDraft(d);
     setSaved({ ...d, name: "" });
     setIssue(null);
@@ -189,6 +210,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
   /** Kaydet: grup (ad, renk, ekran, yetki) → kişiler (eklenen: bu grup; çıkarılan: grupsuz). Kısmi sonuçta kalan kişiler bildirilir. */
   async function save(): Promise<boolean> {
     if (draft === null || draft.template !== null || !data.canEdit) return false;
+    const finalGrants = mergedGrants(draft.grants, saved?.powers ?? [], draft.powers);
     setBusy(true);
     setIssue(null);
     try {
@@ -198,7 +220,7 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
         name: draft.name,
         color: draft.color,
         screens: [...draft.screens],
-        grants: grantsOf(draft.powers),
+        grants: finalGrants,
       });
       if (!r.ok) {
         feedback.error();
@@ -222,9 +244,9 @@ export function GroupsView({ slug, dark, data }: GroupsViewProps) {
         else skipped.push(members.find((x) => x.membershipId === memberId)?.name ?? "?");
       }
       setMembers((list) => list.map((m) => ({ ...m, groupId: next.get(m.membershipId) ?? null })));
-      const g = { id, name: draft.name.trim(), color: draft.color, screens: [...draft.screens], grants: grantsOf(draft.powers), archived: false, version: r.data.version, memberCount: 0 };
+      const g = { id, name: draft.name.trim(), color: draft.color, screens: [...draft.screens], grants: finalGrants, archived: false, version: r.data.version, memberCount: 0 };
       setGroups((list) => (list.some((x) => x.id === id) ? list.map((x) => (x.id === id ? g : x)) : [...list, g]));
-      const done = { ...draft, id, version: r.data.version, name: g.name, picked: draft.picked.filter((x) => next.get(x) === id) };
+      const done = { ...draft, id, version: r.data.version, name: g.name, grants: finalGrants, picked: draft.picked.filter((x) => next.get(x) === id) };
       setDraft(done);
       setSaved(done);
       if (skipped.length > 0) setIssue(t("skipped", { names: skipped.join(", ") }));

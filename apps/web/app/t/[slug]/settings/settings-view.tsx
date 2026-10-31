@@ -61,6 +61,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
   const tr = useTranslations("kural");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const tb = useTranslations("baglantilar");
+  const ty = useTranslations("yetkiler");
   const router = useRouter();
   const sekme = ayarSekmesi(useSearchParams().get("sekme"));
   const base = `/t/${encodeURIComponent(slug)}`;
@@ -333,6 +334,8 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
             <KalipGrup title={t("people")} d={LICON.people} color="6C4BD8" testId="settings-people">
               <KalipBaglanti title={t("members")} value={t("membersV")} d={LICON.people} color="2F5DA8" href={`${base}/members`} testId="settings-members" />
               <KalipBaglanti title={t("groups")} value={t("groupsV")} d={LICON.shield} color="6C4BD8" href={`${base}/groups`} testId="settings-groups" />
+              {/* T-1142: bütün yetkiler aç/kapa ile (grup + kişi görünümü). */}
+              <KalipBaglanti title={ty("settingsLink")} value={ty("settingsLinkV")} d={LICON.key} color="6C4BD8" href={`${base}/yetkiler`} testId="settings-yetkiler" />
             </KalipGrup>
           }
           right={
