@@ -25,24 +25,29 @@ export function GuideTrigger({ className, iconOnly = false }: { className: strin
   );
 }
 
+/** Rehber penceresini açar: `inert` önce kalkar ki showModal odağı pencerenin içine taşıyabilsin. */
+function ac(el: HTMLDialogElement | null): void {
+  if (el === null || el.open) return;
+  el.inert = false;
+  el.showModal();
+}
+
 export function FirstUseGuide() {
   const t = useTranslations("guide");
   const dialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState(0);
-  // T-1134 (ALTIN-KURAL 11): kapalı pencerenin içi klavye sırasına girmez (`inert`); açık/kapalı durumu pencerenin kendi olaylarından.
-  const [open, setOpen] = useState(false);
   const pathname = usePathname();
   // T-983 / T-995: giriş, iki adımlı doğrulama, parola sıfırlama ve aktivasyon sade kalır. T-1012: eski rehber kendiliğinden YALNIZ karşılama
   // sayfasında (`/`, tetikleyicisinin bulunduğu eski başlık) açılır; çalışma alanı kendi kurulum turunu (T-1006), seçici/kurulum/saha ekranları
   // kendi kabuğunu kullanır. Destek > Rehberi aç olayı (aşağıda) her yerde elle açar.
   useEffect(() => {
     if (pathname !== "/") return;
-    try { if (localStorage.getItem(KEY) !== "seen" && !dialog.current?.open) dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
+    try { if (localStorage.getItem(KEY) !== "seen") ac(dialog.current); } catch { /* Rehber düğmeden açılabilir. */ }
   }, [pathname]);
   useEffect(() => {
     const onOpen = () => {
       setStep(0);
-      if (!dialog.current?.open) dialog.current?.showModal();
+      ac(dialog.current);
     };
     window.addEventListener(OPEN_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
@@ -51,21 +56,20 @@ export function FirstUseGuide() {
     try { localStorage.setItem(KEY, "seen"); } catch { /* Depolama gerekli değildir. */ }
     dialog.current?.close();
   }
+  // T-1134 (ALTIN-KURAL 11): kapalı pencerenin içi klavye sırasına girmez (`inert`). Açarken `inert` showModal'dan ÖNCE kalkar (yoksa odak
+  // pencereye geçmez); her kapanışta (Esc, düğme, kod) geri konur. Elle (React özniteliği değil): yeniden çizim açık pencereyi kapatmasın.
   useEffect(() => {
     const el = dialog.current;
     if (el === null) return undefined;
-    const sync = (): void => setOpen(el.open);
-    sync();
-    el.addEventListener("close", sync);
-    const mo = new MutationObserver(sync);
-    mo.observe(el, { attributes: true, attributeFilter: ["open"] });
-    return () => {
-      el.removeEventListener("close", sync);
-      mo.disconnect();
+    if (!el.open) el.inert = true;
+    const kapandi = (): void => {
+      el.inert = true;
     };
+    el.addEventListener("close", kapandi);
+    return () => el.removeEventListener("close", kapandi);
   }, []);
   return (
-    <dialog ref={dialog} className="guide-dialog" aria-labelledby="guide-title" onCancel={close} inert={!open}>
+    <dialog ref={dialog} className="guide-dialog" aria-labelledby="guide-title" onCancel={close}>
       <div className="guide-heading"><span>{t("progress", { current: step + 1, total: 3 })}</span><button type="button" onClick={close} aria-label={t("skip")}>×</button></div>
       <p className="guide-kicker">ETKİN WMS</p><h2 id="guide-title">{t("title")}</h2><p className="guide-intro">{t("intro")}</p>
       <div className={`guide-step guide-step-${step}`}><span className="guide-step-number" aria-hidden="true">{step + 1}</span><h3>{t(`steps.${step}.title`)}</h3><p>{t(`steps.${step}.text`)}</p></div>
