@@ -5,9 +5,9 @@
 // - İrsaliye (SHIPMENTS): `integration_outbox` (tenant + bağlantı + akış + belge TEKİL). Dış çağrıdan önce satır SENDING yazılır; sonuç
 //   kesin değilse (ağ kopması, 5xx, okunamayan 2xx) satır CHECK olur ve KÖR YENİDEN GÖNDERİLMEZ (Paraşüt'te tekrar anahtarı yok → çift irsaliye
 //   riski). Kesin 4xx red: FAILED; eşleme eksikse (cari/ürün bağlı değil) geri çekilmeli yeniden deneme, 10 denemede FAILED.
-//   Olay kaydı fark sorgusudur: akışın İLK açılışından (`first_enabled_at`, kapat/aç sıfırlamaz — T-1135) ve son stok toplamı gönderiminden
-//   sonra İŞLENMİŞ (durum geçmişinde POSTED anı), kuyrukta olmayan sevk belgesi. Kapalıyken işlenen belge yeniden açılınca gider; oluşturulup
-//   açılıştan sonra işlenen belge de gider. Kesim noktası/imleç yoktur (I-16), kayıp yoktur.
+//   Olay kaydı fark sorgusudur: akışın İLK açılışından (`first_enabled_at`, kapat/aç sıfırlamaz — T-1135) sonra İŞLENMİŞ (durum geçmişinde
+//   POSTED anı), stok toplamına girmemiş (çift başına son başarılı işaretin görüntüsünde görünmeyen), kuyrukta olmayan sevk belgesi.
+//   Kapalıyken işlenen belge yeniden açılınca gider; oluşturulup açılıştan sonra işlenen belge de gider. Kesim noktası/imleç yoktur (I-16), kayıp yoktur.
 // - Stok (STOCK): mutlak "yeni toplam" gönderilir (tekrar aynı sonuç); yalnız son gönderimden farklı çift. T-1135: STOCK ve SHIPMENTS aynı
 //   bağlantıda birlikte açılamaz (stok sahibi Etkin, kullanıcı kararı 30 Ekim; DB tetikleyicisi + domain), STOCK Devir tamamlanmadan çalışmaz;
 //   kesin 4xx reddi işarete FAILED yazılır ve aynı toplam yeniden denenmez (401/429 koşuyu durdurur, sonra yeniden denenir).
@@ -314,10 +314,11 @@ async function markStock(rc: RunCtx, rows: readonly StockLevelRow[], failure: st
     for (const r of rows) {
       if (failure === null) {
         // Mutlak toplam gönderildi: işaret güncellenir (tekrar gönderim aynı sonucu verir; çift sayım olmaz); önceki red kaydı temizlenir.
+        // `as_of_snapshot`: toplamın okunduğu görüntü — bu görüntüde işlenmiş sevk belgesi Paraşüt toplamına girmiştir (irsaliye keşfi).
         await tx.execute(sql`
-          INSERT INTO public.integration_stock_marks (tenant_id, integration_id, item_id, warehouse_id, quantity)
-          VALUES (${rc.tenantId}::uuid, ${rc.integrationId}::uuid, ${r.item_id}::uuid, ${r.warehouse_id}::uuid, ${r.quantity}::numeric)
-          ON CONFLICT ON CONSTRAINT integration_stock_marks_pkey DO UPDATE SET quantity = EXCLUDED.quantity, failed_quantity = NULL, last_error_code = NULL`);
+          INSERT INTO public.integration_stock_marks (tenant_id, integration_id, item_id, warehouse_id, quantity, as_of_snapshot)
+          VALUES (${rc.tenantId}::uuid, ${rc.integrationId}::uuid, ${r.item_id}::uuid, ${r.warehouse_id}::uuid, ${r.quantity}::numeric, ${r.snap}::pg_snapshot)
+          ON CONFLICT ON CONSTRAINT integration_stock_marks_pkey DO UPDATE SET quantity = EXCLUDED.quantity, as_of_snapshot = EXCLUDED.as_of_snapshot, failed_quantity = NULL, last_error_code = NULL`);
       } else {
         // Kesin red: aynı toplam yeniden denenmez (30 sn'de bir sonsuz tekrar yok); toplam değişince yeniden gider.
         await tx.execute(sql`
@@ -434,7 +435,7 @@ async function claimShipment(rc: RunCtx): Promise<ShipmentPayload | "none" | "de
 
 /**
  * T-1135: irsaliye keşfinin akış alt sınırı = İLK açılış anı (kapat/aç sıfırlamaz). 0066 öncesi satırda `first_enabled_at` boşsa `enabled_at`.
- * Hiç açılmamışsa null (keşif yok). Son stok toplamı gönderimi ayrıca SQL'de alt sınıra katılır (GREATEST).
+ * Hiç açılmamışsa null (keşif yok). Stok toplamına girmiş belge ayrıca SQL'de çift başına görüntü görünürlüğüyle ayıklanır.
  */
 export function shipmentDiscoveryFloor(flow: { readonly first_enabled_at: Date | string | null; readonly enabled_at: Date | string | null }): Date | null {
   const v = flow.first_enabled_at ?? flow.enabled_at;
@@ -453,20 +454,24 @@ async function pushShipments(rc: RunCtx): Promise<void> {
        WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = 'SHIPMENTS' AND status = 'SENDING'
          AND updated_at < now() - make_interval(mins => ${STALE_SENDING_MINUTES})`);
     // Fark sorgusu (T-1135): akışın ilk açılışından sonra İŞLENMİŞ sevk belgeleri — işlenme anı durum geçmişinden (tetikleyici yazar, sunucu
-    // saati). Oluşturma anı ölçüt değildir. Son stok toplamı gönderiminden önce işlenen belge zaten o toplamın içindedir: alt sınır ikisinin
-    // büyüğüdür (stok modundan irsaliyeye dönüşte çift düşüm yok). Kesim noktası değildir (I-16): her koşu bütün farkı yeniden tarar.
+    // saati). Oluşturma anı ölçüt değildir. Stok toplamına girmiş belge irsaliye olarak gönderilmez (çift düşüm yok): belge yalnız BÜTÜN
+    // (ürün, belge deposu) çiftlerinin son BAŞARILI stok işaretinin okuma görüntüsünde işlenmişse (POSTED xid görünür) atlanır. Görünürlük
+    // zamana değil işlem kimliğine dayanır (I-16); reddedilen ya da sınır yüzünden gönderilmeyen çiftin belgesi gider. Her koşu bütün farkı tarar.
     await tx.execute(sql`
-      WITH since AS (
-        SELECT GREATEST(${enabledAt.toISOString()}::timestamptz,
-                        COALESCE((SELECT max(m.sent_at) FROM public.integration_stock_marks m
-                                   WHERE m.tenant_id = ${rc.tenantId}::uuid AND m.integration_id = ${rc.integrationId}::uuid), '-infinity'::timestamptz)) AS t
-      )
       INSERT INTO public.integration_outbox (tenant_id, id, integration_id, flow, entity_type, entity_id)
       SELECT d.tenant_id, gen_random_uuid(), ${rc.integrationId}::uuid, 'SHIPMENTS', 'DOCUMENT', d.id
-        FROM public.documents d, since
+        FROM public.documents d
+        JOIN public.document_status_history h ON h.tenant_id = d.tenant_id AND h.document_id = d.id AND h.to_status = 'POSTED'
        WHERE d.tenant_id = ${rc.tenantId}::uuid AND d.kind = 'STOCK_OUT' AND d.source_kind = 'SALES_ORDER' AND d.status = 'POSTED'
-         AND EXISTS (SELECT 1 FROM public.document_status_history h
-                      WHERE h.tenant_id = d.tenant_id AND h.document_id = d.id AND h.to_status = 'POSTED' AND h.occurred_at >= since.t)
+         AND h.occurred_at >= ${enabledAt.toISOString()}::timestamptz
+         AND NOT (
+           EXISTS (SELECT 1 FROM public.document_lines l0 WHERE l0.tenant_id = d.tenant_id AND l0.document_id = d.id)
+           AND NOT EXISTS (
+             SELECT 1 FROM public.document_lines l
+               LEFT JOIN public.integration_stock_marks m
+                      ON m.tenant_id = l.tenant_id AND m.integration_id = ${rc.integrationId}::uuid AND m.item_id = l.item_id AND m.warehouse_id = d.warehouse_id
+              WHERE l.tenant_id = d.tenant_id AND l.document_id = d.id
+                AND (m.as_of_snapshot IS NULL OR NOT pg_visible_in_snapshot(h.created_xid, m.as_of_snapshot))))
          AND NOT EXISTS (SELECT 1 FROM public.integration_outbox o WHERE o.tenant_id = d.tenant_id AND o.integration_id = ${rc.integrationId}::uuid AND o.flow = 'SHIPMENTS' AND o.entity_id = d.id)
        ORDER BY d.created_at, d.id
        LIMIT 500

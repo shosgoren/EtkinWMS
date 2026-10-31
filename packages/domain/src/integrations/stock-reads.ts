@@ -19,6 +19,8 @@ export type StockLevelRow = {
   quantity: string;
   product_ext: string;
   warehouse_ext: string;
+  /** T-1135: toplamın okunduğu anlık görüntü (`pg_current_snapshot()::text`, aynı ifade); başarılı gönderimde işarete yazılır. */
+  snap: string;
 };
 
 /**
@@ -50,7 +52,7 @@ export async function selectChangedStockLevels(tx: AccessTx, tenantId: string, i
            WHERE m.tenant_id = ${tenantId}::uuid AND m.integration_id = ${integrationId}::uuid
              AND NOT EXISTS (SELECT 1 FROM totals t WHERE t.item_id = m.item_id AND t.warehouse_id = m.warehouse_id)
         )
-        SELECT p.item_id, p.warehouse_id, p.q::text AS quantity, it.ext AS product_ext, wh.ext AS warehouse_ext
+        SELECT p.item_id, p.warehouse_id, p.q::text AS quantity, it.ext AS product_ext, wh.ext AS warehouse_ext, pg_current_snapshot()::text AS snap
           FROM pairs p
           JOIN it ON it.item_id = p.item_id
           JOIN wh ON wh.warehouse_id = p.warehouse_id

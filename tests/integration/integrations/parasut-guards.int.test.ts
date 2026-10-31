@@ -79,7 +79,7 @@ async function asApp(tenant: string, sql: string, params: unknown[] = []): Promi
   }
 }
 /** STOCK_IN belgesi (doğrudan, migration rolüyle) + POSTED; `reason` açılış stoku ise Devir tamam sayılır. */
-async function postedDoc(w: TenantWorld, kind: "STOCK_IN" | "STOCK_OUT", opts: { reason?: string; orderId?: string; number: string; post?: boolean }): Promise<string> {
+async function postedDoc(w: TenantWorld, kind: "STOCK_IN" | "STOCK_OUT", opts: { reason?: string; orderId?: string; number: string; post?: boolean; itemId?: string }): Promise<string> {
   const doc = randomUUID();
   await adm.query(
     `INSERT INTO public.documents (tenant_id, id, kind, type_version_id, warehouse_id, business_date, created_by, source_kind, source_id, reason)
@@ -87,13 +87,33 @@ async function postedDoc(w: TenantWorld, kind: "STOCK_IN" | "STOCK_OUT", opts: {
     [w.tenantId, doc, w.warehouseId, w.ownerUserId, opts.orderId ?? null, kind, opts.orderId === undefined ? null : "SALES_ORDER", opts.reason ?? null],
   );
   if (kind === "STOCK_OUT") {
-    await adm.query("INSERT INTO public.document_lines (tenant_id, document_id, line_no, item_id, unit_id, quantity, conversion_factor, base_quantity, source_location_id) VALUES ($1, $2, 1, $3, $4, 3, 1, 3, $5)", [w.tenantId, doc, w.itemNoneId, w.unitId, w.rootLocationId]);
+    await adm.query("INSERT INTO public.document_lines (tenant_id, document_id, line_no, item_id, unit_id, quantity, conversion_factor, base_quantity, source_location_id) VALUES ($1, $2, 1, $3, $4, 3, 1, 3, $5)", [w.tenantId, doc, opts.itemId ?? w.itemNoneId, w.unitId, w.rootLocationId]);
   }
   if (opts.post !== false) await post(w, doc, opts.number);
   return doc;
 }
 const post = (w: TenantWorld, doc: string, number: string) => adm.query("UPDATE public.documents SET status = 'POSTED', number = $3 WHERE tenant_id = $1 AND id = $2", [w.tenantId, doc, number]);
 const devir = (w: TenantWorld) => postedDoc(w, "STOCK_IN", { reason: "import.opening_stock", number: `DVR-${randomBytes(3).toString("hex")}` });
+/** Takipsiz ek ürün + kök rafta AVAILABLE bakiye (defter = bakiye; migration rolü, tenant bağlamı). */
+async function stockedItem(w: TenantWorld, code: string, qty: number): Promise<string> {
+  const item = randomUUID();
+  const dim = randomUUID();
+  await adm.query("BEGIN");
+  try {
+    await adm.query("SELECT set_config('app.current_tenant_id', $1, true)", [w.tenantId]);
+    await adm.query("INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, tracking_mode) VALUES ($1, $2, $3, $3, $4, 'NONE')", [w.tenantId, item, code, w.unitId]);
+    const line = randomUUID();
+    await adm.query("INSERT INTO public.document_lines (tenant_id, id, document_id, line_no, item_id, unit_id, quantity, conversion_factor, base_quantity, target_location_id) VALUES ($1, $2, $3, 91, $4, $5, 1, 1, 1, $6)", [w.tenantId, line, w.documentId, item, w.unitId, w.rootLocationId]);
+    await adm.query("INSERT INTO public.stock_dimensions (tenant_id, id, item_id, location_id) VALUES ($1, $2, $3, $4)", [w.tenantId, dim, item, w.rootLocationId]);
+    await adm.query("INSERT INTO public.stock_ledger (tenant_id, id, document_id, document_line_id, stock_dimension_id, quantity, reason, business_date, actor_user_id) VALUES ($1, $2, $3, $4, $5, $6, 'T1135 fikstur', '2026-10-30', $7)", [w.tenantId, randomUUID(), w.documentId, line, dim, qty, w.ownerUserId]);
+    await adm.query("INSERT INTO public.stock_balances (tenant_id, stock_dimension_id, quantity) VALUES ($1, $2, $3)", [w.tenantId, dim, qty]);
+    await adm.query("COMMIT");
+  } catch (e) {
+    await adm.query("ROLLBACK");
+    throw e;
+  }
+  return item;
+}
 const linkRefs = async (w: TenantWorld, rows: [string, string, string][]) => {
   for (const [type, entity, ext] of rows) await adm.query("INSERT INTO public.external_refs (tenant_id, system, entity_type, entity_id, external_id) VALUES ($1, 'PARASUT', $2, $3, $4)", [w.tenantId, type, entity, ext]);
 };
@@ -119,6 +139,58 @@ describe("(A) stok toplamı ⟂ irsaliye", () => {
     expect((await q("SELECT change_summary->>'flow' AS f, change_summary->>'enabled' AS e FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.flow_changed' ORDER BY occurred_at", [W.tenantId]))).toEqual([
       { f: "SHIPMENTS", e: "true" }, { f: "SHIPMENTS", e: "false" }, { f: "STOCK", e: "true" },
     ]);
+  });
+
+  it("DB: iki doğrudan SQL transaction'ı eşzamanlı açarsa ikincisi birincinin commit'ini bekler ve reddedilir (bağlantı satırı kilidi)", async () => {
+    const W = await seedWorld(adm, reg, "G1135A3");
+    const id = await connect(W);
+    await devir(W);
+    const c1 = new pg.Client({ connectionString: env.databaseUrl });
+    const c2 = new pg.Client({ connectionString: env.databaseUrl });
+    await c1.connect();
+    await c2.connect();
+    try {
+      for (const c of [c1, c2]) {
+        await c.query("BEGIN");
+        await c.query("SELECT set_config('app.current_tenant_id', $1, true)", [W.tenantId]);
+      }
+      await c1.query("UPDATE public.integration_flows SET enabled = true WHERE tenant_id = $1 AND integration_id = $2 AND flow = 'STOCK'", [W.tenantId, id]);
+      // c2 bağlantı satırı kilidinde bekler (c1 commit etmeden sonuçlanmaz).
+      let settled = false;
+      const second = c2.query("UPDATE public.integration_flows SET enabled = true WHERE tenant_id = $1 AND integration_id = $2 AND flow = 'SHIPMENTS'", [W.tenantId, id]).then(
+        () => ({ ok: true as const }),
+        (e: unknown) => ({ ok: false as const, code: (e as { code?: string }).code, message: (e as Error).message }),
+      ).finally(() => { settled = true; });
+      await new Promise((r) => setTimeout(r, 300));
+      expect(settled).toBe(false);
+      await c1.query("COMMIT");
+      const r = await second;
+      expect(r).toMatchObject({ ok: false, code: "23514" });
+      expect((r as { message?: string }).message).toMatch(/INTEGRATION_FLOW_EXCLUSIVE/);
+      await c2.query("ROLLBACK");
+      // REPEATABLE READ'de de iki açma birlikte commit edilemez (kilit + karşı satır FOR UPDATE → 40001 ya da 23514).
+      await adm.query("UPDATE public.integration_flows SET enabled = false WHERE tenant_id = $1 AND integration_id = $2", [W.tenantId, id]);
+      for (const c of [c1, c2]) {
+        await c.query("BEGIN ISOLATION LEVEL REPEATABLE READ");
+        await c.query("SELECT set_config('app.current_tenant_id', $1, true)", [W.tenantId]);
+        await c.query("SELECT count(*) FROM public.integration_flows WHERE tenant_id = $1", [W.tenantId]); // görüntü sabitlenir
+      }
+      await c1.query("UPDATE public.integration_flows SET enabled = true WHERE tenant_id = $1 AND integration_id = $2 AND flow = 'STOCK'", [W.tenantId, id]);
+      const rr = c2.query("UPDATE public.integration_flows SET enabled = true WHERE tenant_id = $1 AND integration_id = $2 AND flow = 'SHIPMENTS'", [W.tenantId, id]).then(
+        () => ({ ok: true as const }),
+        (e: unknown) => ({ ok: false as const, code: (e as { code?: string }).code }),
+      );
+      await new Promise((r2) => setTimeout(r2, 300));
+      await c1.query("COMMIT");
+      const r2 = await rr;
+      expect(r2.ok).toBe(false);
+      expect(["40001", "23514"]).toContain((r2 as { code?: string }).code);
+      await c2.query("ROLLBACK");
+      expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_flows WHERE integration_id = $1 AND flow IN ('STOCK','SHIPMENTS') AND enabled", [id]))[0]?.n).toBe(1);
+    } finally {
+      await c1.end();
+      await c2.end();
+    }
   });
 
   it("eşzamanlı iki açma: yalnız biri açılır", async () => {
@@ -228,6 +300,37 @@ describe("(D) irsaliye keşfi: işlenme anı + ilk açılış (kapat/aç kaçır
   });
 });
 
+describe("(D) stok toplamına girmiş belge çift başına ayıklanır (Codex P1)", () => {
+  it("A ürününün toplamı reddedildi, B gönderildi: irsaliyeye dönünce A'nın sevk belgesi gider, B'ninki gitmez; sınır yüzünden gönderilmeyen çiftin belgesi de gider", async () => {
+    const W = await seedWorld(adm, reg, "G1135P1");
+    const id = await connect(W);
+    const itemB = await stockedItem(W, "P1-B", 20);
+    const party = (await q<{ id: string }>("INSERT INTO public.parties (tenant_id, code, code_key, name, created_by) VALUES ($1, 'C-P1', 'C-P1', 'Sevk carisi', $2) RETURNING id", [W.tenantId, W.ownerMembershipId]))[0]?.id as string;
+    await linkRefs(W, [["PARTY", party, "777"], ["ITEM", W.itemNoneId, "555"], ["ITEM", itemB, "556"], ["WAREHOUSE", W.warehouseId, "801"]]);
+    const order = async (n: string) => (await q<{ id: string }>("INSERT INTO public.sales_orders (tenant_id, number, customer_ref, created_by) VALUES ($1, $2, 'c-p1', $3) RETURNING id", [W.tenantId, `SIP-P1-${n}`, W.ownerUserId]))[0]?.id as string;
+    const shipped = () => fake.shipments.map((s2) => (s2.body as { data: { attributes: { procurement_number: string } } }).data.attributes.procurement_number).sort();
+    // İrsaliye ilk kez açılıp kapanır (ilk açılış anı), sonra stok modu.
+    await flow(W, "SHIPMENTS", true);
+    await flow(W, "SHIPMENTS", false);
+    await devir(W);
+    expect(await flow(W, "STOCK", true)).toMatchObject({ ok: true });
+    await postedDoc(W, "STOCK_OUT", { orderId: await order("A"), number: "SVK-A", itemId: W.itemNoneId });
+    await postedDoc(W, "STOCK_OUT", { orderId: await order("B"), number: "SVK-B", itemId: itemB });
+    fake.stockRejectProducts.add("555");
+    const r = await sync(W, id);
+    expect(r.kind === "ran" && r.flows[0]).toMatchObject({ flow: "STOCK", counts: { updated: 1, failed: 1 } });
+    const marks = await q<{ ext: string; ok: boolean; failed: boolean }>(
+      "SELECT r.external_id AS ext, m.as_of_snapshot IS NOT NULL AS ok, m.failed_quantity IS NOT NULL AS failed FROM public.integration_stock_marks m JOIN public.external_refs r ON r.tenant_id = m.tenant_id AND r.system = 'PARASUT' AND r.entity_type = 'ITEM' AND r.entity_id = m.item_id WHERE m.integration_id = $1 ORDER BY r.external_id", [id]);
+    expect(marks).toEqual([{ ext: "555", ok: false, failed: true }, { ext: "556", ok: true, failed: false }]);
+    // B'nin başarılı gönderiminden SONRA işlenen B belgesi toplama girmedi → gider.
+    await postedDoc(W, "STOCK_OUT", { orderId: await order("B2"), number: "SVK-B2", itemId: itemB });
+    expect(await flow(W, "STOCK", false)).toMatchObject({ ok: true });
+    expect(await flow(W, "SHIPMENTS", true)).toMatchObject({ ok: true });
+    await sync(W, id);
+    expect(shipped()).toEqual(["SVK-A", "SVK-B2"]);
+  });
+});
+
 describe("(E) stok gönderiminde kesin red", () => {
   it("422: işaret FAILED, aynı toplam 30 sn'de bir yeniden gönderilmez; 401 işareti bozmaz ve koşu FAILED", async () => {
     const W = await seedWorld(adm, reg, "G1135E");
@@ -285,6 +388,8 @@ describe("(G) koşu günlüğü bakımı", () => {
     await adm.query("INSERT INTO public.integration_runs (tenant_id, id, integration_id, flow, trigger, status, started_at) VALUES ($1, $2, $5, 'WAREHOUSES', 'SCHEDULE', 'RUNNING', now() - interval '50 minutes'), ($1, $3, $5, 'WAREHOUSES', 'SCHEDULE', 'SUCCESS', now() - interval '8 days'), ($1, $4, $5, 'WAREHOUSES', 'SCHEDULE', 'SUCCESS', now() - interval '2 days')", [W.tenantId, stale, old, recent, id]);
     // wms_app yakın geçmişi silemez; başka kiracı hiç göremez.
     expect(await asApp(W.tenantId, "DELETE FROM public.integration_runs WHERE tenant_id = $1 AND id = $2", [W.tenantId, recent])).toMatchObject({ ok: false, code: "55000" });
+    // Başka bir (eski ya da elle başlatılmış) çalışan koşunun izi de silinemez.
+    expect(await asApp(W.tenantId, "DELETE FROM public.integration_runs WHERE tenant_id = $1 AND id = $2", [W.tenantId, stale])).toMatchObject({ ok: false, code: "55000" });
     const B = await seedWorld(adm, reg, "G1135GB");
     expect(await asApp(B.tenantId, "DELETE FROM public.integration_runs WHERE id = $1", [old])).toMatchObject({ ok: true, rowCount: 0 });
     const before = (await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_runs WHERE integration_id = $1", [id]))[0]?.n as number;
@@ -321,6 +426,26 @@ describe("(H) cari eşleme", () => {
     expect(await q("SELECT entity_id FROM public.external_refs WHERE tenant_id = $1 AND system = 'PARASUT' AND entity_type = 'PARTY' AND external_id = '741'", [W.tenantId])).toEqual([{ entity_id: acme }]);
     expect(await q("SELECT 1 FROM public.external_refs WHERE tenant_id = $1 AND system = 'PARASUT' AND external_id = '742'", [W.tenantId])).toEqual([]);
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.parties WHERE tenant_id = $1 AND lower(name) LIKE '%acme%'", [W.tenantId]))[0]?.n).toBe(2);
+  });
+
+  it("şehir yoksa yalnız ada göre birleştirilmez: e-posta/telefon eşitse bağlanır, değilse yeni kayıt", async () => {
+    const W = await seedWorld(adm, reg, "G1135HC");
+    const id = await connect(W);
+    const mk = async (code: string, name: string, email: string | null, phone: string | null) =>
+      (await q<{ id: string }>("INSERT INTO public.parties (tenant_id, code, code_key, name, email, phone, created_by) VALUES ($1, $2, $2, $3, $4, $5, $6) RETURNING id", [W.tenantId, code, name, email, phone, W.ownerMembershipId]))[0]?.id as string;
+    const byMail = await mk("C-M", "Ad Soyad", "ali@example.test", null);
+    const byPhone = await mk("C-P", "Başka Ad", null, "0 (532) 111-22-33");
+    await mk("C-N", "Yalnız Ad", null, null);
+    fake.contacts.push({ id: "761", attributes: { name: "ad soyad", account_type: "customer", email: "ALI@example.test" } });
+    fake.contacts.push({ id: "762", attributes: { name: "Başka Ad", account_type: "customer", phone: "05321112233" } });
+    fake.contacts.push({ id: "763", attributes: { name: "Yalnız Ad", account_type: "customer" } });
+    await flow(W, "CONTACTS", true, "PULL");
+    const r = await sync(W, id);
+    expect(r.kind === "ran" && r.flows[0]).toMatchObject({ counts: { linked: 2, created: 1, skipped: 0, failed: 0 } });
+    const ref = async (ext: string) => (await q<{ e: string }>("SELECT entity_id AS e FROM public.external_refs WHERE tenant_id = $1 AND system = 'PARASUT' AND entity_type = 'PARTY' AND external_id = $2", [W.tenantId, ext]))[0]?.e;
+    expect(await ref("761")).toBe(byMail);
+    expect(await ref("762")).toBe(byPhone);
+    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.parties WHERE tenant_id = $1 AND name = 'Yalnız Ad'", [W.tenantId]))[0]?.n).toBe(2);
   });
 
   it("BOTH: dış karşılığı başka karta bağlı cari bir kez FAILED olur; sonraki koşular yeniden aramaz ve 'atlandı' saymaz; irsaliye bandı etkilenmez", async () => {

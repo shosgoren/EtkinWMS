@@ -88,7 +88,7 @@ it("0062 retains lifecycle data on rollback and preserves the real-card delete g
  });
 },120_000);
 
-it("T-1135 0066: ikisi de açık bağlantıda STOCK kapanır + audit; ilk açılış anı doldurulur; kart kuyruğu varken down reddedilir, boşken 0065'e iner", async () => {
+it("T-1135 0066: ikisi de açık bağlantıda STOCK kapanır + audit; ilk açılış anı doldurulur; kart kuyruğu ya da ilk açılış geçmişi varken down reddedilir", async () => {
   await scratch(async (url, adm) => {
     expect((await migrateDown({ url, to: "0065", wmsEnv: "staging" })).reverted).toEqual(["0066"]);
     const w = await seedWorld(adm, newRegistry(), "M1135");
@@ -110,7 +110,10 @@ it("T-1135 0066: ikisi de açık bağlantıda STOCK kapanır + audit; ilk açıl
     await expect(migrateDown({ url, to: "0065", wmsEnv: "staging" })).rejects.toThrow(/0066_integration_guards down/);
     expect(await top(adm)).toBe("0066");
     await adm.query("DELETE FROM public.integration_outbox WHERE flow = 'CONTACTS'");
-    expect((await migrateDown({ url, to: "0065", wmsEnv: "staging" })).reverted).toEqual(["0066"]);
+    // Kapatılan STOCK'un ilk açılış anı enabled_at'ten farklı (kapat/aç geçmişi): veri kaybettiren down yine reddedilir; yalnız izinli ortamda iner.
+    await expect(migrateDown({ url, to: "0065", wmsEnv: "staging" })).rejects.toThrow(/ilk açılış geçmişi \(1\)/);
+    expect(await top(adm)).toBe("0066");
+    expect((await migrateDown({ url, to: "0065", wmsEnv: "ci" })).reverted).toEqual(["0066"]);
     expect((await adm.query("SELECT has_table_privilege('wms_app', 'public.integration_runs', 'DELETE') AS d")).rows[0]).toEqual({ d: false });
     expect((await migrateUp({ url })).applied).toEqual(["0066"]);
     expect((await adm.query("SELECT has_table_privilege('wms_app', 'public.integration_runs', 'DELETE') AS d")).rows[0]).toEqual({ d: true });

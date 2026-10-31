@@ -1,19 +1,25 @@
--- 0066_integration_guards geri alma (G-08). 0055/0056 nesneleri birebir geri yüklenir. Veri kaybettiren adımlar (kart akışı kuyruk satırı,
--- yalnız başarısız işaret satırı, ilk açılış anı) dolu veride `allow_destructive_down` olmadan REDDEDİLİR; STOCK'u kapatan veri düzeltmesi
--- ve audit satırı geri alınmaz (audit append-only; akış tercihi kullanıcı kararıdır).
+-- 0066_integration_guards geri alma (G-08). 0055/0056 nesneleri birebir geri yüklenir. Veri kaybettiren her adım dolu veride
+-- `allow_destructive_down` olmadan REDDEDİLİR: kart akışı kuyruk satırı, herhangi bir stok red kaydı (`failed_quantity`), `enabled_at`'ten
+-- farklı ilk açılış anı (kapat/aç geçmişi; up yeniden doldurursa `enabled_at`'e döner) ve dolu `as_of_snapshot`. STOCK'u kapatan veri
+-- düzeltmesi ve audit satırı geri alınmaz (audit append-only; akış tercihi kullanıcı kararıdır).
 DO $guard$
 DECLARE
   allow boolean := coalesce(pg_catalog.current_setting('wms_meta.allow_destructive_down', true), '') = 'on';
   n_cards integer;
   n_failed integer;
+  n_first integer;
+  n_snap integer;
 BEGIN
   -- Tablo sahibi FORCE RLS altında: sayım ve silme bütün tenant'larda olsun diye NO FORCE (sonda FORCE geri).
   ALTER TABLE public.integration_outbox NO FORCE ROW LEVEL SECURITY;
   ALTER TABLE public.integration_stock_marks NO FORCE ROW LEVEL SECURITY;
+  ALTER TABLE public.integration_flows NO FORCE ROW LEVEL SECURITY;
   SELECT count(*) INTO n_cards FROM public.integration_outbox WHERE flow <> 'SHIPMENTS';
-  SELECT count(*) INTO n_failed FROM public.integration_stock_marks WHERE quantity IS NULL;
-  IF (n_cards > 0 OR n_failed > 0) AND NOT allow THEN
-    RAISE EXCEPTION '0066_integration_guards down: kart kuyruğu (%) ya da yalnız başarısız stok işareti (%) satırı var; veri kaybettiren geri alma bu ortamda kapalı', n_cards, n_failed;
+  SELECT count(*) INTO n_failed FROM public.integration_stock_marks WHERE failed_quantity IS NOT NULL OR quantity IS NULL;
+  SELECT count(*) INTO n_snap FROM public.integration_stock_marks WHERE as_of_snapshot IS NOT NULL;
+  SELECT count(*) INTO n_first FROM public.integration_flows WHERE first_enabled_at IS NOT NULL AND first_enabled_at IS DISTINCT FROM enabled_at;
+  IF (n_cards > 0 OR n_failed > 0 OR n_first > 0 OR n_snap > 0) AND NOT allow THEN
+    RAISE EXCEPTION '0066_integration_guards down: kart kuyruğu (%), stok red kaydı (%), ilk açılış geçmişi (%) ya da gönderim görüntüsü (%) var; veri kaybettiren geri alma bu ortamda kapalı', n_cards, n_failed, n_first, n_snap;
   END IF;
   DELETE FROM public.integration_outbox WHERE flow <> 'SHIPMENTS';
   DELETE FROM public.integration_stock_marks WHERE quantity IS NULL;
@@ -32,8 +38,8 @@ REVOKE DELETE ON public.integration_runs FROM wms_app;
 DROP TRIGGER integration_runs_delete_guard ON public.integration_runs;
 DROP FUNCTION public.integration_runs_delete_guard();
 
-REVOKE INSERT (failed_quantity, last_error_code) ON public.integration_stock_marks FROM wms_app;
-REVOKE UPDATE (failed_quantity, last_error_code) ON public.integration_stock_marks FROM wms_app;
+REVOKE INSERT (failed_quantity, last_error_code, as_of_snapshot) ON public.integration_stock_marks FROM wms_app;
+REVOKE UPDATE (failed_quantity, last_error_code, as_of_snapshot) ON public.integration_stock_marks FROM wms_app;
 DROP TRIGGER integration_stock_marks_on_insert ON public.integration_stock_marks;
 DROP FUNCTION public.integration_stock_marks_on_insert();
 ALTER TABLE public.integration_stock_marks
@@ -41,6 +47,7 @@ ALTER TABLE public.integration_stock_marks
   DROP CONSTRAINT integration_stock_marks_failed_chk,
   DROP CONSTRAINT integration_stock_marks_sent_chk,
   DROP CONSTRAINT integration_stock_marks_state_chk,
+  DROP COLUMN as_of_snapshot,
   DROP COLUMN last_error_code,
   DROP COLUMN failed_at,
   DROP COLUMN failed_quantity;
@@ -91,3 +98,4 @@ $fn$;
 ALTER TABLE public.integration_flows DROP COLUMN first_enabled_at;
 ALTER TABLE public.integration_outbox FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.integration_stock_marks FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.integration_flows FORCE ROW LEVEL SECURITY;

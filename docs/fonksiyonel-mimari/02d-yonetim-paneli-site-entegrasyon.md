@@ -501,7 +501,7 @@ sequenceDiagram
     participant P as Paraşüt API
     U->>WMS: Sevk belgesini kesinleştirir (POSTED)
     WMS->>DB: documents POSTED (durum geçmişi: işlenme anı) + stok defteri
-    K->>DB: Akışın İLK açılışından (kapat/aç sıfırlamaz) ve son stok toplamı gönderiminden sonra İŞLENMİŞ, kuyrukta olmayan sevk belgelerini bul
+    K->>DB: Akışın İLK açılışından (kapat/aç sıfırlamaz) sonra İŞLENMİŞ, stok toplamına girmemiş (çift başına işaret görüntüsü), kuyrukta olmayan sevk belgelerini bul
     K->>DB: integration_outbox satırı PENDING (belge başına tek)
     K->>DB: Satırı SENDING yap (dış çağrıdan önce kalıcı iz)
     K->>P: İrsaliye oluştur

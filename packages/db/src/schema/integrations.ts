@@ -5,9 +5,11 @@
 //   (tetikleyici version+1, synced_at). `sync_cursors` UPDATE yalnız imleç sütunları; tetikleyici geriye gitmeyi reddeder.
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır.
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, customType, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
+/** T-1135 (0066): PostgreSQL `pg_snapshot` (metin olarak okunur/yazılır). */
+const pgSnapshot = customType<{ data: string }>({ dataType: () => "pg_snapshot" });
 
 export const EXTERNAL_REF_ENTITY_TYPES = ["ITEM", "UNIT", "WAREHOUSE", "LOCATION", "PARTY", "DOCUMENT", "LEDGER_ENTRY"] as const;
 export type ExternalRefEntityType = (typeof EXTERNAL_REF_ENTITY_TYPES)[number];
@@ -181,6 +183,7 @@ export const integrationStockMarks = pgTable(
     failedQuantity: numeric("failed_quantity"),
     failedAt: timestamptz("failed_at"),
     lastErrorCode: text("last_error_code"),
+    asOfSnapshot: pgSnapshot("as_of_snapshot"),
   },
   (t) => [primaryKey({ name: "integration_stock_marks_pkey", columns: [t.tenantId, t.integrationId, t.itemId, t.warehouseId] })],
 );

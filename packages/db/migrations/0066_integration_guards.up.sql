@@ -2,8 +2,9 @@
 -- ERP akış kilitleri ve gönderim kuyruğu/işaret düzeltmeleri. 0055 tablolarına yalnız EK sütun/kısıt/tetikleyici; veri silinmez.
 --
 -- * (A) STOCK ⟂ SHIPMENTS: aynı bağlantıda ikisi birden açık olamaz (tetikleyici, 23514 `INTEGRATION_FLOW_EXCLUSIVE`; yalnız kapalı → açık
---   geçişinde denetlenir, karşı satır FOR KEY SHARE ile kilitlenir: eşzamanlı iki açma biri bekler, kilidi alan karşı satırın son hâlini görür;
---   kilitlenme olursa biri 40P01 ile düşer, sessiz çift açılış olmaz). Bugün ikisi de açık olan bağlantıda STOCK kapatılır ve audit yazılır
+--   geçişinde denetlenir. Seri hâle getirme: önce üst `integrations` satırı FOR UPDATE (bağlantı başına tek kilit; domain de aynı satırı
+--   kilitler), sonra karşı akış satırı koşulsuz FOR UPDATE ile okunur: READ COMMITTED'da en son commit edilmiş hâli görülür, REPEATABLE READ'de
+--   eşzamanlı değişmişse 40001 ile düşer — iki eşzamanlı açma birlikte commit edilemez). Bugün ikisi de açık olan bağlantıda STOCK kapatılır ve audit yazılır
 --   (`integration.flow_changed`, via `migration_0066`; I-12). Varsayılan değişmedi: bütün akışlar kapalı doğar; irsaliye tercih edilen akıştır.
 -- * (B) Stok gönderimi kapısı: `integration_stock_push_ready(tenant, bağlantı)` TEK tanımdır (domain ve tetikleyici aynı işlevi çağırır):
 --   Devir tamam = Paraşüt açılış stoku alındı (`integrations.opening_stock_taken_at`) YA DA işlenmiş açılış stoku belgesi var
@@ -14,8 +15,11 @@
 --   kapalı irsaliye akışında kuyruğun ilk satırı.
 -- * (E) `integration_stock_marks`: kesin 4xx reddi için `failed_quantity` + `failed_at` + `last_error_code`; aynı toplam yeniden
 --   denenmez (toplam değişince gider). `quantity`/`sent_at` artık NULL olabilir (yalnız başarısız olmuş çift). Stok kaynağı DEĞİLDİR.
--- * (G) `integration_runs`: wms_app DELETE (yalnız bu tablo; RLS altında) + silme bekçisi: yalnız RUNNING (değişiklik getirmeyen zamanlı
---   koşunun kendi satırı) ya da 7 günden eski biten satır silinir; yakın geçmiş silinemez. 40 dk'yı aşan RUNNING satırını koşu FAILED/TIMEOUT yapar.
+--   `as_of_snapshot` (pg_snapshot): son BAŞARILI gönderimin toplamının okunduğu anlık görüntü. Stok modundan irsaliyeye dönüşte bir sevk
+--   belgesi yalnız BÜTÜN (ürün, depo) çiftlerinin bu görüntüsünde işlenmişse (`pg_visible_in_snapshot(POSTED xid)`) Paraşüt toplamına girmiş
+--   sayılır ve irsaliye olarak gönderilmez; reddedilen/sınır yüzünden gönderilmeyen çiftin belgesi gider (I-16: zaman değil görünürlük).
+-- * (G) `integration_runs`: wms_app DELETE (yalnız bu tablo; RLS altında) + silme bekçisi: yalnız taze, sayaçsız, hatasız zamanlı RUNNING
+--   satırı (değişiklik getirmeyen koşunun kendi satırı) ya da 7 günden eski biten satır silinir; yakın geçmiş silinemez. 40 dk'yı aşan RUNNING satırını koşu FAILED/TIMEOUT yapar.
 -- * (H) `integration_outbox` kart akışlarına açılır (PRODUCTS/ITEM, CONTACTS/PARTY, WAREHOUSES/WAREHOUSE): Etkin -> ERP kart gönderiminde
 --   bulunan dış kayıt başka bir Etkin kaydına bağlıysa satır bir kez FAILED `EXTERNAL_ALREADY_LINKED` yazılır ve her koşuda yeniden denenmez.
 
@@ -124,6 +128,7 @@ CREATE FUNCTION public.integration_flows_exclusive_guard() RETURNS trigger
 AS $fn$
 DECLARE
   other text;
+  other_on boolean;
 BEGIN
   -- Yalnız kapalı → açık geçişi denetlenir: açık akışın yön/koşu alanı güncellemeleri ve kapatma serbesttir.
   IF NOT NEW.enabled OR (TG_OP = 'UPDATE' AND OLD.enabled) THEN
@@ -133,11 +138,12 @@ BEGIN
     RETURN NEW;
   END IF;
   other := CASE WHEN NEW.flow = 'STOCK' THEN 'SHIPMENTS' ELSE 'STOCK' END;
-  -- Karşı satır kilitlenir: eşzamanlı açma bekler ve kilidi alınca karşı satırın son hâlini görür (READ COMMITTED yeniden okuma).
-  PERFORM 1 FROM public.integration_flows f
-    WHERE f.tenant_id = NEW.tenant_id AND f.integration_id = NEW.integration_id AND f.flow = other AND f.enabled
-    FOR KEY SHARE;
-  IF FOUND THEN
+  -- Bağlantı başına tek kilit: eşzamanlı ikinci açma burada bekler. Sonra karşı satır koşulsuz FOR UPDATE ile (yeni ifade, son commit) okunur.
+  PERFORM 1 FROM public.integrations i WHERE i.tenant_id = NEW.tenant_id AND i.id = NEW.integration_id FOR UPDATE;
+  SELECT f.enabled INTO other_on FROM public.integration_flows f
+    WHERE f.tenant_id = NEW.tenant_id AND f.integration_id = NEW.integration_id AND f.flow = other
+    FOR UPDATE;
+  IF other_on IS TRUE THEN
     RAISE EXCEPTION 'INTEGRATION_FLOW_EXCLUSIVE: stok toplamı ve irsaliye gönderimi aynı bağlantıda birlikte açılamaz (stok sahibi Etkin)'
       USING ERRCODE = '23514';
   END IF;
@@ -159,6 +165,7 @@ ALTER TABLE public.integration_stock_marks
   ADD COLUMN failed_quantity numeric(20, 6),
   ADD COLUMN failed_at timestamptz,
   ADD COLUMN last_error_code text,
+  ADD COLUMN as_of_snapshot pg_snapshot,
   ADD CONSTRAINT integration_stock_marks_state_chk CHECK (quantity IS NOT NULL OR failed_quantity IS NOT NULL),
   ADD CONSTRAINT integration_stock_marks_sent_chk CHECK ((quantity IS NULL) = (sent_at IS NULL)),
   ADD CONSTRAINT integration_stock_marks_failed_chk CHECK ((failed_quantity IS NULL) = (failed_at IS NULL) AND (failed_quantity IS NULL) = (last_error_code IS NULL)),
@@ -205,8 +212,8 @@ REVOKE ALL ON FUNCTION public.integration_stock_marks_on_insert() FROM PUBLIC;
 CREATE TRIGGER integration_stock_marks_on_insert BEFORE INSERT ON public.integration_stock_marks
   FOR EACH ROW EXECUTE FUNCTION public.integration_stock_marks_on_insert();
 
-GRANT INSERT (failed_quantity, last_error_code) ON public.integration_stock_marks TO wms_app;
-GRANT UPDATE (failed_quantity, last_error_code) ON public.integration_stock_marks TO wms_app;
+GRANT INSERT (failed_quantity, last_error_code, as_of_snapshot) ON public.integration_stock_marks TO wms_app;
+GRANT UPDATE (failed_quantity, last_error_code, as_of_snapshot) ON public.integration_stock_marks TO wms_app;
 
 -- (G) Koşu günlüğü bakımı -------------------------------------------------------------------------------------------------------------
 CREATE FUNCTION public.integration_runs_delete_guard() RETURNS trigger
@@ -214,7 +221,16 @@ CREATE FUNCTION public.integration_runs_delete_guard() RETURNS trigger
   SET search_path = pg_catalog, pg_temp
 AS $fn$
 BEGIN
-  IF OLD.status <> 'RUNNING' AND OLD.started_at >= pg_catalog.now() - interval '7 days' THEN
+  -- RUNNING satırı yalnız değişiklik getirmeyen zamanlı koşunun kendi taze satırıysa silinir (sayaç 0, hata yok, 40 dk'dan genç);
+  -- biten satır yalnız 7 günden eskiyse. Diğer her silme 55000.
+  IF OLD.status = 'RUNNING' THEN
+    IF OLD.trigger = 'SCHEDULE' AND OLD.error_code IS NULL AND OLD.started_at >= pg_catalog.now() - interval '40 minutes'
+       AND OLD.created_count = 0 AND OLD.updated_count = 0 AND OLD.linked_count = 0 AND OLD.skipped_count = 0 AND OLD.failed_count = 0 THEN
+      RETURN OLD;
+    END IF;
+    RAISE EXCEPTION 'integration_runs: çalışan koşu kaydı silinemez' USING ERRCODE = '55000';
+  END IF;
+  IF OLD.started_at >= pg_catalog.now() - interval '7 days' THEN
     RAISE EXCEPTION 'integration_runs: yakın geçmişteki biten çalışma kaydı silinemez' USING ERRCODE = '55000';
   END IF;
   RETURN OLD;
