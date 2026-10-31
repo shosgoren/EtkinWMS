@@ -66,7 +66,7 @@ describe("eylem listesi", () => {
         "integration.connected", "integration.checked", "integration.disconnected", "integration.flow_changed", "integration.run_requested", "integration.synced",
         "setup_journey.updated", "setup_journey.labels_printed", "integration.opening_stock_setting", "integration.opening_stock_taken",
         "integration.outbox_retried", "integration.outbox_resolved",
-        "integration.webhook_registered", "integration.webhook_received",
+        "integration.webhook_registered", "integration.webhook_received", "integration.conflict_resolved", "warehouse.restored",
       ].sort(),
     );
   });

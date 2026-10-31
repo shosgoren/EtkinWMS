@@ -181,9 +181,11 @@ export interface ProviderContact {
   /** T-1117 (`0064_party_details`): Paraşüt `short_name` / `district` (isteğe bağlı). */
   readonly shortName?: string | null;
   readonly district?: string | null;
+  /** T-1140: Paraşüt'te arşivli cari eşlemesiz ise yeni kayıt açılmaz (bağlıysa yaşam döngüsü işler, card-lifecycle.ts). */
+  readonly archived?: boolean;
 }
 
-interface PartyFields {
+export interface PartyFields {
   readonly name: string;
   readonly kind: "CUSTOMER" | "SUPPLIER";
   readonly taxNo: string | null;
@@ -196,8 +198,8 @@ interface PartyFields {
   readonly district: string | null;
 }
 
-/** 0050 / 0064 CHECK'lerine uymayan alan atılır (kayıt düşmez). */
-function partyFields(p: ProviderContact): PartyFields | null {
+/** 0050 / 0064 CHECK'lerine uymayan alan atılır (kayıt düşmez). T-1140: iki yönlü eşitlemenin kanonik cari alanları da bu işlevden gelir. */
+export function partyFields(p: ProviderContact): PartyFields | null {
   const name = clean(p.name, 200);
   if (name === null) return null;
   const tax = clean(p.taxNumber, 20)?.replace(/[\s-]/g, "") ?? null;
@@ -252,6 +254,7 @@ export async function applyContact(tx: AccessTx, c: ApplyContext, p: ProviderCon
   // TEK eşlemesiz cariye bağlanır (ikisi de PG tarafında normalleştirilir: boşluk sadeleşir, küçük harf). Şehir yoksa yalnız ada güvenilmez:
   // ek olarak e-posta (küçük harf) ya da telefon (yalnız rakam, ≥ 7) eşit olmalı; o da yoksa eşleme yapılmaz, yeni kayıt açılır.
   // Birden çok aday = ATLANIR (yanlış birleşme riski). Vergi numarası olan cari yalnız vergi numarasıyla eşlenir.
+  if (p.archived === true) return "SKIPPED";
   if (f.taxNo !== null) {
     const byTax = await tx.execute<{ id: string }>(
       sql`SELECT p.id FROM public.parties p
@@ -298,6 +301,9 @@ export interface ProviderWarehouse {
   readonly name: string | null;
   readonly archived: boolean;
 }
+
+/** T-1140: kanonik ad (iki yönlü eşitleme özeti apply ile aynı temizliği kullanır). */
+export const cleanName = (v: unknown): string | null => clean(v, 200);
 
 /** Ad → depo kodu: ASCII büyük harf, harf/rakam dışı tire, en çok 20 karakter. */
 export function warehouseCodeFor(name: string): string {

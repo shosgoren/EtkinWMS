@@ -16,6 +16,11 @@
 //   aşan RUNNING satırı FAILED/TIMEOUT olur; 7 günden eski biten satırlar koşu başında budanır (en çok 500).
 // Stok değişmez kuralı (I-04): ERP'den hiçbir yol stok tablosuna yazmaz; stok okuması yalnız stock-reads.ts SELECT'idir.
 //
+// T-1140 (kullanıcı kararı 31 Ekim): kart akışlarında GERÇEK iki yönlü eşitleme (card-sync.ts). Taramada bağlı kart karar kuralıyla işlenir
+// (PULL: her zaman Paraşüt; BOTH: yalnız değişen taraf, çakışmada son değişen — bilinmeyen zamanda Paraşüt); gönderen yönlerde (PUSH, BOTH)
+// "düzeltme turu" bağlı kartlardaki yerel değişikliği PUT ile gönderir (koşu başına `pushPerRun`, aynı hız sınırı; kesin 4xx kart bekletilir).
+// Cari ve depo için Paraşüt'te silinme/arşiv ürünle aynı kurallarla işlenir (card-lifecycle.ts; yalnız OAuth bağlantısında).
+//
 // Yetki: koşu başında bağlantıyı kuran kişinin üyeliği ACTIVE + TENANT_ADMIN (settings.manage tek sahibi) olmalı; değilse bağlantı ERROR
 // `CONNECTOR_REVOKED` olur ve hiçbir akış çalışmaz (yetkisini kaybeden yöneticinin bağlantısı arka planda yazmaya devam etmez).
 import { randomUUID } from "node:crypto";
@@ -24,6 +29,8 @@ import { appendAudit, currentTenantId } from "@wms/db";
 import type { Sealer } from "@wms/shared/seal";
 import type { AccessTx } from "../identity/access.ts";
 import { applyContact, applyProduct, applyWarehouse, link, refExternal, type ApplyContext, type ApplyOutcome } from "./apply.ts";
+import { auditConflict, cardHash, editedCardCandidates, localCanon, partyCanon, pushesLocal, remoteCanon, remoteUpdatedAt, saveCardMarker, syncRemoteCard, touchCardSig, decideCardSync, type CardDecision, type CardEntity, type LocalCard } from "./card-sync.ts";
+import { cardLifecycleCandidates, observeCard, type LifecycleCard } from "./card-lifecycle.ts";
 import { FLOWS, PROVIDER_INFO, flowSupported, pulls, pushes, type Direction, type Flow } from "./catalog.ts";
 import { ProviderError, type JsonApiResource, type ParasutClient } from "./parasut.ts";
 import { assertLifecycleBinding, lifecycleBinding, lifecycleCandidates, observeProduct, type LifecycleBinding } from "./product-lifecycle.ts";
@@ -92,8 +99,8 @@ type FlowRow = {
 /** T-1135: akış bu koşuda çalışamaz (kalıcı durum; sağlayıcıya istek gitmez). */
 export class FlowBlockedError extends Error {
   override name = "FlowBlockedError";
-  readonly code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE";
-  constructor(code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE") {
+  readonly code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE" | "FLOW_CHANGED";
+  constructor(code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE" | "FLOW_CHANGED") {
     super(`flow blocked (${code})`);
     this.code = code;
   }
@@ -109,6 +116,8 @@ interface RunCtx {
   readonly flow: FlowRow;
   readonly c: Counters;
   readonly productBinding: LifecycleBinding|null;
+  /** T-1140: cari / depo yaşam döngüsü bağlamları (akış alıyorsa ve bağlantı OAuth ise). */
+  readonly cardBindings: Readonly<Record<"CONTACTS" | "WAREHOUSES", LifecycleBinding | null>>;
 }
 
 const errCode = (e: unknown): string => {
@@ -157,14 +166,20 @@ export const toContact = (r: JsonApiResource) => ({
   // T-1117 (`0064_party_details`): Paraşüt kısa ad ve ilçe.
   shortName: s(r.attributes.short_name),
   district: s(r.attributes.district),
+  archived: r.attributes.archived === true,
 });
-const toWarehouse = (r: JsonApiResource) => ({ externalId: r.id, name: s(r.attributes.name), archived: r.attributes.archived === true });
+export const toWarehouse = (r: JsonApiResource) => ({ externalId: r.id, name: s(r.attributes.name), archived: r.attributes.archived === true });
 
 // --- ERP -> Etkin -------------------------------------------------------------------------------------------------------------------
+const KIND_ENTITY: Readonly<Record<"products" | "contacts" | "warehouses", CardEntity>> = Object.freeze({ products: "ITEM", contacts: "PARTY", warehouses: "WAREHOUSE" });
+
 async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): Promise<void> {
   const started=(rc.deps.now??Date.now)();
-  const binding=kind==='products'?rc.productBinding:null;
+  const entity = KIND_ENTITY[kind];
+  const binding=kind==='products'?rc.productBinding:kind==='contacts'?rc.cardBindings.CONTACTS:rc.cardBindings.WAREHOUSES;
   if(binding&&(binding.companyId!==rc.companyId||binding.userId!==rc.ac.actorUserId||binding.membershipId!==rc.ac.membershipId))throw new IntegrationStateError("NOT_CONNECTED");
+  const observe = (tx: AccessTx, b: LifecycleBinding, externalId: string, o: { exists: true; archived: unknown } | { exists: false }) =>
+    kind === "products" ? observeProduct(tx, b, rc.ac, externalId, o, (rc.deps.now ?? Date.now)()) : observeCard(tx, b, rc.ac, entity as LifecycleCard, externalId, o, (rc.deps.now ?? Date.now)());
   let page = rc.flow.cursor === null ? 1 : Math.max(1, Number(rc.flow.cursor));
   for (let n = 0; n < SYNC_LIMITS.pagesPerRun; n++) {
     const p = await rc.deps.client.list(rc.token, rc.companyId, kind, page);
@@ -174,20 +189,28 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
       const barcodeSetting = kind === "products" ? await tx.execute<{ enabled: boolean }>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id=${rc.tenantId}::uuid AND id=${rc.integrationId}::uuid`) : [];
       const ac = { ...rc.ac, pullProductBarcodes: barcodeSetting[0]?.enabled === true };
       for (const item of p.items) {
-        if(kind==="products"&&item.type!=="products"){rc.c.failed++;continue;}
+        if (item.type !== kind) { rc.c.failed++; continue; }
         try {
-          // Satır başına kayıt noktası: bir kartın reddi sayfanın kalanını düşürmez.
+          // Satır başına kayıt noktası: bir kartın reddi sayfanın kalanını düşürmez. T-1140: bağlı kartta karar kuralı (card-sync.ts);
+          // yerel taraf kazanırsa (DEFERRED) burada uygulanmaz, düzeltme turunda gönderilir.
+          // İlk bağlamada apply iki kez çalışabilir (bağla, sonra bağlı kart kuralı): uyarı kart başına en çok bir kez sayılır.
           let warned = 0;
-          const o = await tx.transaction((sp) =>
-            kind === "products" ? applyProduct(sp, ac, toProduct(item, p.included, () => void (warned += 1))) : kind === "contacts" ? applyContact(sp, rc.ac, toContact(item)) : applyWarehouse(sp, rc.ac, toWarehouse(item)),
+          const r = await tx.transaction((sp) =>
+            syncRemoteCard(sp, rc.ac, {
+              entity,
+              direction: rc.flow.direction,
+              flow: rc.flow.flow,
+              resource: item,
+              apply: (t) => (kind === "products" ? applyProduct(t, ac, toProduct(item, p.included, ((n) => () => void (warned = Math.max(warned, (n += 1))))(0))) : kind === "contacts" ? applyContact(t, rc.ac, toContact(item)) : applyWarehouse(t, rc.ac, toWarehouse(item))),
+            }),
           );
-          count(rc.c, o);
+          if (r.outcome !== "DEFERRED") count(rc.c, r.outcome);
           rc.c.warnings += warned;
         } catch {
           rc.c.failed++;
         }
         // Safety state is independent of optional name/unit/barcode parsing failures.
-        if(binding)await tx.transaction(sp=>observeProduct(sp,binding,rc.ac,item.id,{exists:true,archived:item.attributes.archived},(rc.deps.now??Date.now)()));
+        if(binding)await tx.transaction(sp=>observe(sp,binding,item.id,{exists:true,archived:item.attributes.archived}));
       }
       await tx.execute(sql`UPDATE public.integration_flows SET cursor = ${next === null ? null : String(next)} WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = ${rc.flow.flow}`);
     });
@@ -195,15 +218,15 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
     page = next;
   }
   if(binding){
-    // A successful product page alone cannot prove deletion. Verify current company access, then exact identities twice over time.
+    // A successful page alone cannot prove deletion. Verify current company access, then exact identities twice over time.
     const companies=await rc.deps.client.companies(rc.token);
     if(!companies.some(c=>c.id===binding.companyId))throw new IntegrationStateError("NOT_CONNECTED");
-    const candidates=await rc.deps.inTenant(tx=>lifecycleCandidates(tx,binding,started));
+    const candidates=await rc.deps.inTenant(tx=>kind==="products"?lifecycleCandidates(tx,binding,started):cardLifecycleCandidates(tx,binding,rc.ac,entity as LifecycleCard,started));
     for(const candidate of candidates){
-      const product=await rc.deps.client.product(rc.token,rc.companyId,candidate.external_id);
+      const found=kind==="products"?await rc.deps.client.product(rc.token,rc.companyId,candidate.external_id):kind==="contacts"?await rc.deps.client.contact(rc.token,rc.companyId,candidate.external_id):await rc.deps.client.warehouse(rc.token,rc.companyId,candidate.external_id);
       await rc.deps.inTenant(async tx=>{
         if(!(await assertLifecycleBinding(tx,binding)))throw new IntegrationStateError("NOT_CONNECTED");
-        if(await observeProduct(tx,binding,rc.ac,candidate.external_id,product===null?{exists:false}:{exists:true,archived:product.attributes.archived},(rc.deps.now??Date.now)()))rc.c.updated++;
+        if(await observe(tx,binding,candidate.external_id,found===null?{exists:false}:{exists:true,archived:found.attributes.archived}))rc.c.updated++;
       });
     }
   }
@@ -257,6 +280,7 @@ async function pushCards(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pr
     try {
       let ext: string;
       let found: JsonApiResource | null;
+      await rc.deps.inTenant(async () => undefined); // yön hâlâ aynı mı — dış yazımdan önce (inceleme MINOR-4)
       if (entity === "ITEM") {
         found = await client.findProductByCode(rc.token, rc.companyId, row.code);
         ext = found?.id ?? (await client.createProduct(rc.token, rc.companyId, { code: row.code, name: row.name, unit: row.extra }));
@@ -290,8 +314,115 @@ async function pushCards(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pr
       else if (found === null) rc.c.created++;
       else rc.c.linked++;
     } catch (e) {
+      if (e instanceof FlowBlockedError) throw e;
       if (e instanceof ProviderError && e.retryable) throw e; // geçici: koşu durur, iş yeniden dener
       if (e instanceof ProviderError && e.code === "AUTH_FAILED") throw e;
+      rc.c.failed++;
+    }
+  }
+}
+
+// --- Etkin -> ERP (bağlı kartlardaki düzeltme; T-1140) -----------------------------------------------------------------------------
+const ENTITY_FLOW: Readonly<Record<CardEntity, "PRODUCTS" | "CONTACTS" | "WAREHOUSES">> = Object.freeze({ ITEM: "PRODUCTS", PARTY: "CONTACTS", WAREHOUSE: "WAREHOUSES" });
+
+/** Paraşüt'teki güncel kart (BOTH karar için; PUSH'ta yalnız işaret yoksa — karşılaştırma, alma değil). 404 → null. */
+async function fetchRemote(rc: RunCtx, entity: CardEntity, externalId: string): Promise<{ item: JsonApiResource; included: readonly JsonApiResource[] } | null> {
+  if (entity === "ITEM") return rc.deps.client.productDetail(rc.token, rc.companyId, externalId);
+  const item = entity === "PARTY" ? await rc.deps.client.contact(rc.token, rc.companyId, externalId) : await rc.deps.client.warehouse(rc.token, rc.companyId, externalId);
+  return item === null ? null : { item, included: [] };
+}
+
+async function sendEdit(rc: RunCtx, entity: CardEntity, local: LocalCard): Promise<JsonApiResource | null> {
+  const name = localCanon(entity, local)[0] ?? null;
+  if (name === null) return null; // ad okunamıyor: gönderilecek geçerli kart yok
+  if (entity === "ITEM") return rc.deps.client.updateProduct(rc.token, rc.companyId, local.externalId, { name });
+  if (entity === "WAREHOUSE") return rc.deps.client.updateWarehouse(rc.token, rc.companyId, local.externalId, { name });
+  const [, taxNumber, taxOffice, email, phone, city, district, address, shortName] = partyCanon(local);
+  return rc.deps.client.updateContact(rc.token, rc.companyId, local.externalId, {
+    name, taxNumber: taxNumber ?? null, taxOffice: taxOffice ?? null, email: email ?? null, phone: phone ?? null, city: city ?? null, district: district ?? null, address: address ?? null, shortName: shortName ?? null,
+  });
+}
+
+/**
+ * Düzeltme turu (PUSH ve BOTH): yerel imzası son işaretten farklı bağlı kartlar. PUSH'ta Paraşüt'ten hiçbir şey alınmaz (işaret yoksa yalnız
+ * karşılaştırma için okunur); BOTH'ta güncel Paraşüt kartı okunur ve tek kayıt yolu (`syncRemoteCard`) karar verir: Paraşüt kazanırsa yerel
+ * karta uygulanır, Etkin kazanırsa PUT ile gönderilir. Geçici hata / 401 koşuyu durdurur; kesin 4xx kartı bekletir (T-1135 kalıbı).
+ */
+async function pushEdited(rc: RunCtx, entity: CardEntity): Promise<void> {
+  const flow = ENTITY_FLOW[entity];
+  const dir = rc.flow.direction;
+  const rows = await rc.deps.inTenant((tx) => editedCardCandidates(tx, rc.ac, entity, rc.integrationId, flow, SYNC_LIMITS.pushPerRun));
+  for (const { local, marker } of rows) {
+    try {
+      const localHash = cardHash(entity, localCanon(entity, local));
+      let decision: CardDecision;
+      let remote: { item: JsonApiResource; included: readonly JsonApiResource[] } | null = null;
+      if (dir === "PUSH") {
+        const hasBase = marker !== null && marker.localHash !== null && marker.remoteHash !== null;
+        if (hasBase && marker.localHash === localHash) decision = { kind: "NONE" };
+        else {
+          if (!hasBase) {
+            remote = await fetchRemote(rc, entity, local.externalId);
+            if (remote === null) {
+              // Kaynakta yok (PUSH'ta yaşam döngüsü yok): kart bekletilir, her koşuda yeniden sorulmaz; aday listesini tıkamaz (inceleme MINOR-5).
+              await rc.deps.inTenant((tx) => parkCard(tx, rc, entity, local.id, "REMOTE_NOT_FOUND"));
+              rc.c.failed++;
+              continue;
+            }
+          }
+          decision = decideCardSync({ direction: "PUSH", localHash, remoteHash: remote === null ? null : cardHash(entity, remoteCanon(entity, remote.item)), marker });
+        }
+      } else {
+        remote = await fetchRemote(rc, entity, local.externalId);
+        if (remote === null) {
+          // Kaynakta yok: silinmeyi yaşam döngüsü (iki yokluk) işler; imza yenilenir → kart her koşuda yeniden sorulmaz, aday listesini
+          // tıkamaz (inceleme MINOR-5). Kart yeniden düzeltilirse yine aday olur.
+          await rc.deps.inTenant((tx) => touchCardSig(tx, rc.ac, entity, local.id, local.sig));
+          continue;
+        }
+        const found = remote;
+        let barcodes = false;
+        if (entity === "ITEM") barcodes = (await rc.deps.inTenant((tx) => tx.execute<{ enabled: boolean }>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id=${rc.tenantId}::uuid AND id=${rc.integrationId}::uuid`)))[0]?.enabled === true;
+        const r = await rc.deps.inTenant((tx) =>
+          tx.transaction((sp) =>
+            syncRemoteCard(sp, rc.ac, {
+              entity, direction: dir, flow, resource: found.item,
+              apply: (t) => (entity === "ITEM" ? applyProduct(t, { ...rc.ac, pullProductBarcodes: barcodes }, toProduct(found.item, found.included)) : entity === "PARTY" ? applyContact(t, rc.ac, toContact(found.item)) : applyWarehouse(t, rc.ac, toWarehouse(found.item))),
+            }),
+          ),
+        );
+        if (r.outcome !== "DEFERRED") {
+          count(rc.c, r.outcome);
+          continue;
+        }
+        decision = r.decision;
+      }
+      if (decision.kind === "NONE" || decision.kind === "IN_SYNC") {
+        await rc.deps.inTenant(async (tx) => {
+          if (decision.kind === "IN_SYNC" && remote !== null) await saveCardMarker(tx, rc.ac, entity, local.id, { localHash, remoteHash: cardHash(entity, remoteCanon(entity, remote.item)), localSig: local.sig, remoteUpdatedAt: remoteUpdatedAt(remote.item), via: "MATCH" });
+          else await touchCardSig(tx, rc.ac, entity, local.id, local.sig);
+        });
+        continue;
+      }
+      if (!pushesLocal(decision)) continue;
+      await rc.deps.inTenant(async () => undefined); // yön hâlâ aynı mı (sarmalayıcı denetler) — dış yazımdan hemen önce
+      const sent = await sendEdit(rc, entity, local);
+      if (sent === null) {
+        await rc.deps.inTenant((tx) => touchCardSig(tx, rc.ac, entity, local.id, local.sig));
+        continue;
+      }
+      await rc.deps.inTenant(async (tx) => {
+        // Gönderimden sonra eşleme değiştiyse (bağ kaldırıldı / başka karta geçti) işaret yazılmaz.
+        if ((await refExternal(tx, rc.ac, entity, local.id)) !== local.externalId) return;
+        // İşaretin yerel imzası OKUNAN satırınkidir: gönderim sırasında yapılan yeni düzeltme sonraki koşuda yine gider.
+        await saveCardMarker(tx, rc.ac, entity, local.id, { localHash, remoteHash: cardHash(entity, remoteCanon(entity, sent)), localSig: local.sig, remoteUpdatedAt: remoteUpdatedAt(sent), via: "PUSH" });
+        if (decision.kind === "CONFLICT") await auditConflict(tx, rc.ac, entity, local.id, flow, decision);
+      });
+      rc.c.updated++;
+    } catch (e) {
+      if (e instanceof FlowBlockedError) throw e;
+      if (e instanceof ProviderError && (e.retryable || e.code === "AUTH_FAILED")) throw e;
+      if (definiteRejection(e)) await rc.deps.inTenant((tx) => parkCard(tx, rc, entity, local.id, "UPDATE_REJECTED"));
       rc.c.failed++;
     }
   }
@@ -549,20 +680,43 @@ async function pushShipments(rc: RunCtx): Promise<void> {
   }
 }
 
-async function runFlow(rc: RunCtx): Promise<void> {
+/**
+ * T-1140 (inceleme MINOR-4): kart akışında koşu boyunca (en çok 30 dk) okunan yön, her transaction'ın başında yeniden doğrulanır: akış
+ * hâlâ açık ve yönü aynı değilse (FOR SHARE; eşzamanlı yön değişikliği bu transaction bitene kadar bekler) koşu `FLOW_CHANGED` ile durur,
+ * hiçbir şey yazılmaz; dış yazımdan (POST/PUT) hemen önce de aynı denetim yapılır. Sonraki koşu yeni yönle çalışır.
+ */
+function guardFlow(rc: RunCtx): RunCtx {
+  const inner = rc.deps.inTenant;
+  const inTenant: RunTx = (fn) =>
+    inner(async (tx) => {
+      const r = await tx.execute<{ ok: boolean }>(sql`
+        SELECT (enabled AND direction = ${rc.flow.direction}) AS ok FROM public.integration_flows
+         WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = ${rc.flow.flow} FOR SHARE`);
+      if (r[0]?.ok !== true) throw new FlowBlockedError("FLOW_CHANGED");
+      return fn(tx);
+    });
+  return { ...rc, deps: { ...rc.deps, inTenant } };
+}
+
+async function runFlow(input: RunCtx): Promise<void> {
+  const cardFlow = input.flow.flow === "PRODUCTS" || input.flow.flow === "CONTACTS" || input.flow.flow === "WAREHOUSES";
+  const rc = cardFlow ? guardFlow(input) : input;
   const dir = rc.flow.direction;
   switch (rc.flow.flow) {
     case "PRODUCTS":
       if (pulls(dir)) await pull(rc, "products");
       if (pushes(dir)) await pushCards(rc, "ITEM");
+      if (pushes(dir)) await pushEdited(rc, "ITEM");
       return;
     case "CONTACTS":
       if (pulls(dir)) await pull(rc, "contacts");
       if (pushes(dir)) await pushCards(rc, "PARTY");
+      if (pushes(dir)) await pushEdited(rc, "PARTY");
       return;
     case "WAREHOUSES":
       if (pulls(dir)) await pull(rc, "warehouses");
       if (pushes(dir)) await pushCards(rc, "WAREHOUSE");
+      if (pushes(dir)) await pushEdited(rc, "WAREHOUSE");
       return;
     case "STOCK":
       await pushStock(rc);
@@ -619,6 +773,8 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
   // Freeze the connection generation BEFORE selecting/refreshing its token. Never rebind old responses to a new OAuth generation.
   const productBinding=head.flows.some(f=>f.flow==='PRODUCTS'&&pulls(f.direction))
     ?await deps.inTenant(tx=>lifecycleBinding(tx,tenantId,row.id)):null;
+  const cardBinding=async(flow:"CONTACTS"|"WAREHOUSES")=>head.flows.some(f=>f.flow===flow&&pulls(f.direction))?deps.inTenant(tx=>lifecycleBinding(tx,tenantId,row.id,false,flow)):null;
+  const cardBindings={CONTACTS:await cardBinding("CONTACTS"),WAREHOUSES:await cardBinding("WAREHOUSES")};
   let token: { token: string; accountRef: string };
   try {
     // Belirteç koşunun en uzun süresi boyunca geçerli olmalı (iş süresi 30 dk): koşu ortasında 401 ile kalıcı hata / sahte yeniden giriş olmasın.
@@ -631,7 +787,7 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
     }
     throw e;
   }
-  if(productBinding&&!(await deps.inTenant(tx=>assertLifecycleBinding(tx,productBinding))))return {kind:"skipped",reason:"NOT_CONNECTED"};
+  for(const b of [productBinding,cardBindings.CONTACTS,cardBindings.WAREHOUSES])if(b&&!(await deps.inTenant(tx=>assertLifecycleBinding(tx,b))))return {kind:"skipped",reason:"NOT_CONNECTED"};
   const ac: ApplyContext = { tenantId, system: PROVIDER_INFO[row.provider].system, actorUserId: row.connectedBy as string, membershipId: row.connectedMembershipId as string };
   await deps.inTenant((tx) => maintainRuns(tx, tenantId, row.id));
   const results: FlowResult[] = [];
@@ -653,7 +809,7 @@ export async function runIntegrationSync(deps: SyncDeps, payload: SyncPayload, a
     let errorCode: string | null = null;
     let fatal: unknown = null;
     try {
-      await runFlow({ deps, tenantId, integrationId: row.id, companyId: token.accountRef, token: token.token, ac, flow, c, productBinding });
+      await runFlow({ deps, tenantId, integrationId: row.id, companyId: token.accountRef, token: token.token, ac, flow, c, productBinding, cardBindings });
     } catch (e) {
       errorCode = errCode(e);
       fatal = e;

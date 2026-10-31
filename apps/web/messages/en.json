@@ -879,7 +879,8 @@
       "created": "You created a warehouse.",
       "updated": "You updated a warehouse.",
       "archived": "You archived a warehouse.",
-      "code_changed": "You changed a warehouse code."
+      "code_changed": "You changed a warehouse code.",
+      "restored": "A warehouse was reopened."
     },
     "location": {
       "created": "You created a location.",
@@ -1034,6 +1035,7 @@
       "oauth_cancelled": "Paraşüt authorization cancelled",
       "webhook_registered": "Paraşüt instant update registration",
       "webhook_received": "Paraşüt instant update processed",
+      "conflict_resolved": "Conflict with Paraşüt resolved (latest edit won)",
       "outbox_retried": "ERP queue record retried",
       "outbox_resolved": "ERP queue shipment resolved by hand"
     },
@@ -1108,7 +1110,8 @@
         "created": "Warehouse added",
         "updated": "Warehouse updated",
         "archived": "Warehouse archived",
-        "code_changed": "Warehouse code changed"
+        "code_changed": "Warehouse code changed",
+        "restored": "Warehouse reopened"
       },
       "location": {
         "created": "Location added",
@@ -1256,6 +1259,7 @@
         "opening_stock_taken": "Opening stock imported",
         "webhook_registered": "Instant update registration",
         "webhook_received": "Instant update processed",
+        "conflict_resolved": "Paraşüt conflict resolved",
         "outbox_retried": "Integration record retried",
         "outbox_resolved": "Integration record resolved by hand"
       },
@@ -5708,25 +5712,25 @@
     "flowOff": "{name} off",
     "sonuc": {
       "PULL": "Comes from {provider} and follows it; nothing is sent.",
-      "PUSH": "What {provider} lacks is added there; nothing comes back.",
-      "BOTH": "Missing records are added; on conflict {provider} wins.",
+      "PUSH": "New and edited records go to {provider}; nothing comes back.",
+      "BOTH": "Changes flow both ways; on conflict the latest edit wins.",
       "OFF": "No sync."
     },
     "onay": {
       "PRODUCTS": {
         "PULL": "You have {n, number} items. {provider} items are matched to them by stock code and unmatched ones become new cards; linked cards take the {provider} name, and items deleted or archived in {provider} are archived here.",
-        "PUSH": "You have {n, number} items; the {m, number} not linked to {provider} are sent there (linked to an item with the same stock code if one exists).",
-        "BOTH": "You have {n, number} items. {provider} items are matched by stock code and unmatched ones are added here; linked cards take the {provider} name, and items deleted or archived in {provider} are archived here{m, plural, =0 {} one {; # unlinked item is also sent to {provider}} other {; # unlinked items are also sent to {provider}}}."
+        "PUSH": "You have {n, number} items; the {m, number} not linked to {provider} are sent there (linked to an item with the same stock code if one exists), and name edits you make here on linked items also go to {provider}.",
+        "BOTH": "You have {n, number} items. {provider} items are matched by stock code and unmatched ones are added here; on a linked card a change on either side is copied to the other, and if both sides changed the latest edit wins ({provider} wins when the time is unknown); items deleted or archived in {provider} are archived here{m, plural, =0 {} one {; # unlinked item is also sent to {provider}} other {; # unlinked items are also sent to {provider}}}."
       },
       "CONTACTS": {
-        "PULL": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city) and unmatched ones become new parties; linked parties take the {provider} name and details (a party deleted in {provider} stays here).",
-        "PUSH": "You have {n, number} parties; the {m, number} not linked to {provider} are sent there (linked to a party with the same tax number, otherwise name, if one exists).",
-        "BOTH": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city) and unmatched ones are added here; linked parties take the {provider} name and details{m, plural, =0 {} one {; # unlinked party is also sent to {provider}} other {; # unlinked parties are also sent to {provider}}}."
+        "PULL": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city) and unmatched ones become new parties; linked parties take the {provider} name and details, and parties deleted or archived in {provider} are archived here (those with open orders wait).",
+        "PUSH": "You have {n, number} parties; the {m, number} not linked to {provider} are sent there (linked to a party with the same tax number, otherwise name, if one exists), and edits you make here on linked parties also go to {provider}.",
+        "BOTH": "You have {n, number} parties. {provider} parties are matched by tax number (otherwise name and city) and unmatched ones are added here; on a linked card a change on either side is copied to the other, and if both sides changed the latest edit wins ({provider} wins when the time is unknown); parties deleted or archived in {provider} are archived here (those with open orders wait){m, plural, =0 {} one {; # unlinked party is also sent to {provider}} other {; # unlinked parties are also sent to {provider}}}."
       },
       "WAREHOUSES": {
-        "PULL": "You have {n, number} warehouses. {provider} warehouses are matched by name and unmatched ones become new warehouses; linked warehouses take the {provider} name (a warehouse deleted in {provider} stays here).",
-        "PUSH": "You have {n, number} warehouses; the {m, number} not linked to {provider} are sent there (linked to a warehouse with the same name if one exists).",
-        "BOTH": "You have {n, number} warehouses. {provider} warehouses are matched by name and unmatched ones are added here; linked warehouses take the {provider} name{m, plural, =0 {} one {; # unlinked warehouse is also sent to {provider}} other {; # unlinked warehouses are also sent to {provider}}}."
+        "PULL": "You have {n, number} warehouses. {provider} warehouses are matched by name and unmatched ones become new warehouses; linked warehouses take the {provider} name, and warehouses deleted or archived in {provider} are archived here (those with locations, stock or open work wait).",
+        "PUSH": "You have {n, number} warehouses; the {m, number} not linked to {provider} are sent there (linked to a warehouse with the same name if one exists), and name edits you make here on linked warehouses also go to {provider}.",
+        "BOTH": "You have {n, number} warehouses. {provider} warehouses are matched by name and unmatched ones are added here; on a linked card a change on either side is copied to the other, and if both sides changed the latest edit wins ({provider} wins when the time is unknown); warehouses deleted or archived in {provider} are archived here (those with locations, stock or open work wait){m, plural, =0 {} one {; # unlinked warehouse is also sent to {provider}} other {; # unlinked warehouses are also sent to {provider}}}."
       }
     },
     "onayBaslik": "{name}: {dir}?",
@@ -5806,6 +5810,9 @@
       "OPENING_STOCK_INCOMPLETE": "Finish the opening stock transfer first · then stock totals can be sent",
       "TIMEOUT": "Transfer stopped midway · the next run retries",
       "EXTERNAL_ALREADY_LINKED": "Its Paraşüt record is linked to another card · check it",
+      "UPDATE_REJECTED": "Paraşüt did not accept the edit · check the card, then retry",
+      "FLOW_CHANGED": "The flow direction changed during the run · the next run uses the new direction",
+      "REMOTE_NOT_FOUND": "This card does not exist in Paraşüt · check the link, then retry",
       "ROWS_FAILED": "Some rows could not be transferred",
       "INTERNAL": "Unexpected error · tell the Etkin team",
       "PROVIDER_AUTH_FAILED": "Paraşüt rejected the sign-in",
@@ -5945,7 +5952,7 @@
     "arsiv": {
       "title": "Inactive and archive",
       "sub": "Records archived or deleted in {provider}",
-      "text": "An item archived or deleted in {provider} is not deleted in Etkin; it shows under the Archived or Removed filter of the Items list",
+      "text": "An item, party or warehouse archived or deleted in {provider} is not deleted in Etkin but archived; items show under the Archived or Removed filter of the Items list",
       "archived": "Archived items",
       "removed": "Removed items"
     },
