@@ -96,8 +96,9 @@ export async function getIntegrationOverview(params: ConnectionCallParams): Prom
             FROM public.integration_runs r JOIN public.integrations i ON i.tenant_id = r.tenant_id AND i.id = r.integration_id
            WHERE r.tenant_id = ${m.tenantId}::uuid ORDER BY r.started_at DESC, r.id LIMIT ${RUN_LOG_LIMIT}`,
     );
+    // T-1135: bant yalnız irsaliye kuyruğunu sayar (kart akışlarının kalıcı "zaten bağlı" kayıtları ayrı).
     const ob = await tx.execute<{ status: string; n: number }>(
-      sql`SELECT status, count(*)::int AS n FROM public.integration_outbox WHERE tenant_id = ${m.tenantId}::uuid AND status IN ('PENDING', 'CHECK', 'FAILED') GROUP BY status`,
+      sql`SELECT status, count(*)::int AS n FROM public.integration_outbox WHERE tenant_id = ${m.tenantId}::uuid AND flow = 'SHIPMENTS' AND status IN ('PENDING', 'CHECK', 'FAILED') GROUP BY status`,
     );
     const nOf = (st: string): number => Number(ob.find((r) => r.status === st)?.n ?? 0);
     const providers = PROVIDERS.map((provider): ProviderView => {
@@ -339,7 +340,20 @@ export async function disconnectIntegration(params: ConnectionCallParams, input:
   });
 }
 
-export type FlowResultReason = "NOT_CONNECTED" | "UNSUPPORTED";
+/**
+ * T-1135: `INTEGRATION_FLOW_EXCLUSIVE` = stok toplamı ve irsaliye aynı bağlantıda birlikte açılamaz (kullanıcı kararı 30 Ekim: stok sahibi
+ * Etkin; Paraşüt'e yalnız irsaliye gider; varsayılan tercih irsaliye). `OPENING_STOCK_INCOMPLETE` = Devir (açılış stoku) tamamlanmadan stok
+ * gönderimi açılamaz (PRODUCT_IMPORT kararı; tek tanım DB işlevi `integration_stock_push_ready`).
+ */
+export type FlowResultReason = "NOT_CONNECTED" | "UNSUPPORTED" | "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE";
+/** Birlikte açılamayan akış çifti (DB tetikleyicisi `integration_flows_exclusive_guard` ile aynı). */
+export const EXCLUSIVE_FLOWS: Readonly<Partial<Record<Flow, Flow>>> = Object.freeze({ STOCK: "SHIPMENTS", SHIPMENTS: "STOCK" });
+
+/** Devir tamam mı (stok gönderimi kapısı; DB işlevi tek tanımdır). */
+export async function stockPushReady(tx: AccessTx, tenantId: string, integrationId: string): Promise<boolean> {
+  const r = await tx.execute<{ ok: boolean }>(sql`SELECT public.integration_stock_push_ready(${tenantId}::uuid, ${integrationId}::uuid) AS ok`);
+  return r[0]?.ok === true;
+}
 export type SetFlowResult =
   | { readonly ok: true; readonly enabled: boolean; readonly direction: Direction; readonly changed: boolean; readonly queued: boolean }
   | { readonly ok: false; readonly reason: FlowResultReason };
@@ -374,10 +388,19 @@ export async function setIntegrationFlow(
   return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
     const row = await loadIntegration(tx, m.tenantId, { provider }, true);
     if (row === null || row.status === "DISCONNECTED") return { ok: false, reason: "NOT_CONNECTED" } as const;
-    const prev = await tx.execute<{ enabled: boolean; direction: Direction }>(
-      sql`SELECT enabled, direction FROM public.integration_flows WHERE tenant_id = ${m.tenantId}::uuid AND integration_id = ${row.id}::uuid AND flow = ${flow} FOR UPDATE`,
+    // T-1135: dışlayıcı çiftin iki satırı da sabit sırada (akış adı) kilitlenir; eşzamanlı iki açma sıralanır (DB tetikleyicisi ikinci kapı).
+    const other = EXCLUSIVE_FLOWS[flow];
+    const lockFlows = other === undefined ? [flow] : [flow, other].sort();
+    const locked = await tx.execute<{ flow: Flow; enabled: boolean; direction: Direction }>(
+      sql`SELECT flow, enabled, direction FROM public.integration_flows
+           WHERE tenant_id = ${m.tenantId}::uuid AND integration_id = ${row.id}::uuid AND flow IN (${sql.join(lockFlows.map((f) => sql`${f}`), sql`, `)})
+           ORDER BY flow FOR UPDATE`,
     );
-    const before = prev[0];
+    const before = locked.find((f) => f.flow === flow);
+    if (input.enabled && (before === undefined || !before.enabled)) {
+      if (other !== undefined && locked.some((f) => f.flow === other && f.enabled)) return { ok: false, reason: "INTEGRATION_FLOW_EXCLUSIVE" } as const;
+      if (flow === "STOCK" && !(await stockPushReady(tx, m.tenantId, row.id))) return { ok: false, reason: "OPENING_STOCK_INCOMPLETE" } as const;
+    }
     if (before === undefined) {
       await tx.execute(sql`INSERT INTO public.integration_flows (tenant_id, id, integration_id, flow, enabled, direction)
                             VALUES (${m.tenantId}::uuid, ${randomUUID()}::uuid, ${row.id}::uuid, ${flow}, ${input.enabled}, ${direction})`);

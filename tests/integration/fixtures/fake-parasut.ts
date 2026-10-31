@@ -55,6 +55,10 @@ export interface FakeParasut {
   rateLimitNext: number;
   /** İrsaliye POST yanıt durumu (ör. 500, 422) ya da "drop" (bağlantıyı yanıtsız kapatır). */
   shipmentFailure: number | "drop" | null;
+  /** T-1135: stok güncelleme POST yanıt durumu (ör. 422) — null ise kabul. */
+  stockFailure: number | null;
+  /** T-1135: bu ürün kimliklerinden birini içeren stok güncellemesi 422 alır (satır bazlı kesin red). */
+  readonly stockRejectProducts: Set<string>;
   /** Geçerli yenileme belirteci (döner). */
   refreshToken: string;
   accessToken: string;
@@ -113,6 +117,8 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     requests: [],
     rateLimitNext: 0,
     shipmentFailure: null,
+    stockFailure: null,
+    stockRejectProducts: new Set<string>(),
     refreshToken: "",
     accessToken: "",
     expireAccess() {
@@ -204,6 +210,9 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       return send(201, { data: { id: nextId(), type: "shipment_documents", attributes: parsed.data?.attributes ?? {} } });
     }
     if (req.method === "POST" && kind === "stock_updates") {
+      if (state.stockFailure !== null) return send(state.stockFailure, { errors: [{ title: "Rejected" }] });
+      const details = ((parsed as { data?: { relationships?: { details?: { data?: { relationships?: { product?: { data?: { id?: string } } } }[] } } } }).data?.relationships?.details?.data ?? []);
+      if (details.some((d) => state.stockRejectProducts.has(String(d.relationships?.product?.data?.id)))) return send(422, { errors: [{ title: "Rejected product" }] });
       state.stockUpdates.push({ body: parsed });
       return send(201, { data: { id: nextId(), type: "stock_updates", attributes: {} } });
     }

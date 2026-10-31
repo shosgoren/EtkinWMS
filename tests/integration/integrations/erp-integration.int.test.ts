@@ -109,13 +109,14 @@ const stockFingerprint = async (w: TenantWorld) =>
 
 describe("katalog: RLS ve yetkiler (0055)", () => {
   const TABLES = ["integrations", "integration_flows", "integration_runs", "integration_outbox", "integration_stock_marks"];
-  it("ENABLE + FORCE RLS; wms_app DELETE yok; mühürsüz kimlik bilgisi CHECK'te reddedilir", async () => {
+  it("ENABLE + FORCE RLS; wms_app DELETE yalnız koşu günlüğünde; mühürsüz kimlik bilgisi CHECK'te reddedilir", async () => {
     for (const t of TABLES) {
       const r = await q<{ rls: boolean; force: boolean; del: boolean }>(
         "SELECT relrowsecurity AS rls, relforcerowsecurity AS force, has_table_privilege('wms_app', oid, 'DELETE') AS del FROM pg_class WHERE oid = ('public.' || $1)::regclass",
         [t],
       );
-      expect(r[0], t).toEqual({ rls: true, force: true, del: false });
+      // T-1135 (0066): koşu günlüğü budaması için yalnız integration_runs'ta DELETE (silme bekçisi yakın geçmişi korur).
+      expect(r[0], t).toEqual({ rls: true, force: true, del: t === "integration_runs" });
     }
     const plain = await asApp(A.tenantId, "INSERT INTO public.integrations (tenant_id, provider, status, credentials, connected_by, connected_membership_id, connected_at) VALUES ($1, 'LOGO', 'CONNECTED', '{\"password\":\"x\"}'::jsonb, $2, $3, now())", [A.tenantId, A.ownerUserId, A.ownerMembershipId]);
     expect(plain).toMatchObject({ ok: false, code: "23514" });
@@ -260,7 +261,8 @@ describe("senkron", () => {
     // T-1111: değişiklik getirmeyen başarılı zamanlı koşu audit'e yazılmaz (koşu günlüğünde var); satır hatası olan (PARTIAL) yazılır.
     const r4 = await sync(W, id, { trigger: "SCHEDULE" });
     expect(counts(r4)).toEqual({ WAREHOUSES: ["SUCCESS", 0, 0, 0], PRODUCTS: ["PARTIAL", 0, 0, 1], CONTACTS: ["SUCCESS", 0, 0, 0] });
-    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_runs WHERE tenant_id = $1 AND status = 'SUCCESS'", [W.tenantId]))[0]?.n).toBe(6);
+    // T-1135: değişiklik getirmeyen başarılı zamanlı koşu koşu günlüğünde de satır bırakmaz (iki boş SUCCESS satırı yok; PARTIAL yazılır).
+    expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.integration_runs WHERE tenant_id = $1 AND status = 'SUCCESS'", [W.tenantId]))[0]?.n).toBe(4);
     expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.synced'", [W.tenantId]))[0]?.n).toBe(8);
     // Biten koşu kaydı değişmez.
     const done = await asApp(W.tenantId, "UPDATE public.integration_runs SET status = 'RUNNING' WHERE tenant_id = $1", [W.tenantId]);
@@ -448,6 +450,11 @@ describe("senkron", () => {
     const W = await seedWorld(adm, reg, "ERPK");
     const id = await connect(W);
     await adm.query("INSERT INTO public.external_refs (tenant_id, system, entity_type, entity_id, external_id) VALUES ($1, 'PARASUT', 'ITEM', $2, '555'), ($1, 'PARASUT', 'WAREHOUSE', $3, '801')", [W.tenantId, W.itemNoneId, W.warehouseId]);
+    // T-1135: stok gönderimi Devir (işlenmiş açılış stoku belgesi) tamamlanmadan açılmaz.
+    expect(await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "STOCK", enabled: true, direction: "PUSH" })).toEqual({ ok: false, reason: "OPENING_STOCK_INCOMPLETE" });
+    const devir = randomUUID();
+    await adm.query("INSERT INTO public.documents (tenant_id, id, kind, type_version_id, warehouse_id, business_date, created_by, reason) SELECT $1, $2, 'STOCK_IN', id, $3, '2026-10-30', $4, 'import.opening_stock' FROM public.document_type_versions WHERE tenant_id IS NULL AND key = 'STOCK_IN' AND version = 1", [W.tenantId, devir, W.warehouseId, W.ownerUserId]);
+    await adm.query("UPDATE public.documents SET status = 'POSTED', number = 'DVR-T991' WHERE tenant_id = $1 AND id = $2", [W.tenantId, devir]);
     await setIntegrationFlow(admin(W), { provider: "PARASUT", flow: "STOCK", enabled: true, direction: "PUSH" });
     const before = await stockFingerprint(W);
     await sync(W, id);

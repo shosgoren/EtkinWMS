@@ -23,6 +23,8 @@ export {
 
 export { getProductBarcodeSetting, setProductBarcodeSetting } from "./product-settings.ts";
 
-export { getProductSourceInfo, type ProductSourceInfo } from "./product-info.ts";
+export { getProductSourceInfo, parseProductSource, type ProductSourceInfo, type ProductSourceWarning } from "./product-info.ts";
+export { canonicalDecimal, jsonDecimal } from "./decimal-json.ts";
+export { STOCK_TOTAL_STATUSES, STOCK_TOTAL_LOCATION_KINDS } from "./stock-reads.ts";
 
 export * from "./oauth.ts";

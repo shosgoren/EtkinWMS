@@ -5,9 +5,11 @@
 //   (tetikleyici version+1, synced_at). `sync_cursors` UPDATE yalnız imleç sütunları; tetikleyici geriye gitmeyi reddeder.
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır.
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, customType, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
+/** T-1135 (0066): PostgreSQL `pg_snapshot` (metin olarak okunur/yazılır). */
+const pgSnapshot = customType<{ data: string }>({ dataType: () => "pg_snapshot" });
 
 export const EXTERNAL_REF_ENTITY_TYPES = ["ITEM", "UNIT", "WAREHOUSE", "LOCATION", "PARTY", "DOCUMENT", "LEDGER_ENTRY"] as const;
 export type ExternalRefEntityType = (typeof EXTERNAL_REF_ENTITY_TYPES)[number];
@@ -111,6 +113,8 @@ export const integrationFlows = pgTable(
     enabled: boolean("enabled").notNull().default(false),
     direction: text("direction").notNull(),
     enabledAt: timestamptz("enabled_at"),
+    // T-1135 (0066): ilk açılış anı; kapat/aç sıfırlamaz (irsaliye keşfi bunu alt sınır alır).
+    firstEnabledAt: timestamptz("first_enabled_at"),
     cursor: text("cursor"),
     lastRunAt: timestamptz("last_run_at"),
     lastSuccessAt: timestamptz("last_success_at"),
@@ -173,8 +177,13 @@ export const integrationStockMarks = pgTable(
     integrationId: uuid("integration_id").notNull(),
     itemId: uuid("item_id").notNull(),
     warehouseId: uuid("warehouse_id").notNull(),
-    quantity: numeric("quantity").notNull(),
-    sentAt: timestamptz("sent_at").notNull().defaultNow(),
+    // T-1135 (0066): son gönderilen toplam (NULL = hiç gönderilmedi) ve kesin reddedilen toplam + kod (aynı toplam yeniden denenmez).
+    quantity: numeric("quantity"),
+    sentAt: timestamptz("sent_at"),
+    failedQuantity: numeric("failed_quantity"),
+    failedAt: timestamptz("failed_at"),
+    lastErrorCode: text("last_error_code"),
+    asOfSnapshot: pgSnapshot("as_of_snapshot"),
   },
   (t) => [primaryKey({ name: "integration_stock_marks_pkey", columns: [t.tenantId, t.integrationId, t.itemId, t.warehouseId] })],
 );
