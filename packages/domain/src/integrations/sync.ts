@@ -216,9 +216,10 @@ async function unlinked(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pro
   const sys = rc.ac.system;
   const lim = SYNC_LIMITS.pushPerRun;
   // T-1135: dış kaydı başka Etkin kaydına bağlı olduğu için bir kez FAILED yazılan kart her koşuda yeniden denenmez (sonsuz "atlandı" yok).
+  // T-1137: ekrandaki "Yeniden dene" satırı PENDING yapar → bekletme kalkar, kart bir sonraki koşuda yeniden denenir.
   const parked = (alias: string) =>
     sql`NOT EXISTS (SELECT 1 FROM public.integration_outbox ob WHERE ob.tenant_id = ${rc.tenantId}::uuid AND ob.integration_id = ${rc.integrationId}::uuid
-                    AND ob.flow = ${CARD_FLOW[entity]} AND ob.entity_id = ${sql.raw(alias)}.id)`;
+                    AND ob.flow = ${CARD_FLOW[entity]} AND ob.entity_id = ${sql.raw(alias)}.id AND ob.status = 'FAILED')`;
   return rc.deps.inTenant((tx) => {
     if (entity === "ITEM") {
       return tx.execute<PushRow>(sql`
@@ -295,13 +296,14 @@ async function pushCards(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pr
 }
 
 async function parkCard(tx: AccessTx, rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE", entityId: string, code: string): Promise<void> {
-  const ins = await tx.execute<{ id: string }>(sql`
+  await tx.execute(sql`
     INSERT INTO public.integration_outbox (tenant_id, id, integration_id, flow, entity_type, entity_id)
     VALUES (${rc.tenantId}::uuid, gen_random_uuid(), ${rc.integrationId}::uuid, ${CARD_FLOW[entity]}, ${entity}, ${entityId}::uuid)
-    ON CONFLICT ON CONSTRAINT integration_outbox_entity_key DO NOTHING RETURNING id`);
-  if (ins[0] === undefined) return;
-  await tx.execute(sql`UPDATE public.integration_outbox SET status = 'FAILED', attempts = 1, last_error_code = ${code}
-                        WHERE tenant_id = ${rc.tenantId}::uuid AND id = ${ins[0].id}::uuid`);
+    ON CONFLICT ON CONSTRAINT integration_outbox_entity_key DO NOTHING`);
+  // Yeni satır ya da elle "Yeniden dene" ile PENDING'e alınmış eski satır (T-1137) yeniden bekletilir; sayaç artar.
+  await tx.execute(sql`UPDATE public.integration_outbox SET status = 'FAILED', attempts = LEAST(attempts + 1, 100), last_error_code = ${code}
+                        WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = ${CARD_FLOW[entity]}
+                          AND entity_id = ${entityId}::uuid AND status = 'PENDING'`);
 }
 
 // --- Etkin -> ERP (stok seviyesi) ---------------------------------------------------------------------------------------------------

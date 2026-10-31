@@ -3,14 +3,14 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getIntegrationOverview, getOpeningStockState, getProductBarcodeSetting, type IntegrationOverview, getParasutOAuthSettings, getParasutOAuthSelection, oauthApplicationOrigin, oauthCookieName, parseOAuthBinding } from "@wms/domain/integrations";
+import { getIntegrationOverview, getIntegrationOutboxIssues, type OutboxIssues, getOpeningStockState, getProductBarcodeSetting, type IntegrationOverview, getParasutOAuthSettings, getParasutOAuthSelection, oauthApplicationOrigin, oauthCookieName, parseOAuthBinding } from "@wms/domain/integrations";
 import { getSetupJourney } from "@wms/domain/onboarding/journey";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../design/theme.ts";
 import { NICON } from "../../../design/entegrasyon-icons.ts";
 import { KalipKilitliEkran } from "../kalip/liste.tsx";
 import { entegrasyonBolumu } from "./bolum.ts";
-import { IntegrationsView, type OpeningData, type OverviewData } from "./integrations-view.tsx";
+import { IntegrationsView, type IssuesData, type OpeningData, type OverviewData } from "./integrations-view.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,7 @@ function serialize(o: IntegrationOverview): OverviewData {
   return {
     demo: o.demo,
     outbox: o.outbox,
+    health: o.health === null ? null : { ...o.health, since: iso(o.health.since) },
     providers: o.providers.map((p) => ({
       provider: p.provider,
       available: p.available,
@@ -34,6 +35,11 @@ function serialize(o: IntegrationOverview): OverviewData {
     })),
     runs: o.runs.map((r) => ({ id: r.id, flow: r.flow, trigger: r.trigger, status: r.status, startedAt: r.startedAt.toISOString(), created: r.created, updated: r.updated, linked: r.linked, skipped: r.skipped, failed: r.failed, errorCode: r.errorCode })),
   };
+}
+
+/** T-1137: karar bekleyen kuyruk satırları (yalnız kimlik, kod/ad, durum, hata kodu; sır yok). */
+function serializeIssues(x: OutboxIssues): IssuesData {
+  return { total: x.total, items: x.items.map((r) => ({ id: r.id, flow: r.flow, entityType: r.entityType, code: r.code, name: r.name, status: r.status, errorCode: r.errorCode, attempts: r.attempts, updatedAt: r.updatedAt.toISOString(), resolvable: r.resolvable })) };
 }
 
 // T-991: ERP entegrasyonu (Paraşüt; Logo yakında). Yalnız hesap sahibi (`settings.manage`); diğer rollerde kilitli tam ekran. Ayarlar >
@@ -75,6 +81,13 @@ export default async function IntegrationsPage({ params, searchParams }: { param
     journeyWish = null; // yolculuğu göremeyen rol: bilgi yok
   }
   const pullBarcodes = await getProductBarcodeSetting(call);
+  // T-1137: kuyrukta karar bekleyenler ("Bekleyenler ve hatalar"); okunamazsa liste çizilmez, ekran düşmez.
+  let issues: IssuesData = { total: 0, items: [] };
+  try {
+    issues = serializeIssues(await getIntegrationOutboxIssues(call));
+  } catch (e) {
+    console.error(JSON.stringify({ level: "error", msg: "outbox issues failed", code: e instanceof AppError ? e.code : "INTERNAL" }));
+  }
   const oauth=await getParasutOAuthSettings(call);
   const query=await searchParams;
   const origin=oauthApplicationOrigin();
@@ -86,5 +99,5 @@ export default async function IntegrationsPage({ params, searchParams }: { param
   // T-1112: seçili alt bölüm adreste (`?bolum=`); yoksa bağlıyken "Ne çekilsin, gönderilsin", değilse "Bağlantı ve veri kaynağı".
   const connected = overview.providers.some((p) => p.provider === "PARASUT" && p.connection !== null);
   const bolum = entegrasyonBolumu(query.bolum, connected);
-  return <IntegrationsView bolum={bolum} oauth={oauth} oauthSelection={selection} oauthResult={result} oauthReason={reason} pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} />;
+  return <IntegrationsView bolum={bolum} oauth={oauth} oauthSelection={selection} oauthResult={result} oauthReason={reason} pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} issues={issues} opening={opening} journeyWish={journeyWish} />;
 }

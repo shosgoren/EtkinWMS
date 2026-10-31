@@ -28,3 +28,5 @@ export { canonicalDecimal, jsonDecimal } from "./decimal-json.ts";
 export { STOCK_TOTAL_STATUSES, STOCK_TOTAL_LOCATION_KINDS } from "./stock-reads.ts";
 
 export * from "./oauth.ts";
+export { classifyIntegrationHealth, HEALTH_STALE_MS, HEALTH_STUCK_MS, HEALTH_FAIL_STREAK, type IntegrationHealth, type HealthCause, type HealthNext, type HealthLevel } from "./health.ts";
+export { getIntegrationOutboxIssues, retryIntegrationOutbox, resolveIntegrationOutbox, OUTBOX_ISSUE_LIMIT, type OutboxIssue, type OutboxIssues, type OutboxActionResult, type OutboxResolution } from "./outbox.ts";
