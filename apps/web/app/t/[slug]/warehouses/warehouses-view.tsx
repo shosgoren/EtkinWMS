@@ -1,6 +1,6 @@
 "use client";
-// Depo listesi ekranı (T-207). Yetki ve iş kuralları SUNUCUDADIR: `canManage` yalnızca gösterimdir (kilit + açıklama);
-// eylemler sunucuda `settings.manage` ister. Kod normalleştirmesi (A-98) istemcide YOK: sunucunun döndürdüğü kod gösterilir.
+// Depo listesi ekranı (T-207). Yetki ve iş kuralları SUNUCUDADIR: `rights` (T-1141 `cardRights`) yalnızca gösterimdir (kilit + açıklama);
+// eylemler sunucuda `warehouses.create` / `.edit` / `.archive` ister. Kod normalleştirmesi (A-98) istemcide YOK: sunucunun döndürdüğü kod gösterilir.
 // Mobilde kart görünümü (tablo yok → yatay taşma yok). Sunucu reddi neden + sonraki eylemle gösterilir.
 // T-971 (B-63): LİSTE kalıbı (KalipListe.dc.html). Kart `.uc` bağlantısı "Lokasyonları aç"; kartın altında küçük `.btn` eylem satırı
 // (kod değiştir / arşivle — `<a>` içine düğme gömülmez). T-978: arama (`.lsearch`, GET `q`: kod/ad, sunucuda listWarehouses). Bilinçli
@@ -23,6 +23,8 @@ import { YolculukGiris } from "../yolculuk/yolculuk.tsx";
 import { KalipGorunumSec, KalipSonsuz, useKalipDerinlik, KalipSutunSec, KalipTablo, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { KalipOnay } from "../kalip/pencere.tsx";
 import { KalipSecim } from "../kalip/secim.tsx";
+import { KalipKilitliDugme, useKartKilitGerekce } from "../kalip/kilitli.tsx";
+import type { CardRights } from "@wms/domain/identity/permissions";
 import { KalipUyari } from "../kalip/uyari.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
 import { kdz } from "../kalip/tokens.ts";
@@ -305,7 +307,7 @@ const actBtn = (bg: string, disabled: boolean): CSSProperties => ({ background: 
 export function WarehousesView({
   slug,
   dark,
-  canManage,
+  rights,
   warehouses: ilkDepolar,
   nextAfter,
   q = "",
@@ -314,7 +316,8 @@ export function WarehousesView({
 }: {
   slug: string;
   dark: boolean;
-  canManage: boolean;
+  /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
+  rights: CardRights;
   warehouses: readonly WarehouseView[];
   /** Sonraki sayfa imleci (son görülen kod); yoksa `null`. */
   nextAfter: string | null;
@@ -373,7 +376,10 @@ export function WarehousesView({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ServerError | null>(null);
   const [version, setVersion] = useState(0);
-  const progress = useSetupProgress(slug, canManage, version);
+  // T-1141: ekle `warehouses.create`, kod değiştir `warehouses.edit`, arşivle `warehouses.archive`; yetkisiz işlem kilitli düğme + neden.
+  const kilitGerekce = useKartKilitGerekce("warehouses");
+  const canCreate = rights.create;
+  const progress = useSetupProgress(slug, canCreate, version);
   const params = useSearchParams();
   const { say, node: toast } = useKalipToast("liste");
   const errText = useErrorText();
@@ -395,9 +401,9 @@ export function WarehousesView({
     return qs === "" ? base : `${base}?${qs}`;
   })();
   const withParam = (k: string, val: string): string => `${listHref}${listHref.includes("?") ? "&" : "?"}${k}=${encodeURIComponent(val)}`;
-  const creating = params.get("new") === "1" && canManage;
+  const creating = params.get("new") === "1" && canCreate;
   const kodId = params.get("kod");
-  const editing = kodId === null || !canManage ? undefined : warehouses.find((w) => w.id === kodId && w.status === "ACTIVE");
+  const editing = kodId === null || !rights.edit ? undefined : warehouses.find((w) => w.id === kodId && w.status === "ACTIVE");
   const toList = (): void => router.push(listHref);
 
   async function changeCode(id: string, code: string) {
@@ -452,9 +458,8 @@ export function WarehousesView({
       { id: "name", baslik: t("colName"), sabit: true, deger: (w) => <span className="ktad" title={w.name}>{w.name}</span>, sirala: (w) => w.name },
       { id: "locs", baslik: t("colLocations"), sayi: true, deger: (w) => (w.locationCountCapped ? `${w.locationCount}+` : String(w.locationCount)), sirala: (w) => w.locationCount },
       { id: "state", baslik: t("colState"), deger: (w) => <span className={`ktpill ${w.status === "ACTIVE" ? "ok" : ""}`}>{t(`status.${w.status}`)}</span>, sirala: (w) => w.status },
-      // Codex P2 (PR 197): Liste görünümü kartın yönetim işlemlerini (kodu değiştir, arşivle) kaybetmez; yalnız yetkili ve aktif depoda.
-      ...(canManage
-        ? [
+      // Codex P2 (PR 197): Liste görünümü kartın yönetim işlemlerini (kodu değiştir, arşivle) kaybetmez; aktif depoda. T-1141: yetkisizde
+      // gizlenmez, kilitli (kilit ikonu + "yetkin yok · yöneticine sor").
             {
               id: "actions",
               baslik: t("colActions"),
@@ -462,8 +467,10 @@ export function WarehousesView({
               deger: (w: WarehouseView) =>
                 w.status !== "ACTIVE" ? null : (
                   <span className="ktacts" role="group" aria-label={t("actionsFor", { name: w.name })}>
-                    <button
-                      type="button"
+                    <KalipKilitliDugme
+                      kilitli={!rights.edit}
+                      gerekce={kilitGerekce("edit")}
+                      kilitIkonu={false}
                       className="ktact"
                       aria-label={t("codeEdit.for", { name: w.name })}
                       title={t("codeEdit.button")}
@@ -472,10 +479,12 @@ export function WarehousesView({
                         router.push(`${listHref}${listHref.includes("?") ? "&" : "?"}kod=${encodeURIComponent(w.id)}`);
                       }}
                     >
-                      <Ico d={LICON.pencil} size={18} />
-                    </button>
-                    <button
-                      type="button"
+                      <Ico d={rights.edit ? LICON.pencil : LICON.lock} size={18} />
+                    </KalipKilitliDugme>
+                    <KalipKilitliDugme
+                      kilitli={!rights.archive}
+                      gerekce={kilitGerekce("archive")}
+                      kilitIkonu={false}
                       className="ktact del"
                       aria-label={`${t("archive")} · ${w.name}`}
                       title={t("archive")}
@@ -484,15 +493,13 @@ export function WarehousesView({
                         setArchiving(w);
                       }}
                     >
-                      <Ico d={LICON.trash} size={18} />
-                    </button>
+                      <Ico d={rights.archive ? LICON.trash : LICON.lock} size={18} />
+                    </KalipKilitliDugme>
                   </span>
                 ),
             },
-          ]
-        : []),
     ],
-    [t, canManage, router, listHref],
+    [t, rights, kilitGerekce, router, listHref],
   );
   const sutunSecim = useKalipSutunlar<WarehouseView>("warehouses", sutunlar);
 
@@ -564,13 +571,13 @@ export function WarehousesView({
         testId="warehouses"
         bar={{
           back: { href: home },
-          main: { label: tk("add"), aria: t("create"), d: LICON.plus, disabled: !canManage, disabledReason: t("lockedReason"), onClick: openCreate, testId: "warehouses-add" },
+          main: { label: tk("add"), aria: t("create"), d: LICON.plus, locked: !rights.create, disabledReason: kilitGerekce("create"), onClick: openCreate, testId: "warehouses-add" },
         }}
         overlays={toast}
       >
-        {!canManage ? (
+        {!rights.create ? (
           <p className="sr" id={lockedId}>
-            {t("lockedReason")}
+            {kilitGerekce("create")}
           </p>
         ) : null}
         {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={codeChanged.to} busy={undoing} onUndo={() => void undoCode()} /> : null}
@@ -593,9 +600,9 @@ export function WarehousesView({
         ) : warehouses.length === 0 ? (
           <KalipBos
             title={t("empty")}
-            hint={canManage ? t("emptyAction") : t("emptyReadOnly")}
+            hint={canCreate ? t("emptyAction") : t("emptyReadOnly")}
             iconD={LICON.depo}
-            action={canManage ? { label: tk("stepWarehouseCta"), onClick: openCreate, kind: "add" } : { label: tr("home"), href: home, kind: "go" }}
+            action={canCreate ? { label: tk("stepWarehouseCta"), onClick: openCreate, kind: "add" } : { label: tr("home"), href: home, kind: "go" }}
           />
         ) : (
           <>
@@ -638,13 +645,13 @@ export function WarehousesView({
                     </Link>
                     {active ? (
                       <div role="group" aria-label={t("actionsFor", { name: w.name })} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        <button
-                          type="button"
+                        <KalipKilitliDugme
+                          kilitli={!rights.edit}
+                          gerekce={kilitGerekce("edit")}
                           className="btn"
-                          style={actBtn("172E42", !canManage)}
-                          disabled={!canManage}
-                          aria-describedby={canManage ? undefined : lockedId}
+                          style={actBtn("172E42", !rights.edit)}
                           aria-label={t("codeEdit.for", { name: w.name })}
+                          data-testid="warehouse-code-edit"
                           onClick={() => {
                             feedback.minor();
                             router.push(withParam("kod", w.id));
@@ -652,13 +659,13 @@ export function WarehousesView({
                         >
                           <Ico d={LICON.pencil} size={18} />
                           {t("codeEdit.button")}
-                        </button>
-                        <button
-                          type="button"
+                        </KalipKilitliDugme>
+                        <KalipKilitliDugme
+                          kilitli={!rights.archive}
+                          gerekce={kilitGerekce("archive")}
                           className="btn"
-                          style={actBtn("C62828", !canManage)}
-                          disabled={!canManage}
-                          aria-describedby={canManage ? undefined : lockedId}
+                          style={actBtn("C62828", !rights.archive)}
+                          data-testid="warehouse-archive"
                           onClick={() => {
                             feedback.minor();
                             setArchiving(w);
@@ -666,7 +673,7 @@ export function WarehousesView({
                         >
                           <Ico d={LICON.trash} size={18} />
                           {t("archive")}
-                        </button>
+                        </KalipKilitliDugme>
                       </div>
                     ) : null}
                   </div>
@@ -680,7 +687,7 @@ export function WarehousesView({
       </KalipEkran>
 
       <KalipOnay
-        open={archiving !== null}
+        open={archiving !== null && rights.archive}
         title={t("confirmArchive.title", { name: archiving?.name ?? "" })}
         description={t("confirmArchive.description", { name: archiving?.name ?? "", code: archiving?.code ?? "" })}
         confirmLabel={t("confirmArchive.button")}

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { balonGoster, sesCal } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
+import type { CardSection } from "@wms/domain/identity/permissions";
 
 let metin = "Değiştirme yetkin yok · sorumluna sor";
 
@@ -58,4 +59,13 @@ export function KalipKilitliDugme({ kilitli, onClick, gerekce, kilitIkonu = true
       ) : null}
     </button>
   );
+}
+
+/**
+ * T-1141: kart bölümü yetki kilidinin gerekçesi — "Ürün ekleme yetkin yok · Yetki iste: yöneticine sor". Bölüm/işlem adları
+ * `@wms/domain/identity/permissions` `CARD_PERMISSION_CATALOGUE` ile aynı; metinler `yetkiKatalog.locked.<bölüm>.<işlem>`.
+ */
+export function useKartKilitGerekce(group: CardSection): (action: "create" | "edit" | "archive") => string {
+  const t = useTranslations("yetkiKatalog.locked");
+  return (action) => t(`${group}.${action}`);
 }

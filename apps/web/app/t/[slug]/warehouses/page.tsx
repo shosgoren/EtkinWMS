@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { hasPermission } from "@wms/domain/identity/permissions";
+import { cardRights, type CardRights } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
@@ -39,7 +39,7 @@ async function LockedWarehouses({ slug }: { slug: string }) {
 }
 
 // Depo listesi (T-207): sunucu bileşeni; veri T-205 okuyucularından. Sayfa kendi kararını verir: üye değil → 404;
-// zorunlu MFA → kurulum; oturum yok → giriş. Yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda `settings.manage` ister).
+// zorunlu MFA → kurulum; oturum yok → giriş. Yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda T-1141 kart anahtarını ister: `items.*` / `warehouses.*` / `locations.*`).
 export default async function WarehousesPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -57,12 +57,12 @@ export default async function WarehousesPage({ params, searchParams }: { params:
   let rows: WarehouseView[];
   let nextAfter: string | null;
   let total: number | undefined;
-  let canManage: boolean;
+  let rights: CardRights;
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canManage = hasPermission(current.roles, "settings.manage", current.grants);
+    rights = cardRights(current.roles, current.grants, "warehouses");
     const page = await loadWarehousesPage(call, { q, archived, after });
     rows = page.rows;
     nextAfter = page.nextAfter;
@@ -81,7 +81,7 @@ export default async function WarehousesPage({ params, searchParams }: { params:
 
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <WarehousesView slug={slug} dark={await isDark()} canManage={canManage} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} archived={archived} {...(total === undefined ? {} : { total })} />
+      <WarehousesView slug={slug} dark={await isDark()} rights={rights} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} archived={archived} {...(total === undefined ? {} : { total })} />
     </main>
   );
 }

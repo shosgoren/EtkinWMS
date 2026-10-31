@@ -39,6 +39,8 @@ import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../../kalip/for
 import { KalipAlan, KalipGrup, KalipKilit, KalipSabit } from "../../kalip/form.tsx";
 import { approx, fmtGun, fmtQty, stockTone } from "../../kalip/format.ts";
 import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
+import { KalipKilitliDugme, useKartKilitGerekce } from "../../kalip/kilitli.tsx";
+import type { CardRights } from "@wms/domain/identity/permissions";
 import { kdz } from "../../kalip/tokens.ts";
 import { addBarcodeAction, archiveItemAction, loadMoreItemTrackingAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
 import { CARD_VISUAL } from "../card-visual.ts";
@@ -84,7 +86,7 @@ type ItemForm = "edit" | "kod" | "conv" | "barcode";
 const FORMS: readonly ItemForm[] = ["edit", "kod", "conv", "barcode"];
 const c = (hex: string): string => kdz("dzd", hex);
 /** Kart içi küçük işlem düğmesi (kaynak `.btn`); kilitliyken soluk. */
-const actBtn = (bg: string): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48 });
+const actBtn = (bg: string, locked = false): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48, opacity: locked ? 0.5 : 1 });
 
 /** Ürün kartı stok özeti (sunucu, `getItemStockCard`); okunamadıysa `null` → bölümler çizilmez. */
 export interface ItemStockCardView {
@@ -580,7 +582,7 @@ function TakipListesi({ slug, itemId, unit, lotOnly, tracking }: { slug: string;
 export function ItemDetail({
   slug,
   dark,
-  canManage,
+  rights,
   quick,
   stockCard,
   tabData = { kind: "none" },
@@ -594,7 +596,8 @@ export function ItemDetail({
 }: {
   slug: string;
   dark: boolean;
-  canManage: boolean;
+  /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
+  rights: CardRights;
   quick: ItemQuickAccess;
   stockCard: ItemStockCardView | null;
   tabData?: ItemTabData;
@@ -623,7 +626,11 @@ export function ItemDetail({
   const sekme = params.get("sekme") ?? "genel";
   const returnTo = sekme === "genel" ? itemPath : `${itemPath}?sekme=${encodeURIComponent(sekme)}`;
   const active = item.status === "ACTIVE";
-  const writable = canManage && active;
+  // T-1141: değiştirme (ad, kod, birim dönüşümü, barkod) `items.edit`, arşiv `items.archive`. Yetkisiz işlem gizlenmez: kilitli düğme + neden.
+  const writable = rights.edit && active;
+  const canArchive = rights.archive && active;
+  const kilitGerekce = useKartKilitGerekce("items");
+  const editLocked = active && !rights.edit;
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<ServerError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -776,12 +783,12 @@ export function ItemDetail({
       deger: <span className="mono">{item.code}</span>,
       d: SICON.barkod,
       ton: "lacivert",
-      ...(writable
+      ...(active
         ? {
             islem: (
-              <button type="button" onClick={() => open("kod")} aria-label={td("codeEdit.for", { name: item.name })} title={td("codeEdit.button")}>
-                <Ico d={SICON.kalem} size={18} />
-              </button>
+              <KalipKilitliDugme kilitli={!writable} gerekce={kilitGerekce("edit")} kilitIkonu={false} onClick={() => open("kod")} aria-label={td("codeEdit.for", { name: item.name })} title={td("codeEdit.button")} data-testid="item-code-edit">
+                <Ico d={writable ? SICON.kalem : LICON.lock} size={18} />
+              </KalipKilitliDugme>
             ),
           }
         : {}),
@@ -846,13 +853,13 @@ export function ItemDetail({
     );
   }
 
-  const lockReason = canManage ? td("archivedNote") : t("lockedReason");
+  const lockReason = editLocked ? kilitGerekce("edit") : td("archivedNote");
   const bildirimler = (
     <>
       {codeChanged ? <CodeChangedNotice from={codeChanged.from} to={item.code === codeChanged.from ? codeChanged.to : item.code} busy={undoing} onUndo={() => void undoCode()} /> : null}
       {notice ? <KalipKartNot metin={notice} d={SICON.onay} renk="ok" testId="item-notice" /> : null}
       {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
-      {canManage ? null : <p className="sr">{t("lockedReason")}</p>}
+      {editLocked ? <p className="sr">{kilitGerekce("edit")}</p> : null}
       {active ? null : <KalipKartNot metin={td("archivedNote")} d={SICON.arsiv} renk="gri" testId="item-archived-note" />}
     </>
   );
@@ -917,6 +924,14 @@ export function ItemDetail({
           bos={td("conversionsEmpty")}
           satirlar={conversions.map((cv) => ({ key: cv.unitId, baslik: td("conversionLine", { unit: cv.unitCode, factor: cv.factor, base: unit }), d: SICON.cevrim, ton: "mor", testId: "conversion-row" }))}
         />
+        {editLocked ? (
+          <div>
+            <KalipKilitliDugme kilitli gerekce={kilitGerekce("edit")} className="btn" style={actBtn("6C4BD8", true)} data-testid="conversion-add">
+              <Ico d={LICON.plus} size={18} />
+              {tk("convAdd")}
+            </KalipKilitliDugme>
+          </div>
+        ) : null}
         {writable ? (
           <div>
             <button
@@ -959,13 +974,15 @@ export function ItemDetail({
             const alt = (
               <>
                 {b.ambiguous ? <KalipUyari title={td("barcodeAmbiguous")} sub={b.barcode} /> : null}
-                {writable ? (
-                  <button
-                    type="button"
+                {writable || editLocked ? (
+                  <KalipKilitliDugme
+                    kilitli={editLocked}
+                    gerekce={kilitGerekce("edit")}
                     className="btn"
-                    style={actBtn("C62828")}
-                    disabled={busy === "remove"}
+                    style={actBtn("C62828", editLocked)}
+                    aria-busy={busy === "remove" || undefined}
                     onClick={() => {
+                      if (busy === "remove") return;
                       feedback.minor();
                       setRemoving(b);
                     }}
@@ -973,7 +990,7 @@ export function ItemDetail({
                   >
                     <Ico d={LICON.trash} size={18} />
                     {td("barcodeRemove")}
-                  </button>
+                  </KalipKilitliDugme>
                 ) : null}
               </>
             );
@@ -984,16 +1001,16 @@ export function ItemDetail({
               d: SICON.barkod,
               ton: "mavi" as const,
               testId: "barcode-row",
-              ...(b.ambiguous || writable ? { altta: alt } : {}),
+              ...(b.ambiguous || writable || editLocked ? { altta: alt } : {}),
             };
           })}
         />
-        {writable ? (
+        {active ? (
           <div>
-            <button type="button" className="btn" style={actBtn("0E7C7B")} onClick={() => open("barcode")} data-testid="barcode-add">
+            <KalipKilitliDugme kilitli={editLocked} gerekce={kilitGerekce("edit")} className="btn" style={actBtn("0E7C7B", editLocked)} onClick={() => open("barcode")} data-testid="barcode-add">
               <Ico d={LICON.plus} size={18} />
               {tk("bcAdd")}
-            </button>
+            </KalipKilitliDugme>
           </div>
         ) : null}
       </div>
@@ -1002,27 +1019,29 @@ export function ItemDetail({
     ana = (
       <>
         <KalipBilgiIzgara baslik={td("cardTitle")} bilgiler={bilgiler} kilitD={SICON.kilit} />
-        {writable ? (
+        {active ? (
           <div className="stkdugmeler">
-            <button type="button" className="btn" style={actBtn("2F5DA8")} onClick={() => open("edit")} data-testid="item-edit-open">
+            <KalipKilitliDugme kilitli={!writable} gerekce={kilitGerekce("edit")} className="btn" style={actBtn("2F5DA8", !writable)} onClick={() => open("edit")} data-testid="item-edit-open">
               <Ico d={LICON.pencil} size={18} />
               {tk("editAria")}
-            </button>
-            <button
-              type="button"
+            </KalipKilitliDugme>
+            <KalipKilitliDugme
+              kilitli={!canArchive}
+              gerekce={kilitGerekce("archive")}
               className="btn"
-              style={actBtn("C62828")}
-              disabled={busy === "archive"}
+              style={actBtn("C62828", !canArchive)}
               aria-busy={busy === "archive" || undefined}
               aria-describedby="arsiv-ipucu"
               onClick={() => {
+                if (busy === "archive") return;
                 feedback.minor();
                 setArchiveOpen(true);
               }}
+              data-testid="item-archive"
             >
               <Ico d={LICON.trash} size={18} />
               {td("archive")}
-            </button>
+            </KalipKilitliDugme>
             <small id="arsiv-ipucu" className="sr">
               {td("archiveHint")}
             </small>
@@ -1042,7 +1061,7 @@ export function ItemDetail({
         testId="item-detail"
         bar={{
           back: { href: base, aria: td("back") },
-          main: { label: tk("edit"), aria: tk("editAria"), d: LICON.pencil, onClick: () => open("edit"), disabled: !writable, disabledReason: lockReason, testId: "item-edit" },
+          main: { label: tk("edit"), aria: tk("editAria"), d: LICON.pencil, onClick: () => open("edit"), disabled: !active, locked: editLocked, disabledReason: lockReason, testId: "item-edit" },
         }}
       >
         <KalipKayitKart
@@ -1068,7 +1087,7 @@ export function ItemDetail({
       </KalipEkran>
 
       <KalipOnay
-        open={archiveOpen}
+        open={archiveOpen && canArchive}
         title={td("confirmArchive.title", { name: item.name })}
         description={td("confirmArchive.description", { name: item.name, code: item.code })}
         confirmLabel={td("confirmArchive.button")}

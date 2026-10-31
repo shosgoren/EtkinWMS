@@ -7,6 +7,8 @@ import { SICON } from "../../../../design/standart-icons.ts";
 import { KalipEkran } from "../../kalip/ekran.tsx";
 import { KalipBilgiIzgara, KalipKartSerit, KalipKayitKart, type KalipBilgi, type KalipEtiket, type StTon } from "../../kalip/kart.tsx";
 import type { PartyView } from "../parties-view.tsx";
+import { useKartKilitGerekce } from "../../kalip/kilitli.tsx";
+import type { CardRights } from "@wms/domain/identity/permissions";
 
 const KIND_VIS: Readonly<Record<PartyView["kind"], { d: string; ton: StTon }>> = {
   CUSTOMER: { d: LICON.people, ton: "yesil" },
@@ -20,8 +22,11 @@ function mailtoHref(email: string): string {
   return at <= 0 ? `mailto:${encodeURIComponent(email)}` : `mailto:${encodeURIComponent(email.slice(0, at))}@${encodeURIComponent(email.slice(at + 1))}`;
 }
 
-export function PartyCard({ slug, dark, canEdit, party }: { slug: string; dark: boolean; canEdit: boolean; party: PartyView }) {
+export function PartyCard({ slug, dark, rights, party }: { slug: string; dark: boolean; rights: CardRights; party: PartyView }) {
   const t = useTranslations("parties");
+  // T-1141: düzenleme formu değiştirme (`parties.edit`) ve arşiv / geri al (`parties.archive`) işlemlerini taşır; ikisi de yoksa kilitli.
+  const kilitGerekce = useKartKilitGerekce("parties");
+  const formLocked = !rights.edit && !rights.archive;
   const tk = useTranslations("parties.kart");
   const list = `/t/${encodeURIComponent(slug)}/parties`;
   const editHref = `${list}?edit=${encodeURIComponent(party.id)}`;
@@ -59,7 +64,7 @@ export function PartyCard({ slug, dark, canEdit, party }: { slug: string; dark: 
       testId="party-detail"
       bar={{
         back: { href: list, aria: tk("back") },
-        main: { label: tk("edit"), aria: tk("editAria", { name: party.name }), d: LICON.pencil, href: editHref, disabled: !canEdit, disabledReason: t("readOnlySub"), testId: "party-edit" },
+        main: { label: tk("edit"), aria: tk("editAria", { name: party.name }), d: LICON.pencil, href: editHref, locked: formLocked, disabledReason: kilitGerekce("edit"), testId: "party-edit" },
       }}
     >
       <KalipKayitKart

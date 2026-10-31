@@ -18,6 +18,20 @@ const PERMISSION_LIST = [
   "audit.view",
   // T-421/T-427: Excel'den aktarım (ürün, cari, açılış stoku). Hesap sahibinde her zaman; diğerlerine yalnız özel yetki grubuyla.
   "data.import",
+  // T-1141 (kullanıcı kararı 31 Ekim): kart bölümü × işlem. Rollerde yalnız `TENANT_ADMIN` (bugünkü `settings.manage` erişimiyle birebir;
+  // hiçbir rol erişim kaybetmez/kazanmaz). Gruba verilebilirlik (GRANTABLE + 0051 CHECK) yetki ekranı işinde açılır.
+  "items.create",
+  "items.edit",
+  "items.archive",
+  "parties.create",
+  "parties.edit",
+  "parties.archive",
+  "warehouses.create",
+  "warehouses.edit",
+  "warehouses.archive",
+  "locations.create",
+  "locations.edit",
+  "locations.archive",
 ] as const;
 export type Permission = (typeof PERMISSION_LIST)[number];
 /** Derin dondurulmuş (çalışma anında değiştirilemez). */
@@ -73,4 +87,69 @@ export function hasPermission(roles: readonly string[], permission: Permission, 
     if (!Object.hasOwn(ROLE_PERMISSIONS, role)) return false;
     return (ROLE_PERMISSIONS as Readonly<Record<string, readonly Permission[]>>)[role]?.includes(permission) === true;
   });
+}
+
+/**
+ * T-1141: kart bölümleri ve işlemleri — TEK KATALOG. Yetki ekranı (Yetki grupları / Ekip) bu listeyi bölüm (grup) × işlem anahtarları olarak
+ * çizer; ekranlar (`cardRights`) ve domain komutları aynı anahtarları kullanır. Etiketler web dil dosyasında: `yetkiKatalog.groups.<group>`,
+ * `yetkiKatalog.actions.<action>`, kilit gerekçesi `yetkiKatalog.locked.<group>.<action>`.
+ * `requires`: işlemin istediği izinlerin HEPSİ. `write: false` = yazma değildir (etiket/QR basımı kayıt yazmaz; `stock.view`).
+ * `shared: true` = anahtar başka bölümlerle ortaktır (Excel aktarımı `data.import`); ayrı anahtara bölmek grup taşıma migration'ı ister.
+ */
+export const CARD_SECTIONS = Object.freeze(["items", "parties", "warehouses", "locations"] as const);
+export type CardSection = (typeof CARD_SECTIONS)[number];
+export const CARD_ACTIONS = Object.freeze(["create", "edit", "archive", "import", "label"] as const);
+export type CardAction = (typeof CARD_ACTIONS)[number];
+
+export interface CardPermissionEntry {
+  readonly group: CardSection;
+  readonly action: CardAction;
+  readonly requires: readonly Permission[];
+  readonly write: boolean;
+  readonly shared: boolean;
+  /** Bu anahtarın kapsadığı işlemler (ekran/yetki listesinde açıklama için): ör. arşivle + geri al, kod değiştirme. */
+  readonly covers: readonly string[];
+}
+
+const entry = (group: CardSection, action: CardAction, requires: readonly Permission[], covers: readonly string[], opts: { write?: boolean; shared?: boolean } = {}): CardPermissionEntry =>
+  Object.freeze({ group, action, requires: Object.freeze([...requires]), write: opts.write ?? true, shared: opts.shared ?? false, covers: Object.freeze([...covers]) });
+
+export const CARD_PERMISSION_CATALOGUE: readonly CardPermissionEntry[] = Object.freeze([
+  entry("items", "create", ["items.create"], ["create"]),
+  entry("items", "edit", ["items.edit"], ["edit", "codeChange", "barcode", "unit", "conversion"]),
+  entry("items", "archive", ["items.archive"], ["archive"]),
+  entry("items", "import", ["data.import"], ["import"], { shared: true }),
+  entry("items", "label", ["stock.view"], ["label"], { write: false, shared: true }),
+  entry("parties", "create", ["parties.create"], ["create"]),
+  entry("parties", "edit", ["parties.edit"], ["edit", "codeChange"]),
+  entry("parties", "archive", ["parties.archive"], ["archive", "restore"]),
+  entry("parties", "import", ["data.import"], ["import"], { shared: true }),
+  entry("warehouses", "create", ["warehouses.create"], ["create"]),
+  entry("warehouses", "edit", ["warehouses.edit"], ["edit", "codeChange"]),
+  entry("warehouses", "archive", ["warehouses.archive"], ["archive"]),
+  entry("warehouses", "import", ["data.import", "settings.manage"], ["import"], { shared: true }),
+  entry("locations", "create", ["locations.create"], ["create", "bulk"]),
+  entry("locations", "edit", ["locations.edit"], ["edit", "codeChange", "kind"]),
+  entry("locations", "archive", ["locations.archive"], ["archive"]),
+  entry("locations", "import", ["data.import", "settings.manage"], ["import"], { shared: true }),
+  entry("locations", "label", ["stock.view"], ["label"], { write: false, shared: true }),
+]);
+
+/** Bölüm + işlem → yazma anahtarı (yalnız tek anahtarlı yazma işlemleri: create / edit / archive). */
+export const cardPermission = (group: CardSection, action: "create" | "edit" | "archive"): Permission => `${group}.${action}` as Permission;
+
+export interface CardRights {
+  readonly create: boolean;
+  readonly edit: boolean;
+  readonly archive: boolean;
+  readonly import: boolean;
+}
+
+/** Ekranın gösterim kararı (yalnız kilit/gösterim; asıl karar domain komutunda). Katalogdaki `requires` listesinin hepsi gerekir. */
+export function cardRights(roles: readonly string[], grants: readonly string[], group: CardSection): CardRights {
+  const can = (action: CardAction): boolean => {
+    const e = CARD_PERMISSION_CATALOGUE.find((x) => x.group === group && x.action === action);
+    return e !== undefined && e.requires.every((p) => hasPermission(roles, p, grants));
+  };
+  return Object.freeze({ create: can("create"), edit: can("edit"), archive: can("archive"), import: can("import") });
 }

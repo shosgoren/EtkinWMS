@@ -6,7 +6,7 @@ import { getAppDb } from "@wms/db";
 import { ITEM_CARD_TYPES } from "@wms/domain/catalog";
 import type { listUnits } from "@wms/domain/catalog/units";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { hasPermission } from "@wms/domain/identity/permissions";
+import { cardRights, type CardRights } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
@@ -38,7 +38,7 @@ async function LockedItems(slug: string) {
 }
 
 // Ürün listesi (T-216): sunucu bileşeni; veri T-240 okuyucularından (keyset, OFFSET yok). Sayfa kendi kararını verir: üye değil → 404;
-// zorunlu MFA → kurulum; oturum yok → giriş. Yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda `settings.manage` ister).
+// zorunlu MFA → kurulum; oturum yok → giriş. Yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda T-1141 kart anahtarını ister: `items.*` / `warehouses.*` / `locations.*`).
 export default async function ItemsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -66,13 +66,13 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   let units: Awaited<ReturnType<typeof listUnits>>;
   let nextCursor: string | null;
   let total: number | undefined;
-  let canManage: boolean;
+  let rights: CardRights;
   let stock: Record<string, ItemStockView> = {};
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canManage = hasPermission(current.roles, "settings.manage", current.grants);
+    rights = cardRights(current.roles, current.grants, "items");
     const page = await loadItemsPage(call, { q, status, cardType, after, ...extra });
     rows = page.rows;
     units = page.units;
@@ -102,7 +102,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
       <ItemsView
         slug={slug}
         dark={dark}
-        canManage={canManage}
+        rights={rights}
         items={rows}
         stock={stock}
         units={units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }))}
