@@ -442,6 +442,8 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     // T-1139: migration 0068'in eski yöntem bağlantısına yaptığı durum sentetik kurulur (DISCONNECTED + kimlik yok + LEGACY_METHOD_REMOVED,
     // webhook anahtarları silinmiş). Ekran: bağlı değil; Paraşüt kartının yerinde tek kırmızı bant ve tek "Yeniden bağlan"; Excel kartı durur;
     // Bağlantı bölümünde rozet. Düğme OAuth'u başlatır; yeniden bağlanınca bağlı şerit döner.
+    // Kesmeden önce kurulu (ACTIVE) webhook kimlikleri: 0068 Paraşüt'e çağrı yapamaz, bunlar sahte Paraşüt'te kalır.
+    const preCutHooks = (await db<{ id: string }>(`SELECT external_id AS id FROM public.integration_webhooks WHERE integration_id = ${tenantIntegration} AND status = 'ACTIVE'`, [slug])).map((r) => r.id);
     await db(`UPDATE public.integration_webhooks SET status = 'DELETED', key_box = NULL WHERE integration_id = ${tenantIntegration} AND status = 'ACTIVE'`, [slug]);
     await db(`UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL, last_error_code = 'LEGACY_METHOD_REMOVED', webhook_status = 'OFF', webhook_checked_at = NULL WHERE id = ${tenantIntegration}`, [slug]);
     await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
@@ -467,6 +469,20 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("integrations-conn")).toHaveAttribute("data-status", "CONNECTED");
     await expect(page.getByTestId("integrations-health")).toHaveAttribute("data-level", "ok");
     expect((await db<{ code: string | null }>(`SELECT last_error_code AS code FROM public.integrations WHERE id = ${tenantIntegration}`, [slug]))[0]?.code).toBeNull();
+    // Yeniden bağlanınca worker kayıt işi anlık bildirimi yeniden kurar ve Paraşüt'te kalan eski kayıtları (DELETED satırın kimliği) siler.
+    // İş bitmeden sonraki adıma geçilmez: aşağıdaki kendi uygulama bağlantısı sahte Paraşüt'te yeni belirteç verir (sahte sunucuda tek geçerli
+    // erişim belirteci vardır) ve yarıda kalan kayıt işini 401 ile düşürürdü (CI bulgusu; gerçek Paraşüt'te eski belirteç geçersizleşmez).
+    await expect
+      .poll(async () => {
+        await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
+        return page.getByTestId("integrations-webhook").getAttribute("data-status");
+      }, { timeout: 120_000, intervals: [2_000, 5_000] })
+      .toBe("ACTIVE");
+    const fakeUrl = process.env.E2E_FAKE_PARASUT_URL;
+    if (!fakeUrl) throw new Error("e2e: sahte Paraşüt adresi yok (global-setup)");
+    const remoteIds = ((await (await fetch(`${fakeUrl}/__fake/webhooks`)).json()) as { data: { id: string }[] }).data.map((h) => h.id);
+    for (const old of preCutHooks) expect(remoteIds, `eski webhook ${old} Paraşüt'ten silinmeli`).not.toContain(old);
+    expect((await db<{ n: number }>(`SELECT count(*)::int AS n FROM public.integration_webhooks WHERE integration_id = ${tenantIntegration} AND status = 'ACTIVE'`, [slug]))[0]?.n).toBe(6);
     // Kendi uygulaması, eski yetki kodu yöntemiyle (OOB): anahtarlar kaydedilir, bağlan → kod formu.
     await page.getByTestId("oauth-advanced").click();
     await page.getByTestId("oauth-settings-open").click();
