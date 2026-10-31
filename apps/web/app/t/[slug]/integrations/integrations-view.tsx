@@ -13,9 +13,13 @@
 // giriş yap ve izin ver → şirketini seç (tek şirket kendiliğinden). Kendi uygulamasını kullanmak isteyen için "Gelişmiş" açılır satırı
 // (`KalipSatir`): 3 adımlı rehberli kart (1 gerçek dönüş adresi + Kopyala, 2 iki anahtar, 3 BAĞLAN). Eski yetki kodu (OOB) yolu yalnız kendi
 // uygulamasında OOB adresini kaydeden müşteri için kalır; sağlayıcı hata kodu `reasons.*` ile gösterilir (genel "tamamlanamadı" değil).
+// T-1137 (kullanıcı 30 Ekim): eski "e-posta + parola ile bağlan" penceresi ve girişi kalktı (sunucu eylemi UNSUPPORTED döner); eski yöntemle
+// bağlı müşteriye sağlık bandında nazik "Yeni yönteme geç". Bağlantı sağlığı (sunucuda hesaplanır) tek bant: simge + renk + tek cümle + tek
+// sonraki adım (`KalipBildirim` + `KalipDugme`). "Bekleyenler ve hatalar"da karar bekleyen kuyruk satırları satır başına çözüm düğmeleriyle;
+// geri dönüşü olmayan kararlar (`KalipOnay`) onay ister. Excel, bağlı değilken kaynak listesinde Paraşüt'ün yanında bir veri kaynağı kartıdır.
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { NICON } from "../../../design/entegrasyon-icons.ts";
 import { SICON } from "../../../design/standart-icons.ts";
@@ -30,9 +34,10 @@ import { ayarSekmeleri } from "../settings/sekmeler.ts";
 import { entegrasyonSorunSayisi, sonEsitleme, type EntegrasyonBolumu } from "./bolum.ts";
 import { donusAdresi } from "./oauth-adres.ts";
 import { yonDegisimi, yonOnayAnahtari, yonOnayGerekir, yonSonucAnahtari, type KartAkisi, type YonDegisimi } from "./yon-sonuc.ts";
-import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
+import { KalipOnay } from "../kalip/pencere.tsx";
+import { KalipBildirim, KalipDugme } from "../kalip/belge.tsx";
 import { kdz } from "../kalip/tokens.ts";
-import { countFlowRecordsAction, checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
+import { countFlowRecordsAction, checkIntegrationAction, disconnectIntegrationAction, retryIntegrationOutboxAction, resolveIntegrationOutboxAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
 import { feedback, intlDil } from "@wms/ui";
 
 type Provider = "PARASUT" | "LOGO";
@@ -51,7 +56,9 @@ export interface FlowData {
 }
 export interface OverviewData {
   readonly demo: boolean;
-  readonly outbox: { readonly pending: number; readonly check: number; readonly failed: number };
+  readonly outbox: { readonly pending: number; readonly check: number; readonly failed: number; readonly parked: number };
+  /** T-1137: bağlantı sağlığı (sunucuda, DB saatiyle); bağlı değilse null. */
+  readonly health: HealthData | null;
   readonly providers: readonly {
     readonly provider: Provider;
     readonly available: boolean;
@@ -60,6 +67,31 @@ export interface OverviewData {
   }[];
   readonly runs: readonly { readonly id: string; readonly flow: Flow; readonly trigger: "SCHEDULE" | "MANUAL"; readonly status: "RUNNING" | "SUCCESS" | "PARTIAL" | "FAILED"; readonly startedAt: string; readonly created: number; readonly updated: number; readonly linked: number; readonly skipped: number; readonly failed: number; readonly errorCode: string | null }[];
 }
+
+export interface HealthData {
+  readonly level: "ok" | "warn" | "error";
+  readonly cause: "AUTH" | "STUCK" | "TIMEOUT" | "FAILING" | "STALE" | null;
+  readonly next: "RECONNECT" | "RUN" | "DETAIL" | null;
+  readonly flow: Flow | null;
+  readonly since: string | null;
+  readonly code: string | null;
+  readonly legacy: boolean;
+}
+/** T-1137: kuyrukta karar bekleyen satır (kod/ad yalnız gösterim için). */
+export interface IssueData {
+  readonly id: string;
+  readonly flow: "SHIPMENTS" | "PRODUCTS" | "CONTACTS" | "WAREHOUSES";
+  readonly entityType: "DOCUMENT" | "ITEM" | "PARTY" | "WAREHOUSE";
+  readonly code: string | null;
+  readonly name: string | null;
+  readonly status: "CHECK" | "FAILED";
+  readonly errorCode: string | null;
+  readonly attempts: number;
+  readonly updatedAt: string;
+  readonly resolvable: boolean;
+}
+export interface IssuesData { readonly total: number; readonly items: readonly IssueData[] }
+type IssueAsk = { readonly kind: "retry" | "SENT" | "SKIP"; readonly issue: IssueData };
 
 /** T-1006: açılış stoku ayarı (varsayılan kapalı) + alındı zamanı + yazılabilecek raflar. */
 export interface OpeningData {
@@ -84,19 +116,17 @@ const PROVIDER_COLOR: Readonly<Record<Provider, string>> = { PARASUT: "2F5DA8", 
 const PROVIDER_NAME: Readonly<Record<Provider, string>> = { PARASUT: "Paraşüt", LOGO: "Logo" };
 const c = (hex: string): string => kdz("dzf", hex);
 
-const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: "", password: "" };
 const EMPTY_APP = { clientId: "", clientSecret: "" };
 
 /** T-1133: ekrana yalnız bayraklar ve dönüş adresi gelir; uygulama kimliği/sırrı hiçbir zaman istemciye inmez. */
 export interface OAuthData { readonly configured: boolean; readonly ownApp: boolean; readonly shared: boolean; readonly oob: boolean; readonly callbackUrl: string | null }
 
-export function IntegrationsView({ slug, dark, data, bolum, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult, oauthReason = null, webhook = null }: { oauth:OAuthData; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; oauthReason?: string | null; slug: string; dark: boolean; data: OverviewData; bolum: EntegrasyonBolumu; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean; webhook?: { readonly status: "OFF" | "ACTIVE" | "FAILED"; readonly lastEventAt: string | null } | null }) {
+export function IntegrationsView({ slug, dark, data, bolum, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult, oauthReason = null, webhook = null, issues = { total: 0, items: [] } }: { issues?: IssuesData; oauth:OAuthData; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; oauthReason?: string | null; slug: string; dark: boolean; data: OverviewData; bolum: EntegrasyonBolumu; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean; webhook?: { readonly status: "OFF" | "ACTIVE" | "FAILED"; readonly lastEventAt: string | null } | null }) {
   const t = useTranslations("integrations");
   const tb = useTranslations("baglantilar"); // T-1112: ortak ayar sekmelerinin adları
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const ts = useTranslations("serverErrors");
   const router = useRouter();
-  const formId = useId();
   const base = `/t/${encodeURIComponent(slug)}`;
   const { say, node: toast } = useKalipToast("form");
   const [busy, setBusy] = useState<string | null>(null);
@@ -113,11 +143,12 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   useEffect(()=>setSelectOpen(oauthSelection!==null),[oauthSelection]);
   // T-1133: callback'ten dönen sabit neden kodu varsa ekran onu söyler (ör. izin verilmedi, Paraşüt çok istek dedi); yoksa genel ileti.
   useEffect(()=>{if(oauthResult!==null){const reason=oauthResult!=="failed"||oauthReason===null?t(`oauth.${oauthResult}`):oauthReason==="DENIED"?t("oauth.denied"):t.has(`reasons.${oauthReason}`)?t(`reasons.${oauthReason}`):t("oauth.failed");say(oauthResult==="connected"?"ok":"warn",reason);router.replace(`${base}/integrations`);}},[oauthResult,oauthReason,router,base,say,t]);
-  const [formOpen, setFormOpen] = useState(false);
+  // T-1137: yolculuk adım 1'deki "Mevcut stoku da alalım mı?" cevabı bağlanınca ayara işlenir (eski parola penceresinden OAuth dönüşüne taşındı).
+  useEffect(()=>{if(oauthResult==="connected"&&journeyWish===true)void setOpeningStockAction({slug,provider:"PARASUT",enabled:true,via:"journey"});},[oauthResult,journeyWish,slug]);
   const [cutOpen, setCutOpen] = useState(false);
+  const [ask, setAsk] = useState<IssueAsk | null>(null);
   // T-1136: yön değişiminin onay penceresi (yerel kayıt varken yeni "al" ya da yeni "gönder"); metinler açılırken hesaplanır.
   const [onay, setOnay] = useState<{ readonly flow: Flow; readonly dir: Direction; readonly title: string; readonly text: string; readonly evet: string } | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [reauth, setReauth] = useState(false);
   // İyimser akış durumu (sunucu yanıtı gelene dek); sunucu verisi değişince sıfırlanır.
   const [local, setLocal] = useState<Partial<Record<Flow, { enabled: boolean; direction: Direction }>>>({});
@@ -274,31 +305,6 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
     router.refresh();
   };
 
-  const submitConnect = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    if (busy !== null) return;
-    if (Object.values(form).some((v) => v.trim() === "")) {
-      say("warn", t("form.missing"));
-      return;
-    }
-    setBusy("connect");
-    const r = await connectParasutAction({ slug, ...form });
-    setBusy(null);
-    if (!r.ok) return failed(r);
-    if (!r.data.ok) {
-      say("err", reasonText(r.data.reason));
-      return;
-    }
-    setForm(EMPTY_FORM); // girilen sır bellekte tutulmaz
-    setFormOpen(false);
-    say("ok", t("form.connected", { label: r.data.label }));
-    // T-1006: yolculuk adım 1'de "Mevcut stok miktarlarını da alalım mı?" cevaplandıysa bağlanınca ayara işlenir ("Hayır" = kapalı kalır).
-    if (journeyWish === true) await setOpeningStockAction({ slug, provider: "PARASUT", enabled: true, via: "journey" });
-    // T-1112: bağlanınca sıradaki iş "ne çekilsin" — bağlıyken varsayılan bölüm (adres sorgusuz).
-    router.replace(`${base}/integrations`);
-    router.refresh();
-  };
-
   const cut = async (): Promise<void> => {
     setBusy("cut");
     const r = await disconnectIntegrationAction({ slug, provider: "PARASUT" });
@@ -415,7 +421,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
 
   // T-1133 Gelişmiş: kendi Paraşüt uygulaman — 3 adımlı rehberli kart. 1: gerçek dönüş adresi salt okunur + Kopyala; 2: iki anahtar (sade Türkçe);
   // 3: KAYDET'ten sonra bölümdeki BAĞLAN. Doğrulama ortak `KalipFormEkran` (eksik alan kırmızı + "N alan eksik"). Eski yetki kodu yöntemi (OOB)
-  // yalnız anahtarla açılır; "Eski bağlantı yöntemi" düğmesi kalır (parola akışı başka yerden ulaşılamaz; kaldırma T-1137).
+  // yalnız anahtarla açılır. T-1137: e-posta + parola ile bağlanma (eski "Eski bağlantı yöntemi" düğmesi) kalktı.
   const stepIcon=(n:number,done:boolean,color:string)=><i style={{background:c(done?"2F9E6B":color)}} aria-hidden="true">{done?<Ico d={LICON.check} size={18}/>:<b style={{font:"inherit",color:"inherit"}}>{n}</b>}</i>;
   // Gösterilen ve kopyalanan adres aynı kaynaktan (seçili yönteme göre: OOB → URN, değilse sunucu callback'i).
   const callbackValue=donusAdresi(appOob,oauth.callbackUrl);
@@ -426,7 +432,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
     onSave={async()=>{const r=await saveParasutOAuthSettingsAction({slug,clientId:appForm.clientId.trim(),clientSecret:appForm.clientSecret.trim(),...(appOob?{oob:true}:{})});if(!r.ok)return formFailure(r);return r.data.ok?{ok:true}:{ok:false,mesaj:reasonText(r.data.reason)};}}
     onDone={()=>{resetApp();setConfigOpen(false);router.refresh();}}
     onBack={()=>{resetApp();setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
-    footer={reauthAction??(appForm.clientId!==""||appForm.clientSecret!==""?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{resetApp();setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>)}>
+    footer={reauthAction}>
     <KalipGrup title={t("oauth.step1")} sub={appOob?t("oauth.step1Oob"):t("oauth.step1Hint")} d={LICON.globe} color="2F5DA8" testId="oauth-step1">
       <KalipAlan label={t("oauth.callback")} name="callbackUrl" value={callbackShown} readOnly autoComplete="off" onFocus={e=>e.currentTarget.select()} data-testid="oauth-callback" />
       <button type="button" className="btn n" data-testid="oauth-copy" onClick={()=>copyCallback(callbackValue)}><Ico d={copied?LICON.check:LICON.clip} size={20}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
@@ -459,8 +465,11 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   const self = `${base}/integrations`;
   const sorun = entegrasyonSorunSayisi({ outbox: data.outbox, flows });
   const son = sonEsitleme(flows, data.runs);
+  // T-1137: sağlık sorunu varsa "Bağlantı ve veri kaynağı" da rozet alır (sorun bandı orada ve akış bölümünde).
+  const hp = data.health;
+  const saglikRozet = hp !== null && hp.level !== "ok" ? { badge: 1, badgeAria: t("bolum.badgeAria", { n: 1 }) } : {};
   const bolumler: KalipAltBolum[] = [
-    { id: "baglanti", label: t("bolum.baglanti"), d: SICON.baglanti, ton: "parasut", href: `${self}?bolum=baglanti` },
+    { id: "baglanti", label: t("bolum.baglanti"), d: SICON.baglanti, ton: "parasut", href: `${self}?bolum=baglanti`, ...saglikRozet },
     { id: "akis", label: t("bolum.akis"), d: SICON.cevrim, ton: "mavi", href: `${self}?bolum=akis` },
     { id: "sahiplik", label: t("bolum.sahiplik"), d: SICON.kilit, ton: "mor", href: `${self}?bolum=sahiplik`, soon: t("pillSoon") },
     { id: "arsiv", label: t("bolum.arsiv"), d: SICON.arsiv, ton: "gri", href: `${self}?bolum=arsiv` },
@@ -468,6 +477,82 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   ];
   const up = (x: string): string => x.toLocaleUpperCase(intlDil(locale));
   const hataliAkislar = flows.filter((f) => f.errorCount > 0);
+
+  // T-1137: bağlantı sağlığı bandı — simge + renk (trafik ışığı) + tek cümle + tek sonraki adım. Neden sunucudan (sabit kod), metin burada.
+  const goDetail = (): void => {
+    feedback.minor();
+    router.push(`${self}?bolum=hatalar`);
+  };
+  // `inConn`: bağlantı bölümünde bağlantı satırı koptu durumunu zaten kırmızı + "Yeniden bağlan" ile söyler (T-991) — aynı şey iki kez çizilmez.
+  const saglikBandi = (testId: string, inConn: boolean): ReactNode => {
+    if (hp === null) return null;
+    const out: ReactNode[] = [];
+    if (hp.level !== "ok" && hp.cause !== null && !(inConn && hp.cause === "AUTH")) {
+      const name = hp.flow === null ? pn : t(`flows.${hp.flow}.name`);
+      const sub = hp.cause === "AUTH" || hp.cause === "FAILING" ? reasonText(hp.code) : t(`health.${hp.cause}.sub`, { at: hp.since === null ? "" : when(hp.since) });
+      const next =
+        hp.next === "RECONNECT" ? (
+          <KalipDugme tur="ana" d={NICON.plug} onClick={openForm} busy={busy === "oauth"} data-testid={`${testId}-next`} data-next="RECONNECT">{t("health.next.RECONNECT")}</KalipDugme>
+        ) : hp.next === "RUN" ? (
+          <KalipDugme tur="ana" d={NICON.sync} onClick={() => void runFlow(hp.flow ?? undefined)} busy={busy !== null && busy.startsWith("run")} data-testid={`${testId}-next`} data-next="RUN">{t("health.next.RUN")}</KalipDugme>
+        ) : (
+          <KalipDugme d={LICON.info} onClick={goDetail} data-testid={`${testId}-next`} data-next="DETAIL">{t("health.next.DETAIL")}</KalipDugme>
+        );
+      out.push(
+        <div key="h" data-testid={testId} data-level={hp.level} data-cause={hp.cause}>
+          <KalipBildirim tur={hp.level === "error" ? "hata" : "uyari"} title={t(`health.${hp.cause}.title`, { name, provider: pn })} sub={sub}>
+            <span>{next}</span>
+          </KalipBildirim>
+        </div>,
+      );
+    } else if (inConn && hp.level === "ok") {
+      out.push(
+        <div key="h" data-testid={testId} data-level="ok">
+          <KalipBildirim tur="tamam" title={t("health.ok")} />
+        </div>,
+      );
+    }
+    if (hp.legacy && hp.cause !== "AUTH") {
+      out.push(
+        <div key="l" data-testid={`${testId}-legacy`}>
+          <KalipBildirim tur="bilgi" title={t("health.legacy.title")} sub={t("health.legacy.sub")}>
+            <span><KalipDugme d={NICON.plug} onClick={openForm} busy={busy === "oauth"} data-testid={`${testId}-legacy-next`}>{t("health.legacy.next")}</KalipDugme></span>
+          </KalipBildirim>
+        </div>,
+      );
+    }
+    return out.length === 0 ? null : <>{out}</>;
+  };
+
+  // T-1137: kuyrukta karar bekleyen satır — yeniden dene / gönderildi say / gönderme. Çift irsaliye riski olan (CHECK) yeniden gönderim ve
+  // elle çözüm kararları onay ister (geri dönüşü yok); kesin reddedilmiş irsaliye ve kart bekletmesi onaysız yeniden denenir.
+  const issueTitle = (it: IssueData): string =>
+    it.flow === "SHIPMENTS" ? t("issues.doc", { code: it.code ?? "—" }) : `${t(`flows.${it.flow}.name`)} · ${[it.code, it.name].filter((x) => x !== null).join(" ") || "—"}`;
+  const doIssue = async (kind: IssueAsk["kind"], it: IssueData): Promise<void> => {
+    if (busy !== null) return;
+    setBusy(`issue-${it.id}`);
+    const r = kind === "retry" ? await retryIntegrationOutboxAction({ slug, id: it.id }) : await resolveIntegrationOutboxAction({ slug, id: it.id, resolution: kind });
+    setBusy(null);
+    setAsk(null);
+    if (!r.ok) return failed(r);
+    if (!r.data.ok) {
+      say("warn", t(`issues.reasons.${r.data.reason}`));
+      router.refresh();
+      return;
+    }
+    say("ok", kind === "retry" ? (r.data.queued ? t("issues.retried") : t("issues.retriedLater")) : kind === "SENT" ? t("issues.markedSent") : t("issues.markedSkip"));
+    router.refresh();
+  };
+  const pickIssue = (kind: IssueAsk["kind"], it: IssueData): void => {
+    if (busy !== null) return;
+    if (kind === "retry" && !(it.flow === "SHIPMENTS" && it.status === "CHECK")) {
+      void doIssue(kind, it);
+      return;
+    }
+    feedback.minor();
+    setAsk({ kind, issue: it });
+  };
+  const askKey = ask === null ? "askResend" : ask.kind === "retry" ? "askResend" : ask.kind === "SENT" ? "askSent" : "askSkip";
   return (
     <KalipEkran
       kind="form"
@@ -549,6 +634,28 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                       </button>
                     );
                   })}
+                  {/* T-1137: Excel birinci sınıf veri kaynağı — mevcut Excel aktarım akışını açar (aktarma mantığı orada; burada tekrar yok). */}
+                  <button
+                    type="button"
+                    role="listitem"
+                    className="prov"
+                    aria-label={`${t("excelSource.name")}: ${t("excelSource.pill")}`}
+                    data-testid="integrations-excel"
+                    data-provider="EXCEL"
+                    onClick={() => {
+                      feedback.minor();
+                      router.push(`${base}/settings/baglantilar`);
+                    }}
+                  >
+                    <span className="plogo" style={{ background: c("2F7D5B") }}>
+                      <Ico d={LICON.excel} size={28} />
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <b>{t("excelSource.name")}</b>
+                      <small>{t("excelSource.sub")}</small>
+                    </span>
+                    <span className="pill go">{t("excelSource.pill")}</span>
+                  </button>
                 </div>
               ) : (
                 <>
@@ -603,6 +710,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                       </span>
                     </div>
                   ) : null}
+                  {saglikBandi("integrations-health", true)}
                   <KalipAnahtar title={t("barcode.pull")} sub={t("barcode.keep")} d={NICON.pull} color="2F5DA8"
                     on={barcodeOn} aria={t("barcode.pull")} onToggle={() => void toggleBarcodes()} testId="product-barcode-toggle" />
                   {opening !== null ? (
@@ -663,7 +771,9 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                 </>
               )}
               {/* T-1112: Excel aktarımı (Ayarlar › Entegrasyonlar sekmesinin eski hedefi) bu bölümden açılır. */}
-              <KalipBaglanti title={t("baglanti.excel")} value={t("baglanti.excelOpen")} d={LICON.excel} color="2F7D5B" href={`${base}/settings/baglantilar`} testId="integrations-excel" />
+              {/* T-1137: bağlı değilken Excel kaynak listesinde (Paraşüt'ün yanında) kart; bağlıyken ek veri kaynağı satırı. İkisi de aynı giriş
+                  (`integrations-excel` → `/settings/baglantilar`); her durumda tam bir tane çizilir. */}
+              {connected ? <KalipBaglanti title={t("baglanti.excel")} value={t("baglanti.excelOpen")} d={LICON.excel} color="2F7D5B" href={`${base}/settings/baglantilar`} testId="integrations-excel" /> : null}
               {/* T-1104 (kullanıcı 27 Ekim: "derle topla, pratik olsun"): uygulama bilgileri sık kullanılmaz — bölümün en altında. Bağlı değilken
                   ayrı "Paraşüt ile bağlan" yok (ana BAĞLAN aynı işi yapar); bağlıyken OAuth ile yeniden bağlanma burada kalır. */}
               {/* T-1133 (kullanıcı 30 Ekim): müşteri anahtar girmez — Etkin'in ortak uygulaması. Kendi uygulamasını kullanmak isteyen için "Gelişmiş"
@@ -713,7 +823,9 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
               {!connected ? (
                 <KalipBos title={t("akis.none", { provider: pn })} hint={t("akis.noneHint")} iconD={NICON.plug} action={{ label: t("akis.go"), href: `${self}?bolum=baglanti`, kind: "go" }} testId="integrations-flows-empty" />
               ) : (
-                flows.map((f) => {
+                <>
+                {saglikBandi("integrations-health-akis", false)}
+                {flows.map((f) => {
                   const ui = FLOW_UI[f.flow];
                   const s = flowState(f);
                   const na = f.directions.length === 0;
@@ -760,7 +872,8 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                       <KalipYonSecimi label={t("dirAria", { name })} options={options} value={s.enabled && !na ? s.direction : "OFF"} busy={busy === `flow-${f.flow}`} onPick={(id) => pickYon(f, id)} testId={`flow-${f.flow}-toggle`} />
                     </KalipAyarSatir>
                   );
-                })
+                })}
+                </>
               )}
             </KalipAyarKart>
           ) : null}
@@ -818,6 +931,46 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                   </span>
                 </div>
               ) : null}
+              {issues.items.length > 0 ? <KalipBaslik title={t("issues.title", { n: issues.total })} hint={issues.total > issues.items.length ? t("issues.more", { n: issues.total - issues.items.length }) : t("issues.hint")} /> : null}
+              {issues.items.map((it) => (
+                <KalipAyarSatir
+                  key={it.id}
+                  title={issueTitle(it)}
+                  d={FLOW_UI[it.flow].d}
+                  ton={FLOW_UI[it.flow].ton}
+                  testId="integration-issue"
+                  data={{ "data-status": it.status, "data-flow": it.flow, "data-id": it.id }}
+                  sub={
+                    <>
+                      <span className="ebad">
+                        <Ico d={LICON.warn} size={12} />
+                        {up(reasonText(it.errorCode ?? (it.status === "CHECK" ? "UNCERTAIN" : "UNKNOWN")))}
+                      </span>
+                      <span>{when(it.updatedAt)}</span>
+                    </>
+                  }
+                >
+                  {/* Stok toplamına girmiş sevk belgesi yeniden gönderilemez (sunucu da reddeder): yalnız elle çözüm. */}
+                  {it.errorCode === "ALREADY_IN_STOCK_TOTAL" ? null : (
+                    <button type="button" className="frun" onClick={() => pickIssue("retry", it)} aria-busy={busy === `issue-${it.id}`} data-testid="issue-retry">
+                      <Ico d={NICON.sync} size={16} />
+                      {it.flow === "SHIPMENTS" ? t("issues.resend") : t("issues.retry")}
+                    </button>
+                  )}
+                  {it.resolvable ? (
+                    <>
+                      <button type="button" className="frun" onClick={() => pickIssue("SENT", it)} data-testid="issue-sent">
+                        <Ico d={LICON.check} size={16} />
+                        {t("issues.sent")}
+                      </button>
+                      <button type="button" className="frun" onClick={() => pickIssue("SKIP", it)} data-testid="issue-skip">
+                        <Ico d={NICON.unlink} size={16} />
+                        {t("issues.skip")}
+                      </button>
+                    </>
+                  ) : null}
+                </KalipAyarSatir>
+              ))}
               {hataliAkislar.map((f) => (
                 <KalipAyarSatir
                   key={f.flow}
@@ -884,49 +1037,22 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
             </KalipAyarKart>
           ) : null}
         </KalipAltBolumler>
-        <KalipPencere
-          open={formOpen}
-          title={t("form.title", { provider: pn })}
-          icon={{ d: NICON.plug, color: "2F5DA8" }}
-          onClose={() => {
-            setFormOpen(false);
-            setForm(EMPTY_FORM);
+        <KalipOnay
+          open={ask !== null}
+          title={t(`issues.${askKey}.title`, { doc: ask === null ? "" : issueTitle(ask.issue) })}
+          description={t(`issues.${askKey}.text`, { provider: pn })}
+          confirmLabel={t(`issues.${askKey}.confirm`)}
+          cancelLabel={t("issues.cancel")}
+          variant={ask?.kind === "retry" ? "danger" : "primary"}
+          loading={ask !== null && busy === `issue-${ask.issue.id}`}
+          onConfirm={() => {
+            if (ask !== null) void doIssue(ask.kind, ask.issue);
           }}
-          onSubmit={(e) => void submitConnect(e)}
-          busy={busy === "connect"}
-          testId="integrations-form"
-          footer={
-            <>
-              <KalipPencereDugme
-                kind="cancel"
-                onClick={() => {
-                  feedback.minor();
-                  setFormOpen(false);
-                  setForm(EMPTY_FORM);
-                }}
-                disabled={busy === "connect"}
-              >
-                {t("form.cancel")}
-              </KalipPencereDugme>
-              <KalipPencereDugme kind="ok" type="submit" loading={busy === "connect"} data-testid="integrations-form-submit">
-                <Ico d={NICON.plug} size={20} />
-                {t("form.submit")}
-              </KalipPencereDugme>
-            </>
-          }
-        >
-          <div className="cnote" id={`${formId}-note`}>
-            <i>
-              <Ico d={LICON.info} size={20} />
-            </i>
-            <span>{t("form.note")}</span>
-          </div>
-          <KalipPencereAlan label={t("form.company")} hint={t("form.companyHint")} name="companyId" inputMode="numeric" autoComplete="off" required maxLength={12} value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} data-testid="integrations-company" />
-          <KalipPencereAlan label={t("form.clientId")} name="clientId" autoComplete="off" required maxLength={200} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} data-testid="integrations-client-id" />
-          <KalipPencereAlan label={t("form.clientSecret")} name="clientSecret" type="password" autoComplete="off" required maxLength={200} value={form.clientSecret} onChange={(e) => setForm({ ...form, clientSecret: e.target.value })} data-testid="integrations-client-secret" />
-          <KalipPencereAlan label={t("form.email")} name="username" type="email" autoComplete="off" required maxLength={254} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} data-testid="integrations-email" />
-          <KalipPencereAlan label={t("form.password")} name="password" type="password" autoComplete="off" required maxLength={200} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} data-testid="integrations-password" />
-        </KalipPencere>
+          onCancel={() => {
+            feedback.minor();
+            setAsk(null);
+          }}
+        />
         <KalipOnay
           open={cutOpen}
           title={t("cutTitle")}

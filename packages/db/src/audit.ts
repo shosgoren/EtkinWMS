@@ -140,6 +140,9 @@ export const AUDIT_ACTIONS = [
   "setup_journey.labels_printed",
   "integration.opening_stock_setting",
   "integration.opening_stock_taken",
+  // T-1137: gönderim kuyruğunda karar bekleyen satır — yeniden dene (bekletmeyi kaldır) / elle çözüldü say (Paraşüt'te var · gönderme).
+  "integration.outbox_retried",
+  "integration.outbox_resolved",
   // T-1138 (0067): Paraşüt anlık bildirim — webhook kaydı kuruldu/kurulamadı (sayı + sabit kod) ve işlenen tek kart olayı (kaynak, eylem,
   // sonuç). Anahtar/imza/yük yazılmaz.
   "integration.webhook_registered",

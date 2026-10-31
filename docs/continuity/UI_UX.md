@@ -107,6 +107,7 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
 - Kayıp cevap aynıkey/payload; başarılı kayıt sonrası readhatası ikinci yazma yaratmaz, sonraki işlem freshstate olmadan kapalı. Gerçek desktop/mobile4PASS dörtviewport, sameQR/lot/tarihler/diğer800KG ve A→B→A; fizikselkamera/yazıcıUNKNOWN. CI/yayın/flag ayrı.
 
 - **Entegrasyon (`/t/<alan>/integrations`, T-991):** form kalıbı + `Entegrasyon.dc.html` "YENİ" bölümü (`.dzen`, iç sarmalayıcı `display: contents`).
+  - **T-1137:** bağlantı sağlığı tek bant (`KalipBildirim` hata/uyarı/tamam + tek `KalipDugme`: Yeniden bağlan · Şimdi çalıştır · Ayrıntı; neden sunucudan, saat DB'den), bağlı bantta ve "Ne çekilsin" bölümünün üstünde; eski parola bağlantısına bilgi kartı "Yeni yönteme geç". Karar bekleyen kuyruk satırı `KalipAyarSatir` + `.frun` düğmeler; geri dönüşsüz karar `KalipOnay`. Excel bağlı değilken kaynak listesinde `.prov` kartı (yeni stil yok). Parola penceresi kalktı.
   Bağlan penceresi KalipPencere, Kes onayı KalipOnay; akış = KalipAnahtar + KalipSecenek (yön). Ana düğme BAĞLAN / EŞİTLE hiçbir durumda sessiz
   değil. Ayarlar > Bağlantılar (T-981) kartı bu adrese bağlanacak.
   T-1134: `KalipBos` (`.nomatch`) form (`.dzf`) ve kayıt kartı (`.dzd`) kabında da biçimli (`kalip-frame.css`; bekçi `ui-standards.test.ts`);

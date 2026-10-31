@@ -6,7 +6,7 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
-import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, countFlowRecords, CARD_FLOWS, FLOWS, DIRECTIONS, beginParasutOAuth, selectParasutOAuthCompany, encodeOAuthBinding, parseOAuthBinding, oauthCookieName, OAUTH_TTL_SECONDS, saveParasutOAuthSettings, completeParasutOAuth, PARASUT_OOB_REDIRECT_URI } from "@wms/domain/integrations";
+import { checkIntegration, disconnectIntegration, retryIntegrationOutbox, resolveIntegrationOutbox, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, countFlowRecords, CARD_FLOWS, FLOWS, DIRECTIONS, beginParasutOAuth, selectParasutOAuthCompany, encodeOAuthBinding, parseOAuthBinding, oauthCookieName, OAUTH_TTL_SECONDS, saveParasutOAuthSettings, completeParasutOAuth, PARASUT_OOB_REDIRECT_URI } from "@wms/domain/integrations";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { getSenderQueue } from "../../../../lib/queue.ts";
 
@@ -14,16 +14,12 @@ const guardedAction = createProductionGuard(() => headers());
 const slug = z.string().min(1).max(63);
 const provider = z.enum(["PARASUT", "LOGO"]);
 
-const connectSchema = z
-  .object({
-    slug,
-    companyId: z.string().regex(/^\s*[0-9]{1,12}\s*$/),
-    clientId: z.string().min(1).max(200),
-    clientSecret: z.string().min(1).max(200),
-    username: z.string().min(3).max(254),
-    password: z.string().min(1).max(200),
-  })
-  .strict();
+// T-1137 (kullanıcı kararı 30 Ekim): eski "e-posta + parola ile bağlan" kaldırıldı. Eski istemci hangi alanları gönderirse göndersin
+// (yalnız `slug` doğrulanır; diğer alanlar okunmaz, saklanmaz, loglanmaz) açık bir kodla reddedilir. Mevcut parola bağlantıları çalışmaya
+// devam eder (belirteç yenileme mühürlü kutudan); yalnız YENİ parola bağlantısı kurulamaz.
+const legacyConnectSchema = z.object({ slug }); // bilinmeyen alanlar atılır (strip): parola ayrıştırılmış girdiye bile girmez
+const outboxSchema = z.object({ slug, id: z.string().uuid() }).strict();
+const resolveSchema = z.object({ slug, id: z.string().uuid(), resolution: z.enum(["SENT", "SKIP"]) }).strict();
 const providerSchema = z.object({ slug, provider }).strict();
 const flowSchema = z.object({ slug, provider, flow: z.enum(FLOWS), enabled: z.boolean(), direction: z.enum(DIRECTIONS) }).strict();
 const runSchema = z.object({ slug, provider, flow: z.enum(FLOWS).optional() }).strict();
@@ -38,15 +34,21 @@ async function access(tenantSlug: string, ctx: ActionContext) {
 }
 
 export async function connectParasutAction(raw: unknown) {
-  const requestHeaders = await headers();
-  const { ensureRecentAuth } = await import("../../../../lib/auth-service.ts");
-  return guardedAction({ schema: connectSchema }, async (i, ctx) => {
-    const a = await access(i.slug, ctx);
-    return connectParasut(
-      { ...a, recentAuth: () => ensureRecentAuth(requestHeaders) },
-      { companyId: i.companyId, clientId: i.clientId, clientSecret: i.clientSecret, username: i.username, password: i.password, requestId: ctx.requestId },
-    );
+  return guardedAction({ schema: legacyConnectSchema }, async (i, ctx) => {
+    await access(i.slug, ctx); // yetki + hız sınırı yine uygulanır (yetkisiz çağrı FORBIDDEN alır, "UNSUPPORTED" bilgisi değil)
+    return { ok: false, reason: "UNSUPPORTED" } as const;
   })(raw);
+}
+
+/** T-1137: kuyruk satırını yeniden dene (irsaliye yeniden gönder / kart bekletmesini kaldır); bağlıysa koşu kuyruğa girer. */
+export async function retryIntegrationOutboxAction(raw: unknown) {
+  const queue = await getSenderQueue();
+  return guardedAction({ schema: outboxSchema }, async (i, ctx) => retryIntegrationOutbox(await access(i.slug, ctx), { id: i.id, requestId: ctx.requestId }, { queue }))(raw);
+}
+
+/** T-1137: irsaliyeyi elle çözüldü say ("SENT" Paraşüt'te var · "SKIP" gönderme). */
+export async function resolveIntegrationOutboxAction(raw: unknown) {
+  return guardedAction({ schema: resolveSchema }, async (i, ctx) => resolveIntegrationOutbox(await access(i.slug, ctx), { id: i.id, resolution: i.resolution, requestId: ctx.requestId }))(raw);
 }
 
 export async function checkIntegrationAction(raw: unknown) {

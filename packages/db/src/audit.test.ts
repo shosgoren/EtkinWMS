@@ -65,6 +65,7 @@ describe("eylem listesi", () => {
         "integration.oauth_configured", "integration.oauth_started", "integration.oauth_failed", "integration.oauth_cancelled",
         "integration.connected", "integration.checked", "integration.disconnected", "integration.flow_changed", "integration.run_requested", "integration.synced",
         "setup_journey.updated", "setup_journey.labels_printed", "integration.opening_stock_setting", "integration.opening_stock_taken",
+        "integration.outbox_retried", "integration.outbox_resolved",
         "integration.webhook_registered", "integration.webhook_received",
       ].sort(),
     );

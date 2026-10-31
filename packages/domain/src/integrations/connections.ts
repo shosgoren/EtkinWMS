@@ -15,6 +15,7 @@ import { FLOWS, PROVIDERS, PROVIDER_INFO, defaultDirection, parseDirection, pars
 import { ParasutClient, ProviderError, parseCompanyId, type ProviderErrorCode, type TokenSet } from "./parasut.ts";
 import { integrationSealer, sealSecrets } from "./secrets.ts";
 import { IntegrationStateError, accessToken, loadIntegration, type IntegrationStatus } from "./store.ts";
+import { classifyIntegrationHealth, type IntegrationHealth } from "./health.ts";
 import { clearWebhooksInTx, enqueueWebhookRegister, removeParasutWebhooks } from "./webhook-register.ts";
 
 export type ConnectionCallParams = Omit<TenantAccessParams, "permission">;
@@ -71,11 +72,15 @@ export interface IntegrationOverview {
   readonly demo: boolean;
   readonly providers: readonly ProviderView[];
   readonly runs: readonly RunView[];
-  /** Gönderim kuyruğu (irsaliye): bekleyen, kontrol isteyen (belirsiz), başarısız. */
-  readonly outbox: { readonly pending: number; readonly check: number; readonly failed: number };
+  /** Gönderim kuyruğu (irsaliye): bekleyen, kontrol isteyen (belirsiz), başarısız. T-1137: `parked` = kart kuyruğunda bekletilen (FAILED) satır. */
+  readonly outbox: { readonly pending: number; readonly check: number; readonly failed: number; readonly parked: number };
+  /** T-1137: Paraşüt bağlantı sağlığı (sunucuda, DB saatiyle); bağlı değilse null. */
+  readonly health: IntegrationHealth | null;
 }
 
 export const RUN_LOG_LIMIT = 15;
+/** T-1137: elle çözülmüş irsaliye kuyruk satırı (FAILED + bu kod): Paraşüt'te var sayıldı / gönderilmeyecek. Sorun sayılmaz, yeniden gönderilmez. */
+export const MANUAL_OUTBOX_CODES = Object.freeze(["MANUAL_SENT", "MANUAL_SKIPPED"] as const);
 const d = (v: Date | string | null): Date | null => (v === null ? null : new Date(v));
 
 async function isDemo(tx: AccessTx, tenantId: string): Promise<boolean> {
@@ -86,20 +91,31 @@ async function isDemo(tx: AccessTx, tenantId: string): Promise<boolean> {
 /** Ekran okuması (`settings.manage`). Sır sütunu seçilmez. */
 export async function getIntegrationOverview(params: ConnectionCallParams): Promise<IntegrationOverview> {
   return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
-    const conns = await tx.execute<{ id: string; provider: Provider; status: IntegrationStatus; account_label: string | null; connected_at: Date | string | null; last_checked_at: Date | string | null; last_error_code: string | null }>(
-      sql`SELECT id, provider, status, account_label, connected_at, last_checked_at, last_error_code FROM public.integrations WHERE tenant_id = ${m.tenantId}::uuid`,
+    // T-1137: `legacy` = bağlantı OAuth izni olmadan (eski e-posta + parola) kuruldu: bağlanma anına denk gelen tamamlanmış izin denemesi yok.
+    const conns = await tx.execute<{ id: string; provider: Provider; status: IntegrationStatus; account_label: string | null; connected_at: Date | string | null; last_checked_at: Date | string | null; last_error_code: string | null; legacy: boolean; db_now: Date | string; webhook_status: "OFF" | "ACTIVE" | "FAILED" | null }>(
+      sql`SELECT i.id, i.provider, i.status, i.account_label, i.connected_at, i.last_checked_at, i.last_error_code, i.webhook_status, now() AS db_now,
+                 (i.connected_at IS NOT NULL AND NOT EXISTS (
+                    SELECT 1 FROM public.integration_oauth_attempts a
+                     WHERE a.tenant_id = i.tenant_id AND a.phase = 'COMPLETE'
+                       AND a.created_at <= i.connected_at AND a.created_at >= i.connected_at - interval '1 hour')) AS legacy
+            FROM public.integrations i WHERE i.tenant_id = ${m.tenantId}::uuid`,
     );
-    const flows = await tx.execute<{ integration_id: string; flow: Flow; enabled: boolean; direction: Direction; last_run_at: Date | string | null; last_status: FlowView["lastStatus"]; error_count: number; last_error_code: string | null }>(
-      sql`SELECT integration_id, flow, enabled, direction, last_run_at, last_status, error_count, last_error_code FROM public.integration_flows WHERE tenant_id = ${m.tenantId}::uuid`,
+    const flows = await tx.execute<{ integration_id: string; flow: Flow; enabled: boolean; direction: Direction; last_run_at: Date | string | null; last_status: FlowView["lastStatus"]; error_count: number; last_error_code: string | null; last_success_at: Date | string | null; enabled_at: Date | string | null }>(
+      sql`SELECT integration_id, flow, enabled, direction, last_run_at, last_status, error_count, last_error_code, last_success_at, enabled_at FROM public.integration_flows WHERE tenant_id = ${m.tenantId}::uuid`,
     );
     const runs = await tx.execute<{ id: string; provider: Provider; flow: Flow; trigger: RunView["trigger"]; status: RunView["status"]; started_at: Date | string; finished_at: Date | string | null; created_count: number; updated_count: number; linked_count: number; skipped_count: number; failed_count: number; error_code: string | null }>(
       sql`SELECT r.id, i.provider, r.flow, r.trigger, r.status, r.started_at, r.finished_at, r.created_count, r.updated_count, r.linked_count, r.skipped_count, r.failed_count, r.error_code
             FROM public.integration_runs r JOIN public.integrations i ON i.tenant_id = r.tenant_id AND i.id = r.integration_id
            WHERE r.tenant_id = ${m.tenantId}::uuid ORDER BY r.started_at DESC, r.id LIMIT ${RUN_LOG_LIMIT}`,
     );
-    // T-1135: bant yalnız irsaliye kuyruğunu sayar (kart akışlarının kalıcı "zaten bağlı" kayıtları ayrı).
+    // T-1135: bant yalnız irsaliye kuyruğunu sayar (kart akışlarının kalıcı "zaten bağlı" kayıtları ayrı: T-1137 `parked`).
+    // T-1137: elle çözülmüş irsaliye (Gönderildi say / Gönderme) sorun sayılmaz.
     const ob = await tx.execute<{ status: string; n: number }>(
-      sql`SELECT status, count(*)::int AS n FROM public.integration_outbox WHERE tenant_id = ${m.tenantId}::uuid AND flow = 'SHIPMENTS' AND status IN ('PENDING', 'CHECK', 'FAILED') GROUP BY status`,
+      sql`SELECT CASE WHEN flow = 'SHIPMENTS' THEN status ELSE 'PARKED' END AS status, count(*)::int AS n FROM public.integration_outbox
+           WHERE tenant_id = ${m.tenantId}::uuid
+             AND ((flow = 'SHIPMENTS' AND status IN ('PENDING', 'CHECK', 'FAILED')) OR (flow <> 'SHIPMENTS' AND status = 'FAILED'))
+             AND NOT (status = 'FAILED' AND last_error_code IN (${sql.join(MANUAL_OUTBOX_CODES.map((c) => sql`${c}`), sql`, `)}))
+           GROUP BY 1`,
     );
     const nOf = (st: string): number => Number(ob.find((r) => r.status === st)?.n ?? 0);
     const providers = PROVIDERS.map((provider): ProviderView => {
@@ -127,8 +143,25 @@ export async function getIntegrationOverview(params: ConnectionCallParams): Prom
         }),
       };
     });
+    const pc = conns.find((x) => x.provider === "PARASUT");
+    const pv = providers.find((p) => p.provider === "PARASUT");
+    const health =
+      pc === undefined || pv === undefined || pv.connection === null
+        ? null
+        : classifyIntegrationHealth({
+            now: new Date(pc.db_now),
+            connection: { status: pv.connection.status, lastErrorCode: pv.connection.lastErrorCode },
+            legacy: pc.legacy === true,
+            webhook: pc.webhook_status ?? "OFF",
+            flows: pv.flows.map((f) => {
+              const raw = flows.find((x) => x.integration_id === pc.id && x.flow === f.flow);
+              return { flow: f.flow, direction: f.direction, enabled: f.enabled, lastStatus: f.lastStatus, errorCount: f.errorCount, lastErrorCode: f.lastErrorCode, lastSuccessAt: d(raw?.last_success_at ?? null), enabledAt: d(raw?.enabled_at ?? null) };
+            }),
+            runs: runs.filter((r) => r.provider === "PARASUT").map((r) => ({ flow: r.flow, status: r.status, startedAt: new Date(r.started_at), errorCode: r.error_code })),
+          });
     return {
       demo: await isDemo(tx, m.tenantId),
+      health,
       providers,
       runs: runs.map((r) => ({
         id: r.id,
@@ -145,7 +178,7 @@ export async function getIntegrationOverview(params: ConnectionCallParams): Prom
         failed: Number(r.failed_count),
         errorCode: r.error_code,
       })),
-      outbox: { pending: nOf("PENDING"), check: nOf("CHECK"), failed: nOf("FAILED") },
+      outbox: { pending: nOf("PENDING"), check: nOf("CHECK"), failed: nOf("FAILED"), parked: nOf("PARKED") },
     };
   });
 }
@@ -190,6 +223,9 @@ function sealerOf(deps: IntegrationDeps): Sealer | null {
 }
 
 /**
+ * T-1137 (kullanıcı kararı 30 Ekim): ekran ve sunucu eylemi bu yolu ARTIK ÇAĞIRMAZ — `connectParasutAction` yeni parola bağlantısını
+ * `UNSUPPORTED` ile reddeder. İşlev yalnız entegrasyon testlerinin bağlantı kurulumu için durur; mevcut parola bağlantıları belirteç yenilemeyle
+ * çalışmaya devam eder (store.ts), bağlantı OAuth ile yenilenince eski yöntem kendiliğinden biter.
  * Paraşüt'e bağlan: parola akışı → şirket listesinde istenen şirket → mühürlü kutu + akış satırları (hepsi kapalı, varsayılan yön). Parola
  * saklanmaz. Farklı şirkete yeniden bağlanma reddedilir (`COMPANY_CHANGED`): eski eşlemeler başka şirketin kimlikleridir.
  */
@@ -366,7 +402,7 @@ export type SetFlowResult =
 
 const singletonKey = (integrationId: string): string => `integration.sync.${integrationId}`;
 
-async function enqueueRun(tx: AccessTx, deps: IntegrationDeps, userId: string, integrationId: string, flow: Flow | undefined): Promise<boolean> {
+export async function enqueueRun(tx: AccessTx, deps: IntegrationDeps, userId: string, integrationId: string, flow: Flow | undefined): Promise<boolean> {
   if (deps.queue === undefined) return false;
   const queue = deps.queue;
   // Kayıt noktası: kuyruk yazımı düşerse ayar kaydı yine geçerli (zamanlanmış koşu alır).

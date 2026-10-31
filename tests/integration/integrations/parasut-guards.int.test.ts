@@ -9,7 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createDbClient, withSystemTenant } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { createSealer } from "../../../packages/shared/src/seal.ts";
-import { ParasutClient, connectParasut, getIntegrationOverview, runIntegrationSync, setIntegrationFlow, STOCK_TOTAL_LOCATION_KINDS, STOCK_TOTAL_STATUSES } from "../../../packages/domain/src/integrations/index.ts";
+import { ParasutClient, connectParasut, getIntegrationOverview, retryIntegrationOutbox, runIntegrationSync, setIntegrationFlow, STOCK_TOTAL_LOCATION_KINDS, STOCK_TOTAL_STATUSES } from "../../../packages/domain/src/integrations/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
@@ -351,6 +351,41 @@ describe("(D) 0066 öncesi (görüntüsüz) işaret: çift başına eski zaman k
   });
 });
 
+describe("(D) T-1137: stok toplamına girmiş sevk belgesi kuyruktan da gitmez (inceleme MINOR-1)", () => {
+  it("FAILED irsaliye → stok modu toplamı kapsar → irsaliyeye dönüş: Yeniden dene ALREADY_IN_STOCK_TOTAL, PENDING kalıntısı alınırken de gönderilmez", async () => {
+    const W = await seedWorld(adm, reg, "G1137SW");
+    const id = await connect(W);
+    const party = (await q<{ id: string }>("INSERT INTO public.parties (tenant_id, code, code_key, name, created_by) VALUES ($1, 'C-SW', 'C-SW', 'Sevk carisi', $2) RETURNING id", [W.tenantId, W.ownerMembershipId]))[0]?.id as string;
+    await linkRefs(W, [["PARTY", party, "777"], ["ITEM", W.itemNoneId, "555"], ["WAREHOUSE", W.warehouseId, "801"]]);
+    const order = async (n: string) => (await q<{ id: string }>("INSERT INTO public.sales_orders (tenant_id, number, customer_ref, created_by) VALUES ($1, $2, 'c-sw', $3) RETURNING id", [W.tenantId, `SIP-SW-${n}`, W.ownerUserId]))[0]?.id as string;
+    // İrsaliye açıkken işlenen belge kesin redle FAILED kalmış (Paraşüt'te oluşmadı).
+    expect(await flow(W, "SHIPMENTS", true)).toMatchObject({ ok: true });
+    const doc = await postedDoc(W, "STOCK_OUT", { orderId: await order("1"), number: "SVK-SW" });
+    const ob = randomUUID();
+    await adm.query("INSERT INTO public.integration_outbox (tenant_id, id, integration_id, flow, entity_type, entity_id) VALUES ($1, $2, $3, 'SHIPMENTS', 'DOCUMENT', $4)", [W.tenantId, ob, id, doc]);
+    await adm.query("UPDATE public.integration_outbox SET status = 'FAILED', attempts = 10, last_error_code = 'PROVIDER_INVALID' WHERE id = $1", [ob]);
+    // Stok moduna geçiş: başarılı stok gönderimi bu belgeyi toplama katar (görüntüde POSTED xid görünür).
+    expect(await flow(W, "SHIPMENTS", false)).toMatchObject({ ok: true });
+    await devir(W);
+    expect(await flow(W, "STOCK", true)).toMatchObject({ ok: true });
+    await sync(W, id);
+    expect(fake.stockUpdates.length).toBeGreaterThan(0);
+    expect(await flow(W, "STOCK", false)).toMatchObject({ ok: true });
+    expect(await flow(W, "SHIPMENTS", true)).toMatchObject({ ok: true });
+    const state = async () => (await q("SELECT status, attempts, last_error_code FROM public.integration_outbox WHERE id = $1", [ob]))[0];
+    // Ekrandan yeniden dene reddedilir, satır değişmez.
+    expect(await retryIntegrationOutbox(admin(W), { id: ob })).toEqual({ ok: false, reason: "ALREADY_IN_STOCK_TOTAL" });
+    expect(await state()).toEqual({ status: "FAILED", attempts: 10, last_error_code: "PROVIDER_INVALID" });
+    // PENDING kalıntısı (ör. geçişten önce kuyrukta kalmış): kuyruk alımı aynı ifadeyi sınar, irsaliye gitmez, kalıcı FAILED.
+    await adm.query("UPDATE public.integration_outbox SET status = 'PENDING', next_attempt_at = now() WHERE id = $1", [ob]);
+    await sync(W, id);
+    expect(fake.shipments).toEqual([]);
+    expect(await state()).toMatchObject({ status: "FAILED", last_error_code: "ALREADY_IN_STOCK_TOTAL" });
+    expect(await retryIntegrationOutbox(admin(W), { id: ob })).toEqual({ ok: false, reason: "ALREADY_IN_STOCK_TOTAL" });
+    expect(fake.shipments).toEqual([]);
+  });
+});
+
 describe("(E) stok gönderiminde kesin red", () => {
   it("422: işaret FAILED, aynı toplam 30 sn'de bir yeniden gönderilmez; 401 işareti bozmaz ve koşu FAILED", async () => {
     const W = await seedWorld(adm, reg, "G1135E");
@@ -485,6 +520,7 @@ describe("(H) cari eşleme", () => {
     const r2 = await sync(W, id, { flow: "CONTACTS" });
     expect(r2.kind === "ran" && r2.flows[0]?.counts).toMatchObject({ failed: 0, skipped: 0 });
     expect(searches()).toBe(n);
-    expect((await getIntegrationOverview(admin(W))).outbox).toEqual({ pending: 0, check: 0, failed: 0 });
+    // T-1137: bekletilen kart kuyruk satırı ayrı sayılır (`parked`); irsaliye sayıları değişmez.
+    expect((await getIntegrationOverview(admin(W))).outbox).toEqual({ pending: 0, check: 0, failed: 0, parked: 1 });
   });
 });

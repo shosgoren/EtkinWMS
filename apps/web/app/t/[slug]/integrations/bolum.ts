@@ -11,9 +11,12 @@ export function entegrasyonBolumu(raw: string | string[] | null | undefined, con
   return connected ? "akis" : "baglanti";
 }
 
-/** Rozet: kontrol bekleyen + gönderilemeyen kayıtlar (outbox CHECK + FAILED) ve hatası olan akış sayısı. Bekleyen (PENDING) sorun değildir. */
-export function entegrasyonSorunSayisi(data: { readonly outbox: { readonly check: number; readonly failed: number }; readonly flows: readonly { readonly errorCount: number }[] }): number {
-  return data.outbox.check + data.outbox.failed + data.flows.filter((f) => f.errorCount > 0).length;
+/**
+ * Rozet: kontrol bekleyen + gönderilemeyen kayıtlar (outbox CHECK + FAILED) ve hatası olan akış sayısı. Bekleyen (PENDING) sorun değildir.
+ * T-1137: kart kuyruğunda bekletilen satırlar (`parked`, ör. EXTERNAL_ALREADY_LINKED) de sayılır; elle çözülmüş irsaliye sayılmaz (sunucu).
+ */
+export function entegrasyonSorunSayisi(data: { readonly outbox: { readonly check: number; readonly failed: number; readonly parked?: number }; readonly flows: readonly { readonly errorCount: number }[] }): number {
+  return data.outbox.check + data.outbox.failed + (data.outbox.parked ?? 0) + data.flows.filter((f) => f.errorCount > 0).length;
 }
 
 /** Son eşitleme zamanı: akışların son çalışması ve son koşunun başlangıcının en yenisi (ISO); hiç yoksa null. */
