@@ -1110,7 +1110,8 @@
         "created": "Warehouse added",
         "updated": "Warehouse updated",
         "archived": "Warehouse archived",
-        "code_changed": "Warehouse code changed"
+        "code_changed": "Warehouse code changed",
+        "restored": "Warehouse reopened"
       },
       "location": {
         "created": "Location added",
@@ -1258,6 +1259,7 @@
         "opening_stock_taken": "Opening stock imported",
         "webhook_registered": "Instant update registration",
         "webhook_received": "Instant update processed",
+        "conflict_resolved": "Paraşüt conflict resolved",
         "outbox_retried": "Integration record retried",
         "outbox_resolved": "Integration record resolved by hand"
       },

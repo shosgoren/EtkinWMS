@@ -3,7 +3,7 @@
 // akışı yok, `grant_type=password` 400 alır; yenilemede YENİ yenileme
 // belirteci), `GET /v4/me?include=companies`, şirket kapsamında products / contacts / warehouses (GET sayfalı, `filter[...]`, POST),
 // shipment_documents POST, stock_updates POST; T-1140: products / contacts / warehouses `PUT /:id` (öznitelik birleştirir, `updated_at` yazar;
-// `updateFailure` ile red) + warehouses/:id GET, oluşturulan kayıtta `updated_at`; T-1138: webhooks GET/POST/DELETE + contacts/:id GET + imzalı teslim üretici (`emitWebhook`). Her istek `requests`e yazılır (gövde dahil) — testler sırrın yalnız token ucuna gittiğini denetler.
+// `updateFailure` ile red) + warehouses/:id GET; T-1138: webhooks GET/POST/DELETE + contacts/:id GET + imzalı teslim üretici (`emitWebhook`). Her istek `requests`e yazılır (gövde dahil) — testler sırrın yalnız token ucuna gittiğini denetler.
 import { createHmac } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -298,7 +298,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     if (req.method === "POST" && col !== undefined) {
       const attrs = parsed.data?.attributes ?? {};
       if (typeof attrs.name !== "string" || attrs.name === "") return send(422, { errors: [{ title: "name required" }] });
-      const rec = { id: nextId(), attributes: { ...attrs, updated_at: new Date().toISOString() } };
+      const rec = { id: nextId(), attributes: attrs };
       col.push(rec);
       return send(201, { data: { id: rec.id, type: kind, attributes: rec.attributes } });
     }

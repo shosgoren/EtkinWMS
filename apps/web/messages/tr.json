@@ -1110,7 +1110,8 @@
         "created": "Depo eklendi",
         "updated": "Depo güncellendi",
         "archived": "Depo arşivlendi",
-        "code_changed": "Depo kodu değişti"
+        "code_changed": "Depo kodu değişti",
+        "restored": "Depo geri açıldı"
       },
       "location": {
         "created": "Raf eklendi",
@@ -1258,6 +1259,7 @@
         "opening_stock_taken": "Açılış stoku alındı",
         "webhook_registered": "Anlık bildirim kaydı",
         "webhook_received": "Anlık bildirim işlendi",
+        "conflict_resolved": "Paraşüt çakışması çözüldü",
         "outbox_retried": "Entegrasyon kaydı yeniden denendi",
         "outbox_resolved": "Entegrasyon kaydı elle çözüldü"
       },
