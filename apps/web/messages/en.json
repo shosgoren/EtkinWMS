@@ -1031,7 +1031,9 @@
       "oauth_configured": "Paraşüt application configured",
       "oauth_started": "Paraşüt authorization started",
       "oauth_failed": "Paraşüt authorization failed",
-      "oauth_cancelled": "Paraşüt authorization cancelled"
+      "oauth_cancelled": "Paraşüt authorization cancelled",
+      "webhook_registered": "Paraşüt instant update registration",
+      "webhook_received": "Paraşüt instant update processed"
     },
     "setup_journey": {
       "updated": "Setup journey choice changed",

@@ -1031,7 +1031,9 @@
       "oauth_configured": "Paraşüt uygulama bilgileri kaydedildi",
       "oauth_started": "Paraşüt izni başlatıldı",
       "oauth_failed": "Paraşüt izni tamamlanamadı",
-      "oauth_cancelled": "Paraşüt izni iptal edildi"
+      "oauth_cancelled": "Paraşüt izni iptal edildi",
+      "webhook_registered": "Paraşüt anlık bildirim kaydı",
+      "webhook_received": "Paraşüt anlık bildirimi işlendi"
     },
     "setup_journey": {
       "updated": "Kurulum yolculuğu seçimi değişti",
