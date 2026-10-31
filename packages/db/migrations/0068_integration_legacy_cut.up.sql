@@ -14,8 +14,10 @@
 -- * Kimlik bilgisi silinir (mühürlü kutu NULL; 0055 CHECK: DISCONNECTED <=> NULL). Belirteçler bu yüzden geri getirilemez → down
 --   bilerek no-op'tur (aşağıda değil, down dosyasında gerekçesi).
 -- * `last_error_code = 'LEGACY_METHOD_REMOVED'`: ekran bu kodla kesilmiş bağlantıyı AUTH "Yeniden bağlan" olarak gösterir (health.ts).
---   OAuth ile yeniden bağlanma (`connectParasutAuthorized` UPSERT) kodu temizler; `connected_at` korunur → ilk bağlantı varsayılanı yeniden
---   uygulanmaz, akış tercihleri olduğu gibi geri gelir. `account_ref` korunur → eşleme varken başka şirkete bağlanma yine reddedilir.
+--   OAuth ile yeniden bağlanma (`connectParasutAuthorized` UPSERT) kodu temizler ve `connected_at`'i yeni bağlanma anına (now()) yazar.
+--   0068 `connected_at`'e dokunmaz: UPSERT'ten önce okunan önceki değer dolu olduğu için ilk bağlantı varsayılanı (ürün çekme açma) yeniden
+--   uygulanmaz. Yeniden bağlanmada korunan akış satırları (aç/kapa + yön) ve `account_ref`'tir → tercihler olduğu gibi döner, eşleme varken
+--   başka şirkete bağlanma yine reddedilir.
 -- * Akış satırları açık kalabilir: hiçbir eşitleme yolu kesilmiş bağlantıda koşmaz (zamanlayıcı/el ile koşu/webhook araması/yaşam döngüsü
 --   `status = 'CONNECTED'` ister; senkron `DISCONNECTED`'ı atlar; belirteç okuması NOT_CONNECTED döner).
 -- * Anlık bildirim (T-1138) kayıtları: anahtarlar silinir (NULL), satırlar DELETED, bağlantıda durum OFF (`clearWebhooksInTx` ile aynı).
