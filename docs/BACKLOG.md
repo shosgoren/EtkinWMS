@@ -172,10 +172,11 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-192 | `stock-overview` e2e "Nasıl kullanırım?" düğmesi ara sıra bulunamıyor (27 Ekim main CI, T-1091 birleşmesi; yeniden koşuda geçti); demo girişinden sonra Pano yüklenmesi beklenmeli |
 | B-193 | Otomatik kod çakışmada sıradakine geçince (ürün, depo, cari) kullanıcıya son kod balonda söylenmiyor; kayıt sonucuna kod eklenip balonda gösterilmeli (T-1093 güvenlik incelemesi notu) |
 | B-194 | **KODDA VAR #260 (T-1124; depo işleri odaklı + sıralı odak; ürün/cari elle ekleme rehberi kalan)** — Adım adım rehber ikinci paket: depo işleri (mal kabul, yerleştir, çıkış, transfer, sayım) T-1026 yazılı kartlarından T-1095 odaklı/bulanık motoruna; ürün ve cari elle ekleme rehberi |
-| B-196 | **KISMEN #251 (T-1112: solda alt bölümler, yön seçimi, bekleyen/hata bölümü; Excel toplu işlem hâlâ ayrı ekran)** — Ayarlar › Entegrasyonlar tek ekran (STANDART §5 ayar kalıbı: solda bölümler — Bağlantı, Ne aktarılsın, Açılış stoku, Excel toplu işlem, Hatalar; sağda tek konu); Paraşüt satırında bağlantı durumu; açılış stokunun üç girişi tek yere (T-1104 ikinci adım) |
+| B-196 | **KISMEN #274 (T-1136: yön seçiminin sonuç cümlesi + dolu katalogda onay)** — **KISMEN #251 (T-1112: solda alt bölümler, yön seçimi, bekleyen/hata bölümü; Excel toplu işlem hâlâ ayrı ekran)** — Ayarlar › Entegrasyonlar tek ekran (STANDART §5 ayar kalıbı: solda bölümler — Bağlantı, Ne aktarılsın, Açılış stoku, Excel toplu işlem, Hatalar; sağda tek konu); Paraşüt satırında bağlantı durumu; açılış stokunun üç girişi tek yere (T-1104 ikinci adım) |
 | B-197 | Gerçek iPhone Safari kontrolü (kullanıcıdan): yüzen kısayol (sürükle/halka), odaklı rehber kartı ve buzlu perde, bas-konuş, doğal sesle okuma (T-1102/T-1105/T-1103/T-1106) |
 | B-207 | T-1121 kalanları: lokasyon ağacı (`warehouses/[warehouseId]/location-tree.tsx`) Tailwind düzen sınıfları; paketli kabulde saha `PrimaryButton`/`SecondaryButton` (T-1122 sonrası kalıp düğmesine) ve mal kabul `ErrorNotice` (T-1119 sonrası); paket etiketinin baskı içeriği eski `--color-surface`/`--color-ink` belirteçlerinde (baskı sayfası, bilinçli); kiracı sayfalarındaki `<main className="flex w-full min-w-0 flex-col">` sarmalayıcıları; detay `KalipUyari` (`.dzd`) ile ortak `KalipUyari` (`kalip/uyari.tsx`) aynı adlı — birleştirilmeli |
 | B-214 | Kiracı dışı ekranlar hâlâ `@wms/ui` eski bileşenlerle: giriş, iki adımlı doğrulama sihirbazı, parola sıfırlama, deneme aktivasyonu, çalışma alanı seçimi, saha katılımı (ve yönetim paneli); giriş ailesi `Giris.dc.html` tuvalinden kalıba (fonksiyonel-mimari G-95; B-159 ile) |
+| B-223 | Ana ekran "Excel'den aktar" kutusunun alt yazısı kurulum yolculuğundaki kart kaynağından okunur (T-1134); gerçek Paraşüt bağlantı durumundan okunmalı (pano okuması gerekir) |
 
 ## Eklemeler (kullanıcı onayı 20 Ekim)
 | ID | İş |
@@ -212,10 +213,10 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-107 | **T-450 iOS sanal kamera + ≤1,5× zoom #157; gerçek iPhone doğrulaması hâlâ bekliyor** — iPhone'da OKUT hızını gerçek cihazda doğrula (T-446); yetmezse ücretli SDK (STRICH/Dynamsoft/Scandit) ya da yerel uygulama kararı |
 | B-108 | **#150 ALTIN-KURAL 5–17 birleşti #150 (T-436)** — **#151 tam ekran form + #152 UI lint birleşti #151 (T-990)** — **#146 Excel/Bağlantılar birleşti #146 (T-981b)** — **#145 QR paylaş birleşti #145 (T-986b)** — YARIM PR'ları bitir (T-447): #145 QR paylaş, #146 Excel/Bağlantılar, #151 tam ekran form + kurallar 1–4, #152 UI lint, #150 kurallar 5–17 — main merge + `pnpm prepush` + sıralı birleştirme |
 | B-109 | Tuvale (Claude Design) T-979c orta etiket ve T-979b 48 px düzeltmelerini işle (kaynak `docs/design/source` ile eşitle) |
-| B-110 | ERP · Paraşüt canlı ilk bağlantıda doğrula: token gövdesi, irsaliye deposu/cari türü, 429 (T-991) |
+| B-110 | **T-1138 anlık bildirim (webhook) KODDA VAR #273; gerçek hesapta anahtar/imza doğrulaması ayrı satırda** — **NOT (T-1135) — kesirli `quantity`/`new_total_inventory` sayısı ve 4xx kalıcı red davranışı canlı ilk bağlantıda doğrulanmalı** — **ortak uygulama kodda (T-1133) — canlı ilk bağlantı ortak uygulamayla da doğrulanmalı** — ERP · Paraşüt canlı ilk bağlantıda doğrula: token gövdesi, irsaliye deposu/cari türü, 429 (T-991) |
 | B-111 | ERP · Logo entegrasyonu — ürün bilgisi bekleniyor (Tiger/Go/İşbaşı; aynı altyapı) |
 | B-112 | **BİTTİ #146 (T-981b; Paraşüt bağlandı, Logo YAKINDA — B-111)** — ERP · Ayarlar › Bağlantılar Paraşüt/Logo kartını `/integrations`'a bağla (T-981b ile) |
-| B-113 | ERP · CHECK durumundaki irsaliyeyi ekrandan çözme |
+| B-113 | **BİTTİ #275 (T-1137: Yeniden gönder · Gönderildi say · Gönderme; T-1135 parçasındaki bekletilen kart satırının "Yeniden dene"si de bu PR'da — fold sonrası koordinatör o satırı KISMEN işaretler, eşleme düzeltme ayrı)** — **KISMEN #270 (T-1135) — kalıcı red/zaman aşımı kodları sade metinle; CHECK çözme düğmesi hâlâ yok** — ERP · CHECK durumundaki irsaliyeyi ekrandan çözme |
 | B-114 | ERP · Aynı bağlantıda iki koşu çakışmasını kilitle (MINOR-1) |
 | B-115 | ERP · Paraşüt yanıtını akışla oku, 5 MiB'de kes (MINOR-5) |
 | B-116 | ERP · Paraşüt sipariş karşılığı — kullanıcı kararı |
@@ -253,6 +254,33 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-216 | Denetim kaydına kayıt türü + kimliği dizini: ürün kartı "Değişiklik geçmişi" sekmesi bugün firma + zaman dizini ve süre sınırıyla tarar (T-1116; G-99) |
 | B-217 | 0065 "kullanılmış ürün" tanımındaki yedi kullanım dalı için davranış testi (bugün kapsam bekçisi tanımda olduklarını garanti ediyor; T-1129 security-reviewer MINOR) |
 | B-218 | Açık PR 250 (T-1071, `fix/T-1071-product-recreate`) `0064_product_recreate` migration'ı main'deki 0064 (T-1117) ve 0065 (T-1129) ile çakışıyor; birleşmeden önce 0066'ya yeniden numaralanmalı (G-98) |
+| B-219 | Paraşüt ortak uygulama devrede; müşteri anahtar girmez — sahip Paraşüt'te uygulamayı kaydedip sunucuya iki env değerini girince canlı doğrulama (OPERATIONS, T-1133) |
+| B-220 | Entegrasyon "Gelişmiş: kendi Paraşüt uygulaman" kartı tasarım tuvaline eklenmeli (T-1133, DESIGN-PARITY) |
+| B-221 | Ortak Paraşüt uygulaması bağlantılarında sır kutuya kopyalanmasın: kutuya "ortak" işareti + yenilemede sırrı ortamdan çöz (döndürmede eski sır kalmaz; T-1133 inceleme MINOR-1) |
+| B-222 | Yaşam döngüsü kapısı ortak uygulama denemesini bağlantıya zaman penceresi yerine açık bağla (tamamlanan deneme kimliği / "bağlanma yolu" alanı; T-1133 inceleme MINOR-2) |
+| B-224 | ERP kart kuyruğunda "dış kayıt başka karta bağlı" (EXTERNAL_ALREADY_LINKED) FAILED satırını ekrandan görme ve çözme (yeniden dene / eşlemeyi düzelt); şimdilik kart bir daha gönderilmez (T-1135) |
+| B-225 | Açılış stoku eşzamanlı iki istek testi ara sıra NOTHING döner (tests/integration/integrations/opening-stock.int.test.ts:163; T-1135 sırasında bir kez görüldü, tekrarında geçti) — yarış nedeni incelensin |
+| B-226 | Paraşüt "iki yönlü" gerçek iki yönlü güncelleme değil: eşlenmiş kartın Etkin'deki değişikliği (ad, cari alanları) hiç gönderilmez, her alma koşusu Paraşüt'teki değerle üzerine yazar (çakışmada Paraşüt kazanır; T-1136 metni bunu söyler). Alan sahipliği (B-200) ya da değişiklik gönderimi kararı gerekir |
+| B-227 | ERP · Kuyrukta "Gönderildi say" denen irsaliyeye Paraşüt irsaliye numarasını bağlama (dış kimlik girerek `external_refs`); bugün yalnız "bir daha gönderme" işareti (T-1137 bulgusu) |
+| B-228 | ERP · Bekletilen kart (EXTERNAL_ALREADY_LINKED) için eşlemeyi ekrandan düzeltme: Paraşüt karşılığını başka karttan bu karta taşıma (T-1137 bulgusu) |
+| B-229 | ERP · Paraşüt anlık bildirim gerçek hesapta doğrula (T-1138): webhook oluştururken `encryption_key` gönderilebiliyor mu yoksa Paraşüt mü atıyor, `Signature` başlığının kesin yapısı (HMAC/düz SHA256, onaltılık/base64, hangi veri), teslim gövdesi biçimi (`www-url-encoded`, `data` metni), yeniden teslim politikası ve kaynak IP'leri; Entegrasyonlar bağlı bantta "Anlık bildirim açık" ve Paraşüt'te ürün adı değiştirince Ürünler ekranında birkaç saniyede görünmesi |
+| B-230 | ERP · Paraşüt satış faturası / irsaliye anlık bildirimi (webhook modelinde var; satış akışı kararı bekliyor — kullanıcı önceliği 30 Ekim) (T-1138 bulgusu) |
+| B-231 | 🔒 ERP · Paraşüt anlık bildirim alıcısında doğrulama maliyeti ve yanıt süresi sıkılaştırması (T-1138 inceleme MINOR-2; ayrıntı gizli danışma taslağında) |
+| B-232 | ERP · 0068 ile bağlantısı kesilen müşteriye ekran dışında haber (zil / e-posta: "Paraşüt bağlantını yenile"); bugün yalnız Entegrasyonlar ekranındaki bant ve sol rozet (T-1139 bulgusu) |
+| B-233 | Tasarım · `Entegrasyon.dc.html` T-1066 yorumundaki "Eski bağlantı bağımsız ikincil erişimdir" notu ve 0068 "Yeniden bağlan" bandı tuvale işlenmeli (kaynak değişikliği tuval sahibinde; DESIGN-PARITY bilinçli fark, T-1139) |
+| B-234 | ERP · Anlık bildirim kaydı sürerken bağlantı yeniden kurulursa: kayıt işi eski belirteçle düşerse durum FAILED kalır ve yalnız saatte bir yeniden denenir; yeniden bağlanma kayıt işini aynı tekil anahtarla kuyruğa verdiği için çalışan iş varken yenisi açılmayabilir (doğrulanmadı). Bağlanınca webhook durumunu OFF'a çekmek ya da kayıt işini bağlantı sürümüne bağlamak düşünülmeli (T-1139 CI bulgusu; sahte Paraşüt tek belirteç tuttuğu için e2e'de görüldü) |
+| B-235 | ERP · Paraşüt iki yönlü eşitlemeyi gerçek hesapta doğrula (T-1140): `PUT /v4/{şirket}/products, contacts, warehouses/{id}` kabul edilen alanlar ve yanıt biçimi, `attributes.updated_at` var mı ve saat dilimi (yoksa her çakışma "zaman bilinmiyor → Paraşüt"), carilerde `archived` alanı, `GET /warehouses/{id}`; Entegrasyonlar'da İki yönlü seçip Etkin'de cari adını değiştirince Paraşüt'te görünmesi |
+| B-236 | ERP · Etkin'de boşaltılan cari alanı (e-posta, telefon…) Paraşüt'te silinmiyor (boş alan bilinçli gönderilmez; Paraşüt'ün null kabulü UNKNOWN) — gerekirse "alan temizle" kuralı (T-1140 bulgusu) |
+| B-237 | ERP · Paraşüt'te silinen/arşivlenen depo, Etkin'de etkin lokasyonu varken PENDING kalır (domain archiveWarehouse kuralı); boş lokasyonların da arşivlenmesi kullanıcı kararı bekliyor (T-1140 bulgusu) |
+| B-238 | ERP · Alan sahipliği ekranı ("Yakında") iki yönlü eşitlemenin alan bazlı kuralına bağlanmalı; bugün kart başına "son değişen kazanır" (T-1140 bulgusu) |
+| B-239 | 🔒 ERP · Paraşüt'e düzeltme gönderiminde ön koşul / eşzamanlılık sıkılaştırması (T-1140 inceleme MINOR-5; ayrıntı gizli danışma taslağında) |
+| B-240 | ERP · Cari kart düzenleme ve Excel'den cari aktarma, cari akışı "Etkin'den gönder" / "İki yönlü" iken Paraşüt'teki kaydı da değiştirir; kart formunda ve aktarım akışında tek satır uyarı yok (T-1140 inceleme MINOR-7) |
+| B-241 | ERP · İki yönlü çakışmada yerel değişiklik anı `audit_logs`'tan (kiracı + zaman dizini) okunur; büyük kiracıda gerekirse (tenant_id, entity_type, entity_id, occurred_at) dizini ya da işarette değişiklik anı (T-1140 inceleme MINOR-1/2) |
+| B-242 | Yetki · Kart anahtarlarını (`items.*`, `parties.*`, `warehouses.*`, `locations.*`) gruba verilebilir yapmak: GRANTABLE + migration ile `permission_groups_grants_chk` listesi ve sayı sınırı, yetki ekranında bölüm × işlem anahtarları (T-1141 katalog hazır; T-1142) — BİTTİ #279 / main `008070a` (canlı 1 Kasım) |
+| B-243 | Yetki · Depo / raf yeri Excel içe aktarımı hâlâ `settings.manage` ön koşulu taşır; kart anahtarlarına (`warehouses.create`, `locations.create`) bağlanması (T-1141 bulgusu) |
+| B-244 | B-243 ile aynı iş (T-1142 tekrar kaydı) — B-243'te izlenir |
+| B-245 | Yetki · Kişiye özel yetki istisnası (grup dışında tek kişiye aç/kapa) yok: model rol + en çok bir grup. Gerekirse ayrı tablo + `withMembership` değişikliği + güvenlik incelemesi (T-1142 kararı) |
+| B-246 | Yetki ekranı tuvale eklenmeli (STANDART §5'ten türetildi; `KalipAnahtarKumesi` satırları, şablon düğmeleri, kişi görünümü) ve ilk kullanım rehberi adımları (T-1142) |
 
 ## Belge düzeltmeleri
 | ID | İş |
