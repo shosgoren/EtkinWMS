@@ -5,6 +5,7 @@
 // `dryRun`: hiçbir şey yazılmaz; aynı kurallarla satır başına sonuç döner (kontrol adımı).
 // T-1117 (`0064_party_details`): Kısa ad (listede görünen ad), İlçe ve Varsayılan teslimat (`OWN` kendi personelim / `CARRIER` kargo firması).
 import { sql } from "drizzle-orm";
+import { releaseSourceArchive } from "../integrations/source-archive.ts";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
@@ -348,9 +349,8 @@ export async function setPartyArchived(params: PartyCommandParams, input: { read
       RETURNING version`);
     const row = rows[0];
     if (row === undefined) throw new AppError("VERSION_CONFLICT");
-    // T-1140: kullanıcının arşivi/geri açması sistem (Paraşüt yaşam döngüsü) sahipliğini bırakır — card-lifecycle.ts `releaseSourceArchive` ile aynı.
-    await tx.execute(sql`UPDATE public.integration_card_states SET source_managed_archive = false
-                          WHERE tenant_id = ${m.tenantId}::uuid AND entity_type = 'PARTY' AND entity_id = ${input.id}::uuid AND source_managed_archive`);
+    // T-1140: kullanıcının arşivi/geri açması sistem (Paraşüt yaşam döngüsü) arşiv sahipliğini bırakır.
+    await releaseSourceArchive(tx, m.tenantId, "PARTY", input.id);
     await appendAudit(tx, { action: input.archived ? "party.archived" : "party.restored", actorUserId: m.userId, entityType: "party", entityId: input.id, requestId: requestId ?? null });
     return { version: Number(row.version) };
   });

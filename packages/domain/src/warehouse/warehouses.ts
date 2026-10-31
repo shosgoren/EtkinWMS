@@ -13,6 +13,7 @@
 //   `ACTIVE` denetler (arşivin `FOR NO KEY UPDATE`'iyle çakışır; sıra sayım kilidi → lokasyon). T-217 kartı + kapı testi zorunlu.
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
+import { releaseSourceArchive } from "../integrations/source-archive.ts";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
@@ -216,11 +217,10 @@ export async function archiveWarehouse(params: WarehouseCallParams, input: Archi
     if (cur[0] === undefined) throw new AppError("NOT_FOUND");
     if (cur[0].status === "ARCHIVED") {
       // T-1140: sistemin (Paraşüt yaşam döngüsü) arşivlediği depoyu kullanıcı arşivli tutmak istiyor: sahiplik kullanıcıya geçer, Paraşüt'te
-      // yeniden etkin olsa da açılmaz (ürünün archiveItem kuralı; card-lifecycle.ts `releaseSourceArchive` ile aynı).
-      const released = await tx.execute(sql`UPDATE public.integration_card_states SET source_managed_archive = false
-                                              WHERE tenant_id = ${m.tenantId}::uuid AND entity_type = 'WAREHOUSE' AND entity_id = ${warehouseId}::uuid AND source_managed_archive RETURNING entity_id`);
-      if (released.length > 0) await appendAudit(tx, { action: "warehouse.archived", actorUserId: m.userId, entityType: "warehouse", entityId: warehouseId, requestId: input.requestId ?? null, changeSummary: { ownership: "local" } });
-      return { archived: released.length > 0 };
+      // yeniden etkin olsa da açılmaz (ürünün archiveItem kuralı).
+      const released = await releaseSourceArchive(tx, m.tenantId, "WAREHOUSE", warehouseId);
+      if (released) await appendAudit(tx, { action: "warehouse.archived", actorUserId: m.userId, entityType: "warehouse", entityId: warehouseId, requestId: input.requestId ?? null, changeSummary: { ownership: "local" } });
+      return { archived: released };
     }
     const active = await tx.execute<{ used: boolean }>(
       sql`SELECT EXISTS (SELECT 1 FROM public.locations
@@ -232,8 +232,7 @@ export async function archiveWarehouse(params: WarehouseCallParams, input: Archi
       sql`UPDATE public.warehouses SET status = 'ARCHIVED', archived_at = now()
            WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid AND status = 'ACTIVE'`,
     );
-    await tx.execute(sql`UPDATE public.integration_card_states SET source_managed_archive = false
-                          WHERE tenant_id = ${m.tenantId}::uuid AND entity_type = 'WAREHOUSE' AND entity_id = ${warehouseId}::uuid AND source_managed_archive`);
+    await releaseSourceArchive(tx, m.tenantId, "WAREHOUSE", warehouseId);
     await appendAudit(tx, {
       action: "warehouse.archived",
       actorUserId: m.userId,

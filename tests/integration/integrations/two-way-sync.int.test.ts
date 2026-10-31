@@ -491,6 +491,27 @@ describe("(6) güvenlik incelemesi (PR 278 @ 4963bf3, MINOR-1…5) ve kiracı y�
     expect((await q<{ sig: boolean }>("SELECT local_sig IS NOT NULL AS sig FROM public.integration_card_states WHERE tenant_id = $1 AND entity_id = $2", [W.tenantId, gone]))[0]?.sig).toBe(true);
   });
 
+  it("MINOR-A: BOTH'ta yerel düzeltme + geçici 404 + kart geri gelir → düzeltme yine Paraşüt'e gider (kaybolmaz)", async () => {
+    const W = await seedWorld(adm, reg, "T1140MA");
+    const id = await connect(W);
+    fake.contacts.push({ id: "8501", attributes: { name: "Kappa", account_type: "customer", updated_at: iso(-7_200_000) } });
+    const p = await party(W, "C-KAPPA", "Kappa", "8501");
+    await flow(W, "CONTACTS", "BOTH");
+    await sync(W, id, "CONTACTS");
+    await editParty(W, p, { name: "Kappa Yerel" });
+    const saved = fake.contacts.splice(fake.contacts.findIndex((c) => c.id === "8501"), 1);
+    await sync(W, id, "CONTACTS"); // düzeltme turu 404 görür → imza yenilenir; yaşam döngüsü ilk yokluğu yazar
+    expect(fake.updates).toEqual([]);
+    fake.contacts.push(...saved);
+    await sync(W, id, "CONTACTS"); // tarama kartı görür, yerel taraf kazanır (DEFERRED) → aynı koşunun düzeltme turunda gider
+    expect(fake.updates).toEqual([{ kind: "contacts", id: "8501", attributes: { name: "Kappa Yerel" } }]);
+    expect(contact("8501").attributes.name).toBe("Kappa Yerel");
+    expect((await partyRow(p))?.name).toBe("Kappa Yerel");
+    const n = puts();
+    await sync(W, id, "CONTACTS");
+    expect(puts()).toBe(n);
+  });
+
   it("kiracı A'nın koşusu kiracı B'nin dış kimliğine asla PUT göndermez", async () => {
     const A = await seedWorld(adm, reg, "T1140NA");
     const B = await seedWorld(adm, reg, "T1140NB");

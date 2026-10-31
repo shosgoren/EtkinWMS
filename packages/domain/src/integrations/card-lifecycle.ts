@@ -3,7 +3,7 @@
 //  - Kaynakta arşivli → yerel kart kullanımda değilse arşivlenir (`via: integration` audit), kullanımdaysa PENDING bekler.
 //  - Kaynakta yok (404) → tek gözlem silme değildir: aynı bağlamda en az 30 sn arayla İKİ yokluk; sonra arşiv / PENDING. Fiziksel silme YOK.
 //  - Kaynakta yeniden etkin → yalnız SİSTEMİN arşivlediği kart (`source_managed_archive`) geri açılır; kullanıcının arşivi korunur.
-//    Kullanıcı kartı kendisi arşivler / geri açarsa komut işareti temizler (`releaseSourceArchive`); kaynak durumu değişmedikçe sistem kullanıcıyla çekişmez.
+//    Kullanıcı kartı kendisi arşivler / geri açarsa komut işareti temizler (`source-archive.ts` releaseSourceArchive); kaynak durumu değişmedikçe sistem kullanıcıyla çekişmez.
 //  - "Kullanımda": cari = açık sipariş / mal kabul / sipariş belgesi; depo = etkin lokasyon (domain archiveWarehouse kuralı), sıfır olmayan
 //    bakiye, açık belge / kabul / iade / görev / sayım (product-lifecycle-reads.ts, salt SELECT; stok tablosuna yazma ve kilit yok — I-04, I-15).
 // Durum `integration_card_states` (0069) satırındadır; kart satırında yalnız domain'in kendi arşiv alanları (parties.archived_at,
@@ -132,11 +132,3 @@ export async function cardLifecycleCandidates(tx: AccessTx, b: LifecycleBinding,
      LIMIT 10`);
 }
 
-/**
- * Kullanıcı kartı kendisi arşivledi ya da geri açtı (domain komutu, aynı transaction): sistem sahipliği bırakılır — Paraşüt'te kart yeniden
- * etkin olsa da kullanıcının arşivi açılmaz (ürünün `archiveItem` kuralıyla aynı; inceleme MINOR-3).
- */
-export async function releaseSourceArchive(tx: AccessTx, tenantId: string, entity: LifecycleCard, id: string): Promise<void> {
-  await tx.execute(sql`UPDATE public.integration_card_states SET source_managed_archive = false
-                        WHERE tenant_id = ${tenantId}::uuid AND entity_type = ${entity} AND entity_id = ${id}::uuid AND source_managed_archive`);
-}

@@ -319,7 +319,13 @@ export async function syncRemoteCard(tx: AccessTx, c: ApplyContext, i: RemoteCar
     let localAt: number | null = null;
     if (i.direction === "BOTH" && localHash !== remoteHash) localAt = await localChangedAt(tx, c.tenantId, i.entity, linked, cur.marker?.syncedAt ?? null);
     const decision = decideCardSync({ direction: i.direction, localHash, remoteHash, marker: cur.marker, times: () => ({ localAt, remoteAt }) });
-    if (pushesLocal(decision)) return { outcome: "DEFERRED", decision };
+    if (pushesLocal(decision)) {
+      // Yerel taraf kazandı ama burada gönderilmez: imza sıfırlanır → düzeltme turu kartı kesin aday seçer (imza, ör. geçici 404'te
+      // yenilenmiş olsa bile yerel düzeltme kaybolmaz; inceleme MINOR-A). Gönderim başarılı olunca işaret yeniden yazılır.
+      await tx.execute(sql`UPDATE public.integration_card_states SET local_sig = NULL
+                            WHERE tenant_id = ${c.tenantId}::uuid AND system = ${c.system} AND entity_type = ${i.entity} AND entity_id = ${linked}::uuid AND local_sig IS NOT NULL`);
+      return { outcome: "DEFERRED", decision };
+    }
     if (decision.kind === "NONE") return { outcome: "UNCHANGED", decision };
     const outcome = await i.apply(tx);
     await mark(linked, decision.kind === "IN_SYNC" ? "MATCH" : "PULL");
