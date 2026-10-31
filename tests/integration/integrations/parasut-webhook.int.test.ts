@@ -448,6 +448,38 @@ describe("PR 273 inceleme düzeltmeleri", () => {
   });
 });
 
+describe("inceleme 764d808 (MINOR-A / MINOR-B)", () => {
+  it("MINOR-A: beklenmeyen hata durumu FAILED INTERNAL yapar, kalıcı yazılmamış uzak kayıt silinir; sonraki tikte kayıt işi açılmaz", async () => {
+    const { w, id } = await world("WHMA");
+    let thrown = false;
+    const flaky = { ...sealer, seal: (v: Readonly<Record<string, string>>, aad: never) => {
+      if (!thrown && (aad as { jobType?: string }).jobType === "integration.webhook.key") { thrown = true; throw new TypeError("boom"); }
+      return sealer.seal(v, aad);
+    } } as typeof sealer;
+    const r = await registerParasutWebhooks({ inTenant: inTenant(w), client: client(), sealer: flaky, callbackUrl: URI }, id);
+    expect(r).toEqual({ kind: "failed", code: "INTERNAL", errorName: "TypeError" });
+    expect((await q("SELECT webhook_status, webhook_last_error_code FROM public.integrations WHERE id = $1", [id]))[0]).toEqual({ webhook_status: "FAILED", webhook_last_error_code: "INTERNAL" });
+    expect(fake.webhooks).toHaveLength(0);
+    const queue = memQueue();
+    await withSystemTenant(app, w.tenantId, "test.schedule", (tx) => enqueueScheduledIntegrations(tx as never, w.tenantId, queue as never));
+    expect(queue.jobs.map((j) => j.job.type)).not.toContain("integration.webhook");
+  });
+
+  it("MINOR-B: döngü ortasında bağlantı kesilirse bu koşunun açtığı bütün uzak kayıtlar silinir (0 kalır)", async () => {
+    const { w, id } = await world("WHMB");
+    const c = client();
+    const orig = c.createWebhook.bind(c);
+    let n = 0;
+    c.createWebhook = async (...a) => {
+      const rec = await orig(...a);
+      if (++n === 3) await q("UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL WHERE id = $1", [id]);
+      return rec;
+    };
+    expect(await registerParasutWebhooks({ inTenant: inTenant(w), client: c, sealer, callbackUrl: URI }, id)).toEqual({ kind: "skipped", reason: "NOT_CONNECTED" });
+    expect(fake.webhooks).toHaveLength(0);
+  });
+});
+
 describe("kademe ve kesme", () => {
   it("anlık bildirim açıkken kart 15 dk / depo 3 dk; kurulamamışken 30 sn; kayıt işi vadesinde", async () => {
     const { w, id } = await world("WHA");

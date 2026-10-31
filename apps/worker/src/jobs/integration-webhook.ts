@@ -26,7 +26,7 @@ export function createIntegrationWebhookHandler(deps: IntegrationWebhookDeps): J
       const client = new ParasutClient({ baseUrl: resolveParasutBaseUrl(deps.env), ...(deps.fetch === undefined ? {} : { fetch: deps.fetch }) });
       if (p.kind === "REGISTER") {
         const r = await registerParasutWebhooks({ inTenant, client, sealer, callbackUrl: parasutWebhookUrl(deps.env) }, p.integrationId);
-        deps.logger.info("integration.webhook register", { jobId: ctx.jobId, result: r.kind, ...(r.kind === "skipped" ? { reason: r.reason } : r.kind === "failed" ? { reason: r.code } : { created: r.created, kept: r.kept }) });
+        deps.logger.info("integration.webhook register", { jobId: ctx.jobId, result: r.kind, ...(r.kind === "skipped" ? { reason: r.reason } : r.kind === "failed" ? { reason: r.code, ...(r.errorName === undefined ? {} : { error: r.errorName }) } : { created: r.created, kept: r.kept }) });
         return;
       }
       if (p.resource === undefined || p.externalId === undefined || p.eventKey === undefined) {

@@ -58,7 +58,11 @@ export interface RegisterDeps {
   readonly now?: () => number;
 }
 
-export type RegisterResult = { readonly kind: "skipped"; readonly reason: string } | { readonly kind: "ok"; readonly created: number; readonly kept: number } | { readonly kind: "failed"; readonly code: string };
+export type RegisterResult =
+  | { readonly kind: "skipped"; readonly reason: string }
+  | { readonly kind: "ok"; readonly created: number; readonly kept: number }
+  /** `errorName`: yalnız beklenmeyen hatada sınıf adı (ileti/sır yok; worker günlüğü için). */
+  | { readonly kind: "failed"; readonly code: string; readonly errorName?: string };
 
 type Row = { model: string; action: string; external_id: string; status: string; key_box: unknown };
 const errCode = (e: unknown): string => (e instanceof ProviderError ? `PROVIDER_${e.code}` : e instanceof IntegrationStateError ? e.code : "INTERNAL");
@@ -91,6 +95,13 @@ export async function registerParasutWebhooks(deps: RegisterDeps, integrationId:
   if (deps.callbackUrl === null) return fail("CONFIG");
   const uri = deps.callbackUrl;
   let created = 0, kept = 0;
+  /** Bu koşuda Paraşüt'te açılanlar (inceleme MINOR-B): kesme yarışında hepsi, beklenmeyen hatada kalıcı yazılmamışlar geri silinir. */
+  const opened: { id: string; persisted: boolean }[] = [];
+  let tokenRef: { token: string; accountRef: string } | null = null;
+  const rollback = async (all: boolean): Promise<void> => {
+    if (tokenRef === null) return;
+    for (const o of opened) if (all || !o.persisted) await deps.client.deleteWebhook(tokenRef.token, tokenRef.accountRef, o.id).catch(() => undefined);
+  };
   /**
    * PR 273 P3: her başarılı kayıt HEMEN kalıcı yazılır (kimlik + mühürlü anahtar); sonraki kayıt düşse de sonraki deneme ve kesme onu görür
    * (çoğaltma ve sahipsiz kayıt yok). Bağlantı bu arada kesildiyse yazılmaz, Paraşüt'teki kayıt geri silinir.
@@ -108,6 +119,7 @@ export async function registerParasutWebhooks(deps: RegisterDeps, integrationId:
     });
   try {
     const token = await accessToken({ runTx: deps.inTenant, tenantId, integrationId, client: deps.client, sealer: deps.sealer, ...(deps.now === undefined ? {} : { now: deps.now }) });
+    tokenRef = token;
     const remote = await deps.client.listWebhooks(token.token, token.accountRef);
     const existingKey = head.rows.map((r) => (r.status === "ACTIVE" ? openWebhookKey(deps.sealer, tenantId, r.key_box) : null)).find((k) => k !== null) ?? null;
     const ourKey = existingKey ?? newWebhookKey();
@@ -135,24 +147,48 @@ export async function registerParasutWebhooks(deps: RegisterDeps, integrationId:
         if (mine !== undefined && mine.external_id !== rec.id && remote.some((w) => w.id === mine.external_id)) {
           await deps.client.deleteWebhook(token.token, token.accountRef, mine.external_id).catch(() => undefined);
         }
+        const entry = { id: rec.id, persisted: false };
+        opened.push(entry);
         if (!(await persist({ model, action, externalId: rec.id, key: rec.encryptionKey ?? ourKey }))) {
-          await deps.client.deleteWebhook(token.token, token.accountRef, rec.id).catch(() => undefined);
+          // Bağlantı bu koşu sırasında kesildi: kesme bu koşunun açtıklarını görmemiş olabilir → hepsi Paraşüt'te geri silinir.
+          await rollback(true);
           return { kind: "skipped", reason: "NOT_CONNECTED" };
         }
+        entry.persisted = true;
         created++;
       }
     }
   } catch (e) {
     if (e instanceof ProviderError || e instanceof IntegrationStateError) return fail(errCode(e));
-    throw e;
+    return unexpected(e);
   }
-  return deps.inTenant(async (tx) => {
-    const cur = await loadIntegration(tx, tenantId, { id: integrationId }, true);
-    if (cur === null || cur.status !== "CONNECTED") return { kind: "skipped", reason: "NOT_CONNECTED" } as const;
-    await markStatus(tx, tenantId, integrationId, "ACTIVE", null);
-    await appendAudit(tx, { action: "integration.webhook_registered", actorUserId: actor, entityType: "integration", entityId: integrationId, changeSummary: { provider: "PARASUT", ok: true, created, kept } });
-    return { kind: "ok", created, kept } as const;
-  });
+  try {
+    return await finishOk();
+  } catch (e) {
+    return unexpected(e);
+  }
+
+  /**
+   * Beklenmeyen hata (inceleme MINOR-A): durum FAILED `INTERNAL` olur → zamanlayıcının saatlik yeniden denemesi geçerli (OFF kalıp 30 sn'de
+   * bir yeniden kayıt açmaz); kalıcı yazılmamış uzak kayıt geri silinir. Fırlatılmaz (kuyruk yeniden denemesi de çoğaltmasın); yalnız sınıf adı döner.
+   */
+  async function unexpected(e: unknown): Promise<RegisterResult> {
+    await rollback(false);
+    await fail("INTERNAL");
+    return { kind: "failed", code: "INTERNAL", errorName: e instanceof Error ? e.name : "unknown" };
+  }
+
+  async function finishOk(): Promise<RegisterResult> {
+    const r = await deps.inTenant(async (tx) => {
+      const cur = await loadIntegration(tx, tenantId, { id: integrationId }, true);
+      if (cur === null || cur.status !== "CONNECTED") return { kind: "skipped", reason: "NOT_CONNECTED" } as const;
+      await markStatus(tx, tenantId, integrationId, "ACTIVE", null);
+      await appendAudit(tx, { action: "integration.webhook_registered", actorUserId: actor, entityType: "integration", entityId: integrationId, changeSummary: { provider: "PARASUT", ok: true, created, kept } });
+      return { kind: "ok", created, kept } as const;
+    });
+    if (r.kind === "skipped") await rollback(true); // döngü bittikten sonra kesildiyse de bu koşunun açtıkları geri silinir
+    return r;
+  }
 }
 
 /**
