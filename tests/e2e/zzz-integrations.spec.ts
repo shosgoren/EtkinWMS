@@ -310,6 +310,10 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("flow-PRODUCTS-toggle")).not.toHaveAttribute("aria-busy", "true");
     await urun.getByRole("radio", { name: "Yalnız Etkin WMS" }).click();
     await expect(urun).toHaveAttribute("data-enabled", "false");
+    // Kapatma sunucuya yazılmadan rehber açılırsa sayfa sunucunun eski "açık" verisiyle yeniden çizilir ve akış adımı kendiliğinden geçer
+    // (telefonda prepush koşusunda görüldü): kayıt bitsin, balon gelsin.
+    await expect(page.getByTestId("flow-PRODUCTS-toggle")).not.toHaveAttribute("aria-busy", "true");
+    await expect(page.getByTestId("kalip-toast")).toContainText("Ürün kartları kapandı");
     await page.getByTestId("operation-guide-trigger").first().click();
     await expect(page.getByTestId("guide-picker")).toBeVisible();
     await page.getByTestId("adim-basla-urun-PARASUT").click();
