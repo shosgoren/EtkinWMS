@@ -113,10 +113,10 @@ it("0068 up: eski yöntem bağlantıları kesilir (audit, kimlik + webhook anaht
     const D = await seedWorld(adm, reg, "LC5");
     const lId = await seedLegacyParasutConnection(adm, L, sealer, { flowsOn: ["PRODUCTS", "SHIPMENTS"], webhooks: true });
     const eId = await seedLegacyParasutConnection(adm, E, sealer, { status: "ERROR" });
-    const sId = await seedOAuthShaped(adm, S, SHARED_OAUTH_CONFIG_VERSION);
+    await seedOAuthShaped(adm, S, SHARED_OAUTH_CONFIG_VERSION);
     const appVersion = randomUUID();
     await inTenant(adm, P.tenantId, `INSERT INTO public.integration_oauth_apps (tenant_id, version, credentials) VALUES ($1, $2, '{"v":2,"kid":"s","iv":"s","tag":"s","ct":"s"}')`, [P.tenantId, appVersion]);
-    const pId = await seedOAuthShaped(adm, P, appVersion);
+    await seedOAuthShaped(adm, P, appVersion);
     const dId = await seedLegacyParasutConnection(adm, D, sealer);
     await inTenant(adm, D.tenantId, "UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL WHERE tenant_id = $1 AND id = $2", [D.tenantId, dId]);
     // Eski bağlantının müşteri verisi: dış eşleme + bekleyen irsaliye kuyruğu (kesmeden sonra aynen kalmalı).

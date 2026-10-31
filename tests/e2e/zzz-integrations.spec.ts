@@ -345,7 +345,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("integrations-baglanti")).not.toContainText("GERİSİ KENDİLİĞİNDEN");
     await expect(page.getByTestId("integrations-baglanti")).not.toContainText("SON SINAMA");
     const html = await page.content();
-    for (const secret of [F.clientSecret, F.password]) expect(html).not.toContain(secret);
+    for (const secret of [F.clientSecret, F.authorizationCode]) expect(html).not.toContain(secret);
 
 
     const barcodeToggle = page.getByTestId("product-barcode-toggle");
