@@ -31,6 +31,8 @@ export async function GET(request:Request):Promise<Response>{
       await limitVerifiedTenant({...access,permission:"settings.manage"},ctx);
       const result=await completeParasutOAuth({...access,recentAuth:()=>ensureRecentAuth(req.headers)},{binding,...(error===null?{code:code!}:{denied:true})},{queue:await getSenderQueue()});
       if(result.ok&&result.status==="SELECT")return end(`${target}?oauth_select=${encodeURIComponent(result.id)}`,false);
+      // T-1133: neden yalnız sabit kod (ProviderError/DENIED/CONFIG…); sır ya da sağlayıcı metni taşımaz. Ekran `reasons.*` ile gösterir.
+      if(!result.ok&&/^[A-Z_]{1,40}$/.test(result.reason))return end(`${target}?oauth_result=failed&oauth_reason=${result.reason}`);
       return end(`${target}?oauth_result=${result.ok?"connected":"failed"}`);
     }catch(e){
       if(!(e instanceof AppError))throw e;
