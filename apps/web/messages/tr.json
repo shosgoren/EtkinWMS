@@ -5817,7 +5817,8 @@
       "PROVIDER_BAD_RESPONSE": "Paraşüt yanıtı okunamadı",
       "PROVIDER_COMPANY_NOT_FOUND": "Şirket bulunamadı",
       "PROVIDER_CONFIG": "Sunucu ayarı eksik",
-      "UNKNOWN": "Bir şey ters gitti · tekrar dene"
+      "UNKNOWN": "Bir şey ters gitti · tekrar dene",
+      "ALREADY_IN_STOCK_TOTAL": "Bu sevk stok miktarıyla Paraşüt'e zaten yansıdı · irsaliye gönderilmez"
     },
     "opening": {
       "title": "Açılış stoku",
@@ -6029,7 +6030,8 @@
       "reasons": {
         "NOT_FOUND": "Kayıt bulunamadı · liste yenilendi",
         "NOT_RETRYABLE": "Bu kayıt şu an değiştirilemez · gönderiliyor ya da gönderildi",
-        "UNSUPPORTED": "Bu kayıt için bu seçenek yok"
+        "UNSUPPORTED": "Bu kayıt için bu seçenek yok",
+        "ALREADY_IN_STOCK_TOTAL": "Bu sevk stok miktarıyla Paraşüt'e zaten yansıdı · irsaliye gönderilmez, \"Gönderme\" ile listeden kaldır"
       }
     }
   },

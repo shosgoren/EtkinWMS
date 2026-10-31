@@ -948,10 +948,13 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                     </>
                   }
                 >
-                  <button type="button" className="frun" onClick={() => pickIssue("retry", it)} aria-busy={busy === `issue-${it.id}`} data-testid="issue-retry">
-                    <Ico d={NICON.sync} size={16} />
-                    {it.flow === "SHIPMENTS" ? t("issues.resend") : t("issues.retry")}
-                  </button>
+                  {/* Stok toplamına girmiş sevk belgesi yeniden gönderilemez (sunucu da reddeder): yalnız elle çözüm. */}
+                  {it.errorCode === "ALREADY_IN_STOCK_TOTAL" ? null : (
+                    <button type="button" className="frun" onClick={() => pickIssue("retry", it)} aria-busy={busy === `issue-${it.id}`} data-testid="issue-retry">
+                      <Ico d={NICON.sync} size={16} />
+                      {it.flow === "SHIPMENTS" ? t("issues.resend") : t("issues.retry")}
+                    </button>
+                  )}
                   {it.resolvable ? (
                     <>
                       <button type="button" className="frun" onClick={() => pickIssue("SENT", it)} data-testid="issue-sent">

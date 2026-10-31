@@ -56,9 +56,22 @@ describe("classifyIntegrationHealth", () => {
 
   it("açık akışın son koşusu TIMEOUT → Şimdi çalıştır; daha yeni başarılı koşu varsa sorun değil; kapalı akışta yok sayılır", () => {
     const t = { flow: "PRODUCTS" as const, status: "FAILED" as const, startedAt: ago(50 * MIN), errorCode: "TIMEOUT" };
-    expect(classifyIntegrationHealth(base({ runs: [t] }))).toMatchObject({ level: "error", cause: "TIMEOUT", next: "RUN", flow: "PRODUCTS", code: "TIMEOUT" });
-    expect(classifyIntegrationHealth(base({ runs: [{ flow: "PRODUCTS", status: "SUCCESS", startedAt: ago(MIN), errorCode: null }, t] }))?.cause).toBeNull();
+    const before = [flow({ lastSuccessAt: ago(70 * MIN), enabledAt: ago(120 * MIN) })]; // son başarı TIMEOUT koşusundan önce
+    expect(classifyIntegrationHealth(base({ flows: before, runs: [t] }))).toMatchObject({ level: "error", cause: "TIMEOUT", next: "RUN", flow: "PRODUCTS", code: "TIMEOUT" });
+    // Daha yeni başarılı koşu (satırı kalan; akışın son başarısı da o an).
+    expect(classifyIntegrationHealth(base({ flows: [flow({ lastSuccessAt: ago(MIN) })], runs: [{ flow: "PRODUCTS", status: "SUCCESS", startedAt: ago(MIN), errorCode: null }, t] }))?.cause).toBeNull();
     expect(classifyIntegrationHealth(base({ flows: [flow({ enabled: false })], runs: [t] }))?.cause).toBeNull();
+  });
+
+  it("TIMEOUT / takılı koşudan SONRA başarı varsa bant kalkar (boş başarılı koşu satır bırakmaz, yalnız last_success_at yazar)", () => {
+    const t = { flow: "PRODUCTS" as const, status: "FAILED" as const, startedAt: ago(50 * MIN), errorCode: "TIMEOUT" };
+    expect(classifyIntegrationHealth(base({ flows: [flow({ lastSuccessAt: ago(MIN) })], runs: [t] }))?.cause).toBeNull();
+    expect(classifyIntegrationHealth(base({ flows: [flow({ lastSuccessAt: ago(60 * MIN), enabledAt: ago(120 * MIN) })], runs: [t] }))?.cause).toBe("TIMEOUT");
+    const stuck = { flow: "PRODUCTS" as const, status: "RUNNING" as const, startedAt: ago(HEALTH_STUCK_MS + MIN), errorCode: null };
+    expect(classifyIntegrationHealth(base({ flows: [flow({ lastSuccessAt: ago(MIN) })], runs: [stuck] }))?.cause).toBeNull();
+    expect(classifyIntegrationHealth(base({ flows: [flow({ lastSuccessAt: ago(HEALTH_STUCK_MS + 5 * MIN) })], runs: [stuck] }))?.cause).toBe("STUCK");
+    // FAILING akış satırının kendi durumudur: başarılı koşu SUCCESS + sayaç 0 yazar → kalkar.
+    expect(classifyIntegrationHealth(base({ flows: [flow({ lastStatus: "SUCCESS", errorCount: 0, lastErrorCode: null })] }))?.cause).toBeNull();
   });
 
   it(`art arda ${HEALTH_FAIL_STREAK} FAILED → FAILING + Ayrıntı (kod akıştan); daha az ya da PARTIAL sorun bandı değil`, () => {
@@ -103,8 +116,9 @@ describe("classifyIntegrationHealth", () => {
     const stuck = { flow: "CONTACTS" as const, status: "RUNNING" as const, startedAt: ago(HEALTH_STUCK_MS + MIN), errorCode: null };
     const timeout = { flow: "PRODUCTS" as const, status: "FAILED" as const, startedAt: ago(60 * MIN), errorCode: "TIMEOUT" };
     const failing = flow({ flow: "WAREHOUSES", lastStatus: "FAILED", errorCount: 5, lastSuccessAt: ago(999 * MIN) });
-    expect(classifyIntegrationHealth(base({ flows: [flow(), failing], runs: [stuck, timeout] }))?.cause).toBe("STUCK");
-    expect(classifyIntegrationHealth(base({ flows: [flow(), failing], runs: [timeout] }))?.cause).toBe("TIMEOUT");
+    const old = flow({ lastSuccessAt: ago(70 * MIN), enabledAt: ago(120 * MIN) });
+    expect(classifyIntegrationHealth(base({ flows: [old, failing], runs: [stuck, timeout] }))?.cause).toBe("STUCK");
+    expect(classifyIntegrationHealth(base({ flows: [old, failing], runs: [timeout] }))?.cause).toBe("TIMEOUT");
     expect(classifyIntegrationHealth(base({ flows: [flow(), failing] }))?.cause).toBe("FAILING");
   });
 });

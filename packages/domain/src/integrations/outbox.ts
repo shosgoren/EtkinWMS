@@ -6,7 +6,10 @@
 //  - İrsaliye CHECK: Paraşüt yanıt vermedi; belge Paraşüt'te oluşmuş olabilir (tekrar anahtarı yok → kör yeniden gönderim çift irsaliye).
 //    İnsan karar verir: "Yeniden gönder" (PENDING; ekran önce onay sorar) ya da "Gönderildi say" / "Gönderme" (FAILED + MANUAL_* kodu:
 //    sorun sayılmaz, fark sorgusu belgeyi bir daha kuyruğa almaz çünkü satır kalır).
-//  - İrsaliye FAILED: kesin red ya da 10 deneme (oluşmadı) → yeniden gönder güvenli; ya da elle çözüldü say.
+//  - İrsaliye FAILED: kesin red ya da 10 deneme (Paraşüt'te oluşmadı). Yeniden gönderim YALNIZ belge bu arada stok toplamına girmemişse
+//    yapılır (stok modundan dönüşte toplama girmiş belge irsaliye olarak giderse Paraşüt'te stok iki kez düşer): sync.ts'in tek kapsama
+//    ifadesi (`shipmentCoveredByStock`) burada ve kuyruk alımında yeniden sınanır → `ALREADY_IN_STOCK_TOTAL`. Elle çözülmüş satır
+//    (MANUAL_*) yeniden denenmez (`NOT_RETRYABLE`).
 //  - Kart FAILED `EXTERNAL_ALREADY_LINKED` (T-1135 bekletme): Paraşüt'teki karşılık başka karta bağlı; "Yeniden dene" bekletmeyi kaldırır
 //    (PENDING) → sonraki koşu kartı yeniden dener; yine çakışırsa satır tekrar FAILED olur (sync.ts `parkCard`).
 // Komutlar idempotenttir: aynı hedef duruma ikinci çağrı `changed: false` döner, audit yazılmaz.
@@ -15,6 +18,7 @@ import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx } from "../identity/access.ts";
 import { MANUAL_OUTBOX_CODES, enqueueRun, type ConnectionCallParams, type IntegrationDeps } from "./connections.ts";
+import { shipmentCoveredByStock } from "./sync.ts";
 import type { Flow } from "./catalog.ts";
 
 export const OUTBOX_ISSUE_LIMIT = 50;
@@ -86,7 +90,7 @@ export async function getIntegrationOutboxIssues(params: ConnectionCallParams): 
 
 export type OutboxActionResult =
   | { readonly ok: true; readonly changed: boolean; readonly queued: boolean }
-  | { readonly ok: false; readonly reason: "NOT_FOUND" | "NOT_RETRYABLE" | "UNSUPPORTED" };
+  | { readonly ok: false; readonly reason: "NOT_FOUND" | "NOT_RETRYABLE" | "UNSUPPORTED" | "ALREADY_IN_STOCK_TOTAL" };
 
 type Locked = { id: string; integration_id: string; flow: OutboxFlow; entity_type: OutboxEntity; entity_id: string; status: string; last_error_code: string | null; conn_status: string };
 
@@ -102,7 +106,8 @@ async function lockRow(tx: AccessTx, tenantId: string, id: string): Promise<Lock
 
 /**
  * Yeniden dene / gönder: CHECK ya da FAILED satır PENDING olur (deneme sayacı sıfır, hemen sırada); kart bekletmesi kalkar. Bağlantı
- * bağlıysa o akışın koşusu kuyruğa girer. Zaten PENDING ise değişiklik yok. Gönderilmiş / gönderilmekte olan satır değişmez.
+ * bağlıysa o akışın koşusu kuyruğa girer. Zaten PENDING ise değişiklik yok. Gönderilmiş / gönderilmekte olan ya da elle çözülmüş satır
+ * değişmez (`NOT_RETRYABLE`); stok toplamına girmiş sevk belgesi `ALREADY_IN_STOCK_TOTAL`.
  */
 export async function retryIntegrationOutbox(params: ConnectionCallParams, input: { readonly id: string; readonly requestId?: string | null }, deps: IntegrationDeps = {}): Promise<OutboxActionResult> {
   const id = outboxId(input.id);
@@ -111,6 +116,10 @@ export async function retryIntegrationOutbox(params: ConnectionCallParams, input
     if (row === undefined) return { ok: false, reason: "NOT_FOUND" } as const;
     if (row.status === "PENDING") return { ok: true, changed: false, queued: false } as const;
     if (row.status !== "CHECK" && row.status !== "FAILED") return { ok: false, reason: "NOT_RETRYABLE" } as const;
+    // İnsanın verdiği karar (Gönderildi say / Gönderme) yeniden gönderimle bozulmaz.
+    if (row.last_error_code !== null && (MANUAL_OUTBOX_CODES as readonly string[]).includes(row.last_error_code)) return { ok: false, reason: "NOT_RETRYABLE" } as const;
+    // Belge bu arada stok toplamına girdiyse irsaliye gönderilmez (çift düşüm yok); kuyruk alımı da aynı ifadeyi sınar.
+    if (row.flow === "SHIPMENTS" && (await shipmentCoveredByStock(tx, m.tenantId, row.integration_id, row.entity_id))) return { ok: false, reason: "ALREADY_IN_STOCK_TOTAL" } as const;
     await tx.execute(sql`UPDATE public.integration_outbox SET status = 'PENDING', attempts = 0, next_attempt_at = now(), last_error_code = NULL
                           WHERE tenant_id = ${m.tenantId}::uuid AND id = ${row.id}::uuid`);
     await appendAudit(tx, {

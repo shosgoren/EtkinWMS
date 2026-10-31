@@ -170,10 +170,13 @@ describe("bağlantı sağlığı (sunucuda, tenant kapsamında)", () => {
     expect((await getIntegrationOverview(admin(W))).health?.cause).toBe("STALE");
 
     // T-1135 zaman aşımı: açık akışın son koşusu FAILED/TIMEOUT → Şimdi çalıştır.
-    await inTenant(W, "UPDATE public.integration_flows SET last_success_at = now() WHERE tenant_id = $1 AND flow = 'PRODUCTS'", [W.tenantId]);
+    // Son başarı TIMEOUT koşusundan ÖNCE (sonra başarı olsaydı bant kalkardı; birim testi).
+    await inTenant(W, "UPDATE public.integration_flows SET last_success_at = now() - interval '50 minutes' WHERE tenant_id = $1 AND flow = 'PRODUCTS'", [W.tenantId]);
     await inTenant(W, "INSERT INTO public.integration_runs (tenant_id, id, integration_id, flow, trigger, started_at) VALUES ($1, $2, $3, 'PRODUCTS', 'SCHEDULE', now() - interval '45 minutes')", [W.tenantId, randomUUID(), id]);
     await inTenant(W, "UPDATE public.integration_runs SET status = 'FAILED', error_code = 'TIMEOUT' WHERE tenant_id = $1 AND status = 'RUNNING'", [W.tenantId]);
     expect((await getIntegrationOverview(admin(W))).health).toMatchObject({ level: "error", cause: "TIMEOUT", next: "RUN", flow: "PRODUCTS" });
+    await inTenant(W, "UPDATE public.integration_flows SET last_success_at = now(), last_status = 'SUCCESS' WHERE tenant_id = $1 AND flow = 'PRODUCTS'", [W.tenantId]);
+    expect((await getIntegrationOverview(admin(W))).health?.cause).toBeNull();
 
     await inTenant(W, "UPDATE public.integrations SET status = 'ERROR', last_error_code = 'REAUTH_REQUIRED' WHERE tenant_id = $1 AND id = $2", [W.tenantId, id]);
     expect((await getIntegrationOverview(admin(W))).health).toMatchObject({ level: "error", cause: "AUTH", next: "RECONNECT", code: "REAUTH_REQUIRED" });
@@ -247,6 +250,12 @@ describe("kuyrukta karar bekleyenler: okuma + yeniden dene + elle çözüm", () 
     expect(await resolveIntegrationOutbox(admin(W), { id: sent, resolution: "SENT" })).toEqual({ ok: true, changed: false, queued: false });
     expect(await audits(W, "integration.outbox_resolved")).toBe(2);
     expect(await resolveIntegrationOutbox(admin(W), { id: card, resolution: "SKIP" })).toEqual({ ok: false, reason: "UNSUPPORTED" });
+    // İnsan kararı yeniden gönderimle bozulmaz (inceleme MINOR-2): elle çözülmüş satır yeniden denenmez, satır ve audit değişmez.
+    const retriedBefore = await audits(W, "integration.outbox_retried");
+    for (const id of [sent, skip]) expect(await retryIntegrationOutbox(admin(W), { id })).toEqual({ ok: false, reason: "NOT_RETRYABLE" });
+    expect(await row(W, sent)).toEqual({ status: "FAILED", attempts: 3, last_error_code: "MANUAL_SENT" });
+    expect(await row(W, skip)).toEqual({ status: "FAILED", attempts: 3, last_error_code: "MANUAL_SKIPPED" });
+    expect(await audits(W, "integration.outbox_retried")).toBe(retriedBefore);
     expect((await getIntegrationOverview(admin(W))).outbox).toEqual({ pending: 0, check: 0, failed: 0, parked: 1 });
     expect((await getIntegrationOutboxIssues(admin(W))).items.map((r) => r.id)).toEqual([card]);
     const audit = await inTenant<{ s: Record<string, unknown> }>(W, "SELECT change_summary AS s FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.outbox_resolved' AND change_summary->>'outbox_id' = $2", [W.tenantId, sent]);
@@ -313,9 +322,13 @@ describe("sunucu eylemleri (gerçek sorgu yolu)", () => {
     expect(await actions.retryIntegrationOutboxAction!({ slug: W.slug, id })).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
     expect(await row(W, id)).toEqual({ status: "CHECK", attempts: 3, last_error_code: "UNCERTAIN" });
     as(W.ownerUserId);
-    expect(await actions.resolveIntegrationOutboxAction!({ slug: W.slug, id, resolution: "SKIP" })).toEqual({ ok: true, data: { ok: true, changed: true, queued: false } });
-    as(W.ownerUserId);
     expect(await actions.retryIntegrationOutboxAction!({ slug: W.slug, id })).toEqual({ ok: true, data: { ok: true, changed: true, queued: false } });
     expect(await row(W, id)).toEqual({ status: "PENDING", attempts: 0, last_error_code: null });
+    const id2 = await outboxRow(W, idW, { status: "CHECK", code: "UNCERTAIN" });
+    as(W.ownerUserId);
+    expect(await actions.resolveIntegrationOutboxAction!({ slug: W.slug, id: id2, resolution: "SKIP" })).toEqual({ ok: true, data: { ok: true, changed: true, queued: false } });
+    as(W.ownerUserId);
+    expect(await actions.retryIntegrationOutboxAction!({ slug: W.slug, id: id2 })).toEqual({ ok: true, data: { ok: false, reason: "NOT_RETRYABLE" } });
+    expect(await row(W, id2)).toEqual({ status: "FAILED", attempts: 3, last_error_code: "MANUAL_SKIPPED" });
   });
 });

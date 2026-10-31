@@ -6,7 +6,9 @@
 //  1. AUTH     — bağlantı ERROR (401 / yeniden giriş / anahtar okunamadı / bağlayanın yetkisi kalktı) → Yeniden bağlan.
 //  2. STUCK    — bir koşu `HEALTH_STUCK_MS`'den uzun süredir RUNNING (worker 40 dk'da TIMEOUT'a çevirir) → Ayrıntı.
 //  3. TIMEOUT  — açık akışın en son koşusu FAILED/TIMEOUT (yarıda kaldı) → Şimdi çalıştır.
-//  4. FAILING  — açık akış art arda `HEALTH_FAIL_STREAK` kez hata verdi (son durum FAILED) → Ayrıntı.
+//  4. FAILING  — açık akış art arda `HEALTH_FAIL_STREAK` kez hata verdi (son durum FAILED) → Ayrıntı. Akış satırının kendi durumudur:
+//     başarılı (boş da olsa) her koşu `last_status`'u SUCCESS, sayacı 0 yapar → kendiliğinden kalkar.
+//  STUCK ve TIMEOUT koşu günlüğünden gelir; o koşudan sonra akışta başarı (`last_success_at`) varsa sayılmaz (boş başarılı koşu satır bırakmaz).
 //  5. STALE    — açık akışın son BAŞARILI eşitlemesi eşikten eski (hiç başarı yoksa açılış anından beri) → Şimdi çalıştır.
 // Sorun yoksa ve bağlantı eski e-posta + parola yöntemiyle kurulmuşsa yalnız `legacy` işareti (nazik "Yeni yönteme geç").
 // Eşik (T-1138 kademeli zamanlayıcı ile uyumlu): taramada (webhook OFF / FAILED) her akış 30 sn'de bir koşar → 10 dk (~20 kaçırılmış koşu).
@@ -81,11 +83,17 @@ export function classifyIntegrationHealth(input: HealthInput): IntegrationHealth
   if (c.status === "ERROR") return { level: "error", cause: "AUTH", next: "RECONNECT", flow: null, since: null, code: c.lastErrorCode ?? "REAUTH_REQUIRED", legacy };
   const now = input.now.getTime();
   const on = input.flows.filter((f) => f.enabled);
-  const stuck = input.runs.find((r) => r.status === "RUNNING" && now - r.startedAt.getTime() > HEALTH_STUCK_MS);
+  // Değişiklik getirmeyen başarılı zamanlı koşu kendi koşu satırını siler, yalnız akışın `last_success_at`'ini yazar (T-1135): koşu
+  // günlüğündeki en yeni satır eski bir TIMEOUT / RUNNING olarak kalabilir. Bu yüzden koşu sorunu yalnız ondan SONRA başarı yoksa sayılır.
+  const healedAfter = (flow: Flow, startedAt: Date): boolean => {
+    const ok = input.flows.find((f) => f.flow === flow)?.lastSuccessAt ?? null;
+    return ok !== null && ok.getTime() >= startedAt.getTime();
+  };
+  const stuck = input.runs.find((r) => r.status === "RUNNING" && now - r.startedAt.getTime() > HEALTH_STUCK_MS && !healedAfter(r.flow, r.startedAt));
   if (stuck !== undefined) return { level: "warn", cause: "STUCK", next: "DETAIL", flow: stuck.flow, since: stuck.startedAt, code: null, legacy };
   for (const f of on) {
     const last = input.runs.find((r) => r.flow === f.flow);
-    if (last !== undefined && last.status === "FAILED" && last.errorCode === "TIMEOUT") return { level: "error", cause: "TIMEOUT", next: "RUN", flow: f.flow, since: last.startedAt, code: "TIMEOUT", legacy };
+    if (last !== undefined && last.status === "FAILED" && last.errorCode === "TIMEOUT" && !healedAfter(f.flow, last.startedAt)) return { level: "error", cause: "TIMEOUT", next: "RUN", flow: f.flow, since: last.startedAt, code: "TIMEOUT", legacy };
   }
   const failing = on.find((f) => f.lastStatus === "FAILED" && f.errorCount >= HEALTH_FAIL_STREAK);
   if (failing !== undefined) return { level: "error", cause: "FAILING", next: "DETAIL", flow: failing.flow, since: null, code: failing.lastErrorCode, legacy };

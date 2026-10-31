@@ -19,7 +19,7 @@
 // Yetki: koşu başında bağlantıyı kuran kişinin üyeliği ACTIVE + TENANT_ADMIN (settings.manage tek sahibi) olmalı; değilse bağlantı ERROR
 // `CONNECTOR_REVOKED` olur ve hiçbir akış çalışmaz (yetkisini kaybeden yöneticinin bağlantısı arka planda yazmaya devam etmez).
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { appendAudit, currentTenantId } from "@wms/db";
 import type { Sealer } from "@wms/shared/seal";
 import type { AccessTx } from "../identity/access.ts";
@@ -385,6 +385,35 @@ interface ShipmentPayload {
 
 const backoffMinutes = (attempts: number): number => Math.min(24 * 60, 5 * 2 ** Math.max(0, attempts - 1));
 
+/**
+ * T-1135 tek tanım (T-1137'de ayrıldı): sevk belgesi (`d`) + POSTED geçmiş satırı (`h`) bu bağlantının stok toplamına girmiş mi — BÜTÜN
+ * (ürün, belge deposu) çiftlerinin son BAŞARILI stok işaretinin okuma görüntüsünde POSTED xid görünür (I-16); görüntüsü olmayan 0066 öncesi
+ * işarette çiftin `sent_at`'i ölçüttür. Doğruysa belge irsaliye olarak GÖNDERİLMEZ (Paraşüt'te stok iki kez düşmesin). Keşif (fark sorgusu),
+ * kuyruk alımı (`claimShipment`) ve ekrandaki yeniden dene (`outbox.ts`) aynı ifadeyi kullanır.
+ */
+export function shipmentInStockTotal(integrationId: string): SQL {
+  return sql`(
+           EXISTS (SELECT 1 FROM public.document_lines l0 WHERE l0.tenant_id = d.tenant_id AND l0.document_id = d.id)
+           AND NOT EXISTS (
+             SELECT 1 FROM public.document_lines l
+               LEFT JOIN public.integration_stock_marks m
+                      ON m.tenant_id = l.tenant_id AND m.integration_id = ${integrationId}::uuid AND m.item_id = l.item_id AND m.warehouse_id = d.warehouse_id
+              WHERE l.tenant_id = d.tenant_id AND l.document_id = d.id
+                AND CASE WHEN m.as_of_snapshot IS NOT NULL THEN NOT pg_visible_in_snapshot(h.created_xid, m.as_of_snapshot)
+                         -- 0066 öncesi işaret (görüntü yok): eski zaman kuralı çift başına — gönderimden (sent_at) önce işlenen belge toplama girmiştir.
+                         ELSE (m.sent_at IS NULL OR h.occurred_at > m.sent_at) END))`;
+}
+
+/** Tek belge için `shipmentInStockTotal` (çağıranın transaction'ında; satır kilidi çağıranda). */
+export async function shipmentCoveredByStock(tx: AccessTx, tenantId: string, integrationId: string, documentId: string): Promise<boolean> {
+  const r = await tx.execute<{ covered: boolean }>(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM public.documents d
+        JOIN public.document_status_history h ON h.tenant_id = d.tenant_id AND h.document_id = d.id AND h.to_status = 'POSTED'
+       WHERE d.tenant_id = ${tenantId}::uuid AND d.id = ${documentId}::uuid AND ${shipmentInStockTotal(integrationId)}) AS covered`);
+  return r[0]?.covered === true;
+}
+
 async function claimShipment(rc: RunCtx): Promise<ShipmentPayload | "none" | "deferred"> {
   return rc.deps.inTenant(async (tx) => {
     const r = await tx.execute<{ id: string; entity_id: string; attempts: number }>(sql`
@@ -393,6 +422,14 @@ async function claimShipment(rc: RunCtx): Promise<ShipmentPayload | "none" | "de
        ORDER BY created_at, id LIMIT 1 FOR UPDATE SKIP LOCKED`);
     const row = r[0];
     if (row === undefined) return "none";
+    // T-1137: kuyrukta kalmış (ör. stok modundan dönüşte PENDING kalan ya da elle yeniden denenen) belge bu arada stok toplamına girdiyse
+    // gönderilmez: kalıcı FAILED `ALREADY_IN_STOCK_TOTAL` (yeniden denenmez).
+    if (await shipmentCoveredByStock(tx, rc.tenantId, rc.integrationId, row.entity_id)) {
+      await tx.execute(sql`UPDATE public.integration_outbox SET status = 'FAILED', last_error_code = 'ALREADY_IN_STOCK_TOTAL'
+                            WHERE tenant_id = ${rc.tenantId}::uuid AND id = ${row.id}::uuid`);
+      rc.c.skipped++;
+      return "deferred";
+    }
     const attempts = Number(row.attempts) + 1;
     const defer = async (code: string): Promise<"deferred"> => {
       const failed = attempts >= SYNC_LIMITS.outboxMaxAttempts;
@@ -469,16 +506,7 @@ async function pushShipments(rc: RunCtx): Promise<void> {
         JOIN public.document_status_history h ON h.tenant_id = d.tenant_id AND h.document_id = d.id AND h.to_status = 'POSTED'
        WHERE d.tenant_id = ${rc.tenantId}::uuid AND d.kind = 'STOCK_OUT' AND d.source_kind = 'SALES_ORDER' AND d.status = 'POSTED'
          AND h.occurred_at >= ${enabledAt.toISOString()}::timestamptz
-         AND NOT (
-           EXISTS (SELECT 1 FROM public.document_lines l0 WHERE l0.tenant_id = d.tenant_id AND l0.document_id = d.id)
-           AND NOT EXISTS (
-             SELECT 1 FROM public.document_lines l
-               LEFT JOIN public.integration_stock_marks m
-                      ON m.tenant_id = l.tenant_id AND m.integration_id = ${rc.integrationId}::uuid AND m.item_id = l.item_id AND m.warehouse_id = d.warehouse_id
-              WHERE l.tenant_id = d.tenant_id AND l.document_id = d.id
-                AND CASE WHEN m.as_of_snapshot IS NOT NULL THEN NOT pg_visible_in_snapshot(h.created_xid, m.as_of_snapshot)
-                         -- 0066 öncesi işaret (görüntü yok): eski zaman kuralı çift başına — gönderimden (sent_at) önce işlenen belge toplama girmiştir.
-                         ELSE (m.sent_at IS NULL OR h.occurred_at > m.sent_at) END))
+         AND NOT ${shipmentInStockTotal(rc.integrationId)}
          AND NOT EXISTS (SELECT 1 FROM public.integration_outbox o WHERE o.tenant_id = d.tenant_id AND o.integration_id = ${rc.integrationId}::uuid AND o.flow = 'SHIPMENTS' AND o.entity_id = d.id)
        ORDER BY d.created_at, d.id
        LIMIT 500

@@ -5817,7 +5817,8 @@
       "PROVIDER_BAD_RESPONSE": "Paraşüt answer unreadable",
       "PROVIDER_COMPANY_NOT_FOUND": "Company not found",
       "PROVIDER_CONFIG": "Server setting missing",
-      "UNKNOWN": "Something went wrong · try again"
+      "UNKNOWN": "Something went wrong · try again",
+      "ALREADY_IN_STOCK_TOTAL": "This shipment is already in the stock total sent to Paraşüt · no shipment document is sent"
     },
     "opening": {
       "title": "Opening stock",
@@ -6029,7 +6030,8 @@
       "reasons": {
         "NOT_FOUND": "Record not found · list refreshed",
         "NOT_RETRYABLE": "This record cannot be changed now · it is being sent or was sent",
-        "UNSUPPORTED": "This option is not available for this record"
+        "UNSUPPORTED": "This option is not available for this record",
+        "ALREADY_IN_STOCK_TOTAL": "This shipment is already in the stock total sent to Paraşüt · no shipment document is sent; use \"Don't send\" to clear it"
       }
     }
   },
