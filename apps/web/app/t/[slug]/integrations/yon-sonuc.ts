@@ -16,10 +16,10 @@ export const kartAkisi = (flow: string): flow is KartAkisi => (KART_AKISLARI as 
 const alir = (d: YonDirection): boolean => d === "PULL" || d === "BOTH";
 const gonderir = (d: YonDirection): boolean => d === "PUSH" || d === "BOTH";
 
-/** Satır altındaki sonuç cümlesinin çeviri anahtarı (`integrations` altında); kart akışı değilse null. */
+/** Satır altındaki sonuç cümlesinin çeviri anahtarı (`integrations` altında; üç kart akışında kural aynı, satır adı akışı söyler); kart akışı değilse null. */
 export function yonSonucAnahtari(flow: string, secim: YonSecim): string | null {
   if (!kartAkisi(flow)) return null;
-  return secim === "OFF" ? "sonuc.OFF" : `sonuc.${flow}.${secim}`;
+  return `sonuc.${secim}`;
 }
 
 export interface YonDegisimi {

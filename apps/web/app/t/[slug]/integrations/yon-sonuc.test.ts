@@ -15,8 +15,7 @@ describe("sonuç cümlesi", () => {
     expect(KART_AKISLARI).toEqual(["PRODUCTS", "CONTACTS", "WAREHOUSES"]);
     for (const f of KART_AKISLARI) {
       expect(kartAkisi(f)).toBe(true);
-      for (const d of DIRS) expect(yonSonucAnahtari(f, d)).toBe(`sonuc.${f}.${d}`);
-      expect(yonSonucAnahtari(f, "OFF")).toBe("sonuc.OFF");
+      for (const s of SECIMLER) expect(yonSonucAnahtari(f, s)).toBe(`sonuc.${s}`);
     }
     for (const f of ["STOCK", "SHIPMENTS", "SALES_ORDERS", "x"]) {
       expect(kartAkisi(f)).toBe(false);
@@ -31,20 +30,18 @@ describe("sonuç cümlesi", () => {
           const v = get(root, yonSonucAnahtari(f, s) as string);
           expect(typeof v, `${f}.${s}`).toBe("string");
           const text = (v as string).replace("{provider}", "Paraşüt");
-          expect(text.length, text).toBeLessThanOrEqual(70);
+          expect(text.length, text).toBeLessThanOrEqual(60);
           expect(text.match(/[.!?]/g)?.length ?? 0, text).toBe(1);
         }
     }
   });
   it("Türkçe metin koddaki gerçek kuralı söyler: al = gönderim yok, gönder = karşı taraftan gelmez, iki yönlü = çakışmada sağlayıcı kazanır", () => {
-    const s = (tr as unknown as { integrations: { sonuc: Record<string, Record<string, string>> } }).integrations.sonuc;
-    for (const f of KART_AKISLARI) {
-      const r = s[f] as Record<string, string>;
-      expect(r.PULL).toContain("gitmez");
-      expect(r.PUSH).toContain("gelmez");
-      expect(r.BOTH).toContain("{provider}'teki kazanır");
-      expect(r.BOTH).not.toMatch(/son değişen/i);
-    }
+    const s = (tr as unknown as { integrations: { sonuc: Record<string, string> } }).integrations.sonuc;
+    expect(s.PULL).toContain("gitmez");
+    expect(s.PUSH).toContain("olmayanlar eklenir");
+    expect(s.PUSH).toContain("gelmez");
+    expect(s.BOTH).toContain("çakışmada {provider} kazanır");
+    expect(s.BOTH).not.toMatch(/son değişen/i);
     expect(s.OFF).toBe("Eşitleme yapılmaz.");
   });
 });

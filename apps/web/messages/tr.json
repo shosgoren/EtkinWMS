@@ -5699,22 +5699,10 @@
     "flowOnNoQueue": "{name} açıldı · birazdan kendiliğinden aktarılır",
     "flowOff": "{name} kapandı",
     "sonuc": {
-      "OFF": "Eşitleme yapılmaz.",
-      "PRODUCTS": {
-        "PULL": "{provider}'teki ürünler gelir; buradaki değişiklik oraya gitmez.",
-        "PUSH": "{provider}'te olmayan ürünler oraya eklenir; oradakiler gelmez.",
-        "BOTH": "Eksik ürünler iki yana eklenir; çakışmada {provider}'teki kazanır."
-      },
-      "CONTACTS": {
-        "PULL": "{provider}'teki cariler gelir; buradaki değişiklik oraya gitmez.",
-        "PUSH": "{provider}'te olmayan cariler oraya eklenir; oradakiler gelmez.",
-        "BOTH": "Eksik cariler iki yana eklenir; çakışmada {provider}'teki kazanır."
-      },
-      "WAREHOUSES": {
-        "PULL": "{provider}'teki depolar gelir; buradaki değişiklik oraya gitmez.",
-        "PUSH": "{provider}'te olmayan depolar oraya eklenir; oradakiler gelmez.",
-        "BOTH": "Eksik depolar iki yana eklenir; çakışmada {provider}'teki kazanır."
-      }
+      "PULL": "{provider}'ten gelir; buradaki değişiklik gitmez.",
+      "PUSH": "{provider}'te olmayanlar eklenir; oradan gelmez.",
+      "BOTH": "Eksikler eklenir; çakışmada {provider} kazanır.",
+      "OFF": "Eşitleme yapılmaz."
     },
     "onay": {
       "PRODUCTS": {

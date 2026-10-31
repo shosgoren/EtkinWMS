@@ -5699,22 +5699,10 @@
     "flowOnNoQueue": "{name} on · transfers automatically shortly",
     "flowOff": "{name} off",
     "sonuc": {
-      "OFF": "No sync.",
-      "PRODUCTS": {
-        "PULL": "Items come from {provider}; changes here are not sent there.",
-        "PUSH": "Items missing in {provider} are added there; theirs do not come.",
-        "BOTH": "Missing items are added on both sides; on conflict {provider} wins."
-      },
-      "CONTACTS": {
-        "PULL": "Parties come from {provider}; changes here are not sent there.",
-        "PUSH": "Parties missing in {provider} are added there; theirs do not come.",
-        "BOTH": "Missing parties are added on both sides; on conflict {provider} wins."
-      },
-      "WAREHOUSES": {
-        "PULL": "Warehouses come from {provider}; changes here are not sent there.",
-        "PUSH": "Warehouses missing in {provider} are added there; theirs do not come.",
-        "BOTH": "Missing warehouses are added on both sides; on conflict {provider} wins."
-      }
+      "PULL": "Comes from {provider}; changes here are not sent.",
+      "PUSH": "What {provider} lacks is added there; nothing comes back.",
+      "BOTH": "Missing records are added; on conflict {provider} wins.",
+      "OFF": "No sync."
     },
     "onay": {
       "PRODUCTS": {

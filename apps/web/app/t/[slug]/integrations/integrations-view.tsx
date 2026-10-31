@@ -116,7 +116,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   const [formOpen, setFormOpen] = useState(false);
   const [cutOpen, setCutOpen] = useState(false);
   // T-1136: yön değişiminin onay penceresi (yerel kayıt varken yeni "al" ya da yeni "gönder"); metinler açılırken hesaplanır.
-  const [onay, setOnay] = useState<{ readonly f: FlowData; readonly dir: Direction; readonly title: string; readonly text: string; readonly evet: string } | null>(null);
+  const [onay, setOnay] = useState<{ readonly flow: Flow; readonly dir: Direction; readonly title: string; readonly text: string; readonly evet: string } | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [reauth, setReauth] = useState(false);
   // İyimser akış durumu (sunucu yanıtı gelene dek); sunucu verisi değişince sıfırlanır.
@@ -236,7 +236,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
     const name = t(`flows.${f.flow}.name`);
     feedback.warn();
     setOnay({
-      f,
+      flow: f.flow,
       dir,
       title: t("onayBaslik", { name, dir: t(`yon.${dir}`, { provider: pn }) }),
       text: t(yonOnayAnahtari(f.flow as KartAkisi, dir), { n: r.data.total, m: r.data.unlinked, provider: pn }),
@@ -937,9 +937,11 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
           confirmLabel={onay?.evet ?? ""}
           cancelLabel={t("onayVazgec")}
           onConfirm={() => {
+            // Pencere açıkken ekran verisi yenilenmiş olabilir: akışın GÜNCEL satırı (önceki durum ondan okunur).
             const o = onay;
             setOnay(null);
-            if (o !== null) void setFlow(o.f, true, o.dir);
+            const cur = o === null ? undefined : flows.find((x) => x.flow === o.flow);
+            if (o !== null && cur !== undefined) void setFlow(cur, true, o.dir);
           }}
           onCancel={() => {
             feedback.minor();
