@@ -3,14 +3,17 @@
 //
 // T-1135 — ERP'ye giden toplamın KESİN kümesi (kullanıcı kararı 30 Ekim: stok sahibi Etkin; Paraşüt'e satılabilir eldeki miktar gider):
 //   DAHİL: `stock_status = 'AVAILABLE'` boyutların bakiyesi (rezerve dahil: fiziksel eldeki), yalnız `locations.kind IN ('RECEIVING','STORAGE')`
-//          raflarda, raf ve depo durumu ne olsun (arşivli raftaki kalan stok da eldedir).
-//   HARİÇ: karantina / hasarlı / bloke (`QUARANTINE`, `DAMAGED`, `BLOCKED`) ve yoldaki / sevk sahası (`TRANSIT`, `STAGING`) stok.
+//          ve ARŞİVLİ OLMAYAN (`locations.status <> 'ARCHIVED'`) raflarda. T-1140 (kullanıcı kararı 31 Ekim): arşivli raftaki stok Paraşüt
+//          toplamına girmez (önceki kural "arşivli raftaki kalan stok da eldedir" idi). Depo durumu ölçüt değildir.
+//   HARİÇ: arşivli raf (`STOCK_TOTAL_EXCLUDED_LOCATION_STATUS`), karantina / hasarlı / bloke (`QUARANTINE`, `DAMAGED`, `BLOCKED`) ve yoldaki / sevk sahası (`TRANSIT`, `STAGING`) stok.
 // Aynı küme `STOCK_TOTAL_STATUSES` / `STOCK_TOTAL_LOCATION_KINDS` sabitlerindedir (kart + birim testi bu sabitleri okur).
 import { sql } from "drizzle-orm";
 import type { AccessTx } from "../identity/access.ts";
 
 export const STOCK_TOTAL_STATUSES = Object.freeze(["AVAILABLE"] as const);
 export const STOCK_TOTAL_LOCATION_KINDS = Object.freeze(["RECEIVING", "STORAGE"] as const);
+/** T-1140: bu durumdaki raflar toplama girmez. */
+export const STOCK_TOTAL_EXCLUDED_LOCATION_STATUS = "ARCHIVED" as const;
 
 export type StockLevelRow = {
   item_id: string;
@@ -42,7 +45,7 @@ export async function selectChangedStockLevels(tx: AccessTx, tenantId: string, i
             JOIN public.stock_dimensions d ON d.tenant_id = b.tenant_id AND d.id = b.stock_dimension_id
             JOIN public.locations l ON l.tenant_id = d.tenant_id AND l.id = d.location_id
            WHERE b.tenant_id = ${tenantId}::uuid
-             AND d.stock_status IN (${statuses}) AND l.kind IN (${kinds})
+             AND d.stock_status IN (${statuses}) AND l.kind IN (${kinds}) AND l.status <> ${STOCK_TOTAL_EXCLUDED_LOCATION_STATUS}
              AND d.item_id IN (SELECT item_id FROM it) AND l.warehouse_id IN (SELECT warehouse_id FROM wh)
            GROUP BY d.item_id, l.warehouse_id
         ), pairs AS (

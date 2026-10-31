@@ -421,6 +421,51 @@ export class ParasutClient {
     return this.create(token, companyId, "warehouses", { type: "warehouses", attributes: { name: w.name } });
   }
 
+  /** Depo kartı kimliğiyle (T-1140 iki yönlü eşitleme). 404 yalnız "yok" demektir. */
+  async warehouse(token: string, companyId: string, warehouseId: string): Promise<JsonApiResource | null> {
+    const cid = parseCompanyId(companyId), wid = id(warehouseId);
+    const r = await this.request("GET", `/v4/${cid}/warehouses/${wid}`, { token });
+    if (r.status === 404) return null;
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const item = resource((r.body as { data?: unknown } | null)?.data);
+    if (item.id !== wid || item.type !== "warehouses") throw new ProviderError("BAD_RESPONSE", r.status);
+    return item;
+  }
+
+  // --- düzeltme gönderimi (T-1140) --------------------------------------------------------------------------------------------------
+  // Paraşüt v4 belgesi kart düzenlemeyi `PUT /v4/{şirket}/{kaynak}/{kimlik}` ile tanımlar (JSON:API `data.id` + `data.type` + `attributes`);
+  // yanıt güncel kaynaktır. Gönderilen alanlar oluşturma eşleyicileriyle (createProduct/createContact/createWarehouse) aynı kümeden seçilir;
+  // boş (null) alan GÖNDERİLMEZ (Paraşüt'teki değeri silmeyiz). Gerçek hesapta alan kabulü ve yanıt biçimi UNKNOWN (BACKLOG).
+  private async update(token: string, companyId: string, kind: "products" | "contacts" | "warehouses", externalId: string, attributes: Record<string, unknown>): Promise<JsonApiResource> {
+    const cid = parseCompanyId(companyId), xid = id(externalId);
+    const r = await this.request("PUT", `/v4/${cid}/${kind}/${xid}`, { token, json: { data: { id: xid, type: kind, attributes } } });
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const item = resource((r.body as { data?: unknown } | null)?.data);
+    if (item.id !== xid || item.type !== kind) throw new ProviderError("BAD_RESPONSE", r.status);
+    return item;
+  }
+
+  /** Ürün: yalnız ad (kod iki tarafta eşleme anahtarıdır, birim kart açıldıktan sonra değişmez — I-09). */
+  async updateProduct(token: string, companyId: string, externalId: string, p: { readonly name: string }): Promise<JsonApiResource> {
+    return this.update(token, companyId, "products", externalId, { name: p.name });
+  }
+
+  /** Cari: ad + createContact'taki iletişim/vergi alanları (dolu olanlar). Cari türü (`account_type`) gönderilmez (Etkin'de BOTH olabilir). */
+  async updateContact(
+    token: string,
+    companyId: string,
+    externalId: string,
+    c: { readonly name: string; readonly taxNumber: string | null; readonly taxOffice: string | null; readonly email: string | null; readonly phone: string | null; readonly city: string | null; readonly district: string | null; readonly address: string | null; readonly shortName: string | null },
+  ): Promise<JsonApiResource> {
+    const attrs: Record<string, unknown> = { name: c.name };
+    for (const [k, v] of [["tax_number", c.taxNumber], ["tax_office", c.taxOffice], ["email", c.email], ["phone", c.phone], ["city", c.city], ["district", c.district], ["address", c.address], ["short_name", c.shortName]] as const) if (v !== null) attrs[k] = v;
+    return this.update(token, companyId, "contacts", externalId, attrs);
+  }
+
+  async updateWarehouse(token: string, companyId: string, externalId: string, w: { readonly name: string }): Promise<JsonApiResource> {
+    return this.update(token, companyId, "warehouses", externalId, { name: w.name });
+  }
+
   /**
    * Satış irsaliyesi (`inflow: false`). Stok hareketi yalnız ürün + miktar taşır (belgede depo ilişkisi yok; Paraşüt'ün depo seçimi canlıda
    * doğrulanacak). Cari ilişki türü belgede `contact` yazıyor, okuma modelinde `contacts`; JSON:API çoğul türü gönderilir (doğrulanacak).

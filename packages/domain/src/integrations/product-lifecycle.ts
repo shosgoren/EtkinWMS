@@ -10,9 +10,12 @@ import { SHARED_OAUTH_CONFIG_VERSION } from "./oauth.ts";
 export interface LifecycleBinding {
  readonly tenantId:string; readonly integrationId:string; readonly companyId:string;
  readonly userId:string; readonly membershipId:string; readonly connectedAt:string; readonly configVersion:string|null;
+ /** T-1140: cari / depo yaşam döngüsü bağlamı (yalnız o akış açıkken). Ürün bağlamında alan yoktur (eski bağlam özetleri değişmesin). */
+ readonly flow?:"CONTACTS"|"WAREHOUSES";
 }
+export type LifecycleFlow="PRODUCTS"|"CONTACTS"|"WAREHOUSES";
 /** Configuration first, then connection/flow/member; no network while locked. A stale run cannot mutate a reconnected tenant. */
-export async function lifecycleBinding(tx:AccessTx,tenantId:string,integrationId:string,lock=false):Promise<LifecycleBinding|null> {
+export async function lifecycleBinding(tx:AccessTx,tenantId:string,integrationId:string,lock=false,flow:LifecycleFlow="PRODUCTS"):Promise<LifecycleBinding|null> {
  const app=await tx.execute<{version:string}>(sql`SELECT version FROM public.integration_oauth_apps WHERE tenant_id=${tenantId}::uuid ${lock?sql`FOR SHARE`:sql``}`);
  let configVersion=app[0]?.version??null;
  if(configVersion===null){
@@ -31,14 +34,14 @@ export async function lifecycleBinding(tx:AccessTx,tenantId:string,integrationId
  JOIN public.tenant_memberships m ON m.tenant_id=i.tenant_id AND m.id=i.connected_membership_id AND m.user_id=i.connected_by
  JOIN public.membership_roles r ON r.tenant_id=m.tenant_id AND r.membership_id=m.id
  WHERE i.tenant_id=${tenantId}::uuid AND i.id=${integrationId}::uuid AND i.provider='PARASUT' AND i.status='CONNECTED' AND i.account_ref IS NOT NULL
- AND f.flow='PRODUCTS' AND f.enabled AND f.direction IN ('PULL','BOTH') AND m.status='ACTIVE' AND r.role_key='TENANT_ADMIN'
+ AND f.flow=${flow} AND f.enabled AND f.direction IN ('PULL','BOTH') AND m.status='ACTIVE' AND r.role_key='TENANT_ADMIN'
  ${lock?sql`FOR SHARE OF i,f,m,r`:sql``}`);
- const r=rows[0];return r?{tenantId,integrationId,companyId:r.account_ref,userId:r.connected_by,membershipId:r.connected_membership_id,connectedAt:r.connected_at,configVersion}:null;
+ const r=rows[0];return r?{tenantId,integrationId,companyId:r.account_ref,userId:r.connected_by,membershipId:r.connected_membership_id,connectedAt:r.connected_at,configVersion,...(flow==="PRODUCTS"?{}:{flow})}:null;
 }
 export async function assertLifecycleBinding(tx:AccessTx,b:LifecycleBinding):Promise<boolean> {
- const now=await lifecycleBinding(tx,b.tenantId,b.integrationId,true);return now!==null&&JSON.stringify(now)===JSON.stringify(b);
+ const now=await lifecycleBinding(tx,b.tenantId,b.integrationId,true,b.flow??"PRODUCTS");return now!==null&&JSON.stringify(now)===JSON.stringify(b);
 }
-function context(b:LifecycleBinding,itemId:string,externalId:string):string {
+export function context(b:LifecycleBinding,itemId:string,externalId:string):string {
  return createHash("sha256").update(JSON.stringify([b,itemId,externalId])).digest("hex");
 }
 /** Explicit references, discovered from actual item FKs, conservatively count as use (metadata labels/conversions excluded). */

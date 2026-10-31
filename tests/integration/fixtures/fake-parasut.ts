@@ -2,7 +2,8 @@
 // Belgedeki şekiller (https://apidocs.parasut.com/swagger.json): OAuth `POST /oauth/token` (authorization_code / refresh_token; T-1139: parola
 // akışı yok, `grant_type=password` 400 alır; yenilemede YENİ yenileme
 // belirteci), `GET /v4/me?include=companies`, şirket kapsamında products / contacts / warehouses (GET sayfalı, `filter[...]`, POST),
-// shipment_documents POST, stock_updates POST; T-1138: webhooks GET/POST/DELETE + contacts/:id GET + imzalı teslim üretici (`emitWebhook`). Her istek `requests`e yazılır (gövde dahil) — testler sırrın yalnız token ucuna gittiğini denetler.
+// shipment_documents POST, stock_updates POST; T-1140: products / contacts / warehouses `PUT /:id` (öznitelik birleştirir, `updated_at` yazar;
+// `updateFailure` ile red) + warehouses/:id GET; T-1138: webhooks GET/POST/DELETE + contacts/:id GET + imzalı teslim üretici (`emitWebhook`). Her istek `requests`e yazılır (gövde dahil) — testler sırrın yalnız token ucuna gittiğini denetler.
 import { createHmac } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -71,6 +72,10 @@ export interface FakeParasut {
   stockFailure: number | null;
   /** T-1135: bu ürün kimliklerinden birini içeren stok güncellemesi 422 alır (satır bazlı kesin red). */
   readonly stockRejectProducts: Set<string>;
+  /** T-1140: kart düzenleme (PUT) yanıt durumu (ör. 422) — null ise kabul. */
+  updateFailure: number | null;
+  /** T-1140: PUT ile gelen düzenlemeler (sıralı). */
+  readonly updates: { kind: string; id: string; attributes: Record<string, unknown> }[];
   /** Geçerli yenileme belirteci (döner). */
   refreshToken: string;
   accessToken: string;
@@ -145,6 +150,8 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     shipmentFailure: null,
     stockFailure: null,
     stockRejectProducts: new Set<string>(),
+    updateFailure: null,
+    updates: [],
     refreshToken: "",
     accessToken: "",
     mintAuthorizationCode() {
@@ -215,6 +222,27 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       if (contact[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });
       const row = state.contacts.find((r) => r.id === contact[2]);
       return row === undefined ? send(404, { errors: [{ title: "Not found" }] }) : send(200, { data: { ...row, type: "contacts", relationships: row.relationships ?? {} } });
+    }
+    const whOne = /^\/v4\/([0-9]+)\/warehouses\/([0-9]+)$/.exec(url.pathname);
+    if (req.method === "GET" && whOne !== null) {
+      if (whOne[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });
+      const row = state.warehouses.find((r) => r.id === whOne[2]);
+      return row === undefined ? send(404, { errors: [{ title: "Not found" }] }) : send(200, { data: { ...row, type: "warehouses", relationships: row.relationships ?? {} } });
+    }
+    const cardOne = /^\/v4\/([0-9]+)\/(products|contacts|warehouses)\/([0-9]+)$/.exec(url.pathname);
+    if (req.method === "PUT" && cardOne !== null) {
+      if (cardOne[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });
+      const kind = cardOne[2] as string;
+      const row = (collections[kind] ?? []).find((r) => r.id === cardOne[3]);
+      if (row === undefined) return send(404, { errors: [{ title: "Not found" }] });
+      if (state.updateFailure !== null) return send(state.updateFailure, { errors: [{ title: "Rejected" }] });
+      let b: { data?: { id?: unknown; type?: unknown; attributes?: Record<string, unknown> } } = {};
+      try { b = JSON.parse(body) as typeof b; } catch { return send(400, { errors: [{ title: "Bad JSON" }] }); }
+      const a = b.data?.attributes ?? {};
+      if (String(b.data?.id) !== row.id || b.data?.type !== kind || ("name" in a && (typeof a.name !== "string" || a.name === ""))) return send(422, { errors: [{ title: "invalid" }] });
+      state.updates.push({ kind, id: row.id, attributes: a });
+      row.attributes = { ...row.attributes, ...a, updated_at: new Date().toISOString() };
+      return send(200, { data: { id: row.id, type: kind, attributes: row.attributes, relationships: row.relationships ?? {} } });
     }
     const hookOne = /^\/v4\/([0-9]+)\/webhooks\/([0-9]+)$/.exec(url.pathname);
     if (req.method === "DELETE" && hookOne !== null) {

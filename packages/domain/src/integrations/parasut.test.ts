@@ -199,3 +199,27 @@ describe("single product lifecycle evidence", () => {
     await expect(c.product("synthetic","123","9876")).rejects.toBeInstanceOf(ProviderError);
   });
 });
+
+describe("T-1140 düzeltme gönderimi (PUT) ve depo okuma", () => {
+  it("yalnız verilen alanlar gider; boş cari alanı gönderilmez; yanıt güncel kaynak; 404 / 422 sabit kod", async () => {
+    fake.products.push({ id: "501", attributes: { code: "K-501", name: "Eski", unit: "Adet" } });
+    fake.contacts.push({ id: "502", attributes: { name: "Cari", email: "a@b.test", account_type: "customer" } });
+    fake.warehouses.push({ id: "503", attributes: { name: "Depo" } });
+    const c = new ParasutClient({ baseUrl: fake.url });
+    const { accessToken: tok } = await grant(c);
+    const p = await c.updateProduct(tok, "115", "501", { name: "Yeni" });
+    expect(p.attributes).toMatchObject({ code: "K-501", name: "Yeni", unit: "Adet" });
+    expect(fake.requests.at(-1)).toMatchObject({ method: "PUT", path: "/v4/115/products/501" });
+    expect(JSON.parse(fake.requests.at(-1)?.body ?? "{}")).toEqual({ data: { id: "501", type: "products", attributes: { name: "Yeni" } } });
+    await c.updateContact(tok, "115", "502", { name: "Cari 2", taxNumber: null, taxOffice: null, email: null, phone: "0532 111 22 33", city: null, district: null, address: null, shortName: null });
+    expect(fake.updates.at(-1)).toEqual({ kind: "contacts", id: "502", attributes: { name: "Cari 2", phone: "0532 111 22 33" } });
+    expect(fake.contacts.find((x) => x.id === "502")?.attributes.email).toBe("a@b.test");
+    expect((await c.updateWarehouse(tok, "115", "503", { name: "Depo 2" })).attributes.name).toBe("Depo 2");
+    expect((await c.warehouse(tok, "115", "503"))?.attributes.name).toBe("Depo 2");
+    expect(await c.warehouse(tok, "115", "999")).toBeNull();
+    await expect(c.updateWarehouse(tok, "115", "999", { name: "X" })).rejects.toMatchObject({ code: "NOT_FOUND", status: 404 });
+    fake.updateFailure = 422;
+    await expect(c.updateProduct(tok, "115", "501", { name: "Z" })).rejects.toMatchObject({ code: "INVALID", status: 422 });
+    await expect(c.updateProduct(tok, "115", "../1", { name: "Z" })).rejects.toMatchObject({ code: "BAD_RESPONSE" });
+  });
+});

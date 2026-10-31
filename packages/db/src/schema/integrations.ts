@@ -211,6 +211,34 @@ export const integrationStockMarks = pgTable(
   (t) => [primaryKey({ name: "integration_stock_marks_pkey", columns: [t.tenantId, t.integrationId, t.itemId, t.warehouseId] })],
 );
 
+// T-1140 (0069): bağlı kart başına iki yönlü eşitleme işareti + cari/depo kaynak yaşam döngüsü (çok biçimli; kart FK'si yok).
+export const integrationCardStates = pgTable(
+  "integration_card_states",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    system: text("system").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    localHash: text("local_hash"),
+    remoteHash: text("remote_hash"),
+    localSig: text("local_sig"),
+    syncedAt: timestamptz("synced_at"),
+    remoteUpdatedAt: timestamptz("remote_updated_at"),
+    lastPulledAt: timestamptz("last_pulled_at"),
+    lastPushedAt: timestamptz("last_pushed_at"),
+    sourceState: text("source_state").notNull().default("ACTIVE"),
+    sourceDisposition: text("source_disposition").notNull().default("NONE"),
+    sourceManagedArchive: boolean("source_managed_archive").notNull().default(false),
+    sourceChangedAt: timestamptz("source_changed_at"),
+    sourceCheckedAt: timestamptz("source_checked_at"),
+    sourceMissingSince: timestamptz("source_missing_since"),
+    sourceMissingContext: text("source_missing_context"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ name: "integration_card_states_pkey", columns: [t.tenantId, t.system, t.entityType, t.entityId] })],
+);
+
 /** 0061: ephemeral authorization state; tokens are sealed and never selected by overview. */
 export const integrationOauthAttempts = pgTable("integration_oauth_attempts", {
   tenantId: uuid("tenant_id").notNull(),

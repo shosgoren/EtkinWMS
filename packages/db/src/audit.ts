@@ -147,6 +147,10 @@ export const AUDIT_ACTIONS = [
   // sonuç). Anahtar/imza/yük yazılmaz.
   "integration.webhook_registered",
   "integration.webhook_received",
+  // T-1140 (0069): iki yönlü eşitlemede çakışma çözüldü (kazanan taraf, dayanak, iki zaman; değer yazılmaz) ve Paraşüt'te yeniden etkin olan,
+  // sistemin arşivlediği depo geri açıldı.
+  "integration.conflict_resolved",
+  "warehouse.restored",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -1,9 +1,11 @@
 // T-1136: Ayarlar › Entegrasyonlar › Akış — yön seçiminin SONUCU (satır altındaki tek cümle) ve hangi geçişin önce onay istediği. Saf
 // işlevler (ekran ve birim testi aynı kuralı kullanır). Kural koddaki gerçek davranıştan gelir (`packages/domain/src/integrations/`):
-//  - al (PULL): sağlayıcı kartları gelir (`sync.ts` runFlow → pull → `apply.ts`); hiçbir şey gönderilmez.
-//  - gönder (PUSH): yalnız sağlayıcıya EŞLENMEMİŞ yerel kartlar gider (`sync.ts` unlinked/pushCards); sağlayıcıda aynısı varsa ona bağlanır.
-//  - iki yönlü (BOTH): önce al, sonra gönder; eşlenmiş kartta sağlayıcıdaki değer yereldekinin üstüne yazılır, yereldeki düzeltme gönderilmez
-//    → çakışmada sağlayıcı kazanır ("son değişen kazanır" kuralı YOK).
+//  - al (PULL): sağlayıcı kartları gelir (`sync.ts` runFlow → pull → `apply.ts`); hiçbir şey gönderilmez. Ürün, cari ve depo sağlayıcıda
+//    silinir/arşivlenirse burada arşive alınır, kullanımdaysa bekler (`product-lifecycle.ts`, T-1140 `card-lifecycle.ts`).
+//  - gönder (PUSH): sağlayıcıya EŞLENMEMİŞ yerel kartlar gider (`sync.ts` unlinked/pushCards; aynısı varsa bağlanır) ve T-1140'tan beri
+//    bağlı kartlardaki yerel düzeltme de gider (`pushEdited`); sağlayıcıdan hiçbir şey alınmaz.
+//  - iki yönlü (BOTH, T-1140): bağlı kartta yalnız değişen taraf öbürüne yansır; iki taraf da değiştiyse son değişen kazanır, zaman
+//    bilinmiyorsa sağlayıcı kazanır (`card-sync.ts` decideCardSync; her çakışma audit'li).
 // Onay: yeni bir "al" yerel kayıt varken (eşleşme/ekleme olur), yeni bir "gönder" eşlenmemiş yerel kayıt varken (dışarı kart gider) sorulur.
 // Kapatmak, aynı yönü yeniden seçmek, boş katalog ve zaten açık olan yönü korumak onay istemez.
 
