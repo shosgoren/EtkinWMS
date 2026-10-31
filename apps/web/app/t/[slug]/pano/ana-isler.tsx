@@ -39,7 +39,8 @@ function Ico({ d, size, wide }: { d: string; size: number; wide?: boolean }) {
   );
 }
 
-export function AnaIsler({ slug, items, adaylar }: { slug: string; items: readonly AnaIs[]; adaylar: readonly AnaAday[] }) {
+/** `kaynak`: kurulum yolculuğunda seçilen kart kaynağı (T-1134: Paraşüt seçiliyse "Excel'den aktar" kutusunun alt yazısı Excel değil Paraşüt der). */
+export function AnaIsler({ slug, items, adaylar, kaynak = null }: { slug: string; items: readonly AnaIs[]; adaylar: readonly AnaAday[]; kaynak?: "EXCEL" | "PARASUT" | null }) {
   const t = useTranslations("pano.ana");
   const tk = useTranslations("kabuk");
   const keys = items.map((x) => x.key);
@@ -77,7 +78,8 @@ export function AnaIsler({ slug, items, adaylar }: { slug: string; items: readon
 
   const bul = (k: string): AnaAday | undefined => adaylar.find((x) => x.key === k);
   const ad = (x: AnaAday): string => (x.mod === undefined ? t(`is.${x.key as AnaIsKey}.ad`) : tk(`mod.${x.key as KabukModuleId}.name`));
-  const alt = (x: AnaAday): string => (x.mod === undefined ? t(`is.${x.key as AnaIsKey}.alt`) : tk(`mod.${x.key as KabukModuleId}.sub`));
+  const alt = (x: AnaAday): string =>
+    x.mod !== undefined ? tk(`mod.${x.key as KabukModuleId}.sub`) : x.key === "excel" && kaynak === "PARASUT" ? t("is.excel.altParasut") : t(`is.${x.key as AnaIsKey}.alt`);
   const ikon = (x: AnaAday): string => x.mod?.d ?? IKON[x.key as AnaIsKey];
 
   const bitir = (): void => {

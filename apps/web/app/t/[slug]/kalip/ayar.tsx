@@ -22,6 +22,8 @@ export interface KalipAltBolum {
   readonly badge?: number;
   /** Rozetin erişilebilir adı (ör. "3 sorun"). */
   readonly badgeAria?: string;
+  /** T-1134: bölüm henüz yoksa adın yanında küçük rozet (ör. "YAKINDA"); satır yine açılır, içi boş durum + yönlendirme. */
+  readonly soon?: string;
 }
 
 /** Sol alt bölüm listesi + sağda seçili bölüm (`children`). */
@@ -54,6 +56,11 @@ export function KalipAltBolumler({ label, items, current, children, testId }: { 
                 <Ico d={o.d} size={16} />
               </span>
               <span className="stab-ad">{o.label}</span>
+              {o.soon === undefined ? null : (
+                <span className="stab-soon" data-testid={`alt-bolum-${o.id}-soon`}>
+                  {o.soon}
+                </span>
+              )}
               {badge > 0 ? (
                 <span className="stab-say" aria-label={o.badgeAria} data-testid={`alt-bolum-${o.id}-badge`}>
                   {badge}

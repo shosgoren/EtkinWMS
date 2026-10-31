@@ -3,6 +3,8 @@ import { completeFirstUseGuide } from "./support/first-use-guide.ts";
 import { enterDemoReal, enterDemoShared } from "./support/demo-session.ts";
 
 const title = "Birlikte, adım adım.";
+// T-1134: kapalı rehber penceresi `inert`; açılınca odak pencerenin içine geçer (showModal öncesi inert kalkar).
+const odakPencerede = "document.activeElement?.closest('dialog.guide-dialog[open]') != null && !document.querySelector('dialog.guide-dialog').inert";
 
 for (const [mode, enter] of [["gerçek", enterDemoReal], ["paylaşılan", enterDemoShared]] as const) {
   test(`rehberden sonra ${mode} demo giriş yardımcısı ana ekrana ulaşır`, async ({ page }) => {
@@ -28,6 +30,7 @@ test("ilk rehber tamamlanır; tercih yenilemede korunur ve rehber yeniden açıl
   const guide = page.getByRole("dialog", { name: title });
   await expect(guide).toBeVisible();
   await expect(guide.getByRole("heading", { name: "Yapacağınız işi seçin" })).toBeVisible();
+  await expect.poll(() => page.evaluate<boolean>(odakPencerede), "kendiliğinden açılan rehberde odak pencerede").toBe(true);
   const bounds = await guide.boundingBox();
   const viewport = page.viewportSize();
   if (bounds === null || viewport === null) throw new Error("rehber/ekran ölçüsü alınamadı");
@@ -41,8 +44,10 @@ test("ilk rehber tamamlanır; tercih yenilemede korunur ve rehber yeniden açıl
   await expect(guide).not.toBeVisible();
   await page.getByRole("button", { name: "Nasıl kullanırım?" }).click();
   await expect(guide.getByText("Adım 1 / 3", { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate<boolean>(odakPencerede), "düğmeyle açılan rehberde odak pencerede").toBe(true);
   await page.keyboard.press("Escape");
   await expect(guide).not.toBeVisible();
+  await expect(page.locator("dialog.guide-dialog")).toHaveAttribute("inert", "");
   await expect(page.getByRole("button", { name: "Nasıl kullanırım?" })).toBeFocused();
 });
 

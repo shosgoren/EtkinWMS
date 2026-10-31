@@ -90,6 +90,17 @@ describe("ALTIN-KURAL mekanik bekçi (T-990)", () => {
     expect(bad).toEqual([]);
   });
 
+  // T-1134: ortak boş durum (`KalipBos` → `.nomatch`) her kalıp kabında biçimli olmalı; kaynağı KalipListe olduğu için üretilmiş CSS yalnız
+  // `.dzl`'yi tanımlar, form ve kayıt kartı kabı elle yazılan kalip-frame.css'te. Eksikse başlık/ipucu/düğme biçimsiz üst üste biner.
+  it("KalipBos boş durumu liste, form ve kayıt kartı kabında biçimli (.dzl/.dzf/.dzd .nomatch)", () => {
+    const css = CSS.map((p) => readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "")).join("\n");
+    for (const scope of ["dzl", "dzf", "dzd"]) {
+      expect(new RegExp(`\\.${scope} \\.nomatch[^{,]*[,{]`).test(css), `.${scope} .nomatch`).toBe(true);
+      expect(new RegExp(`\\.${scope} \\.nomatch \\.nic[^{,]*[,{]`).test(css), `.${scope} .nomatch .nic`).toBe(true);
+      expect(new RegExp(`\\.${scope}\\.dz-dark \\.nomatch[^{,]*[,{]`).test(css), `.${scope}.dz-dark .nomatch`).toBe(true);
+    }
+  });
+
   it("üretilmiş CSS önekli backdrop-filter yazmaz (küçültücü standart özelliği silmesin)", () => {
     for (const r of generatedCss()) {
       const css = readFileSync(path.join(APP, r), "utf8");

@@ -4298,7 +4298,8 @@
         },
         "excel": {
           "ad": "Excel'den aktar",
-          "alt": "Seçili veri kaynağı"
+          "alt": "Seçili veri kaynağı",
+          "altParasut": "Veri kaynağı · Paraşüt"
         },
         "kayit": {
           "ad": "Kim ne yaptı?",
@@ -5626,13 +5627,12 @@
   "integrations": {
     "title": "Entegrasyon",
     "locked": "Bu ekran yalnız hesap sahibinde",
-    "lockedHint": "ERP bağlantısını yalnız hesap sahibi kurar ve değiştirir.",
-    "head": "ERP BAĞLANTISI",
-    "hintNone": "ERP'Nİ SEÇ · BİLGİLERİ GİR · BAĞLAN",
-    "hintOn": "AÇ / KAPAT · YÖNÜ SEÇ · GERİSİ KENDİLİĞİNDEN",
-    "demo": "Örnek (demo) alanda ERP bağlanmaz",
+    "lockedHint": "Muhasebe programı bağlantısını yalnız hesap sahibi kurar ve değiştirir.",
+    "head": "MUHASEBE PROGRAMI BAĞLANTISI",
+    "hintNone": "MUHASEBE PROGRAMINI SEÇ · BİLGİLERİ GİR · BAĞLAN",
+    "demo": "Örnek (demo) alanda muhasebe programı bağlanmaz",
     "demoSub": "GERÇEK ÇALIŞMA ALANINDA BAĞLAN",
-    "providerList": "ERP seç",
+    "providerList": "Muhasebe programı seç",
     "providers": {
       "PARASUT": {
         "name": "Paraşüt",
@@ -5651,7 +5651,7 @@
     "pillSoon": "YAKINDA",
     "soonToast": "Logo yakında · ürün bilgisi bekleniyor",
     "connTitle": "Bağlı · {label}",
-    "connSub": "{provider} · SON SINAMA {at}",
+    "connSub": "{provider} · SON KONTROL {at}",
     "connSubNever": "{provider} · HENÜZ SINANMADI",
     "connErrTitle": "{provider} bağlantısında sorun var",
     "connErrSub": "BAĞLANTIYI SINA YA DA YENİDEN BAĞLAN",
@@ -5698,9 +5698,9 @@
     "flowOnAria": "{name}: açık. Kapatmak için dokun",
     "flowOffAria": "{name}: kapalı. Açmak için dokun",
     "flowNaAria": "{name}: {provider}'te karşılığı yok",
-    "flowNa": "{provider}'te karşılığı yok · Logo gelince açılır",
+    "flowNa": "{provider}'te sipariş yok · satış faturasıyla gelecek",
     "flowOn": "{name} açıldı · ilk aktarım başladı",
-    "flowOnNoQueue": "{name} açıldı · saatlik aktarımda çalışır",
+    "flowOnNoQueue": "{name} açıldı · birazdan kendiliğinden aktarılır",
     "flowOff": "{name} kapandı",
     "dirSet": "{name}: {dir}",
     "never": "HENÜZ ÇALIŞMADI",
@@ -5727,7 +5727,7 @@
     "runFailedRows": "{n} SATIR OLMADI",
     "runNoChange": "DEĞİŞİKLİK YOK",
     "trigger": {
-      "SCHEDULE": "SAATLİK",
+      "SCHEDULE": "OTOMATİK",
       "MANUAL": "ELLE"
     },
     "outboxCheck": "{n} irsaliye kontrol bekliyor",
@@ -5775,7 +5775,7 @@
       "CONNECTOR_REVOKED": "Bağlayan kişinin yetkisi kalktı · yeniden bağlan",
       "UNSUPPORTED": "Bu yön bu ERP'de yok",
       "NO_ENABLED_FLOW": "Önce aktarılacak bir şey aç",
-      "QUEUE_UNAVAILABLE": "Arka plan şu an kapalı · saatlik aktarım alır",
+      "QUEUE_UNAVAILABLE": "Arka plan şu an kapalı · birazdan kendiliğinden alınır",
       "CONTACT_NOT_LINKED": "Cari Paraşüt'e bağlı değil",
       "ITEM_NOT_LINKED": "Ürün Paraşüt'e bağlı değil",
       "DOCUMENT_EMPTY": "Belgede satır yok",
@@ -5908,7 +5908,7 @@
     },
     "baglanti": {
       "title": "Bağlantı ve veri kaynağı",
-      "sub": "ERP bağlantısı · açılış stoku · Excel",
+      "sub": "Muhasebe programı bağlantısı · açılış stoku · Excel",
       "excel": "Excel ile aktar",
       "excelSub": "ÜRÜN · CARİ · DEPO · RAF · AÇILIŞ STOKU",
       "excelOpen": "Aç"
@@ -5917,7 +5917,9 @@
       "title": "Alan sahipliği",
       "sub": "Hangi alanı hangi sistem değiştirir",
       "soon": "Yakında",
-      "text": "Alan alan sahiplik seçimi yakında gelecek"
+      "text": "Alan sahipliği yakında",
+      "soonHint": "Şimdilik her bilginin yönünü Ne çekilsin, gönderilsin bölümünden seçersin",
+      "go": "Yön seçimine git"
     },
     "arsiv": {
       "title": "Pasif ve arşiv",
@@ -6344,9 +6346,9 @@
         "kontrol": "Sütunlar eşleşti. Alttaki düğmeyle kontrol et.",
         "uygula": "Sorun yoksa alttaki düğmeyle aktar.",
         "baglan": "Paraşüt'ü bağla: alttaki BAĞLAN düğmesine bas.",
-        "akis_urun": "Ürün kartları akışını aç.",
-        "akis_depo": "Depolar akışını aç.",
-        "akis_cari": "Cari kartlar akışını aç.",
+        "akis_urun": "Ürün kartları için yönü seç (Paraşüt'ten al).",
+        "akis_depo": "Depolar için yönü seç (Paraşüt'ten al).",
+        "akis_cari": "Cariler için yönü seç (Paraşüt'ten al).",
         "esitle": "Şimdi çalıştır düğmesine bas."
       },
       "open": "Ekranı aç",

@@ -433,7 +433,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   const bolumler: KalipAltBolum[] = [
     { id: "baglanti", label: t("bolum.baglanti"), d: SICON.baglanti, ton: "parasut", href: `${self}?bolum=baglanti` },
     { id: "akis", label: t("bolum.akis"), d: SICON.cevrim, ton: "mavi", href: `${self}?bolum=akis` },
-    { id: "sahiplik", label: t("bolum.sahiplik"), d: SICON.kilit, ton: "mor", href: `${self}?bolum=sahiplik` },
+    { id: "sahiplik", label: t("bolum.sahiplik"), d: SICON.kilit, ton: "mor", href: `${self}?bolum=sahiplik`, soon: t("pillSoon") },
     { id: "arsiv", label: t("bolum.arsiv"), d: SICON.arsiv, ton: "gri", href: `${self}?bolum=arsiv` },
     { id: "hatalar", label: t("bolum.hatalar"), d: SICON.uyari, ton: "turuncu", href: `${self}?bolum=hatalar`, badge: sorun, badgeAria: t("bolum.badgeAria", { n: sorun }) },
   ];
@@ -484,7 +484,9 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
         <KalipAltBolumler label={t("bolum.label")} items={bolumler} current={bolum} testId="integrations-bolumler">
           {bolum === "baglanti" ? (
             <KalipAyarKart title={t("baglanti.title")} sub={connected ? (err ? t("connErrTitle", { provider: pn }) : t("connTitle", { label: conn.label ?? pn })) : t("baglanti.sub")} d={SICON.baglanti} ton="parasut" testId="integrations-baglanti">
-              <KalipBaslik title={t("head")} hint={connected ? t("hintOn") : oauth.configured ? t("oauth.hintNone") : t("hintNone")} />
+              {/* T-1134: bağlıyken ipucu yok (eski "AÇ / KAPAT · YÖNÜ SEÇ" akışlar bölümüne aitti ve telefonda kesiliyordu). T-1133: OAuth
+                  ayarlıysa bağlanma ipucu OAuth'a göre. */}
+              <KalipBaslik title={t("head")} hint={connected ? undefined : oauth.configured ? t("oauth.hintNone") : t("hintNone")} />
               {!connected ? (
                 <div className="provs" role="list" aria-label={t("providerList")} data-testid="integrations-providers">
                   {data.providers.map((p) => {
@@ -733,8 +735,9 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
           ) : null}
           {bolum === "sahiplik" ? (
             <KalipAyarKart title={t("sahiplik.title")} sub={t("sahiplik.sub")} d={SICON.kilit} ton="mor" testId="integrations-sahiplik">
-              {/* Veri yok (STANDART §8 "Paraşüt alan sahipliği" ayrı iş): sahte denetim çizilmez, yalnız "Yakında". */}
-              <KalipBos title={t("sahiplik.text")} hint={up(t("sahiplik.soon"))} iconD={SICON.kilit} testId="integrations-sahiplik-soon" />
+              {/* Veri yok (B-200 "Paraşüt alan sahipliği" ayrı iş): sahte denetim çizilmez. T-1134: çıkmaz değil — tek cümle + yön seçimine
+                  götüren düğme (ALTIN-KURAL 8); solda "YAKINDA" rozeti. */}
+              <KalipBos title={t("sahiplik.text")} hint={t("sahiplik.soonHint")} iconD={SICON.kilit} action={{ label: t("sahiplik.go"), href: `${self}?bolum=akis`, kind: "go" }} testId="integrations-sahiplik-soon" />
             </KalipAyarKart>
           ) : null}
           {bolum === "arsiv" ? (

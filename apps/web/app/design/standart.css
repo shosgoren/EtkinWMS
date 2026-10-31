@@ -1415,6 +1415,19 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
   font: 700 12px/22px var(--font-instrument), sans-serif;
   text-align: center;
 }
+.stab-soon {
+  margin-left: auto;
+  flex: none;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--color-kr-bg-a);
+  color: var(--color-st-k-gri);
+  font: 800 10px/1.2 var(--font-bricolage), sans-serif;
+  letter-spacing: .04em;
+}
+.stab-say + .stab-soon {
+  margin-left: 6px;
+}
 .stab-g {
   flex: 1;
   min-width: 0;
@@ -1564,6 +1577,7 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
 .dz-dark .stab-i { color: var(--color-kr-text-dark); }
 .dz-dark .stab-i:hover { background: var(--color-st-dark-hover); }
 .dz-dark .stab-i.on { background: var(--color-kr-card-dark); }
+.dz-dark .stab-soon { background: var(--color-kr-bg-dark-a); color: var(--color-kr-muted); }
 .dz-dark .stak { background: var(--color-kr-card-dark); color: var(--color-kr-text-dark); }
 .dz-dark :is(.stak-t small, .stay-t small) { color: var(--color-kr-muted); }
 .dz-dark .stay { background: var(--color-kr-bg-dark-a); box-shadow: inset 0 0 0 1.5px var(--color-kr-ink-dark); }
@@ -1597,11 +1611,21 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
   .stay { padding: 10px; gap: 10px; }
   .stay-r,
   .styon { width: 100%; }
+  /* T-1134: dört seçenek tek satıra sığmıyordu (75 px düğme, "Yalnız Etkin WMS" üç satır). Telefonda ızgara: 140 px'ten dar düğme yok,
+     sığan kadar sütun (390 px'te 2×2); tek seçenek tam satır. */
+  .styon {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
   .styon > button {
-    flex: 1 1 0;
     width: auto;
     min-width: 0;
   }
+}
+/* T-1134 (ALTIN-KURAL 12): ayar satırındaki satır içi işlem ("Şimdi çalıştır", üretilmiş `.dzen .frun` 40 px) kalıp küçük düğmesiyle
+   aynı dokunma hedefi (44 px). */
+.dzf .dzen .frun {
+  min-height: 44px;
 }
 
 /* ---- T-1121 (kullanıcı 28 Ekim: "eski tasarım öğesi kalmasın"): eski `@wms/ui` Banner / Button / Tailwind girişlerinin kalıp karşılıkları.
