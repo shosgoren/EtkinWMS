@@ -11,7 +11,7 @@ import {
   type PermissionSection,
   type RoleKey,
 } from "@wms/domain/identity/permissions";
-import { bolumDurumu, eslesenSablon, sablonFarki, yetkiAra, yetkiKaynagi, type YetkiAnahtar, type YetkiBolum, type YetkiRol, type YetkiSatir } from "./katalog.ts";
+import { bolumDurumu, eslesenSablon, iyimserIstek, sablonFarki, yetkiAra, yetkiKaynagi, type YetkiAnahtar, type YetkiBolum, type YetkiRol, type YetkiSatir } from "./katalog.ts";
 import { yetkiKatalogu } from "./katalog-sunucu.ts";
 
 type Ayni<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
@@ -34,11 +34,27 @@ describe("yetki ekranı kataloğu (T-1142)", () => {
 
   it("yetkiKaynagi her rol × izin × grup için domain permissionSource ile aynı", () => {
     const grantSets: readonly (readonly string[])[] = [[], [...GRANTABLE], ["items.edit"], ["settings.manage", "users.manage"], ["parties.create", "stock.post"]];
-    for (const role of [...ROLE_KEYS, "NOPE"]) {
+    const roleSets: readonly (readonly string[])[] = [...[...ROLE_KEYS, "NOPE"].map((r) => [r]), [], ["PICKER", "COUNTER"], ["READ_ONLY", "WAREHOUSE_MANAGER"], ["NOPE", "PICKER"]];
+    for (const roles of roleSets) {
       for (const g of grantSets) {
-        for (const p of PERMISSIONS) expect(yetkiKaynagi(k, role, g, p), `${role} ${p} ${g.join(",")}`).toBe(permissionSource([role], g, p));
+        for (const p of PERMISSIONS) expect(yetkiKaynagi(k, roles, g, p), `${roles.join("+")} ${p} ${g.join(",")}`).toBe(permissionSource(roles, g, p));
       }
     }
+  });
+
+  it("iki rollü üye: izin rollerin birleşimidir (ilk rol değil) — PICKER + COUNTER hem okutur hem belge açar", () => {
+    expect(yetkiKaynagi(k, ["PICKER", "COUNTER"], [], "document.create")).toBe("role");
+    expect(yetkiKaynagi(k, ["PICKER", "COUNTER"], [], "stock.post")).toBe("role");
+    expect(yetkiKaynagi(k, ["PICKER"], [], "document.create")).toBeNull();
+    expect(permissionSource(["PICKER", "COUNTER"], [], "document.create")).toBe("role");
+  });
+
+  it("iyimser istek reddedilince gösterim geri alınır ve hata çağırana gider; başarıda geri alınmaz", async () => {
+    let state = "eski";
+    await expect(iyimserIstek(() => (state = "yeni"), () => (state = "eski"), () => Promise.reject(new Error("ağ koptu")))).rejects.toThrow("ağ koptu");
+    expect(state).toBe("eski");
+    await expect(iyimserIstek(() => (state = "yeni"), () => (state = "eski"), () => Promise.resolve(1))).resolves.toBe(1);
+    expect(state).toBe("yeni");
   });
 
   it("şablon eşleşmesi sıradan bağımsız; fark küme işlemi", () => {

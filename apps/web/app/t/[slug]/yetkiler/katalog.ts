@@ -55,10 +55,9 @@ export interface YetkiKatalog {
 
 export type YetkiKaynak = "role" | "group" | null;
 
-/** Domain `permissionSource` ile aynı kural: rol önce; grup yalnız verilebilir anahtarda; yoksa yok. */
-export function yetkiKaynagi(k: YetkiKatalog, role: string, grants: readonly string[], p: YetkiAnahtar): YetkiKaynak {
-  const rp = Object.hasOwn(k.rolePermissions, role) ? k.rolePermissions[role as YetkiRol] : [];
-  if (rp.includes(p)) return "role";
+/** Domain `permissionSource` ile aynı kural: rollerden BİRİ taşıyorsa rol (birleşim, `hasPermission` gibi); grup yalnız verilebilir anahtarda. */
+export function yetkiKaynagi(k: YetkiKatalog, roles: readonly string[], grants: readonly string[], p: YetkiAnahtar): YetkiKaynak {
+  if (roles.some((role) => Object.hasOwn(k.rolePermissions, role) && k.rolePermissions[role as YetkiRol].includes(p))) return "role";
   if (grants.includes(p) && k.rows.some((r) => r.permission === p && r.grantable)) return "group";
   return null;
 }
@@ -86,4 +85,18 @@ export function yetkiAra(rows: readonly YetkiSatir[], q: string, metin: (r: Yetk
   const n = kucuk(q.trim());
   if (n === "") return rows;
   return rows.filter((r) => kucuk(metin(r)).includes(n));
+}
+
+/**
+ * İyimser gösterimli istek: önce `uygula`, sonra istek. İstek REDDEDİLİRSE (ağ kopması, sunucu çökmesi) `geriAl` çalışır ve hata yeniden
+ * fırlatılır (çağıran balonla söyler). Dönen hata sonucu (ok: false) çağıranın işidir.
+ */
+export async function iyimserIstek<T>(uygula: () => void, geriAl: () => void, istek: () => Promise<T>): Promise<T> {
+  uygula();
+  try {
+    return await istek();
+  } catch (e) {
+    geriAl();
+    throw e;
+  }
 }

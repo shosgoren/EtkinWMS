@@ -67,7 +67,7 @@ export default async function YetkilerPage({ params, searchParams }: { params: P
         data={{
           canEdit: data.canEdit,
           groups: data.groups.filter((g) => !g.archived).map((g) => ({ id: g.id, name: g.name, color: g.color, grants: g.grants, version: g.version })),
-          members: data.members.map((m) => ({ membershipId: m.membershipId, name: m.name, isOwner: m.isOwner, isField: m.isField, role: m.roles[0] ?? "READ_ONLY", groupId: m.groupId })),
+          members: data.members.map((m) => ({ membershipId: m.membershipId, name: m.name, isOwner: m.isOwner, isField: m.isField, role: m.roles[0] ?? "READ_ONLY", roles: [...m.roles], groupId: m.groupId })),
         }}
       />
     </main>

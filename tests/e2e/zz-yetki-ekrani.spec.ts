@@ -17,7 +17,7 @@ test("yetki ekranı: grupta aç/kapa anında kaydedilir, kişide etkisi görün�
   const tag = randomUUID().slice(0, 6);
   const person = `Yetki Deneme ${tag}`;
   const groupName = `Kartçılar ${tag}`;
-  // Sentetik üye (G-09): Toplayıcı rolünde, gruba sahibin ekranından konur.
+  // Sentetik üye (G-09): Toplayıcı + Sayımcı rollerinde, gruba sahibin ekranından konur.
   const [tenant] = await db<{ id: string; owner: string }>("SELECT t.id, m.id AS owner FROM public.tenants t JOIN public.tenant_memberships m ON m.tenant_id = t.id AND m.is_owner WHERE t.slug = $1 LIMIT 1", [slug]);
   if (tenant === undefined) throw new Error("e2e: tenant yok");
   await db("INSERT INTO public.users (name, email) VALUES ($1, $2)", [person, `yetki-${tag}@example.test`]);
@@ -27,6 +27,8 @@ test("yetki ekranı: grupta aç/kapa anında kaydedilir, kişide etkisi görün�
   const [member] = await db<{ id: string }>("SELECT id FROM public.tenant_memberships WHERE tenant_id = $1 AND user_id = $2", [tenant.id, user.id]);
   if (member === undefined) throw new Error("e2e: üyelik yok");
   await db("INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES ($1, $2, 'PICKER')", [tenant.id, member.id]);
+  // İki rollü üye: kişi görünümü rollerin birleşimini gösterir (ilk rol değil).
+  await db("INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES ($1, $2, 'COUNTER')", [tenant.id, member.id]);
   await db("INSERT INTO public.permission_groups (tenant_id, name, created_by) VALUES ($1, $2, $3)", [tenant.id, groupName, tenant.owner]);
   const [group] = await db<{ id: string }>("SELECT id FROM public.permission_groups WHERE tenant_id = $1 AND name = $2", [tenant.id, groupName]);
   if (group === undefined) throw new Error("e2e: grup yok");
@@ -83,6 +85,8 @@ test("yetki ekranı: grupta aç/kapa anında kaydedilir, kişide etkisi görün�
   await expect(eff).toHaveAttribute("data-changed", "true");
   await expect(eff).toContainText(`${groupName} grubundan`);
   await expect(page.getByTestId("yetki-kisi-stock.post")).toContainText("Rolünden");
+  await expect(page.getByTestId("yetki-kisi-documents.create")).toContainText("Rolünden");
+  await expect(page.getByTestId("yetki-kisi-documents.create")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("yetki-kisi-fark")).toContainText("1 yetki rolünden fazla");
   await page.getByTestId("yetki-kisi-sifirla").click();
   await expect(page.getByTestId("kalip-toast").filter({ hasText: `${person}: rol varsayılanına döndü` })).toBeVisible();

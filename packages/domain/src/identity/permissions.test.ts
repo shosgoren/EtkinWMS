@@ -123,6 +123,10 @@ describe("PERMISSION_CATALOGUE (T-1142 yetki ekranı)", () => {
     expect(permissionSource(["PICKER"], ["items.edit"], "items.edit")).toBe("group");
     expect(permissionSource(["PICKER"], [], "items.edit")).toBeNull();
     expect(permissionSource(["PICKER"], ["settings.manage"], "settings.manage")).toBeNull();
+    // İki rollü üye: rollerin birleşimi (ilk rol değil).
+    expect(permissionSource(["PICKER", "COUNTER"], [], "document.create")).toBe("role");
+    expect(permissionSource(["COUNTER", "PICKER"], [], "stock.post")).toBe("role");
+    expect(permissionSource(["PICKER", "COUNTER"], ["items.edit"], "items.edit")).toBe("group");
   });
 });
 

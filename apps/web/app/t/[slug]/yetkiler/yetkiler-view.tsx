@@ -23,7 +23,7 @@ import { KalipSecim, KalipSecimKutulari, KalipSekme } from "../kalip/secim.tsx";
 import { ayarSekmeleri } from "../settings/sekmeler.ts";
 import { changeGroupGrantsAction, setMemberGroupAction } from "../groups/actions.ts";
 import { changeRoleAction } from "../members/actions.ts";
-import { bolumDurumu, eslesenSablon, sablonFarki, yetkiAra, yetkiKaynagi, type YetkiAnahtar, type YetkiBolum, type YetkiKatalog, type YetkiRol, type YetkiSatir } from "./katalog.ts";
+import { bolumDurumu, eslesenSablon, iyimserIstek, sablonFarki, yetkiAra, yetkiKaynagi, type YetkiAnahtar, type YetkiBolum, type YetkiKatalog, type YetkiRol, type YetkiSatir } from "./katalog.ts";
 
 export interface YetkiGrup {
   readonly id: string;
@@ -37,7 +37,10 @@ export interface YetkiKisi {
   readonly name: string;
   readonly isOwner: boolean;
   readonly isField: boolean;
+  /** Birincil rol (rol seçimi bu değeri gösterir). */
   readonly role: string;
+  /** Bütün roller (etkin izin birleşimdir; `hasPermission` ile aynı). */
+  readonly roles: readonly string[];
   readonly groupId: string | null;
 }
 export interface YetkilerViewProps {
@@ -173,9 +176,13 @@ export function YetkilerView({ slug, dark, katalog, bolum, kisi, data }: Yetkile
     void tekKayit(async () => {
       const before = g.grants;
       const tahmin = before.filter((x) => !remove.includes(x as YetkiAnahtar)).concat(add.filter((x) => !before.includes(x)));
-      setGroups((list) => list.map((x) => (x.id === g.id ? { ...x, grants: tahmin } : x)));
-      const r = (await changeGroupGrantsAction({ slug, id: g.id, add: [...add], remove: [...remove] })) as Sonuc;
       const geri = (): void => setGroups((list) => list.map((x) => (x.id === g.id ? { ...x, grants: before } : x)));
+      // İstek reddedilirse (ağ kopması vb.) de iyimser gösterim geri alınır; hata balonu `tekKayit`'te.
+      const r = await iyimserIstek(
+        () => setGroups((list) => list.map((x) => (x.id === g.id ? { ...x, grants: tahmin } : x))),
+        geri,
+        async () => (await changeGroupGrantsAction({ slug, id: g.id, add: [...add], remove: [...remove] })) as Sonuc,
+      );
       if (!r.ok) {
         geri();
         say("err", errorText(r.error));
@@ -298,7 +305,7 @@ export function YetkilerView({ slug, dark, katalog, bolum, kisi, data }: Yetkile
   function kisiKarti(m: YetkiKisi) {
     const g = grupOf(m);
     const grants = g?.grants ?? [];
-    const fark = katalog.rows.filter((r) => yetkiKaynagi(katalog, m.role, grants, r.permission) === "group").length;
+    const fark = katalog.rows.filter((r) => yetkiKaynagi(katalog, m.roles, grants, r.permission) === "group").length;
     const kilitSebep = !data.canEdit ? t("lock.owner") : m.isOwner ? t("person.ownerRole") : undefined;
     const rolItems = ROLLER.map((r) => ({
       id: r,
@@ -373,7 +380,7 @@ export function YetkilerView({ slug, dark, katalog, bolum, kisi, data }: Yetkile
                 say("err", errorText(r.error));
                 return;
               }
-              setMembers((list) => list.map((x) => (x.membershipId === m.membershipId ? { ...x, role: id } : x)));
+              setMembers((list) => list.map((x) => (x.membershipId === m.membershipId ? { ...x, role: id, roles: [id] } : x)));
               say("ok", t("person.roleDone", { name: m.name, role: roleLabel(id) }));
             });
           }}
@@ -416,11 +423,11 @@ export function YetkilerView({ slug, dark, katalog, bolum, kisi, data }: Yetkile
         {sections.length === 0 ? <KalipBos title={t("noMatch")} action={{ label: t("clear"), kind: "clear", onClick: () => setQ("") }} testId="yetki-bos" /> : null}
         {sections.map((s) => {
           const list = rows.filter((r) => r.section === s);
-          const acik = list.filter((r) => (m.isOwner ? true : yetkiKaynagi(katalog, m.role, grants, r.permission) !== null)).length;
+          const acik = list.filter((r) => (m.isOwner ? true : yetkiKaynagi(katalog, m.roles, grants, r.permission) !== null)).length;
           return (
             <KalipAnahtarKumesi key={s} title={bolumLabel(s)} sub={t("sectionSub", { on: acik, n: list.length })} d={BOLUM[s].d} ton={BOLUM[s].ton} testId={`yetki-kisi-bolum-${s}`}>
               {list.map((r) => {
-                const src = m.isOwner ? "role" : yetkiKaynagi(katalog, m.role, grants, r.permission);
+                const src = m.isOwner ? "role" : yetkiKaynagi(katalog, m.roles, grants, r.permission);
                 const name = rowLabel(r);
                 const sub = src === "role" ? t("person.fromRole") : src === "group" ? t("person.fromGroup", { group: g?.name ?? "" }) : t("person.off");
                 return (
