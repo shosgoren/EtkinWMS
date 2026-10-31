@@ -119,7 +119,7 @@ export async function retryIntegrationOutbox(params: ConnectionCallParams, input
       entityType: "integration",
       entityId: row.integration_id,
       requestId: input.requestId ?? null,
-      changeSummary: { outbox_id: row.id, flow: row.flow, entity_type: row.entity_type, entity_id: row.entity_id, before: { status: row.status, code: row.last_error_code } },
+      changeSummary: { outbox_id: row.id, flow: row.flow, entity_type: row.entity_type, entity_id: row.entity_id, before: { status: row.status, error: row.last_error_code } },
     });
     const queued = row.conn_status === "CONNECTED" ? await enqueueRun(tx, deps, m.userId, row.integration_id, row.flow) : false;
     return { ok: true, changed: true, queued } as const;
@@ -151,7 +151,7 @@ export async function resolveIntegrationOutbox(
       entityType: "integration",
       entityId: row.integration_id,
       requestId: input.requestId ?? null,
-      changeSummary: { outbox_id: row.id, flow: row.flow, entity_id: row.entity_id, resolution: input.resolution, before: { status: row.status, code: row.last_error_code } },
+      changeSummary: { outbox_id: row.id, flow: row.flow, entity_id: row.entity_id, resolution: input.resolution, before: { status: row.status, error: row.last_error_code } },
     });
     return { ok: true, changed: true, queued: false } as const;
   });

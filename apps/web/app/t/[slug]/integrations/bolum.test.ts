@@ -25,6 +25,8 @@ describe("sorun rozeti", () => {
   it("CHECK + FAILED + hatalı akış sayısı; bekleyen (PENDING) sayılmaz", () => {
     expect(entegrasyonSorunSayisi({ outbox: { check: 0, failed: 0 }, flows: [] })).toBe(0);
     expect(entegrasyonSorunSayisi({ outbox: { check: 2, failed: 1 }, flows: [{ errorCount: 0 }, { errorCount: 5 }, { errorCount: 1 }] })).toBe(5);
+    // T-1137: kart kuyruğunda bekletilen satırlar da sorun sayılır.
+    expect(entegrasyonSorunSayisi({ outbox: { check: 0, failed: 0, parked: 2 }, flows: [] })).toBe(2);
   });
 });
 

@@ -3,10 +3,12 @@
 // sentetiktir. Masaüstü ve mobil projeler aynı alanı kullanır: bağlıysa test önce bağlantıyı keser (kes penceresi de sınanır).
 // T-1133: Etkin'in ortak Paraşüt uygulaması (global-setup sentetik ortam değişkenleri): BAĞLAN → Paraşüt izin ekranı (sahte: yönlendirme
 // yakalanır, gerçek ağ yok) → callback → tek şirket → bağlı. Müşteri anahtar alanı görmez; kendi uygulaması "Gelişmiş" satırının içinde.
+// T-1137: eski "e-posta + parola ile bağlan" kalktı — ikinci bağlanma da ortak uygulamanın sahte OAuth akışıyla (`connectOAuth`); parola
+// eylemi UNSUPPORTED döner. Excel bağlı değilken kaynak listesinde kart; bağlantı sağlığı bandı ve karar bekleyen irsaliye satırı sınanır.
 import { randomUUID } from "node:crypto";
 import { db } from "./support/package-receiving.ts";
 import { execFileSync } from "node:child_process";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { FAKE_PARASUT_DEFAULTS as F } from "../integration/fixtures/fake-parasut.ts";
 import { localClient, loginEmptyTenant, scrubSecretInputs } from "./support/empty-tenant.ts";
 
@@ -22,6 +24,23 @@ function expireRecentAuth(token: string): void {
     const count = execFileSync("psql", ["-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1"], {env, input: `WITH aged AS (UPDATE public.sessions SET created_at=now()-interval '11 minutes' WHERE token='${literal}' RETURNING 1) SELECT count(*) FROM aged;`, encoding:"utf8", stdio:["pipe","pipe","pipe"]});
     if (count.trim() !== "1") throw new Error("missing fixture session");
   } catch { throw new Error("e2e: local session aging failed"); }
+}
+
+/** T-1133 ortak uygulama ile bağlan: BAĞLAN → Paraşüt izin ekranı (sahte: yönlendirme yakalanır) → callback → tek şirket → bağlı. */
+async function connectOAuth(page: Page): Promise<URL> {
+  let authorize: URL | null = null;
+  await page.route("https://api.parasut.com/**", async (route) => {
+    authorize = new URL(route.request().url());
+    const back = new URL(authorize.searchParams.get("redirect_uri") ?? "about:blank");
+    back.search = new URLSearchParams({ code: F.authorizationCode, state: authorize.searchParams.get("state") ?? "" }).toString();
+    await route.fulfill({ status: 302, headers: { location: back.href } });
+  });
+  await page.getByTestId("integrations-connect").filter({ visible: true }).click();
+  await expect(page.getByTestId("kalip-toast")).toContainText("Paraşüt bağlantısı kuruldu");
+  await page.unroute("https://api.parasut.com/**");
+  const auth = authorize as URL | null;
+  if (auth === null) throw new Error("e2e: Paraşüt izin isteği görülmedi");
+  return auth;
 }
 
 if (!process.env.E2E_BASE_URL?.trim()) {
@@ -57,18 +76,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     // T-1133: ortak uygulama ile bağlan — anahtar alanı yok; BAĞLAN → Paraşüt (sahte izin: yönlendirme yakalanır) → callback → bağlı.
     await expect(page.getByTestId("oauth-app-id")).toHaveCount(0);
     await expect(page.getByTestId("integrations-advanced")).toContainText("Anahtar girmen gerekmez");
-    let authorize: URL | null = null;
-    await page.route("https://api.parasut.com/**", async (route) => {
-      authorize = new URL(route.request().url());
-      const back = new URL(authorize.searchParams.get("redirect_uri") ?? "about:blank");
-      back.search = new URLSearchParams({ code: F.authorizationCode, state: authorize.searchParams.get("state") ?? "" }).toString();
-      await route.fulfill({ status: 302, headers: { location: back.href } });
-    });
-    await page.getByTestId("integrations-connect").filter({ visible: true }).click();
-    await expect(page.getByTestId("kalip-toast")).toContainText("Paraşüt bağlantısı kuruldu");
-    await page.unroute("https://api.parasut.com/**");
-    const auth = authorize as URL | null;
-    if (auth === null) throw new Error("e2e: Paraşüt izin isteği görülmedi");
+    const auth = await connectOAuth(page);
     expect(auth.pathname).toBe("/oauth/authorize");
     expect(auth.searchParams.get("client_id")).toBe(F.clientId);
     expect(auth.searchParams.get("redirect_uri")).toBe(`${new URL(page.url()).origin}/api/integrations/parasut/callback`);
@@ -100,7 +108,15 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(page.getByTestId("oauth-advanced-editor")).toHaveCount(0);
     await expect(page.getByTestId("kabuk-back").filter({ visible: true })).toHaveAttribute("href", `/t/${slug}/settings`);
     await expect(page.getByTestId("kalip-sekme").locator('[data-tab="entegrasyon"]')).toHaveAttribute("aria-current", "page");
-    await expect(page.getByTestId("integrations-excel")).toHaveAttribute("href", `/t/${slug}/settings/baglantilar`);
+    // T-1137: bağlı değilken Excel, kaynak listesinde Paraşüt'ün yanında bir veri kaynağı kartı (ayrı satır yok); mevcut Excel aktarım
+    // ekranını açar (aktarma mantığı tek yerde).
+    await expect(page.getByTestId("integrations-excel")).toHaveCount(0);
+    const excel = page.getByTestId("integrations-providers").getByTestId("provider-EXCEL");
+    await expect(excel).toContainText("Excel");
+    expect((await excel.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await excel.click();
+    await expect(page).toHaveURL(new RegExp(`/t/${slug}/settings/baglantilar$`));
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     // Bağlı değilken akış bölümü boş durum + bağlantıya götüren düğme; alan sahipliği yalnız "Yakında" (sahte denetim yok).
     const bolumler = page.getByTestId("integrations-bolumler");
     await bolumler.locator('[data-bolum="akis"]').click();
@@ -168,15 +184,12 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       for(const id of ['oauth-app-id','oauth-app-secret','oauth-callback']) {const field=page.getByTestId(id).locator('..');const bounds=await field.boundingBox();await field.click({position:{x:5,y:5}});await expect(page.getByTestId(id)).toBeFocused();expect(bounds?.height).toBeGreaterThanOrEqual(44);expect((bounds?.x??-1)>=0&&(bounds?.x??0)+(bounds?.width??0)<=width).toBe(true);}
       await page.screenshot({path:testInfo.outputPath(`oauth-settings-${width}.png`)});
     }
-    await page.getByTestId("oauth-legacy").click();
-    const form = page.getByTestId("integrations-form");
-    await expect(form).toBeVisible();
-    await page.getByTestId("integrations-company").fill(F.companyId);
-    await page.getByTestId("integrations-client-id").fill(F.clientId);
-    await page.getByTestId("integrations-client-secret").fill(F.clientSecret);
-    await page.getByTestId("integrations-email").fill(F.username);
-    await page.getByTestId("integrations-password").fill(F.password);
-    await page.getByTestId("integrations-form-submit").click();
+    // T-1137: eski parola yöntemine giriş yok (ne bu formda ne ekranda); sunucu eylemi de yeni parola bağlantısını reddeder (int test).
+    await expect(page.getByTestId("oauth-legacy")).toHaveCount(0);
+    await expect(page.getByTestId("integrations-form")).toHaveCount(0);
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
+    await expect(page.getByTestId("integrations-password")).toHaveCount(0);
+    await connectOAuth(page);
 
     // T-1112: bağlanınca "Ne çekilsin, gönderilsin" bölümü açılır: her akış tek satır, her zaman görünen yön seçimi; yalnız katalogun
     // desteklediği yönler + "Yalnız Etkin WMS" (= kapalı).
@@ -313,6 +326,72 @@ if (!process.env.E2E_BASE_URL?.trim()) {
         await page.screenshot({ path: testInfo.outputPath(`barcode-${width}.png`) });
       }
     }
+    // T-1137: bağlantı sağlığı bandı — OAuth ile bağlı: "eski yöntem" uyarısı yok. Bağlantı koparsa (401 / yeniden giriş) bant kırmızı,
+    // tek cümle + tek sonraki adım "Yeniden bağlan" (≥ 44 px); "Bağlantı ve veri kaynağı" rozet alır. Durum sentetik olarak kurulur, geri alınır.
+    await expect(page.getByTestId("integrations-health")).toBeVisible();
+    await expect(page.getByTestId("integrations-health-legacy")).toHaveCount(0);
+    const tenantIntegration = "(SELECT i.id FROM public.integrations i JOIN public.tenants t ON t.id = i.tenant_id WHERE t.slug = $1 AND i.provider = 'PARASUT')";
+    try {
+      await db(`UPDATE public.integrations SET status = 'ERROR', last_error_code = 'REAUTH_REQUIRED' WHERE id = ${tenantIntegration}`, [slug]);
+      await page.reload();
+      // Bağlantı bölümünde kopma bağlantı satırının kendisidir (çift bant yok); sağlık bandı akış bölümünün üstünde.
+      await expect(page.getByTestId("integrations-conn")).toHaveAttribute("data-status", "ERROR");
+      await expect(page.getByTestId("integrations-reconnect")).toBeVisible();
+      await expect(page.getByTestId("integrations-health")).toHaveCount(0);
+      await expect(bolumler.getByTestId("alt-bolum-baglanti-badge")).toHaveText("1");
+      await bolumler.locator('[data-bolum="akis"]').click();
+      const band = page.getByTestId("integrations-health-akis");
+      await expect(band).toHaveAttribute("data-cause", "AUTH");
+      await expect(band).toContainText("Paraşüt bağlantısı koptu");
+      await expect(band).toContainText("Paraşüt yeniden giriş istiyor");
+      const next = page.getByTestId("integrations-health-akis-next");
+      await expect(next).toHaveAttribute("data-next", "RECONNECT");
+      await expect(next).toContainText("Yeniden bağlan");
+      await expect(next).toBeVisible();
+      await expect.poll(async () => (await next.boundingBox())?.height ?? 0, { message: "Yeniden bağlan ≥ 44 px" }).toBeGreaterThanOrEqual(44);
+      if (testInfo.project.name === "desktop") await page.screenshot({ path: testInfo.outputPath("health-auth-1280.png") });
+    } finally {
+      await db(`UPDATE public.integrations SET status = 'CONNECTED', last_error_code = NULL WHERE id = ${tenantIntegration}`, [slug]);
+    }
+
+    // T-1137: karar bekleyen irsaliye (Paraşüt yanıt vermedi → CHECK): satırda Yeniden gönder / Gönderildi say / Gönderme; çift irsaliye
+    // riski olan yeniden gönderim onay ister. Satırlar sentetik (rastgele belge kimliği); test sonunda silinir.
+    const tenantId = (await db<{ id: string }>("SELECT id FROM public.tenants WHERE slug = $1", [slug]))[0]!.id;
+    const rowIds = [randomUUID(), randomUUID()];
+    try {
+      for (const id of rowIds) {
+        await db(`INSERT INTO public.integration_outbox (tenant_id, id, integration_id, flow, entity_type, entity_id) VALUES ($1, $2, ${tenantIntegration.replace("$1", "$3")}, 'SHIPMENTS', 'DOCUMENT', $4)`, [tenantId, id, slug, randomUUID()]);
+        await db("UPDATE public.integration_outbox SET status = 'CHECK', last_error_code = 'UNCERTAIN' WHERE id = $1", [id]);
+      }
+      await page.goto(`/t/${slug}/integrations?bolum=hatalar`);
+      const issue = (id: string) => page.locator(`[data-testid="integration-issue"][data-id="${id}"]`);
+      await expect(issue(rowIds[0]!)).toHaveAttribute("data-status", "CHECK");
+      await expect(issue(rowIds[0]!)).toContainText("PARAŞÜT YANIT VERMEDİ");
+      for (const b of ["issue-retry", "issue-sent", "issue-skip"]) {
+        await expect(issue(rowIds[0]!).getByTestId(b)).toBeVisible();
+        await expect.poll(async () => (await issue(rowIds[0]!).getByTestId(b).boundingBox())?.height ?? 0, { message: `${b} ≥ 44 px` }).toBeGreaterThanOrEqual(44);
+      }
+      await issue(rowIds[0]!).getByTestId("issue-retry").click();
+      const resend = page.getByRole("dialog").filter({ hasText: "yeniden gönderilsin mi?" });
+      await expect(resend).toBeVisible();
+      await resend.getByRole("button", { name: "Yeniden gönder" }).click();
+      await expect(page.getByTestId("kalip-toast")).toContainText(/Sıraya alındı|Bir sonraki eşitlemede/);
+      await expect(issue(rowIds[0]!)).toHaveCount(0);
+      expect((await db<{ status: string }>("SELECT status FROM public.integration_outbox WHERE id = $1", [rowIds[0]]))[0]?.status).toBe("PENDING");
+      await issue(rowIds[1]!).getByTestId("issue-sent").click();
+      await page.getByRole("dialog").filter({ hasText: "gönderildi sayılsın mı?" }).getByRole("button", { name: "Gönderildi say" }).click();
+      await expect(page.getByTestId("kalip-toast")).toContainText("Gönderildi sayıldı");
+      await expect(issue(rowIds[1]!)).toHaveCount(0);
+      expect(await db("SELECT status, last_error_code FROM public.integration_outbox WHERE id = $1", [rowIds[1]])).toEqual([{ status: "FAILED", last_error_code: "MANUAL_SENT" }]);
+      if (testInfo.project.name === "mobile") {
+        const o = await page.evaluate<{ sh: number; h: number }>("({ sh: document.documentElement.scrollHeight, h: window.innerHeight })");
+        expect(o.sh, "telefonda sayfa kaymaz, yalnız bölüm kayar").toBeLessThanOrEqual(o.h);
+      }
+    } finally {
+      await db("DELETE FROM public.integration_outbox WHERE id = ANY($1::uuid[])", [`{${rowIds.join(",")}}`]);
+    }
+    await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
+
     await page.getByTestId("integrations-test").click();
     await expect(page.getByTestId("kalip-toast")).toContainText("Bağlantı sağlam");
     // Kendi uygulaması, eski yetki kodu yöntemiyle (OOB): anahtarlar kaydedilir, bağlan → kod formu.

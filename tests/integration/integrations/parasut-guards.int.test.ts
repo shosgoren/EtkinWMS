@@ -485,6 +485,7 @@ describe("(H) cari eşleme", () => {
     const r2 = await sync(W, id, { flow: "CONTACTS" });
     expect(r2.kind === "ran" && r2.flows[0]?.counts).toMatchObject({ failed: 0, skipped: 0 });
     expect(searches()).toBe(n);
-    expect((await getIntegrationOverview(admin(W))).outbox).toEqual({ pending: 0, check: 0, failed: 0 });
+    // T-1137: bekletilen kart kuyruk satırı ayrı sayılır (`parked`); irsaliye sayıları değişmez.
+    expect((await getIntegrationOverview(admin(W))).outbox).toEqual({ pending: 0, check: 0, failed: 0, parked: 1 });
   });
 });

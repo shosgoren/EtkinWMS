@@ -1033,7 +1033,9 @@
       "oauth_failed": "Paraşüt authorization failed",
       "oauth_cancelled": "Paraşüt authorization cancelled",
       "webhook_registered": "Paraşüt instant update registration",
-      "webhook_received": "Paraşüt instant update processed"
+      "webhook_received": "Paraşüt instant update processed",
+      "outbox_retried": "ERP queue record retried",
+      "outbox_resolved": "ERP queue shipment resolved by hand"
     },
     "setup_journey": {
       "updated": "Setup journey choice changed",
@@ -1253,7 +1255,9 @@
         "opening_stock_setting": "Opening stock setting changed",
         "opening_stock_taken": "Opening stock imported",
         "webhook_registered": "Instant update registration",
-        "webhook_received": "Instant update processed"
+        "webhook_received": "Instant update processed",
+        "outbox_retried": "Integration record retried",
+        "outbox_resolved": "Integration record resolved by hand"
       },
       "setup_journey": {
         "updated": "Setup guide updated",
@@ -5733,20 +5737,6 @@
     "outboxCheck": "{n} waybills need a check",
     "outboxCheckSub": "PARAŞÜT DID NOT ANSWER · NOT RESENT TO AVOID DUPLICATES",
     "outboxFailed": "{n} waybills could not be sent",
-    "form": {
-      "title": "Connect to {provider}",
-      "note": "Company number and client details come from Paraşüt (destek@parasut.com). Your password is not stored; only the connection key is kept encrypted.",
-      "company": "COMPANY NUMBER",
-      "companyHint": "The number in the Paraşüt address bar: uygulama.parasut.com/115 → 115",
-      "clientId": "CLIENT ID",
-      "clientSecret": "CLIENT SECRET",
-      "email": "PARAŞÜT E-MAIL",
-      "password": "PARAŞÜT PASSWORD",
-      "submit": "Connect",
-      "cancel": "Cancel",
-      "missing": "All five fields are required",
-      "connected": "Connected · {label}"
-    },
     "cutTitle": "Disconnect?",
     "cutText": "Transfers stop and the connection key is deleted. Cards and matches stay in Etkin; reconnecting continues where it left off.",
     "cutConfirm": "Disconnect",
@@ -5842,7 +5832,6 @@
       "copy": "Copy",
       "copied": "Copied",
       "copyFailed": "Could not copy · select the address and copy it",
-      "legacy": "Legacy connection",
       "saved": "Keys saved",
       "failed": "Connection failed. Connect again.",
       "retry": "Connection expired. Connect again.",
@@ -5909,7 +5898,7 @@
     "baglanti": {
       "title": "Connection and data source",
       "sub": "Accounting software connection · opening stock · Excel",
-      "excel": "Transfer with Excel",
+      "excel": "Data source: Excel",
       "excelSub": "ITEM · PARTY · WAREHOUSE · SHELF · OPENING STOCK",
       "excelOpen": "Open"
     },
@@ -5941,6 +5930,77 @@
       "onNever": "Instant updates on · no update yet",
       "failed": "Instant updates could not be set up · checking every 30 s",
       "pending": "Setting up instant updates · checking every 30 s"
+    },
+    "excelSource": {
+      "name": "Excel",
+      "sub": "DATA SOURCE · ITEM · PARTY · WAREHOUSE · OPENING STOCK",
+      "pill": "OPEN"
+    },
+    "health": {
+      "ok": "Connection healthy · transfers on schedule",
+      "AUTH": {
+        "title": "{provider} connection lost"
+      },
+      "STUCK": {
+        "title": "{name} has been running for a long time",
+        "sub": "Started {at} · stops by itself after 40 minutes"
+      },
+      "TIMEOUT": {
+        "title": "{name} stopped halfway",
+        "sub": "Started {at} · run again to continue where it left off"
+      },
+      "FAILING": {
+        "title": "{name} keeps failing"
+      },
+      "STALE": {
+        "title": "{name} has not synced for a while",
+        "sub": "Last successful sync {at}"
+      },
+      "next": {
+        "RECONNECT": "Reconnect",
+        "RUN": "Run now",
+        "DETAIL": "Details"
+      },
+      "legacy": {
+        "title": "Old connection method (e-mail + password)",
+        "sub": "Your connection works. With the new method your password never reaches Etkin; reconnect once.",
+        "next": "Switch to the new method"
+      }
+    },
+    "issues": {
+      "title": "{n} records need a decision",
+      "hint": "Choose what to do on each row",
+      "more": "Showing the first 50 · {n} more",
+      "doc": "Shipment {code}",
+      "resend": "Send again",
+      "retry": "Try again",
+      "sent": "Mark as sent",
+      "skip": "Don't send",
+      "cancel": "Cancel",
+      "retried": "Queued · will be retried shortly",
+      "retriedLater": "Will be retried on the next sync",
+      "markedSent": "Marked as sent · will not be sent again",
+      "markedSkip": "Will not be sent · removed from the list",
+      "askResend": {
+        "title": "Send {doc} again?",
+        "text": "{provider} did not answer; the shipment may already exist there. Check {provider} first: if it is missing send again, otherwise \"Mark as sent\".",
+        "confirm": "Send again"
+      },
+      "askSent": {
+        "title": "Mark {doc} as sent?",
+        "text": "This shipment is treated as already in {provider} and will not be sent again.",
+        "confirm": "Mark as sent"
+      },
+      "askSkip": {
+        "title": "Don't send {doc}?",
+        "text": "This shipment will not be sent to {provider} and leaves the list.",
+        "confirm": "Don't send"
+      },
+      "reasons": {
+        "NOT_FOUND": "Record not found · list refreshed",
+        "NOT_RETRYABLE": "This record cannot be changed now · it is being sent or was sent",
+        "UNSUPPORTED": "This option is not available for this record"
+      }
     }
   },
   "etkin": {

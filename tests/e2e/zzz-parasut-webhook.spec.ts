@@ -42,17 +42,19 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     await expect(page.getByTestId("integrations")).toBeVisible();
     if (!(await page.getByTestId("integrations-conn").isVisible())) {
-      // T-1133: eski (parola) yolu Gelişmiş altında, uygulama bilgileri formunun içinden açılır.
-      await page.getByTestId("oauth-advanced").click();
-      await page.getByTestId("oauth-settings-open").click();
-      await page.getByTestId("oauth-legacy").click();
-      await expect(page.getByTestId("integrations-form")).toBeVisible();
-      await page.getByTestId("integrations-company").fill(F.companyId);
-      await page.getByTestId("integrations-client-id").fill(F.clientId);
-      await page.getByTestId("integrations-client-secret").fill(F.clientSecret);
-      await page.getByTestId("integrations-email").fill(F.username);
-      await page.getByTestId("integrations-password").fill(F.password);
-      await page.getByTestId("integrations-form-submit").click();
+      // T-1137: eski parola yolu kalktı — ortak uygulamanın sahte OAuth akışı (zzz-integrations ile aynı): önceki koşudan kalan kendi
+      // uygulama kaydı (OOB) ortak uygulamanın önüne geçmesin.
+      await db("DELETE FROM public.integration_oauth_apps WHERE tenant_id=(SELECT id FROM public.tenants WHERE slug=$1)", [slug]);
+      await page.reload();
+      await page.route("https://api.parasut.com/**", async (route) => {
+        const authorize = new URL(route.request().url());
+        const back = new URL(authorize.searchParams.get("redirect_uri") ?? "about:blank");
+        back.search = new URLSearchParams({ code: F.authorizationCode, state: authorize.searchParams.get("state") ?? "" }).toString();
+        await route.fulfill({ status: 302, headers: { location: back.href } });
+      });
+      await page.getByTestId("integrations-connect").filter({ visible: true }).click();
+      await expect(page.getByTestId("kalip-toast")).toContainText("Paraşüt bağlantısı kuruldu");
+      await page.unroute("https://api.parasut.com/**");
       await expect(page.getByTestId("integrations-flows")).toBeVisible();
     }
     await db("UPDATE public.integration_flows f SET enabled = true, direction = 'PULL' FROM public.tenants t WHERE t.id = f.tenant_id AND t.slug = $1 AND f.flow = 'PRODUCTS'", [slug]);

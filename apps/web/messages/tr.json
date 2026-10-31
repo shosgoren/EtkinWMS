@@ -1033,7 +1033,9 @@
       "oauth_failed": "Paraşüt izni tamamlanamadı",
       "oauth_cancelled": "Paraşüt izni iptal edildi",
       "webhook_registered": "Paraşüt anlık bildirim kaydı",
-      "webhook_received": "Paraşüt anlık bildirimi işlendi"
+      "webhook_received": "Paraşüt anlık bildirimi işlendi",
+      "outbox_retried": "ERP kuyruğunda kayıt yeniden denendi",
+      "outbox_resolved": "ERP kuyruğunda irsaliye elle çözüldü"
     },
     "setup_journey": {
       "updated": "Kurulum yolculuğu seçimi değişti",
@@ -1253,7 +1255,9 @@
         "opening_stock_setting": "Açılış stoku ayarı değişti",
         "opening_stock_taken": "Açılış stoku alındı",
         "webhook_registered": "Anlık bildirim kaydı",
-        "webhook_received": "Anlık bildirim işlendi"
+        "webhook_received": "Anlık bildirim işlendi",
+        "outbox_retried": "Entegrasyon kaydı yeniden denendi",
+        "outbox_resolved": "Entegrasyon kaydı elle çözüldü"
       },
       "setup_journey": {
         "updated": "Kurulum rehberi güncellendi",
@@ -5733,20 +5737,6 @@
     "outboxCheck": "{n} irsaliye kontrol bekliyor",
     "outboxCheckSub": "PARAŞÜT YANIT VERMEDİ · ÇİFT OLMASIN DİYE TEKRAR GÖNDERİLMEDİ",
     "outboxFailed": "{n} irsaliye gönderilemedi",
-    "form": {
-      "title": "{provider}'e bağlan",
-      "note": "Şirket numarası ve istemci bilgisi Paraşüt'ten gelir (destek@parasut.com). Parolan saklanmaz; yalnız bağlantı anahtarı şifreli tutulur.",
-      "company": "ŞİRKET NUMARASI",
-      "companyHint": "Paraşüt adres çubuğundaki sayı: uygulama.parasut.com/115 → 115",
-      "clientId": "İSTEMCİ KİMLİĞİ",
-      "clientSecret": "İSTEMCİ SIRRI",
-      "email": "PARAŞÜT E-POSTASI",
-      "password": "PARAŞÜT PAROLASI",
-      "submit": "Bağlan",
-      "cancel": "Vazgeç",
-      "missing": "Beş alanın hepsi gerekli",
-      "connected": "Bağlandı · {label}"
-    },
     "cutTitle": "Bağlantı kesilsin mi?",
     "cutText": "Aktarım durur, bağlantı anahtarı silinir. Kartlar ve eşleşmeler Etkin'de kalır; yeniden bağlanınca kaldığı yerden devam eder.",
     "cutConfirm": "Bağlantıyı kes",
@@ -5842,7 +5832,6 @@
       "copy": "Kopyala",
       "copied": "Kopyalandı",
       "copyFailed": "Kopyalanamadı · adresi elle seçip kopyala",
-      "legacy": "Eski bağlantı yöntemi",
       "saved": "Anahtarlar kaydedildi",
       "failed": "Bağlantı tamamlanamadı. Yeniden bağlan.",
       "retry": "Bağlantının süresi doldu. Yeniden bağlan.",
@@ -5909,7 +5898,7 @@
     "baglanti": {
       "title": "Bağlantı ve veri kaynağı",
       "sub": "Muhasebe programı bağlantısı · açılış stoku · Excel",
-      "excel": "Excel ile aktar",
+      "excel": "Veri kaynağı: Excel",
       "excelSub": "ÜRÜN · CARİ · DEPO · RAF · AÇILIŞ STOKU",
       "excelOpen": "Aç"
     },
@@ -5941,6 +5930,77 @@
       "onNever": "Anlık bildirim açık · henüz bildirim gelmedi",
       "failed": "Anlık bildirim kurulamadı · 30 sn'de bir taranıyor",
       "pending": "Anlık bildirim kuruluyor · 30 sn'de bir taranıyor"
+    },
+    "excelSource": {
+      "name": "Excel",
+      "sub": "VERİ KAYNAĞI · ÜRÜN · CARİ · DEPO · AÇILIŞ STOKU",
+      "pill": "AÇ"
+    },
+    "health": {
+      "ok": "Bağlantı sağlıklı · aktarım düzenli",
+      "AUTH": {
+        "title": "{provider} bağlantısı koptu"
+      },
+      "STUCK": {
+        "title": "{name} uzun süredir bitmedi",
+        "sub": "{at} başladı · 40 dakikada kendiliğinden durur"
+      },
+      "TIMEOUT": {
+        "title": "{name} yarıda kaldı",
+        "sub": "{at} başladı · yeniden çalıştırınca kaldığı yerden devam eder"
+      },
+      "FAILING": {
+        "title": "{name} art arda hata veriyor"
+      },
+      "STALE": {
+        "title": "{name} bir süredir eşitlenmedi",
+        "sub": "Son başarılı eşitleme {at}"
+      },
+      "next": {
+        "RECONNECT": "Yeniden bağlan",
+        "RUN": "Şimdi çalıştır",
+        "DETAIL": "Ayrıntı"
+      },
+      "legacy": {
+        "title": "Eski bağlantı yöntemi (e-posta + parola)",
+        "sub": "Bağlantın çalışıyor. Yeni yöntemde parolan Etkin'e hiç gelmez; bir kez yeniden bağlanman yeter.",
+        "next": "Yeni yönteme geç"
+      }
+    },
+    "issues": {
+      "title": "Karar bekleyen {n} kayıt",
+      "hint": "Her satırda ne yapılacağını seç",
+      "more": "İlk 50 gösteriliyor · {n} kayıt daha",
+      "doc": "İrsaliye {code}",
+      "resend": "Yeniden gönder",
+      "retry": "Yeniden dene",
+      "sent": "Gönderildi say",
+      "skip": "Gönderme",
+      "cancel": "Vazgeç",
+      "retried": "Sıraya alındı · birazdan yeniden denenir",
+      "retriedLater": "Bir sonraki eşitlemede yeniden denenir",
+      "markedSent": "Gönderildi sayıldı · bir daha gönderilmez",
+      "markedSkip": "Gönderilmeyecek · listeden kalktı",
+      "askResend": {
+        "title": "{doc} yeniden gönderilsin mi?",
+        "text": "{provider} yanıt vermemişti; irsaliye orada oluşmuş olabilir. Önce {provider}'te kontrol et: yoksa yeniden gönder, varsa \"Gönderildi say\".",
+        "confirm": "Yeniden gönder"
+      },
+      "askSent": {
+        "title": "{doc} gönderildi sayılsın mı?",
+        "text": "Bu irsaliye {provider}'te zaten var sayılır ve bir daha gönderilmez.",
+        "confirm": "Gönderildi say"
+      },
+      "askSkip": {
+        "title": "{doc} gönderilmesin mi?",
+        "text": "Bu irsaliye {provider}'e gönderilmez ve listeden kalkar.",
+        "confirm": "Gönderme"
+      },
+      "reasons": {
+        "NOT_FOUND": "Kayıt bulunamadı · liste yenilendi",
+        "NOT_RETRYABLE": "Bu kayıt şu an değiştirilemez · gönderiliyor ya da gönderildi",
+        "UNSUPPORTED": "Bu kayıt için bu seçenek yok"
+      }
     }
   },
   "etkin": {
