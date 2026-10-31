@@ -1,4 +1,4 @@
-// T-428: cari kartlar (müşteri / tedarikçi). Okuma `stock.view`; ekleme/düzenleme/arşiv `settings.manage`; Excel'den aktarım `data.import` (hesap sahibi ya da
+// T-428: cari kartlar (müşteri / tedarikçi). Okuma `stock.view`; ekleme `parties.create`, düzenleme `parties.edit`, arşiv/geri al `parties.archive` (T-1141); Excel'den aktarım `data.import` (hesap sahibi ya da
 // T-421 özel yetki grubu). Fiziksel silme yok. Audit aynı transaction'da (I-12).
 // Kod alan içinde benzersizdir (büyük/küçük harf ve boşluktan bağımsız: `code_key`). Vergi no 10/11 hane denetimi uyarıdır, engel değildir.
 // Aktarım (`importParties`): aynı kod varsa güncellenir (boş hücre mevcut değeri silmez), dosyada tekrarlayan kod → ilki alınır, sonrakiler sorunlu.
@@ -291,7 +291,7 @@ export async function getParty(params: QueryParams, partyId: string): Promise<Pa
  */
 const auditSummary = (v: Clean, deliveryMode: PartyDeliveryMode): Record<string, unknown> => ({ ref: v.code, name: v.name, short_name: v.shortName, delivery_mode: deliveryMode });
 
-/** Tek cari kaydet (`settings.manage`): `id` yoksa yeni (ad zorunlu), varsa sürüm denetimli güncelleme (boş alan temizlenir). */
+/** Tek cari kaydet (T-1141: yeni `parties.create`, düzenleme `parties.edit`): `id` yoksa yeni (ad zorunlu), varsa sürüm denetimli güncelleme (boş alan temizlenir). */
 export type SavePartyResult = { readonly ok: true; readonly id: string; readonly version: number } | { readonly ok: false; readonly issue: PartyIssue | "CODE_TAKEN" };
 
 export async function saveParty(params: PartyCommandParams, input: PartyInput & { readonly id?: string; readonly expectedVersion?: number }): Promise<SavePartyResult> {
@@ -300,7 +300,7 @@ export async function saveParty(params: PartyCommandParams, input: PartyInput & 
   const v = c.value;
   if (v.name === null) return { ok: false, issue: "NAME_MISSING" };
   const { requestId, ...access } = params;
-  return runTenantCommand<SavePartyResult>({ ...access, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand<SavePartyResult>({ ...access, permission: input.id === undefined ? "parties.create" : "parties.edit" }, async (tx, m) => {
     if (input.id === undefined) {
       const rows = await tx.execute<{ id: string; version: number }>(sql`
         INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, created_by)
@@ -336,11 +336,11 @@ export async function saveParty(params: PartyCommandParams, input: PartyInput & 
   });
 }
 
-/** Arşivle / geri al (`settings.manage`, sürüm denetimli). */
+/** Arşivle / geri al (T-1141: `parties.archive` ikisini de kapsar; sürüm denetimli). */
 export async function setPartyArchived(params: PartyCommandParams, input: { readonly id: string; readonly expectedVersion: number; readonly archived: boolean }): Promise<{ readonly version: number }> {
   if (!/^[0-9a-f-]{36}$/i.test(input.id)) throw new AppError("VALIDATION_FAILED");
   const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...access, permission: "parties.archive" }, async (tx, m) => {
     const rows = await tx.execute<{ version: number }>(sql`
       UPDATE public.parties SET archived_at = CASE WHEN ${input.archived}::boolean THEN now() ELSE NULL END
        WHERE tenant_id = ${m.tenantId}::uuid AND id = ${input.id}::uuid AND version = ${input.expectedVersion}

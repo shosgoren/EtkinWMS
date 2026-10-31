@@ -1,5 +1,5 @@
 "use server";
-// Cari kart eylemleri (T-428). İnce giriş: yalnız girdi doğrulama (zod) + domain komutu; yetki (`settings.manage`; Excel aktarımı `data.import`), doğrulama ve audit domain'dedir.
+// Cari kart eylemleri (T-428). İnce giriş: yalnız girdi doğrulama (zod) + domain komutu; yetki (T-1141 kart anahtarları `parties.create` / `.edit` / `.archive`; Excel aktarımı `data.import`), doğrulama ve audit domain'dedir.
 // Aktarım satırları yalnız bellekte taşınır (diske/loga yazılmaz, G-09). Bu dosyada DB bağlantısı açılmaz (`getAppDb` yalnız domain'e verilir).
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -40,7 +40,7 @@ const importSchema = z
 
 const moreSchema = z.object({ slug: slugSchema, q: z.string().max(100), archived: z.boolean(), after: z.string().min(1).max(2048) }).strict();
 
-async function writeContext(slug: string, ctx: ActionContext, permission: "settings.manage" | "data.import" = "settings.manage") {
+async function writeContext(slug: string, ctx: ActionContext, permission: "parties.create" | "parties.edit" | "parties.archive" | "data.import") {
   const principal = ctx.principal;
   if (principal === null) throw new Error("unreachable: principal required");
   await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission }, ctx);
@@ -55,7 +55,7 @@ async function writeContext(slug: string, ctx: ActionContext, permission: "setti
 export async function savePartyAction(raw: unknown) {
   return guardedAction({ schema: saveSchema }, async (input, ctx) => {
     const { slug, autoCode, ...body } = input;
-    const params = await writeContext(slug, ctx);
+    const params = await writeContext(slug, ctx, body.id === undefined ? "parties.create" : "parties.edit");
     const call = { ...params, requestId: ctx.requestId };
     // Codex P2: önek seçilen türün öneki olmalı (eski türün önerisiyle "otomatik" kayıt ve o önekle yeniden deneme yok).
     const kindPrefix = body.kind === "CUSTOMER" || body.kind === "SUPPLIER" || body.kind === "BOTH" ? PARTY_CODE_PREFIX[body.kind] : PARTY_CODE_PREFIX.CUSTOMER;
@@ -69,17 +69,17 @@ export async function savePartyAction(raw: unknown) {
   })(raw);
 }
 
-/** T-1093: yeni cari formunda sıradaki kod (türe göre önek). Salt okuma; yetki `settings.manage` (domain). */
+/** T-1093: yeni cari formunda sıradaki kod (türe göre önek). Salt okuma; yetki `parties.create` (domain, T-1141). */
 export async function suggestPartyCodeAction(raw: unknown) {
   return guardedAction({ schema: suggestSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "parties.create");
     return suggestCode(params, { kind: "party", prefix: PARTY_CODE_PREFIX[input.kind] });
   })(raw);
 }
 
 export async function archivePartyAction(raw: unknown) {
   return guardedAction({ schema: archiveSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "parties.archive");
     return setPartyArchived({ ...params, requestId: ctx.requestId }, { id: input.id, expectedVersion: input.expectedVersion, archived: input.archived });
   })(raw);
 }

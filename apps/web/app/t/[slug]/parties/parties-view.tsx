@@ -4,7 +4,7 @@
 // listeyi süzer), cari kartları, boş durum + Excel'den aktar. Karta dokununca kart TAM EKRAN FORMDA açılır (T-990 `KalipFormEkran`; adres
 // `?new=1` / `?edit=<id>`): kimlik grubu (kod, ünvan, tür kutuları) + vergi/iletişim grubu, sağda canlı önizleme. Kaydet, doğrulama
 // (zorunlu kod/ünvan, e-posta biçimi; sunucu alan hataları ilgili alanda), çıkış kutusu ortak sarmalayıcıdadır. Arşivle / arşivden çıkar
-// formun altında. Yetki SUNUCUDADIR: `canEdit` yalnız gösterimdir.
+// formun altında. Yetki SUNUCUDADIR: `rights` (T-1141 `cardRights`) yalnız gösterimdir.
 // Bilinçli farklar (DESIGN-PARITY, T-971): çip sayıları yok (sunucu tür sayımı vermez); tür süzgeci yalnız yüklenen ≤100 kartı süzer.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,6 +16,8 @@ import { KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipAlanSira, KalipGrup } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
+import { KalipKilitliDugme, useKartKilitGerekce } from "../kalip/kilitli.tsx";
+import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
 import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { archivePartyAction, loadMorePartiesAction, savePartyAction, suggestPartyCodeAction } from "./actions.ts";
@@ -92,8 +94,12 @@ const ISSUE_FIELD: Record<string, keyof Form> = {
   EMAIL_INVALID: "email",
 };
 
-function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark: boolean; canEdit: boolean; party: PartyView | null; onClose: (msg?: string) => void }) {
+function PartyForm({ slug, dark, rights, party, onClose }: { slug: string; dark: boolean; rights: CardRights; party: PartyView | null; onClose: (msg?: string) => void }) {
   const t = useTranslations("parties");
+  // T-1141: yeni cari `parties.create`, düzenleme `parties.edit`, arşiv / geri al `parties.archive` (yalnız gösterim; karar domain'de).
+  const kilitGerekce = useKartKilitGerekce("parties");
+  const canEdit = party === null ? rights.create : rights.edit;
+  const lockText = kilitGerekce(party === null ? "create" : "edit");
   const tr = useTranslations("kural");
   const router = useRouter();
   const base = `/t/${encodeURIComponent(slug)}`;
@@ -222,7 +228,7 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       initial={initial}
       rules={rules}
       canEdit={canEdit}
-      lockedTitle={t("readOnly")}
+      lockedTitle={lockText}
       lockedSub={t("readOnlySub")}
       onSave={save}
       onDone={() => onClose(t("saved"))}
@@ -237,11 +243,11 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
       // sağda büyük simgeli tür seçimi.
       preview={<KalipOnizleme name={f.name} code={f.code} d={FORM_ICON.d} color={FORM_ICON.color} kind={party === null ? t("stripNew") : t("stripEdit")} bos={t("stripEmpty")} kodNot={autoNote} secim={kindPick} />}
       footer={
-        canEdit && party !== null ? (
+        party !== null ? (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" className="btn n" disabled={busy} onClick={() => void onArchive()} data-testid="party-archive">
+            <KalipKilitliDugme kilitli={!rights.archive} gerekce={kilitGerekce("archive")} className="btn n" aria-busy={busy || undefined} onClick={() => { if (!busy) void onArchive(); }} data-testid="party-archive">
               {party.archived ? t("restore") : t("archive")}
-            </button>
+            </KalipKilitliDugme>
           </div>
         ) : undefined
       }
@@ -285,7 +291,7 @@ function PartyForm({ slug, dark, canEdit, party, onClose }: { slug: string; dark
 export function PartiesView({
   slug,
   dark,
-  canEdit,
+  rights,
   q,
   archived,
   items: ilkCariler,
@@ -295,7 +301,8 @@ export function PartiesView({
 }: {
   slug: string;
   dark: boolean;
-  canEdit: boolean;
+  /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
+  rights: CardRights;
   q: string;
   archived: boolean;
   items: readonly PartyView[];
@@ -314,7 +321,8 @@ export function PartiesView({
   const [kind, setKind] = useState<Kind | "">("");
   const { say, node: toast } = useKalipToast("liste");
   const editId = params.get("edit");
-  const isNew = params.get("new") === "1" && canEdit;
+  const kilitGerekce = useKartKilitGerekce("parties");
+  const isNew = params.get("new") === "1" && rights.create;
   // T-1058: kaydırınca eklenen sayfalar (sunucunun ilk sayfasının devamı); arama / arşiv değişince (yeni ilk sayfa) sıfırlanır.
   const [ek, setEk] = useState<{ readonly bas: readonly PartyView[]; readonly rows: readonly PartyView[]; readonly cursor: string | null }>({ bas: ilkCariler, rows: [], cursor: nextCursor });
   const guncel = ek.bas === ilkCariler ? ek : { bas: ilkCariler, rows: [], cursor: nextCursor };
@@ -366,7 +374,7 @@ export function PartiesView({
   };
 
   if (isNew || editing !== undefined) {
-    return <PartyForm key={editing?.id ?? "new"} slug={slug} dark={dark} canEdit={canEdit} party={editing ?? null} onClose={close} />;
+    return <PartyForm key={editing?.id ?? "new"} slug={slug} dark={dark} rights={rights} party={editing ?? null} onClose={close} />;
   }
 
   const shown = kind === "" ? items : items.filter((p) => p.kind === kind);
@@ -388,7 +396,8 @@ export function PartiesView({
       bar={{
         back: { href: base, aria: t("back") },
         homeNav: { href: base, aria: t("home") },
-        main: canEdit ? { label: t("newShort"), aria: t("new"), d: LICON.plus, onClick: () => open(null), testId: "party-new" } : null,
+        // T-1141: yetkisiz "Yeni cari" gizlenmez; kilitli ana işlem (kilit ikonu + "yetkin yok · yöneticine sor" balonu).
+        main: { label: t("newShort"), aria: t("new"), d: LICON.plus, onClick: () => open(null), locked: !rights.create, disabledReason: kilitGerekce("create"), testId: "party-new" },
       }}
       overlays={toast}
     >
@@ -407,7 +416,7 @@ export function PartiesView({
             <KalipBos
               title={t("empty")}
               iconD={ICON.d}
-              action={canEdit ? { label: t("firstParty"), kind: "add", onClick: () => open(null) } : { label: tr("home"), href: base, kind: "go" }}
+              action={rights.create ? { label: t("firstParty"), kind: "add", onClick: () => open(null) } : { label: tr("home"), href: base, kind: "go" }}
             />
           ) : q === "" && kind === "" && archived ? (
             // T-1037: boş arşiv bir arama sonucu değildir — "Arşivde cari yok" + etkin carilere dön.

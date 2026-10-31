@@ -6509,5 +6509,43 @@
     "appQrLabel": "{app} indirme QR kodu",
     "appTipQr": "Telefonunuzun kamerasıyla QR'ı okutun; telefonunuza uygun mağaza (App Store ya da Google Play) açılır.",
     "addCameraTip": "Uygulamayı açmadan telefonun kamerasıyla da okutabilirsiniz: çıkan “… ile aç / Ekle” önerisine dokunun, hesap eklenir."
+  },
+  "yetkiKatalog": {
+    "groups": {
+      "items": "Ürünler",
+      "parties": "Cariler",
+      "warehouses": "Depolar",
+      "locations": "Raf yerleri"
+    },
+    "actions": {
+      "create": "Ekle",
+      "edit": "Değiştir",
+      "archive": "Arşivle / Geri al",
+      "import": "Excel",
+      "label": "Etiket"
+    },
+    "ask": "Yetki iste · yöneticine sor",
+    "locked": {
+      "items": {
+        "create": "Ürün ekleme yetkin yok · Yetki iste: yöneticine sor",
+        "edit": "Ürün değiştirme yetkin yok · Yetki iste: yöneticine sor",
+        "archive": "Ürün arşivleme yetkin yok · Yetki iste: yöneticine sor"
+      },
+      "parties": {
+        "create": "Cari ekleme yetkin yok · Yetki iste: yöneticine sor",
+        "edit": "Cari değiştirme yetkin yok · Yetki iste: yöneticine sor",
+        "archive": "Cari arşivleme / geri alma yetkin yok · Yetki iste: yöneticine sor"
+      },
+      "warehouses": {
+        "create": "Depo ekleme yetkin yok · Yetki iste: yöneticine sor",
+        "edit": "Depo değiştirme yetkin yok · Yetki iste: yöneticine sor",
+        "archive": "Depo arşivleme yetkin yok · Yetki iste: yöneticine sor"
+      },
+      "locations": {
+        "create": "Raf yeri ekleme yetkin yok · Yetki iste: yöneticine sor",
+        "edit": "Raf yeri değiştirme yetkin yok · Yetki iste: yöneticine sor",
+        "archive": "Raf yeri arşivleme yetkin yok · Yetki iste: yöneticine sor"
+      }
+    }
   }
 }

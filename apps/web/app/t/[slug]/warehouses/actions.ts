@@ -1,6 +1,6 @@
 "use server";
 // Depo ve lokasyon eylemleri (T-207). İnce giriş: yalnızca girdi doğrulama (zod) + T-205 domain komutu; kod/ad normalleştirmesi
-// (A-98) ve yetki (`settings.manage`, A-68) sunucuda domain'dedir, burada yeniden yazılmaz. İdempotency gerekmez: komutlar stok
+// (A-98) ve yetki (T-1141 kart anahtarları, A-68) sunucuda domain'dedir, burada yeniden yazılmaz. İdempotency gerekmez: komutlar stok
 // değiştirmez; çift gönderim `CODE_TAKEN` ile sonuçlanır. Bu dosyada DB bağlantısı açılmaz (`getAppDb` yalnızca domain'e verilir).
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import {
   searchLocations,
 } from "@wms/domain/warehouse";
 import type { LocationKindValue } from "@wms/domain/warehouse";
+import type { Permission } from "@wms/domain/identity/permissions";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { loadWarehousesPage } from "./list-page.ts";
 
@@ -60,17 +61,17 @@ const moreLocationsSchema = z
   .object({ slug: slugSchema, warehouseId: idSchema, after: z.object({ depth: z.number().int().min(0).max(16), code: textSchema, id: idSchema }).strict() })
   .strict();
 
-/** Komut izni `settings.manage`; sayaç doğrulanmış tenant kimliğiyle tüketilir (üye/yetkisiz çağıran sayaç tüketmez). */
-async function writeContext(slug: string, ctx: ActionContext) {
+/** Komut izni T-1141 kart anahtarı (domain komutuyla aynı); sayaç doğrulanmış tenant kimliğiyle tüketilir (üye/yetkisiz çağıran sayaç tüketmez). */
+async function writeContext(slug: string, ctx: ActionContext, permission: Permission) {
   const principal = ctx.principal;
   if (principal === null) throw new Error("unreachable: principal required");
-  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission: "settings.manage" }, ctx);
+  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission }, ctx);
   return { db: getAppDb(), principal, tenantSlug: slug };
 }
 
 export async function createWarehouseAction(raw: unknown) {
   return guardedAction({ schema: createWarehouseSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "warehouses.create");
     const create = (code: string) => createWarehouse(params, { code, name: input.name, requestId: ctx.requestId });
     const r = await createWithSuggestedCode({
       kind: "warehouse",
@@ -85,7 +86,7 @@ export async function createWarehouseAction(raw: unknown) {
 
 export async function archiveWarehouseAction(raw: unknown) {
   return guardedAction({ schema: archiveWarehouseSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "warehouses.archive");
     const r = await archiveWarehouse(params, { warehouseId: input.warehouseId, requestId: ctx.requestId });
     return { archived: r.archived };
   })(raw);
@@ -94,7 +95,7 @@ export async function archiveWarehouseAction(raw: unknown) {
 /** Depo kodunu değiştirir (T-257): normalleştirme, benzersizlik, kod geçmişi ve audit T-251 domain komutundadır. */
 export async function renameWarehouseAction(raw: unknown) {
   return guardedAction({ schema: renameWarehouseSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "warehouses.edit");
     const r = await renameWarehouse(params, { warehouseId: input.warehouseId, code: input.code, requestId: ctx.requestId });
     return { changed: r.changed };
   })(raw);
@@ -103,7 +104,7 @@ export async function renameWarehouseAction(raw: unknown) {
 /** Lokasyon kodunu değiştirir (T-257): depo içi benzersizlik ve kod geçmişi domain'dedir. */
 export async function renameLocationAction(raw: unknown) {
   return guardedAction({ schema: renameLocationSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "locations.edit");
     const r = await renameLocation(params, { locationId: input.locationId, code: input.code, requestId: ctx.requestId });
     return { changed: r.changed };
   })(raw);
@@ -111,7 +112,7 @@ export async function renameLocationAction(raw: unknown) {
 
 export async function createLocationAction(raw: unknown) {
   return guardedAction({ schema: createLocationSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "locations.create");
     const create = (code: string) =>
       createLocation(params, { warehouseId: input.warehouseId, parentId: input.parentId, code, name: input.name, kind: input.kind, requestId: ctx.requestId });
     const r = await createWithSuggestedCode({
@@ -127,7 +128,7 @@ export async function createLocationAction(raw: unknown) {
 
 export async function archiveLocationAction(raw: unknown) {
   return guardedAction({ schema: archiveLocationSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "locations.archive");
     const r = await archiveLocation(params, { locationId: input.locationId, requestId: ctx.requestId });
     return { archived: r.archived };
   })(raw);
@@ -159,7 +160,7 @@ export async function loadMoreLocationsAction(raw: unknown) {
 /** Sıradaki depo/lokasyon kodu (T-250): sunucuda hesaplanır; yazımda benzersizlik yine denetlenir. */
 export async function suggestCodeAction(raw: unknown) {
   return guardedAction({ schema: suggestCodeSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, input.kind === "location" ? "locations.create" : "warehouses.create");
     return suggestCode(params, { kind: input.kind, ...(input.warehouseId === undefined ? {} : { warehouseId: input.warehouseId }) });
   })(raw);
 }
@@ -167,7 +168,7 @@ export async function suggestCodeAction(raw: unknown) {
 /** Toplu raf önizleme (T-250): salt okuma; kod üretimi, sınır ve çakışma denetimi domain'de. */
 export async function previewBulkLocationsAction(raw: unknown) {
   return guardedAction({ schema: previewBulkSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "locations.create");
     return previewBulkLocations(params, {
       warehouseId: input.warehouseId,
       parentId: input.parentId,
@@ -183,7 +184,7 @@ export async function previewBulkLocationsAction(raw: unknown) {
 /** Toplu raf oluşturma (T-250): tek transaction + idempotency anahtarı domain'dedir. */
 export async function createBulkLocationsAction(raw: unknown) {
   return guardedAction({ schema: createBulkSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "locations.create");
     return createBulkLocations(params, {
       warehouseId: input.warehouseId,
       parentId: input.parentId,

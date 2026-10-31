@@ -1,6 +1,6 @@
 "use server";
 // Ürün kartı eylemleri (T-216). İnce giriş: yalnızca girdi doğrulama (zod) + T-208 domain komutu. Kod/ad normalleştirmesi, takip modu,
-// ölçek, dönüşüm katsayısı kuralları ve yetki (`settings.manage`, A-68) sunucuda domain'dedir; burada yeniden yazılmaz. Katsayı ve
+// ölçek, dönüşüm katsayısı kuralları ve yetki (T-1141 kart anahtarları, A-68) sunucuda domain'dedir; burada yeniden yazılmaz. Katsayı ve
 // barkod miktarı DİZGİ olarak domain'e iletilir (I-09: `Number`/float'a çevrilmez). Bu dosyada DB bağlantısı açılmaz (`getAppDb`
 // yalnızca domain'e verilir). Köken (Origin) ve oturum denetimi ortak `createProductionGuard` içindedir.
 import { headers } from "next/headers";
@@ -70,17 +70,17 @@ const addBarcodeSchema = z
   .strict();
 const removeBarcodeSchema = z.object({ slug: slugSchema, barcodeId: idSchema }).strict();
 
-/** Komut izni `settings.manage`; sayaç doğrulanmış tenant kimliğiyle tüketilir (üye/yetkisiz çağıran sayaç tüketmez). */
-async function writeContext(slug: string, ctx: ActionContext) {
+/** Komut izni T-1141 kart anahtarı (domain komutuyla aynı); sayaç doğrulanmış tenant kimliğiyle tüketilir (üye/yetkisiz çağıran sayaç tüketmez). */
+async function writeContext(slug: string, ctx: ActionContext, permission: "items.create" | "items.edit" | "items.archive") {
   const principal = ctx.principal;
   if (principal === null) throw new Error("unreachable: principal required");
-  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission: "settings.manage" }, ctx);
+  await limitVerifiedTenant({ db: getAppDb(), principal, tenantSlug: slug, permission }, ctx);
   return { db: getAppDb(), principal, tenantSlug: slug };
 }
 
 export async function createItemAction(raw: unknown) {
   return guardedAction({ schema: createItemSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.create");
     const base = {
       name: input.name,
       ...(input.quantityScale === undefined ? {} : { quantityScale: input.quantityScale }),
@@ -102,7 +102,7 @@ export async function createItemAction(raw: unknown) {
 /** Sıradaki ürün kodu (T-250): sunucuda hesaplanır, yazımda benzersizlik yine denetlenir. */
 export async function suggestItemCodeAction(raw: unknown) {
   return guardedAction({ schema: suggestItemCodeSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.create");
     return suggestCode(params, { kind: "item", ...(input.prefix === undefined ? {} : { prefix: input.prefix }) });
   })(raw);
 }
@@ -145,7 +145,7 @@ export async function loadMoreItemTrackingAction(raw: unknown) {
 
 export async function updateItemAction(raw: unknown) {
   return guardedAction({ schema: updateItemSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.edit");
     const r = await updateItem(
       { ...params, requestId: ctx.requestId },
       {
@@ -163,10 +163,10 @@ export async function updateItemAction(raw: unknown) {
   })(raw);
 }
 
-/** Yeni birim (T-911): kod tenant içinde benzersiz (`CODE_TAKEN`); ürün formundan satır içi eklenir. Yetki `settings.manage` domain'de. */
+/** Yeni birim (T-911): kod tenant içinde benzersiz (`CODE_TAKEN`); yeni ürün formundan satır içi eklenir. Yetki `items.create` domain'de (T-1141). */
 export async function createUnitAction(raw: unknown) {
   return guardedAction({ schema: createUnitSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.create");
     const r = await createUnit({ ...params, requestId: ctx.requestId }, { code: input.code, name: input.name });
     return { unitId: r.unitId };
   })(raw);
@@ -174,7 +174,7 @@ export async function createUnitAction(raw: unknown) {
 
 export async function archiveItemAction(raw: unknown) {
   return guardedAction({ schema: archiveItemSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.archive");
     const r = await archiveItem({ ...params, requestId: ctx.requestId }, { itemId: input.itemId });
     return { changed: r.changed };
   })(raw);
@@ -182,7 +182,7 @@ export async function archiveItemAction(raw: unknown) {
 
 export async function setConversionAction(raw: unknown) {
   return guardedAction({ schema: conversionSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.edit");
     const r = await setUnitConversion({ ...params, requestId: ctx.requestId }, { itemId: input.itemId, unitId: input.unitId, factor: input.factor });
     return { factor: r.factor };
   })(raw);
@@ -190,7 +190,7 @@ export async function setConversionAction(raw: unknown) {
 
 export async function addBarcodeAction(raw: unknown) {
   return guardedAction({ schema: addBarcodeSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.edit");
     const r = await addBarcode({ ...params, requestId: ctx.requestId }, { itemId: input.itemId, unitId: input.unitId, barcode: input.barcode, quantity: input.quantity });
     return { barcodeId: r.barcodeId };
   })(raw);
@@ -198,7 +198,7 @@ export async function addBarcodeAction(raw: unknown) {
 
 export async function removeBarcodeAction(raw: unknown) {
   return guardedAction({ schema: removeBarcodeSchema }, async (input, ctx) => {
-    const params = await writeContext(input.slug, ctx);
+    const params = await writeContext(input.slug, ctx, "items.edit");
     const r = await removeBarcode({ ...params, requestId: ctx.requestId }, { barcodeId: input.barcodeId });
     return { barcodeId: r.barcodeId };
   })(raw);

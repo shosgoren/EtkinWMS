@@ -6509,5 +6509,43 @@
     "appQrLabel": "{app} download QR code",
     "appTipQr": "Scan the QR with your phone camera; the right store (App Store or Google Play) opens for your phone.",
     "addCameraTip": "You can also scan with the phone camera without opening the app: tap the “Open in … / Add” suggestion and the account is added."
+  },
+  "yetkiKatalog": {
+    "groups": {
+      "items": "Products",
+      "parties": "Contacts",
+      "warehouses": "Warehouses",
+      "locations": "Locations"
+    },
+    "actions": {
+      "create": "Add",
+      "edit": "Change",
+      "archive": "Archive / Restore",
+      "import": "Excel",
+      "label": "Label"
+    },
+    "ask": "Request access · ask your admin",
+    "locked": {
+      "items": {
+        "create": "You can't add products · Request access: ask your admin",
+        "edit": "You can't change products · Request access: ask your admin",
+        "archive": "You can't archive products · Request access: ask your admin"
+      },
+      "parties": {
+        "create": "You can't add contacts · Request access: ask your admin",
+        "edit": "You can't change contacts · Request access: ask your admin",
+        "archive": "You can't archive or restore contacts · Request access: ask your admin"
+      },
+      "warehouses": {
+        "create": "You can't add warehouses · Request access: ask your admin",
+        "edit": "You can't change warehouses · Request access: ask your admin",
+        "archive": "You can't archive warehouses · Request access: ask your admin"
+      },
+      "locations": {
+        "create": "You can't add locations · Request access: ask your admin",
+        "edit": "You can't change locations · Request access: ask your admin",
+        "archive": "You can't archive locations · Request access: ask your admin"
+      }
+    }
   }
 }

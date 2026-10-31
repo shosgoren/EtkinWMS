@@ -1,6 +1,6 @@
 // Barkod komutları ve çözümleme (T-208; A-68, A-69, A-88, 04 §Ürün).
 //
-// - Yazma `settings.manage`, çözümleme `stock.view`. `tenant_id` bağlamdan; tüm erişim `tx` üzerinden.
+// - Yazma `items.edit` (T-1141), çözümleme `stock.view`. `tenant_id` bağlamdan; tüm erişim `tx` üzerinden.
 // - A-69: barkod tenant içinde tekil DEĞİLDİR; aynı (ürün, birim, barkod) üçlüsü tekildir. Çözümleme tek (ürün, birim,
 //   miktar) eşleşmesi vermiyorsa SESSİZCE ilk ürüne atanmaz: `VALIDATION_FAILED`/`BARCODE_AMBIGUOUS` + aday listesi.
 //   Adaylar yalnızca çağıranın tenant'ındandır (RLS).
@@ -74,7 +74,7 @@ export async function addBarcode(
   const gs1 = parseGs1(barcode);
   if (gs1.ok && gs1.gtin !== undefined) throw new AppError("VALIDATION_FAILED");
   const { requestId, writePermission, ...access } = params;
-  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: writePermission ?? "items.edit" }, async (tx, actor) => {
     const item = await loadItem(tx, actor.tenantId, itemId, "share");
     if (item === undefined) throw new AppError("NOT_FOUND");
     if (item.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
@@ -124,7 +124,7 @@ export async function addBarcode(
 export async function removeBarcode(params: CatalogCommandParams, input: { readonly barcodeId: string }): Promise<{ readonly barcodeId: string }> {
   const barcodeId = parseUuid(input.barcodeId);
   const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: "items.edit" }, async (tx, actor) => {
     const rows = await tx.execute<{ item_id: string; unit_id: string | null; barcode: string }>(
       sql`DELETE FROM public.item_barcodes WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${barcodeId}::uuid
           RETURNING item_id, unit_id, barcode`,

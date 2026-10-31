@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getParty, listParties, type PartyRow } from "@wms/domain/catalog/parties";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { hasPermission } from "@wms/domain/identity/permissions";
+import { cardRights, type CardRights } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { temaKoyu } from "../../../design/theme.ts";
 import { PARTIES_PAGE_SIZE } from "./list-page.ts";
@@ -28,14 +28,14 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   if (principal === null) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
   const q = typeof sp.q === "string" ? sp.q.slice(0, 100) : "";
   const archived = sp.arsiv === "1";
-  let canEdit = false;
+  let rights: CardRights = { create: false, edit: false, archive: false, import: false };
   let data: Awaited<ReturnType<typeof listParties>>;
   let editParty: PartyRow | null = null;
   try {
     const summary = await getMembershipSummary({ db: getAppDb(), principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canEdit = hasPermission(current.roles, "settings.manage", current.grants);
+    rights = cardRights(current.roles, current.grants, "parties");
     data = await listParties({ db: getAppDb(), principal, tenantSlug: slug }, { q, archived, limit: PARTIES_PAGE_SIZE });
     // T-1090: kart ekranından Düzenle (`?edit=<id>`) — cari ilk sayfada olmasa da form açılsın. Bulunamaz/başka tenant → form açılmaz.
     if (typeof sp.edit === "string" && /^[0-9a-f-]{36}$/i.test(sp.edit) && !data.items.some((p) => p.id === sp.edit)) {
@@ -55,7 +55,7 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   const jar = await cookies();
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <PartiesView slug={slug} dark={temaKoyu(jar)} canEdit={canEdit} q={q} archived={archived} items={data.items} total={data.total} nextCursor={data.nextCursor} editParty={editParty} />
+      <PartiesView slug={slug} dark={temaKoyu(jar)} rights={rights} q={q} archived={archived} items={data.items} total={data.total} nextCursor={data.nextCursor} editParty={editParty} />
     </main>
   );
 }

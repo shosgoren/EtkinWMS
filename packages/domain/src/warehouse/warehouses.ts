@@ -1,6 +1,6 @@
 // Depo kartı komutları ve okuyucuları (T-205; A-45, A-68, A-83, A-86, A-77).
 //
-// - Yazma: `runTenantCommand(settings.manage)` (A-68: yalnızca TENANT_ADMIN); okuma: `runTenantQuery(stock.view)`. Her yazma aynı
+// - Yazma: `runTenantCommand(warehouses.create | .edit | .archive)` (T-1141; A-68: rollerde yalnızca TENANT_ADMIN); okuma: `runTenantQuery(stock.view)`. Her yazma aynı
 //   transaction'da `appendAudit` (I-12). `tenant_id` yalnızca doğrulanmış üyelikten gelir (RLS WITH CHECK ayrıca korur).
 // - `wms_app` INSERT yetkisi sütun düzeyindedir (`created_at`/`status`/`archived_at` yok) → Drizzle `insert()` DEĞİL, açık sütunlu
 //   ham INSERT kullanılır (varsayılan sütunlar listeye girmez).
@@ -94,7 +94,7 @@ export interface CreateWarehouseInput {
 export async function createWarehouse(params: WarehouseCallParams, input: CreateWarehouseInput): Promise<{ readonly warehouseId: string }> {
   const code = normalizeCode(input.code);
   const name = normalizeName(input.name);
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "warehouses.create" }, async (tx, m) => {
     const id = randomUUID();
     const rows = await tx.execute<{ id: string }>(
       sql`INSERT INTO public.warehouses (tenant_id, id, code, name)
@@ -154,7 +154,7 @@ export async function renameWarehouse(params: WarehouseCallParams, input: Rename
   if (input.name === undefined && input.code === undefined) throw new AppError("VALIDATION_FAILED");
   const name = input.name === undefined ? undefined : normalizeName(input.name);
   const code = input.code === undefined ? undefined : normalizeCode(input.code);
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "warehouses.edit" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
     const cur = await tx.execute<{ name: string; code: string; status: string }>(
       sql`SELECT name, code, status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid FOR NO KEY UPDATE`,
@@ -207,7 +207,7 @@ export interface ArchiveWarehouseInput {
 /** Aktif lokasyonu veya pozitif bakiyesi olan depo `IN_USE`. Zaten arşivli depo no-op (`archived: false`). */
 export async function archiveWarehouse(params: WarehouseCallParams, input: ArchiveWarehouseInput): Promise<{ readonly archived: boolean }> {
   const warehouseId = parseUuid(input.warehouseId);
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "warehouses.archive" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
     // FOR NO KEY UPDATE (stok komutlarının FK KEY SHARE'iyle çakışmaz, FOR SHARE ile çakışır): eşzamanlı `createLocation` (depo satırını FOR SHARE okur) ile serileştirir; kontroller kilitten SONRA yeni görüntüyle çalışır.
     const cur = await tx.execute<{ status: string }>(

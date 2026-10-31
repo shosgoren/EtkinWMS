@@ -1,6 +1,6 @@
 "use client";
-// Ürün listesi ekranı (T-216; T-968 liste kalıbı, KalipListe.dc.html). Yetki ve iş kuralları SUNUCUDADIR: `canManage` yalnızca gösterimdir
-// (kilit + açıklama); eylemler sunucuda `settings.manage` ister. Kod normalleştirmesi, takip modu ve ölçek kuralları istemcide YOK. Arama
+// Ürün listesi ekranı (T-216; T-968 liste kalıbı, KalipListe.dc.html). Yetki ve iş kuralları SUNUCUDADIR: `rights` (T-1141 `cardRights`) yalnızca gösterimdir
+// (kilit + açıklama); eylemler sunucuda `items.create` vb. ister. Kod normalleştirmesi, takip modu ve ölçek kuralları istemcide YOK. Arama
 // sunucudadır (GET formu, keyset imleç, OFFSET yok); yazdıkça canlı sonuç (`searchItemsAction`), Enter tek eşleşmede ürünü açar; barkod
 // okuyucu (klavye kaması) ve kamera (CameraOverlay, T-286) aynı yolu kullanır. Süzgeç çipleri adresi değiştirir (kart türü / arşivli).
 // Bilinçli farklar (DESIGN-PARITY, T-968): "Kritik" çipi yok (sunucu süzgeci yok; sorunlu kart yine dolu renk); çip sayıları yok;
@@ -22,6 +22,8 @@ import type { AlanKurali } from "../kalip/dogrula.ts";
 import { KalipFormEkran, KalipOnizleme, type KaydetSonuc } from "../kalip/form-ekran.tsx";
 import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
 import { KalipSecim, KalipSecimGrubu } from "../kalip/secim.tsx";
+import { useKartKilitGerekce } from "../kalip/kilitli.tsx";
+import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
 import { eskiSurumBildir, eskiSurumMu, eylem } from "../kalip/surum.tsx";
 import { ItemFiltersView } from "./filters-view.tsx";
 import { extraFilterParams, type ItemExtraFilters } from "./filters.ts";
@@ -398,7 +400,7 @@ export interface ItemStockView {
 export function ItemsView({
   slug,
   dark,
-  canManage,
+  rights,
   items: ilkItems,
   stock: ilkStock,
   units,
@@ -408,7 +410,8 @@ export function ItemsView({
 }: {
   slug: string;
   dark: boolean;
-  canManage: boolean;
+  /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
+  rights: CardRights;
   items: readonly ItemListView[];
   stock: Readonly<Record<string, ItemStockView>>;
   units: readonly UnitOption[];
@@ -474,7 +477,9 @@ export function ItemsView({
   const sutunSecim = useKalipSutunlar<ItemsSatir>("items", sutunlar);
 
   // T-990: ekleme tam ekran formdur; adres `?new=1` (rehberin büyük düğmesi de buraya gelir). Geri listeye döner.
-  const creating = params.get("new") === "1" && canManage;
+  const canCreate = rights.create;
+  const kilitGerekce = useKartKilitGerekce("items");
+  const creating = params.get("new") === "1" && canCreate;
   const openCreate = (): void => {
     feedback.minor();
     router.push(`${base}?new=1`);
@@ -619,8 +624,8 @@ export function ItemsView({
             label: tk("add"),
             aria: tk("addAria"),
             d: LICON.plus,
-            disabled: !canManage,
-            disabledReason: t("lockedReason"),
+            locked: !canCreate,
+            disabledReason: kilitGerekce("create"),
             onClick: openCreate,
             testId: "items-add",
           },
@@ -656,7 +661,7 @@ export function ItemsView({
             <KalipGorunumSec value={gorunum} onChange={setGorunum} />
           </span>
         </div>
-        {!canManage ? <p className="sr">{t("lockedReason")}</p> : null}
+        {!canCreate ? <p className="sr">{kilitGerekce("create")}</p> : null}
         {/* T-1054: eski "depo → raf → ürün" kutusu yerine asıl kurulum yolculuğu (entegrasyon → ürün → depo/raf → cari …); bitince çıkmaz. */}
         <YolculukGiris dark={dark} />
 
@@ -706,10 +711,10 @@ export function ItemsView({
             <>
               <KalipBos
                 title={t("empty")}
-                hint={canManage ? t("emptyAction") : t("emptyReadOnly")}
+                hint={canCreate ? t("emptyAction") : t("emptyReadOnly")}
                 iconD={LICON.box}
                 action={
-                  canManage
+                  canCreate
                     ? {
                         label: tk("stepItemsCta"),
                         kind: "add",
