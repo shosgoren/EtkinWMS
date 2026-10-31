@@ -86,7 +86,7 @@ describe("kaynaklar", () => {
   it("irsaliye: inflow false, cari + stok hareketleri (ürün + miktar)", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
     const { accessToken: tok } = await c.passwordGrant(creds());
-    await c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "2026-10-21T09:00:00.000Z", description: "Etkin WMS · SVK-1", procurementNumber: "SVK-1", contactId: "77", lines: [{ productId: "5", quantity: 3 }] });
+    await c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "2026-10-21T09:00:00.000Z", description: "Etkin WMS · SVK-1", procurementNumber: "SVK-1", contactId: "77", lines: [{ productId: "5", quantity: "3.000000" }] });
     expect(fake.shipments[0]?.body).toEqual({
       data: {
         type: "shipment_documents",
@@ -97,15 +97,30 @@ describe("kaynaklar", () => {
     await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "../1", lines: [] })).rejects.toMatchObject({ code: "BAD_RESPONSE" });
   });
 
+  it("T-1135 (I-09): 6 ondalıklı miktar ve toplam JSON gövdesine float aritmetiği olmadan birebir sayı olarak gider", async () => {
+    const c = new ParasutClient({ baseUrl: fake.url });
+    const { accessToken: tok } = await c.passwordGrant(creds());
+    await c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "7", lines: [{ productId: "5", quantity: "0.000123" }, { productId: "6", quantity: "12.340000" }] });
+    await c.createStockUpdate(tok, "115", [{ productId: "5", warehouseId: "9", total: "12345678901234.123456" }, { productId: "6", warehouseId: "9", total: "0.100000" }]);
+    const ship = fake.requests.find((r) => r.path === "/v4/115/shipment_documents")?.body ?? "";
+    const stock = fake.requests.find((r) => r.path === "/v4/115/stock_updates")?.body ?? "";
+    expect(ship).toContain('"quantity":0.000123');
+    expect(ship).toContain('"quantity":12.34');
+    expect(stock).toContain('"new_total_inventory":12345678901234.123456');
+    expect(stock).toContain('"new_total_inventory":0.1');
+    expect(`${ship}${stock}`).not.toMatch(/"(quantity|new_total_inventory)":"/);
+    await expect(c.createStockUpdate(tok, "115", [{ productId: "5", warehouseId: "9", total: "1e3" }])).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
+
   it("4xx/5xx sabit kodlara iner", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
     const { accessToken: tok } = await c.passwordGrant(creds());
     fake.shipmentFailure = 422;
-    await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "1", lines: [{ productId: "1", quantity: 1 }] })).rejects.toMatchObject({ code: "INVALID", status: 422, retryable: false });
+    await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "1", lines: [{ productId: "1", quantity: "1" }] })).rejects.toMatchObject({ code: "INVALID", status: 422, retryable: false });
     fake.shipmentFailure = 503;
-    await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "1", lines: [{ productId: "1", quantity: 1 }] })).rejects.toMatchObject({ code: "UNAVAILABLE", retryable: true });
+    await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "1", lines: [{ productId: "1", quantity: "1" }] })).rejects.toMatchObject({ code: "UNAVAILABLE", retryable: true });
     fake.shipmentFailure = "drop";
-    await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "1", lines: [{ productId: "1", quantity: 1 }] })).rejects.toMatchObject({ code: "NETWORK", status: null });
+    await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "1", lines: [{ productId: "1", quantity: "1" }] })).rejects.toMatchObject({ code: "NETWORK", status: null });
     fake.expireAccess();
     await expect(c.list(tok, "115", "products", 1)).rejects.toMatchObject({ code: "AUTH_FAILED", status: 401 });
   });

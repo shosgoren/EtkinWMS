@@ -450,7 +450,7 @@ stateDiagram-v2
 | "Yeniden bağlan" | Buton | Tıklar | OAuth akışını yeniden başlatır | — | Belirteç kaybında (`REAUTH_REQUIRED`) | [TAMAMLANDI] |
 | "Bağlantıyı kes" | Buton + onay | Tıklar | `disconnectIntegrationAction` → `disconnectIntegration` | `integrations.status=DISCONNECTED`, `credentials=NULL` | Yakın zamanda doğrulama; eşlemeler (`external_refs`) korunur | [TAMAMLANDI] |
 | Ürün barkodları: "Paraşüt barkodlarını al" | Anahtar | Açar/kapar | `setProductBarcodeAction` → `setProductBarcodeSetting` | `integrations.pull_product_barcodes` (0059, varsayılan KAPALI); audit | Mevcut etiketler korunur; barkodu olmayan ürüne kalıcı dahili barkod, dış barkod alternatif olarak eklenir; ayrılmış QR biçimi ve eşdeğer GTIN çakışması reddedilir | [TAMAMLANDI] (T-1061) |
-| Akış satırları + **yön seçimi** (Ürün kartları, Cari kartlar, Depolar, Siparişler, İrsaliye, Stok miktarı) | Tek seçici (`KalipYonSecimi`), her zaman görünür | Yön seçer ya da "Yalnız Etkin WMS" | `setIntegrationFlowAction` → `setIntegrationFlow` (açılınca hemen bir `integration.sync` işi kuyruğa) | `integration_flows.enabled`, `direction` (PULL/PUSH/BOTH), `enabled_at` | Yalnız katalogun desteklediği yönler: kartlarda "Paraşüt → Etkin / Etkin → Paraşüt / İki yönlü" (Depolar dahil, kullanıcı kararı 28 Ekim), Stok ve İrsaliye yalnız "Etkin → Paraşüt" (DB kuralı); "Yalnız Etkin WMS" = `enabled=false` (veri değişmez); Siparişler Paraşüt'te karşılığı olmadığı için yalnız "Yalnız Etkin WMS" | [TAMAMLANDI] (T-1112) |
+| Akış satırları + **yön seçimi** (Ürün kartları, Cari kartlar, Depolar, Siparişler, İrsaliye, Stok miktarı) | Tek seçici (`KalipYonSecimi`), her zaman görünür | Yön seçer ya da "Yalnız Etkin WMS" | `setIntegrationFlowAction` → `setIntegrationFlow` (açılınca hemen bir `integration.sync` işi kuyruğa) | `integration_flows.enabled`, `direction` (PULL/PUSH/BOTH), `enabled_at`, `first_enabled_at` (0066) | T-1135: İrsaliye ile Stok miktarı birlikte açılamaz; Stok miktarı Devir tamamlanmadan açılamaz (sade neden balonda). Yalnız katalogun desteklediği yönler: kartlarda "Paraşüt → Etkin / Etkin → Paraşüt / İki yönlü" (Depolar dahil, kullanıcı kararı 28 Ekim), Stok ve İrsaliye yalnız "Etkin → Paraşüt" (DB kuralı); "Yalnız Etkin WMS" = `enabled=false` (veri değişmez); Siparişler Paraşüt'te karşılığı olmadığı için yalnız "Yalnız Etkin WMS" | [TAMAMLANDI] (T-1112) |
 | Akış altı bilgi: son koşu zamanı / son hata, hata rozeti, "Şimdi çalıştır" | Metin + Buton | Tıklar | `runIntegrationAction` → `requestIntegrationRun` → kuyruk `integration.sync` (`trigger=MANUAL`) | `integration_runs` (yeni koşu) | Aynı bağlantı için kuyrukta/çalışan ikinci iş açılmaz | [TAMAMLANDI] |
 | Ürün kaynak bilgisi (kategori, GTİP, birim, kaynakta arşivli mi) | Arka plan | Ürün alma koşusunda | `productSourceInfo` (`product-info.ts`) | `items.source_product_info` (0060, jsonb; fiyat/stok alanı kabul edilmez) | Bilinmeyen/uyuşmayan birim reddedilir, yeni kart 6 ondalıkla açılır; mevcut kartın birimi değişmez (T-1060) | [TAMAMLANDI] (T-1062) |
 | Ürün yaşam döngüsü (kaynakta arşiv / silinme) | Arka plan + ürün listesi süzgeci | Ürün alma koşusunda | `observeProduct` (`product-lifecycle.ts`) | `items.source_state` (ACTIVE/ARCHIVED/DELETED), `source_disposition` (NONE/PENDING/ARCHIVED/REMOVED), `source_managed_archive`, `source_missing_since`, `source_checked_at` (0062); audit | Yalnız firma başına OAuth uygulaması + açık `PRODUCTS` PULL/BOTH akışı + bağlayan kişi o alanda hâlâ etkin üye ve **Yönetici** (TENANT_ADMIN) iken çalışır (hesap sahipliğini devretmek tek başına durdurmaz; yönetici rolü kalkarsa ya da üyelik biterse bağlantı `CONNECTOR_REVOKED` ile durur — `connectorAllowed`, `lifecycleBinding`). Bir kez görünmemek silme sayılmaz: aynı bağlamda ≥ 30 sn arayla ikinci yokluk gerekir; ağ hatası/eksik tarama silme sayılmaz. Stoğu ya da açık işi olan kart `PENDING` (yeni kullanım kapanır, iş bitince arşiv); kullanılmış kart `ARCHIVED`; hiç kullanılmamış silinen kart `REMOVED` ("Kaldırıldı" süzgeci). Kaynakta yeniden etkinleşince yalnız sistemin arşivlediği kart açılır. Geçmiş, QR, eşleme ve miktar korunur | [TAMAMLANDI] (T-1067/T-1068, B-183) |
@@ -508,15 +508,18 @@ sequenceDiagram
     participant K as Worker (integration.sync, 30 sn)
     participant P as Paraşüt API
     U->>WMS: Sevk belgesini kesinleştirir (POSTED)
-    WMS->>DB: stock_documents POSTED + stok defteri
-    K->>DB: Akış açıldıktan sonraki, kuyrukta olmayan POSTED sevk belgelerini bul
+    WMS->>DB: documents POSTED (durum geçmişi: işlenme anı) + stok defteri
+    K->>DB: Akışın İLK açılışından (kapat/aç sıfırlamaz) sonra İŞLENMİŞ, stok toplamına girmemiş (çift başına işaret görüntüsü), kuyrukta olmayan sevk belgelerini bul
     K->>DB: integration_outbox satırı PENDING (belge başına tek)
     K->>DB: Satırı SENDING yap (dış çağrıdan önce kalıcı iz)
     K->>P: İrsaliye oluştur
     alt Kesin başarı
         P-->>K: 2xx + irsaliye kimliği
         K->>DB: SENT + external_id + sent_at (artık değişmez)
-    else Kesin red (4xx)
+    else 401 / 429
+        P-->>K: Oturum ya da hız sınırı
+        K->>DB: PENDING (geri çekilmeli yeniden deneme; 10 denemede FAILED)
+    else Kesin red (diğer 4xx)
         P-->>K: Hata
         K->>DB: FAILED + last_error_code
     else Belirsiz (ağ koptu, 5xx)
@@ -532,7 +535,8 @@ stateDiagram-v2
     PENDING --> PENDING: Eşleme eksik, geri çekilmeli tekrar
     PENDING --> FAILED: 10 denemede eşleme hâlâ eksik
     SENDING --> SENT: Paraşüt kabul etti
-    SENDING --> FAILED: Kesin red
+    SENDING --> PENDING: 401 / 429 (oturum, hız sınırı)
+    SENDING --> FAILED: Kesin red (diğer 4xx)
     SENDING --> CHECK: Sonuç belirsiz, elle kontrol
     SENT --> [*]
 ```
@@ -554,7 +558,15 @@ stateDiagram-v2
 
 *Bağlantı durumu (`integrations.status`):* CONNECTED → ERROR (sınama/senkron hatası; bağlayan kişi hesap sahibi değilse `CONNECTOR_REVOKED`)
 → CONNECTED (başarılı sınama) ; her durumdan DISCONNECTED (bağlantıyı kes; şifreli bilgiler silinir). Koşu durumu
-(`integration_runs.status`): RUNNING → SUCCESS / PARTIAL / FAILED.
+(`integration_runs.status`): RUNNING → SUCCESS / PARTIAL / FAILED; 40 dk'yı aşan RUNNING → FAILED `TIMEOUT` (T-1135). Değişiklik getirmeyen
+başarılı zamanlı koşu satır bırakmaz (son kontrol anı `integration_flows.last_run_at`); 7 günden eski biten satırlar koşu başında budanır.
+
+*Stok toplamı ⟂ irsaliye (T-1135, kullanıcı kararı 30 Ekim — stok sahibi Etkin):* aynı bağlantıda STOCK ve SHIPMENTS birlikte açılamaz
+(domain + 0066 tetikleyicisi; neden `INTEGRATION_FLOW_EXCLUSIVE`); tercih irsaliyedir. STOCK yalnız Devir tamamlanınca açılır
+(`OPENING_STOCK_INCOMPLETE`). Gönderilen toplam yalnız `AVAILABLE` stok, `RECEIVING`/`STORAGE` raflar (karantina/hasarlı/bloke ve
+TRANSIT/STAGING hariç). Kesin 4xx reddi stok işaretine yazılır, aynı toplam yeniden denenmez; 401/429 koşuyu durdurur, sonra yeniden denenir.
+Miktarlar JSON'a ondalık metinden float aritmetiği olmadan sayı olarak yazılır (I-09). Gerçek Paraşüt'ün `new_total_inventory`/`quantity`
+için kesirli sayı kabulü UNKNOWN (B-110).
 
 ---
 
