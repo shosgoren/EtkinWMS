@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getIntegrationOverview, getOpeningStockState, getProductBarcodeSetting, type IntegrationOverview, getParasutOAuthSettings, getParasutOAuthSelection, oauthApplicationOrigin, oauthCookieName, parseOAuthBinding } from "@wms/domain/integrations";
+import { getWebhookStatus, getIntegrationOverview, getOpeningStockState, getProductBarcodeSetting, type IntegrationOverview, getParasutOAuthSettings, getParasutOAuthSelection, oauthApplicationOrigin, oauthCookieName, parseOAuthBinding } from "@wms/domain/integrations";
 import { getSetupJourney } from "@wms/domain/onboarding/journey";
 import { AppError } from "@wms/shared/errors";
 import { THEME_COOKIE } from "../../../design/theme.ts";
@@ -75,6 +75,9 @@ export default async function IntegrationsPage({ params, searchParams }: { param
     journeyWish = null; // yolculuğu göremeyen rol: bilgi yok
   }
   const pullBarcodes = await getProductBarcodeSetting(call);
+  // T-1138: anlık bildirim satırı (okunamazsa satır çizilmez).
+  const hook = await getWebhookStatus(call).catch(() => null);
+  const webhook = hook === null ? null : { status: hook.status, lastEventAt: iso(hook.lastEventAt) };
   const oauth=await getParasutOAuthSettings(call);
   const query=await searchParams;
   const origin=oauthApplicationOrigin();
@@ -84,5 +87,5 @@ export default async function IntegrationsPage({ params, searchParams }: { param
   // T-1112: seçili alt bölüm adreste (`?bolum=`); yoksa bağlıyken "Ne çekilsin, gönderilsin", değilse "Bağlantı ve veri kaynağı".
   const connected = overview.providers.some((p) => p.provider === "PARASUT" && p.connection !== null);
   const bolum = entegrasyonBolumu(query.bolum, connected);
-  return <IntegrationsView bolum={bolum} oauth={oauth} oauthSelection={selection} oauthResult={result} pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} />;
+  return <IntegrationsView bolum={bolum} oauth={oauth} oauthSelection={selection} oauthResult={result} pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} webhook={webhook} />;
 }

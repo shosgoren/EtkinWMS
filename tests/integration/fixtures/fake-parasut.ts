@@ -1,7 +1,8 @@
 // T-991: sahte Paraşüt API v4 sunucusu (gerçek ağ yok). Birim, entegrasyon ve e2e testleri aynı sahteyi kullanır. Yalnız 127.0.0.1'e bağlanır.
 // Belgedeki şekiller (https://apidocs.parasut.com/swagger.json): OAuth `POST /oauth/token` (password / refresh_token; yenilemede YENİ yenileme
 // belirteci), `GET /v4/me?include=companies`, şirket kapsamında products / contacts / warehouses (GET sayfalı, `filter[...]`, POST),
-// shipment_documents POST, stock_updates POST. Her istek `requests`e yazılır (gövde dahil) — testler sırrın yalnız token ucuna gittiğini denetler.
+// shipment_documents POST, stock_updates POST; T-1138: webhooks GET/POST/DELETE + contacts/:id GET + imzalı teslim üretici (`emitWebhook`). Her istek `requests`e yazılır (gövde dahil) — testler sırrın yalnız token ucuna gittiğini denetler.
+import { createHmac } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -44,6 +45,14 @@ export interface FakeParasut {
   readonly shipments: { body: unknown }[];
   readonly stockUpdates: { body: unknown }[];
   readonly requests: FakeRequest[];
+  /** T-1138: webhook kayıtları (`encryption_key` sahte sunucuda tutulur; gerçek Paraşüt davranışı UNKNOWN). */
+  readonly webhooks: FakeRecord[];
+  /** Anahtar kipi: "ours" = istekteki anahtarı saklar ve yanıtta döndürmez; "assign" = alanı reddeder (422), kendi anahtarını atar ve döndürür. */
+  webhookKeyMode: "ours" | "assign";
+  /** Webhook POST'una hata (ör. 500) — kayıt kurulamazsa 30 sn tarama sürer. */
+  webhookFailure: number | null;
+  /** İmzalı teslim üretir (kayıtlı anahtarla; HMAC-SHA256(anahtar, data) onaltılık — VARSAYIM) ve hedef adrese POST eder. */
+  emitWebhook(target: string, ev: { readonly model: "product" | "contact"; readonly action: "create" | "update" | "delete"; readonly id: string; readonly eventDate?: string; readonly key?: string; readonly companyId?: string; readonly signature?: string; readonly fetchInit?: Record<string, unknown> }): Promise<{ status: number; body: string }>;
   /** Sonraki N isteğe 429 döner (ilk istekte `Retry-After: 1`). */
   rateLimitNext: number;
   /** İrsaliye POST yanıt durumu (ör. 500, 422) ya da "drop" (bağlantıyı yanıtsız kapatır). */
@@ -98,7 +107,18 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     url: "",
     opts,
     companies:[{id:opts.companyId,name:opts.companyName}],
-    products: [], categories: [],
+    products: [], categories: [], webhooks: [], webhookKeyMode: "ours", webhookFailure: null,
+    async emitWebhook(target, ev) {
+      const hook = state.webhooks.find((w) => w.attributes.model === ev.model && w.attributes.action === ev.action);
+      const key = ev.key ?? (hook?.attributes.encryption_key as string | undefined) ?? "";
+      const col = ev.model === "product" ? state.products : state.contacts;
+      const rec = col.find((r) => r.id === ev.id);
+      const data = JSON.stringify({ id: ev.id, data: { id: ev.id, type: `${ev.model}s`, attributes: rec?.attributes ?? {} }, included: [] });
+      const body = new URLSearchParams({ company_id: ev.companyId ?? opts.companyId, resource: ev.model, action: ev.action, event_date: ev.eventDate ?? new Date().toISOString(), data }).toString();
+      const signature = ev.signature ?? createHmac("sha256", key).update(data).digest("hex");
+      const res = await fetch(target, { method: "POST", headers: { "content-type": "www-url-encoded", signature }, body, ...(ev.fetchInit ?? {}) });
+      return { status: res.status, body: await res.text() };
+    },
     contacts: [],
     warehouses: [],
     shipments: [],
@@ -148,6 +168,15 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       }
       return send(400, { error: "unsupported_grant_type" });
     }
+    // T-1138: yalnız sahte sunucuda test denetimi (e2e spec'i global-setup sürecindeki sahteye buradan erişir; gerçek Paraşüt'te yok).
+    if (url.pathname === "/__fake/webhooks" && req.method === "GET") return send(200, { data: state.webhooks });
+    if (url.pathname === "/__fake/products" && req.method === "POST") {
+      const rec = JSON.parse(body) as FakeRecord;
+      const i = state.products.findIndex((r) => r.id === rec.id);
+      if (i < 0) state.products.push(rec);
+      else state.products[i] = rec;
+      return send(200, { data: rec });
+    }
     if (req.headers.authorization !== `Bearer ${state.accessToken}` || state.accessToken === "") return send(401, { errors: [{ title: "Unauthorized" }] });
     if (req.method === "GET" && url.pathname === "/v4/me") {
       return send(200, { data: { id: "9", type: "users", attributes: { name: "Muhasebe", email: opts.username } }, included: state.companies.map(c=>({id:c.id,type:"companies",attributes:{name:c.name}})) });
@@ -156,7 +185,39 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     if (req.method === "GET" && product !== null) {
       if (product[1] !== opts.companyId) return send(404, {errors:[{title:"Not found"}]});
       const row = state.products.find(r => r.id === product[2]);
-      return row === undefined ? send(404,{errors:[{title:"Not found"}]}) : send(200,{data:{...row,type:"products",relationships:row.relationships??{}}});
+      return row === undefined ? send(404,{errors:[{title:"Not found"}]}) : send(200,{data:{...row,type:"products",relationships:row.relationships??{}},included:url.searchParams.get("include")==="category"?state.categories.map((r)=>({id:r.id,type:"item_categories",attributes:r.attributes})):[]});
+    }
+    const contact = /^\/v4\/([0-9]+)\/contacts\/([0-9]+)$/.exec(url.pathname);
+    if (req.method === "GET" && contact !== null) {
+      if (contact[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });
+      const row = state.contacts.find((r) => r.id === contact[2]);
+      return row === undefined ? send(404, { errors: [{ title: "Not found" }] }) : send(200, { data: { ...row, type: "contacts", relationships: row.relationships ?? {} } });
+    }
+    const hookOne = /^\/v4\/([0-9]+)\/webhooks\/([0-9]+)$/.exec(url.pathname);
+    if (req.method === "DELETE" && hookOne !== null) {
+      if (hookOne[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });
+      const i = state.webhooks.findIndex((w) => w.id === hookOne[2]);
+      if (i < 0) return send(404, { errors: [{ title: "Not found" }] });
+      state.webhooks.splice(i, 1);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    if (url.pathname === `/v4/${opts.companyId}/webhooks`) {
+      const view = (w: FakeRecord) => ({ id: w.id, type: "webhooks", attributes: { model: w.attributes.model, action: w.attributes.action, uri: w.attributes.uri, ...(state.webhookKeyMode === "assign" ? { encryption_key: w.attributes.encryption_key } : {}) } });
+      if (req.method === "GET") return send(200, { data: state.webhooks.map(view), meta: { current_page: 1, total_pages: 1, total_count: state.webhooks.length } });
+      if (req.method === "POST") {
+        if (state.webhookFailure !== null) return send(state.webhookFailure, { errors: [{ title: "Rejected" }] });
+        let b: { data?: { attributes?: Record<string, unknown> } } = {};
+        try { b = JSON.parse(body) as typeof b; } catch { return send(400, { errors: [{ title: "Bad JSON" }] }); }
+        const a = b.data?.attributes ?? {};
+        if (!["product", "contact", "sales_invoice", "shipment_document", "employee", "stock_movement"].includes(String(a.model)) || !["create", "update", "delete"].includes(String(a.action)) || typeof a.uri !== "string") return send(422, { errors: [{ title: "invalid" }] });
+        if (state.webhookKeyMode === "assign" && "encryption_key" in a) return send(422, { errors: [{ title: "encryption_key is not permitted" }] });
+        const key = state.webhookKeyMode === "assign" ? `assigned-${nextId()}-${Math.random().toString(36).slice(2)}` : String(a.encryption_key ?? "");
+        const rec = { id: nextId(), attributes: { model: a.model, action: a.action, uri: a.uri, encryption_key: key } };
+        state.webhooks.push(rec);
+        return send(201, { data: view(rec) });
+      }
     }
     const m = /^\/v4\/([0-9]+)\/([a-z_]+)$/.exec(url.pathname);
     if (m === null || m[1] !== opts.companyId) return send(404, { errors: [{ title: "Not found" }] });

@@ -61,6 +61,8 @@ export const QUEUE_EXPIRE_SECONDS: { readonly [T in JobType]: number } = {
   "support.notify": 300,
   // T-991: ERP senkronu; sayfa başına HTTP (10 istek / 10 sn sınırı) + kısa transaction'lar; koşu başına sayfa üst sınırı var → 1800 sn.
   "integration.sync": 1800,
+  // T-1138: tek kart okuması + yazımı ya da en çok 12 webhook API çağrısı (15 sn zaman aşımı, 10 istek/10 sn) → 300 sn.
+  "integration.webhook": 300,
 };
 
 /** İş zarfı: tenant kimliği yükten AYRI saklanır; yalnızca `enqueue` yazar. */

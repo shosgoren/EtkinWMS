@@ -140,6 +140,10 @@ export const AUDIT_ACTIONS = [
   "setup_journey.labels_printed",
   "integration.opening_stock_setting",
   "integration.opening_stock_taken",
+  // T-1138 (0067): Paraşüt anlık bildirim — webhook kaydı kuruldu/kurulamadı (sayı + sabit kod) ve işlenen tek kart olayı (kaynak, eylem,
+  // sonuç). Anahtar/imza/yük yazılmaz.
+  "integration.webhook_registered",
+  "integration.webhook_received",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -8,7 +8,7 @@ import { z } from "zod";
 
 /** Kayıtlı iş türleri. `email.send` T-116, `invitation.deliver` T-117, `demo.reseed` T-123 tarafından doldurulur;
  * `stock.document.post` T-222, `stock.consistency.check` T-225 (handler'lar o kartlarda; ADR-019 §5);
- * `platform.activation.deliver` ve `trial.welcome` T-995 (ADR-026 §3); `support.notify` T-967 (B-84, operatöre WhatsApp kısa bildirimi); `integration.sync` T-991 (ERP senkronu). */
+ * `platform.activation.deliver` ve `trial.welcome` T-995 (ADR-026 §3); `support.notify` T-967 (B-84, operatöre WhatsApp kısa bildirimi); `integration.sync` T-991 (ERP senkronu); `integration.webhook` T-1138 (Paraşüt anlık bildirim). */
 export const JOB_TYPES = [
   "email.send",
   "invitation.deliver",
@@ -19,6 +19,7 @@ export const JOB_TYPES = [
   "trial.welcome",
   "support.notify",
   "integration.sync",
+  "integration.webhook",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
@@ -57,6 +58,21 @@ export const JOB_PAYLOAD_SCHEMAS = {
       integrationId: z.string().uuid(),
       flow: z.enum(["PRODUCTS", "CONTACTS", "WAREHOUSES", "SALES_ORDERS", "SHIPMENTS", "STOCK"]).optional(),
       trigger: z.enum(["SCHEDULE", "MANUAL"]),
+      /** T-1138: zamanlayıcının bu koşuda çalıştırmak istediği akışlar (kademe); yoksa bütün açık akışlar. */
+      flows: z.array(z.enum(["PRODUCTS", "CONTACTS", "WAREHOUSES", "SALES_ORDERS", "SHIPMENTS", "STOCK"])).max(6).optional(),
+    })
+    .strict(),
+  /** Paraşüt anlık bildirim (T-1138): tenant işi. REGISTER = webhook kaydını kur/uzlaştır; EVENT = tek kart olayı (kayıt Paraşüt'ten
+   * kimliğiyle yeniden okunur; teslim yükü taşınmaz). `eventKey` (tenant, kaynak, kimlik, olay zamanı) özetinden UUID: processed_events anahtarı. */
+  "integration.webhook": z
+    .object({
+      integrationId: z.string().uuid(),
+      kind: z.enum(["REGISTER", "EVENT"]),
+      resource: z.enum(["product", "contact"]).optional(),
+      action: z.enum(["create", "update", "delete"]).optional(),
+      externalId: z.string().regex(/^[0-9]{1,18}$/).optional(),
+      eventDate: z.string().min(1).max(64).optional(),
+      eventKey: z.string().uuid().optional(),
     })
     .strict(),
 } as const satisfies Record<JobType, z.ZodType>;

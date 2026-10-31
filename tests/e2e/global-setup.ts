@@ -159,6 +159,8 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   // T-991: sahte Paraşüt (yalnız 127.0.0.1; gerçek ağ yok). Web ve worker sağlayıcı adresini buradan alır (geri döngü dışı adres reddedilir).
   const fakeParasut: FakeParasut = await startFakeParasut();
   env.PARASUT_BASE_URL = fakeParasut.url;
+  // T-1138: e2e spec'i sahte Paraşüt'ün test denetim uçlarına (webhook anahtarı, ürün) buradan ulaşır.
+  process.env.E2E_FAKE_PARASUT_URL = fakeParasut.url;
   // T-1002: sahte iç ses servisi (yalnız 127.0.0.1; model yok). Web Etkin isteğini buraya iletir.
   const fakeVoice: FakeVoice = await startFakeVoice();
   env.VOICE_URL = fakeVoice.url;
@@ -175,6 +177,7 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   const teardown = async (): Promise<void> => {
     clearSharedSession();
     await fakeParasut.close().catch(() => undefined);
+    delete process.env.E2E_FAKE_PARASUT_URL;
     await fakeVoice.close().catch(() => undefined);
     for (const prefix of ["E2E_EMPTY", "E2E_PILOT", "E2E_STOCK_DESKTOP", "E2E_STOCK_MOBILE", "E2E_OPERATOR", "E2E_MULTI", "E2E_ERP", "E2E_TOUR", "E2E_TOUR_SETUP_DESKTOP", "E2E_TOUR_SETUP_MOBILE", "E2E_TOUR_OP_DESKTOP", "E2E_TOUR_OP_MOBILE", "E2E_TOUR_RACE_DESKTOP", "E2E_TOUR_RACE_MOBILE", "E2E_TOUR_YER_DESKTOP", "E2E_TOUR_YER_MOBILE", ...PACKAGE_ACTORS.map(actor => actor.prefix)]) {
       for (const key of ["SLUG", "EMAIL", "PASSWORD", "TOTP_SECRET"]) delete process.env[`${prefix}_${key}`];

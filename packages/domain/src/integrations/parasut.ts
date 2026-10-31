@@ -121,6 +121,20 @@ export interface Company {
   readonly name: string;
 }
 
+/** Paraşüt webhook kaydı (T-1138). `encryptionKey` yanıtta varsa; sır olarak işlenir (loga/audit'e girmez). */
+export interface WebhookRecord {
+  readonly id: string;
+  readonly model: string | null;
+  readonly action: string | null;
+  readonly uri: string | null;
+  readonly encryptionKey: string | null;
+}
+
+function webhookRecord(r: JsonApiResource): WebhookRecord {
+  const a = r.attributes;
+  return { id: r.id, model: str(a.model, 40), action: str(a.action, 40), uri: str(a.uri, 2048), encryptionKey: str(a.encryption_key, 512) };
+}
+
 const str = (v: unknown, max: number): string | null => (typeof v === "string" && v.trim() !== "" ? v.trim().slice(0, max) : null);
 
 function resource(raw: unknown): JsonApiResource {
@@ -294,13 +308,65 @@ export class ParasutClient {
 
   /** 404 means absent only; the caller must separately prove company/catalog access before reconciling deletion. */
   async product(token: string, companyId: string, productId: string): Promise<JsonApiResource | null> {
+    return (await this.productDetail(token, companyId, productId))?.item ?? null;
+  }
+
+  /** T-1138: ürün + `included` (kategori adı için; webhook yeniden okuması kaynak bilgisini eksik yazmasın). */
+  async productDetail(token: string, companyId: string, productId: string): Promise<{ readonly item: JsonApiResource; readonly included: readonly JsonApiResource[] } | null> {
     const cid = parseCompanyId(companyId), pid = id(productId);
     const r = await this.request("GET", `/v4/${cid}/products/${pid}?include=category`, { token });
     if (r.status === 404) return null;
     if (r.status !== 200) throw ParasutClient.fail(r.status);
-    const item = resource((r.body as { data?: unknown } | null)?.data);
+    const b = (r.body ?? {}) as { data?: unknown; included?: unknown };
+    const item = resource(b.data);
     if (item.id !== pid || item.type !== "products") throw new ProviderError("BAD_RESPONSE", r.status);
+    return { item, included: Array.isArray(b.included) ? b.included.map(resource) : [] };
+  }
+
+  /** Cari kartı kimliğiyle (T-1138 webhook yeniden okuması). 404 yalnız "yok" demektir. */
+  async contact(token: string, companyId: string, contactId: string): Promise<JsonApiResource | null> {
+    const cid = parseCompanyId(companyId), xid = id(contactId);
+    const r = await this.request("GET", `/v4/${cid}/contacts/${xid}`, { token });
+    if (r.status === 404) return null;
+    if (r.status !== 200) throw ParasutClient.fail(r.status);
+    const item = resource((r.body as { data?: unknown } | null)?.data);
+    if (item.id !== xid || item.type !== "contacts") throw new ProviderError("BAD_RESPONSE", r.status);
     return item;
+  }
+
+  // --- webhook (T-1138) ---------------------------------------------------------------------------------------------------------------
+  // Paraşüt belgesi: webhook kaynağı `model` (product, contact, …), `action` (create, update, delete), `uri`; teslimde `Signature` başlığı.
+  // Anahtar atama biçimi belgede kesin değil: istek `encryption_key` taşır, yanıtta varsa yanıttaki kullanılır (ikisi de desteklenir).
+  /** Şirketin webhook kayıtları (en çok 4 sayfa). Anahtar yanıtta yoksa `encryptionKey` null. */
+  async listWebhooks(token: string, companyId: string): Promise<readonly WebhookRecord[]> {
+    const cid = parseCompanyId(companyId);
+    const out: WebhookRecord[] = [];
+    for (let page = 1; page <= 4; page++) {
+      const r = await this.request("GET", `/v4/${cid}/webhooks?page%5Bnumber%5D=${page}&page%5Bsize%5D=${PARASUT_PAGE_SIZE}`, { token });
+      if (r.status !== 200) throw ParasutClient.fail(r.status);
+      const b = (r.body ?? {}) as { data?: unknown; meta?: { total_pages?: unknown } };
+      if (!Array.isArray(b.data)) throw new ProviderError("BAD_RESPONSE", r.status);
+      for (const raw of b.data) out.push(webhookRecord(resource(raw)));
+      const total = typeof b.meta?.total_pages === "number" ? b.meta.total_pages : page;
+      if (b.data.length === 0 || page >= total) break;
+    }
+    return out;
+  }
+
+  /** Webhook kaydı aç; yanıtta anahtar varsa döner (Paraşüt atadıysa bizimkini değil onu kullanırız). Boş anahtar: alan gönderilmez. */
+  async createWebhook(token: string, companyId: string, w: { readonly model: string; readonly action: string; readonly uri: string; readonly encryptionKey: string }): Promise<WebhookRecord> {
+    const cid = parseCompanyId(companyId);
+    const r = await this.request("POST", `/v4/${cid}/webhooks`, { token, json: { data: { type: "webhooks", attributes: { model: w.model, action: w.action, uri: w.uri, ...(w.encryptionKey === "" ? {} : { encryption_key: w.encryptionKey }) } } } });
+    if (r.status !== 201 && r.status !== 200) throw ParasutClient.fail(r.status);
+    return webhookRecord(resource((r.body as { data?: unknown } | null)?.data));
+  }
+
+  /** Webhook kaydını sil; 404 (zaten yok) başarı sayılır. */
+  async deleteWebhook(token: string, companyId: string, webhookId: string): Promise<void> {
+    const cid = parseCompanyId(companyId), wid = id(webhookId);
+    const r = await this.request("DELETE", `/v4/${cid}/webhooks/${wid}`, { token });
+    if (r.status === 404 || r.status === 204 || r.status === 200) return;
+    throw ParasutClient.fail(r.status);
   }
 
   /** Ürün koduna göre ara (`filter[code]`): Etkin -> Paraşüt gönderiminde çift kayıt açmamak için. */

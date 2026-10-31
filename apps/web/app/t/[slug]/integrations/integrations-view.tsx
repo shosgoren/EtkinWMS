@@ -80,7 +80,7 @@ const c = (hex: string): string => kdz("dzf", hex);
 
 const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: "", password: "" };
 
-export function IntegrationsView({ slug, dark, data, bolum, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult }: { oauth:{configured:boolean;callbackUrl:string|null}; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; slug: string; dark: boolean; data: OverviewData; bolum: EntegrasyonBolumu; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean }) {
+export function IntegrationsView({ slug, dark, data, bolum, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult, webhook = null }: { oauth:{configured:boolean;callbackUrl:string|null}; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; slug: string; dark: boolean; data: OverviewData; bolum: EntegrasyonBolumu; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean; webhook?: { readonly status: "OFF" | "ACTIVE" | "FAILED"; readonly lastEventAt: string | null } | null }) {
   const t = useTranslations("integrations");
   const tb = useTranslations("baglantilar"); // T-1112: ortak ayar sekmelerinin adları
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
@@ -529,6 +529,17 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                       </button>
                     </span>
                   </div>
+                  {/* T-1138: anlık bildirim (Paraşüt webhook) durumu — tek satır. */}
+                  {webhook !== null && !err ? (
+                    <div className="fmeta" role="status" data-testid="integrations-webhook" data-status={webhook.status}>
+                      <span className={webhook.status === "ACTIVE" ? "ok" : "ebad"}>
+                        <Ico d={webhook.status === "ACTIVE" ? LICON.check : LICON.warn} size={14} />
+                        {webhook.status === "ACTIVE"
+                          ? webhook.lastEventAt === null ? t("webhook.onNever") : t("webhook.on", { at: when(webhook.lastEventAt) })
+                          : webhook.status === "FAILED" ? t("webhook.failed") : t("webhook.pending")}
+                      </span>
+                    </div>
+                  ) : null}
                   <KalipAnahtar title={t("barcode.pull")} sub={t("barcode.keep")} d={NICON.pull} color="2F5DA8"
                     on={barcodeOn} aria={t("barcode.pull")} onToggle={() => void toggleBarcodes()} testId="product-barcode-toggle" />
                   {opening !== null ? (
