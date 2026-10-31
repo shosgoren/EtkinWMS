@@ -113,6 +113,11 @@ Kabul matrisi: telefon Android/iOS, notebook kamera, tablet portrait/landscape, 
   telefonda yön seçimi (`.styon`) 2×2 ızgara (en dar 140 px); henüz olmayan alt bölüm `KalipAltBolum.soon` rozetiyle görünür ve içi boş
   durum + yönlendirme (çıkmaz yok); satır içi işlem `.frun` 44 px; kapalı ilk kullanım penceresi `inert` (klavye sırasına girmez); metinde
   "ERP" yerine "Muhasebe programı".
+  T-1136: kart akışlarında (ürün, cari, depo) seçili yönün sonucu satırın altında tek cümle (`KalipAyarSatir note`, `.stay-n`; anahtar
+  `integrations.sonuc.*`, seçim `integrations/yon-sonuc.ts`). Metinler koddaki kurala bağlı: al = gönderim yok, gönder = yalnız eşlenmemiş
+  yerel kart gider, iki yönlü = önce al sonra gönder, çakışmada Paraşüt kazanır ("son değişen kazanır" yok). Yeni "al" (yerel kayıt varken)
+  ya da yeni "gönder" (eşlenmemiş yerel kayıt varken) önce `KalipOnay` (birincil) sorar: sayı sunucudan (`countFlowRecordsAction`,
+  `settings.manage` + RLS), eşleşme kuralı tek cümlede (ürün stok kodu, cari vergi no / ad + şehir, depo ad); Vazgeç eski yönü korur.
 ## Arayüz dili (T-999c)
 - Görünür metin yalnız `apps/web/messages/{tr,en}.json`; JSX'e sabit metin yazılmaz. İki dosyanın anahtar kümesi, tek dilde boş metin ve `{yer tutucu}` adları `apps/web/messages/messages.test.ts` ile bekçide.
 - Dil sırası (`apps/web/i18n/request.ts`): `locale` çerezi (cihaz tercihi; bugün yazan yok) → tenant sayfalarında Ayarlar > Dil (`tenant_settings.locale`, her üye okur) → tarayıcı dili → `tr`. Tenant dışı sayfalar tarayıcı dilindedir (B-105).

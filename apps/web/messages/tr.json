@@ -5698,6 +5698,48 @@
     "flowOn": "{name} açıldı · ilk aktarım başladı",
     "flowOnNoQueue": "{name} açıldı · birazdan kendiliğinden aktarılır",
     "flowOff": "{name} kapandı",
+    "sonuc": {
+      "OFF": "Eşitleme yapılmaz.",
+      "PRODUCTS": {
+        "PULL": "{provider}'teki ürünler gelir; buradaki değişiklik oraya gitmez.",
+        "PUSH": "{provider}'te olmayan ürünler oraya eklenir; oradakiler gelmez.",
+        "BOTH": "Eksik ürünler iki yana eklenir; çakışmada {provider}'teki kazanır."
+      },
+      "CONTACTS": {
+        "PULL": "{provider}'teki cariler gelir; buradaki değişiklik oraya gitmez.",
+        "PUSH": "{provider}'te olmayan cariler oraya eklenir; oradakiler gelmez.",
+        "BOTH": "Eksik cariler iki yana eklenir; çakışmada {provider}'teki kazanır."
+      },
+      "WAREHOUSES": {
+        "PULL": "{provider}'teki depolar gelir; buradaki değişiklik oraya gitmez.",
+        "PUSH": "{provider}'te olmayan depolar oraya eklenir; oradakiler gelmez.",
+        "BOTH": "Eksik depolar iki yana eklenir; çakışmada {provider}'teki kazanır."
+      }
+    },
+    "onay": {
+      "PRODUCTS": {
+        "PULL": "Sende {n, number} ürün var. {provider}'teki ürünler stok koduna göre bunlarla eşleşir; eşleşmeyenler yeni kart olarak eklenir.",
+        "PUSH": "Sende {n, number} ürün var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı stok kodlu ürün varsa ona bağlanır).",
+        "BOTH": "Sende {n, number} ürün var. {provider}'teki ürünler stok koduna göre eşleşir, eşleşmeyenler buraya eklenir{m, plural, =0 {} other {; bağlı olmayan # ürün de {provider}'e gönderilir}}."
+      },
+      "CONTACTS": {
+        "PULL": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir; eşleşmeyenler yeni cari olarak eklenir.",
+        "PUSH": "Sende {n, number} cari var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı vergi numaralı, yoksa aynı adlı cari varsa ona bağlanır).",
+        "BOTH": "Sende {n, number} cari var. {provider}'teki cariler vergi numarasına (yoksa ad ve şehre) göre eşleşir, eşleşmeyenler buraya eklenir{m, plural, =0 {} other {; bağlı olmayan # cari de {provider}'e gönderilir}}."
+      },
+      "WAREHOUSES": {
+        "PULL": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir; eşleşmeyenler yeni depo olarak eklenir.",
+        "PUSH": "Sende {n, number} depo var; {provider}'e bağlı olmayan {m, number} tanesi oraya gönderilir (orada aynı adlı depo varsa ona bağlanır).",
+        "BOTH": "Sende {n, number} depo var. {provider}'teki depolar ada göre eşleşir, eşleşmeyenler buraya eklenir{m, plural, =0 {} other {; bağlı olmayan # depo da {provider}'e gönderilir}}."
+      }
+    },
+    "onayBaslik": "{name}: {dir}?",
+    "onayEvet": {
+      "PULL": "Evet, {provider}'ten al",
+      "PUSH": "Evet, {provider}'e gönder",
+      "BOTH": "Evet, iki yönlü yap"
+    },
+    "onayVazgec": "Vazgeç",
     "dirSet": "{name}: {dir}",
     "never": "HENÜZ ÇALIŞMADI",
     "lastOk": "SON ÇALIŞMA {at}",

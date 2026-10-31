@@ -28,3 +28,4 @@ export { canonicalDecimal, jsonDecimal } from "./decimal-json.ts";
 export { STOCK_TOTAL_STATUSES, STOCK_TOTAL_LOCATION_KINDS } from "./stock-reads.ts";
 
 export * from "./oauth.ts";
+export { countFlowRecords, CARD_FLOWS, type CardFlow, type FlowRecordCount } from "./flow-counts.ts";
