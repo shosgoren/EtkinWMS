@@ -107,8 +107,10 @@ async function world(label: string, opts: { oauthApp?: boolean } = {}): Promise<
 const register = (w: TenantWorld, id: string, uri: string | null = URI) => registerParasutWebhooks({ inTenant: inTenant(w), client: client(), sealer, callbackUrl: uri }, id);
 
 function delivery(ev: { model: string; action: string; id: string; key: string; eventDate?: string; companyId?: string; attributes?: Record<string, unknown> }): { body: string; signature: string } {
-  const data = JSON.stringify({ id: ev.id, data: { id: ev.id, type: `${ev.model}s`, attributes: ev.attributes ?? { name: "yükteki ad (kullanılmaz)" } } });
-  const body = new URLSearchParams({ company_id: ev.companyId ?? fake.opts.companyId, resource: ev.model, action: ev.action, event_date: ev.eventDate ?? new Date().toISOString(), data }).toString();
+  // Paraşüt `data` kaydı gösterim biçimindedir ve `updated_at` taşır; imza yalnız `data`'yı kapsar (VARSAYIM) → olay zamanı buradan.
+  const at = ev.eventDate ?? `${new Date().toISOString()}#${randomUUID()}`;
+  const data = JSON.stringify({ id: ev.id, data: { id: ev.id, type: `${ev.model}s`, attributes: { ...(ev.attributes ?? { name: "yükteki ad (kullanılmaz)" }), updated_at: at } } });
+  const body = new URLSearchParams({ company_id: ev.companyId ?? fake.opts.companyId, resource: ev.model, action: ev.action, event_date: at, data }).toString();
   return { body, signature: createHmac("sha256", ev.key).update(data).digest("hex") };
 }
 const hookKey = (model: string, action: string): string => fake.webhooks.find((w) => w.attributes.model === model && w.attributes.action === action)!.attributes.encryption_key as string;
@@ -324,6 +326,52 @@ describe("ret ve tenant yalıtımı (I-01..03)", () => {
     expect(await run(p)).toEqual({ kind: "applied", outcome: "CREATED" });
     expect(await run(p)).toEqual({ kind: "duplicate" });
     expect(await q("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.webhook_received'", [w.tenantId])).toEqual([{ n: 1 }]);
+  });
+});
+
+describe("tekrar teslim ve imzasız alanlar (inceleme MINOR-1)", () => {
+  it("yalnız `data` imzalıysa dış event_date ve action yok sayılır: yeniden tarihlenen tekrar aynı olay; audit'e eylem yazılmaz", async () => {
+    const { w, id } = await world("WHR1");
+    await register(w, id);
+    fake.products.push({ id: "831", attributes: { code: "WHR1-1", name: "Kelepçe", unit: "Adet" } });
+    const d = delivery({ model: "product", action: "create", id: "831", key: hookKey("product", "create"), eventDate: "2026-10-30T11:00:00+03:00" });
+    const redated = (date: string, action: string) => {
+      const f = new URLSearchParams(d.body);
+      f.set("event_date", date);
+      f.set("action", action);
+      return { body: f.toString(), signature: d.signature };
+    };
+    const queue = memQueue();
+    const deps = { db: app, sealer, queue: queue as never };
+    expect(await receiveParasutWebhook(deps, d)).toEqual({ status: 200, outcome: "QUEUED" });
+    const p0 = queue.jobs[0]!.job.payload;
+    expect(p0).not.toHaveProperty("action");
+    expect(queue.jobs[0]!.job.singletonKey).toBe(`integration.webhook.event.${id}.product.831`);
+    // İş beklerken yeniden tarihlenmiş/eylemi değiştirilmiş tekrarlar yeni iş açmaz (kayıt başına tekil anahtar).
+    for (let i = 0; i < 5; i++) expect(await receiveParasutWebhook(deps, redated(`2027-01-0${i + 1}T00:00:00Z`, "delete"))).toEqual({ status: 200, outcome: "DUPLICATE" });
+    expect(queue.jobs).toHaveLength(1);
+    const run = runner(w, { t: Date.now() });
+    expect(await run(p0 as never)).toEqual({ kind: "applied", outcome: "CREATED" });
+    // İş bittikten sonra gelen yeniden tarihli tekrar: olay anahtarı imzalı veriden → aynı; etki yok.
+    const q2 = memQueue();
+    expect(await receiveParasutWebhook({ db: app, sealer, queue: q2 as never }, redated("2027-02-01T00:00:00Z", "update"))).toEqual({ status: 200, outcome: "QUEUED" });
+    expect(q2.jobs[0]!.job.payload.eventKey).toBe(p0.eventKey);
+    expect(await run(q2.jobs[0]!.job.payload as never)).toEqual({ kind: "duplicate" });
+    expect(await q("SELECT change_summary FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.webhook_received'", [w.tenantId])).toEqual([{ change_summary: { provider: "PARASUT", resource: "product", outcome: "CREATED" } }]);
+  });
+
+  it("ham gövde imzalıysa dış event_date ve action imzalıdır ve kullanılır", async () => {
+    const { w, id } = await world("WHR2");
+    await register(w, id);
+    fake.products.push({ id: "832", attributes: { code: "WHR2-1", name: "Somun", unit: "Adet" } });
+    const key = hookKey("product", "update");
+    const d = delivery({ model: "product", action: "update", id: "832", key, eventDate: "x" });
+    const signed = { body: d.body, signature: createHmac("sha256", key).update(d.body).digest("hex") };
+    const queue = memQueue();
+    expect(await receiveParasutWebhook({ db: app, sealer, queue: queue as never }, signed)).toEqual({ status: 200, outcome: "QUEUED" });
+    expect(queue.jobs[0]!.job.payload).toMatchObject({ action: "update", resource: "product", externalId: "832" });
+    expect(await runner(w, { t: Date.now() })(queue.jobs[0]!.job.payload as never)).toMatchObject({ kind: "applied" });
+    expect((await q<{ a: string }>("SELECT change_summary->>'action' AS a FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.webhook_received'", [w.tenantId]))[0]?.a).toBe("update");
   });
 });
 

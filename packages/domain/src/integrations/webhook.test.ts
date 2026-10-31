@@ -3,7 +3,7 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createSealer } from "@wms/shared/seal";
 import { CADENCE, dueFlows, registerDue } from "./webhook-register.ts";
-import { WEBHOOK_BODY_MAX, openWebhookKey, parseWebhookBody, sealWebhookKey, verifySignature, webhookEventKey } from "./webhook.ts";
+import { WEBHOOK_BODY_MAX, matchSignature, openWebhookKey, parseWebhookBody, sealWebhookKey, signedFields, verifySignature, webhookEventKey, webhookEventSingletonKey } from "./webhook.ts";
 
 const data = JSON.stringify({ id: "501", data: { id: "501", type: "products", attributes: { name: "Vida", updated_at: "2026-10-30T09:00:00+03:00" } } });
 const form = (o: Record<string, string>) => new URLSearchParams(o).toString();
@@ -62,6 +62,29 @@ describe("verifySignature", () => {
     expect(verifySignature(null, [key], [data])).toBe(false);
     expect(verifySignature("abc", [key], [data])).toBe(false);
     expect(verifySignature(hmac.toString("hex"), [], [data])).toBe(false);
+  });
+});
+
+describe("imzalı alanlar (inceleme MINOR-1)", () => {
+  const key = randomBytes(32).toString("hex");
+  const raw = form(base);
+  const p = parseWebhookBody(raw)!;
+  it("yalnız `data` eşleşirse olay zamanı imzalı veriden, eylem yok; ham gövde eşleşirse dış alanlar", () => {
+    const onData = matchSignature(createHmac("sha256", key).update(data).digest("hex"), [key], p.signed, p.rawIndex);
+    expect(onData).toBe(0);
+    expect(signedFields(p, onData)).toEqual({ eventDate: "2026-10-30T09:00:00+03:00", action: null });
+    const onRaw = matchSignature(createHmac("sha256", key).update(raw).digest("hex"), [key], p.signed, p.rawIndex);
+    expect(onRaw).toBe(p.rawIndex);
+    expect(signedFields(p, onRaw)).toEqual({ eventDate: "2026-10-30T09:00:01+03:00", action: "update" });
+  });
+  it("yeniden tarihlenen dış event_date olay zamanını değiştirmez (yalnız data imzalıyken)", () => {
+    const other = parseWebhookBody(form({ ...base, event_date: "2030-01-01T00:00:00Z", action: "delete" }))!;
+    expect(signedFields(other, 0)).toEqual(signedFields(p, 0));
+    const bare = JSON.stringify({ id: "7" });
+    expect(parseWebhookBody(form({ ...base, data: bare }))!.dataEventDate).toBe(createHash("sha256").update(bare).digest("hex"));
+  });
+  it("kuyruk tekil anahtarı kayıt başına (olay zamanı içermez)", () => {
+    expect(webhookEventSingletonKey("i-1", "product", "501")).toBe("integration.webhook.event.i-1.product.501");
   });
 });
 

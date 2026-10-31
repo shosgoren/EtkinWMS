@@ -29,7 +29,7 @@ export function createIntegrationWebhookHandler(deps: IntegrationWebhookDeps): J
         deps.logger.info("integration.webhook register", { jobId: ctx.jobId, result: r.kind, ...(r.kind === "skipped" ? { reason: r.reason } : r.kind === "failed" ? { reason: r.code } : { created: r.created, kept: r.kept }) });
         return;
       }
-      if (p.resource === undefined || p.action === undefined || p.externalId === undefined || p.eventKey === undefined) {
+      if (p.resource === undefined || p.externalId === undefined || p.eventKey === undefined) {
         deps.logger.info("integration.webhook skipped", { jobId: ctx.jobId, reason: "BAD_PAYLOAD" });
         return;
       }
@@ -37,7 +37,7 @@ export function createIntegrationWebhookHandler(deps: IntegrationWebhookDeps): J
         { inTenant, client, sealer, consumeOnce: deps.consumeOnce, ...(deps.sleep === undefined ? {} : { sleep: deps.sleep }) },
         { integrationId: p.integrationId, resource: p.resource, action: p.action, externalId: p.externalId, eventKey: p.eventKey },
       );
-      deps.logger.info("integration.webhook event", { jobId: ctx.jobId, resource: p.resource, action: p.action, result: r.kind, ...(r.kind === "skipped" ? { reason: r.reason } : r.kind === "applied" ? { outcome: r.outcome } : {}) });
+      deps.logger.info("integration.webhook event", { jobId: ctx.jobId, resource: p.resource, ...(p.action === undefined ? {} : { action: p.action }), result: r.kind, ...(r.kind === "skipped" ? { reason: r.reason } : r.kind === "applied" ? { outcome: r.outcome } : {}) });
     } catch (e) {
       deps.logger.error("integration.webhook failed", { jobId: ctx.jobId, kind: p.kind, error: errName(e) });
       throw e;

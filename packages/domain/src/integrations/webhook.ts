@@ -46,9 +46,14 @@ export interface ParsedDelivery {
   readonly resource: WebhookResource | null;
   readonly action: WebhookAction;
   readonly externalId: string;
+  /** Dış `event_date` (yoksa kaydın `updated_at`'i, o da yoksa veri özeti). Yalnız ham gövde imzalıysa kullanılır. */
   readonly eventDate: string;
+  /** İmzalı `data` içinden olay zamanı: `updated_at`, yoksa `data` metninin özeti. Yalnız `data` imzalıysa kullanılır (T-1138 inceleme MINOR-1). */
+  readonly dataEventDate: string;
   /** İmza adayları: `data` alanının metni ve ham gövde (tekrarsız). */
   readonly signed: readonly string[];
+  /** `signed` içinde ham gövdenin sırası (dış alanlar yalnız bu ileti eşleşince imzalıdır). */
+  readonly rawIndex: number;
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" ? v : typeof v === "number" && Number.isFinite(v) ? String(v) : null);
@@ -124,8 +129,10 @@ export function parseWebhookBody(raw: string): ParsedDelivery | null {
   if (externalId === null || !ID_RE.test(externalId)) return null;
   const eventRaw = str(fields.event_date) ?? updatedAtOf(data);
   const eventDate = eventRaw !== null && eventRaw.length <= 64 && !/\p{C}/u.test(eventRaw) ? eventRaw.trim() : createHash("sha256").update(dataText ?? raw).digest("hex");
+  const dataUpdated = updatedAtOf(data);
+  const dataEventDate = dataUpdated !== null && dataUpdated.length <= 64 && !/\p{C}/u.test(dataUpdated) ? dataUpdated.trim() : createHash("sha256").update(dataText ?? raw).digest("hex");
   const signed = [...new Set([...(dataText === null ? [] : [dataText]), raw])];
-  return { companyId, resource: resourceOf(resourceRaw), action, externalId, eventDate, signed };
+  return { companyId, resource: resourceOf(resourceRaw), action, externalId, eventDate, dataEventDate, signed, rawIndex: signed.indexOf(raw) };
 }
 
 /** Yeni imza anahtarı (32 bayt, onaltılık). Paraşüt anahtar atarsa onunki kullanılır (webhook-register.ts). */
@@ -158,15 +165,30 @@ function same(a: string, b: string): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-/** Başlık değerini sabit zamanlı karşılaştırır (önek `sha256=` ve büyük/küçük harf onaltılıkta tolere edilir). */
-export function verifySignature(header: string | null, keys: readonly string[], messages: readonly string[]): boolean {
-  if (header === null) return false;
+/**
+ * Başlık değerini sabit zamanlı karşılaştırır (önek `sha256=` ve büyük/küçük harf onaltılıkta tolere edilir). Eşleşen iletinin sırası
+ * döner (yoksa -1): çağıran yalnız imzalı iletideki alanlara güvenir (MINOR-1). Ham gövde eşleşmesi önceliklidir (her şeyi kapsar).
+ */
+export function matchSignature(header: string | null, keys: readonly string[], messages: readonly string[], prefer = -1): number {
+  if (header === null) return -1;
   const sig = header.trim().replace(/^sha256=/i, "");
-  if (sig.length < 32 || sig.length > 128) return false;
+  if (sig.length < 32 || sig.length > 128) return -1;
   const lower = /^[0-9a-fA-F]+$/.test(sig) ? sig.toLowerCase() : sig;
-  let ok = false;
-  for (const key of keys) for (const m of messages) for (const c of signatureCandidates(key, m)) if (same(lower, c)) ok = true; // erken çıkış yok
-  return ok;
+  let hit = -1;
+  for (const key of keys)
+    messages.forEach((m, i) => {
+      for (const c of signatureCandidates(key, m)) if (same(lower, c) && (hit === -1 || i === prefer)) hit = i; // erken çıkış yok
+    });
+  return hit;
+}
+
+export function verifySignature(header: string | null, keys: readonly string[], messages: readonly string[]): boolean {
+  return matchSignature(header, keys, messages) !== -1;
+}
+
+/** İmzalı alanlar: ham gövde eşleştiyse dış `event_date`/`action`; yalnız `data` eşleştiyse `data` içindeki zaman, eylem YOK (imzasız). */
+export function signedFields(p: ParsedDelivery, matched: number): { readonly eventDate: string; readonly action: WebhookAction | null } {
+  return matched === p.rawIndex ? { eventDate: p.eventDate, action: p.action } : { eventDate: p.dataEventDate, action: null };
 }
 
 /** Olay anahtarı: (tenant, kaynak, kimlik, olay zamanı) özetinden UUID biçimi (processed_events + singletonKey). */
@@ -178,7 +200,8 @@ export function webhookEventKey(tenantId: string, resource: string, externalId: 
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20, 32)}`;
 }
 
-export const webhookEventSingletonKey = (eventKey: string): string => `integration.webhook.event.${eventKey}`;
+/** Kuyruk tekil anahtarı kayıt başınadır (bağlantı, kaynak, kimlik): bekleyen/çalışan iş varken yeni teslim iş açmaz (MINOR-1). */
+export const webhookEventSingletonKey = (integrationId: string, resource: WebhookResource, externalId: string): string => `integration.webhook.event.${integrationId}.${resource}.${externalId}`;
 
 // --- alıcı ---------------------------------------------------------------------------------------------------------------------------
 export interface ReceiveDeps {
@@ -207,12 +230,18 @@ export async function receiveParasutWebhook(deps: ReceiveDeps, input: { readonly
     tx.execute<LookupRow>(sql`SELECT tenant_id, integration_id, key_boxes FROM wms_probe.integration_webhook_lookup('PARASUT', ${parsed.companyId})`),
   );
   let match: LookupRow | null = null;
+  let matched = -1;
   for (const row of rows) {
     const boxes = Array.isArray(row.key_boxes) ? row.key_boxes.slice(0, 6) : [];
     const keys = [...new Set(boxes.map((b) => openWebhookKey(deps.sealer, row.tenant_id, b)).filter((k): k is string => k !== null))];
-    if (keys.length > 0 && verifySignature(input.signature, keys, parsed.signed) && match === null) match = row;
+    const i = keys.length > 0 ? matchSignature(input.signature, keys, parsed.signed, parsed.rawIndex) : -1;
+    if (i !== -1 && match === null) {
+      match = row;
+      matched = i;
+    }
   }
   if (match === null) return reject;
+  const trusted = signedFields(parsed, matched);
   const { tenant_id: tenantId, integration_id: integrationId } = match;
   if (parsed.resource === null) {
     // Kart dışı model (fatura, irsaliye…): doğrulandı, iş yok (satış akışı bekliyor — kullanıcı önceliği 30 Ekim).
@@ -220,15 +249,16 @@ export async function receiveParasutWebhook(deps: ReceiveDeps, input: { readonly
   }
   if (deps.queue === undefined) return { status: 503, outcome: "UNAVAILABLE" };
   const queue = deps.queue;
-  const eventKey = webhookEventKey(tenantId, parsed.resource, parsed.externalId, parsed.eventDate);
+  const eventKey = webhookEventKey(tenantId, parsed.resource, parsed.externalId, trusted.eventDate);
   const resource = parsed.resource;
   try {
     const jobId = await withSystemTenant(deps.db as never, tenantId, "integration.webhook", async (tx) => {
       await tx.execute(sql`UPDATE public.integrations SET webhook_last_event_at = now() WHERE tenant_id = ${tenantId}::uuid AND id = ${integrationId}::uuid AND status = 'CONNECTED'`);
       const r = await queue.enqueue(tx as AccessTx, {
         type: "integration.webhook",
-        payload: { integrationId, kind: "EVENT", resource, action: parsed.action, externalId: parsed.externalId, eventKey },
-        singletonKey: webhookEventSingletonKey(eventKey),
+        payload: { integrationId, kind: "EVENT", resource, ...(trusted.action === null ? {} : { action: trusted.action }), externalId: parsed.externalId, eventKey },
+        // Kayıt başına tek bekleyen iş: yeniden tarihlenmiş tekrar teslim seli tek işe çöker; iş çalışınca güncel durumu okur.
+        singletonKey: webhookEventSingletonKey(integrationId, resource, parsed.externalId),
       });
       return r.jobId;
     });
@@ -255,7 +285,8 @@ export interface WebhookJobDeps {
 export interface WebhookEventPayload {
   readonly integrationId: string;
   readonly resource: WebhookResource;
-  readonly action: WebhookAction;
+  /** Yalnız imzalıysa (ham gövde eşleşmesi); yoksa audit'e yazılmaz. İşin mantığı eyleme bakmaz (kimlikle yeniden okur). */
+  readonly action?: WebhookAction | undefined;
   readonly externalId: string;
   readonly eventKey: string;
 }
@@ -314,7 +345,7 @@ export async function runWebhookEvent(deps: WebhookJobDeps, p: WebhookEventPaylo
             out = "FAILED";
           }
         }
-        await appendAudit(t, { action: "integration.webhook_received", actorUserId: ac.actorUserId, entityType: "integration", entityId: row.id, changeSummary: { provider: "PARASUT", resource: p.resource, action: p.action, outcome: out } });
+        await appendAudit(t, { action: "integration.webhook_received", actorUserId: ac.actorUserId, entityType: "integration", entityId: row.id, changeSummary: { provider: "PARASUT", resource: p.resource, ...(p.action === undefined ? {} : { action: p.action }), outcome: out } });
         return out;
       });
       return r.applied ? ({ kind: "applied", outcome: r.result } as const) : ({ kind: "duplicate" } as const);

@@ -113,8 +113,9 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       const key = ev.key ?? (hook?.attributes.encryption_key as string | undefined) ?? "";
       const col = ev.model === "product" ? state.products : state.contacts;
       const rec = col.find((r) => r.id === ev.id);
-      const data = JSON.stringify({ id: ev.id, data: { id: ev.id, type: `${ev.model}s`, attributes: rec?.attributes ?? {} }, included: [] });
-      const body = new URLSearchParams({ company_id: ev.companyId ?? opts.companyId, resource: ev.model, action: ev.action, event_date: ev.eventDate ?? new Date().toISOString(), data }).toString();
+      const at = ev.eventDate ?? new Date().toISOString();
+      const data = JSON.stringify({ id: ev.id, data: { id: ev.id, type: `${ev.model}s`, attributes: { ...(rec?.attributes ?? {}), updated_at: at } }, included: [] });
+      const body = new URLSearchParams({ company_id: ev.companyId ?? opts.companyId, resource: ev.model, action: ev.action, event_date: at, data }).toString();
       const signature = ev.signature ?? createHmac("sha256", key).update(data).digest("hex");
       const res = await fetch(target, { method: "POST", headers: { "content-type": "www-url-encoded", signature }, body, ...(ev.fetchInit ?? {}) });
       return { status: res.status, body: await res.text() };

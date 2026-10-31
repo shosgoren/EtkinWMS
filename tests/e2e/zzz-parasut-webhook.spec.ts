@@ -20,8 +20,9 @@ async function deliver(page: Page, model: "product", action: "create" | "update"
   const hooks = (await fake<{ data: Hook[] }>("/__fake/webhooks")).data.filter((h) => h.attributes.model === model && h.attributes.action === action);
   const key = hooks[hooks.length - 1]?.attributes.encryption_key;
   if (!key) throw new Error("e2e: webhook kaydı yok");
-  const data = JSON.stringify({ id, data: { id, type: "products", attributes } });
-  const body = new URLSearchParams({ company_id: F.companyId, resource: model, action, event_date: new Date().toISOString(), data }).toString();
+  const at = new Date().toISOString();
+  const data = JSON.stringify({ id, data: { id, type: "products", attributes: { ...attributes, updated_at: at } } });
+  const body = new URLSearchParams({ company_id: F.companyId, resource: model, action, event_date: at, data }).toString();
   const res = await page.request.post("/api/integrations/parasut/webhook", { headers: { "content-type": "www-url-encoded", signature: createHmac("sha256", key).update(data).digest("hex") }, data: body });
   expect(res.status()).toBe(200);
   // Yanlış imza aynı sabit 401 (hangi adımın düştüğü sızmaz).

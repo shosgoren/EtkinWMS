@@ -111,3 +111,27 @@ REVOKE ALL ON FUNCTION wms_probe.integration_webhook_lookup(text, text) FROM PUB
 GRANT EXECUTE ON FUNCTION wms_probe.integration_webhook_lookup(text, text) TO wms_app;
 RESET ROLE;
 REVOKE CREATE ON SCHEMA wms_probe FROM wms_identity_probe;
+
+-- Doğrulama (T-1138 inceleme MINOR-3; 0038 kalıbı): sahip, SECURITY DEFINER, search_path, PUBLIC'te EXECUTE yok, yalnız wms_app EXECUTE.
+DO $verify$
+DECLARE
+  f text := 'wms_probe.integration_webhook_lookup(text, text)';
+  r text;
+BEGIN
+  IF NOT EXISTS (
+       SELECT 1 FROM pg_catalog.pg_proc p
+        WHERE p.oid = f::regprocedure
+          AND p.proowner = pg_catalog.to_regrole('wms_identity_probe')
+          AND p.prosecdef
+          AND p.proconfig = ARRAY['search_path=pg_catalog, pg_temp']
+          AND p.proacl IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM pg_catalog.aclexplode(p.proacl) a WHERE a.grantee = 0)) THEN
+    RAISE EXCEPTION '0067_integration_webhooks: % sahibi/SECURITY DEFINER/search_path/ACL beklenenden farklı', f;
+  END IF;
+  FOREACH r IN ARRAY ARRAY['wms_app', 'wms_auth', 'wms_worker', 'wms_ops'] LOOP
+    IF pg_catalog.has_function_privilege(r, f, 'EXECUTE') <> (r = 'wms_app') THEN
+      RAISE EXCEPTION '0067_integration_webhooks: % için % EXECUTE yetkisi beklenenden farklı', r, f;
+    END IF;
+  END LOOP;
+END
+$verify$;
