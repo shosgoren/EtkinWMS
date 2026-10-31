@@ -6,6 +6,7 @@ Otorite: `docs/INVARIANTS.md`, `docs/spec/04-data-model.md`, `05-stock-engine.md
 - Paylaşımlı PostgreSQL, tenant bazlı veri izolasyonu. Kimlik kullanıcısı ile tenant üyeliği farklı varlıklardır.
 - Context sunucuda doğrulanmış üyelikten; `withTenant` transaction-local `set_config(...,true)` ile. Context eksikse ret; bağlantı havuzunda önceki tenant context'i sızmaz.
 - `wms_app`: uygulama tenant verisi; `wms_auth`: platform kimlik/oturum; `wms_worker`: işçi/kuyruk. Runtime NOSUPERUSER/NOBYPASSRLS/NOCREATE; tablo/fonksiyon sahipliği operatör ve dar NOLOGIN rollerde.
+- Uygulama izinleri kodda tek kaynak (`packages/domain/src/identity/permissions.ts`: rol × izin A-45, gruba verilebilen kapalı liste `GRANTABLE` = `0051` CHECK). T-1141: kart yazmaları bölüm × işlem anahtarı (`items|parties|warehouses|locations` · `create|edit|archive`) ister; rollerde yalnız TENANT_ADMIN, gruba verilemez (CHECK değişmedi). Gruba açmak migration ile CHECK genişletmesi ister (T-1142).
 - DB mimarı migration/RLS/yetki/kilit modelini tasarlar; frontend kolaylığı için grant, owner veya bypass genişletmez.
 - Migration/proof/backup bağlantısı runtime env'den ayrı; operatör rolünün yetkisi uygulamaya verilmez.
 

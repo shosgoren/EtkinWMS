@@ -1,6 +1,6 @@
 "use client";
 // Lokasyon ağacı (T-207). Sunucu düz listeyi `(derinlik, kod, id)` sırasıyla verir (keyset); ağaç `parentId` ile BURADA kurulur
-// (yalnızca gösterim). Yetki/iş kuralları sunucudadır: `canManage` yalnızca kilit gösterimidir; tür/derinlik/ebeveyn
+// (yalnızca gösterim). Yetki/iş kuralları sunucudadır: `rights` (T-1141 `cardRights`) yalnızca kilit gösterimidir; tür/derinlik/ebeveyn
 // kuralları (ör. TRANSIT yalnızca kök) yeniden yazılmaz, sunucu reddi (`PARENT_INVALID` vb.) gösterilir.
 // Düzey etiketleri (Bölge/Raf/Göz) şimdilik sabit i18n varsayılanıdır; tenant terminolojisi okuyucusu Bulgular'da.
 // T-990 (B-97): lokasyon ekleme, kod değiştirme ve toplu raf oluşturucu pencere değil TAM EKRAN FORMDUR; adres `?new=1` (kök) /
@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import type { CSSProperties } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { BulkBuilder } from "../../easy-setup/bulk-builder.tsx";
 import { isSetupComplete, useSetupProgress } from "../../easy-setup/setup-guide.tsx";
@@ -19,6 +19,8 @@ import { KalipKartSerit, KalipKayitKart } from "../../kalip/kart.tsx";
 import { Ico, KalipEkran, useKalipToast } from "../../kalip/ekran.tsx";
 import { KalipOnay } from "../../kalip/pencere.tsx";
 import { kdz } from "../../kalip/tokens.ts";
+import { KalipKilitliDugme, useKartKilitGerekce } from "../../kalip/kilitli.tsx";
+import type { KartYetki as CardRights } from "../../kalip/kart-yetki.ts";
 import { archiveLocationAction, createLocationAction, getSetupProgressAction, loadMoreLocationsAction, renameLocationAction, suggestCodeAction } from "../actions.ts";
 import { CreateForm, ServerErrorBanner, useErrorText } from "../warehouses-view.tsx";
 import type { ServerError } from "../warehouses-view.tsx";
@@ -47,6 +49,24 @@ const TOGGLE =
 const c = (hex: string): string => kdz("dzd", hex);
 /** Satır eylem düğmesi (kaynak `.btn`, küçük); kilitliyken soluk. */
 const actBtn = (bg: string, disabled: boolean): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48, opacity: disabled ? 0.5 : 1 });
+/**
+ * T-1141: satır işlemi. Yetki yoksa ortak kilitli düğme (dokununca sarı "yetkin yok · yöneticine sor" balonu + hata sesi, kilit ikonu);
+ * yetki varsa eski düğme (istemci hazır olana dek pasif).
+ */
+function SatirIslem({ yetki, hazir, gerekce, renk, onClick, children, ...rest }: { yetki: boolean; hazir: boolean; gerekce: string; renk: string; onClick: () => void; children: ReactNode } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "disabled" | "children" | "style" | "className" | "type">) {
+  if (!yetki) {
+    return (
+      <KalipKilitliDugme kilitli gerekce={gerekce} className="btn" style={actBtn(renk, true)} {...rest}>
+        {children}
+      </KalipKilitliDugme>
+    );
+  }
+  return (
+    <button type="button" className="btn" style={actBtn(renk, !hazir)} disabled={!hazir} onClick={onClick} {...rest}>
+      {children}
+    </button>
+  );
+}
 /** Lokasyon türü rengi (kaynak paletinden; yalnız ayırt etmek için, anlamı tür etiketi taşır). */
 const KIND_COLOR: Record<string, string> = { RECEIVING: "2F5DA8", STORAGE: "0E7C7B", STAGING: "E56A00", TRANSIT: "6C4BD8" };
 
@@ -70,7 +90,7 @@ export function LocationTree({
   warehouseName,
   warehouseCode,
   warehouseActive,
-  canManage,
+  rights,
   initialItems,
   initialNext,
   activeTotal,
@@ -81,7 +101,8 @@ export function LocationTree({
   warehouseName: string;
   warehouseCode: string;
   warehouseActive: boolean;
-  canManage: boolean;
+  /** T-1141: raf yeri bölümü yetkileri (yalnız gösterim; karar domain'de). */
+  rights: CardRights;
   initialItems: readonly LocationItem[];
   initialNext: TreeCursor | null;
   /** Sunucudan depodaki toplam aktif lokasyon sayısı (ALTIN-KURAL 15); yoksa yüklenenlerden sayılır ("N+"). */
@@ -117,12 +138,17 @@ export function LocationTree({
     feedback.error();
     setError(e);
   };
-  const writable = canManage && warehouseActive;
+  // T-1141: ekle (tek + toplu) `locations.create`, kod değiştir `locations.edit`, arşivle `locations.archive`. Yetkisiz işlem gizlenmez:
+  // kilitli düğme + neden ("yetkin yok · yöneticine sor"). Arşivli depoda yazma zaten yok (ayrı neden).
+  const kilitGerekce = useKartKilitGerekce("locations");
+  const writable = rights.create && warehouseActive;
   const clientReady = useSyncExternalStore(subscribeToClientReady, getClientReadySnapshot, getServerReadySnapshot);
   const canOpenDialogs = writable && clientReady;
+  const canEditRow = rights.edit && warehouseActive && clientReady;
+  const canArchiveRow = rights.archive && warehouseActive && clientReady;
   const [version, setVersion] = useState(0);
-  const progress = useSetupProgress(slug, canManage, version);
-  const guide = canManage && progress !== null && !isSetupComplete(progress);
+  const progress = useSetupProgress(slug, rights.create, version);
+  const guide = rights.create && progress !== null && !isSetupComplete(progress);
 
   const errText = useErrorText();
   const go = (qs: string): void => router.push(qs === "" ? returnTo : `${returnTo}?${qs}`);
@@ -133,7 +159,7 @@ export function LocationTree({
   const parent: { readonly id: string | null; readonly label: string } | undefined =
     params.get("new") !== "1" || !writable ? undefined : parentItem !== undefined ? { id: parentItem.id, label: `${parentItem.name} (${parentItem.code})` } : parentId === null ? { id: null, label: warehouseName } : undefined;
   const kodId = params.get("kod");
-  const editing = kodId === null || !writable ? undefined : items.find((i) => i.id === kodId && i.status === "ACTIVE");
+  const editing = kodId === null || !(rights.edit && warehouseActive) ? undefined : items.find((i) => i.id === kodId && i.status === "ACTIVE");
 
   // `router.refresh()` sonrası sunucu verisi yeni gelir: yerel (daha fazla yüklenmiş) liste sunucuyla eşitlenir.
   useEffect(() => {
@@ -224,7 +250,7 @@ export function LocationTree({
     setNext(res.data.next);
   }
 
-  const lockText = !canManage ? tw("lockedReason") : !warehouseActive ? t("warehouseArchived") : null;
+  const lockText = !warehouseActive ? t("warehouseArchived") : !rights.create ? kilitGerekce("create") : null;
 
   const activeCount = items.filter((i) => i.status === "ACTIVE").length;
   const countText = activeTotal !== undefined ? String(activeTotal) : next === null ? String(activeCount) : `${activeCount}+`;
@@ -341,7 +367,7 @@ export function LocationTree({
           testId="location-tree"
           bar={{
             back: { href: base, aria: t("back") },
-            main: { label: tw("k.addLoc"), aria: t("addRoot"), d: LICON.plus, disabled: !canOpenDialogs, disabledReason: lockText ?? t("addWait"), onClick: openRoot, testId: "location-add" },
+            main: { label: tw("k.addLoc"), aria: t("addRoot"), d: LICON.plus, disabled: !canOpenDialogs, locked: warehouseActive && !rights.create, disabledReason: lockText ?? t("addWait"), onClick: openRoot, testId: "location-add" },
           }}
           overlays={toast}
         >
@@ -469,12 +495,13 @@ export function LocationTree({
                           <span className={`pill ${active ? "ok" : "warn"}`}>{active ? tw("status.ACTIVE") : tw("status.ARCHIVED")}</span>
                           {active ? (
                             <span role="group" aria-label={tw("actionsFor", { name: it.name })} style={{ gridColumn: "1 / -1", display: "flex", flexWrap: "wrap", gap: 6 }}>
-                              <button
-                                type="button"
-                                className="btn"
-                                style={actBtn("0E7C7B", !canOpenDialogs)}
-                                disabled={!canOpenDialogs}
+                              <SatirIslem
+                                yetki={rights.create}
+                                hazir={canOpenDialogs}
+                                gerekce={kilitGerekce("create")}
+                                renk="0E7C7B"
                                 aria-describedby={noteId}
+                                data-testid="location-add-child"
                                 onClick={() => {
                                   feedback.minor();
                                   go(`new=1&parent=${encodeURIComponent(it.id)}`);
@@ -482,14 +509,15 @@ export function LocationTree({
                               >
                                 <Ico d={LICON.plus} size={18} />
                                 {t("addChild")}
-                              </button>
-                              <button
-                                type="button"
-                                className="btn"
-                                style={actBtn("172E42", !canOpenDialogs)}
-                                disabled={!canOpenDialogs}
+                              </SatirIslem>
+                              <SatirIslem
+                                yetki={rights.edit}
+                                hazir={canEditRow}
+                                gerekce={kilitGerekce("edit")}
+                                renk="172E42"
                                 aria-describedby={noteId}
                                 aria-label={tw("codeEdit.for", { name: it.name })}
+                                data-testid="location-code-edit"
                                 onClick={() => {
                                   feedback.minor();
                                   go(`kod=${encodeURIComponent(it.id)}`);
@@ -497,13 +525,14 @@ export function LocationTree({
                               >
                                 <Ico d={LICON.pencil} size={18} />
                                 {tw("codeEdit.button")}
-                              </button>
-                              <button
-                                type="button"
-                                className="btn"
-                                style={actBtn("C62828", !canOpenDialogs)}
-                                disabled={!canOpenDialogs}
+                              </SatirIslem>
+                              <SatirIslem
+                                yetki={rights.archive}
+                                hazir={canArchiveRow}
+                                gerekce={kilitGerekce("archive")}
+                                renk="C62828"
                                 aria-describedby={noteId}
+                                data-testid="location-archive"
                                 onClick={() => {
                                   feedback.minor();
                                   setArchiving(it);
@@ -511,7 +540,7 @@ export function LocationTree({
                               >
                                 <Ico d={LICON.trash} size={18} />
                                 {t("archive")}
-                              </button>
+                              </SatirIslem>
                             </span>
                           ) : null}
                         </li>
@@ -535,7 +564,7 @@ export function LocationTree({
       </div>
 
       <KalipOnay
-        open={archiving !== null}
+        open={archiving !== null && rights.archive}
         title={t("confirmArchive.title", { name: archiving?.name ?? "" })}
         description={t("confirmArchive.description", { name: archiving?.name ?? "", code: archiving?.code ?? "" })}
         confirmLabel={t("confirmArchive.button")}

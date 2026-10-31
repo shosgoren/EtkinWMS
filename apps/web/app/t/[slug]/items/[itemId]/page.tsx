@@ -9,7 +9,7 @@ import { getProductSourceInfo } from "@wms/domain/integrations";
 import { getItemStockCard, getItemStockPivot, listItemMoves, listItemTracking } from "@wms/domain/stock";
 import { listAudit } from "@wms/domain/audit/audit-query";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { hasPermission } from "@wms/domain/identity/permissions";
+import { cardRights, hasPermission } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../../design/theme.ts";
@@ -37,7 +37,7 @@ async function LockedItem(slug: string) {
 }
 
 // Ürün ayrıntısı (T-216): sunucu bileşeni. Ürün bulunamaz/başka tenant/geçersiz kimlik → 404 (varlık sızdırılmaz). Her okuma tek ürün
-// için sınırlıdır (T-240); yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda `settings.manage` ister).
+// için sınırlıdır (T-240); yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda T-1141 kart anahtarını ister: `items.*` / `warehouses.*` / `locations.*`).
 // T-1116: sekmeye özgü okumalar yalnız o sekme açıkken yapılır (`?sekme=`); okunamazsa sekme "okunamadı" satırı gösterir, kart açılır.
 export default async function ItemDetailPage({ params, searchParams }: { params: Promise<{ slug: string; itemId: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug, itemId } = await params;
@@ -56,7 +56,7 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    const canManage = hasPermission(current.roles, "settings.manage", current.grants);
+    const rights = cardRights(current.roles, current.grants, "items");
     const item = await getItem(call, { itemId });
     const conversions = await listItemConversions(call, item.id);
     const barcodes = await listItemBarcodes(call, item.id);
@@ -88,7 +88,7 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
         <ItemDetail
           slug={slug}
           dark={dark}
-          canManage={canManage}
+          rights={rights}
           quick={{ label: can("stock.view"), count: can("document.create"), transfer: can("stock.post") }}
           stockCard={stockCard}
           tabData={tabData}

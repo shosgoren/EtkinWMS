@@ -2,7 +2,7 @@
 //
 // - İki adım: `previewBulkLocations` (salt okuma: sayı, ilk/son kod, örnekler, MEVCUT KODLA ÇAKIŞMALAR) ve `createBulkLocations`
 //   (tek transaction, hepsi ya da hiçbiri). Çakışma varsa oluşturma `CODE_TAKEN` ile reddedilir; kullanıcı önizlemede çakışmaları görür.
-// - Yetki, depo kapsamı, depo/ebeveyn kilidi (`FOR SHARE`), `depth` ve tür kuralları `createLocation` ile aynıdır (`settings.manage`).
+// - Yetki, depo kapsamı, depo/ebeveyn kilidi (`FOR SHARE`), `depth` ve tür kuralları `createLocation` ile aynıdır (T-1141: `locations.create`).
 //   Kodlar domain'de üretilir (UI'da kural yok); biçim: `<BÖLGE>-<raf>-<göz>`, sayılar en az 2 basamak sıfır dolgulu. Ad = kod (A-250-3).
 // - Üst sınır {@link BULK_LOCATIONS_MAX} (A-250-2): sınırı aşan istek, hiçbir kod üretilmeden `VALIDATION_FAILED`. Depo başına toplam
 //   {@link WAREHOUSE_LOCATIONS_MAX} (A-259-1) mevcut + planlanan sayıyla denetlenir (önizleme de reddeder).
@@ -172,7 +172,7 @@ export async function previewBulkLocations(params: WarehouseCallParams, spec: Bu
   const warehouseId = parseUuid(spec.warehouseId);
   const parentId = parentOf(spec);
   const plan = planBulkLocations(spec);
-  return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantQuery({ ...params, permission: "locations.create" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
     const wh = await tx.execute<{ status: string }>(
       sql`SELECT status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid`,
@@ -227,7 +227,7 @@ export async function createBulkLocations(params: WarehouseCallParams, input: Cr
   const first = plan.codes[0] as string;
   const last = plan.codes[plan.codes.length - 1] as string;
 
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "locations.create" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
     // Aynı anahtarın eşzamanlı iki isteği burada serileşir; ikincisi birincinin audit satırını görür.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${m.tenantId}:bulk-locations:${key}`}, 0))`);

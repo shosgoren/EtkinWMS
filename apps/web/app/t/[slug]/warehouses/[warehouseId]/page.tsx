@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { hasPermission } from "@wms/domain/identity/permissions";
+import { cardRights, type CardRights } from "@wms/domain/identity/permissions";
 import { countLocationsByWarehouse, getLocationTree, getWarehouse } from "@wms/domain/warehouse";
 import type { WarehouseRow } from "@wms/domain/warehouse";
 import { AppError } from "@wms/shared/errors";
@@ -38,7 +38,7 @@ async function LockedTree({ slug }: { slug: string }) {
 }
 
 // Lokasyon ağacı (T-207): sunucu bileşeni. Depo bulunamaz/kapsam dışı/geçersiz kimlik → 404 (varlık sızdırılmaz).
-// Yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda `settings.manage` ister).
+// Yazma yetkisi kararı yalnızca gösterim içindir (eylem sunucuda T-1141 kart anahtarını ister: `items.*` / `warehouses.*` / `locations.*`).
 export default async function LocationTreePage({ params }: { params: Promise<{ slug: string; warehouseId: string }> }) {
   const { slug, warehouseId } = await params;
   const { getAuthService } = await import("../../../../../lib/auth-service.ts");
@@ -52,13 +52,13 @@ export default async function LocationTreePage({ params }: { params: Promise<{ s
 
   let warehouse: WarehouseRow;
   let tree: Awaited<ReturnType<typeof getLocationTree>>;
-  let canManage: boolean;
+  let rights: CardRights;
   let activeTotal: number | undefined;
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    canManage = hasPermission(current.roles, "settings.manage", current.grants);
+    rights = cardRights(current.roles, current.grants, "locations");
     warehouse = await getWarehouse(call, { warehouseId });
     tree = await getLocationTree(call, { warehouseId: warehouse.id, includeArchived: true, limit: TREE_PAGE });
     // ALTIN-KURAL 15: toplam aktif lokasyon (aynı izin `stock.view`, aynı kapsam); ağaç sayfalı kalır.
@@ -82,7 +82,7 @@ export default async function LocationTreePage({ params }: { params: Promise<{ s
         warehouseName={warehouse.name}
         warehouseCode={warehouse.code}
         warehouseActive={warehouse.status === "ACTIVE"}
-        canManage={canManage}
+        rights={rights}
         initialItems={tree.items.map((i) => ({ id: i.id, parentId: i.parentId, code: i.code, name: i.name, depth: i.depth, kind: i.kind, status: i.status }))}
         initialNext={tree.next}
         {...(activeTotal === undefined ? {} : { activeTotal })}

@@ -6,7 +6,7 @@
 //   `renameWarehouse`) da satırı kilitleyerek okur (arşivli kayıt güncellenemez) ve kontrolleri kilitten SONRA yapar →
 //   arşivli ebeveyn/depo altında aktif lokasyon oluşamaz (FK KEY SHARE tek başına NO KEY UPDATE ile çakışmaz).
 // - Kapsam dışı depo/lokasyon `NOT_FOUND` (varlık sızmaz); stok komutları `assertWarehouseInScope` ile `FORBIDDEN` verir.
-// - Yazma `settings.manage`, okuma `stock.view`; her yazma aynı transaction'da `appendAudit`. Ham INSERT açık sütunlarla
+// - Yazma T-1141 kart anahtarları (`locations.create` / `.edit` / `.archive`; A-68: rollerde yalnızca TENANT_ADMIN), okuma `stock.view`; her yazma aynı transaction'da `appendAudit`. Ham INSERT açık sütunlarla
 //   (sütun düzeyi yetki, bkz. warehouses.ts). `depth`/`parent_id`/`warehouse_id` değişmez (tetikleyici zorlar); `code` T-251'den beri `renameLocation` ile değişir.
 // - `depth` = ebeveyn + 1 (tetikleyici de doğrular, fail-closed). `TRANSIT` yalnızca kök düzeyde. Sayım kilidi satırı 0010
 //   tetikleyicisiyle oluşur; komut aynı transaction'da varlığını doğrular (yoksa `COUNT_LOCK_ROW_MISSING`).
@@ -119,7 +119,7 @@ export async function createLocation(params: WarehouseCallParams, input: CreateL
   const name = normalizeName(input.name);
   const kind = parseKind(input.kind);
   if (kind === "TRANSIT" && parentId !== null) throw new AppError("VALIDATION_FAILED", { detail: "PARENT_INVALID" });
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "locations.create" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
     const wh = await tx.execute<{ status: string }>(
       sql`SELECT status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid FOR SHARE`,
@@ -186,7 +186,7 @@ export async function renameLocation(params: WarehouseCallParams, input: RenameL
   if (input.name === undefined && input.code === undefined) throw new AppError("VALIDATION_FAILED");
   const name = input.name === undefined ? undefined : normalizeName(input.name);
   const code = input.code === undefined ? undefined : normalizeCode(input.code);
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "locations.edit" }, async (tx, m) => {
     const cur = await loadActive(tx, m, locationId);
     const newName = name ?? cur.name;
     const newCode = code ?? cur.code;
@@ -235,7 +235,7 @@ export interface SetLocationKindInput {
 export async function setLocationKind(params: WarehouseCallParams, input: SetLocationKindInput): Promise<{ readonly changed: boolean }> {
   const locationId = parseUuid(input.locationId);
   const kind = parseKind(input.kind);
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "locations.edit" }, async (tx, m) => {
     const cur = await loadActive(tx, m, locationId);
     if (cur.kind === kind) return { changed: false };
     if (kind === "TRANSIT" && cur.parentId !== null) throw new AppError("VALIDATION_FAILED", { detail: "PARENT_INVALID" });
@@ -270,7 +270,7 @@ function mapStockLockError(e: unknown): unknown {
 /** Aktif alt lokasyon, pozitif bakiye veya açık sayım (COUNTING) → `IN_USE`. Sayım kilidi satırı kalır. Arşivli lokasyon no-op. */
 export async function archiveLocation(params: WarehouseCallParams, input: ArchiveLocationInput): Promise<{ readonly archived: boolean }> {
   const locationId = parseUuid(input.locationId);
-  return runTenantCommand({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantCommand({ ...params, permission: "locations.archive" }, async (tx, m) => {
     // Kilit sırası (I-15): sayım kilidi satırı → lokasyon satırı. `warehouse_id` değişmez (tetikleyici) → kilitsiz ön okuma güvenli.
     const pre = await tx.execute<{ warehouse_id: string }>(
       sql`SELECT warehouse_id FROM public.locations WHERE tenant_id = ${m.tenantId}::uuid AND id = ${locationId}::uuid`,

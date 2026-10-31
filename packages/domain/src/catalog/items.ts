@@ -1,4 +1,4 @@
-// Ürün kartı komutları (T-208; A-68, A-87, A-16, A-33). Yazma `settings.manage`, okuma `stock.view`.
+// Ürün kartı komutları (T-208; A-68, A-87, A-16, A-33). Yazma: ekle `items.create`, değiştir `items.edit`, arşivle `items.archive` (T-1141), okuma `stock.view`.
 //
 // - Stok DEĞİŞTİRMEZ (G-01); yalnızca katalog satırı yazar ve stok tablolarını OKUR. Bu yüzden `acquireStockLocks`
 //   kullanılmaz; arşiv/stok-denetimi için yalnızca ürün KATALOG satırı `FOR UPDATE` ile kilitlenir (stok kilidi değil).
@@ -106,7 +106,7 @@ export async function createItem(params: CatalogCommandParams, input: CreateItem
   const pickPolicy = input.pickPolicy === undefined ? "FIFO" : parsePick(input.pickPolicy);
   const cardType = input.cardType === undefined ? DEFAULT_CARD_TYPE : parseCardType(input.cardType);
   const { requestId, writePermission, ...access } = params;
-  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: writePermission ?? "items.create" }, async (tx, actor) => {
     const unit = await tx.execute<{ status: string }>(
       sql`SELECT status FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${baseUnitId}::uuid`,
     );
@@ -192,7 +192,7 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
   const cardType = input.cardType === undefined ? undefined : parseCardType(input.cardType);
   // T-981b: Excel "Güncelle" kipi (`onboarding/import-apply`) ad güncellemesini `data.import` ile yapar (createItem ile aynı T-421 kuralı).
   const { requestId, writePermission, ...access } = params;
-  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: writePermission ?? "items.edit" }, async (tx, actor) => {
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
     if (cur === undefined) throw new AppError("NOT_FOUND");
     const newTracking = trackingMode ?? (cur.tracking_mode as TrackingMode);
@@ -275,7 +275,7 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
 export async function archiveItem(params: CatalogCommandParams, input: { readonly itemId: string }): Promise<{ readonly itemId: string; readonly changed: boolean }> {
   const itemId = parseUuid(input.itemId);
   const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: "items.archive" }, async (tx, actor) => {
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
     if (cur === undefined) throw new AppError("NOT_FOUND");
     if (cur.status === "ARCHIVED") {

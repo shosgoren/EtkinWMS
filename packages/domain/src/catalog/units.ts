@@ -1,4 +1,4 @@
-// Birim ve birim dönüşümü komutları (T-208; A-68, I-09). Yazma `settings.manage`, okuma `stock.view`.
+// Birim ve birim dönüşümü komutları (T-208; A-68, I-09). Yazma `items.edit` (T-1141), okuma `stock.view`.
 //
 // - Hepsi `runTenantCommand`/`runTenantQuery` içinde (güncel üyelik + izin, tenant bağlamı `set_config(..., true)`); `tenant_id`
 //   yalnızca üyelik bağlamından gelir, tüm erişim `tx` üzerindendir. Audit aynı transaction'da (I-12).
@@ -13,7 +13,7 @@ import { assertConversionFactor } from "./quantity.ts";
 
 export type CatalogCommandParams = Omit<TenantAccessParams, "permission"> & {
   readonly requestId?: string;
-  /** T-421: yalnız Excel'den aktarım yolu (`onboarding/import-apply`) `data.import` ile yazar (createItem, T-981b updateItem ad); diğer tüm çağrılar `settings.manage`. */
+  /** T-421: yalnız Excel'den aktarım yolu (`onboarding/import-apply`) `data.import` ile yazar (createItem, T-981b updateItem ad); diğer çağrılar T-1141 kart anahtarı (`items.create` / `items.edit` / `items.archive`). */
   readonly writePermission?: "data.import";
 };
 
@@ -58,7 +58,7 @@ export async function createUnit(
   const code = parseCode(input.code);
   const name = parseName(input.name);
   const { requestId, writePermission, ...access } = params;
-  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: writePermission ?? "items.create" }, async (tx, actor) => {
     const rows = await tx.execute<{ id: string }>(
       sql`INSERT INTO public.units (tenant_id, id, code, name)
           VALUES (${actor.tenantId}::uuid, gen_random_uuid(), ${code}, ${name})
@@ -86,7 +86,7 @@ export async function renameUnit(
   const unitId = parseUuid(input.unitId);
   const name = parseName(input.name);
   const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: "items.edit" }, async (tx, actor) => {
     const cur = await tx.execute<{ name: string }>(
       sql`SELECT name FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${unitId}::uuid FOR UPDATE`,
     );
@@ -167,7 +167,7 @@ export async function setUnitConversion(
   const unitId = parseUuid(input.unitId);
   const factor = assertConversionFactor(input.factor);
   const { requestId, writePermission, ...access } = params;
-  return runTenantCommand({ ...access, permission: writePermission ?? "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: writePermission ?? "items.edit" }, async (tx, actor) => {
     const item = await loadItem(tx, actor.tenantId, itemId, "share");
     if (item === undefined) throw new AppError("NOT_FOUND");
     if (item.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");

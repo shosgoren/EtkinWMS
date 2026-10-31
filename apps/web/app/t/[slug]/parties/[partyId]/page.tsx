@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getParty } from "@wms/domain/catalog/parties";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
-import { hasPermission } from "@wms/domain/identity/permissions";
+import { cardRights } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { temaKoyu } from "../../../../design/theme.ts";
 import { PartyCard } from "./party-card.tsx";
@@ -33,11 +33,11 @@ export default async function PartyCardPage({ params }: { params: Promise<{ slug
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
-    const canEdit = hasPermission(current.roles, "settings.manage", current.grants);
+    const rights = cardRights(current.roles, current.grants, "parties");
     const party = await getParty({ db, principal, tenantSlug: slug }, partyId);
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <PartyCard slug={slug} dark={temaKoyu(await cookies())} canEdit={canEdit} party={party} />
+        <PartyCard slug={slug} dark={temaKoyu(await cookies())} rights={rights} party={party} />
       </main>
     );
   } catch (e) {

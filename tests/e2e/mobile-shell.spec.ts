@@ -391,7 +391,9 @@ test("kolay Akış: salt okunur kullanıcıda dört yazma işi kilitli, stok oku
   await expect(page.locator("#main").getByTestId("report-problem")).toHaveCount(0);
   // T-958 / T-979c: ortak alt çubuğun Modüller sayfası salt okuyana yönetici / yazma modüllerini göstermez; Stok durumu ve Genel bakış görünür.
   await page.goto("/t/demo/parties");
-  await expectKabukBar(page, "kabuk-scan", "cariler salt okunur");
+  // T-1141: yetkisiz "Yeni cari" gizlenmez; ana işlem kilitli (kilit ikonu + yetki gerekçesi), OKUT'a dönmez.
+  await expectKabukBar(page, "party-new", "cariler salt okunur");
+  await expect(page.getByTestId("party-new")).toHaveAttribute("data-kilitli", "true");
   await expectModulesSheet(page, ["home", "kokpit", "urun"], ["ekip", "excel", "abone", "etiket", "satin", "trans", "topla", "ayar"]);
   // Telefonda ilk sayfaya sığmayan modüller aramayla bulunur.
   await page.getByTestId("kabuk-mods").click();

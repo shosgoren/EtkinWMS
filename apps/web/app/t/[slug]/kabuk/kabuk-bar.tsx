@@ -21,6 +21,8 @@ import type { KabukModule } from "./types.ts";
 import { useEtkin } from "./etkin.tsx";
 import { useYolSpot } from "../yolculuk/spot.ts";
 import { KabukKisayol } from "./kisayol.tsx";
+import { kilitliDokunus } from "../kalip/kilitli.tsx";
+import { LICON } from "../../../design/kalip-icons.ts";
 import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 
 export interface KabukContextValue {
@@ -101,6 +103,11 @@ export interface KabukMain {
   readonly busy?: boolean;
   /** Pasifken dokununca balonda söylenen neden (verilmezse genel metin). */
   readonly disabledReason?: string;
+  /**
+   * T-1141 (ALTIN-KURAL 17): yetki kilidi. `disabled` gibi işlem çağrılmaz; ikon kilit olur, dokununca SARI "yetkin yok" balonu + hata sesi
+   * (`kalip/kilitli.tsx` `kilitliDokunus`, neden `disabledReason`). Geçici pasiflik (değişiklik yok, bekleniyor) `disabled` ile kalır.
+   */
+  readonly locked?: boolean;
   /** Kaydedilmemiş değişiklik sayısı (ALTIN-KURAL: değişiklik varsa ana işlemde sayı rozeti). */
   readonly badge?: number;
 }
@@ -293,7 +300,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotPr
   const centerCls = `dk big${center.wait === true ? " wait" : ""}${sp("center")}`;
   const centerInner = (
     <>
-      {center.busy === true ? <span className="kyuk" aria-hidden="true" /> : <Ico d={center.d} size={30} />}
+      {center.busy === true ? <span className="kyuk" aria-hidden="true" /> : <Ico d={center.locked === true ? LICON.lock : center.d} size={30} />}
       <span className="cap" aria-hidden={capOf(center.label) === center.label ? undefined : true}>
         {capOf(center.label)}
       </span>
@@ -327,7 +334,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotPr
                 <Ico d={[KICON.homeA, KICON.homeB, KICON.homeC]} size={26} />
                 <span>{t("homeShort")}</span>
               </Slot>
-              {center.href !== undefined && center.onClick === undefined && center.disabled !== true && center.busy !== true ? (
+              {center.href !== undefined && center.onClick === undefined && center.disabled !== true && center.locked !== true && center.busy !== true ? (
                 <Link href={center.href} prefetch={false} className={centerCls} aria-label={center.aria ?? center.label} data-testid={center.testId ?? "kabuk-main"} data-k="center" data-tour="main" style={{ textDecoration: "none" }} onClick={(e) => plainClick(e) && feedback.minor()}>
                   {centerInner}
                 </Link>
@@ -336,10 +343,16 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotPr
                   type="button"
                   className={centerCls}
                   aria-label={center.aria ?? center.label}
-                  aria-disabled={center.disabled === true ? true : undefined}
+                  aria-disabled={center.disabled === true || center.locked === true ? true : undefined}
+                  aria-description={center.locked === true ? center.disabledReason : undefined}
+                  data-kilitli={center.locked === true ? "true" : undefined}
                   aria-busy={center.busy === true || undefined}
                   onClick={() => {
                     if (center.busy === true) return;
+                    if (center.locked === true) {
+                      kilitliDokunus(center.disabledReason);
+                      return;
+                    }
                     if (center.disabled === true) {
                       // Sessiz kapalı düğme yok: hata sesi + neden balonu.
                       feedback.error(center.disabledReason ?? t("mainOff"));

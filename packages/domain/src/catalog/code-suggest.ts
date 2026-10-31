@@ -5,17 +5,20 @@
 //   gönderilen kod sunucunun önerdiği BİÇİMDE (`<ÖNEK>-<sıfır dolgulu sıra>`) ise ve çakışma olursa, AYNI önekle bir sonraki öneriyle
 //   yeniden dener. İstemci bayrağına güvenilmez (T-259): kullanıcının yazdığı kod asla sessizce değiştirilmez.
 // - Sıra = aynı önekle başlayan, yalnızca rakamdan oluşan son ekin en büyüğü + 1 (arşivli kayıtlar dahil: kod arşivde de ayrılmıştır).
-// - Yetki `settings.manage` (öneri yalnızca oluşturma formunun parçası); lokasyonda depo kapsamı `assertWarehouseVisible` ile denetlenir.
+// - Yetki türün "ekle" anahtarı (T-1141: `items.create` / `warehouses.create` / `locations.create` / `parties.create`; öneri yalnızca oluşturma formunun parçası); lokasyonda depo kapsamı `assertWarehouseVisible` ile denetlenir.
 import { sql } from "drizzle-orm";
 import { appendAudit, type ItemCardType, type PickPolicy, type TrackingMode } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery } from "../identity/access.ts";
+import type { Permission } from "../identity/permissions.ts";
 import { assertWarehouseVisible } from "../warehouse/scope.ts";
 import { DEFAULT_CARD_TYPE, createItem, parseCardType } from "./items.ts";
 import { parseCode, parseName, parseUuid, type CatalogCommandParams } from "./units.ts";
 
 export const CODE_SUGGEST_KINDS = ["item", "warehouse", "location", "party"] as const;
 export type CodeSuggestKind = (typeof CODE_SUGGEST_KINDS)[number];
+/** T-1141: öneri, türün kart bölümündeki "ekle" yetkisini ister. */
+const SUGGEST_PERMISSION: Readonly<Record<CodeSuggestKind, Permission>> = Object.freeze({ item: "items.create", warehouse: "warehouses.create", location: "locations.create", party: "parties.create" });
 
 /** A-250-1: varsayılan önek ve sıra basamak sayısı. Kullanıcı öneki değiştirebilir (`A-Z`, `0-9`, `_`; en çok 16 karakter). */
 export const CODE_SUGGEST_DEFAULTS: Readonly<Record<CodeSuggestKind, { readonly prefix: string; readonly width: number }>> = {
@@ -75,7 +78,7 @@ export async function suggestCode(params: SuggestCodeParams, input: SuggestCodeI
   const warehouseId = kind === "location" ? parseUuid(input.warehouseId) : null;
   if (kind !== "location" && input.warehouseId !== undefined) throw new AppError("VALIDATION_FAILED");
   const lead = `${prefix}-`;
-  return runTenantQuery({ ...params, permission: "settings.manage" }, async (tx, m) => {
+  return runTenantQuery({ ...params, permission: SUGGEST_PERMISSION[kind] }, async (tx, m) => {
     // Son ek yalnızca rakam ve en çok SEQ_MAX_DIGITS basamak olanlar sayılır (taşma/aşırı büyük değer sırayı bozmaz).
     const suffixRe = `^[0-9]{1,${SEQ_MAX_DIGITS}}$`;
     let rows: readonly { n: string | number | null }[];
@@ -174,7 +177,7 @@ export interface CreateItemWithDefaultUnitInput {
  * Ürünü oluşturur; `baseUnitId` yoksa varsayılan birim ile ürün TEK transaction'dadır (T-259 MINOR-3/4): ürün reddedilirse (ör. `CODE_TAKEN`)
  * yeni açılan `ADET` de geri alınır. Birim çözümü: aktif `ADET` varsa o; HİÇ aktif birim yoksa `ADET` oluşturulur (eşzamanlı çakışmada
  * mevcut olan okunur); aktif birimler var ama `ADET` yoksa SESSİZ SEÇİM YOK → `VALIDATION_FAILED` (kullanıcı birim seçmeli); `ADET`
- * arşivliyse ve aktif birim yoksa `VALIDATION_FAILED` (arşivli birim sessizce açılmaz). Yetki `settings.manage`.
+ * arşivliyse ve aktif birim yoksa `VALIDATION_FAILED` (arşivli birim sessizce açılmaz). Yetki `items.create` (T-1141).
  * `baseUnitId` verilmişse davranış `createItem` ile aynıdır (yetki + birim durumu orada denetlenir).
  */
 export async function createItemWithDefaultUnit(
@@ -195,7 +198,7 @@ export async function createItemWithDefaultUnit(
   if (!PICK.includes(pickPolicy)) throw new AppError("VALIDATION_FAILED");
   const cardType = input.cardType === undefined ? DEFAULT_CARD_TYPE : parseCardType(input.cardType);
   const { requestId, ...access } = params;
-  return runTenantCommand({ ...access, permission: "settings.manage" }, async (tx, actor) => {
+  return runTenantCommand({ ...access, permission: "items.create" }, async (tx, actor) => {
     const activeAdet = async (): Promise<{ readonly id: string | undefined; readonly anyActive: boolean }> => {
       const active = await tx.execute<{ id: string; code: string }>(
         sql`SELECT id, code FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND status = 'ACTIVE' ORDER BY code`,
