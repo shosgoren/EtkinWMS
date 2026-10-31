@@ -248,6 +248,13 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await page.getByTestId("oauth-app-secret").fill(F.clientSecret);
     await page.getByTestId("oauth-oob-toggle").click();
     await expect(page.getByTestId("oauth-callback")).toHaveValue("urn:ietf:wg:oauth:2.0:oob");
+    // Kopyala, seçili yöntemde GÖSTERİLEN adresi kopyalar (OOB → URN; PR inceleme bulgusu).
+    if (testInfo.project.name === "desktop") {
+      await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+      await page.getByTestId("oauth-copy").click();
+      await expect(page.getByTestId("oauth-copy")).toContainText("Kopyalandı");
+      expect(await page.evaluate("navigator.clipboard.readText()")).toBe("urn:ietf:wg:oauth:2.0:oob");
+    }
     await page.getByTestId("oauth-settings-save").click();
     await expect(page.getByTestId("integrations")).toBeVisible();
     await page.reload();

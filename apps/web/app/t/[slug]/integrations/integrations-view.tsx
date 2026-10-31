@@ -28,6 +28,7 @@ import { KalipBos } from "../kalip/liste.tsx";
 import { KalipSecim, KalipSekme } from "../kalip/secim.tsx";
 import { ayarSekmeleri } from "../settings/sekmeler.ts";
 import { entegrasyonSorunSayisi, sonEsitleme, type EntegrasyonBolumu } from "./bolum.ts";
+import { donusAdresi } from "./oauth-adres.ts";
 import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
@@ -297,10 +298,10 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
     }).catch(()=>{setBusy(null);say("err",t("oauth.failed"));});
   };
   /** T-1133: dönüş adresini kopyala (küçük işlem: sessiz, düğme içinde 2 sn "Kopyalandı"). */
-  const copyCallback=():void=>{
-    if(oauth.callbackUrl===null){say("warn",t("oauth.originMissing"));return;}
+  const copyCallback=(value:string|null=oauth.callbackUrl):void=>{
+    if(value===null){say("warn",t("oauth.originMissing"));return;}
     feedback.minor();
-    void navigator.clipboard.writeText(oauth.callbackUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}).catch(()=>say("warn",t("oauth.copyFailed")));
+    void navigator.clipboard.writeText(value).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}).catch(()=>say("warn",t("oauth.copyFailed")));
   };
   const resetApp=():void=>{setAppForm(EMPTY_APP);setAppOob(oauth.oob);};
 
@@ -387,7 +388,9 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   // 3: KAYDET'ten sonra bölümdeki BAĞLAN. Doğrulama ortak `KalipFormEkran` (eksik alan kırmızı + "N alan eksik"). Eski yetki kodu yöntemi (OOB)
   // yalnız anahtarla açılır; "Eski bağlantı yöntemi" düğmesi kalır (parola akışı başka yerden ulaşılamaz; kaldırma T-1137).
   const stepIcon=(n:number,done:boolean,color:string)=><i style={{background:c(done?"2F9E6B":color)}} aria-hidden="true">{done?<Ico d={LICON.check} size={18}/>:<b style={{font:"inherit",color:"inherit"}}>{n}</b>}</i>;
-  const callbackShown=appOob?t("oauth.oobUrn"):(oauth.callbackUrl??t("oauth.originMissing"));
+  // Gösterilen ve kopyalanan adres aynı kaynaktan (seçili yönteme göre: OOB → URN, değilse sunucu callback'i).
+  const callbackValue=donusAdresi(appOob,oauth.callbackUrl);
+  const callbackShown=callbackValue??t("oauth.originMissing");
   if(configOpen)return <KalipFormEkran dark={dark} title={t("oauth.ownApp")} subtitle={t("oauth.ownAppSub")} icon={{d:LICON.key,color:"2F5DA8"}}
     testId="oauth-settings" values={{...appForm,oob:appOob}} initial={{...EMPTY_APP,oob:oauth.oob}}
     rules={[{name:"clientId",label:t("oauth.id"),required:true,maxLength:200},{name:"clientSecret",label:t("oauth.secret"),required:true,maxLength:200}]}
@@ -397,7 +400,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
     footer={reauthAction??(appForm.clientId!==""||appForm.clientSecret!==""?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{resetApp();setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>)}>
     <KalipGrup title={t("oauth.step1")} sub={appOob?t("oauth.step1Oob"):t("oauth.step1Hint")} d={LICON.globe} color="2F5DA8" testId="oauth-step1">
       <KalipAlan label={t("oauth.callback")} name="callbackUrl" value={callbackShown} readOnly autoComplete="off" onFocus={e=>e.currentTarget.select()} data-testid="oauth-callback" />
-      <button type="button" className="btn n" data-testid="oauth-copy" onClick={copyCallback}><Ico d={copied?LICON.check:LICON.clip} size={20}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
+      <button type="button" className="btn n" data-testid="oauth-copy" onClick={()=>copyCallback(callbackValue)}><Ico d={copied?LICON.check:LICON.clip} size={20}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
     </KalipGrup>
     <KalipGrup title={t("oauth.step2")} sub={t("oauth.step2Hint")} d={LICON.key} color="B07D0B" testId="oauth-step2">
       <KalipAlan label={t("oauth.id")} name="clientId" value={appForm.clientId} autoComplete="off" maxLength={200} onChange={e=>setAppForm({...appForm,clientId:e.target.value})} data-testid="oauth-app-id" />
@@ -633,7 +636,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
                         <b>{t("oauth.step1")}</b>
                         <small data-testid="oauth-callback-url">{oauth.callbackUrl??t("oauth.originMissing")}</small>
                       </span>
-                      <button type="button" className="frun" data-testid="oauth-copy-inline" onClick={copyCallback}><Ico d={copied?LICON.check:LICON.clip} size={16}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
+                      <button type="button" className="frun" data-testid="oauth-copy-inline" onClick={()=>copyCallback()}><Ico d={copied?LICON.check:LICON.clip} size={16}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
                     </div>
                     <div className="cnote"><i><Ico d={LICON.info} size={20}/></i><span>{t("oauth.step1Hint")}</span></div>
                     <div className="rl" role="listitem" data-testid="oauth-step-2">
