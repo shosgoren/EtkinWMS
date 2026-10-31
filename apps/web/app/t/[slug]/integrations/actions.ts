@@ -6,7 +6,7 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
-import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, FLOWS, DIRECTIONS, beginParasutOAuth, selectParasutOAuthCompany, encodeOAuthBinding, parseOAuthBinding, oauthCookieName, OAUTH_TTL_SECONDS, saveParasutOAuthSettings, completeParasutOAuth, PARASUT_OOB_REDIRECT_URI } from "@wms/domain/integrations";
+import { checkIntegration, connectParasut, disconnectIntegration, pullOpeningStock, requestIntegrationRun, setIntegrationFlow, setOpeningStockSetting, setProductBarcodeSetting, countFlowRecords, CARD_FLOWS, FLOWS, DIRECTIONS, beginParasutOAuth, selectParasutOAuthCompany, encodeOAuthBinding, parseOAuthBinding, oauthCookieName, OAUTH_TTL_SECONDS, saveParasutOAuthSettings, completeParasutOAuth, PARASUT_OOB_REDIRECT_URI } from "@wms/domain/integrations";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { getSenderQueue } from "../../../../lib/queue.ts";
 
@@ -73,6 +73,13 @@ export async function runIntegrationAction(raw: unknown) {
   const queue = await getSenderQueue();
   return guardedAction({ schema: runSchema }, async (i, ctx) =>
     requestIntegrationRun(await access(i.slug, ctx), { provider: i.provider, ...(i.flow === undefined ? {} : { flow: i.flow }), requestId: ctx.requestId }, { queue }),
+  )(raw);
+}
+
+/** T-1136: yön onay penceresi için kart akışının yerel kayıt sayısı (yalnız sayı; tenant + `settings.manage` domain'de). */
+export async function countFlowRecordsAction(raw: unknown) {
+  return guardedAction({ schema: z.object({ slug, provider, flow: z.enum(CARD_FLOWS) }).strict() }, async (i, ctx) =>
+    countFlowRecords(await access(i.slug, ctx), { provider: i.provider, flow: i.flow }),
   )(raw);
 }
 

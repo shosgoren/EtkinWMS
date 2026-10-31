@@ -1532,6 +1532,25 @@ body:has(.kperde, .dzk .msheet, [aria-modal="true"]:not([data-testid="pano-picke
   flex-wrap: wrap;
   gap: 6px;
 }
+/* T-1136: ayar satırının alt notu (seçili yönün sonucu) — tam genişlik tek cümle; simge seçimin renginde, yazı satır rengi. */
+.stay-n {
+  flex: 1 1 100%;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 13px/1.3 var(--font-instrument), sans-serif;
+}
+.stay-n > .ico {
+  flex: none;
+  color: var(--k);
+}
+.stay-n > .styon-e {
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+}
 .styon > button {
   appearance: none;
   width: 132px;
