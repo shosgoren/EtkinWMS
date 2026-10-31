@@ -34,10 +34,11 @@ export const ADIM_YETKI: Readonly<Record<AdimRehber, "cards" | "shelves" | "part
 export function adimPlani(rehber: AdimRehber, kaynak: AdimKaynak): readonly AdimRehberAdimi[] {
   if (kaynak === "PARASUT") {
     const f = AKIS[rehber];
-    // T-1112: akış yön seçimi (`flow-<akış>-toggle` = yön seçim grubu) Entegrasyonlar › "Ne çekilsin, gönderilsin" bölümündedir.
+    // T-1112: akış yön seçimi Entegrasyonlar › "Ne çekilsin, gönderilsin" bölümündedir. T-1134: delik akışın BÜTÜN satırında (`flow-<akış>`:
+    // ad + açıklama + yön seçimi); yalnız yön grubunu açmak kullanıcıya "hangi satır" demiyordu ve metin "akışı aç" diyordu.
     return [
       { key: "baglan", path: "/integrations", target: '[data-testid="integrations-connect"], [data-testid="integrations-sync"]', done: { sel: '[data-testid="integrations-sync"]' } },
-      { key: `akis_${rehber}`, path: "/integrations", query: "bolum=akis", target: `[data-testid="flow-${f}-toggle"]`, done: { sel: `[data-testid="flow-${f}"][data-enabled="true"]` } },
+      { key: `akis_${rehber}`, path: "/integrations", query: "bolum=akis", target: `[data-testid="flow-${f}"]`, done: { sel: `[data-testid="flow-${f}"][data-enabled="true"]` } },
       { key: "esitle", path: "/integrations", query: "bolum=akis", target: `[data-testid="flow-${f}-run"]`, done: { click: true } },
     ];
   }

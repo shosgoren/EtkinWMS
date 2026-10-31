@@ -26,8 +26,9 @@ describe("adım adım aktarma rehberi planı (T-1095)", () => {
   });
 
   it("Paraşüt: bağlan → ilgili akışı aç → eşitle (ürün PRODUCTS, depo WAREHOUSES, cari CONTACTS)", () => {
-    expect(adimPlani("urun", "PARASUT")[1]?.target).toContain("flow-PRODUCTS-toggle");
-    expect(adimPlani("depo", "PARASUT")[1]?.target).toContain("flow-WAREHOUSES-toggle");
+    // T-1134: delik bütün akış satırında (yön grubu değil).
+    expect(adimPlani("urun", "PARASUT")[1]?.target).toBe('[data-testid="flow-PRODUCTS"]');
+    expect(adimPlani("depo", "PARASUT")[1]?.target).toBe('[data-testid="flow-WAREHOUSES"]');
     expect(adimPlani("cari", "PARASUT").at(-1)).toMatchObject({ key: "esitle", done: { click: true } });
     // T-1112: akış adımları "Ne çekilsin, gönderilsin" bölümünü açar.
     expect(adimPlani("urun", "PARASUT").slice(1).map((a) => a.query)).toEqual(["bolum=akis", "bolum=akis"]);

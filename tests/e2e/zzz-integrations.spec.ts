@@ -34,6 +34,15 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     // T-1112: bağlantı kartı "Bağlantı ve veri kaynağı" bölümünde (bağlıyken varsayılan bölüm akışlardır).
     await page.goto(`/t/${slug}/integrations?bolum=baglanti`);
     await expect(page.getByTestId("integrations")).toBeVisible();
+    // T-1134 (ALTIN-KURAL 11): kapalı ilk kullanım penceresi klavye sırasında değil (`inert`); birkaç Tab'da kalıp üst çubuğuna ulaşılır.
+    await expect(page.locator("dialog.guide-dialog")).toHaveAttribute("inert", "");
+    await expect(page.locator("dialog.guide-dialog")).not.toHaveAttribute("open", "");
+    let ustCubukta = false;
+    for (let i = 0; i < 4 && !ustCubukta; i++) {
+      await page.keyboard.press("Tab");
+      ustCubukta = await page.evaluate<boolean>('document.activeElement?.closest(".kalip .top") != null && document.activeElement?.closest("dialog") == null');
+    }
+    expect(ustCubukta, "Tab birkaç adımda kalıp üst çubuğuna ulaşır (gizli pencere içinde dolanmaz)").toBe(true);
 
     if (await page.getByTestId("integrations-conn").isVisible()) {
       await page.getByTestId("integrations-cut").click();
@@ -53,8 +62,29 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await bolumler.locator('[data-bolum="akis"]').click();
     await expect(page).toHaveURL(/bolum=akis/);
     await expect(page.getByTestId("integrations-flows-empty")).toBeVisible();
+    // T-1134: form kabındaki boş durum biçimli (başlık / ipucu / düğme alt alta, düğme yazının üstüne binmez; 390 px'te de).
+    const bosDuzen = async (where: string): Promise<void> => {
+      const bos = page.getByTestId("integrations-flows-empty");
+      const r = await bos.evaluate((el) => { const cs = el.ownerDocument.defaultView!.getComputedStyle(el); const b = el.querySelector("b")!.getBoundingClientRect(); const s = el.querySelector("small")!.getBoundingClientRect(); const a = el.querySelector("a.btn")!.getBoundingClientRect(); return { display: cs.display, b: [b.top, b.bottom], s: [s.top, s.bottom], a: [a.top, a.bottom, a.height], w: el.getBoundingClientRect().width }; });
+      expect(r.display, `${where}: boş durum sütun`).toBe("flex");
+      expect(r.s[0]!, `${where}: ipucu başlığın altında`).toBeGreaterThanOrEqual(r.b[1]! - 0.5);
+      expect(r.a[0]!, `${where}: düğme ipucunun altında`).toBeGreaterThanOrEqual(r.s[1]! - 0.5);
+      expect(r.a[2]!, `${where}: düğme ≥ 44 px`).toBeGreaterThanOrEqual(44);
+    };
+    await bosDuzen(testInfo.project.name);
+    if (testInfo.project.name === "desktop") {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await bosDuzen("390");
+      await page.screenshot({ path: testInfo.outputPath("akis-bos-390.png") });
+      await page.setViewportSize({ width: 1280, height: 800 });
+    }
+    // T-1134: Alan sahipliği çıkmaz değil — solda YAKINDA rozeti, içeride tek cümle + yön seçimine götüren düğme.
+    await expect(bolumler.getByTestId("alt-bolum-sahiplik-soon")).toHaveText("YAKINDA");
     await bolumler.locator('[data-bolum="sahiplik"]').click();
     await expect(page.getByTestId("integrations-sahiplik-soon")).toBeVisible();
+    await expect(page.getByTestId("integrations-sahiplik-soon")).toContainText("Alan sahipliği yakında");
+    await expect(page.getByTestId("integrations-sahiplik-soon")).not.toContainText("gelecekYAKINDA");
+    await expect(page.getByTestId("integrations-sahiplik-soon").getByTestId("kalip-empty-action")).toHaveAttribute("href", /bolum=akis$/);
     await expect(page.getByTestId("integrations-sahiplik").getByRole("radio")).toHaveCount(0);
     await bolumler.locator('[data-bolum="arsiv"]').click();
     await expect(page.getByTestId("integrations-archived")).toHaveAttribute("href", `/t/${slug}/items?status=ARCHIVED`);
@@ -105,7 +135,7 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     // Sipariş akışı Paraşüt'te yok: yalnız "Yalnız Etkin WMS" seçeneği (seçili) ve nedeni satırda yazar.
     const siparis = page.getByTestId("flow-SALES_ORDERS");
     await expect(siparis).toHaveAttribute("data-enabled", "false");
-    await expect(siparis).toContainText("karşılığı yok");
+    await expect(siparis).toContainText("sipariş yok");
     await expect(siparis.getByRole("radio")).toHaveCount(1);
     await expect(siparis.getByRole("radio", { name: "Yalnız Etkin WMS" })).toHaveAttribute("aria-checked", "true");
 
@@ -127,11 +157,33 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(urun.getByRole("radio", { name: "Yalnız Etkin WMS" })).toHaveAttribute("aria-checked", "true");
     await page.reload();
     await expect(urun).toHaveAttribute("data-enabled", "false");
+    // T-1134: telefon ölçüleri — yön düğmeleri üç satıra kırılmaz (≥ 140 px, ≤ 2 satır), içerik alanı alt çubuğun üstünde biter (sayfa
+    // kaymaz, yalnız bölüm kayar), "Şimdi çalıştır" ≥ 44 px.
+    const telefonOlc = async (where: string): Promise<void> => {
+      const yon = await page.getByTestId("flow-PRODUCTS-toggle").locator("button").evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height }; }));
+      expect(yon.length).toBe(4);
+      for (const b of yon) {
+        expect(b.w, `${where}: yön düğmesi geniş`).toBeGreaterThanOrEqual(140);
+        expect(b.h, `${where}: yön düğmesi en çok iki satır`).toBeLessThanOrEqual(64);
+      }
+      const o = await page.evaluate<{ innerBottom: number; dockTop: number; docSw: number; docCw: number; docSh: number; winH: number }>(`(() => { const inner = document.querySelector(".dzf .inner").getBoundingClientRect(); const dock = document.querySelector('[data-testid="kabuk-dock"]').getBoundingClientRect(); return { innerBottom: inner.bottom, dockTop: dock.top, docSw: document.documentElement.scrollWidth, docCw: document.documentElement.clientWidth, docSh: document.documentElement.scrollHeight, winH: window.innerHeight }; })()`);
+      expect(o.innerBottom, `${where}: içerik alanı alt çubuğun üstünde biter`).toBeLessThanOrEqual(o.dockTop + 1);
+      expect(o.docSh, `${where}: sayfa gövdesi kaymaz`).toBeLessThanOrEqual(o.winH);
+      expect(o.docSw).toBeLessThanOrEqual(o.docCw);
+      const run = await page.getByTestId("flow-PRODUCTS-run").boundingBox();
+      expect(run?.height ?? 0, `${where}: Şimdi çalıştır ≥ 44 px`).toBeGreaterThanOrEqual(44);
+    };
+    await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
+    await expect(urun).toHaveAttribute("data-enabled", "true");
+    await expect(page.getByTestId("flow-PRODUCTS-run")).toBeVisible();
+    await expect(page.getByTestId("flow-PRODUCTS-toggle")).not.toHaveAttribute("aria-busy", "true");
+    if (testInfo.project.name === "mobile") await telefonOlc("mobile");
     // Telefon genişliğinde alt bölüm listesi kartın üstünde yatay çip satırı; sayfa yatay kaymaz.
     if (testInfo.project.name === "desktop") {
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(bolumler.locator("nav")).toBeVisible();
       await expect(page.getByTestId("integrations-flows")).toBeVisible();
+      await telefonOlc("390");
       const nav = await bolumler.locator("nav").boundingBox();
       const card = await page.getByTestId("integrations-flows").boundingBox();
       if (nav === null || card === null) throw new Error("e2e: bölüm listesi ya da kart ölçülemedi");
@@ -148,6 +200,25 @@ if (!process.env.E2E_BASE_URL?.trim()) {
       expect(navD.x + navD.width).toBeLessThanOrEqual(cardD.x);
       await page.screenshot({ path: testInfo.outputPath("akis-1440.png") });
     }
+    // T-1134: "Nasıl kullanırım" › Ürünleri aktar › Paraşüt ile — bağlıyken ilk adım kendiliğinden biter; akış adımının deliği Ürün
+    // kartları SATIRINDA (perde satırın ortasını örtmez), metin yönü söyler; yön seçilince eşitle adımına geçer.
+    // Önceki yön kaydı bitmeden yeni seçim yok sayılır (aynı işlem iki kez gönderilmez): önce iş bitsin.
+    await expect(page.getByTestId("flow-PRODUCTS-toggle")).not.toHaveAttribute("aria-busy", "true");
+    await urun.getByRole("radio", { name: "Yalnız Etkin WMS" }).click();
+    await expect(urun).toHaveAttribute("data-enabled", "false");
+    await page.getByTestId("operation-guide-trigger").first().click();
+    await expect(page.getByTestId("guide-picker")).toBeVisible();
+    await page.getByTestId("adim-basla-urun-PARASUT").click();
+    const rehber = page.getByTestId("adim-rehber");
+    await expect(rehber).toHaveAttribute("data-step", "akis_urun");
+    await expect(page.getByTestId("adim-metin")).toContainText("Ürün kartları için yönü seç");
+    const perde = page.getByTestId("kalip-perde");
+    await expect(perde).toHaveAttribute("style", /path\(evenodd/);
+    await expect.poll(async () => page.evaluate<boolean>(`(() => { const r = document.querySelector('[data-testid="flow-PRODUCTS"]').getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return el?.closest('[data-testid="flow-PRODUCTS"]') != null && el?.closest('[data-testid="kalip-perde"]') == null; })()`), "delik Ürün kartları satırını açık bırakır").toBe(true);
+    await urun.getByRole("radio", { name: "Paraşüt'ten al" }).click();
+    await expect(rehber).toHaveAttribute("data-step", "esitle");
+    await page.getByTestId("adim-kapat").first().click();
+    await expect(rehber).toHaveCount(0);
     // Bekleyenler ve hatalar: son koşular listesi bu bölümde.
     await bolumler.locator('[data-bolum="hatalar"]').click();
     await expect(page.getByTestId("integrations-runs")).toBeVisible();
@@ -158,6 +229,9 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await expect(conn).toBeVisible();
     await expect(conn).toContainText(F.companyName);
     await expect(conn).toHaveAttribute("data-status", "CONNECTED");
+    // T-1134: bağlıyken bağlantı bölümünde eski "AÇ / KAPAT · YÖNÜ SEÇ · GERİSİ KENDİLİĞİNDEN" ipucu yok; "SON SINAMA" yerine "SON KONTROL".
+    await expect(page.getByTestId("integrations-baglanti")).not.toContainText("GERİSİ KENDİLİĞİNDEN");
+    await expect(page.getByTestId("integrations-baglanti")).not.toContainText("SON SINAMA");
     const html = await page.content();
     for (const secret of [F.clientSecret, F.password]) expect(html).not.toContain(secret);
 

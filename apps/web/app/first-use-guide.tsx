@@ -29,6 +29,8 @@ export function FirstUseGuide() {
   const t = useTranslations("guide");
   const dialog = useRef<HTMLDialogElement>(null);
   const [step, setStep] = useState(0);
+  // T-1134 (ALTIN-KURAL 11): kapalı pencerenin içi klavye sırasına girmez (`inert`); açık/kapalı durumu pencerenin kendi olaylarından.
+  const [open, setOpen] = useState(false);
   const pathname = usePathname();
   // T-983 / T-995: giriş, iki adımlı doğrulama, parola sıfırlama ve aktivasyon sade kalır. T-1012: eski rehber kendiliğinden YALNIZ karşılama
   // sayfasında (`/`, tetikleyicisinin bulunduğu eski başlık) açılır; çalışma alanı kendi kurulum turunu (T-1006), seçici/kurulum/saha ekranları
@@ -49,8 +51,21 @@ export function FirstUseGuide() {
     try { localStorage.setItem(KEY, "seen"); } catch { /* Depolama gerekli değildir. */ }
     dialog.current?.close();
   }
+  useEffect(() => {
+    const el = dialog.current;
+    if (el === null) return undefined;
+    const sync = (): void => setOpen(el.open);
+    sync();
+    el.addEventListener("close", sync);
+    const mo = new MutationObserver(sync);
+    mo.observe(el, { attributes: true, attributeFilter: ["open"] });
+    return () => {
+      el.removeEventListener("close", sync);
+      mo.disconnect();
+    };
+  }, []);
   return (
-    <dialog ref={dialog} className="guide-dialog" aria-labelledby="guide-title" onCancel={close}>
+    <dialog ref={dialog} className="guide-dialog" aria-labelledby="guide-title" onCancel={close} inert={!open}>
       <div className="guide-heading"><span>{t("progress", { current: step + 1, total: 3 })}</span><button type="button" onClick={close} aria-label={t("skip")}>×</button></div>
       <p className="guide-kicker">ETKİN WMS</p><h2 id="guide-title">{t("title")}</h2><p className="guide-intro">{t("intro")}</p>
       <div className={`guide-step guide-step-${step}`}><span className="guide-step-number" aria-hidden="true">{step + 1}</span><h3>{t(`steps.${step}.title`)}</h3><p>{t(`steps.${step}.text`)}</p></div>
