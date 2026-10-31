@@ -91,7 +91,21 @@ export async function registerParasutWebhooks(deps: RegisterDeps, integrationId:
   if (deps.callbackUrl === null) return fail("CONFIG");
   const uri = deps.callbackUrl;
   let created = 0, kept = 0;
-  const writes: { model: string; action: string; externalId: string; key: string }[] = [];
+  /**
+   * PR 273 P3: her başarılı kayıt HEMEN kalıcı yazılır (kimlik + mühürlü anahtar); sonraki kayıt düşse de sonraki deneme ve kesme onu görür
+   * (çoğaltma ve sahipsiz kayıt yok). Bağlantı bu arada kesildiyse yazılmaz, Paraşüt'teki kayıt geri silinir.
+   */
+  const persist = (w: { model: string; action: string; externalId: string; key: string }): Promise<boolean> =>
+    deps.inTenant(async (tx) => {
+      const cur = await loadIntegration(tx, tenantId, { id: integrationId }, true);
+      if (cur === null || cur.status !== "CONNECTED") return false;
+      const box = JSON.stringify(sealWebhookKey(deps.sealer, tenantId, w.key));
+      await tx.execute(sql`
+        INSERT INTO public.integration_webhooks (tenant_id, integration_id, model, action, external_id, key_box, status)
+        VALUES (${tenantId}::uuid, ${integrationId}::uuid, ${w.model}, ${w.action}, ${w.externalId}, ${box}::jsonb, 'ACTIVE')
+        ON CONFLICT ON CONSTRAINT integration_webhooks_model_action_key DO UPDATE SET external_id = EXCLUDED.external_id, key_box = EXCLUDED.key_box, status = 'ACTIVE'`);
+      return true;
+    });
   try {
     const token = await accessToken({ runTx: deps.inTenant, tenantId, integrationId, client: deps.client, sealer: deps.sealer, ...(deps.now === undefined ? {} : { now: deps.now }) });
     const remote = await deps.client.listWebhooks(token.token, token.accountRef);
@@ -121,7 +135,10 @@ export async function registerParasutWebhooks(deps: RegisterDeps, integrationId:
         if (mine !== undefined && mine.external_id !== rec.id && remote.some((w) => w.id === mine.external_id)) {
           await deps.client.deleteWebhook(token.token, token.accountRef, mine.external_id).catch(() => undefined);
         }
-        writes.push({ model, action, externalId: rec.id, key: rec.encryptionKey ?? ourKey });
+        if (!(await persist({ model, action, externalId: rec.id, key: rec.encryptionKey ?? ourKey }))) {
+          await deps.client.deleteWebhook(token.token, token.accountRef, rec.id).catch(() => undefined);
+          return { kind: "skipped", reason: "NOT_CONNECTED" };
+        }
         created++;
       }
     }
@@ -132,13 +149,6 @@ export async function registerParasutWebhooks(deps: RegisterDeps, integrationId:
   return deps.inTenant(async (tx) => {
     const cur = await loadIntegration(tx, tenantId, { id: integrationId }, true);
     if (cur === null || cur.status !== "CONNECTED") return { kind: "skipped", reason: "NOT_CONNECTED" } as const;
-    for (const w of writes) {
-      const box = JSON.stringify(sealWebhookKey(deps.sealer, tenantId, w.key));
-      await tx.execute(sql`
-        INSERT INTO public.integration_webhooks (tenant_id, integration_id, model, action, external_id, key_box, status)
-        VALUES (${tenantId}::uuid, ${integrationId}::uuid, ${w.model}, ${w.action}, ${w.externalId}, ${box}::jsonb, 'ACTIVE')
-        ON CONFLICT ON CONSTRAINT integration_webhooks_model_action_key DO UPDATE SET external_id = EXCLUDED.external_id, key_box = EXCLUDED.key_box, status = 'ACTIVE'`);
-    }
     await markStatus(tx, tenantId, integrationId, "ACTIVE", null);
     await appendAudit(tx, { action: "integration.webhook_registered", actorUserId: actor, entityType: "integration", entityId: integrationId, changeSummary: { provider: "PARASUT", ok: true, created, kept } });
     return { kind: "ok", created, kept } as const;

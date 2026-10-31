@@ -58,6 +58,8 @@ export interface FakeParasut {
   webhookKeyMode: "ours" | "assign";
   /** Webhook POST'una hata (ör. 500) — kayıt kurulamazsa 30 sn tarama sürer. */
   webhookFailure: number | null;
+  /** Bu kadar başarılı webhook POST'undan sonra `webhookFailure` (yoksa 500) döner (kısmi kayıt; PR 273 P3). */
+  webhookFailAfter: number | null;
   /** İmzalı teslim üretir (kayıtlı anahtarla; HMAC-SHA256(anahtar, data) onaltılık — VARSAYIM) ve hedef adrese POST eder. */
   emitWebhook(target: string, ev: { readonly model: "product" | "contact"; readonly action: "create" | "update" | "delete"; readonly id: string; readonly eventDate?: string; readonly key?: string; readonly companyId?: string; readonly signature?: string; readonly fetchInit?: Record<string, unknown> }): Promise<{ status: number; body: string }>;
   /** Sonraki N isteğe 429 döner (ilk istekte `Retry-After: 1`). */
@@ -118,7 +120,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     url: "",
     opts,
     companies:[{id:opts.companyId,name:opts.companyName}],
-    products: [], categories: [], webhooks: [], webhookKeyMode: "ours", webhookFailure: null,
+    products: [], categories: [], webhooks: [], webhookKeyMode: "ours", webhookFailure: null, webhookFailAfter: null,
     async emitWebhook(target, ev) {
       const hook = state.webhooks.find((w) => w.attributes.model === ev.model && w.attributes.action === ev.action);
       const key = ev.key ?? (hook?.attributes.encryption_key as string | undefined) ?? "";
@@ -222,7 +224,11 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       const view = (w: FakeRecord) => ({ id: w.id, type: "webhooks", attributes: { model: w.attributes.model, action: w.attributes.action, uri: w.attributes.uri, ...(state.webhookKeyMode === "assign" ? { encryption_key: w.attributes.encryption_key } : {}) } });
       if (req.method === "GET") return send(200, { data: state.webhooks.map(view), meta: { current_page: 1, total_pages: 1, total_count: state.webhooks.length } });
       if (req.method === "POST") {
-        if (state.webhookFailure !== null) return send(state.webhookFailure, { errors: [{ title: "Rejected" }] });
+        if (state.webhookFailure !== null && state.webhookFailAfter === null) return send(state.webhookFailure, { errors: [{ title: "Rejected" }] });
+        if (state.webhookFailAfter !== null) {
+          if (state.webhookFailAfter <= 0) return send(state.webhookFailure ?? 500, { errors: [{ title: "Rejected" }] });
+          state.webhookFailAfter -= 1;
+        }
         let b: { data?: { attributes?: Record<string, unknown> } } = {};
         try { b = JSON.parse(body) as typeof b; } catch { return send(400, { errors: [{ title: "Bad JSON" }] }); }
         const a = b.data?.attributes ?? {};

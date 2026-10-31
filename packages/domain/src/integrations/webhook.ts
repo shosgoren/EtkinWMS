@@ -298,6 +298,37 @@ export type WebhookEventResult =
   | { readonly kind: "applied"; readonly outcome: WebhookOutcome };
 type Finish = (outcome: WebhookOutcome, apply?: (tx: AccessTx) => Promise<WebhookOutcome | void>) => Promise<WebhookEventResult>;
 
+/**
+ * Yazım anı yetki denetimi (PR 273 P1): ağ okumasından sonra, yazan transaction'da bağlantı (aynı şirket + aynı bağlayan) CONNECTED,
+ * bağlayan hâlâ ACTIVE üye + TENANT_ADMIN ve ilgili akış (Paraşüt → Etkin) açık mı — satırlar FOR SHARE kilitlenir: eşzamanlı kesme/akış
+ * kapatma bu transaction bitene kadar bekler ya da biz onun sonucunu görürüz. Biri tutmazsa hiçbir şey yazılmaz.
+ */
+export async function webhookWriteAllowed(tx: AccessTx, w: { readonly tenantId: string; readonly integrationId: string; readonly companyId: string; readonly userId: string; readonly membershipId: string; readonly flow: "PRODUCTS" | "CONTACTS" }): Promise<boolean> {
+  const r = await tx.execute<{ ok: boolean }>(sql`
+    SELECT true AS ok
+      FROM public.integrations i
+      JOIN public.integration_flows f ON f.tenant_id = i.tenant_id AND f.integration_id = i.id AND f.flow = ${w.flow}
+      JOIN public.tenant_memberships m ON m.tenant_id = i.tenant_id AND m.id = i.connected_membership_id AND m.user_id = i.connected_by
+      JOIN public.membership_roles mr ON mr.tenant_id = m.tenant_id AND mr.membership_id = m.id AND mr.role_key = 'TENANT_ADMIN'
+     WHERE i.tenant_id = ${w.tenantId}::uuid AND i.id = ${w.integrationId}::uuid AND i.provider = 'PARASUT' AND i.status = 'CONNECTED'
+       AND i.account_ref = ${w.companyId} AND i.connected_by = ${w.userId}::uuid AND i.connected_membership_id = ${w.membershipId}::uuid
+       AND m.status = 'ACTIVE' AND f.enabled AND f.direction IN ('PULL', 'BOTH')
+     FOR SHARE OF i, f, m, mr`);
+  return r[0]?.ok === true;
+}
+
+/** Geçici hata (yeniden denenmeli): kilitlenme/serileştirme, bağlantı, kaynak/kapanma. FAILED'a çevrilmez, yukarı fırlatılır (PR 273 P2). */
+export function isTransientDbError(e: unknown): boolean {
+  let cur: unknown = e;
+  for (let i = 0; i < 6 && cur !== null && cur !== undefined; i++) {
+    const code = (cur as { code?: unknown }).code;
+    if (typeof code === "string" && /^[0-9A-Z]{5}$/.test(code)) return /^(40|08|53|57|58)/.test(code) || code === "55P03";
+    if (typeof code === "string" && /^(ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|CONNECTION_)/.test(code)) return true;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 async function processed(tx: AccessTx, eventKey: string): Promise<boolean> {
   const r = await tx.execute(sql`SELECT 1 AS one FROM public.processed_events WHERE consumer = ${WEBHOOK_CONSUMER} AND event_id = ${eventKey}::uuid LIMIT 1`);
   return r.length > 0;
@@ -333,15 +364,19 @@ export async function runWebhookEvent(deps: WebhookJobDeps, p: WebhookEventPaylo
     if (e instanceof IntegrationStateError) return { kind: "skipped", reason: e.code };
     throw e;
   }
+  const guard = { tenantId, integrationId: row.id, companyId: token.accountRef, userId: ac.actorUserId, membershipId: ac.membershipId, flow: p.resource === "product" ? ("PRODUCTS" as const) : ("CONTACTS" as const) };
   const finish: Finish = (outcome, apply) =>
     deps.inTenant<WebhookEventResult>(async (tx) => {
+      if (!(await webhookWriteAllowed(tx, guard))) return { kind: "skipped", reason: "NOT_CONNECTED" } as const;
       if (binding !== null && !(await assertLifecycleBinding(tx, binding))) return { kind: "skipped", reason: "NOT_CONNECTED" } as const;
       const r = await deps.consumeOnce(tx, WEBHOOK_CONSUMER, p.eventKey, async (t) => {
         let out: WebhookOutcome = outcome;
         if (apply !== undefined) {
           try {
             out = (await apply(t)) ?? out;
-          } catch {
+          } catch (e) {
+            // Geçici hata: transaction + processed_events işareti geri alınır, kuyruk yeniden dener. Kesin red (doğrulama/kısıt): FAILED.
+            if (isTransientDbError(e)) throw e;
             out = "FAILED";
           }
         }
@@ -364,7 +399,7 @@ export async function runWebhookEvent(deps: WebhookJobDeps, p: WebhookEventPaylo
   if (binding === null) return finish("IGNORED");
   if (!(await deps.client.companies(token.token)).some((c) => c.id === binding.companyId)) return { kind: "skipped", reason: "NOT_CONNECTED" };
   const first = await deps.inTenant(async (tx) => {
-    if (!(await assertLifecycleBinding(tx, binding))) return false;
+    if (!(await webhookWriteAllowed(tx, guard)) || !(await assertLifecycleBinding(tx, binding))) return false;
     await observeProduct(tx, binding, ac, p.externalId, { exists: false }, now());
     return true;
   });
@@ -394,7 +429,8 @@ async function applyFound(
     const withBarcodes = { ...ac, pullProductBarcodes: s[0]?.enabled === true };
     try {
       outcome = await tx.transaction((sp) => applyProduct(sp, withBarcodes, toProduct(item, included)));
-    } catch {
+    } catch (e) {
+      if (isTransientDbError(e)) throw e;
       outcome = "SKIPPED";
       // Ad/birim/barkod okunamasa da yaşam döngüsü durumu ayrıca işlenir (sync.ts ile aynı).
     }

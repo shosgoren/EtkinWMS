@@ -375,6 +375,79 @@ describe("tekrar teslim ve imzasız alanlar (inceleme MINOR-1)", () => {
   });
 });
 
+describe("PR 273 inceleme düzeltmeleri", () => {
+  it("P1: okuma sürerken bağlantı kesilir ya da akış kapanırsa cari/ürün yazılmaz (yazım anı yetki denetimi)", async () => {
+    const { w, id } = await world("WHP1");
+    await register(w, id);
+    fake.contacts.push({ id: "941", attributes: { name: "Yarış Cari", account_type: "customer" } });
+    fake.products.push({ id: "942", attributes: { code: "WHP1-1", name: "Yarış Ürün", unit: "Adet" } });
+    const run = async (model: "contact" | "product", during: () => Promise<unknown>) => {
+      const queue = memQueue();
+      await receiveParasutWebhook({ db: app, sealer, queue: queue as never }, delivery({ model, action: "create", id: model === "contact" ? "941" : "942", key: hookKey(model, "create") }));
+      const c = client();
+      const origContact = c.contact.bind(c), origProduct = c.productDetail.bind(c);
+      c.contact = async (...a) => { const r = await origContact(...a); await during(); return r; };
+      c.productDetail = async (...a) => { const r = await origProduct(...a); await during(); return r; };
+      return runWebhookEvent({ inTenant: inTenant(w), client: c, sealer, consumeOnce: consumeOnce as unknown as ConsumeOnce }, queue.jobs[0]!.job.payload as never);
+    };
+    expect(await run("contact", () => q("UPDATE public.integration_flows SET enabled = false WHERE tenant_id = $1 AND flow = 'CONTACTS'", [w.tenantId]))).toEqual({ kind: "skipped", reason: "NOT_CONNECTED" });
+    expect(await q("SELECT 1 FROM public.parties WHERE tenant_id = $1 AND code = 'PRS-941'", [w.tenantId])).toEqual([]);
+    await q("UPDATE public.integration_flows SET enabled = true WHERE tenant_id = $1 AND flow = 'CONTACTS'", [w.tenantId]);
+    expect(await run("contact", () => q("UPDATE public.membership_roles SET role_key = 'WAREHOUSE_MANAGER' WHERE tenant_id = $1 AND membership_id = $2 AND role_key = 'TENANT_ADMIN'", [w.tenantId, w.ownerMembershipId]).catch(() => q("DELETE FROM public.membership_roles WHERE tenant_id = $1 AND membership_id = $2 AND role_key = 'TENANT_ADMIN'", [w.tenantId, w.ownerMembershipId])))).toEqual({ kind: "skipped", reason: "NOT_CONNECTED" });
+    expect(await q("SELECT 1 FROM public.parties WHERE tenant_id = $1 AND code = 'PRS-941'", [w.tenantId])).toEqual([]);
+    await q("INSERT INTO public.membership_roles (tenant_id, membership_id, role_key) VALUES ($1, $2, 'TENANT_ADMIN') ON CONFLICT DO NOTHING", [w.tenantId, w.ownerMembershipId]);
+    expect(await run("product", () => q("UPDATE public.integrations SET status = 'DISCONNECTED', credentials = NULL WHERE id = $1", [id]))).toEqual({ kind: "skipped", reason: "NOT_CONNECTED" });
+    expect(await q("SELECT 1 FROM public.items WHERE tenant_id = $1 AND code = 'WHP1-1'", [w.tenantId])).toEqual([]);
+    expect(await q("SELECT count(*)::int AS n FROM public.processed_events WHERE tenant_id = $1 AND consumer = 'integration.webhook.event'", [w.tenantId])).toEqual([{ n: 0 }]);
+  });
+
+  it("P2: geçici DB hatası FAILED olmaz — transaction ve processed_events geri alınır, yeniden deneme uygular; kesin red FAILED", async () => {
+    const { w, id } = await world("WHP2");
+    await register(w, id);
+    fake.contacts.push({ id: "951", attributes: { name: "Geçici Cari", account_type: "customer" } });
+    const queue = memQueue();
+    await receiveParasutWebhook({ db: app, sealer, queue: queue as never }, delivery({ model: "contact", action: "create", id: "951", key: hookKey("contact", "create") }));
+    const payload = queue.jobs[0]!.job.payload as never;
+    // Kart okunurken (apply içinde) atılan hata: 40P01 (kilitlenme) geçicidir.
+    const failing = (err: Error) => {
+      const c = client();
+      const orig = c.contact.bind(c);
+      c.contact = async (...a) => {
+        const r = await orig(...a);
+        if (r === null) return r;
+        return { ...r, get attributes(): Record<string, unknown> { throw err; } } as never;
+      };
+      return c;
+    };
+    const deadlock = Object.assign(new Error("deadlock detected"), { code: "40P01" });
+    await expect(runWebhookEvent({ inTenant: inTenant(w), client: failing(deadlock), sealer, consumeOnce: consumeOnce as unknown as ConsumeOnce }, payload)).rejects.toThrow("deadlock detected");
+    expect(await q("SELECT count(*)::int AS n FROM public.processed_events WHERE tenant_id = $1 AND consumer = 'integration.webhook.event'", [w.tenantId])).toEqual([{ n: 0 }]);
+    expect(await q("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1 AND action = 'integration.webhook_received'", [w.tenantId])).toEqual([{ n: 0 }]);
+    expect(await runner(w, { t: Date.now() })(payload)).toEqual({ kind: "applied", outcome: "CREATED" });
+    // Kesin red (doğrulama): FAILED olarak bir kez işlenir.
+    fake.contacts.push({ id: "952", attributes: { name: "Kesin Red", account_type: "customer" } });
+    const q2 = memQueue();
+    await receiveParasutWebhook({ db: app, sealer, queue: q2 as never }, delivery({ model: "contact", action: "create", id: "952", key: hookKey("contact", "create") }));
+    const definite = Object.assign(new Error("invalid"), { code: "VALIDATION_FAILED" });
+    expect(await runWebhookEvent({ inTenant: inTenant(w), client: failing(definite), sealer, consumeOnce: consumeOnce as unknown as ConsumeOnce }, q2.jobs[0]!.job.payload as never)).toEqual({ kind: "applied", outcome: "FAILED" });
+  });
+
+  it("P3: ikinci kayıt düşerse ilki kalıcı; yeniden deneme çoğaltmaz, sahipsiz kayıt bırakmaz; kesme hepsini siler", async () => {
+    const { w, id } = await world("WHP3");
+    fake.webhookFailAfter = 1;
+    expect(await register(w, id)).toEqual({ kind: "failed", code: "PROVIDER_UNAVAILABLE" });
+    expect(fake.webhooks).toHaveLength(1);
+    const rows = async () => q<{ external_id: string; status: string }>("SELECT external_id, status FROM public.integration_webhooks WHERE integration_id = $1 ORDER BY external_id", [id]);
+    expect((await rows()).map((r) => [r.external_id, r.status])).toEqual([[fake.webhooks[0]!.id, "ACTIVE"]]);
+    fake.webhookFailAfter = null;
+    expect(await register(w, id)).toEqual({ kind: "ok", created: 5, kept: 1 });
+    expect(fake.webhooks).toHaveLength(6);
+    expect((await rows()).map((r) => r.external_id).sort()).toEqual(fake.webhooks.map((x) => x.id).sort());
+    await disconnectIntegration(admin(w), { provider: "PARASUT" }, { client: client(), sealer });
+    expect(fake.webhooks).toHaveLength(0);
+  });
+});
+
 describe("kademe ve kesme", () => {
   it("anlık bildirim açıkken kart 15 dk / depo 3 dk; kurulamamışken 30 sn; kayıt işi vadesinde", async () => {
     const { w, id } = await world("WHA");

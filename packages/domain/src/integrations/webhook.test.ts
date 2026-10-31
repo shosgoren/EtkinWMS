@@ -3,6 +3,7 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createSealer } from "@wms/shared/seal";
 import { CADENCE, dueFlows, registerDue } from "./webhook-register.ts";
+import { isTransientDbError } from "./webhook.ts";
 import { WEBHOOK_BODY_MAX, matchSignature, openWebhookKey, parseWebhookBody, sealWebhookKey, signedFields, verifySignature, webhookEventKey, webhookEventSingletonKey } from "./webhook.ts";
 
 const data = JSON.stringify({ id: "501", data: { id: "501", type: "products", attributes: { name: "Vida", updated_at: "2026-10-30T09:00:00+03:00" } } });
@@ -130,5 +131,17 @@ describe("kademe", () => {
     expect(registerDue("FAILED", ago(CADENCE.registerRetryMs), now)).toBe(true);
     expect(registerDue("ACTIVE", ago(CADENCE.registerRetryMs), now)).toBe(false);
     expect(registerDue("ACTIVE", ago(CADENCE.registerReconcileMs), now)).toBe(true);
+  });
+});
+
+describe("geçici DB hatası sınıflaması (PR 273 P2)", () => {
+  const err = (code: string, nested = false) => (nested ? Object.assign(new Error("wrap"), { cause: Object.assign(new Error("x"), { code }) }) : Object.assign(new Error("x"), { code }));
+  it("kilitlenme, serileştirme, bağlantı, kapanma ve kilit bekleme geçicidir (sarılı hata dahil)", () => {
+    for (const c of ["40P01", "40001", "08006", "08003", "57P01", "53300", "55P03", "ECONNRESET"]) expect(isTransientDbError(err(c)), c).toBe(true);
+    expect(isTransientDbError(err("40P01", true))).toBe(true);
+  });
+  it("kısıt/doğrulama ve kodsuz hata kesindir", () => {
+    for (const c of ["23505", "23514", "22P02", "VALIDATION_FAILED"]) expect(isTransientDbError(err(c)), c).toBe(false);
+    expect(isTransientDbError(new Error("x"))).toBe(false);
   });
 });
