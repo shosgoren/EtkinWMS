@@ -424,7 +424,7 @@ stateDiagram-v2
   `PARASUT_OAUTH_CLIENT_SECRET`, dönüş `<BETTER_AUTH_URL>/api/integrations/parasut/callback`); müşteri anahtar girmez. Muhasebe programı
   bağlantısı 3 adım: **BAĞLAN → Paraşüt'te giriş yap ve izin ver → şirketini seç** (tek şirket kendiliğinden). Çözüm sırası: firmanın kendi
   uygulaması (Gelişmiş) → ortak uygulama → yok ("henüz hazır değil" balonu, Gelişmiş açılır). Deneme (state + HttpOnly nonce) her iki
-  durumda firma + kullanıcı + üyeliğe bağlıdır; ortak uygulama sırrı DB/audit/log/istemciye girmez. Callback başarısızlığı yalnız sabit neden
+  durumda firma + kullanıcı + üyeliğe bağlıdır; ortak uygulama sırrı audit/log/URL/istemciye girmez (yenileme için bağlantının mühürlü kutusunda). Callback başarısızlığı yalnız sabit neden
   kodunu (`oauth_reason`) taşır, ekran `reasons.*` ile söyler. Ortak uygulamayla kurulan bağlantıda ürün yaşam döngüsü, bağlanma anını
   kapsayan tamamlanmış yetki kodu denemesine (sabit ortak sürüm) bağlanır; eski parola bağlantısında kapalı kalır.
   2. **Ne çekilsin, gönderilsin:** "Paraşüt bağlı · son eşitleme SS:DD"; akış başına satır ve **her zaman görünen yön seçimi** (yalnız

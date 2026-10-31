@@ -1,8 +1,9 @@
 // T-1066: confidential-client OAuth authorization-code flow; no password, open redirect or replay.
 // T-1133 (kullanıcı kararı 30 Ekim): Etkin'in TEK ortak Paraşüt uygulaması sunucu ortamından (`PARASUT_OAUTH_CLIENT_ID` /
 // `PARASUT_OAUTH_CLIENT_SECRET`, dönüş adresi `BETTER_AUTH_URL` + callback yolu) okunur; müşteri anahtar girmez. Kiracı kendi
-// uygulamasını kaydettiyse ("Gelişmiş") onun satırı önceliklidir. Ortam sırrı DB'ye, audit'e, loga ve istemciye yazılmaz; yalnız
-// sağlayıcıya giden belirteç isteğinde kullanılır.
+// uygulamasını kaydettiyse ("Gelişmiş") onun satırı önceliklidir. Ortam sırrı audit'e, loga, URL'ye ve istemciye yazılmaz; yalnız
+// sağlayıcıya giden belirteç isteğinde ve (yenileme için) bağlantının QUEUE_SEAL_KEY ile mühürlü kutusunda bulunur — mevcut bağlantı
+// yolu gibi (inceleme MINOR-1; döndürme adımı OPERATIONS'ta, kutuda işaret + ortamdan çözme ayrı iş).
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
