@@ -305,10 +305,11 @@ type Finish = (outcome: WebhookOutcome, apply?: (tx: AccessTx) => Promise<Webhoo
 
 /**
  * Yazım anı yetki denetimi (PR 273 P1): ağ okumasından sonra, yazan transaction'da bağlantı (aynı şirket + aynı bağlayan) CONNECTED,
- * bağlayan hâlâ ACTIVE üye + TENANT_ADMIN ve ilgili akış (Paraşüt → Etkin) açık mı — satırlar FOR SHARE kilitlenir: eşzamanlı kesme/akış
+ * bağlayan hâlâ ACTIVE üye + TENANT_ADMIN ve ilgili akış açık ve yönü işin başında okunan yönle AYNI mı (T-1140 inceleme MINOR-4: karar
+ * kuralı yöne bağlıdır; ağ okuması sırasında yön değiştiyse eski yönle yazılmaz) — satırlar FOR SHARE kilitlenir: eşzamanlı kesme/akış
  * kapatma bu transaction bitene kadar bekler ya da biz onun sonucunu görürüz. Biri tutmazsa hiçbir şey yazılmaz.
  */
-export async function webhookWriteAllowed(tx: AccessTx, w: { readonly tenantId: string; readonly integrationId: string; readonly companyId: string; readonly userId: string; readonly membershipId: string; readonly flow: "PRODUCTS" | "CONTACTS" }): Promise<boolean> {
+export async function webhookWriteAllowed(tx: AccessTx, w: { readonly tenantId: string; readonly integrationId: string; readonly companyId: string; readonly userId: string; readonly membershipId: string; readonly flow: "PRODUCTS" | "CONTACTS"; readonly direction: "PULL" | "BOTH" }): Promise<boolean> {
   const r = await tx.execute<{ ok: boolean }>(sql`
     SELECT true AS ok
       FROM public.integrations i
@@ -317,7 +318,7 @@ export async function webhookWriteAllowed(tx: AccessTx, w: { readonly tenantId: 
       JOIN public.membership_roles mr ON mr.tenant_id = m.tenant_id AND mr.membership_id = m.id AND mr.role_key = 'TENANT_ADMIN'
      WHERE i.tenant_id = ${w.tenantId}::uuid AND i.id = ${w.integrationId}::uuid AND i.provider = 'PARASUT' AND i.status = 'CONNECTED'
        AND i.account_ref = ${w.companyId} AND i.connected_by = ${w.userId}::uuid AND i.connected_membership_id = ${w.membershipId}::uuid
-       AND m.status = 'ACTIVE' AND f.enabled AND f.direction IN ('PULL', 'BOTH')
+       AND m.status = 'ACTIVE' AND f.enabled AND f.direction = ${w.direction}
      FOR SHARE OF i, f, m, mr`);
   return r[0]?.ok === true;
 }
@@ -370,7 +371,7 @@ export async function runWebhookEvent(deps: WebhookJobDeps, p: WebhookEventPaylo
     if (e instanceof IntegrationStateError) return { kind: "skipped", reason: e.code };
     throw e;
   }
-  const guard = { tenantId, integrationId: row.id, companyId: token.accountRef, userId: ac.actorUserId, membershipId: ac.membershipId, flow: p.resource === "product" ? ("PRODUCTS" as const) : ("CONTACTS" as const) };
+  const guard = { tenantId, integrationId: row.id, companyId: token.accountRef, userId: ac.actorUserId, membershipId: ac.membershipId, flow: p.resource === "product" ? ("PRODUCTS" as const) : ("CONTACTS" as const), direction: direction === "BOTH" ? ("BOTH" as const) : ("PULL" as const) };
   const finish: Finish = (outcome, apply) =>
     deps.inTenant<WebhookEventResult>(async (tx) => {
       if (!(await webhookWriteAllowed(tx, guard))) return { kind: "skipped", reason: "NOT_CONNECTED" } as const;

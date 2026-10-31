@@ -214,7 +214,14 @@ export async function archiveWarehouse(params: WarehouseCallParams, input: Archi
       sql`SELECT status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid FOR NO KEY UPDATE`,
     );
     if (cur[0] === undefined) throw new AppError("NOT_FOUND");
-    if (cur[0].status === "ARCHIVED") return { archived: false };
+    if (cur[0].status === "ARCHIVED") {
+      // T-1140: sistemin (Paraşüt yaşam döngüsü) arşivlediği depoyu kullanıcı arşivli tutmak istiyor: sahiplik kullanıcıya geçer, Paraşüt'te
+      // yeniden etkin olsa da açılmaz (ürünün archiveItem kuralı; card-lifecycle.ts `releaseSourceArchive` ile aynı).
+      const released = await tx.execute(sql`UPDATE public.integration_card_states SET source_managed_archive = false
+                                              WHERE tenant_id = ${m.tenantId}::uuid AND entity_type = 'WAREHOUSE' AND entity_id = ${warehouseId}::uuid AND source_managed_archive RETURNING entity_id`);
+      if (released.length > 0) await appendAudit(tx, { action: "warehouse.archived", actorUserId: m.userId, entityType: "warehouse", entityId: warehouseId, requestId: input.requestId ?? null, changeSummary: { ownership: "local" } });
+      return { archived: released.length > 0 };
+    }
     const active = await tx.execute<{ used: boolean }>(
       sql`SELECT EXISTS (SELECT 1 FROM public.locations
                           WHERE tenant_id = ${m.tenantId}::uuid AND warehouse_id = ${warehouseId}::uuid AND status = 'ACTIVE') AS used`,
@@ -225,6 +232,8 @@ export async function archiveWarehouse(params: WarehouseCallParams, input: Archi
       sql`UPDATE public.warehouses SET status = 'ARCHIVED', archived_at = now()
            WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid AND status = 'ACTIVE'`,
     );
+    await tx.execute(sql`UPDATE public.integration_card_states SET source_managed_archive = false
+                          WHERE tenant_id = ${m.tenantId}::uuid AND entity_type = 'WAREHOUSE' AND entity_id = ${warehouseId}::uuid AND source_managed_archive`);
     await appendAudit(tx, {
       action: "warehouse.archived",
       actorUserId: m.userId,

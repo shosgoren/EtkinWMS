@@ -250,13 +250,24 @@ export async function touchCardSig(tx: AccessTx, c: ApplyContext, entity: CardEn
     ON CONFLICT ON CONSTRAINT integration_card_states_pkey DO UPDATE SET local_sig = EXCLUDED.local_sig`);
 }
 
-/** Etkin'deki son entegrasyon dışı değişikliğin anı (audit, I-12): işaret varsa yalnız son eşitlemeden sonrası; yoksa null. */
-export async function localChangedAt(tx: AccessTx, entity: CardEntity, entityId: string, since: string | null): Promise<number | null> {
+/**
+ * Etkin'deki son KANONİK alan değişikliğinin anı (audit, I-12): yalnız bu kiracının, entegrasyon dışı ve kanonik alanı değiştiren eylemleri —
+ * ürün `item.updated` (ad değiştiyse), depo `warehouse.updated` (ad), cari `party.created` / `party.updated` (kart formu; kanonik olmayan
+ * teslimat seçimi de bu eylemdedir — bilinen yaklaşıklık). Arşiv, barkod, kod vb. ilgisiz kayıtlar sayılmaz (inceleme MINOR-2). İşaret
+ * varsa yalnız son eşitlemeden sonrası; bulunmazsa null (çakışmada Paraşüt). Toplu içe aktarma (`party.imported`) karta bağlı değildir → null.
+ */
+export async function localChangedAt(tx: AccessTx, tenantId: string, entity: CardEntity, entityId: string, since: string | null): Promise<number | null> {
+  const which =
+    entity === "ITEM"
+      ? sql`action = 'item.updated' AND (change_summary->>'from_name') IS DISTINCT FROM (change_summary->>'to_name')`
+      : entity === "WAREHOUSE"
+        ? sql`action = 'warehouse.updated' AND (change_summary->>'to_name') IS NOT NULL`
+        : sql`action IN ('party.created', 'party.updated')`;
   const r = await tx.execute<{ t: string | null }>(sql`
     SELECT (extract(epoch FROM max(occurred_at)) * 1000)::bigint::text AS t FROM public.audit_logs
-     WHERE entity_type = ${AUDIT_TYPE[entity]} AND entity_id = ${entityId}
+     WHERE tenant_id = ${tenantId}::uuid AND entity_type = ${AUDIT_TYPE[entity]} AND entity_id = ${entityId}
        AND occurred_at > COALESCE(${since}::timestamptz, now() - make_interval(days => ${LOCAL_TIME_LOOKBACK_DAYS}))
-       AND COALESCE(change_summary->>'via', '') <> 'integration'`);
+       AND COALESCE(change_summary->>'via', '') <> 'integration' AND ${which}`);
   const t = r[0]?.t;
   return t === null || t === undefined ? null : Number(t);
 }
@@ -298,26 +309,39 @@ export async function syncRemoteCard(tx: AccessTx, c: ApplyContext, i: RemoteCar
     const after = await loadLocalCard(tx, c, i.entity, id);
     if (after !== null && after.local.active) await saveCardMarker(tx, c, i.entity, id, { localHash: cardHash(i.entity, localCanon(i.entity, after.local)), remoteHash, localSig: after.local.sig, remoteUpdatedAt: remoteAt, via });
   };
+  const decideLinked = async (linked: string): Promise<{ readonly outcome: RemoteCardOutcome; readonly decision: CardDecision }> => {
+    const cur = await loadLocalCard(tx, c, i.entity, linked);
+    if (cur === null || !cur.local.active || i.direction === "PUSH") {
+      // Arşivli / bulunamayan yerel kart: eski davranış (apply arşivli kartı değiştirmez). PUSH'ta bu yol çağrılmaz; çağrılırsa hiçbir şey alınmaz.
+      return { outcome: i.direction === "PUSH" ? "UNCHANGED" : await i.apply(tx), decision: { kind: "NONE" } };
+    }
+    const localHash = cardHash(i.entity, localCanon(i.entity, cur.local));
+    let localAt: number | null = null;
+    if (i.direction === "BOTH" && localHash !== remoteHash) localAt = await localChangedAt(tx, c.tenantId, i.entity, linked, cur.marker?.syncedAt ?? null);
+    const decision = decideCardSync({ direction: i.direction, localHash, remoteHash, marker: cur.marker, times: () => ({ localAt, remoteAt }) });
+    if (pushesLocal(decision)) return { outcome: "DEFERRED", decision };
+    if (decision.kind === "NONE") return { outcome: "UNCHANGED", decision };
+    const outcome = await i.apply(tx);
+    await mark(linked, decision.kind === "IN_SYNC" ? "MATCH" : "PULL");
+    // Paraşüt kazandı: gerçek çakışmada (iki taraf da değişti) her zaman; tabansız farkta yalnız yerel kart gerçekten değiştiyse yazılır.
+    if (decision.kind === "CONFLICT" && (decision.baseline || outcome === "UPDATED")) await auditConflict(tx, c, i.entity, linked, i.flow, decision);
+    return { outcome, decision };
+  };
   if (linked === null) {
     const outcome = await i.apply(tx);
     const now = await refEntity(tx, c, i.entity, i.resource.id);
-    if (now !== null) await mark(now, "PULL");
+    if (now === null) return { outcome, decision: { kind: "PULL" } };
+    // İlk bağlama (yeni kart ya da koda / vergi numarasına göre VAR OLAN karta bağlanma): apply bağlanan kartın alanlarını değiştirmez
+    // (LINKED). İki taraf farklıyken taban YAZILMAZ — aynı transaction'da bağlı kart kuralı işletilir: işaret yok + fark = çakışma
+    // (zaman bilinmezse Paraşüt; Etkin daha yeniyse uygulanmaz, düzeltme turunda gider). Eşitse taban yazılır. (PR 278 inceleme P2)
+    if (outcome !== "CREATED") {
+      const r = await decideLinked(now);
+      return { outcome, decision: r.decision };
+    }
+    // Paraşüt'ten yeni açılan kart: taban yalnız iki taraf gerçekten eşitse yazılır (değilse işaretsiz kalır, sonraki koşu karar verir).
+    const after = await loadLocalCard(tx, c, i.entity, now);
+    if (after !== null && cardHash(i.entity, localCanon(i.entity, after.local)) === remoteHash) await mark(now, "PULL");
     return { outcome, decision: { kind: "PULL" } };
   }
-  const cur = await loadLocalCard(tx, c, i.entity, linked);
-  if (cur === null || !cur.local.active || i.direction === "PUSH") {
-    // Arşivli / bulunamayan yerel kart: eski davranış (apply arşivli kartı değiştirmez). PUSH'ta bu yol çağrılmaz; çağrılırsa hiçbir şey alınmaz.
-    return { outcome: i.direction === "PUSH" ? "UNCHANGED" : await i.apply(tx), decision: { kind: "NONE" } };
-  }
-  const localHash = cardHash(i.entity, localCanon(i.entity, cur.local));
-  let localAt: number | null = null;
-  if (i.direction === "BOTH" && localHash !== remoteHash) localAt = await localChangedAt(tx, i.entity, linked, cur.marker?.syncedAt ?? null);
-  const decision = decideCardSync({ direction: i.direction, localHash, remoteHash, marker: cur.marker, times: () => ({ localAt, remoteAt }) });
-  if (pushesLocal(decision)) return { outcome: "DEFERRED", decision };
-  if (decision.kind === "NONE") return { outcome: "UNCHANGED", decision };
-  const outcome = await i.apply(tx);
-  await mark(linked, decision.kind === "IN_SYNC" ? "MATCH" : "PULL");
-  // Paraşüt kazandı: gerçek çakışmada (iki taraf da değişti) her zaman; tabansız farkta yalnız yerel kart gerçekten değiştiyse yazılır.
-  if (decision.kind === "CONFLICT" && (decision.baseline || outcome === "UPDATED")) await auditConflict(tx, c, i.entity, linked, i.flow, decision);
-  return { outcome, decision };
+  return decideLinked(linked);
 }

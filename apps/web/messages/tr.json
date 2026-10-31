@@ -5811,6 +5811,8 @@
       "TIMEOUT": "Aktarım yarıda kaldı · bir sonraki koşu yeniden dener",
       "EXTERNAL_ALREADY_LINKED": "Paraşüt'teki karşılığı başka bir karta bağlı · kontrol et",
       "UPDATE_REJECTED": "Paraşüt düzeltmeyi kabul etmedi · kartı kontrol et, sonra yeniden dene",
+      "FLOW_CHANGED": "Akışın yönü koşu sırasında değişti · bir sonraki koşu yeni yönle çalışır",
+      "REMOTE_NOT_FOUND": "Paraşüt'te bu kart yok · bağlantıyı kontrol et, sonra yeniden dene",
       "ROWS_FAILED": "Bazı satırlar aktarılamadı",
       "INTERNAL": "Beklenmeyen hata · Etkin ekibine bildir",
       "PROVIDER_AUTH_FAILED": "Paraşüt girişi reddetti",

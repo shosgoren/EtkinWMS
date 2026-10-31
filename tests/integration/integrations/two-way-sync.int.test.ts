@@ -15,9 +15,9 @@ import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/clie
 import { createSealer } from "../../../packages/shared/src/seal.ts";
 import { consumeOnce } from "../../../packages/queue-adapter/src/consume.ts";
 import { ParasutClient, runIntegrationSync, runWebhookEvent, setIntegrationFlow, type ConsumeOnce } from "../../../packages/domain/src/integrations/index.ts";
-import { saveParty } from "../../../packages/domain/src/catalog/parties.ts";
+import { saveParty, setPartyArchived } from "../../../packages/domain/src/catalog/parties.ts";
 import { updateItem } from "../../../packages/domain/src/catalog/items.ts";
-import { renameWarehouse } from "../../../packages/domain/src/warehouse/warehouses.ts";
+import { archiveWarehouse, renameWarehouse } from "../../../packages/domain/src/warehouse/warehouses.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
 import { connectParasutOAuth } from "../fixtures/parasut-oauth.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
@@ -186,6 +186,46 @@ describe("(1) iki yönlü (BOTH)", () => {
     expect(fake.products[0]?.attributes).toMatchObject({ code: "P-1140", unit: "adet" });
   });
 
+  it("ilk bağlama (PR 278 P2): koda / vergi numarasına göre bağlanan kartın adı farklıysa taban yazılmaz, çakışma kuralı işler; iki taraf eşitlenir", async () => {
+    const W = await seedWorld(adm, reg, "T1140L");
+    const id = await connect(W);
+    // Ürün: koda göre bağlanır, adlar farklı, Paraşüt zamanı yok → Paraşüt kazanır (tabansız çakışma, audit'li).
+    const item = randomUUID();
+    await adm.query("INSERT INTO public.items (tenant_id, id, code, name, base_unit_id, tracking_mode) VALUES ($1, $2, 'P-LINK', 'Yerel Ad', $3, 'NONE')", [W.tenantId, item, W.unitId]);
+    fake.products.push({ id: "7251", attributes: { code: "P-LINK", name: "Paraşüt Adı", unit: "adet", archived: false } });
+    // Cari (zaman yok): vergi numarasına göre bağlanır → Paraşüt kazanır.
+    const p1 = (await q<{ id: string }>("INSERT INTO public.parties (tenant_id, code, code_key, name, tax_no, created_by) VALUES ($1, 'C-L1', 'C-L1', 'Yerel Cari', '2222222222', $2) RETURNING id", [W.tenantId, W.ownerMembershipId]))[0]?.id as string;
+    fake.contacts.push({ id: "7252", attributes: { name: "Paraşüt Cari", tax_number: "2222222222", account_type: "customer" } });
+    // Cari (Etkin daha yeni): bağlanmadan önce Etkin'de düzeltildi, Paraşüt bir saat önce değişti → Etkin kazanır, PUT ile gider.
+    const p2 = (await q<{ id: string }>("INSERT INTO public.parties (tenant_id, code, code_key, name, tax_no, created_by) VALUES ($1, 'C-L2', 'C-L2', 'Eski Ad', '3333333333', $2) RETURNING id", [W.tenantId, W.ownerMembershipId]))[0]?.id as string;
+    await editParty(W, p2, { name: "Yerel Yeni" });
+    fake.contacts.push({ id: "7253", attributes: { name: "Paraşüt Eski", tax_number: "3333333333", account_type: "customer", updated_at: iso(-3_600_000) } });
+    await flow(W, "PRODUCTS", "BOTH");
+    await flow(W, "CONTACTS", "BOTH");
+    await sync(W, id, "PRODUCTS");
+    await sync(W, id, "CONTACTS");
+    const itemName = async () => (await q<{ name: string }>("SELECT name FROM public.items WHERE id = $1", [item]))[0]?.name;
+    expect(await itemName()).toBe("Paraşüt Adı");
+    expect(await conflicts(W, item)).toEqual([{ winner: "PARASUT", basis: "UNKNOWN_TIME", baseline: false }]);
+    expect((await partyRow(p1))?.name).toBe("Paraşüt Cari");
+    expect(await conflicts(W, p1)).toEqual([{ winner: "PARASUT", basis: "UNKNOWN_TIME", baseline: false }]);
+    expect((await partyRow(p2))?.name).toBe("Yerel Yeni");
+    expect(contact("7253").attributes.name).toBe("Yerel Yeni");
+    expect(await conflicts(W, p2)).toEqual([{ winner: "ETKIN", basis: "NEWER_LOCAL", baseline: false }]);
+    expect(fake.updates.filter((u) => u.id === "7251" || u.id === "7252")).toEqual([]);
+    expect(await state(W, "ITEM", item)).toMatchObject({ marked: true });
+    expect(await state(W, "PARTY", p1)).toMatchObject({ marked: true });
+    // Kararlı: artık iki taraf eşit; sonraki koşular ne yazar ne gönderir, sonraki düzeltme yine gider.
+    const n = puts();
+    await sync(W, id, "PRODUCTS");
+    await sync(W, id, "CONTACTS");
+    expect(puts()).toBe(n);
+    expect((await conflicts(W, item)).length + (await conflicts(W, p1)).length + (await conflicts(W, p2)).length).toBe(3);
+    expect(await updateItem(admin(W), { itemId: item, name: "Yerel Ad 2" })).toMatchObject({ changed: true });
+    await sync(W, id, "PRODUCTS");
+    expect(fake.updates.at(-1)).toEqual({ kind: "products", id: "7251", attributes: { name: "Yerel Ad 2" } });
+  });
+
   it("webhook aynı kuralı uygular: yerel daha yeniyse uygulanmaz (LOCAL_NEWER), Paraşüt daha yeniyse uygulanır", async () => {
     const W = await seedWorld(adm, reg, "T1140W");
     const id = await connect(W);
@@ -337,6 +377,137 @@ describe("(3) cari ve depo kaynak yaşam döngüsü", () => {
     expect(await wh(empty)).toBe("ACTIVE");
     expect(await state(W, "WAREHOUSE", W.warehouseId)).toMatchObject({ source_state: "ACTIVE", source_disposition: "NONE" });
     expect((await q("SELECT action FROM public.audit_logs WHERE tenant_id = $1 AND entity_id = $2 AND action IN ('warehouse.archived', 'warehouse.restored') ORDER BY occurred_at, id", [W.tenantId, empty])).map((r) => r.action)).toEqual(["warehouse.archived", "warehouse.restored"]);
+  });
+});
+
+describe("(6) güvenlik incelemesi (PR 278 @ 4963bf3, MINOR-1…5) ve kiracı yönü", () => {
+  it("MINOR-2: yerel zaman yalnız kanonik alanı değiştiren kayıttan; sonradan gelen ilgisiz audit Etkin'i kazandırmaz", async () => {
+    const W = await seedWorld(adm, reg, "T1140M2");
+    const id = await connect(W);
+    fake.contacts.push({ id: "8001", attributes: { name: "Zeta", account_type: "customer", updated_at: iso(-7_200_000) } });
+    const p = await party(W, "C-ZETA", "Zeta", "8001");
+    await flow(W, "CONTACTS", "BOTH");
+    await sync(W, id, "CONTACTS");
+    await editParty(W, p, { name: "Zeta Yerel" }); // T1
+    contact("8001").attributes = { ...contact("8001").attributes, name: "Zeta Uzak", updated_at: iso(1_000) }; // T2 > T1
+    // T3 > T2: kanonik alanı değiştirmeyen kayıt (ör. arşiv/geri al) + başka bir kiracıdaki aynı kimlikli kayıt.
+    const other = await seedWorld(adm, reg, "T1140M2B");
+    await adm.query("INSERT INTO public.audit_logs (tenant_id, action, entity_type, entity_id, occurred_at) VALUES ($1, 'party.archived', 'party', $2, now() + interval '1 hour'), ($3, 'party.updated', 'party', $2, now() + interval '1 hour')", [W.tenantId, p, other.tenantId]);
+    await sync(W, id, "CONTACTS");
+    expect((await partyRow(p))?.name).toBe("Zeta Uzak");
+    expect((await conflicts(W, p)).at(-1)).toMatchObject({ winner: "PARASUT", basis: "NEWER_REMOTE" });
+    expect(puts()).toBe(0);
+  });
+
+  it("MINOR-3: kullanıcının geri açtığı / yeniden arşivlediği cari ve depo sistemce çevrilmez", async () => {
+    const W = await seedWorld(adm, reg, "T1140M3");
+    const id = await connect(W);
+    fake.contacts.push({ id: "8101", attributes: { name: "Eta", account_type: "customer", archived: true } });
+    const p = await party(W, "C-ETA", "Eta", "8101");
+    const wh = randomUUID();
+    await adm.query("INSERT INTO public.warehouses (tenant_id, id, code, name) VALUES ($1, $2, 'D-ETA', 'Eta Depo')", [W.tenantId, wh]);
+    await link(W, "WAREHOUSE", wh, "8102");
+    fake.warehouses.push({ id: "8102", attributes: { name: "Eta Depo", archived: true } });
+    await flow(W, "CONTACTS", "PULL");
+    await flow(W, "WAREHOUSES", "PULL");
+    await sync(W, id, "CONTACTS");
+    await sync(W, id, "WAREHOUSES");
+    expect((await partyRow(p))?.archived).toBe(true);
+    expect(await state(W, "PARTY", p)).toMatchObject({ source_managed_archive: true });
+    // Kullanıcı geri açar: Paraşüt'te hâlâ arşivli olsa da sistem yeniden arşivlemez.
+    const ver = async () => Number((await q<{ v: number }>("SELECT version AS v FROM public.parties WHERE id = $1", [p]))[0]?.v);
+    await setPartyArchived(admin(W), { id: p, expectedVersion: await ver(), archived: false });
+    expect(await state(W, "PARTY", p)).toMatchObject({ source_managed_archive: false });
+    await sync(W, id, "CONTACTS");
+    expect((await partyRow(p))?.archived).toBe(false);
+    // Kullanıcı yeniden arşivler; Paraşüt'te etkin olunca açılmaz (kullanıcının arşivi).
+    await setPartyArchived(admin(W), { id: p, expectedVersion: await ver(), archived: true });
+    contact("8101").attributes.archived = false;
+    await sync(W, id, "CONTACTS");
+    expect((await partyRow(p))?.archived).toBe(true);
+    // Depo: sistem arşivledi; kullanıcı arşivi sahiplenir → Paraşüt'te etkin olunca açılmaz.
+    expect(await state(W, "WAREHOUSE", wh)).toMatchObject({ source_managed_archive: true });
+    expect(await archiveWarehouse(admin(W), { warehouseId: wh })).toEqual({ archived: true });
+    expect(await state(W, "WAREHOUSE", wh)).toMatchObject({ source_managed_archive: false });
+    fake.warehouses[0]!.attributes.archived = false;
+    await sync(W, id, "WAREHOUSES");
+    expect((await q<{ status: string }>("SELECT status FROM public.warehouses WHERE id = $1", [wh]))[0]?.status).toBe("ARCHIVED");
+  });
+
+  it("MINOR-4: koşu ya da webhook sürerken yön değişirse eski yönle hiçbir şey yazılmaz / gönderilmez", async () => {
+    const W = await seedWorld(adm, reg, "T1140M4");
+    const id = await connect(W);
+    fake.contacts.push({ id: "8201", attributes: { name: "Teta", account_type: "customer", updated_at: iso(-7_200_000) } });
+    const p = await party(W, "C-TETA", "Teta", "8201");
+    await flow(W, "CONTACTS", "BOTH");
+    await sync(W, id, "CONTACTS");
+    await editParty(W, p, { name: "Teta Yerel" });
+    contact("8201").attributes = { ...contact("8201").attributes, name: "Teta Uzak", updated_at: iso(-3_600_000) };
+    // Sync: katalog okunurken kullanıcı yönü "Paraşüt'ten al"a çevirir.
+    const c = client();
+    const list = c.list.bind(c);
+    c.list = async (...a) => {
+      const r = await list(...a);
+      await q("UPDATE public.integration_flows SET direction = 'PULL' WHERE tenant_id = $1 AND flow = 'CONTACTS'", [W.tenantId]);
+      return r;
+    };
+    const r = await runIntegrationSync({ inTenant: inTenant(W), client: c, sealer }, { integrationId: id, flow: "CONTACTS", trigger: "MANUAL" }, W.ownerUserId);
+    expect(r).toMatchObject({ kind: "ran", flows: [{ status: "FAILED", errorCode: "FLOW_CHANGED" }] });
+    expect(puts()).toBe(0);
+    expect((await partyRow(p))?.name).toBe("Teta Yerel");
+    // Webhook: Paraşüt okunurken yön BOTH → PULL; işin başındaki yönle yazılmaz.
+    await q("UPDATE public.integration_flows SET direction = 'BOTH' WHERE tenant_id = $1 AND flow = 'CONTACTS'", [W.tenantId]);
+    const wc = client();
+    const read = wc.contact.bind(wc);
+    wc.contact = async (...a) => {
+      const x = await read(...a);
+      await q("UPDATE public.integration_flows SET direction = 'PULL' WHERE tenant_id = $1 AND flow = 'CONTACTS'", [W.tenantId]);
+      return x;
+    };
+    const w = await runWebhookEvent({ inTenant: inTenant(W), client: wc, sealer, consumeOnce: consumeOnce as unknown as ConsumeOnce, sleep: async () => undefined }, { integrationId: id, resource: "contact", externalId: "8201", eventKey: randomUUID() });
+    expect(w).toEqual({ kind: "skipped", reason: "NOT_CONNECTED" });
+    expect((await partyRow(p))?.name).toBe("Teta Yerel");
+  });
+
+  it("MINOR-5: Paraşüt'te bulunmayan bağlı kart her koşuda yeniden sorulmaz (BOTH imza yenilenir, PUSH bekletilir)", async () => {
+    const W = await seedWorld(adm, reg, "T1140M5");
+    const id = await connect(W);
+    const gone = await party(W, "C-YOK", "Yok Cari", "8301");
+    await flow(W, "CONTACTS", "BOTH");
+    const asked = () => fake.requests.filter((r) => r.method === "GET" && r.path === "/v4/115/contacts/8301").length;
+    await sync(W, id, "CONTACTS");
+    const after1 = asked();
+    expect(after1).toBeGreaterThan(0);
+    await sync(W, id, "CONTACTS");
+    // İkinci koşuda yalnız yaşam döngüsü (iki yokluk) sorar; düzeltme turu tekrar sormaz.
+    expect(asked() - after1).toBeLessThanOrEqual(1);
+    const p2 = await party(W, "C-YOK2", "Yok Cari 2", "8302");
+    await flow(W, "CONTACTS", "PUSH");
+    await sync(W, id, "CONTACTS");
+    expect(await q("SELECT status, last_error_code FROM public.integration_outbox WHERE tenant_id = $1 AND entity_id = $2", [W.tenantId, p2])).toEqual([{ status: "FAILED", last_error_code: "REMOTE_NOT_FOUND" }]);
+    const n = fake.requests.filter((r) => r.path === "/v4/115/contacts/8302").length;
+    await sync(W, id, "CONTACTS");
+    expect(fake.requests.filter((r) => r.path === "/v4/115/contacts/8302").length).toBe(n);
+    expect((await q<{ sig: boolean }>("SELECT local_sig IS NOT NULL AS sig FROM public.integration_card_states WHERE tenant_id = $1 AND entity_id = $2", [W.tenantId, gone]))[0]?.sig).toBe(true);
+  });
+
+  it("kiracı A'nın koşusu kiracı B'nin dış kimliğine asla PUT göndermez", async () => {
+    const A = await seedWorld(adm, reg, "T1140NA");
+    const B = await seedWorld(adm, reg, "T1140NB");
+    const idA = await connect(A);
+    fake.contacts.push({ id: "8401", attributes: { name: "A Cari", account_type: "customer" } }, { id: "8402", attributes: { name: "B Cari", account_type: "customer" } });
+    const pa = await party(A, "C-NA", "A Cari", "8401");
+    const pb = await party(B, "C-NB", "B Cari", "8402");
+    // B'de düzeltilmiş, işaretli ama imzası eski kart: kiracı süzgeci olmasa aday olurdu.
+    await adm.query("UPDATE public.parties SET name = 'B Yerel' WHERE id = $1", [pb]);
+    await adm.query("INSERT INTO public.integration_card_states (tenant_id, system, entity_type, entity_id, local_hash, remote_hash, local_sig, synced_at) VALUES ($1, 'PARASUT', 'PARTY', $2, $3, $3, $4, now())", [B.tenantId, pb, "a".repeat(64), "b".repeat(32)]);
+    await flow(A, "CONTACTS", "BOTH");
+    await sync(A, idA, "CONTACTS");
+    await editParty(A, pa, { name: "A Yerel" });
+    await sync(A, idA, "CONTACTS");
+    expect(fake.updates.map((u) => u.id)).toEqual(["8401"]);
+    expect(fake.requests.some((r) => r.path.includes("/contacts/8402"))).toBe(false);
+    expect(await q("SELECT local_sig FROM public.integration_card_states WHERE tenant_id = $1 AND entity_id = $2", [B.tenantId, pb])).toEqual([{ local_sig: "b".repeat(32) }]);
   });
 });
 

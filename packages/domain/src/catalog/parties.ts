@@ -348,6 +348,9 @@ export async function setPartyArchived(params: PartyCommandParams, input: { read
       RETURNING version`);
     const row = rows[0];
     if (row === undefined) throw new AppError("VERSION_CONFLICT");
+    // T-1140: kullanıcının arşivi/geri açması sistem (Paraşüt yaşam döngüsü) sahipliğini bırakır — card-lifecycle.ts `releaseSourceArchive` ile aynı.
+    await tx.execute(sql`UPDATE public.integration_card_states SET source_managed_archive = false
+                          WHERE tenant_id = ${m.tenantId}::uuid AND entity_type = 'PARTY' AND entity_id = ${input.id}::uuid AND source_managed_archive`);
     await appendAudit(tx, { action: input.archived ? "party.archived" : "party.restored", actorUserId: m.userId, entityType: "party", entityId: input.id, requestId: requestId ?? null });
     return { version: Number(row.version) };
   });

@@ -5811,6 +5811,8 @@
       "TIMEOUT": "Transfer stopped midway · the next run retries",
       "EXTERNAL_ALREADY_LINKED": "Its Paraşüt record is linked to another card · check it",
       "UPDATE_REJECTED": "Paraşüt did not accept the edit · check the card, then retry",
+      "FLOW_CHANGED": "The flow direction changed during the run · the next run uses the new direction",
+      "REMOTE_NOT_FOUND": "This card does not exist in Paraşüt · check the link, then retry",
       "ROWS_FAILED": "Some rows could not be transferred",
       "INTERNAL": "Unexpected error · tell the Etkin team",
       "PROVIDER_AUTH_FAILED": "Paraşüt rejected the sign-in",

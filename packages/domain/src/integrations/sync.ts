@@ -99,8 +99,8 @@ type FlowRow = {
 /** T-1135: akış bu koşuda çalışamaz (kalıcı durum; sağlayıcıya istek gitmez). */
 export class FlowBlockedError extends Error {
   override name = "FlowBlockedError";
-  readonly code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE";
-  constructor(code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE") {
+  readonly code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE" | "FLOW_CHANGED";
+  constructor(code: "INTEGRATION_FLOW_EXCLUSIVE" | "OPENING_STOCK_INCOMPLETE" | "FLOW_CHANGED") {
     super(`flow blocked (${code})`);
     this.code = code;
   }
@@ -193,6 +193,7 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
         try {
           // Satır başına kayıt noktası: bir kartın reddi sayfanın kalanını düşürmez. T-1140: bağlı kartta karar kuralı (card-sync.ts);
           // yerel taraf kazanırsa (DEFERRED) burada uygulanmaz, düzeltme turunda gönderilir.
+          // İlk bağlamada apply iki kez çalışabilir (bağla, sonra bağlı kart kuralı): uyarı kart başına en çok bir kez sayılır.
           let warned = 0;
           const r = await tx.transaction((sp) =>
             syncRemoteCard(sp, rc.ac, {
@@ -200,7 +201,7 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
               direction: rc.flow.direction,
               flow: rc.flow.flow,
               resource: item,
-              apply: (t) => (kind === "products" ? applyProduct(t, ac, toProduct(item, p.included, () => void (warned += 1))) : kind === "contacts" ? applyContact(t, rc.ac, toContact(item)) : applyWarehouse(t, rc.ac, toWarehouse(item))),
+              apply: (t) => (kind === "products" ? applyProduct(t, ac, toProduct(item, p.included, ((n) => () => void (warned = Math.max(warned, (n += 1))))(0))) : kind === "contacts" ? applyContact(t, rc.ac, toContact(item)) : applyWarehouse(t, rc.ac, toWarehouse(item))),
             }),
           );
           if (r.outcome !== "DEFERRED") count(rc.c, r.outcome);
@@ -279,6 +280,7 @@ async function pushCards(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pr
     try {
       let ext: string;
       let found: JsonApiResource | null;
+      await rc.deps.inTenant(async () => undefined); // yön hâlâ aynı mı — dış yazımdan önce (inceleme MINOR-4)
       if (entity === "ITEM") {
         found = await client.findProductByCode(rc.token, rc.companyId, row.code);
         ext = found?.id ?? (await client.createProduct(rc.token, rc.companyId, { code: row.code, name: row.name, unit: row.extra }));
@@ -312,6 +314,7 @@ async function pushCards(rc: RunCtx, entity: "ITEM" | "PARTY" | "WAREHOUSE"): Pr
       else if (found === null) rc.c.created++;
       else rc.c.linked++;
     } catch (e) {
+      if (e instanceof FlowBlockedError) throw e;
       if (e instanceof ProviderError && e.retryable) throw e; // geçici: koşu durur, iş yeniden dener
       if (e instanceof ProviderError && e.code === "AUTH_FAILED") throw e;
       rc.c.failed++;
@@ -360,13 +363,23 @@ async function pushEdited(rc: RunCtx, entity: CardEntity): Promise<void> {
         else {
           if (!hasBase) {
             remote = await fetchRemote(rc, entity, local.externalId);
-            if (remote === null) continue; // kaynakta yok: gönderilmez
+            if (remote === null) {
+              // Kaynakta yok (PUSH'ta yaşam döngüsü yok): kart bekletilir, her koşuda yeniden sorulmaz; aday listesini tıkamaz (inceleme MINOR-5).
+              await rc.deps.inTenant((tx) => parkCard(tx, rc, entity, local.id, "REMOTE_NOT_FOUND"));
+              rc.c.failed++;
+              continue;
+            }
           }
           decision = decideCardSync({ direction: "PUSH", localHash, remoteHash: remote === null ? null : cardHash(entity, remoteCanon(entity, remote.item)), marker });
         }
       } else {
         remote = await fetchRemote(rc, entity, local.externalId);
-        if (remote === null) continue; // kaynakta yok: yaşam döngüsü işler, gönderilmez
+        if (remote === null) {
+          // Kaynakta yok: silinmeyi yaşam döngüsü (iki yokluk) işler; imza yenilenir → kart her koşuda yeniden sorulmaz, aday listesini
+          // tıkamaz (inceleme MINOR-5). Kart yeniden düzeltilirse yine aday olur.
+          await rc.deps.inTenant((tx) => touchCardSig(tx, rc.ac, entity, local.id, local.sig));
+          continue;
+        }
         const found = remote;
         let barcodes = false;
         if (entity === "ITEM") barcodes = (await rc.deps.inTenant((tx) => tx.execute<{ enabled: boolean }>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id=${rc.tenantId}::uuid AND id=${rc.integrationId}::uuid`)))[0]?.enabled === true;
@@ -392,6 +405,7 @@ async function pushEdited(rc: RunCtx, entity: CardEntity): Promise<void> {
         continue;
       }
       if (!pushesLocal(decision)) continue;
+      await rc.deps.inTenant(async () => undefined); // yön hâlâ aynı mı (sarmalayıcı denetler) — dış yazımdan hemen önce
       const sent = await sendEdit(rc, entity, local);
       if (sent === null) {
         await rc.deps.inTenant((tx) => touchCardSig(tx, rc.ac, entity, local.id, local.sig));
@@ -406,6 +420,7 @@ async function pushEdited(rc: RunCtx, entity: CardEntity): Promise<void> {
       });
       rc.c.updated++;
     } catch (e) {
+      if (e instanceof FlowBlockedError) throw e;
       if (e instanceof ProviderError && (e.retryable || e.code === "AUTH_FAILED")) throw e;
       if (definiteRejection(e)) await rc.deps.inTenant((tx) => parkCard(tx, rc, entity, local.id, "UPDATE_REJECTED"));
       rc.c.failed++;
@@ -665,7 +680,27 @@ async function pushShipments(rc: RunCtx): Promise<void> {
   }
 }
 
-async function runFlow(rc: RunCtx): Promise<void> {
+/**
+ * T-1140 (inceleme MINOR-4): kart akışında koşu boyunca (en çok 30 dk) okunan yön, her transaction'ın başında yeniden doğrulanır: akış
+ * hâlâ açık ve yönü aynı değilse (FOR SHARE; eşzamanlı yön değişikliği bu transaction bitene kadar bekler) koşu `FLOW_CHANGED` ile durur,
+ * hiçbir şey yazılmaz; dış yazımdan (POST/PUT) hemen önce de aynı denetim yapılır. Sonraki koşu yeni yönle çalışır.
+ */
+function guardFlow(rc: RunCtx): RunCtx {
+  const inner = rc.deps.inTenant;
+  const inTenant: RunTx = (fn) =>
+    inner(async (tx) => {
+      const r = await tx.execute<{ ok: boolean }>(sql`
+        SELECT (enabled AND direction = ${rc.flow.direction}) AS ok FROM public.integration_flows
+         WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = ${rc.flow.flow} FOR SHARE`);
+      if (r[0]?.ok !== true) throw new FlowBlockedError("FLOW_CHANGED");
+      return fn(tx);
+    });
+  return { ...rc, deps: { ...rc.deps, inTenant } };
+}
+
+async function runFlow(input: RunCtx): Promise<void> {
+  const cardFlow = input.flow.flow === "PRODUCTS" || input.flow.flow === "CONTACTS" || input.flow.flow === "WAREHOUSES";
+  const rc = cardFlow ? guardFlow(input) : input;
   const dir = rc.flow.direction;
   switch (rc.flow.flow) {
     case "PRODUCTS":
