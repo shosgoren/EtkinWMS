@@ -25,6 +25,13 @@ export function GuideTrigger({ className, iconOnly = false }: { className: strin
   );
 }
 
+/** Rehber penceresini açar: `inert` önce kalkar ki showModal odağı pencerenin içine taşıyabilsin. */
+function ac(el: HTMLDialogElement | null): void {
+  if (el === null || el.open) return;
+  el.inert = false;
+  el.showModal();
+}
+
 export function FirstUseGuide() {
   const t = useTranslations("guide");
   const dialog = useRef<HTMLDialogElement>(null);
@@ -35,12 +42,12 @@ export function FirstUseGuide() {
   // kendi kabuğunu kullanır. Destek > Rehberi aç olayı (aşağıda) her yerde elle açar.
   useEffect(() => {
     if (pathname !== "/") return;
-    try { if (localStorage.getItem(KEY) !== "seen" && !dialog.current?.open) dialog.current?.showModal(); } catch { /* Rehber düğmeden açılabilir. */ }
+    try { if (localStorage.getItem(KEY) !== "seen") ac(dialog.current); } catch { /* Rehber düğmeden açılabilir. */ }
   }, [pathname]);
   useEffect(() => {
     const onOpen = () => {
       setStep(0);
-      if (!dialog.current?.open) dialog.current?.showModal();
+      ac(dialog.current);
     };
     window.addEventListener(OPEN_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
@@ -49,6 +56,18 @@ export function FirstUseGuide() {
     try { localStorage.setItem(KEY, "seen"); } catch { /* Depolama gerekli değildir. */ }
     dialog.current?.close();
   }
+  // T-1134 (ALTIN-KURAL 11): kapalı pencerenin içi klavye sırasına girmez (`inert`). Açarken `inert` showModal'dan ÖNCE kalkar (yoksa odak
+  // pencereye geçmez); her kapanışta (Esc, düğme, kod) geri konur. Elle (React özniteliği değil): yeniden çizim açık pencereyi kapatmasın.
+  useEffect(() => {
+    const el = dialog.current;
+    if (el === null) return undefined;
+    if (!el.open) el.inert = true;
+    const kapandi = (): void => {
+      el.inert = true;
+    };
+    el.addEventListener("close", kapandi);
+    return () => el.removeEventListener("close", kapandi);
+  }, []);
   return (
     <dialog ref={dialog} className="guide-dialog" aria-labelledby="guide-title" onCancel={close}>
       <div className="guide-heading"><span>{t("progress", { current: step + 1, total: 3 })}</span><button type="button" onClick={close} aria-label={t("skip")}>×</button></div>

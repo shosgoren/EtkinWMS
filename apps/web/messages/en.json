@@ -4294,7 +4294,8 @@
         },
         "excel": {
           "ad": "Import from Excel",
-          "alt": "Selected data source"
+          "alt": "Selected data source",
+          "altParasut": "Data source · Paraşüt"
         },
         "kayit": {
           "ad": "Who did what?",
@@ -5622,13 +5623,12 @@
   "integrations": {
     "title": "Integration",
     "locked": "Only the account owner can open this screen",
-    "lockedHint": "Only the account owner connects and changes the ERP link.",
-    "head": "ERP CONNECTION",
-    "hintNone": "PICK YOUR ERP · ENTER DETAILS · CONNECT",
-    "hintOn": "TURN ON / OFF · PICK DIRECTION · THE REST IS AUTOMATIC",
-    "demo": "ERP cannot be connected in the demo workspace",
+    "lockedHint": "Only the account owner connects and changes the accounting software link.",
+    "head": "ACCOUNTING SOFTWARE CONNECTION",
+    "hintNone": "PICK YOUR ACCOUNTING SOFTWARE · ENTER DETAILS · CONNECT",
+    "demo": "Accounting software cannot be connected in the demo workspace",
     "demoSub": "CONNECT IN A REAL WORKSPACE",
-    "providerList": "Pick an ERP",
+    "providerList": "Pick accounting software",
     "providers": {
       "PARASUT": {
         "name": "Paraşüt",
@@ -5694,9 +5694,9 @@
     "flowOnAria": "{name}: on. Tap to turn off",
     "flowOffAria": "{name}: off. Tap to turn on",
     "flowNaAria": "{name}: not available in {provider}",
-    "flowNa": "Not available in {provider} · comes with Logo",
+    "flowNa": "No orders in {provider} · will come with sales invoices",
     "flowOn": "{name} on · first transfer started",
-    "flowOnNoQueue": "{name} on · runs with the hourly transfer",
+    "flowOnNoQueue": "{name} on · transfers automatically shortly",
     "flowOff": "{name} off",
     "dirSet": "{name}: {dir}",
     "never": "NOT RUN YET",
@@ -5723,7 +5723,7 @@
     "runFailedRows": "{n} ROWS FAILED",
     "runNoChange": "NO CHANGE",
     "trigger": {
-      "SCHEDULE": "HOURLY",
+      "SCHEDULE": "AUTOMATIC",
       "MANUAL": "MANUAL"
     },
     "outboxCheck": "{n} waybills need a check",
@@ -5771,7 +5771,7 @@
       "CONNECTOR_REVOKED": "The person who connected lost permission · reconnect",
       "UNSUPPORTED": "This direction is not available in this ERP",
       "NO_ENABLED_FLOW": "Turn on something to transfer first",
-      "QUEUE_UNAVAILABLE": "Background jobs are off · the hourly run will pick it up",
+      "QUEUE_UNAVAILABLE": "Background jobs are off · it will be picked up automatically shortly",
       "CONTACT_NOT_LINKED": "Party not linked to Paraşüt",
       "ITEM_NOT_LINKED": "Item not linked to Paraşüt",
       "DOCUMENT_EMPTY": "Document has no lines",
@@ -5904,7 +5904,7 @@
     },
     "baglanti": {
       "title": "Connection and data source",
-      "sub": "ERP connection · opening stock · Excel",
+      "sub": "Accounting software connection · opening stock · Excel",
       "excel": "Transfer with Excel",
       "excelSub": "ITEM · PARTY · WAREHOUSE · SHELF · OPENING STOCK",
       "excelOpen": "Open"
@@ -5913,7 +5913,9 @@
       "title": "Field ownership",
       "sub": "Which system changes which field",
       "soon": "Soon",
-      "text": "Choosing ownership field by field is coming soon"
+      "text": "Field ownership is coming soon",
+      "soonHint": "For now, pick the direction of each item in What to pull, what to push",
+      "go": "Go to direction choice"
     },
     "arsiv": {
       "title": "Inactive and archive",
@@ -6334,9 +6336,9 @@
         "kontrol": "Columns matched. Check with the button below.",
         "uygula": "If all is fine, import with the button below.",
         "baglan": "Connect Paraşüt: press CONNECT below.",
-        "akis_urun": "Turn on the products flow.",
-        "akis_depo": "Turn on the warehouses flow.",
-        "akis_cari": "Turn on the accounts flow.",
+        "akis_urun": "Pick the direction for products (Pull from Paraşüt).",
+        "akis_depo": "Pick the direction for warehouses (Pull from Paraşüt).",
+        "akis_cari": "Pick the direction for accounts (Pull from Paraşüt).",
         "esitle": "Press Sync now."
       },
       "open": "Open the screen",

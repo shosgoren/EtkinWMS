@@ -115,7 +115,7 @@ export async function PanoBoard(p: PanoBoardProps) {
             ))
           )}
         </section>
-        <AnaIsler slug={p.slug} items={isler} adaylar={adaylar} />
+        <AnaIsler slug={p.slug} items={isler} adaylar={adaylar} kaynak={p.journey?.cardSource ?? null} />
       </div>
     </PanoShell>
   );
