@@ -15,7 +15,8 @@ export interface OpenTarget {
 /** [kök önekleri, hedef]. Önce özel (çok sözcüklü/alt sekme) kurallar, sonra genel. Kök en az 3 harf; sözcük kökle başlar. */
 const RULES: readonly (readonly [readonly string[], OpenTarget, (ws: readonly string[]) => boolean])[] = [
   // T-1142: "yetkiler", "kullanıcı yetkileri", "yetki ayarları" → yetki ekranı (ekip yönetimi izniyle; yetkisiz modül açılmaz).
-  [["yetki"], { id: "ekip", path: "/yetkiler" }, () => true],
+  // Yalnız "yetki" sözcüğünün kendisi ve çekimleri ("yetkiler", "yetkileri", "yetkilere"); "yetkili" (kişi) eşleşmez.
+  [["yetki"], { id: "ekip", path: "/yetkiler" }, (ws) => ws.some((w) => /^yetki(ler|leri|lere|lerin|lerine|yi|ye|si)?$/.test(w))],
   [["ayar"], { id: "ayar", suffix: "?sekme=kullanici" }, (ws) => has(ws, ["kullanici", "uye", "yetki", "personel"])],
   [["ayar"], { id: "ayar", suffix: "?sekme=gorunum" }, (ws) => has(ws, ["gorunum", "tema", "karanlik", "koyu", "acik"])],
   // T-1118: Entegrasyonlar ayrı ekran (T-1112, Ayarlar sekmesi); Excel aktarımı Bağlantılar ekranında kalır.

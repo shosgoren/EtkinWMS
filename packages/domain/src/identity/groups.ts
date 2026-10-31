@@ -113,6 +113,23 @@ async function ownerWrite<T>(params: CommandParams, fn: (tx: AccessTx, actor: { 
   }
 }
 
+/**
+ * T-1142 (güvenlik incelemesi MINOR-2): grup satırı kilitlendikten SONRA gruptaki saha hesabı var mı (kilitsiz, taze okuma).
+ * Kilit sırası `withMembership` ile aynı kalır (üyelik satırları → grup); ilk üye listesi grup kilidinden ÖNCE okunduğundan, o arada
+ * eşzamanlı `setMemberGroup` gruba yeni bir saha hesabı koymuş olabilir. `setMemberGroup` grubu FOR SHARE okur → bizim FOR UPDATE kilidimiz
+ * onun commit'ini bekler; READ COMMITTED'da sonraki deyim onun eklediği satırı görür. Bu yeniden okuma kilit almaz (ters sıra kilit = deadlock).
+ */
+async function hasFieldMemberNow(tx: AccessTx, tenantId: string, groupId: string): Promise<boolean> {
+  const rows = await tx.execute<{ email: string }>(
+    sql`SELECT u.email
+          FROM public.member_groups mg
+          JOIN public.tenant_memberships m ON m.tenant_id = mg.tenant_id AND m.id = mg.membership_id AND m.status = 'ACTIVE'
+          JOIN public.users u ON u.id = m.user_id
+         WHERE mg.tenant_id = ${tenantId}::uuid AND mg.group_id = ${groupId}::uuid`,
+  );
+  return rows.some((r) => isFieldEmail(r.email));
+}
+
 async function bumpMembers(tx: AccessTx, tenantId: string, membershipIds: readonly string[]): Promise<void> {
   if (membershipIds.length === 0) return;
   await tx.execute(
@@ -285,7 +302,7 @@ export async function saveGroup(
       const before = await lockGroup(tx, actor.tenantId, id);
       if (before.version !== expectedVersion) throw new AppError("VERSION_CONFLICT");
       if (before.archived_at !== null) throw new AppError("VALIDATION_FAILED");
-      if (needsMfa(g.grants) && members.some((m) => isFieldEmail(m.email))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
+      if (needsMfa(g.grants) && (members.some((m) => isFieldEmail(m.email)) || (await hasFieldMemberNow(tx, actor.tenantId, id)))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
       const rows = await tx.execute<{ version: number }>(
         sql`UPDATE public.permission_groups
                SET name = ${g.name}, color = ${g.color},
@@ -333,7 +350,7 @@ export async function setGroupArchived(
       const before = await lockGroup(tx, actor.tenantId, id);
       if (before.version !== expectedVersion) throw new AppError("VERSION_CONFLICT");
       if ((before.archived_at !== null) === archived) return { ok: true, id, version: before.version } as const;
-      if (!archived && needsMfa(before.grants) && members.some((m) => isFieldEmail(m.email))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
+      if (!archived && needsMfa(before.grants) && (members.some((m) => isFieldEmail(m.email)) || (await hasFieldMemberNow(tx, actor.tenantId, id)))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
       const rows = await tx.execute<{ version: number }>(
         sql`UPDATE public.permission_groups SET archived_at = ${archived ? sql`now()` : sql`NULL`}
              WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${id}::uuid RETURNING version`,
@@ -374,7 +391,9 @@ export async function changeGroupGrants(params: CommandParams & { readonly id: s
     const same = grants.length === before.grants.length && grants.every((g) => before.grants.includes(g));
     if (same) return { ok: true, changed: false, version: before.version, grants } as const;
     // Yalnız EKLENEN MFA yetkisi engellenir (kapatma her zaman serbest).
-    if (needsMfa(grants.filter((g) => !before.grants.includes(g))) && members.some((m) => isFieldEmail(m.email))) return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
+    if (needsMfa(grants.filter((g) => !before.grants.includes(g))) && (members.some((m) => isFieldEmail(m.email)) || (await hasFieldMemberNow(tx, actor.tenantId, id)))) {
+      return { ok: false, issue: "FIELD_MEMBER_MFA" } as const;
+    }
     const arr = grants.length === 0 ? sql`'{}'::text[]` : sql`ARRAY[${sql.join(grants.map((g) => sql`${g}`), sql`, `)}]::text[]`;
     const rows = await tx.execute<{ version: number }>(
       sql`UPDATE public.permission_groups SET grants = ${arr} WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${id}::uuid RETURNING version`,

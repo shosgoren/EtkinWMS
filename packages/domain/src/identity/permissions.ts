@@ -89,17 +89,24 @@ export const GRANTABLE: readonly Permission[] = Object.freeze([
 ] as const);
 /**
  * Taşıyana MFA zorunlu kılan yetkiler (rolde MFA_REQUIRED_ROLES ile aynı gerekçe: onay, ters kayıt, toplu yazma).
- * T-1142: cari anahtarları da — cari kartı kişisel veri taşır (vergi no, telefon, e-posta, adres); kartı tek tek yazan üye iki adımlı
- * doğrulama ister, saha hesabına (MFA yapamaz) verilemez. Toplu kişisel veri (Excel aktarımı/indirmesi) yine yalnız `settings.manage`.
+ * T-1142: cari anahtarları — cari kartı kişisel veri taşır (vergi no, telefon, e-posta, adres). Ürün ve depo anahtarları — bağlı dış sisteme
+ * (ERP) giden kart değişikliği. Taşıyan üye iki adımlı doğrulama ister, saha hesabına (MFA yapamaz) verilemez. Raf yeri anahtarları MFA
+ * istemez: raf yerleri yalnız Etkin'dedir ve saha personeli kullanır. Toplu kişisel veri (Excel aktarımı/indirmesi) yine yalnız `settings.manage`.
  */
 export const MFA_GRANTS: readonly Permission[] = Object.freeze([
   "document.approve",
   "count_diff.approve",
   "reversal.create",
   "data.import",
+  "items.create",
+  "items.edit",
+  "items.archive",
   "parties.create",
   "parties.edit",
   "parties.archive",
+  "warehouses.create",
+  "warehouses.edit",
+  "warehouses.archive",
 ] as const);
 
 /**
@@ -236,6 +243,8 @@ export const PERMISSION_CATALOGUE: readonly PermissionRow[] = Object.freeze([
 
 /**
  * Hazır yetki şablonları (yetki ekranında tek dokunuşla gruba uygulanır; grup rolün ÜSTÜNE ek yetki verir). Hepsi GRANTABLE alt kümesi.
+ * "Depo sorumlusu" ve "Kart sorumlusu" MFA isteyen anahtar taşır (onay, ters kayıt, ürün/depo/cari kartı): saha hesabı olan grupta ekran bu
+ * anahtarları atlar (yalnız MFA istemeyenler uygulanır).
  * "Salt okunur" = ek yetki yok (üye yalnız rolünün izinleriyle kalır).
  */
 export const PERMISSION_PRESETS: readonly { readonly id: string; readonly grants: readonly Permission[] }[] = Object.freeze([

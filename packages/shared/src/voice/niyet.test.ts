@@ -145,6 +145,7 @@ describe("ekran hedefi (T-1110)", () => {
     ["yetkiler", { id: "ekip", path: "/yetkiler" }],
     ["kullanici yetkileri", { id: "ekip", path: "/yetkiler" }],
     ["yetki ayarlari", { id: "ekip", path: "/yetkiler" }],
+    ["yetkili kullanici", { id: "ekip" }],
     ["tema ayarlari", { id: "ayar", suffix: "?sekme=gorunum" }],
     ["parasut baglantisi", { id: "ayar", path: "/integrations" }],
     ["entegrasyonlar", { id: "ayar", path: "/integrations" }],

@@ -56,8 +56,8 @@ describe("nextGrants (T-1142 aç/kapa)", () => {
     expect(() => nextGrants([], "items.edit", [])).toThrow();
     expect(() => nextGrants([], [...GRANTABLE, "stock.post"], [])).toThrow();
   });
-  it("cari anahtarları MFA ister; ürün anahtarları istemez", () => {
-    expect(needsMfa(["parties.edit"])).toBe(true);
-    expect(needsMfa(["items.edit", "warehouses.create", "locations.archive"])).toBe(false);
+  it("cari, ürün ve depo anahtarları MFA ister; raf yeri anahtarları istemez", () => {
+    for (const k of ["parties.edit", "items.edit", "items.create", "warehouses.create", "warehouses.archive"]) expect(needsMfa([k]), k).toBe(true);
+    expect(needsMfa(["locations.create", "locations.edit", "locations.archive", "stock.post"])).toBe(false);
   });
 });

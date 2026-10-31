@@ -74,8 +74,8 @@ describe("kart anahtarları, roller ve gruplar", () => {
     expect(cardRights(["PICKER"], ["parties.create"], "parties")).toEqual({ create: true, edit: false, archive: false, import: false });
   });
 
-  it("T-1142: cari anahtarları kişisel veri taşır — MFA zorunlu; diğer kart anahtarları değil", () => {
-    for (const k of WRITE_KEYS) expect(MFA_GRANTS.includes(k), k).toBe(k.startsWith("parties."));
+  it("T-1142: cari (kişisel veri), ürün ve depo (dış sisteme giden) anahtarları MFA ister; raf yeri anahtarları istemez", () => {
+    for (const k of WRITE_KEYS) expect(MFA_GRANTS.includes(k), k).toBe(!k.startsWith("locations."));
     expect(MFA_GRANTS.every((g) => GRANTABLE.includes(g))).toBe(true);
   });
 

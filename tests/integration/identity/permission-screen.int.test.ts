@@ -4,12 +4,12 @@
 // isteyen yetki alamaz, çapraz tenant NOT_FOUND (I-01/I-02). Gerçek wms_app bağlantısı + RLS; fikstürler sentetik (G-09).
 import pg from "pg";
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createDbClient } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { AppError } from "../../../packages/shared/src/errors.ts";
 import { FIELD_EMAIL_DOMAIN } from "../../../packages/shared/src/field-login.ts";
-import { archiveItem, createItem, createUnit, renameUnit, updateItem } from "../../../packages/domain/src/catalog/index.ts";
+import { archiveItem, createItem, createUnit, renameUnit, suggestCode, updateItem } from "../../../packages/domain/src/catalog/index.ts";
 import { saveParty } from "../../../packages/domain/src/catalog/parties.ts";
 import { archiveWarehouse, createWarehouse, renameWarehouse } from "../../../packages/domain/src/warehouse/index.ts";
 import { changeGroupGrants, listGroups, saveGroup, setGroupArchived, setMemberGroup } from "../../../packages/domain/src/identity/groups.ts";
@@ -100,18 +100,30 @@ afterAll(async () => {
   await app.close();
 }, 60_000);
 
+// Her test kendi başlangıcından koşar (sıra bağımsız): gruplar boş yetkiye, üyeler kendi gruplarına döner.
+beforeEach(async () => {
+  await adm.query("UPDATE public.permission_groups SET grants = '{}' WHERE id = ANY($1::uuid[]) AND grants <> '{}'", [[gEdit, gParty, gField]]);
+  for (const [m, g] of [[EDITOR_M, gEdit], [PARTY_M, gParty], [FIELD_M, gField]] as const) {
+    await adm.query(
+      "INSERT INTO public.member_groups (tenant_id, membership_id, group_id, assigned_by) VALUES ($1, $2, $3, $4) ON CONFLICT (tenant_id, membership_id) DO UPDATE SET group_id = EXCLUDED.group_id",
+      [A.tenantId, m, g, A.ownerMembershipId],
+    );
+  }
+});
+
 describe("T-1142 aç/kapa (changeGroupGrants)", () => {
   it("hesap sahibi kart anahtarı açar; tekrar aynı istek yazmaz (idempotent); audit önceki/sonraki yetkiyi taşır; üye sürümü artar", async () => {
     const v0 = await rolesVersion(EDITOR_M);
     const a0 = await auditCount(A.tenantId);
-    const r = await changeGroupGrants({ ...call(A.ownerUserId, A), id: gEdit, add: ["items.edit", "warehouses.archive"], remove: [] });
+    const first = call(A.ownerUserId, A);
+    const r = await changeGroupGrants({ ...first, id: gEdit, add: ["items.edit", "warehouses.archive"], remove: [] });
     expect(r).toMatchObject({ ok: true, changed: true, grants: ["items.edit", "warehouses.archive"] });
     expect(await grantsOf(gEdit)).toEqual(["items.edit", "warehouses.archive"]);
     expect(await rolesVersion(EDITOR_M)).toBe(v0 + 1);
     expect(await auditCount(A.tenantId)).toBe(a0 + 1);
     const audit = await adm.query<{ action: string; actor: string; s: { from_grants: string[]; grants: string[]; via: string } }>(
-      "SELECT action, actor_user_id AS actor, change_summary AS s FROM public.audit_logs WHERE tenant_id = $1 AND entity_id = $2 AND change_summary->>'via' = 'permission_screen'",
-      [A.tenantId, gEdit],
+      "SELECT action, actor_user_id AS actor, change_summary AS s FROM public.audit_logs WHERE tenant_id = $1 AND entity_id = $2 AND request_id = $3 AND change_summary->>'via' = 'permission_screen'",
+      [A.tenantId, gEdit, first.requestId],
     );
     expect(audit.rows).toHaveLength(1);
     expect(audit.rows[0]).toMatchObject({ action: "group.updated", actor: A.ownerUserId, s: { from_grants: [], grants: ["items.edit", "warehouses.archive"], via: "permission_screen" } });
@@ -148,6 +160,14 @@ describe("T-1142 aç/kapa (changeGroupGrants)", () => {
     expect((await renameUnit(plain(A.ownerUserId, A), { unitId: u.unitId, name: "T1142 birim 2" })).changed).toBe(true);
   });
 
+  it("ürün anahtarı da iki adımlı doğrulama ister (dış sisteme giden kart); raf yeri anahtarı istemez", async () => {
+    await changeGroupGrants({ ...call(A.ownerUserId, A), id: gEdit, add: ["items.edit"], remove: [] });
+    expect(await failure(updateItem(plain(EDITOR, A, false), { itemId: A.itemId, name: "mfa yok" }))).toMatchObject({ code: "FORBIDDEN", detail: "MFA_REQUIRED" });
+    await changeGroupGrants({ ...call(A.ownerUserId, A), id: gEdit, add: ["locations.create"], remove: ["items.edit"] });
+    const s = await suggestCode(plain(EDITOR, A, false), { kind: "location", warehouseId: A.warehouseId });
+    expect(typeof s).toBe("object");
+  });
+
   it("cari anahtarı (MINOR a) iki adımlı doğrulama ister; parties.create yalnız ekler, değiştiremez", async () => {
     await changeGroupGrants({ ...call(A.ownerUserId, A), id: gParty, add: ["parties.create"], remove: [] });
     const noMfa = await failure(saveParty(plain(PARTY, A, false), { code: uniq("C-"), name: "x", kind: "CUSTOMER" }));
@@ -157,14 +177,16 @@ describe("T-1142 aç/kapa (changeGroupGrants)", () => {
     expect((await failure(saveParty(plain(PARTY, A, true), { id: p.id, expectedVersion: p.version, code: uniq("C-"), name: "değişti", kind: "CUSTOMER" }))).code).toBe("FORBIDDEN");
   });
 
-  it("saha hesabı olan gruba MFA isteyen yetki açılamaz; MFA istemeyen açılır; kapatma serbest", async () => {
+  it("saha hesabı olan gruba MFA isteyen yetki (cari, ürün, depo, onay, Excel) açılamaz; raf yeri açılır; kapatma serbest", async () => {
     const a0 = await auditCount(A.tenantId);
-    expect(await changeGroupGrants({ ...call(A.ownerUserId, A), id: gField, add: ["parties.edit"], remove: [] })).toEqual({ ok: false, issue: "FIELD_MEMBER_MFA" });
+    for (const k of ["parties.edit", "items.edit", "items.create", "warehouses.edit", "warehouses.archive"]) {
+      expect(await changeGroupGrants({ ...call(A.ownerUserId, A), id: gField, add: [k], remove: [] }), k).toEqual({ ok: false, issue: "FIELD_MEMBER_MFA" });
+    }
     expect(await changeGroupGrants({ ...call(A.ownerUserId, A), id: gField, add: ["data.import", "stock.post"], remove: [] })).toEqual({ ok: false, issue: "FIELD_MEMBER_MFA" });
     expect(await grantsOf(gField)).toEqual([]);
     expect(await auditCount(A.tenantId)).toBe(a0);
-    expect(await changeGroupGrants({ ...call(A.ownerUserId, A), id: gField, add: ["items.edit", "locations.create"], remove: [] })).toMatchObject({ ok: true, changed: true });
-    expect(await changeGroupGrants({ ...call(A.ownerUserId, A), id: gField, add: [], remove: ["items.edit"] })).toMatchObject({ ok: true, changed: true, grants: ["locations.create"] });
+    expect(await changeGroupGrants({ ...call(A.ownerUserId, A), id: gField, add: ["locations.edit", "locations.create", "stock.post"], remove: [] })).toMatchObject({ ok: true, changed: true });
+    expect(await changeGroupGrants({ ...call(A.ownerUserId, A), id: gField, add: [], remove: ["locations.edit"] })).toMatchObject({ ok: true, changed: true, grants: ["stock.post", "locations.create"] });
   });
 
   it("yalnız hesap sahibi: ikinci yönetici, grup üyesi (kendi grubunu büyütme) ve toplayıcı FORBIDDEN; yazım ve audit yok", async () => {
@@ -177,6 +199,7 @@ describe("T-1142 aç/kapa (changeGroupGrants)", () => {
     expect(await grantsOf(gEdit)).toEqual(before);
     expect(await auditCount(A.tenantId)).toBe(a0);
     // Yakın zamanda kimlik doğrulama zorunlu (fail-closed).
+    await changeGroupGrants({ ...call(A.ownerUserId, A), id: gEdit, add: ["items.edit"], remove: [] });
     const noReauth = await failure(changeGroupGrants({ ...plain(A.ownerUserId, A), id: gEdit, add: ["items.archive"], remove: [] }));
     expect(noReauth).toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
   });

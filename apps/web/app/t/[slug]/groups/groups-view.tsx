@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { dz } from "../../../design/gruplar-tokens.ts";
 import { RICON } from "../../../design/gruplar-icons.ts";
 import { archiveGroupAction, saveGroupAction, setMemberGroupAction } from "./actions.ts";
+import { GUC_YETKI, birlesikYetkiler, gruptakiGucler } from "./guc.ts";
 import { KabukBar } from "../kabuk/kabuk-bar.tsx";
 import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
 import { kilitliDokunus } from "../kalip/kilitli.tsx";
@@ -43,13 +44,13 @@ const SCREENS = [
 /** Yetki kartı → domain yetkileri. `team` (ekip yönetimi) ve `settings` (ayarlar) grupla verilmez: kartlar kilitli (yalnız Yönetici rolü). */
 const LOCKED: readonly string[] = ["team", "settings"];
 const POWERS = [
-  ["scan", "2F7D5B", RICON.scan, ["stock.post"]],
-  ["create", "0E7C7B", RICON.plus, ["document.create"]],
-  ["approve", "6C4BD8", RICON.approve, ["document.approve", "count_diff.approve"]],
-  ["reverse", "B5552B", RICON.reverse, ["reversal.create"]],
-  ["team", "2F5DA8", RICON.team, []],
-  ["import", "2F7D5B", RICON.import, ["data.import"]],
-  ["settings", "172E42", RICON.settings, []],
+  ["scan", "2F7D5B", RICON.scan, GUC_YETKI.scan],
+  ["create", "0E7C7B", RICON.plus, GUC_YETKI.create],
+  ["approve", "6C4BD8", RICON.approve, GUC_YETKI.approve],
+  ["reverse", "B5552B", RICON.reverse, GUC_YETKI.reverse],
+  ["team", "2F5DA8", RICON.team, GUC_YETKI.team],
+  ["import", "2F7D5B", RICON.import, GUC_YETKI.import],
+  ["settings", "172E42", RICON.settings, GUC_YETKI.settings],
 ] as const;
 /** Renk anahtarları `#` olmadan (belirteç: `dz()`); sunucuya `#` önekiyle gider (0051 CHECK). */
 const COLORS = ["2F7D5B", "0E7C7B", "2F5DA8", "6C4BD8", "B5552B"] as const;
@@ -91,17 +92,9 @@ function Ico({ d, size, style }: { d: readonly string[] | string; size: number; 
 
 const hexKey = (c: string): string => c.replace("#", "").toUpperCase();
 const initial = (name: string, locale: string): string => buyukHarf(name.trim()[0] ?? "?", locale);
-const powersOf = (grants: readonly string[]): string[] => POWERS.filter(([, , , g]) => g.length > 0 && g.every((x) => grants.includes(x))).map((p) => p[0]);
-const grantsOf = (powers: readonly string[]): string[] => POWERS.filter((p) => powers.includes(p[0])).flatMap((p) => [...p[3]]);
-/**
- * T-1142: kaydederken yalnız bu ekranda DEĞİŞEN güç kartlarının yetkileri eklenir/çıkarılır; Yetkiler ekranında tek tek açılan anahtarlar
- * (kart yetkileri, tek başına belge onayı…) korunur. Eski davranış güç kartlarından yeniden kurup bu anahtarları siliyordu.
- */
-const mergedGrants = (original: readonly string[], before: readonly string[], after: readonly string[]): string[] => {
-  const added = grantsOf(after.filter((p) => !before.includes(p)));
-  const removed = grantsOf(before.filter((p) => !after.includes(p)));
-  return [...new Set([...original.filter((g) => !removed.includes(g)), ...added])];
-};
+// T-1142: güç kartı ↔ yetki eşlemesi ve kayıt birleşimi saf modülde (`guc.ts`, birim testli).
+const powersOf = gruptakiGucler;
+const mergedGrants = birlesikYetkiler;
 
 export function GroupsView({ slug, dark, data, openNew = false }: GroupsViewProps) {
   const t = useTranslations("gruplar");
