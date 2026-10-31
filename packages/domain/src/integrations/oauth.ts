@@ -1,4 +1,9 @@
 // T-1066: confidential-client OAuth authorization-code flow; no password, open redirect or replay.
+// T-1133 (kullanıcı kararı 30 Ekim): Etkin'in TEK ortak Paraşüt uygulaması sunucu ortamından (`PARASUT_OAUTH_CLIENT_ID` /
+// `PARASUT_OAUTH_CLIENT_SECRET`, dönüş adresi `BETTER_AUTH_URL` + callback yolu) okunur; müşteri anahtar girmez. Kiracı kendi
+// uygulamasını kaydettiyse ("Gelişmiş") onun satırı önceliklidir. Ortam sırrı audit'e, loga, URL'ye ve istemciye yazılmaz; yalnız
+// sağlayıcıya giden belirteç isteğinde ve (yenileme için) bağlantının QUEUE_SEAL_KEY ile mühürlü kutusunda bulunur — mevcut bağlantı
+// yolu gibi (inceleme MINOR-1; döndürme adımı OPERATIONS'ta, kutuda işaret + ortamdan çözme ayrı iş).
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
@@ -11,6 +16,9 @@ import { ParasutClient, ProviderError, parseCompanyId, type Company, type TokenS
 
 export const PARASUT_CALLBACK_PATH = "/api/integrations/parasut/callback";
 export const OAUTH_TTL_SECONDS = 600;
+/** T-1133: ortak (ortam) uygulamanın sabit yapılandırma sürümü; kiracı satırı yoksa deneme ve yaşam döngüsü bu sürüme bağlanır. */
+export const SHARED_OAUTH_CONFIG_VERSION = "00000000-0000-4000-8000-000000000001";
+export const PARASUT_OOB_REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
 const HEX = /^[a-f0-9]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SLUG = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -31,12 +39,15 @@ export function oauthApplicationOrigin(env: Readonly<Record<string,string|undefi
     return u.origin;
   } catch { return null; }
 }
+/** T-1133: ortak uygulama (sunucu ortamı). Eksik/geçersiz değer → null (kapalı); dönüş adresi her zaman uygulamanın kendi callback'i. */
 export function parasutOAuthConfig(env: Readonly<Record<string,string|undefined>> = process.env): OAuthConfig | null {
   const origin = oauthApplicationOrigin(env);
   const clientId = env.PARASUT_OAUTH_CLIENT_ID?.trim(); const clientSecret = env.PARASUT_OAUTH_CLIENT_SECRET?.trim();
-  if (origin === null || !clientId || !clientSecret || clientId.length > 200 || clientSecret.length > 200 || /[\p{C}\s]/u.test(clientId+clientSecret)) return null;
-  return { clientId, clientSecret, redirectUri: origin+PARASUT_CALLBACK_PATH };
+  if (origin === null || !clientId || !clientSecret || !validApp(clientId, clientSecret)) return null;
+  return { clientId, clientSecret, redirectUri: origin+PARASUT_CALLBACK_PATH, version: SHARED_OAUTH_CONFIG_VERSION };
 }
+/** T-1133 çözüm sırası: kiracının kendi uygulaması (Gelişmiş) → ortak uygulama → yok. */
+export function pickOAuthConfig(tenant: OAuthConfig | null, shared: OAuthConfig | null): OAuthConfig | null { return tenant ?? shared; }
 export function oauthCookieName(origin: string): string { return origin.startsWith("https:") ? "__Host-etkin-parasut-oauth" : "etkin-parasut-oauth"; }
 export function encodeOAuthBinding(b: OAuthBinding): string { return Buffer.from(JSON.stringify(b)).toString("base64url"); }
 export function parseOAuthBinding(raw: string | undefined): OAuthBinding | null {
@@ -54,34 +65,45 @@ export function matchesOAuthState(binding: OAuthBinding, state: string): boolean
 }
 const APP_AAD = (tenantId: string) => ({jobType:"integration.oauth.application",template:"PARASUT",tenantId});
 function validApp(clientId:string,clientSecret:string):boolean { return clientId.length>0 && clientId.length<=200 && clientSecret.length>0 && clientSecret.length<=200 && !/[\p{C}\s]/u.test(clientId+clientSecret); }
-async function config(tx:AccessTx,tenantId:string,deps:OAuthDeps):Promise<OAuthConfig|null>{
-  if(deps.oauth!==undefined)return deps.oauth;
-  const origin=oauthApplicationOrigin(); if(origin===null)return null;
+async function tenantConfig(tx:AccessTx,tenantId:string,deps:OAuthDeps):Promise<OAuthConfig|null>{
   const rows=await tx.execute<{version:string;credentials:unknown}>(sql`SELECT version,credentials FROM public.integration_oauth_apps WHERE tenant_id=${tenantId}::uuid FOR SHARE`);
   if(rows[0]===undefined)return null;
   const v=sealer(deps).open(rows[0].credentials,APP_AAD(tenantId));
   if(typeof v.clientId!=="string"||typeof v.clientSecret!=="string"||!validApp(v.clientId,v.clientSecret))throw invalid();
   return {clientId:v.clientId,clientSecret:v.clientSecret,version:rows[0].version,redirectUri:typeof v.callbackUrl==="string"&&validCallback(v.callbackUrl)?v.callbackUrl:(()=>{throw invalid();})()};
 }
+async function config(tx:AccessTx,tenantId:string,deps:OAuthDeps):Promise<OAuthConfig|null>{
+  if(deps.oauth!==undefined)return deps.oauth;
+  if(oauthApplicationOrigin()===null)return null;
+  return pickOAuthConfig(await tenantConfig(tx,tenantId,deps),parasutOAuthConfig());
+}
 function validCallback(value:string):boolean {
- if(value==="urn:ietf:wg:oauth:2.0:oob")return true;
+ if(value===PARASUT_OOB_REDIRECT_URI)return true;
  if(value.length>300||/[\p{C}\s]/u.test(value))return false;
  try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password&&!u.hash;}catch{return false;}
 }
-const configVersion=(cfg:OAuthConfig)=>cfg.version??"00000000-0000-4000-8000-000000000001";
-export async function getParasutOAuthSettings(params:ConnectionCallParams):Promise<{configured:boolean;callbackUrl:string|null}>{
+const configVersion=(cfg:OAuthConfig)=>cfg.version??SHARED_OAUTH_CONFIG_VERSION;
+/** Ekran bilgisi: yalnız bayraklar ve dönüş adresi; kimlik/sır hiçbir zaman dönmez. `ownApp` kiracı satırı, `shared` ortak uygulama (T-1133). */
+export interface ParasutOAuthSettings { readonly configured:boolean; readonly ownApp:boolean; readonly shared:boolean; readonly oob:boolean; readonly callbackUrl:string|null }
+export async function getParasutOAuthSettings(params:ConnectionCallParams,deps:OAuthDeps={},env:Readonly<Record<string,string|undefined>>=process.env):Promise<ParasutOAuthSettings>{
  return runTenantQuery({...params,permission:"settings.manage"},async(tx,m)=>{
  const rows=await tx.execute(sql`SELECT version FROM public.integration_oauth_apps WHERE tenant_id=${m.tenantId}::uuid`);
- const origin=oauthApplicationOrigin();return {configured:rows.length===1,callbackUrl:origin===null?null:origin+PARASUT_CALLBACK_PATH};
+ const origin=oauthApplicationOrigin(env);const ownApp=rows.length===1;const shared=parasutOAuthConfig(env)!==null;
+ let oob=false;
+ if(ownApp){try{oob=(await tenantConfig(tx,m.tenantId,deps))?.redirectUri===PARASUT_OOB_REDIRECT_URI;}catch{oob=false;/* okunamayan kutu: bağlanırken zaten reddedilir */}}
+ return {configured:ownApp||shared,ownApp,shared,oob,callbackUrl:origin===null?null:origin+PARASUT_CALLBACK_PATH};
  });
 }
-export async function saveParasutOAuthSettings(params:ConnectionCallParams,input:{clientId:string;clientSecret:string;callbackUrl:string},deps:OAuthDeps={}):Promise<{ok:true}|{ok:false;reason:string}>{
+/** Gelişmiş: kiracının kendi uygulaması. `callbackUrl` verilmezse uygulamanın gerçek callback adresi; OOB yalnız açıkça istenirse. */
+export async function saveParasutOAuthSettings(params:ConnectionCallParams,input:{clientId:string;clientSecret:string;callbackUrl?:string},deps:OAuthDeps={}):Promise<{ok:true}|{ok:false;reason:string}>{
  if(params.recentAuth===undefined)throw new AppError("UNAUTHENTICATED",{detail:"RECENT_AUTH_REQUIRED"});
- if(!validCallback(input.callbackUrl)||!validApp(input.clientId,input.clientSecret))throw invalid();
+ const origin=oauthApplicationOrigin();if(origin===null)throw invalid();
+ const callbackUrl=input.callbackUrl===undefined?origin+PARASUT_CALLBACK_PATH:input.callbackUrl;
+ if(!validCallback(callbackUrl)||!validApp(input.clientId,input.clientSecret))throw invalid();
  return runTenantCommand({...params,permission:"settings.manage"},async(tx,m)=>{
  const demo=await tx.execute<{is_demo:boolean}>(sql`SELECT is_demo FROM public.tenants WHERE id=${m.tenantId}::uuid`);
  if(demo[0]?.is_demo)return {ok:false,reason:"DEMO"} as const;
- const box=sealer(deps).seal({clientId:input.clientId,clientSecret:input.clientSecret,callbackUrl:input.callbackUrl},APP_AAD(m.tenantId));
+ const box=sealer(deps).seal({clientId:input.clientId,clientSecret:input.clientSecret,callbackUrl},APP_AAD(m.tenantId));
  // App lock precedes attempt locks in every path; existing connected credentials remain unchanged.
  await tx.execute(sql`INSERT INTO public.integration_oauth_apps(tenant_id,version,credentials) VALUES(${m.tenantId}::uuid,${randomUUID()}::uuid,${JSON.stringify(box)}::jsonb) ON CONFLICT(tenant_id) DO UPDATE SET version=EXCLUDED.version,credentials=EXCLUDED.credentials,updated_at=now()`);
  await tx.execute(sql`UPDATE public.integration_oauth_attempts SET phase='FAILED',token_box=NULL,companies='[]'::jsonb WHERE tenant_id=${m.tenantId}::uuid AND phase NOT IN ('COMPLETE','FAILED')`);

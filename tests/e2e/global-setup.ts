@@ -157,8 +157,12 @@ export default async function globalSetup(): Promise<(() => Promise<void>) | und
   env.WAREHOUSE_SCOPE_ENABLED = "true";
   assertLoopbackDatabase(env);
   // T-991: sahte Paraşüt (yalnız 127.0.0.1; gerçek ağ yok). Web ve worker sağlayıcı adresini buradan alır (geri döngü dışı adres reddedilir).
-  const fakeParasut: FakeParasut = await startFakeParasut();
+  // T-1133: Etkin'in ortak Paraşüt uygulaması — sentetik kimlik/sır yalnız bu yerel web/worker sürecine verilir; sahte sunucu ortak uygulamanın
+  // dönüş adresini (BETTER_AUTH_URL + callback) ve kendi uygulamasındaki eski yetki kodu (OOB) adresini kabul eder.
+  const fakeParasut: FakeParasut = await startFakeParasut({ extraRedirectUris: [`${env.BETTER_AUTH_URL}/api/integrations/parasut/callback`, "urn:ietf:wg:oauth:2.0:oob"], reusableCode: true });
   env.PARASUT_BASE_URL = fakeParasut.url;
+  env.PARASUT_OAUTH_CLIENT_ID = fakeParasut.opts.clientId;
+  env.PARASUT_OAUTH_CLIENT_SECRET = fakeParasut.opts.clientSecret;
   // T-1002: sahte iç ses servisi (yalnız 127.0.0.1; model yok). Web Etkin isteğini buraya iletir.
   const fakeVoice: FakeVoice = await startFakeVoice();
   env.VOICE_URL = fakeVoice.url;
