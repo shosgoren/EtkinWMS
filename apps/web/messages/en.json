@@ -5838,6 +5838,7 @@
       "saved": "Keys saved",
       "failed": "Connection failed. Connect again.",
       "retry": "Connection expired. Connect again.",
+      "denied": "Access was not allowed in Paraşüt · press CONNECT again",
       "connected": "Paraşüt connected",
       "choose": "Choose your company",
       "configured": "Keys saved",

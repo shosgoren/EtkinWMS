@@ -5838,6 +5838,7 @@
       "saved": "Anahtarlar kaydedildi",
       "failed": "Bağlantı tamamlanamadı. Yeniden bağlan.",
       "retry": "Bağlantının süresi doldu. Yeniden bağlan.",
+      "denied": "Paraşüt’te izin verilmedi · bağlanmak için yeniden BAĞLAN",
       "connected": "Paraşüt bağlantısı kuruldu",
       "choose": "Şirketini seç",
       "configured": "Anahtarlar kayıtlı",

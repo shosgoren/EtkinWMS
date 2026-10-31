@@ -110,7 +110,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   const [selectOpen,setSelectOpen]=useState(oauthSelection!==null);
   useEffect(()=>setSelectOpen(oauthSelection!==null),[oauthSelection]);
   // T-1133: callback'ten dönen sabit neden kodu varsa ekran onu söyler (ör. izin verilmedi, Paraşüt çok istek dedi); yoksa genel ileti.
-  useEffect(()=>{if(oauthResult!==null){const reason=oauthResult==="failed"&&oauthReason!==null&&t.has(`reasons.${oauthReason}`)?t(`reasons.${oauthReason}`):t(`oauth.${oauthResult}`);say(oauthResult==="connected"?"ok":"warn",reason);router.replace(`${base}/integrations`);}},[oauthResult,oauthReason,router,base,say,t]);
+  useEffect(()=>{if(oauthResult!==null){const reason=oauthResult!=="failed"||oauthReason===null?t(`oauth.${oauthResult}`):oauthReason==="DENIED"?t("oauth.denied"):t.has(`reasons.${oauthReason}`)?t(`reasons.${oauthReason}`):t("oauth.failed");say(oauthResult==="connected"?"ok":"warn",reason);router.replace(`${base}/integrations`);}},[oauthResult,oauthReason,router,base,say,t]);
   const [formOpen, setFormOpen] = useState(false);
   const [cutOpen, setCutOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
