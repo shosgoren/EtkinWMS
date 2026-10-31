@@ -5790,6 +5790,7 @@
       "COMPANY_CHANGED": "Talk to the Etkin team to switch company",
       "UNAVAILABLE_PROVIDER": "This ERP is not available yet",
       "REAUTH_REQUIRED": "Paraşüt wants a new sign-in · reconnect",
+      "LEGACY_METHOD_REMOVED": "The Paraşüt connection was renewed · reconnect",
       "SECRET_UNREADABLE": "Connection key unreadable · reconnect",
       "NOT_CONNECTED": "Not connected",
       "CONNECTOR_REVOKED": "The person who connected lost permission · reconnect",
@@ -5874,7 +5875,7 @@
       "change": "Change keys",
       "originMissing": "Return address unavailable. Contact support.",
       "method": "Connection method",
-      "oob": "Authorization code (legacy)",
+      "oob": "Authorization code (manual)",
       "https": "Automatic return",
       "enterCode": "Paraşüt authorization code",
       "code": "Authorization code",
@@ -5890,7 +5891,7 @@
       "noneOn": "Not ready yet",
       "step1": "1 · Register the return address in Paraşüt",
       "step1Hint": "Paraşüt → Settings → Integrations → New application → paste this address",
-      "step1Oob": "Legacy mode on: enter this text as the return address in your Paraşüt application",
+      "step1Oob": "Manual code on: enter this text as the return address in your Paraşüt application",
       "oobUrn": "urn:ietf:wg:oauth:2.0:oob",
       "step2": "2 · Enter the keys",
       "step2Hint": "Your Paraşüt application's id and secret key · stored encrypted",
@@ -5899,7 +5900,7 @@
       "step3": "3 · CONNECT",
       "step3Hint": "Sign in to Paraşüt, allow access, pick your company",
       "stepsFirst": "Save the keys first (step 2)",
-      "oobToggle": "Legacy: authorization code instead of return address",
+      "oobToggle": "Manual: authorization code instead of return address",
       "oobToggleSub": "Turn on if your Paraşüt application cannot take a return address; Paraşüt shows a code and you paste it"
     },
     "bolum": {
@@ -5992,10 +5993,9 @@
         "RUN": "Run now",
         "DETAIL": "Details"
       },
-      "legacy": {
-        "title": "Old connection method (e-mail + password)",
-        "sub": "Your connection works. With the new method your password never reaches Etkin; reconnect once.",
-        "next": "Switch to the new method"
+      "renewed": {
+        "title": "The {provider} connection was renewed; reconnect to continue.",
+        "sub": "Your products, contacts, warehouses, stock and documents are all in place. Only the connection needs renewing."
       }
     },
     "issues": {

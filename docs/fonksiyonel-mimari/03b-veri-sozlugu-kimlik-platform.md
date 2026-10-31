@@ -640,10 +640,10 @@ Firma başına, sağlayıcı başına tek ERP bağlantısı.
 | `status` | text | NOT NULL, varsayılan `CONNECTED`, CHECK | `CONNECTED` Bağlı · `ERROR` Hata var · `DISCONNECTED` Bağlantı kesildi | — |
 | `account_label` | text | NULL olabilir, en çok 120 karakter | Bağlı hesabın görünen adı | — |
 | `account_ref` | text | NULL olabilir, CHECK biçim | ERP'deki firma numarası | — |
-| `credentials` | jsonb | Bağlıyken dolu, kesikken boş; yalnız şifreli kutu biçimi kabul edilir | ERP erişim bilgisi, **şifreli**; parola saklanmaz | — |
+| `credentials` | jsonb | Bağlıyken dolu, kesikken boş; yalnız şifreli kutu biçimi kabul edilir | ERP erişim bilgisi, **şifreli** (yalnız OAuth belirteçleri + uygulama kimliği); kullanıcı parolası hiçbir aşamada alınmaz (T-1139) | — |
 | `connected_by` / `connected_membership_id` / `connected_at` | uuid / uuid / timestamptz | Bağlıyken zorunlu; FK | Bağlantıyı kuran ve anı | `users.id`, `tenant_memberships.id` |
 | `last_checked_at` | timestamptz | NULL olabilir | Son bağlantı denetimi | — |
-| `last_error_code` | text | NULL olabilir, CHECK biçim | Son hata kodu | — |
+| `last_error_code` | text | NULL olabilir, CHECK biçim | Son hata kodu. `LEGACY_METHOD_REMOVED` (0068, T-1139): eski e-posta + parola yöntemiyle kurulmuş bağlantı kesildi (DISCONNECTED); ekran "Yeniden bağlan" gösterir, OAuth ile yeniden bağlanınca silinir | — |
 | `created_at` / `updated_at` / `version` | — | `version` her güncellemede +1 | — | — |
 | `pull_product_barcodes` | boolean | NOT NULL, varsayılan false (0059) | Ürün çekerken ERP'deki barkodu da al ayarı (Bağlantılar ekranından; kapalıyken eski davranış sürer). Değişince denetim kaydı yazılır. | — |
 | `opening_stock_enabled` | boolean | NOT NULL, varsayılan false (0056) | "ERP'den açılış stoku al" ayarı | — |

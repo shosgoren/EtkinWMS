@@ -1,5 +1,6 @@
 // T-991: sahte Paraşüt API v4 sunucusu (gerçek ağ yok). Birim, entegrasyon ve e2e testleri aynı sahteyi kullanır. Yalnız 127.0.0.1'e bağlanır.
-// Belgedeki şekiller (https://apidocs.parasut.com/swagger.json): OAuth `POST /oauth/token` (password / refresh_token; yenilemede YENİ yenileme
+// Belgedeki şekiller (https://apidocs.parasut.com/swagger.json): OAuth `POST /oauth/token` (authorization_code / refresh_token; T-1139: parola
+// akışı yok, `grant_type=password` 400 alır; yenilemede YENİ yenileme
 // belirteci), `GET /v4/me?include=companies`, şirket kapsamında products / contacts / warehouses (GET sayfalı, `filter[...]`, POST),
 // shipment_documents POST, stock_updates POST; T-1138: webhooks GET/POST/DELETE + contacts/:id GET + imzalı teslim üretici (`emitWebhook`). Her istek `requests`e yazılır (gövde dahil) — testler sırrın yalnız token ucuna gittiğini denetler.
 import { createHmac } from "node:crypto";
@@ -23,8 +24,8 @@ export interface FakeRequest {
 export interface FakeParasutOptions {
   readonly clientId?: string;
   readonly clientSecret?: string;
+  /** Paraşüt kullanıcı profilindeki e-posta (`/v4/me`); giriş bilgisi değildir. */
   readonly username?: string;
-  readonly password?: string;
   readonly companyId?: string;
   readonly companyName?: string;
   /** Erişim belirteci ömrü (sn); varsayılan 7200 (belge). */
@@ -73,6 +74,8 @@ export interface FakeParasut {
   /** Geçerli yenileme belirteci (döner). */
   refreshToken: string;
   accessToken: string;
+  /** T-1139: test için yeni tek kullanımlık yetki kodu (yetki kodu akışıyla birden çok bağlantı kuran testler; her kod bir kez geçer). */
+  mintAuthorizationCode(): string;
   /** Erişim belirtecini geçersiz kılar (401 → yenileme). */
   expireAccess(): void;
   /** Yenileme belirtecini iptal eder (yenileme 400 invalid_grant). */
@@ -96,7 +99,6 @@ export const FAKE_PARASUT_DEFAULTS = Object.freeze({
   clientId: "fake-client",
   clientSecret: "fake-client-secret-value",
   username: "muhasebe@example.test",
-  password: "fake-parasut-password",
   companyId: "115",
   companyName: "Örnek Muhasebe A.Ş",
   expiresIn: 7200,
@@ -109,7 +111,8 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
   void _port;
   const opts = { ...FAKE_PARASUT_DEFAULTS, ...given };
   let tokenSeq = 0;
-  let codeUsed=false;
+  /** Geçerli yetki kodları; kullanılan kod (reusableCode değilse) silinir. */
+  const codes = new Set<string>([opts.authorizationCode]);
   const issue = (): { access_token: string; refresh_token: string } => {
     tokenSeq += 1;
     state.accessToken = `acc-${tokenSeq}-${Math.random().toString(36).slice(2)}`;
@@ -144,6 +147,11 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     stockRejectProducts: new Set<string>(),
     refreshToken: "",
     accessToken: "",
+    mintAuthorizationCode() {
+      const code = `code-${tokenSeq}-${Math.random().toString(36).slice(2)}`;
+      codes.add(code);
+      return code;
+    },
     expireAccess() {
       state.accessToken = `expired-${Math.random()}`;
     },
@@ -172,12 +180,10 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       if (f.get("client_id") !== opts.clientId || f.get("client_secret") !== opts.clientSecret) return send(401, { error: "invalid_client" });
       if(f.get("grant_type")==="authorization_code") {
         const redirect=f.get("redirect_uri");
-        if((codeUsed&&!reusableCode)||f.get("code")!==opts.authorizationCode||redirect===null||(redirect!==opts.redirectUri&&!extraRedirectUris.includes(redirect)))return send(400,{error:"invalid_grant"});
-        codeUsed=true;return send(200,{...issue(),token_type:"bearer",expires_in:opts.expiresIn});
-      }
-      if (f.get("grant_type") === "password") {
-        if (f.get("username") !== opts.username || f.get("password") !== opts.password || f.get("redirect_uri") !== "urn:ietf:wg:oauth:2.0:oob") return send(400, { error: "invalid_grant" });
-        return send(200, { ...issue(), token_type: "bearer", expires_in: opts.expiresIn });
+        const code=f.get("code");
+        if(code===null||!codes.has(code)||redirect===null||(redirect!==opts.redirectUri&&!extraRedirectUris.includes(redirect)))return send(400,{error:"invalid_grant"});
+        if(!reusableCode)codes.delete(code);
+        return send(200,{...issue(),token_type:"bearer",expires_in:opts.expiresIn});
       }
       if (f.get("grant_type") === "refresh_token") {
         if (f.get("refresh_token") !== state.refreshToken) return send(400, { error: "invalid_grant" });

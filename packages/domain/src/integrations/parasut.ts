@@ -4,18 +4,18 @@
 // - SSRF: adres sabittir (`https://api.parasut.com`). Kullanıcı adres veremez; şirket numarası ve kaynak kimlikleri yalnız rakamdır ve yola
 //   girmeden doğrulanır. Test/yerel sahte sunucu yalnız `PARASUT_BASE_URL` ortam değişkeniyle ve YALNIZ geri döngü adresinde (127.0.0.1,
 //   localhost, ::1; http) kabul edilir; başka değer açılışı reddeder (sessiz geri düşüş yok).
-// - Sırlar (istemci sırrı, parola, belirteçler) hata iletisine, loga ve dönüş değerine girmez; hata yalnız sabit kod + HTTP durumu taşır.
+// - Sırlar (istemci sırrı, yetki kodu, belirteçler) hata iletisine, loga ve dönüş değerine girmez; hata yalnız sabit kod + HTTP durumu taşır.
 //   Yanıt gövdesi en çok 5 MiB okunur; yönlendirme izlenmez (`redirect: "manual"`).
 // - Hız sınırı (belge: 10 saniyede 10 istek): istemci örneği başına kayan pencere; 429 gelirse `Retry-After` (en çok 60 sn) ya da 10 sn bekleyip
 //   en çok 3 kez yeniden dener (429 davranışı belgede yok; savunmacı). Zaman aşımı istek başına 15 sn.
 //
-// OAuth2: parola akışı (bağlanırken bir kez; parola saklanmaz) ve yenileme akışı (her yenilemede YENİ yenileme belirteci döner, belge).
-// Gövde `application/x-www-form-urlencoded` (RFC 6749 §4.3/§6); belgedeki curl örneği çok parçalı form kullanır — canlı ilk bağlantıda doğrulanacak.
+// OAuth2: yetki kodu akışı (bağlanırken bir kez; kod tek kullanımlık) ve yenileme akışı (her yenilemede YENİ yenileme belirteci döner, belge).
+// T-1139 (kullanıcı kararı 31 Ekim): parola akışı (`grant_type=password`) koddan kalktı; istemci kullanıcı adı/parolası hiç almaz.
+// Gövde `application/x-www-form-urlencoded` (RFC 6749 §4.1.3/§6); belgedeki curl örneği çok parçalı form kullanır — canlı ilk bağlantıda doğrulanacak.
 import { AppError } from "@wms/shared/errors";
 import { jsonDecimal } from "./decimal-json.ts";
 
 export const PARASUT_BASE_URL = "https://api.parasut.com";
-export const PARASUT_REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
 export const PARASUT_PAGE_SIZE = 25;
 const MAX_BODY = 5 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
@@ -247,15 +247,6 @@ export class ParasutClient {
     if (access === null || refresh === null) throw new ProviderError("BAD_RESPONSE");
     // 60 sn pay: bitişe yakın belirteç kullanılmaz.
     return { accessToken: access, refreshToken: refresh, expiresAt: this.now() + Math.max(60, exp - 60) * 1000 };
-  }
-
-  /** Parola akışı (bağlanırken bir kez). Hatalı bilgi → `AUTH_FAILED`. */
-  async passwordGrant(input: { readonly clientId: string; readonly clientSecret: string; readonly username: string; readonly password: string }): Promise<TokenSet> {
-    const r = await this.request("POST", "/oauth/token", {
-      form: { grant_type: "password", client_id: input.clientId, client_secret: input.clientSecret, username: input.username, password: input.password, redirect_uri: PARASUT_REDIRECT_URI },
-    });
-    if (r.status !== 200) throw ParasutClient.fail(r.status, true);
-    return this.tokens(r.body);
   }
 
   /** Authorization code is single-use; no automatic token-request retry. */

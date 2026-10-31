@@ -7,9 +7,10 @@ import {sql} from '../../../packages/db/node_modules/drizzle-orm/index.js';
 import {createDbClient,withSystemTenant} from '../../../packages/db/src/index.ts';
 import type {DbClient} from '../../../packages/db/src/client.ts';
 import {createSealer} from '../../../packages/shared/src/seal.ts';
-import {beginParasutOAuth,completeParasutOAuth,getParasutOAuthSelection,selectParasutOAuthCompany,saveParasutOAuthSettings,getParasutOAuthSettings,disconnectIntegration,getIntegrationOverview,checkIntegration,ParasutClient,encodeOAuthBinding,parseOAuthBinding,matchesOAuthState,connectParasut,SHARED_OAUTH_CONFIG_VERSION,type OAuthBinding} from '../../../packages/domain/src/integrations/index.ts';
+import {beginParasutOAuth,completeParasutOAuth,getParasutOAuthSelection,selectParasutOAuthCompany,saveParasutOAuthSettings,getParasutOAuthSettings,disconnectIntegration,getIntegrationOverview,checkIntegration,ParasutClient,encodeOAuthBinding,parseOAuthBinding,matchesOAuthState,SHARED_OAUTH_CONFIG_VERSION,type OAuthBinding} from '../../../packages/domain/src/integrations/index.ts';
 import {lifecycleBinding} from '../../../packages/domain/src/integrations/product-lifecycle.ts';
 import {startFakeParasut,type FakeParasut} from '../fixtures/fake-parasut.ts';
+import {seedLegacyParasutConnection} from '../fixtures/legacy-parasut.ts';
 import {seedWorld,newRegistry,type TenantWorld} from '../fixtures/tenants.ts';
 import {readIntEnv} from '../harness/env.ts';
 const env=readIntEnv(process.env),reg=newRegistry(),sealer=createSealer(randomBytes(32).toString('hex'));
@@ -198,16 +199,14 @@ describe('T-1133 shared Etkin application (server environment)',()=>{
   await saveParasutOAuthSettings(params(w),input(),deps());
   await expect(finish(r.binding,w)).rejects.toMatchObject({code:'VALIDATION_FAILED'});expect(grants()).toBe(0);
  });
- it('lifecycle gating accepts a shared-app OAuth connection and still rejects a legacy password connection',async()=>{
+ it('lifecycle gating accepts a shared-app OAuth connection and rejects a connection without a completed attempt (T-1139 legacy shape)',async()=>{
   shared();const w=await fresh('SHL');const r=await begin(w);expect((await finish(r.binding,w)).ok).toBe(true);
   const id=(await adm.query("SELECT id FROM integrations WHERE tenant_id=$1 AND provider='PARASUT'",[w.tenantId])).rows[0].id as string;
   const b=await withSystemTenant(db,w.tenantId,'test.lifecycle',tx=>lifecycleBinding(tx,w.tenantId,id,true));
   expect(b).toMatchObject({tenantId:w.tenantId,integrationId:id,companyId:fake.opts.companyId,configVersion:SHARED_OAUTH_CONFIG_VERSION});
-  // Legacy password connection (no completed authorization-code attempt): lifecycle stays off.
+  // Old-method shape (no completed authorization-code attempt; the code can no longer create one — migration 0068 cuts these): lifecycle stays off.
   unshare();const l=await fresh('SHP');
-  expect((await connectParasut(params(l),{companyId:fake.opts.companyId,clientId:fake.opts.clientId,clientSecret:fake.opts.clientSecret,username:fake.opts.username,password:fake.opts.password},deps())).ok).toBe(true);
-  await adm.query("UPDATE integration_flows SET enabled=true,direction='PULL' WHERE tenant_id=$1 AND flow='PRODUCTS'",[l.tenantId]);
-  const lid=(await adm.query("SELECT id FROM integrations WHERE tenant_id=$1 AND provider='PARASUT'",[l.tenantId])).rows[0].id as string;
+  const lid=await seedLegacyParasutConnection(adm,l,sealer,{flowsOn:['PRODUCTS']});
   expect(await withSystemTenant(db,l.tenantId,'test.lifecycle',tx=>lifecycleBinding(tx,l.tenantId,lid,true))).toBeNull();
   // Shared-app connection made by another tenant never unlocks this one.
   expect(await withSystemTenant(db,l.tenantId,'test.lifecycle',tx=>lifecycleBinding(tx,l.tenantId,id,true))).toBeNull();

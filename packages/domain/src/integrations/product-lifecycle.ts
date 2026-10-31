@@ -17,7 +17,7 @@ export async function lifecycleBinding(tx:AccessTx,tenantId:string,integrationId
  let configVersion=app[0]?.version??null;
  if(configVersion===null){
   // T-1133: ortak uygulama — bağlantı, yetki kodu akışıyla TAMAMLANAN (COMPLETE) ve bağlanma anını kapsayan bir denemeden geldiyse sürüm ortak
-  // sabittir. Eski parola akışı bağlantısında böyle deneme yoktur → yaşam döngüsü kapalı kalır (sürümsüz bağlam çıkarılmaz).
+  // sabittir. Böyle deneme yoksa (T-1139 öncesi eski yöntem bağlantısı; 0068 bunları kesti) yaşam döngüsü kapalı kalır (sürümsüz bağlam çıkarılmaz).
   const shared=await tx.execute<{id:string}>(sql`
   SELECT a.id FROM public.integration_oauth_attempts a JOIN public.integrations i ON i.tenant_id=a.tenant_id AND i.connected_by=a.user_id AND i.connected_membership_id=a.membership_id
   WHERE a.tenant_id=${tenantId}::uuid AND i.id=${integrationId}::uuid AND i.provider='PARASUT' AND a.phase='COMPLETE' AND a.config_version=${SHARED_OAUTH_CONFIG_VERSION}::uuid

@@ -14,10 +14,8 @@ const guardedAction = createProductionGuard(() => headers());
 const slug = z.string().min(1).max(63);
 const provider = z.enum(["PARASUT", "LOGO"]);
 
-// T-1137 (kullanıcı kararı 30 Ekim): eski "e-posta + parola ile bağlan" kaldırıldı. Eski istemci hangi alanları gönderirse göndersin
-// (yalnız `slug` doğrulanır; diğer alanlar okunmaz, saklanmaz, loglanmaz) açık bir kodla reddedilir. Mevcut parola bağlantıları çalışmaya
-// devam eder (belirteç yenileme mühürlü kutudan); yalnız YENİ parola bağlantısı kurulamaz.
-const legacyConnectSchema = z.object({ slug }); // bilinmeyen alanlar atılır (strip): parola ayrıştırılmış girdiye bile girmez
+// T-1139 (kullanıcı kararı 31 Ekim, "eski yöntem olmasın"): Paraşüt'e bağlanmanın tek yolu OAuth'tur (aşağıdaki begin/complete/select).
+// E-posta + parola ile bağlanma eylemi ve şeması kaldırıldı; o yöntemle kurulmuş bağlantılar migration 0068 ile kesildi.
 const outboxSchema = z.object({ slug, id: z.string().uuid() }).strict();
 const resolveSchema = z.object({ slug, id: z.string().uuid(), resolution: z.enum(["SENT", "SKIP"]) }).strict();
 const providerSchema = z.object({ slug, provider }).strict();
@@ -31,13 +29,6 @@ async function access(tenantSlug: string, ctx: ActionContext) {
   const a = { db: getAppDb(), principal: ctx.principal, tenantSlug };
   await limitVerifiedTenant({ ...a, permission: "settings.manage" }, ctx);
   return a;
-}
-
-export async function connectParasutAction(raw: unknown) {
-  return guardedAction({ schema: legacyConnectSchema }, async (i, ctx) => {
-    await access(i.slug, ctx); // yetki + hız sınırı yine uygulanır (yetkisiz çağrı FORBIDDEN alır, "UNSUPPORTED" bilgisi değil)
-    return { ok: false, reason: "UNSUPPORTED" } as const;
-  })(raw);
 }
 
 /** T-1137: kuyruk satırını yeniden dene (irsaliye yeniden gönder / kart bekletmesini kaldır); bağlıysa koşu kuyruğa girer. */

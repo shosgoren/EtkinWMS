@@ -12,7 +12,6 @@ import { consumeOnce } from "../../../packages/queue-adapter/src/consume.ts";
 import { createSealer } from "../../../packages/shared/src/seal.ts";
 import {
   ParasutClient,
-  connectParasut,
   disconnectIntegration,
   enqueueScheduledIntegrations,
   getWebhookStatus,
@@ -22,6 +21,7 @@ import {
   type ConsumeOnce,
 } from "../../../packages/domain/src/integrations/index.ts";
 import { startFakeParasut, type FakeParasut } from "../fixtures/fake-parasut.ts";
+import { connectParasutOAuth } from "../fixtures/parasut-oauth.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv, redactErrorChain } from "../harness/env.ts";
 
@@ -94,14 +94,13 @@ function memQueue() {
   };
 }
 
-async function world(label: string, opts: { oauthApp?: boolean } = {}): Promise<{ w: TenantWorld; id: string }> {
+async function world(label: string): Promise<{ w: TenantWorld; id: string }> {
   const w = await seedWorld(adm, reg, label);
-  const r = await connectParasut(admin(w), { companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password }, { client: client(), sealer });
+  // T-1139: bağlantı yalnız OAuth (ortak uygulama); ürün yaşam döngüsü bu bağlantıda gerçek yoldan açıktır (product-lifecycle.ts, COMPLETE deneme).
+  const r = await connectParasutOAuth(admin(w), { client: client(), sealer }, fake);
   expect(r.ok).toBe(true);
   const id = (await q<{ id: string }>("SELECT id FROM public.integrations WHERE tenant_id = $1", [w.tenantId]))[0]!.id;
   await q("UPDATE public.integration_flows SET enabled = true, direction = 'PULL' WHERE tenant_id = $1 AND flow IN ('PRODUCTS','CONTACTS')", [w.tenantId]);
-  // Ürün yaşam döngüsü yalnız firma başına OAuth uygulaması varken çalışır (product-lifecycle.ts); sentetik mühürlü kutu.
-  if (opts.oauthApp !== false) await q("INSERT INTO public.integration_oauth_apps(tenant_id,credentials) VALUES($1,'{\"v\":2,\"kid\":\"s\",\"iv\":\"s\",\"tag\":\"s\",\"ct\":\"s\"}')", [w.tenantId]);
   return { w, id };
 }
 const register = (w: TenantWorld, id: string, uri: string | null = URI) => registerParasutWebhooks({ inTenant: inTenant(w), client: client(), sealer, callbackUrl: uri }, id);
@@ -168,10 +167,12 @@ describe("kayıt", () => {
   it("bağlanınca kayıt işi kuyruğa girer; 6 webhook, mühürlü anahtar, idempotent; durum okuması", async () => {
     const w = await seedWorld(adm, reg, "WH1");
     const queue = memQueue();
-    await connectParasut(admin(w), { companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password }, { client: client(), sealer, queue: queue as never });
+    expect(await connectParasutOAuth(admin(w), { client: client(), sealer, queue: queue as never }, fake)).toMatchObject({ ok: true });
     const id = (await q<{ id: string }>("SELECT id FROM public.integrations WHERE tenant_id = $1", [w.tenantId]))[0]!.id;
-    expect(queue.jobs.map((j) => j.job)).toEqual([{ type: "integration.webhook", actorUserId: w.ownerUserId, payload: { integrationId: id, kind: "REGISTER" }, singletonKey: `integration.webhook.register.${id}` }]);
-    expect(queue.jobs[0]!.tenant).toBe(w.tenantId);
+    // İlk OAuth bağlantısı ürün çekme koşusunu da kuyruğa verir (ürün kuralı); webhook kayıt işi ayrı.
+    expect(queue.jobs.map((j) => j.job.type)).toEqual(["integration.sync", "integration.webhook"]);
+    expect(queue.jobs.map((j) => j.job).filter((j) => j.type === "integration.webhook")).toEqual([{ type: "integration.webhook", actorUserId: w.ownerUserId, payload: { integrationId: id, kind: "REGISTER" }, singletonKey: `integration.webhook.register.${id}` }]);
+    expect(queue.jobs.every((j) => j.tenant === w.tenantId)).toBe(true);
     expect(await getWebhookStatus(admin(w))).toEqual({ status: "OFF", lastEventAt: null, checkedAt: null });
     expect(await register(w, id)).toEqual({ kind: "ok", created: 6, kept: 0 });
     expect(fake.webhooks.map((x) => `${x.attributes.model}/${x.attributes.action}@${x.attributes.uri}`).sort()).toEqual(["contact/create", "contact/delete", "contact/update", "product/create", "product/delete", "product/update"].map((x) => `${x}@${URI}`));
@@ -514,7 +515,7 @@ describe("kademe ve kesme", () => {
     expect(await receiveParasutWebhook({ db: app, sealer, queue: memQueue() as never }, delivery({ model: "product", action: "update", id: "1", key }))).toEqual({ status: 401, outcome: "REJECTED" });
     expect((await q("SELECT webhook_status, webhook_checked_at FROM public.integrations WHERE id = $1", [id]))[0]).toEqual({ webhook_status: "OFF", webhook_checked_at: null });
     // Hemen yeniden bağlanınca (kayıt işini kuyruğa vermeyen eski yol) zamanlayıcı kaydı ilk tikte kurar — bir saat beklemez (CI e2e bulgusu).
-    await connectParasut(admin(w), { companyId: fake.opts.companyId, clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password }, { client: client(), sealer });
+    expect(await connectParasutOAuth(admin(w), { client: client(), sealer }, fake)).toMatchObject({ ok: true });
     const queue = memQueue();
     await withSystemTenant(app, w.tenantId, "test.schedule", (tx) => enqueueScheduledIntegrations(tx as never, w.tenantId, queue as never));
     expect(queue.jobs.map((j) => j.job.type)).toContain("integration.webhook");

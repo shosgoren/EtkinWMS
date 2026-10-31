@@ -1,6 +1,6 @@
-// T-1137: bağlantı sağlığı sınıflandırıcısı — öncelik sırası, eşikler (tarama / webhook ACTIVE), eski parola yöntemi işareti.
+// T-1137: bağlantı sağlığı sınıflandırıcısı — öncelik sırası, eşikler (tarama / webhook ACTIVE). T-1139: 0068'in kestiği eski yöntem bağlantısı → AUTH.
 import { describe, expect, it } from "vitest";
-import { HEALTH_FAIL_STREAK, HEALTH_STALE_MS, HEALTH_STALE_WEBHOOK_CARDS_MS, HEALTH_STUCK_MS, classifyIntegrationHealth, staleLimitMs, type HealthFlowInput, type HealthInput } from "./health.ts";
+import { HEALTH_FAIL_STREAK, HEALTH_STALE_MS, HEALTH_STALE_WEBHOOK_CARDS_MS, HEALTH_STUCK_MS, LEGACY_METHOD_REMOVED, classifyIntegrationHealth, staleLimitMs, type HealthFlowInput, type HealthInput } from "./health.ts";
 import { CADENCE } from "./webhook-register.ts";
 
 const NOW = new Date("2026-10-31T12:00:00Z");
@@ -20,7 +20,6 @@ const flow = (over: Partial<HealthFlowInput> = {}): HealthFlowInput => ({
 const base = (over: Partial<HealthInput> = {}): HealthInput => ({
   now: NOW,
   connection: { status: "CONNECTED", lastErrorCode: null },
-  legacy: false,
   webhook: "OFF",
   flows: [flow()],
   runs: [],
@@ -34,7 +33,7 @@ describe("classifyIntegrationHealth", () => {
   });
 
   it("sağlıklı → ok, adım yok", () => {
-    expect(classifyIntegrationHealth(base())).toEqual({ level: "ok", cause: null, next: null, flow: null, since: null, code: null, legacy: false });
+    expect(classifyIntegrationHealth(base())).toEqual({ level: "ok", cause: null, next: null, flow: null, since: null, code: null });
   });
 
   it("bağlantı ERROR (401 / yeniden giriş) → AUTH + Yeniden bağlan; kod korunur, yoksa REAUTH_REQUIRED", () => {
@@ -107,9 +106,13 @@ describe("classifyIntegrationHealth", () => {
     expect(staleLimitMs("SHIPMENTS", "PUSH", "ACTIVE")).toBe(HEALTH_STALE_MS);
   });
 
-  it("eski parola yöntemi: sorun yoksa ok + legacy; sorun varsa sorun bandı + legacy işareti", () => {
-    expect(classifyIntegrationHealth(base({ legacy: true }))).toMatchObject({ level: "ok", legacy: true });
-    expect(classifyIntegrationHealth(base({ legacy: true, flows: [flow({ lastSuccessAt: ago(HEALTH_STALE_MS + MIN) })] }))).toMatchObject({ cause: "STALE", legacy: true });
+  it("T-1139: 0068'in kestiği eski yöntem bağlantısı → AUTH + Yeniden bağlan (akış durumuna bakılmaz); başka kesilmiş bağlantı null", () => {
+    const cut = { status: "DISCONNECTED" as const, lastErrorCode: LEGACY_METHOD_REMOVED };
+    const want = { level: "error", cause: "AUTH", next: "RECONNECT", flow: null, since: null, code: "LEGACY_METHOD_REMOVED" };
+    expect(classifyIntegrationHealth(base({ connection: cut }))).toEqual(want);
+    expect(classifyIntegrationHealth(base({ connection: cut, flows: [flow({ lastSuccessAt: ago(999 * MIN), lastStatus: "FAILED", errorCount: 9 })] }))).toEqual(want);
+    expect(classifyIntegrationHealth(base({ connection: { status: "DISCONNECTED", lastErrorCode: "REAUTH_REQUIRED" } }))).toBeNull();
+    expect(LEGACY_METHOD_REMOVED).toBe("LEGACY_METHOD_REMOVED");
   });
 
   it("öncelik: STUCK > TIMEOUT > FAILING > STALE", () => {

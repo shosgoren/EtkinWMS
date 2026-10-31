@@ -12,7 +12,8 @@ afterEach(async () => {
   await fake.close();
 });
 
-const creds = () => ({ clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password });
+/** T-1139: tek bağlanma yolu yetki kodu (parola akışı yok); her çağrı sahte sunucudan yeni tek kullanımlık kod alır. */
+const grant = (c: ParasutClient, code = fake.mintAuthorizationCode()) => c.authorizationCodeGrant({ clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, code, redirectUri: fake.opts.redirectUri });
 
 describe("resolveParasutBaseUrl (SSRF)", () => {
   it("varsayılan sabit Paraşüt adresi", () => {
@@ -34,34 +35,44 @@ describe("resolveParasutBaseUrl (SSRF)", () => {
 });
 
 describe("OAuth", () => {
-  it("parola akışı: belge alanları, form gövdesi; yenileme yeni yenileme belirteci döndürür", async () => {
+  it("yetki kodu akışı: belge alanları, form gövdesi; yenileme yeni yenileme belirteci döndürür", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
-    const t = await c.passwordGrant(creds());
+    const code = fake.mintAuthorizationCode();
+    const t = await grant(c, code);
     expect(t.accessToken).toBe(fake.accessToken);
     expect(t.expiresAt).toBeGreaterThan(Date.now() + 7000_000);
     const req = fake.requests[0];
     expect(req?.path).toBe("/oauth/token");
     expect(req?.contentType).toBe("application/x-www-form-urlencoded");
     const form = new URLSearchParams(req?.body ?? "");
-    expect(Object.fromEntries(form)).toEqual({ grant_type: "password", client_id: fake.opts.clientId, client_secret: fake.opts.clientSecret, username: fake.opts.username, password: fake.opts.password, redirect_uri: "urn:ietf:wg:oauth:2.0:oob" });
+    expect(Object.fromEntries(form)).toEqual({ grant_type: "authorization_code", client_id: fake.opts.clientId, client_secret: fake.opts.clientSecret, code, redirect_uri: fake.opts.redirectUri });
     const r = await c.refreshGrant({ clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, refreshToken: t.refreshToken });
     expect(r.refreshToken).not.toBe(t.refreshToken);
     // Eski yenileme belirteci artık geçmez (döner).
     await expect(c.refreshGrant({ clientId: fake.opts.clientId, clientSecret: fake.opts.clientSecret, refreshToken: t.refreshToken })).rejects.toMatchObject({ code: "AUTH_FAILED" });
+    // Kod tek kullanımlık.
+    await expect(grant(c, code)).rejects.toMatchObject({ code: "AUTH_FAILED" });
   });
 
-  it("hatalı bilgi AUTH_FAILED; hata iletisi sır taşımaz", async () => {
+  it("hatalı kod AUTH_FAILED; hata iletisi sır taşımaz", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
-    const e = (await c.passwordGrant({ ...creds(), password: "yanlis-parola-xyz" }).catch((x: unknown) => x)) as ProviderError;
+    const e = (await grant(c, "yanlis-kod-xyz").catch((x: unknown) => x)) as ProviderError;
     expect(e).toBeInstanceOf(ProviderError);
     expect(e.code).toBe("AUTH_FAILED");
     const text = `${e.message} ${e.stack ?? ""} ${JSON.stringify(e)}`;
-    for (const secret of ["yanlis-parola-xyz", fake.opts.clientSecret, fake.opts.username]) expect(text).not.toContain(secret);
+    for (const secret of ["yanlis-kod-xyz", fake.opts.clientSecret]) expect(text).not.toContain(secret);
+  });
+
+  it("T-1139: istemcide parola akışı yok; sahte sunucu da parola akışını reddeder", async () => {
+    const c = new ParasutClient({ baseUrl: fake.url });
+    expect("passwordGrant" in c).toBe(false);
+    const res = await fetch(`${fake.url}/oauth/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "password", client_id: fake.opts.clientId, client_secret: fake.opts.clientSecret, username: "x@example.test", password: "x" }).toString() });
+    expect(res.status).toBe(400);
   });
 
   it("şirket listesi /v4/me?include=companies", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
-    const t = await c.passwordGrant(creds());
+    const t = await grant(c);
     expect(await c.companies(t.accessToken)).toEqual([{ id: "115", name: fake.opts.companyName }]);
     expect(fake.requests.at(-1)?.authorization).toBe(`Bearer ${t.accessToken}`);
   });
@@ -71,7 +82,7 @@ describe("kaynaklar", () => {
   it("sayfalı liste (25), filtre ile arama, oluşturma", async () => {
     for (let i = 0; i < 30; i++) fake.products.push({ id: String(i + 1), attributes: { code: `K-${i}`, name: `Ürün ${i}` } });
     const c = new ParasutClient({ baseUrl: fake.url });
-    const { accessToken: tok } = await c.passwordGrant(creds());
+    const { accessToken: tok } = await grant(c);
     const p1 = await c.list(tok, "115", "products", 1);
     expect(p1.items).toHaveLength(25);
     expect(p1.totalPages).toBe(2);
@@ -85,7 +96,7 @@ describe("kaynaklar", () => {
 
   it("irsaliye: inflow false, cari + stok hareketleri (ürün + miktar)", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
-    const { accessToken: tok } = await c.passwordGrant(creds());
+    const { accessToken: tok } = await grant(c);
     await c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "2026-10-21T09:00:00.000Z", description: "Etkin WMS · SVK-1", procurementNumber: "SVK-1", contactId: "77", lines: [{ productId: "5", quantity: "3.000000" }] });
     expect(fake.shipments[0]?.body).toEqual({
       data: {
@@ -99,7 +110,7 @@ describe("kaynaklar", () => {
 
   it("T-1135 (I-09): 6 ondalıklı miktar ve toplam JSON gövdesine float aritmetiği olmadan birebir sayı olarak gider", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
-    const { accessToken: tok } = await c.passwordGrant(creds());
+    const { accessToken: tok } = await grant(c);
     await c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "7", lines: [{ productId: "5", quantity: "0.000123" }, { productId: "6", quantity: "12.340000" }] });
     await c.createStockUpdate(tok, "115", [{ productId: "5", warehouseId: "9", total: "12345678901234.123456" }, { productId: "6", warehouseId: "9", total: "0.100000" }]);
     const ship = fake.requests.find((r) => r.path === "/v4/115/shipment_documents")?.body ?? "";
@@ -114,7 +125,7 @@ describe("kaynaklar", () => {
 
   it("4xx/5xx sabit kodlara iner", async () => {
     const c = new ParasutClient({ baseUrl: fake.url });
-    const { accessToken: tok } = await c.passwordGrant(creds());
+    const { accessToken: tok } = await grant(c);
     fake.shipmentFailure = 422;
     await expect(c.createShipmentDocument(tok, "115", { issueDate: "2026-10-21", shipmentDate: "x", description: "d", procurementNumber: "p", contactId: "1", lines: [{ productId: "1", quantity: "1" }] })).rejects.toMatchObject({ code: "INVALID", status: 422, retryable: false });
     fake.shipmentFailure = 503;
@@ -131,7 +142,7 @@ describe("hız sınırı", () => {
     let now = 1_000_000;
     const slept: number[] = [];
     const c = new ParasutClient({ baseUrl: fake.url, now: () => now, sleep: async (ms) => { slept.push(ms); now += ms; } });
-    const { accessToken: tok } = await c.passwordGrant(creds());
+    const { accessToken: tok } = await grant(c);
     for (let i = 0; i < 12; i++) await c.list(tok, "115", "products", 1);
     expect(c.requests).toBe(13);
     // 11. istekte pencere doldu: ilk istekten 10 sn geçene dek beklendi.
@@ -142,7 +153,7 @@ describe("hız sınırı", () => {
   it("429 → Retry-After kadar bekleyip yeniden dener (en çok 3)", async () => {
     const slept: number[] = [];
     const c = new ParasutClient({ baseUrl: fake.url, sleep: async (ms) => void slept.push(ms) });
-    const { accessToken: tok } = await c.passwordGrant(creds());
+    const { accessToken: tok } = await grant(c);
     fake.rateLimitNext = 2;
     expect((await c.list(tok, "115", "products", 1)).items).toEqual([]);
     expect(slept).toEqual([1000, 1000]);
@@ -173,11 +184,11 @@ describe("akış kataloğu (sağlayıcıdan bağımsız)", () => {
 
 describe("single product lifecycle evidence", () => {
   it("reads the exact company-scoped product and preserves archive evidence", async () => {
-    const grant=await new ParasutClient({baseUrl:fake.url}).passwordGrant(creds());
+    const tokens=await grant(new ParasutClient({baseUrl:fake.url}));
     fake.products.push({id:"9876",attributes:{name:"Lifecycle",unit:"adet",archived:true}});
     const c=new ParasutClient({baseUrl:fake.url});
-    expect(await c.product(grant.accessToken,fake.opts.companyId,"9876")).toMatchObject({id:"9876",type:"products",attributes:{archived:true}});
-    expect(await c.product(grant.accessToken,fake.opts.companyId,"9877")).toBeNull();
+    expect(await c.product(tokens.accessToken,fake.opts.companyId,"9876")).toMatchObject({id:"9876",type:"products",attributes:{archived:true}});
+    expect(await c.product(tokens.accessToken,fake.opts.companyId,"9877")).toBeNull();
   });
   it.each([401,403,422,500])("status %s is an error, never deletion evidence", async status => {
     const c=new ParasutClient({fetch:async()=>new Response("{}",{status})});
