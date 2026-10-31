@@ -13,6 +13,7 @@ Bu dosya bu akışın tek devam kaydıdır. Müşteriye özel OAuth ayarı ve ge
 - Ambalaj: koli/paket/palet/varil/çuval/poşet/kutu, eşit veya farklı gerçek net miktarlar. Lotlar ayrı gruplar. Palet içeriği toplar, ikinci stok oluşturmaz.
 - Taslak saklanır; baskı stok oluşturmaz, yeniden baskı aynı QR. Kesinleştirme ayrı Devir fişi ve bağlı hareketleri tekilleştirir; bağlantı kesilmesi/çift tıklama çoğaltmaz. Büyük giriş parçalı ve devam edebilir. İşlenmiş fiş yalnız kontrollü ters kayıtla düzelir.
 - Devir tamamlanmadan ve ayrıca etkinleştirilmeden WMS → Paraşüt stok gönderimi açılmaz. Mevcut canlı müşterinin stok/yön ayarları kendiliğinden değiştirilmez.
+- **30 Ekim kullanıcı kararı (T-1135):** stok miktarının sahibi Etkin; Paraşüt'e yalnız irsaliye gider. Stok toplamı ve irsaliye aynı bağlantıda birlikte açılamaz (tek istisna yazılı: ikisi de açık olan bağlantıda 0066 STOCK'u kapatıp audit yazdı — veri kaybı yok). Devir kapısı DB'de (`integration_stock_push_ready`); okutmalı Devir fişi gelince bu işleve eklenir.
 
 ## Seri uygulama sırası
 1. **T-1060 — #209 CANLIDA:** miktarsız aktarımın birim/hassasiyet ve eşleme güvenliği; bilinmeyen birimi ADET sayma kaldırılır, mevcut kart birimi korunur. Main/CI ve deploy `40477830376` başarılı; VPS `health:ok`, release `5c7c00695b1ab4113bcb30ad06a739aab291ccbb` doğrulandı.

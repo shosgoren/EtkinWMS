@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { productSourceInfo } from "./product-info.ts";
+import { parseProductSource, productSourceInfo } from "./product-info.ts";
 import type { JsonApiResource } from "./parasut.ts";
 
 const record = (attributes: Record<string, unknown>, relationships: Record<string, unknown> = {}): JsonApiResource => ({ id: "1", type: "products", attributes, relationships });
@@ -27,10 +27,16 @@ describe("fiyatsız kaynak ürün bilgisi", () => {
   it.each(["true", 1, {}])("yanlış bayrak kabul edilmez: %j", (archived) => {
     expect(() => productSourceInfo(record({ archived }))).toThrow();
   });
-  it("eksik veya yanlış türde kategori eski kategori adıyla karışmaz", () => {
-    const r = record({}, { category: { data: { id: "4", type: "item_categories" } } });
-    expect(() => productSourceInfo(r)).toThrow();
-    expect(() => productSourceInfo(r, [{ id: "4", type: "item_categories", attributes: { name: "Cariler", category_type: "Contact" }, relationships: {} }])).toThrow();
+  it("eksik veya yanlış türde kategori: satır düşmez, ürün kategorisiz alınır, uyarı döner (T-1135); eski kategori adıyla karışmaz", () => {
+    const r = record({ unit: "Adet" }, { category: { data: { id: "4", type: "item_categories" } } });
+    expect(parseProductSource(r)).toEqual({ info: { unit: "Adet", categoryId: null, categoryName: null }, warnings: ["CATEGORY_UNRESOLVED"] });
+    expect(parseProductSource(r, [{ id: "4", type: "item_categories", attributes: { name: "Cariler", category_type: "Contact" }, relationships: {} }]))
+      .toEqual({ info: { unit: "Adet", categoryId: null, categoryName: null }, warnings: ["CATEGORY_UNRESOLVED"] });
+    expect(parseProductSource(record({}, { category: { data: { id: "4", type: "item_categories" } } }), [
+      { id: "4", type: "item_categories", attributes: { name: "Granüller", category_type: "Product" }, relationships: {} },
+    ])).toEqual({ info: { categoryId: "4", categoryName: "Granüller" }, warnings: [] });
+    // Bozuk ilişki şekli yine hatadır (uyarı değil).
     expect(() => productSourceInfo(record({}, { category: { data: { id: "4", type: "contacts" } } }))).toThrow();
+    expect(() => productSourceInfo(record({}, { category: null }))).toThrow();
   });
 });

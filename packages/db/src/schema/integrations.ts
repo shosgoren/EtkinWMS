@@ -111,6 +111,8 @@ export const integrationFlows = pgTable(
     enabled: boolean("enabled").notNull().default(false),
     direction: text("direction").notNull(),
     enabledAt: timestamptz("enabled_at"),
+    // T-1135 (0066): ilk açılış anı; kapat/aç sıfırlamaz (irsaliye keşfi bunu alt sınır alır).
+    firstEnabledAt: timestamptz("first_enabled_at"),
     cursor: text("cursor"),
     lastRunAt: timestamptz("last_run_at"),
     lastSuccessAt: timestamptz("last_success_at"),
@@ -173,8 +175,12 @@ export const integrationStockMarks = pgTable(
     integrationId: uuid("integration_id").notNull(),
     itemId: uuid("item_id").notNull(),
     warehouseId: uuid("warehouse_id").notNull(),
-    quantity: numeric("quantity").notNull(),
-    sentAt: timestamptz("sent_at").notNull().defaultNow(),
+    // T-1135 (0066): son gönderilen toplam (NULL = hiç gönderilmedi) ve kesin reddedilen toplam + kod (aynı toplam yeniden denenmez).
+    quantity: numeric("quantity"),
+    sentAt: timestamptz("sent_at"),
+    failedQuantity: numeric("failed_quantity"),
+    failedAt: timestamptz("failed_at"),
+    lastErrorCode: text("last_error_code"),
   },
   (t) => [primaryKey({ name: "integration_stock_marks_pkey", columns: [t.tenantId, t.integrationId, t.itemId, t.warehouseId] })],
 );

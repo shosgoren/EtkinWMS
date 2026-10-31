@@ -217,6 +217,9 @@ function partyFields(p: ProviderContact): PartyFields | null {
   };
 }
 
+/** Ad/şehir eşleme anahtarı (T-1135): iki taraf da PG'de normalleşir (boşluk sadeleşir, kırpılır, küçük harf); boş metin NULL. */
+const partyNameKey = (expr: ReturnType<typeof sql>) => sql`NULLIF(lower(btrim(regexp_replace(${expr}, '[[:space:]]+', ' ', 'g'))), '')`;
+
 export async function applyContact(tx: AccessTx, c: ApplyContext, p: ProviderContact): Promise<ApplyOutcome> {
   const f = partyFields(p);
   if (f === null) return "SKIPPED";
@@ -240,7 +243,9 @@ export async function applyContact(tx: AccessTx, c: ApplyContext, p: ProviderCon
     await appendAudit(tx, { action: "party.updated", actorUserId: c.actorUserId, entityType: "party", entityId: existing, changeSummary: { name: f.name, via: "integration", system: c.system } });
     return "UPDATED";
   }
-  // Eşlemesiz aynı vergi numaralı cari varsa ona bağlanır (ada göre birleştirme yapılmaz: yanlış birleşme riski).
+  // Eşlemesiz aynı vergi numaralı cari varsa ona bağlanır. Vergi numarası YOKSA (T-1135): normalleştirilmiş ad + şehir birebir eşleşen
+  // TEK eşlemesiz cariye bağlanır (ikisi de PG tarafında normalleştirilir: boşluk sadeleşir, küçük harf; şehir ikisinde de boşsa eşit sayılır);
+  // birden çok aday = ATLANIR (yanlış birleşme riski), aday yoksa yeni kayıt. Vergi numarası olan cari yalnız vergi numarasıyla eşlenir.
   if (f.taxNo !== null) {
     const byTax = await tx.execute<{ id: string }>(
       sql`SELECT p.id FROM public.parties p
@@ -250,6 +255,17 @@ export async function applyContact(tx: AccessTx, c: ApplyContext, p: ProviderCon
     );
     if (byTax.length === 1) return (await link(tx, c, "PARTY", (byTax[0] as { id: string }).id, p.externalId)) ? "LINKED" : "SKIPPED";
     if (byTax.length > 1) return "SKIPPED";
+  } else {
+    const byName = await tx.execute<{ id: string }>(
+      sql`SELECT p.id FROM public.parties p
+           WHERE p.tenant_id = ${c.tenantId}::uuid AND p.archived_at IS NULL AND p.tax_no IS NULL
+             AND ${partyNameKey(sql`p.name`)} = ${partyNameKey(sql`${f.name}::text`)}
+             AND ${partyNameKey(sql`p.city`)} IS NOT DISTINCT FROM ${partyNameKey(sql`${f.city}::text`)}
+             AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = p.tenant_id AND r.system = ${c.system} AND r.entity_type = 'PARTY' AND r.entity_id = p.id)
+           ORDER BY p.created_at LIMIT 2`,
+    );
+    if (byName.length === 1) return (await link(tx, c, "PARTY", (byName[0] as { id: string }).id, p.externalId)) ? "LINKED" : "SKIPPED";
+    if (byName.length > 1) return "SKIPPED";
   }
   const code = `PRS-${p.externalId}`;
   const ins = await tx.execute<{ id: string }>(

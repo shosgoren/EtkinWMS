@@ -48,6 +48,8 @@ export interface FakeParasut {
   rateLimitNext: number;
   /** İrsaliye POST yanıt durumu (ör. 500, 422) ya da "drop" (bağlantıyı yanıtsız kapatır). */
   shipmentFailure: number | "drop" | null;
+  /** T-1135: stok güncelleme POST yanıt durumu (ör. 422) — null ise kabul. */
+  stockFailure: number | null;
   /** Geçerli yenileme belirteci (döner). */
   refreshToken: string;
   accessToken: string;
@@ -106,6 +108,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
     requests: [],
     rateLimitNext: 0,
     shipmentFailure: null,
+    stockFailure: null,
     refreshToken: "",
     accessToken: "",
     expireAccess() {
@@ -196,6 +199,7 @@ export async function startFakeParasut(options: FakeParasutOptions = {}): Promis
       return send(201, { data: { id: nextId(), type: "shipment_documents", attributes: parsed.data?.attributes ?? {} } });
     }
     if (req.method === "POST" && kind === "stock_updates") {
+      if (state.stockFailure !== null) return send(state.stockFailure, { errors: [{ title: "Rejected" }] });
       state.stockUpdates.push({ body: parsed });
       return send(201, { data: { id: nextId(), type: "stock_updates", attributes: {} } });
     }
