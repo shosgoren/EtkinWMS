@@ -121,7 +121,6 @@ export function YetkilerView({ slug, dark, katalog, bolum, kisi, data }: Yetkile
   const bolumLabel = (s: YetkiBolum): string => t(`sections.${s}`);
   const rows = useMemo(
     () => yetkiAra(katalog.rows, q, (r) => `${rowLabel(r)} ${bolumLabel(r.section)}`, (s) => kucukHarf(s, locale)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- etiketler dil ile değişir; `t` kararlı
     [katalog.rows, q, locale],
   );
   const sections = katalog.sections.filter((s) => rows.some((r) => r.section === s));

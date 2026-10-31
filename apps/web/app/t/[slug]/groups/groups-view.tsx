@@ -127,7 +127,6 @@ export function GroupsView({ slug, dark, data, openNew = false }: GroupsViewProp
     if (!openNew || yeniAcildi.current) return;
     yeniAcildi.current = true;
     startNew();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- yalnız ilk açılışta
   }, [openNew]);
   const roleOf = (m: (typeof members)[number]): string => m.roles[0] ?? "READ_ONLY";
   const groupName = (id: string | null): string | null => (id === null ? null : (groups.find((g) => g.id === id)?.name ?? null));

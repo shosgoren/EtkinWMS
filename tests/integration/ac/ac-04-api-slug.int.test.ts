@@ -324,6 +324,8 @@ const LOADERS = [
   "parties/page.tsx",
   // T-421: yetki grupları (üyelik özeti + `listGroups`, users.manage; çapraz tenant 404).
   "groups/page.tsx",
+  // T-1142: Yetkiler (üyelik özeti + `listGroups`, users.manage; çapraz tenant 404).
+  "yetkiler/page.tsx",
   // T-430: Ekip ekranı (listGroups + getJoinOverview, users.manage; çapraz tenant 404).
   "team/page.tsx",
   "warehouses/[warehouseId]/page.tsx",
