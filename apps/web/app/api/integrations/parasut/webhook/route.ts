@@ -1,6 +1,6 @@
 // T-1138: Paraşüt anlık bildirim alıcısı (herkese açık POST; Paraşüt sunucusu çağırır, oturum/köken yok). Caddy yalnız `/api/public/*`
 // yolunu dışarıya kapatır; bu yol dışarıdan erişilebilir olmalıdır (OPERATIONS). Sıra: kip (yalnız müşteri uygulaması) → IP hız sınırı →
-// gövde en çok 128 KiB (akışla; Content-Length'e güvenilmez) → domain `receiveParasutWebhook` (tenant eşlemesi + imza + kuyruk).
+// gövde en çok 64 KiB (akışla; Content-Length'e güvenilmez) → domain `receiveParasutWebhook` (tenant eşlemesi + imza + kuyruk).
 // Ret yanıtı tek biçimdir (401, sabit gövde): bilinmeyen şirket, bozuk gövde, yanlış imza ayırt edilemez. Gövde/imza/şirket loga yazılmaz.
 import { getAppDb } from "@wms/db";
 import { WEBHOOK_BODY_MAX, integrationSealer, receiveParasutWebhook } from "@wms/domain/integrations";

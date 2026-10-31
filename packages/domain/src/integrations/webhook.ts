@@ -9,7 +9,7 @@
 // - Teslim yükü karta YAZILMAZ: iş kaydı Paraşüt'ten kimliğiyle yeniden okur (yetkili belirteçle, aynı şirket). 404 = kaynakta yok →
 //   mevcut ürün yaşam döngüsü kuralları (≥30 sn arayla iki yokluk; fiziksel silme yok). Yük yalnız kaynak türü + kimlik + olay zamanı verir.
 // - Tekrar teslim: olay anahtarı = özet(tenant, kaynak, kimlik, olay zamanı) → kuyruk singletonKey + `processed_events` (I-07).
-// - Gövde en çok 128 KiB; imza adayları sınırlı (anahtar × 3 yapı × en çok 2 ileti).
+// - Gövde en çok 64 KiB; imza adayları sınırlı (tenant başına en çok 6 anahtar × 2 özet × en çok 2 ileti; en çok 5 tenant).
 //
 // VARSAYIM (UNKNOWN, gerçek hesapta doğrulanacak — BACKLOG): Paraşüt belgesi `Signature` başlığını "olay verisi ve şifreleme anahtarı
 // üzerinden SHA256" diye tanımlar; kesin yapı yazmaz. Kabul edilen yapılar: HMAC-SHA256(anahtar, veri) onaltılık / base64 ve
@@ -28,7 +28,7 @@ import { assertLifecycleBinding, lifecycleBinding, observeProduct } from "./prod
 import { connectorAllowed, toContact, toProduct } from "./sync.ts";
 import { IntegrationStateError, accessToken, loadIntegration, type RunTx } from "./store.ts";
 
-export const WEBHOOK_BODY_MAX = 128 * 1024;
+export const WEBHOOK_BODY_MAX = 64 * 1024;
 export const WEBHOOK_CONSUMER = "integration.webhook.event";
 const KEY_AAD = (tenantId: string) => ({ jobType: "integration.webhook.key", template: "PARASUT", tenantId });
 const NIL_USER_ID = "00000000-0000-0000-0000-000000000000";
@@ -208,7 +208,7 @@ export async function receiveParasutWebhook(deps: ReceiveDeps, input: { readonly
   );
   let match: LookupRow | null = null;
   for (const row of rows) {
-    const boxes = Array.isArray(row.key_boxes) ? row.key_boxes.slice(0, 12) : [];
+    const boxes = Array.isArray(row.key_boxes) ? row.key_boxes.slice(0, 6) : [];
     const keys = [...new Set(boxes.map((b) => openWebhookKey(deps.sealer, row.tenant_id, b)).filter((k): k is string => k !== null))];
     if (keys.length > 0 && verifySignature(input.signature, keys, parsed.signed) && match === null) match = row;
   }
