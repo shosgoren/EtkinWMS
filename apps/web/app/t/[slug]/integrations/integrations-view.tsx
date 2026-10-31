@@ -9,6 +9,10 @@
 // bölümler (`KalipAltBolumler`, adres `?bolum=`), sağda yalnız seçili bölüm (`KalipAyarKart`). Akışlar artık aç/kapa + yön yerine tek satırda
 // her zaman görünen yön seçimi (`KalipYonSecimi`): <Sistem>'den al · <Sistem>'e gönder · İki yönlü (yalnız katalogun desteklediği yönler) ·
 // Yalnız Etkin WMS (= akış kapalı). Tuvaldeki "Satış faturasından iş" satırı katalogda yok: çizilmez. Alan sahipliğinde veri yok: "Yakında".
+// T-1133 (kullanıcı 30 Ekim): Etkin'in TEK ortak Paraşüt uygulaması sunucudadır; müşteri anahtar girmez. Bağlan = 3 adım: BAĞLAN → Paraşüt'te
+// giriş yap ve izin ver → şirketini seç (tek şirket kendiliğinden). Kendi uygulamasını kullanmak isteyen için "Gelişmiş" açılır satırı
+// (`KalipSatir`): 3 adımlı rehberli kart (1 gerçek dönüş adresi + Kopyala, 2 iki anahtar, 3 BAĞLAN). Eski yetki kodu (OOB) yolu yalnız kendi
+// uygulamasında OOB adresini kaydeden müşteri için kalır; sağlayıcı hata kodu `reasons.*` ile gösterilir (genel "tamamlanamadı" değil).
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent } from "react";
@@ -17,13 +21,14 @@ import { NICON } from "../../../design/entegrasyon-icons.ts";
 import { SICON } from "../../../design/standart-icons.ts";
 import { KalipAltBolumler, KalipAyarKart, KalipAyarSatir, KalipYonSecimi, type KalipAltBolum, type KalipYon } from "../kalip/ayar.tsx";
 import { Ico, KalipBaslik, KalipEkran, useKalipToast } from "../kalip/ekran.tsx";
-import { KalipAlan, KalipAnahtar, KalipBaglanti, KalipGrup } from "../kalip/form.tsx";
+import { KalipAlan, KalipAnahtar, KalipBaglanti, KalipGrup, KalipPerde, KalipSatir } from "../kalip/form.tsx";
 import { KalipFormEkran } from "../kalip/form-ekran.tsx";
 import type { StTon } from "../kalip/kart.tsx";
 import { KalipBos } from "../kalip/liste.tsx";
 import { KalipSecim, KalipSekme } from "../kalip/secim.tsx";
 import { ayarSekmeleri } from "../settings/sekmeler.ts";
 import { entegrasyonSorunSayisi, sonEsitleme, type EntegrasyonBolumu } from "./bolum.ts";
+import { donusAdresi } from "./oauth-adres.ts";
 import { KalipOnay, KalipPencere, KalipPencereAlan, KalipPencereDugme } from "../kalip/pencere.tsx";
 import { kdz } from "../kalip/tokens.ts";
 import { checkIntegrationAction, connectParasutAction, disconnectIntegrationAction, pullOpeningStockAction, runIntegrationAction, setIntegrationFlowAction, setOpeningStockAction, setProductBarcodeAction, beginParasutOAuthAction, selectParasutOAuthCompanyAction, saveParasutOAuthSettingsAction, completeParasutOAuthCodeAction } from "./actions.ts";
@@ -79,8 +84,12 @@ const PROVIDER_NAME: Readonly<Record<Provider, string>> = { PARASUT: "Paraşüt"
 const c = (hex: string): string => kdz("dzf", hex);
 
 const EMPTY_FORM = { companyId: "", clientId: "", clientSecret: "", username: "", password: "" };
+const EMPTY_APP = { clientId: "", clientSecret: "" };
 
-export function IntegrationsView({ slug, dark, data, bolum, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult, webhook = null }: { oauth:{configured:boolean;callbackUrl:string|null}; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; slug: string; dark: boolean; data: OverviewData; bolum: EntegrasyonBolumu; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean; webhook?: { readonly status: "OFF" | "ACTIVE" | "FAILED"; readonly lastEventAt: string | null } | null }) {
+/** T-1133: ekrana yalnız bayraklar ve dönüş adresi gelir; uygulama kimliği/sırrı hiçbir zaman istemciye inmez. */
+export interface OAuthData { readonly configured: boolean; readonly ownApp: boolean; readonly shared: boolean; readonly oob: boolean; readonly callbackUrl: string | null }
+
+export function IntegrationsView({ slug, dark, data, bolum, opening = null, journeyWish = null, pullBarcodes = false, oauth, oauthSelection, oauthResult, oauthReason = null, webhook = null }: { oauth:OAuthData; oauthSelection:readonly {id:string;name:string}[]|null; oauthResult:string|null; oauthReason?: string | null; slug: string; dark: boolean; data: OverviewData; bolum: EntegrasyonBolumu; opening?: OpeningData | null; journeyWish?: boolean | null; pullBarcodes?: boolean; webhook?: { readonly status: "OFF" | "ACTIVE" | "FAILED"; readonly lastEventAt: string | null } | null }) {
   const t = useTranslations("integrations");
   const tb = useTranslations("baglantilar"); // T-1112: ortak ayar sekmelerinin adları
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
@@ -91,14 +100,18 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   const { say, node: toast } = useKalipToast("form");
   const [busy, setBusy] = useState<string | null>(null);
   const [configOpen,setConfigOpen]=useState(false);
-  const [appForm,setAppForm]=useState({clientId:"",clientSecret:"",callbackUrl:""});
+  const [appForm,setAppForm]=useState(EMPTY_APP);
+  const [appOob,setAppOob]=useState(oauth.oob);
+  useEffect(()=>setAppOob(oauth.oob),[oauth.oob]);
+  const [advOpen,setAdvOpen]=useState(false);
   const [codeFlow,setCodeFlow]=useState<string|null>(null);
   const [authCode,setAuthCode]=useState("");
   const [company,setCompany]=useState("");
   const [copied,setCopied]=useState(false);
   const [selectOpen,setSelectOpen]=useState(oauthSelection!==null);
   useEffect(()=>setSelectOpen(oauthSelection!==null),[oauthSelection]);
-  useEffect(()=>{if(oauthResult!==null){say(oauthResult==="connected"?"ok":"warn",t(`oauth.${oauthResult}`));router.replace(`${base}/integrations`);}},[oauthResult,router,base,say,t]);
+  // T-1133: callback'ten dönen sabit neden kodu varsa ekran onu söyler (ör. izin verilmedi, Paraşüt çok istek dedi); yoksa genel ileti.
+  useEffect(()=>{if(oauthResult!==null){const reason=oauthResult!=="failed"||oauthReason===null?t(`oauth.${oauthResult}`):oauthReason==="DENIED"?t("oauth.denied"):t.has(`reasons.${oauthReason}`)?t(`reasons.${oauthReason}`):t("oauth.failed");say(oauthResult==="connected"?"ok":"warn",reason);router.replace(`${base}/integrations`);}},[oauthResult,oauthReason,router,base,say,t]);
   const [formOpen, setFormOpen] = useState(false);
   const [cutOpen, setCutOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -273,16 +286,24 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
       return;
     }
     feedback.minor();
-    if(!oauth.configured){setConfigOpen(true);return;}
+    // T-1133: ortak ya da kendi uygulaması yoksa bağlanılamaz: Gelişmiş satırı açılır, neden söylenir (anahtar alanı gösterilmez).
+    if(!oauth.configured){feedback.error();setAdvOpen(true);say("warn",t("oauth.notReady"));return;}
     if(busy!==null)return;
     setBusy("oauth");
     void beginParasutOAuthAction({slug}).then(r=>{
       if(!r.ok){setBusy(null);failed(r);return;}
-      if(!r.data.ok){setBusy(null);say("err",t("oauth.failed"));return;}
+      if(!r.data.ok){setBusy(null);say("err",reasonText(r.data.reason));return;}
       if(r.data.manual){setBusy(null);setCodeFlow(r.data.authorizationUrl);return;}
       window.location.assign(r.data.authorizationUrl);
     }).catch(()=>{setBusy(null);say("err",t("oauth.failed"));});
   };
+  /** T-1133: dönüş adresini kopyala (küçük işlem: sessiz, düğme içinde 2 sn "Kopyalandı"). */
+  const copyCallback=(value:string|null=oauth.callbackUrl):void=>{
+    if(value===null){say("warn",t("oauth.originMissing"));return;}
+    feedback.minor();
+    void navigator.clipboard.writeText(value).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}).catch(()=>say("warn",t("oauth.copyFailed")));
+  };
+  const resetApp=():void=>{setAppForm(EMPTY_APP);setAppOob(oauth.oob);};
 
   const openingEnabled = openingOn ?? opening?.enabled === true;
   const openingTaken = opening?.takenAt ?? null;
@@ -363,23 +384,34 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
       }
     : { label: t("mainConnect"), aria: t("mainConnectAria", { provider: pn }), d: NICON.plug, onClick: openForm, testId: "integrations-connect" };
 
-  if(configOpen)return <KalipFormEkran dark={dark} title={t("oauth.settings")} icon={{d:NICON.plug,color:"2F5DA8"}}
-    testId="oauth-settings" values={appForm} initial={{clientId:"",clientSecret:"",callbackUrl:""}}
-    rules={[{name:"clientId",label:t("oauth.id"),required:true,maxLength:200},{name:"clientSecret",label:t("oauth.secret"),required:true,maxLength:200},{name:"callbackUrl",label:t("oauth.callback"),required:true,maxLength:300}]}
-    onSave={async()=>{const r=await saveParasutOAuthSettingsAction({slug,...appForm});if(!r.ok)return formFailure(r);return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
-    onDone={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);router.refresh();}}
-    onBack={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
-    footer={reauthAction??(appForm.clientId!==""||appForm.clientSecret!==""||appForm.callbackUrl!==""?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{setAppForm({clientId:"",clientSecret:"",callbackUrl:""});setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>)}>
-    <KalipGrup title={t("oauth.settings")} d={NICON.plug} color="2F5DA8">
+  // T-1133 Gelişmiş: kendi Paraşüt uygulaman — 3 adımlı rehberli kart. 1: gerçek dönüş adresi salt okunur + Kopyala; 2: iki anahtar (sade Türkçe);
+  // 3: KAYDET'ten sonra bölümdeki BAĞLAN. Doğrulama ortak `KalipFormEkran` (eksik alan kırmızı + "N alan eksik"). Eski yetki kodu yöntemi (OOB)
+  // yalnız anahtarla açılır; "Eski bağlantı yöntemi" düğmesi kalır (parola akışı başka yerden ulaşılamaz; kaldırma T-1137).
+  const stepIcon=(n:number,done:boolean,color:string)=><i style={{background:c(done?"2F9E6B":color)}} aria-hidden="true">{done?<Ico d={LICON.check} size={18}/>:<b style={{font:"inherit",color:"inherit"}}>{n}</b>}</i>;
+  // Gösterilen ve kopyalanan adres aynı kaynaktan (seçili yönteme göre: OOB → URN, değilse sunucu callback'i).
+  const callbackValue=donusAdresi(appOob,oauth.callbackUrl);
+  const callbackShown=callbackValue??t("oauth.originMissing");
+  if(configOpen)return <KalipFormEkran dark={dark} title={t("oauth.ownApp")} subtitle={t("oauth.ownAppSub")} icon={{d:LICON.key,color:"2F5DA8"}}
+    testId="oauth-settings" values={{...appForm,oob:appOob}} initial={{...EMPTY_APP,oob:oauth.oob}}
+    rules={[{name:"clientId",label:t("oauth.id"),required:true,maxLength:200},{name:"clientSecret",label:t("oauth.secret"),required:true,maxLength:200}]}
+    onSave={async()=>{const r=await saveParasutOAuthSettingsAction({slug,clientId:appForm.clientId.trim(),clientSecret:appForm.clientSecret.trim(),...(appOob?{oob:true}:{})});if(!r.ok)return formFailure(r);return r.data.ok?{ok:true}:{ok:false,mesaj:reasonText(r.data.reason)};}}
+    onDone={()=>{resetApp();setConfigOpen(false);router.refresh();}}
+    onBack={()=>{resetApp();setConfigOpen(false);}} savedText={t("oauth.saved")} homeHref={base}
+    footer={reauthAction??(appForm.clientId!==""||appForm.clientSecret!==""?null:<button type="button" className="btn n" data-testid="oauth-legacy" onClick={()=>{resetApp();setConfigOpen(false);setFormOpen(true);}}>{t("oauth.legacy")}</button>)}>
+    <KalipGrup title={t("oauth.step1")} sub={appOob?t("oauth.step1Oob"):t("oauth.step1Hint")} d={LICON.globe} color="2F5DA8" testId="oauth-step1">
+      <KalipAlan label={t("oauth.callback")} name="callbackUrl" value={callbackShown} readOnly autoComplete="off" onFocus={e=>e.currentTarget.select()} data-testid="oauth-callback" />
+      <button type="button" className="btn n" data-testid="oauth-copy" onClick={()=>copyCallback(callbackValue)}><Ico d={copied?LICON.check:LICON.clip} size={20}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
+    </KalipGrup>
+    <KalipGrup title={t("oauth.step2")} sub={t("oauth.step2Hint")} d={LICON.key} color="B07D0B" testId="oauth-step2">
       <KalipAlan label={t("oauth.id")} name="clientId" value={appForm.clientId} autoComplete="off" maxLength={200} onChange={e=>setAppForm({...appForm,clientId:e.target.value})} data-testid="oauth-app-id" />
       <KalipAlan label={t("oauth.secret")} hint={t("oauth.secretHint")} name="clientSecret" type="password" autoComplete="new-password" maxLength={200} value={appForm.clientSecret} onChange={e=>setAppForm({...appForm,clientSecret:e.target.value})} data-testid="oauth-app-secret" />
-      <KalipAlan label={t("oauth.callback")} name="callbackUrl" value={appForm.callbackUrl} autoComplete="off" maxLength={300} onChange={e=>setAppForm({...appForm,callbackUrl:e.target.value})} data-testid="oauth-callback" />
-      <button type="button" className="btn n" data-testid="oauth-copy" onClick={()=>{if(oauth.callbackUrl===null)return;void navigator.clipboard.writeText(appForm.callbackUrl).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}).catch(()=>say("warn",t("oauth.originMissing")));}}><Ico d={LICON.clip} size={20}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
+      <KalipAnahtar title={t("oauth.oobToggle")} sub={t("oauth.oobToggleSub")} d={LICON.key} color="4E6476" on={appOob} changed={appOob!==oauth.oob} aria={t("oauth.oobToggle")} onToggle={()=>{feedback.minor();setAppOob(v=>!v);}} testId="oauth-oob-toggle" />
     </KalipGrup>
+    <div className="cnote" data-testid="oauth-step3-note"><i><Ico d={NICON.plug} size={20}/></i><span>{t("oauth.step3Hint")}</span></div>
   </KalipFormEkran>;
   if(codeFlow!==null)return <KalipFormEkran dark={dark} title={t("oauth.enterCode")} icon={{d:LICON.key,color:"2F5DA8"}} testId="oauth-code-form"
     values={{code:authCode}} initial={{code:""}} rules={[{name:"code",label:t("oauth.code"),required:true,maxLength:4096}]} saveShort={t("mainConnect")}
-    onSave={async()=>{const r=await completeParasutOAuthCodeAction({slug,code:authCode.trim()});setAuthCode("");if(!r.ok)return formFailure(r);if(!r.data.ok)return {ok:false,mesaj:t("oauth.failed")};if(r.data.status==="SELECT"){router.replace(`${base}/integrations?oauth_select=${encodeURIComponent(r.data.id)}`);}return {ok:true};}}
+    onSave={async()=>{const r=await completeParasutOAuthCodeAction({slug,code:authCode.trim()});setAuthCode("");if(!r.ok)return formFailure(r);if(!r.data.ok)return {ok:false,mesaj:reasonText(r.data.reason)};if(r.data.status==="SELECT"){router.replace(`${base}/integrations?oauth_select=${encodeURIComponent(r.data.id)}`);}return {ok:true};}}
     onDone={()=>{setCodeFlow(null);router.refresh();}} onBack={()=>{setAuthCode("");setCodeFlow(null);}} homeHref={base} savedText={t("oauth.codeAccepted")} footer={reauthAction}>
     <KalipGrup title={t("oauth.enterCode")} d={LICON.key} color="2F5DA8">
       <a className="btn n" href={codeFlow} target="_blank" rel="noopener noreferrer" data-testid="oauth-provider-open"><Ico d={NICON.plug} size={20}/>{t("oauth.openProvider")}</a>
@@ -388,7 +420,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
   </KalipFormEkran>;
   if(selectOpen&&oauthSelection!==null)return <KalipFormEkran dark={dark} title={t("oauth.choose")} icon={{d:NICON.plug,color:"2F5DA8"}} testId="oauth-companies"
     values={{companyId:company}} initial={{companyId:""}} rules={[{name:"companyId",label:t("oauth.choose"),required:true}]}
-    saveShort={t("mainConnect")} onSave={async()=>{const r=await selectParasutOAuthCompanyAction({slug,companyId:company});if(!r.ok)return formFailure(r);return r.data.ok?{ok:true}:{ok:false,mesaj:t("oauth.failed")};}}
+    saveShort={t("mainConnect")} onSave={async()=>{const r=await selectParasutOAuthCompanyAction({slug,companyId:company});if(!r.ok)return formFailure(r);return r.data.ok?{ok:true}:{ok:false,mesaj:reasonText(r.data.reason)};}}
     onDone={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);router.refresh();}} onBack={()=>{setSelectOpen(false);setCompany("");router.replace(`${base}/integrations`);}} savedText={t("oauth.connected")} homeHref={base} footer={reauthAction}>
     <KalipSecim label={t("oauth.choose")} color="2F5DA8" value={company} options={oauthSelection.map(c=>({id:c.id,label:c.name,d:LICON.depo}))} onPick={setCompany} testId="oauth-company" />
   </KalipFormEkran>;
@@ -419,7 +451,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
         back: { href: `${base}/settings`, testId: "kabuk-back" },
         main,
       }}
-      overlays={toast}
+      overlays={<>{toast}<KalipPerde open={advOpen} onClose={()=>setAdvOpen(false)} /></>}
     >
       <div className={`dzen${dark ? " dz-dark" : ""}`} style={{ display: "contents" }}>
         <KalipSekme label={tb("tabs")} color="0E7C7B" current="entegrasyon" items={ayarSekmeleri(base, tb)} />
@@ -452,7 +484,7 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
         <KalipAltBolumler label={t("bolum.label")} items={bolumler} current={bolum} testId="integrations-bolumler">
           {bolum === "baglanti" ? (
             <KalipAyarKart title={t("baglanti.title")} sub={connected ? (err ? t("connErrTitle", { provider: pn }) : t("connTitle", { label: conn.label ?? pn })) : t("baglanti.sub")} d={SICON.baglanti} ton="parasut" testId="integrations-baglanti">
-              <KalipBaslik title={t("head")} hint={connected ? t("hintOn") : t("hintNone")} />
+              <KalipBaslik title={t("head")} hint={connected ? t("hintOn") : oauth.configured ? t("oauth.hintNone") : t("hintNone")} />
               {!connected ? (
                 <div className="provs" role="list" aria-label={t("providerList")} data-testid="integrations-providers">
                   {data.providers.map((p) => {
@@ -603,10 +635,39 @@ export function IntegrationsView({ slug, dark, data, bolum, opening = null, jour
               <KalipBaglanti title={t("baglanti.excel")} value={t("baglanti.excelOpen")} d={LICON.excel} color="2F7D5B" href={`${base}/settings/baglantilar`} testId="integrations-excel" />
               {/* T-1104 (kullanıcı 27 Ekim: "derle topla, pratik olsun"): uygulama bilgileri sık kullanılmaz — bölümün en altında. Bağlı değilken
                   ayrı "Paraşüt ile bağlan" yok (ana BAĞLAN aynı işi yapar); bağlıyken OAuth ile yeniden bağlanma burada kalır. */}
+              {/* T-1133 (kullanıcı 30 Ekim): müşteri anahtar girmez — Etkin'in ortak uygulaması. Kendi uygulamasını kullanmak isteyen için "Gelişmiş"
+                  açılır satırı: 3 adımlı rehberli kart. Bölümün en altında (sık kullanılmaz, T-1104). */}
               <div className="stak-g" data-testid="integrations-advanced">
-                <KalipBaslik title={t("oauth.settings")} />
-                <button type="button" className="btn n" data-testid="oauth-settings-open" onClick={()=>{if(data.demo){say("warn",t("demo"));return;}setConfigOpen(true);}}><Ico d={LICON.key} size={20}/>{t(oauth.configured?"oauth.configured":"oauth.setup")}</button>
-                {oauth.configured&&connected?<button type="button" className="btn n" onClick={openForm} aria-busy={busy==="oauth"} data-testid="oauth-connect"> <Ico d={NICON.plug} size={20}/>{t("oauth.connect")}</button>:null}
+                <KalipBaslik title={t("oauth.settings")} hint={oauth.shared&&!oauth.ownApp?t("oauth.sharedHint"):undefined} />
+                <KalipSatir id="own-app" title={t("oauth.ownApp")} value={oauth.ownApp?t("oauth.ownAppOn"):oauth.shared?t("oauth.sharedOn"):t("oauth.noneOn")} d={LICON.key} color="2F5DA8" open={advOpen} onToggle={()=>{feedback.minor();setAdvOpen(v=>!v);}} onClose={()=>setAdvOpen(false)} editorTitle={t("oauth.ownApp")} testId="oauth-advanced">
+                  <div className="runs" role="list" aria-label={t("oauth.ownApp")} data-testid="oauth-steps">
+                    <div className="rl" role="listitem" data-testid="oauth-step-1">
+                      {stepIcon(1,oauth.ownApp,"2F5DA8")}
+                      <span style={{ minWidth: 0 }}>
+                        <b>{t("oauth.step1")}</b>
+                        <small data-testid="oauth-callback-url">{oauth.callbackUrl??t("oauth.originMissing")}</small>
+                      </span>
+                      <button type="button" className="frun" data-testid="oauth-copy-inline" onClick={()=>copyCallback()}><Ico d={copied?LICON.check:LICON.clip} size={16}/>{copied?t("oauth.copied"):t("oauth.copy")}</button>
+                    </div>
+                    <div className="cnote"><i><Ico d={LICON.info} size={20}/></i><span>{t("oauth.step1Hint")}</span></div>
+                    <div className="rl" role="listitem" data-testid="oauth-step-2">
+                      {stepIcon(2,oauth.ownApp,"B07D0B")}
+                      <span style={{ minWidth: 0 }}>
+                        <b>{t("oauth.step2")}</b>
+                        <small>{oauth.ownApp?t("oauth.step2Done"):t("oauth.step2Todo")}</small>
+                      </span>
+                      <button type="button" className="frun" data-testid="oauth-settings-open" onClick={()=>{if(data.demo){feedback.error();say("warn",t("demo"));return;}feedback.minor();setAdvOpen(false);setConfigOpen(true);}}><Ico d={LICON.key} size={16}/>{t(oauth.ownApp?"oauth.change":"oauth.setup")}</button>
+                    </div>
+                    <div className="rl" role="listitem" data-testid="oauth-step-3">
+                      {stepIcon(3,connected&&oauth.ownApp,"2F9E6B")}
+                      <span style={{ minWidth: 0 }}>
+                        <b>{t("oauth.step3")}</b>
+                        <small>{t("oauth.step3Hint")}</small>
+                      </span>
+                      <button type="button" className="frun" data-testid="oauth-connect" aria-busy={busy==="oauth"} aria-disabled={!oauth.ownApp} onClick={()=>{if(!oauth.ownApp){feedback.error();say("warn",t("oauth.stepsFirst"));return;}openForm();}}><Ico d={NICON.plug} size={16}/>{t("mainConnect")}</button>
+                    </div>
+                  </div>
+                </KalipSatir>
               </div>
             </KalipAyarKart>
           ) : null}

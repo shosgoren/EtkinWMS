@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { appendAudit } from "@wms/db";
 import type { AccessTx } from "../identity/access.ts";
 import type { ApplyContext } from "./apply.ts";
+import { SHARED_OAUTH_CONFIG_VERSION } from "./oauth.ts";
 
 export interface LifecycleBinding {
  readonly tenantId:string; readonly integrationId:string; readonly companyId:string;
@@ -13,7 +14,17 @@ export interface LifecycleBinding {
 /** Configuration first, then connection/flow/member; no network while locked. A stale run cannot mutate a reconnected tenant. */
 export async function lifecycleBinding(tx:AccessTx,tenantId:string,integrationId:string,lock=false):Promise<LifecycleBinding|null> {
  const app=await tx.execute<{version:string}>(sql`SELECT version FROM public.integration_oauth_apps WHERE tenant_id=${tenantId}::uuid ${lock?sql`FOR SHARE`:sql``}`);
- if(!app[0])return null; // Legacy/global credentials have no stable per-tenant configuration version; do not infer lifecycle.
+ let configVersion=app[0]?.version??null;
+ if(configVersion===null){
+  // T-1133: ortak uygulama — bağlantı, yetki kodu akışıyla TAMAMLANAN (COMPLETE) ve bağlanma anını kapsayan bir denemeden geldiyse sürüm ortak
+  // sabittir. Eski parola akışı bağlantısında böyle deneme yoktur → yaşam döngüsü kapalı kalır (sürümsüz bağlam çıkarılmaz).
+  const shared=await tx.execute<{id:string}>(sql`
+  SELECT a.id FROM public.integration_oauth_attempts a JOIN public.integrations i ON i.tenant_id=a.tenant_id AND i.connected_by=a.user_id AND i.connected_membership_id=a.membership_id
+  WHERE a.tenant_id=${tenantId}::uuid AND i.id=${integrationId}::uuid AND i.provider='PARASUT' AND a.phase='COMPLETE' AND a.config_version=${SHARED_OAUTH_CONFIG_VERSION}::uuid
+  AND a.created_at<=i.connected_at AND i.connected_at<=a.expires_at ${lock?sql`FOR SHARE OF a`:sql``} LIMIT 1`);
+  if(!shared[0])return null;
+  configVersion=SHARED_OAUTH_CONFIG_VERSION;
+ }
  const rows=await tx.execute<{account_ref:string;connected_by:string;connected_membership_id:string;connected_at:string}>(sql`
  SELECT i.account_ref,i.connected_by,i.connected_membership_id,i.connected_at::text
  FROM public.integrations i JOIN public.integration_flows f ON f.tenant_id=i.tenant_id AND f.integration_id=i.id
@@ -22,7 +33,7 @@ export async function lifecycleBinding(tx:AccessTx,tenantId:string,integrationId
  WHERE i.tenant_id=${tenantId}::uuid AND i.id=${integrationId}::uuid AND i.provider='PARASUT' AND i.status='CONNECTED' AND i.account_ref IS NOT NULL
  AND f.flow='PRODUCTS' AND f.enabled AND f.direction IN ('PULL','BOTH') AND m.status='ACTIVE' AND r.role_key='TENANT_ADMIN'
  ${lock?sql`FOR SHARE OF i,f,m,r`:sql``}`);
- const r=rows[0];return r?{tenantId,integrationId,companyId:r.account_ref,userId:r.connected_by,membershipId:r.connected_membership_id,connectedAt:r.connected_at,configVersion:app[0]?.version??null}:null;
+ const r=rows[0];return r?{tenantId,integrationId,companyId:r.account_ref,userId:r.connected_by,membershipId:r.connected_membership_id,connectedAt:r.connected_at,configVersion}:null;
 }
 export async function assertLifecycleBinding(tx:AccessTx,b:LifecycleBinding):Promise<boolean> {
  const now=await lifecycleBinding(tx,b.tenantId,b.integrationId,true);return now!==null&&JSON.stringify(now)===JSON.stringify(b);

@@ -87,3 +87,36 @@ it("0062 retains lifecycle data on rollback and preserves the real-card delete g
   expect((await adm.query("SELECT source_state,status FROM items WHERE tenant_id=$1 AND id=$2",[w.tenantId,w.itemId])).rows[0]).toEqual({source_state:"ARCHIVED",status:"ARCHIVED"});
  });
 },120_000);
+
+it("T-1135 0066: ikisi de açık bağlantıda STOCK kapanır + audit; ilk açılış anı doldurulur; kart kuyruğu ya da ilk açılış geçmişi varken down reddedilir", async () => {
+  await scratch(async (url, adm) => {
+    expect((await migrateDown({ url, to: "0065", wmsEnv: "staging" })).reverted).toEqual(["0067", "0066"]);
+    const w = await seedWorld(adm, newRegistry(), "M1135");
+    const other = await seedWorld(adm, newRegistry(), "M1135B");
+    const mk = async (tenant: string, stock: boolean) => {
+      const id = (await adm.query<{ id: string }>("INSERT INTO public.integrations (tenant_id, provider, status) VALUES ($1, 'PARASUT', 'DISCONNECTED') RETURNING id", [tenant])).rows[0]?.id as string;
+      await adm.query("INSERT INTO public.integration_flows (tenant_id, integration_id, flow, enabled, direction) VALUES ($1, $2, 'STOCK', $3, 'PUSH'), ($1, $2, 'SHIPMENTS', true, 'PUSH')", [tenant, id, stock]);
+      return id;
+    };
+    const both = await mk(w.tenantId, true);
+    const onlyShip = await mk(other.tenantId, false);
+    expect((await migrateUp({ url })).applied).toEqual(["0066", "0067"]);
+    const flows = async (id: string) => (await adm.query("SELECT flow, enabled, first_enabled_at IS NOT NULL AS first FROM public.integration_flows WHERE integration_id = $1 ORDER BY flow", [id])).rows;
+    expect(await flows(both)).toEqual([{ flow: "SHIPMENTS", enabled: true, first: true }, { flow: "STOCK", enabled: false, first: true }]);
+    expect(await flows(onlyShip)).toEqual([{ flow: "SHIPMENTS", enabled: true, first: true }, { flow: "STOCK", enabled: false, first: false }]);
+    const audit = (await adm.query("SELECT tenant_id, entity_id, change_summary->>'via' AS via, change_summary->>'flow' AS flow, change_summary->>'enabled' AS enabled FROM public.audit_logs WHERE action = 'integration.flow_changed' AND change_summary->>'via' = 'migration_0066'")).rows;
+    expect(audit).toEqual([{ tenant_id: w.tenantId, entity_id: both, via: "migration_0066", flow: "STOCK", enabled: "false" }]);
+    await adm.query("INSERT INTO public.integration_outbox (tenant_id, integration_id, flow, entity_type, entity_id, status) VALUES ($1, $2, 'CONTACTS', 'PARTY', gen_random_uuid(), 'FAILED')", [w.tenantId, both]);
+    // T-1138: her geri alma ayrı transaction'dır; 0067 (webhook verisi yok) önce geri alınır, 0066 bekçisi reddeder.
+    await expect(migrateDown({ url, to: "0065", wmsEnv: "staging" })).rejects.toThrow(/0066_integration_guards down/);
+    expect(await top(adm)).toBe("0066");
+    await adm.query("DELETE FROM public.integration_outbox WHERE flow = 'CONTACTS'");
+    // Kapatılan STOCK'un ilk açılış anı enabled_at'ten farklı (kapat/aç geçmişi): veri kaybettiren down yine reddedilir; yalnız izinli ortamda iner.
+    await expect(migrateDown({ url, to: "0065", wmsEnv: "staging" })).rejects.toThrow(/ilk açılış geçmişi \(1\)/);
+    expect(await top(adm)).toBe("0066");
+    expect((await migrateDown({ url, to: "0065", wmsEnv: "ci" })).reverted).toEqual(["0066"]);
+    expect((await adm.query("SELECT has_table_privilege('wms_app', 'public.integration_runs', 'DELETE') AS d")).rows[0]).toEqual({ d: false });
+    expect((await migrateUp({ url })).applied).toEqual(["0066", "0067"]);
+    expect((await adm.query("SELECT has_table_privilege('wms_app', 'public.integration_runs', 'DELETE') AS d")).rows[0]).toEqual({ d: true });
+  });
+}, 120_000);

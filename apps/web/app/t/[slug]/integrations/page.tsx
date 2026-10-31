@@ -84,8 +84,10 @@ export default async function IntegrationsPage({ params, searchParams }: { param
   const binding=origin===null?null:parseOAuthBinding((await cookies()).get(oauthCookieName(origin))?.value);
   const selection=binding!==null&&binding.slug===slug&&query.oauth_select===binding.id?await getParasutOAuthSelection(call,binding):null;
   const result=["connected","failed","retry"].includes(String(query.oauth_result))?String(query.oauth_result):query.oauth_select!==undefined&&selection===null?"retry":null;
+  // T-1133: callback'ten gelen sabit neden kodu (yalnız büyük harf/alt çizgi; başka her şey yok sayılır).
+  const reason=result==="failed"&&typeof query.oauth_reason==="string"&&/^[A-Z_]{1,40}$/.test(query.oauth_reason)?query.oauth_reason:null;
   // T-1112: seçili alt bölüm adreste (`?bolum=`); yoksa bağlıyken "Ne çekilsin, gönderilsin", değilse "Bağlantı ve veri kaynağı".
   const connected = overview.providers.some((p) => p.provider === "PARASUT" && p.connection !== null);
   const bolum = entegrasyonBolumu(query.bolum, connected);
-  return <IntegrationsView bolum={bolum} oauth={oauth} oauthSelection={selection} oauthResult={result} pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} webhook={webhook} />;
+  return <IntegrationsView bolum={bolum} oauth={oauth} oauthSelection={selection} oauthResult={result} oauthReason={reason} pullBarcodes={pullBarcodes} slug={slug} dark={dark} data={serialize(overview)} opening={opening} journeyWish={journeyWish} webhook={webhook} />;
 }

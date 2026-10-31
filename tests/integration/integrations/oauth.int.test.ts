@@ -1,32 +1,38 @@
 // T-1066: real RLS/database and HTTP provider, synthetic credentials only.
+// T-1133: Etkin'in ortak uygulaması (ortam) — uçtan uca bağlantı, iki kiracı yalıtımı, kendi uygulamasının önceliği, yaşam döngüsü kapısı.
 import {randomBytes} from 'node:crypto';
 import pg from 'pg';
-import {beforeAll,afterAll,beforeEach,describe,it,expect} from 'vitest';
-import {createDbClient} from '../../../packages/db/src/index.ts';
+import {beforeAll,afterAll,beforeEach,afterEach,describe,it,expect} from 'vitest';
+import {sql} from '../../../packages/db/node_modules/drizzle-orm/index.js';
+import {createDbClient,withSystemTenant} from '../../../packages/db/src/index.ts';
 import type {DbClient} from '../../../packages/db/src/client.ts';
 import {createSealer} from '../../../packages/shared/src/seal.ts';
-import {beginParasutOAuth,completeParasutOAuth,getParasutOAuthSelection,selectParasutOAuthCompany,saveParasutOAuthSettings,getParasutOAuthSettings,disconnectIntegration,getIntegrationOverview,checkIntegration,ParasutClient,encodeOAuthBinding,parseOAuthBinding,matchesOAuthState,type OAuthBinding} from '../../../packages/domain/src/integrations/index.ts';
+import {beginParasutOAuth,completeParasutOAuth,getParasutOAuthSelection,selectParasutOAuthCompany,saveParasutOAuthSettings,getParasutOAuthSettings,disconnectIntegration,getIntegrationOverview,checkIntegration,ParasutClient,encodeOAuthBinding,parseOAuthBinding,matchesOAuthState,connectParasut,SHARED_OAUTH_CONFIG_VERSION,type OAuthBinding} from '../../../packages/domain/src/integrations/index.ts';
+import {lifecycleBinding} from '../../../packages/domain/src/integrations/product-lifecycle.ts';
 import {startFakeParasut,type FakeParasut} from '../fixtures/fake-parasut.ts';
 import {seedWorld,newRegistry,type TenantWorld} from '../fixtures/tenants.ts';
 import {readIntEnv} from '../harness/env.ts';
 const env=readIntEnv(process.env),reg=newRegistry(),sealer=createSealer(randomBytes(32).toString('hex'));
 let db:DbClient,adm:pg.Client,A:TenantWorld,B:TenantWorld,fake:FakeParasut;
 const prior=process.env.BETTER_AUTH_URL;
+const SHARED_ENV=['PARASUT_OAUTH_CLIENT_ID','PARASUT_OAUTH_CLIENT_SECRET'] as const;
+const priorShared=SHARED_ENV.map(k=>process.env[k]);
 const params=(w=A)=>({db,principal:{userId:w.ownerUserId,mfaVerified:true},tenantSlug:w.slug,recentAuth:async()=>undefined});
 const deps=()=>({sealer,client:new ParasutClient({baseUrl:fake.url,sleep:async()=>undefined})});
 const input=(callbackUrl=fake.opts.redirectUri)=>({clientId:fake.opts.clientId,clientSecret:fake.opts.clientSecret,callbackUrl});
 async function start(w=A){await saveParasutOAuthSettings(params(w),input(),deps());const r=await beginParasutOAuth(params(w),deps());if(!r.ok)throw new Error('begin failed');return r;}
 const finish=(binding:OAuthBinding,w=A)=>completeParasutOAuth(params(w),{binding,code:fake.opts.authorizationCode},deps());
 const grants=()=>fake.requests.filter(r=>r.path==='/oauth/token').length;
-beforeAll(async()=>{process.env.BETTER_AUTH_URL='https://wms.example.test';db=createDbClient({url:env.databaseUrl,poolMax:4,prepare:false});adm=new pg.Client({connectionString:env.databaseUrlDirect});await adm.connect();A=await seedWorld(adm,reg,'OA');B=await seedWorld(adm,reg,'OB');});
-afterAll(async()=>{await fake?.close();await db?.close();await adm?.end();if(prior===undefined)delete process.env.BETTER_AUTH_URL;else process.env.BETTER_AUTH_URL=prior;});
+beforeAll(async()=>{process.env.BETTER_AUTH_URL='https://wms.example.test';for(const k of SHARED_ENV)delete process.env[k];db=createDbClient({url:env.databaseUrl,poolMax:4,prepare:false});adm=new pg.Client({connectionString:env.databaseUrlDirect});await adm.connect();A=await seedWorld(adm,reg,'OA');B=await seedWorld(adm,reg,'OB');});
+afterAll(async()=>{await fake?.close();await db?.close();await adm?.end();if(prior===undefined)delete process.env.BETTER_AUTH_URL;else process.env.BETTER_AUTH_URL=prior;SHARED_ENV.forEach((k,i)=>{const v=priorShared[i];if(v===undefined)delete process.env[k];else process.env[k]=v;});});
 beforeEach(async()=>{await fake?.close();fake=await startFakeParasut();await adm.query("UPDATE integration_oauth_attempts SET phase='FAILED',token_box=NULL,companies='[]'");});
 describe('tenant OAuth configuration',()=>{
  it('stores three customer values encrypted, returns no application secrets and keeps tenants separate',async()=>{
   await saveParasutOAuthSettings(params(),input('https://customer.example.test/return?app=warehouse'),deps());
   const row=(await adm.query('SELECT credentials FROM integration_oauth_apps WHERE tenant_id=$1',[A.tenantId])).rows[0];
   expect(JSON.stringify(row)).not.toContain(fake.opts.clientSecret);expect(JSON.stringify(row)).not.toContain(fake.opts.clientId);
-  expect(await getParasutOAuthSettings(params())).toEqual({configured:true,callbackUrl:'https://wms.example.test/api/integrations/parasut/callback'});
+  expect(await getParasutOAuthSettings(params(),deps())).toEqual({configured:true,ownApp:true,shared:false,oob:false,callbackUrl:'https://wms.example.test/api/integrations/parasut/callback'});
+  expect(await getParasutOAuthSettings(params(B),deps())).toEqual({configured:false,ownApp:false,shared:false,oob:false,callbackUrl:'https://wms.example.test/api/integrations/parasut/callback'});
   const r=await beginParasutOAuth(params(),deps());expect(r.ok).toBe(true);if(r.ok){expect(new URL(r.authorizationUrl).searchParams.get('redirect_uri')).toBe('https://customer.example.test/return?app=warehouse');expect(r.manual).toBe(true);}
   const b=await beginParasutOAuth(params(B),deps());expect(b).toEqual({ok:false,reason:'CONFIG'});
  });
@@ -34,7 +40,7 @@ describe('tenant OAuth configuration',()=>{
   await expect(saveParasutOAuthSettings(params(),input(callback),deps())).rejects.toMatchObject({code:'VALIDATION_FAILED'});
  });
  it('accepts OOB without customer password and never puts secret in authorization URL',async()=>{
-  await saveParasutOAuthSettings(params(),input('urn:ietf:wg:oauth:2.0:oob'),deps());const r=await beginParasutOAuth(params(),deps());expect(r.ok).toBe(true);if(r.ok){expect(r.manual).toBe(true);expect(new URL(r.authorizationUrl).searchParams.get('redirect_uri')).toBe('urn:ietf:wg:oauth:2.0:oob');expect(r.authorizationUrl).not.toContain(fake.opts.clientSecret);}
+  await saveParasutOAuthSettings(params(),input('urn:ietf:wg:oauth:2.0:oob'),deps());expect((await getParasutOAuthSettings(params(),deps())).oob).toBe(true);const r=await beginParasutOAuth(params(),deps());expect(r.ok).toBe(true);if(r.ok){expect(r.manual).toBe(true);expect(new URL(r.authorizationUrl).searchParams.get('redirect_uri')).toBe('urn:ietf:wg:oauth:2.0:oob');expect(r.authorizationUrl).not.toContain(fake.opts.clientSecret);}
  });
  it('requires role, MFA and recent authentication for saving',async()=>{
   await expect(saveParasutOAuthSettings({...params(),recentAuth:undefined},input(),deps())).rejects.toMatchObject({code:'UNAUTHENTICATED'});
@@ -122,5 +128,88 @@ describe('single use authorization',()=>{
  });
  it('strict cookie parser and constant-time state comparison reject malformed bindings',async()=>{
   const r=await start();expect(parseOAuthBinding(encodeOAuthBinding(r.binding))).toEqual(r.binding);expect(matchesOAuthState(r.binding,r.binding.state)).toBe(true);expect(matchesOAuthState(r.binding,'short')).toBe(false);expect(parseOAuthBinding(Buffer.from(JSON.stringify({...r.binding,extra:true})).toString('base64url'))).toBe(null);expect(parseOAuthBinding('not-json')).toBe(null);
+ });
+});
+
+describe('T-1133 shared Etkin application (server environment)',()=>{
+ const shared=()=>{process.env.PARASUT_OAUTH_CLIENT_ID=fake.opts.clientId;process.env.PARASUT_OAUTH_CLIENT_SECRET=fake.opts.clientSecret;};
+ const unshare=()=>{for(const k of SHARED_ENV)delete process.env[k];};
+ afterEach(unshare);
+ const fresh=(label:string)=>seedWorld(adm,reg,label);
+ async function begin(w:TenantWorld){const r=await beginParasutOAuth(params(w),deps());if(!r.ok)throw new Error('begin failed');return r;}
+ it('connects without any tenant key: start → callback → single company → CONNECTED; no secret in DB, audit or URL',async()=>{
+  shared();const w=await fresh('SH1');
+  expect(await getParasutOAuthSettings(params(w),deps())).toEqual({configured:true,ownApp:false,shared:true,oob:false,callbackUrl:'https://wms.example.test/api/integrations/parasut/callback'});
+  const r=await begin(w);expect(r.manual).toBe(false);
+  const url=new URL(r.authorizationUrl);expect(url.origin).toBe('https://api.parasut.com');expect(url.searchParams.get('client_id')).toBe(fake.opts.clientId);
+  expect(url.searchParams.get('redirect_uri')).toBe('https://wms.example.test/api/integrations/parasut/callback');expect(r.authorizationUrl).not.toContain(fake.opts.clientSecret);
+  expect(await finish(r.binding,w)).toEqual({ok:true,status:'CONNECTED',label:fake.opts.companyName});
+  expect((await adm.query('SELECT count(*)::int AS n FROM integration_oauth_apps WHERE tenant_id=$1',[w.tenantId])).rows[0].n).toBe(0);
+  expect((await adm.query('SELECT phase,config_version,token_box FROM integration_oauth_attempts WHERE id=$1',[r.binding.id])).rows[0]).toEqual({phase:'COMPLETE',config_version:SHARED_OAUTH_CONFIG_VERSION,token_box:null});
+  const dump=JSON.stringify([(await adm.query('SELECT * FROM audit_logs WHERE tenant_id=$1',[w.tenantId])).rows,(await adm.query('SELECT * FROM integration_oauth_attempts WHERE tenant_id=$1',[w.tenantId])).rows,(await adm.query('SELECT credentials FROM integrations WHERE tenant_id=$1',[w.tenantId])).rows]);
+  expect(dump).not.toContain(fake.opts.clientSecret);expect(dump).not.toContain(fake.accessToken);
+  const o=await getIntegrationOverview(params(w));expect(o.providers[0]?.connection?.status).toBe('CONNECTED');
+  expect(grants()).toBe(1);
+ });
+ it('multiple companies: selection then CONNECTED via shared application',async()=>{
+  shared();const w=await fresh('SH2');const r=await begin(w);fake.companies.push({id:'116',name:'Other company'});
+  const done=await finish(r.binding,w);expect(done.ok&&done.status).toBe('SELECT');
+  expect((await getParasutOAuthSelection(params(w),r.binding,deps()))?.map(c=>c.id)).toEqual([fake.opts.companyId,'116']);
+  expect(await selectParasutOAuthCompany(params(w),{binding:r.binding,companyId:'116'},deps())).toEqual({ok:true,status:'CONNECTED',label:'Other company'});
+ });
+ it('two tenants on the same shared client cannot use each other\'s attempt, selection or company list (I-01..03)',async()=>{
+  shared();const x=await fresh('SHX');const y=await fresh('SHY');
+  const rx=await begin(x);const ry=await begin(y);
+  // Y's owner replays X's binding: under Y's slug (rebound) and under X's slug (not a member) — both fail before any token request.
+  await expect(finish({...rx.binding,slug:y.slug},y)).rejects.toMatchObject({code:'VALIDATION_FAILED'});
+  await expect(completeParasutOAuth({...params(y),tenantSlug:x.slug},{binding:rx.binding,code:fake.opts.authorizationCode},deps())).rejects.toMatchObject({code:'NOT_FOUND'});
+  // A valid X state cannot be completed with Y's nonce/id.
+  await expect(finish({...ry.binding,state:rx.binding.state},y)).rejects.toMatchObject({code:'VALIDATION_FAILED'});
+  expect(grants()).toBe(0);
+  fake.companies.push({id:'116',name:'Other company'});
+  expect((await finish(rx.binding,x)).ok).toBe(true);
+  expect(await getParasutOAuthSelection(params(y),{...rx.binding,slug:y.slug},deps())).toBeNull();
+  await expect(selectParasutOAuthCompany(params(y),{binding:{...rx.binding,slug:y.slug},companyId:fake.opts.companyId},deps())).rejects.toMatchObject({code:'VALIDATION_FAILED'});
+  expect((await adm.query("SELECT count(*)::int AS n FROM integrations WHERE tenant_id=$1",[y.tenantId])).rows[0].n).toBe(0);
+  // RLS: Y's transaction does not see X's attempt rows at all.
+  const seen=await withSystemTenant(db,y.tenantId,'test.oauth',tx=>tx.execute(sql`SELECT id FROM public.integration_oauth_attempts WHERE id=${rx.binding.id}::uuid`));
+  expect(seen).toHaveLength(0);
+  expect((await selectParasutOAuthCompany(params(x),{binding:rx.binding,companyId:fake.opts.companyId},deps())).ok).toBe(true);
+ });
+ it("tenant's own application takes precedence over the shared one; removing the shared env keeps own app working",async()=>{
+  shared();const w=await fresh('SHO');
+  await saveParasutOAuthSettings(params(w),{clientId:'own-client',clientSecret:'own-secret-value',callbackUrl:'https://customer.example.test/back'},deps());
+  const r=await begin(w);const url=new URL(r.authorizationUrl);
+  expect(url.searchParams.get('client_id')).toBe('own-client');expect(url.searchParams.get('redirect_uri')).toBe('https://customer.example.test/back');expect(r.manual).toBe(true);
+  expect(await getParasutOAuthSettings(params(w),deps())).toMatchObject({configured:true,ownApp:true,shared:true});
+  unshare();const again=await begin(w);expect(new URL(again.authorizationUrl).searchParams.get('client_id')).toBe('own-client');
+ });
+ it('own application saved without a callback uses the server callback (no typed value)',async()=>{
+  const w=await fresh('SHC');await saveParasutOAuthSettings(params(w),{clientId:fake.opts.clientId,clientSecret:fake.opts.clientSecret},deps());
+  const r=await begin(w);expect(r.manual).toBe(false);expect(new URL(r.authorizationUrl).searchParams.get('redirect_uri')).toBe('https://wms.example.test/api/integrations/parasut/callback');
+  expect(await finish(r.binding,w)).toEqual({ok:true,status:'CONNECTED',label:fake.opts.companyName});
+ });
+ it('without shared env and without own app the tenant is not configured',async()=>{
+  const w=await fresh('SHN');expect(await beginParasutOAuth(params(w),deps())).toEqual({ok:false,reason:'CONFIG'});
+  expect((await getParasutOAuthSettings(params(w),deps())).configured).toBe(false);
+ });
+ it('an attempt started on the shared app cannot finish after the tenant switches to its own app',async()=>{
+  shared();const w=await fresh('SHS');const r=await begin(w);
+  await saveParasutOAuthSettings(params(w),input(),deps());
+  await expect(finish(r.binding,w)).rejects.toMatchObject({code:'VALIDATION_FAILED'});expect(grants()).toBe(0);
+ });
+ it('lifecycle gating accepts a shared-app OAuth connection and still rejects a legacy password connection',async()=>{
+  shared();const w=await fresh('SHL');const r=await begin(w);expect((await finish(r.binding,w)).ok).toBe(true);
+  const id=(await adm.query("SELECT id FROM integrations WHERE tenant_id=$1 AND provider='PARASUT'",[w.tenantId])).rows[0].id as string;
+  const b=await withSystemTenant(db,w.tenantId,'test.lifecycle',tx=>lifecycleBinding(tx,w.tenantId,id,true));
+  expect(b).toMatchObject({tenantId:w.tenantId,integrationId:id,companyId:fake.opts.companyId,configVersion:SHARED_OAUTH_CONFIG_VERSION});
+  // Legacy password connection (no completed authorization-code attempt): lifecycle stays off.
+  unshare();const l=await fresh('SHP');
+  expect((await connectParasut(params(l),{companyId:fake.opts.companyId,clientId:fake.opts.clientId,clientSecret:fake.opts.clientSecret,username:fake.opts.username,password:fake.opts.password},deps())).ok).toBe(true);
+  await adm.query("UPDATE integration_flows SET enabled=true,direction='PULL' WHERE tenant_id=$1 AND flow='PRODUCTS'",[l.tenantId]);
+  const lid=(await adm.query("SELECT id FROM integrations WHERE tenant_id=$1 AND provider='PARASUT'",[l.tenantId])).rows[0].id as string;
+  expect(await withSystemTenant(db,l.tenantId,'test.lifecycle',tx=>lifecycleBinding(tx,l.tenantId,lid,true))).toBeNull();
+  // Shared-app connection made by another tenant never unlocks this one.
+  expect(await withSystemTenant(db,l.tenantId,'test.lifecycle',tx=>lifecycleBinding(tx,l.tenantId,id,true))).toBeNull();
  });
 });

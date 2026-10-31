@@ -29,9 +29,26 @@ function flag(raw: unknown): boolean | null {
   throw new AppError("VALIDATION_FAILED");
 }
 
-/** Eksik alan patch'e girmez; açık null temizler. Fiyat/vergi/döviz/miktar asla seçilmez. */
+/** T-1135: satırı düşürmeyen uyarılar (koşu sayacına ve koşu audit'ine girer; dış kimlik taşımaz). */
+export type ProductSourceWarning = "CATEGORY_UNRESOLVED";
+
+export interface ParsedProductSource {
+  readonly info: ProductSourceInfo;
+  readonly warnings: readonly ProductSourceWarning[];
+}
+
+/** Eksik alan patch'e girmez; açık null temizler. Fiyat/vergi/döviz/miktar asla seçilmez. Kategori çözülemezse satır düşmez (uyarı). */
 export function productSourceInfo(r: JsonApiResource, included: readonly JsonApiResource[] = []): ProductSourceInfo {
+  return parseProductSource(r, included).info;
+}
+
+/**
+ * Kategori ilişkisi var ama `included` içinde yok ya da türü "Product" değilse (T-1135): ürün KATEGORİSİZ alınır (categoryId/categoryName
+ * null — önceki kategori adı yeni kimlikle karışmaz) ve `CATEGORY_UNRESOLVED` uyarısı döner; satır başarısız sayılmaz.
+ */
+export function parseProductSource(r: JsonApiResource, included: readonly JsonApiResource[] = []): ParsedProductSource {
   const a = r.attributes;
+  const warnings: ProductSourceWarning[] = [];
   const result: { -readonly [K in keyof ProductSourceInfo]: ProductSourceInfo[K] } = {};
   if ("unit" in a) result.unit = text(a.unit, 64);
   if ("gtip" in a) result.gtip = text(a.gtip, 64);
@@ -48,14 +65,19 @@ export function productSourceInfo(r: JsonApiResource, included: readonly JsonApi
       if (typeof data !== "object" || !("type" in data) || data.type !== "item_categories" || !("id" in data)) throw new AppError("VALIDATION_FAILED");
       const id = text(data.id, 255);
       if (id === null) throw new AppError("VALIDATION_FAILED");
-      result.categoryId = id;
       const category = included.find((c) => c.type === "item_categories" && c.id === id);
-      // Yeni kategori adına erişilemiyorsa önceki kategorinin adı tutulmaz.
-      if (category === undefined || category.attributes.category_type !== "Product") throw new AppError("VALIDATION_FAILED");
-      result.categoryName = text(category.attributes.name, 200);
+      if (category === undefined || category.attributes.category_type !== "Product") {
+        // Yeni kategori adına erişilemiyor ya da ürün kategorisi değil: önceki kategori adı tutulmaz, ürün kategorisiz alınır.
+        result.categoryId = null;
+        result.categoryName = null;
+        warnings.push("CATEGORY_UNRESOLVED");
+      } else {
+        result.categoryId = id;
+        result.categoryName = text(category.attributes.name, 200);
+      }
     }
   }
-  return result;
+  return { info: result, warnings };
 }
 
 export async function saveProductSourceInfo(tx: AccessTx, c: ApplyContext, itemId: string, patch: ProductSourceInfo | undefined): Promise<boolean> {

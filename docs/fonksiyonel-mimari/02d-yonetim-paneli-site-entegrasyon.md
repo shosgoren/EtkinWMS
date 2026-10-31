@@ -420,7 +420,15 @@ stateDiagram-v2
   `?bolum=baglanti|akis|sahiplik|arsiv|hatalar` (bağlıyken varsayılan `akis`, değilken `baglanti`). Ortak kalıp parçaları
   `kalip/ayar.tsx`: `KalipAltBolumler`, `KalipAyarKart`, `KalipAyarSatir`, `KalipYonSecimi` (Paraşüt turuncusu STANDART §7).
   1. **Bağlantı ve veri kaynağı:** ERP seçimi / bağlantı kartı (sına, kes, yeniden bağlan), barkod tercihi, açılış stoku, Excel aktarımı
-     bağlantısı, en altta Paraşüt uygulama bilgileri (OAuth).
+     bağlantısı, en altta "Gelişmiş: kendi Paraşüt uygulamanı kullan" satırı (T-1133).
+
+  **Bağlanma (T-1133, kullanıcı kararı 30 Ekim):** Etkin TEK ortak Paraşüt uygulaması kaydeder (sunucu env `PARASUT_OAUTH_CLIENT_ID` /
+  `PARASUT_OAUTH_CLIENT_SECRET`, dönüş `<BETTER_AUTH_URL>/api/integrations/parasut/callback`); müşteri anahtar girmez. Muhasebe programı
+  bağlantısı 3 adım: **BAĞLAN → Paraşüt'te giriş yap ve izin ver → şirketini seç** (tek şirket kendiliğinden). Çözüm sırası: firmanın kendi
+  uygulaması (Gelişmiş) → ortak uygulama → yok ("henüz hazır değil" balonu, Gelişmiş açılır). Deneme (state + HttpOnly nonce) her iki
+  durumda firma + kullanıcı + üyeliğe bağlıdır; ortak uygulama sırrı audit/log/URL/istemciye girmez (yenileme için bağlantının mühürlü kutusunda). Callback başarısızlığı yalnız sabit neden
+  kodunu (`oauth_reason`) taşır, ekran `reasons.*` ile söyler. Ortak uygulamayla kurulan bağlantıda ürün yaşam döngüsü, bağlanma anını
+  kapsayan tamamlanmış yetki kodu denemesine (sabit ortak sürüm) bağlanır; eski parola bağlantısında kapalı kalır.
   2. **Ne çekilsin, gönderilsin:** "Paraşüt bağlı · son eşitleme SS:DD"; akış başına satır ve **her zaman görünen yön seçimi** (yalnız
      katalogun desteklediği yönler + "Yalnız Etkin WMS" = akış kapalı); "Şimdi çalıştır" açık akışın satırında. Kullanıcı kararı 28 Ekim:
      Depolar satırında "İki yönlü" de gösterilir. Paraşüt'te karşılığı olmayan Siparişler yalnız "Yalnız Etkin WMS" ve nedeniyle görünür.
@@ -435,8 +443,8 @@ stateDiagram-v2
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Sağlayıcı kartları (Paraşüt, Logo) + bağlantı şeridi | Kart + durum | Görüntülenir | `getIntegrationOverview` | `integrations` (`provider`, `status`, `account_label`, `last_checked_at`, `last_error_code`) — `credentials` **hiç okunmaz** | Ekrana yalnız "bağlı · şirket adı" gider | [TAMAMLANDI] |
-| Paraşüt uygulama ayarları: Application Id, Secret, Callback URL (+ Kopyala) | Tam ekran form | Doldurur, Kaydet | `saveParasutOAuthSettingsAction` → `saveParasutOAuthSettings` | `integration_oauth_apps` (0061; firma başına, mühürlü; arayüzden geri okunmaz); audit `integration.oauth_configured` | Üç alan zorunlu (T-1066); Secret kayıttan sonra gösterilmez; Callback URL uygulamanın kendi dönüş adresi ise otomatik dönüş (HTTPS), değilse yetki kodu (OOB) yolu | [TAMAMLANDI] |
-| BAĞLAN / "Paraşüt ile bağlan" | Buton | Tıklar | `beginParasutOAuthAction` → `beginParasutOAuth` → Paraşüt izin sayfası; dönüş `GET /api/integrations/parasut/callback` → `completeParasutOAuth` | `integration_oauth_attempts` (0061; kısa ömürlü, tek kullanımlık deneme, parola/düz belirteç yok); audit `integration.oauth_started` / `oauth_failed` | Uygulama bilgisi yoksa önce ayar formu açılır; deneme tarayıcıya HttpOnly çerezle bağlıdır, 10 dk geçerli | [TAMAMLANDI] |
+| Gelişmiş: kendi Paraşüt uygulamanı kullan (3 adım: dönüş adresi + Kopyala · Paraşüt uygulama kimliği / gizli anahtarı · BAĞLAN) | Açılır satır + tam ekran form | Kopyalar, doldurur, Kaydet | `saveParasutOAuthSettingsAction` → `saveParasutOAuthSettings` | `integration_oauth_apps` (0061; firma başına, mühürlü; arayüzden geri okunmaz); audit `integration.oauth_configured` | T-1133: iki alan zorunlu (boş KAYDET → kırmızı + "2 alan eksik"); dönüş adresi yazılmaz, sunucunun gerçek callback'i (salt okunur); "Eski yöntem" anahtarı açıksa yetki kodu (OOB). Gizli anahtar kayıttan sonra gösterilmez | [TAMAMLANDI] |
+| BAĞLAN / "Paraşüt ile bağlan" | Buton | Tıklar | `beginParasutOAuthAction` → `beginParasutOAuth` → Paraşüt izin sayfası; dönüş `GET /api/integrations/parasut/callback` → `completeParasutOAuth` | `integration_oauth_attempts` (0061; kısa ömürlü, tek kullanımlık deneme, parola/düz belirteç yok); audit `integration.oauth_started` / `oauth_failed` | T-1133: önce firmanın kendi uygulaması, yoksa Etkin'in ortak uygulaması; ikisi de yoksa "henüz hazır değil" balonu + Gelişmiş açılır (anahtar alanı gösterilmez); deneme tarayıcıya HttpOnly çerezle bağlıdır, 10 dk geçerli; başarısız dönüşte sabit neden kodu `reasons.*` ile gösterilir | [TAMAMLANDI] |
 | Yetki kodu (OOB) formu | Tam ekran form | "Paraşüt'te izin ver" → kodu yapıştırır | `completeParasutOAuthCodeAction` | Aynı | Aynı tarayıcı denemesine bağlı | [TAMAMLANDI] |
 | Şirket seçimi | Seçim listesi | Seçer, BAĞLAN | `selectParasutOAuthCompanyAction` → `selectParasutOAuthCompany` → `connectParasutAuthorized` | `integrations` (`status=CONNECTED`, `account_label`, `account_ref`, `credentials` = şifreli kutu, `connected_by`, `connected_membership_id`); `integration_flows` (6 satır, kapalı); audit `integration.connected` | Tek şirket varsa seçim atlanır; bağlı eşlemesi olan hesapta şirket değiştirme reddedilir (`COMPANY_CHANGED`). **İlk** OAuth bağlantısında Ürün kartları akışı `PULL` olarak açılır ve hemen bir koşu kuyruğa girer; yeniden bağlanma mevcut akış tercihlerini korur | [TAMAMLANDI] |
 | Eski bağlantı yöntemi (şirket no, istemci kimliği/sırrı, e-posta, parola) | Pencere | Uygulama ayarı formundan "Eski bağlantı yöntemi" | `connectParasutAction` → `connectParasut` | `integrations` (aynı kolonlar) | Parola saklanmaz; şirket no yalnız rakam. Bu yolla kurulan bağlantıda firma başına uygulama ayarı olmadığı için ürün yaşam döngüsü çıkarımı yapılmaz | [TAMAMLANDI] (geriye uyum) |
@@ -444,7 +452,7 @@ stateDiagram-v2
 | "Yeniden bağlan" | Buton | Tıklar | OAuth akışını yeniden başlatır | — | Belirteç kaybında (`REAUTH_REQUIRED`) | [TAMAMLANDI] |
 | "Bağlantıyı kes" | Buton + onay | Tıklar | `disconnectIntegrationAction` → `disconnectIntegration` | `integrations.status=DISCONNECTED`, `credentials=NULL` | Yakın zamanda doğrulama; eşlemeler (`external_refs`) korunur | [TAMAMLANDI] |
 | Ürün barkodları: "Paraşüt barkodlarını al" | Anahtar | Açar/kapar | `setProductBarcodeAction` → `setProductBarcodeSetting` | `integrations.pull_product_barcodes` (0059, varsayılan KAPALI); audit | Mevcut etiketler korunur; barkodu olmayan ürüne kalıcı dahili barkod, dış barkod alternatif olarak eklenir; ayrılmış QR biçimi ve eşdeğer GTIN çakışması reddedilir | [TAMAMLANDI] (T-1061) |
-| Akış satırları + **yön seçimi** (Ürün kartları, Cari kartlar, Depolar, Siparişler, İrsaliye, Stok miktarı) | Tek seçici (`KalipYonSecimi`), her zaman görünür | Yön seçer ya da "Yalnız Etkin WMS" | `setIntegrationFlowAction` → `setIntegrationFlow` (açılınca hemen bir `integration.sync` işi kuyruğa) | `integration_flows.enabled`, `direction` (PULL/PUSH/BOTH), `enabled_at` | Yalnız katalogun desteklediği yönler: kartlarda "Paraşüt → Etkin / Etkin → Paraşüt / İki yönlü" (Depolar dahil, kullanıcı kararı 28 Ekim), Stok ve İrsaliye yalnız "Etkin → Paraşüt" (DB kuralı); "Yalnız Etkin WMS" = `enabled=false` (veri değişmez); Siparişler Paraşüt'te karşılığı olmadığı için yalnız "Yalnız Etkin WMS" | [TAMAMLANDI] (T-1112) |
+| Akış satırları + **yön seçimi** (Ürün kartları, Cari kartlar, Depolar, Siparişler, İrsaliye, Stok miktarı) | Tek seçici (`KalipYonSecimi`), her zaman görünür | Yön seçer ya da "Yalnız Etkin WMS" | `setIntegrationFlowAction` → `setIntegrationFlow` (açılınca hemen bir `integration.sync` işi kuyruğa) | `integration_flows.enabled`, `direction` (PULL/PUSH/BOTH), `enabled_at`, `first_enabled_at` (0066) | T-1135: İrsaliye ile Stok miktarı birlikte açılamaz; Stok miktarı Devir tamamlanmadan açılamaz (sade neden balonda). Yalnız katalogun desteklediği yönler: kartlarda "Paraşüt → Etkin / Etkin → Paraşüt / İki yönlü" (Depolar dahil, kullanıcı kararı 28 Ekim), Stok ve İrsaliye yalnız "Etkin → Paraşüt" (DB kuralı); "Yalnız Etkin WMS" = `enabled=false` (veri değişmez); Siparişler Paraşüt'te karşılığı olmadığı için yalnız "Yalnız Etkin WMS" | [TAMAMLANDI] (T-1112) |
 | Akış altı bilgi: son koşu zamanı / son hata, hata rozeti, "Şimdi çalıştır" | Metin + Buton | Tıklar | `runIntegrationAction` → `requestIntegrationRun` → kuyruk `integration.sync` (`trigger=MANUAL`) | `integration_runs` (yeni koşu) | Aynı bağlantı için kuyrukta/çalışan ikinci iş açılmaz | [TAMAMLANDI] |
 | Ürün kaynak bilgisi (kategori, GTİP, birim, kaynakta arşivli mi) | Arka plan | Ürün alma koşusunda | `productSourceInfo` (`product-info.ts`) | `items.source_product_info` (0060, jsonb; fiyat/stok alanı kabul edilmez) | Bilinmeyen/uyuşmayan birim reddedilir, yeni kart 6 ondalıkla açılır; mevcut kartın birimi değişmez (T-1060) | [TAMAMLANDI] (T-1062) |
 | Anlık bildirim satırı (bağlı bant): "Anlık bildirim açık · son bildirim SS:DD" / "kurulamadı · 30 sn'de bir taranıyor" | Durum satırı | Görüntülenir | `getWebhookStatus` | `integrations.webhook_status` (OFF/ACTIVE/FAILED), `webhook_last_event_at`, `webhook_checked_at` (0067) | Paraşüt webhook'u: ürün × {create, update, delete} ve cari × {create, update, delete} bağlanınca ve günde bir uzlaştırılır (kurulamazsa saatte bir yeniden denenir); alıcı `POST /api/integrations/parasut/webhook` (tenant yalnız şirket eşlememizden, imza tenant'ın mühürlü anahtarıyla, kart Paraşüt'ten kimliğiyle yeniden okunur, tekrar teslim `processed_events` ile tek etki). Kademe: anlık bildirim açıkken ürün/cari taraması 15 dk, depo 3 dk (Paraşüt'te depo bildirimi yok); kapalıyken 30 sn. Kesince Paraşüt'teki kayıt silinir, anahtar NULL. Anahtar atama ve imza yapısı gerçek hesapta UNKNOWN | [GELİŞTİRİLİYOR] (T-1138, kodda; canlı doğrulama B-110) |
@@ -503,15 +511,18 @@ sequenceDiagram
     participant K as Worker (integration.sync, 30 sn)
     participant P as Paraşüt API
     U->>WMS: Sevk belgesini kesinleştirir (POSTED)
-    WMS->>DB: stock_documents POSTED + stok defteri
-    K->>DB: Akış açıldıktan sonraki, kuyrukta olmayan POSTED sevk belgelerini bul
+    WMS->>DB: documents POSTED (durum geçmişi: işlenme anı) + stok defteri
+    K->>DB: Akışın İLK açılışından (kapat/aç sıfırlamaz) sonra İŞLENMİŞ, stok toplamına girmemiş (çift başına işaret görüntüsü), kuyrukta olmayan sevk belgelerini bul
     K->>DB: integration_outbox satırı PENDING (belge başına tek)
     K->>DB: Satırı SENDING yap (dış çağrıdan önce kalıcı iz)
     K->>P: İrsaliye oluştur
     alt Kesin başarı
         P-->>K: 2xx + irsaliye kimliği
         K->>DB: SENT + external_id + sent_at (artık değişmez)
-    else Kesin red (4xx)
+    else 401 / 429
+        P-->>K: Oturum ya da hız sınırı
+        K->>DB: PENDING (geri çekilmeli yeniden deneme; 10 denemede FAILED)
+    else Kesin red (diğer 4xx)
         P-->>K: Hata
         K->>DB: FAILED + last_error_code
     else Belirsiz (ağ koptu, 5xx)
@@ -527,7 +538,8 @@ stateDiagram-v2
     PENDING --> PENDING: Eşleme eksik, geri çekilmeli tekrar
     PENDING --> FAILED: 10 denemede eşleme hâlâ eksik
     SENDING --> SENT: Paraşüt kabul etti
-    SENDING --> FAILED: Kesin red
+    SENDING --> PENDING: 401 / 429 (oturum, hız sınırı)
+    SENDING --> FAILED: Kesin red (diğer 4xx)
     SENDING --> CHECK: Sonuç belirsiz, elle kontrol
     SENT --> [*]
 ```
@@ -549,7 +561,15 @@ stateDiagram-v2
 
 *Bağlantı durumu (`integrations.status`):* CONNECTED → ERROR (sınama/senkron hatası; bağlayan kişi hesap sahibi değilse `CONNECTOR_REVOKED`)
 → CONNECTED (başarılı sınama) ; her durumdan DISCONNECTED (bağlantıyı kes; şifreli bilgiler silinir). Koşu durumu
-(`integration_runs.status`): RUNNING → SUCCESS / PARTIAL / FAILED.
+(`integration_runs.status`): RUNNING → SUCCESS / PARTIAL / FAILED; 40 dk'yı aşan RUNNING → FAILED `TIMEOUT` (T-1135). Değişiklik getirmeyen
+başarılı zamanlı koşu satır bırakmaz (son kontrol anı `integration_flows.last_run_at`); 7 günden eski biten satırlar koşu başında budanır.
+
+*Stok toplamı ⟂ irsaliye (T-1135, kullanıcı kararı 30 Ekim — stok sahibi Etkin):* aynı bağlantıda STOCK ve SHIPMENTS birlikte açılamaz
+(domain + 0066 tetikleyicisi; neden `INTEGRATION_FLOW_EXCLUSIVE`); tercih irsaliyedir. STOCK yalnız Devir tamamlanınca açılır
+(`OPENING_STOCK_INCOMPLETE`). Gönderilen toplam yalnız `AVAILABLE` stok, `RECEIVING`/`STORAGE` raflar (karantina/hasarlı/bloke ve
+TRANSIT/STAGING hariç). Kesin 4xx reddi stok işaretine yazılır, aynı toplam yeniden denenmez; 401/429 koşuyu durdurur, sonra yeniden denenir.
+Miktarlar JSON'a ondalık metinden float aritmetiği olmadan sayı olarak yazılır (I-09). Gerçek Paraşüt'ün `new_total_inventory`/`quantity`
+için kesirli sayı kabulü UNKNOWN (B-110).
 
 ---
 

@@ -12,6 +12,7 @@
 // OAuth2: parola akışı (bağlanırken bir kez; parola saklanmaz) ve yenileme akışı (her yenilemede YENİ yenileme belirteci döner, belge).
 // Gövde `application/x-www-form-urlencoded` (RFC 6749 §4.3/§6); belgedeki curl örneği çok parçalı form kullanır — canlı ilk bağlantıda doğrulanacak.
 import { AppError } from "@wms/shared/errors";
+import { jsonDecimal } from "./decimal-json.ts";
 
 export const PARASUT_BASE_URL = "https://api.parasut.com";
 export const PARASUT_REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
@@ -436,27 +437,28 @@ export class ParasutClient {
   async createShipmentDocument(
     token: string,
     companyId: string,
-    d: { readonly issueDate: string; readonly shipmentDate: string; readonly description: string; readonly procurementNumber: string; readonly contactId: string; readonly lines: readonly { readonly productId: string; readonly quantity: number }[] },
+    d: { readonly issueDate: string; readonly shipmentDate: string; readonly description: string; readonly procurementNumber: string; readonly contactId: string; readonly lines: readonly { readonly productId: string; readonly quantity: string }[] },
   ): Promise<string> {
+    // T-1135 (I-09): miktar ondalık metin olarak gelir; JSON sayısına yalnız burada, float aritmetiği olmadan dönüştürülür (`jsonDecimal`).
     return this.create(token, companyId, "shipment_documents", {
       type: "shipment_documents",
       attributes: { issue_date: d.issueDate, shipment_date: d.shipmentDate, inflow: false, description: d.description, procurement_number: d.procurementNumber },
       relationships: {
         contact: { data: { id: id(d.contactId), type: "contacts" } },
-        stock_movements: { data: d.lines.map((l) => ({ type: "stock_movements", attributes: { quantity: l.quantity }, relationships: { product: { data: { id: id(l.productId), type: "products" } } } })) },
+        stock_movements: { data: d.lines.map((l) => ({ type: "stock_movements", attributes: { quantity: jsonDecimal(l.quantity) }, relationships: { product: { data: { id: id(l.productId), type: "products" } } } })) },
       },
     });
   }
 
-  /** Stok güncelleme fişi: ürün + depo başına yeni toplam (mutlak değer → tekrar gönderim aynı sonucu verir). */
-  async createStockUpdate(token: string, companyId: string, details: readonly { readonly productId: string; readonly warehouseId: string; readonly total: number }[]): Promise<string> {
+  /** Stok güncelleme fişi: ürün + depo başına yeni toplam (mutlak değer → tekrar gönderim aynı sonucu verir). Toplam ondalık metindir (I-09). */
+  async createStockUpdate(token: string, companyId: string, details: readonly { readonly productId: string; readonly warehouseId: string; readonly total: string }[]): Promise<string> {
     return this.create(token, companyId, "stock_updates", {
       type: "stock_updates",
       relationships: {
         details: {
           data: details.map((x) => ({
             type: "stock_update_details",
-            attributes: { new_total_inventory: x.total },
+            attributes: { new_total_inventory: jsonDecimal(x.total) },
             relationships: { product: { data: { id: id(x.productId), type: "products" } }, warehouse: { data: { id: id(x.warehouseId), type: "warehouses" } } },
           })),
         },
