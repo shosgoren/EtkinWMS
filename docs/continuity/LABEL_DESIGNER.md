@@ -150,3 +150,7 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 ### T-1159 ortak editör uzantısı (yerel)
 - EtiketEditor kaynağı `.lx` ortak uzantısına dönüştü; port registry CSS/token üretir. KalipEtiketEditor ortak kabın içinde kullanılır; hazır model, gerçek SVG önizleme, taşı/tek dokunuşla yerleştir/boyutlandır/döndür/hizala/kopyala/sil/geri al, klavye ve iki parmak görünüm kontrolü. Logo yükleme yetkili üst katman callback'idir.
 - Özellik sayfası ortak perde ve odak kancasını kullanır; kayıt/çıkış koruması üst sayfanın sorumluluğu. Salt okunur değişikliği reddeder; QR veri bağı serbest metne dönüşmez. Kaynak390/1180/1440/kısa telefon açık-koyu render taşmasız; ilk gözlemdeki alan kutusu taşması ve simge eşliği düzeltildi. Son render/gerçek uygulama e2e, bağımsız inceleme, prepush ve canlı bekliyor.
+
+### T-1160 web sunucu sınırı (yerel)
+- Mevcut production action guard (Origin/oturum/IP/kişi/tenant hız sınırı) ve kapalı şemalar; kullanıcı/tenant UUID istemciden alınmaz. Gerçek yetki/MFA/CAS ve logo kanonikleştirme domain'de tekrar doğrulanır; ağ yazıcısı URL'si veya istemciden baskı snapshot'ı kabul edilmez.
+- 14action sınır testi, webtsc ve hedefESLint geçti. Domain bağımsız incelemesi199birim+11izolasyonint/0bulgu; webaction/renderer/kayıt ekranı için yeni paket incelemesi henüz bekler. Gerçek baskı kaynağı ayrı dilimdir.
