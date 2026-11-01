@@ -159,3 +159,7 @@ Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol iç
 ### T-1157 ortak baskı motoru (yerel)
 - Aynı sürümlü modelden gerçek mm SVG; QR 4modül sessiz alan, Code128 10modül ve EAN13 doğrulanmış mevcut GTIN. DPI ve kalibrasyon sınırlı; okunamayacak kod/metin taşması engellenir, değer kesilmez veya uydurulmaz. Kanonik PNG yalnız yetkili sunucu varlık sınırından alınır.
 - Hedef35birim, sharedtsc/hedefESLint; gerçek Chromium PNG çıktılarından ZXing ile36/36 çözüm (3semboloji ×3DPI ×4dönüş), üç çıktı gözle kontrol edildi. Fiziksel yazıcı ve PDF sayfa kabulü henüz yapılmadı. Bu motor tek başına gerçek baskı kaynağı veya editör ekranı değildir; prepush/CI/yayın bekler.
+
+### T-1158 hazır başlangıç düzenleri (yerel)
+- readyLabelDesign dört bağlama düzen verir; girişte miktar/birim/lot/üretim/SKT, sevkte belge/cari/miktar/lot/SKT, ürün ve rafta kendi gerçek alanları hazırdır. Kanonik tasarım sözleşmesi ve eski şablonlar değişmez; zorunlu veri yoksa baskı uydurulmaz.
+- Hazır düzen/motor/model83hedefbirim, sharedtsc ve hedefESLint geçti. UI bağlantısı, tam prepush/CI/canlı henüz bekler.

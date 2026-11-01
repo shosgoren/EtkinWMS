@@ -13,3 +13,5 @@ export interface LabelWorkspace { readonly templates:readonly LabelTemplateSumma
 
 export * from "./code128.ts";
 export * from "./render.ts";
+
+export * from "./ready.ts";
