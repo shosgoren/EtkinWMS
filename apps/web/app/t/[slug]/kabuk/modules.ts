@@ -45,7 +45,7 @@ export const MODULE_DEFS: readonly ModuleDef[] = Object.freeze([
   { id: "ses", color: "6C4BD8", d: KICON.mSes, path: null, need: null, field: true },
   { id: "abone", color: "17804F", d: KICON.mAbone, path: null, need: "settings.manage" },
   { id: "fis", color: "4E6476", d: KICON.mFis, path: "/stock/documents", need: "stock.view" },
-  { id: "etiket", color: "B23A3A", d: KICON.mEtiket, path: null, need: "settings.manage" },
+  { id: "etiket", color: "B23A3A", d: KICON.mEtiket, path: "/label-designs", need: "labels.view", field: true },
   { id: "cari", color: "0F6E8C", d: KICON.mCari, path: "/parties", need: "stock.view" },
   { id: "ekip", color: "7A4BC2", d: KICON.mEkip, path: "/team", need: "users.manage" },
   // T-979c (eski "Tüm ekranlar" menüsünden): stok durumu, ayarlar, denetim kaydı. İkonlar kalıp kaynağından (KalipListe.dc.html).

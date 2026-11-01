@@ -17,6 +17,8 @@ const RULES: readonly (readonly [readonly string[], OpenTarget, (ws: readonly st
   // T-1142: "yetkiler", "kullanıcı yetkileri", "yetki ayarları" → yetki ekranı (ekip yönetimi izniyle; yetkisiz modül açılmaz).
   // Yalnız "yetki" sözcüğünün kendisi ve çekimleri ("yetkiler", "yetkileri", "yetkilere"); "yetkili" (kişi) eşleşmez.
   [["yetki"], { id: "ekip", path: "/yetkiler" }, (ws) => ws.some((w) => /^yetki(ler|leri|lere|lerin|lerine|yi|ye|si)?$/.test(w))],
+  [["yazici"], { id: "etiket", suffix: "?tab=printers" }, () => true],
+  [["etiket", "sablon"], { id: "etiket" }, (ws) => has(ws,["tasarim","sablon"])],
   [["ayar"], { id: "ayar", suffix: "?sekme=kullanici" }, (ws) => has(ws, ["kullanici", "uye", "yetki", "personel"])],
   [["ayar"], { id: "ayar", suffix: "?sekme=gorunum" }, (ws) => has(ws, ["gorunum", "tema", "karanlik", "koyu", "acik"])],
   // T-1118: Entegrasyonlar ayrı ekran (T-1112, Ayarlar sekmesi); Excel aktarımı Bağlantılar ekranında kalır.
@@ -45,7 +47,7 @@ const RULES: readonly (readonly [readonly string[], OpenTarget, (ws: readonly st
 const FILLER = ["sayfa", "ekran", "liste", "menu", "modul", "bolum", "kisim", "sekme", "durum", "tum", "butun", "hepsi", "yonetim"];
 /** Alt sekme kurallarının koşul sözcükleri de ekran sözlüğündendir ("kullanıcı ayarları", "tema ayarları"). */
 const VOCAB = [
-  ...new Set([...RULES.flatMap(([stems]) => stems), ...FILLER, "kullanici", "uye", "yetki", "personel", "gorunum", "tema", "karanlik", "koyu", "acik"]),
+  ...new Set([...RULES.flatMap(([stems]) => stems), ...FILLER, "tasarim", "kullanici", "uye", "yetki", "personel", "gorunum", "tema", "karanlik", "koyu", "acik"]),
 ];
 
 function has(ws: readonly string[], stems: readonly string[]): boolean {

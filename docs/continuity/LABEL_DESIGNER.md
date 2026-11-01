@@ -204,3 +204,6 @@ T1168 yerel kanıt: 4/4 birim + web typecheck/ESLint; gerçek Chromium PDF altı
 Ürün/toplu filtreli ürün/raf ve kayıtlı kabul/üretim etiket yolları: yetkili özel varsayılan varsa custom-labels; yoksa önceki stock.view baskı yolu. Seçili hatalı özel etikette sessiz fallback yok. Ürün grubu gerçek itemIds taşır, sonraki keyset/filtre legacy yetkili sorguya geri döner; kabul/üretim kaynakları doğrulanmış belgeyle seçilir. Hedef int ve tarayıcı testi henüz yapılmadı.
 
 T1169 yerel gerçekDB19/19 (eski etiket kaynağı8+yeni baskı11), webtypecheck ve hedefESLint geçti. Yeni alan itemIds ile keyset grubu gerçek kaynak kimliklerini taşır. Bağımsız inceleme/tarayıcı/CI/canlı ayrıca bekler.
+
+### T-1173 — Modül ve ayar bağlantısı (yerel)
+Etiket tasarımı artık Modüller'de gerçek labels.view bağlantısıdır (yalnız print yetkisi yeterli değil); açık grant varsa saha kişisinde de görünür. Ayarlar aynı bağımsız yetkiyi sunucuda kontrol eder. “Etiket tasarımını aç” ve “yazıcı ayarları” yetkiyle süzülmüş modülden açılır; “barkod” eski QR ekranıdır. Yeni CSS yok, mevcut ortak ayar satırı. İlk kullanım rehberi ve gerçek tarayıcı kabulü ayrıca bekler.
