@@ -51,7 +51,8 @@
     "./platform/plans": "./src/platform/plans.ts",
     "./platform/site-content": "./src/platform/site-content.ts",
     "./platform/events": "./src/platform/events.ts",
-    "./voice": "./src/voice/index.ts"
+    "./voice": "./src/voice/index.ts",
+    "./labels/print": "./src/labels/print.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
