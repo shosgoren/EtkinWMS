@@ -1,15 +1,11 @@
 // Real tenant data only, called inside the same authorized label-preparation transaction. Never allocates stock/barcode/package IDs.
 import{sql}from'drizzle-orm';
 import{AppError}from'@wms/shared/errors';
-import type{LabelContext,LabelField,LabelRenderValues}from'@wms/shared/labels';
+import type{LabelContext,LabelField,LabelRenderValues,LabelSourceRequest}from'@wms/shared/labels';
 import type{AccessTx,Membership}from'../identity/access.ts';
 import{hasPermission}from'../identity/permissions.ts';
 import{assertWarehouseVisible}from'../warehouse/scope.ts';
-type Page={readonly after?:string;readonly ids?:readonly string[]};
-export type LabelSourceRequest=
- |{readonly kind:'PRODUCT';readonly ids:readonly string[]}
- |({readonly kind:'LOCATION';readonly warehouseId:string;readonly locationId?:string;readonly subtree?:boolean}&Page)
- |({readonly kind:'RECEIPT'|'PRODUCTION'|'SHIPMENT';readonly documentId:string}&Page);
+export type{LabelSourceRequest}from'@wms/shared/labels';
 export type LabelPrintLocale='tr'|'en';
 export interface LabelSourceFact{readonly kind:LabelSourceRequest['kind'];readonly id:string;readonly warehouseId?:string;readonly documentId?:string;readonly version?:number}
 export interface LabelSourceRow{readonly source:LabelSourceFact;readonly values:LabelRenderValues;readonly required:readonly LabelField[];readonly packageCodeRequired:boolean}
@@ -96,6 +92,7 @@ export async function readLabelSourcesInTx(tx:AccessTx,m:Membership,raw:unknown,
   const values:Record<string,string>={name:r.name,code:r.code,unit:r.unit,barcode:barcodes.get(r.item_id)??'',quantity:formatLabelQuantity(r.quantity,locale),lot:r.lot_code??'',expiryDate:formatLabelDate(r.expires_on,locale),documentNo:h.number!};
   if(q.kind!=='SHIPMENT')values.productionDate=formatLabelDate(r.produced_on,locale);
   if(r.package_id!==null)values.packageQr=`EWMS:PKG:1:${r.package_id}`;
+  if(q.kind==='SHIPMENT')values.trackingCode=values.packageQr??h.number!;
   return{source:{kind:q.kind,id:r.id,documentId:q.documentId,warehouseId:h.warehouse_id,version:h.version},values,required,packageCodeRequired:r.package_id!==null};
  });
  return finish(q.kind==='SHIPMENT'?'SHIPMENT':'RECEIPT',result,q);

@@ -205,3 +205,21 @@ Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol iç
 
 ### T-1171 — İlk kullanım koruması (yerel uygulama, henüz canlı değil)
 Büyük alan seçicisi küçük tuval nesnesini hedefleme zorunluluğunu kaldırır; Tab/Enter ve ok tuşları çalışır. mm girişleri yazım bitince doğrulanır, geçersiz ara değer tasarımı değiştirmez. Logo yüklemesi sürerken kayıt/çıkış korunur. Yayın önkontrolü sorunlu nesneyi seçer; sunucu aynı kuralları yeniden doğrular. Varsayılan etikette atanan sürüm dikkate alınır; değişmeyen yayını varsayılana seçmek yeni sürüm üretmez. Yerel tip/lint geçti; gerçek etkileşim kabulü henüz yapılmadı.
+### T-1164 sürümlü baskı hazırlama (yerel)
+- Önizleme salt okunur; hazırlamada değişmez şablon sürümü + gerçek kaynak snapshot'ı + kopya/yazıcı/aktör/audit kaydı. İşUUID metadata kimliğidir, fiziksel paket oluşturmaz. Aynı anahtar/içerik aynı sonucu döndürür; farklı içerik ret. PNG/kod/metin/kalibrasyon kontrolünden önce iş yazılmaz.
+- Varsayılanın atandığı eski sürüm, aynı şablonun daha yeni yayınıyla sessiz değişmez. Tarihsel yeniden basım aynı değer/QR/sürümü kullanır; kaynak ve güncel depo yetkisi yeniden doğrulanır. Kaldırılmış/yanlış eşlenen ürün barkodu veya değişmiş raf kodu fiziksel yeniden basılamaz. Genel/profile sessiz geçiş yok.
+- Tarihsel verinin salt okunur erişimi baskı profili/özellik bayrağıyla kapatılmaz; fiziksel yeni hazırlama ayrı yeniden doğrulanır. Hazırlandı fiziksel basıldı değildir. Wire DTO shared/type-only; istemci DB kodu almaz.
+- Safsnapshot/kaynak/hazırmodel13birim; domain/sharedtsc ve ESLint kontrol edilir. GerçekDB stokdeğişmezliği/izolasyon/int/yenidenbasım, UI/PDF/e2e, güvenlik, prepush/CI/canlı henüz bekler; paket bunlar bitmeden teslim sayılmaz.
+
+T1164 baskı geometri ekkontrolü: büyükEAN13kutusunda modül0.660mmüstüne çıkmaz, rakamlar kodun altında kalır (GS1primarysource renderercomment). 25motor/snapshotbirim ve gerçekChromiumPNG→ZXing36/36 (3semboloji×3DPI×4dönüş) yeniden geçti. Fiziksel cihaz/GS1 kalite sertifikası kanıtı değildir.
+
+### T-1167 — Gerçek DB kabulü (yerel)
+İki tenantlı izole DB, 73 migration ve gerçek wms_app: 11/11 test geçti. Beş mevcut ambalaj QR kimliği/lot/tarih/miktar, stok defteri-bakiye-seri-HU değişmezliği, tek auditli eşzamanlı replay, eski varsayılan sürümü, eski veriyle tekrar baskı, değişen ürün barkodunda yeni fiziksel baskının reddi, genel/şablon/kişisel cihaz yazıcı sırası ve kapalı profilde durma doğrulandı. Etiket yetkisi stok okuma hakkını vermez; depo kapsamı geçmişte de uygulanır. Fiziksel yazıcı, üretim/sevk gerçek kaynak kabulü ve tarayıcı akışı henüz yapılmadı.
+
+### T-1168 — Fiziksel çıktı yüzeyi (yerel)
+Onaylı etiket önizleme kalıbı ve aynı SVG; A4 10mm kenar/3mm aralık veya gerçek özel kağıt. A4'e sığmayan etiket küçültülmez, kullanıcı özel kağıda geçer. Çıktı gövdeye ayrı print-only portal; uygulama kabuğu baskıya girmez. Birim/PDF kabulü ve web bağlantısı henüz bekler.
+
+T1168 yerel kanıt: 4/4 birim + web typecheck/ESLint; gerçek Chromium PDF altı etiket A4te2sayfa, özel100×50mmde6sayfa; pdfinfo ölçüleri ve iki raster görüntü gözle kontrol edildi. Kabuk/yazı taşması yok. İlk hazırlık kalibrasyonu ve yazıcı fiziksel testi ayrıca gerekir.
+
+### T-1172 — Baskı ekranı (yerel geliştirme)
+`/custom-labels` yalnız kapalı kaynak sorgusu veya yetkili geçmiş işUUID alır; GET yazmaz. Baskı eylemi gerçek sunucu kaynaklarını yeniden okur; client değer/endpoint/kalibrasyon veremez. Tarayıcı aynı jobUUID ile tekrar güvenli; SVG DOM'a işlendiğinde sistem diyaloğu açılır ve fiziksel başarı iddia edilmez. Varsayılan atanan sürüm ayrı, açık seçim en yeni yayını kullanır. Tarihsel işte yeniden basım nedeni ve aynı kimlik; yetki/depo ve güncel barkod tekrar kontrol edilir. Test/bağımsız inceleme ve eski düğmelerin bağlantısı bekler.

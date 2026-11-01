@@ -6852,7 +6852,8 @@
       "locationCode": "Raf yeri kodu",
       "locationName": "Raf yeri adı",
       "warehouseName": "Depo",
-      "customerName": "Müşteri"
+      "customerName": "Müşteri",
+      "trackingCode": "Takip QR · otomatik"
     },
     "printers": "Yazıcılar",
     "newPrinter": "Yazıcı ekle",
@@ -6882,5 +6883,46 @@
       "CODE_GEOMETRY": "Kodu büyüt veya çevresini boşalt"
     },
     "printerName": "Yazıcı adı"
+  },
+  "labelPrint": {
+    "title": "Etiket bas",
+    "back": "Geri",
+    "noTemplate": "Önce bu işlem için bir etiket tasarımı yayınlayın.",
+    "locked": "Etiket basma yetkin yok.",
+    "askOwner": "Sorumluna sor.",
+    "login": "Önce Etkin WMS’ye giriş yap.",
+    "changed": "Bilgi değişti; önizlemeyi yenile.",
+    "failed": "Etiket hazırlanamadı. Tekrar dene.",
+    "summary": "{count} etiket · {width} × {height} mm",
+    "template": "Etiket tasarımı",
+    "default": "Varsayılan tasarım",
+    "paper": "Kağıt",
+    "roll": "Özel etiket kağıdı",
+    "copies": "Her etiketten kaç tane?",
+    "copiesError": "Toplam en fazla 500 etiket seç.",
+    "paperError": "Bu ölçü A4’e sığmıyor. Özel etiket kağıdını seç.",
+    "reason": "Tekrar basma nedeni",
+    "reasons": {
+      "damaged": "Etiket hasar gördü",
+      "extra": "Ek kopya gerekiyor"
+    },
+    "dialogHint": "Açılan yazdırma ekranında yazıcıyı seç · Ölçek %100.",
+    "dialogOpened": "Yazdırma ekranı açıldı. Çıktıyı yazıcıda kontrol et.",
+    "print": "YAZDIR",
+    "reprint": "TEKRAR BAS",
+    "preview": "Etiket önizleme",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "nextBatch": "Sonraki etiketler",
+    "savedJob": "Bu baskıyı tekrar aç",
+    "errors": {
+      "PRINTER_UNAVAILABLE": "Seçili yazıcı kapalı. Yazıcı tercihini kontrol et.",
+      "REQUIRED_VALUE": "Zorunlu ürün veya takip bilgisi eksik.",
+      "REQUIRED_CODE": "Tasarımda bu işleme ait QR veya barkod bulunmalı.",
+      "PRINTER_CHANGED": "Yazıcı ayarı değişmiş. Yeni önizleme aç.",
+      "SOURCE_CHANGED": "Barkod veya raf kodu değişmiş. Güncel etiketi bas.",
+      "DESIGN_INVALID": "Etiket alanı veya kod ölçüsü uygun değil. Tasarımı kontrol et."
+    },
+    "preparing": "Etiket hazırlanıyor; biraz bekle."
   }
 }
