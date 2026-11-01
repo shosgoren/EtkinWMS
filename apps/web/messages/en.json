@@ -6860,6 +6860,16 @@
     "saveForPrinter": "Save the label first to select its printer",
     "calibration": "Print offset",
     "calibrationError": "Offset must be between −10 and +10 mm",
-    "switchDefault": "Choose another default label for this section first"
+    "switchDefault": "Choose another default label for this section first",
+    "uploading": "Logo is uploading · please wait",
+    "designIssues": {
+      "BAD_DOCUMENT": "Check label settings",
+      "BAD_SIZE": "Check label size",
+      "BAD_ELEMENT": "Check the highlighted field",
+      "UNSUPPORTED_FIELD": "Add the required code field",
+      "OUTSIDE_LABEL": "Move the highlighted field inside the label",
+      "TOO_MANY_ELEMENTS": "Use fewer fields",
+      "CODE_GEOMETRY": "Enlarge the code or clear its surroundings"
+    }
   }
 }

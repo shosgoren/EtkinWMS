@@ -6860,6 +6860,16 @@
     "saveForPrinter": "Yazıcı seçmek için önce etiketi kaydet",
     "calibration": "Baskı kaydırma",
     "calibrationError": "Kaydırma −10 ile +10 mm arasında olmalı",
-    "switchDefault": "Önce bu bölümde başka bir etiketi varsayılan yap"
+    "switchDefault": "Önce bu bölümde başka bir etiketi varsayılan yap",
+    "uploading": "Logo yükleniyor · biraz bekle",
+    "designIssues": {
+      "BAD_DOCUMENT": "Etiket ayarlarını kontrol et",
+      "BAD_SIZE": "Ölçüyü kontrol et",
+      "BAD_ELEMENT": "İşaretli alanı kontrol et",
+      "UNSUPPORTED_FIELD": "Zorunlu kod alanını ekle",
+      "OUTSIDE_LABEL": "İşaretli alanı etiketin içine taşı",
+      "TOO_MANY_ELEMENTS": "Daha az alan kullan",
+      "CODE_GEOMETRY": "Kodu büyüt veya çevresini boşalt"
+    }
   }
 }

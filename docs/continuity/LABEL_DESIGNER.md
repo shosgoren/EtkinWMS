@@ -180,3 +180,6 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 ### T-1166 çalışma alanı yetki eşliği (yerel)
 - Arşiv UI'si de yayın yetkisini kullanır; izni olmayan dokunuş sarı balon verir. Varsayılan tasarımı arşivlemeye çalışınca önce alternatif etiketi varsayılan yapma yönlendirmesi gelir. Sunucu yetkisi/aktif varsayılan denetimi korunur.
 - T1165 bağımsız düzeltmesi normal merge ile bu dala taşındı; eski rapor1/2 bulgulu olarak saklanır, güncel0/0/0 @6de09b0. UI e2e/yayın hâlâ bekler.
+
+### T-1171 — İlk kullanım koruması (yerel uygulama, henüz canlı değil)
+Büyük alan seçicisi küçük tuval nesnesini hedefleme zorunluluğunu kaldırır; Tab/Enter ve ok tuşları çalışır. mm girişleri yazım bitince doğrulanır, geçersiz ara değer tasarımı değiştirmez. Logo yüklemesi sürerken kayıt/çıkış korunur. Yayın önkontrolü sorunlu nesneyi seçer; sunucu aynı kuralları yeniden doğrular. Varsayılan etikette atanan sürüm dikkate alınır; değişmeyen yayını varsayılana seçmek yeni sürüm üretmez. Yerel tip/lint geçti; gerçek etkileşim kabulü henüz yapılmadı.
