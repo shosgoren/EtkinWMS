@@ -543,7 +543,9 @@
     "rate_limited_image_busy": "Görsel işleniyor, birazdan tekrar dene.",
     "rate_limited_image_busyAction": "Birkaç saniye bekleyip görseli yeniden ekle.",
     "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
-    "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç."
+    "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç.",
+    "validation_failed_image_timeout": "Görsel yüklemesi çok uzun sürdü.",
+    "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",
@@ -1805,7 +1807,9 @@
       "rate_limited_image_busy": "Görsel işleniyor, birazdan tekrar dene.",
       "rate_limited_image_busyAction": "Birkaç saniye bekleyip görseli yeniden ekle.",
       "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
-      "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç."
+      "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç.",
+      "validation_failed_image_timeout": "Görsel yüklemesi çok uzun sürdü.",
+      "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle."
     },
     "locked": "Ürünleri görme yetkin yok.",
     "lockedAction": "Çalışma alanı yöneticine sor.",

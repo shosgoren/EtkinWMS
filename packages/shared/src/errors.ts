@@ -75,6 +75,7 @@ export const ERROR_DETAILS = [
   // T-1160 (güvenlik incelemesi): görsel işleme yuvaları dolu (429) ve çalışma alanı görsel kotası.
   "IMAGE_BUSY",
   "IMAGE_QUOTA",
+  "IMAGE_TIMEOUT",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -120,6 +121,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   MIN_MAX_INVALID: "VALIDATION_FAILED",
   IMAGE_BUSY: "RATE_LIMITED",
   IMAGE_QUOTA: "VALIDATION_FAILED",
+  IMAGE_TIMEOUT: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

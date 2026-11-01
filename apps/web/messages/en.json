@@ -543,7 +543,9 @@
     "rate_limited_image_busy": "Images are being processed, try again shortly.",
     "rate_limited_image_busyAction": "Wait a few seconds and add the image again.",
     "validation_failed_image_quota": "This workspace's image storage is full.",
-    "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support."
+    "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support.",
+    "validation_failed_image_timeout": "The image upload took too long.",
+    "validation_failed_image_timeoutAction": "Check your connection and add the image again."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -1805,7 +1807,9 @@
       "rate_limited_image_busy": "Images are being processed, try again shortly.",
       "rate_limited_image_busyAction": "Wait a few seconds and add the image again.",
       "validation_failed_image_quota": "This workspace's image storage is full.",
-      "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support."
+      "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support.",
+      "validation_failed_image_timeout": "The image upload took too long.",
+      "validation_failed_image_timeoutAction": "Check your connection and add the image again."
     },
     "locked": "You do not have permission to view products.",
     "lockedAction": "Ask your workspace manager.",

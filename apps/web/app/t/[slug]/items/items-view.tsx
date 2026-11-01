@@ -54,6 +54,7 @@ const DETAILED = [
   "validation_failed_min_max_invalid",
   "validation_failed_quantity_scale",
   "validation_failed_image_quota",
+  "validation_failed_image_timeout",
   "rate_limited_image_busy",
 ];
 

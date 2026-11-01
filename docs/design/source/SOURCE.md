@@ -55,7 +55,7 @@ Not (Yolculuk, 22 Ekim): kaynaktaki `.pv-veil` / `.pv-btn` yalnız tuval önizle
 
 T-1026: Kullanıcı 23 Ekim onayıyla kurulum ipucu engellemeyen çalışma kartıdır; Uygula/ekrana dokunma kartı küçültür, form/menü üstünde perde yoktur. İşlem seçici aynı ysheet/yst, kısa rehber aynı ycoach/ynav kaynağını kullanır.
 
-Not (Standart*, 26 Ekim, T-1041): kaynaklar Claude Design tuvalinin artboard dosyalarıdır (tek sayfa, `<x-dc>` + `data-dc-script`); örnek ürünler, sayılar, kişiler (Evren, Demo Firma), saat ve belge numaraları benzetimdir. Kural metni `docs/design/STANDART.md`; üreteç (`port.mjs`) bu kaynakları kabuk/kalıp işlerinde (T-1042…) okuyacak.
+Not (Standart*, 26 Ekim, T-1041): kaynaklar Claude Design tuvalinin artboard dosyalarıdır (tek sayfa, `<x-dc>` + `data-dc-script`); örnek ürünler, sayılar, kişiler (Evren, Demo Firma), saat ve belge numaraları benzetimdir. Kural metni `docs/design/STANDART.md`; üreteç (`port.mjs`) bu kaynakları kabuk/kalıp işlerinde (T-1042…) okuyacak. T-1160: `StandartGorselBuyuk.dc.html` üretece kayıtlı (`gorsel-buyuk`, kap `.dzgb`); stili satır içi olan artboard'ların karşılığı elle yazılan `standart.css`.
 
 ## Etiket editörü ortak kalıp uzantısı — T-1146
 Yerel türetim: STANDART/ALTIN-KURAL, kullanıcı 1 Kasım B-166 geliştirme onayı; Claude tuvalinden indirilmedi. `EtiketEditor.dc.html` sha256 `efac38a2c98bb33340de6fa3d120622a32bd6c91b5d9c0379af8a447ec01ab14`. Bu etkileşimli dosya yalnız örnek verili tasarım kaynağıdır; gerçek kayıt, yetki ve baskı değildir. 390×844/390×670/1180×820/1440×900 render ve gözle kontrol tamam; örnek etkileşimler geçti.

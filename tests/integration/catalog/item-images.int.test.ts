@@ -212,6 +212,27 @@ describe("ürün görseli — domain", () => {
     expect(await failure(restoreItemImage(admin(A), { itemId: item, imageId: ids[0]! }))).toBe("NOT_FOUND/");
   });
 
+  it("çalışma alanı bütçesi (DB yolu): kullanılan + yeni > bütçe ise IMAGE_QUOTA, satır yazılmaz; bütçe yalnız düşürülebilir; silinip boşaltılan sayılmaz", async () => {
+    const item = (await adm.query<{ id: string }>("INSERT INTO public.items (tenant_id, code, name, base_unit_id) VALUES ($1, $2, 'Bütçe ürünü', $3) RETURNING id", [B.tenantId, `QTA-${rnd()}`, B.unitId])).rows[0]!.id;
+    const used = async (): Promise<number> => Number((await adm.query<{ n: string }>("SELECT coalesce(sum(octet_length(data) + octet_length(thumb)), 0)::text AS n FROM public.item_images WHERE tenant_id = $1 AND data IS NOT NULL", [B.tenantId])).rows[0]?.n);
+    const img = await webpImage(150);
+    const size = img.data.length + img.thumb.length;
+    const now = await used();
+    const before = await imagesOf(B, item);
+    expect(await failure(addItemImage(admin(B), { itemId: item, image: img, quotaBytes: now + size - 1 }))).toBe("VALIDATION_FAILED/IMAGE_QUOTA");
+    expect(await imagesOf(B, item)).toEqual(before);
+    const ok = await addItemImage(admin(B), { itemId: item, image: img, quotaBytes: now + size });
+    expect(ok.changed).toBe(true);
+    // Bütçe yükseltilemez: devasa değer üst sınıra (500 MiB) kırpılır → normal ekleme geçer.
+    expect((await addItemImage(admin(B), { itemId: item, image: await webpImage(151), quotaBytes: Number.MAX_SAFE_INTEGER })).changed).toBe(true);
+    // Silinip boşaltılan görsel bütçeden düşer.
+    await removeItemImage(admin(B), { itemId: item, imageId: ok.imageId });
+    await ageRemoved(ok.imageId);
+    await withSystemTenant(app, B.tenantId, "item_images.purge", (tx) => purgeRemovedItemImages(tx, B.tenantId));
+    const after = await used();
+    expect((await addItemImage(admin(B), { itemId: item, image: await webpImage(152), quotaBytes: after + 1_000_000 })).changed).toBe(true);
+  });
+
   it("yetki: PICKER yazamaz (FORBIDDEN, satır/audit yok); gruptan items.edit alan MFA'sız MFA_REQUIRED, MFA'lı yazabilir; arşivli ürüne eklenmez", async () => {
     const before = await imagesOf(A, A.itemId);
     const auditBefore = await audits(A, "item_image.added");
@@ -363,6 +384,23 @@ describe("ürün görseli — route", () => {
     const missing = await get(A.slug, item, randomUUID(), A.ownerUserId);
     expect(missing.status).toBe(404);
   });
+
+  it("yavaş damlatılan gövde ~20 sn sonra 400 IMAGE_TIMEOUT; beklerken işleme yuvası tutulmaz (başka yükleme yuva alabilir)", async () => {
+    const { tryAcquireImageSlot, IMAGE_SLOTS } = await import("../../../apps/web/lib/item-image.ts");
+    const body = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(new Uint8Array([0xff, 0xd8, 0xff, 0xe0])); } });
+    const headers = new Headers({ "fly-client-ip": `203.0.113.${(ipN++ % 250) + 1}`, "sec-fetch-site": "same-origin", "x-test-user": A.ownerUserId, origin: ORIGIN });
+    const pending = upload(new Request(`${ORIGIN}/api/t/${A.slug}/items/${A.itemTwoId}/images`, { method: "POST", headers, body, duplex: "half" } as RequestInit), { params: Promise.resolve({ slug: A.slug, itemId: A.itemTwoId }) });
+    await new Promise((r) => setTimeout(r, 1500));
+    const held = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
+    expect(held.every((x) => x !== null)).toBe(true);
+    for (const r of held) r?.();
+    const res = await pending;
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error?: { detail?: string } }).error?.detail).toBe("IMAGE_TIMEOUT");
+    const again = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
+    expect(again.every((x) => x !== null)).toBe(true);
+    for (const r of again) r?.();
+  }, 45_000);
 
   it("işleme yuvaları doluyken 429 IMAGE_BUSY (gövde işlenmez, satır yazılmaz); yuva boşalınca yükleme geçer", async () => {
     const { tryAcquireImageSlot, IMAGE_SLOTS } = await import("../../../apps/web/lib/item-image.ts");

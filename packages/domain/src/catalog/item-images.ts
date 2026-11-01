@@ -134,7 +134,13 @@ export interface AddItemImageResult {
  */
 export async function addItemImage(
   params: CatalogCommandParams,
-  input: { readonly itemId: string; readonly image: ProcessedItemImage; readonly replaces?: string | null },
+  input: {
+    readonly itemId: string;
+    readonly image: ProcessedItemImage;
+    readonly replaces?: string | null;
+    /** Yalnız DÜŞÜRÜR (test / ileride paket sınırı): etkin bütçe = min(bu, `TENANT_IMAGE_BYTES_MAX`). */
+    readonly quotaBytes?: number;
+  },
 ): Promise<AddItemImageResult> {
   const itemId = parseUuid(input.itemId);
   const replaces = input.replaces === undefined || input.replaces === null ? null : parseUuid(input.replaces);
@@ -156,10 +162,13 @@ export async function addItemImage(
       await tx.execute(sql`UPDATE public.item_images SET is_main = false, removed_at = now() WHERE tenant_id = ${t}::uuid AND id = ${replaces}::uuid`);
     }
     if ((await activeCount(tx, t, itemId)) >= ITEM_IMAGES_MAX) throw new AppError("VALIDATION_FAILED", { detail: "IMAGE_LIMIT" });
+    // Bütçe kesin olsun: aynı çalışma alanının eşzamanlı görsel eklemeleri bu kilitte sıraya girer (işlem sonunda bırakılır).
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${t}::text || ':item-images', 0))`);
     const used = await tx.execute<{ n: string }>(sql`
       SELECT coalesce(sum(octet_length(data) + octet_length(thumb)), 0)::text AS n FROM public.item_images
        WHERE tenant_id = ${t}::uuid AND data IS NOT NULL`);
-    if (exceedsImageQuota(Number(used[0]?.n ?? "0"), data.length + thumb.length)) throw new AppError("VALIDATION_FAILED", { detail: "IMAGE_QUOTA" });
+    const quota = typeof input.quotaBytes === "number" && Number.isFinite(input.quotaBytes) ? Math.min(Math.max(0, input.quotaBytes), TENANT_IMAGE_BYTES_MAX) : TENANT_IMAGE_BYTES_MAX;
+    if (exceedsImageQuota(Number(used[0]?.n ?? "0"), data.length + thumb.length, quota)) throw new AppError("VALIDATION_FAILED", { detail: "IMAGE_QUOTA" });
     // Değiştirilen görsel kapaksa kapak boşaldı → yeni görsel kapak olur; ilk görsel de kapaktır.
     const isMain = (await currentMain(tx, t, itemId)) === null;
     const ins = await tx.execute<{ id: string }>(sql`

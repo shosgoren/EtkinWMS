@@ -29,6 +29,7 @@
 @import "./design/paylas.css";
 @import "./design/yolculuk.css";
 @import "./design/ust-frame.css";
+@import "./design/gorsel-buyuk.css";
 /* T-1042 (STANDART.md §1): masaüstü standardı ortak kabuk — üst çubuk, alt cam çubuk, zemin, genişlik (en sonda; elle yazılır). */
 @import "./design/standart.css";
 /* I-18: tasarım sınıfı `.ring` (Görevlerim ilerleme halkası) Tailwind'in yalın `ring` yardımcısıyla çakışır; yalın aday üretilmez (ring-2 vb. etkilenmez). */
@@ -2047,3 +2048,36 @@ select.bg-none { background-image:none; }
 .dzj.dz-dark {
 }
 /* design:yolculuk:end */
+
+/* design:gorsel-buyuk:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzgb {
+  --color-dz-a-aaaaaa-f: rgba(0, 0, 0, .5);
+  --color-dz-a-bhcoec-bf: rgba(23, 46, 66, .15);
+  --color-dz-a-bhcoec-e: rgba(23, 46, 66, .4);
+  --color-dz-a-bhcoec-f: rgba(23, 46, 66, .5);
+  --color-dz-a-mgcici-if: rgba(198, 40, 40, .85);
+  --color-dz-a-oopbpe-ef: rgba(238, 241, 244, .45);
+  --color-dz-a-pppppp-h: rgba(255, 255, 255, .7);
+  --color-dz-a-pppppp-hf: rgba(255, 255, 255, .75);
+  --color-dz-a-pppppp-i: rgba(255, 255, 255, .8);
+  --color-dz-a-pppppp-jf: rgba(255, 255, 255, .95);
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bpgleh: #1f6b47;
+  --color-dz-x-eogehg: #4e6476;
+  --color-dz-x-glfkef: #6b5a45;
+  --color-dz-x-hkegbe: #7a4614;
+  --color-dz-x-jkflbo: #9a5b1e;
+  --color-dz-x-mpmakj: #cfc0a9;
+  --color-dz-x-njmllg: #d9cbb6;
+  --color-dz-x-nmodok: #dce3ea;
+  --color-dz-x-odpdok: #e3f3ea;
+  --color-dz-x-oinjme: #e8d9c4;
+  --color-dz-x-oopbpe: #eef1f4;
+  --color-dz-x-pemfec: #f4c542;
+  --color-dz-x-peojnm: #f4e9dc;
+  --color-dz-x-phoood: #f7eee3;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzgb.dz-dark {
+}
+/* design:gorsel-buyuk:end */

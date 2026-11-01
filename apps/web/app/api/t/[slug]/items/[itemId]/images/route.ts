@@ -4,13 +4,15 @@
 // gövde en çok 5 MiB okunur (fazlası okunmadan kesilir) → `processItemImage` (bayt imzası, yeniden kodlama, EXIF silme) → domain
 // `addItemImage` (yetki + RLS + audit aynı transaction'da). Dosya diske/loga yazılmaz; yanıt `no-store`.
 // Güvenlik incelemesi MAJOR-1: kullanıcı sınırına ek olarak çalışma alanı başına dakikada 60 yükleme; gövde okunmadan ÖNCE süreç
-// genelindeki işleme yuvası alınır (en çok 2 görsel aynı anda), dolu ise 429 `IMAGE_BUSY` ("Görsel işleniyor, birazdan tekrar dene").
+// genelindeki işleme yuvası (en çok 2 görsel aynı anda) gövde 20 sn sınırla okunduktan SONRA, yalnız işleme süresince alınır; dolu ise 429
+// `IMAGE_BUSY` ("Görsel işleniyor, birazdan tekrar dene"); süre dolarsa 400 `IMAGE_TIMEOUT` (güvenlik incelemesi MINOR-A).
 import { getAppDb } from "@wms/db";
 import { addItemImage, IMAGE_UPLOAD_MAX_BYTES } from "@wms/domain/catalog/item-images";
 import { AppError } from "@wms/shared/errors";
 import { createProductionRouteGuard, limitVerifiedTenant } from "../../../../../../../lib/action-guard.ts";
 import { imageBusy, processItemImage, tryAcquireImageSlot } from "../../../../../../../lib/item-image.ts";
 import { createDbRateLimitStore, createRateLimiter } from "../../../../../../../lib/rate-limit.ts";
+import { readUploadBody } from "../../../../../../../lib/upload-body.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -20,35 +22,6 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const guard = createProductionRouteGuard();
-const tooLarge = (): AppError => new AppError("VALIDATION_FAILED", { detail: "IMAGE_TOO_LARGE" });
-
-/** Gövdeyi en çok `max` bayt okur; aşılırsa okumayı keser (bellek sınırı). */
-async function readCapped(req: Request, max: number): Promise<Uint8Array> {
-  const declared = Number(req.headers.get("content-length") ?? "0");
-  if (Number.isFinite(declared) && declared > max) throw tooLarge();
-  const reader = req.body?.getReader();
-  if (reader === undefined) return new Uint8Array(0);
-  const parts: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.length;
-    if (total > max) {
-      await reader.cancel().catch(() => undefined);
-      throw tooLarge();
-    }
-    parts.push(value);
-  }
-  const out = new Uint8Array(total);
-  let at = 0;
-  for (const p of parts) {
-    out.set(p, at);
-    at += p.length;
-  }
-  return out;
-}
-
 export async function POST(request: Request, nextCtx: { params: Promise<{ slug: string; itemId?: string }> }): Promise<Response> {
   const { slug, itemId } = await nextCtx.params;
   return guard({}, async (req, ctx) => {
@@ -66,11 +39,12 @@ export async function POST(request: Request, nextCtx: { params: Promise<{ slug: 
     await limiter.check("user", `item-image:${principal.userId}`);
     // Üyelik yukarıda doğrulandı (slug → tek tenant); sayaç çalışma alanı başınadır.
     await limiter.check("tenant", `item-image:${slug}`);
+    // Gövde önce, süre sınırıyla okunur (yavaş istemci yuva tutamaz); yuva yalnız çözme / kodlama süresince.
+    const bytes = await readUploadBody(req, IMAGE_UPLOAD_MAX_BYTES);
     const release = tryAcquireImageSlot();
     if (release === null) throw imageBusy();
     let image: Awaited<ReturnType<typeof processItemImage>>;
     try {
-      const bytes = await readCapped(req, IMAGE_UPLOAD_MAX_BYTES);
       image = await processItemImage(bytes);
     } finally {
       release();

@@ -343,7 +343,7 @@ function GorselBuyuk({
   }, [git]);
   if (cur === undefined) return null;
   return (
-    <div className={dark ? "stkgk dz-dark" : "stkgk"}>
+    <div className={dark ? "stkgk dzgb dz-dark" : "stkgk dzgb"}>
       <KalipPerdeKatman onClose={onClose} label={t("close")} />
       <section ref={box} className="stkgb" role="dialog" aria-modal="true" aria-label={t("title", { name: ad })} tabIndex={-1} data-testid="gorsel-buyuk">
         <div className="stkgbh">
@@ -369,20 +369,20 @@ function GorselBuyuk({
           }}
         >
           {n > 1 ? (
-            <button type="button" className="stkgba" aria-label={t("prev")} onClick={() => git(-1)}>
+            <button type="button" className="arr stkgba" aria-label={t("prev")} onClick={() => git(-1)}>
               <Ico d={SICON.gOnceki} size={28} />
             </button>
           ) : null}
           <Image src={cur.src} alt={t("alt", { name: ad, i: i + 1 })} width={cur.width} height={cur.height} className="stkgbi" unoptimized data-testid="gorsel-buyuk-img" />
           {n > 1 ? (
-            <button type="button" className="stkgba" aria-label={t("next")} onClick={() => git(1)}>
+            <button type="button" className="arr stkgba" aria-label={t("next")} onClick={() => git(1)}>
               <Ico d={SICON.chevRight} size={28} />
             </button>
           ) : null}
         </div>
         <div className="stkgbal" role="group" aria-label={t("group")}>
           {gorseller.map((g, k) => (
-            <button key={g.id} type="button" className={k === i ? "stkgth on" : "stkgth"} aria-label={k === i ? t("thumbOpen", { i: k + 1 }) : t("thumb", { i: k + 1 })} aria-current={k === i || undefined} onClick={() => sec(k)}>
+            <button key={g.id} type="button" className={k === i ? "th stkgth on" : "th stkgth"} aria-label={k === i ? t("thumbOpen", { i: k + 1 }) : t("thumb", { i: k + 1 })} aria-current={k === i || undefined} onClick={() => sec(k)}>
               <Image src={g.thumb} alt="" width={96} height={72} unoptimized />
               {g.isMain ? (
                 <i className="stkgthk" aria-label={t("mainTag")}>
