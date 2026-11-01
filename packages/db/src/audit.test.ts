@@ -46,7 +46,7 @@ describe("eylem listesi", () => {
         "onboarding.step_completed", "password_reset_link.issued", "audit.exported",
         "warehouse.created", "warehouse.updated", "warehouse.archived", "location.created", "location.updated",
         "location.archived", "warehouse_scope.changed", "unit.created", "unit.updated", "item.created",
-        "item.updated", "item.archived", "item_barcode.added", "item_barcode.removed", "unit_conversion.set",
+        "item.updated", "item.archived", "item_barcode.added", "item_barcode.removed", "unit_conversion.set", "unit_conversion.removed", "item_image.added", "item_image.replaced", "item_image.removed", "item_image.restored", "item_image.main_set", "item_stock_policy.set",
         "lot.created", "serial.registered", "handling_unit.created", "handling_unit.changed",
         "stock_document.created", "stock_document.updated", "stock_document.approved", "stock_document.posted", "stock_document.cancelled",
         "stock_document.reversed", "reservation.created", "reservation.released",

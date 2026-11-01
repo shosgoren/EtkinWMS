@@ -380,6 +380,9 @@ describe("T-204 silme yasağı, yetkiler ve RLS", () => {
       const r = await inTenant(A.tenantId, async (q) => {
         const before = Number((await q(`SELECT count(*) AS n FROM public.${t}`)).rows[0]?.n);
         expect(before, `${t}: fikstür satırı`).toBeGreaterThan(0);
+        // T-1200 (0074): örnek olmayan dönüşüm artık yalnız KULLANILMIYORSA silinir; burada her dönüşüme birimli barkod bağlanır
+        // (kullanımda), bekçi yine hiçbirini silmez. Kullanılmayanın silinmesi tests/integration/catalog/item-images.int.test.ts'te.
+        if (t === "unit_conversions") await q("INSERT INTO public.item_barcodes (tenant_id, item_id, unit_id, barcode) SELECT tenant_id, item_id, unit_id, 'INUSE-' || id::text FROM public.unit_conversions");
         expect((await q(`DELETE FROM public.${t}`)).rowCount, `${t}: örnek olmayan satır silinmemeli`).toBe(0);
         return q(`SELECT count(*) AS n FROM public.${t} HAVING count(*) = ${before}`);
       });

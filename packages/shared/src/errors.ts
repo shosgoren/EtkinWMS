@@ -67,6 +67,16 @@ export const ERROR_DETAILS = [
   "SEPARATION_OF_DUTIES",
   // T-1144: reddedilmiş demo talebinin aynı e-postasında açık ya da onaylı başka talep var (ikinci deneme alanı açılmaz).
   "DEMO_EMAIL_TAKEN",
+  // T-1200: ürün görseli (tür / bayt imzası / çözülemez; boyut; ürün başına sınır) ve min > maks.
+  "IMAGE_INVALID",
+  "IMAGE_TOO_LARGE",
+  "IMAGE_LIMIT",
+  "MIN_MAX_INVALID",
+  // T-1200 (güvenlik incelemesi): görsel işleme yuvaları dolu (429) ve çalışma alanı görsel kotası.
+  "IMAGE_BUSY",
+  "IMAGE_QUOTA",
+  "IMAGE_TIMEOUT",
+  "IMAGE_LENGTH_REQUIRED",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -106,6 +116,14 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   NOT_CREATOR: "FORBIDDEN",
   SEPARATION_OF_DUTIES: "FORBIDDEN",
   DEMO_EMAIL_TAKEN: "VERSION_CONFLICT",
+  IMAGE_INVALID: "VALIDATION_FAILED",
+  IMAGE_TOO_LARGE: "VALIDATION_FAILED",
+  IMAGE_LIMIT: "VALIDATION_FAILED",
+  MIN_MAX_INVALID: "VALIDATION_FAILED",
+  IMAGE_BUSY: "RATE_LIMITED",
+  IMAGE_QUOTA: "VALIDATION_FAILED",
+  IMAGE_TIMEOUT: "VALIDATION_FAILED",
+  IMAGE_LENGTH_REQUIRED: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

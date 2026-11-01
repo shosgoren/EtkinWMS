@@ -2788,3 +2788,104 @@ button.stpv-satir { cursor: pointer; }
   .dzp .stana .job small { display: none; }
   .dzp .stana-is.duz .job { row-gap: 8px; }
 }
+
+/* ---- T-1200 kayıt görseli (STANDART §3 şerit görseli + "Görsel ekle", §6 büyük görünüm; kaynak `StandartUrunKarti.dc.html`,
+   `StandartGorselBuyuk.dc.html`, liste küçük resmi `StandartUrunlerListe.dc.html`). Ortak bileşen `kalip/gorsel.tsx`. Oklar ve küçük
+   düğmeler görünürde kaynak ölçüsünde, dokunma alanı ≥ 44 px (ALTIN-KURAL 12). Perde ortak `.kperde`; burada bulanıklık yazılmaz. ---- */
+.stkgsut { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.stkgkap { position: relative; display: block; flex: none; }
+.stkgorsel.stkgimg { position: relative; padding: 0; border: 0; overflow: hidden; cursor: pointer; }
+.stkgorsel.stkgimg img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.stkgsay {
+  position: absolute; bottom: 6px; right: 6px; padding: 3px 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--color-kr-ink) 75%, transparent); color: var(--color-kr-on); font: 700 11px/1 var(--font-plex-mono), monospace;
+}
+.stkgok {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; padding: 0; border: 0; background: transparent;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-kr-ink);
+}
+.stkgok.sol { left: -2px; }
+.stkgok.sag { right: -2px; }
+.stkgok > span {
+  width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--color-kr-card) 92%, transparent);
+}
+.stkgekle {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 10px; box-sizing: border-box;
+  border: 2px dashed var(--color-st-k-kahve); border-radius: 12px; background: var(--color-kr-card); color: color-mix(in srgb, var(--color-st-k-kahve) 80%, var(--color-kr-ink));
+  font: 700 13px/1 var(--font-instrument), sans-serif; cursor: pointer;
+}
+.stkgekle[data-kilitli="true"] { opacity: .55; }
+.stkgekle.kucuk { width: 96px; height: 72px; flex-direction: column; gap: 4px; border-radius: 14px; background: color-mix(in srgb, var(--color-kr-card) 70%, transparent); font-size: 12px; }
+
+.stkgb {
+  position: fixed; inset: 0; z-index: 41; box-sizing: border-box; padding: 26px 40px 30px; display: flex; flex-direction: column; align-items: center; gap: 18px;
+  pointer-events: none; color: var(--color-kr-ink); font-family: var(--font-instrument), sans-serif;
+}
+.stkgb:focus { outline: none; }
+.stkgb > * { pointer-events: auto; }
+.stkgbh { width: 100%; display: flex; align-items: center; gap: 14px; }
+.stkgbh > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.stkgbh b { font-size: 22px; overflow-wrap: anywhere; }
+.stkgbh small { font: 600 13px/1 var(--font-plex-mono), monospace; color: var(--color-st-icon); }
+.stkgbx {
+  width: 56px; height: 56px; flex: none; border-radius: 16px; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--color-kr-card) 75%, transparent); color: var(--color-kr-ink); box-shadow: 0 6px 18px -10px var(--color-kr-shadow-soft);
+}
+.stkgbo { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; gap: 24px; }
+/* Oklar (`.arr`) ve küçük resimler (`.th`) üretilmiş `gorsel-buyuk.css` (`.dzgb`) kaynağından; burada yalnız uyarlama (esnemez, odak). */
+.stkgba { flex: none; }
+.stkgbi {
+  flex: 1; min-width: 0; width: auto; height: 100%; max-height: 100%; object-fit: contain; border-radius: 26px;
+  background: var(--color-kr-card); box-shadow: 0 30px 60px -30px var(--color-kr-shadow-soft);
+}
+.stkgbal { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; max-width: 100%; }
+.stkgth { position: relative; padding: 0; overflow: hidden; opacity: .7; background: var(--color-st-k-kutu); }
+.stkgth.on { opacity: 1; box-shadow: 0 0 0 3px var(--color-kr-warn); }
+.stkgth img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.stkgthk {
+  position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--color-kr-warn); color: var(--color-kr-warn-ink);
+}
+.stkgbay { width: 1px; height: 40px; margin: 0 6px; background: color-mix(in srgb, var(--color-kr-ink) 15%, transparent); }
+.stkgbd {
+  min-width: 132px; height: 48px; padding: 0 14px; border-radius: 14px; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: color-mix(in srgb, var(--color-kr-card) 80%, transparent); color: var(--color-kr-ink); box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-b); font: 700 14px/1 var(--font-instrument), sans-serif;
+}
+.stkgbd.sil { background: color-mix(in srgb, var(--color-kr-err) 85%, transparent); color: var(--color-kr-on); box-shadow: none; }
+.stkgbd[data-kilitli="true"] { opacity: .55; }
+.stkgbd[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--color-kr-warn); }
+.stkgbok {
+  margin-left: 12px; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px;
+  background: var(--color-st-k-ok-bg); color: var(--color-st-k-ok); font-weight: 700; font-size: 13.5px;
+}
+.stkgbip { margin-left: 8px; font-size: 13.5px; color: var(--color-st-icon); }
+.dz-dark .stkgb { color: var(--color-kr-text-dark); }
+.dz-dark :is(.stkgbx, .stkgba, .stkgbd:not(.sil)) { background: var(--color-st-dark-glass); color: var(--color-kr-text-dark); box-shadow: none; }
+.dz-dark .stkgbi { background: var(--color-kr-card-dark); }
+.dz-dark .stkgekle { background: var(--color-kr-card-dark); }
+@media (pointer: coarse) { .stkgbip { display: none; } }
+@media (max-width: 699px) {
+  .stkgb { padding: 12px 12px 16px; gap: 10px; }
+  .stkgbh b { font-size: 18px; }
+  .stkgbo { gap: 8px; }
+  .dzgb .stkgba { width: 48px; height: 48px; }
+  .stkgbi { border-radius: 18px; }
+  .dzgb .stkgth { width: 64px; height: 48px; }
+  .stkgekle.kucuk { width: 64px; height: 48px; font-size: 11px; }
+  .stkgbay, .stkgbip { display: none; }
+  .stkgbd { min-width: 0; flex: 1 1 calc(33% - 8px); padding: 0 8px; font-size: 13px; }
+  .stkgbok { margin-left: 0; }
+  .stkgsut .stkgekle { font-size: 12px; padding: 0 6px; }
+}
+
+/* Liste "Görsel" sütunu: 52 × 40 küçük resim + nokta göstergesi; görselsiz satırda "+" kutusu. */
+.ktgor-k { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ktgor-b { width: 52px; height: 40px; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--color-st-k-kutu); color: var(--color-st-icon); }
+.ktgor-b.bos { background: var(--color-kr-bg-a); box-shadow: inset 0 0 0 1.5px var(--color-kr-bg-b); color: var(--color-st-k-ok-ink); }
+.ktgor-b img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ktgor-n { display: flex; gap: 3px; height: 5px; }
+.ktgor-n i { width: 5px; height: 5px; border-radius: 50%; background: var(--color-st-k-ok-ink); }
+.ktgor-n i.on { background: var(--color-kr-ink); }
+.dz-dark .ktgor-b.bos { background: var(--color-kr-bg-dark-a); box-shadow: inset 0 0 0 1.5px var(--color-kr-card-dark); }
+.dz-dark .ktgor-n i.on { background: var(--color-kr-text-dark); }

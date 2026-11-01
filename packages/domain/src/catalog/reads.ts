@@ -10,7 +10,7 @@ import type { ItemCardType, PickPolicy, TrackingMode } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantQuery, type AccessTx } from "../identity/access.ts";
 import { parseCardType, type ItemRow } from "./items.ts";
-import { loadItem, parseText, parseUuid, type CatalogCommandParams, type ItemHeader } from "./units.ts";
+import { loadItem, parseText, parseUuid, type CatalogCommandParams, type ConversionUsage, type ItemHeader } from "./units.ts";
 
 export type CatalogReadParams = Omit<CatalogCommandParams, "requestId">;
 
@@ -185,6 +185,8 @@ export interface ItemConversionRow {
   readonly unitName: string;
   /** 1 birim = `factor` temel birim; kanonik decimal metin (I-09). */
   readonly factor: string;
+  /** T-1200: kaldırma kilidi — belge / mal kabul satırı ya da birimli barkod bu birimi kullanıyorsa nedeni; yoksa `null`. */
+  readonly usage: ConversionUsage | null;
 }
 
 export interface ItemBarcodeRow {
@@ -210,15 +212,19 @@ export async function listItemConversions(params: CatalogReadParams, itemIdRaw: 
   const itemId = parseUuid(itemIdRaw);
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
     await ensureItem(tx, actor.tenantId, itemId);
-    const rows = await tx.execute<{ unit_id: string; unit_code: string; unit_name: string; factor: string }>(
-      sql`SELECT c.unit_id, u.code AS unit_code, u.name AS unit_name, c.to_base_factor::text AS factor
+    const rows = await tx.execute<{ unit_id: string; unit_code: string; unit_name: string; factor: string; doc: boolean; bc: boolean }>(
+      sql`SELECT c.unit_id, u.code AS unit_code, u.name AS unit_name, c.to_base_factor::text AS factor,
+                 (EXISTS (SELECT 1 FROM public.document_lines x WHERE x.tenant_id = c.tenant_id AND x.item_id = c.item_id AND x.unit_id = c.unit_id)
+                  OR EXISTS (SELECT 1 FROM public.inbound_receipt_lines x WHERE x.tenant_id = c.tenant_id AND x.item_id = c.item_id AND x.unit_id = c.unit_id)) AS doc,
+                 EXISTS (SELECT 1 FROM public.item_barcodes x WHERE x.tenant_id = c.tenant_id AND x.item_id = c.item_id AND x.unit_id = c.unit_id) AS bc
             FROM public.unit_conversions c
             JOIN public.units u ON u.tenant_id = c.tenant_id AND u.id = c.unit_id
            WHERE c.tenant_id = ${actor.tenantId}::uuid AND c.item_id = ${itemId}::uuid
            ORDER BY u.code, c.id
            LIMIT ${CHILD_LIST_MAX}`,
     );
-    return rows.map((r) => ({ unitId: r.unit_id, unitCode: r.unit_code, unitName: r.unit_name, factor: canonical(r.factor) }));
+    // Kullanım tanımı `conversionUsage` (units.ts) ve 0074 silme bekçisiyle aynı.
+    return rows.map((r) => ({ unitId: r.unit_id, unitCode: r.unit_code, unitName: r.unit_name, factor: canonical(r.factor), usage: r.doc ? "DOCUMENT" : r.bc ? "BARCODE" : null }));
   });
 }
 
