@@ -1,6 +1,8 @@
 -- 0072_label_editor (T-1148, B-166): additive tenant-scoped label editor storage.
 -- Existing labels, stock and roles are untouched. Published versions/assets/jobs are append-only for wms_app.
 -- Coordinates are integer micrometres, never inventory quantities. JSON is bounded here and strictly parsed in domain.
+-- The nullable published-version back-reference is DEFERRABLE INITIALLY IMMEDIATE: normal operations enforce it immediately;
+-- maintenance reset explicitly defers all constraints and can order immutable versions before their parent template.
 -- Printer profiles are browser/OS hints only; no arbitrary network endpoints or enabled bridge.
 DO $pre$ BEGIN
  IF pg_catalog.to_regclass('public.permission_groups') IS NULL THEN RAISE EXCEPTION '0072_label_editor: prerequisite missing'; END IF;
@@ -39,7 +41,7 @@ CREATE TABLE public.label_template_versions (
  FOREIGN KEY (tenant_id,created_by) REFERENCES public.tenant_memberships(tenant_id,id)
 );
 ALTER TABLE public.label_templates ADD CONSTRAINT label_templates_published_fk
- FOREIGN KEY (tenant_id,published_version_id,id,context) REFERENCES public.label_template_versions(tenant_id,id,template_id,context);
+ FOREIGN KEY (tenant_id,published_version_id,id,context) REFERENCES public.label_template_versions(tenant_id,id,template_id,context) DEFERRABLE INITIALLY IMMEDIATE;
 CREATE TABLE public.label_assets (
  tenant_id uuid NOT NULL REFERENCES public.tenants(id),
  id uuid NOT NULL DEFAULT gen_random_uuid(),

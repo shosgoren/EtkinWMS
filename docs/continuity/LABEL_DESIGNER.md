@@ -126,11 +126,18 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Yazıcı çözümü gerçek yetkili profile listesiyle çağrılır; tarayıcımodu her zaman sistemseçimigerekir der. Açıkça seçilmiş erişilemeyen/kapalı/yetkisiz yazıcı veya hazır olmayan köprüde blocked; genel tercihe sessiz geçiş yok.
 - Yerel64birim/roottsc/hedefESLint geçti. Bağımsız inceleme/prepush/CI henüz bekliyor. Bu saf dilim kalıcı şablon, sunucu yetkisi veya gerçek baskı değildir; sonraki seri kart API/DB/izinleri kurar.
 
-## T-1148…T-1150 kalıcı katman (geliştirme)
-- 0072 yedi tenanttablosu: taslak/sürüm, PNGvarlık, yalnızsistemdiyaloğuyazıcıprofili, şablon/genelcihaz/firma tercihi, bağlamvarsayılanı, değişmezbaskısnapshotı. Uygulama rolü yayımlanansürüm/varlık/baskıyı güncelleyemez/silemez; snapshot hazırlama fizikselbaskıkanıtı değildir.
-- 0073 + yetkikataloğu: labels.view/design/publish/print/printers; Yönetici tümü, özelgrupta ayrıaçılır. Yayın/yazıcıyönetimi MFA. Mevcut stock.view etiket yolu korunur, yeniözelleştirilmişmodüle yetki kendiliğinden verilmez.
-- GeçiciDockerDB: yenişema6test ve öncekimigration4testi geçti; birimkatalog22test/roottsc geçti. Bağımsızsecurity/QA0/0/0 (15birim+6int); öncekimigrationregresyonu179test, AC04 383test ve verify5421birim geçti. Kapsam/tabanmetadata kaydı düzeltildikten sonra genelprepush tekrar koşuyor; CI/yayın bekliyor; henüz API/UI/baskıbağlantısı yok.
 
+## T-1148/T-1150/T-1154 kalıcı şema paketi — PR284
+- 0072 yedi tenant tablosu: taslak/sürüm, kanonik PNG varlık, sistem diyaloğu yazıcı profili, şablon/genel cihaz/firma tercihi, bağlam varsayılanı, değişmez baskı snapshot'ı. Yayımlanmış sürüm/varlık/baskı uygulama rolünde değiştirilemez; snapshot fiziksel baskı kanıtı değildir.
+- Tam CI, ORM eşliği ve dolu etiket verisiyle bakım geri-bağını buldu. Drizzle eşliği tamamlandı. Geri-bağ normalde anında denetlenir; yalnız bakım transaction'ında açık erteleme ve işlem sonunda mevcut tam FK denetimi kullanılır. Canlıda sıfırlama çalıştırılmadı.
+- Dolu yedi tabloyla gerçek bakım + şema: uygulayıcı ve bağımsız inceleme ayrı ayrı 11/11 geçti. Güncel bağımsız rapor 0/0/0 @40fdac4; önceki raporlar bu düzeltmenin kanıtı değildir.
+- Son prepush YEŞİL: lint/typecheck, 5420 birim, bütün bekçiler ve AC-04 383. İlk tam yerel int 2793 geçti/6 başarısız/33 mevcut koşullu atlama; başarısız dosyalar ve yeni bakım/şema ayrı koşuda 117/117 geçti. Tam int yeşil iddiası yok; güncel PR CI beklenir.
+- 0073 ve T-1149 modül yetkileri ayrı sonraki paket. Bu şema paketi API, logo yükleme, gerçek editör veya baskı bağlantısı içermez; B-166 devam eder. Kod/CI/deploy/gerçek DB defteri ayrı doğrulanır.
+## Ayrı yetki paketi: T-1149 / T-1155 / T-1156
+0072şema/bakım düzeltmesi corePR284te; ardından0073 +5etiket yetkisi, MFA ve Yetkiler ekranı kataloğu gelir. Mevcut18anahtarın anlamı değişmez; yeniüst sınır23, negatifuzunluktesti24. Kartdışıyetkifikstürü yeni5anahtarı da taşır; kart yetkisi olmadığı halde kart yazmanın hâlâ reddedildiği kanıtlanır. 0073dolu geri alma stagingde ret, açıkci modunda yalnızyeni etiketgrantları kaldırılır. Testler ve bağımsızinceleme tamamlanmadan PR açılmaz.
+
+
+Yetki paketi kanıtı:24hedefint/22birim/webtsc ve prepushYEŞİL (verify5421birim/AC04 383). Bağımsız0/0/0 @59148f7 (18int+22birim); PR284 şeması main5193f22 ile birleşti, yalnız kendi continuity kayıtları uzlaştırıldı. Yeni CI/deploy/DB henüz bekliyor.
 ## T-1151…T-1153 uygulama katmanı (geliştirme)
 - İstemci sözleşmesi yalnız @wms/shared/labels içinde; domain/editor uyumlulukexportu kaldı. DB kodu istemciye girmez.
 - Kaydetme kararlıUUID ile tekrar güvenli, CAS ve tenantmetadata kilidi; taslak mevcutyayını etkilemez. Yayın+varsayılan ataması tektransaction; geçmiş sürüm geri dönüşü yalnız taslağı değiştirir. Atanmışşablon arşivi alternatif ister.
@@ -139,6 +146,16 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Şablon/sürüm/logo veri teslimi keysetkısa sayfalı, faturalamabayrağıyok ve auditli. Kota200şablon/100logo/30profil; çıktı stokkimliği üretmez.
 - Ön kontrol: eski64model/yazıcı +17PNGbirim, root/domaintsc/hedefESLint, gerçekuygulamarolüyle11entegrasyon geçti. Son arama/exportaudit değişikliğiyle11entegrasyon yenidengeçti; bağımsızinceleme/prepush/CI/API/UI/baskıbağlantısı henüz yok.
 
+
+**Güncel seri durum:** PR284 şema ve PR286 yetki ana dala birleşti; her iki PR gerçekCI/guards yeşil. Şema mainCI yeşil, deploy41339618915 henüz sürüyor; DB/canlı defter doğrulanmadı. Servis paketi bu üçkartla birleştiriliyor; bağımsız551c773 raporu199birim/11int0bulgu, güncel entegrasyon üstünde yeniden inceleme/prepush bekler. API/UI/render/baskı sonraki paketlerdir, B166 tamam değildir.
+
+Servis prepush ilk koşusu yeni root audit çevirilerini eksik buldu; auditLog ve root audit ikisi de tr/en tamamlandı. Baştan prepush tekrar gerekir. Şema deploy5193f22, main artıkb7e2753 olduğu için güvenli NOT_CURRENT_MAIN kapısında reddedildi; canlıya eski SHA zorlanmayacak, güncel main yayın hattı izlenecek.
+
+Servis AC04 filtresi, export testindeki önceki test verisine bağımlılığı buldu. Kendi26sürümlük geçmişi ve kesinBtenant kimlik kümesi ile tekbaşına ve tamdosya kabulü zorunlu; kontrol kaldırılmaz. Güncel hedefint/prepush tekrar gerekir.
+
+Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol için assertiontabanı53→55 yükseldi; tam prepush ve korunan taban sonrası yenilenmiş bağımsız rapor zorunlu.
+
+**Servis son kapı:** Güncel tam prepush YEŞİL: lint/typecheck,5438birim, tüm bekçiler, AC04 387. Son kaynak11int geçti; bağımsız rapor0/0/0 @53244b1 önceki199birim+11int ve aynı işkodunu, yeni test/metadata farkını ayırarak doğruladı. CI/deploy/baskı ekranı hâlâ ayrı bekler.
 ### T-1157 ortak baskı motoru (yerel)
 - Aynı sürümlü modelden gerçek mm SVG; QR 4modül sessiz alan, Code128 10modül ve EAN13 doğrulanmış mevcut GTIN. DPI ve kalibrasyon sınırlı; okunamayacak kod/metin taşması engellenir, değer kesilmez veya uydurulmaz. Kanonik PNG yalnız yetkili sunucu varlık sınırından alınır.
 - Hedef35birim, sharedtsc/hedefESLint; gerçek Chromium PNG çıktılarından ZXing ile36/36 çözüm (3semboloji ×3DPI ×4dönüş), üç çıktı gözle kontrol edildi. Fiziksel yazıcı ve PDF sayfa kabulü henüz yapılmadı. Bu motor tek başına gerçek baskı kaynağı veya editör ekranı değildir; prepush/CI/yayın bekler.
@@ -155,6 +172,11 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Mevcut production action guard (Origin/oturum/IP/kişi/tenant hız sınırı) ve kapalı şemalar; kullanıcı/tenant UUID istemciden alınmaz. Gerçek yetki/MFA/CAS ve logo kanonikleştirme domain'de tekrar doğrulanır; ağ yazıcısı URL'si veya istemciden baskı snapshot'ı kabul edilmez.
 - 14action sınır testi, webtsc ve hedefESLint geçti. Domain bağımsız incelemesi199birim+11izolasyonint/0bulgu; webaction/renderer/kayıt ekranı için yeni paket incelemesi henüz bekler. Gerçek baskı kaynağı ayrı dilimdir.
 
+### T-1165 paket incelemesi düzeltmesi (yerel)
+- Bağımsız incelemede bulunan action/domain yetki eşliği ve yazma önkoşulu tutarlılığı düzeltildi; bekçi/test gevşetilmedi. Canlı etiket modülü henüz açık değildir. Sürükleme/async ekleme güncel saltokunur durumunu kullanır.
+- Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
+
+**Renderer son önkontrol:** Güncel main7037d6d üstünde gerçek5kart/30dosya birleşmesi; tam prepush YEŞİL (verify5487birim, tüm bekçiler, AC04 387). İlk scope hatası, merge konularındaki eksik dal adları ve STACK sharedQR kayıtları düzeltilerek kapandı; kontroller gevşetilmedi. Bağımsız0/0/0 @f985154. PR/CI/deploy ayrı bekler; workspace ve gerçek baskı ekranı sonraki paketlerdir.
 
 ### T-1161 gerçek çalışma alanı (yerel)
 - /label-designs sunucu oturum/yetki kontrolü ve yalnız seçili taslağın kanonik logoları. Ortak liste/context/arşiv/arama/keyset; hazır tasarım → gerçek action kayıt → yetkili yayın/varsayılan. Yarım iş çıkış koruması; sürüm çakışmasında sessiz üzerine yazma yok. Taslak kaydı açık Kaydet eylemidir; otomatik kayıt iddiası yok.
@@ -215,3 +237,5 @@ T1174 gerçekDB13/13: iki üretim çıktısının gerçek paket QR/lot/tarihleri
 
 ### T-1176 — Görsel işlem rehberi (yerel geliştirme)
 Beş kısa adım mevcut ortak hedef deliği/odak/ses/Esc/katlama ile yeni etiket, logo/metin, nesne taşıma, gerçek kayıt ve yazıcı bağlantısını gösterir. Tasarım+görüntüleme hakkı gerekir; rehber işlem yetkisi vermez. Başarı markerı yalnız kayıt ve seçiliyse yayın/varsayılan başarıyla oluşur. İlk otomatik açılışın kullanıcı/tenant bazlı sunucu kaydı T1178'de yapılacak; mevcut rehberin cihazdaki kaldığın yerden devam deposu bunun yerine geçmez. T1177 otomatik takip kodu yalnız gerçek packageQr veya gerçek fişnumarasıdır; kaynağı değiştirmez. Yerel151birim/webtip temiz, gerçek kaynak13test yeni bağla tekrar doğrulanır.
+### T-1171 — İlk kullanım koruması (yerel uygulama, henüz canlı değil)
+Büyük alan seçicisi küçük tuval nesnesini hedefleme zorunluluğunu kaldırır; Tab/Enter ve ok tuşları çalışır. mm girişleri yazım bitince doğrulanır, geçersiz ara değer tasarımı değiştirmez. Logo yüklemesi sürerken kayıt/çıkış korunur. Yayın önkontrolü sorunlu nesneyi seçer; sunucu aynı kuralları yeniden doğrular. Varsayılan etikette atanan sürüm dikkate alınır; değişmeyen yayını varsayılana seçmek yeni sürüm üretmez. Yerel tip/lint geçti; gerçek etkileşim kabulü henüz yapılmadı.

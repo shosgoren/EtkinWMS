@@ -7,7 +7,6 @@ import { migrateDown, migrateUp } from "../../../packages/db/src/migrate.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv } from "../harness/env.ts";
 import { LABEL_TABLES, seedLabels } from "./fixtures.ts";
-import { GRANTABLE } from "../../../packages/domain/src/identity/permissions.ts";
 
 const env=readIntEnv(process.env);
 let admin: pg.Client, app: pg.Client, scratchAdmin: pg.Client, database: string;
@@ -59,12 +58,7 @@ it("context mismatch, duplicate nullable preferences and unsafe printer destinat
  await expect(query("INSERT INTO public.label_preferences (tenant_id,membership_id) VALUES($1,$2)",[A.tenantId,A.ownerMembershipId])).rejects.toMatchObject({code:"23514"});
  await expect(query("INSERT INTO public.label_assets (tenant_id,png,sha256,width,height,created_by) VALUES($1,$2,$3,1025,1,$4)",[A.tenantId,Buffer.alloc(67),"b".repeat(64),A.ownerMembershipId])).rejects.toMatchObject({code:"23514"});
 });
-it("label grants match all 23 catalogue keys; no privileged settings grant slips in",async()=>{
- await expect(query("INSERT INTO public.permission_groups (tenant_id,name,grants,created_by) VALUES($1,'Labels',$2,$3)",[A.tenantId,[...GRANTABLE],A.ownerMembershipId])).resolves.toMatchObject({rowCount:1});
- await expect(query("INSERT INTO public.permission_groups (tenant_id,name,grants,created_by) VALUES($1,'Invalid',ARRAY['settings.manage'],$2)",[A.tenantId,A.ownerMembershipId])).rejects.toMatchObject({code:"23514"});
- expect(GRANTABLE).toHaveLength(23);
-});
-it("empty schema down/up is repeatable; populated label/grant downgrade refuses and preserves data",async()=>{
+it("empty schema down/up is repeatable; populated label downgrade refuses and preserves data",async()=>{
  const name=`wms_label_down_${randomBytes(6).toString("hex")}`,url=urlFor(env.databaseUrlDirect,name).href;
  await scratchAdmin.query(`CREATE DATABASE ${name}`);const c=new pg.Client({connectionString:url});
  try{
@@ -75,11 +69,23 @@ it("empty schema down/up is repeatable; populated label/grant downgrade refuses 
   await expect(migrateDown({url,to:"0071",wmsEnv:"staging"})).rejects.toThrow(/0072_label_editor down/);
   expect((await c.query("SELECT count(*)::int AS n FROM public.label_template_versions")).rows[0]?.n).toBe(1);
   expect((await migrateUp({url})).applied).toEqual(["0073"]);
-  await c.query("INSERT INTO public.permission_groups (tenant_id,name,grants,created_by) VALUES($1,'Label grant',ARRAY['labels.design','items.edit'],$2)",[w.tenantId,w.ownerMembershipId]);
-  await expect(migrateDown({url,to:"0071",wmsEnv:"staging"})).rejects.toThrow(/0073_label_permissions down/);
-  expect((await c.query("SELECT grants FROM public.permission_groups WHERE tenant_id=$1",[w.tenantId])).rows[0]?.grants).toEqual(["labels.design","items.edit"]);
   expect((await migrateDown({url,to:"0071",wmsEnv:"ci"})).reverted).toEqual(["0073","0072"]);
-  expect((await c.query("SELECT grants FROM public.permission_groups WHERE tenant_id=$1",[w.tenantId])).rows[0]?.grants).toEqual(["items.edit"]);
   expect((await migrateUp({url})).applied).toEqual(["0072","0073"]);
  }finally{await c.end();await scratchAdmin.query(`DROP DATABASE ${name} WITH (FORCE)`);}
 },120000);
+
+it("published-version back-reference is immediate by default and explicitly deferrable for safe maintenance ordering",async()=>{
+ const flags=(await admin.query("SELECT condeferrable,condeferred FROM pg_constraint WHERE conname='label_templates_published_fk' AND conrelid='public.label_templates'::regclass")).rows[0];
+ expect(flags).toEqual({condeferrable:true,condeferred:false});
+ await admin.query("BEGIN");
+ try{
+  await admin.query("SET CONSTRAINTS ALL DEFERRED");
+  for(const table of ["label_print_jobs","label_defaults","label_preferences","label_template_versions","label_templates"]){await admin.query(`DELETE FROM public.${table} WHERE tenant_id=$1`,[A.tenantId]);expect((await admin.query(`SELECT 1 FROM public.${table} WHERE tenant_id=$1`,[A.tenantId])).rowCount).toBe(0);}
+  await admin.query("SET CONSTRAINTS ALL IMMEDIATE");
+  expect((await admin.query("SELECT 1 FROM public.label_templates WHERE tenant_id=$1",[B.tenantId])).rowCount).toBe(1);
+ }finally{await admin.query("ROLLBACK");}
+ expect((await admin.query("SELECT 1 FROM public.label_template_versions WHERE tenant_id=$1",[A.tenantId])).rowCount).toBe(1);
+ expect((await admin.query("SELECT version_id FROM public.label_defaults WHERE tenant_id=$1",[A.tenantId])).rows[0]?.version_id).toBe(a.version);
+ expect((await admin.query("SELECT version_id FROM public.label_print_jobs WHERE tenant_id=$1",[A.tenantId])).rows[0]?.version_id).toBe(a.version);
+ expect((await admin.query("SELECT printer_id FROM public.label_preferences WHERE tenant_id=$1",[A.tenantId])).rows[0]?.printer_id).toBe(a.printer);
+});

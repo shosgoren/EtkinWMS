@@ -21,6 +21,7 @@ import { setCustomerSuspended } from "../../../packages/domain/src/platform/cust
 import { listPanelEvents } from "../../../packages/domain/src/platform/events.ts";
 import { savePlan } from "../../../packages/domain/src/platform/plans.ts";
 import { installQueueSchema } from "../../../packages/queue-adapter/src/index.ts";
+import { LABEL_TABLES, seedLabels } from "../labels/fixtures.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv } from "../harness/env.ts";
 
@@ -31,6 +32,7 @@ const hex = (n: number) => randomBytes(n).toString("hex");
 
 /** Tohumdan önce dolu olması ŞART olan kiracı tabloları (betik kapsamı bunlarla kanıtlanır). */
 const REQUIRED = [
+  ...LABEL_TABLES.map(t=>`public.${t}`),
   "public.tenants", "public.tenant_memberships", "public.membership_roles", "public.invitations", "public.tenant_settings",
   "public.warehouses", "public.locations", "public.items", "public.units", "public.lots", "public.serials", "public.handling_units",
   "public.documents", "public.document_lines", "public.document_status_history", "public.stock_dimensions", "public.stock_ledger",
@@ -82,6 +84,7 @@ function runScript(dryRun: string): { status: number | null; out: string } {
 }
 
 async function seedExtras(w: TenantWorld, i: number): Promise<void> {
+  await seedLabels(c,w);
   const t = w.tenantId;
   const owner = w.ownerMembershipId;
   await c.query("INSERT INTO public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id) VALUES ($1, $2, 'tenant.created', 'tenant', $3)", [t, w.ownerUserId, t]);
