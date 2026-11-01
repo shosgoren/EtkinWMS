@@ -518,6 +518,8 @@
     "forbidden_not_creatorAction": "Ask the person who created the draft or your manager.",
     "forbidden_separation_of_duties": "Separation of duties is on: whoever prepared this cannot approve or reverse it.",
     "forbidden_separation_of_dutiesAction": "Ask another authorised person to approve or reverse it.",
+    "version_conflict_demo_email_taken": "This e-mail already has an open or approved request.",
+    "version_conflict_demo_email_takenAction": "Use the pending or approved request; leave this copy rejected.",
     "validation_failed_plan_limit": "You have reached your plan's limit.",
     "validation_failed_plan_limitAction": "Archive a record you no longer use, or contact us to upgrade your plan.",
     "validation_failed_plan_invalid": "The plan details are invalid.",
@@ -3363,7 +3365,8 @@
       "doneRejected": "Request rejected",
       "doneReopened": "Request reopened · awaiting approval",
       "doneAgain": "New link ready · pass it to the customer",
-      "failed": "Could not complete · refresh the page and try again"
+      "failed": "Could not complete · refresh the page and try again",
+      "emailTaken": "This e-mail already has an open or approved request"
     },
     "paketler": {
       "title": "Plans",

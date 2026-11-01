@@ -40,5 +40,7 @@ describe("T-1144 veritabanı reddi → sözleşme kodu", () => {
     expect(conflict.code).toBe("VERSION_CONFLICT");
     expect(conflict.message).not.toContain("55000");
     expect(mapPlatformError(new Error("bilinmeyen"))).toMatchObject({ code: "INTERNAL" });
+    // MINOR-1: aynı e-postada açık/onaylı talep → ayrı ayrıntı (operatöre tek cümle).
+    expect(mapPlatformError(pg("WD001"))).toMatchObject({ code: "VERSION_CONFLICT", detail: "DEMO_EMAIL_TAKEN" });
   });
 });

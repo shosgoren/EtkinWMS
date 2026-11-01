@@ -71,6 +71,7 @@ export interface TaleplerLabels {
   readonly doneReopened: string;
   readonly doneAgain: string;
   readonly failed: string;
+  readonly emailTaken: string;
 }
 
 type Ask = "APPROVED" | "REJECTED" | "REOPEN";
@@ -149,7 +150,7 @@ export function TaleplerView({
     if (state === told.current) return;
     told.current = state;
     if (state.done !== undefined) say("ok", doneText(state.done, t));
-    else if (state.error !== undefined) say("err", t.failed);
+    else if (state.error !== undefined) say("err", state.detail === "DEMO_EMAIL_TAKEN" ? t.emailTaken : t.failed);
   }, [state, say, t]);
   // Pencere sunucu yanıtı gelene dek açık kalır (düğmede dönen gösterge); yanıt gelince kapanır.
   useEffect(() => {

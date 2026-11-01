@@ -48,6 +48,7 @@ describe("T-1144 onay pencereleri ve geri açma", () => {
     expect(t.rejectAsk).toBe("Talep reddedilsin mi?");
     expect(t.reject).toBe("Reddet");
     expect(t.reopen).toBe("Geri aç");
+    expect(t.emailTaken).toBe("Bu e-posta için açık ya da onaylı bir talep zaten var");
     expect(fill(t.reopenAskBody, { name: "A", company: "B" })).not.toMatch(/\{/);
     expect(fill("{x} {y}", { x: "1" })).toBe("1 {y}");
   });

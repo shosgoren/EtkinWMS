@@ -74,6 +74,7 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
     doneReopened: tt("doneReopened"),
     doneAgain: tt("doneAgain"),
     failed: tt("failed"),
+    emailTaken: tt("emailTaken"),
   };
   const pending = rows.filter((r) => r.status === "PENDING").length;
   const dark = temaKoyu(await cookies());

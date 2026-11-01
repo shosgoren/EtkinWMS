@@ -65,6 +65,8 @@ export const ERROR_DETAILS = [
   "NOT_CREATOR",
   // T-416: görev ayrılığı açık; hazırlayan onaylayamaz / ters kayıt yapamaz.
   "SEPARATION_OF_DUTIES",
+  // T-1144: reddedilmiş demo talebinin aynı e-postasında açık ya da onaylı başka talep var (ikinci deneme alanı açılmaz).
+  "DEMO_EMAIL_TAKEN",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -103,6 +105,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   SITE_INVALID: "VALIDATION_FAILED",
   NOT_CREATOR: "FORBIDDEN",
   SEPARATION_OF_DUTIES: "FORBIDDEN",
+  DEMO_EMAIL_TAKEN: "VERSION_CONFLICT",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

@@ -23,6 +23,8 @@ export interface TaleplerActionState {
   /** Ekranda teslim: müşteriye iletilecek tek seferlik bağlantı. */
   readonly link?: string;
   readonly error?: string;
+  /** T-1144: operatöre tek cümle söylenecek bilinen ret (ör. aynı e-postada açık/onaylı talep). */
+  readonly detail?: "DEMO_EMAIL_TAKEN";
   /** T-1144: başarılı işlemin türü ve her yanıtta yeni sayaç (istemci balon + sesi bir kez çalar). */
   readonly done?: { readonly intent: "APPROVED" | "REJECTED" | "REISSUE" | "REOPEN"; readonly delivery?: "EMAIL" | "SCREEN"; readonly seq: number };
 }
@@ -83,7 +85,7 @@ export async function demoRequestAction(_prev: TaleplerActionState, form: FormDa
     }
     if (result.error.code === "FORBIDDEN" && result.error.detail === "MFA_REQUIRED") redirect(`/mfa?next=${encodeURIComponent(PATH)}`);
     revalidatePath(INTERNAL_PATH);
-    return { error: result.error.code };
+    return result.error.detail === "DEMO_EMAIL_TAKEN" ? { error: result.error.code, detail: "DEMO_EMAIL_TAKEN" } : { error: result.error.code };
   }
   revalidatePath(INTERNAL_PATH);
   const done = { intent: result.data.intent, seq: Date.now(), ...(result.data.delivery === undefined ? {} : { delivery: result.data.delivery }) };

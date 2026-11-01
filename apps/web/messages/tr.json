@@ -518,6 +518,8 @@
     "forbidden_not_creatorAction": "Taslağı oluşturan kişiden ya da sorumlundan iste.",
     "forbidden_separation_of_duties": "Görev ayrılığı açık: bu işlemi hazırlayan kişi onaylayamaz ya da ters kaydını yapamaz.",
     "forbidden_separation_of_dutiesAction": "Onayı ya da ters kaydı başka bir yetkiliden iste.",
+    "version_conflict_demo_email_taken": "Bu e-posta için açık ya da onaylı bir talep zaten var.",
+    "version_conflict_demo_email_takenAction": "Bekleyen ya da onaylı talebi kullan; bu kopyayı reddedilmiş bırak.",
     "validation_failed_plan_limit": "Paketinizin sınırına ulaştınız.",
     "validation_failed_plan_limitAction": "Kullanmadığınız kaydı arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin.",
     "validation_failed_plan_invalid": "Paket bilgileri geçersiz.",
@@ -3363,7 +3365,8 @@
       "doneRejected": "Talep reddedildi",
       "doneReopened": "Talep geri açıldı · onay bekliyor",
       "doneAgain": "Yeni bağlantı hazır · müşteriye iletin",
-      "failed": "İşlem tamamlanamadı · sayfayı yenileyip tekrar deneyin"
+      "failed": "İşlem tamamlanamadı · sayfayı yenileyip tekrar deneyin",
+      "emailTaken": "Bu e-posta için açık ya da onaylı bir talep zaten var"
     },
     "paketler": {
       "title": "Paketler",
