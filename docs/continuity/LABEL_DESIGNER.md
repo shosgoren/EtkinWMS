@@ -176,3 +176,7 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Bağımsız incelemede bulunan action/domain yetki eşliği ve yazma önkoşulu tutarlılığı düzeltildi; bekçi/test gevşetilmedi. Canlı etiket modülü henüz açık değildir. Sürükleme/async ekleme güncel saltokunur durumunu kullanır.
 - Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
 
+
+### T-1166 çalışma alanı yetki eşliği (yerel)
+- Arşiv UI'si de yayın yetkisini kullanır; izni olmayan dokunuş sarı balon verir. Varsayılan tasarımı arşivlemeye çalışınca önce alternatif etiketi varsayılan yapma yönlendirmesi gelir. Sunucu yetkisi/aktif varsayılan denetimi korunur.
+- T1165 bağımsız düzeltmesi normal merge ile bu dala taşındı; eski rapor1/2 bulgulu olarak saklanır, güncel0/0/0 @6de09b0. UI e2e/yayın hâlâ bekler.

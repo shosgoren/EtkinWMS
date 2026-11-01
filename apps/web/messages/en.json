@@ -6859,6 +6859,7 @@
     "printerSaved": "Printer preference saved",
     "saveForPrinter": "Save the label first to select its printer",
     "calibration": "Print offset",
-    "calibrationError": "Offset must be between −10 and +10 mm"
+    "calibrationError": "Offset must be between −10 and +10 mm",
+    "switchDefault": "Choose another default label for this section first"
   }
 }
