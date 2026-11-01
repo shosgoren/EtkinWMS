@@ -6900,6 +6900,7 @@
       "PRINTER_CHANGED": "Printer settings changed. Open a new preview.",
       "SOURCE_CHANGED": "Barcode or rack code changed. Print a current label.",
       "DESIGN_INVALID": "Label fields or code dimensions are not suitable. Check the design."
-    }
+    },
+    "preparing": "Preparing labels. Please wait."
   }
 }
