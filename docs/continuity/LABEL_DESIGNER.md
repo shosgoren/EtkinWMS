@@ -132,3 +132,8 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Dolu yedi tabloyla gerçek bakım + şema: uygulayıcı ve bağımsız inceleme ayrı ayrı 11/11 geçti. Güncel bağımsız rapor 0/0/0 @40fdac4; önceki raporlar bu düzeltmenin kanıtı değildir.
 - Son prepush YEŞİL: lint/typecheck, 5420 birim, bütün bekçiler ve AC-04 383. İlk tam yerel int 2793 geçti/6 başarısız/33 mevcut koşullu atlama; başarısız dosyalar ve yeni bakım/şema ayrı koşuda 117/117 geçti. Tam int yeşil iddiası yok; güncel PR CI beklenir.
 - 0073 ve T-1149 modül yetkileri ayrı sonraki paket. Bu şema paketi API, logo yükleme, gerçek editör veya baskı bağlantısı içermez; B-166 devam eder. Kod/CI/deploy/gerçek DB defteri ayrı doğrulanır.
+## Ayrı yetki paketi: T-1149 / T-1155 / T-1156
+0072şema/bakım düzeltmesi corePR284te; ardından0073 +5etiket yetkisi, MFA ve Yetkiler ekranı kataloğu gelir. Mevcut18anahtarın anlamı değişmez; yeniüst sınır23, negatifuzunluktesti24. Kartdışıyetkifikstürü yeni5anahtarı da taşır; kart yetkisi olmadığı halde kart yazmanın hâlâ reddedildiği kanıtlanır. 0073dolu geri alma stagingde ret, açıkci modunda yalnızyeni etiketgrantları kaldırılır. Testler ve bağımsızinceleme tamamlanmadan PR açılmaz.
+
+
+Yetki paketi kanıtı:24hedefint/22birim/webtsc ve prepushYEŞİL (verify5421birim/AC04 383). Bağımsız0/0/0 @59148f7 (18int+22birim); PR284 şeması main5193f22 ile birleşti, yalnız kendi continuity kayıtları uzlaştırıldı. Yeni CI/deploy/DB henüz bekliyor.

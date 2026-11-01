@@ -25,9 +25,14 @@ export type YetkiAnahtar =
   | "warehouses.archive"
   | "locations.create"
   | "locations.edit"
-  | "locations.archive";
+  | "locations.archive"
+  | "labels.view"
+  | "labels.design"
+  | "labels.publish"
+  | "labels.print"
+  | "labels.printers";
 
-export type YetkiBolum = "items" | "parties" | "warehouses" | "locations" | "stock" | "documents" | "excel" | "reports" | "settings" | "integrations";
+export type YetkiBolum = "items" | "parties" | "warehouses" | "locations" | "stock" | "documents" | "excel" | "reports" | "settings" | "integrations" | "labels";
 
 export type YetkiRol = "TENANT_ADMIN" | "WAREHOUSE_MANAGER" | "PICKER" | "COUNTER" | "READ_ONLY";
 

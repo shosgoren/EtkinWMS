@@ -104,7 +104,7 @@ async function seedOAuthShaped(adm: pg.Client, w: TenantWorld, version: string):
 
 it("0068 up: eski yöntem bağlantıları kesilir (audit, kimlik + webhook anahtarı silinir, veri yerinde); OAuth ve kesik bağlantı dokunulmaz; down no-op; yeniden up idempotent", async () => {
   await scratch(async (url, adm) => {
-    expect((await migrateDown({ url, to: "0067", wmsEnv: "staging" })).reverted).toEqual(["0072", "0071", "0070", "0069", "0068"]);
+    expect((await migrateDown({ url, to: "0067", wmsEnv: "staging" })).reverted).toEqual(["0073", "0072", "0071", "0070", "0069", "0068"]);
     const reg = newRegistry();
     const L = await seedWorld(adm, reg, "LC1");
     const E = await seedWorld(adm, reg, "LC2");
@@ -139,7 +139,7 @@ it("0068 up: eski yöntem bağlantıları kesilir (audit, kimlik + webhook anaht
     const sCreds = await credsOf(S);
     const pCreds = await credsOf(P);
 
-    expect((await migrateUp({ url })).applied).toEqual(["0068", "0069", "0070", "0071", "0072"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0068", "0069", "0070", "0071", "0072", "0073"]);
 
     // Eski yöntem: kesildi, kimlik silindi, kod yazıldı; şirket eşlemesi (account_ref) ve bağlanma anı korunur (yeniden bağlanma kuralları).
     expect(await conn(L)).toEqual({ status: "DISCONNECTED", creds: false, code: LEGACY_METHOD_REMOVED, ref: "115", label: "Eski Muhasebe", wh: "OFF", connected: true });
@@ -168,10 +168,10 @@ it("0068 up: eski yöntem bağlantıları kesilir (audit, kimlik + webhook anaht
     }
 
     // down: belgeli no-op — silinen kimlik geri gelmez, satırlar değişmez; up yeniden uygulanınca yeni satır/audit yok.
-    expect((await migrateDown({ url, to: "0067", wmsEnv: "staging" })).reverted).toEqual(["0072", "0071", "0070", "0069", "0068"]);
+    expect((await migrateDown({ url, to: "0067", wmsEnv: "staging" })).reverted).toEqual(["0073", "0072", "0071", "0070", "0069", "0068"]);
     expect(await conn(L)).toEqual({ status: "DISCONNECTED", creds: false, code: LEGACY_METHOD_REMOVED, ref: "115", label: "Eski Muhasebe", wh: "OFF", connected: true });
     expect(await conn(S)).toEqual(before.sConn);
-    expect((await migrateUp({ url })).applied).toEqual(["0068", "0069", "0070", "0071", "0072"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0068", "0069", "0070", "0071", "0072", "0073"]);
     expect(await audit()).toEqual(cut);
     expect(await conn(S)).toEqual(before.sConn);
   });
