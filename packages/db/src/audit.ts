@@ -15,6 +15,15 @@ import { isUuid, rawDb, type DbClient, type TenantTx } from "./client.ts";
 
 /** Kayıtlı audit eylemleri (T-107; genişletme: T-117, T-121, T-126). */
 export const AUDIT_ACTIONS = [
+  "label.template_saved",
+  "label.template_published",
+  "label.template_archived",
+  "label.default_changed",
+  "label.printer_saved",
+  "label.preference_changed",
+  "label.asset_added",
+  "label.print_prepared",
+
   "member.invited",
   "member.removed",
   "member.role_changed",

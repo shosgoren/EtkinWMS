@@ -1071,6 +1071,16 @@
     "recentAuthAction": "Sign in again and retry.",
     "loginLink": "Sign in again",
     "actions": {
+      "label": {
+        "template_saved": "Label draft saved",
+        "template_published": "Label design published",
+        "template_archived": "Label archive changed",
+        "default_changed": "Operation label assigned",
+        "printer_saved": "Printer profile saved",
+        "preference_changed": "Label printer selected",
+        "asset_added": "Label logo added",
+        "print_prepared": "Label print prepared"
+      },
       "member": {
         "invited": "Member invited",
         "removed": "Member removed",

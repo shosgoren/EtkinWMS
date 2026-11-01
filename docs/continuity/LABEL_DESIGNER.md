@@ -130,3 +130,11 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - 0072 yedi tenanttablosu: taslak/sürüm, PNGvarlık, yalnızsistemdiyaloğuyazıcıprofili, şablon/genelcihaz/firma tercihi, bağlamvarsayılanı, değişmezbaskısnapshotı. Uygulama rolü yayımlanansürüm/varlık/baskıyı güncelleyemez/silemez; snapshot hazırlama fizikselbaskıkanıtı değildir.
 - 0073 + yetkikataloğu: labels.view/design/publish/print/printers; Yönetici tümü, özelgrupta ayrıaçılır. Yayın/yazıcıyönetimi MFA. Mevcut stock.view etiket yolu korunur, yeniözelleştirilmişmodüle yetki kendiliğinden verilmez.
 - GeçiciDockerDB: yenişema6test ve öncekimigration4testi geçti; birimkatalog22test/roottsc geçti. Bağımsızsecurity/QA0/0/0 (15birim+6int); öncekimigrationregresyonu179test, AC04 383test ve verify5421birim geçti. Kapsam/tabanmetadata kaydı düzeltildikten sonra genelprepush tekrar koşuyor; CI/yayın bekliyor; henüz API/UI/baskıbağlantısı yok.
+
+## T-1151…T-1153 uygulama katmanı (geliştirme)
+- İstemci sözleşmesi yalnız @wms/shared/labels içinde; domain/editor uyumlulukexportu kaldı. DB kodu istemciye girmez.
+- Kaydetme kararlıUUID ile tekrar güvenli, CAS ve tenantmetadata kilidi; taslak mevcutyayını etkilemez. Yayın+varsayılan ataması tektransaction; geçmiş sürüm geri dönüşü yalnız taslağı değiştirir. Atanmışşablon arşivi alternatif ister.
+- Logo istemcide PNGye dönüştürülür; sunucu statik8bit RGB/RGBA, ≤128KiB/1024², CRC/header/scanline/boundedzlib doğrular ve yalnızIHDR/IDAT/IEND yenidenyazar. SVG/URL/animasyon/metadata yok; tenantbazlıhashdedup, değişmezassetUUID.
+- Yazıcılar yalnızSYSTEM_DIALOG; şirket ve aktör/cihaz tercihi, şablonönceliği, açıkseçili kapalıprofilde blok; gerçekköprü yok. Kaynak profillerdeURL/port/kimlikbilgisi yok.
+- Şablon/sürüm/logo veri teslimi keysetkısa sayfalı, faturalamabayrağıyok ve auditli. Kota200şablon/100logo/30profil; çıktı stokkimliği üretmez.
+- Ön kontrol: eski64model/yazıcı +17PNGbirim, root/domaintsc/hedefESLint, gerçekuygulamarolüyle11entegrasyon geçti. Son arama/exportaudit değişikliğiyle11entegrasyon yenidengeçti; bağımsızinceleme/prepush/CI/API/UI/baskıbağlantısı henüz yok.
