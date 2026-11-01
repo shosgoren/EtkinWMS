@@ -96,12 +96,14 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
   const [remember, setRemember] = useState(false);
   const [caps, setCaps] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
   const [mailHint, setMailHint] = useState<string | null>(null);
   const [pwHint, setPwHint] = useState<string | null>(null);
   const [error, setError] = useState<Shown | null>(null);
   const pwRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setReady(true);
     const saved = readRemembered();
     if (saved !== "") {
       setEmail((cur) => (cur === "" ? saved : cur));
@@ -176,7 +178,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
         </div>
       ) : null}
       {error !== null ? <ErrBan e={error} onReset={toReset} /> : null}
-      <form noValidate onSubmit={(e) => void onSubmit(e)} style={{ display: "contents" }} aria-busy={busy}>
+      <form method="post" noValidate onSubmit={(e) => void onSubmit(e)} style={{ display: "contents" }} aria-busy={busy || !ready}>
         <div className="card" style={{ background: C.surface }}>
           <div className="fl">
             <label htmlFor="g-mail">{t("email")}</label>
@@ -185,6 +187,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
               <input
                 id="g-mail"
                 name="email"
+                disabled={!ready}
                 type="email"
                 autoComplete="username"
                 placeholder="ad@firma.com"
@@ -212,6 +215,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
                 id="g-pw"
                 ref={pwRef}
                 name="password"
+                disabled={!ready}
                 type={showPw ? "text" : "password"}
                 autoComplete="current-password"
                 placeholder={t("passwordPh")}
@@ -273,7 +277,7 @@ function Login({ next, socialEnabled, demo, fieldTab, reauth }: { next: string; 
         </div>
         <div className="act" style={{ background: C.bg }}>
           {/* Görünen metin büyük harf (kaynak "GİRİŞ YAP"); erişilebilir ad "Giriş yap" (tr büyük harf dönüşümü CSS'te). */}
-          <button type="submit" className="big" style={{ background: dz("172E42"), color: dz("FFFFFF"), textTransform: "uppercase" }} disabled={busy}>
+          <button type="submit" className="big" style={{ background: dz("172E42"), color: dz("FFFFFF"), textTransform: "uppercase" }} disabled={busy || !ready}>
             {t("submit")}
             <Ico d={GICON.next} size={24} sw={3} />
           </button>
@@ -289,6 +293,8 @@ function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setReady(true); }, []);
   // T-923: "Bu cihazı 30 gün hatırla" — varsayılan kapalı; hassas işlemlerde kod yine sorulur.
   const [trust, setTrust] = useState(false);
   const [error, setError] = useState<(Shown & { readonly kind: "bad" | "locked" | "expired" | "net" }) | null>(null);
@@ -329,7 +335,7 @@ function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
       <h1 className="lh">{t("heading")}</h1>
       <p className="ls">{backup ? t("lsBackup") : t("lsApp")}</p>
       {error !== null ? <ErrBan e={error} /> : null}
-      <form noValidate onSubmit={(e) => void onSubmit(e)} style={{ display: "contents" }} aria-busy={busy}>
+      <form method="post" noValidate onSubmit={(e) => void onSubmit(e)} style={{ display: "contents" }} aria-busy={busy || !ready}>
         <div className="card" style={{ background: C.surface }}>
           {backup ? (
             <div className="fl">
@@ -337,6 +343,7 @@ function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
               <div className={inpCls} style={{ background: C.chip }}>
                 <input
                   id="g-bk"
+                  disabled={!ready}
                   name="code"
                   type="text"
                   autoComplete="one-time-code"
@@ -356,6 +363,7 @@ function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
               <div className={inpCls} style={{ background: C.chip }}>
                 <input
                   id="g-otp"
+                  disabled={!ready}
                   name="code"
                   type="text"
                   inputMode="numeric"
@@ -394,7 +402,7 @@ function Mfa({ next, trustOption }: { next: string; trustOption: boolean }) {
           <button type="button" className="big ghost" style={{ background: C.chip, color: C.fg, flex: "0 0 auto", minWidth: "64px" }} onClick={toLogin} aria-label={t("back")}>
             <Ico d={GICON.back} size={24} sw={3} />
           </button>
-          <button type="submit" className="big" style={{ background: dz("172E42"), color: dz("FFFFFF") }} disabled={busy}>
+          <button type="submit" className="big" style={{ background: dz("172E42"), color: dz("FFFFFF") }} disabled={busy || !ready}>
             {t("submit")}
           </button>
         </div>

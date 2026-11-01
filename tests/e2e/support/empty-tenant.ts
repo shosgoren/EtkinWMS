@@ -112,6 +112,8 @@ async function bindSecrets(page: Page, src: SecretSource): Promise<void> {
 /** Alana, bağlı kaynaktan gelen gizli değeri yazar (React'in `input` olayı dahil). Betik sabittir; yalnızca seçici ve tür adı geçer. */
 async function fillSecret(page: Page, selector: string, kind: "password" | "totp"): Promise<void> {
   await page.locator(selector).waitFor();
+  // Readiness is a real UI gate: never write a secret into a server-rendered form before its handlers attach.
+  await expect(page.locator(selector)).toBeEnabled();
   await page.evaluate(`(async () => {
     const el = document.querySelector(${JSON.stringify(selector)});
     const value = await window.__e2eSecret(${JSON.stringify(kind)});
