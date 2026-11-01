@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@wms/shared/errors";
 import type { PackageReceiptDto, ReceiptPackageDto } from "../actions.ts";
-const mocks = vi.hoisted(() => ({ receipt: vi.fn(), batch: vi.fn(), principal: vi.fn() }));
+const mocks = vi.hoisted(() => ({ receipt: vi.fn(), batch: vi.fn(), principal: vi.fn(), custom: vi.fn() }));
+// Custom routing owns its separate tenant/permission DB boundary; this suite owns the legacy source gate.
+vi.mock("../../../custom-labels/routing.ts", () => ({ customLabelHref: mocks.custom }));
 // T-1121: önizleme ortak kalıp alanını (kalip/form.tsx → ekran.tsx → kabuk) kullanır; o zincirdeki iş eylemleri modülünün okuduğu sabitler.
 vi.mock("@wms/domain/operations", () => ({ getPackageReceipt: mocks.receipt, getPackageProductionBatch: mocks.batch, WORK_SUBJECT_KINDS: ["TASK"], PROBLEM_REASONS: ["OTHER"] }));
 vi.mock("@wms/db", () => ({ getAppDb: () => ({}) }));
@@ -20,7 +22,7 @@ const packages: ReceiptPackageDto[] = Array.from({ length: 5 }, (_, i) => {
 });
 const receipt: PackageReceiptDto = { documentId: packages[0]!.id, documentStatus: "POSTED", documentVersion: 2, documentNumber: "IN-1", receiptId: packages[0]!.id, receiptStatus: "CLOSED", receiptVersion: 2, receiptNumber: "R-1", warehouseId: packages[0]!.id, supplierRef: null, packages };
 const page = (extra = {}) => Page({ params: Promise.resolve({ slug: "acme" }), searchParams: Promise.resolve({ document: receipt.documentId, ...extra }) });
-beforeEach(() => { vi.resetAllMocks(); vi.stubEnv("PACKAGE_RECEIVING_ENABLED", "true"); mocks.principal.mockResolvedValue({ userId: packages[0]!.id, mfaVerified: true }); mocks.receipt.mockResolvedValue(receipt); mocks.batch.mockRejectedValue(new AppError("NOT_FOUND")); });
+beforeEach(() => { vi.resetAllMocks(); vi.stubEnv("PACKAGE_RECEIVING_ENABLED", "true"); mocks.principal.mockResolvedValue({ userId: packages[0]!.id, mfaVerified: true }); mocks.receipt.mockResolvedValue(receipt); mocks.batch.mockRejectedValue(new AppError("NOT_FOUND")); mocks.custom.mockResolvedValue(null); });
 afterEach(() => vi.unstubAllEnvs());
 describe("server label source", () => {
   it("reads only the document from the authorized query and ignores client status claims", async () => {
@@ -32,7 +34,17 @@ describe("server label source", () => {
   it.each(["DRAFT", "PREPARED", "CANCELLED"])("rejects document %s even if client says POSTED", async status => { mocks.receipt.mockResolvedValue({ ...receipt, documentStatus: status }); const result = await page({ status: "POSTED" }); expect(JSON.stringify(result)).not.toContain("EWMS:PKG"); });
   it("requires the server-closed receipt too", () => { expect(() => postedLabelPackages({ ...receipt, receiptStatus: "DRAFT" })).toThrow(AppError); });
   it("foreign document NOT_FOUND propagates to 404", async () => { mocks.receipt.mockRejectedValue(new AppError("NOT_FOUND")); await expect(page()).rejects.toThrow("404"); });
-  it.each(["no stock.view", "warehouse ACL"])("does not expose labels after domain denies %s", async () => { mocks.receipt.mockRejectedValue(new AppError("FORBIDDEN")); expect(JSON.stringify(await page())).not.toContain("EWMS:PKG"); expect(mocks.batch).not.toHaveBeenCalled(); });
+  it.each(["no stock.view", "warehouse ACL"])("does not expose labels after domain denies %s", async () => { mocks.receipt.mockRejectedValue(new AppError("FORBIDDEN")); expect(JSON.stringify(await page())).not.toContain("EWMS:PKG"); expect(mocks.batch).not.toHaveBeenCalled(); expect(mocks.custom).not.toHaveBeenCalled(); });
+  it.each(["receipt", "production"])("routes an authorized %s to its custom default without trusting the client source claim", async kind => {
+    if (kind === "production") {
+      mocks.receipt.mockRejectedValue(new AppError("NOT_FOUND"));
+      mocks.batch.mockResolvedValue({ documentId: receipt.documentId, documentStatus: "POSTED", packages });
+    }
+    const href = "/t/acme/custom-labels?authorized-source";
+    mocks.custom.mockResolvedValue(href);
+    await expect(page({ source: kind === "receipt" ? "production" : "receipt" })).rejects.toThrow(href);
+    expect(mocks.custom).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ tenantSlug: "acme", principal: expect.objectContaining({ mfaVerified: true }) }), { kind: kind === "receipt" ? "RECEIPT" : "PRODUCTION", documentId: receipt.documentId });
+  });
   it("resolves actual POSTED production output after receipt NOT_FOUND and projects only label metadata", async () => {
     mocks.receipt.mockRejectedValue(new AppError("NOT_FOUND"));
     const output={id:packages[0]!.id,qr:packages[0]!.qr,packageNo:1,kind:"KOLI",itemCode:"MM-000001",itemName:"Output",quantity:"50.000000",unitCode:"KG",stockStatus:"AVAILABLE",lotCode:"OUT-1",producedOn:"2026-10-14",expiresOn:"2027-10-14",targetLocationId:"private-output-location",documentLineId:"private-line"};

@@ -30,6 +30,10 @@ export const PACKAGE_ACTORS = [
   { workflow: "transfer", fixture: "transferMobile", prefix: "E2E_PACKAGE_TRANSFER_MOBILE", mobile: true, clientIp: "198.51.100.86" },
   { workflow: "production", fixture: "productionDesktop", prefix: "E2E_PACKAGE_PRODUCTION_DESKTOP", mobile: false, clientIp: "198.51.100.87" },
   { workflow: "production", fixture: "productionMobile", prefix: "E2E_PACKAGE_PRODUCTION_MOBILE", mobile: true, clientIp: "198.51.100.88" },
+  { workflow: "label-design", fixture: "labelDesignDesktop", prefix: "E2E_PACKAGE_LABEL_DESIGN_DESKTOP", mobile: false, clientIp: "198.51.100.91" },
+  { workflow: "label-design", fixture: "labelDesignMobile", prefix: "E2E_PACKAGE_LABEL_DESIGN_MOBILE", mobile: true, clientIp: "198.51.100.92" },
+  { workflow: "label-race", fixture: "labelRaceDesktop", prefix: "E2E_PACKAGE_LABEL_RACE_DESKTOP", mobile: false, clientIp: "198.51.100.93" },
+  { workflow: "label-race", fixture: "labelRaceMobile", prefix: "E2E_PACKAGE_LABEL_RACE_MOBILE", mobile: true, clientIp: "198.51.100.94" },
 ] as const;
 export type PackageWorkflow = (typeof PACKAGE_ACTORS)[number]["workflow"];
 type TenantFixture = "empty" | "pilot" | "stockDesktop" | "stockMobile" | "multi" | "erp" | "tour" | (typeof PACKAGE_ACTORS)[number]["fixture"];
@@ -112,6 +116,8 @@ async function bindSecrets(page: Page, src: SecretSource): Promise<void> {
 /** Alana, bağlı kaynaktan gelen gizli değeri yazar (React'in `input` olayı dahil). Betik sabittir; yalnızca seçici ve tür adı geçer. */
 async function fillSecret(page: Page, selector: string, kind: "password" | "totp"): Promise<void> {
   await page.locator(selector).waitFor();
+  // Readiness is a real UI gate: never write a secret into a server-rendered form before its handlers attach.
+  await expect(page.locator(selector)).toBeEnabled();
   await page.evaluate(`(async () => {
     const el = document.querySelector(${JSON.stringify(selector)});
     const value = await window.__e2eSecret(${JSON.stringify(kind)});

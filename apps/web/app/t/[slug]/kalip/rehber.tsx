@@ -183,6 +183,8 @@ export function KalipIslemRehberleri({ userId, slug, dark }: {
     }
     useEffect(() => {
         const open = (e: Event): void => {
+            const automatic=e instanceof CustomEvent&&typeof e.detail==='object'&&e.detail?.automatic===true;
+            if(automatic&&(e.detail?.guide!=='label'||!allowed.includes('label')||d.aktif!==null||owner!=null))return;
             if (e instanceof CustomEvent && e.detail === 'list') {
                 // Kurulum listesi açılıyor: etkin rehber kapanmaz, katlanır (kurulum bitince/kapanınca simge geri gelir).
                 guncelle(x => katla(x, true));
@@ -200,7 +202,7 @@ export function KalipIslemRehberleri({ userId, slug, dark }: {
                 setPicker(true);
                 return;
             }
-            const asked = e instanceof CustomEvent && allowed.includes(e.detail as OpGuide) ? e.detail as OpGuide : null;
+            const asked = automatic?'label':e instanceof CustomEvent && allowed.includes(e.detail as OpGuide) ? e.detail as OpGuide : null;
             const screen = currentGuide(path, query);
             const g = asked ?? (screen !== null && allowed.includes(screen) ? screen : null);
             if (g !== null) {

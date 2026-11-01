@@ -6,7 +6,7 @@ import{getAppDb}from"@wms/db";
 import{AppError}from"@wms/shared/errors";
 import{LABEL_CONTEXTS}from"@wms/shared/labels";
 import type{Permission}from"@wms/domain/identity/permissions";
-import{getLabelWorkspace,getLabelTemplate,saveLabelTemplate,publishLabelTemplate,assignLabelDefault,archiveLabelTemplate,restoreLabelDraft,uploadLabelLogo,readLabelLogo,saveLabelPrinter,setLabelPrinterPreference,exportLabelDesigns}from"@wms/domain/labels/store";
+import{getLabelWorkspace,getLabelTemplate,markLabelGuideSeen,saveLabelTemplate,publishLabelTemplate,assignLabelDefault,archiveLabelTemplate,restoreLabelDraft,uploadLabelLogo,readLabelLogo,saveLabelPrinter,setLabelPrinterPreference,exportLabelDesigns}from"@wms/domain/labels/store";
 import{ensureRecentAuth}from"../../../../lib/auth-service.ts";
 import{createProductionGuard,limitVerifiedTenant,type ActionContext}from"../../../../lib/action-guard.ts";
 const guard=createProductionGuard(()=>headers()),slug=z.string().min(1).max(63),id=z.string().uuid(),version=z.number().int().min(0).max(2147483646);
@@ -41,3 +41,5 @@ export async function labelLogoReadAction(raw:unknown){return guard({schema:iden
 export async function labelPrinterSaveAction(raw:unknown){return guard({schema:printer},async(input,ctx)=>{const{slug,...body}=input;return saveLabelPrinter(await context(slug,ctx,"labels.printers"),body);})(raw);}
 export async function labelPreferenceAction(raw:unknown){return guard({schema:preference},async(input,ctx)=>{const{slug,...body}=input;return setLabelPrinterPreference(await context(slug,ctx,"labels.printers"),body);})(raw);}
 export async function labelExportAction(raw:unknown){return guard({schema:z.object({slug,kind:z.enum(["TEMPLATES","VERSIONS","ASSETS"]),after:id.optional()}).strict()},async(input,ctx)=>{const{slug,...body}=input;return exportLabelDesigns(await context(slug,ctx,"labels.view"),body);})(raw);}
+
+export async function labelGuideSeenAction(raw:unknown){return guard({schema:z.object({slug}).strict()},async(input,ctx)=>{const p=await context(input.slug,ctx,'labels.design');await markLabelGuideSeen({db:p.db,principal:p.principal,tenantSlug:p.tenantSlug,requestId:p.requestId});return{seen:true};})(raw);}

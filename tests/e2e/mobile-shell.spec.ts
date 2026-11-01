@@ -326,7 +326,8 @@ async function anaIslerEkleCikar(page: Page): Promise<void> {
     await expect(sheet.locator('[data-option="excel"]')).toBeVisible();
     await page.screenshot({ path: path.join(OUT, `t1128-${width}-ekle.png`) });
     await expect(sheet.locator('[data-option="giris"]')).toHaveCount(0);
-    await expect(sheet.locator('[data-option="home"], [data-option="etiket"]'), `${where}: Ana ekran ve YAKINDA modül listede yok`).toHaveCount(0);
+    await expect(sheet.locator('[data-option="home"], [data-option="satin"]'), `${where}: Ana ekran ve YAKINDA modül listede yok`).toHaveCount(0);
+    await expect(sheet.locator('[data-option="etiket"]'), `${where}: yetkili etiket tasarımı artık kullanılabilir`).toContainText(tr.kabuk.mod.etiket.name);
     const trans = sheet.locator('[data-option="trans"]');
     await expect(trans).toContainText(tr.kabuk.mod.trans.name);
     await trans.click();

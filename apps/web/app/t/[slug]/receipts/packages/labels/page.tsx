@@ -1,3 +1,4 @@
+import { customLabelHref } from "../../../custom-labels/routing.ts";
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -38,6 +39,7 @@ export default async function PackageLabelsPage({ params, searchParams }: {
       const receipt = await getPackageReceipt(access, { documentId });
       const packages = postedLabelPackages(receipt);
       back = `${home}/receipts/packages?${new URLSearchParams({ document: receipt.documentId })}`;
+      const custom=await customLabelHref(access,{kind:'RECEIPT',documentId:receipt.documentId});if(custom!==null)redirect(custom);
       return shell(<PackageLabelPreview key={receipt.documentId} packages={packages} />);
     } catch (error) {
       // Source is resolved by authorized server document ownership, never a query discriminator.
@@ -47,6 +49,7 @@ export default async function PackageLabelsPage({ params, searchParams }: {
     if (batch.documentStatus !== "POSTED") throw new AppError("FORBIDDEN");
     back = `${home}/production`;
     if (batch.packages.length === 0 || batch.packages.length > 200) throw new AppError("VALIDATION_FAILED");
+    const custom=await customLabelHref(access,{kind:'PRODUCTION',documentId:batch.documentId});if(custom!==null)redirect(custom);
     // Only immutable output package metadata crosses the shared label renderer boundary.
     return shell(<PackageLabelPreview key={batch.documentId} packages={batch.packages.map(p => ({id:p.id,qr:p.qr,packageNo:p.packageNo,kind:p.kind,itemCode:p.itemCode,itemName:p.itemName,
       quantity:p.quantity,unitCode:p.unitCode,stockStatus:p.stockStatus,lotCode:p.lotCode,producedOn:p.producedOn,expiresOn:p.expiresOn}))} />);

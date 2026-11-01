@@ -14,10 +14,10 @@ import{labelPaperLayout,labelPaperPages,type LabelPaper}from'../labels/physical-
 import{labelDeviceId}from'../label-designs/label-client.ts';
 import{customLabelPreviewAction,customLabelPrepareAction}from'./actions.ts';
 interface Choice{readonly id:string;readonly name:string;readonly versionId:string;readonly isDefault:boolean;readonly assignedVersionId:string|null}
-interface Props{readonly slug:string;readonly dark:boolean;readonly locale:'tr'|'en';readonly source:LabelSourceRequest;readonly choices:readonly Choice[];readonly initial:LabelPrintPreview;readonly initialTemplateId?:string;readonly historicalJob?:string}
-export function CustomLabelPrintView({slug,dark,locale,source,choices,initial,initialTemplateId,historicalJob}:Props){
+interface Props{readonly slug:string;readonly dark:boolean;readonly locale:'tr'|'en';readonly source:LabelSourceRequest;readonly choices:readonly Choice[];readonly initial:LabelPrintPreview;readonly initialTemplateId?:string;readonly historicalJob?:string;readonly initialCopies?:number;readonly nextHref?:string}
+export function CustomLabelPrintView({slug,dark,locale,source,choices,initial,initialTemplateId,historicalJob,initialCopies=1,nextHref}:Props){
  const t=useTranslations('labelPrint'),{say}=useKalipToast('form'),home=`/t/${encodeURIComponent(slug)}`;
- const[preview,setPreview]=useState(initial),[templateId,setTemplateId]=useState(initialTemplateId??''),[mode,setMode]=useState<LabelPaper>('a4'),[copies,setCopies]=useState(1),[index,setIndex]=useState(0),[busy,setBusy]=useState(false),[deviceId,setDeviceId]=useState<string|null>(null),[prepared,setPrepared]=useState<LabelPrepared|null>(null),[reason,setReason]=useState('damaged'),[failure,setFailure]=useState<string|null>(null),[opened,setOpened]=useState(false);
+ const[preview,setPreview]=useState(initial),[templateId,setTemplateId]=useState(initialTemplateId??''),[mode,setMode]=useState<LabelPaper>('a4'),[copies,setCopies]=useState(initialCopies),[index,setIndex]=useState(0),[busy,setBusy]=useState(false),[deviceId,setDeviceId]=useState<string|null>(null),[prepared,setPrepared]=useState<LabelPrepared|null>(null),[reason,setReason]=useState('damaged'),[failure,setFailure]=useState<string|null>(null),[opened,setOpened]=useState(false);
  const alive=useRef(true),pendingPreview=useRef(false);useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  const guard=useRef(false),request=useRef(0),intent=useRef<{key:string;jobId:string}|null>(null);
  let paperOk=true;try{labelPaperLayout(preview.width,preview.height,mode);}catch{paperOk=false;}
@@ -46,6 +46,7 @@ export function CustomLabelPrintView({slug,dark,locale,source,choices,initial,in
   {(!valid||failure)&&<KalipUyari tone="uyari"><p>{failure??t(paperOk?'copiesError':'paperError')}</p></KalipUyari>}
   {opened&&<KalipUyari tone="bilgi"><p>{t('dialogOpened')}</p></KalipUyari>}
   {preview.pages.length>1&&<KalipCipler label={t('preview')} chips={[{id:'previous',label:t('previous'),d:LICON.transfer,color:'3B6A9E',on:false,onClick:()=>setIndex(i=>(i+preview.pages.length-1)%preview.pages.length)},{id:'current',label:`${index+1} / ${preview.pages.length}`,d:LICON.tag,color:'3B6A9E',on:true},{id:'next',label:t('next'),d:LICON.arrow,color:'3B6A9E',on:false,onClick:()=>setIndex(i=>(i+1)%preview.pages.length)}]}/>}
+  {nextHref&&<KalipDaha href={nextHref}>{t('nextBatch')}</KalipDaha>}
   {nextSource&&<KalipDaha href={home+'/custom-labels?'+new URLSearchParams({source:JSON.stringify(nextSource)})}>{t('nextBatch')}</KalipDaha>}
   {prepared&&<KalipDaha href={home+'/custom-labels?'+new URLSearchParams({job:prepared.jobId})}>{t('savedJob')}</KalipDaha>}</section>
   <KalipEtiketOnizleme svg={preview.pages[index]??preview.pages[0]!} width={preview.width} height={preview.height} label={t('preview')}/>

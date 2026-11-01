@@ -36,6 +36,7 @@ export interface SettingsViewProps {
   /** T-436 (ALTIN-KURAL 14): cihazdaki tema tercihi (açık / koyu / otomatik). */
   readonly theme?: TemaTercihi;
   readonly locked: boolean;
+  readonly canLabels?: boolean;
   /** Ayar yoksa (yetkisiz) boş değerler gösterilir; satırlar kilitli. */
   readonly values: SettingsValues;
   readonly addressSlug: string | null;
@@ -54,9 +55,10 @@ export interface SettingsViewProps {
 type RowId = "name" | "loc" | "tz" | "smp" | "theme" | "pass";
 const POPULAR_TZ = ["Europe/Istanbul", "Europe/Berlin", "Europe/London"] as const;
 
-export function SettingsView({ slug, dark: initialDark, theme: initialTheme, locked, values, addressSlug, timeZones, sample, mfaOn, notices, reauth, error }: SettingsViewProps) {
+export function SettingsView({ slug, dark: initialDark, theme: initialTheme, locked, canLabels=false, values, addressSlug, timeZones, sample, mfaOn, notices, reauth, error }: SettingsViewProps) {
   const t = useTranslations("settings.k");
   const ts = useTranslations("settings");
+  const tl = useTranslations("labelEditor");
   const tk = useTranslations("kalip");
   const tr = useTranslations("kural");
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
@@ -236,6 +238,7 @@ export function SettingsView({ slug, dark: initialDark, theme: initialTheme, loc
         <KalipIzgara
           left={
           <KalipGrup title={t("ws")} d={LICON.workspace} color="0F6E8C" testId="settings-ws">
+            {canLabels&&<KalipBaglanti title={tl("title")} value={tl("printers")} d={LICON.printer} color="3B6A9E" href={base+"/label-designs"} testId="settings-label-designs"/>}
             <KalipSatir id="name" title={t("name")} value={v.name} d={LICON.pencil} color="0F6E8C" open={open === "name"} changed={chg.includes("name")} locked={locked} onToggle={toggle("name")} onClose={close} editorTitle={t("nameEditor")} testId="settings-name">
               <div className="sxr">
                 <KalipAlan

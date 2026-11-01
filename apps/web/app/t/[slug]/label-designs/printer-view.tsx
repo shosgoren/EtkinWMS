@@ -24,7 +24,7 @@ export function LabelPrinterChoice({slug,data,device,templateId}:{slug:string;da
 export function LabelPrinters({slug,dark,data,device,editId}:{slug:string;dark:boolean;data:LabelWorkspace;device:string|null;editId:string|undefined}){
  const t=useTranslations('labelEditor'),base=`/t/${encodeURIComponent(slug)}/label-designs`;
  if(editId!==undefined)return<PrinterEdit key={editId} slug={slug} dark={dark} data={data} id={editId}/>;
- return<KalipEkran kind="form" dark={dark} title={t('printers')} icon={{d:LICON.printer,color:'3B6A9E'}} bar={{back:{href:base},main:{label:t('newPrinter'),d:LICON.plus,href:base+'?printer=new',locked:!data.rights.printers,disabledReason:t('locked')}}}>
+ return<KalipEkran testId="label-printers" kind="form" dark={dark} title={t('printers')} icon={{d:LICON.printer,color:'3B6A9E'}} bar={{back:{href:base},main:{label:t('newPrinter'),d:LICON.plus,href:base+'?printer=new',locked:!data.rights.printers,disabledReason:t('locked')}}}>
   <KalipAyarKart title={t('generalPrinter')} d={LICON.printer} ton="mavi"><LabelPrinterChoice slug={slug} data={data} device={device} templateId={null}/></KalipAyarKart>
   <KalipKartListe label={t('printers')}>{data.printers.map(p=><KalipKart key={p.id} name={p.name} code={`${p.dpi} DPI`} d={LICON.printer} color="3B6A9E" aria={p.name} href={base+'?printer='+p.id} badge={{value:t(p.active?'active':'printerClosed'),sub:t('systemPrinter')}}/>)}</KalipKartListe>
  </KalipEkran>;
