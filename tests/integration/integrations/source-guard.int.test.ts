@@ -8,6 +8,9 @@
 //  (3) Entegrasyonun kendi yazımı (apply.ts, `via: integration`) PULL'da engellenmez: yeni kart açar, bağlı kartın adını günceller.
 //  (4) Yarış: yön PULL'a çevrilirken (akış satırı kilitli) komut bekler ve yeni yönü görür.
 //  (5) Kiracı yalıtımı (I-01…I-03): A'nın PULL'u B'yi etkilemez; B'nin ekran okuması A'nın kartının bağlılığını göremez.
+//  (7) İnceleme MINOR-1: ilk eşleme (apply.ts `link`) kart satırını kilitleyip etkinliği yeniden denetler; kullanıcı komutu kart satırını
+//      bağlılık okumasından ÖNCE kilitler → açık bir eşleme varken arşiv bekler ve eşleme commit olunca reddedilir (bağlı + arşivli kart
+//      oluşmaz); önce arşivlenen kart eşlenmez. Örnek veri temizliği bağlı kartlara dokunmaz.
 //  (6) T-1141 ile birlikte: yetkisiz üye önce FORBIDDEN alır (kaynak kuralı yetki sızdırmaz); bağlantı kesilince kural kalkar.
 import pg from "pg";
 import { randomUUID } from "node:crypto";
@@ -21,7 +24,8 @@ import { archiveWarehouse, createLocation, createWarehouse, renameWarehouse } fr
 import { importWarehouses } from "../../../packages/domain/src/onboarding/master-import.ts";
 import { applyImportChunk, previewImport } from "../../../packages/domain/src/onboarding/import-apply.ts";
 import { applyLocationsStep } from "../../../packages/domain/src/onboarding/stock-setup.ts";
-import { applyContact, applyProduct, applyWarehouse } from "../../../packages/domain/src/integrations/apply.ts";
+import { clearSampleData } from "../../../packages/domain/src/onboarding/sample-data.ts";
+import { applyContact, applyProduct, applyWarehouse, link as linkRef } from "../../../packages/domain/src/integrations/apply.ts";
 import { getSourceLinkedIds, getSourceLock } from "../../../packages/domain/src/integrations/source-guard.ts";
 import { newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 import { readIntEnv } from "../harness/env.ts";
@@ -358,5 +362,105 @@ describe("(6) T-1141 yetki ve bağlantı", () => {
     expect(await getSourceLock(admin(w), "ITEM", linked.id)).toMatchObject({ managed: false, linked: false });
     expect(await updateItem(admin(w), { itemId: linked.id, name: "Kesik bağlantı" })).toMatchObject({ changed: true });
     await createItem(admin(w), { code: uniq("K"), name: "Kesik", baseUnitId: w.unitId });
+  });
+});
+
+describe("(7) ilk eşleme ile kullanıcı komutu yarışı (inceleme MINOR-1) ve örnek veri", () => {
+  const ac = (w: TenantWorld) => ({ tenantId: w.tenantId, system: "PARASUT", actorUserId: w.ownerUserId, membershipId: w.ownerMembershipId });
+
+  /** `link` transaction'ı açık tutulur; komut başlatılır, beklediği gösterilir, sonra eşleme commit edilir. */
+  async function holdLink<T>(w: TenantWorld, doLink: (tx: Parameters<Parameters<typeof withSystemTenant>[3]>[0]) => Promise<string>, command: () => Promise<T>): Promise<{ outcome: string; result: Promise<T> }> {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let linked!: () => void;
+    const didLink = new Promise<void>((r) => (linked = r));
+    let outcome = "";
+    const tx = withSystemTenant(app, w.tenantId, "test.source_guard_race", async (t) => {
+      outcome = await doLink(t);
+      linked();
+      await gate;
+    });
+    await didLink;
+    let settled = false;
+    const result = command().finally(() => {
+      settled = true;
+    });
+    result.catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(settled).toBe(false); // kart satırı kilidini bekliyor
+    release();
+    await tx;
+    return { outcome, result };
+  }
+
+  it("cari / ürün / depo: açık eşleme varken arşiv bekler, eşleme commit olunca SOURCE_MANAGED_ARCHIVE; kart bağlı ve etkin kalır", async () => {
+    const { w } = await world("SG-RACE-LINK");
+    for (const f of FLOWS) await setDir(w, f, "PULL");
+    const unit = (await q<{ code: string }>("SELECT code FROM public.units WHERE id = $1", [w.unitId]))[0]!.code;
+
+    const p = await party(w, false);
+    await adm.query("UPDATE public.parties SET tax_no = '9990001112' WHERE id = $1", [p.id]);
+    const rp = await holdLink(
+      w,
+      (t) => applyContact(t, ac(w), { externalId: "RC1", name: "Acme", accountType: "customer", taxNumber: "9990001112", taxOffice: null, email: null, phone: null, city: null, address: null }),
+      async () => setPartyArchived(admin(w), { id: p.id, expectedVersion: await partyVersion(p.id), archived: true }),
+    );
+    expect(rp.outcome).toBe("LINKED");
+    expect(await failure(rp.result)).toMatchObject({ detail: "SOURCE_MANAGED_ARCHIVE" });
+    expect((await q<{ archived: boolean }>("SELECT archived_at IS NOT NULL AS archived FROM public.parties WHERE id = $1", [p.id]))[0]?.archived).toBe(false);
+
+    const i = await item(w, false);
+    const ri = await holdLink(w, (t) => applyProduct(t, ac(w), { externalId: "RI1", code: i.code, name: i.code, unit }), () => archiveItem(admin(w), { itemId: i.id }));
+    expect(ri.outcome).toBe("LINKED");
+    expect(await failure(ri.result)).toMatchObject({ detail: "SOURCE_MANAGED_ARCHIVE" });
+    expect((await q<{ status: string }>("SELECT status FROM public.items WHERE id = $1", [i.id]))[0]?.status).toBe("ACTIVE");
+
+    const wh = await warehouse(w, false);
+    const wname = uniq("Yaris Depo");
+    await adm.query("UPDATE public.warehouses SET name = $2 WHERE id = $1", [wh.id, wname]);
+    const rw = await holdLink(w, (t) => applyWarehouse(t, ac(w), { externalId: "RW1", name: wname, archived: false }), () => archiveWarehouse(admin(w), { warehouseId: wh.id }));
+    expect(rw.outcome).toBe("LINKED");
+    expect(await failure(rw.result)).toMatchObject({ detail: "SOURCE_MANAGED_ARCHIVE" });
+    // Düzenleme de aynı sırayla: açık eşlemeyi bekler ve Paraşüt alanını reddeder.
+    const p2 = await party(w, false);
+    await adm.query("UPDATE public.parties SET tax_no = '9990001113' WHERE id = $1", [p2.id]);
+    const re = await holdLink(
+      w,
+      (t) => applyContact(t, ac(w), { externalId: "RC2", name: "Acme", accountType: "customer", taxNumber: "9990001113", taxOffice: null, email: null, phone: null, city: null, address: null }),
+      async () => saveParty(admin(w), { id: p2.id, code: p2.code, name: "Yerel ad", taxNo: "9990001113", phone: "0212 555 11 22", expectedVersion: await partyVersion(p2.id) }),
+    );
+    expect(await failure(re.result)).toMatchObject({ detail: "SOURCE_MANAGED_FIELD" });
+  });
+
+  it("önce arşivlenen kart eşlenmez (kilit altında yeniden denetim): eşleme atlanır, kart yerel ve arşivli kalır", async () => {
+    const { w } = await world("SG-LINK-ARCH");
+    await setDir(w, "WAREHOUSES", "PULL");
+    const wh = await warehouse(w, false);
+    const wname = uniq("Arsivli Depo");
+    await adm.query("UPDATE public.warehouses SET name = $2 WHERE id = $1", [wh.id, wname]);
+    // Eşleme adayı arşivden önce seçilmiş gibi: link'i doğrudan çağır (apply.ts adayı düz SELECT ile seçer).
+    expect(await archiveWarehouse(admin(w), { warehouseId: wh.id })).toEqual({ archived: true });
+    const r = await withSystemTenant(app, w.tenantId, "test.source_guard_link", (t) => linkRef(t, ac(w), "WAREHOUSE", wh.id, "RW9"));
+    expect(r).toBe(false);
+    expect((await q("SELECT 1 FROM public.external_refs WHERE tenant_id = $1 AND entity_id = $2", [w.tenantId, wh.id])).length).toBe(0);
+  });
+
+  it("örnek veri temizliği Paraşüt'e bağlı örnek karta dokunmaz (silmez, pasife almaz, kalan saymaz)", async () => {
+    const { w } = await world("SG-SAMPLE");
+    const linkedItem = await item(w, true);
+    const freeItem = await item(w, false);
+    const linkedWh = await warehouse(w, true);
+    const freeWh = await warehouse(w, false);
+    await adm.query("UPDATE public.items SET is_sample = true WHERE id = ANY($1::uuid[])", [[linkedItem.id, freeItem.id]]);
+    await adm.query("UPDATE public.warehouses SET is_sample = true WHERE id = ANY($1::uuid[])", [[linkedWh.id, freeWh.id]]);
+    const r = await clearSampleData(admin(w));
+    expect(r.mode).toBe("DELETED");
+    expect(r.counts).toMatchObject({ items: 1, warehouses: 1 });
+    expect((await q<{ status: string }>("SELECT status FROM public.items WHERE id = $1", [linkedItem.id]))[0]?.status).toBe("ACTIVE");
+    expect((await q<{ status: string }>("SELECT status FROM public.warehouses WHERE id = $1", [linkedWh.id]))[0]?.status).toBe("ACTIVE");
+    expect((await q("SELECT 1 FROM public.items WHERE id = $1", [freeItem.id])).length).toBe(0);
+    expect((await q("SELECT 1 FROM public.warehouses WHERE id = $1", [freeWh.id])).length).toBe(0);
+    // Bağlı örnekler "kalan örnek" sayılmaz: ikinci temizlik yapacak bir şey bulmaz.
+    expect(await clearSampleData(admin(w))).toMatchObject({ mode: "NONE" });
   });
 });

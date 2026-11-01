@@ -342,14 +342,14 @@ export async function saveParty(params: PartyCommandParams, input: PartyInput & 
       return { ok: true, id: row.id, version: Number(row.version) } as const;
     }
     if (!/^[0-9a-f-]{36}$/i.test(input.id) || input.expectedVersion === undefined) throw new AppError("VALIDATION_FAILED");
-    // T-1201: akış satırı (FOR SHARE) → cari satırı (FOR UPDATE) sırası; bağlı caride Paraşüt alanı değişiyorsa hiçbir şey yazılmaz.
+    // T-1201: akış satırı (FOR SHARE) → cari satırı (FOR UPDATE) → bağlılık sırası (inceleme MINOR-1: eşzamanlı ilk eşleme kart satırını
+    // kilitler; biz onu bekleriz ve eşleme commit olunca bağlılığı görürüz). Bağlı caride Paraşüt alanı değişiyorsa hiçbir şey yazılmaz.
     const rule = await readSourceRule(tx, m.tenantId, "PARTY", { lock: true });
-    if (await sourceLinked(tx, m.tenantId, "PARTY", input.id, rule)) {
-      const curRows = await tx.execute<DbParty>(sql`
-        SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, archived_at::text, version
-          FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND id = ${input.id}::uuid FOR UPDATE`);
-      const cur = curRows[0];
-      if (cur === undefined) throw new AppError("NOT_FOUND");
+    const curRows = await tx.execute<DbParty>(sql`
+      SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, archived_at::text, version
+        FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND id = ${input.id}::uuid FOR UPDATE`);
+    const cur = curRows[0];
+    if (cur !== undefined && (await sourceLinked(tx, m.tenantId, "PARTY", input.id, rule))) {
       const next: OwnedParty = { name: v.name ?? cur.name, kind: v.kind ?? "CUSTOMER", tax_no: v.taxNo, tax_office: v.taxOffice, phone: v.phone, email: v.email, city: v.city, address: v.address, short_name: v.shortName, district: v.district };
       if (v.code !== cur.code || ownedDiffers(cur, next)) throw sourceManagedError("FIELD");
     }
@@ -381,7 +381,9 @@ export async function setPartyArchived(params: PartyCommandParams, input: { read
   const { requestId, ...access } = params;
   return runTenantCommand({ ...access, permission: "parties.archive" }, async (tx, m) => {
     // T-1201: Paraşüt'e bağlı cari Paraşüt'te arşivlenir; Etkin kendiliğinden uyar (T-1140 yaşam döngüsü).
+    // Sıra akış → cari satırı → bağlılık (inceleme MINOR-1; eşzamanlı ilk eşlemeyi bekler).
     const rule = await readSourceRule(tx, m.tenantId, "PARTY", { lock: true });
+    await tx.execute(sql`SELECT 1 FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND id = ${input.id}::uuid FOR UPDATE`);
     if (await sourceLinked(tx, m.tenantId, "PARTY", input.id, rule)) throw sourceManagedError("ARCHIVE");
     const rows = await tx.execute<{ version: number }>(sql`
       UPDATE public.parties SET archived_at = CASE WHEN ${input.archived}::boolean THEN now() ELSE NULL END
@@ -444,9 +446,10 @@ export async function importParties(
     if (keys.length > 0) {
       const rows = await tx.execute<DbParty>(sql`
         SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, archived_at::text, version
-          FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND code_key = ANY(${`{${keys.map((k) => `"${k.replace(/["\\]/g, (c) => `\\${c}`)}"`).join(",")}}`}::text[])`);
+          FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND code_key = ANY(${`{${keys.map((k) => `"${k.replace(/["\\]/g, (c) => `\\${c}`)}"`).join(",")}}`}::text[]) ${input.dryRun ? sql`` : sql`ORDER BY id FOR UPDATE`}`);
       for (const r of rows) existing.set(r.code_key, r);
     }
+    // T-1201: yazımda satırlar (kimlik sırasıyla) kilitlendikten SONRA bağlılık okunur (inceleme MINOR-1).
     const linked = await sourceLinkedIds(tx, m.tenantId, "PARTY", rule, [...existing.values()].map((r) => r.id));
     for (const x of cleaned) {
       const v = x.v;

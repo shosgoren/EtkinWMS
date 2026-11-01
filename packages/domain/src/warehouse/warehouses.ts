@@ -216,14 +216,14 @@ export async function archiveWarehouse(params: WarehouseCallParams, input: Archi
   const warehouseId = parseUuid(input.warehouseId);
   return runTenantCommand({ ...params, permission: "warehouses.archive" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
-    // T-1201: bağlı depo Paraşüt'te arşivlenir; Etkin kendiliğinden uyar (T-1140).
+    // T-1201: bağlı depo Paraşüt'te arşivlenir; Etkin kendiliğinden uyar (T-1140). Sıra akış → depo satırı → bağlılık (inceleme MINOR-1).
     const rule = await readSourceRule(tx, m.tenantId, "WAREHOUSE", { lock: true });
-    if (await sourceLinked(tx, m.tenantId, "WAREHOUSE", warehouseId, rule)) throw sourceManagedError("ARCHIVE");
     // FOR NO KEY UPDATE (stok komutlarının FK KEY SHARE'iyle çakışmaz, FOR SHARE ile çakışır): eşzamanlı `createLocation` (depo satırını FOR SHARE okur) ile serileştirir; kontroller kilitten SONRA yeni görüntüyle çalışır.
     const cur = await tx.execute<{ status: string }>(
       sql`SELECT status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid FOR NO KEY UPDATE`,
     );
     if (cur[0] === undefined) throw new AppError("NOT_FOUND");
+    if (await sourceLinked(tx, m.tenantId, "WAREHOUSE", warehouseId, rule)) throw sourceManagedError("ARCHIVE");
     if (cur[0].status === "ARCHIVED") {
       // T-1140: sistemin (Paraşüt yaşam döngüsü) arşivlediği depoyu kullanıcı arşivli tutmak istiyor: sahiplik kullanıcıya geçer, Paraşüt'te
       // yeniden etkin olsa da açılmaz (ürünün archiveItem kuralı).
