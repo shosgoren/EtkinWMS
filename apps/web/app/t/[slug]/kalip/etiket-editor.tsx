@@ -40,7 +40,7 @@ export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,co
   if(kind==="text"||kind==="field")e={...box,kind:"text",field:kind==="field"?CONTEXT_FIELDS[design.context][0]:null,text:kind==="text"?t("text"):null,fontSize:3000,bold:false,align:"start"};
   else if(kind==="qr"||kind==="barcode"){
    const field=design.context==="SHIPMENT"?"trackingCode":design.context==="RECEIPT"?"packageQr":design.context==="LOCATION"?"locationCode":"barcode";
-   const size=Math.min(28000,roomW,roomH);e=kind==="qr"?{...box,kind,width:size,height:size,field,locked:true}:{...box,kind,field,format:"CODE128",height:Math.min(18000,roomH),locked:true};
+   const size=Math.min(28000,roomW,roomH);e=kind==="qr"?{...box,kind,width:size,height:size,field,locked:true}:{...box,kind,field,format:"CODE128",width:Math.min(design.context==="PRODUCT"?70000:roomW,roomW),height:Math.min(35000,roomH),locked:true};
   }else e=kind==="frame"?{...box,kind,stroke:300,width:roomW,height:roomH}:{...box,kind,stroke:300,height:1000};
   if(kind!=="frame"){const place=findLabelPlacement(design,e.width,e.height);if(!place){say("warn",t("noSpace"));return;}e={...e,...place};}
   change({...design,elements:[...design.elements,e]});setSelected([id]);setPanel(true);
