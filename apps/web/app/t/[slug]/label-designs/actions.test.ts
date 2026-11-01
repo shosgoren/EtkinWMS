@@ -1,5 +1,5 @@
 import{beforeEach,describe,expect,it,vi}from"vitest";
-const state=vi.hoisted(()=>({authenticated:true,origin:"https://wms.test",limit:vi.fn(),recent:vi.fn(),tenant:vi.fn(),log:vi.fn(),db:{fixture:true},calls:Object.fromEntries(['getLabelWorkspace','getLabelTemplate','saveLabelTemplate','publishLabelTemplate','assignLabelDefault','archiveLabelTemplate','restoreLabelDraft','uploadLabelLogo','readLabelLogo','saveLabelPrinter','setLabelPrinterPreference','exportLabelDesigns'].map(k=>[k,vi.fn()])) as Record<string,ReturnType<typeof vi.fn>>}));
+const state=vi.hoisted(()=>({authenticated:true,origin:"https://wms.test",limit:vi.fn(),recent:vi.fn(),tenant:vi.fn(),log:vi.fn(),db:{fixture:true},calls:Object.fromEntries(['markLabelGuideSeen','getLabelWorkspace','getLabelTemplate','saveLabelTemplate','publishLabelTemplate','assignLabelDefault','archiveLabelTemplate','restoreLabelDraft','uploadLabelLogo','readLabelLogo','saveLabelPrinter','setLabelPrinterPreference','exportLabelDesigns'].map(k=>[k,vi.fn()])) as Record<string,ReturnType<typeof vi.fn>>}));
 vi.mock('next/headers',()=>({headers:()=>Promise.resolve(new Headers({'origin':state.origin,'x-test-ip':'127.0.0.1'}))}));
 vi.mock('@wms/db',()=>({getAppDb:()=>state.db}));
 vi.mock('@wms/domain/labels/store',()=>state.calls);
@@ -8,7 +8,7 @@ vi.mock('../../../../lib/action-guard.ts',async()=>{
  const actual=await vi.importActual<typeof import('../../../../lib/action-guard.ts')>('../../../../lib/action-guard.ts');
  return{...actual,limitVerifiedTenant:state.tenant,createProductionGuard:(getHeaders:()=>Promise<Headers>)=>actual.createActionGuard({getHeaders,resolvePrincipal:()=>Promise.resolve(state.authenticated?{userId:'11111111-1111-4111-8111-111111111111',mfaVerified:true}:null),appUrl:'https://wms.test',socketIp:()=> '127.0.0.1',production:false,newRequestId:()=> '22222222-2222-4222-8222-222222222222',log:state.log,limiter:{check:state.limit}})};
 });
-import{labelWorkspaceAction,labelTemplateAction,labelSaveAction,labelPublishAction,labelAssignAction,labelArchiveAction,labelRestoreAction,labelLogoUploadAction,labelLogoReadAction,labelPrinterSaveAction,labelPreferenceAction,labelExportAction}from'./actions.ts';
+import{labelWorkspaceAction,labelTemplateAction,labelGuideSeenAction,labelSaveAction,labelPublishAction,labelAssignAction,labelArchiveAction,labelRestoreAction,labelLogoUploadAction,labelLogoReadAction,labelPrinterSaveAction,labelPreferenceAction,labelExportAction}from'./actions.ts';
 const id='33333333-3333-4333-8333-333333333333',base={slug:'motive',id};
 beforeEach(()=>{vi.clearAllMocks();state.authenticated=true;state.origin='https://wms.test';state.tenant.mockReset().mockResolvedValue(undefined);for(const f of Object.values(state.calls))f.mockResolvedValue({id,version:1});state.calls.readLabelLogo!.mockResolvedValue(Buffer.from('canonical-png'));});
 describe('label action trusted boundary',()=>{
@@ -49,3 +49,5 @@ describe('label action trusted boundary',()=>{
   expect((await labelLogoUploadAction({slug:'motive',png:'data:image/svg+xml,<svg/>'})).ok).toBe(false);expect((await labelLogoUploadAction({slug:'motive',png:Buffer.alloc(128*1024+1).toString('base64')})).ok).toBe(false);expect(state.calls.uploadLabelLogo).toHaveBeenCalledTimes(1);
  });
 });
+
+it('guide seen state accepts no client actor and uses the verified non-sensitive metadata boundary',async()=>{const r=await labelGuideSeenAction({slug:'motive'});expect(r.ok&&r.data).toEqual({seen:true});expect(state.tenant).toHaveBeenCalledWith(expect.objectContaining({permission:'labels.design',tenantSlug:'motive'}),expect.anything());expect(state.calls.markLabelGuideSeen).toHaveBeenCalledWith(expect.objectContaining({principal:{userId:'11111111-1111-4111-8111-111111111111',mfaVerified:true}}));expect(state.calls.markLabelGuideSeen!.mock.calls[0]?.[0]).not.toHaveProperty('recentAuth');expect((await labelGuideSeenAction({slug:'motive',actorUserId:id})).ok).toBe(false);expect(state.calls.markLabelGuideSeen).toHaveBeenCalledTimes(1);});

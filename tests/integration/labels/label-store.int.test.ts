@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll,beforeAll,expect,it } from "vitest";
 import { defaultLabelDesign, type LabelContext } from "../../../packages/shared/src/labels/index.ts";
-import { saveLabelTemplate,publishLabelTemplate,getLabelTemplate,getLabelWorkspace,assignLabelDefault,archiveLabelTemplate,restoreLabelDraft,exportLabelDesigns } from "../../../packages/domain/src/labels/store.ts";
+import { saveLabelTemplate,publishLabelTemplate,getLabelTemplate,getLabelWorkspace,assignLabelDefault,archiveLabelTemplate,restoreLabelDraft,exportLabelDesigns,getLabelGuideSeen,markLabelGuideSeen } from "../../../packages/domain/src/labels/store.ts";
 import { labelServiceWorld } from "./service-fixture.ts";
 let w:Awaited<ReturnType<typeof labelServiceWorld>>;
 beforeAll(async()=>{w=await labelServiceWorld();},120000);afterAll(async()=>{await w?.dispose();});
@@ -93,4 +93,23 @@ it("@AC-04 template/history exports and lists are bounded/keyset and tenant scop
  const exported: {id:string;template_id:string}[]=[];let historyCursor:string|undefined;
  do{const x=await exportLabelDesigns(w.call(),{kind:"VERSIONS",...(historyCursor?{after:historyCursor}:{})});expect(x.rows.length).toBeLessThanOrEqual(25);exported.push(...x.rows as {id:string;template_id:string}[]);historyCursor=x.next??undefined;}while(historyCursor);
  expect(exported.filter(r=>r.template_id===historical.id).map(r=>r.id).sort()).toEqual(historicalIds.slice().sort());expect((await exportLabelDesigns(w.call(w.B),{kind:"VERSIONS"})).rows).toEqual([]);
+});
+
+it('@AC-04 label introduction state is current-member and tenant scoped, concurrent acknowledgements are idempotent',async()=>{
+ expect(await getLabelGuideSeen(w.call())).toBe(false);expect(await getLabelGuideSeen(w.call(w.B))).toBe(false);
+ const before=(await w.adm.query('SELECT id,quantity::text FROM public.stock_ledger WHERE tenant_id=$1 ORDER BY id',[w.A.tenantId])).rows;
+ await Promise.all([markLabelGuideSeen(w.call()),markLabelGuideSeen(w.call())]);expect(await getLabelGuideSeen(w.call())).toBe(true);expect(await getLabelGuideSeen(w.call(w.B))).toBe(false);
+ expect(Number((await w.adm.query("SELECT count(*) AS n FROM public.audit_logs WHERE tenant_id=$1 AND entity_id=$2 AND action='label.guide_seen'",[w.A.tenantId,w.A.ownerMembershipId])).rows[0]!.n)).toBe(1);
+ await expect(getLabelGuideSeen({...w.call(),tenantSlug:w.B.slug})).rejects.toMatchObject({code:'NOT_FOUND'});
+ const member=()=>w.call(w.A,w.A.memberUserId,false);await w.grant(w.A,['labels.view']);expect(await getLabelGuideSeen(member())).toBe(false);await expect(markLabelGuideSeen(member())).rejects.toMatchObject({code:'FORBIDDEN'});
+ await w.grant(w.A,['labels.design']);await expect(markLabelGuideSeen(member())).rejects.toMatchObject({code:'FORBIDDEN'});
+ await w.grant(w.A,['labels.view','labels.design']);await markLabelGuideSeen(member());expect(await getLabelGuideSeen(member())).toBe(true);
+ expect((await w.adm.query('SELECT id,quantity::text FROM public.stock_ledger WHERE tenant_id=$1 ORDER BY id',[w.A.tenantId])).rows).toEqual(before);
+ await w.grant(w.A,[]);await expect(getLabelGuideSeen(member())).rejects.toMatchObject({code:'FORBIDDEN'});
+});
+it('failed guide audit writes no seen state; acknowledgement never changes label templates or printers',async()=>{
+ const before=(await w.adm.query('SELECT id,version FROM public.label_templates WHERE tenant_id=$1 ORDER BY id',[w.B.tenantId])).rows;
+ await w.adm.query("CREATE FUNCTION label_guide_fault() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN IF NEW.action='label.guide_seen' THEN RAISE EXCEPTION 'SYNTHETIC_GUIDE_FAULT'; END IF; RETURN NEW; END$$");await w.adm.query('CREATE TRIGGER label_guide_fault BEFORE INSERT ON public.audit_logs FOR EACH ROW EXECUTE FUNCTION label_guide_fault()');
+ try{await expect(markLabelGuideSeen(w.call(w.B))).rejects.toMatchObject({code:'INTERNAL'});expect(await getLabelGuideSeen(w.call(w.B))).toBe(false);}finally{await w.adm.query('DROP TRIGGER label_guide_fault ON public.audit_logs');await w.adm.query('DROP FUNCTION label_guide_fault()');}
+ await markLabelGuideSeen(w.call(w.B));expect(await getLabelGuideSeen(w.call(w.B))).toBe(true);expect((await w.adm.query('SELECT id,version FROM public.label_templates WHERE tenant_id=$1 ORDER BY id',[w.B.tenantId])).rows).toEqual(before);
 });
