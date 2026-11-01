@@ -13,6 +13,8 @@ async function pick(page:Page,label:string,id:string){const radio=page.getByRole
 async function save(page:Page){await closeProperties(page);await page.locator('[data-tour="main"]').click();await expect(page.locator('[data-guide-done="label-saved"]')).toHaveCount(1);}
 async function printer(page:Page,slug:string,name:string){await page.goto(`/t/${slug}/label-designs?printer=new`);await page.getByRole('textbox',{name:/^Yazıcı adı/}).fill(name);await page.locator('[data-tour="main"]').click();await expect(page.getByTestId('label-printers')).toBeVisible();const p=await db<{id:string}>('SELECT id FROM public.label_printers WHERE tenant_id=(SELECT id FROM public.tenants WHERE slug=$1) AND name=$2',[slug,name]);expect(p).toHaveLength(1);return p[0]!.id;}
 async function printSpy(page:Page){await page.evaluate(()=>{const w=globalThis as unknown as {print:()=>void;__prints:string[]};w.__prints=[];w.print=()=>{w.__prints.push((globalThis as unknown as {document:{querySelector:(s:string)=>{getAttribute:(n:string)=>string|null}|null}}).document.querySelector('[data-label-job]')?.getAttribute('data-label-job')??'MISSING');};});}
+async function firstGuide(page:Page,tenantId:string){await expect(page.getByTestId('working-guide')).toHaveAttribute('data-guide-id','label');await page.getByTestId('guide-close').click();await expect(page.getByTestId('working-guide')).toHaveCount(0);await expect.poll(async()=>(await db<{n:number}>("SELECT count(*)::int n FROM public.audit_logs WHERE tenant_id=$1 AND action='label.guide_seen'",[tenantId]))[0]?.n).toBe(1);}
+async function closedServerLogin(page:Page){await page.goto('/login');const url=new URL(page.url());if(!['localhost','127.0.0.1','[::1]'].includes(url.hostname))throw Error('Only local login proof allowed');const browser=page.context().browser();if(!browser)throw Error('Local Chromium missing');const proof=await browser.newPage({javaScriptEnabled:false,ignoreHTTPSErrors:true,...localClient('198.51.100.161')});try{await proof.goto(new URL('/login',url).href);await expect(proof.locator('form')).toHaveAttribute('method','post');await expect(proof.locator('input[name="email"]')).toBeDisabled();await expect(proof.locator('input[name="password"]')).toBeDisabled();await expect(proof.getByRole('button',{name:'Giriş yap',exact:true})).toBeDisabled();}finally{await proof.close();}}
 const readerRequire=createRequire(new URL('../../apps/web/package.json',import.meta.url));
 const reader=readerRequire('zxing-wasm/reader') as {prepareZXingModule:(v:unknown)=>unknown;readBarcodes:(b:Uint8Array,v:unknown)=>Promise<{text:string}[]>};
 reader.prepareZXingModule({overrides:{wasmBinary:readFileSync(readerRequire.resolve('zxing-wasm/reader/zxing_reader.wasm'))}});
@@ -24,8 +26,8 @@ async function printedCode(page:Page,format:string){
 }
 
 test('designer, real five-package QR, printer override, immutable reprint and responsive controls',async({page},info)=>{
- test.setTimeout(240_000);page.setDefaultTimeout(15_000);const f=await seedPackage(page,info.project.name.includes('mobile'));const base=`/t/${f.slug}/label-designs`;
- await page.goto(base);await expect(page.getByTestId('working-guide')).toHaveAttribute('data-guide-id','label');await page.getByTestId('guide-close').click();
+ test.setTimeout(240_000);page.setDefaultTimeout(15_000);await closedServerLogin(page);const f=await seedPackage(page,info.project.name.includes('mobile'),false,'label-design');const base=`/t/${f.slug}/label-designs`;
+ await page.goto(base);await firstGuide(page,f.tenantId);
  await page.reload();await expect(page.getByTestId('label-designs')).toBeVisible();await expect(page.getByTestId('working-guide')).toHaveCount(0);
  const general=await printer(page,f.slug,'General QA'),special=await printer(page,f.slug,'Receipt QA');expect(general).not.toBe(special);
  await pick(page,'Genel yazıcı','COMPANY');await pick(page,'Yazıcı profili',general);await expect(page.getByText('Yazıcı tercihi kaydedildi',{exact:true})).toBeVisible();
@@ -56,8 +58,8 @@ test('designer, real five-package QR, printer override, immutable reprint and re
 });
 
 test('prepare revalidates changed paper size; busy navigation never opens a late dialog; stock.view legacy route remains usable',async({page},info)=>{
- test.setTimeout(180_000);page.setDefaultTimeout(15_000);const f=await seedPackage(page,info.project.name.includes('mobile')),base=`/t/${f.slug}/label-designs`,name='Race '+randomUUID().slice(0,8);
- await page.goto(base+'?new=RECEIPT');await properties(page);await page.getByRole('textbox',{name:'Etiket adı',exact:true}).fill(name);await save(page);
+ test.setTimeout(180_000);page.setDefaultTimeout(15_000);const f=await seedPackage(page,info.project.name.includes('mobile'),false,'label-race'),base=`/t/${f.slug}/label-designs`,name='Race '+randomUUID().slice(0,8);
+ await page.goto(base+'?new=RECEIPT');await firstGuide(page,f.tenantId);await properties(page);await page.getByRole('textbox',{name:'Etiket adı',exact:true}).fill(name);await save(page);
  const template=(await db<{id:string;created_by:string}>('SELECT id,created_by FROM public.label_templates WHERE tenant_id=$1 AND name=$2',[f.tenantId,name]))[0]!;expect(template.id).toBeTruthy();
  await fillPackage(page,f,f.kg,'1','200');await page.getByRole('button',{name:'Kontrol',exact:true}).click();await page.getByRole('button',{name:'Kabul et',exact:true}).click();await posted(page);const doc=await documentId(page),ids=await identities(f,doc);
  await page.getByRole('link',{name:'Etiketleri aç',exact:true}).click();await expect(page.getByTestId('custom-labels')).toBeVisible();await expect(page.getByText('1 etiket · 100 × 50 mm',{exact:true})).toBeVisible();
