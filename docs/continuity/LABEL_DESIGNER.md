@@ -231,3 +231,8 @@ T1169 yerel gerçekDB19/19 (eski etiket kaynağı8+yeni baskı11), webtypecheck 
 
 ### T-1173 — Modül ve ayar bağlantısı (yerel)
 Etiket tasarımı artık Modüller'de gerçek labels.view bağlantısıdır (yalnız print yetkisi yeterli değil); açık grant varsa saha kişisinde de görünür. Ayarlar aynı bağımsız yetkiyi sunucuda kontrol eder. “Etiket tasarımını aç” ve “yazıcı ayarları” yetkiyle süzülmüş modülden açılır; “barkod” eski QR ekranıdır. Yeni CSS yok, mevcut ortak ayar satırı. İlk kullanım rehberi ve gerçek tarayıcı kabulü ayrıca bekler.
+
+### T-1174 — Üretim ve sevk kabulü (yerel geliştirme)
+İşlenmiş çıkış belgesi kartında atanmış özel sevk etiketi bağlantısı; düz çıkış fişQR kullanır, fiziksel paket kimliği üretilmez. Gerçek kabul/kalite/yerleştirme/reçete/üretim komutlarıyla iki çıktı paketi ve gerçek çıkış postası üzerinden etiket testi hazırlanıyor; taslak kaynak ret ve stok değişmezliği ayrıca sınanır. Test henüz yapılmadı.
+
+T1174 gerçekDB13/13: iki üretim çıktısının gerçek paket QR/lot/tarihleri ve düz sevkin gerçek DB fişnumarası doğrulandı; baskı stok değiştirmedi. Routing2+action5 birim, root/web tip ve hedef ESLint geçti. Paketli sevkte otomatik kod seçimi T1177; tarayıcı/CI/canlı ayrı bekler.
