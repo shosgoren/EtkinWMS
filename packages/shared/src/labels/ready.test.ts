@@ -1,6 +1,6 @@
 import{describe,it,expect}from'vitest';
 import{readyLabelDesign}from'./ready.ts';
-import{LABEL_CONTEXTS,parseLabelDesign,prepareLabelForPrint}from'./model.ts';
+import{LABEL_CONTEXTS,parseLabelDesign,prepareLabelForPrint,findLabelPlacement}from'./model.ts';
 import{renderLabelSvg}from'./render.ts';
 describe('ready label designs protect first use',()=>{
  it.each(LABEL_CONTEXTS)('%s remains editable, publishable and context-bound',context=>{
@@ -23,3 +23,12 @@ describe('ready label designs protect first use',()=>{
 });
 
 it('shipment automatic code satisfies required package binding without weakening receipts or the real document field',()=>{const d=readyLabelDesign('SHIPMENT');expect(d.elements.find(e=>e.kind==='qr')?.field).toBe('trackingCode');expect(prepareLabelForPrint(d,['name','quantity','unit','documentNo','packageQr'])).toEqual(d);const withoutDoc={...d,elements:d.elements.filter(e=>!(e.kind==='text'&&e.field==='documentNo'))};expect(()=>prepareLabelForPrint(withoutDoc,['documentNo','packageQr'])).toThrow();const receipt={...readyLabelDesign('RECEIPT'),elements:readyLabelDesign('RECEIPT').elements.map(e=>e.kind==='qr'?{...e,field:'trackingCode'}:e)};expect(()=>parseLabelDesign(receipt)).toThrow();});
+
+it.each(LABEL_CONTEXTS)('%s places a new logo in free space without covering existing content or code',context=>{const d=readyLabelDesign(context),before=JSON.stringify(d),p=findLabelPlacement(d,30000,8000);expect(p).not.toBeNull();const e={...p!,id:'placed-logo',kind:'logo' as const,assetId:'11111111-1111-4111-8111-111111111111',rotation:0 as const,locked:false};expect(()=>parseLabelDesign({...d,elements:[...d.elements,e]})).not.toThrow();expect(d.elements.every(b=>!(e.x<b.x+b.width&&e.x+e.width>b.x&&e.y<b.y+b.height&&e.y+e.height>b.y))).toBe(true);expect(JSON.stringify(d)).toBe(before);});
+it('placement respects occupied space and frame edges and rejects unsafe dimensions',()=>{const d=readyLabelDesign('PRODUCT'),full={...d,elements:[{id:'full',kind:'text' as const,x:2000,y:2000,width:96000,height:46000,rotation:0 as const,locked:false,field:null,text:'Full',fontSize:2000,bold:false,align:'start' as const}]};expect(findLabelPlacement(full,30000,8000)).toBeNull();expect(()=>findLabelPlacement(d,NaN,8000)).toThrow();const framed={...d,elements:[{id:'border',kind:'frame' as const,x:2000,y:2000,width:96000,height:46000,rotation:0 as const,locked:false,stroke:300}]};expect(findLabelPlacement(framed,30000,8000)).not.toBeNull();});
+it.each(['PRODUCT','RECEIPT'] as const)('%s ready label prints a real long product identifier without clipping',context=>{
+ const code='11111111-1111-4111-8111-111111111111';
+ const common={name:'SBR granül',code,unit:'KG'};const values=context==='PRODUCT'?{...common,barcode:'ETK-HM-001'}:{...common,packageQr:'EWMS:PKG:1:'+code,quantity:'200',lot:'LABEL-LOT',productionDate:'01.10.2026',expiryDate:'01.10.2027',documentNo:'GIR-2026-001'};
+ const svg=renderLabelSvg(readyLabelDesign(context),values);
+ expect(svg.replace(/<[^>]*>/g,'')).toContain(code);expect(svg).toContain('font-size="2000"');
+});
