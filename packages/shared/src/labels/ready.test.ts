@@ -23,3 +23,9 @@ describe('ready label designs protect first use',()=>{
 });
 
 it('shipment automatic code satisfies required package binding without weakening receipts or the real document field',()=>{const d=readyLabelDesign('SHIPMENT');expect(d.elements.find(e=>e.kind==='qr')?.field).toBe('trackingCode');expect(prepareLabelForPrint(d,['name','quantity','unit','documentNo','packageQr'])).toEqual(d);const withoutDoc={...d,elements:d.elements.filter(e=>!(e.kind==='text'&&e.field==='documentNo'))};expect(()=>prepareLabelForPrint(withoutDoc,['documentNo','packageQr'])).toThrow();const receipt={...readyLabelDesign('RECEIPT'),elements:readyLabelDesign('RECEIPT').elements.map(e=>e.kind==='qr'?{...e,field:'trackingCode'}:e)};expect(()=>parseLabelDesign(receipt)).toThrow();});
+it.each(['PRODUCT','RECEIPT'] as const)('%s ready label prints a real long product identifier without clipping',context=>{
+ const code='11111111-1111-4111-8111-111111111111';
+ const common={name:'SBR granül',code,unit:'KG'};const values=context==='PRODUCT'?{...common,barcode:'ETK-HM-001'}:{...common,packageQr:'EWMS:PKG:1:'+code,quantity:'200',lot:'LABEL-LOT',productionDate:'01.10.2026',expiryDate:'01.10.2027',documentNo:'GIR-2026-001'};
+ const svg=renderLabelSvg(readyLabelDesign(context),values);
+ expect(svg.replace(/<[^>]*>/g,'')).toContain(code);expect(svg).toContain('font-size="2000"');
+});
