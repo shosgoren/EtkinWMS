@@ -6852,7 +6852,8 @@
       "locationCode": "Bin code",
       "locationName": "Bin name",
       "warehouseName": "Warehouse",
-      "customerName": "Customer"
+      "customerName": "Customer",
+      "trackingCode": "Tracking QR · automatic"
     },
     "printers": "Printers",
     "newPrinter": "Add printer",
